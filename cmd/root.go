@@ -10,6 +10,7 @@ var (
 	provider   string
 	promptFlag string
 	resumeID   string
+	mcpServers []string
 )
 
 // SetVersion sets the version string from main.
@@ -29,6 +30,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&promptFlag, "prompt", "p", "", "send a single prompt and exit")
 	rootCmd.Flags().StringVar(&provider, "provider", "", "LLM provider (anthropic, openai, gemini, etc.)")
 	rootCmd.Flags().StringVarP(&resumeID, "resume", "r", "", "resume a saved session by ID")
+	rootCmd.Flags().StringArrayVar(&mcpServers, "mcp", nil, "MCP server command (e.g. --mcp 'npx @modelcontextprotocol/server-filesystem .')")
 	rootCmd.AddCommand(versionCmd)
 }
 

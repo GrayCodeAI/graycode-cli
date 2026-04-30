@@ -7,54 +7,76 @@ Built on [eyrie](https://github.com/GrayCodeAI/eyrie) — the universal LLM prov
 ## Install
 
 ```bash
+# Homebrew (macOS/Linux)
+brew install GrayCodeAI/tap/hawk
+
+# Go
 go install github.com/GrayCodeAI/hawk@latest
+
+# Script
+curl -fsSL https://raw.githubusercontent.com/GrayCodeAI/hawk/main/install.sh | sh
+
+# From source
+git clone https://github.com/GrayCodeAI/hawk && cd hawk && go install .
 ```
 
 ## Quick Start
 
 ```bash
-# Set your API key
 export ANTHROPIC_API_KEY=sk-ant-...
-
-# Launch interactive REPL
 hawk
-
-# Single prompt
-hawk -p "explain this codebase"
-
-# Specify model
-hawk -m claude-sonnet-4-20250514
-
-# Resume a previous session
-hawk -r abc123
 ```
 
-## Features
+## Usage
 
-- **Agentic loop** — hawk calls tools, reads results, and keeps going until the task is done
-- **Streaming** — token-by-token output in a Bubbletea TUI
-- **6 built-in tools** — bash, file_read, file_write, file_edit, glob, grep
-- **Multi-provider** — Anthropic, OpenAI, Gemini, Groq, Ollama, OpenRouter, and more via eyrie
-- **Session persistence** — conversations saved to `~/.hawk/sessions/`
-- **Context-aware** — reads HAWK.md, git status, and cwd into the system prompt
-- **Cost tracking** — token usage and estimated cost per session
-- **Graceful cancel** — Ctrl+C cancels the current stream, second Ctrl+C quits
+```bash
+hawk                          # Interactive REPL
+hawk -p "explain this code"   # Single prompt
+hawk -m gpt-4o                # Specify model
+hawk --provider openai        # Force provider
+hawk -r abc123                # Resume session
+hawk --mcp "npx @mcp/server"  # Connect MCP server
+```
+
+## Tools (12)
+
+| Tool | Description |
+|---|---|
+| `bash` | Run shell commands |
+| `file_read` | Read files with line ranges |
+| `file_write` | Create/overwrite files |
+| `file_edit` | String replacement editing |
+| `glob` | File pattern matching |
+| `grep` | Regex search in files |
+| `web_fetch` | Fetch URLs, HTML→text |
+| `web_search` | DuckDuckGo search |
+| `agent` | Spawn sub-agents for parallel tasks |
+| `ask_user` | Ask clarifying questions |
+| `todo` | Task list management |
+| `lsp` | Code diagnostics (go vet, tsc, etc.) |
+
+Plus any tools from connected MCP servers.
 
 ## Slash Commands
 
 | Command | Description |
 |---|---|
-| `/help` | Show available commands |
-| `/clear` | Clear the display |
-| `/cost` | Show token usage and cost |
-| `/model` | Show current provider/model |
-| `/history` | List saved sessions |
-| `/resume <id>` | Resume a saved session |
-| `/quit` | Exit hawk |
+| `/help` | Show commands |
+| `/clear` | Clear display |
+| `/compact` | Compact context |
+| `/cost` | Token usage and cost |
+| `/diff` | Review changes |
+| `/model` | Show model |
+| `/history` | List sessions |
+| `/resume <id>` | Resume session |
+| `/commit` | Auto-commit with AI message |
+| `/doctor` | Run diagnostics |
+| `/init` | Analyze project |
+| `/permissions allow <tool>` | Always allow a tool |
 
 ## Providers
 
-hawk auto-detects your provider from environment variables:
+Auto-detected from environment:
 
 | Provider | Env Variable |
 |---|---|
@@ -63,27 +85,51 @@ hawk auto-detects your provider from environment variables:
 | Gemini | `GEMINI_API_KEY` |
 | Groq | `GROQ_API_KEY` |
 | OpenRouter | `OPENROUTER_API_KEY` |
+| Grok | `XAI_API_KEY` |
 | Ollama | `OLLAMA_BASE_URL` |
 
-Or force a provider: `hawk --provider openai`
+## MCP (Model Context Protocol)
+
+Connect external tool servers:
+
+```bash
+hawk --mcp "npx @modelcontextprotocol/server-filesystem ."
+hawk --mcp "npx @modelcontextprotocol/server-github"
+```
+
+MCP tools appear as `mcp_<server>_<tool>` in the tool registry.
 
 ## HAWK.md
 
-Create a `HAWK.md` file in your project root to give hawk project-specific instructions:
+Create a `HAWK.md` in your project root for project-specific instructions:
 
 ```markdown
-# Project: my-app
-- This is a Go project using chi router
+# My Project
+- Go project using chi router
 - Tests use testify
-- Run tests with: go test ./...
+- Run tests: go test ./...
 ```
+
+## Permission System
+
+hawk asks before running dangerous tools (bash, file_write, file_edit):
+
+```
+⚠ Run: go test ./...  [y/n]
+```
+
+Use `/permissions allow bash` to always allow a tool for the session.
 
 ## Architecture
 
-- **CLI**: [cobra](https://github.com/spf13/cobra)
-- **TUI**: [Bubbletea](https://github.com/charmbracelet/bubbletea) + [lipgloss](https://github.com/charmbracelet/lipgloss)
-- **LLM**: [eyrie](https://github.com/GrayCodeAI/eyrie) — zero-dependency Go LLM client
-- **Tools**: bash, file_read, file_write, file_edit, glob, grep
+| Layer | Technology |
+|---|---|
+| CLI | [cobra](https://github.com/spf13/cobra) |
+| TUI | [Bubbletea](https://github.com/charmbracelet/bubbletea) + [lipgloss](https://github.com/charmbracelet/lipgloss) |
+| LLM | [eyrie](https://github.com/GrayCodeAI/eyrie) |
+| MCP | JSON-RPC over stdio |
+
+Zero CGO. Single static binary. Cross-compiled for linux/darwin/windows amd64/arm64.
 
 ## License
 

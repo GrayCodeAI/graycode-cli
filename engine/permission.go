@@ -53,14 +53,19 @@ func (pm *PermissionMemory) Check(toolName string, summary string) *bool {
 	for _, rule := range pm.allowRules {
 		parts := strings.SplitN(rule, ":", 2)
 		if len(parts) == 2 && parts[0] == toolName {
-			if matched, _ := filepath.Match(parts[1], summary); matched {
+			pattern := parts[1]
+			// Glob match
+			if matched, _ := filepath.Match(pattern, summary); matched {
 				t := true
 				return &t
 			}
-			// Also check prefix match
-			if strings.HasPrefix(summary, parts[1]) {
-				t := true
-				return &t
+			// Prefix match for patterns ending with *
+			if strings.HasSuffix(pattern, "*") {
+				prefix := pattern[:len(pattern)-1]
+				if strings.HasPrefix(summary, prefix) {
+					t := true
+					return &t
+				}
 			}
 		}
 	}

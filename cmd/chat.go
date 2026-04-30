@@ -42,6 +42,10 @@ type toolUseMsg struct{ name, id string }
 type toolResultMsg struct{ name, content string }
 type permissionAskMsg struct{ req engine.PermissionRequest }
 type thinkingMsg string
+type askUserMsg struct {
+	question string
+	response chan string
+}
 
 type displayMsg struct {
 	role    string
@@ -67,13 +71,14 @@ type chatModel struct {
 	partial   strings.Builder
 	waiting   bool
 	permReq   *engine.PermissionRequest // pending permission prompt
+	askReq    *askUserMsg              // pending ask_user prompt
 	width     int
 	height    int
 	quitting  bool
 }
 
 func defaultRegistry() *tool.Registry {
-	return tool.NewRegistry(
+	tools := []tool.Tool{
 		tool.BashTool{},
 		tool.FileReadTool{},
 		tool.FileWriteTool{},
@@ -86,7 +91,24 @@ func defaultRegistry() *tool.Registry {
 		tool.AskUserQuestionTool{},
 		tool.TodoWriteTool{},
 		tool.LSPTool{},
-	)
+	}
+
+	// Load MCP server tools
+	for _, cmd := range mcpServers {
+		parts := strings.Fields(cmd)
+		if len(parts) == 0 {
+			continue
+		}
+		name := parts[0]
+		mcpTools, err := tool.LoadMCPTools(context.Background(), name, parts[0], parts[1:]...)
+		if err != nil {
+			// MCP server failed to connect — skip silently, will show in /doctor
+			continue
+		}
+		tools = append(tools, mcpTools...)
+	}
+
+	return tool.NewRegistry(tools...)
 }
 
 func genID() string {
@@ -121,6 +143,14 @@ func newChatModel(ref *progRef) chatModel {
 
 	// Wire agent sub-spawning
 	sess.WireAgentTool()
+
+	// Wire ask_user tool
+	tool.AskUserFn = func(question string) (string, error) {
+		resp := make(chan string, 1)
+		ref.Send(askUserMsg{question: question, response: resp})
+		answer := <-resp
+		return answer, nil
+	}
 
 	// Resume a saved session
 	if resumeID != "" {
@@ -162,6 +192,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.permReq = nil
 			}
 			return m, nil
+		}
+		// AskUser prompt active — Enter submits answer
+		if m.askReq != nil {
+			if msg.Type == tea.KeyEnter {
+				answer := strings.TrimSpace(m.input.Value())
+				m.input.Reset()
+				m.messages = append(m.messages, displayMsg{role: "user", content: answer})
+				m.askReq.response <- answer
+				m.askReq = nil
+				return m, nil
+			}
+			// Let textarea handle other keys
+			var cmd tea.Cmd
+			m.input, cmd = m.input.Update(msg)
+			return m, cmd
 		}
 		if m.waiting {
 			if msg.Type == tea.KeyCtrlC {
@@ -233,6 +278,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case permissionAskMsg:
 		m.permReq = &msg.req
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
+		return m, nil
+
+	case askUserMsg:
+		m.askReq = &msg
+		m.messages = append(m.messages, displayMsg{role: "question", content: "❓ " + msg.question})
+		m.input.Focus()
+		m.input.SetValue("")
 		return m, nil
 
 	case streamDoneMsg:
@@ -466,6 +518,8 @@ func (m chatModel) View() string {
 			b.WriteString(dimStyle.Render(msg.content))
 		case "permission":
 			b.WriteString(toolStyle.Render("⚠ " + msg.content + "  [y/n]"))
+		case "question":
+			b.WriteString(toolStyle.Render(msg.content))
 		case "error":
 			b.WriteString(errorStyle.Render("error: "))
 			b.WriteString(msg.content)
@@ -484,7 +538,7 @@ func (m chatModel) View() string {
 		}
 	}
 
-	if !m.waiting {
+	if !m.waiting || m.askReq != nil {
 		b.WriteString(m.input.View())
 		b.WriteString("\n")
 	}
