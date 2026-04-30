@@ -39,7 +39,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		detected = client.DetectProvider()
 	}
 	if model == "" {
-		model = client.ResolveDefaultModel(detected)
+		model = defaultModelForProvider(detected)
 	}
 	s := &Session{
 		client:      client.NewEyrieClient(&client.EyrieConfig{Provider: detected}),
@@ -54,6 +54,23 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 }
 
 func (s *Session) Model() string    { return s.model }
+
+// defaultModelForProvider returns a sensible default model for each provider.
+func defaultModelForProvider(provider string) string {
+	defaults := map[string]string{
+		"anthropic":  "claude-sonnet-4-20250514",
+		"openai":     "gpt-4o",
+		"gemini":     "gemini-2.5-flash",
+		"openrouter": "anthropic/claude-sonnet-4-20250514",
+		"groq":       "llama-3.3-70b-versatile",
+		"grok":       "grok-3",
+		"ollama":     "llama3.2",
+	}
+	if m, ok := defaults[provider]; ok {
+		return m
+	}
+	return "claude-sonnet-4-20250514"
+}
 func (s *Session) Provider() string { return s.provider }
 
 func (s *Session) AddUser(content string) {

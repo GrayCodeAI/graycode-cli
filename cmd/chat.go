@@ -154,6 +154,15 @@ func newChatModel(ref *progRef) chatModel {
 
 	m := chatModel{input: ta, spinner: sp, session: sess, ref: ref, sessionID: sid}
 
+	// Welcome message inside TUI
+	m.messages = append(m.messages, displayMsg{role: "welcome", content: fmt.Sprintf(
+		"🦅 Welcome to hawk v%s\n\n"+
+			"Provider: %s  Model: %s\n"+
+			"Session: %s\n\n"+
+			"Type a message to chat. Type /help for commands.\n"+
+			"Press Ctrl+C to quit.",
+		version, sess.Provider(), sess.Model(), sid)})
+
 	// Wire permission system
 	sess.PermissionFn = func(req engine.PermissionRequest) {
 		ref.Send(permissionAskMsg{req: req})
@@ -590,6 +599,8 @@ func (m chatModel) View() string {
 			b.WriteString(toolDimStyle.Render(msg.content))
 		case "thinking":
 			b.WriteString(dimStyle.Render("💭 " + msg.content))
+		case "welcome":
+			b.WriteString(headerStyle.Render(msg.content))
 		case "system":
 			b.WriteString(dimStyle.Render(msg.content))
 		case "permission":
