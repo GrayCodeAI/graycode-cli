@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches: [main]
@@ -6,13 +7,104 @@ on:
     branches: [main]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.22', '1.23']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Check coverage
+        run: |
+          go tool cover -func=coverage.out | tail -1
+          go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.go-version }}
+          path: coverage.html
+
   build:
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -ldflags "-s -w -X main.Version=ci-test" -o hawk-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: hawk-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: hawk-${{ matrix.goos }}-${{ matrix.goarch }}*
+
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
-      - run: go build ./...
-      - run: go test ./... -race -count=1
-      - run: go vet ./...
+          go-version: '1.23'
+
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -d . | wc -l)" -gt 0 ]; then
+            echo "Code is not formatted. Run 'gofmt -w .'"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Check module tidiness
+        run: |
+          go mod tidy
+          if [ -n "$(git diff --name-only go.mod go.sum)" ]; then
+            echo "go.mod or go.sum is not tidy. Run 'go mod tidy'"
+            exit 1
+          fi
