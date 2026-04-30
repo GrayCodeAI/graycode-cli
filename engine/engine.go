@@ -12,6 +12,7 @@ import (
 	"github.com/GrayCodeAI/hawk/hooks"
 	hawkmodel "github.com/GrayCodeAI/hawk/model"
 	"github.com/GrayCodeAI/hawk/permissions"
+	"github.com/GrayCodeAI/hawk/retry"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
@@ -167,20 +168,29 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			opts.Tools = s.registry.EyrieTools()
 		}
 
-		result, err := s.client.StreamChat(ctx, s.messages, opts)
-		if err != nil {
-			// Handle prompt too long
-			if strings.Contains(err.Error(), "too long") || strings.Contains(err.Error(), "too many tokens") {
-				s.compact()
-				result, err = s.client.StreamChat(ctx, s.messages, opts)
-				if err != nil {
-					ch <- StreamEvent{Type: "error", Content: err.Error()}
-					return
+		var result *client.StreamResult
+		var err error
+
+		// Use retry for transient errors
+		retryCfg := retry.DefaultConfig()
+		retryCfg.MaxRetries = 2
+		retryCfg.BaseDelay = 500 * time.Millisecond
+
+		err = retry.Do(ctx, retryCfg, func() error {
+			result, err = s.client.StreamChat(ctx, s.messages, opts)
+			if err != nil {
+				// Handle prompt too long with compaction
+				if strings.Contains(err.Error(), "too long") || strings.Contains(err.Error(), "too many tokens") {
+					s.compact()
+					result, err = s.client.StreamChat(ctx, s.messages, opts)
 				}
-			} else {
-				ch <- StreamEvent{Type: "error", Content: err.Error()}
-				return
 			}
+			return err
+		})
+
+		if err != nil {
+			ch <- StreamEvent{Type: "error", Content: err.Error()}
+			return
 		}
 
 		var textContent string
