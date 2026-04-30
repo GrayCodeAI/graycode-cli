@@ -11,6 +11,18 @@ import (
 // LoadHawkMD reads HAWK.md from the current directory or parents.
 func LoadHawkMD() string {
 	dir, _ := os.Getwd()
+	return LoadHawkMDFrom(dir)
+}
+
+// LoadHawkMDFrom reads HAWK.md from start or its parents.
+func LoadHawkMDFrom(start string) string {
+	dir := start
+	if dir == "" {
+		dir, _ = os.Getwd()
+	}
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
 	for {
 		for _, name := range []string{"HAWK.md", ".hawk/HAWK.md"} {
 			data, err := os.ReadFile(filepath.Join(dir, name))
@@ -59,14 +71,38 @@ func gitCmd(args ...string) (string, error) {
 
 // BuildContext assembles the full context string for the system prompt.
 func BuildContext() string {
+	return BuildContextWithDirs(nil)
+}
+
+// BuildContextWithDirs assembles context including additional user-specified directories.
+func BuildContextWithDirs(addDirs []string) string {
 	var parts []string
 	cwd, _ := os.Getwd()
+	if abs, err := filepath.Abs(cwd); err == nil {
+		cwd = abs
+	}
 	parts = append(parts, "Working directory: "+cwd)
 	if git := GitContext(); git != "" {
 		parts = append(parts, git)
 	}
 	if md := LoadHawkMD(); md != "" {
 		parts = append(parts, "Project instructions (HAWK.md):\n"+md)
+	}
+	for _, dir := range addDirs {
+		dir = strings.TrimSpace(dir)
+		if dir == "" {
+			continue
+		}
+		if abs, err := filepath.Abs(dir); err == nil {
+			dir = abs
+		}
+		if dir == cwd {
+			continue
+		}
+		parts = append(parts, "Additional directory: "+dir)
+		if md := LoadHawkMDFrom(dir); md != "" {
+			parts = append(parts, "Additional directory instructions ("+dir+"):\n"+md)
+		}
 	}
 	return strings.Join(parts, "\n")
 }

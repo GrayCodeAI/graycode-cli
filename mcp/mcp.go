@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -26,6 +27,14 @@ type Tool struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	InputSchema map[string]interface{} `json:"inputSchema"`
+}
+
+// Resource is a resource exposed by an MCP server.
+type Resource struct {
+	URI         string `json:"uri"`
+	Name        string `json:"name"`
+	MimeType    string `json:"mimeType,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type jsonrpcRequest struct {
@@ -92,6 +101,52 @@ func (s *Server) ListTools() ([]Tool, error) {
 		return nil, err
 	}
 	return resp.Tools, nil
+}
+
+// ListResources returns resources available on this MCP server.
+func (s *Server) ListResources() ([]Resource, error) {
+	result, err := s.call("resources/list", nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		Resources []Resource `json:"resources"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Resources, nil
+}
+
+// ReadResource reads a resource from this MCP server.
+func (s *Server) ReadResource(uri string) (string, error) {
+	result, err := s.call("resources/read", map[string]interface{}{"uri": uri})
+	if err != nil {
+		return "", err
+	}
+	var resp struct {
+		Contents []struct {
+			URI      string `json:"uri"`
+			MimeType string `json:"mimeType,omitempty"`
+			Text     string `json:"text,omitempty"`
+			Blob     string `json:"blob,omitempty"`
+		} `json:"contents"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return string(result), nil
+	}
+	var out string
+	for _, c := range resp.Contents {
+		if c.Text != "" {
+			out += c.Text
+		} else if c.Blob != "" {
+			out += fmt.Sprintf("[blob resource %s, mime=%s, base64 bytes=%d]", c.URI, c.MimeType, len(c.Blob))
+		}
+		if out != "" && !strings.HasSuffix(out, "\n") {
+			out += "\n"
+		}
+	}
+	return strings.TrimRight(out, "\n"), nil
 }
 
 // CallTool invokes a tool on the MCP server.

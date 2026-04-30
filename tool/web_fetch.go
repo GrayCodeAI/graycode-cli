@@ -13,8 +13,11 @@ import (
 
 type WebFetchTool struct{}
 
-func (WebFetchTool) Name() string        { return "web_fetch" }
-func (WebFetchTool) Description() string { return "Fetch a URL and return its content as text. HTML is converted to plain text." }
+func (WebFetchTool) Name() string      { return "WebFetch" }
+func (WebFetchTool) Aliases() []string { return []string{"web_fetch"} }
+func (WebFetchTool) Description() string {
+	return "Fetch a URL and return its content as text. HTML is converted to plain text."
+}
 func (WebFetchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -21,8 +21,14 @@ const (
 func Welcome(version string) {
 	fmt.Println()
 	fmt.Println(teal + bold + "  🦅 hawk" + reset + dim + " v" + version + reset)
-	fmt.Println(dim + "  AI coding agent — reads, writes, and runs code in your terminal" + reset)
+	fmt.Println(dim + "  AI coding agent — reads, writes, runs tools, and manages coding sessions" + reset)
 	fmt.Println(dim + "  Powered by eyrie • github.com/GrayCodeAI/hawk" + reset)
+	fmt.Println()
+	fmt.Println("  " + bold + "Start" + reset)
+	fmt.Println("  • Type a request in the REPL, or run " + teal + "hawk -p \"explain this repo\"" + reset)
+	fmt.Println("  • Use " + teal + "/help" + reset + " for commands, " + teal + "/status" + reset + " for model/session, " + teal + "/doctor" + reset + " for checks")
+	fmt.Println("  • Permission modes: default, acceptEdits, bypassPermissions, dontAsk, plan")
+	fmt.Println("  • Tool rules use archive syntax: " + teal + "Bash(git:*) Edit Read" + reset)
 	fmt.Println()
 }
 

@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/config"
 )
 
 // NotebookEditTool edits Jupyter notebook cells.
 type NotebookEditTool struct{}
 
-func (NotebookEditTool) Name() string { return "notebook_edit" }
+func (NotebookEditTool) Name() string      { return "NotebookEdit" }
+func (NotebookEditTool) Aliases() []string { return []string{"notebook_edit"} }
 func (NotebookEditTool) Description() string {
 	return "Edit a Jupyter notebook cell. Specify the notebook path, cell number, and new source."
 }
@@ -69,7 +72,8 @@ func (NotebookEditTool) Execute(_ context.Context, input json.RawMessage) (strin
 // ConfigTool reads/writes hawk settings.
 type ConfigTool struct{}
 
-func (ConfigTool) Name() string { return "config" }
+func (ConfigTool) Name() string      { return "Config" }
+func (ConfigTool) Aliases() []string { return []string{"config"} }
 func (ConfigTool) Description() string {
 	return "Read or modify hawk configuration settings."
 }
@@ -96,9 +100,16 @@ func (ConfigTool) Execute(_ context.Context, input json.RawMessage) (string, err
 	}
 	switch p.Action {
 	case "get":
-		return fmt.Sprintf("Config key %q: (use /config to view settings)", p.Key), nil
+		value, ok := hawkconfig.SettingValue(hawkconfig.LoadSettings(), p.Key)
+		if !ok {
+			return "", fmt.Errorf("unsupported setting key: %s", p.Key)
+		}
+		return fmt.Sprintf("%s=%s", p.Key, value), nil
 	case "set":
-		return fmt.Sprintf("Set %q = %q (restart to apply)", p.Key, p.Value), nil
+		if err := hawkconfig.SetGlobalSetting(p.Key, p.Value); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Set %q in global settings (restart to apply)", p.Key), nil
 	default:
 		return "", fmt.Errorf("unknown action: %s", p.Action)
 	}
@@ -107,7 +118,8 @@ func (ConfigTool) Execute(_ context.Context, input json.RawMessage) (string, err
 // BriefTool provides a concise summary of the current state.
 type BriefTool struct{}
 
-func (BriefTool) Name() string { return "brief" }
+func (BriefTool) Name() string      { return "SendUserMessage" }
+func (BriefTool) Aliases() []string { return []string{"brief", "Brief"} }
 func (BriefTool) Description() string {
 	return "Generate a brief status update about what you've done so far. Use at the end of a task to summarize."
 }

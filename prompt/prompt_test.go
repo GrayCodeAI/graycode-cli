@@ -7,7 +7,7 @@ import (
 
 func TestSystemPromptContainsEssentials(t *testing.T) {
 	s := System()
-	for _, want := range []string{"hawk", "bash", "file_read", "file_write", "file_edit", "glob", "grep", "Safety"} {
+	for _, want := range []string{"hawk", "Bash", "Read", "Write", "Edit", "Glob", "Grep", "Safety"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("system prompt missing %q", want)
 		}

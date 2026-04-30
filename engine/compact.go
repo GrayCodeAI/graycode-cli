@@ -38,7 +38,7 @@ func (s *Session) generateSummary() string {
 	// Build a compact version of the conversation for summarization
 	var summaryMsgs []client.EyrieMessage
 	summaryMsgs = append(summaryMsgs, client.EyrieMessage{
-		Role: "user",
+		Role:    "user",
 		Content: "Summarize this conversation concisely. Include: what the user asked for, what tools were used, what files were modified, what was accomplished, and any unfinished work. Be brief — 3-5 sentences max.\n\nConversation:\n",
 	})
 

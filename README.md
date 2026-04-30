@@ -31,48 +31,106 @@ hawk
 
 ```bash
 hawk                          # Interactive REPL
-hawk -p "explain this code"   # Single prompt
+hawk -p "explain this code"   # Print response and exit
+hawk --prompt "explain this"  # Legacy single-prompt alias
 hawk -m gpt-4o                # Specify model
 hawk --provider openai        # Force provider
 hawk -r abc123                # Resume session
+hawk -c                       # Continue latest session in this directory
+hawk --fork-session -r abc123 # Resume as a new session
 hawk --mcp "npx @mcp/server"  # Connect MCP server
+hawk -p "fix tests" --allowed-tools "Bash(go test:*) Edit Read"
+hawk -p "plan only" --permission-mode plan --tools "Read,Grep,Glob"
+hawk --settings '{"model":"gpt-4o"}' --add-dir ../shared
+hawk doctor                   # Run local diagnostics
+hawk config                   # Show effective settings
+hawk config get model         # Read a config value
+hawk config set model gpt-4o  # Update global config
+hawk mcp                      # Show MCP server configuration
+hawk sessions                 # List saved sessions
+hawk tools                    # List built-in tools
 ```
 
-## Tools (12)
+## Tools (24)
 
 | Tool | Description |
 |---|---|
-| `bash` | Run shell commands |
-| `file_read` | Read files with line ranges |
-| `file_write` | Create/overwrite files |
-| `file_edit` | String replacement editing |
-| `glob` | File pattern matching |
-| `grep` | Regex search in files |
-| `web_fetch` | Fetch URLs, HTML→text |
-| `web_search` | DuckDuckGo search |
-| `agent` | Spawn sub-agents for parallel tasks |
-| `ask_user` | Ask clarifying questions |
-| `todo` | Task list management |
-| `lsp` | Code diagnostics (go vet, tsc, etc.) |
+| `Bash` | Run shell commands |
+| `Read` | Read files with line ranges |
+| `Write` | Create/overwrite files |
+| `Edit` | String replacement editing |
+| `LS` | Directory listing |
+| `Glob` | File pattern matching |
+| `Grep` | Regex search in files |
+| `WebFetch` | Fetch URLs, HTML→text |
+| `WebSearch` | DuckDuckGo search |
+| `ToolSearch` | Search available tools |
+| `Skill` | Load local skill instructions |
+| `Agent` | Spawn sub-agents for parallel tasks |
+| `AskUserQuestion` | Ask clarifying questions |
+| `TodoWrite` | Task list management, including archive-style `todos` arrays |
+| `TaskOutput` | Read background Bash task output |
+| `TaskStop` | Stop a background Bash task |
+| `LSP` | Code diagnostics (go vet, tsc, etc.) |
+| `EnterPlanMode` | Request plan mode |
+| `ExitPlanMode` | Leave plan mode |
+| `NotebookEdit` | Edit Jupyter notebook cells |
+| `ListMcpResourcesTool` | List MCP resources |
+| `ReadMcpResourceTool` | Read MCP resources |
+| `Config` | Read/modify Hawk config |
+| `SendUserMessage` | Send a brief status update |
 
-Plus any tools from connected MCP servers.
+Lowercase Go-port names like `bash`, `file_read`, and `file_edit` remain accepted as aliases. Plus any tools from connected MCP servers.
 
 ## Slash Commands
 
 | Command | Description |
 |---|---|
 | `/help` | Show commands |
+| `/add-dir <path>` | Add a directory to context |
+| `/branch` | Show git branch/status |
+| `/bughunter` | Ask hawk to hunt for bugs |
 | `/clear` | Clear display |
 | `/compact` | Compact context |
 | `/cost` | Token usage and cost |
 | `/diff` | Review changes |
+| `/env` | Show provider environment status |
+| `/files` | Show modified files |
 | `/model` | Show model |
+| `/mcp` | Show MCP status |
+| `/memory` | Show loaded project instructions |
 | `/history` | List sessions |
 | `/resume <id>` | Resume session |
 | `/commit` | Auto-commit with AI message |
 | `/doctor` | Run diagnostics |
 | `/init` | Analyze project |
 | `/permissions allow <tool>` | Always allow a tool |
+| `/permissions deny <tool>` | Always deny a tool |
+| `/permissions mode <mode>` | Change permission mode |
+| `/pr-comments` | Ask hawk to handle PR comments |
+| `/release-notes` | Draft release notes |
+| `/review` | Ask hawk to review changes |
+| `/security-review` | Ask hawk to review security risks |
+| `/skills` | List local skills |
+| `/summary` | Summarize the current session |
+| `/tools` | List enabled tools |
+| `/version` | Show hawk version |
+| `/welcome` | Show startup summary |
+
+## Session Flags
+
+Archive-compatible session controls are available:
+
+```bash
+hawk --session-id my-session
+hawk --continue
+hawk --resume my-session --fork-session
+hawk -p --input-format stream-json --output-format stream-json < events.jsonl
+```
+
+`--settings` accepts either a JSON object or a path to a JSON file. `--add-dir` includes extra directory context, reads `HAWK.md` from those directories when present, and allows file tools to access those roots.
+
+Settings are loaded from `~/.hawk/settings.json` and `.hawk/settings.json`, with project settings overriding global settings. Both snake_case Go keys and archive-style aliases are accepted, including `apiKey`, `autoAllow`, `maxBudgetUSD`, `customHeaders`, `mcpServers`, `allowed_tools`, and `disallowed_tools`.
 
 ## Providers
 
@@ -97,7 +155,7 @@ hawk --mcp "npx @modelcontextprotocol/server-filesystem ."
 hawk --mcp "npx @modelcontextprotocol/server-github"
 ```
 
-MCP tools appear as `mcp_<server>_<tool>` in the tool registry.
+MCP tools appear as `mcp__<server>__<tool>` in the tool registry. The older `mcp_<server>_<tool>` form remains accepted as an alias.
 
 ## HAWK.md
 
@@ -112,13 +170,24 @@ Create a `HAWK.md` in your project root for project-specific instructions:
 
 ## Permission System
 
-hawk asks before running dangerous tools (bash, file_write, file_edit):
+hawk asks before running dangerous tools (`Bash`, `Write`, `Edit`, `NotebookEdit`):
 
 ```
 ⚠ Run: go test ./...  [y/n]
 ```
 
-Use `/permissions allow bash` to always allow a tool for the session.
+Use `/permissions allow Bash` to always allow a tool for the session. Lowercase aliases such as `/permissions allow bash` are also accepted.
+
+Non-interactive mode accepts archive-style permission controls:
+
+```bash
+hawk -p "review this repo" --tools "Read,Grep,Glob"
+hawk -p "fix lint" --allowed-tools "Bash(go test:*) Edit Read"
+hawk -p "do not modify files" --permission-mode plan
+hawk -p "run without prompts" --permission-mode bypassPermissions
+```
+
+Supported permission modes are `default`, `acceptEdits`, `bypassPermissions`, `dontAsk`, and `plan`. Permission rules support archive syntax such as `Bash(git:*)`, `Write(*.env)`, and bare tool names.
 
 ## Architecture
 

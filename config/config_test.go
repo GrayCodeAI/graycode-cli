@@ -40,3 +40,134 @@ func TestBuildContext(t *testing.T) {
 		t.Fatal("expected Working directory in context")
 	}
 }
+
+func TestBuildContextWithDirs(t *testing.T) {
+	root := t.TempDir()
+	extra := t.TempDir()
+	os.WriteFile(filepath.Join(extra, "HAWK.md"), []byte("extra instructions"), 0o644)
+
+	orig, _ := os.Getwd()
+	os.Chdir(root)
+	defer os.Chdir(orig)
+
+	ctx := BuildContextWithDirs([]string{extra})
+	if !strings.Contains(ctx, "Additional directory:") {
+		t.Fatal("expected additional directory in context")
+	}
+	if !strings.Contains(ctx, "extra instructions") {
+		t.Fatal("expected additional directory HAWK.md instructions")
+	}
+}
+
+func TestLoadSettingsWithJSONOverride(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	settings, err := LoadSettingsWithOverride(`{"model":"test-model","allowedTools":["Read"],"disallowedTools":["Write"]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings.Model != "test-model" {
+		t.Fatalf("got model %q", settings.Model)
+	}
+	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Read" {
+		t.Fatalf("unexpected allowedTools: %v", settings.AllowedTools)
+	}
+	if len(settings.DisallowedTools) != 1 || settings.DisallowedTools[0] != "Write" {
+		t.Fatalf("unexpected disallowedTools: %v", settings.DisallowedTools)
+	}
+}
+
+func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	settings, err := LoadSettingsWithOverride(`{
+		"apiKey":"secret",
+		"autoAllow":["Read"],
+		"maxBudgetUSD":1.25,
+		"customHeaders":{"x-test":"yes"},
+		"mcpServers":[{"name":"demo","command":"demo-mcp","args":["--stdio"]}],
+		"allowed_tools":["Bash"],
+		"disallowed_tools":["Write"]
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings.APIKey != "secret" || settings.MaxBudgetUSD != 1.25 {
+		t.Fatalf("unexpected settings: %#v", settings)
+	}
+	if len(settings.AutoAllow) != 1 || settings.AutoAllow[0] != "Read" {
+		t.Fatalf("unexpected autoAllow: %v", settings.AutoAllow)
+	}
+	if settings.CustomHeaders["x-test"] != "yes" {
+		t.Fatalf("unexpected customHeaders: %v", settings.CustomHeaders)
+	}
+	if len(settings.MCPServers) != 1 || settings.MCPServers[0].Name != "demo" {
+		t.Fatalf("unexpected mcpServers: %v", settings.MCPServers)
+	}
+	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Bash" {
+		t.Fatalf("unexpected allowedTools: %v", settings.AllowedTools)
+	}
+	if len(settings.DisallowedTools) != 1 || settings.DisallowedTools[0] != "Write" {
+		t.Fatalf("unexpected disallowedTools: %v", settings.DisallowedTools)
+	}
+}
+
+func TestLoadSettingsProjectMergeIncludesArchiveFields(t *testing.T) {
+	home := t.TempDir()
+	project := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".hawk"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".hawk", "settings.json"), []byte(`{"model":"global","allowedTools":["Read"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(project, ".hawk"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".hawk", "settings.json"), []byte(`{"model":"project","disallowedTools":["Write"],"mcpServers":[{"name":"demo","command":"demo-mcp"}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig, _ := os.Getwd()
+	if err := os.Chdir(project); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(orig)
+
+	settings := LoadSettings()
+	if settings.Model != "project" {
+		t.Fatalf("expected project model override, got %q", settings.Model)
+	}
+	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Read" {
+		t.Fatalf("expected global allowedTools, got %v", settings.AllowedTools)
+	}
+	if len(settings.DisallowedTools) != 1 || settings.DisallowedTools[0] != "Write" {
+		t.Fatalf("expected project disallowedTools, got %v", settings.DisallowedTools)
+	}
+	if len(settings.MCPServers) != 1 || settings.MCPServers[0].Name != "demo" {
+		t.Fatalf("expected project mcpServers, got %v", settings.MCPServers)
+	}
+}
+
+func TestSetGlobalSettingAndSettingValue(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := SetGlobalSetting("model", "test-model"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetGlobalSetting("allowedTools", "Read, Write"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetGlobalSetting("maxBudgetUSD", "2.5"); err != nil {
+		t.Fatal(err)
+	}
+
+	settings := LoadGlobalSettings()
+	if settings.Model != "test-model" {
+		t.Fatalf("unexpected model: %q", settings.Model)
+	}
+	if got, ok := SettingValue(settings, "allowed_tools"); !ok || got != "Read, Write" {
+		t.Fatalf("unexpected allowedTools value: %q ok=%v", got, ok)
+	}
+	if got, ok := SettingValue(settings, "max_budget_usd"); !ok || got != "2.5" {
+		t.Fatalf("unexpected max budget value: %q ok=%v", got, ok)
+	}
+}

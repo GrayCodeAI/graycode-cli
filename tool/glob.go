@@ -11,7 +11,8 @@ import (
 
 type GlobTool struct{}
 
-func (GlobTool) Name() string        { return "glob" }
+func (GlobTool) Name() string        { return "Glob" }
+func (GlobTool) Aliases() []string   { return []string{"glob"} }
 func (GlobTool) Description() string { return "Find files matching a glob pattern." }
 func (GlobTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
@@ -24,7 +25,7 @@ func (GlobTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (GlobTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (GlobTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Pattern string `json:"pattern"`
 		Path    string `json:"path"`
@@ -35,6 +36,9 @@ func (GlobTool) Execute(_ context.Context, input json.RawMessage) (string, error
 	root := p.Path
 	if root == "" {
 		root = "."
+	}
+	if err := validatePathAllowed(ctx, root); err != nil {
+		return "", err
 	}
 	var matches []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
