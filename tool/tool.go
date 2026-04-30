@@ -16,6 +16,28 @@ type Tool interface {
 	Execute(ctx context.Context, input json.RawMessage) (string, error)
 }
 
+// ToolContext carries session-level functions for tools that need them.
+type ToolContext struct {
+	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
+	AskUserFn    func(question string) (string, error)
+}
+
+// ctxKey is the context key for ToolContext.
+type ctxKey struct{}
+
+// WithToolContext attaches a ToolContext to a context.
+func WithToolContext(ctx context.Context, tc *ToolContext) context.Context {
+	return context.WithValue(ctx, ctxKey{}, tc)
+}
+
+// GetToolContext retrieves the ToolContext from a context.
+func GetToolContext(ctx context.Context) *ToolContext {
+	if tc, ok := ctx.Value(ctxKey{}).(*ToolContext); ok {
+		return tc
+	}
+	return nil
+}
+
 // Registry holds all registered tools.
 type Registry struct {
 	tools map[string]Tool

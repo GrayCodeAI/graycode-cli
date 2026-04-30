@@ -3,14 +3,14 @@ package engine
 import (
 	"context"
 	"strings"
-
-	"github.com/GrayCodeAI/hawk/tool"
 )
 
-// WireAgentTool sets up the AgentSpawnFn to create sub-agent sessions.
+// WireAgentTool sets up sub-agent spawning that inherits permissions.
 func (s *Session) WireAgentTool() {
-	tool.AgentSpawnFn = func(ctx context.Context, prompt string) (string, error) {
+	s.AgentSpawnFn = func(ctx context.Context, prompt string) (string, error) {
 		sub := NewSession(s.provider, s.model, s.system, s.registry)
+		sub.PermissionFn = s.PermissionFn // inherit parent's permission handler
+		sub.Permissions = s.Permissions   // share permission memory
 		sub.AddUser(prompt)
 		ch, err := sub.Stream(ctx)
 		if err != nil {

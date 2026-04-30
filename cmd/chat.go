@@ -145,7 +145,7 @@ func newChatModel(ref *progRef) chatModel {
 	sess.WireAgentTool()
 
 	// Wire ask_user tool
-	tool.AskUserFn = func(question string) (string, error) {
+	sess.AskUserFn = func(question string) (string, error) {
 		resp := make(chan string, 1)
 		ref.Send(askUserMsg{question: question, response: resp})
 		answer := <-resp
@@ -158,8 +158,17 @@ func newChatModel(ref *progRef) chatModel {
 			m.sessionID = saved.ID
 			var msgs []client.EyrieMessage
 			for _, sm := range saved.Messages {
-				msgs = append(msgs, client.EyrieMessage{Role: sm.Role, Content: sm.Content})
-				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
+				for _, tc := range sm.ToolUse {
+					em.ToolUse = append(em.ToolUse, client.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+				}
+				if sm.ToolResult != nil {
+					em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
+				}
+				msgs = append(msgs, em)
+				if sm.Role == "user" || sm.Role == "assistant" {
+					m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+				}
 			}
 			sess.LoadMessages(msgs)
 		} else {
@@ -399,8 +408,17 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = nil
 		var msgs []client.EyrieMessage
 		for _, sm := range saved.Messages {
-			msgs = append(msgs, client.EyrieMessage{Role: sm.Role, Content: sm.Content})
-			m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
+			for _, tc := range sm.ToolUse {
+				em.ToolUse = append(em.ToolUse, client.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+			}
+			if sm.ToolResult != nil {
+				em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
+			}
+			msgs = append(msgs, em)
+			if sm.Role == "user" || sm.Role == "assistant" {
+				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+			}
 		}
 		m.session.LoadMessages(msgs)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resumed session %s", saved.ID)})
@@ -441,14 +459,20 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 }
 
 func (m *chatModel) saveSession() {
-	var msgs []session.Message
-	for _, dm := range m.messages {
-		if dm.role == "user" || dm.role == "assistant" {
-			msgs = append(msgs, session.Message{Role: dm.role, Content: dm.content})
-		}
-	}
-	if len(msgs) == 0 {
+	raw := m.session.RawMessages()
+	if len(raw) == 0 {
 		return
+	}
+	var msgs []session.Message
+	for _, rm := range raw {
+		sm := session.Message{Role: rm.Role, Content: rm.Content}
+		for _, tc := range rm.ToolUse {
+			sm.ToolUse = append(sm.ToolUse, session.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+		}
+		if rm.ToolResult != nil {
+			sm.ToolResult = &session.ToolResult{ToolUseID: rm.ToolResult.ToolUseID, Content: rm.ToolResult.Content, IsError: rm.ToolResult.IsError}
+		}
+		msgs = append(msgs, sm)
 	}
 	_ = session.Save(&session.Session{
 		ID: m.sessionID, Model: m.session.Model(), Provider: m.session.Provider(),
@@ -561,8 +585,10 @@ func runChat() error {
 
 	if promptFlag != "" {
 		sess := m.session
+		ctx, cancel := context.WithCancel(context.Background())
+		_ = cancel // will be cancelled when program exits
 		go func() {
-			ch, err := sess.Stream(context.Background())
+			ch, err := sess.Stream(ctx)
 			if err != nil {
 				p.Send(streamErrMsg{err: err})
 				return

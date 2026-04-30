@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hawk/eyrie/client"
 
@@ -26,7 +27,9 @@ type Session struct {
 	system       string
 	Cost         Cost
 	Permissions  *PermissionMemory
-	PermissionFn func(PermissionRequest) // set by TUI to handle permission prompts
+	PermissionFn func(PermissionRequest)
+	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
+	AskUserFn    func(question string) (string, error)
 }
 
 // NewSession creates a new conversation session.
@@ -66,6 +69,9 @@ func (s *Session) LoadMessages(msgs []client.EyrieMessage) {
 }
 
 func (s *Session) MessageCount() int { return len(s.messages) }
+
+// RawMessages returns the conversation messages for persistence.
+func (s *Session) RawMessages() []client.EyrieMessage { return s.messages }
 
 // StreamEvent is sent from the engine to the TUI.
 type StreamEvent struct {
@@ -190,7 +196,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
 			// Check permission for dangerous tools
-			if toolNeedsPermission(tc.Name) && s.PermissionFn != nil {
+			if toolNeedsPermission(tc.Name, tc.Arguments) && s.PermissionFn != nil {
 				summary := toolSummary(tc.Name, tc.Arguments)
 				// Check memory first
 				if decision := s.Permissions.Check(tc.Name, summary); decision != nil {
@@ -201,7 +207,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					}
 					// allowed by rule, proceed
 				} else {
-					// Ask user
+					// Ask user with timeout
 					resp := make(chan bool, 1)
 					s.PermissionFn(PermissionRequest{
 						ToolName: tc.Name,
@@ -209,16 +215,31 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						Summary:  summary,
 						Response: resp,
 					})
-					if !<-resp {
-						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
-						results = append(results, toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true})
+					select {
+					case allowed := <-resp:
+						if !allowed {
+							ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
+							results = append(results, toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true})
+							continue
+						}
+					case <-ctx.Done():
+						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission prompt cancelled."}
+						results = append(results, toolExecResult{tc: tc, output: "Permission prompt cancelled.", isErr: true})
+						continue
+					case <-time.After(5 * time.Minute):
+						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission prompt timed out."}
+						results = append(results, toolExecResult{tc: tc, output: "Permission prompt timed out.", isErr: true})
 						continue
 					}
 				}
 			}
 
 			inputJSON, _ := json.Marshal(tc.Arguments)
-			output, execErr := s.registry.Execute(ctx, tc.Name, inputJSON)
+			toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
+				AgentSpawnFn: s.AgentSpawnFn,
+				AskUserFn:    s.AskUserFn,
+			})
+			output, execErr := s.registry.Execute(toolCtx, tc.Name, inputJSON)
 			isErr := execErr != nil
 			if isErr {
 				output = fmt.Sprintf("Error: %s", execErr.Error())
@@ -256,18 +277,58 @@ func (s *Session) Compact() {
 	s.compact()
 }
 
-// compact removes older messages, keeping the first and last N.
+// compact removes older messages while preserving tool_use/tool_result pairing.
 func (s *Session) compact() {
 	if len(s.messages) <= 20 {
 		return
 	}
-	// Keep first 4 messages (initial context) and last 16
-	keep := make([]client.EyrieMessage, 0, 21)
-	keep = append(keep, s.messages[:4]...)
+	// Keep first 4 and last 16, but ensure we don't break tool pairs.
+	// Walk backwards from the cut point to find a safe boundary.
+	cutStart := 4
+	cutEnd := len(s.messages) - 16
+
+	// Ensure cutEnd doesn't land in the middle of a tool_use/tool_result pair.
+	// A tool_result (user msg with ToolResult) must follow its tool_use (assistant msg with ToolUse).
+	// Walk cutEnd forward until we're at a clean boundary.
+	for cutEnd < len(s.messages) {
+		msg := s.messages[cutEnd]
+		if msg.ToolResult != nil {
+			// This is a tool_result — we'd orphan it. Include it.
+			cutEnd++
+			continue
+		}
+		if msg.Role == "assistant" && len(msg.ToolUse) > 0 {
+			// This is a tool_use — we need its results too. Skip past them.
+			cutEnd++
+			continue
+		}
+		break
+	}
+
+	// Also walk cutStart forward to not orphan pairs at the beginning
+	for cutStart < cutEnd {
+		msg := s.messages[cutStart]
+		if msg.Role == "assistant" && len(msg.ToolUse) > 0 {
+			// Include the tool results that follow
+			cutStart++
+			for cutStart < cutEnd && s.messages[cutStart].ToolResult != nil {
+				cutStart++
+			}
+			continue
+		}
+		break
+	}
+
+	if cutStart >= cutEnd {
+		return // nothing to compact
+	}
+
+	keep := make([]client.EyrieMessage, 0, len(s.messages)-(cutEnd-cutStart)+1)
+	keep = append(keep, s.messages[:cutStart]...)
 	keep = append(keep, client.EyrieMessage{
 		Role:    "user",
-		Content: "[Earlier conversation was compacted to save context. Continue from the recent messages below.]",
+		Content: "[Earlier conversation compacted to save context.]",
 	})
-	keep = append(keep, s.messages[len(s.messages)-16:]...)
+	keep = append(keep, s.messages[cutEnd:]...)
 	s.messages = keep
 }

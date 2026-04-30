@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/tool"
 )
 
 // PermissionRequest is sent from engine to TUI when a tool needs approval.
@@ -84,10 +86,16 @@ func (pm *PermissionMemory) Check(toolName string, summary string) *bool {
 }
 
 // toolNeedsPermission returns true for tools that modify state.
-func toolNeedsPermission(name string) bool {
+func toolNeedsPermission(name string, args map[string]interface{}) bool {
 	switch name {
-	case "bash", "file_write", "file_edit":
+	case "file_write", "file_edit":
 		return true
+	case "bash":
+		// Check if the command is suspicious
+		if cmd, ok := args["command"].(string); ok {
+			return tool.IsSuspicious(cmd)
+		}
+		return true // fail-closed: if we can't parse, ask
 	default:
 		return false
 	}
