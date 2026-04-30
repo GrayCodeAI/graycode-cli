@@ -702,6 +702,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /config             — Show settings
 /context            — Show current context
 /cost               — Token usage and cost
+/metrics            — Show collected metrics
 /diff               — Review changes
 /doctor             — Run diagnostics
 /env                — Show provider environment status
@@ -732,6 +733,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/cost":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
+		return m, nil
+	case "/metrics":
+		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Metrics().Format()})
 		return m, nil
 	case "/model":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s/%s", m.session.Provider(), m.session.Model())})

@@ -80,6 +80,7 @@ func defaultModelForProvider(provider string) string {
 	return hawkmodel.DefaultModel(provider)
 }
 func (s *Session) Provider() string { return s.provider }
+func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
 func (s *Session) AddUser(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "user", Content: content})
