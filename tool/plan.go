@@ -13,7 +13,8 @@ func IsPlanMode() bool { return planMode.Load() }
 
 type EnterPlanModeTool struct{}
 
-func (EnterPlanModeTool) Name() string { return "enter_plan_mode" }
+func (EnterPlanModeTool) Name() string      { return "EnterPlanMode" }
+func (EnterPlanModeTool) Aliases() []string { return []string{"enter_plan_mode"} }
 func (EnterPlanModeTool) Description() string {
 	return "Enter plan mode. In plan mode, you should only read files and discuss plans — do not write files or run commands that modify state. Use this when the user asks you to plan before implementing."
 }
@@ -27,7 +28,8 @@ func (EnterPlanModeTool) Execute(_ context.Context, _ json.RawMessage) (string, 
 
 type ExitPlanModeTool struct{}
 
-func (ExitPlanModeTool) Name() string { return "exit_plan_mode" }
+func (ExitPlanModeTool) Name() string      { return "ExitPlanMode" }
+func (ExitPlanModeTool) Aliases() []string { return []string{"exit_plan_mode"} }
 func (ExitPlanModeTool) Description() string {
 	return "Exit plan mode and begin implementation. Use this when the user approves the plan and wants you to start making changes."
 }

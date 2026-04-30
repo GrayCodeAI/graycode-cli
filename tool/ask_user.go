@@ -8,7 +8,8 @@ import (
 
 type AskUserQuestionTool struct{}
 
-func (AskUserQuestionTool) Name() string { return "ask_user" }
+func (AskUserQuestionTool) Name() string      { return "AskUserQuestion" }
+func (AskUserQuestionTool) Aliases() []string { return []string{"ask_user"} }
 func (AskUserQuestionTool) Description() string {
 	return "Ask the user a clarifying question when you need more information to proceed."
 }

@@ -11,6 +11,11 @@ func TestPermissionMemoryAlwaysAllow(t *testing.T) {
 		t.Fatal("expected bash to be allowed")
 	}
 
+	result = pm.Check("Bash", "echo hello")
+	if result == nil || !*result {
+		t.Fatal("expected Bash to be allowed through canonical permission name")
+	}
+
 	result = pm.Check("file_write", "test.go")
 	if result != nil {
 		t.Fatal("expected file_write to require asking")
@@ -32,6 +37,46 @@ func TestPermissionMemoryPattern(t *testing.T) {
 	}
 }
 
+func TestPermissionMemoryArchiveSpecs(t *testing.T) {
+	pm := NewPermissionMemory()
+	pm.AllowSpec("Bash(git:*)")
+	pm.DenySpec("Write(*.env)")
+
+	result := pm.Check("Bash", "git status")
+	if result == nil || !*result {
+		t.Fatal("expected Bash(git:*) to allow git status")
+	}
+
+	result = pm.Check("Write", "prod.env")
+	if result == nil || *result {
+		t.Fatal("expected Write(*.env) to deny prod.env")
+	}
+}
+
+func TestPermissionMemoryDenyOverridesAllow(t *testing.T) {
+	pm := NewPermissionMemory()
+	pm.AllowSpec("Bash(*)")
+	pm.DenySpec("Bash(rm:*)")
+
+	result := pm.Check("Bash", "rm -rf /tmp/x")
+	if result == nil || *result {
+		t.Fatal("expected deny rule to override broad allow")
+	}
+}
+
+func TestPermissionModeParsing(t *testing.T) {
+	s := NewSession("", "", "", nil)
+	if err := s.SetPermissionMode("acceptEdits"); err != nil {
+		t.Fatal(err)
+	}
+	if s.Mode != PermissionModeAcceptEdits {
+		t.Fatalf("got %q", s.Mode)
+	}
+	if err := s.SetPermissionMode("bad"); err == nil {
+		t.Fatal("expected invalid permission mode error")
+	}
+}
+
 func TestToolNeedsPermission(t *testing.T) {
 	cases := []struct {
 		name string
@@ -39,11 +84,18 @@ func TestToolNeedsPermission(t *testing.T) {
 		want bool
 	}{
 		{"file_write", nil, true},
+		{"Write", nil, true},
 		{"file_edit", nil, true},
+		{"Edit", nil, true},
+		{"NotebookEdit", nil, true},
 		{"file_read", nil, false},
+		{"Read", nil, false},
 		{"glob", nil, false},
+		{"Glob", nil, false},
 		{"grep", nil, false},
+		{"Grep", nil, false},
 		{"bash", map[string]interface{}{"command": "echo hello"}, false},
+		{"Bash", map[string]interface{}{"command": "echo hello"}, false},
 		{"bash", map[string]interface{}{"command": "rm -rf /"}, true},
 		{"bash", map[string]interface{}{"command": "sudo apt install"}, true},
 		{"bash", map[string]interface{}{"command": "go test ./..."}, false},
@@ -85,6 +137,14 @@ func TestCostSummary(t *testing.T) {
 	s := c.Summary()
 	if s == "" {
 		t.Fatal("expected non-empty summary")
+	}
+}
+
+func TestCostTotal(t *testing.T) {
+	c := Cost{Model: "gpt-4o"}
+	c.Add(100, 50)
+	if c.Total() <= 0 {
+		t.Fatal("expected positive total")
 	}
 }
 

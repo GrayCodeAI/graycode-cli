@@ -23,3 +23,5 @@ Thumbs.db
 
 # Build
 dist/
+.gocache/
+.gomodcache/

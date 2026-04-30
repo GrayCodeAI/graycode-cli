@@ -10,7 +10,8 @@ import (
 
 type AgentTool struct{}
 
-func (AgentTool) Name() string { return "agent" }
+func (AgentTool) Name() string      { return "Agent" }
+func (AgentTool) Aliases() []string { return []string{"agent", "Task"} }
 func (AgentTool) Description() string {
 	return "Spawn a sub-agent to handle a complex task independently. The sub-agent has access to all tools."
 }
@@ -41,7 +42,8 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 // MultiAgentTool spawns multiple sub-agents in parallel.
 type MultiAgentTool struct{}
 
-func (MultiAgentTool) Name() string { return "multi_agent" }
+func (MultiAgentTool) Name() string      { return "MultiAgent" }
+func (MultiAgentTool) Aliases() []string { return []string{"multi_agent"} }
 func (MultiAgentTool) Description() string {
 	return "Spawn multiple sub-agents in parallel for independent tasks."
 }

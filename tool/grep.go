@@ -12,7 +12,8 @@ import (
 
 type GrepTool struct{}
 
-func (GrepTool) Name() string        { return "grep" }
+func (GrepTool) Name() string        { return "Grep" }
+func (GrepTool) Aliases() []string   { return []string{"grep"} }
 func (GrepTool) Description() string { return "Search for a regex pattern in files." }
 func (GrepTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
@@ -26,7 +27,7 @@ func (GrepTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (GrepTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (GrepTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Pattern string `json:"pattern"`
 		Path    string `json:"path"`
@@ -42,6 +43,9 @@ func (GrepTool) Execute(_ context.Context, input json.RawMessage) (string, error
 	root := p.Path
 	if root == "" {
 		root = "."
+	}
+	if err := validatePathAllowed(ctx, root); err != nil {
+		return "", err
 	}
 	var results []string
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {

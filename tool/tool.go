@@ -16,10 +16,17 @@ type Tool interface {
 	Execute(ctx context.Context, input json.RawMessage) (string, error)
 }
 
+// AliasedTool can be implemented by tools that need backward-compatible wire names.
+type AliasedTool interface {
+	Aliases() []string
+}
+
 // ToolContext carries session-level functions for tools that need them.
 type ToolContext struct {
-	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
-	AskUserFn    func(question string) (string, error)
+	AgentSpawnFn       func(ctx context.Context, prompt string) (string, error)
+	AskUserFn          func(question string) (string, error)
+	AvailableTools     []Tool
+	AllowedDirectories []string
 }
 
 // ctxKey is the context key for ToolContext.
@@ -40,7 +47,8 @@ func GetToolContext(ctx context.Context) *ToolContext {
 
 // Registry holds all registered tools.
 type Registry struct {
-	tools map[string]Tool
+	tools   map[string]Tool
+	primary []Tool
 }
 
 // NewRegistry creates a registry with the given tools.
@@ -48,6 +56,14 @@ func NewRegistry(tools ...Tool) *Registry {
 	r := &Registry{tools: make(map[string]Tool, len(tools))}
 	for _, t := range tools {
 		r.tools[t.Name()] = t
+		r.primary = append(r.primary, t)
+		if aliased, ok := t.(AliasedTool); ok {
+			for _, alias := range aliased.Aliases() {
+				if alias != "" {
+					r.tools[alias] = t
+				}
+			}
+		}
 	}
 	return r
 }
@@ -58,10 +74,17 @@ func (r *Registry) Get(name string) (Tool, bool) {
 	return t, ok
 }
 
+// PrimaryTools returns the model-visible tools registered in this registry.
+func (r *Registry) PrimaryTools() []Tool {
+	out := make([]Tool, len(r.primary))
+	copy(out, r.primary)
+	return out
+}
+
 // EyrieTools converts all tools to eyrie tool definitions for the API.
 func (r *Registry) EyrieTools() []client.EyrieTool {
-	out := make([]client.EyrieTool, 0, len(r.tools))
-	for _, t := range r.tools {
+	out := make([]client.EyrieTool, 0, len(r.primary))
+	for _, t := range r.primary {
 		out = append(out, client.EyrieTool{
 			Name:        t.Name(),
 			Description: t.Description(),

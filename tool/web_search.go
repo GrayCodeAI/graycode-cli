@@ -13,8 +13,11 @@ import (
 
 type WebSearchTool struct{}
 
-func (WebSearchTool) Name() string        { return "web_search" }
-func (WebSearchTool) Description() string { return "Search the web and return results. Uses DuckDuckGo." }
+func (WebSearchTool) Name() string      { return "WebSearch" }
+func (WebSearchTool) Aliases() []string { return []string{"web_search"} }
+func (WebSearchTool) Description() string {
+	return "Search the web and return results. Uses DuckDuckGo."
+}
 func (WebSearchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

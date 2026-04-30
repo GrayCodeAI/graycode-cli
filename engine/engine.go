@@ -9,12 +9,15 @@ import (
 
 	"github.com/hawk/eyrie/client"
 
+	"github.com/GrayCodeAI/hawk/hooks"
+	hawkmodel "github.com/GrayCodeAI/hawk/model"
+	"github.com/GrayCodeAI/hawk/permissions"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
 const (
 	maxContextMessages = 100 // auto-compact threshold
-	maxRecoveryRetries = 3  // max_tokens recovery attempts
+	maxRecoveryRetries = 3   // max_tokens recovery attempts
 )
 
 // Session manages a conversation with an LLM via eyrie.
@@ -27,6 +30,13 @@ type Session struct {
 	system       string
 	Cost         Cost
 	Permissions  *PermissionMemory
+	AutoMode     *permissions.AutoModeState
+	Classifier   *permissions.Classifier
+	BypassKill   *permissions.BypassKillswitch
+	Mode         PermissionMode
+	MaxTurns     int
+	MaxBudgetUSD float64
+	AllowedDirs  []string
 	PermissionFn func(PermissionRequest)
 	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
 	AskUserFn    func(question string) (string, error)
@@ -48,28 +58,19 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		model:       model,
 		system:      systemPrompt,
 		Permissions: NewPermissionMemory(),
+		AutoMode:    permissions.NewAutoModeState(),
+		Classifier:  permissions.NewClassifier(),
+		BypassKill:  permissions.NewBypassKillswitch(),
 	}
 	s.Cost.Model = model
 	return s
 }
 
-func (s *Session) Model() string    { return s.model }
+func (s *Session) Model() string { return s.model }
 
 // defaultModelForProvider returns a sensible default model for each provider.
 func defaultModelForProvider(provider string) string {
-	defaults := map[string]string{
-		"anthropic":  "claude-sonnet-4-20250514",
-		"openai":     "gpt-4o",
-		"gemini":     "gemini-2.5-flash",
-		"openrouter": "anthropic/claude-sonnet-4-20250514",
-		"groq":       "llama-3.3-70b-versatile",
-		"grok":       "grok-3",
-		"ollama":     "llama3.2",
-	}
-	if m, ok := defaults[provider]; ok {
-		return m
-	}
-	return "claude-sonnet-4-20250514"
+	return hawkmodel.DefaultModel(provider)
 }
 func (s *Session) Provider() string { return s.provider }
 
@@ -79,6 +80,24 @@ func (s *Session) AddUser(content string) {
 
 func (s *Session) AddAssistant(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: content})
+}
+
+// AppendSystemContext adds runtime context, such as /add-dir, to future model calls.
+func (s *Session) AppendSystemContext(content string) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return
+	}
+	if strings.TrimSpace(s.system) == "" {
+		s.system = content
+		return
+	}
+	s.system += "\n\n" + content
+}
+
+// SetAllowedDirs sets directories that file tools are allowed to access.
+func (s *Session) SetAllowedDirs(dirs []string) {
+	s.AllowedDirs = append([]string(nil), dirs...)
 }
 
 func (s *Session) LoadMessages(msgs []client.EyrieMessage) {
@@ -92,10 +111,19 @@ func (s *Session) RawMessages() []client.EyrieMessage { return s.messages }
 
 // StreamEvent is sent from the engine to the TUI.
 type StreamEvent struct {
-	Type     string // content, thinking, tool_use, tool_result, done, error
+	Type     string // content, thinking, tool_use, tool_result, usage, done, error
 	Content  string
 	ToolName string
 	ToolID   string
+	Usage    *StreamUsage // usage data for this event
+}
+
+// StreamUsage tracks token usage for a single stream event.
+type StreamUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	CacheReadTokens  int `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens int `json:"cache_write_tokens,omitempty"`
 }
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
@@ -108,6 +136,12 @@ func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	defer close(ch)
 
+	// Session start hook
+	hooks.ExecuteAsync(ctx, hooks.EventSessionStart, map[string]interface{}{
+		"provider": s.provider,
+		"model":    s.model,
+	})
+
 	recoveryCount := 0
 
 	for {
@@ -115,6 +149,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if len(s.messages) > maxContextMessages {
 			s.smartCompact()
 		}
+
+		// Pre-query hook
+		hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
+			"provider": s.provider,
+			"model":    s.model,
+			"messages": len(s.messages),
+		})
 
 		opts := client.ChatOptions{
 			Provider:  s.provider,
@@ -179,6 +220,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		result.Close()
 
+		// Post-query hook
+		hooks.ExecuteAsync(ctx, hooks.EventPostQuery, map[string]interface{}{
+			"provider": s.provider,
+			"model":    s.model,
+			"content":  textContent,
+			"tools":    len(toolCalls),
+		})
+
 		// Handle max_tokens recovery
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
@@ -193,6 +242,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
 			}
 			ch <- StreamEvent{Type: "done"}
+			// Session end hook
+			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
+				"provider": s.provider,
+				"model":    s.model,
+				"messages": len(s.messages),
+			})
 			return
 		}
 
@@ -215,6 +270,42 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// Check permission for dangerous tools
 			if toolNeedsPermission(tc.Name, tc.Arguments) && s.PermissionFn != nil {
 				summary := toolSummary(tc.Name, tc.Arguments)
+
+				// Bypass killswitch check
+				if s.BypassKill.IsEnabled() {
+					goto executeTool
+				}
+
+				// Classifier-based auto-allow for safe commands
+				if s.Classifier != nil && tc.Name == "Bash" {
+					if classification := s.Classifier.Classify(summary); classification == "safe" {
+						goto executeTool
+					}
+				}
+
+				// Auto-mode check
+				if s.AutoMode != nil {
+					if allowed, ok := s.AutoMode.ShouldAutoAllow(tc.Name, summary); ok {
+						if allowed {
+							goto executeTool
+						} else {
+							ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied (auto-mode)."}
+							results = append(results, toolExecResult{tc: tc, output: "Permission denied (auto-mode).", isErr: true})
+							continue
+						}
+					}
+				}
+
+				// Permission mode check
+				if decision := s.modeDecision(tc.Name); decision != nil {
+					if !*decision {
+						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by permission mode."}
+						results = append(results, toolExecResult{tc: tc, output: "Permission denied by permission mode.", isErr: true})
+						continue
+					}
+					goto executeTool
+				}
+
 				// Check memory first
 				if decision := s.Permissions.Check(tc.Name, summary); decision != nil {
 					if !*decision {
@@ -251,6 +342,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 
+		executeTool:
+			// Pre-tool hook
+			hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{
+				"tool": tc.Name,
+				"args": tc.Arguments,
+			})
+
 			inputJSON, _ := json.Marshal(tc.Arguments)
 			toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
 				AgentSpawnFn: s.AgentSpawnFn,
@@ -264,6 +362,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if len(output) > 50000 {
 				output = output[:50000] + "\n... (truncated)"
 			}
+
+			// Post-tool hook
+			hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{
+				"tool":   tc.Name,
+				"output": output,
+				"is_err": isErr,
+			})
 
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
 			results = append(results, toolExecResult{tc: tc, output: output, isErr: isErr})

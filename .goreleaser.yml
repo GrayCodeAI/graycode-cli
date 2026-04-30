@@ -10,7 +10,7 @@ builds:
   - main: .
     binary: hawk
     ldflags:
-      - -s -w -X main.Version={{.Version}}
+      - -s -w -X main.Version={{.Version}} -X main.BuildDate={{.Date}}
     env:
       - CGO_ENABLED=0
     goos:

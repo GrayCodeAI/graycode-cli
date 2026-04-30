@@ -11,6 +11,9 @@ func (s *Session) WireAgentTool() {
 		sub := NewSession(s.provider, s.model, s.system, s.registry)
 		sub.PermissionFn = s.PermissionFn // inherit parent's permission handler
 		sub.Permissions = s.Permissions   // share permission memory
+		sub.Mode = s.Mode
+		sub.MaxTurns = s.MaxTurns
+		sub.MaxBudgetUSD = s.MaxBudgetUSD
 		sub.AddUser(prompt)
 		ch, err := sub.Stream(ctx)
 		if err != nil {

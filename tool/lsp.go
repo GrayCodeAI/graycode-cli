@@ -10,7 +10,8 @@ import (
 
 type LSPTool struct{}
 
-func (LSPTool) Name() string { return "lsp" }
+func (LSPTool) Name() string      { return "LSP" }
+func (LSPTool) Aliases() []string { return []string{"lsp"} }
 func (LSPTool) Description() string {
 	return "Get code intelligence: diagnostics, definitions, references. Uses the project's language server."
 }
