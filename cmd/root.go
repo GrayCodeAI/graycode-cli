@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	"github.com/GrayCodeAI/hawk/onboarding"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +23,20 @@ var rootCmd = &cobra.Command{
 	Short: "AI coding agent powered by eyrie",
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Load saved API key from settings
+		hawkconfig.LoadAPIKeyFromSettings()
+
+		// Show welcome
+		onboarding.Welcome(version)
+
+		// First-run setup if needed
+		if onboarding.NeedsSetup() {
+			if err := onboarding.RunSetup(); err != nil {
+				return err
+			}
+		}
+
+		// Launch TUI
 		return runChat()
 	},
 }
@@ -30,8 +46,9 @@ func init() {
 	rootCmd.Flags().StringVarP(&promptFlag, "prompt", "p", "", "send a single prompt and exit")
 	rootCmd.Flags().StringVar(&provider, "provider", "", "LLM provider (anthropic, openai, gemini, etc.)")
 	rootCmd.Flags().StringVarP(&resumeID, "resume", "r", "", "resume a saved session by ID")
-	rootCmd.Flags().StringArrayVar(&mcpServers, "mcp", nil, "MCP server command (e.g. --mcp 'npx @modelcontextprotocol/server-filesystem .')")
+	rootCmd.Flags().StringArrayVar(&mcpServers, "mcp", nil, "MCP server command")
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(setupCmd)
 }
 
 var versionCmd = &cobra.Command{
@@ -39,6 +56,15 @@ var versionCmd = &cobra.Command{
 	Short: "Print hawk version",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Println("hawk", version)
+	},
+}
+
+var setupCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Run first-time setup again",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		onboarding.Welcome(version)
+		return onboarding.RunSetup()
 	},
 }
 

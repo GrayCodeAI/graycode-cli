@@ -10,6 +10,7 @@ import (
 type Settings struct {
 	Model           string            `json:"model,omitempty"`
 	Provider        string            `json:"provider,omitempty"`
+	APIKey          string            `json:"api_key,omitempty"`
 	Theme           string            `json:"theme,omitempty"`
 	AutoAllow       []string          `json:"auto_allow,omitempty"`       // tools to always allow
 	MaxBudgetUSD    float64           `json:"max_budget_usd,omitempty"`   // cost cap per session
@@ -82,4 +83,25 @@ func SaveProject(s Settings) error {
 		return err
 	}
 	return os.WriteFile(projectSettingsPath(), data, 0o644)
+}
+
+// LoadAPIKeyFromSettings loads the saved API key into the environment if not already set.
+func LoadAPIKeyFromSettings() {
+	s := LoadSettings()
+	if s.APIKey == "" || s.Provider == "" {
+		return
+	}
+	envKeys := map[string]string{
+		"anthropic":  "ANTHROPIC_API_KEY",
+		"openai":     "OPENAI_API_KEY",
+		"gemini":     "GEMINI_API_KEY",
+		"openrouter": "OPENROUTER_API_KEY",
+		"groq":       "GROQ_API_KEY",
+		"grok":       "XAI_API_KEY",
+	}
+	if envKey, ok := envKeys[s.Provider]; ok {
+		if os.Getenv(envKey) == "" {
+			os.Setenv(envKey, s.APIKey)
+		}
+	}
 }
