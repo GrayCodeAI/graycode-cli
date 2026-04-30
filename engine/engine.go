@@ -10,7 +10,9 @@ import (
 	"github.com/hawk/eyrie/client"
 
 	"github.com/GrayCodeAI/hawk/hooks"
+	"github.com/GrayCodeAI/hawk/logger"
 	hawkmodel "github.com/GrayCodeAI/hawk/model"
+	"github.com/GrayCodeAI/hawk/metrics"
 	"github.com/GrayCodeAI/hawk/permissions"
 	"github.com/GrayCodeAI/hawk/retry"
 	"github.com/GrayCodeAI/hawk/tool"
@@ -29,6 +31,8 @@ type Session struct {
 	provider     string
 	model        string
 	system       string
+	log          *logger.Logger
+	metrics      *metrics.Registry
 	Cost         Cost
 	Permissions  *PermissionMemory
 	AutoMode     *permissions.AutoModeState
@@ -58,6 +62,8 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		provider:    detected,
 		model:       model,
 		system:      systemPrompt,
+		log:         logger.Default(),
+		metrics:     metrics.NewRegistry(),
 		Permissions: NewPermissionMemory(),
 		AutoMode:    permissions.NewAutoModeState(),
 		Classifier:  permissions.NewClassifier(),
@@ -158,6 +164,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			"messages": len(s.messages),
 		})
 
+		s.log.Info("stream query", map[string]interface{}{
+			"provider": s.provider,
+			"model":    s.model,
+			"messages": len(s.messages),
+		})
+
 		opts := client.ChatOptions{
 			Provider:  s.provider,
 			Model:     s.model,
@@ -176,6 +188,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		retryCfg.MaxRetries = 2
 		retryCfg.BaseDelay = 500 * time.Millisecond
 
+		s.metrics.Counter("api.requests").Inc()
+		apiStart := time.Now()
+
 		err = retry.Do(ctx, retryCfg, func() error {
 			result, err = s.client.StreamChat(ctx, s.messages, opts)
 			if err != nil {
@@ -188,7 +203,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return err
 		})
 
+		apiDuration := time.Since(apiStart)
+		s.metrics.Timer("api.latency").Record(apiDuration)
+
 		if err != nil {
+			s.log.Error("stream error", map[string]interface{}{
+				"error": err.Error(),
+			})
 			ch <- StreamEvent{Type: "error", Content: err.Error()}
 			return
 		}
@@ -367,13 +388,27 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			output, execErr := s.registry.Execute(toolCtx, tc.Name, inputJSON)
 			isErr := execErr != nil
 			if isErr {
+				s.log.Warn("tool execution error", map[string]interface{}{
+					"tool":  tc.Name,
+					"error": execErr.Error(),
+				})
 				output = fmt.Sprintf("Error: %s", execErr.Error())
+			} else {
+				s.log.Info("tool executed", map[string]interface{}{
+					"tool":   tc.Name,
+					"output": len(output),
+				})
 			}
 			if len(output) > 50000 {
 				output = output[:50000] + "\n... (truncated)"
 			}
 
 			// Post-tool hook
+			s.metrics.Counter("tools.executed").Inc()
+			if isErr {
+				s.metrics.Counter("tools.errors").Inc()
+			}
+
 			hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{
 				"tool":   tc.Name,
 				"output": output,
