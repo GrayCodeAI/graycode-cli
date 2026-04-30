@@ -142,6 +142,53 @@ func init() {
 	rootCmd.AddCommand(sessionsCmd)
 	rootCmd.AddCommand(toolsCmd)
 	rootCmd.AddCommand(pluginCmd)
+	rootCmd.AddCommand(completionCmd)
+}
+
+var completionCmd = &cobra.Command{
+	Use:   "completion [bash|zsh|fish|powershell]",
+	Short: "Generate shell completion script",
+	Long: `To load completions:
+
+Bash:
+  source <(hawk completion bash)
+  # To load completions for each session, execute once:
+  # Linux:
+  hawk completion bash > /etc/bash_completion.d/hawk
+  # macOS:
+  hawk completion bash > /usr/local/etc/bash_completion.d/hawk
+
+Zsh:
+  source <(hawk completion zsh)
+  # To load completions for each session, execute once:
+  hawk completion zsh > "${fpath[1]}/_hawk"
+
+Fish:
+  hawk completion fish | source
+  # To load completions for each session, execute once:
+  hawk completion fish > ~/.config/fish/completions/hawk.fish
+
+PowerShell:
+  hawk completion powershell | Out-String | Invoke-Expression
+  # To load completions for every new session, run:
+  hawk completion powershell > hawk.ps1
+  # and source this file from your PowerShell profile.
+`,
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		switch args[0] {
+		case "bash":
+			cmd.Root().GenBashCompletion(cmd.OutOrStdout())
+		case "zsh":
+			cmd.Root().GenZshCompletion(cmd.OutOrStdout())
+		case "fish":
+			cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true)
+		case "powershell":
+			cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
+		}
+	},
 }
 
 var versionCmd = &cobra.Command{
