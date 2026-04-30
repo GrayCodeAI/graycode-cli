@@ -64,6 +64,9 @@ func Do(ctx context.Context, cfg Config, fn func() error) error {
 	}
 	var err error
 	for i := 0; i <= cfg.MaxRetries; i++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		err = fn()
 		if err == nil {
 			return nil

@@ -7,6 +7,20 @@ import (
 	"github.com/hawk/eyrie/client"
 )
 
+// ShouldAutoCompact returns true if the conversation is approaching context limits.
+func (s *Session) ShouldAutoCompact() bool {
+	return len(s.messages) >= maxContextMessages
+}
+
+// AutoCompactIfNeeded runs compaction when the conversation exceeds the threshold.
+func (s *Session) AutoCompactIfNeeded() bool {
+	if !s.ShouldAutoCompact() {
+		return false
+	}
+	s.smartCompact()
+	return true
+}
+
 // smartCompact uses the LLM to generate a summary of the conversation being compacted.
 func (s *Session) smartCompact() {
 	if len(s.messages) <= 20 {

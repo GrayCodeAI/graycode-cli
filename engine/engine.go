@@ -117,6 +117,22 @@ func (s *Session) MessageCount() int { return len(s.messages) }
 // RawMessages returns the conversation messages for persistence.
 func (s *Session) RawMessages() []client.EyrieMessage { return s.messages }
 
+// RemoveLastExchange removes the last user+assistant message pair.
+func (s *Session) RemoveLastExchange() {
+	if len(s.messages) < 2 {
+		return
+	}
+	// Remove from the end until we've removed one user and one assistant message
+	removed := 0
+	for i := len(s.messages) - 1; i >= 0 && removed < 2; i-- {
+		role := s.messages[i].Role
+		if role == "user" || role == "assistant" {
+			removed++
+		}
+		s.messages = s.messages[:i]
+	}
+}
+
 // StreamEvent is sent from the engine to the TUI.
 type StreamEvent struct {
 	Type     string // content, thinking, tool_use, tool_result, usage, done, error

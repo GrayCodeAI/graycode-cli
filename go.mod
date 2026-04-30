@@ -32,6 +32,7 @@ require (
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/hawk/eyrie => /Users/lakshmanpatel/Desktop/OSS2026/RealWork/eyrie

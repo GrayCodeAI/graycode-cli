@@ -46,10 +46,27 @@ var Catalog = []ModelInfo{
 	{Name: "grok-3", Provider: "grok", ContextSize: 128_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Grok 3"},
 	{Name: "grok-3-mini", Provider: "grok", ContextSize: 128_000, InputPrice: 0.50, OutputPrice: 2.0, Description: "Grok 3 Mini"},
 
+	// DeepSeek
+	{Name: "deepseek-chat", Provider: "deepseek", ContextSize: 128_000, InputPrice: 0.14, OutputPrice: 0.28, Description: "DeepSeek Chat V3"},
+	{Name: "deepseek-reasoner", Provider: "deepseek", ContextSize: 128_000, InputPrice: 0.55, OutputPrice: 2.19, Description: "DeepSeek R1 - reasoning"},
+
+	// Mistral
+	{Name: "mistral-large-latest", Provider: "mistral", ContextSize: 128_000, InputPrice: 2.0, OutputPrice: 6.0, Description: "Mistral Large"},
+	{Name: "mistral-small-latest", Provider: "mistral", ContextSize: 32_000, InputPrice: 0.20, OutputPrice: 0.60, Description: "Mistral Small"},
+	{Name: "codestral-latest", Provider: "mistral", ContextSize: 32_000, InputPrice: 0.30, OutputPrice: 0.90, Description: "Codestral - code generation"},
+
+	// AWS Bedrock
+	{Name: "us.anthropic.claude-sonnet-4-20250514-v1:0", Provider: "bedrock", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude Sonnet 4 via Bedrock"},
+	{Name: "us.anthropic.claude-opus-4-20250514-v1:0", Provider: "bedrock", ContextSize: 200_000, InputPrice: 15.0, OutputPrice: 75.0, Description: "Claude Opus 4 via Bedrock"},
+
+	// GCP Vertex AI
+	{Name: "claude-sonnet-4@20250514", Provider: "vertex", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude Sonnet 4 via Vertex AI"},
+
 	// Ollama (local)
 	{Name: "llama3.2", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "Llama 3.2 (local)"},
 	{Name: "qwen2.5", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "Qwen 2.5 (local)"},
 	{Name: "codellama", Provider: "ollama", ContextSize: 16_000, InputPrice: 0, OutputPrice: 0, Description: "CodeLlama (local)"},
+	{Name: "deepseek-coder-v2", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "DeepSeek Coder V2 (local)"},
 }
 
 // Find looks up a model by name.

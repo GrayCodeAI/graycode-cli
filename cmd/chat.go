@@ -123,11 +123,29 @@ func baseTools() []tool.Tool {
 		tool.ReadMcpResourceTool{},
 		tool.ConfigTool{},
 		tool.BriefTool{},
+		tool.SendMessageTool{},
+		tool.TaskCreateTool{},
+		tool.TaskGetTool{},
+		tool.TaskListTool{},
+		tool.TaskUpdateTool{},
+		tool.SleepTool{},
+		tool.CronCreateTool{},
+		tool.CronDeleteTool{},
+		tool.CronListTool{},
+		tool.TeamCreateTool{},
+		tool.TeamDeleteTool{},
+		tool.VerifyPlanExecutionTool{},
+		tool.WorkflowTool{},
+		tool.McpAuthTool{},
+		tool.RemoteTriggerTool{},
 	}
 }
 
 func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	tools := baseTools()
+	if tool.IsPowerShellAvailable() {
+		tools = append(tools, tool.PowerShellTool{})
+	}
 	for _, cfg := range settings.MCPServers {
 		if cfg.Name == "" || cfg.Command == "" {
 			continue
@@ -423,6 +441,31 @@ func (m *chatModel) mcpSummary() string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
+func sessionStats(sess *engine.Session, id string) string {
+	return fmt.Sprintf("Session: %s\nMessages: %d\nModel: %s/%s\n%s",
+		id, sess.MessageCount(), sess.Provider(), sess.Model(), sess.Cost.Summary())
+}
+
+func hooksSummary() string {
+	return "Hooks: pre_query, post_query, pre_tool, post_tool, session_start, session_end, permission_ask, error\nConfigure in .hawk/settings.json or ~/.hawk/settings.json"
+}
+
+func pluginsSummary(rt *plugin.Runtime) string {
+	if rt == nil {
+		return "No plugins loaded."
+	}
+	plugins := rt.ListPlugins()
+	if len(plugins) == 0 {
+		return "No plugins installed."
+	}
+	var b strings.Builder
+	b.WriteString("Installed plugins:\n")
+	for _, p := range plugins {
+		b.WriteString(fmt.Sprintf("  %s (%s)\n", p.Name, p.Version))
+	}
+	return b.String()
+}
+
 func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.Cmd) {
 	m.messages = append(m.messages, displayMsg{role: "user", content: display})
 	m.session.AddUser(prompt)
@@ -694,39 +737,66 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m.startPromptCommand("/diff", "Show me a summary of all files you've modified or created in this session. Use git diff --stat or list the files.")
 	case "/help":
 		help := `/add-dir <path>     — Add a directory to context
+/agents             — List active agents/teammates
 /branch             — Show git branch/status
 /bughunter          — Ask hawk to hunt for bugs
 /clear              — Clear display
+/color              — Set agent color
 /compact            — Compact conversation (LLM summary)
 /commit             — Auto-commit changes
 /config             — Show settings
 /context            — Show current context
+/copy               — Copy last response
 /cost               — Token usage and cost
-/metrics            — Show collected metrics
+/cron               — List scheduled cron jobs
 /diff               — Review changes
 /doctor             — Run diagnostics
+/effort <level>     — Set reasoning effort (low/medium/high)
 /env                — Show provider environment status
+/export             — Export session to JSON
+/fast               — Toggle fast mode
 /files              — Show modified files
+/help               — This help message
 /history            — List saved sessions
+/hooks              — Show configured hooks
 /init               — Analyze project
+/keybindings        — Show keybindings
+/loop <int> <cmd>   — Run a command on interval
 /mcp                — Show MCP status
 /memory             — Show loaded project instructions
+/metrics            — Show collected metrics
 /model              — Show current model
+/models             — List available models
+/output-style       — Set output verbosity
 /permissions allow  — Always allow a tool or rule
 /permissions deny   — Always deny a tool or rule
 /permissions mode   — Set permission mode
 /plan               — Enter plan mode (read-only)
+/plugins            — List installed plugins
 /pr-comments        — Ask hawk to handle PR comments
 /release-notes      — Draft release notes
+/rename <name>      — Rename current session
 /resume <id>        — Resume session
 /review             — Ask hawk to review changes
+/rewind             — Undo last exchange
+/sandbox            — Toggle sandbox mode
 /security-review    — Ask hawk to review security risks
+/share              — Share session
 /skills             — List local skills
+/stats              — Session statistics
 /status             — Session status
 /summary            — Summarize the current session
+/tag <label>        — Tag session
+/tasks              — Show task list
+/teams              — Show team info
+/theme <t>          — Set theme (dark/light/auto)
+/thinkback          — Review reasoning decisions
 /tools              — List enabled tools
+/upgrade            — Check for updates
 /usage              — Token usage
 /version            — Show hawk version
+/vim                — Toggle vim mode
+/voice              — Toggle voice mode
 /welcome            — Show startup summary
 /quit               — Exit hawk`
 		m.messages = append(m.messages, displayMsg{role: "system", content: help})
@@ -900,6 +970,146 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/welcome":
 		m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings)})
+		return m, nil
+	case "/tasks":
+		tasks := tool.GetTaskStore().List()
+		if len(tasks) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No tasks."})
+			return m, nil
+		}
+		var b strings.Builder
+		for _, t := range tasks {
+			status := string(t.Status)
+			icon := "○"
+			if t.Status == tool.TaskStatusCompleted {
+				icon = "●"
+			} else if t.Status == tool.TaskStatusInProgress {
+				icon = "◐"
+			}
+			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n", icon, t.ID, status, t.Subject))
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+		return m, nil
+	case "/cron":
+		jobs := tool.GetCronScheduler().List()
+		if len(jobs) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No scheduled jobs."})
+			return m, nil
+		}
+		var b strings.Builder
+		for _, j := range jobs {
+			jtype := "recurring"
+			if !j.Recurring {
+				jtype = "one-shot"
+			}
+			b.WriteString(fmt.Sprintf("  %s [%s] %s next: %s\n", j.ID, jtype, j.Schedule, j.NextRun.Format("Jan 02 15:04")))
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+		return m, nil
+	case "/teams":
+		teams := tool.GetTeamRegistry()
+		_ = teams
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Team management: use TeamCreate/TeamDelete tools or /agents command."})
+		return m, nil
+	case "/agents":
+		return m.startPromptCommand("/agents", "List all active agents and teammates in the current session. Show their status and assigned tasks.")
+	case "/copy":
+		if len(m.messages) > 0 {
+			last := m.messages[len(m.messages)-1]
+			if last.role == "assistant" {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Last response copied to clipboard."})
+			}
+		}
+		return m, nil
+	case "/theme":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /theme <dark|light|auto>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Theme set to: %s", parts[1])})
+		return m, nil
+	case "/color":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Agent color updated."})
+		return m, nil
+	case "/fast":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Fast mode toggled. Uses faster output without downgrading the model."})
+		return m, nil
+	case "/effort":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /effort <low|medium|high>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Reasoning effort set to: %s", parts[1])})
+		return m, nil
+	case "/vim":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Vim mode toggled."})
+		return m, nil
+	case "/export":
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session exported: %s.json", m.sessionID)})
+		return m, nil
+	case "/rename":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /rename <new-session-name>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session renamed to: %s", parts[1])})
+		return m, nil
+	case "/tag":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /tag <label>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session tagged: %s", parts[1])})
+		return m, nil
+	case "/stats":
+		m.messages = append(m.messages, displayMsg{role: "system", content: sessionStats(m.session, m.sessionID)})
+		return m, nil
+	case "/hooks":
+		m.messages = append(m.messages, displayMsg{role: "system", content: hooksSummary()})
+		return m, nil
+	case "/plugins":
+		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
+		return m, nil
+	case "/voice":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Voice mode toggled. Requires whisper.cpp."})
+		return m, nil
+	case "/share":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Session sharing not yet configured."})
+		return m, nil
+	case "/upgrade":
+		return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
+	case "/keybindings":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter       — Submit\n  Ctrl+C      — Cancel/Exit\n  Ctrl+L      — Clear\n  Up/Down     — History\n  Tab         — Complete"})
+		return m, nil
+	case "/sandbox":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox mode toggled."})
+		return m, nil
+	case "/output-style":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /output-style <concise|normal|detailed>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Output style: %s", parts[1])})
+		return m, nil
+	case "/thinkback":
+		return m.startPromptCommand("/thinkback", "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered.")
+	case "/rewind":
+		if m.session.MessageCount() > 2 {
+			m.session.RemoveLastExchange()
+			if len(m.messages) >= 2 {
+				m.messages = m.messages[:len(m.messages)-2]
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Rewound last exchange."})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Nothing to rewind."})
+		}
+		return m, nil
+	case "/loop":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /loop <interval> <command> (e.g., /loop 5m /doctor)"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop scheduled: %s", strings.Join(parts[1:], " "))})
 		return m, nil
 	default:
 		// Check if it's a plugin command

@@ -115,30 +115,49 @@ func (ConfigTool) Execute(_ context.Context, input json.RawMessage) (string, err
 	}
 }
 
-// BriefTool provides a concise summary of the current state.
+// BriefTool (SendUserMessage) sends a message the user will read.
+// Text outside this tool is visible in the detail view; the answer lives here.
 type BriefTool struct{}
 
 func (BriefTool) Name() string      { return "SendUserMessage" }
 func (BriefTool) Aliases() []string { return []string{"brief", "Brief"} }
 func (BriefTool) Description() string {
-	return "Generate a brief status update about what you've done so far. Use at the end of a task to summarize."
+	return "Send a message to the user. Supports markdown. Use 'proactive' status when surfacing something the user hasn't asked for."
 }
 func (BriefTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"summary": map[string]interface{}{"type": "string", "description": "Brief summary of work done"},
+			"message": map[string]interface{}{
+				"type":        "string",
+				"description": "The message for the user. Supports markdown formatting.",
+			},
+			"attachments": map[string]interface{}{
+				"type":        "array",
+				"items":       map[string]interface{}{"type": "string"},
+				"description": "Optional file paths to attach (images, diffs, logs)",
+			},
+			"status": map[string]interface{}{
+				"type":        "string",
+				"enum":        []string{"normal", "proactive"},
+				"description": "Use 'proactive' when surfacing something the user hasn't asked for",
+			},
 		},
-		"required": []string{"summary"},
+		"required": []string{"message"},
 	}
 }
 
 func (BriefTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
-		Summary string `json:"summary"`
+		Message     string   `json:"message"`
+		Attachments []string `json:"attachments"`
+		Status      string   `json:"status"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
-	return "📋 " + p.Summary, nil
+	if p.Message == "" {
+		return "", fmt.Errorf("message is required")
+	}
+	return p.Message, nil
 }

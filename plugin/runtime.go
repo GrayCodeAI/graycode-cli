@@ -103,3 +103,8 @@ func (r *Runtime) IsCommand(name string) bool {
 	_, ok := r.commands[name]
 	return ok
 }
+
+// ListPlugins returns all loaded plugin manifests.
+func (r *Runtime) ListPlugins() []*Manifest {
+	return r.plugins
+}
