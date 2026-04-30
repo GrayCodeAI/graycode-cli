@@ -5,9 +5,10 @@ import (
 )
 
 var (
-	version string
-	model   string
-	prompt  string
+	version    string
+	model      string
+	provider   string
+	promptFlag string
 )
 
 // SetVersion sets the version string from main.
@@ -24,7 +25,8 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.Flags().StringVarP(&model, "model", "m", "", "model to use (e.g. claude-sonnet-4-20250514)")
-	rootCmd.Flags().StringVarP(&prompt, "prompt", "p", "", "send a single prompt and exit")
+	rootCmd.Flags().StringVarP(&promptFlag, "prompt", "p", "", "send a single prompt and exit")
+	rootCmd.Flags().StringVar(&provider, "provider", "", "LLM provider (anthropic, openai, gemini, etc.)")
 	rootCmd.AddCommand(versionCmd)
 }
 
