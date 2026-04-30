@@ -73,14 +73,14 @@ func Save(s *Session) error {
 	}
 	s.UpdatedAt = time.Now()
 	if err := os.MkdirAll(sessionsDir(), 0o755); err != nil {
-		return err
+		return fmt.Errorf("create sessions directory: %w", err)
 	}
 
 	// Write in JSONL format: first line is session metadata, subsequent lines are messages
 	path := jsonlPathFor(s.ID)
 	f, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("create session file: %w", err)
 	}
 	defer f.Close()
 
@@ -100,26 +100,26 @@ func Save(s *Session) error {
 	}
 	metaData, err := json.Marshal(meta)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal session metadata: %w", err)
 	}
 	if _, err := w.Write(metaData); err != nil {
-		return err
+		return fmt.Errorf("write session metadata: %w", err)
 	}
 	if err := w.WriteByte('\n'); err != nil {
-		return err
+		return fmt.Errorf("write newline: %w", err)
 	}
 
 	// Write each message as a JSON line
 	for _, msg := range s.Messages {
 		msgData, err := json.Marshal(msg)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal message: %w", err)
 		}
 		if _, err := w.Write(msgData); err != nil {
-			return err
+			return fmt.Errorf("write message: %w", err)
 		}
 		if err := w.WriteByte('\n'); err != nil {
-			return err
+			return fmt.Errorf("write message newline: %w", err)
 		}
 	}
 
