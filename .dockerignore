@@ -1,0 +1,11 @@
+.git
+.gitignore
+*.md
+.github
+.factory
+Dockerfile
+.dockerignore
+hawk_bin
+hawk_test_bin
+coverage.out
+coverage.html
