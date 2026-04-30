@@ -77,6 +77,8 @@ func defaultRegistry() *tool.Registry {
 		tool.FileEditTool{},
 		tool.GlobTool{},
 		tool.GrepTool{},
+		tool.WebFetchTool{},
+		tool.WebSearchTool{},
 	)
 }
 

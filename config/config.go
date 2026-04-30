@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,27 +27,34 @@ func LoadHawkMD() string {
 	return ""
 }
 
-// GitContext returns a brief git status string for the system prompt.
+// GitContext returns git info for the system prompt.
 func GitContext() string {
 	var b strings.Builder
-	if branch, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
-		b.WriteString("Git branch: ")
-		b.WriteString(strings.TrimSpace(string(branch)))
-		b.WriteString("\n")
+	if branch, err := gitCmd("rev-parse", "--abbrev-ref", "HEAD"); err == nil {
+		b.WriteString("Git branch: " + branch + "\n")
 	}
-	if status, err := exec.Command("git", "status", "--porcelain").Output(); err == nil {
-		s := strings.TrimSpace(string(status))
-		if s != "" {
-			lines := strings.Split(s, "\n")
-			if len(lines) > 10 {
-				lines = append(lines[:10], "...")
-			}
-			b.WriteString("Modified files:\n")
-			b.WriteString(strings.Join(lines, "\n"))
-			b.WriteString("\n")
+	if user, err := gitCmd("config", "user.name"); err == nil {
+		b.WriteString("Git user: " + user + "\n")
+	}
+	if defaultBranch, err := gitCmd("symbolic-ref", "refs/remotes/origin/HEAD", "--short"); err == nil {
+		b.WriteString("Default branch: " + defaultBranch + "\n")
+	}
+	if log, err := gitCmd("log", "--oneline", "-5"); err == nil && log != "" {
+		b.WriteString("Recent commits:\n" + log + "\n")
+	}
+	if status, err := gitCmd("status", "--porcelain"); err == nil && status != "" {
+		lines := strings.Split(status, "\n")
+		if len(lines) > 10 {
+			lines = append(lines[:10], fmt.Sprintf("... and %d more", len(lines)-10))
 		}
+		b.WriteString("Modified files:\n" + strings.Join(lines, "\n") + "\n")
 	}
 	return b.String()
+}
+
+func gitCmd(args ...string) (string, error) {
+	out, err := exec.Command("git", args...).Output()
+	return strings.TrimSpace(string(out)), err
 }
 
 // BuildContext assembles the full context string for the system prompt.
