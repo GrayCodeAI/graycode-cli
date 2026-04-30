@@ -2,17 +2,21 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/prompt"
+	"github.com/GrayCodeAI/hawk/session"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
@@ -30,7 +34,6 @@ var (
 	toolDimStyle = lipgloss.NewStyle().Foreground(dimColor)
 )
 
-// Tea messages
 type streamChunkMsg string
 type streamDoneMsg struct{}
 type streamErrMsg struct{ err error }
@@ -51,16 +54,17 @@ func (r *progRef) Set(p *tea.Program) { r.mu.Lock(); r.p = p; r.mu.Unlock() }
 func (r *progRef) Send(msg tea.Msg)   { r.mu.Lock(); p := r.p; r.mu.Unlock(); if p != nil { p.Send(msg) } }
 
 type chatModel struct {
-	input    textarea.Model
-	spinner  spinner.Model
-	session  *engine.Session
-	ref      *progRef
-	messages []displayMsg
-	partial  strings.Builder
-	waiting  bool
-	width    int
-	height   int
-	quitting bool
+	input     textarea.Model
+	spinner   spinner.Model
+	session   *engine.Session
+	ref       *progRef
+	sessionID string
+	messages  []displayMsg
+	partial   strings.Builder
+	waiting   bool
+	width     int
+	height    int
+	quitting  bool
 }
 
 func defaultRegistry() *tool.Registry {
@@ -74,9 +78,15 @@ func defaultRegistry() *tool.Registry {
 	)
 }
 
+func genID() string {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
+}
+
 func newChatModel(ref *progRef) chatModel {
 	ta := textarea.New()
-	ta.Placeholder = "Message hawk..."
+	ta.Placeholder = "Message hawk... (type /help for commands)"
 	ta.Focus()
 	ta.CharLimit = 0
 	ta.SetHeight(3)
@@ -87,9 +97,16 @@ func newChatModel(ref *progRef) chatModel {
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(tealColor)
 
-	sess := engine.NewSession(provider, model, prompt.System(), defaultRegistry())
+	systemPrompt := prompt.System() + "\n\n" + hawkconfig.BuildContext()
+	sess := engine.NewSession(provider, model, systemPrompt, defaultRegistry())
 
-	return chatModel{input: ta, spinner: sp, session: sess, ref: ref}
+	return chatModel{
+		input:     ta,
+		spinner:   sp,
+		session:   sess,
+		ref:       ref,
+		sessionID: genID(),
+	}
 }
 
 func (m chatModel) Init() tea.Cmd {
@@ -103,6 +120,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if m.waiting {
 			if msg.Type == tea.KeyCtrlC {
+				m.saveSession()
 				m.quitting = true
 				return m, tea.Quit
 			}
@@ -110,6 +128,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch msg.Type {
 		case tea.KeyCtrlC:
+			m.saveSession()
 			m.quitting = true
 			return m, tea.Quit
 		case tea.KeyEnter:
@@ -117,13 +136,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if text == "" {
 				return m, nil
 			}
-			if text == "/quit" || text == "/exit" {
-				m.quitting = true
-				return m, tea.Quit
+			m.input.Reset()
+
+			// Slash commands
+			if strings.HasPrefix(text, "/") {
+				return m.handleCommand(text)
 			}
+
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
-			m.input.Reset()
 			m.waiting = true
 			m.partial.Reset()
 			m.startStream()
@@ -135,7 +156,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case toolUseMsg:
-		// Flush any partial text as a message
 		if m.partial.Len() > 0 {
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
 			m.partial.Reset()
@@ -158,6 +178,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.waiting = false
 		m.input.Focus()
+		m.saveSession()
 		return m, nil
 
 	case streamErrMsg:
@@ -185,6 +206,78 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
+	parts := strings.Fields(text)
+	cmd := parts[0]
+
+	switch cmd {
+	case "/quit", "/exit":
+		m.saveSession()
+		m.quitting = true
+		return m, tea.Quit
+
+	case "/clear":
+		m.messages = nil
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
+		return m, nil
+
+	case "/help":
+		help := `/clear    — Clear conversation
+/cost     — Show token usage and cost
+/model    — Show current model
+/history  — List saved sessions
+/quit     — Exit hawk`
+		m.messages = append(m.messages, displayMsg{role: "system", content: help})
+		return m, nil
+
+	case "/cost":
+		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
+		return m, nil
+
+	case "/model":
+		info := fmt.Sprintf("Provider: %s\nModel: %s", m.session.Provider(), m.session.Model())
+		m.messages = append(m.messages, displayMsg{role: "system", content: info})
+		return m, nil
+
+	case "/history":
+		entries, err := session.List()
+		if err != nil || len(entries) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No saved sessions."})
+			return m, nil
+		}
+		var b strings.Builder
+		for _, e := range entries {
+			b.WriteString(fmt.Sprintf("  %s  %s  %s\n", e.ID, e.UpdatedAt.Format("Jan 02 15:04"), e.Preview))
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+		return m, nil
+
+	default:
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+		return m, nil
+	}
+}
+
+func (m *chatModel) saveSession() {
+	var msgs []session.Message
+	for _, dm := range m.messages {
+		if dm.role == "user" || dm.role == "assistant" {
+			msgs = append(msgs, session.Message{Role: dm.role, Content: dm.content})
+		}
+	}
+	if len(msgs) == 0 {
+		return
+	}
+	s := &session.Session{
+		ID:        m.sessionID,
+		Model:     m.session.Model(),
+		Provider:  m.session.Provider(),
+		Messages:  msgs,
+		CreatedAt: time.Now(),
+	}
+	_ = session.Save(s)
 }
 
 func (m *chatModel) startStream() {
@@ -225,7 +318,7 @@ func (m chatModel) View() string {
 
 	b.WriteString(headerStyle.Render(fmt.Sprintf("🦅 hawk v%s", version)))
 	b.WriteString(dimStyle.Render(fmt.Sprintf("  %s/%s", m.session.Provider(), m.session.Model())))
-	b.WriteString(dimStyle.Render("  (ctrl+c to quit)"))
+	b.WriteString(dimStyle.Render(fmt.Sprintf("  [%s]", m.sessionID)))
 	b.WriteString("\n\n")
 
 	for _, msg := range m.messages {
@@ -240,6 +333,8 @@ func (m chatModel) View() string {
 			b.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
 			b.WriteString(toolDimStyle.Render(msg.content))
+		case "system":
+			b.WriteString(dimStyle.Render(msg.content))
 		case "error":
 			b.WriteString(errorStyle.Render("error: "))
 			b.WriteString(msg.content)

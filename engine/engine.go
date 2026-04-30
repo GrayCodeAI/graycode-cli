@@ -18,6 +18,7 @@ type Session struct {
 	provider string
 	model    string
 	system   string
+	Cost     Cost
 }
 
 // NewSession creates a new conversation session.
