@@ -25,6 +25,7 @@ type Session struct {
 	model        string
 	system       string
 	Cost         Cost
+	Permissions  *PermissionMemory
 	PermissionFn func(PermissionRequest) // set by TUI to handle permission prompts
 }
 
@@ -37,13 +38,16 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 	if model == "" {
 		model = client.ResolveDefaultModel(detected)
 	}
-	return &Session{
-		client:   client.NewEyrieClient(&client.EyrieConfig{Provider: detected}),
-		registry: registry,
-		provider: detected,
-		model:    model,
-		system:   systemPrompt,
+	s := &Session{
+		client:      client.NewEyrieClient(&client.EyrieConfig{Provider: detected}),
+		registry:    registry,
+		provider:    detected,
+		model:       model,
+		system:      systemPrompt,
+		Permissions: NewPermissionMemory(),
 	}
+	s.Cost.Model = model
+	return s
 }
 
 func (s *Session) Model() string    { return s.model }
@@ -187,18 +191,29 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 			// Check permission for dangerous tools
 			if toolNeedsPermission(tc.Name) && s.PermissionFn != nil {
-				resp := make(chan bool, 1)
-				s.PermissionFn(PermissionRequest{
-					ToolName: tc.Name,
-					ToolID:   tc.ID,
-					Summary:  toolSummary(tc.Name, tc.Arguments),
-					Response: resp,
-				})
-				allowed := <-resp
-				if !allowed {
-					ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
-					results = append(results, toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true})
-					continue
+				summary := toolSummary(tc.Name, tc.Arguments)
+				// Check memory first
+				if decision := s.Permissions.Check(tc.Name, summary); decision != nil {
+					if !*decision {
+						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied (rule)."}
+						results = append(results, toolExecResult{tc: tc, output: "Permission denied (rule).", isErr: true})
+						continue
+					}
+					// allowed by rule, proceed
+				} else {
+					// Ask user
+					resp := make(chan bool, 1)
+					s.PermissionFn(PermissionRequest{
+						ToolName: tc.Name,
+						ToolID:   tc.ID,
+						Summary:  summary,
+						Response: resp,
+					})
+					if !<-resp {
+						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
+						results = append(results, toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true})
+						continue
+					}
 				}
 			}
 

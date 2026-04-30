@@ -33,11 +33,29 @@ func (FileEditTool) Execute(_ context.Context, input json.RawMessage) (string, e
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
+	info, err := os.Stat(p.Path)
+	if err != nil {
+		suggestion := suggestSimilar(p.Path)
+		if suggestion != "" {
+			return "", fmt.Errorf("file not found: %s\nDid you mean: %s", p.Path, suggestion)
+		}
+		return "", fmt.Errorf("file not found: %s", p.Path)
+	}
+	if info.Size() > maxFileSize {
+		return "", fmt.Errorf("file too large: %d bytes", info.Size())
+	}
 	data, err := os.ReadFile(p.Path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", p.Path, err)
 	}
 	content := string(data)
+
+	// Detect line endings
+	lineEnding := "\n"
+	if strings.Contains(content, "\r\n") {
+		lineEnding = "\r\n"
+	}
+
 	count := strings.Count(content, p.OldStr)
 	if count == 0 {
 		return "", fmt.Errorf("old_str not found in %s", p.Path)
@@ -46,8 +64,15 @@ func (FileEditTool) Execute(_ context.Context, input json.RawMessage) (string, e
 		return "", fmt.Errorf("old_str found %d times in %s — must be unique", count, p.Path)
 	}
 	result := strings.Replace(content, p.OldStr, p.NewStr, 1)
-	if err := os.WriteFile(p.Path, []byte(result), 0o644); err != nil {
+
+	// Preserve line endings
+	if lineEnding == "\r\n" {
+		result = strings.ReplaceAll(result, "\r\n", "\n")
+		result = strings.ReplaceAll(result, "\n", "\r\n")
+	}
+
+	if err := os.WriteFile(p.Path, []byte(result), info.Mode()); err != nil {
 		return "", fmt.Errorf("write: %w", err)
 	}
-	return fmt.Sprintf("Edited %s", p.Path), nil
+	return fmt.Sprintf("Edited %s (replaced 1 occurrence)", p.Path), nil
 }

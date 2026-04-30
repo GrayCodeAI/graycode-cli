@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
+
+const maxFileSize = 1 << 30 // 1 GiB
 
 type FileReadTool struct{}
 
@@ -33,6 +36,17 @@ func (FileReadTool) Execute(_ context.Context, input json.RawMessage) (string, e
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
+	info, err := os.Stat(p.Path)
+	if err != nil {
+		suggestion := suggestSimilar(p.Path)
+		if suggestion != "" {
+			return "", fmt.Errorf("file not found: %s\nDid you mean: %s", p.Path, suggestion)
+		}
+		return "", fmt.Errorf("file not found: %s", p.Path)
+	}
+	if info.Size() > maxFileSize {
+		return "", fmt.Errorf("file too large: %d bytes (max %d)", info.Size(), maxFileSize)
+	}
 	data, err := os.ReadFile(p.Path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", p.Path, err)
@@ -54,4 +68,37 @@ func (FileReadTool) Execute(_ context.Context, input json.RawMessage) (string, e
 		fmt.Fprintf(&b, "%4d | %s\n", i+1, lines[i])
 	}
 	return b.String(), nil
+}
+
+// suggestSimilar finds a similar file in the same directory.
+func suggestSimilar(path string) string {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	best := ""
+	bestScore := 0
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		score := commonPrefix(strings.ToLower(base), strings.ToLower(e.Name()))
+		if score > bestScore && score >= 3 {
+			bestScore = score
+			best = filepath.Join(dir, e.Name())
+		}
+	}
+	return best
+}
+
+func commonPrefix(a, b string) int {
+	n := min(len(a), len(b))
+	for i := 0; i < n; i++ {
+		if a[i] != b[i] {
+			return i
+		}
+	}
+	return n
 }

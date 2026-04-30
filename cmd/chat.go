@@ -82,6 +82,10 @@ func defaultRegistry() *tool.Registry {
 		tool.GrepTool{},
 		tool.WebFetchTool{},
 		tool.WebSearchTool{},
+		tool.AgentTool{},
+		tool.AskUserQuestionTool{},
+		tool.TodoWriteTool{},
+		tool.LSPTool{},
 	)
 }
 
@@ -110,10 +114,13 @@ func newChatModel(ref *progRef) chatModel {
 
 	m := chatModel{input: ta, spinner: sp, session: sess, ref: ref, sessionID: sid}
 
-	// Wire permission system: engine sends requests via PermissionFn, TUI handles them
+	// Wire permission system
 	sess.PermissionFn = func(req engine.PermissionRequest) {
 		ref.Send(permissionAskMsg{req: req})
 	}
+
+	// Wire agent sub-spawning
+	sess.WireAgentTool()
 
 	// Resume a saved session
 	if resumeID != "" {
@@ -294,14 +301,18 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.startStream()
 		return m, nil
 	case "/help":
-		help := `/clear         — Clear display
-/compact       — Compact conversation to save context
-/cost          — Show token usage and cost
-/diff          — Show files modified this session
-/model         — Show current model
-/history       — List saved sessions
-/resume <id>   — Resume a saved session
-/quit          — Exit hawk`
+		help := `/clear              — Clear display
+/compact            — Compact conversation to save context
+/commit             — Auto-commit changes with AI message
+/cost               — Show token usage and cost
+/diff               — Review changes made this session
+/doctor             — Run project diagnostics
+/history            — List saved sessions
+/init               — Analyze and summarize this project
+/model              — Show current model
+/permissions allow <tool> — Always allow a tool
+/resume <id>        — Resume a saved session
+/quit               — Exit hawk`
 		m.messages = append(m.messages, displayMsg{role: "system", content: help})
 		return m, nil
 	case "/cost":
@@ -341,6 +352,35 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.session.LoadMessages(msgs)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resumed session %s", saved.ID)})
+		return m, nil
+	case "/commit":
+		m.messages = append(m.messages, displayMsg{role: "user", content: "/commit"})
+		m.session.AddUser("Review the changes I've made, then create a git commit with an appropriate commit message. Use 'git add' for specific files and 'git commit'.")
+		m.waiting = true
+		m.partial.Reset()
+		m.startStream()
+		return m, nil
+	case "/doctor":
+		m.messages = append(m.messages, displayMsg{role: "user", content: "/doctor"})
+		m.session.AddUser("Run diagnostics on this project: check if it builds, run tests, check for lint errors. Report any issues found.")
+		m.waiting = true
+		m.partial.Reset()
+		m.startStream()
+		return m, nil
+	case "/init":
+		m.messages = append(m.messages, displayMsg{role: "user", content: "/init"})
+		m.session.AddUser("Analyze this project: read the README, check the directory structure, identify the language/framework, build system, and test runner. Give me a brief summary.")
+		m.waiting = true
+		m.partial.Reset()
+		m.startStream()
+		return m, nil
+	case "/permissions":
+		if len(parts) >= 3 && parts[1] == "allow" {
+			m.session.Permissions.AlwaysAllow(parts[2])
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Always allowing: %s", parts[2])})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /permissions allow <tool_name>"})
+		}
 		return m, nil
 	default:
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
