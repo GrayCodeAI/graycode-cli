@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hawk/eyrie/client"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
@@ -58,6 +59,7 @@ type chatModel struct {
 	spinner   spinner.Model
 	session   *engine.Session
 	ref       *progRef
+	cancel    context.CancelFunc // cancel current stream
 	sessionID string
 	messages  []displayMsg
 	partial   strings.Builder
@@ -99,14 +101,26 @@ func newChatModel(ref *progRef) chatModel {
 
 	systemPrompt := prompt.System() + "\n\n" + hawkconfig.BuildContext()
 	sess := engine.NewSession(provider, model, systemPrompt, defaultRegistry())
+	sid := genID()
 
-	return chatModel{
-		input:     ta,
-		spinner:   sp,
-		session:   sess,
-		ref:       ref,
-		sessionID: genID(),
+	m := chatModel{input: ta, spinner: sp, session: sess, ref: ref, sessionID: sid}
+
+	// Resume a saved session
+	if resumeID != "" {
+		if saved, err := session.Load(resumeID); err == nil {
+			m.sessionID = saved.ID
+			var msgs []client.EyrieMessage
+			for _, sm := range saved.Messages {
+				msgs = append(msgs, client.EyrieMessage{Role: sm.Role, Content: sm.Content})
+				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+			}
+			sess.LoadMessages(msgs)
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		}
 	}
+
+	return m
 }
 
 func (m chatModel) Init() tea.Cmd {
@@ -120,6 +134,19 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if m.waiting {
 			if msg.Type == tea.KeyCtrlC {
+				// First Ctrl+C cancels stream, second quits
+				if m.cancel != nil {
+					m.cancel()
+					m.cancel = nil
+					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
+					if m.partial.Len() > 0 {
+						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
+						m.partial.Reset()
+					}
+					m.waiting = false
+					m.input.Focus()
+					return m, nil
+				}
 				m.saveSession()
 				m.quitting = true
 				return m, tea.Quit
@@ -137,12 +164,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.input.Reset()
-
-			// Slash commands
 			if strings.HasPrefix(text, "/") {
 				return m.handleCommand(text)
 			}
-
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			m.waiting = true
@@ -177,6 +201,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.partial.Reset()
 		}
 		m.waiting = false
+		m.cancel = nil
 		m.input.Focus()
 		m.saveSession()
 		return m, nil
@@ -185,6 +210,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "error", content: msg.err.Error()})
 		m.partial.Reset()
 		m.waiting = false
+		m.cancel = nil
 		m.input.Focus()
 		return m, nil
 
@@ -217,30 +243,25 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.saveSession()
 		m.quitting = true
 		return m, tea.Quit
-
 	case "/clear":
 		m.messages = nil
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
 		return m, nil
-
 	case "/help":
-		help := `/clear    — Clear conversation
-/cost     — Show token usage and cost
-/model    — Show current model
-/history  — List saved sessions
-/quit     — Exit hawk`
+		help := `/clear         — Clear display
+/cost          — Show token usage and cost
+/model         — Show current model
+/history       — List saved sessions
+/resume <id>   — Resume a saved session
+/quit          — Exit hawk`
 		m.messages = append(m.messages, displayMsg{role: "system", content: help})
 		return m, nil
-
 	case "/cost":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
 		return m, nil
-
 	case "/model":
-		info := fmt.Sprintf("Provider: %s\nModel: %s", m.session.Provider(), m.session.Model())
-		m.messages = append(m.messages, displayMsg{role: "system", content: info})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s/%s", m.session.Provider(), m.session.Model())})
 		return m, nil
-
 	case "/history":
 		entries, err := session.List()
 		if err != nil || len(entries) == 0 {
@@ -253,7 +274,26 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 		return m, nil
-
+	case "/resume":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /resume <session-id>"})
+			return m, nil
+		}
+		saved, err := session.Load(parts[1])
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		m.sessionID = saved.ID
+		m.messages = nil
+		var msgs []client.EyrieMessage
+		for _, sm := range saved.Messages {
+			msgs = append(msgs, client.EyrieMessage{Role: sm.Role, Content: sm.Content})
+			m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+		}
+		m.session.LoadMessages(msgs)
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resumed session %s", saved.ID)})
+		return m, nil
 	default:
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
 		return m, nil
@@ -270,21 +310,19 @@ func (m *chatModel) saveSession() {
 	if len(msgs) == 0 {
 		return
 	}
-	s := &session.Session{
-		ID:        m.sessionID,
-		Model:     m.session.Model(),
-		Provider:  m.session.Provider(),
-		Messages:  msgs,
-		CreatedAt: time.Now(),
-	}
-	_ = session.Save(s)
+	_ = session.Save(&session.Session{
+		ID: m.sessionID, Model: m.session.Model(), Provider: m.session.Provider(),
+		Messages: msgs, CreatedAt: time.Now(),
+	})
 }
 
 func (m *chatModel) startStream() {
 	sess := m.session
 	ref := m.ref
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
 	go func() {
-		ch, err := sess.Stream(context.Background())
+		ch, err := sess.Stream(ctx)
 		if err != nil {
 			ref.Send(streamErrMsg{err: err})
 			return
@@ -315,7 +353,6 @@ func (m chatModel) View() string {
 	}
 
 	var b strings.Builder
-
 	b.WriteString(headerStyle.Render(fmt.Sprintf("🦅 hawk v%s", version)))
 	b.WriteString(dimStyle.Render(fmt.Sprintf("  %s/%s", m.session.Provider(), m.session.Model())))
 	b.WriteString(dimStyle.Render(fmt.Sprintf("  [%s]", m.sessionID)))

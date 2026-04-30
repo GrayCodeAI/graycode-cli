@@ -51,9 +51,14 @@ func (s *Session) AddAssistant(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: content})
 }
 
+// LoadMessages restores conversation history (for --resume).
+func (s *Session) LoadMessages(msgs []client.EyrieMessage) {
+	s.messages = msgs
+}
+
 // StreamEvent is sent from the engine to the TUI.
 type StreamEvent struct {
-	Type     string // "content", "thinking", "tool_use", "tool_result", "done", "error"
+	Type     string // "content", "thinking", "tool_use", "tool_result", "tool_ask", "done", "error"
 	Content  string
 	ToolName string
 	ToolID   string

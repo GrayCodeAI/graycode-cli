@@ -9,6 +9,7 @@ var (
 	model      string
 	provider   string
 	promptFlag string
+	resumeID   string
 )
 
 // SetVersion sets the version string from main.
@@ -27,6 +28,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&model, "model", "m", "", "model to use (e.g. claude-sonnet-4-20250514)")
 	rootCmd.Flags().StringVarP(&promptFlag, "prompt", "p", "", "send a single prompt and exit")
 	rootCmd.Flags().StringVar(&provider, "provider", "", "LLM provider (anthropic, openai, gemini, etc.)")
+	rootCmd.Flags().StringVarP(&resumeID, "resume", "r", "", "resume a saved session by ID")
 	rootCmd.AddCommand(versionCmd)
 }
 
