@@ -40,6 +40,8 @@ type streamDoneMsg struct{}
 type streamErrMsg struct{ err error }
 type toolUseMsg struct{ name, id string }
 type toolResultMsg struct{ name, content string }
+type permissionAskMsg struct{ req engine.PermissionRequest }
+type thinkingMsg string
 
 type displayMsg struct {
 	role    string
@@ -64,6 +66,7 @@ type chatModel struct {
 	messages  []displayMsg
 	partial   strings.Builder
 	waiting   bool
+	permReq   *engine.PermissionRequest // pending permission prompt
 	width     int
 	height    int
 	quitting  bool
@@ -107,6 +110,11 @@ func newChatModel(ref *progRef) chatModel {
 
 	m := chatModel{input: ta, spinner: sp, session: sess, ref: ref, sessionID: sid}
 
+	// Wire permission system: engine sends requests via PermissionFn, TUI handles them
+	sess.PermissionFn = func(req engine.PermissionRequest) {
+		ref.Send(permissionAskMsg{req: req})
+	}
+
 	// Resume a saved session
 	if resumeID != "" {
 		if saved, err := session.Load(resumeID); err == nil {
@@ -134,6 +142,20 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Permission prompt active — handle y/n
+		if m.permReq != nil {
+			switch msg.String() {
+			case "y", "Y":
+				m.permReq.Response <- true
+				m.messages = append(m.messages, displayMsg{role: "system", content: "✓ Allowed"})
+				m.permReq = nil
+			case "n", "N":
+				m.permReq.Response <- false
+				m.messages = append(m.messages, displayMsg{role: "system", content: "✗ Denied"})
+				m.permReq = nil
+			}
+			return m, nil
+		}
 		if m.waiting {
 			if msg.Type == tea.KeyCtrlC {
 				// First Ctrl+C cancels stream, second quits
@@ -181,6 +203,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.partial.WriteString(string(msg))
 		return m, nil
 
+	case thinkingMsg:
+		m.messages = append(m.messages, displayMsg{role: "thinking", content: string(msg)})
+		return m, nil
+
 	case toolUseMsg:
 		if m.partial.Len() > 0 {
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
@@ -195,6 +221,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content = content[:500] + "..."
 		}
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, content)})
+		return m, nil
+
+	case permissionAskMsg:
+		m.permReq = &msg.req
+		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
 		return m, nil
 
 	case streamDoneMsg:
@@ -249,9 +280,24 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = nil
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
 		return m, nil
+	case "/compact":
+		before := m.session.MessageCount()
+		m.session.Compact()
+		after := m.session.MessageCount()
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compacted: %d → %d messages", before, after)})
+		return m, nil
+	case "/diff":
+		m.messages = append(m.messages, displayMsg{role: "user", content: "/diff"})
+		m.session.AddUser("Show me a summary of all files you've modified or created in this session. Use bash with 'git diff --stat' or list the files.")
+		m.waiting = true
+		m.partial.Reset()
+		m.startStream()
+		return m, nil
 	case "/help":
 		help := `/clear         — Clear display
+/compact       — Compact conversation to save context
 /cost          — Show token usage and cost
+/diff          — Show files modified this session
 /model         — Show current model
 /history       — List saved sessions
 /resume <id>   — Resume a saved session
@@ -333,6 +379,8 @@ func (m *chatModel) startStream() {
 			switch ev.Type {
 			case "content":
 				ref.Send(streamChunkMsg(ev.Content))
+			case "thinking":
+				ref.Send(thinkingMsg(ev.Content))
 			case "tool_use":
 				ref.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
 			case "tool_result":
@@ -372,8 +420,12 @@ func (m chatModel) View() string {
 			b.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
 			b.WriteString(toolDimStyle.Render(msg.content))
+		case "thinking":
+			b.WriteString(dimStyle.Render("💭 " + msg.content))
 		case "system":
 			b.WriteString(dimStyle.Render(msg.content))
+		case "permission":
+			b.WriteString(toolStyle.Render("⚠ " + msg.content + "  [y/n]"))
 		case "error":
 			b.WriteString(errorStyle.Render("error: "))
 			b.WriteString(msg.content)
@@ -425,6 +477,8 @@ func runChat() error {
 				switch ev.Type {
 				case "content":
 					p.Send(streamChunkMsg(ev.Content))
+				case "thinking":
+					p.Send(thinkingMsg(ev.Content))
 				case "tool_use":
 					p.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
 				case "tool_result":

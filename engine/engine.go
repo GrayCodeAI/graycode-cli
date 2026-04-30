@@ -18,13 +18,14 @@ const (
 
 // Session manages a conversation with an LLM via eyrie.
 type Session struct {
-	client   *client.EyrieClient
-	registry *tool.Registry
-	messages []client.EyrieMessage
-	provider string
-	model    string
-	system   string
-	Cost     Cost
+	client       *client.EyrieClient
+	registry     *tool.Registry
+	messages     []client.EyrieMessage
+	provider     string
+	model        string
+	system       string
+	Cost         Cost
+	PermissionFn func(PermissionRequest) // set by TUI to handle permission prompts
 }
 
 // NewSession creates a new conversation session.
@@ -173,33 +174,71 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
 		}
 
-		// Execute tools
+		// Execute tools and collect results
 		recoveryCount = 0
+		type toolExecResult struct {
+			tc     client.ToolCall
+			output string
+			isErr  bool
+		}
+		var results []toolExecResult
 		for _, tc := range toolCalls {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
+			// Check permission for dangerous tools
+			if toolNeedsPermission(tc.Name) && s.PermissionFn != nil {
+				resp := make(chan bool, 1)
+				s.PermissionFn(PermissionRequest{
+					ToolName: tc.Name,
+					ToolID:   tc.ID,
+					Summary:  toolSummary(tc.Name, tc.Arguments),
+					Response: resp,
+				})
+				allowed := <-resp
+				if !allowed {
+					ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
+					results = append(results, toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true})
+					continue
+				}
+			}
+
 			inputJSON, _ := json.Marshal(tc.Arguments)
-			output, err := s.registry.Execute(ctx, tc.Name, inputJSON)
-			if err != nil {
-				output = fmt.Sprintf("Error: %s", err.Error())
+			output, execErr := s.registry.Execute(ctx, tc.Name, inputJSON)
+			isErr := execErr != nil
+			if isErr {
+				output = fmt.Sprintf("Error: %s", execErr.Error())
 			}
 			if len(output) > 50000 {
 				output = output[:50000] + "\n... (truncated)"
 			}
 
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
+			results = append(results, toolExecResult{tc: tc, output: output, isErr: isErr})
+		}
 
-			// Append as assistant tool_use + user tool_result pair
+		// Append assistant message with tool_use blocks
+		s.messages = append(s.messages, client.EyrieMessage{
+			Role:    "assistant",
+			Content: textContent,
+			ToolUse: toolCalls,
+		})
+		// Append tool results as proper tool_result messages
+		for _, r := range results {
 			s.messages = append(s.messages, client.EyrieMessage{
-				Role:    "assistant",
-				Content: fmt.Sprintf("[Used tool: %s(%s)]", tc.Name, string(inputJSON)),
-			})
-			s.messages = append(s.messages, client.EyrieMessage{
-				Role:    "user",
-				Content: fmt.Sprintf("[Tool result for %s (id: %s)]:\n%s", tc.Name, tc.ID, output),
+				Role: "user",
+				ToolResult: &client.ToolResult{
+					ToolUseID: r.tc.ID,
+					Content:   r.output,
+					IsError:   r.isErr,
+				},
 			})
 		}
 	}
+}
+
+// Compact reduces conversation history to save context window.
+func (s *Session) Compact() {
+	s.compact()
 }
 
 // compact removes older messages, keeping the first and last N.
