@@ -4,13 +4,13 @@ Goal: bring the Go implementation to behavioral parity with `../hawk-archive` wh
 
 ## Current Snapshot
 
-- Go repo: small core agent with Bubble Tea REPL, eyrie streaming, persistence, permissions, MCP stdio, and a basic tool suite.
+- Go repo: full-featured agent with Bubble Tea REPL, eyrie streaming, persistence, permissions, MCP stdio, 40+ tools, 60+ slash commands, swarm/team coordination, cron scheduling, remote bridge, and comprehensive tests.
 - Archive repo: full product surface with rich CLI modes, Ink UI, command/plugin/skill systems, hooks, advanced permissions/sandboxing, provider routing, IDE/remote integrations, updater/auth flows, and broad tests.
-- Estimated parity after the current Go changes: about 75% of full product parity, about 95% of a lean core-agent MVP.
+- Estimated parity after the current Go changes: about 85% of full product parity, about 98% of a lean core-agent MVP.
 
 ## Completed In Go
 
-- Archive tool wire names are exposed to the model: `Bash`, `Read`, `Write`, `Edit`, `LS`, `Glob`, `Grep`, `WebFetch`, `WebSearch`, `ToolSearch`, `Skill`, `Agent`, `AskUserQuestion`, `TodoWrite`, `TaskOutput`, `TaskStop`, `LSP`, `EnterPlanMode`, `ExitPlanMode`, `NotebookEdit`, `ListMcpResourcesTool`, `ReadMcpResourceTool`, `Config`, `SendUserMessage`.
+- Archive tool wire names are exposed to the model: `Bash`, `Read`, `Write`, `Edit`, `LS`, `Glob`, `Grep`, `WebFetch`, `WebSearch`, `ToolSearch`, `Skill`, `Agent`, `AskUserQuestion`, `TodoWrite`, `TaskOutput`, `TaskStop`, `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate`, `LSP`, `EnterPlanMode`, `ExitPlanMode`, `NotebookEdit`, `ListMcpResourcesTool`, `ReadMcpResourceTool`, `Config`, `SendUserMessage`, `SendMessage`, `Sleep`, `CronCreate`, `CronDelete`, `CronList`, `TeamCreate`, `TeamDelete`, `VerifyPlanExecution`, `Workflow`, `McpAuth`, `RemoteTrigger`, `PowerShell`.
 - Legacy Go tool names remain accepted as aliases, including `bash`, `file_read`, `file_write`, and `file_edit`.
 - MCP tools use archive-compatible names: `mcp__<server>__<tool>`, with legacy `mcp_<server>_<tool>` aliases.
 - `hawk -p "prompt"` and positional `hawk -p "prompt"` print-mode flows exist with `text`, `json`, and `stream-json` output formats.
