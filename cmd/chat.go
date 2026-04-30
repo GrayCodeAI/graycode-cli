@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -91,6 +92,11 @@ func defaultRegistry() *tool.Registry {
 		tool.AskUserQuestionTool{},
 		tool.TodoWriteTool{},
 		tool.LSPTool{},
+		tool.EnterPlanModeTool{},
+		tool.ExitPlanModeTool{},
+		tool.NotebookEditTool{},
+		tool.ConfigTool{},
+		tool.BriefTool{},
 	}
 
 	// Load MCP server tools
@@ -131,7 +137,19 @@ func newChatModel(ref *progRef) chatModel {
 	sp.Style = lipgloss.NewStyle().Foreground(tealColor)
 
 	systemPrompt := prompt.System() + "\n\n" + hawkconfig.BuildContext()
-	sess := engine.NewSession(provider, model, systemPrompt, defaultRegistry())
+	
+	// Apply settings
+	settings := hawkconfig.LoadSettings()
+	effectiveModel := model
+	if effectiveModel == "" && settings.Model != "" {
+		effectiveModel = settings.Model
+	}
+	effectiveProvider := provider
+	if effectiveProvider == "" && settings.Provider != "" {
+		effectiveProvider = settings.Provider
+	}
+	
+	sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, defaultRegistry())
 	sid := genID()
 
 	m := chatModel{input: ta, spinner: sp, session: sess, ref: ref, sessionID: sid}
@@ -143,6 +161,11 @@ func newChatModel(ref *progRef) chatModel {
 
 	// Wire agent sub-spawning
 	sess.WireAgentTool()
+
+	// Apply auto-allow from settings
+	for _, t := range settings.AutoAllow {
+		sess.Permissions.AlwaysAllow(t)
+	}
 
 	// Wire ask_user tool
 	sess.AskUserFn = func(question string) (string, error) {
@@ -350,9 +373,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/compact":
 		before := m.session.MessageCount()
-		m.session.Compact()
+		m.session.SmartCompact()
 		after := m.session.MessageCount()
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compacted: %d → %d messages", before, after)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compacted: %d → %d messages (LLM summary)", before, after)})
 		return m, nil
 	case "/diff":
 		m.messages = append(m.messages, displayMsg{role: "user", content: "/diff"})
@@ -363,16 +386,21 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/help":
 		help := `/clear              — Clear display
-/compact            — Compact conversation to save context
-/commit             — Auto-commit changes with AI message
-/cost               — Show token usage and cost
-/diff               — Review changes made this session
-/doctor             — Run project diagnostics
+/compact            — Compact conversation (LLM summary)
+/commit             — Auto-commit changes
+/config             — Show settings
+/context            — Show current context
+/cost               — Token usage and cost
+/diff               — Review changes
+/doctor             — Run diagnostics
 /history            — List saved sessions
-/init               — Analyze and summarize this project
+/init               — Analyze project
 /model              — Show current model
-/permissions allow <tool> — Always allow a tool
-/resume <id>        — Resume a saved session
+/permissions allow  — Always allow a tool
+/plan               — Enter plan mode (read-only)
+/resume <id>        — Resume session
+/status             — Session status
+/usage              — Token usage
 /quit               — Exit hawk`
 		m.messages = append(m.messages, displayMsg{role: "system", content: help})
 		return m, nil
@@ -451,6 +479,30 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		} else {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /permissions allow <tool_name>"})
 		}
+		return m, nil
+	case "/status":
+		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMessages: %d\n%s",
+			m.sessionID, m.session.Provider(), m.session.Model(),
+			m.session.MessageCount(), m.session.Cost.Summary())
+		m.messages = append(m.messages, displayMsg{role: "system", content: info})
+		return m, nil
+	case "/context":
+		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.BuildContext()})
+		return m, nil
+	case "/config":
+		settings := hawkconfig.LoadSettings()
+		data, _ := json.MarshalIndent(settings, "", "  ")
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Settings:\n" + string(data)})
+		return m, nil
+	case "/plan":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Plan mode: hawk will only read and discuss, no modifications."})
+		m.session.AddUser("Enter plan mode. Only read files and discuss plans — do not write files or run commands that modify state until I say to proceed.")
+		m.waiting = true
+		m.partial.Reset()
+		m.startStream()
+		return m, nil
+	case "/usage":
+		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
 		return m, nil
 	default:
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})

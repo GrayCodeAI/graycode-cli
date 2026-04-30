@@ -96,7 +96,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	for {
 		// Auto-compact if conversation is too long
 		if len(s.messages) > maxContextMessages {
-			s.compact()
+			s.smartCompact()
 		}
 
 		opts := client.ChatOptions{
@@ -272,10 +272,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	}
 }
 
-// Compact reduces conversation history to save context window.
-func (s *Session) Compact() {
-	s.compact()
-}
+// Compact reduces conversation history (boundary-aware truncation).
+func (s *Session) Compact() { s.compact() }
+
+// SmartCompact reduces conversation history using LLM-generated summaries.
+func (s *Session) SmartCompact() { s.smartCompact() }
 
 // compact removes older messages while preserving tool_use/tool_result pairing.
 func (s *Session) compact() {
