@@ -13,24 +13,35 @@ import (
 
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/prompt"
+	"github.com/GrayCodeAI/hawk/tool"
 )
 
 var (
-	tealColor   = lipgloss.Color("#4ECDC4")
-	dimColor    = lipgloss.Color("#666666")
-	errorColor  = lipgloss.Color("#e05555")
-	userStyle   = lipgloss.NewStyle().Foreground(tealColor).Bold(true)
-	assistStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
-	dimStyle    = lipgloss.NewStyle().Foreground(dimColor)
-	errorStyle  = lipgloss.NewStyle().Foreground(errorColor)
-	headerStyle = lipgloss.NewStyle().Foreground(tealColor).Bold(true)
+	tealColor    = lipgloss.Color("#4ECDC4")
+	dimColor     = lipgloss.Color("#666666")
+	errorColor   = lipgloss.Color("#e05555")
+	toolColor    = lipgloss.Color("#FFD700")
+	userStyle    = lipgloss.NewStyle().Foreground(tealColor).Bold(true)
+	assistStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	dimStyle     = lipgloss.NewStyle().Foreground(dimColor)
+	errorStyle   = lipgloss.NewStyle().Foreground(errorColor)
+	headerStyle  = lipgloss.NewStyle().Foreground(tealColor).Bold(true)
+	toolStyle    = lipgloss.NewStyle().Foreground(toolColor).Bold(true)
+	toolDimStyle = lipgloss.NewStyle().Foreground(dimColor)
 )
 
+// Tea messages
 type streamChunkMsg string
 type streamDoneMsg struct{}
 type streamErrMsg struct{ err error }
+type toolUseMsg struct{ name, id string }
+type toolResultMsg struct{ name, content string }
 
-// progRef holds a reference to the tea.Program, set after creation.
+type displayMsg struct {
+	role    string
+	content string
+}
+
 type progRef struct {
 	mu sync.Mutex
 	p  *tea.Program
@@ -38,11 +49,6 @@ type progRef struct {
 
 func (r *progRef) Set(p *tea.Program) { r.mu.Lock(); r.p = p; r.mu.Unlock() }
 func (r *progRef) Send(msg tea.Msg)   { r.mu.Lock(); p := r.p; r.mu.Unlock(); if p != nil { p.Send(msg) } }
-
-type displayMsg struct {
-	role    string
-	content string
-}
 
 type chatModel struct {
 	input    textarea.Model
@@ -55,6 +61,17 @@ type chatModel struct {
 	width    int
 	height   int
 	quitting bool
+}
+
+func defaultRegistry() *tool.Registry {
+	return tool.NewRegistry(
+		tool.BashTool{},
+		tool.FileReadTool{},
+		tool.FileWriteTool{},
+		tool.FileEditTool{},
+		tool.GlobTool{},
+		tool.GrepTool{},
+	)
 }
 
 func newChatModel(ref *progRef) chatModel {
@@ -70,7 +87,7 @@ func newChatModel(ref *progRef) chatModel {
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(tealColor)
 
-	sess := engine.NewSession(provider, model, prompt.System())
+	sess := engine.NewSession(provider, model, prompt.System(), defaultRegistry())
 
 	return chatModel{input: ta, spinner: sp, session: sess, ref: ref}
 }
@@ -117,13 +134,28 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.partial.WriteString(string(msg))
 		return m, nil
 
-	case streamDoneMsg:
-		content := m.partial.String()
-		if content != "" {
-			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
-			m.session.AddAssistant(content)
+	case toolUseMsg:
+		// Flush any partial text as a message
+		if m.partial.Len() > 0 {
+			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
+			m.partial.Reset()
 		}
-		m.partial.Reset()
+		m.messages = append(m.messages, displayMsg{role: "tool_use", content: msg.name})
+		return m, nil
+
+	case toolResultMsg:
+		content := msg.content
+		if len(content) > 500 {
+			content = content[:500] + "..."
+		}
+		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, content)})
+		return m, nil
+
+	case streamDoneMsg:
+		if m.partial.Len() > 0 {
+			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
+			m.partial.Reset()
+		}
 		m.waiting = false
 		m.input.Focus()
 		return m, nil
@@ -168,8 +200,15 @@ func (m *chatModel) startStream() {
 			switch ev.Type {
 			case "content":
 				ref.Send(streamChunkMsg(ev.Content))
+			case "tool_use":
+				ref.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
+			case "tool_result":
+				ref.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
 			case "error":
 				ref.Send(streamErrMsg{err: fmt.Errorf("%s", ev.Content)})
+				return
+			case "done":
+				ref.Send(streamDoneMsg{})
 				return
 			}
 		}
@@ -197,6 +236,10 @@ func (m chatModel) View() string {
 		case "assistant":
 			b.WriteString(assistStyle.Render("hawk: "))
 			b.WriteString(msg.content)
+		case "tool_use":
+			b.WriteString(toolStyle.Render("⚡ " + msg.content))
+		case "tool_result":
+			b.WriteString(toolDimStyle.Render(msg.content))
 		case "error":
 			b.WriteString(errorStyle.Render("error: "))
 			b.WriteString(msg.content)
@@ -248,8 +291,15 @@ func runChat() error {
 				switch ev.Type {
 				case "content":
 					p.Send(streamChunkMsg(ev.Content))
+				case "tool_use":
+					p.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
+				case "tool_result":
+					p.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
 				case "error":
 					p.Send(streamErrMsg{err: fmt.Errorf("%s", ev.Content)})
+					return
+				case "done":
+					p.Send(streamDoneMsg{})
 					return
 				}
 			}
