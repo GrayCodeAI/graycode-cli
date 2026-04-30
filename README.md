@@ -114,7 +114,9 @@ Lowercase Go-port names like `bash`, `file_read`, and `file_edit` remain accepte
 | `/skills` | List local skills |
 | `/summary` | Summarize the current session |
 | `/tools` | List enabled tools |
-| `/version` | Show hawk version |
+| `/models` | List available models and providers |
+| `/plugin list` | List installed plugins |
+| `/plugin-command <name>` | Run a plugin command |
 | `/welcome` | Show startup summary |
 
 ## Session Flags
@@ -145,6 +147,92 @@ Auto-detected from environment:
 | OpenRouter | `OPENROUTER_API_KEY` |
 | Grok | `XAI_API_KEY` |
 | Ollama | `OLLAMA_BASE_URL` |
+
+ hawk --mcp "npx @modelcontextprotocol/server-github"
+```
+
+## Model Catalog
+
+Built-in model catalog with 25+ models across 7 providers:
+
+```bash
+hawk /models              # List available models
+hawk --provider anthropic --model claude-sonnet-4-20250514
+```
+
+Models include pricing, context sizes, and recommendations. Smart routing automatically selects appropriate models based on provider capabilities.
+
+## Plugin System
+
+Install and manage plugins:
+
+```bash
+hawk plugin list          # List installed plugins
+hawk plugin install ./my-plugin
+hawk plugin uninstall my-plugin
+```
+
+Plugins can provide commands, skills, and hooks. See `plugin/` package for manifest format and runtime details.
+
+## Advanced Permissions
+
+Beyond basic allow/deny, hawk includes:
+
+- **Auto-mode**: Learns from your decisions and auto-allows/denies similar commands
+- **Command classifier**: Classifies commands as safe/unsafe/unknown
+- **Bypass killswitch**: Emergency disable for auto-mode
+- **Shadowed rule detection**: Warns when allow rules are hidden by broader deny rules
+
+```bash
+hawk -p "review this repo" --permission-mode acceptEdits
+```
+
+## Session Memory
+
+hawk extracts and stores important decisions from sessions:
+
+```bash
+hawk /memory              # Show loaded project instructions
+```
+
+Memories are automatically extracted from messages containing keywords like "Important", "Note", "Remember", etc.
+
+## Analytics
+
+Session traces and events are logged for analysis:
+
+```bash
+# Analytics are stored in ~/.hawk/analytics/
+# Use the API to query session costs, provider usage, etc.
+```
+
+## Auto-Update
+
+Check for updates:
+
+```bash
+hawk /version             # Shows current version
+# hawk update             # Check and install updates (future)
+```
+
+## IDE Integration
+
+ hawk provides IDE integration hints:
+
+- VSCode extension manifest generation
+- LSP server configuration suggestions
+- Keyboard shortcut recommendations
+
+See `ide/` package for extension development support.
+
+## Sandbox Mode (Experimental)
+
+Run commands in isolated environments:
+
+```bash
+# Supports namespace, docker, and chroot isolation
+# Configure in settings: {"sandbox": {"enabled": true, "type": "docker"}}
+```
 
 ## MCP (Model Context Protocol)
 
@@ -197,6 +285,34 @@ Supported permission modes are `default`, `acceptEdits`, `bypassPermissions`, `d
 | TUI | [Bubbletea](https://github.com/charmbracelet/bubbletea) + [lipgloss](https://github.com/charmbracelet/lipgloss) |
 | LLM | [eyrie](https://github.com/GrayCodeAI/eyrie) |
 | MCP | JSON-RPC over stdio |
+| Hooks | Event-driven plugin system |
+| Plugins | Manifest-based external commands |
+| LSP | JSON-RPC language server client |
+| Sandbox | Namespace/docker/chroot isolation |
+
+### Package Structure
+
+- `cmd/` - CLI commands and TUI
+- `engine/` - Agent loop, session management, streaming
+- `tool/` - Built-in tools (Bash, Read, Write, Edit, etc.)
+- `config/` - Settings loading and validation
+- `session/` - Session persistence (JSONL format)
+- `prompt/` - System prompt construction
+- `mcp/` - MCP client and server management
+- `hooks/` - Event hook system
+- `plugin/` - Plugin runtime and manifest validation
+- `permissions/` - Permission checking and advanced features
+- `model/` - Model catalog and provider routing
+- `memory/` - Session memory extraction
+- `analytics/` - Event logging and session traces
+- `auth/` - Token storage and OAuth
+- `update/` - Auto-update checking
+- `lsp/` - LSP client and server manager
+- `voice/` - STT integration
+- `magicdocs/` - Automatic documentation generation
+- `ide/` - IDE integration hints
+- `remote/` - Remote session management
+- `sandbox/` - Command isolation
 
 Zero CGO. Single static binary. Cross-compiled for linux/darwin/windows amd64/arm64.
 
