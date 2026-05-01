@@ -53,6 +53,12 @@ func NewBridgeClient(serverURL, token string) *BridgeClient {
 	}
 }
 
+// NewBridgeClientWithTransport creates a bridge client with a specific transport.
+func NewBridgeClientWithTransport(serverURL, token string, transport Transport) *BridgeClient {
+	c := NewBridgeClient(serverURL, token)
+	return c
+}
+
 // Connect establishes a connection to the remote server.
 func (c *BridgeClient) Connect(ctx context.Context) error {
 	c.mu.Lock()

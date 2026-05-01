@@ -246,7 +246,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		err = retry.Do(ctx, retryCfg, func() error {
 			result, err = s.client.StreamChat(ctx, s.messages, opts)
 			if err != nil {
-				// Handle prompt too long with compaction
 				if strings.Contains(err.Error(), "too long") || strings.Contains(err.Error(), "too many tokens") {
 					s.compact()
 					result, err = s.client.StreamChat(ctx, s.messages, opts)
@@ -257,6 +256,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		apiDuration := time.Since(apiStart)
 		s.metrics.Timer("api.latency").Record(apiDuration)
+		s.metrics.Timer("api.last_latency").Record(apiDuration)
 
 		if err != nil {
 			s.log.Error("stream error", map[string]interface{}{
