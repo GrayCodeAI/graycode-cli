@@ -237,6 +237,11 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return "", fmt.Errorf("command is required")
 	}
 
+	// Safety layer: block destructive commands before any execution.
+	if IsDestructiveCommand(p.Command) {
+		return "", fmt.Errorf("blocked: destructive command pattern detected — %s", p.Command)
+	}
+
 	// Hard block: always-dangerous patterns
 	lower := strings.ToLower(p.Command)
 	for _, pat := range dangerousSubstrings {
@@ -290,9 +295,10 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return "", fmt.Errorf("blocked: consecutive quotes indicate obfuscation attempt")
 	}
 
+	// Apply per-tool timeout from safety config, allow explicit override.
 	timeout := time.Duration(p.Timeout) * time.Second
 	if timeout == 0 {
-		timeout = 120 * time.Second
+		timeout = ToolTimeout("Bash")
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -309,9 +315,8 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	out, err := cmd.CombinedOutput()
 	result := string(out)
 
-	if len(result) > 100000 {
-		result = result[:100000] + "\n... (output truncated at 100KB)"
-	}
+	// Apply safety output truncation (50KB).
+	result = TruncateOutput(result)
 	result = strings.TrimRight(result, "\n")
 
 	if err != nil {
