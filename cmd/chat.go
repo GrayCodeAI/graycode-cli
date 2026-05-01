@@ -22,6 +22,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hawk/eyrie/catalog"
@@ -109,6 +110,7 @@ func (r *progRef) Send(msg tea.Msg) {
 type chatModel struct {
 	input          textinput.Model
 	spinner        spinner.Model
+	viewport       viewport.Model
 	session        *engine.Session
 	registry       *tool.Registry
 	settings       hawkconfig.Settings
@@ -140,6 +142,7 @@ type chatModel struct {
 	history        []string
 	historyIdx     int
 	historyDraft   string // unsent text before navigating history
+	autoScroll     bool   // whether to auto-scroll viewport to bottom
 }
 
 func blinkTickCmd() tea.Cmd {
@@ -1241,10 +1244,22 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	}
 
 	initWidth := 80
-	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+	initHeight := 24
+	if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
 		initWidth = w
+		if h > 0 {
+			initHeight = h
+		}
 	}
-	m := chatModel{input: ta, spinner: sp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, historyIdx: 0}
+	// Reserve lines for the bottom bar: status line (1) + input border top (1) + input (1) + input border bottom (1) + help line (1) = 5
+	vpHeight := initHeight - 5
+	if vpHeight < 4 {
+		vpHeight = 4
+	}
+	vp := viewport.New(initWidth, vpHeight)
+	vp.MouseWheelEnabled = true
+
+	m := chatModel{input: ta, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true}
 
 	// Initialize plugin runtime
 	pr := plugin.NewRuntime()
@@ -1448,6 +1463,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			m.waiting = true
+			m.autoScroll = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.partial.Reset()
 			m.startStream()
@@ -1521,6 +1537,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.input.Width < 20 {
 			m.input.Width = 20
 		}
+		// Resize viewport: total height minus bottom bar (status + input + help)
+		vpHeight := msg.Height - 5
+		if vpHeight < 4 {
+			vpHeight = 4
+		}
+		m.viewport.Width = msg.Width
+		m.viewport.Height = vpHeight
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -1540,6 +1563,22 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
+
+	// Update viewport for scroll events (mouse wheel, page up/down)
+	var vpCmd tea.Cmd
+	m.viewport, vpCmd = m.viewport.Update(msg)
+	cmds = append(cmds, vpCmd)
+
+	// If user scrolled away from bottom, disable auto-scroll.
+	// Re-enable when they scroll back to bottom.
+	if m.viewport.AtBottom() {
+		m.autoScroll = true
+	} else {
+		m.autoScroll = false
+	}
+
+	// Update viewport content with current messages
+	m.updateViewportContent()
 
 	return m, tea.Batch(cmds...)
 }
@@ -2341,9 +2380,92 @@ func wrapText(text string, width int, prefixWidth int) string {
 	return strings.TrimRight(result.String(), "\n")
 }
 
+func (m *chatModel) updateViewportContent() {
+	viewWidth := m.width
+	if viewWidth <= 0 {
+		viewWidth = 80
+	}
+
+	hawkC := "\033[38;2;255;94;14m"
+	rst := "\033[0m"
+	bgDark := "\033[48;2;30;30;40m"
+
+	var chatContent strings.Builder
+	chatContent.WriteString("\n")
+
+	for i, msg := range m.messages {
+		switch msg.role {
+		case "user":
+			if i > 0 {
+				chatContent.WriteString("\n")
+			}
+			wrapped := wrapText(msg.content, viewWidth, 3)
+			line := hawkC + "█" + rst + "  " + wrapped
+			chatContent.WriteString(bgDark + line + rst)
+		case "assistant":
+			content := strings.TrimLeft(msg.content, "\n\r")
+			chatContent.WriteString(hawkC + "⛬ " + rst + renderInlineMarkdown(wrapText(content, viewWidth, 3)))
+		case "tool_use":
+			chatContent.WriteString(toolStyle.Render("⚡ " + msg.content))
+		case "tool_result":
+			chatContent.WriteString(toolDimStyle.Render(msg.content))
+		case "thinking":
+			chatContent.WriteString(dimStyle.Render("💭 " + msg.content))
+		case "welcome":
+			chatContent.WriteString(buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed))
+		case "system":
+			chatContent.WriteString(dimStyle.Render(msg.content))
+		case "permission":
+			chatContent.WriteString(toolStyle.Render("⚠ " + msg.content + "  [y/n]"))
+		case "question":
+			chatContent.WriteString(toolStyle.Render(msg.content))
+		case "usage":
+		case "error":
+			chatContent.WriteString(errorStyle.Render("error: " + msg.content))
+		}
+		chatContent.WriteString("\n\n")
+	}
+
+	if m.waiting {
+		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
+		if partial != "" {
+			chatContent.WriteString(hawkC + "⛬ " + rst + renderInlineMarkdown(wrapText(partial, viewWidth, 3)))
+			chatContent.WriteString("\n\n")
+		} else {
+			chatContent.WriteString(m.spinner.View() + "  " + renderGlimmerVerb(m.spinnerVerb, m.glimmerPos) + "\033[1;38;2;255;94;14m...\033[0m " + dimStyle.Render("(Press ESC to stop)") + "\n\n")
+		}
+	}
+
+	if m.configOpen {
+		chatContent.WriteString(m.configPanelView())
+		chatContent.WriteString("\n\n")
+	}
+
+	// Calculate bottom bar height to size viewport correctly
+	bottomBarLines := 0
+	if !m.configOpen {
+		bottomBarLines = 5 // status(1) + input borders+content(3) + help(1)
+		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
+			bottomBarLines += len(sugs)
+		}
+	}
+	vpHeight := m.height - bottomBarLines - 1
+	if vpHeight < 4 {
+		vpHeight = 4
+	}
+	m.viewport.Width = viewWidth
+	m.viewport.Height = vpHeight
+
+	atBottom := m.viewport.AtBottom()
+	m.viewport.SetContent(chatContent.String())
+	if atBottom || m.autoScroll {
+		m.viewport.GotoBottom()
+	}
+}
+
 func (m chatModel) View() string {
 	if m.quitting {
-		return dimStyle.Render("Goodbye.") + "\n"
+		return ""
 	}
 
 	viewWidth := m.width
@@ -2355,65 +2477,10 @@ func (m chatModel) View() string {
 		}
 	}
 
-	hawkC := "\033[38;2;255;94;14m"
-	rst := "\033[0m"
-	bgDark := "\033[48;2;30;30;40m" // subtle dark background strip
-
-	var b strings.Builder
-	b.WriteString("\n")
-
-	for i, msg := range m.messages {
-		switch msg.role {
-		case "user":
-			// Add extra blank line before user input for visual separation,
-			// unless it's the very first message.
-			if i > 0 {
-				b.WriteString("\n")
-			}
-			wrapped := wrapText(msg.content, viewWidth, 3)
-			line := hawkC + "█" + rst + "  " + wrapped
-			b.WriteString(bgDark + line + rst)
-		case "assistant":
-			content := strings.TrimLeft(msg.content, "\n\r")
-			b.WriteString(hawkC + "⛬ " + rst + renderInlineMarkdown(wrapText(content, viewWidth, 3)))
-		case "tool_use":
-			b.WriteString(toolStyle.Render("⚡ " + msg.content))
-		case "tool_result":
-			b.WriteString(toolDimStyle.Render(msg.content))
-		case "thinking":
-			b.WriteString(dimStyle.Render("💭 " + msg.content))
-		case "welcome":
-			b.WriteString(buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed))
-		case "system":
-			b.WriteString(dimStyle.Render(msg.content))
-		case "permission":
-			b.WriteString(toolStyle.Render("⚠ " + msg.content + "  [y/n]"))
-		case "question":
-			b.WriteString(toolStyle.Render(msg.content))
-		case "usage":
-		case "error":
-			b.WriteString(errorStyle.Render("error: " + msg.content))
-		}
-		b.WriteString("\n\n")
-	}
-
-	if m.waiting {
-		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
-		if partial != "" {
-			b.WriteString(hawkC + "⛬ " + rst + renderInlineMarkdown(wrapText(partial, viewWidth, 3)))
-			b.WriteString("\n\n")
-		} else {
-			b.WriteString(m.spinner.View() + "  " + renderGlimmerVerb(m.spinnerVerb, m.glimmerPos) + "\033[1;38;2;255;94;14m...\033[0m " + dimStyle.Render("(Press ESC to stop)") + "\n\n")
-		}
-	}
-
-	if m.configOpen {
-		b.WriteString(m.configPanelView())
-		b.WriteString("\n\n")
-	}
+	// Build the fixed bottom bar
+	var bottomBar strings.Builder
 
 	if !m.configOpen {
-		// Status line: dark background, clean separator
 		totalW := viewWidth
 		if totalW < 40 {
 			totalW = 80
@@ -2427,29 +2494,29 @@ func (m chatModel) View() string {
 			gap = 1
 		}
 		leftRendered := lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
-		b.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
+		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
 		inputBox := lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), true, false, true, false).
 			BorderForeground(lipgloss.Color("#555555")).
 			Width(totalW).
 			Render(m.input.View())
-		b.WriteString(inputBox + "\n")
+		bottomBar.WriteString(inputBox + "\n")
 		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
 			}
 			for i, s := range sugs {
 				if i == m.slashSel {
-					b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Render("  "+s) + "\n")
+					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Render("  "+s) + "\n")
 				} else {
-					b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E")).Render("  "+s) + "\n")
+					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E")).Render("  "+s) + "\n")
 				}
 			}
 		}
-		b.WriteString(dimStyle.Render("? for help") + "\n")
+		bottomBar.WriteString(dimStyle.Render("? for help") + "\n")
 	}
 
-	return b.String()
+	return m.viewport.View() + "\n" + bottomBar.String()
 }
 
 func runChat() error {
@@ -2473,7 +2540,7 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m)
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
@@ -2514,6 +2581,9 @@ func runChat() error {
 	}
 
 	_, err = p.Run()
+	if err == nil {
+		fmt.Println(dimStyle.Render("Goodbye."))
+	}
 	return err
 }
 
