@@ -147,6 +147,7 @@ type chatModel struct {
 	autoScroll     bool   // whether to auto-scroll viewport to bottom
 	vim            *VimState
 	contextViz     *ContextVisualization
+	wal            *session.WAL
 }
 
 func blinkTickCmd() tea.Cmd {
@@ -344,6 +345,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	dimC := "\033[2m"
 	boldC := "\033[1m"
 	greenC := "\033[38;2;78;205;196m"
+	redC := "\033[38;2;224;85;85m"
 	rst := "\033[0m"
 
 	totalW := width
@@ -399,33 +401,33 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		b.WriteString(center(combined, visW) + "\n")
 	}
 
-	b.WriteString("\n")
 	verLine := fmt.Sprintf("v%s (ctrl+j for changelog)", version)
 	b.WriteString(center(dimC+verLine+rst, len(verLine)) + "\n")
 
 	tip := "TIP: Use /help to see all available commands"
 	b.WriteString(center(boldC+tip+rst, len(tip)) + "\n")
 
-	shortcuts := "shift+tab modes · ctrl+N models · ctrl+L autonomy · tab reasoning"
+	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
 	b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
+	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
 
 	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
 
-	// Use dim grey for zero counts (less aggressive than red on first launch)
-	skillMark := dimC + "·" + rst
+	skillMark := redC + "×" + rst
 	mcpMark := greenC + "✓" + rst
 	if mcpCount == 0 {
-		mcpMark = dimC + "·" + rst
+		mcpMark = redC + "×" + rst
 	}
 	agentsMark := greenC + "✓" + rst
 	if hawkconfig.LoadHawkMD() == "" {
-		agentsMark = dimC + "·" + rst
+		agentsMark = redC + "×" + rst
 	}
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, agentsMark)
-	indVis := fmt.Sprintf("Skills (%d) ·  MCPs (%d) ·  AGENTS.md ·", skillsCount, mcpCount)
-	b.WriteString(center(dimC+indicators+rst, len(indVis)) + "\n")
+	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
+	b.WriteString(center(indicators, len(indVis)) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
@@ -1257,6 +1259,27 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	m := chatModel{input: ta, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true}
 
+	// Initialize write-ahead log for crash recovery
+	if wal, err := session.NewWAL(sid); err == nil {
+		m.wal = wal
+		wal.AppendMeta(effectiveModel, effectiveProvider, "")
+	}
+
+	// Check for crash recovery
+	if recovered := session.CheckForRecovery(); len(recovered) > 0 {
+		home, _ := os.UserHomeDir()
+		walDir := filepath.Join(home, ".hawk", "sessions")
+		for _, rid := range recovered {
+			if rid == sid {
+				continue // current session WAL
+			}
+			if rs, err := session.RecoverFromWAL(rid); rs != nil && err == nil {
+				session.Save(rs)
+				os.Remove(filepath.Join(walDir, rid+".wal"))
+			}
+		}
+	}
+
 	// Initialize plugin runtime
 	pr := plugin.NewRuntime()
 	_ = pr.LoadAll()
@@ -1458,6 +1481,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
+			if m.wal != nil {
+				m.wal.Append(session.Message{Role: "user", Content: text})
+			}
 			m.waiting = true
 			m.autoScroll = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
@@ -1504,7 +1530,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamDoneMsg:
 		if m.partial.Len() > 0 {
-			m.messages = append(m.messages, displayMsg{role: "assistant", content: sanitizeIdentity(m.partial.String())})
+			content := sanitizeIdentity(m.partial.String())
+			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
+			if m.wal != nil {
+				m.wal.Append(session.Message{Role: "assistant", Content: content})
+			}
 			m.partial.Reset()
 		}
 		m.waiting = false
@@ -2220,10 +2250,15 @@ func (m *chatModel) saveSession() {
 		}
 		msgs = append(msgs, sm)
 	}
-	_ = session.Save(&session.Session{
+	err := session.Save(&session.Session{
 		ID: m.sessionID, Model: m.session.Model(), Provider: m.session.Provider(),
 		Messages: msgs, CreatedAt: time.Now(),
 	})
+	// On successful save, WAL is no longer needed (session file has everything)
+	if err == nil && m.wal != nil {
+		m.wal.Remove()
+		m.wal = nil
+	}
 }
 
 func (m *chatModel) startStream() {
@@ -2625,17 +2660,14 @@ func (m chatModel) View() string {
 		if gap < 0 {
 			gap = 0
 		}
-		// Position at ~40% down the screen (droid-style), but never more
-		// than 8 lines of top padding so it doesn't sink too low on tall terminals.
-		topPad := int(float64(availableHeight) * 0.40) - welcomeLines/2
+		// Position at ~30% down the screen so content sits in the upper
+		// area with breathing room above the status bar.
+		topPad := int(float64(availableHeight) * 0.30) - welcomeLines/2
 		if topPad < 2 {
 			topPad = 2
 		}
 		if topPad > gap {
 			topPad = gap
-		}
-		if topPad > 8 {
-			topPad = 8
 		}
 		return strings.Repeat("\n", topPad) + welcome + bottomBar.String()
 	}
