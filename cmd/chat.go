@@ -148,6 +148,7 @@ type chatModel struct {
 	vim            *VimState
 	contextViz     *ContextVisualization
 	wal            *session.WAL
+	startedAt      time.Time
 }
 
 func blinkTickCmd() tea.Cmd {
@@ -1257,7 +1258,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	vp := viewport.New(initWidth, vpHeight)
 	vp.MouseWheelEnabled = false
 
-	m := chatModel{input: ta, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true}
+	m := chatModel{input: ta, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now()}
 
 	// Initialize write-ahead log for crash recovery
 	if wal, err := session.NewWAL(sid); err == nil {
