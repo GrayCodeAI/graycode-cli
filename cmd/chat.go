@@ -137,6 +137,9 @@ type chatModel struct {
 	spinnerVerb    string
 	glimmerPos     int
 	lastCtrlC      time.Time
+	history        []string
+	historyIdx     int
+	historyDraft   string // unsent text before navigating history
 }
 
 func blinkTickCmd() tea.Cmd {
@@ -1237,7 +1240,11 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		return chatModel{}, err
 	}
 
-	m := chatModel{input: ta, spinner: sp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))]}
+	initWidth := 80
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		initWidth = w
+	}
+	m := chatModel{input: ta, spinner: sp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, historyIdx: 0}
 
 	// Initialize plugin runtime
 	pr := plugin.NewRuntime()
@@ -1329,7 +1336,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.quitting = true
 				return m, tea.Quit
 			}
-			return m, nil
+			if msg.Type == tea.KeyEsc {
+				if m.cancel != nil {
+					m.cancel()
+					m.cancel = nil
+					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
+					if m.partial.Len() > 0 {
+						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
+						m.partial.Reset()
+					}
+					m.waiting = false
+					m.input.Focus()
+				}
+				return m, nil
+			}
+			// Allow typing in input while streaming
+			var cmd tea.Cmd
+			m.input, cmd = m.input.Update(msg)
+			return m, cmd
 		}
 		if m.configOpen {
 			switch msg.Type {
@@ -1377,12 +1401,33 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
+			if len(m.history) > 0 {
+				if m.historyIdx == len(m.history) {
+					m.historyDraft = m.input.Value()
+				}
+				if m.historyIdx > 0 {
+					m.historyIdx--
+					m.input.SetValue(m.history[m.historyIdx])
+					m.input.CursorEnd()
+				}
+			}
+			return m, nil
 		case tea.KeyDown:
 			sugs := slashSuggestions(m.input.Value())
 			if len(sugs) > 0 {
 				m.slashSel = (m.slashSel + 1) % len(sugs)
 				return m, nil
 			}
+			if m.historyIdx < len(m.history)-1 {
+				m.historyIdx++
+				m.input.SetValue(m.history[m.historyIdx])
+				m.input.CursorEnd()
+			} else if m.historyIdx == len(m.history)-1 {
+				m.historyIdx = len(m.history)
+				m.input.SetValue(m.historyDraft)
+				m.input.CursorEnd()
+			}
+			return m, nil
 		case tea.KeyEsc:
 			if len(slashSuggestions(m.input.Value())) > 0 {
 				m.slashSel = 0
@@ -1393,6 +1438,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if text == "" {
 				return m, nil
 			}
+			m.history = append(m.history, text)
+			m.historyIdx = len(m.history)
+			m.historyDraft = ""
 			m.input.Reset()
 			if strings.HasPrefix(text, "/") {
 				return m.handleCommand(text)
@@ -1489,7 +1537,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
 	}
-	if (!m.waiting || m.askReq != nil) && !m.input.Focused() {
+	if !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
 
@@ -2139,8 +2187,8 @@ func abs(x int) int {
 // friendlyError translates raw API errors into user-friendly messages.
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 var (
-	reModelName = regexp.MustCompile(`(?i)\b(I'm|I am|my name is)\s+(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)`)
-	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)`)
+	reModelName = regexp.MustCompile(`(?i)\b(I['` + "\u2018\u2019" + `]m|I am|my name is)\s+\*{0,2}(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)\*{0,2}`)
+	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
 )
 
 func sanitizeIdentity(s string) string {
@@ -2179,30 +2227,94 @@ func friendlyError(err error) string {
 	}
 }
 
-// wrapText wraps text to the given width, preserving existing newlines.
-// indent is prepended to continuation lines.
-func wrapText(text string, width int, indent string) string {
+// wrapText wraps text to fit within width columns total (including indent).
+// The first line has no indent (caller provides the prefix).
+// Continuation lines get indent prepended.
+// wrapText wraps text to fit within the given width.
+// prefixWidth is the visual width of the prefix already printed before the first line
+// (e.g. "⛬ " = 2 columns). Continuation lines are indented to align with the first
+// line's text start position.
+// width is the total terminal width available.
+func wrapText(text string, width int, prefixWidth int) string {
 	if width < 20 {
 		width = 80
 	}
+	// First line has less room because the prefix is already printed.
+	firstLineWidth := width - prefixWidth
+	if firstLineWidth < 10 {
+		firstLineWidth = width
+	}
+	// Continuation indent: spaces to align under the first line's text.
+	indent := strings.Repeat(" ", prefixWidth)
+	indentW := prefixWidth
+	contWidth := width - indentW
+	if contWidth < 10 {
+		contWidth = width
+	}
 	var result strings.Builder
-	for _, line := range strings.Split(text, "\n") {
-		if runewidth.StringWidth(line) <= width {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		isFirst := (i == 0)
+		if !isFirst {
+			result.WriteString(indent)
+		}
+
+		// Detect leading whitespace on this line so wrapped continuations
+		// stay aligned with the original content (e.g. indented bullet lists).
+		trimmed := strings.TrimLeft(line, " \t")
+		lineLeading := line[:len(line)-len(trimmed)]
+		lineLeadingW := runewidth.StringWidth(lineLeading)
+
+		// For bullet-style lines ("* ", "- ", "N. "), add extra indent so
+		// continuation text aligns past the bullet marker.
+		bulletExtra := ""
+		if len(trimmed) > 0 {
+			if strings.HasPrefix(trimmed, "* ") || strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "+ ") {
+				bulletExtra = "  "
+			} else if idx := strings.Index(trimmed, ". "); idx > 0 && idx <= 3 {
+				allDigits := true
+				for _, ch := range trimmed[:idx] {
+					if ch < '0' || ch > '9' {
+						allDigits = false
+						break
+					}
+				}
+				if allDigits {
+					bulletExtra = strings.Repeat(" ", idx+2)
+				}
+			}
+		}
+
+		// Build the continuation indent for wrapped segments of this line.
+		lineIndent := indent + lineLeading + bulletExtra
+		lineIndentW := indentW + lineLeadingW + runewidth.StringWidth(bulletExtra)
+		lineContWidth := width - lineIndentW
+		if lineContWidth < 10 {
+			lineContWidth = contWidth
+			lineIndent = indent
+		}
+
+		maxW := firstLineWidth
+		if !isFirst {
+			maxW = contWidth - lineLeadingW // account for leading whitespace already written
+		}
+		if runewidth.StringWidth(line) <= maxW {
 			result.WriteString(line)
 			result.WriteByte('\n')
 			continue
 		}
 		curWidth := 0
 		var curLine strings.Builder
-		for _, word := range strings.Split(line, " ") {
+		for _, word := range strings.Fields(line) {
 			wordW := runewidth.StringWidth(word)
-			if curWidth > 0 && curWidth+1+wordW > width {
+			if curWidth > 0 && curWidth+1+wordW > maxW {
 				result.WriteString(curLine.String())
 				result.WriteByte('\n')
-				result.WriteString(indent)
+				result.WriteString(lineIndent)
 				curLine.Reset()
 				curLine.WriteString(word)
-				curWidth = len(indent) + wordW
+				curWidth = wordW
+				maxW = lineContWidth
 			} else if curWidth > 0 {
 				curLine.WriteByte(' ')
 				curLine.WriteString(word)
@@ -2225,6 +2337,15 @@ func (m chatModel) View() string {
 		return dimStyle.Render("Goodbye.") + "\n"
 	}
 
+	viewWidth := m.width
+	if viewWidth <= 0 {
+		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+			viewWidth = w
+		} else {
+			viewWidth = 80
+		}
+	}
+
 	hawkC := "\033[38;2;255;94;14m"
 	rst := "\033[0m"
 	bgDark := "\033[48;2;30;30;40m" // subtle dark background strip
@@ -2232,15 +2353,20 @@ func (m chatModel) View() string {
 	var b strings.Builder
 	b.WriteString("\n")
 
-	for _, msg := range m.messages {
+	for i, msg := range m.messages {
 		switch msg.role {
 		case "user":
-			wrapped := wrapText(msg.content, m.width-3, "   ")
+			// Add extra blank line before user input for visual separation,
+			// unless it's the very first message.
+			if i > 0 {
+				b.WriteString("\n")
+			}
+			wrapped := wrapText(msg.content, viewWidth, 3)
 			line := hawkC + "█" + rst + "  " + wrapped
 			b.WriteString(bgDark + line + rst)
 		case "assistant":
 			content := strings.TrimLeft(msg.content, "\n\r")
-			b.WriteString(hawkC + "⛬ " + rst + wrapText(content, m.width-3, "  "))
+			b.WriteString(hawkC + "⛬ " + rst + wrapText(content, viewWidth, 3))
 		case "tool_use":
 			b.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
@@ -2265,7 +2391,7 @@ func (m chatModel) View() string {
 	if m.waiting {
 		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
 		if partial != "" {
-			b.WriteString(hawkC + "⛬ " + rst + wrapText(partial, m.width-3, "  "))
+			b.WriteString(hawkC + "⛬ " + rst + wrapText(partial, viewWidth, 3))
 			b.WriteString("\n\n")
 		} else {
 			b.WriteString(m.spinner.View() + "  " + renderGlimmerVerb(m.spinnerVerb, m.glimmerPos) + "\033[1;38;2;255;94;14m...\033[0m " + dimStyle.Render("(Press ESC to stop)") + "\n\n")
@@ -2279,7 +2405,7 @@ func (m chatModel) View() string {
 
 	if !m.configOpen {
 		// Status line: dark background, clean separator
-		totalW := m.width
+		totalW := viewWidth
 		if totalW < 40 {
 			totalW = 80
 		}
