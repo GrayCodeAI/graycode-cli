@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/hawk/eyrie/catalog"
 )
 
 // Settings holds hawk configuration.
+// Herm-style: no API keys stored here. Secrets come from environment variables only.
 type Settings struct {
 	Model           string            `json:"model,omitempty"`
 	Provider        string            `json:"provider,omitempty"`
-	APIKey          string            `json:"api_key,omitempty"`
 	Theme           string            `json:"theme,omitempty"`
 	AutoAllow       []string          `json:"auto_allow,omitempty"`      // tools to always allow
 	AllowedTools    []string          `json:"allowedTools,omitempty"`    // archive-compatible allow rules
@@ -28,7 +31,6 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 	type alias Settings
 	aux := struct {
 		*alias
-		APIKeyCamel          string            `json:"apiKey,omitempty"`
 		AutoAllowCamel       []string          `json:"autoAllow,omitempty"`
 		MaxBudgetUSDCamel    float64           `json:"maxBudgetUSD,omitempty"`
 		CustomHeadersCamel   map[string]string `json:"customHeaders,omitempty"`
@@ -40,9 +42,6 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
-	}
-	if s.APIKey == "" {
-		s.APIKey = aux.APIKeyCamel
 	}
 	if len(s.AutoAllow) == 0 {
 		s.AutoAllow = aux.AutoAllowCamel
@@ -139,9 +138,6 @@ func MergeSettings(base, override Settings) Settings {
 	if override.Provider != "" {
 		base.Provider = override.Provider
 	}
-	if override.APIKey != "" {
-		base.APIKey = override.APIKey
-	}
 	if override.Theme != "" {
 		base.Theme = override.Theme
 	}
@@ -194,16 +190,20 @@ func SaveProject(s Settings) error {
 
 // SettingValue returns a display-safe value for a supported setting key.
 func SettingValue(s Settings, key string) (string, bool) {
-	switch normalizeSettingKey(key) {
+	normalized := normalizeSettingKey(key)
+	// Herm-style: API key status comes from environment, not settings file
+	if provider, ok := apiKeyProviderFromSettingKey(normalized); ok {
+		return EnvKeyStatus(provider), true
+	}
+	switch normalized {
 	case "model":
 		return s.Model, true
 	case "provider":
 		return s.Provider, true
 	case "apikey":
-		if s.APIKey == "" {
-			return "", true
-		}
-		return "(set)", true
+		return EnvKeyStatus(s.Provider), true
+	case "apikeys":
+		return AllEnvKeyStatus(), true
 	case "theme":
 		return s.Theme, true
 	case "autoallow":
@@ -229,15 +229,22 @@ func SettingValue(s Settings, key string) (string, bool) {
 }
 
 // SetGlobalSetting updates a supported scalar/list setting in ~/.hawk/settings.json.
+// Herm-style: API keys are NOT stored in settings.json. Use environment variables.
 func SetGlobalSetting(key, value string) error {
 	s := LoadGlobalSettings()
-	switch normalizeSettingKey(key) {
+	normalized := normalizeSettingKey(key)
+	// Herm-style: reject API key persistence to disk
+	if _, ok := apiKeyProviderFromSettingKey(normalized); ok {
+		return fmt.Errorf("API keys are not stored in settings.json. Set %s in your environment instead", ProviderAPIKeyEnv(providerFromSettingKey(normalized)))
+	}
+	if normalized == "apikey" {
+		return fmt.Errorf("API keys are not stored in settings.json. Set %s in your environment instead", ProviderAPIKeyEnv(normalizeProviderName(s.Provider)))
+	}
+	switch normalized {
 	case "model":
 		s.Model = value
 	case "provider":
 		s.Provider = value
-	case "apikey":
-		s.APIKey = value
 	case "theme":
 		s.Theme = value
 	case "autoallow":
@@ -265,6 +272,22 @@ func normalizeSettingKey(key string) string {
 	return key
 }
 
+func normalizeProviderName(provider string) string {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	provider = strings.ReplaceAll(provider, "_", "-")
+	return provider
+}
+
+func apiKeyProviderFromSettingKey(normalized string) (string, bool) {
+	for _, prefix := range []string{"apikey.", "apikey:"} {
+		if strings.HasPrefix(normalized, prefix) {
+			provider := normalizeProviderName(strings.TrimPrefix(normalized, prefix))
+			return provider, provider != ""
+		}
+	}
+	return "", false
+}
+
 func splitSettingList(value string) []string {
 	var out []string
 	for _, part := range strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == ' ' || r == '\n' || r == '\t' }) {
@@ -276,28 +299,275 @@ func splitSettingList(value string) []string {
 	return out
 }
 
-// LoadAPIKeyFromSettings loads the saved API key into the environment if not already set.
-func LoadAPIKeyFromSettings() {
-	s := LoadSettings()
-	ApplyAPIKeyFromSettings(s)
+// ─────────────────────────────────────────────────────────────
+// Herm-style: API keys from environment only (no disk persistence)
+// ─────────────────────────────────────────────────────────────
+
+// ProviderAPIKeyEnv returns the environment variable name for a provider's API key.
+func ProviderAPIKeyEnv(provider string) string {
+	switch normalizeProviderName(provider) {
+	case "anthropic":
+		return "ANTHROPIC_API_KEY"
+	case "openai":
+		return "OPENAI_API_KEY"
+	case "gemini", "google", "gemma":
+		return "GEMINI_API_KEY"
+	case "openrouter":
+		return "OPENROUTER_API_KEY"
+	case "canopywave":
+		return "CANOPYWAVE_API_KEY"
+	case "grok", "xai":
+		return "XAI_API_KEY"
+	case "opencodego":
+		return "OPENCODEGO_API_KEY"
+	case "ollama":
+		return ""
+	default:
+		replacer := strings.NewReplacer("-", "_", ".", "_", "/", "_")
+		name := strings.ToUpper(replacer.Replace(normalizeProviderName(provider)))
+		if name == "" {
+			return ""
+		}
+		return name + "_API_KEY"
+	}
 }
 
-// ApplyAPIKeyFromSettings loads a provider API key into the process environment.
-func ApplyAPIKeyFromSettings(s Settings) {
-	if s.APIKey == "" || s.Provider == "" {
-		return
+// EnvKeyStatus returns "set" or "empty" for a provider's API key in the environment.
+func EnvKeyStatus(provider string) string {
+	envKey := ProviderAPIKeyEnv(provider)
+	if envKey == "" {
+		return "local"
 	}
-	envKeys := map[string]string{
-		"anthropic":  "ANTHROPIC_API_KEY",
-		"openai":     "OPENAI_API_KEY",
-		"gemini":     "GEMINI_API_KEY",
-		"openrouter": "OPENROUTER_API_KEY",
-		"groq":       "GROQ_API_KEY",
-		"grok":       "XAI_API_KEY",
+	if os.Getenv(envKey) != "" {
+		return "set"
 	}
-	if envKey, ok := envKeys[s.Provider]; ok {
-		if os.Getenv(envKey) == "" {
-			os.Setenv(envKey, s.APIKey)
+	return "empty"
+}
+
+// AllEnvKeyStatus returns a comma-separated summary of all known API key env vars.
+func AllEnvKeyStatus() string {
+	providers := []string{
+		"anthropic", "openai", "gemini", "openrouter",
+		"canopywave", "xai", "opencodego",
+	}
+	var parts []string
+	for _, p := range providers {
+		status := EnvKeyStatus(p)
+		if status == "set" {
+			parts = append(parts, p+":"+status)
 		}
 	}
+	if len(parts) == 0 {
+		return "(none set)"
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ", ")
+}
+
+// LoadAPIKeysFromEnv reads all known API keys from environment variables.
+func LoadAPIKeysFromEnv() map[string]string {
+	providers := []string{
+		"anthropic", "openai", "gemini", "openrouter",
+		"canopywave", "xai", "opencodego",
+	}
+	keys := make(map[string]string)
+	for _, p := range providers {
+		envKey := ProviderAPIKeyEnv(p)
+		if envKey == "" {
+			continue
+		}
+		if v := os.Getenv(envKey); v != "" {
+			keys[p] = v
+		}
+	}
+	return keys
+}
+
+// APIKeyForProvider reads the API key for a provider from the environment.
+func APIKeyForProvider(provider string) string {
+	envKey := ProviderAPIKeyEnv(provider)
+	if envKey == "" {
+		return ""
+	}
+	return os.Getenv(envKey)
+}
+
+// NormalizeProviderForEngine maps hawk provider aliases to eyrie canonical names.
+// This is the boundary where hawk names become engine/eyrie names.
+func NormalizeProviderForEngine(provider string) string {
+	p := normalizeProviderName(provider)
+	switch p {
+	case "xai":
+		return "grok" // eyrie calls it "grok", env var is XAI_API_KEY
+	default:
+		return p
+	}
+}
+
+// providerFromSettingKey extracts the provider name from a setting key like "apikey.openai".
+func providerFromSettingKey(normalized string) string {
+	for _, prefix := range []string{"apikey.", "apikey:"} {
+		if strings.HasPrefix(normalized, prefix) {
+			return normalizeProviderName(strings.TrimPrefix(normalized, prefix))
+		}
+	}
+	return ""
+}
+
+// ─────────────────────────────────────────────────────────────
+// Secure env file for persisting API keys across sessions
+// ─────────────────────────────────────────────────────────────
+
+func envFilePath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".hawk", "env")
+}
+
+// LoadEnvFile reads ~/.hawk/env and applies export lines to the process.
+func LoadEnvFile() error {
+	path := envFilePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// Parse: export KEY=value
+		if !strings.HasPrefix(line, "export ") {
+			continue
+		}
+		rest := strings.TrimPrefix(line, "export ")
+		idx := strings.Index(rest, "=")
+		if idx < 0 {
+			continue
+		}
+		key := strings.TrimSpace(rest[:idx])
+		value := strings.TrimSpace(rest[idx+1:])
+		// Only set if not already set in environment
+		if os.Getenv(key) == "" {
+			os.Setenv(key, value)
+		}
+	}
+	return nil
+}
+
+// RemoveEnvFile removes an export line from ~/.hawk/env.
+func RemoveEnvFile(key string) error {
+	path := envFilePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var lines []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if !strings.HasPrefix(line, "export ") {
+			lines = append(lines, line)
+			continue
+		}
+		rest := strings.TrimPrefix(line, "export ")
+		idx := strings.Index(rest, "=")
+		if idx < 0 {
+			lines = append(lines, line)
+			continue
+		}
+		existingKey := strings.TrimSpace(rest[:idx])
+		if existingKey != key {
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) == 0 {
+		return os.Remove(path)
+	}
+	out := []byte(strings.Join(lines, "\n") + "\n")
+	return os.WriteFile(path, out, 0o600)
+}
+
+// SaveEnvFile writes an export line to ~/.hawk/env, deduplicating existing entries.
+func SaveEnvFile(key, value string) error {
+	path := envFilePath()
+	os.MkdirAll(filepath.Dir(path), 0o700)
+
+	// Read existing lines, filter out old entries for this key
+	var lines []string
+	if data, err := os.ReadFile(path); err == nil {
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			if !strings.HasPrefix(line, "export ") {
+				lines = append(lines, line)
+				continue
+			}
+			rest := strings.TrimPrefix(line, "export ")
+			idx := strings.Index(rest, "=")
+			if idx < 0 {
+				lines = append(lines, line)
+				continue
+			}
+			existingKey := strings.TrimSpace(rest[:idx])
+			if existingKey != key {
+				lines = append(lines, line)
+			}
+		}
+	}
+
+	// Add new entry
+	lines = append(lines, fmt.Sprintf("export %s=%s", key, value))
+
+	// Write back with 600 perms
+	data := []byte(strings.Join(lines, "\n") + "\n")
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ─────────────────────────────────────────────────────────────
+// Live model catalog fetch from eyrie
+// ─────────────────────────────────────────────────────────────
+
+// FetchModelsForProvider fetches live models from the provider's API (if key available)
+// or returns embedded catalog models. This is the runtime model discovery boundary.
+func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error) {
+	provider = NormalizeProviderForEngine(provider)
+	if provider == "" {
+		return nil, fmt.Errorf("no provider specified")
+	}
+
+	// Build env map for eyrie catalog fetch
+	env := make(map[string]string)
+	env["ANTHROPIC_API_KEY"] = os.Getenv("ANTHROPIC_API_KEY")
+	env["OPENAI_API_KEY"] = os.Getenv("OPENAI_API_KEY")
+	env["GEMINI_API_KEY"] = os.Getenv("GEMINI_API_KEY")
+	env["OPENROUTER_API_KEY"] = os.Getenv("OPENROUTER_API_KEY")
+	env["CANOPYWAVE_API_KEY"] = os.Getenv("CANOPYWAVE_API_KEY")
+	env["XAI_API_KEY"] = os.Getenv("XAI_API_KEY")
+	env["OPENCODEGO_API_KEY"] = os.Getenv("OPENCODEGO_API_KEY")
+	env["OLLAMA_BASE_URL"] = os.Getenv("OLLAMA_BASE_URL")
+	env["OPENROUTER_BASE_URL"] = os.Getenv("OPENROUTER_BASE_URL")
+	env["CANOPYWAVE_BASE_URL"] = os.Getenv("CANOPYWAVE_BASE_URL")
+
+	// Fetch live catalog from eyrie
+	cat, err := catalog.FetchModelCatalog("", env)
+	if err != nil {
+		// Fallback to embedded catalog
+		cat = catalog.LoadModelCatalogSync("")
+	}
+
+	models := catalog.ModelsForProvider(&cat, provider)
+	if len(models) == 0 {
+		return nil, fmt.Errorf("no models found for provider %s", provider)
+	}
+	return models, nil
 }

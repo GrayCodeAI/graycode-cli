@@ -6,10 +6,10 @@ import (
 )
 
 func TestValidateSettingsValid(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-test123456789")
 	s := Settings{
 		Provider:     "anthropic",
 		Model:        "claude-sonnet-4-20250514",
-		APIKey:       "sk-ant-test123456789",
 		MaxBudgetUSD: 10.0,
 	}
 	result := ValidateSettings(s)
@@ -18,14 +18,13 @@ func TestValidateSettingsValid(t *testing.T) {
 	}
 }
 
-func TestValidateSettingsInvalidProvider(t *testing.T) {
+func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
+	// Herm-style: missing env key for provider is an error
+	t.Setenv("INVALID_API_KEY", "")
 	s := Settings{Provider: "invalid"}
 	result := ValidateSettings(s)
 	if result.Valid {
-		t.Fatal("expected invalid")
-	}
-	if len(result.Errors) != 1 || result.Errors[0].Field != "provider" {
-		t.Fatalf("unexpected errors: %v", result.Errors)
+		t.Fatal("expected invalid (missing env key)")
 	}
 }
 

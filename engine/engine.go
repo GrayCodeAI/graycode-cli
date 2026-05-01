@@ -11,7 +11,6 @@ import (
 
 	"github.com/GrayCodeAI/hawk/hooks"
 	"github.com/GrayCodeAI/hawk/logger"
-	hawkmodel "github.com/GrayCodeAI/hawk/model"
 	"github.com/GrayCodeAI/hawk/metrics"
 	"github.com/GrayCodeAI/hawk/permissions"
 	"github.com/GrayCodeAI/hawk/retry"
@@ -30,6 +29,7 @@ type Session struct {
 	messages     []client.EyrieMessage
 	provider     string
 	model        string
+	apiKeys      map[string]string
 	system       string
 	log          *logger.Logger
 	metrics      *metrics.Registry
@@ -49,18 +49,12 @@ type Session struct {
 
 // NewSession creates a new conversation session.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	detected := provider
-	if detected == "" {
-		detected = client.DetectProvider()
-	}
-	if model == "" {
-		model = defaultModelForProvider(detected)
-	}
 	s := &Session{
-		client:      client.NewEyrieClient(&client.EyrieConfig{Provider: detected}),
+		client:      client.NewEyrieClient(&client.EyrieConfig{Provider: provider}),
 		registry:    registry,
-		provider:    detected,
+		provider:    provider,
 		model:       model,
+		apiKeys:     map[string]string{},
 		system:      systemPrompt,
 		log:         logger.Default(),
 		metrics:     metrics.NewRegistry(),
@@ -73,14 +67,50 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 	return s
 }
 
-func (s *Session) Model() string { return s.model }
-
-// defaultModelForProvider returns a sensible default model for each provider.
-func defaultModelForProvider(provider string) string {
-	return hawkmodel.DefaultModel(provider)
-}
-func (s *Session) Provider() string { return s.provider }
+func (s *Session) Model() string              { return s.model }
+func (s *Session) Provider() string           { return s.provider }
 func (s *Session) Metrics() *metrics.Registry { return s.metrics }
+
+// SetModel updates the active model for subsequent requests.
+func (s *Session) SetModel(model string) {
+	s.model = strings.TrimSpace(model)
+	s.Cost.Model = s.model
+}
+
+// SetProvider updates the active provider for subsequent requests.
+func (s *Session) SetProvider(provider string) {
+	p := strings.TrimSpace(provider)
+	s.provider = p
+	s.client = client.NewEyrieClient(&client.EyrieConfig{Provider: p})
+	for provider, apiKey := range s.apiKeys {
+		if strings.TrimSpace(apiKey) != "" {
+			s.client.SetAPIKey(provider, apiKey)
+		}
+	}
+}
+
+// SetAPIKey updates a provider API key for subsequent requests.
+func (s *Session) SetAPIKey(provider, apiKey string) {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	apiKey = strings.TrimSpace(apiKey)
+	if provider == "" || apiKey == "" {
+		return
+	}
+	if s.apiKeys == nil {
+		s.apiKeys = map[string]string{}
+	}
+	s.apiKeys[provider] = apiKey
+	if s.client != nil {
+		s.client.SetAPIKey(provider, apiKey)
+	}
+}
+
+// SetAPIKeys updates all known provider API keys for subsequent requests.
+func (s *Session) SetAPIKeys(apiKeys map[string]string) {
+	for provider, apiKey := range apiKeys {
+		s.SetAPIKey(provider, apiKey)
+	}
+}
 
 func (s *Session) AddUser(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "user", Content: content})
@@ -101,6 +131,11 @@ func (s *Session) AppendSystemContext(content string) {
 		return
 	}
 	s.system += "\n\n" + content
+}
+
+// SetLogger replaces the session logger.
+func (s *Session) SetLogger(l *logger.Logger) {
+	s.log = l
 }
 
 // SetAllowedDirs sets directories that file tools are allowed to access.

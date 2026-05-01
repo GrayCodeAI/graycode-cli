@@ -55,25 +55,33 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 	if err != nil {
 		return settings, err
 	}
-	hawkconfig.ApplyAPIKeyFromSettings(settings)
 	return settings, nil
 }
 
 func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
-	effectiveModel := model
-	if effectiveModel == "" && settings.Model != "" {
-		effectiveModel = settings.Model
+	effectiveModel := strings.TrimSpace(settings.Model)
+	if strings.TrimSpace(model) != "" {
+		effectiveModel = strings.TrimSpace(model)
 	}
-	effectiveProvider := provider
-	if effectiveProvider == "" && settings.Provider != "" {
-		effectiveProvider = settings.Provider
+	effectiveProvider := strings.TrimSpace(settings.Provider)
+	if strings.TrimSpace(provider) != "" {
+		effectiveProvider = strings.TrimSpace(provider)
 	}
-	return effectiveModel, effectiveProvider
+	// Normalize hawk aliases (xai → grok) to eyrie canonical names
+	return effectiveModel, hawkconfig.NormalizeProviderForEngine(effectiveProvider)
 }
 
 func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
+	// Herm-style: API keys from environment only
+	normalizedProvider := hawkconfig.NormalizeProviderForEngine(settings.Provider)
+	if normalizedProvider != "" {
+		if key := hawkconfig.APIKeyForProvider(normalizedProvider); key != "" {
+			sess.SetAPIKey(normalizedProvider, key)
+		}
+	}
+	sess.SetAPIKeys(hawkconfig.LoadAPIKeysFromEnv())
 
 	for _, spec := range settings.AutoAllow {
 		sess.Permissions.AllowSpec(spec)

@@ -109,7 +109,7 @@ func (ConfigTool) Execute(_ context.Context, input json.RawMessage) (string, err
 		if err := hawkconfig.SetGlobalSetting(p.Key, p.Value); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("Set %q in global settings (restart to apply)", p.Key), nil
+		return fmt.Sprintf("Set %q in global settings", p.Key), nil
 	default:
 		return "", fmt.Errorf("unknown action: %s", p.Action)
 	}

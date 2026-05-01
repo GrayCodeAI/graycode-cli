@@ -27,6 +27,33 @@ export ANTHROPIC_API_KEY=sk-ant-...
 hawk
 ```
 
+## API Key, Model, and Eyrie
+
+Hawk uses **Eyrie** as the LLM client layer. In practice:
+- Hawk stores only provider, model, and API-key configuration
+- Eyrie owns provider support, model discovery, routing, and request behavior
+- API credentials can come from env vars or `~/.hawk/settings.json`
+
+Recommended flow:
+
+```bash
+# 1) one-time setup
+hawk config provider openai
+hawk config key openai sk-...
+hawk config model gpt-4o
+
+# 2) optional per-run override
+hawk --provider openai --model gpt-4o
+
+# 3) non-interactive usage
+hawk -p "summarize this repo" --provider anthropic --model claude-sonnet-4-20250514
+```
+
+Notes:
+- In chat, use `/config provider <name>`, `/config key <provider> <api-key>`, and `/model <name>`.
+- `--provider` and `--model` override saved config for a single run.
+- Use `/provider-status`, `/model`, `/config keys`, and `/env` to verify runtime settings.
+
 ## Usage
 
 ```bash
@@ -96,7 +123,7 @@ Lowercase Go-port names like `bash`, `file_read`, and `file_edit` remain accepte
 | `/diff` | Review changes |
 | `/env` | Show provider environment status |
 | `/files` | Show modified files |
-| `/model` | Show model |
+| `/model` | Show or switch model |
 | `/mcp` | Show MCP status |
 | `/memory` | Show loaded project instructions |
 | `/history` | List sessions |
@@ -114,7 +141,7 @@ Lowercase Go-port names like `bash`, `file_read`, and `file_edit` remain accepte
 | `/skills` | List local skills |
 | `/summary` | Summarize the current session |
 | `/tools` | List enabled tools |
-| `/models` | List available models and providers |
+| `/models` | Explain that Eyrie manages model discovery |
 | `/plugin list` | List installed plugins |
 | `/plugin-command <name>` | Run a plugin command |
 | `/welcome` | Show startup summary |
@@ -132,35 +159,24 @@ hawk -p --input-format stream-json --output-format stream-json < events.jsonl
 
 `--settings` accepts either a JSON object or a path to a JSON file. `--add-dir` includes extra directory context, reads `HAWK.md` from those directories when present, and allows file tools to access those roots.
 
-Settings are loaded from `~/.hawk/settings.json` and `.hawk/settings.json`, with project settings overriding global settings. Both snake_case Go keys and archive-style aliases are accepted, including `apiKey`, `autoAllow`, `maxBudgetUSD`, `customHeaders`, `mcpServers`, `allowed_tools`, and `disallowed_tools`.
+Settings are loaded from `~/.hawk/settings.json` and `.hawk/settings.json`, with project settings overriding global settings. Both snake_case Go keys and archive-style aliases are accepted, including `apiKey`, `apiKeys`, `autoAllow`, `maxBudgetUSD`, `customHeaders`, `mcpServers`, `allowed_tools`, and `disallowed_tools`.
 
 ## Providers
 
-Auto-detected from environment:
+Hawk passes configured provider/model values to Eyrie. Provider-specific keys can be saved with `hawk config key <provider> <api-key>` or supplied through environment variables:
 
 | Provider | Env Variable |
 |---|---|
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
 | Gemini | `GEMINI_API_KEY` |
-| Groq | `GROQ_API_KEY` |
 | OpenRouter | `OPENROUTER_API_KEY` |
 | Grok | `XAI_API_KEY` |
 | Ollama | `OLLAMA_BASE_URL` |
 
- hawk --mcp "npx @modelcontextprotocol/server-github"
-```
-
 ## Model Catalog
 
-Built-in model catalog with 25+ models across 7 providers:
-
-```bash
-hawk /models              # List available models
-hawk --provider anthropic --model claude-sonnet-4-20250514
-```
-
-Models include pricing, context sizes, and recommendations. Smart routing automatically selects appropriate models based on provider capabilities.
+Model lists, supported providers, pricing, and routing behavior are handled by Eyrie. Hawk does not carry a hardcoded model catalog.
 
 ## Plugin System
 
