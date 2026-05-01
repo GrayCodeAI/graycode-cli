@@ -3,25 +3,33 @@ package cmd
 import (
 	"bufio"
 	"context"
-	"crypto/rand"
+	cryptorand "crypto/rand"
+	"math/rand"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hawk/eyrie/catalog"
 	"github.com/hawk/eyrie/client"
+	"github.com/mattn/go-runewidth"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
-	hawkmodel "github.com/GrayCodeAI/hawk/model"
+	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/session"
 	"github.com/GrayCodeAI/hawk/tool"
@@ -43,9 +51,31 @@ var (
 	diffDelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#e05555"))
 )
 
+// Hawk spinner frames: dot-by-dot build then reverse (like Droid)
+var hawkSpinnerFrames = []string{"◐", "◓", "◑", "◒"}
+
+// Spinner verbs (from hawk-archive) — picked randomly per session
+var spinnerVerbs = []string{
+	"Abstracting", "Architecting", "Brewing", "Calculating", "Cogitating",
+	"Compiling", "Computing", "Conjuring", "Contemplating", "Cooking",
+	"Crafting", "Crunching", "Debugging", "Deciphering", "Deliberating",
+	"Distilling", "Elucidating", "Encoding", "Envisioning", "Forging",
+	"Generating", "Hatching", "Ideating", "Imagining", "Incubating",
+	"Inferencing", "Infusing", "Linting", "Manifesting", "Mulling",
+	"Musing", "Optimizing", "Orchestrating", "Parsing", "Pondering",
+	"Processing", "Reasoning", "Refactoring", "Refining", "Reticulating",
+	"Ruminating", "Scaffolding", "Simmering", "Sketching", "Spelunking",
+	"Spinning", "Synthesizing", "Tempering", "Thinking", "Tinkering",
+	"Tokenizing", "Transpiling", "Unfurling", "Validating", "Vibing",
+	"Weaving", "Whisking", "Wizarding", "Working", "Wrangling",
+}
+
 type streamChunkMsg string
 type streamDoneMsg struct{}
 type streamErrMsg struct{ err error }
+type blinkTickMsg struct{}
+
+type glimmerTickMsg struct{}
 type toolUseMsg struct{ name, id string }
 type toolResultMsg struct{ name, content string }
 type permissionAskMsg struct{ req engine.PermissionRequest }
@@ -76,23 +106,103 @@ func (r *progRef) Send(msg tea.Msg) {
 }
 
 type chatModel struct {
-	input         textarea.Model
-	spinner       spinner.Model
-	session       *engine.Session
-	registry      *tool.Registry
-	settings      hawkconfig.Settings
-	ref           *progRef
-	cancel        context.CancelFunc // cancel current stream
-	sessionID     string
-	messages      []displayMsg
-	partial       strings.Builder
-	waiting       bool
-	permReq       *engine.PermissionRequest // pending permission prompt
-	askReq        *askUserMsg               // pending ask_user prompt
-	width         int
-	height        int
-	quitting      bool
-	pluginRuntime *plugin.Runtime
+	input          textinput.Model
+	spinner        spinner.Model
+	session        *engine.Session
+	registry       *tool.Registry
+	settings       hawkconfig.Settings
+	ref            *progRef
+	cancel         context.CancelFunc // cancel current stream
+	sessionID      string
+	messages       []displayMsg
+	partial        *strings.Builder
+	waiting        bool
+	permReq        *engine.PermissionRequest // pending permission prompt
+	askReq         *askUserMsg               // pending ask_user prompt
+	width          int
+	height         int
+	quitting       bool
+	blinkClosed    bool
+	slashSel       int
+	configOpen     bool
+	configMenu     string
+	configSel      int
+	configScroll   int // scroll offset for long lists
+	configNotice   string
+	configEntry    string
+	configProvider string
+	configModels   []string // fetched from eyrie at runtime
+	pluginRuntime  *plugin.Runtime
+	spinnerVerb    string
+	glimmerPos     int
+	lastCtrlC      time.Time
+}
+
+func blinkTickCmd() tea.Cmd {
+	return tea.Tick(2200*time.Millisecond, func(time.Time) tea.Msg { return blinkTickMsg{} })
+}
+
+func glimmerTickCmd() tea.Cmd {
+	return tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg { return glimmerTickMsg{} })
+}
+
+func slashCommands() []string {
+	return []string{
+		"/add-dir", "/agents", "/branch", "/bughunter", "/clear", "/color", "/commands",
+		"/commit", "/compact", "/config", "/context", "/copy", "/cost", "/cron", "/diff",
+		"/doctor", "/effort", "/env", "/exit", "/export", "/fast", "/files", "/help",
+		"/history", "/hooks", "/init", "/keybindings", "/loop", "/mcp", "/memory", "/metrics",
+		"/model", "/models", "/output-style", "/permissions", "/plan", "/plugin", "/plugins",
+		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
+		"/reload-plugins", "/remote-env", "/rename", "/resume", "/review", "/rewind",
+		"/sandbox", "/security-review", "/session", "/share", "/skills", "/stats", "/status",
+		"/statusline", "/summary", "/tag", "/tasks", "/teams", "/theme", "/think-back",
+		"/thinkback", "/thinkback-play", "/tools", "/upgrade", "/usage", "/version", "/vim",
+		"/voice", "/welcome",
+	}
+}
+
+func slashAliases() map[string]string {
+	return map[string]string{
+		"/con":  "/config",
+		"/conf": "/config",
+	}
+}
+
+func slashSuggestions(input string) []string {
+	v := strings.TrimSpace(input)
+	if !strings.HasPrefix(v, "/") || strings.Contains(v, " ") {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, c := range slashCommands() {
+		if strings.HasPrefix(c, v) {
+			seen[c] = true
+			out = append(out, c)
+		}
+	}
+	for alias, target := range slashAliases() {
+		if strings.HasPrefix(alias, v) && !seen[target] {
+			seen[alias] = true
+			out = append(out, alias+" → "+target)
+		}
+	}
+	if len(out) > 6 {
+		out = out[:6]
+	}
+	return out
+}
+
+func applySlashSuggestion(input string) string {
+	choice := strings.TrimSpace(input)
+	if before, _, ok := strings.Cut(choice, " → "); ok {
+		choice = before
+	}
+	if target, ok := slashAliases()[choice]; ok {
+		choice = target
+	}
+	return choice + " "
 }
 
 func baseTools() []tool.Tool {
@@ -185,7 +295,7 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 
 func genID() string {
 	b := make([]byte, 4)
-	rand.Read(b)
+	cryptorand.Read(b)
 	return fmt.Sprintf("%x", b)
 }
 
@@ -221,69 +331,112 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	return saved.ID, saved, nil
 }
 
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings) string {
-	cwd, _ := os.Getwd()
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool) string {
+	logoC := "\033[38;2;255;94;14m"
+	mascotC := "\033[38;2;255;94;14m"
+	dimC := "\033[2m"
+	boldC := "\033[1m"
+	greenC := "\033[38;2;78;205;196m"
+	redC := "\033[38;2;224;85;85m"
+	rst := "\033[0m"
+
+	totalW := 80
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 40 {
+		totalW = w
+	}
+
+	center := func(s string, visLen int) string {
+		pad := (totalW - visLen) / 2
+		if pad < 0 {
+			pad = 0
+		}
+		return strings.Repeat(" ", pad) + s
+	}
+
+	// Pixel block letters — Droid style
+	art := []string{
+		"██   ██  █████   ██     ██ ██   ██",
+		"██   ██ ██   ██  ██     ██ ██  ██ ",
+		"███████ ███████  ██  █  ██ █████  ",
+		"██   ██ ██   ██  ██ ███ ██ ██  ██ ",
+		"██   ██ ██   ██   ███ ███  ██   ██",
+	}
+	mascot := []string{
+		"   ▄▄▄▄▄▄   ",
+		" ▄█ ▄  ▄ █▄ ",
+		" ███ ██ ███ ",
+		"  ██ ██ ██  ",
+		"  ▀▀    ▀▀  ",
+		"  ▀▀    ▀▀  ",
+	}
+	if blinkClosed {
+		mascot[1] = " ▄█ ─  ─ █▄ "
+	}
+
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("🦅 Welcome to hawk v%s\n\n", version))
-	b.WriteString(fmt.Sprintf("Provider: %s  Model: %s\n", sess.Provider(), sess.Model()))
-	b.WriteString(fmt.Sprintf("Session: %s", sessionID))
-	if saved != nil {
-		if forkSessionFlag {
-			b.WriteString(fmt.Sprintf("  forked from: %s", saved.ID))
-		} else {
-			b.WriteString("  resumed")
+	b.WriteString("\n\n")
+
+	for i := 0; i < len(art); i++ {
+		line := art[i]
+		mLine := ""
+		if i < len(mascot) {
+			mLine = mascot[i]
 		}
+		combined := logoC + line + rst
+		if mLine != "" {
+			combined += "    " + mascotC + mLine + rst
+		}
+		w := runewidth.StringWidth(line)
+		if mLine != "" {
+			w += 4 + runewidth.StringWidth(mLine)
+		}
+		b.WriteString(center(combined, w) + "\n")
 	}
+
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("Directory: %s\n", cwd))
-	b.WriteString(fmt.Sprintf("Permission mode: %s\n", sess.Mode))
-	if settings.Theme != "" {
-		b.WriteString(fmt.Sprintf("Theme: %s\n", settings.Theme))
-	}
-	if hawkconfig.LoadHawkMD() != "" {
-		b.WriteString("Project instructions: HAWK.md loaded\n")
-	} else {
-		b.WriteString("Project instructions: none found\n")
-	}
-	if len(settings.MCPServers) > 0 || len(mcpServers) > 0 {
-		b.WriteString(fmt.Sprintf("MCP servers: %d configured", len(settings.MCPServers)+len(mcpServers)))
-		if len(settings.MCPServers) > 0 {
-			names := make([]string, 0, len(settings.MCPServers))
-			for _, cfg := range settings.MCPServers {
-				if cfg.Name != "" {
-					names = append(names, cfg.Name)
-				}
-			}
-			if len(names) > 0 {
-				b.WriteString(" (" + strings.Join(names, ", ") + ")")
-			}
-		}
-		b.WriteString("\n")
-	} else {
-		b.WriteString("MCP servers: none configured\n")
-	}
-	if registry != nil {
-		tools := registry.EyrieTools()
-		names := make([]string, 0, len(tools))
-		for _, t := range tools {
-			names = append(names, t.Name)
-		}
-		if len(names) > 8 {
-			names = append(names[:8], fmt.Sprintf("+%d more", len(tools)-8))
-		}
-		b.WriteString(fmt.Sprintf("Tools: %d available", len(tools)))
-		if len(names) > 0 {
-			b.WriteString(" (" + strings.Join(names, ", ") + ")")
-		}
-		b.WriteString("\n")
-	}
-	if len(addDirs) > 0 {
-		b.WriteString("Additional dirs: " + strings.Join(addDirs, ", ") + "\n")
-	}
+	verLine := fmt.Sprintf("v%s (ctrl+j for changelog)", version)
+	b.WriteString(center(dimC+verLine+rst, len(verLine)) + "\n")
+
 	b.WriteString("\n")
-	b.WriteString("Common commands: /help, /status, /tools, /permissions mode plan, /doctor, /welcome\n")
-	b.WriteString("Type a message to chat or Ctrl+C to quit.")
+	tip := "TIP: Use /help to see all available commands"
+	b.WriteString(center(boldC+tip+rst, len(tip)) + "\n")
+
+	b.WriteString("\n")
+	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
+	b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
+	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
+
+	b.WriteString("\n")
+	skillsCount := 0
+	mcpCount := len(settings.MCPServers) + len(mcpServers)
+
+	skillMark := redC + "×" + rst
+	mcpMark := greenC + "✓" + rst
+	if mcpCount == 0 {
+		mcpMark = redC + "×" + rst
+	}
+	agentsMark := greenC + "✓" + rst
+	if hawkconfig.LoadHawkMD() == "" {
+		agentsMark = redC + "×" + rst
+	}
+
+	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, agentsMark)
+	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
+	b.WriteString(center(indicators, len(indVis)) + "\n")
+
+	_ = sess.Model()
+	_ = sess.Provider()
+	_ = actLine(saved, sessionID)
+
 	return b.String()
+}
+
+func actLine(saved *session.Session, sessionID string) string {
+	if saved != nil && len(sessionID) >= 8 {
+		return "Resumed session " + sessionID[:8]
+	}
+	return ""
 }
 
 func permissionCommandArg(text, action string) string {
@@ -320,8 +473,9 @@ func envSummary(provider, model string) string {
 		"OPENAI_API_KEY",
 		"GEMINI_API_KEY",
 		"OPENROUTER_API_KEY",
-		"GROQ_API_KEY",
+		"CANOPYWAVE_API_KEY",
 		"XAI_API_KEY",
+		"OPENCODEGO_API_KEY",
 	}
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nEnvironment:\n", provider, model))
@@ -333,6 +487,574 @@ func envSummary(provider, model string) string {
 		b.WriteString(fmt.Sprintf("  %s: %s\n", key, status))
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func configCommandSummary(settings hawkconfig.Settings) string {
+	provider := displayConfigValue(settings.Provider)
+	model := displayConfigValue(settings.Model)
+	return fmt.Sprintf(`Configure Hawk
+
+Run these commands:
+  /config provider openai
+  /model gpt-4o
+
+Current:
+  provider: %s
+  model: %s
+  configured keys: %s
+
+API keys are set via environment variables (herm-style).
+More:
+  /config keys
+  /config get <key>
+  /config set <key> <value>`, provider, model, configuredKeyList())
+}
+
+func modelConfigSummary(provider, model string) string {
+	return fmt.Sprintf("Provider: %s\nModel: %s\n\nUse\n  /model <name>\n  /config provider <name>", displayConfigValue(provider), displayConfigValue(model))
+}
+
+func apiKeyConfigSummary() string {
+	return "API keys (from environment)\n" + indentedAPIKeyLines()
+}
+
+func configuredKeyList() string {
+	var providers []string
+	for _, line := range apiKeyStatusLines() {
+		name, status, ok := strings.Cut(line, ": ")
+		if ok && status == "set" {
+			providers = append(providers, name)
+		}
+	}
+	if len(providers) == 0 {
+		return "(none)"
+	}
+	return strings.Join(providers, ", ")
+}
+
+func indentedAPIKeyLines() string {
+	lines := apiKeyStatusLines()
+	if len(lines) == 0 {
+		return "  (empty)"
+	}
+	return "  " + strings.Join(lines, "\n  ")
+}
+
+func apiKeyStatusLines() []string {
+	providers := client.NewEyrieClient(nil).GetProviders()
+	sort.Strings(providers)
+	var lines []string
+	for _, provider := range providers {
+		lines = append(lines, fmt.Sprintf("%s: %s", provider, hawkconfig.EnvKeyStatus(provider)))
+	}
+	return lines
+}
+
+func activeProviderKeyStatus(settings hawkconfig.Settings) string {
+	provider := strings.TrimSpace(settings.Provider)
+	if provider == "" {
+		return "select provider first"
+	}
+	return hawkconfig.EnvKeyStatus(provider)
+}
+
+func displayConfigValue(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "(empty)"
+	}
+	return value
+}
+
+func providerHint(provider, model string) string {
+	return fmt.Sprintf("Provider: %s\nModel: %s", displayConfigValue(provider), displayConfigValue(model))
+}
+
+func configProviderChoices() []string {
+	providers := []string{
+		"anthropic", "openai", "gemini", "openrouter",
+		"canopywave", "grok", "opencodego", "ollama",
+	}
+	var out []string
+	for _, p := range providers {
+		status := hawkconfig.EnvKeyStatus(p)
+		var statusText string
+		if p == "ollama" {
+			statusText = "local"
+		} else if status == "set" {
+			statusText = "✓"
+		} else {
+			statusText = "key needed"
+		}
+		// Fixed-width alignment: name in 12 chars, status right-aligned
+		label := fmt.Sprintf("%-12s %s", p, statusText)
+		out = append(out, label)
+	}
+	return out
+}
+
+func configModelChoices(provider string, cached []string) []string {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if len(cached) > 0 {
+		out := make([]string, len(cached))
+		copy(out, cached)
+		return out
+	}
+	// Fallback: load from embedded catalog synchronously
+	var out []string
+	if provider != "" {
+		cat := catalog.LoadModelCatalogSync("")
+		for _, entry := range catalog.ModelsForProvider(&cat, provider) {
+			if strings.TrimSpace(entry.ID) != "" {
+				out = append(out, entry.ID)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func extractModelIDs(models []catalog.ModelCatalogEntry) []string {
+	var out []string
+	seen := make(map[string]bool)
+	for _, m := range models {
+		id := strings.TrimSpace(m.ID)
+		if id != "" && !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// ─── Simple Config Wizard ───
+// /config opens provider list → select → [key prompt] → model list → select → done
+
+func (m chatModel) configOptions() []string {
+	switch m.configMenu {
+	case "provider":
+		return configProviderChoices()
+	case "provider-action":
+		return []string{"Use this key", "Remove key"}
+	case "model":
+		settings := hawkconfig.LoadSettings()
+		return configModelChoices(settings.Provider, m.configModels)
+	default:
+		return nil
+	}
+}
+
+func (m chatModel) configPanelView() string {
+	if m.configEntry == "provider-apikey" {
+		return m.configProviderKeyView()
+	}
+	switch m.configMenu {
+	case "provider":
+		return m.configProviderView()
+	case "provider-action":
+		return m.configProviderActionView()
+	case "model":
+		return m.configModelView()
+	default:
+		return ""
+	}
+}
+
+func (m chatModel) configProviderKeyView() string {
+	provider := strings.TrimSpace(m.configProvider)
+	envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("🔑 ") + valueStyle.Render(provider) + "\n")
+	b.WriteString(mutedStyle.Render(envKey) + "\n\n")
+	b.WriteString(m.input.View() + "\n")
+	b.WriteString("\n" + mutedStyle.Render("enter save · esc skip") + "\n")
+	return b.String()
+}
+
+func (m chatModel) configProviderView() string {
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
+	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#e05555"))
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("⚙ Select Provider") + "\n\n")
+
+	opts := m.configOptions()
+	for i, opt := range opts {
+		prefix := "  "
+		lineStyle := style
+		if i == m.configSel {
+			prefix = "❯ "
+			lineStyle = selectedStyle
+		}
+		// Colorize status indicators
+		if strings.Contains(opt, "✓") {
+			opt = strings.Replace(opt, "✓", okStyle.Render("✓"), 1)
+		} else if strings.Contains(opt, "key needed") {
+			opt = strings.Replace(opt, "key needed", warnStyle.Render("key needed"), 1)
+		} else if strings.Contains(opt, "local") {
+			opt = strings.Replace(opt, "local", mutedStyle.Render("local"), 1)
+		}
+		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
+	}
+	b.WriteString("\n" + mutedStyle.Render("↑/↓ · enter · esc"))
+	return b.String()
+}
+
+func (m chatModel) configProviderActionView() string {
+	provider := strings.TrimSpace(m.configProvider)
+	envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("⚙ ") + okStyle.Render("✓") + " " + style.Render(provider) + "\n")
+	b.WriteString(mutedStyle.Render(envKey) + "\n\n")
+
+	opts := m.configOptions()
+	for i, opt := range opts {
+		prefix := "  "
+		lineStyle := style
+		if i == m.configSel {
+			prefix = "❯ "
+			lineStyle = selectedStyle
+		}
+		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
+	}
+	b.WriteString("\n" + mutedStyle.Render("↑/↓ · enter · esc"))
+	return b.String()
+}
+
+const configWindowSize = 10
+
+func (m chatModel) configModelView() string {
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+
+	opts := m.configOptions()
+	total := len(opts)
+
+	// Ensure scroll keeps cursor visible
+	if m.configSel < m.configScroll {
+		m.configScroll = m.configSel
+	}
+	if m.configSel >= m.configScroll+configWindowSize {
+		m.configScroll = m.configSel - configWindowSize + 1
+	}
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("⚙ Select Model") + "\n\n")
+
+	// Scroll up indicator
+	if m.configScroll > 0 {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
+	}
+
+	// Visible window
+	end := m.configScroll + configWindowSize
+	if end > total {
+		end = total
+	}
+	for i := m.configScroll; i < end; i++ {
+		prefix := "  "
+		lineStyle := style
+		if i == m.configSel {
+			prefix = "❯ "
+			lineStyle = selectedStyle
+		}
+		b.WriteString(lineStyle.Render(prefix+opts[i]) + "\n")
+	}
+
+	// Scroll down indicator
+	if end < total {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
+	}
+
+	b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("%d models · ↑/↓ · enter · esc", total)))
+	return b.String()
+}
+
+func (m chatModel) openConfigPanel() chatModel {
+	m.configOpen = true
+	m.configMenu = "provider"
+	m.configSel = 0
+	m.configNotice = ""
+	return m
+}
+
+func (m chatModel) closeConfigPanel() chatModel {
+	m.configOpen = false
+	m.configMenu = ""
+	m.configSel = 0
+	m.configScroll = 0
+	m.configNotice = ""
+	m.configEntry = ""
+	m.configProvider = ""
+	m.configModels = nil
+	m.restoreChatInput()
+	return m
+}
+
+func (m *chatModel) restoreChatInput() {
+	m.input.Reset()
+	m.input.Prompt = " ❯ "
+	m.input.Placeholder = `Try "Create a PR with these changes"`
+	m.input.EchoMode = textinput.EchoNormal
+	m.input.EchoCharacter = '*'
+	m.input.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	m.input.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
+	m.input.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+}
+
+func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) {
+	m.configEntry = kind
+	m.configProvider = provider
+	m.input.Reset()
+	m.input.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	m.input.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
+	m.input.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	switch kind {
+	case "provider-apikey":
+		m.input.Prompt = " key ❯ "
+		m.input.Placeholder = "paste " + provider + " API key"
+		m.input.EchoMode = textinput.EchoPassword
+		m.input.EchoCharacter = '*'
+	case "model":
+		m.input.Prompt = " model ❯ "
+		m.input.Placeholder = "model name"
+		m.input.EchoMode = textinput.EchoNormal
+	case "provider":
+		m.input.Prompt = " provider ❯ "
+		m.input.Placeholder = "provider name"
+		m.input.EchoMode = textinput.EchoNormal
+	}
+	m.input.Focus()
+	return m, textinput.Blink
+}
+
+func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
+	value := strings.TrimSpace(m.input.Value())
+
+	switch m.configEntry {
+	case "provider-apikey":
+		provider := strings.TrimSpace(m.configProvider)
+		if value != "" {
+			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+			if envKey != "" {
+				os.Setenv(envKey, value)
+				_ = hawkconfig.SaveEnvFile(envKey, value)
+			}
+			m.session.SetAPIKey(provider, value)
+		}
+		// Fetch live models from eyrie for this provider
+		models, _ := hawkconfig.FetchModelsForProvider(provider)
+		m.configModels = extractModelIDs(models)
+		m.configEntry = ""
+		m.configProvider = ""
+		m.configMenu = "model"
+		m.configSel = 0
+		m.restoreChatInput()
+		return m, nil
+
+	case "model":
+		if value == "" {
+			m.configEntry = ""
+			m.configProvider = ""
+			m.restoreChatInput()
+			return m, nil
+		}
+		if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.session.SetModel(value)
+		}
+		return m.closeConfigPanel(), nil
+
+	case "provider":
+		if value == "" {
+			m.configEntry = ""
+			m.configProvider = ""
+			m.restoreChatInput()
+			return m, nil
+		}
+		engineProvider := hawkconfig.NormalizeProviderForEngine(value)
+		if err := hawkconfig.SetGlobalSetting("provider", value); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m.closeConfigPanel(), nil
+		}
+		m.session.SetProvider(engineProvider)
+
+		// Same flow as normal provider selection: key prompt or model list
+		if engineProvider != "ollama" && hawkconfig.EnvKeyStatus(engineProvider) != "set" {
+			m.configProvider = engineProvider
+			return m.startConfigEntry("provider-apikey", engineProvider)
+		}
+		models, _ := hawkconfig.FetchModelsForProvider(engineProvider)
+		m.configModels = extractModelIDs(models)
+		m.configEntry = ""
+		m.configProvider = ""
+		m.configMenu = "model"
+		m.configSel = 0
+		m.restoreChatInput()
+		return m, nil
+	}
+
+	// Fallback
+	m.configEntry = ""
+	m.configProvider = ""
+	m.restoreChatInput()
+	return m, nil
+}
+
+func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		if m.configEntry == "provider-apikey" {
+			// Skip key entry, go to model selection
+			m.configEntry = ""
+			m.configProvider = ""
+			m.configMenu = "model"
+			m.configSel = 0
+			m.restoreChatInput()
+			return m, nil
+		}
+		m.configEntry = ""
+		m.configProvider = ""
+		m.restoreChatInput()
+		return m, nil
+	case tea.KeyEnter:
+		return m.finishConfigEntry()
+	default:
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(msg)
+		return m, cmd
+	}
+}
+
+func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
+	if m.configEntry != "" {
+		return m.handleConfigEntryKey(msg)
+	}
+	opts := m.configOptions()
+	if len(opts) == 0 {
+		m.configSel = 0
+		return m, nil
+	}
+	if m.configSel < 0 || m.configSel >= len(opts) {
+		m.configSel = 0
+	}
+
+	switch msg.Type {
+	case tea.KeyEsc:
+		if m.configMenu == "provider" || m.configMenu == "" {
+			return m.closeConfigPanel(), nil
+		}
+		if m.configMenu == "provider-action" {
+			m.configProvider = ""
+			m.configMenu = "provider"
+			m.configSel = 0
+			return m, nil
+		}
+		// From model list → back to provider list
+		m.configMenu = "provider"
+		m.configSel = 0
+		m.configNotice = ""
+		m.configModels = nil
+		return m, nil
+	case tea.KeyUp:
+		if m.configSel == 0 {
+			m.configSel = len(opts) - 1
+		} else {
+			m.configSel--
+		}
+		return m, nil
+	case tea.KeyDown:
+		m.configSel = (m.configSel + 1) % len(opts)
+		return m, nil
+	case tea.KeyEnter:
+		return m.selectConfigOption(opts[m.configSel])
+	}
+	return m, nil
+}
+
+func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
+	switch m.configMenu {
+	case "provider":
+		// Extract provider name (first word) and normalize for engine
+		provider := strings.Fields(option)[0]
+		engineProvider := hawkconfig.NormalizeProviderForEngine(provider)
+		if err := hawkconfig.SetGlobalSetting("provider", provider); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m.closeConfigPanel(), nil
+		}
+		m.session.SetProvider(engineProvider)
+
+		// Seamless flow
+		if engineProvider == "ollama" {
+			// Local provider → straight to models
+			models, _ := hawkconfig.FetchModelsForProvider(engineProvider)
+			m.configModels = extractModelIDs(models)
+			m.configMenu = "model"
+			m.configSel = 0
+			return m, nil
+		}
+		if hawkconfig.EnvKeyStatus(engineProvider) != "set" {
+			// Key missing → prompt for it
+			m.configProvider = engineProvider
+			return m.startConfigEntry("provider-apikey", engineProvider)
+		}
+		// Key is set → show action menu (use or remove)
+		m.configProvider = engineProvider
+		m.configMenu = "provider-action"
+		m.configSel = 0
+		return m, nil
+
+	case "provider-action":
+		provider := strings.TrimSpace(m.configProvider)
+		switch option {
+		case "Use this key":
+			models, _ := hawkconfig.FetchModelsForProvider(provider)
+			m.configModels = extractModelIDs(models)
+			m.configMenu = "model"
+			m.configSel = 0
+			return m, nil
+		case "Remove key":
+			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+			if envKey != "" {
+				os.Unsetenv(envKey)
+				_ = hawkconfig.RemoveEnvFile(envKey)
+			}
+			m.configProvider = ""
+			m.configMenu = "provider"
+			m.configSel = 0
+			return m, nil
+		}
+		return m, nil
+
+	case "model":
+		if err := hawkconfig.SetGlobalSetting("model", option); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m.closeConfigPanel(), nil
+		}
+		m.session.SetModel(option)
+		return m.closeConfigPanel(), nil
+
+	default:
+		return m, nil
+	}
 }
 
 func gitOutput(args ...string) (string, error) {
@@ -476,17 +1198,28 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 }
 
 func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Settings) (chatModel, error) {
-	ta := textarea.New()
-	ta.Placeholder = "Message hawk... (type /help for commands)"
-	ta.Focus()
+	ta := textinput.New()
+	ta.Placeholder = `Try "Create a PR with these changes"`
 	ta.CharLimit = 0
-	ta.SetHeight(3)
-	ta.ShowLineNumbers = false
-	ta.KeyMap.InsertNewline.SetEnabled(false)
+	taWidth := 80
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 10 {
+		taWidth = w
+	}
+	ta.Width = taWidth - 4
+	if ta.Width < 20 {
+		ta.Width = 20
+	}
+	ta.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
+	ta.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#7A7A7A"))
+	ta.CompletionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	ta.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	ta.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	ta.Prompt = "❯ "
+	ta.ShowSuggestions = false
 
 	sp := spinner.New()
-	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(tealColor)
+	sp.Spinner = spinner.Spinner{Frames: hawkSpinnerFrames, FPS: 200 * time.Millisecond}
+	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
 	registry, err := defaultRegistry(settings)
@@ -494,6 +1227,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		return chatModel{}, err
 	}
 	sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if err := configureSession(sess, settings); err != nil {
 		return chatModel{}, err
 	}
@@ -502,7 +1236,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		return chatModel{}, err
 	}
 
-	m := chatModel{input: ta, spinner: sp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid}
+	m := chatModel{input: ta, spinner: sp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))]}
 
 	// Initialize plugin runtime
 	pr := plugin.NewRuntime()
@@ -511,7 +1245,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
-	m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(sess, sid, registry, saved, settings)})
+	m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(sess, sid, registry, saved, settings, false)})
 
 	// Wire permission system
 	sess.PermissionFn = func(req engine.PermissionRequest) {
@@ -538,7 +1272,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	return tea.Batch(textarea.Blink, m.spinner.Tick)
+	return tea.Batch(textinput.Blink, m.spinner.Tick, blinkTickCmd(), glimmerTickCmd(), m.input.Focus())
 }
 
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -596,11 +1330,63 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		if m.configOpen {
+			switch msg.Type {
+			case tea.KeyCtrlC:
+				if time.Since(m.lastCtrlC) < 1*time.Second {
+					m.saveSession()
+					m.quitting = true
+					return m, tea.Quit
+				}
+				m.lastCtrlC = time.Now()
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Press Ctrl+C again to quit."})
+				return m, nil
+			default:
+				next, cmd := m.handleConfigKey(msg)
+				return next, cmd
+			}
+		}
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			m.saveSession()
-			m.quitting = true
-			return m, tea.Quit
+			if time.Since(m.lastCtrlC) < 1*time.Second {
+				m.saveSession()
+				m.quitting = true
+				return m, tea.Quit
+			}
+			m.lastCtrlC = time.Now()
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Press Ctrl+C again to quit."})
+			return m, nil
+		case tea.KeyTab:
+			sugs := slashSuggestions(m.input.Value())
+			if len(sugs) > 0 {
+				if m.slashSel < 0 || m.slashSel >= len(sugs) {
+					m.slashSel = 0
+				}
+				m.input.SetValue(applySlashSuggestion(sugs[m.slashSel]))
+				m.input.CursorEnd()
+				return m, nil
+			}
+		case tea.KeyUp:
+			sugs := slashSuggestions(m.input.Value())
+			if len(sugs) > 0 {
+				if m.slashSel <= 0 {
+					m.slashSel = len(sugs) - 1
+				} else {
+					m.slashSel--
+				}
+				return m, nil
+			}
+		case tea.KeyDown:
+			sugs := slashSuggestions(m.input.Value())
+			if len(sugs) > 0 {
+				m.slashSel = (m.slashSel + 1) % len(sugs)
+				return m, nil
+			}
+		case tea.KeyEsc:
+			if len(slashSuggestions(m.input.Value())) > 0 {
+				m.slashSel = 0
+				return m, nil
+			}
 		case tea.KeyEnter:
 			text := strings.TrimSpace(m.input.Value())
 			if text == "" {
@@ -613,6 +1399,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			m.waiting = true
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.partial.Reset()
 			m.startStream()
 			return m, nil
@@ -666,28 +1453,43 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamErrMsg:
-		m.messages = append(m.messages, displayMsg{role: "error", content: msg.err.Error()})
+		m.messages = append(m.messages, displayMsg{role: "error", content: friendlyError(msg.err)})
 		m.partial.Reset()
 		m.waiting = false
 		m.cancel = nil
 		m.input.Focus()
 		return m, nil
 
+	case blinkTickMsg:
+		m.blinkClosed = !m.blinkClosed
+		cmds = append(cmds, blinkTickCmd())
+		return m, tea.Batch(cmds...)
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.input.SetWidth(msg.Width - 2)
+		m.input.Width = msg.Width - 4
+		if m.input.Width < 20 {
+			m.input.Width = 20
+		}
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
+
+	case glimmerTickMsg:
+		m.glimmerPos++
+		cmds = append(cmds, glimmerTickCmd())
 	}
 
 	if !m.waiting {
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
+	}
+	if (!m.waiting || m.askReq != nil) && !m.input.Focused() {
+		cmds = append(cmds, m.input.Focus())
 	}
 
 	return m, tea.Batch(cmds...)
@@ -735,7 +1537,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/diff":
 		return m.startPromptCommand("/diff", "Show me a summary of all files you've modified or created in this session. Use git diff --stat or list the files.")
-	case "/help":
+	case "/help", "/commands":
 		help := `/add-dir <path>     — Add a directory to context
 /agents             — List active agents/teammates
 /branch             — Show git branch/status
@@ -745,6 +1547,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /compact            — Compact conversation (LLM summary)
 /commit             — Auto-commit changes
 /config             — Show settings
+/commands           — List available slash commands
 /context            — Show current context
 /copy               — Copy last response
 /cost               — Token usage and cost
@@ -808,10 +1611,25 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Metrics().Format()})
 		return m, nil
 	case "/model":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s/%s", m.session.Provider(), m.session.Model())})
+		if len(parts) == 1 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: modelConfigSummary(m.session.Provider(), m.session.Model())})
+			return m, nil
+		}
+		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
+		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
+		if arg == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /model <model-name> or /model set <model-name>"})
+			return m, nil
+		}
+		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		m.session.SetModel(arg)
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", m.session.Model())})
 		return m, nil
 	case "/models":
-		m.messages = append(m.messages, displayMsg{role: "system", content: modelCatalogSummary()})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Model discovery and provider support are handled by Eyrie.\n\nUse\n  /model <name>\n  /config provider <name>\n  /config key <provider> <api-key>"})
 		return m, nil
 	case "/version":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk %s", version)})
@@ -934,15 +1752,74 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Project instructions:\n" + md})
 		}
 		return m, nil
-	case "/config":
+	case "/config", "/con", "/conf":
+		if len(parts) >= 3 && parts[1] == "provider" {
+			value := strings.TrimSpace(strings.Join(parts[2:], " "))
+			if err := hawkconfig.SetGlobalSetting("provider", value); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nSaved to global config.", value)})
+			return m, nil
+		}
+		if len(parts) >= 3 && parts[1] == "model" {
+			value := strings.TrimSpace(strings.Join(parts[2:], " "))
+			if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.session.SetModel(value)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", value)})
+			return m, nil
+		}
+		if len(parts) >= 2 && parts[1] == "keys" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: apiKeyConfigSummary()})
+			return m, nil
+		}
+		if len(parts) >= 3 && parts[1] == "get" {
+			settings, err := loadEffectiveSettings()
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			value, ok := hawkconfig.SettingValue(settings, parts[2])
+			if !ok {
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unsupported setting key %q", parts[2])})
+				return m, nil
+			}
+			if strings.TrimSpace(value) == "" {
+				value = "(empty)"
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s = %s", parts[2], value)})
+			return m, nil
+		}
+		if len(parts) >= 4 && parts[1] == "set" {
+			key := parts[2]
+			value := strings.TrimSpace(strings.Join(parts[3:], " "))
+			if err := hawkconfig.SetGlobalSetting(key, value); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			// Apply common runtime keys immediately.
+			normalizedKey := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "-", ""), "_", ""))
+			switch normalizedKey {
+			case "model":
+				m.session.SetModel(value)
+			case "provider":
+				m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Updated %s = %s", key, value)})
+			return m, nil
+		}
 		settings, err := loadEffectiveSettings()
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		data, _ := json.MarshalIndent(settings, "", "  ")
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Settings:\n" + string(data)})
-		return m, nil
+		m.settings = settings
+		next := m.openConfigPanel()
+		return next, nil
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil
@@ -969,7 +1846,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "/welcome":
-		m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings)})
+		m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed)})
 		return m, nil
 	case "/tasks":
 		tasks := tool.GetTaskStore().List()
@@ -1070,6 +1947,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/plugins":
 		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
 		return m, nil
+	case "/plugin":
+		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
+		return m, nil
 	case "/voice":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Voice mode toggled. Requires whisper.cpp."})
 		return m, nil
@@ -1093,6 +1973,44 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/thinkback":
 		return m.startPromptCommand("/thinkback", "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered.")
+	case "/think-back":
+		return m.startPromptCommand("/think-back", "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered.")
+	case "/thinkback-play":
+		return m.startPromptCommand("/thinkback-play", "Replay the recent reasoning path and summarize key pivots, mistakes avoided, and better alternatives.")
+	case "/ultrareview":
+		return m.startPromptCommand("/ultrareview", "Perform a deep, adversarial code review of this change set. Prioritize correctness, security, regressions, and missing tests.")
+	case "/provider-status":
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider: %s\nModel: %s", m.session.Provider(), m.session.Model())})
+		return m, nil
+	case "/session":
+		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
+			m.sessionID, m.session.Provider(), m.session.Model(),
+			m.session.Mode, m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.Cost.Summary())
+		m.messages = append(m.messages, displayMsg{role: "system", content: info})
+		return m, nil
+	case "/statusline":
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Auto (Off) - all actions require approval | %s %s", m.session.Provider(), m.session.Model())})
+		return m, nil
+	case "/remote-env":
+		m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})
+		return m, nil
+	case "/reload-plugins":
+		if m.pluginRuntime != nil {
+			_ = m.pluginRuntime.LoadAll()
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
+		return m, nil
+	case "/refresh-model-catalog":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Model catalog is built-in in this build; refresh not required."})
+		return m, nil
+	case "/passes":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /passes <count> (compat placeholder). Use /effort for reasoning depth in this build."})
+		return m, nil
+	case "/insights":
+		return m.startPromptCommand("/insights", "Generate a concise report of patterns, friction, wins, and suggested improvements from this session.")
+	case "/terminal-setup", "/install", "/install-github-app", "/install-slack-app", "/web-setup", "/remote-control", "/bridge-kick", "/desktop", "/mobile", "/chrome", "/stickers", "/brief", "/btw", "/buddy", "/advisor", "/privacy-settings", "/rate-limit-options", "/heapdump", "/ide", "/init-verifiers", "/extra-usage", "/ultraplan", "/commit-push-pr", "/debug-model-catalog":
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s is not implemented in Go yet (archive parity placeholder).", cmd)})
+		return m, nil
 	case "/rewind":
 		if m.session.MessageCount() > 2 {
 			m.session.RemoveLastExchange()
@@ -1185,25 +2103,128 @@ func (m *chatModel) startStream() {
 	}()
 }
 
+// renderGlimmerVerb renders the spinner verb with a sweeping 3-color wave
+func renderGlimmerVerb(verb string, glimmerPos int) string {
+	if len(verb) == 0 {
+		return ""
+	}
+	// 3 colors: vivid orange, bright orange, warm amber
+	colors := []string{"255;94;14", "255;140;50", "255;180;80"}
+	runes := []rune(verb)
+
+	var b strings.Builder
+	for i, r := range runes {
+		// Wave: each char picks a color based on position + time, cycling 1→2→3→2→1→2→3...
+		dist := abs((i + glimmerPos) % 5 - 2)
+		if dist == 0 {
+			b.WriteString("\033[1;38;2;" + colors[0] + "m" + string(r))
+		} else if dist == 1 {
+			b.WriteString("\033[1;38;2;" + colors[1] + "m" + string(r))
+		} else {
+			b.WriteString("\033[1;38;2;" + colors[2] + "m" + string(r))
+		}
+	}
+	b.WriteString("\033[0m")
+	return b.String()
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// friendlyError translates raw API errors into user-friendly messages.
+func friendlyError(err error) string {
+	msg := err.Error()
+	low := strings.ToLower(msg)
+	switch {
+	case strings.Contains(low, "429"), strings.Contains(low, "rate limit"):
+		return "Rate limited by the API provider. Wait a moment and try again, or switch providers with /config."
+	case strings.Contains(low, "401"), strings.Contains(low, "unauthorized"), strings.Contains(low, "invalid.*key"):
+		return "Authentication failed. Check your API key with /env or update it with /config key."
+	case strings.Contains(low, "403"), strings.Contains(low, "forbidden"):
+		return "Access denied by the API provider. Verify your API key has the required permissions."
+	case strings.Contains(low, "404"), strings.Contains(low, "not found"):
+		return "Model or endpoint not found. Check your model with /model or provider with /config."
+	case strings.Contains(low, "500"), strings.Contains(low, "internal server error"):
+		return "The API provider returned a server error. Try again shortly."
+	case strings.Contains(low, "502"), strings.Contains(low, "bad gateway"):
+		return "The API provider is temporarily unavailable. Try again shortly."
+	case strings.Contains(low, "503"), strings.Contains(low, "service unavailable"):
+		return "The API provider is temporarily unavailable. Try again shortly."
+	case strings.Contains(low, "timeout"), strings.Contains(low, "deadline exceeded"):
+		return "Request timed out. Check your connection and try again."
+	case strings.Contains(low, "connection refused"), strings.Contains(low, "no such host"):
+		return "Could not reach the API provider. Check your internet connection."
+	default:
+		return msg
+	}
+}
+
+// wrapText wraps text to the given width, preserving existing newlines.
+// indent is prepended to continuation lines.
+func wrapText(text string, width int, indent string) string {
+	if width < 20 {
+		width = 80
+	}
+	var result strings.Builder
+	for _, line := range strings.Split(text, "\n") {
+		if runewidth.StringWidth(line) <= width {
+			result.WriteString(line)
+			result.WriteByte('\n')
+			continue
+		}
+		curWidth := 0
+		var curLine strings.Builder
+		for _, word := range strings.Split(line, " ") {
+			wordW := runewidth.StringWidth(word)
+			if curWidth > 0 && curWidth+1+wordW > width {
+				result.WriteString(curLine.String())
+				result.WriteByte('\n')
+				result.WriteString(indent)
+				curLine.Reset()
+				curLine.WriteString(word)
+				curWidth = len(indent) + wordW
+			} else if curWidth > 0 {
+				curLine.WriteByte(' ')
+				curLine.WriteString(word)
+				curWidth += 1 + wordW
+			} else {
+				curLine.WriteString(word)
+				curWidth = wordW
+			}
+		}
+		if curLine.Len() > 0 {
+			result.WriteString(curLine.String())
+			result.WriteByte('\n')
+		}
+	}
+	return strings.TrimRight(result.String(), "\n")
+}
+
 func (m chatModel) View() string {
 	if m.quitting {
 		return dimStyle.Render("Goodbye.") + "\n"
 	}
 
+	hawkC := "\033[38;2;255;94;14m"
+	rst := "\033[0m"
+	bgDark := "\033[48;2;30;30;40m" // subtle dark background strip
+
 	var b strings.Builder
-	b.WriteString(headerStyle.Render(fmt.Sprintf("🦅 hawk v%s", version)))
-	b.WriteString(dimStyle.Render(fmt.Sprintf("  %s/%s", m.session.Provider(), m.session.Model())))
-	b.WriteString(dimStyle.Render(fmt.Sprintf("  [%s]", m.sessionID)))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	for _, msg := range m.messages {
 		switch msg.role {
 		case "user":
-			b.WriteString(userStyle.Render("You: "))
-			b.WriteString(msg.content)
+			wrapped := wrapText(msg.content, m.width-3, "   ")
+			line := hawkC + "█" + rst + "  " + wrapped
+			b.WriteString(bgDark + line + rst)
 		case "assistant":
-			b.WriteString(assistStyle.Render("hawk: "))
-			b.WriteString(msg.content)
+			content := strings.TrimLeft(msg.content, "\n\r")
+			b.WriteString(hawkC + "⛬ " + rst + wrapText(content, m.width-3, "  "))
 		case "tool_use":
 			b.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
@@ -1211,7 +2232,7 @@ func (m chatModel) View() string {
 		case "thinking":
 			b.WriteString(dimStyle.Render("💭 " + msg.content))
 		case "welcome":
-			b.WriteString(headerStyle.Render(msg.content))
+			b.WriteString(buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed))
 		case "system":
 			b.WriteString(dimStyle.Render(msg.content))
 		case "permission":
@@ -1219,28 +2240,62 @@ func (m chatModel) View() string {
 		case "question":
 			b.WriteString(toolStyle.Render(msg.content))
 		case "usage":
-			// Usage events are not displayed in TUI
 		case "error":
-			b.WriteString(errorStyle.Render("error: "))
-			b.WriteString(msg.content)
+			b.WriteString(errorStyle.Render("error: " + msg.content))
 		}
 		b.WriteString("\n\n")
 	}
 
 	if m.waiting {
-		partial := m.partial.String()
+		partial := strings.TrimLeft(m.partial.String(), "\n\r")
 		if partial != "" {
-			b.WriteString(assistStyle.Render("hawk: "))
-			b.WriteString(partial)
+			b.WriteString(hawkC + "⛬ " + rst + wrapText(partial, m.width-3, "  "))
 			b.WriteString("\n\n")
 		} else {
-			b.WriteString(m.spinner.View() + " Thinking...\n\n")
+			b.WriteString(m.spinner.View() + "  " + renderGlimmerVerb(m.spinnerVerb, m.glimmerPos) + "\033[1;38;2;255;94;14m...\033[0m " + dimStyle.Render("(Press ESC to stop)") + "\n\n")
 		}
 	}
 
-	if !m.waiting || m.askReq != nil {
-		b.WriteString(m.input.View())
-		b.WriteString("\n")
+	if m.configOpen {
+		b.WriteString(m.configPanelView())
+		b.WriteString("\n\n")
+	}
+
+	if !m.configOpen {
+		// Status line: dark background, clean separator
+		totalW := m.width
+		if totalW < 40 {
+			totalW = 80
+		}
+		leftBold := "Auto (Off)"
+		leftDim := " - all actions require approval"
+		rightStatus := fmt.Sprintf("%s %s", m.session.Provider(), m.session.Model())
+		leftVisLen := len(leftBold) + len(leftDim)
+		gap := totalW - leftVisLen - len(rightStatus)
+		if gap < 1 {
+			gap = 1
+		}
+		leftRendered := lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
+		b.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
+		inputBox := lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), true, false, true, false).
+			BorderForeground(lipgloss.Color("#555555")).
+			Width(totalW).
+			Render(m.input.View())
+		b.WriteString(inputBox + "\n")
+		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
+			if m.slashSel < 0 || m.slashSel >= len(sugs) {
+				m.slashSel = 0
+			}
+			for i, s := range sugs {
+				if i == m.slashSel {
+					b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Render("  "+s) + "\n")
+				} else {
+					b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E")).Render("  "+s) + "\n")
+				}
+			}
+		}
+		b.WriteString(dimStyle.Render("? for help") + "\n")
 	}
 
 	return b.String()
@@ -1267,7 +2322,9 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m)
+	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
+	log.SetOutput(io.Discard)
 	ref.Set(p)
 
 	if promptFlag != "" {
@@ -1529,28 +2586,5 @@ func formatDiff(diff string) string {
 		}
 		b.WriteString("\n")
 	}
-	return strings.TrimRight(b.String(), "\n")
-}
-
-func modelCatalogSummary() string {
-	var b strings.Builder
-	b.WriteString("Available models by provider:\n\n")
-	for _, p := range hawkmodel.AllProviders() {
-		b.WriteString(fmt.Sprintf("%s:\n", p))
-		for _, m := range hawkmodel.ByProvider(p) {
-			marker := ""
-			if m.Recommended {
-				marker = " *"
-			}
-			b.WriteString(fmt.Sprintf("  %s%s\n", m.Name, marker))
-			if m.Description != "" {
-				b.WriteString(fmt.Sprintf("    %s\n", m.Description))
-			}
-			b.WriteString(fmt.Sprintf("    Context: %dk, Input: $%.2f/M, Output: $%.2f/M\n",
-				m.ContextSize/1000, m.InputPrice, m.OutputPrice))
-		}
-		b.WriteString("\n")
-	}
-	b.WriteString("* = recommended default\n")
 	return strings.TrimRight(b.String(), "\n")
 }
