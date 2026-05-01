@@ -363,7 +363,6 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		return strings.Repeat(" ", pad) + s
 	}
 
-	// Pixel block letters — Droid style
 	art := []string{
 		"██   ██  █████   ██     ██ ██   ██",
 		"██   ██ ██   ██  ██     ██ ██  ██ ",
@@ -377,16 +376,15 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		" ███ ██ ███ ",
 		"  ██ ██ ██  ",
 		"  ▀▀    ▀▀  ",
-		"  ▀▀    ▀▀  ",
 	}
 	if blinkClosed {
 		mascot[1] = " ▄█ ─  ─ █▄ "
 	}
 
-	// On narrow terminals, drop the mascot so the art still centers
 	showMascot := totalW >= 60
 
 	var b strings.Builder
+	b.WriteString("\n\n\n\n")
 
 	for i := 0; i < len(art); i++ {
 		line := art[i]
@@ -403,14 +401,14 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		b.WriteString(center(combined, visW) + "\n")
 	}
 
-	verLine := fmt.Sprintf("v%s (ctrl+j for changelog)", version)
-	b.WriteString("\n" + center(dimC+verLine+rst, len(verLine)) + "\n")
+	verLine := fmt.Sprintf("v%s", version)
+	b.WriteString(center(dimC+verLine+rst, len(verLine)) + "\n")
 
 	tip := "TIP: Use /help to see all available commands"
 	b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 
 	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
-	b.WriteString("\n" + center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
 	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
 	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
 
@@ -422,14 +420,14 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	if mcpCount == 0 {
 		mcpMark = redC + "×" + rst
 	}
-	agentsMark := greenC + "✓" + rst
+	hawkMark := greenC + "✓" + rst
 	if hawkconfig.LoadHawkMD() == "" {
-		agentsMark = redC + "×" + rst
+		hawkMark = redC + "×" + rst
 	}
 
-	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, agentsMark)
+	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
 	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
-	b.WriteString("\n" + center(indicators, len(indVis)) + "\n")
+	b.WriteString(center(indicators, len(indVis)) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
@@ -2639,7 +2637,9 @@ func (m *chatModel) updateViewportContent() {
 			bottomBarLines += len(sugs)
 		}
 	}
-	vpHeight := m.height - bottomBarLines - 1
+	welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
+	welcomeLines := strings.Count(welcome, "\n")
+	vpHeight := m.height - bottomBarLines - welcomeLines
 	if vpHeight < 4 {
 		vpHeight = 4
 	}
@@ -2720,25 +2720,19 @@ func (m chatModel) View() string {
 		bottomBarLines++
 	}
 
-	// When no real messages yet, render welcome banner as static content
-	// above the bottom bar — not inside the scrollable viewport.
+	welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
+	welcomeLines := strings.Count(welcome, "\n")
+
 	if !m.hasRealMessages() {
-		welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
-		welcomeLines := strings.Count(welcome, "\n")
-		availableHeight := m.height - bottomBarLines
-		gap := availableHeight - welcomeLines
-		if gap < 0 {
-			gap = 0
+		availableHeight := m.height - bottomBarLines - welcomeLines
+		pad := ""
+		if availableHeight > 0 {
+			pad = strings.Repeat("\n", availableHeight)
 		}
-		// Fixed top padding: art sits high with breathing room below.
-		topPad := 3
-		if topPad > gap {
-			topPad = gap
-		}
-		return strings.Repeat("\n", topPad) + welcome + bottomBar.String()
+		return welcome + pad + bottomBar.String()
 	}
 
-	return m.viewport.View() + "\n" + bottomBar.String()
+	return welcome + m.viewport.View() + bottomBar.String()
 }
 
 func runChat() error {
