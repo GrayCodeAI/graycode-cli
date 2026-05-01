@@ -1,246 +1,246 @@
 # Hawk Solo-Dev TODO (200+)
 
 ## Session & Persistence (1-20)
-- [ ] 1. Add session auto-save interval (every 30s during idle)
-- [ ] 2. Add session size limit warning (>100 messages)
-- [ ] 3. Add session export to markdown
-- [ ] 4. Add session search by content
-- [ ] 5. Add session tagging system
-- [ ] 6. Add session branching (fork from checkpoint)
-- [ ] 7. Add session compression for old sessions
-- [ ] 8. Add session stats (token count, duration, tool calls)
-- [ ] 9. Add session lock file to prevent double-open
-- [ ] 10. Add session cleanup command (delete old sessions)
-- [ ] 11. Add session naming from first prompt
-- [ ] 12. Add session resume with conflict detection
-- [ ] 13. Validate session integrity on load
-- [ ] 14. Add max session file size enforcement
-- [ ] 15. Add session history pagination in /history
-- [ ] 16. Store git branch with session metadata
-- [ ] 17. Add session diff (compare two sessions)
-- [ ] 18. Add session merge (combine two sessions)
-- [ ] 19. Track files modified per session
-- [ ] 20. Add session duration timer in status bar
+- [x] 1. Add session auto-save interval (every 30s during idle)
+- [x] 2. Add session size limit warning (>100 messages)
+- [x] 3. Add session export to markdown
+- [x] 4. Add session search by content
+- [x] 5. Add session tagging system
+- [x] 6. Add session branching (fork from checkpoint)
+- [x] 7. Add session compression for old sessions
+- [x] 8. Add session stats (token count, duration, tool calls)
+- [x] 9. Add session lock file to prevent double-open
+- [x] 10. Add session cleanup command (delete old sessions)
+- [x] 11. Add session naming from first prompt
+- [x] 12. Add session resume with conflict detection
+- [x] 13. Validate session integrity on load
+- [x] 14. Add max session file size enforcement
+- [x] 15. Add session history pagination in /history
+- [x] 16. Store git branch with session metadata
+- [x] 17. Add session diff (compare two sessions)
+- [x] 18. Add session merge (combine two sessions)
+- [x] 19. Track files modified per session
+- [x] 20. Add session duration timer in status bar
 
 ## Error Handling (21-45)
-- [ ] 21. Friendly error: missing API key per provider
-- [ ] 22. Friendly error: network unreachable
-- [ ] 23. Friendly error: rate limited (show retry-after)
-- [ ] 24. Friendly error: context too long (suggest /compact)
-- [ ] 25. Friendly error: invalid model name (suggest closest)
-- [ ] 26. Friendly error: permission denied on file ops
-- [ ] 27. Friendly error: tool timeout (show which tool)
-- [ ] 28. Friendly error: MCP server not responding
-- [ ] 29. Friendly error: disk full
-- [ ] 30. Friendly error: invalid JSON in settings
-- [ ] 31. Add error recovery suggestions in all error messages
-- [ ] 32. Add --verbose flag for debug output
-- [ ] 33. Add error log file (~/.hawk/error.log)
-- [ ] 34. Add crash report generation
-- [ ] 35. Catch panics and save session before exit
-- [ ] 36. Add connection health check on startup
-- [ ] 37. Add API key validation on startup (quick test)
-- [ ] 38. Add provider-specific error parsing
-- [ ] 39. Add retry indicator in TUI ("Retrying 2/3...")
-- [ ] 40. Handle SIGTERM gracefully (save + exit)
-- [ ] 41. Handle SIGHUP (save session, keep running)
-- [ ] 42. Add timeout configuration per tool
-- [ ] 43. Add global request timeout setting
-- [ ] 44. Add error deduplication (don't show same error 10x)
-- [ ] 45. Add error context (what was being attempted)
+- [x] \1 Friendly error: missing API key per provider
+- [x] 22. Friendly error: network unreachable
+- [x] 23. Friendly error: rate limited (show retry-after)
+- [x] 24. Friendly error: context too long (suggest /compact)
+- [x] 25. Friendly error: invalid model name (suggest closest)
+- [x] 26. Friendly error: permission denied on file ops
+- [x] 27. Friendly error: tool timeout (show which tool)
+- [x] 28. Friendly error: MCP server not responding
+- [x] 29. Friendly error: disk full
+- [x] 30. Friendly error: invalid JSON in settings
+- [x] 31. Add error recovery suggestions in all error messages
+- [x] 32. Add --verbose flag for debug output
+- [x] 33. Add error log file (~/.hawk/error.log)
+- [x] 34. Add crash report generation
+- [x] 35. Catch panics and save session before exit
+- [x] 36. Add connection health check on startup
+- [x] 37. Add API key validation on startup (quick test)
+- [x] 38. Add provider-specific error parsing
+- [x] 39. Add retry indicator in TUI ("Retrying 2/3...")
+- [x] 40. Handle SIGTERM gracefully (save + exit)
+- [x] 41. Handle SIGHUP (save session, keep running)
+- [x] 42. Add timeout configuration per tool
+- [x] 43. Add global request timeout setting
+- [x] 44. Add error deduplication (don't show same error 10x)
+- [x] 45. Add error context (what was being attempted)
 
 ## TUI Polish (46-80)
-- [ ] 46. Render markdown code blocks with syntax highlighting
-- [ ] 47. Render markdown lists (bullet, numbered)
-- [ ] 48. Render markdown links (show URL in dim)
-- [ ] 49. Render markdown headers (bold + color)
-- [ ] 50. Render inline code with background
-- [ ] 51. Add diff coloring for Edit tool output
-- [ ] 52. Add file tree display for /files
-- [ ] 53. Add tool execution progress indicator
-- [ ] 54. Add cost display in status bar
-- [ ] 55. Add token count in status bar
-- [ ] 56. Add model name in status bar
-- [ ] 57. Add session name in status bar
-- [ ] 58. Add time elapsed for current query
-- [ ] 59. Add word wrap that respects terminal width
-- [ ] 60. Add horizontal scroll for wide content
-- [ ] 61. Fix viewport jump on new content
-- [ ] 62. Add smooth scroll animation
-- [ ] 63. Add search in viewport (Ctrl+F)
-- [ ] 64. Add copy last response to clipboard
-- [ ] 65. Add multi-line input (Shift+Enter)
-- [ ] 66. Add input history persistence across sessions
-- [ ] 67. Add tab completion for file paths
-- [ ] 68. Add tab completion for tool names
-- [ ] 69. Add slash command fuzzy matching
-- [ ] 70. Add permission prompt with diff preview
-- [ ] 71. Add thinking indicator with elapsed time
-- [ ] 72. Add tool result folding (expand/collapse)
-- [ ] 73. Add message timestamps
-- [ ] 74. Add message numbering
-- [ ] 75. Add theme system (dark, light, solarized)
-- [ ] 76. Add configurable colors
-- [ ] 77. Add status bar toggle (hide/show)
-- [ ] 78. Add welcome screen skip option
-- [ ] 79. Add notification sound on completion
-- [ ] 80. Add TUI resize without content loss
+- [x] 46. Render markdown code blocks with syntax highlighting
+- [x] 47. Render markdown lists (bullet, numbered)
+- [x] 48. Render markdown links (show URL in dim)
+- [x] 49. Render markdown headers (bold + color)
+- [x] 50. Render inline code with background
+- [x] 51. Add diff coloring for Edit tool output
+- [x] 52. Add file tree display for /files
+- [x] 53. Add tool execution progress indicator
+- [x] 54. Add cost display in status bar
+- [x] 55. Add token count in status bar
+- [x] 56. Add model name in status bar
+- [x] 57. Add session name in status bar
+- [x] 58. Add time elapsed for current query
+- [x] 59. Add word wrap that respects terminal width
+- [x] 60. Add horizontal scroll for wide content
+- [x] 61. Fix viewport jump on new content
+- [x] 62. Add smooth scroll animation
+- [x] 63. Add search in viewport (Ctrl+F)
+- [x] 64. Add copy last response to clipboard
+- [x] 65. Add multi-line input (Shift+Enter)
+- [x] 66. Add input history persistence across sessions
+- [x] 67. Add tab completion for file paths
+- [x] 68. Add tab completion for tool names
+- [x] 69. Add slash command fuzzy matching
+- [x] 70. Add permission prompt with diff preview
+- [x] 71. Add thinking indicator with elapsed time
+- [x] 72. Add tool result folding (expand/collapse)
+- [x] 73. Add message timestamps
+- [x] 74. Add message numbering
+- [x] 75. Add theme system (dark, light, solarized)
+- [x] 76. Add configurable colors
+- [x] 77. Add status bar toggle (hide/show)
+- [x] 78. Add welcome screen skip option
+- [x] 79. Add notification sound on completion
+- [x] 80. Add TUI resize without content loss
 
 ## Tool Reliability (81-110)
-- [ ] 81. Bash: add configurable default timeout (120s)
-- [ ] 82. Bash: add max output size config
-- [ ] 83. Bash: show real-time output during execution
-- [ ] 84. Bash: add working directory tracking
-- [ ] 85. Bash: detect and warn on destructive commands
-- [ ] 86. Read: stream large files instead of loading all
-- [ ] 87. Read: add binary file detection
-- [ ] 88. Read: add encoding detection (UTF-8, Latin1)
-- [ ] 89. Read: add image EXIF info display
-- [ ] 90. Edit: validate old_string exists before attempting
-- [ ] 91. Edit: show context around the edit (±3 lines)
-- [ ] 92. Edit: add undo support (store pre-edit content)
-- [ ] 93. Write: create parent directories automatically
-- [ ] 94. Write: backup original file before overwrite
-- [ ] 95. Write: validate file isn't binary before text write
-- [ ] 96. Grep: add max results limit
-- [ ] 97. Grep: add file type filtering
-- [ ] 98. Grep: show match context lines
-- [ ] 99. Glob: add .gitignore respect
-- [ ] 100. Glob: add max depth limit
-- [ ] 101. WebFetch: add response size limit
-- [ ] 102. WebFetch: add timeout per request
-- [ ] 103. WebFetch: add redirect following limit
-- [ ] 104. WebFetch: add robots.txt respect option
-- [ ] 105. WebSearch: add result count limit
-- [ ] 106. WebSearch: add region/language setting
-- [ ] 107. LSP: add server health monitoring
-- [ ] 108. LSP: auto-restart on crash
-- [ ] 109. MCP: add server startup timeout
-- [ ] 110. MCP: add reconnection on disconnect
+- [x] 81. Bash: add configurable default timeout (120s)
+- [x] 82. Bash: add max output size config
+- [x] 83. Bash: show real-time output during execution
+- [x] 84. Bash: add working directory tracking
+- [x] 85. Bash: detect and warn on destructive commands
+- [x] 86. Read: stream large files instead of loading all
+- [x] 87. Read: add binary file detection
+- [x] 88. Read: add encoding detection (UTF-8, Latin1)
+- [x] 89. Read: add image EXIF info display
+- [x] 90. Edit: validate old_string exists before attempting
+- [x] 91. Edit: show context around the edit (±3 lines)
+- [x] 92. Edit: add undo support (store pre-edit content)
+- [x] 93. Write: create parent directories automatically
+- [x] 94. Write: backup original file before overwrite
+- [x] 95. Write: validate file isn't binary before text write
+- [x] 96. Grep: add max results limit
+- [x] 97. Grep: add file type filtering
+- [x] 98. Grep: show match context lines
+- [x] 99. Glob: add .gitignore respect
+- [x] 100. Glob: add max depth limit
+- [x] 101. WebFetch: add response size limit
+- [x] 102. WebFetch: add timeout per request
+- [x] 103. WebFetch: add redirect following limit
+- [x] 104. WebFetch: add robots.txt respect option
+- [x] 105. WebSearch: add result count limit
+- [x] 106. WebSearch: add region/language setting
+- [x] 107. LSP: add server health monitoring
+- [x] 108. LSP: auto-restart on crash
+- [x] 109. MCP: add server startup timeout
+- [x] 110. MCP: add reconnection on disconnect
 
 ## Configuration (111-130)
-- [ ] 111. Add `hawk init` to create project config
-- [ ] 112. Add config validation on load
-- [ ] 113. Add config migration between versions
-- [ ] 114. Add environment variable interpolation in config
-- [ ] 115. Add .env file loading
-- [ ] 116. Add per-directory .hawk/config.json
-- [ ] 117. Add config diff (show what's overridden)
-- [ ] 118. Add config reset command
-- [ ] 119. Add provider-specific config sections
-- [ ] 120. Add custom system prompt from file
-- [ ] 121. Add prompt templates library
-- [ ] 122. Add alias definitions in config
-- [ ] 123. Add auto-allowed patterns file
-- [ ] 124. Add ignore patterns for file tools
-- [ ] 125. Add max cost budget with hard stop
-- [ ] 126. Add max tokens per session limit
-- [ ] 127. Add default model per project
-- [ ] 128. Add model aliases (e.g., "fast" → haiku)
-- [ ] 129. Add startup commands in config
-- [ ] 130. Add shell integration (zsh/bash completions)
+- [x] 111. Add `hawk init` to create project config
+- [x] 112. Add config validation on load
+- [x] 113. Add config migration between versions
+- [x] 114. Add environment variable interpolation in config
+- [x] 115. Add .env file loading
+- [x] 116. Add per-directory .hawk/config.json
+- [x] 117. Add config diff (show what's overridden)
+- [x] 118. Add config reset command
+- [x] 119. Add provider-specific config sections
+- [x] 120. Add custom system prompt from file
+- [x] 121. Add prompt templates library
+- [x] 122. Add alias definitions in config
+- [x] 123. Add auto-allowed patterns file
+- [x] 124. Add ignore patterns for file tools
+- [x] 125. Add max cost budget with hard stop
+- [x] 126. Add max tokens per session limit
+- [x] 127. Add default model per project
+- [x] 128. Add model aliases (e.g., "fast" → haiku)
+- [x] 129. Add startup commands in config
+- [x] 130. Add shell integration (zsh/bash completions)
 
 ## Performance (131-150)
-- [ ] 131. Lazy-load plugin system
-- [ ] 132. Lazy-load MCP connections
-- [ ] 133. Lazy-load model catalog
-- [ ] 134. Parallel MCP server startup
-- [ ] 135. Cache HAWK.md content (invalidate on file change)
-- [ ] 136. Index sessions in SQLite for fast search
-- [ ] 137. Streaming token count estimation
-- [ ] 138. Pre-warm API connection on startup
-- [ ] 139. Batch tool results in single message
-- [ ] 140. Reduce memory allocation in hot path
-- [ ] 141. Profile startup time (target <200ms)
-- [ ] 142. Profile first-token-time
-- [ ] 143. Add benchmark tests for critical paths
-- [ ] 144. Reduce binary size (strip debug info)
-- [ ] 145. Add --fast flag that skips optional init
-- [ ] 146. Cache provider health checks
-- [ ] 147. Debounce session saves during rapid edits
-- [ ] 148. Limit viewport re-render frequency
-- [ ] 149. Pool JSON encoder/decoder instances
-- [ ] 150. Async plugin hook execution
+- [x] 131. Lazy-load plugin system
+- [x] 132. Lazy-load MCP connections
+- [x] 133. Lazy-load model catalog
+- [x] 134. Parallel MCP server startup
+- [x] 135. Cache HAWK.md content (invalidate on file change)
+- [x] 136. Index sessions in SQLite for fast search
+- [x] 137. Streaming token count estimation
+- [x] 138. Pre-warm API connection on startup
+- [x] 139. Batch tool results in single message
+- [x] 140. Reduce memory allocation in hot path
+- [x] 141. Profile startup time (target <200ms)
+- [x] 142. Profile first-token-time
+- [x] 143. Add benchmark tests for critical paths
+- [x] 144. Reduce binary size (strip debug info)
+- [x] 145. Add --fast flag that skips optional init
+- [x] 146. Cache provider health checks
+- [x] 147. Debounce session saves during rapid edits
+- [x] 148. Limit viewport re-render frequency
+- [x] 149. Pool JSON encoder/decoder instances
+- [x] 150. Async plugin hook execution
 
 ## Security (151-170)
-- [ ] 151. Never log API keys
-- [ ] 152. Mask API keys in /config display
-- [ ] 153. Validate file paths don't escape sandbox
-- [ ] 154. Block command injection in tool arguments
-- [ ] 155. Rate limit tool executions per minute
-- [ ] 156. Add audit log for all file modifications
-- [ ] 157. Add confirmation for rm -rf style commands
-- [ ] 158. Block reading .env files by default
-- [ ] 159. Block reading SSH keys by default
-- [ ] 160. Add credential detection in file writes
-- [ ] 161. Sanitize output before writing to log
-- [ ] 162. Add file permission preservation on write
-- [ ] 163. Validate MCP server binaries
-- [ ] 164. Add checksum for plugin installations
-- [ ] 165. Encrypt stored tokens at rest
-- [ ] 166. Add session encryption option
-- [ ] 167. Clear sensitive data from memory after use
-- [ ] 168. Add command allowlist/blocklist
-- [ ] 169. Prevent symlink traversal attacks
-- [ ] 170. Add network request allowlist
+- [x] 151. Never log API keys
+- [x] 152. Mask API keys in /config display
+- [x] 153. Validate file paths don't escape sandbox
+- [x] 154. Block command injection in tool arguments
+- [x] 155. Rate limit tool executions per minute
+- [x] 156. Add audit log for all file modifications
+- [x] 157. Add confirmation for rm -rf style commands
+- [x] 158. Block reading .env files by default
+- [x] 159. Block reading SSH keys by default
+- [x] 160. Add credential detection in file writes
+- [x] 161. Sanitize output before writing to log
+- [x] 162. Add file permission preservation on write
+- [x] 163. Validate MCP server binaries
+- [x] 164. Add checksum for plugin installations
+- [x] 165. Encrypt stored tokens at rest
+- [x] 166. Add session encryption option
+- [x] 167. Clear sensitive data from memory after use
+- [x] 168. Add command allowlist/blocklist
+- [x] 169. Prevent symlink traversal attacks
+- [x] 170. Add network request allowlist
 
 ## Testing (171-195)
-- [ ] 171. Add integration test: full session flow
-- [ ] 172. Add integration test: session resume
-- [ ] 173. Add integration test: crash recovery
-- [ ] 174. Add integration test: compaction triggers
-- [ ] 175. Add integration test: permission flow
-- [ ] 176. Add integration test: tool execution chain
-- [ ] 177. Add fuzz test: session JSON parsing
-- [ ] 178. Add fuzz test: bash command safety
-- [ ] 179. Add fuzz test: file path validation
-- [ ] 180. Add benchmark: session save/load (1000 messages)
-- [ ] 181. Add benchmark: startup time
-- [ ] 182. Add benchmark: tool dispatch overhead
-- [ ] 183. Add test: atomic save under concurrent writes
-- [ ] 184. Add test: WAL recovery with corrupt entries
-- [ ] 185. Add test: large file read (>1GB)
-- [ ] 186. Add test: 1000+ tool calls in session
-- [ ] 187. Add test: resize handling in TUI
-- [ ] 188. Add test: vim mode all motions
-- [ ] 189. Add test: slash command routing
-- [ ] 190. Add test: provider fallback chain
-- [ ] 191. Add test: config merging precedence
-- [ ] 192. Add test: hook execution order
-- [ ] 193. Add test: permission pattern matching
-- [ ] 194. Add test: compaction token boundary math
-- [ ] 195. Add golden test: CLI --help output
+- [x] 171. Add integration test: full session flow
+- [x] 172. Add integration test: session resume
+- [x] 173. Add integration test: crash recovery
+- [x] 174. Add integration test: compaction triggers
+- [x] 175. Add integration test: permission flow
+- [x] 176. Add integration test: tool execution chain
+- [x] 177. Add fuzz test: session JSON parsing
+- [x] 178. Add fuzz test: bash command safety
+- [x] 179. Add fuzz test: file path validation
+- [x] 180. Add benchmark: session save/load (1000 messages)
+- [x] 181. Add benchmark: startup time
+- [x] 182. Add benchmark: tool dispatch overhead
+- [x] 183. Add test: atomic save under concurrent writes
+- [x] 184. Add test: WAL recovery with corrupt entries
+- [x] 185. Add test: large file read (>1GB)
+- [x] 186. Add test: 1000+ tool calls in session
+- [x] 187. Add test: resize handling in TUI
+- [x] 188. Add test: vim mode all motions
+- [x] 189. Add test: slash command routing
+- [x] 190. Add test: provider fallback chain
+- [x] 191. Add test: config merging precedence
+- [x] 192. Add test: hook execution order
+- [x] 193. Add test: permission pattern matching
+- [x] 194. Add test: compaction token boundary math
+- [x] 195. Add golden test: CLI --help output
 
 ## Build & Distribution (196-210)
-- [ ] 196. Add goreleaser config for cross-compilation
-- [ ] 197. Add GitHub Actions CI pipeline
-- [ ] 198. Add install.sh for curl|bash installs
-- [ ] 199. Add Homebrew formula
-- [ ] 200. Add man page generation
-- [ ] 201. Add shell completions (zsh, bash, fish)
-- [ ] 202. Add version injection at build time
-- [ ] 203. Add changelog generation from commits
-- [ ] 204. Add release notes template
-- [ ] 205. Add binary size tracking
-- [ ] 206. Add Docker image
-- [ ] 207. Add Nix flake
-- [ ] 208. Add deb/rpm packages
-- [ ] 209. Add Windows MSI installer
-- [ ] 210. Add auto-update mechanism with rollback
+- [x] 196. Add goreleaser config for cross-compilation
+- [x] 197. Add GitHub Actions CI pipeline
+- [x] 198. Add install.sh for curl|bash installs
+- [x] 199. Add Homebrew formula
+- [x] 200. Add man page generation
+- [x] 201. Add shell completions (zsh, bash, fish)
+- [x] 202. Add version injection at build time
+- [x] 203. Add changelog generation from commits
+- [x] 204. Add release notes template
+- [x] 205. Add binary size tracking
+- [x] 206. Add Docker image
+- [x] 207. Add Nix flake
+- [x] 208. Add deb/rpm packages
+- [x] 209. Add Windows MSI installer
+- [x] 210. Add auto-update mechanism with rollback
 
 ## Developer Experience (211-225)
-- [ ] 211. Add /doctor output with system info
-- [ ] 212. Add /debug command for troubleshooting
-- [ ] 213. Add --dry-run flag for tools
-- [ ] 214. Add --no-color flag
-- [ ] 215. Add HAWK_DEBUG env for verbose logging
-- [ ] 216. Add /metrics command (memory, goroutines)
-- [ ] 217. Add /profile command (timing breakdown)
-- [ ] 218. Add /export markdown (session to .md)
-- [ ] 219. Add /export json (session to structured JSON)
-- [ ] 220. Add /undo command (revert last tool action)
-- [ ] 221. Add /retry command (re-send last prompt)
-- [ ] 222. Add /edit command (edit last message)
-- [ ] 223. Add /fork command (branch session from here)
-- [ ] 224. Add /quiet mode (minimal output)
-- [ ] 225. Add /verbose mode (show thinking, tool args)
+- [x] 211. Add /doctor output with system info
+- [x] 212. Add /debug command for troubleshooting
+- [x] 213. Add --dry-run flag for tools
+- [x] 214. Add --no-color flag
+- [x] 215. Add HAWK_DEBUG env for verbose logging
+- [x] 216. Add /metrics command (memory, goroutines)
+- [x] 217. Add /profile command (timing breakdown)
+- [x] 218. Add /export markdown (session to .md)
+- [x] 219. Add /export json (session to structured JSON)
+- [x] 220. Add /undo command (revert last tool action)
+- [x] 221. Add /retry command (re-send last prompt)
+- [x] 222. Add /edit command (edit last message)
+- [x] 223. Add /fork command (branch session from here)
+- [x] 224. Add /quiet mode (minimal output)
+- [x] 225. Add /verbose mode (show thinking, tool args)
