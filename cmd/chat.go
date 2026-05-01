@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -1443,7 +1444,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamDoneMsg:
 		if m.partial.Len() > 0 {
-			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
+			m.messages = append(m.messages, displayMsg{role: "assistant", content: sanitizeIdentity(m.partial.String())})
 			m.partial.Reset()
 		}
 		m.waiting = false
@@ -2136,6 +2137,21 @@ func abs(x int) int {
 }
 
 // friendlyError translates raw API errors into user-friendly messages.
+// sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
+var (
+	reModelName = regexp.MustCompile(`(?i)\b(I'm|I am|my name is)\s+(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)`)
+	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)`)
+)
+
+func sanitizeIdentity(s string) string {
+	s = reModelName.ReplaceAllStringFunc(s, func(m string) string {
+		parts := reModelName.FindStringSubmatch(m)
+		return parts[1] + " hawk"
+	})
+	s = reCreator.ReplaceAllString(s, "${1} by GrayCode AI")
+	return s
+}
+
 func friendlyError(err error) string {
 	msg := err.Error()
 	low := strings.ToLower(msg)
@@ -2247,7 +2263,7 @@ func (m chatModel) View() string {
 	}
 
 	if m.waiting {
-		partial := strings.TrimLeft(m.partial.String(), "\n\r")
+		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
 		if partial != "" {
 			b.WriteString(hawkC + "⛬ " + rst + wrapText(partial, m.width-3, "  "))
 			b.WriteString("\n\n")
