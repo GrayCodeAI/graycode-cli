@@ -2354,32 +2354,7 @@ func renderInlineMarkdown(s string) string {
 	return reBold.ReplaceAllString(s, "\033[1m${1}\033[22m")
 }
 
-func friendlyError(err error) string {
-	msg := err.Error()
-	low := strings.ToLower(msg)
-	switch {
-	case strings.Contains(low, "429"), strings.Contains(low, "rate limit"):
-		return "Rate limited by the API provider. Wait a moment and try again, or switch providers with /config."
-	case strings.Contains(low, "401"), strings.Contains(low, "unauthorized"), strings.Contains(low, "invalid.*key"):
-		return "Authentication failed. Check your API key with /env or update it with /config key."
-	case strings.Contains(low, "403"), strings.Contains(low, "forbidden"):
-		return "Access denied by the API provider. Verify your API key has the required permissions."
-	case strings.Contains(low, "404"), strings.Contains(low, "not found"):
-		return "Model or endpoint not found. Check your model with /model or provider with /config."
-	case strings.Contains(low, "500"), strings.Contains(low, "internal server error"):
-		return "The API provider returned a server error. Try again shortly."
-	case strings.Contains(low, "502"), strings.Contains(low, "bad gateway"):
-		return "The API provider is temporarily unavailable. Try again shortly."
-	case strings.Contains(low, "503"), strings.Contains(low, "service unavailable"):
-		return "The API provider is temporarily unavailable. Try again shortly."
-	case strings.Contains(low, "timeout"), strings.Contains(low, "deadline exceeded"):
-		return "Request timed out. Check your connection and try again."
-	case strings.Contains(low, "connection refused"), strings.Contains(low, "no such host"):
-		return "Could not reach the API provider. Check your internet connection."
-	default:
-		return msg
-	}
-}
+// friendlyError is defined in errors.go with comprehensive pattern matching.
 
 // wrapText wraps text to fit within width columns total (including indent).
 // The first line has no indent (caller provides the prefix).
@@ -2660,12 +2635,8 @@ func (m chatModel) View() string {
 		if gap < 0 {
 			gap = 0
 		}
-		// Position at ~30% down the screen so content sits in the upper
-		// area with breathing room above the status bar.
-		topPad := int(float64(availableHeight) * 0.30) - welcomeLines/2
-		if topPad < 2 {
-			topPad = 2
-		}
+		// Fixed top padding: art sits high with breathing room below.
+		topPad := 3
 		if topPad > gap {
 			topPad = gap
 		}

@@ -14,12 +14,12 @@ func TestFriendlyError(t *testing.T) {
 		{"rate limit 429", "eyrie: openai stream request failed: max retries (3) exceeded: HTTP 429", "Rate limited"},
 		{"unauthorized 401", "HTTP 401 Unauthorized", "Authentication failed"},
 		{"forbidden 403", "HTTP 403 Forbidden", "Access denied"},
-		{"not found 404", "model not found", "not found"},
+		{"not found 404", "model not found", "/model"},
 		{"server error 500", "HTTP 500 Internal Server Error", "server error"},
 		{"bad gateway 502", "HTTP 502 Bad Gateway", "temporarily unavailable"},
 		{"service unavailable 503", "HTTP 503 Service Unavailable", "temporarily unavailable"},
 		{"timeout", "context deadline exceeded", "timed out"},
-		{"connection refused", "connection refused", "internet connection"},
+		{"connection refused", "connection refused", "Connection refused"},
 		{"unknown error", "something weird happened", "something weird happened"},
 	}
 	for _, tt := range tests {
