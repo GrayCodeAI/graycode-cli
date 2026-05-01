@@ -2457,7 +2457,18 @@ func (m *chatModel) updateViewportContent() {
 	m.viewport.Height = vpHeight
 
 	atBottom := m.viewport.AtBottom()
-	m.viewport.SetContent(chatContent.String())
+	contentStr := chatContent.String()
+
+	// Count content lines to see if we need top-padding.
+	// When content is shorter than the viewport, prepend blank lines
+	// so messages appear at the bottom, right above the input bar.
+	contentLines := strings.Count(contentStr, "\n")
+	if contentLines < vpHeight {
+		padding := strings.Repeat("\n", vpHeight-contentLines)
+		contentStr = padding + contentStr
+	}
+
+	m.viewport.SetContent(contentStr)
 	if atBottom || m.autoScroll {
 		m.viewport.GotoBottom()
 	}
