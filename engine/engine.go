@@ -303,6 +303,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		result.Close()
 
+		// Check for inline tool calls in text (some providers embed tool calls in text)
+		if len(toolCalls) == 0 && strings.Contains(textContent, "<|tool_calls_section_begin|>") {
+			cleanText, inlineCalls := client.ParseInlineToolCalls(textContent)
+			if len(inlineCalls) > 0 {
+				textContent = cleanText
+				for _, ic := range inlineCalls {
+					toolCalls = append(toolCalls, ic)
+				}
+			}
+		}
+
 		// Post-query hook
 		hooks.ExecuteAsync(ctx, hooks.EventPostQuery, map[string]interface{}{
 			"provider": s.provider,
@@ -332,11 +343,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"messages": len(s.messages),
 			})
 			return
-		}
-
-		// Append assistant text if any
-		if textContent != "" {
-			s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
 		}
 
 		// Execute tools and collect results
@@ -472,18 +478,27 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Append assistant message with tool_use blocks
+		assistContent := textContent
+		if assistContent == "" && len(toolCalls) > 0 {
+			assistContent = " " // non-empty to satisfy APIs that reject empty content
+		}
 		s.messages = append(s.messages, client.EyrieMessage{
 			Role:    "assistant",
-			Content: textContent,
+			Content: assistContent,
 			ToolUse: toolCalls,
 		})
 		// Append tool results as proper tool_result messages
 		for _, r := range results {
+			resultContent := r.output
+			if resultContent == "" {
+				resultContent = "(no output)"
+			}
 			s.messages = append(s.messages, client.EyrieMessage{
-				Role: "user",
+				Role:    "user",
+				Content: resultContent,
 				ToolResult: &client.ToolResult{
 					ToolUseID: r.tc.ID,
-					Content:   r.output,
+					Content:   resultContent,
 					IsError:   r.isErr,
 				},
 			})

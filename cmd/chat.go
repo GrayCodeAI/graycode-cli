@@ -402,13 +402,13 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	}
 
 	verLine := fmt.Sprintf("v%s", version)
-	b.WriteString(center(dimC+verLine+rst, len(verLine)) + "\n")
+	b.WriteString("\n" + center(dimC+verLine+rst, len(verLine)) + "\n")
 
 	tip := "TIP: Use /help to see all available commands"
 	b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 
 	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
-	b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	b.WriteString("\n" + center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
 	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
 	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
 
@@ -427,7 +427,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
 	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
-	b.WriteString(center(indicators, len(indVis)) + "\n")
+	b.WriteString("\n" + center(indicators, len(indVis)) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
@@ -2569,17 +2569,14 @@ func (m *chatModel) updateViewportContent() {
 		viewWidth = 80
 	}
 
-	// When only the welcome banner is showing, the viewport is not used.
-	if !m.hasRealMessages() {
-		return
-	}
-
 	hawkC := "\033[38;2;255;94;14m"
 	rst := "\033[0m"
 	bgDark := "\033[48;2;30;30;40m"
 
+	welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
+
 	var chatContent strings.Builder
-	chatContent.WriteString("\n")
+	chatContent.WriteString(welcome + "\n")
 
 	for i, msg := range m.messages {
 		switch msg.role {
@@ -2637,9 +2634,7 @@ func (m *chatModel) updateViewportContent() {
 			bottomBarLines += len(sugs)
 		}
 	}
-	welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
-	welcomeLines := strings.Count(welcome, "\n")
-	vpHeight := m.height - bottomBarLines - welcomeLines
+	vpHeight := m.height - bottomBarLines - 1
 	if vpHeight < 4 {
 		vpHeight = 4
 	}
@@ -2649,11 +2644,12 @@ func (m *chatModel) updateViewportContent() {
 	atBottom := m.viewport.AtBottom()
 	contentStr := chatContent.String()
 
-	// Bottom-align: when content is shorter than viewport, pad top
-	contentLines := strings.Count(contentStr, "\n")
-	if contentLines < vpHeight {
-		padding := strings.Repeat("\n", vpHeight-contentLines)
-		contentStr = padding + contentStr
+	if !m.hasRealMessages() {
+		contentLines := strings.Count(contentStr, "\n")
+		if contentLines < vpHeight {
+			topPad := (vpHeight - contentLines) / 3
+			contentStr = strings.Repeat("\n", topPad) + contentStr
+		}
 	}
 
 	m.viewport.SetContent(contentStr)
@@ -2720,19 +2716,7 @@ func (m chatModel) View() string {
 		bottomBarLines++
 	}
 
-	welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
-	welcomeLines := strings.Count(welcome, "\n")
-
-	if !m.hasRealMessages() {
-		availableHeight := m.height - bottomBarLines - welcomeLines
-		pad := ""
-		if availableHeight > 0 {
-			pad = strings.Repeat("\n", availableHeight)
-		}
-		return welcome + pad + bottomBar.String()
-	}
-
-	return welcome + m.viewport.View() + bottomBar.String()
+	return m.viewport.View() + "\n" + bottomBar.String()
 }
 
 func runChat() error {
@@ -2820,6 +2804,7 @@ func runPrint(text string) error {
 	}
 
 	sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if err := configureSession(sess, settings); err != nil {
 		return err
 	}
