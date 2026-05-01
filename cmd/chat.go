@@ -2393,6 +2393,15 @@ func (m *chatModel) updateViewportContent() {
 	var chatContent strings.Builder
 	chatContent.WriteString("\n")
 
+	// Check if there are any real chat messages (not just welcome)
+	hasRealMessages := false
+	for _, msg := range m.messages {
+		if msg.role != "welcome" {
+			hasRealMessages = true
+			break
+		}
+	}
+
 	for i, msg := range m.messages {
 		switch msg.role {
 		case "user":
@@ -2412,7 +2421,10 @@ func (m *chatModel) updateViewportContent() {
 		case "thinking":
 			chatContent.WriteString(dimStyle.Render("💭 " + msg.content))
 		case "welcome":
-			chatContent.WriteString(buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed))
+			// Only show the welcome banner when there are no real messages yet
+			if !hasRealMessages {
+				chatContent.WriteString(buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed))
+			}
 		case "system":
 			chatContent.WriteString(dimStyle.Render(msg.content))
 		case "permission":
