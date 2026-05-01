@@ -161,17 +161,18 @@ func glimmerTickCmd() tea.Cmd {
 
 func slashCommands() []string {
 	return []string{
-		"/add-dir", "/agents", "/branch", "/bughunter", "/clear", "/color", "/commands",
-		"/commit", "/compact", "/config", "/context", "/copy", "/cost", "/cron", "/diff",
-		"/doctor", "/effort", "/env", "/exit", "/export", "/fast", "/files", "/help",
-		"/history", "/hooks", "/init", "/keybindings", "/loop", "/mcp", "/memory", "/metrics",
-		"/model", "/models", "/output-style", "/permissions", "/plan", "/plugin", "/plugins",
+		"/add-dir", "/agents", "/audit", "/branch", "/bughunter", "/clean", "/clear",
+		"/color", "/commands", "/commit", "/compact", "/compress", "/config", "/context",
+		"/copy", "/cost", "/cron", "/diff", "/doctor", "/effort", "/env", "/exit",
+		"/export", "/fast", "/files", "/fork", "/help", "/history", "/hooks", "/init",
+		"/integrity", "/keybindings", "/loop", "/mcp", "/memory", "/metrics", "/model",
+		"/models", "/output-style", "/permissions", "/plan", "/plugin", "/plugins",
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/resume", "/review", "/rewind",
-		"/sandbox", "/security-review", "/session", "/share", "/skills", "/stats", "/status",
-		"/statusline", "/summary", "/tag", "/tasks", "/teams", "/theme", "/think-back",
-		"/thinkback", "/thinkback-play", "/tools", "/upgrade", "/usage", "/version", "/vim",
-		"/voice", "/welcome",
+		"/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
+		"/status", "/statusline", "/summary", "/tag", "/tasks", "/teams", "/theme",
+		"/think-back", "/thinkback", "/thinkback-play", "/tools", "/upgrade", "/usage",
+		"/version", "/vim", "/voice", "/welcome",
 	}
 }
 
@@ -403,13 +404,13 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	}
 
 	verLine := fmt.Sprintf("v%s (ctrl+j for changelog)", version)
-	b.WriteString(center(dimC+verLine+rst, len(verLine)) + "\n")
+	b.WriteString("\n" + center(dimC+verLine+rst, len(verLine)) + "\n")
 
 	tip := "TIP: Use /help to see all available commands"
-	b.WriteString(center(boldC+tip+rst, len(tip)) + "\n")
+	b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 
 	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
-	b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	b.WriteString("\n" + center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
 	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
 	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
 
@@ -428,7 +429,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, agentsMark)
 	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
-	b.WriteString(center(indicators, len(indVis)) + "\n")
+	b.WriteString("\n" + center(indicators, len(indVis)) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
@@ -2218,6 +2219,99 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop scheduled: %s", strings.Join(parts[1:], " "))})
+		return m, nil
+	case "/fork":
+		atIndex := len(m.session.RawMessages()) - 1
+		if len(parts) >= 2 {
+			if idx, err := strconv.Atoi(parts[1]); err == nil {
+				atIndex = idx
+			}
+		}
+		if atIndex < 0 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No messages to fork from."})
+			return m, nil
+		}
+		forked, err := session.Fork(m.sessionID, atIndex)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked session %s from %s at index %d", forked.ID, m.sessionID, atIndex)})
+		return m, nil
+	case "/search":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /search <query>"})
+			return m, nil
+		}
+		query := strings.TrimSpace(strings.TrimPrefix(text, "/search"))
+		results, err := session.SearchSessions(query, 10)
+		if err != nil || len(results) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No results found."})
+			return m, nil
+		}
+		var b strings.Builder
+		b.WriteString(fmt.Sprintf("Search results for %q:\n", query))
+		for _, r := range results {
+			b.WriteString(fmt.Sprintf("  [%s] msg %d (%s): %s\n", r.SessionID, r.MsgIndex, r.Role, r.Preview))
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+		return m, nil
+	case "/clean":
+		days := 30
+		if len(parts) >= 2 {
+			if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 {
+				days = d
+			}
+		}
+		removed, err := session.CleanOldSessions(time.Duration(days) * 24 * time.Hour)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Cleaned %d sessions older than %d days.", removed, days)})
+		return m, nil
+	case "/audit":
+		m.messages = append(m.messages, displayMsg{role: "system", content: tool.FormatAuditSummary()})
+		return m, nil
+	case "/compress":
+		days := 7
+		if len(parts) >= 2 {
+			if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 {
+				days = d
+			}
+		}
+		count, err := session.CompressOldSessions(time.Duration(days) * 24 * time.Hour)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compressed %d sessions older than %d days.", count, days)})
+		return m, nil
+	case "/integrity":
+		saved, err := session.Load(m.sessionID)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Could not load current session: " + err.Error()})
+			return m, nil
+		}
+		check := session.ValidateIntegrity(saved)
+		var ib strings.Builder
+		if check.Valid {
+			ib.WriteString("Session integrity: VALID\n")
+		} else {
+			ib.WriteString("Session integrity: INVALID\n")
+		}
+		ib.WriteString(fmt.Sprintf("Messages: %d (user: %d, assistant: %d)\n", check.Stats.MessageCount, check.Stats.UserMessages, check.Stats.AssistantMessages))
+		ib.WriteString(fmt.Sprintf("Tool uses: %d, Tool results: %d\n", check.Stats.ToolUses, check.Stats.ToolResults))
+		if check.Stats.OrphanedResults > 0 {
+			ib.WriteString(fmt.Sprintf("Orphaned results: %d\n", check.Stats.OrphanedResults))
+		}
+		for _, w := range check.Warnings {
+			ib.WriteString("  warning: " + w + "\n")
+		}
+		for _, e := range check.Errors {
+			ib.WriteString("  error: " + e + "\n")
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: ib.String()})
 		return m, nil
 	default:
 		// Check if it's a plugin command
