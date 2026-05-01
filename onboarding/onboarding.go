@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	"github.com/mattn/go-runewidth"
+	"golang.org/x/term"
 )
 
 const (
@@ -19,26 +21,68 @@ const (
 
 // Welcome prints the hawk welcome banner.
 func Welcome(version string) {
+	// Vivid Orange #FF5E0E
+	hawkC := "\033[38;2;255;94;14m"
+
+	totalW := 80
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 40 {
+		totalW = w
+	}
+
+	center := func(s string, visLen int) string {
+		pad := (totalW - visLen) / 2
+		if pad < 0 {
+			pad = 0
+		}
+		return strings.Repeat(" ", pad) + s
+	}
+
+	art := []string{
+		"█████████    █████████    ███       ███  ███   █████████",
+		"███    ███   ███    ███   ███       ███  ███  ███       ",
+		"███    ███   ███    ███   ███       ███  ███ ███        ",
+		"███    ███   ███    ███   ███   █   ███  ██████         ",
+		"█████████    █████████    ███  ███  ███  ██████         ",
+		"███    ███   ███    ███   ████ ███ ████  ███ ███        ",
+		"███    ███   ███    ███   ████████████   ███  ███       ",
+		"███    ███   ███    ███   █████   █████  ███   ███      ",
+		"███    ███   ███    ███   ████     ████  ███    ███     ",
+	}
+
 	fmt.Println()
-	fmt.Println(teal + bold + "  🦅 hawk" + reset + dim + " v" + version + reset)
-	fmt.Println(dim + "  AI coding agent — reads, writes, runs tools, and manages coding sessions" + reset)
-	fmt.Println(dim + "  Powered by eyrie • github.com/GrayCodeAI/hawk" + reset)
+	for _, line := range art {
+		w := runewidth.StringWidth(line)
+		fmt.Println(center(hawkC+line+reset, w))
+	}
+
 	fmt.Println()
-	fmt.Println("  " + bold + "Start" + reset)
-	fmt.Println("  • Type a request in the REPL, or run " + teal + "hawk -p \"explain this repo\"" + reset)
-	fmt.Println("  • Use " + teal + "/help" + reset + " for commands, " + teal + "/status" + reset + " for model/session, " + teal + "/doctor" + reset + " for checks")
-	fmt.Println("  • Permission modes: default, acceptEdits, bypassPermissions, dontAsk, plan")
-	fmt.Println("  • Tool rules use archive syntax: " + teal + "Bash(git:*) Edit Read" + reset)
+	verLine := fmt.Sprintf("v%s", version)
+	fmt.Println(center(dim+verLine+reset, len(verLine)))
+
+	fmt.Println()
+	fmt.Println(center(bold+"Welcome to Hawk!"+reset, 16))
+
+	fmt.Println()
+	fmt.Println(center(bold+"Quick start:"+reset, 12))
+	fmt.Println(center(hawkC+"hawk"+reset+" -p \"explain this repo\"     one-shot mode", 49))
+	fmt.Println(center(hawkC+"hawk"+reset+"                            interactive REPL", 49))
+	fmt.Println(center(hawkC+"hawk"+reset+" -c                          continue last session", 54))
+
+	fmt.Println()
+	fmt.Println(center(hawkC+"? for shortcuts"+reset, 15))
 	fmt.Println()
 }
 
 // NeedsSetup returns true if first-run setup is needed.
 func NeedsSetup() bool {
+	// Load persisted env vars first
+	_ = hawkconfig.LoadEnvFile()
+
 	settings := hawkconfig.LoadSettings()
 	if settings.Provider != "" {
 		return false
 	}
-	// Check if any API key is in env
+	// Check if any API key is in env (either from shell or ~/.hawk/env)
 	keys := []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
 		"OPENROUTER_API_KEY", "XAI_API_KEY", "GROQ_API_KEY"}
 	for _, k := range keys {
@@ -51,6 +95,9 @@ func NeedsSetup() bool {
 
 // RunSetup runs the interactive first-run setup.
 func RunSetup() error {
+	// Load any previously saved env vars first
+	_ = hawkconfig.LoadEnvFile()
+
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println(teal + bold + "  First-time setup" + reset)
@@ -118,26 +165,26 @@ func RunSetup() error {
 			return fmt.Errorf("no API key")
 		}
 
-		// Set it for this session
+		// Herm-style: set env var for this session, persist to ~/.hawk/env
 		os.Setenv(selected.envKey, apiKey)
+		_ = hawkconfig.SaveEnvFile(selected.envKey, apiKey)
 
-		// Save to settings
+		// Save provider preference only (not the key)
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = selected.name
-		settings.APIKey = apiKey
 		if err := hawkconfig.SaveGlobal(settings); err != nil {
 			fmt.Printf("  %sWarning: couldn't save settings: %s%s\n", dim, err, reset)
 		}
 
 		fmt.Println()
-		fmt.Printf("  %s✓ API key saved to ~/.hawk/settings.json%s\n", teal, reset)
+		fmt.Printf("  %s✓ API key saved to ~/.hawk/env (secure, 600 perms)%s\n", teal, reset)
 	} else if selected.name == "ollama" {
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = "ollama"
 		hawkconfig.SaveGlobal(settings)
 		fmt.Printf("  %s✓ Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
-		// Key already in env
+		// Key already in env — just save provider preference
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = selected.name
 		hawkconfig.SaveGlobal(settings)

@@ -9,6 +9,7 @@ import (
 func (s *Session) WireAgentTool() {
 	s.AgentSpawnFn = func(ctx context.Context, prompt string) (string, error) {
 		sub := NewSession(s.provider, s.model, s.system, s.registry)
+		sub.SetAPIKeys(s.apiKeys)
 		sub.PermissionFn = s.PermissionFn // inherit parent's permission handler
 		sub.Permissions = s.Permissions   // share permission memory
 		sub.Mode = s.Mode

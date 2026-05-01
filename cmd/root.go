@@ -58,8 +58,8 @@ var rootCmd = &cobra.Command{
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Load saved API key from settings
-		hawkconfig.LoadAPIKeyFromSettings()
+		// Load persisted env vars (API keys from ~/.hawk/env)
+		hawkconfig.LoadEnvFile()
 
 		if versionFlag {
 			if buildDate != "" && buildDate != "unknown" {
@@ -90,11 +90,9 @@ var rootCmd = &cobra.Command{
 			return runPrint(promptFlag)
 		}
 
-		// Show welcome
-		onboarding.Welcome(version)
-
 		// First-run setup if needed
 		if onboarding.NeedsSetup() {
+			onboarding.Welcome(version)
 			if err := onboarding.RunSetup(); err != nil {
 				return err
 			}
@@ -222,7 +220,7 @@ var doctorCmd = &cobra.Command{
 }
 
 var configCmd = &cobra.Command{
-	Use:   "config [get <key>|set <key> <value>]",
+	Use:   "config [provider <name>|model <name>|get <key>|set <key> <value>]",
 	Short: "Show or update settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
@@ -249,6 +247,27 @@ var configCmd = &cobra.Command{
 					return err
 				}
 				cmd.Println("updated", args[1])
+				return nil
+			case "provider":
+				if len(args) < 2 {
+					return fmt.Errorf("usage: hawk config provider <name>")
+				}
+				if err := hawkconfig.SetGlobalSetting("provider", strings.Join(args[1:], " ")); err != nil {
+					return err
+				}
+				cmd.Println("updated provider")
+				return nil
+			case "model":
+				if len(args) < 2 {
+					return fmt.Errorf("usage: hawk config model <name>")
+				}
+				if err := hawkconfig.SetGlobalSetting("model", strings.Join(args[1:], " ")); err != nil {
+					return err
+				}
+				cmd.Println("updated model")
+				return nil
+			case "keys":
+				cmd.Println(apiKeyConfigSummary())
 				return nil
 			default:
 				return fmt.Errorf("unknown config action %q", args[0])

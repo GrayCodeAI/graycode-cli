@@ -79,7 +79,6 @@ func TestLoadSettingsWithJSONOverride(t *testing.T) {
 func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	settings, err := LoadSettingsWithOverride(`{
-		"apiKey":"secret",
 		"autoAllow":["Read"],
 		"maxBudgetUSD":1.25,
 		"customHeaders":{"x-test":"yes"},
@@ -90,7 +89,7 @@ func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if settings.APIKey != "secret" || settings.MaxBudgetUSD != 1.25 {
+	if settings.MaxBudgetUSD != 1.25 {
 		t.Fatalf("unexpected settings: %#v", settings)
 	}
 	if len(settings.AutoAllow) != 1 || settings.AutoAllow[0] != "Read" {
@@ -159,6 +158,10 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	if err := SetGlobalSetting("maxBudgetUSD", "2.5"); err != nil {
 		t.Fatal(err)
 	}
+	// Herm-style: API keys rejected from settings file
+	if err := SetGlobalSetting("apiKey.openai", "sk-test"); err == nil {
+		t.Fatal("expected error setting api key in settings")
+	}
 
 	settings := LoadGlobalSettings()
 	if settings.Model != "test-model" {
@@ -169,5 +172,10 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	}
 	if got, ok := SettingValue(settings, "max_budget_usd"); !ok || got != "2.5" {
 		t.Fatalf("unexpected max budget value: %q ok=%v", got, ok)
+	}
+	// API key status from environment
+	t.Setenv("OPENAI_API_KEY", "sk-test")
+	if got, ok := SettingValue(settings, "apiKey.openai"); !ok || got != "set" {
+		t.Fatalf("unexpected provider API key status: %q ok=%v", got, ok)
 	}
 }

@@ -21,12 +21,12 @@ func TestSessionLifecycle(t *testing.T) {
 		t.Fatal("expected session")
 	}
 
-	// Test basic properties
-	if sess.Provider() == "" {
-		t.Fatal("expected provider to be detected")
+	// Test basic properties: no implicit provider/model defaults in Hawk.
+	if sess.Provider() != "" {
+		t.Fatalf("expected empty provider by default, got %q", sess.Provider())
 	}
-	if sess.Model() == "" {
-		t.Fatal("expected model")
+	if sess.Model() != "" {
+		t.Fatalf("expected empty model by default, got %q", sess.Model())
 	}
 
 	// Test message management

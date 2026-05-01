@@ -42,18 +42,7 @@ func (r ValidationResult) Error() string {
 func ValidateSettings(s Settings) ValidationResult {
 	var errors []ValidationError
 
-	// Validate provider
-	validProviders := map[string]bool{
-		"anthropic": true, "openai": true, "google": true,
-		"ollama": true, "groq": true, "openrouter": true, "grok": true,
-	}
-	if s.Provider != "" && !validProviders[s.Provider] {
-		errors = append(errors, ValidationError{
-			Field:   "provider",
-			Message: "invalid provider",
-			Value:   s.Provider,
-		})
-	}
+	// Provider names are delegated to Eyrie. Do not hardcode/validate here.
 
 	// Validate model
 	if s.Model != "" && strings.Contains(s.Model, " ") {
@@ -64,12 +53,15 @@ func ValidateSettings(s Settings) ValidationResult {
 		})
 	}
 
-	// Validate API key format (basic check)
-	if s.APIKey != "" && len(s.APIKey) < 10 {
-		errors = append(errors, ValidationError{
-			Field:   "apiKey",
-			Message: "API key seems too short",
-		})
+	// Herm-style: validate API key is in environment (not in settings)
+	if s.Provider != "" {
+		envKey := ProviderAPIKeyEnv(s.Provider)
+		if envKey != "" && APIKeyForProvider(s.Provider) == "" {
+			errors = append(errors, ValidationError{
+				Field:   "apiKey",
+				Message: fmt.Sprintf("set %s in your environment", envKey),
+			})
+		}
 	}
 
 	// Validate max budget

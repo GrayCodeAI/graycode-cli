@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -58,12 +57,14 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 		apiKey = os.Getenv("OPENAI_API_KEY")
 	case "google":
 		apiKey = os.Getenv("GOOGLE_API_KEY")
-	case "groq":
-		apiKey = os.Getenv("GROQ_API_KEY")
 	case "openrouter":
 		apiKey = os.Getenv("OPENROUTER_API_KEY")
 	case "grok":
 		apiKey = os.Getenv("XAI_API_KEY")
+	case "canopywave":
+		apiKey = os.Getenv("CANOPYWAVE_API_KEY")
+	case "opencodego":
+		apiKey = os.Getenv("OPENCODEGO_API_KEY")
 	}
 	registry.Register("api_key", health.APIKeyChecker(provider, apiKey))
 
@@ -92,11 +93,7 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 }
 
 func settingsSummary(settings hawkconfig.Settings) string {
-	data, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return err.Error()
-	}
-	return string(data)
+	return configCommandSummary(settings)
 }
 
 func mcpConfigSummary(settings hawkconfig.Settings) string {

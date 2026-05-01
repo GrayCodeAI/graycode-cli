@@ -71,7 +71,7 @@ func TestLocalSlashCommands(t *testing.T) {
 			t.Fatalf("%s did not append a message", input)
 		}
 	}
-	if !strings.Contains(m.messages[len(m.messages)-1].content, "Common commands") {
+	if !strings.Contains(m.messages[len(m.messages)-1].content, "Skills") {
 		t.Fatalf("expected expanded welcome message, got %s", m.messages[len(m.messages)-1].content)
 	}
 }
