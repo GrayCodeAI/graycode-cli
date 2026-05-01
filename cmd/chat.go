@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/hawk/eyrie/client"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/GrayCodeAI/hawk/analytics"
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/logger"
@@ -143,6 +145,8 @@ type chatModel struct {
 	historyIdx     int
 	historyDraft   string // unsent text before navigating history
 	autoScroll     bool   // whether to auto-scroll viewport to bottom
+	vim            *VimState
+	contextViz     *ContextVisualization
 }
 
 func blinkTickCmd() tea.Cmd {
@@ -1257,7 +1261,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		vpHeight = 4
 	}
 	vp := viewport.New(initWidth, vpHeight)
-	vp.MouseWheelEnabled = true
+	vp.MouseWheelEnabled = false
 
 	m := chatModel{input: ta, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true}
 
@@ -1556,6 +1560,23 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if !m.waiting {
+		// Vim mode key interception
+		if m.vim != nil && m.vim.IsEnabled() {
+			if keyMsg, ok := msg.(tea.KeyMsg); ok {
+				text := m.input.Value()
+				cursor := m.input.Position()
+				newText, newCursor, consumed := m.vim.HandleKey(keyMsg, text, cursor)
+				if consumed {
+					if newText != text {
+						m.input.SetValue(newText)
+					}
+					m.input.SetCursor(newCursor)
+				}
+				if consumed && m.vim.Mode == VimNormal {
+					return m, tea.Batch(cmds...)
+				}
+			}
+		}
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
@@ -2007,7 +2028,15 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Reasoning effort set to: %s", parts[1])})
 		return m, nil
 	case "/vim":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Vim mode toggled."})
+		if m.vim == nil {
+			m.vim = NewVimState()
+		}
+		m.vim.SetEnabled(!m.vim.IsEnabled())
+		state := "disabled"
+		if m.vim.IsEnabled() {
+			state = "enabled (press Esc for NORMAL mode)"
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Vim mode " + state})
 		return m, nil
 	case "/export":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session exported: %s.json", m.sessionID)})
@@ -2027,7 +2056,18 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session tagged: %s", parts[1])})
 		return m, nil
 	case "/stats":
-		m.messages = append(m.messages, displayMsg{role: "system", content: sessionStats(m.session, m.sessionID)})
+		days := 30
+		if len(parts) > 1 {
+			if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 {
+				days = d
+			}
+		}
+		stats, err := analytics.ComputeStats(days)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "system", content: sessionStats(m.session, m.sessionID)})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: analytics.FormatStats(stats)})
+		}
 		return m, nil
 	case "/hooks":
 		m.messages = append(m.messages, displayMsg{role: "system", content: hooksSummary()})
@@ -2095,8 +2135,82 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /passes <count> (compat placeholder). Use /effort for reasoning depth in this build."})
 		return m, nil
 	case "/insights":
-		return m.startPromptCommand("/insights", "Generate a concise report of patterns, friction, wins, and suggested improvements from this session.")
-	case "/terminal-setup", "/install", "/install-github-app", "/install-slack-app", "/web-setup", "/remote-control", "/bridge-kick", "/desktop", "/mobile", "/chrome", "/stickers", "/brief", "/btw", "/buddy", "/advisor", "/privacy-settings", "/rate-limit-options", "/heapdump", "/ide", "/init-verifiers", "/extra-usage", "/ultraplan", "/commit-push-pr", "/debug-model-catalog":
+		days := 30
+		if len(parts) > 1 {
+			if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 {
+				days = d
+			}
+		}
+		report, err := analytics.GenerateInsights(days, nil)
+		if err != nil {
+			return m.startPromptCommand("/insights", "Generate a concise report of patterns, friction, wins, and suggested improvements from this session.")
+		}
+		path, saveErr := analytics.SaveInsightsReport(report)
+		if saveErr != nil {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Insights: %d sessions scanned, %d patterns found. (Failed to save: %v)", report.SessionsScanned, len(report.TopPatterns), saveErr)})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Insights report saved: %s\n%d sessions scanned, %d patterns.", path, report.SessionsScanned, len(report.TopPatterns))})
+		}
+		return m, nil
+	case "/dream":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Running background memory consolidation..."})
+		return m.startPromptCommand("/dream", "Review all session memories in ~/.hawk/memory/ and consolidate them. Remove redundant entries, merge related facts, and produce a clean organized memory document. Focus on user preferences, project context, and recurring patterns.")
+	case "/teleport":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /teleport export | /teleport import <file>"})
+			return m, nil
+		}
+		switch parts[1] {
+		case "export":
+			path, err := session.ExportToFile(m.sessionID)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session exported: %s", path)})
+			}
+		case "import":
+			if len(parts) < 3 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /teleport import <file.teleport.json>"})
+				return m, nil
+			}
+			pkg, err := session.LoadTeleportPackage(parts[2])
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			if err := session.ImportFromTeleport(pkg); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session imported from %s (source: %s)", parts[2], pkg.SourceHost)})
+			}
+		default:
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /teleport export | /teleport import <file>"})
+		}
+		return m, nil
+	case "/ctx", "/ctx-viz":
+		if m.contextViz == nil {
+			m.contextViz = NewContextVisualization(200000)
+		}
+		tokens := m.session.MessageCount() * 200 // rough estimate
+		m.contextViz.Update(tokens)
+		breakdown := TokenBreakdown{
+			Total: tokens,
+			UserMsgs: tokens / 3,
+			Assistant: tokens / 3,
+			ToolResult: tokens / 4,
+			ToolUse: tokens / 12,
+			System: tokens / 12,
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: RenderBreakdown(breakdown, m.contextViz.ContextWindowSize)})
+		return m, nil
+	case "/marketplace":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /marketplace search <query> | /marketplace featured | /marketplace install <name>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Marketplace: %s (requires network; use hawk plugin install <name> for local installs)", strings.Join(parts[1:], " "))})
+		return m, nil
+	case "/terminal-setup", "/install-github-app", "/install-slack-app", "/web-setup", "/bridge-kick", "/desktop", "/mobile", "/chrome", "/stickers", "/privacy-settings", "/rate-limit-options", "/heapdump", "/init-verifiers", "/extra-usage", "/ultraplan", "/debug-model-catalog":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s is not implemented in Go yet (archive parity placeholder).", cmd)})
 		return m, nil
 	case "/rewind":
@@ -2380,10 +2494,24 @@ func wrapText(text string, width int, prefixWidth int) string {
 	return strings.TrimRight(result.String(), "\n")
 }
 
+func (m *chatModel) hasRealMessages() bool {
+	for _, msg := range m.messages {
+		if msg.role != "welcome" {
+			return true
+		}
+	}
+	return m.waiting
+}
+
 func (m *chatModel) updateViewportContent() {
 	viewWidth := m.width
 	if viewWidth <= 0 {
 		viewWidth = 80
+	}
+
+	// When only the welcome banner is showing, the viewport is not used.
+	if !m.hasRealMessages() {
+		return
 	}
 
 	hawkC := "\033[38;2;255;94;14m"
@@ -2392,15 +2520,6 @@ func (m *chatModel) updateViewportContent() {
 
 	var chatContent strings.Builder
 	chatContent.WriteString("\n")
-
-	// Check if there are any real chat messages (not just welcome)
-	hasRealMessages := false
-	for _, msg := range m.messages {
-		if msg.role != "welcome" {
-			hasRealMessages = true
-			break
-		}
-	}
 
 	for i, msg := range m.messages {
 		switch msg.role {
@@ -2421,10 +2540,7 @@ func (m *chatModel) updateViewportContent() {
 		case "thinking":
 			chatContent.WriteString(dimStyle.Render("💭 " + msg.content))
 		case "welcome":
-			// Only show the welcome banner when there are no real messages yet
-			if !hasRealMessages {
-				chatContent.WriteString(buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed))
-			}
+			// Skip welcome in viewport — it's rendered statically in View()
 		case "system":
 			chatContent.WriteString(dimStyle.Render(msg.content))
 		case "permission":
@@ -2471,9 +2587,7 @@ func (m *chatModel) updateViewportContent() {
 	atBottom := m.viewport.AtBottom()
 	contentStr := chatContent.String()
 
-	// Count content lines to see if we need top-padding.
-	// When content is shorter than the viewport, prepend blank lines
-	// so messages appear at the bottom, right above the input bar.
+	// Bottom-align: when content is shorter than viewport, pad top
 	contentLines := strings.Count(contentStr, "\n")
 	if contentLines < vpHeight {
 		padding := strings.Repeat("\n", vpHeight-contentLines)
@@ -2502,6 +2616,7 @@ func (m chatModel) View() string {
 
 	// Build the fixed bottom bar
 	var bottomBar strings.Builder
+	bottomBarLines := 0
 
 	if !m.configOpen {
 		totalW := viewWidth
@@ -2518,12 +2633,14 @@ func (m chatModel) View() string {
 		}
 		leftRendered := lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
 		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
+		bottomBarLines++
 		inputBox := lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder(), true, false, true, false).
 			BorderForeground(lipgloss.Color("#555555")).
 			Width(totalW).
 			Render(m.input.View())
 		bottomBar.WriteString(inputBox + "\n")
+		bottomBarLines += 3
 		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
@@ -2534,9 +2651,24 @@ func (m chatModel) View() string {
 				} else {
 					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E")).Render("  "+s) + "\n")
 				}
+				bottomBarLines++
 			}
 		}
 		bottomBar.WriteString(dimStyle.Render("? for help") + "\n")
+		bottomBarLines++
+	}
+
+	// When no real messages yet, render welcome banner as static content
+	// above the bottom bar — not inside the scrollable viewport.
+	if !m.hasRealMessages() {
+		welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed)
+		welcomeLines := strings.Count(welcome, "\n")
+		availableHeight := m.height - bottomBarLines
+		gap := availableHeight - welcomeLines
+		if gap < 0 {
+			gap = 0
+		}
+		return strings.Repeat("\n", gap) + welcome + bottomBar.String()
 	}
 
 	return m.viewport.View() + "\n" + bottomBar.String()
@@ -2563,7 +2695,7 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
