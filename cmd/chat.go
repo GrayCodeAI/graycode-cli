@@ -2188,7 +2188,7 @@ func abs(x int) int {
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 var (
 	reModelName = regexp.MustCompile(`(?i)\b(I['` + "\u2018\u2019" + `]m|I am|my name is)\s+\*{0,2}(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)\*{0,2}`)
-	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
+	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(?:a\s+company\s+called\s+|a\s+team\s+(?:at|called)\s+|the\s+team\s+at\s+)?\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
 )
 
 func sanitizeIdentity(s string) string {
@@ -2198,6 +2198,15 @@ func sanitizeIdentity(s string) string {
 	})
 	s = reCreator.ReplaceAllString(s, "${1} by GrayCode AI")
 	return s
+}
+
+// reBold matches markdown **bold** syntax.
+var reBold = regexp.MustCompile(`\*\*(.+?)\*\*`)
+
+// renderInlineMarkdown converts inline markdown to ANSI terminal formatting.
+// Currently handles **bold** → ANSI bold.
+func renderInlineMarkdown(s string) string {
+	return reBold.ReplaceAllString(s, "\033[1m${1}\033[22m")
 }
 
 func friendlyError(err error) string {
@@ -2366,7 +2375,7 @@ func (m chatModel) View() string {
 			b.WriteString(bgDark + line + rst)
 		case "assistant":
 			content := strings.TrimLeft(msg.content, "\n\r")
-			b.WriteString(hawkC + "⛬ " + rst + wrapText(content, viewWidth, 3))
+			b.WriteString(hawkC + "⛬ " + rst + renderInlineMarkdown(wrapText(content, viewWidth, 3)))
 		case "tool_use":
 			b.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
@@ -2391,7 +2400,7 @@ func (m chatModel) View() string {
 	if m.waiting {
 		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
 		if partial != "" {
-			b.WriteString(hawkC + "⛬ " + rst + wrapText(partial, viewWidth, 3))
+			b.WriteString(hawkC + "⛬ " + rst + renderInlineMarkdown(wrapText(partial, viewWidth, 3)))
 			b.WriteString("\n\n")
 		} else {
 			b.WriteString(m.spinner.View() + "  " + renderGlimmerVerb(m.spinnerVerb, m.glimmerPos) + "\033[1;38;2;255;94;14m...\033[0m " + dimStyle.Render("(Press ESC to stop)") + "\n\n")
