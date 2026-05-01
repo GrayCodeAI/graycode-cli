@@ -244,7 +244,6 @@ func baseTools() []tool.Tool {
 		tool.ReadMcpResourceTool{},
 		tool.ConfigTool{},
 		tool.BriefTool{},
-		tool.SendMessageTool{},
 		tool.TaskCreateTool{},
 		tool.TaskGetTool{},
 		tool.TaskListTool{},
@@ -253,12 +252,9 @@ func baseTools() []tool.Tool {
 		tool.CronCreateTool{},
 		tool.CronDeleteTool{},
 		tool.CronListTool{},
-		tool.TeamCreateTool{},
-		tool.TeamDeleteTool{},
 		tool.VerifyPlanExecutionTool{},
 		tool.WorkflowTool{},
 		tool.McpAuthTool{},
-		tool.RemoteTriggerTool{},
 	}
 }
 
@@ -342,18 +338,17 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	return saved.ID, saved, nil
 }
 
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool) string {
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int) string {
 	logoC := "\033[38;2;255;94;14m"
 	mascotC := "\033[38;2;255;94;14m"
 	dimC := "\033[2m"
 	boldC := "\033[1m"
 	greenC := "\033[38;2;78;205;196m"
-	redC := "\033[38;2;224;85;85m"
 	rst := "\033[0m"
 
-	totalW := 80
-	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 40 {
-		totalW = w
+	totalW := width
+	if totalW < 40 {
+		totalW = 80
 	}
 
 	center := func(s string, visLen int) string {
@@ -384,61 +379,58 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		mascot[1] = " ▄█ ─  ─ █▄ "
 	}
 
+	// On narrow terminals, drop the mascot so the art still centers
+	showMascot := totalW >= 60
+
 	var b strings.Builder
-	b.WriteString("\n\n")
 
 	for i := 0; i < len(art); i++ {
 		line := art[i]
 		mLine := ""
-		if i < len(mascot) {
+		if showMascot && i < len(mascot) {
 			mLine = mascot[i]
 		}
 		combined := logoC + line + rst
+		visW := runewidth.StringWidth(line)
 		if mLine != "" {
 			combined += "    " + mascotC + mLine + rst
+			visW += 4 + runewidth.StringWidth(mLine)
 		}
-		w := runewidth.StringWidth(line)
-		if mLine != "" {
-			w += 4 + runewidth.StringWidth(mLine)
-		}
-		b.WriteString(center(combined, w) + "\n")
+		b.WriteString(center(combined, visW) + "\n")
 	}
 
 	b.WriteString("\n")
 	verLine := fmt.Sprintf("v%s (ctrl+j for changelog)", version)
 	b.WriteString(center(dimC+verLine+rst, len(verLine)) + "\n")
 
-	b.WriteString("\n")
 	tip := "TIP: Use /help to see all available commands"
 	b.WriteString(center(boldC+tip+rst, len(tip)) + "\n")
 
-	b.WriteString("\n")
-	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
+	shortcuts := "shift+tab modes · ctrl+N models · ctrl+L autonomy · tab reasoning"
 	b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
-	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
-	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
 
-	b.WriteString("\n")
 	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
 
-	skillMark := redC + "×" + rst
+	// Use dim grey for zero counts (less aggressive than red on first launch)
+	skillMark := dimC + "·" + rst
 	mcpMark := greenC + "✓" + rst
 	if mcpCount == 0 {
-		mcpMark = redC + "×" + rst
+		mcpMark = dimC + "·" + rst
 	}
 	agentsMark := greenC + "✓" + rst
 	if hawkconfig.LoadHawkMD() == "" {
-		agentsMark = redC + "×" + rst
+		agentsMark = dimC + "·" + rst
 	}
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, agentsMark)
-	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
-	b.WriteString(center(indicators, len(indVis)) + "\n")
+	indVis := fmt.Sprintf("Skills (%d) ·  MCPs (%d) ·  AGENTS.md ·", skillsCount, mcpCount)
+	b.WriteString(center(dimC+indicators+rst, len(indVis)) + "\n")
 
-	_ = sess.Model()
-	_ = sess.Provider()
-	_ = actLine(saved, sessionID)
+	if resume := actLine(saved, sessionID); resume != "" {
+		b.WriteString("\n")
+		b.WriteString(center(dimC+resume+rst, len(resume)) + "\n")
+	}
 
 	return b.String()
 }
@@ -821,7 +813,7 @@ func (m chatModel) closeConfigPanel() chatModel {
 
 func (m *chatModel) restoreChatInput() {
 	m.input.Reset()
-	m.input.Prompt = " ❯ "
+	m.input.Prompt = "❯ "
 	m.input.Placeholder = `Try "Create a PR with these changes"`
 	m.input.EchoMode = textinput.EchoNormal
 	m.input.EchoCharacter = '*'
@@ -1272,7 +1264,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
-	m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(sess, sid, registry, saved, settings, false)})
+	m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth)})
 
 	// Wire permission system
 	sess.PermissionFn = func(req engine.PermissionRequest) {
@@ -1955,7 +1947,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "/welcome":
-		m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed)})
+		m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, m.width)})
 		return m, nil
 	case "/tasks":
 		tasks := tool.GetTaskStore().List()
@@ -1993,9 +1985,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 		return m, nil
 	case "/teams":
-		teams := tool.GetTeamRegistry()
-		_ = teams
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Team management: use TeamCreate/TeamDelete tools or /agents command."})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Team management is available in the enterprise version."})
 		return m, nil
 	case "/agents":
 		return m.startPromptCommand("/agents", "List all active agents and teammates in the current session. Show their status and assigned tasks.")
@@ -2155,37 +2145,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/dream":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Running background memory consolidation..."})
 		return m.startPromptCommand("/dream", "Review all session memories in ~/.hawk/memory/ and consolidate them. Remove redundant entries, merge related facts, and produce a clean organized memory document. Focus on user preferences, project context, and recurring patterns.")
-	case "/teleport":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /teleport export | /teleport import <file>"})
-			return m, nil
-		}
-		switch parts[1] {
-		case "export":
-			path, err := session.ExportToFile(m.sessionID)
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session exported: %s", path)})
-			}
-		case "import":
-			if len(parts) < 3 {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /teleport import <file.teleport.json>"})
-				return m, nil
-			}
-			pkg, err := session.LoadTeleportPackage(parts[2])
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			if err := session.ImportFromTeleport(pkg); err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session imported from %s (source: %s)", parts[2], pkg.SourceHost)})
-			}
-		default:
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /teleport export | /teleport import <file>"})
-		}
+	case "/teleport", "/remote-control":
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s is a team/enterprise feature (available in hawk-archive).", cmd)})
 		return m, nil
 	case "/ctx", "/ctx-viz":
 		if m.contextViz == nil {
@@ -2204,11 +2165,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: RenderBreakdown(breakdown, m.contextViz.ContextWindowSize)})
 		return m, nil
 	case "/marketplace":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /marketplace search <query> | /marketplace featured | /marketplace install <name>"})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Marketplace: %s (requires network; use hawk plugin install <name> for local installs)", strings.Join(parts[1:], " "))})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Plugin marketplace is a team/enterprise feature. Use /plugin install <path> for local plugins."})
 		return m, nil
 	case "/terminal-setup", "/install-github-app", "/install-slack-app", "/web-setup", "/bridge-kick", "/desktop", "/mobile", "/chrome", "/stickers", "/privacy-settings", "/rate-limit-options", "/heapdump", "/init-verifiers", "/extra-usage", "/ultraplan", "/debug-model-catalog":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s is not implemented in Go yet (archive parity placeholder).", cmd)})
@@ -2661,14 +2618,26 @@ func (m chatModel) View() string {
 	// When no real messages yet, render welcome banner as static content
 	// above the bottom bar — not inside the scrollable viewport.
 	if !m.hasRealMessages() {
-		welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed)
+		welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
 		welcomeLines := strings.Count(welcome, "\n")
 		availableHeight := m.height - bottomBarLines
 		gap := availableHeight - welcomeLines
 		if gap < 0 {
 			gap = 0
 		}
-		return strings.Repeat("\n", gap) + welcome + bottomBar.String()
+		// Position at ~40% down the screen (droid-style), but never more
+		// than 8 lines of top padding so it doesn't sink too low on tall terminals.
+		topPad := int(float64(availableHeight) * 0.40) - welcomeLines/2
+		if topPad < 2 {
+			topPad = 2
+		}
+		if topPad > gap {
+			topPad = gap
+		}
+		if topPad > 8 {
+			topPad = 8
+		}
+		return strings.Repeat("\n", topPad) + welcome + bottomBar.String()
 	}
 
 	return m.viewport.View() + "\n" + bottomBar.String()
