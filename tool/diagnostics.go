@@ -15,7 +15,12 @@ type DiagnosticsTool struct{}
 func (DiagnosticsTool) Name() string        { return "Diagnostics" }
 func (DiagnosticsTool) Aliases() []string    { return []string{"diagnostics", "lint"} }
 func (DiagnosticsTool) Description() string {
-	return "Get lint/type/compile errors for a file or project"
+	return `Run lint, type-check, and compile diagnostics for a file or entire project. Use this to:
+- Check for compile errors after editing code (Go: go vet + go build)
+- Find type errors in TypeScript/JavaScript (tsc --noEmit, eslint)
+- Validate Python syntax (py_compile)
+- Scope to a single file or the whole project directory
+Run this after making code changes to catch errors before committing.`
 }
 
 func (DiagnosticsTool) Parameters() map[string]interface{} {

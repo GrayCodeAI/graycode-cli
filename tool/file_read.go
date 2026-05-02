@@ -80,6 +80,7 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}
+	data = StripBOM(data)
 	if startLine == 0 && endLine == 0 {
 		return string(data), nil
 	}
