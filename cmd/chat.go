@@ -1755,9 +1755,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
-			provider := m.session.Provider()
-			models, _ := hawkconfig.FetchModelsForProvider(provider)
-			m.configModels = extractModelIDs(models)
 			m.configOpen = true
 			m.configMenu = "model"
 			m.configSel = 0
