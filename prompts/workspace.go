@@ -16,6 +16,7 @@ type WorkspaceContext struct {
 	RecentCommits []string // last 5 commit onelines
 	TopFiles      []string // top-level files/dirs
 	Language      string   // detected primary language
+	ChangedFiles  []string // files with uncommitted changes (for change-set context)
 }
 
 // GatherWorkspaceContext collects workspace info from the given directory.
@@ -59,6 +60,16 @@ func GatherWorkspaceContext(dir string) *WorkspaceContext {
 			ctx.GitStatus = fmt.Sprintf("%d files modified", modifiedCount)
 		} else {
 			ctx.GitStatus = "clean"
+		}
+	}
+
+	// Changed files for context-awareness
+	if out, err := gitCmd(dir, "diff", "--name-only", "HEAD"); err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				ctx.ChangedFiles = append(ctx.ChangedFiles, line)
+			}
 		}
 	}
 
@@ -111,6 +122,18 @@ func (w *WorkspaceContext) Format() string {
 			langNote = " (" + w.Language + " project)"
 		}
 		b.WriteString("Structure: " + strings.Join(dirs, " ") + langNote + "\n")
+	}
+
+	if len(w.ChangedFiles) > 0 {
+		files := w.ChangedFiles
+		if len(files) > 8 {
+			files = files[:8]
+		}
+		b.WriteString("Changed: " + strings.Join(files, ", "))
+		if len(w.ChangedFiles) > 8 {
+			b.WriteString(fmt.Sprintf(" (+%d more)", len(w.ChangedFiles)-8))
+		}
+		b.WriteString("\n")
 	}
 
 	return b.String()

@@ -9,7 +9,7 @@ import (
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
-	modelPkg "github.com/GrayCodeAI/hawk/model"
+	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/permissions"
 	"github.com/GrayCodeAI/hawk/tool"
 )
@@ -49,6 +49,12 @@ type Session struct {
 
 	PinnedMessages int // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
+
+	// Cost optimization
+	Cascade      *CascadeRouter       // cascade.go — model tier routing
+	Lifecycle    *SessionLifecycle    // lifecycle.go — self-improvement loop
+	Reflector    *Reflector           // reflect.go — verbal self-reflection
+	CostTracker  *CostTracker         // cost_tracker.go — per-request cost persistence
 
 	// Advanced features
 	Autonomy   AutonomyLevel        // autonomy.go — permission level

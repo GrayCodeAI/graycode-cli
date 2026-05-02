@@ -10,8 +10,9 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
+	"github.com/GrayCodeAI/hawk/analytics"
 	"github.com/GrayCodeAI/hawk/hooks"
-	modelPkg "github.com/GrayCodeAI/hawk/model"
+	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/retry"
 	"github.com/GrayCodeAI/hawk/tool"
 )
@@ -25,12 +26,39 @@ func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 
 func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	defer close(ch)
+	sessionStart := time.Now()
+
+	// Self-improvement: run OnSessionEnd when the loop exits (regardless of how)
+	defer func() {
+		if s.Lifecycle != nil {
+			outcome := SessionOutcome{
+				Success:  ctx.Err() == nil,
+				Duration: time.Since(sessionStart),
+			}
+			if len(s.messages) > 0 {
+				for _, m := range s.messages {
+					if m.Role == "user" && m.ToolResult == nil && outcome.TaskGoal == "" {
+						outcome.TaskGoal = m.Content
+					}
+				}
+			}
+			_ = s.Lifecycle.OnSessionEnd(ctx, s, outcome)
+		}
+	}()
 
 	// Session start hook
 	hooks.ExecuteAsync(ctx, hooks.EventSessionStart, map[string]interface{}{
 		"provider": s.provider,
 		"model":    s.model,
 	})
+
+	// Self-improvement: inject learned guidelines and skills from prior sessions
+	if s.Lifecycle != nil && len(s.messages) > 0 {
+		lastMsg := s.messages[len(s.messages)-1].Content
+		if learnedCtx := s.Lifecycle.OnSessionStart(ctx, lastMsg); learnedCtx != "" {
+			s.AppendSystemContext(learnedCtx)
+		}
+	}
 
 	// Inject remembered context from yaad into system prompt
 	if s.Memory != nil && len(s.messages) > 0 {
@@ -105,13 +133,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Auto-compact if token usage exceeds threshold of model context window
+		// Auto-compact if token usage exceeds context budget allocation
+		convTokens := EstimateTokens(s.messages)
 		if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-			pct := s.AutoCompactThresholdPct
-			if pct <= 0 {
-				pct = 85
-			}
-			if EstimateTokens(s.messages) > info.ContextSize*pct/100 {
+			budget := NewContextBudget(info.ContextSize)
+			if budget.ShouldCompact(convTokens) {
 				s.smartCompact()
 			}
 		}
@@ -129,18 +155,33 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			"messages": len(s.messages),
 		})
 
-		maxTok := 16384
+		// Dynamic max_tokens based on task type and recent tool patterns
+		taskType := classifyPromptForBudget(s.messages)
+		contextSize := 200000
 		if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-			if limit := info.ContextSize / 8; limit < maxTok {
-				maxTok = limit
+			contextSize = info.ContextSize
+		}
+		maxTok := DynamicMaxTokens(s.messages, contextSize, taskType)
+
+		// Model cascade: select optimal model for this request
+		activeModel := s.model
+		if s.Cascade != nil && s.Cascade.Enabled {
+			lastUserMsg := ""
+			for i := len(s.messages) - 1; i >= 0; i-- {
+				if s.messages[i].Role == "user" {
+					lastUserMsg = s.messages[i].Content
+					break
+				}
 			}
+			activeModel = s.Cascade.SelectModel(lastUserMsg, s.model, "")
 		}
 
 		opts := client.ChatOptions{
-			Provider:  s.provider,
-			Model:     s.model,
-			MaxTokens: maxTok,
-			System:    s.system,
+			Provider:      s.provider,
+			Model:         activeModel,
+			MaxTokens:     maxTok,
+			System:        s.system,
+			EnableCaching: s.provider == "anthropic",
 		}
 		// Inject beliefs as ephemeral context (not persisted to s.system)
 		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
@@ -267,7 +308,20 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if ev.Usage != nil {
 						s.Cost.Add(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
 						lastUsage = ev.Usage
-						// Emit usage event so the TUI can display real-time cost.
+						// Persist cost entry for analytics
+						if s.CostTracker != nil {
+							inPrice, outPrice := pricingForModel(activeModel)
+							cost := float64(ev.Usage.PromptTokens)*inPrice/1_000_000 + float64(ev.Usage.CompletionTokens)*outPrice/1_000_000
+							s.CostTracker.Record(analytics.CostEntry{
+								Model:        activeModel,
+								TaskType:     taskType,
+								InputTokens:  ev.Usage.PromptTokens,
+								OutputTokens: ev.Usage.CompletionTokens,
+								CostUSD:      cost,
+								Duration:     time.Since(apiStart),
+								Kept:         true,
+							})
+						}
 						ch <- StreamEvent{
 							Type: "usage",
 							Usage: &StreamUsage{

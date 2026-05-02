@@ -1,4 +1,4 @@
-# Hawk Solo-Dev TODO (200+)
+# Hawk Solo-Dev TODO (250+)
 
 ## Session & Persistence (1-20)
 - [x] 1. Add session auto-save interval (every 30s during idle)
@@ -244,3 +244,46 @@
 - [x] 223. Add /fork command (branch session from here)
 - [x] 224. Add /quiet mode (minimal output)
 - [x] 225. Add /verbose mode (show thinking, tool args)
+
+## Cost Optimization (226-235)
+- [x] 226. Add model cascade router (classify prompt → select model tier)
+- [x] 227. Add dynamic max_tokens (adaptive output budgets per task type)
+- [x] 228. Use cheap model for compaction summaries
+- [x] 229. Add context budget allocator (formal token allocation across categories)
+- [x] 230. Wire prompt caching headers in eyrie (cache_control on system/tools)
+- [x] 231. Add Ollama as first-class local model provider
+- [x] 232. Add batch API client for non-interactive operations
+- [x] 233. Add frugal mode config (aggressive cost optimization preset)
+- [x] 234. Wire cost analytics to real session data
+- [x] 235. Add per-request cost estimation in status bar
+
+## Self-Improvement (236-245)
+- [x] 236. Add LLM reflection engine (verbal self-reflection on failures)
+- [x] 237. Add self-review before file write (rubber duck debugging)
+- [x] 238. Add session lifecycle loop (OnSessionStart/OnSessionEnd)
+- [x] 239. Wire EvolvingMemory.Learn() into session end
+- [x] 240. Wire skill distillation into successful complex sessions
+- [x] 241. Add few-shot example curation from prior successes
+- [x] 242. Add error pattern database (trigger → root cause → resolution)
+- [x] 243. Add benchmark-driven system prompt tuning
+- [x] 244. Add cross-session transfer learning
+- [x] 245. Add adaptive system prompts from feedback
+
+## Context Intelligence (246-255)
+- [x] 246. Add import/dependency graph (Go/Python/TypeScript)
+- [x] 247. Add change-set aware context from git diff
+- [x] 248. Enhanced AST parser (go/ast, no CGO) replacing regex parsers
+- [x] 249. Add call graph analysis for Go (callers/callees)
+- [x] 250. Add file relevance prediction (pre-load predicted files)
+- [x] 251. Add recent edit tracker (feed into Shapley ranker)
+- [x] 252. Add co-change analysis from git history
+- [x] 253. Add hierarchical code summarization (3-level cache)
+- [x] 254. Add interface extraction mode (exported signatures only)
+- [x] 255. Add fsnotify for real-time index updates
+
+## Security (256-260)
+- [x] 256. Add Landlock sandbox (Linux default, zero-dependency)
+- [x] 257. Add seccomp-bpf syscall filtering (blocks 21 dangerous syscalls)
+- [x] 258. Add Landlock auto-detection and fallback chain
+- [x] 259. Add gVisor (runsc) Docker backend option
+- [x] 260. Improve seatbelt profile (deny home writes in strict mode)

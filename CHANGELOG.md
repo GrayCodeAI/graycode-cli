@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.0] — 2026-05-03
+
+### Added
+- **Model Cascade Router**: Cost-aware routing that classifies prompts and selects optimal model tier (simple→Haiku, debug→Sonnet, generation→Opus). Supports frugal mode for aggressive cost savings. Tracks routing decisions for analytics.
+- **Dynamic max_tokens**: Adaptive output budgets based on task type and recent tool-call patterns. Reduces output token costs 15-25% by not over-allocating.
+- **Cheap Compaction Model**: Conversation summaries now use the cheapest available model (Haiku/gpt-4o-mini) instead of the primary model. Saves $0.10-0.50 per compaction.
+- **Context Budget Allocator**: Formal token allocation across system prompt, tool defs, repo map, memory, workspace, pre-loaded files, and conversation. Adaptive: shrinks file budget as conversation grows. Triggers compaction at threshold.
+- **LLM Reflection Engine**: Verbal self-reflection after failed attempts (Reflexion pattern). Asks "what failed, why, what to do differently" instead of mechanical summaries. Accumulates episodic memory buffer.
+- **Self-Review Before Write**: Rubber duck debugging step between code generation and file write. Model explains its code and checks for bugs/regressions before applying.
+- **Session Lifecycle (Self-Improvement Loop)**: Closed loop wiring OnSessionStart (retrieve guidelines + skills) and OnSessionEnd (learn guidelines, distill skills, record cost).
+- **Import/Dependency Graph**: Parses import statements for Go, Python, TypeScript. Builds forward/reverse edges. DependenciesOf, DependentsOf, ImpactSet with BFS depth control.
+- **Change-Set Aware Context**: Loads only code relevant to current `git diff`. 70-90% context reduction for focused tasks. FormatContext with token budgeting.
+- **Landlock Sandbox (Linux)**: Zero-dependency, zero-overhead, unprivileged filesystem isolation. Restricts agent to project dir + /tmp. Default Linux sandbox.
+- **seccomp-bpf Syscall Filtering (Linux)**: Blocks 21 dangerous syscalls (mount, ptrace, reboot, kexec_load, init_module, bpf, etc.). Applied via SysProcAttr.
+
+### Changed
+- `generateSummary()` now uses cheapest available model per provider instead of primary model
+- Ecosystem roadmap added: `ECOSYSTEM-ROADMAP.md` with 30-feature prioritized implementation plan
+
 ## [0.2.0] — 2026-05-01
 
 ### Added
