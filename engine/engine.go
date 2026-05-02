@@ -202,8 +202,16 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	})
 
 	recoveryCount := 0
+	turnCount := 0
 
 	for {
+		// Enforce MaxTurns budget
+		if s.MaxTurns > 0 && turnCount >= s.MaxTurns {
+			ch <- StreamEvent{Type: "content", Content: "Turn limit reached — stopping."}
+			ch <- StreamEvent{Type: "done"}
+			return
+		}
+		turnCount++
 		// Auto-compact if conversation is too long
 		if len(s.messages) > maxContextMessages {
 			s.smartCompact()

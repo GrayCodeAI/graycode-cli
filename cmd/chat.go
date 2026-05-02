@@ -2643,9 +2643,6 @@ func (m *chatModel) updateViewportContent() {
 	bottomBarLines := 0
 	if !m.configOpen {
 		bottomBarLines = 5 // status(1) + input borders+content(3) + help(1)
-		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
-			bottomBarLines += len(sugs)
-		}
 	}
 	vpHeight := m.height - bottomBarLines - 1
 	if vpHeight < 4 {
