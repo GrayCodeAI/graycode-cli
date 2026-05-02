@@ -51,6 +51,9 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err := validatePathAllowed(ctx, path); err != nil {
 		return "", err
 	}
+	if tc := GetToolContext(ctx); tc != nil && tc.Protected != nil && tc.Protected.IsProtected(path) {
+		return "", fmt.Errorf("path %s is protected (read-only)", path)
+	}
 	oldStr := p.OldStr
 	if oldStr == "" {
 		oldStr = p.OldString

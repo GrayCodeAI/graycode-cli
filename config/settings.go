@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/model"
 	"github.com/hawk/eyrie/catalog"
 )
 
@@ -29,6 +30,8 @@ type Settings struct {
 	RepoMapMaxTokens  int                     `json:"repo_map_max_tokens,omitempty"`
 	Sandbox           string                  `json:"sandbox,omitempty"`     // sandbox mode: strict, workspace, off
 	AutoCommit        bool                    `json:"auto_commit,omitempty"` // auto-commit file changes
+	Autonomy          int                     `json:"autonomy,omitempty"`    // autonomy level 0-4
+	ModelRoles        *model.ModelRoles       `json:"model_roles,omitempty"` // per-role model overrides
 }
 
 // CustomProviderConfig defines a user-specified OpenAI-compatible provider.
@@ -183,6 +186,27 @@ func MergeSettings(base, override Settings) Settings {
 	}
 	if override.AutoCommit {
 		base.AutoCommit = true
+	}
+	if override.Autonomy > 0 {
+		base.Autonomy = override.Autonomy
+	}
+	if override.ModelRoles != nil {
+		if base.ModelRoles == nil {
+			base.ModelRoles = override.ModelRoles
+		} else {
+			if override.ModelRoles.Planner != "" {
+				base.ModelRoles.Planner = override.ModelRoles.Planner
+			}
+			if override.ModelRoles.Coder != "" {
+				base.ModelRoles.Coder = override.ModelRoles.Coder
+			}
+			if override.ModelRoles.Reviewer != "" {
+				base.ModelRoles.Reviewer = override.ModelRoles.Reviewer
+			}
+			if override.ModelRoles.Commit != "" {
+				base.ModelRoles.Commit = override.ModelRoles.Commit
+			}
+		}
 	}
 	if len(override.CustomHeaders) > 0 {
 		if base.CustomHeaders == nil {

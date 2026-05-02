@@ -22,6 +22,12 @@ type AliasedTool interface {
 	Aliases() []string
 }
 
+// PathProtector checks whether a file path is protected (read-only).
+// engine.ProtectedPaths implements this interface.
+type PathProtector interface {
+	IsProtected(path string) bool
+}
+
 // ToolContext carries session-level functions for tools that need them.
 type ToolContext struct {
 	AgentSpawnFn       func(ctx context.Context, prompt string) (string, error)
@@ -30,6 +36,7 @@ type ToolContext struct {
 	AllowedDirectories []string
 	SandboxMode        sandbox.Mode
 	AutoCommit         bool
+	Protected          PathProtector
 }
 
 // ctxKey is the context key for ToolContext.
