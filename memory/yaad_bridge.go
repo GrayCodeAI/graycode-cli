@@ -115,6 +115,106 @@ func (b *YaadBridge) Recall(query string, tokenBudget int) (string, error) {
 	return sb.String(), nil
 }
 
+// InitCodeIndex creates the code index tables in yaad's store.
+// Safe to call multiple times.
+func (b *YaadBridge) InitCodeIndex() error {
+	if !b.ready {
+		return nil
+	}
+	return b.store.CreateCodeIndex(context.Background())
+}
+
+// IndexCodeChunk stores a code chunk in the yaad code index.
+func (b *YaadBridge) IndexCodeChunk(path, content, symbol, lang string, start, end, tokens int, hash string) error {
+	if !b.ready {
+		return nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	id := fmt.Sprintf("%s:%d-%d", path, start, end)
+	return b.store.UpsertCodeChunk(context.Background(), &storage.CodeChunkRecord{
+		ID:        id,
+		Path:      path,
+		StartLine: start,
+		EndLine:   end,
+		Content:   content,
+		Symbol:    symbol,
+		Language:  lang,
+		Tokens:    tokens,
+		FileHash:  hash,
+	})
+}
+
+// CodeSearchResult represents a code chunk returned by a search.
+type CodeSearchResult struct {
+	Path      string
+	StartLine int
+	EndLine   int
+	Content   string
+	Symbol    string
+	Score     float64
+}
+
+// SearchCode performs full-text search over indexed code chunks.
+func (b *YaadBridge) SearchCode(query string, limit int) ([]CodeSearchResult, error) {
+	if !b.ready {
+		return nil, nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	records, err := b.store.SearchCodeChunksFTS(context.Background(), query, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]CodeSearchResult, len(records))
+	for i, r := range records {
+		results[i] = CodeSearchResult{
+			Path:      r.Path,
+			StartLine: r.StartLine,
+			EndLine:   r.EndLine,
+			Content:   r.Content,
+			Symbol:    r.Symbol,
+		}
+	}
+	return results, nil
+}
+
+// GetFileHash returns the stored hash for a file path, or empty string if not indexed.
+func (b *YaadBridge) GetFileHash(path string) (string, error) {
+	if !b.ready {
+		return "", nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.store.GetFileHash(context.Background(), path)
+}
+
+// ClearFileChunks removes all indexed chunks for a given file path.
+func (b *YaadBridge) ClearFileChunks(path string) error {
+	if !b.ready {
+		return nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.store.DeleteChunksByPath(context.Background(), path)
+}
+
+// ListIndexedPaths returns all file paths that have indexed code chunks.
+func (b *YaadBridge) ListIndexedPaths() ([]string, error) {
+	if !b.ready {
+		return nil, nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.store.ListIndexedPaths(context.Background())
+}
+
 // Close shuts down the yaad engine and closes the database connection.
 func (b *YaadBridge) Close() {
 	if !b.ready {

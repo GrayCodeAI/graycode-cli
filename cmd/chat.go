@@ -182,6 +182,72 @@ func slashAliases() map[string]string {
 	return nil
 }
 
+var slashDescriptions = map[string]string{
+	"/add":             "Add files to conversation context",
+	"/add-dir":         "Add a directory to context",
+	"/agents":          "List active agents",
+	"/audit":           "Show tool audit summary",
+	"/branch":          "Show git branch info",
+	"/btw":             "Side note without triggering a response",
+	"/bughunter":       "Hunt for bugs in the codebase",
+	"/clean":           "Delete old sessions",
+	"/clear":           "Clear conversation",
+	"/commit":          "Auto-commit changes with AI message",
+	"/compact":         "Compress conversation to save tokens",
+	"/compress":        "Compress old sessions",
+	"/config":          "Open settings panel",
+	"/context":         "Show current context",
+	"/copy":            "Copy last response to clipboard",
+	"/cost":            "Show token usage and cost",
+	"/diff":            "Summarize modified files",
+	"/doctor":          "Run diagnostics (build, test, lint)",
+	"/drop":            "Remove file from context",
+	"/effort":          "Set reasoning effort level",
+	"/env":             "Show environment info",
+	"/exit":            "Save and exit",
+	"/export":          "Export session",
+	"/fast":            "Toggle fast mode",
+	"/files":           "Show modified files",
+	"/fork":            "Fork session at a point",
+	"/help":            "Show all commands",
+	"/history":         "List saved sessions",
+	"/hooks":           "Show configured hooks",
+	"/init":            "Analyze project structure",
+	"/integrity":       "Validate session integrity",
+	"/lint":            "Run linter, add issues to context",
+	"/loop":            "Schedule recurring command",
+	"/mcp":             "Show MCP server status",
+	"/memory":          "Show project instructions",
+	"/metrics":         "Show session metrics",
+	"/model":           "Switch or view current model",
+	"/new":             "Start a fresh session",
+	"/permissions":     "Manage permission rules",
+	"/plan":            "Enter plan mode (read-only)",
+	"/plugins":         "List installed plugins",
+	"/quit":            "Save and exit",
+	"/resume":          "Resume a saved session",
+	"/retry":           "Redo last message",
+	"/review":          "Code review for bugs and issues",
+	"/rewind":          "Undo last exchange",
+	"/run":             "Run command, add output to context",
+	"/sandbox":         "Toggle sandbox mode",
+	"/search":          "Search across sessions",
+	"/security-review": "Security audit",
+	"/skills":          "List available skills",
+	"/stats":           "Show analytics stats",
+	"/status":          "Show session info",
+	"/summary":         "Summarize the session",
+	"/tasks":           "Show task list",
+	"/test":            "Run tests, add failures to context",
+	"/tokens":          "Show token estimate",
+	"/tools":           "List enabled tools",
+	"/usage":           "Show cost summary",
+	"/version":         "Show hawk version",
+	"/vim":             "Toggle vim mode",
+	"/welcome":         "Show welcome screen",
+	"/yolo":            "Toggle auto-approve mode",
+}
+
 func slashSuggestions(input string) []string {
 	v := strings.TrimSpace(input)
 	if !strings.HasPrefix(v, "/") || strings.Contains(v, " ") {
@@ -192,7 +258,12 @@ func slashSuggestions(input string) []string {
 	for _, c := range slashCommands() {
 		if strings.HasPrefix(c, v) {
 			seen[c] = true
-			out = append(out, c)
+			desc := slashDescriptions[c]
+			if desc != "" {
+				out = append(out, c+"  "+desc)
+			} else {
+				out = append(out, c)
+			}
 		}
 	}
 	for alias, target := range slashAliases() {
@@ -201,11 +272,11 @@ func slashSuggestions(input string) []string {
 			out = append(out, alias+" → "+target)
 		}
 	}
-	if len(out) == 1 && out[0] == v {
+	if len(out) == 1 && strings.HasPrefix(out[0], v+" ") && strings.Fields(out[0])[0] == v {
 		return nil
 	}
-	if len(out) > 6 {
-		out = out[:6]
+	if len(out) > 10 {
+		out = out[:10]
 	}
 	return out
 }
@@ -214,6 +285,10 @@ func applySlashSuggestion(input string) string {
 	choice := strings.TrimSpace(input)
 	if before, _, ok := strings.Cut(choice, " → "); ok {
 		choice = before
+	}
+	parts := strings.Fields(choice)
+	if len(parts) > 0 {
+		choice = parts[0]
 	}
 	if target, ok := slashAliases()[choice]; ok {
 		choice = target
@@ -2873,11 +2948,25 @@ func (m chatModel) View() string {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
 			}
+			cmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+			descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
+			selCmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+			selDescStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
 			for i, s := range sugs {
+				cmdPart := s
+				descPart := ""
+				if fields := strings.SplitN(s, "  ", 2); len(fields) == 2 {
+					cmdPart = fields[0]
+					descPart = fields[1]
+				}
+				pad := 20 - runewidth.StringWidth(cmdPart)
+				if pad < 2 {
+					pad = 2
+				}
 				if i == m.slashSel {
-					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Render("▸ "+s) + "\n")
+					bottomBar.WriteString("  " + selCmdStyle.Render(cmdPart) + strings.Repeat(" ", pad) + selDescStyle.Render(descPart) + "\n")
 				} else {
-					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E")).Render("  "+s) + "\n")
+					bottomBar.WriteString("  " + cmdStyle.Render(cmdPart) + strings.Repeat(" ", pad) + descStyle.Render(descPart) + "\n")
 				}
 				bottomBarLines++
 			}
