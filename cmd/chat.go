@@ -167,11 +167,11 @@ func slashCommands() []string {
 		"/color", "/commands", "/commit", "/compact", "/compress", "/config", "/context",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit",
 		"/export", "/fast", "/files", "/fork", "/help", "/history", "/hooks", "/init",
-		"/integrity", "/keybindings", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model",
+		"/integrity", "/keybindings", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
 		"/output-style", "/permissions", "/plan", "/plugin", "/plugins",
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
+		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
 		"/status", "/statusline", "/summary", "/tag", "/tasks", "/teams", "/test", "/theme",
 		"/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/upgrade", "/usage",
 		"/version", "/vim", "/voice", "/welcome", "/yolo",
@@ -1427,7 +1427,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyCtrlL:
 			modes := []string{"default", "acceptEdits", "bypassPermissions"}
-			current := m.session.PermissionMode()
+			current := string(m.session.Mode)
 			idx := 0
 			for i, md := range modes {
 				if md == current {
@@ -2466,6 +2466,28 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 
 	case "/yolo":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Auto-approve mode toggled. All tool calls will be approved automatically."})
+		return m, nil
+
+	case "/new":
+		m.saveSession()
+		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
+		m.session.LoadMessages(nil)
+		sid := genID()
+		m.sessionID = sid
+		if wal, err := session.NewWAL(sid); err == nil {
+			m.wal = wal
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: "New session started."})
+		return m, nil
+
+	case "/btw":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /btw <message>"})
+			return m, nil
+		}
+		note := strings.TrimSpace(strings.TrimPrefix(text, "/btw"))
+		m.session.AddUser(fmt.Sprintf("[Background note — do not respond to this directly, just acknowledge and keep it in mind]\n%s", note))
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Noted: %s", note)})
 		return m, nil
 
 	default:
