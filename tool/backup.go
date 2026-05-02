@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -26,10 +27,14 @@ func BackupFile(path string) (string, error) {
 		return "", nil
 	}
 
+	absPath, _ := filepath.Abs(path)
 	backupDir := backupDirFor(path)
 	if err := os.MkdirAll(backupDir, 0o755); err != nil {
 		return "", err
 	}
+
+	// Write origin mapping so UndoLatest can find the original directory
+	_ = os.WriteFile(filepath.Join(backupDir, ".origin"), []byte(filepath.Dir(absPath)), 0o644)
 
 	ts := time.Now().Format("20060102-150405")
 	backupName := filepath.Base(path) + "." + ts + ".bak"
@@ -98,6 +103,66 @@ func ListBackups(path string) []string {
 		}
 	}
 	return backups
+}
+
+// UndoLatest finds the most recent backup across all files and restores it.
+// Returns the restored file path for display, or an error if no backups exist.
+func UndoLatest() (string, error) {
+	home, _ := os.UserHomeDir()
+	backupsRoot := filepath.Join(home, ".hawk", "backups")
+	dirs, err := os.ReadDir(backupsRoot)
+	if err != nil {
+		return "", fmt.Errorf("no file changes to undo")
+	}
+	var bestFile string
+	var bestTime time.Time
+	var bestDir string
+	for _, d := range dirs {
+		if !d.IsDir() {
+			continue
+		}
+		subDir := filepath.Join(backupsRoot, d.Name())
+		entries, err := os.ReadDir(subDir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".") {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				continue
+			}
+			if info.ModTime().After(bestTime) {
+				bestTime = info.ModTime()
+				bestFile = e.Name()
+				bestDir = subDir
+			}
+		}
+	}
+	if bestFile == "" {
+		return "", fmt.Errorf("no file changes to undo")
+	}
+	// Read origin to get the original directory
+	originData, err := os.ReadFile(filepath.Join(bestDir, ".origin"))
+	if err != nil {
+		return "", fmt.Errorf("no file changes to undo")
+	}
+	origDir := strings.TrimSpace(string(originData))
+	// Strip .<timestamp>.bak to get base filename
+	baseName := bestFile
+	if strings.HasSuffix(baseName, ".bak") {
+		baseName = baseName[:len(baseName)-4]
+		if dot := strings.LastIndex(baseName, "."); dot > 0 {
+			baseName = baseName[:dot]
+		}
+	}
+	originalPath := filepath.Join(origDir, baseName)
+	if err := RestoreFromBackup(originalPath); err != nil {
+		return "", err
+	}
+	return originalPath, nil
 }
 
 func backupDirFor(path string) string {

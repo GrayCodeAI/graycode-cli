@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-03T00:00:00Z",
+  "skills": [
+    {
+      "name": "go-review",
+      "description": "Reviews Go code for idioms, error handling, concurrency, and performance patterns",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "go-review",
+      "category": "engineering",
+      "tags": ["go", "review", "code-quality"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-03T00:00:00Z"
+    },
+    {
+      "name": "changelog",
+      "description": "Generates user-facing changelogs from git commits using conventional commit format",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "changelog",
+      "category": "workflow",
+      "tags": ["changelog", "git", "release"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-03T00:00:00Z"
+    },
+    {
+      "name": "docker-deploy",
+      "description": "Docker build optimization, multi-stage builds, and deployment workflows",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "docker-deploy",
+      "category": "ops",
+      "tags": ["docker", "deploy", "containers"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-03T00:00:00Z"
+    },
+    {
+      "name": "api-design",
+      "description": "RESTful API design patterns, endpoint naming, versioning, and error handling",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "api-design",
+      "category": "engineering",
+      "tags": ["api", "rest", "design"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-03T00:00:00Z"
+    },
+    {
+      "name": "security-scan",
+      "description": "Scans code for injection, auth flaws, secrets, and dependency vulnerabilities",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "security-scan",
+      "category": "security",
+      "tags": ["security", "scan", "vulnerabilities"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-03T00:00:00Z"
+    }
+  ]
+}

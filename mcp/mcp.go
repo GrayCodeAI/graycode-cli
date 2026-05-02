@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Server represents a connected MCP server.
@@ -20,6 +22,9 @@ type Server struct {
 	stdout  io.ReadCloser
 	mu      sync.Mutex
 	nextID  int
+	reader  *bufio.Scanner
+	pending map[int]chan json.RawMessage // response channels keyed by request ID
+	pendMu  sync.Mutex
 }
 
 // Tool is a tool exposed by an MCP server.
@@ -39,7 +44,7 @@ type Resource struct {
 
 type jsonrpcRequest struct {
 	JSONRPC string      `json:"jsonrpc"`
-	ID      int         `json:"id"`
+	ID      int         `json:"id,omitempty"`
 	Method  string      `json:"method"`
 	Params  interface{} `json:"params,omitempty"`
 }
@@ -47,12 +52,15 @@ type jsonrpcRequest struct {
 type jsonrpcResponse struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      int             `json:"id"`
+	Method  string          `json:"method,omitempty"`
 	Result  json.RawMessage `json:"result,omitempty"`
 	Error   *struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
 }
+
+const defaultCallTimeout = 30 * time.Second
 
 // Connect starts an MCP server process via stdio transport.
 func Connect(ctx context.Context, name, command string, args ...string) (*Server, error) {
@@ -69,13 +77,28 @@ func Connect(ctx context.Context, name, command string, args ...string) (*Server
 		return nil, fmt.Errorf("mcp: start %s: %w", command, err)
 	}
 
-	s := &Server{Name: name, Command: command, Args: args, cmd: cmd, stdin: stdin, stdout: stdout}
+	scanner := bufio.NewScanner(stdout)
+	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024) // 1MB buffer
+
+	s := &Server{
+		Name:    name,
+		Command: command,
+		Args:    args,
+		cmd:     cmd,
+		stdin:   stdin,
+		stdout:  stdout,
+		reader:  scanner,
+		pending: make(map[int]chan json.RawMessage),
+	}
+
+	// Start background reader to dispatch responses and notifications
+	go s.readLoop()
 
 	// Initialize
-	_, err = s.call("initialize", map[string]interface{}{
+	_, err = s.callWithTimeout(ctx, "initialize", map[string]interface{}{
 		"protocolVersion": "2024-11-05",
 		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "0.0.1"},
+		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "0.2.0"},
 	})
 	if err != nil {
 		cmd.Process.Kill()
@@ -86,6 +109,46 @@ func Connect(ctx context.Context, name, command string, args ...string) (*Server
 	s.notify("notifications/initialized", nil)
 
 	return s, nil
+}
+
+// readLoop reads lines from stdout and dispatches to pending request channels.
+func (s *Server) readLoop() {
+	for s.reader.Scan() {
+		line := s.reader.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var msg jsonrpcResponse
+		if err := json.Unmarshal(line, &msg); err != nil {
+			continue
+		}
+		// If it has an ID, it's a response to a request
+		if msg.ID != 0 {
+			s.pendMu.Lock()
+			ch, ok := s.pending[msg.ID]
+			if ok {
+				delete(s.pending, msg.ID)
+			}
+			s.pendMu.Unlock()
+			if ok {
+				if msg.Error != nil {
+					ch <- nil // signal error via nil
+				} else {
+					ch <- msg.Result
+				}
+				close(ch)
+			}
+			continue
+		}
+		// Otherwise it's a notification — ignore for now
+	}
+	// Scanner done — close all pending channels
+	s.pendMu.Lock()
+	for id, ch := range s.pending {
+		close(ch)
+		delete(s.pending, id)
+	}
+	s.pendMu.Unlock()
 }
 
 // ListTools returns tools available on this MCP server.
@@ -183,47 +246,68 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) call(method string, params interface{}) (json.RawMessage, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	return s.callWithTimeout(context.Background(), method, params)
+}
 
+func (s *Server) callWithTimeout(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
+	s.mu.Lock()
 	s.nextID++
-	req := jsonrpcRequest{JSONRPC: "2.0", ID: s.nextID, Method: method, Params: params}
+	id := s.nextID
+	s.mu.Unlock()
+
+	// Register pending response channel
+	ch := make(chan json.RawMessage, 1)
+	s.pendMu.Lock()
+	s.pending[id] = ch
+	s.pendMu.Unlock()
+
+	req := jsonrpcRequest{JSONRPC: "2.0", ID: id, Method: method, Params: params}
 	data, _ := json.Marshal(req)
 	data = append(data, '\n')
 
-	if _, err := s.stdin.Write(data); err != nil {
+	s.mu.Lock()
+	_, err := s.stdin.Write(data)
+	s.mu.Unlock()
+	if err != nil {
+		s.pendMu.Lock()
+		delete(s.pending, id)
+		s.pendMu.Unlock()
 		return nil, fmt.Errorf("write: %w", err)
 	}
 
-	// Read response line
-	buf := make([]byte, 0, 4096)
-	tmp := make([]byte, 1)
-	for {
-		n, err := s.stdout.Read(tmp)
-		if err != nil {
-			return nil, fmt.Errorf("read: %w", err)
-		}
-		if n > 0 {
-			if tmp[0] == '\n' {
-				break
-			}
-			buf = append(buf, tmp[0])
-		}
+	// Wait for response with timeout
+	timeout := defaultCallTimeout
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = time.Until(deadline)
 	}
 
-	var resp jsonrpcResponse
-	if err := json.Unmarshal(buf, &resp); err != nil {
-		return nil, fmt.Errorf("parse response: %w", err)
+	select {
+	case result, ok := <-ch:
+		if !ok {
+			return nil, fmt.Errorf("mcp: connection closed")
+		}
+		if result == nil {
+			return nil, fmt.Errorf("mcp: server returned error")
+		}
+		return result, nil
+	case <-time.After(timeout):
+		s.pendMu.Lock()
+		delete(s.pending, id)
+		s.pendMu.Unlock()
+		return nil, fmt.Errorf("mcp: call %s timed out after %s", method, timeout)
+	case <-ctx.Done():
+		s.pendMu.Lock()
+		delete(s.pending, id)
+		s.pendMu.Unlock()
+		return nil, ctx.Err()
 	}
-	if resp.Error != nil {
-		return nil, fmt.Errorf("mcp error %d: %s", resp.Error.Code, resp.Error.Message)
-	}
-	return resp.Result, nil
 }
 
 func (s *Server) notify(method string, params interface{}) {
 	req := jsonrpcRequest{JSONRPC: "2.0", Method: method, Params: params}
 	data, _ := json.Marshal(req)
 	data = append(data, '\n')
+	s.mu.Lock()
 	s.stdin.Write(data)
+	s.mu.Unlock()
 }

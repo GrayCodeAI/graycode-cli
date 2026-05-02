@@ -55,7 +55,9 @@ const summaryTemplate = `Now provide your summary inside <summary> tags with the
 
 8. **Current Work**: What was being worked on most recently? Include specific details.
 
-9. **Next Step**: Based on the most recent user messages, what should happen next? Include direct quotes from the user if they gave specific direction.`
+9. **Lookup Hints**: List 3-5 specific topics or keywords the agent should search for in conversation history if it needs details that were summarized away. Format as a bullet list of search queries.
+
+10. **Next Step**: Based on the most recent user messages, what should happen next? Include direct quotes from the user if they gave specific direction.`
 
 // BuildCompactPrompt constructs the full compaction prompt for LLM-based summarization.
 func BuildCompactPrompt(variant CompactVariant) string {

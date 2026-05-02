@@ -70,10 +70,10 @@ func TestBuildSystemPromptHasSeparators(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSystemPrompt failed: %v", err)
 	}
-	// Should have 3 separators for 4 sections
+	// Should have 5 separators for 6 sections
 	count := strings.Count(result, "---")
-	if count != 3 {
-		t.Errorf("expected 3 section separators, got %d", count)
+	if count != 5 {
+		t.Errorf("expected 5 section separators, got %d", count)
 	}
 }
 

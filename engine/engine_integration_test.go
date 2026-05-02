@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 
 	"github.com/GrayCodeAI/hawk/session"
 	"github.com/GrayCodeAI/hawk/tool"

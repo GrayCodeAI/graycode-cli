@@ -14,6 +14,7 @@ const maxFileSize = 1 << 30 // 1 GiB
 type FileReadTool struct{}
 
 func (FileReadTool) Name() string      { return "Read" }
+func (FileReadTool) RiskLevel() string { return "low" }
 func (FileReadTool) Aliases() []string { return []string{"file_read"} }
 func (FileReadTool) Description() string {
 	return "Read a file's contents, optionally a specific line range."
@@ -54,6 +55,9 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err := validatePathAllowed(ctx, path); err != nil {
 		return "", err
 	}
+	if reason := IsSensitivePath(path); reason != "" {
+		return "", fmt.Errorf("blocked: %s", reason)
+	}
 	startLine, endLine := p.StartLine, p.EndLine
 	if p.Offset > 0 {
 		startLine = p.Offset
@@ -79,6 +83,9 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)
+	}
+	if IsBinaryContent(data) {
+		return BinaryIndicator, nil
 	}
 	data = StripBOM(data)
 	if startLine == 0 && endLine == 0 {

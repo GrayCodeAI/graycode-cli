@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 func TestCollapseRepeatedMessages_NoCollapse(t *testing.T) {

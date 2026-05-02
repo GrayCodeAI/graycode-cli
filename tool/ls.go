@@ -13,6 +13,7 @@ import (
 type LSTool struct{}
 
 func (LSTool) Name() string      { return "LS" }
+func (LSTool) RiskLevel() string { return "low" }
 func (LSTool) Aliases() []string { return []string{"ls"} }
 func (LSTool) Description() string {
 	return "List files and directories in a directory."

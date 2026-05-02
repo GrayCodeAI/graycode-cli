@@ -84,7 +84,7 @@ func GenerateManPage() string {
 	b.WriteString(".SH FILES\n")
 	b.WriteString(".TP\n\\fB~/.hawk/settings.json\\fR\nGlobal configuration file\n")
 	b.WriteString(".TP\n\\fB.hawk/settings.json\\fR\nProject-level configuration\n")
-	b.WriteString(".TP\n\\fBHAWK.md\\fR\nProject instructions file\n")
+	b.WriteString(".TP\n\\fBAGENTS.md\\fR\nProject instructions file (also reads AGENTS.md for backward compatibility)\n")
 	b.WriteString(".TP\n\\fB~/.hawk/sessions/\\fR\nSaved session data\n")
 	b.WriteString(".TP\n\\fB~/.hawk/templates/\\fR\nPrompt templates\n")
 	b.WriteString(".TP\n\\fB~/.hawk/env\\fR\nPersisted API keys\n")

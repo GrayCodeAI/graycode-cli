@@ -64,43 +64,36 @@ func loadEnvFile(path string) {
 }
 
 // GetAPIKey returns the API key for a provider, checking multiple sources.
+// Delegates to ProviderAPIKeyEnv (settings.go) as the single source of truth
+// for provider→env-var mappings, with fallback aliases for compatibility.
 func GetAPIKey(provider string) string {
-	envVars := providerKeyEnvVars(provider)
-	for _, key := range envVars {
-		if v := os.Getenv(key); v != "" {
+	// Primary: use the canonical env var from ProviderAPIKeyEnv
+	if envVar := ProviderAPIKeyEnv(provider); envVar != "" {
+		if v := os.Getenv(envVar); v != "" {
+			return v
+		}
+	}
+	// Fallback aliases for providers that have secondary env var names
+	for _, alt := range providerFallbackEnvVars(provider) {
+		if v := os.Getenv(alt); v != "" {
 			return v
 		}
 	}
 	return ""
 }
 
-// providerKeyEnvVars returns the environment variable names for a provider's API key.
-func providerKeyEnvVars(provider string) []string {
+// providerFallbackEnvVars returns secondary/legacy env var names not covered
+// by the canonical ProviderAPIKeyEnv mapping.
+func providerFallbackEnvVars(provider string) []string {
 	switch strings.ToLower(provider) {
 	case "anthropic":
-		return []string{"ANTHROPIC_API_KEY", "CLAUDE_API_KEY"}
-	case "openai":
-		return []string{"OPENAI_API_KEY"}
+		return []string{"CLAUDE_API_KEY"}
 	case "gemini", "google":
-		return []string{"GEMINI_API_KEY", "GOOGLE_API_KEY"}
-	case "openrouter":
-		return []string{"OPENROUTER_API_KEY"}
-	case "groq":
-		return []string{"GROQ_API_KEY"}
+		return []string{"GOOGLE_API_KEY"}
 	case "grok", "xai":
-		return []string{"XAI_API_KEY", "GROK_API_KEY"}
-	case "deepseek":
-		return []string{"DEEPSEEK_API_KEY"}
-	case "mistral":
-		return []string{"MISTRAL_API_KEY"}
-	case "bedrock":
-		return []string{"AWS_ACCESS_KEY_ID"}
-	case "vertex":
-		return []string{"GOOGLE_APPLICATION_CREDENTIALS"}
-	case "ollama":
-		return []string{} // no key needed
+		return []string{"GROK_API_KEY"}
 	default:
-		return []string{strings.ToUpper(provider) + "_API_KEY"}
+		return nil
 	}
 }
 

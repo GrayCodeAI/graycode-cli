@@ -6,14 +6,30 @@ import (
 	"strings"
 )
 
+// SkillSource tracks where an installed skill came from.
+type SkillSource struct {
+	Repo        string `json:"repo,omitempty"`
+	Ref         string `json:"ref,omitempty"`
+	InstalledAt string `json:"installed_at,omitempty"`
+}
+
 // SmartSkill is a skill that can be auto-invoked based on file paths or user
-// prompt context.
+// prompt context. Follows the Agent Skills spec (agentskills.io).
 type SmartSkill struct {
-	Name        string
-	Description string   // used for auto-matching against user prompts
-	Paths       []string // glob patterns that trigger this skill
-	Content     string   // skill prompt content (body of SKILL.md)
-	AutoInvoke  bool     // if true, model can trigger without user /command
+	Name          string
+	Description   string   // used for auto-matching against user prompts
+	Paths         []string // glob patterns that trigger this skill
+	Content       string   // skill prompt content (body of SKILL.md)
+	AutoInvoke    bool     // if true, model can trigger without user /command
+	Compatibility string   // environment requirements (per spec)
+	AllowedTools  string   // pre-approved tools, space-separated (per spec)
+	Version       string   // semver for update tracking
+	Author        string   // skill author
+	License       string   // license identifier (MIT, Apache-2.0, etc.)
+	Category      string   // engineering, ops, testing, security, devtools, workflow
+	Tags          []string // discovery tags
+	Agents        []string // cross-agent compatibility (hawk, claude-code, etc.)
+	Source        SkillSource
 }
 
 // LoadSmartSkills scans the given directories for SKILL.md files with YAML
@@ -95,6 +111,28 @@ func parseSmartSkill(content string) SmartSkill {
 			skill.AutoInvoke = val == "true"
 		case "paths":
 			skill.Paths = parseYAMLStringArray(val)
+		case "compatibility":
+			skill.Compatibility = val
+		case "allowed-tools":
+			skill.AllowedTools = val
+		case "version":
+			skill.Version = val
+		case "author":
+			skill.Author = val
+		case "license":
+			skill.License = val
+		case "category":
+			skill.Category = val
+		case "tags":
+			skill.Tags = parseYAMLStringArray(val)
+		case "agents":
+			skill.Agents = parseYAMLStringArray(val)
+		case "source-repo":
+			skill.Source.Repo = val
+		case "source-installed-at":
+			skill.Source.InstalledAt = val
+		case "source-ref":
+			skill.Source.Ref = val
 		}
 	}
 
@@ -212,4 +250,31 @@ func FormatSkillsForPrompt(skills []SmartSkill) string {
 		b.WriteString("\n")
 	}
 	return b.String()
+}
+
+// ParseSmartSkillPublic is the exported version of parseSmartSkill.
+func ParseSmartSkillPublic(content string) SmartSkill {
+	return parseSmartSkill(content)
+}
+
+// DefaultSkillDirs returns directories to scan for SKILL.md files.
+// Includes hawk's own paths plus cross-agent standard paths for interoperability.
+// Follows the agentskills.io spec and supports gh skill install placement.
+func DefaultSkillDirs() []string {
+	home, _ := os.UserHomeDir()
+	if home == "" {
+		return []string{".hawk/skills", ".agents/skills"}
+	}
+	return []string{
+		// Project-level directories.
+		".hawk/skills",                                     // hawk project skills
+		".agents/skills",                                   // agentskills.io shared dir (gh skill install default)
+		".claude/skills",                                   // Claude Code project skills
+		".codex/skills",                                    // Codex project skills
+		// User-level directories.
+		filepath.Join(home, ".hawk", "skills"),              // hawk global skills
+		filepath.Join(home, ".agents", "skills"),            // agentskills.io global shared
+		filepath.Join(home, ".claude", "skills"),            // Claude Code global skills
+		filepath.Join(home, ".codex", "skills"),             // Codex global skills
+	}
 }

@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// modelPricing maps model prefixes to (input $/M, output $/M).
+// modelPricing is kept as a fallback for models not in the catalog.
 var modelPricing = map[string][2]float64{
 	"claude-3-5-sonnet": {3.0, 15.0},
 	"claude-sonnet-4":   {3.0, 15.0},
@@ -36,6 +36,12 @@ var modelPricing = map[string][2]float64{
 }
 
 func pricingForModel(model string) (float64, float64) {
+	// Use catalog first (single source of truth)
+	inPrice, outPrice := ModelPricing(model)
+	if inPrice != 3.0 || outPrice != 15.0 {
+		return inPrice, outPrice // found in catalog
+	}
+	// Fallback to local prefix map for models not in catalog
 	lower := strings.ToLower(model)
 	for prefix, prices := range modelPricing {
 		if strings.Contains(lower, prefix) {
@@ -84,12 +90,11 @@ func (c *Cost) Total() float64 {
 	return c.TotalCostUSD
 }
 
-// TotalUSD returns the estimated total cost using catalog pricing when available.
+// TotalUSD returns the estimated total cost (same as Total — unified pricing).
 func (c *Cost) TotalUSD() float64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	inPrice, outPrice := ModelPricing(c.Model)
-	return float64(c.PromptTokens)/1_000_000*inPrice + float64(c.CompletionTokens)/1_000_000*outPrice
+	return c.TotalCostUSD
 }
 
 // Summary returns a formatted cost string.

@@ -95,8 +95,8 @@ func (r *Router) SetFallbackChain(chain []string) {
 
 // SelectProvider chooses the best available provider, falling back if needed.
 func (r *Router) SelectProvider(preferred string) (string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	if preferred != "" && r.isAvailable(preferred) {
 		return preferred, nil

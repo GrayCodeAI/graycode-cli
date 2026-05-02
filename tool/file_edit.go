@@ -11,6 +11,7 @@ import (
 type FileEditTool struct{}
 
 func (FileEditTool) Name() string      { return "Edit" }
+func (FileEditTool) RiskLevel() string { return "medium" }
 func (FileEditTool) Aliases() []string { return []string{"file_edit"} }
 func (FileEditTool) Description() string {
 	return "Edit a file by replacing an exact string match with new content."
@@ -50,6 +51,9 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	}
 	if err := validatePathAllowed(ctx, path); err != nil {
 		return "", err
+	}
+	if reason := IsSensitivePath(path); reason != "" {
+		return "", fmt.Errorf("blocked: %s", reason)
 	}
 	if tc := GetToolContext(ctx); tc != nil && tc.Protected != nil && tc.Protected.IsProtected(path) {
 		return "", fmt.Errorf("path %s is protected (read-only)", path)
@@ -95,7 +99,14 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if count > 1 {
 		return "", fmt.Errorf("old_str found %d times in %s — must be unique", count, path)
 	}
+	if cred := DetectCredentials(newStr); cred != "" {
+		return "", fmt.Errorf("new_str contains a credential (%s) — refusing to edit", cred)
+	}
+
 	result := strings.Replace(content, oldStr, newStr, 1)
+	if _, backupErr := BackupFile(path); backupErr != nil {
+		_ = backupErr // best-effort backup
+	}
 
 	// Preserve line endings
 	if lineEnding == "\r\n" {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 // CompactStrategy defines a conversation compaction approach.

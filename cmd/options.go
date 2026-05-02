@@ -16,7 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/prompts"
 	"github.com/GrayCodeAI/hawk/repomap"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 func buildSystemPrompt() (string, error) {
@@ -44,14 +44,15 @@ func buildSystemPrompt() (string, error) {
 		}
 	}
 
-	// Assemble modular prompt from templates
+	// Assemble modular prompt from templates (primary source for tools,
+	// practices, communication). prompt.System() provides only the identity
+	// preamble and system-level instructions the templates don't cover.
 	modularPrompt, err := prompts.BuildSystemPrompt(ctx)
 	if err != nil {
-		// Fall back to legacy prompt if templates fail
+		// Fall back to preamble-only if templates fail
 		modularPrompt = ""
 	}
 
-	// Combine: legacy system prompt + modular template sections + workspace context
 	base := prompt.System() + "\n\n" + hawkconfig.BuildContextWithDirs(addDirs)
 	if modularPrompt != "" {
 		base += "\n\n" + modularPrompt
@@ -98,7 +99,7 @@ func buildSystemPrompt() (string, error) {
 // it to the system prompt when the repo_map setting is enabled.
 func injectRepoMap(base string) string {
 	settings := hawkconfig.LoadSettings()
-	if !settings.RepoMap {
+	if settings.RepoMap == nil || !*settings.RepoMap {
 		return base
 	}
 	maxTokens := settings.RepoMapMaxTokens
@@ -167,6 +168,7 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 	yaadMem := memory.NewYaadBridge()
 	if yaadMem.Ready() {
 		sess.Memory = yaadMem
+		sess.YaadBridge = yaadMem
 	}
 	// Herm-style: API keys from environment only
 	normalizedProvider := hawkconfig.NormalizeProviderForEngine(settings.Provider)

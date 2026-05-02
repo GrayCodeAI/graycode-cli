@@ -145,7 +145,7 @@
 - [x] 132. Lazy-load MCP connections
 - [x] 133. Lazy-load model catalog
 - [x] 134. Parallel MCP server startup
-- [x] 135. Cache HAWK.md content (invalidate on file change)
+- [x] 135. Cache AGENTS.md content (invalidate on file change)
 - [x] 136. Index sessions in SQLite for fast search
 - [x] 137. Streaming token count estimation
 - [x] 138. Pre-warm API connection on startup

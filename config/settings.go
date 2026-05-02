@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/model"
-	"github.com/hawk/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // Settings holds hawk configuration.
@@ -26,12 +26,20 @@ type Settings struct {
 	CustomHeaders     map[string]string       `json:"custom_headers,omitempty"`
 	MCPServers        []MCPServerConfig       `json:"mcp_servers,omitempty"`
 	CustomProviders   []CustomProviderConfig  `json:"custom_providers,omitempty"`
-	RepoMap           bool                    `json:"repo_map,omitempty"`
+	RepoMap           *bool                   `json:"repo_map,omitempty"`
 	RepoMapMaxTokens  int                     `json:"repo_map_max_tokens,omitempty"`
 	Sandbox           string                  `json:"sandbox,omitempty"`     // sandbox mode: strict, workspace, off
-	AutoCommit        bool                    `json:"auto_commit,omitempty"` // auto-commit file changes
+	AutoCommit        *bool                   `json:"auto_commit,omitempty"` // auto-commit file changes
 	Autonomy          int                     `json:"autonomy,omitempty"`    // autonomy level 0-4
 	ModelRoles        *model.ModelRoles       `json:"model_roles,omitempty"` // per-role model overrides
+	AutoCompactThresholdPct int                `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
+	Attribution             *Attribution       `json:"attribution,omitempty"`
+}
+
+// Attribution controls how hawk identifies itself in git commits.
+type Attribution struct {
+	TrailerStyle  string `json:"trailer_style,omitempty"`  // "none", "co-authored-by", "assisted-by" (default)
+	GeneratedWith bool   `json:"generated_with,omitempty"` // append "Generated with Hawk" line
 }
 
 // CustomProviderConfig defines a user-specified OpenAI-compatible provider.
@@ -82,9 +90,12 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 
 // MCPServerConfig defines an MCP server to connect at startup.
 type MCPServerConfig struct {
-	Name    string   `json:"name"`
-	Command string   `json:"command"`
-	Args    []string `json:"args,omitempty"`
+	Name    string            `json:"name"`
+	Command string            `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	Type    string            `json:"type,omitempty"`    // "stdio" (default), "sse", "http"
+	URL     string            `json:"url,omitempty"`     // for sse/http transports
+	Headers map[string]string `json:"headers,omitempty"` // custom headers for sse/http
 }
 
 func globalSettingsPath() string {
@@ -175,8 +186,8 @@ func MergeSettings(base, override Settings) Settings {
 	if len(override.CustomProviders) > 0 {
 		base.CustomProviders = append(base.CustomProviders, override.CustomProviders...)
 	}
-	if override.RepoMap {
-		base.RepoMap = true
+	if override.RepoMap != nil {
+		base.RepoMap = override.RepoMap
 	}
 	if override.RepoMapMaxTokens > 0 {
 		base.RepoMapMaxTokens = override.RepoMapMaxTokens
@@ -184,11 +195,14 @@ func MergeSettings(base, override Settings) Settings {
 	if override.Sandbox != "" {
 		base.Sandbox = override.Sandbox
 	}
-	if override.AutoCommit {
-		base.AutoCommit = true
+	if override.AutoCommit != nil {
+		base.AutoCommit = override.AutoCommit
 	}
-	if override.Autonomy > 0 {
+	if override.Autonomy != 0 {
 		base.Autonomy = override.Autonomy
+	}
+	if override.AutoCompactThresholdPct > 0 {
+		base.AutoCompactThresholdPct = override.AutoCompactThresholdPct
 	}
 	if override.ModelRoles != nil {
 		if base.ModelRoles == nil {
@@ -351,6 +365,9 @@ func splitSettingList(value string) []string {
 	return out
 }
 
+// BoolPtr returns a pointer to the given bool value.
+func BoolPtr(b bool) *bool { return &b }
+
 // ─────────────────────────────────────────────────────────────
 // Herm-style: API keys from environment only (no disk persistence)
 // ─────────────────────────────────────────────────────────────
@@ -372,6 +389,16 @@ func ProviderAPIKeyEnv(provider string) string {
 		return "XAI_API_KEY"
 	case "opencodego":
 		return "OPENCODEGO_API_KEY"
+	case "groq":
+		return "GROQ_API_KEY"
+	case "deepseek":
+		return "DEEPSEEK_API_KEY"
+	case "mistral":
+		return "MISTRAL_API_KEY"
+	case "bedrock":
+		return "AWS_ACCESS_KEY_ID"
+	case "vertex":
+		return "GOOGLE_APPLICATION_CREDENTIALS"
 	case "ollama":
 		return ""
 	default:

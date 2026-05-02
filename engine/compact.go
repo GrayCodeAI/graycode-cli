@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
@@ -34,8 +34,12 @@ func (s *Session) smartCompact() {
 		return
 	}
 
-	// Keep last 10 messages + summary
-	keep := make([]client.EyrieMessage, 0, 12)
+	// Keep last N messages + summary, respecting pinned count
+	keepEnd := 10
+	if s.PinnedMessages > keepEnd {
+		keepEnd = s.PinnedMessages
+	}
+	keep := make([]client.EyrieMessage, 0, keepEnd+2)
 	keep = append(keep, client.EyrieMessage{
 		Role:    "user",
 		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
@@ -44,16 +48,18 @@ func (s *Session) smartCompact() {
 		Role:    "assistant",
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
-	keep = append(keep, s.messages[len(s.messages)-10:]...)
+	keep = append(keep, s.messages[len(s.messages)-keepEnd:]...)
 	s.messages = keep
 }
 
 func (s *Session) generateSummary() string {
 	// Build a compact version of the conversation for summarization
+	// using the structured compaction prompt from compact_prompt.go
 	var summaryMsgs []client.EyrieMessage
+	compactPrompt := BuildCompactPrompt(CompactBase)
 	summaryMsgs = append(summaryMsgs, client.EyrieMessage{
 		Role:    "user",
-		Content: "Summarize this conversation concisely. Include: what the user asked for, what tools were used, what files were modified, what was accomplished, and any unfinished work. Be brief — 3-5 sentences max.\n\nConversation:\n",
+		Content: compactPrompt + "\n\nConversation:\n",
 	})
 
 	// Add a condensed version of messages
@@ -73,10 +79,11 @@ func (s *Session) generateSummary() string {
 	resp, err := s.client.Chat(ctx, summaryMsgs, client.ChatOptions{
 		Provider:  s.provider,
 		Model:     s.model,
-		MaxTokens: 500,
+		MaxTokens: 1000,
 	})
 	if err != nil {
 		return ""
 	}
-	return resp.Content
+	// Extract structured summary, stripping analysis block
+	return FormatCompactSummary(resp.Content)
 }

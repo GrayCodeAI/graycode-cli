@@ -215,6 +215,107 @@ func (b *YaadBridge) ListIndexedPaths() ([]string, error) {
 	return b.store.ListIndexedPaths(context.Background())
 }
 
+// SearchByType returns nodes matching the given type (label).
+func (b *YaadBridge) SearchByType(nodeType string, limit int) ([]string, []string, error) {
+	if !b.ready {
+		return nil, nil, nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	nodes, err := b.store.ListNodes(context.Background(), storage.NodeFilter{Type: nodeType, Limit: limit})
+	if err != nil {
+		return nil, nil, err
+	}
+	ids := make([]string, len(nodes))
+	contents := make([]string, len(nodes))
+	for i, n := range nodes {
+		ids[i] = n.ID
+		contents[i] = n.Content
+	}
+	return ids, contents, nil
+}
+
+// UpdateNodeContent updates the content of a node by ID.
+func (b *YaadBridge) UpdateNodeContent(id, newContent string) error {
+	if !b.ready {
+		return nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.store.UpdateNodeContent(context.Background(), id, newContent)
+}
+
+// CompactResult is a lightweight search result (~50 tokens vs ~500 for full content).
+type CompactResult struct {
+	ID    string  `json:"id"`
+	Type  string  `json:"type"`
+	Title string  `json:"title"` // first 100 chars of content
+	Score float64 `json:"score"`
+}
+
+// FullResult contains the complete content for a node.
+type FullResult struct {
+	ID      string `json:"id"`
+	Content string `json:"content"`
+	Type    string `json:"type"`
+}
+
+// SearchCompact returns compact index entries (ID + title + score) without full content.
+func (b *YaadBridge) SearchCompact(query string, limit int) ([]CompactResult, error) {
+	if !b.ready {
+		return nil, nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if limit <= 0 {
+		limit = 10
+	}
+	nodes, err := b.store.SearchNodes(context.Background(), query, limit)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]CompactResult, len(nodes))
+	for i, n := range nodes {
+		title := n.Content
+		if len(title) > 100 {
+			title = title[:100]
+		}
+		results[i] = CompactResult{
+			ID:    n.ID,
+			Type:  n.Type,
+			Title: title,
+			Score: n.Confidence,
+		}
+	}
+	return results, nil
+}
+
+// GetFullContent returns full content for specific node IDs.
+func (b *YaadBridge) GetFullContent(ids []string) ([]FullResult, error) {
+	if !b.ready || len(ids) == 0 {
+		return nil, nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	nodes, err := b.store.GetNodesBatch(context.Background(), ids)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]FullResult, len(nodes))
+	for i, n := range nodes {
+		results[i] = FullResult{
+			ID:      n.ID,
+			Content: n.Content,
+			Type:    n.Type,
+		}
+	}
+	return results, nil
+}
+
 // Close shuts down the yaad engine and closes the database connection.
 func (b *YaadBridge) Close() {
 	if !b.ready {

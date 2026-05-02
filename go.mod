@@ -3,13 +3,16 @@ module github.com/GrayCodeAI/hawk
 go 1.26.1
 
 require (
-	github.com/GrayCodeAI/tok v0.0.0-00010101000000-000000000000
-	github.com/GrayCodeAI/yaad v0.0.0-00010101000000-000000000000
+	github.com/GrayCodeAI/inspect v0.0.0-20260502133858-000000000000
+	github.com/GrayCodeAI/sight v0.0.0-20260502133858-000000000000
+	github.com/GrayCodeAI/tok v0.0.0-20260502133858-5f53dfc0ed74
+	github.com/GrayCodeAI/yaad v0.0.0-20260502133858-2c0017f468cd
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fsnotify/fsnotify v1.10.0
-	github.com/hawk/eyrie v0.0.0-00010101000000-000000000000
+	github.com/GrayCodeAI/eyrie v0.0.0-20260430131257-27fe67ccfb1f
+	github.com/hawk/eyrie v0.0.0-20260430131257-27fe67ccfb1f
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/spf13/cobra v1.9.1
 	go.opentelemetry.io/otel v1.43.0
@@ -80,8 +83,5 @@ require (
 	modernc.org/sqlite v1.50.0 // indirect
 )
 
-replace github.com/hawk/eyrie => /Users/lakshmanpatel/Desktop/OSS2026/RealWork/eyrie
-
-replace github.com/GrayCodeAI/tok => /Users/lakshmanpatel/Desktop/OSS2026/RealWork/tok
-
-replace github.com/GrayCodeAI/yaad => /Users/lakshmanpatel/Desktop/OSS2026/RealWork/yaad
+// For local development, use go.work instead of replace directives.
+// See go.work.example for setup instructions.

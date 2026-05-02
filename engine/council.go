@@ -7,118 +7,182 @@ import (
 	"sync"
 )
 
-// CouncilConfig controls multi-model consensus.
+// CouncilConfig controls the Karpathy LLM Council pattern.
 type CouncilConfig struct {
-	Models     []string // models to consult (e.g., ["claude-sonnet", "gpt-4o", "gemini-pro"])
-	Synthesize bool     // have a model synthesize responses (default: true)
-	Evaluator  string   // model that evaluates/ranks responses
+	Models   []string // council member model names
+	Chairman string   // chairman model (synthesizer)
 }
 
 // CouncilResponse holds one model's contribution.
 type CouncilResponse struct {
 	Model    string
 	Response string
-	Score    float64 // evaluation score (0-1)
 }
 
-// RunCouncil sends a prompt to multiple models in parallel, collects responses,
-// optionally evaluates/synthesizes them, and returns the best answer.
-func RunCouncil(ctx context.Context, sess *Session, prompt string, cfg CouncilConfig) (string, []CouncilResponse, error) {
+// CouncilRanking holds one model's ranking of responses.
+type CouncilRanking struct {
+	Model   string
+	Ranking string
+}
+
+// CouncilResult holds the full council output.
+type CouncilResult struct {
+	Responses []CouncilResponse
+	Rankings  []CouncilRanking
+	Synthesis string
+}
+
+// RunCouncil implements Karpathy's 3-stage LLM Council pattern:
+//  1. Send query to all models in parallel, collect responses
+//  2. Anonymize responses, send ranking prompt to all models in parallel
+//  3. Send all responses + rankings to chairman for synthesis
+func RunCouncil(ctx context.Context, query string, cfg CouncilConfig, sess *Session) (*CouncilResult, error) {
 	if len(cfg.Models) == 0 {
-		return "", nil, fmt.Errorf("council: no models specified")
+		return nil, fmt.Errorf("council: no models specified")
+	}
+	if cfg.Chairman == "" {
+		cfg.Chairman = sess.Model()
 	}
 
-	// 1. Send prompt to all models in parallel
-	responses := make([]CouncilResponse, len(cfg.Models))
+	// Stage 1: parallel query to all models
+	responses, err := councilStage1(ctx, sess, query, cfg.Models)
+	if err != nil {
+		return nil, err
+	}
+
+	// Stage 2: parallel ranking by all models
+	rankings, err := councilStage2(ctx, sess, query, responses, cfg.Models)
+	if err != nil {
+		return nil, err
+	}
+
+	// Stage 3: chairman synthesis
+	synthesis, err := councilStage3(ctx, sess, query, responses, rankings, cfg.Chairman)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CouncilResult{Responses: responses, Rankings: rankings, Synthesis: synthesis}, nil
+}
+
+// councilStage1 sends the query to all models in parallel.
+func councilStage1(ctx context.Context, sess *Session, query string, models []string) ([]CouncilResponse, error) {
+	responses := make([]CouncilResponse, len(models))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	var firstErr error
 
-	for i, model := range cfg.Models {
+	for i, model := range models {
 		wg.Add(1)
-		go func(idx int, modelName string) {
+		go func(idx int, m string) {
 			defer wg.Done()
-
-			resp, err := queryModel(ctx, sess, modelName, prompt)
+			resp, err := councilQuery(ctx, sess, m, query)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
 				if firstErr == nil {
-					firstErr = fmt.Errorf("council: model %s: %w", modelName, err)
+					firstErr = fmt.Errorf("council: model %s: %w", m, err)
 				}
-				responses[idx] = CouncilResponse{Model: modelName, Response: fmt.Sprintf("(error: %v)", err)}
-				return
+				responses[idx] = CouncilResponse{Model: m, Response: fmt.Sprintf("(error: %v)", err)}
+			} else {
+				responses[idx] = CouncilResponse{Model: m, Response: resp}
 			}
-			responses[idx] = CouncilResponse{Model: modelName, Response: resp, Score: 0.5}
 		}(i, model)
 	}
 	wg.Wait()
 
-	// Filter out empty responses
-	var valid []CouncilResponse
+	var valid int
 	for _, r := range responses {
-		if r.Response != "" && !strings.HasPrefix(r.Response, "(error:") {
-			valid = append(valid, r)
+		if !strings.HasPrefix(r.Response, "(error:") {
+			valid++
 		}
 	}
-
-	if len(valid) == 0 {
+	if valid == 0 {
 		if firstErr != nil {
-			return "", responses, firstErr
+			return nil, firstErr
 		}
-		return "", responses, fmt.Errorf("council: all models returned empty responses")
+		return nil, fmt.Errorf("council: all models failed")
 	}
-
-	// If only one valid response, return it directly
-	if len(valid) == 1 {
-		return valid[0].Response, responses, nil
-	}
-
-	// 2. If Synthesize: evaluate and synthesize
-	if cfg.Synthesize {
-		evaluator := cfg.Evaluator
-		if evaluator == "" {
-			evaluator = sess.Model()
-		}
-
-		synthesisPrompt := buildSynthesisPrompt(prompt, valid)
-		synthesized, err := queryModel(ctx, sess, evaluator, synthesisPrompt)
-		if err != nil {
-			// Fall back to the first valid response
-			return valid[0].Response, responses, nil
-		}
-		return synthesized, responses, nil
-	}
-
-	// No synthesis: return the first valid response
-	return valid[0].Response, responses, nil
+	return responses, nil
 }
 
-// buildSynthesisPrompt creates the prompt for the evaluator model.
-func buildSynthesisPrompt(originalPrompt string, responses []CouncilResponse) string {
+// councilStage2 sends anonymized responses to all models for ranking.
+func councilStage2(ctx context.Context, sess *Session, query string, responses []CouncilResponse, models []string) ([]CouncilRanking, error) {
+	rankPrompt := buildRankingPrompt(query, responses)
+
+	rankings := make([]CouncilRanking, len(models))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, model := range models {
+		wg.Add(1)
+		go func(idx int, m string) {
+			defer wg.Done()
+			resp, err := councilQuery(ctx, sess, m, rankPrompt)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				rankings[idx] = CouncilRanking{Model: m, Ranking: "(error)"}
+			} else {
+				rankings[idx] = CouncilRanking{Model: m, Ranking: resp}
+			}
+		}(i, model)
+	}
+	wg.Wait()
+	return rankings, nil
+}
+
+// councilStage3 sends everything to the chairman for final synthesis.
+func councilStage3(ctx context.Context, sess *Session, query string, responses []CouncilResponse, rankings []CouncilRanking, chairman string) (string, error) {
+	prompt := buildChairmanPrompt(query, responses, rankings)
+	return councilQuery(ctx, sess, chairman, prompt)
+}
+
+// buildRankingPrompt creates the Stage 2 ranking prompt (Karpathy's format).
+func buildRankingPrompt(query string, responses []CouncilResponse) string {
 	var b strings.Builder
-	b.WriteString("You received the following prompt:\n\n")
-	b.WriteString(originalPrompt)
-	b.WriteString("\n\nHere are ")
-	b.WriteString(fmt.Sprintf("%d", len(responses)))
-	b.WriteString(" responses from different models. Rank them by quality and synthesize the best answer.\n\n")
+	b.WriteString("You are evaluating multiple AI responses to the following question:\n\n")
+	b.WriteString("QUESTION: " + query + "\n\n")
+	b.WriteString("Here are the responses:\n\n")
 
 	for i, r := range responses {
-		b.WriteString(fmt.Sprintf("--- Response %d (from %s) ---\n", i+1, r.Model))
-		b.WriteString(r.Response)
-		b.WriteString("\n\n")
+		label := string(rune('A' + i))
+		b.WriteString(fmt.Sprintf("=== Response %s ===\n%s\n\n", label, r.Response))
 	}
 
-	b.WriteString("Synthesize the best elements of all responses into a single, high-quality answer. Be concise.")
+	b.WriteString("Please rank these responses from best to worst. Consider accuracy, completeness, clarity, and helpfulness.\n\n")
+	b.WriteString("Provide a brief justification for your ranking, then end with your final ranking in this exact format:\n\n")
+	b.WriteString("FINAL RANKING: [best to worst, e.g. B, A, C]\n")
 	return b.String()
 }
 
-// queryModel queries a specific model using the session's client infrastructure.
-// It creates a temporary session with the target model and collects the response.
-func queryModel(ctx context.Context, sess *Session, modelName, prompt string) (string, error) {
+// buildChairmanPrompt creates the Stage 3 chairman synthesis prompt (Karpathy's format).
+func buildChairmanPrompt(query string, responses []CouncilResponse, rankings []CouncilRanking) string {
+	var b strings.Builder
+	b.WriteString("You are the chairman of an LLM council. Your job is to synthesize the best possible answer.\n\n")
+	b.WriteString("ORIGINAL QUESTION: " + query + "\n\n")
+
+	b.WriteString("=== COUNCIL RESPONSES ===\n\n")
+	for i, r := range responses {
+		label := string(rune('A' + i))
+		b.WriteString(fmt.Sprintf("--- Response %s (from %s) ---\n%s\n\n", label, r.Model, r.Response))
+	}
+
+	b.WriteString("=== COUNCIL RANKINGS ===\n\n")
+	for _, r := range rankings {
+		b.WriteString(fmt.Sprintf("--- Ranking by %s ---\n%s\n\n", r.Model, r.Ranking))
+	}
+
+	b.WriteString("Based on the responses and rankings above, synthesize the best possible answer to the original question. ")
+	b.WriteString("Take the strongest elements from the highest-ranked responses. Be thorough and accurate.\n")
+	return b.String()
+}
+
+// councilQuery queries a specific model using the session's client infrastructure.
+func councilQuery(ctx context.Context, sess *Session, modelName, prompt string) (string, error) {
 	sub := NewSession(sess.Provider(), modelName, sess.system, sess.registry)
 	sub.SetAPIKeys(sess.apiKeys)
-	sub.MaxTurns = 1 // single turn, no tool use
+	sub.MaxTurns = 1
 	sub.AddUser(prompt)
 
 	ch, err := sub.Stream(ctx)
@@ -138,7 +202,7 @@ func queryModel(ctx context.Context, sess *Session, modelName, prompt string) (s
 	return b.String(), nil
 }
 
-// DefaultCouncilModels returns 3 diverse models from different providers.
+// DefaultCouncilModels returns diverse models from different providers.
 func DefaultCouncilModels() []string {
 	return []string{
 		"claude-sonnet-4-20250514",

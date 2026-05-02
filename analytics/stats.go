@@ -195,6 +195,5 @@ func FormatStats(s *SessionStats) string {
 }
 
 func eventLogDir() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hawk", "events")
+	return analyticsDir()
 }

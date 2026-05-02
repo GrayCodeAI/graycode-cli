@@ -13,6 +13,8 @@ import (
 )
 
 const maxTaskOutputBytes = 200_000
+const maxBackgroundTasks = 50
+const completedRetention = 8 * time.Hour
 
 type backgroundTask struct {
 	id      string
@@ -34,7 +36,30 @@ var backgroundTasks = struct {
 }{tasks: make(map[string]*backgroundTask)}
 
 func startBackgroundBash(ctx context.Context, command string) (string, error) {
+	// Auto-cleanup completed tasks older than retention period.
 	backgroundTasks.Lock()
+	for id, t := range backgroundTasks.tasks {
+		select {
+		case <-t.done:
+			if time.Since(t.started) > completedRetention {
+				delete(backgroundTasks.tasks, id)
+			}
+		default:
+		}
+	}
+	// Enforce max concurrent limit.
+	active := 0
+	for _, t := range backgroundTasks.tasks {
+		select {
+		case <-t.done:
+		default:
+			active++
+		}
+	}
+	if active >= maxBackgroundTasks {
+		backgroundTasks.Unlock()
+		return "", fmt.Errorf("max background tasks (%d) reached — stop a task first", maxBackgroundTasks)
+	}
 	backgroundTasks.next++
 	id := fmt.Sprintf("task_%d", backgroundTasks.next)
 	backgroundTasks.Unlock()

@@ -1,6 +1,15 @@
+// Package model provides model routing and health checking.
+// Model discovery, pricing, and catalog data are delegated to eyrie.
+// Hawk does NOT carry a hardcoded model catalog.
 package model
 
-// ModelInfo describes a known LLM model.
+import (
+	"sync"
+
+	"github.com/GrayCodeAI/eyrie/catalog"
+)
+
+// ModelInfo describes a known LLM model (hawk's internal representation).
 type ModelInfo struct {
 	Name        string  `json:"name"`
 	Provider    string  `json:"provider"`
@@ -11,73 +20,54 @@ type ModelInfo struct {
 	Recommended bool    `json:"recommended,omitempty"`
 }
 
-// Catalog is the registry of known models.
-var Catalog = []ModelInfo{
-	// Anthropic
-	{Name: "claude-sonnet-4-20250514", Provider: "anthropic", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude 4 Sonnet - balanced speed and quality", Recommended: true},
-	{Name: "claude-opus-4-20250514", Provider: "anthropic", ContextSize: 200_000, InputPrice: 15.0, OutputPrice: 75.0, Description: "Claude 4 Opus - highest quality"},
-	{Name: "claude-3-5-sonnet-20241022", Provider: "anthropic", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude 3.5 Sonnet"},
-	{Name: "claude-3-5-haiku-20241022", Provider: "anthropic", ContextSize: 200_000, InputPrice: 0.80, OutputPrice: 4.0, Description: "Claude 3.5 Haiku - fast and cheap"},
-	{Name: "claude-3-opus-20240229", Provider: "anthropic", ContextSize: 200_000, InputPrice: 15.0, OutputPrice: 75.0, Description: "Claude 3 Opus"},
-	{Name: "claude-3-haiku-20240307", Provider: "anthropic", ContextSize: 200_000, InputPrice: 0.25, OutputPrice: 1.25, Description: "Claude 3 Haiku"},
+var (
+	catalogMu sync.RWMutex
+	dynamic   []ModelInfo // runtime-registered models (custom providers)
+)
 
-	// OpenAI
-	{Name: "gpt-4o", Provider: "openai", ContextSize: 128_000, InputPrice: 2.50, OutputPrice: 10.0, Description: "GPT-4o - multimodal", Recommended: true},
-	{Name: "gpt-4o-mini", Provider: "openai", ContextSize: 128_000, InputPrice: 0.15, OutputPrice: 0.60, Description: "GPT-4o Mini - fast and cheap"},
-	{Name: "gpt-4-turbo-2024-04-09", Provider: "openai", ContextSize: 128_000, InputPrice: 10.0, OutputPrice: 30.0, Description: "GPT-4 Turbo"},
-	{Name: "o1-preview", Provider: "openai", ContextSize: 128_000, InputPrice: 15.0, OutputPrice: 60.0, Description: "O1 Preview - reasoning"},
-	{Name: "o1-mini", Provider: "openai", ContextSize: 128_000, InputPrice: 3.0, OutputPrice: 12.0, Description: "O1 Mini - reasoning"},
-
-	// Gemini
-	{Name: "gemini-2.5-flash", Provider: "gemini", ContextSize: 1_000_000, InputPrice: 0.15, OutputPrice: 0.60, Description: "Gemini 2.5 Flash - fast", Recommended: true},
-	{Name: "gemini-2.5-pro", Provider: "gemini", ContextSize: 1_000_000, InputPrice: 1.25, OutputPrice: 10.0, Description: "Gemini 2.5 Pro - highest quality"},
-	{Name: "gemini-2.0-flash", Provider: "gemini", ContextSize: 1_000_000, InputPrice: 0.10, OutputPrice: 0.40, Description: "Gemini 2.0 Flash"},
-	{Name: "gemini-1.5-pro", Provider: "gemini", ContextSize: 2_000_000, InputPrice: 1.25, OutputPrice: 5.0, Description: "Gemini 1.5 Pro"},
-
-	// OpenRouter
-	{Name: "anthropic/claude-sonnet-4-20250514", Provider: "openrouter", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude Sonnet via OpenRouter"},
-	{Name: "openai/gpt-4o", Provider: "openrouter", ContextSize: 128_000, InputPrice: 2.50, OutputPrice: 10.0, Description: "GPT-4o via OpenRouter"},
-
-	// Groq
-	{Name: "llama-3.3-70b-versatile", Provider: "groq", ContextSize: 128_000, InputPrice: 0.20, OutputPrice: 0.20, Description: "Llama 3.3 70B via Groq"},
-	{Name: "mixtral-8x7b-32768", Provider: "groq", ContextSize: 32_768, InputPrice: 0.20, OutputPrice: 0.20, Description: "Mixtral 8x7B via Groq"},
-
-	// xAI
-	{Name: "grok-3", Provider: "grok", ContextSize: 128_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Grok 3"},
-	{Name: "grok-3-mini", Provider: "grok", ContextSize: 128_000, InputPrice: 0.50, OutputPrice: 2.0, Description: "Grok 3 Mini"},
-
-	// DeepSeek
-	{Name: "deepseek-chat", Provider: "deepseek", ContextSize: 128_000, InputPrice: 0.14, OutputPrice: 0.28, Description: "DeepSeek Chat V3"},
-	{Name: "deepseek-reasoner", Provider: "deepseek", ContextSize: 128_000, InputPrice: 0.55, OutputPrice: 2.19, Description: "DeepSeek R1 - reasoning"},
-
-	// Mistral
-	{Name: "mistral-large-latest", Provider: "mistral", ContextSize: 128_000, InputPrice: 2.0, OutputPrice: 6.0, Description: "Mistral Large"},
-	{Name: "mistral-small-latest", Provider: "mistral", ContextSize: 32_000, InputPrice: 0.20, OutputPrice: 0.60, Description: "Mistral Small"},
-	{Name: "codestral-latest", Provider: "mistral", ContextSize: 32_000, InputPrice: 0.30, OutputPrice: 0.90, Description: "Codestral - code generation"},
-
-	// AWS Bedrock
-	{Name: "us.anthropic.claude-sonnet-4-20250514-v1:0", Provider: "bedrock", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude Sonnet 4 via Bedrock"},
-	{Name: "us.anthropic.claude-opus-4-20250514-v1:0", Provider: "bedrock", ContextSize: 200_000, InputPrice: 15.0, OutputPrice: 75.0, Description: "Claude Opus 4 via Bedrock"},
-
-	// GCP Vertex AI
-	{Name: "claude-sonnet-4@20250514", Provider: "vertex", ContextSize: 200_000, InputPrice: 3.0, OutputPrice: 15.0, Description: "Claude Sonnet 4 via Vertex AI"},
-
-	// Ollama (local)
-	{Name: "llama3.2", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "Llama 3.2 (local)"},
-	{Name: "qwen2.5", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "Qwen 2.5 (local)"},
-	{Name: "codellama", Provider: "ollama", ContextSize: 16_000, InputPrice: 0, OutputPrice: 0, Description: "CodeLlama (local)"},
-	{Name: "deepseek-coder-v2", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "DeepSeek Coder V2 (local)"},
+// fromEyrie converts an eyrie catalog entry to hawk's ModelInfo.
+func fromEyrie(provider string, e catalog.ModelCatalogEntry) ModelInfo {
+	desc := e.Description
+	if desc == "" {
+		desc = e.DisplayName
+	}
+	return ModelInfo{
+		Name:        e.ID,
+		Provider:    provider,
+		ContextSize: e.ContextWindow,
+		InputPrice:  e.InputPricePer1M,
+		OutputPrice: e.OutputPricePer1M,
+		Description: desc,
+	}
 }
 
-// RegisterDynamic adds a model entry to the catalog at runtime.
-// This is used for user-defined custom providers.
+// eyrieCatalog returns the current eyrie catalog.
+func eyrieCatalog() catalog.ModelCatalog {
+	return catalog.DefaultModelCatalog()
+}
+
+// RegisterDynamic adds a model entry at runtime (custom providers).
 func RegisterDynamic(info ModelInfo) {
-	Catalog = append(Catalog, info)
+	catalogMu.Lock()
+	defer catalogMu.Unlock()
+	dynamic = append(dynamic, info)
 }
 
-// Find looks up a model by name.
+// Find looks up a model by name across eyrie's catalog and dynamic entries.
 func Find(name string) (ModelInfo, bool) {
-	for _, m := range Catalog {
+	// Check eyrie catalog first
+	cat := eyrieCatalog()
+	for provider, models := range cat.Providers {
+		for _, m := range models {
+			if m.ID == name {
+				return fromEyrie(provider, m), true
+			}
+		}
+	}
+	// Check dynamic entries
+	catalogMu.RLock()
+	defer catalogMu.RUnlock()
+	for _, m := range dynamic {
 		if m.Name == name {
 			return m, true
 		}
@@ -85,10 +75,18 @@ func Find(name string) (ModelInfo, bool) {
 	return ModelInfo{}, false
 }
 
-// ByProvider returns all models for a given provider.
+// ByProvider returns all models for a given provider from eyrie's catalog.
 func ByProvider(provider string) []ModelInfo {
-	var out []ModelInfo
-	for _, m := range Catalog {
+	cat := eyrieCatalog()
+	entries := catalog.ModelsForProvider(&cat, provider)
+	out := make([]ModelInfo, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, fromEyrie(provider, e))
+	}
+	// Append dynamic entries for this provider
+	catalogMu.RLock()
+	defer catalogMu.RUnlock()
+	for _, m := range dynamic {
 		if m.Provider == provider {
 			out = append(out, m)
 		}
@@ -97,40 +95,43 @@ func ByProvider(provider string) []ModelInfo {
 }
 
 // Recommended returns the recommended model for a provider.
+// Delegates to eyrie's GetProviderDefaultModel.
 func Recommended(provider string) (ModelInfo, bool) {
-	for _, m := range Catalog {
-		if m.Provider == provider && m.Recommended {
-			return m, true
-		}
+	name := catalog.GetProviderDefaultModel(provider, nil)
+	if name == "" {
+		return ModelInfo{}, false
 	}
-	return ModelInfo{}, false
+	info, ok := Find(name)
+	if ok {
+		info.Recommended = true
+	}
+	return info, ok
 }
 
-// DefaultModel returns the default model for a provider.
+// DefaultModel returns the default model for a provider via eyrie.
 func DefaultModel(provider string) string {
-	if m, ok := Recommended(provider); ok {
-		return m.Name
+	name := catalog.GetProviderDefaultModel(provider, nil)
+	if name != "" {
+		return name
 	}
-	defaults := map[string]string{
-		"anthropic":  "claude-sonnet-4-20250514",
-		"openai":     "gpt-4o",
-		"gemini":     "gemini-2.5-flash",
-		"openrouter": "anthropic/claude-sonnet-4-20250514",
-		"groq":       "llama-3.3-70b-versatile",
-		"grok":       "grok-3",
-		"ollama":     "llama3.2",
-	}
-	if m, ok := defaults[provider]; ok {
-		return m
-	}
-	return "claude-sonnet-4-20250514"
+	// Fallback for unknown providers
+	return ""
 }
 
-// AllProviders returns all supported provider names.
+// AllProviders returns all provider names from eyrie's catalog.
 func AllProviders() []string {
-	seen := make(map[string]bool)
-	var out []string
-	for _, m := range Catalog {
+	cat := eyrieCatalog()
+	out := make([]string, 0, len(cat.Providers))
+	for p := range cat.Providers {
+		out = append(out, p)
+	}
+	catalogMu.RLock()
+	defer catalogMu.RUnlock()
+	seen := make(map[string]bool, len(out))
+	for _, p := range out {
+		seen[p] = true
+	}
+	for _, m := range dynamic {
 		if !seen[m.Provider] {
 			seen[m.Provider] = true
 			out = append(out, m.Provider)

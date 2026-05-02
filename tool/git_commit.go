@@ -6,11 +6,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/config"
 )
 
 // lastAutoCommitHash stores the hash of the most recent auto-commit so it
 // can be reverted if needed.
 var lastAutoCommitHash string
+
+func getAttribution() *hawkconfig.Attribution {
+	s := hawkconfig.LoadSettings()
+	if s.Attribution == nil {
+		return &hawkconfig.Attribution{TrailerStyle: "assisted-by"}
+	}
+	return s.Attribution
+}
 
 // AutoCommit stages the file at path and creates a commit with a
 // conventional hawk message.  toolName and description are used to
@@ -28,6 +38,21 @@ func AutoCommit(path, toolName, description string) error {
 
 	base := filepath.Base(path)
 	msg := fmt.Sprintf("hawk: %s %s — %s", toolName, base, description)
+
+	// Attribution trailer from config.
+	if attr := getAttribution(); attr != nil {
+		switch attr.TrailerStyle {
+		case "co-authored-by":
+			msg += "\n\nCo-authored-by: Hawk <hawk@graycode.ai>"
+		case "assisted-by", "":
+			msg += "\n\nAssisted-by: Hawk <hawk@graycode.ai>"
+		case "none":
+			// no trailer
+		}
+		if attr.GeneratedWith {
+			msg += "\nGenerated-with: Hawk"
+		}
+	}
 
 	commit := exec.Command("git", "commit", "-m", msg)
 	if out, err := commit.CombinedOutput(); err != nil {

@@ -13,6 +13,7 @@ import (
 type GrepTool struct{}
 
 func (GrepTool) Name() string        { return "Grep" }
+func (GrepTool) RiskLevel() string   { return "low" }
 func (GrepTool) Aliases() []string   { return []string{"grep"} }
 func (GrepTool) Description() string { return "Search for a regex pattern in files." }
 func (GrepTool) Parameters() map[string]interface{} {
