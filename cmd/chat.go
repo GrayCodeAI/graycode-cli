@@ -164,7 +164,7 @@ func glimmerTickCmd() tea.Cmd {
 func slashCommands() []string {
 	return []string{
 		"/add", "/add-dir", "/agents", "/audit", "/branch", "/bughunter", "/clean", "/clear",
-		"/color", "/commands", "/commit", "/compact", "/compress", "/config", "/context",
+		"/color", "/commit", "/compact", "/compress", "/config", "/context",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit",
 		"/export", "/fast", "/files", "/fork", "/help", "/history", "/hooks", "/init",
 		"/integrity", "/keybindings", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
@@ -192,6 +192,7 @@ var slashDescriptions = map[string]string{
 	"/bughunter":       "Hunt for bugs in the codebase",
 	"/clean":           "Delete old sessions",
 	"/clear":           "Clear conversation",
+	"/color":           "Change agent color",
 	"/commit":          "Auto-commit changes with AI message",
 	"/compact":         "Compress conversation to save tokens",
 	"/compress":        "Compress old sessions",
@@ -275,9 +276,6 @@ func slashSuggestions(input string) []string {
 	if len(out) == 1 && strings.HasPrefix(out[0], v+" ") && strings.Fields(out[0])[0] == v {
 		return nil
 	}
-	if len(out) > 10 {
-		out = out[:10]
-	}
 	return out
 }
 
@@ -336,6 +334,7 @@ func baseTools() []tool.Tool {
 		tool.WorkflowTool{},
 		tool.McpAuthTool{},
 		tool.DiagnosticsTool{},
+		tool.CodeSearchTool{},
 	}
 }
 
@@ -2948,11 +2947,21 @@ func (m chatModel) View() string {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
 			}
-			cmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+			cmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
 			descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
 			selCmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 			selDescStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
-			for i, s := range sugs {
+			maxVisible := 6
+			start := 0
+			if m.slashSel >= maxVisible {
+				start = m.slashSel - maxVisible + 1
+			}
+			end := start + maxVisible
+			if end > len(sugs) {
+				end = len(sugs)
+			}
+			for i := start; i < end; i++ {
+				s := sugs[i]
 				cmdPart := s
 				descPart := ""
 				if fields := strings.SplitN(s, "  ", 2); len(fields) == 2 {
