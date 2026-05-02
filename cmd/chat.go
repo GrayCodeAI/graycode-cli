@@ -2337,19 +2337,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: ib.String()})
 		return m, nil
-	default:
-		// Check if it's a plugin command
-		if m.pluginRuntime != nil && m.pluginRuntime.IsCommand(cmd[1:]) {
-			out, err := m.pluginRuntime.ExecuteCommand(cmd[1:], parts[1:])
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: out})
-			}
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
-		return m, nil
 	case "/retry":
 		if len(m.history) > 0 {
 			last := m.history[len(m.history)-1]
@@ -2451,10 +2438,20 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/yolo":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Auto-approve mode toggled. All tool calls will be approved automatically."})
 		return m, nil
-	}
 
-	m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
-	return m, nil
+	default:
+		if m.pluginRuntime != nil && m.pluginRuntime.IsCommand(cmd[1:]) {
+			out, err := m.pluginRuntime.ExecuteCommand(cmd[1:], parts[1:])
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: out})
+			}
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+		return m, nil
+	}
 }
 
 func (m *chatModel) saveSession() {
