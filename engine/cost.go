@@ -84,6 +84,14 @@ func (c *Cost) Total() float64 {
 	return c.TotalCostUSD
 }
 
+// TotalUSD returns the estimated total cost using catalog pricing when available.
+func (c *Cost) TotalUSD() float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	inPrice, outPrice := ModelPricing(c.Model)
+	return float64(c.PromptTokens)/1_000_000*inPrice + float64(c.CompletionTokens)/1_000_000*outPrice
+}
+
 // Summary returns a formatted cost string.
 func (c *Cost) Summary() string {
 	c.mu.Lock()

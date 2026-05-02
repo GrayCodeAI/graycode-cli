@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hawk/eyrie/client"
@@ -12,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/hooks"
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/metrics"
+	modelPkg "github.com/GrayCodeAI/hawk/model"
 	"github.com/GrayCodeAI/hawk/permissions"
 	"github.com/GrayCodeAI/hawk/retry"
 	"github.com/GrayCodeAI/hawk/tool"
@@ -34,6 +36,7 @@ type Session struct {
 	log          *logger.Logger
 	metrics      *metrics.Registry
 	Cost         Cost
+	Router       *modelPkg.Router
 	Permissions  *PermissionMemory
 	AutoMode     *permissions.AutoModeState
 	Classifier   *permissions.Classifier
@@ -64,6 +67,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		BypassKill:  permissions.NewBypassKillswitch(),
 	}
 	s.Cost.Model = model
+	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
 	return s
 }
 
@@ -203,8 +207,16 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 	recoveryCount := 0
 	turnCount := 0
+	snowball := NewSnowballDetector(500000) // 500K token ceiling
 
 	for {
+		// Snowball abort check
+		if snowball.ShouldAbort() {
+			ch <- StreamEvent{Type: "content", Content: "\n\n" + snowball.Summary()}
+			ch <- StreamEvent{Type: "done"}
+			return
+		}
+
 		// Enforce MaxTurns budget
 		if s.MaxTurns > 0 && turnCount >= s.MaxTurns {
 			ch <- StreamEvent{Type: "content", Content: "Turn limit reached — stopping."}
@@ -240,6 +252,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			opts.Tools = s.registry.EyrieTools()
 		}
 
+		// Circuit breaker: select provider with failover
+		if s.Router != nil {
+			if selectedProvider, err := s.Router.SelectProvider(s.provider); err == nil && selectedProvider != s.provider {
+				s.log.Info("provider failover", map[string]interface{}{"from": s.provider, "to": selectedProvider})
+				opts.Provider = selectedProvider
+			}
+		}
+
 		var result *client.StreamResult
 		var err error
 
@@ -267,6 +287,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		s.metrics.Timer("api.last_latency").Record(apiDuration)
 
 		if err != nil {
+			// Record failure for circuit breaker
+			if s.Router != nil {
+				s.Router.RecordFailure(s.provider, err)
+			}
 			s.log.Error("stream error", map[string]interface{}{
 				"error": err.Error(),
 			})
@@ -274,42 +298,96 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 
+		// Record success for circuit breaker
+		if s.Router != nil {
+			s.Router.RecordSuccess(s.provider, apiDuration)
+		}
+
 		var textContent string
 		var toolCalls []client.ToolCall
 		var stopReason string
+		var lastUsage *client.EyrieUsage
 
-		for ev := range result.Events {
-			select {
-			case <-ctx.Done():
-				result.Close()
-				return
-			default:
+		// Streaming with retry for transient stream errors
+		const maxStreamRetries = 2
+		var streamErr error
+		for streamAttempt := 0; streamAttempt <= maxStreamRetries; streamAttempt++ {
+			streamErr = nil
+			for ev := range result.Events {
+				select {
+				case <-ctx.Done():
+					result.Close()
+					return
+				default:
+				}
+				switch ev.Type {
+				case "content":
+					textContent += ev.Content
+					ch <- StreamEvent{Type: "content", Content: ev.Content}
+				case "thinking":
+					ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
+				case "tool_call":
+					if ev.ToolCall != nil {
+						toolCalls = append(toolCalls, *ev.ToolCall)
+					}
+				case "usage":
+					if ev.Usage != nil {
+						s.Cost.Add(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
+						lastUsage = ev.Usage
+					}
+				case "error":
+					streamErr = fmt.Errorf("%s", ev.Error)
+					if isRetryableStreamError(streamErr) {
+						break // break switch, will check in outer loop
+					}
+					ch <- StreamEvent{Type: "error", Content: ev.Error}
+					result.Close()
+					return
+				case "done":
+					if ev.StopReason != "" {
+						stopReason = ev.StopReason
+					}
+				}
 			}
-			switch ev.Type {
-			case "content":
-				textContent += ev.Content
-				ch <- StreamEvent{Type: "content", Content: ev.Content}
-			case "thinking":
-				ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
-			case "tool_call":
-				if ev.ToolCall != nil {
-					toolCalls = append(toolCalls, *ev.ToolCall)
-				}
-			case "usage":
-				if ev.Usage != nil {
-					s.Cost.Add(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
-				}
-			case "error":
-				ch <- StreamEvent{Type: "error", Content: ev.Error}
-				result.Close()
-				return
-			case "done":
-				if ev.StopReason != "" {
-					stopReason = ev.StopReason
-				}
+			result.Close()
+
+			if streamErr == nil {
+				break
 			}
+			if !isRetryableStreamError(streamErr) {
+				break
+			}
+			s.log.Warn("stream retry", map[string]interface{}{"attempt": streamAttempt + 1, "error": streamErr.Error()})
+			time.Sleep(time.Duration(streamAttempt+1) * time.Second)
+
+			// Re-open the stream for retry
+			result, err = s.client.StreamChat(ctx, s.messages, opts)
+			if err != nil {
+				ch <- StreamEvent{Type: "error", Content: err.Error()}
+				return
+			}
+			// Reset accumulated state for the retry
+			textContent = ""
+			toolCalls = nil
+			stopReason = ""
+			lastUsage = nil
 		}
-		result.Close()
+
+		// Snowball detector: record usage after each API response
+		if lastUsage != nil {
+			progress := 0.5
+			if len(toolCalls) > 0 {
+				progress = 1.0
+			}
+			snowball.RecordTurn(lastUsage.PromptTokens+lastUsage.CompletionTokens, progress)
+		}
+
+		// Budget enforcement
+		if s.MaxBudgetUSD > 0 && s.Cost.TotalUSD() >= s.MaxBudgetUSD {
+			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.Cost.TotalUSD(), s.MaxBudgetUSD)}
+			ch <- StreamEvent{Type: "done"}
+			return
+		}
 
 		// Check for inline tool calls in text (some providers embed tool calls in text)
 		if len(toolCalls) == 0 && strings.Contains(textContent, "<|tool_calls_section_begin|>") {
@@ -360,8 +438,25 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			output string
 			isErr  bool
 		}
-		var results []toolExecResult
+
+		// Classify tools into concurrent (read-only) and sequential (write) batches
+		safeConcurrent := map[string]bool{"Read": true, "Grep": true, "Glob": true, "LS": true, "WebSearch": true, "WebFetch": true, "ToolSearch": true}
+
+		var concurrentCalls []client.ToolCall
+		var sequentialCalls []client.ToolCall
 		for _, tc := range toolCalls {
+			if safeConcurrent[tc.Name] {
+				concurrentCalls = append(concurrentCalls, tc)
+			} else {
+				sequentialCalls = append(sequentialCalls, tc)
+			}
+		}
+
+		var results []toolExecResult
+		var mu sync.Mutex
+
+		// executeSingleTool handles permission checking and execution for one tool call.
+		executeSingleTool := func(tc client.ToolCall) toolExecResult {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
 			// Check permission for dangerous tools
@@ -387,8 +482,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 							goto executeTool
 						} else {
 							ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied (auto-mode)."}
-							results = append(results, toolExecResult{tc: tc, output: "Permission denied (auto-mode).", isErr: true})
-							continue
+							return toolExecResult{tc: tc, output: "Permission denied (auto-mode).", isErr: true}
 						}
 					}
 				}
@@ -397,8 +491,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				if decision := s.modeDecision(tc.Name); decision != nil {
 					if !*decision {
 						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by permission mode."}
-						results = append(results, toolExecResult{tc: tc, output: "Permission denied by permission mode.", isErr: true})
-						continue
+						return toolExecResult{tc: tc, output: "Permission denied by permission mode.", isErr: true}
 					}
 					goto executeTool
 				}
@@ -407,8 +500,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				if decision := s.Permissions.Check(tc.Name, summary); decision != nil {
 					if !*decision {
 						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied (rule)."}
-						results = append(results, toolExecResult{tc: tc, output: "Permission denied (rule).", isErr: true})
-						continue
+						return toolExecResult{tc: tc, output: "Permission denied (rule).", isErr: true}
 					}
 					// allowed by rule, proceed
 				} else {
@@ -424,17 +516,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					case allowed := <-resp:
 						if !allowed {
 							ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
-							results = append(results, toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true})
-							continue
+							return toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true}
 						}
 					case <-ctx.Done():
 						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission prompt cancelled."}
-						results = append(results, toolExecResult{tc: tc, output: "Permission prompt cancelled.", isErr: true})
-						continue
+						return toolExecResult{tc: tc, output: "Permission prompt cancelled.", isErr: true}
 					case <-time.After(5 * time.Minute):
 						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission prompt timed out."}
-						results = append(results, toolExecResult{tc: tc, output: "Permission prompt timed out.", isErr: true})
-						continue
+						return toolExecResult{tc: tc, output: "Permission prompt timed out.", isErr: true}
 					}
 				}
 			}
@@ -482,7 +571,29 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			})
 
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
-			results = append(results, toolExecResult{tc: tc, output: output, isErr: isErr})
+			return toolExecResult{tc: tc, output: output, isErr: isErr}
+		}
+
+		// Execute concurrent batch (read-only tools) in parallel
+		if len(concurrentCalls) > 0 {
+			var wg sync.WaitGroup
+			for _, tc := range concurrentCalls {
+				wg.Add(1)
+				go func(tc client.ToolCall) {
+					defer wg.Done()
+					r := executeSingleTool(tc)
+					mu.Lock()
+					results = append(results, r)
+					mu.Unlock()
+				}(tc)
+			}
+			wg.Wait()
+		}
+
+		// Execute sequential batch (write tools) one-by-one
+		for _, tc := range sequentialCalls {
+			r := executeSingleTool(tc)
+			results = append(results, r)
 		}
 
 		// Append assistant message with tool_use blocks
@@ -512,6 +623,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			})
 		}
 	}
+}
+
+// isRetryableStreamError checks if a streaming error is transient and worth retrying.
+func isRetryableStreamError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "EOF") ||
+		strings.Contains(msg, "broken pipe")
 }
 
 // Compact reduces conversation history (boundary-aware truncation).

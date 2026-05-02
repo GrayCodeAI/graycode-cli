@@ -80,6 +80,7 @@ type streamErrMsg struct{ err error }
 type blinkTickMsg struct{}
 
 type glimmerTickMsg struct{}
+type modelsFetchedMsg []string
 type toolUseMsg struct{ name, id string }
 type toolResultMsg struct{ name, content string }
 type permissionAskMsg struct{ req engine.PermissionRequest }
@@ -1503,6 +1504,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+	case modelsFetchedMsg:
+		if len(msg) > 0 {
+			m.configModels = []string(msg)
+		}
+		return m, nil
+
 	case streamChunkMsg:
 		m.partial.WriteString(string(msg))
 		return m, nil
@@ -1755,12 +1762,18 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
+			m.configModels = nil
 			m.configOpen = true
 			m.configMenu = "model"
 			m.configSel = 0
 			m.configScroll = 0
 			m.configNotice = ""
-			return m, nil
+			provider := m.session.Provider()
+			cmd := func() tea.Msg {
+				models, _ := hawkconfig.FetchModelsForProvider(provider)
+				return modelsFetchedMsg(extractModelIDs(models))
+			}
+			return m, cmd
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
 		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))

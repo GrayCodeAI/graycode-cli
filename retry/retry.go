@@ -4,6 +4,7 @@ package retry
 import (
 	"context"
 	"math"
+	"math/rand"
 	"strings"
 	"time"
 )
@@ -112,8 +113,10 @@ func DoWithResult[T any](ctx context.Context, cfg Config, fn func() (T, error)) 
 
 func backoff(attempt int, base, max time.Duration, multiplier float64) time.Duration {
 	d := float64(base) * math.Pow(multiplier, float64(attempt))
-	if d > float64(max) {
+	jitter := time.Duration(rand.Int63n(int64(base)))
+	delay := time.Duration(d) + jitter
+	if delay > max {
 		return max
 	}
-	return time.Duration(d)
+	return delay
 }
