@@ -24,6 +24,12 @@ const (
 	maxRecoveryRetries = 3   // max_tokens recovery attempts
 )
 
+// MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
+type MemoryRecaller interface {
+	Recall(query string, tokenBudget int) (string, error)
+	Remember(content, category string) error
+}
+
 // Session manages a conversation with an LLM via eyrie.
 type Session struct {
 	client       *client.EyrieClient
@@ -48,6 +54,7 @@ type Session struct {
 	PermissionFn func(PermissionRequest)
 	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
 	AskUserFn    func(question string) (string, error)
+	Memory       MemoryRecaller
 }
 
 // NewSession creates a new conversation session.
@@ -118,6 +125,10 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 
 func (s *Session) AddUser(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "user", Content: content})
+	// Persist explicit "remember" requests via yaad
+	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
+		go s.Memory.Remember(content, "user_explicit")
+	}
 }
 
 func (s *Session) AddAssistant(content string) {
@@ -205,6 +216,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		"model":    s.model,
 	})
 
+	// Inject remembered context from yaad into system prompt
+	if s.Memory != nil && len(s.messages) > 0 {
+		lastMsg := s.messages[len(s.messages)-1].Content
+		remembered, err := s.Memory.Recall(lastMsg, 2000)
+		if err == nil && remembered != "" {
+			s.AppendSystemContext("## Relevant Memories\n" + remembered)
+		}
+	}
+
 	recoveryCount := 0
 	turnCount := 0
 	snowball := NewSnowballDetector(500000) // 500K token ceiling
@@ -259,6 +279,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				opts.Provider = selectedProvider
 			}
 		}
+
+		// Count actual input tokens for precise budget tracking
+		inputTokens := 0
+		for _, msg := range s.messages {
+			inputTokens += CountTokensFast(msg.Content)
+			if msg.ToolResult != nil {
+				inputTokens += CountTokensFast(msg.ToolResult.Content)
+			}
+		}
+		inputTokens += CountTokensFast(s.system)
+		s.log.Info("token count", map[string]interface{}{"input_tokens": inputTokens, "model": s.model})
 
 		var result *client.StreamResult
 		var err error
@@ -420,6 +451,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if len(toolCalls) == 0 {
 			if textContent != "" {
 				s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
+				// Auto-remember corrections and learnings
+				if s.Memory != nil && shouldRemember(textContent) {
+					go s.Memory.Remember(textContent, "assistant_learning")
+				}
 			}
 			ch <- StreamEvent{Type: "done"}
 			// Session end hook
@@ -553,6 +588,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					"tool":   tc.Name,
 					"output": len(output),
 				})
+			}
+			// Compress large outputs using tok instead of naive truncation
+			if len(output) > 20000 {
+				compressed, tokens := CompressForContext(output, 10000)
+				if tokens > 0 && tokens < CountTokensFast(output) {
+					output = compressed
+				}
 			}
 			if len(output) > 50000 {
 				output = output[:50000] + "\n... (truncated)"
@@ -694,4 +736,17 @@ func (s *Session) compact() {
 	})
 	keep = append(keep, s.messages[cutEnd:]...)
 	s.messages = keep
+}
+
+// shouldRemember returns true if the assistant response contains language that
+// suggests a correction, learning, or noteworthy insight worth persisting.
+func shouldRemember(content string) bool {
+	triggers := []string{"actually", "correction", "instead", "don't", "mistake", "should have", "better approach"}
+	lower := strings.ToLower(content)
+	for _, t := range triggers {
+		if strings.Contains(lower, t) {
+			return true
+		}
+	}
+	return false
 }

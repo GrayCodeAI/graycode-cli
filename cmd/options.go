@@ -10,6 +10,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/memory"
 	hawkmodel "github.com/GrayCodeAI/hawk/model"
 	"github.com/GrayCodeAI/hawk/prompt"
 	"github.com/GrayCodeAI/hawk/prompts"
@@ -161,6 +162,12 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
+
+	// Initialize yaad memory bridge
+	yaadMem := memory.NewYaadBridge()
+	if yaadMem.Ready() {
+		sess.Memory = yaadMem
+	}
 	// Herm-style: API keys from environment only
 	normalizedProvider := hawkconfig.NormalizeProviderForEngine(settings.Provider)
 	if normalizedProvider != "" {
