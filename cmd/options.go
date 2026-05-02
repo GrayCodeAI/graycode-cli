@@ -10,8 +10,11 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
+	hawkmodel "github.com/GrayCodeAI/hawk/model"
 	"github.com/GrayCodeAI/hawk/prompt"
+	"github.com/GrayCodeAI/hawk/repomap"
 	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/hawk/eyrie/client"
 )
 
 func buildSystemPrompt() (string, error) {
@@ -47,13 +50,61 @@ func buildSystemPrompt() (string, error) {
 		}
 		base += appendPrompt
 	}
+
+	// Inject repo map into system prompt if enabled in settings.
+	base = injectRepoMap(base)
+
 	return base, nil
+}
+
+// injectRepoMap generates a repo map of the current directory and appends
+// it to the system prompt when the repo_map setting is enabled.
+func injectRepoMap(base string) string {
+	settings := hawkconfig.LoadSettings()
+	if !settings.RepoMap {
+		return base
+	}
+	maxTokens := settings.RepoMapMaxTokens
+	if maxTokens <= 0 {
+		maxTokens = 2000
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return base
+	}
+	rm, err := repomap.Generate(cwd, repomap.Options{
+		MaxFiles:  500,
+		MaxTokens: maxTokens,
+	})
+	if err != nil || rm == nil || len(rm.Files) == 0 {
+		return base
+	}
+	formatted := rm.Format(maxTokens)
+	if formatted == "" {
+		return base
+	}
+	return base + "\n\n# Repository Map\n" + formatted
 }
 
 func loadEffectiveSettings() (hawkconfig.Settings, error) {
 	settings, err := hawkconfig.LoadSettingsWithOverride(settingsFlag)
 	if err != nil {
 		return settings, err
+	}
+	// Register user-defined custom providers with eyrie and hawk model catalog.
+	for _, cp := range settings.CustomProviders {
+		if cp.Name == "" || cp.BaseURL == "" {
+			continue
+		}
+		client.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
+		if cp.Model != "" {
+			hawkmodel.RegisterDynamic(hawkmodel.ModelInfo{
+				Name:        cp.Model,
+				Provider:    cp.Name,
+				ContextSize: 128_000,
+				Description: "Custom provider: " + cp.Name,
+			})
+		}
 	}
 	return settings, nil
 }

@@ -69,6 +69,12 @@ var Catalog = []ModelInfo{
 	{Name: "deepseek-coder-v2", Provider: "ollama", ContextSize: 128_000, InputPrice: 0, OutputPrice: 0, Description: "DeepSeek Coder V2 (local)"},
 }
 
+// RegisterDynamic adds a model entry to the catalog at runtime.
+// This is used for user-defined custom providers.
+func RegisterDynamic(info ModelInfo) {
+	Catalog = append(Catalog, info)
+}
+
 // Find looks up a model by name.
 func Find(name string) (ModelInfo, bool) {
 	for _, m := range Catalog {

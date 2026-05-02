@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/GrayCodeAI/hawk/sandbox"
 	"github.com/hawk/eyrie/client"
 )
 
@@ -27,6 +28,8 @@ type ToolContext struct {
 	AskUserFn          func(question string) (string, error)
 	AvailableTools     []Tool
 	AllowedDirectories []string
+	SandboxMode        sandbox.Mode
+	AutoCommit         bool
 }
 
 // ctxKey is the context key for ToolContext.

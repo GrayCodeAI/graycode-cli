@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/GrayCodeAI/hawk/sandbox"
 )
 
 // dangerousCommands are commands that should ALWAYS be blocked.
@@ -311,7 +314,19 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return fmt.Sprintf("Started background task %s. Use TaskOutput with task_id=%q to read output, or TaskStop to stop it.", id, id), nil
 	}
 
-	cmd := exec.CommandContext(ctx, "bash", "-c", p.Command)
+	// Sandbox wrapping: if a sandbox mode is configured, wrap the command
+	// with sandbox-exec (macOS Seatbelt) when available.
+	execName := "bash"
+	execArgs := []string{"-c", p.Command}
+	if sbMode := sandbox.ModeFromContext(ctx); sbMode != sandbox.ModeOff {
+		workDir, _ := os.Getwd()
+		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: true}
+		if sandbox.Available() {
+			execName, execArgs = sandbox.WrapCommand(p.Command, cfg)
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, execName, execArgs...)
 	out, err := cmd.CombinedOutput()
 	result := string(out)
 
