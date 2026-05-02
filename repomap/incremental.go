@@ -65,6 +65,8 @@ type fileWork struct {
 // via the indexer. Files whose hash matches the stored hash are skipped. Files
 // that have been removed from disk are cleared from the index.
 // File processing is parallelized across available CPUs.
+// Uses IndexPatterns for include/exclude glob filtering and GitignoreRules
+// for nested .gitignore support.
 func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added, skipped, removed int, err error) {
 	ignoreSet := make(map[string]bool)
 	for _, p := range defaultIgnorePatterns {
@@ -73,6 +75,10 @@ func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added
 	for _, p := range ignore {
 		ignoreSet[p] = true
 	}
+
+	// Load index patterns and gitignore rules
+	patterns := LoadIndexPatterns()
+	gitRules := LoadGitignoreRules(dir)
 
 	// Phase 1: collect all candidate files (sequential walk)
 	var files []fileWork
@@ -100,6 +106,17 @@ func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added
 		if relErr != nil {
 			relPath = path
 		}
+
+		// Apply IndexPatterns filtering
+		if !patterns.ShouldIndex(relPath) {
+			return nil
+		}
+
+		// Apply nested gitignore rules
+		if gitRules.ShouldIgnore(relPath) {
+			return nil
+		}
+
 		seenPaths[relPath] = true
 		files = append(files, fileWork{absPath: path, relPath: relPath, lang: lang})
 		return nil

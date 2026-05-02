@@ -15,7 +15,11 @@ func (CodeSearchTool) Name() string { return "CodeSearch" }
 func (CodeSearchTool) Aliases() []string { return []string{"code_search", "search_code"} }
 
 func (CodeSearchTool) Description() string {
-	return "Search the codebase semantically by meaning, not just text matching."
+	return `Search the codebase by meaning, not just text matching. Use this to find:
+- Functions related to a concept (e.g., "authentication logic")
+- Code that implements a pattern (e.g., "error handling")
+- Files relevant to a task (e.g., "database connection")
+This is better than Grep for conceptual/natural language queries. Use Grep for exact string matches.`
 }
 
 func (CodeSearchTool) Parameters() map[string]interface{} {

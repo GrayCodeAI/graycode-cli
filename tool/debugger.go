@@ -15,7 +15,15 @@ type DebuggerTool struct{}
 
 func (DebuggerTool) Name() string        { return "Debug" }
 func (DebuggerTool) Aliases() []string   { return []string{"debug", "breakpoint"} }
-func (DebuggerTool) Description() string { return "Set breakpoints, run debugger, inspect variables" }
+func (DebuggerTool) Description() string {
+	return `Interactive debugger for Go (Delve), Python (pdb), and Node.js (--inspect). Use this to:
+- Set breakpoints at specific file:line locations
+- Run a file under the debugger to hit breakpoints
+- Inspect variable values and evaluate expressions at runtime
+- Step through code line-by-line or continue to the next breakpoint
+- View the current call stack and goroutines
+Prefer this over adding print statements when you need to understand runtime state.`
+}
 
 func (DebuggerTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
