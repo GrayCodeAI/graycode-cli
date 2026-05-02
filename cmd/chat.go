@@ -2655,6 +2655,11 @@ func (m *chatModel) updateViewportContent() {
 	atBottom := m.viewport.AtBottom()
 	contentStr := chatContent.String()
 
+	contentLines := strings.Count(contentStr, "\n") + 1
+	if contentLines < vpHeight {
+		m.viewport.Height = contentLines
+	}
+
 	m.viewport.SetContent(contentStr)
 	if atBottom || m.autoScroll {
 		m.viewport.GotoBottom()
@@ -2827,6 +2832,13 @@ func runChat() error {
 		dimStyle.Render(leftDim),
 		strings.Repeat(" ", gap),
 		dimStyle.Render(rightStatus))
+
+	border := strings.Repeat("─", viewWidth)
+	borderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
+	fmt.Println(borderStyle.Render(border))
+	fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true).Render(">") + " ")
+	fmt.Println(borderStyle.Render(border))
+	fmt.Println(dimStyle.Render("? for help"))
 
 	if fm.sessionID != "" {
 		fmt.Println(dimStyle.Render(fmt.Sprintf("To resume this session, run: hawk --resume %s", fm.sessionID)))
