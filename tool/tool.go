@@ -28,10 +28,22 @@ type PathProtector interface {
 	IsProtected(path string) bool
 }
 
+// CodeSearchResult is returned by CodeSearchFn.
+type CodeSearchResult struct {
+	Path      string
+	StartLine int
+	EndLine   int
+	Content   string
+	Symbol    string
+	Language  string
+	Score     float64
+}
+
 // ToolContext carries session-level functions for tools that need them.
 type ToolContext struct {
 	AgentSpawnFn       func(ctx context.Context, prompt string) (string, error)
 	AskUserFn          func(question string) (string, error)
+	CodeSearchFn       func(ctx context.Context, query string, limit int) ([]CodeSearchResult, error)
 	AvailableTools     []Tool
 	AllowedDirectories []string
 	SandboxMode        sandbox.Mode

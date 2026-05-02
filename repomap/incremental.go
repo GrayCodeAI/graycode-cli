@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	"github.com/GrayCodeAI/tok"
 )
@@ -52,9 +54,17 @@ var supportedCodeExts = map[string]string{
 	".java": "java",
 }
 
+// fileWork represents a file to be processed during reindexing.
+type fileWork struct {
+	absPath string
+	relPath string
+	lang    string
+}
+
 // IncrementalReindex walks dir, chunks supported source files, and stores them
 // via the indexer. Files whose hash matches the stored hash are skipped. Files
 // that have been removed from disk are cleared from the index.
+// File processing is parallelized across available CPUs.
 func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added, skipped, removed int, err error) {
 	ignoreSet := make(map[string]bool)
 	for _, p := range defaultIgnorePatterns {
@@ -64,7 +74,8 @@ func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added
 		ignoreSet[p] = true
 	}
 
-	// Track which paths we see on disk
+	// Phase 1: collect all candidate files (sequential walk)
+	var files []fileWork
 	seenPaths := make(map[string]bool)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, walkErr error) error {
@@ -90,64 +101,90 @@ func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added
 			relPath = path
 		}
 		seenPaths[relPath] = true
-
-		// Compute hash and compare with stored hash
-		fileHash, hashErr := ComputeFileHash(path)
-		if hashErr != nil {
-			return nil // skip unreadable files
-		}
-
-		storedHash, hashErr := indexer.GetFileHash(relPath)
-		if hashErr != nil {
-			return nil // skip on error
-		}
-
-		if storedHash == fileHash {
-			skipped++
-			return nil
-		}
-
-		// File changed or new: clear old chunks and re-index
-		if err := indexer.ClearFileChunks(relPath); err != nil {
-			return nil // skip on error
-		}
-
-		data, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return nil
-		}
-
-		opts := tok.ChunkOptions{
-			MaxTokens: 500,
-			MinTokens: 50,
-			Language:  lang,
-		}
-		chunks := tok.ChunkCode(string(data), opts)
-
-		for i, chunk := range chunks {
-			chunkID := fmt.Sprintf("%s:%d", relPath, i)
-			if idxErr := indexer.IndexCodeChunk(
-				relPath,
-				chunk.Content,
-				chunk.Symbol,
-				lang,
-				chunk.StartLine,
-				chunk.EndLine,
-				chunk.Tokens,
-				fileHash,
-			); idxErr != nil {
-				_ = chunkID // used for context, not needed as arg
-				return nil
-			}
-		}
-		added++
+		files = append(files, fileWork{absPath: path, relPath: relPath, lang: lang})
 		return nil
 	})
 	if err != nil {
-		return added, skipped, removed, fmt.Errorf("walk: %w", err)
+		return 0, 0, 0, fmt.Errorf("walk: %w", err)
 	}
 
-	// Remove indexed paths that no longer exist on disk
+	// Phase 2: process files in parallel using a bounded goroutine pool
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	numWorkers := runtime.NumCPU()
+	if numWorkers < 1 {
+		numWorkers = 1
+	}
+	sem := make(chan struct{}, numWorkers)
+
+	for _, fw := range files {
+		wg.Add(1)
+		sem <- struct{}{} // acquire semaphore slot
+		go func(fw fileWork) {
+			defer wg.Done()
+			defer func() { <-sem }() // release semaphore slot
+
+			// Compute hash and compare with stored hash
+			fileHash, hashErr := ComputeFileHash(fw.absPath)
+			if hashErr != nil {
+				return // skip unreadable files
+			}
+
+			storedHash, hashErr := indexer.GetFileHash(fw.relPath)
+			if hashErr != nil {
+				return // skip on error
+			}
+
+			if storedHash == fileHash {
+				mu.Lock()
+				skipped++
+				mu.Unlock()
+				return
+			}
+
+			// File changed or new: clear old chunks and re-index
+			if clearErr := indexer.ClearFileChunks(fw.relPath); clearErr != nil {
+				return // skip on error
+			}
+
+			data, readErr := os.ReadFile(fw.absPath)
+			if readErr != nil {
+				return
+			}
+
+			opts := tok.ChunkOptions{
+				MaxTokens: 500,
+				MinTokens: 50,
+				Language:  fw.lang,
+			}
+			chunks := tok.ChunkCode(string(data), opts)
+
+			for i, chunk := range chunks {
+				chunkID := fmt.Sprintf("%s:%d", fw.relPath, i)
+				if idxErr := indexer.IndexCodeChunk(
+					fw.relPath,
+					chunk.Content,
+					chunk.Symbol,
+					fw.lang,
+					chunk.StartLine,
+					chunk.EndLine,
+					chunk.Tokens,
+					fileHash,
+				); idxErr != nil {
+					_ = chunkID
+					return
+				}
+			}
+
+			mu.Lock()
+			added++
+			mu.Unlock()
+		}(fw)
+	}
+	wg.Wait()
+
+	// Phase 3: remove indexed paths that no longer exist on disk
 	indexedPaths, listErr := indexer.ListIndexedPaths()
 	if listErr == nil {
 		for _, p := range indexedPaths {
