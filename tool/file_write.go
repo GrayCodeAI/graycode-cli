@@ -45,6 +45,9 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if err := validatePathAllowed(ctx, path); err != nil {
 		return "", err
 	}
+	if tc := GetToolContext(ctx); tc != nil && tc.Protected != nil && tc.Protected.IsProtected(path) {
+		return "", fmt.Errorf("path %s is protected (read-only)", path)
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}

@@ -167,7 +167,7 @@ func slashCommands() []string {
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/effort", "/env", "/exit",
 		"/export", "/fast", "/files", "/fork", "/help", "/history", "/hooks", "/init",
 		"/integrity", "/keybindings", "/loop", "/mcp", "/memory", "/metrics", "/model",
-		"/models", "/output-style", "/permissions", "/plan", "/plugin", "/plugins",
+		"/output-style", "/permissions", "/plan", "/plugin", "/plugins",
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/resume", "/review", "/rewind",
 		"/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
@@ -178,10 +178,7 @@ func slashCommands() []string {
 }
 
 func slashAliases() map[string]string {
-	return map[string]string{
-		"/con":  "/config",
-		"/conf": "/config",
-	}
+	return nil
 }
 
 func slashSuggestions(input string) []string {
@@ -202,6 +199,9 @@ func slashSuggestions(input string) []string {
 			seen[alias] = true
 			out = append(out, alias+" → "+target)
 		}
+	}
+	if len(out) == 1 && out[0] == v {
+		return nil
 	}
 	if len(out) > 6 {
 		out = out[:6]
@@ -1474,6 +1474,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if text == "" {
 				return m, nil
 			}
+			if sugs := slashSuggestions(text); len(sugs) > 0 {
+				if m.slashSel < 0 || m.slashSel >= len(sugs) {
+					m.slashSel = 0
+				}
+				m.input.SetValue(applySlashSuggestion(sugs[m.slashSel]))
+				m.input.CursorEnd()
+				return m, nil
+			}
 			m.history = append(m.history, text)
 			m.historyIdx = len(m.history)
 			m.historyDraft = ""
@@ -1746,7 +1754,14 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: modelConfigSummary(m.session.Provider(), m.session.Model())})
+			provider := m.session.Provider()
+			models, _ := hawkconfig.FetchModelsForProvider(provider)
+			m.configModels = extractModelIDs(models)
+			m.configOpen = true
+			m.configMenu = "model"
+			m.configSel = 0
+			m.configScroll = 0
+			m.configNotice = ""
 			return m, nil
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
@@ -1761,9 +1776,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.session.SetModel(arg)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", m.session.Model())})
-		return m, nil
-	case "/models":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Model discovery and provider support are handled by Eyrie.\n\nUse\n  /model <name>\n  /config provider <name>\n  /config key <provider> <api-key>"})
 		return m, nil
 	case "/version":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk %s", version)})
@@ -2698,7 +2710,7 @@ func (m chatModel) View() string {
 			}
 			for i, s := range sugs {
 				if i == m.slashSel {
-					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Render("  "+s) + "\n")
+					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Render("▸ "+s) + "\n")
 				} else {
 					bottomBar.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E")).Render("  "+s) + "\n")
 				}
