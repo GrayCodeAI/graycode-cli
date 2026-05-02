@@ -1,4 +1,4 @@
-package model
+package routing
 
 import "testing"
 
@@ -83,12 +83,12 @@ func TestModelForRoleFallback(t *testing.T) {
 }
 
 func TestModelForRoleUltimateFallback(t *testing.T) {
-	// When even Coder is empty, fall back to the hardcoded default.
+	// When even Coder is empty, fall back to whatever the catalog provides at runtime.
 	roles := ModelRoles{}
 
 	got := roles.ModelForRole(RolePlanner)
-	if got != "claude-sonnet-4-20250514" {
-		t.Errorf("fully empty roles should fall back to hardcoded default, got %q", got)
+	if got == "" {
+		t.Error("fully empty roles should fall back to a catalog model, got empty string")
 	}
 }
 

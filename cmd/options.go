@@ -11,7 +11,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/memory"
-	hawkmodel "github.com/GrayCodeAI/hawk/model"
+	hawkmodel "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/prompt"
 	"github.com/GrayCodeAI/hawk/prompts"
 	"github.com/GrayCodeAI/hawk/repomap"
@@ -217,6 +217,21 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 	// Teach mode: augment system prompt with explanation instructions
 	if teachMode {
 		sess.AppendSystemContext("\n\n## Teaching Mode\n" + engine.TeachPromptAugment(teachDepth))
+	}
+
+	// Model cascade router: automatically routes tasks to optimal model tier
+	roles := hawkmodel.DefaultRoles(sess.Model())
+	if settings.ModelRoles != nil {
+		roles = *settings.ModelRoles
+	}
+	sess.Cascade = engine.NewCascadeRouter(sess.Model(), roles)
+	sess.Cascade.Enabled = true
+	sess.Cascade.FrugalMode = settings.Frugal
+
+	// Session lifecycle: self-improvement loop (learn from sessions)
+	sess.Lifecycle = &engine.SessionLifecycle{
+		Memory:     &engine.EvolvingMemoryAdapter{EM: memory.NewEvolvingMemory()},
+		SkillStore: &engine.SkillDistillerAdapter{SD: sess.SkillDistiller},
 	}
 
 	return nil

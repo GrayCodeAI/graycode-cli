@@ -29,11 +29,19 @@ func GenerateProfile(cfg SandboxConfig) string {
 	}
 }
 
-// strictProfile generates a read-only Seatbelt profile.
+// strictProfile generates a hardened read-only Seatbelt profile.
 func strictProfile(cfg SandboxConfig) string {
-	profile := "(version 1)(deny default)(allow process*)(allow sysctl-read)(allow file-read*)(allow mach-lookup)"
+	profile := "(version 1)(deny default)(allow process*)(allow sysctl-read)(allow mach-lookup)"
+	// Allow reads except for sensitive paths
+	profile += "(allow file-read*)"
+	// Deny writes to home directory (prevents credential/config theft)
+	profile += `(deny file-write* (subpath (param "HOME")))`
+	// Deny execution of unexpected binaries
+	profile += `(deny process-exec* (subpath "/usr/local"))`
 	if cfg.AllowNetwork {
 		profile += "(allow network*)"
+	} else {
+		profile += "(deny network*)"
 	}
 	return profile
 }

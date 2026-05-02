@@ -1,7 +1,7 @@
 // Package model provides model routing and health checking.
 // Model discovery, pricing, and catalog data are delegated to eyrie.
 // Hawk does NOT carry a hardcoded model catalog.
-package model
+package routing
 
 import (
 	"sync"

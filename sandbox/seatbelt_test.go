@@ -37,7 +37,7 @@ func TestGenerateProfileStrict(t *testing.T) {
 	if !strings.Contains(profile, "(allow network*)") {
 		t.Error("strict profile with AllowNetwork should allow network")
 	}
-	if strings.Contains(profile, "file-write") {
+	if strings.Contains(profile, "(allow file-write") {
 		t.Error("strict profile should not allow file-write")
 	}
 }

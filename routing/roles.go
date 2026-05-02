@@ -1,4 +1,4 @@
-package model
+package routing
 
 import "strings"
 
@@ -21,18 +21,10 @@ type ModelRoles struct {
 	Commit   string `json:"commit,omitempty"`
 }
 
-// cheapCommitModels lists inexpensive models, in priority order, to use for
-// the commit role when no explicit model is configured.
-var cheapCommitModels = []string{
-	"claude-3-5-haiku-20241022",
-	"gpt-4o-mini",
-	"gemini-2.5-flash",
-}
-
 // DefaultRoles returns a ModelRoles where every role uses primaryModel except
-// Commit, which defaults to the cheapest available model.
+// Commit, which defaults to the cheapest available model from the catalog.
 func DefaultRoles(primaryModel string) ModelRoles {
-	commit := cheapestAvailable(primaryModel)
+	commit := CheapestForProvider(providerOf(primaryModel), primaryModel)
 	return ModelRoles{
 		Planner:  primaryModel,
 		Coder:    primaryModel,
@@ -59,18 +51,46 @@ func (r ModelRoles) ModelForRole(role Role) string {
 		if strings.TrimSpace(r.Coder) != "" {
 			return r.Coder
 		}
-		return "claude-sonnet-4-20250514" // ultimate fallback
+		return primaryModel()
 	}
 	return m
 }
 
-// cheapestAvailable picks the first cheap model present in the catalog,
-// falling back to primaryModel if none are found.
-func cheapestAvailable(primaryModel string) string {
-	for _, name := range cheapCommitModels {
-		if _, ok := Find(name); ok {
-			return name
+// CheapestForProvider queries eyrie's catalog at runtime and returns the
+// cheapest model for the given provider. No hardcoded model names.
+func CheapestForProvider(provider, fallback string) string {
+	models := ByProvider(provider)
+	if len(models) == 0 {
+		return fallback
+	}
+	cheapest := models[0]
+	for _, m := range models[1:] {
+		if m.InputPrice > 0 && m.InputPrice < cheapest.InputPrice {
+			cheapest = m
 		}
 	}
-	return primaryModel
+	if cheapest.Name != "" {
+		return cheapest.Name
+	}
+	return fallback
+}
+
+// providerOf extracts the provider from a model name by looking it up in the catalog.
+func providerOf(modelName string) string {
+	info, ok := Find(modelName)
+	if ok {
+		return info.Provider
+	}
+	return ""
+}
+
+// primaryModel returns a reasonable fallback by querying what's available.
+func primaryModel() string {
+	providers := AllProviders()
+	for _, p := range providers {
+		if m := DefaultModel(p); m != "" {
+			return m
+		}
+	}
+	return ""
 }

@@ -2,9 +2,12 @@ package engine
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
+
+	modelPkg "github.com/GrayCodeAI/hawk/routing"
 )
 
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
@@ -78,7 +81,7 @@ func (s *Session) generateSummary() string {
 
 	resp, err := s.client.Chat(ctx, summaryMsgs, client.ChatOptions{
 		Provider:  s.provider,
-		Model:     s.model,
+		Model:     s.compactModel(),
 		MaxTokens: 1000,
 	})
 	if err != nil {
@@ -86,4 +89,32 @@ func (s *Session) generateSummary() string {
 	}
 	// Extract structured summary, stripping analysis block
 	return FormatCompactSummary(resp.Content)
+}
+
+// compactModel returns the cheapest available model for the current provider.
+// Queries eyrie's catalog at runtime — no hardcoded model names.
+// Summarization doesn't need frontier reasoning, so the cheapest model suffices.
+func (s *Session) compactModel() string {
+	provider := strings.ToLower(s.provider)
+	models := modelPkg.ByProvider(provider)
+	if len(models) == 0 {
+		return s.model
+	}
+
+	// Find the cheapest model by input price
+	cheapest := models[0]
+	for _, m := range models[1:] {
+		if m.InputPrice > 0 && m.InputPrice < cheapest.InputPrice {
+			cheapest = m
+		}
+	}
+
+	// Only use a cheaper model if it actually costs less than the session model
+	if info, ok := modelPkg.Find(s.model); ok {
+		if cheapest.InputPrice >= info.InputPrice {
+			return s.model
+		}
+	}
+
+	return cheapest.Name
 }

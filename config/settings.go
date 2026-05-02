@@ -9,7 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/model"
+	"github.com/GrayCodeAI/hawk/routing"
+
 	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
@@ -31,8 +32,9 @@ type Settings struct {
 	Sandbox           string                  `json:"sandbox,omitempty"`     // sandbox mode: strict, workspace, off
 	AutoCommit        *bool                   `json:"auto_commit,omitempty"` // auto-commit file changes
 	Autonomy          int                     `json:"autonomy,omitempty"`    // autonomy level 0-4
-	ModelRoles        *model.ModelRoles       `json:"model_roles,omitempty"` // per-role model overrides
+	ModelRoles        *routing.ModelRoles       `json:"model_roles,omitempty"` // per-role model overrides
 	AutoCompactThresholdPct int                `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
+	Frugal                  bool               `json:"frugal,omitempty"` // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution       `json:"attribution,omitempty"`
 }
 
