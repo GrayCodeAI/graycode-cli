@@ -82,20 +82,20 @@ func EstimateTokens(msgs []client.EyrieMessage) int {
 }
 
 func estimateMessageTokens(m client.EyrieMessage) int {
-	tokens := len(m.Content) / 4
+	tokens := CountTokensFast(m.Content)
 	for _, tc := range m.ToolUse {
-		tokens += len(tc.Name) / 4
+		tokens += CountTokensFast(tc.Name)
 		for _, v := range tc.Arguments {
 			switch val := v.(type) {
 			case string:
-				tokens += len(val) / 4
+				tokens += CountTokensFast(val)
 			default:
 				tokens += 10
 			}
 		}
 	}
 	if m.ToolResult != nil {
-		tokens += len(m.ToolResult.Content) / 4
+		tokens += CountTokensFast(m.ToolResult.Content)
 	}
 	return tokens
 }

@@ -163,18 +163,18 @@ func glimmerTickCmd() tea.Cmd {
 
 func slashCommands() []string {
 	return []string{
-		"/add-dir", "/agents", "/audit", "/branch", "/bughunter", "/clean", "/clear",
+		"/add", "/add-dir", "/agents", "/audit", "/branch", "/bughunter", "/clean", "/clear",
 		"/color", "/commands", "/commit", "/compact", "/compress", "/config", "/context",
-		"/copy", "/cost", "/cron", "/diff", "/doctor", "/effort", "/env", "/exit",
+		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit",
 		"/export", "/fast", "/files", "/fork", "/help", "/history", "/hooks", "/init",
-		"/integrity", "/keybindings", "/loop", "/mcp", "/memory", "/metrics", "/model",
+		"/integrity", "/keybindings", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model",
 		"/output-style", "/permissions", "/plan", "/plugin", "/plugins",
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
-		"/reload-plugins", "/remote-env", "/rename", "/resume", "/review", "/rewind",
-		"/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
-		"/status", "/statusline", "/summary", "/tag", "/tasks", "/teams", "/theme",
-		"/think-back", "/thinkback", "/thinkback-play", "/tools", "/upgrade", "/usage",
-		"/version", "/vim", "/voice", "/welcome",
+		"/reload-plugins", "/remote-env", "/rename", "/resume", "/retry", "/review", "/rewind",
+		"/run", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
+		"/status", "/statusline", "/summary", "/tag", "/tasks", "/teams", "/test", "/theme",
+		"/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/upgrade", "/usage",
+		"/version", "/vim", "/voice", "/welcome", "/yolo",
 	}
 }
 
@@ -2350,7 +2350,111 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
 		return m, nil
+	case "/retry":
+		if len(m.history) > 0 {
+			last := m.history[len(m.history)-1]
+			if m.session.MessageCount() > 2 {
+				m.session.RemoveLastExchange()
+				if len(m.messages) >= 2 {
+					m.messages = m.messages[:len(m.messages)-2]
+				}
+			}
+			m.messages = append(m.messages, displayMsg{role: "user", content: last})
+			m.session.AddUser(last)
+			m.waiting = true
+			m.autoScroll = true
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.startStream()
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "error", content: "No previous message to retry."})
+		return m, nil
+
+	case "/add":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add <file-path> [file-path...]"})
+			return m, nil
+		}
+		var added []string
+		for _, f := range parts[1:] {
+			content, err := os.ReadFile(f)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Cannot read %s: %v", f, err)})
+				continue
+			}
+			m.session.AddUser(fmt.Sprintf("[File: %s]\n```\n%s\n```", f, string(content)))
+			added = append(added, f)
+		}
+		if len(added) > 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Added to context: %s", strings.Join(added, ", "))})
+		}
+		return m, nil
+
+	case "/drop":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /drop <file-path>"})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Dropped %s from context.", parts[1])})
+		return m, nil
+
+	case "/run":
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /run <command>"})
+			return m, nil
+		}
+		cmdStr := strings.TrimSpace(strings.TrimPrefix(text, "/run"))
+		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
+		result := strings.TrimSpace(string(out))
+		if err != nil {
+			result += "\n" + err.Error()
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("$ %s\n%s", cmdStr, result)})
+		m.session.AddUser(fmt.Sprintf("[Command output: %s]\n```\n%s\n```", cmdStr, result))
+		return m, nil
+
+	case "/test":
+		cmdStr := "go test ./..."
+		if len(parts) >= 2 {
+			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/test"))
+		}
+		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
+		result := strings.TrimSpace(string(out))
+		if err != nil {
+			result += "\n" + err.Error()
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tests failed:\n%s", result)})
+			m.session.AddUser(fmt.Sprintf("[Test failures]\n```\n%s\n```\nPlease fix these test failures.", result))
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "All tests passed."})
+		}
+		return m, nil
+
+	case "/lint":
+		cmdStr := "golangci-lint run ./..."
+		if len(parts) >= 2 {
+			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/lint"))
+		}
+		out, _ := exec.Command("sh", "-c", cmdStr).CombinedOutput()
+		result := strings.TrimSpace(string(out))
+		if result == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No lint issues."})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Lint issues:\n%s", result)})
+			m.session.AddUser(fmt.Sprintf("[Lint output]\n```\n%s\n```\nPlease fix these lint issues.", result))
+		}
+		return m, nil
+
+	case "/tokens":
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Messages: %d\nEstimated tokens: ~%d", m.session.MessageCount(), m.session.MessageCount()*200)})
+		return m, nil
+
+	case "/yolo":
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Auto-approve mode toggled. All tool calls will be approved automatically."})
+		return m, nil
 	}
+
+	m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+	return m, nil
 }
 
 func (m *chatModel) saveSession() {
