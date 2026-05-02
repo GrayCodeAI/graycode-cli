@@ -173,7 +173,7 @@ func slashCommands() []string {
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/resume", "/retry", "/review", "/rewind",
 		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
-		"/status", "/statusline", "/summary", "/tag", "/tasks", "/teams", "/test", "/theme",
+		"/status", "/statusline", "/summary", "/tag", "/tasks", "/test", "/theme",
 		"/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/upgrade", "/usage",
 		"/version", "/vim", "/voice", "/welcome", "/yolo",
 	}
@@ -262,7 +262,6 @@ var slashDescriptions = map[string]string{
 	"/share":           "Share session",
 	"/statusline":      "Show status line info",
 	"/tag":             "Tag current session",
-	"/teams":           "Team management",
 	"/theme":           "Change visual theme",
 	"/think-back":      "Review reasoning decisions",
 	"/thinkback":       "Review reasoning decisions",
@@ -2171,9 +2170,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 		return m, nil
-	case "/teams":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Team management is available in the enterprise version."})
-		return m, nil
 	case "/agents":
 		return m.startPromptCommand("/agents", "List all active agents and teammates in the current session. Show their status and assigned tasks.")
 	case "/copy":
@@ -2417,9 +2413,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/refresh-model-catalog":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Model catalog is built-in in this build; refresh not required."})
 		return m, nil
-	case "/passes":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /passes <count> (compat placeholder). Use /effort for reasoning depth in this build."})
-		return m, nil
 	case "/insights":
 		days := 30
 		if len(parts) > 1 {
@@ -2441,9 +2434,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/dream":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Running background memory consolidation..."})
 		return m.startPromptCommand("/dream", "Review all session memories in ~/.hawk/memory/ and consolidate them. Remove redundant entries, merge related facts, and produce a clean organized memory document. Focus on user preferences, project context, and recurring patterns.")
-	case "/teleport", "/remote-control":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s is a team/enterprise feature (available in hawk-archive).", cmd)})
-		return m, nil
 	case "/ctx", "/ctx-viz":
 		if m.contextViz == nil {
 			m.contextViz = NewContextVisualization(200000)
@@ -2459,12 +2449,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			System: tokens / 12,
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: RenderBreakdown(breakdown, m.contextViz.ContextWindowSize)})
-		return m, nil
-	case "/marketplace":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Plugin marketplace is a team/enterprise feature. Use /plugin install <path> for local plugins."})
-		return m, nil
-	case "/terminal-setup", "/install-github-app", "/install-slack-app", "/web-setup", "/bridge-kick", "/desktop", "/mobile", "/chrome", "/stickers", "/privacy-settings", "/rate-limit-options", "/heapdump", "/init-verifiers", "/extra-usage", "/ultraplan", "/debug-model-catalog":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s is not implemented in Go yet (archive parity placeholder).", cmd)})
 		return m, nil
 	case "/rewind":
 		if m.session.MessageCount() > 2 {
