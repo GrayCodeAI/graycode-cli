@@ -8,14 +8,23 @@ import (
 	"strings"
 )
 
-// LoadHawkMD reads HAWK.md from the current directory or parents.
-func LoadHawkMD() string {
+// LoadAgentsMD reads AGENTS.md (or AGENTS.md for backward compatibility) from the current directory or parents.
+func LoadAgentsMD() string {
 	dir, _ := os.Getwd()
-	return LoadHawkMDFrom(dir)
+	return LoadAgentsMDFrom(dir)
 }
 
-// LoadHawkMDFrom reads HAWK.md from start or its parents.
-func LoadHawkMDFrom(start string) string {
+const maxAgentsMDSize = 10 * 1024 // 10KB
+
+// agentFiles lists project instruction filenames in priority order.
+// AGENTS.md is the canonical name; AGENTS.md is kept for backward compatibility.
+var agentFiles = []string{
+	"AGENTS.md", ".hawk/AGENTS.md", ".agent/AGENTS.md",
+	"AGENTS.md", ".hawk/AGENTS.md", ".agent/AGENTS.md",
+}
+
+// LoadAgentsMDFrom reads AGENTS.md (or AGENTS.md fallback) from start or its parents.
+func LoadAgentsMDFrom(start string) string {
 	dir := start
 	if dir == "" {
 		dir, _ = os.Getwd()
@@ -24,9 +33,12 @@ func LoadHawkMDFrom(start string) string {
 		dir = abs
 	}
 	for {
-		for _, name := range []string{"HAWK.md", ".hawk/HAWK.md"} {
+		for _, name := range agentFiles {
 			data, err := os.ReadFile(filepath.Join(dir, name))
 			if err == nil {
+				if len(data) > maxAgentsMDSize {
+					return string(data[:maxAgentsMDSize]) + "\n\n[WARNING: AGENTS.md truncated to 10KB]"
+				}
 				return string(data)
 			}
 		}
@@ -35,6 +47,22 @@ func LoadHawkMDFrom(start string) string {
 			break
 		}
 		dir = parent
+	}
+	return ""
+}
+
+// LoadAgentDir returns the path to .hawk/ or .agent/ directory, whichever exists.
+// .hawk/ takes priority. Returns empty string if neither exists.
+func LoadAgentDir() string {
+	dir, _ := os.Getwd()
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	for _, name := range []string{".hawk", ".agent"} {
+		p := filepath.Join(dir, name)
+		if info, err := os.Stat(p); err == nil && info.IsDir() {
+			return p
+		}
 	}
 	return ""
 }
@@ -85,8 +113,27 @@ func BuildContextWithDirs(addDirs []string) string {
 	if git := GitContext(); git != "" {
 		parts = append(parts, git)
 	}
-	if md := LoadHawkMD(); md != "" {
-		parts = append(parts, "Project instructions (HAWK.md):\n"+md)
+	if md := LoadAgentsMD(); md != "" {
+		parts = append(parts, "Project instructions (AGENTS.md):\n"+md)
+	}
+	// Cross-agent context files: read instructions from other coding agents.
+	crossAgentFiles := []string{
+		"CLAUDE.md", "CLAUDE.local.md",
+		"GEMINI.md",
+		".cursorrules",
+		".github/copilot-instructions.md",
+		"crush.md", "CRUSH.md",
+	}
+	for _, name := range crossAgentFiles {
+		data, err := os.ReadFile(filepath.Join(cwd, name))
+		if err != nil {
+			continue
+		}
+		content := string(data)
+		if len(content) > maxAgentsMDSize {
+			content = content[:maxAgentsMDSize]
+		}
+		parts = append(parts, fmt.Sprintf("Cross-agent instructions (%s):\n%s", name, content))
 	}
 	for _, dir := range addDirs {
 		dir = strings.TrimSpace(dir)
@@ -100,7 +147,7 @@ func BuildContextWithDirs(addDirs []string) string {
 			continue
 		}
 		parts = append(parts, "Additional directory: "+dir)
-		if md := LoadHawkMDFrom(dir); md != "" {
+		if md := LoadAgentsMDFrom(dir); md != "" {
 			parts = append(parts, "Additional directory instructions ("+dir+"):\n"+md)
 		}
 	}

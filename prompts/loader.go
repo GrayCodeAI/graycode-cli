@@ -32,7 +32,7 @@ type PromptContext struct {
 }
 
 // mainSections lists the template files assembled into the system prompt, in order.
-var mainSections = []string{"role.md", "tools.md", "practices.md", "communication.md"}
+var mainSections = []string{"role.md", "execution.md", "tools.md", "practices.md", "examples.md", "communication.md"}
 
 // DefaultContext builds a PromptContext from the current environment.
 func DefaultContext() PromptContext {

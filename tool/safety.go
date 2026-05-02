@@ -67,10 +67,20 @@ var destructivePatterns = []string{
 // gating — it catches broader patterns than bash.go's dangerousSubstrings
 // (e.g. "rm -rf ." is already caught; this also catches bare "rm -rf").
 func IsDestructiveCommand(command string) bool {
+	// Check full command first (catches multi-char patterns like fork bombs)
 	lower := strings.ToLower(command)
 	for _, pat := range destructivePatterns {
 		if strings.Contains(lower, strings.ToLower(pat)) {
 			return true
+		}
+	}
+	// Also check each segment independently
+	for _, seg := range SegmentCommand(command) {
+		segLower := strings.ToLower(seg)
+		for _, pat := range destructivePatterns {
+			if strings.Contains(segLower, strings.ToLower(pat)) {
+				return true
+			}
 		}
 	}
 	return false

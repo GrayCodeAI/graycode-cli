@@ -12,6 +12,7 @@ import (
 type GlobTool struct{}
 
 func (GlobTool) Name() string        { return "Glob" }
+func (GlobTool) RiskLevel() string   { return "low" }
 func (GlobTool) Aliases() []string   { return []string{"glob"} }
 func (GlobTool) Description() string { return "Find files matching a glob pattern." }
 func (GlobTool) Parameters() map[string]interface{} {

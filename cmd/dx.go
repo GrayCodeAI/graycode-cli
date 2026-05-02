@@ -108,12 +108,12 @@ func doctorOutput(settings hawkconfig.Settings) string {
 		b.WriteString("Plugins:         0\n")
 	}
 
-	// HAWK.md found
-	hawkMD := hawkconfig.LoadHawkMD()
-	if hawkMD != "" {
-		b.WriteString("HAWK.md:         found\n")
+	// AGENTS.md found
+	agentsMD := hawkconfig.LoadAgentsMD()
+	if agentsMD != "" {
+		b.WriteString("AGENTS.md:       found\n")
 	} else {
-		b.WriteString("HAWK.md:         not found\n")
+		b.WriteString("AGENTS.md:       not found\n")
 	}
 
 	// Git repo status

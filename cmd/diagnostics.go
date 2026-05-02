@@ -34,7 +34,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 			b.WriteString("  " + line + "\n")
 		}
 	}
-	if hawkconfig.LoadHawkMD() != "" {
+	if hawkconfig.LoadAgentsMD() != "" {
 		b.WriteString("\nProject instructions: found\n")
 	} else {
 		b.WriteString("\nProject instructions: not found\n")

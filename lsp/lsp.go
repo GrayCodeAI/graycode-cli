@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ type Client struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
 	stdout io.ReadCloser
+	reader *bufio.Reader // single persistent reader
 	mu     sync.Mutex
 	id     int
 }
@@ -32,6 +34,7 @@ type Request struct {
 type Response struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      int             `json:"id,omitempty"`
+	Method  string          `json:"method,omitempty"`
 	Result  json.RawMessage `json:"result,omitempty"`
 	Error   *ResponseError  `json:"error,omitempty"`
 }
@@ -76,59 +79,77 @@ func (m *ServerManager) Start(name, command string, args ...string) error {
 		return err
 	}
 
-	client := &Client{
+	c := &Client{
 		cmd:    cmd,
 		stdin:  stdin,
 		stdout: stdout,
+		reader: bufio.NewReader(stdout), // single reader for the connection lifetime
 	}
-	m.servers[name] = client
+	m.servers[name] = c
 
-	// Send initialize request
-	_, _ = client.Request("initialize", map[string]interface{}{
-		"processId":    command,
+	// Send initialize request with correct processId
+	_, _ = c.Request("initialize", map[string]interface{}{
+		"processId":    os.Getpid(),
 		"rootUri":      "file://.",
 		"capabilities": map[string]interface{}{},
 	})
 
+	// Send initialized notification per LSP spec
+	c.Notify("initialized", struct{}{})
+
 	return nil
 }
 
-// Stop stops an LSP server.
+// Stop stops an LSP server gracefully.
 func (m *ServerManager) Stop(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	client, ok := m.servers[name]
+	c, ok := m.servers[name]
 	if !ok {
 		return nil
 	}
 	delete(m.servers, name)
 
-	_ = client.stdin.Close()
-	_ = client.cmd.Process.Kill()
+	// Graceful shutdown per LSP spec
+	_, _ = c.Request("shutdown", nil)
+	c.Notify("exit", nil)
+
+	_ = c.stdin.Close()
+	_ = c.cmd.Process.Kill()
 	return nil
+}
+
+// Notify sends a notification (no response expected).
+func (c *Client) Notify(method string, params interface{}) {
+	type notification struct {
+		JSONRPC string      `json:"jsonrpc"`
+		Method  string      `json:"method"`
+		Params  interface{} `json:"params,omitempty"`
+	}
+	data, err := json.Marshal(notification{JSONRPC: "2.0", Method: method, Params: params})
+	if err != nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(data))
+	c.stdin.Write(data)
 }
 
 // Request sends a request to an LSP server.
 func (c *Client) Request(method string, params interface{}) (*Response, error) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.id++
 	id := c.id
-	c.mu.Unlock()
 
-	req := Request{
-		JSONRPC: "2.0",
-		ID:      id,
-		Method:  method,
-		Params:  params,
-	}
+	req := Request{JSONRPC: "2.0", ID: id, Method: method, Params: params}
 	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if _, err := fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(data)); err != nil {
 		return nil, err
@@ -137,37 +158,44 @@ func (c *Client) Request(method string, params interface{}) (*Response, error) {
 		return nil, err
 	}
 
-	// Read response
-	reader := bufio.NewReader(c.stdout)
-	var contentLength int
+	// Read response using the persistent reader, skipping notifications
 	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
+		var contentLength int
+		for {
+			line, err := c.reader.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			line = strings.TrimSpace(line)
+			if line == "" {
+				break
+			}
+			if strings.HasPrefix(line, "Content-Length: ") {
+				fmt.Sscanf(line, "Content-Length: %d", &contentLength)
+			}
+		}
+
+		if contentLength == 0 {
+			return nil, fmt.Errorf("no content length")
+		}
+
+		respData := make([]byte, contentLength)
+		if _, err := io.ReadFull(c.reader, respData); err != nil {
 			return nil, err
 		}
-		line = strings.TrimSpace(line)
-		if line == "" {
-			break
+
+		var resp Response
+		if err := json.Unmarshal(respData, &resp); err != nil {
+			return nil, err
 		}
-		if strings.HasPrefix(line, "Content-Length: ") {
-			fmt.Sscanf(line, "Content-Length: %d", &contentLength)
+
+		// Skip server-initiated notifications (no ID)
+		if resp.ID == 0 && resp.Method != "" {
+			continue
 		}
-	}
 
-	if contentLength == 0 {
-		return nil, fmt.Errorf("no content length")
+		return &resp, nil
 	}
-
-	respData := make([]byte, contentLength)
-	if _, err := io.ReadFull(reader, respData); err != nil {
-		return nil, err
-	}
-
-	var resp Response
-	if err := json.Unmarshal(respData, &resp); err != nil {
-		return nil, err
-	}
-	return &resp, nil
 }
 
 // List returns all running servers.

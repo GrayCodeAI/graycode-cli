@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 )
 
 type AgentTool struct{}
 
 func (AgentTool) Name() string      { return "Agent" }
+func (AgentTool) RiskLevel() string { return "medium" }
 func (AgentTool) Aliases() []string { return []string{"agent", "Task"} }
 func (AgentTool) Description() string {
 	return "Spawn a sub-agent to handle a complex task independently. The sub-agent has access to all tools."
@@ -36,7 +36,33 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	if tc == nil || tc.AgentSpawnFn == nil {
 		return "", fmt.Errorf("agent spawning not configured")
 	}
-	return tc.AgentSpawnFn(ctx, p.Prompt)
+	out, err := tc.AgentSpawnFn(ctx, p.Prompt)
+	if err != nil {
+		return "", err
+	}
+	return agentEnvelope("success", out), nil
+}
+
+func agentEnvelope(status, output string) string {
+	summary := output
+	if len(summary) > 200 {
+		summary = summary[:200]
+	}
+	env := struct {
+		Agent      string `json:"agent"`
+		Status     string `json:"status"`
+		Summary    string `json:"summary"`
+		TokensUsed int    `json:"tokens_used"`
+		FullOutput string `json:"full_output"`
+	}{
+		Agent:      "sub-agent",
+		Status:     status,
+		Summary:    summary,
+		TokensUsed: 0,
+		FullOutput: output,
+	}
+	b, _ := json.Marshal(env)
+	return string(b)
 }
 
 // MultiAgentTool spawns multiple sub-agents in parallel.
@@ -87,15 +113,18 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 		}(i, task)
 	}
 	wg.Wait()
-	var b strings.Builder
+	envelopes := make([]json.RawMessage, len(results))
 	for i, r := range results {
-		fmt.Fprintf(&b, "=== Agent %d ===\n", i+1)
+		var status, output string
 		if r.err != nil {
-			fmt.Fprintf(&b, "Error: %s\n", r.err)
+			status = "error"
+			output = r.err.Error()
 		} else {
-			b.WriteString(r.output)
+			status = "success"
+			output = r.output
 		}
-		b.WriteString("\n\n")
+		envelopes[i] = json.RawMessage(agentEnvelope(status, output))
 	}
-	return b.String(), nil
+	b, _ := json.Marshal(envelopes)
+	return string(b), nil
 }

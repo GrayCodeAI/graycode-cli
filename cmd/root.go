@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -51,6 +51,7 @@ var (
 	councilMode                bool
 	teachMode                  bool
 	teachDepth                 int
+	autoSkillFlag              bool
 )
 
 // SetVersion sets the version string from main.
@@ -109,6 +110,15 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		// Auto-skill: analyze project and install matching skills.
+		if autoSkillFlag {
+			cwd, _ := os.Getwd()
+			msg, _ := plugin.RunAutoSkill(cwd)
+			if msg != "" {
+				fmt.Println(msg)
+			}
+		}
+
 		// Launch TUI
 		return runChat()
 	},
@@ -151,6 +161,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&councilMode, "council", false, "consult multiple models and synthesize best answer")
 	rootCmd.Flags().BoolVar(&teachMode, "teach", false, "explain reasoning as the agent works")
 	rootCmd.Flags().IntVar(&teachDepth, "teach-depth", 2, "explanation depth: 1=what, 2=why, 3=how")
+	rootCmd.Flags().BoolVar(&autoSkillFlag, "auto-skill", false, "auto-detect project and install matching skills")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
@@ -163,6 +174,14 @@ func init() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(researchCmd)
 	rootCmd.AddCommand(contextCmd)
+	rootCmd.AddCommand(inspectCmd)
+	rootCmd.AddCommand(sightCmd)
+	rootCmd.AddCommand(fingerprintCmd)
+	rootCmd.AddCommand(cmdHistoryCmd)
+	rootCmd.AddCommand(planCmd)
+	rootCmd.AddCommand(rulesCmd)
+	rootCmd.AddCommand(sandboxCmd)
+	rootCmd.AddCommand(costCmd)
 }
 
 var completionCmd = &cobra.Command{
@@ -318,9 +337,8 @@ var mcpCmd = &cobra.Command{
 }
 
 var sessionsCmd = &cobra.Command{
-	Use:     "sessions",
-	Aliases: []string{"history"},
-	Short:   "List saved sessions",
+	Use:   "sessions",
+	Short: "List saved sessions",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Println(sessionsSummary())
 	},
@@ -371,45 +389,39 @@ var pluginCmd = &cobra.Command{
 }
 
 var (
-	researchTarget string
-	researchMetric string
-	researchBudget time.Duration
-	researchGoal   string
-	researchMaxIter int
+	researchGrep      string
+	researchDirection string
+	researchBudgetMin int
+	researchBranch    string
+	researchResults   string
 )
 
 var researchCmd = &cobra.Command{
-	Use:   "research",
-	Short: "Autonomous research loop: modify code, run metric, keep improvements",
-	Long:  "hawk research --target train.go --metric \"go test -bench .\" --budget 5m --goal \"optimize performance\"",
+	Use:   "research [flags] <metric-command>",
+	Short: "Autonomous research loop (Karpathy autoresearch pattern)",
+	Long:  "hawk research --grep '^val_bpb:' --direction lower 'uv run train.py'",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if researchMetric == "" {
-			return fmt.Errorf("--metric is required")
+		if len(args) == 0 {
+			return fmt.Errorf("metric command is required")
 		}
-		config := ResearchConfig{
-			TargetFile:    researchTarget,
-			Metric:        researchMetric,
-			Budget:        researchBudget,
-			MaxIterations: researchMaxIter,
-			GoalPrompt:    researchGoal,
-			KeepBest:      true,
+		cfg := ResearchConfig{
+			MetricCmd:    strings.Join(args, " "),
+			MetricGrep:   researchGrep,
+			Direction:    researchDirection,
+			Budget:       researchBudgetMin,
+			BranchPrefix: researchBranch,
+			ResultsFile:  researchResults,
 		}
-		ctx := context.Background()
-		results, err := RunResearch(ctx, config)
-		if err != nil {
-			return err
-		}
-		cmd.Println(FormatResearchReport(results))
-		return nil
+		return runPrint(BuildResearchPrompt(cfg))
 	},
 }
 
 func init() {
-	researchCmd.Flags().StringVar(&researchTarget, "target", "", "file to modify")
-	researchCmd.Flags().StringVar(&researchMetric, "metric", "", "command that outputs a score")
-	researchCmd.Flags().DurationVar(&researchBudget, "budget", 5*time.Minute, "time budget per iteration")
-	researchCmd.Flags().StringVar(&researchGoal, "goal", "", "what to optimize")
-	researchCmd.Flags().IntVar(&researchMaxIter, "max-iterations", 50, "max total iterations")
+	researchCmd.Flags().StringVar(&researchGrep, "grep", "", "grep pattern to extract metric from run.log")
+	researchCmd.Flags().StringVar(&researchDirection, "direction", "lower", "optimization direction: lower or higher")
+	researchCmd.Flags().IntVar(&researchBudgetMin, "budget", 5, "time budget per experiment in minutes")
+	researchCmd.Flags().StringVar(&researchBranch, "branch", "autoresearch", "git branch prefix")
+	researchCmd.Flags().StringVar(&researchResults, "results", "results.tsv", "results TSV file path")
 }
 
 var (

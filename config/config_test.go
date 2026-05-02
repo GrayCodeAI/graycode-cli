@@ -7,28 +7,28 @@ import (
 	"testing"
 )
 
-func TestLoadHawkMD(t *testing.T) {
+func TestLoadAgentsMD(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("test instructions"), 0o644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("test instructions"), 0o644)
 
 	// Change to temp dir
 	orig, _ := os.Getwd()
 	os.Chdir(dir)
 	defer os.Chdir(orig)
 
-	md := LoadHawkMD()
+	md := LoadAgentsMD()
 	if md != "test instructions" {
 		t.Fatalf("got %q", md)
 	}
 }
 
-func TestLoadHawkMDMissing(t *testing.T) {
+func TestLoadAgentsMDMissing(t *testing.T) {
 	dir := t.TempDir()
 	orig, _ := os.Getwd()
 	os.Chdir(dir)
 	defer os.Chdir(orig)
 
-	md := LoadHawkMD()
+	md := LoadAgentsMD()
 	if md != "" {
 		t.Fatalf("expected empty, got %q", md)
 	}
@@ -44,7 +44,7 @@ func TestBuildContext(t *testing.T) {
 func TestBuildContextWithDirs(t *testing.T) {
 	root := t.TempDir()
 	extra := t.TempDir()
-	os.WriteFile(filepath.Join(extra, "HAWK.md"), []byte("extra instructions"), 0o644)
+	os.WriteFile(filepath.Join(extra, "AGENTS.md"), []byte("extra instructions"), 0o644)
 
 	orig, _ := os.Getwd()
 	os.Chdir(root)
@@ -55,7 +55,7 @@ func TestBuildContextWithDirs(t *testing.T) {
 		t.Fatal("expected additional directory in context")
 	}
 	if !strings.Contains(ctx, "extra instructions") {
-		t.Fatal("expected additional directory HAWK.md instructions")
+		t.Fatal("expected additional directory AGENTS.md instructions")
 	}
 }
 
@@ -177,5 +177,85 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "sk-test")
 	if got, ok := SettingValue(settings, "apiKey.openai"); !ok || got != "set" {
 		t.Fatalf("unexpected provider API key status: %q ok=%v", got, ok)
+	}
+}
+
+func TestLoadAgentsMD_AgentDir(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".agent", "AGENTS.md"), []byte("agent dir instructions"), 0o644)
+
+	md := LoadAgentsMDFrom(dir)
+	if md != "agent dir instructions" {
+		t.Fatalf("expected .agent/AGENTS.md content, got %q", md)
+	}
+}
+
+func TestLoadAgentsMD_HawkDirPriority(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".hawk", "AGENTS.md"), []byte("hawk dir"), 0o644)
+	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".agent", "AGENTS.md"), []byte("agent dir"), 0o644)
+
+	md := LoadAgentsMDFrom(dir)
+	if md != "hawk dir" {
+		t.Fatalf("expected .hawk/ to take priority, got %q", md)
+	}
+}
+
+func TestLoadAgentDir_Hawk(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	got := LoadAgentDir()
+	if !strings.HasSuffix(got, ".hawk") || got == "" {
+		t.Fatalf("expected path ending in .hawk, got %q", got)
+	}
+}
+
+func TestLoadAgentDir_Agent(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
+
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	got := LoadAgentDir()
+	if !strings.HasSuffix(got, ".agent") || got == "" {
+		t.Fatalf("expected path ending in .agent, got %q", got)
+	}
+}
+
+func TestLoadAgentDir_Neither(t *testing.T) {
+	dir := t.TempDir()
+
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	got := LoadAgentDir()
+	if got != "" {
+		t.Fatalf("expected empty, got %q", got)
+	}
+}
+
+func TestLoadAgentDir_HawkPriority(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
+
+	orig, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(orig)
+
+	got := LoadAgentDir()
+	if !strings.HasSuffix(got, ".hawk") || got == "" {
+		t.Fatalf("expected .hawk priority, got %q", got)
 	}
 }

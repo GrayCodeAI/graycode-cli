@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 func TestSummarizeTrajectory_ToolUsage(t *testing.T) {

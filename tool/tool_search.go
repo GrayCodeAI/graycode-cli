@@ -11,6 +11,7 @@ import (
 type ToolSearchTool struct{}
 
 func (ToolSearchTool) Name() string      { return "ToolSearch" }
+func (ToolSearchTool) RiskLevel() string { return "low" }
 func (ToolSearchTool) Aliases() []string { return []string{"tool_search"} }
 func (ToolSearchTool) Description() string {
 	return `Search available tools by name or description. Use query "select:<tool_name>" for direct selection.`

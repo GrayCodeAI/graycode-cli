@@ -9,30 +9,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.22', '1.23']
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: '1.26.1'
 
       - name: Download dependencies
         run: go mod download
-
-      - name: Run go vet
-        run: go vet ./...
 
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
@@ -45,8 +31,45 @@ jobs:
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.go-version }}
+          name: coverage
           path: coverage.html
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.1'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout 5m
+
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -d . | wc -l)" -gt 0 ]; then
+            echo "Code is not formatted. Run 'gofmt -w .'"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Check module tidiness
+        run: |
+          go mod tidy
+          if [ -n "$(git diff --name-only go.mod go.sum)" ]; then
+            echo "go.mod or go.sum is not tidy. Run 'go mod tidy'"
+            exit 1
+          fi
 
   build:
     runs-on: ubuntu-latest
@@ -64,7 +87,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.26.1'
 
       - name: Build
         env:
@@ -79,32 +102,3 @@ jobs:
         with:
           name: hawk-${{ matrix.goos }}-${{ matrix.goarch }}
           path: hawk-${{ matrix.goos }}-${{ matrix.goarch }}*
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-
-      - name: Check formatting
-        run: |
-          if [ "$(gofmt -d . | wc -l)" -gt 0 ]; then
-            echo "Code is not formatted. Run 'gofmt -w .'"
-            gofmt -d .
-            exit 1
-          fi
-
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Check module tidiness
-        run: |
-          go mod tidy
-          if [ -n "$(git diff --name-only go.mod go.sum)" ]; then
-            echo "go.mod or go.sum is not tidy. Run 'go mod tidy'"
-            exit 1
-          fi

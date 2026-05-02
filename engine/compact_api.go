@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 // APICompactStrategy uses API-level context edits to clear thinking blocks

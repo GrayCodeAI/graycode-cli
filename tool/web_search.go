@@ -14,6 +14,7 @@ import (
 type WebSearchTool struct{}
 
 func (WebSearchTool) Name() string      { return "WebSearch" }
+func (WebSearchTool) RiskLevel() string { return "low" }
 func (WebSearchTool) Aliases() []string { return []string{"web_search"} }
 func (WebSearchTool) Description() string {
 	return "Search the web and return results. Uses DuckDuckGo."

@@ -13,9 +13,10 @@ import (
 
 // Runtime manages loaded plugins and their execution.
 type Runtime struct {
-	plugins  []*Manifest
-	commands map[string]CommandDef
-	hooks    map[string][]HookDef
+	plugins    []*Manifest
+	commands   map[string]CommandDef
+	hooks      map[string][]HookDef
+	SmartSkills []SmartSkill
 }
 
 // NewRuntime creates a new plugin runtime.
@@ -41,6 +42,8 @@ func (r *Runtime) LoadAll() error {
 			r.hooks[h.Event] = append(r.hooks[h.Event], h)
 		}
 	}
+	// Load smart skills from standard directories
+	r.SmartSkills = LoadSmartSkills(DefaultSkillDirs())
 	return nil
 }
 

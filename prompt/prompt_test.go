@@ -7,7 +7,9 @@ import (
 
 func TestSystemPromptContainsEssentials(t *testing.T) {
 	s := System()
-	for _, want := range []string{"hawk", "Bash", "Read", "Write", "Edit", "Glob", "Grep", "Safety"} {
+	// Tool details are now in prompts/templates/; System() retains only
+	// identity, environment, system instructions, and safety.
+	for _, want := range []string{"hawk", "Environment", "System", "Safety"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("system prompt missing %q", want)
 		}

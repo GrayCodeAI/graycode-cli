@@ -13,7 +13,7 @@ import (
 
 func TestAdditionalDirContextLoadsInstructions(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("extra instructions"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("extra instructions"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

@@ -137,12 +137,16 @@ func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 
 // runDocker runs a command in a Docker container.
 func (s *Sandbox) runDocker(ctx context.Context, command string) (*exec.Cmd, error) {
+	workDir, _ := os.Getwd()
+	if len(s.config.ReadOnlyDirs) > 0 {
+		workDir = s.config.ReadOnlyDirs[0]
+	}
 	args := []string{
 		"run", "--rm",
-		"-v", fmt.Sprintf("%s:/workspace", s.config.ReadOnlyDirs[0]),
+		"-v", fmt.Sprintf("%s:/workspace", workDir),
 		"-w", "/workspace",
 		"--memory", fmt.Sprintf("%dm", s.config.MaxMemoryMB),
-		"--cpus", fmt.Sprintf("%d", s.config.MaxCPUPct/100),
+		"--cpus", fmt.Sprintf("%.2f", float64(s.config.MaxCPUPct)/100.0),
 	}
 	if !s.config.AllowNetwork {
 		args = append(args, "--network", "none")

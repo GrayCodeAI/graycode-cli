@@ -13,7 +13,7 @@
         
         hawk = pkgs.buildGoModule rec {
           pname = "hawk";
-          version = "0.1.0";
+          version = "0.2.0";
           
           src = ./.;
           
@@ -43,7 +43,7 @@
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            go_1_23
+            go_1_26
             gopls
             gotools
             go-tools

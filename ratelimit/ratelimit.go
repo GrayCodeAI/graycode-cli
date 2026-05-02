@@ -151,5 +151,13 @@ func PerSecond(rps int) *Limiter {
 
 // PerMinute creates a rate limiter with the given requests per minute.
 func PerMinute(rpm int) *Limiter {
-	return New(Config{Rate: rpm / 60, Burst: rpm / 10})
+	rate := rpm / 60
+	if rate < 1 {
+		rate = 1
+	}
+	burst := rpm / 10
+	if burst < 1 {
+		burst = 1
+	}
+	return New(Config{Rate: rate, Burst: burst})
 }

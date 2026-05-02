@@ -25,3 +25,5 @@ Thumbs.db
 dist/
 .gocache/
 .gomodcache/
+go.work
+go.work.sum

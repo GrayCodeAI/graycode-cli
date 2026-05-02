@@ -11,6 +11,7 @@ import (
 type FileWriteTool struct{}
 
 func (FileWriteTool) Name() string      { return "Write" }
+func (FileWriteTool) RiskLevel() string { return "medium" }
 func (FileWriteTool) Aliases() []string { return []string{"file_write"} }
 func (FileWriteTool) Description() string {
 	return "Create or overwrite a file with the given content."
@@ -45,8 +46,21 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if err := validatePathAllowed(ctx, path); err != nil {
 		return "", err
 	}
+	if reason := IsSensitivePath(path); reason != "" {
+		return "", fmt.Errorf("blocked: %s", reason)
+	}
 	if tc := GetToolContext(ctx); tc != nil && tc.Protected != nil && tc.Protected.IsProtected(path) {
 		return "", fmt.Errorf("path %s is protected (read-only)", path)
+	}
+	if cred := DetectCredentials(p.Content); cred != "" {
+		return "", fmt.Errorf("content contains a credential (%s) — refusing to write", cred)
+	}
+	// Backup existing file before overwriting
+	if _, statErr := os.Stat(path); statErr == nil {
+		if _, backupErr := BackupFile(path); backupErr != nil {
+			// Best-effort backup — log but don't block the write
+			_ = backupErr
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)

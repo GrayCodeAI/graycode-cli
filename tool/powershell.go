@@ -15,6 +15,7 @@ import (
 type PowerShellTool struct{}
 
 func (PowerShellTool) Name() string        { return "PowerShell" }
+func (PowerShellTool) RiskLevel() string   { return "high" }
 func (PowerShellTool) Aliases() []string   { return []string{"powershell"} }
 func (PowerShellTool) Description() string {
 	return "Execute a PowerShell command. Use this instead of Bash when running on Windows or when PowerShell-specific cmdlets are needed."
@@ -46,6 +47,13 @@ func (PowerShellTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	}
 	if p.Command == "" {
 		return "", fmt.Errorf("command is required")
+	}
+	// Safety: check for destructive commands (same as Bash tool)
+	if IsDestructiveCommand(p.Command) {
+		return "", fmt.Errorf("command blocked: contains a destructive pattern")
+	}
+	if IsSuspicious(p.Command) {
+		return "", fmt.Errorf("command blocked: flagged as suspicious")
 	}
 
 	timeout := 120 * time.Second

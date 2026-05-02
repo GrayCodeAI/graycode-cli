@@ -165,6 +165,15 @@ func RunSetup() error {
 			return fmt.Errorf("no API key")
 		}
 
+		// Validate key format before saving
+		if warning, valid := validateAPIKey(selected.name, apiKey); !valid {
+			fmt.Printf("  %s⚠ %s%s\n", red, warning, reset)
+			fmt.Println(red + "  API key not saved. Please check your key and try again." + reset)
+			return fmt.Errorf("invalid API key")
+		} else if warning != "" {
+			fmt.Printf("  %s⚠ %s (saving anyway)%s\n", dim, warning, reset)
+		}
+
 		// Herm-style: set env var for this session, persist to ~/.hawk/env
 		os.Setenv(selected.envKey, apiKey)
 		_ = hawkconfig.SaveEnvFile(selected.envKey, apiKey)
@@ -218,4 +227,24 @@ func SaveAPIKeyToEnvFile(key, value string) {
 	}
 	defer f.Close()
 	fmt.Fprintf(f, "export %s=%s\n", key, value)
+}
+
+// validateAPIKey checks the key format for known providers.
+// Returns (warning, isValid). A warning with isValid=true means the key is
+// acceptable but may have an unusual format.
+func validateAPIKey(provider, key string) (string, bool) {
+	if len(key) <= 10 {
+		return "API key seems too short", false
+	}
+	switch strings.ToLower(provider) {
+	case "anthropic":
+		if !strings.HasPrefix(key, "sk-ant-") {
+			return "Anthropic keys typically start with 'sk-ant-'", false
+		}
+	case "openai":
+		if !strings.HasPrefix(key, "sk-") {
+			return "OpenAI keys typically start with 'sk-'", false
+		}
+	}
+	return "", true
 }

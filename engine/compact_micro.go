@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 // MicroCompactStrategy clears old tool result content while preserving message structure.

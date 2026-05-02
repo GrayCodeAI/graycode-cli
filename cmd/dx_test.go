@@ -36,7 +36,7 @@ func TestDoctorOutputContainsSections(t *testing.T) {
 		"Session directory:",
 		"MCP servers:",
 		"Plugins:",
-		"HAWK.md:",
+		"AGENTS.md:",
 		"Git:",
 	}
 	for _, section := range sections {

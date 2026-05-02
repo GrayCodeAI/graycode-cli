@@ -6,6 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/repomap"
+	"github.com/GrayCodeAI/hawk/tool"
 )
 
 // ExportContext generates a comprehensive context document about the current project.
@@ -55,8 +58,8 @@ func ExportContext(dir string, focus string) (string, error) {
 		b.WriteString("\n\n")
 	}
 
-	// HAWK.md / project instructions
-	for _, instrFile := range []string{"HAWK.md", "CLAUDE.md", ".hawk.md"} {
+	// AGENTS.md / project instructions
+	for _, instrFile := range []string{"AGENTS.md", "AGENTS.md", "CLAUDE.md", ".hawk.md"} {
 		data, err := os.ReadFile(filepath.Join(dir, instrFile))
 		if err == nil && len(data) > 0 {
 			b.WriteString(fmt.Sprintf("## Project Instructions (%s)\n\n%s\n\n", instrFile, strings.TrimSpace(string(data))))
@@ -245,4 +248,91 @@ func findFocusFiles(dir, focus string) []string {
 		result = result[:20]
 	}
 	return result
+}
+
+// renderCXML renders a directory as CXML (Karpathy's rendergit pattern).
+// Returns the CXML string and a stats summary.
+func renderCXML(dir string) (string, string, error) {
+	if dir == "" {
+		var err error
+		dir, err = os.Getwd()
+		if err != nil {
+			return "", "", err
+		}
+	}
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", "", err
+	}
+
+	gi := repomap.LoadGitignoreRules(dir)
+
+	var binaryExts = map[string]bool{
+		".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".bmp": true, ".ico": true, ".webp": true,
+		".pdf": true, ".zip": true, ".tar": true, ".gz": true, ".bz2": true, ".xz": true, ".7z": true,
+		".exe": true, ".dll": true, ".so": true, ".dylib": true, ".o": true, ".a": true,
+		".wasm": true, ".pyc": true, ".class": true, ".jar": true,
+		".mp3": true, ".mp4": true, ".wav": true, ".avi": true, ".mov": true, ".mkv": true,
+		".ttf": true, ".otf": true, ".woff": true, ".woff2": true, ".eot": true,
+		".sqlite": true, ".db": true, ".DS_Store": true,
+	}
+
+	const maxFileSize = 50 * 1024
+
+	var files []struct{ rel, content string }
+	var scanned, skipped int
+
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		name := info.Name()
+		if info.IsDir() {
+			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" || name == "__pycache__" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, path)
+		if gi.ShouldIgnore(rel) {
+			skipped++
+			return nil
+		}
+		scanned++
+		if binaryExts[strings.ToLower(filepath.Ext(name))] {
+			skipped++
+			return nil
+		}
+		if info.Size() > maxFileSize {
+			skipped++
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			skipped++
+			return nil
+		}
+		if tool.IsBinaryContent(data) {
+			skipped++
+			return nil
+		}
+		files = append(files, struct{ rel, content string }{rel, string(data)})
+		return nil
+	})
+
+	var b strings.Builder
+	b.WriteString("<documents>\n")
+
+	// Document 1: directory tree
+	b.WriteString("<document index=\"1\">\n<source>directory_tree</source>\n<document_content>\n")
+	b.WriteString(dirTree(dir, 3))
+	b.WriteString("</document_content>\n</document>\n")
+
+	for i, f := range files {
+		b.WriteString(fmt.Sprintf("<document index=\"%d\">\n<source>%s</source>\n<document_content>\n%s\n</document_content>\n</document>\n", i+2, f.rel, f.content))
+	}
+	b.WriteString("</documents>\n")
+
+	stats := fmt.Sprintf("Render complete: %d files scanned, %d included, %d skipped", scanned, len(files), skipped)
+	return b.String(), stats, nil
 }

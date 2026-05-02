@@ -2,9 +2,10 @@ package engine
 
 import (
 	"context"
+	"log"
 	"sync"
 
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 // AutoCompactor orchestrates compaction with circuit breaker protection.
@@ -39,6 +40,7 @@ func (ac *AutoCompactor) ShouldAutoCompact(sess *Session) bool {
 	}
 
 	if ac.consecutiveFailures >= ac.config.MaxFailures {
+		log.Printf("Auto-compact paused after %d consecutive failures.", ac.consecutiveFailures)
 		return false
 	}
 

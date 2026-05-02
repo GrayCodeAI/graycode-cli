@@ -81,6 +81,7 @@ var commandSubstitutionPatterns = []*regexp.Regexp{
 type BashTool struct{}
 
 func (BashTool) Name() string        { return "Bash" }
+func (BashTool) RiskLevel() string   { return "high" }
 func (BashTool) Aliases() []string   { return []string{"bash"} }
 func (BashTool) Description() string { return "Run a shell command." }
 func (BashTool) Parameters() map[string]interface{} {
@@ -98,40 +99,128 @@ func (BashTool) Parameters() map[string]interface{} {
 	}
 }
 
+// SegmentCommand splits a command string on &&, ||, ;, and | (respecting quotes)
+// into individual segments for independent analysis.
+func SegmentCommand(cmd string) []string {
+	var segments []string
+	var current strings.Builder
+	inSingle, inDouble := false, false
+	runes := []rune(cmd)
+	for i := 0; i < len(runes); i++ {
+		ch := runes[i]
+		if ch == '\'' && !inDouble {
+			inSingle = !inSingle
+			current.WriteRune(ch)
+			continue
+		}
+		if ch == '"' && !inSingle {
+			inDouble = !inDouble
+			current.WriteRune(ch)
+			continue
+		}
+		if inSingle || inDouble {
+			current.WriteRune(ch)
+			continue
+		}
+		// Check for &&, ||
+		if i+1 < len(runes) && ((ch == '&' && runes[i+1] == '&') || (ch == '|' && runes[i+1] == '|')) {
+			if s := strings.TrimSpace(current.String()); s != "" {
+				segments = append(segments, s)
+			}
+			current.Reset()
+			i++ // skip second char
+			continue
+		}
+		// Check for ; or single |
+		if ch == ';' || ch == '|' {
+			if s := strings.TrimSpace(current.String()); s != "" {
+				segments = append(segments, s)
+			}
+			current.Reset()
+			continue
+		}
+		current.WriteRune(ch)
+	}
+	if s := strings.TrimSpace(current.String()); s != "" {
+		segments = append(segments, s)
+	}
+	return segments
+}
+
 // IsSuspicious returns true if the command needs a permission prompt.
 // This is fail-closed: anything we can't confidently classify as safe gets flagged.
 func IsSuspicious(command string) bool {
-	lower := strings.ToLower(command)
+	// Whole-command checks that apply regardless of segmentation
+	if strings.Contains(command, "\r") {
+		return true
+	}
+	if ifsInjectionRe.MatchString(command) {
+		return true
+	}
+	if procEnvironRe.MatchString(command) {
+		return true
+	}
+	if ansiCQuotingRe.MatchString(command) {
+		return true
+	}
+	if localeQuotingRe.MatchString(command) {
+		return true
+	}
+	if emptyQuotePairRe.MatchString(command) {
+		return true
+	}
+	if consecutiveQuotesRe.MatchString(command) {
+		return true
+	}
+	if commandSubstitutionRe.MatchString(command) && heredocRe.MatchString(command) {
+		return true
+	}
 
-	// Check dangerous substrings
+	// Check full command for patterns that span operators (e.g. "| bash")
+	lower := strings.ToLower(command)
 	for _, pat := range dangerousSubstrings {
 		if strings.Contains(lower, pat) {
 			return true
 		}
 	}
-
-	// Check suspicious patterns
 	for _, pat := range suspiciousPatterns {
 		if strings.Contains(lower, strings.ToLower(pat)) {
 			return true
 		}
 	}
 
-	// Check command substitution patterns
-	for _, re := range commandSubstitutionPatterns {
-		if re.MatchString(command) {
+	// Check each segment independently
+	for _, seg := range SegmentCommand(command) {
+		if isSegmentSuspicious(seg) {
 			return true
 		}
 	}
+	return false
+}
 
-	// Check zsh equals expansion (=cmd at word start)
-	// This can bypass deny rules by expanding to the full command path
-	if zshEqualsExpansionRe.MatchString(command) {
+// isSegmentSuspicious checks a single command segment for suspicious patterns.
+func isSegmentSuspicious(segment string) bool {
+	lower := strings.ToLower(segment)
+
+	for _, pat := range dangerousSubstrings {
+		if strings.Contains(lower, pat) {
+			return true
+		}
+	}
+	for _, pat := range suspiciousPatterns {
+		if strings.Contains(lower, strings.ToLower(pat)) {
+			return true
+		}
+	}
+	for _, re := range commandSubstitutionPatterns {
+		if re.MatchString(segment) {
+			return true
+		}
+	}
+	if zshEqualsExpansionRe.MatchString(segment) {
 		return true
 	}
-
-	// Check zsh dangerous commands
-	words := strings.Fields(command)
+	words := strings.Fields(segment)
 	for _, word := range words {
 		base := strings.TrimLeft(word, "\\/")
 		base = strings.TrimSpace(base)
@@ -139,77 +228,16 @@ func IsSuspicious(command string) bool {
 			return true
 		}
 	}
-
-	// Check if first command word is dangerous
 	if len(words) > 0 {
 		base := words[0]
-		// Strip path prefix
 		if i := strings.LastIndex(base, "/"); i >= 0 {
 			base = base[i+1:]
 		}
-		// Strip leading backslash (bypass attempt)
 		base = strings.TrimLeft(base, "\\")
 		if dangerousCommands[base] {
 			return true
 		}
 	}
-
-	// Multi-command detection: ;, &&, || with dangerous commands
-	for _, sep := range []string{";", "&&", "||"} {
-		parts := strings.Split(command, sep)
-		for _, part := range parts {
-			part = strings.TrimSpace(part)
-			w := strings.Fields(part)
-			if len(w) > 0 {
-				base := strings.TrimLeft(w[0], "\\/")
-				if dangerousCommands[base] {
-					return true
-				}
-			}
-		}
-	}
-
-	// Check for carriage return (misparsing concern)
-	if strings.Contains(command, "\r") {
-		return true
-	}
-
-	// Check for IFS injection (can bypass regex validation)
-	if ifsInjectionRe.MatchString(command) {
-		return true
-	}
-
-	// Check for /proc/*/environ access (exposes environment variables)
-	if procEnvironRe.MatchString(command) {
-		return true
-	}
-
-	// Check for ANSI-C quoting which can hide characters
-	if ansiCQuotingRe.MatchString(command) {
-		return true
-	}
-
-	// Check for locale quoting
-	if localeQuotingRe.MatchString(command) {
-		return true
-	}
-
-	// Check for empty quote pairs before dash (flag obfuscation)
-	if emptyQuotePairRe.MatchString(command) {
-		return true
-	}
-
-	// Check for 3+ consecutive quotes at word start
-	if consecutiveQuotesRe.MatchString(command) {
-		return true
-	}
-
-	// Check for heredoc in substitution (complex validation needed)
-	if commandSubstitutionRe.MatchString(command) && heredocRe.MatchString(command) {
-		// This needs proper validation - be conservative
-		return true
-	}
-
 	return false
 }
 

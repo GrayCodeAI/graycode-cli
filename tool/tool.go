@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/sandbox"
-	"github.com/hawk/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/client"
 )
 
 // Tool is the interface every hawk tool implements.
@@ -20,6 +21,12 @@ type Tool interface {
 // AliasedTool can be implemented by tools that need backward-compatible wire names.
 type AliasedTool interface {
 	Aliases() []string
+}
+
+// RiskLevelProvider can be implemented by tools to declare their risk level.
+// Tools that don't implement it default to "medium".
+type RiskLevelProvider interface {
+	RiskLevel() string // "low", "medium", "high"
 }
 
 // PathProtector checks whether a file path is protected (read-only).
@@ -44,11 +51,13 @@ type ToolContext struct {
 	AgentSpawnFn       func(ctx context.Context, prompt string) (string, error)
 	AskUserFn          func(question string) (string, error)
 	CodeSearchFn       func(ctx context.Context, query string, limit int) ([]CodeSearchResult, error)
+	RefreshCodeIndexFn func(ctx context.Context) error
 	AvailableTools     []Tool
 	AllowedDirectories []string
 	SandboxMode        sandbox.Mode
 	AutoCommit         bool
 	Protected          PathProtector
+	YaadBridge         *memory.YaadBridge
 }
 
 // ctxKey is the context key for ToolContext.
