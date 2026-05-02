@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/onboarding"
@@ -43,6 +45,12 @@ var (
 	sandboxFlag                string
 	autoCommitFlag             bool
 	watchFlag                  bool
+	vibeMode                   bool
+	powerLevel                 int
+	timeout                    time.Duration
+	councilMode                bool
+	teachMode                  bool
+	teachDepth                 int
 )
 
 // SetVersion sets the version string from main.
@@ -137,6 +145,12 @@ func init() {
 	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "sandbox mode for Bash commands: strict, workspace, or off")
 	rootCmd.Flags().BoolVar(&autoCommitFlag, "auto-commit", false, "auto-commit file changes made by Write and Edit tools")
 	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes")
+	rootCmd.Flags().BoolVar(&vibeMode, "vibe", false, "vibe coding mode: auto-apply, auto-run, no confirmations")
+	rootCmd.Flags().IntVar(&powerLevel, "power", 5, "power level 1-10 (auto-configures model, context, review depth)")
+	rootCmd.Flags().DurationVar(&timeout, "timeout", 0, "time budget for the operation (e.g., 2m, 5m, 1h)")
+	rootCmd.Flags().BoolVar(&councilMode, "council", false, "consult multiple models and synthesize best answer")
+	rootCmd.Flags().BoolVar(&teachMode, "teach", false, "explain reasoning as the agent works")
+	rootCmd.Flags().IntVar(&teachDepth, "teach-depth", 2, "explanation depth: 1=what, 2=why, 3=how")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
@@ -147,6 +161,8 @@ func init() {
 	rootCmd.AddCommand(toolsCmd)
 	rootCmd.AddCommand(pluginCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(researchCmd)
+	rootCmd.AddCommand(contextCmd)
 }
 
 var completionCmd = &cobra.Command{
@@ -352,6 +368,78 @@ var pluginCmd = &cobra.Command{
 			return fmt.Errorf("unknown plugin action %q", args[0])
 		}
 	},
+}
+
+var (
+	researchTarget string
+	researchMetric string
+	researchBudget time.Duration
+	researchGoal   string
+	researchMaxIter int
+)
+
+var researchCmd = &cobra.Command{
+	Use:   "research",
+	Short: "Autonomous research loop: modify code, run metric, keep improvements",
+	Long:  "hawk research --target train.go --metric \"go test -bench .\" --budget 5m --goal \"optimize performance\"",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if researchMetric == "" {
+			return fmt.Errorf("--metric is required")
+		}
+		config := ResearchConfig{
+			TargetFile:    researchTarget,
+			Metric:        researchMetric,
+			Budget:        researchBudget,
+			MaxIterations: researchMaxIter,
+			GoalPrompt:    researchGoal,
+			KeepBest:      true,
+		}
+		ctx := context.Background()
+		results, err := RunResearch(ctx, config)
+		if err != nil {
+			return err
+		}
+		cmd.Println(FormatResearchReport(results))
+		return nil
+	},
+}
+
+func init() {
+	researchCmd.Flags().StringVar(&researchTarget, "target", "", "file to modify")
+	researchCmd.Flags().StringVar(&researchMetric, "metric", "", "command that outputs a score")
+	researchCmd.Flags().DurationVar(&researchBudget, "budget", 5*time.Minute, "time budget per iteration")
+	researchCmd.Flags().StringVar(&researchGoal, "goal", "", "what to optimize")
+	researchCmd.Flags().IntVar(&researchMaxIter, "max-iterations", 50, "max total iterations")
+}
+
+var (
+	contextFocus  string
+	contextOutput string
+)
+
+var contextCmd = &cobra.Command{
+	Use:   "context",
+	Short: "Export project context as a single document for use in any LLM",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if contextOutput != "" {
+			if err := ExportContextToFile("", contextFocus, contextOutput); err != nil {
+				return err
+			}
+			cmd.Println("Context exported to", contextOutput)
+			return nil
+		}
+		result, err := ExportContext("", contextFocus)
+		if err != nil {
+			return err
+		}
+		cmd.Print(result)
+		return nil
+	},
+}
+
+func init() {
+	contextCmd.Flags().StringVar(&contextFocus, "focus", "", "focus on a specific area (e.g., 'engine', 'auth')")
+	contextCmd.Flags().StringVarP(&contextOutput, "output", "o", "", "write context to a file instead of stdout")
 }
 
 // Execute runs the root command.

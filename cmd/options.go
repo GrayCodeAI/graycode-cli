@@ -208,7 +208,16 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 	if budget == 0 && settings.MaxBudgetUSD > 0 {
 		budget = settings.MaxBudgetUSD
 	}
-	return sess.SetMaxBudgetUSD(budget)
+	if err := sess.SetMaxBudgetUSD(budget); err != nil {
+		return err
+	}
+
+	// Teach mode: augment system prompt with explanation instructions
+	if teachMode {
+		sess.AppendSystemContext("\n\n## Teaching Mode\n" + engine.TeachPromptAugment(teachDepth))
+	}
+
+	return nil
 }
 
 func validateRootFlags() error {

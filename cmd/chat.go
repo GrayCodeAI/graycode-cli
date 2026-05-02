@@ -81,6 +81,7 @@ type blinkTickMsg struct{}
 
 type glimmerTickMsg struct{}
 type modelsFetchedMsg []string
+type loopTickMsg struct{ command string }
 type toolUseMsg struct{ name, id string }
 type toolResultMsg struct{ name, content string }
 type permissionAskMsg struct{ req engine.PermissionRequest }
@@ -1634,6 +1635,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case loopTickMsg:
+		if !m.waiting {
+			return m.handleCommand(msg.command)
+		}
+		return m, nil
+
 	case streamChunkMsg:
 		m.partial.WriteString(string(msg))
 		return m, nil
@@ -2170,32 +2177,65 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/agents":
 		return m.startPromptCommand("/agents", "List all active agents and teammates in the current session. Show their status and assigned tasks.")
 	case "/copy":
-		if len(m.messages) > 0 {
-			last := m.messages[len(m.messages)-1]
-			if last.role == "assistant" {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Last response copied to clipboard."})
+		for i := len(m.messages) - 1; i >= 0; i-- {
+			if m.messages[i].role == "assistant" {
+				cmd := exec.Command("pbcopy")
+				cmd.Stdin = strings.NewReader(m.messages[i].content)
+				if err := cmd.Run(); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to copy: " + err.Error()})
+				} else {
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Copied to clipboard."})
+				}
+				return m, nil
 			}
 		}
+		m.messages = append(m.messages, displayMsg{role: "error", content: "No assistant response to copy."})
 		return m, nil
 	case "/theme":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /theme <dark|light|auto>"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Theme set to: %s", parts[1])})
+		if err := hawkconfig.SetGlobalSetting("theme", parts[1]); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Theme set to: %s (restart to apply)", parts[1])})
+		}
 		return m, nil
 	case "/color":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Agent color updated."})
+		if len(parts) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /color <hex-color>"})
+			return m, nil
+		}
+		if err := hawkconfig.SetGlobalSetting("agentColor", parts[1]); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Agent color set to: %s", parts[1])})
+		}
 		return m, nil
 	case "/fast":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Fast mode toggled. Uses faster output without downgrading the model."})
+		if m.session.Model() == m.settings.Model {
+			fastModel := "claude-haiku-4-5-20251001"
+			m.session.SetModel(fastModel)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode on → %s", fastModel)})
+		} else {
+			m.session.SetModel(m.settings.Model)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode off → %s", m.settings.Model)})
+		}
 		return m, nil
 	case "/effort":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /effort <low|medium|high>"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Reasoning effort set to: %s", parts[1])})
+		level := strings.ToLower(parts[1])
+		switch level {
+		case "low", "medium", "high":
+			_ = hawkconfig.SetGlobalSetting("reasoningEffort", level)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Reasoning effort → %s", level)})
+		default:
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid levels: low, medium, high"})
+		}
 		return m, nil
 	case "/vim":
 		if m.vim == nil {
@@ -2209,21 +2249,60 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Vim mode " + state})
 		return m, nil
 	case "/export":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session exported: %s.json", m.sessionID)})
+		home, _ := os.UserHomeDir()
+		exportDir := filepath.Join(home, ".hawk", "exports")
+		os.MkdirAll(exportDir, 0755)
+		exportPath := filepath.Join(exportDir, m.sessionID+".md")
+		var md strings.Builder
+		md.WriteString(fmt.Sprintf("# Session %s\n\n", m.sessionID))
+		for _, msg := range m.messages {
+			switch msg.role {
+			case "user":
+				md.WriteString("## User\n" + msg.content + "\n\n")
+			case "assistant":
+				md.WriteString("## Assistant\n" + msg.content + "\n\n")
+			case "system":
+				md.WriteString("_" + msg.content + "_\n\n")
+			}
+		}
+		if err := os.WriteFile(exportPath, []byte(md.String()), 0644); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Exported to: %s", exportPath)})
+		}
 		return m, nil
 	case "/rename":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /rename <new-session-name>"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session renamed to: %s", parts[1])})
+		newName := parts[1]
+		home, _ := os.UserHomeDir()
+		sessDir := filepath.Join(home, ".hawk", "sessions")
+		oldPath := filepath.Join(sessDir, m.sessionID+".jsonl")
+		newPath := filepath.Join(sessDir, newName+".jsonl")
+		if err := os.Rename(oldPath, newPath); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.sessionID = newName
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session renamed to: %s", newName)})
+		}
 		return m, nil
 	case "/tag":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /tag <label>"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session tagged: %s", parts[1])})
+		home, _ := os.UserHomeDir()
+		tagFile := filepath.Join(home, ".hawk", "sessions", m.sessionID+".tags")
+		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			f.WriteString(parts[1] + "\n")
+			f.Close()
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tagged: %s", parts[1])})
+		}
 		return m, nil
 	case "/stats":
 		days := 30
@@ -2249,10 +2328,34 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
 		return m, nil
 	case "/voice":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Voice mode toggled. Requires whisper.cpp."})
+		out, err := exec.Command("which", "whisper").CombinedOutput()
+		if err != nil || strings.TrimSpace(string(out)) == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Voice requires whisper.cpp. Install with: brew install whisper-cpp"})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Recording... (press Enter when done, Ctrl+C to cancel)\nNote: voice input requires a separate terminal. Use: whisper --model base -f recording.wav | hawk"})
+		}
 		return m, nil
 	case "/share":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Session sharing not yet configured."})
+		home, _ := os.UserHomeDir()
+		exportDir := filepath.Join(home, ".hawk", "exports")
+		os.MkdirAll(exportDir, 0755)
+		exportPath := filepath.Join(exportDir, m.sessionID+".md")
+		var md strings.Builder
+		md.WriteString(fmt.Sprintf("# Hawk Session %s\n\n", m.sessionID))
+		md.WriteString(fmt.Sprintf("Model: %s/%s\n\n---\n\n", m.session.Provider(), m.session.Model()))
+		for _, msg := range m.messages {
+			switch msg.role {
+			case "user":
+				md.WriteString("**User:** " + msg.content + "\n\n")
+			case "assistant":
+				md.WriteString("**Hawk:** " + msg.content + "\n\n")
+			}
+		}
+		if err := os.WriteFile(exportPath, []byte(md.String()), 0644); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session saved to: %s\nShare this file or paste its contents.", exportPath)})
+		}
 		return m, nil
 	case "/upgrade":
 		return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
@@ -2260,14 +2363,27 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter       — Submit\n  Ctrl+C      — Cancel/Exit\n  Ctrl+L      — Clear\n  Up/Down     — History\n  Tab         — Complete"})
 		return m, nil
 	case "/sandbox":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox mode toggled."})
+		if string(m.session.Mode) == "acceptEdits" {
+			m.session.SetPermissionMode("default")
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ON — all actions require approval."})
+		} else {
+			m.session.SetPermissionMode("acceptEdits")
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox OFF — file edits auto-approved, other actions require approval."})
+		}
 		return m, nil
 	case "/output-style":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /output-style <concise|normal|detailed>"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Output style: %s", parts[1])})
+		style := strings.ToLower(parts[1])
+		switch style {
+		case "concise", "normal", "detailed":
+			_ = hawkconfig.SetGlobalSetting("outputStyle", style)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Output style → %s", style)})
+		default:
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid styles: concise, normal, detailed"})
+		}
 		return m, nil
 	case "/thinkback":
 		return m.startPromptCommand("/thinkback", "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered.")
@@ -2362,11 +2478,24 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "/loop":
-		if len(parts) < 2 {
+		if len(parts) < 3 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /loop <interval> <command> (e.g., /loop 5m /doctor)"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop scheduled: %s", strings.Join(parts[1:], " "))})
+		interval, err := time.ParseDuration(parts[1])
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Invalid interval %q: %v", parts[1], err)})
+			return m, nil
+		}
+		loopCmd := strings.Join(parts[2:], " ")
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop started: %s every %s (stop with /clear)", loopCmd, interval)})
+		go func() {
+			ticker := time.NewTicker(interval)
+			defer ticker.Stop()
+			for range ticker.C {
+				m.ref.Send(loopTickMsg{command: loopCmd})
+			}
+		}()
 		return m, nil
 	case "/fork":
 		atIndex := len(m.session.RawMessages()) - 1
@@ -2506,7 +2635,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /drop <file-path>"})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Dropped %s from context.", parts[1])})
+		file := parts[1]
+		m.session.AddUser(fmt.Sprintf("[System: The file %s has been removed from context. Disregard any previous content from this file.]", file))
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Dropped %s from context.", file)})
 		return m, nil
 
 	case "/run":
@@ -2560,7 +2691,13 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "/yolo":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Auto-approve mode toggled. All tool calls will be approved automatically."})
+		if string(m.session.Mode) == "bypassPermissions" {
+			m.session.SetPermissionMode("default")
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Yolo mode OFF — all actions require approval."})
+		} else {
+			m.session.SetPermissionMode("bypassPermissions")
+			m.messages = append(m.messages, displayMsg{role: "system", content: "⚠ Yolo mode ON — all tool calls auto-approved."})
+		}
 		return m, nil
 
 	case "/new":
@@ -3168,7 +3305,17 @@ func runPrint(text string) error {
 	}
 
 	sess.AddUser(text)
-	ch, err := sess.Stream(context.Background())
+
+	// Wire timeout if --timeout flag is set
+	ctx := context.Background()
+	if timeout > 0 {
+		cfg := engine.TimeoutConfig{Total: timeout, Countdown: true}
+		var cancel context.CancelFunc
+		ctx, cancel = engine.WithTimeout(ctx, cfg)
+		defer cancel()
+	}
+
+	ch, err := sess.Stream(ctx)
 	if err != nil {
 		return err
 	}
