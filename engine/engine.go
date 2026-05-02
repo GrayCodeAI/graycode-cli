@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -55,6 +56,18 @@ type Session struct {
 	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
 	AskUserFn    func(question string) (string, error)
 	Memory       MemoryRecaller
+
+	// Advanced features
+	Autonomy   AutonomyLevel        // autonomy.go — permission level
+	Sandbox    *DiffSandbox         // diffsandbox.go — staged file changes
+	Plan       *PlanState           // subtask.go — user-activated plan
+	Beliefs    *BeliefState         // belief.go — discovered knowledge
+	Critic     *Critic              // critic.go — patch pre-screening
+	Backtrack  *BacktrackEngine     // backtrack.go — decision recording
+	Limits     *LimitTracker        // limits.go — safety limits
+	Teach      TeachConfig          // teach.go — explanation depth
+	Trajectory *TrajectoryDistiller // trajectory.go — multi-run distillation
+	Shadow     *ShadowWorkspace     // shadow.go — edit pre-validation
 }
 
 // NewSession creates a new conversation session.
@@ -72,6 +85,9 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		AutoMode:    permissions.NewAutoModeState(),
 		Classifier:  permissions.NewClassifier(),
 		BypassKill:  permissions.NewBypassKillswitch(),
+		Beliefs:     NewBeliefState(),
+		Backtrack:   NewBacktrackEngine(),
+		Limits:      NewLimitTracker(DefaultLimits()),
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
@@ -230,11 +246,27 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	snowball := NewSnowballDetector(500000) // 500K token ceiling
 
 	for {
+		// Timeout check: abort if context was cancelled by a time budget
+		if ctx.Err() != nil {
+			ch <- StreamEvent{Type: "content", Content: "\n\nTime budget exhausted."}
+			ch <- StreamEvent{Type: "done"}
+			return
+		}
+
 		// Snowball abort check
 		if snowball.ShouldAbort() {
 			ch <- StreamEvent{Type: "content", Content: "\n\n" + snowball.Summary()}
 			ch <- StreamEvent{Type: "done"}
 			return
+		}
+
+		// Safety limits check
+		if s.Limits != nil {
+			if exceeded, reason := s.Limits.IsExceeded(); exceeded {
+				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
+				ch <- StreamEvent{Type: "done"}
+				return
+			}
 		}
 
 		// Enforce MaxTurns budget
@@ -244,6 +276,20 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 		turnCount++
+
+		// Record turn for limits tracking
+		if s.Limits != nil {
+			s.Limits.RecordTurn()
+		}
+
+		// Belief maintenance: prune stale beliefs and inject context
+		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
+			s.Beliefs.Prune(turnCount)
+			if summary := s.Beliefs.FormatForPrompt(); summary != "" {
+				// Inject beliefs as ephemeral context (not persisted to system prompt)
+				s.AppendSystemContext("## Agent Beliefs\n" + summary)
+			}
+		}
 		// Auto-compact if conversation is too long
 		if len(s.messages) > maxContextMessages {
 			s.smartCompact()
@@ -487,6 +533,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
+		// Backtrack: record decision point when tool calls are pending
+		if s.Backtrack != nil && len(toolCalls) > 0 {
+			var toolNames []string
+			for _, tc := range toolCalls {
+				toolNames = append(toolNames, tc.Name)
+			}
+			s.Backtrack.RecordDecision(turnCount, strings.Join(toolNames, ", "), nil, s.messages)
+		}
+
 		var results []toolExecResult
 		var mu sync.Mutex
 
@@ -494,8 +549,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		executeSingleTool := func(tc client.ToolCall) toolExecResult {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
-			// Check permission for dangerous tools
-			if toolNeedsPermission(tc.Name, tc.Arguments) && s.PermissionFn != nil {
+			// Check permission for dangerous tools.
+			// Use autonomy level to decide: the AutonomyConfig considers whether
+			// the tool is read-only/write/bash and whether the specific invocation
+			// is classified as safe.
+			isSafe := !toolNeedsPermission(tc.Name, tc.Arguments)
+			autoCfg := PresetConfig(s.Autonomy)
+			needsPerm := autoCfg.NeedsPermission(tc.Name, isSafe)
+			if needsPerm && s.PermissionFn != nil {
 				summary := toolSummary(tc.Name, tc.Arguments)
 
 				// Bypass killswitch check
@@ -583,12 +644,92 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					"error": execErr.Error(),
 				})
 				output = fmt.Sprintf("Error: %s", execErr.Error())
+				// Backtrack: mark decision as failed on tool error
+				if s.Backtrack != nil {
+					s.Backtrack.MarkOutcome(turnCount, "failure")
+				}
 			} else {
 				s.log.Info("tool executed", map[string]interface{}{
 					"tool":   tc.Name,
 					"output": len(output),
 				})
 			}
+
+			// Limits: record every tool call
+			if s.Limits != nil {
+				s.Limits.RecordToolCall(tc.Name)
+			}
+
+			// Beliefs: record discoveries from read operations
+			canonical := canonicalToolName(tc.Name)
+			if s.Beliefs != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
+				subject := tc.Name
+				if p, ok := pathArgument(tc.Arguments); ok {
+					subject = p
+				}
+				// Use first 200 chars of output as summary
+				contentSummary := output
+				if len(contentSummary) > 200 {
+					contentSummary = contentSummary[:200]
+				}
+				s.Beliefs.Record("file_purpose", subject, contentSummary, turnCount)
+			}
+
+			// Beliefs: invalidate beliefs when files are modified
+			if s.Beliefs != nil && (canonical == "Write" || canonical == "Edit") {
+				if p, ok := pathArgument(tc.Arguments); ok {
+					s.Beliefs.Invalidate(p)
+				}
+			}
+
+			// Critic: pre-screen Write/Edit patches before accepting
+			if s.Critic != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+				if p, ok := pathArgument(tc.Arguments); ok {
+					// For writes, original content may be empty (new file)
+					origContent := ""
+					if data, readErr := readFileContent(p); readErr == nil {
+						origContent = data
+					}
+					intent := textContent // use the LLM's text as intent context
+					verdict := s.Critic.PreScreenPatch(origContent, output, intent)
+					if s.Critic.ShouldBlock(verdict) {
+						issueStr := strings.Join(verdict.Issues, "; ")
+						output = fmt.Sprintf("Patch rejected by validator: %s. Try again.", issueStr)
+						isErr = true
+					}
+				}
+			}
+
+			// Shadow: validate edits in a temporary workspace
+			if s.Shadow != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+				if p, ok := pathArgument(tc.Arguments); ok {
+					validationErrs := s.Shadow.ValidateEdit(p, output)
+					if len(validationErrs) > 0 {
+						var warnings []string
+						for _, ve := range validationErrs {
+							warnings = append(warnings, ve.Message)
+						}
+						output += fmt.Sprintf("\n\nValidation warnings: %s", strings.Join(warnings, "; "))
+					}
+				}
+			}
+
+			// Sandbox: intercept Write/Edit to stage instead of apply
+			if s.Sandbox != nil && s.Sandbox.IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
+				if p, ok := pathArgument(tc.Arguments); ok {
+					origContent := ""
+					if data, readErr := readFileContent(p); readErr == nil {
+						origContent = data
+					}
+					action := "overwrite"
+					if canonical == "Edit" {
+						action = "edit"
+					}
+					s.Sandbox.Stage(p, action, origContent, output)
+					output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
+				}
+			}
+
 			// Compress large outputs using tok instead of naive truncation
 			if len(output) > 20000 {
 				compressed, tokens := CompressForContext(output, 10000)
@@ -664,6 +805,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				},
 			})
 		}
+
+		// Sandbox: notify about staged changes after all tools in this turn
+		if s.Sandbox != nil && s.Sandbox.IsEnabled() {
+			pending := s.Sandbox.List()
+			if len(pending) > 0 {
+				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))}
+			}
+		}
 	}
 }
 
@@ -736,6 +885,16 @@ func (s *Session) compact() {
 	})
 	keep = append(keep, s.messages[cutEnd:]...)
 	s.messages = keep
+}
+
+// readFileContent reads a file from disk and returns its content as a string.
+// Used by critic and sandbox to capture original file state.
+func readFileContent(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // shouldRemember returns true if the assistant response contains language that
