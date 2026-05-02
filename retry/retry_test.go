@@ -115,21 +115,25 @@ func TestDoWithResult(t *testing.T) {
 }
 
 func TestBackoff(t *testing.T) {
+	base := 1 * time.Second
+	maxDelay := 30 * time.Second
+
 	tests := []struct {
-		attempt    int
-		expected   time.Duration
+		attempt int
+		minDur  time.Duration
+		maxDur  time.Duration
 	}{
-		{0, 1 * time.Second},
-		{1, 2 * time.Second},
-		{2, 4 * time.Second},
-		{3, 8 * time.Second},
-		{10, 30 * time.Second}, // capped at max
+		{0, 1 * time.Second, 2 * time.Second},  // base*2^0 + [0, base) jitter
+		{1, 2 * time.Second, 3 * time.Second},  // base*2^1 + [0, base) jitter
+		{2, 4 * time.Second, 5 * time.Second},  // base*2^2 + [0, base) jitter
+		{3, 8 * time.Second, 9 * time.Second},  // base*2^3 + [0, base) jitter
+		{10, maxDelay, maxDelay},                // capped at max
 	}
 
 	for _, tt := range tests {
-		result := backoff(tt.attempt, 1*time.Second, 30*time.Second, 2.0)
-		if result != tt.expected {
-			t.Errorf("backoff(%d) = %v, want %v", tt.attempt, result, tt.expected)
+		result := backoff(tt.attempt, base, maxDelay, 2.0)
+		if result < tt.minDur || result > tt.maxDur {
+			t.Errorf("backoff(%d) = %v, want between %v and %v", tt.attempt, result, tt.minDur, tt.maxDur)
 		}
 	}
 }
