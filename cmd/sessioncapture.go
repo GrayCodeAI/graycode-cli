@@ -12,19 +12,19 @@ import (
 )
 
 var sessionCaptureCmd = &cobra.Command{
-	Use:     "capture",
-	Aliases: []string{"trace"},
+	Use:     "trace",
+	Aliases: []string{"capture"},
 	Short:   "Git-native session capture — rewind, checkpoint, and audit AI sessions",
-	Long: `capture integrates with the Trace CLI to record coding sessions into Git.
+	Long: `trace integrates with the Trace CLI to record coding sessions into Git.
 
 Sessions are captured alongside commits on a separate branch, giving you
 rewind, resume, and full audit capabilities.
 
 Examples:
-  hawk capture status
-  hawk capture enable
-  hawk capture checkpoints
-  hawk capture rewind <checkpoint-id>`,
+  hawk trace status
+  hawk trace enable
+  hawk trace checkpoints
+  hawk trace rewind <checkpoint-id>`,
 }
 
 var captureEnableCmd = &cobra.Command{
