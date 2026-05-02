@@ -2,7 +2,7 @@
 
 AI coding agent that reads, writes, and runs code in your terminal.
 
-Built on [eyrie](https://github.com/GrayCodeAI/eyrie) (universal LLM provider), [tok](https://github.com/GrayCodeAI/tok) (tokenizer/compression), and [yaad](https://github.com/GrayCodeAI/yaad) (graph memory).
+Built on [eyrie](https://github.com/GrayCodeAI/eyrie) (universal LLM provider), [tok](https://github.com/GrayCodeAI/tok) (tokenizer/compression), [yaad](https://github.com/GrayCodeAI/yaad) (graph memory), and [trace](https://github.com/GrayCodeAI/trace) (session capture).
 
 ## Install
 
@@ -208,23 +208,25 @@ Hawk passes configured provider/model values to eyrie. API keys via `hawk config
 | LLM | [eyrie](https://github.com/GrayCodeAI/eyrie) — model-agnostic provider |
 | Tokenizer | [tok](https://github.com/GrayCodeAI/tok) — BPE counting + context compression |
 | Memory | [yaad](https://github.com/GrayCodeAI/yaad) — graph-based persistent memory |
+| Session capture | [trace](https://github.com/GrayCodeAI/trace) — git-native session recording |
 | MCP | JSON-RPC over stdio |
 | Hooks | Event-driven plugin system |
 | Plugins | Manifest-based external commands |
 | LSP | JSON-RPC language server client |
-| Sandbox | Namespace/docker/chroot/seatbelt isolation |
+| Sandbox | Namespace/docker/chroot/seatbelt/landlock/seccomp isolation |
 
 ### Package Structure
 
 ```
 cmd/          CLI commands and TUI (split: chat, commands, config, view, stream, print, welcome)
-engine/       Agent loop (split: session, stream, engine), compaction, beliefs, backtracking
+engine/       Agent loop, compaction, beliefs, backtracking, cascade router, context budget,
+              reflection, self-review, session lifecycle (self-improvement loop)
 tool/         40 built-in tools with safety layer (credentials, sensitive paths, backups)
 config/       Settings loading, validation, budget, aliases, templates
 session/      Session persistence (JSONL), WAL, snapshots, checkpoints, compression
 prompt/       System prompt preamble (identity, safety)
 prompts/      Modular prompt templates (role, tools, practices, communication, examples)
-repomap/      Code intelligence (PageRank, BM25, TF-IDF, Shapley scoring)
+repomap/      Code intelligence (PageRank, BM25, TF-IDF, Shapley, import graph, change-set context)
 memory/       Unified MemoryManager (auto, evolving, zenbrain, yaad bridge)
 model/        Provider routing, health checking, roles (delegates catalog to eyrie)
 mcp/          MCP client with buffered I/O and timeout
@@ -232,9 +234,9 @@ lsp/          LSP client with persistent reader
 plugin/       Plugin runtime and smart skill auto-invocation
 permissions/  Advanced permission system (auto-mode, classifier, killswitch)
 hooks/        Event hook system with decision hooks
-analytics/    Session traces and activity tracking
+analytics/    Session traces, activity tracking, cost optimization, model cascade
 trace/        Built-in tracer + optional OTel SDK (build tag)
-sandbox/      Command isolation (namespace, docker, chroot, seatbelt)
+sandbox/      Command isolation (namespace, docker, chroot, seatbelt, landlock, seccomp)
 retry/        Exponential backoff with jitter
 circuit/      Circuit breaker (closed/open/half-open)
 ratelimit/    Token bucket rate limiting
