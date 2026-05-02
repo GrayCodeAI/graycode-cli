@@ -15,15 +15,28 @@ import (
 // Settings holds hawk configuration.
 // Herm-style: no API keys stored here. Secrets come from environment variables only.
 type Settings struct {
-	Model           string            `json:"model,omitempty"`
-	Provider        string            `json:"provider,omitempty"`
-	Theme           string            `json:"theme,omitempty"`
-	AutoAllow       []string          `json:"auto_allow,omitempty"`      // tools to always allow
-	AllowedTools    []string          `json:"allowedTools,omitempty"`    // archive-compatible allow rules
-	DisallowedTools []string          `json:"disallowedTools,omitempty"` // archive-compatible deny rules
-	MaxBudgetUSD    float64           `json:"max_budget_usd,omitempty"`  // cost cap per session
-	CustomHeaders   map[string]string `json:"custom_headers,omitempty"`
-	MCPServers      []MCPServerConfig `json:"mcp_servers,omitempty"`
+	Model             string                 `json:"model,omitempty"`
+	Provider          string                 `json:"provider,omitempty"`
+	Theme             string                 `json:"theme,omitempty"`
+	AutoAllow         []string               `json:"auto_allow,omitempty"`      // tools to always allow
+	AllowedTools      []string               `json:"allowedTools,omitempty"`    // archive-compatible allow rules
+	DisallowedTools   []string               `json:"disallowedTools,omitempty"` // archive-compatible deny rules
+	MaxBudgetUSD      float64                `json:"max_budget_usd,omitempty"`  // cost cap per session
+	CustomHeaders     map[string]string       `json:"custom_headers,omitempty"`
+	MCPServers        []MCPServerConfig       `json:"mcp_servers,omitempty"`
+	CustomProviders   []CustomProviderConfig  `json:"custom_providers,omitempty"`
+	RepoMap           bool                    `json:"repo_map,omitempty"`
+	RepoMapMaxTokens  int                     `json:"repo_map_max_tokens,omitempty"`
+	Sandbox           string                  `json:"sandbox,omitempty"`     // sandbox mode: strict, workspace, off
+	AutoCommit        bool                    `json:"auto_commit,omitempty"` // auto-commit file changes
+}
+
+// CustomProviderConfig defines a user-specified OpenAI-compatible provider.
+type CustomProviderConfig struct {
+	Name      string `json:"name"`
+	BaseURL   string `json:"base_url"`
+	APIKeyEnv string `json:"api_key_env,omitempty"`
+	Model     string `json:"model,omitempty"`
 }
 
 // UnmarshalJSON accepts both Go-era snake_case keys and archive-style camelCase keys.
@@ -155,6 +168,21 @@ func MergeSettings(base, override Settings) Settings {
 	}
 	if len(override.MCPServers) > 0 {
 		base.MCPServers = append(base.MCPServers, override.MCPServers...)
+	}
+	if len(override.CustomProviders) > 0 {
+		base.CustomProviders = append(base.CustomProviders, override.CustomProviders...)
+	}
+	if override.RepoMap {
+		base.RepoMap = true
+	}
+	if override.RepoMapMaxTokens > 0 {
+		base.RepoMapMaxTokens = override.RepoMapMaxTokens
+	}
+	if override.Sandbox != "" {
+		base.Sandbox = override.Sandbox
+	}
+	if override.AutoCommit {
+		base.AutoCommit = true
 	}
 	if len(override.CustomHeaders) > 0 {
 		if base.CustomHeaders == nil {

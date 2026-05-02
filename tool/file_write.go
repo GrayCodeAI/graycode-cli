@@ -51,5 +51,8 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if err := os.WriteFile(path, []byte(p.Content), 0o644); err != nil {
 		return "", fmt.Errorf("write: %w", err)
 	}
+	if autoCommitEnabled(ctx) {
+		_ = AutoCommit(path, "Write", "wrote file")
+	}
 	return fmt.Sprintf("Wrote %d bytes to %s", len(p.Content), path), nil
 }

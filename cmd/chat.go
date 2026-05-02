@@ -149,6 +149,7 @@ type chatModel struct {
 	contextViz     *ContextVisualization
 	wal            *session.WAL
 	startedAt      time.Time
+	welcomeCache   string
 }
 
 func blinkTickCmd() tea.Cmd {
@@ -1249,8 +1250,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			initHeight = h
 		}
 	}
-	// Reserve lines for the bottom bar: status line (1) + input border top (1) + input (1) + input border bottom (1) + help line (1) = 5
-	vpHeight := initHeight - 5
+	// Reserve lines for the bottom bar
+	vpHeight := initHeight - 6
 	if vpHeight < 4 {
 		vpHeight = 4
 	}
@@ -1287,7 +1288,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
-	m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth)})
+	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth)
+	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 
 	// Wire permission system
 	sess.PermissionFn = func(req engine.PermissionRequest) {
@@ -1563,13 +1565,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.input.Width < 20 {
 			m.input.Width = 20
 		}
-		// Resize viewport: total height minus bottom bar (status + input + help)
-		vpHeight := msg.Height - 5
+		// Resize viewport: total height minus bottom bar
+		vpHeight := msg.Height - 6
 		if vpHeight < 4 {
 			vpHeight = 4
 		}
 		m.viewport.Width = msg.Width
 		m.viewport.Height = vpHeight
+		m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, false, msg.Width)
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -1977,7 +1980,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "/welcome":
-		m.messages = append(m.messages, displayMsg{role: "welcome", content: buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, m.width)})
+		m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 		return m, nil
 	case "/tasks":
 		tasks := tool.GetTaskStore().List()
@@ -2573,10 +2576,8 @@ func (m *chatModel) updateViewportContent() {
 	rst := "\033[0m"
 	bgDark := "\033[48;2;30;30;40m"
 
-	welcome := buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, m.blinkClosed, viewWidth)
-
 	var chatContent strings.Builder
-	chatContent.WriteString(welcome + "\n")
+	chatContent.WriteString(m.welcomeCache + "\n")
 
 	for i, msg := range m.messages {
 		switch msg.role {
@@ -2643,14 +2644,6 @@ func (m *chatModel) updateViewportContent() {
 
 	atBottom := m.viewport.AtBottom()
 	contentStr := chatContent.String()
-
-	if !m.hasRealMessages() {
-		contentLines := strings.Count(contentStr, "\n")
-		if contentLines < vpHeight {
-			topPad := (vpHeight - contentLines) / 3
-			contentStr = strings.Repeat("\n", topPad) + contentStr
-		}
-	}
 
 	m.viewport.SetContent(contentStr)
 	if atBottom || m.autoScroll {
