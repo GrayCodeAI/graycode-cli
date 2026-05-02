@@ -1410,6 +1410,35 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		switch msg.Type {
+		case tea.KeyCtrlN:
+			models := configModelChoices(m.session.Provider(), m.configModels)
+			if len(models) > 1 {
+				current := m.session.Model()
+				idx := 0
+				for i, md := range models {
+					if md == current {
+						idx = (i + 1) % len(models)
+						break
+					}
+				}
+				m.session.SetModel(models[idx])
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model → %s", models[idx])})
+			}
+			return m, nil
+		case tea.KeyCtrlL:
+			modes := []string{"default", "acceptEdits", "bypassPermissions"}
+			current := m.session.PermissionMode()
+			idx := 0
+			for i, md := range modes {
+				if md == current {
+					idx = (i + 1) % len(modes)
+					break
+				}
+			}
+			m.session.SetPermissionMode(modes[idx])
+			labels := map[string]string{"default": "Off", "acceptEdits": "Auto-edit", "bypassPermissions": "Full Auto"}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy → %s", labels[modes[idx]])})
+			return m, nil
 		case tea.KeyCtrlC:
 			if time.Since(m.lastCtrlC) < 1*time.Second {
 				m.saveSession()
