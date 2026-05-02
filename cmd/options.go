@@ -12,6 +12,7 @@ import (
 	"github.com/GrayCodeAI/hawk/engine"
 	hawkmodel "github.com/GrayCodeAI/hawk/model"
 	"github.com/GrayCodeAI/hawk/prompt"
+	"github.com/GrayCodeAI/hawk/prompts"
 	"github.com/GrayCodeAI/hawk/repomap"
 	"github.com/GrayCodeAI/hawk/tool"
 	"github.com/hawk/eyrie/client"
@@ -25,7 +26,42 @@ func buildSystemPrompt() (string, error) {
 		return "", fmt.Errorf("cannot use both --append-system-prompt and --append-system-prompt-file")
 	}
 
+	// Build modular template-based system prompt
+	ctx := prompts.DefaultContext()
+
+	// Gather workspace context and inject into prompt context
+	cwd, _ := os.Getwd()
+	ws := prompts.GatherWorkspaceContext(cwd)
+	if ws != nil {
+		ctx.GitBranch = ws.GitBranch
+		ctx.GitStatus = ws.GitStatus
+		if len(ws.RecentCommits) > 0 {
+			ctx.RecentCommits = strings.Join(ws.RecentCommits, " / ")
+		}
+		if len(ws.TopFiles) > 0 {
+			ctx.TopFiles = strings.Join(ws.TopFiles, " ")
+		}
+	}
+
+	// Assemble modular prompt from templates
+	modularPrompt, err := prompts.BuildSystemPrompt(ctx)
+	if err != nil {
+		// Fall back to legacy prompt if templates fail
+		modularPrompt = ""
+	}
+
+	// Combine: legacy system prompt + modular template sections + workspace context
 	base := prompt.System() + "\n\n" + hawkconfig.BuildContextWithDirs(addDirs)
+	if modularPrompt != "" {
+		base += "\n\n" + modularPrompt
+	}
+	if ws != nil {
+		wsFormatted := ws.Format()
+		if wsFormatted != "" {
+			base += "\n\n" + wsFormatted
+		}
+	}
+
 	if systemPromptFile != "" {
 		data, err := os.ReadFile(systemPromptFile)
 		if err != nil {
