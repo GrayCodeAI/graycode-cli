@@ -182,6 +182,7 @@ func init() {
 	rootCmd.AddCommand(rulesCmd)
 	rootCmd.AddCommand(sandboxCmd)
 	rootCmd.AddCommand(costCmd)
+	rootCmd.AddCommand(sessionCaptureCmd)
 }
 
 var completionCmd = &cobra.Command{
