@@ -259,6 +259,7 @@ func baseTools() []tool.Tool {
 		tool.VerifyPlanExecutionTool{},
 		tool.WorkflowTool{},
 		tool.McpAuthTool{},
+		tool.DiagnosticsTool{},
 	}
 }
 
@@ -2742,7 +2743,7 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m)
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
@@ -2782,11 +2783,55 @@ func runChat() error {
 		}()
 	}
 
-	_, err = p.Run()
-	if err == nil {
-		fmt.Println(dimStyle.Render("Goodbye."))
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
 	}
-	return err
+	fm := finalModel.(chatModel)
+	hawkC := "\033[38;2;255;94;14m"
+	rst := "\033[0m"
+
+	fmt.Print(fm.welcomeCache)
+	fmt.Println()
+	for _, msg := range fm.messages {
+		switch msg.role {
+		case "user":
+			fmt.Println(hawkC + "█" + rst + "  " + msg.content)
+			fmt.Println()
+		case "assistant":
+			fmt.Println(hawkC + "⛬ " + rst + msg.content)
+			fmt.Println()
+		case "system":
+			fmt.Println(dimStyle.Render("●  " + msg.content))
+			fmt.Println()
+		case "error":
+			fmt.Println(errorStyle.Render("●  " + msg.content))
+			fmt.Println()
+		}
+	}
+
+	viewWidth := fm.width
+	if viewWidth <= 0 {
+		viewWidth = 80
+	}
+	leftBold := "Auto (Off)"
+	leftDim := " - all actions require approval"
+	rightStatus := fmt.Sprintf("%s %s", fm.session.Provider(), fm.session.Model())
+	leftVisLen := len(leftBold) + len(leftDim)
+	gap := viewWidth - leftVisLen - len(rightStatus)
+	if gap < 1 {
+		gap = 1
+	}
+	fmt.Printf("%s%s%s%s\n",
+		lipgloss.NewStyle().Bold(true).Render(leftBold),
+		dimStyle.Render(leftDim),
+		strings.Repeat(" ", gap),
+		dimStyle.Render(rightStatus))
+
+	if fm.sessionID != "" {
+		fmt.Println(dimStyle.Render(fmt.Sprintf("To resume this session, run: hawk --resume %s", fm.sessionID)))
+	}
+	return nil
 }
 
 func runPrint(text string) error {
