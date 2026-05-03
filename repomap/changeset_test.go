@@ -174,7 +174,10 @@ func TestFromGitDiff_TotalFilesCount(t *testing.T) {
 func TestFromGitDiffRange_BranchComparison(t *testing.T) {
 	root := createGitRepoWithChanges(t)
 
-	// Commit the change on a branch
+	// Ensure we're on a branch called "main" (CI may default to a different name)
+	runGit(t, root, "branch", "-M", "main")
+
+	// Commit the change on a feature branch
 	runGit(t, root, "checkout", "-b", "feature")
 	runGit(t, root, "add", "-A")
 	runGit(t, root, "commit", "-m", "add verify")
