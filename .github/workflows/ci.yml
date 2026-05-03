@@ -12,13 +12,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout dependencies
+        run: |
+          git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git ../eyrie
+          git clone --depth=1 https://github.com/GrayCodeAI/tok.git ../tok
+          git clone --depth=1 https://github.com/GrayCodeAI/yaad.git ../yaad
+          git clone --depth=1 https://github.com/GrayCodeAI/inspect.git ../inspect
+          git clone --depth=1 https://github.com/GrayCodeAI/sight.git ../sight
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.1'
 
       - name: Download dependencies
-        run: go mod download
+        run: |
+          cp go.work.ci go.work 2>/dev/null || cat > go.work << 'EOF'
+          go 1.26.1
+          use .
+          replace (
+            github.com/hawk/eyrie => ../eyrie
+            github.com/GrayCodeAI/eyrie => ../eyrie
+            github.com/GrayCodeAI/tok => ../tok
+            github.com/GrayCodeAI/yaad => ../yaad
+            github.com/GrayCodeAI/inspect => ../inspect
+            github.com/GrayCodeAI/sight => ../sight
+          )
+          EOF
+          go mod download
 
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
@@ -45,7 +66,7 @@ jobs:
           go-version: '1.26.1'
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1.0
           args: --timeout 5m
