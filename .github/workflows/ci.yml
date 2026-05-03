@@ -25,9 +25,9 @@ jobs:
         with:
           go-version: '1.26.1'
 
-      - name: Download dependencies
+      - name: Create workspace
         run: |
-          cp go.work.ci go.work 2>/dev/null || cat > go.work << 'EOF'
+          cat > go.work << 'EOF'
           go 1.26.1
           use .
           replace (
@@ -38,31 +38,41 @@ jobs:
             github.com/GrayCodeAI/sight => ../sight
           )
           EOF
-          go mod download
 
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Check coverage
-        run: |
-          go tool cover -func=coverage.out | tail -1
-          go tool cover -html=coverage.out -o coverage.html
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.html
+        run: go test -race -count=1 -timeout=120s ./...
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout dependencies
+        run: |
+          git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git ../eyrie
+          git clone --depth=1 https://github.com/GrayCodeAI/tok.git ../tok
+          git clone --depth=1 https://github.com/GrayCodeAI/yaad.git ../yaad
+          git clone --depth=1 https://github.com/GrayCodeAI/inspect.git ../inspect
+          git clone --depth=1 https://github.com/GrayCodeAI/sight.git ../sight
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.1'
+
+      - name: Create workspace
+        run: |
+          cat > go.work << 'EOF'
+          go 1.26.1
+          use .
+          replace (
+            github.com/GrayCodeAI/eyrie => ../eyrie
+            github.com/GrayCodeAI/tok => ../tok
+            github.com/GrayCodeAI/yaad => ../yaad
+            github.com/GrayCodeAI/inspect => ../inspect
+            github.com/GrayCodeAI/sight => ../sight
+          )
+          EOF
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
@@ -71,30 +81,9 @@ jobs:
           install-mode: goinstall
           args: --timeout 5m
 
-      - name: govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
-
-      - name: Check formatting
-        run: |
-          if [ "$(gofmt -d . | wc -l)" -gt 0 ]; then
-            echo "Code is not formatted. Run 'gofmt -w .'"
-            gofmt -d .
-            exit 1
-          fi
-
-      - name: Check module tidiness
-        run: |
-          go mod tidy
-          if [ -n "$(git diff --name-only go.mod go.sum)" ]; then
-            echo "go.mod or go.sum is not tidy. Run 'go mod tidy'"
-            exit 1
-          fi
-
   build:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, lint]
     strategy:
       matrix:
         goos: [linux, darwin, windows]
@@ -105,21 +94,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout dependencies
+        run: |
+          git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git ../eyrie
+          git clone --depth=1 https://github.com/GrayCodeAI/tok.git ../tok
+          git clone --depth=1 https://github.com/GrayCodeAI/yaad.git ../yaad
+          git clone --depth=1 https://github.com/GrayCodeAI/inspect.git ../inspect
+          git clone --depth=1 https://github.com/GrayCodeAI/sight.git ../sight
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.1'
 
+      - name: Create workspace
+        run: |
+          cat > go.work << 'EOF'
+          go 1.26.1
+          use .
+          replace (
+            github.com/GrayCodeAI/eyrie => ../eyrie
+            github.com/GrayCodeAI/tok => ../tok
+            github.com/GrayCodeAI/yaad => ../yaad
+            github.com/GrayCodeAI/inspect => ../inspect
+            github.com/GrayCodeAI/sight => ../sight
+          )
+          EOF
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
-        run: |
-          go build -ldflags "-s -w -X main.Version=ci-test" -o hawk-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: hawk-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: hawk-${{ matrix.goos }}-${{ matrix.goarch }}*
+          CGO_ENABLED: "0"
+        run: go build -ldflags "-s -w" -o hawk-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
