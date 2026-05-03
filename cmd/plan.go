@@ -34,7 +34,7 @@ var planCreateCmd = &cobra.Command{
 
 		// Generate the plan prompt (would normally be sent to an LLM).
 		prompt := planner.Generate(description, "")
-		cmd.Println("Plan prompt generated. Send this to an LLM to produce a plan:\n")
+		cmd.Println("Plan prompt generated. Send this to an LLM to produce a plan:")
 		cmd.Println("--- System ---")
 		cmd.Println(prompt.System)
 		cmd.Println()
