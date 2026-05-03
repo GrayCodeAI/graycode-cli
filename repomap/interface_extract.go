@@ -105,7 +105,7 @@ func formatFuncSig(fset *token.FileSet, fn *ast.FuncDecl) string {
 }
 
 func formatTypeSpec(ts *ast.TypeSpec) string {
-	kind := "struct"
+	var kind string
 	switch ts.Type.(type) {
 	case *ast.InterfaceType:
 		kind = "interface"

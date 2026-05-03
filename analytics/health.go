@@ -12,10 +12,11 @@ func ComputeSessionHealth(toolCalls, toolErrors, editRetries, compactions, midTa
 	score := 100
 	signals := map[string]int{}
 
-	if outcome == "errored" {
+	switch outcome {
+	case "errored":
 		signals["outcome_errored"] = -30
 		score += signals["outcome_errored"]
-	} else if outcome == "abandoned" {
+	case "abandoned":
 		signals["outcome_abandoned"] = -15
 		score += signals["outcome_abandoned"]
 	}
