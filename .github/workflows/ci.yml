@@ -31,7 +31,6 @@ jobs:
           go 1.26.1
           use .
           replace (
-            github.com/hawk/eyrie => ../eyrie
             github.com/GrayCodeAI/eyrie => ../eyrie
             github.com/GrayCodeAI/tok => ../tok
             github.com/GrayCodeAI/yaad => ../yaad

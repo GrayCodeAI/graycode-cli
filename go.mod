@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fsnotify/fsnotify v1.10.0
-	github.com/hawk/eyrie v0.3.0
+	github.com/GrayCodeAI/eyrie v0.3.0
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/spf13/cobra v1.9.1
 	go.opentelemetry.io/otel v1.43.0
@@ -82,7 +82,6 @@ require (
 	modernc.org/sqlite v1.50.0 // indirect
 )
 
-replace github.com/hawk/eyrie => github.com/GrayCodeAI/eyrie v0.3.0
 
 // For local development, use go.work instead of replace directives.
 // See go.work.example for setup instructions.
