@@ -192,10 +192,11 @@ func (m *chatModel) updateViewportContent() {
 		case "system":
 			chatContent.WriteString(dimStyle.Render(msg.content))
 		case "permission":
-			chatContent.WriteString(toolStyle.Render("⚠ " + msg.content + "  [y/n]"))
+			chatContent.WriteString(renderPermissionBox(msg.content, viewWidth))
 		case "question":
 			chatContent.WriteString(toolStyle.Render(msg.content))
 		case "usage":
+			chatContent.WriteString(dimStyle.Render("  " + msg.content))
 		case "error":
 			chatContent.WriteString(errorStyle.Render("error: " + msg.content))
 		}
@@ -273,8 +274,8 @@ func (m chatModel) View() string {
 		if totalW < 40 {
 			totalW = 80
 		}
-		leftBold := "Auto (Off)"
-		leftDim := " - all actions require approval"
+		leftBold := permissionModeLabel(m.session)
+		leftDim := permissionModeHint(m.session)
 		rightStatus := fmt.Sprintf("%s %s", m.session.Provider(), m.session.Model())
 		leftVisLen := len(leftBold) + len(leftDim)
 		gap := totalW - leftVisLen - len(rightStatus)
@@ -341,16 +342,56 @@ func (m chatModel) View() string {
 
 func formatDiff(diff string) string {
 	var b strings.Builder
+	lineNum := 0
 	for _, line := range strings.Split(diff, "\n") {
 		switch {
+		case strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ "):
+			// File headers
+			b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF")).Render(line))
+		case strings.HasPrefix(line, "@@"):
+			// Hunk headers — extract line numbers
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render(line))
+			// Parse starting line from @@ -X,Y +Z,W @@
+			if idx := strings.Index(line, "+"); idx >= 0 {
+				fmt.Sscanf(line[idx:], "+%d", &lineNum)
+				if lineNum > 0 {
+					lineNum-- // will be incremented on first content line
+				}
+			}
 		case strings.HasPrefix(line, "+"):
+			lineNum++
+			num := fmt.Sprintf("%4d ", lineNum)
+			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render(num))
 			b.WriteString(diffAddStyle.Render(line))
 		case strings.HasPrefix(line, "-"):
+			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render("     "))
 			b.WriteString(diffDelStyle.Render(line))
 		default:
+			lineNum++
+			num := fmt.Sprintf("%4d ", lineNum)
+			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render(num))
 			b.WriteString(line)
 		}
 		b.WriteString("\n")
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// renderPermissionBox renders a visually distinct permission prompt box.
+func renderPermissionBox(summary string, width int) string {
+	boxW := width - 4
+	if boxW < 40 {
+		boxW = 40
+	}
+	border := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FFD700")).
+		Width(boxW).
+		Padding(0, 1)
+
+	title := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render("⚠ Permission Required")
+	body := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Render(summary)
+	options := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4")).Render("[y]es  [n]o  [a]lways")
+
+	return border.Render(title + "\n" + body + "\n" + options)
 }
