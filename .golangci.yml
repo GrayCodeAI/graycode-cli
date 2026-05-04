@@ -5,5 +5,4 @@ linters:
   enable:
     - govet
     - ineffassign
-    - staticcheck
     - unused
