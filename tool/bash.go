@@ -178,11 +178,6 @@ func IsSuspicious(command string) bool {
 
 	// Check full command for patterns that span operators (e.g. "| bash")
 	lower := strings.ToLower(command)
-	for _, pat := range dangerousSubstrings {
-		if strings.Contains(lower, pat) {
-			return true
-		}
-	}
 	for _, pat := range suspiciousPatterns {
 		if strings.Contains(lower, strings.ToLower(pat)) {
 			return true

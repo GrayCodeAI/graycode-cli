@@ -42,14 +42,23 @@ const (
 
 // SetPermissionMode applies an archive-compatible permission mode.
 func (s *Session) SetPermissionMode(mode string) error {
+	err := s.Perm.SetMode(mode)
+	if err == nil {
+		s.Mode = s.Perm.Mode // keep backward-compat field in sync
+	}
+	return err
+}
+
+// setPermissionMode is the shared implementation used by both Session and PermissionEngine.
+func setPermissionMode(target *PermissionMode, mode string) error {
 	mode = strings.TrimSpace(mode)
 	if mode == "" {
-		s.Mode = PermissionModeDefault
+		*target = PermissionModeDefault
 		return nil
 	}
 	switch PermissionMode(mode) {
 	case PermissionModeDefault, PermissionModeAcceptEdits, PermissionModeBypassPermissions, PermissionModeDontAsk, PermissionModePlan:
-		s.Mode = PermissionMode(mode)
+		*target = PermissionMode(mode)
 		return nil
 	default:
 		return fmt.Errorf("invalid permission mode %q (valid: default, acceptEdits, bypassPermissions, dontAsk, plan)", mode)
