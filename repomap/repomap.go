@@ -163,7 +163,11 @@ func estimateTokens(rm *RepoMap) int {
 // isSupportedExt returns true for file extensions that have a parser.
 func isSupportedExt(ext string) bool {
 	switch ext {
-	case ".go", ".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".java":
+	case ".go", ".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".java",
+		".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hh",
+		".cs", ".php",
+		".rb", ".kt", ".kts", ".swift", ".scala", ".sc",
+		".lua", ".dart", ".ex", ".exs", ".hs":
 		return true
 	}
 	return false
@@ -183,17 +187,42 @@ func parseFileSymbols(path string) []Symbol {
 	}
 
 	var symbols []Symbol
+	src := string(data)
 	switch ext {
 	case ".go":
-		symbols = parseGo(string(data))
+		symbols = parseGo(src)
 	case ".py":
-		symbols = parsePython(string(data))
+		symbols = parsePython(src)
 	case ".ts", ".tsx", ".js", ".jsx":
-		symbols = parseTypeScript(string(data))
+		symbols = parseTypeScript(src)
 	case ".rs":
-		symbols = parseRust(string(data))
+		symbols = parseRust(src)
 	case ".java":
-		symbols = parseJava(string(data))
+		symbols = parseJava(src)
+	case ".c", ".h":
+		symbols = parseC(src)
+	case ".cpp", ".cc", ".cxx", ".hpp", ".hh":
+		symbols = parseCpp(src)
+	case ".cs":
+		symbols = parseCSharp(src)
+	case ".php":
+		symbols = parsePHP(src)
+	case ".rb":
+		symbols = parseRuby(src)
+	case ".kt", ".kts":
+		symbols = parseKotlin(src)
+	case ".swift":
+		symbols = parseSwift(src)
+	case ".scala", ".sc":
+		symbols = parseScala(src)
+	case ".lua":
+		symbols = parseLua(src)
+	case ".dart":
+		symbols = parseDart(src)
+	case ".ex", ".exs":
+		symbols = parseElixir(src)
+	case ".hs":
+		symbols = parseHaskell(src)
 	}
 
 	// Update cache

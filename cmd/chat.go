@@ -127,7 +127,7 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 }
 
 func genID() string {
-	b := make([]byte, 4)
+	b := make([]byte, 8)
 	cryptorand.Read(b)
 	return fmt.Sprintf("%x", b)
 }

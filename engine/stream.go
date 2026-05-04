@@ -550,82 +550,19 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		executeSingleTool := func(tc client.ToolCall) toolExecResult {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
-			// Check permission for dangerous tools.
-			// Use autonomy level to decide: the AutonomyConfig considers whether
-			// the tool is read-only/write/bash and whether the specific invocation
-			// is classified as safe.
-			isSafe := !toolNeedsPermission(tc.Name, tc.Arguments)
-			autoCfg := PresetConfig(s.Autonomy)
-			needsPerm := autoCfg.NeedsPermission(tc.Name, isSafe)
-			if needsPerm && s.PermissionFn != nil {
-				summary := toolSummary(tc.Name, tc.Arguments)
+			// Sync PermissionEngine state from Session fields (backward compat)
+			s.Perm.PromptFn = s.PermissionFn
+			s.Perm.Autonomy = s.Autonomy
 
-				// Bypass killswitch check
-				if s.BypassKill.IsEnabled() {
-					goto executeTool
-				}
-
-				// Classifier-based auto-allow for safe commands
-				if s.Classifier != nil && tc.Name == "Bash" {
-					if classification := s.Classifier.Classify(summary); classification == "safe" {
-						goto executeTool
-					}
-				}
-
-				// Auto-mode check
-				if s.AutoMode != nil {
-					if allowed, ok := s.AutoMode.ShouldAutoAllow(tc.Name, summary); ok {
-						if allowed {
-							goto executeTool
-						} else {
-							ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied (auto-mode)."}
-							return toolExecResult{tc: tc, output: "Permission denied (auto-mode).", isErr: true}
-						}
-					}
-				}
-
-				// Permission mode check
-				if decision := s.modeDecision(tc.Name); decision != nil {
-					if !*decision {
-						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by permission mode."}
-						return toolExecResult{tc: tc, output: "Permission denied by permission mode.", isErr: true}
-					}
-					goto executeTool
-				}
-
-				// Check memory first
-				if decision := s.Permissions.Check(tc.Name, summary); decision != nil {
-					if !*decision {
-						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied (rule)."}
-						return toolExecResult{tc: tc, output: "Permission denied (rule).", isErr: true}
-					}
-					// allowed by rule, proceed
-				} else {
-					// Ask user with timeout
-					resp := make(chan bool, 1)
-					s.PermissionFn(PermissionRequest{
-						ToolName: tc.Name,
-						ToolID:   tc.ID,
-						Summary:  summary,
-						Response: resp,
-					})
-					select {
-					case allowed := <-resp:
-						if !allowed {
-							ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission denied by user."}
-							return toolExecResult{tc: tc, output: "Permission denied by user.", isErr: true}
-						}
-					case <-ctx.Done():
-						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission prompt cancelled."}
-						return toolExecResult{tc: tc, output: "Permission prompt cancelled.", isErr: true}
-					case <-time.After(5 * time.Minute):
-						ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Permission prompt timed out."}
-						return toolExecResult{tc: tc, output: "Permission prompt timed out.", isErr: true}
-					}
-				}
+			granted, denyMsg := s.Perm.CheckTool(ctx, toolCallInfo{
+				Name: tc.Name,
+				ID:   tc.ID,
+				Args: tc.Arguments,
+			})
+			if !granted {
+				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
+				return toolExecResult{tc: tc, output: denyMsg, isErr: true}
 			}
-
-		executeTool:
 			// Pre-tool hook
 			hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{
 				"tool": tc.Name,
@@ -869,11 +806,17 @@ func isRetryableStreamError(err error) bool {
 // shouldRemember returns true if the assistant response contains language that
 // suggests a correction, learning, or noteworthy insight worth persisting.
 func shouldRemember(content string) bool {
-	triggers := []string{"actually", "correction", "instead", "don't", "mistake", "should have", "better approach"}
+	// Require 2+ distinct trigger matches to avoid noise from common words.
+	// Single words like "actually" or "don't" appear in normal conversation.
+	triggers := []string{"actually", "correction", "instead", "don't", "mistake", "should have", "better approach", "wrong", "fix", "note to self"}
 	lower := strings.ToLower(content)
+	hits := 0
 	for _, t := range triggers {
 		if strings.Contains(lower, t) {
-			return true
+			hits++
+			if hits >= 2 {
+				return true
+			}
 		}
 	}
 	return false

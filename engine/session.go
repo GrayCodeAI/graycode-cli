@@ -33,15 +33,17 @@ type Session struct {
 	metrics      *metrics.Registry
 	Cost         Cost
 	Router       *modelPkg.Router
-	Permissions  *PermissionMemory
-	AutoMode     *permissions.AutoModeState
-	Classifier   *permissions.Classifier
-	BypassKill   *permissions.BypassKillswitch
-	Mode         PermissionMode
+	Perm         *PermissionEngine // extracted permission subsystem
+	// Backward-compatible accessors below (will be removed after full migration)
+	Permissions  *PermissionMemory            // use Perm.Memory
+	AutoMode     *permissions.AutoModeState   // use Perm.AutoMode
+	Classifier   *permissions.Classifier      // use Perm.Classifier
+	BypassKill   *permissions.BypassKillswitch // use Perm.BypassKill
+	Mode         PermissionMode               // use Perm.Mode
 	MaxTurns     int
 	MaxBudgetUSD float64
 	AllowedDirs  []string
-	PermissionFn func(PermissionRequest)
+	PermissionFn func(PermissionRequest)      // use Perm.PromptFn
 	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
 	AskUserFn    func(question string) (string, error)
 	Memory       MemoryRecaller
@@ -74,6 +76,7 @@ type Session struct {
 
 // NewSession creates a new conversation session.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
+	pe := NewPermissionEngine()
 	s := &Session{
 		client:      client.NewEyrieClient(&client.EyrieConfig{Provider: provider}),
 		registry:    registry,
@@ -83,10 +86,11 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		system:      systemPrompt,
 		log:         logger.Default(),
 		metrics:     metrics.NewRegistry(),
-		Permissions: NewPermissionMemory(),
-		AutoMode:    permissions.NewAutoModeState(),
-		Classifier:  permissions.NewClassifier(),
-		BypassKill:  permissions.NewBypassKillswitch(),
+		Perm:        pe,
+		Permissions: pe.Memory,
+		AutoMode:    pe.AutoMode,
+		Classifier:  pe.Classifier,
+		BypassKill:  pe.BypassKill,
 		Beliefs:     NewBeliefState(),
 		Backtrack:   NewBacktrackEngine(),
 		Limits:      NewLimitTracker(DefaultLimits()),

@@ -200,14 +200,16 @@ func TestFormatTokenTruncation(t *testing.T) {
 }
 
 func TestIsSupportedExt(t *testing.T) {
-	supported := []string{".go", ".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".java"}
+	supported := []string{".go", ".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".java",
+		".c", ".h", ".cpp", ".cc", ".cs", ".php", ".rb", ".kt", ".swift", ".scala",
+		".lua", ".dart", ".ex", ".exs", ".hs"}
 	for _, ext := range supported {
 		if !isSupportedExt(ext) {
 			t.Errorf("expected %s to be supported", ext)
 		}
 	}
 
-	unsupported := []string{".txt", ".md", ".yaml", ".json", ".c", ".cpp", ".rb"}
+	unsupported := []string{".txt", ".md", ".yaml", ".json", ".xml", ".csv"}
 	for _, ext := range unsupported {
 		if isSupportedExt(ext) {
 			t.Errorf("expected %s to not be supported", ext)
