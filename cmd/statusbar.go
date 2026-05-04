@@ -7,6 +7,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/GrayCodeAI/hawk/engine"
 )
 
 // renderStatusBar renders a full-width status bar for the chat TUI.
@@ -31,15 +33,12 @@ func renderStatusBar(m *chatModel, width int) string {
 
 	// Center: cost | tokens | messages
 	cost := m.session.Cost.Total()
-	tokenCount := m.session.MessageCount() * 200 // rough estimate
+	tokenEst := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
 	msgCount := m.session.MessageCount()
 
 	costStr := fmt.Sprintf("$%.2f", cost)
-	tokenStr := fmt.Sprintf("%dk", tokenCount/1000)
-	if tokenCount < 1000 {
-		tokenStr = fmt.Sprintf("%d", tokenCount)
-	}
-	msgStr := fmt.Sprintf("%d", msgCount)
+	tokenStr := formatTokenCount(tokenEst)
+	msgStr := fmt.Sprintf("%d msgs", msgCount)
 
 	centerText := fmt.Sprintf("%s | %s | %s", costStr, tokenStr, msgStr)
 	center := tealSty.Render(centerText)
@@ -82,4 +81,53 @@ func renderStatusBar(m *chatModel, width int) string {
 	rightGap := remaining - leftGap
 
 	return left + strings.Repeat(" ", leftGap) + center + strings.Repeat(" ", rightGap) + right
+}
+
+// permissionModeLabel returns the display label for the current permission mode.
+func permissionModeLabel(sess *engine.Session) string {
+	if sess == nil || sess.Perm == nil {
+		return "Default"
+	}
+	switch sess.Perm.Mode {
+	case engine.PermissionModeBypassPermissions:
+		return "Bypass (All Allowed)"
+	case engine.PermissionModeAcceptEdits:
+		return "Auto (Edits Allowed)"
+	case engine.PermissionModeDontAsk:
+		return "Deny (All Blocked)"
+	case engine.PermissionModePlan:
+		return "Plan (Read Only)"
+	default:
+		return "Default"
+	}
+}
+
+// permissionModeHint returns a short description for the current permission mode.
+func permissionModeHint(sess *engine.Session) string {
+	if sess == nil || sess.Perm == nil {
+		return " - tools require approval"
+	}
+	switch sess.Perm.Mode {
+	case engine.PermissionModeBypassPermissions:
+		return " - all tools auto-approved"
+	case engine.PermissionModeAcceptEdits:
+		return " - file edits auto-approved"
+	case engine.PermissionModeDontAsk:
+		return " - all tools blocked"
+	case engine.PermissionModePlan:
+		return " - read-only exploration"
+	default:
+		return " - tools require approval"
+	}
+}
+
+// formatTokenCount formats a token count for display.
+func formatTokenCount(tokens int) string {
+	if tokens >= 1_000_000 {
+		return fmt.Sprintf("%.1fM tok", float64(tokens)/1_000_000)
+	}
+	if tokens >= 1000 {
+		return fmt.Sprintf("%.1fK tok", float64(tokens)/1000)
+	}
+	return fmt.Sprintf("%d tok", tokens)
 }

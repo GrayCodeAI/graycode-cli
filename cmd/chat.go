@@ -313,6 +313,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.permReq.Response <- false
 				m.messages = append(m.messages, displayMsg{role: "system", content: "✗ Denied"})
 				m.permReq = nil
+			case "a", "A":
+				m.permReq.Response <- true
+				m.session.Perm.Memory.AlwaysAllow(m.permReq.ToolName)
+				m.messages = append(m.messages, displayMsg{role: "system", content: "✓ Always allowed: " + m.permReq.ToolName})
+				m.permReq = nil
 			}
 			return m, nil
 		}
@@ -496,6 +501,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if strings.HasPrefix(text, "/") {
 				return m.handleCommand(text)
 			}
+			// Shell escape: !command runs directly without AI
+			if strings.HasPrefix(text, "!") {
+				return m.handleShellEscape(text[1:])
+			}
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			if m.wal != nil {
@@ -571,6 +580,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.wal.Append(session.Message{Role: "assistant", Content: content})
 			}
 			m.partial.Reset()
+		}
+		// Inline cost summary after each response
+		cost := m.session.Cost.Total()
+		tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
+		elapsed := time.Since(m.toolStartTime)
+		if m.toolStartTime.IsZero() {
+			elapsed = 0
+		}
+		if tokens > 0 {
+			costLine := fmt.Sprintf("$%.3f • %s • %.1fs", cost, formatTokenCount(tokens), elapsed.Seconds())
+			m.messages = append(m.messages, displayMsg{role: "usage", content: costLine})
 		}
 		m.waiting = false
 		m.cancel = nil

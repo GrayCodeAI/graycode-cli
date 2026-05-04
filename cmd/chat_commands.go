@@ -1824,3 +1824,34 @@ func explainCode(path string, line int) (string, error) {
 	}
 	return result, nil
 }
+
+// handleShellEscape runs a shell command directly (triggered by ! prefix).
+func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
+	command = strings.TrimSpace(command)
+	if command == "" {
+		return m, nil
+	}
+	m.messages = append(m.messages, displayMsg{role: "system", content: "$ " + command})
+	m.viewDirty = true
+
+	cmd := exec.Command("sh", "-c", command)
+	out, err := cmd.CombinedOutput()
+	result := strings.TrimRight(string(out), "\n")
+	if err != nil && result == "" {
+		result = err.Error()
+	}
+	if result != "" {
+		// Truncate very long output
+		if len(result) > 4000 {
+			lines := strings.Split(result, "\n")
+			if len(lines) > 40 {
+				head := strings.Join(lines[:20], "\n")
+				tail := strings.Join(lines[len(lines)-20:], "\n")
+				result = head + fmt.Sprintf("\n\n... (%d lines omitted) ...\n\n", len(lines)-40) + tail
+			}
+		}
+		m.messages = append(m.messages, displayMsg{role: "tool_result", content: result})
+	}
+	m.viewDirty = true
+	return m, nil
+}
