@@ -56,4 +56,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOWORK: "on"
+          GOWORK: ${{ github.workspace }}/go.work
