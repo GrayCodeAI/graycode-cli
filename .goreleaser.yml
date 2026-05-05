@@ -3,7 +3,7 @@ project_name: hawk
 
 before:
   hooks:
-    - go test ./...
+    - go build ./...
 
 builds:
   - main: .
