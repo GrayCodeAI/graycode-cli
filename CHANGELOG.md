@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.4.0] — 2026-05-05
+
+### Added
+- **Exec Subcommand**: `hawk exec "prompt"` — full engine non-interactive mode with `--output-format json`, `--auto` autonomy levels, `--worktree` isolation, `--agent` personas, `--session-id` resume, stdin piping
+- **Daemon Server**: `hawk daemon start/stop/status` — background HTTP server with JSON + SSE streaming on `/v1/chat`, `/v1/health`, `/v1/sessions`
+- **Mission Mode**: `hawk mission "prompt"` — multi-agent orchestration decomposing work into parallel features executed in isolated git worktrees. `--dry-run` for planning only
+- **Session Search**: `hawk search "query"` — full-text search across all saved sessions with `--json` output
+- **Custom Agents**: `hawk agent list/create/show/remove` — markdown persona definitions in `~/.hawk/agents/` with YAML frontmatter (name, description, model)
+- **Snapshot System**: Shadow git tracking of every file change. `hawk snapshot list/restore/diff` + `/snapshot` slash command. Auto-snapshots on every Write/Edit tool call
+- **Waza Workflows**: `/think` (plan before code), `/hunt` (root-cause diagnosis), `/check` (pre-ship review with auto-fix), `/design` (screenshot-driven UI iteration)
+- **Structured Compaction**: Summary template with Goal/Constraints/Progress/Files/Decisions/Errors/Instructions/Next sections for better intent preservation
+- **Doom Loop Detection**: Lowered threshold to 3 (from 4). Two-tier escalation: first detection injects redirect prompt, doom loop hard-stops with "ask user for help"
+- **Session Persistence for exec**: All exec runs saved to `~/.hawk/sessions/` and searchable via `hawk search`
+
+### Packages Added
+- `mission/` — Multi-agent orchestration with worktree-based parallel workers
+- `daemon/` — HTTP server with session factory, SSE streaming, PID file management
+- `agents/` — Markdown persona loader with frontmatter parsing
+- `snapshot/` — Shadow git repository for granular file-level undo
+
+### Inspired By
+- Factory Droid v0.117.0 (exec mode, daemon, mission orchestration, custom agents)
+- OpenCode (structured compaction, snapshot system, doom loop escalation)
+- Waza by tw93 (engineering-habit workflows: think, hunt, check, design)
+
 ## [0.3.0] — 2026-05-03
 
 ### Added

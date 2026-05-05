@@ -11,6 +11,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/memory"
+	"github.com/GrayCodeAI/hawk/snapshot"
 	hawkmodel "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/prompt"
 	"github.com/GrayCodeAI/hawk/prompts"
@@ -163,6 +164,13 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
+
+	// Initialize snapshot tracker for granular undo
+	cwd, _ := os.Getwd()
+	snap := snapshot.New(cwd)
+	if err := snap.Init(); err == nil {
+		sess.Snapshots = snap
+	}
 
 	// Initialize yaad memory bridge
 	yaadMem := memory.NewYaadBridge()

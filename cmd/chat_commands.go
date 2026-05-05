@@ -25,16 +25,16 @@ import (
 func slashCommands() []string {
 	return []string{
 		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/bughunter", "/clean", "/clear",
-		"/color", "/commit", "/compact", "/compress", "/config", "/context", "/council",
+		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
 		"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-		"/output-style", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
+		"/hunt", "/output-style", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
 		"/power", "/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/stats",
+		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/stats",
 		"/status", "/statusline", "/summary", "/tag", "/tasks", "/test", "/theme",
-		"/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
+		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
 		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
 	}
 }
@@ -52,6 +52,10 @@ var slashDescriptions = map[string]string{
 	"/branch":          "Show git branch info",
 	"/btw":             "Side note without triggering a response",
 	"/bughunter":       "Hunt for bugs in the codebase",
+	"/check":           "Review diff, find issues, auto-fix safe ones, verify before ship",
+	"/design":          "Screenshot-driven UI iteration (Waza method)",
+	"/hunt":            "Diagnose root cause of errors before fixing (Waza method)",
+	"/think":           "Turn rough idea into approved plan before coding (Waza method)",
 	"/clean":           "Delete old sessions",
 	"/clear":           "Clear conversation",
 	"/color":           "Change agent color",
@@ -100,6 +104,7 @@ var slashDescriptions = map[string]string{
 	"/run":             "Run command, add output to context",
 	"/sandbox":         "Toggle sandbox mode",
 	"/search":          "Search across sessions",
+	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
 	"/security-review": "Security audit",
 	"/skills":          "List skills or manage: search, install, trending, info, remove, update, feedback, publish, audit",
 	"/learn":           "LLM-powered skill advisor (/learn deep for source analysis)",
@@ -670,6 +675,31 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m.startPromptCommand("/release-notes", "Draft concise release notes for the current changes, grouped by user-facing improvements, fixes, and compatibility notes.")
 	case "/pr-comments":
 		return m.startPromptCommand("/pr-comments", "Review open PR comments or, if unavailable, inspect the current diff and suggest responses or fixes for likely review comments.")
+	case "/think":
+		topic := strings.TrimSpace(strings.TrimPrefix(text, "/think"))
+		if topic == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /think <what to plan>"})
+			return m, nil
+		}
+		return m.startPromptCommand("/think", buildThinkPrompt(topic))
+	case "/hunt":
+		symptom := strings.TrimSpace(strings.TrimPrefix(text, "/hunt"))
+		if symptom == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /hunt <error or symptom>"})
+			return m, nil
+		}
+		return m.startPromptCommand("/hunt", buildHuntPrompt(symptom))
+	case "/snapshot":
+		return m.handleSnapshot(text)
+	case "/check":
+		return m.startPromptCommand("/check", buildCheckPrompt())
+	case "/design":
+		topic := strings.TrimSpace(strings.TrimPrefix(text, "/design"))
+		if topic == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design <what to build or improve>"})
+			return m, nil
+		}
+		return m.startPromptCommand("/design", buildDesignPrompt(topic))
 	case "/permissions":
 		if len(parts) >= 2 {
 			switch parts[1] {

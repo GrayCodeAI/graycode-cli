@@ -183,6 +183,12 @@ func init() {
 	rootCmd.AddCommand(sandboxCmd)
 	rootCmd.AddCommand(costCmd)
 	rootCmd.AddCommand(sessionCaptureCmd)
+	rootCmd.AddCommand(execCmd)
+	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(agentCmd)
+	rootCmd.AddCommand(missionCmd)
+	rootCmd.AddCommand(searchCmd)
+	rootCmd.AddCommand(snapshotCmd)
 }
 
 var completionCmd = &cobra.Command{
