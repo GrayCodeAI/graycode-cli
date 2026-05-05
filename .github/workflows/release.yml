@@ -16,6 +16,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout sister repos
+        run: |
+          cd ..
+          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/eyrie.git eyrie || git clone --depth 1 https://github.com/GrayCodeAI/eyrie.git eyrie
+          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/tok.git tok || git clone --depth 1 https://github.com/GrayCodeAI/tok.git tok
+          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/yaad.git yaad || git clone --depth 1 https://github.com/GrayCodeAI/yaad.git yaad
+          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/sight.git sight || git clone --depth 1 https://github.com/GrayCodeAI/sight.git sight
+          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/inspect.git inspect || git clone --depth 1 https://github.com/GrayCodeAI/inspect.git inspect
+
+      - name: Create go.work
+        run: |
+          cat > go.work << 'EOF'
+          go 1.26.1
+
+          use .
+
+          replace (
+            github.com/GrayCodeAI/eyrie => ../eyrie
+            github.com/GrayCodeAI/tok => ../tok
+            github.com/GrayCodeAI/yaad => ../yaad
+            github.com/GrayCodeAI/inspect => ../inspect
+            github.com/GrayCodeAI/sight => ../sight
+          )
+          EOF
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -31,3 +56,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOWORK: "on"
