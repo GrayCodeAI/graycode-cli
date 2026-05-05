@@ -13,8 +13,8 @@ func TestBuildCompactPrompt_Base(t *testing.T) {
 	if !strings.Contains(prompt, "Chronologically analyze each message") {
 		t.Error("should contain base analysis instruction")
 	}
-	if !strings.Contains(prompt, "Primary Request & Intent") {
-		t.Error("should contain summary template")
+	if !strings.Contains(prompt, "## Goal") {
+		t.Error("should contain structured summary template")
 	}
 }
 

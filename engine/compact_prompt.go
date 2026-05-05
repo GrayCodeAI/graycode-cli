@@ -37,27 +37,38 @@ const detailedAnalysisPartial = `Before providing your final summary, wrap your 
    - Errors encountered and how they were resolved
 2. Double-check for technical accuracy and completeness.`
 
-const summaryTemplate = `Now provide your summary inside <summary> tags with the following sections:
+const summaryTemplate = `Now provide your summary inside <summary> tags using EXACTLY this structure. Keep section order unchanged.
 
-1. **Primary Request & Intent**: What is the user trying to accomplish? What's the goal?
+## Goal
+- [single-sentence task summary — what the user is trying to accomplish]
 
-2. **Key Technical Concepts**: Important architectural decisions, patterns, or domain concepts discussed.
+## Constraints & Preferences
+- [user constraints, coding style preferences, specific instructions, or "(none)"]
 
-3. **Files & Code**: List all files that were read, created, or modified. Include relevant code snippets, function signatures, and the rationale for changes.
+## Progress
+### Done
+- [completed work with file paths and brief description]
 
-4. **Errors & Fixes**: Any errors encountered, their root causes, and how they were resolved.
+### In Progress
+- [current work — what was being worked on most recently with specific details]
 
-5. **Problem Solving**: Approaches that worked, approaches that didn't, and why.
+### Blocked
+- [blockers, errors not yet resolved, or "(none)"]
 
-6. **All User Messages**: Reproduce ALL non-tool-result user messages verbatim. These contain instructions and feedback critical for continuity.
+## Files Modified
+- [list every file read/created/modified with one-line description of change]
 
-7. **Pending Tasks**: Anything the user asked for that hasn't been completed yet.
+## Key Decisions
+- [architectural decisions, patterns chosen, approaches rejected and why]
 
-8. **Current Work**: What was being worked on most recently? Include specific details.
+## Errors & Fixes
+- [errors encountered, root causes, resolutions — or "(none)"]
 
-9. **Lookup Hints**: List 3-5 specific topics or keywords the agent should search for in conversation history if it needs details that were summarized away. Format as a bullet list of search queries.
+## User Instructions (verbatim)
+- [reproduce key non-trivial user messages/feedback that affect future work]
 
-10. **Next Step**: Based on the most recent user messages, what should happen next? Include direct quotes from the user if they gave specific direction.`
+## Next Step
+- [based on most recent user messages, what should happen next — include direct quotes if user gave specific direction]`
 
 // BuildCompactPrompt constructs the full compaction prompt for LLM-based summarization.
 func BuildCompactPrompt(variant CompactVariant) string {

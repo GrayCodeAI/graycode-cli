@@ -59,6 +59,17 @@ hawk --fork-session -r abc123 # Resume as new session
 hawk --mcp "npx @mcp/server"  # Connect MCP server
 hawk -p "fix tests" --allowed-tools "Bash(go test:*) Edit Read"
 hawk -p "plan only" --permission-mode plan --tools "Read,Grep,Glob"
+hawk exec "fix all tests"     # Non-interactive with full engine
+hawk exec --auto full -o json "add error handling"
+hawk exec --worktree "refactor auth module"
+hawk exec --agent reviewer "review last commit"
+hawk daemon start             # Background HTTP server
+hawk daemon status            # Check if daemon running
+hawk mission "add auth, rate limiting, and tests"
+hawk mission --dry-run "decompose this into features"
+hawk search "authentication"  # Search across all sessions
+hawk agent list               # List custom personas
+hawk agent create debugger    # Create new persona
 hawk doctor                   # Run diagnostics
 hawk config                   # Show effective settings
 hawk sessions                 # List saved sessions
@@ -164,6 +175,10 @@ Core commands:
 | `/review` | Ask hawk to review changes |
 | `/test` | Run project tests |
 | `/lint` | Run linter |
+| `/think <topic>` | Plan before coding (Waza method) |
+| `/hunt <symptom>` | Root-cause diagnosis before fixing (Waza method) |
+| `/check` | Pre-ship review with auto-fix (Waza method) |
+| `/design <goal>` | Screenshot-driven UI iteration (Waza method) |
 | `/bughunter` | Hunt for bugs |
 | `/security-review` | Review security risks |
 | `/power <level>` | Set power level (1-10) |
@@ -237,12 +252,82 @@ hooks/        Event hook system with decision hooks
 analytics/    Session traces, activity tracking, cost optimization, model cascade
 trace/        Built-in tracer + optional OTel SDK (build tag)
 sandbox/      Command isolation (namespace, docker, chroot, seatbelt, landlock, seccomp)
+mission/      Multi-agent orchestration (parallel feature execution in worktrees)
+daemon/       Background HTTP server (JSON + SSE streaming)
+agents/       Custom agent persona loader (markdown + frontmatter)
+parallel/     Worktree-based parallel task execution
 retry/        Exponential backoff with jitter
 circuit/      Circuit breaker (closed/open/half-open)
 ratelimit/    Token bucket rate limiting
 ```
 
 Zero CGO. Single static binary. Cross-compiled for linux/darwin/windows amd64/arm64.
+
+## Exec Mode
+
+Run hawk non-interactively for scripting and CI:
+
+```bash
+hawk exec "fix all failing tests"
+hawk exec --auto full "refactor to use context"
+hawk exec --output-format json "list all TODO comments"
+hawk exec --worktree "add rate limiting"           # isolated branch
+hawk exec --agent reviewer "review the last 3 commits"
+hawk exec -s exec-123456 "continue from last time" # resume session
+echo "explain main.go" | hawk exec -               # stdin
+```
+
+## Mission Mode
+
+Decompose work into parallel features:
+
+```bash
+hawk mission "Add auth, rate limiting, and logging"
+hawk mission --workers 6 --model claude-sonnet-4-6 "Refactor into microservices"
+hawk mission --dry-run "What would this decompose into?"
+```
+
+Each feature runs in its own git worktree with full autonomy. Results are committed on separate branches.
+
+## Daemon
+
+Background HTTP server for programmatic access:
+
+```bash
+hawk daemon start              # Start on port 4590
+hawk daemon start --port 8080  # Custom port
+hawk daemon status             # Check if running
+hawk daemon stop               # Graceful shutdown
+```
+
+Endpoints:
+- `GET /v1/health` — server status
+- `POST /v1/chat` — send prompt, get response (JSON or SSE streaming)
+- `GET /v1/sessions` — list active sessions
+
+SSE streaming: set `Accept: text/event-stream` header.
+
+## Custom Agents
+
+Define reusable personas in `~/.hawk/agents/`:
+
+```bash
+hawk agent create reviewer -d "Security-focused code reviewer"
+hawk agent list
+hawk agent show reviewer
+hawk exec --agent reviewer "check the auth module"
+```
+
+Agent files are markdown with YAML frontmatter:
+
+```markdown
+---
+name: reviewer
+description: Security-focused code reviewer
+model: claude-sonnet-4-6
+---
+You are a security expert. Focus on injection, auth bypass, and secrets.
+```
 
 ## AGENTS.md
 

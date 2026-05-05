@@ -75,7 +75,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	var toolsUsedSet map[string]bool
 	var filesModifiedSet map[string]bool
 	snowball := NewSnowballDetector(500000) // 500K token ceiling
-	loopDet := NewLoopDetector(10, 4)       // 10-step window, 4 repeats = stuck
+	loopDet := NewLoopDetector(10, DoomLoopThreshold) // 10-step window, 3 repeats = doom loop
 
 	for {
 		// Timeout check: abort if context was cancelled by a time budget
@@ -92,11 +92,16 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 
-		// Loop detection check
-		if loopDet.IsLooping() {
-			ch <- StreamEvent{Type: "content", Content: "\n\n⚠ " + loopDet.LoopWarning()}
+		// Loop detection check (doom loop = hard stop, first loop = warning + inject)
+		if loopDet.IsDoomLoop() {
+			ch <- StreamEvent{Type: "content", Content: "\n\n🛑 " + loopDet.DoomLoopWarning()}
 			ch <- StreamEvent{Type: "done"}
 			return
+		}
+		if loopDet.IsLooping() && !loopDet.Escalated() {
+			loopDet.MarkEscalated()
+			s.AddAssistant(loopDet.LoopWarning())
+			s.AddUser("You are stuck in a loop. Try a completely different approach. If you cannot make progress, explain what's blocking you.")
 		}
 
 		// Safety limits check
@@ -730,6 +735,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		for _, tc := range sequentialCalls {
 			r := executeSingleTool(tc)
 			results = append(results, r)
+		}
+
+		// Auto-snapshot after write operations for granular undo
+		if len(sequentialCalls) > 0 && s.Snapshots != nil {
+			var writeNames []string
+			for _, tc := range sequentialCalls {
+				writeNames = append(writeNames, tc.Name)
+			}
+			go s.Snapshots.Track(strings.Join(writeNames, ", "))
 		}
 
 		// Append assistant message with tool_use blocks

@@ -20,6 +20,11 @@ type MemoryRecaller interface {
 	Remember(content, category string) error
 }
 
+// SnapshotTracker abstracts the snapshot system so engine doesn't import snapshot directly.
+type SnapshotTracker interface {
+	Track(message string) (string, error)
+}
+
 // Session manages a conversation with an LLM via eyrie.
 type Session struct {
 	client       *client.EyrieClient
@@ -69,6 +74,7 @@ type Session struct {
 	Teach      TeachConfig          // teach.go — explanation depth
 	Trajectory *TrajectoryDistiller // trajectory.go — multi-run distillation
 	Shadow     *ShadowWorkspace     // shadow.go — edit pre-validation
+	Snapshots  SnapshotTracker     // snapshot integration for auto-tracking
 	Sleeptime      *memory.SleeptimeAgent   // sleeptime.go — background memory consolidation
 	Activity       *memory.ActivityTracker  // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller   // skill_distill.go — auto-skill extraction
