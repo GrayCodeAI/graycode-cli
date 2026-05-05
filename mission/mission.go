@@ -230,7 +230,9 @@ func (m *Mission) persistState() error {
 	if m.Dir == "" {
 		return nil
 	}
+	m.mu.Lock()
 	data, err := json.MarshalIndent(m, "", "  ")
+	m.mu.Unlock()
 	if err != nil {
 		return err
 	}
