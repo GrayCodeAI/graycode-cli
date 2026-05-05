@@ -3,7 +3,6 @@ project_name: hawk
 
 before:
   hooks:
-    - go mod tidy
     - go test ./...
 
 builds:
