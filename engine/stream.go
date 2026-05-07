@@ -250,12 +250,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		s.metrics.Counter("api.requests").Inc()
 		apiStart := time.Now()
 
+		contCfg := client.DefaultContinuationConfig()
 		err = retry.Do(ctx, retryCfg, func() error {
-			result, err = s.client.StreamChat(ctx, s.messages, opts)
+			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
 			if err != nil {
 				if strings.Contains(err.Error(), "too long") || strings.Contains(err.Error(), "too many tokens") {
 					s.compact()
-					result, err = s.client.StreamChat(ctx, s.messages, opts)
+					result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
 				}
 			}
 			return err
@@ -361,7 +362,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			time.Sleep(time.Duration(streamAttempt+1) * time.Second)
 
 			// Re-open the stream for retry
-			result, err = s.client.StreamChat(ctx, s.messages, opts)
+			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
 			if err != nil {
 				ch <- StreamEvent{Type: "error", Content: err.Error()}
 				return
