@@ -3,23 +3,27 @@ package memory
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/GrayCodeAI/hawk/hawkerr"
 	yaadEngine "github.com/GrayCodeAI/yaad/engine"
 	"github.com/GrayCodeAI/yaad/graph"
 	"github.com/GrayCodeAI/yaad/storage"
 )
 
 // YaadBridge connects hawk's memory system to the yaad memory graph.
-// If yaad is not initialized (missing DB), all operations fall back silently.
+// If yaad is not initialized (missing DB), operations return a BridgeError
+// and log a warning on first access.
 type YaadBridge struct {
-	engine *yaadEngine.Engine
-	store  *storage.Store
-	mu     sync.Mutex
-	ready  bool
+	engine   *yaadEngine.Engine
+	store    *storage.Store
+	mu       sync.Mutex
+	ready    bool
+	warnOnce sync.Once
 }
 
 // NewYaadBridge initializes a bridge to yaad's SQLite store at ~/.yaad/data/yaad.db.
@@ -59,12 +63,30 @@ func (b *YaadBridge) Ready() bool {
 	return b.ready
 }
 
+// IsReady is a public alias for Ready, exported for external consumers
+// that need to check bridge status before batching operations.
+func (b *YaadBridge) IsReady() bool {
+	return b.ready
+}
+
+// notReadyError logs a warning once and returns a structured BridgeError.
+func (b *YaadBridge) notReadyError(op string) error {
+	b.warnOnce.Do(func() {
+		log.Println("[hawk/memory] WARNING: yaad bridge is not initialized; memory operations will be skipped. Ensure ~/.yaad/data/ is accessible.")
+	})
+	return &hawkerr.BridgeError{
+		Bridge: "yaad",
+		Op:     op,
+		Reason: "bridge not initialized",
+	}
+}
+
 // Remember stores content into yaad's memory graph under the given category.
 // Category maps to yaad's node type (e.g., "convention", "decision", "bug", "preference").
-// Falls back silently if yaad is not initialized.
+// Returns a BridgeError if yaad is not initialized.
 func (b *YaadBridge) Remember(content, category string) error {
 	if !b.ready {
-		return nil
+		return b.notReadyError("Remember")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -83,11 +105,10 @@ func (b *YaadBridge) Remember(content, category string) error {
 }
 
 // Recall searches yaad's memory graph and returns formatted context that fits
-// within the specified token budget. Falls back silently returning empty string
-// if yaad is not initialized.
+// within the specified token budget. Returns a BridgeError if yaad is not initialized.
 func (b *YaadBridge) Recall(query string, tokenBudget int) (string, error) {
 	if !b.ready {
-		return "", nil
+		return "", b.notReadyError("Recall")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -116,10 +137,10 @@ func (b *YaadBridge) Recall(query string, tokenBudget int) (string, error) {
 }
 
 // InitCodeIndex creates the code index tables in yaad's store.
-// Safe to call multiple times.
+// Safe to call multiple times. Returns a BridgeError if yaad is not initialized.
 func (b *YaadBridge) InitCodeIndex() error {
 	if !b.ready {
-		return nil
+		return b.notReadyError("InitCodeIndex")
 	}
 	return b.store.CreateCodeIndex(context.Background())
 }
@@ -127,7 +148,7 @@ func (b *YaadBridge) InitCodeIndex() error {
 // IndexCodeChunk stores a code chunk in the yaad code index.
 func (b *YaadBridge) IndexCodeChunk(path, content, symbol, lang string, start, end, tokens int, hash string) error {
 	if !b.ready {
-		return nil
+		return b.notReadyError("IndexCodeChunk")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -159,7 +180,7 @@ type CodeSearchResult struct {
 // SearchCode performs full-text search over indexed code chunks.
 func (b *YaadBridge) SearchCode(query string, limit int) ([]CodeSearchResult, error) {
 	if !b.ready {
-		return nil, nil
+		return nil, b.notReadyError("SearchCode")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -185,7 +206,7 @@ func (b *YaadBridge) SearchCode(query string, limit int) ([]CodeSearchResult, er
 // GetFileHash returns the stored hash for a file path, or empty string if not indexed.
 func (b *YaadBridge) GetFileHash(path string) (string, error) {
 	if !b.ready {
-		return "", nil
+		return "", b.notReadyError("GetFileHash")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -196,7 +217,7 @@ func (b *YaadBridge) GetFileHash(path string) (string, error) {
 // ClearFileChunks removes all indexed chunks for a given file path.
 func (b *YaadBridge) ClearFileChunks(path string) error {
 	if !b.ready {
-		return nil
+		return b.notReadyError("ClearFileChunks")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -207,7 +228,7 @@ func (b *YaadBridge) ClearFileChunks(path string) error {
 // ListIndexedPaths returns all file paths that have indexed code chunks.
 func (b *YaadBridge) ListIndexedPaths() ([]string, error) {
 	if !b.ready {
-		return nil, nil
+		return nil, b.notReadyError("ListIndexedPaths")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -218,7 +239,7 @@ func (b *YaadBridge) ListIndexedPaths() ([]string, error) {
 // SearchByType returns nodes matching the given type (label).
 func (b *YaadBridge) SearchByType(nodeType string, limit int) ([]string, []string, error) {
 	if !b.ready {
-		return nil, nil, nil
+		return nil, nil, b.notReadyError("SearchByType")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -239,7 +260,7 @@ func (b *YaadBridge) SearchByType(nodeType string, limit int) ([]string, []strin
 // UpdateNodeContent updates the content of a node by ID.
 func (b *YaadBridge) UpdateNodeContent(id, newContent string) error {
 	if !b.ready {
-		return nil
+		return b.notReadyError("UpdateNodeContent")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -265,7 +286,7 @@ type FullResult struct {
 // SearchCompact returns compact index entries (ID + title + score) without full content.
 func (b *YaadBridge) SearchCompact(query string, limit int) ([]CompactResult, error) {
 	if !b.ready {
-		return nil, nil
+		return nil, b.notReadyError("SearchCompact")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -295,7 +316,10 @@ func (b *YaadBridge) SearchCompact(query string, limit int) ([]CompactResult, er
 
 // GetFullContent returns full content for specific node IDs.
 func (b *YaadBridge) GetFullContent(ids []string) ([]FullResult, error) {
-	if !b.ready || len(ids) == 0 {
+	if !b.ready {
+		return nil, b.notReadyError("GetFullContent")
+	}
+	if len(ids) == 0 {
 		return nil, nil
 	}
 	b.mu.Lock()
