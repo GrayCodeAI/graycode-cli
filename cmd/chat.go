@@ -223,7 +223,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		vpHeight = 4
 	}
 	vp := viewport.New(initWidth, vpHeight)
-	vp.MouseWheelEnabled = false
+	vp.MouseWheelEnabled = true
 
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now(), activeSkills: make(map[string]plugin.SmartSkill)}
 
@@ -253,6 +253,16 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		if bridge := memory.NewYaadBridge(); bridge != nil && bridge.Ready() {
 			_ = bridge.InitCodeIndex()
 			bridge.Close()
+		}
+	}()
+
+	// Prefetch models for current provider in background so /config and /model are instant
+	go func() {
+		provider := effectiveProvider
+		models, _ := hawkconfig.FetchModelsForProvider(provider)
+		ids := extractModelIDs(models)
+		if len(ids) > 0 {
+			modelCache[provider] = ids
 		}
 	}()
 
@@ -319,6 +329,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "✓ Always allowed: " + m.permReq.ToolName})
 				m.permReq = nil
 			}
+			m.viewDirty = true
+			m.updateViewportContent()
 			return m, nil
 		}
 		// AskUser prompt active — Enter submits answer
@@ -329,6 +341,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.messages = append(m.messages, displayMsg{role: "user", content: answer})
 				m.askReq.response <- answer
 				m.askReq = nil
+				m.viewDirty = true
+				m.updateViewportContent()
 				return m, nil
 			}
 			// Let textarea handle other keys
@@ -349,6 +363,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.waiting = false
 					m.input.Focus()
+					m.viewDirty = true
+					m.updateViewportContent()
 					return m, nil
 				}
 				m.saveSession()
@@ -367,6 +383,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.waiting = false
 					m.input.Focus()
 				}
+				m.viewDirty = true
+				m.updateViewportContent()
 				return m, nil
 			}
 			// Allow typing in input while streaming
@@ -384,9 +402,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.lastCtrlC = time.Now()
 				m.messages = append(m.messages, displayMsg{role: "system", content: "Press Ctrl+C again to quit."})
+				m.viewDirty = true
+				m.updateViewportContent()
 				return m, nil
 			default:
 				next, cmd := m.handleConfigKey(msg)
+				next.viewDirty = true
+				next.updateViewportContent()
 				return next, cmd
 			}
 		}
@@ -405,6 +427,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.session.SetModel(models[idx])
 				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model → %s", models[idx])})
 			}
+			m.viewDirty = true
+			m.updateViewportContent()
 			return m, nil
 		case tea.KeyCtrlL:
 			modes := []string{"default", "acceptEdits", "bypassPermissions"}
@@ -419,6 +443,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.session.SetPermissionMode(modes[idx])
 			labels := map[string]string{"default": "Off", "acceptEdits": "Auto-edit", "bypassPermissions": "Full Auto"}
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy → %s", labels[modes[idx]])})
+			m.viewDirty = true
+			m.updateViewportContent()
 			return m, nil
 		case tea.KeyCtrlC:
 			if time.Since(m.lastCtrlC) < 1*time.Second {
@@ -428,6 +454,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.lastCtrlC = time.Now()
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Press Ctrl+C again to quit."})
+			m.viewDirty = true
+			m.updateViewportContent()
 			return m, nil
 		case tea.KeyTab:
 			sugs := slashSuggestions(m.input.Value())
@@ -499,7 +527,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.historyDraft = ""
 			m.input.Reset()
 			if strings.HasPrefix(text, "/") {
-				return m.handleCommand(text)
+				result, cmd := m.handleCommand(text)
+				m.viewDirty = true
+				m.updateViewportContent()
+				return result, cmd
 			}
 			// Shell escape: !command runs directly without AI
 			if strings.HasPrefix(text, "!") {
@@ -522,12 +553,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case modelsFetchedMsg:
 		if len(msg) > 0 {
 			m.configModels = []string(msg)
+			// Auto-set first model so provider switch is immediately usable
+			if m.configOpen && len(m.configModels) > 0 {
+				m.session.SetModel(m.configModels[0])
+				_ = hawkconfig.SetGlobalSetting("model", m.configModels[0])
+			}
+		}
+		if m.configOpen {
+			m.viewDirty = true
+			m.updateViewportContent()
 		}
 		return m, nil
 
 	case loopTickMsg:
 		if !m.waiting {
-			return m.handleCommand(msg.command)
+			result, cmd := m.handleCommand(msg.command)
+			m.viewDirty = true
+			m.updateViewportContent()
+			return result, cmd
 		}
 		return m, nil
 
@@ -553,8 +596,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case toolResultMsg:
 		content := msg.content
-		if len(content) > 500 {
-			content = content[:500] + "..."
+		totalLen := len(content)
+		if totalLen > 800 {
+			content = content[:800] + fmt.Sprintf(" … (%d more chars)", totalLen-800)
 		}
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, content)})
 		m.viewDirty = true
@@ -620,13 +664,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.SetWidth(msg.Width - 4)
-		// Resize viewport: total height minus bottom bar
-		vpHeight := msg.Height - 6
-		if vpHeight < 4 {
-			vpHeight = 4
-		}
-		m.viewport.Width = msg.Width
-		m.viewport.Height = vpHeight
 		m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, false, msg.Width)
 		m.viewDirty = true
 

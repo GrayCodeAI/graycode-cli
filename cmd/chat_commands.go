@@ -521,24 +521,53 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
-			m.configModels = nil
 			m.configOpen = true
 			m.configMenu = "model"
 			m.configSel = 0
 			m.configScroll = 0
 			m.configNotice = ""
+			m.viewDirty = true
 			provider := m.session.Provider()
-			cmd := func() tea.Msg {
-				models, _ := hawkconfig.FetchModelsForProvider(provider)
-				return modelsFetchedMsg(extractModelIDs(models))
+			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
+				m.configModels = cached
+				return m, nil
 			}
-			return m, cmd
+			m.configModels = nil
+			return m, fetchModelsAsync(provider)
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
 		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
 		if arg == "" {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /model <model-name> or /model set <model-name>"})
 			return m, nil
+		}
+		// Validate model against known models for current provider
+		known := configModelChoices(m.session.Provider(), m.configModels)
+		if len(known) > 0 {
+			found := false
+			for _, k := range known {
+				if strings.EqualFold(k, arg) {
+					arg = k
+					found = true
+					break
+				}
+			}
+			if !found {
+				// Show available models as hint
+				hint := "Unknown model: " + arg + "\nAvailable models for " + m.session.Provider() + ":\n"
+				max := 10
+				if len(known) < max {
+					max = len(known)
+				}
+				for _, k := range known[:max] {
+					hint += "  " + k + "\n"
+				}
+				if len(known) > 10 {
+					hint += fmt.Sprintf("  ... and %d more (use /model to browse)", len(known)-10)
+				}
+				m.messages = append(m.messages, displayMsg{role: "error", content: hint})
+				return m, nil
+			}
 		}
 		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
@@ -760,12 +789,34 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				return m, nil
 			}
-			m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nSaved to global config.", value)})
+			engineProvider := hawkconfig.NormalizeProviderForEngine(value)
+			m.session.SetProvider(engineProvider)
+			// Use cached model or set first from cache
+			if cached, ok := modelCache[engineProvider]; ok && len(cached) > 0 {
+				m.session.SetModel(cached[0])
+				_ = hawkconfig.SetGlobalSetting("model", cached[0])
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved to global config.", value, m.session.Model())})
 			return m, nil
 		}
 		if len(parts) >= 3 && parts[1] == "model" {
 			value := strings.TrimSpace(strings.Join(parts[2:], " "))
+			known := configModelChoices(m.session.Provider(), m.configModels)
+			if len(known) > 0 {
+				found := false
+				for _, k := range known {
+					if strings.EqualFold(k, value) {
+						value = k
+						found = true
+						break
+					}
+				}
+				if !found {
+					hint := "Unknown model: " + value + "\nUse /model to browse available models."
+					m.messages = append(m.messages, displayMsg{role: "error", content: hint})
+					return m, nil
+				}
+			}
 			if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				return m, nil
@@ -819,8 +870,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.settings = settings
-		next := m.openConfigPanel()
-		return next, nil
+		m.configOpen = true
+		m.configMenu = "provider"
+		m.configSel = 0
+		m.configNotice = ""
+		m.viewDirty = true
+		return m, nil
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil
