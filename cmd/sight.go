@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
 	sightLib "github.com/GrayCodeAI/sight"
@@ -26,6 +27,7 @@ var (
 	sightFormat     string
 	sightReflection bool
 	sightMode       string // "review", "describe", "improve"
+	sightTimeout    time.Duration
 )
 
 var sightCmd = &cobra.Command{
@@ -86,6 +88,11 @@ Examples:
 		}
 
 		ctx := context.Background()
+		if sightTimeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, sightTimeout)
+			defer cancel()
+		}
 
 		mode := sightMode
 		if mode == "" {
@@ -114,6 +121,7 @@ func init() {
 	sightCmd.Flags().StringVar(&sightFormat, "format", "terminal", "output format: terminal, json, sarif")
 	sightCmd.Flags().BoolVar(&sightReflection, "reflection", false, "enable self-reflection pass to validate findings")
 	sightCmd.Flags().StringVar(&sightMode, "mode", "review", "operation mode: review, describe, improve")
+	sightCmd.Flags().DurationVar(&sightTimeout, "timeout", 2*time.Minute, "timeout for the LLM review operation (e.g. 30s, 2m)")
 }
 
 // getDiff obtains the diff to review, either from a PR number or git diff.

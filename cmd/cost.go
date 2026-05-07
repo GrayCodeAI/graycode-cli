@@ -9,10 +9,13 @@ import (
 
 var costCmd = &cobra.Command{
 	Use:   "cost",
-	Short: "Analyze and optimize LLM API spend",
+	Short: "[Experimental] Analyze and optimize LLM API spend",
 	Long: `cost provides analysis and optimization recommendations for LLM API
 usage. It examines session data to identify wasteful spending patterns and
 suggests model routing improvements.
+
+NOTE: This feature is experimental. Cost tracking is not yet fully available;
+session data integration is in progress.
 
 Subcommands:
   analyze   Run a full cost optimization analysis
@@ -23,22 +26,23 @@ var costAnalyzeCmd = &cobra.Command{
 	Use:   "analyze",
 	Short: "Run a full cost optimization analysis",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: Wire up to actual session data once the session store
-		// exposes CostEntry records. For now, show a placeholder that
-		// demonstrates the analytics pipeline works.
+		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
+		cmd.Println()
+
 		entries := []analytics.CostEntry{}
 		report := analytics.Analyze(entries)
 
 		if report.TotalSpend == 0 {
-			cmd.Println("No cost data available yet.")
+			cmd.Println("No cost data collected in this session.")
 			cmd.Println()
-			cmd.Println("Cost analysis will be available once session data is integrated.")
-			cmd.Println("The analyzer supports:")
+			cmd.Println("Once session data integration is complete, the analyzer will support:")
 			cmd.Println("  - Spend breakdown by model and task type")
 			cmd.Println("  - Wasted spend detection (expensive models for simple tasks)")
 			cmd.Println("  - Abandoned output tracking")
 			cmd.Println("  - Model routing recommendations")
 			cmd.Println("  - Prompt caching suggestions")
+			cmd.Println()
+			cmd.Println("To track progress: https://github.com/GrayCodeAI/hawk/issues")
 			return nil
 		}
 
@@ -51,13 +55,15 @@ var costSummaryCmd = &cobra.Command{
 	Use:   "summary",
 	Short: "Show a quick spend summary",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: Wire up to actual session data.
+		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
+		cmd.Println()
+
 		entries := []analytics.CostEntry{}
 		report := analytics.Analyze(entries)
 
 		if report.TotalSpend == 0 {
-			cmd.Println("No cost data available yet.")
-			cmd.Println("Run hawk with LLM interactions to start collecting cost data.")
+			cmd.Println("No cost data collected in this session.")
+			cmd.Println("Cost tracking will be available once session data integration is complete.")
 			return nil
 		}
 

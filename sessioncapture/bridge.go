@@ -5,14 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 // Bridge wraps the trace CLI for Git-native session capture.
 type Bridge struct {
-	bin   string
-	ready bool
+	bin      string
+	ready    bool
+	warnOnce sync.Once
 }
 
 // Status holds the parsed output of `trace status --json`.
@@ -32,11 +35,12 @@ type Checkpoint struct {
 }
 
 // NewBridge locates the trace binary and returns a bridge.
-// Returns a no-op bridge if trace is not installed.
+// Returns a no-op bridge if trace is not installed, logging a warning on first use.
 func NewBridge() *Bridge {
 	b := &Bridge{}
 	path, err := exec.LookPath("trace")
 	if err != nil {
+		log.Println("[hawk/sessioncapture] WARNING: trace CLI not found in PATH; session capture features will be unavailable. Install trace to enable checkpoints and rewind.")
 		return b
 	}
 	b.bin = path
@@ -70,7 +74,10 @@ func (b *Bridge) Disable(ctx context.Context, dir string) error {
 // GetStatus returns the current trace session status.
 func (b *Bridge) GetStatus(ctx context.Context, dir string) (*Status, error) {
 	if !b.ready {
-		return &Status{}, nil
+		b.warnOnce.Do(func() {
+			log.Println("[hawk/sessioncapture] WARNING: trace CLI not available; returning empty status")
+		})
+		return &Status{}, fmt.Errorf("trace CLI not found")
 	}
 	out, err := b.run(ctx, dir, "status", "--json")
 	if err != nil {
@@ -86,7 +93,7 @@ func (b *Bridge) GetStatus(ctx context.Context, dir string) (*Status, error) {
 // ListCheckpoints returns available checkpoints for the current session.
 func (b *Bridge) ListCheckpoints(ctx context.Context, dir string) ([]Checkpoint, error) {
 	if !b.ready {
-		return nil, nil
+		return nil, fmt.Errorf("trace CLI not found")
 	}
 	out, err := b.run(ctx, dir, "checkpoint", "list", "--json")
 	if err != nil {
