@@ -6,6 +6,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
+	"github.com/GrayCodeAI/hawk/convodag"
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
@@ -75,6 +76,7 @@ type Session struct {
 	Trajectory *TrajectoryDistiller // trajectory.go — multi-run distillation
 	Shadow     *ShadowWorkspace     // shadow.go — edit pre-validation
 	Snapshots  SnapshotTracker     // snapshot integration for auto-tracking
+	ConvoDAG   *convodag.DAG       // conversation DAG for branching/forking
 	Sleeptime      *memory.SleeptimeAgent   // sleeptime.go — background memory consolidation
 	Activity       *memory.ActivityTracker  // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller   // skill_distill.go — auto-skill extraction
@@ -153,7 +155,13 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 
 func (s *Session) AddUser(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "user", Content: content})
-	// Persist explicit "remember" requests via yaad
+	if s.ConvoDAG != nil {
+		parentID := ""
+		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
+			parentID = head.ID
+		}
+		s.ConvoDAG.Append(parentID, "user", content)
+	}
 	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
 		go s.Memory.Remember(content, "user_explicit")
 	}
@@ -161,6 +169,77 @@ func (s *Session) AddUser(content string) {
 
 func (s *Session) AddAssistant(content string) {
 	s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: content})
+	if s.ConvoDAG != nil {
+		parentID := ""
+		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
+			parentID = head.ID
+		}
+		s.ConvoDAG.Append(parentID, "assistant", content)
+	}
+}
+
+// ForkConversation creates a new branch from a specific point in history.
+// Returns the fork node ID and the messages up to that point.
+func (s *Session) ForkConversation(nodeID string) (string, error) {
+	if s.ConvoDAG == nil {
+		return "", nil
+	}
+	fork, err := s.ConvoDAG.Fork(nodeID)
+	if err != nil {
+		return "", err
+	}
+	// Rebuild messages from the forked branch
+	history, err := s.ConvoDAG.History(fork.ID)
+	if err != nil {
+		return "", err
+	}
+	s.messages = s.messages[:0]
+	for _, node := range history {
+		if node.Role == "user" || node.Role == "assistant" {
+			s.messages = append(s.messages, client.EyrieMessage{Role: node.Role, Content: node.Content})
+		}
+	}
+	return fork.ID, nil
+}
+
+// SwitchBranch navigates to a different branch point and rebuilds messages.
+func (s *Session) SwitchBranch(nodeID string) error {
+	if s.ConvoDAG == nil {
+		return nil
+	}
+	if err := s.ConvoDAG.SetHead(nodeID); err != nil {
+		return err
+	}
+	history, err := s.ConvoDAG.History(nodeID)
+	if err != nil {
+		return err
+	}
+	s.messages = s.messages[:0]
+	for _, node := range history {
+		if node.Role == "user" || node.Role == "assistant" {
+			s.messages = append(s.messages, client.EyrieMessage{Role: node.Role, Content: node.Content})
+		}
+	}
+	return nil
+}
+
+// ListBranches returns child nodes (alternative branches) from a given node.
+func (s *Session) ListBranches(nodeID string) ([]*convodag.Node, error) {
+	if s.ConvoDAG == nil {
+		return nil, nil
+	}
+	return s.ConvoDAG.Branches(nodeID)
+}
+
+// ConvoHead returns the current conversation head node ID.
+func (s *Session) ConvoHead() string {
+	if s.ConvoDAG == nil {
+		return ""
+	}
+	if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
+		return head.ID
+	}
+	return ""
 }
 
 // AppendSystemContext adds runtime context, such as /add-dir, to future model calls.

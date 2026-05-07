@@ -576,6 +576,58 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.session.SetModel(arg)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", m.session.Model())})
 		return m, nil
+	case "/branches":
+		if m.session.ConvoDAG == nil {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation branches (DAG not active)."})
+			return m, nil
+		}
+		headID := m.session.ConvoHead()
+		if headID == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation history."})
+			return m, nil
+		}
+		// If /branches <id> — switch to that branch
+		if len(parts) >= 2 {
+			targetID := parts[1]
+			if err := m.session.SwitchBranch(targetID); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.messages = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Switched to branch %s", targetID)})
+			for _, msg := range m.session.RawMessages() {
+				m.messages = append(m.messages, displayMsg{role: msg.Role, content: msg.Content})
+			}
+			return m, nil
+		}
+		// List branches
+		history, err := m.session.ConvoDAG.History(headID)
+		if err != nil || len(history) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No branches available (linear conversation).\nUse /fork to create a branch."})
+			return m, nil
+		}
+		var branchInfo strings.Builder
+		branchInfo.WriteString("Conversation branches:\n")
+		found := false
+		for i := len(history) - 1; i >= 0; i-- {
+			branches, _ := m.session.ListBranches(history[i].ID)
+			if len(branches) > 1 {
+				found = true
+				branchInfo.WriteString(fmt.Sprintf("\n  Fork at: %s (%s)\n", history[i].ID[:8], history[i].Role))
+				for _, b := range branches {
+					marker := "  "
+					if b.ID == headID {
+						marker = "→ "
+					}
+					branchInfo.WriteString(fmt.Sprintf("    %s%s (%s: %s)\n", marker, b.ID[:8], b.Role, truncate(b.Content, 40)))
+				}
+			}
+		}
+		if !found {
+			branchInfo.WriteString("  No fork points yet.\n  Use /fork to create a branch.")
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: branchInfo.String()})
+		return m, nil
 	case "/version":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk %s", version)})
 		return m, nil
@@ -1634,6 +1686,22 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}()
 		return m, nil
 	case "/fork":
+		// If convodag is active, fork from the current head node
+		if m.session.ConvoDAG != nil {
+			headID := m.session.ConvoHead()
+			if headID == "" {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "No conversation to fork from."})
+				return m, nil
+			}
+			forkID, err := m.session.ForkConversation(headID)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked at %s → new branch %s\nYou can now take a different approach. Use /branches to see all branches.", headID[:8], forkID[:8])})
+			return m, nil
+		}
+		// Fallback: legacy session fork
 		atIndex := len(m.session.RawMessages()) - 1
 		if len(parts) >= 2 {
 			if idx, err := strconv.Atoi(parts[1]); err == nil {
@@ -1939,4 +2007,12 @@ func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
 	}
 	m.viewDirty = true
 	return m, nil
+}
+
+func truncate(s string, max int) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }
