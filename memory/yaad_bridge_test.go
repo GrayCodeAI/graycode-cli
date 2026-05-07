@@ -7,8 +7,8 @@ import (
 func TestSearchCompact_NotReady(t *testing.T) {
 	b := &YaadBridge{ready: false}
 	results, err := b.SearchCompact("test", 5)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("expected error when bridge not ready")
 	}
 	if results != nil {
 		t.Fatal("expected nil results when not ready")
@@ -18,8 +18,8 @@ func TestSearchCompact_NotReady(t *testing.T) {
 func TestGetFullContent_NotReady(t *testing.T) {
 	b := &YaadBridge{ready: false}
 	results, err := b.GetFullContent([]string{"id1"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil {
+		t.Fatal("expected error when bridge not ready")
 	}
 	if results != nil {
 		t.Fatal("expected nil results when not ready")
