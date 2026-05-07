@@ -14,6 +14,20 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 )
 
+// In-memory model cache per provider (avoids re-fetching on every interaction)
+var modelCache = make(map[string][]string)
+
+func fetchModelsAsync(provider string) tea.Cmd {
+	return func() tea.Msg {
+		models, _ := hawkconfig.FetchModelsForProvider(provider)
+		ids := extractModelIDs(models)
+		if len(ids) > 0 {
+			modelCache[provider] = ids
+		}
+		return modelsFetchedMsg(ids)
+	}
+}
+
 func configProviderChoices() []string {
 	providers := []string{
 		"anthropic", "openai", "gemini", "openrouter",
@@ -115,7 +129,11 @@ func (m chatModel) configProviderKeyView() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("🔑 ") + valueStyle.Render(provider) + "\n")
 	b.WriteString(mutedStyle.Render(envKey) + "\n\n")
-	b.WriteString(m.input.View() + "\n")
+	if m.useConfigInput {
+		b.WriteString(m.configInput.View() + "\n")
+	} else {
+		b.WriteString(m.input.View() + "\n")
+	}
 	b.WriteString("\n" + mutedStyle.Render("enter save · esc skip") + "\n")
 	return b.String()
 }
@@ -237,6 +255,7 @@ func (m chatModel) openConfigPanel() chatModel {
 	m.configMenu = "provider"
 	m.configSel = 0
 	m.configNotice = ""
+	m.viewDirty = true
 	return m
 }
 
@@ -249,6 +268,7 @@ func (m chatModel) closeConfigPanel() chatModel {
 	m.configEntry = ""
 	m.configProvider = ""
 	m.configModels = nil
+	m.viewDirty = true
 	m.restoreChatInput()
 	return m
 }
@@ -314,15 +334,14 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 			}
 			m.session.SetAPIKey(provider, value)
 		}
-		// Fetch live models from eyrie for this provider
-		models, _ := hawkconfig.FetchModelsForProvider(provider)
-		m.configModels = extractModelIDs(models)
 		m.configEntry = ""
-		m.configProvider = ""
 		m.configMenu = "model"
 		m.configSel = 0
+		m.configModels = nil
 		m.restoreChatInput()
-		return m, nil
+		// Invalidate cache for this provider since key just changed
+		delete(modelCache, provider)
+		return m, fetchModelsAsync(provider)
 
 	case "model":
 		if value == "" {
@@ -462,21 +481,13 @@ func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
 		}
 		m.session.SetProvider(engineProvider)
 
-		// Seamless flow
-		if engineProvider == "ollama" {
-			// Local provider → straight to models
-			models, _ := hawkconfig.FetchModelsForProvider(engineProvider)
-			m.configModels = extractModelIDs(models)
-			m.configMenu = "model"
-			m.configSel = 0
-			return m, nil
-		}
-		if hawkconfig.EnvKeyStatus(engineProvider) != "set" {
+		if hawkconfig.EnvKeyStatus(engineProvider) != "set" && engineProvider != "ollama" {
 			// Key missing → prompt for it
 			m.configProvider = engineProvider
 			return m.startConfigEntry("provider-apikey", engineProvider)
 		}
-		// Key is set → show action menu (use or remove)
+
+		// Key is set → show action menu
 		m.configProvider = engineProvider
 		m.configMenu = "provider-action"
 		m.configSel = 0
@@ -486,17 +497,21 @@ func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
 		provider := strings.TrimSpace(m.configProvider)
 		switch option {
 		case "Use this key":
-			models, _ := hawkconfig.FetchModelsForProvider(provider)
-			m.configModels = extractModelIDs(models)
 			m.configMenu = "model"
 			m.configSel = 0
-			return m, nil
+			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
+				m.configModels = cached
+				return m, nil
+			}
+			m.configModels = nil
+			return m, fetchModelsAsync(provider)
 		case "Remove key":
 			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
 			if envKey != "" {
 				os.Unsetenv(envKey)
 				_ = hawkconfig.RemoveEnvFile(envKey)
 			}
+			delete(modelCache, provider)
 			m.configProvider = ""
 			m.configMenu = "provider"
 			m.configSel = 0
