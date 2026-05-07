@@ -14,6 +14,7 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 	m.messages = append(m.messages, displayMsg{role: "user", content: display})
 	m.session.AddUser(prompt)
 	m.waiting = true
+	m.viewDirty = true
 	m.partial.Reset()
 	m.startStream()
 	return m, nil
