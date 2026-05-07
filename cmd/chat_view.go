@@ -117,7 +117,40 @@ func wrapText(text string, width int, prefixWidth int) string {
 		var curLine strings.Builder
 		for _, word := range strings.Fields(line) {
 			wordW := runewidth.StringWidth(word)
-			if curWidth > 0 && curWidth+1+wordW > maxW {
+			// Force-break words longer than available width
+			if wordW > maxW && curWidth == 0 {
+				runes := []rune(word)
+				for len(runes) > 0 {
+					chunk := 0
+					chunkW := 0
+					for chunk < len(runes) && chunkW+runewidth.RuneWidth(runes[chunk]) <= maxW {
+						chunkW += runewidth.RuneWidth(runes[chunk])
+						chunk++
+					}
+					if chunk == 0 {
+						chunk = 1
+						chunkW = runewidth.RuneWidth(runes[0])
+					}
+					if curLine.Len() > 0 {
+						result.WriteString(curLine.String())
+						result.WriteByte('\n')
+						result.WriteString(lineIndent)
+						curLine.Reset()
+						maxW = lineContWidth
+					}
+					curLine.WriteString(string(runes[:chunk]))
+					curWidth = chunkW
+					runes = runes[chunk:]
+					if len(runes) > 0 {
+						result.WriteString(curLine.String())
+						result.WriteByte('\n')
+						result.WriteString(lineIndent)
+						curLine.Reset()
+						curWidth = 0
+						maxW = lineContWidth
+					}
+				}
+			} else if curWidth > 0 && curWidth+1+wordW > maxW {
 				result.WriteString(curLine.String())
 				result.WriteByte('\n')
 				result.WriteString(lineIndent)
@@ -152,15 +185,42 @@ func (m *chatModel) hasRealMessages() bool {
 }
 
 func (m *chatModel) updateViewportContent() {
-	if !m.viewDirty {
-		return
-	}
-	m.viewDirty = false
-
 	viewWidth := m.width
 	if viewWidth <= 0 {
 		viewWidth = 80
 	}
+
+	// Always recalculate viewport height to track input box size changes
+	bottomBarLines := 0
+	if !m.configOpen {
+		inputLines := strings.Count(m.input.Value(), "\n") + 1
+		if inputLines > 10 {
+			inputLines = 10
+		}
+		// status(1) + border-top(1) + input(N) + border-bottom(1) + help(1) + newline-separator(1)
+		bottomBarLines = 1 + 2 + inputLines + 1 + 1
+		// Account for slash suggestion menu
+		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
+			visible := len(sugs)
+			if visible > 6 {
+				visible = 6
+			}
+			bottomBarLines += visible
+		}
+	}
+	newVPHeight := m.height - bottomBarLines
+	if newVPHeight < 4 {
+		newVPHeight = 4
+	}
+	if m.viewport.Height != newVPHeight {
+		m.viewport.Height = newVPHeight
+		m.viewport.Width = viewWidth
+	}
+
+	if !m.viewDirty {
+		return
+	}
+	m.viewDirty = false
 
 	hawkC := "\033[38;2;255;94;14m"
 	rst := "\033[0m"
@@ -175,32 +235,61 @@ func (m *chatModel) updateViewportContent() {
 			if i > 0 {
 				chatContent.WriteString("\n")
 			}
-			wrapped := wrapText(msg.content, viewWidth, 3)
-			line := hawkC + "█" + rst + "  " + wrapped
-			chatContent.WriteString(bgDark + line + rst)
+			wrapped := wrapText(msg.content, viewWidth-1, 3)
+			wrappedLines := strings.Split(wrapped, "\n")
+			for li, wl := range wrappedLines {
+				if li == 0 {
+					chatContent.WriteString(bgDark + hawkC + "█" + rst + bgDark + "  " + wl)
+				} else {
+					chatContent.WriteString(bgDark + "   " + wl)
+				}
+				// Pad to full width for consistent background
+				visW := 3 + visibleWidth(wl)
+				if pad := viewWidth - visW; pad > 0 {
+					chatContent.WriteString(strings.Repeat(" ", pad))
+				}
+				chatContent.WriteString(rst)
+				if li < len(wrappedLines)-1 {
+					chatContent.WriteByte('\n')
+				}
+			}
 		case "assistant":
 			content := strings.TrimLeft(msg.content, "\n\r")
 			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(content, viewWidth-3))
 		case "tool_use":
 			chatContent.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
-			chatContent.WriteString(toolDimStyle.Render(msg.content))
+			toolWrapped := wrapText(msg.content, viewWidth-6, 0)
+			chatContent.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
 		case "thinking":
-			chatContent.WriteString(dimStyle.Render("💭 " + msg.content))
+			thinkWrapped := wrapText(msg.content, viewWidth-4, 3)
+			chatContent.WriteString(dimStyle.Render("💭 " + thinkWrapped))
 		case "welcome":
 			// Skip welcome in viewport — it's rendered statically in View()
 		case "system":
-			chatContent.WriteString(dimStyle.Render(msg.content))
+			sysWrapped := wrapText(msg.content, viewWidth-2, 0)
+			chatContent.WriteString(dimStyle.Render(sysWrapped))
 		case "permission":
 			chatContent.WriteString(renderPermissionBox(msg.content, viewWidth))
 		case "question":
-			chatContent.WriteString(toolStyle.Render(msg.content))
+			qWrapped := wrapText(msg.content, viewWidth-2, 2)
+			chatContent.WriteString(toolStyle.Render(qWrapped))
 		case "usage":
 			chatContent.WriteString(dimStyle.Render("  " + msg.content))
 		case "error":
-			chatContent.WriteString(errorStyle.Render("error: " + msg.content))
+			errWrapped := wrapText(msg.content, viewWidth-8, 7)
+			chatContent.WriteString(errorStyle.Render("error: " + errWrapped))
 		}
-		chatContent.WriteString("\n\n")
+		// Tighter spacing between tool_use → tool_result pairs
+		if msg.role == "tool_use" && i+1 < len(m.messages) && m.messages[i+1].role == "tool_result" {
+			chatContent.WriteByte('\n')
+		} else if msg.role == "tool_result" && i+1 < len(m.messages) && m.messages[i+1].role == "tool_use" {
+			chatContent.WriteByte('\n')
+		} else if msg.role == "usage" {
+			chatContent.WriteByte('\n')
+		} else {
+			chatContent.WriteString("\n\n")
+		}
 	}
 
 	if m.waiting {
@@ -225,25 +314,8 @@ func (m *chatModel) updateViewportContent() {
 		chatContent.WriteString("\n\n")
 	}
 
-	// Calculate bottom bar height to size viewport correctly
-	bottomBarLines := 0
-	if !m.configOpen {
-		bottomBarLines = 5 // status(1) + input borders+content(3) + help(1)
-	}
-	vpHeight := m.height - bottomBarLines - 1
-	if vpHeight < 4 {
-		vpHeight = 4
-	}
-	m.viewport.Width = viewWidth
-	m.viewport.Height = vpHeight
-
 	atBottom := m.viewport.AtBottom()
 	contentStr := chatContent.String()
-
-	contentLines := strings.Count(contentStr, "\n") + 1
-	if contentLines < vpHeight {
-		m.viewport.Height = contentLines
-	}
 
 	m.viewport.SetContent(contentStr)
 	if atBottom || m.autoScroll {
@@ -296,7 +368,12 @@ func (m chatModel) View() string {
 				return m.input.View()
 			}())
 		bottomBar.WriteString(inputBox + "\n")
-		bottomBarLines += 3
+		// borders(2) + input content lines
+		inputLines := strings.Count(m.input.Value(), "\n") + 1
+		if inputLines > 10 {
+			inputLines = 10
+		}
+		bottomBarLines += 2 + inputLines
 		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
@@ -335,6 +412,7 @@ func (m chatModel) View() string {
 			}
 		}
 		bottomBar.WriteString(dimStyle.Render("? for help") + "\n")
+		bottomBarLines++
 	}
 
 	return m.viewport.View() + "\n" + bottomBar.String()
