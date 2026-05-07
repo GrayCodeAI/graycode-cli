@@ -512,6 +512,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.waiting = true
 			m.autoScroll = true
+			m.viewDirty = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.partial.Reset()
 			m.startStream()
@@ -633,10 +634,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
+		if m.waiting {
+			m.viewDirty = true
+		}
 
 	case glimmerTickMsg:
 		m.glimmerPos++
 		cmds = append(cmds, glimmerTickCmd())
+		if m.waiting {
+			m.viewDirty = true
+		}
 	}
 
 	if !m.waiting {
