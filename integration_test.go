@@ -236,7 +236,7 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	verbose := "This is a very long and verbose piece of text that contains a lot of redundant information that could be compressed significantly by removing unnecessary repetition and verbosity from the text content."
 	compressed, _ := tok.Compress(verbose)
 	if compressed == "" {
-		compressed = verbose // fallback if no compression
+		t.Log("no compression applied, using original")
 	}
 
 	// 3. Use sight to review code (mock)
