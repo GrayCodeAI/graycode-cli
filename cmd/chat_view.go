@@ -412,7 +412,7 @@ func (m chatModel) View() string {
 			}
 		}
 		bottomBar.WriteString(dimStyle.Render("? for help") + "\n")
-		bottomBarLines++
+		_ = bottomBarLines
 	}
 
 	return m.viewport.View() + "\n" + bottomBar.String()
