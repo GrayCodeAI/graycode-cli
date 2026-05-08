@@ -15,6 +15,7 @@ import (
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/retry"
 	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/trace"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
@@ -27,6 +28,13 @@ func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	defer close(ch)
 	sessionStart := time.Now()
+
+	// Start session-level trace span
+	var sessionSpan *trace.Span
+	if s.Tracer != nil {
+		ctx, sessionSpan = trace.StartSessionSpan(ctx, s.Tracer, fmt.Sprintf("%d", sessionStart.UnixNano()))
+		defer trace.EndSpanWithError(sessionSpan, nil)
+	}
 
 	// Self-improvement: run OnSessionEnd when the loop exits (regardless of how)
 	defer func() {
@@ -250,6 +258,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		s.metrics.Counter("api.requests").Inc()
 		apiStart := time.Now()
 
+		// Trace: start agent loop span for this turn
+		var loopSpan *trace.Span
+		if s.Tracer != nil {
+			ctx, loopSpan = trace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
+		}
+
 		contCfg := client.DefaultContinuationConfig()
 		err = retry.Do(ctx, retryCfg, func() error {
 			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
@@ -267,6 +281,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		s.metrics.Timer("api.last_latency").Record(apiDuration)
 
 		if err != nil {
+			// End trace span with error
+			if loopSpan != nil {
+				trace.EndSpanWithError(loopSpan, err)
+			}
 			// Record failure for circuit breaker
 			if s.Router != nil {
 				s.Router.RecordFailure(s.provider, err)
@@ -419,6 +437,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			"tools":    len(toolCalls),
 		})
 
+		// End agent loop trace span for this turn
+		if loopSpan != nil {
+			loopSpan.SetTag("tools", fmt.Sprintf("%d", len(toolCalls)))
+			trace.EndSpanWithError(loopSpan, nil)
+		}
+
 		// Activity nudge: remind agent to persist learnings if idle
 		if s.Activity != nil {
 			if nudge := s.Activity.NudgeMessage(); nudge != "" {
@@ -556,6 +580,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		executeSingleTool := func(tc client.ToolCall) toolExecResult {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
+			// Trace: start tool span
+			var toolSpan *trace.Span
+			if s.Tracer != nil {
+				_, toolSpan = trace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
+			}
+
 			// Sync PermissionEngine state from Session fields (backward compat)
 			s.Perm.PromptFn = s.PermissionFn
 			s.Perm.Autonomy = s.Autonomy
@@ -567,6 +597,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			})
 			if !granted {
 				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
+				if toolSpan != nil {
+					toolSpan.SetTag("denied", "true")
+					toolSpan.Finish()
+				}
 				return toolExecResult{tc: tc, output: denyMsg, isErr: true}
 			}
 			// Pre-tool hook
@@ -713,6 +747,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			})
 
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
+			if toolSpan != nil {
+				if isErr {
+					toolSpan.SetTag("error", "true")
+				}
+				toolSpan.Finish()
+			}
 			return toolExecResult{tc: tc, output: output, isErr: isErr}
 		}
 
