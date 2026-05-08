@@ -16,6 +16,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/plugin"
+	"github.com/GrayCodeAI/hawk/sandbox"
 	"github.com/GrayCodeAI/hawk/session"
 	"github.com/GrayCodeAI/hawk/tool"
 )
@@ -138,6 +139,13 @@ type chatModel struct {
 	welcomeCache   string
 	viewDirty      bool
 	activeSkills   map[string]plugin.SmartSkill // per-session activated skills
+
+	// Container mode (herm-style hermetic execution)
+	containerEnabled    bool
+	containerStatus     string // "checking docker…", "pulling image…", "starting…", "<id>", "docker not running"
+	containerReady      bool
+	containerErr        error
+	containerSandbox    *sandbox.ContainerSandbox
 }
 
 func blinkTickCmd() tea.Cmd {

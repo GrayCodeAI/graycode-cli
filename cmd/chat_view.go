@@ -349,6 +349,9 @@ func (m chatModel) View() string {
 		leftBold := permissionModeLabel(m.session)
 		leftDim := permissionModeHint(m.session)
 		rightStatus := fmt.Sprintf("%s %s", m.session.Provider(), m.session.Model())
+		if m.containerEnabled && m.containerStatus != "" {
+			rightStatus = fmt.Sprintf("container: %s  %s", m.containerStatus, rightStatus)
+		}
 		leftVisLen := len(leftBold) + len(leftDim)
 		gap := totalW - leftVisLen - len(rightStatus)
 		if gap < 1 {
