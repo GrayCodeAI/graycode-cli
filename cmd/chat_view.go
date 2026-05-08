@@ -418,7 +418,6 @@ func (m chatModel) View() string {
 			}
 			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
 		}
-		bottomBar.WriteString(dimStyle.Render("? for help") + "\n")
 		_ = bottomBarLines
 	}
 
