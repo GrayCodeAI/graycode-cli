@@ -352,7 +352,7 @@ func (m chatModel) View() string {
 			leftDim = " - no approval needed"
 		} else if m.containerEnabled && m.containerErr != nil {
 			leftBold = "Container"
-			leftDim = " - docker not running"
+			leftDim = " - Docker is not running. Start Docker and try again."
 		} else if m.containerEnabled {
 			leftBold = "Container"
 			leftDim = " - " + m.containerStatus
@@ -366,7 +366,13 @@ func (m chatModel) View() string {
 		if gap < 1 {
 			gap = 1
 		}
-		leftRendered := lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
+		var leftRendered string
+		if m.containerEnabled && m.containerErr != nil {
+			redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+			leftRendered = redStyle.Bold(true).Render(leftBold) + redStyle.Render(leftDim)
+		} else {
+			leftRendered = lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
+		}
 		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
 		bottomBarLines++
 		inputBox := lipgloss.NewStyle().
@@ -425,10 +431,12 @@ func (m chatModel) View() string {
 		}
 		if m.containerEnabled && m.containerStatus != "" {
 			style := dimStyle
+			text := "container: " + m.containerStatus
 			if m.containerErr != nil {
 				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+				text = "Docker is not running. Start Docker and try again."
 			}
-			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
+			bottomBar.WriteString(style.Render(text) + "\n")
 		}
 		_ = bottomBarLines
 	}
