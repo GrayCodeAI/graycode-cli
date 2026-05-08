@@ -24,7 +24,7 @@ import (
 
 func slashCommands() []string {
 	return []string{
-		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/bughunter", "/clean", "/clear",
+		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
@@ -78,7 +78,8 @@ var slashDescriptions = map[string]string{
 	"/fast":            "Toggle fast mode",
 	"/files":           "Show modified files",
 	"/focus":           "Narrow agent attention to specific files/dirs",
-	"/fork":            "Fork session at a point",
+	"/fork":            "Fork conversation to try a different approach",
+	"/branches":        "List or switch conversation branches",
 	"/help":            "Show all commands",
 	"/history":         "List saved sessions",
 	"/hooks":           "Show configured hooks",
