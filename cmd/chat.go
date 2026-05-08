@@ -235,6 +235,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	vp.MouseWheelEnabled = true
 
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now(), activeSkills: make(map[string]plugin.SmartSkill)}
+	m.containerEnabled = shouldUseContainer()
 
 	// Initialize write-ahead log for crash recovery
 	if wal, err := session.NewWAL(sid); err == nil {
@@ -313,7 +314,13 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	return tea.Batch(m.input.Focus(), m.spinner.Tick, blinkTickCmd(), glimmerTickCmd())
+	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd(), glimmerTickCmd()}
+	if m.containerEnabled {
+		m.containerStatus = "checking docker…"
+		cwd, _ := os.Getwd()
+		cmds = append(cmds, bootContainerCmd(cwd))
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -690,6 +697,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.waiting {
 			m.viewDirty = true
 		}
+
+	case containerStatusMsg:
+		m.containerStatus = msg.status
+		m.containerReady = msg.ready
+		m.containerErr = msg.err
+		if msg.sandbox != nil {
+			m.containerSandbox = msg.sandbox
+		}
+		if msg.err != nil {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Container: " + msg.err.Error()})
+		} else if msg.ready {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Container ready (" + msg.status + ")"})
+		}
+		m.viewDirty = true
+		m.updateViewportContent()
 	}
 
 	if !m.waiting {
