@@ -18,6 +18,19 @@ type containerStatusMsg struct {
 	sandbox *sandbox.ContainerSandbox
 }
 
+// shouldUseContainer determines if hawk should run in container mode.
+// Default: YES if Docker is available (like herm). User can override with --no-container.
+func shouldUseContainer() bool {
+	if noContainer {
+		return false
+	}
+	if containerMode {
+		return true
+	}
+	// Default: auto-detect. If Docker is running, use container mode.
+	return sandbox.DockerAvailable()
+}
+
 // bootContainerCmd starts the container in the background and sends status
 // updates to the TUI (herm-style async boot with progress feedback).
 func bootContainerCmd(projectDir string) tea.Cmd {
