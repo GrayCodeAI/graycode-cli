@@ -431,12 +431,10 @@ func (m chatModel) View() string {
 		}
 		if m.containerEnabled && m.containerStatus != "" {
 			style := dimStyle
-			text := "container: " + m.containerStatus
 			if m.containerErr != nil {
 				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
-				text = "Docker is not running. Start Docker and try again."
 			}
-			bottomBar.WriteString(style.Render(text) + "\n")
+			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
 		}
 		_ = bottomBarLines
 	}
