@@ -349,9 +349,6 @@ func (m chatModel) View() string {
 		leftBold := permissionModeLabel(m.session)
 		leftDim := permissionModeHint(m.session)
 		rightStatus := fmt.Sprintf("%s %s", m.session.Provider(), m.session.Model())
-		if m.containerEnabled && m.containerStatus != "" {
-			rightStatus = fmt.Sprintf("container: %s  %s", m.containerStatus, rightStatus)
-		}
 		leftVisLen := len(leftBold) + len(leftDim)
 		gap := totalW - leftVisLen - len(rightStatus)
 		if gap < 1 {
@@ -413,6 +410,13 @@ func (m chatModel) View() string {
 				}
 				bottomBarLines++
 			}
+		}
+		if m.containerEnabled && m.containerStatus != "" {
+			style := dimStyle
+			if m.containerErr != nil {
+				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+			}
+			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
 		}
 		bottomBar.WriteString(dimStyle.Render("? for help") + "\n")
 		_ = bottomBarLines
