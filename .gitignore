@@ -26,4 +26,4 @@ dist/
 .gocache/
 .gomodcache/
 go.work
-go.work.sum
+go.work.sum.hawk/
