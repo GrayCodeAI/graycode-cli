@@ -353,6 +353,9 @@ func (m chatModel) View() string {
 		} else if m.containerEnabled && m.containerErr != nil {
 			leftBold = "Container"
 			leftDim = " - docker not running"
+		} else if m.containerEnabled {
+			leftBold = "Container"
+			leftDim = " - " + m.containerStatus
 		} else {
 			leftBold = permissionModeLabel(m.session)
 			leftDim = permissionModeHint(m.session)
