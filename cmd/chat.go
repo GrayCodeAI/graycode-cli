@@ -331,6 +331,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Container failed — block all input except quit
+		if m.containerEnabled && m.containerErr != nil {
+			if msg.String() == "ctrl+c" || msg.String() == "q" {
+				m.quitting = true
+				return m, tea.Quit
+			}
+			return m, nil
+		}
 		// Permission prompt active — handle y/n
 		if m.permReq != nil {
 			switch msg.String() {
@@ -712,7 +720,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containerSandbox = msg.sandbox
 		}
 		if msg.err != nil {
-			m.messages = append(m.messages, displayMsg{role: "system", content: msg.err.Error()})
 			m.input.Blur()
 		}
 		m.viewDirty = true
