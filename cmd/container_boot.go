@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -41,6 +42,20 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 			return containerStatusMsg{
 				status: "docker not running",
 				err:    fmt.Errorf("Docker is not running. Start Docker and try again."),
+			}
+		}
+
+		// Ensure image exists locally, pull if needed (like herm)
+		image := cs.Image()
+		pullCtx, pullCancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer pullCancel()
+		checkCmd := exec.CommandContext(pullCtx, "docker", "image", "inspect", image)
+		if checkCmd.Run() != nil {
+			// Image not available locally — pull it
+			pullCmd := exec.CommandContext(pullCtx, "docker", "pull", image)
+			if err := pullCmd.Run(); err != nil {
+				// Fall back to ubuntu:24.04 if custom image can't be pulled
+				cs.SetImage("ubuntu:24.04")
 			}
 		}
 

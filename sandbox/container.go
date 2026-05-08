@@ -57,11 +57,19 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Remove any stale container with the same name from a previous session
 	exec.CommandContext(ctx, "docker", "rm", "-f", name).Run()
 
+	// Create attachments and cache dirs (like herm)
+	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
+	cacheDir := filepath.Join(c.projectDir, ".hawk", "cache")
+	os.MkdirAll(attachDir, 0755)
+	os.MkdirAll(cacheDir, 0755)
+
 	args := []string{
 		"run", "-d", "--rm",
 		"--name", name,
-		"-v", c.projectDir + ":/workspace",
-		"-w", "/workspace",
+		"-v", c.projectDir + ":" + c.projectDir, // mount at same path (like herm)
+		"-v", attachDir + ":/attachments:ro",
+		"-v", cacheDir + ":/cache",
+		"-w", c.projectDir,
 		c.image,
 		"sleep", "infinity",
 	}
@@ -130,6 +138,20 @@ func (c *ContainerSandbox) ContainerID() string {
 	return c.containerID
 }
 
+// Image returns the current image name.
+func (c *ContainerSandbox) Image() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.image
+}
+
+// SetImage updates the image to use for the next Start call.
+func (c *ContainerSandbox) SetImage(img string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.image = img
+}
+
 // BuildFromDockerfile builds a new image from a Dockerfile in the project.
 // Returns the image tag that can be used for subsequent Start calls.
 func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile string) (string, error) {
@@ -168,6 +190,13 @@ func (c *ContainerSandbox) containerName() string {
 	return fmt.Sprintf("hawk-%s-%x", base, hash[:4])
 }
 
+// ContainerImageTag is set at build time via ldflags. Falls back to "latest".
+var ContainerImageTag = "latest"
+
+func defaultHawkImage() string {
+	return "graycode/hawk:" + ContainerImageTag
+}
+
 func resolveImage(projectDir string) string {
 	dfPath := filepath.Join(projectDir, ".hawk", "Dockerfile")
 	if _, err := os.Stat(dfPath); err == nil {
@@ -177,5 +206,5 @@ func resolveImage(projectDir string) string {
 			return fmt.Sprintf("hawk-sandbox:%x", hash[:6])
 		}
 	}
-	return "ubuntu:24.04"
+	return defaultHawkImage()
 }
