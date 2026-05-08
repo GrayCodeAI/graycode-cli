@@ -112,6 +112,21 @@ func (r *Registry) PrimaryTools() []Tool {
 	return out
 }
 
+// Filter returns a new Registry containing only tools whose names are in the allowlist.
+func (r *Registry) Filter(allow []string) *Registry {
+	set := make(map[string]bool, len(allow))
+	for _, name := range allow {
+		set[name] = true
+	}
+	var filtered []Tool
+	for _, t := range r.primary {
+		if set[t.Name()] {
+			filtered = append(filtered, t)
+		}
+	}
+	return NewRegistry(filtered...)
+}
+
 // EyrieTools converts all tools to eyrie tool definitions for the API.
 func (r *Registry) EyrieTools() []client.EyrieTool {
 	out := make([]client.EyrieTool, 0, len(r.primary))
