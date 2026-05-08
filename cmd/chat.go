@@ -529,6 +529,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case tea.KeyEnter:
+			if m.containerEnabled && m.containerErr != nil {
+				return m, nil
+			}
 			text := strings.TrimSpace(m.input.Value())
 			if text == "" {
 				return m, nil
@@ -709,7 +712,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containerSandbox = msg.sandbox
 		}
 		if msg.err != nil {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Container: " + msg.err.Error()})
+			m.messages = append(m.messages, displayMsg{role: "system", content: msg.err.Error()})
+			m.input.Blur()
 		}
 		m.viewDirty = true
 		m.updateViewportContent()
