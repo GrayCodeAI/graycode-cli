@@ -236,6 +236,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now(), activeSkills: make(map[string]plugin.SmartSkill)}
 	m.containerEnabled = shouldUseContainer()
+	if m.containerEnabled {
+		m.containerStatus = "checking docker…"
+	}
 
 	// Initialize write-ahead log for crash recovery
 	if wal, err := session.NewWAL(sid); err == nil {
