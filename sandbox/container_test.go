@@ -36,8 +36,9 @@ func TestContainerSandbox_ContainerName(t *testing.T) {
 
 func TestResolveImage_Default(t *testing.T) {
 	img := resolveImage(t.TempDir())
-	if img != "ubuntu:24.04" {
-		t.Fatalf("expected default image ubuntu:24.04, got %s", img)
+	expected := defaultHawkImage()
+	if img != expected {
+		t.Fatalf("expected default image %s, got %s", expected, img)
 	}
 }
 

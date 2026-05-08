@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/GrayCodeAI/hawk/cmd"
+	"github.com/GrayCodeAI/hawk/sandbox"
 )
 
 // Version is set at build time via ldflags.
@@ -17,6 +18,7 @@ var BuildDate = "unknown"
 func main() {
 	cmd.SetVersion(Version)
 	cmd.SetBuildDate(BuildDate)
+	sandbox.ContainerImageTag = Version
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
