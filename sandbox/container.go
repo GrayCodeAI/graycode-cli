@@ -185,9 +185,8 @@ func (c *ContainerSandbox) HotSwap(ctx context.Context) error {
 }
 
 func (c *ContainerSandbox) containerName() string {
-	base := filepath.Base(c.projectDir)
 	hash := sha256.Sum256([]byte(c.projectDir))
-	return fmt.Sprintf("hawk-%s-%x", base, hash[:4])
+	return fmt.Sprintf("hawk-%x", hash[:4])
 }
 
 // ContainerImageTag is set at build time via ldflags. Falls back to "latest".
