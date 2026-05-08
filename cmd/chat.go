@@ -707,8 +707,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.err != nil {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Container: " + msg.err.Error()})
-		} else if msg.ready {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Container ready (" + msg.status + ")"})
 		}
 		m.viewDirty = true
 		m.updateViewportContent()
