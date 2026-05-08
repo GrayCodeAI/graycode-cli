@@ -52,9 +52,14 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 		return nil
 	}
 
+	name := c.containerName()
+
+	// Remove any stale container with the same name from a previous session
+	exec.CommandContext(ctx, "docker", "rm", "-f", name).Run()
+
 	args := []string{
 		"run", "-d", "--rm",
-		"--name", c.containerName(),
+		"--name", name,
 		"-v", c.projectDir + ":/workspace",
 		"-w", "/workspace",
 		c.image,
@@ -62,9 +67,9 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	}
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("container start failed: %w", err)
+		return fmt.Errorf("container start failed: %s", strings.TrimSpace(string(out)))
 	}
 	c.containerID = strings.TrimSpace(string(out))
 	c.running = true
