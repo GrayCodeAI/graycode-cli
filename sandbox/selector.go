@@ -94,6 +94,8 @@ func bwrapAvailable() bool {
 }
 
 func dockerAvailable() bool {
-	_, err := exec.LookPath("docker")
-	return err == nil
+	cmd := exec.Command("docker", "info")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run() == nil
 }
