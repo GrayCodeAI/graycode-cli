@@ -13,6 +13,7 @@ import (
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/permissions"
 	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/trace"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -80,6 +81,7 @@ type Session struct {
 	Sleeptime      *memory.SleeptimeAgent   // sleeptime.go — background memory consolidation
 	Activity       *memory.ActivityTracker  // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller   // skill_distill.go — auto-skill extraction
+	Tracer         *trace.Tracer            // trace.go — distributed tracing spans
 }
 
 // NewSession creates a new conversation session.
@@ -102,6 +104,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		Beliefs:     NewBeliefState(),
 		Backtrack:   NewBacktrackEngine(),
 		Limits:      NewLimitTracker(DefaultLimits()),
+		Tracer:      trace.NewTracer(),
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
