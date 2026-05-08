@@ -24,7 +24,7 @@ import (
 
 func slashCommands() []string {
 	return []string{
-		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/bughunter", "/clean", "/clear",
+		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
@@ -78,7 +78,8 @@ var slashDescriptions = map[string]string{
 	"/fast":            "Toggle fast mode",
 	"/files":           "Show modified files",
 	"/focus":           "Narrow agent attention to specific files/dirs",
-	"/fork":            "Fork session at a point",
+	"/fork":            "Fork conversation to try a different approach",
+	"/branches":        "List or switch conversation branches",
 	"/help":            "Show all commands",
 	"/history":         "List saved sessions",
 	"/hooks":           "Show configured hooks",
@@ -521,18 +522,19 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
-			m.configModels = nil
 			m.configOpen = true
 			m.configMenu = "model"
 			m.configSel = 0
 			m.configScroll = 0
 			m.configNotice = ""
+			m.viewDirty = true
 			provider := m.session.Provider()
-			cmd := func() tea.Msg {
-				models, _ := hawkconfig.FetchModelsForProvider(provider)
-				return modelsFetchedMsg(extractModelIDs(models))
+			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
+				m.configModels = cached
+				return m, nil
 			}
-			return m, cmd
+			m.configModels = nil
+			return m, fetchModelsAsync(provider)
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
 		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
@@ -540,12 +542,92 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /model <model-name> or /model set <model-name>"})
 			return m, nil
 		}
+		// Validate model against known models for current provider
+		known := configModelChoices(m.session.Provider(), m.configModels)
+		if len(known) > 0 {
+			found := false
+			for _, k := range known {
+				if strings.EqualFold(k, arg) {
+					arg = k
+					found = true
+					break
+				}
+			}
+			if !found {
+				// Show available models as hint
+				hint := "Unknown model: " + arg + "\nAvailable models for " + m.session.Provider() + ":\n"
+				max := 10
+				if len(known) < max {
+					max = len(known)
+				}
+				for _, k := range known[:max] {
+					hint += "  " + k + "\n"
+				}
+				if len(known) > 10 {
+					hint += fmt.Sprintf("  ... and %d more (use /model to browse)", len(known)-10)
+				}
+				m.messages = append(m.messages, displayMsg{role: "error", content: hint})
+				return m, nil
+			}
+		}
 		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
 		m.session.SetModel(arg)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", m.session.Model())})
+		return m, nil
+	case "/branches":
+		if m.session.ConvoDAG == nil {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation branches (DAG not active)."})
+			return m, nil
+		}
+		headID := m.session.ConvoHead()
+		if headID == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation history."})
+			return m, nil
+		}
+		// If /branches <id> — switch to that branch
+		if len(parts) >= 2 {
+			targetID := parts[1]
+			if err := m.session.SwitchBranch(targetID); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.messages = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Switched to branch %s", targetID)})
+			for _, msg := range m.session.RawMessages() {
+				m.messages = append(m.messages, displayMsg{role: msg.Role, content: msg.Content})
+			}
+			return m, nil
+		}
+		// List branches
+		history, err := m.session.ConvoDAG.History(headID)
+		if err != nil || len(history) < 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No branches available (linear conversation).\nUse /fork to create a branch."})
+			return m, nil
+		}
+		var branchInfo strings.Builder
+		branchInfo.WriteString("Conversation branches:\n")
+		found := false
+		for i := len(history) - 1; i >= 0; i-- {
+			branches, _ := m.session.ListBranches(history[i].ID)
+			if len(branches) > 1 {
+				found = true
+				branchInfo.WriteString(fmt.Sprintf("\n  Fork at: %s (%s)\n", history[i].ID[:8], history[i].Role))
+				for _, b := range branches {
+					marker := "  "
+					if b.ID == headID {
+						marker = "→ "
+					}
+					branchInfo.WriteString(fmt.Sprintf("    %s%s (%s: %s)\n", marker, b.ID[:8], b.Role, truncate(b.Content, 40)))
+				}
+			}
+		}
+		if !found {
+			branchInfo.WriteString("  No fork points yet.\n  Use /fork to create a branch.")
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: branchInfo.String()})
 		return m, nil
 	case "/version":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk %s", version)})
@@ -760,12 +842,34 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				return m, nil
 			}
-			m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nSaved to global config.", value)})
+			engineProvider := hawkconfig.NormalizeProviderForEngine(value)
+			m.session.SetProvider(engineProvider)
+			// Use cached model or set first from cache
+			if cached, ok := modelCache[engineProvider]; ok && len(cached) > 0 {
+				m.session.SetModel(cached[0])
+				_ = hawkconfig.SetGlobalSetting("model", cached[0])
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved to global config.", value, m.session.Model())})
 			return m, nil
 		}
 		if len(parts) >= 3 && parts[1] == "model" {
 			value := strings.TrimSpace(strings.Join(parts[2:], " "))
+			known := configModelChoices(m.session.Provider(), m.configModels)
+			if len(known) > 0 {
+				found := false
+				for _, k := range known {
+					if strings.EqualFold(k, value) {
+						value = k
+						found = true
+						break
+					}
+				}
+				if !found {
+					hint := "Unknown model: " + value + "\nUse /model to browse available models."
+					m.messages = append(m.messages, displayMsg{role: "error", content: hint})
+					return m, nil
+				}
+			}
 			if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				return m, nil
@@ -819,8 +923,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.settings = settings
-		next := m.openConfigPanel()
-		return next, nil
+		m.configOpen = true
+		m.configMenu = "provider"
+		m.configSel = 0
+		m.configNotice = ""
+		m.viewDirty = true
+		return m, nil
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil
@@ -1579,6 +1687,22 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}()
 		return m, nil
 	case "/fork":
+		// If convodag is active, fork from the current head node
+		if m.session.ConvoDAG != nil {
+			headID := m.session.ConvoHead()
+			if headID == "" {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "No conversation to fork from."})
+				return m, nil
+			}
+			forkID, err := m.session.ForkConversation(headID)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked at %s → new branch %s\nYou can now take a different approach. Use /branches to see all branches.", headID[:8], forkID[:8])})
+			return m, nil
+		}
+		// Fallback: legacy session fork
 		atIndex := len(m.session.RawMessages()) - 1
 		if len(parts) >= 2 {
 			if idx, err := strconv.Atoi(parts[1]); err == nil {
@@ -1884,4 +2008,12 @@ func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
 	}
 	m.viewDirty = true
 	return m, nil
+}
+
+func truncate(s string, max int) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }
