@@ -78,6 +78,30 @@ var commandSubstitutionPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`\}\s*always\s*\{`), // zsh always block
 }
 
+// ContainerExecutor allows BashTool to route commands through a container
+// instead of local execution. When set via context, all commands run inside
+// the container (Docker-first mode, like herm).
+type ContainerExecutor interface {
+	Exec(ctx context.Context, command string, timeout time.Duration) (string, error)
+	Running() bool
+}
+
+type containerExecKey struct{}
+
+// WithContainerExecutor injects a container executor into the context.
+// When present, BashTool routes all commands through it instead of local shell.
+func WithContainerExecutor(ctx context.Context, ce ContainerExecutor) context.Context {
+	return context.WithValue(ctx, containerExecKey{}, ce)
+}
+
+// ContainerExecutorFromContext extracts the container executor, if any.
+func ContainerExecutorFromContext(ctx context.Context) ContainerExecutor {
+	if ce, ok := ctx.Value(containerExecKey{}).(ContainerExecutor); ok {
+		return ce
+	}
+	return nil
+}
+
 type BashTool struct{}
 
 func (BashTool) Name() string        { return "Bash" }
@@ -335,6 +359,18 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 			return "", err
 		}
 		return fmt.Sprintf("Started background task %s. Use TaskOutput with task_id=%q to read output, or TaskStop to stop it.", id, id), nil
+	}
+
+	// Container mode: if a ContainerExecutor is in context, route through Docker.
+	// This provides herm-style full isolation — no permission prompts needed.
+	if ce := ContainerExecutorFromContext(ctx); ce != nil && ce.Running() {
+		result, err := ce.Exec(ctx, p.Command, timeout)
+		result = TruncateOutput(result)
+		result = strings.TrimRight(result, "\n")
+		if err != nil {
+			return fmt.Sprintf("%s\n\nexit code: %s", result, err.Error()), nil
+		}
+		return result, nil
 	}
 
 	// Sandbox wrapping: if a sandbox mode is configured, wrap the command

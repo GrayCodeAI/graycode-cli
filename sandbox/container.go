@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+// Compile-time check: ContainerSandbox implements tool.ContainerExecutor.
+var _ containerExecutor = (*ContainerSandbox)(nil)
+
+type containerExecutor interface {
+	Exec(ctx context.Context, command string, timeout time.Duration) (string, error)
+	Running() bool
+}
+
 // ContainerSandbox executes commands inside a Docker container, providing
 // full isolation. It supports dynamic Dockerfile generation for on-the-fly
 // environment setup (inspired by herm's DevEnv pattern).
