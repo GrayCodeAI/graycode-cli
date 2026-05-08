@@ -118,6 +118,13 @@ func (c *ContainerSandbox) Running() bool {
 	return c.running
 }
 
+// ContainerID returns the full container ID (empty if not running).
+func (c *ContainerSandbox) ContainerID() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.containerID
+}
+
 // BuildFromDockerfile builds a new image from a Dockerfile in the project.
 // Returns the image tag that can be used for subsequent Start calls.
 func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile string) (string, error) {
