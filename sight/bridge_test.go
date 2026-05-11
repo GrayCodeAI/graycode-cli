@@ -3,18 +3,7 @@ package sight
 import (
 	"context"
 	"testing"
-
-	sightLib "github.com/GrayCodeAI/sight"
 )
-
-// mockProvider implements sight.Provider for testing.
-type mockProvider struct {
-	response string
-}
-
-func (m *mockProvider) Chat(_ context.Context, msgs []sightLib.Message, _ sightLib.ChatOpts) (*sightLib.Response, error) {
-	return &sightLib.Response{Content: m.response, TokensUsed: 10}, nil
-}
 
 func TestNewBridge_NilClient(t *testing.T) {
 	b := NewBridge(nil, "anthropic")

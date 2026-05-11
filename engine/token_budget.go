@@ -119,11 +119,7 @@ func isTextQuestion(messages []client.EyrieMessage) bool {
 			return true
 		}
 	}
-	if strings.HasSuffix(strings.TrimSpace(lower), "?") {
-		return true
-	}
-
-	return false
+	return strings.HasSuffix(strings.TrimSpace(lower), "?")
 }
 
 // classifyPromptForBudget extracts a task type string from the current messages

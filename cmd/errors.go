@@ -14,7 +14,6 @@ import (
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/session"
 )
 
 // ─── friendlyError ────────────────────────────────────────────────────────────
@@ -174,6 +173,7 @@ func friendlyError(err error) string {
 // Catches panics, saves the current session state, logs the stack trace to
 // ~/.hawk/crash.log, and exits with a user-friendly message.
 
+//lint:ignore U1000 Infrastructure wired in main.go for production builds
 func panicRecovery(saveFn func()) {
 	if r := recover(); r != nil {
 		stack := string(debug.Stack())
@@ -221,6 +221,7 @@ func panicRecovery(saveFn func()) {
 // Handles SIGTERM, SIGINT, and SIGHUP gracefully. Calls the provided save
 // function before exiting to ensure the current session is persisted.
 
+//lint:ignore U1000 Infrastructure wired in main.go for production builds
 func signalHandler(saveFn func()) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -261,9 +262,11 @@ type errorLoggerT struct {
 	path string
 }
 
+//lint:ignore U1000 Singleton used by logError below
 var errLogger *errorLoggerT
 var errLoggerOnce sync.Once
 
+//lint:ignore U1000 Infrastructure used by logError
 func getErrorLogger() *errorLoggerT {
 	errLoggerOnce.Do(func() {
 		home, _ := os.UserHomeDir()
@@ -322,11 +325,6 @@ func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 	}
 	defer f.Close()
 	f.WriteString(entry)
-}
-
-// logError is a package-level convenience that uses the singleton error logger.
-func logError(context string, err error) {
-	getErrorLogger().LogError(context, err)
 }
 
 // ─── validateStartup ─────────────────────────────────────────────────────────
@@ -424,25 +422,4 @@ func providerDNSHost(provider string) string {
 	}
 }
 
-// ─── Helpers used by session save in panic/signal paths ───────────────────────
 
-// saveSessionSafe is a helper for use in panic recovery and signal handlers.
-// It wraps session.Save with error recovery so it never panics.
-func saveSessionSafe(sessionID string, model, provider string, messages []session.Message) {
-	defer func() { recover() }()
-
-	if len(messages) == 0 || sessionID == "" {
-		return
-	}
-
-	s := &session.Session{
-		ID:        sessionID,
-		Model:     model,
-		Provider:  provider,
-		Messages:  messages,
-		CreatedAt: time.Now(),
-	}
-	if err := session.Save(s); err != nil {
-		logError("save_session_panic", err)
-	}
-}

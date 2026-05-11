@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 )
 
@@ -80,8 +79,4 @@ func (p *QueryProfile) String() string {
 	)
 }
 
-// isDebug returns true when HAWK_DEBUG is set to a truthy value.
-func isDebug() bool {
-	v := os.Getenv("HAWK_DEBUG")
-	return v == "1" || v == "true" || v == "yes"
-}
+

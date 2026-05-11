@@ -28,15 +28,6 @@ func sanitizeIdentity(s string) string {
 	return s
 }
 
-// reBold matches markdown **bold** syntax.
-var reBold = regexp.MustCompile(`\*\*(.+?)\*\*`)
-
-// renderInlineMarkdown converts inline markdown to ANSI terminal formatting.
-// Currently handles **bold** → ANSI bold.
-func renderInlineMarkdown(s string) string {
-	return reBold.ReplaceAllString(s, "\033[1m${1}\033[22m")
-}
-
 // wrapText wraps text to fit within width columns total (including indent).
 // The first line has no indent (caller provides the prefix).
 // Continuation lines get indent prepended.
@@ -173,15 +164,6 @@ func wrapText(text string, width int, prefixWidth int) string {
 		}
 	}
 	return strings.TrimRight(result.String(), "\n")
-}
-
-func (m *chatModel) hasRealMessages() bool {
-	for _, msg := range m.messages {
-		if msg.role != "welcome" {
-			return true
-		}
-	}
-	return m.waiting
 }
 
 func (m *chatModel) updateViewportContent() {
@@ -440,43 +422,6 @@ func (m chatModel) View() string {
 	}
 
 	return m.viewport.View() + "\n" + bottomBar.String()
-}
-
-func formatDiff(diff string) string {
-	var b strings.Builder
-	lineNum := 0
-	for _, line := range strings.Split(diff, "\n") {
-		switch {
-		case strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ "):
-			// File headers
-			b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF")).Render(line))
-		case strings.HasPrefix(line, "@@"):
-			// Hunk headers — extract line numbers
-			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render(line))
-			// Parse starting line from @@ -X,Y +Z,W @@
-			if idx := strings.Index(line, "+"); idx >= 0 {
-				fmt.Sscanf(line[idx:], "+%d", &lineNum)
-				if lineNum > 0 {
-					lineNum-- // will be incremented on first content line
-				}
-			}
-		case strings.HasPrefix(line, "+"):
-			lineNum++
-			num := fmt.Sprintf("%4d ", lineNum)
-			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render(num))
-			b.WriteString(diffAddStyle.Render(line))
-		case strings.HasPrefix(line, "-"):
-			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render("     "))
-			b.WriteString(diffDelStyle.Render(line))
-		default:
-			lineNum++
-			num := fmt.Sprintf("%4d ", lineNum)
-			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Render(num))
-			b.WriteString(line)
-		}
-		b.WriteString("\n")
-	}
-	return strings.TrimRight(b.String(), "\n")
 }
 
 // renderPermissionBox renders a visually distinct permission prompt box.
