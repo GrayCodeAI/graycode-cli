@@ -1,7 +1,8 @@
-version: "2"
+run:
+  timeout: 5m
 
 linters:
-  default: none
+  disable-all: true
   enable:
     - govet
     - ineffassign
@@ -17,8 +18,8 @@ linters-settings:
     check-type-assertions: true
   gosec:
     excludes:
-      - G204  # subprocess with variables expected for tool execution
-      - G304  # file path from variable expected for Read tool
+      - G204
+      - G304
   misspell:
     locale: US
   staticcheck:
