@@ -81,6 +81,41 @@ jobs:
           install-mode: goinstall
           args: --timeout 5m
 
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout dependencies
+        run: |
+          git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git ../eyrie
+          git clone --depth=1 https://github.com/GrayCodeAI/tok.git ../tok
+          git clone --depth=1 https://github.com/GrayCodeAI/yaad.git ../yaad
+          git clone --depth=1 https://github.com/GrayCodeAI/inspect.git ../inspect
+          git clone --depth=1 https://github.com/GrayCodeAI/sight.git ../sight
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.1'
+
+      - name: Create workspace
+        run: |
+          cat > go.work << 'EOF'
+          go 1.26.1
+          use .
+          replace (
+            github.com/GrayCodeAI/eyrie => ../eyrie
+            github.com/GrayCodeAI/tok => ../tok
+            github.com/GrayCodeAI/yaad => ../yaad
+            github.com/GrayCodeAI/inspect => ../inspect
+            github.com/GrayCodeAI/sight => ../sight
+          )
+          EOF
+
+      - name: Run govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
+
   build:
     runs-on: ubuntu-latest
     needs: [test, lint]
