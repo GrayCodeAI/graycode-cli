@@ -1,0 +1,52 @@
+name: Setup Dependencies
+description: Clone ecosystem deps with retry, setup Go, create workspace
+
+inputs:
+  go-version:
+    description: Go version to install
+    default: '1.26.1'
+  token:
+    description: GitHub token for authenticated clones
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout dependencies
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        clone_with_retry() {
+          local repo=$1 dest=$2
+          for i in 1 2 3; do
+            git clone --depth=1 "https://x-access-token:${GH_TOKEN}@github.com/GrayCodeAI/${repo}.git" "$dest" && return 0
+            echo "Retry $i for $repo..." && sleep $((i * 5))
+          done
+          echo "Failed to clone $repo after 3 attempts" && return 1
+        }
+        clone_with_retry eyrie ../eyrie
+        clone_with_retry tok ../tok
+        clone_with_retry yaad ../yaad
+        clone_with_retry inspect ../inspect
+        clone_with_retry sight ../sight
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Create workspace
+      shell: bash
+      run: |
+        cat > go.work << 'EOF'
+        go 1.26.1
+        use .
+        replace (
+          github.com/GrayCodeAI/eyrie => ../eyrie
+          github.com/GrayCodeAI/tok => ../tok
+          github.com/GrayCodeAI/yaad => ../yaad
+          github.com/GrayCodeAI/inspect => ../inspect
+          github.com/GrayCodeAI/sight => ../sight
+        )
+        EOF
