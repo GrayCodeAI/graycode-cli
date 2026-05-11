@@ -23,7 +23,6 @@ func awaySummary(messages []displayMsg, lastActivity time.Time) string {
 
 	// Collect the most recent user and assistant messages for a recap.
 	var userTopics []string
-	var assistantSummaries []string
 	var toolsUsed []string
 
 	// Look at the last 10 messages for context
@@ -39,12 +38,6 @@ func awaySummary(messages []displayMsg, lastActivity time.Time) string {
 				userTopics = append(userTopics, msg.content[:80]+"...")
 			} else {
 				userTopics = append(userTopics, msg.content)
-			}
-		case "assistant":
-			if len(msg.content) > 100 {
-				assistantSummaries = append(assistantSummaries, msg.content[:100]+"...")
-			} else {
-				assistantSummaries = append(assistantSummaries, msg.content)
 			}
 		case "tool_use":
 			toolsUsed = append(toolsUsed, msg.content)

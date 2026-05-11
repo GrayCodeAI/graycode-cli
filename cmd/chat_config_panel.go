@@ -250,15 +250,6 @@ func (m chatModel) configModelView() string {
 	return b.String()
 }
 
-func (m chatModel) openConfigPanel() chatModel {
-	m.configOpen = true
-	m.configMenu = "provider"
-	m.configSel = 0
-	m.configNotice = ""
-	m.viewDirty = true
-	return m
-}
-
 func (m chatModel) closeConfigPanel() chatModel {
 	m.configOpen = false
 	m.configMenu = ""

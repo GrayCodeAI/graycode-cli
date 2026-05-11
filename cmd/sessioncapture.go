@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/GrayCodeAI/hawk/sessioncapture"
 	"github.com/charmbracelet/lipgloss"
@@ -167,12 +166,4 @@ func init() {
 	sessionCaptureCmd.AddCommand(captureRewindCmd)
 }
 
-// formatCaptureHelp adds install guidance when trace is missing.
-func formatCaptureHelp() string {
-	var b strings.Builder
-	b.WriteString("Session capture requires the Trace CLI.\n\n")
-	b.WriteString("Install:\n")
-	b.WriteString("  curl -fsSL https://trace.graycode.ai/install.sh | bash\n")
-	b.WriteString("  # or: go install github.com/GrayCodeAI/trace/cmd/trace@latest\n")
-	return b.String()
-}
+

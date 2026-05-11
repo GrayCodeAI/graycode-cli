@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/GrayCodeAI/hawk/sandbox"
 )
@@ -402,17 +401,4 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	return result, nil
 }
 
-// countRunes returns the number of UTF-8 code points in a string.
-func countRunes(s string) int {
-	return utf8.RuneCountInString(s)
-}
 
-// validateHeredocSafety performs enhanced validation for heredoc patterns.
-func validateHeredocSafety(command string) bool {
-	// Check for heredoc in command substitution
-	if !heredocSubstitutionRe.MatchString(command) {
-		return true
-	}
-	// For security, any heredoc in command substitution requires approval
-	return false
-}

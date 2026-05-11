@@ -68,10 +68,7 @@ ENV TERM=xterm-256color LANG=C.UTF-8
 // Default: ALWAYS (like herm). Container-first, no fallback.
 // User can opt out with --no-container for host mode.
 func shouldUseContainer() bool {
-	if noContainer {
-		return false
-	}
-	return true
+	return !noContainer
 }
 
 // bootContainerCmd starts the container in the background and sends status
@@ -83,7 +80,7 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 		if !sandbox.DockerAvailable() {
 			return containerStatusMsg{
 				status: "docker not running",
-				err:    fmt.Errorf("Docker is not running. Start Docker and try again."),
+				err:    fmt.Errorf("docker is not running: start Docker and try again"),
 			}
 		}
 

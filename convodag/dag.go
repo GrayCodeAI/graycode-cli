@@ -336,11 +336,6 @@ func (d *DAG) getNode(id string) (*Node, error) {
 	return scanSingleNode(row)
 }
 
-// scanner is satisfied by both *sql.Row and *sql.Rows.
-type scanner interface {
-	Scan(dest ...interface{}) error
-}
-
 func scanSingleNode(row *sql.Row) (*Node, error) {
 	var (
 		n          Node

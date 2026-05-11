@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -67,7 +68,7 @@ func TestBuildChairmanPrompt(t *testing.T) {
 
 func TestCouncilConfig_EmptyModels(t *testing.T) {
 	cfg := CouncilConfig{Models: []string{}}
-	_, err := RunCouncil(nil, "test", cfg, nil)
+	_, err := RunCouncil(context.TODO(), "test", cfg, nil)
 	if err == nil {
 		t.Fatal("expected error for empty models")
 	}

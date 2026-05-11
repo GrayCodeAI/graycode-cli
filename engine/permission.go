@@ -208,13 +208,6 @@ func toolSummary(name string, args map[string]interface{}) string {
 	return name
 }
 
-func (s *Session) needsPermission(name string, args map[string]interface{}) bool {
-	if s.Mode == PermissionModePlan && canonicalToolName(name) == "ExitPlanMode" {
-		return true
-	}
-	return toolNeedsPermission(name, args)
-}
-
 func (s *Session) modeDecision(name string) *bool {
 	toolName := canonicalToolName(name)
 	switch s.Mode {
@@ -233,15 +226,6 @@ func (s *Session) modeDecision(name string) *bool {
 		}
 	}
 	return nil
-}
-
-func (s *Session) applyToolState(name string) {
-	switch canonicalToolName(name) {
-	case "EnterPlanMode":
-		s.Mode = PermissionModePlan
-	case "ExitPlanMode":
-		s.Mode = PermissionModeDefault
-	}
 }
 
 func (s *Session) exceededBudget() bool {

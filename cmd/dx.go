@@ -52,7 +52,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	if v == "" {
 		v = "(dev)"
 	}
-	b.WriteString(fmt.Sprintf("\nHawk:\n"))
+	b.WriteString("\nHawk:\n")
 	b.WriteString(fmt.Sprintf("  Version:     %s\n", v))
 	if buildDate != "" && buildDate != "unknown" {
 		b.WriteString(fmt.Sprintf("  Build date:  %s\n", buildDate))
@@ -63,7 +63,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	if effectiveProvider == "" {
 		effectiveProvider = "(not configured)"
 	}
-	b.WriteString(fmt.Sprintf("\nProvider:\n"))
+	b.WriteString("\nProvider:\n")
 	b.WriteString(fmt.Sprintf("  Provider:    %s\n", effectiveProvider))
 	b.WriteString(fmt.Sprintf("  API key:     %s\n", maskedKeyStatus(settings.Provider)))
 
@@ -75,7 +75,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("  Model:       %s\n", effectiveModel))
 
 	// Session directory status
-	b.WriteString(fmt.Sprintf("\nSession directory:\n"))
+	b.WriteString("\nSession directory:\n")
 	home, _ := os.UserHomeDir()
 	sessDir := filepath.Join(home, ".hawk", "sessions")
 	if info, err := os.Stat(sessDir); err != nil {
@@ -117,7 +117,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	}
 
 	// Git repo status
-	b.WriteString(fmt.Sprintf("\nGit:\n"))
+	b.WriteString("\nGit:\n")
 	branch, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil || branch == "" {
 		b.WriteString("  Not a git repository\n")
@@ -201,7 +201,7 @@ func debugOutput(sess *engine.Session, sessionID string) string {
 	// Memory usage
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-	b.WriteString(fmt.Sprintf("\nMemory:\n"))
+	b.WriteString("\nMemory:\n")
 	b.WriteString(fmt.Sprintf("  Alloc:         %s\n", formatBytes(memStats.Alloc)))
 	b.WriteString(fmt.Sprintf("  TotalAlloc:    %s\n", formatBytes(memStats.TotalAlloc)))
 	b.WriteString(fmt.Sprintf("  Sys:           %s\n", formatBytes(memStats.Sys)))
