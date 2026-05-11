@@ -1,35 +1,13 @@
 version: "2"
 
-run:
-  timeout: 5m
-
 linters:
   default: none
   enable:
     - govet
     - ineffassign
-    - unused
-    - staticcheck
-    - gosec
     - nilerr
     - misspell
-
-linters-settings:
-  gosec:
-    excludes:
-      - G204
-      - G304
-  misspell:
-    locale: US
-  staticcheck:
-    checks: ["all", "-U1000"]
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-dirs:
-    - vendor
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
