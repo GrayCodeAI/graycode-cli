@@ -5,3 +5,32 @@ linters:
   enable:
     - govet
     - ineffassign
+    - unused
+    - errcheck
+    - staticcheck
+    - gosec
+    - nilerr
+    - misspell
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  gosec:
+    excludes:
+      - G204  # subprocess with variables expected for tool execution
+      - G304  # file path from variable expected for Read tool
+  misspell:
+    locale: US
+  staticcheck:
+    checks: ["all", "-U1000"]
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-dirs:
+    - vendor
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
