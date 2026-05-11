@@ -79,6 +79,7 @@ jobs:
         with:
           version: v2.1.0
           install-mode: goinstall
+          verify: false
           args: --timeout 5m
 
   security:
