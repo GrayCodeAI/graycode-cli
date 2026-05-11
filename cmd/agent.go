@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/GrayCodeAI/hawk/agents"
 	"github.com/spf13/cobra"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var agentCmd = &cobra.Command{
@@ -118,7 +119,7 @@ You are a specialized agent. Complete tasks according to your expertise.
 - Be precise and focused
 - Follow project conventions
 - Report results clearly
-`, name, desc, modelLine, strings.Title(name))
+	`, name, desc, modelLine, cases.Title(language.English).String(name))
 
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return err

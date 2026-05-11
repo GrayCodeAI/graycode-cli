@@ -189,10 +189,6 @@ More:
   /config set <key> <value>`, provider, model, configuredKeyList())
 }
 
-func modelConfigSummary(provider, model string) string {
-	return fmt.Sprintf("Provider: %s\nModel: %s\n\nUse\n  /model <name>\n  /config provider <name>", displayConfigValue(provider), displayConfigValue(model))
-}
-
 func apiKeyConfigSummary() string {
 	return "API keys (from environment)\n" + indentedAPIKeyLines()
 }
@@ -229,14 +225,6 @@ func apiKeyStatusLines() []string {
 	return lines
 }
 
-func activeProviderKeyStatus(settings hawkconfig.Settings) string {
-	provider := strings.TrimSpace(settings.Provider)
-	if provider == "" {
-		return "select provider first"
-	}
-	return hawkconfig.EnvKeyStatus(provider)
-}
-
 func displayConfigValue(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "(empty)"
@@ -244,6 +232,4 @@ func displayConfigValue(value string) string {
 	return value
 }
 
-func providerHint(provider, model string) string {
-	return fmt.Sprintf("Provider: %s\nModel: %s", displayConfigValue(provider), displayConfigValue(model))
-}
+

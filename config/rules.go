@@ -134,9 +134,7 @@ func globMatch(pattern, path string) bool {
 		parts := strings.SplitN(pattern, "**", 2)
 		prefix := parts[0]
 		suffix := parts[1]
-		if strings.HasPrefix(suffix, "/") {
-			suffix = suffix[1:]
-		}
+		suffix = strings.TrimPrefix(suffix, "/")
 
 		// Check if path starts with prefix
 		if prefix != "" && !strings.HasPrefix(path, prefix) {

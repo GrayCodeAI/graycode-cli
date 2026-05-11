@@ -413,9 +413,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			cleanText, inlineCalls := client.ParseInlineToolCalls(textContent)
 			if len(inlineCalls) > 0 {
 				textContent = cleanText
-				for _, ic := range inlineCalls {
-					toolCalls = append(toolCalls, ic)
-				}
+			toolCalls = append(toolCalls, inlineCalls...)
 			}
 		}
 

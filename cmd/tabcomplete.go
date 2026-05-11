@@ -67,13 +67,6 @@ func (c *lruCache) put(key string, value []string) {
 	}
 }
 
-// len returns the number of cached entries.
-func (c *lruCache) len() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return len(c.items)
-}
-
 // dirCompletionCache is an LRU cache for directory listing results.
 var dirCompletionCache = newLRUCache(64)
 
