@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -121,22 +120,4 @@ func formatBugReport(findings string) string {
 	return b.String()
 }
 
-// gitDiffContent returns the output of `git diff` in the current directory.
-func gitDiffContent() (string, error) {
-	cmd := exec.Command("git", "diff")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("git diff: %w", err)
-	}
-	return strings.TrimSpace(string(out)), nil
-}
 
-// gitDiffStagedContent returns the output of `git diff --staged` in the current directory.
-func gitDiffStagedContent() (string, error) {
-	cmd := exec.Command("git", "diff", "--staged")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("git diff --staged: %w", err)
-	}
-	return strings.TrimSpace(string(out)), nil
-}
