@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
@@ -172,11 +173,13 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 		sess.Snapshots = snap
 	}
 
-	// Initialize yaad memory bridge
-	yaadMem := memory.NewYaadBridge()
-	if yaadMem.Ready() {
-		sess.Memory = yaadMem
-		sess.YaadBridge = yaadMem
+	// Initialize enhanced memory system (yaad bridge + auto-capture + proactive + metrics)
+	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
+	if enhancedMem.Yaad.Ready() {
+		sess.Memory = enhancedMem
+		sess.YaadBridge = enhancedMem.Yaad
+		sess.EnhancedMemory = enhancedMem
+		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
 	// Herm-style: API keys from environment only
 	normalizedProvider := hawkconfig.NormalizeProviderForEngine(settings.Provider)

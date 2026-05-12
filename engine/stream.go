@@ -38,9 +38,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 	// Self-improvement: run OnSessionEnd when the loop exits (regardless of how)
 	defer func() {
+		success := ctx.Err() == nil
 		if s.Lifecycle != nil {
 			outcome := SessionOutcome{
-				Success:  ctx.Err() == nil,
+				Success:  success,
 				Duration: time.Since(sessionStart),
 			}
 			if len(s.messages) > 0 {
@@ -51,6 +52,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			_ = s.Lifecycle.OnSessionEnd(ctx, s, outcome)
+		}
+		// Enhanced memory: session-end processing (confidence, diff, continuity)
+		if s.EnhancedMemory != nil {
+			s.EnhancedMemory.EndSession(success)
 		}
 	}()
 
@@ -655,6 +660,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				s.Beliefs.Record("file_purpose", subject, contentSummary, turnCount)
 			}
 
+			// Proactive context: inject relevant memories when reading files
+			if s.EnhancedMemory != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
+				if p, ok := pathArgument(tc.Arguments); ok && p != "" {
+					if proactiveCtx := s.EnhancedMemory.ProactiveContextForFile(p); proactiveCtx != "" {
+						s.AppendSystemContext(proactiveCtx)
+					}
+				}
+			}
+
 			// Beliefs: invalidate beliefs when files are modified
 			if s.Beliefs != nil && (canonical == "Write" || canonical == "Edit") {
 				if p, ok := pathArgument(tc.Arguments); ok {
@@ -736,6 +750,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.metrics.Counter("tools.executed").Inc()
 			if isErr {
 				s.metrics.Counter("tools.errors").Inc()
+			}
+
+			// Enhanced memory: auto-capture from tool results + proactive context
+			if s.EnhancedMemory != nil {
+				s.EnhancedMemory.OnToolResult(tc.Name, tc.Arguments, output, isErr)
 			}
 
 			hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{
