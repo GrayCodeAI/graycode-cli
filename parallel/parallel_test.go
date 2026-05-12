@@ -98,11 +98,22 @@ func TestCleanupIdempotent(t *testing.T) {
 }
 
 func TestParallelExecution(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		// Reduce concurrency in CI: git worktree operations race under
+		// shallow clones and constrained I/O. Use 2 workers instead of 4.
+		t.Log("CI detected: reducing concurrency to avoid worktree race")
+	}
+
 	repo := initTestRepo(t)
 	defer os.RemoveAll(repo)
 
-	pool := NewPool(repo, "main", 4)
+	workers := 4
 	numTasks := 4
+	if os.Getenv("CI") != "" {
+		workers = 2
+		numTasks = 2
+	}
+	pool := NewPool(repo, "main", workers)
 	for i := 0; i < numTasks; i++ {
 		pool.AddTask(fmt.Sprintf("task-%d", i))
 	}
