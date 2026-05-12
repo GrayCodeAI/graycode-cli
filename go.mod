@@ -3,11 +3,11 @@ module github.com/GrayCodeAI/hawk
 go 1.26.1
 
 require (
-	github.com/GrayCodeAI/eyrie v0.5.0
-	github.com/GrayCodeAI/inspect v0.5.0
-	github.com/GrayCodeAI/sight v0.5.0
-	github.com/GrayCodeAI/tok v0.5.1
-	github.com/GrayCodeAI/yaad v0.5.0
+	github.com/GrayCodeAI/eyrie v0.1.0
+	github.com/GrayCodeAI/inspect v0.1.0
+	github.com/GrayCodeAI/sight v0.1.0
+	github.com/GrayCodeAI/tok v0.1.0
+	github.com/GrayCodeAI/yaad v0.1.0
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
