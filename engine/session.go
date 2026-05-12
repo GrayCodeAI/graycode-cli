@@ -53,8 +53,9 @@ type Session struct {
 	PermissionFn func(PermissionRequest)      // use Perm.PromptFn
 	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
 	AskUserFn    func(question string) (string, error)
-	Memory       MemoryRecaller
-	YaadBridge   *memory.YaadBridge
+	Memory          MemoryRecaller
+	YaadBridge      *memory.YaadBridge
+	EnhancedMemory  *memory.EnhancedMemoryManager
 
 	PinnedMessages int // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
