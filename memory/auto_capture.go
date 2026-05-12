@@ -92,7 +92,14 @@ func (ac *AutoCapture) Ingest(toolName string, args map[string]interface{}, outp
 func (ac *AutoCapture) Metrics() CaptureMetrics {
 	ac.metrics.mu.Lock()
 	defer ac.metrics.mu.Unlock()
-	return *ac.metrics
+	return CaptureMetrics{
+		Captured:       ac.metrics.Captured,
+		Skipped:        ac.metrics.Skipped,
+		ConventionsOut: ac.metrics.ConventionsOut,
+		DecisionsOut:   ac.metrics.DecisionsOut,
+		BugsOut:        ac.metrics.BugsOut,
+		FilesOut:       ac.metrics.FilesOut,
+	}
 }
 
 // Stop halts background processing.
