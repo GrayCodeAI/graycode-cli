@@ -93,8 +93,16 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	}
 
 	count := strings.Count(content, oldStr)
+	fuzzyNote := ""
 	if count == 0 {
-		return "", fmt.Errorf("old_str not found in %s", path)
+		// Try fuzzy matching fallback
+		matched, matchedStr, similarity := fuzzyFind(content, oldStr)
+		if !matched {
+			return "", fmt.Errorf("old_str not found in %s", path)
+		}
+		oldStr = matchedStr
+		fuzzyNote = fmt.Sprintf(" (Applied via fuzzy match — %.0f%% similarity)", similarity*100)
+		count = 1
 	}
 	if count > 1 {
 		return "", fmt.Errorf("old_str found %d times in %s — must be unique", count, path)
@@ -120,5 +128,201 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if autoCommitEnabled(ctx) {
 		_ = AutoCommit(path, "Edit", "edited file")
 	}
-	return fmt.Sprintf("Edited %s (replaced 1 occurrence)", path), nil
+	return fmt.Sprintf("Edited %s (replaced 1 occurrence)%s", path, fuzzyNote), nil
 }
+
+// --- Fuzzy matching helpers ---
+
+// fuzzyFind attempts to find oldStr in content using progressively fuzzier strategies.
+// Returns (matched, actualStringInContent, similarityScore).
+func fuzzyFind(content, oldStr string) (bool, string, float64) {
+	// Strategy 1: Whitespace-normalized matching
+	if matched, actual := whitespaceNormalizedFind(content, oldStr); matched {
+		return true, actual, 1.0
+	}
+
+	// Strategy 2: Leading-whitespace adjustment (indentation differences)
+	if matched, actual := leadingWhitespaceFind(content, oldStr); matched {
+		return true, actual, 1.0
+	}
+
+	// Strategy 3: Levenshtein-based similarity matching on contiguous line blocks
+	if matched, actual, sim := levenshteinBlockFind(content, oldStr, 0.85); matched {
+		return true, actual, sim
+	}
+
+	return false, "", 0
+}
+
+// normalizeWhitespace collapses runs of spaces and tabs into a single space.
+func normalizeWhitespace(s string) string {
+	var b strings.Builder
+	inSpace := false
+	for _, r := range s {
+		if r == ' ' || r == '\t' {
+			if !inSpace {
+				b.WriteRune(' ')
+				inSpace = true
+			}
+		} else {
+			b.WriteRune(r)
+			inSpace = false
+		}
+	}
+	return b.String()
+}
+
+// whitespaceNormalizedFind normalizes whitespace in both content and oldStr,
+// finds the match in normalized content, then maps back to the original.
+func whitespaceNormalizedFind(content, oldStr string) (bool, string) {
+	normOld := normalizeWhitespace(oldStr)
+	if normOld == oldStr {
+		// No whitespace difference, skip this strategy
+		return false, ""
+	}
+
+	normContent := normalizeWhitespace(content)
+	idx := strings.Index(normContent, normOld)
+	if idx == -1 {
+		return false, ""
+	}
+	// Verify uniqueness in the normalized domain
+	if strings.Count(normContent, normOld) != 1 {
+		return false, ""
+	}
+
+	// Map normalized byte offsets back to original byte offsets.
+	// Walk content and normContent in parallel to find the original
+	// positions corresponding to the normalized match boundaries.
+	endNorm := idx + len(normOld)
+	normBytePos := 0
+	origStart := -1
+	origEnd := -1
+	inSpace := false
+	for i, r := range content {
+		if normBytePos == idx && origStart == -1 {
+			origStart = i
+		}
+		if normBytePos == endNorm {
+			origEnd = i
+			break
+		}
+		if r == ' ' || r == '\t' {
+			if !inSpace {
+				normBytePos++ // one space byte in normalized output
+				inSpace = true
+			}
+			// Additional whitespace chars don't advance normBytePos
+		} else {
+			runeLen := len(string(r))
+			normBytePos += runeLen
+			inSpace = false
+		}
+	}
+	if origStart == -1 {
+		return false, ""
+	}
+	if origEnd == -1 {
+		// Match extends to end of content
+		origEnd = len(content)
+	}
+
+	actual := content[origStart:origEnd]
+	return true, actual
+}
+
+// leadingWhitespaceFind tries matching by ignoring leading whitespace on each line.
+func leadingWhitespaceFind(content, oldStr string) (bool, string) {
+	oldLines := strings.Split(oldStr, "\n")
+	contentLines := strings.Split(content, "\n")
+
+	if len(oldLines) == 0 || len(contentLines) < len(oldLines) {
+		return false, ""
+	}
+
+	// Trim leading whitespace for comparison
+	trimmedOld := make([]string, len(oldLines))
+	for i, l := range oldLines {
+		trimmedOld[i] = strings.TrimLeft(l, " \t")
+	}
+
+	var matchStart int = -1
+	for i := 0; i <= len(contentLines)-len(oldLines); i++ {
+		found := true
+		for j, tl := range trimmedOld {
+			contentTrimmed := strings.TrimLeft(contentLines[i+j], " \t")
+			if contentTrimmed != tl {
+				found = false
+				break
+			}
+		}
+		if found {
+			if matchStart != -1 {
+				// Multiple matches — not unique
+				return false, ""
+			}
+			matchStart = i
+		}
+	}
+
+	if matchStart == -1 {
+		return false, ""
+	}
+
+	// Reconstruct the actual string from content lines
+	actual := strings.Join(contentLines[matchStart:matchStart+len(oldLines)], "\n")
+	return true, actual
+}
+
+// levenshteinBlockFind finds the most similar contiguous block of lines in content.
+func levenshteinBlockFind(content, oldStr string, threshold float64) (bool, string, float64) {
+	oldLines := strings.Split(oldStr, "\n")
+	contentLines := strings.Split(content, "\n")
+	numOldLines := len(oldLines)
+
+	if numOldLines == 0 || len(contentLines) < numOldLines {
+		return false, "", 0
+	}
+
+	bestSimilarity := 0.0
+	bestStart := -1
+	bestEnd := -1
+
+	// Try blocks of exactly the same line count, and also +/- 1 line
+	for delta := 0; delta <= 1; delta++ {
+		for _, blockLen := range []int{numOldLines + delta, numOldLines - delta} {
+			if blockLen <= 0 || blockLen > len(contentLines) {
+				continue
+			}
+			for i := 0; i <= len(contentLines)-blockLen; i++ {
+				candidate := strings.Join(contentLines[i:i+blockLen], "\n")
+				maxLen := len(oldStr)
+				if len(candidate) > maxLen {
+					maxLen = len(candidate)
+				}
+				if maxLen == 0 {
+					continue
+				}
+				dist := levenshteinDistance(candidate, oldStr)
+				similarity := 1.0 - float64(dist)/float64(maxLen)
+				if similarity > bestSimilarity {
+					bestSimilarity = similarity
+					bestStart = i
+					bestEnd = i + blockLen
+				}
+			}
+		}
+	}
+
+	if bestSimilarity >= threshold && bestStart >= 0 {
+		actual := strings.Join(contentLines[bestStart:bestEnd], "\n")
+		// Verify the actual string exists uniquely in content
+		if strings.Count(content, actual) != 1 {
+			return false, "", 0
+		}
+		return true, actual, bestSimilarity
+	}
+
+	return false, "", 0
+}
+
