@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-skills/main/registry.json"
+const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json"
 
 // SkillEntry is a single skill in the registry index.
 type SkillEntry struct {
