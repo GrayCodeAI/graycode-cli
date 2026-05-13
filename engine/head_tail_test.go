@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func makeMessages(n int, tokensEach int) []WindowMessage {
+func headTailMakeMessages(n int, tokensEach int) []WindowMessage {
 	msgs := make([]WindowMessage, n)
 	for i := range msgs {
 		msgs[i] = WindowMessage{
@@ -46,7 +46,7 @@ func TestNewHeadTailWindow_Custom(t *testing.T) {
 
 func TestApply_NoDropping(t *testing.T) {
 	w := NewHeadTailWindow(4, 12, 10000)
-	msgs := makeMessages(10, 100) // 10 messages fit within head+tail (16)
+	msgs := headTailMakeMessages(10, 100) // 10 messages fit within head+tail (16)
 
 	result := w.Apply(msgs)
 
@@ -66,7 +66,7 @@ func TestApply_NoDropping(t *testing.T) {
 
 func TestApply_DropsMiddle(t *testing.T) {
 	w := NewHeadTailWindow(4, 12, 100000)
-	msgs := makeMessages(30, 100) // 30 messages, keep 4 head + 12 tail = 16
+	msgs := headTailMakeMessages(30, 100) // 30 messages, keep 4 head + 12 tail = 16
 
 	result := w.Apply(msgs)
 
@@ -109,7 +109,7 @@ func TestApply_WithSummary(t *testing.T) {
 
 func TestApply_MaxTokensTrimming(t *testing.T) {
 	w := NewHeadTailWindow(4, 12, 500) // very tight budget
-	msgs := makeMessages(30, 100)      // 30 * 100 = 3000 tokens total
+	msgs := headTailMakeMessages(30, 100)      // 30 * 100 = 3000 tokens total
 
 	result := w.Apply(msgs)
 
@@ -156,7 +156,7 @@ func TestSummarizeDroppedWindow_TopicExtraction(t *testing.T) {
 }
 
 func TestAdaptiveSizes_MinimumGuarantees(t *testing.T) {
-	msgs := makeMessages(3, 100)
+	msgs := headTailMakeMessages(3, 100)
 	head, tail := AdaptiveSizes(msgs, 1000)
 
 	if head < 2 {
@@ -168,7 +168,7 @@ func TestAdaptiveSizes_MinimumGuarantees(t *testing.T) {
 }
 
 func TestAdaptiveSizes_LargeBudget(t *testing.T) {
-	msgs := makeMessages(100, 100) // 10000 tokens total
+	msgs := headTailMakeMessages(100, 100) // 10000 tokens total
 	head, tail := AdaptiveSizes(msgs, 8000)
 
 	// With large budget, should allocate more to tail.
@@ -184,7 +184,7 @@ func TestAdaptiveSizes_LargeBudget(t *testing.T) {
 }
 
 func TestAdaptiveSizes_TightBudget(t *testing.T) {
-	msgs := makeMessages(100, 100)
+	msgs := headTailMakeMessages(100, 100)
 	head, tail := AdaptiveSizes(msgs, 600) // only enough for ~6 messages
 
 	if head < 2 {
@@ -322,28 +322,28 @@ func TestFormatWindow_NoDropped(t *testing.T) {
 }
 
 func TestShouldApply_UnderBudget(t *testing.T) {
-	msgs := makeMessages(10, 100)
+	msgs := headTailMakeMessages(10, 100)
 	if ShouldApply(msgs, 2000) {
 		t.Error("expected false when under budget")
 	}
 }
 
 func TestShouldApply_OverBudget(t *testing.T) {
-	msgs := makeMessages(10, 100)
+	msgs := headTailMakeMessages(10, 100)
 	if !ShouldApply(msgs, 500) {
 		t.Error("expected true when over budget")
 	}
 }
 
 func TestShouldApply_ZeroBudget(t *testing.T) {
-	msgs := makeMessages(10, 100)
+	msgs := headTailMakeMessages(10, 100)
 	if ShouldApply(msgs, 0) {
 		t.Error("expected false when budget is 0 (no limit)")
 	}
 }
 
 func TestShouldApply_ExactBudget(t *testing.T) {
-	msgs := makeMessages(10, 100)
+	msgs := headTailMakeMessages(10, 100)
 	if ShouldApply(msgs, 1000) {
 		t.Error("expected false when exactly at budget")
 	}
@@ -372,7 +372,7 @@ func TestFormatWindowTokens(t *testing.T) {
 
 func TestApply_ConcurrentSafety(t *testing.T) {
 	w := NewHeadTailWindow(4, 12, 100000)
-	msgs := makeMessages(30, 100)
+	msgs := headTailMakeMessages(30, 100)
 
 	done := make(chan struct{})
 	for i := 0; i < 10; i++ {
@@ -392,7 +392,7 @@ func TestApply_ConcurrentSafety(t *testing.T) {
 
 func TestApply_ExactHeadPlusTailBoundary(t *testing.T) {
 	w := NewHeadTailWindow(4, 12, 100000)
-	msgs := makeMessages(16, 100) // exactly head + tail
+	msgs := headTailMakeMessages(16, 100) // exactly head + tail
 
 	result := w.Apply(msgs)
 
@@ -405,7 +405,7 @@ func TestApply_ExactHeadPlusTailBoundary(t *testing.T) {
 }
 
 func TestAdaptiveSizes_ZeroTokenMessages(t *testing.T) {
-	msgs := makeMessages(20, 0)
+	msgs := headTailMakeMessages(20, 0)
 	head, tail := AdaptiveSizes(msgs, 1000)
 
 	if head < 2 {

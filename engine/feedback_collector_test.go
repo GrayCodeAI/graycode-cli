@@ -362,7 +362,7 @@ func TestIdentifyIssues_LowCategoryScores(t *testing.T) {
 	}
 }
 
-func TestFormatReport(t *testing.T) {
+func TestFeedbackCollectorFormatReport(t *testing.T) {
 	fc := NewFeedbackCollector("")
 
 	_ = fc.RecordExplicit(5, "perfect", "quality", "s1", "code")
@@ -403,7 +403,7 @@ func TestFormatReport(t *testing.T) {
 	}
 }
 
-func TestSaveAndLoad(t *testing.T) {
+func TestFeedbackCollectorSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 
 	fc := NewFeedbackCollector(dir)
@@ -448,7 +448,7 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestLoad_NonexistentFile(t *testing.T) {
+func TestFeedbackCollectorLoad_NonexistentFile(t *testing.T) {
 	dir := t.TempDir()
 	fc := NewFeedbackCollector(dir)
 
@@ -475,7 +475,7 @@ func TestLoad_NoDir(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestFeedbackCollectorConcurrentAccess(t *testing.T) {
 	fc := NewFeedbackCollector("")
 
 	var wg sync.WaitGroup

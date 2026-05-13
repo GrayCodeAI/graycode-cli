@@ -11,7 +11,7 @@ import (
 	"github.com/GrayCodeAI/hawk/metrics"
 )
 
-func TestEstimateTokens(t *testing.T) {
+func TestCompactEstimateTokens(t *testing.T) {
 	msgs := []client.EyrieMessage{
 		{Role: "user", Content: "Hello world"},
 		{Role: "assistant", Content: strings.Repeat("x", 400)},

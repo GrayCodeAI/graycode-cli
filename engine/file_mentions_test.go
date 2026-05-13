@@ -8,8 +8,8 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 )
 
-// setupTestProject creates a temporary directory with test files.
-func setupTestProject(t *testing.T) string {
+// fileMentionsSetupTestProject creates a temporary directory with test files.
+func fileMentionsSetupTestProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -44,7 +44,7 @@ func setupTestProject(t *testing.T) string {
 }
 
 func TestDetectMentions_Backticks(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "You should check `src/main.go` for the entry point."
@@ -54,7 +54,7 @@ func TestDetectMentions_Backticks(t *testing.T) {
 }
 
 func TestDetectMentions_Quotes(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := `The authentication logic is in "lib/auth.ts" and needs updating.`
@@ -64,7 +64,7 @@ func TestDetectMentions_Quotes(t *testing.T) {
 }
 
 func TestDetectMentions_BarePaths(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "Look at ./internal/handler.go for the implementation."
@@ -74,7 +74,7 @@ func TestDetectMentions_BarePaths(t *testing.T) {
 }
 
 func TestDetectMentions_FiltersURLs(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "See http://example.com/path/to/file.go and https://github.com/repo/main.go"
@@ -88,7 +88,7 @@ func TestDetectMentions_FiltersURLs(t *testing.T) {
 }
 
 func TestDetectMentions_FiltersNonExistent(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "Check `nonexistent/file.go` for details."
@@ -102,7 +102,7 @@ func TestDetectMentions_FiltersNonExistent(t *testing.T) {
 }
 
 func TestDetectMentions_Deduplicates(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "Look at `src/main.go` and also src/main.go for reference."
@@ -120,7 +120,7 @@ func TestDetectMentions_Deduplicates(t *testing.T) {
 }
 
 func TestDetectMentions_FileLineFormat(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "Error at src/main.go:42 in the handler."
@@ -186,7 +186,7 @@ func TestFilterNew(t *testing.T) {
 }
 
 func TestInjectFileMentionContext_NewFiles(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "You need to update `src/auth.go` and `pkg/middleware/rate.go`."
@@ -203,7 +203,7 @@ func TestInjectFileMentionContext_NewFiles(t *testing.T) {
 }
 
 func TestInjectFileMentionContext_AllAlreadyDiscussed(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "You need to update `src/auth.go`."
@@ -219,7 +219,7 @@ func TestInjectFileMentionContext_AllAlreadyDiscussed(t *testing.T) {
 }
 
 func TestDetectMentions_FiltersFalsePositives(t *testing.T) {
-	dir := setupTestProject(t)
+	dir := fileMentionsSetupTestProject(t)
 	d := NewFileMentionDetector(dir)
 
 	text := "Write to /dev/null and check /etc/passwd for users."
@@ -264,10 +264,10 @@ func assertContains(t *testing.T, slice []string, expected string) {
 
 // fileMentionsContainsStr checks if a string contains a substring.
 func fileMentionsContainsStr(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && fileMentionsContainsSubstring(s, substr))
 }
 
-func containsSubstring(s, substr string) bool {
+func fileMentionsContainsSubstring(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
 			return true

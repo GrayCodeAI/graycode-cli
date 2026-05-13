@@ -91,7 +91,7 @@ func TestGetByExtension(t *testing.T) {
 	}
 }
 
-func TestRegister(t *testing.T) {
+func TestLanguageSupportRegister(t *testing.T) {
 	r := NewLanguageRegistry()
 
 	cfg := &LanguageConfig{
@@ -494,7 +494,7 @@ func TestFunctionPatterns(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestLanguageSupportConcurrentAccess(t *testing.T) {
 	r := NewLanguageRegistry()
 
 	done := make(chan struct{})

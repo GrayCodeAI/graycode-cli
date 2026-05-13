@@ -603,7 +603,7 @@ func TestDocUpdDetectSignatureChangeDetail(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestDocUpdaterConcurrentAccess(t *testing.T) {
 	du := NewDocUpdater()
 
 	oldContent := `package main

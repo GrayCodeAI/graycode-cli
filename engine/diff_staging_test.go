@@ -442,7 +442,7 @@ func TestHasPendingAfterApply(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestDiffStagingConcurrentAccess(t *testing.T) {
 	sa := NewStagingArea()
 	var wg sync.WaitGroup
 

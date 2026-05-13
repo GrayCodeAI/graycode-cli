@@ -269,7 +269,7 @@ func TestExtractNumberFromURL(t *testing.T) {
 	}
 }
 
-func TestFormatDuration(t *testing.T) {
+func TestGitProviderFormatDuration(t *testing.T) {
 	tests := []struct {
 		d    time.Duration
 		want string

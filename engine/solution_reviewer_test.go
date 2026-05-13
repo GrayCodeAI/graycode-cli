@@ -352,7 +352,7 @@ func TestFormatReview(t *testing.T) {
 	})
 }
 
-func TestShouldRetry(t *testing.T) {
+func TestSolutionReviewerShouldRetry(t *testing.T) {
 	t.Run("empty solutions means retry", func(t *testing.T) {
 		if !ShouldRetry(nil) {
 			t.Error("expected true for empty solutions")

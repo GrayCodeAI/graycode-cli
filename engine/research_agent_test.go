@@ -246,7 +246,7 @@ func TestRankFindings(t *testing.T) {
 	})
 }
 
-func TestSynthesize(t *testing.T) {
+func TestResearchAgentSynthesize(t *testing.T) {
 	ra := NewResearchAgent(5)
 
 	t.Run("combines findings", func(t *testing.T) {
@@ -461,7 +461,7 @@ func TestResearch(t *testing.T) {
 	})
 }
 
-func TestExtractKeywords(t *testing.T) {
+func TestResearchAgentExtractKeywords(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected []string

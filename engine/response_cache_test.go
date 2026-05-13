@@ -323,7 +323,7 @@ func TestShouldCache(t *testing.T) {
 	}
 }
 
-func TestFormatStats(t *testing.T) {
+func TestResponseCacheFormatStats(t *testing.T) {
 	rc := NewResponseCache(1000, time.Hour)
 
 	rc.Set("explain closures", "response about closures", "gpt-4", 500)

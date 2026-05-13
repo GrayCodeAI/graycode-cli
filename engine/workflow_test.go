@@ -691,7 +691,7 @@ func TestBuiltinWorkflows(t *testing.T) {
 	}
 }
 
-func TestFormatResult(t *testing.T) {
+func TestWorkflowFormatResult(t *testing.T) {
 	result := &WorkflowResult{
 		Status: "success",
 		Steps: []StepResult{

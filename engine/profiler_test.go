@@ -590,7 +590,7 @@ func TestConcurrentRecordDuration(t *testing.T) {
 	timer.mu.Unlock()
 }
 
-func TestFormatDuration(t *testing.T) {
+func TestProfilerFormatDuration(t *testing.T) {
 	tests := []struct {
 		input    time.Duration
 		expected string

@@ -149,7 +149,7 @@ func TestBudgetEnforcement(t *testing.T) {
 	}
 }
 
-func TestFormatContext(t *testing.T) {
+func TestContextProviderFormatContext(t *testing.T) {
 	items := []ContextItem{
 		{Source: "git", Title: "Current Branch", Content: "main", Relevance: 0.9},
 		{Source: "files", Title: "Recent Files", Content: "file1.go\nfile2.go", Relevance: 0.7},
