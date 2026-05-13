@@ -272,40 +272,24 @@ func parseReviewDiffSection(section string) reviewDiffFile {
 
 	// Parse hunks for content.
 	var contentLines []string
-	lineNo := 0
+	contentLineNo := 0
 	inHunk := false
 	for _, l := range lines {
 		if strings.HasPrefix(l, "@@") {
 			inHunk = true
-			// Parse new file line number.
-			parts := strings.Split(l, "+")
-			if len(parts) >= 2 {
-				numStr := strings.Split(parts[1], ",")[0]
-				n := 0
-				for _, ch := range numStr {
-					if ch >= '0' && ch <= '9' {
-						n = n*10 + int(ch-'0')
-					} else {
-						break
-					}
-				}
-				if n > 0 {
-					lineNo = n - 1
-				}
-			}
 			continue
 		}
 		if !inHunk {
 			continue
 		}
 		if strings.HasPrefix(l, "+") {
-			lineNo++
+			contentLineNo++
 			content := strings.TrimPrefix(l, "+")
 			contentLines = append(contentLines, content)
 			f.diffLines = append(f.diffLines, DiffLine{
 				Type:      "add",
 				Content:   content,
-				NewLineNo: lineNo,
+				NewLineNo: contentLineNo,
 			})
 		} else if strings.HasPrefix(l, "-") {
 			content := strings.TrimPrefix(l, "-")
@@ -314,13 +298,13 @@ func parseReviewDiffSection(section string) reviewDiffFile {
 				Content: content,
 			})
 		} else if strings.HasPrefix(l, " ") {
-			lineNo++
+			contentLineNo++
 			content := strings.TrimPrefix(l, " ")
 			contentLines = append(contentLines, content)
 			f.diffLines = append(f.diffLines, DiffLine{
 				Type:      "context",
 				Content:   content,
-				NewLineNo: lineNo,
+				NewLineNo: contentLineNo,
 			})
 		}
 	}

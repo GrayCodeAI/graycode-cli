@@ -296,6 +296,11 @@ func tokenizeClaim(text string) []string {
 		words = append(words, current.String())
 	}
 
+	// Trim trailing punctuation from tokens (sentence-ending dots, etc.)
+	for i, w := range words {
+		words[i] = strings.TrimRight(w, ".")
+	}
+
 	return words
 }
 

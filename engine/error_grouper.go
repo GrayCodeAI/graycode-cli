@@ -46,8 +46,9 @@ func NewErrorGrouper() *ErrorGrouper {
 // normalization regexes compiled once
 var (
 	pathPattern     = regexp.MustCompile(`(?:/[a-zA-Z0-9._\-]+)+(?:\.[a-zA-Z]+)?`)
-	lineNumPattern  = regexp.MustCompile(`(?:line\s*|:)\d+`)
-	numberPattern   = regexp.MustCompile(`\b\d{2,}\b`)
+	errFileLinePattern = regexp.MustCompile(`\b[a-zA-Z0-9_\-]+\.[a-zA-Z]{1,4}:\d+:?`)
+	lineNumPattern  = regexp.MustCompile(`(?:line\s*|:)\d+:?`)
+	numberPattern   = regexp.MustCompile(`\b\d{2,}`)
 	quotedPattern   = regexp.MustCompile(`"[^"]*"`)
 	hexPattern      = regexp.MustCompile(`0x[0-9a-fA-F]+`)
 	multiSpaceRegex = regexp.MustCompile(`\s+`)
@@ -61,8 +62,11 @@ func NormalizeError(msg string) string {
 	// Strip hex addresses
 	normalized = hexPattern.ReplaceAllString(normalized, "<addr>")
 
-	// Strip file paths
+	// Strip file paths (absolute paths)
 	normalized = pathPattern.ReplaceAllString(normalized, "<path>")
+
+	// Strip filename:line patterns (e.g., "main.go:42")
+	normalized = errFileLinePattern.ReplaceAllString(normalized, "<path><line>")
 
 	// Strip line numbers (e.g., "line 42", ":42")
 	normalized = lineNumPattern.ReplaceAllString(normalized, "<line>")

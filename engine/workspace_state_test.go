@@ -513,7 +513,7 @@ func TestWorkspaceStateDetectLanguage(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := detectLanguage(tt.path)
+		got := wsDetectLanguage(tt.path)
 		if got != tt.expected {
 			t.Errorf("detectLanguage(%s) = %s, want %s", tt.path, got, tt.expected)
 		}

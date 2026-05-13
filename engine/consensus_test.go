@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -44,10 +45,10 @@ func TestSampleSolutions(t *testing.T) {
 		cs := NewConsensusSampler(3)
 		ctx := context.Background()
 
-		counter := 0
+		var counter int64
 		generateFn := func(_ context.Context, _ string) (string, error) {
-			counter++
-			return fmt.Sprintf("Solution %d: implement the handler with proper error handling. Step 1. Create the file src/handler.go", counter), nil
+			c := atomic.AddInt64(&counter, 1)
+			return fmt.Sprintf("Solution %d: implement the handler with proper error handling. Step 1. Create the file src/handler.go", c), nil
 		}
 
 		result, err := cs.SampleSolutions(ctx, "fix the bug", generateFn)
@@ -73,10 +74,10 @@ func TestSampleSolutions(t *testing.T) {
 		ctx := context.Background()
 
 		solutions := []string{"short", "medium length solution", "this is the longest solution by far and should win the contest"}
-		idx := 0
+		var idx int64
 		generateFn := func(_ context.Context, _ string) (string, error) {
-			s := solutions[idx%len(solutions)]
-			idx++
+			i := atomic.AddInt64(&idx, 1) - 1
+			s := solutions[int(i)%len(solutions)]
 			return s, nil
 		}
 
@@ -138,10 +139,10 @@ func TestSampleSolutions(t *testing.T) {
 			"First paragraph about setup.\n\nSecond about implementation.",
 			"First paragraph about setup.\n\nThird about testing.",
 		}
-		idx := 0
+		var idx int64
 		generateFn := func(_ context.Context, _ string) (string, error) {
-			s := solutions[idx%len(solutions)]
-			idx++
+			i := atomic.AddInt64(&idx, 1) - 1
+			s := solutions[int(i)%len(solutions)]
 			return s, nil
 		}
 

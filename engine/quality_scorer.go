@@ -238,8 +238,9 @@ func (qs *QualityScorer) scoreToolUsage(ctx ResponseContext) float64 {
 		score -= errorRate * 0.4
 	}
 
-	// Good tool/file ratio: reading before writing
-	if len(ctx.FilesModified) > 0 && ctx.ToolCallCount >= len(ctx.FilesModified)*2 {
+	// Good tool/file ratio: reading before writing (only if error rate is low)
+	errorRate := float64(ctx.ToolErrors) / float64(ctx.ToolCallCount)
+	if len(ctx.FilesModified) > 0 && ctx.ToolCallCount >= len(ctx.FilesModified)*2 && errorRate < 0.2 {
 		// Likely read before write pattern
 		score += 0.1
 	}

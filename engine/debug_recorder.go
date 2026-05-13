@@ -347,14 +347,14 @@ func (dr *DebugRecorder) SearchSessions(symptom string) []*DebugSession {
 			}
 		}
 
-		// Require at least 2 word matches or more than half the words
+		// Require at least 1 word match in significant words
 		significantWords := 0
 		for _, w := range words {
 			if len(w) >= 3 {
 				significantWords++
 			}
 		}
-		if significantWords > 0 && (matchCount >= 2 || matchCount > significantWords/2) {
+		if significantWords > 0 && matchCount >= 1 {
 			results = append(results, session)
 		}
 	}
