@@ -183,7 +183,8 @@ func TestRedactSlackToken(t *testing.T) {
 
 func TestRedactSendGridKey(t *testing.T) {
 	r := NewOutputRedactor()
-	input := "SENDGRID_API_KEY=SG.FAKE_TEST_ONLY_000000.FAKE_TEST_VALUE_NOT_REAL_00000000000000000000"
+	// SG.{22 chars}.{43 chars} = valid SendGrid key format
+	input := "SENDGRID_API_KEY=SG.abcdefghijklmnopqrstuv.abcdefghijklmnopqrstuvwxyz01234567890123456"
 	result := r.Redact(input)
 	if !strings.Contains(result, "[REDACTED:api_key]") {
 		t.Errorf("SendGrid key not redacted: %s", result)

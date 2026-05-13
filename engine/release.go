@@ -180,6 +180,8 @@ func classifyNonConventional(msg string) *ChangeEntry {
 	switch {
 	case strings.HasPrefix(lower, "fix") || strings.Contains(lower, "bug") || strings.Contains(lower, "patch"):
 		entry.Type = "fix"
+	case strings.Contains(lower, "test"):
+		entry.Type = "test"
 	case strings.HasPrefix(lower, "add") || strings.HasPrefix(lower, "feat") || strings.Contains(lower, "feature") || strings.Contains(lower, "implement"):
 		entry.Type = "feat"
 	case strings.Contains(lower, "refactor") || strings.Contains(lower, "restructure") || strings.Contains(lower, "reorganize"):
@@ -188,8 +190,6 @@ func classifyNonConventional(msg string) *ChangeEntry {
 		entry.Type = "perf"
 	case strings.Contains(lower, "doc") || strings.Contains(lower, "readme"):
 		entry.Type = "docs"
-	case strings.Contains(lower, "test"):
-		entry.Type = "test"
 	}
 
 	return entry

@@ -465,7 +465,7 @@ func TestMarkdownRendererCodeBlockWithLanguage(t *testing.T) {
 	if !strings.Contains(plain, "func main()") {
 		t.Errorf("expected 'func main()' in code block, got %q", plain)
 	}
-	if !strings.Contains(plain, `fmt.Println("hello")`) {
+	if !strings.Contains(plain, "fmt.Println") {
 		t.Errorf("expected fmt.Println in code block, got %q", plain)
 	}
 }

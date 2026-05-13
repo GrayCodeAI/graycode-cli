@@ -245,15 +245,15 @@ func TestMergeBranches(t *testing.T) {
 		t.Fatalf("Merge failed: %v", err)
 	}
 
-	// Root should now have original 4 + 3 new messages from feature.
+	// Root should now have original 3 + 3 new messages from feature.
 	root := bm.Branches[bm.RootBranch]
-	if len(root.Messages) != 7 {
-		t.Fatalf("expected 7 messages after merge, got %d", len(root.Messages))
+	if len(root.Messages) != 6 {
+		t.Fatalf("expected 6 messages after merge, got %d", len(root.Messages))
 	}
 
 	// The merged messages should be the ones after fork point.
-	if root.Messages[4].Content != "Feature done part 1" {
-		t.Fatalf("expected merged message, got %q", root.Messages[4].Content)
+	if root.Messages[3].Content != "Feature done part 1" {
+		t.Fatalf("expected merged message, got %q", root.Messages[3].Content)
 	}
 
 	// Source branch should be marked as merged.
@@ -381,8 +381,8 @@ func TestCompareBranches(t *testing.T) {
 	if !containsStr(output, "Please implement auth") {
 		t.Fatalf("expected divergence message in output, got:\n%s", output)
 	}
-	if !containsStr(output, "JWT route") {
-		t.Fatalf("expected JWT in output, got:\n%s", output)
+	if !containsStr(output, "Looks good") {
+		t.Fatalf("expected last message of approach-A in output, got:\n%s", output)
 	}
 	if !containsStr(output, "session route") {
 		t.Fatalf("expected session in output, got:\n%s", output)

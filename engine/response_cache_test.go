@@ -465,7 +465,7 @@ func TestResponseCacheJaccard(t *testing.T) {
 		{"", "", 1.0},
 		{"a b c", "a b c d", 0.75},
 		{"a b", "c d", 0.0},
-		{"the cat sat on the mat", "the cat sat on a mat", 0.8571}, // 6/7
+		{"the cat sat on the mat", "the cat sat on a mat", 0.8333}, // 5/6
 	}
 
 	for _, tt := range tests {

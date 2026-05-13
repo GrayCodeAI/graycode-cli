@@ -230,7 +230,9 @@ func ExtractHTML(body string) (title, content string) {
 		preBlocks = append(preBlocks, "```\n"+strings.TrimSpace(cleaned)+"\n```")
 	}
 
-	// Remove script and style tags and their content.
+	// Remove head, script and style tags and their content.
+	headRe := regexp.MustCompile(`(?is)<head[^>]*>.*?</head>`)
+	body = headRe.ReplaceAllString(body, "")
 	scriptRe := regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`)
 	body = scriptRe.ReplaceAllString(body, "")
 	styleRe := regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`)
