@@ -625,7 +625,7 @@ func FormatValidation(v *GenValidation) string {
 	scoreComment := "good to go"
 	if v.Score < 0.5 {
 		scoreComment = "significant issues found"
-	} else if v.Score < 0.8 {
+	} else if v.Score < 0.9 {
 		scoreComment = "proceed with caution"
 	}
 

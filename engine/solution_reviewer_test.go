@@ -331,7 +331,7 @@ func TestFormatReview(t *testing.T) {
 		if !strings.Contains(formatted, "45%") {
 			t.Errorf("missing agreement percentage in: %s", formatted)
 		}
-		if !strings.Contains(formatted, "approaches varied") {
+		if !strings.Contains(formatted, "moderate agreement") {
 			t.Errorf("missing agreement description in: %s", formatted)
 		}
 	})

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -154,7 +155,7 @@ func TestStallDetectorWindowSliding(t *testing.T) {
 
 	// Push old entries out with different calls.
 	for i := 0; i < 5; i++ {
-		sd.Record("Read", map[string]interface{}{"path": strings.Repeat("x", i+1)}, "unique output")
+		sd.Record("Read", map[string]interface{}{"path": strings.Repeat("x", i+1)}, fmt.Sprintf("output %d", i))
 	}
 
 	result = sd.Check()

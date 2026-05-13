@@ -1156,7 +1156,7 @@ func RenderTree(files []string) string {
 
 // renderTemplate executes a Go template with the given variables.
 func renderTemplate(text string, vars map[string]string) (string, error) {
-	t, err := template.New("").Parse(text)
+	t, err := template.New("").Option("missingkey=error").Parse(text)
 	if err != nil {
 		return "", err
 	}

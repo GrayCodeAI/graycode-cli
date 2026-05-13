@@ -552,7 +552,7 @@ func TestWorkspaceDiffReportFormatDuration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := formatDuration(tt.d)
+		got := wdrFormatDuration(tt.d)
 		if got != tt.want {
 			t.Errorf("formatDuration(%v) = %q, want %q", tt.d, got, tt.want)
 		}
