@@ -494,7 +494,7 @@ func TestSuggestFix_FallsBackToFirstSuggestion(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestErrorContextConcurrentAccess(t *testing.T) {
 	ec := NewErrorContext()
 	var wg sync.WaitGroup
 

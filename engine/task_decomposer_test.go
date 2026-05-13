@@ -198,7 +198,7 @@ func TestFindParallelGroups_Empty(t *testing.T) {
 	}
 }
 
-func TestEstimateComplexity(t *testing.T) {
+func TestTaskDecomposerEstimateComplexity(t *testing.T) {
 	td := NewTaskDecomposer()
 
 	// Simple goal

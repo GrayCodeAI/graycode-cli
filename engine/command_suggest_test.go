@@ -488,7 +488,7 @@ func TestDismissDoesNotAffectOtherSuggestions(t *testing.T) {
 	}
 }
 
-func TestConcurrency(t *testing.T) {
+func TestCommandSuggestConcurrency(t *testing.T) {
 	se := NewSuggestionEngine()
 
 	var wg sync.WaitGroup

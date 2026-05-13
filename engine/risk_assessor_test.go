@@ -278,7 +278,7 @@ func TestDetermineLevel(t *testing.T) {
 	}
 }
 
-func TestRenderBar(t *testing.T) {
+func TestRiskAssessorRenderBar(t *testing.T) {
 	tests := []struct {
 		score    float64
 		expected string

@@ -598,7 +598,7 @@ func TestConcurrentAccessSafety(t *testing.T) {
 	}
 }
 
-func TestClear(t *testing.T) {
+func TestUndoClear(t *testing.T) {
 	um := NewUndoManager()
 	um.mu.Lock()
 	um.Stack = append(um.Stack, UndoEntry{ID: "a"}, UndoEntry{ID: "b"})

@@ -297,7 +297,7 @@ func TestScanSkipsNodeModules(t *testing.T) {
 	}
 }
 
-func TestSummary(t *testing.T) {
+func TestWorkspaceStateSummary(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "auth.go")
@@ -371,7 +371,7 @@ func TestBuildContextForAgent(t *testing.T) {
 	}
 }
 
-func TestReset(t *testing.T) {
+func TestWorkspaceStateReset(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "main.go")
@@ -404,7 +404,7 @@ func TestReset(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestWorkspaceStateConcurrentAccess(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create several test files
@@ -495,7 +495,7 @@ func TestRelativeAndAbsolutePaths(t *testing.T) {
 	}
 }
 
-func TestDetectLanguage(t *testing.T) {
+func TestWorkspaceStateDetectLanguage(t *testing.T) {
 	tests := []struct {
 		path     string
 		expected string
@@ -520,7 +520,7 @@ func TestDetectLanguage(t *testing.T) {
 	}
 }
 
-func TestIsTestFile(t *testing.T) {
+func TestWorkspaceStateIsTestFile(t *testing.T) {
 	tests := []struct {
 		path     string
 		expected bool

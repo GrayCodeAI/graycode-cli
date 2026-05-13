@@ -53,7 +53,7 @@ func TestTrajectoryInspectorRecord(t *testing.T) {
 	}
 }
 
-func TestRenderTimeline(t *testing.T) {
+func TestTrajectoryInspectorRenderTimeline(t *testing.T) {
 	ti := NewTrajectoryInspector("session-abc123")
 	// Override start time for predictable output.
 	ti.StartTime = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -216,7 +216,7 @@ func TestFindPatterns_BashRetries(t *testing.T) {
 	}
 }
 
-func TestGetByType(t *testing.T) {
+func TestTrajectoryInspectorGetByType(t *testing.T) {
 	ti := NewTrajectoryInspector("session-filter")
 
 	ti.Record("thought", "first thought", "", 0, 10)
@@ -270,7 +270,7 @@ func TestGetToolUsage(t *testing.T) {
 	}
 }
 
-func TestExportJSON(t *testing.T) {
+func TestTrajectoryInspectorExportJSON(t *testing.T) {
 	ti := NewTrajectoryInspector("session-export")
 	ti.Record("thought", "thinking about problem", "", 0, 100)
 	ti.Record("action", "main.go", "Read", 150*time.Millisecond, 50)
@@ -352,7 +352,7 @@ func TestReplay_ZeroSpeed(t *testing.T) {
 	}
 }
 
-func TestSummarize(t *testing.T) {
+func TestTrajectoryInspectorSummarize(t *testing.T) {
 	ti := NewTrajectoryInspector("session-summary")
 	ti.StartTime = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -390,7 +390,7 @@ func TestSummarize_Empty(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestTrajectoryInspectorConcurrentAccess(t *testing.T) {
 	ti := NewTrajectoryInspector("session-concurrent")
 
 	done := make(chan struct{})
@@ -460,7 +460,7 @@ func TestInspectorFormatTokens(t *testing.T) {
 	}
 }
 
-func TestEventIcon(t *testing.T) {
+func TestTrajectoryInspectorEventIcon(t *testing.T) {
 	tests := []struct {
 		eventType string
 		want      string

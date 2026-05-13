@@ -20,7 +20,7 @@ func TestNewExperienceStore(t *testing.T) {
 	}
 }
 
-func TestRecord(t *testing.T) {
+func TestExperienceRecord(t *testing.T) {
 	store := NewExperienceStore("")
 
 	exp := store.Record(
@@ -185,16 +185,16 @@ func TestBuildExperienceContext(t *testing.T) {
 		t.Fatal("expected non-empty context")
 	}
 
-	if !containsSubstring(ctx, "Relevant Past Experiences") {
+	if !experienceContainsSubstring(ctx, "Relevant Past Experiences") {
 		t.Error("expected header in context")
 	}
-	if !containsSubstring(ctx, "JWT auth") {
+	if !experienceContainsSubstring(ctx, "JWT auth") {
 		t.Error("expected task name in context")
 	}
-	if !containsSubstring(ctx, "success") {
+	if !experienceContainsSubstring(ctx, "success") {
 		t.Error("expected outcome in context")
 	}
-	if !containsSubstring(ctx, "Read, Edit, Bash") {
+	if !experienceContainsSubstring(ctx, "Read, Edit, Bash") {
 		t.Error("expected tools in context")
 	}
 }
@@ -226,7 +226,7 @@ func TestBuildExperienceContextTokenLimit(t *testing.T) {
 	// Very small token limit should truncate
 	ctx := store.BuildExperienceContext("Implement feature with testing", 50)
 	// Should contain at least the header
-	if !containsSubstring(ctx, "Relevant Past Experiences") {
+	if !experienceContainsSubstring(ctx, "Relevant Past Experiences") {
 		t.Error("expected header even with small token limit")
 	}
 }
@@ -259,13 +259,13 @@ func TestGeneralize(t *testing.T) {
 
 	// Check files are generalized
 	for _, f := range generalized.FilesModified {
-		if containsSubstring(f, "users") || containsSubstring(f, "auth") {
+		if experienceContainsSubstring(f, "users") || experienceContainsSubstring(f, "auth") {
 			t.Errorf("file path not generalized: %s", f)
 		}
 	}
 
 	// Check approach is generalized
-	if containsSubstring(generalized.Approach, "pkg/users/service.go") {
+	if experienceContainsSubstring(generalized.Approach, "pkg/users/service.go") {
 		t.Error("approach should have file paths generalized")
 	}
 }
@@ -309,7 +309,7 @@ func TestDeduplicate(t *testing.T) {
 	// The success one should remain
 	found := false
 	for _, exp := range store.Experiences {
-		if exp.Score == 1.0 && containsSubstring(exp.Task, "JWT") {
+		if exp.Score == 1.0 && experienceContainsSubstring(exp.Task, "JWT") {
 			found = true
 		}
 	}
@@ -326,7 +326,7 @@ func TestDeduplicateEmpty(t *testing.T) {
 	}
 }
 
-func TestPrune(t *testing.T) {
+func TestExperiencePrune(t *testing.T) {
 	store := NewExperienceStore("")
 
 	// Add experiences with different ages and scores
@@ -365,7 +365,7 @@ func TestPrune(t *testing.T) {
 	}
 }
 
-func TestSaveAndLoad(t *testing.T) {
+func TestExperienceSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create store and record experiences
@@ -423,7 +423,7 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestSaveNoDir(t *testing.T) {
+func TestExperienceSaveNoDir(t *testing.T) {
 	store := NewExperienceStore("")
 	err := store.Save()
 	if err == nil {
@@ -431,7 +431,7 @@ func TestSaveNoDir(t *testing.T) {
 	}
 }
 
-func TestLoadNoDir(t *testing.T) {
+func TestExperienceLoadNoDir(t *testing.T) {
 	store := NewExperienceStore("")
 	err := store.Load()
 	if err == nil {
@@ -439,7 +439,7 @@ func TestLoadNoDir(t *testing.T) {
 	}
 }
 
-func TestLoadNoFile(t *testing.T) {
+func TestExperienceLoadNoFile(t *testing.T) {
 	dir := t.TempDir()
 	store := NewExperienceStore(dir)
 	// Should not error when file doesn't exist
@@ -448,7 +448,7 @@ func TestLoadNoFile(t *testing.T) {
 	}
 }
 
-func TestStats(t *testing.T) {
+func TestExperienceStats(t *testing.T) {
 	store := NewExperienceStore("")
 
 	store.Record("Task A", "Approach A", "success",
@@ -544,11 +544,11 @@ func TestGeneralizePath(t *testing.T) {
 
 	for _, tt := range tests {
 		result := generalizePath(tt.input)
-		if !containsSubstring(result, tt.contains) {
+		if !experienceContainsSubstring(result, tt.contains) {
 			t.Errorf("generalizePath(%q) = %q, expected to contain %q", tt.input, result, tt.contains)
 		}
 		// Should have wildcard or generic pattern
-		if !containsSubstring(result, "*") && !containsSubstring(result, "<") {
+		if !experienceContainsSubstring(result, "*") && !experienceContainsSubstring(result, "<") {
 			t.Errorf("generalizePath(%q) = %q, expected generic pattern", tt.input, result)
 		}
 	}
@@ -578,7 +578,7 @@ func TestExtractTags(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestExperienceConcurrentAccess(t *testing.T) {
 	store := NewExperienceStore("")
 
 	// Concurrent writes and reads
@@ -636,12 +636,12 @@ func TestUsedCountIncrement(t *testing.T) {
 	}
 }
 
-// containsSubstring checks if s contains substr.
-func containsSubstring(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStr(s, substr))
+// experienceContainsSubstring checks if s contains substr.
+func experienceContainsSubstring(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && experienceContainsStr(s, substr))
 }
 
-func containsStr(s, substr string) bool {
+func experienceContainsStr(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
 			return true

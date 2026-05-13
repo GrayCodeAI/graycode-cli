@@ -382,7 +382,7 @@ func TestSummarize(t *testing.T) {
 	}
 }
 
-func TestSummarizeEmpty(t *testing.T) {
+func TestSessionTimelineSummarizeEmpty(t *testing.T) {
 	tl := NewTimeline("empty")
 	summary := tl.Summarize()
 	if summary != "Empty session with no recorded events." {
@@ -390,7 +390,7 @@ func TestSummarizeEmpty(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestSessionTimelineConcurrentAccess(t *testing.T) {
 	tl := NewTimeline("concurrent")
 	done := make(chan struct{})
 
@@ -424,7 +424,7 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 }
 
-func TestFormatDuration(t *testing.T) {
+func TestSessionTimelineFormatDuration(t *testing.T) {
 	tests := []struct {
 		d    time.Duration
 		want string

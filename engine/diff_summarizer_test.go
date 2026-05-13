@@ -415,7 +415,7 @@ func TestGeneratePRSummaryEmpty(t *testing.T) {
 	}
 }
 
-func TestFormatSummary(t *testing.T) {
+func TestDiffSummarizerFormatSummary(t *testing.T) {
 	ds := NewDiffSummarizer()
 
 	summary := &DiffSummary{
@@ -455,7 +455,7 @@ func TestFormatSummary(t *testing.T) {
 	}
 }
 
-func TestFormatSummaryEmpty(t *testing.T) {
+func TestDiffSummarizerFormatSummaryEmpty(t *testing.T) {
 	ds := NewDiffSummarizer()
 	output := ds.FormatSummary(nil)
 	if !strings.Contains(output, "No changes detected") {

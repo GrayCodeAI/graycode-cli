@@ -91,7 +91,7 @@ func TestNewErrorGrouper(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestErrorGrouperAdd(t *testing.T) {
 	eg := NewErrorGrouper()
 
 	group := eg.Add("nil pointer dereference at main.go:42", "main.go", 42, "func main()")
@@ -319,7 +319,7 @@ func TestFormatGroupsEmpty(t *testing.T) {
 	}
 }
 
-func TestPrune(t *testing.T) {
+func TestErrorGrouperPrune(t *testing.T) {
 	eg := NewErrorGrouper()
 
 	// Add and resolve a group
@@ -366,7 +366,7 @@ func TestPruneKeepsActiveOldGroups(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestErrorGrouperConcurrentAccess(t *testing.T) {
 	eg := NewErrorGrouper()
 	var wg sync.WaitGroup
 

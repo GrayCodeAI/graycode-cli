@@ -269,7 +269,7 @@ func TestGetByBudget_ZeroBudget(t *testing.T) {
 	}
 }
 
-func TestPrune(t *testing.T) {
+func TestContextDecayPrune(t *testing.T) {
 	cd := NewContextDecay(1 * time.Millisecond)
 
 	cd.Add("will decay", "general", 10)
@@ -384,7 +384,7 @@ func TestStats(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestContextDecayConcurrentAccess(t *testing.T) {
 	cd := NewContextDecay(30 * time.Minute)
 
 	// Add some entries

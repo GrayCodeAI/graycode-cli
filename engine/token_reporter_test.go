@@ -24,7 +24,7 @@ func TestNewTokenReporter(t *testing.T) {
 	}
 }
 
-func TestRecord(t *testing.T) {
+func TestTokenReporterRecord(t *testing.T) {
 	tr := NewTokenReporter(100000)
 
 	tr.Record(500, 200, "sonnet", "Read", 0.01)
@@ -376,7 +376,7 @@ func TestGetHistoryZero(t *testing.T) {
 	}
 }
 
-func TestReset(t *testing.T) {
+func TestTokenReporterReset(t *testing.T) {
 	tr := NewTokenReporter(100000)
 	tr.Record(5000, 3000, "sonnet", "Read", 0.05)
 	tr.Record(5000, 3000, "sonnet", "Read", 0.05)
@@ -397,7 +397,7 @@ func TestReset(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestTokenReporterConcurrentAccess(t *testing.T) {
 	tr := NewTokenReporter(1000000)
 	var wg sync.WaitGroup
 

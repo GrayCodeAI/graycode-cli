@@ -99,7 +99,7 @@ func TestExtractConventions(t *testing.T) {
 	}
 }
 
-func TestExtractDecisions(t *testing.T) {
+func TestMemoryConsolidatorExtractDecisions(t *testing.T) {
 	mc := NewMemoryConsolidator("")
 
 	raw := []RawMemory{
@@ -330,7 +330,7 @@ func TestLoadNonexistent(t *testing.T) {
 	}
 }
 
-func TestLoadNoDir(t *testing.T) {
+func TestMemoryConsolidatorLoadNoDir(t *testing.T) {
 	mc := NewMemoryConsolidator("")
 	err := mc.Load()
 	if err == nil {
@@ -338,7 +338,7 @@ func TestLoadNoDir(t *testing.T) {
 	}
 }
 
-func TestSaveNoDir(t *testing.T) {
+func TestMemoryConsolidatorSaveNoDir(t *testing.T) {
 	mc := NewMemoryConsolidator("")
 	err := mc.Save()
 	if err == nil {
@@ -384,7 +384,7 @@ func TestFormatMemories(t *testing.T) {
 	}
 }
 
-func TestStats(t *testing.T) {
+func TestMemoryConsolidatorStats(t *testing.T) {
 	mc := NewMemoryConsolidator("")
 
 	mc.RawMemories = []RawMemory{

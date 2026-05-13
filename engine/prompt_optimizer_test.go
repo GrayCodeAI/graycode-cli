@@ -486,7 +486,7 @@ func TestABTest_PickVariant(t *testing.T) {
 	}
 }
 
-func TestJaccardSimilarity(t *testing.T) {
+func TestPromptOptimizerJaccardSimilarity(t *testing.T) {
 	tests := []struct {
 		a, b     string
 		minScore float64
@@ -508,7 +508,7 @@ func TestJaccardSimilarity(t *testing.T) {
 	}
 }
 
-func TestTokenize(t *testing.T) {
+func TestPromptOptimizerTokenize(t *testing.T) {
 	tokens := tokenize("Fix the login-bug! (quickly)")
 	// Should filter words <= 2 chars and strip punctuation
 	for _, tok := range tokens {

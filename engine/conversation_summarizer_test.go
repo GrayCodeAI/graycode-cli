@@ -267,7 +267,7 @@ func TestGenerateTitle_FallbackToFirstMessage(t *testing.T) {
 	}
 }
 
-func TestFormatSummary(t *testing.T) {
+func TestConversationSummarizerFormatSummary(t *testing.T) {
 	cs := NewConversationSummarizer()
 	summary := &Summary{
 		Level:          "structured",
@@ -402,7 +402,7 @@ func TestPluralS(t *testing.T) {
 	}
 }
 
-func TestEstimateTokens(t *testing.T) {
+func TestConversationSummarizerEstimateTokens(t *testing.T) {
 	result := estimateTokens("hello world test string")
 	if result <= 0 {
 		t.Errorf("expected positive token estimate, got %d", result)

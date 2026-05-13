@@ -25,7 +25,7 @@ func TestNewKnowledgeBase(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestKnowledgeAdd(t *testing.T) {
 	kb := NewKnowledgeBase("/tmp/test-kb")
 
 	// Test nil entry
@@ -104,7 +104,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestSearch(t *testing.T) {
+func TestKnowledgeSearch(t *testing.T) {
 	kb := NewKnowledgeBase("/tmp/test-kb")
 
 	entries := []*KnowledgeEntry{
@@ -183,7 +183,7 @@ func TestSearch(t *testing.T) {
 	}
 }
 
-func TestGetByCategory(t *testing.T) {
+func TestKnowledgeGetByCategory(t *testing.T) {
 	kb := NewKnowledgeBase("/tmp/test-kb")
 
 	_ = kb.Add(&KnowledgeEntry{ID: "p1", Category: "pattern", Title: "Pattern 1", Confidence: 0.8})
@@ -522,7 +522,7 @@ func TestKnowledgeSaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestStats(t *testing.T) {
+func TestKnowledgeStats(t *testing.T) {
 	kb := NewKnowledgeBase("/tmp/test-kb")
 
 	_ = kb.Add(&KnowledgeEntry{ID: "p1", Category: "pattern", Language: "go", Confidence: 0.8, UsageCount: 10})
