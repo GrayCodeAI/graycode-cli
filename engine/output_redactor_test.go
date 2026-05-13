@@ -276,7 +276,7 @@ func TestIsCleanWithKnownSecrets(t *testing.T) {
 	}
 }
 
-func TestFormatStats(t *testing.T) {
+func TestOutputRedactorFormatStats(t *testing.T) {
 	r := NewOutputRedactor()
 
 	// Empty stats.
@@ -303,7 +303,7 @@ func TestFormatStats(t *testing.T) {
 	}
 }
 
-func TestAddPattern(t *testing.T) {
+func TestOutputRedactorAddPattern(t *testing.T) {
 	r := NewOutputRedactor()
 	initialCount := len(r.Patterns)
 

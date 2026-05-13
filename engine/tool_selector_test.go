@@ -246,7 +246,7 @@ func TestFilterExpensiveEmpty(t *testing.T) {
 	}
 }
 
-func TestFormatSelection(t *testing.T) {
+func TestToolSelectorFormatSelection(t *testing.T) {
 	sel := &ToolSelection{
 		Recommended: []string{"Read", "Grep", "Edit", "Bash", "Glob", "LS"},
 		Excluded:    []string{"WebSearch", "WebFetch", "Agent", "NotebookEdit"},
@@ -343,7 +343,7 @@ func TestAdaptGenericBoost(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestToolSelectorConcurrentAccess(t *testing.T) {
 	ts := NewToolSelector(defaultTestTools())
 	var wg sync.WaitGroup
 

@@ -630,7 +630,7 @@ func TestLearnConventions_EmptyDir(t *testing.T) {
 	}
 }
 
-func TestConcurrency(t *testing.T) {
+func TestConventionEnforcerConcurrency(t *testing.T) {
 	cs := NewConventionSet("/test")
 	cs.AddConvention(Convention{
 		Name:        "test rule",

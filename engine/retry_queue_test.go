@@ -235,7 +235,7 @@ func TestGetReadyExcludesNotReady(t *testing.T) {
 	}
 }
 
-func TestGetPending(t *testing.T) {
+func TestRetryQueueGetPending(t *testing.T) {
 	rq := NewRetryQueue()
 	rq.BackoffBase = 1 * time.Millisecond
 
@@ -301,7 +301,7 @@ func TestCalculateBackoffIncreases(t *testing.T) {
 	}
 }
 
-func TestPrune(t *testing.T) {
+func TestRetryQueuePrune(t *testing.T) {
 	rq := NewRetryQueue()
 	rq.BackoffBase = 1 * time.Millisecond
 
@@ -403,7 +403,7 @@ func TestSize(t *testing.T) {
 	}
 }
 
-func TestClear(t *testing.T) {
+func TestRetryQueueClear(t *testing.T) {
 	rq := NewRetryQueue()
 	rq.BackoffBase = 1 * time.Millisecond
 
@@ -416,7 +416,7 @@ func TestClear(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestRetryQueueConcurrentAccess(t *testing.T) {
 	rq := NewRetryQueue()
 	rq.BackoffBase = 1 * time.Millisecond
 	rq.BackoffMax = 5 * time.Millisecond
@@ -495,7 +495,7 @@ func TestMarkFailedRecalculatesBackoff(t *testing.T) {
 	}
 }
 
-func TestFormatDuration(t *testing.T) {
+func TestRetryQueueFormatDuration(t *testing.T) {
 	rq := NewRetryQueue()
 
 	tests := []struct {

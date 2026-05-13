@@ -73,7 +73,7 @@ func TestLoadBuiltins(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestPatternsGet(t *testing.T) {
 	pl := NewPatternLibrary("")
 	pl.LoadBuiltins()
 
@@ -123,7 +123,7 @@ func TestApply(t *testing.T) {
 	}
 }
 
-func TestSearch(t *testing.T) {
+func TestPatternsSearch(t *testing.T) {
 	pl := NewPatternLibrary("")
 	pl.LoadBuiltins()
 
@@ -483,7 +483,7 @@ func TestListByTag(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestPatternsConcurrentAccess(t *testing.T) {
 	pl := NewPatternLibrary("")
 	pl.LoadBuiltins()
 

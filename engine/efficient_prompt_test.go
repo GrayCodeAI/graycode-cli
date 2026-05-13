@@ -231,7 +231,7 @@ func TestOptimizeMessages_Empty(t *testing.T) {
 	}
 }
 
-func TestEstimateSavings(t *testing.T) {
+func TestEfficientPromptEstimateSavings(t *testing.T) {
 	ep := NewEfficientPrompter()
 
 	savings := ep.EstimateSavings("Could you please   help me for example with this")
@@ -338,7 +338,7 @@ func TestEnableDisableStrategy_NonExistent(t *testing.T) {
 	ep.DisableStrategy("nonexistent")
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestEfficientPromptConcurrentAccess(t *testing.T) {
 	ep := NewEfficientPrompter()
 	var wg sync.WaitGroup
 

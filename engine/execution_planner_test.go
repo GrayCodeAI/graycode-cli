@@ -337,7 +337,7 @@ func TestRecordTiming(t *testing.T) {
 	}
 }
 
-func TestFormatPlan(t *testing.T) {
+func TestExecutionPlannerFormatPlan(t *testing.T) {
 	ep := NewExecutionPlanner()
 	calls := []PlannedCall{
 		{ToolName: "Read", Args: map[string]interface{}{"file_path": "src/auth.go"}, Targets: []string{"src/auth.go"}},
@@ -365,7 +365,7 @@ func TestFormatPlan(t *testing.T) {
 	}
 }
 
-func TestFormatPlan_Empty(t *testing.T) {
+func TestExecutionPlannerFormatPlan_Empty(t *testing.T) {
 	ep := NewExecutionPlanner()
 	plan := ep.Plan(nil)
 	output := ep.FormatPlan(plan)

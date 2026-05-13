@@ -538,7 +538,7 @@ func TestCompareReports_WithChanges(t *testing.T) {
 	}
 }
 
-func TestFormatDuration(t *testing.T) {
+func TestWorkspaceDiffReportFormatDuration(t *testing.T) {
 	tests := []struct {
 		d    time.Duration
 		want string

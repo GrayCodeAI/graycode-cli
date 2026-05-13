@@ -19,7 +19,7 @@ func TestNewCodeLensProvider(t *testing.T) {
 	}
 }
 
-func TestRegister(t *testing.T) {
+func TestCodeLensRegister(t *testing.T) {
 	p := NewCodeLensProvider()
 	called := false
 	p.Register("custom", func(file, content string) []CodeLens {

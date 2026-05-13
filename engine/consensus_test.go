@@ -404,7 +404,7 @@ func TestCalculateAgreement(t *testing.T) {
 	}
 }
 
-func TestEstimateTokens(t *testing.T) {
+func TestConsensusEstimateTokens(t *testing.T) {
 	tokens := estimateTokens("hello world this is a test")
 	// 26 chars / 4 = 6
 	if tokens != 6 {
@@ -441,7 +441,7 @@ This handles the request correctly. It validates the input. It produces proper o
 	}
 }
 
-func TestConcurrency(t *testing.T) {
+func TestConsensusConcurrency(t *testing.T) {
 	cs := NewConsensusSampler(10)
 	ctx := context.Background()
 

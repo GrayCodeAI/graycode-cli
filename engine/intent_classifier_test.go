@@ -328,7 +328,7 @@ func TestGetPatterns(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestIntentClassifierConcurrentAccess(t *testing.T) {
 	ic := NewIntentClassifier()
 	var wg sync.WaitGroup
 
