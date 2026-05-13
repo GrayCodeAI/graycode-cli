@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
 
@@ -83,6 +84,10 @@ type Session struct {
 	Activity       *memory.ActivityTracker  // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller   // skill_distill.go — auto-skill extraction
 	Tracer         *trace.Tracer            // trace.go — distributed tracing spans
+	LintLoop       *LintLoop                // lint_loop.go — auto lint-fix reflected messages
+	TestLoop       *TestLoop                // test_loop.go — auto test-fix loop
+	FileMentions   *FileMentionDetector     // file_mentions.go — detect referenced files
+	ResponseCache  *ResponseCache           // response_cache.go — cache similar prompts
 }
 
 // NewSession creates a new conversation session.
@@ -106,6 +111,10 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		Backtrack:   NewBacktrackEngine(),
 		Limits:      NewLimitTracker(DefaultLimits()),
 		Tracer:      trace.NewTracer(),
+		LintLoop:    NewLintLoop(),
+		TestLoop:    NewTestLoop(),
+		FileMentions: NewFileMentionDetector("."),
+		ResponseCache: NewResponseCache(1000, 24*time.Hour),
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)

@@ -106,7 +106,7 @@ func TestFormatNonEmpty(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestProtectedConcurrentAccess(t *testing.T) {
 	pp := NewProtectedPaths()
 	done := make(chan struct{})
 
