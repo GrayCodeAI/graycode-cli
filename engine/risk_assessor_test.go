@@ -289,9 +289,9 @@ func TestRiskAssessorRenderBar(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := renderBar(tt.score)
+		got := riskRenderBar(tt.score)
 		if got != tt.expected {
-			t.Errorf("renderBar(%.1f): got %q, want %q", tt.score, got, tt.expected)
+			t.Errorf("riskRenderBar(%.1f): got %q, want %q", tt.score, got, tt.expected)
 		}
 	}
 }

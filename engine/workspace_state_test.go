@@ -539,9 +539,9 @@ func TestWorkspaceStateIsTestFile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := isTestFile(tt.path)
+		got := wsIsTestFile(tt.path)
 		if got != tt.expected {
-			t.Errorf("isTestFile(%s) = %v, want %v", tt.path, got, tt.expected)
+			t.Errorf("wsIsTestFile(%s) = %v, want %v", tt.path, got, tt.expected)
 		}
 	}
 }
