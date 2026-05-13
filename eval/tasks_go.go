@@ -1040,7 +1040,7 @@ func Register(name, email string, age int, password string) error {
 				return err
 			}
 
-			test := `package main
+			_ = `package main
 
 import "testing"
 
@@ -1086,7 +1086,7 @@ func TestRegisterInvalidPassword(t *testing.T) {
 }
 `
 			// Need to add strings import to test
-			test = `package main
+			test := `package main
 
 import (
 	"strings"
