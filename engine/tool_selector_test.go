@@ -246,14 +246,14 @@ func TestFilterExpensiveEmpty(t *testing.T) {
 	}
 }
 
-func TestToolSelectorFormatSelection(t *testing.T) {
+func TestToolSelectorFormatToolSelection(t *testing.T) {
 	sel := &ToolSelection{
 		Recommended: []string{"Read", "Grep", "Edit", "Bash", "Glob", "LS"},
 		Excluded:    []string{"WebSearch", "WebFetch", "Agent", "NotebookEdit"},
 		Reason:      "debugging task — prioritize file access + execution",
 		Confidence:  0.88,
 	}
-	result := FormatSelection("fix auth bug", sel)
+	result := FormatToolSelection("fix auth bug", sel)
 
 	if !strings.Contains(result, `Tool Selection for "fix auth bug"`) {
 		t.Errorf("expected task name in output, got:\n%s", result)
