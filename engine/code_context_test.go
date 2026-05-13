@@ -42,9 +42,9 @@ func TestEstimateTokens(t *testing.T) {
 		{"func main() {\n\tfmt.Println(\"hello\")\n}", 5, 15},
 	}
 	for _, tt := range tests {
-		got := EstimateTokens(tt.input)
+		got := codeCtxEstimateTokens(tt.input)
 		if got < tt.min || got > tt.max {
-			t.Errorf("EstimateTokens(%q) = %d, want in [%d, %d]", tt.input, got, tt.min, tt.max)
+			t.Errorf("codeCtxEstimateTokens(%q) = %d, want in [%d, %d]", tt.input, got, tt.min, tt.max)
 		}
 	}
 }

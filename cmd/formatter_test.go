@@ -391,7 +391,7 @@ func TestFormatDuration(t *testing.T) {
 	}
 }
 
-func TestFormatBytes(t *testing.T) {
+func TestFormatterFormatBytes(t *testing.T) {
 	tests := []struct {
 		input    int64
 		expected string

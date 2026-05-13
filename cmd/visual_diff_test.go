@@ -289,7 +289,7 @@ func TestColorizeByLanguage(t *testing.T) {
 	}
 }
 
-func TestStripAnsi(t *testing.T) {
+func TestVisualDiffStripAnsi(t *testing.T) {
 	input := "\033[31mhello\033[0m \033[32mworld\033[0m"
 	expected := "hello world"
 	result := stripAnsi(input)
