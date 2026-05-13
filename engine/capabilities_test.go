@@ -263,7 +263,7 @@ func TestGetCategories(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestCapabilitiesConcurrentAccess(t *testing.T) {
 	r := NewCapabilityRegistry()
 
 	var wg sync.WaitGroup

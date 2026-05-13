@@ -757,7 +757,7 @@ func TestExplainFile_ParseError(t *testing.T) {
 	}
 }
 
-func TestDetectPatterns(t *testing.T) {
+func TestExplainerDetectPatterns(t *testing.T) {
 	src := `package example
 
 import (

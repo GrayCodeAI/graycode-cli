@@ -444,7 +444,7 @@ func TestFormatSelfAssessmentEmptySections(t *testing.T) {
 	}
 }
 
-func TestAverageScore(t *testing.T) {
+func TestSelfAssessmentAverageScore(t *testing.T) {
 	sa := NewSelfAssessor()
 
 	// No history.

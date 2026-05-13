@@ -347,7 +347,7 @@ func TestFormatSkill(t *testing.T) {
 	}
 }
 
-func TestListByTag(t *testing.T) {
+func TestSkillRegistryListByTag(t *testing.T) {
 	reg := NewSkillRegistry(t.TempDir())
 	_ = reg.Register(&Skill{ID: "s1", Name: "S1", Tags: []string{"go", "testing"}})
 	_ = reg.Register(&Skill{ID: "s2", Name: "S2", Tags: []string{"python"}})
@@ -423,7 +423,7 @@ func TestSkillRegistrySaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestLoadNonexistent(t *testing.T) {
+func TestSkillRegistryLoadNonexistent(t *testing.T) {
 	reg := NewSkillRegistry(filepath.Join(t.TempDir(), "nonexistent"))
 	// Should not error on missing file.
 	if err := reg.Load(); err != nil {

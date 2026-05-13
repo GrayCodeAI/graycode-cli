@@ -254,7 +254,7 @@ func TestEstimateTokenSavings_NoChange(t *testing.T) {
 	}
 }
 
-func TestAddRule(t *testing.T) {
+func TestResponseFormatterAddRule(t *testing.T) {
 	rf := NewResponseFormatter()
 	initialCount := len(rf.Rules)
 

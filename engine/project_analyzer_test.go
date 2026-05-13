@@ -76,7 +76,7 @@ func TestDetectArchitecture(t *testing.T) {
 	}
 }
 
-func TestDetectPatterns(t *testing.T) {
+func TestProjectAnalyzerDetectPatterns(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create files with repository pattern.
