@@ -89,6 +89,8 @@ type Session struct {
 	FileMentions   *FileMentionDetector     // file_mentions.go — detect referenced files
 	ResponseCache  *ResponseCache           // response_cache.go — cache similar prompts
 	Pipeline       *IntegrationPipeline    // integration.go — unified feature orchestration
+	Files          *FileTracker             // compact_files.go — cumulative file tracking across compactions
+	Steering       *SteeringQueue          // steering.go — user guidance injection between tool batches
 }
 
 // NewSession creates a new conversation session.

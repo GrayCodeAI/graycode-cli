@@ -919,6 +919,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			})
 		}
 
+		// --- STEERING: Inject user guidance between tool batches ---
+		if s.Steering != nil && s.Steering.HasPending() {
+			for _, steer := range s.Steering.Drain() {
+				s.messages = append(s.messages, client.EyrieMessage{
+					Role:    "user",
+					Content: "[User guidance during execution]: " + steer.Content,
+				})
+				ch <- StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"}
+			}
+		}
+
 		// Loop detection: record this step's tool call signatures
 		if len(results) > 0 {
 			var ldNames, ldInputs, ldOutputs []string
