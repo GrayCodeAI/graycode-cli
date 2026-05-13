@@ -11,19 +11,42 @@ import (
 	"time"
 )
 
+// searchResult is the shared result type for all search backends.
+type searchResult struct {
+	Title       string
+	URL         string
+	Description string
+}
+
 type WebSearchTool struct{}
 
 func (WebSearchTool) Name() string      { return "WebSearch" }
-func (WebSearchTool) RiskLevel() string { return "low" }
-func (WebSearchTool) Aliases() []string { return []string{"web_search"} }
+func (WebSearchTool) RiskLevel() string  { return "low" }
+func (WebSearchTool) Aliases() []string  { return []string{"web_search"} }
 func (WebSearchTool) Description() string {
-	return "Search the web and return results. Uses DuckDuckGo."
+	return "Search the web and return structured results. Supports Brave Search, SearXNG, and DuckDuckGo backends."
 }
 func (WebSearchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"query": map[string]interface{}{"type": "string", "description": "Search query"},
+			"query": map[string]interface{}{
+				"type":        "string",
+				"description": "Search query",
+			},
+			"numResults": map[string]interface{}{
+				"type":        "integer",
+				"description": "Number of results to return (1-20)",
+				"minimum":     1,
+				"maximum":     20,
+				"default":     5,
+			},
+			"searchType": map[string]interface{}{
+				"type":        "string",
+				"description": "Type of search to perform",
+				"enum":        []string{"web", "news"},
+				"default":     "web",
+			},
 		},
 		"required": []string{"query"},
 	}
@@ -31,7 +54,9 @@ func (WebSearchTool) Parameters() map[string]interface{} {
 
 func (WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
-		Query string `json:"query"`
+		Query      string `json:"query"`
+		NumResults int    `json:"numResults"`
+		SearchType string `json:"searchType"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
@@ -39,34 +64,212 @@ func (WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if p.Query == "" {
 		return "", fmt.Errorf("query is required")
 	}
+	if p.NumResults <= 0 {
+		p.NumResults = 5
+	}
+	if p.NumResults > 20 {
+		p.NumResults = 20
+	}
+	if p.SearchType == "" {
+		p.SearchType = "web"
+	}
 
+	// Try providers in order: Brave → SearXNG → DuckDuckGo
+	var results []searchResult
+	var err error
+
+	// 1. Brave Search
+	brave := newBraveClient()
+	if brave.available() {
+		results, err = brave.search(ctx, p.Query, p.NumResults)
+		if err == nil {
+			return formatSearchResults(p.Query, results), nil
+		}
+		// Fall through to next provider on error
+	}
+
+	// 2. SearXNG
+	searxng := newSearxngClient()
+	if searxng.available() {
+		results, err = searxng.search(ctx, p.Query, p.NumResults)
+		if err == nil {
+			return formatSearchResults(p.Query, results), nil
+		}
+		// Fall through to DuckDuckGo on error
+	}
+
+	// 3. DuckDuckGo (fallback)
+	results, err = duckDuckGoSearch(ctx, p.Query, p.NumResults)
+	if err != nil {
+		return "", fmt.Errorf("all search providers failed: %w", err)
+	}
+	return formatSearchResults(p.Query, results), nil
+}
+
+// formatSearchResults formats results as numbered structured text.
+func formatSearchResults(query string, results []searchResult) string {
+	if len(results) == 0 {
+		return fmt.Sprintf("Search results for: %s\n\nNo results found.", query)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Search results for: %s\n\n", query))
+
+	for i, r := range results {
+		sb.WriteString(fmt.Sprintf("%d. Title: %s\n", i+1, r.Title))
+		sb.WriteString(fmt.Sprintf("   URL: %s\n", r.URL))
+		sb.WriteString(fmt.Sprintf("   Description: %s\n", r.Description))
+		if i < len(results)-1 {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+// duckDuckGoSearch scrapes DuckDuckGo HTML results as a fallback.
+func duckDuckGoSearch(ctx context.Context, query string, count int) ([]searchResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	u := "https://html.duckduckgo.com/html/?q=" + url.QueryEscape(p.Query)
-	req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
+	u := "https://html.duckduckgo.com/html/?q=" + url.QueryEscape(query)
+	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("User-Agent", "hawk/0.0.1")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 200_000))
-	text := htmlTagRe.ReplaceAllString(string(body), " ")
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 200_000))
+	if err != nil {
+		return nil, err
+	}
+
+	return parseDuckDuckGoHTML(string(body), count), nil
+}
+
+// parseDuckDuckGoHTML extracts search results from DuckDuckGo HTML response.
+func parseDuckDuckGoHTML(html string, count int) []searchResult {
+	var results []searchResult
+
+	// Split on result links - DDG uses class="result__a" for result titles
+	parts := strings.Split(html, "class=\"result__a\"")
+	if len(parts) <= 1 {
+		// Fallback: try to extract plain text lines
+		return parseDuckDuckGoPlainText(html, count)
+	}
+
+	for i := 1; i < len(parts) && len(results) < count; i++ {
+		var r searchResult
+
+		// Extract href (URL)
+		hrefIdx := strings.Index(parts[i], "href=\"")
+		if hrefIdx == -1 {
+			// Look backward in the tag opening
+			prefix := parts[i-1]
+			hrefIdx = strings.LastIndex(prefix, "href=\"")
+			if hrefIdx != -1 {
+				hrefEnd := strings.Index(prefix[hrefIdx+6:], "\"")
+				if hrefEnd != -1 {
+					rawURL := prefix[hrefIdx+6 : hrefIdx+6+hrefEnd]
+					r.URL = extractDDGURL(rawURL)
+				}
+			}
+		} else {
+			hrefEnd := strings.Index(parts[i][hrefIdx+6:], "\"")
+			if hrefEnd != -1 {
+				rawURL := parts[i][hrefIdx+6 : hrefIdx+6+hrefEnd]
+				r.URL = extractDDGURL(rawURL)
+			}
+		}
+
+		// Extract title (text between > and </a>)
+		closeTag := strings.Index(parts[i], ">")
+		endAnchor := strings.Index(parts[i], "</a>")
+		if closeTag != -1 && endAnchor != -1 && closeTag < endAnchor {
+			title := parts[i][closeTag+1 : endAnchor]
+			title = htmlTagRe.ReplaceAllString(title, "")
+			r.Title = strings.TrimSpace(title)
+		}
+
+		// Extract description/snippet - DDG uses class="result__snippet"
+		snippetIdx := strings.Index(parts[i], "class=\"result__snippet\"")
+		if snippetIdx != -1 {
+			after := parts[i][snippetIdx:]
+			closeSnip := strings.Index(after, ">")
+			endSnip := strings.Index(after, "</a>")
+			if endSnip == -1 {
+				endSnip = strings.Index(after, "</td>")
+			}
+			if endSnip == -1 {
+				endSnip = strings.Index(after, "</span>")
+			}
+			if closeSnip != -1 && endSnip != -1 && closeSnip < endSnip {
+				desc := after[closeSnip+1 : endSnip]
+				desc = htmlTagRe.ReplaceAllString(desc, "")
+				r.Description = strings.TrimSpace(desc)
+			}
+		}
+
+		if r.Title != "" || r.URL != "" {
+			results = append(results, r)
+		}
+	}
+
+	return results
+}
+
+// extractDDGURL extracts the actual URL from DuckDuckGo's redirect URL.
+func extractDDGURL(rawURL string) string {
+	// DDG often wraps URLs like //duckduckgo.com/l/?uddg=<encoded_url>&...
+	if strings.Contains(rawURL, "uddg=") {
+		parts := strings.SplitN(rawURL, "uddg=", 2)
+		if len(parts) == 2 {
+			ampIdx := strings.Index(parts[1], "&")
+			encoded := parts[1]
+			if ampIdx != -1 {
+				encoded = parts[1][:ampIdx]
+			}
+			decoded, err := url.QueryUnescape(encoded)
+			if err == nil {
+				return decoded
+			}
+		}
+	}
+	// Clean up protocol-relative URLs
+	if strings.HasPrefix(rawURL, "//") {
+		return "https:" + rawURL
+	}
+	return rawURL
+}
+
+// parseDuckDuckGoPlainText is a last-resort parser that strips HTML and returns lines.
+func parseDuckDuckGoPlainText(html string, count int) []searchResult {
+	text := htmlTagRe.ReplaceAllString(html, " ")
 	text = multiSpaceRe.ReplaceAllString(text, "\n")
 
-	// Keep first 50 non-empty lines
 	var lines []string
 	for _, l := range strings.Split(text, "\n") {
 		l = strings.TrimSpace(l)
-		if l != "" {
+		if l != "" && len(l) > 20 {
 			lines = append(lines, l)
-			if len(lines) >= 50 {
+			if len(lines) >= count {
 				break
 			}
 		}
 	}
-	return fmt.Sprintf("Search results for: %s\n\n%s", p.Query, strings.Join(lines, "\n")), nil
+
+	var results []searchResult
+	for _, l := range lines {
+		results = append(results, searchResult{
+			Title:       l,
+			URL:         "",
+			Description: "",
+		})
+	}
+	return results
 }

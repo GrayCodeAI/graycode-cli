@@ -633,6 +633,121 @@ func CalculateStats(messages []ExportedMessage) SessionExportStats {
 	return stats
 }
 
+// Export renders a session in the specified format, optionally redacting secrets.
+func Export(s *Session, format string, redact bool) ([]byte, error) {
+	if s == nil {
+		return nil, fmt.Errorf("session is nil")
+	}
+	if redact {
+		s = redactSessionMessages(s)
+	}
+	switch format {
+	case "json":
+		return exportSessionJSON(s)
+	case "md":
+		return exportSessionMarkdown(s)
+	default:
+		return nil, fmt.Errorf("unsupported export format: %s", format)
+	}
+}
+
+// RedactSecrets replaces detected secrets in text with [REDACTED].
+func RedactSecrets(text string) string {
+	return redactString(text)
+}
+
+func redactSessionMessages(s *Session) *Session {
+	cp := *s
+	cp.Messages = make([]Message, len(s.Messages))
+	for i, msg := range s.Messages {
+		cp.Messages[i] = Message{
+			Role:    msg.Role,
+			Content: redactString(msg.Content),
+		}
+		if len(msg.ToolUse) > 0 {
+			cp.Messages[i].ToolUse = make([]ToolCall, len(msg.ToolUse))
+			for j, tc := range msg.ToolUse {
+				cp.Messages[i].ToolUse[j] = ToolCall{
+					ID:        tc.ID,
+					Name:      tc.Name,
+					Arguments: redactToolArguments(tc.Arguments),
+				}
+			}
+		}
+		if msg.ToolResult != nil {
+			cp.Messages[i].ToolResult = &ToolResult{
+				ToolUseID: msg.ToolResult.ToolUseID,
+				Content:   redactString(msg.ToolResult.Content),
+				IsError:   msg.ToolResult.IsError,
+			}
+		}
+	}
+	return &cp
+}
+
+func redactToolArguments(args map[string]interface{}) map[string]interface{} {
+	if args == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(args))
+	for k, v := range args {
+		if s, ok := v.(string); ok {
+			out[k] = redactString(s)
+		} else {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func exportSessionJSON(s *Session) ([]byte, error) {
+	return json.MarshalIndent(s, "", "  ")
+}
+
+func exportSessionMarkdown(s *Session) ([]byte, error) {
+	var b strings.Builder
+
+	b.WriteString("# Session\n\n")
+	b.WriteString(fmt.Sprintf("- **ID:** %s\n", s.ID))
+	b.WriteString(fmt.Sprintf("- **Model:** %s\n", s.Model))
+	b.WriteString(fmt.Sprintf("- **Provider:** %s\n", s.Provider))
+	if s.CWD != "" {
+		b.WriteString(fmt.Sprintf("- **CWD:** %s\n", s.CWD))
+	}
+	if s.Name != "" {
+		b.WriteString(fmt.Sprintf("- **Name:** %s\n", s.Name))
+	}
+	b.WriteString(fmt.Sprintf("- **Created:** %s\n", s.CreatedAt.Format("2006-01-02 15:04:05")))
+	b.WriteString(fmt.Sprintf("- **Updated:** %s\n", s.UpdatedAt.Format("2006-01-02 15:04:05")))
+	b.WriteString("\n## Messages\n\n")
+
+	for _, msg := range s.Messages {
+		b.WriteString(fmt.Sprintf("### %s\n\n", msg.Role))
+		if msg.Content != "" {
+			if msg.Role == "assistant" {
+				b.WriteString(fmt.Sprintf("```\n%s\n```\n\n", msg.Content))
+			} else {
+				b.WriteString(msg.Content + "\n\n")
+			}
+		}
+		if len(msg.ToolUse) > 0 {
+			for _, tc := range msg.ToolUse {
+				b.WriteString(fmt.Sprintf("**Tool Call:** %s\n", tc.Name))
+				if len(tc.Arguments) > 0 {
+					argJSON, _ := json.MarshalIndent(tc.Arguments, "", "  ")
+					b.WriteString(fmt.Sprintf("```json\n%s\n```\n\n", string(argJSON)))
+				}
+			}
+		}
+		if msg.ToolResult != nil {
+			b.WriteString("**Tool Result:**\n")
+			b.WriteString(fmt.Sprintf("```\n%s\n```\n\n", msg.ToolResult.Content))
+		}
+	}
+
+	return []byte(b.String()), nil
+}
+
 // formatDuration renders a duration in a human-readable short form.
 func formatDuration(d time.Duration) string {
 	if d == 0 {
