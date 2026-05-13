@@ -1,0 +1,682 @@
+package session
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"html"
+	"regexp"
+	"strings"
+	"time"
+)
+
+// ExportFormat defines the output format for session exports.
+type ExportFormat string
+
+const (
+	// FormatMarkdown exports as a readable conversation log.
+	FormatMarkdown ExportFormat = "markdown"
+	// FormatJSON exports as full structured JSON.
+	FormatJSON ExportFormat = "json"
+	// FormatHTML exports as a styled HTML page.
+	FormatHTML ExportFormat = "html"
+	// FormatReplay exports as JSONL for reproducible replay.
+	FormatReplay ExportFormat = "replay"
+)
+
+// SessionExporter configures how sessions are exported.
+type SessionExporter struct {
+	IncludeToolResults bool
+	IncludeSystemPrompt bool
+	MaxMessages        int // 0 = all
+	RedactSecrets      bool
+}
+
+// ExportedSession is a portable representation of a session.
+type ExportedSession struct {
+	ID        string             `json:"id"`
+	Model     string             `json:"model"`
+	Provider  string             `json:"provider"`
+	CreatedAt time.Time          `json:"created_at"`
+	Messages  []ExportedMessage  `json:"messages"`
+	Metadata  map[string]string  `json:"metadata,omitempty"`
+	Stats     SessionExportStats `json:"stats"`
+}
+
+// ExportedMessage is a single message within an exported session.
+type ExportedMessage struct {
+	Role       string    `json:"role"`
+	Content    string    `json:"content"`
+	Timestamp  time.Time `json:"timestamp"`
+	ToolName   string    `json:"tool_name,omitempty"`
+	ToolResult string    `json:"tool_result,omitempty"`
+	TokenCount int       `json:"token_count,omitempty"`
+}
+
+// SessionExportStats summarizes session metrics.
+type SessionExportStats struct {
+	TotalMessages     int           `json:"total_messages"`
+	UserMessages      int           `json:"user_messages"`
+	AssistantMessages int           `json:"assistant_messages"`
+	ToolCalls         int           `json:"tool_calls"`
+	TotalTokens       int           `json:"total_tokens"`
+	Duration          time.Duration `json:"duration"`
+}
+
+// NewSessionExporter creates a SessionExporter with default settings.
+func NewSessionExporter() *SessionExporter {
+	return &SessionExporter{
+		IncludeToolResults:  true,
+		IncludeSystemPrompt: false,
+		MaxMessages:         0,
+		RedactSecrets:       false,
+	}
+}
+
+// Export dispatches to the format-specific renderer and returns the result.
+func (e *SessionExporter) Export(session *ExportedSession, format ExportFormat) (string, error) {
+	if session == nil {
+		return "", fmt.Errorf("session is nil")
+	}
+
+	sess := e.prepareSession(session)
+
+	switch format {
+	case FormatMarkdown:
+		return ExportMarkdown(sess), nil
+	case FormatJSON:
+		return ExportJSON(sess), nil
+	case FormatHTML:
+		return ExportHTML(sess), nil
+	case FormatReplay:
+		return ExportReplay(sess), nil
+	default:
+		return "", fmt.Errorf("unsupported export format: %s", string(format))
+	}
+}
+
+// prepareSession applies exporter settings (truncation, redaction, filtering).
+func (e *SessionExporter) prepareSession(session *ExportedSession) *ExportedSession {
+	// Work on a copy to avoid mutating the original.
+	copy := *session
+	msgs := make([]ExportedMessage, 0, len(session.Messages))
+
+	for _, m := range session.Messages {
+		if !e.IncludeSystemPrompt && m.Role == "system" {
+			continue
+		}
+		if !e.IncludeToolResults && m.ToolResult != "" {
+			mc := m
+			mc.ToolResult = ""
+			msgs = append(msgs, mc)
+			continue
+		}
+		msgs = append(msgs, m)
+	}
+
+	if e.MaxMessages > 0 && len(msgs) > e.MaxMessages {
+		msgs = msgs[:e.MaxMessages]
+	}
+
+	copy.Messages = msgs
+
+	if e.RedactSecrets {
+		redacted := RedactSensitive(&copy)
+		return redacted
+	}
+
+	return &copy
+}
+
+// ExportMarkdown renders a session as a readable Markdown conversation log.
+func ExportMarkdown(session *ExportedSession) string {
+	if session == nil {
+		return ""
+	}
+
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("# Session: %s\n", session.ID))
+	b.WriteString(fmt.Sprintf("Model: %s | Provider: %s\n", session.Model, session.Provider))
+	b.WriteString(fmt.Sprintf("Date: %s | Duration: %s\n",
+		session.CreatedAt.UTC().Format("2006-01-02 15:04 UTC"),
+		formatDuration(session.Stats.Duration)))
+	b.WriteString(fmt.Sprintf("Tokens: %s | Messages: %d\n",
+		formatNumber(session.Stats.TotalTokens), session.Stats.TotalMessages))
+	b.WriteString("\n---\n\n")
+
+	for _, msg := range session.Messages {
+		switch msg.Role {
+		case "user":
+			b.WriteString("## User\n")
+			b.WriteString(msg.Content)
+			b.WriteString("\n\n")
+		case "assistant":
+			b.WriteString("## Assistant\n")
+			b.WriteString(msg.Content)
+			b.WriteString("\n\n")
+			if msg.ToolName != "" {
+				b.WriteString(fmt.Sprintf("### Tool: %s\n", msg.ToolName))
+				if msg.ToolResult != "" {
+					b.WriteString("```\n")
+					b.WriteString(msg.ToolResult)
+					b.WriteString("\n```\n\n")
+				}
+			}
+		case "system":
+			b.WriteString("## System\n")
+			b.WriteString(msg.Content)
+			b.WriteString("\n\n")
+		case "tool":
+			b.WriteString(fmt.Sprintf("### Tool: %s\n", msg.ToolName))
+			if msg.ToolResult != "" {
+				b.WriteString("```\n")
+				b.WriteString(msg.ToolResult)
+				b.WriteString("\n```\n\n")
+			}
+		}
+	}
+
+	b.WriteString("---\n")
+	return b.String()
+}
+
+// ExportHTML renders a session as a styled HTML page with dark/light theme support.
+func ExportHTML(session *ExportedSession) string {
+	if session == nil {
+		return ""
+	}
+
+	var b strings.Builder
+
+	b.WriteString(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session: ` + html.EscapeString(session.ID) + `</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --msg-user-bg: #e8f4fd;
+  --msg-assistant-bg: #f0f0f0;
+  --tool-bg: #f8f8e0;
+  --border: #ddd;
+  --code-bg: #282c34;
+  --code-fg: #abb2bf;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a2e;
+    --fg: #e0e0e0;
+    --msg-user-bg: #1e3a5f;
+    --msg-assistant-bg: #2a2a3e;
+    --tool-bg: #2e2e1e;
+    --border: #444;
+    --code-bg: #0d1117;
+    --code-fg: #c9d1d9;
+  }
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--fg); max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+.header { border-bottom: 2px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+.header h1 { margin: 0 0 8px 0; }
+.stats { font-size: 0.9em; opacity: 0.8; }
+.message { margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); }
+.message.user { background: var(--msg-user-bg); }
+.message.assistant { background: var(--msg-assistant-bg); }
+.message .role { font-weight: bold; font-size: 0.85em; text-transform: uppercase; margin-bottom: 4px; }
+.tool-call { background: var(--tool-bg); border-radius: 4px; padding: 8px 12px; margin-top: 8px; }
+.tool-call summary { cursor: pointer; font-weight: bold; font-size: 0.9em; }
+pre { background: var(--code-bg); color: var(--code-fg); padding: 12px; border-radius: 6px; overflow-x: auto; }
+code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Session: ` + html.EscapeString(session.ID) + `</h1>
+<div class="stats">
+<span>Model: ` + html.EscapeString(session.Model) + `</span> |
+<span>Provider: ` + html.EscapeString(session.Provider) + `</span> |
+<span>Date: ` + session.CreatedAt.UTC().Format("2006-01-02 15:04 UTC") + `</span> |
+<span>Duration: ` + formatDuration(session.Stats.Duration) + `</span> |
+<span>Tokens: ` + formatNumber(session.Stats.TotalTokens) + `</span> |
+<span>Messages: ` + fmt.Sprintf("%d", session.Stats.TotalMessages) + `</span>
+</div>
+</div>
+`)
+
+	for _, msg := range session.Messages {
+		role := html.EscapeString(msg.Role)
+		content := html.EscapeString(msg.Content)
+
+		b.WriteString(fmt.Sprintf(`<div class="message %s">`, role))
+		b.WriteString(fmt.Sprintf(`<div class="role">%s</div>`, role))
+		b.WriteString(fmt.Sprintf(`<div class="content"><p>%s</p></div>`, content))
+
+		if msg.ToolName != "" && msg.ToolResult != "" {
+			b.WriteString(`<details class="tool-call">`)
+			b.WriteString(fmt.Sprintf(`<summary>Tool: %s</summary>`, html.EscapeString(msg.ToolName)))
+			b.WriteString(fmt.Sprintf(`<pre><code>%s</code></pre>`, html.EscapeString(msg.ToolResult)))
+			b.WriteString(`</details>`)
+		}
+
+		b.WriteString("</div>\n")
+	}
+
+	b.WriteString(`</body>
+</html>`)
+
+	return b.String()
+}
+
+// ExportJSON renders a session as full structured JSON suitable for re-import.
+func ExportJSON(session *ExportedSession) string {
+	if session == nil {
+		return "{}"
+	}
+
+	data, err := json.MarshalIndent(session, "", "  ")
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
+// replayEntry is a single line in the JSONL replay format.
+type replayEntry struct {
+	Seq        int       `json:"seq"`
+	Timestamp  time.Time `json:"timestamp"`
+	DeltaMs    int64     `json:"delta_ms"`
+	Role       string    `json:"role"`
+	Content    string    `json:"content"`
+	ToolName   string    `json:"tool_name,omitempty"`
+	ToolResult string    `json:"tool_result,omitempty"`
+	TokenCount int       `json:"token_count,omitempty"`
+}
+
+// ExportReplay renders a session as JSONL suitable for step-by-step replay.
+func ExportReplay(session *ExportedSession) string {
+	if session == nil {
+		return ""
+	}
+
+	var b strings.Builder
+	var prevTime time.Time
+
+	for i, msg := range session.Messages {
+		deltaMs := int64(0)
+		if i > 0 && !prevTime.IsZero() && !msg.Timestamp.IsZero() {
+			deltaMs = msg.Timestamp.Sub(prevTime).Milliseconds()
+		}
+		prevTime = msg.Timestamp
+
+		entry := replayEntry{
+			Seq:        i + 1,
+			Timestamp:  msg.Timestamp,
+			DeltaMs:    deltaMs,
+			Role:       msg.Role,
+			Content:    msg.Content,
+			ToolName:   msg.ToolName,
+			ToolResult: msg.ToolResult,
+			TokenCount: msg.TokenCount,
+		}
+
+		data, err := json.Marshal(entry)
+		if err != nil {
+			continue
+		}
+		b.Write(data)
+		b.WriteByte('\n')
+	}
+
+	return b.String()
+}
+
+// Import parses an exported session from the given data and format.
+func Import(data string, format ExportFormat) (*ExportedSession, error) {
+	switch format {
+	case FormatJSON:
+		return importJSON(data)
+	case FormatReplay:
+		return importReplay(data)
+	default:
+		return nil, fmt.Errorf("import not supported for format: %s", string(format))
+	}
+}
+
+func importJSON(data string) (*ExportedSession, error) {
+	var session ExportedSession
+	if err := json.Unmarshal([]byte(data), &session); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON session: %w", err)
+	}
+	return &session, nil
+}
+
+func importReplay(data string) (*ExportedSession, error) {
+	lines := strings.Split(strings.TrimSpace(data), "\n")
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("empty replay data")
+	}
+
+	session := &ExportedSession{
+		Messages: make([]ExportedMessage, 0, len(lines)),
+	}
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		var entry replayEntry
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			return nil, fmt.Errorf("failed to parse replay entry: %w", err)
+		}
+
+		msg := ExportedMessage{
+			Role:       entry.Role,
+			Content:    entry.Content,
+			Timestamp:  entry.Timestamp,
+			ToolName:   entry.ToolName,
+			ToolResult: entry.ToolResult,
+			TokenCount: entry.TokenCount,
+		}
+		session.Messages = append(session.Messages, msg)
+	}
+
+	// Derive basic metadata from messages.
+	if len(session.Messages) > 0 {
+		session.CreatedAt = session.Messages[0].Timestamp
+	}
+	session.Stats = CalculateStats(session.Messages)
+
+	return session, nil
+}
+
+// claudeJSONLEntry represents an entry in Claude Code's JSONL session format.
+type claudeJSONLEntry struct {
+	Type       string `json:"type"`
+	Role       string `json:"role"`
+	Content    string `json:"content"`
+	Model      string `json:"model,omitempty"`
+	Timestamp  string `json:"timestamp,omitempty"`
+	ToolName   string `json:"tool_name,omitempty"`
+	ToolResult string `json:"tool_result,omitempty"`
+}
+
+// ImportFromClaude imports a session from Claude Code's JSONL format.
+func ImportFromClaude(jsonlData string) (*ExportedSession, error) {
+	lines := strings.Split(strings.TrimSpace(jsonlData), "\n")
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("empty claude session data")
+	}
+
+	session := &ExportedSession{
+		Provider: "anthropic",
+		Messages: make([]ExportedMessage, 0, len(lines)),
+		Metadata: map[string]string{"source": "claude-code"},
+	}
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		var entry claudeJSONLEntry
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			continue // Skip malformed lines.
+		}
+
+		if entry.Model != "" && session.Model == "" {
+			session.Model = entry.Model
+		}
+
+		var ts time.Time
+		if entry.Timestamp != "" {
+			parsed, err := time.Parse(time.RFC3339, entry.Timestamp)
+			if err == nil {
+				ts = parsed
+			}
+		}
+
+		msg := ExportedMessage{
+			Role:       entry.Role,
+			Content:    entry.Content,
+			Timestamp:  ts,
+			ToolName:   entry.ToolName,
+			ToolResult: entry.ToolResult,
+		}
+
+		if msg.Role != "" {
+			session.Messages = append(session.Messages, msg)
+		}
+	}
+
+	if len(session.Messages) > 0 {
+		session.CreatedAt = session.Messages[0].Timestamp
+	}
+	session.Stats = CalculateStats(session.Messages)
+
+	return session, nil
+}
+
+// ImportFromAider imports a session from Aider's chat history format.
+// Aider uses a Markdown-like format with role markers like "#### user" and "#### assistant".
+func ImportFromAider(historyData string) (*ExportedSession, error) {
+	if strings.TrimSpace(historyData) == "" {
+		return nil, fmt.Errorf("empty aider history data")
+	}
+
+	session := &ExportedSession{
+		Provider: "unknown",
+		Messages: make([]ExportedMessage, 0),
+		Metadata: map[string]string{"source": "aider"},
+	}
+
+	lines := strings.Split(historyData, "\n")
+	var currentRole string
+	var contentLines []string
+
+	flushMessage := func() {
+		if currentRole == "" {
+			return
+		}
+		content := strings.TrimSpace(strings.Join(contentLines, "\n"))
+		if content != "" {
+			session.Messages = append(session.Messages, ExportedMessage{
+				Role:    currentRole,
+				Content: content,
+			})
+		}
+		contentLines = nil
+	}
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		if strings.HasPrefix(trimmed, "#### ") {
+			flushMessage()
+			rolePart := strings.TrimPrefix(trimmed, "#### ")
+			rolePart = strings.ToLower(strings.TrimSpace(rolePart))
+			switch {
+			case strings.Contains(rolePart, "user"):
+				currentRole = "user"
+			case strings.Contains(rolePart, "assistant"):
+				currentRole = "assistant"
+			case strings.Contains(rolePart, "system"):
+				currentRole = "system"
+			default:
+				currentRole = rolePart
+			}
+			contentLines = nil
+			continue
+		}
+
+		if currentRole != "" {
+			contentLines = append(contentLines, line)
+		}
+	}
+	flushMessage()
+
+	session.Stats = CalculateStats(session.Messages)
+
+	return session, nil
+}
+
+// secretPatterns defines regex patterns for sensitive data detection.
+var secretPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(api[_-]?key|apikey)\s*[:=]\s*["']?([A-Za-z0-9_\-]{16,})["']?`),
+	regexp.MustCompile(`(?i)(secret|token|password|passwd|pwd)\s*[:=]\s*["']?([^\s"']{8,})["']?`),
+	regexp.MustCompile(`(?i)(bearer)\s+([A-Za-z0-9_\-\.]{20,})`),
+	regexp.MustCompile(`sk-[A-Za-z0-9]{20,}`),
+	regexp.MustCompile(`ghp_[A-Za-z0-9]{36,}`),
+	regexp.MustCompile(`gho_[A-Za-z0-9]{36,}`),
+	regexp.MustCompile(`github_pat_[A-Za-z0-9_]{22,}`),
+	regexp.MustCompile(`xox[baprs]-[A-Za-z0-9\-]{10,}`),
+	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
+	regexp.MustCompile(`-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----`),
+}
+
+// RedactSensitive returns a copy of the session with sensitive values replaced by [REDACTED].
+func RedactSensitive(session *ExportedSession) *ExportedSession {
+	if session == nil {
+		return nil
+	}
+
+	redacted := *session
+	redacted.Messages = make([]ExportedMessage, len(session.Messages))
+
+	for i, msg := range session.Messages {
+		redacted.Messages[i] = ExportedMessage{
+			Role:       msg.Role,
+			Content:    redactString(msg.Content),
+			Timestamp:  msg.Timestamp,
+			ToolName:   msg.ToolName,
+			ToolResult: redactString(msg.ToolResult),
+			TokenCount: msg.TokenCount,
+		}
+	}
+
+	if session.Metadata != nil {
+		redacted.Metadata = make(map[string]string, len(session.Metadata))
+		for k, v := range session.Metadata {
+			redacted.Metadata[k] = redactString(v)
+		}
+	}
+
+	return &redacted
+}
+
+func redactString(s string) string {
+	if s == "" {
+		return s
+	}
+	result := s
+	for _, pat := range secretPatterns {
+		result = pat.ReplaceAllStringFunc(result, func(match string) string {
+			return "[REDACTED]"
+		})
+	}
+	return result
+}
+
+// GenerateShareLink creates a deterministic share ID from the session content hash.
+func GenerateShareLink(session *ExportedSession) string {
+	if session == nil {
+		return ""
+	}
+
+	h := sha256.New()
+	h.Write([]byte(session.ID))
+	h.Write([]byte(session.Model))
+	h.Write([]byte(session.Provider))
+	h.Write([]byte(session.CreatedAt.UTC().Format(time.RFC3339)))
+	for _, msg := range session.Messages {
+		h.Write([]byte(msg.Role))
+		h.Write([]byte(msg.Content))
+	}
+
+	hash := hex.EncodeToString(h.Sum(nil))
+	return fmt.Sprintf("hawk://share/%s", hash[:16])
+}
+
+// CalculateStats computes session statistics from a slice of messages.
+func CalculateStats(messages []ExportedMessage) SessionExportStats {
+	stats := SessionExportStats{
+		TotalMessages: len(messages),
+	}
+
+	for _, m := range messages {
+		switch m.Role {
+		case "user":
+			stats.UserMessages++
+		case "assistant":
+			stats.AssistantMessages++
+		}
+		if m.ToolName != "" {
+			stats.ToolCalls++
+		}
+		stats.TotalTokens += m.TokenCount
+	}
+
+	if len(messages) >= 2 {
+		first := messages[0].Timestamp
+		last := messages[len(messages)-1].Timestamp
+		if !first.IsZero() && !last.IsZero() {
+			stats.Duration = last.Sub(first)
+		}
+	}
+
+	return stats
+}
+
+// formatDuration renders a duration in a human-readable short form.
+func formatDuration(d time.Duration) string {
+	if d == 0 {
+		return "0s"
+	}
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		mins := int(d.Minutes())
+		secs := int(d.Seconds()) % 60
+		if secs == 0 {
+			return fmt.Sprintf("%dm", mins)
+		}
+		return fmt.Sprintf("%dm%ds", mins, secs)
+	}
+	hours := int(d.Hours())
+	mins := int(d.Minutes()) % 60
+	return fmt.Sprintf("%dh%dm", hours, mins)
+}
+
+// formatNumber adds comma separators to large numbers.
+func formatNumber(n int) string {
+	if n < 0 {
+		return "-" + formatNumber(-n)
+	}
+	s := fmt.Sprintf("%d", n)
+	if len(s) <= 3 {
+		return s
+	}
+
+	var result strings.Builder
+	remainder := len(s) % 3
+	if remainder > 0 {
+		result.WriteString(s[:remainder])
+		if len(s) > remainder {
+			result.WriteByte(',')
+		}
+	}
+	for i := remainder; i < len(s); i += 3 {
+		if i > remainder {
+			result.WriteByte(',')
+		}
+		result.WriteString(s[i : i+3])
+	}
+	return result.String()
+}
