@@ -289,7 +289,7 @@ func (cm *CheckpointManager) FormatCheckpoints() string {
 	now := time.Now()
 	for i, cp := range cm.Checkpoints {
 		age := formatAge(now.Sub(cp.Timestamp))
-		name := cp.Name
+		var name string
 		if cp.Auto {
 			name = "auto-checkpoint"
 		} else {
