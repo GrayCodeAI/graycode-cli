@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/tok"
 )
 
 // ---------------------------------------------------------------------------
@@ -349,8 +350,9 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []client.Ey
 	// 3. Detect file mentions
 	result.MentionedFiles = p.FileMentionDetector.DetectMentions(result.FormattedResponse)
 
-	// 4. Redact secrets from output
+	// 4. Redact secrets from output (hawk's patterns + tok's 27 patterns)
 	result.FormattedResponse = p.OutputRedactor.Redact(result.FormattedResponse)
+	result.FormattedResponse = tok.DefaultSecretDetector().RedactSecrets(result.FormattedResponse)
 
 	// 5. Update timeline
 	p.Timeline.AddEvent("response", "", map[string]string{
