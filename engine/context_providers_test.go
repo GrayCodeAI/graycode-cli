@@ -155,7 +155,7 @@ func TestContextProviderFormatContext(t *testing.T) {
 		{Source: "files", Title: "Recent Files", Content: "file1.go\nfile2.go", Relevance: 0.7},
 	}
 
-	output := FormatContext(items)
+	output := FormatContextItems(items)
 
 	if !strings.Contains(output, "## Relevant Context") {
 		t.Error("missing header")
@@ -175,12 +175,12 @@ func TestContextProviderFormatContext(t *testing.T) {
 }
 
 func TestFormatContextEmpty(t *testing.T) {
-	output := FormatContext(nil)
+	output := FormatContextItems(nil)
 	if output != "" {
 		t.Errorf("expected empty string for nil items, got %q", output)
 	}
 
-	output = FormatContext([]ContextItem{})
+	output = FormatContextItems([]ContextItem{})
 	if output != "" {
 		t.Errorf("expected empty string for empty items, got %q", output)
 	}
