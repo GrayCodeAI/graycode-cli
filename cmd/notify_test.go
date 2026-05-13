@@ -429,7 +429,7 @@ func TestNotifierDisabled(t *testing.T) {
 	}
 }
 
-func TestFormatDuration(t *testing.T) {
+func TestNotifyFormatDuration(t *testing.T) {
 	tests := []struct {
 		dur      time.Duration
 		expected string

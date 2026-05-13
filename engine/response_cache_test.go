@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+func toStructSet(m map[string]bool) map[string]struct{} {
+	result := make(map[string]struct{}, len(m))
+	for k := range m {
+		result[k] = struct{}{}
+	}
+	return result
+}
+
 func TestNewResponseCache(t *testing.T) {
 	rc := NewResponseCache(0, 0)
 	if rc.MaxEntries != DefaultMaxEntries {
@@ -461,8 +469,8 @@ func TestResponseCacheJaccard(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		setA := wordSet(tt.a)
-		setB := wordSet(tt.b)
+		setA := toStructSet(wordSet(tt.a))
+		setB := toStructSet(wordSet(tt.b))
 		sim := responseCacheJaccard(setA, setB)
 		if sim < tt.expected-0.01 || sim > tt.expected+0.01 {
 			t.Errorf("jaccardSimilarity(%q, %q) = %f, want ~%f", tt.a, tt.b, sim, tt.expected)

@@ -421,7 +421,7 @@ func TestEstimateRemainingWithActiveProgress(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestProgressTrackerConcurrentAccess(t *testing.T) {
 	pt := NewProgressTracker("Concurrent Task")
 	pt.AddStep("Step 1")
 	pt.AddStep("Step 2")

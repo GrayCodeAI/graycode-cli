@@ -84,7 +84,7 @@ func TestAddPlanItem(t *testing.T) {
 	}
 }
 
-func TestRegisterAgent(t *testing.T) {
+func TestLedgerRegisterAgent(t *testing.T) {
 	lo := NewLedgerOrchestrator()
 	lo.RegisterAgent("agent-1")
 	lo.RegisterAgent("agent-2")

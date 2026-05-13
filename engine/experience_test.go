@@ -508,7 +508,7 @@ func TestJaccardSimilarity(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := jaccardSimilarity(tt.a, tt.b)
+		got := expJaccardSimilarity(tt.a, tt.b)
 		if got != tt.expected {
 			t.Errorf("jaccard(%v, %v) = %f, want %f", tt.a, tt.b, got, tt.expected)
 		}
