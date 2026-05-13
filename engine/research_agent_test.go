@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -422,9 +423,12 @@ func TestResearch(t *testing.T) {
 		ra := NewResearchAgent(2)
 		ra.Timeout = 5 * time.Second
 
+		var mu sync.Mutex
 		var searched []string
 		searchFn := func(q string) (string, error) {
+			mu.Lock()
 			searched = append(searched, q)
+			mu.Unlock()
 			return "result for " + q, nil
 		}
 
