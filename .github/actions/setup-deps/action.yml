@@ -39,14 +39,4 @@ runs:
     - name: Create workspace
       shell: bash
       run: |
-        cat > go.work << 'EOF'
-        go 1.26.1
-        use .
-        replace (
-          github.com/GrayCodeAI/eyrie => ../eyrie
-          github.com/GrayCodeAI/tok => ../tok
-          github.com/GrayCodeAI/yaad => ../yaad
-          github.com/GrayCodeAI/inspect => ../inspect
-          github.com/GrayCodeAI/sight => ../sight
-        )
-        EOF
+        printf 'go 1.26.1\n\nuse .\n\nreplace (\n\tgithub.com/GrayCodeAI/eyrie => ../eyrie\n\tgithub.com/GrayCodeAI/tok => ../tok\n\tgithub.com/GrayCodeAI/yaad => ../yaad\n\tgithub.com/GrayCodeAI/inspect => ../inspect\n\tgithub.com/GrayCodeAI/sight => ../sight\n)\n' > go.work
