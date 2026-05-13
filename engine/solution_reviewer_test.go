@@ -238,7 +238,7 @@ func TestScoreSolution(t *testing.T) {
 	})
 
 	t.Run("nil solution scores zero", func(t *testing.T) {
-		sr := NewSolutionReviewer(3)
+		_ = NewSolutionReviewer(3)
 		score := defaultScoreSolution(nil)
 		if score != 0.0 {
 			t.Errorf("expected 0 for nil solution, got %f", score)
