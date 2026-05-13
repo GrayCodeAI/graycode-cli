@@ -155,7 +155,7 @@ func TestFindGroup(t *testing.T) {
 	// These won't match because "foo" and "bar" are short words not quoted
 	// Let's use a case that will match
 	eg.Add(`cannot find "x" in scope`, "a.go", 1, "")
-	found = eg.FindGroup(`cannot find "y" in scope`)
+	found := eg.FindGroup(`cannot find "y" in scope`)
 	if found == nil {
 		t.Fatal("FindGroup returned nil for known pattern")
 	}
