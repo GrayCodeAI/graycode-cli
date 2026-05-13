@@ -500,7 +500,7 @@ func TestPromptOptimizerJaccardSimilarity(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		score := jaccardSimilarity(tt.a, tt.b)
+		score := optimizerJaccardSimilarity(tt.a, tt.b)
 		if score < tt.minScore || score > tt.maxScore {
 			t.Errorf("jaccardSimilarity(%q, %q) = %.3f, expected [%.2f, %.2f]",
 				tt.a, tt.b, score, tt.minScore, tt.maxScore)
