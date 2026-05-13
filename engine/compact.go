@@ -30,6 +30,29 @@ func (s *Session) smartCompact() {
 		return
 	}
 
+	// Keep last N messages + summary, respecting pinned count
+	keepEnd := 10
+	if s.PinnedMessages > keepEnd {
+		keepEnd = s.PinnedMessages
+	}
+
+	// Check for split-turn condition first
+	if s.SplitTurnNeeded(keepEnd) {
+		s.splitTurnCompact()
+		return
+	}
+
+	// Extract file tracking from messages being compacted
+	if s.Files == nil {
+		s.Files = NewFileTracker()
+	}
+	compactedMsgs := s.messages[:len(s.messages)-keepEnd]
+	s.Files.ExtractFromMessages(compactedMsgs)
+	// Also parse any previous tracked-files from existing summary
+	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
+		s.Files.ParseFromSummary(compactedMsgs[0].Content)
+	}
+
 	// Try LLM-based summary first, fall back to truncation
 	summary := s.generateSummary()
 	if summary == "" {
@@ -37,11 +60,12 @@ func (s *Session) smartCompact() {
 		return
 	}
 
-	// Keep last N messages + summary, respecting pinned count
-	keepEnd := 10
-	if s.PinnedMessages > keepEnd {
-		keepEnd = s.PinnedMessages
+	// Append file tracking to summary
+	fileBlock := s.Files.FormatForSummary()
+	if fileBlock != "" {
+		summary += "\n\n" + fileBlock
 	}
+
 	keep := make([]client.EyrieMessage, 0, keepEnd+2)
 	keep = append(keep, client.EyrieMessage{
 		Role:    "user",
