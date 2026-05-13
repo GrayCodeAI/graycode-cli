@@ -163,7 +163,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 
 	resp := HealthResponse{
 		Status:    "ok",
-		Version:   "0.3.0",
+		Version:   "0.1.0",
 		Uptime:    time.Since(s.startedAt).Round(time.Second).String(),
 		Sessions:  sessionCount,
 		StartedAt: s.startedAt.Format(time.RFC3339),
