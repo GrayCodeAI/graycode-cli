@@ -88,6 +88,7 @@ type Session struct {
 	TestLoop       *TestLoop                // test_loop.go — auto test-fix loop
 	FileMentions   *FileMentionDetector     // file_mentions.go — detect referenced files
 	ResponseCache  *ResponseCache           // response_cache.go — cache similar prompts
+	Pipeline       *IntegrationPipeline    // integration.go — unified feature orchestration
 }
 
 // NewSession creates a new conversation session.
@@ -115,6 +116,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		TestLoop:    NewTestLoop(),
 		FileMentions: NewFileMentionDetector("."),
 		ResponseCache: NewResponseCache(1000, 24*time.Hour),
+		Pipeline:      NewIntegrationPipeline(),
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)

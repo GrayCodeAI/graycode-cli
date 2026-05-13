@@ -160,6 +160,37 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
+		// Integration pipeline: pre-query (intent, tools, budget, injection scan, cache)
+		if s.Pipeline != nil {
+			lastUserMsg := ""
+			for i := len(s.messages) - 1; i >= 0; i-- {
+				if s.messages[i].Role == "user" && s.messages[i].ToolResult == nil {
+					lastUserMsg = s.messages[i].Content
+					break
+				}
+			}
+			preResult := s.Pipeline.PreQuery(s.messages, lastUserMsg)
+			if preResult != nil {
+				// Cache hit: short-circuit the LLM call
+				if preResult.CacheHit && preResult.CachedResponse != "" {
+					ch <- StreamEvent{Type: "content", Content: preResult.CachedResponse}
+					s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
+					ch <- StreamEvent{Type: "done"}
+					return
+				}
+				// Injection detected: warn but continue
+				if preResult.InjectionRisk != nil && preResult.InjectionRisk.IsRisky {
+					s.log.Warn("injection risk detected", map[string]interface{}{
+						"level": preResult.InjectionRisk.RiskLevel,
+					})
+				}
+				// Apply adaptive system prompt if generated
+				if preResult.SystemPrompt != "" {
+					s.system = preResult.SystemPrompt
+				}
+			}
+		}
+
 		// Pre-query hook
 		hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
 			"provider": s.provider,
@@ -463,6 +494,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// No tool calls — done
 		if len(toolCalls) == 0 {
+			// Integration pipeline: post-response (format, score, redact, cache, learn)
+			if s.Pipeline != nil && textContent != "" {
+				postResult := s.Pipeline.PostResponse(textContent, s.messages)
+				if postResult != nil && postResult.FormattedResponse != "" {
+					textContent = postResult.FormattedResponse
+				}
+			}
 			if textContent != "" {
 				s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
 				// Auto-remember corrections and learnings
@@ -523,6 +561,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}()
 			}
 			ch <- StreamEvent{Type: "done"}
+			// Integration pipeline: end-session (assess, learn, store experience)
+			if s.Pipeline != nil {
+				taskGoal := ""
+				for _, m := range s.messages {
+					if m.Role == "user" && m.ToolResult == nil {
+						taskGoal = m.Content
+						break
+					}
+				}
+				go s.Pipeline.EndSession(ctx.Err() == nil, taskGoal)
+			}
 			// Session end hook
 			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
 				"provider": s.provider,
@@ -763,6 +812,26 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if len(output) > maxChars {
 				output = output[:maxChars] + "\n... (truncated)"
+			}
+
+			// Integration pipeline: post-tool (stall detect, lint, test, error recovery)
+			if s.Pipeline != nil {
+				var execErr error
+				if isErr {
+					execErr = fmt.Errorf("%s", output)
+				}
+				toolResult := s.Pipeline.PostToolExecution(tc.Name, tc.Arguments, output, execErr)
+				if toolResult != nil {
+					if toolResult.StallWarning != "" {
+						output += "\n\n" + toolResult.StallWarning
+					}
+					if toolResult.LintErrors != "" {
+						output += "\n\nLint: " + toolResult.LintErrors
+					}
+					if toolResult.RecoveryAction != "" && toolResult.ShouldRetry {
+						output += "\n\nRecovery suggestion: " + toolResult.RecoveryAction
+					}
+				}
 			}
 
 			// Post-tool hook
