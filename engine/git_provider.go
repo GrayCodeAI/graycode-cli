@@ -603,7 +603,7 @@ func parseGitConfig(content string) (string, string, string) {
 
 // parseRemoteURL extracts provider, owner, and repo from a git remote URL.
 func parseRemoteURL(url string) (string, string, string) {
-	provider := "github"
+	var provider string
 
 	// Normalize URL
 	url = strings.TrimSuffix(url, ".git")

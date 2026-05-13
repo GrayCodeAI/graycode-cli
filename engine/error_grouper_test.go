@@ -151,7 +151,7 @@ func TestFindGroup(t *testing.T) {
 	eg.Add("undefined variable foo", "main.go", 10, "")
 
 	// Find with same normalized pattern
-	found := eg.FindGroup("undefined variable bar")
+	_ = eg.FindGroup("undefined variable bar")
 	// These won't match because "foo" and "bar" are short words not quoted
 	// Let's use a case that will match
 	eg.Add(`cannot find "x" in scope`, "a.go", 1, "")

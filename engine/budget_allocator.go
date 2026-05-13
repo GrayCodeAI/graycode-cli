@@ -276,10 +276,6 @@ func (ba *BudgetAllocator) Rebalance() {
 
 		// Shrink to the midpoint between min and current, proportional to usage.
 		// If usage is 0.0, shrink to minimum. If usage is 0.4, shrink less.
-		targetUsage := alloc.Usage
-		if targetUsage < 0.1 {
-			targetUsage = 0.1
-		}
 		// Target size: what would make usage ~70% at the used amount.
 		usedTokens := int(float64(alloc.CurrentTokens) * alloc.Usage)
 		targetSize := int(float64(usedTokens) / 0.7)

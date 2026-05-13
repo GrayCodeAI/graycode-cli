@@ -62,7 +62,7 @@ func NewOSVChecker() *OSVChecker {
 		{Package: "crossenv", Ecosystem: "npm", Advisory: "MAL-2017-0001", Severity: "CRITICAL", Description: "typosquat of cross-env - credential stealer", DateAdded: time.Date(2017, 8, 1, 0, 0, 0, 0, time.UTC)},
 		{Package: "lodahs", Ecosystem: "npm", Advisory: "MAL-2019-0001", Severity: "HIGH", Description: "typosquat of lodash - data exfiltration", DateAdded: time.Date(2019, 6, 15, 0, 0, 0, 0, time.UTC)},
 		{Package: "lodashs", Ecosystem: "npm", Advisory: "MAL-2019-0002", Severity: "HIGH", Description: "typosquat of lodash - data exfiltration", DateAdded: time.Date(2019, 6, 15, 0, 0, 0, 0, time.UTC)},
-		{Package: "expresss", Ecosystem: "npm", Advisory: "MAL-2020-0001", Severity: "HIGH", Description: "typosquat of express - backdoor", DateAdded: time.Date(2020, 3, 10, 0, 0, 0, 0, time.UTC)},
+		{Package: "expresss", Ecosystem: "npm", Advisory: "MAL-2020-0001", Severity: "HIGH", Description: "typosquat of express - backdoor", DateAdded: time.Date(2020, 3, 10, 0, 0, 0, 0, time.UTC)}, //nolint:misspell
 		{Package: "babelcli", Ecosystem: "npm", Advisory: "MAL-2017-0002", Severity: "HIGH", Description: "typosquat of babel-cli - credential stealer", DateAdded: time.Date(2017, 8, 1, 0, 0, 0, 0, time.UTC)},
 		{Package: "mongose", Ecosystem: "npm", Advisory: "MAL-2017-0003", Severity: "HIGH", Description: "typosquat of mongoose - credential stealer", DateAdded: time.Date(2017, 8, 1, 0, 0, 0, 0, time.UTC)},
 		{Package: "d3.js", Ecosystem: "npm", Advisory: "MAL-2017-0004", Severity: "HIGH", Description: "typosquat of d3 - credential stealer", DateAdded: time.Date(2017, 8, 1, 0, 0, 0, 0, time.UTC)},
@@ -74,7 +74,7 @@ func NewOSVChecker() *OSVChecker {
 		{Package: "node-request", Ecosystem: "npm", Advisory: "MAL-2019-0004", Severity: "HIGH", Description: "typosquat of request - backdoor", DateAdded: time.Date(2019, 4, 5, 0, 0, 0, 0, time.UTC)},
 		{Package: "discordi.js", Ecosystem: "npm", Advisory: "MAL-2021-0010", Severity: "HIGH", Description: "typosquat of discord.js - token stealer", DateAdded: time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)},
 		{Package: "discord.jss", Ecosystem: "npm", Advisory: "MAL-2021-0011", Severity: "HIGH", Description: "typosquat of discord.js - token stealer", DateAdded: time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC)},
-		{Package: "electorn", Ecosystem: "npm", Advisory: "MAL-2022-0020", Severity: "HIGH", Description: "typosquat of electron - backdoor", DateAdded: time.Date(2022, 4, 12, 0, 0, 0, 0, time.UTC)},
+		{Package: "electorn", Ecosystem: "npm", Advisory: "MAL-2022-0020", Severity: "HIGH", Description: "typosquat of electron - backdoor", DateAdded: time.Date(2022, 4, 12, 0, 0, 0, 0, time.UTC)}, //nolint:misspell
 		{Package: "axios-https", Ecosystem: "npm", Advisory: "MAL-2023-0001", Severity: "HIGH", Description: "typosquat of axios - data exfiltration", DateAdded: time.Date(2023, 1, 15, 0, 0, 0, 0, time.UTC)},
 		{Package: "react-dev-utils-cdn", Ecosystem: "npm", Advisory: "MAL-2023-0002", Severity: "HIGH", Description: "typosquat - credential stealer", DateAdded: time.Date(2023, 2, 10, 0, 0, 0, 0, time.UTC)},
 
