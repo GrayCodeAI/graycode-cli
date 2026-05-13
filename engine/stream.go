@@ -709,6 +709,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 
 			// Sandbox: intercept Write/Edit to stage instead of apply
+			sandboxIntercepted := false
 			if s.Sandbox != nil && s.Sandbox.IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
 				if p, ok := pathArgument(tc.Arguments); ok {
 					origContent := ""
@@ -721,6 +722,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					}
 					s.Sandbox.Stage(p, action, origContent, output)
 					output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
+					sandboxIntercepted = true
+				}
+			}
+
+			// Lint loop: run lint on successfully written/edited files and append
+			// reflected error message if lint fails (Aider "reflected_message" pattern).
+			if s.LintLoop != nil && s.LintLoop.Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
+				if p, ok := pathArgument(tc.Arguments); ok {
+					count := s.LintLoop.ReflectionCount(p)
+					if s.LintLoop.ShouldRetry(count) {
+						if lintResult, lintErr := s.LintLoop.RunLint(p); lintErr == nil && lintResult != nil {
+							reflected := s.LintLoop.BuildReflectedMessage(lintResult)
+							if reflected != "" {
+								s.LintLoop.RecordReflection(p)
+								output += "\n\n" + reflected
+							}
+						}
+					}
 				}
 			}
 

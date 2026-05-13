@@ -7,12 +7,7 @@ import (
 	"path/filepath"
 )
 
-// Rule captures a single permission rule for persistence.
-type Rule struct {
-	Tool    string `json:"tool"`              // tool name, e.g. "Bash"
-	Pattern string `json:"pattern"`           // glob pattern, e.g. "go test*"
-	Action  string `json:"action"`            // "allow" or "deny"
-}
+// Rule is defined in rules.go with the Action type.
 
 // Save serializes permission rules to a JSON file atomically.
 func Save(path string, rules []Rule) error {
