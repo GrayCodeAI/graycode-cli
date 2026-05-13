@@ -69,7 +69,7 @@ func (c *braveClient) search(ctx context.Context, query string, count int) ([]se
 
 	req.Header.Set("X-Subscription-Token", c.apiKey)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "hawk/0.0.1")
+	req.Header.Set("User-Agent", "hawk/0.1.0")
 
 	resp, err := c.http.Do(req)
 	if err != nil {

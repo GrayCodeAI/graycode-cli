@@ -49,7 +49,7 @@ func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "hawk/0.0.1")
+	req.Header.Set("User-Agent", "hawk/0.1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
