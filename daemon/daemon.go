@@ -148,6 +148,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /v1/health", s.handleHealth)
 	s.mux.HandleFunc("POST /v1/chat", s.handleChat)
 	s.mux.HandleFunc("GET /v1/sessions", s.handleListSessions)
+	s.mux.HandleFunc("GET /v1/sessions/{id}", s.handleGetSession)
+	s.mux.HandleFunc("GET /v1/sessions/{id}/messages", s.handleGetMessages)
+	s.mux.HandleFunc("DELETE /v1/sessions/{id}", s.handleDeleteSession)
+	s.mux.HandleFunc("GET /v1/stats", s.handleStats)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
