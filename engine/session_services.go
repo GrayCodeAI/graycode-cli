@@ -337,7 +337,7 @@ func (s *Session) Services() *SessionServices {
 			SkillDistill: s.SkillDistiller,
 		},
 		Optim: &Optimizer{
-			Cost:        s.Cost,
+			Cost:        Cost{Model: s.Cost.Model, PromptTokens: s.Cost.PromptTokens, CompletionTokens: s.Cost.CompletionTokens, TotalCostUSD: s.Cost.TotalCostUSD},
 			CostTracker: s.CostTracker,
 			Cascade:     s.Cascade,
 			Router:      s.Router,
