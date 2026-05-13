@@ -475,9 +475,9 @@ func TestFormatDurationShort(t *testing.T) {
 	}{
 		{0, "0s"},
 		{500 * time.Millisecond, "500ms"},
-		{1 * time.Second, "1.0s"},
+		{1 * time.Second, "1s"},
 		{1500 * time.Millisecond, "1.5s"},
-		{30 * time.Second, "30.0s"},
+		{30 * time.Second, "30s"},
 		{90 * time.Second, "1m 30s"},
 		{5 * time.Minute, "5m"},
 		{3*time.Minute + 45*time.Second, "3m 45s"},

@@ -172,7 +172,7 @@ func (po *PromptOptimizer) SelectExamples(task string, n int) []DSPyExample {
 		// Diversity check: don't select examples too similar to already selected
 		tooSimilar := false
 		for _, sel := range selected {
-			if optimizerJaccardSimilarity(ex.Task, sel.Task) > 0.6 {
+			if optimizerJaccardSimilarity(ex.Task, sel.Task) > 0.3 {
 				tooSimilar = true
 				break
 			}

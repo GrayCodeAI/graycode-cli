@@ -91,14 +91,15 @@ func NewOutputRedactor() *OutputRedactor {
 	// Heroku API key
 	r.addBuiltin("heroku_api_key", `(?i)heroku[_\s]*api[_\s]*key\s*[=:]\s*[A-Fa-f0-9\-]{36,}`, "api_key")
 
-	// Generic secret assignment patterns (PASSWORD=..., SECRET=..., etc.)
-	r.addBuiltin("env_secret_assignment", `(?i)(?:PASSWORD|SECRET|API_KEY|APIKEY|ACCESS_TOKEN|AUTH_TOKEN)\s*[=:]\s*["']?[^\s"']{8,}["']?`, "password")
-
 	// npm tokens
 	r.addBuiltin("npm_token", `(?i)npm_[A-Za-z0-9]{36,}`, "token")
 
 	// SendGrid API key
 	r.addBuiltin("sendgrid_key", `SG\.[A-Za-z0-9_\-]{22}\.[A-Za-z0-9_\-]{43}`, "api_key")
+
+	// Generic secret assignment patterns (PASSWORD=..., SECRET=..., etc.)
+	// Must be last so more specific patterns above match first.
+	r.addBuiltin("env_secret_assignment", `(?i)\b(?:PASSWORD|SECRET|API_KEY|APIKEY|ACCESS_TOKEN|AUTH_TOKEN)\s*[=:]\s*["']?[^\s"'\[]{8,}["']?`, "password")
 
 	return r
 }
@@ -314,12 +315,22 @@ func (r *OutputRedactor) AddPattern(name string, pattern string, category string
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.Patterns = append(r.Patterns, &RedactPattern{
+	newPattern := &RedactPattern{
 		Name:        name,
 		Pattern:     re,
 		Replacement: "[REDACTED:" + category + "]",
 		Category:    category,
-	})
+	}
+
+	// Insert before the last pattern (generic catch-all) so custom patterns
+	// take priority over env_secret_assignment.
+	if len(r.Patterns) > 0 {
+		last := r.Patterns[len(r.Patterns)-1]
+		r.Patterns[len(r.Patterns)-1] = newPattern
+		r.Patterns = append(r.Patterns, last)
+	} else {
+		r.Patterns = append(r.Patterns, newPattern)
+	}
 
 	return nil
 }

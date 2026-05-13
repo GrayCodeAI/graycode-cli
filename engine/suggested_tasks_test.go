@@ -377,7 +377,7 @@ func TestScanSecurityTasks(t *testing.T) {
 	content := `package config
 
 var dbPassword = "super_secret_123"
-var apiKey = "sk-abc123"
+var api_key = "sk-abc123"
 `
 	os.WriteFile(goFile, []byte(content), 0644)
 

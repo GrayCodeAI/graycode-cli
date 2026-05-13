@@ -652,9 +652,9 @@ func extractTitle(msg, fallback string) string {
 		}
 	}
 
-	// Truncate to 80 chars
+	// Truncate to ~80 chars
 	if len(msg) > 80 {
-		return msg[:77] + "..."
+		return msg[:78] + "..."
 	}
 	return msg
 }

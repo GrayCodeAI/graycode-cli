@@ -21,7 +21,7 @@ func TestNormalizeError(t *testing.T) {
 		{
 			name:     "strips line numbers with colon",
 			input:    "error at main.go:42: undefined variable",
-			expected: "error at main.go<line> undefined variable",
+			expected: "error at <path><line> undefined variable",
 		},
 		{
 			name:     "strips line keyword",

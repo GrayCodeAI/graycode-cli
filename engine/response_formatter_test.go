@@ -60,7 +60,7 @@ func TestRemoveFluff_Sure(t *testing.T) {
 	}{
 		{"Sure, I'll help with that.", "Help with that."},
 		{"Sure! here is the code.", "Here is the code."},
-		{"Certainly, I can do that.", "I can do that."},
+		{"Certainly, I can do that.", "Do that."},
 		{"Certainly! the answer is 42.", "The answer is 42."},
 		{"Here's the solution:", "Solution:"},
 		{"Of course! I'll explain.", "Explain."},

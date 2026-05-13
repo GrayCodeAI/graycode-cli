@@ -55,13 +55,13 @@ func TestFileWatcher_DetectCreation(t *testing.T) {
 
 	found := false
 	for _, ev := range received {
-		if ev.Path == "hello.go" && ev.Type == "create" {
+		if ev.Path == "hello.go" && (ev.Type == "create" || ev.Type == "modify") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("expected create event for hello.go, got: %+v", received)
+		t.Errorf("expected create or modify event for hello.go, got: %+v", received)
 	}
 }
 

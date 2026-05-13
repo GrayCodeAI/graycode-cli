@@ -623,13 +623,19 @@ func TestFullWorkflow(t *testing.T) {
 		t.Fatalf("expected 7 allocations, got %d", len(result))
 	}
 
-	// Simulate usage.
+	// Simulate usage and redistribute tokens so lower-priority flexible
+	// allocations have spare capacity that can be stolen.
+	ba.Allocations["conversation"].CurrentTokens = 40000
 	ba.Allocations["conversation"].Usage = 0.95
+	ba.Allocations["tool_results"].CurrentTokens = 15000
 	ba.Allocations["tool_results"].Usage = 0.3
+	ba.Allocations["readonly_ctx"].CurrentTokens = 8000
 	ba.Allocations["readonly_ctx"].Usage = 0.2
 	ba.Allocations["system_prompt"].Usage = 0.8
 	ba.Allocations["memory"].Usage = 0.6
+	ba.Allocations["repo_map"].CurrentTokens = 6000
 	ba.Allocations["repo_map"].Usage = 0.4
+	ba.Allocations["goals"].CurrentTokens = 1500
 	ba.Allocations["goals"].Usage = 0.5
 
 	// Request more for conversation.

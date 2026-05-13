@@ -279,7 +279,7 @@ func builtinRules() []ActionRule {
 			Name:     "Function is too long",
 			Category: "refactor",
 			Language: "",
-			Pattern:  regexp.MustCompile(`(?s)(func |def |function )\w+[^{]*\{[^\}]{2000,}\}`),
+			Pattern:  regexp.MustCompile(`(?s)(func |def |function )\w+[^{]*\{[^\}]{999,}\}`),
 			Priority: 3,
 			Message:  "Function exceeds 50 lines; consider splitting into smaller functions",
 		},

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -431,13 +432,13 @@ func TestDecay(t *testing.T) {
 
 	learner.Decay(0.9)
 
-	if learner.Insights[0].Confidence != 0.9*0.9 {
+	if math.Abs(learner.Insights[0].Confidence-0.9*0.9) > 1e-9 {
 		t.Errorf("expected confidence %.2f, got %.2f", 0.9*0.9, learner.Insights[0].Confidence)
 	}
-	if learner.Insights[1].Confidence != 0.5*0.9 {
+	if math.Abs(learner.Insights[1].Confidence-0.5*0.9) > 1e-9 {
 		t.Errorf("expected confidence %.2f, got %.2f", 0.5*0.9, learner.Insights[1].Confidence)
 	}
-	if learner.Conventions[0].Confidence != 0.8*0.9 {
+	if math.Abs(learner.Conventions[0].Confidence-0.8*0.9) > 1e-9 {
 		t.Errorf("expected convention confidence %.2f, got %.2f", 0.8*0.9, learner.Conventions[0].Confidence)
 	}
 }

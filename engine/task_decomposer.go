@@ -95,8 +95,8 @@ func (td *TaskDecomposer) DetectPattern(goal string) string {
 		{[]string{"implement", "add feature", "create", "build"}, "implementation"},
 		{[]string{"fix", "bug", "error", "broken", "crash"}, "debugging"},
 		{[]string{"refactor", "restructure", "reorganize", "clean up"}, "refactoring"},
-		{[]string{"test", "coverage", "spec"}, "testing"},
 		{[]string{"review", "audit", "inspect"}, "review"},
+		{[]string{"test", "coverage", "spec"}, "testing"},
 		{[]string{"explain", "document", "describe"}, "explanation"},
 	}
 

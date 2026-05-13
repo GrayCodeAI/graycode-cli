@@ -526,11 +526,11 @@ func categorizeApproach(approach string, toolsUsed []string) string {
 	if strings.Contains(lower, "avoid") || strings.Contains(lower, "don't") || strings.Contains(lower, "skip") {
 		return "avoidance"
 	}
-	if strings.Contains(lower, "prefer") || strings.Contains(lower, "always") || strings.Contains(lower, "use") {
-		return "preference"
-	}
 	if len(toolsUsed) > 0 {
 		return "tool_usage"
+	}
+	if strings.Contains(lower, "prefer") || strings.Contains(lower, "always") || strings.HasPrefix(lower, "use ") || strings.Contains(lower, " use ") {
+		return "preference"
 	}
 	return "approach"
 }

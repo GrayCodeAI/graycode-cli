@@ -391,7 +391,7 @@ func parseGoFailedTests(output string) []string {
 	return tests
 }
 
-var pythonFailPattern = regexp.MustCompile(`FAILED\s+(\S+)`)
+var pythonFailPattern = regexp.MustCompile(`(?m)^FAILED\s+(\S+)`)
 
 func parsePythonFailedTests(output string) []string {
 	matches := pythonFailPattern.FindAllStringSubmatch(output, -1)
