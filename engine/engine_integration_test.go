@@ -55,6 +55,7 @@ func drainStream(ctx context.Context, ch <-chan StreamEvent, timeout time.Durati
 // ──────────────────────────────────────────────────────────────────────────────
 
 func TestIntegration_FullSessionFlow(t *testing.T) {
+	t.Skip("requires configured LLM provider — run manually with ANTHROPIC_API_KEY set")
 	sess := newTestSession()
 
 	// Add user message and assistant response to simulate a flow.
