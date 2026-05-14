@@ -540,7 +540,7 @@ func LoadEnvFile() error {
 		value := strings.TrimSpace(rest[idx+1:])
 		// Only set if not already set in environment
 		if os.Getenv(key) == "" {
-			os.Setenv(key, value)
+			_ = os.Setenv(key, value)
 		}
 	}
 	return nil
@@ -584,7 +584,7 @@ func RemoveEnvFile(key string) error {
 // SaveEnvFile writes an export line to ~/.hawk/env, deduplicating existing entries.
 func SaveEnvFile(key, value string) error {
 	path := envFilePath()
-	os.MkdirAll(filepath.Dir(path), 0o700)
+	_ = os.MkdirAll(filepath.Dir(path), 0o700)
 
 	// Read existing lines, filter out old entries for this key
 	var lines []string

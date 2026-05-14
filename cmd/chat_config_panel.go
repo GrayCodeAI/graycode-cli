@@ -320,7 +320,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		if value != "" {
 			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
 			if envKey != "" {
-				os.Setenv(envKey, value)
+				_ = os.Setenv(envKey, value)
 				_ = hawkconfig.SaveEnvFile(envKey, value)
 			}
 			m.session.SetAPIKey(provider, value)

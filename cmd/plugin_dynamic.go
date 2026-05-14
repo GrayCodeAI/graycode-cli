@@ -92,7 +92,7 @@ var pluginStatusCmd = &cobra.Command{
 			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
 				s.Name, s.Version, s.State, s.ToolCount, s.HookCount)
 		}
-		w.Flush()
+		_ = w.Flush()
 
 		return nil
 	},
@@ -336,7 +336,7 @@ var pluginLogsCmd = &cobra.Command{
 				errStr,
 			)
 		}
-		w.Flush()
+		_ = w.Flush()
 		return nil
 	},
 }

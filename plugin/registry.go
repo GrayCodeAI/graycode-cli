@@ -289,7 +289,7 @@ func Remove(name string) error {
 	removed := false
 	for _, d := range dirs {
 		if _, err := os.Stat(d); err == nil {
-			os.RemoveAll(d)
+			_ = os.RemoveAll(d)
 			removed = true
 		}
 	}

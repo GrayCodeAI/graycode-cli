@@ -405,7 +405,7 @@ func FindEntryPoints(projectDir string) []string {
 	var entryPoints []string
 	seen := make(map[string]bool)
 
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -469,7 +469,7 @@ func FindKeyFiles(projectDir string, limit int) []string {
 	importCounts := make(map[string]int) // how many files import this one
 
 	// First pass: collect all files and count imports
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -639,7 +639,7 @@ func RenderCompact(summary *CodebaseSummary) string {
 func summaryDetectLanguage(projectDir string) string {
 	counts := map[string]int{}
 
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return nil
 		}

@@ -34,7 +34,7 @@ func NewFileWatcher(root string, onChange func(path string)) (*FileWatcher, erro
 	}
 
 	// Add all directories
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

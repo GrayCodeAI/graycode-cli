@@ -131,7 +131,7 @@ func (hs *HealthScorer) ScoreTestCoverage(dir string) (float64, []HealthIssue) {
 	dirsWithSource := make(map[string]bool)
 	dirsWithTests := make(map[string]bool)
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -229,7 +229,7 @@ func (hs *HealthScorer) ScoreDocumentation(dir string) (float64, []HealthIssue) 
 	totalExported := 0
 	documentedExported := 0
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -295,7 +295,7 @@ func (hs *HealthScorer) ScoreComplexity(dir string) (float64, []HealthIssue) {
 	highComplexityCount := 0
 	threshold := 10
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -461,7 +461,7 @@ func (hs *HealthScorer) ScoreCodeQuality(dir string) (float64, []HealthIssue) {
 	var longFiles []string
 	var deadCodeFiles []string
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -557,7 +557,7 @@ func (hs *HealthScorer) ScoreMaintainability(dir string) (float64, []HealthIssue
 
 	// Check package organization
 	pkgCount := 0
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -581,7 +581,7 @@ func (hs *HealthScorer) ScoreMaintainability(dir string) (float64, []HealthIssue
 
 	// Check naming consistency
 	inconsistentNames := 0
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -657,7 +657,7 @@ func (hs *HealthScorer) ScoreSecurity(dir string) (float64, []HealthIssue) {
 
 	foundPatterns := make(map[string][]string)
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -957,7 +957,7 @@ func checkErrorPatterns(dir string) float64 {
 	totalReturns := 0
 	wrappedErrors := 0
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

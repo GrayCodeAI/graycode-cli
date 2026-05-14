@@ -237,14 +237,14 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// Hijack the client connection.
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		targetConn.Close()
+		_ = targetConn.Close()
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
 		return
 	}
 
 	clientConn, _, err := hijacker.Hijack()
 	if err != nil {
-		targetConn.Close()
+		_ = targetConn.Close()
 		http.Error(w, fmt.Sprintf("Hijack failed: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -256,7 +256,7 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		n, _ := io.Copy(targetConn, clientConn)
 		atomic.AddInt64(&np.Stats.TotalBytes, n)
-		targetConn.Close()
+		_ = targetConn.Close()
 	}()
 	go func() {
 		n, _ := io.Copy(clientConn, targetConn)

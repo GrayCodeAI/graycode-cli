@@ -345,7 +345,7 @@ func detectTests(dir string) bool {
 	// Walk top two levels looking for test files.
 	found := false
 	depth := 0
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || found {
 			return filepath.SkipDir
 		}

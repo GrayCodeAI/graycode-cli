@@ -96,7 +96,7 @@ func auditContent(path, content string) []AuditFinding {
 // AuditSkillDir scans all SKILL.md files in a directory tree.
 func AuditSkillDir(dir string) AuditResult {
 	var result AuditResult
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}

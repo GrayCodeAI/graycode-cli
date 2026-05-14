@@ -58,7 +58,7 @@ func loadEnvFile(path string) {
 
 		// Don't override existing env vars
 		if os.Getenv(key) == "" {
-			os.Setenv(key, value)
+			_ = os.Setenv(key, value)
 		}
 	}
 }

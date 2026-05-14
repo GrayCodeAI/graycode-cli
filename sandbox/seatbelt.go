@@ -124,11 +124,11 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	}
 
 	if _, err := tmpFile.WriteString(profile); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		_ = os.Remove(tmpFile.Name())
 		return nil, fmt.Errorf("failed to write seatbelt profile: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Build the sandbox-exec command.
 	cmd := exec.CommandContext(ctx, "sandbox-exec", "-f", tmpFile.Name(), "bash", "-c", command)

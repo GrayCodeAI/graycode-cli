@@ -175,7 +175,7 @@ func RunSetup() error {
 		}
 
 		// Herm-style: set env var for this session, persist to ~/.hawk/env
-		os.Setenv(selected.envKey, apiKey)
+		_ = os.Setenv(selected.envKey, apiKey)
 		_ = hawkconfig.SaveEnvFile(selected.envKey, apiKey)
 
 		// Save provider preference only (not the key)

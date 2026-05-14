@@ -479,7 +479,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
-			m.session.SetPermissionMode(modes[idx])
+			_ = m.session.SetPermissionMode(modes[idx])
 			labels := map[string]string{"default": "Off", "acceptEdits": "Auto-edit", "bypassPermissions": "Full Auto"}
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy → %s", labels[modes[idx]])})
 			m.viewDirty = true

@@ -144,7 +144,7 @@ func BuildDependencyGraph(projectDir string) map[string][]string {
 	modulePath := detectModulePath(projectDir)
 
 	// Walk all Go files and parse imports.
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -588,7 +588,7 @@ func isTestFile(file string, language string) bool {
 // countAllTests counts all test files in the project.
 func countAllTests(projectDir, language string) int {
 	count := 0
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -678,7 +678,7 @@ func extractTestFuncNames(testFiles []string) []string {
 				names = append(names, matches[1])
 			}
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	return names

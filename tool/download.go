@@ -58,7 +58,7 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
-	os.MkdirAll(filepath.Dir(p.Destination), 0o755)
+	_ = os.MkdirAll(filepath.Dir(p.Destination), 0o755)
 	f, err := os.Create(p.Destination)
 	if err != nil {
 		return "", fmt.Errorf("create file: %w", err)

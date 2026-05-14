@@ -16,12 +16,12 @@ func CPUProfile(path string) (func(), error) {
 		return nil, fmt.Errorf("create profile file: %w", err)
 	}
 	if err := pprof.StartCPUProfile(f); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, fmt.Errorf("start CPU profile: %w", err)
 	}
 	return func() {
 		pprof.StopCPUProfile()
-		f.Close()
+		_ = f.Close()
 	}, nil
 }
 

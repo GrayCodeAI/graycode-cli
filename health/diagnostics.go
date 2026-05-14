@@ -279,7 +279,7 @@ func checkDiskSpace() DiagnosticResult {
 			Duration: time.Since(start),
 		}
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	_ = os.Remove(tmpFile.Name())
 
 	return DiagnosticResult{

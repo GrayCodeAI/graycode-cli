@@ -341,7 +341,7 @@ func (rw *RotatingWriter) openNew() error {
 	}
 	info, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("stat log file: %w", err)
 	}
 	rw.file = f
@@ -359,7 +359,7 @@ func (rw *RotatingWriter) rotate() error {
 	for i := rw.MaxFiles - 1; i >= 1; i-- {
 		src := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, i))
 		dst := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, i+1))
-		os.Rename(src, dst)
+		_ = os.Rename(src, dst)
 	}
 
 	// Rename current to .1.log.
