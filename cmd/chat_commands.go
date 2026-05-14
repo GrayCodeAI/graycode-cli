@@ -19,6 +19,9 @@ import (
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/session"
+	"github.com/GrayCodeAI/hawk/shellmode"
+	"github.com/GrayCodeAI/hawk/staleness"
+	"github.com/GrayCodeAI/hawk/taste"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
@@ -27,13 +30,13 @@ func slashCommands() []string {
 		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
-		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
+		"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
 		"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
 		"/hunt", "/output-style", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
 		"/power", "/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/stats",
-		"/status", "/statusline", "/summary", "/tag", "/tasks", "/test", "/theme",
+		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/stale", "/stats",
+		"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
 		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
 	}
@@ -75,6 +78,7 @@ var slashDescriptions = map[string]string{
 	"/exit":            "Save and exit",
 	"/explain":         "Trace code back to the commit that created it",
 	"/export":          "Export session",
+	"/feedback":        "Submit feedback about hawk",
 	"/fast":            "Toggle fast mode",
 	"/files":           "Show modified files",
 	"/focus":           "Narrow agent attention to specific files/dirs",
@@ -106,6 +110,7 @@ var slashDescriptions = map[string]string{
 	"/sandbox":         "Toggle sandbox mode",
 	"/search":          "Search across sessions",
 	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
+	"/stale":           "Show stale rules that may need updating or removal",
 	"/security-review": "Security audit",
 	"/skills":          "List skills or manage: search, install, trending, info, remove, update, feedback, publish, audit",
 	"/learn":           "LLM-powered skill advisor (/learn deep for source analysis)",
@@ -138,6 +143,7 @@ var slashDescriptions = map[string]string{
 	"/share":           "Share session",
 	"/statusline":      "Show status line info",
 	"/tag":             "Tag current session",
+	"/taste":           "Show learned taste preferences",
 	"/theme":           "Change visual theme",
 	"/think-back":      "Review reasoning decisions",
 	"/thinkback":       "Review reasoning decisions",
@@ -428,6 +434,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /env                — Show provider environment status
 /export             — Export session to JSON
 /fast               — Toggle fast mode
+/feedback <msg>     — Submit feedback (saved to ~/.hawk/feedback/)
 /files              — Show modified files
 /help               — This help message
 /history            — List saved sessions
@@ -457,10 +464,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /share              — Share session
 /learn              — LLM-powered skill advisor (deep, update)
 /skills             — List, search, install, remove skills
+/stale              — Show stale rules that may need removal
 /stats              — Session statistics
 /status             — Session status
 /summary            — Summarize the current session
 /tag <label>        — Tag session
+/taste              — Show learned coding style preferences
 /tasks              — Show task list
 /teams              — Show team info
 /theme <t>          — Set theme (dark/light/auto)
@@ -1472,6 +1481,58 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Exported to: %s", exportPath)})
 		}
 		return m, nil
+	case "/feedback":
+		body := strings.TrimSpace(strings.TrimPrefix(text, "/feedback"))
+		if body == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to ~/.hawk/feedback/"})
+			return m, nil
+		}
+		home, _ := os.UserHomeDir()
+		feedDir := filepath.Join(home, ".hawk", "feedback")
+		os.MkdirAll(feedDir, 0755)
+		report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
+			time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)
+		fname := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))
+		fpath := filepath.Join(feedDir, fname)
+		if err := os.WriteFile(fpath, []byte(report), 0644); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to save feedback: " + err.Error()})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Feedback saved to %s", fpath)})
+		}
+		return m, nil
+	case "/stale":
+		if m.stalenessDetector == nil {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No staleness data available yet. Rules will be tracked as they are used."})
+			return m, nil
+		}
+		threshold := 7 * 24 * time.Hour // 7 days default
+		if len(parts) > 1 {
+			if d, err := time.ParseDuration(parts[1]); err == nil {
+				threshold = d
+			}
+		}
+		staleRules := m.stalenessDetector.CheckStaleness(threshold)
+		if len(staleRules) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No stale rules detected. All rules have been used within the threshold."})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: stalenessFormatReport(staleRules)})
+		}
+		return m, nil
+	case "/taste":
+		store, err := tasteStoreForSession()
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Taste store error: " + err.Error()})
+			return m, nil
+		}
+		cwd, _ := os.Getwd()
+		projectID := filepath.Base(cwd)
+		profile, err := store.Load(projectID)
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Load taste profile: " + err.Error()})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: profile.Summary()})
+		return m, nil
 	case "/rename":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /rename <new-session-name>"})
@@ -1985,26 +2046,33 @@ func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
 	if command == "" {
 		return m, nil
 	}
+
+	// Warn about destructive commands.
+	if shellmode.IsDestructive(command) {
+		m.messages = append(m.messages, displayMsg{role: "error", content: "Warning: potentially destructive command detected. Use with caution."})
+	}
+
 	m.messages = append(m.messages, displayMsg{role: "system", content: "$ " + command})
 	m.viewDirty = true
 
-	cmd := exec.Command("sh", "-c", command)
-	out, err := cmd.CombinedOutput()
-	result := strings.TrimRight(string(out), "\n")
-	if err != nil && result == "" {
-		result = err.Error()
-	}
-	if result != "" {
-		// Truncate very long output
-		if len(result) > 4000 {
-			lines := strings.Split(result, "\n")
+	result := shellmode.ExecuteShell(context.Background(), command)
+	output := result.Stdout + result.Stderr
+	output = strings.TrimRight(output, "\n")
+
+	if output != "" {
+		// Truncate very long output.
+		if len(output) > 4000 {
+			lines := strings.Split(output, "\n")
 			if len(lines) > 40 {
 				head := strings.Join(lines[:20], "\n")
 				tail := strings.Join(lines[len(lines)-20:], "\n")
-				result = head + fmt.Sprintf("\n\n... (%d lines omitted) ...\n\n", len(lines)-40) + tail
+				output = head + fmt.Sprintf("\n\n... (%d lines omitted) ...\n\n", len(lines)-40) + tail
 			}
 		}
-		m.messages = append(m.messages, displayMsg{role: "tool_result", content: result})
+		m.messages = append(m.messages, displayMsg{role: "tool_result", content: output})
+	}
+	if result.ExitCode != 0 && output == "" {
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("exit code: %d", result.ExitCode)})
 	}
 	m.viewDirty = true
 	return m, nil
@@ -2016,4 +2084,14 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max] + "…"
+}
+
+// tasteStoreForSession returns a taste store using the default location.
+func tasteStoreForSession() (*taste.Store, error) {
+	return taste.NewStore("")
+}
+
+// stalenessFormatReport formats stale rules for display.
+func stalenessFormatReport(rules []staleness.StaleRule) string {
+	return staleness.FormatReport(rules)
 }

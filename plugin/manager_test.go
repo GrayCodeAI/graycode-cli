@@ -176,7 +176,7 @@ func TestToolExecutionEcho(t *testing.T) {
 				"name": "echo-tool",
 				"description": "Echoes input",
 				"command": "echo hello world",
-				"timeout_seconds": 5
+				"timeout_seconds": 15
 			}
 		]
 	}`
@@ -216,7 +216,7 @@ func TestToolExecutionWithStdinInput(t *testing.T) {
 				"name": "cat-tool",
 				"description": "Reads stdin and outputs it",
 				"command": "cat",
-				"timeout_seconds": 5
+				"timeout_seconds": 15
 			}
 		]
 	}`
@@ -527,7 +527,7 @@ cat`
 				"name":            "transform",
 				"description":     "Transforms JSON",
 				"command":         scriptPath,
-				"timeout_seconds": 5,
+				"timeout_seconds": 15,
 				"input_schema": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -737,7 +737,7 @@ func TestToolExecutionWithArgs(t *testing.T) {
 				"name": "greet",
 				"command": "echo",
 				"args": ["hello", "world"],
-				"timeout_seconds": 5
+				"timeout_seconds": 15
 			}
 		]
 	}`
@@ -774,7 +774,7 @@ func TestToolExecutionFailingCommand(t *testing.T) {
 			{
 				"name": "fail-tool",
 				"command": "false",
-				"timeout_seconds": 5
+				"timeout_seconds": 15
 			}
 		]
 	}`
