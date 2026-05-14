@@ -316,11 +316,18 @@ func (ts *ToolSelector) Adapt(feedback string) {
 	}
 
 	// Determine which intents this feedback relates to by checking existing task patterns.
-	// Look for "for <intent>" or "during <intent>" in the feedback.
+	// Look for exact word match on intent names to avoid ambiguity
+	// (e.g., "debug task" should match "debug" not "search" even though it contains "search" substring).
 	var relatedIntent string
+	words := strings.Fields(lower)
 	for intent := range ts.TaskPatterns {
-		if strings.Contains(lower, intent) {
-			relatedIntent = intent
+		for _, w := range words {
+			if w == intent {
+				relatedIntent = intent
+				break
+			}
+		}
+		if relatedIntent != "" {
 			break
 		}
 	}
