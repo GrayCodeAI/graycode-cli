@@ -1,0 +1,1 @@
+Read a file's contents, optionally a specific line range.

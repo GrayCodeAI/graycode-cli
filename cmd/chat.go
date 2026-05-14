@@ -22,7 +22,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/convodag"
+	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
@@ -215,7 +215,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	// Initialize conversation DAG for branching support
 	if home, err := os.UserHomeDir(); err == nil {
 		dagPath := filepath.Join(home, ".hawk", "sessions", "convo.db")
-		if dag, err := convodag.New(dagPath, sid); err == nil {
+		if dag, err := storage.NewDAG(dagPath, sid); err == nil {
 			sess.ConvoDAG = dag
 		}
 	}
