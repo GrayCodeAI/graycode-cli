@@ -180,7 +180,7 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 
 // HotSwap stops the current container and starts a new one with the updated image.
 func (c *ContainerSandbox) HotSwap(ctx context.Context) error {
-	c.Stop()
+	_ = c.Stop()
 	return c.Start(ctx)
 }
 

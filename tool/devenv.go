@@ -76,7 +76,7 @@ func (DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string, e
 
 		// Back up existing Dockerfile
 		if _, err := os.Stat(dfPath); err == nil {
-			os.Rename(dfPath, dfPath+".old")
+			_ = os.Rename(dfPath, dfPath+".old")
 		}
 
 		if err := os.WriteFile(dfPath, []byte(p.Dockerfile), 0644); err != nil {

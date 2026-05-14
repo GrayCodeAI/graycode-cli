@@ -82,7 +82,7 @@ func (pp *PluginProcess) Stop() {
 		pp.cancel()
 	}
 	if pp.stdin != nil {
-		pp.stdin.Close()
+		_ = pp.stdin.Close()
 	}
 }
 

@@ -64,14 +64,14 @@ func (a *AuditLog) Record(entry AuditEntry) {
 	if err != nil {
 		return
 	}
-	a.f.Write(data)
-	a.f.Write([]byte("\n"))
+	_, _ = a.f.Write(data)
+	_, _ = a.f.Write([]byte("\n"))
 }
 
 // Close closes the audit log.
 func (a *AuditLog) Close() {
 	if a != nil && a.f != nil {
-		a.f.Close()
+		_ = a.f.Close()
 	}
 }
 

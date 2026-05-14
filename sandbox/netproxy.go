@@ -116,7 +116,7 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 
 	go func() {
 		<-ctx.Done()
-		np.server.Close()
+		_ = np.server.Close()
 	}()
 
 	return np.listener.Addr().String(), nil
@@ -250,7 +250,7 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send 200 OK to client.
-	clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	_, _ = clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 
 	// Bridge the streams.
 	go func() {
@@ -261,7 +261,7 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		n, _ := io.Copy(clientConn, targetConn)
 		atomic.AddInt64(&np.Stats.TotalBytes, n)
-		clientConn.Close()
+		_ = clientConn.Close()
 	}()
 }
 

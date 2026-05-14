@@ -229,7 +229,7 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 			tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")
 			if err == nil {
 				profile := GenerateSeatbeltProfile(policy)
-				tmpFile.WriteString(profile)
+				_, _ = tmpFile.WriteString(profile)
 				_ = tmpFile.Close()
 				return "sandbox-exec", []string{"-f", tmpFile.Name(), "bash", "-c", command}
 			}

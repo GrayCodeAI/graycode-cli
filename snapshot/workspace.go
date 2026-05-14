@@ -424,7 +424,7 @@ func (s *SnapshotStore) save(snapshot *WorkspaceSnapshot) error {
 	defer func() { _ = f.Close() }()
 
 	gw := gzip.NewWriter(f)
-	defer gw.Close()
+	defer func() { _ = gw.Close() }()
 
 	enc := json.NewEncoder(gw)
 	if err := enc.Encode(snapshot); err != nil {
@@ -447,7 +447,7 @@ func (s *SnapshotStore) load(id string) (*WorkspaceSnapshot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decompressing snapshot %s: %w", id, err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	var snap WorkspaceSnapshot
 	dec := json.NewDecoder(gr)

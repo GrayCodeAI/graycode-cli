@@ -49,7 +49,7 @@ func removeWorktree(repoDir, worktreePath string) error {
 		_ = os.RemoveAll(worktreePath)
 		// Clean up the parent temp dir if it is now empty.
 		parent := filepath.Dir(worktreePath)
-		os.Remove(parent) // ignore error; may not be empty
+		_ = os.Remove(parent) // ignore error; may not be empty
 
 		// If the original error was just "not a working tree" that's fine.
 		outStr := strings.TrimSpace(string(out))
@@ -62,7 +62,7 @@ func removeWorktree(repoDir, worktreePath string) error {
 
 	// Clean up the parent temp dir created by createWorktree.
 	parent := filepath.Dir(worktreePath)
-	os.Remove(parent) // ignore error; best-effort
+	_ = os.Remove(parent) // ignore error; best-effort
 
 	return nil
 }

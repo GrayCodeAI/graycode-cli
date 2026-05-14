@@ -43,7 +43,7 @@ func NewFileWatcher(root string, onChange func(path string)) (*FileWatcher, erro
 			if name == ".git" || name == "node_modules" || name == "vendor" || strings.HasPrefix(name, ".") {
 				return filepath.SkipDir
 			}
-			w.Add(path)
+			_ = w.Add(path)
 		}
 		return nil
 	})
@@ -74,7 +74,7 @@ func (fw *FileWatcher) Stop() {
 	fw.running = false
 	fw.mu.Unlock()
 	close(fw.done)
-	fw.watcher.Close()
+	_ = fw.watcher.Close()
 }
 
 func (fw *FileWatcher) loop() {

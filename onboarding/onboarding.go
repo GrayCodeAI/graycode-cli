@@ -212,7 +212,7 @@ func RunSetup() error {
 	fmt.Println(dim + "  ─────────────────────────────────────────" + reset)
 	fmt.Println()
 	fmt.Print("  Press Enter to start... ")
-	reader.ReadString('\n')
+	_, _ = reader.ReadString('\n')
 
 	return nil
 }
