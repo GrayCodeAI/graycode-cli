@@ -352,7 +352,7 @@ func (rw *RotatingWriter) openNew() error {
 
 func (rw *RotatingWriter) rotate() error {
 	if rw.file != nil {
-		rw.file.Close()
+		_ = rw.file.Close()
 	}
 
 	// Shift existing rotated files.
@@ -364,7 +364,7 @@ func (rw *RotatingWriter) rotate() error {
 
 	// Rename current to .1.log.
 	rotated := filepath.Join(rw.Dir, fmt.Sprintf("%s.1.log", rw.Prefix))
-	os.Rename(rw.current, rotated)
+	_ = os.Rename(rw.current, rotated)
 
 	// Remove excess files.
 	excess := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, rw.MaxFiles+1))

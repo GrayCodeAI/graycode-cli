@@ -192,7 +192,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Pre-query hook
-		hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
+		_ = hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
 			"provider": s.provider,
 			"model":    s.model,
 			"messages": len(s.messages),
@@ -372,7 +372,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						if s.CostTracker != nil {
 							inPrice, outPrice := pricingForModel(activeModel)
 							cost := float64(ev.Usage.PromptTokens)*inPrice/1_000_000 + float64(ev.Usage.CompletionTokens)*outPrice/1_000_000
-							s.CostTracker.Record(analytics.CostEntry{
+							_ = s.CostTracker.Record(analytics.CostEntry{
 								Model:        activeModel,
 								TaskType:     taskType,
 								InputTokens:  ev.Usage.PromptTokens,
@@ -557,7 +557,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						return
 					}
 					content, _ := json.Marshal(skill)
-					s.YaadBridge.Remember(string(content), "skill")
+					_ = s.YaadBridge.Remember(string(content), "skill")
 				}()
 			}
 			ch <- StreamEvent{Type: "done"}

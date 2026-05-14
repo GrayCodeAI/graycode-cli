@@ -38,7 +38,7 @@ var cmdHistorySearchCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 
 		query := args[0]
 		for _, a := range args[1:] {
@@ -79,7 +79,7 @@ var cmdHistoryRecentCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 
 		n := 20
 		if len(args) > 0 {
@@ -115,7 +115,7 @@ var cmdHistoryStatsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 
 		stats, err := store.Stats()
 		if err != nil {

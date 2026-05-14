@@ -91,7 +91,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 	// Ensure a go.mod exists so `go vet` can operate.
 	modPath := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(modPath); os.IsNotExist(err) {
-		os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o644)
+		_ = os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o644)
 		defer os.Remove(modPath)
 	}
 

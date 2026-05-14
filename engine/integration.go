@@ -371,7 +371,7 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []client.Ey
 	}
 
 	// 8. Update experience store with implicit signal
-	p.FeedbackCollector.RecordImplicit(ImplicitSignal{
+	_ = p.FeedbackCollector.RecordImplicit(ImplicitSignal{
 		Type:      "accepted",
 		SessionID: p.Timeline.SessionID,
 		Timestamp: time.Now(),
@@ -505,7 +505,7 @@ func (p *IntegrationPipeline) EndSession(success bool, taskGoal string) *Session
 
 	// 3. Update knowledge base
 	if success && taskGoal != "" {
-		p.KnowledgeBase.Add(&KnowledgeEntry{
+		_ = p.KnowledgeBase.Add(&KnowledgeEntry{
 			Title:      fmt.Sprintf("Completed: %s", truncateString(taskGoal, 60)),
 			Content:    fmt.Sprintf("Task completed in %s with %d files modified.", summary.Duration.Round(time.Second), len(summary.FilesModified)),
 			Category:   "session_outcome",
@@ -516,7 +516,7 @@ func (p *IntegrationPipeline) EndSession(success bool, taskGoal string) *Session
 	}
 
 	// 4. Collect implicit feedback
-	p.FeedbackCollector.RecordImplicit(ImplicitSignal{
+	_ = p.FeedbackCollector.RecordImplicit(ImplicitSignal{
 		Type:      "accepted",
 		SessionID: p.Timeline.SessionID,
 		Timestamp: time.Now(),

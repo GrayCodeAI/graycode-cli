@@ -131,7 +131,7 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 
 func genID() string {
 	b := make([]byte, 8)
-	cryptorand.Read(b)
+	_, _ = cryptorand.Read(b)
 	return fmt.Sprintf("%x", b)
 }
 
@@ -255,7 +255,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	// Initialize write-ahead log for crash recovery
 	if wal, err := session.NewWAL(sid); err == nil {
 		m.wal = wal
-		wal.AppendMeta(effectiveModel, effectiveProvider, "")
+		_ = wal.AppendMeta(effectiveModel, effectiveProvider, "")
 	}
 
 	// Check for crash recovery
@@ -267,7 +267,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 				continue // current session WAL
 			}
 			if rs, err := session.RecoverFromWAL(rid); rs != nil && err == nil {
-				session.Save(rs)
+				_ = session.Save(rs)
 				_ = os.Remove(filepath.Join(walDir, rid+".wal"))
 			}
 		}
@@ -583,7 +583,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			if m.wal != nil {
-				m.wal.Append(session.Message{Role: "user", Content: text})
+				_ = m.wal.Append(session.Message{Role: "user", Content: text})
 			}
 			m.waiting = true
 			m.autoScroll = true
@@ -666,7 +666,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content := sanitizeIdentity(m.partial.String())
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
 			if m.wal != nil {
-				m.wal.Append(session.Message{Role: "assistant", Content: content})
+				_ = m.wal.Append(session.Message{Role: "assistant", Content: content})
 			}
 			m.partial.Reset()
 		}

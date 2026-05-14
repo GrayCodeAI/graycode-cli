@@ -177,7 +177,7 @@ func (s *Session) AddUser(content string) {
 		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
 			parentID = head.ID
 		}
-		s.ConvoDAG.Append(parentID, "user", content)
+		_, _ = s.ConvoDAG.Append(parentID, "user", content)
 	}
 	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
 		go s.Memory.Remember(content, "user_explicit")
@@ -191,7 +191,7 @@ func (s *Session) AddAssistant(content string) {
 		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
 			parentID = head.ID
 		}
-		s.ConvoDAG.Append(parentID, "assistant", content)
+		_, _ = s.ConvoDAG.Append(parentID, "assistant", content)
 	}
 }
 

@@ -351,7 +351,7 @@ func (m *chatModel) saveSession() {
 	})
 	// On successful save, WAL is no longer needed (session file has everything)
 	if err == nil && m.wal != nil {
-		m.wal.Remove()
+		_ = m.wal.Remove()
 		m.wal = nil
 	}
 }
@@ -1626,10 +1626,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/sandbox":
 		if string(m.session.Mode) == "acceptEdits" {
-			m.session.SetPermissionMode("default")
+			_ = m.session.SetPermissionMode("default")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ON — all actions require approval."})
 		} else {
-			m.session.SetPermissionMode("acceptEdits")
+			_ = m.session.SetPermissionMode("acceptEdits")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox OFF — file edits auto-approved, other actions require approval."})
 		}
 		return m, nil
@@ -1958,10 +1958,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 
 	case "/yolo":
 		if string(m.session.Mode) == "bypassPermissions" {
-			m.session.SetPermissionMode("default")
+			_ = m.session.SetPermissionMode("default")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Yolo mode OFF — all actions require approval."})
 		} else {
-			m.session.SetPermissionMode("bypassPermissions")
+			_ = m.session.SetPermissionMode("bypassPermissions")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "⚠ Yolo mode ON — all tool calls auto-approved."})
 		}
 		return m, nil
