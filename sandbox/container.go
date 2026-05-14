@@ -60,8 +60,8 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Create attachments and cache dirs (like herm)
 	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
 	cacheDir := filepath.Join(c.projectDir, ".hawk", "cache")
-	os.MkdirAll(attachDir, 0755)
-	os.MkdirAll(cacheDir, 0755)
+	_ = os.MkdirAll(attachDir, 0755)
+	_ = os.MkdirAll(cacheDir, 0755)
 
 	args := []string{
 		"run", "-d", "--rm",

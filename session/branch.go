@@ -42,6 +42,6 @@ func Fork(sessionID string, atIndex int) (*Session, error) {
 
 func generateForkID() string {
 	b := make([]byte, 4)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return fmt.Sprintf("%x", b)
 }

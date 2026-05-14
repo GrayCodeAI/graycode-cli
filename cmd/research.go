@@ -160,7 +160,7 @@ func parseResearchArgs(args string) ResearchConfig {
 		case "--budget":
 			if i+1 < len(parts) {
 				i++
-				fmt.Sscanf(parts[i], "%d", &cfg.Budget)
+				_, _ = fmt.Sscanf(parts[i], "%d", &cfg.Budget)
 			}
 		case "--branch":
 			if i+1 < len(parts) {

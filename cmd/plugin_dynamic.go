@@ -87,7 +87,7 @@ var pluginStatusCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n")
+		_, _ = fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n")
 		for _, s := range statuses {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
 				s.Name, s.Version, s.State, s.ToolCount, s.HookCount)
@@ -211,7 +211,7 @@ type Output struct {
 func main() {
 	var input Input
 	if err := json.NewDecoder(os.Stdin).Decode(&input); err != nil {
-		fmt.Fprintf(os.Stderr, "error reading input: %%v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error reading input: %%v\n", err)
 		os.Exit(1)
 	}
 
@@ -220,7 +220,7 @@ func main() {
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing output: %%v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error writing output: %%v\n", err)
 		os.Exit(1)
 	}
 }
@@ -323,7 +323,7 @@ var pluginLogsCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		fmt.Fprintf(w, "TIME\tPLUGIN\tEVENT\tERROR\n")
+		_, _ = fmt.Fprintf(w, "TIME\tPLUGIN\tEVENT\tERROR\n")
 		for _, ev := range collected {
 			errStr := ""
 			if ev.Error != "" {

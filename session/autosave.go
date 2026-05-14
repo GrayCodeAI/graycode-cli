@@ -85,7 +85,7 @@ func AcquireLock(sessionID string) (*LockFile, error) {
 	// Check if lock exists and is stale (>5 min old)
 	if info, err := os.Stat(path); err == nil {
 		if time.Since(info.ModTime()) > 5*time.Minute {
-			os.Remove(path) // stale lock
+			_ = os.Remove(path) // stale lock
 		} else {
 			return nil, &SessionLockedError{ID: sessionID}
 		}
@@ -95,8 +95,8 @@ func AcquireLock(sessionID string) (*LockFile, error) {
 	if err != nil {
 		return nil, &SessionLockedError{ID: sessionID}
 	}
-	f.Write([]byte(time.Now().Format(time.RFC3339)))
-	f.Close()
+	_, _ = f.Write([]byte(time.Now().Format(time.RFC3339)))
+	_ = f.Close()
 
 	return &LockFile{path: path}, nil
 }
@@ -104,14 +104,14 @@ func AcquireLock(sessionID string) (*LockFile, error) {
 // Release removes the lock file.
 func (l *LockFile) Release() {
 	if l != nil && l.path != "" {
-		os.Remove(l.path)
+		_ = os.Remove(l.path)
 	}
 }
 
 // Refresh updates the lock file timestamp to prevent it from going stale.
 func (l *LockFile) Refresh() {
 	if l != nil && l.path != "" {
-		os.Chtimes(l.path, time.Now(), time.Now())
+		_ = os.Chtimes(l.path, time.Now(), time.Now())
 	}
 }
 

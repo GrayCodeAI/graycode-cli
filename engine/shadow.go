@@ -66,7 +66,7 @@ func (sw *ShadowWorkspace) ValidateMultipleEdits(edits map[string]string) map[st
 // Close removes the shadow workspace temp directory and all its contents.
 func (sw *ShadowWorkspace) Close() {
 	if sw.tempDir != "" {
-		os.RemoveAll(sw.tempDir)
+		_ = os.RemoveAll(sw.tempDir)
 	}
 }
 

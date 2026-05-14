@@ -282,19 +282,19 @@ func (s *Sandbox) applyChange(c *Change) error {
 		tmpName := tmp.Name()
 		if _, err := tmp.WriteString(c.Content); err != nil {
 			tmp.Close()
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 			return fmt.Errorf("write temp file: %w", err)
 		}
 		if err := tmp.Close(); err != nil {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 			return fmt.Errorf("close temp file: %w", err)
 		}
 		if err := os.Chmod(tmpName, 0o644); err != nil {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 			return fmt.Errorf("chmod temp file: %w", err)
 		}
 		if err := os.Rename(tmpName, absPath); err != nil {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 			return fmt.Errorf("rename temp to %s: %w", absPath, err)
 		}
 

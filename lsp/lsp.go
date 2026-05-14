@@ -133,7 +133,7 @@ func (c *Client) Notify(method string, params interface{}) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(data))
+		_, _ = fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(data))
 	c.stdin.Write(data)
 }
 
@@ -171,7 +171,7 @@ func (c *Client) Request(method string, params interface{}) (*Response, error) {
 				break
 			}
 			if strings.HasPrefix(line, "Content-Length: ") {
-				fmt.Sscanf(line, "Content-Length: %d", &contentLength)
+				_, _ = fmt.Sscanf(line, "Content-Length: %d", &contentLength)
 			}
 		}
 

@@ -113,7 +113,7 @@ func projectSettingsPath() string {
 func LoadGlobalSettings() Settings {
 	var s Settings
 	if data, err := os.ReadFile(globalSettingsPath()); err == nil {
-		json.Unmarshal(data, &s)
+		_ = json.Unmarshal(data, &s)
 	}
 	return s
 }
@@ -238,7 +238,7 @@ func MergeSettings(base, override Settings) Settings {
 // SaveGlobal saves settings to the global config file.
 func SaveGlobal(s Settings) error {
 	dir := filepath.Dir(globalSettingsPath())
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func SaveGlobal(s Settings) error {
 
 // SaveProject saves settings to the project config file.
 func SaveProject(s Settings) error {
-	os.MkdirAll(".hawk", 0o755)
+	_ = os.MkdirAll(".hawk", 0o755)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err

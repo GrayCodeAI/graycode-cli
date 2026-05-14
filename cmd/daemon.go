@@ -122,7 +122,7 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to stop daemon (PID %d): %w", info.PID, err)
 	}
 
-	os.Remove(pidFile)
+	_ = os.Remove(pidFile)
 	fmt.Printf("Stopped daemon (PID %d)\n", info.PID)
 	return nil
 }
@@ -151,12 +151,12 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 	proc, err := os.FindProcess(info.PID)
 	if err != nil {
 		fmt.Println("Status: not running (stale PID file)")
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return nil
 	}
 	if err := proc.Signal(syscall.Signal(0)); err != nil {
 		fmt.Println("Status: not running (stale PID file)")
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 		return nil
 	}
 

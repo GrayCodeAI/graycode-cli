@@ -134,7 +134,7 @@ func FormatAuditResult(r AuditResult) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Scanned %d file(s). Found %d issue(s):\n\n", r.Files, len(r.Findings))
+		_, _ = fmt.Fprintf(&b, "Scanned %d file(s). Found %d issue(s):\n\n", r.Files, len(r.Findings))
 
 	critical, warning, info := 0, 0, 0
 	for _, f := range r.Findings {
@@ -146,18 +146,18 @@ func FormatAuditResult(r AuditResult) string {
 		case SeverityInfo:
 			info++
 		}
-		fmt.Fprintf(&b, "  [%s] %s:%d:%d — %s\n", f.Severity, f.File, f.Line, f.Column, f.Message)
+		_, _ = fmt.Fprintf(&b, "  [%s] %s:%d:%d — %s\n", f.Severity, f.File, f.Line, f.Column, f.Message)
 	}
 
 	b.WriteString("\n")
 	if critical > 0 {
-		fmt.Fprintf(&b, "⚠ %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
+		_, _ = fmt.Fprintf(&b, "⚠ %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
 	}
 	if warning > 0 {
-		fmt.Fprintf(&b, "  %d WARNING(s) — invisible characters that may hide content.\n", warning)
+		_, _ = fmt.Fprintf(&b, "  %d WARNING(s) — invisible characters that may hide content.\n", warning)
 	}
 	if info > 0 {
-		fmt.Fprintf(&b, "  %d INFO — potential homoglyphs (may be legitimate non-Latin text).\n", info)
+		_, _ = fmt.Fprintf(&b, "  %d INFO — potential homoglyphs (may be legitimate non-Latin text).\n", info)
 	}
 	return b.String()
 }

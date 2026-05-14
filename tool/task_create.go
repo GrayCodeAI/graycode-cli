@@ -296,7 +296,7 @@ func (TaskListTool) Execute(_ context.Context, input json.RawMessage) (string, e
 		Action string `json:"action"`
 	}
 	if input != nil {
-		json.Unmarshal(input, &p)
+		_ = json.Unmarshal(input, &p)
 	}
 
 	switch p.Action {

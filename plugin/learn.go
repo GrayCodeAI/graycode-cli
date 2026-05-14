@@ -28,7 +28,7 @@ func BuildLearnPrompt(ctx LearnContext) string {
 		b.WriteString("No project markers detected.\n")
 	} else {
 		for _, s := range ctx.Signals {
-			fmt.Fprintf(&b, "- %s: %s\n", s.Category, s.Name)
+		_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Category, s.Name)
 		}
 	}
 
@@ -45,7 +45,7 @@ func BuildLearnPrompt(ctx LearnContext) string {
 		b.WriteString("None.\n")
 	} else {
 		for _, s := range ctx.Installed {
-			fmt.Fprintf(&b, "- %s: %s\n", s.Name, s.Description)
+		_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Name, s.Description)
 		}
 	}
 
@@ -55,7 +55,7 @@ func BuildLearnPrompt(ctx LearnContext) string {
 		b.WriteString("Registry unavailable.\n")
 	} else {
 		for _, s := range ctx.Registry {
-			fmt.Fprintf(&b, "- **%s** [%s] (%d installs): %s\n", s.Name, s.Category, s.Installs, s.Description)
+		_, _ = fmt.Fprintf(&b, "- **%s** [%s] (%d installs): %s\n", s.Name, s.Category, s.Installs, s.Description)
 		}
 	}
 
@@ -121,7 +121,7 @@ func GatherDeepSourceInfo(dir string) string {
 		if len(content) > maxFileSize {
 			content = content[:maxFileSize] + "\n... (truncated)"
 		}
-		fmt.Fprintf(&b, "### %s\n```\n%s\n```\n\n", name, content)
+		_, _ = fmt.Fprintf(&b, "### %s\n```\n%s\n```\n\n", name, content)
 		read++
 	}
 
@@ -143,7 +143,7 @@ func GatherDeepSourceInfo(dir string) string {
 		if len(content) > maxFileSize {
 			content = content[:maxFileSize] + "\n... (truncated)"
 		}
-		fmt.Fprintf(&b, "### %s\n```\n%s\n```\n\n", name, content)
+		_, _ = fmt.Fprintf(&b, "### %s\n```\n%s\n```\n\n", name, content)
 		read++
 	}
 
@@ -161,7 +161,7 @@ func BuildLearnUpdatePrompt(ctx LearnContext) string {
 
 	b.WriteString("## Project Analysis\n")
 	for _, s := range ctx.Signals {
-		fmt.Fprintf(&b, "- %s: %s\n", s.Category, s.Name)
+		_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Category, s.Name)
 	}
 
 	if ctx.SourceInfo != "" {
@@ -172,15 +172,15 @@ func BuildLearnUpdatePrompt(ctx LearnContext) string {
 
 	b.WriteString("\n## Installed Skills (review each)\n")
 	for _, s := range ctx.Installed {
-		fmt.Fprintf(&b, "- **%s**", s.Name)
+		_, _ = fmt.Fprintf(&b, "- **%s**", s.Name)
 		if s.Version != "" {
-			fmt.Fprintf(&b, " v%s", s.Version)
+		_, _ = fmt.Fprintf(&b, " v%s", s.Version)
 		}
 		if s.Description != "" {
-			fmt.Fprintf(&b, ": %s", s.Description)
+		_, _ = fmt.Fprintf(&b, ": %s", s.Description)
 		}
 		if s.Source.Repo != "" {
-			fmt.Fprintf(&b, " (from %s)", s.Source.Repo)
+		_, _ = fmt.Fprintf(&b, " (from %s)", s.Source.Repo)
 		}
 		b.WriteString("\n")
 	}
@@ -207,17 +207,17 @@ func FormatLearnSummary(ctx LearnContext, deep bool) string {
 	if deep {
 		mode = "/learn deep"
 	}
-	fmt.Fprintf(&b, "Running %s advisor...\n\n", mode)
+		_, _ = fmt.Fprintf(&b, "Running %s advisor...\n\n", mode)
 
 	if len(ctx.Signals) > 0 {
 		names := make([]string, len(ctx.Signals))
 		for i, s := range ctx.Signals {
 			names[i] = s.Name
 		}
-		fmt.Fprintf(&b, "Detected: %s\n", strings.Join(names, ", "))
+		_, _ = fmt.Fprintf(&b, "Detected: %s\n", strings.Join(names, ", "))
 	}
-	fmt.Fprintf(&b, "Installed skills: %d\n", len(ctx.Installed))
-	fmt.Fprintf(&b, "Registry skills: %d\n", len(ctx.Registry))
+		_, _ = fmt.Fprintf(&b, "Installed skills: %d\n", len(ctx.Installed))
+		_, _ = fmt.Fprintf(&b, "Registry skills: %d\n", len(ctx.Registry))
 	if deep && ctx.SourceInfo != "" {
 		b.WriteString("Source analysis: included\n")
 	}

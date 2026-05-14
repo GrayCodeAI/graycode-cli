@@ -720,7 +720,7 @@ func summaryCountFileLines(path string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	count := 0
 	scanner := bufio.NewScanner(f)
@@ -789,7 +789,7 @@ func summaryExtractImports(path string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var imports []string
 	scanner := bufio.NewScanner(f)
@@ -840,7 +840,7 @@ func summaryHasGoMain(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	hasPackageMain := false
 	hasFuncMain := false
@@ -864,7 +864,7 @@ func summaryHasPythonMain(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {

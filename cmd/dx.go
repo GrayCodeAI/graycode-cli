@@ -89,7 +89,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 			writable = "not writable"
 		} else {
 			f.Close()
-			os.Remove(testFile)
+			_ = os.Remove(testFile)
 		}
 		entries, _ := os.ReadDir(sessDir)
 		b.WriteString(fmt.Sprintf("  Path:        %s\n", sessDir))

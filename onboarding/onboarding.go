@@ -225,8 +225,8 @@ func SaveAPIKeyToEnvFile(key, value string) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
-	fmt.Fprintf(f, "export %s=%s\n", key, value)
+	defer func() { _ = f.Close() }()
+		_, _ = fmt.Fprintf(f, "export %s=%s\n", key, value)
 }
 
 // validateAPIKey checks the key format for known providers.

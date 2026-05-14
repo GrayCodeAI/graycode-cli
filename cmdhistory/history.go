@@ -313,6 +313,6 @@ func scanEntries(rows *sql.Rows) ([]Entry, error) {
 // generateID produces a short 8-character hex ID from crypto/rand.
 func generateID() string {
 	b := make([]byte, 4)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return fmt.Sprintf("%x", b)
 }

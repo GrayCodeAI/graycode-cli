@@ -236,9 +236,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		for ev := range events {
 			switch ev.Type {
 			case "content":
-				fmt.Fprintf(w, "data: %s\n\n", ev.Content)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", ev.Content)
 			case "done":
-				fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+		_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
 			}
 			if flusher != nil {
 				flusher.Flush()

@@ -150,7 +150,7 @@ func formatTodoItems() string {
 			}
 			extra = " (" + strings.Join(parts, ", ") + ")"
 		}
-		fmt.Fprintf(&b, "%s #%d: %s%s\n", mark, t.ID, t.Task, extra)
+		_, _ = fmt.Fprintf(&b, "%s #%d: %s%s\n", mark, t.ID, t.Task, extra)
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

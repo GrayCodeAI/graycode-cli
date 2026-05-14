@@ -280,7 +280,7 @@ func checkDiskSpace() DiagnosticResult {
 		}
 	}
 	tmpFile.Close()
-	os.Remove(tmpFile.Name())
+	_ = os.Remove(tmpFile.Name())
 
 	return DiagnosticResult{
 		Name:     "disk_space",
@@ -567,7 +567,7 @@ func checkDirWritable(name, dir string, start time.Time) DiagnosticResult {
 			Duration: time.Since(start),
 		}
 	}
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 
 	return DiagnosticResult{
 		Name:     name,

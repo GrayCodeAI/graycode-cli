@@ -721,6 +721,6 @@ func checkWritable(dir string) error {
 	}
 	name := f.Name()
 	f.Close()
-	os.Remove(name)
+	_ = os.Remove(name)
 	return nil
 }

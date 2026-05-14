@@ -268,7 +268,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			}
 			if rs, err := session.RecoverFromWAL(rid); rs != nil && err == nil {
 				session.Save(rs)
-				os.Remove(filepath.Join(walDir, rid+".wal"))
+				_ = os.Remove(filepath.Join(walDir, rid+".wal"))
 			}
 		}
 	}

@@ -103,32 +103,61 @@ func Save(s *Session) error {
 		"created_at": s.CreatedAt.Format(time.RFC3339),
 		"updated_at": s.UpdatedAt.Format(time.RFC3339),
 	}
-	metaData, _ := json.Marshal(meta)
-	w.Write(metaData)
-	w.WriteByte('\n')
+	metaData, err := json.Marshal(meta)
+	if err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return fmt.Errorf("marshal session meta: %w", err)
+	}
+	if _, err := w.Write(metaData); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return fmt.Errorf("write session meta: %w", err)
+	}
+	if err := w.WriteByte('\n'); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return fmt.Errorf("write newline: %w", err)
+	}
 
 	// Write each message as a JSON line
 	for _, msg := range s.Messages {
-		msgData, _ := json.Marshal(msg)
-		w.Write(msgData)
-		w.WriteByte('\n')
+		msgData, err := json.Marshal(msg)
+		if err != nil {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+			return fmt.Errorf("marshal message: %w", err)
+		}
+		if _, err := w.Write(msgData); err != nil {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+			return fmt.Errorf("write message: %w", err)
+		}
+		if err := w.WriteByte('\n'); err != nil {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+			return fmt.Errorf("write newline: %w", err)
+		}
 	}
 
 	if err := w.Flush(); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return fmt.Errorf("flush session: %w", err)
 	}
 	if err := f.Sync(); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return fmt.Errorf("sync session: %w", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("close session file: %w", err)
+	}
 
 	// Atomic rename: either old file or new file, never partial
 	if err := os.Rename(tmp, target); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("atomic rename: %w", err)
 	}
 
@@ -209,7 +238,7 @@ func (w *WAL) Close() error {
 
 // Remove deletes the WAL file (called after successful Save).
 func (w *WAL) Remove() error {
-	w.Close()
+	_ = w.Close()
 	return os.Remove(w.path)
 }
 
@@ -221,7 +250,7 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	if err != nil {
 		return nil, nil // no WAL, nothing to recover
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var s Session
 	s.ID = sessionID
@@ -304,7 +333,7 @@ func loadJSONL(id string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var s Session
 	s.ID = id
@@ -424,7 +453,7 @@ func loadPreview(path string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 4096), 4096) // small buffer, just need first few lines

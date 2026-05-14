@@ -685,7 +685,7 @@ func (fg *FileGrouper) extractLocalImports(relPath string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Detect the module path from go.mod
 	modPath := detectModulePath(fg.ProjectDir)

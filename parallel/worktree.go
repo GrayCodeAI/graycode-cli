@@ -26,7 +26,7 @@ func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// Best-effort cleanup of the temp dir.
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return wtPath, nil
@@ -46,7 +46,7 @@ func removeWorktree(repoDir, worktreePath string) error {
 		_ = prune.Run()
 
 		// Also try to clean up the filesystem path directly.
-		os.RemoveAll(worktreePath)
+		_ = os.RemoveAll(worktreePath)
 		// Clean up the parent temp dir if it is now empty.
 		parent := filepath.Dir(worktreePath)
 		os.Remove(parent) // ignore error; may not be empty

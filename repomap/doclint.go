@@ -386,17 +386,6 @@ func deriveVerbs(name string) []string {
 	return verbs
 }
 
-// verbFromName extracts a likely verb from a CamelCase name.
-// e.g., "HandleRequest" -> "handle", "ProcessData" -> "process"
-func verbFromName(name string) string {
-	// Split camelCase
-	parts := splitCamelCase(name)
-	if len(parts) == 0 {
-		return name
-	}
-	return strings.ToLower(parts[0])
-}
-
 var camelSplitRe = regexp.MustCompile(`[A-Z][^A-Z]*`)
 
 // splitCamelCase splits a CamelCase identifier into words.

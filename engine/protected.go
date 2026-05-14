@@ -79,7 +79,7 @@ func (p *ProtectedPaths) Format() string {
 	var b strings.Builder
 	b.WriteString("The following paths are READ-ONLY. Do NOT write to or edit them:\n")
 	for _, path := range paths {
-		fmt.Fprintf(&b, "  - %s\n", path)
+		_, _ = fmt.Fprintf(&b, "  - %s\n", path)
 	}
 	return b.String()
 }

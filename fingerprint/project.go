@@ -922,7 +922,7 @@ func detectIndentationConvention(dir string) *Convention {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		lineCount := 0

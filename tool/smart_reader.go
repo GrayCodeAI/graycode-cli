@@ -294,7 +294,7 @@ func (sr *SmartReader) ReadRange(path string, startLine, endLine int) (*ReadResu
 	if err != nil {
 		return nil, fmt.Errorf("smart_reader: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
@@ -355,19 +355,19 @@ func (sr *SmartReader) EstimateFileTokens(path string) (int, error) {
 func FormatResult(path string, result *ReadResult) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "%s (%d lines, showing %d):\n", path, result.TotalLines, result.ShownLines)
+		_, _ = fmt.Fprintf(&b, "%s (%d lines, showing %d):\n", path, result.TotalLines, result.ShownLines)
 
 	for _, sec := range result.Sections {
 		reason := sec.Reason
 		if reason != "" {
 			reason = " (" + reason + ")"
 		}
-		fmt.Fprintf(&b, "[%d-%d]%s\n", sec.StartLine, sec.EndLine, reason)
+		_, _ = fmt.Fprintf(&b, "[%d-%d]%s\n", sec.StartLine, sec.EndLine, reason)
 	}
 
 	if result.Truncated {
 		omitted := result.TotalLines - result.ShownLines
-		fmt.Fprintf(&b, "\nTruncated: %d lines omitted (symbols-only available via /symbols)\n", omitted)
+		_, _ = fmt.Fprintf(&b, "\nTruncated: %d lines omitted (symbols-only available via /symbols)\n", omitted)
 	}
 
 	return b.String()

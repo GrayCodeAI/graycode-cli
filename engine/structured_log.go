@@ -368,7 +368,7 @@ func (rw *RotatingWriter) rotate() error {
 
 	// Remove excess files.
 	excess := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, rw.MaxFiles+1))
-	os.Remove(excess)
+	_ = os.Remove(excess)
 
 	return rw.openNew()
 }

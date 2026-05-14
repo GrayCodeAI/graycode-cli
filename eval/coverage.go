@@ -118,10 +118,6 @@ func ParseCoverageProfile(data string) (*CoverageReport, error) {
 		startIdx = 1
 	}
 
-	type lineInfo struct {
-		covered bool
-	}
-
 	// fileLines maps file path -> line number -> covered.
 	fileLines := make(map[string]map[int]bool)
 

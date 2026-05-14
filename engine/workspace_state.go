@@ -252,9 +252,9 @@ func (ws *WorkspaceState) Summary() string {
 	// Project line with detected language
 	lang := ws.detectProjectLanguage()
 	if lang != "" {
-		fmt.Fprintf(&b, "Project: %s (%s)\n", ws.ProjectDir, lang)
+		_, _ = fmt.Fprintf(&b, "Project: %s (%s)\n", ws.ProjectDir, lang)
 	} else {
-		fmt.Fprintf(&b, "Project: %s\n", ws.ProjectDir)
+		_, _ = fmt.Fprintf(&b, "Project: %s\n", ws.ProjectDir)
 	}
 
 	// Modified files
@@ -264,16 +264,16 @@ func (ws *WorkspaceState) Summary() string {
 			names = append(names, path)
 		}
 		sort.Strings(names)
-		fmt.Fprintf(&b, "Modified: %d files (%s)\n", len(names), strings.Join(names, ", "))
+		_, _ = fmt.Fprintf(&b, "Modified: %d files (%s)\n", len(names), strings.Join(names, ", "))
 	} else {
 		b.WriteString("Modified: 0 files\n")
 	}
 
 	// Opened files
-	fmt.Fprintf(&b, "Opened: %d files\n", len(ws.OpenFiles))
+		_, _ = fmt.Fprintf(&b, "Opened: %d files\n", len(ws.OpenFiles))
 
 	// Staged files
-	fmt.Fprintf(&b, "Staged: %d files\n", len(ws.StagedFiles))
+		_, _ = fmt.Fprintf(&b, "Staged: %d files\n", len(ws.StagedFiles))
 
 	// External changes
 	externalChanges := ws.detectExternalChangesLocked()
@@ -282,7 +282,7 @@ func (ws *WorkspaceState) Summary() string {
 		for _, path := range externalChanges {
 			descriptions = append(descriptions, fmt.Sprintf("%s updated", filepath.Base(path)))
 		}
-		fmt.Fprintf(&b, "External changes: %d file (%s)\n", len(externalChanges), strings.Join(descriptions, ", "))
+		_, _ = fmt.Fprintf(&b, "External changes: %d file (%s)\n", len(externalChanges), strings.Join(descriptions, ", "))
 	} else {
 		b.WriteString("External changes: none\n")
 	}
@@ -290,7 +290,7 @@ func (ws *WorkspaceState) Summary() string {
 	// Last scan
 	if !ws.LastScan.IsZero() {
 		ago := time.Since(ws.LastScan).Round(time.Second)
-		fmt.Fprintf(&b, "Last scan: %s ago\n", ago)
+		_, _ = fmt.Fprintf(&b, "Last scan: %s ago\n", ago)
 	} else {
 		b.WriteString("Last scan: never\n")
 	}
@@ -306,7 +306,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	var b strings.Builder
 
 	b.WriteString("<workspace_state>\n")
-	fmt.Fprintf(&b, "project_dir: %s\n", ws.ProjectDir)
+		_, _ = fmt.Fprintf(&b, "project_dir: %s\n", ws.ProjectDir)
 
 	// Recently modified
 	if len(ws.ModifiedFiles) > 0 {
@@ -317,7 +317,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			fmt.Fprintf(&b, "  - %s (at %s)\n", name, ws.ModifiedFiles[name].Format(time.RFC3339))
+		_, _ = fmt.Fprintf(&b, "  - %s (at %s)\n", name, ws.ModifiedFiles[name].Format(time.RFC3339))
 		}
 	}
 
@@ -331,7 +331,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 		sort.Strings(names)
 		for _, name := range names {
 			fs := ws.OpenFiles[name]
-			fmt.Fprintf(&b, "  - %s [%s", name, fs.Language)
+		_, _ = fmt.Fprintf(&b, "  - %s [%s", name, fs.Language)
 			if fs.IsTest {
 				b.WriteString(", test")
 			}
@@ -346,7 +346,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	if len(ws.StagedFiles) > 0 {
 		b.WriteString("staged_files:\n")
 		for _, path := range ws.StagedFiles {
-			fmt.Fprintf(&b, "  - %s\n", path)
+		_, _ = fmt.Fprintf(&b, "  - %s\n", path)
 		}
 	}
 
@@ -355,7 +355,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	if len(externalChanges) > 0 {
 		b.WriteString("external_changes:\n")
 		for _, path := range externalChanges {
-			fmt.Fprintf(&b, "  - %s (changed outside hawk)\n", path)
+		_, _ = fmt.Fprintf(&b, "  - %s (changed outside hawk)\n", path)
 		}
 	}
 
@@ -461,7 +461,7 @@ func hashFile(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {

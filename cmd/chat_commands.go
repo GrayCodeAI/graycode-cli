@@ -1047,7 +1047,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 					b.WriteString(plugin.FormatSkillEntry(e))
 				}
 				if len(results) > 20 {
-					fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
+		_, _ = fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 				return m, nil
@@ -1072,7 +1072,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				var b strings.Builder
 				b.WriteString("Trending skills:\n\n")
 				for i, e := range results {
-					fmt.Fprintf(&b, "  %d. ", i+1)
+		_, _ = fmt.Fprintf(&b, "  %d. ", i+1)
 					b.WriteString(strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
@@ -1097,21 +1097,21 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				var b strings.Builder
-				fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
+		_, _ = fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
 				if entry.Version != "" {
-					fmt.Fprintf(&b, "Version: %s\n", entry.Version)
+		_, _ = fmt.Fprintf(&b, "Version: %s\n", entry.Version)
 				}
 				if entry.Author != "" {
-					fmt.Fprintf(&b, "Author: %s\n", entry.Author)
+		_, _ = fmt.Fprintf(&b, "Author: %s\n", entry.Author)
 				}
 				if entry.Description != "" {
-					fmt.Fprintf(&b, "Description: %s\n", entry.Description)
+		_, _ = fmt.Fprintf(&b, "Description: %s\n", entry.Description)
 				}
 				if entry.Repo != "" {
-					fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
+		_, _ = fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
 				}
-				fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
-				fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
+		_, _ = fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
+		_, _ = fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 				return m, nil
 
@@ -1187,10 +1187,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				}
 				var b strings.Builder
 				b.WriteString("✓ Skill validated successfully.\n\n")
-				fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
-				fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
+		_, _ = fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
+		_, _ = fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
 				if skill.Version != "" {
-					fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
+		_, _ = fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
 				}
 				b.WriteString("\nTo publish:\n")
 				b.WriteString("  1. Push your skill to a GitHub repo with skills/<name>/SKILL.md\n")
@@ -1461,7 +1461,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/export":
 		home, _ := os.UserHomeDir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
-		os.MkdirAll(exportDir, 0755)
+		_ = os.MkdirAll(exportDir, 0755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
 		md.WriteString(fmt.Sprintf("# Session %s\n\n", m.sessionID))
@@ -1489,7 +1489,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		home, _ := os.UserHomeDir()
 		feedDir := filepath.Join(home, ".hawk", "feedback")
-		os.MkdirAll(feedDir, 0755)
+		_ = os.MkdirAll(feedDir, 0755)
 		report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
 			time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)
 		fname := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))
@@ -1600,7 +1600,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/share":
 		home, _ := os.UserHomeDir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
-		os.MkdirAll(exportDir, 0755)
+		_ = os.MkdirAll(exportDir, 0755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
 		md.WriteString(fmt.Sprintf("# Hawk Session %s\n\n", m.sessionID))

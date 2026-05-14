@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, dev]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -14,7 +17,17 @@ jobs:
       - uses: ./.github/actions/setup-deps
         with:
           token: ${{ github.token }}
-      - run: go test -race -count=1 -timeout=120s ./...
+      - name: Run tests with race detector
+        run: go test -race -count=1 -timeout=120s ./...
+      - name: Run tests with coverage
+        run: |
+          go test -race -coverprofile=coverage.out -covermode=atomic -timeout=120s ./...
+          go tool cover -func=coverage.out | grep "^total:"
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
 
   lint:
     runs-on: ubuntu-latest
@@ -37,7 +50,14 @@ jobs:
       - uses: ./.github/actions/setup-deps
         with:
           token: ${{ github.token }}
-      - run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./... || true
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - name: Run gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -exclude=G104,G301,G302,G304,G306 ./... || true
 
   build:
     runs-on: ubuntu-latest
@@ -59,4 +79,27 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
-        run: go build -ldflags "-s -w" -o hawk-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
+        run: |
+          go build -ldflags "-s -w -X main.Version=${{ github.sha }}" \
+            -o hawk-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: hawk-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: hawk-*
+
+  benchmark:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-deps
+        with:
+          token: ${{ github.token }}
+      - name: Run benchmarks
+        run: go test ./... -bench=. -benchmem -count=3 -timeout=300s | tee bench.txt
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks
+          path: bench.txt
