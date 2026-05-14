@@ -13,7 +13,7 @@ package engine
 import (
 	"github.com/GrayCodeAI/eyrie/client"
 
-	"github.com/GrayCodeAI/hawk/convodag"
+	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
@@ -142,7 +142,7 @@ type SessionServices struct {
 	Critic     *Critic
 	Backtrack  *BacktrackEngine
 	Shadow     *ShadowWorkspace
-	ConvoDAG   *convodag.DAG
+	ConvoDAG   *storage.DAG
 	Plan       *PlanState
 	Teach      TeachConfig
 	Trajectory *TrajectoryDistiller

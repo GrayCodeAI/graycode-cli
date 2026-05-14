@@ -1,0 +1,1 @@
+Spawn a sub-agent to handle a complex task independently.

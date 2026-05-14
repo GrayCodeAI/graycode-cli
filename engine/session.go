@@ -7,7 +7,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
-	"github.com/GrayCodeAI/hawk/convodag"
+	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
@@ -79,7 +79,7 @@ type Session struct {
 	Trajectory *TrajectoryDistiller // trajectory.go — multi-run distillation
 	Shadow     *ShadowWorkspace     // shadow.go — edit pre-validation
 	Snapshots  SnapshotTracker     // snapshot integration for auto-tracking
-	ConvoDAG   *convodag.DAG       // conversation DAG for branching/forking
+	ConvoDAG   *storage.DAG       // conversation DAG for branching/forking
 	Sleeptime      *memory.SleeptimeAgent   // sleeptime.go — background memory consolidation
 	Activity       *memory.ActivityTracker  // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller   // skill_distill.go — auto-skill extraction
@@ -241,7 +241,7 @@ func (s *Session) SwitchBranch(nodeID string) error {
 }
 
 // ListBranches returns child nodes (alternative branches) from a given node.
-func (s *Session) ListBranches(nodeID string) ([]*convodag.Node, error) {
+func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
 	if s.ConvoDAG == nil {
 		return nil, nil
 	}
