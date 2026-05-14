@@ -203,7 +203,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	url := "https://github.com/" + repo + ".git"
 	cmd := exec.Command("git", "clone", "--depth", "1", "--single-branch", url, tmpDir)

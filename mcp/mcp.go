@@ -101,7 +101,7 @@ func Connect(ctx context.Context, name, command string, args ...string) (*Server
 		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "0.2.0"},
 	})
 	if err != nil {
-		cmd.Process.Kill()
+		_ = cmd.Process.Kill()
 		return nil, fmt.Errorf("mcp: initialize: %w", err)
 	}
 
@@ -241,7 +241,7 @@ func (s *Server) CallTool(name string, args map[string]interface{}) (string, err
 
 // Close shuts down the MCP server.
 func (s *Server) Close() error {
-	s.stdin.Close()
+	_ = s.stdin.Close()
 	return s.cmd.Wait()
 }
 
@@ -308,6 +308,6 @@ func (s *Server) notify(method string, params interface{}) {
 	data, _ := json.Marshal(req)
 	data = append(data, '\n')
 	s.mu.Lock()
-	s.stdin.Write(data)
+	_, _ = s.stdin.Write(data)
 	s.mu.Unlock()
 }

@@ -40,7 +40,7 @@ func (t *Transcriber) transcribeWhisper(path string, audioData []byte) (string, 
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 	if _, err := tmpFile.Write(audioData); err != nil {
 		return "", err
 	}

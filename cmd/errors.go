@@ -302,7 +302,7 @@ func (l *errorLoggerT) LogError(context string, err error) {
 		return
 	}
 	defer func() { _ = f.Close() }()
-	f.WriteString(entry)
+	_, _ = f.WriteString(entry)
 }
 
 // LogErrorf writes a formatted, timestamped error entry to ~/.hawk/error.log.
@@ -324,7 +324,7 @@ func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 		return
 	}
 	defer func() { _ = f.Close() }()
-	f.WriteString(entry)
+	_, _ = f.WriteString(entry)
 }
 
 // ─── validateStartup ─────────────────────────────────────────────────────────

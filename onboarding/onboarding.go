@@ -190,13 +190,13 @@ func RunSetup() error {
 	} else if selected.name == "ollama" {
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = "ollama"
-		hawkconfig.SaveGlobal(settings)
+		_ = hawkconfig.SaveGlobal(settings)
 		fmt.Printf("  %s✓ Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
 		// Key already in env — just save provider preference
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = selected.name
-		hawkconfig.SaveGlobal(settings)
+		_ = hawkconfig.SaveGlobal(settings)
 		fmt.Printf("  %s✓ Using %s from environment%s\n", teal, selected.envKey, reset)
 	}
 

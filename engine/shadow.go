@@ -40,7 +40,7 @@ func (sw *ShadowWorkspace) ValidateEdit(originalPath, newContent string) []Valid
 	if err := os.WriteFile(tmpFile, []byte(newContent), 0o644); err != nil {
 		return []ValidationError{{File: originalPath, Message: fmt.Sprintf("shadow write: %v", err)}}
 	}
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	runner := shadowValidator(ext)
 	if runner == nil {
@@ -92,7 +92,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 	modPath := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(modPath); os.IsNotExist(err) {
 		_ = os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o644)
-		defer os.Remove(modPath)
+		defer func() { _ = os.Remove(modPath) }()
 	}
 
 	cmd := exec.Command("go", "vet", "./...")

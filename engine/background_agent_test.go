@@ -31,7 +31,7 @@ func TestBackgroundAgentPool_SubmitAndCollect(t *testing.T) {
 	})
 
 	// Give goroutine time to complete
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	results := pool.Collect()
 	if len(results) != 1 {

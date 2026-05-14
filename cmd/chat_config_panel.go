@@ -499,7 +499,7 @@ func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
 		case "Remove key":
 			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
 			if envKey != "" {
-				os.Unsetenv(envKey)
+				_ = os.Unsetenv(envKey)
 				_ = hawkconfig.RemoveEnvFile(envKey)
 			}
 			delete(modelCache, provider)

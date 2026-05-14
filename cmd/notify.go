@@ -159,7 +159,7 @@ $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
 
 // Bell writes the terminal bell character to stdout.
 func (n *Notifier) Bell() {
-	fmt.Fprint(os.Stdout, "\a")
+	_, _ = fmt.Fprint(os.Stdout, "\a")
 }
 
 // GetUnread returns all unread notifications.

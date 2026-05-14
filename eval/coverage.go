@@ -68,7 +68,7 @@ func (ca *CoverageAnalyzer) RunCoverage() (*CoverageReport, error) {
 	defer ca.mu.Unlock()
 
 	coverFile := filepath.Join(ca.ProjectDir, "coverage.out")
-	defer os.Remove(coverFile)
+	defer func() { _ = os.Remove(coverFile) }()
 
 	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./...")
 	cmd.Dir = ca.ProjectDir

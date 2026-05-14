@@ -157,7 +157,7 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 			lastErr = fmt.Errorf("failed to create temp dir: %w", err)
 			continue
 		}
-		defer os.RemoveAll(workDir)
+		defer func() { _ = os.RemoveAll(workDir) }()
 
 		// Run setup to create the initial buggy/incomplete code.
 		startTime := time.Now()

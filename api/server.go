@@ -75,7 +75,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
-		s.server.Shutdown(context.Background())
+		_ = s.server.Shutdown(context.Background())
 	}()
 
 	err = s.server.Serve(ln)
@@ -131,5 +131,5 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }

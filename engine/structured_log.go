@@ -153,7 +153,7 @@ func (l *StructuredLogger) log(level LogLevel, msg string, fields ...map[string]
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	fmt.Fprintln(l.Output, output)
+	_, _ = fmt.Fprintln(l.Output, output)
 }
 
 func (l *StructuredLogger) formatJSON(entry LogEntry) string {

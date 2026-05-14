@@ -818,7 +818,7 @@ func checkGoCompilation(code string) []GenIssue {
 	if err != nil {
 		return nil
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tmpFile := filepath.Join(tmpDir, "generated.go")
 	if err := os.WriteFile(tmpFile, []byte(code), 0644); err != nil {

@@ -134,7 +134,7 @@ func (c *Client) Notify(method string, params interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 		_, _ = fmt.Fprintf(c.stdin, "Content-Length: %d\r\n\r\n", len(data))
-	c.stdin.Write(data)
+	_, _ = c.stdin.Write(data)
 }
 
 // Request sends a request to an LSP server.

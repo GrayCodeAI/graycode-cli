@@ -281,7 +281,7 @@ func (s *Sandbox) applyChange(c *Change) error {
 		}
 		tmpName := tmp.Name()
 		if _, err := tmp.WriteString(c.Content); err != nil {
-			tmp.Close()
+			_ = tmp.Close()
 			_ = os.Remove(tmpName)
 			return fmt.Errorf("write temp file: %w", err)
 		}

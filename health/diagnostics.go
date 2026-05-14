@@ -515,7 +515,7 @@ func checkTCPReachable(name, host, port string, start time.Time) DiagnosticResul
 			Duration: time.Since(start),
 		}
 	}
-	conn.Close()
+	_ = conn.Close()
 	return DiagnosticResult{
 		Name:     name,
 		Status:   "pass",
