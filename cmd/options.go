@@ -158,8 +158,17 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	if strings.TrimSpace(provider) != "" {
 		effectiveProvider = strings.TrimSpace(provider)
 	}
-	// Normalize hawk aliases (xai → grok) to eyrie canonical names
-	return effectiveModel, hawkconfig.NormalizeProviderForEngine(effectiveProvider)
+	// If the configured provider's API key is missing, fall back to auto-detection
+	// so users with ANTHROPIC_API_KEY don't get confusing errors about canopywave.
+	normalized := hawkconfig.NormalizeProviderForEngine(effectiveProvider)
+	if normalized != "" && hawkconfig.APIKeyForProvider(normalized) == "" {
+		detected := client.DetectProvider()
+		if detected != "" && hawkconfig.APIKeyForProvider(detected) != "" {
+			normalized = detected
+			effectiveModel = ""
+		}
+	}
+	return effectiveModel, normalized
 }
 
 func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {

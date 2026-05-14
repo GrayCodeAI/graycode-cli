@@ -269,7 +269,7 @@ func TestTruncateStrategy(t *testing.T) {
 		messages: makeMessages(100),
 		log:      newTestLogger(),
 		metrics:  newTestMetrics(),
-		client:   client.NewEyrieClient(&client.EyrieConfig{Provider: "test"}),
+		client:   client.Client(&client.EyrieConfig{Provider: "test"}),
 	}
 
 	s := &TruncateStrategy{}

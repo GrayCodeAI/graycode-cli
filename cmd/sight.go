@@ -62,7 +62,7 @@ Examples:
 		if prov == "" {
 			prov = client.DetectProvider()
 		}
-		eyrieClient := client.NewEyrieClient(&client.EyrieConfig{Provider: prov})
+		eyrieClient := client.Client(&client.EyrieConfig{Provider: prov})
 
 		var sightOpts []sightLib.Option
 		if sightModel != "" {
