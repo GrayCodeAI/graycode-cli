@@ -28,6 +28,8 @@ import (
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/session"
+	"github.com/GrayCodeAI/hawk/staleness"
+	"github.com/GrayCodeAI/hawk/taste"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
@@ -238,6 +240,16 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.containerEnabled = shouldUseContainer()
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
+	}
+
+	// Initialize taste and staleness subsystems.
+	m.stalenessDetector = staleness.NewDetector()
+	if store, err := taste.NewStore(""); err == nil {
+		cwd, _ := os.Getwd()
+		projectID := filepath.Base(cwd)
+		if hooks, err := taste.NewHooks(projectID, store); err == nil {
+			m.tasteHooks = hooks
+		}
 	}
 
 	// Initialize write-ahead log for crash recovery
@@ -566,6 +578,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if strings.HasPrefix(text, "!") {
 				return m.handleShellEscape(text[1:])
 			}
+			// @ mention: resolve file references and include as context.
+			text = m.handleMentions(text)
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			if m.wal != nil {

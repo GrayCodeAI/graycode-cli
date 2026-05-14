@@ -216,7 +216,7 @@ func indentedAPIKeyLines() string {
 }
 
 func apiKeyStatusLines() []string {
-	providers := client.NewEyrieClient(nil).GetProviders()
+	providers := client.Client(nil).GetProviders()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {
