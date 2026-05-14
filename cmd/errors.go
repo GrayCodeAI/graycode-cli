@@ -202,8 +202,8 @@ func panicRecovery(saveFn func()) {
 
 			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 			if err == nil {
-				f.WriteString(entry)
-				f.Close()
+				_, _ = f.WriteString(entry)
+				_ = f.Close()
 			}
 		}
 

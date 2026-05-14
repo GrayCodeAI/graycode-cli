@@ -88,7 +88,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 		if f, err := os.Create(testFile); err != nil {
 			writable = "not writable"
 		} else {
-			f.Close()
+			_ = f.Close()
 			_ = os.Remove(testFile)
 		}
 		entries, _ := os.ReadDir(sessDir)

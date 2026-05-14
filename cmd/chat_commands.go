@@ -1561,8 +1561,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
-			f.WriteString(parts[1] + "\n")
-			f.Close()
+			_, _ = f.WriteString(parts[1] + "\n")
+			_ = f.Close()
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tagged: %s", parts[1])})
 		}
 		return m, nil
@@ -1626,10 +1626,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/sandbox":
 		if string(m.session.Mode) == "acceptEdits" {
-			_ = m.session.SetPermissionMode("default")
+			m.session.SetPermissionMode("default")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ON — all actions require approval."})
 		} else {
-			_ = m.session.SetPermissionMode("acceptEdits")
+			m.session.SetPermissionMode("acceptEdits")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox OFF — file edits auto-approved, other actions require approval."})
 		}
 		return m, nil
@@ -1958,10 +1958,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 
 	case "/yolo":
 		if string(m.session.Mode) == "bypassPermissions" {
-			_ = m.session.SetPermissionMode("default")
+			m.session.SetPermissionMode("default")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Yolo mode OFF — all actions require approval."})
 		} else {
-			_ = m.session.SetPermissionMode("bypassPermissions")
+			m.session.SetPermissionMode("bypassPermissions")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "⚠ Yolo mode ON — all tool calls auto-approved."})
 		}
 		return m, nil
