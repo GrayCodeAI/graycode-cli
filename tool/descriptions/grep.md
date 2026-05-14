@@ -1,0 +1,1 @@
+Search for a regex pattern across files.

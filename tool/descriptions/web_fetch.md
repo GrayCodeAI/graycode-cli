@@ -1,0 +1,1 @@
+Fetch a URL and return its content as text.

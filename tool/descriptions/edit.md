@@ -1,0 +1,1 @@
+Edit a file by replacing an exact string match with new content.
