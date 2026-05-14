@@ -43,8 +43,8 @@ func TestVersionEndpoint(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Version != "0.4.0" {
-		t.Fatalf("expected version '0.4.0', got %q", resp.Version)
+	if resp.Version != "0.2.0" {
+		t.Fatalf("expected version '0.2.0', got %q", resp.Version)
 	}
 }
 

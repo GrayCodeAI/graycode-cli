@@ -19,11 +19,11 @@ jobs:
       - name: Checkout sister repos
         run: |
           cd ..
-          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/eyrie.git eyrie || git clone --depth 1 https://github.com/GrayCodeAI/eyrie.git eyrie
-          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/tok.git tok || git clone --depth 1 https://github.com/GrayCodeAI/tok.git tok
-          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/yaad.git yaad || git clone --depth 1 https://github.com/GrayCodeAI/yaad.git yaad
-          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/sight.git sight || git clone --depth 1 https://github.com/GrayCodeAI/sight.git sight
-          git clone --depth 1 --branch v0.4.0 https://github.com/GrayCodeAI/inspect.git inspect || git clone --depth 1 https://github.com/GrayCodeAI/inspect.git inspect
+          git clone --depth 1 --branch v0.2.0 https://github.com/GrayCodeAI/eyrie.git eyrie || git clone --depth 1 https://github.com/GrayCodeAI/eyrie.git eyrie
+          git clone --depth 1 --branch v0.2.0 https://github.com/GrayCodeAI/tok.git tok || git clone --depth 1 https://github.com/GrayCodeAI/tok.git tok
+          git clone --depth 1 --branch v0.2.0 https://github.com/GrayCodeAI/yaad.git yaad || git clone --depth 1 https://github.com/GrayCodeAI/yaad.git yaad
+          git clone --depth 1 --branch v0.2.0 https://github.com/GrayCodeAI/sight.git sight || git clone --depth 1 https://github.com/GrayCodeAI/sight.git sight
+          git clone --depth 1 --branch v0.2.0 https://github.com/GrayCodeAI/inspect.git inspect || git clone --depth 1 https://github.com/GrayCodeAI/inspect.git inspect
 
       - name: Create go.work
         run: |

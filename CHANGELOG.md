@@ -1,5 +1,47 @@
 # Changelog
 
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Changed
+- **Version re-baselined to `0.2.0`** across `main.go`, `api/server.go`, `flake.nix`,
+  `.github/workflows/release.yml`, and the `update`/`api` test suites, aligning hawk
+  with the rest of the hawk-eco ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
+
+### Added — Production Hardening (top-50 OSS parity)
+- **Stricter linting**: `.golangci.yml` v2 config enabling `errcheck`, `staticcheck`,
+  `gocritic` (diagnostic + performance), `unused`, `ineffassign`, `misspell`, `noctx`,
+  `bodyclose`, `unconvert`, `whitespace`, with `govet enable-all` (minus `fieldalignment`).
+- **CI parity**: race-detector tests with coverage upload, golangci-lint v2 action,
+  `govulncheck` and `gosec` security scans, multi-platform build matrix
+  (linux/darwin/windows × amd64/arm64), benchmark job on PRs.
+- **Makefile** with standard targets: `build`, `test`, `test-coverage`, `test-10x`,
+  `lint`, `fmt`, `vet`, `security`, `bench`, `clean`, `install`, `release`, `help`.
+- **Container**: Dockerfile uses `tini` init, embeds tzdata, verifies deps, runs as
+  non-root.
+- **Repository hygiene**: `.editorconfig` for cross-editor consistency,
+  `.github/dependabot.yml` for automated dep updates, `CONTRIBUTING.md` with the
+  full contributor workflow.
+
+### Fixed — Correctness
+- 240+ unchecked error returns hardened across `session`, `engine`, `tool`, `config`,
+  `auth`, `cmd`, `daemon`, `diffsandbox`, `analytics`, `cmdhistory`, `container`,
+  `eval`, `fingerprint`, `update` packages.
+- Dead-code removal: 13 unused declarations removed (caught by the `unused` linter).
+- Real bugs fixed where `append` results were silently discarded
+  (`mcp/server.go`, `repomap/depgraph.go`, flagged by `staticcheck SA4010`).
+- `session` package is now fully `errcheck`-clean, protecting persistence integrity.
+
+### Tests
+- `auth` package coverage raised from ~18% to ~71% with table-driven tests covering
+  every code path.
+- `update` package coverage raised from ~22% to ~92% with full HTTP mocking, including
+  error paths (server failure, invalid JSON, unreachable host) and `Summary()` rendering.
+
 ## [0.4.0] — 2026-05-05
 
 ### Added

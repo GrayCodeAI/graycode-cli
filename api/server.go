@@ -10,7 +10,7 @@ import (
 )
 
 // Version is the current hawk API version.
-const Version = "0.4.0"
+const Version = "0.2.0"
 
 // Server is the HTTP API server for hawk.
 type Server struct {
