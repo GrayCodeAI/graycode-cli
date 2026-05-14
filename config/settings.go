@@ -470,7 +470,15 @@ func APIKeyForProvider(provider string) string {
 	if envKey == "" {
 		return ""
 	}
-	return os.Getenv(envKey)
+	if v := os.Getenv(envKey); v != "" {
+		return v
+	}
+	// Check alternate env var names (e.g. GROK_API_KEY as alias for XAI_API_KEY)
+	switch normalizeProviderName(provider) {
+	case "grok", "xai":
+		return os.Getenv("GROK_API_KEY")
+	}
+	return ""
 }
 
 // NormalizeProviderForEngine maps hawk provider aliases to eyrie canonical names.

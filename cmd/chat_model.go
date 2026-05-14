@@ -18,6 +18,8 @@ import (
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/sandbox"
 	"github.com/GrayCodeAI/hawk/session"
+	"github.com/GrayCodeAI/hawk/staleness"
+	"github.com/GrayCodeAI/hawk/taste"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
@@ -141,6 +143,10 @@ type chatModel struct {
 	containerReady      bool
 	containerErr        error
 	containerSandbox    *sandbox.ContainerSandbox
+
+	// Taste & staleness tracking
+	tasteHooks         *taste.Hooks
+	stalenessDetector  *staleness.Detector
 }
 
 func blinkTickCmd() tea.Cmd {

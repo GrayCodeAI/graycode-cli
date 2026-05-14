@@ -97,7 +97,7 @@ type Session struct {
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	pe := NewPermissionEngine()
 	s := &Session{
-		client:      client.NewEyrieClient(&client.EyrieConfig{Provider: provider}),
+		client:      client.Client(&client.EyrieConfig{Provider: provider}),
 		registry:    registry,
 		provider:    provider,
 		model:       model,
@@ -139,7 +139,7 @@ func (s *Session) SetModel(model string) {
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
 	s.provider = p
-	s.client = client.NewEyrieClient(&client.EyrieConfig{Provider: p})
+	s.client = client.Client(&client.EyrieConfig{Provider: p})
 	for provider, apiKey := range s.apiKeys {
 		if strings.TrimSpace(apiKey) != "" {
 			s.client.SetAPIKey(provider, apiKey)
