@@ -101,3 +101,18 @@ func TestHooksSummary(t *testing.T) {
 	summary := hooksSummary()
 	_ = summary
 }
+
+func TestApplySlashSuggestion(t *testing.T) {
+	t.Parallel()
+	result := applySlashSuggestion("/help")
+	if result == "" {
+		t.Error("should return non-empty")
+	}
+}
+
+
+func TestStalenessFormatReport(t *testing.T) {
+	t.Parallel()
+	report := stalenessFormatReport(nil)
+	_ = report
+}
