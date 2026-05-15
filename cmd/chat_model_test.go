@@ -134,6 +134,10 @@ func TestChatModel_ManyCommands(t *testing.T) {
 		"/power", "/fast", "/effort",
 		"/memory", "/plugins", "/mcp",
 		"/sandbox", "/permissions",
+		"/usage", "/metrics", "/integrity",
+		"/keybindings", "/cron", "/tasks",
+		"/files", "/branches", "/provider-status",
+		"/output-style plain",
 	}
 
 	for _, cmd := range commands {
