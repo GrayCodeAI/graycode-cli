@@ -81,6 +81,15 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// Start background preheater to keep LLM connections warm
+	preheater := daemon.NewPreheater(30 * time.Second)
+	preheater.Start([]string{
+		"https://api.anthropic.com/v1/messages",
+		"https://api.openai.com/v1/chat/completions",
+		fmt.Sprintf("http://127.0.0.1:%d/v1/health", daemonPort),
+	})
+	defer preheater.Stop()
+
 	fmt.Printf("hawk daemon running on http://%s\n", addr)
 	fmt.Println("Endpoints: GET /v1/health, POST /v1/chat, GET /v1/sessions")
 	fmt.Println("Press Ctrl+C to stop.")

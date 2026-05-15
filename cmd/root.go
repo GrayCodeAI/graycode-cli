@@ -193,6 +193,7 @@ func init() {
 	rootCmd.AddCommand(missionCmd)
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(snapshotCmd)
+	rootCmd.AddCommand(evalCmd)
 }
 
 var completionCmd = &cobra.Command{

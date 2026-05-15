@@ -3,6 +3,7 @@ package cron
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"sync"
 	"time"
 )
@@ -257,7 +258,8 @@ func (e *Engine) computeNextRun(job *Job) {
 			job.Enabled = false
 		}
 	case ScheduleEvery:
-		next := now.Add(job.Schedule.Every)
+		jitter := time.Duration(rand.IntN(5)) * time.Second
+		next := now.Add(job.Schedule.Every + jitter)
 		job.NextRunAt = &next
 	}
 }

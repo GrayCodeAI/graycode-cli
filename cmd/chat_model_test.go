@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/sessioncapture"
+	"github.com/GrayCodeAI/hawk/shellmode"
 	"github.com/GrayCodeAI/hawk/tool"
 )
 
@@ -14,13 +16,17 @@ func newTestChatModel() *chatModel {
 	sess.SetTestClient(engine.NewMockClientForTest())
 
 	m := &chatModel{
-		session:   sess,
-		registry:  tool.NewRegistry(),
-		partial:   &strings.Builder{},
-		sessionID: "test-session",
-		width:     120,
-		height:    40,
-		ref:       &progRef{},
+		session:        sess,
+		registry:       tool.NewRegistry(),
+		partial:        &strings.Builder{},
+		sessionID:      "test-session",
+		width:          120,
+		height:         40,
+		ref:            &progRef{},
+		modeManager:    shellmode.NewModeManager(),
+		termCtx:        sessioncapture.NewTerminalContext(),
+		ghostText:      NewGhostText(),
+		inputIndicator: &InputIndicator{},
 	}
 	return m
 }

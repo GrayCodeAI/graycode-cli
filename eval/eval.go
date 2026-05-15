@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type BenchmarkTask struct {
 	Prompt      string
 	TimeLimit   time.Duration
 	Tags        []string
+	MaxAttempts int
+	Filters     []Filter
 }
 
 // TaskResult captures the outcome of running a single benchmark task.
@@ -57,6 +60,15 @@ type Runner struct {
 	Provider    string
 	MaxAttempts int
 	Timeout     time.Duration
+	LLM         LLMClient
+	Cache       *Cache
+	NoCache     bool
+	Filters     []Filter
+}
+
+// LLMClient is the interface for invoking an LLM during evaluation.
+type LLMClient interface {
+	Complete(ctx context.Context, model, prompt string) (response string, tokens int, cost float64, err error)
 }
 
 // NewRunner creates a Runner configured for the given model and provider.
@@ -141,7 +153,12 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 
 	var lastErr error
 
-	for attempt := 1; attempt <= r.MaxAttempts; attempt++ {
+	maxAttempts := r.MaxAttempts
+	if task.MaxAttempts > 0 {
+		maxAttempts = task.MaxAttempts
+	}
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		select {
 		case <-ctx.Done():
 			result.Error = fmt.Sprintf("context cancelled after %d attempts: %v", attempt-1, ctx.Err())
@@ -166,14 +183,41 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 			continue
 		}
 
-		// In a real integration, this is where hawk would be invoked with task.Prompt
-		// to attempt to fix/complete the code. For the framework itself, we simulate
-		// by just validating the setup (which should fail) and measuring the harness.
-		//
-		// The actual LLM invocation would be plugged in here by the caller:
-		//   err = invokeLLM(ctx, r.Model, r.Provider, task.Prompt, workDir)
-		//
-		// For now, we run validation to test the framework mechanics.
+		// Invoke LLM to fix/complete the code
+		if r.LLM != nil {
+			var llmResponse string
+			if !r.NoCache && r.Cache != nil {
+				if entry := r.Cache.Get(r.Model, task.Prompt); entry != nil {
+					llmResponse = entry.Response
+					result.TokensUsed += entry.Tokens
+					result.CostUSD += entry.CostUSD
+					goto applyResponse
+				}
+			}
+			{
+				resp, tokens, cost, err := r.LLM.Complete(ctx, r.Model, task.Prompt)
+				if err != nil {
+					lastErr = fmt.Errorf("LLM call failed: %w", err)
+					continue
+				}
+				llmResponse = resp
+				result.TokensUsed += tokens
+				result.CostUSD += cost
+				if !r.NoCache && r.Cache != nil {
+					_ = r.Cache.Put(r.Model, task.Prompt, resp, tokens, cost)
+				}
+			}
+		applyResponse:
+			// Apply filters to extract code from response
+			filters := r.Filters
+			if len(filters) == 0 {
+				filters = task.Filters
+			}
+			filtered := ApplyFilters(llmResponse, filters...)
+			// Write solution to work directory
+			ext := ".go"
+			_ = os.WriteFile(filepath.Join(workDir, "solution"+ext), []byte(filtered), 0o644)
+		}
 
 		passed, msg := task.ValidateFn(workDir)
 		result.Duration = time.Since(startTime)
