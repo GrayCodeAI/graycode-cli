@@ -1,64 +1,114 @@
-# Contributing to Hawk
+# Contributing to hawk
 
-Thanks for your interest in contributing to hawk! This guide will help you get started.
+Thanks for your interest! This guide covers the conventions used across the
+hawk-eco. The eco-wide standards (versioning, release tooling, repo layout)
+are defined in <https://github.com/GrayCodeAI/hawk-eco/blob/main/VERSIONING.md>.
 
-## Development Setup
+## Quick start
 
-```bash
-# Clone
-git clone https://github.com/GrayCodeAI/hawk.git
-cd hawk
+1. Fork the repo and create a feature branch off `main`:
+   ```bash
+   git checkout -b feat/short-description
+   ```
+2. Make your changes in small, focused commits.
+3. Run the full local check before pushing:
+   ```bash
+   make ci
+   ```
+4. Open a pull request. CI will re-run the same checks plus security
+   scanning, race-detector tests, and (where applicable) integration tests.
 
-# Build
-make build
+## Build & test
 
-# Run tests
-make test
+This repo uses the standardised hawk-eco Makefile targets. Run `make help`
+for the full list. The most common targets:
 
-# Run linter
-make lint
+| Target              | What it does                                     |
+| ------------------- | ------------------------------------------------ |
+| `make build`        | Build the binary / verify the library compiles  |
+| `make test`         | Run unit tests                                   |
+| `make test-race`    | Run unit tests with the race detector            |
+| `make cover`        | Generate a coverage report                       |
+| `make lint`         | Run the linter (`golangci-lint` / `ruff`)        |
+| `make fmt`          | Format source files                              |
+| `make vet`          | Run `go vet` / `mypy`                            |
+| `make security`     | Run `govulncheck` / `pip-audit`                  |
+| `make ci`           | Run everything CI runs (the gate before pushing) |
+
+## Commit message convention
+
+We use [Conventional Commits](https://www.conventionalcommits.org/). This
+isn't cosmetic — release-please reads commit messages to bump the `VERSION`
+file and generate the CHANGELOG, so getting them right matters.
+
+```
+<type>(<optional scope>): <short summary>
+
+<optional body>
+
+<optional footer(s)>
 ```
 
-## Making Changes
+**Types:**
 
-1. Fork the repo and create a branch from `dev`
-2. Make your changes
-3. Add tests for new functionality
-4. Ensure `make test` and `make lint` pass
-5. Open a PR against `dev`
+- `feat:` — a new feature (triggers a minor version bump)
+- `fix:` — a bug fix (triggers a patch version bump)
+- `perf:` — performance improvement
+- `refactor:` — code restructure with no behaviour change
+- `docs:` — documentation only
+- `test:` — adding or fixing tests
+- `build:` — build system or dependencies
+- `ci:` — CI configuration
+- `chore:` — anything else (no release effect)
+- `revert:` — reverts a previous commit
 
-## Code Standards
+**Breaking changes:** add `!` after the type/scope or include `BREAKING
+CHANGE:` in the footer. This triggers a major version bump.
 
-- Go 1.26+ with modules
-- All errors must be handled (no unchecked return values)
-- Use `context.Context` for cancellation and timeouts
-- Use structured logging via `log/slog`
-- Table-driven tests with `t.Parallel()` where safe
-- No global mutable state
-
-## Commit Messages
-
-Use [Conventional Commits](https://www.conventionalcommits.org/):
+Examples:
 
 ```
-feat(engine): add token budget tracking
-fix(session): prevent WAL corruption on crash
-docs(readme): update install instructions
-test(tool): add fuzz tests for bash command parsing
+feat(client): add streaming retry with exponential backoff
+fix: handle empty response body in chat handler
+refactor!: rename ClientV1 to Client (BREAKING CHANGE)
 ```
 
-## Testing
+## Pull request checklist
 
-```bash
-make test          # Unit tests with race detector
-make test-coverage # Tests with coverage report
-make bench         # Benchmarks
-```
+Before requesting review:
 
-## Architecture
+- [ ] `make ci` passes locally.
+- [ ] New behaviour has tests; bug fixes have a regression test.
+- [ ] `CHANGELOG.md` entries are **not** edited manually — release-please
+      generates them from your commit messages.
+- [ ] The `VERSION` file is **not** edited manually — release-please bumps
+      it on release.
+- [ ] Public API changes have updated doc comments.
+- [ ] No secrets, API keys, or PII in code, comments, tests, or fixtures.
 
-See `CLAUDE.md` for a complete architecture overview.
+## Code review etiquette
+
+- Reviewers focus on correctness, design, and tests; formatting is
+  enforced by tooling, not humans.
+- Authors respond to every comment (resolved, addressed, or politely
+  declined with rationale) — no silent dismissals.
+- Squash-merge by default; the PR title becomes the commit (so it must
+  be a valid Conventional Commit message).
+- One approving review from a CODEOWNERS-listed reviewer is required.
+
+## Reporting bugs
+
+Open an issue using the bug-report template. Include the `hawk`
+version (`hawk --version` for binaries, `hawk.Version` for
+libraries — see this repo's `VERSION` file), reproduction steps, expected
+behaviour, and actual behaviour.
+
+## Reporting security issues
+
+**Do not open a public issue.** See [SECURITY.md](./SECURITY.md) for
+private reporting channels.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under
+the same license as this repo (see [LICENSE](./LICENSE)).

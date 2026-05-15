@@ -1,52 +1,126 @@
-NAME := hawk
-# Source of truth for the version: the VERSION file at the repo root.
-# Local dev builds without a VERSION file fall back to `git describe`.
+# Canonical hawk-eco Makefile for Go binary repos.
+# Source of truth: .shared-templates/Makefile.binary.tmpl at the eco root.
+# Placeholders rendered per repo: hawk, ..
+
+# ---------------------------------------------------------------------------
+# Project metadata
+# ---------------------------------------------------------------------------
+NAME      := hawk
+MAIN_PKG  := .
+
+# ---------------------------------------------------------------------------
+# Versioning — sourced from VERSION file; falls back to git describe.
+# See https://github.com/GrayCodeAI/hawk-eco/blob/main/VERSIONING.md.
+# ---------------------------------------------------------------------------
 VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
-DATE := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(DATE)
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+DATE    := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
-.PHONY: all build test lint fmt vet security bench clean install release help
+LDFLAGS := -s -w \
+	-X main.Version=$(VERSION) \
+	-X main.Commit=$(COMMIT) \
+	-X main.BuildDate=$(DATE)
 
-all: lint test build ## Default: lint, test, build
+# ---------------------------------------------------------------------------
+# Tooling — pinned, install if missing.
+# ---------------------------------------------------------------------------
+GOBIN_DIR    := $(shell go env GOPATH)/bin
+GOLANGCI     := $(GOBIN_DIR)/golangci-lint
+GOFUMPT      := $(GOBIN_DIR)/gofumpt
+GOIMPORTS    := $(GOBIN_DIR)/goimports
+GOVULNCHECK  := $(GOBIN_DIR)/govulncheck
+GORELEASER   := $(GOBIN_DIR)/goreleaser
 
-build: ## Build binary
-	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/$(NAME) .
+# ---------------------------------------------------------------------------
+# Phony declarations (alphabetical).
+# ---------------------------------------------------------------------------
+.PHONY: all bench build ci clean cover fmt help install lint lint-fix \
+        release security test test-10x test-race tidy version vet
 
-test: ## Run tests with race detector
-	go test ./... -race -count=1 -timeout=120s
+# ---------------------------------------------------------------------------
+# Default target.
+# ---------------------------------------------------------------------------
+all: lint test build ## Default — lint, test, build.
 
-test-coverage: ## Run tests with coverage report
-	go test ./... -race -coverprofile=coverage.out -covermode=atomic -timeout=120s
-	go tool cover -func=coverage.out | grep "^total:"
+# ---------------------------------------------------------------------------
+# Build / install / release.
+# ---------------------------------------------------------------------------
+build: ## Build the binary into bin/$(NAME).
+	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/$(NAME) $(MAIN_PKG)
 
-test-10x: ## Run tests 10 times to catch flakes
+install: ## Install the binary to $GOBIN.
+	CGO_ENABLED=0 go install -ldflags="$(LDFLAGS)" $(MAIN_PKG)
+
+release: ## Cut a release via goreleaser (requires a clean tree + tag).
+	@command -v $(GORELEASER) >/dev/null 2>&1 || (echo "install: go install github.com/goreleaser/goreleaser/v2@latest" && exit 1)
+	$(GORELEASER) release --clean
+
+# ---------------------------------------------------------------------------
+# Tests.
+# ---------------------------------------------------------------------------
+test: ## Run unit tests.
+	go test ./... -count=1 -timeout=120s
+
+test-race: ## Run unit tests with the race detector.
+	go test ./... -race -count=1 -timeout=180s
+
+test-10x: ## Run tests 10 times to surface flakes.
 	go test ./... -race -count=10 -timeout=600s
 
-lint: ## Run linter
-	golangci-lint run ./... --timeout=5m
+cover: ## Generate a coverage report (coverage.out + coverage.html).
+	go test ./... -race -coverprofile=coverage.out -covermode=atomic -timeout=180s
+	@go tool cover -func=coverage.out | grep "^total:"
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
 
-fmt: ## Format code
-	gofumpt -w .
-	goimports -w .
-
-vet: ## Run go vet
-	go vet ./...
-
-security: ## Run security scanner
-	govulncheck ./...
-
-bench: ## Run benchmarks
+bench: ## Run benchmarks.
 	go test ./... -bench=. -benchmem -count=3 -timeout=300s
 
-clean: ## Clean build artifacts
-	rm -rf bin/ coverage.out
+# ---------------------------------------------------------------------------
+# Quality gates.
+# ---------------------------------------------------------------------------
+fmt: ## Format source files (gofumpt + goimports).
+	@command -v $(GOFUMPT)   >/dev/null 2>&1 || (echo "install: go install mvdan.cc/gofumpt@latest"   && exit 1)
+	@command -v $(GOIMPORTS) >/dev/null 2>&1 || (echo "install: go install golang.org/x/tools/cmd/goimports@latest" && exit 1)
+	$(GOFUMPT) -w .
+	$(GOIMPORTS) -w .
 
-install: ## Install locally
-	go install -ldflags="$(LDFLAGS)" .
+vet: ## Run go vet.
+	go vet ./...
 
-release: ## Create release (requires goreleaser)
-	goreleaser release --clean
+lint: ## Run golangci-lint.
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
+	$(GOLANGCI) run ./... --timeout=5m
 
-help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+lint-fix: ## Run golangci-lint with --fix.
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
+	$(GOLANGCI) run ./... --fix --timeout=5m
+
+security: ## Run govulncheck.
+	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || (echo "install: go install golang.org/x/vuln/cmd/govulncheck@latest" && exit 1)
+	$(GOVULNCHECK) ./...
+
+tidy: ## Tidy go.mod / go.sum.
+	go mod tidy
+	go mod verify
+
+# ---------------------------------------------------------------------------
+# Composite gate used by CI and pre-push.
+# ---------------------------------------------------------------------------
+ci: tidy fmt vet lint test-race security ## Run everything CI runs.
+	@echo "All CI checks passed."
+
+# ---------------------------------------------------------------------------
+# Misc.
+# ---------------------------------------------------------------------------
+version: ## Print the version that will be embedded.
+	@echo "Version: $(VERSION)"
+	@echo "Commit:  $(COMMIT)"
+	@echo "Date:    $(DATE)"
+
+clean: ## Remove build artefacts.
+	rm -rf bin/ dist/ coverage.out coverage.html
+	go clean -testcache
+
+help: ## Show this help.
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
