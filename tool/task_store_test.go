@@ -90,3 +90,46 @@ func TestTaskStore_CreateWithParent(t *testing.T) {
 		t.Errorf("ParentID = %q, want %q", child.ParentID, parent.ID)
 	}
 }
+
+func TestTaskStore_Delete(t *testing.T) {
+	store := &TaskStore{tasks: make(map[string]*Task)}
+	task := store.Create("to-delete", "d", "f", nil)
+	if !store.Delete(task.ID) {
+		t.Error("Delete should return true")
+	}
+	if _, found := store.Get(task.ID); found {
+		t.Error("should not find deleted task")
+	}
+}
+
+func TestTaskToolMetadata(t *testing.T) {
+	t.Parallel()
+	tools := []Tool{TaskCreateTool{}, TaskGetTool{}, TaskListTool{}, TaskUpdateTool{}}
+	for _, tl := range tools {
+		if tl.Name() == "" {
+			t.Error("Name empty")
+		}
+		if tl.Description() == "" {
+			t.Errorf("%s: Description empty", tl.Name())
+		}
+		if tl.Parameters() == nil {
+			t.Errorf("%s: Parameters nil", tl.Name())
+		}
+	}
+}
+
+func TestCronToolMetadata(t *testing.T) {
+	t.Parallel()
+	tools := []Tool{CronCreateTool{}, CronDeleteTool{}, CronListTool{}}
+	for _, tl := range tools {
+		if tl.Name() == "" {
+			t.Error("Name empty")
+		}
+		if tl.Description() == "" {
+			t.Errorf("%s: Description empty", tl.Name())
+		}
+		if tl.Parameters() == nil {
+			t.Errorf("%s: Parameters nil", tl.Name())
+		}
+	}
+}
