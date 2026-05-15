@@ -1,7 +1,9 @@
 package engine
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
 )
@@ -140,5 +142,60 @@ func TestSession_Metrics(t *testing.T) {
 
 	if s.Metrics() == nil {
 		t.Error("Metrics() should not be nil")
+	}
+}
+
+func TestSession_Stream_MockEndTurn(t *testing.T) {
+	mc := newMockClient(mockTextResponse("Hello! I can help with that."))
+	s := newMockSession(mc)
+	s.MaxTurns = 1
+	s.AddUser("hi there")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ch, err := s.Stream(ctx)
+	if err != nil {
+		t.Fatalf("Stream() error: %v", err)
+	}
+
+	var events []StreamEvent
+	for ev := range ch {
+		events = append(events, ev)
+	}
+
+	if len(events) == 0 {
+		t.Fatal("expected at least one stream event")
+	}
+
+	if mc.callCount() < 1 {
+		t.Error("expected at least one LLM call")
+	}
+}
+
+func TestSession_Stream_MultiTurn(t *testing.T) {
+	mc := newMockClient(
+		mockTextResponse("First response"),
+		mockTextResponse("Second response"),
+	)
+	s := newMockSession(mc)
+	s.MaxTurns = 2
+	s.AddUser("hello")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ch, err := s.Stream(ctx)
+	if err != nil {
+		t.Fatalf("Stream() error: %v", err)
+	}
+
+	var events []StreamEvent
+	for ev := range ch {
+		events = append(events, ev)
+	}
+
+	if len(events) == 0 {
+		t.Fatal("expected stream events")
 	}
 }
