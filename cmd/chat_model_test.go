@@ -171,3 +171,25 @@ func TestChatModel_SlashExport(t *testing.T) {
 		t.Error("/export returned nil")
 	}
 }
+
+func TestChatModel_SafeCommands(t *testing.T) {
+	// Commands that don't trigger streaming or external calls
+	commands := []string{
+		"/config", "/history",
+		"/yolo", "/sandbox",
+		"/focus", "/pin", "/welcome",
+		"/rename test-name",
+		"/color blue", "/output-style markdown",
+		"/vim", "/effort low",
+	}
+
+	for _, cmd := range commands {
+		t.Run(cmd, func(t *testing.T) {
+			m := newTestChatModel()
+			result, _ := m.handleCommand(cmd)
+			if result == nil {
+				t.Errorf("%s returned nil model", cmd)
+			}
+		})
+	}
+}
