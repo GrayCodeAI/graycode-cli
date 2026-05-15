@@ -200,22 +200,19 @@ func TestChatModel_SlashExport(t *testing.T) {
 	}
 }
 
-func TestChatModel_SafeCommands(t *testing.T) {
+func TestChatModel_StreamingCommands(t *testing.T) {
+	// These trigger startStream but progRef is nil-safe so they won't panic
 	commands := []string{
-		"/config", "/history",
-		"/yolo", "/sandbox",
-		"/focus", "/pin", "/welcome",
-		"/rename test-name",
-		"/color blue", "/output-style markdown",
-		"/vim", "/effort low",
-		"/stale", "/sessions",
-		"/power 5",
-		"/stale", "/search test",
+		"/doctor", "/commit", "/review",
+		"/summary", "/security-review",
+		"/bughunter", "/check", "/hunt",
+		"/design", "/ultrareview",
 	}
 
 	for _, cmd := range commands {
 		t.Run(cmd, func(t *testing.T) {
 			m := newTestChatModel()
+			m.session.AddUser("some context for the command")
 			result, _ := m.handleCommand(cmd)
 			if result == nil {
 				t.Errorf("%s returned nil model", cmd)
