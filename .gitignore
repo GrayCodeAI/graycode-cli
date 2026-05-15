@@ -29,3 +29,5 @@ go.work
 go.work.sum.hawk/
 .hawk/snapshots
 engine/.hawk/
+cmd/.hawk/
+.hawk/
