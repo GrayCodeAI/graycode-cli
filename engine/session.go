@@ -30,7 +30,7 @@ type SnapshotTracker interface {
 
 // Session manages a conversation with an LLM via eyrie.
 type Session struct {
-	client       *client.EyrieClient
+	client       ChatClient
 	registry     *tool.Registry
 	messages     []client.EyrieMessage
 	provider     string
