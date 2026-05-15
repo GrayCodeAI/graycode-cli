@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/GrayCodeAI/hawk-eco/blob/main/compatibility-matrix.schema.json",
+  "title": "hawk-eco compatibility matrix",
+  "description": "Schema for compatibility-matrix.json — records which combinations of component versions are tested together.",
+  "type": "object",
+  "required": ["version", "components", "dependencies", "matrices"],
+  "properties": {
+    "$schema":     { "type": "string" },
+    "description": { "type": "string" },
+    "version":     { "type": "string", "description": "Schema version of this file (independent of any component version)." },
+    "updated":     { "type": "string", "format": "date" },
+    "components": {
+      "type": "array",
+      "description": "Canonical list of component (repo) names in the eco.",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Per-component dependency list — which other eco components a given one consumes. Drives test ordering and impact analysis.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "matrices": {
+      "type": "array",
+      "description": "Named version combinations that are tested together.",
+      "items": {
+        "type": "object",
+        "required": ["name", "components"],
+        "properties": {
+          "name":        { "type": "string" },
+          "description": { "type": "string" },
+          "components": {
+            "type": "object",
+            "description": "Map of component name → version. Use `main` to mean the latest commit on the main branch (tested every PR).",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      },
+      "minItems": 1
+    }
+  }
+}
