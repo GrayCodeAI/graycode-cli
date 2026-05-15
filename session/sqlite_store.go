@@ -200,36 +200,53 @@ func (s *SQLiteStore) migrate() error {
 }
 
 // splitStatements splits a SQL string on semicolons, being careful not to
-// split inside string literals. This is a simplified parser sufficient for
-// our migration DDL.
+// split inside string literals or BEGIN...END blocks (triggers, etc.).
 func splitStatements(sql string) []string {
 	var stmts []string
 	var current strings.Builder
 	inString := false
+	beginDepth := 0
 
 	for i := 0; i < len(sql); i++ {
 		ch := sql[i]
 		if ch == '\'' {
 			inString = !inString
 			current.WriteByte(ch)
-		} else if ch == ';' && !inString {
-			s := strings.TrimSpace(current.String())
-			if s != "" {
-				stmts = append(stmts, s)
+		} else if !inString {
+			// Track BEGIN...END nesting for triggers
+			upper := strings.ToUpper(sql[i:])
+			if strings.HasPrefix(upper, "BEGIN") && (i+5 >= len(sql) || !isIdentChar(sql[i+5])) {
+				beginDepth++
+				current.WriteString(sql[i : i+5])
+				i += 4
+			} else if strings.HasPrefix(upper, "END") && (i+3 >= len(sql) || !isIdentChar(sql[i+3])) && beginDepth > 0 {
+				beginDepth--
+				current.WriteString(sql[i : i+3])
+				i += 2
+			} else if ch == ';' && beginDepth == 0 {
+				s := strings.TrimSpace(current.String())
+				if s != "" {
+					stmts = append(stmts, s)
+				}
+				current.Reset()
+			} else {
+				current.WriteByte(ch)
 			}
-			current.Reset()
 		} else {
 			current.WriteByte(ch)
 		}
 	}
 
-	// Handle trailing statement without semicolon.
 	s := strings.TrimSpace(current.String())
 	if s != "" {
 		stmts = append(stmts, s)
 	}
 
 	return stmts
+}
+
+func isIdentChar(b byte) bool {
+	return (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '_'
 }
 
 // CreateSession inserts a new session record.
