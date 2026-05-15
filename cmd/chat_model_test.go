@@ -138,6 +138,13 @@ func TestChatModel_ManyCommands(t *testing.T) {
 		"/keybindings", "/cron", "/tasks",
 		"/files", "/branches", "/provider-status",
 		"/output-style plain",
+		"/copy", "/export", "/fork",
+		"/rewind", "/undo", "/taste",
+		"/theme dark", "/btw hello",
+		"/focus src/", "/pin",
+		"/rename test-session",
+		"/tag important",
+		"/color green",
 	}
 
 	for _, cmd := range commands {
