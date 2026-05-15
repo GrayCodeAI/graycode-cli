@@ -102,6 +102,133 @@ func TestLockFile_Release_Nil(t *testing.T) {
 	lock.Release() // should not panic
 }
 
+func TestContainsIgnoreCase(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		s, substr string
+		want      bool
+	}{
+		{"Hello World", "hello", true},
+		{"Hello World", "WORLD", true},
+		{"Hello", "xyz", false},
+		{"", "x", false},
+		{"abc", "", true},
+	}
+	for _, tt := range tests {
+		if got := containsIgnoreCase(tt.s, tt.substr); got != tt.want {
+			t.Errorf("containsIgnoreCase(%q, %q) = %v, want %v", tt.s, tt.substr, got, tt.want)
+		}
+	}
+}
+
+func TestToLower(t *testing.T) {
+	t.Parallel()
+	if toLower("HELLO") != "hello" {
+		t.Error("toLower(HELLO) should be hello")
+	}
+	if toLower("") != "" {
+		t.Error("toLower empty")
+	}
+}
+
+func TestIndexOf(t *testing.T) {
+	t.Parallel()
+	if indexOf("hello world", "world") != 6 {
+		t.Error("indexOf should find 'world' at 6")
+	}
+	if indexOf("hello", "xyz") != -1 {
+		t.Error("indexOf should return -1 for missing")
+	}
+}
+
+func TestExtractContext(t *testing.T) {
+	t.Parallel()
+	content := "line1\nline2\nline3 match here\nline4\nline5"
+	ctx := extractContext(content, "match", 1)
+	if ctx == "" {
+		t.Error("extractContext should return surrounding lines")
+	}
+}
+
+func TestContainsTag(t *testing.T) {
+	t.Parallel()
+	if !containsTag("#important #urgent", "important") {
+		t.Error("should find 'important' tag")
+	}
+	if containsTag("#important #urgent", "missing") {
+		t.Error("should not find 'missing' tag")
+	}
+}
+
+func TestCleanOldSessions(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	_ = os.MkdirAll(sessDir, 0o755)
+
+	// Create old sessions
+	for i := 0; i < 5; i++ {
+		sess := &Session{
+			ID:        fmt.Sprintf("old-%d", i),
+			CreatedAt: time.Now().Add(-60 * 24 * time.Hour),
+			UpdatedAt: time.Now().Add(-60 * 24 * time.Hour),
+			Messages:  []Message{{Role: "user", Content: "old msg"}},
+		}
+		_ = Save(sess)
+	}
+
+	removed, err := CleanOldSessions(30)
+	if err != nil {
+		t.Fatalf("CleanOldSessions: %v", err)
+	}
+	_ = removed
+}
+
+func TestExportToMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	_ = os.MkdirAll(sessDir, 0o755)
+
+	sess := &Session{
+		ID:        "export-test",
+		Model:     "test-model",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Messages: []Message{
+			{Role: "user", Content: "hello"},
+			{Role: "assistant", Content: "hi there"},
+		},
+	}
+	_ = Save(sess)
+
+	md := ExportToMarkdown(sess)
+	if md == "" {
+		t.Error("markdown should not be empty")
+	}
+}
+
+func TestSearchSessions_Integration(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	_ = os.MkdirAll(sessDir, 0o755)
+
+	sess := &Session{
+		ID:        "search-int",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Messages: []Message{
+			{Role: "user", Content: "fix the golang authentication bug"},
+			{Role: "assistant", Content: "I'll look at the auth module"},
+		},
+	}
+	_ = Save(sess)
+
+	results, _ := SearchSessions("golang", 10)
+	_ = results
+}
+
 func TestSessionLockedError(t *testing.T) {
 	t.Parallel()
 	err := &SessionLockedError{ID: "test-123"}
