@@ -1,0 +1,20 @@
+[
+  {
+    "id": "exp-e7bf70b654ec3ccf",
+    "task": "Summarize the current session, important decisions, modified files, test status, and remaining work.",
+    "approach": "integration_pipeline",
+    "steps": null,
+    "outcome": "success",
+    "tools_used": null,
+    "files_modified": [],
+    "tokens_used": 0,
+    "duration": 106625,
+    "score": 1,
+    "tags": [
+      "ci",
+      "test"
+    ],
+    "created_at": "2026-05-15T08:30:50.694237+05:30",
+    "used_count": 0
+  }
+]

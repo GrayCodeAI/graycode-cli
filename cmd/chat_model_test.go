@@ -11,7 +11,6 @@ import (
 func newTestChatModel() *chatModel {
 	sess := engine.NewSession("", "test-model", "you are helpful", nil)
 	sess.MaxTurns = 1
-	// Inject mock client so streaming commands don't panic
 	sess.SetTestClient(engine.NewMockClientForTest())
 
 	m := &chatModel{
@@ -21,6 +20,7 @@ func newTestChatModel() *chatModel {
 		sessionID: "test-session",
 		width:     120,
 		height:    40,
+		ref:       &progRef{},
 	}
 	return m
 }
@@ -184,6 +184,7 @@ func TestChatModel_SafeCommands(t *testing.T) {
 		"/vim", "/effort low",
 		"/stale", "/sessions",
 		"/power 5",
+		"/stale", "/search test",
 	}
 
 	for _, cmd := range commands {

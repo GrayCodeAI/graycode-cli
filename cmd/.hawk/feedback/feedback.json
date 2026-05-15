@@ -1,0 +1,17 @@
+{
+  "entries": [],
+  "implicit_signals": [
+    {
+      "type": "accepted",
+      "session_id": "default",
+      "tool_name": "",
+      "timestamp": "2026-05-15T08:30:50.694229+05:30"
+    },
+    {
+      "type": "accepted",
+      "session_id": "default",
+      "tool_name": "",
+      "timestamp": "2026-05-15T08:30:50.694238+05:30"
+    }
+  ]
+}
