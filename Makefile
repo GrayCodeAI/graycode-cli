@@ -1,8 +1,10 @@
 NAME := hawk
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+# Source of truth for the version: the VERSION file at the repo root.
+# Local dev builds without a VERSION file fall back to `git describe`.
+VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.BuildDate=$(DATE)
+LDFLAGS := -s -w -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(DATE)
 
 .PHONY: all build test lint fmt vet security bench clean install release help
 

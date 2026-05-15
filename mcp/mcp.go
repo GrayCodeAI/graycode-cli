@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+// clientVersion is the hawk version reported in MCP `initialize` clientInfo.
+// It is wired at startup by main.go from the canonical hawk version (the
+// VERSION file at the repo root, injected via ldflags). The "dev" default
+// applies only to local builds without ldflags.
+var clientVersion = "dev"
+
+// SetClientVersion lets main.go propagate the canonical hawk version into
+// this package without creating an import cycle with cmd.
+func SetClientVersion(v string) { clientVersion = v }
+
 // Server represents a connected MCP server.
 type Server struct {
 	Name    string
@@ -98,7 +108,7 @@ func Connect(ctx context.Context, name, command string, args ...string) (*Server
 	_, err = s.callWithTimeout(ctx, "initialize", map[string]interface{}{
 		"protocolVersion": "2024-11-05",
 		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "0.2.0"},
+		"clientInfo":      map[string]interface{}{"name": "hawk", "version": clientVersion},
 	})
 	if err != nil {
 		_ = cmd.Process.Kill()

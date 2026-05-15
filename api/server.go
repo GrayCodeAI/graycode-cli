@@ -9,8 +9,15 @@ import (
 	"sync"
 )
 
-// Version is the current hawk API version.
-const Version = "0.2.0"
+// Version is the current hawk API surface version, exposed in the GET /version
+// endpoint. It is wired at startup by main.go from the canonical version
+// (the VERSION file at the repo root, injected via ldflags). The "dev"
+// default applies only to local builds without ldflags.
+var Version = "dev"
+
+// SetVersion lets main.go propagate the canonical hawk version into this
+// package without creating an import cycle with cmd.
+func SetVersion(v string) { Version = v }
 
 // Server is the HTTP API server for hawk.
 type Server struct {

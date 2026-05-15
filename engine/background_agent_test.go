@@ -30,12 +30,10 @@ func TestBackgroundAgentPool_SubmitAndCollect(t *testing.T) {
 		return "result-1", nil
 	})
 
-	// Give goroutine time to complete
-	time.Sleep(200 * time.Millisecond)
-
-	results := pool.Collect()
+	// Use WaitAll to ensure task completes deterministically
+	results := pool.WaitAll()
 	if len(results) != 1 {
-		t.Fatalf("Collect() returned %d results, want 1", len(results))
+		t.Fatalf("WaitAll() returned %d results, want 1", len(results))
 	}
 	if results[0].ID != "task-1" {
 		t.Errorf("ID = %q, want %q", results[0].ID, "task-1")
