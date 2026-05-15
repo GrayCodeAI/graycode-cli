@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/GrayCodeAI/hawk-eco/blob/main/compatibility-matrix.schema.json",
+  "$id": "https://github.com/GrayCodeAI/hawk/blob/main/compatibility-matrix.schema.json",
   "title": "hawk-eco compatibility matrix",
   "description": "Schema for compatibility-matrix.json — records which combinations of component versions are tested together.",
   "type": "object",

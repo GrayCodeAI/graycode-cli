@@ -47,7 +47,7 @@ The output is canonical SARIF 2.1.0 — see
 ## Versioning
 
 Version is read at compile time from the `VERSION` file at the repo root
-(see [hawk-eco VERSIONING.md](https://github.com/GrayCodeAI/hawk-eco/blob/main/VERSIONING.md)).
+(see [hawk-eco VERSIONING.md](https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md)).
 
 ## Status
 
