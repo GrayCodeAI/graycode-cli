@@ -254,7 +254,41 @@ The `compact/` sub-package is the cleanest extraction candidate:
 - Few external dependencies (mostly used by `engine.Stream`)
 - Has its own tests already grouped together
 
-Recommend doing `compact/` first end-to-end (Stage 1 + Stage 2 for that
-cluster). If it goes smoothly, the same template applies to the other 14.
-If it surfaces problems (e.g. unexpected coupling), the split plan can
-be adjusted before committing to all of it.
+**Status: Stage 1 worked examples landed for 7 of 24 clusters.**
+
+| Cluster | Aliases file | Symbols |
+|---------|--------------|---------|
+| `compact/` | `engine/compact/aliases.go` | 13 types, 7 funcs |
+| `cost/`    | `engine/cost/aliases.go`    | 6 types, 4 funcs |
+| `token/`   | `engine/token/aliases.go`   | 6 types, 5 funcs |
+| `retry/`   | `engine/retry/aliases.go`   | 2 types, 1 func  |
+| `control/` | `engine/control/aliases.go` | 6 types, 3 funcs, 1 const |
+| `git/`     | `engine/git/aliases.go`     | 9 types, 4 funcs |
+| `prompt/`  | `engine/prompt/aliases.go`  | 6 types, 3 funcs |
+
+New code should import `github.com/GrayCodeAI/hawk/engine/<cluster>`
+instead of reaching into `engine` for these names. The remaining 17
+clusters follow the same pattern:
+
+```go
+// engine/<cluster>/aliases.go
+package <cluster>
+
+import "github.com/GrayCodeAI/hawk/engine"
+
+// Re-export the cluster's public symbols from engine as type and var
+// aliases. Implementation stays in engine until Stage 2 of this plan.
+type Foo = engine.ClusterFoo
+// ...
+func NewBar(...) *Bar { return engine.NewClusterBar(...) }
+```
+
+To extract the next cluster:
+
+1. Pick the cluster from the layout above (e.g. `prompt/`).
+2. List the public symbols in the corresponding `engine/<prefix>_*.go`
+   files: `grep -E "^(func|type|var|const) [A-Z]" engine/prompt_*.go`.
+3. Create `engine/<cluster>/aliases.go` re-exporting them.
+4. Verify `go build ./engine/<cluster>` and `go build ./engine` both
+   compile (no import cycle).
+5. Commit. Land. Move on.
