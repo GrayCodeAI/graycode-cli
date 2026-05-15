@@ -124,3 +124,16 @@ clean: ## Remove build artefacts.
 
 help: ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+# ---------------------------------------------------------------------------
+# Compatibility matrix (hawk-specific extension to the canonical template).
+# Validates compatibility-matrix.json and reports the resolved versions for
+# a chosen matrix entry. Wired into the compatibility-test workflow.
+# ---------------------------------------------------------------------------
+.PHONY: compat-test compat-check
+
+compat-test: ## Validate compatibility-matrix.json and report the 'next' matrix.
+	@go run ./cmd/compat-test -matrix=next
+
+compat-check: ## Strict validation — non-zero exit if any component lacks a version.
+	@go run ./cmd/compat-test -matrix=next -strict
