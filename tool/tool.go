@@ -58,6 +58,9 @@ type ToolContext struct {
 	AutoCommit         bool
 	Protected          PathProtector
 	YaadBridge         *memory.YaadBridge
+	// BackgroundManager tracks background sub-agents. If nil, background
+	// mode is not available.
+	BackgroundManager *BackgroundAgentManager
 }
 
 // ctxKey is the context key for ToolContext.

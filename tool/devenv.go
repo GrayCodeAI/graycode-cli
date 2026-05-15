@@ -7,12 +7,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/sandbox"
 )
 
 // DevEnvTool allows the agent to read, write, and build Docker environments
 // dynamically. When the agent needs a tool that isn't installed, it can modify
 // the Dockerfile and rebuild the container on-the-fly (inspired by herm).
-type DevEnvTool struct{}
+type DevEnvTool struct {
+	// Manager is the DevEnvManager used for building and caching images.
+	// If nil, the build action will return an error.
+	Manager *sandbox.DevEnvManager
+}
 
 func (DevEnvTool) Name() string      { return "DevEnv" }
 func (DevEnvTool) RiskLevel() string { return "medium" }
@@ -39,7 +45,7 @@ func (DevEnvTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Action     string `json:"action"`
 		Dockerfile string `json:"dockerfile"`
@@ -89,12 +95,17 @@ func (DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string, e
 		if err != nil {
 			return "", fmt.Errorf("no Dockerfile at %s — use action='write' first", dfPath)
 		}
-		// The actual build is delegated to the ContainerSandbox.BuildFromDockerfile
-		// which is wired up at the session level. Here we just validate.
 		if !strings.Contains(string(content), "FROM") {
 			return "", fmt.Errorf("invalid Dockerfile: missing FROM instruction")
 		}
-		return fmt.Sprintf("Build requested for Dockerfile (%d bytes). Container will be rebuilt and hot-swapped.", len(content)), nil
+		if t.Manager == nil {
+			return "DevEnvManager not initialized. Cannot build.", nil
+		}
+		tag, err := t.Manager.RebuildAndForceSwap(ctx, dfPath)
+		if err != nil {
+			return "", fmt.Errorf("building image: %w", err)
+		}
+		return fmt.Sprintf("Image built and container hot-swapped: %s", tag), nil
 
 	default:
 		return "", fmt.Errorf("unknown action: %s (use read, write, or build)", p.Action)
