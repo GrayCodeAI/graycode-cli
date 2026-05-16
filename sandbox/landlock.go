@@ -38,8 +38,8 @@ const (
 // Linux-specific open flags (defined here because the Go syscall package
 // does not export them during cross-compilation from non-Linux hosts).
 const (
-	oPath   = 0x200000 // O_PATH
-	oCloexec = 0x80000 // O_CLOEXEC
+	oPath    = 0x200000 // O_PATH
+	oCloexec = 0x80000  // O_CLOEXEC
 )
 
 // Rule types.
@@ -286,8 +286,8 @@ func addPathRule(rulesetFD int, path string, access uint64) error {
 // It starts with all v3 bits and drops newer ones on EINVAL.
 func bestHandledFS() uint64 {
 	masks := []uint64{
-		accessFSAll,                                     // v3 (truncate + refer)
-		accessFSAll &^ accessFSTruncate,                 // v2 (refer, no truncate)
+		accessFSAll,                     // v3 (truncate + refer)
+		accessFSAll &^ accessFSTruncate, // v2 (refer, no truncate)
 		accessFSAll &^ accessFSTruncate &^ accessFSRefer, // v1 (base set)
 	}
 	for _, m := range masks {

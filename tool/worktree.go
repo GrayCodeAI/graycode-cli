@@ -18,6 +18,7 @@ func (EnterWorktreeTool) Aliases() []string { return nil }
 func (EnterWorktreeTool) Description() string {
 	return "Switch to a git worktree directory."
 }
+
 func (EnterWorktreeTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -73,6 +74,7 @@ func (ExitWorktreeTool) Aliases() []string { return nil }
 func (ExitWorktreeTool) Description() string {
 	return "Return to the main repository from a git worktree."
 }
+
 func (ExitWorktreeTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type":       "object",

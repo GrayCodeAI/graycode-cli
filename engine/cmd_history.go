@@ -37,9 +37,9 @@ type AliasSuggestion struct {
 
 // CommandHistory tracks shell commands executed during sessions and provides insights.
 type CommandHistory struct {
-	Commands []CommandRecord    `json:"commands"`
-	Patterns map[string]int    `json:"patterns"`
-	Failures map[string]int    `json:"failures"`
+	Commands []CommandRecord `json:"commands"`
+	Patterns map[string]int  `json:"patterns"`
+	Failures map[string]int  `json:"failures"`
 	mu       sync.RWMutex
 }
 
@@ -90,9 +90,9 @@ func (ch *CommandHistory) GetFrequent(limit int) []CommandFrequency {
 
 	// Aggregate by command
 	type cmdStats struct {
-		count       int
-		totalDur    time.Duration
-		failCount   int
+		count     int
+		totalDur  time.Duration
+		failCount int
 	}
 	stats := make(map[string]*cmdStats)
 
@@ -234,7 +234,8 @@ func (ch *CommandHistory) DetectPatterns() []string {
 		if count >= 3 {
 			parts := strings.SplitN(pair, " && ", 2)
 			patterns = append(patterns, fmt.Sprintf(
-				"You frequently run `%s` after `%s` — consider combining", parts[1], parts[0]))
+				"You frequently run `%s` after `%s` — consider combining", parts[1], parts[0],
+			))
 		}
 	}
 
@@ -253,7 +254,8 @@ func (ch *CommandHistory) DetectPatterns() []string {
 			rate := float64(fails) / float64(total) * 100
 			if rate >= 30 {
 				patterns = append(patterns, fmt.Sprintf(
-					"Command `%s` fails %.0f%% of the time — check for issues", cmd, rate))
+					"Command `%s` fails %.0f%% of the time — check for issues", cmd, rate,
+				))
 			}
 		}
 	}
@@ -269,7 +271,8 @@ func (ch *CommandHistory) DetectPatterns() []string {
 	}
 	if maxCmd != "" && maxCount >= 3 {
 		patterns = append(patterns, fmt.Sprintf(
-			"`%s` is your most common command (%d times)", maxCmd, maxCount))
+			"`%s` is your most common command (%d times)", maxCmd, maxCount,
+		))
 	}
 
 	return patterns

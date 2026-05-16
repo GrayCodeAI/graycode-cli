@@ -10,7 +10,7 @@ import (
 func TestDevEnvManager_GetOrBuild_CachesOnSameHash(t *testing.T) {
 	dir := t.TempDir()
 	dockerfile := filepath.Join(dir, "Dockerfile")
-	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo hello"), 0644); err != nil {
+	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo hello"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -50,7 +50,7 @@ func TestDevEnvManager_GetOrBuild_CachesOnSameHash(t *testing.T) {
 func TestDevEnvManager_GetOrBuild_RebuildsOnChange(t *testing.T) {
 	dir := t.TempDir()
 	dockerfile := filepath.Join(dir, "Dockerfile")
-	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo v1"), 0644); err != nil {
+	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo v1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,7 +69,7 @@ func TestDevEnvManager_GetOrBuild_RebuildsOnChange(t *testing.T) {
 	}
 
 	// Modify Dockerfile
-	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo v2"), 0644); err != nil {
+	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo v2"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -98,9 +98,9 @@ func TestDevEnvManager_IsStale_NoCache(t *testing.T) {
 func TestDevEnvManager_Invalidate(t *testing.T) {
 	dir := t.TempDir()
 	subDir := filepath.Join(dir, "myproject")
-	os.MkdirAll(subDir, 0755)
+	os.MkdirAll(subDir, 0o755)
 	dockerfile := filepath.Join(subDir, "Dockerfile")
-	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest"), 0644); err != nil {
+	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

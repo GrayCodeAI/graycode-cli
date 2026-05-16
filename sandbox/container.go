@@ -60,8 +60,8 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Create attachments and cache dirs (like herm)
 	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
 	cacheDir := filepath.Join(c.projectDir, ".hawk", "cache")
-	_ = os.MkdirAll(attachDir, 0755)
-	_ = os.MkdirAll(cacheDir, 0755)
+	_ = os.MkdirAll(attachDir, 0o755)
+	_ = os.MkdirAll(cacheDir, 0o755)
 
 	args := []string{
 		"run", "-d", "--rm",
@@ -159,10 +159,10 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 	tag := fmt.Sprintf("hawk-sandbox:%x", hash[:6])
 
 	dfPath := filepath.Join(c.projectDir, ".hawk", "Dockerfile")
-	if err := os.MkdirAll(filepath.Dir(dfPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dfPath), 0o755); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(dfPath, []byte(dockerfile), 0644); err != nil {
+	if err := os.WriteFile(dfPath, []byte(dockerfile), 0o644); err != nil {
 		return "", err
 	}
 

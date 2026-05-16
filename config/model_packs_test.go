@@ -412,4 +412,3 @@ func TestSpeedPackUsesHaiku(t *testing.T) {
 		}
 	}
 }
-

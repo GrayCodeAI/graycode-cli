@@ -16,6 +16,7 @@ func (FileWriteTool) Aliases() []string { return []string{"file_write"} }
 func (FileWriteTool) Description() string {
 	return "Create or overwrite a file with the given content."
 }
+
 func (FileWriteTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

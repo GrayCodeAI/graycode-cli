@@ -4,22 +4,26 @@ package branching
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type BranchMessage = engine.BranchMessage
-type ConversationBranch = engine.ConversationBranch
-type BranchManager = engine.BranchManager
-type CascadeRouter = engine.CascadeRouter
-type RoutingDecision = engine.RoutingDecision
-type ModelTier = engine.ModelTier
-type CouncilConfig = engine.CouncilConfig
-type CouncilResponse = engine.CouncilResponse
-type CouncilRanking = engine.CouncilRanking
-type CouncilResult = engine.CouncilResult
-type ShadowWorkspace = engine.ShadowWorkspace
-type SnowballDetector = engine.SnowballDetector
+type (
+	BranchMessage      = engine.BranchMessage
+	ConversationBranch = engine.ConversationBranch
+	BranchManager      = engine.BranchManager
+	CascadeRouter      = engine.CascadeRouter
+	RoutingDecision    = engine.RoutingDecision
+	ModelTier          = engine.ModelTier
+	CouncilConfig      = engine.CouncilConfig
+	CouncilResponse    = engine.CouncilResponse
+	CouncilRanking     = engine.CouncilRanking
+	CouncilResult      = engine.CouncilResult
+	ShadowWorkspace    = engine.ShadowWorkspace
+	SnowballDetector   = engine.SnowballDetector
+)
 
-var NewBranchManager = engine.NewBranchManager
-var NewCascadeRouter = engine.NewCascadeRouter
-var RunCouncil = engine.RunCouncil
-var DefaultCouncilModels = engine.DefaultCouncilModels
-var NewShadowWorkspace = engine.NewShadowWorkspace
-var NewSnowballDetector = engine.NewSnowballDetector
+var (
+	NewBranchManager     = engine.NewBranchManager
+	NewCascadeRouter     = engine.NewCascadeRouter
+	RunCouncil           = engine.RunCouncil
+	DefaultCouncilModels = engine.DefaultCouncilModels
+	NewShadowWorkspace   = engine.NewShadowWorkspace
+	NewSnowballDetector  = engine.NewSnowballDetector
+)

@@ -16,6 +16,7 @@ func (ToolSearchTool) Aliases() []string { return []string{"tool_search"} }
 func (ToolSearchTool) Description() string {
 	return `Search available tools by name or description. Use query "select:<tool_name>" for direct selection.`
 }
+
 func (ToolSearchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -26,6 +27,7 @@ func (ToolSearchTool) Parameters() map[string]interface{} {
 		"required": []string{"query"},
 	}
 }
+
 func (ToolSearchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Query      string `json:"query"`

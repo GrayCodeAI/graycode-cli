@@ -3,11 +3,11 @@ module github.com/GrayCodeAI/hawk
 go 1.26.1
 
 require (
-	github.com/GrayCodeAI/eyrie v0.1.0
-	github.com/GrayCodeAI/inspect v0.1.0
-	github.com/GrayCodeAI/sight v0.1.0
-	github.com/GrayCodeAI/tok v0.1.0
-	github.com/GrayCodeAI/yaad v0.1.0
+	github.com/GrayCodeAI/eyrie v0.2.0
+	github.com/GrayCodeAI/inspect v0.2.0
+	github.com/GrayCodeAI/sight v0.2.0
+	github.com/GrayCodeAI/tok v0.2.0
+	github.com/GrayCodeAI/yaad v0.2.0
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
@@ -23,7 +23,7 @@ require (
 	golang.org/x/term v0.42.0
 	golang.org/x/text v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.50.0
+	modernc.org/sqlite v1.50.1
 )
 
 require (
@@ -77,7 +77,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	modernc.org/libc v1.72.0 // indirect
+	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

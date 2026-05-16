@@ -23,9 +23,9 @@ type CachedImage struct {
 
 // SwapRequest is sent when a container hot-swap is needed after a rebuild.
 type SwapRequest struct {
-	ImageTag    string
-	Dockerfile  string
-	Workspace   string
+	ImageTag   string
+	Dockerfile string
+	Workspace  string
 }
 
 // DevEnvManager caches Docker images per-project based on Dockerfile content hashes.

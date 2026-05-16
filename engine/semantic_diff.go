@@ -30,16 +30,16 @@ type SemanticChange struct {
 
 // SignatureChange describes how a function signature changed between versions.
 type SignatureChange struct {
-	Name           string
-	ParamsAdded    []string
-	ParamsRemoved  []string
+	Name            string
+	ParamsAdded     []string
+	ParamsRemoved   []string
 	ParamsReordered bool
-	ReturnChanged  bool
-	OldReturn      string
-	NewReturn      string
+	ReturnChanged   bool
+	OldReturn       string
+	NewReturn       string
 	ReceiverChanged bool
-	OldReceiver    string
-	NewReceiver    string
+	OldReceiver     string
+	NewReceiver     string
 }
 
 // SemanticAnalyzer performs semantic diff analysis on Go source code.
@@ -92,10 +92,10 @@ func (sa *SemanticAnalyzer) AnalyzeDiff(diff string) (*SemanticDiff, error) {
 
 // diffFile holds parsed information about a single file's changes in the diff.
 type diffFile struct {
-	path       string
-	oldContent string
-	newContent string
-	addedLines []string
+	path         string
+	oldContent   string
+	newContent   string
+	addedLines   []string
 	removedLines []string
 }
 

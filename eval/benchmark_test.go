@@ -179,8 +179,8 @@ func TestCompareEmptyResults(t *testing.T) {
 func TestRankModelsByQuality(t *testing.T) {
 	mb := NewModelBenchmark("rank-test", nil)
 	mb.Results = map[string]*ModelResult{
-		"low": {Model: "low", PassRate: 0.5, AvgCostUSD: 0.001, AvgDuration: 500 * time.Millisecond},
-		"mid": {Model: "mid", PassRate: 0.75, AvgCostUSD: 0.005, AvgDuration: 1 * time.Second},
+		"low":  {Model: "low", PassRate: 0.5, AvgCostUSD: 0.001, AvgDuration: 500 * time.Millisecond},
+		"mid":  {Model: "mid", PassRate: 0.75, AvgCostUSD: 0.005, AvgDuration: 1 * time.Second},
 		"high": {Model: "high", PassRate: 0.95, AvgCostUSD: 0.015, AvgDuration: 2 * time.Second},
 	}
 

@@ -37,17 +37,17 @@ func init() {
 }
 
 type statsOutput struct {
-	Period        string                `json:"period"`
-	TotalSessions int                  `json:"total_sessions"`
-	TotalMessages int                  `json:"total_messages"`
-	TotalToolCalls int                 `json:"total_tool_calls"`
-	TotalCostUSD  float64             `json:"total_cost_usd"`
-	ActiveDays    int                  `json:"active_days"`
-	AvgCostPerSession float64         `json:"avg_cost_per_session"`
-	AvgCostPerDay     float64         `json:"avg_cost_per_day"`
-	Models        map[string]modelStat `json:"models,omitempty"`
-	TopTools      []toolStat           `json:"top_tools,omitempty"`
-	DailyBreakdown []dayStat           `json:"daily_breakdown,omitempty"`
+	Period            string               `json:"period"`
+	TotalSessions     int                  `json:"total_sessions"`
+	TotalMessages     int                  `json:"total_messages"`
+	TotalToolCalls    int                  `json:"total_tool_calls"`
+	TotalCostUSD      float64              `json:"total_cost_usd"`
+	ActiveDays        int                  `json:"active_days"`
+	AvgCostPerSession float64              `json:"avg_cost_per_session"`
+	AvgCostPerDay     float64              `json:"avg_cost_per_day"`
+	Models            map[string]modelStat `json:"models,omitempty"`
+	TopTools          []toolStat           `json:"top_tools,omitempty"`
+	DailyBreakdown    []dayStat            `json:"daily_breakdown,omitempty"`
 }
 
 type modelStat struct {
@@ -178,25 +178,25 @@ func aggregateStats(traces []*analytics.SessionTrace, days int) *statsOutput {
 func printStatsText(cmd *cobra.Command, out *statsOutput) {
 	w := cmd.OutOrStdout()
 
-		_, _ = fmt.Fprintf(w, "\n")
-		_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
-		_, _ = fmt.Fprintf(w, "  Hawk Usage Statistics (%s)\n", out.Period)
-		_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
+	_, _ = fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
+	_, _ = fmt.Fprintf(w, "  Hawk Usage Statistics (%s)\n", out.Period)
+	_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
 
 	// Overview section
-		_, _ = fmt.Fprintf(w, "\n")
-		_, _ = fmt.Fprintf(w, "─── Overview ───\n")
-		_, _ = fmt.Fprintf(w, "  Sessions:     %d\n", out.TotalSessions)
-		_, _ = fmt.Fprintf(w, "  Messages:     %d\n", out.TotalMessages)
-		_, _ = fmt.Fprintf(w, "  Tool calls:   %d\n", out.TotalToolCalls)
-		_, _ = fmt.Fprintf(w, "  Active days:  %d\n", out.ActiveDays)
+	_, _ = fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "─── Overview ───\n")
+	_, _ = fmt.Fprintf(w, "  Sessions:     %d\n", out.TotalSessions)
+	_, _ = fmt.Fprintf(w, "  Messages:     %d\n", out.TotalMessages)
+	_, _ = fmt.Fprintf(w, "  Tool calls:   %d\n", out.TotalToolCalls)
+	_, _ = fmt.Fprintf(w, "  Active days:  %d\n", out.ActiveDays)
 
 	// Cost section
-		_, _ = fmt.Fprintf(w, "\n")
-		_, _ = fmt.Fprintf(w, "─── Cost ───\n")
-		_, _ = fmt.Fprintf(w, "  Total cost:       $%.4f\n", out.TotalCostUSD)
-		_, _ = fmt.Fprintf(w, "  Avg cost/session: $%.4f\n", out.AvgCostPerSession)
-		_, _ = fmt.Fprintf(w, "  Avg cost/day:     $%.4f\n", out.AvgCostPerDay)
+	_, _ = fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "─── Cost ───\n")
+	_, _ = fmt.Fprintf(w, "  Total cost:       $%.4f\n", out.TotalCostUSD)
+	_, _ = fmt.Fprintf(w, "  Avg cost/session: $%.4f\n", out.AvgCostPerSession)
+	_, _ = fmt.Fprintf(w, "  Avg cost/day:     $%.4f\n", out.AvgCostPerDay)
 
 	// Models section
 	if statsModels && len(out.Models) > 0 {
@@ -219,7 +219,7 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 		})
 
 		for _, m := range models {
-		_, _ = fmt.Fprintf(w, "  %-30s %8d %10s\n", m.name, m.stat.Requests, fmt.Sprintf("$%.4f", m.stat.CostUSD))
+			_, _ = fmt.Fprintf(w, "  %-30s %8d %10s\n", m.name, m.stat.Requests, fmt.Sprintf("$%.4f", m.stat.CostUSD))
 		}
 	}
 
@@ -249,9 +249,9 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 				barLen = 1
 			}
 			bar := strings.Repeat("█", barLen)
-		_, _ = fmt.Fprintf(w, "  %-20s %s %d\n", t.Name, bar, t.Count)
+			_, _ = fmt.Fprintf(w, "  %-20s %s %d\n", t.Name, bar, t.Count)
 		}
 	}
 
-		_, _ = fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 }

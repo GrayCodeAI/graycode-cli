@@ -10,10 +10,10 @@ import (
 func TestParseManifestV2(t *testing.T) {
 	dir := t.TempDir()
 	manifest := map[string]interface{}{
-		"name":    "test-plugin",
-		"version": "1.0.0",
+		"name":        "test-plugin",
+		"version":     "1.0.0",
 		"description": "A test plugin",
-		"mode":    "daemon",
+		"mode":        "daemon",
 		"tools": []map[string]interface{}{
 			{"name": "test_tool", "description": "does stuff"},
 		},

@@ -18,16 +18,16 @@ import (
 //
 // The closed loop:
 // SESSION START:
-//   1. Retrieve relevant EvolvingMemory guidelines
-//   2. Inject few-shot examples from prior successes
-//   3. Load yaad context (conventions, active tasks, stale warnings)
+//  1. Retrieve relevant EvolvingMemory guidelines
+//  2. Inject few-shot examples from prior successes
+//  3. Load yaad context (conventions, active tasks, stale warnings)
 //
 // SESSION END:
-//   1. Generate LLM reflection ("what worked, what failed, why")
-//   2. Extract guidelines via EvolvingMemory.Learn()
-//   3. Distill successful approaches into skills
-//   4. Record cost/performance metrics
-//   5. Trigger yaad consolidation
+//  1. Generate LLM reflection ("what worked, what failed, why")
+//  2. Extract guidelines via EvolvingMemory.Learn()
+//  3. Distill successful approaches into skills
+//  4. Record cost/performance metrics
+//  5. Trigger yaad consolidation
 type SessionLifecycle struct {
 	Memory      EvolvingMemoryInterface
 	SkillStore  SkillStoreInterface

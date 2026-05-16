@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-
-
 var imageExtensions = map[string]string{
 	".png":  "image/png",
 	".jpg":  "image/jpeg",
@@ -34,5 +32,3 @@ func getImageDimensions(data []byte) (int, int) {
 	}
 	return cfg.Width, cfg.Height
 }
-
-

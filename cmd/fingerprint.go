@@ -9,9 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	fingerprintFormat string
-)
+var fingerprintFormat string
 
 var fingerprintCmd = &cobra.Command{
 	Use:   "fingerprint [dir]",

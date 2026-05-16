@@ -18,7 +18,7 @@ type Convention struct {
 	Pattern     *regexp.Regexp
 	AntiPattern *regexp.Regexp
 	Language    string
-	Category    string  // "naming", "structure", "error_handling", "testing", "style"
+	Category    string // "naming", "structure", "error_handling", "testing", "style"
 	Example     string
 	Confidence  float64 // 0.0 to 1.0 — how confident we are this convention applies
 }

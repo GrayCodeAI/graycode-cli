@@ -38,10 +38,10 @@ func BuildSymbolGraph(dir string, opts Options) (*SymbolGraph, error) {
 
 	// Collect all symbols.
 	type symInfo struct {
-		key    string
-		name   string
-		file   string
-		kind   string
+		key  string
+		name string
+		file string
+		kind string
 	}
 	var allSyms []symInfo
 	for _, fm := range rm.Files {

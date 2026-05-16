@@ -61,7 +61,7 @@ func TestLoadWorkflow(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "workflow.json")
 	data, _ := json.Marshal(wf)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestLoadWorkflow_FileNotFound(t *testing.T) {
 func TestLoadWorkflow_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.json")
-	os.WriteFile(path, []byte("not json"), 0644)
+	os.WriteFile(path, []byte("not json"), 0o644)
 
 	engine := NewWorkflowEngine(mockExecuteFn(nil))
 	_, err := engine.LoadWorkflow(path)
@@ -119,7 +119,7 @@ func TestLoadWorkflow_CycleDetection(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "cyclic.json")
 	data, _ := json.Marshal(wf)
-	os.WriteFile(path, data, 0644)
+	os.WriteFile(path, data, 0o644)
 
 	engine := NewWorkflowEngine(mockExecuteFn(nil))
 	_, err := engine.LoadWorkflow(path)

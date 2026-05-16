@@ -33,11 +33,11 @@ type RetrievalEntry struct {
 
 // RetrievalReport summarizes retrieval effectiveness across sessions.
 type RetrievalReport struct {
-	TotalRecalls      int     `json:"total_recalls"`
-	HitRate           float64 `json:"hit_rate"`
-	AvgResultCount    float64 `json:"avg_result_count"`
-	AvgTokensPerCall  int     `json:"avg_tokens_per_call"`
-	TotalTokensSaved  int     `json:"total_tokens_saved"`
+	TotalRecalls      int      `json:"total_recalls"`
+	HitRate           float64  `json:"hit_rate"`
+	AvgResultCount    float64  `json:"avg_result_count"`
+	AvgTokensPerCall  int      `json:"avg_tokens_per_call"`
+	TotalTokensSaved  int      `json:"total_tokens_saved"`
 	MostQueriedTopics []string `json:"most_queried_topics"`
 }
 

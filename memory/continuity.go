@@ -20,16 +20,16 @@ type ContinuityTracker struct {
 
 // ContinuitySession records memory effectiveness for a single session.
 type ContinuitySession struct {
-	SessionID        string    `json:"session_id"`
-	StartedAt        time.Time `json:"started_at"`
+	SessionID        string        `json:"session_id"`
+	StartedAt        time.Time     `json:"started_at"`
 	Duration         time.Duration `json:"duration"`
-	MemoryInjected   bool      `json:"memory_injected"`
-	MemoriesAccessed int       `json:"memories_accessed"`
-	TokensFromMemory int       `json:"tokens_from_memory"`
-	TokensSaved      int       `json:"tokens_saved"`
-	ReExplanations   int       `json:"re_explanations"`
-	TaskSuccess      bool      `json:"task_success"`
-	Score            float64   `json:"score"`
+	MemoryInjected   bool          `json:"memory_injected"`
+	MemoriesAccessed int           `json:"memories_accessed"`
+	TokensFromMemory int           `json:"tokens_from_memory"`
+	TokensSaved      int           `json:"tokens_saved"`
+	ReExplanations   int           `json:"re_explanations"`
+	TaskSuccess      bool          `json:"task_success"`
+	Score            float64       `json:"score"`
 }
 
 // ContinuityReport summarizes memory effectiveness over time.

@@ -31,10 +31,10 @@ type EfficientStats struct {
 
 // OptimizedResult contains the result of optimizing a single prompt.
 type OptimizedResult struct {
-	Original   string
-	Optimized  string
+	Original    string
+	Optimized   string
 	TokensSaved int
-	Applied    []string
+	Applied     []string
 }
 
 // PromptMsg represents a message in a conversation with role, content, and token count.
@@ -224,7 +224,8 @@ func (ep *EfficientPrompter) FormatEfficientStats() string {
 
 	pct := float64(ep.Stats.TotalSavings) / float64(ep.Stats.OriginalTokens) * 100.0
 
-	return fmt.Sprintf("Token Efficiency:\nCalls: %d | Saved: %s tokens (%.1f%%)",
+	return fmt.Sprintf(
+		"Token Efficiency:\nCalls: %d | Saved: %s tokens (%.1f%%)",
 		ep.Stats.CallCount,
 		epFormatNumber(ep.Stats.TotalSavings),
 		pct,

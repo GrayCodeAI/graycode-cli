@@ -298,26 +298,26 @@ func skillExtractTags(goal string, toolCalls []string) []string {
 	combined := strings.ToLower(goal + " " + strings.Join(toolCalls, " "))
 
 	keywords := map[string]string{
-		"test":       "testing",
-		"_test.go":   "testing",
-		"go test":    "testing",
-		"lint":       "linting",
-		"fmt":        "formatting",
-		"refactor":   "refactoring",
-		"docker":     "docker",
-		"git":        "git",
-		"deploy":     "deployment",
-		"migration":  "migration",
-		".go":        "go",
-		".py":        "python",
-		".ts":        "typescript",
-		".js":        "javascript",
-		".rs":        "rust",
-		"debug":      "debugging",
-		"fix":        "bugfix",
-		"doc":        "documentation",
-		"benchmark":  "performance",
-		"perf":       "performance",
+		"test":      "testing",
+		"_test.go":  "testing",
+		"go test":   "testing",
+		"lint":      "linting",
+		"fmt":       "formatting",
+		"refactor":  "refactoring",
+		"docker":    "docker",
+		"git":       "git",
+		"deploy":    "deployment",
+		"migration": "migration",
+		".go":       "go",
+		".py":       "python",
+		".ts":       "typescript",
+		".js":       "javascript",
+		".rs":       "rust",
+		"debug":     "debugging",
+		"fix":       "bugfix",
+		"doc":       "documentation",
+		"benchmark": "performance",
+		"perf":      "performance",
 	}
 
 	for keyword, tag := range keywords {
@@ -341,7 +341,7 @@ func FormatSkill(skill *Skill) string {
 	}
 
 	var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "Skill: %q\n", skill.Name)
+	_, _ = fmt.Fprintf(&b, "Skill: %q\n", skill.Name)
 
 	if len(skill.Tags) > 0 {
 		_, _ = fmt.Fprintf(&b, "Tags: %v\n", skill.Tags)
@@ -361,7 +361,7 @@ func FormatSkill(skill *Skill) string {
 			return steps[i].Order < steps[j].Order
 		})
 		for _, step := range steps {
-		_, _ = fmt.Fprintf(&b, "  %d. %s\n", step.Order, step.Content)
+			_, _ = fmt.Fprintf(&b, "  %d. %s\n", step.Order, step.Content)
 		}
 	}
 

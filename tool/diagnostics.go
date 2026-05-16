@@ -12,8 +12,8 @@ import (
 // DiagnosticsTool runs lint/type/compile diagnostics for a file or project.
 type DiagnosticsTool struct{}
 
-func (DiagnosticsTool) Name() string        { return "Diagnostics" }
-func (DiagnosticsTool) Aliases() []string    { return []string{"diagnostics", "lint"} }
+func (DiagnosticsTool) Name() string      { return "Diagnostics" }
+func (DiagnosticsTool) Aliases() []string { return []string{"diagnostics", "lint"} }
 func (DiagnosticsTool) Description() string {
 	return `Run lint, type-check, and compile diagnostics for a file or entire project. Use this to:
 - Check for compile errors after editing code (Go: go vet + go build)

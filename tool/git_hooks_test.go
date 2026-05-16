@@ -12,7 +12,7 @@ func setupHooksTestDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	hooksDir := filepath.Join(dir, ".git", "hooks")
-	if err := os.MkdirAll(hooksDir, 0755); err != nil {
+	if err := os.MkdirAll(hooksDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	return dir
@@ -34,7 +34,7 @@ func TestNewGitHookInstaller_DetectsExisting(t *testing.T) {
 	dir := setupHooksTestDir(t)
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
 	content := "#!/bin/sh\n# hawk-managed: pre-commit hook\necho hello\n"
-	if err := os.WriteFile(hookPath, []byte(content), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(content), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -74,7 +74,7 @@ func TestInstall_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm()&0111 == 0 {
+	if info.Mode().Perm()&0o111 == 0 {
 		t.Error("hook file is not executable")
 	}
 
@@ -110,7 +110,7 @@ func TestInstall_PreservesExisting(t *testing.T) {
 
 	// Write existing non-hawk hook.
 	existing := "#!/bin/sh\necho existing\n"
-	if err := os.WriteFile(hookPath, []byte(existing), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(existing), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -182,7 +182,7 @@ func TestUninstall_RestoresBackup(t *testing.T) {
 
 	// Write existing non-hawk hook.
 	existing := "#!/bin/sh\necho original\n"
-	if err := os.WriteFile(hookPath, []byte(existing), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(existing), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -351,7 +351,7 @@ func TestBackupExisting(t *testing.T) {
 	dir := setupHooksTestDir(t)
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
 	content := "#!/bin/sh\necho original\n"
-	if err := os.WriteFile(hookPath, []byte(content), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(content), 0o755); err != nil {
 		t.Fatal(err)
 	}
 

@@ -179,7 +179,8 @@ func (sa *SessionAnalytics) WeeklyTrend() string {
 		if d.sessions > 0 {
 			successPct = fmt.Sprintf("%.0f%%", float64(d.success)/float64(d.sessions)*100)
 		}
-		sb.WriteString(fmt.Sprintf("%-12s %8d %7s %8s\n",
+		sb.WriteString(fmt.Sprintf(
+			"%-12s %8d %7s %8s\n",
 			d.date.Format("Mon 01/02"),
 			d.sessions,
 			fmt.Sprintf("$%.2f", d.cost),
@@ -251,7 +252,8 @@ func (sa *SessionAnalytics) ModelComparison() string {
 		successRate := float64(e.stats.successes) / float64(e.stats.sessions) * 100
 		avgDur := e.stats.totalDur / time.Duration(e.stats.sessions)
 		avgCost := e.stats.totalCost / float64(e.stats.sessions)
-		sb.WriteString(fmt.Sprintf("%-25s %7.0f%% %10s %9s\n",
+		sb.WriteString(fmt.Sprintf(
+			"%-25s %7.0f%% %10s %9s\n",
 			e.name,
 			successRate,
 			fmtSessionDuration(avgDur),

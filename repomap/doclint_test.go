@@ -310,7 +310,7 @@ type Service struct{}
 // Run executes the main service loop and handles incoming requests.
 func (s *Service) Run() {}
 `
-	err := os.WriteFile(filepath.Join(dir, "service.go"), []byte(wellDoc), 0644)
+	err := os.WriteFile(filepath.Join(dir, "service.go"), []byte(wellDoc), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +324,7 @@ func (r *Repo) Save() {}
 
 func (r *Repo) Load() {}
 `
-	err = os.WriteFile(filepath.Join(dir, "repo.go"), []byte(undoc), 0644)
+	err = os.WriteFile(filepath.Join(dir, "repo.go"), []byte(undoc), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +334,7 @@ func (r *Repo) Load() {}
 
 func TestSomething(t *testing.T) {}
 `
-	err = os.WriteFile(filepath.Join(dir, "service_test.go"), []byte(testFile), 0644)
+	err = os.WriteFile(filepath.Join(dir, "service_test.go"), []byte(testFile), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,17 +369,17 @@ func TestLintDirectory_SkipsVendor(t *testing.T) {
 
 	// Create vendor directory with Go file
 	vendorDir := filepath.Join(dir, "vendor")
-	err := os.MkdirAll(vendorDir, 0755)
+	err := os.MkdirAll(vendorDir, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.WriteFile(filepath.Join(vendorDir, "lib.go"), []byte("package lib\n\ntype X struct{}\n"), 0644)
+	err = os.WriteFile(filepath.Join(vendorDir, "lib.go"), []byte("package lib\n\ntype X struct{}\n"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a main file
-	err = os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// Run starts the application.\nfunc Run() {}\n"), 0644)
+	err = os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// Run starts the application.\nfunc Run() {}\n"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}

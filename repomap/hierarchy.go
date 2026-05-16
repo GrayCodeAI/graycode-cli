@@ -25,10 +25,10 @@ type PackageSummary struct {
 
 // FileSummary is a level-3 summary of a single file.
 type FileSummary struct {
-	Path       string
-	Functions  []string // exported function signatures
-	Types      []string // exported type names
-	LineCount  int
+	Path      string
+	Functions []string // exported function signatures
+	Types     []string // exported type names
+	LineCount int
 }
 
 // BuildHierarchy scans a Go project and builds a 3-level summary.

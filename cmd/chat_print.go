@@ -88,7 +88,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
 			} else {
-		_, _ = fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
+				_, _ = fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
 			}
 		case "tool_result":
 			content := ev.Content
@@ -98,7 +98,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
 			} else {
-		_, _ = fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
+				_, _ = fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
 			}
 		case "usage":
 			if outputFormat == "stream-json" && ev.Usage != nil {

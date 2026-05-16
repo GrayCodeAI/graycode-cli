@@ -26,12 +26,12 @@ type DebugSession struct {
 
 // DebugStep records a single action taken during a debugging session.
 type DebugStep struct {
-	Index        int       `json:"index"`
-	Action       string    `json:"action"` // "read", "grep", "test", "hypothesis", "fix_attempt"
-	Target       string    `json:"target"`
-	Result       string    `json:"result"`
-	Timestamp    time.Time `json:"timestamp"`
-	InsightGained string   `json:"insight_gained,omitempty"`
+	Index         int       `json:"index"`
+	Action        string    `json:"action"` // "read", "grep", "test", "hypothesis", "fix_attempt"
+	Target        string    `json:"target"`
+	Result        string    `json:"result"`
+	Timestamp     time.Time `json:"timestamp"`
+	InsightGained string    `json:"insight_gained,omitempty"`
 }
 
 // Hypothesis represents a debugging hypothesis that can be tested and confirmed or rejected.

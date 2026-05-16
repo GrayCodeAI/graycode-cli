@@ -287,8 +287,8 @@ func TestScoreRisk(t *testing.T) {
 
 	// Low risk: no affected packages.
 	lowRisk := &ImpactAnalysis{
-		ChangedFiles:        []string{"pkg/auth/auth.go"},
-		DirectlyAffected:    nil,
+		ChangedFiles:         []string{"pkg/auth/auth.go"},
+		DirectlyAffected:     nil,
 		TransitivelyAffected: nil,
 	}
 	score := ia.ScoreRisk(lowRisk)
@@ -398,11 +398,11 @@ func TestGenerateSuggestions(t *testing.T) {
 
 func TestFormatImpact(t *testing.T) {
 	analysis := &ImpactAnalysis{
-		ChangedFiles:        []string{"pkg/auth/token.go", "pkg/auth/middleware.go"},
-		DirectlyAffected:    []string{"pkg/handler/", "pkg/server/", "pkg/api/"},
+		ChangedFiles:         []string{"pkg/auth/token.go", "pkg/auth/middleware.go"},
+		DirectlyAffected:     []string{"pkg/handler/", "pkg/server/", "pkg/api/"},
 		TransitivelyAffected: []string{"cmd/hawk/", "pkg/daemon/"},
-		RiskScore:           0.78,
-		TestCoverage:        0.67,
+		RiskScore:            0.78,
+		TestCoverage:         0.67,
 		Suggestions: []string{
 			"Run: go test ./pkg/handler/... ./pkg/server/... ./pkg/api/...",
 			"Review cmd/hawk/ for integration impact",

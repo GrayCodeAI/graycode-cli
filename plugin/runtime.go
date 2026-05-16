@@ -13,9 +13,9 @@ import (
 
 // Runtime manages loaded plugins and their execution.
 type Runtime struct {
-	plugins    []*Manifest
-	commands   map[string]CommandDef
-	hooks      map[string][]HookDef
+	plugins     []*Manifest
+	commands    map[string]CommandDef
+	hooks       map[string][]HookDef
 	SmartSkills []SmartSkill
 }
 

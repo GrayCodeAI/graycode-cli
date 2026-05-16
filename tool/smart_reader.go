@@ -355,7 +355,7 @@ func (sr *SmartReader) EstimateFileTokens(path string) (int, error) {
 func FormatResult(path string, result *ReadResult) string {
 	var b strings.Builder
 
-		_, _ = fmt.Fprintf(&b, "%s (%d lines, showing %d):\n", path, result.TotalLines, result.ShownLines)
+	_, _ = fmt.Fprintf(&b, "%s (%d lines, showing %d):\n", path, result.TotalLines, result.ShownLines)
 
 	for _, sec := range result.Sections {
 		reason := sec.Reason
@@ -752,7 +752,7 @@ func NewSmartReaderTool() *SmartReaderTool {
 	return &SmartReaderTool{reader: NewSmartReader(defaultMaxTokens)}
 }
 
-func (SmartReaderTool) Name() string    { return "SmartRead" }
+func (SmartReaderTool) Name() string      { return "SmartRead" }
 func (SmartReaderTool) RiskLevel() string { return "low" }
 func (SmartReaderTool) Aliases() []string { return []string{"smart_read"} }
 

@@ -139,8 +139,8 @@ func TestHealthRouter_ModelForTask(t *testing.T) {
 	// Should select a light-tier model since complexity is low
 	lightModels := map[string]bool{
 		"claude-3-5-haiku-20241022": true,
-		"gpt-4o-mini":              true,
-		"gemini-2.5-flash":         true,
+		"gpt-4o-mini":               true,
+		"gemini-2.5-flash":          true,
 	}
 	if !lightModels[model] {
 		t.Errorf("expected a light-tier model for tiny file, got %q", model)

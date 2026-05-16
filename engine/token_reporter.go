@@ -9,13 +9,13 @@ import (
 
 // TokenEntry records a single token usage event.
 type TokenEntry struct {
-	Timestamp   time.Time
-	InputTokens int
+	Timestamp    time.Time
+	InputTokens  int
 	OutputTokens int
-	Model       string
-	ToolName    string
-	CostUSD    float64
-	Cumulative int
+	Model        string
+	ToolName     string
+	CostUSD      float64
+	Cumulative   int
 }
 
 // BudgetAlert represents a budget threshold notification.

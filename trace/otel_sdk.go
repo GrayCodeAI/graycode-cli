@@ -34,7 +34,8 @@ func InitOTelSDK(cfg TelemetryConfig) (*OTelProviders, error) {
 	ctx := context.Background()
 
 	// Build resource
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(cfg.ServiceName),
 			semconv.ServiceVersionKey.String(cfg.ServiceVersion),
@@ -64,7 +65,8 @@ func InitOTelSDK(cfg TelemetryConfig) (*OTelProviders, error) {
 
 	// Build tracer provider
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(traceExporter,
+		sdktrace.WithBatcher(
+			traceExporter,
 			sdktrace.WithBatchTimeout(cfg.TracesInterval),
 		),
 		sdktrace.WithResource(res),

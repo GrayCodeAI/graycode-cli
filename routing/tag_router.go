@@ -223,7 +223,7 @@ func (tr *TagRouter) Save(path string) error {
 	if err != nil {
 		return fmt.Errorf("marshal tag router: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("write tag router config: %w", err)
 	}
 	return nil

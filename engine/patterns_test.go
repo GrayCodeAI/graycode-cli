@@ -287,7 +287,7 @@ Test this input:
 
 {{INPUT}}
 `
-	err := os.WriteFile(filepath.Join(dir, "test_pattern.md"), []byte(content), 0644)
+	err := os.WriteFile(filepath.Join(dir, "test_pattern.md"), []byte(content), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,19 +304,19 @@ author: someone
 ---
 Review: {{INPUT}}
 `
-	err = os.WriteFile(filepath.Join(dir, "another.md"), []byte(content2), 0644)
+	err = os.WriteFile(filepath.Join(dir, "another.md"), []byte(content2), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Non-markdown file (should be ignored)
-	err = os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("not a pattern"), 0644)
+	err = os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("not a pattern"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Malformed file (no frontmatter)
-	err = os.WriteFile(filepath.Join(dir, "bad.md"), []byte("no frontmatter here"), 0644)
+	err = os.WriteFile(filepath.Join(dir, "bad.md"), []byte("no frontmatter here"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +371,7 @@ author: tester
 ---
 Do something: {{INPUT}}
 `
-	err := os.WriteFile(filepath.Join(dir, "my_custom_pattern.md"), []byte(content), 0644)
+	err := os.WriteFile(filepath.Join(dir, "my_custom_pattern.md"), []byte(content), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}

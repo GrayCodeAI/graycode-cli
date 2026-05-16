@@ -35,55 +35,55 @@ func NewAutoImporter() *AutoImporter {
 	// Standard library packages
 	stdPackages := map[string]string{
 		// Core
-		"fmt":      "fmt",
-		"os":       "os",
-		"io":       "io",
-		"strings":  "strings",
-		"strconv":  "strconv",
-		"time":     "time",
-		"sync":     "sync",
-		"context":  "context",
-		"errors":   "errors",
-		"log":      "log",
-		"math":     "math",
-		"sort":     "sort",
-		"bytes":    "bytes",
-		"bufio":    "bufio",
-		"regexp":   "regexp",
-		"reflect":  "reflect",
-		"runtime":  "runtime",
-		"unicode":  "unicode",
-		"unsafe":   "unsafe",
+		"fmt":     "fmt",
+		"os":      "os",
+		"io":      "io",
+		"strings": "strings",
+		"strconv": "strconv",
+		"time":    "time",
+		"sync":    "sync",
+		"context": "context",
+		"errors":  "errors",
+		"log":     "log",
+		"math":    "math",
+		"sort":    "sort",
+		"bytes":   "bytes",
+		"bufio":   "bufio",
+		"regexp":  "regexp",
+		"reflect": "reflect",
+		"runtime": "runtime",
+		"unicode": "unicode",
+		"unsafe":  "unsafe",
 
 		// IO
-		"ioutil":  "io/ioutil",
-		"fs":      "io/fs",
+		"ioutil": "io/ioutil",
+		"fs":     "io/fs",
 
 		// Encoding
-		"json":    "encoding/json",
-		"xml":     "encoding/xml",
-		"csv":     "encoding/csv",
-		"base64":  "encoding/base64",
-		"hex":     "encoding/hex",
-		"binary":  "encoding/binary",
-		"gob":     "encoding/gob",
-		"pem":     "encoding/pem",
-		"asn1":    "encoding/asn1",
+		"json":   "encoding/json",
+		"xml":    "encoding/xml",
+		"csv":    "encoding/csv",
+		"base64": "encoding/base64",
+		"hex":    "encoding/hex",
+		"binary": "encoding/binary",
+		"gob":    "encoding/gob",
+		"pem":    "encoding/pem",
+		"asn1":   "encoding/asn1",
 
 		// Crypto
-		"sha256":  "crypto/sha256",
-		"sha512":  "crypto/sha512",
-		"md5":     "crypto/md5",
-		"aes":     "crypto/aes",
-		"cipher":  "crypto/cipher",
-		"rand":    "crypto/rand",
-		"rsa":     "crypto/rsa",
-		"ecdsa":   "crypto/ecdsa",
-		"tls":     "crypto/tls",
-		"x509":    "crypto/x509",
-		"hmac":    "crypto/hmac",
+		"sha256":   "crypto/sha256",
+		"sha512":   "crypto/sha512",
+		"md5":      "crypto/md5",
+		"aes":      "crypto/aes",
+		"cipher":   "crypto/cipher",
+		"rand":     "crypto/rand",
+		"rsa":      "crypto/rsa",
+		"ecdsa":    "crypto/ecdsa",
+		"tls":      "crypto/tls",
+		"x509":     "crypto/x509",
+		"hmac":     "crypto/hmac",
 		"elliptic": "crypto/elliptic",
-		"ed25519": "crypto/ed25519",
+		"ed25519":  "crypto/ed25519",
 
 		// Net
 		"http":      "net/http",
@@ -103,41 +103,41 @@ func NewAutoImporter() *AutoImporter {
 		"user":     "os/user",
 
 		// Text
-		"template":   "text/template",
-		"tabwriter":  "text/tabwriter",
-		"scanner":    "text/scanner",
+		"template":  "text/template",
+		"tabwriter": "text/tabwriter",
+		"scanner":   "text/scanner",
 
 		// HTML
 		"html": "html",
 
 		// Go tooling
-		"ast":       "go/ast",
-		"parser":    "go/parser",
-		"token":     "go/token",
-		"printer":   "go/printer",
-		"format":    "go/format",
-		"types":     "go/types",
-		"build":     "go/build",
-		"constant":  "go/constant",
-		"importer":  "go/importer",
-		"doc":       "go/doc",
+		"ast":      "go/ast",
+		"parser":   "go/parser",
+		"token":    "go/token",
+		"printer":  "go/printer",
+		"format":   "go/format",
+		"types":    "go/types",
+		"build":    "go/build",
+		"constant": "go/constant",
+		"importer": "go/importer",
+		"doc":      "go/doc",
 
 		// Database
 		"sql": "database/sql",
 
 		// Archive / Compress
-		"tar":    "archive/tar",
-		"zip":    "archive/zip",
-		"gzip":   "compress/gzip",
-		"flate":  "compress/flate",
-		"zlib":   "compress/zlib",
-		"bzip2":  "compress/bzip2",
-		"lzw":    "compress/lzw",
+		"tar":   "archive/tar",
+		"zip":   "archive/zip",
+		"gzip":  "compress/gzip",
+		"flate": "compress/flate",
+		"zlib":  "compress/zlib",
+		"bzip2": "compress/bzip2",
+		"lzw":   "compress/lzw",
 
 		// Container
-		"heap":  "container/heap",
-		"list":  "container/list",
-		"ring":  "container/ring",
+		"heap": "container/heap",
+		"list": "container/list",
+		"ring": "container/ring",
 
 		// Sync extensions
 		"atomic": "sync/atomic",
@@ -147,15 +147,15 @@ func NewAutoImporter() *AutoImporter {
 		"bits": "math/bits",
 
 		// Testing
-		"testing":  "testing",
-		"iotest":   "testing/iotest",
-		"quick":    "testing/quick",
-		"fstest":   "testing/fstest",
+		"testing": "testing",
+		"iotest":  "testing/iotest",
+		"quick":   "testing/quick",
+		"fstest":  "testing/fstest",
 
 		// Debug
-		"elf":    "debug/elf",
-		"dwarf":  "debug/dwarf",
-		"pe":     "debug/pe",
+		"elf":   "debug/elf",
+		"dwarf": "debug/dwarf",
+		"pe":    "debug/pe",
 
 		// Embed
 		"embed": "embed",
@@ -167,12 +167,12 @@ func NewAutoImporter() *AutoImporter {
 		"flag": "flag",
 
 		// Image
-		"image":  "image",
+		"image":    "image",
 		"imgcolor": "image/color",
-		"draw":   "image/draw",
-		"png":    "image/png",
-		"jpeg":   "image/jpeg",
-		"gif":    "image/gif",
+		"draw":     "image/draw",
+		"png":      "image/png",
+		"jpeg":     "image/jpeg",
+		"gif":      "image/gif",
 
 		// Index
 		"suffixarray": "index/suffixarray",
@@ -192,11 +192,11 @@ func NewAutoImporter() *AutoImporter {
 		"utf16": "unicode/utf16",
 
 		// Hash
-		"crc32":  "hash/crc32",
-		"crc64":  "hash/crc64",
-		"fnv":    "hash/fnv",
+		"crc32":   "hash/crc32",
+		"crc64":   "hash/crc64",
+		"fnv":     "hash/fnv",
 		"adler32": "hash/adler32",
-		"hash":   "hash",
+		"hash":    "hash",
 		"maphash": "hash/maphash",
 
 		// Syscall
@@ -237,35 +237,35 @@ func NewAutoImporter() *AutoImporter {
 		"httprouter": "github.com/julienschmidt/httprouter",
 
 		// CLI
-		"cobra":   "github.com/spf13/cobra",
-		"viper":   "github.com/spf13/viper",
-		"pflag":   "github.com/spf13/pflag",
-		"cli":     "github.com/urfave/cli/v2",
-		"color":   "github.com/fatih/color",
+		"cobra": "github.com/spf13/cobra",
+		"viper": "github.com/spf13/viper",
+		"pflag": "github.com/spf13/pflag",
+		"cli":   "github.com/urfave/cli/v2",
+		"color": "github.com/fatih/color",
 
 		// Logging
-		"zap":       "go.uber.org/zap",
-		"zapcore":   "go.uber.org/zap/zapcore",
-		"logrus":    "github.com/sirupsen/logrus",
-		"zerolog":   "github.com/rs/zerolog",
+		"zap":     "go.uber.org/zap",
+		"zapcore": "go.uber.org/zap/zapcore",
+		"logrus":  "github.com/sirupsen/logrus",
+		"zerolog": "github.com/rs/zerolog",
 
 		// Testing
-		"assert":    "github.com/stretchr/testify/assert",
-		"require":   "github.com/stretchr/testify/require",
-		"mock":      "github.com/stretchr/testify/mock",
-		"suite":     "github.com/stretchr/testify/suite",
-		"gomock":    "go.uber.org/mock/gomock",
-		"gomega":    "github.com/onsi/gomega",
-		"ginkgo":    "github.com/onsi/ginkgo/v2",
+		"assert":  "github.com/stretchr/testify/assert",
+		"require": "github.com/stretchr/testify/require",
+		"mock":    "github.com/stretchr/testify/mock",
+		"suite":   "github.com/stretchr/testify/suite",
+		"gomock":  "go.uber.org/mock/gomock",
+		"gomega":  "github.com/onsi/gomega",
+		"ginkgo":  "github.com/onsi/ginkgo/v2",
 
 		// Database
-		"sqlx":   "github.com/jmoiron/sqlx",
-		"gorm":   "gorm.io/gorm",
-		"pgx":    "github.com/jackc/pgx/v5",
+		"sqlx":    "github.com/jmoiron/sqlx",
+		"gorm":    "gorm.io/gorm",
+		"pgx":     "github.com/jackc/pgx/v5",
 		"sqlite3": "github.com/mattn/go-sqlite3",
-		"redis":  "github.com/redis/go-redis/v9",
-		"mongo":  "go.mongodb.org/mongo-driver/mongo",
-		"bson":   "go.mongodb.org/mongo-driver/bson",
+		"redis":   "github.com/redis/go-redis/v9",
+		"mongo":   "go.mongodb.org/mongo-driver/mongo",
+		"bson":    "go.mongodb.org/mongo-driver/bson",
 
 		// Serialization
 		"yaml":     "gopkg.in/yaml.v3",
@@ -275,8 +275,8 @@ func NewAutoImporter() *AutoImporter {
 		"msgpack":  "github.com/vmihailenco/msgpack/v5",
 
 		// HTTP clients
-		"resty":      "github.com/go-resty/resty/v2",
-		"websocket":  "github.com/gorilla/websocket",
+		"resty":     "github.com/go-resty/resty/v2",
+		"websocket": "github.com/gorilla/websocket",
 
 		// Auth
 		"jwt": "github.com/golang-jwt/jwt/v5",
@@ -288,7 +288,7 @@ func NewAutoImporter() *AutoImporter {
 		"validator": "github.com/go-playground/validator/v10",
 
 		// Concurrency
-		"errgroup": "golang.org/x/sync/errgroup",
+		"errgroup":  "golang.org/x/sync/errgroup",
 		"semaphore": "golang.org/x/sync/semaphore",
 
 		// Observability
@@ -303,8 +303,8 @@ func NewAutoImporter() *AutoImporter {
 		"status": "google.golang.org/grpc/status",
 
 		// Cloud
-		"aws":    "github.com/aws/aws-sdk-go-v2/aws",
-		"s3":     "github.com/aws/aws-sdk-go-v2/service/s3",
+		"aws": "github.com/aws/aws-sdk-go-v2/aws",
+		"s3":  "github.com/aws/aws-sdk-go-v2/service/s3",
 
 		// Templating
 		"sprig": "github.com/Masterminds/sprig/v3",
@@ -337,33 +337,33 @@ func NewAutoImporter() *AutoImporter {
 		"diff": "github.com/sergi/go-diff/diffmatchpatch",
 
 		// Additional popular third-party
-		"afero":     "github.com/spf13/afero",
-		"cast":      "github.com/spf13/cast",
-		"testify":   "github.com/stretchr/testify",
-		"decimal":   "github.com/shopspring/decimal",
-		"copier":    "github.com/jinzhu/copier",
-		"cron":      "github.com/robfig/cron/v3",
-		"squirrel":  "github.com/Masterminds/squirrel",
-		"backoff":   "github.com/cenkalti/backoff/v4",
-		"sarama":    "github.com/IBM/sarama",
-		"nats":      "github.com/nats-io/nats.go",
-		"amqp":      "github.com/rabbitmq/amqp091-go",
-		"elastic":   "github.com/olivere/elastic/v7",
-		"goquery":   "github.com/PuerkitoBio/goquery",
-		"colly":     "github.com/gocolly/colly/v2",
-		"chromedp":  "github.com/chromedp/chromedp",
-		"excelize":  "github.com/xuri/excelize/v2",
-		"imaging":   "github.com/disintegration/imaging",
-		"resize":    "github.com/nfnt/resize",
-		"bluemonday": "github.com/microcosm-cc/bluemonday",
+		"afero":       "github.com/spf13/afero",
+		"cast":        "github.com/spf13/cast",
+		"testify":     "github.com/stretchr/testify",
+		"decimal":     "github.com/shopspring/decimal",
+		"copier":      "github.com/jinzhu/copier",
+		"cron":        "github.com/robfig/cron/v3",
+		"squirrel":    "github.com/Masterminds/squirrel",
+		"backoff":     "github.com/cenkalti/backoff/v4",
+		"sarama":      "github.com/IBM/sarama",
+		"nats":        "github.com/nats-io/nats.go",
+		"amqp":        "github.com/rabbitmq/amqp091-go",
+		"elastic":     "github.com/olivere/elastic/v7",
+		"goquery":     "github.com/PuerkitoBio/goquery",
+		"colly":       "github.com/gocolly/colly/v2",
+		"chromedp":    "github.com/chromedp/chromedp",
+		"excelize":    "github.com/xuri/excelize/v2",
+		"imaging":     "github.com/disintegration/imaging",
+		"resize":      "github.com/nfnt/resize",
+		"bluemonday":  "github.com/microcosm-cc/bluemonday",
 		"blackfriday": "github.com/russross/blackfriday/v2",
-		"goldmark":  "github.com/yuin/goldmark",
-		"casbin":    "github.com/casbin/casbin/v2",
-		"wire":      "github.com/google/wire",
-		"fx":        "go.uber.org/fx",
-		"dig":       "go.uber.org/dig",
-		"machinery": "github.com/RichardKnop/machinery/v2",
-		"asynq":     "github.com/hibiken/asynq",
+		"goldmark":    "github.com/yuin/goldmark",
+		"casbin":      "github.com/casbin/casbin/v2",
+		"wire":        "github.com/google/wire",
+		"fx":          "go.uber.org/fx",
+		"dig":         "go.uber.org/dig",
+		"machinery":   "github.com/RichardKnop/machinery/v2",
+		"asynq":       "github.com/hibiken/asynq",
 	}
 
 	for sym, path := range stdPackages {
@@ -893,6 +893,7 @@ func (AutoImportTool) Name() string { return "AutoImport" }
 func (AutoImportTool) Description() string {
 	return "Automatically detect and add missing imports in Go source code. Analyzes package-qualified symbol references and adds the corresponding import statements."
 }
+
 func (AutoImportTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -4,22 +4,24 @@ package scaffold
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type Template = engine.Template
-type TemplateFile = engine.TemplateFile
-type TemplateVariable = engine.TemplateVariable
-type Scaffolder = engine.Scaffolder
-type Recipe = engine.Recipe
-type RecipeRegistry = engine.RecipeRegistry
-type PromptPattern = engine.PromptPattern
-type PatternLibrary = engine.PatternLibrary
-type Skill = engine.Skill
-type SkillStep = engine.SkillStep
-type SkillResult = engine.SkillResult
-type SkillRegistry = engine.SkillRegistry
-type FewShotStore = engine.FewShotStore
-type FewShotExample = engine.FewShotExample
+type (
+	Template         = engine.Template
+	TemplateFile     = engine.TemplateFile
+	TemplateVariable = engine.TemplateVariable
+	Scaffolder       = engine.Scaffolder
+	Recipe           = engine.Recipe
+	RecipeRegistry   = engine.RecipeRegistry
+	PromptPattern    = engine.PromptPattern
+	PatternLibrary   = engine.PatternLibrary
+	Skill            = engine.Skill
+	SkillStep        = engine.SkillStep
+	SkillResult      = engine.SkillResult
+	SkillRegistry    = engine.SkillRegistry
+	FewShotStore     = engine.FewShotStore
+	FewShotExample   = engine.FewShotExample
+)
 
-func NewScaffolder() *Scaffolder              { return engine.NewScaffolder() }
+func NewScaffolder() *Scaffolder                   { return engine.NewScaffolder() }
 func NewRecipeRegistry(dir string) *RecipeRegistry { return engine.NewRecipeRegistry(dir) }
 func NewPatternLibrary(dir string) *PatternLibrary { return engine.NewPatternLibrary(dir) }
 func NewSkillRegistry(dir string) *SkillRegistry   { return engine.NewSkillRegistry(dir) }

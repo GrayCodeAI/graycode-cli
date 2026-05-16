@@ -14,26 +14,26 @@ import (
 
 // Mission represents a multi-agent orchestration run.
 type Mission struct {
-	ID          string     `json:"id"`
-	Prompt      string     `json:"prompt"`
-	Dir         string     `json:"dir"`
-	Features    []Feature  `json:"features"`
-	Status      Status     `json:"status"`
-	StartedAt   time.Time  `json:"started_at"`
-	CompletedAt time.Time  `json:"completed_at,omitempty"`
-	Config      Config     `json:"config"`
+	ID          string    `json:"id"`
+	Prompt      string    `json:"prompt"`
+	Dir         string    `json:"dir"`
+	Features    []Feature `json:"features"`
+	Status      Status    `json:"status"`
+	StartedAt   time.Time `json:"started_at"`
+	CompletedAt time.Time `json:"completed_at,omitempty"`
+	Config      Config    `json:"config"`
 	mu          sync.Mutex
 }
 
 // Config controls mission orchestration behavior.
 type Config struct {
-	MaxWorkers        int    `json:"max_workers"`
-	WorkerModel       string `json:"worker_model"`
-	ValidatorModel    string `json:"validator_model"`
-	RepoDir           string `json:"repo_dir"`
-	BaseBranch        string `json:"base_branch"`
-	AutonomyLevel     int    `json:"autonomy_level"`
-	SkipValidation    bool   `json:"skip_validation"`
+	MaxWorkers     int    `json:"max_workers"`
+	WorkerModel    string `json:"worker_model"`
+	ValidatorModel string `json:"validator_model"`
+	RepoDir        string `json:"repo_dir"`
+	BaseBranch     string `json:"base_branch"`
+	AutonomyLevel  int    `json:"autonomy_level"`
+	SkipValidation bool   `json:"skip_validation"`
 }
 
 // Status represents the mission lifecycle.

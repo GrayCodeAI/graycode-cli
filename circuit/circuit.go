@@ -13,7 +13,7 @@ import (
 type State int
 
 const (
-	Closed State = iota   // Normal operation
+	Closed   State = iota // Normal operation
 	Open                  // Failing fast
 	HalfOpen              // Testing recovery
 )
@@ -33,15 +33,15 @@ func (s State) String() string {
 
 // Breaker is a circuit breaker.
 type Breaker struct {
-	mu                sync.RWMutex
-	state             State
-	failures          int
-	lastFailureTime   time.Time
-	successCount      int
+	mu              sync.RWMutex
+	state           State
+	failures        int
+	lastFailureTime time.Time
+	successCount    int
 
-	maxFailures       int
-	timeout           time.Duration
-	halfOpenMaxCalls  int
+	maxFailures      int
+	timeout          time.Duration
+	halfOpenMaxCalls int
 }
 
 // ErrOpen is returned when the circuit is open.
@@ -193,9 +193,9 @@ func (b *Breaker) Stats() Stats {
 
 // Manager manages multiple named circuit breakers.
 type Manager struct {
-	mu        sync.RWMutex
-	breakers  map[string]*Breaker
-	config    Config
+	mu       sync.RWMutex
+	breakers map[string]*Breaker
+	config   Config
 }
 
 // NewManager creates a new circuit breaker manager.

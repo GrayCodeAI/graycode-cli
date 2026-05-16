@@ -7,13 +7,13 @@ import (
 
 // Checkpoint represents a restorable point in the conversation.
 type Checkpoint struct {
-	Index       int       `json:"index"`
-	MessageID   string    `json:"message_id,omitempty"`
-	Role        string    `json:"role"`
-	Preview     string    `json:"preview"`
-	ToolName    string    `json:"tool_name,omitempty"`
-	Timestamp   time.Time `json:"timestamp"`
-	TokenCount  int       `json:"token_count,omitempty"`
+	Index      int       `json:"index"`
+	MessageID  string    `json:"message_id,omitempty"`
+	Role       string    `json:"role"`
+	Preview    string    `json:"preview"`
+	ToolName   string    `json:"tool_name,omitempty"`
+	Timestamp  time.Time `json:"timestamp"`
+	TokenCount int       `json:"token_count,omitempty"`
 }
 
 // ListCheckpoints extracts interactive restore points from a session.

@@ -34,7 +34,7 @@ type TaskContext struct {
 	FilesModified int
 	TestsPassed   bool
 	Duration      time.Duration
-	TokensUsed   int
+	TokensUsed    int
 	UserFeedback  string
 }
 

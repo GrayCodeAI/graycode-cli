@@ -11,10 +11,10 @@ import (
 
 // ErrorPattern records a known error trigger, root cause, and resolution.
 type ErrorPattern struct {
-	Trigger    string    `json:"trigger"`     // error message pattern
-	RootCause  string    `json:"root_cause"`  // why it happens
-	Resolution string    `json:"resolution"`  // how to fix it
-	HitCount   int       `json:"hit_count"`   // times encountered
+	Trigger    string    `json:"trigger"`    // error message pattern
+	RootCause  string    `json:"root_cause"` // why it happens
+	Resolution string    `json:"resolution"` // how to fix it
+	HitCount   int       `json:"hit_count"`  // times encountered
 	LastSeen   time.Time `json:"last_seen"`
 }
 

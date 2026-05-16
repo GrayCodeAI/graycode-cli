@@ -313,8 +313,8 @@ func (em *EnhancedMemoryManager) Close() {
 // HealthCheck verifies the memory system is working correctly.
 func (em *EnhancedMemoryManager) HealthCheck() map[string]interface{} {
 	health := map[string]interface{}{
-		"yaad_ready":    em.Yaad.Ready(),
-		"timestamp":     time.Now().Format(time.RFC3339),
+		"yaad_ready": em.Yaad.Ready(),
+		"timestamp":  time.Now().Format(time.RFC3339),
 	}
 
 	if em.Retrieval != nil {

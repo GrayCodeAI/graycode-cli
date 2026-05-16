@@ -537,4 +537,3 @@ func TestDurationRoundTrip(t *testing.T) {
 		t.Fatalf("expected duration %v, got %v", dur, entries[0].Duration)
 	}
 }
-

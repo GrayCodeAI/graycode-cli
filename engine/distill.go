@@ -397,14 +397,14 @@ func inferTags(user, assistant string) []string {
 	combined := strings.ToLower(user + " " + assistant)
 
 	tagKeywords := map[string][]string{
-		"coding":  {"func ", "function", "implement", "code", "package", "import", "class"},
-		"review":  {"review", "feedback", "suggest", "improve", "refactor"},
-		"debug":   {"error", "bug", "fix", "debug", "stack trace", "panic"},
-		"test":    {"test", "assert", "expect", "mock", "coverage"},
-		"docs":    {"document", "readme", "explain", "comment", "description"},
-		"deploy":  {"deploy", "ci/cd", "pipeline", "docker", "kubernetes"},
-		"design":  {"architecture", "design", "pattern", "interface", "struct"},
-		"config":  {"config", "setting", "environment", "variable", "yaml", "json"},
+		"coding": {"func ", "function", "implement", "code", "package", "import", "class"},
+		"review": {"review", "feedback", "suggest", "improve", "refactor"},
+		"debug":  {"error", "bug", "fix", "debug", "stack trace", "panic"},
+		"test":   {"test", "assert", "expect", "mock", "coverage"},
+		"docs":   {"document", "readme", "explain", "comment", "description"},
+		"deploy": {"deploy", "ci/cd", "pipeline", "docker", "kubernetes"},
+		"design": {"architecture", "design", "pattern", "interface", "struct"},
+		"config": {"config", "setting", "environment", "variable", "yaml", "json"},
 	}
 
 	for tag, keywords := range tagKeywords {

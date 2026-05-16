@@ -15,10 +15,10 @@ func TestAtomicSave(t *testing.T) {
 	defer os.Setenv("HOME", origHome)
 
 	sess := &Session{
-		ID:        "test-atomic-1",
-		Model:     "claude-4",
-		Provider:  "anthropic",
-		CWD:       "/tmp/test",
+		ID:       "test-atomic-1",
+		Model:    "claude-4",
+		Provider: "anthropic",
+		CWD:      "/tmp/test",
 		Messages: []Message{
 			{Role: "user", Content: "hello"},
 			{Role: "assistant", Content: "hi there"},

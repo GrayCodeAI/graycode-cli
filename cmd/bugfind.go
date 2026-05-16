@@ -119,5 +119,3 @@ func formatBugReport(findings string) string {
 
 	return b.String()
 }
-
-

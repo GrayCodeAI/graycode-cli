@@ -15,12 +15,12 @@ import (
 
 // SeatbeltPolicy describes the permissions for a macOS seatbelt sandbox profile.
 type SeatbeltPolicy struct {
-	AllowNetwork bool     // allow outbound/inbound network access
-	AllowWrite   bool     // allow filesystem writes (to WritablePaths only)
+	AllowNetwork  bool     // allow outbound/inbound network access
+	AllowWrite    bool     // allow filesystem writes (to WritablePaths only)
 	ReadablePaths []string // paths allowed for file-read*
 	WritablePaths []string // paths allowed for file-write*
-	AllowProcess bool     // allow spawning child processes (process-exec*)
-	AllowSysctl  bool     // allow sysctl-read
+	AllowProcess  bool     // allow spawning child processes (process-exec*)
+	AllowSysctl   bool     // allow sysctl-read
 }
 
 // GenerateSeatbeltProfile generates a valid Apple sandbox-exec SBPL
@@ -58,7 +58,7 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 	// Writable paths (only if AllowWrite is true).
 	if policy.AllowWrite {
 		for _, p := range policy.WritablePaths {
-		_, _ = fmt.Fprintf(&b, "(allow file-write* (subpath \"%s\"))\n", p)
+			_, _ = fmt.Fprintf(&b, "(allow file-write* (subpath \"%s\"))\n", p)
 		}
 	}
 

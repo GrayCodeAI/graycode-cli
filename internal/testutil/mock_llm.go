@@ -104,13 +104,13 @@ func (m *MockLLMServer) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := map[string]interface{}{
-		"id":           fmt.Sprintf("msg_%d", m.idx),
-		"type":         "message",
-		"role":         "assistant",
-		"content":      content,
-		"model":        "mock-model",
-		"stop_reason":  stopReason,
-		"usage":        map[string]int{"input_tokens": 100, "output_tokens": 50},
+		"id":          fmt.Sprintf("msg_%d", m.idx),
+		"type":        "message",
+		"role":        "assistant",
+		"content":     content,
+		"model":       "mock-model",
+		"stop_reason": stopReason,
+		"usage":       map[string]int{"input_tokens": 100, "output_tokens": 50},
 	}
 
 	_ = json.NewEncoder(w).Encode(result)

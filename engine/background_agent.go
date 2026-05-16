@@ -11,10 +11,10 @@ import (
 // When background agents finish, their results are collected for re-injection
 // into the main agent loop (inspired by herm's completion cycles).
 type BackgroundAgentPool struct {
-	mu       sync.Mutex
-	pending  []backgroundTask
-	results  []BackgroundResult
-	maxWait  time.Duration
+	mu        sync.Mutex
+	pending   []backgroundTask
+	results   []BackgroundResult
+	maxWait   time.Duration
 	maxCycles int
 }
 

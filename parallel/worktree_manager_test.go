@@ -33,7 +33,7 @@ func initManagerTestRepo(t *testing.T) string {
 	run("git", "config", "user.name", "Hawk Test")
 
 	readme := filepath.Join(dir, "README.md")
-	if err := os.WriteFile(readme, []byte("# worktree manager test\n"), 0644); err != nil {
+	if err := os.WriteFile(readme, []byte("# worktree manager test\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	run("git", "add", "README.md")
@@ -200,7 +200,7 @@ func TestMergeBackMergeCommit(t *testing.T) {
 
 	// Make a commit in the worktree.
 	newFile := filepath.Join(wt.Path, "merged.txt")
-	if err := os.WriteFile(newFile, []byte("merge content\n"), 0644); err != nil {
+	if err := os.WriteFile(newFile, []byte("merge content\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGitIn(t, wt.Path, "add", "merged.txt")
@@ -244,7 +244,7 @@ func TestMergeBackFastForward(t *testing.T) {
 
 	// Make a commit in the worktree.
 	newFile := filepath.Join(wt.Path, "ff.txt")
-	if err := os.WriteFile(newFile, []byte("fast forward\n"), 0644); err != nil {
+	if err := os.WriteFile(newFile, []byte("fast forward\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGitIn(t, wt.Path, "add", "ff.txt")
@@ -284,7 +284,7 @@ func TestMergeBackSquash(t *testing.T) {
 	// Make multiple commits in the worktree.
 	for i, name := range []string{"a.txt", "b.txt"} {
 		f := filepath.Join(wt.Path, name)
-		if err := os.WriteFile(f, []byte("content\n"), 0644); err != nil {
+		if err := os.WriteFile(f, []byte("content\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		runGitIn(t, wt.Path, "add", name)
@@ -386,7 +386,7 @@ func TestIsClean(t *testing.T) {
 
 	// Create an uncommitted file.
 	dirty := filepath.Join(wt.Path, "dirty.txt")
-	if err := os.WriteFile(dirty, []byte("uncommitted\n"), 0644); err != nil {
+	if err := os.WriteFile(dirty, []byte("uncommitted\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -417,7 +417,7 @@ func TestGetDiff(t *testing.T) {
 
 	// Make a commit in the worktree.
 	newFile := filepath.Join(wt.Path, "diffed.txt")
-	if err := os.WriteFile(newFile, []byte("new content\n"), 0644); err != nil {
+	if err := os.WriteFile(newFile, []byte("new content\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGitIn(t, wt.Path, "add", "diffed.txt")
@@ -454,7 +454,7 @@ func TestFormatMergePreview(t *testing.T) {
 
 	// Make a commit.
 	newFile := filepath.Join(wt.Path, "preview.txt")
-	if err := os.WriteFile(newFile, []byte("preview content\n"), 0644); err != nil {
+	if err := os.WriteFile(newFile, []byte("preview content\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGitIn(t, wt.Path, "add", "preview.txt")

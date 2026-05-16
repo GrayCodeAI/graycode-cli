@@ -212,7 +212,7 @@ func TestDetectTests_TempDir(t *testing.T) {
 
 	// Dir with test directory.
 	dir2 := t.TempDir()
-	os.Mkdir(filepath.Join(dir2, "tests"), 0755)
+	os.Mkdir(filepath.Join(dir2, "tests"), 0o755)
 	if !detectTests(dir2) {
 		t.Error("expected detectTests to return true for tests/ directory")
 	}
@@ -227,7 +227,7 @@ func TestDetectTests_TempDir(t *testing.T) {
 func TestDetectCI(t *testing.T) {
 	// With .github/workflows.
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0o755)
 	if !detectCI(dir) {
 		t.Error("expected detectCI to detect .github/workflows")
 	}
@@ -274,7 +274,7 @@ require (
 func TestSkipDirs(t *testing.T) {
 	dir := t.TempDir()
 	// Create a file in node_modules that should be skipped.
-	os.MkdirAll(filepath.Join(dir, "node_modules", "pkg"), 0755)
+	os.MkdirAll(filepath.Join(dir, "node_modules", "pkg"), 0o755)
 	writeFile(t, filepath.Join(dir, "node_modules", "pkg", "index.js"), "module.exports = {};\n")
 	// Create a normal file.
 	writeFile(t, filepath.Join(dir, "main.go"), "package main\n")
@@ -321,7 +321,7 @@ func TestFormat_NoGitInfo(t *testing.T) {
 
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
 }

@@ -8,14 +8,14 @@ import (
 
 // Spec is a frozen specification that defines what to build.
 type Spec struct {
-	Title      string
-	Goal       string
-	Files      []string
-	Criteria   []string // acceptance criteria
+	Title       string
+	Goal        string
+	Files       []string
+	Criteria    []string // acceptance criteria
 	Assumptions []string
-	OutOfScope []string
-	CreatedAt  time.Time
-	Approved   bool
+	OutOfScope  []string
+	CreatedAt   time.Time
+	Approved    bool
 }
 
 // SpecGeneratePrompt creates the prompt to generate a spec from user intent.

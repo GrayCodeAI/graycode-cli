@@ -95,15 +95,15 @@ func TestLanguageSupportRegister(t *testing.T) {
 	r := NewLanguageRegistry()
 
 	cfg := &LanguageConfig{
-		Name:         "Zig",
-		Extensions:   []string{".zig"},
-		TestCommand:  "zig build test",
-		LintCommand:  "",
-		FormatCommand: "zig fmt",
-		BuildCommand: "zig build",
+		Name:           "Zig",
+		Extensions:     []string{".zig"},
+		TestCommand:    "zig build test",
+		LintCommand:    "",
+		FormatCommand:  "zig fmt",
+		BuildCommand:   "zig build",
 		PackageManager: "zig",
-		PackageFile:  "build.zig",
-		CommentStyle: "//",
+		PackageFile:    "build.zig",
+		CommentStyle:   "//",
 	}
 
 	r.Register(cfg)
@@ -131,9 +131,9 @@ func TestRegisterOverwrite(t *testing.T) {
 
 	// Overwrite Go with a custom config.
 	cfg := &LanguageConfig{
-		Name:        "Go",
-		Extensions:  []string{".go"},
-		TestCommand: "go test -v ./...",
+		Name:         "Go",
+		Extensions:   []string{".go"},
+		TestCommand:  "go test -v ./...",
 		CommentStyle: "//",
 	}
 
@@ -153,12 +153,12 @@ func TestDetect(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create go.mod.
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Create some .go files.
 	for _, name := range []string{"main.go", "util.go", "handler.go"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("package main\n"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("package main\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -177,24 +177,24 @@ func TestDetectAll(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a mixed project: Go primary, some Shell scripts, a SQL file.
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"main.go", "handler.go", "util.go"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("package main\n"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("package main\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.Mkdir(filepath.Join(dir, "scripts"), 0755); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, "scripts"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "scripts", "deploy.sh"), []byte("#!/bin/bash\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "scripts", "deploy.sh"), []byte("#!/bin/bash\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "scripts", "setup.sh"), []byte("#!/bin/bash\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "scripts", "setup.sh"), []byte("#!/bin/bash\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "schema.sql"), []byte("CREATE TABLE t (id INT);\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "schema.sql"), []byte("CREATE TABLE t (id INT);\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -243,15 +243,15 @@ func TestDetectSkipsHiddenDirs(t *testing.T) {
 
 	// Put Go files only in a hidden dir.
 	hidden := filepath.Join(dir, ".hidden")
-	if err := os.Mkdir(hidden, 0755); err != nil {
+	if err := os.Mkdir(hidden, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(hidden, "main.go"), []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(hidden, "main.go"), []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Put a Python file at root.
-	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("print('hi')\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("print('hi')\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -268,10 +268,10 @@ func TestDetectSkipsHiddenDirs(t *testing.T) {
 
 func TestTestCommand(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -284,10 +284,10 @@ func TestTestCommand(t *testing.T) {
 
 func TestLintCommand(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"test\"\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"test\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.rs"), []byte("fn main() {}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.rs"), []byte("fn main() {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -300,10 +300,10 @@ func TestLintCommand(t *testing.T) {
 
 func TestFormatCommand(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("print('hi')\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("print('hi')\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -521,21 +521,21 @@ func TestDetectWithNodeModules(t *testing.T) {
 
 	// Create node_modules with many .js files (should be skipped).
 	nm := filepath.Join(dir, "node_modules", "some-pkg")
-	if err := os.MkdirAll(nm, 0755); err != nil {
+	if err := os.MkdirAll(nm, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 50; i++ {
 		name := filepath.Join(nm, strings.Repeat("a", i+1)+".js")
-		if err := os.WriteFile(name, []byte("//"), 0644); err != nil {
+		if err := os.WriteFile(name, []byte("//"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	// Create a single .ts file at root.
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "index.ts"), []byte("export {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "index.ts"), []byte("export {}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -575,14 +575,14 @@ func TestShortCmd(t *testing.T) {
 func TestDetectPythonProject(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask==2.0\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask==2.0\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(dir, "src"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "src"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"app.py", "models.py", "views.py"} {
-		if err := os.WriteFile(filepath.Join(dir, "src", name), []byte("# python\n"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "src", name), []byte("# python\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}

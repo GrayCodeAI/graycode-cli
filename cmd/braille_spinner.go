@@ -12,14 +12,14 @@ import (
 type SpinnerStyle string
 
 const (
-	SpinnerBraille      SpinnerStyle = "braille"
-	SpinnerBrailleWave  SpinnerStyle = "braillewave"
-	SpinnerDNA          SpinnerStyle = "dna"
-	SpinnerScan         SpinnerStyle = "scan"
-	SpinnerPulse        SpinnerStyle = "pulse"
-	SpinnerSnake        SpinnerStyle = "snake"
-	SpinnerOrbit        SpinnerStyle = "orbit"
-	SpinnerRandom       SpinnerStyle = "random"
+	SpinnerBraille     SpinnerStyle = "braille"
+	SpinnerBrailleWave SpinnerStyle = "braillewave"
+	SpinnerDNA         SpinnerStyle = "dna"
+	SpinnerScan        SpinnerStyle = "scan"
+	SpinnerPulse       SpinnerStyle = "pulse"
+	SpinnerSnake       SpinnerStyle = "snake"
+	SpinnerOrbit       SpinnerStyle = "orbit"
+	SpinnerRandom      SpinnerStyle = "random"
 )
 
 // spinnerFrames maps style names to their animation frames.
@@ -38,13 +38,13 @@ var shimmerColors = []string{"255", "219", "213", "200", "141"}
 
 // BrailleSpinner renders animated braille spinners with shimmer text.
 type BrailleSpinner struct {
-	mu       sync.Mutex
-	style    SpinnerStyle
-	frames   []string
-	frame    int
-	text     string
-	running  bool
-	stopCh   chan struct{}
+	mu      sync.Mutex
+	style   SpinnerStyle
+	frames  []string
+	frame   int
+	text    string
+	running bool
+	stopCh  chan struct{}
 }
 
 // NewBrailleSpinner creates a spinner with the given style and label text.

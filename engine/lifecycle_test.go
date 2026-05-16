@@ -41,7 +41,10 @@ func (m *mockMemory) Format() string {
 
 type mockSkillStore struct {
 	skills    []string
-	distilled []struct{ goal, outcome string; steps []string }
+	distilled []struct {
+		goal, outcome string
+		steps         []string
+	}
 	distillErr error
 }
 
@@ -49,7 +52,10 @@ func (m *mockSkillStore) Distill(goal string, steps []string, outcome string) er
 	if m.distillErr != nil {
 		return m.distillErr
 	}
-	m.distilled = append(m.distilled, struct{ goal, outcome string; steps []string }{goal, outcome, steps})
+	m.distilled = append(m.distilled, struct {
+		goal, outcome string
+		steps         []string
+	}{goal, outcome, steps})
 	return nil
 }
 
@@ -58,8 +64,8 @@ func (m *mockSkillStore) Retrieve(query string) []string {
 }
 
 type mockCostTracker struct {
-	entries  []CostEntry
-	total    float64
+	entries   []CostEntry
+	total     float64
 	recordErr error
 }
 

@@ -13,9 +13,9 @@ type RelevancePrediction struct {
 
 // PredictedFile is a file predicted to be relevant to the current task.
 type PredictedFile struct {
-	Path      string
-	Score     float64
-	Reason    string // why it was predicted relevant
+	Path   string
+	Score  float64
+	Reason string // why it was predicted relevant
 }
 
 // PredictRelevantFiles predicts which files are likely relevant given:

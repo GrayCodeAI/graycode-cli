@@ -456,10 +456,10 @@ func checkSecurity(files []string) *CheckResult {
 	// Patterns that indicate potential secrets or dangerous code.
 	secretPatterns := []*regexp.Regexp{
 		regexp.MustCompile(`(?i)(password|secret|token|api_key|apikey|private_key)\s*[:=]\s*["'][^"']{8,}["']`),
-		regexp.MustCompile(`(?i)AKIA[0-9A-Z]{16}`),                   // AWS Access Key
-		regexp.MustCompile(`(?i)-----BEGIN (RSA |EC )?PRIVATE KEY-----`), // Private key
+		regexp.MustCompile(`(?i)AKIA[0-9A-Z]{16}`),                        // AWS Access Key
+		regexp.MustCompile(`(?i)-----BEGIN (RSA |EC )?PRIVATE KEY-----`),  // Private key
 		regexp.MustCompile(`(?i)(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}`), // GitHub token
-		regexp.MustCompile(`(?i)sk-[A-Za-z0-9]{20,}`),                 // OpenAI-style key
+		regexp.MustCompile(`(?i)sk-[A-Za-z0-9]{20,}`),                     // OpenAI-style key
 	}
 
 	dangerousPatterns := []*regexp.Regexp{

@@ -39,11 +39,11 @@ type ModelPrice struct {
 
 // Recommendation represents a cost optimization recommendation.
 type Recommendation struct {
-	Type            string  // "model_switch", "caching", "compression", "batching"
-	Description     string
+	Type             string // "model_switch", "caching", "compression", "batching"
+	Description      string
 	EstimatedSavings float64 // USD per day
-	Priority        string  // "high", "medium", "low"
-	Action          string  // what to do
+	Priority         string  // "high", "medium", "low"
+	Action           string  // what to do
 }
 
 // NewCostOptimizer creates a CostOptimizer with default pricing for common models.

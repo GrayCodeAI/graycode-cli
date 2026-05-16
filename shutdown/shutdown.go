@@ -13,11 +13,11 @@ import (
 
 // Handler manages graceful shutdown.
 type Handler struct {
-	mu       sync.Mutex
-	hooks    []func(ctx context.Context) error
-	timeout  time.Duration
-	signals  []os.Signal
-	cancel   context.CancelFunc
+	mu      sync.Mutex
+	hooks   []func(ctx context.Context) error
+	timeout time.Duration
+	signals []os.Signal
+	cancel  context.CancelFunc
 }
 
 // Config configures shutdown behavior.
@@ -88,7 +88,7 @@ func (h *Handler) shutdown() {
 		go func(fn func(ctx context.Context) error) {
 			defer wg.Done()
 			if err := fn(ctx); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Shutdown hook error: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "Shutdown hook error: %v\n", err)
 			}
 		}(hook)
 	}

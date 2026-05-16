@@ -12,12 +12,12 @@ import (
 
 // DeviceFlowConfig holds OAuth device flow configuration.
 type DeviceFlowConfig struct {
-	ClientID        string
-	DeviceAuthURL   string // e.g. "https://github.com/login/device/code"
-	TokenURL        string // e.g. "https://github.com/login/oauth/access_token"
-	Scopes          []string
-	PollInterval    time.Duration
-	ExpiresIn       time.Duration
+	ClientID      string
+	DeviceAuthURL string // e.g. "https://github.com/login/device/code"
+	TokenURL      string // e.g. "https://github.com/login/oauth/access_token"
+	Scopes        []string
+	PollInterval  time.Duration
+	ExpiresIn     time.Duration
 }
 
 // DeviceCodeResponse is the initial response from the device auth endpoint.

@@ -282,6 +282,7 @@ type TaskListTool struct{}
 func (TaskListTool) Name() string        { return "TaskList" }
 func (TaskListTool) Aliases() []string   { return []string{"task_list"} }
 func (TaskListTool) Description() string { return "List all tasks, ready tasks, or compact completed" }
+
 func (TaskListTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -341,6 +342,7 @@ type TaskUpdateTool struct{}
 func (TaskUpdateTool) Name() string        { return "TaskUpdate" }
 func (TaskUpdateTool) Aliases() []string   { return []string{"task_update"} }
 func (TaskUpdateTool) Description() string { return "Update a task's status, owner, or dependencies" }
+
 func (TaskUpdateTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -546,7 +546,8 @@ func RenderForPrompt(summary *CodebaseSummary, budget int) string {
 
 	// Header
 	sb.WriteString(fmt.Sprintf("## Codebase: %s\n", summary.ProjectName))
-	sb.WriteString(fmt.Sprintf("%s project (%d packages, %s files, %s LOC)\n",
+	sb.WriteString(fmt.Sprintf(
+		"%s project (%d packages, %s files, %s LOC)\n",
 		summary.Language,
 		len(summary.Packages),
 		summaryFormatNumber(summary.TotalFiles),
@@ -832,8 +833,10 @@ func summaryExtractImports(path string) []string {
 	return imports
 }
 
-var summaryGoMainRe = regexp.MustCompile(`^func\s+main\s*\(`)
-var summaryGoPackageMainRe = regexp.MustCompile(`^package\s+main\b`)
+var (
+	summaryGoMainRe        = regexp.MustCompile(`^func\s+main\s*\(`)
+	summaryGoPackageMainRe = regexp.MustCompile(`^package\s+main\b`)
+)
 
 func summaryHasGoMain(path string) bool {
 	f, err := os.Open(path)

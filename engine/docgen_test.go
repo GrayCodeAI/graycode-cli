@@ -11,7 +11,7 @@ import (
 // createTestGoFile creates a temporary Go source file for testing.
 func createTestGoFile(t *testing.T, dir, filename, content string) {
 	t.Helper()
-	err := os.WriteFile(filepath.Join(dir, filename), []byte(content), 0644)
+	err := os.WriteFile(filepath.Join(dir, filename), []byte(content), 0o644)
 	if err != nil {
 		t.Fatalf("failed to create test file %s: %v", filename, err)
 	}
@@ -147,11 +147,11 @@ func helper() {}
 
 func TestRenderMarkdown_ProducesValidOutput(t *testing.T) {
 	doc := &ProjectDoc{
-		Name:        "myproject",
-		Description: "A test project for documentation.",
+		Name:         "myproject",
+		Description:  "A test project for documentation.",
 		Architecture: "Simple package layout.",
-		QuickStart:  "import \"myproject\"",
-		GeneratedAt: time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC),
+		QuickStart:   "import \"myproject\"",
+		GeneratedAt:  time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC),
 		Packages: []PackageDoc{
 			{
 				Name:        "auth",
@@ -393,7 +393,7 @@ This is a fantastic project that does amazing things.
 
 go get myproject
 `
-	err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0644)
+	err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -431,7 +431,7 @@ func TestInferDescription_Fallback_GoMod(t *testing.T) {
 
 go 1.21
 `
-	err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(gomod), 0644)
+	err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(gomod), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -609,7 +609,7 @@ func TestGenerate_FullProject(t *testing.T) {
 
 	// Create a sub-package
 	subDir := filepath.Join(dir, "pkg", "util")
-	err := os.MkdirAll(subDir, 0755)
+	err := os.MkdirAll(subDir, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -641,7 +641,7 @@ A test project for the doc generator.
 
 Just run it.
 `
-	err = os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0644)
+	err = os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -702,7 +702,7 @@ This is the real description after badges.
 
 ## More stuff
 `
-	err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0644)
+	err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}

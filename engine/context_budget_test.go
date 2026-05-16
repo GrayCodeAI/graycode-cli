@@ -303,9 +303,9 @@ func TestClamp(t *testing.T) {
 	}{
 		{5, 1, 10, 5},   // within range
 		{0, 1, 10, 1},   // below floor
-		{15, 1, 10, 10},  // above ceiling
+		{15, 1, 10, 10}, // above ceiling
 		{1, 1, 10, 1},   // at floor
-		{10, 1, 10, 10},  // at ceiling
+		{10, 1, 10, 10}, // at ceiling
 	}
 	for _, tt := range tests {
 		got := clamp(tt.v, tt.lo, tt.hi)

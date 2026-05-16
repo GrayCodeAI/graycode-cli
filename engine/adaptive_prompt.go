@@ -20,10 +20,10 @@ type AdaptivePrompt struct {
 
 // PromptAdjustment is a user-derived prompt modification.
 type PromptAdjustment struct {
-	Rule       string    `json:"rule"`        // "always use tabs" or "never add comments"
-	Source     string    `json:"source"`      // user message that triggered this
-	Polarity   string    `json:"polarity"`    // "do" or "dont"
-	Confidence float64   `json:"confidence"`  // increases with reinforcement
+	Rule       string    `json:"rule"`       // "always use tabs" or "never add comments"
+	Source     string    `json:"source"`     // user message that triggered this
+	Polarity   string    `json:"polarity"`   // "do" or "dont"
+	Confidence float64   `json:"confidence"` // increases with reinforcement
 	Active     bool      `json:"active"`
 	CreatedAt  time.Time `json:"created_at"`
 	LastUsed   time.Time `json:"last_used"`

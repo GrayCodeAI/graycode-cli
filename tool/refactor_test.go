@@ -30,7 +30,7 @@ func main() {
 	fmt.Println("world")
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -61,7 +61,7 @@ func main() {
 func TestExtractFunction_InvalidRange(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.go")
-	os.WriteFile(file, []byte("package main\n\nfunc main() {}\n"), 0644)
+	os.WriteFile(file, []byte("package main\n\nfunc main() {}\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.ExtractFunction(file, 10, 20, "foo")
@@ -81,7 +81,7 @@ func calculate() int {
 	return result
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,7 +111,7 @@ func calculate() int {
 func TestRenameSymbol_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.go")
-	os.WriteFile(file, []byte("package main\n"), 0644)
+	os.WriteFile(file, []byte("package main\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.RenameSymbol(file, "nonexistent", "newname")
@@ -129,7 +129,7 @@ func TestRenameSymbol_WordBoundary(t *testing.T) {
 var name = "test"
 var namePrefix = "pre"
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -166,7 +166,7 @@ func main() {
 	fmt.Println(msg)
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -193,7 +193,7 @@ func main() {
 func TestInlineVariable_NotDeclaration(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.go")
-	os.WriteFile(file, []byte("package main\n\nfunc main() {\n\tfmt.Println(\"hello\")\n}\n"), 0644)
+	os.WriteFile(file, []byte("package main\n\nfunc main() {\n\tfmt.Println(\"hello\")\n}\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.InlineVariable(file, 4)
@@ -214,7 +214,7 @@ func main() {
 	fmt.Println(2 + 2)
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -241,7 +241,7 @@ func main() {
 func TestExtractVariable_ExprNotFound(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.go")
-	os.WriteFile(file, []byte("package main\n\nfunc main() {\n\tx := 1\n}\n"), 0644)
+	os.WriteFile(file, []byte("package main\n\nfunc main() {\n\tx := 1\n}\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.ExtractVariable(file, 4, "nonexistent", "v")
@@ -260,7 +260,7 @@ func main() {
 	err := doSomething()
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -294,7 +294,7 @@ func main() {
 	doSomething()
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -325,7 +325,7 @@ func doWork() error {
 	return err
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -357,7 +357,7 @@ func doWork() (int, error) {
 	return 0, err
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -380,7 +380,7 @@ func doWork() (int, error) {
 func TestWrapWithContext_NotReturnErr(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.go")
-	os.WriteFile(file, []byte("package main\n\nfunc f() {\n\tx := 1\n}\n"), 0644)
+	os.WriteFile(file, []byte("package main\n\nfunc f() {\n\tx := 1\n}\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.WrapWithContext(file, 4, "ctx")
@@ -404,7 +404,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -434,7 +434,7 @@ func TestAdd(t *testing.T) {
 func TestConvertToTableTest_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.go")
-	os.WriteFile(file, []byte("package main\n"), 0644)
+	os.WriteFile(file, []byte("package main\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.ConvertToTableTest(file, "TestNonexistent")
@@ -460,7 +460,7 @@ func main() {
 	pkg.Do()
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -498,7 +498,7 @@ func main() {
 	fmt.Println("hi")
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	r := NewRefactorer()
 	result, err := r.SortImports(file)
@@ -521,7 +521,7 @@ func process(used int, unused string) int {
 	return used * 2
 }
 `
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -560,7 +560,7 @@ func greet(name string, age int) {
 	fmt.Printf("%s is %d", name, age)
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	r := NewRefactorer()
 	result, err := r.RemoveUnusedParams(file, "greet")
@@ -575,7 +575,7 @@ func greet(name string, age int) {
 func TestRemoveUnusedParams_FuncNotFound(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.go")
-	os.WriteFile(file, []byte("package main\n"), 0644)
+	os.WriteFile(file, []byte("package main\n"), 0o644)
 
 	r := NewRefactorer()
 	_, err := r.RemoveUnusedParams(file, "nonexistent")
@@ -652,7 +652,7 @@ func increment() {
 	counter++
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -729,7 +729,7 @@ func main() {
 	fmt.Println(os.Args)
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -759,7 +759,7 @@ func main() {
 	fmt.Println("b")
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -792,7 +792,7 @@ func main() {
 	fmt.Println(val)
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -822,7 +822,7 @@ func main() {
 	fmt.Println(1 + 1)
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -852,7 +852,7 @@ func main() {
 	err := doThing()
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -881,7 +881,7 @@ func work() error {
 	return err
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -910,7 +910,7 @@ func process(used int, unused string) int {
 	return used * 2
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{
@@ -943,7 +943,7 @@ func TestMultiply(t *testing.T) {
 	}
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	tool := NewRefactorTool()
 	input, _ := json.Marshal(map[string]interface{}{

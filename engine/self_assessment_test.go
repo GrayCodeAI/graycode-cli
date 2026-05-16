@@ -86,11 +86,11 @@ func TestIdentifyStrengths(t *testing.T) {
 	strengths := sa.IdentifyStrengths(ctx)
 
 	found := map[string]bool{
-		"Completed in single attempt":  false,
+		"Completed in single attempt":    false,
 		"Low token usage for complexity": false,
-		"All tests passing":            false,
-		"No errors encountered":        false,
-		"Fast completion":              false,
+		"All tests passing":              false,
+		"No errors encountered":          false,
+		"Fast completion":                false,
 	}
 
 	for _, s := range strengths {

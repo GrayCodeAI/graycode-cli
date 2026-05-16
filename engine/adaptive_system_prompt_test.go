@@ -279,8 +279,8 @@ func TestEstimateStringTokens(t *testing.T) {
 		expected int
 	}{
 		{"", 0},
-		{"hi", 1},       // 2 chars -> ceil(2/4) = 1
-		{"hello", 2},    // 5 chars -> ceil(5/4) = 2
+		{"hi", 1},                         // 2 chars -> ceil(2/4) = 1
+		{"hello", 2},                      // 5 chars -> ceil(5/4) = 2
 		{"hello world this is a test", 7}, // 26 chars -> ceil(26/4) = 7
 	}
 
@@ -495,8 +495,8 @@ func TestDynamicSectionEmptyContent(t *testing.T) {
 		Dynamic:  func() string { return "" },
 	})
 	b.AddSection(PromptSection{
-		Name:    "static",
-		Content: "Static content.",
+		Name:     "static",
+		Content:  "Static content.",
 		Priority: 2,
 	})
 

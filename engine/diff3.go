@@ -32,10 +32,10 @@ type Diff3Stats struct {
 
 // Diff3Region represents a classified region in the three-way diff.
 type Diff3Region struct {
-	Type       string // "unchanged", "ours", "theirs", "conflict"
-	BaseStart  int
-	BaseEnd    int
-	OursLines  []string
+	Type        string // "unchanged", "ours", "theirs", "conflict"
+	BaseStart   int
+	BaseEnd     int
+	OursLines   []string
 	TheirsLines []string
 }
 

@@ -235,11 +235,11 @@ func TestGeneralize(t *testing.T) {
 	store := NewExperienceStore("")
 
 	exp := &Experience{
-		ID:       "exp-123",
-		Task:     "Fix bug in user service",
-		Approach: "Modified pkg/users/service.go to fix nil pointer",
-		Steps:    []string{"Read pkg/users/service.go", "Found nil check missing"},
-		Outcome:  "success",
+		ID:        "exp-123",
+		Task:      "Fix bug in user service",
+		Approach:  "Modified pkg/users/service.go to fix nil pointer",
+		Steps:     []string{"Read pkg/users/service.go", "Found nil check missing"},
+		Outcome:   "success",
 		ToolsUsed: []string{"Read", "Edit"},
 		FilesModified: []string{
 			"pkg/users/service.go",

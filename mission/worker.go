@@ -30,7 +30,8 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			"You are working on feature: %s\n\nDescription: %s\n\nExpected behavior: %s\n\n"+
 				"Working directory: %s\n\nComplete this feature. Make all necessary code changes, "+
 				"then run tests. When done, commit your changes with a descriptive message.",
-			feature.ID, feature.Description, feature.ExpectedBehavior, wtPath)
+			feature.ID, feature.Description, feature.ExpectedBehavior, wtPath,
+		)
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)

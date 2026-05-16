@@ -386,7 +386,8 @@ func TestGetNextGoalPrefersInProgress(t *testing.T) {
 func TestGoalOptions(t *testing.T) {
 	gt := NewGoalTracker()
 
-	g := gt.AddGoal("Options test",
+	g := gt.AddGoal(
+		"Options test",
 		WithPriority(1),
 		WithBudget(2000),
 		WithDependencies("dep-1", "dep-2"),

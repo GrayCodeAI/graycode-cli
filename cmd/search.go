@@ -62,7 +62,7 @@ func runSearch(_ *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "SESSION\tROLE\tMATCH\n")
+	_, _ = fmt.Fprintf(w, "SESSION\tROLE\tMATCH\n")
 	for _, r := range results {
 		preview := r.Preview
 		if len(preview) > 80 {

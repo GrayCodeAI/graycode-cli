@@ -61,11 +61,11 @@ func TestResolveImage_WithDockerfile(t *testing.T) {
 }
 
 func mkdirAll(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o755)
 }
 
 func writeFile(path, content string) error {
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0o644)
 }
 
 func contains(s, sub string) bool {

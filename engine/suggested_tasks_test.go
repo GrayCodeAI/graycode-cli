@@ -174,15 +174,15 @@ func main() {
 	hackAround()
 }
 `
-	if err := os.WriteFile(goFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(goFile, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a file in a skip directory (should be ignored)
 	vendorDir := filepath.Join(dir, "vendor")
-	os.MkdirAll(vendorDir, 0755)
+	os.MkdirAll(vendorDir, 0o755)
 	vendorFile := filepath.Join(vendorDir, "dep.go")
-	os.WriteFile(vendorFile, []byte("// TODO: vendor todo"), 0644)
+	os.WriteFile(vendorFile, []byte("// TODO: vendor todo"), 0o644)
 
 	tasks := ScanTODOs(dir)
 
@@ -230,8 +230,8 @@ func TestScanTODOsSkipsVendor(t *testing.T) {
 
 	// Only vendor file
 	vendorDir := filepath.Join(dir, "vendor")
-	os.MkdirAll(vendorDir, 0755)
-	os.WriteFile(filepath.Join(vendorDir, "lib.go"), []byte("// TODO: should skip"), 0644)
+	os.MkdirAll(vendorDir, 0o755)
+	os.WriteFile(filepath.Join(vendorDir, "lib.go"), []byte("// TODO: should skip"), 0o644)
 
 	tasks := ScanTODOs(dir)
 	if len(tasks) != 0 {
@@ -262,12 +262,12 @@ func TestScanGitTasksUncommittedChanges(t *testing.T) {
 	runGit("config", "user.name", "Test")
 
 	// Create a committed file
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Test"), 0644)
+	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Test"), 0o644)
 	runGit("add", ".")
 	runGit("commit", "-m", "initial")
 
 	// Create uncommitted changes
-	os.WriteFile(filepath.Join(dir, "new_file.go"), []byte("package main"), 0644)
+	os.WriteFile(filepath.Join(dir, "new_file.go"), []byte("package main"), 0o644)
 
 	tasks := ScanGitTasks(dir)
 
@@ -379,7 +379,7 @@ func TestScanSecurityTasks(t *testing.T) {
 var dbPassword = "super_secret_123"
 var api_key = "sk-abc123"
 `
-	os.WriteFile(goFile, []byte(content), 0644)
+	os.WriteFile(goFile, []byte(content), 0o644)
 
 	tasks := scanSecurityTasks(dir)
 
@@ -416,7 +416,7 @@ func TestScanDocsTasks(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create go.mod so it's recognized as a Go project
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n\ngo 1.21\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n\ngo 1.21\n"), 0o644)
 
 	// Create a Go file with an undocumented exported function
 	goFile := filepath.Join(dir, "handler.go")
@@ -433,7 +433,7 @@ func UndocumentedExport() string {
 
 func unexported() {}
 `
-	os.WriteFile(goFile, []byte(content), 0644)
+	os.WriteFile(goFile, []byte(content), 0o644)
 
 	tasks := scanDocsTasks(dir)
 
@@ -465,7 +465,7 @@ func TestRefresh(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a file with a TODO
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("// TODO: test refresh\npackage main\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte("// TODO: test refresh\npackage main\n"), 0o644)
 
 	tq := NewTaskQueue()
 	err := tq.Refresh(dir)

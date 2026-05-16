@@ -305,7 +305,8 @@ func TestLocalize_NoMatch(t *testing.T) {
 
 func TestLocalize_WithOptions(t *testing.T) {
 	root := testRoot(t)
-	loc, err := Localize(root, "repomap generate symbols",
+	loc, err := Localize(
+		root, "repomap generate symbols",
 		WithMaxFiles(3),
 		WithMaxSymbols(5),
 		WithContextLines(2),
@@ -346,7 +347,8 @@ func TestFormatSummary(t *testing.T) {
 
 func TestLocalize_LanguageFilter(t *testing.T) {
 	root := testRoot(t)
-	loc, err := Localize(root, "session model",
+	loc, err := Localize(
+		root, "session model",
 		WithLanguage("go"),
 		WithMaxFiles(5),
 		WithMaxSymbols(10),

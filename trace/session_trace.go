@@ -70,20 +70,20 @@ func (s *SpanStatus) UnmarshalJSON(data []byte) error {
 
 // TraceSummary holds aggregate statistics for a session trace.
 type TraceSummary struct {
-	TotalDuration time.Duration `json:"total_duration"`
-	LLMCalls      int           `json:"llm_calls"`
-	ToolCalls     int           `json:"tool_calls"`
-	TotalTokensIn int           `json:"total_tokens_in"`
-	TotalTokensOut int          `json:"total_tokens_out"`
-	TotalCostUSD  float64       `json:"total_cost_usd"`
-	Errors        int           `json:"errors"`
+	TotalDuration  time.Duration `json:"total_duration"`
+	LLMCalls       int           `json:"llm_calls"`
+	ToolCalls      int           `json:"tool_calls"`
+	TotalTokensIn  int           `json:"total_tokens_in"`
+	TotalTokensOut int           `json:"total_tokens_out"`
+	TotalCostUSD   float64       `json:"total_cost_usd"`
+	Errors         int           `json:"errors"`
 }
 
 // SessionTrace groups all operations in a session into a parent-child
 // hierarchy, inspired by Helicone's session-level trace trees.
 type SessionTrace struct {
-	SessionID string    `json:"session_id"`
-	StartTime time.Time `json:"start_time"`
+	SessionID string       `json:"session_id"`
+	StartTime time.Time    `json:"start_time"`
 	Root      *SessionSpan `json:"root"`
 
 	mu      sync.Mutex

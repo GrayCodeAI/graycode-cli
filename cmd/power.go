@@ -204,7 +204,8 @@ func DescribePower(level int) string {
 		autoApplyStr = "auto-apply"
 	}
 
-	return fmt.Sprintf("Power %d: %s, %dK context, %s review, %s, up to $%.2f/task",
+	return fmt.Sprintf(
+		"Power %d: %s, %dK context, %s review, %s, up to $%.2f/task",
 		config.Level,
 		config.Model,
 		config.ContextWindow/1024,

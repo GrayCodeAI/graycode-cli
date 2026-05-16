@@ -17,25 +17,25 @@ import (
 // Settings holds hawk configuration.
 // Herm-style: no API keys stored here. Secrets come from environment variables only.
 type Settings struct {
-	Model             string                 `json:"model,omitempty"`
-	Provider          string                 `json:"provider,omitempty"`
-	Theme             string                 `json:"theme,omitempty"`
-	AutoAllow         []string               `json:"auto_allow,omitempty"`      // tools to always allow
-	AllowedTools      []string               `json:"allowedTools,omitempty"`    // archive-compatible allow rules
-	DisallowedTools   []string               `json:"disallowedTools,omitempty"` // archive-compatible deny rules
-	MaxBudgetUSD      float64                `json:"max_budget_usd,omitempty"`  // cost cap per session
-	CustomHeaders     map[string]string       `json:"custom_headers,omitempty"`
-	MCPServers        []MCPServerConfig       `json:"mcp_servers,omitempty"`
-	CustomProviders   []CustomProviderConfig  `json:"custom_providers,omitempty"`
-	RepoMap           *bool                   `json:"repo_map,omitempty"`
-	RepoMapMaxTokens  int                     `json:"repo_map_max_tokens,omitempty"`
-	Sandbox           string                  `json:"sandbox,omitempty"`     // sandbox mode: strict, workspace, off
-	AutoCommit        *bool                   `json:"auto_commit,omitempty"` // auto-commit file changes
-	Autonomy          int                     `json:"autonomy,omitempty"`    // autonomy level 0-4
-	ModelRoles        *routing.ModelRoles       `json:"model_roles,omitempty"` // per-role model overrides
-	AutoCompactThresholdPct int                `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
-	Frugal                  bool               `json:"frugal,omitempty"` // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
-	Attribution             *Attribution       `json:"attribution,omitempty"`
+	Model                   string                 `json:"model,omitempty"`
+	Provider                string                 `json:"provider,omitempty"`
+	Theme                   string                 `json:"theme,omitempty"`
+	AutoAllow               []string               `json:"auto_allow,omitempty"`      // tools to always allow
+	AllowedTools            []string               `json:"allowedTools,omitempty"`    // archive-compatible allow rules
+	DisallowedTools         []string               `json:"disallowedTools,omitempty"` // archive-compatible deny rules
+	MaxBudgetUSD            float64                `json:"max_budget_usd,omitempty"`  // cost cap per session
+	CustomHeaders           map[string]string      `json:"custom_headers,omitempty"`
+	MCPServers              []MCPServerConfig      `json:"mcp_servers,omitempty"`
+	CustomProviders         []CustomProviderConfig `json:"custom_providers,omitempty"`
+	RepoMap                 *bool                  `json:"repo_map,omitempty"`
+	RepoMapMaxTokens        int                    `json:"repo_map_max_tokens,omitempty"`
+	Sandbox                 string                 `json:"sandbox,omitempty"`                    // sandbox mode: strict, workspace, off
+	AutoCommit              *bool                  `json:"auto_commit,omitempty"`                // auto-commit file changes
+	Autonomy                int                    `json:"autonomy,omitempty"`                   // autonomy level 0-4
+	ModelRoles              *routing.ModelRoles    `json:"model_roles,omitempty"`                // per-role model overrides
+	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
+	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
+	Attribution             *Attribution           `json:"attribution,omitempty"`
 }
 
 // Attribution controls how hawk identifies itself in git commits.

@@ -76,7 +76,7 @@ func TestClassifyUpdate_InvalidVersionFallsToPatch(t *testing.T) {
 
 func TestParseSemver_Valid(t *testing.T) {
 	tests := []struct {
-		version       string
+		version             string
 		major, minor, patch int
 	}{
 		{"v1.2.3", 1, 2, 3},
@@ -351,7 +351,7 @@ func TestFormatPlan_Empty(t *testing.T) {
 
 func TestDepUpdater_DetectLanguage_Go(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -364,7 +364,7 @@ func TestDepUpdater_DetectLanguage_Go(t *testing.T) {
 
 func TestDepUpdater_DetectLanguage_JavaScript(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -377,7 +377,7 @@ func TestDepUpdater_DetectLanguage_JavaScript(t *testing.T) {
 
 func TestDepUpdater_DetectLanguage_Python(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask==2.0"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte("flask==2.0"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -390,7 +390,7 @@ func TestDepUpdater_DetectLanguage_Python(t *testing.T) {
 
 func TestDepUpdater_DetectLanguage_Rust(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -413,8 +413,8 @@ func TestDepUpdater_DetectLanguage_Unknown(t *testing.T) {
 func TestDepUpdater_DetectLanguage_Priority(t *testing.T) {
 	// When multiple files exist, go.mod takes priority
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644)
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644)
 
 	du := &DependencyUpdater{ProjectDir: dir}
 	lang := du.DetectLanguage()
@@ -425,7 +425,7 @@ func TestDepUpdater_DetectLanguage_Priority(t *testing.T) {
 
 func TestNewDependencyUpdater(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644)
 
 	du := NewDependencyUpdater(dir)
 	if du.ProjectDir != dir {

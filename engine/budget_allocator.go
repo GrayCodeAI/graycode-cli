@@ -23,7 +23,7 @@ type BudgetAllocator struct {
 type Allocation struct {
 	Name          string
 	MinTokens     int
-	MaxTokens     int     // 0 or negative means unlimited
+	MaxTokens     int // 0 or negative means unlimited
 	CurrentTokens int
 	Priority      int     // 1 = highest priority
 	Flexible      bool    // can tokens be stolen from this allocation?
@@ -357,7 +357,8 @@ func (ba *BudgetAllocator) FormatBudget() string {
 		if alloc.Flexible {
 			flexStr = "yes"
 		}
-		sb.WriteString(fmt.Sprintf("%-16s %6d %6s %8d %5.0f%% %5d %8s\n",
+		sb.WriteString(fmt.Sprintf(
+			"%-16s %6d %6s %8d %5.0f%% %5d %8s\n",
 			alloc.Name,
 			alloc.MinTokens,
 			maxStr,

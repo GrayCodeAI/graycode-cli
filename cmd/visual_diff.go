@@ -84,7 +84,7 @@ func (vd *VisualDiff) RenderInline(diff string) string {
 
 	// Collect lines for word-level diffing
 	type diffLine struct {
-		text   string
+		text     string
 		lineType byte // '+', '-', ' ', '@', 'd'
 	}
 	var parsed []diffLine
@@ -362,7 +362,7 @@ func (vd *VisualDiff) RenderFileDiff(path, oldContent, newContent string) string
 
 	// Determine which output lines are "interesting" (changed)
 	type outputLine struct {
-		lineType byte   // '+', '-', ' '
+		lineType byte // '+', '-', ' '
 		text     string
 		oldNum   int
 		newNum   int

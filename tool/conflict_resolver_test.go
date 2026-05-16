@@ -40,7 +40,7 @@ func main() {
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -79,7 +79,7 @@ line2
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -122,7 +122,7 @@ end
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "multi.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -141,7 +141,7 @@ func TestParseConflicts_NoConflicts(t *testing.T) {
 	content := "just a normal file\nwith no conflicts\n"
 	dir := t.TempDir()
 	path := filepath.Join(dir, "clean.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -284,7 +284,7 @@ after
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "trivial.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -321,7 +321,7 @@ after
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ours.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -356,7 +356,7 @@ after
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "theirs.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -398,7 +398,7 @@ func main() {}
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "imports.go")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -434,7 +434,7 @@ after
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty_ours.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -468,7 +468,7 @@ after
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "apply.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -507,19 +507,19 @@ func TestFormatConflicts(t *testing.T) {
 		Path: "src/auth.go",
 		Conflicts: []Conflict{
 			{
-				StartLine:    15,
-				EndLine:      22,
-				OursContent:  `import "fmt"`,
+				StartLine:     15,
+				EndLine:       22,
+				OursContent:   `import "fmt"`,
 				TheirsContent: `import "os"`,
-				Resolved:     true,
-				Resolution:   `import "fmt"\nimport "os"`,
+				Resolved:      true,
+				Resolution:    `import "fmt"\nimport "os"`,
 			},
 			{
-				StartLine:    45,
-				EndLine:      60,
-				OursContent:  "func auth() { return true }",
+				StartLine:     45,
+				EndLine:       60,
+				OursContent:   "func auth() { return true }",
 				TheirsContent: "func auth() { return false }",
-				Resolved:     false,
+				Resolved:      false,
 			},
 		},
 	}
@@ -587,7 +587,7 @@ line2
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "execute.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -630,7 +630,7 @@ after
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dryrun.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -695,7 +695,7 @@ end
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "additive.txt")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

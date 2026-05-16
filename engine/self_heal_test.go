@@ -33,7 +33,7 @@ func TestNewSelfHealer(t *testing.T) {
 func TestHeal_SuccessOnFirstAttempt(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "ok.sh")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 0\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -61,7 +61,7 @@ func TestHeal_FixAfterFailure(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "broken.sh")
 	// Script that fails initially
-	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,7 +108,7 @@ END_NEW
 func TestHeal_MaxAttemptsExhausted(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "unfixable.sh")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +134,7 @@ func TestHeal_MaxAttemptsExhausted(t *testing.T) {
 func TestHeal_ContextCanceled(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "slow.sh")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -176,7 +176,7 @@ func TestHealCommand_FixFailingCommand(t *testing.T) {
 	chatFn := func(ctx context.Context, prompt string) (string, error) {
 		callCount++
 		// Create the file as the "fix"
-		os.WriteFile(target, []byte("hello\n"), 0644)
+		os.WriteFile(target, []byte("hello\n"), 0o644)
 		return "I cannot provide a structured fix for this", nil
 	}
 
@@ -350,7 +350,7 @@ func TestApplyFixes_Replace(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.py")
 	content := "line1\nline2\nline3\n"
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -377,7 +377,7 @@ func TestApplyFixes_Insert(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.py")
 	content := "line1\nline2\nline3"
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -405,7 +405,7 @@ func TestApplyFixes_Delete(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.py")
 	content := "line1\nline2\nline3"
-	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -441,7 +441,7 @@ func TestApplyFixes_FileNotFound(t *testing.T) {
 func TestRunScript(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "test.sh")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\necho hello\necho oops >&2\nexit 42\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho hello\necho oops >&2\nexit 42\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -465,7 +465,7 @@ func TestRunScript(t *testing.T) {
 func TestRunScript_Timeout(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "slow.sh")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\nsleep 10\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nsleep 10\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -528,7 +528,7 @@ func TestFormatResult_EmptyAttempts(t *testing.T) {
 func TestHeal_ChatFnError(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "broken.sh")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 

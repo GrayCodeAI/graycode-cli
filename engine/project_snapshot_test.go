@@ -12,7 +12,7 @@ func TestSnapshotCacheHit(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a file so ls has output.
-	if err := os.WriteFile(dir+"/hello.txt", []byte("hi"), 0644); err != nil {
+	if err := os.WriteFile(dir+"/hello.txt", []byte("hi"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -36,7 +36,7 @@ func TestSnapshotCacheHit(t *testing.T) {
 
 func TestSnapshotCacheExpired(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(dir+"/file.txt", []byte("x"), 0644); err != nil {
+	if err := os.WriteFile(dir+"/file.txt", []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -98,7 +98,7 @@ func TestForExploreModeNil(t *testing.T) {
 
 func TestSnapshotInvalidate(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(dir+"/a.txt", []byte("a"), 0644); err != nil {
+	if err := os.WriteFile(dir+"/a.txt", []byte("a"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

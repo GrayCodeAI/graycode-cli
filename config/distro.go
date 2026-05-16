@@ -28,17 +28,17 @@ type DistroProvider struct {
 
 // DistroExtension defines a bundled extension.
 type DistroExtension struct {
-	Name    string `yaml:"name"`
-	Command string `yaml:"command"`
+	Name    string   `yaml:"name"`
+	Command string   `yaml:"command"`
 	Args    []string `yaml:"args"`
 }
 
 // DistroBranding customizes the UI appearance.
 type DistroBranding struct {
-	Prompt      string `yaml:"prompt"`
-	WelcomeMsg  string `yaml:"welcome_message"`
-	AgentName   string `yaml:"agent_name"`
-	Color       string `yaml:"color"`
+	Prompt     string `yaml:"prompt"`
+	WelcomeMsg string `yaml:"welcome_message"`
+	AgentName  string `yaml:"agent_name"`
+	Color      string `yaml:"color"`
 }
 
 // DistroDefaults sets default behavior.

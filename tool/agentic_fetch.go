@@ -10,11 +10,12 @@ import (
 type AgenticFetchTool struct{}
 
 func (AgenticFetchTool) Name() string      { return "AgenticFetch" }
-func (AgenticFetchTool) RiskLevel() string  { return "low" }
-func (AgenticFetchTool) Aliases() []string  { return []string{"agentic_fetch", "research"} }
+func (AgenticFetchTool) RiskLevel() string { return "low" }
+func (AgenticFetchTool) Aliases() []string { return []string{"agentic_fetch", "research"} }
 func (AgenticFetchTool) Description() string {
 	return "Fetch and intelligently summarize web content using a sub-agent. Better than raw WebFetch for research — the sub-agent extracts only the relevant information."
 }
+
 func (AgenticFetchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -6,28 +6,30 @@ package errs
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type ErrorContext = engine.ErrorContext
-type ErrorHelp = engine.ErrorHelp
-type EnrichedError = engine.EnrichedError
-type ErrorInstance = engine.ErrorInstance
-type ErrorGroup = engine.ErrorGroup
-type ErrorGrouper = engine.ErrorGrouper
-type LearnedPattern = engine.LearnedPattern
-type ErrorLearnerStats = engine.ErrorLearnerStats
-type ErrorLearner = engine.ErrorLearner
-type ErrorPattern = engine.ErrorPattern
-type ErrorPatternDB = engine.ErrorPatternDB
-type ErrorRecovery = engine.ErrorRecovery
-type RecoveryStrategy = engine.RecoveryStrategy
-type RecoveryContext = engine.RecoveryContext
-type RecoveryResult = engine.RecoveryResult
-type RecoveryAttempt = engine.RecoveryAttempt
+type (
+	ErrorContext      = engine.ErrorContext
+	ErrorHelp         = engine.ErrorHelp
+	EnrichedError     = engine.EnrichedError
+	ErrorInstance     = engine.ErrorInstance
+	ErrorGroup        = engine.ErrorGroup
+	ErrorGrouper      = engine.ErrorGrouper
+	LearnedPattern    = engine.LearnedPattern
+	ErrorLearnerStats = engine.ErrorLearnerStats
+	ErrorLearner      = engine.ErrorLearner
+	ErrorPattern      = engine.ErrorPattern
+	ErrorPatternDB    = engine.ErrorPatternDB
+	ErrorRecovery     = engine.ErrorRecovery
+	RecoveryStrategy  = engine.RecoveryStrategy
+	RecoveryContext   = engine.RecoveryContext
+	RecoveryResult    = engine.RecoveryResult
+	RecoveryAttempt   = engine.RecoveryAttempt
+)
 
-func NewErrorContext() *ErrorContext       { return engine.NewErrorContext() }
-func NewErrorGrouper() *ErrorGrouper       { return engine.NewErrorGrouper() }
-func NewErrorLearner() *ErrorLearner       { return engine.NewErrorLearner() }
-func NewErrorPatternDB() *ErrorPatternDB   { return engine.NewErrorPatternDB() }
-func NewErrorRecovery() *ErrorRecovery     { return engine.NewErrorRecovery() }
-func FormatError(e *EnrichedError) string  { return engine.FormatError(e) }
-func NormalizeError(msg string) string     { return engine.NormalizeError(msg) }
-func ExtractPattern(msg string) string     { return engine.ExtractPattern(msg) }
+func NewErrorContext() *ErrorContext      { return engine.NewErrorContext() }
+func NewErrorGrouper() *ErrorGrouper      { return engine.NewErrorGrouper() }
+func NewErrorLearner() *ErrorLearner      { return engine.NewErrorLearner() }
+func NewErrorPatternDB() *ErrorPatternDB  { return engine.NewErrorPatternDB() }
+func NewErrorRecovery() *ErrorRecovery    { return engine.NewErrorRecovery() }
+func FormatError(e *EnrichedError) string { return engine.FormatError(e) }
+func NormalizeError(msg string) string    { return engine.NormalizeError(msg) }
+func ExtractPattern(msg string) string    { return engine.ExtractPattern(msg) }

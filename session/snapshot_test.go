@@ -99,7 +99,8 @@ func TestSnapshotStore_Rewind(t *testing.T) {
 	ss.Take("initial", sess)
 
 	// Add more messages
-	sess.Messages = append(sess.Messages,
+	sess.Messages = append(
+		sess.Messages,
 		Message{Role: "assistant", Content: "hi"},
 		Message{Role: "user", Content: "more stuff"},
 	)
@@ -248,4 +249,3 @@ func TestSnapshotStore_Cleanup(t *testing.T) {
 		}
 	}
 }
-

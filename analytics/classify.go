@@ -83,10 +83,10 @@ func ClassifyTurn(toolNames []string, userMessage string) TurnCategory {
 
 // OneShotTracker tracks the percentage of edit turns that succeed without retries.
 type OneShotTracker struct {
-	mu            sync.Mutex
-	totalEdits    int
-	retriedEdits  int
-	lastWasEdit   bool
+	mu           sync.Mutex
+	totalEdits   int
+	retriedEdits int
+	lastWasEdit  bool
 }
 
 // RecordTurn records a turn's tool usage for one-shot rate calculation.

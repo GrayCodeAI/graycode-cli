@@ -37,15 +37,15 @@ func NewModelfileParser() *ModelfileParser {
 
 // validParameters defines the set of recognized parameter names.
 var validParameters = map[string]bool{
-	"temperature": true,
-	"top_p":       true,
-	"top_k":       true,
-	"max_tokens":  true,
-	"stop":        true,
-	"seed":        true,
-	"num_ctx":     true,
-	"repeat_penalty": true,
-	"presence_penalty": true,
+	"temperature":       true,
+	"top_p":             true,
+	"top_k":             true,
+	"max_tokens":        true,
+	"stop":              true,
+	"seed":              true,
+	"num_ctx":           true,
+	"repeat_penalty":    true,
+	"presence_penalty":  true,
 	"frequency_penalty": true,
 }
 

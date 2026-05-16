@@ -12,9 +12,11 @@ import (
 	"time"
 )
 
-const maxTaskOutputBytes = 200_000
-const maxBackgroundTasks = 50
-const completedRetention = 8 * time.Hour
+const (
+	maxTaskOutputBytes = 200_000
+	maxBackgroundTasks = 50
+	completedRetention = 8 * time.Hour
+)
 
 type backgroundTask struct {
 	id      string
@@ -179,6 +181,7 @@ func (TaskOutputTool) Aliases() []string { return []string{"task_output"} }
 func (TaskOutputTool) Description() string {
 	return "Read output from a background Bash task started with run_in_background."
 }
+
 func (TaskOutputTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -188,6 +191,7 @@ func (TaskOutputTool) Parameters() map[string]interface{} {
 		"required": []string{"task_id"},
 	}
 }
+
 func (TaskOutputTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		TaskID string `json:"task_id"`
@@ -210,6 +214,7 @@ func (TaskStopTool) Aliases() []string { return []string{"task_stop"} }
 func (TaskStopTool) Description() string {
 	return "Stop a background Bash task."
 }
+
 func (TaskStopTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -219,6 +224,7 @@ func (TaskStopTool) Parameters() map[string]interface{} {
 		"required": []string{"task_id"},
 	}
 }
+
 func (TaskStopTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		TaskID string `json:"task_id"`

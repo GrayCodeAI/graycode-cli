@@ -47,7 +47,6 @@ WHAT_TO_DO: Use the project root from the session context instead of hardcoding 
 		{Role: "user", Content: "Fix the config parser to handle nested keys."},
 		{Role: "assistant", Content: "I will edit config.go."},
 	}, "permission denied: /tmp/config.go")
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
