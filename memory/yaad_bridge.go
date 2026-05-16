@@ -351,3 +351,62 @@ func (b *YaadBridge) Close() {
 	}
 	b.ready = false
 }
+
+// LoadYaadContext queries yaad for project-relevant memories and returns
+// a formatted string for injection into the system prompt.
+// Uses a broad project-context search with a 2000-token budget.
+// Returns empty string if yaad is unavailable or has no relevant memories.
+func LoadYaadContext(projectDir string) string {
+	bridge := NewYaadBridge()
+	if !bridge.Ready() {
+		return ""
+	}
+
+	// Search for project-specific context
+	query := fmt.Sprintf("project context conventions decisions preferences for %s", filepath.Base(projectDir))
+	content, err := bridge.Recall(query, 2000)
+	if err != nil || content == "" {
+		return ""
+	}
+
+	return "\n\n--- YAAD PROJECT MEMORY ---\n" + content + "\n--- END YAAD PROJECT MEMORY ---\n"
+}
+
+// YaadStatus returns a human-readable summary of yaad's state.
+func YaadStatus() string {
+	bridge := NewYaadBridge()
+	if !bridge.Ready() {
+		return "Yaad: not initialized (run 'yaad init' or ensure ~/.yaad/data/ exists)"
+	}
+
+	// Try to get a count of nodes
+	_, _, err := bridge.SearchByType("convention", 1)
+	if err != nil {
+		return "Yaad: initialized but unable to query"
+	}
+
+	// Count different node types
+	typeCounts := make(map[string]int)
+	for _, nodeType := range []string{"convention", "decision", "bug", "preference", "task", "skill", "spec", "entity"} {
+		ids, _, _ := bridge.SearchByType(nodeType, 1000)
+		if len(ids) > 0 {
+			typeCounts[nodeType] = len(ids)
+		}
+	}
+
+	total := 0
+	for _, count := range typeCounts {
+		total += count
+	}
+
+	if total == 0 {
+		return "Yaad: initialized but no memories stored"
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("Yaad: %d memories\n", total))
+	for t, count := range typeCounts {
+		b.WriteString(fmt.Sprintf("  %s: %d\n", t, count))
+	}
+	return b.String()
+}

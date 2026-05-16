@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/memory"
 )
 
 // LoadAgentsMD reads AGENTS.md (or AGENTS.md for backward compatibility) from the current directory or parents.
@@ -97,6 +99,17 @@ func gitCmd(args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
+// loadYaadMemories queries yaad for project-relevant memories and injects them
+// into the system prompt. Uses the yaad bridge with project-specific search.
+func loadYaadMemories(projectDir string) string {
+	if projectDir == "" {
+		return ""
+	}
+	// Use the yaad bridge to search for project context.
+	// The bridge handles graceful degradation if yaad is unavailable.
+	return memory.LoadYaadContext(projectDir)
+}
+
 // BuildContext assembles the full context string for the system prompt.
 func BuildContext() string {
 	return BuildContextWithDirs(nil)
@@ -150,6 +163,10 @@ func BuildContextWithDirs(addDirs []string) string {
 		if md := LoadAgentsMDFrom(dir); md != "" {
 			parts = append(parts, "Additional directory instructions ("+dir+"):\n"+md)
 		}
+	}
+	// Inject yaad memories (graph-native persistent memory).
+	if yaad := loadYaadMemories(cwd); yaad != "" {
+		parts = append(parts, yaad)
 	}
 	return strings.Join(parts, "\n")
 }

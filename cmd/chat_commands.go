@@ -17,6 +17,7 @@ import (
 	"github.com/GrayCodeAI/hawk/analytics"
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/recipe"
 	"github.com/GrayCodeAI/hawk/session"
@@ -34,9 +35,9 @@ func slashCommands() []string {
 		"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
 		"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
 		"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
-		"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/reflect", "/refresh-model-catalog", "/release-notes",
+		"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/btw", "/brainstorm", "/checkpoint", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
+		"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
 		"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
 		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
@@ -103,6 +104,7 @@ var slashDescriptions = map[string]string{
 	"/plugins":         "List installed plugins",
 	"/power":           "Set power level (1-10)",
 	"/quit":            "Save and exit",
+	"/recover":         "Scan for interrupted sessions and resume",
 	"/resume":          "Resume a saved session",
 	"/retry":           "Redo last message",
 	"/review":          "Code review for bugs and issues",
@@ -436,6 +438,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /cron               — List scheduled cron jobs
 /diff               — Review changes
 /doctor             — Run diagnostics
+/dream              — Run memory consolidation
+/away               — Generate session recap
 /effort <level>     — Set reasoning effort (low/medium/high)
 /env                — Show provider environment status
 /export             — Export session to JSON
@@ -721,6 +725,53 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📋 CXML copied to clipboard.\n%s", stats)})
 		return m, nil
+	case "/recover":
+		candidates := session.ScanForRecovery()
+		if len(candidates) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No interrupted sessions found."})
+			return m, nil
+		}
+		if len(parts) >= 2 {
+			// Resume specific session
+			s, note, err := session.ResumeSession(parts[1])
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				return m, nil
+			}
+			m.sessionID = s.ID
+			m.messages = nil
+			var msgs []client.EyrieMessage
+			for _, sm := range s.Messages {
+				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
+				for _, tc := range sm.ToolUse {
+					em.ToolUse = append(em.ToolUse, client.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+				}
+				if sm.ToolResult != nil {
+					em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
+				}
+				msgs = append(msgs, em)
+				if sm.Role == "user" || sm.Role == "assistant" {
+					m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
+				}
+			}
+			m.session.LoadMessages(msgs)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Recovered: %s\nSession %s ready (%d msgs)", note, s.ID, len(s.Messages))})
+			return m, nil
+		}
+		// List candidates
+		var b strings.Builder
+		b.WriteString(fmt.Sprintf("Found %d interrupted session(s):\n\n", len(candidates)))
+		for i, c := range candidates {
+			shortID := c.SessionID
+			if len(shortID) > 8 {
+				shortID = shortID[:8]
+			}
+			b.WriteString(fmt.Sprintf("%d. [%s] %s — %s (%d msgs, %s)\n",
+				i+1, shortID, c.Interruption, c.CWD, c.MessageCount, formatDuration(c.Age)))
+		}
+		b.WriteString("\nResume with: /recover <session-id>")
+		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+		return m, nil
 	case "/resume":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /resume <session-id>"})
@@ -806,6 +857,63 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m.startPromptCommand("/investigate", engine.InvestigatePrompt(engine.InvestigateReproduce, ctx))
 	case "/checkpoint":
 		return m.startPromptCommand("/checkpoint", engine.CheckpointPrompts(engine.CheckpointOrientation, nil))
+	case "/dream":
+		projectDir, _ := os.Getwd()
+		status := memory.YaadStatus()
+		if strings.Contains(status, "not initialized") || strings.Contains(status, "no memories") {
+			m.messages = append(m.messages, displayMsg{role: "system", content: status + "\nRun 'yaad' to start storing memories, or use /memory to view AGENTS.md."})
+			return m, nil
+		}
+		yaadCtx := memory.LoadYaadContext(projectDir)
+		if yaadCtx == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No yaad memories found to consolidate."})
+			return m, nil
+		}
+		dreamPrompt := `Review the yaad memories below and consolidate them into a coherent summary.
+Focus on: recurring patterns, user preferences learned, project context that should persist,
+and any corrections or feedback. Remove redundant or outdated entries.
+Write the consolidated result as clear, organized yaad memory nodes.
+
+` + yaadCtx
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Running memory consolidation...\n" + status})
+		return m.startPromptCommand("/dream", dreamPrompt)
+	case "/away":
+		messages := m.session.RawMessages()
+		if len(messages) < 4 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Not enough conversation history for a recap."})
+			return m, nil
+		}
+		// Build recent conversation summary
+		start := 0
+		if len(messages) > 30 {
+			start = len(messages) - 30
+		}
+		var summary strings.Builder
+		for _, msg := range messages[start:] {
+			preview := msg.Content
+			if len(preview) > 200 {
+				preview = preview[:200] + "..."
+			}
+			if msg.Role == "user" && preview != "" {
+				summary.WriteString(fmt.Sprintf("User: %s\n", preview))
+			} else if msg.Role == "assistant" && msg.Content != "" {
+				summary.WriteString(fmt.Sprintf("Assistant: %s\n", preview))
+			}
+		}
+		awayPrompt := fmt.Sprintf(`You are generating a brief "while you were away" recap for a coding session.
+
+Rules:
+- 1-3 sentences maximum
+- Focus on what was accomplished and what's next
+- Do NOT include status reports or tool call details
+- Be concise and actionable
+
+Recent conversation:
+%s
+
+Generate the recap:`, summary.String())
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Generating recap..."})
+		return m.startPromptCommand("/away", awayPrompt)
 	case "/reflect":
 		return m.startPromptCommand("/reflect", engine.ReflectPrompt("this session so far"))
 	case "/spec":
@@ -1815,9 +1923,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Insights report saved: %s\n%d sessions scanned, %d patterns.", path, report.SessionsScanned, len(report.TopPatterns))})
 		}
 		return m, nil
-	case "/dream":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Running background memory consolidation..."})
-		return m.startPromptCommand("/dream", "Review all session memories in ~/.hawk/memory/ and consolidate them. Remove redundant entries, merge related facts, and produce a clean organized memory document. Focus on user preferences, project context, and recurring patterns.")
 	case "/ctx", "/ctx-viz":
 		if m.contextViz == nil {
 			m.contextViz = NewContextVisualization(200000)
