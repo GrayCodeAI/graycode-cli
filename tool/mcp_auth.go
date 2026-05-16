@@ -41,7 +41,8 @@ func (m *MCPAuthManager) StartAuth(serverName, serverURL string) (*MCPAuthState,
 	// Attempt to discover OAuth endpoint
 	wellKnown := fmt.Sprintf("%s://%s/.well-known/oauth-authorization-server", parsed.Scheme, parsed.Host)
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(wellKnown)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, wellKnown, nil)
+	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != 200 {
 		state := &MCPAuthState{
 			ServerName: serverName,
