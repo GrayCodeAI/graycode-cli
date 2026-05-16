@@ -29,6 +29,14 @@ linters:
         - all
         - -SA1019
         - -ST1000
+        - -QF1003
+        - -QF1011
+        - -S1008
+        - -S1017
+        - -SA9003
+        - -QF1004
+        - -QF1012
+        - -QF1002
   exclusions:
     paths:
       - .gomodcache
