@@ -51,5 +51,5 @@ func TestAutoCapture_Metrics(t *testing.T) {
 	defer ac.Stop()
 
 	metrics := ac.Metrics()
-	_ = metrics
+	_ = &metrics
 }
