@@ -10,13 +10,13 @@ import (
 
 // StoredResult is the persistent JSON format for eval results.
 type StoredResult struct {
-	Version   string       `json:"version"`
-	Timestamp time.Time    `json:"timestamp"`
-	Suite     string       `json:"suite"`
-	Model     string       `json:"model"`
-	Provider  string       `json:"provider"`
-	Hash      *ResultHash  `json:"hash,omitempty"`
-	Summary   ResultSummary `json:"summary"`
+	Version   string             `json:"version"`
+	Timestamp time.Time          `json:"timestamp"`
+	Suite     string             `json:"suite"`
+	Model     string             `json:"model"`
+	Provider  string             `json:"provider"`
+	Hash      *ResultHash        `json:"hash,omitempty"`
+	Summary   ResultSummary      `json:"summary"`
 	Tasks     []StoredTaskResult `json:"tasks"`
 }
 
@@ -33,13 +33,13 @@ type ResultSummary struct {
 
 // StoredTaskResult is the per-task persistent format.
 type StoredTaskResult struct {
-	TaskID   string  `json:"task_id"`
-	Passed   bool    `json:"passed"`
-	Duration string  `json:"duration"`
-	Tokens   int     `json:"tokens"`
-	CostUSD  float64 `json:"cost_usd"`
-	Attempts int     `json:"attempts"`
-	Error    string  `json:"error,omitempty"`
+	TaskID   string   `json:"task_id"`
+	Passed   bool     `json:"passed"`
+	Duration string   `json:"duration"`
+	Tokens   int      `json:"tokens"`
+	CostUSD  float64  `json:"cost_usd"`
+	Attempts int      `json:"attempts"`
+	Error    string   `json:"error,omitempty"`
 	Tags     []string `json:"tags,omitempty"`
 }
 

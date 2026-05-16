@@ -15,13 +15,13 @@ ISSUES: none
 SUGGESTIONS: none`,
 	}
 
-	result, err := ReviewBeforeWrite(context.Background(), mock, "test-model",
+	result, err := ReviewBeforeWrite(
+		context.Background(), mock, "test-model",
 		"add error handling",
 		"main.go",
 		"func run() { doStuff() }",
 		"func run() { if err := doStuff(); err != nil { return err } }",
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -47,13 +47,13 @@ ISSUES: missing nil check on input, return type changed without updating callers
 SUGGESTIONS: add nil guard, update call sites`,
 	}
 
-	result, err := ReviewBeforeWrite(context.Background(), mock, "test-model",
+	result, err := ReviewBeforeWrite(
+		context.Background(), mock, "test-model",
 		"refactor function",
 		"handler.go",
 		"func handle(r *Request) {}",
 		"func handle(r *Request) error { return nil }",
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,13 +80,13 @@ ISSUES: none
 SUGGESTIONS: none`,
 	}
 
-	result, err := ReviewBeforeWrite(context.Background(), mock, "test-model",
+	result, err := ReviewBeforeWrite(
+		context.Background(), mock, "test-model",
 		"complex refactor",
 		"engine.go",
 		"// old code",
 		"// new code",
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -116,13 +116,13 @@ ISSUES: introduces a data race on shared counter
 SUGGESTIONS: add mutex`,
 	}
 
-	result, err := ReviewBeforeWrite(context.Background(), mock, "test-model",
+	result, err := ReviewBeforeWrite(
+		context.Background(), mock, "test-model",
 		"add counter",
 		"counter.go",
 		"var count int",
 		"var count int\nfunc inc() { count++ }",
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

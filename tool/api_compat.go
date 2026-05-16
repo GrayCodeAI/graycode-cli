@@ -16,13 +16,13 @@ import (
 
 // APISnapshot captures the full public API surface of a Go package.
 type APISnapshot struct {
-	Package    string         `json:"package"`
-	Functions  []FuncSig      `json:"functions"`
-	Types      []TypeSig      `json:"types"`
-	Interfaces []InterfaceSig `json:"interfaces"`
-	Constants  []ConstSig     `json:"constants"`
-	Variables  []VarSig       `json:"variables"`
-	GeneratedAt time.Time    `json:"generated_at"`
+	Package     string         `json:"package"`
+	Functions   []FuncSig      `json:"functions"`
+	Types       []TypeSig      `json:"types"`
+	Interfaces  []InterfaceSig `json:"interfaces"`
+	Constants   []ConstSig     `json:"constants"`
+	Variables   []VarSig       `json:"variables"`
+	GeneratedAt time.Time      `json:"generated_at"`
 }
 
 // FuncSig represents a function or method signature.
@@ -44,9 +44,9 @@ type TypeSig struct {
 
 // InterfaceSig represents an interface declaration.
 type InterfaceSig struct {
-	Name    string    `json:"name"`
-	Methods []FuncSig `json:"methods"`
-	Exported bool     `json:"exported"`
+	Name     string    `json:"name"`
+	Methods  []FuncSig `json:"methods"`
+	Exported bool      `json:"exported"`
 }
 
 // FieldSig represents a struct field.
@@ -73,7 +73,7 @@ type VarSig struct {
 
 // BreakingChange describes a single incompatible change between two API snapshots.
 type BreakingChange struct {
-	Type     string `json:"type"`     // "removed", "signature_changed", "type_changed", "field_removed", "method_added"
+	Type     string `json:"type"` // "removed", "signature_changed", "type_changed", "field_removed", "method_added"
 	Symbol   string `json:"symbol"`
 	Old      string `json:"old"`
 	New      string `json:"new"`
@@ -595,7 +595,7 @@ func (c *CompatChecker) SaveSnapshot(snapshot *APISnapshot, path string) error {
 	if err != nil {
 		return fmt.Errorf("marshaling snapshot: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("writing snapshot to %s: %w", path, err)
 	}
 	return nil

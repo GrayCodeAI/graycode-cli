@@ -334,7 +334,7 @@ func TestRegisterTemplate(t *testing.T) {
 		Description: "Custom template",
 		Language:    "rust",
 		Files: []TemplateFile{
-			{Path: "{{.ProjectName}}/main.rs", Content: "fn main() {}", Mode: 0644},
+			{Path: "{{.ProjectName}}/main.rs", Content: "fn main() {}", Mode: 0o644},
 		},
 		Variables: []TemplateVariable{
 			{Name: "ProjectName", Required: true, Type: "string"},
@@ -372,7 +372,7 @@ func TestLoadTemplateFromJSON(t *testing.T) {
 		Language:    "go",
 		Framework:   "custom",
 		Files: []TemplateFile{
-			{Path: "{{.ProjectName}}/main.go", Content: "package main\n", Mode: 0644},
+			{Path: "{{.ProjectName}}/main.go", Content: "package main\n", Mode: 0o644},
 		},
 		Variables: []TemplateVariable{
 			{Name: "ProjectName", Description: "Project name", Required: true, Type: "string"},
@@ -387,7 +387,7 @@ func TestLoadTemplateFromJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshaling template: %v", err)
 	}
-	if err := os.WriteFile(jsonPath, data, 0644); err != nil {
+	if err := os.WriteFile(jsonPath, data, 0o644); err != nil {
 		t.Fatalf("writing template file: %v", err)
 	}
 
@@ -428,7 +428,7 @@ func TestLoadTemplateInvalidJSON(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	jsonPath := filepath.Join(tmpDir, "bad.json")
-	if err := os.WriteFile(jsonPath, []byte("not json"), 0644); err != nil {
+	if err := os.WriteFile(jsonPath, []byte("not json"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -444,7 +444,7 @@ func TestLoadTemplateMissingName(t *testing.T) {
 	tmpDir := t.TempDir()
 	jsonPath := filepath.Join(tmpDir, "noname.json")
 	data := `{"description": "no name template"}`
-	if err := os.WriteFile(jsonPath, []byte(data), 0644); err != nil {
+	if err := os.WriteFile(jsonPath, []byte(data), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -740,7 +740,7 @@ func TestFileMode(t *testing.T) {
 		Name:     "mode-test",
 		Language: "bash",
 		Files: []TemplateFile{
-			{Path: "{{.ProjectName}}/script.sh", Content: "#!/bin/bash\necho hello\n", Mode: 0755},
+			{Path: "{{.ProjectName}}/script.sh", Content: "#!/bin/bash\necho hello\n", Mode: 0o755},
 		},
 		Variables: []TemplateVariable{
 			{Name: "ProjectName", Required: true, Type: "string"},
@@ -759,7 +759,7 @@ func TestFileMode(t *testing.T) {
 	}
 
 	// Check executable bit is set (at minimum)
-	if info.Mode()&0100 == 0 {
+	if info.Mode()&0o100 == 0 {
 		t.Errorf("script.sh should be executable, got mode %o", info.Mode())
 	}
 }

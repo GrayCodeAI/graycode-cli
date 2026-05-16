@@ -10,12 +10,12 @@ import (
 
 // ResultHash captures reproducibility information for a benchmark run.
 type ResultHash struct {
-	TasksHash   string `json:"tasks_hash"`
-	PromptHash  string `json:"prompt_hash"`
-	GitCommit   string `json:"git_commit"`
-	GoVersion   string `json:"go_version"`
-	OS          string `json:"os"`
-	Arch        string `json:"arch"`
+	TasksHash  string `json:"tasks_hash"`
+	PromptHash string `json:"prompt_hash"`
+	GitCommit  string `json:"git_commit"`
+	GoVersion  string `json:"go_version"`
+	OS         string `json:"os"`
+	Arch       string `json:"arch"`
 }
 
 // ComputeHash generates reproducibility hashes for a set of tasks.

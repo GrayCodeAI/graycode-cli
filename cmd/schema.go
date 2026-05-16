@@ -48,9 +48,9 @@ var schemaCmd = &cobra.Command{
 						},
 					},
 				},
-				"sandbox":    map[string]interface{}{"type": "string", "enum": []string{"strict", "workspace", "off"}},
+				"sandbox":     map[string]interface{}{"type": "string", "enum": []string{"strict", "workspace", "off"}},
 				"auto_commit": map[string]interface{}{"type": "boolean"},
-				"autonomy":   map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 4},
+				"autonomy":    map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 4},
 				"attribution": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
@@ -58,8 +58,8 @@ var schemaCmd = &cobra.Command{
 						"generated_with": map[string]interface{}{"type": "boolean", "description": "Append 'Generated with Hawk' to commits"},
 					},
 				},
-				"repo_map":           map[string]interface{}{"type": "boolean"},
-				"repo_map_max_tokens": map[string]interface{}{"type": "integer"},
+				"repo_map":                   map[string]interface{}{"type": "boolean"},
+				"repo_map_max_tokens":        map[string]interface{}{"type": "integer"},
 				"auto_compact_threshold_pct": map[string]interface{}{"type": "integer", "default": 85},
 			},
 		}

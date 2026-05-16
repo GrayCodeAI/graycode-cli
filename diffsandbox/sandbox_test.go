@@ -358,7 +358,8 @@ func TestConcurrentAccess(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			path := filepath.Join("concurrent", strings.Replace(
-				strings.Replace(t.Name(), "/", "_", -1), " ", "_", -1),
+				strings.Replace(t.Name(), "/", "_", -1), " ", "_", -1,
+			),
 				strings.Replace(filepath.Base(t.Name()), " ", "_", -1)+
 					"_"+strings.Replace(string(rune('a'+idx%26)), " ", "", -1)+".txt")
 			sb.ProposeCreate(path, "content\n")

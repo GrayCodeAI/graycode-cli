@@ -9,10 +9,10 @@ import (
 type DegradationSignal int
 
 const (
-	SignalLooping       DegradationSignal = iota // repeated identical tool calls
-	SignalErrorSpike                             // 3+ consecutive failures
-	SignalContextDrift                           // referencing non-existent files
-	SignalNoProgress                             // many turns without meaningful change
+	SignalLooping      DegradationSignal = iota // repeated identical tool calls
+	SignalErrorSpike                            // 3+ consecutive failures
+	SignalContextDrift                          // referencing non-existent files
+	SignalNoProgress                            // many turns without meaningful change
 )
 
 // DegradationDetector monitors agent quality over turns and triggers recovery.

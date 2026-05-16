@@ -135,10 +135,10 @@ func NewMigrationRegistry() *MigrationRegistry {
 			}
 			if _, ok := data["cost_limits"]; !ok {
 				data["cost_limits"] = map[string]interface{}{
-					"max_per_session":  5.0,
-					"max_per_day":      25.0,
-					"warn_threshold":   0.8,
-					"hard_stop":        true,
+					"max_per_session": 5.0,
+					"max_per_day":     25.0,
+					"warn_threshold":  0.8,
+					"hard_stop":       true,
 				}
 			}
 			return data, nil

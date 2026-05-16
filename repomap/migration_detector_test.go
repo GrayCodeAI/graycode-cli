@@ -206,7 +206,7 @@ func main() {
 	_ = data
 }
 `
-	if err := os.WriteFile(goFile, []byte(goContent), 0644); err != nil {
+	if err := os.WriteFile(goFile, []byte(goContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,7 +214,7 @@ func main() {
 	pyContent := `import os
 path = os.path.join("a", "b")
 `
-	if err := os.WriteFile(pyFile, []byte(pyContent), 0644); err != nil {
+	if err := os.WriteFile(pyFile, []byte(pyContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -238,25 +238,25 @@ func TestScan_SkipsVendorAndGit(t *testing.T) {
 
 	// Create vendor directory with a file that would match
 	vendorDir := filepath.Join(dir, "vendor")
-	os.MkdirAll(vendorDir, 0755)
+	os.MkdirAll(vendorDir, 0o755)
 	os.WriteFile(filepath.Join(vendorDir, "dep.go"), []byte(`package dep
 import "io/ioutil"
 var _ = ioutil.ReadFile
-`), 0644)
+`), 0o644)
 
 	// Create .git directory
 	gitDir := filepath.Join(dir, ".git")
-	os.MkdirAll(gitDir, 0755)
+	os.MkdirAll(gitDir, 0o755)
 	os.WriteFile(filepath.Join(gitDir, "hooks.go"), []byte(`package git
 import "io/ioutil"
 var _ = ioutil.ReadFile
-`), 0644)
+`), 0o644)
 
 	// Create a normal file
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
 import "io/ioutil"
 var _ = ioutil.ReadFile
-`), 0644)
+`), 0o644)
 
 	md := NewMigrationDetector()
 	opps, err := md.Scan(dir)

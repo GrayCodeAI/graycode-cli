@@ -21,15 +21,15 @@ var (
 
 // FeedbackReport is the structured report written to file or used in issue URL.
 type FeedbackReport struct {
-	Timestamp  string `json:"timestamp"`
-	Version    string `json:"version"`
-	Model      string `json:"model"`
-	Provider   string `json:"provider"`
-	OS         string `json:"os"`
-	Arch       string `json:"arch"`
-	Category   string `json:"category"`
-	Body       string `json:"body"`
-	SessionID  string `json:"session_id,omitempty"`
+	Timestamp string `json:"timestamp"`
+	Version   string `json:"version"`
+	Model     string `json:"model"`
+	Provider  string `json:"provider"`
+	OS        string `json:"os"`
+	Arch      string `json:"arch"`
+	Category  string `json:"category"`
+	Body      string `json:"body"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 var feedbackCmd = &cobra.Command{
@@ -132,7 +132,8 @@ func openFeedbackIssue(report FeedbackReport) error {
 	bodyBuilder.WriteString(fmt.Sprintf("- **Category:** %s\n", report.Category))
 	bodyBuilder.WriteString(fmt.Sprintf("- **Timestamp:** %s\n", report.Timestamp))
 
-	issueURL := fmt.Sprintf("https://github.com/GrayCodeAI/hawk/issues/new?title=%s&body=%s&labels=%s",
+	issueURL := fmt.Sprintf(
+		"https://github.com/GrayCodeAI/hawk/issues/new?title=%s&body=%s&labels=%s",
 		url.QueryEscape(title),
 		url.QueryEscape(bodyBuilder.String()),
 		url.QueryEscape(report.Category),

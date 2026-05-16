@@ -107,7 +107,7 @@ func TestCheckPath_Symlink(t *testing.T) {
 	// Create a symlink that points outside the project
 	outsideDir := t.TempDir()
 	outsideFile := filepath.Join(outsideDir, "secret.txt")
-	if err := os.WriteFile(outsideFile, []byte("secret"), 0644); err != nil {
+	if err := os.WriteFile(outsideFile, []byte("secret"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -353,7 +353,7 @@ func TestCheckNetwork_PrivateRanges(t *testing.T) {
 		{"169.254.169.254", 80, true}, // metadata endpoint
 		{"8.8.8.8", 53, false},        // public DNS
 		{"1.1.1.1", 443, false},       // Cloudflare
-		{"93.184.216.34", 80, false},   // example.com
+		{"93.184.216.34", 80, false},  // example.com
 	}
 
 	for _, tt := range tests {

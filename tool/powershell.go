@@ -14,12 +14,13 @@ import (
 // PowerShellTool executes PowerShell commands (Windows/cross-platform pwsh).
 type PowerShellTool struct{}
 
-func (PowerShellTool) Name() string        { return "PowerShell" }
-func (PowerShellTool) RiskLevel() string   { return "high" }
-func (PowerShellTool) Aliases() []string   { return []string{"powershell"} }
+func (PowerShellTool) Name() string      { return "PowerShell" }
+func (PowerShellTool) RiskLevel() string { return "high" }
+func (PowerShellTool) Aliases() []string { return []string{"powershell"} }
 func (PowerShellTool) Description() string {
 	return "Execute a PowerShell command. Use this instead of Bash when running on Windows or when PowerShell-specific cmdlets are needed."
 }
+
 func (PowerShellTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

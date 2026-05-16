@@ -15,7 +15,7 @@ import (
 type MemoryLayer int
 
 const (
-	LayerWorking   MemoryLayer = iota // current task context (cleared each task)
+	LayerWorking    MemoryLayer = iota // current task context (cleared each task)
 	LayerShortTerm                     // this session (cleared on session end)
 	LayerEpisodic                      // past sessions (what happened)
 	LayerSemantic                      // facts and knowledge (what is true)

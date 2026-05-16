@@ -171,7 +171,7 @@ func TestParseErrorParameterMissingValue(t *testing.T) {
 func TestParseFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "Modelfile")
-	err := os.WriteFile(path, []byte("FROM test-model\nPARAMETER temperature 0.5\n"), 0644)
+	err := os.WriteFile(path, []byte("FROM test-model\nPARAMETER temperature 0.5\n"), 0o644)
 	if err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}

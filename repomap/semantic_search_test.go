@@ -362,10 +362,10 @@ func TestIndexDirectory(t *testing.T) {
 	// Create subdirectories
 	authDir := filepath.Join(tmpDir, "src", "auth")
 	dbDir := filepath.Join(tmpDir, "src", "db")
-	if err := os.MkdirAll(authDir, 0755); err != nil {
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(dbDir, 0755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -383,7 +383,7 @@ func Login(username, password string) (*Session, error) {
 	}
 	return createSession(user)
 }
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -393,7 +393,7 @@ func Login(username, password string) (*Session, error) {
 func Query(sql string, args ...interface{}) (*Rows, error) {
 	return pool.Query(sql, args...)
 }
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -461,8 +461,8 @@ func TestRebuildIndex(t *testing.T) {
 
 func TestTokenizeSearch(t *testing.T) {
 	tests := []struct {
-		input         string
-		mustContain   []string
+		input          string
+		mustContain    []string
 		mustNotContain []string
 	}{
 		{

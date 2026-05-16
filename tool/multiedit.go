@@ -12,18 +12,19 @@ import (
 type MultiEditTool struct{}
 
 func (MultiEditTool) Name() string      { return "MultiEdit" }
-func (MultiEditTool) RiskLevel() string  { return "medium" }
-func (MultiEditTool) Aliases() []string  { return []string{"multi_edit", "multi_file_edit"} }
+func (MultiEditTool) RiskLevel() string { return "medium" }
+func (MultiEditTool) Aliases() []string { return []string{"multi_edit", "multi_file_edit"} }
 func (MultiEditTool) Description() string {
 	return "Apply multiple edits to a single file in one call. Each edit replaces an exact string match. Edits are applied sequentially."
 }
+
 func (MultiEditTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
 			"file_path": map[string]interface{}{"type": "string", "description": "File path to edit"},
 			"edits": map[string]interface{}{
-				"type": "array",
+				"type":        "array",
 				"description": "Array of edit operations",
 				"items": map[string]interface{}{
 					"type": "object",

@@ -36,9 +36,9 @@ var commonFollowups = []followup{
 
 // projectFollowups overrides based on detected project type.
 var projectFollowups = map[string][]followup{
-	"go.mod":       {{"fixed", "go test ./..."}, {"installed", "go mod tidy"}},
-	"package.json": {{"fixed", "npm test"}, {"installed", "npm install"}, {"test", "npm test"}},
-	"Cargo.toml":   {{"fixed", "cargo test"}, {"built", "cargo build"}, {"test", "cargo test"}},
+	"go.mod":         {{"fixed", "go test ./..."}, {"installed", "go mod tidy"}},
+	"package.json":   {{"fixed", "npm test"}, {"installed", "npm install"}, {"test", "npm test"}},
+	"Cargo.toml":     {{"fixed", "cargo test"}, {"built", "cargo build"}, {"test", "cargo test"}},
 	"pyproject.toml": {{"fixed", "pytest"}, {"test", "pytest"}, {"installed", "pip install -e ."}},
 }
 

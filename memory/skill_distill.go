@@ -21,7 +21,8 @@ type DistilledSkill struct {
 // BuildSkillPrompt creates a prompt that asks the LLM to distill a completed task
 // into a reusable skill document.
 func (sd *SkillDistiller) BuildSkillPrompt(taskDescription string, toolsUsed []string, filesModified []string, outcome string) string {
-	return fmt.Sprintf(`You are a skill extraction agent. Analyze this completed task and distill it into a reusable skill.
+	return fmt.Sprintf(
+		`You are a skill extraction agent. Analyze this completed task and distill it into a reusable skill.
 
 <task>%s</task>
 <tools_used>%s</tools_used>

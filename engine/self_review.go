@@ -38,8 +38,8 @@ const ConfidenceThreshold = 0.7
 // If confidence is below ConfidenceThreshold (0.7), the review will suggest
 // fixes rather than approving, regardless of whether explicit issues were found.
 func ReviewBeforeWrite(ctx context.Context, llm LLMClient, model string,
-	intent string, filePath string, oldContent string, newContent string) (*SelfReviewResult, error) {
-
+	intent string, filePath string, oldContent string, newContent string,
+) (*SelfReviewResult, error) {
 	if llm == nil {
 		return nil, fmt.Errorf("self-review: no LLM client configured")
 	}

@@ -2,18 +2,19 @@
 //
 // trace is a fully independent tool (own repo, own binary, works with any agent).
 // hawk can optionally manage it via slash commands:
-//   /trace-enable   — enable session capture
-//   /trace-disable  — disable session capture
-//   /trace-status   — show capture status
+//
+//	/trace-enable   — enable session capture
+//	/trace-disable  — disable session capture
+//	/trace-status   — show capture status
 //
 // hawk NEVER auto-enables trace. The user must explicitly opt in.
 package sessioncapture
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
-	"os"
 	"strings"
 )
 

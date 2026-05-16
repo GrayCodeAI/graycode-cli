@@ -51,8 +51,8 @@ type IntegrationPipeline struct {
 	SelfAssessor      *SelfAssessor
 
 	// Session management
-	Timeline      *Timeline
-	TokenReporter *TokenReporter
+	Timeline       *Timeline
+	TokenReporter  *TokenReporter
 	WorkspaceState *WorkspaceState
 	CommandHistory *CommandHistory
 	ResponseCache  *ResponseCache
@@ -144,14 +144,14 @@ func (is *InjectionScanner) Scan(input string) *ScanResult {
 
 // PreQueryResult holds the aggregated results of the pre-query pipeline.
 type PreQueryResult struct {
-	Intent          *Intent
-	SuggestedTools  []string
+	Intent           *Intent
+	SuggestedTools   []string
 	BudgetAllocation map[string]int
-	PredictedCost   float64
-	SystemPrompt    string
-	CacheHit        bool
-	CachedResponse  string
-	InjectionRisk   *ScanResult
+	PredictedCost    float64
+	SystemPrompt     string
+	CacheHit         bool
+	CachedResponse   string
+	InjectionRisk    *ScanResult
 }
 
 // PostResponseResult holds the aggregated results of the post-response pipeline.
@@ -356,8 +356,8 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []client.Ey
 
 	// 5. Update timeline
 	p.Timeline.AddEvent("response", "", map[string]string{
-		"quality":  fmt.Sprintf("%.2f", result.QualityScore),
-		"files":    fmt.Sprintf("%d", len(result.MentionedFiles)),
+		"quality": fmt.Sprintf("%.2f", result.QualityScore),
+		"files":   fmt.Sprintf("%d", len(result.MentionedFiles)),
 	})
 
 	// 6. Record token usage

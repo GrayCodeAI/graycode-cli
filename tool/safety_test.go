@@ -220,16 +220,16 @@ func TestTruncateOutput_ExactBoundary(t *testing.T) {
 
 func TestToolTimeout(t *testing.T) {
 	cases := map[string]time.Duration{
-		"Bash":     120 * time.Second,
-		"bash":     120 * time.Second,
-		"WebFetch": 30 * time.Second,
+		"Bash":      120 * time.Second,
+		"bash":      120 * time.Second,
+		"WebFetch":  30 * time.Second,
 		"web_fetch": 30 * time.Second,
-		"Grep":     60 * time.Second,
-		"grep":     60 * time.Second,
-		"Read":     60 * time.Second,
-		"Write":    60 * time.Second,
-		"Edit":     60 * time.Second,
-		"unknown":  60 * time.Second,
+		"Grep":      60 * time.Second,
+		"grep":      60 * time.Second,
+		"Read":      60 * time.Second,
+		"Write":     60 * time.Second,
+		"Edit":      60 * time.Second,
+		"unknown":   60 * time.Second,
 	}
 	for name, want := range cases {
 		if got := ToolTimeout(name); got != want {

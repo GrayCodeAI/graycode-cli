@@ -55,9 +55,9 @@ Keep subtasks focused and actionable. Each subtask should represent a single log
 // ParseSubtasks parses LLM output formatted as numbered subtasks.
 // Expected format:
 //
-//	1. Title here
-//	   Description of what to do
-//	   Files: path/to/file.go, another/file.go
+//  1. Title here
+//     Description of what to do
+//     Files: path/to/file.go, another/file.go
 func ParseSubtasks(output string) []Subtask {
 	lines := strings.Split(output, "\n")
 	var subtasks []Subtask

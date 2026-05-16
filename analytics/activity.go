@@ -113,7 +113,8 @@ func (a *ActivityTracker) Summary() string {
 		ratio = float64(execTime) / float64(userTime)
 	}
 
-	return fmt.Sprintf("User: %s | Agent: %s | Ratio: %.1fx",
+	return fmt.Sprintf(
+		"User: %s | Agent: %s | Ratio: %.1fx",
 		formatDurationCompact(userTime),
 		formatDurationCompact(execTime),
 		ratio,

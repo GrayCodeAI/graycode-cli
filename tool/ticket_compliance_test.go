@@ -446,7 +446,7 @@ func TestTicketComplianceTool_Execute(t *testing.T) {
 	tool := &TicketComplianceTool{}
 
 	input := map[string]string{
-		"branch_name": "feature/HAWK-123-jwt",
+		"branch_name":    "feature/HAWK-123-jwt",
 		"pr_description": "Fixes HAWK-123\n\nAdds JWT authentication",
 		"ticket_content": `# Add JWT authentication
 

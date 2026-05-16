@@ -139,7 +139,8 @@ Begin now. Read the project, set up the branch, run the baseline, then start the
 // parseResearchArgs parses /research arguments into a ResearchConfig.
 // Format: /research [flags] <metric-command>
 // Flags: --grep <pattern>, --direction <lower|higher>, --budget <minutes>,
-//        --branch <prefix>, --results <file>
+//
+//	--branch <prefix>, --results <file>
 func parseResearchArgs(args string) ResearchConfig {
 	cfg := DefaultResearchConfig()
 	parts := strings.Fields(args)

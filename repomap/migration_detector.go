@@ -577,7 +577,7 @@ func FormatOpportunities(opps []MigrationOpportunity) string {
 
 	var b strings.Builder
 
-		_, _ = fmt.Fprintf(&b, "Migration Opportunities (%d found):\n", len(opps))
+	_, _ = fmt.Fprintf(&b, "Migration Opportunities (%d found):\n", len(opps))
 	b.WriteString(strings.Repeat("═", 35))
 	b.WriteString("\n")
 
@@ -612,7 +612,7 @@ func FormatOpportunities(opps []MigrationOpportunity) string {
 		}
 	}
 
-		_, _ = fmt.Fprintf(&b, "\nAuto-fixable: %d/%d\n", autoFixCount, len(opps))
+	_, _ = fmt.Fprintf(&b, "\nAuto-fixable: %d/%d\n", autoFixCount, len(opps))
 
 	return b.String()
 }

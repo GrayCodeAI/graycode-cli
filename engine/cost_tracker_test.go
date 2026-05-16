@@ -19,11 +19,11 @@ func TestCostTracker_NewAndRecord(t *testing.T) {
 	}
 
 	err := ct.Record(analytics.CostEntry{
-		Model:      "claude-sonnet",
-				InputTokens:  100,
+		Model:        "claude-sonnet",
+		InputTokens:  100,
 		OutputTokens: 50,
-		CostUSD:  0.018,
-		Timestamp:  time.Now(),
+		CostUSD:      0.018,
+		Timestamp:    time.Now(),
 	})
 	if err != nil {
 		t.Fatalf("Record: %v", err)

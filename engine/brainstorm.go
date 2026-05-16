@@ -6,11 +6,11 @@ import "fmt"
 type BrainstormPhase int
 
 const (
-	BrainstormSetup     BrainstormPhase = iota // define the problem space
-	BrainstormDiverge                          // generate ideas (quantity over quality)
-	BrainstormOrganize                         // cluster and categorize
-	BrainstormEvaluate                         // score and prioritize
-	BrainstormConverge                         // select and refine top ideas
+	BrainstormSetup    BrainstormPhase = iota // define the problem space
+	BrainstormDiverge                         // generate ideas (quantity over quality)
+	BrainstormOrganize                        // cluster and categorize
+	BrainstormEvaluate                        // score and prioritize
+	BrainstormConverge                        // select and refine top ideas
 )
 
 func (p BrainstormPhase) String() string {
@@ -32,11 +32,11 @@ func (p BrainstormPhase) String() string {
 
 // BrainstormSession tracks a brainstorming session.
 type BrainstormSession struct {
-	Topic     string
-	Phase     BrainstormPhase
-	Ideas     []string
-	Clusters  map[string][]string
-	TopPicks  []string
+	Topic    string
+	Phase    BrainstormPhase
+	Ideas    []string
+	Clusters map[string][]string
+	TopPicks []string
 }
 
 // NewBrainstormSession starts a new brainstorming session.

@@ -114,12 +114,12 @@ func (cv *ContextVisualization) renderCompact() string {
 
 // TokenBreakdown provides a detailed breakdown of token usage by category.
 type TokenBreakdown struct {
-	System    int `json:"system"`
-	UserMsgs  int `json:"user_messages"`
-	Assistant int `json:"assistant"`
-	ToolUse   int `json:"tool_use"`
+	System     int `json:"system"`
+	UserMsgs   int `json:"user_messages"`
+	Assistant  int `json:"assistant"`
+	ToolUse    int `json:"tool_use"`
 	ToolResult int `json:"tool_results"`
-	Total     int `json:"total"`
+	Total      int `json:"total"`
 }
 
 // RenderBreakdown produces a multi-line token breakdown for /context command.

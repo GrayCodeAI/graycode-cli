@@ -318,10 +318,10 @@ func TestBuildContextForTask(t *testing.T) {
 	if result == "" {
 		t.Error("expected non-empty context for matching task")
 	}
-	if !strings.Contains(result,"Relevant Knowledge") {
+	if !strings.Contains(result, "Relevant Knowledge") {
 		t.Error("expected header in context")
 	}
-	if !strings.Contains(result,"Error handling") {
+	if !strings.Contains(result, "Error handling") {
 		t.Error("expected entry content in context")
 	}
 
@@ -588,19 +588,19 @@ func TestFormatEntry(t *testing.T) {
 
 	result = kb.FormatEntry(entry)
 
-	if !strings.Contains(result,"## Error Handling [pattern]") {
+	if !strings.Contains(result, "## Error Handling [pattern]") {
 		t.Error("expected title with category in output")
 	}
-	if !strings.Contains(result,"Language: go") {
+	if !strings.Contains(result, "Language: go") {
 		t.Error("expected language in output")
 	}
-	if !strings.Contains(result,"Always check errors") {
+	if !strings.Contains(result, "Always check errors") {
 		t.Error("expected content in output")
 	}
-	if !strings.Contains(result,"if err != nil") {
+	if !strings.Contains(result, "if err != nil") {
 		t.Error("expected examples in output")
 	}
-	if !strings.Contains(result,"error, best-practice") {
+	if !strings.Contains(result, "error, best-practice") {
 		t.Error("expected tags in output")
 	}
 
@@ -612,10 +612,10 @@ func TestFormatEntry(t *testing.T) {
 		Category: "shortcut",
 	}
 	result = kb.FormatEntry(minimal)
-	if !strings.Contains(result,"## Minimal [shortcut]") {
+	if !strings.Contains(result, "## Minimal [shortcut]") {
 		t.Error("expected minimal entry formatted correctly")
 	}
-	if strings.Contains(result,"Language:") {
+	if strings.Contains(result, "Language:") {
 		t.Error("should not contain Language for empty language")
 	}
 }

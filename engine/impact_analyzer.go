@@ -13,12 +13,12 @@ import (
 
 // ImpactAnalysis holds the results of analyzing the blast radius of code changes.
 type ImpactAnalysis struct {
-	ChangedFiles        []string
-	DirectlyAffected    []string
+	ChangedFiles         []string
+	DirectlyAffected     []string
 	TransitivelyAffected []string
-	RiskScore           float64
-	TestCoverage        float64
-	Suggestions         []string
+	RiskScore            float64
+	TestCoverage         float64
+	Suggestions          []string
 }
 
 // ImpactAnalyzer predicts the blast radius of code changes before they're applied.

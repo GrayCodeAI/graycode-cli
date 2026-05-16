@@ -24,11 +24,11 @@ type SpawnDecision struct {
 
 // SubTask is a decomposed piece of work for a sub-agent.
 type SubTask struct {
-	ID          string
-	Prompt      string
-	Mode        SubAgentMode
-	Priority    int // higher = run first
-	DependsOn   []string // IDs of tasks this depends on
+	ID        string
+	Prompt    string
+	Mode      SubAgentMode
+	Priority  int      // higher = run first
+	DependsOn []string // IDs of tasks this depends on
 }
 
 // SpawnStrategy defines how agents coordinate.

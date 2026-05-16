@@ -100,8 +100,8 @@ func TestIsAllowed_ExactDomainMatching(t *testing.T) {
 	}{
 		{"github.com", true},
 		{"golang.org", true},
-		{"api.github.com", false},  // exact match only
-		{"sub.golang.org", false},  // exact match only
+		{"api.github.com", false}, // exact match only
+		{"sub.golang.org", false}, // exact match only
 		{"notgithub.com", false},
 	}
 

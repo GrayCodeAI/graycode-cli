@@ -33,9 +33,9 @@ func TestEstimateTokens(t *testing.T) {
 	}{
 		{"", 0},
 		{"abcd", 1},
-		{"abcde", 2},       // (5+3)/4 = 2
-		{"12345678", 2},    // (8+3)/4 = 2
-		{"123456789", 3},   // (9+3)/4 = 3
+		{"abcde", 2},     // (5+3)/4 = 2
+		{"12345678", 2},  // (8+3)/4 = 2
+		{"123456789", 3}, // (9+3)/4 = 3
 	}
 	for _, tt := range tests {
 		got := estimateTokens(tt.input)
@@ -50,7 +50,7 @@ func createTempFile(t *testing.T, name, content string) string {
 	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -455,7 +455,7 @@ func TestReadFile_BinaryFile(t *testing.T) {
 	content := []byte{0x00, 0x01, 0x02, 0x03, 0x00, 0x00}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "binary.bin")
-	if err := os.WriteFile(path, content, 0644); err != nil {
+	if err := os.WriteFile(path, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
 

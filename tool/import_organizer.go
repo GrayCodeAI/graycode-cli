@@ -783,6 +783,7 @@ func (ImportOrganizerTool) Name() string { return "OrganizeImports" }
 func (ImportOrganizerTool) Description() string {
 	return "Organize and fix imports in Go and TypeScript files. Groups imports by category, sorts alphabetically, and removes unused imports."
 }
+
 func (ImportOrganizerTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -838,7 +839,7 @@ func (ImportOrganizerTool) Execute(ctx context.Context, input json.RawMessage) (
 	}
 
 	// Write back.
-	if err := os.WriteFile(p.Path, []byte(result), 0644); err != nil {
+	if err := os.WriteFile(p.Path, []byte(result), 0o644); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 

@@ -43,7 +43,7 @@ func TestRecover_FileNotFound(t *testing.T) {
 	// Create a temp directory with a file to test Levenshtein matching.
 	dir := t.TempDir()
 	authFile := filepath.Join(dir, "auth.go")
-	if err2 := os.WriteFile(authFile, []byte("package main"), 0644); err2 != nil {
+	if err2 := os.WriteFile(authFile, []byte("package main"), 0o644); err2 != nil {
 		t.Fatal(err2)
 	}
 

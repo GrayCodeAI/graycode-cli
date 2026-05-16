@@ -284,7 +284,7 @@ go 1.21
 
 require github.com/go-chi/chi/v5 v5.0.10
 `
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -303,7 +303,7 @@ go 1.21
 
 require github.com/gin-gonic/gin v1.9.1
 `
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -325,7 +325,7 @@ func main() {
 	e := echo.New()
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(src), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -376,10 +376,10 @@ func DeleteUser() {}
 func HealthCheck() {}
 `
 
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainGo), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainGo), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -404,7 +404,7 @@ func TestScanProjectSkipsVendor(t *testing.T) {
 
 	// Create vendor directory with routes that should be ignored
 	vendorDir := filepath.Join(dir, "vendor", "somelib")
-	if err := os.MkdirAll(vendorDir, 0755); err != nil {
+	if err := os.MkdirAll(vendorDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -424,10 +424,10 @@ func main() {
 }
 `
 
-	if err := os.WriteFile(filepath.Join(vendorDir, "routes.go"), []byte(vendorFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(vendorDir, "routes.go"), []byte(vendorFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -466,10 +466,10 @@ func main() {
 }
 `
 
-	if err := os.WriteFile(filepath.Join(dir, "routes_test.go"), []byte(testFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "routes_test.go"), []byte(testFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

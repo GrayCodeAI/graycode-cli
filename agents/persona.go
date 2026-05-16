@@ -238,16 +238,26 @@ func BuildSystemPrompt(persona *Persona, projectContext string) string {
 
 // expertiseKeywords maps expertise domains to keywords for task matching.
 var expertiseKeywords = map[string][]string{
-	"security": {"security", "vulnerability", "cve", "injection", "xss", "csrf", "auth", "authentication",
-		"authorization", "encrypt", "secret", "owasp", "penetration", "exploit"},
-	"testing": {"test", "spec", "assert", "mock", "stub", "coverage", "unit test", "integration test",
-		"e2e", "benchmark", "fuzzing", "fixture"},
-	"frontend": {"css", "html", "react", "vue", "angular", "component", "ui", "ux", "style",
-		"responsive", "accessibility", "a11y", "dom", "browser", "tailwind"},
-	"backend": {"api", "database", "sql", "server", "endpoint", "middleware", "rest", "grpc",
-		"microservice", "cache", "queue", "migration"},
-	"devops": {"deploy", "kubernetes", "k8s", "docker", "ci", "cd", "pipeline", "terraform",
-		"ansible", "helm", "monitoring", "infrastructure", "aws", "gcp", "azure", "nginx"},
+	"security": {
+		"security", "vulnerability", "cve", "injection", "xss", "csrf", "auth", "authentication",
+		"authorization", "encrypt", "secret", "owasp", "penetration", "exploit",
+	},
+	"testing": {
+		"test", "spec", "assert", "mock", "stub", "coverage", "unit test", "integration test",
+		"e2e", "benchmark", "fuzzing", "fixture",
+	},
+	"frontend": {
+		"css", "html", "react", "vue", "angular", "component", "ui", "ux", "style",
+		"responsive", "accessibility", "a11y", "dom", "browser", "tailwind",
+	},
+	"backend": {
+		"api", "database", "sql", "server", "endpoint", "middleware", "rest", "grpc",
+		"microservice", "cache", "queue", "migration",
+	},
+	"devops": {
+		"deploy", "kubernetes", "k8s", "docker", "ci", "cd", "pipeline", "terraform",
+		"ansible", "helm", "monitoring", "infrastructure", "aws", "gcp", "azure", "nginx",
+	},
 }
 
 // SelectPersona automatically selects the best persona for a given task

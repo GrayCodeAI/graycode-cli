@@ -40,9 +40,9 @@ type GenIssue struct {
 // GenValidation holds the complete result of validating generated code.
 type GenValidation struct {
 	Valid    bool
-	Issues  []GenIssue
+	Issues   []GenIssue
 	Language string
-	Score   float64
+	Score    float64
 }
 
 // NewGenValidator creates a GenValidator with built-in checks for common generation errors.
@@ -821,7 +821,7 @@ func checkGoCompilation(code string) []GenIssue {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tmpFile := filepath.Join(tmpDir, "generated.go")
-	if err := os.WriteFile(tmpFile, []byte(code), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(code), 0o644); err != nil {
 		return nil
 	}
 

@@ -134,7 +134,7 @@ func FormatAuditResult(r AuditResult) string {
 	}
 
 	var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "Scanned %d file(s). Found %d issue(s):\n\n", r.Files, len(r.Findings))
+	_, _ = fmt.Fprintf(&b, "Scanned %d file(s). Found %d issue(s):\n\n", r.Files, len(r.Findings))
 
 	critical, warning, info := 0, 0, 0
 	for _, f := range r.Findings {

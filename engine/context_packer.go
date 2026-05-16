@@ -27,10 +27,10 @@ const (
 // ContextPacker optimally selects which messages to keep when approaching
 // context window limits, maximizing information density per token spent.
 type ContextPacker struct {
-	MaxTokens        int             // model's context window
-	ReservedForOutput int            // tokens reserved for response
-	SystemPromptTokens int           // tokens consumed by system prompt
-	Strategy         PackingStrategy // packing strategy to use
+	MaxTokens          int             // model's context window
+	ReservedForOutput  int             // tokens reserved for response
+	SystemPromptTokens int             // tokens consumed by system prompt
+	Strategy           PackingStrategy // packing strategy to use
 }
 
 // ScoredMessage represents a message with scoring metadata for packing decisions.
@@ -55,10 +55,10 @@ type PackingResult struct {
 // NewContextPacker creates a new context packer for the given model context size.
 func NewContextPacker(maxTokens int) *ContextPacker {
 	return &ContextPacker{
-		MaxTokens:         maxTokens,
-		ReservedForOutput: 4096,
+		MaxTokens:          maxTokens,
+		ReservedForOutput:  4096,
 		SystemPromptTokens: 0,
-		Strategy:          StrategyHybrid,
+		Strategy:           StrategyHybrid,
 	}
 }
 

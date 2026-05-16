@@ -121,7 +121,7 @@ func (rm *RepoMap) Format(maxTokens int) string {
 	for _, fm := range rm.Files {
 		// Estimate this file's contribution
 		lineEst := 1 + len(fm.Symbols) // file header + one line per symbol
-		tokEst := lineEst * 6           // ~6 tokens per line on average
+		tokEst := lineEst * 6          // ~6 tokens per line on average
 
 		if tokenCount+tokEst > maxTokens {
 			remaining := len(rm.Files) - countFormattedFiles(&b)

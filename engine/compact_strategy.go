@@ -102,15 +102,15 @@ func estimateMessageTokens(m client.EyrieMessage) int {
 
 // compactableTools are tools whose old results can be safely cleared.
 var compactableTools = map[string]bool{
-	"Bash":      true,
-	"Read":      true,
-	"Grep":      true,
-	"Glob":      true,
-	"WebFetch":  true,
+	"Bash":       true,
+	"Read":       true,
+	"Grep":       true,
+	"Glob":       true,
+	"WebFetch":   true,
 	"WebSearch":  true,
-	"Edit":      true,
-	"Write":     true,
-	"LS":        true,
+	"Edit":       true,
+	"Write":      true,
+	"LS":         true,
 	"ToolSearch": true,
 }
 

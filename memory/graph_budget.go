@@ -17,19 +17,19 @@ import (
 // - Task complexity (more memory for complex multi-file tasks)
 // - Impact analysis (what's affected by current changes)
 type GraphAwareBudget struct {
-	bridge      *YaadBridge
-	proactive   *ProactiveContext
-	mu          sync.Mutex
-	baseBudget  int
-	maxBudget   int
+	bridge     *YaadBridge
+	proactive  *ProactiveContext
+	mu         sync.Mutex
+	baseBudget int
+	maxBudget  int
 }
 
 // MemoryInjection represents prioritized memory content for prompt injection.
 type MemoryInjection struct {
-	Content     string
-	TokenCount  int
-	Source      string // "graph", "global", "proactive", "file"
-	Priority    float64
+	Content    string
+	TokenCount int
+	Source     string // "graph", "global", "proactive", "file"
+	Priority   float64
 }
 
 // NewGraphAwareBudget creates a graph-aware memory budget allocator.

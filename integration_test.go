@@ -9,13 +9,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/inspect"
 	"github.com/GrayCodeAI/sight"
 	"github.com/GrayCodeAI/tok"
 	"github.com/GrayCodeAI/yaad/engine"
 	"github.com/GrayCodeAI/yaad/graph"
 	"github.com/GrayCodeAI/yaad/storage"
-	"github.com/GrayCodeAI/hawk/routing"
 )
 
 // mockSightProvider implements sight.Provider for integration testing.
@@ -203,8 +203,8 @@ func TestIntegration_CascadeRouting(t *testing.T) {
 	cr := routing.NewCascadeRouter(roles)
 
 	tests := []struct {
-		msg      string
-		wantType routing.TaskType
+		msg       string
+		wantType  routing.TaskType
 		wantModel string
 	}{
 		{"Design the architecture for the payment system", routing.TaskPlanning, "claude-opus-4-20250514"},

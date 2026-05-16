@@ -11,10 +11,10 @@ import (
 // executes them precisely. This is a cost-saving pattern: the architect uses
 // fewer tokens to plan, allowing the editor to focus on precise implementation.
 type ArchitectConfig struct {
-	ArchitectModel string // cheap/fast model for planning, e.g., "haiku"
-	EditorModel    string // expensive/precise model for edits, e.g., "sonnet"
-	PlanTokenBudget int   // max tokens for architect's plan, default 4096
-	Enabled        bool
+	ArchitectModel  string // cheap/fast model for planning, e.g., "haiku"
+	EditorModel     string // expensive/precise model for edits, e.g., "sonnet"
+	PlanTokenBudget int    // max tokens for architect's plan, default 4096
+	Enabled         bool
 }
 
 // ArchitectPlan represents the structured output from the architect model.
@@ -176,8 +176,8 @@ func ParsePlan(response string) (*ArchitectPlan, error) {
 // parseSteps extracts step entries from lines. It looks for numbered steps
 // that follow patterns like:
 //
-//	1. [file.go] ACTION: description
-//	2. [file.go] ACTION: description
+//  1. [file.go] ACTION: description
+//  2. [file.go] ACTION: description
 //
 // It also handles variants without brackets or with different numbering.
 func parseSteps(lines []string) []PlanStep {
@@ -305,8 +305,10 @@ func parseStepLine(line string) (PlanStep, bool) {
 
 // looksLikeFile returns true if the string looks like a filename.
 func looksLikeFile(s string) bool {
-	extensions := []string{".go", ".js", ".ts", ".py", ".rs", ".java", ".c", ".h",
-		".cpp", ".rb", ".md", ".yaml", ".yml", ".json", ".toml", ".sql", ".sh"}
+	extensions := []string{
+		".go", ".js", ".ts", ".py", ".rs", ".java", ".c", ".h",
+		".cpp", ".rb", ".md", ".yaml", ".yml", ".json", ".toml", ".sql", ".sh",
+	}
 	lower := strings.ToLower(s)
 	for _, ext := range extensions {
 		if strings.HasSuffix(lower, ext) {

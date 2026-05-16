@@ -56,7 +56,7 @@ ENV TERM=xterm-256color LANG=C.UTF-8
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	dfPath := filepath.Join(tmpDir, "Dockerfile")
-	if err := os.WriteFile(dfPath, []byte(dockerfile), 0644); err != nil {
+	if err := os.WriteFile(dfPath, []byte(dockerfile), 0o644); err != nil {
 		return false
 	}
 

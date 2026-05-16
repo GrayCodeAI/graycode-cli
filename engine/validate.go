@@ -194,10 +194,14 @@ func parseGoErrors(output string) []ValidationError {
 
 // Python error format varies, but py_compile typically gives:
 // File "path", line N
-//   ...
+//
+//	...
+//
 // SyntaxError: message
-var pythonLineRe = regexp.MustCompile(`File "([^"]+)", line (\d+)`)
-var pythonErrorRe = regexp.MustCompile(`(SyntaxError|IndentationError|TabError):\s*(.+)`)
+var (
+	pythonLineRe  = regexp.MustCompile(`File "([^"]+)", line (\d+)`)
+	pythonErrorRe = regexp.MustCompile(`(SyntaxError|IndentationError|TabError):\s*(.+)`)
+)
 
 func parsePythonErrors(output, path string) []ValidationError {
 	var errors []ValidationError

@@ -19,9 +19,9 @@ type SmartCreator struct {
 
 // FileTemplate describes the boilerplate template for a given file type.
 type FileTemplate struct {
-	Extension          string
-	Language           string
-	Template           string
+	Extension           string
+	Language            string
+	Template            string
 	RequiresPackageName bool
 }
 

@@ -264,9 +264,9 @@ func TestCompressDiffPrioritization(t *testing.T) {
 
 	// Create diff where source files should come before config
 	diff := buildTestDiff(map[string]string{
-		"config.yaml":  generateDiffContent("config.yaml", 20),
-		"src/core.go":  generateDiffContent("src/core.go", 20),
-		"README.md":    generateDiffContent("README.md", 20),
+		"config.yaml":     generateDiffContent("config.yaml", 20),
+		"src/core.go":     generateDiffContent("src/core.go", 20),
+		"README.md":       generateDiffContent("README.md", 20),
 		"src/api_test.go": generateDiffContent("src/api_test.go", 20),
 	})
 

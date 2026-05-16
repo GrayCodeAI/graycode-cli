@@ -29,6 +29,7 @@ func (TodoWriteTool) Aliases() []string { return []string{"todo"} }
 func (TodoWriteTool) Description() string {
 	return "Manage a task list. Actions: add, complete, list, remove."
 }
+
 func (TodoWriteTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

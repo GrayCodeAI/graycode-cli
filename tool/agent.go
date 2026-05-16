@@ -20,6 +20,7 @@ func (AgentTool) Aliases() []string { return []string{"agent", "Task"} }
 func (AgentTool) Description() string {
 	return "Spawn a sub-agent to handle a complex task independently. The sub-agent has access to all tools. Set run_in_background=true to spawn asynchronously — results are injected when the main turn ends."
 }
+
 func (AgentTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -138,6 +139,7 @@ func (MultiAgentTool) Aliases() []string { return []string{"multi_agent"} }
 func (MultiAgentTool) Description() string {
 	return "Spawn multiple sub-agents in parallel for independent tasks."
 }
+
 func (MultiAgentTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -775,7 +775,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		pt := detectAgentsProjectType()
 		content := GenerateAgentsTemplate(pt)
-		if err := os.WriteFile("AGENTS.md", []byte(content), 0644); err != nil {
+		if err := os.WriteFile("AGENTS.md", []byte(content), 0o644); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to write AGENTS.md: " + err.Error()})
 			return m, nil
 		}
@@ -1165,7 +1165,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 					b.WriteString(plugin.FormatSkillEntry(e))
 				}
 				if len(results) > 20 {
-		_, _ = fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
+					_, _ = fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 				return m, nil
@@ -1190,7 +1190,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				var b strings.Builder
 				b.WriteString("Trending skills:\n\n")
 				for i, e := range results {
-		_, _ = fmt.Fprintf(&b, "  %d. ", i+1)
+					_, _ = fmt.Fprintf(&b, "  %d. ", i+1)
 					b.WriteString(strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
@@ -1215,21 +1215,21 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
+				_, _ = fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
 				if entry.Version != "" {
-		_, _ = fmt.Fprintf(&b, "Version: %s\n", entry.Version)
+					_, _ = fmt.Fprintf(&b, "Version: %s\n", entry.Version)
 				}
 				if entry.Author != "" {
-		_, _ = fmt.Fprintf(&b, "Author: %s\n", entry.Author)
+					_, _ = fmt.Fprintf(&b, "Author: %s\n", entry.Author)
 				}
 				if entry.Description != "" {
-		_, _ = fmt.Fprintf(&b, "Description: %s\n", entry.Description)
+					_, _ = fmt.Fprintf(&b, "Description: %s\n", entry.Description)
 				}
 				if entry.Repo != "" {
-		_, _ = fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
+					_, _ = fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
 				}
-		_, _ = fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
-		_, _ = fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
+				_, _ = fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
+				_, _ = fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 				return m, nil
 
@@ -1305,10 +1305,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				}
 				var b strings.Builder
 				b.WriteString("✓ Skill validated successfully.\n\n")
-		_, _ = fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
-		_, _ = fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
+				_, _ = fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
+				_, _ = fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
 				if skill.Version != "" {
-		_, _ = fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
+					_, _ = fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
 				}
 				b.WriteString("\nTo publish:\n")
 				b.WriteString("  1. Push your skill to a GitHub repo with skills/<name>/SKILL.md\n")
@@ -1579,7 +1579,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/export":
 		home, _ := os.UserHomeDir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
-		_ = os.MkdirAll(exportDir, 0755)
+		_ = os.MkdirAll(exportDir, 0o755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
 		md.WriteString(fmt.Sprintf("# Session %s\n\n", m.sessionID))
@@ -1593,7 +1593,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				md.WriteString("_" + msg.content + "_\n\n")
 			}
 		}
-		if err := os.WriteFile(exportPath, []byte(md.String()), 0644); err != nil {
+		if err := os.WriteFile(exportPath, []byte(md.String()), 0o644); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Exported to: %s", exportPath)})
@@ -1607,12 +1607,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		home, _ := os.UserHomeDir()
 		feedDir := filepath.Join(home, ".hawk", "feedback")
-		_ = os.MkdirAll(feedDir, 0755)
+		_ = os.MkdirAll(feedDir, 0o755)
 		report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
 			time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)
 		fname := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))
 		fpath := filepath.Join(feedDir, fname)
-		if err := os.WriteFile(fpath, []byte(report), 0644); err != nil {
+		if err := os.WriteFile(fpath, []byte(report), 0o644); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to save feedback: " + err.Error()})
 		} else {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Feedback saved to %s", fpath)})
@@ -1675,7 +1675,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		home, _ := os.UserHomeDir()
 		tagFile := filepath.Join(home, ".hawk", "sessions", m.sessionID+".tags")
-		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
@@ -1718,7 +1718,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/share":
 		home, _ := os.UserHomeDir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
-		_ = os.MkdirAll(exportDir, 0755)
+		_ = os.MkdirAll(exportDir, 0o755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
 		md.WriteString(fmt.Sprintf("# Hawk Session %s\n\n", m.sessionID))
@@ -1731,7 +1731,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				md.WriteString("**Hawk:** " + msg.content + "\n\n")
 			}
 		}
-		if err := os.WriteFile(exportPath, []byte(md.String()), 0644); err != nil {
+		if err := os.WriteFile(exportPath, []byte(md.String()), 0o644); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session saved to: %s\nShare this file or paste its contents.", exportPath)})
@@ -1825,12 +1825,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		tokens := m.session.MessageCount() * 200 // rough estimate
 		m.contextViz.Update(tokens)
 		breakdown := TokenBreakdown{
-			Total: tokens,
-			UserMsgs: tokens / 3,
-			Assistant: tokens / 3,
+			Total:      tokens,
+			UserMsgs:   tokens / 3,
+			Assistant:  tokens / 3,
 			ToolResult: tokens / 4,
-			ToolUse: tokens / 12,
-			System: tokens / 12,
+			ToolUse:    tokens / 12,
+			System:     tokens / 12,
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: RenderBreakdown(breakdown, m.contextViz.ContextWindowSize)})
 		return m, nil

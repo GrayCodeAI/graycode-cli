@@ -45,13 +45,13 @@ func NewErrorGrouper() *ErrorGrouper {
 
 // normalization regexes compiled once
 var (
-	pathPattern     = regexp.MustCompile(`(?:/[a-zA-Z0-9._\-]+)+(?:\.[a-zA-Z]+)?`)
+	pathPattern        = regexp.MustCompile(`(?:/[a-zA-Z0-9._\-]+)+(?:\.[a-zA-Z]+)?`)
 	errFileLinePattern = regexp.MustCompile(`\b[a-zA-Z0-9_\-]+\.[a-zA-Z]{1,4}:\d+:?`)
-	lineNumPattern  = regexp.MustCompile(`(?:line\s*|:)\d+:?`)
-	numberPattern   = regexp.MustCompile(`\b\d{2,}`)
-	quotedPattern   = regexp.MustCompile(`"[^"]*"`)
-	hexPattern      = regexp.MustCompile(`0x[0-9a-fA-F]+`)
-	multiSpaceRegex = regexp.MustCompile(`\s+`)
+	lineNumPattern     = regexp.MustCompile(`(?:line\s*|:)\d+:?`)
+	numberPattern      = regexp.MustCompile(`\b\d{2,}`)
+	quotedPattern      = regexp.MustCompile(`"[^"]*"`)
+	hexPattern         = regexp.MustCompile(`0x[0-9a-fA-F]+`)
+	multiSpaceRegex    = regexp.MustCompile(`\s+`)
 )
 
 // NormalizeError strips file paths, line numbers, and specific values from an

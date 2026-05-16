@@ -222,7 +222,7 @@ func HandleRequest() error {
 func DoWork() {
 }
 `
-	err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(content), 0644)
+	err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(content), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +255,7 @@ func DoWork() {
 func Helper() {
 }
 `
-	err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(content), 0644)
+	err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(content), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,14 +277,14 @@ func TestScanProjectForStaleDocs_SkipsVendor(t *testing.T) {
 
 	// Create vendor directory with stale docs
 	vendorDir := filepath.Join(dir, "vendor")
-	os.MkdirAll(vendorDir, 0755)
+	os.MkdirAll(vendorDir, 0o755)
 
 	vendorContent := `package vendor
 
 // BadFunc uses MissingThing
 func BadFunc() {}
 `
-	os.WriteFile(filepath.Join(vendorDir, "bad.go"), []byte(vendorContent), 0644)
+	os.WriteFile(filepath.Join(vendorDir, "bad.go"), []byte(vendorContent), 0o644)
 
 	// Create main file without issues
 	mainContent := `package main
@@ -293,7 +293,7 @@ func BadFunc() {}
 func DoWork() {
 }
 `
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainContent), 0644)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainContent), 0o644)
 
 	updates := du.ScanProjectForStaleDocs(dir)
 

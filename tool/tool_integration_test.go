@@ -89,10 +89,10 @@ func TestIntegration_GlobThenRead(t *testing.T) {
 
 	// Create several files.
 	files := map[string]string{
-		"alpha.go":    "package alpha",
-		"beta.go":     "package beta",
-		"gamma.txt":   "not a go file",
-		"delta.go":    "package delta",
+		"alpha.go":  "package alpha",
+		"beta.go":   "package beta",
+		"gamma.txt": "not a go file",
+		"delta.go":  "package delta",
 	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {

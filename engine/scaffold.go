@@ -88,7 +88,7 @@ func main() {
 	}
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/internal/cmd/root.go",
@@ -115,7 +115,7 @@ func Execute() error {
 	return nil
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/go.mod",
@@ -123,7 +123,7 @@ func Execute() error {
 
 go 1.21
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/Makefile",
@@ -143,7 +143,7 @@ clean:
 lint:
 	golangci-lint run ./...
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/.gitignore",
@@ -159,7 +159,7 @@ vendor/
 .idea/
 .vscode/
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/README.md",
@@ -187,7 +187,7 @@ go install {{.Module}}/cmd@latest
 
 {{.License}}
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 		},
 		PostCreate: []string{"cd {{.ProjectName}} && go mod tidy"},
@@ -232,7 +232,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr, wrapped))
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/internal/handler/handler.go",
@@ -261,7 +261,7 @@ func CreateItem(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "created"})
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/internal/middleware/middleware.go",
@@ -295,7 +295,7 @@ func Recovery(next http.Handler) http.Handler {
 	})
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/go.mod",
@@ -303,7 +303,7 @@ func Recovery(next http.Handler) http.Handler {
 
 go 1.21
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/Dockerfile",
@@ -321,7 +321,7 @@ COPY --from=builder /app/server .
 EXPOSE {{.Port}}
 CMD ["./server"]
 `,
-				Mode: 0644,
+				Mode:      0o644,
 				Condition: "{{.WithDocker}}",
 			},
 			{
@@ -331,7 +331,7 @@ CMD ["./server"]
 vendor/
 .env
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/README.md",
@@ -351,7 +351,7 @@ go run ./cmd/server/main.go
 - GET /api/v1/items
 - POST /api/v1/items
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 		},
 		PostCreate: []string{"cd {{.ProjectName}} && go mod tidy"},
@@ -377,7 +377,7 @@ package {{.PackageName}}
 // Version is the library version.
 const Version = "0.1.0"
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/{{.PackageName}}_test.go",
@@ -391,7 +391,7 @@ func TestVersion(t *testing.T) {
 	}
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/example_test.go",
@@ -408,7 +408,7 @@ func Example() {
 	// Output: 0.1.0
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/go.mod",
@@ -416,7 +416,7 @@ func Example() {
 
 go 1.21
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/.github/workflows/ci.yml",
@@ -433,7 +433,7 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
 `,
-				Mode: 0644,
+				Mode:      0o644,
 				Condition: "{{.WithCI}}",
 			},
 			{
@@ -450,14 +450,14 @@ import "{{.Module}}"
 go get {{.Module}}
 ` + "```" + `
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/.gitignore",
 				Content: `vendor/
 *.test
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 		},
 		PostCreate: []string{"cd {{.ProjectName}} && go mod tidy"},
@@ -497,7 +497,7 @@ app.listen(port, () => {
 
 export default app;
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/tsconfig.json",
@@ -519,7 +519,7 @@ export default app;
   "exclude": ["node_modules", "dist"]
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/package.json",
@@ -545,7 +545,7 @@ export default app;
   }
 }
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/Dockerfile",
@@ -564,7 +564,7 @@ RUN npm ci --production
 EXPOSE {{.Port}}
 CMD ["node", "dist/index.js"]
 `,
-				Mode: 0644,
+				Mode:      0o644,
 				Condition: "{{.WithDocker}}",
 			},
 			{
@@ -574,7 +574,7 @@ dist/
 .env
 *.js.map
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/README.md",
@@ -596,7 +596,7 @@ npm run build
 npm start
 ` + "```" + `
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 		},
 		PostCreate: []string{"cd {{.ProjectName}} && npm install"},
@@ -634,13 +634,13 @@ def list_items():
 def create_item(item: dict):
     return {"status": "created", "item": item}
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/app/__init__.py",
 				Content: `"""{{.ProjectName}} application."""
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/requirements.txt",
@@ -648,7 +648,7 @@ def create_item(item: dict):
 uvicorn[standard]>=0.23.0
 pydantic>=2.0.0
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/Dockerfile",
@@ -660,7 +660,7 @@ COPY . .
 EXPOSE {{.Port}}
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "{{.Port}}"]
 `,
-				Mode: 0644,
+				Mode:      0o644,
 				Condition: "{{.WithDocker}}",
 			},
 			{
@@ -674,7 +674,7 @@ venv/
 dist/
 *.egg-info/
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/README.md",
@@ -696,7 +696,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port {{.Port}}
 ` + "```" + `
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 		},
 		PostCreate: []string{"cd {{.ProjectName}} && python -m venv venv"},
@@ -736,14 +736,14 @@ def hello(name):
 if __name__ == "__main__":
     main()
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/{{.ProjectName}}/__init__.py",
 				Content: `"""{{.ProjectName}} package."""
 __version__ = "0.1.0"
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/setup.py",
@@ -765,12 +765,12 @@ setup(
     python_requires=">=3.8",
 )
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
-				Path: "{{.ProjectName}}/tests/__init__.py",
-				Content: ``,
-				Mode:      0644,
+				Path:      "{{.ProjectName}}/tests/__init__.py",
+				Content:   ``,
+				Mode:      0o644,
 				Condition: "{{.WithTests}}",
 			},
 			{
@@ -793,7 +793,7 @@ def test_hello_name():
     assert result.exit_code == 0
     assert "Hello, Test!" in result.output
 `,
-				Mode:      0644,
+				Mode:      0o644,
 				Condition: "{{.WithTests}}",
 			},
 			{
@@ -808,7 +808,7 @@ dist/
 *.egg-info/
 build/
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 			{
 				Path: "{{.ProjectName}}/README.md",
@@ -833,7 +833,7 @@ pip install -e .
 
 {{.Author}}
 `,
-				Mode: 0644,
+				Mode: 0o644,
 			},
 		},
 		PostCreate: []string{"cd {{.ProjectName}} && pip install -e ."},
@@ -899,14 +899,14 @@ func (s *Scaffolder) Generate(templateName string, vars map[string]string, outpu
 
 		// Create directories
 		dir := filepath.Dir(fullPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("creating directory %s: %w", dir, err)
 		}
 
 		// Determine file mode
 		mode := f.Mode
 		if mode == 0 {
-			mode = 0644
+			mode = 0o644
 		}
 
 		// Write file

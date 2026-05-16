@@ -16,9 +16,9 @@ var mentionRe = regexp.MustCompile(`@"([^"]+)"|@([^\s,;:!?]+)`)
 
 // ParseResult holds the output of parsing mentions from input.
 type ParseResult struct {
-	CleanInput    string   // Input with mentions removed
+	CleanInput     string   // Input with mentions removed
 	MentionedFiles []string // Resolved file paths
-	RawMentions   []string // Original mention strings as typed
+	RawMentions    []string // Original mention strings as typed
 }
 
 // ParseMentions extracts @-prefixed file mentions from the input string.

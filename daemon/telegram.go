@@ -23,7 +23,7 @@ type TelegramGateway struct {
 
 // TelegramUpdate represents an incoming Telegram message.
 type TelegramUpdate struct {
-	UpdateID int `json:"update_id"`
+	UpdateID int              `json:"update_id"`
 	Message  *TelegramMessage `json:"message,omitempty"`
 }
 

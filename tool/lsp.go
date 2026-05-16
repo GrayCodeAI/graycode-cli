@@ -15,6 +15,7 @@ func (LSPTool) Aliases() []string { return []string{"lsp"} }
 func (LSPTool) Description() string {
 	return "Get code intelligence: diagnostics, definitions, references. Uses the project's language server."
 }
+
 func (LSPTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

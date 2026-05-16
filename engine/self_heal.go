@@ -362,7 +362,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			content := string(data)
 			if strings.Contains(content, fix.OldContent) {
 				content = strings.Replace(content, fix.OldContent, fix.NewContent, 1)
-				return os.WriteFile(fix.File, []byte(content), 0644)
+				return os.WriteFile(fix.File, []byte(content), 0o644)
 			}
 		}
 		// Fallback: replace by line number
@@ -381,7 +381,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			result = append(result, lines[:startIdx]...)
 			result = append(result, newLines...)
 			result = append(result, lines[endIdx:]...)
-			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0644)
+			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o644)
 		}
 
 	case "insert":
@@ -397,14 +397,14 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 		result = append(result, lines[:insertIdx]...)
 		result = append(result, newLines...)
 		result = append(result, lines[insertIdx:]...)
-		return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0644)
+		return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o644)
 
 	case "delete":
 		if fix.OldContent != "" {
 			content := string(data)
 			if strings.Contains(content, fix.OldContent) {
 				content = strings.Replace(content, fix.OldContent, "", 1)
-				return os.WriteFile(fix.File, []byte(content), 0644)
+				return os.WriteFile(fix.File, []byte(content), 0o644)
 			}
 		}
 		// Fallback: delete by line number
@@ -412,7 +412,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			result := make([]string, 0, len(lines)-1)
 			result = append(result, lines[:fix.Line-1]...)
 			result = append(result, lines[fix.Line:]...)
-			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0644)
+			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o644)
 		}
 	}
 

@@ -4,28 +4,33 @@ package validation
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type GenValidator = engine.GenValidator
-type GenCheck = engine.GenCheck
-type GenIssue = engine.GenIssue
-type GenValidation = engine.GenValidation
-type SchemaValidator = engine.SchemaValidator
-type Schema = engine.Schema
-type FieldSpec = engine.FieldSpec
-type SchemaValidationResult = engine.SchemaValidationResult
-type SchemaValidationError = engine.SchemaValidationError
-type TestLoop = engine.TestLoop
-type TestResult = engine.TestResult
-type LintLoop = engine.LintLoop
-type LintResult = engine.LintResult
+type (
+	GenValidator           = engine.GenValidator
+	GenCheck               = engine.GenCheck
+	GenIssue               = engine.GenIssue
+	GenValidation          = engine.GenValidation
+	SchemaValidator        = engine.SchemaValidator
+	Schema                 = engine.Schema
+	FieldSpec              = engine.FieldSpec
+	SchemaValidationResult = engine.SchemaValidationResult
+	SchemaValidationError  = engine.SchemaValidationError
+	TestLoop               = engine.TestLoop
+	TestResult             = engine.TestResult
+	LintLoop               = engine.LintLoop
+	LintResult             = engine.LintResult
+)
 
-func NewGenValidator() *GenValidator       { return engine.NewGenValidator() }
-func NewSchemaValidator() *SchemaValidator  { return engine.NewSchemaValidator() }
-func NewTestLoop() *TestLoop               { return engine.NewTestLoop() }
-func NewLintLoop() *LintLoop               { return engine.NewLintLoop() }
-func ValidateGo(code string) []GenIssue    { return engine.ValidateGo(code) }
-func ValidatePython(code string) []GenIssue { return engine.ValidatePython(code) }
-func ValidateTypeScript(code string) []GenIssue { return engine.ValidateTypeScript(code) }
+func NewGenValidator() *GenValidator                    { return engine.NewGenValidator() }
+func NewSchemaValidator() *SchemaValidator              { return engine.NewSchemaValidator() }
+func NewTestLoop() *TestLoop                            { return engine.NewTestLoop() }
+func NewLintLoop() *LintLoop                            { return engine.NewLintLoop() }
+func ValidateGo(code string) []GenIssue                 { return engine.ValidateGo(code) }
+func ValidatePython(code string) []GenIssue             { return engine.ValidatePython(code) }
+func ValidateTypeScript(code string) []GenIssue         { return engine.ValidateTypeScript(code) }
 func ExtractJSONFromOutput(text string) (string, error) { return engine.ExtractJSONFromOutput(text) }
-func ExtractCodeFromOutput(text, lang string) (string, error) { return engine.ExtractCodeFromOutput(text, lang) }
-func RepairJSON(broken string) (string, error) { return engine.RepairJSON(broken) }
+
+func ExtractCodeFromOutput(text, lang string) (string, error) {
+	return engine.ExtractCodeFromOutput(text, lang)
+}
+func RepairJSON(broken string) (string, error)   { return engine.RepairJSON(broken) }
 func DetectTestCommand(projectDir string) string { return engine.DetectTestCommand(projectDir) }

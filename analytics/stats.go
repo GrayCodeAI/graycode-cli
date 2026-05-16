@@ -12,28 +12,28 @@ import (
 
 // SessionStats holds aggregated statistics for a user's sessions.
 type SessionStats struct {
-	TotalSessions   int                    `json:"total_sessions"`
-	TotalMessages   int                    `json:"total_messages"`
-	TotalDuration   time.Duration          `json:"total_duration"`
-	TotalTokens     int64                  `json:"total_tokens"`
-	TotalCost       float64                `json:"total_cost"`
-	ToolUsage       map[string]int         `json:"tool_usage"`
-	ModelUsage      map[string]ModelStats  `json:"model_usage"`
-	LanguageStats   map[string]int         `json:"language_stats"`
-	GitCommits      int                    `json:"git_commits"`
-	ActivityHeatmap [7][24]int             `json:"activity_heatmap"` // [weekday][hour]
-	PeakDay         time.Weekday           `json:"peak_day"`
-	PeakHour        int                    `json:"peak_hour"`
-	DateRange       DateRange              `json:"date_range"`
+	TotalSessions   int                   `json:"total_sessions"`
+	TotalMessages   int                   `json:"total_messages"`
+	TotalDuration   time.Duration         `json:"total_duration"`
+	TotalTokens     int64                 `json:"total_tokens"`
+	TotalCost       float64               `json:"total_cost"`
+	ToolUsage       map[string]int        `json:"tool_usage"`
+	ModelUsage      map[string]ModelStats `json:"model_usage"`
+	LanguageStats   map[string]int        `json:"language_stats"`
+	GitCommits      int                   `json:"git_commits"`
+	ActivityHeatmap [7][24]int            `json:"activity_heatmap"` // [weekday][hour]
+	PeakDay         time.Weekday          `json:"peak_day"`
+	PeakHour        int                   `json:"peak_hour"`
+	DateRange       DateRange             `json:"date_range"`
 }
 
 // ModelStats tracks usage per model.
 type ModelStats struct {
-	Model       string  `json:"model"`
-	Tokens      int64   `json:"tokens"`
-	Requests    int     `json:"requests"`
-	AvgLatency  float64 `json:"avg_latency_ms"`
-	Cost        float64 `json:"cost"`
+	Model      string  `json:"model"`
+	Tokens     int64   `json:"tokens"`
+	Requests   int     `json:"requests"`
+	AvgLatency float64 `json:"avg_latency_ms"`
+	Cost       float64 `json:"cost"`
 }
 
 // DateRange represents the time span of statistics.

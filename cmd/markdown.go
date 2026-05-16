@@ -403,16 +403,16 @@ type MarkdownTheme struct {
 // DefaultTheme returns a visually appealing terminal color theme.
 func DefaultTheme() *MarkdownTheme {
 	return &MarkdownTheme{
-		Heading:        "\x1b[1;36m", // bold cyan
-		Bold:           "\x1b[1m",    // bold
-		Italic:         "\x1b[3m",    // italic
+		Heading:        "\x1b[1;36m",        // bold cyan
+		Bold:           "\x1b[1m",           // bold
+		Italic:         "\x1b[3m",           // italic
 		Code:           "\x1b[48;5;236;37m", // dark bg + cyan fg
 		CodeBlock:      "\x1b[48;5;236m",    // dark background
-		Link:           "\x1b[4;36m", // underline cyan
-		ListBullet:     "\x1b[36m",   // cyan
-		BlockQuote:     "\x1b[3;90m", // italic dim
-		HorizontalRule: "\x1b[90m",   // dim
-		Reset:          "\x1b[0m",    // reset all
+		Link:           "\x1b[4;36m",        // underline cyan
+		ListBullet:     "\x1b[36m",          // cyan
+		BlockQuote:     "\x1b[3;90m",        // italic dim
+		HorizontalRule: "\x1b[90m",          // dim
+		Reset:          "\x1b[0m",           // reset all
 	}
 }
 
@@ -437,17 +437,17 @@ func NewMarkdownRenderer(width int) *MarkdownRenderer {
 
 // Compiled regex patterns for the struct-based renderer.
 var (
-	reRendererBold       = regexp.MustCompile(`\*\*(.+?)\*\*`)
-	reRendererItalic     = regexp.MustCompile(`(?:^|[^*])\*([^*]+?)\*(?:[^*]|$)`)
-	reRendererCode       = regexp.MustCompile("`([^`]+)`")
-	reRendererLink       = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
-	reRendererOrderedLi  = regexp.MustCompile(`^(\s*)(\d+)\.\s+(.*)$`)
-	reRendererTableRow   = regexp.MustCompile(`^\|(.+)\|$`)
-	reRendererTableSep   = regexp.MustCompile(`^\|[\s:]*[-]+[\s:]*`)
-	reHighlightKeyword   = regexp.MustCompile(`\b(func|var|const|type|struct|interface|map|chan|go|defer|return|if|else|for|range|switch|case|default|break|continue|select|package|import|nil|true|false|def|class|self|from|import|as|with|yield|lambda|try|except|finally|raise|assert|pass|del|global|nonlocal|async|await|function|let|const|var|new|this|typeof|instanceof|export|import|from|async|await|fn|pub|mod|use|impl|trait|enum|match|loop|move|mut|ref|where|unsafe|extern|crate|macro|then|fi|do|done|elif|esac)\b`)
-	reHighlightString    = regexp.MustCompile(`("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|` + "`" + `[^` + "`" + `]*` + "`" + `)`)
-	reHighlightComment   = regexp.MustCompile(`(//.*$|#.*$|/\*.*?\*/)`)
-	reHighlightNumber    = regexp.MustCompile(`\b(\d+\.?\d*)\b`)
+	reRendererBold      = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	reRendererItalic    = regexp.MustCompile(`(?:^|[^*])\*([^*]+?)\*(?:[^*]|$)`)
+	reRendererCode      = regexp.MustCompile("`([^`]+)`")
+	reRendererLink      = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+	reRendererOrderedLi = regexp.MustCompile(`^(\s*)(\d+)\.\s+(.*)$`)
+	reRendererTableRow  = regexp.MustCompile(`^\|(.+)\|$`)
+	reRendererTableSep  = regexp.MustCompile(`^\|[\s:]*[-]+[\s:]*`)
+	reHighlightKeyword  = regexp.MustCompile(`\b(func|var|const|type|struct|interface|map|chan|go|defer|return|if|else|for|range|switch|case|default|break|continue|select|package|import|nil|true|false|def|class|self|from|import|as|with|yield|lambda|try|except|finally|raise|assert|pass|del|global|nonlocal|async|await|function|let|const|var|new|this|typeof|instanceof|export|import|from|async|await|fn|pub|mod|use|impl|trait|enum|match|loop|move|mut|ref|where|unsafe|extern|crate|macro|then|fi|do|done|elif|esac)\b`)
+	reHighlightString   = regexp.MustCompile(`("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|` + "`" + `[^` + "`" + `]*` + "`" + `)`)
+	reHighlightComment  = regexp.MustCompile(`(//.*$|#.*$|/\*.*?\*/)`)
+	reHighlightNumber   = regexp.MustCompile(`\b(\d+\.?\d*)\b`)
 )
 
 // Render converts a markdown string to ANSI-styled terminal output.
@@ -1139,5 +1139,7 @@ func runeWidth(r rune) int {
 }
 
 // Ensure fmt and strconv are used (required imports for table rendering)
-var _ = fmt.Sprintf
-var _ = strconv.Itoa
+var (
+	_ = fmt.Sprintf
+	_ = strconv.Itoa
+)

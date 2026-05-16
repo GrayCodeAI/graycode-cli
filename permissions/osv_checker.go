@@ -183,7 +183,6 @@ func (c *OSVChecker) CheckPackage(name, ecosystem string) *CheckResult {
 	return result
 }
 
-
 // CheckCommand parses a shell command to extract and check the package being installed.
 func (c *OSVChecker) CheckCommand(command string) *CheckResult {
 	command = strings.TrimSpace(command)

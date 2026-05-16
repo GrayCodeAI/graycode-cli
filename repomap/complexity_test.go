@@ -194,10 +194,10 @@ func medium(x int) int {
 }
 `
 
-	if err := os.WriteFile(filepath.Join(dir, "simple.go"), []byte(simpleFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "simple.go"), []byte(simpleFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "complex.go"), []byte(complexFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "complex.go"), []byte(complexFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -478,10 +478,10 @@ function simple(x) {
 
 func TestMaintainabilityIndex(t *testing.T) {
 	tests := []struct {
-		name    string
-		fc      FunctionComplexity
-		minMI   float64
-		maxMI   float64
+		name  string
+		fc    FunctionComplexity
+		minMI float64
+		maxMI float64
 	}{
 		{
 			name:  "simple function",
@@ -706,7 +706,7 @@ func f3() { if true { if true { if true {} } } }
 func f4() { for i := 0; i < 10; i++ { if true {} } }
 func f5() { switch x { case 1: case 2: case 3: } }
 `
-	if err := os.WriteFile(filepath.Join(dir, "funcs.go"), []byte(code), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "funcs.go"), []byte(code), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

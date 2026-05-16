@@ -13,7 +13,7 @@ type cacheEntry struct {
 }
 
 var (
-	cacheMu    sync.RWMutex
+	cacheMu     sync.RWMutex
 	symbolCache = make(map[string]cacheEntry)
 )
 

@@ -13,7 +13,7 @@ import (
 func createTempFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("failed to create temp file %s: %v", path, err)
 	}
 	return path
@@ -196,7 +196,7 @@ func TestRefreshStaleReReadsChangedFiles(t *testing.T) {
 
 	// Modify the file and update mtime to be after LastRefreshed
 	time.Sleep(10 * time.Millisecond)
-	if err := os.WriteFile(path, []byte("updated"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("updated"), 0o644); err != nil {
 		t.Fatalf("failed to update file: %v", err)
 	}
 
@@ -221,7 +221,7 @@ func TestRefreshStaleSkipsNonAutoRefresh(t *testing.T) {
 	}
 
 	time.Sleep(10 * time.Millisecond)
-	if err := os.WriteFile(path, []byte("changed"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("changed"), 0o644); err != nil {
 		t.Fatalf("failed to update file: %v", err)
 	}
 
@@ -376,8 +376,8 @@ func TestTokenEstimateApproximation(t *testing.T) {
 		expected int
 	}{
 		{"", 0},
-		{"abc", 1},        // len=3, 3/4=0, but >0 so returns 1
-		{"abcd", 1},       // len=4, 4/4=1
+		{"abc", 1},          // len=3, 3/4=0, but >0 so returns 1
+		{"abcd", 1},         // len=4, 4/4=1
 		{"hello world!", 3}, // len=12, 12/4=3
 		{strings.Repeat("x", 100), 25},
 		{strings.Repeat("y", 1000), 250},
@@ -513,4 +513,3 @@ func TestAddPatternInvalidGlob(t *testing.T) {
 		t.Fatal("expected error for invalid glob pattern")
 	}
 }
-

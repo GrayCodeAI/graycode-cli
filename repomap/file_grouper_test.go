@@ -81,19 +81,19 @@ import "testing"
 
 func TestHandle(t *testing.T) {}
 `,
-		".env.example":    "PORT=8080\nHOST=localhost\n",
-		".env":            "PORT=8080\nHOST=localhost\n",
-		"Makefile":        "build:\n\tgo build .\n",
-		"Dockerfile":      "FROM golang:1.21\n",
-		".gitignore":      "*.exe\n",
+		".env.example": "PORT=8080\nHOST=localhost\n",
+		".env":         "PORT=8080\nHOST=localhost\n",
+		"Makefile":     "build:\n\tgo build .\n",
+		"Dockerfile":   "FROM golang:1.21\n",
+		".gitignore":   "*.exe\n",
 	}
 
 	for name, content := range files {
 		path := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -213,8 +213,8 @@ func TestFindTestPairGo(t *testing.T) {
 
 func TestFindTestPairPython(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "handler.py"), []byte("def handle(): pass\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "test_handler.py"), []byte("def test_handle(): pass\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "handler.py"), []byte("def handle(): pass\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "test_handler.py"), []byte("def test_handle(): pass\n"), 0o644)
 
 	fg := NewFileGrouper(dir)
 
@@ -231,8 +231,8 @@ func TestFindTestPairPython(t *testing.T) {
 
 func TestFindTestPairTypeScript(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "component.tsx"), []byte("export const Comp = () => {}\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "component.test.tsx"), []byte("test('comp', () => {})\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "component.tsx"), []byte("export const Comp = () => {}\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "component.test.tsx"), []byte("test('comp', () => {})\n"), 0o644)
 
 	fg := NewFileGrouper(dir)
 
@@ -559,10 +559,10 @@ func runGrouperGit(t *testing.T, dir string, args ...string) {
 func writeGrouperFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

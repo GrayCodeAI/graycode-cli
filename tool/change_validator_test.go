@@ -409,7 +409,7 @@ func TestCheckSecurity_DetectsSecrets(t *testing.T) {
 var apiKey = "sk-abcdefghijklmnopqrstuvwxyz123456"
 var password = "super_secret_password_123"
 `
-	if err := os.WriteFile(secretFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(secretFile, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -436,7 +436,7 @@ func main() {
 	fmt.Println("hello world")
 }
 `
-	if err := os.WriteFile(safeFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(safeFile, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -455,7 +455,7 @@ func TestCheckSize_LargeFile(t *testing.T) {
 	for i := 0; i < 600; i++ {
 		sb.WriteString("// line of code\n")
 	}
-	if err := os.WriteFile(bigFile, []byte(sb.String()), 0644); err != nil {
+	if err := os.WriteFile(bigFile, []byte(sb.String()), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -472,7 +472,7 @@ func TestCheckSize_SmallFile(t *testing.T) {
 	dir := t.TempDir()
 	smallFile := filepath.Join(dir, "small.go")
 	content := "package small\n\nfunc Hello() string { return \"hi\" }\n"
-	if err := os.WriteFile(smallFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(smallFile, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

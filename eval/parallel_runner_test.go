@@ -271,9 +271,9 @@ func TestFormatResult_WithFailures(t *testing.T) {
 	result := &RunnerResult{
 		Packages: []PackageResult{
 			{
-				Package: "pkg/config",
-				Passed:  3,
-				Failed:  2,
+				Package:  "pkg/config",
+				Passed:   3,
+				Failed:   2,
 				Duration: 1500 * time.Millisecond,
 				Tests: []TestCaseResult{
 					{Name: "TestLoad", Passed: true, Duration: 100 * time.Millisecond},

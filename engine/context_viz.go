@@ -240,18 +240,22 @@ func (cv *ContextVisualizer) Recommend() []string {
 		switch {
 		case sec.Name == "conversation" && sec.Percentage > 20:
 			recs = append(recs, fmt.Sprintf(
-				"Conversation is %.0f%% of context — consider compacting", sec.Percentage))
+				"Conversation is %.0f%% of context — consider compacting", sec.Percentage,
+			))
 		case sec.Name == "tool_results" && sec.Tokens > 5000:
 			recs = append(recs, fmt.Sprintf(
-				"Tool results are large — enabling tok compression would save ~60%%"))
+				"Tool results are large — enabling tok compression would save ~60%%",
+			))
 		case sec.Name == "readonly_context" && sec.Tokens > 8000:
 			recs = append(recs, fmt.Sprintf(
 				"%s tokens in read-only context — review if all files are needed",
-				formatTokens(sec.Tokens)))
+				formatTokens(sec.Tokens),
+			))
 		case sec.Compressible && sec.Percentage > 15:
 			recs = append(recs, fmt.Sprintf(
 				"%s is compressible and using %.0f%% — consider trimming",
-				sectionDisplayName(sec.Name), sec.Percentage))
+				sectionDisplayName(sec.Name), sec.Percentage,
+			))
 		}
 	}
 

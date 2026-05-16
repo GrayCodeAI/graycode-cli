@@ -34,7 +34,7 @@ func (s *APICompactStrategy) Compact(ctx context.Context, sess *Session) (*Compa
 
 // APICompactConfig controls API-level compaction.
 type APICompactConfig struct {
-	TriggerTokens  int
+	TriggerTokens    int
 	KeepTargetTokens int
 	ClearToolInputs  bool
 	ClearThinking    bool

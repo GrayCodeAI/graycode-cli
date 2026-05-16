@@ -71,12 +71,12 @@ func NewTestLoop() *TestLoop {
 // DefaultTestCommands returns the standard set of test commands for common project types.
 func DefaultTestCommands() map[string]string {
 	return map[string]string{
-		"go":         "go test ./...",
-		"python":     "pytest",
-		"javascript": "npm test",
-		"typescript": "npm test",
-		"rust":       "cargo test",
-		"ruby":       "bundle exec rspec",
+		"go":          "go test ./...",
+		"python":      "pytest",
+		"javascript":  "npm test",
+		"typescript":  "npm test",
+		"rust":        "cargo test",
+		"ruby":        "bundle exec rspec",
 		"java-gradle": "./gradlew test",
 		"java-maven":  "mvn test",
 	}

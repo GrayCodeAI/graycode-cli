@@ -21,7 +21,7 @@ type MultiRepoConfig struct {
 
 // MultiRepoContext loads and manages cross-repo context.
 type MultiRepoContext struct {
-	Config MultiRepoConfig
+	Config  MultiRepoConfig
 	BaseDir string
 }
 

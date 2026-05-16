@@ -4,27 +4,31 @@ package intelligence
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type Intent = engine.Intent
-type IntentRule = engine.IntentRule
-type ClassifiedInput = engine.ClassifiedInput
-type IntentClassifier = engine.IntentClassifier
-type Capability = engine.Capability
-type CapabilityRegistry = engine.CapabilityRegistry
-type LanguageConfig = engine.LanguageConfig
-type LanguageRegistry = engine.LanguageRegistry
-type ToolInfo = engine.ToolInfo
-type ToolSelection = engine.ToolSelection
-type ToolSelector = engine.ToolSelector
-type CommandSuggestion = engine.CommandSuggestion
-type SuggestionRule = engine.SuggestionRule
-type SuggestionEngine = engine.SuggestionEngine
+type (
+	Intent             = engine.Intent
+	IntentRule         = engine.IntentRule
+	ClassifiedInput    = engine.ClassifiedInput
+	IntentClassifier   = engine.IntentClassifier
+	Capability         = engine.Capability
+	CapabilityRegistry = engine.CapabilityRegistry
+	LanguageConfig     = engine.LanguageConfig
+	LanguageRegistry   = engine.LanguageRegistry
+	ToolInfo           = engine.ToolInfo
+	ToolSelection      = engine.ToolSelection
+	ToolSelector       = engine.ToolSelector
+	CommandSuggestion  = engine.CommandSuggestion
+	SuggestionRule     = engine.SuggestionRule
+	SuggestionEngine   = engine.SuggestionEngine
+)
 
-var NewIntentClassifier = engine.NewIntentClassifier
-var FormatIntent = engine.FormatIntent
-var NewCapabilityRegistry = engine.NewCapabilityRegistry
-var NewLanguageRegistry = engine.NewLanguageRegistry
-var FormatLanguages = engine.FormatLanguages
-var NewToolSelector = engine.NewToolSelector
-var FormatToolSelection = engine.FormatToolSelection
-var NewSuggestionEngine = engine.NewSuggestionEngine
-var FormatCommandSuggestions = engine.FormatCommandSuggestions
+var (
+	NewIntentClassifier      = engine.NewIntentClassifier
+	FormatIntent             = engine.FormatIntent
+	NewCapabilityRegistry    = engine.NewCapabilityRegistry
+	NewLanguageRegistry      = engine.NewLanguageRegistry
+	FormatLanguages          = engine.FormatLanguages
+	NewToolSelector          = engine.NewToolSelector
+	FormatToolSelection      = engine.FormatToolSelection
+	NewSuggestionEngine      = engine.NewSuggestionEngine
+	FormatCommandSuggestions = engine.FormatCommandSuggestions
+)

@@ -6,8 +6,10 @@ import (
 	"time"
 )
 
-const awayThreshold = 5 * time.Minute
-const awayMinMessages = 5
+const (
+	awayThreshold   = 5 * time.Minute
+	awayMinMessages = 5
+)
 
 // awaySummary generates a 1-3 sentence recap of session context when the user
 // returns after inactivity. Returns empty string if idle time is less than 5

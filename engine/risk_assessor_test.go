@@ -27,14 +27,14 @@ func TestNewRiskAssessor(t *testing.T) {
 func TestAssess_LowRisk(t *testing.T) {
 	ra := NewRiskAssessor()
 	ctx := &RiskContext{
-		Files:           []string{"main.go"},
-		Diff:            "- old\n+ new",
-		TestsExist:      true,
-		IsExported:      false,
+		Files:             []string{"main.go"},
+		Diff:              "- old\n+ new",
+		TestsExist:        true,
+		IsExported:        false,
 		HasBreakingChange: false,
-		LinesChanged:    5,
-		FilesAffected:   1,
-		Complexity:      2,
+		LinesChanged:      5,
+		FilesAffected:     1,
+		Complexity:        2,
 	}
 
 	assessment := ra.Assess(ctx)
@@ -55,14 +55,14 @@ func TestAssess_LowRisk(t *testing.T) {
 func TestAssess_HighRisk(t *testing.T) {
 	ra := NewRiskAssessor()
 	ctx := &RiskContext{
-		Files:           []string{"auth.go", "config.go", "handler.go", "middleware.go", "router.go"},
-		Diff:            strings.Repeat("+line\n", 200),
-		TestsExist:      false,
-		IsExported:      true,
+		Files:             []string{"auth.go", "config.go", "handler.go", "middleware.go", "router.go"},
+		Diff:              strings.Repeat("+line\n", 200),
+		TestsExist:        false,
+		IsExported:        true,
 		HasBreakingChange: true,
-		LinesChanged:    250,
-		FilesAffected:   5,
-		Complexity:      15,
+		LinesChanged:      250,
+		FilesAffected:     5,
+		Complexity:        15,
 	}
 
 	assessment := ra.Assess(ctx)
@@ -80,14 +80,14 @@ func TestAssess_HighRisk(t *testing.T) {
 func TestAssess_CriticalRisk(t *testing.T) {
 	ra := NewRiskAssessor()
 	ctx := &RiskContext{
-		Files:           []string{"a.go", "b.go", "c.go", "d.go", "e.go", "f.go", "g.go", "h.go", "i.go", "j.go", "k.go"},
-		Diff:            strings.Repeat("+line\n", 600),
-		TestsExist:      false,
-		IsExported:      true,
+		Files:             []string{"a.go", "b.go", "c.go", "d.go", "e.go", "f.go", "g.go", "h.go", "i.go", "j.go", "k.go"},
+		Diff:              strings.Repeat("+line\n", 600),
+		TestsExist:        false,
+		IsExported:        true,
 		HasBreakingChange: true,
-		LinesChanged:    600,
-		FilesAffected:   11,
-		Complexity:      25,
+		LinesChanged:      600,
+		FilesAffected:     11,
+		Complexity:        25,
 	}
 
 	assessment := ra.Assess(ctx)
@@ -105,14 +105,14 @@ func TestAssess_CriticalRisk(t *testing.T) {
 func TestAssess_MediumRisk(t *testing.T) {
 	ra := NewRiskAssessor()
 	ctx := &RiskContext{
-		Files:           []string{"handler.go", "handler_test.go"},
-		Diff:            strings.Repeat("+line\n", 50),
-		TestsExist:      true,
-		IsExported:      true,
+		Files:             []string{"handler.go", "handler_test.go"},
+		Diff:              strings.Repeat("+line\n", 50),
+		TestsExist:        true,
+		IsExported:        true,
 		HasBreakingChange: false,
-		LinesChanged:    60,
-		FilesAffected:   2,
-		Complexity:      8,
+		LinesChanged:      60,
+		FilesAffected:     2,
+		Complexity:        8,
 	}
 
 	assessment := ra.Assess(ctx)
@@ -358,12 +358,12 @@ func TestAssess_ConcurrentAccess(t *testing.T) {
 
 func TestFactorDescription(t *testing.T) {
 	ctx := &RiskContext{
-		FilesAffected:   3,
-		LinesChanged:    42,
-		IsExported:      true,
-		TestsExist:      false,
+		FilesAffected:     3,
+		LinesChanged:      42,
+		IsExported:        true,
+		TestsExist:        false,
 		HasBreakingChange: true,
-		Complexity:      7,
+		Complexity:        7,
 	}
 
 	tests := []struct {
@@ -388,12 +388,12 @@ func TestFactorDescription(t *testing.T) {
 
 func TestFactorDescription_Negatives(t *testing.T) {
 	ctx := &RiskContext{
-		FilesAffected:   0,
-		LinesChanged:    0,
-		IsExported:      false,
-		TestsExist:      true,
+		FilesAffected:     0,
+		LinesChanged:      0,
+		IsExported:        false,
+		TestsExist:        true,
 		HasBreakingChange: false,
-		Complexity:      0,
+		Complexity:        0,
 	}
 
 	tests := []struct {

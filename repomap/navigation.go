@@ -124,7 +124,6 @@ func (idx *NavIndex) BuildIndex(projectDir string) error {
 
 		return nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("walking project directory: %w", err)
 	}

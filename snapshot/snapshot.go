@@ -193,7 +193,8 @@ func (t *Tracker) Cleanup(maxAge time.Duration) error {
 func (t *Tracker) gitWork(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = t.shadowDir
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"GIT_WORK_TREE="+t.projectDir,
 		"GIT_DIR="+filepath.Join(t.shadowDir, ".git"),
 	)
@@ -207,7 +208,8 @@ func (t *Tracker) gitWork(args ...string) error {
 func (t *Tracker) gitWorkOutput(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = t.shadowDir
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"GIT_WORK_TREE="+t.projectDir,
 		"GIT_DIR="+filepath.Join(t.shadowDir, ".git"),
 	)

@@ -83,8 +83,10 @@ func NeedsSetup() bool {
 		return false
 	}
 	// Check if any API key is in env (either from shell or ~/.hawk/env)
-	keys := []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
-		"OPENROUTER_API_KEY", "XAI_API_KEY", "GROQ_API_KEY"}
+	keys := []string{
+		"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+		"OPENROUTER_API_KEY", "XAI_API_KEY", "GROQ_API_KEY",
+	}
 	for _, k := range keys {
 		if os.Getenv(k) != "" {
 			return false
@@ -226,7 +228,7 @@ func SaveAPIKeyToEnvFile(key, value string) {
 		return
 	}
 	defer func() { _ = f.Close() }()
-		_, _ = fmt.Fprintf(f, "export %s=%s\n", key, value)
+	_, _ = fmt.Fprintf(f, "export %s=%s\n", key, value)
 }
 
 // validateAPIKey checks the key format for known providers.

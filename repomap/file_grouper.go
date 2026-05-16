@@ -845,4 +845,3 @@ func extractNonEmpty(s string) []string {
 	}
 	return lines
 }
-

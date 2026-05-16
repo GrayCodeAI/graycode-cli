@@ -91,7 +91,7 @@ func (s *HTTPServer) Call(ctx context.Context, method string, params interface{}
 	if err != nil {
 		return nil, fmt.Errorf("mcp %s request: %w", s.Type, err)
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		data, _ := io.ReadAll(resp.Body)

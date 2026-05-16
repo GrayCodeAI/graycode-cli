@@ -125,7 +125,8 @@ func (ss *SnapshotStore) Format() string {
 		if s.Label != "" {
 			label = fmt.Sprintf(" [%s]", s.Label)
 		}
-		result += fmt.Sprintf("  #%d  %s  %s  (%d msgs)%s\n",
+		result += fmt.Sprintf(
+			"  #%d  %s  %s  (%d msgs)%s\n",
 			s.ID,
 			s.Timestamp.Format("2006-01-02 15:04:05"),
 			s.Action,

@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/GrayCodeAI/eyrie/catalog"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 )

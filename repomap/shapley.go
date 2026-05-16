@@ -58,7 +58,7 @@ func (sr *ShapleyRanker) ComputeScores(relevantPaths []string, query string) []S
 	// Build a symbol reference map for centrality computation.
 	// For each chunk, extract identifiers and count how many other chunks reference them.
 	chunkSymbols := make(map[string][]string) // chunkID -> extracted symbols
-	allSymbols := make(map[string]int)         // symbol -> reference count across chunks
+	allSymbols := make(map[string]int)        // symbol -> reference count across chunks
 
 	for _, c := range sr.chunks {
 		id := chunkID(c)

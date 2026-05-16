@@ -826,4 +826,3 @@ func (ca *ComplexityAnalyzer) FormatReport(report *ComplexityReport) string {
 
 	return sb.String()
 }
-

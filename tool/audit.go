@@ -11,13 +11,13 @@ import (
 
 // AuditEntry records a file modification event.
 type AuditEntry struct {
-	Timestamp time.Time `json:"timestamp"`
-	Tool      string    `json:"tool"`
-	Action    string    `json:"action"` // "create", "edit", "write", "delete"
-	Path      string    `json:"path"`
-	BackupRef string    `json:"backup_ref,omitempty"`
-	LinesChanged int    `json:"lines_changed,omitempty"`
-	BytesWritten int    `json:"bytes_written,omitempty"`
+	Timestamp    time.Time `json:"timestamp"`
+	Tool         string    `json:"tool"`
+	Action       string    `json:"action"` // "create", "edit", "write", "delete"
+	Path         string    `json:"path"`
+	BackupRef    string    `json:"backup_ref,omitempty"`
+	LinesChanged int       `json:"lines_changed,omitempty"`
+	BytesWritten int       `json:"bytes_written,omitempty"`
 }
 
 // AuditLog tracks all file modifications for accountability.
@@ -27,8 +27,10 @@ type AuditLog struct {
 	path string
 }
 
-var globalAudit *AuditLog
-var auditOnce sync.Once
+var (
+	globalAudit *AuditLog
+	auditOnce   sync.Once
+)
 
 // GetAuditLog returns the global audit log instance.
 func GetAuditLog() *AuditLog {

@@ -15,7 +15,7 @@ type PromptPattern struct {
 	Description  string
 	SystemPrompt string
 	UserTemplate string
-	OutputFormat  string
+	OutputFormat string
 	Tags         []string
 	Version      string
 	Author       string
