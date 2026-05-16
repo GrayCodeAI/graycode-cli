@@ -297,7 +297,7 @@ func NewRotatingWriter(dir, prefix string) (*RotatingWriter, error) {
 		MaxSize:  10 * 1024 * 1024, // 10MB
 		MaxFiles: 5,
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("creating log directory: %w", err)
 	}
 	if err := rw.openNew(); err != nil {
@@ -335,7 +335,7 @@ func (rw *RotatingWriter) Close() error {
 func (rw *RotatingWriter) openNew() error {
 	name := fmt.Sprintf("%s.log", rw.Prefix)
 	path := filepath.Join(rw.Dir, name)
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return fmt.Errorf("opening log file: %w", err)
 	}

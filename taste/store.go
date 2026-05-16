@@ -16,9 +16,9 @@ const (
 
 // storeEnvelope wraps a profile with versioning metadata for serialization.
 type storeEnvelope struct {
-	Version   int      `json:"version"`
+	Version    int       `json:"version"`
 	ExportedAt time.Time `json:"exported_at"`
-	Profile   *Profile `json:"profile"`
+	Profile    *Profile  `json:"profile"`
 }
 
 // Store manages file-based persistence for taste profiles at ~/.hawk/taste/.
@@ -193,4 +193,3 @@ func sanitizeProjectID(id string) string {
 	}
 	return string(b)
 }
-

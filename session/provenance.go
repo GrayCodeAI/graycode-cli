@@ -12,9 +12,9 @@ const (
 
 type ProvenanceTag struct {
 	Source    InputProvenance `json:"source"`
-	SessionID string         `json:"session_id,omitempty"`
-	Channel   string         `json:"channel,omitempty"`
-	Trusted   bool           `json:"trusted"`
+	SessionID string          `json:"session_id,omitempty"`
+	Channel   string          `json:"channel,omitempty"`
+	Trusted   bool            `json:"trusted"`
 }
 
 func NewUserProvenance() ProvenanceTag {

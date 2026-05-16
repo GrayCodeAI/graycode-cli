@@ -12,13 +12,13 @@ import (
 // LearnedPattern represents a learned error pattern with its fix information.
 type LearnedPattern struct {
 	ID           string    `json:"id"`
-	Category     string    `json:"category"`      // "build", "test", "lint", "runtime"
-	Language     string    `json:"language"`       // "go", "python", "js", "ts", "rust", "generic"
-	Pattern      string    `json:"pattern"`        // regex that matches this error
-	Example      string    `json:"example"`        // actual error message example
-	Fix          string    `json:"fix"`            // description of how to fix
-	FixTemplate  string    `json:"fix_template"`   // template for automated fix
-	Confidence   float64   `json:"confidence"`     // how reliable this fix is (0-1)
+	Category     string    `json:"category"`     // "build", "test", "lint", "runtime"
+	Language     string    `json:"language"`     // "go", "python", "js", "ts", "rust", "generic"
+	Pattern      string    `json:"pattern"`      // regex that matches this error
+	Example      string    `json:"example"`      // actual error message example
+	Fix          string    `json:"fix"`          // description of how to fix
+	FixTemplate  string    `json:"fix_template"` // template for automated fix
+	Confidence   float64   `json:"confidence"`   // how reliable this fix is (0-1)
 	SuccessCount int       `json:"success_count"`
 	FailureCount int       `json:"failure_count"`
 	LastSeen     time.Time `json:"last_seen"`

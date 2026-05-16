@@ -229,8 +229,8 @@ func formatInterfaceMethodSig(name string, typ ast.Expr) string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 var (
-	pyClassDefRe    = regexp.MustCompile(`^class\s+(\w+)\s*(?:\(([^)]*)\))?`)
-	pyFuncDefRe     = regexp.MustCompile(`^(async\s+)?def\s+(\w+)\s*\(([^)]*)\)`)
+	pyClassDefRe     = regexp.MustCompile(`^class\s+(\w+)\s*(?:\(([^)]*)\))?`)
+	pyFuncDefRe      = regexp.MustCompile(`^(async\s+)?def\s+(\w+)\s*\(([^)]*)\)`)
 	pyDecoratorEnhRe = regexp.MustCompile(`^@([\w.]+)`)
 )
 

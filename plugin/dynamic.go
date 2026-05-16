@@ -26,9 +26,9 @@ const (
 
 // DynamicPlugin extends the base Plugin with lifecycle management.
 type DynamicPlugin struct {
-	Plugin                   // embed existing Plugin
+	Plugin      // embed existing Plugin
 	State       PluginState
-	Error       string    // last error message
+	Error       string // last error message
 	ActivatedAt time.Time
 	Process     *PluginProcess // running process (for long-lived plugins)
 	HookIDs     []string       // registered hook IDs (for cleanup on deactivate)
@@ -100,7 +100,7 @@ type HookRegistrar interface {
 
 // PluginEvent represents a lifecycle event for a plugin.
 type PluginEvent struct {
-	Type       string    // "activated", "deactivated", "failed", "installed"
+	Type       string // "activated", "deactivated", "failed", "installed"
 	PluginName string
 	Timestamp  time.Time
 	Error      string
@@ -108,12 +108,12 @@ type PluginEvent struct {
 
 // PluginStatus provides a snapshot of a plugin's state.
 type PluginStatus struct {
-	Name       string
-	Version    string
-	State      PluginState
-	ToolCount  int
-	HookCount  int
-	Error      string
+	Name        string
+	Version     string
+	State       PluginState
+	ToolCount   int
+	HookCount   int
+	Error       string
 	ActivatedAt time.Time
 }
 

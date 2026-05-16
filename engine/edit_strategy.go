@@ -6,11 +6,11 @@ import "strings"
 type EditStrategy int
 
 const (
-	EditWholeFile    EditStrategy = iota // replace entire file (small files <100 lines)
-	EditSearchReplace                    // precise search-and-replace blocks
-	EditDiff                             // unified diff format
-	EditAppend                           // append to end of file
-	EditInsert                           // insert at specific location
+	EditWholeFile     EditStrategy = iota // replace entire file (small files <100 lines)
+	EditSearchReplace                     // precise search-and-replace blocks
+	EditDiff                              // unified diff format
+	EditAppend                            // append to end of file
+	EditInsert                            // insert at specific location
 )
 
 // SelectEditStrategy picks the optimal edit approach based on file size and change type.

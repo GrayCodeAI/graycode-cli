@@ -40,9 +40,9 @@ func TestShouldIndex_IncludePatterns(t *testing.T) {
 	}{
 		{"main.go", true},
 		{"app.py", true},
-		{"handler_test.go", false},     // excluded even though *.go matches
-		{"styles.css", false},           // not in include list
-		{"README.md", false},            // not in include list
+		{"handler_test.go", false}, // excluded even though *.go matches
+		{"styles.css", false},      // not in include list
+		{"README.md", false},       // not in include list
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {

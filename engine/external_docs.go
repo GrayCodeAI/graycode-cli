@@ -210,7 +210,8 @@ func (ed *ExternalDocs) FormatResults(results []DocResult) string {
 // packageRefPatterns match common patterns like "use X", "import X", "add X"
 var packageRefPatterns = regexp.MustCompile(
 	`(?i)\b(?:use|using|import|require|add|install|` +
-		`include|depend(?:s|ency)?|with|integrate)\s+([a-zA-Z0-9_\-/.@]+)`)
+		`include|depend(?:s|ency)?|with|integrate)\s+([a-zA-Z0-9_\-/.@]+)`,
+)
 
 func extractWords(text string) map[string]bool {
 	words := make(map[string]bool)

@@ -84,7 +84,6 @@ func TestHasString(t *testing.T) {
 	}
 }
 
-
 func TestBranchSummary(t *testing.T) {
 	// May produce output or empty depending on whether we're in a git repo
 	summary := branchSummary()
@@ -109,7 +108,6 @@ func TestApplySlashSuggestion(t *testing.T) {
 		t.Error("should return non-empty")
 	}
 }
-
 
 func TestStalenessFormatReport(t *testing.T) {
 	t.Parallel()

@@ -17,11 +17,11 @@ import (
 )
 
 var (
-	missionWorkers  int
-	missionModel    string
-	missionAuto     string
-	missionTimeout  time.Duration
-	missionDryRun   bool
+	missionWorkers int
+	missionModel   string
+	missionAuto    string
+	missionTimeout time.Duration
+	missionDryRun  bool
 )
 
 var missionCmd = &cobra.Command{
@@ -136,7 +136,8 @@ func planWithLLM(ctx context.Context, prompt, provider, model string, settings h
 			"- Specific (clear what to implement)\n"+
 			"- Testable (has clear success criteria)\n\n"+
 			"Format: one feature per line, numbered. Just the descriptions, no extra text.",
-		prompt)
+		prompt,
+	)
 
 	registry, _ := defaultRegistry(settings)
 	sess := engine.NewSession(provider, model, planPrompt, registry)

@@ -31,7 +31,8 @@ func mockCmdRecorder(responses []struct {
 	stdout   string
 	stderr   string
 	exitCode int
-}) (func(ctx context.Context, name string, args ...string) *exec.Cmd, *[]invocation) {
+},
+) (func(ctx context.Context, name string, args ...string) *exec.Cmd, *[]invocation) {
 	var calls []invocation
 	idx := 0
 	fn := func(ctx context.Context, name string, args ...string) *exec.Cmd {

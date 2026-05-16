@@ -14,17 +14,17 @@ import (
 
 // PromptParameter is a tunable prompt component (like a neural network weight).
 type PromptParameter struct {
-	Name    string `json:"name"`
-	Value   string `json:"value"`
-	Score   float64 `json:"score"`    // 0.0-1.0 performance score
-	Version int    `json:"version"`
+	Name    string  `json:"name"`
+	Value   string  `json:"value"`
+	Score   float64 `json:"score"` // 0.0-1.0 performance score
+	Version int     `json:"version"`
 }
 
 // PromptGradient is textual feedback on how to improve a prompt (like a gradient).
 type PromptGradient struct {
-	Parameter string `json:"parameter"`
-	Feedback  string `json:"feedback"` // what went wrong
-	Direction string `json:"direction"` // how to improve
+	Parameter string  `json:"parameter"`
+	Feedback  string  `json:"feedback"`  // what went wrong
+	Direction string  `json:"direction"` // how to improve
 	Magnitude float64 `json:"magnitude"` // 0.0-1.0 how much to change
 }
 
@@ -37,13 +37,13 @@ type PromptOptimizer struct {
 
 // OptimizationStep records one optimization iteration.
 type OptimizationStep struct {
-	Timestamp  time.Time       `json:"timestamp"`
-	Parameter  string          `json:"parameter"`
-	OldValue   string          `json:"old_value"`
-	NewValue   string          `json:"new_value"`
-	OldScore   float64         `json:"old_score"`
-	NewScore   float64         `json:"new_score"`
-	Gradient   PromptGradient  `json:"gradient"`
+	Timestamp time.Time      `json:"timestamp"`
+	Parameter string         `json:"parameter"`
+	OldValue  string         `json:"old_value"`
+	NewValue  string         `json:"new_value"`
+	OldScore  float64        `json:"old_score"`
+	NewScore  float64        `json:"new_score"`
+	Gradient  PromptGradient `json:"gradient"`
 }
 
 // NewPromptOptimizer creates an optimizer that persists to ~/.hawk/prompt_params.json.

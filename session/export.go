@@ -27,10 +27,10 @@ const (
 
 // SessionExporter configures how sessions are exported.
 type SessionExporter struct {
-	IncludeToolResults bool
+	IncludeToolResults  bool
 	IncludeSystemPrompt bool
-	MaxMessages        int // 0 = all
-	RedactSecrets      bool
+	MaxMessages         int // 0 = all
+	RedactSecrets       bool
 }
 
 // ExportedSession is a portable representation of a session.

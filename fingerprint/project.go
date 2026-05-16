@@ -16,18 +16,18 @@ import (
 // ProjectFingerprint holds a comprehensive analysis of a project's type,
 // tech stack, conventions, and recommended configuration.
 type ProjectFingerprint struct {
-	Language       string         // primary language
-	Languages      []ProjectLangInfo // all detected languages
-	Framework      string         // e.g., "chi", "gin", "express", "django", "next.js"
-	BuildSystem    string         // "go modules", "npm", "cargo", "gradle", "maven"
-	TestFramework  string         // "go test", "jest", "pytest", "cargo test"
-	LintTools      []string
-	PackageManager string
-	CI             string // "github-actions", "gitlab-ci", "circleci"
-	Docker         bool
-	Monorepo       bool
-	ProjectSize    string // "tiny" (<10 files), "small", "medium", "large" (>1000)
-	Conventions    []Convention
+	Language        string            // primary language
+	Languages       []ProjectLangInfo // all detected languages
+	Framework       string            // e.g., "chi", "gin", "express", "django", "next.js"
+	BuildSystem     string            // "go modules", "npm", "cargo", "gradle", "maven"
+	TestFramework   string            // "go test", "jest", "pytest", "cargo test"
+	LintTools       []string
+	PackageManager  string
+	CI              string // "github-actions", "gitlab-ci", "circleci"
+	Docker          bool
+	Monorepo        bool
+	ProjectSize     string // "tiny" (<10 files), "small", "medium", "large" (>1000)
+	Conventions     []Convention
 	Recommendations []string
 
 	// Internal tracking fields (unexported).
@@ -434,7 +434,7 @@ func detectTestFramework(dir string, lang string) string {
 		}
 		// Check if there are any _test.go files.
 		hasTests := false
-	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || hasTests {
 				return filepath.SkipAll
 			}
@@ -523,7 +523,7 @@ func detectTestFramework(dir string, lang string) string {
 		}
 		// Check for test files with unittest patterns.
 		hasUnittest := false
-	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || hasUnittest {
 				return filepath.SkipAll
 			}
@@ -982,7 +982,7 @@ func detectNamingConvention(dir string, lang string) *Convention {
 		snakeRe := regexp.MustCompile(`\bdef ([a-z][a-z0-9]*_[a-z0-9_]+)\b`)
 		camelRe := regexp.MustCompile(`\bdef ([a-z][a-zA-Z0-9]+[A-Z][a-zA-Z0-9]*)\b`)
 
-	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || sampled >= 10 {
 				return filepath.SkipAll
 			}
@@ -1027,8 +1027,8 @@ func detectNamingConvention(dir string, lang string) *Convention {
 
 // detectGoErrorHandling checks error handling patterns in Go source files.
 func detectGoErrorHandling(dir string) *Convention {
-	wrapCount := 0  // fmt.Errorf("...: %w", err)
-	bareCount := 0  // return err (without wrapping)
+	wrapCount := 0 // fmt.Errorf("...: %w", err)
+	bareCount := 0 // return err (without wrapping)
 	sampled := 0
 
 	wrapRe := regexp.MustCompile(`fmt\.Errorf\([^)]*%w`)

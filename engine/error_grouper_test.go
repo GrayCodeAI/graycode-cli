@@ -36,7 +36,7 @@ func TestNormalizeError(t *testing.T) {
 		{
 			name:     "strips quoted strings",
 			input:    `undefined: "myVariable" in scope`,
-			expected:  "undefined: <str> in scope",
+			expected: "undefined: <str> in scope",
 		},
 		{
 			name:     "strips large numbers",

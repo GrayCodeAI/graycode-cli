@@ -28,7 +28,7 @@ func BuildLearnPrompt(ctx LearnContext) string {
 		b.WriteString("No project markers detected.\n")
 	} else {
 		for _, s := range ctx.Signals {
-		_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Category, s.Name)
+			_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Category, s.Name)
 		}
 	}
 
@@ -45,7 +45,7 @@ func BuildLearnPrompt(ctx LearnContext) string {
 		b.WriteString("None.\n")
 	} else {
 		for _, s := range ctx.Installed {
-		_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Name, s.Description)
+			_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.Name, s.Description)
 		}
 	}
 
@@ -55,7 +55,7 @@ func BuildLearnPrompt(ctx LearnContext) string {
 		b.WriteString("Registry unavailable.\n")
 	} else {
 		for _, s := range ctx.Registry {
-		_, _ = fmt.Fprintf(&b, "- **%s** [%s] (%d installs): %s\n", s.Name, s.Category, s.Installs, s.Description)
+			_, _ = fmt.Fprintf(&b, "- **%s** [%s] (%d installs): %s\n", s.Name, s.Category, s.Installs, s.Description)
 		}
 	}
 
@@ -174,13 +174,13 @@ func BuildLearnUpdatePrompt(ctx LearnContext) string {
 	for _, s := range ctx.Installed {
 		_, _ = fmt.Fprintf(&b, "- **%s**", s.Name)
 		if s.Version != "" {
-		_, _ = fmt.Fprintf(&b, " v%s", s.Version)
+			_, _ = fmt.Fprintf(&b, " v%s", s.Version)
 		}
 		if s.Description != "" {
-		_, _ = fmt.Fprintf(&b, ": %s", s.Description)
+			_, _ = fmt.Fprintf(&b, ": %s", s.Description)
 		}
 		if s.Source.Repo != "" {
-		_, _ = fmt.Fprintf(&b, " (from %s)", s.Source.Repo)
+			_, _ = fmt.Fprintf(&b, " (from %s)", s.Source.Repo)
 		}
 		b.WriteString("\n")
 	}
@@ -207,7 +207,7 @@ func FormatLearnSummary(ctx LearnContext, deep bool) string {
 	if deep {
 		mode = "/learn deep"
 	}
-		_, _ = fmt.Fprintf(&b, "Running %s advisor...\n\n", mode)
+	_, _ = fmt.Fprintf(&b, "Running %s advisor...\n\n", mode)
 
 	if len(ctx.Signals) > 0 {
 		names := make([]string, len(ctx.Signals))
@@ -216,8 +216,8 @@ func FormatLearnSummary(ctx LearnContext, deep bool) string {
 		}
 		_, _ = fmt.Fprintf(&b, "Detected: %s\n", strings.Join(names, ", "))
 	}
-		_, _ = fmt.Fprintf(&b, "Installed skills: %d\n", len(ctx.Installed))
-		_, _ = fmt.Fprintf(&b, "Registry skills: %d\n", len(ctx.Registry))
+	_, _ = fmt.Fprintf(&b, "Installed skills: %d\n", len(ctx.Installed))
+	_, _ = fmt.Fprintf(&b, "Registry skills: %d\n", len(ctx.Registry))
 	if deep && ctx.SourceInfo != "" {
 		b.WriteString("Source analysis: included\n")
 	}

@@ -305,11 +305,11 @@ func main() {
 }
 `
 	action := CodeAction{
-		ID:   "go-ioutil-readfile",
+		ID:    "go-ioutil-readfile",
 		Title: "Replace deprecated ioutil.ReadFile",
-		File: "main.go",
-		Line: 6,
-		Fix:  "os.ReadFile",
+		File:  "main.go",
+		Line:  6,
+		Fix:   "os.ReadFile",
 	}
 
 	result, err := applyFixHelper(action, content)

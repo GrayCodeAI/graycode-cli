@@ -78,5 +78,3 @@ func (p *QueryProfile) String() string {
 		p.TokensOut,
 	)
 }
-
-

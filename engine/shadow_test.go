@@ -62,7 +62,7 @@ func TestShadowWorkspace_ValidateMultipleEdits(t *testing.T) {
 	defer sw.Close()
 
 	edits := map[string]string{
-		filepath.Join(t.TempDir(), "good.go"): "package main\n\nfunc main() {}\n",
+		filepath.Join(t.TempDir(), "good.go"):     "package main\n\nfunc main() {}\n",
 		filepath.Join(t.TempDir(), "unknown.xyz"): "some content",
 	}
 

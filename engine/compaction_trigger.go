@@ -4,10 +4,10 @@ import "time"
 
 // CompactionTrigger monitors token usage and triggers compaction proactively.
 type CompactionTrigger struct {
-	Threshold    float64 // trigger at this % of context window (e.g. 0.8 = 80%)
-	WindowSize   int     // total context window tokens
-	LastCompact  time.Time
-	MinInterval  time.Duration // don't compact more often than this
+	Threshold   float64 // trigger at this % of context window (e.g. 0.8 = 80%)
+	WindowSize  int     // total context window tokens
+	LastCompact time.Time
+	MinInterval time.Duration // don't compact more often than this
 }
 
 // NewCompactionTrigger creates a trigger with sensible defaults for solo dev use.

@@ -394,15 +394,17 @@ func (tx *Transaction) FilesDiff() string {
 // TransactionTool implements the Tool interface for atomic multi-file edits.
 type TransactionTool struct{}
 
-func (TransactionTool) Name() string     { return "AtomicMultiEdit" }
+func (TransactionTool) Name() string      { return "AtomicMultiEdit" }
 func (TransactionTool) RiskLevel() string { return "high" }
 func (TransactionTool) Aliases() []string {
 	return []string{"atomic_multi_edit", "transaction_edit"}
 }
+
 func (TransactionTool) Description() string {
 	return "Apply multiple file operations (create, modify, delete, rename) as an atomic transaction. " +
 		"Either all operations succeed or all are rolled back."
 }
+
 func (TransactionTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

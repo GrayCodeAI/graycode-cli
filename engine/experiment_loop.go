@@ -12,12 +12,12 @@ import (
 
 // ExperimentResult holds the outcome of a single autonomous experiment.
 type ExperimentResult struct {
-	ID        int
-	Change    string // description of what was tried
-	Passed    bool
-	Metric    string // validation output
-	Duration  time.Duration
-	Kept      bool
+	ID       int
+	Change   string // description of what was tried
+	Passed   bool
+	Metric   string // validation output
+	Duration time.Duration
+	Kept     bool
 }
 
 // ExperimentLoop runs autonomous iterations: modify → validate → keep/discard.

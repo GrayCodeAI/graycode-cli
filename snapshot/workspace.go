@@ -470,7 +470,8 @@ func FormatList(snapshots []*WorkspaceSnapshot) string {
 	for i, snap := range snapshots {
 		age := formatAge(time.Since(snap.CreatedAt))
 		size := formatSize(snap.Size)
-		sb.WriteString(fmt.Sprintf("  %d. [%s] %q (%s, %d files, %s)\n",
+		sb.WriteString(fmt.Sprintf(
+			"  %d. [%s] %q (%s, %d files, %s)\n",
 			i+1,
 			snap.ID[:7],
 			snap.Name,

@@ -531,7 +531,7 @@ func TestHashFiles(t *testing.T) {
 
 func TestEstimateTokens(t *testing.T) {
 	msgs := []Message{
-		{Role: "user", Content: "hello world test"}, // 16 chars -> 4 tokens
+		{Role: "user", Content: "hello world test"},           // 16 chars -> 4 tokens
 		{Role: "assistant", Content: "response here testing"}, // 21 chars -> 5 tokens
 	}
 	tokens := estimateTokens(msgs)

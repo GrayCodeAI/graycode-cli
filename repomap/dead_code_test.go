@@ -263,7 +263,7 @@ func TestIsTestFunction(t *testing.T) {
 	}{
 		{"TestFoo", true},
 		{"TestA", true},
-		{"Test", false},   // "Test" alone is not a test function (no uppercase after)
+		{"Test", false},    // "Test" alone is not a test function (no uppercase after)
 		{"Testfoo", false}, // lowercase after Test
 		{"BenchmarkFoo", true},
 		{"Benchmark", false},
@@ -409,7 +409,7 @@ func TestScan_Integration(t *testing.T) {
 
 go 1.21
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -441,7 +441,7 @@ type DeadConfig struct {
 var activeVar = UsedConfig{Name: "test"}
 var deadVar = 999
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(mainFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(mainFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -478,24 +478,24 @@ func TestScan_SkipsVendor(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Write go.mod
-	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module test\ngo 1.21\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module test\ngo 1.21\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Write a main file
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\nfunc main() {}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create vendor dir with Go files that should be skipped
 	vendorDir := filepath.Join(tmpDir, "vendor", "pkg")
-	if err := os.MkdirAll(vendorDir, 0755); err != nil {
+	if err := os.MkdirAll(vendorDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	vendorFile := `package pkg
 func VendorFunc() {}
 `
-	if err := os.WriteFile(filepath.Join(vendorDir, "pkg.go"), []byte(vendorFile), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(vendorDir, "pkg.go"), []byte(vendorFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -515,7 +515,7 @@ func VendorFunc() {}
 func TestFindUnusedExports(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module example.com/myapp\ngo 1.21\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module example.com/myapp\ngo 1.21\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -531,7 +531,7 @@ func init() {
 	_ = unexportedUsed()
 }
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "lib.go"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "lib.go"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -586,4 +586,3 @@ func FuncD() { FuncC() }
 	results := d.FindUnused()
 	_ = results // just ensure no panic
 }
-

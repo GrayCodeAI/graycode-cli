@@ -31,15 +31,15 @@ type AutonomyConfig struct {
 
 // readOnlyTools are tools that only observe and never mutate.
 var readOnlyTools = map[string]bool{
-	"Read":      true,
-	"Grep":      true,
-	"Glob":      true,
-	"LS":        true,
-	"WebSearch": true,
-	"file_read": true,
-	"grep":      true,
-	"glob":      true,
-	"ls":        true,
+	"Read":       true,
+	"Grep":       true,
+	"Glob":       true,
+	"LS":         true,
+	"WebSearch":  true,
+	"file_read":  true,
+	"grep":       true,
+	"glob":       true,
+	"ls":         true,
 	"web_search": true,
 }
 

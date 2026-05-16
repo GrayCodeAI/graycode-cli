@@ -165,13 +165,13 @@ func RunAutoSkill(dir string) (string, error) {
 	}
 
 	var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "Detected: %s\n", strings.Join(sigNames, ", "))
+	_, _ = fmt.Fprintf(&b, "Detected: %s\n", strings.Join(sigNames, ", "))
 
 	installed := 0
 	for _, skill := range recommended {
 		msg, err := rc.Install(skill.Repo, skill.Name, "project")
 		if err != nil {
-		_, _ = fmt.Fprintf(&b, "  ✗ %s — %v\n", skill.Name, err)
+			_, _ = fmt.Fprintf(&b, "  ✗ %s — %v\n", skill.Name, err)
 			continue
 		}
 		_ = msg

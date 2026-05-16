@@ -12,12 +12,12 @@ import (
 
 // StaleRule represents a rule that may no longer be relevant.
 type StaleRule struct {
-	ID                string
-	Path              string
-	LastUsed          time.Time
-	DaysSinceUsed     int
+	ID                 string
+	Path               string
+	LastUsed           time.Time
+	DaysSinceUsed      int
 	ContradictionCount int
-	Contradictions    []Contradiction
+	Contradictions     []Contradiction
 }
 
 // Contradiction records when a user consistently does the opposite of what a rule says.
@@ -29,10 +29,10 @@ type Contradiction struct {
 
 // RuleUsage tracks when a rule was last used.
 type RuleUsage struct {
-	RuleID    string
-	Path      string
-	LastUsed  time.Time
-	UseCount  int
+	RuleID   string
+	Path     string
+	LastUsed time.Time
+	UseCount int
 }
 
 // Detector tracks which rules have influenced agent behavior and identifies stale ones.

@@ -21,14 +21,14 @@ type Handover struct {
 
 // HandoverContext captures the full state needed to continue work.
 type HandoverContext struct {
-	Goal                 string   `json:"goal"`
-	Progress             string   `json:"progress"`
-	FilesModified        []string `json:"files_modified"`
-	PendingTasks         []string `json:"pending_tasks"`
-	Warnings             []string `json:"warnings"`
-	KeyDecisions         []string `json:"key_decisions"`
-	CurrentState         string   `json:"current_state"`
-	TokensBudgetRemaining int     `json:"tokens_budget_remaining"`
+	Goal                  string   `json:"goal"`
+	Progress              string   `json:"progress"`
+	FilesModified         []string `json:"files_modified"`
+	PendingTasks          []string `json:"pending_tasks"`
+	Warnings              []string `json:"warnings"`
+	KeyDecisions          []string `json:"key_decisions"`
+	CurrentState          string   `json:"current_state"`
+	TokensBudgetRemaining int      `json:"tokens_budget_remaining"`
 }
 
 // HandoverManager coordinates handover creation and tracking.

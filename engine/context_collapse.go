@@ -31,8 +31,8 @@ func CollapseRepeatedMessages(msgs []client.EyrieMessage) []client.EyrieMessage 
 			if runLen >= 2 {
 				errText := extractErrorText(msgs[i])
 				result = append(result, client.EyrieMessage{
-					Role:    msgs[i].Role,
-					Content: fmt.Sprintf("[Error repeated %d times: %s]", runLen, errText),
+					Role:       msgs[i].Role,
+					Content:    fmt.Sprintf("[Error repeated %d times: %s]", runLen, errText),
 					ToolResult: msgs[i].ToolResult,
 				})
 				i = j

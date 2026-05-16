@@ -14,7 +14,7 @@ func TestBeforeModifyCapturesState(t *testing.T) {
 	tmp := t.TempDir()
 	file := filepath.Join(tmp, "test.go")
 	content := []byte("package main\n\nfunc main() {}\n")
-	if err := os.WriteFile(file, content, 0644); err != nil {
+	if err := os.WriteFile(file, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -36,7 +36,7 @@ func TestBeforeModifyCapturesState(t *testing.T) {
 	if cap.wasNew {
 		t.Error("expected wasNew to be false for existing file")
 	}
-	if cap.mode != 0644 {
+	if cap.mode != 0o644 {
 		t.Errorf("expected mode 0644, got %v", cap.mode)
 	}
 }
@@ -69,7 +69,7 @@ func TestRecordChangeCreatesEntry(t *testing.T) {
 	tmp := t.TempDir()
 	file := filepath.Join(tmp, "main.go")
 	original := []byte("package main\n")
-	if err := os.WriteFile(file, original, 0644); err != nil {
+	if err := os.WriteFile(file, original, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -80,7 +80,7 @@ func TestRecordChangeCreatesEntry(t *testing.T) {
 
 	// Simulate modification.
 	modified := []byte("package main\n\nimport \"fmt\"\n")
-	if err := os.WriteFile(file, modified, 0644); err != nil {
+	if err := os.WriteFile(file, modified, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -122,7 +122,7 @@ func TestUndoRestoresOriginalFile(t *testing.T) {
 	tmp := t.TempDir()
 	file := filepath.Join(tmp, "config.go")
 	original := []byte("timeout := 30\n")
-	if err := os.WriteFile(file, original, 0644); err != nil {
+	if err := os.WriteFile(file, original, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -132,7 +132,7 @@ func TestUndoRestoresOriginalFile(t *testing.T) {
 	}
 
 	modified := []byte("timeout := 60\n")
-	if err := os.WriteFile(file, modified, 0644); err != nil {
+	if err := os.WriteFile(file, modified, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -171,7 +171,7 @@ func TestUndoDeletesNewFiles(t *testing.T) {
 
 	// Create the file (simulates a write tool).
 	content := []byte("package handlers\n\nfunc Handle() {}\n")
-	if err := os.WriteFile(file, content, 0644); err != nil {
+	if err := os.WriteFile(file, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,7 +194,7 @@ func TestUndoNReversesMultipleChanges(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		file := filepath.Join(tmp, fmt.Sprintf("file%d.go", i))
 		original := []byte(fmt.Sprintf("version := %d\n", i))
-		if err := os.WriteFile(file, original, 0644); err != nil {
+		if err := os.WriteFile(file, original, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -208,7 +208,7 @@ func TestUndoNReversesMultipleChanges(t *testing.T) {
 		}
 
 		modified := []byte(fmt.Sprintf("version := %d\n", i+10))
-		if err := os.WriteFile(file, modified, 0644); err != nil {
+		if err := os.WriteFile(file, modified, 0o644); err != nil {
 			t.Fatal(err)
 		}
 		um.RecordChange(fmt.Sprintf("Edit file%d.go", i), "edit", nil, []string{file})
@@ -258,7 +258,7 @@ func TestUndoToGoesBackToSpecificPoint(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		file := filepath.Join(tmp, fmt.Sprintf("f%d.go", i))
 		original := []byte(fmt.Sprintf("val := %d\n", i))
-		if err := os.WriteFile(file, original, 0644); err != nil {
+		if err := os.WriteFile(file, original, 0o644); err != nil {
 			t.Fatal(err)
 		}
 		if err := um.BeforeModify(file); err != nil {
@@ -266,7 +266,7 @@ func TestUndoToGoesBackToSpecificPoint(t *testing.T) {
 		}
 
 		modified := []byte(fmt.Sprintf("val := %d\n", i*100))
-		if err := os.WriteFile(file, modified, 0644); err != nil {
+		if err := os.WriteFile(file, modified, 0o644); err != nil {
 			t.Fatal(err)
 		}
 		id := um.RecordChange(fmt.Sprintf("Edit f%d.go", i), "edit", nil, []string{file})
@@ -342,13 +342,13 @@ func TestMaxEntriesTrimsOldEntries(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		file := filepath.Join(tmp, fmt.Sprintf("x%d.go", i))
-		if err := os.WriteFile(file, []byte("a"), 0644); err != nil {
+		if err := os.WriteFile(file, []byte("a"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		if err := um.BeforeModify(file); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(file, []byte("b"), 0644); err != nil {
+		if err := os.WriteFile(file, []byte("b"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		um.RecordChange(fmt.Sprintf("edit x%d.go", i), "edit", nil, []string{file})
@@ -558,7 +558,7 @@ func TestConcurrentAccessSafety(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			file := filepath.Join(tmp, fmt.Sprintf("concurrent%d.go", idx))
-			if err := os.WriteFile(file, []byte(fmt.Sprintf("v%d", idx)), 0644); err != nil {
+			if err := os.WriteFile(file, []byte(fmt.Sprintf("v%d", idx)), 0o644); err != nil {
 				errCh <- err
 				return
 			}
@@ -566,7 +566,7 @@ func TestConcurrentAccessSafety(t *testing.T) {
 				errCh <- err
 				return
 			}
-			if err := os.WriteFile(file, []byte(fmt.Sprintf("v%d-modified", idx)), 0644); err != nil {
+			if err := os.WriteFile(file, []byte(fmt.Sprintf("v%d-modified", idx)), 0o644); err != nil {
 				errCh <- err
 				return
 			}
@@ -625,7 +625,7 @@ func TestMultipleFilesInSingleEntry(t *testing.T) {
 	files := make([]string, 3)
 	for i := 0; i < 3; i++ {
 		files[i] = filepath.Join(tmp, fmt.Sprintf("multi%d.go", i))
-		if err := os.WriteFile(files[i], []byte(fmt.Sprintf("original%d", i)), 0644); err != nil {
+		if err := os.WriteFile(files[i], []byte(fmt.Sprintf("original%d", i)), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		if err := um.BeforeModify(files[i]); err != nil {
@@ -635,7 +635,7 @@ func TestMultipleFilesInSingleEntry(t *testing.T) {
 
 	// Modify all files.
 	for i, f := range files {
-		if err := os.WriteFile(f, []byte(fmt.Sprintf("modified%d", i)), 0644); err != nil {
+		if err := os.WriteFile(f, []byte(fmt.Sprintf("modified%d", i)), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}

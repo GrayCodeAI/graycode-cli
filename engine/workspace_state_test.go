@@ -35,7 +35,7 @@ func TestMarkOpened(t *testing.T) {
 
 	// Create a test file
 	testFile := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -70,7 +70,7 @@ func TestMarkOpenedTestFile(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "main_test.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,7 +90,7 @@ func TestMarkModified(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "handler.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -128,7 +128,7 @@ func TestHasChanged(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "config.go")
-	if err := os.WriteFile(testFile, []byte("package config\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package config\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -141,7 +141,7 @@ func TestHasChanged(t *testing.T) {
 	}
 
 	// Modify the file externally
-	if err := os.WriteFile(testFile, []byte("package config\n\nvar X = 1\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package config\n\nvar X = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -167,13 +167,13 @@ func TestDetectExternalChanges(t *testing.T) {
 	file2 := filepath.Join(dir, "b.go")
 	file3 := filepath.Join(dir, "c.go")
 
-	if err := os.WriteFile(file1, []byte("package a\n"), 0644); err != nil {
+	if err := os.WriteFile(file1, []byte("package a\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(file2, []byte("package b\n"), 0644); err != nil {
+	if err := os.WriteFile(file2, []byte("package b\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(file3, []byte("package c\n"), 0644); err != nil {
+	if err := os.WriteFile(file3, []byte("package c\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -183,13 +183,13 @@ func TestDetectExternalChanges(t *testing.T) {
 	ws.MarkOpened(file3)
 
 	// Modify file1 as hawk (should not be external)
-	if err := os.WriteFile(file1, []byte("package a\n\nvar X = 1\n"), 0644); err != nil {
+	if err := os.WriteFile(file1, []byte("package a\n\nvar X = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	ws.MarkModified(file1)
 
 	// Modify file2 externally (should be detected)
-	if err := os.WriteFile(file2, []byte("package b\n\nvar Y = 2\n"), 0644); err != nil {
+	if err := os.WriteFile(file2, []byte("package b\n\nvar Y = 2\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,16 +208,16 @@ func TestScan(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create project structure
-	if err := os.MkdirAll(filepath.Join(dir, "src"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "src"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "src", "handler.go"), []byte("package src\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "src", "handler.go"), []byte("package src\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "src", "handler_test.go"), []byte("package src\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "src", "handler_test.go"), []byte("package src\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -249,13 +249,13 @@ func TestScanSkipsHiddenDirs(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create hidden directory
-	if err := os.MkdirAll(filepath.Join(dir, ".git", "objects"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".git", "objects"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".git", "config"), []byte("[core]\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".git", "config"), []byte("[core]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -275,13 +275,13 @@ func TestScanSkipsHiddenDirs(t *testing.T) {
 func TestScanSkipsNodeModules(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.MkdirAll(filepath.Join(dir, "node_modules", "express"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "node_modules", "express"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "node_modules", "express", "index.js"), []byte("module.exports = {};\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "node_modules", "express", "index.js"), []byte("module.exports = {};\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "index.js"), []byte("const app = require('express');\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "index.js"), []byte("const app = require('express');\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -301,7 +301,7 @@ func TestWorkspaceStateSummary(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "auth.go")
-	if err := os.WriteFile(testFile, []byte("package auth\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package auth\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -337,7 +337,7 @@ func TestBuildContextForAgent(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -375,7 +375,7 @@ func TestWorkspaceStateReset(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(testFile, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -410,7 +410,7 @@ func TestWorkspaceStateConcurrentAccess(t *testing.T) {
 	// Create several test files
 	for i := 0; i < 10; i++ {
 		path := filepath.Join(dir, fmt.Sprintf("file%d.go", i))
-		if err := os.WriteFile(path, []byte(fmt.Sprintf("package f%d\n", i)), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(fmt.Sprintf("package f%d\n", i)), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -464,10 +464,10 @@ func TestRelativeAndAbsolutePaths(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "pkg", "service.go")
-	if err := os.MkdirAll(filepath.Join(dir, "pkg"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "pkg"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(testFile, []byte("package pkg\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package pkg\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -573,7 +573,7 @@ func TestGetModifiedSorted(t *testing.T) {
 
 	for _, name := range []string{"c.go", "a.go", "b.go"} {
 		path := filepath.Join(dir, name)
-		if err := os.WriteFile(path, []byte("package x\n"), 0644); err != nil {
+		if err := os.WriteFile(path, []byte("package x\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -614,7 +614,7 @@ func TestExternalChangesWithDeletedFile(t *testing.T) {
 	dir := t.TempDir()
 
 	testFile := filepath.Join(dir, "temp.go")
-	if err := os.WriteFile(testFile, []byte("package temp\n"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package temp\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

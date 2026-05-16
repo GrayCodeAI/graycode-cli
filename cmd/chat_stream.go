@@ -68,7 +68,7 @@ func renderGlimmerVerb(verb string, glimmerPos int) string {
 	var b strings.Builder
 	for i, r := range runes {
 		// Wave: each char picks a color based on position + time, cycling 1→2→3→2→1→2→3...
-		dist := abs((i + glimmerPos) % 5 - 2)
+		dist := abs((i+glimmerPos)%5 - 2)
 		if dist == 0 {
 			b.WriteString("\033[1;38;2;" + colors[0] + "m" + string(r))
 		} else if dist == 1 {

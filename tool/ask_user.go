@@ -13,6 +13,7 @@ func (AskUserQuestionTool) Aliases() []string { return []string{"ask_user"} }
 func (AskUserQuestionTool) Description() string {
 	return "Ask the user a clarifying question when you need more information to proceed."
 }
+
 func (AskUserQuestionTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

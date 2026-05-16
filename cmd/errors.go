@@ -245,7 +245,7 @@ func signalHandler(saveFn func()) {
 			case <-done:
 				// saved successfully
 			case <-time.After(5 * time.Second):
-		_, _ = fmt.Fprintf(os.Stderr, "Save timed out, exiting.\n")
+				_, _ = fmt.Fprintf(os.Stderr, "Save timed out, exiting.\n")
 			}
 		}
 
@@ -291,7 +291,8 @@ func (l *errorLoggerT) LogError(context string, err error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	entry := fmt.Sprintf("[%s] %s: %s\n",
+	entry := fmt.Sprintf(
+		"[%s] %s: %s\n",
 		time.Now().Format(time.RFC3339),
 		context,
 		err.Error(),
@@ -314,7 +315,8 @@ func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	entry := fmt.Sprintf("[%s] %s\n",
+	entry := fmt.Sprintf(
+		"[%s] %s\n",
 		time.Now().Format(time.RFC3339),
 		fmt.Sprintf(format, args...),
 	)
@@ -421,5 +423,3 @@ func providerDNSHost(provider string) string {
 		return ""
 	}
 }
-
-

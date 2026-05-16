@@ -10,11 +10,12 @@ import (
 // VerifyPlanExecutionTool checks whether a plan's steps have been executed correctly.
 type VerifyPlanExecutionTool struct{}
 
-func (VerifyPlanExecutionTool) Name() string        { return "VerifyPlanExecution" }
-func (VerifyPlanExecutionTool) Aliases() []string   { return []string{"verify_plan_execution"} }
+func (VerifyPlanExecutionTool) Name() string      { return "VerifyPlanExecution" }
+func (VerifyPlanExecutionTool) Aliases() []string { return []string{"verify_plan_execution"} }
 func (VerifyPlanExecutionTool) Description() string {
 	return "Verify that a plan's steps have been executed correctly by checking task completion and file changes"
 }
+
 func (VerifyPlanExecutionTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

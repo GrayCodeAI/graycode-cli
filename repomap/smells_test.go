@@ -489,7 +489,7 @@ func TestScanDirectory(t *testing.T) {
 		sb.WriteString("() {}\n\n")
 	}
 
-	err := os.WriteFile(filepath.Join(dir, "monster.go"), []byte(sb.String()), 0644)
+	err := os.WriteFile(filepath.Join(dir, "monster.go"), []byte(sb.String()), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +499,7 @@ func TestScanDirectory(t *testing.T) {
 
 func Hello() string { return "hello" }
 `
-	err = os.WriteFile(filepath.Join(dir, "clean.go"), []byte(clean), 0644)
+	err = os.WriteFile(filepath.Join(dir, "clean.go"), []byte(clean), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +529,7 @@ func TestScanDirectory_SkipsVendor(t *testing.T) {
 
 	// Create vendor directory with smelly code
 	vendorDir := filepath.Join(dir, "vendor")
-	err := os.Mkdir(vendorDir, 0755)
+	err := os.Mkdir(vendorDir, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,7 +542,7 @@ func TestScanDirectory_SkipsVendor(t *testing.T) {
 		sb.WriteString(string(rune('A' + i)))
 		sb.WriteString("() {}\n\n")
 	}
-	err = os.WriteFile(filepath.Join(vendorDir, "huge.go"), []byte(sb.String()), 0644)
+	err = os.WriteFile(filepath.Join(vendorDir, "huge.go"), []byte(sb.String()), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -568,7 +568,7 @@ func TestScanDirectory_SkipsTestFiles(t *testing.T) {
 		sb.WriteString(string(rune('A' + i)))
 		sb.WriteString("() {}\n\n")
 	}
-	err := os.WriteFile(filepath.Join(dir, "helpers_test.go"), []byte(sb.String()), 0644)
+	err := os.WriteFile(filepath.Join(dir, "helpers_test.go"), []byte(sb.String()), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}

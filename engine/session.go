@@ -11,8 +11,8 @@ import (
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
-	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/permissions"
+	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
 	"github.com/GrayCodeAI/hawk/trace"
 )
@@ -30,66 +30,66 @@ type SnapshotTracker interface {
 
 // Session manages a conversation with an LLM via eyrie.
 type Session struct {
-	client       ChatClient
-	registry     *tool.Registry
-	messages     []client.EyrieMessage
-	provider     string
-	model        string
-	apiKeys      map[string]string
-	system       string
-	log          *logger.Logger
-	metrics      *metrics.Registry
-	Cost         Cost
-	Router       *modelPkg.Router
-	Perm         *PermissionEngine // extracted permission subsystem
+	client   ChatClient
+	registry *tool.Registry
+	messages []client.EyrieMessage
+	provider string
+	model    string
+	apiKeys  map[string]string
+	system   string
+	log      *logger.Logger
+	metrics  *metrics.Registry
+	Cost     Cost
+	Router   *modelPkg.Router
+	Perm     *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
-	Permissions  *PermissionMemory            // use Perm.Memory
-	AutoMode     *permissions.AutoModeState   // use Perm.AutoMode
-	Classifier   *permissions.Classifier      // use Perm.Classifier
-	BypassKill   *permissions.BypassKillswitch // use Perm.BypassKill
-	Mode         PermissionMode               // use Perm.Mode
-	MaxTurns     int
-	MaxBudgetUSD float64
-	AllowedDirs  []string
-	PermissionFn func(PermissionRequest)      // use Perm.PromptFn
-	AgentSpawnFn func(ctx context.Context, prompt string) (string, error)
-	AskUserFn    func(question string) (string, error)
-	Memory          MemoryRecaller
-	YaadBridge      *memory.YaadBridge
-	EnhancedMemory  *memory.EnhancedMemoryManager
+	Permissions    *PermissionMemory             // use Perm.Memory
+	AutoMode       *permissions.AutoModeState    // use Perm.AutoMode
+	Classifier     *permissions.Classifier       // use Perm.Classifier
+	BypassKill     *permissions.BypassKillswitch // use Perm.BypassKill
+	Mode           PermissionMode                // use Perm.Mode
+	MaxTurns       int
+	MaxBudgetUSD   float64
+	AllowedDirs    []string
+	PermissionFn   func(PermissionRequest) // use Perm.PromptFn
+	AgentSpawnFn   func(ctx context.Context, prompt string) (string, error)
+	AskUserFn      func(question string) (string, error)
+	Memory         MemoryRecaller
+	YaadBridge     *memory.YaadBridge
+	EnhancedMemory *memory.EnhancedMemoryManager
 
-	PinnedMessages int // messages to protect from compaction (from /pin)
+	PinnedMessages          int // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
 
 	// Cost optimization
-	Cascade      *CascadeRouter       // cascade.go — model tier routing
-	Lifecycle    *SessionLifecycle    // lifecycle.go — self-improvement loop
-	Reflector    *Reflector           // reflect.go — verbal self-reflection
-	CostTracker  *CostTracker         // cost_tracker.go — per-request cost persistence
+	Cascade     *CascadeRouter    // cascade.go — model tier routing
+	Lifecycle   *SessionLifecycle // lifecycle.go — self-improvement loop
+	Reflector   *Reflector        // reflect.go — verbal self-reflection
+	CostTracker *CostTracker      // cost_tracker.go — per-request cost persistence
 
 	// Advanced features
-	Autonomy   AutonomyLevel        // autonomy.go — permission level
-	Sandbox    *DiffSandbox         // diffsandbox.go — staged file changes
-	Plan       *PlanState           // subtask.go — user-activated plan
-	Beliefs    *BeliefState         // belief.go — discovered knowledge
-	Critic     *Critic              // critic.go — patch pre-screening
-	Backtrack  *BacktrackEngine     // backtrack.go — decision recording
-	Limits     *LimitTracker        // limits.go — safety limits
-	Teach      TeachConfig          // teach.go — explanation depth
-	Trajectory *TrajectoryDistiller // trajectory.go — multi-run distillation
-	Shadow     *ShadowWorkspace     // shadow.go — edit pre-validation
-	Snapshots  SnapshotTracker     // snapshot integration for auto-tracking
-	ConvoDAG   *storage.DAG       // conversation DAG for branching/forking
-	Sleeptime      *memory.SleeptimeAgent   // sleeptime.go — background memory consolidation
-	Activity       *memory.ActivityTracker  // activity.go — memory save nudging (Engram pattern)
-	SkillDistiller *memory.SkillDistiller   // skill_distill.go — auto-skill extraction
-	Tracer         *trace.Tracer            // trace.go — distributed tracing spans
-	LintLoop       *LintLoop                // lint_loop.go — auto lint-fix reflected messages
-	TestLoop       *TestLoop                // test_loop.go — auto test-fix loop
-	FileMentions   *FileMentionDetector     // file_mentions.go — detect referenced files
-	ResponseCache  *ResponseCache           // response_cache.go — cache similar prompts
+	Autonomy       AutonomyLevel           // autonomy.go — permission level
+	Sandbox        *DiffSandbox            // diffsandbox.go — staged file changes
+	Plan           *PlanState              // subtask.go — user-activated plan
+	Beliefs        *BeliefState            // belief.go — discovered knowledge
+	Critic         *Critic                 // critic.go — patch pre-screening
+	Backtrack      *BacktrackEngine        // backtrack.go — decision recording
+	Limits         *LimitTracker           // limits.go — safety limits
+	Teach          TeachConfig             // teach.go — explanation depth
+	Trajectory     *TrajectoryDistiller    // trajectory.go — multi-run distillation
+	Shadow         *ShadowWorkspace        // shadow.go — edit pre-validation
+	Snapshots      SnapshotTracker         // snapshot integration for auto-tracking
+	ConvoDAG       *storage.DAG            // conversation DAG for branching/forking
+	Sleeptime      *memory.SleeptimeAgent  // sleeptime.go — background memory consolidation
+	Activity       *memory.ActivityTracker // activity.go — memory save nudging (Engram pattern)
+	SkillDistiller *memory.SkillDistiller  // skill_distill.go — auto-skill extraction
+	Tracer         *trace.Tracer           // trace.go — distributed tracing spans
+	LintLoop       *LintLoop               // lint_loop.go — auto lint-fix reflected messages
+	TestLoop       *TestLoop               // test_loop.go — auto test-fix loop
+	FileMentions   *FileMentionDetector    // file_mentions.go — detect referenced files
+	ResponseCache  *ResponseCache          // response_cache.go — cache similar prompts
 	Pipeline       *IntegrationPipeline    // integration.go — unified feature orchestration
-	Files          *FileTracker             // compact_files.go — cumulative file tracking across compactions
+	Files          *FileTracker            // compact_files.go — cumulative file tracking across compactions
 	Steering       *SteeringQueue          // steering.go — user guidance injection between tool batches
 }
 
@@ -97,26 +97,26 @@ type Session struct {
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	pe := NewPermissionEngine()
 	s := &Session{
-		client:      client.Client(&client.EyrieConfig{Provider: provider}),
-		registry:    registry,
-		provider:    provider,
-		model:       model,
-		apiKeys:     map[string]string{},
-		system:      systemPrompt,
-		log:         logger.Default(),
-		metrics:     metrics.NewRegistry(),
-		Perm:        pe,
-		Permissions: pe.Memory,
-		AutoMode:    pe.AutoMode,
-		Classifier:  pe.Classifier,
-		BypassKill:  pe.BypassKill,
-		Beliefs:     NewBeliefState(),
-		Backtrack:   NewBacktrackEngine(),
-		Limits:      NewLimitTracker(DefaultLimits()),
-		Tracer:      trace.NewTracer(),
-		LintLoop:    NewLintLoop(),
-		TestLoop:    NewTestLoop(),
-		FileMentions: NewFileMentionDetector("."),
+		client:        client.Client(&client.EyrieConfig{Provider: provider}),
+		registry:      registry,
+		provider:      provider,
+		model:         model,
+		apiKeys:       map[string]string{},
+		system:        systemPrompt,
+		log:           logger.Default(),
+		metrics:       metrics.NewRegistry(),
+		Perm:          pe,
+		Permissions:   pe.Memory,
+		AutoMode:      pe.AutoMode,
+		Classifier:    pe.Classifier,
+		BypassKill:    pe.BypassKill,
+		Beliefs:       NewBeliefState(),
+		Backtrack:     NewBacktrackEngine(),
+		Limits:        NewLimitTracker(DefaultLimits()),
+		Tracer:        trace.NewTracer(),
+		LintLoop:      NewLintLoop(),
+		TestLoop:      NewTestLoop(),
+		FileMentions:  NewFileMentionDetector("."),
 		ResponseCache: NewResponseCache(1000, 24*time.Hour),
 		Pipeline:      NewIntegrationPipeline(),
 	}

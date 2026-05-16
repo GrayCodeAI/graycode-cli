@@ -729,7 +729,7 @@ func main() {
 
 	// Create a sub-package
 	pkgDir := filepath.Join(dir, "pkg", "util")
-	os.MkdirAll(pkgDir, 0755)
+	os.MkdirAll(pkgDir, 0o755)
 
 	writeHealthFile(t, filepath.Join(pkgDir, "util.go"), `package util
 
@@ -790,10 +790,10 @@ func TestAdd(t *testing.T) {
 func writeHealthFile(t *testing.T, path, content string) {
 	t.Helper()
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

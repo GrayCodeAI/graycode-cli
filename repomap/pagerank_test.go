@@ -59,9 +59,9 @@ func TestComputePageRank(t *testing.T) {
 			"b.go:Baz": {File: "b.go", Symbol: "Baz", Kind: "func", Rank: 1.0},
 		},
 		edges: map[string][]string{
-			"a.go:Foo": {"b.go:Baz"},        // Foo references Baz
-			"a.go:Bar": {"b.go:Baz"},        // Bar references Baz
-			"b.go:Baz": {"a.go:Foo"},        // Baz references Foo
+			"a.go:Foo": {"b.go:Baz"}, // Foo references Baz
+			"a.go:Bar": {"b.go:Baz"}, // Bar references Baz
+			"b.go:Baz": {"a.go:Foo"}, // Baz references Foo
 		},
 	}
 
@@ -116,7 +116,7 @@ func TestTopSymbols(t *testing.T) {
 func TestFormatMap(t *testing.T) {
 	sg := &SymbolGraph{
 		nodes: map[string]*SymbolNode{
-			"main.go:main":   {File: "main.go", Symbol: "main", Kind: "func", Rank: 0.3},
+			"main.go:main":    {File: "main.go", Symbol: "main", Kind: "func", Rank: 0.3},
 			"server.go:Start": {File: "server.go", Symbol: "Start", Kind: "func", Rank: 0.7},
 		},
 		edges: map[string][]string{},

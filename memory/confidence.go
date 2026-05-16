@@ -12,11 +12,11 @@ import (
 // When a session succeeds, accessed memories get a confidence boost.
 // When a session fails, accessed memories get flagged for review.
 type ConfidenceTracker struct {
-	bridge       *YaadBridge
-	accessed     map[string]time.Time // nodeID → last access time
-	mu           sync.Mutex
-	boostAmount  float64
-	penaltyRate  float64
+	bridge      *YaadBridge
+	accessed    map[string]time.Time // nodeID → last access time
+	mu          sync.Mutex
+	boostAmount float64
+	penaltyRate float64
 }
 
 // NewConfidenceTracker creates a tracker that adjusts confidence from outcomes.

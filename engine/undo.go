@@ -42,11 +42,11 @@ type UndoManager struct {
 
 // fileCapture is the internal representation of a pre-modification file state.
 type fileCapture struct {
-	path         string
-	content      []byte
-	mode         os.FileMode
-	wasNew       bool
-	capturedAt   time.Time
+	path       string
+	content    []byte
+	mode       os.FileMode
+	wasNew     bool
+	capturedAt time.Time
 }
 
 // NewUndoManager creates a new UndoManager with a default capacity of 100 entries.
@@ -81,7 +81,7 @@ func (um *UndoManager) BeforeModify(path string) error {
 
 	if os.IsNotExist(statErr) {
 		capture.wasNew = true
-		capture.mode = 0644
+		capture.mode = 0o644
 	} else {
 		content, readErr := os.ReadFile(absPath)
 		if readErr != nil {
@@ -381,7 +381,7 @@ func restoreEntry(entry *UndoEntry) error {
 
 		// Ensure parent directory exists.
 		dir := filepath.Dir(f.Path)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("undo: mkdir %q: %w", dir, err)
 		}
 

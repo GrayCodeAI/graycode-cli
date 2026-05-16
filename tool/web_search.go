@@ -21,11 +21,12 @@ type searchResult struct {
 type WebSearchTool struct{}
 
 func (WebSearchTool) Name() string      { return "WebSearch" }
-func (WebSearchTool) RiskLevel() string  { return "low" }
-func (WebSearchTool) Aliases() []string  { return []string{"web_search"} }
+func (WebSearchTool) RiskLevel() string { return "low" }
+func (WebSearchTool) Aliases() []string { return []string{"web_search"} }
 func (WebSearchTool) Description() string {
 	return "Search the web and return structured results. Supports Brave Search, SearXNG, and DuckDuckGo backends."
 }
+
 func (WebSearchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -142,7 +143,7 @@ func duckDuckGoSearch(ctx context.Context, query string, count int) ([]searchRes
 	if err != nil {
 		return nil, err
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 200_000))
 	if err != nil {

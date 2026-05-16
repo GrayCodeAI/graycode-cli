@@ -519,7 +519,7 @@ require (
 	github.com/another/dep v0.5.0
 )
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -541,13 +541,13 @@ func main() {
 	_ = lib.New()
 }
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(mainGo), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte(mainGo), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create internal/config package.
 	configDir := filepath.Join(tmpDir, "internal", "config")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configGo := `package config
@@ -559,7 +559,7 @@ func Load() error {
 	return nil
 }
 `
-	if err := os.WriteFile(filepath.Join(configDir, "config.go"), []byte(configGo), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "config.go"), []byte(configGo), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -661,13 +661,13 @@ func TestBuildFromPackageJSON(t *testing.T) {
   }
 }
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "package.json"), []byte(pkgJSON), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "package.json"), []byte(pkgJSON), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create src directory with files.
 	srcDir := filepath.Join(tmpDir, "src")
-	if err := os.MkdirAll(srcDir, 0755); err != nil {
+	if err := os.MkdirAll(srcDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -677,7 +677,7 @@ import { helper } from './utils';
 
 const app = express();
 `
-	if err := os.WriteFile(filepath.Join(srcDir, "index.js"), []byte(indexJS), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(srcDir, "index.js"), []byte(indexJS), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -687,7 +687,7 @@ export function helper() {
   return path.join('a', 'b');
 }
 `
-	if err := os.WriteFile(filepath.Join(srcDir, "utils.js"), []byte(utilsJS), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(srcDir, "utils.js"), []byte(utilsJS), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -811,7 +811,7 @@ require github.com/single/dep v0.1.0
 
 	expected := map[string]bool{
 		"github.com/foo/bar":    true,
-		"github.com/baz/qux":   true,
+		"github.com/baz/qux":    true,
 		"github.com/single/dep": true,
 	}
 	for _, dep := range deps {
@@ -908,7 +908,7 @@ func main() {
 	fmt.Println("hello")
 }
 `
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

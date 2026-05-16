@@ -364,7 +364,7 @@ func TestRecordInput(t *testing.T) {
 
 	ac.RecordInput("go test ./...")
 	ac.RecordInput("/commit")
-	ac.RecordInput("  ")   // should be ignored (whitespace only)
+	ac.RecordInput("  ")      // should be ignored (whitespace only)
 	ac.RecordInput("/commit") // second usage
 
 	if len(ac.History) != 3 { // "go test", "/commit", "/commit"
@@ -379,14 +379,14 @@ func TestRecordInput(t *testing.T) {
 func TestRefreshFiles(t *testing.T) {
 	// Create a temp directory with some files
 	tmpDir := t.TempDir()
-	_ = os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main"), 0644)
-	_ = os.MkdirAll(filepath.Join(tmpDir, "sub"), 0755)
-	_ = os.WriteFile(filepath.Join(tmpDir, "sub", "helper.go"), []byte("package sub"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main"), 0o644)
+	_ = os.MkdirAll(filepath.Join(tmpDir, "sub"), 0o755)
+	_ = os.WriteFile(filepath.Join(tmpDir, "sub", "helper.go"), []byte("package sub"), 0o644)
 	// Hidden file should be skipped
-	_ = os.WriteFile(filepath.Join(tmpDir, ".hidden"), []byte(""), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, ".hidden"), []byte(""), 0o644)
 	// Hidden directory should be skipped
-	_ = os.MkdirAll(filepath.Join(tmpDir, ".git"), 0755)
-	_ = os.WriteFile(filepath.Join(tmpDir, ".git", "config"), []byte(""), 0644)
+	_ = os.MkdirAll(filepath.Join(tmpDir, ".git"), 0o755)
+	_ = os.WriteFile(filepath.Join(tmpDir, ".git", "config"), []byte(""), 0o644)
 
 	ac := NewAutocompleter(tmpDir)
 

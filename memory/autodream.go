@@ -32,11 +32,11 @@ Write the consolidated result as a clear, organized memory document.`,
 
 // AutoDreamState tracks the last dream execution.
 type AutoDreamState struct {
-	mu              sync.Mutex
-	LastDreamTime   time.Time `json:"last_dream_time"`
-	SessionsSince   int       `json:"sessions_since"`
-	DreamCount      int       `json:"dream_count"`
-	LastError       string    `json:"last_error,omitempty"`
+	mu            sync.Mutex
+	LastDreamTime time.Time `json:"last_dream_time"`
+	SessionsSince int       `json:"sessions_since"`
+	DreamCount    int       `json:"dream_count"`
+	LastError     string    `json:"last_error,omitempty"`
 }
 
 // NewAutoDreamState creates a new auto-dream state.

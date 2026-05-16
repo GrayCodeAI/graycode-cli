@@ -315,7 +315,8 @@ func (ep *ExecutionPlanner) FormatPlan(plan *ExecutionPlan) string {
 
 		for _, step := range group {
 			target := planFormatTarget(step.Args)
-			sb.WriteString(fmt.Sprintf("  %s(%s)%s~%s\n",
+			sb.WriteString(fmt.Sprintf(
+				"  %s(%s)%s~%s\n",
 				step.ToolName,
 				target,
 				planPadding(step.ToolName, target),

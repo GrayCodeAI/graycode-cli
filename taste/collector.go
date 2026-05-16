@@ -269,4 +269,3 @@ func (c *Collector) Cleanup(maxAge time.Duration) {
 		}
 	}
 }
-

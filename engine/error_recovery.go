@@ -282,7 +282,8 @@ func (er *ErrorRecovery) FormatHistory(limit int) string {
 		if a.Recovered {
 			status = "OK"
 		}
-		sb.WriteString(fmt.Sprintf("  [%s] %s | strategy=%s | duration=%s | error=%s\n",
+		sb.WriteString(fmt.Sprintf(
+			"  [%s] %s | strategy=%s | duration=%s | error=%s\n",
 			a.Timestamp.Format("15:04:05"),
 			status,
 			a.Strategy,

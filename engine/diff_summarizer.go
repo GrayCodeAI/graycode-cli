@@ -210,9 +210,11 @@ func (ds *DiffSummarizer) SummarizeFile(path string, hunks []string) *FileSummar
 	return fs
 }
 
-var funcPattern = regexp.MustCompile(`^\s*func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(`)
-var structPattern = regexp.MustCompile(`^\s*type\s+(\w+)\s+struct`)
-var interfacePattern = regexp.MustCompile(`^\s*type\s+(\w+)\s+interface`)
+var (
+	funcPattern      = regexp.MustCompile(`^\s*func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(`)
+	structPattern    = regexp.MustCompile(`^\s*type\s+(\w+)\s+struct`)
+	interfacePattern = regexp.MustCompile(`^\s*type\s+(\w+)\s+interface`)
+)
 
 // detectKeyChanges identifies significant additions/removals like new functions, types, etc.
 func (ds *DiffSummarizer) detectKeyChanges(added, removed []string) []string {

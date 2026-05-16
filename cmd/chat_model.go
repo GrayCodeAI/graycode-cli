@@ -55,22 +55,26 @@ var spinnerVerbs = []string{
 	"Weaving", "Whisking", "Wizarding", "Working", "Wrangling",
 }
 
-type streamChunkMsg string
-type streamDoneMsg struct{}
-type streamErrMsg struct{ err error }
-type blinkTickMsg struct{}
+type (
+	streamChunkMsg string
+	streamDoneMsg  struct{}
+	streamErrMsg   struct{ err error }
+	blinkTickMsg   struct{}
+)
 
-type glimmerTickMsg struct{}
-type modelsFetchedMsg []string
-type loopTickMsg struct{ command string }
-type toolUseMsg struct{ name, id string }
-type toolResultMsg struct{ name, content string }
-type permissionAskMsg struct{ req engine.PermissionRequest }
-type thinkingMsg string
-type askUserMsg struct {
-	question string
-	response chan string
-}
+type (
+	glimmerTickMsg   struct{}
+	modelsFetchedMsg []string
+	loopTickMsg      struct{ command string }
+	toolUseMsg       struct{ name, id string }
+	toolResultMsg    struct{ name, content string }
+	permissionAskMsg struct{ req engine.PermissionRequest }
+	thinkingMsg      string
+	askUserMsg       struct {
+		question string
+		response chan string
+	}
+)
 
 type displayMsg struct {
 	role    string
@@ -140,15 +144,15 @@ type chatModel struct {
 	activeSkills   map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (herm-style hermetic execution)
-	containerEnabled    bool
-	containerStatus     string // "checking docker…", "pulling image…", "starting…", "<id>", "docker not running"
-	containerReady      bool
-	containerErr        error
-	containerSandbox    *sandbox.ContainerSandbox
+	containerEnabled bool
+	containerStatus  string // "checking docker…", "pulling image…", "starting…", "<id>", "docker not running"
+	containerReady   bool
+	containerErr     error
+	containerSandbox *sandbox.ContainerSandbox
 
 	// Taste & staleness tracking
-	tasteHooks         *taste.Hooks
-	stalenessDetector  *staleness.Detector
+	tasteHooks        *taste.Hooks
+	stalenessDetector *staleness.Detector
 
 	// Lacy-inspired features
 	termCtx        *sessioncapture.TerminalContext
@@ -158,10 +162,10 @@ type chatModel struct {
 	brailleSpinner *BrailleSpinner
 
 	// BMAD/Aeon-inspired features
-	hintsLoader    *engine.HintsLoader
-	sourceRoots    *engine.SourceRoots
-	selfImprover   *engine.SelfImprover
-	codingSoul     *engine.CodingSoul
+	hintsLoader  *engine.HintsLoader
+	sourceRoots  *engine.SourceRoots
+	selfImprover *engine.SelfImprover
+	codingSoul   *engine.CodingSoul
 }
 
 func blinkTickCmd() tea.Cmd {

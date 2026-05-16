@@ -108,8 +108,8 @@ func TestApply_WithSummary(t *testing.T) {
 }
 
 func TestApply_MaxTokensTrimming(t *testing.T) {
-	w := NewHeadTailWindow(4, 12, 500) // very tight budget
-	msgs := headTailMakeMessages(30, 100)      // 30 * 100 = 3000 tokens total
+	w := NewHeadTailWindow(4, 12, 500)    // very tight budget
+	msgs := headTailMakeMessages(30, 100) // 30 * 100 = 3000 tokens total
 
 	result := w.Apply(msgs)
 

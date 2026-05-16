@@ -76,7 +76,7 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 			return "", fmt.Errorf("dockerfile must contain a FROM instruction")
 		}
 
-		if err := os.MkdirAll(filepath.Dir(dfPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(dfPath), 0o755); err != nil {
 			return "", err
 		}
 
@@ -85,7 +85,7 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 			_ = os.Rename(dfPath, dfPath+".old")
 		}
 
-		if err := os.WriteFile(dfPath, []byte(p.Dockerfile), 0644); err != nil {
+		if err := os.WriteFile(dfPath, []byte(p.Dockerfile), 0o644); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Dockerfile written to %s. Use action='build' to rebuild the container.", dfPath), nil

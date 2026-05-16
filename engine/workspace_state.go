@@ -95,7 +95,6 @@ func (ws *WorkspaceState) Scan() error {
 		newScanState[relPath] = fs
 		return nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("workspace scan failed: %w", err)
 	}
@@ -270,10 +269,10 @@ func (ws *WorkspaceState) Summary() string {
 	}
 
 	// Opened files
-		_, _ = fmt.Fprintf(&b, "Opened: %d files\n", len(ws.OpenFiles))
+	_, _ = fmt.Fprintf(&b, "Opened: %d files\n", len(ws.OpenFiles))
 
 	// Staged files
-		_, _ = fmt.Fprintf(&b, "Staged: %d files\n", len(ws.StagedFiles))
+	_, _ = fmt.Fprintf(&b, "Staged: %d files\n", len(ws.StagedFiles))
 
 	// External changes
 	externalChanges := ws.detectExternalChangesLocked()
@@ -306,7 +305,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	var b strings.Builder
 
 	b.WriteString("<workspace_state>\n")
-		_, _ = fmt.Fprintf(&b, "project_dir: %s\n", ws.ProjectDir)
+	_, _ = fmt.Fprintf(&b, "project_dir: %s\n", ws.ProjectDir)
 
 	// Recently modified
 	if len(ws.ModifiedFiles) > 0 {
@@ -317,7 +316,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 		}
 		sort.Strings(names)
 		for _, name := range names {
-		_, _ = fmt.Fprintf(&b, "  - %s (at %s)\n", name, ws.ModifiedFiles[name].Format(time.RFC3339))
+			_, _ = fmt.Fprintf(&b, "  - %s (at %s)\n", name, ws.ModifiedFiles[name].Format(time.RFC3339))
 		}
 	}
 
@@ -331,7 +330,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 		sort.Strings(names)
 		for _, name := range names {
 			fs := ws.OpenFiles[name]
-		_, _ = fmt.Fprintf(&b, "  - %s [%s", name, fs.Language)
+			_, _ = fmt.Fprintf(&b, "  - %s [%s", name, fs.Language)
 			if fs.IsTest {
 				b.WriteString(", test")
 			}
@@ -346,7 +345,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	if len(ws.StagedFiles) > 0 {
 		b.WriteString("staged_files:\n")
 		for _, path := range ws.StagedFiles {
-		_, _ = fmt.Fprintf(&b, "  - %s\n", path)
+			_, _ = fmt.Fprintf(&b, "  - %s\n", path)
 		}
 	}
 
@@ -355,7 +354,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	if len(externalChanges) > 0 {
 		b.WriteString("external_changes:\n")
 		for _, path := range externalChanges {
-		_, _ = fmt.Fprintf(&b, "  - %s (changed outside hawk)\n", path)
+			_, _ = fmt.Fprintf(&b, "  - %s (changed outside hawk)\n", path)
 		}
 	}
 

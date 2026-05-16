@@ -121,12 +121,12 @@ func (n *Notifier) NotifyCostMilestone(cost float64) {
 
 // SetTerminalTitle sets the terminal title using escape sequences.
 func (n *Notifier) SetTerminalTitle(title string) {
-		_, _ = fmt.Fprintf(os.Stdout, "\033]0;%s\007", title)
+	_, _ = fmt.Fprintf(os.Stdout, "\033]0;%s\007", title)
 }
 
 // ClearTitle resets the terminal title.
 func (n *Notifier) ClearTitle() {
-		_, _ = fmt.Fprintf(os.Stdout, "\033]0;\007")
+	_, _ = fmt.Fprintf(os.Stdout, "\033]0;\007")
 }
 
 // DesktopNotify sends a desktop notification using OS-specific mechanisms.

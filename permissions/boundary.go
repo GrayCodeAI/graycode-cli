@@ -454,7 +454,8 @@ func FormatViolation(v *BoundaryViolation) string {
 	if v == nil {
 		return ""
 	}
-	return fmt.Sprintf("⛔ BOUNDARY VIOLATION: %s\nAttempted: %s\nBoundary: %s\nSeverity: %s",
+	return fmt.Sprintf(
+		"⛔ BOUNDARY VIOLATION: %s\nAttempted: %s\nBoundary: %s\nSeverity: %s",
 		v.Description,
 		v.Attempted,
 		v.Allowed,

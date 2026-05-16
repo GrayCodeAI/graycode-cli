@@ -505,7 +505,7 @@ func (mp *MigrationPlanner) Rollback(plan *MigrationPlan) error {
 			if !ok {
 				return fmt.Errorf("no backup found for %s", f)
 			}
-			if err := os.WriteFile(f, backup, 0644); err != nil {
+			if err := os.WriteFile(f, backup, 0o644); err != nil {
 				return fmt.Errorf("restoring %s: %w", f, err)
 			}
 		}
@@ -543,7 +543,7 @@ func (mp *MigrationPlanner) executeStep(step *MigrationStep) error {
 		}
 
 		newContent := re.ReplaceAll(content, []byte(step.Replacement))
-		if err := os.WriteFile(f, newContent, 0644); err != nil {
+		if err := os.WriteFile(f, newContent, 0o644); err != nil {
 			return fmt.Errorf("writing %s: %w", f, err)
 		}
 	}

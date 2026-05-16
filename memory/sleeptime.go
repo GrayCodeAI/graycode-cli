@@ -27,7 +27,8 @@ func (sa *SleeptimeAgent) ShouldRun() bool {
 
 // BuildConsolidationPrompt creates the prompt for the background memory agent.
 func (sa *SleeptimeAgent) BuildConsolidationPrompt(transcript []string, memoryState string) string {
-	return fmt.Sprintf(`You are a memory consolidation agent. Review the recent conversation and current memory state, then output structured memory updates.
+	return fmt.Sprintf(
+		`You are a memory consolidation agent. Review the recent conversation and current memory state, then output structured memory updates.
 
 <conversation>
 %s

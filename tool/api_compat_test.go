@@ -18,10 +18,10 @@ func TestNewCompatChecker(t *testing.T) {
 
 func createTestPackage(t *testing.T, dir string, source string) {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "api.go"), []byte(source), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "api.go"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -450,7 +450,7 @@ func TestLoadSnapshotInvalidPath(t *testing.T) {
 func TestLoadSnapshotInvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	badFile := filepath.Join(dir, "bad.json")
-	if err := os.WriteFile(badFile, []byte("not json"), 0644); err != nil {
+	if err := os.WriteFile(badFile, []byte("not json"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

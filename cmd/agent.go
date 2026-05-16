@@ -45,8 +45,10 @@ var agentRemoveCmd = &cobra.Command{
 	RunE:  runAgentRemove,
 }
 
-var agentCreateDesc string
-var agentCreateModel string
+var (
+	agentCreateDesc  string
+	agentCreateModel string
+)
 
 func init() {
 	agentCreateCmd.Flags().StringVarP(&agentCreateDesc, "description", "d", "", "Agent description")
@@ -70,7 +72,7 @@ func runAgentList(_ *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "NAME\tMODEL\tDESCRIPTION\n")
+	_, _ = fmt.Fprintf(w, "NAME\tMODEL\tDESCRIPTION\n")
 	for _, a := range all {
 		model := a.Model
 		if model == "" {

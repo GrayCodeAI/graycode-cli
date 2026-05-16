@@ -37,7 +37,7 @@ func Check(currentVersion string) (*ReleaseInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("update check failed: %s", resp.Status)

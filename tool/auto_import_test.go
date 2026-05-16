@@ -35,15 +35,15 @@ func TestNewAutoImporter(t *testing.T) {
 
 	// Spot-check some third-party packages.
 	thirdPartyChecks := map[string]string{
-		"chi":     "github.com/go-chi/chi/v5",
-		"gin":     "github.com/gin-gonic/gin",
-		"cobra":   "github.com/spf13/cobra",
-		"viper":   "github.com/spf13/viper",
-		"zap":     "go.uber.org/zap",
-		"assert":  "github.com/stretchr/testify/assert",
-		"sqlx":    "github.com/jmoiron/sqlx",
-		"gorm":    "gorm.io/gorm",
-		"uuid":    "github.com/google/uuid",
+		"chi":    "github.com/go-chi/chi/v5",
+		"gin":    "github.com/gin-gonic/gin",
+		"cobra":  "github.com/spf13/cobra",
+		"viper":  "github.com/spf13/viper",
+		"zap":    "go.uber.org/zap",
+		"assert": "github.com/stretchr/testify/assert",
+		"sqlx":   "github.com/jmoiron/sqlx",
+		"gorm":   "gorm.io/gorm",
+		"uuid":   "github.com/google/uuid",
 	}
 	for sym, expected := range thirdPartyChecks {
 		if got := ai.KnownPackages[sym]; got != expected {

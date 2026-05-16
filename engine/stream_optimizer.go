@@ -16,9 +16,9 @@ type StreamOptimizer struct {
 	DeduplicateRepeats bool
 	ProgressiveRender  bool
 
-	mu        sync.Mutex
-	buffer    strings.Builder
-	lastFlush time.Time
+	mu         sync.Mutex
+	buffer     strings.Builder
+	lastFlush  time.Time
 	totalChars int
 	flushCount int
 	startTime  time.Time
@@ -28,13 +28,13 @@ type StreamOptimizer struct {
 
 // StreamStats holds statistics about stream processing.
 type StreamStats struct {
-	TotalChars       int
-	FlushCount       int
-	AvgFlushSize     int
-	Duration         time.Duration
-	CharsPerSecond   float64
+	TotalChars        int
+	FlushCount        int
+	AvgFlushSize      int
+	Duration          time.Duration
+	CharsPerSecond    float64
 	DeduplicatedChars int
-	BufferedChars    int
+	BufferedChars     int
 }
 
 // NewStreamOptimizer creates a StreamOptimizer with sensible defaults.

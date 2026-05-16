@@ -18,6 +18,7 @@ func (WebFetchTool) Aliases() []string { return []string{"web_fetch"} }
 func (WebFetchTool) Description() string {
 	return "Fetch a URL and return its content as text. HTML is converted to plain text."
 }
+
 func (WebFetchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -28,8 +29,10 @@ func (WebFetchTool) Parameters() map[string]interface{} {
 	}
 }
 
-var htmlTagRe = regexp.MustCompile(`<[^>]*>`)
-var multiSpaceRe = regexp.MustCompile(`\s{3,}`)
+var (
+	htmlTagRe    = regexp.MustCompile(`<[^>]*>`)
+	multiSpaceRe = regexp.MustCompile(`\s{3,}`)
+)
 
 func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
@@ -55,7 +58,7 @@ func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err != nil {
 		return "", err
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 500_000))
 	if err != nil {

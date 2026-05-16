@@ -231,5 +231,3 @@ func displayConfigValue(value string) string {
 	}
 	return value
 }
-
-

@@ -38,7 +38,7 @@ type FieldSpec struct {
 
 // SchemaValidationResult holds the outcome of a schema validation pass.
 type SchemaValidationResult struct {
-	Valid      bool
+	Valid     bool
 	Errors    []SchemaValidationError
 	Warnings  []string
 	Extracted interface{}
@@ -788,4 +788,3 @@ func (sv *SchemaValidator) registerBuiltins() {
 		},
 	}
 }
-

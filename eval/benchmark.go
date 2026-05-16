@@ -157,7 +157,8 @@ func (mb *ModelBenchmark) Compare() string {
 	// Sort models by pass rate descending for display.
 	ranked := mb.RankModels("quality")
 	for _, r := range ranked {
-		sb.WriteString(fmt.Sprintf("%-22s %-12s %-13s %-12s %s\n",
+		sb.WriteString(fmt.Sprintf(
+			"%-22s %-12s %-13s %-12s %s\n",
 			truncate(r.Model, 20),
 			fmt.Sprintf("%.1f%%", r.PassRate*100),
 			fmt.Sprintf("%d", r.AvgTokens),

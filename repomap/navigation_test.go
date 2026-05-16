@@ -442,11 +442,11 @@ func TestSearchSymbols(t *testing.T) {
 		wantMin  int
 		wantName string
 	}{
-		{"Validate", "", 2, "ValidateToken"},     // fuzzy matches ValidateToken, Validate methods
+		{"Validate", "", 2, "ValidateToken"},       // fuzzy matches ValidateToken, Validate methods
 		{"Validator", "interface", 1, "Validator"}, // filtered by kind
 		{"JWT", "", 1, "JWTValidator"},
-		{"claims", "", 1, "Claims"},   // case insensitive
-		{"zzzzz", "", 0, ""},          // no match
+		{"claims", "", 1, "Claims"}, // case insensitive
+		{"zzzzz", "", 0, ""},        // no match
 	}
 
 	for _, tc := range tests {

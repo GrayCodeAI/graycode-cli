@@ -15,6 +15,7 @@ func (SleepTool) Aliases() []string { return []string{"sleep"} }
 func (SleepTool) Description() string {
 	return "Pause execution for a specified number of seconds."
 }
+
 func (SleepTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

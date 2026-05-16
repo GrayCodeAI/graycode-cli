@@ -362,10 +362,10 @@ func TestCreateGetDelete_Lifecycle(t *testing.T) {
 
 	// Create
 	p := &Persona{
-		Name:        "lifecycle-test",
-		Description: "Test persona for lifecycle",
-		Model:       "claude-sonnet-4-6",
-		Expertise:   []string{"testing"},
+		Name:         "lifecycle-test",
+		Description:  "Test persona for lifecycle",
+		Model:        "claude-sonnet-4-6",
+		Expertise:    []string{"testing"},
 		SystemPrompt: "You are a lifecycle test.",
 	}
 	if err := r.Create(p); err != nil {
@@ -457,12 +457,12 @@ func TestBuiltinPersonas_AreValid(t *testing.T) {
 	builtins := BuiltinPersonas()
 
 	expectedNames := map[string]bool{
-		"default":  false,
-		"reviewer": false,
+		"default":   false,
+		"reviewer":  false,
 		"architect": false,
-		"debugger": false,
-		"teacher":  false,
-		"speed":    false,
+		"debugger":  false,
+		"teacher":   false,
+		"speed":     false,
 	}
 
 	for _, p := range builtins {

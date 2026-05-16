@@ -10,11 +10,11 @@ import (
 
 // AutoCompactor orchestrates compaction with circuit breaker protection.
 type AutoCompactor struct {
-	mu                 sync.Mutex
-	registry           *StrategyRegistry
-	config             CompactConfig
+	mu                  sync.Mutex
+	registry            *StrategyRegistry
+	config              CompactConfig
 	consecutiveFailures int
-	lastStrategy       string
+	lastStrategy        string
 }
 
 // NewAutoCompactor creates an auto-compactor with the given config.

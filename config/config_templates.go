@@ -41,10 +41,10 @@ func NewTemplateRegistry() *TemplateRegistry {
 		Language:    "go",
 		Framework:   "",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(go build .)", "bash(go test ./...)", "bash(go vet ./...)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -90,10 +90,10 @@ paths: ["*.go"]
 		Language:    "go",
 		Framework:   "chi/gin",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(go build .)", "bash(go test ./...)", "bash(curl localhost:*)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -145,10 +145,10 @@ paths: ["**/handler*.go", "**/route*.go", "**/middleware*.go"]
 		Language:    "typescript",
 		Framework:   "react",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(npm run build)", "bash(npm test)", "bash(npx tsc --noEmit)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -201,10 +201,10 @@ paths: ["src/**/*.tsx", "src/**/*.ts", "app/**/*.tsx"]
 		Language:    "typescript",
 		Framework:   "express/fastify",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(npm run build)", "bash(npm test)", "bash(npx tsc --noEmit)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -258,10 +258,10 @@ paths: ["src/**/*.ts"]
 		Language:    "python",
 		Framework:   "fastapi/django",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(python -m pytest)", "bash(python -m mypy .)", "bash(ruff check .)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -314,10 +314,10 @@ paths: ["**/*.py"]
 		Language:    "python",
 		Framework:   "pytorch/sklearn",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(python -m pytest)", "bash(python -m mypy .)", "bash(jupyter nbconvert --execute *)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -372,10 +372,10 @@ paths: ["**/*.py", "notebooks/**/*.ipynb"]
 		Language:    "rust",
 		Framework:   "clap",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
+			"model":      "sonnet",
+			"sandbox":    "workspace",
 			"auto_allow": []string{"bash(cargo build)", "bash(cargo test)", "bash(cargo clippy)"},
-			"repo_map": true,
+			"repo_map":   true,
 		},
 		Files: map[string]string{
 			".hawk/settings.json": `{
@@ -428,10 +428,10 @@ paths: ["**/*.rs"]
 		Language:    "multi",
 		Framework:   "workspace",
 		Content: map[string]interface{}{
-			"model":    "sonnet",
-			"sandbox":  "workspace",
-			"auto_allow": []string{"bash(make build)", "bash(make test)", "bash(make lint)"},
-			"repo_map": true,
+			"model":               "sonnet",
+			"sandbox":             "workspace",
+			"auto_allow":          []string{"bash(make build)", "bash(make test)", "bash(make lint)"},
+			"repo_map":            true,
 			"repo_map_max_tokens": 8000,
 		},
 		Files: map[string]string{

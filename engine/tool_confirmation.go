@@ -6,10 +6,10 @@ import "strings"
 type ToolRisk int
 
 const (
-	RiskNone ToolRisk = iota // auto-approve silently
-	RiskLow                  // auto-approve with notification
-	RiskMedium               // ask user (default for unknown)
-	RiskHigh                 // always ask, show warning
+	RiskNone   ToolRisk = iota // auto-approve silently
+	RiskLow                    // auto-approve with notification
+	RiskMedium                 // ask user (default for unknown)
+	RiskHigh                   // always ask, show warning
 )
 
 // ToolConfirmationRouter decides whether a tool call needs user approval
@@ -84,8 +84,10 @@ func (r *ToolConfirmationRouter) classifyBashRisk(args map[string]interface{}) T
 	lower := strings.ToLower(cmd)
 
 	// High risk: destructive commands
-	highRisk := []string{"rm -rf", "drop table", "git push --force", "git reset --hard",
-		"chmod -R 777", "mkfs", "dd if=", "> /dev/"}
+	highRisk := []string{
+		"rm -rf", "drop table", "git push --force", "git reset --hard",
+		"chmod -R 777", "mkfs", "dd if=", "> /dev/",
+	}
 	for _, pat := range highRisk {
 		if strings.Contains(lower, pat) {
 			return RiskHigh
@@ -93,10 +95,12 @@ func (r *ToolConfirmationRouter) classifyBashRisk(args map[string]interface{}) T
 	}
 
 	// Low risk: common dev commands
-	lowRisk := []string{"go test", "go build", "go vet", "npm test", "npm run",
+	lowRisk := []string{
+		"go test", "go build", "go vet", "npm test", "npm run",
 		"cargo test", "cargo build", "pytest", "make", "cat ", "echo ",
 		"git status", "git diff", "git log", "git branch", "ls ", "pwd",
-		"head ", "tail ", "wc ", "grep ", "find "}
+		"head ", "tail ", "wc ", "grep ", "find ",
+	}
 	for _, pat := range lowRisk {
 		if strings.HasPrefix(lower, pat) || strings.Contains(lower, pat) {
 			return RiskLow

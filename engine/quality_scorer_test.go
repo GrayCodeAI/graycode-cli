@@ -452,7 +452,8 @@ func TestAverageScore(t *testing.T) {
 
 	// Add some scores manually
 	qs.mu.Lock()
-	qs.History = append(qs.History,
+	qs.History = append(
+		qs.History,
 		ScoredResponse{Score: 0.8, Breakdown: map[string]float64{}},
 		ScoredResponse{Score: 0.6, Breakdown: map[string]float64{}},
 		ScoredResponse{Score: 0.9, Breakdown: map[string]float64{}},

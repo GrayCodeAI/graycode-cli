@@ -24,14 +24,14 @@ description: Run the full test suite
 
 Execute unit and integration tests with coverage.
 `
-	if err := os.WriteFile(filepath.Join(dir, "deploy.md"), []byte(skill1), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "deploy.md"), []byte(skill1), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "test-suite.md"), []byte(skill2), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "test-suite.md"), []byte(skill2), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Non-md file should be ignored.
-	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("ignored"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("ignored"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

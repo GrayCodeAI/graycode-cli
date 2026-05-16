@@ -21,14 +21,14 @@ type DependencyUpdater struct {
 
 // Dependency represents a single package dependency with version info.
 type Dependency struct {
-	Name              string
-	CurrentVersion    string
-	LatestVersion     string
-	UpdateType        string // "major", "minor", "patch"
-	IsDirectDep       bool
+	Name               string
+	CurrentVersion     string
+	LatestVersion      string
+	UpdateType         string // "major", "minor", "patch"
+	IsDirectDep        bool
 	HasBreakingChanges bool
-	SecurityFix       bool
-	Changelog         string
+	SecurityFix        bool
+	Changelog          string
 }
 
 // UpdatePlan represents a structured plan for updating dependencies.
@@ -117,11 +117,11 @@ func (du *DependencyUpdater) listOutdatedGo() ([]Dependency, error) {
 
 		updateType := ClassifyUpdate(current, latest)
 		dep := Dependency{
-			Name:              name,
-			CurrentVersion:    current,
-			LatestVersion:     latest,
-			UpdateType:        updateType,
-			IsDirectDep:       true,
+			Name:               name,
+			CurrentVersion:     current,
+			LatestVersion:      latest,
+			UpdateType:         updateType,
+			IsDirectDep:        true,
 			HasBreakingChanges: updateType == "major",
 		}
 		deps = append(deps, dep)
@@ -151,11 +151,11 @@ func (du *DependencyUpdater) listOutdatedJS() ([]Dependency, error) {
 	for name, info := range result {
 		updateType := ClassifyUpdate(info.Current, info.Latest)
 		dep := Dependency{
-			Name:              name,
-			CurrentVersion:    info.Current,
-			LatestVersion:     info.Latest,
-			UpdateType:        updateType,
-			IsDirectDep:       info.Type == "dependencies",
+			Name:               name,
+			CurrentVersion:     info.Current,
+			LatestVersion:      info.Latest,
+			UpdateType:         updateType,
+			IsDirectDep:        info.Type == "dependencies",
 			HasBreakingChanges: updateType == "major",
 		}
 		deps = append(deps, dep)
@@ -184,11 +184,11 @@ func (du *DependencyUpdater) listOutdatedPython() ([]Dependency, error) {
 	for _, item := range result {
 		updateType := ClassifyUpdate(item.CurrentVersion, item.LatestVersion)
 		dep := Dependency{
-			Name:              item.Name,
-			CurrentVersion:    item.CurrentVersion,
-			LatestVersion:     item.LatestVersion,
-			UpdateType:        updateType,
-			IsDirectDep:       true,
+			Name:               item.Name,
+			CurrentVersion:     item.CurrentVersion,
+			LatestVersion:      item.LatestVersion,
+			UpdateType:         updateType,
+			IsDirectDep:        true,
 			HasBreakingChanges: updateType == "major",
 		}
 		deps = append(deps, dep)
@@ -220,11 +220,11 @@ func (du *DependencyUpdater) listOutdatedRust() ([]Dependency, error) {
 	for _, item := range result.Dependencies {
 		updateType := ClassifyUpdate(item.Current, item.Latest)
 		dep := Dependency{
-			Name:              item.Name,
-			CurrentVersion:    item.Current,
-			LatestVersion:     item.Latest,
-			UpdateType:        updateType,
-			IsDirectDep:       item.Kind == "Normal",
+			Name:               item.Name,
+			CurrentVersion:     item.Current,
+			LatestVersion:      item.Latest,
+			UpdateType:         updateType,
+			IsDirectDep:        item.Kind == "Normal",
 			HasBreakingChanges: updateType == "major",
 		}
 		deps = append(deps, dep)
@@ -381,7 +381,7 @@ func (du *DependencyUpdater) applyRustUpdate(dep Dependency) error {
 		content = strings.Replace(content, oldPattern, newPattern, 1)
 	}
 
-	if err := os.WriteFile(cargoPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cargoPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write Cargo.toml: %w", err)
 	}
 	return nil

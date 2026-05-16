@@ -20,11 +20,11 @@ type TransferLearning struct {
 
 // TransferPattern is a reusable pattern extracted from a successful session.
 type TransferPattern struct {
-	Language    string    `json:"language"`    // go, python, typescript, etc.
-	Category    string    `json:"category"`    // "fix", "refactor", "feature", "test"
-	Pattern     string    `json:"pattern"`     // generalized description
-	Approach    string    `json:"approach"`    // what worked
-	Confidence  float64   `json:"confidence"`  // based on success rate
+	Language    string    `json:"language"`   // go, python, typescript, etc.
+	Category    string    `json:"category"`   // "fix", "refactor", "feature", "test"
+	Pattern     string    `json:"pattern"`    // generalized description
+	Approach    string    `json:"approach"`   // what worked
+	Confidence  float64   `json:"confidence"` // based on success rate
 	UsedCount   int       `json:"used_count"`
 	SuccessRate float64   `json:"success_rate"`
 	CreatedAt   time.Time `json:"created_at"`

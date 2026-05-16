@@ -119,7 +119,7 @@ func (s *URLScraper) Fetch(ctx context.Context, rawURL string) (*ScrapeResult, e
 	if err != nil {
 		return nil, fmt.Errorf("fetching URL: %w", err)
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Limit read size.
 	limited := io.LimitReader(resp.Body, s.MaxSize)

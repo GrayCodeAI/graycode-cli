@@ -155,7 +155,7 @@ func (ac *AutoCapture) processBash(job captureJob) {
 	if isTestCommand(cmd) {
 		if job.isErr || containsTestFailure(job.output) {
 			snippet := truncate(job.output, 300)
-	_ = ac.bridge.Remember(
+			_ = ac.bridge.Remember(
 				fmt.Sprintf("Test failure: `%s` → %s", truncate(cmd, 100), snippet),
 				"bug",
 			)
@@ -168,7 +168,7 @@ func (ac *AutoCapture) processBash(job captureJob) {
 	if isGitCommit(cmd) && !job.isErr {
 		msg := extractCommitMessage(cmd)
 		if msg != "" {
-	_ = ac.bridge.Remember(
+			_ = ac.bridge.Remember(
 				fmt.Sprintf("Commit: %s", msg),
 				"decision",
 			)
@@ -181,7 +181,7 @@ func (ac *AutoCapture) processBash(job captureJob) {
 	if isPackageInstall(cmd) {
 		pkg := extractPackageName(cmd)
 		if pkg != "" {
-	_ = ac.bridge.Remember(
+			_ = ac.bridge.Remember(
 				fmt.Sprintf("Dependency added: %s", pkg),
 				"decision",
 			)
@@ -192,7 +192,7 @@ func (ac *AutoCapture) processBash(job captureJob) {
 
 	// Detect build/deploy commands as conventions
 	if isBuildCommand(cmd) && !job.isErr {
-	_ = ac.bridge.Remember(
+		_ = ac.bridge.Remember(
 			fmt.Sprintf("Build command: `%s`", truncate(cmd, 200)),
 			"convention",
 		)
@@ -208,7 +208,7 @@ func (ac *AutoCapture) processRead(job captureJob) {
 	}
 	// Only track significant reads (file structure discovery)
 	if len(job.output) > 500 && isStructuralFile(path) {
-	_ = ac.bridge.Remember(
+		_ = ac.bridge.Remember(
 			fmt.Sprintf("Project file: %s", path),
 			"file",
 		)
@@ -223,7 +223,7 @@ func (ac *AutoCapture) processError(job captureJob) {
 	// Extract error patterns that are likely bugs
 	if containsErrorPattern(job.output) {
 		snippet := truncate(job.output, 300)
-	_ = ac.bridge.Remember(
+		_ = ac.bridge.Remember(
 			fmt.Sprintf("Error in %s: %s", job.toolName, snippet),
 			"bug",
 		)
@@ -243,7 +243,7 @@ var (
 	structuralFiles   = regexp.MustCompile(`(?i)(package\.json|go\.mod|Cargo\.toml|pyproject\.toml|Makefile|Dockerfile|docker-compose|tsconfig|\.env\.example)`)
 )
 
-func isTestCommand(cmd string) bool       { return testCmdPattern.MatchString(cmd) }
+func isTestCommand(cmd string) bool        { return testCmdPattern.MatchString(cmd) }
 func isGitCommit(cmd string) bool          { return gitCommitPattern.MatchString(cmd) }
 func isPackageInstall(cmd string) bool     { return pkgInstallPattern.MatchString(cmd) }
 func isBuildCommand(cmd string) bool       { return buildCmdPattern.MatchString(cmd) }

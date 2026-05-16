@@ -76,7 +76,7 @@ func TestTaskUpdateTool_Execute(t *testing.T) {
 	tool := TaskUpdateTool{}
 	input, _ := json.Marshal(map[string]interface{}{
 		"taskId": task.ID,
-		"status":  "completed",
+		"status": "completed",
 	})
 	result, err := tool.Execute(context.Background(), input)
 	if err != nil {

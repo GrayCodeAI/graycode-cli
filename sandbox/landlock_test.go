@@ -1,8 +1,8 @@
 package sandbox
 
 import (
-	"strings"
 	"runtime"
+	"strings"
 	"testing"
 )
 

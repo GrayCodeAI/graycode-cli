@@ -37,7 +37,7 @@ func initTestRepo(t *testing.T) string {
 
 	// Create an initial commit so branches can be made.
 	readme := filepath.Join(dir, "README.md")
-	if err := os.WriteFile(readme, []byte("# test repo\n"), 0644); err != nil {
+	if err := os.WriteFile(readme, []byte("# test repo\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	run("git", "add", "README.md")
@@ -323,7 +323,7 @@ func TestMergeWorktree(t *testing.T) {
 
 	// Make a change in the worktree and commit it.
 	newFile := filepath.Join(wtPath, "new.txt")
-	if err := os.WriteFile(newFile, []byte("hello from worktree\n"), 0644); err != nil {
+	if err := os.WriteFile(newFile, []byte("hello from worktree\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit := func(dir string, args ...string) {

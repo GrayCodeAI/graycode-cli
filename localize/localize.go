@@ -131,7 +131,7 @@ func extractCodeBlocks(rootDir string, symbols []SymbolMatch, contextLines int) 
 		// Build content with line numbers
 		var b strings.Builder
 		for i := start; i <= end; i++ {
-		_, _ = fmt.Fprintf(&b, "%4d | %s\n", i, lines[i-1])
+			_, _ = fmt.Fprintf(&b, "%4d | %s\n", i, lines[i-1])
 		}
 
 		blocks = append(blocks, CodeBlock{

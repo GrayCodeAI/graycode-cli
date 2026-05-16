@@ -11,7 +11,7 @@ import (
 type CostEntry struct {
 	SessionID    string        `json:"session_id"`
 	Model        string        `json:"model"`
-	TaskType     string        `json:"task_type"`     // "simple", "generation", "debug", "refactor", "review", "chat"
+	TaskType     string        `json:"task_type"` // "simple", "generation", "debug", "refactor", "review", "chat"
 	InputTokens  int           `json:"input_tokens"`
 	OutputTokens int           `json:"output_tokens"`
 	CostUSD      float64       `json:"cost_usd"`
@@ -50,7 +50,7 @@ type TaskSpend struct {
 
 // Recommendation represents a cost optimization suggestion.
 type Recommendation struct {
-	Type        string  `json:"type"`        // "downgrade", "batch", "cache"
+	Type        string  `json:"type"` // "downgrade", "batch", "cache"
 	Description string  `json:"description"`
 	Savings     float64 `json:"savings"` // estimated USD savings
 }
@@ -65,10 +65,10 @@ var modelPricing = map[string]float64{
 	"sonnet":                   3.0,
 	"haiku":                    0.25,
 	// OpenAI
-	"gpt-4":        30.0,
-	"gpt-4-turbo":  10.0,
-	"gpt-4o":       2.5,
-	"gpt-4o-mini":  0.15,
+	"gpt-4":         30.0,
+	"gpt-4-turbo":   10.0,
+	"gpt-4o":        2.5,
+	"gpt-4o-mini":   0.15,
 	"gpt-3.5-turbo": 0.5,
 	// Fallback tiers
 	"expensive": 15.0,
@@ -211,7 +211,8 @@ func generateOptimizationRecs(entries []CostEntry, report *OptimizationReport) [
 			Description: fmt.Sprintf(
 				"%d simple tasks were sent to expensive models (total $%.4f). "+
 					"Route simple questions to a cheaper model (haiku/gpt-4o-mini) to save ~$%.4f.",
-				simpleOnExpensive, simpleExpensiveCost, savings),
+				simpleOnExpensive, simpleExpensiveCost, savings,
+			),
 			Savings: savings,
 		})
 	}
@@ -235,7 +236,8 @@ func generateOptimizationRecs(entries []CostEntry, report *OptimizationReport) [
 					Description: fmt.Sprintf(
 						"%d chat/conversational tasks used expensive models ($%.4f). "+
 							"Consider using sonnet/gpt-4o for general conversation to save ~$%.4f.",
-						chatCount, chatExpensiveCost, savings),
+						chatCount, chatExpensiveCost, savings,
+					),
 					Savings: savings,
 				})
 			}
@@ -261,7 +263,8 @@ func generateOptimizationRecs(entries []CostEntry, report *OptimizationReport) [
 				Description: fmt.Sprintf(
 					"High call volume (avg %d calls/task-type). "+
 						"Enable prompt caching to reduce redundant token costs by ~$%.4f.",
-					avgCallsPerType, savings),
+					avgCallsPerType, savings,
+				),
 				Savings: savings,
 			})
 		}
@@ -276,7 +279,8 @@ func generateOptimizationRecs(entries []CostEntry, report *OptimizationReport) [
 				Description: fmt.Sprintf(
 					"%.0f%% of spend ($%.4f) was on abandoned/discarded outputs. "+
 						"Consider iterating with cheaper models first, then upgrading for final output.",
-					abandonRate, report.AbandonedSpend),
+					abandonRate, report.AbandonedSpend,
+				),
 				Savings: report.AbandonedSpend * 0.50,
 			})
 		}

@@ -23,10 +23,10 @@ type ContextProvider interface {
 
 // ContextItem represents a single piece of context gathered from a provider.
 type ContextItem struct {
-	Source    string
-	Title     string
-	Content   string
-	Relevance float64
+	Source     string
+	Title      string
+	Content    string
+	Relevance  float64
 	TokenCount int
 }
 
@@ -213,7 +213,8 @@ func (g *GitContextProvider) Gather(ctx context.Context, query string) ([]Contex
 	}
 
 	// Recent commits
-	logCmd := exec.CommandContext(ctx, "git", "-C", g.RepoDir, "log",
+	logCmd := exec.CommandContext(
+		ctx, "git", "-C", g.RepoDir, "log",
 		fmt.Sprintf("--max-count=%d", maxCommits),
 		"--oneline",
 	)

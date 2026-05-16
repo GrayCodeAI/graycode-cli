@@ -11,13 +11,13 @@ import (
 // Dashboard provides a local telemetry dashboard for hawk showing usage analytics,
 // performance metrics, and session history in a terminal-friendly format.
 type Dashboard struct {
-	Sessions    []SessionSummary           `json:"sessions"`
-	DailyStats  []DayStat                  `json:"daily_stats"`
-	ModelUsage  map[string]DashModelStats  `json:"model_usage"`
-	ToolUsage   map[string]int             `json:"tool_usage"`
+	Sessions     []SessionSummary          `json:"sessions"`
+	DailyStats   []DayStat                 `json:"daily_stats"`
+	ModelUsage   map[string]DashModelStats `json:"model_usage"`
+	ToolUsage    map[string]int            `json:"tool_usage"`
 	TotalCostUSD float64                   `json:"total_cost_usd"`
-	TotalTokens int                        `json:"total_tokens"`
-	ActiveDays  int                        `json:"active_days"`
+	TotalTokens  int                       `json:"total_tokens"`
+	ActiveDays   int                       `json:"active_days"`
 }
 
 // SessionSummary captures key metrics for a single session.

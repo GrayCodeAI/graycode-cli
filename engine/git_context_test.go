@@ -22,7 +22,8 @@ func setupTestRepo(t *testing.T) (string, func()) {
 		t.Helper()
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(
+			os.Environ(),
 			"GIT_AUTHOR_NAME=Alice",
 			"GIT_AUTHOR_EMAIL=alice@example.com",
 			"GIT_COMMITTER_NAME=Alice",
@@ -38,7 +39,8 @@ func setupTestRepo(t *testing.T) (string, func()) {
 		t.Helper()
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(
+			os.Environ(),
 			"GIT_AUTHOR_NAME="+author,
 			"GIT_AUTHOR_EMAIL="+email,
 			"GIT_COMMITTER_NAME="+author,
@@ -55,7 +57,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	runInDir("git", "checkout", "-b", "main")
 
 	// Create initial file and commit
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
@@ -63,7 +65,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	runInDir("git", "commit", "-m", "initial commit")
 
 	// Add another file by Bob
-	if err := os.WriteFile(filepath.Join(dir, "utils.go"), []byte("package main\n\nfunc helper() {}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "utils.go"), []byte("package main\n\nfunc helper() {}\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
@@ -71,7 +73,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	runInDirAs("Bob", "bob@example.com", "git", "commit", "-m", "add utils helper")
 
 	// Modify main.go again (by Alice)
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"hello\")\n}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"hello\")\n}\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
@@ -79,11 +81,11 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	runInDir("git", "commit", "-m", "add hello print")
 
 	// Add related file (modified together with main.go)
-	if err := os.WriteFile(filepath.Join(dir, "config.go"), []byte("package main\n\nvar cfg = \"default\"\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "config.go"), []byte("package main\n\nvar cfg = \"default\"\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(cfg)\n}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(cfg)\n}\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
@@ -91,11 +93,11 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	runInDir("git", "commit", "-m", "add config and update main")
 
 	// One more commit touching both main.go and config.go
-	if err := os.WriteFile(filepath.Join(dir, "config.go"), []byte("package main\n\nvar cfg = \"production\"\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "config.go"), []byte("package main\n\nvar cfg = \"production\"\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"app:\", cfg)\n}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"app:\", cfg)\n}\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
@@ -106,7 +108,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 	runInDir("git", "checkout", "-b", "feature/auth-v2")
 
 	// Add a commit on the feature branch
-	if err := os.WriteFile(filepath.Join(dir, "auth.go"), []byte("package main\n\nfunc authenticate() bool {\n\treturn true\n}\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "auth.go"), []byte("package main\n\nfunc authenticate() bool {\n\treturn true\n}\n"), 0o644); err != nil {
 		cleanup()
 		t.Fatalf("write file: %v", err)
 	}
@@ -146,7 +148,7 @@ func TestGetUncommitted(t *testing.T) {
 	}
 
 	// Modify a file
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// modified\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// modified\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -412,7 +414,7 @@ func TestGetDiffSummary(t *testing.T) {
 	}
 
 	// Modify a file
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// changed\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// changed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

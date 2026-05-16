@@ -94,7 +94,7 @@ src/api/** @carol
 # Another comment
 docs/ @docTeam
 `
-	if err := os.WriteFile(codeownersPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(codeownersPath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -399,14 +399,14 @@ func TestBuildFromGitHistory(t *testing.T) {
 	runGit("config", "user.name", "alice")
 
 	// Create a file and commit
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit("add", "main.go")
 	runGit("commit", "-m", "initial commit")
 
 	// Second commit by same author
-	if err := os.WriteFile(filepath.Join(tmpDir, "util.go"), []byte("package util"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "util.go"), []byte("package util"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit("add", "util.go")
@@ -415,7 +415,7 @@ func TestBuildFromGitHistory(t *testing.T) {
 	// Change author and commit
 	runGit("config", "user.name", "bob")
 	runGit("config", "user.email", "bob@example.com")
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\nfunc main() {}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit("add", "main.go")

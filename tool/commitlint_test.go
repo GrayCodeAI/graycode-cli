@@ -33,10 +33,10 @@ func TestNewCommitLinter_DefaultRules(t *testing.T) {
 
 func TestParseCommitMessage_BasicConventional(t *testing.T) {
 	tests := []struct {
-		input    string
-		wantType string
-		wantScope string
-		wantSubj string
+		input        string
+		wantType     string
+		wantScope    string
+		wantSubj     string
 		wantBreaking bool
 	}{
 		{
@@ -386,7 +386,7 @@ func TestLoadFromProject_JSONConfig(t *testing.T) {
     "header-max-length": [1, "always", 80]
   }
 }`
-	err := os.WriteFile(filepath.Join(dir, ".commitlintrc.json"), []byte(config), 0644)
+	err := os.WriteFile(filepath.Join(dir, ".commitlintrc.json"), []byte(config), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -445,7 +445,7 @@ func TestLoadFromProject_JSConfig(t *testing.T) {
   },
 };
 `
-	err := os.WriteFile(filepath.Join(dir, "commitlint.config.js"), []byte(config), 0644)
+	err := os.WriteFile(filepath.Join(dir, "commitlint.config.js"), []byte(config), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
