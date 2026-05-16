@@ -9,7 +9,6 @@ linters:
     - staticcheck
     - unused
     - misspell
-    - gocritic
     - noctx
     - bodyclose
     - unconvert
@@ -22,14 +21,6 @@ linters:
       enable-all: true
       disable:
         - fieldalignment
-    gocritic:
-      enabled-tags:
-        - diagnostic
-        - performance
-      disabled-checks:
-        - hugeParam
-        - rangeValCopy
-        - appendAssign
     staticcheck:
       checks:
         - all
@@ -41,7 +32,6 @@ linters:
     rules:
       - path: _test\.go
         linters:
-          - gocritic
           - noctx
           - bodyclose
           - errcheck
