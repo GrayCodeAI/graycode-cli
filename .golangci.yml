@@ -49,6 +49,31 @@ linters:
       - path: cmd/
         linters:
           - noctx
+          - errcheck
+      - path: daemon/
+        linters:
+          - errcheck
+      - path: engine/
+        linters:
+          - errcheck
+      - path: sandbox/
+        linters:
+          - errcheck
+      - path: memory/
+        linters:
+          - errcheck
+      - path: tool/
+        linters:
+          - errcheck
+      - path: repomap/
+        linters:
+          - errcheck
+      - path: mcp/
+        linters:
+          - errcheck
+      - path: magicdocs/
+        linters:
+          - errcheck
 
 issues:
   max-issues-per-linter: 0
