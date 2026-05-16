@@ -81,7 +81,7 @@ func (c *LangfuseClient) Trace(ctx context.Context, ev TraceEvent) {
 	c.mu.Unlock()
 
 	if shouldFlush {
-		go c.Flush(ctx)
+		go func() { _ = c.Flush(ctx) }()
 	}
 }
 
@@ -113,7 +113,7 @@ func (c *LangfuseClient) Flush(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("langfuse: HTTP %d", resp.StatusCode)
 	}

@@ -72,7 +72,7 @@ func (df *DeviceFlow) RequestCode(ctx context.Context) (*DeviceCodeResponse, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("device auth request failed: HTTP %d", resp.StatusCode)
@@ -132,7 +132,7 @@ func (df *DeviceFlow) exchangeCode(ctx context.Context, deviceCode string) (*Tok
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var raw map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
@@ -145,6 +145,8 @@ func (df *DeviceFlow) exchangeCode(ctx context.Context, deviceCode string) (*Tok
 
 	jsonData, _ := json.Marshal(raw)
 	var token TokenResponse
-	json.Unmarshal(jsonData, &token)
+	if err := json.Unmarshal(jsonData, &token); err != nil {
+		return nil, err
+	}
 	return &token, nil
 }

@@ -14,41 +14,42 @@ linters:
     - bodyclose
     - unconvert
     - whitespace
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-    disabled-checks:
-      - hugeParam
-      - rangeValCopy
-      - appendAssign
-  staticcheck:
-    checks:
-      - all
-      - -SA1019
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - appendAssign
+    staticcheck:
+      checks:
+        - all
+        - -SA1019
+  exclusions:
+    paths:
+      - .gomodcache
+      - vendor
+    rules:
+      - path: _test\.go
+        linters:
+          - gocritic
+          - noctx
+          - bodyclose
+          - errcheck
+          - unused
+      - path: cmd/
+        linters:
+          - noctx
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-dirs:
-    - .gomodcache
-    - vendor
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gocritic
-        - noctx
-        - bodyclose
-        - errcheck
-    - path: cmd/
-      linters:
-        - noctx

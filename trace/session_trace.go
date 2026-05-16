@@ -265,11 +265,12 @@ func (st *SessionTrace) FormatTree() string {
 // formatSpan recursively renders a span and its children into the builder.
 func formatSpan(b *strings.Builder, span *SessionSpan, prefix string, isLast bool, isRoot bool) {
 	// Write the connector.
-	if isRoot {
+	switch {
+	case isRoot:
 		// No connector for the root span.
-	} else if isLast {
+	case isLast:
 		b.WriteString(prefix + "└── ")
-	} else {
+	default:
 		b.WriteString(prefix + "├── ")
 	}
 
@@ -282,7 +283,7 @@ func formatSpan(b *strings.Builder, span *SessionSpan, prefix string, isLast boo
 			dur = time.Since(span.StartTime)
 		}
 	}
-	b.WriteString(fmt.Sprintf("%s [%s]", span.Name, formatDuration(dur)))
+	fmt.Fprintf(b, "%s [%s]", span.Name, formatDuration(dur))
 
 	// Write selected attributes inline.
 	attrParts := formatInlineAttrs(span)
