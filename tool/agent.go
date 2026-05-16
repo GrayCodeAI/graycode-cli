@@ -5,12 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 )
-
-// backgroundCompletionTimeout is the maximum time to wait for background
-// sub-agents in a single background-completion cycle.
-const backgroundCompletionTimeout = 2 * time.Minute
 
 type AgentTool struct{}
 

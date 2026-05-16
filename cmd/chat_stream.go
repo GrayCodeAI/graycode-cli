@@ -56,31 +56,6 @@ func (m *chatModel) startStream() {
 	}()
 }
 
-// renderGlimmerVerb renders the spinner verb with a sweeping 3-color wave
-func renderGlimmerVerb(verb string, glimmerPos int) string {
-	if len(verb) == 0 {
-		return ""
-	}
-	// 3 colors: vivid orange, bright orange, warm amber
-	colors := []string{"255;94;14", "255;140;50", "255;180;80"}
-	runes := []rune(verb)
-
-	var b strings.Builder
-	for i, r := range runes {
-		// Wave: each char picks a color based on position + time, cycling 1→2→3→2→1→2→3...
-		dist := abs((i+glimmerPos)%5 - 2)
-		if dist == 0 {
-			b.WriteString("\033[1;38;2;" + colors[0] + "m" + string(r))
-		} else if dist == 1 {
-			b.WriteString("\033[1;38;2;" + colors[1] + "m" + string(r))
-		} else {
-			b.WriteString("\033[1;38;2;" + colors[2] + "m" + string(r))
-		}
-	}
-	b.WriteString("\033[0m")
-	return b.String()
-}
-
 func abs(x int) int {
 	if x < 0 {
 		return -x
