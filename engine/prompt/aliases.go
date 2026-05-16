@@ -18,14 +18,20 @@ type ABTest struct {
 	A, B DSPyVariant
 }
 
-// NewABTest builds an A/B test between two variants.
-func NewABTest(a, b DSPyVariant) *ABTest {
-	return &ABTest{A: a, B: b}
+// Tuner is a lighter-weight prompt-tuning helper for online adjustments.
+type Tuner = engine.PromptTuner
+
+// Variant is a tuned prompt the Tuner emits.
+type Variant = engine.PromptVariant
+
+// NewOptimizer returns a fresh prompt optimizer.
+func NewOptimizer() *Optimizer {
+	return engine.NewPromptOptimizer()
 }
 
 // NewABTest builds an A/B test between two variants.
 func NewABTest(a, b DSPyVariant) *ABTest {
-	return engine.NewABTest(a, b)
+	return &ABTest{A: a, B: b}
 }
 
 // NewTuner returns a fresh prompt tuner.
