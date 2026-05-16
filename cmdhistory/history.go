@@ -69,7 +69,7 @@ func New(dbPath string) (*Store, error) {
 	}
 
 	if err := createSchema(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("create schema: %w", err)
 	}
 
@@ -164,7 +164,7 @@ func (s *Store) Search(query string, opts SearchOpts) ([]Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("search query: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return scanEntries(rows)
 }
@@ -184,7 +184,7 @@ func (s *Store) Recent(n int) ([]Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("recent query: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return scanEntries(rows)
 }
@@ -205,7 +205,7 @@ func (s *Store) SearchByDir(dir string, limit int) ([]Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("search by dir: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return scanEntries(rows)
 }
@@ -240,7 +240,7 @@ func (s *Store) Stats() (*HistoryStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("stats top commands: %w", err)
 	}
-	defer cmdRows.Close()
+	defer func() { _ = cmdRows.Close() }()
 
 	for cmdRows.Next() {
 		var cc CommandCount
@@ -265,7 +265,7 @@ func (s *Store) Stats() (*HistoryStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("stats top dirs: %w", err)
 	}
-	defer dirRows.Close()
+	defer func() { _ = dirRows.Close() }()
 
 	for dirRows.Next() {
 		var dc DirCount
@@ -313,6 +313,6 @@ func scanEntries(rows *sql.Rows) ([]Entry, error) {
 // generateID produces a short 8-character hex ID from crypto/rand.
 func generateID() string {
 	b := make([]byte, 4)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return fmt.Sprintf("%x", b)
 }

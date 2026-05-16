@@ -66,7 +66,7 @@ func (hr *HealthRouter) ComputeHealth(path string) CodeHealth {
 	if err != nil {
 		return h
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	maxNesting := 0

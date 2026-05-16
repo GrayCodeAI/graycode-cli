@@ -486,7 +486,7 @@ func (se *SearchEngine) loadSessionMessages(path string) ([]Message, sessionMeta
 	if err != nil {
 		return nil, sessionMeta{}, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	ext := filepath.Ext(path)
 	if ext == ".json" {

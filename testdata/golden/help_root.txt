@@ -1,0 +1,85 @@
+hawk is an AI coding agent that reads, writes, and runs code in your terminal.
+
+Usage:
+  hawk [prompt] [flags]
+  hawk [command]
+
+Available Commands:
+  agent       Manage custom agent personas
+  completion  Generate shell completion script
+  config      Show or update settings
+  context     Export project context as a single document for use in any LLM
+  cost        [Experimental] Analyze and optimize LLM API spend
+  daemon      Manage the hawk background server
+  doctor      Run local diagnostics
+  exec        Execute a single command non-interactively
+  feedback    Submit feedback about hawk
+  fingerprint Generate a repository fingerprint (languages, deps, git info)
+  help        Help about any command
+  history     Search and browse command history
+  inspect     Scan a website for broken links, security issues, accessibility violations, and more
+  mcp         Show MCP server configuration
+  mission     Run a multi-agent mission (parallel feature execution)
+  plan        Create and manage structured development plans
+  plugin      Manage plugins
+  pr          AI-powered pull request workflow
+  research    Autonomous research loop (Karpathy autoresearch pattern)
+  rules       Detect, import, and export AI coding rules between tool formats
+  sandbox     View, apply, or discard pending diff sandbox changes
+  schema      Output JSON schema for hawk settings.json
+  search      Search across saved sessions
+  sessions    List saved sessions
+  setup       Run first-time setup again
+  sight       AI-powered code review on the current branch diff
+  skills      Manage skills (list, search, install, remove, audit, info, trending)
+  snapshot    Manage file snapshots (undo any change)
+  stats       Show usage statistics and cost analytics
+  taste       Manage taste profile (learned coding style preferences)
+  tools       List built-in tools
+  trace       Git-native session capture — rewind, checkpoint, and audit AI sessions
+  version     Print hawk version
+
+Flags:
+      --add-dir stringArray                additional directories to include in session context
+      --allowed-tools stringArray          comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")
+      --allowedTools stringArray           comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")
+      --append-system-prompt string        append text to the default or custom system prompt
+      --append-system-prompt-file string   read text from a file and append it to the system prompt
+      --auto-commit                        auto-commit file changes made by Write and Edit tools
+      --auto-skill                         auto-detect project and install matching skills
+      --container                          force container mode even if auto-detection would skip it
+  -c, --continue                           continue the most recent conversation in the current directory
+      --council                            consult multiple models and synthesize best answer
+      --dangerously-skip-permissions       bypass all permission checks
+      --disallowed-tools stringArray       comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")
+      --disallowedTools stringArray        comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")
+      --fork-session                       when resuming, create a new session ID instead of reusing the original
+  -h, --help                               help for hawk
+      --input-format string                input format for --print: "text" or "stream-json" (default "text")
+      --max-budget-usd float               maximum estimated API spend in USD
+      --max-turns int                      maximum number of agentic turns in non-interactive mode
+      --mcp stringArray                    MCP server command
+  -m, --model string                       model to use (e.g. claude-sonnet-4-20250514)
+      --no-container                       disable container mode (run on host with permission prompts)
+      --no-session-persistence             disable session persistence in print mode
+      --output-format string               output format for --print: "text", "json", or "stream-json" (default "text")
+      --permission-mode string             permission mode: default, acceptEdits, bypassPermissions, dontAsk, or plan
+      --power int                          power level 1-10 (auto-configures model, context, review depth) (default 5)
+  -p, --print                              print response and exit
+      --prompt string                      send a single prompt and exit (legacy alias for --print)
+      --provider string                    LLM provider (anthropic, openai, gemini, etc.)
+  -r, --resume string                      resume a saved session by ID
+      --sandbox string                     sandbox mode for Bash commands: strict, workspace, or off
+      --session-id string                  use a specific session ID for the conversation
+      --settings string                    path to a settings JSON file or a JSON string to load for this session
+      --system-prompt string               system prompt to use for the session
+      --system-prompt-file string          read system prompt from a file
+      --teach                              explain reasoning as the agent works
+      --teach-depth int                    explanation depth: 1=what, 2=why, 3=how (default 2)
+      --timeout duration                   time budget for the operation (e.g., 2m, 5m, 1h)
+      --tools stringArray                  available tools: "" disables all tools, "default" enables all, or names like "Bash,Edit,Read"
+  -v, --version                            output the version number
+      --vibe                               vibe coding mode: auto-apply, auto-run, no confirmations
+      --watch                              watch the working directory for file changes
+
+Use "hawk [command] --help" for more information about a command.

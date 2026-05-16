@@ -121,12 +121,12 @@ func (n *Notifier) NotifyCostMilestone(cost float64) {
 
 // SetTerminalTitle sets the terminal title using escape sequences.
 func (n *Notifier) SetTerminalTitle(title string) {
-	fmt.Fprintf(os.Stdout, "\033]0;%s\007", title)
+		_, _ = fmt.Fprintf(os.Stdout, "\033]0;%s\007", title)
 }
 
 // ClearTitle resets the terminal title.
 func (n *Notifier) ClearTitle() {
-	fmt.Fprintf(os.Stdout, "\033]0;\007")
+		_, _ = fmt.Fprintf(os.Stdout, "\033]0;\007")
 }
 
 // DesktopNotify sends a desktop notification using OS-specific mechanisms.
@@ -159,7 +159,7 @@ $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
 
 // Bell writes the terminal bell character to stdout.
 func (n *Notifier) Bell() {
-	fmt.Fprint(os.Stdout, "\a")
+	_, _ = fmt.Fprint(os.Stdout, "\a")
 }
 
 // GetUnread returns all unread notifications.

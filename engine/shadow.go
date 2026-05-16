@@ -40,7 +40,7 @@ func (sw *ShadowWorkspace) ValidateEdit(originalPath, newContent string) []Valid
 	if err := os.WriteFile(tmpFile, []byte(newContent), 0o644); err != nil {
 		return []ValidationError{{File: originalPath, Message: fmt.Sprintf("shadow write: %v", err)}}
 	}
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	runner := shadowValidator(ext)
 	if runner == nil {
@@ -66,7 +66,7 @@ func (sw *ShadowWorkspace) ValidateMultipleEdits(edits map[string]string) map[st
 // Close removes the shadow workspace temp directory and all its contents.
 func (sw *ShadowWorkspace) Close() {
 	if sw.tempDir != "" {
-		os.RemoveAll(sw.tempDir)
+		_ = os.RemoveAll(sw.tempDir)
 	}
 }
 
@@ -91,8 +91,8 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 	// Ensure a go.mod exists so `go vet` can operate.
 	modPath := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(modPath); os.IsNotExist(err) {
-		os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o644)
-		defer os.Remove(modPath)
+		_ = os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o644)
+		defer func() { _ = os.Remove(modPath) }()
 	}
 
 	cmd := exec.Command("go", "vet", "./...")

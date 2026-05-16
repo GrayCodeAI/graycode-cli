@@ -51,7 +51,7 @@ func (m *MCPAuthManager) StartAuth(serverName, serverURL string) (*MCPAuthState,
 		m.states[serverName] = state
 		return state, nil
 	}
-	defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 	var oauthConfig struct {
 		AuthorizationEndpoint string `json:"authorization_endpoint"`

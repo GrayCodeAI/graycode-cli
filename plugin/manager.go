@@ -339,7 +339,7 @@ func ScanPlugin(pluginDir string) []SecurityIssue {
 	}
 
 	// Scan all files in the plugin directory for hidden Unicode characters
-	filepath.Walk(pluginDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(pluginDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}

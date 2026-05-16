@@ -66,7 +66,7 @@ func (h *Handler) Listen() context.Context {
 
 	go func() {
 		sig := <-sigCh
-		fmt.Fprintf(os.Stderr, "\nReceived signal: %v, shutting down gracefully...\n", sig)
+		_, _ = fmt.Fprintf(os.Stderr, "\nReceived signal: %v, shutting down gracefully...\n", sig)
 		h.shutdown()
 	}()
 
@@ -88,7 +88,7 @@ func (h *Handler) shutdown() {
 		go func(fn func(ctx context.Context) error) {
 			defer wg.Done()
 			if err := fn(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "Shutdown hook error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Shutdown hook error: %v\n", err)
 			}
 		}(hook)
 	}

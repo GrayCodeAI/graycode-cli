@@ -190,7 +190,7 @@ func panicRecovery(saveFn func()) {
 		home, _ := os.UserHomeDir()
 		if home != "" {
 			crashDir := filepath.Join(home, ".hawk")
-			os.MkdirAll(crashDir, 0o755)
+			_ = os.MkdirAll(crashDir, 0o755)
 			crashLog := filepath.Join(crashDir, "crash.log")
 
 			entry := fmt.Sprintf(
@@ -202,17 +202,17 @@ func panicRecovery(saveFn func()) {
 
 			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 			if err == nil {
-				f.WriteString(entry)
-				f.Close()
+				_, _ = f.WriteString(entry)
+				_ = f.Close()
 			}
 		}
 
 		// Print user-friendly message
-		fmt.Fprintf(os.Stderr, "\nhawk encountered an unexpected error and needs to exit.\n")
-		fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
-		fmt.Fprintf(os.Stderr, "Details logged to ~/.hawk/crash.log\n")
-		fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n\n")
-		fmt.Fprintf(os.Stderr, "panic: %v\n", r)
+		_, _ = fmt.Fprintf(os.Stderr, "\nhawk encountered an unexpected error and needs to exit.\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Details logged to ~/.hawk/crash.log\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n\n")
+		_, _ = fmt.Fprintf(os.Stderr, "panic: %v\n", r)
 		os.Exit(1)
 	}
 }
@@ -228,7 +228,7 @@ func signalHandler(saveFn func()) {
 
 	go func() {
 		sig := <-sigCh
-		fmt.Fprintf(os.Stderr, "\nReceived %v, saving session...\n", sig)
+		_, _ = fmt.Fprintf(os.Stderr, "\nReceived %v, saving session...\n", sig)
 
 		if saveFn != nil {
 			// Give save a bounded amount of time
@@ -245,11 +245,11 @@ func signalHandler(saveFn func()) {
 			case <-done:
 				// saved successfully
 			case <-time.After(5 * time.Second):
-				fmt.Fprintf(os.Stderr, "Save timed out, exiting.\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Save timed out, exiting.\n")
 			}
 		}
 
-		fmt.Fprintf(os.Stderr, "Goodbye.\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Goodbye.\n")
 		os.Exit(0)
 	}()
 }
@@ -274,7 +274,7 @@ func getErrorLogger() *errorLoggerT {
 			home = os.TempDir()
 		}
 		dir := filepath.Join(home, ".hawk")
-		os.MkdirAll(dir, 0o755)
+		_ = os.MkdirAll(dir, 0o755)
 		errLogger = &errorLoggerT{
 			path: filepath.Join(dir, "error.log"),
 		}
@@ -301,8 +301,8 @@ func (l *errorLoggerT) LogError(context string, err error) {
 	if ferr != nil {
 		return
 	}
-	defer f.Close()
-	f.WriteString(entry)
+	defer func() { _ = f.Close() }()
+	_, _ = f.WriteString(entry)
 }
 
 // LogErrorf writes a formatted, timestamped error entry to ~/.hawk/error.log.
@@ -323,8 +323,8 @@ func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 	if ferr != nil {
 		return
 	}
-	defer f.Close()
-	f.WriteString(entry)
+	defer func() { _ = f.Close() }()
+	_, _ = f.WriteString(entry)
 }
 
 // ─── validateStartup ─────────────────────────────────────────────────────────
@@ -394,7 +394,7 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 					Message: fmt.Sprintf("Sessions directory %s is not writable: %v", sessDir, err),
 				})
 			} else {
-				os.Remove(tmpPath)
+				_ = os.Remove(tmpPath)
 			}
 		}
 	}

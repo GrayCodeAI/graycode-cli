@@ -153,11 +153,11 @@ func (ss *SnapshotStore) Cleanup() {
 	// Remove old snapshot files
 	for _, s := range toRemove {
 		path := filepath.Join(ss.dir, fmt.Sprintf("%d.jsonl", s.ID))
-		os.Remove(path)
+		_ = os.Remove(path)
 	}
 
 	// Update index
-	ss.saveIndex()
+	_ = ss.saveIndex()
 }
 
 // saveIndex writes the snapshot index to disk.
@@ -176,7 +176,7 @@ func writeSessionJSONL(path string, sess *Session) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Write metadata
 	meta := map[string]interface{}{
@@ -189,15 +189,29 @@ func writeSessionJSONL(path string, sess *Session) error {
 		"created_at": sess.CreatedAt.Format(time.RFC3339),
 		"updated_at": sess.UpdatedAt.Format(time.RFC3339),
 	}
-	metaData, _ := json.Marshal(meta)
-	f.Write(metaData)
-	f.Write([]byte("\n"))
+	metaData, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("marshal snapshot meta: %w", err)
+	}
+	if _, err := f.Write(metaData); err != nil {
+		return fmt.Errorf("write snapshot meta: %w", err)
+	}
+	if _, err := f.Write([]byte("\n")); err != nil {
+		return fmt.Errorf("write newline: %w", err)
+	}
 
 	// Write messages
 	for _, msg := range sess.Messages {
-		msgData, _ := json.Marshal(msg)
-		f.Write(msgData)
-		f.Write([]byte("\n"))
+		msgData, err := json.Marshal(msg)
+		if err != nil {
+			return fmt.Errorf("marshal snapshot message: %w", err)
+		}
+		if _, err := f.Write(msgData); err != nil {
+			return fmt.Errorf("write snapshot message: %w", err)
+		}
+		if _, err := f.Write([]byte("\n")); err != nil {
+			return fmt.Errorf("write newline: %w", err)
+		}
 	}
 
 	return f.Sync()

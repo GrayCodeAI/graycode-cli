@@ -279,8 +279,8 @@ func checkDiskSpace() DiagnosticResult {
 			Duration: time.Since(start),
 		}
 	}
-	tmpFile.Close()
-	os.Remove(tmpFile.Name())
+	_ = tmpFile.Close()
+	_ = os.Remove(tmpFile.Name())
 
 	return DiagnosticResult{
 		Name:     "disk_space",
@@ -515,7 +515,7 @@ func checkTCPReachable(name, host, port string, start time.Time) DiagnosticResul
 			Duration: time.Since(start),
 		}
 	}
-	conn.Close()
+	_ = conn.Close()
 	return DiagnosticResult{
 		Name:     name,
 		Status:   "pass",
@@ -567,7 +567,7 @@ func checkDirWritable(name, dir string, start time.Time) DiagnosticResult {
 			Duration: time.Since(start),
 		}
 	}
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 
 	return DiagnosticResult{
 		Name:     name,

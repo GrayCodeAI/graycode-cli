@@ -129,8 +129,8 @@ func (t *Tracker) Diff(from, to string) ([]FileDiff, error) {
 			continue
 		}
 		var adds, dels int
-		fmt.Sscanf(parts[0], "%d", &adds)
-		fmt.Sscanf(parts[1], "%d", &dels)
+		_, _ = fmt.Sscanf(parts[0], "%d", &adds)
+		_, _ = fmt.Sscanf(parts[1], "%d", &dels)
 
 		status := "modified"
 		if adds > 0 && dels == 0 {

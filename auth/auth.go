@@ -107,7 +107,7 @@ func (s *SecureStorage) setFile(account, token string) error {
 	path := filepath.Join(os.Getenv("HOME"), ".hawk", ".tokens")
 	var tokens map[string]string
 	if data, err := os.ReadFile(path); err == nil {
-		json.Unmarshal(data, &tokens)
+		_ = json.Unmarshal(data, &tokens)
 	}
 	if tokens == nil {
 		tokens = make(map[string]string)
@@ -120,7 +120,7 @@ func (s *SecureStorage) setFile(account, token string) error {
 // GenerateNonce generates a random nonce for OAuth.
 func GenerateNonce() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return base64.URLEncoding.EncodeToString(b)
 }
 

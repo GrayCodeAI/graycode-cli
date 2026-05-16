@@ -107,12 +107,12 @@ func (db *ErrorPatternDB) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &db.patterns)
+	_ = json.Unmarshal(data, &db.patterns)
 }
 
 func (db *ErrorPatternDB) save() {
 	dir := filepath.Dir(db.path)
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 	data, _ := json.Marshal(db.patterns)
-	os.WriteFile(db.path, data, 0o644)
+	_ = os.WriteFile(db.path, data, 0o644)
 }

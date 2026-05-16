@@ -27,7 +27,7 @@ func Save(path string, rules []Rule) error {
 		return fmt.Errorf("write permissions temp file: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("rename permissions file: %w", err)
 	}
 	return nil

@@ -423,7 +423,7 @@ func getGitBlame(file string) []blameEntry {
 		if strings.HasPrefix(l, "author-time ") {
 			ts := strings.TrimPrefix(l, "author-time ")
 			var epoch int64
-			fmt.Sscanf(ts, "%d", &epoch)
+			_, _ = fmt.Sscanf(ts, "%d", &epoch)
 			if epoch > 0 {
 				entries = append(entries, blameEntry{
 					line: lineNum,
@@ -434,7 +434,7 @@ func getGitBlame(file string) []blameEntry {
 		// Track the line number from the header
 		parts := strings.Fields(l)
 		if len(parts) >= 3 && len(parts[0]) == 40 {
-			fmt.Sscanf(parts[2], "%d", &lineNum)
+			_, _ = fmt.Sscanf(parts[2], "%d", &lineNum)
 		}
 	}
 	return entries
@@ -503,7 +503,7 @@ func isRecent(age string) bool {
 	}
 	if strings.HasSuffix(age, "d") {
 		var days int
-		fmt.Sscanf(age, "%dd", &days)
+		_, _ = fmt.Sscanf(age, "%dd", &days)
 		return days < 7
 	}
 	return false
@@ -565,10 +565,10 @@ func parseCoverageProfile(profile, file string) map[string]float64 {
 			continue
 		}
 		var startLine, endLine, stmts, count int
-		fmt.Sscanf(rangeParts[0], "%d", &startLine)
-		fmt.Sscanf(rangeParts[1], "%d", &endLine)
-		fmt.Sscanf(parts[1], "%d", &stmts)
-		fmt.Sscanf(parts[2], "%d", &count)
+		_, _ = fmt.Sscanf(rangeParts[0], "%d", &startLine)
+		_, _ = fmt.Sscanf(rangeParts[1], "%d", &endLine)
+		_, _ = fmt.Sscanf(parts[1], "%d", &stmts)
+		_, _ = fmt.Sscanf(parts[2], "%d", &count)
 		blocks = append(blocks, blockInfo{startLine, endLine, stmts, count})
 	}
 

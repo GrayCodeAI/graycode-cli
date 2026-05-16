@@ -438,7 +438,7 @@ func (pa *ProjectAnalyzer) detectProjectName() string {
 	// Try go.mod first.
 	modPath := filepath.Join(pa.Dir, "go.mod")
 	if f, err := os.Open(modPath); err == nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
@@ -978,7 +978,7 @@ func countFileLines(path string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	count := 0
 	scanner := bufio.NewScanner(f)

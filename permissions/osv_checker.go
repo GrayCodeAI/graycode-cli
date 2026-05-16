@@ -183,10 +183,6 @@ func (c *OSVChecker) CheckPackage(name, ecosystem string) *CheckResult {
 	return result
 }
 
-// installCommandRe matches common install commands for extracting package names.
-var installCommandRe = regexp.MustCompile(
-	`(?:npm\s+install|npm\s+i|npx|pip\s+install|pip3\s+install|go\s+get|cargo\s+add)\s+(.+)`,
-)
 
 // CheckCommand parses a shell command to extract and check the package being installed.
 func (c *OSVChecker) CheckCommand(command string) *CheckResult {

@@ -87,7 +87,7 @@ func {{.Name}}Handler(w http.ResponseWriter, r *http.Request) {
 	resp := {{.Name}}Response{}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 `,
 		Variables: []TemplateVar{
@@ -230,7 +230,7 @@ func (s *{{.Resource}}Store) Handle{{.Resource}}s(w http.ResponseWriter, r *http
 	switch r.Method {
 	case http.MethodGet:
 		items := s.List{{.Resource}}s()
-		json.NewEncoder(w).Encode(items)
+		_ = json.NewEncoder(w).Encode(items)
 	case http.MethodPost:
 		var item {{.Resource}}
 		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
@@ -242,7 +242,7 @@ func (s *{{.Resource}}Store) Handle{{.Resource}}s(w http.ResponseWriter, r *http
 			return
 		}
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(item)
+		_ = json.NewEncoder(w).Encode(item)
 	case http.MethodPut:
 		var item {{.Resource}}
 		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
@@ -253,7 +253,7 @@ func (s *{{.Resource}}Store) Handle{{.Resource}}s(w http.ResponseWriter, r *http
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		json.NewEncoder(w).Encode(item)
+		_ = json.NewEncoder(w).Encode(item)
 	case http.MethodDelete:
 		id := r.URL.Query().Get("id")
 		if err := s.Delete{{.Resource}}(id); err != nil {

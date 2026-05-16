@@ -106,7 +106,7 @@ func (dp *DistillationPipeline) ExportJSONL(path string) error {
 	if err != nil {
 		return fmt.Errorf("distill: create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	enc := json.NewEncoder(f)
 	for _, ex := range dp.Examples {
@@ -133,7 +133,7 @@ func (dp *DistillationPipeline) ExportOpenAI(path string) error {
 	if err != nil {
 		return fmt.Errorf("distill: create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	enc := json.NewEncoder(f)
 	for _, ex := range dp.Examples {
@@ -162,7 +162,7 @@ func (dp *DistillationPipeline) ExportAnthropicFormat(path string) error {
 	if err != nil {
 		return fmt.Errorf("distill: create file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	enc := json.NewEncoder(f)
 	for _, ex := range dp.Examples {

@@ -386,6 +386,6 @@ func (bm *BranchManager) AddMessage(role, content string, toolUse []string) {
 // generateBranchID produces a 16-character hex ID from crypto/rand.
 func generateBranchID() string {
 	b := make([]byte, 8)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }

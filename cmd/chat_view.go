@@ -11,6 +11,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/GrayCodeAI/hawk/shellmode"
 )
 
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
@@ -280,7 +282,9 @@ func (m *chatModel) updateViewportContent() {
 			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(partial, viewWidth-3))
 			chatContent.WriteString("\n\n")
 		} else {
-			spinnerLine := m.spinner.View() + "  " + renderGlimmerVerb(m.spinnerVerb, m.glimmerPos) + "\033[1;38;2;255;94;14m...\033[0m"
+			// Braille spinner with shimmer text (reuse cached instance)
+			m.brailleSpinner.text = m.spinnerVerb
+			spinnerLine := m.brailleSpinner.Tick() + "\033[1;38;2;255;94;14m...\033[0m"
 			if !m.toolStartTime.IsZero() {
 				if elapsed := time.Since(m.toolStartTime); elapsed > 2*time.Second {
 					spinnerLine += fmt.Sprintf(" (%.1fs)", elapsed.Seconds())
@@ -343,6 +347,13 @@ func (m chatModel) View() string {
 			leftDim = permissionModeHint(m.session)
 		}
 		rightStatus := fmt.Sprintf("%s %s", m.session.Provider(), m.session.Model())
+		// Input classification indicator + mode
+		m.inputIndicator.Classify(m.input.Value(), m.modeManager.Current())
+		indicatorStr := m.inputIndicator.Render() + " " + m.inputIndicator.Label()
+		if m.modeManager.Current() != shellmode.ModeAuto {
+			indicatorStr += " [" + m.modeManager.Current().String() + "]"
+		}
+		rightStatus = indicatorStr + "  " + rightStatus
 		leftVisLen := len(leftBold) + len(leftDim)
 		gap := totalW - leftVisLen - len(rightStatus)
 		if gap < 1 {
@@ -368,6 +379,12 @@ func (m chatModel) View() string {
 				return m.input.View()
 			}())
 		bottomBar.WriteString(inputBox + "\n")
+		// Ghost text suggestion (shown below input when active)
+		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
+			ghostStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
+			bottomBar.WriteString(ghostStyle.Render("  → "+ghost+" (Tab to accept)") + "\n")
+			bottomBarLines++
+		}
 		// borders(2) + input content lines
 		inputLines := strings.Count(m.input.Value(), "\n") + 1
 		if inputLines > 10 {

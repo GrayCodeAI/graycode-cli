@@ -16,12 +16,12 @@ func CPUProfile(path string) (func(), error) {
 		return nil, fmt.Errorf("create profile file: %w", err)
 	}
 	if err := pprof.StartCPUProfile(f); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, fmt.Errorf("start CPU profile: %w", err)
 	}
 	return func() {
 		pprof.StopCPUProfile()
-		f.Close()
+		_ = f.Close()
 	}, nil
 }
 
@@ -31,7 +31,7 @@ func MemoryProfile(path string) error {
 	if err != nil {
 		return fmt.Errorf("create profile file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	runtime.GC()
 	if err := pprof.WriteHeapProfile(f); err != nil {
@@ -46,7 +46,7 @@ func GoroutineProfile(path string) error {
 	if err != nil {
 		return fmt.Errorf("create profile file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if err := pprof.Lookup("goroutine").WriteTo(f, 1); err != nil {
 		return fmt.Errorf("write goroutine profile: %w", err)

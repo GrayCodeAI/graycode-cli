@@ -142,7 +142,7 @@ func duckDuckGoSearch(ctx context.Context, query string, count int) ([]searchRes
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 200_000))
 	if err != nil {

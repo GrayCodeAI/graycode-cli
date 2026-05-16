@@ -220,7 +220,7 @@ func runExec(_ *cobra.Command, args []string) error {
 			}
 		case "error":
 			if execOutputFormat == "text" {
-				fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
+		_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
 			}
 		case "done":
 			// loop will exit when channel closes

@@ -94,7 +94,7 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 	// Try Cargo.toml
 	cargoToml := filepath.Join(rm.ProjectDir, "Cargo.toml")
 	if f, err := os.Open(cargoToml); err == nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -114,7 +114,7 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 	// Try go.mod (look for a version comment or module version)
 	goMod := filepath.Join(rm.ProjectDir, "go.mod")
 	if f, err := os.Open(goMod); err == nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			line := scanner.Text()

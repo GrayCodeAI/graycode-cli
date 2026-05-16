@@ -206,7 +206,7 @@ func (cm *CheckpointManager) Delete(id string) error {
 
 	// Remove checkpoint data from disk
 	cpDir := filepath.Join(cm.Dir, id)
-	os.RemoveAll(cpDir)
+		_ = os.RemoveAll(cpDir)
 
 	cm.Checkpoints = append(cm.Checkpoints[:idx], cm.Checkpoints[idx+1:]...)
 
@@ -312,7 +312,7 @@ func (cm *CheckpointManager) Prune() {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	cm.pruneUnlocked()
-	cm.saveIndex()
+	_ = cm.saveIndex()
 }
 
 // pruneUnlocked removes excess auto-checkpoints. Must be called with mu held.
@@ -349,7 +349,7 @@ func (cm *CheckpointManager) pruneUnlocked() {
 
 		for _, cp := range toRemove {
 			cpDir := filepath.Join(cm.Dir, cp.ID)
-			os.RemoveAll(cpDir)
+		_ = os.RemoveAll(cpDir)
 		}
 	}
 
@@ -672,7 +672,7 @@ func (sc *SmartCheckpointer) OnEvent(event CheckpointTrigger, session *Session, 
 	// Take the snapshot outside the lock (it does its own I/O).
 	label := fmt.Sprintf("[%s] %s", event, action)
 	if store != nil {
-		store.Take(label, session)
+		_ = store.Take(label, session)
 	}
 }
 

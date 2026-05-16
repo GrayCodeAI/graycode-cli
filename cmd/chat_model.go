@@ -18,6 +18,8 @@ import (
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/sandbox"
 	"github.com/GrayCodeAI/hawk/session"
+	"github.com/GrayCodeAI/hawk/sessioncapture"
+	"github.com/GrayCodeAI/hawk/shellmode"
 	"github.com/GrayCodeAI/hawk/staleness"
 	"github.com/GrayCodeAI/hawk/taste"
 	"github.com/GrayCodeAI/hawk/tool"
@@ -147,6 +149,19 @@ type chatModel struct {
 	// Taste & staleness tracking
 	tasteHooks         *taste.Hooks
 	stalenessDetector  *staleness.Detector
+
+	// Lacy-inspired features
+	termCtx        *sessioncapture.TerminalContext
+	inputIndicator *InputIndicator
+	ghostText      *GhostText
+	modeManager    *shellmode.ModeManager
+	brailleSpinner *BrailleSpinner
+
+	// BMAD/Aeon-inspired features
+	hintsLoader    *engine.HintsLoader
+	sourceRoots    *engine.SourceRoots
+	selfImprover   *engine.SelfImprover
+	codingSoul     *engine.CodingSoul
 }
 
 func blinkTickCmd() tea.Cmd {

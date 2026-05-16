@@ -791,12 +791,6 @@ func RenderTreeContext(file string, symbols []Symbol, maxLines int) string {
 	var b strings.Builder
 	b.WriteString(file + "\n")
 
-	// Group symbols by parent scope
-	type scopeGroup struct {
-		parent   string
-		children []Symbol
-	}
-
 	// Separate top-level symbols from scoped ones
 	var topLevel []Symbol
 	groups := make(map[string][]Symbol)
