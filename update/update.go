@@ -1,6 +1,7 @@
 package update
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,7 +26,7 @@ type ReleaseInfo struct {
 
 // Check checks for available updates.
 func Check(currentVersion string) (*ReleaseInfo, error) {
-	req, err := http.NewRequest("GET", updateURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", updateURL, nil)
 	if err != nil {
 		return nil, err
 	}
