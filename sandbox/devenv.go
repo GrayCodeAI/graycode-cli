@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -20,6 +21,13 @@ type CachedImage struct {
 	Stale       bool
 }
 
+// SwapRequest is sent when a container hot-swap is needed after a rebuild.
+type SwapRequest struct {
+	ImageTag    string
+	Dockerfile  string
+	Workspace   string
+}
+
 // DevEnvManager caches Docker images per-project based on Dockerfile content hashes.
 type DevEnvManager struct {
 	projectDir string
@@ -28,6 +36,10 @@ type DevEnvManager struct {
 	// buildFn is the function called to build a Docker image. Defaults to actual Docker build.
 	// Can be overridden in tests.
 	buildFn func(ctx context.Context, dockerfile, tag string) error
+	// OnSwapNeeded is called after a successful rebuild to request a container
+	// hot-swap. The session should stop the old container and start a new one
+	// with the given image tag. May be nil.
+	OnSwapNeeded func(req SwapRequest)
 }
 
 // NewDevEnvManager creates a new DevEnvManager for the given project directory.
@@ -39,10 +51,17 @@ func NewDevEnvManager(projectDir string) *DevEnvManager {
 	}
 }
 
-// defaultBuildFn is a placeholder build function. In production this would invoke `docker build`.
+// defaultBuildFn builds a Docker image from the given Dockerfile path,
+// tagging it with the given tag. The build context is the directory
+// containing the Dockerfile.
 func defaultBuildFn(ctx context.Context, dockerfile, tag string) error {
-	// In a real implementation, this would run:
-	//   docker build -t <tag> -f <dockerfile> <context>
+	contextDir := filepath.Dir(dockerfile)
+	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dockerfile, contextDir)
+	cmd.Stdout = os.Stderr // show build output on stderr
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker build failed: %w", err)
+	}
 	return nil
 }
 
@@ -116,6 +135,37 @@ func (d *DevEnvManager) Invalidate(projectDir string) {
 		cached.Stale = true
 		d.imageCache[key] = cached
 	}
+}
+
+// RebuildAndForceSwap forces a rebuild even if cached, then triggers
+// the OnSwapNeeded callback. This is the hot-swap path.
+func (d *DevEnvManager) RebuildAndForceSwap(ctx context.Context, dockerfilePath string) (string, error) {
+	d.mu.Lock()
+	key := filepath.Base(filepath.Dir(dockerfilePath))
+	if key == "." || key == "" {
+		key = "default"
+	}
+	// Invalidate to force rebuild.
+	if cached, ok := d.imageCache[key]; ok {
+		cached.Stale = true
+		d.imageCache[key] = cached
+	}
+	d.mu.Unlock()
+
+	tag, err := d.GetOrBuild(ctx, dockerfilePath)
+	if err != nil {
+		return "", err
+	}
+
+	if d.OnSwapNeeded != nil {
+		d.OnSwapNeeded(SwapRequest{
+			ImageTag:   tag,
+			Dockerfile: dockerfilePath,
+			Workspace:  d.projectDir,
+		})
+	}
+
+	return tag, nil
 }
 
 // hashDockerfile computes a SHA-256 hash of the Dockerfile contents.

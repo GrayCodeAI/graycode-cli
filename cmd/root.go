@@ -73,7 +73,7 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Load persisted env vars (API keys from ~/.hawk/env)
-		hawkconfig.LoadEnvFile()
+		_ = hawkconfig.LoadEnvFile()
 
 		if versionFlag {
 			if buildDate != "" && buildDate != "unknown" {
@@ -193,6 +193,7 @@ func init() {
 	rootCmd.AddCommand(missionCmd)
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(snapshotCmd)
+	rootCmd.AddCommand(evalCmd)
 }
 
 var completionCmd = &cobra.Command{
@@ -230,13 +231,13 @@ PowerShell:
 	Run: func(cmd *cobra.Command, args []string) {
 		switch args[0] {
 		case "bash":
-			cmd.Root().GenBashCompletion(cmd.OutOrStdout())
+			_ = cmd.Root().GenBashCompletion(cmd.OutOrStdout())
 		case "zsh":
-			cmd.Root().GenZshCompletion(cmd.OutOrStdout())
+			_ = cmd.Root().GenZshCompletion(cmd.OutOrStdout())
 		case "fish":
-			cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true)
+			_ = cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true)
 		case "powershell":
-			cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
+			_ = cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
 		}
 	},
 }

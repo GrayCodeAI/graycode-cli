@@ -720,7 +720,7 @@ func checkWritable(dir string) error {
 		return fmt.Errorf("not writable: %w", err)
 	}
 	name := f.Name()
-	f.Close()
-	os.Remove(name)
+	_ = f.Close()
+	_ = os.Remove(name)
 	return nil
 }

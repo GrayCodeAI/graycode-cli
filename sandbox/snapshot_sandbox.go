@@ -295,15 +295,15 @@ func (m *SandboxManager) FormatStatus() string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Sandboxes (%d):\n", len(sandboxes))
+		_, _ = fmt.Fprintf(&b, "Sandboxes (%d):\n", len(sandboxes))
 	b.WriteString("─────────────────\n")
 
 	for i, sb := range sandboxes {
 		switch sb.Status {
 		case "running":
 			ago := time.Since(sb.CreatedAt).Truncate(time.Second)
-			fmt.Fprintf(&b, "%d. [running] %s (%s)\n", i+1, sb.ID, sb.WorkDir)
-			fmt.Fprintf(&b, "   Created: %s ago, Files: %d\n", formatDuration(ago), len(sb.Files))
+		_, _ = fmt.Fprintf(&b, "%d. [running] %s (%s)\n", i+1, sb.ID, sb.WorkDir)
+		_, _ = fmt.Fprintf(&b, "   Created: %s ago, Files: %d\n", formatDuration(ago), len(sb.Files))
 		case "paused":
 			var pausedAgo string
 			if sb.PausedAt != nil {
@@ -311,10 +311,10 @@ func (m *SandboxManager) FormatStatus() string {
 			} else {
 				pausedAgo = "unknown"
 			}
-			fmt.Fprintf(&b, "%d. [paused] %s (%s)\n", i+1, sb.ID, sb.WorkDir)
-			fmt.Fprintf(&b, "   Paused: %s ago, Resumable\n", pausedAgo)
+		_, _ = fmt.Fprintf(&b, "%d. [paused] %s (%s)\n", i+1, sb.ID, sb.WorkDir)
+		_, _ = fmt.Fprintf(&b, "   Paused: %s ago, Resumable\n", pausedAgo)
 		case "terminated":
-			fmt.Fprintf(&b, "%d. [terminated] %s\n", i+1, sb.ID)
+		_, _ = fmt.Fprintf(&b, "%d. [terminated] %s\n", i+1, sb.ID)
 			b.WriteString("   Cleanup eligible\n")
 		}
 	}

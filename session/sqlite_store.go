@@ -128,19 +128,19 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 
 	// Enable WAL mode for better concurrent read performance.
 	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("set WAL mode: %w", err)
 	}
 
 	// Enable foreign keys.
 	if _, err := db.Exec("PRAGMA foreign_keys=ON"); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("enable foreign keys: %w", err)
 	}
 
 	s := &SQLiteStore{db: db, dbPath: dbPath}
 	if err := s.migrate(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
@@ -180,14 +180,14 @@ func (s *SQLiteStore) migrate() error {
 				continue
 			}
 			if _, err := tx.Exec(stmt); err != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 				return fmt.Errorf("migration %d failed: %w\nstatement: %s", i+1, err, stmt)
 			}
 		}
 
 		// Record the new version.
 		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", i+1); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("record migration %d: %w", i+1, err)
 		}
 
@@ -200,36 +200,53 @@ func (s *SQLiteStore) migrate() error {
 }
 
 // splitStatements splits a SQL string on semicolons, being careful not to
-// split inside string literals. This is a simplified parser sufficient for
-// our migration DDL.
+// split inside string literals or BEGIN...END blocks (triggers, etc.).
 func splitStatements(sql string) []string {
 	var stmts []string
 	var current strings.Builder
 	inString := false
+	beginDepth := 0
 
 	for i := 0; i < len(sql); i++ {
 		ch := sql[i]
 		if ch == '\'' {
 			inString = !inString
 			current.WriteByte(ch)
-		} else if ch == ';' && !inString {
-			s := strings.TrimSpace(current.String())
-			if s != "" {
-				stmts = append(stmts, s)
+		} else if !inString {
+			// Track BEGIN...END nesting for triggers
+			upper := strings.ToUpper(sql[i:])
+			if strings.HasPrefix(upper, "BEGIN") && (i+5 >= len(sql) || !isIdentChar(sql[i+5])) {
+				beginDepth++
+				current.WriteString(sql[i : i+5])
+				i += 4
+			} else if strings.HasPrefix(upper, "END") && (i+3 >= len(sql) || !isIdentChar(sql[i+3])) && beginDepth > 0 {
+				beginDepth--
+				current.WriteString(sql[i : i+3])
+				i += 2
+			} else if ch == ';' && beginDepth == 0 {
+				s := strings.TrimSpace(current.String())
+				if s != "" {
+					stmts = append(stmts, s)
+				}
+				current.Reset()
+			} else {
+				current.WriteByte(ch)
 			}
-			current.Reset()
 		} else {
 			current.WriteByte(ch)
 		}
 	}
 
-	// Handle trailing statement without semicolon.
 	s := strings.TrimSpace(current.String())
 	if s != "" {
 		stmts = append(stmts, s)
 	}
 
 	return stmts
+}
+
+func isIdentChar(b byte) bool {
+	return (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '_'
 }
 
 // CreateSession inserts a new session record.
@@ -315,7 +332,7 @@ func (s *SQLiteStore) ListSessions(projectDir string, limit int) ([]*SessionReco
 	if err != nil {
 		return nil, fmt.Errorf("list sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []*SessionRecord
 	for rows.Next() {
@@ -340,7 +357,7 @@ func (s *SQLiteStore) AppendMessage(sessionID string, msg *MessageRecord) error 
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if msg.CreatedAt.IsZero() {
 		msg.CreatedAt = time.Now()
@@ -379,7 +396,7 @@ func (s *SQLiteStore) GetMessages(sessionID string) ([]*MessageRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get messages: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var messages []*MessageRecord
 	for rows.Next() {
@@ -452,7 +469,7 @@ func (s *SQLiteStore) DeleteSession(id string) error {
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete messages first (FK constraint).
 	if _, err := tx.Exec("DELETE FROM messages WHERE session_id = ?", id); err != nil {
@@ -482,7 +499,7 @@ func (s *SQLiteStore) ForkSession(originalID, newID string) error {
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Copy the session record.
 	now := time.Now()
@@ -525,7 +542,7 @@ func (s *SQLiteStore) SearchSessions(query string) ([]*SessionRecord, error) {
 		// Fall back to LIKE search if FTS is not available.
 		return s.searchFallback(query)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []*SessionRecord
 	for rows.Next() {
@@ -553,7 +570,7 @@ func (s *SQLiteStore) searchFallback(query string) ([]*SessionRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("search sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []*SessionRecord
 	for rows.Next() {
@@ -590,7 +607,7 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Find the cutoff: delete all messages except the last N.
 	_, err = tx.Exec(`DELETE FROM messages

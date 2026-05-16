@@ -60,8 +60,8 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Create attachments and cache dirs (like herm)
 	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
 	cacheDir := filepath.Join(c.projectDir, ".hawk", "cache")
-	os.MkdirAll(attachDir, 0755)
-	os.MkdirAll(cacheDir, 0755)
+	_ = os.MkdirAll(attachDir, 0755)
+	_ = os.MkdirAll(cacheDir, 0755)
 
 	args := []string{
 		"run", "-d", "--rm",
@@ -180,7 +180,7 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 
 // HotSwap stops the current container and starts a new one with the updated image.
 func (c *ContainerSandbox) HotSwap(ctx context.Context) error {
-	c.Stop()
+	_ = c.Stop()
 	return c.Start(ctx)
 }
 

@@ -164,12 +164,12 @@ func (ap *AdaptivePrompt) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &ap.adjustments)
+	_ = json.Unmarshal(data, &ap.adjustments)
 }
 
 func (ap *AdaptivePrompt) save() {
 	dir := filepath.Dir(ap.path)
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 	data, _ := json.Marshal(ap.adjustments)
-	os.WriteFile(ap.path, data, 0o644)
+	_ = os.WriteFile(ap.path, data, 0o644)
 }

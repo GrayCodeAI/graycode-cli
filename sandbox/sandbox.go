@@ -104,7 +104,7 @@ func (s *Sandbox) setupChroot() error {
 	for _, bin := range binaries {
 		if _, err := os.Stat(bin); err == nil {
 			dest := filepath.Join(s.root, bin)
-			os.MkdirAll(filepath.Dir(dest), 0o755)
+			_ = os.MkdirAll(filepath.Dir(dest), 0o755)
 			copyFile(bin, dest)
 		}
 	}
@@ -229,8 +229,8 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 			tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")
 			if err == nil {
 				profile := GenerateSeatbeltProfile(policy)
-				tmpFile.WriteString(profile)
-				tmpFile.Close()
+				_, _ = tmpFile.WriteString(profile)
+				_ = tmpFile.Close()
 				return "sandbox-exec", []string{"-f", tmpFile.Name(), "bash", "-c", command}
 			}
 		}

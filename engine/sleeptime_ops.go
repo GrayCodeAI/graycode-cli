@@ -31,7 +31,7 @@ func parseAndApplyMemoryOps(bridge *memory.YaadBridge, response string) {
 		}
 		switch op.Op {
 		case "add":
-			bridge.Remember(op.Content, op.Type)
+			_ = bridge.Remember(op.Content, op.Type)
 		}
 	}
 }

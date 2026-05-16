@@ -207,7 +207,7 @@ func (du *DocUpdater) ScanProjectForStaleDocs(projectDir string) []DocUpdate {
 	allSymbols := make(map[string]bool)
 	var goFiles []string
 
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

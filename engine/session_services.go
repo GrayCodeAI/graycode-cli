@@ -30,7 +30,7 @@ import (
 // CoreLoop encapsulates the agent loop: sending messages to the LLM,
 // executing tool calls, and accumulating the conversation history.
 type CoreLoop struct {
-	Client   *client.EyrieClient
+	Client   ChatClient
 	Registry *tool.Registry
 	Messages []client.EyrieMessage
 	Provider string

@@ -335,7 +335,7 @@ func parseGoImports(path string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var imports []string
 	scanner := bufio.NewScanner(f)
@@ -374,7 +374,7 @@ func parsePythonImports(path string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var imports []string
 	scanner := bufio.NewScanner(f)
@@ -395,7 +395,7 @@ func parseTSImports(path string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var imports []string
 	scanner := bufio.NewScanner(f)

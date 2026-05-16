@@ -40,9 +40,6 @@ const (
 // dockerCmd is a function variable for exec.CommandContext, replaceable in tests.
 var dockerCmd = exec.CommandContext
 
-// lookPath is a function variable for exec.LookPath, replaceable in tests.
-var lookPath = exec.LookPath
-
 // Status queries Docker for the current state of a container.
 // Returns StateRunning, StateStopped, or StateNotFound.
 func Status(ctx context.Context, containerID string) (string, error) {

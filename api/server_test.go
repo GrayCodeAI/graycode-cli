@@ -43,8 +43,8 @@ func TestVersionEndpoint(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Version != "0.4.0" {
-		t.Fatalf("expected version '0.4.0', got %q", resp.Version)
+	if resp.Version != Version {
+		t.Fatalf("expected version %q, got %q", Version, resp.Version)
 	}
 }
 
@@ -112,5 +112,60 @@ func TestHealthEndpoint_ContentType(t *testing.T) {
 	ct := w.Header().Get("Content-Type")
 	if ct != "application/json" {
 		t.Fatalf("expected Content-Type 'application/json', got %q", ct)
+	}
+}
+
+func TestWriteJSON(t *testing.T) {
+	w := httptest.NewRecorder()
+	data := map[string]string{"key": "value"}
+	writeJSON(w, http.StatusCreated, data)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("status = %d, want 201", w.Code)
+	}
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Error("Content-Type should be application/json")
+	}
+	var result map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if result["key"] != "value" {
+		t.Errorf("key = %q, want 'value'", result["key"])
+	}
+}
+
+func TestNew(t *testing.T) {
+	srv := New(":8080")
+	if srv == nil {
+		t.Fatal("New returned nil")
+	}
+	if srv.Handler() == nil {
+		t.Error("Handler() should not be nil")
+	}
+}
+
+func TestChatEndpoint_MethodNotAllowed(t *testing.T) {
+	srv := New(":0")
+	req := httptest.NewRequest(http.MethodGet, "/chat", nil)
+	w := httptest.NewRecorder()
+
+	srv.Handler().ServeHTTP(w, req)
+
+	// GET on /chat should return error (405 or similar)
+	if w.Code == http.StatusOK {
+		t.Error("GET /chat should not return 200")
+	}
+}
+
+func TestUnknownEndpoint(t *testing.T) {
+	srv := New(":0")
+	req := httptest.NewRequest(http.MethodGet, "/unknown-path", nil)
+	w := httptest.NewRecorder()
+
+	srv.Handler().ServeHTTP(w, req)
+
+	if w.Code == http.StatusOK {
+		t.Error("unknown path should not return 200")
 	}
 }

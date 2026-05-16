@@ -57,7 +57,7 @@ func NewRegistryClient() *RegistryClient {
 
 // FetchIndex downloads the registry index, using a local cache when fresh.
 func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
-	os.MkdirAll(rc.CacheDir, 0o755)
+	_ = os.MkdirAll(rc.CacheDir, 0o755)
 	cachePath := filepath.Join(rc.CacheDir, "skills-index.json")
 
 	// Use cache if less than 1 hour old.
@@ -78,7 +78,7 @@ func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
 		// Fall back to stale cache on network error.
 		return rc.loadCachedIndex(cachePath)
 	}
-	defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return rc.loadCachedIndex(cachePath)
@@ -90,7 +90,7 @@ func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
 	}
 
 	// Write cache.
-	os.WriteFile(cachePath, data, 0o644)
+	_ = os.WriteFile(cachePath, data, 0o644)
 
 	var idx SkillIndex
 	if err := json.Unmarshal(data, &idx); err != nil {
@@ -196,14 +196,14 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	default: // "project"
 		destBase = filepath.Join(".hawk", "skills")
 	}
-	os.MkdirAll(destBase, 0o755)
+	_ = os.MkdirAll(destBase, 0o755)
 
 	// Clone into a temp dir, then copy the skill(s).
 	tmpDir, err := os.MkdirTemp("", "hawk-skill-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	url := "https://github.com/" + repo + ".git"
 	cmd := exec.Command("git", "clone", "--depth", "1", "--single-branch", url, tmpDir)
@@ -238,7 +238,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 		}
 
 		destDir := filepath.Join(destBase, name)
-		os.MkdirAll(destDir, 0o755)
+		_ = os.MkdirAll(destDir, 0o755)
 
 		data, err := os.ReadFile(srcSkill)
 		if err != nil {
@@ -289,7 +289,7 @@ func Remove(name string) error {
 	removed := false
 	for _, d := range dirs {
 		if _, err := os.Stat(d); err == nil {
-			os.RemoveAll(d)
+			_ = os.RemoveAll(d)
 			removed = true
 		}
 	}
@@ -324,22 +324,22 @@ func InstalledSkillInfo(name string) (SmartSkill, string, bool) {
 // FormatSkillEntry formats a registry entry for display.
 func FormatSkillEntry(e SkillEntry) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s", e.Name)
+		_, _ = fmt.Fprintf(&b, "  %s", e.Name)
 	if e.Version != "" {
-		fmt.Fprintf(&b, " v%s", e.Version)
+		_, _ = fmt.Fprintf(&b, " v%s", e.Version)
 	}
 	if e.Author != "" {
-		fmt.Fprintf(&b, " by %s", e.Author)
+		_, _ = fmt.Fprintf(&b, " by %s", e.Author)
 	}
 	if e.Installs > 0 {
-		fmt.Fprintf(&b, " (%d installs)", e.Installs)
+		_, _ = fmt.Fprintf(&b, " (%d installs)", e.Installs)
 	}
 	b.WriteString("\n")
 	if e.Description != "" {
-		fmt.Fprintf(&b, "    %s\n", e.Description)
+		_, _ = fmt.Fprintf(&b, "    %s\n", e.Description)
 	}
 	if e.Repo != "" {
-		fmt.Fprintf(&b, "    repo: %s\n", e.Repo)
+		_, _ = fmt.Fprintf(&b, "    repo: %s\n", e.Repo)
 	}
 	return b.String()
 }
@@ -347,40 +347,40 @@ func FormatSkillEntry(e SkillEntry) string {
 // FormatSkillInfo formats detailed skill info for display.
 func FormatSkillInfo(s SmartSkill, path string) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Skill: %s\n", s.Name)
+		_, _ = fmt.Fprintf(&b, "Skill: %s\n", s.Name)
 	if s.Version != "" {
-		fmt.Fprintf(&b, "Version: %s\n", s.Version)
+		_, _ = fmt.Fprintf(&b, "Version: %s\n", s.Version)
 	}
 	if s.Author != "" {
-		fmt.Fprintf(&b, "Author: %s\n", s.Author)
+		_, _ = fmt.Fprintf(&b, "Author: %s\n", s.Author)
 	}
 	if s.License != "" {
-		fmt.Fprintf(&b, "License: %s\n", s.License)
+		_, _ = fmt.Fprintf(&b, "License: %s\n", s.License)
 	}
 	if s.Category != "" {
-		fmt.Fprintf(&b, "Category: %s\n", s.Category)
+		_, _ = fmt.Fprintf(&b, "Category: %s\n", s.Category)
 	}
 	if s.Description != "" {
-		fmt.Fprintf(&b, "Description: %s\n", s.Description)
+		_, _ = fmt.Fprintf(&b, "Description: %s\n", s.Description)
 	}
 	if len(s.Tags) > 0 {
-		fmt.Fprintf(&b, "Tags: %s\n", strings.Join(s.Tags, ", "))
+		_, _ = fmt.Fprintf(&b, "Tags: %s\n", strings.Join(s.Tags, ", "))
 	}
 	if len(s.Agents) > 0 {
-		fmt.Fprintf(&b, "Agents: %s\n", strings.Join(s.Agents, ", "))
+		_, _ = fmt.Fprintf(&b, "Agents: %s\n", strings.Join(s.Agents, ", "))
 	}
 	if s.AllowedTools != "" {
-		fmt.Fprintf(&b, "Tools: %s\n", s.AllowedTools)
+		_, _ = fmt.Fprintf(&b, "Tools: %s\n", s.AllowedTools)
 	}
 	if s.Source.Repo != "" {
-		fmt.Fprintf(&b, "Source: %s", s.Source.Repo)
+		_, _ = fmt.Fprintf(&b, "Source: %s", s.Source.Repo)
 		if s.Source.Ref != "" {
-			fmt.Fprintf(&b, " @ %s", s.Source.Ref)
+		_, _ = fmt.Fprintf(&b, " @ %s", s.Source.Ref)
 		}
 		b.WriteString("\n")
 	}
 	if path != "" {
-		fmt.Fprintf(&b, "Path: %s\n", path)
+		_, _ = fmt.Fprintf(&b, "Path: %s\n", path)
 	}
 	return b.String()
 }

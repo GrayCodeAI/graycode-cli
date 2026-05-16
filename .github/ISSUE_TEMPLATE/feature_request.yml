@@ -1,0 +1,62 @@
+name: Feature request
+description: Suggest an improvement or new capability for hawk.
+title: "feat: <one-line summary>"
+labels: ["enhancement", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature. hawk is built for **solo developers**, so
+        we evaluate every request against the question: _"would a single
+        developer working alone benefit from this?"_
+
+        Before submitting:
+        - Search [existing issues](https://github.com/GrayCodeAI/hawk/issues) to avoid duplicates.
+        - For large changes, consider opening a discussion first.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the user problem first. Solutions can come later.
+      placeholder: When I'm doing X, hawk makes me do Y, which is painful because Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like hawk to behave? CLI flags, output, config, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What did you try? What did other tools do? Why isn't that enough?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Roughly how big is this change?
+      options:
+        - "Small (a flag or output tweak)"
+        - "Medium (a new subcommand or behavior)"
+        - "Large (architectural / cross-package)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Solo-developer fit
+      description: hawk avoids enterprise scope. Confirm this feature respects that.
+      options:
+        - label: Works with zero configuration (sensible defaults).
+        - label: Works offline / does not require a cloud account.
+        - label: Stores data locally by default.
+        - label: Has an escape hatch (override via flag, env, or config).

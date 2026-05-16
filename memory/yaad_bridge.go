@@ -347,7 +347,7 @@ func (b *YaadBridge) Close() {
 	}
 	b.engine.Close()
 	if b.store != nil {
-		b.store.Close()
+		_ = b.store.Close()
 	}
 	b.ready = false
 }

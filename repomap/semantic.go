@@ -157,7 +157,7 @@ func (idx *SemanticIndex) Save(path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	enc := gob.NewEncoder(f)
 	return enc.Encode(idx.chunks)
 }
@@ -168,7 +168,7 @@ func LoadSemanticIndex(path string) (*SemanticIndex, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var chunks []CodeChunk
 	dec := gob.NewDecoder(f)
 	if err := dec.Decode(&chunks); err != nil {

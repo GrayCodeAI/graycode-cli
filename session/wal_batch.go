@@ -80,7 +80,7 @@ func (b *BatchedWAL) ensureTimerLocked() {
 	b.timer = time.AfterFunc(batchFlushInterval, func() {
 		b.mu.Lock()
 		defer b.mu.Unlock()
-		b.flushLocked()
+		_ = b.flushLocked()
 	})
 }
 

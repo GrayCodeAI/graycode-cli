@@ -1,0 +1,112 @@
+# Canonical lefthook config for hawk-eco Go repos.
+# Source of truth: .shared-templates/lefthook.yml.tmpl
+#
+# Install lefthook:
+#   brew install lefthook        (macOS)
+#   go install github.com/evilmartians/lefthook@latest
+#   npm install -g lefthook      (cross-platform)
+#
+# Activate hooks in this repo (one time):
+#   lefthook install
+#
+# Skip hooks for a single commit (use sparingly):
+#   LEFTHOOK=0 git commit -m "..."
+
+# ---------------------------------------------------------------------------
+# pre-commit — runs before commit creation, on staged files only.
+# ---------------------------------------------------------------------------
+pre-commit:
+  parallel: true
+  commands:
+
+    fmt:
+      glob: "*.go"
+      run: |
+        if ! command -v gofumpt >/dev/null 2>&1; then
+          echo "lefthook: gofumpt not installed (go install mvdan.cc/gofumpt@latest)"; exit 1
+        fi
+        gofumpt -w {staged_files}
+      stage_fixed: true
+
+    imports:
+      glob: "*.go"
+      run: |
+        if ! command -v goimports >/dev/null 2>&1; then
+          echo "lefthook: goimports not installed (go install golang.org/x/tools/cmd/goimports@latest)"; exit 1
+        fi
+        goimports -w {staged_files}
+      stage_fixed: true
+
+    lint:
+      glob: "*.go"
+      run: |
+        if ! command -v golangci-lint >/dev/null 2>&1; then
+          echo "lefthook: golangci-lint not installed — skipping (install: https://golangci-lint.run/usage/install/)"
+          exit 0
+        fi
+        golangci-lint run --new-from-rev=HEAD~1 --fix {staged_files}
+      stage_fixed: true
+
+    yaml-lint:
+      glob: "*.{yml,yaml}"
+      run: |
+        # Quick syntax check via Python's yaml module (already on most systems).
+        for f in {staged_files}; do
+          python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" "$f" || exit 1
+        done
+
+    forbidden-strings:
+      run: |
+        # Catch obvious credential-shaped strings in staged additions.
+        bad=$(git diff --cached --diff-filter=AM -U0 -- {staged_files} \
+          | grep -E '^\+' \
+          | grep -Ei '(aws_secret|password\s*=|api[_-]?key\s*=|BEGIN [A-Z]+ PRIVATE KEY)' \
+          | grep -v 'example\|placeholder\|TODO\|x-release-please' || true)
+        if [ -n "$bad" ]; then
+          echo "lefthook: possible secret in staged changes:"
+          echo "$bad"
+          echo "If this is a false positive, bypass with: LEFTHOOK=0 git commit"
+          exit 1
+        fi
+
+# ---------------------------------------------------------------------------
+# pre-push — heavier checks, runs only on push (not every commit).
+# ---------------------------------------------------------------------------
+pre-push:
+  commands:
+
+    test:
+      run: go test ./... -count=1 -timeout=60s
+
+    vet:
+      run: go vet ./...
+
+    govulncheck:
+      run: |
+        if ! command -v govulncheck >/dev/null 2>&1; then
+          echo "lefthook: govulncheck not installed — skipping"
+          exit 0
+        fi
+        govulncheck ./...
+
+# ---------------------------------------------------------------------------
+# commit-msg — validate Conventional Commits (release-please depends on it).
+# ---------------------------------------------------------------------------
+commit-msg:
+  commands:
+
+    conventional-commit:
+      run: |
+        msg=$(head -n1 "{1}")
+        # Allow merge commits, revert commits, and release-please bot commits to bypass.
+        case "$msg" in
+          "Merge "*|"Revert "*|"chore(main): release"*) exit 0 ;;
+        esac
+        # Conventional commits regex.
+        if ! echo "$msg" | grep -qE '^(feat|fix|perf|refactor|test|docs|build|ci|chore|revert|style)(\([a-z0-9 _-]+\))?!?: .{1,72}$'; then
+          echo "lefthook: commit message does not follow Conventional Commits."
+          echo "  format: <type>(<scope>): <summary>"
+          echo "  example: feat(client): add streaming retry"
+          echo "  full guide: https://www.conventionalcommits.org/"
+          exit 1
+        fi

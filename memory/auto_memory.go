@@ -50,7 +50,7 @@ func (am *AutoMemory) Write(topic, content string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, err = fmt.Fprintf(f, "- %s\n", content)
 	return err
 }
@@ -62,7 +62,7 @@ func (am *AutoMemory) LoadStartup() string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var b strings.Builder
 	scanner := bufio.NewScanner(f)

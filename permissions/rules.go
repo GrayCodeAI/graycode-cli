@@ -45,7 +45,7 @@ func (rs *RuleSet) LoadFromFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("open rules file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var rules []Rule
 	scanner := bufio.NewScanner(f)
@@ -258,7 +258,7 @@ func (rs *RuleSet) SaveToFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("create rules file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	w := bufio.NewWriter(f)
 	for _, rule := range rs.Rules {

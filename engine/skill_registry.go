@@ -341,15 +341,15 @@ func FormatSkill(skill *Skill) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Skill: %q\n", skill.Name)
+		_, _ = fmt.Fprintf(&b, "Skill: %q\n", skill.Name)
 
 	if len(skill.Tags) > 0 {
-		fmt.Fprintf(&b, "Tags: %v\n", skill.Tags)
+		_, _ = fmt.Fprintf(&b, "Tags: %v\n", skill.Tags)
 	}
 
 	if skill.UsageCount > 0 {
 		successes := int(skill.SuccessRate * float64(skill.UsageCount))
-		fmt.Fprintf(&b, "Success rate: %.0f%% (%d/%d)\n", skill.SuccessRate*100, successes, skill.UsageCount)
+		_, _ = fmt.Fprintf(&b, "Success rate: %.0f%% (%d/%d)\n", skill.SuccessRate*100, successes, skill.UsageCount)
 	}
 
 	if len(skill.Steps) > 0 {
@@ -361,7 +361,7 @@ func FormatSkill(skill *Skill) string {
 			return steps[i].Order < steps[j].Order
 		})
 		for _, step := range steps {
-			fmt.Fprintf(&b, "  %d. %s\n", step.Order, step.Content)
+		_, _ = fmt.Fprintf(&b, "  %d. %s\n", step.Order, step.Content)
 		}
 	}
 

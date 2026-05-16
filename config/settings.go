@@ -113,7 +113,7 @@ func projectSettingsPath() string {
 func LoadGlobalSettings() Settings {
 	var s Settings
 	if data, err := os.ReadFile(globalSettingsPath()); err == nil {
-		json.Unmarshal(data, &s)
+		_ = json.Unmarshal(data, &s)
 	}
 	return s
 }
@@ -238,7 +238,7 @@ func MergeSettings(base, override Settings) Settings {
 // SaveGlobal saves settings to the global config file.
 func SaveGlobal(s Settings) error {
 	dir := filepath.Dir(globalSettingsPath())
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func SaveGlobal(s Settings) error {
 
 // SaveProject saves settings to the project config file.
 func SaveProject(s Settings) error {
-	os.MkdirAll(".hawk", 0o755)
+	_ = os.MkdirAll(".hawk", 0o755)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
@@ -540,7 +540,7 @@ func LoadEnvFile() error {
 		value := strings.TrimSpace(rest[idx+1:])
 		// Only set if not already set in environment
 		if os.Getenv(key) == "" {
-			os.Setenv(key, value)
+			_ = os.Setenv(key, value)
 		}
 	}
 	return nil
@@ -584,7 +584,7 @@ func RemoveEnvFile(key string) error {
 // SaveEnvFile writes an export line to ~/.hawk/env, deduplicating existing entries.
 func SaveEnvFile(key, value string) error {
 	path := envFilePath()
-	os.MkdirAll(filepath.Dir(path), 0o700)
+	_ = os.MkdirAll(filepath.Dir(path), 0o700)
 
 	// Read existing lines, filter out old entries for this key
 	var lines []string

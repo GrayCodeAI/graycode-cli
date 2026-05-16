@@ -50,7 +50,7 @@ func CompressOldSessions(maxAge time.Duration) (int, error) {
 		}
 
 		// Remove the original after successful compression
-		os.Remove(srcPath)
+		_ = os.Remove(srcPath)
 		compressed++
 	}
 	return compressed, nil
@@ -77,13 +77,13 @@ func DecompressSession(id string) (*Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open compressed session: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, fmt.Errorf("gzip reader: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	// Determine format based on original extension
 	isJSONL := filepath.Ext(gzPath[:len(gzPath)-3]) == ".jsonl"
@@ -99,22 +99,22 @@ func compressFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	gw := gzip.NewWriter(out)
 	if _, err := io.Copy(gw, in); err != nil {
-		gw.Close()
-		os.Remove(dst)
+		_ = gw.Close()
+		_ = os.Remove(dst)
 		return err
 	}
 	if err := gw.Close(); err != nil {
-		os.Remove(dst)
+		_ = os.Remove(dst)
 		return err
 	}
 	return nil
