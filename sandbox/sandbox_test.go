@@ -7,11 +7,11 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	c := DefaultConfig()
-	if c.Enabled {
-		t.Fatal("expected sandbox disabled by default")
+	if !c.Enabled {
+		t.Fatal("expected sandbox enabled by default")
 	}
-	if c.Type != "none" {
-		t.Fatalf("expected type 'none', got %q", c.Type)
+	if c.Type != "auto" {
+		t.Fatalf("expected type 'auto', got %q", c.Type)
 	}
 }
 
@@ -24,7 +24,10 @@ func TestNew(t *testing.T) {
 }
 
 func TestRunDisabled(t *testing.T) {
-	s, err := New(DefaultConfig())
+	s, err := New(&Config{
+		Enabled: false,
+		Type:    "none",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

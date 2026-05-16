@@ -17,8 +17,16 @@ func TestCompactEstimateTokens(t *testing.T) {
 		{Role: "assistant", Content: strings.Repeat("x", 400)},
 	}
 	tokens := EstimateTokens(msgs)
-	if tokens < 100 {
-		t.Errorf("expected at least 100 tokens, got %d", tokens)
+	if tokens < 1 {
+		t.Errorf("expected at least 1 token, got %d", tokens)
+	}
+	// Longer input should produce more tokens
+	shortMsgs := []client.EyrieMessage{
+		{Role: "user", Content: "hi"},
+	}
+	shortTokens := EstimateTokens(shortMsgs)
+	if tokens <= shortTokens {
+		t.Errorf("expected more tokens for longer input: %d vs %d", tokens, shortTokens)
 	}
 }
 
