@@ -134,21 +134,3 @@ release:
   footer: |
 
     **Full changelog:** https://github.com/GrayCodeAI/hawk/compare/{{ .PreviousTag }}...{{ .Tag }}
-
-# ---------------------------------------------------------------------------
-# Homebrew tap — published to GrayCodeAI/homebrew-tap.
-# Requires the HOMEBREW_TAP_TOKEN secret in the release workflow.
-# ---------------------------------------------------------------------------
-brews:
-  - repository:
-      owner: GrayCodeAI
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/GrayCodeAI/hawk"
-    description: "AI coding agent — reads, writes, and runs code in your terminal"
-    license: MIT
-    install: |
-      bin.install "hawk"
-    test: |
-      system "#{bin}/hawk", "--version"
