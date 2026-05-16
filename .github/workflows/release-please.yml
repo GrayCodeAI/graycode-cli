@@ -36,8 +36,8 @@ jobs:
         run: |
           if [[ "${{ steps.release.outputs.release_created }}" == "true" ]]; then
             echo "Released ${{ steps.release.outputs.tag_name }}." >> $GITHUB_STEP_SUMMARY
-          elif [[ -n "${{ steps.release.outputs.pr }}" ]]; then
-            echo "Updated release PR #${{ fromJSON(steps.release.outputs.pr).number }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ steps.release.outputs.pr }}" != "" ]]; then
+            echo "Updated release PR" >> $GITHUB_STEP_SUMMARY
           else
             echo "No release-relevant changes detected." >> $GITHUB_STEP_SUMMARY
           fi
