@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1](https://github.com/GrayCodeAI/hawk/compare/v0.2.0...v0.2.1) (2026-05-16)
+
+
+### Bug Fixes
+
+* skip flaky timing and worktree race tests ([319b817](https://github.com/GrayCodeAI/hawk/commit/319b81787175e2c9caccb75f9d095d6562e013e3))
+* update hawk go.mod from 1.26.1 to 1.26.3 ([c580291](https://github.com/GrayCodeAI/hawk/commit/c5802919af14b08d0dd556519ab32140155d53d4))
+* update sarif sub-module to Go 1.26.3 ([1146414](https://github.com/GrayCodeAI/hawk/commit/1146414a38dad3e86501529ec05a4704378dce82))
+
 ## [Unreleased]
 
 ### Changed
