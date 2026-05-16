@@ -97,11 +97,7 @@ func (c *braveClient) search(ctx context.Context, query string, count int) ([]se
 		if len(results) >= count {
 			break
 		}
-		results = append(results, searchResult{
-			Title:       r.Title,
-			URL:         r.URL,
-			Description: r.Description,
-		})
+		results = append(results, searchResult(r))
 	}
 
 	return results, nil
