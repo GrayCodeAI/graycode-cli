@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -73,7 +74,10 @@ func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
 		}
 	}
 
-	resp, err := rc.client.Get(rc.IndexURL)
+	resp, err := rc.client.Do(func() *http.Request {
+		r, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, rc.IndexURL, nil)
+		return r
+	}())
 	if err != nil {
 		// Fall back to stale cache on network error.
 		return rc.loadCachedIndex(cachePath)
