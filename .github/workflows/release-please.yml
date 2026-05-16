@@ -33,10 +33,14 @@ jobs:
 
       - name: Summary
         if: always()
+        env:
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+          PR_OUTPUT: ${{ steps.release.outputs.pr }}
         run: |
-          if [[ "${{ steps.release.outputs.release_created }}" == "true" ]]; then
-            echo "Released ${{ steps.release.outputs.tag_name }}." >> $GITHUB_STEP_SUMMARY
-          elif [[ "${{ steps.release.outputs.pr }}" != "" ]]; then
+          if [[ "$RELEASE_CREATED" == "true" ]]; then
+            echo "Released $TAG_NAME." >> $GITHUB_STEP_SUMMARY
+          elif [[ -n "$PR_OUTPUT" ]]; then
             echo "Updated release PR" >> $GITHUB_STEP_SUMMARY
           else
             echo "No release-relevant changes detected." >> $GITHUB_STEP_SUMMARY
