@@ -364,14 +364,6 @@ func (sd *SmellDetector) DetectDataClump(content string) []CodeSmell {
 		return true
 	})
 
-	// Find parameter groups that appear in multiple functions
-	// Group by type signature (ignoring names)
-	type paramGroup struct {
-		types []string
-		funcs []string
-		line  int
-	}
-
 	// Check all pairs of functions for shared parameter type sequences of length >= 3
 	reported := make(map[string]bool)
 	for i := 0; i < len(allFuncs); i++ {

@@ -1,15 +1,36 @@
+# Canonical hawk-eco goreleaser config for Go binary repos.
+# Source of truth: .shared-templates/.goreleaser.yml.tmpl
+#
+# Placeholders rendered per repo:
+#   hawk      — short repo name (e.g. hawk, yaad, trace)
+#   ./     — main package path (e.g. ./ or ./cmd/yaad)
+#   AI coding agent — reads, writes, and runs code in your terminal  — short single-line description for brew/nfpms
+#   main   — Go package path holding Version vars
+#                      (e.g. main or github.com/GrayCodeAI/hawk/internal/version)
+#
+# Repos with PRO/special features (e.g. trace's macOS notarization, tok's
+# nfpms) extend this template with extra sections instead of replacing it.
+
 version: 2
 project_name: hawk
 
+# ---------------------------------------------------------------------------
+# Pre-build hooks — keep go.mod tidy and verified.
+# ---------------------------------------------------------------------------
 before:
   hooks:
-    - go build ./...
+    - go mod tidy
+    - go mod verify
 
+# ---------------------------------------------------------------------------
+# Builds — three OS × two arch (no Windows/arm64).
+# Reproducible: `mod_timestamp` ties the binary timestamp to the commit time
+# rather than the build host's clock.
+# ---------------------------------------------------------------------------
 builds:
-  - main: .
+  - id: hawk
+    main: ./
     binary: hawk
-    ldflags:
-      - -s -w -X main.Version={{.Version}} -X main.BuildDate={{.Date}}
     env:
       - CGO_ENABLED=0
     goos:
@@ -19,31 +40,124 @@ builds:
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.ShortCommit}}
+      - -X main.BuildDate={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
 
+# ---------------------------------------------------------------------------
+# Archives — tar.gz on Unix, zip on Windows. Includes README + LICENSE.
+# ---------------------------------------------------------------------------
 archives:
-  - format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: default
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
 
+# ---------------------------------------------------------------------------
+# Source archive — published alongside binaries for downstream packagers.
+# ---------------------------------------------------------------------------
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_source"
+
+# ---------------------------------------------------------------------------
+# Checksums — SHA-256, single file per release.
+# ---------------------------------------------------------------------------
 checksum:
   name_template: checksums.txt
+  algorithm: sha256
 
+# ---------------------------------------------------------------------------
+# SBOM — generated with anchore/syft for every artefact (industry standard).
+# ---------------------------------------------------------------------------
+sboms:
+  - artifacts: archive
+    documents:
+      - "${artifact}.spdx.sbom.json"
+
+# ---------------------------------------------------------------------------
+# Snapshot — unreleased dev builds get a clear synthetic version.
+# ---------------------------------------------------------------------------
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# ---------------------------------------------------------------------------
+# Changelog — Conventional-Commit grouped, hidden noise.
+# ---------------------------------------------------------------------------
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
       - "^chore:"
+      - "^ci:"
+      - "^test:"
+      - "^style:"
+      - "^build:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "🚀 Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "⚡ Performance"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "♻️  Refactoring"
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: "📝 Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: "Other"
+      order: 999
 
+# ---------------------------------------------------------------------------
+# Release — auto-detect prereleases (rc/beta tags). Created on the repo
+# itself (not a separate release repo).
+# ---------------------------------------------------------------------------
+release:
+  draft: false
+  prerelease: auto
+  name_template: "v{{ .Version }}"
+  header: |
+    ## hawk v{{ .Version }}
+
+    AI coding agent — reads, writes, and runs code in your terminal
+  footer: |
+
+    **Full changelog:** https://github.com/GrayCodeAI/hawk/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# ---------------------------------------------------------------------------
+# Homebrew tap — published to GrayCodeAI/homebrew-tap.
+# Requires the HOMEBREW_TAP_TOKEN secret in the release workflow.
+# ---------------------------------------------------------------------------
 brews:
   - repository:
       owner: GrayCodeAI
       name: homebrew-tap
-    homepage: https://github.com/GrayCodeAI/hawk
-    description: AI coding agent — reads, writes, and runs code in your terminal
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/GrayCodeAI/hawk"
+    description: "AI coding agent — reads, writes, and runs code in your terminal"
     license: MIT
     install: |
       bin.install "hawk"
+    test: |
+      system "#{bin}/hawk", "--version"

@@ -1,0 +1,43 @@
+# Canonical release-please workflow for hawk-eco repos.
+# Opens / updates a release PR on every push to main; on merge of that PR,
+# tags the new release. The tag triggers goreleaser (separate workflow).
+#
+# Source of truth: .shared-templates/release-please.yml.tmpl at the eco root.
+
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          if [[ "${{ steps.release.outputs.release_created }}" == "true" ]]; then
+            echo "Released ${{ steps.release.outputs.tag_name }}." >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ steps.release.outputs.pr }}" != "" ]]; then
+            echo "Updated release PR: ${{ steps.release.outputs.pr }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No release-relevant changes detected." >> $GITHUB_STEP_SUMMARY
+          fi

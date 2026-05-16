@@ -42,13 +42,13 @@ func sendTerminalNotification(title, body string) {
 	switch detectTerminal() {
 	case "iterm2":
 		// iTerm2 OSC 9 notification
-		fmt.Fprintf(os.Stderr, "\033]9;%s\007", body)
+		_, _ = fmt.Fprintf(os.Stderr, "\033]9;%s\007", body)
 	case "kitty":
 		// Kitty OSC 99 notification
-		fmt.Fprintf(os.Stderr, "\033]99;i=hawk:d=0;%s\033\\", body)
+		_, _ = fmt.Fprintf(os.Stderr, "\033]99;i=hawk:d=0;%s\033\\", body)
 	case "ghostty":
 		// Ghostty OSC 777 notification
-		fmt.Fprintf(os.Stderr, "\033]777;notify;%s;%s\033\\", title, body)
+		_, _ = fmt.Fprintf(os.Stderr, "\033]777;notify;%s;%s\033\\", title, body)
 	case "apple":
 		if runtime.GOOS == "darwin" {
 			script := fmt.Sprintf(`display notification "%s" with title "%s"`, body, title)

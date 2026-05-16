@@ -1,57 +1,71 @@
-# Security Policy
+# Security Policy — hawk
 
-## Supported Versions
+## Supported versions
 
-| Version | Supported |
-|---------|-----------|
-| 0.4.x   | Yes |
-| < 0.4   | No  |
+We support the latest minor version on each `0.x` line, and the latest two
+minor versions once `1.x` ships. Older versions receive critical-severity
+fixes only on a best-effort basis.
 
-## Reporting a Vulnerability
+The current canonical version is the contents of the [`VERSION`](./VERSION)
+file at the repo root. See [`VERSIONING.md`](https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md)
+for the eco-wide versioning scheme.
 
-**Do NOT open a public GitHub issue for security vulnerabilities.**
+## Reporting a vulnerability
 
-Email: security@graycode.ai
+**Do not open a public GitHub issue for security vulnerabilities.** Instead:
 
-### Response Timeline
-- Acknowledgment: 48 hours
-- Initial assessment: 5 business days
-- Fix: 7-30 days depending on severity
+1. Open a private [GitHub Security Advisory](https://github.com/GrayCodeAI/hawk/security/advisories/new), **or**
+2. Email `security@graycode.ai` with the details below.
 
-## Security Design
+Include in your report:
 
-### Sandboxing
-- Linux: Landlock filesystem sandboxing + seccomp-bpf syscall filtering
-- macOS: sandbox-exec profiles
-- Docker: optional container isolation
-- All platforms: command allowlists, path restrictions
+- A description of the vulnerability and the affected component.
+- Steps to reproduce, ideally with a minimal proof-of-concept.
+- The version (`VERSION` file or git SHA) you tested against.
+- The potential impact and any suggested mitigation.
 
-### Credential Handling
-- API keys stored in ~/.hawk/provider.json (0600 permissions)
-- Provider keys passed via environment variables, never logged
-- Daemon binds to 127.0.0.1 only (localhost)
+**Response targets:**
 
-### Permission System
-- All tool executions require user approval based on risk level
-- Auto-learning from user decisions (per-project)
-- Dangerous operations (rm -rf, git push --force) always prompt
+- Initial acknowledgement: within **48 hours**.
+- Triage and severity assessment: within **5 business days**.
+- Coordinated fix and disclosure: within **30 days** for high/critical, **90
+  days** for medium/low (per industry-standard responsible disclosure).
 
-### Network
-- eyrie handles all LLM API calls over HTTPS
-- No telemetry or data collection without explicit opt-in
-- Daemon port (4590) not exposed externally
+## Disclosure policy
+
+We follow [coordinated vulnerability disclosure](https://en.wikipedia.org/wiki/Coordinated_vulnerability_disclosure):
+
+- Reporters receive credit in the advisory and CHANGELOG (unless they opt
+  out).
+- We request that reporters refrain from public disclosure until a fix has
+  been released or the disclosure deadline above has elapsed.
+- We will not pursue legal action against good-faith researchers acting
+  within this policy.
+
+## Security practices in this repo
+
+- **Dependency monitoring:** automated via Dependabot (see
+  `.github/dependabot.yml`).
+- **Static analysis:** `golangci-lint` / `ruff` / `mypy` enforced in CI.
+- **Vulnerability scanning:** `govulncheck` (Go) / `pip-audit` (Python) run
+  on every CI build.
+- **Lockfiles:** `go.sum` / `pnpm-lock.yaml` / `pyproject.toml` are pinned
+  and committed.
+- **Reproducible builds:** release artefacts ship with SHA-256 checksums via
+  goreleaser.
+- **No secrets in source:** API keys are configuration, not constants. Pre-
+  commit hooks block accidental secret commits.
 
 ## Scope
 
-In scope:
-- Remote code execution via tool execution
-- Sandbox escape
-- Permission bypass
-- Credential exposure
-- Command injection via LLM-generated tool calls
-- Path traversal outside allowed directories
+This policy covers the code in this repository and the release artefacts
+published from it. It does not cover:
 
-Out of scope:
-- Issues requiring physical access
-- Social engineering
-- Denial of service via resource exhaustion
+- Third-party dependencies (report to upstream).
+- LLM provider services that hawk integrates with (report to the
+  provider).
+- Local filesystem misuse where an attacker already has shell access (out of
+  threat model).
+
+For hawk-specific threat-model notes, see the README and any docs in
+this repo.

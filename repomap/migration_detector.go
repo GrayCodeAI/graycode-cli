@@ -577,7 +577,7 @@ func FormatOpportunities(opps []MigrationOpportunity) string {
 
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "Migration Opportunities (%d found):\n", len(opps))
+		_, _ = fmt.Fprintf(&b, "Migration Opportunities (%d found):\n", len(opps))
 	b.WriteString(strings.Repeat("═", 35))
 	b.WriteString("\n")
 
@@ -599,7 +599,7 @@ func FormatOpportunities(opps []MigrationOpportunity) string {
 		if len(items) == 0 {
 			continue
 		}
-		fmt.Fprintf(&b, "\n%s (%d):\n", strings.ToUpper(prio), len(items))
+		_, _ = fmt.Fprintf(&b, "\n%s (%d):\n", strings.ToUpper(prio), len(items))
 		for _, item := range items {
 			// Extract short old pattern for display
 			oldDisplay := shortPattern(item.OldPattern)
@@ -612,7 +612,7 @@ func FormatOpportunities(opps []MigrationOpportunity) string {
 		}
 	}
 
-	fmt.Fprintf(&b, "\nAuto-fixable: %d/%d\n", autoFixCount, len(opps))
+		_, _ = fmt.Fprintf(&b, "\nAuto-fixable: %d/%d\n", autoFixCount, len(opps))
 
 	return b.String()
 }

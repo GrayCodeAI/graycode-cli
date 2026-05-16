@@ -62,14 +62,14 @@ func runSearch(_ *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "SESSION\tROLE\tMATCH\n")
+		_, _ = fmt.Fprintf(w, "SESSION\tROLE\tMATCH\n")
 	for _, r := range results {
 		preview := r.Preview
 		if len(preview) > 80 {
 			preview = preview[:80] + "..."
 		}
 		preview = strings.ReplaceAll(preview, "\n", " ")
-		fmt.Fprintf(w, "%s\t%s\t%s\n", r.SessionID[:8], r.Role, preview)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", r.SessionID[:8], r.Role, preview)
 	}
 	return w.Flush()
 }

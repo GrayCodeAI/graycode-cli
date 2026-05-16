@@ -68,7 +68,7 @@ func (ca *CoverageAnalyzer) RunCoverage() (*CoverageReport, error) {
 	defer ca.mu.Unlock()
 
 	coverFile := filepath.Join(ca.ProjectDir, "coverage.out")
-	defer os.Remove(coverFile)
+	defer func() { _ = os.Remove(coverFile) }()
 
 	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./...")
 	cmd.Dir = ca.ProjectDir
@@ -116,10 +116,6 @@ func ParseCoverageProfile(data string) (*CoverageReport, error) {
 	startIdx := 0
 	if strings.HasPrefix(lines[0], "mode:") {
 		startIdx = 1
-	}
-
-	type lineInfo struct {
-		covered bool
 	}
 
 	// fileLines maps file path -> line number -> covered.

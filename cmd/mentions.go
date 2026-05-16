@@ -62,18 +62,3 @@ func (m *chatModel) handleMentions(text string) string {
 	}
 	return text
 }
-
-// mentionSuggestions provides fuzzy file completion for @-prefixed input.
-func mentionSuggestions(input string, cursorPos int) []string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-
-	partial := mention.ExtractPartial(input, cursorPos)
-	if partial == "" {
-		return nil
-	}
-
-	return mention.FuzzyMatch(partial, cwd, 8)
-}

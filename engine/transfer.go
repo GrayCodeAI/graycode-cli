@@ -133,12 +133,12 @@ func (tl *TransferLearning) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &tl.patterns)
+	_ = json.Unmarshal(data, &tl.patterns)
 }
 
 func (tl *TransferLearning) save() {
 	dir := filepath.Dir(tl.path)
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 	data, _ := json.Marshal(tl.patterns)
-	os.WriteFile(tl.path, data, 0o644)
+	_ = os.WriteFile(tl.path, data, 0o644)
 }

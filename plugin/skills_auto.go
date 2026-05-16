@@ -30,6 +30,18 @@ type SmartSkill struct {
 	Tags          []string // discovery tags
 	Agents        []string // cross-agent compatibility (hawk, claude-code, etc.)
 	Source        SkillSource
+	Invoke        string   // namespaced invocation pattern (e.g. "/vendor:skill")
+	Refs          []string // declared @ref() references in SKILL.md
+	RefDir        string   // path to references/ directory
+	Chain         SkillChain
+}
+
+// SkillChain declares relationships between skills.
+type SkillChain struct {
+	After     []string // skills that should run before this one
+	Before    []string // skills to suggest after this one completes
+	Conflicts []string // skills that cannot be active simultaneously
+	Enhances  []string // skills that work well together (advisory)
 }
 
 // LoadSmartSkills scans the given directories for SKILL.md files with YAML
@@ -62,6 +74,11 @@ func LoadSmartSkills(dirs []string) []SmartSkill {
 			skill := parseSmartSkill(string(data))
 			if skill.Name == "" {
 				skill.Name = e.Name()
+			}
+			// Set reference directory if it exists
+			refDir := filepath.Join(dir, e.Name(), "references")
+			if info, err := os.Stat(refDir); err == nil && info.IsDir() {
+				skill.RefDir = refDir
 			}
 			skills = append(skills, skill)
 		}
@@ -133,10 +150,56 @@ func parseSmartSkill(content string) SmartSkill {
 			skill.Source.InstalledAt = val
 		case "source-ref":
 			skill.Source.Ref = val
+		case "invoke":
+			skill.Invoke = val
+		case "chain-after":
+			skill.Chain.After = parseYAMLStringArray(val)
+		case "chain-before":
+			skill.Chain.Before = parseYAMLStringArray(val)
+		case "chain-conflicts":
+			skill.Chain.Conflicts = parseYAMLStringArray(val)
+		case "chain-enhances":
+			skill.Chain.Enhances = parseYAMLStringArray(val)
 		}
 	}
 
+	// Extract @ref() declarations from content
+	skill.Refs = extractRefs(skill.Content)
+
 	return skill
+}
+
+// extractRefs finds all @ref(filename.md) patterns in content.
+func extractRefs(content string) []string {
+	var refs []string
+	for _, line := range strings.Split(content, "\n") {
+		for {
+			idx := strings.Index(line, "@ref(")
+			if idx < 0 {
+				break
+			}
+			end := strings.Index(line[idx:], ")")
+			if end < 0 {
+				break
+			}
+			ref := line[idx+5 : idx+end]
+			refs = append(refs, ref)
+			line = line[idx+end+1:]
+		}
+	}
+	return refs
+}
+
+// LoadRef loads a reference document on-demand from the skill's references/ dir.
+func (s *SmartSkill) LoadRef(name string) (string, error) {
+	if s.RefDir == "" {
+		return "", os.ErrNotExist
+	}
+	data, err := os.ReadFile(filepath.Join(s.RefDir, name))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // parseYAMLLine splits "key: value" and returns (key, value, true).
@@ -168,6 +231,29 @@ func parseYAMLStringArray(s string) []string {
 		}
 	}
 	return result
+}
+
+// ResolveChainConflicts checks if activating a skill conflicts with already-active skills.
+func ResolveChainConflicts(candidate SmartSkill, active map[string]SmartSkill) []string {
+	var conflicts []string
+	for name, a := range active {
+		for _, c := range candidate.Chain.Conflicts {
+			if name == c {
+				conflicts = append(conflicts, name)
+			}
+		}
+		for _, c := range a.Chain.Conflicts {
+			if candidate.Name == c {
+				conflicts = append(conflicts, name)
+			}
+		}
+	}
+	return conflicts
+}
+
+// SuggestChainSkills returns skill names that should be suggested based on chain declarations.
+func SuggestChainSkills(skill SmartSkill) (after []string, enhances []string) {
+	return skill.Chain.Before, skill.Chain.Enhances
 }
 
 // MatchSkillsByPath returns skills whose Paths glob patterns match activePath.

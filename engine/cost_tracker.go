@@ -87,13 +87,15 @@ func LoadCostHistory() ([]analytics.CostEntry, error) {
 
 func (ct *CostTracker) appendToFile(entry analytics.CostEntry) error {
 	dir := filepath.Dir(ct.filePath)
-	os.MkdirAll(dir, 0o755)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
 
 	f, err := os.OpenFile(ct.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data, _ := json.Marshal(entry)
 	data = append(data, '\n')

@@ -102,7 +102,7 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	}
 	var b strings.Builder
 	for i := start; i < end; i++ {
-		fmt.Fprintf(&b, "%4d | %s\n", i+1, lines[i])
+		_, _ = fmt.Fprintf(&b, "%4d | %s\n", i+1, lines[i])
 	}
 	return b.String(), nil
 }

@@ -131,7 +131,7 @@ func extractCodeBlocks(rootDir string, symbols []SymbolMatch, contextLines int) 
 		// Build content with line numbers
 		var b strings.Builder
 		for i := start; i <= end; i++ {
-			fmt.Fprintf(&b, "%4d | %s\n", i, lines[i-1])
+		_, _ = fmt.Fprintf(&b, "%4d | %s\n", i, lines[i-1])
 		}
 
 		blocks = append(blocks, CodeBlock{
@@ -151,7 +151,7 @@ func readFileLines(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []string
 	scanner := bufio.NewScanner(f)
@@ -175,7 +175,7 @@ func (loc *Localization) FormatSummary() string {
 		b.WriteString("  (no files matched)\n")
 	}
 	for i, f := range loc.Files {
-		fmt.Fprintf(&b, "  %d. %s (score: %.1f) — %s\n", i+1, f.Path, f.Score, f.Reason)
+		_, _ = fmt.Fprintf(&b, "  %d. %s (score: %.1f) — %s\n", i+1, f.Path, f.Score, f.Reason)
 	}
 
 	b.WriteString("\n=== Symbol-level localization ===\n")
@@ -192,7 +192,7 @@ func (loc *Localization) FormatSummary() string {
 		b.WriteString("  (no code blocks)\n")
 	}
 	for _, cb := range loc.Context {
-		fmt.Fprintf(&b, "--- %s (lines %d-%d) ---\n", cb.File, cb.StartLine, cb.EndLine)
+		_, _ = fmt.Fprintf(&b, "--- %s (lines %d-%d) ---\n", cb.File, cb.StartLine, cb.EndLine)
 		b.WriteString(cb.Content)
 		b.WriteString("\n")
 	}

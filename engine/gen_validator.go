@@ -818,7 +818,7 @@ func checkGoCompilation(code string) []GenIssue {
 	if err != nil {
 		return nil
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tmpFile := filepath.Join(tmpDir, "generated.go")
 	if err := os.WriteFile(tmpFile, []byte(code), 0644); err != nil {
@@ -845,7 +845,7 @@ func checkGoCompilation(code string) []GenIssue {
 	for _, line := range strings.Split(string(output), "\n") {
 		if m := goErrRe.FindStringSubmatch(line); m != nil {
 			lineNum := 0
-			fmt.Sscanf(m[1], "%d", &lineNum)
+			_, _ = fmt.Sscanf(m[1], "%d", &lineNum)
 			issues = append(issues, GenIssue{
 				Check:    "compilation",
 				Message:  m[3],
@@ -908,7 +908,7 @@ func genExtractLineNumber(errLine string) int {
 	re := regexp.MustCompile(`:(\d+):`)
 	if m := re.FindStringSubmatch(errLine); m != nil {
 		n := 0
-		fmt.Sscanf(m[1], "%d", &n)
+		_, _ = fmt.Sscanf(m[1], "%d", &n)
 		return n
 	}
 	return 0

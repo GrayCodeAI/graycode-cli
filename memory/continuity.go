@@ -242,7 +242,7 @@ func (ct *ContinuityTracker) saveNoLock() {
 		return
 	}
 	dir := filepath.Dir(ct.savePath)
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 
 	// Keep last 100 sessions
 	if len(ct.sessions) > 100 {
@@ -253,7 +253,7 @@ func (ct *ContinuityTracker) saveNoLock() {
 	if err != nil {
 		return
 	}
-	os.WriteFile(ct.savePath, data, 0o644)
+	_ = os.WriteFile(ct.savePath, data, 0o644)
 }
 
 func (ct *ContinuityTracker) load() {
@@ -264,5 +264,5 @@ func (ct *ContinuityTracker) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &ct.sessions)
+	_ = json.Unmarshal(data, &ct.sessions)
 }

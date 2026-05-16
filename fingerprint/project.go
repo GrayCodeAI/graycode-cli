@@ -120,7 +120,7 @@ func Scan(projectDir string) (*ProjectFingerprint, error) {
 func detectLanguages(dir string) []ProjectLangInfo {
 	counts := make(map[string]int)
 
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -434,7 +434,7 @@ func detectTestFramework(dir string, lang string) string {
 		}
 		// Check if there are any _test.go files.
 		hasTests := false
-		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || hasTests {
 				return filepath.SkipAll
 			}
@@ -523,7 +523,7 @@ func detectTestFramework(dir string, lang string) string {
 		}
 		// Check for test files with unittest patterns.
 		hasUnittest := false
-		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || hasUnittest {
 				return filepath.SkipAll
 			}
@@ -749,7 +749,7 @@ func detectDocker(dir string) bool {
 func detectMonorepo(dir string) bool {
 	// Check for multiple go.mod files.
 	goModCount := 0
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -902,7 +902,7 @@ func detectIndentationConvention(dir string) *Convention {
 	sampled := 0
 	maxSamples := 20
 
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || sampled >= maxSamples {
 			return filepath.SkipAll
 		}
@@ -922,7 +922,7 @@ func detectIndentationConvention(dir string) *Convention {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		lineCount := 0
@@ -982,7 +982,7 @@ func detectNamingConvention(dir string, lang string) *Convention {
 		snakeRe := regexp.MustCompile(`\bdef ([a-z][a-z0-9]*_[a-z0-9_]+)\b`)
 		camelRe := regexp.MustCompile(`\bdef ([a-z][a-zA-Z0-9]+[A-Z][a-zA-Z0-9]*)\b`)
 
-		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || sampled >= 10 {
 				return filepath.SkipAll
 			}
@@ -1034,7 +1034,7 @@ func detectGoErrorHandling(dir string) *Convention {
 	wrapRe := regexp.MustCompile(`fmt\.Errorf\([^)]*%w`)
 	bareRe := regexp.MustCompile(`return\s+err\b`)
 
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || sampled >= 20 {
 			return filepath.SkipAll
 		}
@@ -1085,7 +1085,7 @@ func detectImportOrganization(dir string, lang string) *Convention {
 	ungroupedCount := 0
 	sampled := 0
 
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || sampled >= 15 {
 			return filepath.SkipAll
 		}
@@ -1167,7 +1167,7 @@ func detectTestNaming(dir string, lang string) *Convention {
 	tableDrivenRe := regexp.MustCompile(`(tests|cases|testCases|tt)\s*:?=\s*\[\]struct`)
 	simpleFuncRe := regexp.MustCompile(`func Test[A-Z]\w+\(t \*testing\.T\)`)
 
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || sampled >= 15 {
 			return filepath.SkipAll
 		}

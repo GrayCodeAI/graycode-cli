@@ -458,7 +458,7 @@ func DetectFramework(dir string) string {
 
 	// Scan Go source files for imports
 	counts := make(map[string]int)
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}

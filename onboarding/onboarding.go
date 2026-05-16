@@ -175,7 +175,7 @@ func RunSetup() error {
 		}
 
 		// Herm-style: set env var for this session, persist to ~/.hawk/env
-		os.Setenv(selected.envKey, apiKey)
+		_ = os.Setenv(selected.envKey, apiKey)
 		_ = hawkconfig.SaveEnvFile(selected.envKey, apiKey)
 
 		// Save provider preference only (not the key)
@@ -190,13 +190,13 @@ func RunSetup() error {
 	} else if selected.name == "ollama" {
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = "ollama"
-		hawkconfig.SaveGlobal(settings)
+		_ = hawkconfig.SaveGlobal(settings)
 		fmt.Printf("  %s✓ Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
 		// Key already in env — just save provider preference
 		settings := hawkconfig.LoadSettings()
 		settings.Provider = selected.name
-		hawkconfig.SaveGlobal(settings)
+		_ = hawkconfig.SaveGlobal(settings)
 		fmt.Printf("  %s✓ Using %s from environment%s\n", teal, selected.envKey, reset)
 	}
 
@@ -212,7 +212,7 @@ func RunSetup() error {
 	fmt.Println(dim + "  ─────────────────────────────────────────" + reset)
 	fmt.Println()
 	fmt.Print("  Press Enter to start... ")
-	reader.ReadString('\n')
+	_, _ = reader.ReadString('\n')
 
 	return nil
 }
@@ -225,8 +225,8 @@ func SaveAPIKeyToEnvFile(key, value string) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
-	fmt.Fprintf(f, "export %s=%s\n", key, value)
+	defer func() { _ = f.Close() }()
+		_, _ = fmt.Fprintf(f, "export %s=%s\n", key, value)
 }
 
 // validateAPIKey checks the key format for known providers.

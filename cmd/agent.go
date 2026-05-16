@@ -70,7 +70,7 @@ func runAgentList(_ *cobra.Command, _ []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "NAME\tMODEL\tDESCRIPTION\n")
+		_, _ = fmt.Fprintf(w, "NAME\tMODEL\tDESCRIPTION\n")
 	for _, a := range all {
 		model := a.Model
 		if model == "" {
@@ -80,7 +80,7 @@ func runAgentList(_ *cobra.Command, _ []string) error {
 		if len(desc) > 50 {
 			desc = desc[:50] + "..."
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", a.Name, model, desc)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", a.Name, model, desc)
 	}
 	return w.Flush()
 }

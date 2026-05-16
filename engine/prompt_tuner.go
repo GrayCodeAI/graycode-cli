@@ -118,14 +118,14 @@ func (pt *PromptTuner) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &pt.variants)
+	_ = json.Unmarshal(data, &pt.variants)
 }
 
 func (pt *PromptTuner) save() {
 	dir := filepath.Dir(pt.path)
-	os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755)
 	data, _ := json.Marshal(pt.variants)
-	os.WriteFile(pt.path, data, 0o644)
+	_ = os.WriteFile(pt.path, data, 0o644)
 }
 
 func formatFloat(f float64) string {

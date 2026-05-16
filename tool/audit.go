@@ -35,7 +35,7 @@ func GetAuditLog() *AuditLog {
 	auditOnce.Do(func() {
 		home, _ := os.UserHomeDir()
 		dir := filepath.Join(home, ".hawk", "audit")
-		os.MkdirAll(dir, 0o755)
+		_ = os.MkdirAll(dir, 0o755)
 
 		today := time.Now().Format("2006-01-02")
 		path := filepath.Join(dir, today+".jsonl")
@@ -64,14 +64,14 @@ func (a *AuditLog) Record(entry AuditEntry) {
 	if err != nil {
 		return
 	}
-	a.f.Write(data)
-	a.f.Write([]byte("\n"))
+	_, _ = a.f.Write(data)
+	_, _ = a.f.Write([]byte("\n"))
 }
 
 // Close closes the audit log.
 func (a *AuditLog) Close() {
 	if a != nil && a.f != nil {
-		a.f.Close()
+		_ = a.f.Close()
 	}
 }
 

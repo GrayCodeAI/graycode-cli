@@ -28,6 +28,8 @@ import (
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/session"
+	"github.com/GrayCodeAI/hawk/sessioncapture"
+	"github.com/GrayCodeAI/hawk/shellmode"
 	"github.com/GrayCodeAI/hawk/staleness"
 	"github.com/GrayCodeAI/hawk/taste"
 	"github.com/GrayCodeAI/hawk/tool"
@@ -131,7 +133,7 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 
 func genID() string {
 	b := make([]byte, 8)
-	cryptorand.Read(b)
+	_, _ = cryptorand.Read(b)
 	return fmt.Sprintf("%x", b)
 }
 
@@ -242,6 +244,20 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		m.containerStatus = "checking docker…"
 	}
 
+	// Initialize lacy-inspired features
+	m.termCtx = sessioncapture.NewTerminalContext()
+	m.inputIndicator = &InputIndicator{}
+	m.ghostText = NewGhostText()
+	m.modeManager = shellmode.NewModeManager()
+	m.modeManager.LoadPersistedMode()
+	m.brailleSpinner = NewBrailleSpinner(SpinnerBrailleWave, "")
+
+	// Initialize BMAD/Aeon features
+	m.hintsLoader = engine.NewHintsLoader()
+	m.sourceRoots = engine.NewSourceRoots()
+	m.selfImprover = engine.NewSelfImprover()
+	m.codingSoul = engine.LoadCodingSoul()
+
 	// Initialize taste and staleness subsystems.
 	m.stalenessDetector = staleness.NewDetector()
 	if store, err := taste.NewStore(""); err == nil {
@@ -255,7 +271,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	// Initialize write-ahead log for crash recovery
 	if wal, err := session.NewWAL(sid); err == nil {
 		m.wal = wal
-		wal.AppendMeta(effectiveModel, effectiveProvider, "")
+		_ = wal.AppendMeta(effectiveModel, effectiveProvider, "")
 	}
 
 	// Check for crash recovery
@@ -267,8 +283,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 				continue // current session WAL
 			}
 			if rs, err := session.RecoverFromWAL(rid); rs != nil && err == nil {
-				session.Save(rs)
-				os.Remove(filepath.Join(walDir, rid+".wal"))
+				_ = session.Save(rs)
+				_ = os.Remove(filepath.Join(walDir, rid+".wal"))
 			}
 		}
 	}
@@ -479,7 +495,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
-			m.session.SetPermissionMode(modes[idx])
+			_ = m.session.SetPermissionMode(modes[idx])
 			labels := map[string]string{"default": "Off", "acceptEdits": "Auto-edit", "bypassPermissions": "Full Auto"}
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy → %s", labels[modes[idx]])})
 			m.viewDirty = true
@@ -497,6 +513,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateViewportContent()
 			return m, nil
 		case tea.KeyTab:
+			// Accept ghost text suggestion if active and input is empty
+			if m.ghostText.Active() && strings.TrimSpace(m.input.Value()) == "" {
+				accepted := m.ghostText.Accept()
+				m.input.SetValue(accepted)
+				m.input.CursorEnd()
+				return m, nil
+			}
 			sugs := slashSuggestions(m.input.Value())
 			if len(sugs) > 0 {
 				if m.slashSel < 0 || m.slashSel >= len(sugs) {
@@ -576,14 +599,42 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// Shell escape: !command runs directly without AI
 			if strings.HasPrefix(text, "!") {
+				m.termCtx.MarkCommand(text[1:])
 				return m.handleShellEscape(text[1:])
 			}
+			// Mode-aware classification: in auto mode, classify input
+			classification := m.modeManager.ClassifyWithMode(text)
+			if classification == shellmode.ClassShell && !strings.HasPrefix(text, "!") {
+				// Auto-detected as shell command — execute directly
+				m.termCtx.MarkCommand(text)
+				return m.handleShellEscape(text)
+			}
+			// ClassAgent or ClassNeutral → route to AI
 			// @ mention: resolve file references and include as context.
 			text = m.handleMentions(text)
+			// Build delta-based terminal context for the query
+			text = m.termCtx.BuildContext(text)
+			// Scale-adaptive: classify task complexity
+			scale := engine.ClassifyScale(text)
+			behavior := engine.GetBehavior(scale)
+			_ = behavior // used for future turn limiting
+			// Inject self-improvement lessons
+			if lessons := m.selfImprover.ForPrompt(5); lessons != "" {
+				m.session.AppendSystemContext(lessons)
+			}
+			// Inject coding soul
+			if soul := m.codingSoul.ForPrompt(); soul != "" {
+				m.session.AppendSystemContext(soul)
+			}
+			// Load hints from CWD
+			cwd, _ := os.Getwd()
+			if hints := m.hintsLoader.LoadHints(cwd); hints != "" {
+				m.session.AppendSystemContext(hints)
+			}
 			m.messages = append(m.messages, displayMsg{role: "user", content: text})
 			m.session.AddUser(text)
 			if m.wal != nil {
-				m.wal.Append(session.Message{Role: "user", Content: text})
+				_ = m.wal.Append(session.Message{Role: "user", Content: text})
 			}
 			m.waiting = true
 			m.autoScroll = true
@@ -666,8 +717,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content := sanitizeIdentity(m.partial.String())
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
 			if m.wal != nil {
-				m.wal.Append(session.Message{Role: "assistant", Content: content})
+				_ = m.wal.Append(session.Message{Role: "assistant", Content: content})
 			}
+			// Generate ghost text suggestion from AI response
+			m.ghostText.Suggest(content)
 			m.partial.Reset()
 		}
 		// Inline cost summary after each response
@@ -741,6 +794,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if !m.waiting {
+		// Clear ghost text when user starts typing
+		if m.ghostText.Active() && m.input.Value() != "" {
+			m.ghostText.Clear()
+		}
 		// Vim mode key interception (operates on full textarea value)
 		if m.vim != nil && m.vim.IsEnabled() {
 			if keyMsg, ok := msg.(tea.KeyMsg); ok {

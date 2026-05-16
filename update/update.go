@@ -9,7 +9,11 @@ import (
 	"strings"
 )
 
-const updateURL = "https://api.github.com/repos/GrayCodeAI/hawk/releases/latest"
+var updateURL = "https://api.github.com/repos/GrayCodeAI/hawk/releases/latest"
+
+func setUpdateURL(url string) {
+	updateURL = url
+}
 
 // ReleaseInfo represents a GitHub release.
 type ReleaseInfo struct {
@@ -33,7 +37,7 @@ func Check(currentVersion string) (*ReleaseInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("update check failed: %s", resp.Status)

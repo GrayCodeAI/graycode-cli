@@ -40,7 +40,7 @@ func (fw *FileWatcher) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	if err := watcher.Add(fw.dir); err != nil {
 		return err
