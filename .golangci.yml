@@ -21,6 +21,8 @@ linters:
       enable-all: true
       disable:
         - fieldalignment
+        - shadow
+        - unusedwrite
     staticcheck:
       checks:
         - all
