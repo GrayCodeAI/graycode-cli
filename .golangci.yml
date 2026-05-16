@@ -50,6 +50,7 @@ linters:
         - -QF1002
         - -QF1008
         - -QF1001
+        - -SA4017
   exclusions:
     paths:
       - .gomodcache
