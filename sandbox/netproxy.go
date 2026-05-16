@@ -307,7 +307,7 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Failed to forward request: %v", err), http.StatusBadGateway)
 		return
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Copy response headers.
 	for key, values := range resp.Header {

@@ -18,14 +18,14 @@ type ConflictResolver struct {
 
 // Conflict represents a single conflict region within a file.
 type Conflict struct {
-	File         string
-	StartLine    int
-	EndLine      int
-	OursContent  string
+	File          string
+	StartLine     int
+	EndLine       int
+	OursContent   string
 	TheirsContent string
-	BaseContent  string
-	Resolved     bool
-	Resolution   string
+	BaseContent   string
+	Resolved      bool
+	Resolution    string
 }
 
 // ConflictFile represents a file containing one or more merge conflicts.
@@ -433,7 +433,7 @@ func (cr *ConflictResolver) ApplyResolution(cf *ConflictFile) error {
 		return fmt.Errorf("no resolved content to write")
 	}
 
-	err := os.WriteFile(cf.Path, []byte(cf.FullContent), 0644)
+	err := os.WriteFile(cf.Path, []byte(cf.FullContent), 0o644)
 	if err != nil {
 		return fmt.Errorf("write resolved file %s: %w", cf.Path, err)
 	}

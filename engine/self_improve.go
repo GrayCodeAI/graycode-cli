@@ -10,11 +10,11 @@ import (
 
 // SelfImproveEntry records a lesson learned from a mistake.
 type SelfImproveEntry struct {
-	Timestamp   time.Time `json:"timestamp"`
-	What        string    `json:"what"`        // what went wrong
-	Why         string    `json:"why"`         // root cause
-	Lesson      string    `json:"lesson"`      // what to do differently
-	Category    string    `json:"category"`    // code, test, design, communication
+	Timestamp time.Time `json:"timestamp"`
+	What      string    `json:"what"`     // what went wrong
+	Why       string    `json:"why"`      // root cause
+	Lesson    string    `json:"lesson"`   // what to do differently
+	Category  string    `json:"category"` // code, test, design, communication
 }
 
 // SelfImprover tracks mistakes and lessons across sessions.

@@ -268,7 +268,8 @@ func (sd *StallDetector) FormatWindow() string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("Stall Window (%d/%d entries):\n", len(sd.Window), sd.WindowSize))
 	for i, entry := range sd.Window {
-		b.WriteString(fmt.Sprintf("  [%d] %s args=%s out=%s @%s\n",
+		b.WriteString(fmt.Sprintf(
+			"  [%d] %s args=%s out=%s @%s\n",
 			i,
 			entry.ToolName,
 			entry.ArgsHash[:8],

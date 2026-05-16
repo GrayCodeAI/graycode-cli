@@ -160,7 +160,7 @@ func main() {
 	fmt.Println("hello")
 }
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -205,7 +205,7 @@ func serve() {
 	fmt.Println("starting")
 }
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -274,7 +274,7 @@ func TestApply_NewFileCreation(t *testing.T) {
 func TestApply_FileDeletion(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "obsolete.go")
-	if err := os.WriteFile(filePath, []byte("package old\n"), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte("package old\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -305,7 +305,7 @@ func beta() {
 	doBeta()
 }
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -351,7 +351,7 @@ func main() {
 	fmt.Println("hello")
 }
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -395,7 +395,7 @@ func b() {
 	doStuff()
 }
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -448,10 +448,10 @@ func TestApplyAll(t *testing.T) {
 	fileA := filepath.Join(dir, "a.go")
 	fileB := filepath.Join(dir, "b.go")
 
-	if err := os.WriteFile(fileA, []byte("package a\n\nfunc A() {\n\told()\n}\n"), 0644); err != nil {
+	if err := os.WriteFile(fileA, []byte("package a\n\nfunc A() {\n\told()\n}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(fileB, []byte("package b\n\nfunc B() {\n\told()\n}\n"), 0644); err != nil {
+	if err := os.WriteFile(fileB, []byte("package b\n\nfunc B() {\n\told()\n}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -538,7 +538,7 @@ func main() {
 	fmt.Println("original")
 }
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

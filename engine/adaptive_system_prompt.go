@@ -23,8 +23,8 @@ type PromptBuildContext struct {
 type PromptSection struct {
 	Name        string
 	Content     string
-	Priority    int        // 1 = highest priority, higher numbers = lower priority
-	Tokens      int        // pre-computed token count (0 means recalculate)
+	Priority    int           // 1 = highest priority, higher numbers = lower priority
+	Tokens      int           // pre-computed token count (0 means recalculate)
 	Conditional func() bool   // if non-nil, section is included only when this returns true
 	Dynamic     func() string // if non-nil, content is generated at build time
 }
@@ -289,7 +289,7 @@ func DefaultSections(ctx PromptBuildContext) []PromptSection {
 			Priority: 2,
 		},
 		{
-			Name: "project",
+			Name:     "project",
 			Content:  "Follow project-specific conventions documented in AGENTS.md and CLAUDE.md. Respect existing code style, patterns, and architecture.",
 			Priority: 2,
 			Conditional: func() bool {

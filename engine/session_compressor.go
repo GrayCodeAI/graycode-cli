@@ -42,11 +42,11 @@ type CompressedBlock struct {
 
 // CompressionResult holds statistics and details about a compression operation.
 type CompressionResult struct {
-	Original           int
-	Compressed         int
-	TokensSaved        int
-	Blocks             []CompressedBlock
-	PreservedMessages  int
+	Original          int
+	Compressed        int
+	TokensSaved       int
+	Blocks            []CompressedBlock
+	PreservedMessages int
 }
 
 // SessionCompressor performs intelligent session compression using configurable strategies.
@@ -250,8 +250,8 @@ func TieredCompress(messages []CompressMessage, budget int) []CompressMessage {
 	}
 
 	n := len(messages)
-	recentStart := n - n/5      // last 20%
-	middleStart := n - 3*n/5    // 20-60% from end
+	recentStart := n - n/5   // last 20%
+	middleStart := n - 3*n/5 // 20-60% from end
 
 	if recentStart < 0 {
 		recentStart = 0

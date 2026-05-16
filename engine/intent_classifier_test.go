@@ -22,8 +22,8 @@ func TestNewIntentClassifier(t *testing.T) {
 func TestClassify_CodeWrite(t *testing.T) {
 	ic := NewIntentClassifier()
 	tests := []struct {
-		input    string
-		wantCat  string
+		input   string
+		wantCat string
 	}{
 		{"implement a new auth module", IntentCodeWrite},
 		{"create a function to parse JSON", IntentCodeWrite},

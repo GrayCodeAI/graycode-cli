@@ -622,9 +622,9 @@ func TestDetectLanguageFromFiles(t *testing.T) {
 
 func TestCategorizeApproach(t *testing.T) {
 	tests := []struct {
-		approach  string
-		tools     []string
-		expected  string
+		approach string
+		tools    []string
+		expected string
 	}{
 		{"avoid using global state", nil, "avoidance"},
 		{"don't modify the API contract", nil, "avoidance"},

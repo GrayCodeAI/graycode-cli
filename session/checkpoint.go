@@ -206,7 +206,7 @@ func (cm *CheckpointManager) Delete(id string) error {
 
 	// Remove checkpoint data from disk
 	cpDir := filepath.Join(cm.Dir, id)
-		_ = os.RemoveAll(cpDir)
+	_ = os.RemoveAll(cpDir)
 
 	cm.Checkpoints = append(cm.Checkpoints[:idx], cm.Checkpoints[idx+1:]...)
 
@@ -349,7 +349,7 @@ func (cm *CheckpointManager) pruneUnlocked() {
 
 		for _, cp := range toRemove {
 			cpDir := filepath.Join(cm.Dir, cp.ID)
-		_ = os.RemoveAll(cpDir)
+			_ = os.RemoveAll(cpDir)
 		}
 	}
 

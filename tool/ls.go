@@ -18,6 +18,7 @@ func (LSTool) Aliases() []string { return []string{"ls"} }
 func (LSTool) Description() string {
 	return "List files and directories in a directory."
 }
+
 func (LSTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

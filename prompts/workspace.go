@@ -218,21 +218,21 @@ func detectLanguage(dir string) string {
 	}
 
 	langMap := map[string]string{
-		".go":   "Go",
-		".py":   "Python",
-		".js":   "JavaScript",
-		".ts":   "TypeScript",
-		".tsx":  "TypeScript",
-		".jsx":  "JavaScript",
-		".rs":   "Rust",
-		".rb":   "Ruby",
-		".java": "Java",
-		".kt":   "Kotlin",
-		".cs":   "C#",
-		".cpp":  "C++",
-		".c":    "C",
+		".go":    "Go",
+		".py":    "Python",
+		".js":    "JavaScript",
+		".ts":    "TypeScript",
+		".tsx":   "TypeScript",
+		".jsx":   "JavaScript",
+		".rs":    "Rust",
+		".rb":    "Ruby",
+		".java":  "Java",
+		".kt":    "Kotlin",
+		".cs":    "C#",
+		".cpp":   "C++",
+		".c":     "C",
 		".swift": "Swift",
-		".php":  "PHP",
+		".php":   "PHP",
 	}
 
 	type langCount struct {

@@ -51,7 +51,7 @@ func (m *MCPAuthManager) StartAuth(serverName, serverURL string) (*MCPAuthState,
 		m.states[serverName] = state
 		return state, nil
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	var oauthConfig struct {
 		AuthorizationEndpoint string `json:"authorization_endpoint"`
@@ -93,11 +93,12 @@ func (m *MCPAuthManager) SetAuthenticated(serverName string) {
 // McpAuthTool initiates OAuth authentication for an MCP server.
 type McpAuthTool struct{}
 
-func (McpAuthTool) Name() string        { return "McpAuth" }
-func (McpAuthTool) Aliases() []string   { return []string{"mcp_auth"} }
+func (McpAuthTool) Name() string      { return "McpAuth" }
+func (McpAuthTool) Aliases() []string { return []string{"mcp_auth"} }
 func (McpAuthTool) Description() string {
 	return "Start OAuth authentication for an MCP server that requires authorization"
 }
+
 func (McpAuthTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

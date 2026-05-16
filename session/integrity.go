@@ -10,21 +10,21 @@ import (
 
 // IntegrityCheck validates a session's structural integrity.
 type IntegrityCheck struct {
-	Valid    bool     `json:"valid"`
-	Warnings []string `json:"warnings,omitempty"`
-	Errors   []string `json:"errors,omitempty"`
+	Valid    bool           `json:"valid"`
+	Warnings []string       `json:"warnings,omitempty"`
+	Errors   []string       `json:"errors,omitempty"`
 	Stats    IntegrityStats `json:"stats"`
 }
 
 // IntegrityStats holds session statistics found during validation.
 type IntegrityStats struct {
-	MessageCount     int `json:"message_count"`
-	UserMessages     int `json:"user_messages"`
+	MessageCount      int `json:"message_count"`
+	UserMessages      int `json:"user_messages"`
 	AssistantMessages int `json:"assistant_messages"`
-	ToolUses         int `json:"tool_uses"`
-	ToolResults      int `json:"tool_results"`
-	OrphanedResults  int `json:"orphaned_results"`
-	EmptyMessages    int `json:"empty_messages"`
+	ToolUses          int `json:"tool_uses"`
+	ToolResults       int `json:"tool_results"`
+	OrphanedResults   int `json:"orphaned_results"`
+	EmptyMessages     int `json:"empty_messages"`
 }
 
 // ValidateIntegrity checks a session for structural problems.
@@ -135,15 +135,15 @@ func Stats(sess *Session) map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"id":            sess.ID,
-		"messages":      len(sess.Messages),
-		"user_messages": users,
+		"id":                 sess.ID,
+		"messages":           len(sess.Messages),
+		"user_messages":      users,
 		"assistant_messages": assistants,
-		"tool_calls":    tools,
-		"total_chars":   totalChars,
-		"est_tokens":    totalChars / 4,
-		"duration":      duration.String(),
-		"model":         sess.Model,
-		"provider":      sess.Provider,
+		"tool_calls":         tools,
+		"total_chars":        totalChars,
+		"est_tokens":         totalChars / 4,
+		"duration":           duration.String(),
+		"model":              sess.Model,
+		"provider":           sess.Provider,
 	}
 }

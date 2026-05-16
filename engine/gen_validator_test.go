@@ -374,9 +374,9 @@ export function bar(): number {
 func TestFormatValidation_NoIssues(t *testing.T) {
 	v := &GenValidation{
 		Valid:    true,
-		Issues:  nil,
+		Issues:   nil,
 		Language: "go",
-		Score:   1.0,
+		Score:    1.0,
 	}
 	output := FormatValidation(v)
 	if !strings.Contains(output, "no issues") {
@@ -395,7 +395,7 @@ func TestFormatValidation_WithIssues(t *testing.T) {
 			{Check: "completeness", Message: "TODO marker left in generated code", Line: 28, Severity: "warning"},
 		},
 		Language: "go",
-		Score:   0.85,
+		Score:    0.85,
 	}
 	output := FormatValidation(v)
 
@@ -426,7 +426,7 @@ func TestFormatValidation_LowScore(t *testing.T) {
 			{Check: "syntax", Message: "unclosed brace", Line: 4, Severity: "error"},
 		},
 		Language: "go",
-		Score:   0.4,
+		Score:    0.4,
 	}
 	output := FormatValidation(v)
 	if !strings.Contains(output, "significant issues found") {

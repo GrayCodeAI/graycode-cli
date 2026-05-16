@@ -24,8 +24,8 @@ type MemEntry struct {
 // SharedMemory provides a concurrent-safe key-value store for multi-agent
 // workflows, allowing agents to read and write common state without message passing.
 type SharedMemory struct {
-	Entries    map[string]*MemEntry   `json:"entries"`
-	Namespaces map[string][]string   `json:"namespaces"` // namespace -> list of keys
+	Entries    map[string]*MemEntry `json:"entries"`
+	Namespaces map[string][]string  `json:"namespaces"` // namespace -> list of keys
 	mu         sync.RWMutex
 	watchers   map[string][]chan *MemEntry
 }
@@ -274,7 +274,7 @@ func (sm *SharedMemory) FormatState() string {
 	sort.Strings(keys)
 
 	var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "Shared Memory (%d entries):\n", count)
+	_, _ = fmt.Fprintf(&b, "Shared Memory (%d entries):\n", count)
 	b.WriteString("─────────────────────────\n")
 
 	for _, key := range keys {

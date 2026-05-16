@@ -35,8 +35,8 @@ type SimilarIssue struct {
 
 // IssueIndex provides BM25-based similarity search over a collection of issues.
 type IssueIndex struct {
-	Issues        []*Issue          `json:"issues"`
-	InvertedIndex map[string][]int  `json:"inverted_index"`
+	Issues        []*Issue         `json:"issues"`
+	InvertedIndex map[string][]int `json:"inverted_index"`
 	mu            sync.RWMutex
 }
 
@@ -228,12 +228,12 @@ func dedupStrings(ss []string) []string {
 
 // ghIssueJSON represents the JSON structure returned by `gh issue list --json`.
 type ghIssueJSON struct {
-	Number    int       `json:"number"`
-	Title     string    `json:"title"`
-	Body      string    `json:"body"`
-	Labels    []ghLabel `json:"labels"`
-	State     string    `json:"state"`
-	CreatedAt time.Time `json:"createdAt"`
+	Number    int        `json:"number"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
+	Labels    []ghLabel  `json:"labels"`
+	State     string     `json:"state"`
+	CreatedAt time.Time  `json:"createdAt"`
 	ClosedAt  *time.Time `json:"closedAt"`
 }
 
@@ -250,7 +250,8 @@ func (idx *IssueIndex) ImportFromGitHub(projectDir string) error {
 		return fmt.Errorf("gh CLI not found: %w", err)
 	}
 
-	cmd := exec.Command("gh", "issue", "list",
+	cmd := exec.Command(
+		"gh", "issue", "list",
 		"--state", "all",
 		"--limit", "200",
 		"--json", "number,title,body,labels,state,createdAt,closedAt",

@@ -139,9 +139,9 @@ func (ic *IntentClassifier) Classify(input string) *Intent {
 	lower := strings.ToLower(input)
 
 	type scored struct {
-		rule     IntentRule
-		score    float64
-		matched  []string
+		rule    IntentRule
+		score   float64
+		matched []string
 	}
 
 	var best scored
@@ -331,7 +331,8 @@ func FormatIntent(intent *Intent) string {
 		tools = "[" + strings.Join(intent.SuggestedTools, ", ") + "]"
 	}
 
-	return fmt.Sprintf("Intent: %s (confidence: %.2f)\nSub: %s\nKeywords: %s\nTools: %s\nComplexity: %s",
+	return fmt.Sprintf(
+		"Intent: %s (confidence: %.2f)\nSub: %s\nKeywords: %s\nTools: %s\nComplexity: %s",
 		intent.Category,
 		intent.Confidence,
 		intent.SubCategory,

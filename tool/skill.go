@@ -17,6 +17,7 @@ func (SkillTool) Aliases() []string { return []string{"skill"} }
 func (SkillTool) Description() string {
 	return "Load instructions from a local Hawk skill. Use without a skill name to list available skills."
 }
+
 func (SkillTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -25,6 +26,7 @@ func (SkillTool) Parameters() map[string]interface{} {
 		},
 	}
 }
+
 func (SkillTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Skill string `json:"skill"`
@@ -92,7 +94,8 @@ func skillRoots() []string {
 		roots = append(roots, filepath.Join(cwd, ".hawk", "skills"))
 	}
 	if home, err := os.UserHomeDir(); err == nil {
-		roots = append(roots,
+		roots = append(
+			roots,
 			filepath.Join(home, ".hawk", "skills"),
 			filepath.Join(home, ".codex", "skills"),
 		)

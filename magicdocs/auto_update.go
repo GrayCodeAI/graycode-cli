@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
-const magicDocMarker = "# MAGIC DOC:"
-const staleDuration = 24 * time.Hour
+const (
+	magicDocMarker = "# MAGIC DOC:"
+	staleDuration  = 24 * time.Hour
+)
 
 // MagicDocFile represents a file containing auto-update markers.
 type MagicDocFile struct {

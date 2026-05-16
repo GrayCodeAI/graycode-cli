@@ -339,7 +339,8 @@ func FormatHistory(history []*ApprovalRequest, limit int) string {
 			statusIcon = "⏰"
 		}
 
-		sb.WriteString(fmt.Sprintf("  [%s] %s | %s | %s | %s\n",
+		sb.WriteString(fmt.Sprintf(
+			"  [%s] %s | %s | %s | %s\n",
 			statusIcon,
 			req.CreatedAt.Format("15:04:05"),
 			req.Tool,

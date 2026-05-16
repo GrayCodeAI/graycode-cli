@@ -3,10 +3,10 @@ package cmd
 import (
 	"context"
 	cryptorand "crypto/rand"
-	"math/rand"
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,8 +21,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/eyrie/storage"
+	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
@@ -961,5 +961,3 @@ func runChat() error {
 	}
 	return nil
 }
-
-

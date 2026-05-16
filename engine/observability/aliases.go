@@ -4,26 +4,30 @@ package observability
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type Profiler = engine.Profiler
-type ProfileSpan = engine.ProfileSpan
-type Counter = engine.Counter
-type Timer = engine.Timer
-type DebugSession = engine.DebugSession
-type DebugStep = engine.DebugStep
-type Hypothesis = engine.Hypothesis
-type DebugRecorder = engine.DebugRecorder
-type LogLevel = engine.LogLevel
-type LogEntry = engine.LogEntry
-type StructuredLogger = engine.StructuredLogger
-type AgentLogger = engine.AgentLogger
-type RotatingWriter = engine.RotatingWriter
-type Feedback = engine.Feedback
-type FeedbackCollector = engine.FeedbackCollector
-type ImplicitSignal = engine.ImplicitSignal
+type (
+	Profiler          = engine.Profiler
+	ProfileSpan       = engine.ProfileSpan
+	Counter           = engine.Counter
+	Timer             = engine.Timer
+	DebugSession      = engine.DebugSession
+	DebugStep         = engine.DebugStep
+	Hypothesis        = engine.Hypothesis
+	DebugRecorder     = engine.DebugRecorder
+	LogLevel          = engine.LogLevel
+	LogEntry          = engine.LogEntry
+	StructuredLogger  = engine.StructuredLogger
+	AgentLogger       = engine.AgentLogger
+	RotatingWriter    = engine.RotatingWriter
+	Feedback          = engine.Feedback
+	FeedbackCollector = engine.FeedbackCollector
+	ImplicitSignal    = engine.ImplicitSignal
+)
 
-var NewProfiler = engine.NewProfiler
-var NewDebugRecorder = engine.NewDebugRecorder
-var NewStructuredLogger = engine.NewStructuredLogger
-var ParseLevel = engine.ParseLevel
-var NewRotatingWriter = engine.NewRotatingWriter
-var NewFeedbackCollector = engine.NewFeedbackCollector
+var (
+	NewProfiler          = engine.NewProfiler
+	NewDebugRecorder     = engine.NewDebugRecorder
+	NewStructuredLogger  = engine.NewStructuredLogger
+	ParseLevel           = engine.ParseLevel
+	NewRotatingWriter    = engine.NewRotatingWriter
+	NewFeedbackCollector = engine.NewFeedbackCollector
+)

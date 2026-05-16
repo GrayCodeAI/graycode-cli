@@ -35,10 +35,10 @@ type Declaration struct {
 
 // DeadCodeDetector scans Go projects to find unused declarations.
 type DeadCodeDetector struct {
-	Declarations map[string]*Declaration
-	References   map[string]int
-	mu           sync.RWMutex
-	moduleName   string
+	Declarations   map[string]*Declaration
+	References     map[string]int
+	mu             sync.RWMutex
+	moduleName     string
 	lineCountCache map[string]int
 }
 

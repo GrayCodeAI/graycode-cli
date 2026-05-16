@@ -14,9 +14,11 @@ func (ListMcpResourcesTool) Name() string { return "ListMcpResourcesTool" }
 func (ListMcpResourcesTool) Aliases() []string {
 	return []string{"list_mcp_resources", "listMcpResources"}
 }
+
 func (ListMcpResourcesTool) Description() string {
 	return "List resources exposed by connected MCP servers. Optionally filter by server name."
 }
+
 func (ListMcpResourcesTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -25,6 +27,7 @@ func (ListMcpResourcesTool) Parameters() map[string]interface{} {
 		},
 	}
 }
+
 func (ListMcpResourcesTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Server string `json:"server"`
@@ -73,9 +76,11 @@ func (ReadMcpResourceTool) Name() string { return "ReadMcpResourceTool" }
 func (ReadMcpResourceTool) Aliases() []string {
 	return []string{"read_mcp_resource", "readMcpResource"}
 }
+
 func (ReadMcpResourceTool) Description() string {
 	return "Read a resource exposed by a connected MCP server."
 }
+
 func (ReadMcpResourceTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -86,6 +91,7 @@ func (ReadMcpResourceTool) Parameters() map[string]interface{} {
 		"required": []string{"server", "uri"},
 	}
 }
+
 func (ReadMcpResourceTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Server string `json:"server"`

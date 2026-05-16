@@ -78,7 +78,7 @@ func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
 		// Fall back to stale cache on network error.
 		return rc.loadCachedIndex(cachePath)
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return rc.loadCachedIndex(cachePath)
@@ -324,7 +324,7 @@ func InstalledSkillInfo(name string) (SmartSkill, string, bool) {
 // FormatSkillEntry formats a registry entry for display.
 func FormatSkillEntry(e SkillEntry) string {
 	var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "  %s", e.Name)
+	_, _ = fmt.Fprintf(&b, "  %s", e.Name)
 	if e.Version != "" {
 		_, _ = fmt.Fprintf(&b, " v%s", e.Version)
 	}
@@ -347,7 +347,7 @@ func FormatSkillEntry(e SkillEntry) string {
 // FormatSkillInfo formats detailed skill info for display.
 func FormatSkillInfo(s SmartSkill, path string) string {
 	var b strings.Builder
-		_, _ = fmt.Fprintf(&b, "Skill: %s\n", s.Name)
+	_, _ = fmt.Fprintf(&b, "Skill: %s\n", s.Name)
 	if s.Version != "" {
 		_, _ = fmt.Fprintf(&b, "Version: %s\n", s.Version)
 	}
@@ -375,7 +375,7 @@ func FormatSkillInfo(s SmartSkill, path string) string {
 	if s.Source.Repo != "" {
 		_, _ = fmt.Fprintf(&b, "Source: %s", s.Source.Repo)
 		if s.Source.Ref != "" {
-		_, _ = fmt.Fprintf(&b, " @ %s", s.Source.Ref)
+			_, _ = fmt.Fprintf(&b, " @ %s", s.Source.Ref)
 		}
 		b.WriteString("\n")
 	}

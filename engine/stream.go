@@ -12,8 +12,8 @@ import (
 
 	"github.com/GrayCodeAI/hawk/analytics"
 	"github.com/GrayCodeAI/hawk/hooks"
-	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/retry"
+	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
 	"github.com/GrayCodeAI/hawk/trace"
 )
@@ -87,7 +87,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	toolTurns := 0 // turns that used tools (for skill distillation)
 	var toolsUsedSet map[string]bool
 	var filesModifiedSet map[string]bool
-	snowball := NewSnowballDetector(500000) // 500K token ceiling
+	snowball := NewSnowballDetector(500000)           // 500K token ceiling
 	loopDet := NewLoopDetector(10, DoomLoopThreshold) // 10-step window, 3 repeats = doom loop
 
 	for {
@@ -449,7 +449,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			cleanText, inlineCalls := client.ParseInlineToolCalls(textContent)
 			if len(inlineCalls) > 0 {
 				textContent = cleanText
-			toolCalls = append(toolCalls, inlineCalls...)
+				toolCalls = append(toolCalls, inlineCalls...)
 			}
 		}
 

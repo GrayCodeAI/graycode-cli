@@ -356,7 +356,7 @@ func TestDetectCISystem(t *testing.T) {
 		{
 			name: "github-actions",
 			setup: func(dir string) {
-				os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0755)
+				os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0o755)
 			},
 			expected: "github-actions",
 		},
@@ -370,7 +370,7 @@ func TestDetectCISystem(t *testing.T) {
 		{
 			name: "circleci",
 			setup: func(dir string) {
-				os.MkdirAll(filepath.Join(dir, ".circleci"), 0755)
+				os.MkdirAll(filepath.Join(dir, ".circleci"), 0o755)
 			},
 			expected: "circleci",
 		},
@@ -511,7 +511,7 @@ func TestDetectTestFramework(t *testing.T) {
 
 	t.Run("rspec", func(t *testing.T) {
 		dir := t.TempDir()
-		os.Mkdir(filepath.Join(dir, "spec"), 0755)
+		os.Mkdir(filepath.Join(dir, "spec"), 0o755)
 		writeTestFile(t, filepath.Join(dir, "Gemfile"), "gem 'rails'\ngem 'rspec'\n")
 
 		result := detectTestFramework(dir, "Ruby")
@@ -560,8 +560,8 @@ func TestDetectDocker(t *testing.T) {
 
 func TestDetectMonorepo_MultipleGoMod(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "pkg1"), 0755)
-	os.MkdirAll(filepath.Join(dir, "pkg2"), 0755)
+	os.MkdirAll(filepath.Join(dir, "pkg1"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "pkg2"), 0o755)
 	writeTestFile(t, filepath.Join(dir, "pkg1", "go.mod"), "module example.com/pkg1\n")
 	writeTestFile(t, filepath.Join(dir, "pkg2", "go.mod"), "module example.com/pkg2\n")
 
@@ -581,7 +581,7 @@ func TestDetectMonorepo_GoWork(t *testing.T) {
 
 func TestDetectMonorepo_PackagesDir(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "packages"), 0755)
+	os.MkdirAll(filepath.Join(dir, "packages"), 0o755)
 
 	if !detectMonorepo(dir) {
 		t.Error("expected Monorepo=true with packages/ directory")
@@ -1157,7 +1157,7 @@ require (
 	writeTestFile(t, filepath.Join(dir, "handler.go"), "package main\n\nimport \"net/http\"\n\nfunc handler(w http.ResponseWriter, r *http.Request) {}\n")
 	writeTestFile(t, filepath.Join(dir, "main_test.go"), "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {}\n")
 
-	os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0o755)
 	writeTestFile(t, filepath.Join(dir, ".github", "workflows", "ci.yml"), "name: CI\non: push\n")
 	writeTestFile(t, filepath.Join(dir, "Dockerfile"), "FROM golang:1.21\nCOPY . .\nRUN go build .\n")
 	writeTestFile(t, filepath.Join(dir, ".golangci.yml"), "linters:\n  enable:\n    - errcheck\n")
@@ -1225,14 +1225,14 @@ func TestScan_FullJSProject(t *testing.T) {
 	writeTestFile(t, filepath.Join(dir, "package-lock.json"), `{"lockfileVersion": 3}`)
 	writeTestFile(t, filepath.Join(dir, ".eslintrc.json"), `{"extends": "next/core-web-vitals"}`)
 
-	os.MkdirAll(filepath.Join(dir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(dir, "pages"), 0o755)
 	writeTestFile(t, filepath.Join(dir, "pages", "index.tsx"), "export default function Home() { return <div>Hello</div>; }\n")
 	writeTestFile(t, filepath.Join(dir, "pages", "about.tsx"), "export default function About() { return <div>About</div>; }\n")
 	writeTestFile(t, filepath.Join(dir, "pages", "contact.tsx"), "export default function Contact() { return <div>Contact</div>; }\n")
 	writeTestFile(t, filepath.Join(dir, "pages", "blog.tsx"), "export default function Blog() { return <div>Blog</div>; }\n")
 	writeTestFile(t, filepath.Join(dir, "lib", "utils.ts"), "export function cn(...args: string[]) { return args.join(' '); }\n")
 
-	os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0o755)
 	writeTestFile(t, filepath.Join(dir, ".github", "workflows", "ci.yml"), "name: CI\n")
 
 	fp, err := Scan(dir)
@@ -1262,10 +1262,10 @@ func TestScan_FullJSProject(t *testing.T) {
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", dir, err)
 	}
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
 }
@@ -1273,6 +1273,6 @@ func writeTestFile(t *testing.T, path, content string) {
 // writeTestFile2 is a non-testing.T helper used in table-driven test setup functions.
 func writeTestFile2(path, content string) {
 	dir := filepath.Dir(path)
-	os.MkdirAll(dir, 0755)
-	os.WriteFile(path, []byte(content), 0644)
+	os.MkdirAll(dir, 0o755)
+	os.WriteFile(path, []byte(content), 0o644)
 }

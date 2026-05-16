@@ -13,17 +13,17 @@ var ErrRateLimited = errors.New("rate limited")
 
 // Limiter is a token bucket rate limiter.
 type Limiter struct {
-	mu         sync.Mutex
-	tokens     float64
-	capacity   float64
-	fillRate   float64 // tokens per second
-	lastFill   time.Time
+	mu       sync.Mutex
+	tokens   float64
+	capacity float64
+	fillRate float64 // tokens per second
+	lastFill time.Time
 }
 
 // Config configures a rate limiter.
 type Config struct {
-	Rate   int           // tokens per second
-	Burst  int           // max burst size
+	Rate  int // tokens per second
+	Burst int // max burst size
 }
 
 // New creates a new rate limiter.
@@ -114,8 +114,8 @@ func (l *Limiter) refill() {
 
 // Manager manages multiple named rate limiters.
 type Manager struct {
-	mu        sync.RWMutex
-	limiters  map[string]*Limiter
+	mu       sync.RWMutex
+	limiters map[string]*Limiter
 }
 
 // NewManager creates a new rate limiter manager.

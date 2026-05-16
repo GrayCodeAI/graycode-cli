@@ -34,7 +34,7 @@ type ModelPack struct {
 // ModelPackRegistry holds all registered packs and tracks the active one.
 type ModelPackRegistry struct {
 	Packs      map[string]*ModelPack `json:"packs"`
-	ActivePack string               `json:"active_pack"`
+	ActivePack string                `json:"active_pack"`
 	mu         sync.RWMutex
 }
 
@@ -308,7 +308,7 @@ func packFilePath() (string, error) {
 // packFileData is the JSON structure persisted to disk.
 type packFileData struct {
 	Packs      map[string]*ModelPack `json:"packs"`
-	ActivePack string               `json:"active_pack"`
+	ActivePack string                `json:"active_pack"`
 }
 
 // Save persists the registry to disk as JSON.

@@ -165,5 +165,3 @@ func init() {
 	sessionCaptureCmd.AddCommand(captureCheckpointsCmd)
 	sessionCaptureCmd.AddCommand(captureRewindCmd)
 }
-
-

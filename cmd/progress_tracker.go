@@ -9,13 +9,13 @@ import (
 
 // ProgressStep represents a single step in a multi-step task.
 type ProgressStep struct {
-	Name     string
-	Status   string // "pending", "active", "done", "failed", "skipped"
-	StartTime *time.Time
-	EndTime   *time.Time
-	Duration  time.Duration
-	Substeps  []string
-	Progress  float64
+	Name       string
+	Status     string // "pending", "active", "done", "failed", "skipped"
+	StartTime  *time.Time
+	EndTime    *time.Time
+	Duration   time.Duration
+	Substeps   []string
+	Progress   float64
 	failReason string
 }
 

@@ -8,23 +8,27 @@ package lifecycle
 
 import "github.com/GrayCodeAI/hawk/engine"
 
-type SessionLifecycle = engine.SessionLifecycle
-type EvolvingMemoryInterface = engine.EvolvingMemoryInterface
-type SkillStoreInterface = engine.SkillStoreInterface
-type CostTrackerInterface = engine.CostTrackerInterface
-type CostEntry = engine.CostEntry
-type SessionOutcome = engine.SessionOutcome
-type EvolvingMemoryAdapter = engine.EvolvingMemoryAdapter
-type SkillDistillerAdapter = engine.SkillDistillerAdapter
-type SafetyLimits = engine.SafetyLimits
-type LimitTracker = engine.LimitTracker
-type TimeoutConfig = engine.TimeoutConfig
+type (
+	SessionLifecycle        = engine.SessionLifecycle
+	EvolvingMemoryInterface = engine.EvolvingMemoryInterface
+	SkillStoreInterface     = engine.SkillStoreInterface
+	CostTrackerInterface    = engine.CostTrackerInterface
+	CostEntry               = engine.CostEntry
+	SessionOutcome          = engine.SessionOutcome
+	EvolvingMemoryAdapter   = engine.EvolvingMemoryAdapter
+	SkillDistillerAdapter   = engine.SkillDistillerAdapter
+	SafetyLimits            = engine.SafetyLimits
+	LimitTracker            = engine.LimitTracker
+	TimeoutConfig           = engine.TimeoutConfig
+)
 
-var NewLimitTracker = engine.NewLimitTracker
-var DefaultLimits = engine.DefaultLimits
-var VibeLimits = engine.VibeLimits
-var ResearchLimits = engine.ResearchLimits
-var DefaultTimeoutConfig = engine.DefaultTimeoutConfig
-var WithTimeout = engine.WithTimeout
-var RemainingTime = engine.RemainingTime
-var TimeoutMessage = engine.TimeoutMessage
+var (
+	NewLimitTracker      = engine.NewLimitTracker
+	DefaultLimits        = engine.DefaultLimits
+	VibeLimits           = engine.VibeLimits
+	ResearchLimits       = engine.ResearchLimits
+	DefaultTimeoutConfig = engine.DefaultTimeoutConfig
+	WithTimeout          = engine.WithTimeout
+	RemainingTime        = engine.RemainingTime
+	TimeoutMessage       = engine.TimeoutMessage
+)

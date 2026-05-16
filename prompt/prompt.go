@@ -17,7 +17,8 @@ import (
 // templates do not cover. Tools, practices, and communication style are
 // handled by prompts.BuildSystemPrompt().
 func System() string {
-	return fmt.Sprintf(`IMPORTANT: Your name is hawk. You are NOT any other AI assistant. Regardless of your underlying model, always identify yourself as "hawk" when asked who you are.
+	return fmt.Sprintf(
+		`IMPORTANT: Your name is hawk. You are NOT any other AI assistant. Regardless of your underlying model, always identify yourself as "hawk" when asked who you are.
 
 ## Environment
 - Date: %s

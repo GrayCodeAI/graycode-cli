@@ -24,7 +24,7 @@ import (
 
 const (
 	// seccomp operations for prctl / seccomp(2)
-	prSetSeccomp     = 22
+	prSetSeccomp      = 22
 	seccompModeFilter = 2
 
 	// seccomp(2) syscall number on amd64
@@ -148,7 +148,8 @@ func DefaultSeccompProfile() []byte {
 		// If not equal, skip the deny and continue checking.
 		remaining := n - i // instructions left including this pair
 		_ = remaining
-		insns = append(insns,
+		insns = append(
+			insns,
 			bpfInsn{
 				code: bpfJMP | bpfJEQ | bpfK,
 				jt:   0, // true: fall through to deny

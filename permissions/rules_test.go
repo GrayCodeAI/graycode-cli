@@ -8,8 +8,8 @@ import (
 
 func TestParsRuleLine_Valid(t *testing.T) {
 	tests := []struct {
-		line    string
-		want    Rule
+		line string
+		want Rule
 	}{
 		{
 			line: `allow Read *`,
@@ -216,8 +216,8 @@ func TestEvaluate_FileTools(t *testing.T) {
 func TestEvaluate_FirstMatchWins(t *testing.T) {
 	rs := NewRuleSet()
 	rs.Rules = []Rule{
-		{Tool: "Bash", Pattern: "git push*", Action: ActionAllow},  // more specific first
-		{Tool: "Bash", Pattern: "git *", Action: ActionDeny},       // broader second
+		{Tool: "Bash", Pattern: "git push*", Action: ActionAllow}, // more specific first
+		{Tool: "Bash", Pattern: "git *", Action: ActionDeny},      // broader second
 	}
 
 	args := map[string]interface{}{"command": "git push origin main"}

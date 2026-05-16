@@ -25,12 +25,12 @@ type ReleaseManager struct {
 
 // Release represents a prepared release with all associated metadata.
 type Release struct {
-	Version        string
-	Date           time.Time
-	Changes        []ChangeEntry
+	Version         string
+	Date            time.Time
+	Changes         []ChangeEntry
 	BreakingChanges []ChangeEntry
-	Contributors   []string
-	Stats          ReleaseStats
+	Contributors    []string
+	Stats           ReleaseStats
 }
 
 // ChangeEntry represents a single change parsed from a commit message.
@@ -375,7 +375,8 @@ func GenerateChangelog(release *Release) string {
 	}
 
 	// Stats
-	b.WriteString(fmt.Sprintf("\n### Stats\n%d commits, %d files changed, +%s -%s, %d contributors\n",
+	b.WriteString(fmt.Sprintf(
+		"\n### Stats\n%d commits, %d files changed, +%s -%s, %d contributors\n",
 		release.Stats.Commits,
 		release.Stats.FilesChanged,
 		formatNumber(release.Stats.Additions),
@@ -588,7 +589,8 @@ func FormatReleaseNotes(release *Release) string {
 
 	// Stats footer
 	b.WriteString("---\n\n")
-	b.WriteString(fmt.Sprintf("**Full Changelog:** %d commits, %d files changed, +%s -%s\n",
+	b.WriteString(fmt.Sprintf(
+		"**Full Changelog:** %d commits, %d files changed, +%s -%s\n",
 		release.Stats.Commits,
 		release.Stats.FilesChanged,
 		formatNumber(release.Stats.Additions),
@@ -638,7 +640,7 @@ func UpdateVersionFile(version, filePath string) error {
 		return fmt.Errorf("no version pattern found in %s", filePath)
 	}
 
-	if err := os.WriteFile(filePath, []byte(updated), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(updated), 0o644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filePath, err)
 	}
 

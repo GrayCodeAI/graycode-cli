@@ -53,7 +53,7 @@ func TestParseDiffFilesEmpty(t *testing.T) {
 func TestDetectLanguage(t *testing.T) {
 	// Create temp dir with go.mod.
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644)
 
 	lang := dtsDetectLanguage(dir)
 	if lang != "go" {
@@ -62,7 +62,7 @@ func TestDetectLanguage(t *testing.T) {
 
 	// Python project.
 	dir2 := t.TempDir()
-	os.WriteFile(filepath.Join(dir2, "setup.py"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir2, "setup.py"), []byte(""), 0o644)
 
 	lang2 := dtsDetectLanguage(dir2)
 	if lang2 != "python" {
@@ -71,7 +71,7 @@ func TestDetectLanguage(t *testing.T) {
 
 	// JS project.
 	dir3 := t.TempDir()
-	os.WriteFile(filepath.Join(dir3, "package.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(dir3, "package.json"), []byte("{}"), 0o644)
 
 	lang3 := dtsDetectLanguage(dir3)
 	if lang3 != "javascript" {
@@ -80,7 +80,7 @@ func TestDetectLanguage(t *testing.T) {
 
 	// TS project.
 	dir4 := t.TempDir()
-	os.WriteFile(filepath.Join(dir4, "tsconfig.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(dir4, "tsconfig.json"), []byte("{}"), 0o644)
 
 	lang4 := dtsDetectLanguage(dir4)
 	if lang4 != "typescript" {
@@ -113,7 +113,7 @@ func TestIsTestFile(t *testing.T) {
 
 func TestNewTestSelector(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644)
 
 	ts := NewTestSelector(dir)
 	if ts.ProjectDir != dir {
@@ -129,7 +129,7 @@ func TestNewTestSelector(t *testing.T) {
 
 func TestSelectFromDiffEmpty(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644)
 
 	ts := NewTestSelector(dir)
 	selected, err := ts.SelectFromDiff("")
@@ -144,17 +144,17 @@ func TestSelectFromDiffEmpty(t *testing.T) {
 func TestSelectFromFiles_Go(t *testing.T) {
 	// Set up a project with source and test files.
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/myapp\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/myapp\n"), 0o644)
 
 	// Create pkg/auth directory with source and test files.
 	authDir := filepath.Join(dir, "pkg", "auth")
-	os.MkdirAll(authDir, 0755)
+	os.MkdirAll(authDir, 0o755)
 	os.WriteFile(filepath.Join(authDir, "token.go"), []byte(`package auth
 
 func ValidateToken(t string) bool {
 	return t != ""
 }
-`), 0644)
+`), 0o644)
 	os.WriteFile(filepath.Join(authDir, "token_test.go"), []byte(`package auth
 
 import "testing"
@@ -164,7 +164,7 @@ func TestValidateToken(t *testing.T) {
 		t.Error("expected true")
 	}
 }
-`), 0644)
+`), 0o644)
 
 	ts := NewTestSelector(dir)
 	selected, err := ts.SelectFromFiles([]string{"pkg/auth/token.go"})
@@ -194,12 +194,12 @@ func TestValidateToken(t *testing.T) {
 
 func TestSelectFromFiles_Python(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "setup.py"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir, "setup.py"), []byte(""), 0o644)
 
 	// Create source and test files.
-	os.MkdirAll(filepath.Join(dir, "app"), 0755)
-	os.WriteFile(filepath.Join(dir, "app", "auth.py"), []byte("def login(): pass\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "app", "test_auth.py"), []byte("def test_login(): pass\n"), 0644)
+	os.MkdirAll(filepath.Join(dir, "app"), 0o755)
+	os.WriteFile(filepath.Join(dir, "app", "auth.py"), []byte("def login(): pass\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "app", "test_auth.py"), []byte("def test_login(): pass\n"), 0o644)
 
 	ts := NewTestSelector(dir)
 	selected, err := ts.SelectFromFiles([]string{"app/auth.py"})
@@ -221,12 +221,12 @@ func TestSelectFromFiles_Python(t *testing.T) {
 
 func TestSelectFromFiles_JS(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644)
 
 	// Create source and test files.
-	os.MkdirAll(filepath.Join(dir, "src"), 0755)
-	os.WriteFile(filepath.Join(dir, "src", "auth.ts"), []byte("export function login() {}\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "src", "auth.test.ts"), []byte("test('login', () => {})\n"), 0644)
+	os.MkdirAll(filepath.Join(dir, "src"), 0o755)
+	os.WriteFile(filepath.Join(dir, "src", "auth.ts"), []byte("export function login() {}\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "src", "auth.test.ts"), []byte("test('login', () => {})\n"), 0o644)
 
 	ts := NewTestSelector(dir)
 	selected, err := ts.SelectFromFiles([]string{"src/auth.ts"})
@@ -248,18 +248,18 @@ func TestSelectFromFiles_JS(t *testing.T) {
 
 func TestBuildDependencyGraph(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/myapp\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/myapp\n"), 0o644)
 
 	// Create packages with imports.
 	authDir := filepath.Join(dir, "pkg", "auth")
 	serverDir := filepath.Join(dir, "pkg", "server")
-	os.MkdirAll(authDir, 0755)
-	os.MkdirAll(serverDir, 0755)
+	os.MkdirAll(authDir, 0o755)
+	os.MkdirAll(serverDir, 0o755)
 
 	os.WriteFile(filepath.Join(authDir, "auth.go"), []byte(`package auth
 
 func Check() bool { return true }
-`), 0644)
+`), 0o644)
 
 	os.WriteFile(filepath.Join(serverDir, "server.go"), []byte(`package server
 
@@ -268,7 +268,7 @@ import "example.com/myapp/pkg/auth"
 func Start() {
 	auth.Check()
 }
-`), 0644)
+`), 0o644)
 
 	graph := BuildDependencyGraph(dir)
 
@@ -367,8 +367,8 @@ func TestFormatSelection(t *testing.T) {
 		Packages: []string{"pkg/auth", "pkg/handler"},
 		Reason: map[string]string{
 			"pkg/auth/token_test.go":      "direct: tests token.go",
-			"pkg/auth/middleware_test.go":  "direct: tests middleware.go",
-			"pkg/handler/api_test.go":      "direct: tests api.go",
+			"pkg/auth/middleware_test.go": "direct: tests middleware.go",
+			"pkg/handler/api_test.go":     "direct: tests api.go",
 		},
 	}
 
@@ -469,14 +469,14 @@ func main() {
 	fmt.Println("hello")
 }
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	imports := parseGoImports(file)
 	expected := map[string]bool{
-		"fmt":                            true,
-		"os":                             true,
-		"example.com/myapp/pkg/auth":     true,
-		"example.com/myapp/pkg/handler":  true,
+		"fmt":                           true,
+		"os":                            true,
+		"example.com/myapp/pkg/auth":    true,
+		"example.com/myapp/pkg/handler": true,
 	}
 
 	for _, imp := range imports {
@@ -499,7 +499,7 @@ import "fmt"
 
 func main() {}
 `
-	os.WriteFile(file, []byte(content), 0644)
+	os.WriteFile(file, []byte(content), 0o644)
 
 	imports := parseGoImports(file)
 	if len(imports) != 1 || imports[0] != "fmt" {
@@ -509,18 +509,18 @@ func main() {}
 
 func TestSelectFromDiff_Integration(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/myapp\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/myapp\n"), 0o644)
 
 	// Create source + test.
 	authDir := filepath.Join(dir, "pkg", "auth")
-	os.MkdirAll(authDir, 0755)
+	os.MkdirAll(authDir, 0o755)
 	os.WriteFile(filepath.Join(authDir, "token.go"), []byte(`package auth
 func Validate() bool { return true }
-`), 0644)
+`), 0o644)
 	os.WriteFile(filepath.Join(authDir, "token_test.go"), []byte(`package auth
 import "testing"
 func TestValidate(t *testing.T) {}
-`), 0644)
+`), 0o644)
 
 	diff := `diff --git a/pkg/auth/token.go b/pkg/auth/token.go
 index abc..def 100644
@@ -556,13 +556,13 @@ index abc..def 100644
 
 func TestFindRelatedTests_Go(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644)
 
 	pkgDir := filepath.Join(dir, "pkg", "core")
-	os.MkdirAll(pkgDir, 0755)
-	os.WriteFile(filepath.Join(pkgDir, "core.go"), []byte("package core\n"), 0644)
-	os.WriteFile(filepath.Join(pkgDir, "core_test.go"), []byte("package core\n"), 0644)
-	os.WriteFile(filepath.Join(pkgDir, "helper_test.go"), []byte("package core\n"), 0644)
+	os.MkdirAll(pkgDir, 0o755)
+	os.WriteFile(filepath.Join(pkgDir, "core.go"), []byte("package core\n"), 0o644)
+	os.WriteFile(filepath.Join(pkgDir, "core_test.go"), []byte("package core\n"), 0o644)
+	os.WriteFile(filepath.Join(pkgDir, "helper_test.go"), []byte("package core\n"), 0o644)
 
 	ts := NewTestSelector(dir)
 	related := ts.FindRelatedTests("pkg/core/core.go")
@@ -591,7 +591,7 @@ func TestFindRelatedTests_Go(t *testing.T) {
 
 func TestDetectModulePath(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module github.com/example/myproject\n\ngo 1.21\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module github.com/example/myproject\n\ngo 1.21\n"), 0o644)
 
 	mod := detectModulePath(dir)
 	if mod != "github.com/example/myproject" {
@@ -609,18 +609,18 @@ func TestDetectModulePathMissing(t *testing.T) {
 
 func TestSelectedTestsCoverageField(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644)
 
 	// Create multiple test files.
 	pkgDir := filepath.Join(dir, "pkg", "a")
-	os.MkdirAll(pkgDir, 0755)
-	os.WriteFile(filepath.Join(pkgDir, "a.go"), []byte("package a\n"), 0644)
-	os.WriteFile(filepath.Join(pkgDir, "a_test.go"), []byte("package a\n"), 0644)
+	os.MkdirAll(pkgDir, 0o755)
+	os.WriteFile(filepath.Join(pkgDir, "a.go"), []byte("package a\n"), 0o644)
+	os.WriteFile(filepath.Join(pkgDir, "a_test.go"), []byte("package a\n"), 0o644)
 
 	pkg2Dir := filepath.Join(dir, "pkg", "b")
-	os.MkdirAll(pkg2Dir, 0755)
-	os.WriteFile(filepath.Join(pkg2Dir, "b.go"), []byte("package b\n"), 0644)
-	os.WriteFile(filepath.Join(pkg2Dir, "b_test.go"), []byte("package b\n"), 0644)
+	os.MkdirAll(pkg2Dir, 0o755)
+	os.WriteFile(filepath.Join(pkg2Dir, "b.go"), []byte("package b\n"), 0o644)
+	os.WriteFile(filepath.Join(pkg2Dir, "b_test.go"), []byte("package b\n"), 0o644)
 
 	ts := NewTestSelector(dir)
 	selected, err := ts.SelectFromFiles([]string{"pkg/a/a.go"})

@@ -77,7 +77,8 @@ var planListCmd = &cobra.Command{
 			pending := len(planner.PendingTasks(plan))
 			total := len(plan.Tasks)
 			done := total - pending
-			cmd.Println(fmt.Sprintf("  %s  [%d/%d done]  %s",
+			cmd.Println(fmt.Sprintf(
+				"  %s  [%d/%d done]  %s",
 				strings.TrimSuffix(e.Name(), ".json"),
 				done, total,
 				plan.Title,

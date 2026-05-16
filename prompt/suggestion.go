@@ -9,9 +9,9 @@ import (
 
 // Suggestion represents a contextual prompt suggestion.
 type Suggestion struct {
-	Text       string `json:"text"`
+	Text       string  `json:"text"`
 	Confidence float64 `json:"confidence"`
-	Source     string `json:"source"` // "speculation", "history", "context"
+	Source     string  `json:"source"` // "speculation", "history", "context"
 }
 
 // SuggestionService generates prompt suggestions based on conversation context.

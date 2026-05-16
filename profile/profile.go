@@ -56,13 +56,13 @@ func GoroutineProfile(path string) error {
 
 // Stats returns runtime statistics.
 type Stats struct {
-	NumGoroutine int    `json:"num_goroutine"`
-	NumCPU       int    `json:"num_cpu"`
-	MemAlloc     uint64 `json:"mem_alloc"`
+	NumGoroutine  int    `json:"num_goroutine"`
+	NumCPU        int    `json:"num_cpu"`
+	MemAlloc      uint64 `json:"mem_alloc"`
 	MemTotalAlloc uint64 `json:"mem_total_alloc"`
-	MemSys       uint64 `json:"mem_sys"`
-	MemNumGC     uint32 `json:"mem_num_gc"`
-	Timestamp    int64  `json:"timestamp"`
+	MemSys        uint64 `json:"mem_sys"`
+	MemNumGC      uint32 `json:"mem_num_gc"`
+	Timestamp     int64  `json:"timestamp"`
 }
 
 // GetStats returns current runtime statistics.

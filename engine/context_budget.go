@@ -58,11 +58,11 @@ func NewContextBudget(contextSize int) *ContextBudget {
 	b := &ContextBudget{Total: contextSize}
 
 	// Fixed allocations — scale with context but clamp to documented ranges.
-	b.SystemPrompt = clamp(contextSize*3/100, 3000, 5000)   // ~3%
-	b.ToolDefs = clamp(contextSize*2/100, 2000, 3000)       // ~2%
-	b.RepoMap = clamp(contextSize*2/100, 2000, 4000)        // ~2%
-	b.Memory = clamp(contextSize*1/100, 1000, 2000)         // ~1%
-	b.Workspace = clamp(contextSize*1/200, 300, 500)        // ~0.5%
+	b.SystemPrompt = clamp(contextSize*3/100, 3000, 5000) // ~3%
+	b.ToolDefs = clamp(contextSize*2/100, 2000, 3000)     // ~2%
+	b.RepoMap = clamp(contextSize*2/100, 2000, 4000)      // ~2%
+	b.Memory = clamp(contextSize*1/100, 1000, 2000)       // ~1%
+	b.Workspace = clamp(contextSize*1/200, 300, 500)      // ~0.5%
 
 	// Reserved — output space and safety margin.
 	b.OutputReserve = clamp(contextSize*10/100, 4000, 20000) // ~10%
@@ -180,7 +180,7 @@ func (b *ContextBudget) UsageReport(conversationTokens int) string {
 // long conversations reduce files to the minimum to preserve history.
 func (b *ContextBudget) adaptiveFileBudget(conversationTokens, adaptiveSpace int) int {
 	minFiles := clamp(b.Total*5/100, 2000, 10000)  // floor: ~5%
-	maxFiles := clamp(b.Total*15/100, 5000, 30000)  // ceiling: ~15%
+	maxFiles := clamp(b.Total*15/100, 5000, 30000) // ceiling: ~15%
 
 	if maxFiles > adaptiveSpace {
 		maxFiles = adaptiveSpace / 2

@@ -7,7 +7,7 @@ import (
 // MemoryManager is a unified facade that coordinates all memory subsystems
 // and implements the engine.MemoryRecaller interface.
 type MemoryManager struct {
-	Core     *Memory         // nil-safe; used via package-level funcs
+	Core     *Memory // nil-safe; used via package-level funcs
 	Auto     *AutoMemory
 	Evolving *EvolvingMemory
 	Zen      *ZenBrain

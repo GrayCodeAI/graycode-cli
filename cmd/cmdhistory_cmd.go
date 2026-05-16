@@ -181,7 +181,8 @@ func printCmdHistoryEntry(cmd *cobra.Command, e cmdhistory.Entry) {
 	if e.ExitCode != 0 {
 		exitLabel = fmt.Sprintf("exit:%d", e.ExitCode)
 	}
-	cmd.Println(fmt.Sprintf("[%s] [%s] [%s] %s",
+	cmd.Println(fmt.Sprintf(
+		"[%s] [%s] [%s] %s",
 		e.CreatedAt.Format("2006-01-02 15:04:05"),
 		exitLabel,
 		e.Duration.Round(1),

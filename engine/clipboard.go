@@ -228,18 +228,18 @@ func DetectLanguage(code string) string {
 	lines := strings.Split(code, "\n")
 
 	var (
-		hasFunc       bool
-		hasPackage    bool
-		hasDef        bool
-		hasColonEnd   bool
-		hasConst      bool
-		hasArrow      bool
-		hasImportBr   bool
-		hasFn         bool
-		hasLet        bool
-		hasThinArrow  bool
-		hasClass      bool
-		hasPublic     bool
+		hasFunc      bool
+		hasPackage   bool
+		hasDef       bool
+		hasColonEnd  bool
+		hasConst     bool
+		hasArrow     bool
+		hasImportBr  bool
+		hasFn        bool
+		hasLet       bool
+		hasThinArrow bool
+		hasClass     bool
+		hasPublic    bool
 	)
 
 	for _, line := range lines {

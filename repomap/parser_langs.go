@@ -219,10 +219,10 @@ func parseSwift(src string) []Symbol {
 // ── Scala ──
 
 var (
-	scClassRe  = regexp.MustCompile(`(?:case\s+)?class\s+(\w+)`)
-	scObjRe    = regexp.MustCompile(`object\s+(\w+)`)
-	scTraitRe  = regexp.MustCompile(`trait\s+(\w+)`)
-	scDefRe    = regexp.MustCompile(`\bdef\s+(\w+)`)
+	scClassRe = regexp.MustCompile(`(?:case\s+)?class\s+(\w+)`)
+	scObjRe   = regexp.MustCompile(`object\s+(\w+)`)
+	scTraitRe = regexp.MustCompile(`trait\s+(\w+)`)
+	scDefRe   = regexp.MustCompile(`\bdef\s+(\w+)`)
 )
 
 func parseScala(src string) []Symbol {
@@ -252,7 +252,7 @@ func parseScala(src string) []Symbol {
 // ── Lua ──
 
 var (
-	luaFuncRe      = regexp.MustCompile(`^(?:local\s+)?function\s+([\w.:]+)\s*\(`)
+	luaFuncRe       = regexp.MustCompile(`^(?:local\s+)?function\s+([\w.:]+)\s*\(`)
 	luaAssignFuncRe = regexp.MustCompile(`^(?:local\s+)?([\w.]+)\s*=\s*function\s*\(`)
 )
 

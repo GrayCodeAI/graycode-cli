@@ -18,13 +18,13 @@ type InsightsFacet struct {
 
 // InsightsReport holds a complete cross-session analysis.
 type InsightsReport struct {
-	GeneratedAt     time.Time        `json:"generated_at"`
-	SessionsScanned int              `json:"sessions_scanned"`
-	DateRange       DateRange        `json:"date_range"`
-	Facets          []InsightsFacet  `json:"facets"`
-	TopPatterns     []string         `json:"top_patterns"`
-	Recommendations []string         `json:"recommendations"`
-	Stats           *SessionStats    `json:"stats,omitempty"`
+	GeneratedAt     time.Time       `json:"generated_at"`
+	SessionsScanned int             `json:"sessions_scanned"`
+	DateRange       DateRange       `json:"date_range"`
+	Facets          []InsightsFacet `json:"facets"`
+	TopPatterns     []string        `json:"top_patterns"`
+	Recommendations []string        `json:"recommendations"`
+	Stats           *SessionStats   `json:"stats,omitempty"`
 }
 
 // GenerateInsights analyzes session transcripts to extract patterns and recommendations.

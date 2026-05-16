@@ -13,7 +13,7 @@ type Fingerprint struct {
 	Languages      []LanguageInfo // detected languages with percentages
 	TotalFiles     int
 	TotalLines     int
-	Dependencies   int    // count from package manager files
+	Dependencies   int // count from package manager files
 	HasTests       bool
 	HasCI          bool
 	License        string

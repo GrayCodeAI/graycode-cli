@@ -267,7 +267,7 @@ func renderCXML(dir string) (string, string, error) {
 
 	gi := repomap.LoadGitignoreRules(dir)
 
-	var binaryExts = map[string]bool{
+	binaryExts := map[string]bool{
 		".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".bmp": true, ".ico": true, ".webp": true,
 		".pdf": true, ".zip": true, ".tar": true, ".gz": true, ".bz2": true, ".xz": true, ".7z": true,
 		".exe": true, ".dll": true, ".so": true, ".dylib": true, ".o": true, ".a": true,

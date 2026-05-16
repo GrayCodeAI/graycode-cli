@@ -329,7 +329,8 @@ var pluginLogsCmd = &cobra.Command{
 			if ev.Error != "" {
 				errStr = truncatePluginStr(ev.Error, 50)
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			fmt.Fprintf(
+				w, "%s\t%s\t%s\t%s\n",
 				ev.Timestamp.Format("15:04:05"),
 				ev.PluginName,
 				ev.Type,

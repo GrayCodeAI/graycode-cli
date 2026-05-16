@@ -11,11 +11,11 @@ import (
 
 func TestParseConventionalCommit_Basic(t *testing.T) {
 	tests := []struct {
-		name     string
-		msg      string
-		wantType string
+		name      string
+		msg       string
+		wantType  string
 		wantScope string
-		wantDesc string
+		wantDesc  string
 		wantBreak bool
 	}{
 		{
@@ -418,12 +418,12 @@ func TestDetectCurrentVersion_PackageJSON(t *testing.T) {
 
 	// Create package.json
 	pkgContent := `{"name": "test-pkg", "version": "2.1.0"}`
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Need at least one commit for git describe to work (even if it fails)
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("hi"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("hi"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit(t, dir, "add", ".")
@@ -446,7 +446,7 @@ func TestDetectCurrentVersion_GitTag(t *testing.T) {
 	runGit(t, dir, "config", "user.email", "test@test.com")
 	runGit(t, dir, "config", "user.name", "Test")
 
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit(t, dir, "add", ".")
@@ -474,10 +474,10 @@ func TestDetectCurrentVersion_CargoToml(t *testing.T) {
 name = "myapp"
 version = "3.2.1"
 `
-	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte(cargoContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte(cargoContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.rs"), []byte("fn main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.rs"), []byte("fn main() {}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit(t, dir, "add", ".")
@@ -500,7 +500,7 @@ func TestDetectCurrentVersion_Default(t *testing.T) {
 	runGit(t, dir, "config", "user.email", "test@test.com")
 	runGit(t, dir, "config", "user.name", "Test")
 
-	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("hello"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("hello"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit(t, dir, "add", ".")
@@ -758,7 +758,7 @@ func TestUpdateVersionFile_PackageJSON(t *testing.T) {
   "version": "1.0.0",
   "description": "test"
 }`
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -782,7 +782,7 @@ func TestUpdateVersionFile_GoFile(t *testing.T) {
 
 const Version = "1.2.3"
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -807,7 +807,7 @@ name = "myapp"
 version = "0.5.0"
 edition = "2021"
 `
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -828,7 +828,7 @@ func TestUpdateVersionFile_NoPattern(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "random.txt")
 	content := "no version here\n"
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -921,7 +921,7 @@ func runGit(t *testing.T, dir string, args ...string) {
 
 func writeFile(t *testing.T, dir, name, content string) {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -10,10 +10,11 @@ import (
 // CoreMemoryAppendTool appends content to a memory block identified by label.
 type CoreMemoryAppendTool struct{}
 
-func (CoreMemoryAppendTool) Name() string        { return "CoreMemoryAppend" }
+func (CoreMemoryAppendTool) Name() string { return "CoreMemoryAppend" }
 func (CoreMemoryAppendTool) Description() string {
 	return "Append content to a core memory block. Creates the block if it doesn't exist."
 }
+
 func (CoreMemoryAppendTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -46,10 +47,11 @@ func (CoreMemoryAppendTool) Execute(ctx context.Context, input json.RawMessage) 
 // CoreMemoryReplaceTool finds and replaces content within a memory block.
 type CoreMemoryReplaceTool struct{}
 
-func (CoreMemoryReplaceTool) Name() string        { return "CoreMemoryReplace" }
+func (CoreMemoryReplaceTool) Name() string { return "CoreMemoryReplace" }
 func (CoreMemoryReplaceTool) Description() string {
 	return "Find and replace content within a core memory block identified by label."
 }
+
 func (CoreMemoryReplaceTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -98,10 +100,11 @@ func (CoreMemoryReplaceTool) Execute(ctx context.Context, input json.RawMessage)
 // CoreMemoryRethinkTool completely rewrites a memory block.
 type CoreMemoryRethinkTool struct{}
 
-func (CoreMemoryRethinkTool) Name() string        { return "CoreMemoryRethink" }
+func (CoreMemoryRethinkTool) Name() string { return "CoreMemoryRethink" }
 func (CoreMemoryRethinkTool) Description() string {
 	return "Completely rewrite a core memory block identified by label. Overwrites the first matching node or creates a new one."
 }
+
 func (CoreMemoryRethinkTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

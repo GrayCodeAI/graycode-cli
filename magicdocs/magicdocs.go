@@ -90,9 +90,9 @@ func GenerateMarkdown(entries []DocEntry) string {
 	for pkg, pkgEntries := range packages {
 		_, _ = fmt.Fprintf(&b, "## Package %s\n\n", pkg)
 		for _, e := range pkgEntries {
-		_, _ = fmt.Fprintf(&b, "### %s\n\n", e.Name)
-		_, _ = fmt.Fprintf(&b, "- **Type**: %s\n", e.Type)
-		_, _ = fmt.Fprintf(&b, "- **File**: %s:%d\n\n", e.File, e.Line)
+			_, _ = fmt.Fprintf(&b, "### %s\n\n", e.Name)
+			_, _ = fmt.Fprintf(&b, "- **Type**: %s\n", e.Type)
+			_, _ = fmt.Fprintf(&b, "- **File**: %s:%d\n\n", e.File, e.Line)
 			if e.Doc != "" {
 				b.WriteString(e.Doc)
 				b.WriteString("\n\n")

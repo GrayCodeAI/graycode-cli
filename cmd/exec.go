@@ -20,14 +20,14 @@ import (
 
 var (
 	execOutputFormat string
-	execAutoLevel   string
-	execModel       string
-	execMaxTurns    int
-	execCWD         string
-	execAgent       string
-	execSessionID   string
-	execTag         string
-	execWorktree    bool
+	execAutoLevel    string
+	execModel        string
+	execMaxTurns     int
+	execCWD          string
+	execAgent        string
+	execSessionID    string
+	execTag          string
+	execWorktree     bool
 	execWorktreeName string
 )
 
@@ -220,7 +220,7 @@ func runExec(_ *cobra.Command, args []string) error {
 			}
 		case "error":
 			if execOutputFormat == "text" {
-		_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
+				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
 			}
 		case "done":
 			// loop will exit when channel closes

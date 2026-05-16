@@ -43,8 +43,8 @@ type Change struct {
 	ID        string
 	Path      string // relative file path
 	Type      ChangeType
-	Content   string    // new content (for Create/Modify)
-	Original  string    // original content (for Modify, used for diff)
+	Content   string // new content (for Create/Modify)
+	Original  string // original content (for Modify, used for diff)
 	Timestamp time.Time
 }
 

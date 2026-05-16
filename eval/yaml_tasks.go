@@ -13,17 +13,17 @@ import (
 
 // YAMLTask is the declarative task definition format.
 type YAMLTask struct {
-	Task        string   `yaml:"task"`
-	Description string   `yaml:"description"`
-	Language    string   `yaml:"language"`
-	Tags        []string `yaml:"tags"`
-	Timeout     string   `yaml:"timeout"`
-	MaxAttempts int      `yaml:"max_attempts"`
-	Setup       string   `yaml:"setup"`
-	Prompt      string   `yaml:"prompt"`
-	Validate    []string `yaml:"validate"`
+	Task        string            `yaml:"task"`
+	Description string            `yaml:"description"`
+	Language    string            `yaml:"language"`
+	Tags        []string          `yaml:"tags"`
+	Timeout     string            `yaml:"timeout"`
+	MaxAttempts int               `yaml:"max_attempts"`
+	Setup       string            `yaml:"setup"`
+	Prompt      string            `yaml:"prompt"`
+	Validate    []string          `yaml:"validate"`
 	Files       map[string]string `yaml:"files"`
-	Filters     []string `yaml:"filters"`
+	Filters     []string          `yaml:"filters"`
 }
 
 // LoadTasksFromYAML loads task definitions from a directory of YAML files.

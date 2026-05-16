@@ -12,10 +12,10 @@ import (
 // memories from the diff: new files → purpose, new deps → choices,
 // conventions followed/violated → confidence updates.
 type SessionDiffAnalyzer struct {
-	bridge       *YaadBridge
-	projectDir   string
-	startFiles   map[string]string // path → content hash at session start
-	mu           sync.Mutex
+	bridge     *YaadBridge
+	projectDir string
+	startFiles map[string]string // path → content hash at session start
+	mu         sync.Mutex
 }
 
 // DiffResult holds the analysis of what changed during a session.
@@ -138,7 +138,7 @@ func (sd *SessionDiffAnalyzer) StoreMemoriesFromDiff(diff *DiffResult) {
 
 	// New dependencies → remember as decisions
 	for _, dep := range diff.NewDeps {
-	_ = sd.bridge.Remember(
+		_ = sd.bridge.Remember(
 			fmt.Sprintf("Dependency added: %s", dep),
 			"decision",
 		)
@@ -153,7 +153,7 @@ func (sd *SessionDiffAnalyzer) StoreMemoriesFromDiff(diff *DiffResult) {
 		// Remove the hash prefix
 		parts := strings.SplitN(commit, " ", 2)
 		if len(parts) > 1 {
-	_ = sd.bridge.Remember(
+			_ = sd.bridge.Remember(
 				fmt.Sprintf("Decision: %s", parts[1]),
 				"decision",
 			)

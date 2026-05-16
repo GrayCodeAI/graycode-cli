@@ -43,10 +43,10 @@ type ImplicitSignal struct {
 
 // validCategories defines the set of allowed feedback categories.
 var validCategories = map[string]bool{
-	"quality":      true,
-	"speed":        true,
-	"accuracy":     true,
-	"helpfulness":  true,
+	"quality":     true,
+	"speed":       true,
+	"accuracy":    true,
+	"helpfulness": true,
 }
 
 // validSignalTypes defines the set of allowed implicit signal types.

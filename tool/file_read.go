@@ -19,6 +19,7 @@ func (FileReadTool) Aliases() []string { return []string{"file_read"} }
 func (FileReadTool) Description() string {
 	return "Read a file's contents, optionally a specific line range."
 }
+
 func (FileReadTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -49,10 +49,10 @@ func TestClassifyTurn_Refactoring(t *testing.T) {
 
 func TestOneShotTracker_AllFirstTry(t *testing.T) {
 	tr := &OneShotTracker{}
-	tr.RecordTurn([]string{"Edit"})   // edit
-	tr.RecordTurn([]string{"Bash"})   // non-edit → previous was one-shot
-	tr.RecordTurn([]string{"Edit"})   // edit
-	tr.RecordTurn([]string{"Read"})   // non-edit → previous was one-shot
+	tr.RecordTurn([]string{"Edit"}) // edit
+	tr.RecordTurn([]string{"Bash"}) // non-edit → previous was one-shot
+	tr.RecordTurn([]string{"Edit"}) // edit
+	tr.RecordTurn([]string{"Read"}) // non-edit → previous was one-shot
 	rate := tr.Rate()
 	if rate != 100.0 {
 		t.Errorf("got %.1f%%, want 100%%", rate)
@@ -61,9 +61,9 @@ func TestOneShotTracker_AllFirstTry(t *testing.T) {
 
 func TestOneShotTracker_WithRetries(t *testing.T) {
 	tr := &OneShotTracker{}
-	tr.RecordTurn([]string{"Edit"})   // edit 1
-	tr.RecordTurn([]string{"Edit"})   // retry → edit 1 was NOT one-shot
-	tr.RecordTurn([]string{"Bash"})   // non-edit → edit 2 was one-shot
+	tr.RecordTurn([]string{"Edit"}) // edit 1
+	tr.RecordTurn([]string{"Edit"}) // retry → edit 1 was NOT one-shot
+	tr.RecordTurn([]string{"Bash"}) // non-edit → edit 2 was one-shot
 	total, firstTry := tr.Stats()
 	if total != 2 {
 		t.Errorf("total: got %d, want 2", total)

@@ -33,14 +33,14 @@ type RiskFactorDef struct {
 
 // RiskContext provides the context needed to assess risk of a change.
 type RiskContext struct {
-	Files           []string
-	Diff            string
-	TestsExist      bool
-	IsExported      bool
+	Files             []string
+	Diff              string
+	TestsExist        bool
+	IsExported        bool
 	HasBreakingChange bool
-	LinesChanged    int
-	FilesAffected   int
-	Complexity      int
+	LinesChanged      int
+	FilesAffected     int
+	Complexity        int
 }
 
 // RiskAssessor evaluates risk of proposed code changes.

@@ -14,7 +14,7 @@ import (
 type Suggestion struct {
 	Text        string
 	Description string
-	Category    string  // "command", "file", "tool", "history", "model"
+	Category    string // "command", "file", "tool", "history", "model"
 	Score       float64
 }
 

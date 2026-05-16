@@ -4,10 +4,10 @@ package localize
 type Option func(*config)
 
 type config struct {
-	maxFiles   int
-	maxSymbols int
-	language   string // empty = auto-detect from extension
-	contextLines int  // lines of context around a symbol for Stage 3
+	maxFiles     int
+	maxSymbols   int
+	language     string // empty = auto-detect from extension
+	contextLines int    // lines of context around a symbol for Stage 3
 }
 
 func defaults() *config {

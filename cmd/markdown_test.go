@@ -203,8 +203,10 @@ Some **bold** text with ` + "`" + `inline code` + "`" + `.
 	out := renderMarkdown(input, 80)
 	plain := stripAnsi(out)
 
-	checks := []string{"Title", "bold", "inline code", "list item one",
-		"A blockquote", "│", "─", "1.", "ordered one", "python", "print"}
+	checks := []string{
+		"Title", "bold", "inline code", "list item one",
+		"A blockquote", "│", "─", "1.", "ordered one", "python", "print",
+	}
 	for _, want := range checks {
 		if !strings.Contains(plain, want) {
 			t.Errorf("mixed markdown: expected %q in output", want)

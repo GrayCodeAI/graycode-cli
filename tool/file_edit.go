@@ -16,6 +16,7 @@ func (FileEditTool) Aliases() []string { return []string{"file_edit"} }
 func (FileEditTool) Description() string {
 	return "Edit a file by replacing an exact string match with new content."
 }
+
 func (FileEditTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -325,4 +326,3 @@ func levenshteinBlockFind(content, oldStr string, threshold float64) (bool, stri
 
 	return false, "", 0
 }
-

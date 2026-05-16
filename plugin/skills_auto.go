@@ -353,14 +353,14 @@ func DefaultSkillDirs() []string {
 	}
 	return []string{
 		// Project-level directories.
-		".hawk/skills",                                     // hawk project skills
-		".agents/skills",                                   // agentskills.io shared dir (gh skill install default)
-		".claude/skills",                                   // Claude Code project skills
-		".codex/skills",                                    // Codex project skills
+		".hawk/skills",   // hawk project skills
+		".agents/skills", // agentskills.io shared dir (gh skill install default)
+		".claude/skills", // Claude Code project skills
+		".codex/skills",  // Codex project skills
 		// User-level directories.
-		filepath.Join(home, ".hawk", "skills"),              // hawk global skills
-		filepath.Join(home, ".agents", "skills"),            // agentskills.io global shared
-		filepath.Join(home, ".claude", "skills"),            // Claude Code global skills
-		filepath.Join(home, ".codex", "skills"),             // Codex global skills
+		filepath.Join(home, ".hawk", "skills"),   // hawk global skills
+		filepath.Join(home, ".agents", "skills"), // agentskills.io global shared
+		filepath.Join(home, ".claude", "skills"), // Claude Code global skills
+		filepath.Join(home, ".codex", "skills"),  // Codex global skills
 	}
 }

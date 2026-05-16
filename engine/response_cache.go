@@ -382,7 +382,8 @@ func (rc *ResponseCache) FormatStats() string {
 		oldestStr = responseCacheFormatDuration(oldestAge)
 	}
 
-	return fmt.Sprintf("Response Cache:\nEntries: %d/%d\nHit rate: %d%% (%d hits / %d total)\nSaved: %s tokens (~$%.2f)\nOldest entry: %s",
+	return fmt.Sprintf(
+		"Response Cache:\nEntries: %d/%d\nHit rate: %d%% (%d hits / %d total)\nSaved: %s tokens (~$%.2f)\nOldest entry: %s",
 		stats.Entries, rc.MaxEntries,
 		hitPct, stats.HitCount, total,
 		responseCacheFormatTokens(stats.SavedTokens), stats.SavedCostUSD,

@@ -438,11 +438,11 @@ func ScanFiber(content, file string) []APIEndpoint {
 // Returns one of: "chi", "gin", "echo", "gorilla", "fiber", "net/http", or "unknown".
 func DetectFramework(dir string) string {
 	frameworks := map[string]string{
-		"github.com/go-chi/chi":     "chi",
-		"github.com/gin-gonic/gin":  "gin",
-		"github.com/labstack/echo":  "echo",
-		"github.com/gorilla/mux":    "gorilla",
-		"github.com/gofiber/fiber":  "fiber",
+		"github.com/go-chi/chi":    "chi",
+		"github.com/gin-gonic/gin": "gin",
+		"github.com/labstack/echo": "echo",
+		"github.com/gorilla/mux":   "gorilla",
+		"github.com/gofiber/fiber": "fiber",
 	}
 
 	// First check go.mod if available

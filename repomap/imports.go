@@ -288,8 +288,8 @@ func (g *ImportGraph) resolvePythonImport(fromFile, imp string) []string {
 	// Convert dotted path to directory path: "pkg.sub.module" -> "pkg/sub/module"
 	parts := strings.Split(imp, ".")
 	candidates := []string{
-		filepath.Join(parts...) + ".py",                          // pkg/sub/module.py
-		filepath.Join(append(parts, "__init__")...) + ".py",      // pkg/sub/module/__init__.py
+		filepath.Join(parts...) + ".py",                     // pkg/sub/module.py
+		filepath.Join(append(parts, "__init__")...) + ".py", // pkg/sub/module/__init__.py
 	}
 
 	var result []string

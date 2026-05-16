@@ -23,7 +23,7 @@ type SharedMemory struct {
 
 // MemoryEvent represents a memory change that other agents should know about.
 type MemoryEvent struct {
-	Type      string    `json:"type"`       // "added", "updated", "conflict"
+	Type      string    `json:"type"` // "added", "updated", "conflict"
 	NodeType  string    `json:"node_type"`
 	Content   string    `json:"content"`
 	AgentID   string    `json:"agent_id"`

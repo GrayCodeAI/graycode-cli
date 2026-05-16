@@ -30,11 +30,12 @@ type WorkflowStep struct {
 // WorkflowTool executes scripted workflows from .hawk/workflows/.
 type WorkflowTool struct{}
 
-func (WorkflowTool) Name() string        { return "Workflow" }
-func (WorkflowTool) Aliases() []string   { return []string{"workflow"} }
+func (WorkflowTool) Name() string      { return "Workflow" }
+func (WorkflowTool) Aliases() []string { return []string{"workflow"} }
 func (WorkflowTool) Description() string {
 	return "Execute a scripted workflow defined in .hawk/workflows/"
 }
+
 func (WorkflowTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -55,7 +56,7 @@ func (WorkflowTool) Parameters() map[string]interface{} {
 func (WorkflowTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Workflow string         `json:"workflow"`
-		Args    map[string]any `json:"args"`
+		Args     map[string]any `json:"args"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
@@ -87,8 +88,8 @@ func (WorkflowTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	out, _ := json.Marshal(map[string]any{
 		"workflow":    def.Name,
 		"description": def.Description,
-		"steps":      results,
-		"totalSteps": len(def.Steps),
+		"steps":       results,
+		"totalSteps":  len(def.Steps),
 	})
 	return string(out), nil
 }
@@ -102,7 +103,8 @@ func loadWorkflow(name string) (*WorkflowDef, error) {
 
 	home, _ := os.UserHomeDir()
 	if home != "" {
-		searchPaths = append(searchPaths,
+		searchPaths = append(
+			searchPaths,
 			filepath.Join(home, ".hawk", "workflows", name+".yml"),
 			filepath.Join(home, ".hawk", "workflows", name+".yaml"),
 		)

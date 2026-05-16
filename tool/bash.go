@@ -65,6 +65,7 @@ var (
 	processSubstitutionRe   = regexp.MustCompile(`<\(|>\(|=\(`)
 	consecutiveQuotesExecRe = regexp.MustCompile(`['"]{3,}`)
 )
+
 var commandSubstitutionPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`<\(`),              // process substitution <()
 	regexp.MustCompile(`>\(`),              // process substitution >()
@@ -400,5 +401,3 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 	return result, nil
 }
-
-

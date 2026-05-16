@@ -23,7 +23,7 @@ type EnvVar struct {
 
 // EnvManager manages environment variables, profiles, and secrets.
 type EnvManager struct {
-	Vars          map[string]*EnvVar `json:"vars"`
+	Vars          map[string]*EnvVar  `json:"vars"`
 	Profiles      map[string][]string `json:"profiles"`
 	ActiveProfile string              `json:"active_profile"`
 	mu            sync.RWMutex

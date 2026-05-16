@@ -157,11 +157,12 @@ func fieldMatches(field string, value int) bool {
 // CronCreateTool schedules a prompt to run on a cron schedule.
 type CronCreateTool struct{}
 
-func (CronCreateTool) Name() string        { return "CronCreate" }
-func (CronCreateTool) Aliases() []string   { return []string{"cron_create", "ScheduleWakeup"} }
+func (CronCreateTool) Name() string      { return "CronCreate" }
+func (CronCreateTool) Aliases() []string { return []string{"cron_create", "ScheduleWakeup"} }
 func (CronCreateTool) Description() string {
 	return "Schedule a prompt to run at a future time — either recurring on a cron schedule, or once at a specific time."
 }
+
 func (CronCreateTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

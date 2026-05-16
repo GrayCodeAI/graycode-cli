@@ -13,8 +13,8 @@ import (
 // (Delve for Go, pdb for Python, node --inspect for Node).
 type DebuggerTool struct{}
 
-func (DebuggerTool) Name() string        { return "Debug" }
-func (DebuggerTool) Aliases() []string   { return []string{"debug", "breakpoint"} }
+func (DebuggerTool) Name() string      { return "Debug" }
+func (DebuggerTool) Aliases() []string { return []string{"debug", "breakpoint"} }
 func (DebuggerTool) Description() string {
 	return `Interactive debugger for Go (Delve), Python (pdb), and Node.js (--inspect). Use this to:
 - Set breakpoints at specific file:line locations

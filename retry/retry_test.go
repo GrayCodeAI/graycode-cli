@@ -123,11 +123,11 @@ func TestBackoff(t *testing.T) {
 		minDur  time.Duration
 		maxDur  time.Duration
 	}{
-		{0, 1 * time.Second, 2 * time.Second},  // base*2^0 + [0, base) jitter
-		{1, 2 * time.Second, 3 * time.Second},  // base*2^1 + [0, base) jitter
-		{2, 4 * time.Second, 5 * time.Second},  // base*2^2 + [0, base) jitter
-		{3, 8 * time.Second, 9 * time.Second},  // base*2^3 + [0, base) jitter
-		{10, maxDelay, maxDelay},                // capped at max
+		{0, 1 * time.Second, 2 * time.Second}, // base*2^0 + [0, base) jitter
+		{1, 2 * time.Second, 3 * time.Second}, // base*2^1 + [0, base) jitter
+		{2, 4 * time.Second, 5 * time.Second}, // base*2^2 + [0, base) jitter
+		{3, 8 * time.Second, 9 * time.Second}, // base*2^3 + [0, base) jitter
+		{10, maxDelay, maxDelay},              // capped at max
 	}
 
 	for _, tt := range tests {

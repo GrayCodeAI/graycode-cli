@@ -117,7 +117,6 @@ func TestDaemon_Chat_EmptyPrompt(t *testing.T) {
 	}
 }
 
-
 func TestDaemon_Sessions(t *testing.T) {
 	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
 	addr, err := srv.Start()

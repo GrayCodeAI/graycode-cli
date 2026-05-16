@@ -53,4 +53,3 @@ func TestAutoCapture_Metrics(t *testing.T) {
 	metrics := ac.Metrics()
 	_ = metrics
 }
-

@@ -15,11 +15,12 @@ import (
 type DownloadTool struct{}
 
 func (DownloadTool) Name() string      { return "Download" }
-func (DownloadTool) RiskLevel() string  { return "medium" }
-func (DownloadTool) Aliases() []string  { return []string{"download"} }
+func (DownloadTool) RiskLevel() string { return "medium" }
+func (DownloadTool) Aliases() []string { return []string{"download"} }
 func (DownloadTool) Description() string {
 	return "Download a file from a URL and save it to a local path."
 }
+
 func (DownloadTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -52,7 +53,7 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
 	}
-		defer func() { _ = resp.Body.Close() }()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)

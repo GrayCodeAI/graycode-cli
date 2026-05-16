@@ -18,12 +18,12 @@ import (
 type TerminalContext struct {
 	mu sync.Mutex
 
-	lastCWD      string
+	lastCWD       string
 	lastGitBranch string
-	lastExitCode int
-	cmdBuffer    []string
-	maxCmds      int
-	hadRealCmd   bool
+	lastExitCode  int
+	cmdBuffer     []string
+	maxCmds       int
+	hadRealCmd    bool
 
 	outputEnabled  bool
 	outputMaxLines int

@@ -55,7 +55,7 @@ func TestDefaultTestCommands(t *testing.T) {
 
 func TestDetectTestCommandGo(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "go test -count=1 ./..." {
@@ -65,7 +65,7 @@ func TestDetectTestCommandGo(t *testing.T) {
 
 func TestDetectTestCommandPython(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "pytest.ini"), []byte("[pytest]\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "pytest.ini"), []byte("[pytest]\n"), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "pytest -x" {
@@ -73,7 +73,7 @@ func TestDetectTestCommandPython(t *testing.T) {
 	}
 
 	dir2 := t.TempDir()
-	os.WriteFile(filepath.Join(dir2, "setup.py"), []byte("from setuptools import setup\n"), 0644)
+	os.WriteFile(filepath.Join(dir2, "setup.py"), []byte("from setuptools import setup\n"), 0o644)
 
 	cmd2 := DetectTestCommand(dir2)
 	if cmd2 != "pytest -x" {
@@ -84,7 +84,7 @@ func TestDetectTestCommandPython(t *testing.T) {
 func TestDetectTestCommandJavaScript(t *testing.T) {
 	dir := t.TempDir()
 	pkgJSON := `{"name": "test", "scripts": {"test": "jest"}}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "npm test" {
@@ -95,7 +95,7 @@ func TestDetectTestCommandJavaScript(t *testing.T) {
 func TestDetectTestCommandJavaScriptNoScript(t *testing.T) {
 	dir := t.TempDir()
 	pkgJSON := `{"name": "test"}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "npm test" {
@@ -105,7 +105,7 @@ func TestDetectTestCommandJavaScriptNoScript(t *testing.T) {
 
 func TestDetectTestCommandRust(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"test\"\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"test\"\n"), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "cargo test" {
@@ -115,7 +115,7 @@ func TestDetectTestCommandRust(t *testing.T) {
 
 func TestDetectTestCommandRuby(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "Gemfile"), []byte("source 'https://rubygems.org'\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "Gemfile"), []byte("source 'https://rubygems.org'\n"), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "bundle exec rspec" {
@@ -125,7 +125,7 @@ func TestDetectTestCommandRuby(t *testing.T) {
 
 func TestDetectTestCommandGradle(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "build.gradle"), []byte("apply plugin: 'java'\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "build.gradle"), []byte("apply plugin: 'java'\n"), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "./gradlew test" {
@@ -135,7 +135,7 @@ func TestDetectTestCommandGradle(t *testing.T) {
 
 func TestDetectTestCommandMaven(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project></project>\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project></project>\n"), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "mvn test -q" {
@@ -536,8 +536,8 @@ func TestRunTestsGoProject(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a minimal Go project that passes
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc Add(a, b int) int { return a + b }\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc Add(a, b int) int { return a + b }\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "main_test.go"), []byte(`package main
 
 import "testing"
@@ -547,7 +547,7 @@ func TestAdd(t *testing.T) {
 		t.Error("expected 5")
 	}
 }
-`), 0644)
+`), 0o644)
 
 	tl := NewTestLoop()
 	ctx := context.Background()
@@ -571,8 +571,8 @@ func TestRunTestsGoProjectFailing(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create a minimal Go project that fails
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc Add(a, b int) int { return a + b }\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc Add(a, b int) int { return a + b }\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "main_test.go"), []byte(`package main
 
 import "testing"
@@ -582,7 +582,7 @@ func TestAdd(t *testing.T) {
 		t.Error("expected 6 but got 5")
 	}
 }
-`), 0644)
+`), 0o644)
 
 	tl := NewTestLoop()
 	ctx := context.Background()
@@ -608,8 +608,8 @@ func TestAdd(t *testing.T) {
 func TestDetectTestCommandPriority(t *testing.T) {
 	// go.mod takes priority over package.json if both exist
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0644)
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"jest"}}`), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"scripts":{"test":"jest"}}`), 0o644)
 
 	cmd := DetectTestCommand(dir)
 	if cmd != "go test -count=1 ./..." {

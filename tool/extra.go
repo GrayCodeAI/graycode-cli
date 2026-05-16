@@ -18,6 +18,7 @@ func (NotebookEditTool) Aliases() []string { return []string{"notebook_edit"} }
 func (NotebookEditTool) Description() string {
 	return "Edit a Jupyter notebook cell. Specify the notebook path, cell number, and new source."
 }
+
 func (NotebookEditTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -77,6 +78,7 @@ func (ConfigTool) Aliases() []string { return []string{"config"} }
 func (ConfigTool) Description() string {
 	return "Read or modify hawk configuration settings."
 }
+
 func (ConfigTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -124,6 +126,7 @@ func (BriefTool) Aliases() []string { return []string{"brief", "Brief"} }
 func (BriefTool) Description() string {
 	return "Send a message to the user. Supports markdown. Use 'proactive' status when surfacing something the user hasn't asked for."
 }
+
 func (BriefTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

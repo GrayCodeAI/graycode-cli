@@ -38,7 +38,7 @@ func TestFileWatcher_DetectCreation(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a file.
-	err := os.WriteFile(filepath.Join(dir, "hello.go"), []byte("package main"), 0644)
+	err := os.WriteFile(filepath.Join(dir, "hello.go"), []byte("package main"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestFileWatcher_DetectModification(t *testing.T) {
 
 	// Create file before watching.
 	filePath := filepath.Join(dir, "data.txt")
-	err := os.WriteFile(filePath, []byte("initial"), 0644)
+	err := os.WriteFile(filePath, []byte("initial"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestFileWatcher_DetectModification(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Modify the file.
-	err = os.WriteFile(filePath, []byte("modified content that is longer"), 0644)
+	err = os.WriteFile(filePath, []byte("modified content that is longer"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestFileWatcher_DetectDeletion(t *testing.T) {
 
 	// Create file before watching.
 	filePath := filepath.Join(dir, "remove_me.txt")
-	err := os.WriteFile(filePath, []byte("delete this"), 0644)
+	err := os.WriteFile(filePath, []byte("delete this"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestFileWatcher_DebounceRapidChanges(t *testing.T) {
 
 	// Create initial file.
 	filePath := filepath.Join(dir, "rapid.txt")
-	err := os.WriteFile(filePath, []byte("v0"), 0644)
+	err := os.WriteFile(filePath, []byte("v0"), 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestFileWatcher_DebounceRapidChanges(t *testing.T) {
 
 	// Make rapid changes — each within debounce window of the previous.
 	for i := 1; i <= 5; i++ {
-		err = os.WriteFile(filePath, []byte(strings.Repeat("x", i*100)), 0644)
+		err = os.WriteFile(filePath, []byte(strings.Repeat("x", i*100)), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -273,7 +273,7 @@ func TestFileWatcher_BatchWindowGroupsEvents(t *testing.T) {
 	// Create multiple files quickly.
 	for i := 0; i < 3; i++ {
 		name := filepath.Join(dir, strings.Repeat("a", i+1)+".txt")
-		_ = os.WriteFile(name, []byte("content"), 0644)
+		_ = os.WriteFile(name, []byte("content"), 0o644)
 	}
 
 	// Wait for debounce.
@@ -301,8 +301,8 @@ func TestFileWatcher_IgnorePatterns(t *testing.T) {
 
 	// Create .git directory that should be ignored.
 	gitDir := filepath.Join(dir, ".git")
-	_ = os.MkdirAll(gitDir, 0755)
-	_ = os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main"), 0644)
+	_ = os.MkdirAll(gitDir, 0o755)
+	_ = os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main"), 0o644)
 
 	var mu sync.Mutex
 	var received []FileEvent
@@ -329,13 +329,13 @@ func TestFileWatcher_IgnorePatterns(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Modify an ignored file.
-	_ = os.WriteFile(filepath.Join(gitDir, "index"), []byte("binary data"), 0644)
+	_ = os.WriteFile(filepath.Join(gitDir, "index"), []byte("binary data"), 0o644)
 
 	// Create a .swp file (should be ignored).
-	_ = os.WriteFile(filepath.Join(dir, "test.swp"), []byte("swap"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "test.swp"), []byte("swap"), 0o644)
 
 	// Create a non-ignored file.
-	_ = os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644)
 
 	// Wait for debounce.
 	time.Sleep(400 * time.Millisecond)
@@ -558,7 +558,7 @@ func TestFileWatcher_ConcurrentSafety(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := filepath.Join(dir, strings.Repeat("f", n+1)+".txt")
-			_ = os.WriteFile(name, []byte("goroutine content"), 0644)
+			_ = os.WriteFile(name, []byte("goroutine content"), 0o644)
 		}(i)
 	}
 	wg.Wait()
@@ -603,8 +603,8 @@ func TestFileWatcher_PatternFiltering(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create both .go and .txt files.
-	_ = os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0644)
-	_ = os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("notes"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644)
+	_ = os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("notes"), 0o644)
 
 	time.Sleep(400 * time.Millisecond)
 
@@ -632,7 +632,7 @@ func TestFileWatcher_PatternFiltering(t *testing.T) {
 func TestWatchSingle(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "config.yaml")
-	_ = os.WriteFile(filePath, []byte("key: value"), 0644)
+	_ = os.WriteFile(filePath, []byte("key: value"), 0o644)
 
 	var mu sync.Mutex
 	changeCount := 0
@@ -654,7 +654,7 @@ func TestWatchSingle(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Modify the file.
-	_ = os.WriteFile(filePath, []byte("key: updated"), 0644)
+	_ = os.WriteFile(filePath, []byte("key: updated"), 0o644)
 
 	time.Sleep(200 * time.Millisecond)
 

@@ -265,7 +265,7 @@ func TestRunLintPassingFile(t *testing.T) {
 	// Create a temporary valid Go file
 	dir := t.TempDir()
 	goFile := filepath.Join(dir, "valid.go")
-	err := os.WriteFile(goFile, []byte("package main\n\nfunc main() {}\n"), 0644)
+	err := os.WriteFile(goFile, []byte("package main\n\nfunc main() {}\n"), 0o644)
 	if err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestRunLintFailingFile(t *testing.T) {
 	dir := t.TempDir()
 	goFile := filepath.Join(dir, "invalid.go")
 	// This file has a syntax error
-	err := os.WriteFile(goFile, []byte("package main\n\nfunc main() {\n\tfmt.Println(undefined)\n}\n"), 0644)
+	err := os.WriteFile(goFile, []byte("package main\n\nfunc main() {\n\tfmt.Println(undefined)\n}\n"), 0o644)
 	if err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
@@ -315,9 +315,9 @@ func TestRunLintFailingFile(t *testing.T) {
 
 func TestParseLintErrors(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  string
-		want   int
+		name    string
+		input   string
+		want    int
 		notWant []string
 	}{
 		{

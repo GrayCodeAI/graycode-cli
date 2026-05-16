@@ -76,7 +76,7 @@ func ProcessItems(items []string) error {
 	return nil
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "user.go"), []byte(src), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "user.go"), []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -123,7 +123,7 @@ func TestProcessItems(t *testing.T) {
 	}
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "user_test.go"), []byte(testSrc), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "user_test.go"), []byte(testSrc), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

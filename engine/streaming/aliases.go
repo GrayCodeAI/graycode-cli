@@ -9,19 +9,21 @@ import (
 	"github.com/GrayCodeAI/hawk/engine"
 )
 
-type CacheEntry = engine.CacheEntry
-type CacheStats = engine.CacheStats
-type ResponseCache = engine.ResponseCache
-type FormatRule = engine.FormatRule
-type FormattedResponse = engine.FormattedResponse
-type ResponseFormatter = engine.ResponseFormatter
-type StreamOptimizer = engine.StreamOptimizer
-type StreamStats = engine.StreamStats
-type ThinkingPhase = engine.ThinkingPhase
-type ThinkingStep = engine.ThinkingStep
-type ThinkingProtocol = engine.ThinkingProtocol
-type SteeringQueue = engine.SteeringQueue
-type SteeringMessage = engine.SteeringMessage
+type (
+	CacheEntry        = engine.CacheEntry
+	CacheStats        = engine.CacheStats
+	ResponseCache     = engine.ResponseCache
+	FormatRule        = engine.FormatRule
+	FormattedResponse = engine.FormattedResponse
+	ResponseFormatter = engine.ResponseFormatter
+	StreamOptimizer   = engine.StreamOptimizer
+	StreamStats       = engine.StreamStats
+	ThinkingPhase     = engine.ThinkingPhase
+	ThinkingStep      = engine.ThinkingStep
+	ThinkingProtocol  = engine.ThinkingProtocol
+	SteeringQueue     = engine.SteeringQueue
+	SteeringMessage   = engine.SteeringMessage
+)
 
 const DefaultMaxEntries = engine.DefaultMaxEntries
 

@@ -32,7 +32,7 @@ type ScaleBehavior struct {
 	Scale        TaskScale
 	MaxTurns     int
 	PlanRequired bool
-	AutoApprove  bool // auto-approve file edits
+	AutoApprove  bool   // auto-approve file edits
 	ScanScope    string // "file", "module", "repo"
 }
 
@@ -44,10 +44,12 @@ var ScaleBehaviors = map[TaskScale]ScaleBehavior{
 	ScaleEpic:  {Scale: ScaleEpic, MaxTurns: 50, PlanRequired: true, AutoApprove: false, ScanScope: "repo"},
 }
 
-var patchKeywords = []string{"fix", "typo", "rename", "bump", "update version", "remove unused", "delete", "correct"}
-var minorKeywords = []string{"add", "implement", "handle", "support", "include", "extend", "improve"}
-var majorKeywords = []string{"refactor", "redesign", "migrate", "rewrite", "restructure", "overhaul", "consolidate"}
-var epicKeywords = []string{"build", "create new", "design system", "architecture", "from scratch", "new service", "new module"}
+var (
+	patchKeywords = []string{"fix", "typo", "rename", "bump", "update version", "remove unused", "delete", "correct"}
+	minorKeywords = []string{"add", "implement", "handle", "support", "include", "extend", "improve"}
+	majorKeywords = []string{"refactor", "redesign", "migrate", "rewrite", "restructure", "overhaul", "consolidate"}
+	epicKeywords  = []string{"build", "create new", "design system", "architecture", "from scratch", "new service", "new module"}
+)
 
 // ClassifyScale determines the task scale from user input.
 func ClassifyScale(prompt string) TaskScale {

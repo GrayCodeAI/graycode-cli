@@ -11,10 +11,10 @@ import (
 // InterfaceExtraction shows only exported signatures (no bodies).
 // Uses ~100 tokens per file vs ~500+ for full content.
 type InterfaceExtraction struct {
-	Functions  []string // "func Name(args) returns"
-	Types      []string // "type Name struct/interface"
-	Constants  []string // "const Name = ..."
-	Package    string
+	Functions []string // "func Name(args) returns"
+	Types     []string // "type Name struct/interface"
+	Constants []string // "const Name = ..."
+	Package   string
 }
 
 // ExtractInterface parses a Go file and returns only its exported API surface.

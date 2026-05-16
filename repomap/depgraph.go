@@ -24,9 +24,9 @@ type DepGraph struct {
 
 // DepNode represents a single package or module in the dependency graph.
 type DepNode struct {
-	ID         string   // package/module path
-	Name       string   // short name
-	Type       string   // "internal", "external", "stdlib"
+	ID         string // package/module path
+	Name       string // short name
+	Type       string // "internal", "external", "stdlib"
 	FileCount  int
 	LOC        int
 	ImportedBy []string
@@ -1322,4 +1322,3 @@ func isNodeBuiltin(name string) bool {
 	}
 	return builtins[name]
 }
-

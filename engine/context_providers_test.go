@@ -398,9 +398,9 @@ func TestErrorContextProvider(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create some log files
-	os.WriteFile(filepath.Join(tmpDir, "build.log"), []byte("error: undefined variable x"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "test.err"), []byte("FAIL: TestFoo timeout"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("not an error file"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "build.log"), []byte("error: undefined variable x"), 0o644)
+	os.WriteFile(filepath.Join(tmpDir, "test.err"), []byte("FAIL: TestFoo timeout"), 0o644)
+	os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("not an error file"), 0o644)
 
 	provider := &ErrorContextProvider{LogDir: tmpDir}
 
@@ -449,7 +449,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 )
 `
-	os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0o644)
 
 	provider := &DependencyContextProvider{ProjectDir: tmpDir}
 
@@ -479,14 +479,14 @@ func TestFileContextProvider(t *testing.T) {
 	files := []string{"a.go", "b.go", "c.js"}
 	for i, name := range files {
 		path := filepath.Join(tmpDir, name)
-		os.WriteFile(path, []byte("package main"), 0644)
+		os.WriteFile(path, []byte("package main"), 0o644)
 		// Stagger modification times
 		modTime := time.Now().Add(time.Duration(-i) * time.Hour)
 		os.Chtimes(path, modTime, modTime)
 	}
 
 	// Create a non-source file that should be excluded
-	os.WriteFile(filepath.Join(tmpDir, "data.txt"), []byte("not source"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "data.txt"), []byte("not source"), 0o644)
 
 	provider := &FileContextProvider{RepoDir: tmpDir, MaxFiles: 10}
 

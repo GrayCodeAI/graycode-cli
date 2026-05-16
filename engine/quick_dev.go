@@ -30,10 +30,10 @@ func (p QuickDevPhase) String() string {
 
 // QuickDevState tracks the current state of a quick-dev workflow.
 type QuickDevState struct {
-	Phase       QuickDevPhase
-	Intent      string // compressed user intent
-	IsOneShot   bool   // true = skip planning
-	Spec        string // frozen spec (if planned path)
+	Phase        QuickDevPhase
+	Intent       string // compressed user intent
+	IsOneShot    bool   // true = skip planning
+	Spec         string // frozen spec (if planned path)
 	FilesChanged []string
 }
 

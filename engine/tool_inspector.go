@@ -10,9 +10,9 @@ type ToolInspector struct {
 type InspectionAction int
 
 const (
-	ActionAllow          InspectionAction = iota // execute without asking
-	ActionRequireApproval                        // ask user with context
-	ActionDeny                                   // block execution
+	ActionAllow           InspectionAction = iota // execute without asking
+	ActionRequireApproval                         // ask user with context
+	ActionDeny                                    // block execution
 )
 
 // InspectionResult holds the inspection decision with reasoning.
