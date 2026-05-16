@@ -478,13 +478,10 @@ func (dg *DepGraph) TopologicalSort() []string {
 	}
 	sort.Strings(queue) // deterministic order
 
-	var result []string
 	for len(queue) > 0 {
-		// Sort for determinism at each step.
 		sort.Strings(queue)
 		node := queue[0]
 		queue = queue[1:]
-		result = append(result, node)
 
 		for _, neighbor := range adj[node] {
 			inDegree[neighbor]--
@@ -493,11 +490,6 @@ func (dg *DepGraph) TopologicalSort() []string {
 			}
 		}
 	}
-
-	// Reverse so leaves come first (dependencies before dependents).
-	// Actually, Kahn's gives us sources first. We want sinks (leaves) first.
-	// A "leaf" in dependency context is something that depends on nothing.
-	// Kahn's naturally gives nodes with no incoming edges first.
 	// For "leaves first" (packages with no dependencies), we reverse the edge direction.
 
 	// Re-do with reversed edges: nodes that IMPORT nothing come first.
@@ -1280,7 +1272,7 @@ func countFileLOC(path string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	count := 0
 	scanner := bufio.NewScanner(f)

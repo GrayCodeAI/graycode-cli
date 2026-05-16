@@ -178,32 +178,32 @@ func aggregateStats(traces []*analytics.SessionTrace, days int) *statsOutput {
 func printStatsText(cmd *cobra.Command, out *statsOutput) {
 	w := cmd.OutOrStdout()
 
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
-	fmt.Fprintf(w, "  Hawk Usage Statistics (%s)\n", out.Period)
-	fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
+		_, _ = fmt.Fprintf(w, "\n")
+		_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
+		_, _ = fmt.Fprintf(w, "  Hawk Usage Statistics (%s)\n", out.Period)
+		_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
 
 	// Overview section
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "─── Overview ───\n")
-	fmt.Fprintf(w, "  Sessions:     %d\n", out.TotalSessions)
-	fmt.Fprintf(w, "  Messages:     %d\n", out.TotalMessages)
-	fmt.Fprintf(w, "  Tool calls:   %d\n", out.TotalToolCalls)
-	fmt.Fprintf(w, "  Active days:  %d\n", out.ActiveDays)
+		_, _ = fmt.Fprintf(w, "\n")
+		_, _ = fmt.Fprintf(w, "─── Overview ───\n")
+		_, _ = fmt.Fprintf(w, "  Sessions:     %d\n", out.TotalSessions)
+		_, _ = fmt.Fprintf(w, "  Messages:     %d\n", out.TotalMessages)
+		_, _ = fmt.Fprintf(w, "  Tool calls:   %d\n", out.TotalToolCalls)
+		_, _ = fmt.Fprintf(w, "  Active days:  %d\n", out.ActiveDays)
 
 	// Cost section
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "─── Cost ───\n")
-	fmt.Fprintf(w, "  Total cost:       $%.4f\n", out.TotalCostUSD)
-	fmt.Fprintf(w, "  Avg cost/session: $%.4f\n", out.AvgCostPerSession)
-	fmt.Fprintf(w, "  Avg cost/day:     $%.4f\n", out.AvgCostPerDay)
+		_, _ = fmt.Fprintf(w, "\n")
+		_, _ = fmt.Fprintf(w, "─── Cost ───\n")
+		_, _ = fmt.Fprintf(w, "  Total cost:       $%.4f\n", out.TotalCostUSD)
+		_, _ = fmt.Fprintf(w, "  Avg cost/session: $%.4f\n", out.AvgCostPerSession)
+		_, _ = fmt.Fprintf(w, "  Avg cost/day:     $%.4f\n", out.AvgCostPerDay)
 
 	// Models section
 	if statsModels && len(out.Models) > 0 {
-		fmt.Fprintf(w, "\n")
-		fmt.Fprintf(w, "─── Models ───\n")
-		fmt.Fprintf(w, "  %-30s %8s %10s\n", "MODEL", "REQUESTS", "COST")
-		fmt.Fprintf(w, "  %-30s %8s %10s\n", strings.Repeat("─", 30), strings.Repeat("─", 8), strings.Repeat("─", 10))
+		_, _ = fmt.Fprintf(w, "\n")
+		_, _ = fmt.Fprintf(w, "─── Models ───\n")
+		_, _ = fmt.Fprintf(w, "  %-30s %8s %10s\n", "MODEL", "REQUESTS", "COST")
+		_, _ = fmt.Fprintf(w, "  %-30s %8s %10s\n", strings.Repeat("─", 30), strings.Repeat("─", 8), strings.Repeat("─", 10))
 
 		// Sort models by cost descending
 		type modelEntry struct {
@@ -219,14 +219,14 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 		})
 
 		for _, m := range models {
-			fmt.Fprintf(w, "  %-30s %8d %10s\n", m.name, m.stat.Requests, fmt.Sprintf("$%.4f", m.stat.CostUSD))
+		_, _ = fmt.Fprintf(w, "  %-30s %8d %10s\n", m.name, m.stat.Requests, fmt.Sprintf("$%.4f", m.stat.CostUSD))
 		}
 	}
 
 	// Top Tools section
 	if len(out.TopTools) > 0 {
-		fmt.Fprintf(w, "\n")
-		fmt.Fprintf(w, "─── Top Tools ───\n")
+		_, _ = fmt.Fprintf(w, "\n")
+		_, _ = fmt.Fprintf(w, "─── Top Tools ───\n")
 
 		limit := statsTop
 		if limit > len(out.TopTools) {
@@ -249,9 +249,9 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 				barLen = 1
 			}
 			bar := strings.Repeat("█", barLen)
-			fmt.Fprintf(w, "  %-20s %s %d\n", t.Name, bar, t.Count)
+		_, _ = fmt.Fprintf(w, "  %-20s %s %d\n", t.Name, bar, t.Count)
 		}
 	}
 
-	fmt.Fprintf(w, "\n")
+		_, _ = fmt.Fprintf(w, "\n")
 }

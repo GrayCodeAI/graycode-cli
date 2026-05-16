@@ -152,7 +152,7 @@ func countLines(path string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	count := 0
 	buf := make([]byte, 32*1024)
@@ -345,7 +345,7 @@ func detectTests(dir string) bool {
 	// Walk top two levels looking for test files.
 	found := false
 	depth := 0
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || found {
 			return filepath.SkipDir
 		}
@@ -419,7 +419,7 @@ func detectLicense(dir string) string {
 		if err != nil {
 			continue
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		// Read up to the first 5 lines to identify the license.

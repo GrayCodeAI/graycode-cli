@@ -157,7 +157,7 @@ import (
 func TestReadConfigSuccess(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.txt")
-	os.WriteFile(path, []byte("key=value"), 0o644)
+	_ = os.WriteFile(path, []byte("key=value"), 0o644)
 
 	content, err := ReadConfig(path)
 	if err != nil {

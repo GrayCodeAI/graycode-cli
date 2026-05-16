@@ -1,0 +1,67 @@
+# EditorConfig — https://editorconfig.org
+# Canonical eco-wide template (.shared-templates/editorconfig.tmpl).
+
+root = true
+
+# Default for everything.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Go uses tabs by convention.
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# Python — PEP 8.
+[*.py]
+indent_size = 4
+
+# TypeScript / JavaScript — 2 spaces, ecosystem default.
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+indent_size = 2
+
+# Web assets.
+[*.{html,css,scss}]
+indent_size = 2
+
+# YAML — 2 spaces (ecosystem standard, GitHub Actions, k8s, etc.).
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON / JSONC.
+[*.{json,jsonc}]
+indent_size = 2
+
+# TOML.
+[*.toml]
+indent_size = 2
+
+# Markdown — 2 spaces, preserve trailing whitespace (used for line breaks).
+[*.md]
+trim_trailing_whitespace = false
+indent_size = 2
+
+# Shell scripts.
+[*.{sh,bash,zsh,fish}]
+indent_size = 4
+
+# Makefiles must use tabs.
+[{Makefile,*.mk}]
+indent_style = tab
+
+# Dockerfiles.
+[Dockerfile*]
+indent_size = 4
+
+# GitHub Actions workflows — 2 spaces.
+[.github/**/*.{yml,yaml}]
+indent_size = 2
+
+# Config files.
+[*.{cfg,ini,conf}]
+indent_size = 4

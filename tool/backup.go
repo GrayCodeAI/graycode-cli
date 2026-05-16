@@ -227,6 +227,6 @@ func cleanOldBackups(dir, baseName string, keep int) {
 
 	// Remove all but the last N
 	for i := 0; i < len(files)-keep; i++ {
-		os.Remove(filepath.Join(dir, files[i].name))
+		_ = os.Remove(filepath.Join(dir, files[i].name))
 	}
 }

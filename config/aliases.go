@@ -46,7 +46,7 @@ func LoadAliases() map[string]string {
 // SaveAliases writes command aliases to ~/.hawk/aliases.json.
 func SaveAliases(aliases map[string]string) error {
 	path := aliasesFilePath()
-	os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
 	data, err := json.MarshalIndent(aliases, "", "  ")
 	if err != nil {
 		return err

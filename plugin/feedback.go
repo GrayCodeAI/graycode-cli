@@ -48,7 +48,7 @@ func (fs *FeedbackStore) load() ([]SkillRating, error) {
 }
 
 func (fs *FeedbackStore) save(ratings []SkillRating) error {
-	os.MkdirAll(filepath.Dir(fs.path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(fs.path), 0o755)
 	data, err := json.MarshalIndent(ratings, "", "  ")
 	if err != nil {
 		return err

@@ -274,7 +274,7 @@ func (sm *SharedMemory) FormatState() string {
 	sort.Strings(keys)
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Shared Memory (%d entries):\n", count)
+		_, _ = fmt.Fprintf(&b, "Shared Memory (%d entries):\n", count)
 	b.WriteString("─────────────────────────\n")
 
 	for _, key := range keys {

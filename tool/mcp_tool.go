@@ -78,7 +78,7 @@ func LoadMCPTools(ctx context.Context, name, command string, args ...string) ([]
 	registerMCPServer(server)
 	mcpTools, err := server.ListTools()
 	if err != nil {
-		server.Close()
+		_ = server.Close()
 		return nil, err
 	}
 	var tools []Tool

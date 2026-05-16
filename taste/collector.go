@@ -1,7 +1,6 @@
 package taste
 
 import (
-	"strings"
 	"sync"
 	"time"
 )
@@ -271,44 +270,3 @@ func (c *Collector) Cleanup(maxAge time.Duration) {
 	}
 }
 
-// extractIdentifiers pulls identifiers from code for naming analysis.
-func extractIdentifiers(code string) []string {
-	var ids []string
-	lines := strings.Split(code, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		// Skip empty lines, comments.
-		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "/*") {
-			continue
-		}
-		// Simple token extraction — look for assignment-like patterns.
-		words := strings.Fields(line)
-		for _, w := range words {
-			// Filter to likely identifiers (alpha-numeric with underscores/mixed case).
-			if len(w) > 2 && isIdentifier(w) {
-				ids = append(ids, w)
-			}
-		}
-	}
-	return ids
-}
-
-func isIdentifier(s string) bool {
-	for i, c := range s {
-		if i == 0 && !isAlpha(c) {
-			return false
-		}
-		if !isAlpha(c) && !isDigit(c) && c != '_' {
-			return false
-		}
-	}
-	return true
-}
-
-func isAlpha(c rune) bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-}
-
-func isDigit(c rune) bool {
-	return c >= '0' && c <= '9'
-}

@@ -33,7 +33,7 @@ func LogEvent(name, sessionID string, properties map[string]interface{}) {
 	data, _ := json.Marshal(event)
 	f, _ := os.OpenFile(filepath.Join(analyticsDir(), "events.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if f != nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		_, _ = f.Write(data)
 		_, _ = f.WriteString("\n")
 	}
@@ -59,7 +59,7 @@ func SaveTrace(t *SessionTrace) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.Write(data); err != nil {
 		return err
 	}

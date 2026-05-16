@@ -636,14 +636,14 @@ func parseYAMLList(val string) []string {
 // parseFloat converts a string to float64, returning 0 on failure.
 func parseFloat(s string) float64 {
 	var f float64
-	fmt.Sscanf(s, "%f", &f)
+	_, _ = fmt.Sscanf(s, "%f", &f)
 	return f
 }
 
 // parseInt converts a string to int, returning 0 on failure.
 func parseInt(s string) int {
 	var i int
-	fmt.Sscanf(s, "%d", &i)
+	_, _ = fmt.Sscanf(s, "%d", &i)
 	return i
 }
 

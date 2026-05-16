@@ -52,13 +52,13 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 
 	// Readable paths.
 	for _, p := range policy.ReadablePaths {
-		fmt.Fprintf(&b, "(allow file-read* (subpath \"%s\"))\n", p)
+		_, _ = fmt.Fprintf(&b, "(allow file-read* (subpath \"%s\"))\n", p)
 	}
 
 	// Writable paths (only if AllowWrite is true).
 	if policy.AllowWrite {
 		for _, p := range policy.WritablePaths {
-			fmt.Fprintf(&b, "(allow file-write* (subpath \"%s\"))\n", p)
+		_, _ = fmt.Fprintf(&b, "(allow file-write* (subpath \"%s\"))\n", p)
 		}
 	}
 
@@ -124,11 +124,11 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	}
 
 	if _, err := tmpFile.WriteString(profile); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 		return nil, fmt.Errorf("failed to write seatbelt profile: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Build the sandbox-exec command.
 	cmd := exec.CommandContext(ctx, "sandbox-exec", "-f", tmpFile.Name(), "bash", "-c", command)

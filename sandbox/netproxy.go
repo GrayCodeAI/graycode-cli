@@ -116,7 +116,7 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 
 	go func() {
 		<-ctx.Done()
-		np.server.Close()
+		_ = np.server.Close()
 	}()
 
 	return np.listener.Addr().String(), nil
@@ -237,31 +237,31 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// Hijack the client connection.
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		targetConn.Close()
+		_ = targetConn.Close()
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
 		return
 	}
 
 	clientConn, _, err := hijacker.Hijack()
 	if err != nil {
-		targetConn.Close()
+		_ = targetConn.Close()
 		http.Error(w, fmt.Sprintf("Hijack failed: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Send 200 OK to client.
-	clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	_, _ = clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 
 	// Bridge the streams.
 	go func() {
 		n, _ := io.Copy(targetConn, clientConn)
 		atomic.AddInt64(&np.Stats.TotalBytes, n)
-		targetConn.Close()
+		_ = targetConn.Close()
 	}()
 	go func() {
 		n, _ := io.Copy(clientConn, targetConn)
 		atomic.AddInt64(&np.Stats.TotalBytes, n)
-		clientConn.Close()
+		_ = clientConn.Close()
 	}()
 }
 
@@ -307,7 +307,7 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Failed to forward request: %v", err), http.StatusBadGateway)
 		return
 	}
-	defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 	// Copy response headers.
 	for key, values := range resp.Header {

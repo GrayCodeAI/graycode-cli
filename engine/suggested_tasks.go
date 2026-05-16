@@ -244,7 +244,7 @@ func ScanTODOs(projectDir string) []*SuggestedTask {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		lineNum := 0
@@ -425,7 +425,7 @@ func scanDocsTasks(projectDir string) []*SuggestedTask {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		lineNum := 0
@@ -549,7 +549,7 @@ func scanSecurityTasks(projectDir string) []*SuggestedTask {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		lineNum := 0

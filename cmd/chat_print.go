@@ -42,13 +42,13 @@ func runPrint(text string) error {
 
 	reader := bufio.NewReader(os.Stdin)
 	sess.PermissionFn = func(req engine.PermissionRequest) {
-		fmt.Fprintf(os.Stderr, "\nAllow %s: %s [y/N] ", req.ToolName, req.Summary)
+		_, _ = fmt.Fprintf(os.Stderr, "\nAllow %s: %s [y/N] ", req.ToolName, req.Summary)
 		answer, _ := reader.ReadString('\n')
 		answer = strings.TrimSpace(strings.ToLower(answer))
 		req.Response <- answer == "y" || answer == "yes"
 	}
 	sess.AskUserFn = func(question string) (string, error) {
-		fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
 		answer, _ := reader.ReadString('\n')
 		return strings.TrimSpace(answer), nil
 	}
@@ -88,7 +88,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
 			} else {
-				fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
+		_, _ = fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
 			}
 		case "tool_result":
 			content := ev.Content
@@ -98,7 +98,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
 			} else {
-				fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
+		_, _ = fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
 			}
 		case "usage":
 			if outputFormat == "stream-json" && ev.Usage != nil {

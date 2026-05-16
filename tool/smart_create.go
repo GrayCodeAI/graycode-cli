@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 // SmartCreator generates boilerplate content when creating new files based on
@@ -16,7 +15,6 @@ import (
 type SmartCreator struct {
 	ProjectDir  string
 	Conventions map[string]string
-	mu          sync.RWMutex
 }
 
 // FileTemplate describes the boilerplate template for a given file type.
@@ -492,7 +490,7 @@ func extractCopyrightHeader(filePath string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	var lines []string
@@ -539,7 +537,7 @@ func extractImportStyle(filePath string, language string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	var importLines []string
@@ -591,7 +589,7 @@ func extractGoExportedFunctions(filePath string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var functions []string
 	scanner := bufio.NewScanner(f)

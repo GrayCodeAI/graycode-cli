@@ -1,0 +1,86 @@
+# Canonical eco-wide .gitattributes template (.shared-templates/gitattributes.tmpl).
+# Auto-detect text files and normalise line endings to LF.
+
+* text=auto eol=lf
+
+# --- Source code -----------------------------------------------------------
+*.go     text eol=lf diff=golang
+*.py     text eol=lf diff=python
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.js     text eol=lf
+*.jsx    text eol=lf
+*.mjs    text eol=lf
+*.cjs    text eol=lf
+*.rs     text eol=lf diff=rust
+
+# --- Shell + config --------------------------------------------------------
+*.sh     text eol=lf
+*.bash   text eol=lf
+*.toml   text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.json   text eol=lf linguist-language=JSON
+*.jsonc  text eol=lf linguist-language=JSON
+*.cff    text eol=lf
+
+# --- Documentation ---------------------------------------------------------
+*.md     text eol=lf diff=markdown
+*.txt    text eol=lf
+
+# --- Build / packaging ----------------------------------------------------
+Makefile        text eol=lf
+*.mk            text eol=lf
+Dockerfile*     text eol=lf
+docker-compose*.yml text eol=lf
+.github/**/*.yml    text eol=lf
+.github/**/*.yaml   text eol=lf
+
+# --- Generated artefacts (mark as such for diffs and language stats) ------
+go.mod          text eol=lf linguist-generated
+go.sum          text eol=lf linguist-generated
+*.pb.go         linguist-generated
+*_generated.go  linguist-generated
+package-lock.json   linguist-generated
+pnpm-lock.yaml      linguist-generated
+yarn.lock           linguist-generated
+
+# --- Vendored / external sources ------------------------------------------
+vendor/**       linguist-vendored
+node_modules/** linguist-vendored
+testdata/**     linguist-vendored
+benchmarks/data/** linguist-vendored
+
+# --- Binary files (do not text-normalise) ---------------------------------
+*.exe    binary
+*.dll    binary
+*.so     binary
+*.dylib  binary
+*.a      binary
+*.o      binary
+*.db     binary
+*.sqlite binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.svg    text eol=lf
+*.pdf    binary
+*.zip    binary
+*.tar.gz binary
+*.tgz    binary
+*.whl    binary
+
+# --- Source archive hygiene (excluded from `git archive`) -----------------
+.github         export-ignore
+.shared-templates export-ignore
+.gitattributes  export-ignore
+.gitignore      export-ignore
+.editorconfig   export-ignore
+.golangci.yml   export-ignore
+.goreleaser.yml export-ignore
+.goreleaser.yaml export-ignore
+testdata/       export-ignore
+benchmarks/     export-ignore
+e2e/            export-ignore

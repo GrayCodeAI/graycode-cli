@@ -18,6 +18,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/engine"
 	"github.com/GrayCodeAI/hawk/plugin"
+	"github.com/GrayCodeAI/hawk/recipe"
 	"github.com/GrayCodeAI/hawk/session"
 	"github.com/GrayCodeAI/hawk/shellmode"
 	"github.com/GrayCodeAI/hawk/staleness"
@@ -32,10 +33,10 @@ func slashCommands() []string {
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 		"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
 		"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-		"/hunt", "/output-style", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
-		"/power", "/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog", "/release-notes",
+		"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
+		"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/reflect", "/refresh-model-catalog", "/release-notes",
 		"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/btw", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/stale", "/stats",
+		"/run", "/btw", "/brainstorm", "/checkpoint", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
 		"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
 		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
@@ -351,7 +352,7 @@ func (m *chatModel) saveSession() {
 	})
 	// On successful save, WAL is no longer needed (session file has everything)
 	if err == nil && m.wal != nil {
-		m.wal.Remove()
+		_ = m.wal.Remove()
 		m.wal = nil
 	}
 }
@@ -359,6 +360,11 @@ func (m *chatModel) saveSession() {
 func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(text)
 	cmd := parts[0]
+
+	// Namespaced skill invocation: /vendor:skill-name [args...]
+	if strings.Contains(cmd, ":") && strings.HasPrefix(cmd, "/") {
+		return m.handleNamespacedSkill(cmd, text)
+	}
 
 	switch cmd {
 	case "/quit", "/exit":
@@ -528,6 +534,27 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/metrics":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Metrics().Format()})
+		return m, nil
+	case "/mode":
+		if len(parts) == 1 {
+			// Show current mode
+			current := m.modeManager.Current()
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Mode: %s (auto | shell | agent)", current.String())})
+			return m, nil
+		}
+		arg := strings.ToLower(parts[1])
+		if arg == "toggle" {
+			newMode := m.modeManager.Toggle()
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Mode → %s", newMode.String())})
+			return m, nil
+		}
+		mode, ok := shellmode.ParseMode(arg)
+		if !ok {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /mode [auto|shell|agent|toggle]"})
+			return m, nil
+		}
+		m.modeManager.Set(mode)
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Mode → %s", mode.String())})
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
@@ -755,7 +782,80 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Created AGENTS.md (detected: %s). Edit it to match your project.", pt)})
 		return m, nil
 	case "/review":
-		return m.startPromptCommand("/review", "Review the current changes for bugs, regressions, missing tests, and risky behavior. Prioritize actionable findings with file references.")
+		return m.startPromptCommand("/review", engine.ReviewPrompt(nil))
+	case "/party":
+		topic := strings.TrimSpace(strings.TrimPrefix(text, "/party"))
+		if topic == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /party <topic to discuss>"})
+			return m, nil
+		}
+		ps := engine.NewPartySession(topic, nil)
+		return m.startPromptCommand("/party", ps.GeneratePrompt(1))
+	case "/brainstorm":
+		topic := strings.TrimSpace(strings.TrimPrefix(text, "/brainstorm"))
+		if topic == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /brainstorm <topic>"})
+			return m, nil
+		}
+		return m.startPromptCommand("/brainstorm", engine.BrainstormPrompt(engine.BrainstormSetup, topic, ""))
+	case "/investigate":
+		ctx := strings.TrimSpace(strings.TrimPrefix(text, "/investigate"))
+		if ctx == "" {
+			ctx = "the issue described above"
+		}
+		return m.startPromptCommand("/investigate", engine.InvestigatePrompt(engine.InvestigateReproduce, ctx))
+	case "/checkpoint":
+		return m.startPromptCommand("/checkpoint", engine.CheckpointPrompts(engine.CheckpointOrientation, nil))
+	case "/reflect":
+		return m.startPromptCommand("/reflect", engine.ReflectPrompt("this session so far"))
+	case "/spec":
+		arg := strings.TrimSpace(strings.TrimPrefix(text, "/spec"))
+		if arg == "" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /spec <what to build>"})
+			return m, nil
+		}
+		return m.startPromptCommand("/spec", engine.SpecGeneratePrompt(arg))
+	case "/soul":
+		arg := strings.TrimSpace(strings.TrimPrefix(text, "/soul"))
+		if arg == "init" {
+			return m.startPromptCommand("/soul init", engine.InitSoulPrompt())
+		}
+		soul := engine.LoadCodingSoul()
+		if soul.Style == "" && soul.Preferences == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No soul file found. Run /soul init to generate one."})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: soul.ForPrompt()})
+		}
+		return m, nil
+	case "/recipe":
+		arg := strings.TrimSpace(strings.TrimPrefix(text, "/recipe"))
+		if arg == "" || arg == "list" {
+			rn := recipe.NewRunner()
+			recipes := rn.List()
+			if len(recipes) == 0 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No recipes found in ~/.hawk/recipes/ or .hawk/recipes/"})
+			} else {
+				var list string
+				for _, r := range recipes {
+					list += fmt.Sprintf("  • %s — %s\n", r.Title, r.Description)
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Available recipes:\n" + list})
+			}
+			return m, nil
+		}
+		rn := recipe.NewRunner()
+		for _, r := range rn.List() {
+			if strings.EqualFold(r.Title, arg) || strings.Contains(strings.ToLower(r.Title), strings.ToLower(arg)) {
+				prompt, err := rn.Execute(context.Background(), r, nil)
+				if err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+					return m, nil
+				}
+				return m.startPromptCommand("/recipe "+r.Title, prompt)
+			}
+		}
+		m.messages = append(m.messages, displayMsg{role: "error", content: "Recipe not found: " + arg})
+		return m, nil
 	case "/security-review":
 		return m.startPromptCommand("/security-review", "Review the repository for security risks. Focus on command execution, file permissions, secret exposure, network access, authentication, and unsafe defaults.")
 	case "/bughunter":
@@ -825,8 +925,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		if m.registry != nil {
 			toolCount = len(m.registry.EyrieTools())
 		}
-		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
+		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
 			m.sessionID, m.session.Provider(), m.session.Model(),
+			m.modeManager.Current().String(),
 			m.session.Mode, m.session.MessageCount(), toolCount, m.session.Cost.Summary())
 		if len(addDirs) > 0 {
 			info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
@@ -834,6 +935,23 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: info})
 		return m, nil
 	case "/context":
+		arg := strings.TrimSpace(strings.TrimPrefix(text, "/context"))
+		if arg == "init" {
+			cwd, _ := os.Getwd()
+			pc := engine.NewProjectContext(cwd)
+			return m.startPromptCommand("/context init", pc.InitPrompt())
+		}
+		if arg == "show" {
+			cwd, _ := os.Getwd()
+			pc := engine.NewProjectContext(cwd)
+			content := pc.Load()
+			if content == "" {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No project context files found. Run /context init to generate."})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: content})
+			}
+			return m, nil
+		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.BuildContextWithDirs(addDirs)})
 		return m, nil
 	case "/memory":
@@ -1047,7 +1165,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 					b.WriteString(plugin.FormatSkillEntry(e))
 				}
 				if len(results) > 20 {
-					fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
+		_, _ = fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 				return m, nil
@@ -1072,7 +1190,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				var b strings.Builder
 				b.WriteString("Trending skills:\n\n")
 				for i, e := range results {
-					fmt.Fprintf(&b, "  %d. ", i+1)
+		_, _ = fmt.Fprintf(&b, "  %d. ", i+1)
 					b.WriteString(strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
@@ -1097,21 +1215,21 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				var b strings.Builder
-				fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
+		_, _ = fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
 				if entry.Version != "" {
-					fmt.Fprintf(&b, "Version: %s\n", entry.Version)
+		_, _ = fmt.Fprintf(&b, "Version: %s\n", entry.Version)
 				}
 				if entry.Author != "" {
-					fmt.Fprintf(&b, "Author: %s\n", entry.Author)
+		_, _ = fmt.Fprintf(&b, "Author: %s\n", entry.Author)
 				}
 				if entry.Description != "" {
-					fmt.Fprintf(&b, "Description: %s\n", entry.Description)
+		_, _ = fmt.Fprintf(&b, "Description: %s\n", entry.Description)
 				}
 				if entry.Repo != "" {
-					fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
+		_, _ = fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
 				}
-				fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
-				fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
+		_, _ = fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
+		_, _ = fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
 				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 				return m, nil
 
@@ -1187,10 +1305,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				}
 				var b strings.Builder
 				b.WriteString("✓ Skill validated successfully.\n\n")
-				fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
-				fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
+		_, _ = fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
+		_, _ = fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
 				if skill.Version != "" {
-					fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
+		_, _ = fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
 				}
 				b.WriteString("\nTo publish:\n")
 				b.WriteString("  1. Push your skill to a GitHub repo with skills/<name>/SKILL.md\n")
@@ -1461,7 +1579,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/export":
 		home, _ := os.UserHomeDir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
-		os.MkdirAll(exportDir, 0755)
+		_ = os.MkdirAll(exportDir, 0755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
 		md.WriteString(fmt.Sprintf("# Session %s\n\n", m.sessionID))
@@ -1489,7 +1607,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		home, _ := os.UserHomeDir()
 		feedDir := filepath.Join(home, ".hawk", "feedback")
-		os.MkdirAll(feedDir, 0755)
+		_ = os.MkdirAll(feedDir, 0755)
 		report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
 			time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)
 		fname := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))
@@ -1561,8 +1679,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
-			f.WriteString(parts[1] + "\n")
-			f.Close()
+			_, _ = f.WriteString(parts[1] + "\n")
+			_ = f.Close()
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tagged: %s", parts[1])})
 		}
 		return m, nil
@@ -1600,7 +1718,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/share":
 		home, _ := os.UserHomeDir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
-		os.MkdirAll(exportDir, 0755)
+		_ = os.MkdirAll(exportDir, 0755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
 		md.WriteString(fmt.Sprintf("# Hawk Session %s\n\n", m.sessionID))
@@ -1626,10 +1744,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/sandbox":
 		if string(m.session.Mode) == "acceptEdits" {
-			m.session.SetPermissionMode("default")
+			_ = m.session.SetPermissionMode("default")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ON — all actions require approval."})
 		} else {
-			m.session.SetPermissionMode("acceptEdits")
+			_ = m.session.SetPermissionMode("acceptEdits")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox OFF — file edits auto-approved, other actions require approval."})
 		}
 		return m, nil
@@ -1958,10 +2076,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 
 	case "/yolo":
 		if string(m.session.Mode) == "bypassPermissions" {
-			m.session.SetPermissionMode("default")
+			_ = m.session.SetPermissionMode("default")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Yolo mode OFF — all actions require approval."})
 		} else {
-			m.session.SetPermissionMode("bypassPermissions")
+			_ = m.session.SetPermissionMode("bypassPermissions")
 			m.messages = append(m.messages, displayMsg{role: "system", content: "⚠ Yolo mode ON — all tool calls auto-approved."})
 		}
 		return m, nil
@@ -1975,6 +2093,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		if wal, err := session.NewWAL(sid); err == nil {
 			m.wal = wal
 		}
+		m.termCtx.Reset()
+		m.ghostText.Clear()
 		m.messages = append(m.messages, displayMsg{role: "system", content: "New session started."})
 		return m, nil
 
@@ -2074,7 +2194,82 @@ func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
 	if result.ExitCode != 0 && output == "" {
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("exit code: %d", result.ExitCode)})
 	}
+
+	// Smart reroute: if command failed with NL markers, offer to send to AI
+	if result.ExitCode != 0 && shellmode.RerouteCandidate(command, result.Stderr, result.ExitCode) {
+		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ Natural language detected in failed command — rerouting to AI..."})
+		m.termCtx.MarkExitCode(result.ExitCode)
+		query := m.termCtx.BuildContext(command)
+		m.messages = append(m.messages, displayMsg{role: "user", content: command})
+		m.session.AddUser(query)
+		m.ghostText.SuggestExplicit(command) // suggest the original command for retry
+		m.waiting = true
+		m.autoScroll = true
+		m.viewDirty = true
+		m.partial.Reset()
+		m.startStream()
+		return m, nil
+	}
+
+	m.termCtx.MarkExitCode(result.ExitCode)
 	m.viewDirty = true
+	return m, nil
+}
+
+// handleNamespacedSkill handles /vendor:skill-name invocations.
+func (m *chatModel) handleNamespacedSkill(cmd, fullText string) (tea.Model, tea.Cmd) {
+	// Parse /vendor:skill-name
+	invoke := cmd // e.g. "/hawk:go-review"
+
+	// Search active and installed skills for matching invoke pattern
+	var matched *plugin.SmartSkill
+	for name, skill := range m.activeSkills {
+		if skill.Invoke == invoke || "/hawk:"+name == invoke {
+			matched = &skill
+			break
+		}
+	}
+
+	if matched == nil {
+		// Try loading from installed skills
+		skills := plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+		for i := range skills {
+			if skills[i].Invoke == invoke || "/hawk:"+skills[i].Name == invoke {
+				matched = &skills[i]
+				break
+			}
+		}
+	}
+
+	if matched == nil {
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Skill not found: %s", invoke)})
+		return m, nil
+	}
+
+	// Activate the skill and send as context
+	// Check for chain conflicts
+	conflicts := plugin.ResolveChainConflicts(*matched, m.activeSkills)
+	if len(conflicts) > 0 {
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Conflicts with active skill(s): %s", strings.Join(conflicts, ", "))})
+	}
+
+	m.activeSkills[matched.Name] = *matched
+	args := strings.TrimSpace(strings.TrimPrefix(fullText, cmd))
+	prompt := matched.Content
+	if args != "" {
+		prompt = fmt.Sprintf("[Skill: %s]\n%s\n\n[User request]: %s", matched.Name, prompt, args)
+	} else {
+		prompt = fmt.Sprintf("[Skill: %s activated]\n%s", matched.Name, prompt)
+	}
+
+	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚡ Skill activated: %s", matched.Name)})
+	m.messages = append(m.messages, displayMsg{role: "user", content: args})
+	m.session.AddUser(prompt)
+	m.waiting = true
+	m.autoScroll = true
+	m.viewDirty = true
+	m.partial.Reset()
+	m.startStream()
 	return m, nil
 }
 

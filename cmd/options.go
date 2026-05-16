@@ -136,7 +136,7 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 		if cp.Name == "" || cp.BaseURL == "" {
 			continue
 		}
-		client.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
+		_ = client.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
 		if cp.Model != "" {
 			hawkmodel.RegisterDynamic(hawkmodel.ModelInfo{
 				Name:        cp.Model,

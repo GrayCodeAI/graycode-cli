@@ -225,7 +225,7 @@ func runGit(dir string, args ...string) (string, error) {
 // findFocusFiles finds files matching the focus string in the directory.
 func findFocusFiles(dir, focus string) []string {
 	var result []string
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -282,7 +282,7 @@ func renderCXML(dir string) (string, string, error) {
 	var files []struct{ rel, content string }
 	var scanned, skipped int
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

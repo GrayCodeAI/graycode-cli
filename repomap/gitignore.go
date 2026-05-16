@@ -80,7 +80,7 @@ func parseGitignore(path, baseDir string) []ignoreRule {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var rules []ignoreRule
 	scanner := bufio.NewScanner(f)

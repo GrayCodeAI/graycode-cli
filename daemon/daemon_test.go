@@ -151,3 +151,135 @@ func TestDaemon_GracefulShutdown(t *testing.T) {
 		t.Errorf("Stop failed: %v", err)
 	}
 }
+
+func TestDefaultConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Port != 4590 {
+		t.Errorf("DefaultConfig().Port = %d, want 4590", cfg.Port)
+	}
+	if cfg.Host != "127.0.0.1" {
+		t.Errorf("DefaultConfig().Host = %q, want 127.0.0.1", cfg.Host)
+	}
+}
+
+func TestDaemon_Stats(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	resp, err := http.Get("http://" + addr + "/v1/stats")
+	if err != nil {
+		t.Fatalf("GET /v1/stats failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestDaemon_InvalidMethod(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	req, _ := http.NewRequest("DELETE", "http://"+addr+"/v1/health", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("DELETE /v1/health failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		t.Error("DELETE on health endpoint should not return 200")
+	}
+}
+
+func TestDaemon_InvalidJSON(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	resp, err := http.Post("http://"+addr+"/v1/chat", "application/json", bytes.NewReader([]byte("not json")))
+	if err != nil {
+		t.Fatalf("POST /v1/chat failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 400 {
+		t.Errorf("expected 400 for invalid JSON, got %d", resp.StatusCode)
+	}
+}
+
+func TestDaemon_GetSession_MissingID(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	resp, err := http.Get("http://" + addr + "/v1/sessions/nonexistent-id")
+	if err != nil {
+		t.Fatalf("GET /v1/sessions/x failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 404 {
+		t.Errorf("expected 404 for nonexistent session, got %d", resp.StatusCode)
+	}
+}
+
+func TestChatRequest_JSON(t *testing.T) {
+	req := ChatRequest{
+		Prompt:    "test prompt",
+		SessionID: "sess-123",
+		Model:     "claude-sonnet",
+		MaxTurns:  5,
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+	var decoded ChatRequest
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Unmarshal error: %v", err)
+	}
+	if decoded.Prompt != req.Prompt {
+		t.Errorf("Prompt = %q, want %q", decoded.Prompt, req.Prompt)
+	}
+	if decoded.MaxTurns != req.MaxTurns {
+		t.Errorf("MaxTurns = %d, want %d", decoded.MaxTurns, req.MaxTurns)
+	}
+}
+
+func TestErrorResponse_JSON(t *testing.T) {
+	resp := ErrorResponse{
+		Error:   "something failed",
+		Code:    "internal_error",
+		Details: "stack trace here",
+	}
+	data, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+	var decoded ErrorResponse
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Unmarshal error: %v", err)
+	}
+	if decoded.Error != resp.Error {
+		t.Errorf("Error = %q, want %q", decoded.Error, resp.Error)
+	}
+	if decoded.Code != resp.Code {
+		t.Errorf("Code = %q, want %q", decoded.Code, resp.Code)
+	}
+}

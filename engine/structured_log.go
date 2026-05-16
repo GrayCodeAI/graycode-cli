@@ -153,7 +153,7 @@ func (l *StructuredLogger) log(level LogLevel, msg string, fields ...map[string]
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	fmt.Fprintln(l.Output, output)
+	_, _ = fmt.Fprintln(l.Output, output)
 }
 
 func (l *StructuredLogger) formatJSON(entry LogEntry) string {
@@ -341,7 +341,7 @@ func (rw *RotatingWriter) openNew() error {
 	}
 	info, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("stat log file: %w", err)
 	}
 	rw.file = f
@@ -352,23 +352,23 @@ func (rw *RotatingWriter) openNew() error {
 
 func (rw *RotatingWriter) rotate() error {
 	if rw.file != nil {
-		rw.file.Close()
+		_ = rw.file.Close()
 	}
 
 	// Shift existing rotated files.
 	for i := rw.MaxFiles - 1; i >= 1; i-- {
 		src := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, i))
 		dst := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, i+1))
-		os.Rename(src, dst)
+		_ = os.Rename(src, dst)
 	}
 
 	// Rename current to .1.log.
 	rotated := filepath.Join(rw.Dir, fmt.Sprintf("%s.1.log", rw.Prefix))
-	os.Rename(rw.current, rotated)
+	_ = os.Rename(rw.current, rotated)
 
 	// Remove excess files.
 	excess := filepath.Join(rw.Dir, fmt.Sprintf("%s.%d.log", rw.Prefix, rw.MaxFiles+1))
-	os.Remove(excess)
+	_ = os.Remove(excess)
 
 	return rw.openNew()
 }

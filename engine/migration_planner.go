@@ -618,7 +618,7 @@ func (mp *MigrationPlanner) findMatchingLines(filePath, text string) []int {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []int
 	scanner := bufio.NewScanner(f)

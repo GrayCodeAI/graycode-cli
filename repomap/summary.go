@@ -405,7 +405,7 @@ func FindEntryPoints(projectDir string) []string {
 	var entryPoints []string
 	seen := make(map[string]bool)
 
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -469,7 +469,7 @@ func FindKeyFiles(projectDir string, limit int) []string {
 	importCounts := make(map[string]int) // how many files import this one
 
 	// First pass: collect all files and count imports
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -639,7 +639,7 @@ func RenderCompact(summary *CodebaseSummary) string {
 func summaryDetectLanguage(projectDir string) string {
 	counts := map[string]int{}
 
-	filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil {
 			return nil
 		}
@@ -720,7 +720,7 @@ func summaryCountFileLines(path string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	count := 0
 	scanner := bufio.NewScanner(f)
@@ -789,7 +789,7 @@ func summaryExtractImports(path string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var imports []string
 	scanner := bufio.NewScanner(f)
@@ -840,7 +840,7 @@ func summaryHasGoMain(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	hasPackageMain := false
 	hasFuncMain := false
@@ -864,7 +864,7 @@ func summaryHasPythonMain(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {

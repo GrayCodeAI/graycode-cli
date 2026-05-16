@@ -1,0 +1,36 @@
+# CODEOWNERS for hawk
+#
+# These owners will be the default owners for everything in the repo. Unless
+# a later match takes precedence, they will be requested for review when
+# someone opens a pull request.
+#
+# Format reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global default
+* @GrayCodeAI/maintainers
+
+# Engine and core agent loop
+/engine/         @GrayCodeAI/core-team
+/cmd/            @GrayCodeAI/core-team
+/tool/           @GrayCodeAI/core-team
+/session/        @GrayCodeAI/core-team
+
+# Sandbox / container / permissions (security-sensitive)
+/sandbox/        @GrayCodeAI/security-team
+/permissions/    @GrayCodeAI/security-team
+/container/      @GrayCodeAI/security-team
+/auth/           @GrayCodeAI/security-team
+
+# CI / release / build tooling
+/.github/        @GrayCodeAI/devops-team
+/Makefile        @GrayCodeAI/devops-team
+/.goreleaser.yml @GrayCodeAI/devops-team
+/Dockerfile      @GrayCodeAI/devops-team
+
+# Versioning + release artefacts
+/VERSION         @GrayCodeAI/maintainers
+/CHANGELOG.md    @GrayCodeAI/maintainers
+
+# Documentation
+*.md             @GrayCodeAI/docs-team
+/docs/           @GrayCodeAI/docs-team
