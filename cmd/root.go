@@ -9,6 +9,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/onboarding"
 	"github.com/GrayCodeAI/hawk/plugin"
+	"github.com/GrayCodeAI/hawk/session"
 	"github.com/spf13/cobra"
 )
 
@@ -54,6 +55,7 @@ var (
 	autoSkillFlag              bool
 	containerMode              bool
 	noContainer                bool
+	recoverFlag                bool
 )
 
 // SetVersion sets the version string from main.
@@ -121,6 +123,22 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		// Extract bundled skills on first run.
+		if n, _ := plugin.ExtractBundledSkills(); n > 0 {
+			fmt.Printf("Extracted %d bundled skills to ~/.hawk/bundled-skills/\n", n)
+		}
+
+		// Recovery: scan for interrupted sessions before launching TUI.
+		if recoverFlag {
+			candidates := session.ScanForRecovery()
+			if len(candidates) > 0 {
+				// Auto-resume the most recent interrupted session
+				c := candidates[0]
+				fmt.Printf("Found interrupted session %s (%s, %d msgs)\n", c.SessionID, c.Interruption, c.MessageCount)
+				resumeID = c.SessionID
+			}
+		}
+
 		// Launch TUI
 		return runChat()
 	},
@@ -167,6 +185,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&noContainer, "no-container", false, "disable container mode (run on host with permission prompts)")
 	rootCmd.Flags().BoolVar(&containerMode, "container", false, "force container mode even if auto-detection would skip it")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
+	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(doctorCmd)
@@ -194,6 +213,7 @@ func init() {
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(evalCmd)
+	rootCmd.AddCommand(recoverCmd)
 }
 
 var completionCmd = &cobra.Command{
@@ -469,4 +489,39 @@ func init() {
 // Execute runs the root command.
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+var recoverCmd = &cobra.Command{
+	Use:   "recover [session-id]",
+	Short: "Scan for interrupted sessions and resume",
+	Long: `Scan for sessions that were interrupted (crash, terminal close, etc.)
+and offer to resume them. If a session-id is provided, resume that specific session.
+
+Examples:
+  hawk recover              # List interrupted sessions
+  hawk recover abc123       # Resume specific session
+  hawk --recover            # Auto-resume most recent interrupted session`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			// Resume specific session
+			s, note, err := session.ResumeSession(args[0])
+			if err != nil {
+				return err
+			}
+			cmd.Println(note)
+			cmd.Printf("Session %s ready to resume (%d messages, %s/%s)\n",
+				s.ID, len(s.Messages), s.Provider, s.Model)
+			return nil
+		}
+
+		// Scan and list
+		candidates := session.ScanForRecovery()
+		cmd.Println(session.FormatRecoveryCandidates(candidates))
+
+		if len(candidates) > 0 {
+			cmd.Println("Resume with: hawk recover <id>")
+			cmd.Println("Or launch TUI with: hawk --recover")
+		}
+		return nil
+	},
 }

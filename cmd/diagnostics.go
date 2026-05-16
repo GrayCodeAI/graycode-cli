@@ -8,6 +8,8 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/config"
 	"github.com/GrayCodeAI/hawk/health"
+	"github.com/GrayCodeAI/hawk/memory"
+	"github.com/GrayCodeAI/hawk/plugin"
 	"github.com/GrayCodeAI/hawk/session"
 )
 
@@ -34,13 +36,37 @@ func doctorReport(settings hawkconfig.Settings) string {
 			b.WriteString("  " + line + "\n")
 		}
 	}
-	if hawkconfig.LoadAgentsMD() != "" {
+
+	// Project instructions
+	if md := hawkconfig.LoadAgentsMD(); md != "" {
 		b.WriteString("\nProject instructions: found\n")
 	} else {
-		b.WriteString("\nProject instructions: not found\n")
+		b.WriteString("\nProject instructions: not found (consider creating AGENTS.md)\n")
 	}
+
+	// Yaad memory status
+	b.WriteString("\n" + memory.YaadStatus() + "\n")
+
+	// Bundled skills
+	bundledDir := plugin.BundledSkillsDir()
+	if _, err := os.Stat(bundledDir); err == nil {
+		entries, _ := os.ReadDir(bundledDir)
+		b.WriteString(fmt.Sprintf("Bundled skills: %d extracted\n", len(entries)))
+	} else {
+		b.WriteString("Bundled skills: not yet extracted\n")
+	}
+
 	b.WriteString(fmt.Sprintf("Configured MCP servers: %d\n", len(settings.MCPServers)+len(mcpServers)))
 	b.WriteString(fmt.Sprintf("Built-in tools: %d\n", len(baseTools())))
+
+	// Session recovery status
+	recoveryCandidates := session.ScanForRecovery()
+	if len(recoveryCandidates) > 0 {
+		b.WriteString(fmt.Sprintf("\nInterrupted sessions: %d (run hawk recover)\n", len(recoveryCandidates)))
+	} else {
+		b.WriteString("\nInterrupted sessions: none\n")
+	}
+
 	b.WriteString("\n" + healthCheckReport(settings, provider) + "\n")
 	return strings.TrimRight(b.String(), "\n")
 }
