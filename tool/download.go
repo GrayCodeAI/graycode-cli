@@ -49,7 +49,8 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	}
 
 	client := &http.Client{Timeout: 2 * time.Minute}
-	resp, err := client.Get(p.URL)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, p.URL, nil)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
 	}
