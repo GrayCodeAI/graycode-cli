@@ -90,19 +90,31 @@ func TestListAll_FromDir(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write some agent files
-	os.WriteFile(filepath.Join(dir, "worker.md"), []byte("---\nname: worker\n---\nDo work."), 0o644)
-	os.WriteFile(filepath.Join(dir, "reviewer.md"), []byte("---\nname: reviewer\n---\nReview code."), 0o644)
-	os.WriteFile(filepath.Join(dir, "not-md.txt"), []byte("ignored"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "worker.md"), []byte("---\nname: worker\n---\nDo work."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "reviewer.md"), []byte("---\nname: reviewer\n---\nReview code."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "not-md.txt"), []byte("ignored"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	// Override the agent dirs for testing
 	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	if err := os.Setenv("HOME", dir); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Setenv("HOME", origHome) //nolint:errcheck
 
 	// Create ~/.hawk/agents
 	agentDir := filepath.Join(dir, ".hawk", "agents")
-	os.MkdirAll(agentDir, 0o755)
-	os.WriteFile(filepath.Join(agentDir, "test.md"), []byte("---\nname: test\n---\nTest prompt."), 0o644)
+	if err := os.MkdirAll(agentDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agentDir, "test.md"), []byte("---\nname: test\n---\nTest prompt."), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	agents, err := ListAll()
 	if err != nil {

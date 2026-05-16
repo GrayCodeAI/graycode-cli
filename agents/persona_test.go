@@ -520,9 +520,15 @@ temperature: 0.7
 ---
 You are persona two.
 `
-	os.WriteFile(filepath.Join(dir, "persona-one.md"), []byte(file1), 0o644)
-	os.WriteFile(filepath.Join(dir, "persona-two.md"), []byte(file2), 0o644)
-	os.WriteFile(filepath.Join(dir, "not-a-persona.txt"), []byte("ignored"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "persona-one.md"), []byte(file1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "persona-two.md"), []byte(file2), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "not-a-persona.txt"), []byte("ignored"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	r := NewPersonaRegistry(dir)
 	if err := r.LoadAll(); err != nil {
