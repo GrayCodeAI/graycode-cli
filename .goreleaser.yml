@@ -80,14 +80,6 @@ checksum:
   algorithm: sha256
 
 # ---------------------------------------------------------------------------
-# SBOM — generated with anchore/syft for every artefact (industry standard).
-# ---------------------------------------------------------------------------
-sboms:
-  - artifacts: archive
-    documents:
-      - "${artifact}.spdx.sbom.json"
-
-# ---------------------------------------------------------------------------
 # Snapshot — unreleased dev builds get a clear synthetic version.
 # ---------------------------------------------------------------------------
 snapshot:
