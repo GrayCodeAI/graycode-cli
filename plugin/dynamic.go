@@ -582,7 +582,7 @@ func (dm *DynamicPluginManager) executeDaemonTool(ctx context.Context, dp *Dynam
 		"id":      time.Now().UnixNano(),
 		"params": map[string]interface{}{
 			"name":  toolName,
-			"input": json.RawMessage(input),
+			"input": input,
 		},
 	}
 
