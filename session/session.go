@@ -9,29 +9,23 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/shared/types"
 )
 
 // Message is a persisted conversation message.
 type Message struct {
-	Role       string      `json:"role"`
-	Content    string      `json:"content,omitempty"`
-	ToolUse    []ToolCall  `json:"tool_use,omitempty"`
-	ToolResult *ToolResult `json:"tool_result,omitempty"`
+	Role       string           `json:"role"`
+	Content    string           `json:"content,omitempty"`
+	ToolUse    []types.ToolCall `json:"tool_use,omitempty"`
+	ToolResult *types.ToolResult `json:"tool_result,omitempty"`
 }
 
-// ToolCall mirrors client.ToolCall for persistence.
-type ToolCall struct {
-	ID        string                 `json:"id"`
-	Name      string                 `json:"name"`
-	Arguments map[string]interface{} `json:"arguments"`
-}
+// ToolCall is an alias to the shared ToolCall type for persistence.
+type ToolCall = types.ToolCall
 
-// ToolResult mirrors client.ToolResult for persistence.
-type ToolResult struct {
-	ToolUseID string `json:"tool_use_id"`
-	Content   string `json:"content"`
-	IsError   bool   `json:"is_error,omitempty"`
-}
+// ToolResult is an alias to the shared ToolResult type for persistence.
+type ToolResult = types.ToolResult
 
 // Session is a persisted conversation.
 type Session struct {

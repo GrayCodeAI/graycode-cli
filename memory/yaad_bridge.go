@@ -85,6 +85,11 @@ func (b *YaadBridge) notReadyError(op string) error {
 // Category maps to yaad's node type (e.g., "convention", "decision", "bug", "preference").
 // Returns a BridgeError if yaad is not initialized.
 func (b *YaadBridge) Remember(content, category string) error {
+	return b.RememberWithContext(context.Background(), content, category)
+}
+
+// RememberWithContext is the context-aware version of Remember.
+func (b *YaadBridge) RememberWithContext(ctx context.Context, content, category string) error {
 	if !b.ready {
 		return b.notReadyError("Remember")
 	}
@@ -96,7 +101,7 @@ func (b *YaadBridge) Remember(content, category string) error {
 		nodeType = "convention"
 	}
 
-	_, err := b.engine.Remember(context.Background(), yaadEngine.RememberInput{
+	_, err := b.engine.Remember(ctx, yaadEngine.RememberInput{
 		Type:    nodeType,
 		Content: content,
 		Scope:   "project",
@@ -107,13 +112,18 @@ func (b *YaadBridge) Remember(content, category string) error {
 // Recall searches yaad's memory graph and returns formatted context that fits
 // within the specified token budget. Returns a BridgeError if yaad is not initialized.
 func (b *YaadBridge) Recall(query string, tokenBudget int) (string, error) {
+	return b.RecallWithContext(context.Background(), query, tokenBudget)
+}
+
+// RecallWithContext is the context-aware version of Recall.
+func (b *YaadBridge) RecallWithContext(ctx context.Context, query string, tokenBudget int) (string, error) {
 	if !b.ready {
 		return "", b.notReadyError("Recall")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	result, err := b.engine.Recall(context.Background(), yaadEngine.RecallOpts{
+	result, err := b.engine.Recall(ctx, yaadEngine.RecallOpts{
 		Query:  query,
 		Budget: tokenBudget,
 		Limit:  10,

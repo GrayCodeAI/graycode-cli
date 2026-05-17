@@ -26,8 +26,8 @@ type Config struct {
 // DefaultConfig returns a default sandbox configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		Enabled:      false,
-		Type:         "none",
+		Enabled:      true,
+		Type:         "auto",
 		AllowNetwork: true,
 		AllowWrite:   true,
 		MaxMemoryMB:  512,
@@ -123,10 +123,11 @@ func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 		return exec.CommandContext(ctx, "bash", "-c", command), nil
 	}
 
-	// On darwin, default to seatbelt when type is empty or unrecognized.
+	// Auto-select the best available sandbox backend.
 	sandboxType := s.config.Type
-	if runtime.GOOS == "darwin" && (sandboxType == "" || sandboxType == "none") {
-		sandboxType = "seatbelt"
+	if sandboxType == "" || sandboxType == "none" || sandboxType == "auto" {
+		selection := SelectSandbox(IsolationDefault, "")
+		sandboxType = selection.Backend
 	}
 
 	switch sandboxType {

@@ -12,6 +12,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/shared/types"
 )
 
 //go:embed VERSION
@@ -55,6 +57,20 @@ func (s Severity) level() string {
 		return "note"
 	default:
 		return "none"
+	}
+}
+
+// FromSharedSeverity converts a shared types.Severity to SARIF Severity.
+func FromSharedSeverity(s types.Severity) Severity {
+	switch s {
+	case types.SeverityCritical, types.SeverityHigh:
+		return SeverityError
+	case types.SeverityMedium:
+		return SeverityWarning
+	case types.SeverityLow:
+		return SeverityNote
+	default:
+		return SeverityNone
 	}
 }
 
