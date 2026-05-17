@@ -30,6 +30,13 @@ const (
 	ProviderSwitch  = "provider.switch"
 	UserInput       = "user.input"
 	AgentResponse   = "agent.response"
+
+	// Review lifecycle events
+	ReviewQueued    = "review.queued"
+	ReviewStarted   = "review.started"
+	ReviewCompleted = "review.completed"
+	ReviewFailed    = "review.failed"
+	ReviewFixed     = "review.fixed"
 )
 
 // Event represents a single lifecycle event emitted by the agent.
