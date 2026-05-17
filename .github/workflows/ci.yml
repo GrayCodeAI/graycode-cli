@@ -71,6 +71,8 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+      - name: Remove go.work (local dev only)
+        run: rm -f go.work go.work.sum
       - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1.0
