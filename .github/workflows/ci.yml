@@ -77,6 +77,8 @@ jobs:
           install-mode: goinstall
           verify: false
           args: --timeout=5m
+        env:
+          GOWORK: "off"
 
   # -------------------------------------------------------------------------
   # Tests with race detector + coverage upload.
