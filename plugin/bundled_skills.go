@@ -1,15 +1,11 @@
 package plugin
 
 import (
-	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
-
-//go:embed bundled/*
-var bundledSkillsFS embed.FS
 
 // BundledSkill defines a skill that ships with hawk.
 type BundledSkill struct {
