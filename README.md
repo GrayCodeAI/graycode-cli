@@ -1,204 +1,157 @@
-# 🦅 hawk
+<p align="center">
+  <img src="https://github.com/GrayCodeAI/hawk/raw/main/assets/logo.svg" alt="hawk" width="480"/>
+</p>
 
-AI coding agent that reads, writes, and runs code in your terminal.
+<h1 align="center">AI Coding Agent for Your Terminal</h1>
 
-Built on [eyrie](https://github.com/GrayCodeAI/eyrie) (universal LLM provider), [tok](https://github.com/GrayCodeAI/tok) (tokenizer/compression), [yaad](https://github.com/GrayCodeAI/yaad) (graph memory), and [trace](https://github.com/GrayCodeAI/trace) (session capture).
+<p align="center">
+  Read, write, and run code with AI — fully local, model-agnostic, open source.
+</p>
 
-## Install
+<p align="center">
+  <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
+  <a href="https://github.com/GrayCodeAI/hawk/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/GrayCodeAI/hawk/ci.yml?style=flat-square&label=tests" alt="CI"></a>
+  <a href="https://github.com/GrayCodeAI/hawk/releases"><img src="https://img.shields.io/github/v/release/GrayCodeAI/hawk?style=flat-square&label=release&color=green" alt="Release"></a>
+  <a href="https://pkg.go.dev/github.com/GrayCodeAI/hawk"><img src="https://img.shields.io/badge/godoc-reference-00ADD8?style=flat-square&logo=go" alt="GoDoc"></a>
+</p>
 
-```bash
-# Homebrew (macOS/Linux)
-brew install GrayCodeAI/tap/hawk
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#skills">Skills</a> ·
+  <a href="#tools">Tools</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
 
-# Go
-go install github.com/GrayCodeAI/hawk@latest
+---
 
-# Script (with checksum verification)
-curl -fsSL https://raw.githubusercontent.com/GrayCodeAI/hawk/main/install.sh | sh
+## Why hawk
 
-# From source
-git clone https://github.com/GrayCodeAI/hawk && cd hawk && go install .
-```
+hawk is an AI-powered coding agent that lives in your terminal. It reads your codebase, writes and edits files, runs tests, and manages git — all through natural language. Unlike IDE-bound tools, hawk works over SSH, in containers, and on any machine with a shell.
+
+- **Model-agnostic** — works with Claude, GPT-4, Gemini, DeepSeek, Ollama, and 75+ models through [eyrie](https://github.com/GrayCodeAI/eyrie)
+- **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
+- **Privacy-first** — your code never leaves your machine except to the LLM API you choose
+- **Extensible** — 40+ built-in tools, MCP server support, community skill registry
 
 ## Quick Start
 
 ```bash
+# Install
+brew install GrayCodeAI/tap/hawk
+
+# Set your API key
 export ANTHROPIC_API_KEY=sk-ant-...
+
+# Start coding
 hawk
 ```
 
-## Model Agnostic
-
-Hawk is fully model-agnostic. Model discovery, pricing, and routing are handled by **eyrie**. Hawk stores only provider, model, and API-key configuration.
+Or install via other methods:
 
 ```bash
-# One-time setup
-hawk config provider openai
-hawk config key openai sk-...
-hawk config model gpt-4o
+# Go install
+go install github.com/GrayCodeAI/hawk@latest
 
-# Per-run override
-hawk --provider openai --model gpt-4o
+# Install script (with checksum verification)
+curl -fsSL https://raw.githubusercontent.com/GrayCodeAI/hawk/main/install.sh | sh
 
-# Non-interactive
-hawk -p "summarize this repo" --provider anthropic --model claude-sonnet-4-20250514
+# From source
+git clone https://github.com/GrayCodeAI/hawk && cd hawk && go build .
 ```
 
-In chat: `/config provider <name>`, `/config key <provider> <api-key>`, `/model <name>`.
+## Features
+
+### Interactive Terminal UI
+
+Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) for a smooth, keyboard-driven experience with vim-style keybindings.
+
+### 40+ Built-in Tools
+
+| Category | Tools |
+|---|---|
+| **Files** | `Read`, `Write`, `Edit`, `LS`, `Glob`, `Grep` |
+| **Shell** | `Bash`, `PowerShell`, `CronCreate`, `CronDelete` |
+| **Git** | `GitCommit`, `SmartCommit`, `EnterWorktree`, `ExitWorktree` |
+| **Web** | `WebFetch`, `WebSearch`, `CodeSearch` |
+| **Tasks** | `TodoWrite`, `TaskCreate`, `TaskList`, `TaskUpdate` |
+| **Code** | `LSP` diagnostics, `CodeSearch`, `NotebookEdit` |
+| **MCP** | `ListMcpResources`, `ReadMcpResource` |
+
+### Multi-Agent Mission Mode
+
+Decompose complex work into parallel feature branches:
+
+```bash
+hawk mission "Add auth, rate limiting, and logging"
+```
+
+Each sub-agent runs in its own git worktree with full autonomy.
+
+### Community Skills
+
+Discover and install modular instruction packages for specialized workflows:
+
+```bash
+hawk skills search api        # Search community registry
+hawk skills install go-review # Install from GitHub
+hawk skills audit             # Security scan installed skills
+```
+
+### Permission System
+
+hawk asks before running dangerous tools. Auto-mode learns from your decisions, with emergency killswitch support.
+
+### MCP & LSP Support
+
+Connect external tools via [Model Context Protocol](https://modelcontextprotocol.io/) and get code intelligence through Language Server Protocol.
 
 ## Usage
 
+### Interactive Mode
+
 ```bash
-hawk                          # Interactive REPL
-hawk -p "explain this code"   # Print response and exit
-hawk -m gpt-4o                # Specify model
-hawk --provider openai        # Force provider
-hawk -r abc123                # Resume session
-hawk -c                       # Continue latest session
-hawk --fork-session -r abc123 # Resume as new session
-hawk --mcp "npx @mcp/server"  # Connect MCP server
+hawk                              # Start REPL
+hawk -r abc123                    # Resume session
+hawk -c                           # Continue latest session
+hawk --provider openai --model gpt-4o  # Override provider
+```
+
+### Non-Interactive Mode
+
+```bash
+hawk -p "explain this repo"                    # Print response, exit
 hawk -p "fix tests" --allowed-tools "Bash(go test:*) Edit Read"
-hawk -p "plan only" --permission-mode plan --tools "Read,Grep,Glob"
-hawk exec "fix all tests"     # Non-interactive with full engine
-hawk exec --auto full -o json "add error handling"
-hawk exec --worktree "refactor auth module"
-hawk exec --agent reviewer "review last commit"
-hawk daemon start             # Background HTTP server
-hawk daemon status            # Check if daemon running
-hawk mission "add auth, rate limiting, and tests"
-hawk mission --dry-run "decompose this into features"
-hawk search "authentication"  # Search across all sessions
-hawk agent list               # List custom personas
-hawk agent create debugger    # Create new persona
-hawk doctor                   # Run diagnostics
-hawk config                   # Show effective settings
-hawk sessions                 # List saved sessions
-hawk tools                    # List built-in tools
-hawk skills search api        # Search community skills
-hawk skills install GrayCodeAI/hawk-skills go-review
-hawk skills audit             # Security scan installed skills
-hawk --auto-skill             # Auto-detect project, install matching skills
+hawk exec "refactor auth module"               # Full engine, non-interactive
+hawk exec --auto full "add error handling"     # Full autonomy
+hawk exec --worktree "add rate limiting"       # Isolated branch
+hawk exec --agent reviewer "review last commit" # Custom persona
 ```
 
-## Skills
-
-Hawk has a community skill registry — modular instruction packages that teach the agent specialized workflows.
+### Daemon Mode
 
 ```bash
-# In the REPL
-/skills                          # List installed skills
-/skills search <query>           # Search community registry
-/skills trending                 # Most popular skills
-/skills install <owner/repo>     # Install from GitHub
-/skills use <name>               # Activate for this session
-/skills deactivate <name>        # Deactivate
-/skills new <description>        # Create a new skill (LLM wizard)
-/skills info <name>              # Show details
-/skills remove <name>            # Uninstall
-/skills feedback <name> <1-5>    # Rate a skill
-/skills audit                    # Security scan for hidden Unicode threats
-/skills publish <dir>            # Validate and publish
-
-/learn                           # LLM-powered skill advisor
-/learn deep                      # Advisor with source file analysis
-/learn update                    # Re-analyze and flag outdated skills
-
-# Non-interactive (CI/scripts)
-hawk skills list
-hawk skills search api --category engineering --json
-hawk skills install GrayCodeAI/hawk-skills go-review --scope user
-hawk skills audit --json
-hawk --auto-skill
+hawk daemon start              # Background HTTP server on port 4590
+hawk daemon status             # Check if running
+hawk daemon stop               # Graceful shutdown
 ```
 
-Skills are discovered from `.hawk/skills/`, `.agents/skills/` (agentskills.io), `~/.hawk/skills/`, and Claude/Codex directories for cross-agent compatibility. Install includes automatic security scanning — skills with dangerous hidden Unicode are sanitized on install.
+Endpoints: `GET /v1/health`, `POST /v1/chat` (JSON or SSE streaming)
 
-## Tools (40)
+### Mission Mode
 
-| Tool | Description |
-|---|---|
-| `Bash` | Run shell commands |
-| `Read` | Read files with line ranges |
-| `Write` | Create/overwrite files |
-| `Edit` | String replacement editing |
-| `LS` | Directory listing |
-| `Glob` | File pattern matching |
-| `Grep` | Regex search in files |
-| `WebFetch` | Fetch URLs, HTML→text |
-| `WebSearch` | DuckDuckGo search |
-| `ToolSearch` | Search available tools |
-| `Skill` | Load local skill instructions |
-| `Agent` | Spawn sub-agents for parallel tasks |
-| `AskUserQuestion` | Ask clarifying questions |
-| `TodoWrite` | Task list management |
-| `TaskCreate/Get/List/Update` | Persistent task CRUD |
-| `TaskOutput` | Read background task output |
-| `TaskStop` | Stop a background task |
-| `LSP` | Code diagnostics (go vet, tsc, etc.) |
-| `EnterPlanMode` / `ExitPlanMode` | Plan mode control |
-| `EnterWorktree` / `ExitWorktree` | Git worktree isolation |
-| `NotebookEdit` | Edit Jupyter notebook cells |
-| `ListMcpResources` / `ReadMcpResource` | MCP resource access |
-| `Config` | Read/modify hawk config |
-| `SendUserMessage` | Send brief status update |
-| `Sleep` | Pause execution |
-| `CronCreate/Delete/List` | Scheduled task management |
-| `VerifyPlanExecution` | Verify plan completion |
-| `Workflow` | Execute scripted workflows |
-| `McpAuth` | MCP authentication |
-| `Diagnostics` | System diagnostics |
-| `CodeSearch` | Semantic code search via yaad |
-| `PowerShell` | PowerShell commands (cross-platform) |
-
-Plus any tools from connected MCP servers.
-
-## Slash Commands (91)
-
-Core commands:
-
-| Command | Description |
-|---|---|
-| `/help` | Show commands |
-| `/model` | Show or switch model |
-| `/config` | Open config panel |
-| `/env` | Show provider environment |
-| `/cost` | Token usage and cost |
-| `/diff` | Show git diff (preview before commit) |
-| `/commit` | Auto-commit with AI message |
-| `/undo` | Restore last file change from backup |
-| `/focus <path>` | Narrow agent to specific files/dirs |
-| `/pin [n]` | Protect last N messages from compaction |
-| `/compact` | Compact context |
-| `/clear` | Clear display |
-| `/branch` | Show git branch/status |
-| `/files` | Show modified files |
-| `/review` | Ask hawk to review changes |
-| `/test` | Run project tests |
-| `/lint` | Run linter |
-| `/think <topic>` | Plan before coding (Waza method) |
-| `/hunt <symptom>` | Root-cause diagnosis before fixing (Waza method) |
-| `/check` | Pre-ship review with auto-fix (Waza method) |
-| `/design <goal>` | Screenshot-driven UI iteration (Waza method) |
-| `/bughunter` | Hunt for bugs |
-| `/security-review` | Review security risks |
-| `/power <level>` | Set power level (1-10) |
-| `/vibe` | Enter vibe coding mode |
-| `/research <cmd>` | Autonomous optimization loop |
-| `/tools` | List enabled tools |
-| `/skills` | List local skills |
-| `/memory` | Show loaded project instructions |
-| `/history` | List sessions |
-| `/resume <id>` | Resume session |
-| `/doctor` | Run diagnostics |
-| `/init` | Analyze project |
-| `/vim` | Toggle vim keybindings |
-| `/permissions` | Manage tool permissions |
-
-Run `/help` for the full list of 91 commands.
+```bash
+hawk mission "Add auth, rate limiting, and logging"
+hawk mission --workers 6 "Refactor into microservices"
+hawk mission --dry-run "What would this decompose into?"
+```
 
 ## Providers
 
-Hawk passes configured provider/model values to eyrie. API keys via `hawk config key <provider> <api-key>` or environment variables:
+hawk works with any LLM provider. Set your API key via environment variable or `hawk config key <provider> <key>`:
 
 | Provider | Env Variable |
 |---|---|
@@ -206,169 +159,87 @@ Hawk passes configured provider/model values to eyrie. API keys via `hawk config
 | OpenAI | `OPENAI_API_KEY` |
 | Gemini | `GEMINI_API_KEY` |
 | OpenRouter | `OPENROUTER_API_KEY` |
-| Grok | `XAI_API_KEY` |
+| Grok (xAI) | `XAI_API_KEY` |
 | Groq | `GROQ_API_KEY` |
 | DeepSeek | `DEEPSEEK_API_KEY` |
-| Mistral | `MISTRAL_API_KEY` |
-| Bedrock | `AWS_ACCESS_KEY_ID` |
-| Vertex | `GOOGLE_APPLICATION_CREDENTIALS` |
-| Ollama | `OLLAMA_BASE_URL` |
+| Ollama | `OLLAMA_BASE_URL` (no key) |
+
+Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/eyrie).
 
 ## Architecture
 
-| Layer | Technology |
-|---|---|
-| CLI | [cobra](https://github.com/spf13/cobra) |
-| TUI | [Bubbletea](https://github.com/charmbracelet/bubbletea) + [lipgloss](https://github.com/charmbracelet/lipgloss) |
-| LLM | [eyrie](https://github.com/GrayCodeAI/eyrie) — model-agnostic provider |
-| Tokenizer | [tok](https://github.com/GrayCodeAI/tok) — BPE counting + context compression |
-| Memory | [yaad](https://github.com/GrayCodeAI/yaad) — graph-based persistent memory |
-| Session capture | [trace](https://github.com/GrayCodeAI/trace) — git-native session recording |
-| MCP | JSON-RPC over stdio |
-| Hooks | Event-driven plugin system |
-| Plugins | Manifest-based external commands |
-| LSP | JSON-RPC language server client |
-| Sandbox | Namespace/docker/chroot/seatbelt/landlock/seccomp isolation |
-
-### Package Structure
+hawk is built in Go with a modular, layered architecture:
 
 ```
-cmd/          CLI commands and TUI (split: chat, commands, config, view, stream, print, welcome)
-engine/       Agent loop, compaction, beliefs, backtracking, cascade router, context budget,
-              reflection, self-review, session lifecycle (self-improvement loop)
-tool/         40 built-in tools with safety layer (credentials, sensitive paths, backups)
-config/       Settings loading, validation, budget, aliases, templates
-session/      Session persistence (JSONL), WAL, snapshots, checkpoints, compression
-prompt/       System prompt preamble (identity, safety)
-prompts/      Modular prompt templates (role, tools, practices, communication, examples)
-repomap/      Code intelligence (PageRank, BM25, TF-IDF, Shapley, import graph, change-set context)
-memory/       Unified MemoryManager (auto, evolving, zenbrain, yaad bridge)
-model/        Provider routing, health checking, roles (delegates catalog to eyrie)
-mcp/          MCP client with buffered I/O and timeout
-lsp/          LSP client with persistent reader
-plugin/       Plugin runtime and smart skill auto-invocation
-permissions/  Advanced permission system (auto-mode, classifier, killswitch)
-hooks/        Event hook system with decision hooks
-analytics/    Session traces, activity tracking, cost optimization, model cascade
-trace/        Built-in tracer + optional OTel SDK (build tag)
-sandbox/      Command isolation (namespace, docker, chroot, seatbelt, landlock, seccomp)
-mission/      Multi-agent orchestration (parallel feature execution in worktrees)
-daemon/       Background HTTP server (JSON + SSE streaming)
-agents/       Custom agent persona loader (markdown + frontmatter)
-parallel/     Worktree-based parallel task execution
-retry/        Exponential backoff with jitter
-circuit/      Circuit breaker (closed/open/half-open)
-ratelimit/    Token bucket rate limiting
+hawk/
+├── cmd/                    # CLI entry point (Cobra + Bubble Tea TUI)
+├── internal/
+│   ├── engine/             # Agent loop, compaction, self-improvement
+│   ├── tool/               # 40+ built-in tools with safety layer
+│   ├── config/             # Settings, budget tracking, agent personas
+│   ├── session/            # Persistence (JSONL, WAL, checkpoints)
+│   ├── api/                # HTTP API server
+│   ├── daemon/             # Background HTTP/SSE server
+│   ├── sandbox/            # Command isolation (landlock, seccomp, docker)
+│   ├── permissions/        # User approval system with auto-learning
+│   ├── hooks/              # Event-driven plugin system
+│   ├── mcp/                # Model Context Protocol client
+│   ├── intelligence/       # Code intelligence (repomap, memory, planner)
+│   ├── multiagent/         # Mission orchestration, parallel execution
+│   ├── observability/      # Analytics, metrics, logging, tracing
+│   ├── resilience/         # Circuit breaker, rate limiting, retries
+│   ├── feature/            # eval, fingerprint, voice, IDE integration
+│   ├── bridge/             # External bridges (sight, inspect, sessioncapture)
+│   ├── provider/           # Provider routing
+│   └── system/             # Bus, cron, retention, shutdown
+├── docs/                   # Architecture, research notes
+└── testdata/               # Test fixtures
 ```
 
-Zero CGO. Single static binary. Cross-compiled for linux/darwin/windows amd64/arm64.
+### Ecosystem
 
-## Exec Mode
+| Component | Repository | Purpose |
+|---|---|---|
+| **hawk** | This repo | AI coding agent |
+| **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
+| **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Tokenizer & compression |
+| **yaad** | [GrayCodeAI/yaad](https://github.com/GrayCodeAI/yaad) | Graph-based memory |
+| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture |
 
-Run hawk non-interactively for scripting and CI:
+## Development
+
+### Prerequisites
+
+- Go 1.26+
+
+### Build & Test
 
 ```bash
-hawk exec "fix all failing tests"
-hawk exec --auto full "refactor to use context"
-hawk exec --output-format json "list all TODO comments"
-hawk exec --worktree "add rate limiting"           # isolated branch
-hawk exec --agent reviewer "review the last 3 commits"
-hawk exec -s exec-123456 "continue from last time" # resume session
-echo "explain main.go" | hawk exec -               # stdin
+go build .                    # Build binary
+go test -race ./...           # Run all tests with race detector
+make ci                       # Run full CI suite (lint, test, security)
+make cover                    # Generate coverage report
 ```
 
-## Mission Mode
+### Project Structure
 
-Decompose work into parallel features:
+hawk follows Go conventions: `cmd/` for entry points, `internal/` for private code, tests alongside source files. See [docs/architecture.md](docs/architecture.md) for details.
 
-```bash
-hawk mission "Add auth, rate limiting, and logging"
-hawk mission --workers 6 --model claude-sonnet-4-6 "Refactor into microservices"
-hawk mission --dry-run "What would this decompose into?"
-```
+## Contributing
 
-Each feature runs in its own git worktree with full autonomy. Results are committed on separate branches.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit conventions, and the PR process.
 
-## Daemon
+Quick start:
 
-Background HTTP server for programmatic access:
+1. Fork and create a branch: `git checkout -b feat/short-description`
+2. Make changes in small, focused commits
+3. Run `make ci` locally
+4. Open a pull request
 
-```bash
-hawk daemon start              # Start on port 4590
-hawk daemon start --port 8080  # Custom port
-hawk daemon status             # Check if running
-hawk daemon stop               # Graceful shutdown
-```
-
-Endpoints:
-- `GET /v1/health` — server status
-- `POST /v1/chat` — send prompt, get response (JSON or SSE streaming)
-- `GET /v1/sessions` — list active sessions
-
-SSE streaming: set `Accept: text/event-stream` header.
-
-## Custom Agents
-
-Define reusable personas in `~/.hawk/agents/`:
-
-```bash
-hawk agent create reviewer -d "Security-focused code reviewer"
-hawk agent list
-hawk agent show reviewer
-hawk exec --agent reviewer "check the auth module"
-```
-
-Agent files are markdown with YAML frontmatter:
-
-```markdown
----
-name: reviewer
-description: Security-focused code reviewer
-model: claude-sonnet-4-6
----
-You are a security expert. Focus on injection, auth bypass, and secrets.
-```
-
-## AGENTS.md
-
-Create an `AGENTS.md` in your project root for project-specific instructions (max 10KB). Any AI coding agent can read this — hawk, Claude Code, Cursor, Codex:
-
-```markdown
-# My Project
-- Go project using chi router
-- Tests use testify
-- Run tests: go test ./...
-```
-
-Hawk also reads `AGENTS.md` for backward compatibility.
-
-## Permission System
-
-Hawk asks before running dangerous tools (`Bash`, `Write`, `Edit`, `NotebookEdit`):
-
-```
-⚠ Run: go test ./...  [y/n]
-```
-
-Features:
-- **Auto-mode**: Learns from your decisions
-- **Command classifier**: Safe/unsafe/unknown classification
-- **Bypass killswitch**: Emergency disable for auto-mode
-- **Shadowed rule detection**: Warns when rules conflict
-
-```bash
-hawk -p "review this repo" --permission-mode acceptEdits
-hawk -p "fix lint" --allowed-tools "Bash(go test:*) Edit Read"
-hawk -p "plan only" --permission-mode plan
-```
-
-## MCP (Model Context Protocol)
-
-```bash
-hawk --mcp "npx @modelcontextprotocol/server-filesystem ."
-hawk --mcp "npx @modelcontextprotocol/server-github"
-```
+Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages — release-please uses them for versioning.
 
 ## License
 
-MIT — [GrayCode AI](https://github.com/GrayCodeAI)
+MIT — see [LICENSE](LICENSE) for details.
+
+© 2026 GrayCode AI
