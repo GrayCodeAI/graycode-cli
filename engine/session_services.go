@@ -17,10 +17,10 @@ import (
 	"github.com/GrayCodeAI/hawk/logger"
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
+	"github.com/GrayCodeAI/hawk/oteltrace"
 	"github.com/GrayCodeAI/hawk/permissions"
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/GrayCodeAI/hawk/oteltrace"
 )
 
 // ---------------------------------------------------------------------------
