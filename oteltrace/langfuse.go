@@ -1,5 +1,5 @@
 // Package trace provides Langfuse tracing integration for LLM observability.
-package trace
+package oteltrace
 
 import (
 	"bytes"

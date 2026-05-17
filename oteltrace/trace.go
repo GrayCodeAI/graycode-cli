@@ -1,6 +1,6 @@
 // Package trace provides distributed tracing support.
 // This is a lightweight stub for future OpenTelemetry integration.
-package trace
+package oteltrace
 
 import (
 	"context"

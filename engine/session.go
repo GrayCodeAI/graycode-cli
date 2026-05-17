@@ -14,7 +14,7 @@ import (
 	"github.com/GrayCodeAI/hawk/permissions"
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/GrayCodeAI/hawk/trace"
+	"github.com/GrayCodeAI/hawk/oteltrace"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -83,7 +83,7 @@ type Session struct {
 	Sleeptime      *memory.SleeptimeAgent  // sleeptime.go — background memory consolidation
 	Activity       *memory.ActivityTracker // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller  // skill_distill.go — auto-skill extraction
-	Tracer         *trace.Tracer           // trace.go — distributed tracing spans
+	Tracer         *oteltrace.Tracer           // oteltrace.go — distributed tracing spans
 	LintLoop       *LintLoop               // lint_loop.go — auto lint-fix reflected messages
 	TestLoop       *TestLoop               // test_loop.go — auto test-fix loop
 	FileMentions   *FileMentionDetector    // file_mentions.go — detect referenced files
@@ -113,7 +113,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 		Beliefs:       NewBeliefState(),
 		Backtrack:     NewBacktrackEngine(),
 		Limits:        NewLimitTracker(DefaultLimits()),
-		Tracer:        trace.NewTracer(),
+		Tracer:        oteltrace.NewTracer(),
 		LintLoop:      NewLintLoop(),
 		TestLoop:      NewTestLoop(),
 		FileMentions:  NewFileMentionDetector("."),
