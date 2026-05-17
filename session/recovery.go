@@ -18,12 +18,12 @@ import (
 type InterruptionType string
 
 const (
-	InterruptionNone           InterruptionType = "none"
-	InterruptionMidTool        InterruptionType = "mid_tool"        // tool was executing
-	InterruptionMidResponse    InterruptionType = "mid_response"    // assistant was writing a response
-	InterruptionAwaitingInput  InterruptionType = "awaiting_input"  // waiting for user input
-	InterruptionToolError      InterruptionType = "tool_error"      // tool execution failed
-	InterruptionPermissionAsk  InterruptionType = "permission_ask"  // waiting for permission approval
+	InterruptionNone          InterruptionType = "none"
+	InterruptionMidTool       InterruptionType = "mid_tool"       // tool was executing
+	InterruptionMidResponse   InterruptionType = "mid_response"   // assistant was writing a response
+	InterruptionAwaitingInput InterruptionType = "awaiting_input" // waiting for user input
+	InterruptionToolError     InterruptionType = "tool_error"     // tool execution failed
+	InterruptionPermissionAsk InterruptionType = "permission_ask" // waiting for permission approval
 )
 
 // RecoveryCandidate represents an interrupted session that can be resumed.

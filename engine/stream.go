@@ -12,10 +12,10 @@ import (
 
 	"github.com/GrayCodeAI/hawk/analytics"
 	"github.com/GrayCodeAI/hawk/hooks"
+	"github.com/GrayCodeAI/hawk/oteltrace"
 	"github.com/GrayCodeAI/hawk/retry"
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/GrayCodeAI/hawk/oteltrace"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
