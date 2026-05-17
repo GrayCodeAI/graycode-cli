@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/GrayCodeAI/hawk/compare/v0.2.0...v0.3.0) (2026-05-17)
+
+
+### Features
+
+* add hawk review — continuous background code review ([#5](https://github.com/GrayCodeAI/hawk/issues/5)) ([9cad447](https://github.com/GrayCodeAI/hawk/commit/9cad44709fbbcff8aaabda19aa356989cb974398))
+* adopt 10 solo-dev features from openclaude + yaad cognitive engine wiring ([ce47824](https://github.com/GrayCodeAI/hawk/commit/ce47824c7b8a8b83885256d4f4fb82eeaae88f73))
+
+
+### Bug Fixes
+
+* resolve unused var lint errors (register sessionsKillCmd, remove unused embed) ([61a6865](https://github.com/GrayCodeAI/hawk/commit/61a6865d141ae1504bb1d6c0b6c0cd184ab1834e))
+* skip flaky timing and worktree race tests ([319b817](https://github.com/GrayCodeAI/hawk/commit/319b81787175e2c9caccb75f9d095d6562e013e3))
+* update hawk go.mod from 1.26.1 to 1.26.3 ([c580291](https://github.com/GrayCodeAI/hawk/commit/c5802919af14b08d0dd556519ab32140155d53d4))
+* update sarif sub-module to Go 1.26.3 ([1146414](https://github.com/GrayCodeAI/hawk/commit/1146414a38dad3e86501529ec05a4704378dce82))
+* update tests to match current defaults ([c630fde](https://github.com/GrayCodeAI/hawk/commit/c630fde22e96191dd3ea4a9a8c9a03ab2640f260))
+
+
+### Refactoring
+
+* migrate trace package to oteltrace, add shared types ([c7e8a8f](https://github.com/GrayCodeAI/hawk/commit/c7e8a8f09ae9efae2060c987a13d36fcd3f4b5e9))
+
 ## [Unreleased]
 
 ### Changed
