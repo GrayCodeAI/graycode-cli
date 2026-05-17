@@ -15,7 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/retry"
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/GrayCodeAI/hawk/trace"
+	"github.com/GrayCodeAI/hawk/oteltrace"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
@@ -30,10 +30,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	sessionStart := time.Now()
 
 	// Start session-level trace span
-	var sessionSpan *trace.Span
+	var sessionSpan *oteltrace.Span
 	if s.Tracer != nil {
-		ctx, sessionSpan = trace.StartSessionSpan(ctx, s.Tracer, fmt.Sprintf("%d", sessionStart.UnixNano()))
-		defer trace.EndSpanWithError(sessionSpan, nil)
+		ctx, sessionSpan = oteltrace.StartSessionSpan(ctx, s.Tracer, fmt.Sprintf("%d", sessionStart.UnixNano()))
+		defer oteltrace.EndSpanWithError(sessionSpan, nil)
 	}
 
 	// Self-improvement: run OnSessionEnd when the loop exits (regardless of how)
@@ -295,9 +295,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		apiStart := time.Now()
 
 		// Trace: start agent loop span for this turn
-		var loopSpan *trace.Span
+		var loopSpan *oteltrace.Span
 		if s.Tracer != nil {
-			ctx, loopSpan = trace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
+			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
 		}
 
 		contCfg := client.DefaultContinuationConfig()
@@ -319,7 +319,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if err != nil {
 			// End trace span with error
 			if loopSpan != nil {
-				trace.EndSpanWithError(loopSpan, err)
+				oteltrace.EndSpanWithError(loopSpan, err)
 			}
 			// Record failure for circuit breaker
 			if s.Router != nil {
@@ -474,7 +474,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// End agent loop trace span for this turn
 		if loopSpan != nil {
 			loopSpan.SetTag("tools", fmt.Sprintf("%d", len(toolCalls)))
-			trace.EndSpanWithError(loopSpan, nil)
+			oteltrace.EndSpanWithError(loopSpan, nil)
 		}
 
 		// Activity nudge: remind agent to persist learnings if idle
@@ -633,9 +633,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
 			// Trace: start tool span
-			var toolSpan *trace.Span
+			var toolSpan *oteltrace.Span
 			if s.Tracer != nil {
-				_, toolSpan = trace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
+				_, toolSpan = oteltrace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
 			}
 
 			// Sync PermissionEngine state from Session fields (backward compat)

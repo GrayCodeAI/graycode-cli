@@ -1,6 +1,6 @@
 //go:build otel
 
-package trace
+package oteltrace
 
 import (
 	"context"

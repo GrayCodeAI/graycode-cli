@@ -103,6 +103,22 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 		return health.Check{Name: "config", Status: health.Degraded, Message: result.Error()}
 	})
 
+	// Yaad memory bridge check
+	bridge := memory.NewYaadBridge()
+	if bridge.Ready() {
+		registry.Register("yaad", func(ctx context.Context) health.Check {
+			_, _, err := bridge.SearchByType("convention", 1)
+			if err != nil {
+				return health.Check{Name: "yaad", Status: health.Unhealthy, Message: "Yaad bridge initialized but query failed"}
+			}
+			return health.Check{Name: "yaad", Status: health.Healthy, Message: "Yaad memory bridge operational"}
+		})
+	} else {
+		registry.Register("yaad", func(ctx context.Context) health.Check {
+			return health.Check{Name: "yaad", Status: health.Degraded, Message: "Yaad not initialized (run 'yaad init')"}
+		})
+	}
+
 	results := registry.Run(context.Background())
 	var b strings.Builder
 	b.WriteString("Health checks:\n")
