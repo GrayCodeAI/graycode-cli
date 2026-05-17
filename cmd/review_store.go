@@ -16,13 +16,13 @@ import (
 type ReviewStatus string
 
 const (
-	ReviewStatusPending  ReviewStatus = "pending"
-	ReviewStatusRunning  ReviewStatus = "running"
-	ReviewStatusOpen     ReviewStatus = "open"
-	ReviewStatusPassed   ReviewStatus = "passed"
-	ReviewStatusFixed    ReviewStatus = "fixed"
-	ReviewStatusClosed   ReviewStatus = "closed"
-	ReviewStatusFailed   ReviewStatus = "failed" // review process itself failed
+	ReviewStatusPending ReviewStatus = "pending"
+	ReviewStatusRunning ReviewStatus = "running"
+	ReviewStatusOpen    ReviewStatus = "open"
+	ReviewStatusPassed  ReviewStatus = "passed"
+	ReviewStatusFixed   ReviewStatus = "fixed"
+	ReviewStatusClosed  ReviewStatus = "closed"
+	ReviewStatusFailed  ReviewStatus = "failed" // review process itself failed
 )
 
 // ReviewRecord represents a persisted review in the SQLite store.

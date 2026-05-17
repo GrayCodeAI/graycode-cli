@@ -5,8 +5,8 @@ import (
 
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
-	"github.com/GrayCodeAI/hawk/tool"
 	"github.com/GrayCodeAI/hawk/oteltrace"
+	"github.com/GrayCodeAI/hawk/tool"
 )
 
 // ---------------------------------------------------------------------------
@@ -410,5 +410,5 @@ var _ MemoryRecaller = (*mockMemoryRecaller)(nil)
 var (
 	_ *memory.YaadBridge = nil
 	_ *metrics.Registry  = nil
-	_ *oteltrace.Tracer      = nil
+	_ *oteltrace.Tracer  = nil
 )
