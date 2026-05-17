@@ -278,7 +278,7 @@ var sessionsKillCmd = &cobra.Command{
 }
 
 func init() {
-	sessionsCmd.AddCommand(sessionsLsCmd)
+	sessionsCmd.AddCommand(sessionsLsCmd, sessionsKillCmd)
 	rootCmd.AddCommand(bgCmd)
 	rootCmd.AddCommand(attachCmd)
 }
