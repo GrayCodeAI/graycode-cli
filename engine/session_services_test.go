@@ -6,7 +6,7 @@ import (
 	"github.com/GrayCodeAI/hawk/memory"
 	"github.com/GrayCodeAI/hawk/metrics"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/GrayCodeAI/hawk/trace"
+	"github.com/GrayCodeAI/hawk/oteltrace"
 )
 
 // ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ func TestNewSessionServices_WithSandbox(t *testing.T) {
 }
 
 func TestNewSessionServices_WithTracing(t *testing.T) {
-	tracer := trace.NewTracer()
+	tracer := oteltrace.NewTracer()
 	ss := NewSessionServices(WithTracing(tracer))
 
 	if ss.Observe.Tracer != tracer {
@@ -137,7 +137,7 @@ func TestNewSessionServices_WithMaxBudget(t *testing.T) {
 func TestNewSessionServices_MultipleOptions(t *testing.T) {
 	reg := tool.NewRegistry()
 	mem := &mockMemoryRecaller{}
-	tracer := trace.NewTracer()
+	tracer := oteltrace.NewTracer()
 
 	ss := NewSessionServices(
 		WithProvider("openai", "gpt-4o"),
@@ -410,5 +410,5 @@ var _ MemoryRecaller = (*mockMemoryRecaller)(nil)
 var (
 	_ *memory.YaadBridge = nil
 	_ *metrics.Registry  = nil
-	_ *trace.Tracer      = nil
+	_ *oteltrace.Tracer      = nil
 )

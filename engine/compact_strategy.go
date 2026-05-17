@@ -2,6 +2,8 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/client"
@@ -82,20 +84,25 @@ func EstimateTokens(msgs []client.EyrieMessage) int {
 }
 
 func estimateMessageTokens(m client.EyrieMessage) int {
-	tokens := CountTokensFast(m.Content)
+	tokens := CountTokens(m.Content)
 	for _, tc := range m.ToolUse {
-		tokens += CountTokensFast(tc.Name)
+		tokens += CountTokens(tc.Name)
 		for _, v := range tc.Arguments {
 			switch val := v.(type) {
 			case string:
-				tokens += CountTokensFast(val)
+				tokens += CountTokens(val)
 			default:
-				tokens += 10
+				if encoded, err := json.Marshal(v); err == nil {
+					tokens += CountTokens(string(encoded))
+				} else {
+					// Fallback to string conversion for unknown types
+					tokens += CountTokens(fmt.Sprintf("%v", v))
+				}
 			}
 		}
 	}
 	if m.ToolResult != nil {
-		tokens += CountTokensFast(m.ToolResult.Content)
+		tokens += CountTokens(m.ToolResult.Content)
 	}
 	return tokens
 }

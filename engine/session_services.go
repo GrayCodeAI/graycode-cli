@@ -20,7 +20,7 @@ import (
 	"github.com/GrayCodeAI/hawk/permissions"
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 	"github.com/GrayCodeAI/hawk/tool"
-	"github.com/GrayCodeAI/hawk/trace"
+	"github.com/GrayCodeAI/hawk/oteltrace"
 )
 
 // ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ func (o *Optimizer) WithinBudget() bool {
 // Observability groups telemetry and diagnostics so that tracing, metrics,
 // and structured logging are co-located.
 type Observability struct {
-	Tracer  *trace.Tracer
+	Tracer  *oteltrace.Tracer
 	Metrics *metrics.Registry
 	Log     *logger.Logger
 }
@@ -202,7 +202,7 @@ func WithSandbox(sandbox *DiffSandbox) ServiceOption {
 }
 
 // WithTracing sets the Tracer on the Observability service.
-func WithTracing(tracer *trace.Tracer) ServiceOption {
+func WithTracing(tracer *oteltrace.Tracer) ServiceOption {
 	return func(ss *SessionServices) {
 		if ss.Observe == nil {
 			ss.Observe = &Observability{}
@@ -284,7 +284,7 @@ func NewSessionServices(opts ...ServiceOption) *SessionServices {
 			Router: modelPkg.NewRouter(modelPkg.StrategyBalanced),
 		},
 		Observe: &Observability{
-			Tracer:  trace.NewTracer(),
+			Tracer:  oteltrace.NewTracer(),
 			Metrics: metrics.NewRegistry(),
 			Log:     logger.Default(),
 		},

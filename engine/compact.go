@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/tok"
 
 	modelPkg "github.com/GrayCodeAI/hawk/routing"
 )
@@ -100,6 +101,18 @@ func (s *Session) generateSummary() string {
 		}
 	}
 
+	// Try tok compression first as a fast, zero-cost alternative
+	conversationText := summaryMsgs[0].Content
+	targetBudget := 1000 // Keep summary under 1K tokens
+	compressed, stats := tok.Compress(conversationText, tok.WithBudget(targetBudget))
+	reductionRatio := float64(stats.FinalTokens) / float64(stats.OriginalTokens)
+	if reductionRatio < 0.5 && stats.OriginalTokens > targetBudget*2 {
+		// tok achieved >50% reduction, use compressed output directly
+		// Extract key facts from compressed text for summary format
+		return extractSummaryFromCompressed(compressed)
+	}
+
+	// Fall back to LLM-based summarization if tok compression insufficient
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -113,6 +126,28 @@ func (s *Session) generateSummary() string {
 	}
 	// Extract structured summary, stripping analysis block
 	return FormatCompactSummary(resp.Content)
+}
+
+// extractSummaryFromCompressed pulls key information from tok-compressed text
+// to create a usable summary for the conversation context.
+func extractSummaryFromCompressed(compressed string) string {
+	// tok compression preserves semantic meaning; extract actionable summary
+	lines := strings.Split(compressed, "\n")
+	var keyPoints []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || len(line) < 20 {
+			continue
+		}
+		// Keep lines that look like substantive content
+		if strings.Contains(line, ":") || strings.Contains(line, ".") || strings.Contains(line, "function") || strings.Contains(line, "error") {
+			keyPoints = append(keyPoints, line)
+		}
+	}
+	if len(keyPoints) == 0 {
+		return ""
+	}
+	return strings.Join(keyPoints, "\n")
 }
 
 // compactModel returns the cheapest available model for the current provider.
