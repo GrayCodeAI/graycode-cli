@@ -93,6 +93,8 @@ func IsDestructiveCommand(command string) bool {
 // credentialPatterns is a compiled set of regexes that match common secret
 // formats.  All patterns are case-insensitive where appropriate.
 var credentialPatterns = []*regexp.Regexp{
+	// Anthropic API keys (must precede generic sk- pattern)
+	regexp.MustCompile(`sk-ant-api\d{2}-[A-Za-z0-9_-]{20,}`),
 	// OpenAI-style secret keys
 	regexp.MustCompile(`sk-[A-Za-z0-9]{20,}`),
 	// AWS access key IDs
@@ -111,6 +113,7 @@ var credentialPatterns = []*regexp.Regexp{
 // pattern found in content, or "" if none match.
 func DetectCredentials(content string) string {
 	labels := []string{
+		"Anthropic API key (sk-ant-...)",
 		"OpenAI/secret key (sk-...)",
 		"AWS access key (AKIA...)",
 		"GitHub personal access token (ghp_...)",
@@ -163,6 +166,13 @@ func IsSensitivePath(path string) string {
 	clean := filepath.Clean(resolved)
 
 	home, _ := os.UserHomeDir()
+
+	if home != "" {
+		hawkProv := filepath.Join(home, ".hawk", "provider.json")
+		if clean == hawkProv {
+			return "access to ~/.hawk/provider.json is blocked for security (API credentials)"
+		}
+	}
 
 	// Check suffix-based blocks (e.g. ~/.ssh/*)
 	for _, suffix := range blockedPathSuffixes {

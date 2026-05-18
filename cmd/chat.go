@@ -204,7 +204,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	if err != nil {
 		return chatModel{}, err
 	}
-	sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if err := configureSession(sess, settings); err != nil {
 		return chatModel{}, err

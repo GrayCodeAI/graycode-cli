@@ -4,6 +4,7 @@
 package routing
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
@@ -25,25 +26,29 @@ var (
 	dynamic   []ModelInfo // runtime-registered models (custom providers)
 )
 
-// fromEyrie converts an eyrie catalog entry to hawk's ModelInfo.
-func fromEyrie(provider string, e catalog.ModelCatalogEntry) ModelInfo {
-	desc := e.Description
-	if desc == "" {
-		desc = e.DisplayName
+func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelInfo {
+	inPrice, outPrice := 0.0, 0.0
+	if offering.Pricing.RatesPer1M != nil {
+		inPrice = offering.Pricing.RatesPer1M["input_tokens"]
+		outPrice = offering.Pricing.RatesPer1M["output_tokens"]
 	}
 	return ModelInfo{
-		Name:        e.ID,
-		Provider:    provider,
-		ContextSize: e.ContextWindow,
-		InputPrice:  e.InputPricePer1M,
-		OutputPrice: e.OutputPricePer1M,
-		Description: desc,
+		Name:        model.ID,
+		Provider:    model.ProviderID,
+		ContextSize: model.ContextWindow,
+		InputPrice:  inPrice,
+		OutputPrice: outPrice,
+		Description: model.Name,
 	}
 }
 
-// eyrieCatalog returns the current eyrie catalog.
-func eyrieCatalog() catalog.ModelCatalog {
-	return catalog.DefaultModelCatalog()
+func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
+	c := catalog.DefaultCatalogV1()
+	compiled, err := catalog.CompileCatalogV1(&c)
+	if err != nil {
+		return nil
+	}
+	return compiled
 }
 
 // RegisterDynamic adds a model entry at runtime (custom providers).
@@ -55,13 +60,11 @@ func RegisterDynamic(info ModelInfo) {
 
 // Find looks up a model by name across eyrie's catalog and dynamic entries.
 func Find(name string) (ModelInfo, bool) {
-	// Check eyrie catalog first
-	cat := eyrieCatalog()
-	for provider, models := range cat.Providers {
-		for _, m := range models {
-			if m.ID == name {
-				return fromEyrie(provider, m), true
-			}
+	if compiled := eyrieCatalogV1(); compiled != nil {
+		if canonical, ok := compiled.CanonicalModelForAliasOrID(name); ok {
+			model := compiled.ModelsByID[canonical]
+			offering := firstOffering(compiled, canonical, "")
+			return fromEyrieV1(model, offering), true
 		}
 	}
 	// Check dynamic entries
@@ -77,11 +80,20 @@ func Find(name string) (ModelInfo, bool) {
 
 // ByProvider returns all models for a given provider from eyrie's catalog.
 func ByProvider(provider string) []ModelInfo {
-	cat := eyrieCatalog()
-	entries := catalog.ModelsForProvider(&cat, provider)
-	out := make([]ModelInfo, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, fromEyrie(provider, e))
+	provider = canonicalProvider(provider)
+	compiled := eyrieCatalogV1()
+	out := []ModelInfo{}
+	if compiled != nil {
+		modelIDs := make([]string, 0, len(compiled.ModelsByID))
+		for id, model := range compiled.ModelsByID {
+			if canonicalProvider(model.ProviderID) == provider {
+				modelIDs = append(modelIDs, id)
+			}
+		}
+		sort.Strings(modelIDs)
+		for _, id := range modelIDs {
+			out = append(out, fromEyrieV1(compiled.ModelsByID[id], firstOffering(compiled, id, "")))
+		}
 	}
 	// Append dynamic entries for this provider
 	catalogMu.RLock()
@@ -97,7 +109,7 @@ func ByProvider(provider string) []ModelInfo {
 // Recommended returns the recommended model for a provider.
 // Delegates to eyrie's GetProviderDefaultModel.
 func Recommended(provider string) (ModelInfo, bool) {
-	name := catalog.GetProviderDefaultModel(provider, nil)
+	name := DefaultModel(provider)
 	if name == "" {
 		return ModelInfo{}, false
 	}
@@ -110,32 +122,84 @@ func Recommended(provider string) (ModelInfo, bool) {
 
 // DefaultModel returns the default model for a provider via eyrie.
 func DefaultModel(provider string) string {
-	name := catalog.GetProviderDefaultModel(provider, nil)
-	if name != "" {
-		return name
+	provider = canonicalProvider(provider)
+	if compiled := eyrieCatalogV1(); compiled != nil {
+		legacyDefault := catalog.GetProviderDefaultModel(legacyProviderName(provider), nil)
+		if legacyDefault != "" {
+			if canonical, ok := compiled.CanonicalModelForAliasOrID(legacyDefault); ok {
+				return canonical
+			}
+		}
+		for _, model := range ByProvider(provider) {
+			return model.Name
+		}
 	}
-	// Fallback for unknown providers
 	return ""
 }
 
-// AllProviders returns all provider names from eyrie's catalog.
+// AllProviders returns all canonical model owner providers from eyrie's catalog.
 func AllProviders() []string {
-	cat := eyrieCatalog()
-	out := make([]string, 0, len(cat.Providers))
-	for p := range cat.Providers {
-		out = append(out, p)
+	seen := map[string]bool{}
+	var out []string
+	if compiled := eyrieCatalogV1(); compiled != nil {
+		for _, model := range compiled.ModelsByID {
+			provider := canonicalProvider(model.ProviderID)
+			if provider != "" && !seen[provider] {
+				seen[provider] = true
+				out = append(out, provider)
+			}
+		}
 	}
 	catalogMu.RLock()
 	defer catalogMu.RUnlock()
-	seen := make(map[string]bool, len(out))
-	for _, p := range out {
-		seen[p] = true
-	}
 	for _, m := range dynamic {
 		if !seen[m.Provider] {
 			seen[m.Provider] = true
 			out = append(out, m.Provider)
 		}
 	}
+	sort.Strings(out)
 	return out
+}
+
+func firstOffering(compiled *catalog.CompiledCatalogV1, canonicalModelID, deploymentID string) catalog.ModelOfferingV1 {
+	offerings := compiled.OfferingsByCanonicalModel[canonicalModelID]
+	if len(offerings) == 0 {
+		return catalog.ModelOfferingV1{}
+	}
+	if deploymentID != "" {
+		for _, offering := range offerings {
+			if offering.DeploymentID == deploymentID {
+				return offering
+			}
+		}
+	}
+	sort.SliceStable(offerings, func(i, j int) bool {
+		return offerings[i].DeploymentID < offerings[j].DeploymentID
+	})
+	return offerings[0]
+}
+
+func canonicalProvider(provider string) string {
+	switch provider {
+	case "gemini":
+		return "google"
+	case "grok":
+		return "xai"
+	case "zai":
+		return "z-ai"
+	default:
+		return provider
+	}
+}
+
+func legacyProviderName(provider string) string {
+	switch provider {
+	case "google":
+		return "gemini"
+	case "xai":
+		return "grok"
+	default:
+		return provider
+	}
 }

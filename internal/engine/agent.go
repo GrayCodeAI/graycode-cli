@@ -60,7 +60,7 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 		subSystemPrompt = s.system
 	}
 
-	sub := NewSession(s.provider, model, subSystemPrompt, registry)
+	sub := s.SubSession(model, subSystemPrompt, registry)
 	sub.SetAPIKeys(s.apiKeys)
 	sub.PermissionFn = s.PermissionFn
 	sub.Permissions = s.Permissions

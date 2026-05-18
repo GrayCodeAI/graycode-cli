@@ -84,7 +84,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		if req.Model != "" {
 			effectiveModel = req.Model
 		}
-		sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, registry)
+		sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 		sess.SetLogger(logger.New(io.Discard, logger.Error))
 		if err := configureSession(sess, settings); err != nil {
 			return nil, err
