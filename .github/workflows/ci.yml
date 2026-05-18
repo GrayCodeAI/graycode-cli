@@ -185,7 +185,7 @@ jobs:
           fetch-depth: 1
       - name: Run gitleaks (report only)
         run: |
-          go install github.com/gitleaks/gitleaks@latest
+          go install github.com/zricethezav/gitleaks/v4/cmd/gitleaks@latest
           gitleaks detect --source . --report-format json --report-path gitleaks-report.json || true
 
   # -------------------------------------------------------------------------
