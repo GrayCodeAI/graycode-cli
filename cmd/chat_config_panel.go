@@ -58,15 +58,10 @@ func configModelChoices(provider string, cached []string) []string {
 		copy(out, cached)
 		return out
 	}
-	// Fallback: load from embedded catalog synchronously
-	var out []string
-	if provider != "" {
-		cat := catalog.LoadModelCatalogSync("")
-		for _, entry := range catalog.ModelsForProvider(&cat, provider) {
-			if strings.TrimSpace(entry.ID) != "" {
-				out = append(out, entry.ID)
-			}
-		}
+	models, _ := hawkconfig.FetchModelsForProvider(provider)
+	out := extractModelIDs(models)
+	if len(out) > 0 {
+		modelCache[provider] = out
 	}
 	sort.Strings(out)
 	return out

@@ -4,6 +4,9 @@
 package routing
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 
@@ -43,8 +46,10 @@ func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelI
 }
 
 func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
-	c := catalog.DefaultCatalogV1()
-	compiled, err := catalog.CompileCatalogV1(&c)
+	home, _ := os.UserHomeDir()
+	compiled, err := catalog.LoadCatalogV1(context.Background(), catalog.LoadCatalogV1Options{
+		CachePath: filepath.Join(home, ".eyrie", "model_catalog.json"),
+	})
 	if err != nil {
 		return nil
 	}
@@ -106,8 +111,7 @@ func ByProvider(provider string) []ModelInfo {
 	return out
 }
 
-// Recommended returns the recommended model for a provider.
-// Delegates to eyrie's GetProviderDefaultModel.
+// Recommended returns the first JSON-catalog model for a provider.
 func Recommended(provider string) (ModelInfo, bool) {
 	name := DefaultModel(provider)
 	if name == "" {
@@ -120,16 +124,10 @@ func Recommended(provider string) (ModelInfo, bool) {
 	return info, ok
 }
 
-// DefaultModel returns the default model for a provider via eyrie.
+// DefaultModel returns the first catalog model for a provider via Eyrie's JSON catalog.
 func DefaultModel(provider string) string {
 	provider = canonicalProvider(provider)
 	if compiled := eyrieCatalogV1(); compiled != nil {
-		legacyDefault := catalog.GetProviderDefaultModel(legacyProviderName(provider), nil)
-		if legacyDefault != "" {
-			if canonical, ok := compiled.CanonicalModelForAliasOrID(legacyDefault); ok {
-				return canonical
-			}
-		}
 		for _, model := range ByProvider(provider) {
 			return model.Name
 		}
@@ -188,17 +186,6 @@ func canonicalProvider(provider string) string {
 		return "xai"
 	case "zai":
 		return "z-ai"
-	default:
-		return provider
-	}
-}
-
-func legacyProviderName(provider string) string {
-	switch provider {
-	case "google":
-		return "gemini"
-	case "xai":
-		return "grok"
 	default:
 		return provider
 	}

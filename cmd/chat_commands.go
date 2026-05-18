@@ -1915,7 +1915,12 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
 		return m, nil
 	case "/refresh-model-catalog":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Model catalog is built-in in this build; refresh not required."})
+		summary, err := hawkconfig.RefreshModelCatalogV1(context.Background())
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Model catalog refresh failed: %v", err)})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: summary})
 		return m, nil
 	case "/insights":
 		days := 30

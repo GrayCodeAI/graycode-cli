@@ -165,6 +165,11 @@ hawk works with any LLM provider. Set your API key via environment variable or `
 | Ollama | `OLLAMA_BASE_URL` (no key) |
 
 Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/eyrie).
+For deployment-aware routing, set `"deployment_routing": true` in `.hawk/settings.json`
+or export `HAWK_DEPLOYMENT_ROUTING=true`. Hawk will route canonical model IDs through
+Eyrie's deployment catalog, so new models can be exposed by refreshing the catalog
+instead of changing Hawk. In chat, run `/refresh-model-catalog` to fetch the latest
+deployment-aware catalog into `~/.eyrie/model_catalog.json`.
 
 ## Architecture
 

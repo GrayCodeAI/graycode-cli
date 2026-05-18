@@ -1,13 +1,16 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 
@@ -630,37 +633,121 @@ func SaveEnvFile(key, value string) error {
 // Live model catalog fetch from eyrie
 // ─────────────────────────────────────────────────────────────
 
-// FetchModelsForProvider fetches live models from the provider's API (if key available)
-// or returns embedded catalog models. This is the runtime model discovery boundary.
+// FetchModelsForProvider reads model metadata from Eyrie's deployment-aware JSON
+// catalog cache. RefreshModelCatalogV1 is the explicit network refresh boundary.
 func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error) {
-	provider = NormalizeProviderForEngine(provider)
+	provider = catalogProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
 
-	// Build env map for eyrie catalog fetch
-	env := make(map[string]string)
-	env["ANTHROPIC_API_KEY"] = os.Getenv("ANTHROPIC_API_KEY")
-	env["OPENAI_API_KEY"] = os.Getenv("OPENAI_API_KEY")
-	env["GEMINI_API_KEY"] = os.Getenv("GEMINI_API_KEY")
-	env["OPENROUTER_API_KEY"] = os.Getenv("OPENROUTER_API_KEY")
-	env["CANOPYWAVE_API_KEY"] = os.Getenv("CANOPYWAVE_API_KEY")
-	env["XAI_API_KEY"] = os.Getenv("XAI_API_KEY")
-	env["OPENCODEGO_API_KEY"] = os.Getenv("OPENCODEGO_API_KEY")
-	env["OLLAMA_BASE_URL"] = os.Getenv("OLLAMA_BASE_URL")
-	env["OPENROUTER_BASE_URL"] = os.Getenv("OPENROUTER_BASE_URL")
-	env["CANOPYWAVE_BASE_URL"] = os.Getenv("CANOPYWAVE_BASE_URL")
-
-	// Fetch live catalog from eyrie
-	cat, err := catalog.FetchModelCatalog("", env)
+	compiled, err := loadEyrieCatalogV1(context.Background(), false)
 	if err != nil {
-		// Fallback to embedded catalog
-		cat = catalog.LoadModelCatalogSync("")
+		return nil, err
 	}
 
-	models := catalog.ModelsForProvider(&cat, provider)
+	models := modelEntriesForProvider(compiled, provider)
 	if len(models) == 0 {
 		return nil, fmt.Errorf("no models found for provider %s", provider)
 	}
 	return models, nil
+}
+
+// RefreshModelCatalogV1 fetches the deployment-aware catalog from LangDAG and
+// writes Eyrie's shared cache. Callers get a short summary for UI display.
+func RefreshModelCatalogV1(ctx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	compiled, err := loadEyrieCatalogV1(ctx, true)
+	if err != nil {
+		return "", err
+	}
+	for _, diagnostic := range compiled.Diagnostics {
+		if diagnostic.Code == "remote_refresh_failed" {
+			return "", errors.New(diagnostic.Message)
+		}
+	}
+	cachePath := eyrieModelCatalogCachePath()
+	return fmt.Sprintf("Model catalog refreshed: %d models, %d deployments, %d offerings cached at %s",
+		len(compiled.ModelsByID), len(compiled.DeploymentsByID), len(compiled.OfferingsByID), cachePath), nil
+}
+
+func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalogV1, error) {
+	return catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
+		CachePath:     eyrieModelCatalogCachePath(),
+		RefreshRemote: refreshRemote,
+	})
+}
+
+func eyrieModelCatalogCachePath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".eyrie", "model_catalog.json")
+}
+
+func catalogProviderID(provider string) string {
+	switch NormalizeProviderForEngine(provider) {
+	case "gemini":
+		return "google"
+	case "grok":
+		return "xai"
+	default:
+		return NormalizeProviderForEngine(provider)
+	}
+}
+
+func modelEntriesForProvider(compiled *catalog.CompiledCatalogV1, provider string) []catalog.ModelCatalogEntry {
+	if compiled == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []catalog.ModelCatalogEntry
+	add := func(model catalog.ModelV1, offering catalog.ModelOfferingV1) {
+		if model.ID == "" || seen[model.ID] {
+			return
+		}
+		seen[model.ID] = true
+		inPrice, outPrice := 0.0, 0.0
+		if offering.Pricing.RatesPer1M != nil {
+			inPrice = offering.Pricing.RatesPer1M["input_tokens"]
+			outPrice = offering.Pricing.RatesPer1M["output_tokens"]
+		}
+		out = append(out, catalog.ModelCatalogEntry{
+			ID:               model.ID,
+			DisplayName:      model.Name,
+			ContextWindow:    model.ContextWindow,
+			MaxOutput:        model.MaxOutput,
+			InputPricePer1M:  inPrice,
+			OutputPricePer1M: outPrice,
+		})
+	}
+	if provider == "openrouter" {
+		for _, offering := range compiled.OfferingsByDeployment["openrouter"] {
+			add(compiled.ModelsByID[offering.CanonicalModelID], offering)
+		}
+	} else {
+		ids := make([]string, 0, len(compiled.ModelsByID))
+		for id, model := range compiled.ModelsByID {
+			if catalogProviderID(model.ProviderID) == provider {
+				ids = append(ids, id)
+			}
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			add(compiled.ModelsByID[id], firstCatalogOffering(compiled, id))
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func firstCatalogOffering(compiled *catalog.CompiledCatalogV1, canonicalModelID string) catalog.ModelOfferingV1 {
+	offerings := compiled.OfferingsByCanonicalModel[canonicalModelID]
+	if len(offerings) == 0 {
+		return catalog.ModelOfferingV1{}
+	}
+	sort.SliceStable(offerings, func(i, j int) bool {
+		return offerings[i].DeploymentID < offerings[j].DeploymentID
+	})
+	return offerings[0]
 }
