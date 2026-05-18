@@ -146,8 +146,8 @@ func TestRouter_SelectProviderForModel(t *testing.T) {
 	if provider != "openai" {
 		t.Errorf("expected openai, got %s", provider)
 	}
-	if info.Name != "gpt-4o" {
-		t.Errorf("expected gpt-4o, got %s", info.Name)
+	if info.Name != "openai/gpt-4o" {
+		t.Errorf("expected canonical openai/gpt-4o, got %s", info.Name)
 	}
 }
 

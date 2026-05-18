@@ -256,8 +256,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Circuit breaker: select provider with failover
-		if s.Router != nil {
+		// Circuit breaker: select provider with failover (legacy single-provider clients only).
+		if s.Router != nil && !s.DeploymentRouting {
 			if selectedProvider, err := s.Router.SelectProvider(s.provider); err == nil && selectedProvider != s.provider {
 				s.log.Info("provider failover", map[string]interface{}{"from": s.provider, "to": selectedProvider})
 				opts.Provider = selectedProvider
@@ -322,7 +322,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				oteltrace.EndSpanWithError(loopSpan, err)
 			}
 			// Record failure for circuit breaker
-			if s.Router != nil {
+			if s.Router != nil && !s.DeploymentRouting {
 				s.Router.RecordFailure(s.provider, err)
 			}
 			s.log.Error("stream error", map[string]interface{}{
@@ -333,7 +333,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Record success for circuit breaker
-		if s.Router != nil {
+		if s.Router != nil && !s.DeploymentRouting {
 			s.Router.RecordSuccess(s.provider, apiDuration)
 		}
 

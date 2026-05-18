@@ -140,7 +140,7 @@ func planWithLLM(ctx context.Context, prompt, provider, model string, settings h
 	)
 
 	registry, _ := defaultRegistry(settings)
-	sess := engine.NewSession(provider, model, planPrompt, registry)
+	sess := newHawkSession(settings, provider, model, planPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	_ = configureSession(sess, settings)
 	sess.MaxTurns = 1

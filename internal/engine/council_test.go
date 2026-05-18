@@ -8,8 +8,8 @@ import (
 
 func TestDefaultCouncilModels(t *testing.T) {
 	models := DefaultCouncilModels()
-	if len(models) != 3 {
-		t.Fatalf("expected 3 default council models, got %d", len(models))
+	if len(models) < 3 {
+		t.Fatalf("expected at least 3 catalog-backed council models, got %d", len(models))
 	}
 	seen := map[string]bool{}
 	for _, m := range models {

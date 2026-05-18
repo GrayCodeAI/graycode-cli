@@ -3,7 +3,7 @@ module github.com/GrayCodeAI/hawk
 go 1.26.3
 
 require (
-	github.com/GrayCodeAI/eyrie v0.2.0
+	github.com/GrayCodeAI/eyrie v0.3.0
 	github.com/GrayCodeAI/inspect v0.2.0
 	github.com/GrayCodeAI/sight v0.2.0
 	github.com/GrayCodeAI/tok v0.2.0
@@ -25,6 +25,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.50.1
 )
+
+// Pin sibling eyrie until github.com/GrayCodeAI/eyrie@v0.3.0 is tagged on the module proxy (then remove this replace).
+replace github.com/GrayCodeAI/eyrie => ../eyrie
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
@@ -81,6 +84,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-// For local development, use go.work instead of replace directives.
-// See go.work.example for setup instructions.
