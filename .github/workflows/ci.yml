@@ -181,12 +181,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: trufflesecurity/trufflehog@main
         with:
-          fetch-depth: 1
-      - name: Run gitleaks (report only)
-        run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_x64.tar.gz | tar -xz -C /tmp
-          /tmp/gitleaks detect --source . --report-format json --report-path gitleaks-report.json || true
+          extra_args: --only-verified
 
   # -------------------------------------------------------------------------
   # 8. Dependency review — only on pull requests.
