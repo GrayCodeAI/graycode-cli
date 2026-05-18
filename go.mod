@@ -3,7 +3,7 @@ module github.com/GrayCodeAI/hawk
 go 1.26.3
 
 require (
-	github.com/GrayCodeAI/eyrie v0.3.0
+	github.com/GrayCodeAI/eyrie v0.2.0
 	github.com/GrayCodeAI/inspect v0.2.0
 	github.com/GrayCodeAI/sight v0.2.0
 	github.com/GrayCodeAI/tok v0.2.0
@@ -26,7 +26,7 @@ require (
 	modernc.org/sqlite v1.50.1
 )
 
-// Pin sibling eyrie until github.com/GrayCodeAI/eyrie@v0.3.0 is tagged on the module proxy (then remove this replace).
+// Local sibling eyrie checkout (main may be ahead of tagged v0.2.0); remove when using only the published module.
 replace github.com/GrayCodeAI/eyrie => ../eyrie
 
 require (
