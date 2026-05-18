@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os/exec"
@@ -27,14 +26,13 @@ type ReviewResponse struct {
 // RegisterReviewRoutes adds review endpoints to the daemon.
 // Called from routes() if review support is enabled.
 func (s *Server) RegisterReviewRoutes() {
-	s.mux.HandleFunc("POST /v1/review", s.handleReview)
-	s.mux.HandleFunc("GET /v1/review/status", s.handleReviewStatus)
+	s.mux.HandleFunc("POST /v1/review", s.auth(s.handleReview))
+	s.mux.HandleFunc("GET /v1/review/status", s.auth(s.handleReviewStatus))
 }
 
 func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	var req ReviewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+	if !decodeJSONBody(w, r, &req) {
 		return
 	}
 	if req.SHA == "" {

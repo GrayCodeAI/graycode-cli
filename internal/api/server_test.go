@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -99,6 +100,55 @@ func TestChatEndpoint_InvalidJSON(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestChatEndpoint_AuthRequired(t *testing.T) {
+	srv := NewWithAPIKey(":0", "secret")
+
+	body := ChatRequest{Message: "hello", Model: "gpt-4"}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/chat", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	srv.Handler().ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without key, got %d", w.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/chat", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer secret")
+	w = httptest.NewRecorder()
+
+	srv.Handler().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 with key, got %d", w.Code)
+	}
+}
+
+func TestChatEndpoint_RejectsOversizedBody(t *testing.T) {
+	srv := New(":0")
+	req := httptest.NewRequest(http.MethodPost, "/chat", strings.NewReader(`{"message":"`+strings.Repeat("x", maxRequestBodyBytes+1)+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	srv.Handler().ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for oversized body, got %d", w.Code)
+	}
+}
+
+func TestChatEndpoint_RejectsUnknownFields(t *testing.T) {
+	srv := New(":0")
+	req := httptest.NewRequest(http.MethodPost, "/chat", strings.NewReader(`{"message":"hello","unknown":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	srv.Handler().ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unknown field, got %d", w.Code)
 	}
 }
 

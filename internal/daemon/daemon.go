@@ -2,8 +2,10 @@ package daemon
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,6 +17,8 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
+
+const maxRequestBodyBytes = 1 << 20
 
 // SessionFactory creates a configured engine session for a given request.
 // The caller (cmd package) provides this, wiring system prompts, tools, keys.
@@ -28,6 +32,7 @@ type Server struct {
 	startedAt  time.Time
 	sessions   sync.Map // sessionID -> *Session
 	newSession SessionFactory
+	apiKey     string
 }
 
 // Config holds daemon configuration.
@@ -35,6 +40,7 @@ type Config struct {
 	Port    int    `json:"port"`
 	Host    string `json:"host"`
 	LogFile string `json:"log_file"`
+	APIKey  string `json:"api_key,omitempty"`
 }
 
 // DefaultConfig returns reasonable defaults.
@@ -98,6 +104,7 @@ func New(cfg Config, factory SessionFactory) *Server {
 		mux:        http.NewServeMux(),
 		startedAt:  time.Now(),
 		newSession: factory,
+		apiKey:     cfg.APIKey,
 	}
 	s.routes()
 	s.server = &http.Server{
@@ -146,13 +153,54 @@ func (s *Server) Addr() string {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /v1/health", s.handleHealth)
-	s.mux.HandleFunc("POST /v1/chat", s.handleChat)
-	s.mux.HandleFunc("GET /v1/sessions", s.handleListSessions)
-	s.mux.HandleFunc("GET /v1/sessions/{id}", s.handleGetSession)
-	s.mux.HandleFunc("GET /v1/sessions/{id}/messages", s.handleGetMessages)
-	s.mux.HandleFunc("DELETE /v1/sessions/{id}", s.handleDeleteSession)
-	s.mux.HandleFunc("GET /v1/stats", s.handleStats)
+	s.mux.HandleFunc("POST /v1/chat", s.auth(s.handleChat))
+	s.mux.HandleFunc("GET /v1/sessions", s.auth(s.handleListSessions))
+	s.mux.HandleFunc("GET /v1/sessions/{id}", s.auth(s.handleGetSession))
+	s.mux.HandleFunc("GET /v1/sessions/{id}/messages", s.auth(s.handleGetMessages))
+	s.mux.HandleFunc("DELETE /v1/sessions/{id}", s.auth(s.handleDeleteSession))
+	s.mux.HandleFunc("GET /v1/stats", s.auth(s.handleStats))
 	s.RegisterReviewRoutes()
+}
+
+func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.apiKey == "" {
+			next(w, r)
+			return
+		}
+		token := r.Header.Get("Authorization")
+		token = strings.TrimPrefix(token, "Bearer ")
+		if token == "" {
+			token = r.Header.Get("X-API-Key")
+		}
+		if !constantTimeEqual(token, s.apiKey) {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		next(w, r)
+	}
+}
+
+func constantTimeEqual(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return false
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "request body must contain a single JSON object"})
+		return false
+	}
+	return true
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -178,8 +226,7 @@ func wantsSSE(r *http.Request) bool {
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	var req ChatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+	if !decodeJSONBody(w, r, &req) {
 		return
 	}
 	if req.Prompt == "" {
@@ -309,9 +356,23 @@ func (s *Server) writePIDFile() error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	data := fmt.Sprintf(`{"pid":%d,"addr":"%s","started_at":"%s"}`,
-		os.Getpid(), s.addr, s.startedAt.Format(time.RFC3339))
-	return os.WriteFile(filepath.Join(dir, "daemon.json"), []byte(data), 0o644)
+	data, err := json.Marshal(struct {
+		PID          int    `json:"pid"`
+		Addr         string `json:"addr"`
+		StartedAt    string `json:"started_at"`
+		AuthRequired bool   `json:"auth_required"`
+		APIKey       string `json:"api_key,omitempty"`
+	}{
+		PID:          os.Getpid(),
+		Addr:         s.addr,
+		StartedAt:    s.startedAt.Format(time.RFC3339),
+		AuthRequired: s.apiKey != "",
+		APIKey:       s.apiKey,
+	})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "daemon.json"), append(data, '\n'), 0o600)
 }
 
 func (s *Server) removePIDFile() error {

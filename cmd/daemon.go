@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +20,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var daemonPort int
+var (
+	daemonPort   int
+	daemonAPIKey string
+)
 
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
@@ -46,6 +51,7 @@ var daemonStatusCmd = &cobra.Command{
 
 func init() {
 	daemonStartCmd.Flags().IntVarP(&daemonPort, "port", "p", 4590, "Port to listen on")
+	daemonStartCmd.Flags().StringVar(&daemonAPIKey, "api-key", "", "API key for protected daemon endpoints (defaults to HAWK_DAEMON_API_KEY or a generated key)")
 	daemonCmd.AddCommand(daemonStartCmd)
 	daemonCmd.AddCommand(daemonStopCmd)
 	daemonCmd.AddCommand(daemonStatusCmd)
@@ -53,6 +59,17 @@ func init() {
 
 func runDaemonStart(_ *cobra.Command, _ []string) error {
 	settings := hawkconfig.LoadSettings()
+	apiKey := daemonAPIKey
+	if apiKey == "" {
+		apiKey = os.Getenv("HAWK_DAEMON_API_KEY")
+	}
+	if apiKey == "" {
+		var err error
+		apiKey, err = generateDaemonAPIKey()
+		if err != nil {
+			return err
+		}
+	}
 
 	factory := func(req daemon.ChatRequest) (*engine.Session, error) {
 		systemPrompt, err := buildSystemPrompt()
@@ -75,7 +92,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		return sess, nil
 	}
 
-	srv := daemon.New(daemon.Config{Port: daemonPort, Host: "127.0.0.1"}, factory)
+	srv := daemon.New(daemon.Config{Port: daemonPort, Host: "127.0.0.1", APIKey: apiKey}, factory)
 	addr, err := srv.Start()
 	if err != nil {
 		return err
@@ -92,6 +109,8 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 
 	fmt.Printf("hawk daemon running on http://%s\n", addr)
 	fmt.Println("Endpoints: GET /v1/health, POST /v1/chat, GET /v1/sessions")
+	fmt.Println("Protected endpoints require Authorization: Bearer <api-key> or X-API-Key.")
+	fmt.Printf("API key: %s\n", apiKey)
 	fmt.Println("Press Ctrl+C to stop.")
 
 	// Wait for interrupt
@@ -103,6 +122,14 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return srv.Stop(ctx)
+}
+
+func generateDaemonAPIKey() (string, error) {
+	var b [32]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", fmt.Errorf("generate daemon API key: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(b[:]), nil
 }
 
 func runDaemonStop(_ *cobra.Command, _ []string) error {
