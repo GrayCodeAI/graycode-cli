@@ -5,11 +5,13 @@ package types
 import "github.com/GrayCodeAI/hawk/internal/types"
 
 // Re-export all types from internal/types for backward compatibility.
-type Severity = types.Severity
-type TokenSeverity = types.TokenSeverity
-type AuditSeverity = types.AuditSeverity
-type ToolCall = types.ToolCall
-type ToolResult = types.ToolResult
+type (
+	Severity      = types.Severity
+	TokenSeverity = types.TokenSeverity
+	AuditSeverity = types.AuditSeverity
+	ToolCall      = types.ToolCall
+	ToolResult    = types.ToolResult
+)
 
 // Severity constants
 const (

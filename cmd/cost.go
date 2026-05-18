@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/observability"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/spf13/cobra"
 )
 

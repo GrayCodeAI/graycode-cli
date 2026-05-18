@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/internal/api"
 	"github.com/GrayCodeAI/hawk/cmd"
+	"github.com/GrayCodeAI/hawk/internal/api"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )

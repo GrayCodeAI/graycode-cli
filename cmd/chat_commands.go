@@ -14,16 +14,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/internal/observability"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
-	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 

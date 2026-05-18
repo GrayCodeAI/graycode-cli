@@ -8,8 +8,8 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 
 	"github.com/GrayCodeAI/eyrie/storage"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
