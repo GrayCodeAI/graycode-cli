@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 	"github.com/GrayCodeAI/hawk/internal/session"
 )
 

@@ -10,11 +10,11 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
-	"github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 

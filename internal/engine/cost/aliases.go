@@ -6,8 +6,8 @@
 package cost
 
 import (
-	"github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
 
 // Cost is the canonical cost record (input/output tokens + USD).
