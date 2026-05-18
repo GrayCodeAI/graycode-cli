@@ -185,8 +185,8 @@ jobs:
           fetch-depth: 1
       - name: Run gitleaks (report only)
         run: |
-          go install github.com/zricethezav/gitleaks/v4/cmd/gitleaks@latest
-          gitleaks detect --source . --report-format json --report-path gitleaks-report.json || true
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_amd64.tar.gz | tar -xz -C /tmp
+          /tmp/gitleaks detect --source . --report-format json --report-path gitleaks-report.json || true
 
   # -------------------------------------------------------------------------
   # 8. Dependency review — only on pull requests.
