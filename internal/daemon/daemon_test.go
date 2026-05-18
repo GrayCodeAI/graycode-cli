@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,6 +70,79 @@ func TestDaemon_Chat_NoEngine(t *testing.T) {
 
 	if resp.StatusCode != 503 {
 		t.Errorf("expected 503 with nil factory, got %d", resp.StatusCode)
+	}
+}
+
+func TestDaemon_ProtectedEndpointsRequireAPIKey(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1", APIKey: "secret"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	body, _ := json.Marshal(ChatRequest{Prompt: "hello"})
+	resp, err := http.Post("http://"+addr+"/v1/chat", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST /v1/chat failed: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without key, got %d", resp.StatusCode)
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://"+addr+"/v1/chat", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", "secret")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST /v1/chat with key failed: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected authenticated request to reach handler, got %d", resp.StatusCode)
+	}
+}
+
+func TestDaemon_RejectsOversizedBody(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	body := []byte(`{"prompt":"` + strings.Repeat("x", maxRequestBodyBytes+1) + `"}`)
+	resp, err := http.Post("http://"+addr+"/v1/chat", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST /v1/chat failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for oversized body, got %d", resp.StatusCode)
+	}
+}
+
+func TestDaemon_RejectsUnknownFields(t *testing.T) {
+	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
+	addr, err := srv.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer srv.Stop(context.Background())
+
+	resp, err := http.Post("http://"+addr+"/v1/chat", "application/json", bytes.NewReader([]byte(`{"prompt":"hello","unknown":true}`)))
+	if err != nil {
+		t.Fatalf("POST /v1/chat failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unknown field, got %d", resp.StatusCode)
 	}
 }
 

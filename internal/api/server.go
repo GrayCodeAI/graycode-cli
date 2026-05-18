@@ -3,11 +3,16 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
+	"io"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 )
+
+const maxRequestBodyBytes = 1 << 20
 
 // Version is the current hawk API surface version, exposed in the GET /version
 // endpoint. It is wired at startup by main.go from the canonical version
@@ -25,6 +30,7 @@ type Server struct {
 	mux    *http.ServeMux
 	server *http.Server
 	mu     sync.Mutex
+	apiKey string
 }
 
 // ChatRequest is the request body for POST /chat.
@@ -50,10 +56,17 @@ type VersionResponse struct {
 
 // New creates a new API server listening on the given address.
 func New(addr string) *Server {
+	return NewWithAPIKey(addr, "")
+}
+
+// NewWithAPIKey creates a new API server and protects mutating endpoints when
+// apiKey is non-empty.
+func NewWithAPIKey(addr, apiKey string) *Server {
 	mux := http.NewServeMux()
 	s := &Server{
-		addr: addr,
-		mux:  mux,
+		addr:   addr,
+		mux:    mux,
+		apiKey: apiKey,
 	}
 	s.registerRoutes()
 	return s
@@ -63,7 +76,48 @@ func New(addr string) *Server {
 func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /version", s.handleVersion)
-	s.mux.HandleFunc("POST /chat", s.handleChat)
+	s.mux.HandleFunc("POST /chat", s.auth(s.handleChat))
+}
+
+func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.apiKey == "" {
+			next(w, r)
+			return
+		}
+		token := r.Header.Get("Authorization")
+		token = strings.TrimPrefix(token, "Bearer ")
+		if token == "" {
+			token = r.Header.Get("X-API-Key")
+		}
+		if !constantTimeEqual(token, s.apiKey) {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		next(w, r)
+	}
+}
+
+func constantTimeEqual(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return false
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "request body must contain a single JSON object"})
+		return false
+	}
+	return true
 }
 
 // Start starts the HTTP server. It blocks until the context is cancelled or an error occurs.
@@ -119,12 +173,11 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	var req ChatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+	if !decodeJSONBody(w, r, &req) {
 		return
 	}
 	if req.Message == "" {
-		http.Error(w, `{"error":"message is required"}`, http.StatusBadRequest)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "message is required"})
 		return
 	}
 
