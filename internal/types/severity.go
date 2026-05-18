@@ -1,4 +1,4 @@
-// Package types provides shared types used across the hawk-eco modules.
+// Package types provides shared types used across GrayCodeAI hawk-related modules.
 package types
 
 import "strings"
@@ -42,20 +42,6 @@ func ParseSeverity(s string) Severity {
 // AtLeast returns true if s >= threshold.
 func (s Severity) AtLeast(threshold Severity) bool {
 	return s >= threshold
-}
-
-// SARIFLevel maps Severity to SARIF level strings.
-func (s Severity) SARIFLevel() string {
-	switch s {
-	case SeverityCritical, SeverityHigh:
-		return "error"
-	case SeverityMedium:
-		return "warning"
-	case SeverityLow:
-		return "note"
-	default:
-		return "none"
-	}
 }
 
 // TokenSeverity defines rule severity for compression error patterns.

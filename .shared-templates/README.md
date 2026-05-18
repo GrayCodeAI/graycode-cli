@@ -1,8 +1,8 @@
 # Eco-Wide Shared Templates
 
-Canonical source-of-truth templates for project meta-files used across every
-hawk-eco repo. Copy these into a repo when adding it to the eco; refresh them
-when updating eco-wide standards.
+Canonical source-of-truth templates for project meta-files used across GrayCodeAI
+repos that adopt these conventions. Copy them into a repo when onboarding it, and
+refresh when updating shared standards.
 
 Files are named `<TARGET>.tmpl` where `<TARGET>` is the rendered filename. The
 single placeholder `${PROJECT}` is replaced with the repo's short name (e.g.
