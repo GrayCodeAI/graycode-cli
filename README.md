@@ -198,13 +198,25 @@ hawk/
 
 ### Ecosystem
 
+hawk integrates these GrayCodeAI repos in three ways:
+
+- **`go.mod` modules:** **eyrie**, **sight**, **inspect**, **tok**, **yaad** — pinned versions from the module proxy (same semver story across CI).
+- **Submodule + `go.work`:** **eyrie** only — checked out under **`external/eyrie`** (`git submodule update --init --recursive`) so CI/builds always see the same Eyrie source layout as Herm-style repos.
+- **Optional CLI (no Go import):** **trace** — installed separately; `hawk` shells into `trace` for session capture when present.
+
+Cross-repo types (severity, etc.) are exported from **`github.com/GrayCodeAI/hawk/shared/types`** so **sight** / **inspect** / **tok** do not import **`internal/`**.
+
+You may keep a **personal** parent **`go.work`** that lists sibling clones on disk (`../sight`, …); nothing besides **`external/eyrie`** is committed as a submodule in hawk.
+
 | Component | Repository | Purpose |
 |---|---|---|
 | **hawk** | This repo | AI coding agent |
 | **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
+| **sight** | [GrayCodeAI/sight](https://github.com/GrayCodeAI/sight) | Diff-based code review (`hawk sight`) |
+| **inspect** | [GrayCodeAI/inspect](https://github.com/GrayCodeAI/inspect) | Site audit library |
 | **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Tokenizer & compression |
 | **yaad** | [GrayCodeAI/yaad](https://github.com/GrayCodeAI/yaad) | Graph-based memory |
-| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture |
+| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture CLI |
 
 ## Development
 

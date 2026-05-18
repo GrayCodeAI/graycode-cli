@@ -1,8 +1,8 @@
 {
   "$schema": "./compatibility-matrix.schema.json",
-  "description": "Cross-repo compatibility tracking for the hawk-eco. Each `matrix` entry records a combination of component versions that have been tested together. CI runs the matrix on a schedule and on PR to ensure released components stay compatible.",
+  "description": "Cross-repo compatibility tracking for GrayCodeAI repositories. Each `matrix` entry records a combination of component versions that have been tested together. CI runs the matrix on a schedule and on PR to ensure released components stay compatible.",
   "version": "1",
-  "updated": "2026-05-15",
+  "updated": "2026-05-18",
   "components": [
     "hawk",
     "hawk-sdk-go",
@@ -12,20 +12,18 @@
     "inspect",
     "tok",
     "yaad",
-    "trace",
-    "sarif"
+    "trace"
   ],
   "dependencies": {
     "hawk":            ["eyrie", "sight", "inspect", "tok"],
     "hawk-sdk-go":     ["hawk"],
     "hawk-sdk-python": ["hawk"],
-    "sight":           ["eyrie", "sarif"],
-    "inspect":         ["sarif"],
+    "sight":           ["hawk", "eyrie"],
+    "inspect":         ["hawk"],
     "trace":           [],
-    "tok":             [],
+    "tok":             ["hawk"],
     "yaad":            [],
-    "eyrie":           [],
-    "sarif":           []
+    "eyrie":           []
   },
   "matrices": [
     {
@@ -40,8 +38,7 @@
         "inspect":         "0.2.0",
         "tok":             "0.2.0",
         "yaad":            "0.2.0",
-        "trace":           "0.2.0",
-        "sarif":           "0.1.0"
+        "trace":           "0.2.0"
       }
     },
     {
@@ -56,8 +53,7 @@
         "inspect":         "main",
         "tok":             "main",
         "yaad":            "main",
-        "trace":           "main",
-        "sarif":           "main"
+        "trace":           "main"
       }
     }
   ]

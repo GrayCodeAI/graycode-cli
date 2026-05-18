@@ -1,4 +1,4 @@
-# Canonical hawk-eco goreleaser config for Go binary repos.
+# Canonical GrayCodeAI goreleaser config for Go binary repos.
 # Source of truth: .shared-templates/.goreleaser.yml.tmpl
 #
 # Placeholders rendered per repo:
