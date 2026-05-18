@@ -1,0 +1,8 @@
+go 1.26.3
+
+use (
+	.
+	./external/eyrie
+)
+
+// Eyrie is a git submodule at ./external/eyrie (Herm / LangDAG pattern).

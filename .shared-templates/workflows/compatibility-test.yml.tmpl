@@ -1,7 +1,7 @@
-# Canonical compatibility-test workflow for the hawk-eco.
+# Canonical compatibility-test workflow for GrayCodeAI repositories.
 # Source of truth: .shared-templates/workflows/compatibility-test.yml.tmpl
 #
-# Lives in the central hawk-eco repo (or eventually GrayCodeAI/.github). On
+# Lives in hawk (or eventually GrayCodeAI/.github). On
 # every push to a component repo's main, AND on a nightly schedule, this
 # workflow:
 #
@@ -132,7 +132,7 @@ jobs:
       - name: Checkout each component at its pinned version
         run: |
           # Each component is its own repo under github.com/GrayCodeAI/<component>
-          for c in hawk hawk-sdk-go hawk-sdk-python eyrie sight inspect tok yaad trace sarif; do
+          for c in hawk hawk-sdk-go hawk-sdk-python eyrie sight inspect tok yaad trace; do
             ver_var="COMPAT_$(echo "$c" | tr 'a-z-' 'A-Z_')"
             ver="${!ver_var}"
             [ -z "$ver" ] && continue

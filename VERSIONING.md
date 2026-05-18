@@ -1,7 +1,7 @@
-# Versioning Standard — hawk-eco
+# Versioning Standard — GrayCodeAI repositories
 
-This document describes the versioning convention used across every repo in
-the hawk-eco. Adopted 2026-05-14.
+This document describes the versioning convention used across every GrayCodeAI
+repository that follows this layout. Adopted 2026-05-14.
 
 ## TL;DR
 

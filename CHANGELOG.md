@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Version re-baselined to `0.2.0`** across `main.go`, `api/server.go`, `flake.nix`,
   `.github/workflows/release.yml`, and the `update`/`api` test suites, aligning hawk
-  with the rest of the hawk-eco ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
+  with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
 
 ### Added — Production Hardening (top-50 OSS parity)
 - **Stricter linting**: `.golangci.yml` v2 config enabling `errcheck`, `staticcheck`,

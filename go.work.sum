@@ -1,6 +1,7 @@
 cel.dev/expr v0.25.1/go.mod h1:hrXvqGP6G6gyx8UAHSHJ5RGk//1Oj5nXQ2NI02Nrsg4=
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0/go.mod h1:P4WPRUkOhJC13W//jWpyfJNDAIpvRbAUIYLX/4jtlE0=
+github.com/GrayCodeAI/eyrie v0.2.0/go.mod h1:7usV5x9L8imlOGGLVuhX4SIWUpr6iWBk3bAdjqCnuCI=
 github.com/GrayCodeAI/hawk v0.2.0/go.mod h1:ppjbB+dlYJ6IGYZywBM+KHwhRqN/uG2RGBsQloXk8A8=
 github.com/GrayCodeAI/inspect v0.1.0 h1:zQSYALPuodpbVpUPLELhvuBy4FYnWLzYo1NjwUigChI=
 github.com/GrayCodeAI/inspect v0.1.0/go.mod h1:IOH0pwvJ5TmNFSRDkLH3nbWbawE/PPaZojV2Lj5BSnU=

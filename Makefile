@@ -1,4 +1,4 @@
-# Canonical hawk-eco Makefile for Go binary repos.
+# Canonical GrayCodeAI Makefile for Go binary repos.
 # Source of truth: .shared-templates/Makefile.binary.tmpl at the eco root.
 # Placeholders rendered per repo: hawk, ..
 

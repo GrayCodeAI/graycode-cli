@@ -1,6 +1,6 @@
 # Hawk Ecosystem - Complete Feature Reference
 
-> 100 features implemented across the hawk-eco ecosystem, organized by category.
+> 100 features implemented across the GrayCodeAI ecosystem, organized by category.
 
 ---
 
@@ -160,19 +160,18 @@ Monitoring, profiling, and cost analysis for agent operations.
 
 ---
 
-## 8. Review & Security (7 features)
+## 8. Review & Security (6 features)
 
 Automated code review, static analysis, and vulnerability scanning.
 
 | # | Feature | File Path(s) | Description | Key Functions/Types | Inspired By |
 |---|---------|-------------|-------------|---------------------|-------------|
 | 74 | Static analysis rules (sight) | `sight/static_rules.go` | 35 security and correctness rules | `StaticAnalyzer`, `Analyze()`, `Rule`, `Violation`, `Severity` | semgrep |
-| 75 | SARIF output (sight) | `sight/sarif.go` | GitHub Code Scanning compatible output | `SARIFWriter`, `Write()`, `Run`, `Result`, `Location` | Custom |
-| 76 | API security checks (inspect) | `inspect/api_security.go` | CORS, JWT, rate limiting vulnerability checks | `APISecurityChecker`, `Check()`, `CORSCheck`, `JWTCheck` | OWASP |
-| 77 | Dependency CVE scanning (inspect) | `inspect/dependency_check.go` | 30+ known vulnerability patterns | `CVEScanner`, `Scan()`, `Vulnerability`, `Advisory` | Custom |
-| 78 | Multi-format reporting (inspect) | `inspect/report.go` | HTML/Markdown/JUnit report generation | `Reporter`, `Generate()`, `HTMLReport`, `JUnitReport` | Custom |
-| 79 | Code review bot | `engine/review_bot.go` | 22 rule-based automated review checks | `ReviewBot`, `Review()`, `ReviewRule`, `Comment`, `Suggestion` | Custom |
-| 80 | Inline annotations | `engine/annotations.go` | Temporary comments visible only to agent | `Annotator`, `Add()`, `Remove()`, `Annotation`, `Scope` | Custom |
+| 75 | API security checks (inspect) | `inspect/api_security.go` | CORS, JWT, rate limiting vulnerability checks | `APISecurityChecker`, `Check()`, `CORSCheck`, `JWTCheck` | OWASP |
+| 76 | Dependency CVE scanning (inspect) | `inspect/dependency_check.go` | 30+ known vulnerability patterns | `CVEScanner`, `Scan()`, `Vulnerability`, `Advisory` | Custom |
+| 77 | Multi-format reporting (inspect) | `inspect/report.go` | HTML/Markdown/JUnit report generation | `Reporter`, `Generate()`, `HTMLReport`, `JUnitReport` | Custom |
+| 78 | Code review bot | `engine/review_bot.go` | 22 rule-based automated review checks | `ReviewBot`, `Review()`, `ReviewRule`, `Comment`, `Suggestion` | Custom |
+| 79 | Inline annotations | `engine/annotations.go` | Temporary comments visible only to agent | `Annotator`, `Add()`, `Remove()`, `Annotation`, `Scope` | Custom |
 
 ---
 
@@ -269,4 +268,4 @@ System health, configuration management, and project setup.
 
 ---
 
-*Generated for hawk-eco v1.0 - 100 features across 12 categories*
+*Generated for hawk ecosystem reference v1.0 — 100 features across 12 categories*

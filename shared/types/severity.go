@@ -1,38 +1,38 @@
-// Package types provides shared type definitions for backward compatibility.
-// Deprecated: Use github.com/GrayCodeAI/hawk/internal/types instead.
+// Package types defines stable shared types for GrayCodeAI libraries (sight, inspect, tok, …).
+// Implementations live in github.com/GrayCodeAI/hawk/internal/types; this package forwards them
+// so consumers do not import internal paths from another module.
 package types
 
-import "github.com/GrayCodeAI/hawk/internal/types"
+import hawkinternal "github.com/GrayCodeAI/hawk/internal/types"
 
-// Re-export all types from internal/types for backward compatibility.
 type (
-	Severity      = types.Severity
-	TokenSeverity = types.TokenSeverity
-	AuditSeverity = types.AuditSeverity
-	ToolCall      = types.ToolCall
-	ToolResult    = types.ToolResult
+	Severity      = hawkinternal.Severity
+	TokenSeverity = hawkinternal.TokenSeverity
+	AuditSeverity = hawkinternal.AuditSeverity
+	ToolCall      = hawkinternal.ToolCall
+	ToolResult    = hawkinternal.ToolResult
 )
 
-// Severity constants
 const (
-	SeverityInfo     = types.SeverityInfo
-	SeverityLow      = types.SeverityLow
-	SeverityMedium   = types.SeverityMedium
-	SeverityHigh     = types.SeverityHigh
-	SeverityCritical = types.SeverityCritical
+	SeverityInfo     = hawkinternal.SeverityInfo
+	SeverityLow      = hawkinternal.SeverityLow
+	SeverityMedium   = hawkinternal.SeverityMedium
+	SeverityHigh     = hawkinternal.SeverityHigh
+	SeverityCritical = hawkinternal.SeverityCritical
 )
 
-// TokenSeverity constants
 const (
-	TokenSeverityCritical = types.TokenSeverityCritical
-	TokenSeverityHigh     = types.TokenSeverityHigh
-	TokenSeverityMedium   = types.TokenSeverityMedium
-	TokenSeverityLow      = types.TokenSeverityLow
+	TokenSeverityCritical = hawkinternal.TokenSeverityCritical
+	TokenSeverityHigh     = hawkinternal.TokenSeverityHigh
+	TokenSeverityMedium   = hawkinternal.TokenSeverityMedium
+	TokenSeverityLow      = hawkinternal.TokenSeverityLow
 )
 
-// AuditSeverity constants
 const (
-	AuditSeverityCritical = types.AuditSeverityCritical
-	AuditSeverityWarning  = types.AuditSeverityWarning
-	AuditSeverityInfo     = types.AuditSeverityInfo
+	AuditSeverityCritical = hawkinternal.AuditSeverityCritical
+	AuditSeverityWarning  = hawkinternal.AuditSeverityWarning
+	AuditSeverityInfo     = hawkinternal.AuditSeverityInfo
 )
+
+// ParseSeverity converts a string to a Severity (delegates to hawk internal/types).
+var ParseSeverity = hawkinternal.ParseSeverity
