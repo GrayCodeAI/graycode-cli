@@ -1,4 +1,4 @@
-# Canonical lefthook config for hawk-eco Go repos.
+# Canonical lefthook config for GrayCodeAI Go repos.
 # Source of truth: .shared-templates/lefthook.yml.tmpl
 #
 # Install lefthook:

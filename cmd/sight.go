@@ -118,7 +118,7 @@ func init() {
 	sightCmd.Flags().StringVar(&sightConcerns, "concerns", "", "comma-separated concerns (security,bugs,performance,correctness,style)")
 	sightCmd.Flags().StringVar(&sightModel, "model", "", "LLM model to use for review")
 	sightCmd.Flags().StringVar(&sightFailOn, "fail-on", "critical", "minimum severity to cause exit code 1 (info,low,medium,high,critical)")
-	sightCmd.Flags().StringVar(&sightFormat, "format", "terminal", "output format: terminal, json, sarif")
+	sightCmd.Flags().StringVar(&sightFormat, "format", "terminal", "output format: terminal, json")
 	sightCmd.Flags().BoolVar(&sightReflection, "reflection", false, "enable self-reflection pass to validate findings")
 	sightCmd.Flags().StringVar(&sightMode, "mode", "review", "operation mode: review, describe, improve")
 	sightCmd.Flags().DurationVar(&sightTimeout, "timeout", 2*time.Minute, "timeout for the LLM review operation (e.g. 30s, 2m)")
@@ -161,13 +161,6 @@ func runSightReview(ctx context.Context, bridge *hawkSight.Bridge, diff string) 
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(result); err != nil {
-			return err
-		}
-	case "sarif":
-		sarif := formatSightSARIF(result)
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(sarif); err != nil {
 			return err
 		}
 	default:
@@ -363,69 +356,4 @@ func formatImprovementsTerminal(result *sightLib.ImproveResult) string {
 	b.WriteString("\n")
 
 	return b.String()
-}
-
-// formatSightSARIF produces a minimal SARIF 2.1.0 output for CI integration.
-func formatSightSARIF(result *sightLib.Result) map[string]interface{} {
-	rules := []map[string]interface{}{}
-	ruleIndex := map[string]int{}
-	results := []map[string]interface{}{}
-
-	for _, f := range result.Findings {
-		ruleID := f.Concern
-		if _, ok := ruleIndex[ruleID]; !ok {
-			ruleIndex[ruleID] = len(rules)
-			rules = append(rules, map[string]interface{}{
-				"id":   ruleID,
-				"name": f.Concern,
-			})
-		}
-
-		sarif := map[string]interface{}{
-			"ruleId":  ruleID,
-			"level":   sarifLevel(f.Severity),
-			"message": map[string]string{"text": f.Message},
-		}
-		if f.File != "" {
-			loc := map[string]interface{}{
-				"physicalLocation": map[string]interface{}{
-					"artifactLocation": map[string]string{"uri": f.File},
-				},
-			}
-			if f.Line > 0 {
-				loc["physicalLocation"].(map[string]interface{})["region"] = map[string]int{
-					"startLine": f.Line,
-				}
-			}
-			sarif["locations"] = []map[string]interface{}{loc}
-		}
-		results = append(results, sarif)
-	}
-
-	return map[string]interface{}{
-		"$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
-		"version": "2.1.0",
-		"runs": []map[string]interface{}{
-			{
-				"tool": map[string]interface{}{
-					"driver": map[string]interface{}{
-						"name":  "hawk-sight",
-						"rules": rules,
-					},
-				},
-				"results": results,
-			},
-		},
-	}
-}
-
-func sarifLevel(sev sightLib.Severity) string {
-	switch sev {
-	case sightLib.SeverityCritical, sightLib.SeverityHigh:
-		return "error"
-	case sightLib.SeverityMedium:
-		return "warning"
-	default:
-		return "note"
-	}
 }

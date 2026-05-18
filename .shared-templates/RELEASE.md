@@ -1,7 +1,7 @@
 # release-please
 
 We use [release-please](https://github.com/googleapis/release-please) for all
-release automation in the hawk-eco. Each repo has three files:
+release automation across GrayCodeAI repositories. Each repo has three files:
 
 | File | What it does |
 |------|--------------|

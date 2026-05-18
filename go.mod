@@ -26,9 +26,6 @@ require (
 	modernc.org/sqlite v1.50.1
 )
 
-// Local sibling eyrie checkout (main may be ahead of tagged v0.2.0); remove when using only the published module.
-replace github.com/GrayCodeAI/eyrie => ../eyrie
-
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
