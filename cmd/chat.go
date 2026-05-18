@@ -22,16 +22,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
-	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 

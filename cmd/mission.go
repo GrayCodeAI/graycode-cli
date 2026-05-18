@@ -11,8 +11,8 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	mission "github.com/GrayCodeAI/hawk/internal/multiagent"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/multiagent"
 	"github.com/spf13/cobra"
 )
 

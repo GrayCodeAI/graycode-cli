@@ -2,46 +2,46 @@
 
 ## Architecture
 
-hawk is a model-agnostic AI coding agent with 59 packages organized around:
+hawk is a model-agnostic AI coding agent with 60+ packages organized around:
 
 ### Core Packages
 - `cmd/` — CLI entry point (cobra + bubbletea TUI)
-- `engine/` — Agent loop, compaction, self-improvement, loop detection
-- `tool/` — 40 built-in tools with safety/permission layer
-- `config/` — Settings, budget tracking, validation, agent personas
+- `internal/engine/` — Agent loop, compaction, self-improvement, loop detection
+- `internal/tool/` — 40 built-in tools with safety/permission layer
+- `internal/config/` — Settings, budget tracking, validation, agent personas
 
 ### Provider Layer
 - `eyrie` (external) — LLM provider abstraction, streaming, retries
 - hawk never talks to LLM APIs directly; eyrie handles all provider communication
 
 ### Intelligence
-- `repomap/` — Code intelligence (PageRank, BM25, TF-IDF for file relevance)
-- `memory/` — yaad bridge for persistent cross-session memory
-- `planner/` — Multi-step planning with decomposition
+- `internal/intelligence/repomap/` — Code intelligence (PageRank, BM25, TF-IDF for file relevance)
+- `internal/intelligence/memory/` — yaad bridge for persistent cross-session memory
+- `internal/intelligence/planner/` — Multi-step planning with decomposition
 
 ### Infrastructure
-- `session/` — Persistence (JSONL, WAL, checkpoints, branch tracking)
-- `daemon/` — Background HTTP/SSE server (JSON + streaming)
-- `sandbox/` — Command isolation (landlock, seccomp, docker, chroot)
-- `permissions/` — User approval system with auto-learning
-- `hooks/` — Event-driven plugin system
-- `mcp/` — Model Context Protocol client with buffered I/O
+- `internal/session/` — Persistence (JSONL, WAL, checkpoints, branch tracking)
+- `internal/daemon/` — Background HTTP/SSE server (JSON + streaming)
+- `internal/sandbox/` — Command isolation (landlock, seccomp, docker, chroot)
+- `internal/permissions/` — User approval system with auto-learning
+- `internal/hooks/` — Event-driven plugin system
+- `internal/mcp/` — Model Context Protocol client with buffered I/O
 
 ### Multi-Agent
-- `mission/` — Multi-agent orchestration on parallel git branches
-- `parallel/` — Worktree-based parallel execution
-- `agents/` — Custom persona loader (markdown + YAML frontmatter)
+- `internal/multiagent/mission/` — Multi-agent orchestration on parallel git branches
+- `internal/multiagent/parallel/` — Worktree-based parallel execution
+- `internal/multiagent/agents/` — Custom persona loader (markdown + YAML frontmatter)
 
 ### Resilience
-- `circuit/` — Circuit breaker pattern
-- `ratelimit/` — Token bucket rate limiting
-- `retry/` — Exponential backoff
-- `health/` — Diagnostics and self-checks
+- `internal/resilience/circuit/` — Circuit breaker pattern
+- `internal/resilience/ratelimit/` — Token bucket rate limiting
+- `internal/resilience/retry/` — Exponential backoff
+- `internal/resilience/health/` — Diagnostics and self-checks
 
 ## Key Patterns
 
 ### Error Handling
-- `hawkerr/` package defines BridgeError for cross-package errors
+- `internal/hawkerr/` package defines BridgeError for cross-package errors
 - All errors use `%w` wrapping for proper error chain inspection
 - Panic recovery in `cmd/errors.go` with triple-nested defer/recover
 
@@ -52,7 +52,7 @@ hawk is a model-agnostic AI coding agent with 59 packages organized around:
 
 ### Testing
 - Race detector required: `go test -race`
-- Integration tests: `integration_test.go` at root, engine/, tool/
+- Integration tests: `integration_test.go` at root
 - No mocking of databases — real SQLite in tests
 - Tests timeout: 120s
 
@@ -89,4 +89,4 @@ replace (
 ## Sandbox (Linux)
 - Landlock: filesystem access restrictions
 - seccomp-bpf: blocks 21 dangerous syscalls
-- Fallback: no-op on non-Linux (sandbox_other.go)
+- Fallback: no-op on non-Linux (`internal/sandbox/landlock_other.go`)

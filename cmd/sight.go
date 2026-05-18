@@ -12,8 +12,8 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	sightLib "github.com/GrayCodeAI/sight"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
