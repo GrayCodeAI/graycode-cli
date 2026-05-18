@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/spf13/cobra"

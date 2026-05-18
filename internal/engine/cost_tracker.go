@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/observability"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
 
 // CostTracker records per-request cost entries for analytics and optimization.
