@@ -1,31 +1,17 @@
-# Canonical CI workflow for hawk-eco Go repos.
-# Source of truth: .shared-templates/workflows/go-ci.yml.tmpl
-#
-# Two deployment models:
-#
-# 1. NOW — render this template inline into each repo's
-#    .github/workflows/ci.yml. Every repo has identical content.
-#
-# 2. LATER — once GrayCodeAI/.github exists as a central repo, move this
-#    file to GrayCodeAI/.github/.github/workflows/go-ci.yml with
-#    `on: workflow_call:`. Each repo's ci.yml becomes a 5-line caller:
-#
-#       name: CI
-#       on: { push: { branches: [main] }, pull_request: }
-#       jobs:
-#         ci:
-#           uses: GrayCodeAI/.github/.github/workflows/go-ci.yml@main
+# Strict CI pipeline for hawk-eco Go repos.
+# All jobs must pass — no continue-on-error except where explicitly noted.
 
 name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
 
 permissions:
   contents: read
+  security-events: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -36,10 +22,10 @@ env:
 
 jobs:
   # -------------------------------------------------------------------------
-  # Format + vet — fastest, fail fast.
+  # 1. Format — gofumpt + goimports must be clean (zero tolerance).
   # -------------------------------------------------------------------------
-  fmt-vet:
-    name: fmt + vet
+  format:
+    name: format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,24 +33,75 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: gofumpt diff
+      - name: gofumpt
         run: |
           go install mvdan.cc/gofumpt@latest
           out=$(gofumpt -l .)
           if [ -n "$out" ]; then
-            echo "::error::gofumpt would reformat the following files:"
-            echo "$out"
+            echo "::error::gofumpt would reformat:"
+            echo "$out" | head -20
             exit 1
           fi
+      - name: goimports
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+          out=$(goimports -l .)
+          if [ -n "$out" ]; then
+            echo "::error::goimports would reformat:"
+            echo "$out" | head -20
+            exit 1
+          fi
+
+  # -------------------------------------------------------------------------
+  # 2. Module hygiene — tidy, verify, no stray replace directives.
+  # -------------------------------------------------------------------------
+  module:
+    name: module hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: go mod tidy
+        run: |
+          go mod tidy
+          if ! git diff --quiet -- go.mod go.sum; then
+            echo "::error::go.mod / go.sum out of date — run 'go mod tidy'"
+            git diff -- go.mod go.sum
+            exit 1
+          fi
+      - name: go mod verify
+        run: go mod verify
+      - name: no stray replace directives
+        run: |
+          if grep -q "^\s*replace" go.mod; then
+            echo "::warning::go.mod contains replace directives (should use go.work for local dev)"
+          fi
+
+  # -------------------------------------------------------------------------
+  # 3. Vet + static analysis — compiler-level correctness.
+  # -------------------------------------------------------------------------
+  vet:
+    name: vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
       - name: go vet
         run: go vet ./...
 
   # -------------------------------------------------------------------------
-  # Lint — golangci-lint covers most static checks.
+  # 4. Lint — golangci-lint with zero-tolerance policy.
   # -------------------------------------------------------------------------
   lint:
     name: lint
     runs-on: ubuntu-latest
+    needs: [format, vet]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -77,47 +114,50 @@ jobs:
         with:
           version: v2.1.0
           install-mode: goinstall
-          verify: false
           args: --timeout=5m
         env:
           GOWORK: "off"
 
   # -------------------------------------------------------------------------
-  # Tests with race detector + coverage upload.
+  # 5. Tests — race detector, coverage threshold, no flaky skips.
   # -------------------------------------------------------------------------
   test:
-    name: test (race + cover)
+    name: test (race + coverage)
     runs-on: ubuntu-latest
+    needs: [format, vet]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: Tidy check
+      - name: Test with race detector
+        run: go test ./... -race -count=1 -coverprofile=coverage.out -covermode=atomic -timeout=300s
+      - name: Coverage summary
         run: |
-          go mod tidy
-          if ! git diff --quiet; then
-            echo "::error::go.mod / go.sum out of date — run 'go mod tidy' and commit"
-            git diff
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+          echo "Coverage: ${coverage}%"
+          echo "coverage=${coverage}" >> $GITHUB_ENV
+      - name: Coverage threshold (minimum 10%)
+        run: |
+          if (( $(echo "${coverage} < 10" | bc -l) )); then
+            echo "::error::Coverage ${coverage}% is below minimum 10%"
             exit 1
           fi
-      - name: Test
-        run: go test ./... -race -count=1 -coverprofile=coverage.out -covermode=atomic -timeout=180s
-      - name: Coverage summary
-        run: go tool cover -func=coverage.out | tail -1
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-${{ github.job }}
           path: coverage.out
+          retention-days: 30
 
   # -------------------------------------------------------------------------
-  # Security scan — vulnerability database + (optional) gosec.
+  # 6. Security — vulnerability scan + secret detection.
   # -------------------------------------------------------------------------
   security:
     name: security
     runs-on: ubuntu-latest
+    needs: [format, vet]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -128,21 +168,53 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
-      - name: gosec (advisory)
-        continue-on-error: true
+      - name: gosec (strict)
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec -exclude=G104,G301,G302,G304,G306 ./...
+          gosec -exclude=G104 -confidence=high -severity=medium ./...
 
   # -------------------------------------------------------------------------
-  # Cross-platform build matrix — only for repos that produce a binary.
-  # Repos that are pure libraries can keep this job (it'll just `go build ./...`)
-  # or remove it locally.
+  # 7. Secret scan — detect leaked API keys, tokens, credentials.
+  # -------------------------------------------------------------------------
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # -------------------------------------------------------------------------
+  # 8. Markdown lint — validate documentation quality.
+  # -------------------------------------------------------------------------
+  markdown:
+    name: markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: '**/*.md'
+          config: |
+            {
+              "default": true,
+              "line-length": false,
+              "no-inline-html": false,
+              "first-line-h1": false,
+              "no-duplicate-heading": false,
+              "no-emphasis-as-heading": false
+            }
+
+  # -------------------------------------------------------------------------
+  # 9. Cross-platform build matrix — zero CGO, all targets.
   # -------------------------------------------------------------------------
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest
-    needs: [fmt-vet, lint, test]
+    needs: [format, lint, test, security]
     strategy:
       fail-fast: false
       matrix:
@@ -162,4 +234,14 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
-        run: go build ./...
+        run: go build -trimpath -v ./...
+      - name: Binary size check (linux/amd64 only)
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          size=$(go build -trimpath -o /tmp/hawk-bin . && wc -c < /tmp/hawk-bin)
+          size_mb=$((size / 1024 / 1024))
+          echo "Binary size: ${size_mb}MB"
+          if [ "$size_mb" -gt 100 ]; then
+            echo "::warning::Binary size ${size_mb}MB exceeds 100MB threshold"
+          fi
+          rm -f /tmp/hawk-bin
