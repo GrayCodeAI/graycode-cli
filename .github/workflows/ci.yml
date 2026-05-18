@@ -113,7 +113,7 @@ jobs:
         run: rm -f go.work go.work.sum
       - uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v8.0.0
         with:
-          version: v2.1.0
+          version: v2.1.6
           install-mode: goinstall
           args: --timeout=5m
         env:
@@ -184,9 +184,15 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run gitleaks
+        run: |
+          go install github.com/gitleaks/gitleaks/v2/cmd/gitleaks@latest
+          gitleaks detect --source . --report-format json --report-path gitleaks-report.json --verbose --exit-code 1
+          if [ -s gitleaks-report.json ] && [ "$(cat gitleaks-report.json)" != "[]" ]; then
+            echo "::error::Secrets detected in repository"
+            cat gitleaks-report.json
+            exit 1
+          fi
 
   # -------------------------------------------------------------------------
   # 8. Dependency review — only on pull requests.
@@ -207,18 +213,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: DavidAnson/markdownlint-cli2-action@a23dae216ce3fee4db69da41fed90d2a4af801cf # v19.0.0
-        with:
-          globs: '**/*.md'
-          config: |
-            {
-              "default": true,
-              "line-length": false,
-              "no-inline-html": false,
-              "first-line-h1": false,
-              "no-duplicate-heading": false,
-              "no-emphasis-as-heading": false
-            }
+      - name: Run markdownlint-cli2
+        run: |
+          npm install -g markdownlint-cli2
+          echo '{"default":true,"line-length":false,"no-inline-html":false,"first-line-h1":false,"no-duplicate-heading":false,"no-emphasis-as-heading":false}' > .markdownlint-cli2.jsonc
+          markdownlint-cli2 '**/*.md'
 
   # -------------------------------------------------------------------------
   # 10. Cross-platform build matrix — zero CGO, all targets.
