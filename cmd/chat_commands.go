@@ -21,6 +21,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
@@ -1629,7 +1630,18 @@ Generate the recap:`, summary.String())
 		return m, nil
 	case "/fast":
 		if m.session.Model() == m.settings.Model {
-			fastModel := "claude-haiku-4-5-20251001"
+			norm := hawkconfig.NormalizeProviderForEngine(m.session.Provider())
+			fastModel := hawkmodel.CheapestForProvider(norm, m.session.Model())
+			if strings.TrimSpace(fastModel) == "" {
+				fastModel = hawkmodel.DefaultModel(norm)
+			}
+			if strings.TrimSpace(fastModel) == "" {
+				fastModel = client.ResolveDefaultModel(m.session.Provider())
+			}
+			if strings.TrimSpace(fastModel) == "" {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Fast mode: no catalog model resolved for this provider"})
+				return m, nil
+			}
 			m.session.SetModel(fastModel)
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode on → %s", fastModel)})
 		} else {

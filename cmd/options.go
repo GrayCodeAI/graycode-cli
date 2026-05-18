@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/prompt"
@@ -168,7 +170,18 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 			effectiveModel = ""
 		}
 	}
+	if normalized != "" && strings.TrimSpace(effectiveModel) == "" {
+		if resolved := hawkmodel.DefaultModel(normalized); resolved != "" {
+			effectiveModel = resolved
+		} else if resolved := client.ResolveDefaultModel(normalized); resolved != "" {
+			effectiveModel = resolved
+		}
+	}
 	return effectiveModel, normalized
+}
+
+func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveModel, systemPrompt string, registry *tool.Registry) *engine.Session {
+	return eyrieclient.NewHawkSession(context.Background(), settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 }
 
 func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {

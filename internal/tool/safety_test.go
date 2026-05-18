@@ -64,6 +64,7 @@ func TestDetectCredentials(t *testing.T) {
 		want    bool
 	}{
 		{"OpenAI key", "sk-abc123def456ghi789jkl012mno", true},
+		{"Anthropic key", "sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789ABCD", true},
 		{"AWS key", "AKIAIOSFODNN7EXAMPLE", true},
 		{"GitHub PAT", "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij", true},
 		{"GitHub OAuth", "gho_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij", true},
@@ -102,6 +103,7 @@ func TestIsSensitivePath(t *testing.T) {
 		filepath.Join(home, ".ssh", "config"),
 		filepath.Join(home, ".ssh", "authorized_keys"),
 		filepath.Join(home, ".aws", "credentials"),
+		filepath.Join(home, ".hawk", "provider.json"),
 		filepath.Join(home, ".env"),
 		"/some/project/.env",
 		"/tmp/app/credentials.json",

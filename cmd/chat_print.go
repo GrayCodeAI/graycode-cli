@@ -34,7 +34,7 @@ func runPrint(text string) error {
 		return err
 	}
 
-	sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if err := configureSession(sess, settings); err != nil {
 		return err
