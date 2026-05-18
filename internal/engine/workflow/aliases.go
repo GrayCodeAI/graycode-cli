@@ -6,7 +6,7 @@ import (
 	"context"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // Workflow is a declarative multi-step task definition.

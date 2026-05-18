@@ -6,7 +6,7 @@
 // supporting lifecycle infrastructure only.
 package lifecycle
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	SessionLifecycle        = engine.SessionLifecycle

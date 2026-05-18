@@ -5,7 +5,7 @@ package review
 import (
 	"context"
 
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // LLMClient is the minimal interface review components use to call models.

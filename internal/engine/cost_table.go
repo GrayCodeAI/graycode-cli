@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/routing"
+import "github.com/GrayCodeAI/hawk/internal/provider/routing"
 
 // ModelPricing returns input/output price per million tokens for a model.
 func ModelPricing(modelName string) (inputPricePerM, outputPricePerM float64) {

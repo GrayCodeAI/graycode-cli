@@ -2,7 +2,7 @@
 // in package engine. See ../REFACTOR_PLAN.md.
 package git
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 // Context wraps a local git repo and exposes file/commit/blame queries.
 type Context = engine.GitContext

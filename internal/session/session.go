@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/shared/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // Message is a persisted conversation message.

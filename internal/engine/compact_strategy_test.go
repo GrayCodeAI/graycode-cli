@@ -7,8 +7,8 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
-	"github.com/GrayCodeAI/hawk/logger"
-	"github.com/GrayCodeAI/hawk/metrics"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 )
 
 func TestCompactEstimateTokens(t *testing.T) {

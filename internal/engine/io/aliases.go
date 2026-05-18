@@ -2,7 +2,7 @@
 // watcher, and cron scheduler types. See ../REFACTOR_PLAN.md.
 package io
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	ClipboardMonitor  = engine.ClipboardMonitor

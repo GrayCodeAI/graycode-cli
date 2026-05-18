@@ -2,7 +2,7 @@
 // types — loop detection, stall detection, backtracking. See ../REFACTOR_PLAN.md.
 package control
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 // LoopDetector watches for repeated tool-call patterns indicating the agent
 // is stuck in a doom loop.

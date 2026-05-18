@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/repomap"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // ExportContext generates a comprehensive context document about the current project.

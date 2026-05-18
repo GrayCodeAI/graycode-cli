@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	hawkSight "github.com/GrayCodeAI/hawk/sight"
+	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
 )

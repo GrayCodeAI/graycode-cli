@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/permissions"
+	"github.com/GrayCodeAI/hawk/internal/permissions"
 )
 
 // PermissionEngine encapsulates all permission-checking logic.

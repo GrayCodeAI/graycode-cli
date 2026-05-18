@@ -4,7 +4,7 @@
 // Named "errs" (not "error") to avoid shadowing the builtin error type.
 package errs
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	ErrorContext      = engine.ErrorContext

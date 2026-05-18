@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // NotebookEditTool edits Jupyter notebook cells.

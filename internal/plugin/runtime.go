@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/hooks"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
 )
 
 // Runtime manages loaded plugins and their execution.

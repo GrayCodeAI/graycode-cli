@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/routing"
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 )

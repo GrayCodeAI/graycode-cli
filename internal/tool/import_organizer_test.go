@@ -9,11 +9,11 @@ func TestOrganizeGo_GroupsCorrectly(t *testing.T) {
 	input := `package main
 
 import (
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 	"fmt"
 	"github.com/google/uuid"
 	"os"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"strings"
 )
 
@@ -37,8 +37,8 @@ func main() {
 	osIdx := strings.Index(result, `"os"`)
 	stringsIdx := strings.Index(result, `"strings"`)
 	uuidIdx := strings.Index(result, `"github.com/google/uuid"`)
-	engineIdx := strings.Index(result, `"github.com/GrayCodeAI/hawk/engine"`)
-	toolIdx := strings.Index(result, `"github.com/GrayCodeAI/hawk/tool"`)
+	engineIdx := strings.Index(result, `"github.com/GrayCodeAI/hawk/internal/engine"`)
+	toolIdx := strings.Index(result, `"github.com/GrayCodeAI/hawk/internal/tool"`)
 
 	if fmtIdx < 0 || osIdx < 0 || stringsIdx < 0 {
 		t.Fatal("stdlib imports missing")

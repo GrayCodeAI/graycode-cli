@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/memory"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
 
 // LoadAgentsMD reads AGENTS.md (or AGENTS.md for backward compatibility) from the current directory or parents.
