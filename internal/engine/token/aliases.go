@@ -7,7 +7,7 @@ package token
 
 import (
 	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // Predictor estimates token usage for upcoming requests based on history.

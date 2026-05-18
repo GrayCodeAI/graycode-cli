@@ -7,8 +7,8 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
-	"github.com/GrayCodeAI/hawk/session"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // lastAutoCommitHash stores the hash of the most recent auto-commit so it

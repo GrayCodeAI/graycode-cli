@@ -7,7 +7,7 @@ package ctxmgr
 import (
 	"time"
 
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 type (

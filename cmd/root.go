@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/onboarding"
-	"github.com/GrayCodeAI/hawk/plugin"
-	"github.com/GrayCodeAI/hawk/session"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/onboarding"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/spf13/cobra"
 )
 

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/analytics"
+	"github.com/GrayCodeAI/hawk/internal/observability"
 )
 
 func TestCostTracker_NewAndRecord(t *testing.T) {

@@ -2,7 +2,7 @@
 // external docs fetching, and doc updating. See ../REFACTOR_PLAN.md.
 package docs
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	DocGenerator = engine.DocGenerator

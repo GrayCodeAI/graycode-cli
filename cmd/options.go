@@ -10,15 +10,15 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/prompt"
-	"github.com/GrayCodeAI/hawk/prompts"
-	"github.com/GrayCodeAI/hawk/repomap"
-	hawkmodel "github.com/GrayCodeAI/hawk/routing"
-	"github.com/GrayCodeAI/hawk/snapshot"
-	"github.com/GrayCodeAI/hawk/tool"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/prompt"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
+	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/snapshot"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 func buildSystemPrompt() (string, error) {

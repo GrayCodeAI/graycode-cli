@@ -9,10 +9,10 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/mattn/go-runewidth"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/session"
-	"github.com/GrayCodeAI/hawk/tool"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int) string {

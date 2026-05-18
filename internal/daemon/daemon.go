@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // SessionFactory creates a configured engine session for a given request.

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/api"
+	"github.com/GrayCodeAI/hawk/internal/api"
 	"github.com/GrayCodeAI/hawk/cmd"
-	"github.com/GrayCodeAI/hawk/mcp"
-	"github.com/GrayCodeAI/hawk/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/mcp"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // Version, Commit, and BuildDate are set at build time via ldflags.

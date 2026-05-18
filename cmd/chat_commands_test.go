@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/tool"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 func TestAdditionalDirContextLoadsInstructions(t *testing.T) {

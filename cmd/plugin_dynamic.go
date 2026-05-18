@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/plugin"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/spf13/cobra"
 )
 

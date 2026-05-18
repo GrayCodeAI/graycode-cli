@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/mcp"
+	"github.com/GrayCodeAI/hawk/internal/mcp"
 )
 
 var connectedMCPServers = struct {

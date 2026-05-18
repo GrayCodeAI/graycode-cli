@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/prompts"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // SubAgentMode determines the capabilities and cost profile of a sub-agent.

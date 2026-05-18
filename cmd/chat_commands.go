@@ -14,17 +14,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/analytics"
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/plugin"
-	"github.com/GrayCodeAI/hawk/recipe"
-	"github.com/GrayCodeAI/hawk/session"
-	"github.com/GrayCodeAI/hawk/shellmode"
-	"github.com/GrayCodeAI/hawk/staleness"
-	"github.com/GrayCodeAI/hawk/taste"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/observability"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/recipe"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/system/staleness"
+	"github.com/GrayCodeAI/hawk/internal/feature/taste"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 func slashCommands() []string {

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"github.com/GrayCodeAI/hawk/agents"
+	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

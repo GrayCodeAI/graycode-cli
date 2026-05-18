@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/memory"
+import "github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 
 // EvolvingMemoryAdapter bridges memory.EvolvingMemory to the EvolvingMemoryInterface.
 type EvolvingMemoryAdapter struct {

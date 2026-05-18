@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/sessioncapture"
-	"github.com/GrayCodeAI/hawk/shellmode"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 func newTestChatModel() *chatModel {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 )

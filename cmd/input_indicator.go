@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/GrayCodeAI/hawk/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 )
 
 // InputClass represents the classification of user input.

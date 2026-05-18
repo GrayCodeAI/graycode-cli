@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/mention"
+	"github.com/GrayCodeAI/hawk/internal/mention"
 )
 
 // handleMentions processes @-prefixed file mentions in user input.

@@ -2,7 +2,7 @@
 // See ../REFACTOR_PLAN.md.
 package branching
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	BranchMessage      = engine.BranchMessage

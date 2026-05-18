@@ -11,7 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/GrayCodeAI/hawk/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // containerStatusMsg carries container lifecycle updates to the TUI.

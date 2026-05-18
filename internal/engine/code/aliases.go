@@ -2,7 +2,7 @@
 // (context extraction, lenses, actions, explainer). See ../REFACTOR_PLAN.md.
 package code
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	Snippet            = engine.CodeSnippet

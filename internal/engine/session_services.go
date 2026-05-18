@@ -14,13 +14,13 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 
 	"github.com/GrayCodeAI/eyrie/storage"
-	"github.com/GrayCodeAI/hawk/logger"
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/metrics"
-	"github.com/GrayCodeAI/hawk/oteltrace"
-	"github.com/GrayCodeAI/hawk/permissions"
-	modelPkg "github.com/GrayCodeAI/hawk/routing"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/permissions"
+	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // ---------------------------------------------------------------------------

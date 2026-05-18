@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // dangerousCommands are commands that should ALWAYS be blocked.

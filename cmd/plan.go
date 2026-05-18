@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/planner"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/planner"
 	"github.com/spf13/cobra"
 )
 
