@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // PermissionRequest is sent from engine to TUI when a tool needs approval.

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/memory"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
 
 type memoryOp struct {

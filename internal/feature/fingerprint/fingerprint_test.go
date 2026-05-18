@@ -7,14 +7,14 @@ import (
 	"testing"
 )
 
-// repoRoot returns the hawk repo root (parent of the fingerprint package).
+// repoRoot returns the hawk repo root (great-grandparent of internal/feature/fingerprint).
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
 	}
-	return filepath.Dir(wd)
+	return filepath.Dir(filepath.Dir(filepath.Dir(wd)))
 }
 
 func TestGenerate_HawkRepo(t *testing.T) {

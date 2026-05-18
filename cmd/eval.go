@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/eval"
+	"github.com/GrayCodeAI/hawk/internal/feature/eval"
 	"github.com/spf13/cobra"
 )
 

@@ -2,7 +2,7 @@
 // package engine. See ../REFACTOR_PLAN.md.
 package session
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 // Services bundles the dependencies a session uses (provider, tools, memory).
 type Services = engine.SessionServices

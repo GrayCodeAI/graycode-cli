@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // Tool is the interface every hawk tool implements.

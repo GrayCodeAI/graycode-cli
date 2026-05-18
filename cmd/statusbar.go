@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // renderStatusBar renders a full-width status bar for the chat TUI.

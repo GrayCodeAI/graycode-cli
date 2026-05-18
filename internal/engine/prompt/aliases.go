@@ -2,7 +2,7 @@
 // prompt-optimisation types in package engine. See ../REFACTOR_PLAN.md.
 package prompt
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 // Optimizer learns better prompts via DSPy-style example mining.
 type Optimizer = engine.PromptOptimizer

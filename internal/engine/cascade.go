@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/analytics"
-	"github.com/GrayCodeAI/hawk/routing"
+	"github.com/GrayCodeAI/hawk/internal/observability"
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // CascadeRouter selects the optimal model for each request based on task complexity.

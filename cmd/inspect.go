@@ -10,7 +10,7 @@ import (
 
 	inspectLib "github.com/GrayCodeAI/inspect"
 
-	hawkInspect "github.com/GrayCodeAI/hawk/inspect"
+	hawkInspect "github.com/GrayCodeAI/hawk/internal/bridge/inspect"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )

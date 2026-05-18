@@ -13,16 +13,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/plugin"
-	"github.com/GrayCodeAI/hawk/sandbox"
-	"github.com/GrayCodeAI/hawk/session"
-	"github.com/GrayCodeAI/hawk/sessioncapture"
-	"github.com/GrayCodeAI/hawk/shellmode"
-	"github.com/GrayCodeAI/hawk/staleness"
-	"github.com/GrayCodeAI/hawk/taste"
-	"github.com/GrayCodeAI/hawk/tool"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/system/staleness"
+	"github.com/GrayCodeAI/hawk/internal/feature/taste"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 var (

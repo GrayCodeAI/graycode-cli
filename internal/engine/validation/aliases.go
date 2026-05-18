@@ -2,7 +2,7 @@
 // schema validation, test loops, and lint loops. See ../REFACTOR_PLAN.md.
 package validation
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	GenValidator           = engine.GenValidator

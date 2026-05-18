@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/routing"
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 func TestNewCascadeRouter(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/routing"
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/inspect"
 	"github.com/GrayCodeAI/sight"
 	"github.com/GrayCodeAI/tok"

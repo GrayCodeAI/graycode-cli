@@ -2,7 +2,7 @@
 // memory consolidation types. See ../REFACTOR_PLAN.md.
 package memory
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	KnowledgeEntry     = engine.KnowledgeEntry

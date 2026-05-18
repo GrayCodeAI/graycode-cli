@@ -2,7 +2,7 @@
 // and research agent types. See ../REFACTOR_PLAN.md.
 package search
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	URLScraper      = engine.URLScraper
