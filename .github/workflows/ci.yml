@@ -136,13 +136,13 @@ jobs:
         run: go test ./... -race -count=1 -shuffle=on -coverprofile=coverage.out -covermode=atomic -timeout=300s
       - name: Coverage summary
         run: |
-          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%' | tail -1)
           echo "Coverage: ${coverage}%"
-          echo "coverage=${coverage}" >> $GITHUB_ENV
+          echo "COVERAGE=${coverage}" >> "$GITHUB_ENV"
       - name: Coverage threshold (minimum 10%)
         run: |
-          if (( $(echo "${coverage} < 10" | bc -l) )); then
-            echo "::error::Coverage ${coverage}% is below minimum 10%"
+          if (( $(echo "${COVERAGE} < 10" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below minimum 10%"
             exit 1
           fi
       - name: Upload coverage
@@ -184,7 +184,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@3838638076c55b796d98e7f7bc1f8d93fda089e4 # v2.11.0
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -207,7 +207,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: DavidAnson/markdownlint-cli2-action@43d16a9f5a242a4e2109391f3d7e7e4d8e3b6c7d # v19.0.0
+      - uses: DavidAnson/markdownlint-cli2-action@a23dae216ce3fee4db69da41fed90d2a4af801cf # v19.0.0
         with:
           globs: '**/*.md'
           config: |
