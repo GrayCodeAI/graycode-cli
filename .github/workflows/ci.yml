@@ -226,8 +226,8 @@ jobs:
       - name: Run markdownlint-cli2
         run: |
           npm install -g markdownlint-cli2
-          printf '%s\n' '{"config":{"default":true,"line-length":false,"no-inline-html":false,"first-line-h1":false,"no-duplicate-heading":false,"no-emphasis-as-heading":false,"blanks-around-headings":false,"blanks-around-lists":false,"blanks-around-fences":false,"fenced-code-language":false,"table-column-style":false,"no-space-in-emphasis":false,"ol-prefix":false,"link-fragments":false,"blanks-around-tables":false,"table-column-count":false,"single-trailing-newline":false}}' > .markdownlint-cli2.jsonc
-          markdownlint-cli2 --ignore 'external/**' '**/*.md'
+          printf '%s\n' '{"ignores":["external/**"],"config":{"default":true,"line-length":false,"no-inline-html":false,"first-line-h1":false,"no-duplicate-heading":false,"no-emphasis-as-heading":false,"blanks-around-headings":false,"blanks-around-lists":false,"blanks-around-fences":false,"fenced-code-language":false,"table-column-style":false,"no-space-in-emphasis":false,"ol-prefix":false,"link-fragments":false,"blanks-around-tables":false,"table-column-count":false,"single-trailing-newline":false}}' > .markdownlint-cli2.jsonc
+          markdownlint-cli2 '**/*.md'
 
   # -------------------------------------------------------------------------
   # 10. Cross-platform build matrix — zero CGO, all targets.
