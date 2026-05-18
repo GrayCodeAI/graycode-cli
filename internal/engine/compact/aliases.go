@@ -11,7 +11,7 @@
 // See REFACTOR_PLAN.md at the engine package root for the full split plan.
 package compact
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 // Strategy is the contract every compaction strategy implements.
 type Strategy = engine.CompactStrategy

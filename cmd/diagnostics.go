@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/health"
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/plugin"
-	"github.com/GrayCodeAI/hawk/session"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/resilience/health"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/session"
 )
 
 func doctorReport(settings hawkconfig.Settings) string {

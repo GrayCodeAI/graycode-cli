@@ -2,7 +2,7 @@
 // summariser, test selector, and 3-way merge. See ../REFACTOR_PLAN.md.
 package diff
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	PendingChange = engine.PendingChange

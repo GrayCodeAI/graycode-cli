@@ -2,7 +2,7 @@
 // patterns, skills, and few-shot types. See ../REFACTOR_PLAN.md.
 package scaffold
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	Template         = engine.Template

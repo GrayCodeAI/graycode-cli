@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
-	"github.com/GrayCodeAI/hawk/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 )
 
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".

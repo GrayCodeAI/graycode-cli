@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/taste"
+	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/spf13/cobra"
 )
 

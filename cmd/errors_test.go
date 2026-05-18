@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestFriendlyErrorNil(t *testing.T) {

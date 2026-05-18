@@ -2,7 +2,7 @@
 // See ../REFACTOR_PLAN.md.
 package planning
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	ExecutionPlan    = engine.ExecutionPlan

@@ -10,12 +10,12 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
-	"github.com/GrayCodeAI/hawk/analytics"
-	"github.com/GrayCodeAI/hawk/hooks"
-	"github.com/GrayCodeAI/hawk/oteltrace"
-	"github.com/GrayCodeAI/hawk/retry"
-	modelPkg "github.com/GrayCodeAI/hawk/routing"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/observability"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
+	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.

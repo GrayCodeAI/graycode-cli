@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/sessioncapture"
+	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/GrayCodeAI/hawk/cmdhistory"
+	"github.com/GrayCodeAI/hawk/internal/cmdhistory"
 	"github.com/spf13/cobra"
 )
 

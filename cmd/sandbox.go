@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/diffsandbox"
+	"github.com/GrayCodeAI/hawk/internal/diffsandbox"
 	"github.com/spf13/cobra"
 )
 

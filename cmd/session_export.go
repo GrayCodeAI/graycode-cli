@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/session"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/spf13/cobra"
 )
 

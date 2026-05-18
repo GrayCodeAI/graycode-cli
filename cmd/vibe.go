@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // VibeConfig controls vibe coding behavior.

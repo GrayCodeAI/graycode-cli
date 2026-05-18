@@ -7,15 +7,15 @@ import (
 	"testing"
 )
 
-// testRoot returns the hawk repo root (parent of localize/).
+// testRoot returns the hawk repo root (grandparent of internal/localize/).
 func testRoot(t *testing.T) string {
 	t.Helper()
-	// We are in hawk/localize, so root is one directory up.
+	// We are in hawk/internal/localize, so root is two directories up.
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
-	root := filepath.Dir(wd)
+	root := filepath.Dir(filepath.Dir(wd))
 	// Sanity check: go.mod should exist at root.
 	if _, err := os.Stat(filepath.Join(root, "go.mod")); err != nil {
 		t.Fatalf("could not find go.mod at %s: %v", root, err)
@@ -99,7 +99,7 @@ func TestScoreFile(t *testing.T) {
 		keywords []string
 		wantPos  bool // expect positive score
 	}{
-		{"engine/session.go", []string{"session"}, true},
+		{"internal/engine/session.go", []string{"session"}, true},
 		{"repomap/parser.go", []string{"parser"}, true},
 		{"repomap/parser.go", []string{"unrelated", "nothing"}, false},
 		{"cmd/root.go", []string{"root", "cmd"}, true},
@@ -122,7 +122,7 @@ func TestScoreFile(t *testing.T) {
 func TestExtractSymbols_Go(t *testing.T) {
 	root := testRoot(t)
 	// Use engine/session.go as a known Go file.
-	path := filepath.Join(root, "engine", "session.go")
+	path := filepath.Join(root, "internal", "engine", "session.go")
 	symbols, err := extractSymbols(path, "")
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestExtractSymbols_Go(t *testing.T) {
 
 func TestExtractSymbols_GoRepomap(t *testing.T) {
 	root := testRoot(t)
-	path := filepath.Join(root, "repomap", "repomap.go")
+	path := filepath.Join(root, "internal", "intelligence", "repomap", "repomap.go")
 	symbols, err := extractSymbols(path, "")
 	if err != nil {
 		t.Fatal(err)
@@ -225,7 +225,7 @@ func TestSplitIdentifier(t *testing.T) {
 func TestFindSymbols_Integration(t *testing.T) {
 	root := testRoot(t)
 	files := []FileMatch{
-		{Path: filepath.Join("engine", "session.go"), Score: 10.0},
+		{Path: filepath.Join("internal", "engine", "session.go"), Score: 10.0},
 	}
 	symbols, err := findSymbols(root, files, "session model provider", 20, "")
 	if err != nil {

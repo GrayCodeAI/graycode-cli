@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/shared/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 //go:embed VERSION

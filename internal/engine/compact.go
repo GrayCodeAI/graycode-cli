@@ -8,7 +8,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/tok"
 
-	modelPkg "github.com/GrayCodeAI/hawk/routing"
+	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // ShouldAutoCompact returns true if the conversation is approaching context limits.

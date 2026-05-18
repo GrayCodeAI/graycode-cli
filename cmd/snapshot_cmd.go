@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/snapshot"
+	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )

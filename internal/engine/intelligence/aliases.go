@@ -2,7 +2,7 @@
 // See ../REFACTOR_PLAN.md.
 package intelligence
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/hawk/internal/engine"
 
 type (
 	Intent             = engine.Intent

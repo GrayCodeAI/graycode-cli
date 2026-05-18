@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // In-memory model cache per provider (avoids re-fetching on every interaction)

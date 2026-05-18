@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // DevEnvTool allows the agent to read, write, and build Docker environments

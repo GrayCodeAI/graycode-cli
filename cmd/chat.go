@@ -22,17 +22,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/GrayCodeAI/eyrie/storage"
-	hawkconfig "github.com/GrayCodeAI/hawk/config"
-	"github.com/GrayCodeAI/hawk/engine"
-	"github.com/GrayCodeAI/hawk/logger"
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/plugin"
-	"github.com/GrayCodeAI/hawk/session"
-	"github.com/GrayCodeAI/hawk/sessioncapture"
-	"github.com/GrayCodeAI/hawk/shellmode"
-	"github.com/GrayCodeAI/hawk/staleness"
-	"github.com/GrayCodeAI/hawk/taste"
-	"github.com/GrayCodeAI/hawk/tool"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
+	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/system/staleness"
+	"github.com/GrayCodeAI/hawk/internal/feature/taste"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // Types, styles, and model struct are in chat_model.go

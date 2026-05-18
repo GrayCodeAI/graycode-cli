@@ -3,10 +3,10 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/memory"
-	"github.com/GrayCodeAI/hawk/metrics"
-	"github.com/GrayCodeAI/hawk/oteltrace"
-	"github.com/GrayCodeAI/hawk/tool"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // ---------------------------------------------------------------------------

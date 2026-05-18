@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/hawkerr"
+	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	yaadEngine "github.com/GrayCodeAI/yaad/engine"
 	"github.com/GrayCodeAI/yaad/graph"
 	"github.com/GrayCodeAI/yaad/storage"
