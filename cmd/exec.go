@@ -155,7 +155,7 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	// Create engine session
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
-	sess := engine.NewSession(effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 
 	if err := configureSession(sess, settings); err != nil {

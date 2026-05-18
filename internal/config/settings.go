@@ -36,6 +36,7 @@ type Settings struct {
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`
+	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"` // use catalog deployment router when true / unset + provider.json qualifies
 }
 
 // Attribution controls how hawk identifies itself in git commits.
@@ -205,6 +206,9 @@ func MergeSettings(base, override Settings) Settings {
 	}
 	if override.AutoCompactThresholdPct > 0 {
 		base.AutoCompactThresholdPct = override.AutoCompactThresholdPct
+	}
+	if override.DeploymentRouting != nil {
+		base.DeploymentRouting = override.DeploymentRouting
 	}
 	if override.ModelRoles != nil {
 		if base.ModelRoles == nil {

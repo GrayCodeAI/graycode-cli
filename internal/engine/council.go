@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	routing "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // CouncilConfig controls the Karpathy LLM Council pattern.
@@ -180,8 +182,7 @@ func buildChairmanPrompt(query string, responses []CouncilResponse, rankings []C
 
 // councilQuery queries a specific model using the session's client infrastructure.
 func councilQuery(ctx context.Context, sess *Session, modelName, prompt string) (string, error) {
-	sub := NewSession(sess.Provider(), modelName, sess.system, sess.registry)
-	sub.SetAPIKeys(sess.apiKeys)
+	sub := sess.SubSession(modelName, sess.system, sess.registry)
 	sub.MaxTurns = 1
 	sub.AddUser(prompt)
 
@@ -202,11 +203,16 @@ func councilQuery(ctx context.Context, sess *Session, modelName, prompt string) 
 	return b.String(), nil
 }
 
-// DefaultCouncilModels returns diverse models from different providers.
+// DefaultCouncilModels returns one catalog-backed default model per provider (dynamic).
 func DefaultCouncilModels() []string {
-	return []string{
-		"claude-sonnet-4-20250514",
-		"gpt-4o",
-		"gemini-2.5-flash",
+	var out []string
+	for _, p := range routing.AllProviders() {
+		if m := routing.DefaultModel(p); m != "" {
+			out = append(out, m)
+		}
+		if len(out) >= 3 {
+			break
+		}
 	}
+	return out
 }

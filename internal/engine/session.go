@@ -41,7 +41,10 @@ type Session struct {
 	metrics  *metrics.Registry
 	Cost     Cost
 	Router   *modelPkg.Router
-	Perm     *PermissionEngine // extracted permission subsystem
+	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
+	DeploymentRouting bool
+
+	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
 	Permissions    *PermissionMemory             // use Perm.Memory
 	AutoMode       *permissions.AutoModeState    // use Perm.AutoMode
@@ -93,36 +96,54 @@ type Session struct {
 	Steering       *SteeringQueue          // steering.go — user guidance injection between tool batches
 }
 
-// NewSession creates a new conversation session.
+// NewSession creates a new conversation session with a legacy string-named provider.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
+	return NewSessionWithClient(client.Client(&client.EyrieConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
+}
+
+// NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
+func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string, registry *tool.Registry, deploymentRouting bool) *Session {
 	pe := NewPermissionEngine()
 	s := &Session{
-		client:        client.Client(&client.EyrieConfig{Provider: provider}),
-		registry:      registry,
-		provider:      provider,
-		model:         model,
-		apiKeys:       map[string]string{},
-		system:        systemPrompt,
-		log:           logger.Default(),
-		metrics:       metrics.NewRegistry(),
-		Perm:          pe,
-		Permissions:   pe.Memory,
-		AutoMode:      pe.AutoMode,
-		Classifier:    pe.Classifier,
-		BypassKill:    pe.BypassKill,
-		Beliefs:       NewBeliefState(),
-		Backtrack:     NewBacktrackEngine(),
-		Limits:        NewLimitTracker(DefaultLimits()),
-		Tracer:        oteltrace.NewTracer(),
-		LintLoop:      NewLintLoop(),
-		TestLoop:      NewTestLoop(),
-		FileMentions:  NewFileMentionDetector("."),
-		ResponseCache: NewResponseCache(1000, 24*time.Hour),
-		Pipeline:      NewIntegrationPipeline(),
+		client:            chat,
+		registry:          registry,
+		provider:          provider,
+		model:             model,
+		apiKeys:           map[string]string{},
+		system:            systemPrompt,
+		log:               logger.Default(),
+		metrics:           metrics.NewRegistry(),
+		Perm:              pe,
+		Permissions:       pe.Memory,
+		AutoMode:          pe.AutoMode,
+		Classifier:        pe.Classifier,
+		BypassKill:        pe.BypassKill,
+		Beliefs:           NewBeliefState(),
+		Backtrack:         NewBacktrackEngine(),
+		Limits:            NewLimitTracker(DefaultLimits()),
+		Tracer:            oteltrace.NewTracer(),
+		LintLoop:          NewLintLoop(),
+		TestLoop:          NewTestLoop(),
+		FileMentions:      NewFileMentionDetector("."),
+		ResponseCache:     NewResponseCache(1000, 24*time.Hour),
+		Pipeline:          NewIntegrationPipeline(),
+		DeploymentRouting: deploymentRouting,
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
 	return s
+}
+
+// SubSession clones transport and routing mode for explore/general sub-agents.
+func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry) *Session {
+	if registry == nil {
+		registry = s.registry
+	}
+	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting)
+	for provider, key := range s.apiKeys {
+		sub.SetAPIKey(provider, key)
+	}
+	return sub
 }
 
 func (s *Session) Model() string              { return s.model }
@@ -139,6 +160,9 @@ func (s *Session) SetModel(model string) {
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
 	s.provider = p
+	if s.DeploymentRouting {
+		return
+	}
 	s.client = client.Client(&client.EyrieConfig{Provider: p})
 	for provider, apiKey := range s.apiKeys {
 		if strings.TrimSpace(apiKey) != "" {

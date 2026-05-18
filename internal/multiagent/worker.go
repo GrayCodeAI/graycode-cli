@@ -6,7 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -35,7 +37,8 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
-		sess := engine.NewSession(provider, model, systemPrompt, registry)
+		settings := hawkconfig.LoadSettings()
+		sess := eyrieclient.NewHawkSession(ctx, settings, provider, model, systemPrompt, registry)
 
 		// Configure for autonomous operation
 		sess.Autonomy = engine.AutonomyLevel(cfg.AutonomyLevel)
