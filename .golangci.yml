@@ -66,28 +66,28 @@ linters:
         linters:
           - noctx
           - errcheck
-      - path: daemon/
+      - path: internal/daemon/
         linters:
           - errcheck
-      - path: engine/
+      - path: internal/engine/
         linters:
           - errcheck
-      - path: sandbox/
+      - path: internal/sandbox/
         linters:
           - errcheck
-      - path: memory/
+      - path: internal/intelligence/memory/
         linters:
           - errcheck
-      - path: tool/
+      - path: internal/tool/
         linters:
           - errcheck
-      - path: repomap/
+      - path: internal/intelligence/repomap/
         linters:
           - errcheck
-      - path: mcp/
+      - path: internal/mcp/
         linters:
           - errcheck
-      - path: magicdocs/
+      - path: internal/magicdocs/
         linters:
           - errcheck
 
