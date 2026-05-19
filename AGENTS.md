@@ -106,3 +106,20 @@ For sibling clones on one machine, use a **personal** parent **`go.work`** or te
 - Landlock: filesystem access restrictions
 - seccomp-bpf: blocks 21 dangerous syscalls
 - Fallback: no-op on non-Linux (`internal/sandbox/landlock_other.go`)
+
+## Milestone: API key → model → sandbox
+
+Active branch: **`feature/secure-credentials-sandbox`** (hawk + eyrie sibling).
+
+| Concern | Where |
+|---------|--------|
+| First-run `/config`, setup guards | `internal/config/setup_status.go`, `cmd/chat.go` |
+| Keychain + `PersistAPIKey` | `internal/config/credentials_store.go`, eyrie `credentials/` |
+| Catalog discover + routing only on disk | `internal/config/eyrie_apply.go`, eyrie `setup/apply_credentials.go` |
+| No API keys in `provider.json` | eyrie `SanitizeDeploymentConfigForDisk`, hawk `MigrateProviderSecrets` |
+| Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
+| Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md` |
+
+**Not in this milestone:** conversation DAG as source of truth, langdag Go import.
+
+**`/sandbox` vs Docker:** `/sandbox` toggles **approval mode** in the TUI. **Docker container mode** is the default for bash (`shouldUseContainer`); use `--no-container` for host execution.

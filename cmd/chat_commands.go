@@ -110,7 +110,7 @@ var slashDescriptions = map[string]string{
 	"/review":          "Code review for bugs and issues",
 	"/rewind":          "Undo last exchange",
 	"/run":             "Run command, add output to context",
-	"/sandbox":         "Toggle sandbox mode",
+	"/sandbox":         "Toggle approval mode (not Docker; use default container or --no-container)",
 	"/search":          "Search across sessions",
 	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
 	"/stale":           "Show stale rules that may need updating or removal",
@@ -469,7 +469,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /resume <id>        — Resume session
 /review             — Ask hawk to review changes
 /rewind             — Undo last exchange
-/sandbox            — Toggle sandbox mode
+/sandbox            — Toggle approval mode (Docker isolation: default container; --no-container for host)
 /security-review    — Ask hawk to review security risks
 /share              — Share session
 /learn              — LLM-powered skill advisor (deep, update)
@@ -1866,10 +1866,10 @@ Generate the recap:`, summary.String())
 	case "/sandbox":
 		if string(m.session.Mode) == "acceptEdits" {
 			_ = m.session.SetPermissionMode("default")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ON — all actions require approval."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Approval mode ON — all actions require confirmation. (Docker tool isolation is separate: default container mode, or --no-container on host.)"})
 		} else {
 			_ = m.session.SetPermissionMode("acceptEdits")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox OFF — file edits auto-approved, other actions require approval."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Approval mode relaxed — file edits auto-approved; other actions still prompt. (Docker tool isolation unchanged.)"})
 		}
 		return m, nil
 	case "/output-style":

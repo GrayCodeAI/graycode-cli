@@ -180,7 +180,7 @@ func (g *CompletionGenerator) populateCommands() {
 		},
 		{
 			Name:        "sandbox",
-			Description: "Sandbox configuration",
+			Description: "Bash permission profile (strict/workspace/off); not Docker container mode",
 		},
 		{
 			Name:        "cost",
@@ -226,7 +226,7 @@ func (g *CompletionGenerator) populateFlags() {
 		{Name: "settings", Description: "Path to a settings JSON file", Type: "string"},
 		{Name: "add-dir", Description: "Additional directories to include", Type: "string"},
 		{Name: "tools", Description: "Available tools configuration", Type: "string"},
-		{Name: "sandbox", Description: "Sandbox mode for Bash commands", Type: "string", Choices: []string{"strict", "workspace", "off"}},
+		{Name: "sandbox", Description: "Bash permission profile (not Docker; use --no-container for host)", Type: "string", Choices: []string{"strict", "workspace", "off"}},
 		{Name: "auto-commit", Description: "Auto-commit file changes", Type: "bool"},
 		{Name: "watch", Description: "Watch working directory for file changes", Type: "bool"},
 		{Name: "vibe", Description: "Vibe coding mode", Type: "bool"},

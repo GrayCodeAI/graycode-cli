@@ -173,7 +173,7 @@ func init() {
 	rootCmd.Flags().StringVar(&systemPromptFile, "system-prompt-file", "", "read system prompt from a file")
 	rootCmd.Flags().StringVar(&appendSystemPromptFlag, "append-system-prompt", "", "append text to the default or custom system prompt")
 	rootCmd.Flags().StringVar(&appendSystemPromptFile, "append-system-prompt-file", "", "read text from a file and append it to the system prompt")
-	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "sandbox mode for Bash commands: strict, workspace, or off")
+	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "Bash permission profile: strict, workspace, or off (not Docker; see --no-container)")
 	rootCmd.Flags().BoolVar(&autoCommitFlag, "auto-commit", false, "auto-commit file changes made by Write and Edit tools")
 	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes")
 	rootCmd.Flags().BoolVar(&vibeMode, "vibe", false, "vibe coding mode: auto-apply, auto-run, no confirmations")
