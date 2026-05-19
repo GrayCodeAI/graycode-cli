@@ -1,9 +1,8 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"os"
-	"sort"
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
@@ -14,98 +13,154 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
+// configModelOption is one row in the /config model picker (display from eyrie, id for settings).
+type configModelOption struct {
+	ID          string
+	DisplayName string
+}
+
 // In-memory model cache per provider (avoids re-fetching on every interaction)
-var modelCache = make(map[string][]string)
+var modelCache = make(map[string][]configModelOption)
 
 func fetchModelsAsync(provider string) tea.Cmd {
 	return func() tea.Msg {
 		models, _ := hawkconfig.FetchModelsForProvider(provider)
-		ids := extractModelIDs(models)
-		if len(ids) > 0 {
-			modelCache[provider] = ids
+		opts := modelOptionsFromEntries(models)
+		if len(opts) > 0 {
+			modelCache[provider] = opts
 		}
-		return modelsFetchedMsg(ids)
+		return modelsFetchedMsg{options: opts, provider: provider}
 	}
 }
 
-func configProviderChoices() []string {
-	providers := []string{
-		"anthropic", "openai", "gemini", "openrouter",
-		"canopywave", "grok", "opencodego", "ollama",
-	}
-	var out []string
-	for _, p := range providers {
-		status := hawkconfig.EnvKeyStatus(p)
-		var statusText string
-		if p == "ollama" {
-			statusText = "local"
-		} else if status == "set" {
-			statusText = "✓"
-		} else {
-			statusText = "key needed"
-		}
-		// Fixed-width alignment: name in 12 chars, status right-aligned
-		label := fmt.Sprintf("%-12s %s", p, statusText)
-		out = append(out, label)
-	}
-	return out
-}
-
-func configModelChoices(provider string, cached []string) []string {
-	provider = strings.ToLower(strings.TrimSpace(provider))
-	if len(cached) > 0 {
-		out := make([]string, len(cached))
-		copy(out, cached)
-		return out
-	}
-	models, _ := hawkconfig.FetchModelsForProvider(provider)
-	out := extractModelIDs(models)
-	if len(out) > 0 {
-		modelCache[provider] = out
-	}
-	sort.Strings(out)
-	return out
-}
-
-func extractModelIDs(models []catalog.ModelCatalogEntry) []string {
-	var out []string
+func modelOptionsFromEntries(models []catalog.ModelCatalogEntry) []configModelOption {
+	var out []configModelOption
 	seen := make(map[string]bool)
 	for _, m := range models {
 		id := strings.TrimSpace(m.ID)
-		if id != "" && !seen[id] {
-			seen[id] = true
-			out = append(out, id)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		label := strings.TrimSpace(m.DisplayName)
+		if label == "" {
+			label = shortModelID(id)
+		}
+		out = append(out, configModelOption{ID: id, DisplayName: label})
+	}
+	return out
+}
+
+func modelOptionsFromIDs(ids []string) []configModelOption {
+	compiled := hawkconfig.CompiledCatalogV1()
+	out := make([]configModelOption, 0, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		label := shortModelID(id)
+		if compiled != nil {
+			if model, ok := compiled.ModelsByID[id]; ok && strings.TrimSpace(model.Name) != "" {
+				label = strings.TrimSpace(model.Name)
+			}
+		}
+		out = append(out, configModelOption{ID: id, DisplayName: label})
+	}
+	return out
+}
+
+func loadConfigModelOptions(provider string) []configModelOption {
+	provider = strings.TrimSpace(provider)
+	if provider != "" {
+		if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
+			return cached
+		}
+		if models, err := hawkconfig.FetchModelsForProvider(provider); err == nil && len(models) > 0 {
+			return modelOptionsFromEntries(models)
+		}
+	}
+	return modelOptionsFromIDs(hawkconfig.AllCanonicalModelIDs())
+}
+
+func configModelPickerLabels(opts []configModelOption, showProvider bool) []string {
+	out := make([]string, len(opts))
+	for i, opt := range opts {
+		out[i] = formatModelPickerLine(opt, showProvider)
+	}
+	return out
+}
+
+func formatModelPickerLine(opt configModelOption, showProvider bool) string {
+	label := strings.TrimSpace(opt.DisplayName)
+	if label == "" {
+		label = shortModelID(opt.ID)
+	}
+	if !showProvider {
+		return label
+	}
+	prov := hawkconfig.ProviderOfModel(opt.ID)
+	if prov == "" {
+		return label
+	}
+	return fmt.Sprintf("%-28s %s", label, prov)
+}
+
+func shortModelID(id string) string {
+	id = strings.TrimSpace(id)
+	if i := strings.LastIndex(id, "/"); i >= 0 && i < len(id)-1 {
+		return id[i+1:]
+	}
+	return id
+}
+
+func extractModelIDs(opts []configModelOption) []string {
+	out := make([]string, 0, len(opts))
+	for _, o := range opts {
+		if o.ID != "" {
+			out = append(out, o.ID)
 		}
 	}
 	return out
 }
 
-// ─── Simple Config Wizard ───
-// /config opens provider list → select → [key prompt] → model list → select → done
+func configModelChoices(opts []configModelOption, showProvider bool) []string {
+	if len(opts) == 0 {
+		return nil
+	}
+	return configModelPickerLabels(opts, showProvider)
+}
+
+// /config → API keys (eyrie deployments) → eyrie ApplyCredentials → model from catalog
 
 func (m chatModel) configOptions() []string {
 	switch m.configMenu {
-	case "provider":
-		return configProviderChoices()
-	case "provider-action":
-		return []string{"Use this key", "Remove key"}
+	case "hub":
+		return m.configHubChoices()
+	case "apikeys":
+		return m.configDeploymentChoiceLabels()
 	case "model":
-		settings := hawkconfig.LoadSettings()
-		return configModelChoices(settings.Provider, m.configModels)
+		return configModelChoices(m.configModelOptions, m.configModelProvider == "")
 	default:
 		return nil
 	}
 }
 
 func (m chatModel) configPanelView() string {
-	if m.configEntry == "provider-apikey" {
+	if m.configEntry == "deployment-apikey" || m.configEntry == "provider-apikey" {
 		return m.configProviderKeyView()
 	}
 	switch m.configMenu {
-	case "provider":
-		return m.configProviderView()
-	case "provider-action":
-		return m.configProviderActionView()
+	case "hub":
+		return m.configHubView()
+	case "apikeys":
+		return m.configDeploymentsView()
+	case "deployment-detail":
+		return m.configDeploymentDetailView()
+	case "routing":
+		return m.configRoutingView()
+	case "view-config":
+		return m.configViewProviderJSON()
 	case "model":
 		return m.configModelView()
 	default:
@@ -114,15 +169,15 @@ func (m chatModel) configPanelView() string {
 }
 
 func (m chatModel) configProviderKeyView() string {
-	provider := strings.TrimSpace(m.configProvider)
-	envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+	deploymentID := strings.TrimSpace(m.configProvider)
+	envKey := hawkconfig.PrimaryAPIKeyEnvForDeployment(deploymentID)
 
 	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("🔑 ") + valueStyle.Render(provider) + "\n")
+	b.WriteString(titleStyle.Render("🔑 ") + valueStyle.Render(deploymentID) + "\n")
 	b.WriteString(mutedStyle.Render(envKey) + "\n\n")
 	if m.useConfigInput {
 		b.WriteString(m.configInput.View() + "\n")
@@ -130,67 +185,6 @@ func (m chatModel) configProviderKeyView() string {
 		b.WriteString(m.input.View() + "\n")
 	}
 	b.WriteString("\n" + mutedStyle.Render("enter save · esc skip") + "\n")
-	return b.String()
-}
-
-func (m chatModel) configProviderView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
-	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
-	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#e05555"))
-
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("⚙ Select Provider") + "\n\n")
-
-	opts := m.configOptions()
-	for i, opt := range opts {
-		prefix := "  "
-		lineStyle := style
-		if i == m.configSel {
-			prefix = "❯ "
-			lineStyle = selectedStyle
-		}
-		// Colorize status indicators
-		if strings.Contains(opt, "✓") {
-			opt = strings.Replace(opt, "✓", okStyle.Render("✓"), 1)
-		} else if strings.Contains(opt, "key needed") {
-			opt = strings.Replace(opt, "key needed", warnStyle.Render("key needed"), 1)
-		} else if strings.Contains(opt, "local") {
-			opt = strings.Replace(opt, "local", mutedStyle.Render("local"), 1)
-		}
-		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
-	}
-	b.WriteString("\n" + mutedStyle.Render("↑/↓ · enter · esc"))
-	return b.String()
-}
-
-func (m chatModel) configProviderActionView() string {
-	provider := strings.TrimSpace(m.configProvider)
-	envKey := hawkconfig.ProviderAPIKeyEnv(provider)
-
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
-	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
-
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("⚙ ") + okStyle.Render("✓") + " " + style.Render(provider) + "\n")
-	b.WriteString(mutedStyle.Render(envKey) + "\n\n")
-
-	opts := m.configOptions()
-	for i, opt := range opts {
-		prefix := "  "
-		lineStyle := style
-		if i == m.configSel {
-			prefix = "❯ "
-			lineStyle = selectedStyle
-		}
-		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
-	}
-	b.WriteString("\n" + mutedStyle.Render("↑/↓ · enter · esc"))
 	return b.String()
 }
 
@@ -214,7 +208,11 @@ func (m chatModel) configModelView() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("⚙ Select Model") + "\n\n")
+	title := "⚙ Select Model"
+	if p := strings.TrimSpace(m.configModelProvider); p != "" {
+		title = "⚙ Pick model (" + p + ")"
+	}
+	b.WriteString(titleStyle.Render(title) + "\n\n")
 
 	// Scroll up indicator
 	if m.configScroll > 0 {
@@ -253,7 +251,10 @@ func (m chatModel) closeConfigPanel() chatModel {
 	m.configNotice = ""
 	m.configEntry = ""
 	m.configProvider = ""
-	m.configModels = nil
+	m.configModelOptions = nil
+	m.configDeployments = nil
+	m.configDeploymentID = ""
+	m.configRoutingJSON = ""
 	m.viewDirty = true
 	m.restoreChatInput()
 	return m
@@ -271,12 +272,11 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 	m.configEntry = kind
 	m.configProvider = provider
 	switch kind {
-	case "provider-apikey":
-		// Use textinput for password masking
+	case "deployment-apikey", "provider-apikey":
 		m.useConfigInput = true
 		m.configInput.Reset()
 		m.configInput.Prompt = " key ❯ "
-		m.configInput.Placeholder = "paste " + provider + " API key"
+		m.configInput.Placeholder = "paste API key for " + provider
 		m.configInput.EchoMode = textinput.EchoPassword
 		m.configInput.EchoCharacter = '*'
 		m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
@@ -310,24 +310,26 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 	}
 
 	switch m.configEntry {
-	case "provider-apikey":
-		provider := strings.TrimSpace(m.configProvider)
+	case "deployment-apikey", "provider-apikey":
+		deploymentID := strings.TrimSpace(m.configProvider)
 		if value != "" {
-			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+			envKey := hawkconfig.PrimaryAPIKeyEnvForDeployment(deploymentID)
 			if envKey != "" {
-				_ = os.Setenv(envKey, value)
-				_ = hawkconfig.SaveEnvFile(envKey, value)
+				if err := hawkconfig.PersistAPIKey(context.Background(), envKey, value); err != nil {
+					m.configNotice = err.Error()
+					m.configEntry = ""
+					m.configMenu = "deployment-detail"
+					m.restoreChatInput()
+					return m, fetchDeploymentsAsync()
+				}
 			}
-			m.session.SetAPIKey(provider, value)
 		}
 		m.configEntry = ""
-		m.configMenu = "model"
-		m.configSel = 0
-		m.configModels = nil
+		m.configGuideAfterKey = true
+		m.configModelProvider = hawkconfig.ProviderIDForDeployment(deploymentID)
+		m.configNotice = "Applying credentials via eyrie…"
 		m.restoreChatInput()
-		// Invalidate cache for this provider since key just changed
-		delete(modelCache, provider)
-		return m, fetchModelsAsync(provider)
+		return m, applyEyrieCredentialsAsync(deploymentID)
 
 	case "model":
 		if value == "" {
@@ -343,33 +345,6 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		}
 		return m.closeConfigPanel(), nil
 
-	case "provider":
-		if value == "" {
-			m.configEntry = ""
-			m.configProvider = ""
-			m.restoreChatInput()
-			return m, nil
-		}
-		engineProvider := hawkconfig.NormalizeProviderForEngine(value)
-		if err := hawkconfig.SetGlobalSetting("provider", value); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m.closeConfigPanel(), nil
-		}
-		m.session.SetProvider(engineProvider)
-
-		// Same flow as normal provider selection: key prompt or model list
-		if engineProvider != "ollama" && hawkconfig.EnvKeyStatus(engineProvider) != "set" {
-			m.configProvider = engineProvider
-			return m.startConfigEntry("provider-apikey", engineProvider)
-		}
-		models, _ := hawkconfig.FetchModelsForProvider(engineProvider)
-		m.configModels = extractModelIDs(models)
-		m.configEntry = ""
-		m.configProvider = ""
-		m.configMenu = "model"
-		m.configSel = 0
-		m.restoreChatInput()
-		return m, nil
 	}
 
 	// Fallback
@@ -382,11 +357,10 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
-		if m.configEntry == "provider-apikey" {
-			// Skip key entry, go to model selection
+		if m.configEntry == "deployment-apikey" || m.configEntry == "provider-apikey" {
 			m.configEntry = ""
 			m.configProvider = ""
-			m.configMenu = "model"
+			m.configMenu = "apikeys"
 			m.configSel = 0
 			m.restoreChatInput()
 			return m, nil
@@ -414,32 +388,49 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		return m.handleConfigEntryKey(msg)
 	}
 	opts := m.configOptions()
-	if len(opts) == 0 {
+	if len(opts) == 0 && m.configMenu != "deployment-detail" && m.configMenu != "routing" {
 		m.configSel = 0
 		return m, nil
 	}
-	if m.configSel < 0 || m.configSel >= len(opts) {
-		m.configSel = 0
+	if len(opts) > 0 {
+		if m.configSel < 0 || m.configSel >= len(opts) {
+			m.configSel = 0
+		}
 	}
 
 	switch msg.Type {
 	case tea.KeyEsc:
-		if m.configMenu == "provider" || m.configMenu == "" {
+		switch m.configMenu {
+		case "hub", "":
+			return m.closeConfigPanel(), nil
+		case "deployment-detail":
+			m.configMenu = "apikeys"
+			m.configDeploymentID = ""
+			return m, nil
+		case "apikeys", "routing", "view-config":
+			m.configMenu = "hub"
+			m.configSel = 0
+			m.configScroll = 0
+			return m, nil
+		case "model":
+			m.configMenu = "hub"
+			m.configSel = 0
+			m.configScroll = 0
+			m.configModelOptions = nil
+			return m, nil
+		default:
 			return m.closeConfigPanel(), nil
 		}
-		if m.configMenu == "provider-action" {
-			m.configProvider = ""
-			m.configMenu = "provider"
-			m.configSel = 0
+	case tea.KeyUp:
+		if m.configMenu == "routing" {
+			if m.configScroll > 0 {
+				m.configScroll--
+			}
 			return m, nil
 		}
-		// From model list → back to provider list
-		m.configMenu = "provider"
-		m.configSel = 0
-		m.configNotice = ""
-		m.configModels = nil
-		return m, nil
-	case tea.KeyUp:
+		if len(opts) == 0 {
+			return m, nil
+		}
 		if m.configSel == 0 {
 			m.configSel = len(opts) - 1
 		} else {
@@ -447,71 +438,52 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyDown:
+		if m.configMenu == "routing" {
+			m.configScroll++
+			return m, nil
+		}
+		if len(opts) == 0 {
+			return m, nil
+		}
 		m.configSel = (m.configSel + 1) % len(opts)
 		return m, nil
 	case tea.KeyEnter:
-		return m.selectConfigOption(opts[m.configSel])
+		if m.configMenu == "deployment-detail" || m.configMenu == "routing" {
+			return m, nil
+		}
+		if m.configSel >= 0 && m.configSel < len(opts) {
+			return m.selectConfigOption(opts[m.configSel])
+		}
+		return m, nil
 	}
 	return m, nil
 }
 
 func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
 	switch m.configMenu {
-	case "provider":
-		// Extract provider name (first word) and normalize for engine
-		provider := strings.Fields(option)[0]
-		engineProvider := hawkconfig.NormalizeProviderForEngine(provider)
-		if err := hawkconfig.SetGlobalSetting("provider", provider); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m.closeConfigPanel(), nil
-		}
-		m.session.SetProvider(engineProvider)
-
-		if hawkconfig.EnvKeyStatus(engineProvider) != "set" && engineProvider != "ollama" {
-			// Key missing → prompt for it
-			m.configProvider = engineProvider
-			return m.startConfigEntry("provider-apikey", engineProvider)
-		}
-
-		// Key is set → show action menu
-		m.configProvider = engineProvider
-		m.configMenu = "provider-action"
-		m.configSel = 0
-		return m, nil
-
-	case "provider-action":
-		provider := strings.TrimSpace(m.configProvider)
-		switch option {
-		case "Use this key":
-			m.configMenu = "model"
-			m.configSel = 0
-			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
-				m.configModels = cached
-				return m, nil
-			}
-			m.configModels = nil
-			return m, fetchModelsAsync(provider)
-		case "Remove key":
-			envKey := hawkconfig.ProviderAPIKeyEnv(provider)
-			if envKey != "" {
-				_ = os.Unsetenv(envKey)
-				_ = hawkconfig.RemoveEnvFile(envKey)
-			}
-			delete(modelCache, provider)
-			m.configProvider = ""
-			m.configMenu = "provider"
-			m.configSel = 0
-			return m, nil
-		}
-		return m, nil
+	case "hub":
+		return m.handleConfigHubSelect(option)
+	case "apikeys":
+		return m.handleConfigDeploymentSelect(option)
 
 	case "model":
-		if err := hawkconfig.SetGlobalSetting("model", option); err != nil {
+		modelID := option
+		if m.configSel >= 0 && m.configSel < len(m.configModelOptions) {
+			modelID = m.configModelOptions[m.configSel].ID
+		} else {
+			modelID = hawkconfig.ResolveCanonicalModel(option)
+		}
+		if err := hawkconfig.SetGlobalSetting("model", modelID); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m.closeConfigPanel(), nil
 		}
-		m.session.SetModel(option)
-		return m.closeConfigPanel(), nil
+		m.session.SetModel(modelID)
+		if prov := hawkconfig.ProviderOfModel(modelID); prov != "" {
+			_ = hawkconfig.SetGlobalSetting("provider", prov)
+			m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(prov))
+		}
+		next, cmd := m.rebuildSessionTransport()
+		return next.closeConfigPanel(), cmd
 
 	default:
 		return m, nil

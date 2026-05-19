@@ -79,7 +79,7 @@ func CheapestForProvider(provider, fallback string) string {
 func providerOf(modelName string) string {
 	info, ok := Find(modelName)
 	if ok {
-		return info.Provider
+		return canonicalProvider(info.Provider)
 	}
 	return ""
 }

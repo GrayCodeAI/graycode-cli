@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,10 +14,12 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/setup"
 )
 
 // Settings holds hawk configuration.
-// Herm-style: no API keys stored here. Secrets come from environment variables only.
+// Hawk: no API keys stored here. Secrets come from environment variables only.
 type Settings struct {
 	Model                   string                 `json:"model,omitempty"`
 	Provider                string                 `json:"provider,omitempty"`
@@ -266,7 +267,7 @@ func SaveProject(s Settings) error {
 // SettingValue returns a display-safe value for a supported setting key.
 func SettingValue(s Settings, key string) (string, bool) {
 	normalized := normalizeSettingKey(key)
-	// Herm-style: API key status comes from environment, not settings file
+	// Hawk: API key status comes from environment, not settings file
 	if provider, ok := apiKeyProviderFromSettingKey(normalized); ok {
 		return EnvKeyStatus(provider), true
 	}
@@ -298,17 +299,19 @@ func SettingValue(s Settings, key string) (string, bool) {
 	case "mcpservers":
 		data, _ := json.Marshal(s.MCPServers)
 		return string(data), true
+	case "deploymentrouting":
+		return DeploymentRoutingLabel(s), true
 	default:
 		return "", false
 	}
 }
 
 // SetGlobalSetting updates a supported scalar/list setting in ~/.hawk/settings.json.
-// Herm-style: API keys are NOT stored in settings.json. Use environment variables.
+// Hawk: API keys are NOT stored in settings.json. Use environment variables.
 func SetGlobalSetting(key, value string) error {
 	s := LoadGlobalSettings()
 	normalized := normalizeSettingKey(key)
-	// Herm-style: reject API key persistence to disk
+	// Hawk: reject API key persistence to disk
 	if _, ok := apiKeyProviderFromSettingKey(normalized); ok {
 		return fmt.Errorf("API keys are not stored in settings.json. Set %s in your environment instead", ProviderAPIKeyEnv(providerFromSettingKey(normalized)))
 	}
@@ -334,6 +337,17 @@ func SetGlobalSetting(key, value string) error {
 			return fmt.Errorf("invalid max budget: %w", err)
 		}
 		s.MaxBudgetUSD = amount
+	case "deploymentrouting":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			enabled := true
+			s.DeploymentRouting = &enabled
+		case "0", "false", "no", "off":
+			enabled := false
+			s.DeploymentRouting = &enabled
+		default:
+			return fmt.Errorf("deployment_routing must be true or false")
+		}
 	default:
 		return fmt.Errorf("unsupported setting key %q", key)
 	}
@@ -378,71 +392,33 @@ func splitSettingList(value string) []string {
 func BoolPtr(b bool) *bool { return &b }
 
 // ─────────────────────────────────────────────────────────────
-// Herm-style: API keys from environment only (no disk persistence)
+// Hawk: API keys from environment only (no disk persistence)
 // ─────────────────────────────────────────────────────────────
 
-// ProviderAPIKeyEnv returns the environment variable name for a provider's API key.
+// ProviderAPIKeyEnv returns the API key env var from eyrie deployment env_fallbacks.
 func ProviderAPIKeyEnv(provider string) string {
-	switch normalizeProviderName(provider) {
-	case "anthropic":
-		return "ANTHROPIC_API_KEY"
-	case "openai":
-		return "OPENAI_API_KEY"
-	case "gemini", "google", "gemma":
-		return "GEMINI_API_KEY"
-	case "openrouter":
-		return "OPENROUTER_API_KEY"
-	case "canopywave":
-		return "CANOPYWAVE_API_KEY"
-	case "grok", "xai":
-		return "XAI_API_KEY"
-	case "opencodego":
-		return "OPENCODEGO_API_KEY"
-	case "groq":
-		return "GROQ_API_KEY"
-	case "deepseek":
-		return "DEEPSEEK_API_KEY"
-	case "mistral":
-		return "MISTRAL_API_KEY"
-	case "bedrock":
-		return "AWS_ACCESS_KEY_ID"
-	case "vertex":
-		return "GOOGLE_APPLICATION_CREDENTIALS"
-	case "ollama":
+	compiled := compiledCatalogOrBootstrap()
+	if compiled == nil {
 		return ""
-	default:
-		replacer := strings.NewReplacer("-", "_", ".", "_", "/", "_")
-		name := strings.ToUpper(replacer.Replace(normalizeProviderName(provider)))
-		if name == "" {
-			return ""
-		}
-		return name + "_API_KEY"
 	}
+	return catalog.PrimaryAPIKeyEnvForProvider(compiled, catalogProviderID(provider))
 }
 
-// EnvKeyStatus returns "set" or "empty" for a provider's API key in the environment.
+// EnvKeyStatus returns set, empty, or local from eyrie catalog credential metadata.
 func EnvKeyStatus(provider string) string {
-	envKey := ProviderAPIKeyEnv(provider)
-	if envKey == "" {
-		return "local"
+	compiled := compiledCatalogOrBootstrap()
+	if compiled == nil {
+		return "empty"
 	}
-	if os.Getenv(envKey) != "" {
-		return "set"
-	}
-	return "empty"
+	return catalog.CredentialStatusForProvider(compiled, catalogProviderID(provider))
 }
 
-// AllEnvKeyStatus returns a comma-separated summary of all known API key env vars.
+// AllEnvKeyStatus returns a comma-separated summary of providers with credentials set.
 func AllEnvKeyStatus() string {
-	providers := []string{
-		"anthropic", "openai", "gemini", "openrouter",
-		"canopywave", "xai", "opencodego",
-	}
 	var parts []string
-	for _, p := range providers {
-		status := EnvKeyStatus(p)
-		if status == "set" {
-			parts = append(parts, p+":"+status)
+	for _, p := range AllCatalogProviders() {
+		if EnvKeyStatus(p) == "set" {
+			parts = append(parts, p+":set")
 		}
 	}
 	if len(parts) == 0 {
@@ -452,38 +428,28 @@ func AllEnvKeyStatus() string {
 	return strings.Join(parts, ", ")
 }
 
-// LoadAPIKeysFromEnv reads all known API keys from environment variables.
+// LoadAPIKeysFromEnv reads API keys for all eyrie catalog providers from the environment.
 func LoadAPIKeysFromEnv() map[string]string {
-	providers := []string{
-		"anthropic", "openai", "gemini", "openrouter",
-		"canopywave", "xai", "opencodego",
-	}
 	keys := make(map[string]string)
-	for _, p := range providers {
-		envKey := ProviderAPIKeyEnv(p)
-		if envKey == "" {
-			continue
-		}
-		if v := os.Getenv(envKey); v != "" {
+	for _, p := range AllCatalogProviders() {
+		if v := APIKeyForProvider(p); v != "" {
 			keys[p] = v
 		}
 	}
 	return keys
 }
 
-// APIKeyForProvider reads the API key for a provider from the environment.
+// APIKeyForProvider reads the API key for a provider using eyrie env_fallbacks.
 func APIKeyForProvider(provider string) string {
-	envKey := ProviderAPIKeyEnv(provider)
-	if envKey == "" {
+	compiled := compiledCatalogOrBootstrap()
+	if compiled == nil {
 		return ""
 	}
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-	// Check alternate env var names (e.g. GROK_API_KEY as alias for XAI_API_KEY)
-	switch normalizeProviderName(provider) {
-	case "grok", "xai":
-		return os.Getenv("GROK_API_KEY")
+	provider = catalogProviderID(provider)
+	for _, env := range catalog.APIKeyEnvsForProvider(compiled, provider) {
+		if v := os.Getenv(env); v != "" {
+			return v
+		}
 	}
 	return ""
 }
@@ -641,42 +607,70 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 		return nil, fmt.Errorf("no provider specified")
 	}
 
-	compiled, err := loadEyrieCatalogV1(context.Background(), false)
+	ctx := context.Background()
+	compiled, err := loadEyrieCatalogV1(ctx, false)
 	if err != nil {
-		return nil, err
+		if refreshErr := TryAutoRefreshCatalog(ctx); refreshErr == nil {
+			compiled, err = loadEyrieCatalogV1(ctx, false)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	models := modelEntriesForProvider(compiled, provider)
-	if len(models) == 0 {
-		return nil, fmt.Errorf("no models found for provider %s", provider)
+	if len(models) > 0 {
+		return models, nil
 	}
-	return models, nil
+	if refreshErr := TryAutoRefreshCatalog(ctx); refreshErr == nil {
+		if compiled, err = loadEyrieCatalogV1(ctx, false); err == nil {
+			if models = modelEntriesForProvider(compiled, provider); len(models) > 0 {
+				return models, nil
+			}
+		}
+	}
+	// Custom OpenAI-compatible providers: single model from settings, not hawk catalog data.
+	for _, cp := range LoadSettings().CustomProviders {
+		if NormalizeProviderForEngine(cp.Name) != provider {
+			continue
+		}
+		if id := strings.TrimSpace(cp.Model); id != "" {
+			return []catalog.ModelCatalogEntry{{
+				ID:          id,
+				DisplayName: id,
+			}}, nil
+		}
+	}
+	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog (check API keys; hawk will refresh automatically on next start)", provider)
 }
 
-// RefreshModelCatalogV1 fetches the deployment-aware catalog from LangDAG and
-// writes Eyrie's shared cache. Callers get a short summary for UI display.
+func refreshModelCatalog(ctx context.Context) (*catalog.RefreshResult, error) {
+	return setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentialsFromOS())
+}
+
+// RefreshModelCatalogV1 asks eyrie to refresh the remote catalog and provider APIs using env API keys.
 func RefreshModelCatalogV1(ctx context.Context) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	compiled, err := loadEyrieCatalogV1(ctx, true)
+	result, err := refreshModelCatalog(ctx)
 	if err != nil {
 		return "", err
 	}
-	for _, diagnostic := range compiled.Diagnostics {
-		if diagnostic.Code == "remote_refresh_failed" {
-			return "", errors.New(diagnostic.Message)
-		}
-	}
-	cachePath := eyrieModelCatalogCachePath()
-	return fmt.Sprintf("Model catalog refreshed: %d models, %d deployments, %d offerings cached at %s",
-		len(compiled.ModelsByID), len(compiled.DeploymentsByID), len(compiled.OfferingsByID), cachePath), nil
+	return result.DiscoverReport(), nil
 }
 
 func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalogV1, error) {
+	if refreshRemote {
+		result, err := setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentialsFromOS())
+		if err != nil {
+			return nil, err
+		}
+		return result.Compiled, nil
+	}
 	return catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
-		CachePath:     eyrieModelCatalogCachePath(),
-		RefreshRemote: refreshRemote,
+		CachePath:    catalog.DefaultCachePath(),
+		RequireCache: false,
 	})
 }
 

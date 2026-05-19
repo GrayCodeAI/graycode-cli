@@ -1,0 +1,1066 @@
+{
+  "schema_version": "model-catalog/v1",
+  "generated_at": "2026-04-09T00:00:00Z",
+  "stale_after": "2026-05-09T00:00:00Z",
+  "providers": {
+    "anthropic": {
+      "id": "anthropic",
+      "name": "Anthropic"
+    },
+    "google": {
+      "id": "google",
+      "name": "Google"
+    },
+    "ollama": {
+      "id": "ollama",
+      "name": "Ollama"
+    },
+    "openai": {
+      "id": "openai",
+      "name": "OpenAI"
+    },
+    "opencodego": {
+      "id": "opencodego",
+      "name": "OpenCode Go"
+    },
+    "openrouter": {
+      "id": "openrouter",
+      "name": "OpenRouter"
+    },
+    "xai": {
+      "id": "xai",
+      "name": "xAI"
+    },
+    "z-ai": {
+      "id": "z-ai",
+      "name": "Z.AI"
+    }
+  },
+  "api_protocols": {
+    "anthropic-messages": {
+      "id": "anthropic-messages",
+      "name": "Anthropic Messages"
+    },
+    "gemini-generate-content": {
+      "id": "gemini-generate-content",
+      "name": "Gemini generateContent"
+    },
+    "openai-chat-completions": {
+      "id": "openai-chat-completions",
+      "name": "OpenAI Chat Completions"
+    }
+  },
+  "deployments": {
+    "anthropic-bedrock": {
+      "id": "anthropic-bedrock",
+      "name": "Anthropic on Bedrock",
+      "provider_id": "anthropic",
+      "api_protocol_id": "anthropic-messages",
+      "adapter_constructor": "anthropic-bedrock",
+      "native_model_id_source": "catalog_known"
+    },
+    "anthropic-direct": {
+      "id": "anthropic-direct",
+      "name": "Anthropic",
+      "provider_id": "anthropic",
+      "api_protocol_id": "anthropic-messages",
+      "adapter_constructor": "anthropic",
+      "native_model_id_source": "catalog_known"
+    },
+    "anthropic-vertex": {
+      "id": "anthropic-vertex",
+      "name": "Anthropic on Vertex",
+      "provider_id": "anthropic",
+      "api_protocol_id": "anthropic-messages",
+      "adapter_constructor": "anthropic-vertex",
+      "native_model_id_source": "catalog_known"
+    },
+    "canopywave": {
+      "id": "canopywave",
+      "name": "CanopyWave",
+      "provider_id": "z-ai",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "canopywave",
+      "native_model_id_source": "catalog_known"
+    },
+    "gemini-direct": {
+      "id": "gemini-direct",
+      "name": "Gemini",
+      "provider_id": "google",
+      "api_protocol_id": "gemini-generate-content",
+      "adapter_constructor": "gemini",
+      "native_model_id_source": "catalog_known"
+    },
+    "gemini-vertex": {
+      "id": "gemini-vertex",
+      "name": "Gemini on Vertex",
+      "provider_id": "google",
+      "api_protocol_id": "gemini-generate-content",
+      "adapter_constructor": "gemini-vertex",
+      "native_model_id_source": "catalog_known"
+    },
+    "grok-direct": {
+      "id": "grok-direct",
+      "name": "Grok",
+      "provider_id": "xai",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "grok",
+      "native_model_id_source": "catalog_known"
+    },
+    "ollama-local": {
+      "id": "ollama-local",
+      "name": "Ollama local",
+      "provider_id": "ollama",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "ollama",
+      "native_model_id_source": "discovered",
+      "local": true
+    },
+    "openai-azure": {
+      "id": "openai-azure",
+      "name": "Azure OpenAI",
+      "provider_id": "openai",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "openai-azure",
+      "native_model_id_source": "user_configured",
+      "model_mappings_required": true
+    },
+    "openai-direct": {
+      "id": "openai-direct",
+      "name": "OpenAI",
+      "provider_id": "openai",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "openai",
+      "native_model_id_source": "catalog_known"
+    },
+    "opencodego": {
+      "id": "opencodego",
+      "name": "OpenCode Go",
+      "provider_id": "opencodego",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "opencodego",
+      "native_model_id_source": "catalog_known"
+    },
+    "openrouter": {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "provider_id": "openrouter",
+      "api_protocol_id": "openai-chat-completions",
+      "adapter_constructor": "openrouter",
+      "native_model_id_source": "discovered"
+    }
+  },
+  "models": {
+    "anthropic/claude-haiku-4-5-20251001": {
+      "id": "anthropic/claude-haiku-4-5-20251001",
+      "provider_id": "anthropic",
+      "name": "claude-haiku-4-5-20251001",
+      "context_window": 200000,
+      "max_output": 16000,
+      "aliases": [
+        "claude-haiku-4-5-20251001"
+      ]
+    },
+    "anthropic/claude-opus-4-6": {
+      "id": "anthropic/claude-opus-4-6",
+      "provider_id": "anthropic",
+      "name": "claude-opus-4-6",
+      "context_window": 200000,
+      "max_output": 32000,
+      "aliases": [
+        "claude-opus-4-6"
+      ]
+    },
+    "anthropic/claude-sonnet-4-6": {
+      "id": "anthropic/claude-sonnet-4-6",
+      "provider_id": "anthropic",
+      "name": "claude-sonnet-4-6",
+      "context_window": 200000,
+      "max_output": 32000,
+      "aliases": [
+        "claude-sonnet-4-6"
+      ]
+    },
+    "google/gemini-2.0-flash": {
+      "id": "google/gemini-2.0-flash",
+      "provider_id": "google",
+      "name": "gemini-2.0-flash",
+      "context_window": 1000000,
+      "max_output": 8192,
+      "aliases": [
+        "gemini-2.0-flash"
+      ]
+    },
+    "google/gemini-2.0-flash-lite": {
+      "id": "google/gemini-2.0-flash-lite",
+      "provider_id": "google",
+      "name": "gemini-2.0-flash-lite",
+      "context_window": 1000000,
+      "max_output": 8192,
+      "aliases": [
+        "gemini-2.0-flash-lite"
+      ]
+    },
+    "google/gemini-2.5-pro-preview-03-25": {
+      "id": "google/gemini-2.5-pro-preview-03-25",
+      "provider_id": "google",
+      "name": "gemini-2.5-pro-preview-03-25",
+      "context_window": 1000000,
+      "max_output": 65536,
+      "aliases": [
+        "gemini-2.5-pro-preview-03-25"
+      ]
+    },
+    "openai/gpt-4o": {
+      "id": "openai/gpt-4o",
+      "provider_id": "openai",
+      "name": "gpt-4o",
+      "context_window": 128000,
+      "max_output": 16000,
+      "aliases": [
+        "gpt-4o"
+      ]
+    },
+    "openai/gpt-4o-mini": {
+      "id": "openai/gpt-4o-mini",
+      "provider_id": "openai",
+      "name": "gpt-4o-mini",
+      "context_window": 128000,
+      "max_output": 16000,
+      "aliases": [
+        "gpt-4o-mini"
+      ]
+    },
+    "opencodego/glm-5": {
+      "id": "opencodego/glm-5",
+      "provider_id": "opencodego",
+      "name": "GLM-5",
+      "context_window": 128000,
+      "max_output": 8000,
+      "aliases": [
+        "glm-5",
+        "GLM-5"
+      ]
+    },
+    "opencodego/glm-5.1": {
+      "id": "opencodego/glm-5.1",
+      "provider_id": "opencodego",
+      "name": "GLM-5.1",
+      "context_window": 128000,
+      "max_output": 8000,
+      "aliases": [
+        "glm-5.1",
+        "GLM-5.1"
+      ]
+    },
+    "opencodego/kimi-k2.5": {
+      "id": "opencodego/kimi-k2.5",
+      "provider_id": "opencodego",
+      "name": "Kimi K2.5",
+      "context_window": 256000,
+      "max_output": 8000,
+      "aliases": [
+        "kimi-k2.5",
+        "Kimi K2.5"
+      ]
+    },
+    "opencodego/kimi-k2.6": {
+      "id": "opencodego/kimi-k2.6",
+      "provider_id": "opencodego",
+      "name": "Kimi K2.6",
+      "context_window": 256000,
+      "max_output": 8000,
+      "aliases": [
+        "kimi-k2.6",
+        "Kimi K2.6"
+      ]
+    },
+    "opencodego/mimo-v2-omni": {
+      "id": "opencodego/mimo-v2-omni",
+      "provider_id": "opencodego",
+      "name": "MiMo V2 Omni",
+      "context_window": 128000,
+      "max_output": 8000,
+      "aliases": [
+        "mimo-v2-omni",
+        "MiMo V2 Omni"
+      ]
+    },
+    "opencodego/mimo-v2-pro": {
+      "id": "opencodego/mimo-v2-pro",
+      "provider_id": "opencodego",
+      "name": "MiMo V2 Pro",
+      "context_window": 128000,
+      "max_output": 8000,
+      "aliases": [
+        "mimo-v2-pro",
+        "MiMo V2 Pro"
+      ]
+    },
+    "opencodego/minimax-m2.5": {
+      "id": "opencodego/minimax-m2.5",
+      "provider_id": "opencodego",
+      "name": "MiniMax M2.5",
+      "context_window": 1000000,
+      "max_output": 8000,
+      "aliases": [
+        "minimax-m2.5",
+        "MiniMax M2.5"
+      ]
+    },
+    "opencodego/minimax-m2.7": {
+      "id": "opencodego/minimax-m2.7",
+      "provider_id": "opencodego",
+      "name": "MiniMax M2.7",
+      "context_window": 1000000,
+      "max_output": 8000,
+      "aliases": [
+        "minimax-m2.7",
+        "MiniMax M2.7"
+      ]
+    },
+    "opencodego/qwen3.5-plus": {
+      "id": "opencodego/qwen3.5-plus",
+      "provider_id": "opencodego",
+      "name": "Qwen3.5 Plus",
+      "context_window": 1000000,
+      "max_output": 65536,
+      "aliases": [
+        "qwen3.5-plus",
+        "Qwen3.5 Plus"
+      ]
+    },
+    "opencodego/qwen3.6-plus": {
+      "id": "opencodego/qwen3.6-plus",
+      "provider_id": "opencodego",
+      "name": "Qwen3.6 Plus",
+      "context_window": 1000000,
+      "max_output": 65536,
+      "aliases": [
+        "qwen3.6-plus",
+        "Qwen3.6 Plus"
+      ]
+    },
+    "xai/grok-2": {
+      "id": "xai/grok-2",
+      "provider_id": "xai",
+      "name": "grok-2",
+      "context_window": 128000,
+      "max_output": 8000,
+      "aliases": [
+        "grok-2"
+      ]
+    },
+    "zai/glm-4.6": {
+      "id": "zai/glm-4.6",
+      "provider_id": "z-ai",
+      "name": "zai/glm-4.6",
+      "context_window": 128000,
+      "max_output": 8192,
+      "aliases": [
+        "zai/glm-4.6"
+      ]
+    }
+  },
+  "offerings": [
+    {
+      "id": "anthropic-direct:claude-opus-4-6",
+      "canonical_model_id": "anthropic/claude-opus-4-6",
+      "deployment_id": "anthropic-direct",
+      "native_model_id": "claude-opus-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 15,
+          "output_tokens": 75
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-direct:claude-sonnet-4-6",
+      "canonical_model_id": "anthropic/claude-sonnet-4-6",
+      "deployment_id": "anthropic-direct",
+      "native_model_id": "claude-sonnet-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-direct:claude-haiku-4-5-20251001",
+      "canonical_model_id": "anthropic/claude-haiku-4-5-20251001",
+      "deployment_id": "anthropic-direct",
+      "native_model_id": "claude-haiku-4-5-20251001",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 1,
+          "output_tokens": 5
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "openai-direct:gpt-4o",
+      "canonical_model_id": "openai/gpt-4o",
+      "deployment_id": "openai-direct",
+      "native_model_id": "gpt-4o",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 5,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "openai-direct:gpt-4o-mini",
+      "canonical_model_id": "openai/gpt-4o-mini",
+      "deployment_id": "openai-direct",
+      "native_model_id": "gpt-4o-mini",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.15,
+          "output_tokens": 0.6
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "grok-direct:grok-2",
+      "canonical_model_id": "xai/grok-2",
+      "deployment_id": "grok-direct",
+      "native_model_id": "grok-2",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 2,
+          "output_tokens": 10
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "gemini-direct:gemini-2.5-pro-preview-03-25",
+      "canonical_model_id": "google/gemini-2.5-pro-preview-03-25",
+      "deployment_id": "gemini-direct",
+      "native_model_id": "gemini-2.5-pro-preview-03-25",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 1.25,
+          "output_tokens": 5
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "gemini-direct:gemini-2.0-flash",
+      "canonical_model_id": "google/gemini-2.0-flash",
+      "deployment_id": "gemini-direct",
+      "native_model_id": "gemini-2.0-flash",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.1,
+          "output_tokens": 0.4
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "gemini-direct:gemini-2.0-flash-lite",
+      "canonical_model_id": "google/gemini-2.0-flash-lite",
+      "deployment_id": "gemini-direct",
+      "native_model_id": "gemini-2.0-flash-lite",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.075,
+          "output_tokens": 0.3
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "openrouter:openai/gpt-4o",
+      "canonical_model_id": "openai/gpt-4o",
+      "deployment_id": "openrouter",
+      "native_model_id": "openai/gpt-4o",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 5,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "openrouter:openai/gpt-4o-mini",
+      "canonical_model_id": "openai/gpt-4o-mini",
+      "deployment_id": "openrouter",
+      "native_model_id": "openai/gpt-4o-mini",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.15,
+          "output_tokens": 0.6
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "openrouter:anthropic/claude-sonnet-4-6",
+      "canonical_model_id": "anthropic/claude-sonnet-4-6",
+      "deployment_id": "openrouter",
+      "native_model_id": "anthropic/claude-sonnet-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "canopywave:zai/glm-4.6",
+      "canonical_model_id": "zai/glm-4.6",
+      "deployment_id": "canopywave",
+      "native_model_id": "zai/glm-4.6",
+      "capabilities": {},
+      "pricing": {
+        "status": "unknown",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:glm-5.1",
+      "canonical_model_id": "opencodego/glm-5.1",
+      "deployment_id": "opencodego",
+      "native_model_id": "glm-5.1",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 5,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:glm-5",
+      "canonical_model_id": "opencodego/glm-5",
+      "deployment_id": "opencodego",
+      "native_model_id": "glm-5",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 5,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:kimi-k2.5",
+      "canonical_model_id": "opencodego/kimi-k2.5",
+      "deployment_id": "opencodego",
+      "native_model_id": "kimi-k2.5",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 10
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:kimi-k2.6",
+      "canonical_model_id": "opencodego/kimi-k2.6",
+      "deployment_id": "opencodego",
+      "native_model_id": "kimi-k2.6",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 10
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:mimo-v2-pro",
+      "canonical_model_id": "opencodego/mimo-v2-pro",
+      "deployment_id": "opencodego",
+      "native_model_id": "mimo-v2-pro",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 10
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:mimo-v2-omni",
+      "canonical_model_id": "opencodego/mimo-v2-omni",
+      "deployment_id": "opencodego",
+      "native_model_id": "mimo-v2-omni",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 2,
+          "output_tokens": 8
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:minimax-m2.7",
+      "canonical_model_id": "opencodego/minimax-m2.7",
+      "deployment_id": "opencodego",
+      "native_model_id": "minimax-m2.7",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 1,
+          "output_tokens": 3
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:minimax-m2.5",
+      "canonical_model_id": "opencodego/minimax-m2.5",
+      "deployment_id": "opencodego",
+      "native_model_id": "minimax-m2.5",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.5,
+          "output_tokens": 1.5
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:qwen3.6-plus",
+      "canonical_model_id": "opencodego/qwen3.6-plus",
+      "deployment_id": "opencodego",
+      "native_model_id": "qwen3.6-plus",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.3,
+          "output_tokens": 1.7
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "opencodego:qwen3.5-plus",
+      "canonical_model_id": "opencodego/qwen3.5-plus",
+      "deployment_id": "opencodego",
+      "native_model_id": "qwen3.5-plus",
+      "capabilities": {},
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.26,
+          "output_tokens": 1.56
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-bedrock:claude-opus-4-6",
+      "canonical_model_id": "anthropic/claude-opus-4-6",
+      "deployment_id": "anthropic-bedrock",
+      "native_model_id": "claude-opus-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 15,
+          "output_tokens": 75
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-vertex:claude-opus-4-6",
+      "canonical_model_id": "anthropic/claude-opus-4-6",
+      "deployment_id": "anthropic-vertex",
+      "native_model_id": "claude-opus-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 15,
+          "output_tokens": 75
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-bedrock:claude-sonnet-4-6",
+      "canonical_model_id": "anthropic/claude-sonnet-4-6",
+      "deployment_id": "anthropic-bedrock",
+      "native_model_id": "claude-sonnet-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-vertex:claude-sonnet-4-6",
+      "canonical_model_id": "anthropic/claude-sonnet-4-6",
+      "deployment_id": "anthropic-vertex",
+      "native_model_id": "claude-sonnet-4-6",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 3,
+          "output_tokens": 15
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-bedrock:claude-haiku-4-5-20251001",
+      "canonical_model_id": "anthropic/claude-haiku-4-5-20251001",
+      "deployment_id": "anthropic-bedrock",
+      "native_model_id": "claude-haiku-4-5-20251001",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 1,
+          "output_tokens": 5
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "anthropic-vertex:claude-haiku-4-5-20251001",
+      "canonical_model_id": "anthropic/claude-haiku-4-5-20251001",
+      "deployment_id": "anthropic-vertex",
+      "native_model_id": "claude-haiku-4-5-20251001",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 1,
+          "output_tokens": 5
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "gemini-vertex:gemini-2.5-pro-preview-03-25",
+      "canonical_model_id": "google/gemini-2.5-pro-preview-03-25",
+      "deployment_id": "gemini-vertex",
+      "native_model_id": "gemini-2.5-pro-preview-03-25",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 1.25,
+          "output_tokens": 5
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "gemini-vertex:gemini-2.0-flash",
+      "canonical_model_id": "google/gemini-2.0-flash",
+      "deployment_id": "gemini-vertex",
+      "native_model_id": "gemini-2.0-flash",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.1,
+          "output_tokens": 0.4
+        },
+        "source": "test"
+      }
+    },
+    {
+      "id": "gemini-vertex:gemini-2.0-flash-lite",
+      "canonical_model_id": "google/gemini-2.0-flash-lite",
+      "deployment_id": "gemini-vertex",
+      "native_model_id": "gemini-2.0-flash-lite",
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.075,
+          "output_tokens": 0.3
+        },
+        "source": "test"
+      }
+    }
+  ],
+  "offering_templates": [
+    {
+      "id": "openai-azure:openai/gpt-4o",
+      "canonical_model_id": "openai/gpt-4o",
+      "deployment_id": "openai-azure",
+      "native_model_id_source": "user_configured",
+      "mapping_required": true,
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 5,
+          "output_tokens": 15
+        },
+        "source": "embedded"
+      }
+    },
+    {
+      "id": "openai-azure:openai/gpt-4o-mini",
+      "canonical_model_id": "openai/gpt-4o-mini",
+      "deployment_id": "openai-azure",
+      "native_model_id_source": "user_configured",
+      "mapping_required": true,
+      "capabilities": {
+        "server_tools": {
+          "web_search": "supported"
+        }
+      },
+      "pricing": {
+        "status": "known",
+        "currency": "USD",
+        "effective_at": "2026-04-09T00:00:00Z",
+        "rates_per_1m": {
+          "input_tokens": 0.15,
+          "output_tokens": 0.6
+        },
+        "source": "embedded"
+      }
+    }
+  ],
+  "aliases": {
+    "anthropic/claude-sonnet-4-6": "anthropic/claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001": "anthropic/claude-haiku-4-5-20251001",
+    "claude-opus-4-6": "anthropic/claude-opus-4-6",
+    "claude-sonnet-4-6": "anthropic/claude-sonnet-4-6",
+    "gemini-2.0-flash": "google/gemini-2.0-flash",
+    "gemini-2.0-flash-lite": "google/gemini-2.0-flash-lite",
+    "gemini-2.5-pro-preview-03-25": "google/gemini-2.5-pro-preview-03-25",
+    "glm-5": "opencodego/glm-5",
+    "glm-5.1": "opencodego/glm-5.1",
+    "gpt-4o": "openai/gpt-4o",
+    "gpt-4o-mini": "openai/gpt-4o-mini",
+    "grok-2": "xai/grok-2",
+    "kimi-k2.5": "opencodego/kimi-k2.5",
+    "kimi-k2.6": "opencodego/kimi-k2.6",
+    "mimo-v2-omni": "opencodego/mimo-v2-omni",
+    "mimo-v2-pro": "opencodego/mimo-v2-pro",
+    "minimax-m2.5": "opencodego/minimax-m2.5",
+    "minimax-m2.7": "opencodego/minimax-m2.7",
+    "openai/gpt-4o": "openai/gpt-4o",
+    "openai/gpt-4o-mini": "openai/gpt-4o-mini",
+    "qwen3.5-plus": "opencodego/qwen3.5-plus",
+    "qwen3.6-plus": "opencodego/qwen3.6-plus",
+    "zai/glm-4.6": "zai/glm-4.6"
+  },
+  "provenance": {
+    "source": "test",
+    "observed_at": "2026-04-09T00:00:00Z"
+  }
+}

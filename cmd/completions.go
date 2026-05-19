@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // FlagInfo describes a CLI flag for completion generation.
@@ -258,24 +260,7 @@ func (g *CompletionGenerator) populateProviders() {
 }
 
 func (g *CompletionGenerator) populateModels() {
-	g.Models = []string{
-		"claude-sonnet-4-20250514",
-		"claude-opus-4-20250514",
-		"claude-haiku-3-20250307",
-		"gpt-4o",
-		"gpt-4o-mini",
-		"gpt-4-turbo",
-		"o1",
-		"o1-mini",
-		"o3-mini",
-		"gemini-2.0-flash",
-		"gemini-2.0-pro",
-		"deepseek-chat",
-		"deepseek-reasoner",
-		"mistral-large-latest",
-		"llama-3.1-70b",
-		"llama-3.1-405b",
-	}
+	g.Models = routing.AllCatalogModelNames()
 }
 
 func (g *CompletionGenerator) populateSlashCommands() {

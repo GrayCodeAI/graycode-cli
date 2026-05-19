@@ -21,7 +21,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
-	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
@@ -571,10 +570,10 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			provider := m.session.Provider()
 			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
-				m.configModels = cached
+				m.configModelOptions = cached
 				return m, nil
 			}
-			m.configModels = nil
+			m.configModelOptions = nil
 			return m, fetchModelsAsync(provider)
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
@@ -584,12 +583,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		// Validate model against known models for current provider
-		known := configModelChoices(m.session.Provider(), m.configModels)
+		known := configModelChoices(m.configModelOptions, false)
 		if len(known) > 0 {
 			found := false
-			for _, k := range known {
-				if strings.EqualFold(k, arg) {
-					arg = k
+			for i, k := range known {
+				if strings.EqualFold(k, arg) || strings.EqualFold(m.configModelOptions[i].ID, arg) {
+					arg = m.configModelOptions[i].ID
 					found = true
 					break
 				}
@@ -610,6 +609,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				m.messages = append(m.messages, displayMsg{role: "error", content: hint})
 				return m, nil
 			}
+		}
+		if hawkconfig.DeploymentRoutingEnabled(m.settings) {
+			arg = hawkconfig.ResolveCanonicalModel(arg)
 		}
 		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
@@ -1082,20 +1084,20 @@ Generate the recap:`, summary.String())
 			m.session.SetProvider(engineProvider)
 			// Use cached model or set first from cache
 			if cached, ok := modelCache[engineProvider]; ok && len(cached) > 0 {
-				m.session.SetModel(cached[0])
-				_ = hawkconfig.SetGlobalSetting("model", cached[0])
+				m.session.SetModel(cached[0].ID)
+				_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
 			}
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved to global config.", value, m.session.Model())})
 			return m, nil
 		}
 		if len(parts) >= 3 && parts[1] == "model" {
 			value := strings.TrimSpace(strings.Join(parts[2:], " "))
-			known := configModelChoices(m.session.Provider(), m.configModels)
+			known := configModelChoices(m.configModelOptions, false)
 			if len(known) > 0 {
 				found := false
-				for _, k := range known {
-					if strings.EqualFold(k, value) {
-						value = k
+				for i, k := range known {
+					if strings.EqualFold(k, value) || strings.EqualFold(m.configModelOptions[i].ID, value) {
+						value = m.configModelOptions[i].ID
 						found = true
 						break
 					}
@@ -1160,9 +1162,11 @@ Generate the recap:`, summary.String())
 		}
 		m.settings = settings
 		m.configOpen = true
-		m.configMenu = "provider"
+		m.configMenu = "hub"
 		m.configSel = 0
+		m.configScroll = 0
 		m.configNotice = ""
+		m.configDeployments = nil
 		m.viewDirty = true
 		return m, nil
 	case "/mcp":
@@ -1631,12 +1635,9 @@ Generate the recap:`, summary.String())
 	case "/fast":
 		if m.session.Model() == m.settings.Model {
 			norm := hawkconfig.NormalizeProviderForEngine(m.session.Provider())
-			fastModel := hawkmodel.CheapestForProvider(norm, m.session.Model())
+			fastModel := hawkconfig.CheapestModelForProvider(norm, m.session.Model())
 			if strings.TrimSpace(fastModel) == "" {
-				fastModel = hawkmodel.DefaultModel(norm)
-			}
-			if strings.TrimSpace(fastModel) == "" {
-				fastModel = client.ResolveDefaultModel(m.session.Provider())
+				fastModel = hawkconfig.DefaultModelForProvider(norm)
 			}
 			if strings.TrimSpace(fastModel) == "" {
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Fast mode: no catalog model resolved for this provider"})
@@ -1894,7 +1895,12 @@ Generate the recap:`, summary.String())
 	case "/ultrareview":
 		return m.startPromptCommand("/ultrareview", "Perform a deep, adversarial code review of this change set. Prioritize correctness, security, regressions, and missing tests.")
 	case "/provider-status":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider: %s\nModel: %s", m.session.Provider(), m.session.Model())})
+		report, err := hawkconfig.DeploymentStatusReport(context.Background(), m.session.Model())
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Provider status failed: %v", err)})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: report})
 		return m, nil
 	case "/session":
 		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",

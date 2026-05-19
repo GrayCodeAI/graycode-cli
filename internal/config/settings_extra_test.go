@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -79,8 +80,8 @@ func TestNormalizeProviderForEngine(t *testing.T) {
 }
 
 func TestFetchModelsForProviderUsesEyrieJSONCache(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
+	cachePath := filepath.Join(t.TempDir(), "model_catalog.json")
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", cachePath)
 	now := time.Now().UTC().Truncate(time.Second)
 	c := catalog.CatalogV1{
 		SchemaVersion: catalog.CatalogV1SchemaVersion,
@@ -124,7 +125,7 @@ func TestFetchModelsForProviderUsesEyrieJSONCache(t *testing.T) {
 			},
 		}},
 	}
-	if err := catalog.WriteCatalogV1Cache(eyrieModelCatalogCachePath(), &c); err != nil {
+	if err := catalog.WriteCatalogV1Cache(cachePath, &c); err != nil {
 		t.Fatalf("write catalog cache: %v", err)
 	}
 

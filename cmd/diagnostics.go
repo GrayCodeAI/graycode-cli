@@ -29,6 +29,11 @@ func doctorReport(settings hawkconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("Directory: %s\n", cwd))
 	b.WriteString(fmt.Sprintf("Provider: %s\n", provider))
 	b.WriteString(fmt.Sprintf("Model: %s\n", modelName))
+	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
+	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
+		b.WriteString("\n" + deployReport + "\n")
+	}
+	_ = hawkconfig.MigrateProviderConfig()
 	b.WriteString("\n" + envSummary(provider, modelName) + "\n")
 	b.WriteString("\nGit:\n")
 	if branch := branchSummary(); branch != "" {

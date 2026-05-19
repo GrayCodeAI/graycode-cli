@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -19,12 +20,12 @@ func TestValidateSettingsValid(t *testing.T) {
 }
 
 func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
-	// Herm-style: missing env key for provider is an error
-	t.Setenv("INVALID_API_KEY", "")
-	s := Settings{Provider: "invalid"}
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	os.Unsetenv("ANTHROPIC_API_KEY")
+	s := Settings{Provider: "anthropic"}
 	result := ValidateSettings(s)
 	if result.Valid {
-		t.Fatal("expected invalid (missing env key)")
+		t.Fatal("expected invalid (missing env key for eyrie provider)")
 	}
 }
 

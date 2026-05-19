@@ -7,47 +7,9 @@ import (
 	"testing"
 )
 
-func TestNeedsSetup_NoEnvKeys(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	t.Setenv("ANTHROPIC_API_KEY", "")
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("GEMINI_API_KEY", "")
-	t.Setenv("OPENROUTER_API_KEY", "")
-	t.Setenv("XAI_API_KEY", "")
-	t.Setenv("GROQ_API_KEY", "")
-
-	os.Unsetenv("ANTHROPIC_API_KEY")
-	os.Unsetenv("OPENAI_API_KEY")
-	os.Unsetenv("GEMINI_API_KEY")
-	os.Unsetenv("OPENROUTER_API_KEY")
-	os.Unsetenv("XAI_API_KEY")
-	os.Unsetenv("GROQ_API_KEY")
-
-	if !NeedsSetup() {
-		t.Error("NeedsSetup() should be true when no keys are set")
-	}
-}
-
-func TestNeedsSetup_WithAnthropicKey(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-test123456789")
-
+func TestNeedsSetup_AlwaysFalseForTUI(t *testing.T) {
 	if NeedsSetup() {
-		t.Error("NeedsSetup() should be false when ANTHROPIC_API_KEY is set")
-	}
-}
-
-func TestNeedsSetup_WithOpenAIKey(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	t.Setenv("OPENAI_API_KEY", "sk-test123456789")
-
-	os.Unsetenv("ANTHROPIC_API_KEY")
-
-	if NeedsSetup() {
-		t.Error("NeedsSetup() should be false when OPENAI_API_KEY is set")
+		t.Error("NeedsSetup() should be false; use /config or hawk setup instead")
 	}
 }
 

@@ -158,7 +158,7 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	if err := SetGlobalSetting("maxBudgetUSD", "2.5"); err != nil {
 		t.Fatal(err)
 	}
-	// Herm-style: API keys rejected from settings file
+	// Hawk: API keys rejected from settings file
 	if err := SetGlobalSetting("apiKey.openai", "sk-test"); err == nil {
 		t.Fatal("expected error setting api key in settings")
 	}

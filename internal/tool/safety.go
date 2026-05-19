@@ -172,6 +172,14 @@ func IsSensitivePath(path string) string {
 		if clean == hawkProv {
 			return "access to ~/.hawk/provider.json is blocked for security (API credentials)"
 		}
+		hawkEnv := filepath.Join(home, ".hawk", "env")
+		if clean == hawkEnv {
+			return "access to ~/.hawk/env is blocked for security (API keys)"
+		}
+		hawkDotEnv := filepath.Join(home, ".hawk", ".env")
+		if clean == hawkDotEnv {
+			return "access to ~/.hawk/.env is blocked for security (API keys)"
+		}
 	}
 
 	// Check suffix-based blocks (e.g. ~/.ssh/*)

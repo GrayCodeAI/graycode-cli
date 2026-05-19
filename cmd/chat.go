@@ -242,6 +242,12 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.containerEnabled = shouldUseContainer()
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
+	} else if noContainer && hawkconfig.SecureCredentialsEnabled() {
+		m.messages = append(m.messages, displayMsg{
+			role: "system",
+			content: "Secure credentials mode is on but --no-container runs tools on the host. " +
+				"Use container mode (default) so agents cannot read ~/.hawk/env or provider.json.",
+		})
 	}
 
 	// Initialize lacy-inspired features
@@ -301,9 +307,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	go func() {
 		provider := effectiveProvider
 		models, _ := hawkconfig.FetchModelsForProvider(provider)
-		ids := extractModelIDs(models)
-		if len(ids) > 0 {
-			modelCache[provider] = ids
+		opts := modelOptionsFromEntries(models)
+		if len(opts) > 0 {
+			modelCache[provider] = opts
 		}
 	}()
 
@@ -346,6 +352,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 func (m chatModel) Init() tea.Cmd {
 	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd(), glimmerTickCmd()}
+	if hawkconfig.EvaluateSetup(context.Background()).NeedsSetup {
+		cmds = append(cmds, func() tea.Msg { return firstRunOpenConfigMsg{} })
+	}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
 		cwd, _ := os.Getwd()
@@ -469,7 +478,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch msg.Type {
 		case tea.KeyCtrlN:
-			models := configModelChoices(m.session.Provider(), m.configModels)
+			models := configModelChoices(m.configModelOptions, false)
 			if len(models) > 1 {
 				current := m.session.Model()
 				idx := 0
@@ -610,6 +619,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.handleShellEscape(text)
 			}
 			// ClassAgent or ClassNeutral → route to AI
+			if setup := hawkconfig.EvaluateSetup(context.Background()); setup.NeedsSetup {
+				hint := setup.Hint
+				if hint == "" {
+					hint = "Complete setup in /config (API key and model) before chatting."
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: hint})
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
 			// @ mention: resolve file references and include as context.
 			text = m.handleMentions(text)
 			// Build delta-based terminal context for the query
@@ -646,12 +665,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case modelsFetchedMsg:
-		if len(msg) > 0 {
-			m.configModels = []string(msg)
-			// Auto-set first model so provider switch is immediately usable
-			if m.configOpen && len(m.configModels) > 0 {
-				m.session.SetModel(m.configModels[0])
-				_ = hawkconfig.SetGlobalSetting("model", m.configModels[0])
+		if len(msg.options) > 0 {
+			m.configModelOptions = msg.options
+			if msg.provider != "" {
+				modelCache[msg.provider] = msg.options
 			}
 		}
 		if m.configOpen {
@@ -659,6 +676,38 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateViewportContent()
 		}
 		return m, nil
+
+	case configDeploymentsLoadedMsg:
+		next, _ := m.handleConfigDeploymentMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, nil
+
+	case configRoutingPreviewMsg:
+		next, _ := m.handleConfigRoutingMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, nil
+
+	case configCatalogRefreshMsg:
+		next, cmd := m.handleConfigCatalogRefreshMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, cmd
+
+	case configApplyCredentialsMsg:
+		next, cmd := m.handleConfigApplyCredentialsMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, cmd
 
 	case loopTickMsg:
 		if !m.waiting {
@@ -779,12 +828,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 		}
 
+	case firstRunOpenConfigMsg:
+		m.configOpen = true
+		m.configMenu = "hub"
+		m.configSel = 0
+		m.configScroll = 0
+		m.configNotice = hawkconfig.EvaluateSetup(context.Background()).Hint
+		m.viewDirty = true
+		return m, fetchDeploymentsAsync()
+
 	case containerStatusMsg:
 		m.containerStatus = msg.status
 		m.containerReady = msg.ready
 		m.containerErr = msg.err
 		if msg.sandbox != nil {
 			m.containerSandbox = msg.sandbox
+			if m.session != nil {
+				m.session.ContainerExecutor = msg.sandbox
+			}
 		}
 		if msg.err != nil {
 			m.input.Blur()
@@ -844,6 +905,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func runChat() error {
+	startBackgroundCatalogRefresh(context.Background())
+
 	ref := &progRef{}
 	systemPrompt, err := buildSystemPrompt()
 	if err != nil {

@@ -101,7 +101,11 @@ func friendlyError(err error) string {
 	if strings.Contains(low, "model not found") || strings.Contains(low, "model_not_found") ||
 		strings.Contains(low, "unknown model") || strings.Contains(low, "invalid model") ||
 		strings.Contains(low, "does not exist") || (strings.Contains(low, "404") && strings.Contains(low, "model")) {
-		return "Model not found. Check your model name with /model.\n  Common models: claude-sonnet-4-20250514, gpt-4o, gemini-2.0-flash\n  Use /models to see available options, or /config to change provider."
+		ex1, ex2 := hawkconfig.ExampleModelHints()
+		return fmt.Sprintf(
+			"Model not found. Check your model name with /model.\n  Examples from the eyrie catalog: %s, %s\n  Use /models to list all models, or /config to change provider.",
+			ex1, ex2,
+		)
 	}
 
 	// ── Network unreachable / connection refused / DNS ─────────────────────

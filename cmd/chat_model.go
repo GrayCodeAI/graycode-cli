@@ -64,8 +64,12 @@ type (
 
 type (
 	glimmerTickMsg   struct{}
-	modelsFetchedMsg []string
-	loopTickMsg      struct{ command string }
+	modelsFetchedMsg struct {
+		options  []configModelOption
+		provider string
+	}
+	loopTickMsg            struct{ command string }
+	firstRunOpenConfigMsg struct{}
 	toolUseMsg       struct{ name, id string }
 	toolResultMsg    struct{ name, content string }
 	permissionAskMsg struct{ req engine.PermissionRequest }
@@ -125,7 +129,12 @@ type chatModel struct {
 	configNotice   string
 	configEntry    string
 	configProvider string
-	configModels   []string // fetched from eyrie at runtime
+	configModelOptions []configModelOption // labels + ids from eyrie catalog
+	configModelProvider string             // filter models after API key paste
+	configGuideAfterKey bool               // open model picker when discover finishes
+	configDeployments   []hawkconfig.DeploymentRow
+	configDeploymentID  string
+	configRoutingJSON   string
 	pluginRuntime  *plugin.Runtime
 	spinnerVerb    string
 	glimmerPos     int
@@ -143,7 +152,7 @@ type chatModel struct {
 	viewDirty      bool
 	activeSkills   map[string]plugin.SmartSkill // per-session activated skills
 
-	// Container mode (herm-style hermetic execution)
+	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool
 	containerStatus  string // "checking docker…", "pulling image…", "starting…", "<id>", "docker not running"
 	containerReady   bool

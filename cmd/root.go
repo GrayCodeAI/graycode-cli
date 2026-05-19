@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -74,8 +75,9 @@ var rootCmd = &cobra.Command{
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Load persisted env vars (API keys from ~/.hawk/env)
-		_ = hawkconfig.LoadEnvFile()
+		// Load keychain + ~/.hawk/env into process env (no secrets logged).
+		hawkconfig.PrepareCredentialDiscovery(context.Background())
+		_ = hawkconfig.MigrateProviderSecrets()
 
 		if versionFlag {
 			if buildDate != "" && buildDate != "unknown" {
@@ -103,15 +105,10 @@ var rootCmd = &cobra.Command{
 			if promptFlag == "" {
 				return fmt.Errorf("prompt required in print mode")
 			}
-			return runPrint(promptFlag)
-		}
-
-		// First-run setup if needed
-		if onboarding.NeedsSetup() {
-			onboarding.Welcome(version)
-			if err := onboarding.RunSetup(); err != nil {
+			if err := ensureCatalogBeforeAgent(context.Background(), true); err != nil {
 				return err
 			}
+			return runPrint(promptFlag)
 		}
 
 		// Auto-skill: analyze project and install matching skills.
@@ -139,13 +136,17 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// Launch TUI
+		if err := ensureCatalogBeforeAgent(context.Background(), false); err != nil {
+			return err
+		}
+
+		// Launch TUI — use /config to set API keys; eyrie supplies providers and models
 		return runChat()
 	},
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&model, "model", "m", "", "model to use (e.g. claude-sonnet-4-20250514)")
+	rootCmd.Flags().StringVarP(&model, "model", "m", "", "model to use (from eyrie catalog; see /models)")
 	rootCmd.Flags().BoolVarP(&printMode, "print", "p", false, "print response and exit")
 	rootCmd.Flags().StringVar(&promptFlag, "prompt", "", "send a single prompt and exit (legacy alias for --print)")
 	rootCmd.Flags().StringVar(&outputFormat, "output-format", "text", `output format for --print: "text", "json", or "stream-json"`)
@@ -185,6 +186,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&noContainer, "no-container", false, "disable container mode (run on host with permission prompts)")
 	rootCmd.Flags().BoolVar(&containerMode, "container", false, "force container mode even if auto-detection would skip it")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
+	rootCmd.Flags().BoolVar(&refreshCatalogFlag, "refresh-catalog", false, "refresh the eyrie model catalog before starting")
+	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
@@ -341,6 +344,22 @@ var configCmd = &cobra.Command{
 				return nil
 			case "keys":
 				cmd.Println(apiKeyConfigSummary())
+				return nil
+			case "routing-preview":
+				if len(args) < 2 {
+					return fmt.Errorf("usage: hawk config routing-preview <model>")
+				}
+				out, err := hawkconfig.RoutingPreviewJSON(context.Background(), strings.Join(args[1:], " "))
+				if err != nil {
+					return err
+				}
+				cmd.Println(out)
+				return nil
+			case "migrate-deployments":
+				if err := hawkconfig.MigrateProviderConfig(); err != nil {
+					return err
+				}
+				cmd.Println("provider.json upgraded to deployment config v2 (if legacy keys were present)")
 				return nil
 			default:
 				return fmt.Errorf("unknown config action %q", args[0])

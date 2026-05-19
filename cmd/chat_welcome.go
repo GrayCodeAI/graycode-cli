@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/mattn/go-runewidth"
 
@@ -103,6 +105,13 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
 	b.WriteString("\n" + center(indicators, len(indVis)) + "\n")
 
+	if hint := hawkconfig.FirstRunSetupHint(context.Background()); hint != "" {
+		b.WriteString("\n" + center(boldC+hint+rst, len(hint)) + "\n")
+	}
+
+	catalogLine := hawkconfig.CatalogStatusLine(context.Background())
+	b.WriteString(center(dimC+catalogLine+rst, len(catalogLine)) + "\n")
+
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
 		b.WriteString(center(dimC+resume+rst, len(resume)) + "\n")
@@ -147,14 +156,11 @@ func toolListSummary(registry *tool.Registry) string {
 }
 
 func envSummary(provider, model string) string {
-	envKeys := []string{
-		"ANTHROPIC_API_KEY",
-		"OPENAI_API_KEY",
-		"GEMINI_API_KEY",
-		"OPENROUTER_API_KEY",
-		"CANOPYWAVE_API_KEY",
-		"XAI_API_KEY",
-		"OPENCODEGO_API_KEY",
+	compiled := hawkconfig.CompiledCatalogV1()
+	var envKeys []string
+	if compiled != nil {
+		envKeys = catalog.DiscoveryEnvKeysFromCatalog(compiled)
+		sort.Strings(envKeys)
 	}
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nEnvironment:\n", provider, model))
@@ -173,16 +179,15 @@ func configCommandSummary(settings hawkconfig.Settings) string {
 	model := displayConfigValue(settings.Model)
 	return fmt.Sprintf(`Configure Hawk
 
-Run these commands:
-  /config provider openai
-  /model gpt-4o
+Interactive setup (recommended):
+  /config  → Provider & API keys → pick model (from eyrie catalog)
 
 Current:
   provider: %s
   model: %s
   configured keys: %s
 
-API keys are set via environment variables (herm-style).
+Providers, models, and env var names come from eyrie — hawk does not embed catalog data.
 More:
   /config keys
   /config get <key>

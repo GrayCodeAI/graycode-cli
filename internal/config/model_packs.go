@@ -8,6 +8,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
+
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // ModelRole defines a model configuration for a specific role within a pack.
@@ -46,68 +50,40 @@ func NewModelPackRegistry() *ModelPackRegistry {
 	}
 
 	r.Packs["default"] = &ModelPack{
-		Name:        "default",
-		Description: "Balanced defaults: sonnet for code, haiku for summarize, opus for complex tasks",
-		Models: map[string]ModelRole{
-			"code":      {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.2, MaxTokens: 4096, Purpose: "code generation and editing"},
-			"chat":      {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.7, MaxTokens: 2048, Purpose: "interactive conversation"},
-			"summarize": {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.3, MaxTokens: 1024, Purpose: "summarization"},
-			"review":    {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.1, MaxTokens: 4096, Purpose: "code review"},
-			"plan":      {Provider: "anthropic", Model: "claude-opus-4-6", Temperature: 0.4, MaxTokens: 8192, Purpose: "complex planning and architecture"},
-			"debug":     {Provider: "anthropic", Model: "claude-opus-4-6", Temperature: 0.2, MaxTokens: 4096, Purpose: "debugging complex issues"},
-		},
-		DefaultProvider: "anthropic",
+		Name:            "default",
+		Description:     "Balanced defaults: sonnet for code, haiku for summarize, opus for complex tasks",
+		Models:          anthropicPackModels(eycatalog.TierHaiku, eycatalog.TierSonnet, eycatalog.TierOpus),
+		DefaultProvider: defaultPackProvider,
 		Settings:        map[string]interface{}{"stream": true},
 		Tags:            []string{"recommended", "general"},
 		Author:          "hawk",
 	}
 
 	r.Packs["budget"] = &ModelPack{
-		Name:        "budget",
-		Description: "Cost-optimized: haiku for everything, sonnet only for complex tasks",
-		Models: map[string]ModelRole{
-			"code":      {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.2, MaxTokens: 4096, Purpose: "code generation and editing"},
-			"chat":      {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.7, MaxTokens: 2048, Purpose: "interactive conversation"},
-			"summarize": {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.3, MaxTokens: 1024, Purpose: "summarization"},
-			"review":    {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.1, MaxTokens: 2048, Purpose: "code review"},
-			"plan":      {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.4, MaxTokens: 4096, Purpose: "complex planning"},
-			"debug":     {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.2, MaxTokens: 2048, Purpose: "debugging"},
-		},
-		DefaultProvider: "anthropic",
+		Name:            "budget",
+		Description:     "Cost-optimized: haiku for everything, sonnet only for complex tasks",
+		Models:          anthropicPackModels(eycatalog.TierHaiku, eycatalog.TierHaiku, eycatalog.TierSonnet),
+		DefaultProvider: defaultPackProvider,
 		Settings:        map[string]interface{}{"stream": true, "max_retries": 2},
 		Tags:            []string{"cost-effective", "fast"},
 		Author:          "hawk",
 	}
 
 	r.Packs["quality"] = &ModelPack{
-		Name:        "quality",
-		Description: "Quality-optimized: opus for code, sonnet for everything else",
-		Models: map[string]ModelRole{
-			"code":      {Provider: "anthropic", Model: "claude-opus-4-6", Temperature: 0.2, MaxTokens: 8192, Purpose: "code generation and editing"},
-			"chat":      {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.7, MaxTokens: 4096, Purpose: "interactive conversation"},
-			"summarize": {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.3, MaxTokens: 2048, Purpose: "summarization"},
-			"review":    {Provider: "anthropic", Model: "claude-opus-4-6", Temperature: 0.1, MaxTokens: 8192, Purpose: "code review"},
-			"plan":      {Provider: "anthropic", Model: "claude-opus-4-6", Temperature: 0.4, MaxTokens: 8192, Purpose: "complex planning and architecture"},
-			"debug":     {Provider: "anthropic", Model: "claude-opus-4-6", Temperature: 0.2, MaxTokens: 8192, Purpose: "debugging complex issues"},
-		},
-		DefaultProvider: "anthropic",
+		Name:            "quality",
+		Description:     "Quality-optimized: opus for code, sonnet for everything else",
+		Models:          anthropicPackModels(eycatalog.TierSonnet, eycatalog.TierSonnet, eycatalog.TierOpus),
+		DefaultProvider: defaultPackProvider,
 		Settings:        map[string]interface{}{"stream": true, "max_retries": 3},
 		Tags:            []string{"premium", "thorough"},
 		Author:          "hawk",
 	}
 
 	r.Packs["speed"] = &ModelPack{
-		Name:        "speed",
-		Description: "Speed-optimized: haiku for everything, lowest latency",
-		Models: map[string]ModelRole{
-			"code":      {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.2, MaxTokens: 2048, Purpose: "code generation"},
-			"chat":      {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.7, MaxTokens: 1024, Purpose: "interactive conversation"},
-			"summarize": {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.3, MaxTokens: 512, Purpose: "summarization"},
-			"review":    {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.1, MaxTokens: 2048, Purpose: "code review"},
-			"plan":      {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.4, MaxTokens: 2048, Purpose: "planning"},
-			"debug":     {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.2, MaxTokens: 2048, Purpose: "debugging"},
-		},
-		DefaultProvider: "anthropic",
+		Name:            "speed",
+		Description:     "Speed-optimized: haiku for everything, lowest latency",
+		Models:          anthropicPackModels(eycatalog.TierHaiku, eycatalog.TierHaiku, eycatalog.TierHaiku),
+		DefaultProvider: defaultPackProvider,
 		Settings:        map[string]interface{}{"stream": true, "timeout_ms": 5000},
 		Tags:            []string{"fast", "low-latency"},
 		Author:          "hawk",
@@ -131,17 +107,10 @@ func NewModelPackRegistry() *ModelPackRegistry {
 	}
 
 	r.Packs["balanced"] = &ModelPack{
-		Name:        "balanced",
-		Description: "Balanced: sonnet for code/review, haiku for chat/summarize",
-		Models: map[string]ModelRole{
-			"code":      {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.2, MaxTokens: 4096, Purpose: "code generation and editing"},
-			"chat":      {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.7, MaxTokens: 2048, Purpose: "interactive conversation"},
-			"summarize": {Provider: "anthropic", Model: "claude-haiku-4-5", Temperature: 0.3, MaxTokens: 1024, Purpose: "summarization"},
-			"review":    {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.1, MaxTokens: 4096, Purpose: "code review"},
-			"plan":      {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.4, MaxTokens: 4096, Purpose: "planning"},
-			"debug":     {Provider: "anthropic", Model: "claude-sonnet-4-6", Temperature: 0.2, MaxTokens: 4096, Purpose: "debugging"},
-		},
-		DefaultProvider: "anthropic",
+		Name:            "balanced",
+		Description:     "Balanced: sonnet for code/review, haiku for chat/summarize (from eyrie catalog)",
+		Models:          anthropicPackModels(eycatalog.TierHaiku, eycatalog.TierSonnet, eycatalog.TierSonnet),
+		DefaultProvider: defaultPackProvider,
 		Settings:        map[string]interface{}{"stream": true},
 		Tags:            []string{"balanced", "general"},
 		Author:          "hawk",
@@ -257,21 +226,20 @@ func FormatPack(pack *ModelPack) string {
 	return b.String()
 }
 
-// costPerToken returns approximate cost per 1K tokens for known models.
-// These are rough estimates for cost comparison purposes.
+// costPerToken returns approximate cost per 1K tokens from the eyrie catalog.
 func costPerToken(model string) float64 {
-	switch {
-	case strings.Contains(model, "opus"):
-		return 0.075 // $75 per 1M tokens average (input+output)
-	case strings.Contains(model, "sonnet"):
-		return 0.015 // $15 per 1M tokens average
-	case strings.Contains(model, "haiku"):
-		return 0.005 // $5 per 1M tokens average
-	case strings.Contains(model, "llama"), strings.Contains(model, "codellama"):
-		return 0.0 // local models are free
-	default:
-		return 0.01
+	if info, ok := routing.Find(model); ok {
+		if info.InputPrice == 0 && info.OutputPrice == 0 {
+			return 0
+		}
+		if info.InputPrice > 0 || info.OutputPrice > 0 {
+			avg := (info.InputPrice + info.OutputPrice) / 2
+			if avg > 0 {
+				return avg / 1000
+			}
+		}
 	}
+	return 0
 }
 
 // EstimateCost estimates the cost of a session with the given pack based on

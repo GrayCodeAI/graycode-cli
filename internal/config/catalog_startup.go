@@ -1,0 +1,208 @@
+package config
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
+)
+
+// CatalogReady reports whether the eyrie catalog cache exists and has models.
+func CatalogReady(ctx context.Context) bool {
+	h := CatalogHealthReport(ctx)
+	return h.Error == "" && h.Models > 0 && !h.Stale
+}
+
+// CatalogStatusLine returns a short one-line status for the TUI welcome banner.
+func CatalogStatusLine(ctx context.Context) string {
+	h := CatalogHealthReport(ctx)
+	if h.Error != "" {
+		return "Catalog: unavailable (will retry automatically)"
+	}
+	if h.Models == 0 {
+		return "Catalog: empty (will refresh automatically)"
+	}
+	if h.Stale {
+		return fmt.Sprintf("Catalog: updating… (%d models cached)", h.Models)
+	}
+	return fmt.Sprintf("Catalog: ready (%d models)", h.Models)
+}
+
+// CatalogStartupOptions controls automatic catalog refresh at hawk startup.
+type CatalogStartupOptions struct {
+	ForceRefresh    bool
+	SkipAutoRefresh bool
+	VerboseOutput   bool // full DiscoverReport; default is one line
+}
+
+// PrepareCatalogForSession ensures a usable, fresh catalog before chat/print.
+// By default hawk auto-discovers when the cache is missing, empty, or stale.
+func PrepareCatalogForSession(ctx context.Context, out io.Writer, opts CatalogStartupOptions) error {
+	h := CatalogHealthReport(ctx)
+	if !catalogNeedsAutoRefresh(h, opts) {
+		return nil
+	}
+	if err := AutoRefreshCatalog(ctx, out, opts.VerboseOutput); err != nil {
+		return fmt.Errorf("automatic catalog refresh failed: %w\n\nCheck network access and API keys in the environment or ~/.hawk/env.\nCache path: %s", err, CatalogCachePathForDisplay())
+	}
+	h = CatalogHealthReport(ctx)
+	if h.Error != "" || h.Models == 0 {
+		msg := "model catalog unavailable after refresh"
+		if h.Error != "" {
+			msg = h.Error
+		}
+		return fmt.Errorf("%s\n\nCheck network access and API keys.\nCache path: %s", msg, CatalogCachePathForDisplay())
+	}
+	return nil
+}
+
+func catalogNeedsAutoRefresh(h CatalogHealth, opts CatalogStartupOptions) bool {
+	if opts.SkipAutoRefresh && !opts.ForceRefresh {
+		return false
+	}
+	if opts.ForceRefresh {
+		return true
+	}
+	if !autoRefreshCatalogEnabled() {
+		return false
+	}
+	if catalogRefreshAlways() {
+		return true
+	}
+	if h.Error != "" || h.Models == 0 {
+		return true
+	}
+	return h.Stale
+}
+
+// AutoRefreshCatalog runs eyrie discover (remote + live APIs when keys are set).
+func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error {
+	if out != nil {
+		if verbose {
+			fmt.Fprintln(out, "Discovering model catalog (published catalog + live provider APIs)...")
+		} else {
+			fmt.Fprintln(out, "Updating model catalog automatically…")
+		}
+	}
+	refreshCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	result, err := refreshModelCatalog(refreshCtx)
+	if err != nil {
+		return err
+	}
+	if out != nil {
+		if verbose {
+			fmt.Fprintln(out, strings.TrimSpace(result.DiscoverReport()))
+		} else if result.Compiled != nil {
+			fmt.Fprintf(out, "Catalog ready: %d models, %d deployments → %s\n",
+				len(result.Compiled.ModelsByID),
+				len(result.Compiled.DeploymentsByID),
+				result.CachePath,
+			)
+		}
+		fmt.Println()
+	}
+	return nil
+}
+
+// TryAutoRefreshCatalog refreshes once when the cache cannot be read (e.g. mid-session).
+func TryAutoRefreshCatalog(ctx context.Context) error {
+	if !autoRefreshCatalogEnabled() {
+		return fmt.Errorf("automatic catalog refresh is disabled (HAWK_AUTO_REFRESH_CATALOG=0)")
+	}
+	return AutoRefreshCatalog(ctx, nil, false)
+}
+
+// RefreshCatalogAfterCredentials runs eyrie discover after /config saves API keys.
+func RefreshCatalogAfterCredentials(ctx context.Context, out io.Writer) error {
+	if !autoRefreshCatalogEnabled() {
+		return nil
+	}
+	return AutoRefreshCatalog(ctx, out, false)
+}
+
+// StartupCatalogPrefetch refreshes the catalog in the background when the cache needs it.
+func StartupCatalogPrefetch(ctx context.Context) {
+	if !autoRefreshCatalogEnabled() {
+		return
+	}
+	h := CatalogHealthReport(ctx)
+	if !catalogNeedsAutoRefresh(h, CatalogStartupOptions{}) {
+		return
+	}
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		defer cancel()
+		_ = AutoRefreshCatalog(bgCtx, nil, false)
+	}()
+}
+
+// DiscoverCatalogAfterSetup runs during optional hawk setup after API keys are saved.
+func DiscoverCatalogAfterSetup(ctx context.Context, out io.Writer) {
+	if out == nil {
+		out = os.Stdout
+	}
+	h := CatalogHealthReport(ctx)
+	if !catalogNeedsAutoRefresh(h, CatalogStartupOptions{}) {
+		return
+	}
+	_ = AutoRefreshCatalog(ctx, out, false)
+}
+
+func autoRefreshCatalogEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("HAWK_AUTO_REFRESH_CATALOG"))) {
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return true
+	}
+}
+
+func catalogRefreshAlways() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("HAWK_CATALOG_REFRESH_ALWAYS"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+// ScheduleBackgroundCatalogRefresh silently refreshes the catalog when it is already stale,
+// or after StaleAfter passes during a long interactive session.
+func ScheduleBackgroundCatalogRefresh(ctx context.Context) {
+	if !autoRefreshCatalogEnabled() {
+		return
+	}
+	h := CatalogHealthReport(ctx)
+	if h.Error != "" || h.Models == 0 {
+		return
+	}
+	refresh := func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		defer cancel()
+		_ = AutoRefreshCatalog(bgCtx, nil, false)
+	}
+	if h.Stale {
+		go refresh()
+		return
+	}
+	if h.StaleAfter.IsZero() {
+		return
+	}
+	delay := time.Until(h.StaleAfter.UTC())
+	if delay <= 0 {
+		return
+	}
+	go func() {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			refresh()
+		}
+	}()
+}

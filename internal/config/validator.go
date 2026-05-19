@@ -53,7 +53,7 @@ func ValidateSettings(s Settings) ValidationResult {
 		})
 	}
 
-	// Herm-style: validate API key is in environment (not in settings)
+	// Hawk: validate API key is in environment (not in settings)
 	if s.Provider != "" {
 		envKey := ProviderAPIKeyEnv(s.Provider)
 		if envKey != "" && APIKeyForProvider(s.Provider) == "" {

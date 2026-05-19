@@ -2,6 +2,7 @@ package eyrieclient
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/GrayCodeAI/eyrie/client"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
@@ -29,4 +30,14 @@ func BuildChatClient(ctx context.Context, settings hawkcfg.Settings, legacyProvi
 func NewHawkSession(ctx context.Context, settings hawkcfg.Settings, provider, model, systemPrompt string, registry *tool.Registry) *engine.Session {
 	chat, label, deploy := BuildChatClient(ctx, settings, provider)
 	return engine.NewSessionWithClient(chat, label, model, systemPrompt, registry, deploy)
+}
+
+// RebuildSessionTransport rebuilds the LLM client from current settings and provider.json.
+func RebuildSessionTransport(ctx context.Context, s *engine.Session, settings hawkcfg.Settings, legacyProvider string) error {
+	if s == nil {
+		return fmt.Errorf("session is nil")
+	}
+	chat, label, deploy := BuildChatClient(ctx, settings, legacyProvider)
+	s.ReattachTransport(chat, label, deploy)
+	return nil
 }
