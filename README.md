@@ -206,12 +206,12 @@ hawk/
 hawk integrates these GrayCodeAI repos in three ways:
 
 - **`go.mod` modules:** **eyrie**, **sight**, **inspect**, **tok**, **yaad** — pinned versions from the module proxy (same semver story across CI).
-- **Submodule + `go.work`:** **eyrie** only — checked out under **`external/eyrie`** (`git submodule update --init --recursive`) so CI/builds always see the same Eyrie source layout as Herm-style repos.
+- **Sibling + `go.work` + `replace`:** **eyrie** — clone [eyrie](https://github.com/GrayCodeAI/eyrie) next to hawk (`../eyrie`). `go.mod` uses `replace github.com/GrayCodeAI/eyrie => ../eyrie`. CI clones the same layout via **`.github/actions/checkout-eyrie`**.
 - **Optional CLI (no Go import):** **trace** — installed separately; `hawk` shells into `trace` for session capture when present.
 
 Cross-repo types (severity, etc.) are exported from **`github.com/GrayCodeAI/hawk/shared/types`** so **sight** / **inspect** / **tok** do not import **`internal/`**.
 
-You may keep a **personal** parent **`go.work`** that lists sibling clones on disk (`../sight`, …); nothing besides **`external/eyrie`** is committed as a submodule in hawk.
+You may keep a **personal** parent **`go.work`** that lists sibling clones on disk (`../sight`, …) for multi-repo development.
 
 | Component | Repository | Purpose |
 |---|---|---|

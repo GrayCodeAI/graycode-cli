@@ -30,8 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -56,22 +54,21 @@ jobs:
           fi
 
   # -------------------------------------------------------------------------
-  # 2. Module hygiene — tidy, verify (Herm-style: submodule + go.work, no go.mod replace).
+  # 2. Module hygiene — tidy, verify (hawk + sibling eyrie via go.work + go.mod replace).
   # -------------------------------------------------------------------------
   module:
     name: module hygiene
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/checkout-eyrie
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: go work sync + module consistency
         run: |
-          # Herm uses submodule + go.work only (no go.mod replace). go mod tidy can mis-resolve
+          # Eyrie is a sibling checkout (go.work + replace ../eyrie). go mod tidy can mis-resolve
           # workspace modules here; go work sync is the supported workspace hygiene step.
           go work sync
           go build -mod=readonly -o /dev/null .
@@ -82,10 +79,10 @@ jobs:
           fi
       - name: go mod verify
         run: go mod verify
-      - name: no replace directives in go.mod
+      - name: eyrie replace points at sibling
         run: |
-          if grep -qE '^\s*replace\s' go.mod; then
-            echo "::error::go.mod must not use replace (Eyrie comes from submodule + go.work; see Herm / LangDAG)."
+          if ! grep -qE 'replace github\.com/GrayCodeAI/eyrie => \.\./eyrie' go.mod; then
+            echo "::error::go.mod must replace eyrie with ../eyrie (sibling checkout)."
             grep -nE '^\s*replace\s' go.mod || true
             exit 1
           fi
@@ -98,8 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/checkout-eyrie
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -116,8 +112,7 @@ jobs:
     needs: [format, vet]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/checkout-eyrie
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -136,8 +131,7 @@ jobs:
     needs: [format, vet]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/checkout-eyrie
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -171,8 +165,7 @@ jobs:
     needs: [format, vet]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/checkout-eyrie
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -194,8 +187,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
       - uses: trufflesecurity/trufflehog@0fa069c12f0c7baf431041cd1e564a9c5058846c # main 2026-05-18
         with:
           extra_args: --only-verified
@@ -209,8 +200,6 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
 
   # -------------------------------------------------------------------------
@@ -221,12 +210,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
       - name: Run markdownlint-cli2
         run: |
           npm install -g markdownlint-cli2
-          printf '%s\n' '{"ignores":["external/**"],"config":{"default":true,"line-length":false,"no-inline-html":false,"first-line-h1":false,"no-duplicate-heading":false,"no-emphasis-as-heading":false,"blanks-around-headings":false,"blanks-around-lists":false,"blanks-around-fences":false,"fenced-code-language":false,"table-column-style":false,"no-space-in-emphasis":false,"ol-prefix":false,"link-fragments":false,"blanks-around-tables":false,"table-column-count":false,"single-trailing-newline":false}}' > .markdownlint-cli2.jsonc
+          printf '%s\n' '{"config":{"default":true,"line-length":false,"no-inline-html":false,"first-line-h1":false,"no-duplicate-heading":false,"no-emphasis-as-heading":false,"blanks-around-headings":false,"blanks-around-lists":false,"blanks-around-fences":false,"fenced-code-language":false,"table-column-style":false,"no-space-in-emphasis":false,"ol-prefix":false,"link-fragments":false,"blanks-around-tables":false,"table-column-count":false,"single-trailing-newline":false}}' > .markdownlint-cli2.jsonc
           markdownlint-cli2 '**/*.md'
 
   # -------------------------------------------------------------------------
@@ -246,8 +233,7 @@ jobs:
             goarch: arm64
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/checkout-eyrie
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: ${{ env.GO_VERSION }}

@@ -1,3 +1,0 @@
-[submodule "external/eyrie"]
-	path = external/eyrie
-	url = https://github.com/GrayCodeAI/eyrie.git

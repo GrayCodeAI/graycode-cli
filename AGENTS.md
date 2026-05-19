@@ -70,20 +70,21 @@ go test -race ./...           # Run all tests
 
 | Module | In `go.mod` | In-repo checkout | Used from |
 |--------|-------------|------------------|-----------|
-| eyrie | ✓ | **`external/eyrie`** submodule + **`go.work`** | Provider client, setup, streaming |
+| eyrie | ✓ | sibling **`../eyrie`** + **`go.work`** + **`replace` in `go.mod`** | Provider client, setup, streaming |
 | sight | ✓ | proxy (optional local `replace`) | `hawk sight`, `internal/bridge/sight` |
 | inspect | ✓ | proxy | Inspect bridges |
 | tok | ✓ | proxy | Tokenizer pipeline |
 | yaad | ✓ | proxy | Memory bridge |
 | trace | — | separate **`trace` CLI** | Session capture only; not a Go import |
 
-**Eyrie submodule** (Herm / LangDAG-style):
+**Eyrie sibling checkout** (hawk + eyrie):
 
 ```bash
-git submodule update --init --recursive
+# hawk-eco layout: clone eyrie next to hawk, then:
+cd hawk && go work sync
 ```
 
-Committed **`go.work`** lists `.` and **`./external/eyrie`** only. **`go.mod` must not contain `replace` directives** for Eyrie (CI enforces this).
+Committed **`go.work`** lists `.` and **`../eyrie`**. **`go.mod`** includes **`replace github.com/GrayCodeAI/eyrie => ../eyrie`** (CI enforces this path).
 
 **`shared/types`** forwards **`internal/types`** for **sight**, **inspect**, **tok**, and friends so they never import hawk `internal/` directly.
 
@@ -91,7 +92,7 @@ For sibling clones on one machine, use a **personal** parent **`go.work`** or te
 
 ### CI
 
-- Checkout uses **`submodules: recursive`** so `external/eyrie` is populated
+- CI clones **eyrie** to **`../eyrie`** via **`.github/actions/checkout-eyrie`**
 - Module hygiene: **`go work sync`** and **`go build -mod=readonly`** (not `go mod tidy`, which mis-resolves workspace Eyrie)
 - golangci-lint with errcheck, staticcheck, gosec, unused, misspell
 - Multi-platform builds (linux/darwin/windows × amd64/arm64)
