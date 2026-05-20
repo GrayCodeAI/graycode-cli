@@ -202,19 +202,7 @@ jobs:
           extra_args: --only-verified
 
   # -------------------------------------------------------------------------
-  # 8. Dependency review — only on pull requests.
-  # -------------------------------------------------------------------------
-  dependency-review:
-    name: dependency review
-    runs-on: ubuntu-latest
-    continue-on-error: true # requires GitHub Dependency graph (repo settings)
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-
-  # -------------------------------------------------------------------------
-  # 9. Markdown lint — validate documentation quality.
+  # 8. Markdown lint — validate documentation quality.
   # -------------------------------------------------------------------------
   markdown:
     name: markdown
@@ -228,7 +216,7 @@ jobs:
           markdownlint-cli2 '**/*.md'
 
   # -------------------------------------------------------------------------
-  # 10. Cross-platform build matrix — zero CGO, all targets.
+  # 9. Cross-platform build matrix — zero CGO, all targets.
   # -------------------------------------------------------------------------
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
