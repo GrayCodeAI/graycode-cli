@@ -32,18 +32,18 @@ func slashCommands() []string {
 }
 
 var allSlashCommands = []string{
-		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
-		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
-		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
-		"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
-		"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-		"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
-		"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
-		"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
-		"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
-		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
-		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
+	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
+	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
+	"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
+	"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
+	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
+	"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
+	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
+	"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
+	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
+	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
+	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
+	"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {

@@ -77,12 +77,12 @@ type (
 		provider string
 		err      error
 	}
-	loopTickMsg           struct{ command string }
-	toolUseMsg            struct{ name, id string }
-	toolResultMsg         struct{ name, content string }
-	permissionAskMsg      struct{ req engine.PermissionRequest }
-	thinkingMsg           string
-	askUserMsg            struct {
+	loopTickMsg      struct{ command string }
+	toolUseMsg       struct{ name, id string }
+	toolResultMsg    struct{ name, content string }
+	permissionAskMsg struct{ req engine.PermissionRequest }
+	thinkingMsg      string
+	askUserMsg       struct {
 		question string
 		response chan string
 	}
@@ -136,8 +136,8 @@ type chatModel struct {
 	configSel              int
 	configScroll           int // scroll offset for long lists
 	configNotice           string
-	configEntry            string // configEntryNone, configEntryAPIKeyPaste, configEntryOllamaURL
-	configProvider         string // e.g. configProviderOllama while entry overlay is open
+	configEntry            string              // configEntryNone, configEntryAPIKeyPaste, configEntryOllamaURL
+	configProvider         string              // e.g. configProviderOllama while entry overlay is open
 	configModelOptions     []configModelOption // labels + ids from eyrie catalog
 	configModelProvider    string              // filter models after API key paste
 	configGuideAfterKey    bool                // open model picker when discover finishes

@@ -28,9 +28,9 @@ type configGatewayRefreshMsg struct {
 func (m chatModel) configGatewayRows() []configGatewayRow {
 	providers := hawkconfig.AllSetupGateways()
 	configured := configuredGatewayKeys()
-	active := strings.TrimSpace(m.session.Provider())
-	if active == "" {
-		active = strings.TrimSpace(m.configModelProvider)
+	active := strings.TrimSpace(m.configModelProvider)
+	if active == "" && m.session != nil {
+		active = strings.TrimSpace(m.session.Provider())
 	}
 	var rows []configGatewayRow
 	for _, id := range providers {

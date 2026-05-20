@@ -20,7 +20,8 @@ func (m chatModel) configKeysRows(configured []string) []configKeysRow {
 	for _, p := range configured {
 		rows = append(rows, configKeysRow{kind: configKeysRowCredential, provider: p})
 	}
-	rows = append(rows,
+	rows = append(
+		rows,
 		configKeysRow{kind: configKeysActionAdd},
 		configKeysRow{kind: configKeysActionOllama},
 	)

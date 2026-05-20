@@ -381,11 +381,11 @@ func (m chatModel) View() string {
 		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
 		bottomBarLines++
 		inputBox := inputBorderStyle.Width(totalW).Render(func() string {
-				if m.useConfigInput {
-					return m.configInput.View()
-				}
-				return m.input.View()
-			}())
+			if m.useConfigInput {
+				return m.configInput.View()
+			}
+			return m.input.View()
+		}())
 		bottomBar.WriteString(inputBox + "\n")
 		// Ghost text suggestion (shown below input when active)
 		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {

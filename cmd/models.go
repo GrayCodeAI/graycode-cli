@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/eyrie/catalog"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
 

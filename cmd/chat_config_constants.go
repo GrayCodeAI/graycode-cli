@@ -19,7 +19,7 @@ var configTabLabels = []string{"Keys", "Gateways", "Models"}
 
 // Config entry overlays (configEntry).
 const (
-	configEntryNone      = ""
+	configEntryNone        = ""
 	configEntryAPIKeyPaste = "apikey-paste"
 	configEntryOllamaURL   = "ollama-url"
 )
