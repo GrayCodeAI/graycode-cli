@@ -111,7 +111,8 @@ func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error 
 		if verbose {
 			fmt.Fprintln(out, strings.TrimSpace(result.DiscoverReport()))
 		} else if result.Compiled != nil {
-			fmt.Fprintf(out, "Catalog ready: %d models, %d deployments → %s\n",
+			fmt.Fprintf(
+				out, "Catalog ready: %d models, %d deployments → %s\n",
 				len(result.Compiled.ModelsByID),
 				len(result.Compiled.DeploymentsByID),
 				result.CachePath,

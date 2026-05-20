@@ -44,4 +44,3 @@ func deploymentHasSecrets(dep eyriecfg.DeploymentConfig) bool {
 		strings.TrimSpace(dep.AccessKeyID) != "" ||
 		strings.TrimSpace(dep.SessionToken) != ""
 }
-

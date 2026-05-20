@@ -599,4 +599,3 @@ func catalogProviderID(provider string) string {
 		return NormalizeProviderForEngine(provider)
 	}
 }
-

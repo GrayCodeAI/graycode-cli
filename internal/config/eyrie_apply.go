@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/setup"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/setup"
 )
 
 // ApplyEyrieCredentials discovers the catalog and writes provider.json (routing only on disk).

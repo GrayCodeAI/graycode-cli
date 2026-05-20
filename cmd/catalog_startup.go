@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	refreshCatalogFlag    bool
+	refreshCatalogFlag     bool
 	skipCatalogRefreshFlag bool
 )
 

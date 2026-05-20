@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 )

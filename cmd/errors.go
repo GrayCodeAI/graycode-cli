@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // ─── friendlyError ────────────────────────────────────────────────────────────

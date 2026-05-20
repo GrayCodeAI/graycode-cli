@@ -15,12 +15,12 @@ import (
 
 // DeploymentRow is one catalog deployment with local credential status.
 type DeploymentRow struct {
-	ID          string
-	Name        string
-	ProviderID  string
-	Configured  bool
-	Status      string
-	EnvVars     []EnvVarStatus
+	ID         string
+	Name       string
+	ProviderID string
+	Configured bool
+	Status     string
+	EnvVars    []EnvVarStatus
 }
 
 // EnvVarStatus tracks whether an env var is set for a deployment.

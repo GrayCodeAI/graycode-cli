@@ -22,8 +22,8 @@ type configApplyCredentialsMsg struct {
 }
 
 type configKeyResolvedMsg struct {
-	secret  string
-	result  hawkconfig.CredentialResolveResult
+	secret string
+	result hawkconfig.CredentialResolveResult
 }
 
 func (m chatModel) configPanelTitle() string {

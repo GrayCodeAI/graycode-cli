@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestConfigHubOptions_OmitsRemoveKeyEntry(t *testing.T) {

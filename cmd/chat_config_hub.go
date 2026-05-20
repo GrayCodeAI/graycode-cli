@@ -21,7 +21,8 @@ func (m chatModel) configHubOptions() []configHubOption {
 	if hawkconfig.EvaluateSetup(context.Background()).HasCredentials {
 		out = append(out, configHubOption{action: "model", label: "Pick model"})
 	}
-	out = append(out,
+	out = append(
+		out,
 		configHubOption{action: "apikey", label: "Paste API key"},
 		configHubOption{action: "ollama", label: "Ollama (local — no key)"},
 	)

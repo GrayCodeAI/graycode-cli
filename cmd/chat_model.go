@@ -69,13 +69,13 @@ type (
 		provider string
 		err      error
 	}
-	loopTickMsg            struct{ command string }
+	loopTickMsg           struct{ command string }
 	firstRunOpenConfigMsg struct{}
-	toolUseMsg       struct{ name, id string }
-	toolResultMsg    struct{ name, content string }
-	permissionAskMsg struct{ req engine.PermissionRequest }
-	thinkingMsg      string
-	askUserMsg       struct {
+	toolUseMsg            struct{ name, id string }
+	toolResultMsg         struct{ name, content string }
+	permissionAskMsg      struct{ req engine.PermissionRequest }
+	thinkingMsg           string
+	askUserMsg            struct {
 		question string
 		response chan string
 	}
@@ -102,57 +102,57 @@ func (r *progRef) Send(msg tea.Msg) {
 }
 
 type chatModel struct {
-	input          textarea.Model
-	configInput    textinput.Model // secondary input for config panel password entry
-	useConfigInput bool            // true when config panel needs textinput (e.g. password)
-	spinner        spinner.Model
-	viewport       viewport.Model
-	session        *engine.Session
-	registry       *tool.Registry
-	settings       hawkconfig.Settings
-	ref            *progRef
-	cancel         context.CancelFunc // cancel current stream
-	sessionID      string
-	messages       []displayMsg
-	partial        *strings.Builder
-	waiting        bool
-	permReq        *engine.PermissionRequest // pending permission prompt
-	askReq         *askUserMsg               // pending ask_user prompt
-	width          int
-	height         int
-	quitting       bool
-	blinkClosed    bool
-	slashSel       int
-	configOpen     bool
-	configMenu     string
-	configSel      int
-	configScroll   int // scroll offset for long lists
-	configNotice   string
-	configEntry    string
-	configProvider string
-	configModelOptions []configModelOption // labels + ids from eyrie catalog
-	configModelProvider string             // filter models after API key paste
-	configGuideAfterKey bool               // open model picker when discover finishes
-	configPendingKey      string
-	configProviderOptions []hawkconfig.CredentialProviderOption
-	configSaving          bool   // blocks hub/list input while async credential work runs
+	input                  textarea.Model
+	configInput            textinput.Model // secondary input for config panel password entry
+	useConfigInput         bool            // true when config panel needs textinput (e.g. password)
+	spinner                spinner.Model
+	viewport               viewport.Model
+	session                *engine.Session
+	registry               *tool.Registry
+	settings               hawkconfig.Settings
+	ref                    *progRef
+	cancel                 context.CancelFunc // cancel current stream
+	sessionID              string
+	messages               []displayMsg
+	partial                *strings.Builder
+	waiting                bool
+	permReq                *engine.PermissionRequest // pending permission prompt
+	askReq                 *askUserMsg               // pending ask_user prompt
+	width                  int
+	height                 int
+	quitting               bool
+	blinkClosed            bool
+	slashSel               int
+	configOpen             bool
+	configMenu             string
+	configSel              int
+	configScroll           int // scroll offset for long lists
+	configNotice           string
+	configEntry            string
+	configProvider         string
+	configModelOptions     []configModelOption // labels + ids from eyrie catalog
+	configModelProvider    string              // filter models after API key paste
+	configGuideAfterKey    bool                // open model picker when discover finishes
+	configPendingKey       string
+	configProviderOptions  []hawkconfig.CredentialProviderOption
+	configSaving           bool // blocks hub/list input while async credential work runs
 	configPendingOllamaURL string
-	pluginRuntime  *plugin.Runtime
-	spinnerVerb    string
-	glimmerPos     int
-	lastCtrlC      time.Time
-	history        []string
-	historyIdx     int
-	historyDraft   string // unsent text before navigating history
-	autoScroll     bool   // whether to auto-scroll viewport to bottom
-	vim            *VimState
-	contextViz     *ContextVisualization
-	wal            *session.WAL
-	startedAt      time.Time
-	toolStartTime  time.Time
-	welcomeCache   string
-	viewDirty      bool
-	activeSkills   map[string]plugin.SmartSkill // per-session activated skills
+	pluginRuntime          *plugin.Runtime
+	spinnerVerb            string
+	glimmerPos             int
+	lastCtrlC              time.Time
+	history                []string
+	historyIdx             int
+	historyDraft           string // unsent text before navigating history
+	autoScroll             bool   // whether to auto-scroll viewport to bottom
+	vim                    *VimState
+	contextViz             *ContextVisualization
+	wal                    *session.WAL
+	startedAt              time.Time
+	toolStartTime          time.Time
+	welcomeCache           string
+	viewDirty              bool
+	activeSkills           map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool

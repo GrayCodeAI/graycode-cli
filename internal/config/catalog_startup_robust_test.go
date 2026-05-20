@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/catalogtest"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestPrepareCatalogForSession_StaleCacheRefreshFailureContinues(t *testing.T) {
