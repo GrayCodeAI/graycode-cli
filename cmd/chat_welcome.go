@@ -3,16 +3,16 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/mattn/go-runewidth"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -80,13 +80,16 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	verLine := fmt.Sprintf("v%s", version)
 	b.WriteString("\n" + center(dimC+verLine+rst, len(verLine)) + "\n")
 
-	tip := "TIP: Use /help to see all available commands"
-	b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
-
-	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
-	b.WriteString("\n" + center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
-	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
-	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
+	needsSetup := hawkconfig.NeedsFirstRunSetup(context.Background())
+	if needsSetup {
+		tip := "Complete setup below, then type your first message"
+		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
+	} else {
+		tip := "TIP: /help for commands · /config to change model"
+		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
+		shortcuts := "shift+tab modes · ctrl+N models · esc cancel"
+		b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	}
 
 	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
@@ -156,17 +159,14 @@ func toolListSummary(registry *tool.Registry) string {
 }
 
 func envSummary(provider, model string) string {
-	compiled := hawkconfig.CompiledCatalogV1()
-	var envKeys []string
-	if compiled != nil {
-		envKeys = catalog.DiscoveryEnvKeysFromCatalog(compiled)
-		sort.Strings(envKeys)
-	}
+	envKeys := eyrieclient.DiscoveryEnvKeys(context.Background())
+	sort.Strings(envKeys)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nEnvironment:\n", provider, model))
+	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, credentials.PlatformSecretStoreName()))
+	ctx := context.Background()
 	for _, key := range envKeys {
 		status := "missing"
-		if os.Getenv(key) != "" {
+		if credentials.HasSecret(ctx, key) {
 			status = "set"
 		}
 		b.WriteString(fmt.Sprintf("  %s: %s\n", key, status))
@@ -175,27 +175,23 @@ func envSummary(provider, model string) string {
 }
 
 func configCommandSummary(settings hawkconfig.Settings) string {
-	provider := displayConfigValue(settings.Provider)
-	model := displayConfigValue(settings.Model)
-	return fmt.Sprintf(`Configure Hawk
+	_ = settings
+	provider := displayConfigValue(hawkconfig.ActiveProvider(nil))
+	model := displayConfigValue(hawkconfig.ActiveModel(nil))
+	return fmt.Sprintf(`Setup (eyrie)
 
-Interactive setup (recommended):
-  /config  → Provider & API keys → pick model (from eyrie catalog)
+  /config  → API key + model (opens automatically on first run)
 
 Current:
   provider: %s
-  model: %s
-  configured keys: %s
+  model:    %s
+  keys:     %s
 
-Providers, models, and env var names come from eyrie — hawk does not embed catalog data.
-More:
-  /config keys
-  /config get <key>
-  /config set <key> <value>`, provider, model, configuredKeyList())
+Model catalog and routing live in eyrie — hawk is the UI only.`, provider, model, configuredKeyList())
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (from environment)\n" + indentedAPIKeyLines()
+	return "API keys (" + credentials.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {

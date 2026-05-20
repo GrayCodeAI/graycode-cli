@@ -35,11 +35,8 @@ func TestFriendlyErrorProviderAPIKeys(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := friendlyError(errors.New(tt.errMsg))
-			if !strings.Contains(got, tt.wantEnvVar) {
-				t.Errorf("friendlyError(%q) = %q, should contain %q", tt.errMsg, got, tt.wantEnvVar)
-			}
-			if !strings.Contains(got, "export") {
-				t.Errorf("friendlyError(%q) = %q, should contain 'export' suggestion", tt.errMsg, got)
+			if !strings.Contains(got, "/config") {
+				t.Errorf("friendlyError(%q) = %q, should suggest /config", tt.errMsg, got)
 			}
 		})
 	}
@@ -519,11 +516,8 @@ func TestFriendlyErrorPriorityProviderKeyOverGeneric(t *testing.T) {
 	// An error mentioning ANTHROPIC_API_KEY and 401 should match the
 	// provider-specific key message, not the generic 401 message.
 	got := friendlyError(errors.New("HTTP 401: ANTHROPIC_API_KEY is invalid"))
-	if !strings.Contains(got, "ANTHROPIC_API_KEY") {
-		t.Errorf("provider-specific key match should take priority over generic 401, got: %q", got)
-	}
-	if !strings.Contains(got, "export") {
-		t.Errorf("should contain export suggestion, got: %q", got)
+	if !strings.Contains(got, "/config") {
+		t.Errorf("provider-specific key match should suggest /config, got: %q", got)
 	}
 }
 

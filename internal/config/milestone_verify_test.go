@@ -90,7 +90,8 @@ func TestVerify_PersistAPIKeyDoesNotWriteProviderJSON(t *testing.T) {
 
 func TestVerify_EvaluateSetupFlow(t *testing.T) {
 	isolateMilestoneTest(t)
-	credentials.SetDefaultStore(emptyCredentialStore{})
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 
 	ctx := context.Background()
@@ -106,17 +107,25 @@ func TestVerify_EvaluateSetupFlow(t *testing.T) {
 		t.Fatalf("expected setup needed without credentials, got %+v", st)
 	}
 
-	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-flow-verify-key-1234567890")
+	secret := "sk-ant-flow-verify-key-1234567890"
+	if err := store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), secret); err != nil {
+		t.Fatal(err)
+	}
 	st = EvaluateSetup(ctx)
 	if !st.HasCredentials {
-		t.Fatal("expected credentials after env key set")
+		t.Fatal("expected credentials after keychain key set")
 	}
 	if !st.NeedsSetup || st.HasModel {
 		t.Fatal("expected setup still needed until model selected")
 	}
 
-	settingsPath := filepath.Join(os.Getenv("HOME"), ".hawk", "settings.json")
-	if err := os.WriteFile(settingsPath, []byte(`{"model":"claude-sonnet-4-20250514"}`), 0o644); err != nil {
+	providerPath := filepath.Join(os.Getenv("HOME"), ".hawk", "provider.json")
+	cfg := &eyriecfg.ProviderConfig{
+		ActiveProvider: "anthropic",
+		ActiveModel:    "claude-sonnet-4-20250514",
+		AnthropicModel: "claude-sonnet-4-20250514",
+	}
+	if err := eyriecfg.SaveProviderConfig(cfg, providerPath); err != nil {
 		t.Fatal(err)
 	}
 	st = EvaluateSetup(ctx)

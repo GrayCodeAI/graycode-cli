@@ -1,9 +1,6 @@
 package onboarding
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -36,60 +33,6 @@ func TestValidateAPIKey(t *testing.T) {
 				t.Errorf("validateAPIKey(%q, %q) valid = %v, want %v", tt.provider, tt.key, valid, tt.valid)
 			}
 		})
-	}
-}
-
-func TestSaveAPIKeyToEnvFile(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-
-	hawkDir := filepath.Join(dir, ".hawk")
-	if err := os.MkdirAll(hawkDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	SaveAPIKeyToEnvFile("ANTHROPIC_API_KEY", "sk-ant-test123")
-
-	path := filepath.Join(hawkDir, "env")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("env file not created: %v", err)
-	}
-
-	content := string(data)
-	if !strings.Contains(content, "ANTHROPIC_API_KEY") {
-		t.Error("env file should contain key name")
-	}
-	if !strings.Contains(content, "sk-ant-test123") {
-		t.Error("env file should contain key value")
-	}
-
-	info, _ := os.Stat(path)
-	if info.Mode().Perm() != 0o600 {
-		t.Errorf("env file permissions = %o, want 0600", info.Mode().Perm())
-	}
-}
-
-func TestSaveAPIKeyToEnvFile_Append(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-
-	hawkDir := filepath.Join(dir, ".hawk")
-	if err := os.MkdirAll(hawkDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	SaveAPIKeyToEnvFile("KEY1", "value1")
-	SaveAPIKeyToEnvFile("KEY2", "value2")
-
-	data, err := os.ReadFile(filepath.Join(hawkDir, "env"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	content := string(data)
-	if !strings.Contains(content, "KEY1") || !strings.Contains(content, "KEY2") {
-		t.Error("env file should contain both keys after append")
 	}
 }
 

@@ -1,13 +1,19 @@
 package config
 
 import (
-	"os"
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestValidateSettingsValid(t *testing.T) {
-	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-test123456789")
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test123456789")
+
 	s := Settings{
 		Provider:     "anthropic",
 		Model:        "claude-sonnet-4-20250514",
@@ -20,8 +26,10 @@ func TestValidateSettingsValid(t *testing.T) {
 }
 
 func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
-	t.Setenv("ANTHROPIC_API_KEY", "")
-	os.Unsetenv("ANTHROPIC_API_KEY")
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+
 	s := Settings{Provider: "anthropic"}
 	result := ValidateSettings(s)
 	if result.Valid {

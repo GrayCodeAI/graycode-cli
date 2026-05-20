@@ -15,7 +15,7 @@ type SetupState struct {
 	Hint           string
 }
 
-// EvaluateSetup loads keychain + env once and reports whether /config is still required.
+// EvaluateSetup loads the OS credential store and reports whether /config is still required.
 func EvaluateSetup(ctx context.Context) SetupState {
 	if ctx == nil {
 		ctx = context.Background()
@@ -30,9 +30,9 @@ func EvaluateSetup(ctx context.Context) SetupState {
 	}
 	switch {
 	case !hasCreds:
-		st.Hint = "Setup: open /config → API keys → paste your key (stored in keychain)"
+		st.Hint = "First-time setup: paste an API key or use Ollama local — setup opens automatically"
 	case !hasModel:
-		st.Hint = "Setup: open /config → pick a model after your API key"
+		st.Hint = "Almost ready: pick a model to start chatting"
 	}
 	return st
 }
@@ -58,9 +58,9 @@ func hasConfiguredDeployment(ctx context.Context) bool {
 	return eyriecfg.HasAnyConfiguredDeployment(ctx)
 }
 
-// HasSelectedModel reports whether global settings include a non-empty model id.
+// HasSelectedModel reports whether eyrie provider.json has a selected model.
 func HasSelectedModel() bool {
-	return strings.TrimSpace(LoadSettings().Model) != ""
+	return strings.TrimSpace(ActiveModel(context.Background())) != ""
 }
 
 // NeedsFirstRunSetup is true when the user should complete /config (API key and/or model).

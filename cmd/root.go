@@ -8,6 +8,7 @@ import (
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
@@ -75,7 +76,7 @@ var rootCmd = &cobra.Command{
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Load keychain + ~/.hawk/env into process env (no secrets logged).
+		// Credential store reads OS secret store on demand (not shell env).
 		hawkconfig.PrepareCredentialDiscovery(context.Background())
 		_ = hawkconfig.MigrateProviderSecrets()
 
@@ -192,6 +193,8 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(doctorCmd)
+	rootCmd.AddCommand(preflightCmd)
+	rootCmd.AddCommand(credentialsCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(mcpCmd)
 	rootCmd.AddCommand(sessionsCmd)
@@ -291,6 +294,19 @@ var doctorCmd = &cobra.Command{
 			return err
 		}
 		cmd.Println(doctorReport(settings))
+		return nil
+	},
+}
+
+var preflightCmd = &cobra.Command{
+	Use:   "preflight",
+	Short: "Check hawk is ready to chat (catalog, credentials, model)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := eyrieclient.Preflight(context.Background())
+		cmd.Println(eyrieclient.FormatPreflightReport(r))
+		if !r.Ready {
+			return fmt.Errorf("preflight failed — run hawk and complete /config")
+		}
 		return nil
 	},
 }

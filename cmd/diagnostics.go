@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/resilience/health"
@@ -30,6 +33,8 @@ func doctorReport(settings hawkconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("Provider: %s\n", provider))
 	b.WriteString(fmt.Sprintf("Model: %s\n", modelName))
 	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
+	b.WriteString("\n" + eyrieclient.FormatPreflightReport(eyrieclient.Preflight(context.Background())) + "\n")
+	b.WriteString("\n" + credentials.FormatStorageReport(credentials.StorageReportFor(context.Background())) + "\n")
 	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
 	}
@@ -79,24 +84,9 @@ func doctorReport(settings hawkconfig.Settings) string {
 func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 	registry := health.NewRegistry()
 
-	// API key check
-	apiKey := ""
-	switch provider {
-	case "anthropic":
-		apiKey = os.Getenv("ANTHROPIC_API_KEY")
-	case "openai":
-		apiKey = os.Getenv("OPENAI_API_KEY")
-	case "google":
-		apiKey = os.Getenv("GOOGLE_API_KEY")
-	case "openrouter":
-		apiKey = os.Getenv("OPENROUTER_API_KEY")
-	case "grok":
-		apiKey = os.Getenv("XAI_API_KEY")
-	case "canopywave":
-		apiKey = os.Getenv("CANOPYWAVE_API_KEY")
-	case "opencodego":
-		apiKey = os.Getenv("OPENCODEGO_API_KEY")
-	}
+	ctx := context.Background()
+	apiKeyEnv := primaryAPIKeyEnvForProvider(ctx, provider)
+	apiKey := credentials.LookupSecret(ctx, apiKeyEnv)
 	registry.Register("api_key", health.APIKeyChecker(provider, apiKey))
 
 	// Settings validation
@@ -137,6 +127,21 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 		b.WriteString(fmt.Sprintf("  %s %s: %s\n", status, check.Name, check.Message))
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func primaryAPIKeyEnvForProvider(ctx context.Context, provider string) string {
+	provider = strings.TrimSpace(provider)
+	if provider == "" || provider == "auto" {
+		provider = strings.TrimSpace(hawkconfig.ActiveProvider(ctx))
+	}
+	if provider == "" {
+		return ""
+	}
+	compiled, err := eyrieclient.LoadCatalog(ctx)
+	if err != nil || compiled == nil {
+		return ""
+	}
+	return catalog.PrimaryAPIKeyEnvForProvider(compiled, provider)
 }
 
 func settingsSummary(settings hawkconfig.Settings) string {

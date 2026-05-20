@@ -618,7 +618,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.session.SetModel(arg)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", m.session.Model())})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", m.session.Model())})
 		return m, nil
 	case "/branches":
 		if m.session.ConvoDAG == nil {
@@ -1087,7 +1087,7 @@ Generate the recap:`, summary.String())
 				m.session.SetModel(cached[0].ID)
 				_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved to global config.", value, m.session.Model())})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in eyrie (provider.json).", value, m.session.Model())})
 			return m, nil
 		}
 		if len(parts) >= 3 && parts[1] == "model" {
@@ -1113,12 +1113,19 @@ Generate the recap:`, summary.String())
 				return m, nil
 			}
 			m.session.SetModel(value)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", value)})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", value)})
 			return m, nil
 		}
 		if len(parts) >= 2 && parts[1] == "keys" {
 			m.messages = append(m.messages, displayMsg{role: "system", content: apiKeyConfigSummary()})
 			return m, nil
+		}
+		if len(parts) >= 3 && parts[1] == "key" && parts[2] == "remove" {
+			if len(parts) > 3 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /config key remove"})
+				return m, nil
+			}
+			return m.openConfigRemoveKeyPanel()
 		}
 		if len(parts) >= 3 && parts[1] == "get" {
 			settings, err := loadEffectiveSettings()
@@ -1161,14 +1168,8 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		m.settings = settings
-		m.configOpen = true
-		m.configMenu = "hub"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configNotice = ""
-		m.configDeployments = nil
-		m.viewDirty = true
-		return m, nil
+		next, cmd := m.openConfigPanel()
+		return next, cmd
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil
@@ -1633,7 +1634,8 @@ Generate the recap:`, summary.String())
 		}
 		return m, nil
 	case "/fast":
-		if m.session.Model() == m.settings.Model {
+		savedModel := hawkconfig.ActiveModel(context.Background())
+		if m.session.Model() == savedModel {
 			norm := hawkconfig.NormalizeProviderForEngine(m.session.Provider())
 			fastModel := hawkconfig.CheapestModelForProvider(norm, m.session.Model())
 			if strings.TrimSpace(fastModel) == "" {
@@ -1646,8 +1648,8 @@ Generate the recap:`, summary.String())
 			m.session.SetModel(fastModel)
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode on → %s", fastModel)})
 		} else {
-			m.session.SetModel(m.settings.Model)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode off → %s", m.settings.Model)})
+			m.session.SetModel(savedModel)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode off → %s", savedModel)})
 		}
 		return m, nil
 	case "/effort":

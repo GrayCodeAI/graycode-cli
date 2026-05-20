@@ -4,18 +4,19 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
-func TestHasConfiguredDeployment_FromEnv(t *testing.T) {
-	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-test-key-long-enough")
-	t.Setenv("OPENAI_API_KEY", "")
+func TestHasConfiguredDeployment_FromStore(t *testing.T) {
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough")
 	if !HasConfiguredDeployment(context.Background()) {
-		t.Fatal("expected true when ANTHROPIC_API_KEY is set")
+		t.Fatal("expected true when ANTHROPIC_API_KEY is in secure store")
 	}
 }
 
@@ -45,6 +46,7 @@ func TestHasConfiguredDeployment_RejectsPlaceholder(t *testing.T) {
 		}
 	}
 	t.Setenv("OPENROUTER_API_KEY", "changeme")
+	// Placeholder in shell env must not count — only secure store is trusted.
 	if HasConfiguredDeployment(ctx) {
 		t.Fatal("placeholder should not count as configured")
 	}
@@ -69,8 +71,8 @@ func TestEvaluateSetup_WithoutCredentials(t *testing.T) {
 	if !st.NeedsSetup {
 		t.Fatal("expected setup needed without credentials")
 	}
-	if !strings.Contains(st.Hint, "/config") {
-		t.Fatalf("hint = %q, want /config mention", st.Hint)
+	if st.Hint == "" {
+		t.Fatal("expected non-empty setup hint")
 	}
 }
 

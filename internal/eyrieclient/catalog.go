@@ -8,15 +8,14 @@ import (
 	"github.com/GrayCodeAI/eyrie/setup"
 )
 
-// CatalogCredentials collects API keys from the environment using eyrie's provider profiles.
-// Hawk does not maintain its own list of env var names.
-func CatalogCredentials() catalog.Credentials {
-	return eyriecfg.DiscoveryCredentialsFromOS()
+// CatalogCredentials loads API keys from the OS secret store.
+func CatalogCredentials(ctx context.Context) catalog.Credentials {
+	return eyriecfg.DiscoveryCredentials(ctx)
 }
 
-// DiscoverCatalog refreshes the eyrie remote catalog and live provider model lists using env API keys.
+// DiscoverCatalog refreshes the eyrie remote catalog and live provider model lists.
 func DiscoverCatalog(ctx context.Context) (*catalog.RefreshResult, error) {
-	return setup.DiscoverModelCatalog(ctx, CatalogCredentials())
+	return setup.DiscoverModelCatalog(ctx, CatalogCredentials(ctx))
 }
 
 // DiscoverCatalogWithKeys refreshes the catalog using explicit env keys (name → value).
@@ -27,4 +26,13 @@ func DiscoverCatalogWithKeys(ctx context.Context, apiKeys map[string]string) (*c
 // LoadCatalog loads the compiled catalog from ~/.eyrie/model_catalog.json (no network).
 func LoadCatalog(ctx context.Context) (*catalog.CompiledCatalogV1, error) {
 	return setup.LoadCompiledCatalog(ctx)
+}
+
+// DiscoveryEnvKeys returns env var names needed for catalog discovery (from compiled cache).
+func DiscoveryEnvKeys(ctx context.Context) []string {
+	compiled, err := LoadCatalog(ctx)
+	if err != nil || compiled == nil {
+		return nil
+	}
+	return catalog.DiscoveryEnvKeysFromCatalog(compiled)
 }

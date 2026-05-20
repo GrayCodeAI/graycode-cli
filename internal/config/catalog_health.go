@@ -84,14 +84,28 @@ func FormatCatalogHealth(h CatalogHealth) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
+// CatalogEmptyHint returns actionable guidance when the catalog has no models.
+func CatalogEmptyHint(ctx context.Context) string {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if !HasConfiguredDeployment(ctx) {
+		return "run /config to paste an API key or set up Ollama (local, no key)"
+	}
+	return "check network access, then hawk preflight or /config — hawk refreshes the catalog automatically"
+}
+
 // EnsureCatalogAvailable returns an error when the production catalog cache is missing or empty.
 func EnsureCatalogAvailable(ctx context.Context) error {
 	h := CatalogHealthReport(ctx)
 	if h.Error != "" {
-		return fmt.Errorf("%s", h.Error)
+		if !h.Exists {
+			return fmt.Errorf("model catalog cache missing — %s", CatalogEmptyHint(ctx))
+		}
+		return fmt.Errorf("%s — %s", h.Error, CatalogEmptyHint(ctx))
 	}
 	if h.Models == 0 {
-		return fmt.Errorf("model catalog has no models — hawk will refresh automatically when API keys are set")
+		return fmt.Errorf("model catalog has no models — %s", CatalogEmptyHint(ctx))
 	}
 	return nil
 }

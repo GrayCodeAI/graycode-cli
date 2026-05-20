@@ -114,8 +114,11 @@ Active branch: **`feature/secure-credentials-sandbox`** (hawk + eyrie sibling).
 | Concern | Where |
 |---------|--------|
 | First-run `/config`, setup guards | `internal/config/setup_status.go`, `cmd/chat.go` |
-| Keychain + `PersistAPIKey` | `internal/config/credentials_store.go`, eyrie `credentials/` |
+| Keychain + `PersistAPIKey` / `RemoveStoredCredential` | `internal/config/credentials_store.go`, eyrie `credentials/` |
+| Remove stored key (TUI) | `/config key remove` → `cmd/chat_config_remove.go` |
+| Remove stored key (CLI) | `hawk credentials remove` → `cmd/credentials.go` |
 | Catalog discover + routing only on disk | `internal/config/eyrie_apply.go`, eyrie `setup/apply_credentials.go` |
+| Catalog empty / refresh hints | `internal/config/catalog_health.go`, `catalog_startup.go` |
 | No API keys in `provider.json` | eyrie `SanitizeDeploymentConfigForDisk`, hawk `MigrateProviderSecrets` |
 | Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
 | Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md` |

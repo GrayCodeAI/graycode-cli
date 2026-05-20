@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -13,84 +13,232 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
-type configDeploymentsLoadedMsg struct {
-	rows []hawkconfig.DeploymentRow
-	err  error
-}
-
-type configRoutingPreviewMsg struct {
-	body string
-	err  error
-}
-
-type configCatalogRefreshMsg struct {
-	summary string
-	err     error
-}
-
 type configApplyCredentialsMsg struct {
 	summary      string
 	err          error
 	providerID   string
+	deploymentID string
 	modelOptions []configModelOption
 }
 
-func (m chatModel) configHubChoices() []string {
-	return []string{
-		"Connect API key → pick model",
-		"API keys (eyrie deployments)",
-		"Model (eyrie catalog)",
-		"View provider.json + routing",
-		fmt.Sprintf("Routing preview (%s)", truncateConfig(m.session.Model(), 28)),
-		"Refresh catalog (eyrie discover)",
-	}
+type configKeyResolvedMsg struct {
+	secret  string
+	result  hawkconfig.CredentialResolveResult
 }
 
-func truncateConfig(s string, n int) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= n {
-		return s
+func (m chatModel) configPanelTitle() string {
+	if hawkconfig.NeedsFirstRunSetup(context.Background()) {
+		return "⚙ First-time setup (eyrie)"
 	}
-	return s[:n-1] + "…"
+	return "⚙ Hawk config (eyrie)"
 }
 
-func fetchDeploymentsAsync() tea.Cmd {
+// openConfigPanel: hub → paste key / Ollama / pick model.
+func (m chatModel) openConfigPanel() (chatModel, tea.Cmd) {
+	ctx := context.Background()
+	st := hawkconfig.EvaluateSetup(ctx)
+	m = m.openConfigHub(!st.HasCredentials)
+	return m, nil
+}
+
+func (m chatModel) openFirstRunConfig() (chatModel, tea.Cmd) {
+	return m.openConfigPanel()
+}
+
+func firstRunModelProvider(m chatModel) string {
+	ctx := context.Background()
+	if p := hawkconfig.DefaultModelProviderFilter(ctx); p != "" {
+		return p
+	}
+	return strings.TrimSpace(m.session.Provider())
+}
+
+func resolveKeyAsync(secret string) tea.Cmd {
 	return func() tea.Msg {
-		rows, err := hawkconfig.ListDeploymentRows(context.Background())
-		return configDeploymentsLoadedMsg{rows: rows, err: err}
+		res := eyrieclient.ResolveCredentialForHost(context.Background(), secret)
+		return configKeyResolvedMsg{
+			secret: secret,
+			result: credentialResolveFromRuntime(res),
+		}
 	}
 }
 
-func fetchRoutingPreviewAsync(model string) tea.Cmd {
-	return func() tea.Msg {
-		body, err := hawkconfig.RoutingPreviewJSON(context.Background(), model)
-		return configRoutingPreviewMsg{body: body, err: err}
+func credentialResolveFromRuntime(res eyrieclient.CredentialResolveResult) hawkconfig.CredentialResolveResult {
+	out := hawkconfig.CredentialResolveResult{
+		FormatOK:    res.FormatOK,
+		FormatError: res.FormatError,
+		Providers:   make([]hawkconfig.CredentialProviderOption, len(res.Providers)),
+	}
+	for i, p := range res.Providers {
+		out.Providers[i] = hawkconfig.CredentialProviderOption{
+			ProviderID:   p.ProviderID,
+			DeploymentID: p.DeploymentID,
+			EnvVar:       p.EnvVar,
+			DisplayName:  p.DisplayName,
+			Inferred:     p.Inferred,
+			RequiresKey:  p.RequiresKey,
+			Rank:         p.Rank,
+		}
+	}
+	return out
+}
+
+func credentialOptionFromHawk(in hawkconfig.CredentialInference) eyrieclient.CredentialProviderOption {
+	return eyrieclient.CredentialProviderOption{
+		ProviderID:   in.ProviderID,
+		DeploymentID: in.DeploymentID,
+		EnvVar:       in.EnvVar,
+		DisplayName:  in.DisplayName,
 	}
 }
 
-func refreshCatalogAsync() tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-		defer cancel()
-		summary, err := hawkconfig.RefreshModelCatalogV1(ctx)
-		return configCatalogRefreshMsg{summary: summary, err: err}
-	}
+func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
+	return saveCredentialAsync(inference, secret)
 }
 
-func applyEyrieCredentialsAsync(deploymentID string) tea.Cmd {
+func saveOllamaAsync(baseURL string) tea.Cmd {
 	return func() tea.Msg {
-		result, err := hawkconfig.ApplyEyrieCredentials(context.Background())
+		inference, err := eyrieclient.LocalCredentialInference("ollama")
 		if err != nil {
-			return configApplyCredentialsMsg{err: err, providerID: hawkconfig.ProviderIDForDeployment(deploymentID)}
+			return configApplyCredentialsMsg{err: err}
 		}
-		providerID := hawkconfig.ProviderIDForDeployment(deploymentID)
-		opts := hawkconfig.OptionsFromSetupUI(result.Setup, providerID)
+		inf := hawkconfig.CredentialInference{
+			ProviderID:   inference.ProviderID,
+			DeploymentID: inference.DeploymentID,
+			EnvVar:       inference.EnvVar,
+			DisplayName:  inference.DisplayName,
+		}
+		return saveCredentialAsync(inf, baseURL)()
+	}
+}
+
+func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		rtInf := eyrieclient.InferenceFromOption(credentialOptionFromHawk(inference))
+		if err := eyrieclient.SaveCredentialForHost(ctx, rtInf, secret); err != nil {
+			return configApplyCredentialsMsg{
+				err:          err,
+				providerID:   inference.ProviderID,
+				deploymentID: inference.DeploymentID,
+			}
+		}
+		result, err := eyrieclient.ApplyEyrieCredentials(ctx)
+		if err != nil {
+			return configApplyCredentialsMsg{
+				err:          err,
+				providerID:   inference.ProviderID,
+				deploymentID: inference.DeploymentID,
+			}
+		}
+
+		entries, listErr := eyrieclient.ListModelsForProviderAfterApply(ctx, inference.ProviderID)
+		if listErr != nil {
+			return configApplyCredentialsMsg{
+				err:          listErr,
+				providerID:   inference.ProviderID,
+				deploymentID: inference.DeploymentID,
+			}
+		}
+		opts := configModelOptionsFromEyrie(entries)
+		if len(opts) == 0 {
+			fallback := eyrieclient.OptionsFromSetupUI(result, inference.ProviderID)
+			opts = toConfigModelOptionsFromEyrie(fallback)
+		}
+
 		return configApplyCredentialsMsg{
-			summary:      hawkconfig.FormatApplyCredentialsSummary(result),
-			providerID:   providerID,
-			modelOptions: toConfigModelOptions(opts),
+			summary:      eyrieclient.FormatApplySummary(result),
+			providerID:   inference.ProviderID,
+			deploymentID: inference.DeploymentID,
+			modelOptions: opts,
 		}
 	}
+}
+
+func toConfigModelOptionsFromEyrie(in []eyrieclient.ModelOption) []configModelOption {
+	out := make([]configModelOption, len(in))
+	for i, o := range in {
+		out[i] = configModelOption{ID: o.ID, DisplayName: o.DisplayName}
+	}
+	return out
+}
+
+func (m chatModel) configHubView() string {
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+
+	opts := m.configHubLabels()
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("⚙ Connect a provider") + "\n\n")
+	if notice := strings.TrimSpace(m.configNotice); notice != "" {
+		b.WriteString(mutedStyle.Render(notice) + "\n\n")
+	}
+	for i, opt := range opts {
+		prefix := "  "
+		lineStyle := style
+		if i == m.configSel {
+			prefix = "❯ "
+			lineStyle = selectedStyle
+		}
+		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
+	}
+	help := "↑/↓ · enter · esc close"
+	if m.configSaving {
+		help = "please wait…"
+	}
+	b.WriteString("\n" + mutedStyle.Render(help))
+	return b.String()
+}
+
+func (m chatModel) handleConfigHubSelect() (chatModel, tea.Cmd) {
+	if m.configSaving {
+		return m, nil
+	}
+	opts := m.configHubOptions()
+	if m.configSel < 0 || m.configSel >= len(opts) {
+		return m, nil
+	}
+	switch opts[m.configSel].action {
+	case "model":
+		return m.beginConfigModelPicker()
+	case "apikey":
+		m.configNotice = "Paste your provider API key"
+		return m.startConfigEntry("apikey-paste", "")
+	case "ollama":
+		return m.startConfigOllamaURL()
+	default:
+		return m, nil
+	}
+}
+
+func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
+	return m.startConfigOllamaURLWithValue("http://localhost:11434/v1")
+}
+
+func (m chatModel) startConfigOllamaURLWithValue(url string) (chatModel, tea.Cmd) {
+	m.configEntry = "ollama-url"
+	m.configProvider = "ollama"
+	m.configMenu = ""
+	if strings.TrimSpace(m.configNotice) == "" || strings.TrimSpace(m.configNotice) == "Working…" {
+		m.configNotice = "Confirm Ollama URL (run: ollama serve)"
+	}
+	return m.startConfigURLInput(url)
+}
+
+func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
+	m.useConfigInput = true
+	m.configInput.Reset()
+	m.configInput.SetValue(defaultURL)
+	m.configInput.Prompt = " url ❯ "
+	m.configInput.Placeholder = defaultURL
+	m.configInput.EchoMode = textinput.EchoNormal
+	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
+	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	m.configInput.Focus()
+	return m, textinput.Blink
 }
 
 func toConfigModelOptions(in []hawkconfig.ModelOption) []configModelOption {
@@ -101,213 +249,148 @@ func toConfigModelOptions(in []hawkconfig.ModelOption) []configModelOption {
 	return out
 }
 
-func (m chatModel) configDeploymentChoiceLabels() []string {
-	if len(m.configDeployments) == 0 {
-		return []string{"(loading…)"}
-	}
-	out := make([]string, len(m.configDeployments))
-	for i, row := range m.configDeployments {
-		mark := "○"
-		if row.Configured {
-			mark = "●"
-		}
-		out[i] = fmt.Sprintf("%s %-22s %s", mark, row.ID, row.Status)
-	}
-	return out
-}
-
-func (m chatModel) configHubView() string {
-	return m.configListView("⚙ Hawk Config (eyrie)", m.configHubChoices())
-}
-
-func (m chatModel) configDeploymentsView() string {
-	return m.configListView("🔑 API keys — pick deployment", m.configDeploymentChoiceLabels())
-}
-
-func (m chatModel) configDeploymentDetailView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	okStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
-	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#e05555"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
-
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("Deployment: ") + style.Render(m.configDeploymentID) + "\n\n")
-	row, ok := m.configDeploymentRow(m.configDeploymentID)
-	if !ok {
-		b.WriteString(warnStyle.Render("Not found in catalog") + "\n")
-		b.WriteString(mutedStyle.Render("esc back"))
-		return b.String()
-	}
-	b.WriteString(mutedStyle.Render(row.Name) + " · " + row.ProviderID + "\n")
-	b.WriteString(fmt.Sprintf("Status: %s\n\n", row.Status))
-	b.WriteString(style.Render("Environment:") + "\n")
-	for _, ev := range row.EnvVars {
-		mark := warnStyle.Render("✗")
-		if ev.Set {
-			mark = okStyle.Render("✓")
-		}
-		b.WriteString(fmt.Sprintf("  %s %s\n", mark, ev.Name))
-	}
-	b.WriteString("\n" + mutedStyle.Render("esc back"))
-	return b.String()
-}
-
-func (m chatModel) configRoutingView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
-
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("Routing preview") + "\n\n")
-	if strings.TrimSpace(m.configRoutingJSON) == "" {
-		b.WriteString(mutedStyle.Render("Loading…"))
-	} else {
-		b.WriteString(style.Render(m.configRoutingJSON))
-	}
-	b.WriteString("\n\n" + mutedStyle.Render("esc back"))
-	return b.String()
-}
-
-func (m chatModel) configViewProviderJSON() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
-
-	raw, err := hawkconfig.ProviderConfigJSON()
-	if err != nil {
-		return titleStyle.Render("provider.json") + "\n\n" + err.Error()
-	}
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("provider.json (eyrie)") + "\n\n")
-	b.WriteString(style.Render(raw))
-	b.WriteString("\n\n" + mutedStyle.Render("esc back"))
-	return b.String()
-}
-
-func (m chatModel) configListView(title string, opts []string) string {
+func (m chatModel) configProvidersView() string {
 	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
 
+	opts := m.configProviderLabels()
+	total := len(opts)
+
+	if m.configSel < m.configScroll {
+		m.configScroll = m.configSel
+	}
+	if m.configSel >= m.configScroll+configWindowSize {
+		m.configScroll = m.configSel - configWindowSize + 1
+	}
+
 	var b strings.Builder
-	b.WriteString(titleStyle.Render(title) + "\n\n")
-	for i, opt := range opts {
+	b.WriteString(titleStyle.Render("🔑 Select provider (eyrie)") + "\n\n")
+	if notice := strings.TrimSpace(m.configNotice); notice != "" {
+		b.WriteString(mutedStyle.Render(notice) + "\n\n")
+	}
+	if m.configScroll > 0 {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
+	}
+	end := m.configScroll + configWindowSize
+	if end > total {
+		end = total
+	}
+	for i := m.configScroll; i < end; i++ {
 		prefix := "  "
 		lineStyle := style
 		if i == m.configSel {
 			prefix = "❯ "
 			lineStyle = selectedStyle
 		}
-		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
+		b.WriteString(lineStyle.Render(prefix+opts[i]) + "\n")
 	}
-	b.WriteString("\n" + mutedStyle.Render("↑/↓ · enter · esc"))
+	if end < total {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
+	}
+	b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("%d providers · ★ = eyrie guess · ↑/↓ · enter · esc", total)))
 	return b.String()
 }
 
-func (m chatModel) configDeploymentRow(id string) (hawkconfig.DeploymentRow, bool) {
-	for _, row := range m.configDeployments {
-		if row.ID == id {
-			return row, true
+func (m chatModel) configProviderLabels() []string {
+	out := make([]string, len(m.configProviderOptions))
+	for i, p := range m.configProviderOptions {
+		label := strings.TrimSpace(p.DisplayName)
+		if label == "" {
+			label = p.ProviderID
 		}
+		mark := "  "
+		if p.Inferred {
+			mark = "★ "
+		}
+		out[i] = fmt.Sprintf("%s%-22s %s", mark, label, p.ProviderID)
 	}
-	return hawkconfig.DeploymentRow{}, false
+	return out
 }
 
-func (m chatModel) handleConfigHubSelect(option string) (chatModel, tea.Cmd) {
-	switch {
-	case strings.HasPrefix(option, "Connect API key"):
-		m.configMenu = "apikeys"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configDeployments = nil
-		m.configNotice = "Step 1: pick deployment · paste key · then pick model"
-		return m, fetchDeploymentsAsync()
-	case strings.HasPrefix(option, "API keys"):
-		m.configMenu = "apikeys"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configDeployments = nil
-		return m, fetchDeploymentsAsync()
-	case strings.HasPrefix(option, "Model"):
-		m.configMenu = "model"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configModelProvider = strings.TrimSpace(m.session.Provider())
-		m.configModelOptions = loadConfigModelOptions(m.configModelProvider)
-		if len(m.configModelOptions) == 0 {
-			return m, fetchModelsAsync(m.configModelProvider)
-		}
-		return m, nil
-	case strings.HasPrefix(option, "View provider"):
-		m.configMenu = "view-config"
-		m.configSel = 0
-		return m, nil
-	case strings.HasPrefix(option, "Routing preview"):
-		m.configMenu = "routing"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configRoutingJSON = ""
-		return m, fetchRoutingPreviewAsync(m.session.Model())
-	case strings.HasPrefix(option, "Refresh catalog"):
-		m.configNotice = "Refreshing via eyrie…"
-		return m, applyEyrieCredentialsAsync("")
+func (m chatModel) handleConfigKeyResolvedMsg(msg configKeyResolvedMsg) (chatModel, tea.Cmd) {
+	secret := strings.TrimSpace(msg.secret)
+	if !msg.result.FormatOK {
+		m.configNotice = msg.result.FormatError
+		return m.startConfigEntry("apikey-paste", "")
 	}
+	if secret == "" {
+		m.configNotice = "Paste a valid API key"
+		return m.startConfigEntry("apikey-paste", "")
+	}
+	m.configPendingKey = secret
+	m.configProviderOptions = msg.result.Providers
+	m.configEntry = ""
+	m.configMenu = "providers"
+	m.configSel = 0
+	m.configScroll = 0
+	m.configNotice = "Step 2: select provider (★ = suggested from key shape)"
+	m.restoreChatInput()
 	return m, nil
 }
 
-func (m chatModel) handleConfigDeploymentSelect(option string) (chatModel, tea.Cmd) {
-	parts := strings.Fields(option)
-	if len(parts) < 2 {
+func (m chatModel) handleConfigProviderSelect() (chatModel, tea.Cmd) {
+	idx := m.configSel
+	if idx < 0 || idx >= len(m.configProviderOptions) {
 		return m, nil
 	}
-	deploymentID := parts[1]
-	row, ok := m.configDeploymentRow(deploymentID)
-	if !ok {
-		return m, nil
+	opt := m.configProviderOptions[idx]
+	secret := strings.TrimSpace(m.configPendingKey)
+	if secret == "" {
+		m.configNotice = "Session expired — paste your API key again"
+		return m.startConfigEntry("apikey-paste", "")
 	}
-	m.configDeploymentID = deploymentID
-	if row.Configured {
-		m.configMenu = "deployment-detail"
-		return m, nil
-	}
-	envKey := hawkconfig.PrimaryAPIKeyEnvForDeployment(deploymentID)
-	if envKey == "" {
-		m.configNotice = deploymentID + ": set base URL in environment (local deployment)"
-		return m, nil
-	}
-	m.configProvider = deploymentID
-	return m.startConfigEntry("deployment-apikey", deploymentID)
+	inference := hawkconfig.InferenceFromOption(opt)
+	m.configNotice = fmt.Sprintf("Validating key for %s via eyrie…", opt.DisplayName)
+	m.configSaving = true
+	return m, saveProviderKeyAsync(inference, secret)
 }
 
 func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg) (chatModel, tea.Cmd) {
+	m.configSaving = false
 	if msg.err != nil {
-		m.configNotice = msg.err.Error()
-		return m, fetchDeploymentsAsync()
+		if msg.providerID == "ollama" {
+			return m.returnToOllamaURLAfterError(msg.err)
+		}
+		m.configNotice = formatConfigApplyError(msg.providerID, msg.err)
+		if strings.TrimSpace(m.configPendingKey) != "" && len(m.configProviderOptions) > 0 {
+			m.configMenu = "providers"
+			m.configSel = 0
+		} else {
+			m.configMenu = "hub"
+		}
+		return m, nil
 	}
+	m.configPendingKey = ""
+	m.configProviderOptions = nil
+	m.configPendingOllamaURL = ""
 	m.configNotice = msg.summary
-	modelCache = make(map[string][]configModelOption)
+	InvalidateModelCache()
 	m.configModelProvider = msg.providerID
 	if len(msg.modelOptions) > 0 {
 		modelCache[msg.providerID] = msg.modelOptions
 	}
 	next, cmd := m.rebuildSessionTransport()
-	if m.configGuideAfterKey {
-		m.configGuideAfterKey = false
-		m.configMenu = "model"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configModelOptions = msg.modelOptions
-		if len(m.configModelOptions) == 0 {
-			m.configModelOptions = loadConfigModelOptions(msg.providerID)
-		}
-		if len(m.configModelOptions) > 0 {
-			m.configNotice = "Step 2: pick a model (" + msg.providerID + ")"
-			return next, cmd
-		}
+	if msg.providerID == "ollama" {
+		_ = hawkconfig.SetGlobalSetting("provider", "ollama")
+		next.session.SetProvider(hawkconfig.NormalizeProviderForEngine("ollama"))
 	}
-	return next, tea.Batch(cmd, fetchDeploymentsAsync())
+	next.configGuideAfterKey = false
+	if len(msg.modelOptions) == 0 {
+		if msg.providerID == "ollama" {
+			return next.returnToOllamaURLAfterError(fmt.Errorf("no models installed — run: ollama pull llama3.2"))
+		}
+		next.configMenu = "hub"
+		next.configNotice = "No models in catalog for " + msg.providerID + " — try another provider"
+		return next, cmd
+	}
+	next.configMenu = "model"
+	next.configSel = 0
+	next.configScroll = 0
+	next.configModelOptions = msg.modelOptions
+	next.configNotice = "Pick a model (" + msg.providerID + ")"
+	return next, cmd
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
@@ -315,37 +398,4 @@ func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
 		m.configNotice = err.Error()
 	}
 	return m, nil
-}
-
-func (m chatModel) handleConfigDeploymentMsg(msg configDeploymentsLoadedMsg) (chatModel, tea.Cmd) {
-	if msg.err != nil {
-		m.configNotice = msg.err.Error()
-		return m, nil
-	}
-	m.configDeployments = msg.rows
-	return m, nil
-}
-
-func (m chatModel) handleConfigRoutingMsg(msg configRoutingPreviewMsg) (chatModel, tea.Cmd) {
-	if msg.err != nil {
-		m.configNotice = msg.err.Error()
-		return m, nil
-	}
-	m.configRoutingJSON = msg.body
-	return m, nil
-}
-
-func (m chatModel) handleConfigCatalogRefreshMsg(msg configCatalogRefreshMsg) (chatModel, tea.Cmd) {
-	if msg.err != nil {
-		m.configNotice = msg.err.Error()
-		return m, fetchDeploymentsAsync()
-	}
-	m.configNotice = msg.summary
-	delete(modelCache, m.session.Provider())
-	provider := m.session.Provider()
-	cmds := []tea.Cmd{fetchDeploymentsAsync()}
-	if m.configMenu == "model" {
-		cmds = append(cmds, fetchModelsAsync(provider))
-	}
-	return m, tea.Batch(cmds...)
 }

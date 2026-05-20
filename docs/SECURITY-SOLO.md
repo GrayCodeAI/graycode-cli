@@ -1,22 +1,24 @@
 # Hawk solo security model
 
-This document describes how hawk and eyrie handle API keys and agent isolation for a single developer on macOS (no Vault, no proxy).
+This document describes how hawk and eyrie handle API keys and agent isolation for a single developer on macOS or Linux (no Vault, no proxy).
 
 ## Goals
 
-- API keys live in the OS keychain (or legacy `~/.hawk/env` when opted out).
+- API keys live only in the OS secret store (macOS Keychain / Linux GNOME Keyring or KWallet).
+- Hawk does not read API keys from `.env`, shell env, or plaintext files.
 - `~/.hawk/provider.json` holds routing and deployment metadata only — never secrets on disk.
 - Hawk talks to eyrie without putting keys in JSON or chat messages.
-- Agents run Bash inside Docker when possible; file tools cannot read credential files.
+- Agents run Bash inside Docker when possible; file tools cannot read credential paths.
 
 ## Credential storage
 
-| Mode | `HAWK_SECURE_CREDENTIALS` | Write path | Read path |
-|------|----------------------------|------------|-----------|
-| Secure (default) | unset or `1` | macOS Keychain via eyrie | Keychain, then env file for migration |
-| Legacy | `0` | Keychain + mirror to `~/.hawk/env` | Same |
+| Write | Read | Remove |
+|-------|------|--------|
+| `/config` paste flow → eyrie `runtime.SetCredential` | `credentials.LookupSecret` (keychain only) | `/config key remove` or `hawk credentials remove` |
 
-On startup, hawk calls `PrepareCredentialDiscovery()` so eyrie discovery sees keys from keychain and env without logging values.
+On startup, hawk calls `PrepareCredentialDiscovery()` to one-time migrate legacy `~/.hawk/env` / `~/.hawk/.env` into the keychain and delete those files.
+
+Check status: `hawk credentials status` or `hawk preflight`.
 
 ## First-run flow (`/config`)
 
@@ -24,10 +26,10 @@ On startup, hawk calls `PrepareCredentialDiscovery()` so eyrie discovery sees ke
 User pastes API key in /config
         |
         v
-hawk PersistAPIKey -> eyrie runtime.SetCredential (keychain)
+hawk PersistAPIKey -> eyrie runtime.SetCredential (OS secret store)
         |
         v
-eyrie Apply / discover (credentials from env, not JSON body)
+eyrie Apply / discover (credentials from store, not JSON body)
         |
         v
 SetupUI JSON (display_name + canonical_id per model)
@@ -36,9 +38,11 @@ SetupUI JSON (display_name + canonical_id per model)
 User picks model -> settings.json (canonical id only)
 ```
 
+Remove a stored key: `/config key remove` (interactive picker).
+
 ## Hawk to eyrie
 
-- **Apply**: process env populated from keychain; no `api_key` fields in request payloads.
+- **Apply**: credentials passed from the OS store; no `api_key` fields in request payloads.
 - **Chat**: `model_id` + messages only; eyrie resolves provider and reads secrets internally.
 
 ## Agent isolation
@@ -65,16 +69,20 @@ Use `--no-container` only for debugging; secure mode warns because host Bash can
 
 ## Migration
 
-On first run after upgrade, `MigrateProviderSecrets()` strips secret fields from existing `provider.json` (backup: `provider.json.pre-secret-migrate.bak`).
+- **Legacy env files**: `MigrateLegacyEnvFile()` on startup imports `~/.hawk/env` / `~/.hawk/.env` → keychain → deletes files.
+- **provider.json secrets**: `MigrateProviderSecrets()` strips secret fields (backup: `provider.json.pre-secret-migrate.bak`).
 
 ## Environment variables
 
+Non-secret overrides only (hawk does not load provider API keys from env):
+
 | Variable | Meaning |
 |----------|---------|
-| `HAWK_SECURE_CREDENTIALS` | `0` disables keychain-only disk policy (allows env file mirroring) |
-| Provider keys | Standard names (`OPENAI_API_KEY`, etc.) set in process during discovery only |
+| `HAWK_CONFIG_DIR` | Override hawk config directory |
+| `OPENAI_MODEL` | Override default OpenAI model |
+| `OLLAMA_BASE_URL` | Ollama server URL (also saved via `/config` for Ollama) |
 
 ## Related code
 
-- Hawk: `internal/config/credentials_store.go`, `migrate_provider_secrets.go`, `internal/tool/safety.go`
-- Eyrie: `credentials/`, `config/deployment_secrets.go`, `setup/setup_ui.go`
+- Hawk: `internal/config/credentials_store.go`, `migrate_provider_secrets.go`, `internal/tool/safety.go`, `cmd/credentials.go`
+- Eyrie: `credentials/`, `config/discovery_env.go`, `setup/setup_ui.go`

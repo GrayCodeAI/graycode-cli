@@ -67,6 +67,7 @@ type (
 	modelsFetchedMsg struct {
 		options  []configModelOption
 		provider string
+		err      error
 	}
 	loopTickMsg            struct{ command string }
 	firstRunOpenConfigMsg struct{}
@@ -132,9 +133,10 @@ type chatModel struct {
 	configModelOptions []configModelOption // labels + ids from eyrie catalog
 	configModelProvider string             // filter models after API key paste
 	configGuideAfterKey bool               // open model picker when discover finishes
-	configDeployments   []hawkconfig.DeploymentRow
-	configDeploymentID  string
-	configRoutingJSON   string
+	configPendingKey      string
+	configProviderOptions []hawkconfig.CredentialProviderOption
+	configSaving          bool   // blocks hub/list input while async credential work runs
+	configPendingOllamaURL string
 	pluginRuntime  *plugin.Runtime
 	spinnerVerb    string
 	glimmerPos     int

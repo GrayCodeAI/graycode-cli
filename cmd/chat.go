@@ -24,6 +24,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
@@ -242,11 +243,11 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.containerEnabled = shouldUseContainer()
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
-	} else if noContainer && hawkconfig.SecureCredentialsEnabled() {
+	} else if noContainer {
 		m.messages = append(m.messages, displayMsg{
 			role: "system",
-			content: "Secure credentials mode is on but --no-container runs tools on the host. " +
-				"Use container mode (default) so agents cannot read ~/.hawk/env or provider.json.",
+			content: "--no-container runs tools on the host without sandbox isolation. " +
+				"Use default container mode for safer agent execution.",
 		})
 	}
 
@@ -306,8 +307,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	// Prefetch models for current provider in background so /config and /model are instant
 	go func() {
 		provider := effectiveProvider
-		models, _ := hawkconfig.FetchModelsForProvider(provider)
-		opts := modelOptionsFromEntries(models)
+		entries, _ := eyrieclient.ListModelsForProvider(context.Background(), provider)
+		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCache[provider] = opts
 		}
@@ -665,11 +666,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case modelsFetchedMsg:
+		if msg.err != nil {
+			if m.configOpen {
+				m.configNotice = eyrieclient.FormatSetupError(msg.provider, msg.err)
+				m.viewDirty = true
+				m.updateViewportContent()
+			}
+			return m, nil
+		}
 		if len(msg.options) > 0 {
 			m.configModelOptions = msg.options
 			if msg.provider != "" {
 				modelCache[msg.provider] = msg.options
 			}
+		} else if m.configOpen && msg.err == nil {
+			m.configNotice = hawkconfig.CatalogEmptyHint(context.Background())
 		}
 		if m.configOpen {
 			m.viewDirty = true
@@ -677,32 +688,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case configDeploymentsLoadedMsg:
-		next, _ := m.handleConfigDeploymentMsg(msg)
-		if m.configOpen {
-			next.viewDirty = true
-			next.updateViewportContent()
-		}
-		return next, nil
-
-	case configRoutingPreviewMsg:
-		next, _ := m.handleConfigRoutingMsg(msg)
-		if m.configOpen {
-			next.viewDirty = true
-			next.updateViewportContent()
-		}
-		return next, nil
-
-	case configCatalogRefreshMsg:
-		next, cmd := m.handleConfigCatalogRefreshMsg(msg)
+	case configApplyCredentialsMsg:
+		next, cmd := m.handleConfigApplyCredentialsMsg(msg)
 		if m.configOpen {
 			next.viewDirty = true
 			next.updateViewportContent()
 		}
 		return next, cmd
 
-	case configApplyCredentialsMsg:
-		next, cmd := m.handleConfigApplyCredentialsMsg(msg)
+	case configKeyResolvedMsg:
+		next, cmd := m.handleConfigKeyResolvedMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, cmd
+
+	case configRemoveCredentialMsg:
+		next, cmd := m.handleConfigRemoveCredentialMsg(msg)
 		if m.configOpen {
 			next.viewDirty = true
 			next.updateViewportContent()
@@ -829,13 +832,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case firstRunOpenConfigMsg:
-		m.configOpen = true
-		m.configMenu = "hub"
-		m.configSel = 0
-		m.configScroll = 0
-		m.configNotice = hawkconfig.EvaluateSetup(context.Background()).Hint
-		m.viewDirty = true
-		return m, fetchDeploymentsAsync()
+		return m.openFirstRunConfig()
 
 	case containerStatusMsg:
 		m.containerStatus = msg.status

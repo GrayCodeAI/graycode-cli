@@ -1,10 +1,13 @@
 package config
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestLoadAgentsMD(t *testing.T) {
@@ -133,8 +136,11 @@ func TestLoadSettingsProjectMergeIncludesArchiveFields(t *testing.T) {
 	defer os.Chdir(orig)
 
 	settings := LoadSettings()
-	if settings.Model != "project" {
-		t.Fatalf("expected project model override, got %q", settings.Model)
+	if got := ActiveModel(nil); got != "project" {
+		t.Fatalf("expected project model in eyrie, got %q (settings.model=%q)", got, settings.Model)
+	}
+	if settings.Model != "" {
+		t.Fatalf("model must not remain in hawk settings.json, got %q", settings.Model)
 	}
 	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Read" {
 		t.Fatalf("expected global allowedTools, got %v", settings.AllowedTools)
@@ -164,8 +170,14 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	}
 
 	settings := LoadGlobalSettings()
-	if settings.Model != "test-model" {
-		t.Fatalf("unexpected model: %q", settings.Model)
+	if got := ActiveModel(nil); got != "test-model" {
+		t.Fatalf("unexpected active model: %q (settings.model=%q)", got, settings.Model)
+	}
+	if settings.Model != "" {
+		t.Fatalf("model must not be stored in settings.json, got %q", settings.Model)
+	}
+	if got, ok := SettingValue(settings, "model"); !ok || got != "test-model" {
+		t.Fatalf("unexpected model setting value: %q ok=%v", got, ok)
 	}
 	if got, ok := SettingValue(settings, "allowed_tools"); !ok || got != "Read, Write" {
 		t.Fatalf("unexpected allowedTools value: %q ok=%v", got, ok)
@@ -173,8 +185,11 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	if got, ok := SettingValue(settings, "max_budget_usd"); !ok || got != "2.5" {
 		t.Fatalf("unexpected max budget value: %q ok=%v", got, ok)
 	}
-	// API key status from environment
-	t.Setenv("OPENAI_API_KEY", "sk-test")
+	// API key status from OS secret store
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-test")
 	if got, ok := SettingValue(settings, "apiKey.openai"); !ok || got != "set" {
 		t.Fatalf("unexpected provider API key status: %q ok=%v", got, ok)
 	}

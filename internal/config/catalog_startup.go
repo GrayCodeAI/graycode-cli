@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // CatalogReady reports whether the eyrie catalog cache exists and has models.
@@ -19,10 +21,13 @@ func CatalogReady(ctx context.Context) bool {
 func CatalogStatusLine(ctx context.Context) string {
 	h := CatalogHealthReport(ctx)
 	if h.Error != "" {
-		return "Catalog: unavailable (will retry automatically)"
+		if !h.Exists {
+			return "Catalog: missing — " + CatalogEmptyHint(ctx)
+		}
+		return "Catalog: unavailable — " + CatalogEmptyHint(ctx)
 	}
 	if h.Models == 0 {
-		return "Catalog: empty (will refresh automatically)"
+		return "Catalog: empty — " + CatalogEmptyHint(ctx)
 	}
 	if h.Stale {
 		return fmt.Sprintf("Catalog: updating… (%d models cached)", h.Models)
@@ -44,16 +49,26 @@ func PrepareCatalogForSession(ctx context.Context, out io.Writer, opts CatalogSt
 	if !catalogNeedsAutoRefresh(h, opts) {
 		return nil
 	}
+	hadUsableCache := h.Error == "" && h.Models > 0
 	if err := AutoRefreshCatalog(ctx, out, opts.VerboseOutput); err != nil {
-		return fmt.Errorf("automatic catalog refresh failed: %w\n\nCheck network access and API keys in the environment or ~/.hawk/env.\nCache path: %s", err, CatalogCachePathForDisplay())
+		if hadUsableCache {
+			if out != nil {
+				fmt.Fprintf(out, "Catalog refresh skipped (using %d cached models): %v\n", h.Models, err)
+			}
+			return nil
+		}
+		return fmt.Errorf("automatic catalog refresh failed: %w\n\n%s\nCache path: %s", err, catalogRefreshFailureHint(ctx), CatalogCachePathForDisplay())
 	}
 	h = CatalogHealthReport(ctx)
 	if h.Error != "" || h.Models == 0 {
+		if hadUsableCache {
+			return nil
+		}
 		msg := "model catalog unavailable after refresh"
 		if h.Error != "" {
 			msg = h.Error
 		}
-		return fmt.Errorf("%s\n\nCheck network access and API keys.\nCache path: %s", msg, CatalogCachePathForDisplay())
+		return fmt.Errorf("%s\n\n%s\nCache path: %s", msg, catalogRefreshFailureHint(ctx), CatalogCachePathForDisplay())
 	}
 	return nil
 }
@@ -149,6 +164,13 @@ func DiscoverCatalogAfterSetup(ctx context.Context, out io.Writer) {
 		return
 	}
 	_ = AutoRefreshCatalog(ctx, out, false)
+}
+
+func catalogRefreshFailureHint(ctx context.Context) string {
+	if !HasConfiguredDeployment(ctx) {
+		return "No API keys in " + credentials.PlatformSecretStoreName() + ". Run /config to paste a key or set up Ollama."
+	}
+	return "Check network access and stored keys (" + credentials.PlatformSecretStoreName() + "). Run hawk preflight or /config."
 }
 
 func autoRefreshCatalogEnabled() bool {
