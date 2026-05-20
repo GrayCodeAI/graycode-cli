@@ -170,6 +170,7 @@ func TestPersistAPIKey_RejectsPlaceholder(t *testing.T) {
 
 func TestEvaluateSetupCached_MatchesWarmSnapshot(t *testing.T) {
 	InvalidateConfigUICache()
+	isolateCredentialEnv(t)
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
@@ -185,7 +186,10 @@ func TestEvaluateSetupCached_MatchesWarmSnapshot(t *testing.T) {
 	if !cached.HasCredentials {
 		t.Fatal("expected cached credentials")
 	}
-	if cached.Hint == "" {
-		t.Fatal("expected setup hint when model not selected")
+	if cached.HasModel {
+		t.Fatal("expected no model selected in isolated home")
+	}
+	if cached.Hint != "Almost ready: pick a model to start chatting" {
+		t.Fatalf("hint = %q", cached.Hint)
 	}
 }

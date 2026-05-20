@@ -13,6 +13,7 @@ import (
 
 func TestChatConnectionStatus_WithModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
+	isolateCredentialHome(t)
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
@@ -45,6 +46,7 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 
 func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
+	isolateCredentialHome(t)
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
@@ -67,6 +69,7 @@ func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 
 func TestChatConnectionStatus_NoGatewayNoModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
+	isolateCredentialHome(t)
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
