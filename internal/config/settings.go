@@ -507,16 +507,6 @@ func NormalizeProviderForEngine(provider string) string {
 	}
 }
 
-// providerFromSettingKey extracts the provider name from a setting key like "apikey.openai".
-func providerFromSettingKey(normalized string) string {
-	for _, prefix := range []string{"apikey.", "apikey:"} {
-		if strings.HasPrefix(normalized, prefix) {
-			return normalizeProviderName(strings.TrimPrefix(normalized, prefix))
-		}
-	}
-	return ""
-}
-
 // ─────────────────────────────────────────────────────────────
 // Live model catalog fetch from eyrie
 // ─────────────────────────────────────────────────────────────
@@ -582,11 +572,6 @@ func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.Compi
 		CachePath:    catalog.DefaultCachePath(),
 		RequireCache: false,
 	})
-}
-
-func eyrieModelCatalogCachePath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".eyrie", "model_catalog.json")
 }
 
 func catalogProviderID(provider string) string {

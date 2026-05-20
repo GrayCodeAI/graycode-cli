@@ -26,13 +26,6 @@ type configKeyResolvedMsg struct {
 	result hawkconfig.CredentialResolveResult
 }
 
-func (m chatModel) configPanelTitle() string {
-	if hawkconfig.NeedsFirstRunSetup(context.Background()) {
-		return "⚙ First-time setup (eyrie)"
-	}
-	return "⚙ Hawk config (eyrie)"
-}
-
 // openConfigPanel: hub → paste key / Ollama / pick model.
 func (m chatModel) openConfigPanel() (chatModel, tea.Cmd) {
 	ctx := context.Background()
@@ -239,14 +232,6 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
 	m.configInput.Focus()
 	return m, textinput.Blink
-}
-
-func toConfigModelOptions(in []hawkconfig.ModelOption) []configModelOption {
-	out := make([]configModelOption, len(in))
-	for i, o := range in {
-		out[i] = configModelOption{ID: o.ID, DisplayName: o.DisplayName}
-	}
-	return out
 }
 
 func (m chatModel) configProvidersView() string {

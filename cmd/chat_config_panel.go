@@ -359,7 +359,7 @@ func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
 	if m.configMenu != "model" {
 		return m, nil
 	}
-	modelID := option
+	var modelID string
 	if m.configSel >= 0 && m.configSel < len(m.configModelOptions) {
 		modelID = m.configModelOptions[m.configSel].ID
 	} else {

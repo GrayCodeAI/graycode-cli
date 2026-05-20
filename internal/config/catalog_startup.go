@@ -53,7 +53,7 @@ func PrepareCatalogForSession(ctx context.Context, out io.Writer, opts CatalogSt
 	if err := AutoRefreshCatalog(ctx, out, opts.VerboseOutput); err != nil {
 		if hadUsableCache {
 			if out != nil {
-				fmt.Fprintf(out, "Catalog refresh skipped (using %d cached models): %v\n", h.Models, err)
+				_, _ = fmt.Fprintf(out, "Catalog refresh skipped (using %d cached models): %v\n", h.Models, err)
 			}
 			return nil
 		}
@@ -96,9 +96,9 @@ func catalogNeedsAutoRefresh(h CatalogHealth, opts CatalogStartupOptions) bool {
 func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error {
 	if out != nil {
 		if verbose {
-			fmt.Fprintln(out, "Discovering model catalog (published catalog + live provider APIs)...")
+			_, _ = fmt.Fprintln(out, "Discovering model catalog (published catalog + live provider APIs)...")
 		} else {
-			fmt.Fprintln(out, "Updating model catalog automatically…")
+			_, _ = fmt.Fprintln(out, "Updating model catalog automatically…")
 		}
 	}
 	refreshCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
@@ -109,16 +109,16 @@ func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error 
 	}
 	if out != nil {
 		if verbose {
-			fmt.Fprintln(out, strings.TrimSpace(result.DiscoverReport()))
+			_, _ = fmt.Fprintln(out, strings.TrimSpace(result.DiscoverReport()))
 		} else if result.Compiled != nil {
-			fmt.Fprintf(
+			_, _ = fmt.Fprintf(
 				out, "Catalog ready: %d models, %d deployments → %s\n",
 				len(result.Compiled.ModelsByID),
 				len(result.Compiled.DeploymentsByID),
 				result.CachePath,
 			)
 		}
-		fmt.Println()
+		_, _ = fmt.Fprintln(out)
 	}
 	return nil
 }

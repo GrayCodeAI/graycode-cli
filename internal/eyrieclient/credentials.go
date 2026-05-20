@@ -20,7 +20,7 @@ type CredentialProviderOption = runtime.CredentialProviderOption
 
 // InferenceFromOption converts a provider picker row to persistence metadata.
 func InferenceFromOption(opt CredentialProviderOption) CredentialInference {
-	return eyriecfg.InferenceFromOption(eyriecfg.CredentialProviderOption(opt))
+	return eyriecfg.InferenceFromOption(opt)
 }
 
 // ResolveCredential validates format and lists providers.

@@ -18,12 +18,7 @@ type configRemoveCredentialMsg struct {
 }
 
 func (m chatModel) configRemoveKeyLabels() []string {
-	providers := hawkconfig.ConfiguredCredentialProviders()
-	out := make([]string, len(providers))
-	for i, p := range providers {
-		out[i] = p
-	}
-	return out
+	return hawkconfig.ConfiguredCredentialProviders()
 }
 
 func (m chatModel) beginConfigRemoveKeyPicker() (chatModel, tea.Cmd) {

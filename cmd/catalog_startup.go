@@ -5,21 +5,12 @@ import (
 	"os"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/onboarding"
 )
 
 var (
 	refreshCatalogFlag     bool
 	skipCatalogRefreshFlag bool
 )
-
-func ensureFirstRunSetup() error {
-	if !onboarding.NeedsSetup() {
-		return nil
-	}
-	onboarding.Welcome(version)
-	return onboarding.RunSetup()
-}
 
 func ensureCatalogBeforeAgent(ctx context.Context, strict bool) error {
 	_ = hawkconfig.MigrateProviderConfig()
