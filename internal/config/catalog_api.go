@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
 // CompiledCatalogV1 loads the eyrie catalog from cache or bootstrap wiring (no network).
@@ -14,8 +16,12 @@ func CompiledCatalogV1() *catalog.CompiledCatalogV1 {
 }
 
 func compiledCatalogOrBootstrap() *catalog.CompiledCatalogV1 {
+	if compiled, ok := cachedCompiledCatalog(); ok && compiled != nil {
+		return compiled
+	}
 	compiled, err := loadEyrieCatalogV1(context.Background(), false)
 	if err == nil && compiled != nil {
+		storeCompiledCatalog(compiled)
 		return compiled
 	}
 	bootstrap := catalog.BootstrapCatalogV1()
@@ -23,6 +29,7 @@ func compiledCatalogOrBootstrap() *catalog.CompiledCatalogV1 {
 	if err != nil {
 		return nil
 	}
+	storeCompiledCatalog(compiled)
 	return compiled
 }
 
@@ -46,16 +53,146 @@ func AllCatalogProviders() []string {
 	return out
 }
 
-// DefaultModelForProvider returns the first canonical model for a provider from eyrie's catalog.
-func DefaultModelForProvider(provider string) string {
-	ids, _ := ModelIDsForProvider(provider)
-	if len(ids) > 0 {
-		return ids[0]
+// AllSetupGateways returns gateway IDs where users paste API keys (eyrie registry only).
+// Aggregator owner slugs from OpenRouter/CanopyWave catalogs (ai21, alibaba, …) are excluded.
+func AllSetupGateways() []string {
+	specs := registry.CredentialRegistry()
+	out := make([]string, len(specs))
+	for i, s := range specs {
+		out[i] = s.ProviderID
+	}
+	return out
+}
+
+// setupGatewayRegistryID maps catalog/engine aliases to credential registry gateway ids.
+func setupGatewayRegistryID(provider string) string {
+	p := normalizeProviderName(provider)
+	switch p {
+	case "google":
+		return "gemini"
+	case "xai":
+		return "grok"
+	case "zai":
+		return "z-ai"
+	default:
+		return p
+	}
+}
+
+// IsSetupGateway reports whether id is a registered setup gateway.
+func IsSetupGateway(providerID string) bool {
+	return catalog.IsSetupGateway(setupGatewayRegistryID(providerID))
+}
+
+func GatewayDisplayName(gatewayID string) string {
+	gatewayID = setupGatewayRegistryID(gatewayID)
+	if name := registry.DisplayName(gatewayID); name != gatewayID {
+		return name
+	}
+	return gatewayID
+}
+
+// ActiveGateway returns the user's setup gateway (never an aggregator owner slug like moonshotai).
+func ActiveGateway(ctx context.Context) string {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if p := catalogProviderID(ActiveProvider(ctx)); catalog.IsSetupGateway(p) {
+		return setupGatewayRegistryID(p)
+	}
+	if m := strings.TrimSpace(ActiveModel(ctx)); m != "" {
+		if gw := GatewayForModel(m); gw != "" {
+			return setupGatewayRegistryID(gw)
+		}
 	}
 	return ""
 }
 
-// ModelIDsForProvider lists canonical model IDs for a provider from the eyrie JSON catalog.
+// GatewayForModel resolves the setup gateway for a model id.
+func GatewayForModel(modelID string) string {
+	return catalog.GatewayForModel(CompiledCatalogV1(), modelID)
+}
+
+// ShouldClearSelectionAfterCredentialRemove reports whether provider/model should reset.
+func ShouldClearSelectionAfterCredentialRemove(ctx context.Context, removedProvider string) bool {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	removedProvider = catalogProviderID(removedProvider)
+	if !HasConfiguredDeployment(ctx) {
+		return true
+	}
+	if gw := ActiveGateway(ctx); gw == removedProvider {
+		return true
+	}
+	if m := strings.TrimSpace(ActiveModel(ctx)); m != "" && GatewayForModel(m) == removedProvider {
+		return true
+	}
+	return false
+}
+
+// ClearActiveSelection removes persisted provider/model from provider.json.
+func ClearActiveSelection(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return runtime.ClearActiveSelection(ctx)
+}
+
+// SyncSelectionWithCredentials clears stale provider/model when keys are missing.
+func SyncSelectionWithCredentials(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if !HasConfiguredDeployment(ctx) {
+		if HasSelectedModel() || strings.TrimSpace(ActiveProvider(ctx)) != "" {
+			_ = ClearActiveSelection(ctx)
+		}
+		return
+	}
+	gw := ActiveGateway(ctx)
+	if gw == "" {
+		return
+	}
+	if !credentialConfiguredForGateway(ctx, gw) {
+		_ = ClearActiveSelection(ctx)
+	}
+}
+
+func credentialConfiguredForGateway(ctx context.Context, gateway string) bool {
+	ensureCredSnapshot(ctx)
+	uiCacheMu.RLock()
+	defer uiCacheMu.RUnlock()
+	if !credValid {
+		return false
+	}
+	gateway = setupGatewayRegistryID(gateway)
+	return credConfigured[gateway]
+}
+
+func DefaultModelForProvider(provider string) string {
+	compiled := CompiledCatalogV1()
+	if compiled != nil {
+		if id := catalog.FirstModelForProvider(compiled, provider); id != "" {
+			return id
+		}
+	}
+	return catalog.GetProviderDefaultModel(provider, nil)
+}
+
+// CachedModelCountForProvider returns model count from the on-disk catalog only (no network).
+func CachedModelCountForProvider(provider string) int {
+	provider = setupGatewayRegistryID(provider)
+	if provider == "" {
+		return 0
+	}
+	compiled := CompiledCatalogV1()
+	if compiled == nil {
+		return 0
+	}
+	return len(catalog.ModelEntriesForProvider(compiled, provider))
+}
+
 func ModelIDsForProvider(provider string) ([]string, error) {
 	entries, err := FetchModelsForProvider(provider)
 	if err != nil {

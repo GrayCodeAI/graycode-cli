@@ -6,21 +6,33 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/GrayCodeAI/eyrie/catalog"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
 // configModelOption is one row in the /config model picker (display from eyrie, id for settings).
 type configModelOption struct {
-	ID          string
-	DisplayName string
+	ID               string
+	DisplayName      string
+	Owner            string
+	ContextWindow    int
+	InputPricePer1M  float64
+	OutputPricePer1M float64
 }
 
 var modelCache = make(map[string][]configModelOption)
 
-// InvalidateModelCache clears in-memory model picker rows (call after credential apply or catalog refresh).
+// InvalidateModelCache clears all in-memory model picker rows.
 func InvalidateModelCache() {
 	modelCache = make(map[string][]configModelOption)
+	hawkconfig.InvalidateConfigUICache()
+}
+
+// InvalidateModelCacheProvider drops one gateway's cached picker rows.
+func InvalidateModelCacheProvider(provider string) {
+	delete(modelCache, strings.TrimSpace(provider))
+	hawkconfig.InvalidateConfigUICache()
 }
 
 func fetchModelsAsync(provider string) tea.Cmd {
@@ -33,7 +45,7 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		entries, err := eyrieclient.ListModelsForProvider(ctx, provider)
 		if err != nil {
 			if _, derr := eyrieclient.Discover(ctx); derr == nil {
-				InvalidateModelCache()
+				InvalidateModelCacheProvider(provider)
 				entries, err = eyrieclient.ListModelsForProvider(ctx, provider)
 			}
 		}
@@ -52,7 +64,30 @@ func configModelOptionsFromEyrie(entries []eyrieclient.ModelEntry) []configModel
 	out := eyrieclient.ModelOptionsFromEntries(entries)
 	opts := make([]configModelOption, len(out))
 	for i, o := range out {
-		opts[i] = configModelOption{ID: o.ID, DisplayName: o.DisplayName}
+		opts[i] = configModelOption{
+			ID:               o.ID,
+			DisplayName:      o.DisplayName,
+			Owner:            o.Owner,
+			ContextWindow:    o.ContextWindow,
+			InputPricePer1M:  o.InputPricePer1M,
+			OutputPricePer1M: o.OutputPricePer1M,
+		}
+	}
+	return opts
+}
+
+func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []configModelOption {
+	opts := make([]configModelOption, len(entries))
+	for i, e := range entries {
+		owner := catalog.ModelOwner(e)
+		opts[i] = configModelOption{
+			ID:               e.ID,
+			DisplayName:      e.DisplayName,
+			Owner:            owner,
+			ContextWindow:    e.ContextWindow,
+			InputPricePer1M:  e.InputPricePer1M,
+			OutputPricePer1M: e.OutputPricePer1M,
+		}
 	}
 	return opts
 }
@@ -65,13 +100,13 @@ func loadConfigModelOptions(provider string) []configModelOption {
 	if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
 		return cached
 	}
-	entries, err := eyrieclient.ListModelsForProvider(context.Background(), provider)
-	if err != nil || len(entries) == 0 {
-		return nil
+	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
+		entries := catalog.ModelEntriesForProvider(compiled, provider)
+		if len(entries) > 0 {
+			opts := configModelOptionsFromCatalog(entries)
+			modelCache[provider] = opts
+			return opts
+		}
 	}
-	opts := configModelOptionsFromEyrie(entries)
-	if len(opts) > 0 {
-		modelCache[provider] = opts
-	}
-	return opts
+	return nil
 }

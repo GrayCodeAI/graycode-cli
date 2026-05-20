@@ -31,6 +31,10 @@
       "id": "xai",
       "name": "xAI"
     },
+    "canopywave": {
+      "id": "canopywave",
+      "name": "CanopyWave"
+    },
     "z-ai": {
       "id": "z-ai",
       "name": "Z.AI"
@@ -78,7 +82,7 @@
     "canopywave": {
       "id": "canopywave",
       "name": "CanopyWave",
-      "provider_id": "z-ai",
+      "provider_id": "canopywave",
       "api_protocol_id": "openai-chat-completions",
       "adapter_constructor": "canopywave",
       "native_model_id_source": "catalog_known"

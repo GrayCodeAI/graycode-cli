@@ -28,7 +28,10 @@ import (
 )
 
 func slashCommands() []string {
-	return []string{
+	return allSlashCommands
+}
+
+var allSlashCommands = []string{
 		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
@@ -41,7 +44,35 @@ func slashCommands() []string {
 		"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
 		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
+}
+
+func (m *chatModel) slashSuggestionsFor(input string) []string {
+	if input == m.slashSugInput {
+		return m.slashSugCache
 	}
+	m.slashSugInput = input
+	m.slashSugCache = slashSuggestions(input)
+	return m.slashSugCache
+}
+
+func (m *chatModel) syncInputLayout() bool {
+	if m.configOpen {
+		return false
+	}
+	lines := strings.Count(m.input.Value(), "\n") + 1
+	if lines > 10 {
+		lines = 10
+	}
+	visible := len(m.slashSuggestionsFor(m.input.Value()))
+	if visible > 6 {
+		visible = 6
+	}
+	key := lines<<16 | visible
+	if key == m.layoutKey {
+		return false
+	}
+	m.layoutKey = key
+	return true
 }
 
 func slashAliases() map[string]string {
@@ -163,7 +194,7 @@ func slashSuggestions(input string) []string {
 	}
 	var out []string
 	seen := map[string]bool{}
-	for _, c := range slashCommands() {
+	for _, c := range allSlashCommands {
 		if strings.HasPrefix(c, v) {
 			seen[c] = true
 			desc := slashDescriptions[c]
@@ -562,19 +593,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
-			m.configOpen = true
-			m.configMenu = "model"
-			m.configSel = 0
-			m.configScroll = 0
-			m.configNotice = ""
-			m.viewDirty = true
-			provider := m.session.Provider()
-			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
-				m.configModelOptions = cached
-				return m, nil
-			}
-			m.configModelOptions = nil
-			return m, fetchModelsAsync(provider)
+			next, cmd := m.openConfigAtTab(configTabModels)
+			*m = next
+			return m, cmd
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
 		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
@@ -673,7 +694,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: branchInfo.String()})
 		return m, nil
 	case "/version":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk %s", version)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk v%s", DisplayVersion())})
 		return m, nil
 	case "/env":
 		m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})
@@ -1169,7 +1190,8 @@ Generate the recap:`, summary.String())
 		}
 		m.settings = settings
 		next, cmd := m.openConfigPanel()
-		return next, cmd
+		*m = next
+		return m, cmd
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil

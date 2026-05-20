@@ -2,10 +2,20 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/eyrie/catalog"
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/spf13/cobra"
+)
+
+var (
+	modelsListJSON bool
+	modelsListLive bool
+	modelsListRaw  bool
 )
 
 var modelsCmd = &cobra.Command{
@@ -74,34 +84,76 @@ var modelsRoutingPreviewCmd = &cobra.Command{
 }
 
 var modelsListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List model IDs from the eyrie catalog cache",
+	Use:   "list [provider]",
+	Short: "List models from the eyrie catalog cache (or live provider API)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		provider := ""
 		if len(args) > 0 {
 			provider = args[0]
 		}
-		models, err := hawkconfig.FetchModelsForProvider(provider)
+		ctx := context.Background()
+		var models []catalog.ModelCatalogEntry
+		var err error
+		if modelsListLive {
+			if provider == "" {
+				return fmt.Errorf("provider required with --live (e.g. hawk models list canopywave --live --json)")
+			}
+			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.NormalizeProviderForEngine(provider))
+		} else {
+			models, err = hawkconfig.FetchModelsForProvider(provider)
+		}
 		if err != nil {
 			return err
+		}
+		if modelsListJSON || modelsListRaw {
+			if modelsListRaw {
+				raw := make([]json.RawMessage, 0, len(models))
+				for _, m := range models {
+					if len(m.LiveMetadata) > 0 {
+						raw = append(raw, m.LiveMetadata)
+					}
+				}
+				if len(raw) == 0 && modelsListLive {
+					for _, m := range models {
+						b, merr := json.Marshal(m)
+						if merr != nil {
+							return merr
+						}
+						raw = append(raw, b)
+					}
+				}
+				out, merr := json.MarshalIndent(raw, "", "  ")
+				if merr != nil {
+					return merr
+				}
+				cmd.Println(string(out))
+				return nil
+			}
+			out, merr := json.MarshalIndent(models, "", "  ")
+			if merr != nil {
+				return merr
+			}
+			cmd.Println(string(out))
+			return nil
 		}
 		cmd.Printf("%d models", len(models))
 		if provider != "" {
 			cmd.Printf(" for provider %q", provider)
 		}
 		cmd.Println()
-		for _, m := range models {
-			name := m.DisplayName
-			if name == "" {
-				name = m.ID
-			}
-			cmd.Printf("  %s\n", name)
+		rows := make([]modelTableRow, len(models))
+		for i, m := range models {
+			rows[i] = modelTableRowFromCatalogEntry(m)
 		}
+		printModelTablePlain(rows)
 		return nil
 	},
 }
 
 func init() {
+	modelsListCmd.Flags().BoolVar(&modelsListJSON, "json", false, "Print full catalog entries as JSON (includes live_metadata when cached)")
+	modelsListCmd.Flags().BoolVar(&modelsListLive, "live", false, "Fetch directly from provider API instead of cache")
+	modelsListCmd.Flags().BoolVar(&modelsListRaw, "raw", false, "With --json, print only provider live_metadata objects (same shape as /v1/models data[] items)")
 	modelsCmd.AddCommand(modelsRefreshCmd)
 	modelsCmd.AddCommand(modelsListCmd)
 	modelsCmd.AddCommand(modelsStatusCmd)

@@ -2,7 +2,9 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/catalogtest"
@@ -54,4 +56,107 @@ func TestAutoRefreshCatalogEnabled(t *testing.T) {
 	if !autoRefreshCatalogEnabled() {
 		t.Fatal("expected enabled by default")
 	}
+}
+
+func expectGatewayCountsInLine(t *testing.T, line string, rows []gatewayModelCount) {
+	t.Helper()
+	for _, row := range rows {
+		frag := fmt.Sprintf("%s %d", row.Display, row.Count)
+		if !strings.Contains(line, frag) {
+			t.Fatalf("line %q missing %q", line, frag)
+		}
+	}
+}
+
+func TestFormatCatalogGatewayStatus(t *testing.T) {
+	catalogtest.Install(t)
+	rows := catalogGatewayModelCounts()
+	if len(rows) < 2 {
+		t.Skip("need at least 2 gateways with models in test catalog")
+	}
+	h := CatalogHealthReport(context.Background())
+	line := formatCatalogGatewayStatus("Catalog: ", rows, h.Models)
+	expectGatewayCountsInLine(t, line, rows)
+	if !strings.HasPrefix(line, "Catalog: ") {
+		t.Fatalf("unexpected prefix in %q", line)
+	}
+	if strings.Contains(line, "ready (") {
+		t.Fatalf("expected per-gateway breakdown, got %q", line)
+	}
+}
+
+func TestCatalogStatusLine_GatewayBreakdown(t *testing.T) {
+	catalogtest.Install(t)
+	rows := catalogGatewayModelCounts()
+	if len(rows) == 0 {
+		t.Skip("no gateway counts in test catalog")
+	}
+	line := CatalogStatusLine(context.Background())
+	if strings.Contains(line, "ready (") && strings.Contains(line, "models)") {
+		t.Fatalf("expected gateway breakdown, got %q", line)
+	}
+	expectGatewayCountsInLine(t, line, rows)
+	for _, id := range AllSetupGateways() {
+		count := CachedModelCountForProvider(id)
+		if count <= 0 {
+			continue
+		}
+		frag := fmt.Sprintf("%s %d", GatewayDisplayName(id), count)
+		if !strings.Contains(line, frag) {
+			t.Fatalf("line %q missing cached count %q for gateway %q", line, frag, id)
+		}
+	}
+}
+
+func TestFormatCatalogGatewayStatus_FallbackTotal(t *testing.T) {
+	catalogtest.Install(t)
+	h := CatalogHealthReport(context.Background())
+	if h.Models == 0 {
+		t.Skip("no models in test catalog")
+	}
+	line := formatCatalogGatewayStatus("Catalog: ", nil, h.Models)
+	want := fmt.Sprintf("Catalog: ready (%d models)", h.Models)
+	if line != want {
+		t.Fatalf("line = %q, want %q", line, want)
+	}
+}
+
+func TestFormatCatalogGatewayStatus_UpdatingPrefix(t *testing.T) {
+	catalogtest.Install(t)
+	rows := catalogGatewayModelCounts()
+	if len(rows) == 0 {
+		t.Skip("no gateway counts in test catalog")
+	}
+	h := CatalogHealthReport(context.Background())
+	line := formatCatalogGatewayStatus("Catalog: updating… ", rows, h.Models)
+	wantPrefix := fmt.Sprintf("Catalog: updating… %s %d", rows[0].Display, rows[0].Count)
+	if !strings.HasPrefix(line, wantPrefix) {
+		t.Fatalf("line = %q, want prefix %q", line, wantPrefix)
+	}
+	expectGatewayCountsInLine(t, line, rows)
+}
+
+func TestCatalogGatewayModelCounts_SortedDescending(t *testing.T) {
+	catalogtest.Install(t)
+	rows := catalogGatewayModelCounts()
+	if len(rows) < 2 {
+		t.Skip("need multiple gateways with models")
+	}
+	if rows[0].Count < rows[1].Count {
+		t.Fatalf("expected descending sort, got %+v", rows)
+	}
+	for _, row := range rows {
+		if row.Count != CachedModelCountForProvider(gatewayIDForDisplay(row.Display)) {
+			t.Fatalf("row count %d does not match cache for %q", row.Count, row.Display)
+		}
+	}
+}
+
+func gatewayIDForDisplay(display string) string {
+	for _, id := range AllSetupGateways() {
+		if GatewayDisplayName(id) == display {
+			return id
+		}
+	}
+	return ""
 }

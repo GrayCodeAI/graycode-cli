@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
@@ -22,7 +21,11 @@ func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	if err := eyriecfg.ValidateCredentialSecret(envKey, secret); err != nil {
 		return err
 	}
-	return runtime.SetCredential(ctx, envKey, secret)
+	if err := runtime.SetCredential(ctx, envKey, secret); err != nil {
+		return err
+	}
+	InvalidateConfigUICache()
+	return nil
 }
 
 // PrepareCredentialDiscovery migrates any legacy ~/.hawk/env keys into the OS secret store.
@@ -99,19 +102,16 @@ func InferenceFromOption(opt CredentialProviderOption) CredentialInference {
 
 // SaveCredential validates, probes, and stores via eyrie keychain.
 func SaveCredential(ctx context.Context, inference CredentialInference, secret string) error {
-	return runtime.SaveCredential(ctx, runtime.CredentialInference(inference), secret)
+	if err := runtime.SaveCredential(ctx, runtime.CredentialInference(inference), secret); err != nil {
+		return err
+	}
+	InvalidateConfigUICache()
+	return nil
 }
 
-// ConfiguredCredentialProviders returns catalog providers with a stored API key.
+// ConfiguredCredentialProviders returns setup gateways with a stored API key.
 func ConfiguredCredentialProviders() []string {
-	var out []string
-	for _, p := range AllCatalogProviders() {
-		if EnvKeyStatus(p) == "set" {
-			out = append(out, p)
-		}
-	}
-	sort.Strings(out)
-	return out
+	return configuredCredentialProvidersCached(context.Background())
 }
 
 // FormatCredentialCLIStatus returns hawk credentials status output (providers, not raw env names).
@@ -152,6 +152,9 @@ func RemoveStoredCredential(ctx context.Context, target string) ([]string, error
 			continue
 		}
 		if err := credentials.DeleteSecret(ctx, envKey); err != nil {
+			if len(removed) > 0 {
+				InvalidateConfigUICache()
+			}
 			return removed, err
 		}
 		removed = append(removed, envKey)
@@ -159,6 +162,7 @@ func RemoveStoredCredential(ctx context.Context, target string) ([]string, error
 	if len(removed) == 0 {
 		return nil, fmt.Errorf("no stored credential for %q", target)
 	}
+	InvalidateConfigUICache()
 	return removed, nil
 }
 

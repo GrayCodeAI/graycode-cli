@@ -21,8 +21,18 @@ func EvaluateSetup(ctx context.Context) SetupState {
 		ctx = context.Background()
 	}
 	PrepareCredentialDiscovery(ctx)
-	hasCreds := hasConfiguredDeployment(ctx)
-	hasModel := HasSelectedModel()
+	return evaluateSetupFrom(hasConfiguredDeployment(ctx), HasSelectedModel())
+}
+
+// EvaluateSetupCached uses the in-memory credential snapshot (fast; for TUI hot paths).
+func EvaluateSetupCached(ctx context.Context) SetupState {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return evaluateSetupFrom(HasConfiguredDeploymentCached(ctx), HasSelectedModel())
+}
+
+func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	st := SetupState{
 		HasCredentials: hasCreds,
 		HasModel:       hasModel,
@@ -30,7 +40,7 @@ func EvaluateSetup(ctx context.Context) SetupState {
 	}
 	switch {
 	case !hasCreds:
-		st.Hint = "First-time setup: paste an API key or use Ollama local — setup opens automatically"
+		st.Hint = "First-time setup: run /config to paste an API key or use Ollama local"
 	case !hasModel:
 		st.Hint = "Almost ready: pick a model to start chatting"
 	}
@@ -55,6 +65,10 @@ func hasConfiguredDeployment(ctx context.Context) bool {
 			}
 		}
 	}
+	RefreshConfigCredSnapshot(ctx)
+	if hasConfiguredDeploymentCached(ctx) {
+		return true
+	}
 	return eyriecfg.HasAnyConfiguredDeployment(ctx)
 }
 
@@ -65,10 +79,10 @@ func HasSelectedModel() bool {
 
 // NeedsFirstRunSetup is true when the user should complete /config (API key and/or model).
 func NeedsFirstRunSetup(ctx context.Context) bool {
-	return EvaluateSetup(ctx).NeedsSetup
+	return EvaluateSetupCached(ctx).NeedsSetup
 }
 
 // FirstRunSetupHint returns a short banner line for the welcome screen.
 func FirstRunSetupHint(ctx context.Context) string {
-	return EvaluateSetup(ctx).Hint
+	return EvaluateSetupCached(ctx).Hint
 }

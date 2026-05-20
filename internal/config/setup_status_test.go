@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
@@ -11,9 +12,13 @@ import (
 )
 
 func TestHasConfiguredDeployment_FromStore(t *testing.T) {
+	InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
 	_ = store.Set(context.Background(), credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough")
 	if !HasConfiguredDeployment(context.Background()) {
 		t.Fatal("expected true when ANTHROPIC_API_KEY is in secure store")
@@ -34,9 +39,13 @@ func isolateCredentialEnv(t *testing.T) {
 }
 
 func TestHasConfiguredDeployment_RejectsPlaceholder(t *testing.T) {
+	InvalidateConfigUICache()
 	isolateCredentialEnv(t)
 	credentials.SetDefaultStore(emptyCredentialStore{})
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
 
 	ctx := context.Background()
 	compiled := CompiledCatalogV1()
@@ -53,9 +62,13 @@ func TestHasConfiguredDeployment_RejectsPlaceholder(t *testing.T) {
 }
 
 func TestEvaluateSetup_WithoutCredentials(t *testing.T) {
+	InvalidateConfigUICache()
 	isolateCredentialEnv(t)
 	credentials.SetDefaultStore(emptyCredentialStore{})
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
 
 	ctx := context.Background()
 	compiled := CompiledCatalogV1()
@@ -76,9 +89,103 @@ func TestEvaluateSetup_WithoutCredentials(t *testing.T) {
 	}
 }
 
+func TestSyncSelectionWithCredentials_ClearsStaleModel(t *testing.T) {
+	InvalidateConfigUICache()
+	isolateCredentialEnv(t)
+	credentials.SetDefaultStore(emptyCredentialStore{})
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
+
+	ctx := context.Background()
+	if err := SetActiveProvider(ctx, "openrouter"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetActiveModel(ctx, "moonshotai/kimi-k2.6"); err != nil {
+		t.Fatal(err)
+	}
+	SyncSelectionWithCredentials(ctx)
+	if HasSelectedModel() {
+		t.Fatalf("expected stale model cleared, active = %q", ActiveModel(ctx))
+	}
+	if p := strings.TrimSpace(ActiveProvider(ctx)); p != "" {
+		t.Fatalf("expected stale provider cleared, got %q", p)
+	}
+}
+
+func TestSyncSelectionWithCredentials_KeepsWhenGatewayHasKey(t *testing.T) {
+	InvalidateConfigUICache()
+	isolateCredentialEnv(t)
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
+
+	ctx := context.Background()
+	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	InvalidateConfigUICache()
+	if err := SetActiveProvider(ctx, "openrouter"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetActiveModel(ctx, "openrouter/auto"); err != nil {
+		t.Fatal(err)
+	}
+
+	SyncSelectionWithCredentials(ctx)
+	if ActiveModel(ctx) != "openrouter/auto" {
+		t.Fatalf("model = %q", ActiveModel(ctx))
+	}
+}
+
+func TestFirstRunSetupHint_NoAutoOpen(t *testing.T) {
+	InvalidateConfigUICache()
+	isolateCredentialEnv(t)
+	credentials.SetDefaultStore(emptyCredentialStore{})
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
+
+	hint := FirstRunSetupHint(context.Background())
+	if hint == "" {
+		t.Fatal("expected hint without credentials")
+	}
+	if strings.Contains(strings.ToLower(hint), "automatically") {
+		t.Fatalf("hint should not auto-open config: %q", hint)
+	}
+	if !strings.Contains(hint, "/config") {
+		t.Fatalf("hint should mention /config: %q", hint)
+	}
+}
+
 func TestPersistAPIKey_RejectsPlaceholder(t *testing.T) {
 	err := PersistAPIKey(context.Background(), "OPENAI_API_KEY", "your-api-key")
 	if err == nil {
 		t.Fatal("expected error for placeholder key")
+	}
+}
+
+func TestEvaluateSetupCached_MatchesWarmSnapshot(t *testing.T) {
+	InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
+
+	ctx := context.Background()
+	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	RefreshConfigCredSnapshot(ctx)
+
+	cached := EvaluateSetupCached(ctx)
+	if !cached.HasCredentials {
+		t.Fatal("expected cached credentials")
+	}
+	if cached.Hint == "" {
+		t.Fatal("expected setup hint when model not selected")
 	}
 }

@@ -5,16 +5,52 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
-// CatalogReady reports whether the eyrie catalog cache exists and has models.
-func CatalogReady(ctx context.Context) bool {
-	h := CatalogHealthReport(ctx)
-	return h.Error == "" && h.Models > 0 && !h.Stale
+type gatewayModelCount struct {
+	Display string
+	Count   int
+}
+
+// catalogGatewayModelCounts returns cached model counts per setup gateway (non-zero only).
+func catalogGatewayModelCounts() []gatewayModelCount {
+	var out []gatewayModelCount
+	for _, id := range AllSetupGateways() {
+		n := CachedModelCountForProvider(id)
+		if n <= 0 {
+			continue
+		}
+		out = append(out, gatewayModelCount{
+			Display: GatewayDisplayName(id),
+			Count:   n,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		return out[i].Display < out[j].Display
+	})
+	return out
+}
+
+func formatCatalogGatewayStatus(prefix string, rows []gatewayModelCount, total int) string {
+	if len(rows) == 0 {
+		if total > 0 {
+			return fmt.Sprintf("%sready (%d models)", prefix, total)
+		}
+		return prefix + "empty"
+	}
+	parts := make([]string, len(rows))
+	for i, row := range rows {
+		parts[i] = fmt.Sprintf("%s %d", row.Display, row.Count)
+	}
+	return prefix + strings.Join(parts, " · ")
 }
 
 // CatalogStatusLine returns a short one-line status for the TUI welcome banner.
@@ -29,10 +65,17 @@ func CatalogStatusLine(ctx context.Context) string {
 	if h.Models == 0 {
 		return "Catalog: empty — " + CatalogEmptyHint(ctx)
 	}
+	rows := catalogGatewayModelCounts()
 	if h.Stale {
-		return fmt.Sprintf("Catalog: updating… (%d models cached)", h.Models)
+		return formatCatalogGatewayStatus("Catalog: updating… ", rows, h.Models)
 	}
-	return fmt.Sprintf("Catalog: ready (%d models)", h.Models)
+	return formatCatalogGatewayStatus("Catalog: ", rows, h.Models)
+}
+
+// CatalogReady reports whether the eyrie catalog cache exists and has models.
+func CatalogReady(ctx context.Context) bool {
+	h := CatalogHealthReport(ctx)
+	return h.Error == "" && h.Models > 0 && !h.Stale
 }
 
 // CatalogStartupOptions controls automatic catalog refresh at hawk startup.
@@ -103,10 +146,14 @@ func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error 
 	}
 	refreshCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	result, err := refreshModelCatalog(refreshCtx)
+	result, err := refreshModelCatalog(refreshCtx, false)
 	if err != nil {
 		return err
 	}
+	if result.Compiled != nil {
+		storeCompiledCatalog(result.Compiled)
+	}
+	InvalidateConfigUICache()
 	if out != nil {
 		if verbose {
 			_, _ = fmt.Fprintln(out, strings.TrimSpace(result.DiscoverReport()))

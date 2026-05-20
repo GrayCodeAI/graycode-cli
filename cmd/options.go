@@ -145,6 +145,10 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 
 func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	ctx := context.Background()
+	hawkconfig.SyncSelectionWithCredentials(ctx)
+	if !hawkconfig.HasConfiguredDeployment(ctx) {
+		return "", ""
+	}
 	effectiveModel := hawkconfig.ActiveModel(ctx)
 	if strings.TrimSpace(model) != "" {
 		effectiveModel = strings.TrimSpace(model)

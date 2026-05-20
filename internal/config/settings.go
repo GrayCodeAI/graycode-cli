@@ -544,16 +544,18 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog (check API keys; hawk will refresh automatically on next start)", provider)
 }
 
-func refreshModelCatalog(ctx context.Context) (*catalog.RefreshResult, error) {
-	return setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentials(ctx))
+func refreshModelCatalog(ctx context.Context, force bool) (*catalog.RefreshResult, error) {
+	return setup.DiscoverModelCatalogWithOptions(ctx, eyriecfg.DiscoveryCredentials(ctx), setup.DiscoverModelCatalogOptions{
+		ForceRefresh: force,
+	})
 }
 
 // RefreshModelCatalogV1 asks eyrie to refresh the remote catalog and provider APIs using env API keys.
 func RefreshModelCatalogV1(ctx context.Context) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 
-	result, err := refreshModelCatalog(ctx)
+	result, err := refreshModelCatalog(ctx, true)
 	if err != nil {
 		return "", err
 	}

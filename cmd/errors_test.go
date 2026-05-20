@@ -88,6 +88,17 @@ func TestFriendlyErrorAuth(t *testing.T) {
 	}
 }
 
+func TestFriendlyErrorInsufficientCredits(t *testing.T) {
+	errMsg := "This request requires more credits, or fewer max_tokens. You requested up to 8192 tokens, but can only afford 5705."
+	got := friendlyError(errors.New(errMsg))
+	if strings.Contains(got, "/compact") {
+		t.Fatalf("credits error should not map to context window: %q", got)
+	}
+	if !strings.Contains(got, "credits") {
+		t.Fatalf("expected credits guidance, got %q", got)
+	}
+}
+
 func TestFriendlyErrorContextTooLong(t *testing.T) {
 	tests := []struct {
 		name   string

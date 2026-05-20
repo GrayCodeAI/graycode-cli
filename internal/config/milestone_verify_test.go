@@ -89,10 +89,14 @@ func TestVerify_PersistAPIKeyDoesNotWriteProviderJSON(t *testing.T) {
 }
 
 func TestVerify_EvaluateSetupFlow(t *testing.T) {
+	InvalidateConfigUICache()
 	isolateMilestoneTest(t)
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
 
 	ctx := context.Background()
 	compiled := CompiledCatalogV1()
@@ -111,6 +115,7 @@ func TestVerify_EvaluateSetupFlow(t *testing.T) {
 	if err := store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), secret); err != nil {
 		t.Fatal(err)
 	}
+	InvalidateConfigUICache()
 	st = EvaluateSetup(ctx)
 	if !st.HasCredentials {
 		t.Fatal("expected credentials after keychain key set")

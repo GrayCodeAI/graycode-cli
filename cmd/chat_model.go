@@ -34,6 +34,14 @@ var (
 	errorStyle   = lipgloss.NewStyle().Foreground(errorColor)
 	toolStyle    = lipgloss.NewStyle().Foreground(toolColor).Bold(true)
 	toolDimStyle = lipgloss.NewStyle().Foreground(dimColor)
+
+	slashCmdStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
+	slashDescStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
+	slashSelCmdStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	slashSelDescStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	inputBorderStyle  = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(lipgloss.Color("#555555"))
+	ghostHintStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
+	containerErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
 )
 
 // Hawk spinner frames: dot-by-dot build then reverse (like Droid)
@@ -63,14 +71,13 @@ type (
 )
 
 type (
-	glimmerTickMsg   struct{}
+	glimmerTickMsg   struct{} // unused; kept for tea.Msg compatibility
 	modelsFetchedMsg struct {
 		options  []configModelOption
 		provider string
 		err      error
 	}
 	loopTickMsg           struct{ command string }
-	firstRunOpenConfigMsg struct{}
 	toolUseMsg            struct{ name, id string }
 	toolResultMsg         struct{ name, content string }
 	permissionAskMsg      struct{ req engine.PermissionRequest }
@@ -124,15 +131,17 @@ type chatModel struct {
 	blinkClosed            bool
 	slashSel               int
 	configOpen             bool
-	configMenu             string
+	configTab              int    // configTabKeys, configTabGateways, configTabModels
+	configMenu             string // configMenuNone, configMenuProviders
 	configSel              int
 	configScroll           int // scroll offset for long lists
 	configNotice           string
-	configEntry            string
-	configProvider         string
+	configEntry            string // configEntryNone, configEntryAPIKeyPaste, configEntryOllamaURL
+	configProvider         string // e.g. configProviderOllama while entry overlay is open
 	configModelOptions     []configModelOption // labels + ids from eyrie catalog
 	configModelProvider    string              // filter models after API key paste
 	configGuideAfterKey    bool                // open model picker when discover finishes
+	configGatewayFocus     int                 // last highlighted gateway row (for refresh action)
 	configPendingKey       string
 	configProviderOptions  []hawkconfig.CredentialProviderOption
 	configSaving           bool // blocks hub/list input while async credential work runs
@@ -152,6 +161,13 @@ type chatModel struct {
 	toolStartTime          time.Time
 	welcomeCache           string
 	viewDirty              bool
+	layoutKey              int    // input lines + slash menu height fingerprint
+	slashSugInput          string // memoize slashSuggestions per keystroke
+	slashSugCache          []string
+	connStatusKey          string // gateway+model+creds fingerprint
+	connStatusVal          string
+	partialDirty           bool // stream text changed since last viewport paint
+	lastPartialRender      time.Time
 	activeSkills           map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
@@ -177,6 +193,24 @@ type chatModel struct {
 	sourceRoots  *engine.SourceRoots
 	selfImprover *engine.SelfImprover
 	codingSoul   *engine.CodingSoul
+}
+
+const streamRenderInterval = 50 * time.Millisecond
+
+func (m *chatModel) markPartialDirty() {
+	m.partialDirty = true
+	if time.Since(m.lastPartialRender) >= streamRenderInterval {
+		m.viewDirty = true
+		m.lastPartialRender = time.Now()
+		m.partialDirty = false
+	}
+}
+
+func (m *chatModel) flushPartialDirty() {
+	if m.partialDirty {
+		m.viewDirty = true
+		m.partialDirty = false
+	}
 }
 
 func blinkTickCmd() tea.Cmd {

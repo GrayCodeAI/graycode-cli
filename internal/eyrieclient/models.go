@@ -60,15 +60,26 @@ func ListProviderSetupOptions(ctx context.Context) []ProviderSetupOption {
 
 // ModelOption is a simplified picker row for hawk config.
 type ModelOption struct {
-	ID          string
-	DisplayName string
+	ID               string
+	DisplayName      string
+	Owner            string
+	ContextWindow    int
+	InputPricePer1M  float64
+	OutputPricePer1M float64
 }
 
 // ModelOptionsFromEntries converts runtime entries to hawk picker rows.
 func ModelOptionsFromEntries(in []ModelEntry) []ModelOption {
 	out := make([]ModelOption, len(in))
 	for i, e := range in {
-		out[i] = ModelOption{ID: e.ID, DisplayName: e.DisplayName}
+		out[i] = ModelOption{
+			ID:               e.ID,
+			DisplayName:      e.DisplayName,
+			Owner:            e.Owner,
+			ContextWindow:    e.ContextWindow,
+			InputPricePer1M:  e.InputPricePer1M,
+			OutputPricePer1M: e.OutputPricePer1M,
+		}
 	}
 	return out
 }

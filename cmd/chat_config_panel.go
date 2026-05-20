@@ -40,41 +40,42 @@ func shortModelID(id string) string {
 	return id
 }
 
-// /config → paste key → all providers (eyrie) → model from catalog
-
-func (m chatModel) configOptions() []string {
-	switch m.configMenu {
-	case "hub":
-		return m.configHubLabels()
-	case "providers":
-		return m.configProviderLabels()
-	case "remove-key":
-		return m.configRemoveKeyLabels()
-	case "model":
-		return configModelChoices(m.configModelOptions, m.configModelProvider == "")
+func (m chatModel) configTabItemCount() int {
+	switch {
+	case m.configMenu == configMenuProviders:
+		return len(m.configProviderOptions)
 	default:
-		return nil
+		switch m.configTab {
+		case configTabKeys:
+			return len(m.configKeysRows(hawkconfig.ConfiguredCredentialProviders()))
+		case configTabGateways:
+			return len(m.configGatewayRows()) + 1
+		case configTabModels:
+			return len(m.configModelOptions)
+		}
 	}
+	return 0
 }
 
 func (m chatModel) configPanelView() string {
-	if m.configEntry == "apikey-paste" {
+	if m.configEntry == configEntryAPIKeyPaste {
 		return m.configProviderKeyView()
 	}
-	if m.configEntry == "ollama-url" {
+	if m.configEntry == configEntryOllamaURL {
 		return m.configOllamaURLView()
 	}
-	switch m.configMenu {
-	case "hub":
-		return m.configHubView()
-	case "providers":
+	if m.configMenu == configMenuProviders {
 		return m.configProvidersView()
-	case "remove-key":
-		return m.configRemoveKeyView()
-	case "model":
-		return m.configModelView()
+	}
+	switch m.configTab {
+	case configTabKeys:
+		return m.configKeysView()
+	case configTabGateways:
+		return m.configGatewaysView()
+	case configTabModels:
+		return m.configModelsTabView()
 	default:
-		return ""
+		return m.configKeysView()
 	}
 }
 
@@ -84,7 +85,7 @@ func (m chatModel) configProviderKeyView() string {
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("🔑 Paste API key") + "\n")
-	b.WriteString(mutedStyle.Render("eyrie validates key · you pick provider · dynamic models") + "\n\n")
+	b.WriteString(mutedStyle.Render("eyrie validates key · pick gateway · models load from cache") + "\n\n")
 	if m.useConfigInput {
 		b.WriteString(m.configInput.View() + "\n")
 	} else {
@@ -102,26 +103,30 @@ func (m chatModel) configOllamaURLView() string {
 	b.WriteString(titleStyle.Render("🦙 Ollama local") + "\n")
 	b.WriteString(mutedStyle.Render("no API key · eyrie discovers installed models") + "\n\n")
 	if notice := strings.TrimSpace(m.configNotice); notice != "" {
-		b.WriteString(mutedStyle.Render(notice) + "\n\n")
+		b.WriteString(mutedStyle.Render(sanitizeConfigNotice(notice)) + "\n\n")
 	}
 	if m.useConfigInput {
 		b.WriteString(m.configInput.View() + "\n")
 	} else {
 		b.WriteString(m.input.View() + "\n")
 	}
-	b.WriteString("\n" + mutedStyle.Render("enter connect · esc back") + "\n")
+	b.WriteString("\n" + mutedStyle.Render("enter connect · esc cancel") + "\n")
 	return b.String()
 }
 
 const configWindowSize = 10
 
-func (m chatModel) configModelView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+func (m chatModel) configModelsTabView() string {
+	return m.configTabShellView(m.configModelsBody())
+}
 
-	opts := m.configOptions()
+func (m chatModel) configModelsBody() string {
+	mutedStyle := configMutedStyle()
+	headerStyle := configHeaderStyle()
+	selectedStyle := configSelectedStyle()
+	rowStyle := configRowStyle()
+
+	opts := m.configModelOptions
 	total := len(opts)
 
 	if m.configSel < m.configScroll {
@@ -132,13 +137,12 @@ func (m chatModel) configModelView() string {
 	}
 
 	var b strings.Builder
-	title := "⚙ Select Model"
-	if p := strings.TrimSpace(m.configModelProvider); p != "" {
-		title = "⚙ Pick model (" + p + ")"
+	gw := strings.TrimSpace(m.configModelProvider)
+	if gw == "" {
+		gw = strings.TrimSpace(m.session.Provider())
 	}
-	b.WriteString(titleStyle.Render(title) + "\n\n")
-	if notice := strings.TrimSpace(m.configNotice); notice != "" {
-		b.WriteString(mutedStyle.Render(notice) + "\n\n")
+	if gw != "" {
+		b.WriteString(mutedStyle.Render("Gateway: "+gw) + "\n\n")
 	}
 
 	if total == 0 {
@@ -146,12 +150,13 @@ func (m chatModel) configModelView() string {
 		if hint := hawkconfig.CatalogEmptyHint(context.Background()); hint != "" {
 			b.WriteString(mutedStyle.Render("  "+hint) + "\n")
 		}
-		if m.configModelProvider == "ollama" {
+		if gw == configProviderOllama {
 			b.WriteString(mutedStyle.Render("  Run: ollama pull llama3.2") + "\n")
 		}
-		b.WriteString("\n" + mutedStyle.Render("esc → change provider"))
 		return b.String()
 	}
+
+	b.WriteString("  " + renderModelTableHeader(headerStyle) + "\n")
 
 	if m.configScroll > 0 {
 		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
@@ -162,36 +167,33 @@ func (m chatModel) configModelView() string {
 		end = total
 	}
 	for i := m.configScroll; i < end; i++ {
-		prefix := "  "
-		lineStyle := style
-		if i == m.configSel {
-			prefix = "❯ "
-			lineStyle = selectedStyle
-		}
-		b.WriteString(lineStyle.Render(prefix+opts[i]) + "\n")
+		row := modelTableRowFromOption(opts[i])
+		b.WriteString(renderModelTableRow(row, i == m.configSel, rowStyle, selectedStyle) + "\n")
 	}
 
 	if end < total {
 		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
 	}
 
-	b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("%d models · ↑/↓ · enter · esc", total)))
+	b.WriteString(mutedStyle.Render(fmt.Sprintf("\n%d models · enter select", total)))
 	return b.String()
 }
 
 func (m chatModel) closeConfigPanel() chatModel {
 	m.configOpen = false
-	m.configMenu = ""
+	m.configTab = configTabKeys
+	m.configMenu = configMenuNone
 	m.configSel = 0
 	m.configScroll = 0
 	m.configNotice = ""
-	m.configEntry = ""
+	m.configEntry = configEntryNone
 	m.configProvider = ""
 	m.configPendingKey = ""
 	m.configProviderOptions = nil
 	m.configPendingOllamaURL = ""
 	m.configSaving = false
 	m.configModelOptions = nil
+	m.configGatewayFocus = 0
 	m.viewDirty = true
 	m.restoreChatInput()
 	return m
@@ -208,10 +210,10 @@ func (m *chatModel) restoreChatInput() {
 func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) {
 	m.configEntry = kind
 	m.configProvider = provider
-	if kind == "ollama-url" {
+	if kind == configEntryOllamaURL {
 		return m.startConfigOllamaURL()
 	}
-	if kind != "apikey-paste" {
+	if kind != configEntryAPIKeyPaste {
 		return m, nil
 	}
 	m.useConfigInput = true
@@ -230,28 +232,31 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 	value := strings.TrimSpace(m.configInput.Value())
 	switch m.configEntry {
-	case "ollama-url":
+	case configEntryOllamaURL:
 		if value == "" {
-			value = "http://localhost:11434/v1"
+			value = configDefaultOllamaURL
 		}
 		m.configPendingOllamaURL = value
 		m.configSaving = true
 		m.configNotice = "Checking Ollama and discovering models…"
-		m.configEntry = ""
+		m.configEntry = configEntryNone
+		m.wipeConfigKeyInput()
 		m.restoreChatInput()
 		return m, saveOllamaAsync(value)
-	case "apikey-paste":
+	case configEntryAPIKeyPaste:
 		if value == "" {
-			m.configEntry = ""
+			m.configEntry = configEntryNone
+			m.wipeConfigKeyInput()
 			m.restoreChatInput()
 			return m, nil
 		}
-		m.configNotice = "Resolving providers via eyrie…"
-		m.configEntry = ""
+		m.configNotice = "Resolving gateways via eyrie…"
+		m.configEntry = configEntryNone
+		m.wipeConfigKeyInput()
 		m.restoreChatInput()
 		return m, resolveKeyAsync(value)
 	default:
-		m.configEntry = ""
+		m.configEntry = configEntryNone
 		m.restoreChatInput()
 		return m, nil
 	}
@@ -261,19 +266,18 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
 		switch m.configEntry {
-		case "ollama-url":
-			m.configEntry = ""
+		case configEntryOllamaURL:
+			m.configEntry = configEntryNone
 			m.configProvider = ""
-			m.configMenu = "hub"
-			m.configSel = 1
-			m.configNotice = "Step 1: choose how to connect"
+			m.configTab = configTabKeys
+			m.configNotice = ""
 			m.restoreChatInput()
 			return m, nil
 		default:
-			m.configEntry = ""
+			m.configEntry = configEntryNone
 			m.configProvider = ""
 			m.restoreChatInput()
-			return m.closeConfigPanel(), nil
+			return m, nil
 		}
 	case tea.KeyEnter:
 		return m.finishConfigEntry()
@@ -285,7 +289,7 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 }
 
 func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	if m.configEntry != "" {
+	if m.configEntry != configEntryNone {
 		if m.configSaving {
 			return m, nil
 		}
@@ -294,60 +298,72 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	if m.configSaving {
 		return m, nil
 	}
-	opts := m.configOptions()
-	if len(opts) == 0 {
+	n := m.configTabItemCount()
+	if n == 0 {
 		m.configSel = 0
-		return m, nil
-	}
-	if m.configSel < 0 || m.configSel >= len(opts) {
+	} else if m.configSel < 0 || m.configSel >= n {
 		m.configSel = 0
 	}
 
 	switch msg.Type {
 	case tea.KeyEsc:
-		switch m.configMenu {
-		case "providers":
+		if m.configMenu == configMenuProviders {
 			m.configPendingKey = ""
 			m.configProviderOptions = nil
-			return m.startConfigEntry("apikey-paste", "")
-		case "model":
-			m.configMenu = "hub"
-			m.configSel = 0
-			m.configNotice = m.configHubNotice()
-			m.restoreChatInput()
-			return m, nil
-		case "remove-key":
-			m.configMenu = "hub"
-			m.configSel = 0
-			m.configNotice = m.configHubNotice()
-			m.restoreChatInput()
-			return m, nil
-		case "hub":
-			return m.closeConfigPanel(), nil
-		default:
-			return m.closeConfigPanel(), nil
+			m.configMenu = configMenuNone
+			m.configTab = configTabKeys
+			return m.startConfigEntry(configEntryAPIKeyPaste, "")
 		}
+		if m.configTab == configTabKeys {
+			return m.handleConfigKeysEsc(), nil
+		}
+		return m.closeConfigPanel(), nil
+	case tea.KeyLeft:
+		if m.configMenu != configMenuNone {
+			return m, nil
+		}
+		tab := m.configTab - 1
+		if tab < configTabKeys {
+			tab = configTabModels
+		}
+		return m.switchConfigTab(tab)
+	case tea.KeyRight:
+		if m.configMenu != configMenuNone {
+			return m, nil
+		}
+		tab := m.configTab + 1
+		if tab > configTabModels {
+			tab = configTabKeys
+		}
+		return m.switchConfigTab(tab)
 	case tea.KeyUp:
+		if n == 0 {
+			return m, nil
+		}
 		if m.configSel == 0 {
-			m.configSel = len(opts) - 1
+			m.configSel = n - 1
 		} else {
 			m.configSel--
 		}
-		return m, nil
+		return m.trackConfigGatewayFocus(), nil
 	case tea.KeyDown:
-		m.configSel = (m.configSel + 1) % len(opts)
-		return m, nil
+		if n == 0 {
+			return m, nil
+		}
+		m.configSel = (m.configSel + 1) % n
+		return m.trackConfigGatewayFocus(), nil
 	case tea.KeyEnter:
-		switch m.configMenu {
-		case "hub":
-			return m.handleConfigHubSelect()
-		case "providers":
+		if m.configMenu == configMenuProviders {
 			return m.handleConfigProviderSelect()
-		case "remove-key":
-			return m.handleConfigRemoveKeySelect()
-		case "model":
-			if m.configSel >= 0 && m.configSel < len(opts) {
-				return m.selectConfigOption(opts[m.configSel])
+		}
+		switch m.configTab {
+		case configTabKeys:
+			return m.handleConfigKeysSelect()
+		case configTabGateways:
+			return m.handleConfigGatewaysSelect()
+		case configTabModels:
+			if m.configSel >= 0 && m.configSel < len(m.configModelOptions) {
+				return m.selectConfigModel()
 			}
 		}
 		return m, nil
@@ -355,31 +371,27 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m chatModel) selectConfigOption(option string) (chatModel, tea.Cmd) {
-	if m.configMenu != "model" {
+func (m chatModel) selectConfigModel() (chatModel, tea.Cmd) {
+	if m.configSel < 0 || m.configSel >= len(m.configModelOptions) {
 		return m, nil
 	}
-	var modelID string
-	if m.configSel >= 0 && m.configSel < len(m.configModelOptions) {
-		modelID = m.configModelOptions[m.configSel].ID
-	} else {
-		modelID = hawkconfig.ResolveCanonicalModel(option)
-	}
+	modelID := m.configModelOptions[m.configSel].ID
 	if err := hawkconfig.SetGlobalSetting("model", modelID); err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m.closeConfigPanel(), nil
 	}
 	m.session.SetModel(modelID)
-	if prov := hawkconfig.ProviderOfModel(modelID); prov != "" {
+	if gw := strings.TrimSpace(m.configModelProvider); gw != "" {
+		_ = hawkconfig.SetGlobalSetting("provider", gw)
+		m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(gw))
+	} else if prov := hawkconfig.ProviderOfModel(modelID); prov != "" {
 		_ = hawkconfig.SetGlobalSetting("provider", prov)
 		m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(prov))
-	} else if p := strings.TrimSpace(m.configModelProvider); p != "" {
-		_ = hawkconfig.SetGlobalSetting("provider", p)
-		m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(p))
 	}
 	next, cmd := m.rebuildSessionTransport()
+	next.invalidateConnStatus()
 	next = next.closeConfigPanel()
-	if !hawkconfig.EvaluateSetup(context.Background()).NeedsSetup {
+	if !hawkconfig.EvaluateSetupCached(context.Background()).NeedsSetup {
 		next.messages = append(next.messages, displayMsg{
 			role:    "system",
 			content: fmt.Sprintf("Setup complete — chatting with %s", next.session.Model()),

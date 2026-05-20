@@ -20,12 +20,17 @@ func TestCatalogEmptyHint_NoCredentials(t *testing.T) {
 }
 
 func TestCatalogEmptyHint_WithCredentials(t *testing.T) {
+	InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
 
 	ctx := context.Background()
 	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	InvalidateConfigUICache()
 
 	hint := CatalogEmptyHint(ctx)
 	if strings.Contains(hint, "paste an API key") {

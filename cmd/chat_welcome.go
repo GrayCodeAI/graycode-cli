@@ -13,11 +13,48 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int) string {
+func welcomeDockerSegment(dockerRunning *bool, greenC, redC, rst string) (segment string, visLen int) {
+	if dockerRunning == nil {
+		return "", 0
+	}
+	mark := redC + "×" + rst
+	if *dockerRunning {
+		mark = greenC + "✓" + rst
+	}
+	segment = "  Docker " + mark
+	return segment, len("  Docker x")
+}
+
+func (m chatModel) welcomeDockerRunning() *bool {
+	if !m.containerEnabled {
+		return nil
+	}
+	if m.containerReady {
+		ok := true
+		return &ok
+	}
+	if m.containerErr != nil {
+		ok := false
+		return &ok
+	}
+	ok := sandbox.DockerAvailable()
+	return &ok
+}
+
+func (m chatModel) rebuildWelcomeCache(blinkClosed bool) {
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, blinkClosed, width, m.welcomeDockerRunning())
+}
+
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int, dockerRunning *bool) string {
 	logoC := "\033[38;2;255;94;14m"
 	mascotC := "\033[38;2;255;94;14m"
 	dimC := "\033[2m"
@@ -77,12 +114,13 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		b.WriteString(center(combined, visW) + "\n")
 	}
 
-	verLine := fmt.Sprintf("v%s", version)
+	verLine := fmt.Sprintf("v%s", DisplayVersion())
 	b.WriteString("\n" + center(dimC+verLine+rst, len(verLine)) + "\n")
 
-	needsSetup := hawkconfig.NeedsFirstRunSetup(context.Background())
+	setup := hawkconfig.EvaluateSetupCached(context.Background())
+	needsSetup := setup.NeedsSetup
 	if needsSetup {
-		tip := "Complete setup below, then type your first message"
+		tip := "Run /config to add an API key, then type your first message"
 		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 	} else {
 		tip := "TIP: /help for commands · /config to change model"
@@ -106,14 +144,15 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
 	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
+	if dockerSeg, _ := welcomeDockerSegment(dockerRunning, greenC, redC, rst); dockerSeg != "" {
+		indicators += dockerSeg
+		indVis += "  Docker x"
+	}
 	b.WriteString("\n" + center(indicators, len(indVis)) + "\n")
 
-	if hint := hawkconfig.FirstRunSetupHint(context.Background()); hint != "" {
+	if hint := setup.Hint; hint != "" {
 		b.WriteString("\n" + center(boldC+hint+rst, len(hint)) + "\n")
 	}
-
-	catalogLine := hawkconfig.CatalogStatusLine(context.Background())
-	b.WriteString(center(dimC+catalogLine+rst, len(catalogLine)) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
@@ -180,7 +219,7 @@ func configCommandSummary(settings hawkconfig.Settings) string {
 	model := displayConfigValue(hawkconfig.ActiveModel(nil))
 	return fmt.Sprintf(`Setup (eyrie)
 
-  /config  → API key + model (opens automatically on first run)
+  /config  → API key + model
 
 Current:
   provider: %s

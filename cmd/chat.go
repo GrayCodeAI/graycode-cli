@@ -31,6 +31,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -314,6 +315,10 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}()
 
+	// Warm credential + catalog caches so typing and status bar stay instant.
+	_ = hawkconfig.CompiledCatalogV1()
+	hawkconfig.RefreshConfigCredSnapshot(context.Background())
+
 	// Initialize plugin runtime
 	pr := plugin.NewRuntime()
 	_ = pr.LoadAll()
@@ -321,7 +326,12 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth)
+	var dockerRunning *bool
+	if m.containerEnabled {
+		ok := sandbox.DockerAvailable()
+		dockerRunning = &ok
+	}
+	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, dockerRunning)
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 
 	// Wire permission system
@@ -352,10 +362,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd(), glimmerTickCmd()}
-	if hawkconfig.EvaluateSetup(context.Background()).NeedsSetup {
-		cmds = append(cmds, func() tea.Msg { return firstRunOpenConfigMsg{} })
-	}
+	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd()}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
 		cwd, _ := os.Getwd()
@@ -530,7 +537,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input.CursorEnd()
 				return m, nil
 			}
-			sugs := slashSuggestions(m.input.Value())
+			sugs := m.slashSuggestionsFor(m.input.Value())
 			if len(sugs) > 0 {
 				if m.slashSel < 0 || m.slashSel >= len(sugs) {
 					m.slashSel = 0
@@ -540,7 +547,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case tea.KeyUp:
-			sugs := slashSuggestions(m.input.Value())
+			sugs := m.slashSuggestionsFor(m.input.Value())
 			if len(sugs) > 0 {
 				if m.slashSel <= 0 {
 					m.slashSel = len(sugs) - 1
@@ -561,7 +568,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case tea.KeyDown:
-			sugs := slashSuggestions(m.input.Value())
+			sugs := m.slashSuggestionsFor(m.input.Value())
 			if len(sugs) > 0 {
 				m.slashSel = (m.slashSel + 1) % len(sugs)
 				return m, nil
@@ -577,7 +584,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case tea.KeyEsc:
-			if len(slashSuggestions(m.input.Value())) > 0 {
+			if len(m.slashSuggestionsFor(m.input.Value())) > 0 {
 				m.slashSel = 0
 				return m, nil
 			}
@@ -589,7 +596,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if text == "" {
 				return m, nil
 			}
-			if sugs := slashSuggestions(text); len(sugs) > 0 {
+			if sugs := m.slashSuggestionsFor(text); len(sugs) > 0 {
 				if m.slashSel < 0 || m.slashSel >= len(sugs) {
 					m.slashSel = 0
 				}
@@ -620,7 +627,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.handleShellEscape(text)
 			}
 			// ClassAgent or ClassNeutral → route to AI
-			if setup := hawkconfig.EvaluateSetup(context.Background()); setup.NeedsSetup {
+			if setup := hawkconfig.EvaluateSetupCached(context.Background()); setup.NeedsSetup {
 				hint := setup.Hint
 				if hint == "" {
 					hint = "Complete setup in /config (API key and model) before chatting."
@@ -666,9 +673,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case modelsFetchedMsg:
+		m.configSaving = false
 		if msg.err != nil {
 			if m.configOpen {
-				m.configNotice = eyrieclient.FormatSetupError(msg.provider, msg.err)
+				m.configNotice = sanitizeConfigNotice(eyrieclient.FormatSetupError(msg.provider, msg.err))
 				m.viewDirty = true
 				m.updateViewportContent()
 			}
@@ -679,7 +687,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.provider != "" {
 				modelCache[msg.provider] = msg.options
 			}
-		} else if m.configOpen && msg.err == nil {
+			if m.configOpen && strings.Contains(m.configNotice, "Loading") {
+				m.configNotice = ""
+			}
+		} else if m.configOpen {
 			m.configNotice = hawkconfig.CatalogEmptyHint(context.Background())
 		}
 		if m.configOpen {
@@ -695,6 +706,22 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next.updateViewportContent()
 		}
 		return next, cmd
+
+	case configRefreshCatalogMsg:
+		next := m.handleConfigRefreshCatalogMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, nil
+
+	case configGatewayRefreshMsg:
+		next := m.handleConfigGatewayRefreshMsg(msg)
+		if m.configOpen {
+			next.viewDirty = true
+			next.updateViewportContent()
+		}
+		return next, nil
 
 	case configKeyResolvedMsg:
 		next, cmd := m.handleConfigKeyResolvedMsg(msg)
@@ -723,7 +750,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamChunkMsg:
 		m.partial.WriteString(string(msg))
-		m.viewDirty = true
+		m.markPartialDirty()
 		return m, nil
 
 	case thinkingMsg:
@@ -765,6 +792,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamDoneMsg:
+		m.flushPartialDirty()
 		if m.partial.Len() > 0 {
 			content := sanitizeIdentity(m.partial.String())
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
@@ -813,26 +841,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.SetWidth(msg.Width - 4)
-		m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, false, msg.Width)
+		m.rebuildWelcomeCache(false)
 		m.viewDirty = true
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
-		if m.waiting {
+		if m.waiting && m.partial.Len() == 0 {
 			m.viewDirty = true
 		}
-
-	case glimmerTickMsg:
-		m.glimmerPos++
-		cmds = append(cmds, glimmerTickCmd())
-		if m.waiting {
-			m.viewDirty = true
-		}
-
-	case firstRunOpenConfigMsg:
-		return m.openFirstRunConfig()
 
 	case containerStatusMsg:
 		m.containerStatus = msg.status
@@ -847,6 +865,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.input.Blur()
 		}
+		m.rebuildWelcomeCache(m.blinkClosed)
 		m.viewDirty = true
 		m.updateViewportContent()
 	}
@@ -895,8 +914,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.autoScroll = false
 	}
 
-	// Update viewport content with current messages
-	m.updateViewportContent()
+	// Update viewport content when messages change or input layout shifts (slash menu / multiline).
+	if m.viewDirty || m.syncInputLayout() {
+		m.updateViewportContent()
+	}
 
 	return m, tea.Batch(cmds...)
 }

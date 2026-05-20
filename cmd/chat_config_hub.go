@@ -2,100 +2,68 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
-type configHubOption struct {
-	action string
-	label  string
+func (m chatModel) openConfigPanel() (chatModel, tea.Cmd) {
+	return m.openConfigAtTab(-1)
 }
 
-func (m chatModel) configHubOptions() []configHubOption {
-	var out []configHubOption
-	if hawkconfig.EvaluateSetup(context.Background()).HasCredentials {
-		out = append(out, configHubOption{action: "model", label: "Pick model"})
-	}
-	out = append(
-		out,
-		configHubOption{action: "apikey", label: "Paste API key"},
-		configHubOption{action: "ollama", label: "Ollama (local — no key)"},
-	)
-	return out
-}
-
-func (m chatModel) configHubLabels() []string {
-	opts := m.configHubOptions()
-	out := make([]string, len(opts))
-	for i, o := range opts {
-		out[i] = o.label
-	}
-	return out
-}
-
-func (m chatModel) configHubNotice() string {
-	if m.configSaving {
-		return "Working…"
-	}
-	st := hawkconfig.EvaluateSetup(context.Background())
-	if !st.HasCredentials {
-		return "Step 1: choose how to connect"
-	}
-	prov := strings.TrimSpace(m.session.Provider())
-	model := strings.TrimSpace(m.session.Model())
-	if prov == "" {
-		prov = "unknown provider"
-	}
-	if model != "" {
-		return fmt.Sprintf("Current: %s · %s", prov, model)
-	}
-	return fmt.Sprintf("Current: %s · pick a model to start", prov)
-}
-
-func (m chatModel) openConfigHub(firstRun bool) chatModel {
-	m.configOpen = true
-	m.configMenu = "hub"
+func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
+	m.configTab = configTabModels
 	m.configSel = 0
 	m.configScroll = 0
-	m.configEntry = ""
-	m.configSaving = false
-	m.configGuideAfterKey = firstRun
-	m.configNotice = m.configHubNotice()
-	m.viewDirty = true
-	return m
-}
-
-func (m chatModel) beginConfigModelPicker() (chatModel, tea.Cmd) {
-	m.configMenu = "model"
-	m.configSel = 0
-	m.configScroll = 0
-	m.configModelProvider = firstRunModelProvider(m)
+	if strings.TrimSpace(m.configModelProvider) == "" {
+		m.configModelProvider = firstRunModelProvider(m)
+	}
 	m.configModelOptions = loadConfigModelOptions(m.configModelProvider)
 	if len(m.configModelOptions) == 0 {
+		m.configSaving = true
 		m.configNotice = "Loading models…"
 		return m, fetchModelsAsync(m.configModelProvider)
 	}
-	m.configNotice = "Pick a model"
 	return m, nil
 }
 
 func (m chatModel) returnToOllamaURLAfterError(err error) (chatModel, tea.Cmd) {
 	m.configSaving = false
+	m.configTab = configTabKeys
 	url := strings.TrimSpace(m.configPendingOllamaURL)
 	if url == "" {
-		url = "http://localhost:11434/v1"
+		url = configDefaultOllamaURL
 	}
 	if err != nil {
-		m.configNotice = hawkconfig.FormatConfigProviderError("ollama", err)
+		m.configNotice = hawkconfig.FormatConfigProviderError(configProviderOllama, err)
 	}
 	return m.startConfigOllamaURLWithValue(url)
 }
 
-func formatConfigApplyError(providerID string, err error) string {
-	return eyrieclient.FormatSetupError(providerID, err)
+type configRefreshCatalogMsg struct {
+	summary string
+	err     error
+}
+
+func refreshCatalogAsync() tea.Cmd {
+	return func() tea.Msg {
+		summary, err := hawkconfig.RefreshModelCatalogV1(context.Background())
+		return configRefreshCatalogMsg{summary: summary, err: err}
+	}
+}
+
+func (m chatModel) handleConfigRefreshCatalogMsg(msg configRefreshCatalogMsg) chatModel {
+	m.configSaving = false
+	InvalidateModelCache()
+	if msg.err != nil {
+		m.configNotice = sanitizeConfigNotice(msg.err.Error())
+		return m
+	}
+	m.configNotice = strings.TrimSpace(strings.Split(msg.summary, "\n")[0])
+	if m.configNotice == "" {
+		m.configNotice = "Model catalog refreshed"
+	}
+	return m
 }

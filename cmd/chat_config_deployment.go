@@ -26,18 +26,6 @@ type configKeyResolvedMsg struct {
 	result hawkconfig.CredentialResolveResult
 }
 
-// openConfigPanel: hub → paste key / Ollama / pick model.
-func (m chatModel) openConfigPanel() (chatModel, tea.Cmd) {
-	ctx := context.Background()
-	st := hawkconfig.EvaluateSetup(ctx)
-	m = m.openConfigHub(!st.HasCredentials)
-	return m, nil
-}
-
-func (m chatModel) openFirstRunConfig() (chatModel, tea.Cmd) {
-	return m.openConfigPanel()
-}
-
 func firstRunModelProvider(m chatModel) string {
 	ctx := context.Background()
 	if p := hawkconfig.DefaultModelProviderFilter(ctx); p != "" {
@@ -91,7 +79,7 @@ func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret strin
 
 func saveOllamaAsync(baseURL string) tea.Cmd {
 	return func() tea.Msg {
-		inference, err := eyrieclient.LocalCredentialInference("ollama")
+		inference, err := eyrieclient.LocalCredentialInference(configProviderOllama)
 		if err != nil {
 			return configApplyCredentialsMsg{err: err}
 		}
@@ -116,7 +104,9 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 				deploymentID: inference.DeploymentID,
 			}
 		}
-		result, err := eyrieclient.ApplyEyrieCredentials(ctx)
+		hawkconfig.InvalidateConfigUICache()
+		hawkconfig.RefreshConfigCredSnapshot(ctx)
+		result, err := hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
 		if err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
@@ -125,7 +115,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 
-		entries, listErr := eyrieclient.ListModelsForProviderAfterApply(ctx, inference.ProviderID)
+		entries, listErr := eyrieclient.ListModelsForProvider(ctx, inference.ProviderID)
 		if listErr != nil {
 			return configApplyCredentialsMsg{
 				err:          listErr,
@@ -134,13 +124,13 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 		opts := configModelOptionsFromEyrie(entries)
-		if len(opts) == 0 {
-			fallback := eyrieclient.OptionsFromSetupUI(result, inference.ProviderID)
-			opts = toConfigModelOptionsFromEyrie(fallback)
+		if len(opts) == 0 && result.Setup != nil {
+			fallback := hawkconfig.OptionsFromSetupUI(result.Setup, inference.ProviderID)
+			opts = toConfigModelOptionsFromHawk(fallback)
 		}
 
 		return configApplyCredentialsMsg{
-			summary:      eyrieclient.FormatApplySummary(result),
+			summary:      hawkconfig.FormatApplyCredentialsSummary(result),
 			providerID:   inference.ProviderID,
 			deploymentID: inference.DeploymentID,
 			modelOptions: opts,
@@ -148,90 +138,15 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 	}
 }
 
-func toConfigModelOptionsFromEyrie(in []eyrieclient.ModelOption) []configModelOption {
+func toConfigModelOptionsFromHawk(in []hawkconfig.ModelOption) []configModelOption {
 	out := make([]configModelOption, len(in))
 	for i, o := range in {
-		out[i] = configModelOption{ID: o.ID, DisplayName: o.DisplayName}
+		out[i] = configModelOption{
+			ID:          o.ID,
+			DisplayName: o.DisplayName,
+		}
 	}
 	return out
-}
-
-func (m chatModel) configHubView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
-
-	opts := m.configHubLabels()
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("⚙ Connect a provider") + "\n\n")
-	if notice := strings.TrimSpace(m.configNotice); notice != "" {
-		b.WriteString(mutedStyle.Render(notice) + "\n\n")
-	}
-	for i, opt := range opts {
-		prefix := "  "
-		lineStyle := style
-		if i == m.configSel {
-			prefix = "❯ "
-			lineStyle = selectedStyle
-		}
-		b.WriteString(lineStyle.Render(prefix+opt) + "\n")
-	}
-	help := "↑/↓ · enter · esc close"
-	if m.configSaving {
-		help = "please wait…"
-	}
-	b.WriteString("\n" + mutedStyle.Render(help))
-	return b.String()
-}
-
-func (m chatModel) handleConfigHubSelect() (chatModel, tea.Cmd) {
-	if m.configSaving {
-		return m, nil
-	}
-	opts := m.configHubOptions()
-	if m.configSel < 0 || m.configSel >= len(opts) {
-		return m, nil
-	}
-	switch opts[m.configSel].action {
-	case "model":
-		return m.beginConfigModelPicker()
-	case "apikey":
-		m.configNotice = "Paste your provider API key"
-		return m.startConfigEntry("apikey-paste", "")
-	case "ollama":
-		return m.startConfigOllamaURL()
-	default:
-		return m, nil
-	}
-}
-
-func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
-	return m.startConfigOllamaURLWithValue("http://localhost:11434/v1")
-}
-
-func (m chatModel) startConfigOllamaURLWithValue(url string) (chatModel, tea.Cmd) {
-	m.configEntry = "ollama-url"
-	m.configProvider = "ollama"
-	m.configMenu = ""
-	if strings.TrimSpace(m.configNotice) == "" || strings.TrimSpace(m.configNotice) == "Working…" {
-		m.configNotice = "Confirm Ollama URL (run: ollama serve)"
-	}
-	return m.startConfigURLInput(url)
-}
-
-func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
-	m.useConfigInput = true
-	m.configInput.Reset()
-	m.configInput.SetValue(defaultURL)
-	m.configInput.Prompt = " url ❯ "
-	m.configInput.Placeholder = defaultURL
-	m.configInput.EchoMode = textinput.EchoNormal
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
-	m.configInput.Focus()
-	return m, textinput.Blink
 }
 
 func (m chatModel) configProvidersView() string {
@@ -251,9 +166,9 @@ func (m chatModel) configProvidersView() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("🔑 Select provider (eyrie)") + "\n\n")
+	b.WriteString(titleStyle.Render("🔑 Select gateway") + "\n\n")
 	if notice := strings.TrimSpace(m.configNotice); notice != "" {
-		b.WriteString(mutedStyle.Render(notice) + "\n\n")
+		b.WriteString(mutedStyle.Render(sanitizeConfigNotice(notice)) + "\n\n")
 	}
 	if m.configScroll > 0 {
 		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
@@ -274,7 +189,7 @@ func (m chatModel) configProvidersView() string {
 	if end < total {
 		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
 	}
-	b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("%d providers · ★ = eyrie guess · ↑/↓ · enter · esc", total)))
+	b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("%d gateways · ★ = suggested · ↑/↓ · enter · esc", total)))
 	return b.String()
 }
 
@@ -297,20 +212,21 @@ func (m chatModel) configProviderLabels() []string {
 func (m chatModel) handleConfigKeyResolvedMsg(msg configKeyResolvedMsg) (chatModel, tea.Cmd) {
 	secret := strings.TrimSpace(msg.secret)
 	if !msg.result.FormatOK {
-		m.configNotice = msg.result.FormatError
-		return m.startConfigEntry("apikey-paste", "")
+		m.configNotice = sanitizeConfigNotice(msg.result.FormatError)
+		return m.startConfigEntry(configEntryAPIKeyPaste, "")
 	}
 	if secret == "" {
 		m.configNotice = "Paste a valid API key"
-		return m.startConfigEntry("apikey-paste", "")
+		return m.startConfigEntry(configEntryAPIKeyPaste, "")
 	}
 	m.configPendingKey = secret
 	m.configProviderOptions = msg.result.Providers
-	m.configEntry = ""
-	m.configMenu = "providers"
+	m.configEntry = configEntryNone
+	m.configMenu = configMenuProviders
+	m.configTab = configTabKeys
 	m.configSel = 0
 	m.configScroll = 0
-	m.configNotice = "Step 2: select provider (★ = suggested from key shape)"
+	m.configNotice = "Select gateway (★ = suggested from key shape)"
 	m.restoreChatInput()
 	return m, nil
 }
@@ -324,7 +240,7 @@ func (m chatModel) handleConfigProviderSelect() (chatModel, tea.Cmd) {
 	secret := strings.TrimSpace(m.configPendingKey)
 	if secret == "" {
 		m.configNotice = "Session expired — paste your API key again"
-		return m.startConfigEntry("apikey-paste", "")
+		return m.startConfigEntry(configEntryAPIKeyPaste, "")
 	}
 	inference := hawkconfig.InferenceFromOption(opt)
 	m.configNotice = fmt.Sprintf("Validating key for %s via eyrie…", opt.DisplayName)
@@ -332,24 +248,62 @@ func (m chatModel) handleConfigProviderSelect() (chatModel, tea.Cmd) {
 	return m, saveProviderKeyAsync(inference, secret)
 }
 
+func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
+	return m.startConfigOllamaURLWithValue(configDefaultOllamaURL)
+}
+
+func (m chatModel) startConfigOllamaURLWithValue(url string) (chatModel, tea.Cmd) {
+	m.configEntry = configEntryOllamaURL
+	m.configProvider = configProviderOllama
+	m.configMenu = configMenuNone
+	if strings.TrimSpace(m.configNotice) == "" || strings.TrimSpace(m.configNotice) == "Working…" {
+		m.configNotice = "Confirm Ollama URL (run: ollama serve)"
+	}
+	return m.startConfigURLInput(url)
+}
+
+func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
+	m.useConfigInput = true
+	m.configInput.Reset()
+	m.configInput.SetValue(defaultURL)
+	m.configInput.Prompt = " url ❯ "
+	m.configInput.Placeholder = defaultURL
+	m.configInput.EchoMode = textinput.EchoNormal
+	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
+	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	m.configInput.Focus()
+	return m, textinput.Blink
+}
+
 func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg) (chatModel, tea.Cmd) {
 	m.configSaving = false
+	ctx := context.Background()
 	if msg.err != nil {
-		if msg.providerID == "ollama" {
+		hawkconfig.RefreshConfigCredSnapshot(ctx)
+		m.invalidateConnStatus()
+		if msg.providerID == configProviderOllama {
 			return m.returnToOllamaURLAfterError(msg.err)
 		}
-		m.configNotice = formatConfigApplyError(msg.providerID, msg.err)
+		notice := sanitizeConfigNotice(eyrieclient.FormatSetupError(msg.providerID, msg.err))
+		if hawkconfig.HasConfiguredDeploymentCached(ctx) {
+			notice = "Key saved — " + notice + " · retry in Gateways or Models tab"
+		}
+		m.configNotice = notice
 		if strings.TrimSpace(m.configPendingKey) != "" && len(m.configProviderOptions) > 0 {
-			m.configMenu = "providers"
+			m.configMenu = configMenuProviders
+			m.configTab = configTabKeys
 			m.configSel = 0
 		} else {
-			m.configMenu = "hub"
+			m.configMenu = configMenuNone
+			m.configTab = configTabKeys
 		}
 		return m, nil
 	}
 	m.configPendingKey = ""
 	m.configProviderOptions = nil
 	m.configPendingOllamaURL = ""
+	m.configMenu = configMenuNone
 	m.configNotice = msg.summary
 	InvalidateModelCache()
 	m.configModelProvider = msg.providerID
@@ -357,30 +311,31 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		modelCache[msg.providerID] = msg.modelOptions
 	}
 	next, cmd := m.rebuildSessionTransport()
-	if msg.providerID == "ollama" {
-		_ = hawkconfig.SetGlobalSetting("provider", "ollama")
-		next.session.SetProvider(hawkconfig.NormalizeProviderForEngine("ollama"))
+	next.invalidateConnStatus()
+	if msg.providerID == configProviderOllama {
+		_ = hawkconfig.SetGlobalSetting("provider", configProviderOllama)
+		next.session.SetProvider(hawkconfig.NormalizeProviderForEngine(configProviderOllama))
 	}
 	next.configGuideAfterKey = false
 	if len(msg.modelOptions) == 0 {
-		if msg.providerID == "ollama" {
+		if msg.providerID == configProviderOllama {
 			return next.returnToOllamaURLAfterError(fmt.Errorf("no models installed — run: ollama pull llama3.2"))
 		}
-		next.configMenu = "hub"
-		next.configNotice = "No models in catalog for " + msg.providerID + " — try another provider"
+		next.configTab = configTabKeys
+		next.configNotice = "No models in catalog for " + msg.providerID + " — try another gateway"
 		return next, cmd
 	}
-	next.configMenu = "model"
+	next.configTab = configTabModels
 	next.configSel = 0
 	next.configScroll = 0
 	next.configModelOptions = msg.modelOptions
-	next.configNotice = "Pick a model (" + msg.providerID + ")"
+	next.configNotice = "Gateway: " + msg.providerID + " — pick a model"
 	return next, cmd
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
 	if err := eyrieclient.RebuildSessionTransport(context.Background(), m.session, m.settings, m.session.Provider()); err != nil {
-		m.configNotice = err.Error()
+		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
 	return m, nil
 }

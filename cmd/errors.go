@@ -42,6 +42,7 @@ func friendlyError(err error) string {
 		{[]string{"gemini_api_key", "google_api_key", "gemini api key"}, "GEMINI_API_KEY", "Gemini"},
 		{[]string{"openrouter_api_key", "openrouter api key"}, "OPENROUTER_API_KEY", "OpenRouter"},
 		{[]string{"canopywave_api_key", "canopywave api key"}, "CANOPYWAVE_API_KEY", "CanopyWave"},
+		{[]string{"zai_api_key", "z.ai api key", "z-ai api key"}, "ZAI_API_KEY", "Z.AI"},
 		{[]string{"xai_api_key", "xai api key", "grok api key"}, "XAI_API_KEY", "xAI/Grok"},
 		{[]string{"opencodego_api_key", "opencodego api key"}, "OPENCODEGO_API_KEY", "OpenCodeGo"},
 	}
@@ -90,10 +91,18 @@ func friendlyError(err error) string {
 		return "Access denied by the API provider. Verify your API key has the required permissions."
 	}
 
+	// ── Provider billing / credits (OpenRouter free tier, etc.) ───────────
+	if strings.Contains(low, "requires more credits") || strings.Contains(low, "can only afford") ||
+		strings.Contains(low, "insufficient credits") || strings.Contains(low, "insufficient balance") ||
+		strings.Contains(low, "payment required") || strings.Contains(low, "out of credits") {
+		return "Insufficient provider credits for this request.\n  Add credits at your provider dashboard, switch to a cheaper model with /model, or try again with a shorter prompt."
+	}
+
 	// ── Context too long / token limit ────────────────────────────────────
 	if strings.Contains(low, "context length") || strings.Contains(low, "context_length") ||
 		strings.Contains(low, "token limit") || strings.Contains(low, "too many tokens") ||
-		strings.Contains(low, "maximum context") || strings.Contains(low, "max_tokens") ||
+		strings.Contains(low, "maximum context") ||
+		strings.Contains(low, "max_tokens exceeded") || strings.Contains(low, "max tokens exceeded") ||
 		strings.Contains(low, "context window") || strings.Contains(low, "prompt is too long") {
 		return "The conversation exceeds the model's context window.\n  Use /compact to summarize and free up space, or start a new session."
 	}
@@ -423,7 +432,9 @@ func providerDNSHost(provider string) string {
 	case "grok", "xai":
 		return "api.x.ai"
 	case "canopywave":
-		return "api.canopywave.com"
+		return "inference.canopywave.io"
+	case "z-ai", "zai":
+		return "api.z.ai"
 	default:
 		return ""
 	}

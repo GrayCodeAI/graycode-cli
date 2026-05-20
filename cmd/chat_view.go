@@ -11,9 +11,20 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
-
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 )
+
+func (m chatModel) configShowWelcomeBanner() bool {
+	if strings.TrimSpace(m.welcomeCache) == "" {
+		return false
+	}
+	for _, msg := range m.messages {
+		switch msg.role {
+		case "user", "assistant", "tool_use", "tool_result":
+			return false
+		}
+	}
+	return true
+}
 
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 var (
@@ -184,7 +195,7 @@ func (m *chatModel) updateViewportContent() {
 		// status(1) + border-top(1) + input(N) + border-bottom(1) + help(1) + newline-separator(1)
 		bottomBarLines = 1 + 2 + inputLines + 1 + 1
 		// Account for slash suggestion menu
-		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
+		if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
 			visible := len(sugs)
 			if visible > 6 {
 				visible = 6
@@ -206,12 +217,26 @@ func (m *chatModel) updateViewportContent() {
 	}
 	m.viewDirty = false
 
+	// /config overlay: skip rebuilding full chat history (keep welcome on first run).
+	if m.configOpen {
+		var content strings.Builder
+		if m.configShowWelcomeBanner() {
+			content.WriteString(m.welcomeCache)
+			content.WriteString("\n\n")
+		}
+		content.WriteString(m.configPanelView())
+		m.viewport.SetContent(content.String())
+		return
+	}
+
 	hawkC := "\033[38;2;255;94;14m"
 	rst := "\033[0m"
 	bgDark := "\033[48;2;30;30;40m"
 
 	var chatContent strings.Builder
-	chatContent.WriteString(m.welcomeCache + "\n")
+	if m.configShowWelcomeBanner() {
+		chatContent.WriteString(m.welcomeCache + "\n")
+	}
 
 	for i, msg := range m.messages {
 		switch msg.role {
@@ -295,11 +320,6 @@ func (m *chatModel) updateViewportContent() {
 		}
 	}
 
-	if m.configOpen {
-		chatContent.WriteString(m.configPanelView())
-		chatContent.WriteString("\n\n")
-	}
-
 	atBottom := m.viewport.AtBottom()
 	contentStr := chatContent.String()
 
@@ -346,14 +366,7 @@ func (m chatModel) View() string {
 			leftBold = permissionModeLabel(m.session)
 			leftDim = permissionModeHint(m.session)
 		}
-		rightStatus := fmt.Sprintf("%s %s", m.session.Provider(), m.session.Model())
-		// Input classification indicator + mode
-		m.inputIndicator.Classify(m.input.Value(), m.modeManager.Current())
-		indicatorStr := m.inputIndicator.Render() + " " + m.inputIndicator.Label()
-		if m.modeManager.Current() != shellmode.ModeAuto {
-			indicatorStr += " [" + m.modeManager.Current().String() + "]"
-		}
-		rightStatus = indicatorStr + "  " + rightStatus
+		rightStatus := m.chatBottomRightStatus()
 		leftVisLen := len(leftBold) + len(leftDim)
 		gap := totalW - leftVisLen - len(rightStatus)
 		if gap < 1 {
@@ -361,18 +374,13 @@ func (m chatModel) View() string {
 		}
 		var leftRendered string
 		if m.containerEnabled && m.containerErr != nil {
-			redStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
-			leftRendered = redStyle.Bold(true).Render(leftBold) + redStyle.Render(leftDim)
+			leftRendered = containerErrStyle.Bold(true).Render(leftBold) + containerErrStyle.Render(leftDim)
 		} else {
 			leftRendered = lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
 		}
 		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
 		bottomBarLines++
-		inputBox := lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder(), true, false, true, false).
-			BorderForeground(lipgloss.Color("#555555")).
-			Width(totalW).
-			Render(func() string {
+		inputBox := inputBorderStyle.Width(totalW).Render(func() string {
 				if m.useConfigInput {
 					return m.configInput.View()
 				}
@@ -381,8 +389,7 @@ func (m chatModel) View() string {
 		bottomBar.WriteString(inputBox + "\n")
 		// Ghost text suggestion (shown below input when active)
 		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
-			ghostStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
-			bottomBar.WriteString(ghostStyle.Render("  → "+ghost+" (Tab to accept)") + "\n")
+			bottomBar.WriteString(ghostHintStyle.Render("  → "+ghost+" (Tab to accept)") + "\n")
 			bottomBarLines++
 		}
 		// borders(2) + input content lines
@@ -391,14 +398,14 @@ func (m chatModel) View() string {
 			inputLines = 10
 		}
 		bottomBarLines += 2 + inputLines
-		if sugs := slashSuggestions(m.input.Value()); len(sugs) > 0 {
+		if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
 			}
-			cmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-			descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-			selCmdStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-			selDescStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+			cmdStyle := slashCmdStyle
+			descStyle := slashDescStyle
+			selCmdStyle := slashSelCmdStyle
+			selDescStyle := slashSelDescStyle
 			maxVisible := 6
 			start := 0
 			if m.slashSel >= maxVisible {
@@ -431,7 +438,7 @@ func (m chatModel) View() string {
 		if m.containerEnabled && m.containerStatus != "" {
 			style := dimStyle
 			if m.containerErr != nil {
-				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+				style = containerErrStyle
 			}
 			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
 		}
