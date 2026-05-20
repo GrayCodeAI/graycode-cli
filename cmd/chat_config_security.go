@@ -32,7 +32,3 @@ func (m *chatModel) wipeConfigKeyInput() {
 	m.configInput.Reset()
 	m.configInput.SetValue("")
 }
-
-func (m *chatModel) clearPendingKey() {
-	m.configPendingKey = ""
-}

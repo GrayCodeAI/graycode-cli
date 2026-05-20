@@ -71,7 +71,6 @@ type (
 )
 
 type (
-	glimmerTickMsg   struct{} // unused; kept for tea.Msg compatibility
 	modelsFetchedMsg struct {
 		options  []configModelOption
 		provider string
@@ -148,7 +147,6 @@ type chatModel struct {
 	configPendingOllamaURL string
 	pluginRuntime          *plugin.Runtime
 	spinnerVerb            string
-	glimmerPos             int
 	lastCtrlC              time.Time
 	history                []string
 	historyIdx             int
@@ -215,8 +213,4 @@ func (m *chatModel) flushPartialDirty() {
 
 func blinkTickCmd() tea.Cmd {
 	return tea.Tick(2200*time.Millisecond, func(time.Time) tea.Msg { return blinkTickMsg{} })
-}
-
-func glimmerTickCmd() tea.Cmd {
-	return tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg { return glimmerTickMsg{} })
 }

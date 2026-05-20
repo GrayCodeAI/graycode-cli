@@ -46,7 +46,7 @@ func (m chatModel) welcomeDockerRunning() *bool {
 	return &ok
 }
 
-func (m chatModel) rebuildWelcomeCache(blinkClosed bool) {
+func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	width := m.width
 	if width <= 0 {
 		width = 80

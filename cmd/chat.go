@@ -707,14 +707,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return next, cmd
 
-	case configRefreshCatalogMsg:
-		next := m.handleConfigRefreshCatalogMsg(msg)
-		if m.configOpen {
-			next.viewDirty = true
-			next.updateViewportContent()
-		}
-		return next, nil
-
 	case configGatewayRefreshMsg:
 		next := m.handleConfigGatewayRefreshMsg(msg)
 		if m.configOpen {
