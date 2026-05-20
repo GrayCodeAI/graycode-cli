@@ -207,6 +207,7 @@ jobs:
   dependency-review:
     name: dependency review
     runs-on: ubuntu-latest
+    continue-on-error: true # requires GitHub Dependency graph (repo settings)
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
