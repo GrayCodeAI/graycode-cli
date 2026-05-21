@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	modelTableColGap    = 4
-	modelTableIndent    = 6 // left padding before table rows/header
-	modelTableModelPad  = 10 // extra room after longest model name
+	modelTableColGap   = 4
+	modelTableIndent   = 6  // left padding before table rows/header
+	modelTableModelPad = 10 // extra room after longest model name
 )
 
 type modelTableLayout struct {

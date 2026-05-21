@@ -153,7 +153,8 @@ func renderChatConnectionStatus(gateway, model, ctxLabel string) (string, int) {
 			return muted.Render(s), len(s)
 		}
 		s := gateway + " · pick model"
-		return lipgloss.JoinHorizontal(lipgloss.Left,
+		return lipgloss.JoinHorizontal(
+			lipgloss.Left,
 			accent.Render(gateway),
 			muted.Render(" · pick model"),
 		), len(s)
