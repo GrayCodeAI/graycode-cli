@@ -97,6 +97,8 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 	m.configTab = tab
 	m.configSel = 0
 	m.configScroll = 0
+	m.configKeysPendingRemove = ""
+	m.configKeysRemoveStep = 0
 	m.configNotice = ""
 	if tab == configTabModels {
 		if strings.TrimSpace(m.configModelProvider) == "" {

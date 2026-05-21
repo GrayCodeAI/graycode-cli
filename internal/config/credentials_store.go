@@ -166,6 +166,46 @@ func RemoveStoredCredential(ctx context.Context, target string) ([]string, error
 	return removed, nil
 }
 
+// MaskCredentialForProvider returns a partially masked API key for UI display.
+func MaskCredentialForProvider(ctx context.Context, provider string) string {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	for _, envKey := range credentialEnvKeysForTarget(provider) {
+		secret := credentials.LookupSecret(ctx, envKey)
+		if secret == "" {
+			continue
+		}
+		return maskCredentialSecret(secret)
+	}
+	return "••••••••"
+}
+
+func maskCredentialSecret(secret string) string {
+	secret = strings.TrimSpace(secret)
+	if secret == "" {
+		return "••••••••"
+	}
+	if len(secret) <= 8 {
+		return strings.Repeat("•", len(secret))
+	}
+	return secret[:4] + strings.Repeat("•", len(secret)-6) + secret[len(secret)-2:]
+}
+
+// CredentialInferenceForProvider returns save metadata for a configured gateway.
+func CredentialInferenceForProvider(providerID string) (CredentialInference, error) {
+	providerID = catalogProviderID(normalizeProviderName(strings.TrimSpace(providerID)))
+	envKey := ProviderAPIKeyEnv(providerID)
+	if envKey == "" {
+		return CredentialInference{}, fmt.Errorf("unknown provider %q", providerID)
+	}
+	return CredentialInference{
+		ProviderID:  providerID,
+		EnvVar:      envKey,
+		DisplayName: GatewayDisplayName(providerID),
+	}, nil
+}
+
 func credentialEnvKeysForTarget(target string) []string {
 	if strings.Contains(target, "_") && strings.ToUpper(target) == target {
 		return []string{strings.TrimSpace(target)}

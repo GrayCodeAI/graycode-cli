@@ -9,15 +9,15 @@ import (
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()
-	if len(gws) != 9 {
-		t.Fatalf("expected 9 setup gateways, got %d: %v", len(gws), gws)
+	if len(gws) != 11 {
+		t.Fatalf("expected 11 setup gateways, got %d: %v", len(gws), gws)
 	}
 	for _, id := range gws {
 		if id == "ai21" || id == "alibaba" {
 			t.Fatalf("owner slug %q should not be a gateway", id)
 		}
 	}
-	want := map[string]bool{"gemini": true, "grok": true, "openrouter": true}
+	want := map[string]bool{"gemini": true, "grok": true, "openrouter": true, "kimi": true, "xiaomi": true}
 	for id := range want {
 		found := false
 		for _, gw := range gws {
