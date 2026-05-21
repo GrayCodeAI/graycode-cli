@@ -308,10 +308,3 @@ func printModelTablePlain(rows []modelTableRow) {
 		fmt.Println(renderModelTableRow(row, false, false, layout, lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(), meta, meta))
 	}
 }
-
-func padModelTable(c1, c2, c3, c4 string, w1, w2, w3, w4 int) string {
-	layout := modelTableLayout{Model: w1, Owner: w2, Price: w3, Context: w4}
-	return renderModelTableLine([]string{c1, c2, c3, c4}, layout, []lipgloss.Style{
-		lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(),
-	})
-}
