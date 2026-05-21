@@ -51,7 +51,7 @@ func (m chatModel) configTabItemCount() int {
 		case configTabGateways:
 			return len(m.configGatewayRows()) + 1
 		case configTabModels:
-			return len(m.configModelOptions)
+			return len(m.configFilteredModelOptions())
 		}
 	}
 	return 0
@@ -117,7 +117,111 @@ func (m chatModel) configOllamaURLView() string {
 const configWindowSize = 10
 
 func (m chatModel) configModelsTabView() string {
-	return m.configTabShellView(m.configModelsBody())
+	var body strings.Builder
+	body.WriteString(m.renderConfigModelSearchLine())
+	body.WriteString("\n\n")
+	body.WriteString(m.configModelsBody())
+	return m.configTabShellView(body.String())
+}
+
+func (m chatModel) renderConfigModelSearchLine() string {
+	if m.configModelSearchActive {
+		return m.configInput.View()
+	}
+	indent := strings.Repeat(" ", modelTableIndent)
+	query := strings.TrimSpace(m.configModelSearch)
+	if query == "" {
+		return configMutedStyle().Render(indent + "/ search models")
+	}
+	matches := len(m.configFilteredModelOptions())
+	matchLabel := fmt.Sprintf(" · %d match", matches)
+	if matches != 1 {
+		matchLabel += "es"
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Left,
+		configMutedStyle().Inline(true).Render(indent+"search: "),
+		configAccentStyle().Inline(true).Render(query),
+		configMutedStyle().Inline(true).Render(matchLabel+" · / edit"),
+	)
+}
+
+func (m chatModel) startConfigModelSearch() (chatModel, tea.Cmd) {
+	if m.configTab != configTabModels {
+		return m, nil
+	}
+	m.configModelSearchActive = true
+	m.useConfigInput = true
+	m.configInput.Reset()
+	m.configInput.SetValue(m.configModelSearch)
+	m.configInput.Prompt = strings.Repeat(" ", modelTableIndent) + "search ❯ "
+	m.configInput.Placeholder = "filter by name, owner, id"
+	m.configInput.EchoMode = textinput.EchoNormal
+	m.configInput.EchoCharacter = 0
+	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
+	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	m.configInput.Focus()
+	m.configSel = 0
+	m.configScroll = 0
+	return m, textinput.Blink
+}
+
+func (m chatModel) stopConfigModelSearch(clearQuery bool) chatModel {
+	if m.configModelSearchActive {
+		if clearQuery {
+			m.configModelSearch = ""
+		} else {
+			m.configModelSearch = strings.TrimSpace(m.configInput.Value())
+		}
+	}
+	m.configModelSearchActive = false
+	m.useConfigInput = false
+	m.configInput.Blur()
+	m.configInput.Reset()
+	m.configSel = 0
+	m.configScroll = 0
+	return m
+}
+
+func (m chatModel) handleConfigModelSearchKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		return m.stopConfigModelSearch(true), nil
+	case tea.KeyEnter:
+		opts := m.configFilteredModelOptions()
+		if m.configSel >= 0 && m.configSel < len(opts) {
+			return m.selectConfigModelFromOptions(opts)
+		}
+		return m, nil
+	case tea.KeyUp:
+		n := len(m.configFilteredModelOptions())
+		if n == 0 {
+			return m, nil
+		}
+		if m.configSel == 0 {
+			m.configSel = n - 1
+		} else {
+			m.configSel--
+		}
+		return m, nil
+	case tea.KeyDown:
+		n := len(m.configFilteredModelOptions())
+		if n == 0 {
+			return m, nil
+		}
+		m.configSel = (m.configSel + 1) % n
+		return m, nil
+	default:
+		prev := m.configInput.Value()
+		var cmd tea.Cmd
+		m.configInput, cmd = m.configInput.Update(msg)
+		if m.configInput.Value() != prev {
+			m.configModelSearch = strings.TrimSpace(m.configInput.Value())
+			m.configSel = 0
+			m.configScroll = 0
+		}
+		return m, cmd
+	}
 }
 
 func (m chatModel) configPanelViewWidth() int {
@@ -135,8 +239,9 @@ func (m chatModel) configModelsBody() string {
 	rowStyle := configRowStyle()
 	freeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6BCB77"))
 
-	opts := m.configModelOptions
+	opts := m.configFilteredModelOptions()
 	total := len(opts)
+	allTotal := len(m.configModelOptions)
 
 	if m.configSel < m.configScroll {
 		m.configScroll = m.configSel
@@ -166,6 +271,12 @@ func (m chatModel) configModelsBody() string {
 	}
 
 	if total == 0 {
+		query := m.configModelSearchQuery()
+		if query != "" && allTotal > 0 {
+			b.WriteString(mutedStyle.Render(fmt.Sprintf("%sNo models match %q.", strings.Repeat(" ", modelTableIndent), query)) + "\n")
+			b.WriteString(mutedStyle.Render(strings.Repeat(" ", modelTableIndent)+"/ search again · esc clear") + "\n")
+			return b.String()
+		}
 		b.WriteString(mutedStyle.Render("  No models available.") + "\n")
 		if hint := hawkconfig.CatalogEmptyHint(context.Background()); hint != "" {
 			b.WriteString(mutedStyle.Render("  "+hint) + "\n")
@@ -191,7 +302,7 @@ func (m chatModel) configModelsBody() string {
 		b.WriteString(modelTableScrollHint(0, total-end, mutedStyle) + "\n")
 	}
 
-	b.WriteString("\n" + modelTableFooter(total, m.configScroll, end, mutedStyle))
+	b.WriteString("\n" + modelTableFooter(total, m.configScroll, end, allTotal, mutedStyle))
 	return b.String()
 }
 
@@ -209,6 +320,8 @@ func (m chatModel) closeConfigPanel() chatModel {
 	m.configPendingOllamaURL = ""
 	m.configSaving = false
 	m.configModelOptions = nil
+	m.configModelSearch = ""
+	m.configModelSearchActive = false
 	m.configGatewayFocus = 0
 	m.viewDirty = true
 	m.restoreChatInput()
@@ -314,6 +427,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	if m.configSaving {
 		return m, nil
 	}
+	if m.configTab == configTabModels && m.configModelSearchActive {
+		return m.handleConfigModelSearchKey(msg)
+	}
+	if m.configTab == configTabModels && msg.Type == tea.KeyRunes && string(msg.Runes) == "/" {
+		return m.startConfigModelSearch()
+	}
 	n := m.configTabItemCount()
 	if n == 0 {
 		m.configSel = 0
@@ -329,6 +448,9 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			m.configMenu = configMenuNone
 			m.configTab = configTabKeys
 			return m.startConfigEntry(configEntryAPIKeyPaste, "")
+		}
+		if m.configTab == configTabModels && strings.TrimSpace(m.configModelSearch) != "" {
+			return m.stopConfigModelSearch(true), nil
 		}
 		if m.configTab == configTabKeys {
 			return m.handleConfigKeysEsc(), nil
@@ -378,8 +500,9 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		case configTabGateways:
 			return m.handleConfigGatewaysSelect()
 		case configTabModels:
-			if m.configSel >= 0 && m.configSel < len(m.configModelOptions) {
-				return m.selectConfigModel()
+			opts := m.configFilteredModelOptions()
+			if m.configSel >= 0 && m.configSel < len(opts) {
+				return m.selectConfigModelFromOptions(opts)
 			}
 		}
 		return m, nil
@@ -387,11 +510,11 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m chatModel) selectConfigModel() (chatModel, tea.Cmd) {
-	if m.configSel < 0 || m.configSel >= len(m.configModelOptions) {
+func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatModel, tea.Cmd) {
+	if m.configSel < 0 || m.configSel >= len(opts) {
 		return m, nil
 	}
-	modelID := m.configModelOptions[m.configSel].ID
+	modelID := opts[m.configSel].ID
 	if err := hawkconfig.SetGlobalSetting("model", modelID); err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m.closeConfigPanel(), nil
@@ -406,6 +529,7 @@ func (m chatModel) selectConfigModel() (chatModel, tea.Cmd) {
 	}
 	next, cmd := m.rebuildSessionTransport()
 	next.invalidateConnStatus()
+	next = next.stopConfigModelSearch(true)
 	next = next.closeConfigPanel()
 	if !hawkconfig.EvaluateSetupCached(context.Background()).NeedsSetup {
 		next.messages = append(next.messages, displayMsg{
@@ -414,4 +538,8 @@ func (m chatModel) selectConfigModel() (chatModel, tea.Cmd) {
 		})
 	}
 	return next, cmd
+}
+
+func (m chatModel) selectConfigModel() (chatModel, tea.Cmd) {
+	return m.selectConfigModelFromOptions(m.configFilteredModelOptions())
 }
