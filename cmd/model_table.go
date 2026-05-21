@@ -73,11 +73,11 @@ func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayo
 }
 
 func modelTableRowFromOption(o configModelOption) modelTableRow {
-	name := strings.TrimSpace(o.DisplayName)
+	name := catalog.DisplayModelLabel(o.ID, o.DisplayName)
 	if name == "" {
 		name = shortModelID(o.ID)
 	}
-	owner := strings.TrimSpace(o.Owner)
+	owner := catalog.DisplayModelOwner(o.Owner, o.ID)
 	if owner == "" {
 		owner = "—"
 	}
