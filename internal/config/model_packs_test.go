@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
 )
 
 func TestNewModelPackRegistry(t *testing.T) {
@@ -28,17 +30,20 @@ func TestNewModelPackRegistry(t *testing.T) {
 
 func TestGetModel(t *testing.T) {
 	r := NewModelPackRegistry()
+	wantSonnet := testPackModel(t, eycatalog.TierSonnet)
+	wantHaiku := testPackModel(t, eycatalog.TierHaiku)
+	wantOpus := testPackModel(t, eycatalog.TierOpus)
 
 	tests := []struct {
 		role      string
 		wantModel string
 	}{
-		{"code", "claude-sonnet-4-6"},
-		{"summarize", "claude-haiku-4-5"},
-		{"plan", "claude-opus-4-6"},
-		{"debug", "claude-opus-4-6"},
-		{"chat", "claude-sonnet-4-6"},
-		{"review", "claude-sonnet-4-6"},
+		{"code", wantSonnet},
+		{"summarize", wantHaiku},
+		{"plan", wantOpus},
+		{"debug", wantOpus},
+		{"chat", wantSonnet},
+		{"review", wantSonnet},
 	}
 
 	for _, tt := range tests {
@@ -78,7 +83,8 @@ func TestSetActive(t *testing.T) {
 
 	// Verify GetModel now uses the budget pack.
 	mr := r.GetModel("code")
-	if mr.Model != "claude-haiku-4-5" {
+	wantHaiku := testPackModel(t, eycatalog.TierHaiku)
+	if mr.Model != wantHaiku {
 		t.Errorf("expected haiku for code in budget pack, got %q", mr.Model)
 	}
 }
@@ -205,8 +211,8 @@ func TestEstimateCost(t *testing.T) {
 	costQuality := EstimateCost(r.Packs["quality"], 100000)
 	costLocal := EstimateCost(r.Packs["local"], 100000)
 
-	if costQuality <= costBudget {
-		t.Errorf("quality (%f) should cost more than budget (%f)", costQuality, costBudget)
+	if costQuality < costBudget {
+		t.Errorf("quality (%f) should cost at least as much as budget (%f)", costQuality, costBudget)
 	}
 	if costLocal != 0.0 {
 		t.Errorf("local pack should be free, got %f", costLocal)

@@ -2,7 +2,7 @@ go 1.26.3
 
 use (
 	.
-	./external/eyrie
+	../eyrie
 )
 
-// Eyrie is a git submodule at ./external/eyrie (Herm / LangDAG pattern).
+// Clone eyrie next to hawk (hawk-eco/eyrie). CI uses .github/actions/checkout-eyrie.

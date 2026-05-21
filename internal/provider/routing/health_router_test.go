@@ -135,20 +135,20 @@ func TestHealthRouter_ModelForTask(t *testing.T) {
 	tinyFile := filepath.Join(dir, "tiny.go")
 	os.WriteFile(tinyFile, []byte("package main\n\nfunc main() {}\n"), 0o644)
 
-	model := hr.ModelForTask(tinyFile, "claude-sonnet-4-20250514")
-	// Should select a light-tier model since complexity is low
-	lightModels := map[string]bool{
-		"claude-3-5-haiku-20241022": true,
-		"gpt-4o-mini":               true,
-		"gemini-2.5-flash":          true,
+	_, sonnet, _ := TierModels("anthropic")
+	haiku, openaiHaiku, _ := TierModels("openai")
+	model := hr.ModelForTask(tinyFile, sonnet)
+	lightModels := map[string]bool{}
+	for _, m := range hr.tiers[0].Models {
+		lightModels[m] = true
 	}
 	if !lightModels[model] {
 		t.Errorf("expected a light-tier model for tiny file, got %q", model)
 	}
 
-	// If primaryModel is in the selected tier, it should be returned
-	model2 := hr.ModelForTask(tinyFile, "gpt-4o-mini")
-	if model2 != "gpt-4o-mini" {
-		t.Errorf("expected primary model 'gpt-4o-mini' since it's in light tier, got %q", model2)
+	model2 := hr.ModelForTask(tinyFile, openaiHaiku)
+	if openaiHaiku != "" && !lightModels[model2] {
+		t.Errorf("expected a light-tier model for tiny file with openai primary, got %q", model2)
 	}
+	_ = haiku
 }

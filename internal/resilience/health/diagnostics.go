@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // DiagnosticResult holds the outcome of a single diagnostic check.
@@ -343,21 +346,13 @@ func checkConfigFileValid() DiagnosticResult {
 
 func checkAPIKeySet() DiagnosticResult {
 	start := time.Now()
-	// Check common API key environment variables
-	keys := []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "HAWK_API_KEY"}
-	found := []string{}
-	for _, k := range keys {
-		if os.Getenv(k) != "" {
-			found = append(found, k)
-		}
-	}
-
-	if len(found) == 0 {
+	stored := credentials.StoredEnvKeys(context.Background())
+	if len(stored) == 0 {
 		return DiagnosticResult{
 			Name:     "api_key_set",
 			Status:   "fail",
-			Message:  "No API keys found in environment",
-			Fix:      "Set ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable",
+			Message:  "No API keys stored in the OS secret store",
+			Fix:      "Run /config to save a key, or hawk credentials status to verify storage",
 			Duration: time.Since(start),
 		}
 	}
@@ -365,7 +360,7 @@ func checkAPIKeySet() DiagnosticResult {
 	return DiagnosticResult{
 		Name:     "api_key_set",
 		Status:   "pass",
-		Message:  fmt.Sprintf("API keys found: %s", strings.Join(found, ", ")),
+		Message:  fmt.Sprintf("API keys stored: %s", strings.Join(stored, ", ")),
 		Duration: time.Since(start),
 	}
 }

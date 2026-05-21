@@ -4,6 +4,8 @@ package config
 import (
 	"fmt"
 	"strings"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // ValidationError represents a config validation error.
@@ -44,22 +46,30 @@ func ValidateSettings(s Settings) ValidationResult {
 
 	// Provider names are delegated to Eyrie. Do not hardcode/validate here.
 
-	// Validate model
-	if s.Model != "" && strings.Contains(s.Model, " ") {
+	// Validate model selection (stored in eyrie provider.json)
+	activeModel := strings.TrimSpace(s.Model)
+	if activeModel == "" {
+		activeModel = ActiveModel(nil)
+	}
+	if activeModel != "" && strings.Contains(activeModel, " ") {
 		errors = append(errors, ValidationError{
 			Field:   "model",
 			Message: "model name cannot contain spaces",
-			Value:   s.Model,
+			Value:   activeModel,
 		})
 	}
 
-	// Herm-style: validate API key is in environment (not in settings)
-	if s.Provider != "" {
-		envKey := ProviderAPIKeyEnv(s.Provider)
-		if envKey != "" && APIKeyForProvider(s.Provider) == "" {
+	activeProvider := strings.TrimSpace(s.Provider)
+	if activeProvider == "" {
+		activeProvider = ActiveProvider(nil)
+	}
+	// Hawk: validate API key is in the OS secret store (not in settings)
+	if activeProvider != "" {
+		envKey := ProviderAPIKeyEnv(activeProvider)
+		if envKey != "" && APIKeyForProvider(activeProvider) == "" {
 			errors = append(errors, ValidationError{
 				Field:   "apiKey",
-				Message: fmt.Sprintf("set %s in your environment", envKey),
+				Message: fmt.Sprintf("save your %s API key with /config (%s)", activeProvider, credentials.PlatformSecretStoreName()),
 			})
 		}
 	}

@@ -29,10 +29,15 @@ type HealthRouter struct {
 	tiers []ModelTier
 }
 
-// NewHealthRouter creates a router with the default tier configuration.
+// NewHealthRouter creates a router with catalog-backed tier configuration.
 func NewHealthRouter() *HealthRouter {
+	return NewHealthRouterForProvider("")
+}
+
+// NewHealthRouterForProvider creates a router using eyrie tier models for the provider.
+func NewHealthRouterForProvider(provider string) *HealthRouter {
 	return &HealthRouter{
-		tiers: DefaultTiers(),
+		tiers: DefaultHealthTiers(provider),
 	}
 }
 
@@ -172,23 +177,7 @@ func (hr *HealthRouter) ModelForTask(path string, primaryModel string) string {
 	return primaryModel
 }
 
-// DefaultTiers returns the standard three-tier configuration.
+// DefaultTiers returns catalog-backed tiers for the default anthropic provider.
 func DefaultTiers() []ModelTier {
-	return []ModelTier{
-		{
-			Name:          "light",
-			Models:        []string{"claude-3-5-haiku-20241022", "gpt-4o-mini", "gemini-2.5-flash"},
-			MaxComplexity: 10.0,
-		},
-		{
-			Name:          "standard",
-			Models:        []string{"claude-sonnet-4-20250514", "gpt-4o", "gemini-2.5-pro"},
-			MaxComplexity: 30.0,
-		},
-		{
-			Name:          "heavy",
-			Models:        []string{"claude-opus-4-20250514", "o1-preview", "gemini-2.5-pro"},
-			MaxComplexity: 1e9, // effectively unlimited
-		},
-	}
+	return DefaultHealthTiers("anthropic")
 }

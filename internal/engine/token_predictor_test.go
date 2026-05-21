@@ -126,7 +126,8 @@ func TestEstimateCost(t *testing.T) {
 	tp := NewTokenPredictor()
 
 	t.Run("sonnet pricing", func(t *testing.T) {
-		cost := tp.EstimateCost(10000, "claude-sonnet-4")
+		_, sonnet, _ := testTierModels(t, testProvider)
+		cost := tp.EstimateCost(10000, sonnet)
 		// 6000 input * $3/M + 4000 output * $15/M = $0.018 + $0.060 = $0.078
 		if cost < 0.07 || cost > 0.09 {
 			t.Errorf("expected cost ~$0.078 for sonnet 10k tokens, got $%.4f", cost)
@@ -134,8 +135,9 @@ func TestEstimateCost(t *testing.T) {
 	})
 
 	t.Run("haiku is cheaper", func(t *testing.T) {
-		costHaiku := tp.EstimateCost(10000, "claude-3-5-haiku")
-		costSonnet := tp.EstimateCost(10000, "claude-sonnet-4")
+		haiku, sonnet, _ := testTierModels(t, testProvider)
+		costHaiku := tp.EstimateCost(10000, haiku)
+		costSonnet := tp.EstimateCost(10000, sonnet)
 		if costHaiku >= costSonnet {
 			t.Errorf("haiku ($%.4f) should be cheaper than sonnet ($%.4f)", costHaiku, costSonnet)
 		}

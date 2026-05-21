@@ -27,6 +27,7 @@ func TestBackgroundAgentPool_SubmitAndCollect(t *testing.T) {
 	pool := NewBackgroundAgentPool()
 
 	pool.Submit("task-1", "do something", func(ctx context.Context, prompt string) (string, error) {
+		time.Sleep(time.Millisecond)
 		return "result-1", nil
 	})
 

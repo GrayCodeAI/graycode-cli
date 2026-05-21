@@ -1,16 +1,16 @@
-// Package model provides model routing and health checking.
+// Package routing provides model routing and health checking.
 // Model discovery, pricing, and catalog data are delegated to eyrie.
 // Hawk does NOT carry a hardcoded model catalog.
 package routing
 
 import (
+	"context"
 	"sort"
-	"sync"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
-// ModelInfo describes a known LLM model (hawk's internal representation).
+// ModelInfo describes a known LLM model (view over eyrie catalog entries).
 type ModelInfo struct {
 	Name        string  `json:"name"`
 	Provider    string  `json:"provider"`
@@ -21,10 +21,16 @@ type ModelInfo struct {
 	Recommended bool    `json:"recommended,omitempty"`
 }
 
-var (
-	catalogMu sync.RWMutex
-	dynamic   []ModelInfo // runtime-registered models (custom providers)
-)
+func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
+	compiled, err := catalog.LoadCatalogV1(context.Background(), catalog.LoadCatalogV1Options{
+		CachePath:    catalog.DefaultCachePath(),
+		RequireCache: false,
+	})
+	if err != nil {
+		return nil
+	}
+	return compiled
+}
 
 func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelInfo {
 	inPrice, outPrice := 0.0, 0.0
@@ -42,37 +48,13 @@ func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelI
 	}
 }
 
-func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
-	c := catalog.DefaultCatalogV1()
-	compiled, err := catalog.CompileCatalogV1(&c)
-	if err != nil {
-		return nil
-	}
-	return compiled
-}
-
-// RegisterDynamic adds a model entry at runtime (custom providers).
-func RegisterDynamic(info ModelInfo) {
-	catalogMu.Lock()
-	defer catalogMu.Unlock()
-	dynamic = append(dynamic, info)
-}
-
-// Find looks up a model by name across eyrie's catalog and dynamic entries.
+// Find looks up a model by name via eyrie's JSON catalog.
 func Find(name string) (ModelInfo, bool) {
 	if compiled := eyrieCatalogV1(); compiled != nil {
 		if canonical, ok := compiled.CanonicalModelForAliasOrID(name); ok {
 			model := compiled.ModelsByID[canonical]
 			offering := firstOffering(compiled, canonical, "")
 			return fromEyrieV1(model, offering), true
-		}
-	}
-	// Check dynamic entries
-	catalogMu.RLock()
-	defer catalogMu.RUnlock()
-	for _, m := range dynamic {
-		if m.Name == name {
-			return m, true
 		}
 	}
 	return ModelInfo{}, false
@@ -95,19 +77,10 @@ func ByProvider(provider string) []ModelInfo {
 			out = append(out, fromEyrieV1(compiled.ModelsByID[id], firstOffering(compiled, id, "")))
 		}
 	}
-	// Append dynamic entries for this provider
-	catalogMu.RLock()
-	defer catalogMu.RUnlock()
-	for _, m := range dynamic {
-		if m.Provider == provider {
-			out = append(out, m)
-		}
-	}
 	return out
 }
 
-// Recommended returns the recommended model for a provider.
-// Delegates to eyrie's GetProviderDefaultModel.
+// Recommended returns the first catalog model for a provider.
 func Recommended(provider string) (ModelInfo, bool) {
 	name := DefaultModel(provider)
 	if name == "" {
@@ -120,19 +93,11 @@ func Recommended(provider string) (ModelInfo, bool) {
 	return info, ok
 }
 
-// DefaultModel returns the default model for a provider via eyrie.
+// DefaultModel returns the first catalog model for a provider via eyrie JSON.
 func DefaultModel(provider string) string {
-	provider = canonicalProvider(provider)
-	if compiled := eyrieCatalogV1(); compiled != nil {
-		legacyDefault := catalog.GetProviderDefaultModel(legacyProviderName(provider), nil)
-		if legacyDefault != "" {
-			if canonical, ok := compiled.CanonicalModelForAliasOrID(legacyDefault); ok {
-				return canonical
-			}
-		}
-		for _, model := range ByProvider(provider) {
-			return model.Name
-		}
+	models := ByProvider(provider)
+	if len(models) > 0 {
+		return models[0].Name
 	}
 	return ""
 }
@@ -148,14 +113,6 @@ func AllProviders() []string {
 				seen[provider] = true
 				out = append(out, provider)
 			}
-		}
-	}
-	catalogMu.RLock()
-	defer catalogMu.RUnlock()
-	for _, m := range dynamic {
-		if !seen[m.Provider] {
-			seen[m.Provider] = true
-			out = append(out, m.Provider)
 		}
 	}
 	sort.Strings(out)
@@ -188,17 +145,6 @@ func canonicalProvider(provider string) string {
 		return "xai"
 	case "zai":
 		return "z-ai"
-	default:
-		return provider
-	}
-}
-
-func legacyProviderName(provider string) string {
-	switch provider {
-	case "google":
-		return "gemini"
-	case "xai":
-		return "grok"
 	default:
 		return provider
 	}

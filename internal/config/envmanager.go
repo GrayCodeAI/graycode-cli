@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // EnvVar represents a single environment variable with metadata.
@@ -37,24 +40,14 @@ func NewEnvManager() *EnvManager {
 	}
 }
 
-// Load reads environment variables from multiple sources in priority order.
-// Sources are checked in order: OS environment (highest), .env, .env.local,
-// ~/.hawk/env, then default values (lowest). Custom source paths can be
-// provided to override the default file search order.
+// Load reads environment variables from explicit file sources when provided.
+// By default only the OS environment is used — API keys are not loaded from .env files.
 func (em *EnvManager) Load(sources ...string) error {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	// Determine file sources to load (lowest priority first so higher priority overwrites)
+	// Only load from files when callers pass explicit paths (tests/tools).
 	fileSources := sources
-	if len(fileSources) == 0 {
-		home, _ := os.UserHomeDir()
-		fileSources = []string{
-			filepath.Join(home, ".hawk", "env"),
-			".env.local",
-			".env",
-		}
-	}
 
 	// Load from files in order (lowest priority first)
 	for _, src := range fileSources {
@@ -103,12 +96,6 @@ func sourceNameFromPath(path string) string {
 		return ".env"
 	case ".env.local":
 		return ".env.local"
-	case "env":
-		// Check if it's in ~/.hawk/
-		if strings.Contains(path, ".hawk") {
-			return "~/.hawk/env"
-		}
-		return "file"
 	default:
 		return "file"
 	}
@@ -351,12 +338,13 @@ func (em *EnvManager) Validate() []string {
 		}
 	}
 
-	// Check recommended vars that may not be in the map
+	// Recommended provider credentials live in the OS secret store.
 	recommended := []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY"}
+	ctx := context.Background()
 	for _, key := range recommended {
 		if _, ok := em.Vars[key]; !ok {
-			if os.Getenv(key) == "" {
-				warnings = append(warnings, fmt.Sprintf("WARNING: recommended variable %q is not set", key))
+			if !credentials.HasSecret(ctx, key) {
+				warnings = append(warnings, fmt.Sprintf("WARNING: recommended credential %q is not configured — run /config", key))
 			}
 		}
 	}
