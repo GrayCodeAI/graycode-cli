@@ -311,7 +311,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		entries, _ := eyrieclient.ListModelsForProvider(context.Background(), provider)
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
+			modelCacheMu.Lock()
 			modelCache[provider] = opts
+			modelCacheMu.Unlock()
 		}
 	}()
 
@@ -685,7 +687,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(msg.options) > 0 {
 			m.configModelOptions = msg.options
 			if msg.provider != "" {
+				modelCacheMu.Lock()
 				modelCache[msg.provider] = msg.options
+				modelCacheMu.Unlock()
 			}
 			if m.configOpen && strings.Contains(m.configNotice, "Loading") {
 				m.configNotice = ""
@@ -981,7 +985,10 @@ func runChat() error {
 	if err != nil {
 		return err
 	}
-	fm := finalModel.(chatModel)
+	fm, ok := finalModel.(chatModel)
+	if !ok {
+		return fmt.Errorf("unexpected final model type: %T", finalModel)
+	}
 	hawkC := "\033[38;2;255;94;14m"
 	rst := "\033[0m"
 

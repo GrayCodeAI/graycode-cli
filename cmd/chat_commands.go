@@ -426,6 +426,11 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: branchSummary()})
 		return m, nil
 	case "/clear":
+		// Cancel any running /loop goroutine.
+		if m.loopCancel != nil {
+			m.loopCancel()
+			m.loopCancel = nil
+		}
 		m.messages = nil
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
 		return m, nil
@@ -1104,7 +1109,10 @@ Generate the recap:`, summary.String())
 			engineProvider := hawkconfig.NormalizeProviderForEngine(value)
 			m.session.SetProvider(engineProvider)
 			// Use cached model or set first from cache
-			if cached, ok := modelCache[engineProvider]; ok && len(cached) > 0 {
+			modelCacheMu.RLock()
+			cached, cacheHit := modelCache[engineProvider]
+			modelCacheMu.RUnlock()
+			if cacheHit && len(cached) > 0 {
 				m.session.SetModel(cached[0].ID)
 				_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
 			}
@@ -2008,12 +2016,23 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		loopCmd := strings.Join(parts[2:], " ")
+		// Cancel any previous loop before starting a new one.
+		if m.loopCancel != nil {
+			m.loopCancel()
+		}
+		loopCtx, loopCancel := context.WithCancel(context.Background())
+		m.loopCancel = loopCancel
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop started: %s every %s (stop with /clear)", loopCmd, interval)})
 		go func() {
 			ticker := time.NewTicker(interval)
 			defer ticker.Stop()
-			for range ticker.C {
-				m.ref.Send(loopTickMsg{command: loopCmd})
+			for {
+				select {
+				case <-loopCtx.Done():
+					return
+				case <-ticker.C:
+					m.ref.Send(loopTickMsg{command: loopCmd})
+				}
 			}
 		}()
 		return m, nil
@@ -2182,6 +2201,10 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		cmdStr := strings.TrimSpace(strings.TrimPrefix(text, "/run"))
+		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+			return m, nil
+		}
 		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
@@ -2195,6 +2218,10 @@ Generate the recap:`, summary.String())
 		cmdStr := "go test ./..."
 		if len(parts) >= 2 {
 			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/test"))
+		}
+		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+			return m, nil
 		}
 		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
@@ -2211,6 +2238,10 @@ Generate the recap:`, summary.String())
 		cmdStr := "golangci-lint run ./..."
 		if len(parts) >= 2 {
 			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/lint"))
+		}
+		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+			return m, nil
 		}
 		out, _ := exec.Command("sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))

@@ -47,6 +47,9 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err := validatePathAllowed(ctx, p.Destination); err != nil {
 		return "", err
 	}
+	if err := validateURLPublic(ctx, p.URL); err != nil {
+		return "", err
+	}
 
 	client := &http.Client{Timeout: 2 * time.Minute}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, p.URL, nil)

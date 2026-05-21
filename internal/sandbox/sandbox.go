@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 // Config describes sandbox configuration.
@@ -232,6 +233,11 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 				profile := GenerateSeatbeltProfile(policy)
 				_, _ = tmpFile.WriteString(profile)
 				_ = tmpFile.Close()
+				// Schedule cleanup after command completes.
+				go func() {
+					time.Sleep(5 * time.Minute)
+					_ = os.Remove(tmpFile.Name())
+				}()
 				return "sandbox-exec", []string{"-f", tmpFile.Name(), "bash", "-c", command}
 			}
 		}

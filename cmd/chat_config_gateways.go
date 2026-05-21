@@ -39,9 +39,11 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 		}
 		count := hawkconfig.CachedModelCountForProvider(id)
 		if count == 0 {
+			modelCacheMu.RLock()
 			if cached, ok := modelCache[id]; ok {
 				count = len(cached)
 			}
+			modelCacheMu.RUnlock()
 		}
 		rows = append(rows, configGatewayRow{
 			ID:          id,

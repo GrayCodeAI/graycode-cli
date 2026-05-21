@@ -308,7 +308,9 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	InvalidateModelCache()
 	m.configModelProvider = msg.providerID
 	if len(msg.modelOptions) > 0 {
+		modelCacheMu.Lock()
 		modelCache[msg.providerID] = msg.modelOptions
+		modelCacheMu.Unlock()
 	}
 	next, cmd := m.rebuildSessionTransport()
 	next.invalidateConnStatus()

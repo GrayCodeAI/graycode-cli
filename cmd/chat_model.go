@@ -191,6 +191,9 @@ type chatModel struct {
 	sourceRoots  *engine.SourceRoots
 	selfImprover *engine.SelfImprover
 	codingSoul   *engine.CodingSoul
+
+	// Loop cancellation
+	loopCancel context.CancelFunc // cancels the current /loop goroutine
 }
 
 const streamRenderInterval = 50 * time.Millisecond

@@ -68,7 +68,7 @@ func TestWebFetchTool_HTMLStripping(t *testing.T) {
 
 	var wf WebFetchTool
 	input, _ := json.Marshal(map[string]string{"url": srv.URL})
-	result, err := wf.Execute(context.Background(), input)
+	result, err := wf.Execute(WithSSRFSkip(context.Background()), input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestWebFetchTool_Truncation(t *testing.T) {
 
 	var wf WebFetchTool
 	input, _ := json.Marshal(map[string]string{"url": srv.URL})
-	result, err := wf.Execute(context.Background(), input)
+	result, err := wf.Execute(WithSSRFSkip(context.Background()), input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

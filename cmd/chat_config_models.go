@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -21,17 +22,24 @@ type configModelOption struct {
 	OutputPricePer1M float64
 }
 
-var modelCache = make(map[string][]configModelOption)
+var (
+	modelCache   = make(map[string][]configModelOption)
+	modelCacheMu sync.RWMutex
+)
 
 // InvalidateModelCache clears all in-memory model picker rows.
 func InvalidateModelCache() {
+	modelCacheMu.Lock()
 	modelCache = make(map[string][]configModelOption)
+	modelCacheMu.Unlock()
 	hawkconfig.InvalidateConfigUICache()
 }
 
 // InvalidateModelCacheProvider drops one gateway's cached picker rows.
 func InvalidateModelCacheProvider(provider string) {
+	modelCacheMu.Lock()
 	delete(modelCache, strings.TrimSpace(provider))
+	modelCacheMu.Unlock()
 	hawkconfig.InvalidateConfigUICache()
 }
 
@@ -54,7 +62,9 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		}
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
+			modelCacheMu.Lock()
 			modelCache[provider] = opts
+			modelCacheMu.Unlock()
 		}
 		return modelsFetchedMsg{options: opts, provider: provider}
 	}
@@ -97,14 +107,19 @@ func loadConfigModelOptions(provider string) []configModelOption {
 	if provider == "" {
 		return nil
 	}
+	modelCacheMu.RLock()
 	if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
+		modelCacheMu.RUnlock()
 		return cached
 	}
+	modelCacheMu.RUnlock()
 	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
 		entries := catalog.ModelEntriesForProvider(compiled, provider)
 		if len(entries) > 0 {
 			opts := configModelOptionsFromCatalog(entries)
+			modelCacheMu.Lock()
 			modelCache[provider] = opts
+			modelCacheMu.Unlock()
 			return opts
 		}
 	}
