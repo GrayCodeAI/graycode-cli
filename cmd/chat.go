@@ -198,7 +198,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	ci.EchoMode = textinput.EchoNormal
 
 	sp := spinner.New()
-	sp.Spinner = spinner.Spinner{Frames: hawkSpinnerFrames, FPS: 200 * time.Millisecond}
+	sp.Spinner = spinner.Spinner{Frames: hawkSpinnerFrames, FPS: hawkSpinnerFrameInterval}
 	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
@@ -258,7 +258,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.ghostText = NewGhostText()
 	m.modeManager = shellmode.NewModeManager()
 	m.modeManager.LoadPersistedMode()
-	m.brailleSpinner = NewBrailleSpinner(SpinnerBrailleWave, "")
+	m.brailleSpinner = NewBrailleSpinner(SpinnerHawk, "")
+	m.brailleSpinner.SetLabel(m.spinnerVerb)
 
 	// Initialize BMAD/Aeon features
 	m.hintsLoader = engine.NewHintsLoader()
@@ -364,7 +365,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd()}
+	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
 		cwd, _ := os.Getwd()
@@ -641,7 +642,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// @ mention: resolve file references and include as context.
 			text = m.handleMentions(text)
-			// Build delta-based terminal context for the query
+			userDisplay := text
+			// Build delta-based terminal context for the query (LLM only — not shown in TUI).
 			text = m.termCtx.BuildContext(text)
 			// Scale-adaptive: classify task complexity
 			scale := engine.ClassifyScale(text)
@@ -660,7 +662,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if hints := m.hintsLoader.LoadHints(cwd); hints != "" {
 				m.session.AppendSystemContext(hints)
 			}
-			m.messages = append(m.messages, displayMsg{role: "user", content: text})
+			m.messages = append(m.messages, displayMsg{role: "user", content: userDisplay})
 			m.session.AddUser(text)
 			if m.wal != nil {
 				_ = m.wal.Append(session.Message{Role: "user", Content: text})
@@ -669,6 +671,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.autoScroll = true
 			m.viewDirty = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.partial.Reset()
 			m.startStream()
 			return m, nil
@@ -833,6 +836,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, blinkTickCmd())
 		return m, tea.Batch(cmds...)
 
+	case spinnerVerbTickMsg:
+		cmds = append(cmds, spinnerVerbTickCmd())
+		if m.waiting && m.partial.Len() == 0 {
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
+			m.viewDirty = true
+		}
+		return m, tea.Batch(cmds...)
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -843,10 +855,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
-		cmds = append(cmds, cmd)
 		if m.waiting && m.partial.Len() == 0 {
+			m.brailleSpinner.Tick()
 			m.viewDirty = true
 		}
+		cmds = append(cmds, cmd)
 
 	case containerStatusMsg:
 		m.containerStatus = msg.status

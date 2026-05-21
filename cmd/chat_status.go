@@ -24,7 +24,22 @@ func modelStatusMeta(gateway, modelID string) (displayName, contextLabel string)
 		contextLabel = formatModelTableContext(o.ContextWindow)
 		break
 	}
-	return displayName, contextLabel
+	return normalizeModelDisplayName(modelID, displayName), contextLabel
+}
+
+// normalizeModelDisplayName prefers a short label when the catalog returns a slug.
+func normalizeModelDisplayName(modelID, displayName string) string {
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		return shortModelID(modelID)
+	}
+	if strings.Contains(displayName, "/") {
+		if short := shortModelID(modelID); short != "" {
+			return short
+		}
+		return shortModelID(displayName)
+	}
+	return displayName
 }
 
 func (m *chatModel) invalidateConnStatus() {
@@ -63,39 +78,101 @@ func (m *chatModel) chatConnectionStatus() string {
 	if fp == m.connStatusKey {
 		return m.connStatusVal
 	}
-	status := m.buildConnectionStatus()
+	status := m.buildConnectionStatusPlain()
 	m.connStatusKey = fp
 	m.connStatusVal = status
 	return status
 }
 
-func (m chatModel) buildConnectionStatus() string {
-	gw, model := m.sessionGatewayModel()
-	gwLabel := hawkconfig.GatewayDisplayName(gw)
-	if gwLabel == "" {
-		gwLabel = gw
+func (m chatModel) buildConnectionStatusPlain() string {
+	gw, model, ctxLabel := m.connectionStatusParts()
+	if gw == "" && model == "" {
+		return "pick model"
 	}
-
 	if model == "" {
-		if gwLabel == "" {
+		if gw == "" {
 			return "pick model"
 		}
-		return gwLabel + ": pick model"
+		return gw + " · pick model"
+	}
+	if ctxLabel != "" && ctxLabel != "—" {
+		return fmt.Sprintf("%s · %s · %s ctx", gw, model, ctxLabel)
+	}
+	if gw == "" {
+		return model
+	}
+	return gw + " · " + model
+}
+
+func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string) {
+	gw, modelID := m.sessionGatewayModel()
+	gateway = hawkconfig.GatewayDisplayName(gw)
+	if gateway == "" {
+		gateway = gw
 	}
 
-	displayName, ctxLabel := modelStatusMeta(gw, model)
-	if ctxLabel == "" || ctxLabel == "—" {
-		ctxLabel = "0k"
+	if modelID == "" {
+		return gateway, "", ""
 	}
-	if gwLabel == "" {
-		return fmt.Sprintf("%s .%s", displayName, ctxLabel)
+
+	model, contextLabel = modelStatusMeta(gw, modelID)
+	if contextLabel == "" || contextLabel == "—" {
+		contextLabel = "0k"
 	}
-	return fmt.Sprintf("%s: %s .%s", gwLabel, displayName, ctxLabel)
+	return gateway, model, contextLabel
+}
+
+// renderConnectionStatus returns styled status text and its visible width for layout.
+func (m chatModel) renderConnectionStatus() (string, int) {
+	ctx := context.Background()
+	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
+		return "", 0
+	}
+
+	gw, model, ctxLabel := m.connectionStatusParts()
+	if gw == "" && model == "" {
+		s := "pick model"
+		return dimStyle.Render(s), len(s)
+	}
+	if model == "" {
+		if gw == "" {
+			s := "pick model"
+			return dimStyle.Render(s), len(s)
+		}
+		s := gw + " · pick model"
+		return dimStyle.Render(gw) + dimStyle.Render(" · pick model"), len(s)
+	}
+
+	sep := dimStyle.Render(" · ")
+	const sepVis = 3
+	var b strings.Builder
+	vis := 0
+
+	if gw != "" {
+		b.WriteString(dimStyle.Render(gw))
+		vis += len(gw)
+	}
+	if model != "" {
+		if vis > 0 {
+			b.WriteString(sep)
+			vis += sepVis
+		}
+		b.WriteString(hawkAccentStyle.Render(model))
+		vis += len(model)
+	}
+	if ctxLabel != "" && ctxLabel != "—" {
+		if vis > 0 {
+			b.WriteString(sep)
+			vis += sepVis
+		}
+		ctxText := ctxLabel + " ctx"
+		b.WriteString(dimStyle.Render(ctxText))
+		vis += len(ctxText)
+	}
+	return b.String(), vis
 }
 
 // chatBottomRightStatus is the deployment line on the input bar.
-// No keys: empty (welcome screen carries setup hints).
-// With key: Gateway: Model .262k
 func (m *chatModel) chatBottomRightStatus() string {
 	return m.chatConnectionStatus()
 }

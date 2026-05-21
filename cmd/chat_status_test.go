@@ -33,7 +33,7 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 
 	m := chatModel{session: sess}
 	got := m.chatConnectionStatus()
-	if !strings.Contains(got, "OpenRouter: ") {
+	if !strings.Contains(got, "OpenRouter · ") {
 		t.Fatalf("expected gateway prefix, got %q", got)
 	}
 	if !strings.Contains(got, "kimi-k2.6") {
@@ -62,7 +62,7 @@ func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
-	if got != "OpenRouter: pick model" {
+	if got != "OpenRouter · pick model" {
 		t.Fatalf("status = %q", got)
 	}
 }
@@ -122,6 +122,40 @@ func TestBuildWelcomeMessage_OmitsDockerWhenDisabled(t *testing.T) {
 	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil)
 	if strings.Contains(msg, "Docker") {
 		t.Fatal("expected no Docker indicator when container mode disabled")
+	}
+}
+
+func TestNormalizeModelDisplayName_ShortensSlug(t *testing.T) {
+	got := normalizeModelDisplayName("openrouter/free", "openrouter/free")
+	if got != "free" {
+		t.Fatalf("expected free, got %q", got)
+	}
+}
+
+func TestWelcomeHeader_CompactAfterChat(t *testing.T) {
+	m := chatModel{
+		welcomeCache: "BIG LOGO",
+		messages:     []displayMsg{{role: "user", content: "Hi"}},
+	}
+	got := m.welcomeHeader()
+	if strings.Contains(got, "BIG LOGO") {
+		t.Fatal("expected compact header after chat, got full welcome")
+	}
+	if !strings.Contains(got, "/welcome") {
+		t.Fatalf("expected compact hint, got %q", got)
+	}
+}
+
+func TestShowWelcomeBanner_WithMessages(t *testing.T) {
+	m := chatModel{
+		welcomeCache: "welcome",
+		messages: []displayMsg{
+			{role: "user", content: "Hi"},
+			{role: "assistant", content: "Hello"},
+		},
+	}
+	if !m.showWelcomeBanner() {
+		t.Fatal("welcome banner should stay visible after chat starts")
 	}
 }
 

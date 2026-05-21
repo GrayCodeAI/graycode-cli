@@ -123,9 +123,9 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		tip := "Run /config to add an API key, then type your first message"
 		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 	} else {
-		tip := "TIP: /help for commands · /config to change model"
+		tip := "TIP: /help for commands · /model to switch model"
 		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
-		shortcuts := "shift+tab modes · ctrl+N models · esc cancel"
+		shortcuts := "ctrl+N next model · ctrl+L autonomy · esc cancel"
 		b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
 	}
 

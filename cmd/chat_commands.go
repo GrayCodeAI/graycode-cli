@@ -2159,6 +2159,7 @@ Generate the recap:`, summary.String())
 			m.waiting = true
 			m.autoScroll = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.startStream()
 			return m, nil
 		}

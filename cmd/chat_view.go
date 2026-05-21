@@ -13,17 +13,35 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-func (m chatModel) configShowWelcomeBanner() bool {
-	if strings.TrimSpace(m.welcomeCache) == "" {
-		return false
-	}
+func (m chatModel) showWelcomeBanner() bool {
+	return strings.TrimSpace(m.welcomeCache) != ""
+}
+
+func (m chatModel) hasChatMessages() bool {
 	for _, msg := range m.messages {
 		switch msg.role {
 		case "user", "assistant", "tool_use", "tool_result":
-			return false
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+// welcomeHeader returns the full logo before chat, then a one-line banner after.
+func (m chatModel) welcomeHeader() string {
+	if !m.showWelcomeBanner() {
+		return ""
+	}
+	for _, msg := range m.messages {
+		if msg.role == "welcome" {
+			return m.welcomeCache + "\n\n"
+		}
+	}
+	if m.hasChatMessages() {
+		line := fmt.Sprintf("hawk %s · /help · /welcome for startup screen", DisplayVersion())
+		return dimStyle.Render(line) + "\n\n"
+	}
+	return m.welcomeCache + "\n\n"
 }
 
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
@@ -220,9 +238,8 @@ func (m *chatModel) updateViewportContent() {
 	// /config overlay: skip rebuilding full chat history (keep welcome on first run).
 	if m.configOpen {
 		var content strings.Builder
-		if m.configShowWelcomeBanner() {
-			content.WriteString(m.welcomeCache)
-			content.WriteString("\n\n")
+		if m.showWelcomeBanner() {
+			content.WriteString(m.welcomeHeader())
 		}
 		content.WriteString(m.configPanelView())
 		m.viewport.SetContent(content.String())
@@ -234,8 +251,8 @@ func (m *chatModel) updateViewportContent() {
 	bgDark := "\033[48;2;30;30;40m"
 
 	var chatContent strings.Builder
-	if m.configShowWelcomeBanner() {
-		chatContent.WriteString(m.welcomeCache + "\n")
+	if m.showWelcomeBanner() {
+		chatContent.WriteString(m.welcomeHeader())
 	}
 
 	for i, msg := range m.messages {
@@ -307,9 +324,8 @@ func (m *chatModel) updateViewportContent() {
 			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(partial, viewWidth-3))
 			chatContent.WriteString("\n\n")
 		} else {
-			// Braille spinner with shimmer text (reuse cached instance)
-			m.brailleSpinner.text = m.spinnerVerb
-			spinnerLine := m.brailleSpinner.Tick() + "\033[1;38;2;255;94;14m...\033[0m"
+			// Hawk QuadBlock spinner: random color glyph + verb label
+			spinnerLine := m.brailleSpinner.Frame()
 			if !m.toolStartTime.IsZero() {
 				if elapsed := time.Since(m.toolStartTime); elapsed > 2*time.Second {
 					spinnerLine += fmt.Sprintf(" (%.1fs)", elapsed.Seconds())
@@ -366,9 +382,9 @@ func (m chatModel) View() string {
 			leftBold = permissionModeLabel(m.session)
 			leftDim = permissionModeHint(m.session)
 		}
-		rightStatus := m.chatBottomRightStatus()
+		rightRendered, rightVisLen := m.renderConnectionStatus()
 		leftVisLen := len(leftBold) + len(leftDim)
-		gap := totalW - leftVisLen - len(rightStatus)
+		gap := totalW - leftVisLen - rightVisLen
 		if gap < 1 {
 			gap = 1
 		}
@@ -378,7 +394,7 @@ func (m chatModel) View() string {
 		} else {
 			leftRendered = lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
 		}
-		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + dimStyle.Render(rightStatus) + "\n")
+		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + rightRendered + "\n")
 		bottomBarLines++
 		inputBox := inputBorderStyle.Width(totalW).Render(func() string {
 			if m.useConfigInput {
@@ -441,6 +457,7 @@ func (m chatModel) View() string {
 				style = containerErrStyle
 			}
 			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
+			bottomBarLines++
 		}
 		_ = bottomBarLines
 	}

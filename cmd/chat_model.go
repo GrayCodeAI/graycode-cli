@@ -27,6 +27,8 @@ import (
 
 var (
 	tealColor    = lipgloss.Color("#4ECDC4")
+	hawkColor    = lipgloss.Color("#FF5E0E")
+	hawkColorDim = lipgloss.Color("#CC4A0B")
 	dimColor     = lipgloss.Color("#666666")
 	errorColor   = lipgloss.Color("#e05555")
 	toolColor    = lipgloss.Color("#FFD700")
@@ -37,15 +39,20 @@ var (
 
 	slashCmdStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
 	slashDescStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-	slashSelCmdStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	slashSelDescStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	slashSelCmdStyle  = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	slashSelDescStyle = lipgloss.NewStyle().Foreground(hawkColor)
 	inputBorderStyle  = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(lipgloss.Color("#555555"))
 	ghostHintStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
 	containerErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+	hawkAccentStyle   = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	hawkSpinnerStyle  = lipgloss.NewStyle().Foreground(hawkColor)
 )
 
-// Hawk spinner frames: dot-by-dot build then reverse (like Droid)
-var hawkSpinnerFrames = []string{"◐", "◓", "◑", "◒"}
+// hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.
+var hawkSpinnerFrames = hawkQuadBlockGlyphs
+
+// hawkSpinnerFrameInterval — QuadBlock frame cadence (faster than Framer's 100ms default).
+const hawkSpinnerFrameInterval = 70 * time.Millisecond
 
 // Spinner verbs (from hawk-archive) — picked randomly per session
 var spinnerVerbs = []string{
@@ -67,7 +74,8 @@ type (
 	streamChunkMsg string
 	streamDoneMsg  struct{}
 	streamErrMsg   struct{ err error }
-	blinkTickMsg   struct{}
+	blinkTickMsg       struct{}
+	spinnerVerbTickMsg struct{}
 )
 
 type (
@@ -216,4 +224,8 @@ func (m *chatModel) flushPartialDirty() {
 
 func blinkTickCmd() tea.Cmd {
 	return tea.Tick(2200*time.Millisecond, func(time.Time) tea.Msg { return blinkTickMsg{} })
+}
+
+func spinnerVerbTickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(time.Time) tea.Msg { return spinnerVerbTickMsg{} })
 }
