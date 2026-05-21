@@ -46,7 +46,7 @@ Examples:
   hawk sight --mode improve --model claude-sonnet-4-20250514
   hawk sight --concerns security,bugs --fail-on high --format json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_ = hawkconfig.LoadEnvFile()
+		hawkconfig.PrepareCredentialDiscovery(context.Background())
 
 		diff, err := getDiff()
 		if err != nil {

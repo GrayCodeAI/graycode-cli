@@ -104,6 +104,8 @@ func TestIsSensitivePath(t *testing.T) {
 		filepath.Join(home, ".ssh", "authorized_keys"),
 		filepath.Join(home, ".aws", "credentials"),
 		filepath.Join(home, ".hawk", "provider.json"),
+		filepath.Join(home, ".hawk", "env"),
+		filepath.Join(home, ".hawk", ".env"),
 		filepath.Join(home, ".env"),
 		"/some/project/.env",
 		"/tmp/app/credentials.json",

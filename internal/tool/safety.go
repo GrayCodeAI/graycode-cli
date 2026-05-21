@@ -1,7 +1,10 @@
 package tool
 
 import (
+	"context"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -172,6 +175,14 @@ func IsSensitivePath(path string) string {
 		if clean == hawkProv {
 			return "access to ~/.hawk/provider.json is blocked for security (API credentials)"
 		}
+		hawkEnv := filepath.Join(home, ".hawk", "env")
+		if clean == hawkEnv {
+			return "access to ~/.hawk/env is blocked for security (API keys)"
+		}
+		hawkDotEnv := filepath.Join(home, ".hawk", ".env")
+		if clean == hawkDotEnv {
+			return "access to ~/.hawk/.env is blocked for security (API keys)"
+		}
 	}
 
 	// Check suffix-based blocks (e.g. ~/.ssh/*)
@@ -252,4 +263,73 @@ func IsBinaryContent(data []byte) bool {
 		}
 	}
 	return false
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 8. SSRF protection (WebFetch / Download)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// privateIPBlocks are CIDR ranges that should never be fetched by external tools.
+var privateIPBlocks []*net.IPNet
+
+func init() {
+	for _, cidr := range []string{
+		"127.0.0.0/8",    // loopback
+		"10.0.0.0/8",     // private
+		"172.16.0.0/12",  // private
+		"192.168.0.0/16", // private
+		"169.254.0.0/16", // link-local / cloud metadata
+		"::1/128",        // IPv6 loopback
+		"fc00::/7",       // IPv6 unique local
+		"fe80::/10",      // IPv6 link-local
+	} {
+		_, block, _ := net.ParseCIDR(cidr)
+		if block != nil {
+			privateIPBlocks = append(privateIPBlocks, block)
+		}
+	}
+}
+
+// ssrfSkipKey is a context key that, when set, disables SSRF validation.
+// Used by tests that run httptest servers on localhost.
+type ssrfSkipKey struct{}
+
+// WithSSRFSkip returns a context that skips SSRF URL validation.
+func WithSSRFSkip(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ssrfSkipKey{}, true)
+}
+
+// validateURLPublic rejects URLs that resolve to private/link-local IP ranges
+// to prevent SSRF attacks (e.g., fetching AWS metadata at 169.254.169.254).
+func validateURLPublic(ctx context.Context, rawURL string) error {
+	if ctx.Value(ssrfSkipKey{}) != nil {
+		return nil
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("blocked: only http/https URLs are allowed")
+	}
+
+	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("blocked: URL has no host")
+	}
+
+	// Resolve the hostname to check against private ranges.
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		// If DNS fails, allow the request — the HTTP client will fail anyway.
+		return nil
+	}
+	for _, ip := range ips {
+		for _, block := range privateIPBlocks {
+			if block.Contains(ip) {
+				return fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, ip)
+			}
+		}
+	}
+	return nil
 }

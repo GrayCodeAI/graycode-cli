@@ -70,20 +70,21 @@ go test -race ./...           # Run all tests
 
 | Module | In `go.mod` | In-repo checkout | Used from |
 |--------|-------------|------------------|-----------|
-| eyrie | ✓ | **`external/eyrie`** submodule + **`go.work`** | Provider client, setup, streaming |
+| eyrie | ✓ | sibling **`../eyrie`** + **`go.work`** + **`replace` in `go.mod`** | Provider client, setup, streaming |
 | sight | ✓ | proxy (optional local `replace`) | `hawk sight`, `internal/bridge/sight` |
 | inspect | ✓ | proxy | Inspect bridges |
 | tok | ✓ | proxy | Tokenizer pipeline |
 | yaad | ✓ | proxy | Memory bridge |
 | trace | — | separate **`trace` CLI** | Session capture only; not a Go import |
 
-**Eyrie submodule** (Herm / LangDAG-style):
+**Eyrie sibling checkout** (hawk + eyrie):
 
 ```bash
-git submodule update --init --recursive
+# hawk-eco layout: clone eyrie next to hawk, then:
+cd hawk && go work sync
 ```
 
-Committed **`go.work`** lists `.` and **`./external/eyrie`** only. **`go.mod` must not contain `replace` directives** for Eyrie (CI enforces this).
+Committed **`go.work`** lists `.` and **`../eyrie`**. **`go.mod`** includes **`replace github.com/GrayCodeAI/eyrie => ../eyrie`** (CI enforces this path).
 
 **`shared/types`** forwards **`internal/types`** for **sight**, **inspect**, **tok**, and friends so they never import hawk `internal/` directly.
 
@@ -91,7 +92,7 @@ For sibling clones on one machine, use a **personal** parent **`go.work`** or te
 
 ### CI
 
-- Checkout uses **`submodules: recursive`** so `external/eyrie` is populated
+- CI clones **eyrie** to **`../eyrie`** via **`.github/actions/checkout-eyrie`**
 - Module hygiene: **`go work sync`** and **`go build -mod=readonly`** (not `go mod tidy`, which mis-resolves workspace Eyrie)
 - golangci-lint with errcheck, staticcheck, gosec, unused, misspell
 - Multi-platform builds (linux/darwin/windows × amd64/arm64)
@@ -105,3 +106,23 @@ For sibling clones on one machine, use a **personal** parent **`go.work`** or te
 - Landlock: filesystem access restrictions
 - seccomp-bpf: blocks 21 dangerous syscalls
 - Fallback: no-op on non-Linux (`internal/sandbox/landlock_other.go`)
+
+## Milestone: API key → model → sandbox
+
+Active branch: **`feature/secure-credentials-sandbox`** (hawk + eyrie sibling).
+
+| Concern | Where |
+|---------|--------|
+| First-run `/config`, setup guards | `internal/config/setup_status.go`, `cmd/chat.go` |
+| Keychain + `PersistAPIKey` / `RemoveStoredCredential` | `internal/config/credentials_store.go`, eyrie `credentials/` |
+| Remove stored key (TUI) | `/config key remove` → `cmd/chat_config_remove.go` |
+| Remove stored key (CLI) | `hawk credentials remove` → `cmd/credentials.go` |
+| Catalog discover + routing only on disk | `internal/config/eyrie_apply.go`, eyrie `setup/apply_credentials.go` |
+| Catalog empty / refresh hints | `internal/config/catalog_health.go`, `catalog_startup.go` |
+| No API keys in `provider.json` | eyrie `SanitizeDeploymentConfigForDisk`, hawk `MigrateProviderSecrets` |
+| Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
+| Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md` |
+
+**Not in this milestone:** conversation DAG as source of truth, langdag Go import.
+
+**`/sandbox` vs Docker:** `/sandbox` toggles **approval mode** in the TUI. **Docker container mode** is the default for bash (`shouldUseContainer`); use `--no-container` for host execution.

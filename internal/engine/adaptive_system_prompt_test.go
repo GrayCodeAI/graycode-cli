@@ -4,6 +4,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 func TestNewSystemPromptBuilder(t *testing.T) {
@@ -238,28 +240,34 @@ func TestAdaptForTaskImplement(t *testing.T) {
 }
 
 func TestAdaptForModelOpus(t *testing.T) {
+	_, _, opus := testTierModels(t, testProvider)
 	b := NewSystemPromptBuilder("", 1000)
-	b.AdaptForModel("claude-opus-4")
+	b.AdaptForModel(opus)
 
-	// Opus gets 20% more budget
-	if b.MaxTokens != 1200 {
-		t.Errorf("expected 1200 tokens for opus, got %d", b.MaxTokens)
+	if routing.CostTierOf(opus) == routing.CostTierExpensive {
+		if b.MaxTokens != 1200 {
+			t.Errorf("expected 1200 tokens for opus tier, got %d", b.MaxTokens)
+		}
+	} else if b.MaxTokens != 1000 {
+		t.Errorf("expected default 1000 tokens for non-opus tier, got %d", b.MaxTokens)
 	}
 }
 
 func TestAdaptForModelHaiku(t *testing.T) {
+	haiku, _, _ := testTierModels(t, testProvider)
 	b := NewSystemPromptBuilder("", 1000)
 	b.AddSection(PromptSection{Name: "examples", Content: "Examples.", Priority: 5})
 
-	b.AdaptForModel("claude-haiku-3")
+	b.AdaptForModel(haiku)
 
-	if b.MaxTokens != 700 {
-		t.Errorf("expected 700 tokens for haiku, got %d", b.MaxTokens)
-	}
-
-	for _, s := range b.Sections {
-		if s.Name == "examples" && s.Priority != 10 {
-			t.Errorf("expected examples demoted to priority 10 for haiku, got %d", s.Priority)
+	if routing.CostTierOf(haiku) == routing.CostTierCheap {
+		if b.MaxTokens != 700 {
+			t.Errorf("expected 700 tokens for haiku tier, got %d", b.MaxTokens)
+		}
+		for _, s := range b.Sections {
+			if s.Name == "examples" && s.Priority != 10 {
+				t.Errorf("expected examples demoted to priority 10 for haiku, got %d", s.Priority)
+			}
 		}
 	}
 }

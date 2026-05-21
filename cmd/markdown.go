@@ -18,7 +18,7 @@ import (
 // Markdown rendering styles using the project's existing color palette.
 var (
 	mdHeaderStyle     = lipgloss.NewStyle().Foreground(tealColor).Bold(true)
-	mdBoldStyle       = lipgloss.NewStyle().Bold(true)
+	mdBoldStyle       = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	mdItalicStyle     = lipgloss.NewStyle().Italic(true)
 	mdInlineCodeStyle = lipgloss.NewStyle().Background(lipgloss.Color("#2A2A3A")).Foreground(lipgloss.Color("#E6E6E6"))
 	mdCodeBlockStyle  = lipgloss.NewStyle().Background(lipgloss.Color("#2A2A3A"))

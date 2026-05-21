@@ -133,32 +133,35 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 	if err != nil {
 		return settings, err
 	}
-	// Register user-defined custom providers with eyrie and hawk model catalog.
+	// Register custom providers with eyrie only; models come from settings + catalog fetch.
 	for _, cp := range settings.CustomProviders {
 		if cp.Name == "" || cp.BaseURL == "" {
 			continue
 		}
 		_ = client.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
-		if cp.Model != "" {
-			hawkmodel.RegisterDynamic(hawkmodel.ModelInfo{
-				Name:        cp.Model,
-				Provider:    cp.Name,
-				ContextSize: 128_000,
-				Description: "Custom provider: " + cp.Name,
-			})
-		}
 	}
 	return settings, nil
 }
 
 func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
-	effectiveModel := strings.TrimSpace(settings.Model)
+	ctx := context.Background()
+	hawkconfig.SyncSelectionWithCredentials(ctx)
+	if !hawkconfig.HasConfiguredDeployment(ctx) {
+		return "", ""
+	}
+	effectiveModel := hawkconfig.ActiveModel(ctx)
 	if strings.TrimSpace(model) != "" {
 		effectiveModel = strings.TrimSpace(model)
 	}
-	effectiveProvider := strings.TrimSpace(settings.Provider)
+	if strings.TrimSpace(settings.Model) != "" {
+		effectiveModel = strings.TrimSpace(settings.Model)
+	}
+	effectiveProvider := hawkconfig.ActiveProvider(ctx)
 	if strings.TrimSpace(provider) != "" {
 		effectiveProvider = strings.TrimSpace(provider)
+	}
+	if strings.TrimSpace(settings.Provider) != "" {
+		effectiveProvider = strings.TrimSpace(settings.Provider)
 	}
 	// If the configured provider's API key is missing, fall back to auto-detection
 	// so users with ANTHROPIC_API_KEY don't get confusing errors about canopywave.
@@ -171,11 +174,12 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 		}
 	}
 	if normalized != "" && strings.TrimSpace(effectiveModel) == "" {
-		if resolved := hawkmodel.DefaultModel(normalized); resolved != "" {
-			effectiveModel = resolved
-		} else if resolved := client.ResolveDefaultModel(normalized); resolved != "" {
+		if resolved := hawkconfig.DefaultModelForProvider(normalized); resolved != "" {
 			effectiveModel = resolved
 		}
+	}
+	if hawkconfig.DeploymentRoutingEnabled(settings) && strings.TrimSpace(effectiveModel) != "" {
+		effectiveModel = hawkconfig.ResolveCanonicalModel(effectiveModel)
 	}
 	return effectiveModel, normalized
 }
@@ -203,14 +207,14 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 		sess.EnhancedMemory = enhancedMem
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
-	// Herm-style: API keys from environment only
+	// Hawk: API keys from OS secret store only
 	normalizedProvider := hawkconfig.NormalizeProviderForEngine(settings.Provider)
 	if normalizedProvider != "" {
 		if key := hawkconfig.APIKeyForProvider(normalizedProvider); key != "" {
 			sess.SetAPIKey(normalizedProvider, key)
 		}
 	}
-	sess.SetAPIKeys(hawkconfig.LoadAPIKeysFromEnv())
+	sess.SetAPIKeys(hawkconfig.LoadAPIKeysFromStore())
 
 	for _, spec := range settings.AutoAllow {
 		sess.Permissions.AllowSpec(spec)

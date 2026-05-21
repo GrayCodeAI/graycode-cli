@@ -1,0 +1,23 @@
+name: Checkout eyrie
+description: Clone eyrie as a sibling repo for hawk go.work (../eyrie)
+
+inputs:
+  ref:
+    description: Git ref to checkout (branch or tag)
+    required: false
+    default: main
+
+runs:
+  using: composite
+  steps:
+    - name: Clone eyrie
+      shell: bash
+      run: |
+        set -euo pipefail
+        dest="${GITHUB_WORKSPACE}/../eyrie"
+        if [ -d "$dest/.git" ]; then
+          echo "eyrie already present at $dest"
+          exit 0
+        fi
+        git clone --depth=1 --branch "${{ inputs.ref }}" \
+          "https://github.com/GrayCodeAI/eyrie.git" "$dest"

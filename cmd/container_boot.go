@@ -72,7 +72,7 @@ func shouldUseContainer() bool {
 }
 
 // bootContainerCmd starts the container in the background and sends status
-// updates to the TUI (herm-style async boot with progress feedback).
+// updates to the TUI (async boot with progress feedback).
 func bootContainerCmd(projectDir string) tea.Cmd {
 	return func() tea.Msg {
 		cs := sandbox.NewContainerSandbox(projectDir)

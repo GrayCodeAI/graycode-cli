@@ -36,8 +36,11 @@ func TestGenerateManPage(t *testing.T) {
 	if !strings.Contains(page, ".SH ENVIRONMENT") {
 		t.Fatal("missing ENVIRONMENT section")
 	}
-	if !strings.Contains(page, "ANTHROPIC_API_KEY") {
-		t.Fatal("missing ANTHROPIC_API_KEY in env section")
+	if !strings.Contains(page, ".SH CREDENTIALS") {
+		t.Fatal("missing CREDENTIALS section")
+	}
+	if !strings.Contains(page, "/config") {
+		t.Fatal("missing /config guidance in credentials section")
 	}
 	if !strings.Contains(page, "GrayCode AI") {
 		t.Fatal("missing AUTHORS section")

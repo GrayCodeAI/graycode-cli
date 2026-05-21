@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+
+	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // CascadeRouter selects the optimal model for each request based on task complexity.
@@ -75,7 +76,7 @@ func (cr *CascadeRouter) SelectModel(prompt string, currentModel string, userOve
 
 	// When frugal mode is off, never downgrade from what was already set --
 	// only upgrade or keep the same tier.
-	if !cr.FrugalMode && tierOf(selected) < tierOf(currentModel) {
+	if !cr.FrugalMode && routing.CostTierOf(selected) < routing.CostTierOf(currentModel) {
 		selected = currentModel
 	}
 
@@ -137,8 +138,8 @@ func (cr *CascadeRouter) Summary() string {
 	unchanged := 0
 	for _, d := range cr.decisions {
 		counts[d.TaskType]++
-		origTier := tierOf(d.OriginalModel)
-		selTier := tierOf(d.SelectedModel)
+		origTier := routing.CostTierOf(d.OriginalModel)
+		selTier := routing.CostTierOf(d.SelectedModel)
 		switch {
 		case selTier < origTier:
 			downgrades++
@@ -198,21 +199,19 @@ func classifyPrompt(prompt string) string {
 	return "chat"
 }
 
-// modelForTask maps a task type to the appropriate model using the configured
-// Roles, falling back to analytics.SuggestModel tier names.
+// modelForTask maps a task type to the appropriate model using configured roles
+// and eyrie catalog tier defaults.
 func (cr *CascadeRouter) modelForTask(taskType string) string {
-	tier := analytics.SuggestModel(taskType, "")
+	tier := routing.SuggestTierForTask(taskType)
 
 	switch tier {
-	case "haiku":
-		// In frugal mode, always use the cheapest available.
+	case eycatalog.TierHaiku:
 		if m := cr.Roles.Commit; m != "" {
 			return m
 		}
 		return cr.defaultFor(TierCheap)
-	case "sonnet":
+	case eycatalog.TierSonnet:
 		if cr.FrugalMode {
-			// Frugal mode downgrades mid-tier to cheap for chat/review.
 			if taskType == "chat" || taskType == "review" {
 				if m := cr.Roles.Commit; m != "" {
 					return m
@@ -224,9 +223,8 @@ func (cr *CascadeRouter) modelForTask(taskType string) string {
 			return m
 		}
 		return cr.defaultFor(TierMid)
-	case "opus":
+	case eycatalog.TierOpus:
 		if cr.FrugalMode {
-			// Frugal mode caps generation at mid-tier.
 			if m := cr.Roles.Coder; m != "" {
 				return m
 			}
@@ -241,31 +239,19 @@ func (cr *CascadeRouter) modelForTask(taskType string) string {
 	}
 }
 
-// defaultFor returns the best model for a given cost tier by querying the catalog at runtime.
+// defaultFor returns the best model for a given cost tier via eyrie catalog tier defaults.
 func (cr *CascadeRouter) defaultFor(tier ModelTier) string {
-	info, ok := routing.Find(cr.DefaultModel)
 	provider := ""
-	if ok {
+	if info, ok := routing.Find(cr.DefaultModel); ok {
 		provider = info.Provider
 	}
-	models := routing.ByProvider(provider)
-	if len(models) == 0 {
-		return cr.pick("")
-	}
-
 	switch tier {
 	case TierCheap:
 		return routing.CheapestForProvider(provider, cr.pick(""))
 	case TierExpensive:
-		best := models[0]
-		for _, m := range models[1:] {
-			if m.InputPrice > best.InputPrice {
-				best = m
-			}
-		}
-		return best.Name
+		return routing.MostExpensiveForProvider(provider, cr.pick(""))
 	default:
-		return cr.pick("")
+		return routing.PreferredModelForTier(provider, eycatalog.TierSonnet, cr.pick(""))
 	}
 }
 
@@ -291,32 +277,6 @@ func (cr *CascadeRouter) record(original, selected, taskType, reason string) {
 		Reason:        reason,
 		Timestamp:     time.Now(),
 	})
-}
-
-// tierOf returns the cost tier of a model name using keyword matching.
-func tierOf(modelName string) ModelTier {
-	lower := strings.ToLower(modelName)
-
-	// Cheap models
-	if strings.Contains(lower, "haiku") ||
-		strings.Contains(lower, "gpt-4o-mini") ||
-		strings.Contains(lower, "gpt-3.5") ||
-		strings.Contains(lower, "gemini-2.5-flash") ||
-		strings.Contains(lower, "gemini-2.0-flash") ||
-		strings.Contains(lower, "deepseek-chat") ||
-		strings.Contains(lower, "mistral-small") {
-		return TierCheap
-	}
-
-	// Expensive models
-	if strings.Contains(lower, "opus") ||
-		(strings.Contains(lower, "gpt-4") && !strings.Contains(lower, "gpt-4o") && !strings.Contains(lower, "gpt-4-turbo")) ||
-		strings.Contains(lower, "o1") && !strings.Contains(lower, "o1-mini") {
-		return TierExpensive
-	}
-
-	// Everything else is mid-tier
-	return TierMid
 }
 
 // promptContainsAny checks whether s contains any of the given substrings.

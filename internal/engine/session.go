@@ -44,6 +44,9 @@ type Session struct {
 	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
 	DeploymentRouting bool
 
+	// ContainerExecutor runs Bash in an isolated container when set (no API keys in container env).
+	ContainerExecutor tool.ContainerExecutor
+
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
 	Permissions    *PermissionMemory             // use Perm.Memory
@@ -132,6 +135,23 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
 	return s
+}
+
+// ReattachTransport swaps the LLM client after deployment routing or provider.json changes.
+func (s *Session) ReattachTransport(chat ChatClient, provider string, deploymentRouting bool) {
+	if chat == nil {
+		return
+	}
+	s.client = chat
+	if strings.TrimSpace(provider) != "" {
+		s.provider = strings.TrimSpace(provider)
+	}
+	s.DeploymentRouting = deploymentRouting
+	for name, key := range s.apiKeys {
+		if strings.TrimSpace(key) != "" {
+			s.client.SetAPIKey(name, key)
+		}
+	}
 }
 
 // SubSession clones transport and routing mode for explore/general sub-agents.

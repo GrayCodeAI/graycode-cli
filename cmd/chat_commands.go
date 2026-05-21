@@ -21,7 +21,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
-	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
@@ -29,20 +28,51 @@ import (
 )
 
 func slashCommands() []string {
-	return []string{
-		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
-		"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
-		"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
-		"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
-		"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-		"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
-		"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
-		"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-		"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
-		"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
-		"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
-		"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
+	return allSlashCommands
+}
+
+var allSlashCommands = []string{
+	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
+	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
+	"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
+	"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
+	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
+	"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
+	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
+	"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
+	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
+	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
+	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
+	"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
+}
+
+func (m *chatModel) slashSuggestionsFor(input string) []string {
+	if input == m.slashSugInput {
+		return m.slashSugCache
 	}
+	m.slashSugInput = input
+	m.slashSugCache = slashSuggestions(input)
+	return m.slashSugCache
+}
+
+func (m *chatModel) syncInputLayout() bool {
+	if m.configOpen {
+		return false
+	}
+	lines := strings.Count(m.input.Value(), "\n") + 1
+	if lines > 10 {
+		lines = 10
+	}
+	visible := len(m.slashSuggestionsFor(m.input.Value()))
+	if visible > 6 {
+		visible = 6
+	}
+	key := lines<<16 | visible
+	if key == m.layoutKey {
+		return false
+	}
+	m.layoutKey = key
+	return true
 }
 
 func slashAliases() map[string]string {
@@ -111,7 +141,7 @@ var slashDescriptions = map[string]string{
 	"/review":          "Code review for bugs and issues",
 	"/rewind":          "Undo last exchange",
 	"/run":             "Run command, add output to context",
-	"/sandbox":         "Toggle sandbox mode",
+	"/sandbox":         "Toggle approval mode (not Docker; use default container or --no-container)",
 	"/search":          "Search across sessions",
 	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
 	"/stale":           "Show stale rules that may need updating or removal",
@@ -164,7 +194,7 @@ func slashSuggestions(input string) []string {
 	}
 	var out []string
 	seen := map[string]bool{}
-	for _, c := range slashCommands() {
+	for _, c := range allSlashCommands {
 		if strings.HasPrefix(c, v) {
 			seen[c] = true
 			desc := slashDescriptions[c]
@@ -396,6 +426,11 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: branchSummary()})
 		return m, nil
 	case "/clear":
+		// Cancel any running /loop goroutine.
+		if m.loopCancel != nil {
+			m.loopCancel()
+			m.loopCancel = nil
+		}
 		m.messages = nil
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
 		return m, nil
@@ -470,7 +505,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /resume <id>        — Resume session
 /review             — Ask hawk to review changes
 /rewind             — Undo last exchange
-/sandbox            — Toggle sandbox mode
+/sandbox            — Toggle approval mode (Docker isolation: default container; --no-container for host)
 /security-review    — Ask hawk to review security risks
 /share              — Share session
 /learn              — LLM-powered skill advisor (deep, update)
@@ -563,19 +598,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/model":
 		if len(parts) == 1 {
-			m.configOpen = true
-			m.configMenu = "model"
-			m.configSel = 0
-			m.configScroll = 0
-			m.configNotice = ""
-			m.viewDirty = true
-			provider := m.session.Provider()
-			if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
-				m.configModels = cached
-				return m, nil
-			}
-			m.configModels = nil
-			return m, fetchModelsAsync(provider)
+			next, cmd := m.openConfigAtTab(configTabModels)
+			*m = next
+			return m, cmd
 		}
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
 		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
@@ -584,12 +609,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		// Validate model against known models for current provider
-		known := configModelChoices(m.session.Provider(), m.configModels)
+		known := configModelChoices(m.configModelOptions, false)
 		if len(known) > 0 {
 			found := false
-			for _, k := range known {
-				if strings.EqualFold(k, arg) {
-					arg = k
+			for i, k := range known {
+				if strings.EqualFold(k, arg) || strings.EqualFold(m.configModelOptions[i].ID, arg) {
+					arg = m.configModelOptions[i].ID
 					found = true
 					break
 				}
@@ -611,12 +636,15 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		}
+		if hawkconfig.DeploymentRoutingEnabled(m.settings) {
+			arg = hawkconfig.ResolveCanonicalModel(arg)
+		}
 		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
 		m.session.SetModel(arg)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", m.session.Model())})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", m.session.Model())})
 		return m, nil
 	case "/branches":
 		if m.session.ConvoDAG == nil {
@@ -671,7 +699,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: branchInfo.String()})
 		return m, nil
 	case "/version":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk %s", version)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk v%s", DisplayVersion())})
 		return m, nil
 	case "/env":
 		m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})
@@ -1081,21 +1109,24 @@ Generate the recap:`, summary.String())
 			engineProvider := hawkconfig.NormalizeProviderForEngine(value)
 			m.session.SetProvider(engineProvider)
 			// Use cached model or set first from cache
-			if cached, ok := modelCache[engineProvider]; ok && len(cached) > 0 {
-				m.session.SetModel(cached[0])
-				_ = hawkconfig.SetGlobalSetting("model", cached[0])
+			modelCacheMu.RLock()
+			cached, cacheHit := modelCache[engineProvider]
+			modelCacheMu.RUnlock()
+			if cacheHit && len(cached) > 0 {
+				m.session.SetModel(cached[0].ID)
+				_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved to global config.", value, m.session.Model())})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in eyrie (provider.json).", value, m.session.Model())})
 			return m, nil
 		}
 		if len(parts) >= 3 && parts[1] == "model" {
 			value := strings.TrimSpace(strings.Join(parts[2:], " "))
-			known := configModelChoices(m.session.Provider(), m.configModels)
+			known := configModelChoices(m.configModelOptions, false)
 			if len(known) > 0 {
 				found := false
-				for _, k := range known {
-					if strings.EqualFold(k, value) {
-						value = k
+				for i, k := range known {
+					if strings.EqualFold(k, value) || strings.EqualFold(m.configModelOptions[i].ID, value) {
+						value = m.configModelOptions[i].ID
 						found = true
 						break
 					}
@@ -1111,12 +1142,19 @@ Generate the recap:`, summary.String())
 				return m, nil
 			}
 			m.session.SetModel(value)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved to global config.", value)})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", value)})
 			return m, nil
 		}
 		if len(parts) >= 2 && parts[1] == "keys" {
 			m.messages = append(m.messages, displayMsg{role: "system", content: apiKeyConfigSummary()})
 			return m, nil
+		}
+		if len(parts) >= 3 && parts[1] == "key" && parts[2] == "remove" {
+			if len(parts) > 3 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /config key remove"})
+				return m, nil
+			}
+			return m.openConfigRemoveKeyPanel()
 		}
 		if len(parts) >= 3 && parts[1] == "get" {
 			settings, err := loadEffectiveSettings()
@@ -1159,12 +1197,9 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		m.settings = settings
-		m.configOpen = true
-		m.configMenu = "provider"
-		m.configSel = 0
-		m.configNotice = ""
-		m.viewDirty = true
-		return m, nil
+		next, cmd := m.openConfigPanel()
+		*m = next
+		return m, cmd
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil
@@ -1629,14 +1664,12 @@ Generate the recap:`, summary.String())
 		}
 		return m, nil
 	case "/fast":
-		if m.session.Model() == m.settings.Model {
+		savedModel := hawkconfig.ActiveModel(context.Background())
+		if m.session.Model() == savedModel {
 			norm := hawkconfig.NormalizeProviderForEngine(m.session.Provider())
-			fastModel := hawkmodel.CheapestForProvider(norm, m.session.Model())
+			fastModel := hawkconfig.CheapestModelForProvider(norm, m.session.Model())
 			if strings.TrimSpace(fastModel) == "" {
-				fastModel = hawkmodel.DefaultModel(norm)
-			}
-			if strings.TrimSpace(fastModel) == "" {
-				fastModel = client.ResolveDefaultModel(m.session.Provider())
+				fastModel = hawkconfig.DefaultModelForProvider(norm)
 			}
 			if strings.TrimSpace(fastModel) == "" {
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Fast mode: no catalog model resolved for this provider"})
@@ -1645,8 +1678,8 @@ Generate the recap:`, summary.String())
 			m.session.SetModel(fastModel)
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode on → %s", fastModel)})
 		} else {
-			m.session.SetModel(m.settings.Model)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode off → %s", m.settings.Model)})
+			m.session.SetModel(savedModel)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Fast mode off → %s", savedModel)})
 		}
 		return m, nil
 	case "/effort":
@@ -1865,10 +1898,10 @@ Generate the recap:`, summary.String())
 	case "/sandbox":
 		if string(m.session.Mode) == "acceptEdits" {
 			_ = m.session.SetPermissionMode("default")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ON — all actions require approval."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Approval mode ON — all actions require confirmation. (Docker tool isolation is separate: default container mode, or --no-container on host.)"})
 		} else {
 			_ = m.session.SetPermissionMode("acceptEdits")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox OFF — file edits auto-approved, other actions require approval."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Approval mode relaxed — file edits auto-approved; other actions still prompt. (Docker tool isolation unchanged.)"})
 		}
 		return m, nil
 	case "/output-style":
@@ -1894,7 +1927,12 @@ Generate the recap:`, summary.String())
 	case "/ultrareview":
 		return m.startPromptCommand("/ultrareview", "Perform a deep, adversarial code review of this change set. Prioritize correctness, security, regressions, and missing tests.")
 	case "/provider-status":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider: %s\nModel: %s", m.session.Provider(), m.session.Model())})
+		report, err := hawkconfig.DeploymentStatusReport(context.Background(), m.session.Model())
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Provider status failed: %v", err)})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: report})
 		return m, nil
 	case "/session":
 		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
@@ -1915,7 +1953,12 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
 		return m, nil
 	case "/refresh-model-catalog":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Model catalog is built-in in this build; refresh not required."})
+		summary, err := hawkconfig.RefreshModelCatalogV1(context.Background())
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Model catalog refresh failed: %v", err)})
+			return m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: summary})
 		return m, nil
 	case "/insights":
 		days := 30
@@ -1973,12 +2016,23 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		loopCmd := strings.Join(parts[2:], " ")
+		// Cancel any previous loop before starting a new one.
+		if m.loopCancel != nil {
+			m.loopCancel()
+		}
+		loopCtx, loopCancel := context.WithCancel(context.Background())
+		m.loopCancel = loopCancel
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop started: %s every %s (stop with /clear)", loopCmd, interval)})
 		go func() {
 			ticker := time.NewTicker(interval)
 			defer ticker.Stop()
-			for range ticker.C {
-				m.ref.Send(loopTickMsg{command: loopCmd})
+			for {
+				select {
+				case <-loopCtx.Done():
+					return
+				case <-ticker.C:
+					m.ref.Send(loopTickMsg{command: loopCmd})
+				}
 			}
 		}()
 		return m, nil
@@ -2105,6 +2159,7 @@ Generate the recap:`, summary.String())
 			m.waiting = true
 			m.autoScroll = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.startStream()
 			return m, nil
 		}
@@ -2147,6 +2202,10 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		cmdStr := strings.TrimSpace(strings.TrimPrefix(text, "/run"))
+		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+			return m, nil
+		}
 		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
@@ -2160,6 +2219,10 @@ Generate the recap:`, summary.String())
 		cmdStr := "go test ./..."
 		if len(parts) >= 2 {
 			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/test"))
+		}
+		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+			return m, nil
 		}
 		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
@@ -2176,6 +2239,10 @@ Generate the recap:`, summary.String())
 		cmdStr := "golangci-lint run ./..."
 		if len(parts) >= 2 {
 			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/lint"))
+		}
+		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+			return m, nil
 		}
 		out, _ := exec.Command("sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))

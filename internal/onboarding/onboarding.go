@@ -2,10 +2,12 @@ package onboarding
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
@@ -67,38 +69,22 @@ func Welcome(version string) {
 	fmt.Println(center(hawkC+"hawk"+reset+" -p \"explain this repo\"     one-shot mode", 49))
 	fmt.Println(center(hawkC+"hawk"+reset+"                            interactive REPL", 49))
 	fmt.Println(center(hawkC+"hawk"+reset+" -c                          continue last session", 54))
+	fmt.Println(center(hawkC+"/config"+reset+"                         first-time setup (API key + model)", 54))
 
 	fmt.Println()
 	fmt.Println(center(hawkC+"? for shortcuts"+reset, 15))
 	fmt.Println()
 }
 
-// NeedsSetup returns true if first-run setup is needed.
+// NeedsSetup returns true only when hawk setup is explicitly requested.
+// Normal hawk startup uses /config inside the TUI instead of blocking setup.
 func NeedsSetup() bool {
-	// Load persisted env vars first
-	_ = hawkconfig.LoadEnvFile()
-
-	settings := hawkconfig.LoadSettings()
-	if settings.Provider != "" {
-		return false
-	}
-	// Check if any API key is in env (either from shell or ~/.hawk/env)
-	keys := []string{
-		"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
-		"OPENROUTER_API_KEY", "XAI_API_KEY", "GROQ_API_KEY",
-	}
-	for _, k := range keys {
-		if os.Getenv(k) != "" {
-			return false
-		}
-	}
-	return true
+	return false
 }
 
 // RunSetup runs the interactive first-run setup.
 func RunSetup() error {
-	// Load any previously saved env vars first
-	_ = hawkconfig.LoadEnvFile()
+	hawkconfig.PrepareCredentialDiscovery(context.Background())
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -153,7 +139,7 @@ func RunSetup() error {
 	fmt.Printf("  Selected: %s%s%s\n", teal, selected.name, reset)
 
 	// API key input
-	if selected.envKey != "" && os.Getenv(selected.envKey) == "" {
+	if selected.envKey != "" && !credentials.HasSecret(context.Background(), selected.envKey) {
 		fmt.Println()
 		fmt.Printf("  Enter your %s API key:\n", selected.name)
 		fmt.Printf("  %s(Get one at the provider's website)%s\n", dim, reset)
@@ -163,7 +149,7 @@ func RunSetup() error {
 		apiKey = strings.TrimSpace(apiKey)
 
 		if apiKey == "" {
-			fmt.Println(red + "  No API key entered. Set " + selected.envKey + " in your environment and try again." + reset)
+			fmt.Println(red + "  No API key entered. Run hawk and use /config to save a key securely." + reset)
 			return fmt.Errorf("no API key")
 		}
 
@@ -176,30 +162,24 @@ func RunSetup() error {
 			fmt.Printf("  %s⚠ %s (saving anyway)%s\n", dim, warning, reset)
 		}
 
-		// Herm-style: set env var for this session, persist to ~/.hawk/env
-		_ = os.Setenv(selected.envKey, apiKey)
-		_ = hawkconfig.SaveEnvFile(selected.envKey, apiKey)
+		ctx := context.Background()
+		if err := hawkconfig.PersistAPIKey(ctx, selected.envKey, apiKey); err != nil {
+			fmt.Printf("  %sWarning: couldn't save API key: %s%s\n", dim, err, reset)
+			return err
+		}
 
-		// Save provider preference only (not the key)
-		settings := hawkconfig.LoadSettings()
-		settings.Provider = selected.name
-		if err := hawkconfig.SaveGlobal(settings); err != nil {
-			fmt.Printf("  %sWarning: couldn't save settings: %s%s\n", dim, err, reset)
+		if err := hawkconfig.SetActiveProvider(context.Background(), selected.name); err != nil {
+			fmt.Printf("  %sWarning: couldn't save provider: %s%s\n", dim, err, reset)
 		}
 
 		fmt.Println()
-		fmt.Printf("  %s✓ API key saved to ~/.hawk/env (secure, 600 perms)%s\n", teal, reset)
+		fmt.Printf("  %s✓ API key saved to %s%s\n", teal, credentials.PlatformSecretStoreName(), reset)
 	} else if selected.name == "ollama" {
-		settings := hawkconfig.LoadSettings()
-		settings.Provider = "ollama"
-		_ = hawkconfig.SaveGlobal(settings)
+		_ = hawkconfig.SetActiveProvider(context.Background(), "ollama")
 		fmt.Printf("  %s✓ Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
-		// Key already in env — just save provider preference
-		settings := hawkconfig.LoadSettings()
-		settings.Provider = selected.name
-		_ = hawkconfig.SaveGlobal(settings)
-		fmt.Printf("  %s✓ Using %s from environment%s\n", teal, selected.envKey, reset)
+		_ = hawkconfig.SetActiveProvider(context.Background(), selected.name)
+		fmt.Printf("  %s✓ Using %s (credential already in %s)%s\n", teal, selected.name, credentials.PlatformSecretStoreName(), reset)
 	}
 
 	// Security notes
@@ -216,19 +196,9 @@ func RunSetup() error {
 	fmt.Print("  Press Enter to start... ")
 	_, _ = reader.ReadString('\n')
 
-	return nil
-}
+	hawkconfig.DiscoverCatalogAfterSetup(context.Background(), os.Stdout)
 
-// SaveAPIKeyToEnvFile appends the API key to ~/.hawk/env for future sessions.
-func SaveAPIKeyToEnvFile(key, value string) {
-	home, _ := os.UserHomeDir()
-	path := home + "/.hawk/env"
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return
-	}
-	defer func() { _ = f.Close() }()
-	_, _ = fmt.Fprintf(f, "export %s=%s\n", key, value)
+	return nil
 }
 
 // validateAPIKey checks the key format for known providers.

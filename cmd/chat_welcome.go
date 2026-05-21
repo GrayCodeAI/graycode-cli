@@ -1,21 +1,60 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/mattn/go-runewidth"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int) string {
+func welcomeDockerSegment(dockerRunning *bool, greenC, redC, rst string) (segment string, visLen int) {
+	if dockerRunning == nil {
+		return "", 0
+	}
+	mark := redC + "×" + rst
+	if *dockerRunning {
+		mark = greenC + "✓" + rst
+	}
+	segment = "  Docker " + mark
+	return segment, len("  Docker x")
+}
+
+func (m chatModel) welcomeDockerRunning() *bool {
+	if !m.containerEnabled {
+		return nil
+	}
+	if m.containerReady {
+		ok := true
+		return &ok
+	}
+	if m.containerErr != nil {
+		ok := false
+		return &ok
+	}
+	ok := sandbox.DockerAvailable()
+	return &ok
+}
+
+func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, blinkClosed, width, m.welcomeDockerRunning())
+}
+
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int, dockerRunning *bool) string {
 	logoC := "\033[38;2;255;94;14m"
 	mascotC := "\033[38;2;255;94;14m"
 	dimC := "\033[2m"
@@ -75,16 +114,20 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		b.WriteString(center(combined, visW) + "\n")
 	}
 
-	verLine := fmt.Sprintf("v%s", version)
+	verLine := fmt.Sprintf("v%s", DisplayVersion())
 	b.WriteString("\n" + center(dimC+verLine+rst, len(verLine)) + "\n")
 
-	tip := "TIP: Use /help to see all available commands"
-	b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
-
-	shortcuts := "shift+tab to cycle modes · ctrl+N to cycle models"
-	b.WriteString("\n" + center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
-	shortcuts2 := "ctrl+L for autonomy · tab for reasoning"
-	b.WriteString(center(dimC+shortcuts2+rst, len(shortcuts2)) + "\n")
+	setup := hawkconfig.EvaluateSetupCached(context.Background())
+	needsSetup := setup.NeedsSetup
+	if needsSetup {
+		tip := "Run /config to add an API key, then type your first message"
+		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
+	} else {
+		tip := "TIP: /help for commands · /model to switch model"
+		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
+		shortcuts := "ctrl+N next model · ctrl+L autonomy · esc cancel"
+		b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
+	}
 
 	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
@@ -101,7 +144,15 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
 	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
+	if dockerSeg, _ := welcomeDockerSegment(dockerRunning, greenC, redC, rst); dockerSeg != "" {
+		indicators += dockerSeg
+		indVis += "  Docker x"
+	}
 	b.WriteString("\n" + center(indicators, len(indVis)) + "\n")
+
+	if hint := setup.Hint; hint != "" {
+		b.WriteString("\n" + center(boldC+hint+rst, len(hint)) + "\n")
+	}
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
@@ -147,20 +198,14 @@ func toolListSummary(registry *tool.Registry) string {
 }
 
 func envSummary(provider, model string) string {
-	envKeys := []string{
-		"ANTHROPIC_API_KEY",
-		"OPENAI_API_KEY",
-		"GEMINI_API_KEY",
-		"OPENROUTER_API_KEY",
-		"CANOPYWAVE_API_KEY",
-		"XAI_API_KEY",
-		"OPENCODEGO_API_KEY",
-	}
+	envKeys := eyrieclient.DiscoveryEnvKeys(context.Background())
+	sort.Strings(envKeys)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nEnvironment:\n", provider, model))
+	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, credentials.PlatformSecretStoreName()))
+	ctx := context.Background()
 	for _, key := range envKeys {
 		status := "missing"
-		if os.Getenv(key) != "" {
+		if credentials.HasSecret(ctx, key) {
 			status = "set"
 		}
 		b.WriteString(fmt.Sprintf("  %s: %s\n", key, status))
@@ -169,28 +214,23 @@ func envSummary(provider, model string) string {
 }
 
 func configCommandSummary(settings hawkconfig.Settings) string {
-	provider := displayConfigValue(settings.Provider)
-	model := displayConfigValue(settings.Model)
-	return fmt.Sprintf(`Configure Hawk
+	_ = settings
+	provider := displayConfigValue(hawkconfig.ActiveProvider(nil))
+	model := displayConfigValue(hawkconfig.ActiveModel(nil))
+	return fmt.Sprintf(`Setup (eyrie)
 
-Run these commands:
-  /config provider openai
-  /model gpt-4o
+  /config  → API key + model
 
 Current:
   provider: %s
-  model: %s
-  configured keys: %s
+  model:    %s
+  keys:     %s
 
-API keys are set via environment variables (herm-style).
-More:
-  /config keys
-  /config get <key>
-  /config set <key> <value>`, provider, model, configuredKeyList())
+Model catalog and routing live in eyrie — hawk is the UI only.`, provider, model, configuredKeyList())
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (from environment)\n" + indentedAPIKeyLines()
+	return "API keys (" + credentials.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {

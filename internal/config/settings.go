@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,15 +9,26 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/eyrie/runtime"
+	"github.com/GrayCodeAI/eyrie/setup"
 )
 
+func fetchModelsViaRuntime(ctx context.Context, provider string) ([]catalog.ModelCatalogEntry, error) {
+	return runtime.ModelsForProvider(ctx, provider)
+}
+
 // Settings holds hawk configuration.
-// Herm-style: no API keys stored here. Secrets come from environment variables only.
+// Hawk: no API keys stored here. Secrets come from the OS secret store via eyrie.
 type Settings struct {
+	// Model and Provider are legacy fields read only for one-time migration into eyrie provider.json.
+	// Hawk does not persist model/provider here; use SetActiveModel / SetActiveProvider.
 	Model                   string                 `json:"model,omitempty"`
 	Provider                string                 `json:"provider,omitempty"`
 	Theme                   string                 `json:"theme,omitempty"`
@@ -129,6 +141,7 @@ func LoadSettings() Settings {
 			s = MergeSettings(s, proj)
 		}
 	}
+	migrateLegacyModelProvider(&s)
 	return s
 }
 
@@ -241,6 +254,7 @@ func MergeSettings(base, override Settings) Settings {
 
 // SaveGlobal saves settings to the global config file.
 func SaveGlobal(s Settings) error {
+	s = stripHostModelSelection(s)
 	dir := filepath.Dir(globalSettingsPath())
 	_ = os.MkdirAll(dir, 0o755)
 	data, err := json.MarshalIndent(s, "", "  ")
@@ -252,6 +266,7 @@ func SaveGlobal(s Settings) error {
 
 // SaveProject saves settings to the project config file.
 func SaveProject(s Settings) error {
+	s = stripHostModelSelection(s)
 	_ = os.MkdirAll(".hawk", 0o755)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
@@ -263,15 +278,15 @@ func SaveProject(s Settings) error {
 // SettingValue returns a display-safe value for a supported setting key.
 func SettingValue(s Settings, key string) (string, bool) {
 	normalized := normalizeSettingKey(key)
-	// Herm-style: API key status comes from environment, not settings file
+	// Hawk: API key status comes from OS secret store, not settings file
 	if provider, ok := apiKeyProviderFromSettingKey(normalized); ok {
 		return EnvKeyStatus(provider), true
 	}
 	switch normalized {
 	case "model":
-		return s.Model, true
+		return ActiveModel(context.Background()), true
 	case "provider":
-		return s.Provider, true
+		return ActiveProvider(context.Background()), true
 	case "apikey":
 		return EnvKeyStatus(s.Provider), true
 	case "apikeys":
@@ -295,28 +310,30 @@ func SettingValue(s Settings, key string) (string, bool) {
 	case "mcpservers":
 		data, _ := json.Marshal(s.MCPServers)
 		return string(data), true
+	case "deploymentrouting":
+		return DeploymentRoutingLabel(s), true
 	default:
 		return "", false
 	}
 }
 
 // SetGlobalSetting updates a supported scalar/list setting in ~/.hawk/settings.json.
-// Herm-style: API keys are NOT stored in settings.json. Use environment variables.
+// Hawk: API keys are NOT stored in settings.json. Use /config and the OS secret store.
 func SetGlobalSetting(key, value string) error {
 	s := LoadGlobalSettings()
 	normalized := normalizeSettingKey(key)
-	// Herm-style: reject API key persistence to disk
+	// Hawk: reject API key persistence to disk
 	if _, ok := apiKeyProviderFromSettingKey(normalized); ok {
-		return fmt.Errorf("API keys are not stored in settings.json. Set %s in your environment instead", ProviderAPIKeyEnv(providerFromSettingKey(normalized)))
+		return fmt.Errorf("API keys are not stored in settings.json. Save via /config (%s)", credentials.PlatformSecretStoreName())
 	}
 	if normalized == "apikey" {
-		return fmt.Errorf("API keys are not stored in settings.json. Set %s in your environment instead", ProviderAPIKeyEnv(normalizeProviderName(s.Provider)))
+		return fmt.Errorf("API keys are not stored in settings.json. Save via /config (%s)", credentials.PlatformSecretStoreName())
 	}
 	switch normalized {
 	case "model":
-		s.Model = value
+		return SetActiveModel(context.Background(), value)
 	case "provider":
-		s.Provider = value
+		return SetActiveProvider(context.Background(), value)
 	case "theme":
 		s.Theme = value
 	case "autoallow":
@@ -331,6 +348,17 @@ func SetGlobalSetting(key, value string) error {
 			return fmt.Errorf("invalid max budget: %w", err)
 		}
 		s.MaxBudgetUSD = amount
+	case "deploymentrouting":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			enabled := true
+			s.DeploymentRouting = &enabled
+		case "0", "false", "no", "off":
+			enabled := false
+			s.DeploymentRouting = &enabled
+		default:
+			return fmt.Errorf("deployment_routing must be true or false")
+		}
 	default:
 		return fmt.Errorf("unsupported setting key %q", key)
 	}
@@ -375,71 +403,44 @@ func splitSettingList(value string) []string {
 func BoolPtr(b bool) *bool { return &b }
 
 // ─────────────────────────────────────────────────────────────
-// Herm-style: API keys from environment only (no disk persistence)
+// Hawk: API keys from OS secret store only (no .env)
 // ─────────────────────────────────────────────────────────────
 
-// ProviderAPIKeyEnv returns the environment variable name for a provider's API key.
+// ProviderAPIKeyEnv returns the API key env var from eyrie deployment env_fallbacks.
 func ProviderAPIKeyEnv(provider string) string {
-	switch normalizeProviderName(provider) {
-	case "anthropic":
-		return "ANTHROPIC_API_KEY"
-	case "openai":
-		return "OPENAI_API_KEY"
-	case "gemini", "google", "gemma":
-		return "GEMINI_API_KEY"
-	case "openrouter":
-		return "OPENROUTER_API_KEY"
-	case "canopywave":
-		return "CANOPYWAVE_API_KEY"
-	case "grok", "xai":
-		return "XAI_API_KEY"
-	case "opencodego":
-		return "OPENCODEGO_API_KEY"
-	case "groq":
-		return "GROQ_API_KEY"
-	case "deepseek":
-		return "DEEPSEEK_API_KEY"
-	case "mistral":
-		return "MISTRAL_API_KEY"
-	case "bedrock":
-		return "AWS_ACCESS_KEY_ID"
-	case "vertex":
-		return "GOOGLE_APPLICATION_CREDENTIALS"
-	case "ollama":
+	compiled := compiledCatalogOrBootstrap()
+	if compiled == nil {
 		return ""
-	default:
-		replacer := strings.NewReplacer("-", "_", ".", "_", "/", "_")
-		name := strings.ToUpper(replacer.Replace(normalizeProviderName(provider)))
-		if name == "" {
-			return ""
-		}
-		return name + "_API_KEY"
 	}
+	return catalog.PrimaryAPIKeyEnvForProvider(compiled, catalogProviderID(provider))
 }
 
-// EnvKeyStatus returns "set" or "empty" for a provider's API key in the environment.
+// EnvKeyStatus returns set, empty, or local from the OS credential store.
 func EnvKeyStatus(provider string) string {
-	envKey := ProviderAPIKeyEnv(provider)
-	if envKey == "" {
+	compiled := compiledCatalogOrBootstrap()
+	if compiled == nil {
+		return "empty"
+	}
+	provider = catalogProviderID(provider)
+	envs := catalog.APIKeyEnvsForProvider(compiled, provider)
+	if len(envs) == 0 {
 		return "local"
 	}
-	if os.Getenv(envKey) != "" {
-		return "set"
+	ctx := context.Background()
+	for _, env := range envs {
+		if credentials.HasSecret(ctx, env) {
+			return "set"
+		}
 	}
 	return "empty"
 }
 
-// AllEnvKeyStatus returns a comma-separated summary of all known API key env vars.
+// AllEnvKeyStatus returns a comma-separated summary of providers with credentials set.
 func AllEnvKeyStatus() string {
-	providers := []string{
-		"anthropic", "openai", "gemini", "openrouter",
-		"canopywave", "xai", "opencodego",
-	}
 	var parts []string
-	for _, p := range providers {
-		status := EnvKeyStatus(p)
-		if status == "set" {
-			parts = append(parts, p+":"+status)
+	for _, p := range AllCatalogProviders() {
+		if EnvKeyStatus(p) == "set" {
+			parts = append(parts, p+":set")
 		}
 	}
 	if len(parts) == 0 {
@@ -449,40 +450,49 @@ func AllEnvKeyStatus() string {
 	return strings.Join(parts, ", ")
 }
 
-// LoadAPIKeysFromEnv reads all known API keys from environment variables.
-func LoadAPIKeysFromEnv() map[string]string {
-	providers := []string{
-		"anthropic", "openai", "gemini", "openrouter",
-		"canopywave", "xai", "opencodego",
-	}
+// LoadAPIKeysFromStore reads API keys for all eyrie catalog providers from the OS secret store.
+func LoadAPIKeysFromStore() map[string]string {
 	keys := make(map[string]string)
-	for _, p := range providers {
-		envKey := ProviderAPIKeyEnv(p)
-		if envKey == "" {
-			continue
-		}
-		if v := os.Getenv(envKey); v != "" {
+	for _, p := range AllCatalogProviders() {
+		if v := APIKeyForProvider(p); v != "" {
 			keys[p] = v
 		}
 	}
 	return keys
 }
 
-// APIKeyForProvider reads the API key for a provider from the environment.
+// APIKeyForProvider reads the API key for a provider from the OS secret store.
 func APIKeyForProvider(provider string) string {
-	envKey := ProviderAPIKeyEnv(provider)
-	if envKey == "" {
+	compiled := compiledCatalogOrBootstrap()
+	if compiled == nil {
 		return ""
 	}
-	if v := os.Getenv(envKey); v != "" {
-		return v
+	provider = catalogProviderID(provider)
+	ctx := context.Background()
+	for _, env := range catalog.APIKeyEnvsForProvider(compiled, provider) {
+		if v := credentials.LookupSecret(ctx, env); v != "" {
+			return v
+		}
 	}
-	// Check alternate env var names (e.g. GROK_API_KEY as alias for XAI_API_KEY)
-	switch normalizeProviderName(provider) {
-	case "grok", "xai":
-		return os.Getenv("GROK_API_KEY")
+	for _, env := range providerCredentialEnvAliases(provider) {
+		if v := credentials.LookupSecret(ctx, env); v != "" {
+			return v
+		}
 	}
 	return ""
+}
+
+func providerCredentialEnvAliases(provider string) []string {
+	switch strings.ToLower(provider) {
+	case "anthropic":
+		return []string{"CLAUDE_API_KEY"}
+	case "gemini", "google":
+		return []string{"GOOGLE_API_KEY"}
+	case "grok", "xai":
+		return []string{"GROK_API_KEY"}
+	default:
+		return nil
+	}
 }
 
 // NormalizeProviderForEngine maps hawk provider aliases to eyrie canonical names.
@@ -497,170 +507,82 @@ func NormalizeProviderForEngine(provider string) string {
 	}
 }
 
-// providerFromSettingKey extracts the provider name from a setting key like "apikey.openai".
-func providerFromSettingKey(normalized string) string {
-	for _, prefix := range []string{"apikey.", "apikey:"} {
-		if strings.HasPrefix(normalized, prefix) {
-			return normalizeProviderName(strings.TrimPrefix(normalized, prefix))
-		}
-	}
-	return ""
-}
-
-// ─────────────────────────────────────────────────────────────
-// Secure env file for persisting API keys across sessions
-// ─────────────────────────────────────────────────────────────
-
-func envFilePath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hawk", "env")
-}
-
-// LoadEnvFile reads ~/.hawk/env and applies export lines to the process.
-func LoadEnvFile() error {
-	path := envFilePath()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		// Parse: export KEY=value
-		if !strings.HasPrefix(line, "export ") {
-			continue
-		}
-		rest := strings.TrimPrefix(line, "export ")
-		idx := strings.Index(rest, "=")
-		if idx < 0 {
-			continue
-		}
-		key := strings.TrimSpace(rest[:idx])
-		value := strings.TrimSpace(rest[idx+1:])
-		// Only set if not already set in environment
-		if os.Getenv(key) == "" {
-			_ = os.Setenv(key, value)
-		}
-	}
-	return nil
-}
-
-// RemoveEnvFile removes an export line from ~/.hawk/env.
-func RemoveEnvFile(key string) error {
-	path := envFilePath()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	var lines []string
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		if !strings.HasPrefix(line, "export ") {
-			lines = append(lines, line)
-			continue
-		}
-		rest := strings.TrimPrefix(line, "export ")
-		idx := strings.Index(rest, "=")
-		if idx < 0 {
-			lines = append(lines, line)
-			continue
-		}
-		existingKey := strings.TrimSpace(rest[:idx])
-		if existingKey != key {
-			lines = append(lines, line)
-		}
-	}
-	if len(lines) == 0 {
-		return os.Remove(path)
-	}
-	out := []byte(strings.Join(lines, "\n") + "\n")
-	return os.WriteFile(path, out, 0o600)
-}
-
-// SaveEnvFile writes an export line to ~/.hawk/env, deduplicating existing entries.
-func SaveEnvFile(key, value string) error {
-	path := envFilePath()
-	_ = os.MkdirAll(filepath.Dir(path), 0o700)
-
-	// Read existing lines, filter out old entries for this key
-	var lines []string
-	if data, err := os.ReadFile(path); err == nil {
-		for _, line := range strings.Split(string(data), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			if !strings.HasPrefix(line, "export ") {
-				lines = append(lines, line)
-				continue
-			}
-			rest := strings.TrimPrefix(line, "export ")
-			idx := strings.Index(rest, "=")
-			if idx < 0 {
-				lines = append(lines, line)
-				continue
-			}
-			existingKey := strings.TrimSpace(rest[:idx])
-			if existingKey != key {
-				lines = append(lines, line)
-			}
-		}
-	}
-
-	// Add new entry
-	lines = append(lines, fmt.Sprintf("export %s=%s", key, value))
-
-	// Write back with 600 perms
-	data := []byte(strings.Join(lines, "\n") + "\n")
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return err
-	}
-	return nil
-}
-
 // ─────────────────────────────────────────────────────────────
 // Live model catalog fetch from eyrie
 // ─────────────────────────────────────────────────────────────
 
-// FetchModelsForProvider fetches live models from the provider's API (if key available)
-// or returns embedded catalog models. This is the runtime model discovery boundary.
+// FetchModelsForProvider returns models from the eyrie catalog (dynamic; no hawk hardcoded lists).
+// RefreshModelCatalogV1 is the explicit network refresh boundary.
 func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error) {
-	provider = NormalizeProviderForEngine(provider)
+	provider = catalogProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
-
-	// Build env map for eyrie catalog fetch
-	env := make(map[string]string)
-	env["ANTHROPIC_API_KEY"] = os.Getenv("ANTHROPIC_API_KEY")
-	env["OPENAI_API_KEY"] = os.Getenv("OPENAI_API_KEY")
-	env["GEMINI_API_KEY"] = os.Getenv("GEMINI_API_KEY")
-	env["OPENROUTER_API_KEY"] = os.Getenv("OPENROUTER_API_KEY")
-	env["CANOPYWAVE_API_KEY"] = os.Getenv("CANOPYWAVE_API_KEY")
-	env["XAI_API_KEY"] = os.Getenv("XAI_API_KEY")
-	env["OPENCODEGO_API_KEY"] = os.Getenv("OPENCODEGO_API_KEY")
-	env["OLLAMA_BASE_URL"] = os.Getenv("OLLAMA_BASE_URL")
-	env["OPENROUTER_BASE_URL"] = os.Getenv("OPENROUTER_BASE_URL")
-	env["CANOPYWAVE_BASE_URL"] = os.Getenv("CANOPYWAVE_BASE_URL")
-
-	// Fetch live catalog from eyrie
-	cat, err := catalog.FetchModelCatalog("", env)
+	ctx := context.Background()
+	models, err := fetchModelsViaRuntime(ctx, provider)
+	if err == nil && len(models) > 0 {
+		return models, nil
+	}
+	if refreshErr := TryAutoRefreshCatalog(ctx); refreshErr == nil {
+		return fetchModelsViaRuntime(ctx, provider)
+	}
 	if err != nil {
-		// Fallback to embedded catalog
-		cat = catalog.LoadModelCatalogSync("")
+		return nil, err
 	}
+	// Custom OpenAI-compatible providers: single model from settings, not hawk catalog data.
+	for _, cp := range LoadSettings().CustomProviders {
+		if NormalizeProviderForEngine(cp.Name) != provider {
+			continue
+		}
+		if id := strings.TrimSpace(cp.Model); id != "" {
+			return []catalog.ModelCatalogEntry{{
+				ID:          id,
+				DisplayName: id,
+			}}, nil
+		}
+	}
+	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog (check API keys; hawk will refresh automatically on next start)", provider)
+}
 
-	models := catalog.ModelsForProvider(&cat, provider)
-	if len(models) == 0 {
-		return nil, fmt.Errorf("no models found for provider %s", provider)
+func refreshModelCatalog(ctx context.Context, force bool) (*catalog.RefreshResult, error) {
+	return setup.DiscoverModelCatalogWithOptions(ctx, eyriecfg.DiscoveryCredentials(ctx), setup.DiscoverModelCatalogOptions{
+		ForceRefresh: force,
+	})
+}
+
+// RefreshModelCatalogV1 asks eyrie to refresh the remote catalog and provider APIs using env API keys.
+func RefreshModelCatalogV1(ctx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+
+	result, err := refreshModelCatalog(ctx, true)
+	if err != nil {
+		return "", err
 	}
-	return models, nil
+	return result.DiscoverReport(), nil
+}
+
+func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalogV1, error) {
+	if refreshRemote {
+		result, err := setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentials(ctx))
+		if err != nil {
+			return nil, err
+		}
+		return result.Compiled, nil
+	}
+	return catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
+		CachePath:    catalog.DefaultCachePath(),
+		RequireCache: false,
+	})
+}
+
+func catalogProviderID(provider string) string {
+	switch NormalizeProviderForEngine(provider) {
+	case "gemini":
+		return "google"
+	case "grok":
+		return "xai"
+	default:
+		return NormalizeProviderForEngine(provider)
+	}
 }

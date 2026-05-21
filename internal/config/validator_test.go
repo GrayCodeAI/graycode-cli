@@ -1,12 +1,19 @@
 package config
 
 import (
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestValidateSettingsValid(t *testing.T) {
-	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-test123456789")
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test123456789")
+
 	s := Settings{
 		Provider:     "anthropic",
 		Model:        "claude-sonnet-4-20250514",
@@ -19,12 +26,14 @@ func TestValidateSettingsValid(t *testing.T) {
 }
 
 func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
-	// Herm-style: missing env key for provider is an error
-	t.Setenv("INVALID_API_KEY", "")
-	s := Settings{Provider: "invalid"}
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+
+	s := Settings{Provider: "anthropic"}
 	result := ValidateSettings(s)
 	if result.Valid {
-		t.Fatal("expected invalid (missing env key)")
+		t.Fatal("expected invalid (missing env key for eyrie provider)")
 	}
 }
 

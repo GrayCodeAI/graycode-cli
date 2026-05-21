@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // CostOptimizer analyzes usage patterns and suggests ways to reduce API costs.
@@ -539,35 +541,31 @@ func (co *CostOptimizer) WhatIf(model string) float64 {
 // Helper methods
 
 func (co *CostOptimizer) normalizeModel(model string) string {
-	lower := strings.ToLower(model)
-	if strings.Contains(lower, "opus") {
-		return "claude-opus"
+	if info, ok := routing.Find(model); ok && info.Name != "" {
+		return info.Name
 	}
-	if strings.Contains(lower, "sonnet") {
-		return "claude-sonnet"
+	switch routing.CostTierOf(model) {
+	case routing.CostTierExpensive:
+		return "tier:opus"
+	case routing.CostTierCheap:
+		return "tier:haiku"
+	case routing.CostTierMid:
+		return "tier:sonnet"
+	default:
+		return model
 	}
-	if strings.Contains(lower, "haiku") {
-		return "claude-haiku"
-	}
-	if strings.Contains(lower, "gpt-4o-mini") {
-		return "gpt-4o-mini"
-	}
-	if strings.Contains(lower, "gpt-4o") {
-		return "gpt-4o"
-	}
-	return model
 }
 
 func (co *CostOptimizer) getPricing(model string) ModelPrice {
+	in, out := ModelPricing(model)
+	if in > 0 || out > 0 {
+		return ModelPrice{InputPerMillion: in, OutputPerMillion: out}
+	}
 	normalized := co.normalizeModel(model)
 	if p, ok := co.ModelPricing[normalized]; ok {
 		return p
 	}
-	// Default to sonnet pricing
-	return ModelPrice{
-		InputPerMillion:  3.0,
-		OutputPerMillion: 15.0,
-	}
+	return ModelPrice{InputPerMillion: 3.0, OutputPerMillion: 15.0}
 }
 
 func (co *CostOptimizer) historyDays() float64 {

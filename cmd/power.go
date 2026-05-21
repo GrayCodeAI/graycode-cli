@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // PowerConfig maps a power level (1-10) to all relevant settings.
@@ -35,11 +36,13 @@ func PowerPreset(level int) PowerConfig {
 		level = 10
 	}
 
+	haiku, sonnet, opus := routing.TierModels("anthropic")
+
 	switch level {
 	case 1:
 		return PowerConfig{
 			Level:           1,
-			Model:           "claude-haiku-3",
+			Model:           haiku,
 			MaxTokens:       1024,
 			ContextWindow:   4096,
 			Temperature:     0.3,
@@ -52,7 +55,7 @@ func PowerPreset(level int) PowerConfig {
 	case 2:
 		return PowerConfig{
 			Level:           2,
-			Model:           "claude-haiku-3",
+			Model:           haiku,
 			MaxTokens:       2048,
 			ContextWindow:   4096,
 			Temperature:     0.3,
@@ -65,7 +68,7 @@ func PowerPreset(level int) PowerConfig {
 	case 3:
 		return PowerConfig{
 			Level:           3,
-			Model:           "claude-sonnet-4-20250514",
+			Model:           sonnet,
 			MaxTokens:       4096,
 			ContextWindow:   16384,
 			Temperature:     0.5,
@@ -78,7 +81,7 @@ func PowerPreset(level int) PowerConfig {
 	case 4:
 		return PowerConfig{
 			Level:           4,
-			Model:           "claude-sonnet-4-20250514",
+			Model:           sonnet,
 			MaxTokens:       4096,
 			ContextWindow:   16384,
 			Temperature:     0.5,
@@ -91,7 +94,7 @@ func PowerPreset(level int) PowerConfig {
 	case 5:
 		return PowerConfig{
 			Level:           5,
-			Model:           "claude-sonnet-4-20250514",
+			Model:           sonnet,
 			MaxTokens:       8192,
 			ContextWindow:   65536,
 			Temperature:     0.7,
@@ -104,7 +107,7 @@ func PowerPreset(level int) PowerConfig {
 	case 6:
 		return PowerConfig{
 			Level:           6,
-			Model:           "claude-sonnet-4-20250514",
+			Model:           sonnet,
 			MaxTokens:       8192,
 			ContextWindow:   65536,
 			Temperature:     0.7,
@@ -117,7 +120,7 @@ func PowerPreset(level int) PowerConfig {
 	case 7:
 		return PowerConfig{
 			Level:           7,
-			Model:           "claude-sonnet-4-20250514",
+			Model:           sonnet,
 			MaxTokens:       16384,
 			ContextWindow:   131072,
 			Temperature:     0.7,
@@ -130,7 +133,7 @@ func PowerPreset(level int) PowerConfig {
 	case 8:
 		return PowerConfig{
 			Level:           8,
-			Model:           "claude-opus-4-20250514",
+			Model:           opus,
 			MaxTokens:       16384,
 			ContextWindow:   131072,
 			Temperature:     0.7,
@@ -143,7 +146,7 @@ func PowerPreset(level int) PowerConfig {
 	case 9:
 		return PowerConfig{
 			Level:           9,
-			Model:           "claude-opus-4-20250514",
+			Model:           opus,
 			MaxTokens:       16384,
 			ContextWindow:   204800,
 			Temperature:     0.7,
@@ -156,7 +159,7 @@ func PowerPreset(level int) PowerConfig {
 	case 10:
 		return PowerConfig{
 			Level:           10,
-			Model:           "claude-opus-4-20250514",
+			Model:           opus,
 			MaxTokens:       16384,
 			ContextWindow:   204800,
 			Temperature:     0.7,
