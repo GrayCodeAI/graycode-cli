@@ -56,6 +56,49 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 	return rows
 }
 
+func (m chatModel) activeGatewayRowIndex(rows []configGatewayRow) int {
+	for i, row := range rows {
+		if row.Active {
+			return i
+		}
+	}
+	return -1
+}
+
+// configGatewayRefreshTargetIndex is the gateway row used for refresh label and action.
+func (m chatModel) configGatewayRefreshTargetIndex(rows []configGatewayRow) int {
+	if len(rows) == 0 {
+		return 0
+	}
+	if m.configSel >= 0 && m.configSel < len(rows) {
+		return m.configSel
+	}
+	if m.configGatewayFocus >= 0 && m.configGatewayFocus < len(rows) {
+		return m.configGatewayFocus
+	}
+	if i := m.activeGatewayRowIndex(rows); i >= 0 {
+		return i
+	}
+	return 0
+}
+
+func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
+	rows := m.configGatewayRows()
+	if len(rows) == 0 {
+		m.configNotice = "No gateways available"
+		return m, nil
+	}
+	idx := m.configGatewayRefreshTargetIndex(rows)
+	row := rows[idx]
+	if !row.HasKey {
+		m.configNotice = fmt.Sprintf("Add an API key for %s first — Keys tab → Add API key", row.DisplayName)
+		return m, nil
+	}
+	m.configSaving = true
+	m.configNotice = "Refreshing " + row.DisplayName + "…"
+	return m, refreshGatewayAsync(row.ID)
+}
+
 func (m chatModel) configGatewaysView() string {
 	cursorStyle := configSelectedStyle()
 	rowStyle := configRowStyle()
@@ -65,12 +108,15 @@ func (m chatModel) configGatewaysView() string {
 	metaStyle := configMutedStyle()
 
 	rows := m.configGatewayRows()
+	refreshSel := len(rows)
 
-	if m.configSel < m.configScroll {
-		m.configScroll = m.configSel
-	}
-	if m.configSel >= m.configScroll+configWindowSize {
-		m.configScroll = m.configSel - configWindowSize + 1
+	if m.configSel < len(rows) {
+		if m.configSel < m.configScroll {
+			m.configScroll = m.configSel
+		}
+		if m.configSel >= m.configScroll+configWindowSize {
+			m.configScroll = m.configSel - configWindowSize + 1
+		}
 	}
 
 	headers := []string{"Gateway", "Key", "Catalog", "Active"}
@@ -122,19 +168,15 @@ func (m chatModel) configGatewaysView() string {
 	}
 
 	b.WriteString("\n")
-	refreshSel := len(rows)
-	refreshHint := "Refresh gateway"
-	if m.configGatewayFocus >= 0 && m.configGatewayFocus < len(rows) {
-		refreshHint = "Refresh " + rows[m.configGatewayFocus].DisplayName
-	}
-	b.WriteString(renderConfigTableActionRow(refreshHint, m.configSel == refreshSel, rowStyle, cursorStyle) + "\n")
+	targetIdx := m.configGatewayRefreshTargetIndex(rows)
+	b.WriteString(renderConfigRefreshActionRow(rows[targetIdx].DisplayName, m.configSel == refreshSel) + "\n")
 
 	ctx := context.Background()
 	indent := strings.Repeat(" ", configTableIndent)
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		b.WriteString("\n" + mutedStyle.Render(indent+"Catalog = models in eyrie cache · add key in Keys tab to use them"))
 	} else {
-		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "enter select · ↓ refresh row"))
+		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "r refresh · enter select · ↓ refresh row"))
 	}
 	return m.configTabShellView(b.String())
 }
@@ -143,18 +185,7 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 	rows := m.configGatewayRows()
 	refreshIdx := len(rows)
 	if m.configSel == refreshIdx {
-		if len(rows) == 0 {
-			m.configNotice = "No gateways available"
-			return m, nil
-		}
-		idx := m.configGatewayFocus
-		if idx < 0 || idx >= len(rows) {
-			idx = 0
-		}
-		gw := rows[idx].ID
-		m.configSaving = true
-		m.configNotice = "Refreshing " + gw + "…"
-		return m, refreshGatewayAsync(gw)
+		return m.refreshConfigGateway()
 	}
 	if m.configSel < 0 || m.configSel >= len(rows) {
 		return m, nil
@@ -198,6 +229,14 @@ func (m chatModel) handleConfigGatewayRefreshMsg(msg configGatewayRefreshMsg) ch
 	m.configNotice = msg.summary
 	if m.configTab == configTabModels && strings.TrimSpace(m.configModelProvider) == msg.providerID {
 		m.configModelOptions = loadConfigModelOptions(msg.providerID)
+	}
+	return m
+}
+
+func (m chatModel) focusConfigActiveGateway() chatModel {
+	rows := m.configGatewayRows()
+	if i := m.activeGatewayRowIndex(rows); i >= 0 {
+		m.configGatewayFocus = i
 	}
 	return m
 }
