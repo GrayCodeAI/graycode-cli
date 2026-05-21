@@ -120,11 +120,20 @@ func (m chatModel) configModelsTabView() string {
 	return m.configTabShellView(m.configModelsBody())
 }
 
+func (m chatModel) configPanelViewWidth() int {
+	if m.width > 0 {
+		return m.width
+	}
+	return DetectTerminalWidth()
+}
+
 func (m chatModel) configModelsBody() string {
 	mutedStyle := configMutedStyle()
 	headerStyle := configHeaderStyle()
+	metaStyle := configMutedStyle()
 	selectedStyle := configSelectedStyle()
 	rowStyle := configRowStyle()
+	freeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6BCB77"))
 
 	opts := m.configModelOptions
 	total := len(opts)
@@ -136,13 +145,26 @@ func (m chatModel) configModelsBody() string {
 		m.configScroll = m.configSel - configWindowSize + 1
 	}
 
+	end := m.configScroll + configWindowSize
+	if end > total {
+		end = total
+	}
+
+	visible := make([]modelTableRow, 0, end-m.configScroll)
+	for i := m.configScroll; i < end; i++ {
+		visible = append(visible, modelTableRowFromOption(opts[i]))
+	}
+	layout := computeModelTableLayout(m.configPanelViewWidth(), visible)
+
 	var b strings.Builder
 	gw := strings.TrimSpace(m.configModelProvider)
 	if gw == "" {
 		gw = strings.TrimSpace(m.session.Provider())
 	}
 	if gw != "" {
-		b.WriteString(mutedStyle.Render("Gateway: "+gw) + "\n\n")
+		b.WriteString(configMutedStyle().Render("Gateway  "))
+		b.WriteString(configSelectedStyle().Render(hawkconfig.GatewayDisplayName(gw)))
+		b.WriteString("\n\n")
 	}
 
 	if total == 0 {
@@ -156,26 +178,22 @@ func (m chatModel) configModelsBody() string {
 		return b.String()
 	}
 
-	b.WriteString("  " + renderModelTableHeader(headerStyle) + "\n")
+	b.WriteString(renderModelTableHeader(layout, headerStyle, metaStyle) + "\n")
 
 	if m.configScroll > 0 {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
+		b.WriteString(modelTableScrollHint(m.configScroll, 0, mutedStyle) + "\n")
 	}
 
-	end := m.configScroll + configWindowSize
-	if end > total {
-		end = total
-	}
 	for i := m.configScroll; i < end; i++ {
 		row := modelTableRowFromOption(opts[i])
-		b.WriteString(renderModelTableRow(row, i == m.configSel, rowStyle, selectedStyle) + "\n")
+		b.WriteString(renderModelTableRow(row, i == m.configSel, layout, rowStyle, selectedStyle, metaStyle, freeStyle) + "\n")
 	}
 
 	if end < total {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
+		b.WriteString(modelTableScrollHint(0, total-end, mutedStyle) + "\n")
 	}
 
-	b.WriteString(mutedStyle.Render(fmt.Sprintf("\n%d models · enter select", total)))
+	b.WriteString("\n" + modelTableFooter(total, m.configScroll, end, mutedStyle))
 	return b.String()
 }
 

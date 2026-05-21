@@ -6,36 +6,87 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 const (
-	modelTableColModel    = 28
-	modelTableColProvider = 12
-	modelTableColPrice    = 14
-	modelTableColContext  = 8
+	modelTableColGap    = 4
+	modelTableIndent    = 6 // left padding before table rows/header
+	modelTableModelPad  = 10 // extra room after longest model name
 )
+
+type modelTableLayout struct {
+	Model   int
+	Owner   int
+	Price   int
+	Context int
+}
 
 type modelTableRow struct {
 	Model    string
 	Provider string
 	Price    string
 	Context  string
+	Free     bool
+}
+
+func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayout {
+	if viewWidth <= 0 {
+		viewWidth = 80
+	}
+	usable := viewWidth - modelTableIndent
+	if usable < 48 {
+		usable = 48
+	}
+
+	modelW := runewidth.StringWidth("Model")
+	ownerW := runewidth.StringWidth("Owner")
+	priceW := runewidth.StringWidth("Price")
+	ctxW := runewidth.StringWidth("Ctx")
+	for _, row := range rows {
+		modelW = maxInt(modelW, runewidth.StringWidth(row.Model))
+		ownerW = maxInt(ownerW, runewidth.StringWidth(row.Provider))
+		priceW = maxInt(priceW, runewidth.StringWidth(row.Price))
+		ctxW = maxInt(ctxW, runewidth.StringWidth(row.Context))
+	}
+
+	ownerW += 2
+	priceW += 2
+	ctxW += 1
+
+	gaps := modelTableColGap * 3
+	modelW += modelTableModelPad
+	maxModel := usable - ownerW - priceW - ctxW - gaps
+	if maxModel < 20 {
+		maxModel = 20
+	}
+	if modelW > maxModel {
+		modelW = maxModel
+	}
+
+	return modelTableLayout{Model: modelW, Owner: ownerW, Price: priceW, Context: ctxW}
 }
 
 func modelTableRowFromOption(o configModelOption) modelTableRow {
 	name := strings.TrimSpace(o.DisplayName)
 	if name == "" {
-		name = o.ID
+		name = shortModelID(o.ID)
 	}
 	owner := strings.TrimSpace(o.Owner)
 	if owner == "" {
 		owner = "—"
 	}
+	free := o.InputPricePer1M <= 0 && o.OutputPricePer1M <= 0
+	price := formatModelTablePriceCompact(o.InputPricePer1M, o.OutputPricePer1M)
+	if free && price == "—" {
+		price = "free"
+	}
 	return modelTableRow{
 		Model:    name,
 		Provider: owner,
-		Price:    formatModelTablePrice(o.InputPricePer1M, o.OutputPricePer1M),
+		Price:    price,
 		Context:  formatModelTableContext(o.ContextWindow),
+		Free:     free,
 	}
 }
 
@@ -44,6 +95,13 @@ func formatModelTablePrice(input, output float64) string {
 		return "—"
 	}
 	return fmt.Sprintf("$%s/$%s/M", formatPriceComponent(input), formatPriceComponent(output))
+}
+
+func formatModelTablePriceCompact(input, output float64) string {
+	if input <= 0 && output <= 0 {
+		return "—"
+	}
+	return fmt.Sprintf("$%s/$%s", formatPriceComponent(input), formatPriceComponent(output))
 }
 
 func formatPriceComponent(v float64) string {
@@ -71,9 +129,12 @@ func formatPriceComponent(v float64) string {
 
 func formatModelTableContext(n int) string {
 	if n <= 0 {
-		return "0k"
+		return "—"
 	}
 	if n >= 1_000_000 {
+		if n%1_000_000 == 0 {
+			return fmt.Sprintf("%dm", n/1_000_000)
+		}
 		return fmt.Sprintf("%.1fm", float64(n)/1_000_000)
 	}
 	if n >= 1000 {
@@ -85,43 +146,118 @@ func formatModelTableContext(n int) string {
 	return fmt.Sprintf("%d", n)
 }
 
-func renderModelTableHeader(headerStyle lipgloss.Style) string {
-	return headerStyle.Render(padModelTable(
-		"Model", "Owner", "Price", "Context",
-		modelTableColModel, modelTableColProvider, modelTableColPrice, modelTableColContext,
-	))
-}
-
-func renderModelTableRow(row modelTableRow, selected bool, rowStyle, selectedStyle lipgloss.Style) string {
-	prefix := "  "
-	style := rowStyle
-	if selected {
-		prefix = "❯ "
-		style = selectedStyle
-	}
-	line := padModelTable(
-		row.Model, row.Provider, row.Price, row.Context,
-		modelTableColModel, modelTableColProvider, modelTableColPrice, modelTableColContext,
+func renderModelTableHeader(layout modelTableLayout, headerStyle, metaStyle lipgloss.Style) string {
+	line := renderModelTableLine(
+		[]string{"Model", "Owner", "Price", "Ctx"},
+		layout,
+		[]lipgloss.Style{headerStyle, metaStyle, metaStyle, metaStyle},
 	)
-	return style.Render(prefix + line)
+	ruleLen := layout.Model + layout.Owner + layout.Price + layout.Context + modelTableColGap*3
+	indent := strings.Repeat(" ", modelTableIndent)
+	return indent + line + "\n" + indent + metaStyle.Render(strings.Repeat("─", ruleLen))
 }
 
-func padModelTable(c1, c2, c3, c4 string, w1, w2, w3, w4 int) string {
-	return fmt.Sprintf("%-*s %-*s %-*s %-*s", w1, truncateRunes(c1, w1), w2, truncateRunes(c2, w2), w3, truncateRunes(c3, w3), w4, truncateRunes(c4, w4))
+func renderModelTableRow(row modelTableRow, selected bool, layout modelTableLayout, rowStyle, selectedStyle, metaStyle, freeStyle lipgloss.Style) string {
+	style := rowStyle
+	meta := metaStyle
+	priceStyle := metaStyle
+	if row.Free {
+		priceStyle = freeStyle
+	}
+	prefix := strings.Repeat(" ", modelTableIndent)
+	if selected {
+		prefix = strings.Repeat(" ", modelTableIndent-2) + selectedStyle.Render("❯") + " "
+		style = selectedStyle
+		meta = selectedStyle
+		if !row.Free {
+			priceStyle = selectedStyle
+		}
+	}
+
+	line := renderModelTableLine(
+		[]string{
+			truncateRunes(row.Model, layout.Model),
+			truncateRunes(row.Provider, layout.Owner),
+			truncateRunes(row.Price, layout.Price),
+			truncateRunes(row.Context, layout.Context),
+		},
+		layout,
+		[]lipgloss.Style{style, meta, priceStyle, meta},
+	)
+	return prefix + line
 }
 
-func truncateRunes(s string, max int) string {
-	if max <= 0 {
+func renderModelTableLine(values []string, layout modelTableLayout, styles []lipgloss.Style) string {
+	widths := []int{layout.Model, layout.Owner, layout.Price, layout.Context}
+	parts := make([]string, len(values))
+	for i, v := range values {
+		parts[i] = styles[i].Render(padCellLeft(v, widths[i]))
+	}
+	return strings.Join(parts, strings.Repeat(" ", modelTableColGap))
+}
+
+func padCellLeft(value string, width int) string {
+	if width <= 0 {
 		return ""
 	}
-	r := []rune(s)
-	if len(r) <= max {
+	text := truncateRunes(value, width)
+	pad := width - runewidth.StringWidth(text)
+	if pad < 0 {
+		pad = 0
+	}
+	return text + strings.Repeat(" ", pad)
+}
+
+func truncateRunes(s string, maxCols int) string {
+	if maxCols <= 0 {
+		return ""
+	}
+	if runewidth.StringWidth(s) <= maxCols {
 		return s
 	}
-	if max <= 1 {
-		return string(r[:max])
+	if maxCols <= 1 {
+		return "…"
 	}
-	return string(r[:max-1]) + "…"
+	var b strings.Builder
+	used := 0
+	for _, r := range s {
+		w := runewidth.RuneWidth(r)
+		if used+w > maxCols-1 {
+			break
+		}
+		b.WriteRune(r)
+		used += w
+	}
+	return b.String() + "…"
+}
+
+func modelTableScrollHint(above, below int, muted lipgloss.Style) string {
+	prefix := strings.Repeat(" ", modelTableIndent)
+	switch {
+	case above > 0 && below > 0:
+		return muted.Render(fmt.Sprintf("%s↑ %d above · ↓ %d below", prefix, above, below))
+	case above > 0:
+		return muted.Render(fmt.Sprintf("%s↑ %d above", prefix, above))
+	case below > 0:
+		return muted.Render(fmt.Sprintf("%s↓ %d below", prefix, below))
+	default:
+		return ""
+	}
+}
+
+func modelTableFooter(total, scroll, end int, muted lipgloss.Style) string {
+	prefix := strings.Repeat(" ", modelTableIndent)
+	if total == 0 {
+		return muted.Render(prefix + "No models")
+	}
+	start := scroll + 1
+	if end > total {
+		end = total
+	}
+	if start > end {
+		start = end
+	}
+	return muted.Render(fmt.Sprintf("%s%d–%d of %d · enter to select", prefix, start, end, total))
 }
 
 func modelTableRowFromCatalogEntry(m catalog.ModelCatalogEntry) modelTableRow {
@@ -133,23 +269,33 @@ func modelTableRowFromCatalogEntry(m catalog.ModelCatalogEntry) modelTableRow {
 	if owner == "" {
 		owner = "—"
 	}
+	free := m.InputPricePer1M <= 0 && m.OutputPricePer1M <= 0
+	price := formatModelTablePriceCompact(m.InputPricePer1M, m.OutputPricePer1M)
+	if free && price == "—" {
+		price = "free"
+	}
 	return modelTableRow{
 		Model:    name,
 		Provider: owner,
-		Price:    formatModelTablePrice(m.InputPricePer1M, m.OutputPricePer1M),
+		Price:    price,
 		Context:  formatModelTableContext(m.ContextWindow),
+		Free:     free,
 	}
 }
 
 func printModelTablePlain(rows []modelTableRow) {
-	fmt.Println(padModelTable(
-		"Model", "Owner", "Price", "Context",
-		modelTableColModel, modelTableColProvider, modelTableColPrice, modelTableColContext,
-	))
+	layout := computeModelTableLayout(100, rows)
+	header := lipgloss.NewStyle().Bold(true)
+	meta := lipgloss.NewStyle()
+	fmt.Println(renderModelTableHeader(layout, header, meta))
 	for _, row := range rows {
-		fmt.Println(padModelTable(
-			row.Model, row.Provider, row.Price, row.Context,
-			modelTableColModel, modelTableColProvider, modelTableColPrice, modelTableColContext,
-		))
+		fmt.Println(renderModelTableRow(row, false, layout, lipgloss.NewStyle(), lipgloss.NewStyle(), meta, meta))
 	}
+}
+
+func padModelTable(c1, c2, c3, c4 string, w1, w2, w3, w4 int) string {
+	layout := modelTableLayout{Model: w1, Owner: w2, Price: w3, Context: w4}
+	return renderModelTableLine([]string{c1, c2, c3, c4}, layout, []lipgloss.Style{
+		lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(),
+	})
 }

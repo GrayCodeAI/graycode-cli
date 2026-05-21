@@ -56,7 +56,11 @@ func (m chatModel) configTabShellView(body string) string {
 	tabStyle := configMutedStyle()
 	activeTabStyle := configSelectedStyle()
 	b.WriteString(renderConfigTabBar(m.configTab, tabStyle, activeTabStyle) + "\n")
-	b.WriteString(configMutedStyle().Render(strings.Repeat("─", 52)) + "\n\n")
+	dividerWidth := m.width - 2
+	if dividerWidth < 52 {
+		dividerWidth = 52
+	}
+	b.WriteString(configMutedStyle().Render(strings.Repeat("─", dividerWidth)) + "\n\n")
 	if notice := renderConfigNotice(m.configNotice); notice != "" {
 		b.WriteString(notice + "\n\n")
 	}
