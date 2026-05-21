@@ -30,6 +30,37 @@ func renderConfigGatewayLine(displayName string) string {
 	)
 }
 
+func renderConfigStatusLine(m chatModel) string {
+	gateway, model, configured := m.configStatus()
+	muted := configMutedStyle().Inline(true)
+	accent := configAccentStyle().Inline(true)
+	active := configActiveStyle().Inline(true)
+
+	if !configured {
+		return lipgloss.JoinHorizontal(lipgloss.Left,
+			muted.Render("Gateway: "),
+			muted.Render("none"),
+			muted.Render(" · no API key — add one in "),
+			accent.Render("Keys"),
+		)
+	}
+
+	gatewayStyle := accent
+	if gateway == "none" {
+		gatewayStyle = muted
+	}
+	parts := []string{
+		muted.Render("Gateway: "),
+		gatewayStyle.Render(gateway),
+	}
+	if model == "" {
+		parts = append(parts, muted.Render(" · no model selected"))
+	} else {
+		parts = append(parts, muted.Render(" · Model: "), active.Render(model))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
+}
+
 func configActiveStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
 }

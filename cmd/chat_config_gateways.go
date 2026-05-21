@@ -57,10 +57,12 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 }
 
 func (m chatModel) configGatewaysView() string {
-	selectedStyle := configSelectedStyle()
+	cursorStyle := configSelectedStyle()
 	rowStyle := configRowStyle()
+	activeStyle := configActiveStyle()
 	mutedStyle := configMutedStyle()
 	headerStyle := configHeaderStyle()
+	metaStyle := configMutedStyle()
 
 	rows := m.configGatewayRows()
 
@@ -71,10 +73,31 @@ func (m chatModel) configGatewaysView() string {
 		m.configScroll = m.configSel - configWindowSize + 1
 	}
 
+	headers := []string{"Gateway", "Key", "Catalog", "Active"}
+	tableData := make([][]string, len(rows))
+	layoutData := make([][]string, len(rows))
+	for i, row := range rows {
+		key := "—"
+		if row.HasKey {
+			key = "✓"
+		}
+		models := "—"
+		if row.ModelCount > 0 {
+			models = fmt.Sprintf("%d", row.ModelCount)
+		}
+		tableData[i] = []string{row.DisplayName, key, models, ""}
+		layoutData[i] = append([]string(nil), tableData[i]...)
+		if row.Active {
+			layoutData[i][3] = "●"
+		}
+	}
+	layout := computeConfigTableLayout(m.configPanelViewWidth(), headers, layoutData, []int{2, 2, 2, 2}, true)
+
 	var b strings.Builder
-	b.WriteString("  " + headerStyle.Render(padGatewayTable("Gateway", "Key", "Catalog", "Active", 14, 6, 8, 8)) + "\n")
+	b.WriteString(renderConfigTableHeader(headers, layout, headerStyle, metaStyle) + "\n")
+
 	if m.configScroll > 0 {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
+		b.WriteString(configTableScrollHint(m.configScroll, 0, mutedStyle) + "\n")
 	}
 	end := m.configScroll + configWindowSize
 	if end > len(rows) {
@@ -82,54 +105,38 @@ func (m chatModel) configGatewaysView() string {
 	}
 	for i := m.configScroll; i < end; i++ {
 		row := rows[i]
-		prefix := "  "
-		style := rowStyle
-		if i == m.configSel {
-			prefix = "❯ "
-			style = selectedStyle
-		}
-		key := "—"
-		if row.HasKey {
-			key = "✓"
-		}
-		active := ""
-		if row.Active {
-			active = "●"
-		}
-		models := "—"
-		if row.ModelCount > 0 {
-			models = fmt.Sprintf("%d", row.ModelCount)
-		}
-		line := padGatewayTable(row.DisplayName, key, models, active, 14, 6, 8, 8)
-		b.WriteString(style.Render(prefix+line) + "\n")
+		b.WriteString(renderConfigTableRow(
+			tableData[i],
+			i == m.configSel,
+			row.Active,
+			true,
+			layout,
+			rowStyle,
+			cursorStyle,
+			activeStyle,
+			metaStyle,
+		) + "\n")
 	}
 	if end < len(rows) {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", len(rows)-end)) + "\n")
+		b.WriteString(configTableScrollHint(0, len(rows)-end, mutedStyle) + "\n")
 	}
+
 	b.WriteString("\n")
 	refreshSel := len(rows)
-	prefix := "  "
-	style := rowStyle
-	if m.configSel == refreshSel {
-		prefix = "❯ "
-		style = selectedStyle
-	}
 	refreshHint := "Refresh gateway"
 	if m.configGatewayFocus >= 0 && m.configGatewayFocus < len(rows) {
 		refreshHint = "Refresh " + rows[m.configGatewayFocus].DisplayName
 	}
-	b.WriteString(style.Render(prefix+refreshHint) + "\n")
+	b.WriteString(renderConfigTableActionRow(refreshHint, m.configSel == refreshSel, rowStyle, cursorStyle) + "\n")
+
 	ctx := context.Background()
+	indent := strings.Repeat(" ", configTableIndent)
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		b.WriteString(mutedStyle.Render("\nCatalog = models in eyrie cache · add key in Keys tab to use them"))
+		b.WriteString("\n" + mutedStyle.Render(indent+"Catalog = models in eyrie cache · add key in Keys tab to use them"))
 	} else {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("\n%d gateways · enter select · ↓ refresh row", len(rows))))
+		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "enter select · ↓ refresh row"))
 	}
 	return m.configTabShellView(b.String())
-}
-
-func padGatewayTable(c1, c2, c3, c4 string, w1, w2, w3, w4 int) string {
-	return fmt.Sprintf("%-*s %-*s %-*s %-*s", w1, truncateRunes(c1, w1), w2, truncateRunes(c2, w2), w3, truncateRunes(c3, w3), w4, truncateRunes(c4, w4))
 }
 
 func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
