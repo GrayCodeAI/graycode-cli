@@ -19,7 +19,7 @@ func TestFormatModelTablePrice(t *testing.T) {
 
 func TestFormatModelTableContext(t *testing.T) {
 	cases := map[int]string{
-		0:       "—",
+		0:       "0k",
 		32000:   "32k",
 		262144:  "262k",
 		1000000: "1.0m",

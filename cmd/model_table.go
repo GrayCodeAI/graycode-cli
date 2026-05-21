@@ -71,7 +71,7 @@ func formatPriceComponent(v float64) string {
 
 func formatModelTableContext(n int) string {
 	if n <= 0 {
-		return "—"
+		return "0k"
 	}
 	if n >= 1_000_000 {
 		return fmt.Sprintf("%.1fm", float64(n)/1_000_000)

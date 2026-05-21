@@ -29,6 +29,14 @@ func TestDisplayVersion_ReleaseBuild(t *testing.T) {
 }
 
 func TestChatConnectionStatus_NoCredentials(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+
 	m := chatModel{session: nil}
 	got := m.chatConnectionStatus()
 	if got != "" {

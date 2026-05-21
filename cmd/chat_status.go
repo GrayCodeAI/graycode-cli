@@ -84,17 +84,13 @@ func (m chatModel) buildConnectionStatus() string {
 	}
 
 	displayName, ctxLabel := modelStatusMeta(gw, model)
+	if ctxLabel == "" || ctxLabel == "—" {
+		ctxLabel = "0k"
+	}
 	if gwLabel == "" {
-		if ctxLabel != "" && ctxLabel != "—" {
-			return fmt.Sprintf("%s .%s", displayName, ctxLabel)
-		}
-		return displayName
+		return fmt.Sprintf("%s .%s", displayName, ctxLabel)
 	}
-	line := fmt.Sprintf("%s: %s", gwLabel, displayName)
-	if ctxLabel != "" && ctxLabel != "—" {
-		line += " ." + ctxLabel
-	}
-	return line
+	return fmt.Sprintf("%s: %s .%s", gwLabel, displayName, ctxLabel)
 }
 
 // chatBottomRightStatus is the deployment line on the input bar.

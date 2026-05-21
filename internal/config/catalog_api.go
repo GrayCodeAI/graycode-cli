@@ -177,7 +177,23 @@ func DefaultModelForProvider(provider string) string {
 			return id
 		}
 	}
-	return catalog.GetProviderDefaultModel(provider, nil)
+	if id := catalog.GetProviderDefaultModel(provider, nil); id != "" {
+		return id
+	}
+	// Live-only providers (openrouter, z-ai, canopywave, ollama) have no
+	// static models in the catalog — fetch from the live API, but only
+	// when credentials are configured (avoids hitting public APIs like
+	// OpenRouter's /models endpoint when no key is set).
+	if catalog.IsLiveOnlyProvider(provider) && APIKeyForProvider(provider) != "" {
+		models, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
+			ProviderID: provider,
+			Source:     runtime.ListSourceAuto,
+		})
+		if err == nil && len(models) > 0 {
+			return models[0].ID
+		}
+	}
+	return ""
 }
 
 // CachedModelCountForProvider returns model count from the on-disk catalog only (no network).
