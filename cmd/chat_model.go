@@ -71,9 +71,9 @@ var spinnerVerbs = []string{
 }
 
 type (
-	streamChunkMsg string
-	streamDoneMsg  struct{}
-	streamErrMsg   struct{ err error }
+	streamChunkMsg     string
+	streamDoneMsg      struct{}
+	streamErrMsg       struct{ err error }
 	blinkTickMsg       struct{}
 	spinnerVerbTickMsg struct{}
 )
