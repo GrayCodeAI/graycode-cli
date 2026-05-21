@@ -108,12 +108,11 @@ func renderConfigTableRow(values []string, cursor, active, markEnd bool, layout 
 
 func renderConfigTableActionRow(label string, cursor bool, rowStyle, cursorStyle lipgloss.Style) string {
 	prefix := strings.Repeat(" ", configTableIndent)
-	style := rowStyle
 	if cursor {
 		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render("❯") + " "
-		style = cursorStyle
+		return prefix + cursorStyle.Render(label)
 	}
-	return style.Render(prefix + label)
+	return rowStyle.Render(prefix + label)
 }
 
 func renderConfigTableLine(values []string, layout configTableLayout, styles []lipgloss.Style) string {

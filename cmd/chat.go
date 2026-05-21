@@ -207,6 +207,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		return chatModel{}, err
 	}
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	syncSessionFromPersistedSelection(sess, settings)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if err := configureSession(sess, settings); err != nil {
 		return chatModel{}, err
@@ -636,6 +637,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					hint = "Complete setup in /config (API key and model) before chatting."
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: hint})
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
+			if err := m.ensureSessionReadyForChat(); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				m.viewDirty = true
 				m.updateViewportContent()
 				return m, nil

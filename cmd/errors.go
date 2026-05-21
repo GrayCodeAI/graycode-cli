@@ -45,6 +45,8 @@ func friendlyError(err error) string {
 		{[]string{"zai_api_key", "z.ai api key", "z-ai api key"}, "ZAI_API_KEY", "Z.AI"},
 		{[]string{"xai_api_key", "xai api key", "grok api key"}, "XAI_API_KEY", "xAI/Grok"},
 		{[]string{"opencodego_api_key", "opencodego api key"}, "OPENCODEGO_API_KEY", "OpenCodeGo"},
+		{[]string{"moonshot_api_key", "moonshot api key", "kimi api key"}, "MOONSHOT_API_KEY", "Kimi (Moonshot)"},
+		{[]string{"xiaomi_api_key", "xiaomi api key", "mimo api key"}, "XIAOMI_API_KEY", "Xiaomi (MiMo)"},
 	}
 	for _, pk := range providerKeys {
 		for _, pat := range pk.patterns {
@@ -435,6 +437,10 @@ func providerDNSHost(provider string) string {
 		return "inference.canopywave.io"
 	case "z-ai", "zai":
 		return "api.z.ai"
+	case "kimi", "moonshotai":
+		return "api.moonshot.ai"
+	case "xiaomi", "mimo":
+		return "api.xiaomimimo.com"
 	default:
 		return ""
 	}

@@ -22,6 +22,7 @@ const (
 	configEntryNone        = ""
 	configEntryAPIKeyPaste = "apikey-paste"
 	configEntryOllamaURL   = "ollama-url"
+	configEntryKeyView     = "key-view"
 )
 
 // Config menu overlays (configMenu).

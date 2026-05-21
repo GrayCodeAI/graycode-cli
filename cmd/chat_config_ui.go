@@ -22,6 +22,15 @@ func configAccentStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
 }
 
+func renderConfigBreadcrumb(title string) string {
+	muted := configMutedStyle().Inline(true)
+	accent := configAccentStyle().Inline(true)
+	return lipgloss.JoinHorizontal(lipgloss.Left,
+		muted.Render("Keys › "),
+		accent.Render(title),
+	)
+}
+
 func renderConfigGatewayLine(displayName string) string {
 	indent := strings.Repeat(" ", modelTableIndent)
 	return lipgloss.JoinHorizontal(lipgloss.Left,
@@ -121,6 +130,21 @@ func (m chatModel) configHelpLine() string {
 	muted := configMutedStyle()
 	if m.configSaving {
 		return muted.Render(m.spinner.View() + " working…")
+	}
+	if m.configEntry == configEntryKeyView {
+		if m.configKeysPendingRemove != "" {
+			if m.configKeysRemoveStep >= 2 {
+				return muted.Render("enter again to permanently remove · esc cancel")
+			}
+			return muted.Render("enter continue · esc cancel")
+		}
+		return muted.Render("enter replace key · delete remove · esc back")
+	}
+	if m.configTab == configTabKeys && m.configKeysPendingRemove != "" {
+		if m.configKeysRemoveStep >= 2 {
+			return muted.Render("enter again to permanently remove · esc cancel")
+		}
+		return muted.Render("enter continue · esc cancel")
 	}
 	if m.configTab == configTabModels {
 		if m.configModelSearchActive {

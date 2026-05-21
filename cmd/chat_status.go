@@ -76,6 +76,7 @@ func (m *chatModel) chatConnectionStatus() string {
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		return ""
 	}
+	m.syncSessionSelection()
 	fp := m.connStatusFingerprint()
 	if fp == m.connStatusKey {
 		return m.connStatusVal
