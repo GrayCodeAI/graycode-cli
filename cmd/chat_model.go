@@ -43,7 +43,6 @@ var (
 	inputBorderStyle  = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(lipgloss.Color("#555555"))
 	ghostHintStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
 	containerErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
-	hawkAccentStyle   = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 )
 
 // hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.
