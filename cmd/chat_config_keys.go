@@ -56,7 +56,7 @@ func (m chatModel) configKeysView() string {
 
 	var b strings.Builder
 	if len(configured) == 0 {
-		b.WriteString(mutedStyle.Render(indent + "No API keys yet — select Add API key below, press enter, paste") + "\n\n")
+		b.WriteString(mutedStyle.Render(indent+"No API keys yet — select Add API key below, press enter, paste") + "\n\n")
 	}
 
 	headers := []string{"Gateway", "Status"}

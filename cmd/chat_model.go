@@ -114,71 +114,71 @@ func (r *progRef) Send(msg tea.Msg) {
 }
 
 type chatModel struct {
-	input                  textarea.Model
-	configInput            textinput.Model // secondary input for config panel password entry
-	useConfigInput         bool            // true when config panel needs textinput (e.g. password)
-	spinner                spinner.Model
-	viewport               viewport.Model
-	session                *engine.Session
-	registry               *tool.Registry
-	settings               hawkconfig.Settings
-	ref                    *progRef
-	cancel                 context.CancelFunc // cancel current stream
-	sessionID              string
-	messages               []displayMsg
-	partial                *strings.Builder
-	waiting                bool
-	permReq                *engine.PermissionRequest // pending permission prompt
-	askReq                 *askUserMsg               // pending ask_user prompt
-	width                  int
-	height                 int
-	quitting               bool
-	blinkClosed            bool
-	slashSel               int
-	configOpen             bool
-	configTab              int    // configTabKeys, configTabGateways, configTabModels
-	configMenu             string // configMenuNone, configMenuProviders
-	configSel              int
-	configScroll           int // scroll offset for long lists
-	configNotice           string
-	configEntry            string              // configEntryNone, configEntryAPIKeyPaste, configEntryOllamaURL
-	configProvider         string              // e.g. configProviderOllama while entry overlay is open
-	configModelOptions        []configModelOption // labels + ids from eyrie catalog
-	configModelProvider       string              // filter models after API key paste
-	configModelSearch         string              // active model filter query
-	configModelSearchActive   bool                // typing into model search input
-	configGuideAfterKey    bool                // open model picker when discover finishes
-	configGatewayFocus     int    // last highlighted gateway row (for refresh action)
-	configKeysPendingRemove string // provider awaiting delete confirmation
-	configKeysRemoveStep    int    // 1 = first prompt, 2 = final confirm
-	configReplaceProvider  string // replace-key flow target gateway
-	configPostSaveKeysProvider string // return to Keys tab after replace save
-	configPendingKey       string
-	configProviderOptions  []hawkconfig.CredentialProviderOption
-	configSaving           bool // blocks hub/list input while async credential work runs
-	configPendingOllamaURL string
-	pluginRuntime          *plugin.Runtime
-	spinnerVerb            string
-	lastCtrlC              time.Time
-	history                []string
-	historyIdx             int
-	historyDraft           string // unsent text before navigating history
-	autoScroll             bool   // whether to auto-scroll viewport to bottom
-	vim                    *VimState
-	contextViz             *ContextVisualization
-	wal                    *session.WAL
-	startedAt              time.Time
-	toolStartTime          time.Time
-	welcomeCache           string
-	viewDirty              bool
-	layoutKey              int    // input lines + slash menu height fingerprint
-	slashSugInput          string // memoize slashSuggestions per keystroke
-	slashSugCache          []string
-	connStatusKey          string // gateway+model+creds fingerprint
-	connStatusVal          string
-	partialDirty           bool // stream text changed since last viewport paint
-	lastPartialRender      time.Time
-	activeSkills           map[string]plugin.SmartSkill // per-session activated skills
+	input                      textarea.Model
+	configInput                textinput.Model // secondary input for config panel password entry
+	useConfigInput             bool            // true when config panel needs textinput (e.g. password)
+	spinner                    spinner.Model
+	viewport                   viewport.Model
+	session                    *engine.Session
+	registry                   *tool.Registry
+	settings                   hawkconfig.Settings
+	ref                        *progRef
+	cancel                     context.CancelFunc // cancel current stream
+	sessionID                  string
+	messages                   []displayMsg
+	partial                    *strings.Builder
+	waiting                    bool
+	permReq                    *engine.PermissionRequest // pending permission prompt
+	askReq                     *askUserMsg               // pending ask_user prompt
+	width                      int
+	height                     int
+	quitting                   bool
+	blinkClosed                bool
+	slashSel                   int
+	configOpen                 bool
+	configTab                  int    // configTabKeys, configTabGateways, configTabModels
+	configMenu                 string // configMenuNone, configMenuProviders
+	configSel                  int
+	configScroll               int // scroll offset for long lists
+	configNotice               string
+	configEntry                string              // configEntryNone, configEntryAPIKeyPaste, configEntryOllamaURL
+	configProvider             string              // e.g. configProviderOllama while entry overlay is open
+	configModelOptions         []configModelOption // labels + ids from eyrie catalog
+	configModelProvider        string              // filter models after API key paste
+	configModelSearch          string              // active model filter query
+	configModelSearchActive    bool                // typing into model search input
+	configGuideAfterKey        bool                // open model picker when discover finishes
+	configGatewayFocus         int                 // last highlighted gateway row (for refresh action)
+	configKeysPendingRemove    string              // provider awaiting delete confirmation
+	configKeysRemoveStep       int                 // 1 = first prompt, 2 = final confirm
+	configReplaceProvider      string              // replace-key flow target gateway
+	configPostSaveKeysProvider string              // return to Keys tab after replace save
+	configPendingKey           string
+	configProviderOptions      []hawkconfig.CredentialProviderOption
+	configSaving               bool // blocks hub/list input while async credential work runs
+	configPendingOllamaURL     string
+	pluginRuntime              *plugin.Runtime
+	spinnerVerb                string
+	lastCtrlC                  time.Time
+	history                    []string
+	historyIdx                 int
+	historyDraft               string // unsent text before navigating history
+	autoScroll                 bool   // whether to auto-scroll viewport to bottom
+	vim                        *VimState
+	contextViz                 *ContextVisualization
+	wal                        *session.WAL
+	startedAt                  time.Time
+	toolStartTime              time.Time
+	welcomeCache               string
+	viewDirty                  bool
+	layoutKey                  int    // input lines + slash menu height fingerprint
+	slashSugInput              string // memoize slashSuggestions per keystroke
+	slashSugCache              []string
+	connStatusKey              string // gateway+model+creds fingerprint
+	connStatusVal              string
+	partialDirty               bool // stream text changed since last viewport paint
+	lastPartialRender          time.Time
+	activeSkills               map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool

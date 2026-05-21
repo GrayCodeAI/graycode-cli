@@ -25,7 +25,8 @@ func configAccentStyle() lipgloss.Style {
 func renderConfigBreadcrumb(title string) string {
 	muted := configMutedStyle().Inline(true)
 	accent := configAccentStyle().Inline(true)
-	return lipgloss.JoinHorizontal(lipgloss.Left,
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
 		muted.Render("Keys › "),
 		accent.Render(title),
 	)
@@ -33,7 +34,8 @@ func renderConfigBreadcrumb(title string) string {
 
 func renderConfigGatewayLine(displayName string) string {
 	indent := strings.Repeat(" ", modelTableIndent)
-	return lipgloss.JoinHorizontal(lipgloss.Left,
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
 		configMutedStyle().Inline(true).Render(indent+"Gateway: "),
 		configAccentStyle().Inline(true).Render(displayName),
 	)
@@ -46,7 +48,8 @@ func renderConfigStatusLine(m chatModel) string {
 	active := configActiveStyle().Inline(true)
 
 	if !configured {
-		return lipgloss.JoinHorizontal(lipgloss.Left,
+		return lipgloss.JoinHorizontal(
+			lipgloss.Left,
 			muted.Render("Gateway: "),
 			muted.Render("none"),
 			muted.Render(" · no API key — add one in "),
@@ -112,7 +115,8 @@ func renderConfigRefreshActionRow(gatewayName string, cursor bool) string {
 		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render("❯") + " "
 		return prefix + cursorStyle.Render("Refresh "+gatewayName)
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Left,
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
 		muted.Render(prefix+"Refresh "),
 		accent.Render(gatewayName),
 	)
