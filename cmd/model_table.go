@@ -28,6 +28,7 @@ type modelTableRow struct {
 	Price    string
 	Context  string
 	Free     bool
+	Active   bool // configured in-use model — teal row + ●
 }
 
 func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayout {
@@ -47,7 +48,11 @@ func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayo
 		modelW = maxInt(modelW, runewidth.StringWidth(row.Model))
 		ownerW = maxInt(ownerW, runewidth.StringWidth(row.Provider))
 		priceW = maxInt(priceW, runewidth.StringWidth(row.Price))
-		ctxW = maxInt(ctxW, runewidth.StringWidth(row.Context))
+		ctxText := row.Context
+		if row.Active {
+			ctxText += " ●"
+		}
+		ctxW = maxInt(ctxW, runewidth.StringWidth(ctxText))
 	}
 
 	ownerW += 2
@@ -157,21 +162,31 @@ func renderModelTableHeader(layout modelTableLayout, headerStyle, metaStyle lipg
 	return indent + line + "\n" + indent + metaStyle.Render(strings.Repeat("─", ruleLen))
 }
 
-func renderModelTableRow(row modelTableRow, selected bool, layout modelTableLayout, rowStyle, selectedStyle, metaStyle, freeStyle lipgloss.Style) string {
+func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTableLayout, rowStyle, cursorStyle, activeStyle, metaStyle, freeStyle lipgloss.Style) string {
 	style := rowStyle
 	meta := metaStyle
 	priceStyle := metaStyle
-	if row.Free {
+	if row.Free && !cursor && !active {
 		priceStyle = freeStyle
 	}
+	if active && !cursor {
+		style = activeStyle
+		meta = activeStyle
+		priceStyle = activeStyle
+	}
+	if cursor {
+		style = cursorStyle
+		meta = cursorStyle
+		priceStyle = cursorStyle
+	}
 	prefix := strings.Repeat(" ", modelTableIndent)
-	if selected {
-		prefix = strings.Repeat(" ", modelTableIndent-2) + selectedStyle.Render("❯") + " "
-		style = selectedStyle
-		meta = selectedStyle
-		if !row.Free {
-			priceStyle = selectedStyle
-		}
+	if cursor {
+		prefix = strings.Repeat(" ", modelTableIndent-2) + cursorStyle.Render("❯") + " "
+	}
+
+	ctx := truncateRunes(row.Context, layout.Context)
+	if active {
+		ctx = truncateRunes(row.Context+" ●", layout.Context)
 	}
 
 	line := renderModelTableLine(
@@ -179,7 +194,7 @@ func renderModelTableRow(row modelTableRow, selected bool, layout modelTableLayo
 			truncateRunes(row.Model, layout.Model),
 			truncateRunes(row.Provider, layout.Owner),
 			truncateRunes(row.Price, layout.Price),
-			truncateRunes(row.Context, layout.Context),
+			ctx,
 		},
 		layout,
 		[]lipgloss.Style{style, meta, priceStyle, meta},
@@ -293,7 +308,7 @@ func printModelTablePlain(rows []modelTableRow) {
 	meta := lipgloss.NewStyle()
 	fmt.Println(renderModelTableHeader(layout, header, meta))
 	for _, row := range rows {
-		fmt.Println(renderModelTableRow(row, false, layout, lipgloss.NewStyle(), lipgloss.NewStyle(), meta, meta))
+		fmt.Println(renderModelTableRow(row, false, false, layout, lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(), meta, meta))
 	}
 }
 

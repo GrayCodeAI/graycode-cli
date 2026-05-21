@@ -28,6 +28,7 @@ func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
 		m.configNotice = "Loading models…"
 		return m, fetchModelsAsync(m.configModelProvider)
 	}
+	m = m.focusConfigActiveModelSelection()
 	return m, nil
 }
 

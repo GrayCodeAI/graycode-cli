@@ -178,8 +178,8 @@ func (m chatModel) stopConfigModelSearch(clearQuery bool) chatModel {
 	m.useConfigInput = false
 	m.configInput.Blur()
 	m.configInput.Reset()
-	m.configSel = 0
 	m.configScroll = 0
+	m = m.focusConfigActiveModelSelection()
 	return m
 }
 
@@ -231,17 +231,70 @@ func (m chatModel) configPanelViewWidth() int {
 	return DetectTerminalWidth()
 }
 
+func (m chatModel) configActiveModelID() string {
+	if m.session != nil {
+		if model := strings.TrimSpace(m.session.Model()); model != "" {
+			return model
+		}
+	}
+	return strings.TrimSpace(hawkconfig.ActiveModel(context.Background()))
+}
+
+func modelOptionIsActive(opt configModelOption, activeModelID string) bool {
+	activeModelID = strings.TrimSpace(activeModelID)
+	if activeModelID == "" {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(opt.ID), activeModelID)
+}
+
+func (m chatModel) focusConfigActiveModelSelection() chatModel {
+	opts := m.configFilteredModelOptions()
+	if len(opts) == 0 {
+		m.configSel = 0
+		m.configScroll = 0
+		return m
+	}
+	activeID := m.configActiveModelID()
+	for i, opt := range opts {
+		if modelOptionIsActive(opt, activeID) {
+			m.configSel = i
+			if m.configSel < configWindowSize {
+				m.configScroll = 0
+			} else {
+				m.configScroll = m.configSel - configWindowSize + 1
+			}
+			return m
+		}
+	}
+	if m.configSel >= len(opts) {
+		m.configSel = len(opts) - 1
+	}
+	if m.configSel < 0 {
+		m.configSel = 0
+	}
+	if m.configSel < m.configScroll {
+		m.configScroll = m.configSel
+	}
+	if m.configSel >= m.configScroll+configWindowSize {
+		m.configScroll = m.configSel - configWindowSize + 1
+	}
+	return m
+}
+
 func (m chatModel) configModelsBody() string {
 	mutedStyle := configMutedStyle()
 	headerStyle := configHeaderStyle()
 	metaStyle := configMutedStyle()
-	selectedStyle := configSelectedStyle()
 	rowStyle := configRowStyle()
+	cursorStyle := configSelectedStyle()
+	activeStyle := configActiveStyle()
 	freeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6BCB77"))
 
 	opts := m.configFilteredModelOptions()
 	total := len(opts)
 	allTotal := len(m.configModelOptions)
+	activeModelID := m.configActiveModelID()
 
 	if m.configSel < m.configScroll {
 		m.configScroll = m.configSel
@@ -257,7 +310,9 @@ func (m chatModel) configModelsBody() string {
 
 	visible := make([]modelTableRow, 0, end-m.configScroll)
 	for i := m.configScroll; i < end; i++ {
-		visible = append(visible, modelTableRowFromOption(opts[i]))
+		row := modelTableRowFromOption(opts[i])
+		row.Active = modelOptionIsActive(opts[i], activeModelID)
+		visible = append(visible, row)
 	}
 	layout := computeModelTableLayout(m.configPanelViewWidth(), visible)
 
@@ -295,7 +350,9 @@ func (m chatModel) configModelsBody() string {
 
 	for i := m.configScroll; i < end; i++ {
 		row := modelTableRowFromOption(opts[i])
-		b.WriteString(renderModelTableRow(row, i == m.configSel, layout, rowStyle, selectedStyle, metaStyle, freeStyle) + "\n")
+		row.Active = modelOptionIsActive(opts[i], activeModelID)
+		cursor := i == m.configSel
+		b.WriteString(renderModelTableRow(row, cursor, row.Active, layout, rowStyle, cursorStyle, activeStyle, metaStyle, freeStyle) + "\n")
 	}
 
 	if end < total {
