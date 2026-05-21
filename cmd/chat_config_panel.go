@@ -245,7 +245,17 @@ func modelOptionIsActive(opt configModelOption, activeModelID string) bool {
 	if activeModelID == "" {
 		return false
 	}
-	return strings.EqualFold(strings.TrimSpace(opt.ID), activeModelID)
+	if strings.EqualFold(strings.TrimSpace(opt.ID), activeModelID) {
+		return true
+	}
+	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
+		optCanon, optOK := compiled.CanonicalModelForAliasOrID(opt.ID)
+		activeCanon, activeOK := compiled.CanonicalModelForAliasOrID(activeModelID)
+		if optOK && activeOK && optCanon == activeCanon {
+			return true
+		}
+	}
+	return false
 }
 
 func (m chatModel) focusConfigActiveModelSelection() chatModel {
