@@ -37,25 +37,42 @@ func (m chatModel) configStatusLine() string {
 	return fmt.Sprintf("Gateway: %s · Model: %s", gw, model)
 }
 
-func renderConfigTabBar(active int, tabStyle, activeStyle lipgloss.Style) string {
-	var parts []string
-	for i, label := range configTabLabels {
-		if i == active {
-			parts = append(parts, activeStyle.Render(" "+label+" "))
-		} else {
-			parts = append(parts, tabStyle.Render(" "+label+" "))
-		}
+const (
+	configTabDotFilled = "●"
+	configTabDotEmpty  = "○"
+	configTabGap       = 4
+)
+
+func configTabLabelStyle(active bool) lipgloss.Style {
+	if active {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 	}
-	return strings.Join(parts, "  ")
+	return configMutedStyle()
+}
+
+func renderConfigTabBar(active int) string {
+	if active < 0 || active >= len(configTabLabels) {
+		active = 0
+	}
+	parts := make([]string, 0, len(configTabLabels)*2)
+	for i, label := range configTabLabels {
+		if i > 0 {
+			parts = append(parts, strings.Repeat(" ", configTabGap))
+		}
+		dot := configTabDotEmpty
+		if i == active {
+			dot = configTabDotFilled
+		}
+		parts = append(parts, configTabLabelStyle(i == active).Render(dot+" "+label))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
 func (m chatModel) configTabShellView(body string) string {
 	var b strings.Builder
 	b.WriteString(configTitleStyle().Render("⚙ Setup") + "\n")
 	b.WriteString(configMutedStyle().Render(m.configStatusLine()) + "\n\n")
-	tabStyle := configMutedStyle()
-	activeTabStyle := configSelectedStyle()
-	b.WriteString(renderConfigTabBar(m.configTab, tabStyle, activeTabStyle) + "\n")
+	b.WriteString(renderConfigTabBar(m.configTab) + "\n")
 	dividerWidth := m.width - 2
 	if dividerWidth < 52 {
 		dividerWidth = 52
