@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -130,34 +132,44 @@ func (m chatModel) renderConnectionStatus() (string, int) {
 	}
 
 	gw, model, ctxLabel := m.connectionStatusParts()
-	if gw == "" && model == "" {
+	return renderChatConnectionStatus(gw, model, ctxLabel)
+}
+
+func renderChatConnectionStatus(gateway, model, ctxLabel string) (string, int) {
+	muted := configMutedStyle().Inline(true)
+	accent := configAccentStyle().Inline(true)
+	active := configActiveStyle().Inline(true)
+	sep := muted.Render(" · ")
+	const sepVis = 3
+
+	if gateway == "" && model == "" {
 		s := "pick model"
-		return dimStyle.Render(s), len(s)
+		return muted.Render(s), len(s)
 	}
 	if model == "" {
-		if gw == "" {
+		if gateway == "" {
 			s := "pick model"
-			return dimStyle.Render(s), len(s)
+			return muted.Render(s), len(s)
 		}
-		s := gw + " · pick model"
-		return dimStyle.Render(gw) + dimStyle.Render(" · pick model"), len(s)
+		s := gateway + " · pick model"
+		return lipgloss.JoinHorizontal(lipgloss.Left,
+			accent.Render(gateway),
+			muted.Render(" · pick model"),
+		), len(s)
 	}
 
-	sep := dimStyle.Render(" · ")
-	const sepVis = 3
 	var b strings.Builder
 	vis := 0
-
-	if gw != "" {
-		b.WriteString(dimStyle.Render(gw))
-		vis += len(gw)
+	if gateway != "" {
+		b.WriteString(accent.Render(gateway))
+		vis += len(gateway)
 	}
 	if model != "" {
 		if vis > 0 {
 			b.WriteString(sep)
 			vis += sepVis
 		}
-		b.WriteString(hawkAccentStyle.Render(model))
+		b.WriteString(active.Render(model))
 		vis += len(model)
 	}
 	if ctxLabel != "" && ctxLabel != "—" {
@@ -166,7 +178,7 @@ func (m chatModel) renderConnectionStatus() (string, int) {
 			vis += sepVis
 		}
 		ctxText := ctxLabel + " ctx"
-		b.WriteString(dimStyle.Render(ctxText))
+		b.WriteString(muted.Render(ctxText))
 		vis += len(ctxText)
 	}
 	return b.String(), vis
