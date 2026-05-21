@@ -500,6 +500,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	if m.configTab == configTabModels && msg.Type == tea.KeyRunes && string(msg.Runes) == "/" {
 		return m.startConfigModelSearch()
 	}
+	if m.configTab == configTabGateways && msg.Type == tea.KeyRunes {
+		switch string(msg.Runes) {
+		case "r", "R":
+			return m.refreshConfigGateway()
+		}
+	}
 	n := m.configTabItemCount()
 	if n == 0 {
 		m.configSel = 0

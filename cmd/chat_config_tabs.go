@@ -105,7 +105,7 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 		return m.beginConfigModelsTab()
 	}
 	if tab == configTabGateways {
-		m.configGatewayFocus = 0
+		m = m.focusConfigActiveGateway()
 	}
 	return m, nil
 }

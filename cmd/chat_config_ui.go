@@ -94,6 +94,21 @@ func configNoticeStyle(notice string) lipgloss.Style {
 	}
 }
 
+func renderConfigRefreshActionRow(gatewayName string, cursor bool) string {
+	muted := configMutedStyle().Inline(true)
+	accent := configAccentStyle().Inline(true)
+	cursorStyle := configSelectedStyle().Inline(true)
+	prefix := strings.Repeat(" ", configTableIndent)
+	if cursor {
+		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render("❯") + " "
+		return prefix + cursorStyle.Render("Refresh "+gatewayName)
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Left,
+		muted.Render(prefix+"Refresh "),
+		accent.Render(gatewayName),
+	)
+}
+
 func renderConfigNotice(notice string) string {
 	notice = sanitizeConfigNotice(notice)
 	if notice == "" {
