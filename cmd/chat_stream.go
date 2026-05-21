@@ -20,6 +20,7 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 }
 
 func (m *chatModel) startStream() {
+	m.syncSessionSelection()
 	sess := m.session
 	ref := m.ref
 	ctx, cancel := context.WithCancel(context.Background())

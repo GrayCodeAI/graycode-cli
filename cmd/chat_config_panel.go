@@ -58,6 +58,9 @@ func (m chatModel) configTabItemCount() int {
 }
 
 func (m chatModel) configPanelView() string {
+	if m.configEntry == configEntryKeyView {
+		return m.configKeyDetailView()
+	}
 	if m.configEntry == configEntryAPIKeyPaste {
 		return m.configProviderKeyView()
 	}
@@ -446,6 +449,21 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 			m.restoreChatInput()
 			return m, nil
 		}
+		if replace := strings.TrimSpace(m.configReplaceProvider); replace != "" {
+			m.configReplaceProvider = ""
+			m.configEntry = configEntryNone
+			m.wipeConfigKeyInput()
+			m.restoreChatInput()
+			inference, err := hawkconfig.CredentialInferenceForProvider(replace)
+			if err != nil {
+				m.configNotice = sanitizeConfigNotice(err.Error())
+				return m.startConfigKeyView(replace), nil
+			}
+			m.configPostSaveKeysProvider = replace
+			m.configSaving = true
+			m.configNotice = fmt.Sprintf("Saving key for %s…", inference.DisplayName)
+			return m, saveProviderKeyAsync(inference, value)
+		}
 		m.configNotice = "Resolving gateways via eyrie…"
 		m.configEntry = configEntryNone
 		m.wipeConfigKeyInput()
@@ -469,6 +487,18 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			m.configNotice = ""
 			m.restoreChatInput()
 			return m, nil
+		case configEntryAPIKeyPaste:
+			if replace := strings.TrimSpace(m.configReplaceProvider); replace != "" {
+				m.configReplaceProvider = ""
+				m.configEntry = configEntryNone
+				m.wipeConfigKeyInput()
+				m.restoreChatInput()
+				return m.startConfigKeyView(replace), nil
+			}
+			m.configEntry = configEntryNone
+			m.configProvider = ""
+			m.restoreChatInput()
+			return m, nil
 		default:
 			m.configEntry = configEntryNone
 			m.configProvider = ""
@@ -485,6 +515,12 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 }
 
 func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
+	if m.configEntry == configEntryKeyView {
+		if m.configSaving {
+			return m, nil
+		}
+		return m.handleConfigKeyViewKey(msg)
+	}
 	if m.configEntry != configEntryNone {
 		if m.configSaving {
 			return m, nil
@@ -563,6 +599,10 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 		m.configSel = (m.configSel + 1) % n
 		return m.trackConfigGatewayFocus(), nil
+	case tea.KeyDelete, tea.KeyBackspace:
+		if m.configTab == configTabKeys && m.configKeysPendingRemove == "" {
+			return m.handleConfigKeysDelete(), nil
+		}
 	case tea.KeyEnter:
 		if m.configMenu == configMenuProviders {
 			return m.handleConfigProviderSelect()

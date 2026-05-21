@@ -314,6 +314,17 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	}
 	next, cmd := m.rebuildSessionTransport()
 	next.invalidateConnStatus()
+	if post := strings.TrimSpace(m.configPostSaveKeysProvider); post != "" {
+		next.configPostSaveKeysProvider = ""
+		next.configTab = configTabKeys
+		next.configMenu = configMenuNone
+		next.configEntry = configEntryNone
+		if idx := next.configKeysCredentialIndex(post); idx >= 0 {
+			next.configSel = idx
+		}
+		next.configNotice = "Key updated for " + hawkconfig.GatewayDisplayName(post)
+		return next, cmd
+	}
 	if msg.providerID == configProviderOllama {
 		_ = hawkconfig.SetGlobalSetting("provider", configProviderOllama)
 		next.session.SetProvider(hawkconfig.NormalizeProviderForEngine(configProviderOllama))
@@ -339,5 +350,7 @@ func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
 	if err := eyrieclient.RebuildSessionTransport(context.Background(), m.session, m.settings, m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
+	syncSessionFromPersistedSelection(m.session, m.settings)
+	m.invalidateConnStatus()
 	return m, nil
 }
