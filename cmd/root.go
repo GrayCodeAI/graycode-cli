@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
@@ -74,8 +76,9 @@ var rootCmd = &cobra.Command{
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Load persisted env vars (API keys from ~/.hawk/env)
-		_ = hawkconfig.LoadEnvFile()
+		// Credential store reads OS secret store on demand (not shell env).
+		hawkconfig.PrepareCredentialDiscovery(context.Background())
+		_ = hawkconfig.MigrateProviderSecrets()
 
 		if versionFlag {
 			if buildDate != "" && buildDate != "unknown" {
@@ -103,15 +106,10 @@ var rootCmd = &cobra.Command{
 			if promptFlag == "" {
 				return fmt.Errorf("prompt required in print mode")
 			}
-			return runPrint(promptFlag)
-		}
-
-		// First-run setup if needed
-		if onboarding.NeedsSetup() {
-			onboarding.Welcome(version)
-			if err := onboarding.RunSetup(); err != nil {
+			if err := ensureCatalogBeforeAgent(context.Background(), true); err != nil {
 				return err
 			}
+			return runPrint(promptFlag)
 		}
 
 		// Auto-skill: analyze project and install matching skills.
@@ -139,13 +137,17 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// Launch TUI
+		if err := ensureCatalogBeforeAgent(context.Background(), false); err != nil {
+			return err
+		}
+
+		// Launch TUI — use /config to set API keys; eyrie supplies providers and models
 		return runChat()
 	},
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&model, "model", "m", "", "model to use (e.g. claude-sonnet-4-20250514)")
+	rootCmd.Flags().StringVarP(&model, "model", "m", "", "model to use (from eyrie catalog; see /models)")
 	rootCmd.Flags().BoolVarP(&printMode, "print", "p", false, "print response and exit")
 	rootCmd.Flags().StringVar(&promptFlag, "prompt", "", "send a single prompt and exit (legacy alias for --print)")
 	rootCmd.Flags().StringVar(&outputFormat, "output-format", "text", `output format for --print: "text", "json", or "stream-json"`)
@@ -172,7 +174,7 @@ func init() {
 	rootCmd.Flags().StringVar(&systemPromptFile, "system-prompt-file", "", "read system prompt from a file")
 	rootCmd.Flags().StringVar(&appendSystemPromptFlag, "append-system-prompt", "", "append text to the default or custom system prompt")
 	rootCmd.Flags().StringVar(&appendSystemPromptFile, "append-system-prompt-file", "", "read text from a file and append it to the system prompt")
-	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "sandbox mode for Bash commands: strict, workspace, or off")
+	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "Bash permission profile: strict, workspace, or off (not Docker; see --no-container)")
 	rootCmd.Flags().BoolVar(&autoCommitFlag, "auto-commit", false, "auto-commit file changes made by Write and Edit tools")
 	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes")
 	rootCmd.Flags().BoolVar(&vibeMode, "vibe", false, "vibe coding mode: auto-apply, auto-run, no confirmations")
@@ -185,10 +187,14 @@ func init() {
 	rootCmd.Flags().BoolVar(&noContainer, "no-container", false, "disable container mode (run on host with permission prompts)")
 	rootCmd.Flags().BoolVar(&containerMode, "container", false, "force container mode even if auto-detection would skip it")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
+	rootCmd.Flags().BoolVar(&refreshCatalogFlag, "refresh-catalog", false, "refresh the eyrie model catalog before starting")
+	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(doctorCmd)
+	rootCmd.AddCommand(preflightCmd)
+	rootCmd.AddCommand(credentialsCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(mcpCmd)
 	rootCmd.AddCommand(sessionsCmd)
@@ -292,6 +298,19 @@ var doctorCmd = &cobra.Command{
 	},
 }
 
+var preflightCmd = &cobra.Command{
+	Use:   "preflight",
+	Short: "Check hawk is ready to chat (catalog, credentials, model)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := eyrieclient.Preflight(context.Background())
+		cmd.Println(eyrieclient.FormatPreflightReport(r))
+		if !r.Ready {
+			return fmt.Errorf("preflight failed — run hawk and complete /config")
+		}
+		return nil
+	},
+}
+
 var configCmd = &cobra.Command{
 	Use:   "config [provider <name>|model <name>|get <key>|set <key> <value>]",
 	Short: "Show or update settings",
@@ -341,6 +360,22 @@ var configCmd = &cobra.Command{
 				return nil
 			case "keys":
 				cmd.Println(apiKeyConfigSummary())
+				return nil
+			case "routing-preview":
+				if len(args) < 2 {
+					return fmt.Errorf("usage: hawk config routing-preview <model>")
+				}
+				out, err := hawkconfig.RoutingPreviewJSON(context.Background(), strings.Join(args[1:], " "))
+				if err != nil {
+					return err
+				}
+				cmd.Println(out)
+				return nil
+			case "migrate-deployments":
+				if err := hawkconfig.MigrateProviderConfig(); err != nil {
+					return err
+				}
+				cmd.Println("provider.json upgraded to deployment config v2 (if legacy keys were present)")
 				return nil
 			default:
 				return fmt.Errorf("unknown config action %q", args[0])

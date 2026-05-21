@@ -53,6 +53,9 @@ var (
 	zshEqualsExpansionRe    = regexp.MustCompile(`(?:^|[\s;&|])=[a-zA-Z_]`)
 	ifsInjectionRe          = regexp.MustCompile(`\$IFS|\$\{[^}]*IFS`)
 	procEnvironRe           = regexp.MustCompile(`/proc/.*environ`)
+	envDumpRe               = regexp.MustCompile(`(?i)(^|[;&|]\s*|\s)(printenv|env)(\s|$)`)
+	hawkEnvReadRe           = regexp.MustCompile(`(?i)\b(cat|type|head|less|more|dd)\b[^\n;|]*\.hawk/(env|\.env)\b`)
+	apiKeyEchoRe            = regexp.MustCompile(`(?i)\becho\s+[^\n;|]*\$?(ANTHROPIC|OPENAI|OPENROUTER|GEMINI|GROK|XAI)_API_KEY`)
 	ansiCQuotingRe          = regexp.MustCompile(`\$'[^']*'`)
 	localeQuotingRe         = regexp.MustCompile(`\$"[^"]*"`)
 	emptyQuotePairRe        = regexp.MustCompile(`(?:''|"")+\s*-`)
@@ -324,6 +327,15 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	if procEnvironRe.MatchString(p.Command) {
 		return "", fmt.Errorf("blocked: /proc/*/environ access can expose environment variables")
 	}
+	if envDumpRe.MatchString(p.Command) {
+		return "", fmt.Errorf("blocked: dumping environment variables can expose API keys")
+	}
+	if hawkEnvReadRe.MatchString(p.Command) {
+		return "", fmt.Errorf("blocked: reading ~/.hawk env files can expose API keys")
+	}
+	if apiKeyEchoRe.MatchString(p.Command) {
+		return "", fmt.Errorf("blocked: echoing API key environment variables is not allowed")
+	}
 
 	// Block heredoc in substitution (complex validation)
 	if heredocSubstitutionRe.MatchString(p.Command) {
@@ -362,7 +374,7 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 
 	// Container mode: if a ContainerExecutor is in context, route through Docker.
-	// This provides herm-style full isolation — no permission prompts needed.
+	// Full container isolation — no permission prompts needed.
 	if ce := ContainerExecutorFromContext(ctx); ce != nil && ce.Running() {
 		result, err := ce.Exec(ctx, p.Command, timeout)
 		result = TruncateOutput(result)

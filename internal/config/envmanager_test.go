@@ -517,7 +517,6 @@ func TestSourceNameFromPath(t *testing.T) {
 		{".env", ".env"},
 		{"/project/.env", ".env"},
 		{".env.local", ".env.local"},
-		{"/home/user/.hawk/env", "~/.hawk/env"},
 		{"/some/random/file.txt", "file"},
 	}
 

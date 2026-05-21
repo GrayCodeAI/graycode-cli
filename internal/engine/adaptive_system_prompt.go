@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // PromptBuildContext provides situational context for building a system prompt.
@@ -183,22 +185,16 @@ func (b *SystemPromptBuilder) AdaptForModel(model string) *SystemPromptBuilder {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	lower := strings.ToLower(model)
-
-	switch {
-	case strings.Contains(lower, "opus"):
-		// Opus: more detailed, allow longer sections
-		b.MaxTokens = b.MaxTokens * 12 / 10 // 20% more budget
-	case strings.Contains(lower, "haiku"):
-		// Haiku: more concise, strip examples to save tokens
-		b.MaxTokens = b.MaxTokens * 7 / 10 // 30% less budget
+	switch routing.CostTierOf(model) {
+	case routing.CostTierExpensive:
+		b.MaxTokens = b.MaxTokens * 12 / 10
+	case routing.CostTierCheap:
+		b.MaxTokens = b.MaxTokens * 7 / 10
 		for i := range b.Sections {
 			if b.Sections[i].Name == "examples" {
-				b.Sections[i].Priority = 10 // demote heavily
+				b.Sections[i].Priority = 10
 			}
 		}
-	case strings.Contains(lower, "sonnet"):
-		// Sonnet: balanced, no adjustments
 	}
 
 	return b

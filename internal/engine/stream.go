@@ -667,6 +667,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				AskUserFn:    s.AskUserFn,
 				YaadBridge:   s.YaadBridge,
 			})
+			if s.ContainerExecutor != nil && s.ContainerExecutor.Running() {
+				toolCtx = tool.WithContainerExecutor(toolCtx, s.ContainerExecutor)
+			}
 			// Apply per-tool timeout so individual tools cannot block indefinitely.
 			toolCtx, toolCancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
 			output, execErr := s.registry.Execute(toolCtx, tc.Name, inputJSON)

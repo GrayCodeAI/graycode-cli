@@ -44,6 +44,9 @@ func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if p.URL == "" {
 		return "", fmt.Errorf("url is required")
 	}
+	if err := validateURLPublic(ctx, p.URL); err != nil {
+		return "", err
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()

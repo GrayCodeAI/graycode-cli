@@ -1,10 +1,13 @@
 package health
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 func TestNewDiagnostics(t *testing.T) {
@@ -339,36 +342,20 @@ func TestCheckTempDirWritable(t *testing.T) {
 }
 
 func TestCheckAPIKeySet(t *testing.T) {
-	// Save and clear environment
-	origAnthropic := os.Getenv("ANTHROPIC_API_KEY")
-	origOpenAI := os.Getenv("OPENAI_API_KEY")
-	origHawk := os.Getenv("HAWK_API_KEY")
-
-	os.Unsetenv("ANTHROPIC_API_KEY")
-	os.Unsetenv("OPENAI_API_KEY")
-	os.Unsetenv("HAWK_API_KEY")
-	defer func() {
-		if origAnthropic != "" {
-			os.Setenv("ANTHROPIC_API_KEY", origAnthropic)
-		}
-		if origOpenAI != "" {
-			os.Setenv("OPENAI_API_KEY", origOpenAI)
-		}
-		if origHawk != "" {
-			os.Setenv("HAWK_API_KEY", origHawk)
-		}
-	}()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 
 	result := checkAPIKeySet()
 	if result.Status != "fail" {
-		t.Errorf("Expected fail when no API keys set, got %q", result.Status)
+		t.Errorf("Expected fail when no API keys stored, got %q", result.Status)
 	}
 
-	// Set one key and check again
-	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	ctx := context.Background()
+	_ = store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-1234567890")
 	result = checkAPIKeySet()
 	if result.Status != "pass" {
-		t.Errorf("Expected pass when ANTHROPIC_API_KEY is set, got %q", result.Status)
+		t.Errorf("Expected pass when key is in store, got %q: %s", result.Status, result.Message)
 	}
 	if !strings.Contains(result.Message, "ANTHROPIC_API_KEY") {
 		t.Errorf("Expected message to mention ANTHROPIC_API_KEY, got %q", result.Message)

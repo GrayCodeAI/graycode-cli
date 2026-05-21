@@ -87,16 +87,23 @@ func GenerateManPage() string {
 	b.WriteString(".TP\n\\fBAGENTS.md\\fR\nProject instructions file (also reads AGENTS.md for backward compatibility)\n")
 	b.WriteString(".TP\n\\fB~/.hawk/sessions/\\fR\nSaved session data\n")
 	b.WriteString(".TP\n\\fB~/.hawk/templates/\\fR\nPrompt templates\n")
-	b.WriteString(".TP\n\\fB~/.hawk/env\\fR\nPersisted API keys\n")
 
-	// Environment
+	// Credentials (stored in OS secret service — use /config, not .env)
+	b.WriteString(".SH CREDENTIALS\n")
+	b.WriteString("API keys are stored in the OS secret service (macOS Keychain or Linux GNOME Keyring / KWallet).\n")
+	b.WriteString("Use \\fBhawk\\fR and \\fB/config\\fR to save keys; hawk does not read API keys from .env files.\n")
+	b.WriteString(".TP\n\\fBhawk credentials status\\fR\nShow secure storage status\n")
+	b.WriteString(".TP\n\\fBhawk credentials remove <provider|env-var>\\fR\nRemove a stored API key from the OS secret store\n")
+	b.WriteString(".TP\n\\fB/config key remove\\fR\nRemove a stored API key via interactive picker\n")
+	b.WriteString(".TP\n\\fBhawk credentials migrate\\fR\nImport legacy plaintext credential files into the OS store\n")
+
+	// Environment (non-secret overrides only)
 	b.WriteString(".SH ENVIRONMENT\n")
+	b.WriteString("Non-secret overrides (optional):\n")
 	envVars := []struct{ env, desc string }{
-		{"ANTHROPIC_API_KEY", "API key for Anthropic/Claude models"},
-		{"OPENAI_API_KEY", "API key for OpenAI models"},
-		{"GEMINI_API_KEY", "API key for Google Gemini models"},
-		{"OPENROUTER_API_KEY", "API key for OpenRouter"},
-		{"XAI_API_KEY", "API key for xAI/Grok models"},
+		{"OPENAI_MODEL", "Override default OpenAI model"},
+		{"OLLAMA_BASE_URL", "Ollama server URL (also saved via /config for Ollama)"},
+		{"HAWK_CONFIG_DIR", "Override hawk config directory"},
 	}
 	for _, ev := range envVars {
 		b.WriteString(fmt.Sprintf(".TP\n\\fB%s\\fR\n%s\n", ev.env, ev.desc))
