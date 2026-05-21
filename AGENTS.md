@@ -56,6 +56,11 @@ hawk is a model-agnostic AI coding agent with 60+ packages organized around:
 - No mocking of databases — real SQLite in tests
 - Tests timeout: 120s
 
+## Git commits
+
+- Never add `Co-authored-by:` trailers to commit messages.
+- Commits should list only the human author.
+
 ## Development
 
 ### Build
