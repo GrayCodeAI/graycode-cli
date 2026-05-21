@@ -162,9 +162,7 @@ func (m chatModel) configModelsBody() string {
 		gw = strings.TrimSpace(m.session.Provider())
 	}
 	if gw != "" {
-		b.WriteString(configMutedStyle().Render("Gateway  "))
-		b.WriteString(configSelectedStyle().Render(hawkconfig.GatewayDisplayName(gw)))
-		b.WriteString("\n\n")
+		b.WriteString(renderConfigGatewayLine(hawkconfig.GatewayDisplayName(gw)) + "\n\n")
 	}
 
 	if total == 0 {

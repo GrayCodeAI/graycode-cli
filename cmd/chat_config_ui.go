@@ -18,6 +18,18 @@ func configSelectedStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
 }
 
+func configAccentStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+}
+
+func renderConfigGatewayLine(displayName string) string {
+	indent := strings.Repeat(" ", modelTableIndent)
+	return lipgloss.JoinHorizontal(lipgloss.Left,
+		configMutedStyle().Inline(true).Render(indent+"Gateway: "),
+		configAccentStyle().Inline(true).Render(displayName),
+	)
+}
+
 func configRowStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
 }
