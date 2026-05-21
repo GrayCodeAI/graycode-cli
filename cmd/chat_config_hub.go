@@ -16,6 +16,9 @@ func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
 	m.configTab = configTabModels
 	m.configSel = 0
 	m.configScroll = 0
+	m.configModelSearch = ""
+	m.configModelSearchActive = false
+	m.useConfigInput = false
 	if strings.TrimSpace(m.configModelProvider) == "" {
 		m.configModelProvider = firstRunModelProvider(m)
 	}

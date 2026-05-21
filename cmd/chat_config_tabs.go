@@ -73,6 +73,9 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 	if tab < configTabKeys || tab > configTabModels {
 		return m, nil
 	}
+	if m.configTab == configTabModels && tab != configTabModels {
+		m = m.stopConfigModelSearch(true)
+	}
 	ctx := context.Background()
 	if tab == configTabModels && !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		tab = configTabKeys

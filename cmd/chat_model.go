@@ -143,8 +143,10 @@ type chatModel struct {
 	configNotice           string
 	configEntry            string              // configEntryNone, configEntryAPIKeyPaste, configEntryOllamaURL
 	configProvider         string              // e.g. configProviderOllama while entry overlay is open
-	configModelOptions     []configModelOption // labels + ids from eyrie catalog
-	configModelProvider    string              // filter models after API key paste
+	configModelOptions        []configModelOption // labels + ids from eyrie catalog
+	configModelProvider       string              // filter models after API key paste
+	configModelSearch         string              // active model filter query
+	configModelSearchActive   bool                // typing into model search input
 	configGuideAfterKey    bool                // open model picker when discover finishes
 	configGatewayFocus     int                 // last highlighted gateway row (for refresh action)
 	configPendingKey       string
