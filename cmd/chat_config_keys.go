@@ -33,38 +33,68 @@ func (m chatModel) configKeysAddRowIndex() int {
 }
 
 func (m chatModel) configKeysView() string {
-	selectedStyle := configSelectedStyle()
+	cursorStyle := configSelectedStyle()
 	rowStyle := configRowStyle()
+	activeStyle := configActiveStyle()
 	mutedStyle := configMutedStyle()
+	headerStyle := configHeaderStyle()
+	metaStyle := configMutedStyle()
 
 	configured := hawkconfig.ConfiguredCredentialProviders()
 	rows := m.configKeysRows(configured)
+	indent := strings.Repeat(" ", configTableIndent)
+
 	var b strings.Builder
 	if len(configured) == 0 {
-		b.WriteString(mutedStyle.Render("  No API keys yet — select Add API key below, press enter, paste") + "\n\n")
+		b.WriteString(mutedStyle.Render(indent + "No API keys yet — select Add API key below, press enter, paste") + "\n\n")
 	}
-	b.WriteString(padKeysTable("Gateway", "Status", 20, 12) + "\n")
-	for i, row := range rows {
-		prefix := "  "
-		style := rowStyle
-		if i == m.configSel {
-			prefix = "❯ "
-			style = selectedStyle
+
+	headers := []string{"Gateway", "Status"}
+	tableRows := make([][]string, 0, len(configured))
+	for _, row := range rows {
+		if row.kind != configKeysRowCredential {
+			continue
 		}
+		tableRows = append(tableRows, []string{
+			hawkconfig.GatewayDisplayName(row.provider),
+			"✓ saved",
+		})
+	}
+	layout := computeConfigTableLayout(m.configPanelViewWidth(), headers, tableRows, []int{4, 4}, false)
+
+	b.WriteString(renderConfigTableHeader(headers, layout, headerStyle, metaStyle) + "\n")
+	credIdx := 0
+	for i, row := range rows {
+		if row.kind != configKeysRowCredential {
+			continue
+		}
+		b.WriteString(renderConfigTableRow(
+			tableRows[credIdx],
+			i == m.configSel,
+			false,
+			false,
+			layout,
+			rowStyle,
+			cursorStyle,
+			activeStyle,
+			metaStyle,
+		) + "\n")
+		credIdx++
+	}
+
+	b.WriteString("\n")
+	for i, row := range rows {
 		switch row.kind {
-		case configKeysRowCredential:
-			name := hawkconfig.GatewayDisplayName(row.provider)
-			b.WriteString(style.Render(prefix+padKeysTable(name, "✓ saved", 20, 12)) + "\n")
 		case configKeysActionAdd:
-			b.WriteString("\n" + style.Render(prefix+"Add API key") + "\n")
+			b.WriteString(renderConfigTableActionRow("Add API key", i == m.configSel, rowStyle, cursorStyle) + "\n")
 		case configKeysActionOllama:
-			b.WriteString(style.Render(prefix+"Ollama URL (local)") + "\n")
+			b.WriteString(renderConfigTableActionRow("Ollama URL (local)", i == m.configSel, rowStyle, cursorStyle) + "\n")
 		}
 	}
 	if len(configured) > 0 {
-		b.WriteString(mutedStyle.Render("\nenter saved row to remove key") + "\n")
+		b.WriteString("\n" + mutedStyle.Render(indent+"enter saved row to remove key"))
 	} else {
-		b.WriteString(mutedStyle.Render("\nenter Add API key to paste · stored in "+credentialsStoreLabel()) + "\n")
+		b.WriteString("\n" + mutedStyle.Render(indent+"enter Add API key to paste · stored in "+credentialsStoreLabel()))
 	}
 	return m.configTabShellView(b.String())
 }
@@ -92,10 +122,6 @@ func (m chatModel) handleConfigKeysSelect() (chatModel, tea.Cmd) {
 	default:
 		return m, nil
 	}
-}
-
-func padKeysTable(c1, c2 string, w1, w2 int) string {
-	return fmt.Sprintf("%-*s %-*s", w1, truncateRunes(c1, w1), w2, truncateRunes(c2, w2))
 }
 
 func (m chatModel) handleConfigKeysEsc() chatModel {

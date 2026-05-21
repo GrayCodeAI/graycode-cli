@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,10 +10,10 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
-func (m chatModel) configStatusLine() string {
+func (m chatModel) configStatus() (gateway, model string, configured bool) {
 	ctx := context.Background()
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		return "Gateway: none · no API key — add one in Keys"
+		return "none", "", false
 	}
 	gw := strings.TrimSpace(m.configModelProvider)
 	if gw != "" && hawkconfig.IsSetupGateway(gw) {
@@ -24,17 +23,13 @@ func (m chatModel) configStatusLine() string {
 	} else {
 		gw = "none"
 	}
-	model := ""
 	if m.session != nil {
 		model = strings.TrimSpace(m.session.Model())
 	}
 	if model == "" {
 		model = strings.TrimSpace(hawkconfig.ActiveModel(ctx))
 	}
-	if model == "" {
-		return fmt.Sprintf("Gateway: %s · no model selected", gw)
-	}
-	return fmt.Sprintf("Gateway: %s · Model: %s", gw, model)
+	return gw, model, true
 }
 
 const (
@@ -71,7 +66,7 @@ func renderConfigTabBar(active int) string {
 func (m chatModel) configTabShellView(body string) string {
 	var b strings.Builder
 	b.WriteString(configTitleStyle().Render("⚙ Setup") + "\n")
-	b.WriteString(configMutedStyle().Render(m.configStatusLine()) + "\n\n")
+	b.WriteString(renderConfigStatusLine(m) + "\n\n")
 	b.WriteString(renderConfigTabBar(m.configTab) + "\n")
 	dividerWidth := m.width - 2
 	if dividerWidth < 52 {
