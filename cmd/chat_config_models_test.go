@@ -29,3 +29,13 @@ func TestFilterConfigModelOptions(t *testing.T) {
 		t.Fatalf("expected no matches, got %+v", got)
 	}
 }
+
+func TestModelOptionIsActive(t *testing.T) {
+	opt := configModelOption{ID: "anthropic/claude-opus-4.6"}
+	if !modelOptionIsActive(opt, "anthropic/claude-opus-4.6") {
+		t.Fatal("expected active match")
+	}
+	if modelOptionIsActive(opt, "other/model") {
+		t.Fatal("expected no match")
+	}
+}

@@ -701,6 +701,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.configNotice = hawkconfig.CatalogEmptyHint(context.Background())
 		}
 		if m.configOpen {
+			if m.configTab == configTabModels {
+				m = m.focusConfigActiveModelSelection()
+			}
 			m.viewDirty = true
 			m.updateViewportContent()
 		}

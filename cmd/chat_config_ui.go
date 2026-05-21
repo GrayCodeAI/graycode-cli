@@ -30,6 +30,10 @@ func renderConfigGatewayLine(displayName string) string {
 	)
 }
 
+func configActiveStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
+}
+
 func configRowStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
 }
