@@ -155,27 +155,24 @@ func renderModelTableHeader(layout modelTableLayout, headerStyle, metaStyle lipg
 	line := renderModelTableLine(
 		[]string{"Model", "Owner", "Price", "Ctx"},
 		layout,
-		[]lipgloss.Style{headerStyle, metaStyle, metaStyle, metaStyle},
+		[]lipgloss.Style{headerStyle, headerStyle, headerStyle, headerStyle},
 	)
 	ruleLen := layout.Model + layout.Owner + layout.Price + layout.Context + modelTableColGap*3
 	indent := strings.Repeat(" ", modelTableIndent)
 	return indent + line + "\n" + indent + metaStyle.Render(strings.Repeat("─", ruleLen))
 }
 
-func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTableLayout, rowStyle, cursorStyle, activeStyle, metaStyle, freeStyle lipgloss.Style) string {
-	style := rowStyle
+func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTableLayout, _, cursorStyle, activeStyle, metaStyle, freeStyle lipgloss.Style) string {
 	meta := metaStyle
 	priceStyle := metaStyle
 	if row.Free && !cursor && !active {
 		priceStyle = freeStyle
 	}
 	if active && !cursor {
-		style = activeStyle
 		meta = activeStyle
 		priceStyle = activeStyle
 	}
 	if cursor {
-		style = cursorStyle
 		meta = cursorStyle
 		priceStyle = cursorStyle
 	}
@@ -197,7 +194,7 @@ func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTab
 			ctx,
 		},
 		layout,
-		[]lipgloss.Style{style, meta, priceStyle, meta},
+		[]lipgloss.Style{meta, meta, priceStyle, meta},
 	)
 	return prefix + line
 }

@@ -11,6 +11,16 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
+func TestRenderChatConnectionStatus_ColorParts(t *testing.T) {
+	rendered, vis := renderChatConnectionStatus("OpenRouter", "laguna-m.1:free", "131k")
+	if vis <= 0 {
+		t.Fatalf("expected positive visible width, got %d", vis)
+	}
+	if !strings.Contains(rendered, "OpenRouter") || !strings.Contains(rendered, "laguna-m.1:free") || !strings.Contains(rendered, "131k ctx") {
+		t.Fatalf("missing status parts in %q", rendered)
+	}
+}
+
 func TestChatConnectionStatus_WithModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
