@@ -72,5 +72,11 @@ func (m chatModel) configHelpLine() string {
 	if m.configSaving {
 		return muted.Render(m.spinner.View() + " working…")
 	}
+	if m.configTab == configTabModels {
+		if m.configModelSearchActive {
+			return muted.Render("↑/↓ navigate · enter select · esc clear search")
+		}
+		return muted.Render("↑/↓ navigate · enter select · / search · esc close")
+	}
 	return muted.Render("←/→ tabs · ↑/↓ · enter · esc close")
 }

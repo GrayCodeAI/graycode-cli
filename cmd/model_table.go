@@ -245,7 +245,7 @@ func modelTableScrollHint(above, below int, muted lipgloss.Style) string {
 	}
 }
 
-func modelTableFooter(total, scroll, end int, muted lipgloss.Style) string {
+func modelTableFooter(total, scroll, end, allTotal int, muted lipgloss.Style) string {
 	prefix := strings.Repeat(" ", modelTableIndent)
 	if total == 0 {
 		return muted.Render(prefix + "No models")
@@ -257,7 +257,11 @@ func modelTableFooter(total, scroll, end int, muted lipgloss.Style) string {
 	if start > end {
 		start = end
 	}
-	return muted.Render(fmt.Sprintf("%s%d–%d of %d · enter to select", prefix, start, end, total))
+	label := fmt.Sprintf("%d–%d of %d", start, end, total)
+	if allTotal > 0 && total < allTotal {
+		label += fmt.Sprintf(" (%d total)", allTotal)
+	}
+	return muted.Render(fmt.Sprintf("%s%s · enter to select", prefix, label))
 }
 
 func modelTableRowFromCatalogEntry(m catalog.ModelCatalogEntry) modelTableRow {

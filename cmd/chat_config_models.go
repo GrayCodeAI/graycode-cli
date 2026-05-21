@@ -102,6 +102,46 @@ func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []config
 	return opts
 }
 
+func filterConfigModelOptions(opts []configModelOption, query string) []configModelOption {
+	query = strings.TrimSpace(strings.ToLower(query))
+	if query == "" {
+		return opts
+	}
+	out := make([]configModelOption, 0, len(opts))
+	for _, opt := range opts {
+		if modelOptionMatchesQuery(opt, query) {
+			out = append(out, opt)
+		}
+	}
+	return out
+}
+
+func modelOptionMatchesQuery(opt configModelOption, query string) bool {
+	candidates := []string{
+		strings.ToLower(strings.TrimSpace(opt.ID)),
+		strings.ToLower(strings.TrimSpace(opt.DisplayName)),
+		strings.ToLower(strings.TrimSpace(opt.Owner)),
+		strings.ToLower(shortModelID(opt.ID)),
+	}
+	for _, candidate := range candidates {
+		if candidate != "" && strings.Contains(candidate, query) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m chatModel) configModelSearchQuery() string {
+	if m.configModelSearchActive {
+		return strings.TrimSpace(m.configInput.Value())
+	}
+	return strings.TrimSpace(m.configModelSearch)
+}
+
+func (m chatModel) configFilteredModelOptions() []configModelOption {
+	return filterConfigModelOptions(m.configModelOptions, m.configModelSearchQuery())
+}
+
 func loadConfigModelOptions(provider string) []configModelOption {
 	provider = strings.TrimSpace(provider)
 	if provider == "" {
