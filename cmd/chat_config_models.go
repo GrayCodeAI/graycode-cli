@@ -76,8 +76,8 @@ func configModelOptionsFromEyrie(entries []eyrieclient.ModelEntry) []configModel
 	for i, o := range out {
 		opts[i] = configModelOption{
 			ID:               o.ID,
-			DisplayName:      o.DisplayName,
-			Owner:            o.Owner,
+			DisplayName:      catalog.DisplayModelLabel(o.ID, o.DisplayName),
+			Owner:            catalog.DisplayModelOwner(o.Owner, o.ID),
 			ContextWindow:    o.ContextWindow,
 			InputPricePer1M:  o.InputPricePer1M,
 			OutputPricePer1M: o.OutputPricePer1M,
@@ -89,11 +89,10 @@ func configModelOptionsFromEyrie(entries []eyrieclient.ModelEntry) []configModel
 func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []configModelOption {
 	opts := make([]configModelOption, len(entries))
 	for i, e := range entries {
-		owner := catalog.ModelOwner(e)
 		opts[i] = configModelOption{
 			ID:               e.ID,
-			DisplayName:      e.DisplayName,
-			Owner:            owner,
+			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
+			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID, e.LiveMetadata),
 			ContextWindow:    e.ContextWindow,
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
