@@ -653,7 +653,3 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	}
 	return next, cmd
 }
-
-func (m chatModel) selectConfigModel() (chatModel, tea.Cmd) {
-	return m.selectConfigModelFromOptions(m.configFilteredModelOptions())
-}
