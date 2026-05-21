@@ -31,3 +31,6 @@ go.work.sum.hawk/
 engine/.hawk/
 cmd/.hawk/
 .hawk/
+
+# Yaad memory (local project data)
+.yaad/
