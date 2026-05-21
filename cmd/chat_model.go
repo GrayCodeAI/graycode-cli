@@ -28,7 +28,6 @@ import (
 var (
 	tealColor    = lipgloss.Color("#4ECDC4")
 	hawkColor    = lipgloss.Color("#FF5E0E")
-	hawkColorDim = lipgloss.Color("#CC4A0B")
 	dimColor     = lipgloss.Color("#666666")
 	errorColor   = lipgloss.Color("#e05555")
 	toolColor    = lipgloss.Color("#FFD700")
@@ -45,7 +44,6 @@ var (
 	ghostHintStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
 	containerErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
 	hawkAccentStyle   = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	hawkSpinnerStyle  = lipgloss.NewStyle().Foreground(hawkColor)
 )
 
 // hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.
