@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	configTableColGap  = 4
-	configTableIndent  = 6
-	configTableColPad  = 2
+	configTableColGap = 4
+	configTableIndent = 6
+	configTableColPad = 2
 )
 
 type configTableLayout struct {
@@ -182,4 +182,3 @@ func repeatStyle(n int, primary, fallback lipgloss.Style) []lipgloss.Style {
 	}
 	return out
 }
-

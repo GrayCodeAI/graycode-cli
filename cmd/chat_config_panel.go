@@ -141,7 +141,8 @@ func (m chatModel) renderConfigModelSearchLine() string {
 	if matches != 1 {
 		matchLabel += "es"
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Left,
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
 		configMutedStyle().Inline(true).Render(indent+"search: "),
 		configAccentStyle().Inline(true).Render(query),
 		configMutedStyle().Inline(true).Render(matchLabel+" · / edit"),
