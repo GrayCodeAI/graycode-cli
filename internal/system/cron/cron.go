@@ -266,8 +266,12 @@ func (e *Engine) computeNextRun(job *Job) {
 
 func (e *Engine) MarshalJSON() ([]byte, error) {
 	e.mu.RLock()
-	defer e.mu.RUnlock()
+	jobs := make([]*Job, 0, len(e.jobs))
+	for _, j := range e.jobs {
+		jobs = append(jobs, j)
+	}
+	e.mu.RUnlock()
 	return json.Marshal(struct {
 		Jobs []*Job `json:"jobs"`
-	}{Jobs: e.ListJobs()})
+	}{Jobs: jobs})
 }
