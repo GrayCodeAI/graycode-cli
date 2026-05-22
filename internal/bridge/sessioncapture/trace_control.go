@@ -11,6 +11,7 @@
 package sessioncapture
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,7 +52,7 @@ func (tc *TraceControl) Enable() (string, error) {
 		return "Session capture is already enabled.", nil
 	}
 
-	cmd := exec.Command("trace", "enable", "--agent", "hawk")
+	cmd := exec.CommandContext(context.Background(), "trace", "enable", "--agent", "hawk")
 	cmd.Dir = tc.ProjectDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -69,7 +70,7 @@ func (tc *TraceControl) Disable() (string, error) {
 		return "Session capture is already disabled.", nil
 	}
 
-	cmd := exec.Command("trace", "disable")
+	cmd := exec.CommandContext(context.Background(), "trace", "disable")
 	cmd.Dir = tc.ProjectDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -88,7 +89,7 @@ func (tc *TraceControl) Status() string {
 	}
 
 	// Get detailed status from trace
-	cmd := exec.Command("trace", "status")
+	cmd := exec.CommandContext(context.Background(), "trace", "status")
 	cmd.Dir = tc.ProjectDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {

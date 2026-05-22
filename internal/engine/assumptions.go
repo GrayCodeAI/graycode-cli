@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -62,7 +63,7 @@ func (at *AssumptionTracker) VerifyCommandSucceeds(text, cmd string) {
 	at.mu.Lock()
 	defer at.mu.Unlock()
 	a := Assumption{Text: text}
-	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	out, err := exec.CommandContext(context.Background(), "sh", "-c", cmd).CombinedOutput()
 	if err == nil {
 		a.Status = AssumptionConfirmed
 		a.Proof = "command succeeded"

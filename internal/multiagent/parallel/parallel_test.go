@@ -23,7 +23,7 @@ func initTestRepo(t *testing.T) string {
 
 	run := func(args ...string) {
 		t.Helper()
-		cmd := exec.Command(args[0], args[1:]...)
+		cmd := exec.CommandContext(context.Background(), args[0], args[1:]...)
 		cmd.Dir = dir
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -256,7 +256,7 @@ func TestCleanupRemovesAllWorktrees(t *testing.T) {
 	}
 
 	// git worktree list should only show the main repo.
-	cmd := exec.Command("git", "worktree", "list")
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "list")
 	cmd.Dir = repo
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -329,7 +329,7 @@ func TestMergeWorktree(t *testing.T) {
 	}
 	runGit := func(dir string, args ...string) {
 		t.Helper()
-		cmd := exec.Command("git", args...)
+		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
 		out, err := cmd.CombinedOutput()
 		if err != nil {

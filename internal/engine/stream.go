@@ -10,6 +10,9 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
+	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
@@ -87,7 +90,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	toolTurns := 0 // turns that used tools (for skill distillation)
 	var toolsUsedSet map[string]bool
 	var filesModifiedSet map[string]bool
-	snowball := NewSnowballDetector(500000)           // 500K token ceiling
+	snowball := branching.NewSnowballDetector(500000) // 500K token ceiling
 	loopDet := NewLoopDetector(10, DoomLoopThreshold) // 10-step window, 3 repeats = doom loop
 
 	for {
@@ -145,7 +148,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		// Auto-compact if conversation is too long (message count)
 		if len(s.messages) > maxContextMessages {
-			s.messages = CollapseRepeatedMessages(s.messages)
+			s.messages = ctxmgr.CollapseRepeatedMessages(s.messages)
 			if len(s.messages) > maxContextMessages {
 				s.smartCompact()
 			}
@@ -154,7 +157,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Auto-compact if token usage exceeds context budget allocation
 		convTokens := EstimateTokens(s.messages)
 		if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-			budget := NewContextBudget(info.ContextSize)
+			budget := ctxmgr.NewContextBudget(info.ContextSize)
 			if budget.ShouldCompact(convTokens) {
 				s.smartCompact()
 			}
@@ -276,7 +279,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		s.log.Info("token count", map[string]interface{}{"input_tokens": inputTokens, "model": s.model})
 
 		// Cost warning for expensive calls
-		if inPrice, outPrice := pricingForModel(s.model); true {
+		if inPrice, outPrice := ModelPricing(s.model); true {
 			estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 			if estCost > 0.50 {
 				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n⚠ This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
@@ -370,7 +373,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						lastUsage = ev.Usage
 						// Persist cost entry for analytics
 						if s.CostTracker != nil {
-							inPrice, outPrice := pricingForModel(activeModel)
+							inPrice, outPrice := ModelPricing(activeModel)
 							cost := float64(ev.Usage.PromptTokens)*inPrice/1_000_000 + float64(ev.Usage.CompletionTokens)*outPrice/1_000_000
 							_ = s.CostTracker.Record(analytics.CostEntry{
 								Model:        activeModel,
@@ -526,7 +529,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if err != nil || resp == nil {
 						return
 					}
-					parseAndApplyMemoryOps(s.YaadBridge, resp.Content)
+					lifecycle.ParseAndApplyMemoryOps(s.YaadBridge, resp.Content)
 				}()
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
@@ -642,7 +645,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.Perm.PromptFn = s.PermissionFn
 			s.Perm.Autonomy = s.Autonomy
 
-			granted, denyMsg := s.Perm.CheckTool(ctx, toolCallInfo{
+			granted, denyMsg := s.Perm.CheckTool(ctx, ToolCallInfo{
 				Name: tc.Name,
 				ID:   tc.ID,
 				Args: tc.Arguments,

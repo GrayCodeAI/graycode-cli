@@ -128,7 +128,7 @@ func init() {
 func getDiff() (string, error) {
 	if sightPR > 0 {
 		// Use gh CLI to fetch the PR diff
-		out, err := exec.Command("gh", "pr", "diff", fmt.Sprintf("%d", sightPR)).Output()
+		out, err := exec.CommandContext(context.Background(), "gh", "pr", "diff", fmt.Sprintf("%d", sightPR)).Output()
 		if err != nil {
 			return "", fmt.Errorf("gh pr diff failed: %w", err)
 		}
@@ -139,10 +139,10 @@ func getDiff() (string, error) {
 	if base == "" {
 		base = "main"
 	}
-	out, err := exec.Command("git", "diff", base+"...HEAD").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "diff", base+"...HEAD").Output()
 	if err != nil {
 		// Fallback to two-dot syntax
-		out, err = exec.Command("git", "diff", base, "HEAD").Output()
+		out, err = exec.CommandContext(context.Background(), "git", "diff", base, "HEAD").Output()
 		if err != nil {
 			return "", fmt.Errorf("git diff %s...HEAD failed: %w", base, err)
 		}

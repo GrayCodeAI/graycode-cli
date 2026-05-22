@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 )
@@ -10,7 +11,7 @@ func GVisorAvailable() bool {
 	if !dockerAvailable() {
 		return false
 	}
-	out, err := exec.Command("docker", "info", "--format", "{{.Runtimes}}").Output()
+	out, err := exec.CommandContext(context.Background(), "docker", "info", "--format", "{{.Runtimes}}").Output()
 	if err != nil {
 		return false
 	}

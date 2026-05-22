@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -34,7 +35,7 @@ func setupWorkspaceProject(t *testing.T) string {
 
 func runCmd(t *testing.T, dir, name string, args ...string) {
 	t.Helper()
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("%s %v failed: %s: %v", name, args, out, err)

@@ -2,6 +2,7 @@ package fingerprint
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -1205,7 +1206,7 @@ func detectTestNaming(dir string, lang string) *Convention {
 
 // detectCommitStyle checks git log for conventional commits or other patterns.
 func detectCommitStyle(dir string) *Convention {
-	cmd := exec.Command("git", "log", "--oneline", "-20", "--format=%s")
+	cmd := exec.CommandContext(context.Background(), "git", "log", "--oneline", "-20", "--format=%s")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {

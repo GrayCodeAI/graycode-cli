@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/project"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -243,7 +244,7 @@ func applySlashSuggestion(input string) string {
 }
 
 func gitOutput(args ...string) (string, error) {
-	out, err := exec.Command("git", args...).CombinedOutput()
+	out, err := exec.CommandContext(context.Background(), "git", args...).CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
 
@@ -1085,12 +1086,12 @@ Generate the recap:`, summary.String())
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/context"))
 		if arg == "init" {
 			cwd, _ := os.Getwd()
-			pc := engine.NewProjectContext(cwd)
+			pc := project.NewProjectContext(cwd)
 			return m.startPromptCommand("/context init", pc.InitPrompt())
 		}
 		if arg == "show" {
 			cwd, _ := os.Getwd()
-			pc := engine.NewProjectContext(cwd)
+			pc := project.NewProjectContext(cwd)
 			content := pc.Load()
 			if content == "" {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "No project context files found. Run /context init to generate."})
@@ -1871,7 +1872,7 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
 		return m, nil
 	case "/voice":
-		out, err := exec.Command("which", "whisper").CombinedOutput()
+		out, err := exec.CommandContext(context.Background(), "which", "whisper").CombinedOutput()
 		if err != nil || strings.TrimSpace(string(out)) == "" {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Voice requires whisper.cpp. Install with: brew install whisper-cpp"})
 		} else {
@@ -2216,7 +2217,7 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
 			return m, nil
 		}
-		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
+		out, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
 			result += "\n" + err.Error()
@@ -2234,7 +2235,7 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
 			return m, nil
 		}
-		out, err := exec.Command("sh", "-c", cmdStr).CombinedOutput()
+		out, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
 			result += "\n" + err.Error()
@@ -2254,7 +2255,7 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
 			return m, nil
 		}
-		out, _ := exec.Command("sh", "-c", cmdStr).CombinedOutput()
+		out, _ := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if result == "" {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "No lint issues."})
@@ -2321,7 +2322,7 @@ Generate the recap:`, summary.String())
 func explainCode(path string, line int) (string, error) {
 	// Step 1: git blame to find the commit
 	args := []string{"blame", "-L", fmt.Sprintf("%d,%d", line, line), "--porcelain", path}
-	out, err := exec.Command("git", args...).Output()
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
 	if err != nil {
 		return "", fmt.Errorf("git blame failed: %w", err)
 	}
@@ -2335,13 +2336,13 @@ func explainCode(path string, line int) (string, error) {
 	}
 
 	// Step 2: get commit info
-	info, err := exec.Command("git", "log", "-1", "--format=%h %s (%an, %ar)", commitHash).Output()
+	info, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%h %s (%an, %ar)", commitHash).Output()
 	if err != nil {
 		return fmt.Sprintf("Commit: %s (details unavailable)", commitHash[:7]), nil
 	}
 
 	// Step 3: get the diff for context
-	diff, _ := exec.Command("git", "log", "-1", "--format=", "-p", "--", path, commitHash).Output()
+	diff, _ := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=", "-p", "--", path, commitHash).Output()
 	diffStr := string(diff)
 	if len(diffStr) > 2000 {
 		diffStr = diffStr[:2000] + "\n... (truncated)"

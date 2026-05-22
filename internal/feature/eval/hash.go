@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os/exec"
@@ -37,7 +38,7 @@ func ComputeHash(tasks []BenchmarkTask) *ResultHash {
 	h.TasksHash = hex.EncodeToString(taskHasher.Sum(nil)[:8])
 
 	// Git commit
-	if out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output(); err == nil {
+	if out, err := exec.CommandContext(context.Background(), "git", "rev-parse", "--short", "HEAD").Output(); err == nil {
 		h.GitCommit = strings.TrimSpace(string(out))
 	}
 

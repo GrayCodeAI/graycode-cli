@@ -5,6 +5,7 @@ import (
 )
 
 func TestNewMemoryManager(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	mm := NewMemoryManager(t.TempDir())
 	if mm == nil {
 		t.Fatal("expected non-nil MemoryManager")
@@ -24,6 +25,7 @@ func TestNewMemoryManager(t *testing.T) {
 }
 
 func TestMemoryManager_Remember(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	mm := NewMemoryManager(t.TempDir())
 	categories := []string{"guideline", "core", "procedural", "fact", "session", "other"}
 	for _, cat := range categories {
@@ -34,6 +36,7 @@ func TestMemoryManager_Remember(t *testing.T) {
 }
 
 func TestMemoryManager_Recall(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	mm := NewMemoryManager(t.TempDir())
 	// Store something via ZenBrain so Recall can find it.
 	mm.Zen.Store(LayerCore, "always use gofmt", []string{"preference"})
@@ -48,6 +51,7 @@ func TestMemoryManager_Recall(t *testing.T) {
 }
 
 func TestMemoryManager_FormatForPrompt(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	mm := NewMemoryManager(t.TempDir())
 	// Should not panic even with empty subsystems.
 	_ = mm.FormatForPrompt()

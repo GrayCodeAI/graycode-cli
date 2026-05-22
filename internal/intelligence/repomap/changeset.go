@@ -1,6 +1,7 @@
 package repomap
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -179,13 +180,13 @@ func gitDiffFiles(root string, rangeSpec string) ([]string, error) {
 		args = []string{"diff", "--name-only", rangeSpec}
 	}
 
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
 		// Fallback: if HEAD doesn't exist (initial commit), try without HEAD
 		if rangeSpec == "" {
-			cmd2 := exec.Command("git", "diff", "--name-only", "--cached")
+			cmd2 := exec.CommandContext(context.Background(), "git", "diff", "--name-only", "--cached")
 			cmd2.Dir = root
 			out2, err2 := cmd2.Output()
 			if err2 != nil {

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -52,7 +53,7 @@ func sendTerminalNotification(title, body string) {
 	case "apple":
 		if runtime.GOOS == "darwin" {
 			script := fmt.Sprintf(`display notification "%s" with title "%s"`, body, title)
-			_ = exec.Command("osascript", "-e", script).Start()
+			_ = exec.CommandContext(context.Background(), "osascript", "-e", script).Start()
 		}
 	default:
 		// Generic: BEL character

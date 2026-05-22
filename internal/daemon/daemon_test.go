@@ -10,14 +10,22 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
-func TestDaemon_StartStop(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil) // port 0 = random free port
+func startTestDaemon(t *testing.T, srv *Server) string {
+	t.Helper()
 	addr, err := srv.Start()
 	if err != nil {
+		testutil.SkipIfLoopbackUnavailable(t, err)
 		t.Fatalf("Start failed: %v", err)
 	}
+	return addr
+}
+
+func TestDaemon_StartStop(t *testing.T) {
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil) // port 0 = random free port
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	if addr == "" {
@@ -26,11 +34,8 @@ func TestDaemon_StartStop(t *testing.T) {
 }
 
 func TestDaemon_Health(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	resp, err := http.Get("http://" + addr + "/v1/health")
@@ -54,11 +59,8 @@ func TestDaemon_Health(t *testing.T) {
 }
 
 func TestDaemon_Chat_NoEngine(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	body, _ := json.Marshal(ChatRequest{Prompt: "hello"})
@@ -74,11 +76,8 @@ func TestDaemon_Chat_NoEngine(t *testing.T) {
 }
 
 func TestDaemon_ProtectedEndpointsRequireAPIKey(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1", APIKey: "secret"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost, APIKey: "secret"}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	body, _ := json.Marshal(ChatRequest{Prompt: "hello"})
@@ -108,11 +107,8 @@ func TestDaemon_ProtectedEndpointsRequireAPIKey(t *testing.T) {
 }
 
 func TestDaemon_RejectsOversizedBody(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	body := []byte(`{"prompt":"` + strings.Repeat("x", maxRequestBodyBytes+1) + `"}`)
@@ -128,11 +124,8 @@ func TestDaemon_RejectsOversizedBody(t *testing.T) {
 }
 
 func TestDaemon_RejectsUnknownFields(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	resp, err := http.Post("http://"+addr+"/v1/chat", "application/json", bytes.NewReader([]byte(`{"prompt":"hello","unknown":true}`)))
@@ -152,11 +145,8 @@ func TestDaemon_Chat_WithEngine(t *testing.T) {
 		sess.MaxTurns = 1
 		return sess, nil
 	}
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, factory)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, factory)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	body, _ := json.Marshal(ChatRequest{Prompt: "hello", MaxTurns: 1})
@@ -172,11 +162,8 @@ func TestDaemon_Chat_WithEngine(t *testing.T) {
 }
 
 func TestDaemon_Chat_EmptyPrompt(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	body, _ := json.Marshal(ChatRequest{})
@@ -192,11 +179,8 @@ func TestDaemon_Chat_EmptyPrompt(t *testing.T) {
 }
 
 func TestDaemon_Sessions(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	resp, err := http.Get("http://" + addr + "/v1/sessions")
@@ -211,11 +195,8 @@ func TestDaemon_Sessions(t *testing.T) {
 }
 
 func TestDaemon_GracefulShutdown(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	_, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	_ = startTestDaemon(t, srv)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -230,17 +211,14 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Port != 4590 {
 		t.Errorf("DefaultConfig().Port = %d, want 4590", cfg.Port)
 	}
-	if cfg.Host != "127.0.0.1" {
-		t.Errorf("DefaultConfig().Host = %q, want 127.0.0.1", cfg.Host)
+	if cfg.Host != testutil.LoopbackHost {
+		t.Errorf("DefaultConfig().Host = %q, want %q", cfg.Host, testutil.LoopbackHost)
 	}
 }
 
 func TestDaemon_Stats(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	resp, err := http.Get("http://" + addr + "/v1/stats")
@@ -255,11 +233,8 @@ func TestDaemon_Stats(t *testing.T) {
 }
 
 func TestDaemon_InvalidMethod(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	req, _ := http.NewRequest("DELETE", "http://"+addr+"/v1/health", nil)
@@ -275,11 +250,8 @@ func TestDaemon_InvalidMethod(t *testing.T) {
 }
 
 func TestDaemon_InvalidJSON(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	resp, err := http.Post("http://"+addr+"/v1/chat", "application/json", bytes.NewReader([]byte("not json")))
@@ -294,11 +266,8 @@ func TestDaemon_InvalidJSON(t *testing.T) {
 }
 
 func TestDaemon_GetSession_MissingID(t *testing.T) {
-	srv := New(Config{Port: 0, Host: "127.0.0.1"}, nil)
-	addr, err := srv.Start()
-	if err != nil {
-		t.Fatalf("Start failed: %v", err)
-	}
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
+	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
 
 	resp, err := http.Get("http://" + addr + "/v1/sessions/nonexistent-id")

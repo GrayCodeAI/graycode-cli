@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/netutil"
 )
 
 const maxRequestBodyBytes = 1 << 20
@@ -47,7 +48,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		Port: 4590,
-		Host: "127.0.0.1",
+		Host: netutil.LoopbackHost,
 	}
 }
 
@@ -119,7 +120,7 @@ func New(cfg Config, factory SessionFactory) *Server {
 
 // Start begins serving in the background. Returns the listening address.
 func (s *Server) Start() (string, error) {
-	ln, err := net.Listen("tcp", s.addr)
+	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", s.addr)
 	if err != nil {
 		return "", fmt.Errorf("daemon listen: %w", err)
 	}

@@ -45,7 +45,7 @@ type MockRequest struct {
 func NewMockLLMServer(t *testing.T, responses ...MockResponse) *MockLLMServer {
 	t.Helper()
 	m := &MockLLMServer{Responses: responses}
-	m.Server = httptest.NewServer(http.HandlerFunc(m.handler))
+	m.Server = NewLoopbackHTTPServer(t, http.HandlerFunc(m.handler))
 	t.Cleanup(m.Server.Close)
 	return m
 }

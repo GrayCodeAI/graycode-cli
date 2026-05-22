@@ -1,6 +1,7 @@
 package repomap
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -460,7 +461,7 @@ type gitTestCmd struct {
 }
 
 func (g *gitTestCmd) CombinedOutput() ([]byte, error) {
-	cmd := exec.Command("git", g.args...)
+	cmd := exec.CommandContext(context.Background(), "git", g.args...)
 	cmd.Dir = g.dir
 	return cmd.CombinedOutput()
 }
