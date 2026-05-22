@@ -229,20 +229,20 @@ func TestIntegration_PermissionFlow(t *testing.T) {
 	sess := newTestSession()
 
 	// file_write always needs permission.
-	if !toolNeedsPermission("Write", nil) {
+	if !ToolNeedsPermission("Write", nil) {
 		t.Fatal("Write should need permission")
 	}
-	if !toolNeedsPermission("Edit", nil) {
+	if !ToolNeedsPermission("Edit", nil) {
 		t.Fatal("Edit should need permission")
 	}
 
 	// Safe bash commands do NOT need permission.
-	if toolNeedsPermission("Bash", map[string]interface{}{"command": "echo hello"}) {
+	if ToolNeedsPermission("Bash", map[string]interface{}{"command": "echo hello"}) {
 		t.Fatal("safe echo should not need permission")
 	}
 
 	// Dangerous bash commands DO need permission.
-	if !toolNeedsPermission("Bash", map[string]interface{}{"command": "rm -rf /"}) {
+	if !ToolNeedsPermission("Bash", map[string]interface{}{"command": "rm -rf /"}) {
 		t.Fatal("destructive command should need permission")
 	}
 

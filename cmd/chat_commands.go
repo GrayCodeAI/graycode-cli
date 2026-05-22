@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/project"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -1085,12 +1086,12 @@ Generate the recap:`, summary.String())
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/context"))
 		if arg == "init" {
 			cwd, _ := os.Getwd()
-			pc := engine.NewProjectContext(cwd)
+			pc := project.NewProjectContext(cwd)
 			return m.startPromptCommand("/context init", pc.InitPrompt())
 		}
 		if arg == "show" {
 			cwd, _ := os.Getwd()
-			pc := engine.NewProjectContext(cwd)
+			pc := project.NewProjectContext(cwd)
 			content := pc.Load()
 			if content == "" {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "No project context files found. Run /context init to generate."})

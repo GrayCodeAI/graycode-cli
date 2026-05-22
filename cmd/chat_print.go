@@ -12,6 +12,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/session"
 )
@@ -63,9 +64,9 @@ func runPrint(text string) error {
 	// Wire timeout if --timeout flag is set
 	ctx := context.Background()
 	if timeout > 0 {
-		cfg := engine.TimeoutConfig{Total: timeout, Countdown: true}
+		cfg := lifecycle.TimeoutConfig{Total: timeout, Countdown: true}
 		var cancel context.CancelFunc
-		ctx, cancel = engine.WithTimeout(ctx, cfg)
+		ctx, cancel = lifecycle.WithTimeout(ctx, cfg)
 		defer cancel()
 	}
 

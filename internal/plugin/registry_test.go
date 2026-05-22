@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func testIndex() SkillIndex {
@@ -26,7 +28,7 @@ func serveIndex(t *testing.T) (*httptest.Server, *RegistryClient) {
 	t.Helper()
 	idx := testIndex()
 	data, _ := json.Marshal(idx)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
 	}))

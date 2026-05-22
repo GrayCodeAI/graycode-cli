@@ -20,6 +20,9 @@ const (
 // CostTierOf resolves a model's cost tier from eyrie catalog data (family, tier
 // candidates, and within-provider pricing). Unknown models default to mid-tier.
 func CostTierOf(modelName string) CostTier {
+	if tier, ok := tierFromEyrieModelConfigs(modelName); ok {
+		return mapEyrieTier(tier)
+	}
 	if tier, ok := tierFromCatalogFamily(modelName); ok {
 		return mapEyrieTier(tier)
 	}
@@ -30,6 +33,33 @@ func CostTierOf(modelName string) CostTier {
 		return tier
 	}
 	return CostTierMid
+}
+
+func tierFromEyrieModelConfigs(modelName string) (eycatalog.ModelTier, bool) {
+	modelName = strings.TrimSpace(modelName)
+	if modelName == "" {
+		return "", false
+	}
+
+	seen := map[eycatalog.ModelTier]bool{}
+	for key, cfg := range eycatalog.AllModelConfigs {
+		tier := modelKeyTier(key)
+		if tier == "" {
+			continue
+		}
+		for _, id := range cfg {
+			if modelsMatch(modelName, id) {
+				seen[tier] = true
+			}
+		}
+	}
+	if len(seen) != 1 {
+		return "", false
+	}
+	for tier := range seen {
+		return tier, true
+	}
+	return "", false
 }
 
 // TierModels returns eyrie-preferred model IDs for haiku, sonnet, and opus tiers.

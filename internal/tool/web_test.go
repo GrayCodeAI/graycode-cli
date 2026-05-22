@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestWebSearchTool_Name(t *testing.T) {
@@ -60,7 +61,7 @@ func TestWebFetchTool_EmptyURL(t *testing.T) {
 }
 
 func TestWebFetchTool_HTMLStripping(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("<html><body><h1>Hello</h1><p>World</p></body></html>"))
 	}))
@@ -81,7 +82,7 @@ func TestWebFetchTool_HTMLStripping(t *testing.T) {
 }
 
 func TestWebFetchTool_Truncation(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(strings.Repeat("a", 60000)))
 	}))
