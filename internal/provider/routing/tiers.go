@@ -53,8 +53,10 @@ func tierFromName(modelName string) CostTier {
 	return CostTierMid
 }
 
-var cheapPatterns = []string{"haiku", "mini", "flash", "lite", "nano", "micro", "small", "tiny"}
-var expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
+var (
+	cheapPatterns     = []string{"haiku", "mini", "flash", "lite", "nano", "micro", "small", "tiny"}
+	expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
+)
 
 func tierFromEyrieModelConfigs(modelName string) (eycatalog.ModelTier, bool) {
 	modelName = strings.TrimSpace(modelName)
