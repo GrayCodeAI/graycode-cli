@@ -1,11 +1,16 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
 )
+
+// ReviewChatFn is a function that sends a prompt to an LLM and returns the response.
+type ReviewChatFn func(ctx context.Context, prompt string) (string, error)
 
 // ReviewConcern represents one aspect of code review.
 type ReviewConcern struct {
@@ -80,26 +85,26 @@ Report each issue with: File, Line (approx), Severity (critical/high/medium/low)
 	}
 }
 
-// RunReviewPipeline performs multi-concern parallel review.
-// In this implementation, the LLM calls are simulated by building per-concern
-// prompts and collecting placeholder findings. The caller is expected to wire
-// in actual LLM queries. Returns deduplicated findings sorted by severity and
-// a formatted report string.
-func RunReviewPipeline(files []string, concerns []ReviewConcern) ([]ReviewFinding, string) {
+// RunReviewPipeline performs multi-concern parallel review using the provided
+// chat function to query an LLM. Returns deduplicated findings sorted by
+// severity and a formatted report string.
+func RunReviewPipeline(ctx context.Context, files []string, concerns []ReviewConcern, chatFn ReviewChatFn) ([]ReviewFinding, string) {
 	if len(files) == 0 || len(concerns) == 0 {
 		return nil, "No files or concerns specified."
+	}
+	if chatFn == nil {
+		return nil, "No LLM chat function provided."
 	}
 
 	var mu sync.Mutex
 	var allFindings []ReviewFinding
 	var wg sync.WaitGroup
 
-	// For each concern, build the review prompt (parallel)
 	for _, concern := range concerns {
 		wg.Add(1)
 		go func(c ReviewConcern) {
 			defer wg.Done()
-			findings := reviewForConcern(files, c)
+			findings := reviewForConcern(ctx, files, c, chatFn)
 			mu.Lock()
 			allFindings = append(allFindings, findings...)
 			mu.Unlock()
@@ -107,33 +112,82 @@ func RunReviewPipeline(files []string, concerns []ReviewConcern) ([]ReviewFindin
 	}
 	wg.Wait()
 
-	// Deduplicate findings (same file+line from different concerns)
 	allFindings = deduplicateFindings(allFindings)
-
-	// Sort by severity
 	sortBySeverity(allFindings)
 
 	report := FormatReviewReport(allFindings)
 	return allFindings, report
 }
 
-// reviewForConcern builds a review prompt for a single concern and returns
-// placeholder findings. This is the integration point for actual LLM queries.
-func reviewForConcern(files []string, concern ReviewConcern) []ReviewFinding {
-	// Build the prompt that would be sent to the LLM
-	_ = buildReviewPrompt(files, concern)
+// reviewForConcern builds a review prompt for a single concern, sends it to
+// the LLM via chatFn, and parses the response into structured findings.
+func reviewForConcern(ctx context.Context, files []string, concern ReviewConcern, chatFn ReviewChatFn) []ReviewFinding {
+	prompt := buildReviewPrompt(files, concern)
 
-	// In the full implementation, this would send the prompt to the LLM
-	// and parse structured findings from the response. For now, return empty
-	// to indicate the pipeline structure is in place.
-	return nil
+	response, err := chatFn(ctx, prompt)
+	if err != nil {
+		return nil
+	}
+
+	return parseReviewFindings(response, concern.Name)
+}
+
+// llmFinding mirrors the JSON structure the LLM is asked to return.
+type llmFinding struct {
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
+	Fix      string `json:"fix"`
+}
+
+// parseReviewFindings extracts structured findings from an LLM response.
+// It looks for a JSON array in the response; if parsing fails, it returns a
+// single finding containing the raw response so the user still sees output.
+func parseReviewFindings(response string, concernName string) []ReviewFinding {
+	// Try to find a JSON array in the response.
+	jsonStart := strings.Index(response, "[")
+	jsonEnd := strings.LastIndex(response, "]")
+	if jsonStart >= 0 && jsonEnd > jsonStart {
+		var raw []llmFinding
+		if err := json.Unmarshal([]byte(response[jsonStart:jsonEnd+1]), &raw); err == nil {
+			findings := make([]ReviewFinding, 0, len(raw))
+			for _, r := range raw {
+				findings = append(findings, ReviewFinding{
+					Concern:  concernName,
+					Severity: r.Severity,
+					File:     r.File,
+					Line:     r.Line,
+					Message:  r.Message,
+					Fix:      r.Fix,
+				})
+			}
+			return findings
+		}
+	}
+
+	// Fallback: return the raw response as a single finding.
+	trimmed := strings.TrimSpace(response)
+	if trimmed == "" || strings.EqualFold(trimmed, "no issues found") || strings.EqualFold(trimmed, "no issues found.") {
+		return nil
+	}
+	return []ReviewFinding{{
+		Concern:  concernName,
+		Severity: "medium",
+		Message:  trimmed,
+	}}
 }
 
 // buildReviewPrompt constructs the full prompt for a single review concern.
 func buildReviewPrompt(files []string, concern ReviewConcern) string {
 	var b strings.Builder
 	b.WriteString(concern.Prompt)
-	b.WriteString("\n\n## Files to review\n\n")
+	b.WriteString("\n\n## Output format\n\n")
+	b.WriteString("Return your findings as a JSON array. Each element must have:\n")
+	b.WriteString("  \"file\" (string), \"line\" (int), \"severity\" (critical|high|medium|low),\n")
+	b.WriteString("  \"message\" (string), \"fix\" (string, suggested fix).\n")
+	b.WriteString("If no issues are found, return an empty array: []\n")
+	b.WriteString("\n## Files to review\n\n")
 	for _, f := range files {
 		b.WriteString(fmt.Sprintf("- %s\n", f))
 	}
