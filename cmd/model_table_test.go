@@ -25,6 +25,7 @@ func TestFormatModelTableContext(t *testing.T) {
 		0:       "—",
 		32000:   "32k",
 		1000000: "1m",
+		131072:  "131k",
 	}
 	for n, want := range cases {
 		if got := formatModelTableContext(n); got != want {
@@ -68,5 +69,14 @@ func TestTruncateRunes(t *testing.T) {
 	}
 	if got := truncateRunes("anthropic/claude-opus-4.7-fast", 10); !strings.HasSuffix(got, "…") {
 		t.Fatalf("expected truncation: %q", got)
+	}
+}
+
+func TestParseContextWindowLabelRoundTrip(t *testing.T) {
+	for _, n := range []int{32000, 131000, 1_000_000} {
+		label := formatModelTableContext(n)
+		if got := parseContextWindowLabel(label); got != n {
+			t.Fatalf("round trip %d -> %q -> %d", n, label, got)
+		}
 	}
 }

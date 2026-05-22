@@ -210,9 +210,8 @@ func (m *chatModel) updateViewportContent() {
 		if inputLines > 10 {
 			inputLines = 10
 		}
-		// status(1) + border-top(1) + input(N) + border-bottom(1) + help(1) + newline-separator(1)
+		// status(1) + border-top(1) + input(N) + border-bottom(1) + stats(1)
 		bottomBarLines = 1 + 2 + inputLines + 1 + 1
-		// Account for slash suggestion menu
 		if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
 			visible := len(sugs)
 			if visible > 6 {
@@ -369,21 +368,15 @@ func (m chatModel) View() string {
 			totalW = 80
 		}
 		var leftBold, leftDim string
-		if m.containerEnabled && m.containerReady {
-			leftBold = "Container"
-			leftDim = " - no approval needed"
-		} else if m.containerEnabled && m.containerErr != nil {
-			leftBold = "Container"
-			leftDim = " - Docker is not running. Start Docker and try again."
-		} else if m.containerEnabled {
-			leftBold = "Container"
-			leftDim = " - " + m.containerStatus
-		} else {
-			leftBold = permissionModeLabel(m.session)
-			leftDim = permissionModeHint(m.session)
+		leftBold, leftDim = containerFooterLeft(m)
+		modelRendered, modelVisLen, ctxRendered, ctxVisLen := m.renderConnectionStatusSplit()
+		const ctxSepVis = 3
+		rightVisLen := modelVisLen + ctxVisLen
+		if ctxVisLen > 0 && modelVisLen > 0 {
+			rightVisLen += ctxSepVis
 		}
-		rightRendered, rightVisLen := m.renderConnectionStatus()
-		leftVisLen := len(leftBold) + len(leftDim)
+		leftPlain := leftBold + leftDim
+		leftVisLen := runewidth.StringWidth(leftPlain)
 		gap := totalW - leftVisLen - rightVisLen
 		if gap < 1 {
 			gap = 1
@@ -391,10 +384,19 @@ func (m chatModel) View() string {
 		var leftRendered string
 		if m.containerEnabled && m.containerErr != nil {
 			leftRendered = containerErrStyle.Bold(true).Render(leftBold) + containerErrStyle.Render(leftDim)
+		} else if m.containerEnabled {
+			leftRendered = containerLabelStyle.Render(leftBold) + dimStyle.Render(leftDim)
 		} else {
 			leftRendered = lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
 		}
-		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + rightRendered + "\n")
+		rightLine := modelRendered
+		if ctxVisLen > 0 {
+			if modelVisLen > 0 {
+				rightLine += configMutedStyle().Inline(true).Render(" · ")
+			}
+			rightLine += ctxRendered
+		}
+		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + rightLine + "\n")
 		bottomBarLines++
 		inputBox := inputBorderStyle.Width(totalW).Render(func() string {
 			if m.useConfigInput {
@@ -414,6 +416,8 @@ func (m chatModel) View() string {
 			inputLines = 10
 		}
 		bottomBarLines += 2 + inputLines
+		bottomBar.WriteString(renderStatusBar(&m, totalW) + "\n")
+		bottomBarLines++
 		if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
 			if m.slashSel < 0 || m.slashSel >= len(sugs) {
 				m.slashSel = 0
@@ -450,14 +454,6 @@ func (m chatModel) View() string {
 				}
 				bottomBarLines++
 			}
-		}
-		if m.containerEnabled && m.containerStatus != "" {
-			style := dimStyle
-			if m.containerErr != nil {
-				style = containerErrStyle
-			}
-			bottomBar.WriteString(style.Render("container: "+m.containerStatus) + "\n")
-			bottomBarLines++
 		}
 		_ = bottomBarLines
 	}
