@@ -251,7 +251,7 @@ func TestListActive(t *testing.T) {
 	s.Create("t2", "T2", "d2", nil, 10)
 	s.Create("t3", "T3", "d3", nil, 10)
 
-	s.Activate("t1")                     // active
+	s.Activate("t1")                          // active
 	s.AddHandoff("t2", Handoff{Summary: "h"}) // waiting
 	// t3 remains pending
 
