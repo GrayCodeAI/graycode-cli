@@ -12,12 +12,53 @@ import (
 )
 
 func TestRenderChatConnectionStatus_ColorParts(t *testing.T) {
-	rendered, vis := renderChatConnectionStatus("OpenRouter", "laguna-m.1:free", "131k")
+	rendered, vis := renderChatConnectionStatus("OpenRouter", "laguna-m.1:free", "0k/131k ctx (0%)", 0)
 	if vis <= 0 {
 		t.Fatalf("expected positive visible width, got %d", vis)
 	}
-	if !strings.Contains(rendered, "OpenRouter") || !strings.Contains(rendered, "laguna-m.1:free") || !strings.Contains(rendered, "131k ctx") {
+	if !strings.Contains(rendered, "OpenRouter") || !strings.Contains(rendered, "laguna-m.1:free") || !strings.Contains(rendered, "0k/131k ctx (0%)") {
 		t.Fatalf("missing status parts in %q", rendered)
+	}
+}
+
+func TestParseContextWindowLabel(t *testing.T) {
+	cases := map[string]int{
+		"131k": 131000,
+		"1m":   1_000_000,
+		"1.0m": 1_000_000,
+		"400k": 400000,
+		"—":    0,
+		"":     0,
+	}
+	for label, want := range cases {
+		if got := parseContextWindowLabel(label); got != want {
+			t.Fatalf("parseContextWindowLabel(%q) = %d, want %d", label, got, want)
+		}
+	}
+}
+
+func TestFormatConnectionContextLabel(t *testing.T) {
+	m := chatModel{session: &engine.Session{}}
+	got := formatConnectionContextLabel(m, "131k")
+	if got != "0k/131k ctx (0%)" {
+		t.Fatalf("expected 0k/131k ctx (0%%), got %q", got)
+	}
+
+	sess := &engine.Session{}
+	sess.AddUser(strings.Repeat("a", 4000))
+	m.session = sess
+	got = formatConnectionContextLabel(m, "131k")
+	if !strings.Contains(got, "/131k ctx") || !strings.Contains(got, "%") {
+		t.Fatalf("expected used/total ctx label, got %q", got)
+	}
+}
+
+func TestFormatContextUsedLabel(t *testing.T) {
+	if got := formatContextUsedLabel(0); got != "0k" {
+		t.Fatalf("got %q", got)
+	}
+	if got := formatContextUsedLabel(5000); got != "5k" {
+		t.Fatalf("got %q", got)
 	}
 }
 

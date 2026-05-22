@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
@@ -149,6 +150,28 @@ func formatModelTableContext(n int) string {
 		return fmt.Sprintf("%.0fk", float64(n)/1000)
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+// parseContextWindowLabel reverses formatModelTableContext labels like "131k" or "1.0m".
+func parseContextWindowLabel(label string) int {
+	label = strings.TrimSpace(label)
+	if label == "" || label == "—" {
+		return 0
+	}
+	mult := 1
+	switch {
+	case strings.HasSuffix(label, "m"):
+		mult = 1_000_000
+		label = strings.TrimSuffix(label, "m")
+	case strings.HasSuffix(label, "k"):
+		mult = 1000
+		label = strings.TrimSuffix(label, "k")
+	}
+	f, err := strconv.ParseFloat(label, 64)
+	if err != nil || f <= 0 {
+		return 0
+	}
+	return int(f * float64(mult))
 }
 
 func renderModelTableHeader(layout modelTableLayout, headerStyle, metaStyle lipgloss.Style) string {
