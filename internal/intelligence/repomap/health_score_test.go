@@ -406,7 +406,7 @@ import (
 )
 
 func Risky(cmd string) {
-	_ = exec.Command(cmd)
+	_ = exec.CommandContext(context.Background(), cmd)
 	_ = md5.Sum([]byte("data"))
 }
 `)

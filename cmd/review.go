@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -80,7 +81,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 }
 
 func findGitDir() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--git-dir").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "rev-parse", "--git-dir").Output()
 	if err != nil {
 		return "", fmt.Errorf("not a git repository (run from inside a git repo)")
 	}

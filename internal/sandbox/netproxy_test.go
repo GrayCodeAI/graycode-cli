@@ -9,7 +9,19 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
+
+func startTestProxy(t *testing.T, proxy *NetworkProxy, ctx context.Context) string {
+	t.Helper()
+	addr, err := proxy.Start(ctx)
+	if err != nil {
+		testutil.SkipIfLoopbackUnavailable(t, err)
+		t.Fatalf("Start() error = %v", err)
+	}
+	return addr
+}
 
 func TestIsAllowed_AllowlistMode(t *testing.T) {
 	proxy := NewNetworkProxy(ProxyConfig{
@@ -289,7 +301,7 @@ func TestEnvVars(t *testing.T) {
 
 	env := proxy.EnvVars()
 
-	expected := "http://127.0.0.1:12345"
+	expected := "http://" + testutil.LoopbackHost + ":12345"
 	if env["HTTP_PROXY"] != expected {
 		t.Errorf("HTTP_PROXY = %q, want %q", env["HTTP_PROXY"], expected)
 	}
@@ -302,8 +314,8 @@ func TestEnvVars(t *testing.T) {
 	if env["https_proxy"] != expected {
 		t.Errorf("https_proxy = %q, want %q", env["https_proxy"], expected)
 	}
-	if env["NO_PROXY"] != "localhost,127.0.0.1" {
-		t.Errorf("NO_PROXY = %q, want %q", env["NO_PROXY"], "localhost,127.0.0.1")
+	if env["NO_PROXY"] != testutil.LoopbackNoProxy {
+		t.Errorf("NO_PROXY = %q, want %q", env["NO_PROXY"], testutil.LoopbackNoProxy)
 	}
 }
 
@@ -361,10 +373,7 @@ func TestStart_AssignsPort(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	addr, err := proxy.Start(ctx)
-	if err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
+	addr := startTestProxy(t, proxy, ctx)
 	defer proxy.Stop()
 
 	if addr == "" {
@@ -390,10 +399,7 @@ func TestStop_Clean(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	addr, err := proxy.Start(ctx)
-	if err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
+	addr := startTestProxy(t, proxy, ctx)
 
 	// Verify the proxy is listening.
 	conn, err := net.DialTimeout("tcp", addr, time.Second)
@@ -472,10 +478,7 @@ func TestProxyBlocksRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	addr, err := proxy.Start(ctx)
-	if err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
+	addr := startTestProxy(t, proxy, ctx)
 	defer proxy.Stop()
 
 	// Make a request to a blocked domain through the proxy.
@@ -515,8 +518,9 @@ func TestProxyAllowsRequest(t *testing.T) {
 		w.Write([]byte("hello from target"))
 	})
 	targetServer := &http.Server{Handler: handler}
-	targetLn, err := net.Listen("tcp", "127.0.0.1:0")
+	targetLn, err := net.Listen("tcp", testutil.LoopbackDynamicAddr)
 	if err != nil {
+		testutil.SkipIfLoopbackUnavailable(t, err)
 		t.Fatalf("failed to create target listener: %v", err)
 	}
 	go targetServer.Serve(targetLn)
@@ -526,7 +530,7 @@ func TestProxyAllowsRequest(t *testing.T) {
 	targetHost, _, _ := net.SplitHostPort(targetAddr)
 
 	proxy := NewNetworkProxy(ProxyConfig{
-		AllowedDomains: []string{targetHost, "127.0.0.1"},
+		AllowedDomains: []string{targetHost, testutil.LoopbackHost},
 		Mode:           "allowlist",
 		LogRequests:    true,
 	})
@@ -534,10 +538,7 @@ func TestProxyAllowsRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	addr, err := proxy.Start(ctx)
-	if err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
+	addr := startTestProxy(t, proxy, ctx)
 	defer proxy.Stop()
 
 	// Make a request to the allowed target through the proxy.

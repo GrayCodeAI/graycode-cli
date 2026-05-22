@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -70,7 +71,7 @@ func (ca *CoverageAnalyzer) RunCoverage() (*CoverageReport, error) {
 	coverFile := filepath.Join(ca.ProjectDir, "coverage.out")
 	defer func() { _ = os.Remove(coverFile) }()
 
-	cmd := exec.Command("go", "test", "-coverprofile="+coverFile, "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "test", "-coverprofile="+coverFile, "./...")
 	cmd.Dir = ca.ProjectDir
 	cmd.Stdout = nil
 	cmd.Stderr = nil

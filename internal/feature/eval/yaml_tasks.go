@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -108,7 +109,7 @@ func makeSetupFn(yt YAMLTask) func(string) error {
 		}
 		// Run setup script if provided
 		if yt.Setup != "" {
-			cmd := exec.Command("sh", "-c", yt.Setup)
+			cmd := exec.CommandContext(context.Background(), "sh", "-c", yt.Setup)
 			cmd.Dir = workDir
 			if out, err := cmd.CombinedOutput(); err != nil {
 				return fmt.Errorf("setup: %s: %w", string(out), err)
@@ -121,7 +122,7 @@ func makeSetupFn(yt YAMLTask) func(string) error {
 func makeValidateFn(yt YAMLTask) func(string) (bool, string) {
 	return func(workDir string) (bool, string) {
 		for _, v := range yt.Validate {
-			cmd := exec.Command("sh", "-c", v)
+			cmd := exec.CommandContext(context.Background(), "sh", "-c", v)
 			cmd.Dir = workDir
 			out, err := cmd.CombinedOutput()
 			if err != nil {

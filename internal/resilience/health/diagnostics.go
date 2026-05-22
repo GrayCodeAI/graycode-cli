@@ -414,7 +414,7 @@ func checkOpenAIReachable() DiagnosticResult {
 
 func checkDNSWorks() DiagnosticResult {
 	start := time.Now()
-	_, err := net.LookupHost("dns.google")
+	_, err := net.DefaultResolver.LookupHost(context.Background(), "dns.google")
 	if err != nil {
 		return DiagnosticResult{
 			Name:     "dns_works",
@@ -500,7 +500,8 @@ func checkTempDirWritable() DiagnosticResult {
 // --- Helpers ---
 
 func checkTCPReachable(name, host, port string, start time.Time) DiagnosticResult {
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 5*time.Second)
+	dialer := net.Dialer{Timeout: 5 * time.Second}
+	conn, err := dialer.DialContext(context.Background(), "tcp", net.JoinHostPort(host, port))
 	if err != nil {
 		return DiagnosticResult{
 			Name:     name,

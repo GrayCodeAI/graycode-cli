@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -368,7 +369,7 @@ func (bc *BoundaryChecker) CheckNetwork(host string, port int) *BoundaryViolatio
 	ip := net.ParseIP(host)
 	if ip == nil {
 		// Try resolving the hostname
-		addrs, err := net.LookupHost(host)
+		addrs, err := net.DefaultResolver.LookupHost(context.Background(), host)
 		if err == nil && len(addrs) > 0 {
 			ip = net.ParseIP(addrs[0])
 		}

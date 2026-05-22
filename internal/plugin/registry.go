@@ -210,7 +210,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	url := "https://github.com/" + repo + ".git"
-	cmd := exec.Command("git", "clone", "--depth", "1", "--single-branch", url, tmpDir)
+	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, tmpDir)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("git clone failed: %s\n%s", err, string(out))
 	}

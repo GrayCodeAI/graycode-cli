@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/netutil"
 )
 
 // ProxyStats tracks network proxy usage statistics.
@@ -83,9 +85,9 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	np.cancelFunc = cancel
 
-	addr := fmt.Sprintf("127.0.0.1:%d", np.Port)
+	addr := fmt.Sprintf("%s:%d", netutil.LoopbackHost, np.Port)
 	var err error
-	np.listener, err = net.Listen("tcp", addr)
+	np.listener, err = new(net.ListenConfig).Listen(ctx, "tcp", addr)
 	if err != nil {
 		cancel()
 		return "", fmt.Errorf("failed to start proxy listener: %w", err)
@@ -175,13 +177,13 @@ func (np *NetworkProxy) IsAllowed(host string) bool {
 // EnvVars returns environment variables to set for child processes
 // so they route traffic through this proxy.
 func (np *NetworkProxy) EnvVars() map[string]string {
-	addr := fmt.Sprintf("http://127.0.0.1:%d", np.Port)
+	addr := fmt.Sprintf("http://%s:%d", netutil.LoopbackHost, np.Port)
 	return map[string]string{
 		"HTTP_PROXY":  addr,
 		"HTTPS_PROXY": addr,
 		"http_proxy":  addr,
 		"https_proxy": addr,
-		"NO_PROXY":    "localhost,127.0.0.1",
+		"NO_PROXY":    netutil.LoopbackNoProxy,
 	}
 }
 
@@ -228,7 +230,9 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Dial the target.
-	targetConn, err := net.DialTimeout("tcp", host, 10*time.Second)
+	dialCtx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	targetConn, err := new(net.Dialer).DialContext(dialCtx, "tcp", host)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to connect to %s: %v", host, err), http.StatusBadGateway)
 		return

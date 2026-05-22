@@ -30,7 +30,7 @@ func (s *Session) SplitTurnNeeded(keepCount int) bool {
 	tail := s.messages[len(s.messages)-keepCount:]
 	totalTokens := 0
 	for _, msg := range tail {
-		totalTokens += estimateMessageTokens(msg)
+		totalTokens += EstimateMessageTokens(msg)
 	}
 	if len(tail) == 0 {
 		return false
@@ -43,7 +43,7 @@ func (s *Session) SplitTurnNeeded(keepCount int) bool {
 
 	// Check if any single message in the tail exceeds the budget
 	for _, msg := range tail {
-		if estimateMessageTokens(msg) > budget {
+		if EstimateMessageTokens(msg) > budget {
 			return true
 		}
 	}
@@ -67,7 +67,7 @@ func (s *Session) splitTurnCompact() {
 	tail := s.messages[len(s.messages)-keepEnd:]
 	totalTokens := 0
 	for _, msg := range tail {
-		totalTokens += estimateMessageTokens(msg)
+		totalTokens += EstimateMessageTokens(msg)
 	}
 	avgTokens := totalTokens / len(tail)
 	budget := avgTokens * 3
@@ -77,7 +77,7 @@ func (s *Session) splitTurnCompact() {
 
 	oversizedIdx := -1
 	for i, msg := range tail {
-		if estimateMessageTokens(msg) > budget {
+		if EstimateMessageTokens(msg) > budget {
 			oversizedIdx = i
 			break
 		}

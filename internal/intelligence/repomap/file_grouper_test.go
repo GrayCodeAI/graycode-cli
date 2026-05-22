@@ -1,6 +1,7 @@
 package repomap
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -548,7 +549,7 @@ func TestConfigGrouping(t *testing.T) {
 
 func runGrouperGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {

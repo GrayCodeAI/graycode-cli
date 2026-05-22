@@ -116,12 +116,12 @@ func (el *ExperimentLoop) validate(ctx context.Context) (bool, string) {
 
 // snapshot captures git state for rollback.
 func (el *ExperimentLoop) snapshot() (string, error) {
-	cmd := exec.Command("git", "stash", "create")
+	cmd := exec.CommandContext(context.Background(), "git", "stash", "create")
 	cmd.Dir = el.WorkDir
 	out, err := cmd.Output()
 	if err != nil {
 		// No changes to stash — use HEAD
-		cmd = exec.Command("git", "rev-parse", "HEAD")
+		cmd = exec.CommandContext(context.Background(), "git", "rev-parse", "HEAD")
 		cmd.Dir = el.WorkDir
 		out, _ = cmd.Output()
 	}
@@ -131,10 +131,10 @@ func (el *ExperimentLoop) snapshot() (string, error) {
 // restore reverts to a snapshot.
 func (el *ExperimentLoop) restore(ref string) {
 	if ref == "" {
-		exec.Command("git", "checkout", "--", ".").Run()
+		exec.CommandContext(context.Background(), "git", "checkout", "--", ".").Run()
 		return
 	}
-	cmd := exec.Command("git", "checkout", "--", ".")
+	cmd := exec.CommandContext(context.Background(), "git", "checkout", "--", ".")
 	cmd.Dir = el.WorkDir
 	cmd.Run()
 }

@@ -2,6 +2,7 @@ package voice
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,7 +48,7 @@ func (t *Transcriber) transcribeWhisper(path string, audioData []byte) (string, 
 	_ = tmpFile.Close()
 
 	// Run whisper
-	cmd := exec.Command(path, tmpFile.Name(), "-m", t.config.Model, "-l", t.config.Lang)
+	cmd := exec.CommandContext(context.Background(), path, tmpFile.Name(), "-m", t.config.Model, "-l", t.config.Lang)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {

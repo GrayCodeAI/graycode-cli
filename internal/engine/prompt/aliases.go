@@ -1,17 +1,14 @@
-// Package prompt is the Stage-1 namespace for prompt-construction and
-// prompt-optimisation types in package engine. See ../REFACTOR_PLAN.md.
+// Package prompt provides prompt-construction and prompt-optimisation types.
 package prompt
 
-import "github.com/GrayCodeAI/hawk/internal/engine"
-
 // Optimizer learns better prompts via DSPy-style example mining.
-type Optimizer = engine.PromptOptimizer
+type Optimizer = PromptOptimizer
 
 // DSPyExample is one (input, output) demonstration backing the optimizer.
-type DSPyExample = engine.PromptExample
+type DSPyExample = PromptExample
 
 // DSPyVariant is a candidate prompt being evaluated.
-type DSPyVariant = engine.PromptVariant
+type DSPyVariant = PromptVariant
 
 // ABTest pits two prompt variants against each other on incoming traffic.
 type ABTest struct {
@@ -19,14 +16,14 @@ type ABTest struct {
 }
 
 // Tuner is a lighter-weight prompt-tuning helper for online adjustments.
-type Tuner = engine.PromptTuner
+type Tuner = PromptTuner
 
 // Variant is a tuned prompt the Tuner emits.
-type Variant = engine.PromptVariant
+type Variant = PromptVariant
 
 // NewOptimizer returns a fresh prompt optimizer.
 func NewOptimizer() *Optimizer {
-	return engine.NewPromptOptimizer()
+	return NewPromptOptimizer()
 }
 
 // NewABTest builds an A/B test between two variants.
@@ -36,5 +33,5 @@ func NewABTest(a, b DSPyVariant) *ABTest {
 
 // NewTuner returns a fresh prompt tuner.
 func NewTuner() *Tuner {
-	return engine.NewPromptTuner()
+	return NewPromptTuner()
 }

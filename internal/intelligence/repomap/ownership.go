@@ -2,6 +2,7 @@ package repomap
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -56,7 +57,7 @@ func NewOwnershipMap() *OwnershipMap {
 // It runs `git log --format=%an --name-only` to map files to contributors,
 // calculates ownership percentages per file, and determines the primary owner.
 func (om *OwnershipMap) BuildFromGitHistory(projectDir string) error {
-	cmd := exec.Command("git", "log", "--format=COMMIT_AUTHOR:%an", "--name-only")
+	cmd := exec.CommandContext(context.Background(), "git", "log", "--format=COMMIT_AUTHOR:%an", "--name-only")
 	cmd.Dir = projectDir
 	out, err := cmd.Output()
 	if err != nil {
