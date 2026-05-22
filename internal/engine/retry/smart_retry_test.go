@@ -575,11 +575,11 @@ type testRetryConfig struct {
 	jitterPct         int
 }
 
-func (c *testRetryConfig) BaseDelayMs() int       { return c.baseDelayMs }
-func (c *testRetryConfig) MaxDelayMs() int         { return c.maxDelayMs }
-func (c *testRetryConfig) MaxRetries() int         { return c.maxRetries }
+func (c *testRetryConfig) BaseDelayMs() int           { return c.baseDelayMs }
+func (c *testRetryConfig) MaxDelayMs() int            { return c.maxDelayMs }
+func (c *testRetryConfig) MaxRetries() int            { return c.maxRetries }
 func (c *testRetryConfig) BackoffMultiplier() float64 { return c.backoffMultiplier }
-func (c *testRetryConfig) JitterPct() int          { return c.jitterPct }
+func (c *testRetryConfig) JitterPct() int             { return c.jitterPct }
 
 func retryContains(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {

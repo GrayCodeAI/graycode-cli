@@ -2,17 +2,19 @@ package eyrieclient
 
 import "github.com/GrayCodeAI/eyrie/client"
 
-type EyrieMessage = client.EyrieMessage
-type EyrieUsage = client.EyrieUsage
-type ToolCall = client.ToolCall
-type ToolResult = client.ToolResult
-type ChatOptions = client.ChatOptions
-type StreamResult = client.StreamResult
-type EyrieResponse = client.EyrieResponse
-type EyrieStreamEvent = client.EyrieStreamEvent
-type EyrieTool = client.EyrieTool
-type ContinuationConfig = client.ContinuationConfig
-type EyrieConfig = client.EyrieConfig
+type (
+	EyrieMessage       = client.EyrieMessage
+	EyrieUsage         = client.EyrieUsage
+	ToolCall           = client.ToolCall
+	ToolResult         = client.ToolResult
+	ChatOptions        = client.ChatOptions
+	StreamResult       = client.StreamResult
+	EyrieResponse      = client.EyrieResponse
+	EyrieStreamEvent   = client.EyrieStreamEvent
+	EyrieTool          = client.EyrieTool
+	ContinuationConfig = client.ContinuationConfig
+	EyrieConfig        = client.EyrieConfig
+)
 
 func DefaultContinuationConfig() ContinuationConfig {
 	return client.DefaultContinuationConfig()
