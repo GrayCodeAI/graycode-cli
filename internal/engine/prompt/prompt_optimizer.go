@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // LLMClient is the minimal interface needed for prompt optimization.
 type LLMClient interface {
-	Chat(ctx context.Context, msgs []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error)
+	Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error)
 }
 
 type PromptParameter struct {
@@ -142,8 +142,8 @@ func OptimizePrompt(ctx context.Context, llm LLMClient, model string, po *Prompt
 	}
 
 	prompt := ComputeGradientPrompt(paramName, p.Value, feedback, nil)
-	msgs := []client.EyrieMessage{{Role: "user", Content: prompt}}
-	resp, err := llm.Chat(ctx, msgs, client.ChatOptions{Model: model})
+	msgs := []types.EyrieMessage{{Role: "user", Content: prompt}}
+	resp, err := llm.Chat(ctx, msgs, types.ChatOptions{Model: model})
 	if err != nil {
 		return "", err
 	}

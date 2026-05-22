@@ -64,7 +64,7 @@ func TestAutoCommitAndRevert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := AutoCommit(file, "Write", "wrote file"); err != nil {
+	if err := AutoCommit(context.Background(), file, "Write", "wrote file"); err != nil {
 		t.Fatalf("AutoCommit: %v", err)
 	}
 
@@ -87,13 +87,13 @@ func TestAutoCommitAndRevert(t *testing.T) {
 		t.Fatalf("RevertLastAutoCommit: %v", err)
 	}
 
-	// After revert, HEAD should be a revert commit.
+	// After revert, HEAD should point to the commit before auto-commit.
 	msg2, err := gitHeadMessage()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(msg2, "Revert") {
-		t.Fatalf("expected revert commit message, got: %q", msg2)
+	if msg2 != "initial commit" {
+		t.Fatalf("expected revert to initial commit, got: %q", msg2)
 	}
 }
 
@@ -113,7 +113,7 @@ func TestAutoCommitOutsideGitRepo(t *testing.T) {
 	defer os.Chdir(origDir)
 	os.Chdir(dir)
 
-	err := AutoCommit("/tmp/nonexistent", "Write", "test")
+	err := AutoCommit(context.Background(), "/tmp/nonexistent", "Write", "test")
 	if err == nil {
 		t.Fatal("expected error outside git repo")
 	}

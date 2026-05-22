@@ -11,7 +11,7 @@ package engine
 //   3. Once all callers use Services(), flatten Session to hold only *SessionServices.
 
 import (
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -33,7 +33,7 @@ import (
 type CoreLoop struct {
 	Client   ChatClient
 	Registry *tool.Registry
-	Messages []client.EyrieMessage
+	Messages []types.EyrieMessage
 	Provider string
 	Model    string
 	APIKeys  map[string]string

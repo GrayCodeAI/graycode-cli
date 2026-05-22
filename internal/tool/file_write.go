@@ -70,7 +70,7 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return "", fmt.Errorf("write: %w", err)
 	}
 	if autoCommitEnabled(ctx) {
-		_ = AutoCommit(path, "Write", "wrote file")
+		_ = AutoCommit(ctx, path, "Write", "wrote file")
 	}
 	return fmt.Sprintf("Wrote %d bytes to %s", len(p.Content), path), nil
 }

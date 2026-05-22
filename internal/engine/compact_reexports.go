@@ -4,7 +4,7 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 )
@@ -39,7 +39,7 @@ func NewCompactionTrigger(windowSize int) *CompactionTrigger {
 func BuildCompactPrompt(variant CompactVariant) string { return compact.BuildCompactPrompt(variant) }
 func FormatCompactSummary(raw string) string           { return compact.FormatCompactSummary(raw) }
 func IsCompactableTool(name string) bool               { return compact.IsCompactableTool(name) }
-func AdjustIndexToPreserveAPIInvariants(msgs []client.EyrieMessage, startIdx int) int {
+func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
 	return compact.AdjustIndexToPreserveAPIInvariants(msgs, startIdx)
 }
-func HasTextContent(m client.EyrieMessage) bool { return compact.HasTextContent(m) }
+func HasTextContent(m types.EyrieMessage) bool { return compact.HasTextContent(m) }

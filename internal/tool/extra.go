@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // NotebookEditTool edits Jupyter notebook cells.
@@ -91,7 +89,7 @@ func (ConfigTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (ConfigTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (ConfigTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Action string `json:"action"`
 		Key    string `json:"key"`
@@ -100,15 +98,22 @@ func (ConfigTool) Execute(_ context.Context, input json.RawMessage) (string, err
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
+	tc := GetToolContext(ctx)
 	switch p.Action {
 	case "get":
-		value, ok := hawkconfig.SettingValue(hawkconfig.LoadSettings(), p.Key)
+		if tc == nil || tc.SettingsGet == nil {
+			return "", fmt.Errorf("settings access not available")
+		}
+		value, ok := tc.SettingsGet(p.Key)
 		if !ok {
 			return "", fmt.Errorf("unsupported setting key: %s", p.Key)
 		}
 		return fmt.Sprintf("%s=%s", p.Key, value), nil
 	case "set":
-		if err := hawkconfig.SetGlobalSetting(p.Key, p.Value); err != nil {
+		if tc == nil || tc.SettingsSet == nil {
+			return "", fmt.Errorf("settings access not available")
+		}
+		if err := tc.SettingsSet(p.Key, p.Value); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Set %q in global settings", p.Key), nil

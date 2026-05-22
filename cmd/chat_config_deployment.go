@@ -347,7 +347,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	if err := eyrieclient.RebuildSessionTransport(context.Background(), m.session, m.settings, m.session.Provider()); err != nil {
+	if err := eyrieclient.RebuildSessionTransport(context.Background(), m.session, hawkconfig.DeploymentRoutingEnabled(m.settings), m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
 	syncSessionFromPersistedSelection(m.session, m.settings)

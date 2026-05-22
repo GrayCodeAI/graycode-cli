@@ -70,16 +70,29 @@ func TestConfigTool_Execute(t *testing.T) {
 	hawkDir := filepath.Join(dir, ".hawk")
 	_ = os.MkdirAll(hawkDir, 0o755)
 
+	ctx := context.Background()
+	ctx = WithToolContext(ctx, &ToolContext{
+		SettingsGet: func(key string) (string, bool) {
+			if key == "model" {
+				return "claude-sonnet-4", true
+			}
+			return "", false
+		},
+		SettingsSet: func(key, value string) error { return nil },
+	})
+
 	tool := ConfigTool{}
 	input, _ := json.Marshal(map[string]interface{}{
 		"action": "get",
 		"key":    "model",
 	})
-	result, err := tool.Execute(context.Background(), input)
+	result, err := tool.Execute(ctx, input)
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	_ = result
+	if result != "model=claude-sonnet-4" {
+		t.Errorf("unexpected result: %s", result)
+	}
 }
 
 func TestConfigTool_Execute_InvalidInput(t *testing.T) {

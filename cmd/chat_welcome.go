@@ -6,8 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/mattn/go-runewidth"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -201,11 +199,11 @@ func envSummary(provider, model string) string {
 	envKeys := eyrieclient.DiscoveryEnvKeys(context.Background())
 	sort.Strings(envKeys)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, credentials.PlatformSecretStoreName()))
+	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, eyrieclient.PlatformSecretStoreName()))
 	ctx := context.Background()
 	for _, key := range envKeys {
 		status := "missing"
-		if credentials.HasSecret(ctx, key) {
+		if eyrieclient.HasSecret(ctx, key) {
 			status = "set"
 		}
 		b.WriteString(fmt.Sprintf("  %s: %s\n", key, status))
@@ -230,7 +228,7 @@ Model catalog and routing live in eyrie — hawk is the UI only.`, provider, mod
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (" + credentials.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
+	return "API keys (" + eyrieclient.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {
@@ -256,7 +254,7 @@ func indentedAPIKeyLines() string {
 }
 
 func apiKeyStatusLines() []string {
-	providers := client.Client(nil).GetProviders()
+	providers := eyrieclient.GetProviderNames()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {

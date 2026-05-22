@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -66,22 +66,22 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 
 	// Simulate the engine receiving an assistant text reply + tool call + tool result
 	// by manually building the message sequence that agentLoop would produce.
-	sess.messages = append(sess.messages, client.EyrieMessage{
+	sess.messages = append(sess.messages, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Sure, let me check that file.",
-		ToolUse: []client.ToolCall{
+		ToolUse: []types.ToolCall{
 			{ID: "tc-1", Name: "Bash", Arguments: map[string]interface{}{"command": "echo hello"}},
 		},
 	})
-	sess.messages = append(sess.messages, client.EyrieMessage{
+	sess.messages = append(sess.messages, types.EyrieMessage{
 		Role: "user",
-		ToolResult: &client.ToolResult{
+		ToolResult: &types.ToolResult{
 			ToolUseID: "tc-1",
 			Content:   "hello",
 			IsError:   false,
 		},
 	})
-	sess.messages = append(sess.messages, client.EyrieMessage{
+	sess.messages = append(sess.messages, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "The command ran successfully and returned 'hello'.",
 	})

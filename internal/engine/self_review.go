@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // SelfReview implements "rubber duck debugging" -- asking the model to explain
@@ -102,15 +102,15 @@ SUGGESTIONS: <comma-separated list of improvements, or "none">`)
 }
 
 // buildReviewMessages wraps the review prompt in a message slice.
-func buildReviewMessages(prompt string) []client.EyrieMessage {
-	return []client.EyrieMessage{
+func buildReviewMessages(prompt string) []types.EyrieMessage {
+	return []types.EyrieMessage{
 		{Role: "user", Content: prompt},
 	}
 }
 
 // buildReviewOptions returns ChatOptions suitable for a self-review call.
-func buildReviewOptions(model string) client.ChatOptions {
-	return client.ChatOptions{
+func buildReviewOptions(model string) types.ChatOptions {
+	return types.ChatOptions{
 		Model:     model,
 		MaxTokens: 512,
 	}

@@ -18,6 +18,8 @@ import (
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
+
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func fetchModelsViaRuntime(ctx context.Context, provider string) ([]catalog.ModelCatalogEntry, error) {
@@ -52,10 +54,7 @@ type Settings struct {
 }
 
 // Attribution controls how hawk identifies itself in git commits.
-type Attribution struct {
-	TrailerStyle  string `json:"trailer_style,omitempty"`  // "none", "co-authored-by", "assisted-by" (default)
-	GeneratedWith bool   `json:"generated_with,omitempty"` // append "Generated with Hawk" line
-}
+type Attribution = types.Attribution
 
 // CustomProviderConfig defines a user-specified OpenAI-compatible provider.
 type CustomProviderConfig struct {

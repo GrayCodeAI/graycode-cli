@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // filePathPatterns are regex patterns used to detect file paths in LLM responses.
@@ -125,7 +125,7 @@ func (d *FileMentionDetector) BuildSuggestion(newFiles []string) string {
 // InjectFileMentionContext detects file mentions in the given text,
 // filters out files already discussed in the message history, and returns
 // a system context string if new files are found. Returns "" if none.
-func (d *FileMentionDetector) InjectFileMentionContext(text string, messages []client.EyrieMessage) string {
+func (d *FileMentionDetector) InjectFileMentionContext(text string, messages []types.EyrieMessage) string {
 	mentions := d.DetectMentions(text)
 	if len(mentions) == 0 {
 		return ""
