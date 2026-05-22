@@ -197,6 +197,27 @@ func wrapText(text string, width int, prefixWidth int) string {
 	return strings.TrimRight(result.String(), "\n")
 }
 
+// chatBottomBarLines counts fixed rows below the chat viewport (must stay in sync with View).
+func (m chatModel) chatBottomBarLines() int {
+	if m.configOpen {
+		return 0
+	}
+	inputLines := strings.Count(m.input.Value(), "\n") + 1
+	if inputLines > 10 {
+		inputLines = 10
+	}
+	slashOpen := m.slashMenuOpen()
+	lines := 1 + 2 + inputLines // container/model row + input box borders + content
+	if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
+		lines++
+	}
+	lines += m.visibleSlashSuggestionLines()
+	if !slashOpen {
+		lines++ // session stats row below input
+	}
+	return lines
+}
+
 func (m *chatModel) updateViewportContent() {
 	viewWidth := m.width
 	if viewWidth <= 0 {
@@ -204,22 +225,7 @@ func (m *chatModel) updateViewportContent() {
 	}
 
 	// Always recalculate viewport height to track input box size changes
-	bottomBarLines := 0
-	if !m.configOpen {
-		inputLines := strings.Count(m.input.Value(), "\n") + 1
-		if inputLines > 10 {
-			inputLines = 10
-		}
-		// status(1) + border-top(1) + input(N) + border-bottom(1) + stats(1)
-		bottomBarLines = 1 + 2 + inputLines + 1 + 1
-		if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
-			visible := len(sugs)
-			if visible > 6 {
-				visible = 6
-			}
-			bottomBarLines += visible
-		}
-	}
+	bottomBarLines := m.chatBottomBarLines()
 	newVPHeight := m.height - bottomBarLines
 	if newVPHeight < 4 {
 		newVPHeight = 4
@@ -360,13 +366,13 @@ func (m chatModel) View() string {
 
 	// Build the fixed bottom bar
 	var bottomBar strings.Builder
-	bottomBarLines := 0
 
 	if !m.configOpen {
 		totalW := viewWidth
 		if totalW < 40 {
 			totalW = 80
 		}
+		slashOpen := m.slashMenuOpen()
 		var leftBold, leftDim string
 		leftBold, leftDim = containerFooterLeft(m)
 		modelRendered, modelVisLen, ctxRendered, ctxVisLen := m.renderConnectionStatusSplit()
@@ -397,7 +403,6 @@ func (m chatModel) View() string {
 			rightLine += ctxRendered
 		}
 		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + rightLine + "\n")
-		bottomBarLines++
 		inputBox := inputBorderStyle.Width(totalW).Render(func() string {
 			if m.useConfigInput {
 				return m.configInput.View()
@@ -408,54 +413,47 @@ func (m chatModel) View() string {
 		// Ghost text suggestion (shown below input when active)
 		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
 			bottomBar.WriteString(ghostHintStyle.Render("  → "+ghost+" (Tab to accept)") + "\n")
-			bottomBarLines++
 		}
-		// borders(2) + input content lines
-		inputLines := strings.Count(m.input.Value(), "\n") + 1
-		if inputLines > 10 {
-			inputLines = 10
+		if slashOpen {
+			if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
+				if m.slashSel < 0 || m.slashSel >= len(sugs) {
+					m.slashSel = 0
+				}
+				cmdStyle := slashCmdStyle
+				descStyle := slashDescStyle
+				selCmdStyle := slashSelCmdStyle
+				selDescStyle := slashSelDescStyle
+				maxVisible := 6
+				start := 0
+				if m.slashSel >= maxVisible {
+					start = m.slashSel - maxVisible + 1
+				}
+				end := start + maxVisible
+				if end > len(sugs) {
+					end = len(sugs)
+				}
+				for i := start; i < end; i++ {
+					s := sugs[i]
+					cmdPart := s
+					descPart := ""
+					if fields := strings.SplitN(s, "  ", 2); len(fields) == 2 {
+						cmdPart = fields[0]
+						descPart = fields[1]
+					}
+					pad := 20 - runewidth.StringWidth(cmdPart)
+					if pad < 2 {
+						pad = 2
+					}
+					if i == m.slashSel {
+						bottomBar.WriteString("  " + selCmdStyle.Render(cmdPart) + strings.Repeat(" ", pad) + selDescStyle.Render(descPart) + "\n")
+					} else {
+						bottomBar.WriteString("  " + cmdStyle.Render(cmdPart) + strings.Repeat(" ", pad) + descStyle.Render(descPart) + "\n")
+					}
+				}
+			}
+		} else {
+			bottomBar.WriteString(renderStatusBar(&m, totalW) + "\n")
 		}
-		bottomBarLines += 2 + inputLines
-		bottomBar.WriteString(renderStatusBar(&m, totalW) + "\n")
-		bottomBarLines++
-		if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
-			if m.slashSel < 0 || m.slashSel >= len(sugs) {
-				m.slashSel = 0
-			}
-			cmdStyle := slashCmdStyle
-			descStyle := slashDescStyle
-			selCmdStyle := slashSelCmdStyle
-			selDescStyle := slashSelDescStyle
-			maxVisible := 6
-			start := 0
-			if m.slashSel >= maxVisible {
-				start = m.slashSel - maxVisible + 1
-			}
-			end := start + maxVisible
-			if end > len(sugs) {
-				end = len(sugs)
-			}
-			for i := start; i < end; i++ {
-				s := sugs[i]
-				cmdPart := s
-				descPart := ""
-				if fields := strings.SplitN(s, "  ", 2); len(fields) == 2 {
-					cmdPart = fields[0]
-					descPart = fields[1]
-				}
-				pad := 20 - runewidth.StringWidth(cmdPart)
-				if pad < 2 {
-					pad = 2
-				}
-				if i == m.slashSel {
-					bottomBar.WriteString("  " + selCmdStyle.Render(cmdPart) + strings.Repeat(" ", pad) + selDescStyle.Render(descPart) + "\n")
-				} else {
-					bottomBar.WriteString("  " + cmdStyle.Render(cmdPart) + strings.Repeat(" ", pad) + descStyle.Render(descPart) + "\n")
-				}
-				bottomBarLines++
-			}
-		}
-		_ = bottomBarLines
 	}
 
 	return m.viewport.View() + "\n" + bottomBar.String()
