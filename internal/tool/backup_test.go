@@ -8,6 +8,7 @@ import (
 )
 
 func TestBackupFile_NonExistent(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "nofile.txt")
 	bp, err := BackupFile(path)
@@ -20,6 +21,7 @@ func TestBackupFile_NonExistent(t *testing.T) {
 }
 
 func TestBackupFile_Success(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "test.txt")
 	os.WriteFile(path, []byte("hello"), 0o644)
@@ -37,6 +39,7 @@ func TestBackupFile_Success(t *testing.T) {
 }
 
 func TestRestoreFromBackup(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "test.txt")
 	os.WriteFile(path, []byte("original"), 0o644)
@@ -60,6 +63,7 @@ func TestRestoreFromBackup(t *testing.T) {
 }
 
 func TestListBackups(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "test.txt")
 	os.WriteFile(path, []byte("v1"), 0o644)

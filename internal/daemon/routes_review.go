@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os/exec"
@@ -49,7 +50,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		if req.Concerns != "" {
 			args = append(args, "--concerns", req.Concerns)
 		}
-		_ = exec.Command("hawk", args...).Run()
+		_ = exec.CommandContext(context.Background(), "hawk", args...).Run()
 	}()
 
 	resp := ReviewResponse{
@@ -62,7 +63,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleReviewStatus(w http.ResponseWriter, _ *http.Request) {
 	// Run hawk review status and return output.
-	out, err := exec.Command("hawk", "review", "status").Output()
+	out, err := exec.CommandContext(context.Background(), "hawk", "review", "status").Output()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

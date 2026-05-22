@@ -13,6 +13,8 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
@@ -261,14 +263,14 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 	if settings.ModelRoles != nil {
 		roles = *settings.ModelRoles
 	}
-	sess.Cascade = engine.NewCascadeRouter(sess.Model(), roles)
+	sess.Cascade = branching.NewCascadeRouter(sess.Model(), roles)
 	sess.Cascade.Enabled = true
 	sess.Cascade.FrugalMode = settings.Frugal
 
 	// Session lifecycle: self-improvement loop (learn from sessions)
-	sess.Lifecycle = &engine.SessionLifecycle{
-		Memory:     &engine.EvolvingMemoryAdapter{EM: memory.NewEvolvingMemory()},
-		SkillStore: &engine.SkillDistillerAdapter{SD: sess.SkillDistiller},
+	sess.Lifecycle = &lifecycle.SessionLifecycle{
+		Memory:     &lifecycle.EvolvingMemoryAdapter{EM: memory.NewEvolvingMemory()},
+		SkillStore: &lifecycle.SkillDistillerAdapter{SD: sess.SkillDistiller},
 	}
 
 	return nil

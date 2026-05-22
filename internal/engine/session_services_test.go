@@ -3,6 +3,7 @@ package engine
 import (
 	"testing"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
@@ -115,7 +116,7 @@ func TestNewSessionServices_WithTracing(t *testing.T) {
 }
 
 func TestNewSessionServices_WithCascade(t *testing.T) {
-	cascade := &CascadeRouter{Enabled: true}
+	cascade := &branching.CascadeRouter{Enabled: true}
 	ss := NewSessionServices(WithCascade(cascade))
 
 	if ss.Optim.Cascade != cascade {
@@ -179,7 +180,7 @@ func TestSession_Services_Bridge(t *testing.T) {
 	s.Sandbox = &DiffSandbox{}
 	s.Memory = &mockMemoryRecaller{}
 	s.YaadBridge = &memory.YaadBridge{}
-	s.Cascade = &CascadeRouter{Enabled: true}
+	s.Cascade = &branching.CascadeRouter{Enabled: true}
 
 	svc := s.Services()
 

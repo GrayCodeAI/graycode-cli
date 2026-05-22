@@ -198,7 +198,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 func getAnalysisContent(patterns []string) (string, error) {
 	// Use git ls-files to expand patterns, then read files.
 	args := append([]string{"ls-files", "--"}, patterns...)
-	out, err := exec.Command("git", args...).Output()
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
 	if err != nil {
 		// Fallback: treat patterns as literal file paths.
 		var b strings.Builder
@@ -244,7 +244,7 @@ func autoFixAnalysis(result *sightLib.Result) error {
 		hawkBin = "hawk"
 	}
 
-	cmd := exec.Command(hawkBin, "exec", "--auto", "full", b.String())
+	cmd := exec.CommandContext(context.Background(), hawkBin, "exec", "--auto", "full", b.String())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

@@ -97,13 +97,13 @@ func baseWorkerTools() []tool.Tool {
 }
 
 func createWorktree(repoDir, baseBranch, branch string) (string, error) {
-	dir, err := exec.Command("mktemp", "-d").Output()
+	dir, err := exec.CommandContext(context.Background(), "mktemp", "-d").Output()
 	if err != nil {
 		return "", err
 	}
 	wtPath := strings.TrimSpace(string(dir))
 
-	cmd := exec.Command("git", "worktree", "add", "-b", branch, wtPath, baseBranch)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(out)), err)
@@ -112,13 +112,13 @@ func createWorktree(repoDir, baseBranch, branch string) (string, error) {
 }
 
 func removeWorktree(repoDir, wtPath string) {
-	cmd := exec.Command("git", "worktree", "remove", "--force", wtPath)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath)
 	cmd.Dir = repoDir
 	_ = cmd.Run()
 }
 
 func getLastCommit(dir string) string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -128,7 +128,7 @@ func getLastCommit(dir string) string {
 }
 
 func getChangedFiles(dir, baseBranch string) []string {
-	cmd := exec.Command("git", "diff", "--name-only", baseBranch+"..HEAD")
+	cmd := exec.CommandContext(context.Background(), "git", "diff", "--name-only", baseBranch+"..HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -142,7 +142,7 @@ func getChangedFiles(dir, baseBranch string) []string {
 }
 
 func runTests(dir string) bool {
-	cmd := exec.Command("go", "test", "./...", "-timeout", "60s")
+	cmd := exec.CommandContext(context.Background(), "go", "test", "./...", "-timeout", "60s")
 	cmd.Dir = dir
 	return cmd.Run() == nil
 }

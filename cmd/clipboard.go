@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -15,18 +16,18 @@ func copyToClipboard(text string) error {
 
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("pbcopy")
+		cmd = exec.CommandContext(context.Background(), "pbcopy")
 	case "linux":
 		// Try xclip first, fall back to xsel
 		if _, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.Command("xclip", "-selection", "clipboard")
+			cmd = exec.CommandContext(context.Background(), "xclip", "-selection", "clipboard")
 		} else if _, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.Command("xsel", "--clipboard", "--input")
+			cmd = exec.CommandContext(context.Background(), "xsel", "--clipboard", "--input")
 		} else {
 			return fmt.Errorf("clipboard not available: install xclip or xsel")
 		}
 	case "windows":
-		cmd = exec.Command("clip.exe")
+		cmd = exec.CommandContext(context.Background(), "clip.exe")
 	default:
 		return fmt.Errorf("clipboard not supported on %s", runtime.GOOS)
 	}
@@ -42,17 +43,17 @@ func pasteFromClipboard() (string, error) {
 
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("pbpaste")
+		cmd = exec.CommandContext(context.Background(), "pbpaste")
 	case "linux":
 		if _, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.Command("xclip", "-selection", "clipboard", "-o")
+			cmd = exec.CommandContext(context.Background(), "xclip", "-selection", "clipboard", "-o")
 		} else if _, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.Command("xsel", "--clipboard", "--output")
+			cmd = exec.CommandContext(context.Background(), "xsel", "--clipboard", "--output")
 		} else {
 			return "", fmt.Errorf("clipboard not available: install xclip or xsel")
 		}
 	case "windows":
-		cmd = exec.Command("powershell.exe", "-command", "Get-Clipboard")
+		cmd = exec.CommandContext(context.Background(), "powershell.exe", "-command", "Get-Clipboard")
 	default:
 		return "", fmt.Errorf("clipboard not supported on %s", runtime.GOOS)
 	}

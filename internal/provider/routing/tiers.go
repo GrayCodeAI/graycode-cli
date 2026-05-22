@@ -20,6 +20,9 @@ const (
 // CostTierOf resolves a model's cost tier from eyrie catalog data (family, tier
 // candidates, and within-provider pricing). Unknown models default to mid-tier.
 func CostTierOf(modelName string) CostTier {
+	if tier, ok := tierFromEyrieModelConfigs(modelName); ok {
+		return mapEyrieTier(tier)
+	}
 	if tier, ok := tierFromCatalogFamily(modelName); ok {
 		return mapEyrieTier(tier)
 	}
@@ -29,7 +32,57 @@ func CostTierOf(modelName string) CostTier {
 	if tier, ok := tierFromCatalogPricing(modelName); ok {
 		return tier
 	}
+	// Last resort: infer tier from common model name patterns.
+	return tierFromName(modelName)
+}
+
+// tierFromName infers cost tier from well-known model name patterns.
+// This is a fallback when the eyrie catalog is unavailable or incomplete.
+func tierFromName(modelName string) CostTier {
+	lower := strings.ToLower(strings.TrimSpace(modelName))
+	for _, pat := range cheapPatterns {
+		if strings.Contains(lower, pat) {
+			return CostTierCheap
+		}
+	}
+	for _, pat := range expensivePatterns {
+		if strings.Contains(lower, pat) {
+			return CostTierExpensive
+		}
+	}
 	return CostTierMid
+}
+
+var (
+	cheapPatterns     = []string{"haiku", "mini", "flash", "lite", "nano", "micro", "small", "tiny"}
+	expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
+)
+
+func tierFromEyrieModelConfigs(modelName string) (eycatalog.ModelTier, bool) {
+	modelName = strings.TrimSpace(modelName)
+	if modelName == "" {
+		return "", false
+	}
+
+	seen := map[eycatalog.ModelTier]bool{}
+	for key, cfg := range eycatalog.AllModelConfigs {
+		tier := modelKeyTier(key)
+		if tier == "" {
+			continue
+		}
+		for _, id := range cfg {
+			if modelsMatch(modelName, id) {
+				seen[tier] = true
+			}
+		}
+	}
+	if len(seen) != 1 {
+		return "", false
+	}
+	for tier := range seen {
+		return tier, true
+	}
+	return "", false
 }
 
 // TierModels returns eyrie-preferred model IDs for haiku, sonnet, and opus tiers.

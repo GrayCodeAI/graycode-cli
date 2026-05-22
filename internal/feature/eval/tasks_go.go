@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,14 +51,14 @@ func helperInitModule(workDir, modName string) error {
 // helperValidateBuildAndTest runs go vet and go test in the work directory.
 func helperValidateBuildAndTest(workDir string) (bool, string) {
 	// First check it compiles (go vet includes compilation check without requiring main).
-	cmd := exec.Command("go", "vet", "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
 	cmd.Dir = workDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return false, "vet failed: " + string(out)
 	}
 
 	// Then run tests.
-	cmd = exec.Command("go", "test", "-v", "./...")
+	cmd = exec.CommandContext(context.Background(), "go", "test", "-v", "./...")
 	cmd.Dir = workDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return false, "tests failed: " + string(out)
@@ -487,14 +488,14 @@ func TestCounterConcurrent(t *testing.T) {
 		},
 		ValidateFn: func(workDir string) (bool, string) {
 			// Vet first (includes compile check).
-			cmd := exec.Command("go", "vet", "./...")
+			cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
 			cmd.Dir = workDir
 			if out, err := cmd.CombinedOutput(); err != nil {
 				return false, "vet failed: " + string(out)
 			}
 
 			// Run with race detector.
-			cmd = exec.Command("go", "test", "-race", "./...")
+			cmd = exec.CommandContext(context.Background(), "go", "test", "-race", "./...")
 			cmd.Dir = workDir
 			if out, err := cmd.CombinedOutput(); err != nil {
 				return false, "race test failed: " + string(out)

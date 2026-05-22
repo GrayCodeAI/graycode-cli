@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -80,7 +81,7 @@ func languageValidator(ext string) func(path string) *ValidationResult {
 // validateGo runs go vet on a Go file and parses the output.
 func validateGo(path string) *ValidationResult {
 	dir := filepath.Dir(path)
-	cmd := exec.Command("go", "vet", "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
 	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
@@ -103,7 +104,7 @@ func validateGo(path string) *ValidationResult {
 
 // validatePython runs py_compile on a Python file.
 func validatePython(path string) *ValidationResult {
-	cmd := exec.Command("python3", "-c",
+	cmd := exec.CommandContext(context.Background(), "python3", "-c",
 		fmt.Sprintf("import py_compile; py_compile.compile('%s', doraise=True)", path))
 
 	output, err := cmd.CombinedOutput()
@@ -125,7 +126,7 @@ func validatePython(path string) *ValidationResult {
 
 // validateJS runs node --check on a JavaScript file.
 func validateJS(path string) *ValidationResult {
-	cmd := exec.Command("node", "--check", path)
+	cmd := exec.CommandContext(context.Background(), "node", "--check", path)
 
 	output, err := cmd.CombinedOutput()
 	if err == nil {
@@ -148,7 +149,7 @@ func validateJS(path string) *ValidationResult {
 // Uses npx tsc --noEmit if available, otherwise falls back to node --check.
 func validateTS(path string) *ValidationResult {
 	// Try tsc first
-	cmd := exec.Command("npx", "tsc", "--noEmit", "--allowJs", path)
+	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", path)
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return &ValidationResult{Valid: true}

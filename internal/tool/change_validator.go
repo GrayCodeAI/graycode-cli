@@ -2,6 +2,7 @@ package tool
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -282,7 +283,7 @@ func checkSyntax(files []string) *CheckResult {
 	tsFiles := filterByExtension(files, ".ts", ".tsx")
 
 	if len(goFiles) > 0 {
-		cmd := exec.Command("go", "build", "./...")
+		cmd := exec.CommandContext(context.Background(), "go", "build", "./...")
 		if output, err := cmd.CombinedOutput(); err != nil {
 			result.Passed = false
 			result.Message = "compilation failed"
@@ -293,7 +294,7 @@ func checkSyntax(files []string) *CheckResult {
 
 	if len(pyFiles) > 0 {
 		for _, f := range pyFiles {
-			cmd := exec.Command("python", "-m", "py_compile", f)
+			cmd := exec.CommandContext(context.Background(), "python", "-m", "py_compile", f)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				result.Passed = false
 				result.Message = "syntax error in Python file"
@@ -307,7 +308,7 @@ func checkSyntax(files []string) *CheckResult {
 
 	if len(tsFiles) > 0 {
 		args := append([]string{"--noEmit"}, tsFiles...)
-		cmd := exec.Command("tsc", args...)
+		cmd := exec.CommandContext(context.Background(), "tsc", args...)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			result.Passed = false
 			result.Message = "TypeScript compilation failed"
@@ -331,7 +332,7 @@ func checkFormat(files []string) *CheckResult {
 
 	if len(goFiles) > 0 {
 		args := append([]string{"-l"}, goFiles...)
-		cmd := exec.Command("gofmt", args...)
+		cmd := exec.CommandContext(context.Background(), "gofmt", args...)
 		if output, err := cmd.Output(); err == nil && len(strings.TrimSpace(string(output))) > 0 {
 			result.Passed = false
 			result.Message = "files need formatting"
@@ -345,7 +346,7 @@ func checkFormat(files []string) *CheckResult {
 
 	if len(jsFiles) > 0 {
 		args := append([]string{"--check"}, jsFiles...)
-		cmd := exec.Command("prettier", args...)
+		cmd := exec.CommandContext(context.Background(), "prettier", args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			result.Passed = false
 			result.Message = "files need formatting"
@@ -368,7 +369,7 @@ func checkLint(files []string) *CheckResult {
 	pyFiles := filterByExtension(files, ".py")
 
 	if len(goFiles) > 0 {
-		cmd := exec.Command("go", "vet", "./...")
+		cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
 		if out, err := cmd.CombinedOutput(); err != nil {
 			result.Passed = false
 			result.Message = fmt.Sprintf("%d issues found", countNonEmptyLines(string(out)))
@@ -378,7 +379,7 @@ func checkLint(files []string) *CheckResult {
 
 	if len(jsFiles) > 0 {
 		args := append([]string{"--format", "compact"}, jsFiles...)
-		cmd := exec.Command("eslint", args...)
+		cmd := exec.CommandContext(context.Background(), "eslint", args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			result.Passed = false
 			issues := extractLines(string(out))
@@ -389,7 +390,7 @@ func checkLint(files []string) *CheckResult {
 
 	if len(pyFiles) > 0 {
 		args := append([]string{"--errors-only"}, pyFiles...)
-		cmd := exec.Command("pylint", args...)
+		cmd := exec.CommandContext(context.Background(), "pylint", args...)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			result.Passed = false
 			issues := extractLines(string(out))
@@ -435,7 +436,7 @@ func checkTests(files []string) *CheckResult {
 	}
 
 	args := append([]string{"test", "-short", "-count=1"}, pkgList...)
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(context.Background(), "go", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		result.Passed = false
 		result.Severity = "warning"
@@ -533,7 +534,7 @@ func autoFixFormat(check CheckResult) []string {
 			parts := strings.SplitN(detail, " ", 2)
 			if len(parts) > 0 {
 				file := parts[0]
-				cmd := exec.Command("gofmt", "-w", file)
+				cmd := exec.CommandContext(context.Background(), "gofmt", "-w", file)
 				if err := cmd.Run(); err == nil {
 					fixes = append(fixes, fmt.Sprintf("applied gofmt to %s", file))
 				} else {
