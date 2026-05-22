@@ -2,15 +2,19 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/control"
 
-type LoopDetector = control.LoopDetector
-type StallEntry = control.StallEntry
-type StallResult = control.StallResult
-type StallDetector = control.StallDetector
-type DecisionPoint = control.DecisionPoint
-type BacktrackEngine = control.BacktrackEngine
+type (
+	LoopDetector    = control.LoopDetector
+	StallEntry      = control.StallEntry
+	StallResult     = control.StallResult
+	StallDetector   = control.StallDetector
+	DecisionPoint   = control.DecisionPoint
+	BacktrackEngine = control.BacktrackEngine
+)
 
 const DoomLoopThreshold = control.DoomLoopThreshold
 
-var NewLoopDetector = control.NewLoopDetector
-var NewStallDetector = control.NewStallDetector
-var NewBacktrackEngine = control.NewBacktrackEngine
+var (
+	NewLoopDetector    = control.NewLoopDetector
+	NewStallDetector   = control.NewStallDetector
+	NewBacktrackEngine = control.NewBacktrackEngine
+)

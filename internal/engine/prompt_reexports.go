@@ -5,16 +5,20 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/prompt"
 
-type PromptOptimizer = prompt.PromptOptimizer
-type PromptParameter = prompt.PromptParameter
-type PromptGradient = prompt.PromptGradient
-type OptimizationStep = prompt.OptimizationStep
-type PromptFewShotSelector = prompt.PromptFewShotSelector
-type PromptExample = prompt.PromptExample
-type PromptTuner = prompt.PromptTuner
-type PromptVariant = prompt.PromptVariant
+type (
+	PromptOptimizer       = prompt.PromptOptimizer
+	PromptParameter       = prompt.PromptParameter
+	PromptGradient        = prompt.PromptGradient
+	OptimizationStep      = prompt.OptimizationStep
+	PromptFewShotSelector = prompt.PromptFewShotSelector
+	PromptExample         = prompt.PromptExample
+	PromptTuner           = prompt.PromptTuner
+	PromptVariant         = prompt.PromptVariant
+)
 
-var NewPromptOptimizer = prompt.NewPromptOptimizer
-var NewPromptTuner = prompt.NewPromptTuner
-var ComputeGradientPrompt = prompt.ComputeGradientPrompt
-var FormatPromptExamples = prompt.FormatPromptExamples
+var (
+	NewPromptOptimizer    = prompt.NewPromptOptimizer
+	NewPromptTuner        = prompt.NewPromptTuner
+	ComputeGradientPrompt = prompt.ComputeGradientPrompt
+	FormatPromptExamples  = prompt.FormatPromptExamples
+)

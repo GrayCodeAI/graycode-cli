@@ -5,12 +5,14 @@ import (
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
 
-type Cost = cost.Cost
-type CostOptimizer = cost.CostOptimizer
-type CostTracker = cost.CostTracker
-type RequestCost = cost.RequestCost
-type ModelPrice = cost.ModelPrice
-type Recommendation = cost.Recommendation
+type (
+	Cost           = cost.Cost
+	CostOptimizer  = cost.CostOptimizer
+	CostTracker    = cost.CostTracker
+	RequestCost    = cost.RequestCost
+	ModelPrice     = cost.ModelPrice
+	Recommendation = cost.Recommendation
+)
 
 func NewCostOptimizer() *CostOptimizer                { return cost.NewCostOptimizer() }
 func NewCostTracker(sessionID string) *CostTracker    { return cost.NewCostTracker(sessionID) }

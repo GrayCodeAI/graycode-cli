@@ -5,26 +5,30 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/observability"
 
-type Profiler = observability.Profiler
-type ProfileSpan = observability.ProfileSpan
-type Counter = observability.Counter
-type Timer = observability.Timer
-type DebugSession = observability.DebugSession
-type DebugStep = observability.DebugStep
-type Hypothesis = observability.Hypothesis
-type DebugRecorder = observability.DebugRecorder
-type LogLevel = observability.LogLevel
-type LogEntry = observability.LogEntry
-type StructuredLogger = observability.StructuredLogger
-type AgentLogger = observability.AgentLogger
-type RotatingWriter = observability.RotatingWriter
-type Feedback = observability.Feedback
-type FeedbackCollector = observability.FeedbackCollector
-type ImplicitSignal = observability.ImplicitSignal
+type (
+	Profiler          = observability.Profiler
+	ProfileSpan       = observability.ProfileSpan
+	Counter           = observability.Counter
+	Timer             = observability.Timer
+	DebugSession      = observability.DebugSession
+	DebugStep         = observability.DebugStep
+	Hypothesis        = observability.Hypothesis
+	DebugRecorder     = observability.DebugRecorder
+	LogLevel          = observability.LogLevel
+	LogEntry          = observability.LogEntry
+	StructuredLogger  = observability.StructuredLogger
+	AgentLogger       = observability.AgentLogger
+	RotatingWriter    = observability.RotatingWriter
+	Feedback          = observability.Feedback
+	FeedbackCollector = observability.FeedbackCollector
+	ImplicitSignal    = observability.ImplicitSignal
+)
 
-var NewProfiler = observability.NewProfiler
-var NewDebugRecorder = observability.NewDebugRecorder
-var NewStructuredLogger = observability.NewStructuredLogger
-var ParseLevel = observability.ParseLevel
-var NewRotatingWriter = observability.NewRotatingWriter
-var NewFeedbackCollector = observability.NewFeedbackCollector
+var (
+	NewProfiler          = observability.NewProfiler
+	NewDebugRecorder     = observability.NewDebugRecorder
+	NewStructuredLogger  = observability.NewStructuredLogger
+	ParseLevel           = observability.ParseLevel
+	NewRotatingWriter    = observability.NewRotatingWriter
+	NewFeedbackCollector = observability.NewFeedbackCollector
+)

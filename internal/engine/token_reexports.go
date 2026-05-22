@@ -5,15 +5,18 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
 
-type TokenPredictor = token.TokenPredictor
-type PredictionRecord = token.PredictionRecord
-type Prediction = token.Prediction
-type TokenEntry = token.TokenEntry
-type BudgetAlert = token.BudgetAlert
-type TokenReporter = token.TokenReporter
+type (
+	TokenPredictor   = token.TokenPredictor
+	PredictionRecord = token.PredictionRecord
+	Prediction       = token.Prediction
+	TokenEntry       = token.TokenEntry
+	BudgetAlert      = token.BudgetAlert
+	TokenReporter    = token.TokenReporter
+)
 
 func NewTokenPredictor() *TokenPredictor                { return token.NewTokenPredictor() }
 func NewTokenReporter(sessionBudget int) *TokenReporter { return token.NewTokenReporter(sessionBudget) }
+
 func DynamicMaxTokens(messages []client.EyrieMessage, contextSize int, taskType string) int {
 	return token.DynamicMaxTokens(messages, contextSize, taskType)
 }
@@ -21,6 +24,7 @@ func ClassifyTaskComplexity(task string) string { return token.ClassifyTaskCompl
 func FormatPrediction(pred *Prediction, model string) string {
 	return token.FormatPrediction(pred, model)
 }
+
 func WarnIfExpensive(pred *Prediction, budgetUSD float64) string {
 	return token.WarnIfExpensive(pred, budgetUSD)
 }

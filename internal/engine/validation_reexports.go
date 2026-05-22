@@ -2,19 +2,21 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/validation"
 
-type GenValidator = validation.GenValidator
-type GenCheck = validation.GenCheck
-type GenIssue = validation.GenIssue
-type GenValidation = validation.GenValidation
-type SchemaValidator = validation.SchemaValidator
-type Schema = validation.Schema
-type FieldSpec = validation.FieldSpec
-type SchemaValidationResult = validation.SchemaValidationResult
-type SchemaValidationError = validation.SchemaValidationError
-type TestLoop = validation.TestLoop
-type TestResult = validation.TestResult
-type LintLoop = validation.LintLoop
-type LintResult = validation.LintResult
+type (
+	GenValidator           = validation.GenValidator
+	GenCheck               = validation.GenCheck
+	GenIssue               = validation.GenIssue
+	GenValidation          = validation.GenValidation
+	SchemaValidator        = validation.SchemaValidator
+	Schema                 = validation.Schema
+	FieldSpec              = validation.FieldSpec
+	SchemaValidationResult = validation.SchemaValidationResult
+	SchemaValidationError  = validation.SchemaValidationError
+	TestLoop               = validation.TestLoop
+	TestResult             = validation.TestResult
+	LintLoop               = validation.LintLoop
+	LintResult             = validation.LintResult
+)
 
 func NewGenValidator() *GenValidator       { return validation.NewGenValidator() }
 func NewSchemaValidator() *SchemaValidator { return validation.NewSchemaValidator() }

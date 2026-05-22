@@ -251,7 +251,8 @@ func (idx *IssueIndex) ImportFromGitHub(projectDir string) error {
 		return fmt.Errorf("gh CLI not found: %w", err)
 	}
 
-	cmd := exec.CommandContext(context.Background(),
+	cmd := exec.CommandContext(
+		context.Background(),
 		"gh", "issue", "list",
 		"--state", "all",
 		"--limit", "200",

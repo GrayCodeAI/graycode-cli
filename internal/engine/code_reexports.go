@@ -2,18 +2,20 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/code"
 
-type CodeSnippet = code.CodeSnippet
-type CodeContext = code.CodeContext
-type ContextExtractor = code.ContextExtractor
-type CodeLens = code.CodeLens
-type LensGenerator = code.LensGenerator
-type CodeLensProvider = code.CodeLensProvider
-type CodeAction = code.CodeAction
-type ActionDetector = code.ActionDetector
-type ActionRule = code.ActionRule
-type CodeExplanation = code.CodeExplanation
-type ExplanationSection = code.ExplanationSection
-type CodeExplainer = code.CodeExplainer
+type (
+	CodeSnippet        = code.CodeSnippet
+	CodeContext        = code.CodeContext
+	ContextExtractor   = code.ContextExtractor
+	CodeLens           = code.CodeLens
+	LensGenerator      = code.LensGenerator
+	CodeLensProvider   = code.CodeLensProvider
+	CodeAction         = code.CodeAction
+	ActionDetector     = code.ActionDetector
+	ActionRule         = code.ActionRule
+	CodeExplanation    = code.CodeExplanation
+	ExplanationSection = code.ExplanationSection
+	CodeExplainer      = code.CodeExplainer
+)
 
 func NewContextExtractor(projectDir string, maxTokens int) *ContextExtractor {
 	return code.NewContextExtractor(projectDir, maxTokens)
@@ -26,6 +28,7 @@ func FormatExplanation(exp *CodeExplanation) string { return code.FormatExplanat
 func FormatSuggestions(actions []CodeAction, max int) string {
 	return code.FormatSuggestions(actions, max)
 }
+
 func ApplyFix(action CodeAction, content string) (string, error) {
 	return code.ApplyFix(action, content)
 }

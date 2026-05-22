@@ -11,17 +11,21 @@ import (
 
 type CompactVariant = compact.CompactVariant
 
-const CompactBase = compact.CompactBase
-const CompactPartial = compact.CompactPartial
-const CompactUpTo = compact.CompactUpTo
+const (
+	CompactBase    = compact.CompactBase
+	CompactPartial = compact.CompactPartial
+	CompactUpTo    = compact.CompactUpTo
+)
 
-type CompactResult = compact.CompactResult
-type CompactConfig = compact.CompactConfig
-type FileTracker = compact.FileTracker
-type MicroCompactConfig = compact.MicroCompactConfig
-type APICompactConfig = compact.APICompactConfig
-type SessionMemoryConfig = compact.SessionMemoryConfig
-type CompactionTrigger = compact.CompactionTrigger
+type (
+	CompactResult       = compact.CompactResult
+	CompactConfig       = compact.CompactConfig
+	FileTracker         = compact.FileTracker
+	MicroCompactConfig  = compact.MicroCompactConfig
+	APICompactConfig    = compact.APICompactConfig
+	SessionMemoryConfig = compact.SessionMemoryConfig
+	CompactionTrigger   = compact.CompactionTrigger
+)
 
 func DefaultCompactConfig() CompactConfig             { return compact.DefaultCompactConfig() }
 func DefaultMicroCompactConfig() MicroCompactConfig   { return compact.DefaultMicroCompactConfig() }
@@ -31,6 +35,7 @@ func NewFileTracker() *FileTracker                    { return compact.NewFileTr
 func NewCompactionTrigger(windowSize int) *CompactionTrigger {
 	return compact.NewCompactionTrigger(windowSize)
 }
+
 func BuildCompactPrompt(variant CompactVariant) string { return compact.BuildCompactPrompt(variant) }
 func FormatCompactSummary(raw string) string           { return compact.FormatCompactSummary(raw) }
 func IsCompactableTool(name string) bool               { return compact.IsCompactableTool(name) }

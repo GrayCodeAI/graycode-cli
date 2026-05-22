@@ -2,23 +2,27 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/search"
 
-type URLScraper = search.URLScraper
-type ScrapeResult = search.ScrapeResult
-type Issue = search.Issue
-type SimilarIssue = search.SimilarIssue
-type IssueIndex = search.IssueIndex
-type ResearchAgent = search.ResearchAgent
-type ResearchQuery = search.ResearchQuery
-type ResearchResult = search.ResearchResult
-type ResearchFinding = search.ResearchFinding
+type (
+	URLScraper      = search.URLScraper
+	ScrapeResult    = search.ScrapeResult
+	Issue           = search.Issue
+	SimilarIssue    = search.SimilarIssue
+	IssueIndex      = search.IssueIndex
+	ResearchAgent   = search.ResearchAgent
+	ResearchQuery   = search.ResearchQuery
+	ResearchResult  = search.ResearchResult
+	ResearchFinding = search.ResearchFinding
+)
 
-var NewURLScraper = search.NewURLScraper
-var NewIssueIndex = search.NewIssueIndex
-var NewResearchAgent = search.NewResearchAgent
-var ExtractHTML = search.ExtractHTML
-var ExtractJSON = search.ExtractJSON
-var ExtractMarkdown = search.ExtractMarkdown
-var ExtractCode = search.ExtractCode
-var SuggestResolution = search.SuggestResolution
-var FormatIssueResults = search.FormatIssueResults
-var BuildSearchContext = search.BuildSearchContext
+var (
+	NewURLScraper      = search.NewURLScraper
+	NewIssueIndex      = search.NewIssueIndex
+	NewResearchAgent   = search.NewResearchAgent
+	ExtractHTML        = search.ExtractHTML
+	ExtractJSON        = search.ExtractJSON
+	ExtractMarkdown    = search.ExtractMarkdown
+	ExtractCode        = search.ExtractCode
+	SuggestResolution  = search.SuggestResolution
+	FormatIssueResults = search.FormatIssueResults
+	BuildSearchContext = search.BuildSearchContext
+)

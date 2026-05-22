@@ -2,22 +2,24 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/errs"
 
-type ErrorContext = errs.ErrorContext
-type ErrorHelp = errs.ErrorHelp
-type EnrichedError = errs.EnrichedError
-type ErrorGroup = errs.ErrorGroup
-type ErrorInstance = errs.ErrorInstance
-type ErrorGrouper = errs.ErrorGrouper
-type ErrorPattern = errs.ErrorPattern
-type ErrorPatternDB = errs.ErrorPatternDB
-type ErrorLearner = errs.ErrorLearner
-type ErrorLearnerStats = errs.ErrorLearnerStats
-type LearnedPattern = errs.LearnedPattern
-type ErrorRecovery = errs.ErrorRecovery
-type RecoveryStrategy = errs.RecoveryStrategy
-type RecoveryContext = errs.RecoveryContext
-type RecoveryResult = errs.RecoveryResult
-type RecoveryAttempt = errs.RecoveryAttempt
+type (
+	ErrorContext      = errs.ErrorContext
+	ErrorHelp         = errs.ErrorHelp
+	EnrichedError     = errs.EnrichedError
+	ErrorGroup        = errs.ErrorGroup
+	ErrorInstance     = errs.ErrorInstance
+	ErrorGrouper      = errs.ErrorGrouper
+	ErrorPattern      = errs.ErrorPattern
+	ErrorPatternDB    = errs.ErrorPatternDB
+	ErrorLearner      = errs.ErrorLearner
+	ErrorLearnerStats = errs.ErrorLearnerStats
+	LearnedPattern    = errs.LearnedPattern
+	ErrorRecovery     = errs.ErrorRecovery
+	RecoveryStrategy  = errs.RecoveryStrategy
+	RecoveryContext   = errs.RecoveryContext
+	RecoveryResult    = errs.RecoveryResult
+	RecoveryAttempt   = errs.RecoveryAttempt
+)
 
 func NewErrorContext() *ErrorContext             { return errs.NewErrorContext() }
 func FormatError(enriched *EnrichedError) string { return errs.FormatError(enriched) }

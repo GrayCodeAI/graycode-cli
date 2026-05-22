@@ -2,20 +2,22 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/scaffold"
 
-type Template = scaffold.Template
-type TemplateFile = scaffold.TemplateFile
-type TemplateVariable = scaffold.TemplateVariable
-type Scaffolder = scaffold.Scaffolder
-type Recipe = scaffold.Recipe
-type RecipeRegistry = scaffold.RecipeRegistry
-type PromptPattern = scaffold.PromptPattern
-type PatternLibrary = scaffold.PatternLibrary
-type Skill = scaffold.Skill
-type SkillStep = scaffold.SkillStep
-type SkillResult = scaffold.SkillResult
-type SkillRegistry = scaffold.SkillRegistry
-type FewShotStore = scaffold.FewShotStore
-type FewShotExample = scaffold.FewShotExample
+type (
+	Template         = scaffold.Template
+	TemplateFile     = scaffold.TemplateFile
+	TemplateVariable = scaffold.TemplateVariable
+	Scaffolder       = scaffold.Scaffolder
+	Recipe           = scaffold.Recipe
+	RecipeRegistry   = scaffold.RecipeRegistry
+	PromptPattern    = scaffold.PromptPattern
+	PatternLibrary   = scaffold.PatternLibrary
+	Skill            = scaffold.Skill
+	SkillStep        = scaffold.SkillStep
+	SkillResult      = scaffold.SkillResult
+	SkillRegistry    = scaffold.SkillRegistry
+	FewShotStore     = scaffold.FewShotStore
+	FewShotExample   = scaffold.FewShotExample
+)
 
 func NewScaffolder() *Scaffolder                   { return scaffold.NewScaffolder() }
 func NewRecipeRegistry(dir string) *RecipeRegistry { return scaffold.NewRecipeRegistry(dir) }

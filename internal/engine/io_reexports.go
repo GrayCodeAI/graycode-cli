@@ -2,37 +2,41 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/io"
 
-type ClipboardMonitor = io.ClipboardMonitor
-type AIComment = io.AIComment
-type AIWatcher = io.AIWatcher
-type FileEvent = io.FileEvent
-type WatcherConfig = io.WatcherConfig
-type FileWatcher = io.FileWatcher
-type SingleFileWatcher = io.SingleFileWatcher
-type CronJob = io.CronJob
-type CronScheduler = io.CronScheduler
-type CronExpr = io.CronExpr
-type ClipboardBridge = io.ClipboardBridge
+type (
+	ClipboardMonitor  = io.ClipboardMonitor
+	AIComment         = io.AIComment
+	AIWatcher         = io.AIWatcher
+	FileEvent         = io.FileEvent
+	WatcherConfig     = io.WatcherConfig
+	FileWatcher       = io.FileWatcher
+	SingleFileWatcher = io.SingleFileWatcher
+	CronJob           = io.CronJob
+	CronScheduler     = io.CronScheduler
+	CronExpr          = io.CronExpr
+	ClipboardBridge   = io.ClipboardBridge
+)
 
-var NewClipboardMonitor = io.NewClipboardMonitor
-var ReadClipboard = io.ReadClipboard
-var WriteClipboard = io.WriteClipboard
-var DetectContentType = io.DetectContentType
-var DetectLanguage = io.DetectLanguage
-var NewAIWatcher = io.NewAIWatcher
-var ScanFile = io.ScanFile
-var ScanDirectory = io.ScanDirectory
-var BuildPrompt = io.BuildPrompt
-var RemoveComment = io.RemoveComment
-var NewFileWatcher = io.NewFileWatcher
-var WatchSingle = io.WatchSingle
-var DefaultIgnorePatterns = io.DefaultIgnorePatterns
-var MatchesPattern = io.MatchesPattern
-var DedupEvents = io.DedupEvents
-var FormatEvents = io.FormatEvents
-var NewCronScheduler = io.NewCronScheduler
-var ParseCron = io.ParseCron
-var IsDue = io.IsDue
-var NextRunTime = io.NextRunTime
-var SummarizeClipboard = io.SummarizeClipboard
-var FormatForContext = io.FormatForContext
+var (
+	NewClipboardMonitor   = io.NewClipboardMonitor
+	ReadClipboard         = io.ReadClipboard
+	WriteClipboard        = io.WriteClipboard
+	DetectContentType     = io.DetectContentType
+	DetectLanguage        = io.DetectLanguage
+	NewAIWatcher          = io.NewAIWatcher
+	ScanFile              = io.ScanFile
+	ScanDirectory         = io.ScanDirectory
+	BuildPrompt           = io.BuildPrompt
+	RemoveComment         = io.RemoveComment
+	NewFileWatcher        = io.NewFileWatcher
+	WatchSingle           = io.WatchSingle
+	DefaultIgnorePatterns = io.DefaultIgnorePatterns
+	MatchesPattern        = io.MatchesPattern
+	DedupEvents           = io.DedupEvents
+	FormatEvents          = io.FormatEvents
+	NewCronScheduler      = io.NewCronScheduler
+	ParseCron             = io.ParseCron
+	IsDue                 = io.IsDue
+	NextRunTime           = io.NextRunTime
+	SummarizeClipboard    = io.SummarizeClipboard
+	FormatForContext      = io.FormatForContext
+)

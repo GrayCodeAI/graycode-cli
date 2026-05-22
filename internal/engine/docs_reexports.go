@@ -2,23 +2,27 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/docs"
 
-type DocGenerator = docs.DocGenerator
-type DocSection = docs.DocSection
-type ProjectDoc = docs.ProjectDoc
-type PackageDoc = docs.PackageDoc
-type FunctionDoc = docs.FunctionDoc
-type ParamDoc = docs.ParamDoc
-type TypeDoc = docs.TypeDoc
-type FieldDoc = docs.FieldDoc
-type DocSource = docs.DocSource
-type DocResult = docs.DocResult
-type ExternalDocs = docs.ExternalDocs
-type DocUpdate = docs.DocUpdate
-type DocUpdater = docs.DocUpdater
+type (
+	DocGenerator = docs.DocGenerator
+	DocSection   = docs.DocSection
+	ProjectDoc   = docs.ProjectDoc
+	PackageDoc   = docs.PackageDoc
+	FunctionDoc  = docs.FunctionDoc
+	ParamDoc     = docs.ParamDoc
+	TypeDoc      = docs.TypeDoc
+	FieldDoc     = docs.FieldDoc
+	DocSource    = docs.DocSource
+	DocResult    = docs.DocResult
+	ExternalDocs = docs.ExternalDocs
+	DocUpdate    = docs.DocUpdate
+	DocUpdater   = docs.DocUpdater
+)
 
-var NewDocGenerator = docs.NewDocGenerator
-var NewExternalDocs = docs.NewExternalDocs
-var NewDocUpdater = docs.NewDocUpdater
-var RenderMarkdown = docs.RenderMarkdown
-var RenderHTML = docs.RenderHTML
-var GenerateREADME = docs.GenerateREADME
+var (
+	NewDocGenerator = docs.NewDocGenerator
+	NewExternalDocs = docs.NewExternalDocs
+	NewDocUpdater   = docs.NewDocUpdater
+	RenderMarkdown  = docs.RenderMarkdown
+	RenderHTML      = docs.RenderHTML
+	GenerateREADME  = docs.GenerateREADME
+)

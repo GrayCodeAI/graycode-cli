@@ -20,7 +20,8 @@ func notifyCompletion(duration time.Duration) {
 	switch runtime.GOOS {
 	case "darwin":
 		// macOS: use osascript for native notification
-		_ = exec.CommandContext(context.Background(),
+		_ = exec.CommandContext(
+			context.Background(),
 			"osascript", "-e",
 			`display notification "`+msg+`" with title "Hawk"`,
 		).Start()

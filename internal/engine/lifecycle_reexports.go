@@ -5,24 +5,28 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 
-type SessionLifecycle = lifecycle.SessionLifecycle
-type EvolvingMemoryInterface = lifecycle.EvolvingMemoryInterface
-type SkillStoreInterface = lifecycle.SkillStoreInterface
-type CostTrackerInterface = lifecycle.CostTrackerInterface
-type CostEntry = lifecycle.CostEntry
-type SessionOutcome = lifecycle.SessionOutcome
-type EvolvingMemoryAdapter = lifecycle.EvolvingMemoryAdapter
-type SkillDistillerAdapter = lifecycle.SkillDistillerAdapter
-type SafetyLimits = lifecycle.SafetyLimits
-type LimitTracker = lifecycle.LimitTracker
-type TimeoutConfig = lifecycle.TimeoutConfig
+type (
+	SessionLifecycle        = lifecycle.SessionLifecycle
+	EvolvingMemoryInterface = lifecycle.EvolvingMemoryInterface
+	SkillStoreInterface     = lifecycle.SkillStoreInterface
+	CostTrackerInterface    = lifecycle.CostTrackerInterface
+	CostEntry               = lifecycle.CostEntry
+	SessionOutcome          = lifecycle.SessionOutcome
+	EvolvingMemoryAdapter   = lifecycle.EvolvingMemoryAdapter
+	SkillDistillerAdapter   = lifecycle.SkillDistillerAdapter
+	SafetyLimits            = lifecycle.SafetyLimits
+	LimitTracker            = lifecycle.LimitTracker
+	TimeoutConfig           = lifecycle.TimeoutConfig
+)
 
-var ParseAndApplyMemoryOps = lifecycle.ParseAndApplyMemoryOps
-var NewLimitTracker = lifecycle.NewLimitTracker
-var DefaultLimits = lifecycle.DefaultLimits
-var VibeLimits = lifecycle.VibeLimits
-var ResearchLimits = lifecycle.ResearchLimits
-var DefaultTimeoutConfig = lifecycle.DefaultTimeoutConfig
-var WithTimeout = lifecycle.WithTimeout
-var RemainingTime = lifecycle.RemainingTime
-var TimeoutMessage = lifecycle.TimeoutMessage
+var (
+	ParseAndApplyMemoryOps = lifecycle.ParseAndApplyMemoryOps
+	NewLimitTracker        = lifecycle.NewLimitTracker
+	DefaultLimits          = lifecycle.DefaultLimits
+	VibeLimits             = lifecycle.VibeLimits
+	ResearchLimits         = lifecycle.ResearchLimits
+	DefaultTimeoutConfig   = lifecycle.DefaultTimeoutConfig
+	WithTimeout            = lifecycle.WithTimeout
+	RemainingTime          = lifecycle.RemainingTime
+	TimeoutMessage         = lifecycle.TimeoutMessage
+)

@@ -5,25 +5,32 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/agent"
 
-type SubAgentMode = agent.SubAgentMode
-type SubAgentConfig = agent.SubAgentConfig
-type SubAgentBudget = agent.SubAgentBudget
-type BackgroundAgentPool = agent.BackgroundAgentPool
-type BackgroundResult = agent.BackgroundResult
+type (
+	SubAgentMode        = agent.SubAgentMode
+	SubAgentConfig      = agent.SubAgentConfig
+	SubAgentBudget      = agent.SubAgentBudget
+	BackgroundAgentPool = agent.BackgroundAgentPool
+	BackgroundResult    = agent.BackgroundResult
+)
 
-const SubAgentExplore = agent.SubAgentExplore
-const SubAgentGeneral = agent.SubAgentGeneral
-const DefaultExploreTurns = agent.DefaultExploreTurns
-const DefaultGeneralTurns = agent.DefaultGeneralTurns
-const MaxAgentDepth = agent.MaxAgentDepth
+const (
+	SubAgentExplore     = agent.SubAgentExplore
+	SubAgentGeneral     = agent.SubAgentGeneral
+	DefaultExploreTurns = agent.DefaultExploreTurns
+	DefaultGeneralTurns = agent.DefaultGeneralTurns
+	MaxAgentDepth       = agent.MaxAgentDepth
+)
 
-var ExploreTools = agent.ExploreTools
-var ModeToolAllowlist = agent.ModeToolAllowlist
+var (
+	ExploreTools      = agent.ExploreTools
+	ModeToolAllowlist = agent.ModeToolAllowlist
+)
 
 func DefaultSubAgentConfig() SubAgentConfig { return agent.DefaultSubAgentConfig() }
 func NewSubAgentBudget(mode SubAgentMode, cfg SubAgentConfig) *SubAgentBudget {
 	return agent.NewSubAgentBudget(mode, cfg)
 }
+
 func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 	return agent.FilterToolsForMode(mode, available)
 }

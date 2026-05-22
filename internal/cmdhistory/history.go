@@ -86,7 +86,8 @@ func (s *Store) Record(entry Entry) error {
 		entry.CreatedAt = time.Now().UTC()
 	}
 
-	_, err := s.db.ExecContext(context.Background(),
+	_, err := s.db.ExecContext(
+		context.Background(),
 		`INSERT INTO entries (id, command, exit_code, duration_ms, cwd, git_branch, session_id, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		entry.ID,
@@ -176,7 +177,8 @@ func (s *Store) Recent(n int) ([]Entry, error) {
 		n = 20
 	}
 
-	rows, err := s.db.QueryContext(context.Background(),
+	rows, err := s.db.QueryContext(
+		context.Background(),
 		`SELECT id, command, exit_code, duration_ms, cwd, git_branch, session_id, created_at
 		 FROM entries
 		 ORDER BY created_at DESC
@@ -196,7 +198,8 @@ func (s *Store) SearchByDir(dir string, limit int) ([]Entry, error) {
 		limit = 50
 	}
 
-	rows, err := s.db.QueryContext(context.Background(),
+	rows, err := s.db.QueryContext(
+		context.Background(),
 		`SELECT id, command, exit_code, duration_ms, cwd, git_branch, session_id, created_at
 		 FROM entries
 		 WHERE cwd = ?

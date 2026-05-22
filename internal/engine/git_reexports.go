@@ -5,19 +5,23 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/git"
 
-type GitContext = git.GitContext
-type GitFileInfo = git.GitFileInfo
-type CommitInfo = git.CommitInfo
-type BlameLine = git.BlameLine
-type GitProvider = git.GitProvider
-type GitIssue = git.GitIssue
-type PullRequest = git.PullRequest
-type CIStatus = git.CIStatus
-type CICheck = git.CICheck
+type (
+	GitContext  = git.GitContext
+	GitFileInfo = git.GitFileInfo
+	CommitInfo  = git.CommitInfo
+	BlameLine   = git.BlameLine
+	GitProvider = git.GitProvider
+	GitIssue    = git.GitIssue
+	PullRequest = git.PullRequest
+	CIStatus    = git.CIStatus
+	CICheck     = git.CICheck
+)
 
-var NewGitContext = git.NewGitContext
-var NewGitProvider = git.NewGitProvider
-var FormatIssues = git.FormatIssues
-var FormatPRs = git.FormatPRs
-var FormatCIStatus = git.FormatCIStatus
-var DetectProvider = git.DetectProvider
+var (
+	NewGitContext  = git.NewGitContext
+	NewGitProvider = git.NewGitProvider
+	FormatIssues   = git.FormatIssues
+	FormatPRs      = git.FormatPRs
+	FormatCIStatus = git.FormatCIStatus
+	DetectProvider = git.DetectProvider
+)

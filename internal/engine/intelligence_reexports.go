@@ -5,27 +5,31 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/intelligence"
 
-type Intent = intelligence.Intent
-type IntentRule = intelligence.IntentRule
-type ClassifiedInput = intelligence.ClassifiedInput
-type IntentClassifier = intelligence.IntentClassifier
-type Capability = intelligence.Capability
-type CapabilityRegistry = intelligence.CapabilityRegistry
-type LanguageConfig = intelligence.LanguageConfig
-type LanguageRegistry = intelligence.LanguageRegistry
-type ToolInfo = intelligence.ToolInfo
-type ToolSelection = intelligence.ToolSelection
-type ToolSelector = intelligence.ToolSelector
-type CommandSuggestion = intelligence.CommandSuggestion
-type SuggestionRule = intelligence.SuggestionRule
-type SuggestionEngine = intelligence.SuggestionEngine
+type (
+	Intent             = intelligence.Intent
+	IntentRule         = intelligence.IntentRule
+	ClassifiedInput    = intelligence.ClassifiedInput
+	IntentClassifier   = intelligence.IntentClassifier
+	Capability         = intelligence.Capability
+	CapabilityRegistry = intelligence.CapabilityRegistry
+	LanguageConfig     = intelligence.LanguageConfig
+	LanguageRegistry   = intelligence.LanguageRegistry
+	ToolInfo           = intelligence.ToolInfo
+	ToolSelection      = intelligence.ToolSelection
+	ToolSelector       = intelligence.ToolSelector
+	CommandSuggestion  = intelligence.CommandSuggestion
+	SuggestionRule     = intelligence.SuggestionRule
+	SuggestionEngine   = intelligence.SuggestionEngine
+)
 
-var NewIntentClassifier = intelligence.NewIntentClassifier
-var FormatIntent = intelligence.FormatIntent
-var NewCapabilityRegistry = intelligence.NewCapabilityRegistry
-var NewLanguageRegistry = intelligence.NewLanguageRegistry
-var FormatLanguages = intelligence.FormatLanguages
-var NewToolSelector = intelligence.NewToolSelector
-var FormatToolSelection = intelligence.FormatToolSelection
-var NewSuggestionEngine = intelligence.NewSuggestionEngine
-var FormatCommandSuggestions = intelligence.FormatCommandSuggestions
+var (
+	NewIntentClassifier      = intelligence.NewIntentClassifier
+	FormatIntent             = intelligence.FormatIntent
+	NewCapabilityRegistry    = intelligence.NewCapabilityRegistry
+	NewLanguageRegistry      = intelligence.NewLanguageRegistry
+	FormatLanguages          = intelligence.FormatLanguages
+	NewToolSelector          = intelligence.NewToolSelector
+	FormatToolSelection      = intelligence.FormatToolSelection
+	NewSuggestionEngine      = intelligence.NewSuggestionEngine
+	FormatCommandSuggestions = intelligence.FormatCommandSuggestions
+)

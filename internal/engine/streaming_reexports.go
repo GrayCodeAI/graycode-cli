@@ -5,29 +5,33 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/streaming"
 
-type CacheEntry = streaming.CacheEntry
-type CacheStats = streaming.CacheStats
-type ResponseCache = streaming.ResponseCache
-type FormatRule = streaming.FormatRule
-type FormattedResponse = streaming.FormattedResponse
-type ResponseFormatter = streaming.ResponseFormatter
-type StreamOptimizer = streaming.StreamOptimizer
-type StreamStats = streaming.StreamStats
-type ThinkingPhase = streaming.ThinkingPhase
-type ThinkingStep = streaming.ThinkingStep
-type ThinkingProtocol = streaming.ThinkingProtocol
-type SteeringQueue = streaming.SteeringQueue
-type SteeringMessage = streaming.SteeringMessage
+type (
+	CacheEntry        = streaming.CacheEntry
+	CacheStats        = streaming.CacheStats
+	ResponseCache     = streaming.ResponseCache
+	FormatRule        = streaming.FormatRule
+	FormattedResponse = streaming.FormattedResponse
+	ResponseFormatter = streaming.ResponseFormatter
+	StreamOptimizer   = streaming.StreamOptimizer
+	StreamStats       = streaming.StreamStats
+	ThinkingPhase     = streaming.ThinkingPhase
+	ThinkingStep      = streaming.ThinkingStep
+	ThinkingProtocol  = streaming.ThinkingProtocol
+	SteeringQueue     = streaming.SteeringQueue
+	SteeringMessage   = streaming.SteeringMessage
+)
 
 const DefaultMaxEntries = streaming.DefaultMaxEntries
 
-var NewResponseCache = streaming.NewResponseCache
-var NewResponseFormatter = streaming.NewResponseFormatter
-var NewStreamOptimizer = streaming.NewStreamOptimizer
-var NewThinkingProtocol = streaming.NewThinkingProtocol
-var NewSteeringQueue = streaming.NewSteeringQueue
-var HashPrompt = streaming.HashPrompt
-var ShouldCache = streaming.ShouldCache
-var FixCodeFences = streaming.FixCodeFences
-var RemoveFluff = streaming.RemoveFluff
-var FixMarkdown = streaming.FixMarkdown
+var (
+	NewResponseCache     = streaming.NewResponseCache
+	NewResponseFormatter = streaming.NewResponseFormatter
+	NewStreamOptimizer   = streaming.NewStreamOptimizer
+	NewThinkingProtocol  = streaming.NewThinkingProtocol
+	NewSteeringQueue     = streaming.NewSteeringQueue
+	HashPrompt           = streaming.HashPrompt
+	ShouldCache          = streaming.ShouldCache
+	FixCodeFences        = streaming.FixCodeFences
+	RemoveFluff          = streaming.RemoveFluff
+	FixMarkdown          = streaming.FixMarkdown
+)

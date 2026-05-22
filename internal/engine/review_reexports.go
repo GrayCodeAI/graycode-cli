@@ -4,50 +4,56 @@ import "github.com/GrayCodeAI/hawk/internal/engine/review"
 
 // Types from review sub-package.
 
-type ReviewBot = review.ReviewBot
-type ReviewRule = review.ReviewRule
-type ReviewComment = review.ReviewComment
-type ReviewReport = review.ReviewReport
-type PatchVerdict = review.PatchVerdict
-type Critic = review.Critic
-type Assessment = review.Assessment
-type SelfAssessor = review.SelfAssessor
-type TaskContext = review.TaskContext
-type ConsensusSampler = review.ConsensusSampler
-type Sample = review.Sample
-type ConsensusResult = review.ConsensusResult
-type QualityScorer = review.QualityScorer
-type ScoreWeights = review.ScoreWeights
-type ScoredResponse = review.ScoredResponse
-type ResponseContext = review.ResponseContext
-type SolutionReviewer = review.SolutionReviewer
-type Solution = review.Solution
-type ReviewResult = review.ReviewResult
+type (
+	ReviewBot        = review.ReviewBot
+	ReviewRule       = review.ReviewRule
+	ReviewComment    = review.ReviewComment
+	ReviewReport     = review.ReviewReport
+	PatchVerdict     = review.PatchVerdict
+	Critic           = review.Critic
+	Assessment       = review.Assessment
+	SelfAssessor     = review.SelfAssessor
+	TaskContext      = review.TaskContext
+	ConsensusSampler = review.ConsensusSampler
+	Sample           = review.Sample
+	ConsensusResult  = review.ConsensusResult
+	QualityScorer    = review.QualityScorer
+	ScoreWeights     = review.ScoreWeights
+	ScoredResponse   = review.ScoredResponse
+	ResponseContext  = review.ResponseContext
+	SolutionReviewer = review.SolutionReviewer
+	Solution         = review.Solution
+	ReviewResult     = review.ReviewResult
+)
 
 // Short-name aliases.
 
-type Bot = review.ReviewBot
-type Rule = review.ReviewRule
-type Comment = review.ReviewComment
-type Report = review.ReviewReport
+type (
+	Bot     = review.ReviewBot
+	Rule    = review.ReviewRule
+	Comment = review.ReviewComment
+	Report  = review.ReviewReport
+)
 
 // Functions.
 
-var NewReviewBot = review.NewReviewBot
-var NewCritic = review.NewCritic
-var NewSelfAssessor = review.NewSelfAssessor
-var NewConsensusSampler = review.NewConsensusSampler
-var NewQualityScorer = review.NewQualityScorer
-var NewSolutionReviewer = review.NewSolutionReviewer
-var DefaultWeights = review.DefaultWeights
-var FormatSelfAssessment = review.FormatSelfAssessment
-var FormatConsensus = review.FormatConsensus
-var CompareApproaches = review.CompareApproaches
-var FormatReview = review.FormatReview
-var ShouldRetry = review.ShouldRetry
-var FormatReport = review.FormatReport
-var FormatInline = review.FormatInline
-var FilterBySeverity = review.FilterBySeverity
+var (
+	NewReviewBot         = review.NewReviewBot
+	NewCritic            = review.NewCritic
+	NewSelfAssessor      = review.NewSelfAssessor
+	NewConsensusSampler  = review.NewConsensusSampler
+	NewQualityScorer     = review.NewQualityScorer
+	NewSolutionReviewer  = review.NewSolutionReviewer
+	DefaultWeights       = review.DefaultWeights
+	FormatSelfAssessment = review.FormatSelfAssessment
+	FormatConsensus      = review.FormatConsensus
+	CompareApproaches    = review.CompareApproaches
+	FormatReview         = review.FormatReview
+	ShouldRetry          = review.ShouldRetry
+	FormatReport         = review.FormatReport
+	FormatInline         = review.FormatInline
+	FilterBySeverity     = review.FilterBySeverity
+)
 
 // NewBot delegates to review.NewBot.
 func NewBot() *Bot { return review.NewBot() }

@@ -265,7 +265,8 @@ func (s *SQLiteStore) CreateSession(sess *SessionRecord) error {
 		sess.Status = "active"
 	}
 
-	_, err := s.db.ExecContext(context.Background(),
+	_, err := s.db.ExecContext(
+		context.Background(),
 		`INSERT INTO sessions (id, project_dir, provider, model, created_at, updated_at, parent_id, status, title, total_tokens, total_cost_usd)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		sess.ID, sess.ProjectDir, sess.Provider, sess.Model,

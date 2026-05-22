@@ -5,43 +5,47 @@ package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/planning"
 
-type ExecutionPlan = planning.ExecutionPlan
-type ExecutionStep = planning.ExecutionStep
-type PlannedCall = planning.PlannedCall
-type ExecutionPlanner = planning.ExecutionPlanner
-type Task = planning.Task
-type TaskPlan = planning.TaskPlan
-type TaskDecomposer = planning.TaskDecomposer
-type Subtask = planning.Subtask
-type PlanState = planning.PlanState
-type GoalStatus = planning.GoalStatus
-type Goal = planning.Goal
-type GoalEvent = planning.GoalEvent
-type GoalTracker = planning.GoalTracker
-type GoalOption = planning.GoalOption
-type SuggestedTask = planning.SuggestedTask
-type TaskQueue = planning.TaskQueue
-type ActionRequired = planning.ActionRequired
-type FormField = planning.FormField
-type FormResponse = planning.FormResponse
-type ActionManager = planning.ActionManager
+type (
+	ExecutionPlan    = planning.ExecutionPlan
+	ExecutionStep    = planning.ExecutionStep
+	PlannedCall      = planning.PlannedCall
+	ExecutionPlanner = planning.ExecutionPlanner
+	Task             = planning.Task
+	TaskPlan         = planning.TaskPlan
+	TaskDecomposer   = planning.TaskDecomposer
+	Subtask          = planning.Subtask
+	PlanState        = planning.PlanState
+	GoalStatus       = planning.GoalStatus
+	Goal             = planning.Goal
+	GoalEvent        = planning.GoalEvent
+	GoalTracker      = planning.GoalTracker
+	GoalOption       = planning.GoalOption
+	SuggestedTask    = planning.SuggestedTask
+	TaskQueue        = planning.TaskQueue
+	ActionRequired   = planning.ActionRequired
+	FormField        = planning.FormField
+	FormResponse     = planning.FormResponse
+	ActionManager    = planning.ActionManager
+)
 
-var NewExecutionPlanner = planning.NewExecutionPlanner
-var NewTaskDecomposer = planning.NewTaskDecomposer
-var NewPlanState = planning.NewPlanState
-var DecomposePrompt = planning.DecomposePrompt
-var ParseSubtasks = planning.ParseSubtasks
-var WithPriority = planning.WithPriority
-var WithBudget = planning.WithBudget
-var WithDependencies = planning.WithDependencies
-var WithTags = planning.WithTags
-var NewGoalTracker = planning.NewGoalTracker
-var NewTaskQueue = planning.NewTaskQueue
-var ScanGitTasks = planning.ScanGitTasks
-var ScanTODOs = planning.ScanTODOs
-var ScanTestFailures = planning.ScanTestFailures
-var FormatTasks = planning.FormatTasks
-var NewActionManager = planning.NewActionManager
-var Validate = planning.Validate
-var BuildFormPrompt = planning.BuildFormPrompt
-var FormatResponse = planning.FormatResponse
+var (
+	NewExecutionPlanner = planning.NewExecutionPlanner
+	NewTaskDecomposer   = planning.NewTaskDecomposer
+	NewPlanState        = planning.NewPlanState
+	DecomposePrompt     = planning.DecomposePrompt
+	ParseSubtasks       = planning.ParseSubtasks
+	WithPriority        = planning.WithPriority
+	WithBudget          = planning.WithBudget
+	WithDependencies    = planning.WithDependencies
+	WithTags            = planning.WithTags
+	NewGoalTracker      = planning.NewGoalTracker
+	NewTaskQueue        = planning.NewTaskQueue
+	ScanGitTasks        = planning.ScanGitTasks
+	ScanTODOs           = planning.ScanTODOs
+	ScanTestFailures    = planning.ScanTestFailures
+	FormatTasks         = planning.FormatTasks
+	NewActionManager    = planning.NewActionManager
+	Validate            = planning.Validate
+	BuildFormPrompt     = planning.BuildFormPrompt
+	FormatResponse      = planning.FormatResponse
+)
