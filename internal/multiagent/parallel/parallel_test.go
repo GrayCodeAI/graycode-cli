@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -227,10 +228,13 @@ func TestCleanupRemovesAllWorktrees(t *testing.T) {
 	pool.AddTask("cleanup-a")
 	pool.AddTask("cleanup-b")
 
+	var mu sync.Mutex
 	var paths []string
 	ctx := context.Background()
 	err := pool.Run(ctx, func(_ context.Context, wtPath string, task *Task) (string, error) {
+		mu.Lock()
 		paths = append(paths, wtPath)
+		mu.Unlock()
 		return "ok", nil
 	})
 	if err != nil {
