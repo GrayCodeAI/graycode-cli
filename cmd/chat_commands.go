@@ -1941,7 +1941,7 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: info})
 		return m, nil
 	case "/statusline":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Auto (Off) - all actions require approval | %s %s", m.session.Provider(), m.session.Model())})
+		m.messages = append(m.messages, displayMsg{role: "system", content: statusLineSummary(m)})
 		return m, nil
 	case "/remote-env":
 		m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})

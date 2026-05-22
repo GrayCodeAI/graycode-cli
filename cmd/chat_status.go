@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 func modelStatusMeta(gateway, modelID string) (displayName, contextLabel string) {
@@ -51,7 +52,8 @@ func (m *chatModel) invalidateConnStatus() {
 func (m chatModel) connStatusFingerprint() string {
 	gw, model := m.sessionGatewayModel()
 	creds := strings.Join(hawkconfig.ConfiguredCredentialProviders(), ",")
-	return gw + "\x00" + model + "\x00" + creds
+	used := sessionContextUsedTokens(m.session)
+	return gw + "\x00" + model + "\x00" + creds + "\x00" + fmt.Sprintf("%d", used)
 }
 
 func (m chatModel) sessionGatewayModel() (gateway, model string) {
@@ -99,7 +101,10 @@ func (m chatModel) buildConnectionStatusPlain() string {
 		return gw + " · pick model"
 	}
 	if ctxLabel != "" && ctxLabel != "—" {
-		return fmt.Sprintf("%s · %s · %s ctx", gw, model, ctxLabel)
+		ctxText := formatConnectionContextLabel(m, ctxLabel)
+		if ctxText != "" {
+			return fmt.Sprintf("%s · %s · %s", gw, model, ctxText)
+		}
 	}
 	if gw == "" {
 		return model
@@ -125,18 +130,24 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 	return gateway, model, contextLabel
 }
 
-// renderConnectionStatus returns styled status text and its visible width for layout.
-func (m chatModel) renderConnectionStatus() (string, int) {
+// renderConnectionStatusSplit returns gateway/model and context usage as separate
+// footer segments so context can sit flush on the right edge.
+func (m chatModel) renderConnectionStatusSplit() (modelRendered string, modelVis int, ctxRendered string, ctxVis int) {
 	ctx := context.Background()
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		return "", 0
+		return "", 0, "", 0
 	}
 
 	gw, model, ctxLabel := m.connectionStatusParts()
-	return renderChatConnectionStatus(gw, model, ctxLabel)
+	ctxText := formatConnectionContextLabel(m, ctxLabel)
+	modelRendered, modelVis = renderChatConnectionModel(gw, model)
+	if ctxText != "" {
+		ctxRendered, ctxVis = renderChatConnectionContext(ctxText, contextUsagePercent(m, ctxLabel))
+	}
+	return modelRendered, modelVis, ctxRendered, ctxVis
 }
 
-func renderChatConnectionStatus(gateway, model, ctxLabel string) (string, int) {
+func renderChatConnectionModel(gateway, model string) (string, int) {
 	muted := configMutedStyle().Inline(true)
 	accent := configAccentStyle().Inline(true)
 	active := configActiveStyle().Inline(true)
@@ -174,16 +185,77 @@ func renderChatConnectionStatus(gateway, model, ctxLabel string) (string, int) {
 		b.WriteString(active.Render(model))
 		vis += len(model)
 	}
-	if ctxLabel != "" && ctxLabel != "—" {
-		if vis > 0 {
-			b.WriteString(sep)
-			vis += sepVis
-		}
-		ctxText := ctxLabel + " ctx"
-		b.WriteString(muted.Render(ctxText))
-		vis += len(ctxText)
-	}
 	return b.String(), vis
+}
+
+func renderChatConnectionContext(ctxText string, ctxPct int) (string, int) {
+	if ctxText == "" {
+		return "", 0
+	}
+	styled := contextUsageStyle(ctxPct).Render(ctxText)
+	return styled, len(ctxText)
+}
+
+func renderChatConnectionStatus(gateway, model, ctxText string, ctxPct int) (string, int) {
+	modelRendered, modelVis := renderChatConnectionModel(gateway, model)
+	if ctxText == "" {
+		return modelRendered, modelVis
+	}
+	ctxRendered, ctxVis := renderChatConnectionContext(ctxText, ctxPct)
+	sep := configMutedStyle().Inline(true).Render(" · ")
+	return modelRendered + sep + ctxRendered, modelVis + 3 + ctxVis
+}
+
+func sessionContextUsedTokens(sess *engine.Session) int {
+	if sess == nil {
+		return 0
+	}
+	return engine.EstimateTokens(sess.RawMessages())
+}
+
+func contextUsagePercent(m chatModel, windowLabel string) int {
+	window := parseContextWindowLabel(windowLabel)
+	if window <= 0 {
+		return 0
+	}
+	used := sessionContextUsedTokens(m.session)
+	pct := int(float64(used) / float64(window) * 100)
+	if pct > 999 {
+		return 999
+	}
+	return pct
+}
+
+func formatConnectionContextLabel(m chatModel, windowLabel string) string {
+	windowLabel = strings.TrimSpace(windowLabel)
+	if windowLabel == "" || windowLabel == "—" {
+		return ""
+	}
+	window := parseContextWindowLabel(windowLabel)
+	if window <= 0 {
+		return windowLabel + " ctx"
+	}
+	usedLabel := formatContextUsedLabel(sessionContextUsedTokens(m.session))
+	pct := contextUsagePercent(m, windowLabel)
+	return fmt.Sprintf("%s/%s ctx (%d%%)", usedLabel, windowLabel, pct)
+}
+
+func formatContextUsedLabel(tokens int) string {
+	if tokens <= 0 {
+		return "0k"
+	}
+	return formatModelTableContext(tokens)
+}
+
+func contextUsageStyle(pct int) lipgloss.Style {
+	switch {
+	case pct >= 95:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B")).Inline(true)
+	case pct >= 80:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB347")).Inline(true)
+	default:
+		return configMutedStyle().Inline(true)
+	}
 }
 
 // chatBottomRightStatus is the deployment line on the input bar.

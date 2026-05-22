@@ -812,17 +812,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ghostText.Suggest(content)
 			m.partial.Reset()
 		}
-		// Inline cost summary after each response
-		cost := m.session.Cost.Total()
-		tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
-		elapsed := time.Since(m.toolStartTime)
-		if m.toolStartTime.IsZero() {
-			elapsed = 0
-		}
-		if tokens > 0 {
-			costLine := fmt.Sprintf("$%.3f • %s • %.1fs", cost, formatTokenCount(tokens), elapsed.Seconds())
-			m.messages = append(m.messages, displayMsg{role: "usage", content: costLine})
-		}
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}

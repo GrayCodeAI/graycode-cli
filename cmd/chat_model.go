@@ -36,13 +36,14 @@ var (
 	toolStyle    = lipgloss.NewStyle().Foreground(toolColor).Bold(true)
 	toolDimStyle = lipgloss.NewStyle().Foreground(dimColor)
 
-	slashCmdStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-	slashDescStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-	slashSelCmdStyle  = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	slashSelDescStyle = lipgloss.NewStyle().Foreground(hawkColor)
-	inputBorderStyle  = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(lipgloss.Color("#555555"))
-	ghostHintStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
-	containerErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+	slashCmdStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
+	slashDescStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
+	slashSelCmdStyle    = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	slashSelDescStyle   = lipgloss.NewStyle().Foreground(hawkColor)
+	inputBorderStyle    = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(lipgloss.Color("#555555"))
+	ghostHintStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
+	containerErrStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
+	containerLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#3BAADA")) // softer Docker blue
 )
 
 // hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.
