@@ -828,11 +828,11 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		for _, sm := range saved.Messages {
 			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
 			for _, tc := range sm.ToolUse {
-			em.ToolUse = append(em.ToolUse, tc)
-				}
-				if sm.ToolResult != nil {
-					em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
-				}
+				em.ToolUse = append(em.ToolUse, tc)
+			}
+			if sm.ToolResult != nil {
+				em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
+			}
 			msgs = append(msgs, em)
 			if sm.Role == "user" || sm.Role == "assistant" {
 				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
