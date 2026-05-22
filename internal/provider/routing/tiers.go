@@ -32,8 +32,29 @@ func CostTierOf(modelName string) CostTier {
 	if tier, ok := tierFromCatalogPricing(modelName); ok {
 		return tier
 	}
+	// Last resort: infer tier from common model name patterns.
+	return tierFromName(modelName)
+}
+
+// tierFromName infers cost tier from well-known model name patterns.
+// This is a fallback when the eyrie catalog is unavailable or incomplete.
+func tierFromName(modelName string) CostTier {
+	lower := strings.ToLower(strings.TrimSpace(modelName))
+	for _, pat := range cheapPatterns {
+		if strings.Contains(lower, pat) {
+			return CostTierCheap
+		}
+	}
+	for _, pat := range expensivePatterns {
+		if strings.Contains(lower, pat) {
+			return CostTierExpensive
+		}
+	}
 	return CostTierMid
 }
+
+var cheapPatterns = []string{"haiku", "mini", "flash", "lite", "nano", "micro", "small", "tiny"}
+var expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
 
 func tierFromEyrieModelConfigs(modelName string) (eycatalog.ModelTier, bool) {
 	modelName = strings.TrimSpace(modelName)
