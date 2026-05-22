@@ -35,15 +35,15 @@ func slashCommands() []string {
 var allSlashCommands = []string{
 	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
-	"/copy", "/cost", "/cron", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
+	"/copy", "/cost", "/cron", "/ctx", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 	"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
 	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-	"/hunt", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
+	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/stale", "/stats",
+	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
-	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/undo", "/upgrade", "/usage",
+	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
 }
 
@@ -196,6 +196,10 @@ var slashDescriptions = map[string]string{
 	"/upgrade":         "Check for updates",
 	"/vibe":            "Start vibe coding loop",
 	"/voice":           "Toggle voice input",
+	"/ctx":             "Show conversation context visualization",
+	"/insights":        "Generate session patterns and improvements report",
+	"/spec":            "Generate specification from context",
+	"/ultrareview":     "Deep adversarial code review",
 }
 
 func slashSuggestions(input string) []string {
