@@ -11,7 +11,6 @@ type ToolAggregate struct {
 }
 
 // ToolAggregator collects per-tool call statistics in a thread-safe manner.
-// Inspired by herm's TraceToolSummary pattern for per-tool aggregates.
 type ToolAggregator struct {
 	mu    sync.Mutex
 	tools map[string]*ToolAggregate

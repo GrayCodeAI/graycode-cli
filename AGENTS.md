@@ -129,6 +129,6 @@ Active branch: **`feature/secure-credentials-sandbox`** (hawk + eyrie sibling).
 | Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
 | Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md` |
 
-**Not in this milestone:** conversation DAG as source of truth, langdag Go import.
+**Not in this milestone:** conversation DAG as source of truth.
 
 **`/sandbox` vs Docker:** `/sandbox` toggles **approval mode** in the TUI. **Docker container mode** is the default for bash (`shouldUseContainer`); use `--no-container` for host execution.

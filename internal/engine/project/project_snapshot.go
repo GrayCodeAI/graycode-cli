@@ -9,15 +9,13 @@ import (
 )
 
 // DefaultProjectSnapshotTTL is the default time-to-live for a cached project snapshot.
-// Matches herm's 10s TTL to avoid redundant shell commands when spawning multiple
-// sub-agents against an unchanged repo.
 const DefaultProjectSnapshotTTL = 10 * time.Second
 
 // projectSnapshotCmdTimeout is the per-command timeout for gathering snapshot data.
 const projectSnapshotCmdTimeout = 2 * time.Second
 
 // ProjectSnapshot holds a point-in-time view of project state gathered via shell
-// commands. Inspired by herm's projectSnapshot pattern.
+// commands.
 type ProjectSnapshot struct {
 	DirectoryListing string    // ls -1 output of the project root
 	RecentCommits    string    // git log --oneline -10

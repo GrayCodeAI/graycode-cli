@@ -83,7 +83,7 @@ var commandSubstitutionPatterns = []*regexp.Regexp{
 
 // ContainerExecutor allows BashTool to route commands through a container
 // instead of local execution. When set via context, all commands run inside
-// the container (Docker-first mode, like herm).
+// the container (Docker-first mode).
 type ContainerExecutor interface {
 	Exec(ctx context.Context, command string, timeout time.Duration) (string, error)
 	Running() bool
