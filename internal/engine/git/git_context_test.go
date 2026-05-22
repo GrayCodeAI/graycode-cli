@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +21,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 
 	runInDir := func(args ...string) {
 		t.Helper()
-		cmd := exec.Command(args[0], args[1:]...)
+		cmd := exec.CommandContext(context.Background(), args[0], args[1:]...)
 		cmd.Dir = dir
 		cmd.Env = append(
 			os.Environ(),
@@ -37,7 +38,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 
 	runInDirAs := func(author, email string, args ...string) {
 		t.Helper()
-		cmd := exec.Command(args[0], args[1:]...)
+		cmd := exec.CommandContext(context.Background(), args[0], args[1:]...)
 		cmd.Dir = dir
 		cmd.Env = append(
 			os.Environ(),

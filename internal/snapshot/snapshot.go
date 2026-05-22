@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -191,7 +192,7 @@ func (t *Tracker) Cleanup(maxAge time.Duration) error {
 }
 
 func (t *Tracker) gitWork(args ...string) error {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = t.shadowDir
 	cmd.Env = append(
 		os.Environ(),
@@ -206,7 +207,7 @@ func (t *Tracker) gitWork(args ...string) error {
 }
 
 func (t *Tracker) gitWorkOutput(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = t.shadowDir
 	cmd.Env = append(
 		os.Environ(),

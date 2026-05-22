@@ -17,10 +17,10 @@ type SkillRegistry = scaffold.SkillRegistry
 type FewShotStore = scaffold.FewShotStore
 type FewShotExample = scaffold.FewShotExample
 
-func NewScaffolder() *Scaffolder                        { return scaffold.NewScaffolder() }
-func NewRecipeRegistry(dir string) *RecipeRegistry      { return scaffold.NewRecipeRegistry(dir) }
-func NewPatternLibrary(dir string) *PatternLibrary      { return scaffold.NewPatternLibrary(dir) }
-func NewSkillRegistry(dir string) *SkillRegistry        { return scaffold.NewSkillRegistry(dir) }
-func NewFewShotStore() *FewShotStore                    { return scaffold.NewFewShotStore() }
-func FormatPattern(p *PromptPattern) string             { return scaffold.FormatPattern(p) }
-func FormatSkill(s *Skill) string                       { return scaffold.FormatSkill(s) }
+func NewScaffolder() *Scaffolder                   { return scaffold.NewScaffolder() }
+func NewRecipeRegistry(dir string) *RecipeRegistry { return scaffold.NewRecipeRegistry(dir) }
+func NewPatternLibrary(dir string) *PatternLibrary { return scaffold.NewPatternLibrary(dir) }
+func NewSkillRegistry(dir string) *SkillRegistry   { return scaffold.NewSkillRegistry(dir) }
+func NewFewShotStore() *FewShotStore               { return scaffold.NewFewShotStore() }
+func FormatPattern(p *PromptPattern) string        { return scaffold.FormatPattern(p) }
+func FormatSkill(s *Skill) string                  { return scaffold.FormatSkill(s) }

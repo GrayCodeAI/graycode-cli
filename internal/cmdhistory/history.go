@@ -5,6 +5,7 @@
 package cmdhistory
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"fmt"
@@ -85,7 +86,7 @@ func (s *Store) Record(entry Entry) error {
 		entry.CreatedAt = time.Now().UTC()
 	}
 
-	_, err := s.db.Exec(
+	_, err := s.db.ExecContext(context.Background(),
 		`INSERT INTO entries (id, command, exit_code, duration_ms, cwd, git_branch, session_id, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		entry.ID,
@@ -160,7 +161,7 @@ func (s *Store) Search(query string, opts SearchOpts) ([]Entry, error) {
 		 LIMIT ?`, where,
 	)
 
-	rows, err := s.db.Query(q, args...)
+	rows, err := s.db.QueryContext(context.Background(), q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("search query: %w", err)
 	}
@@ -175,7 +176,7 @@ func (s *Store) Recent(n int) ([]Entry, error) {
 		n = 20
 	}
 
-	rows, err := s.db.Query(
+	rows, err := s.db.QueryContext(context.Background(),
 		`SELECT id, command, exit_code, duration_ms, cwd, git_branch, session_id, created_at
 		 FROM entries
 		 ORDER BY created_at DESC
@@ -195,7 +196,7 @@ func (s *Store) SearchByDir(dir string, limit int) ([]Entry, error) {
 		limit = 50
 	}
 
-	rows, err := s.db.Query(
+	rows, err := s.db.QueryContext(context.Background(),
 		`SELECT id, command, exit_code, duration_ms, cwd, git_branch, session_id, created_at
 		 FROM entries
 		 WHERE cwd = ?
@@ -215,7 +216,7 @@ func (s *Store) Stats() (*HistoryStats, error) {
 	stats := &HistoryStats{}
 
 	// Total and unique command counts, plus success rate.
-	err := s.db.QueryRow(`
+	err := s.db.QueryRowContext(context.Background(), `
 		SELECT
 			COUNT(*) AS total,
 			COUNT(DISTINCT command) AS uniq,
@@ -230,7 +231,7 @@ func (s *Store) Stats() (*HistoryStats, error) {
 	}
 
 	// Top 10 commands by frequency.
-	cmdRows, err := s.db.Query(`
+	cmdRows, err := s.db.QueryContext(context.Background(), `
 		SELECT command, COUNT(*) AS cnt
 		FROM entries
 		GROUP BY command
@@ -254,7 +255,7 @@ func (s *Store) Stats() (*HistoryStats, error) {
 	}
 
 	// Top 10 directories by frequency.
-	dirRows, err := s.db.Query(`
+	dirRows, err := s.db.QueryContext(context.Background(), `
 		SELECT cwd, COUNT(*) AS cnt
 		FROM entries
 		WHERE cwd != ''

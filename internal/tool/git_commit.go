@@ -31,7 +31,7 @@ func AutoCommit(path, toolName, description string) error {
 	}
 
 	// Stage the specific file.
-	add := exec.Command("git", "add", "--", path)
+	add := exec.CommandContext(context.Background(), "git", "add", "--", path)
 	if out, err := add.CombinedOutput(); err != nil {
 		return fmt.Errorf("git add: %s (%w)", strings.TrimSpace(string(out)), err)
 	}
@@ -54,7 +54,7 @@ func AutoCommit(path, toolName, description string) error {
 		}
 	}
 
-	commit := exec.Command("git", "commit", "-m", msg)
+	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg)
 	if out, err := commit.CombinedOutput(); err != nil {
 		return fmt.Errorf("git commit: %s (%w)", strings.TrimSpace(string(out)), err)
 	}
@@ -82,7 +82,7 @@ func RevertLastAutoCommit() error {
 		return fmt.Errorf("HEAD commit is not a hawk auto-commit")
 	}
 
-	revert := exec.Command("git", "revert", "HEAD", "--no-edit")
+	revert := exec.CommandContext(context.Background(), "git", "revert", "HEAD", "--no-edit")
 	if out, err := revert.CombinedOutput(); err != nil {
 		return fmt.Errorf("git revert: %s (%w)", strings.TrimSpace(string(out)), err)
 	}
@@ -92,7 +92,7 @@ func RevertLastAutoCommit() error {
 // IsGitRepo returns true when the current working directory is inside a
 // git repository.
 func IsGitRepo() bool {
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "--is-inside-work-tree")
 	out, err := cmd.CombinedOutput()
 	return err == nil && strings.TrimSpace(string(out)) == "true"
 }
@@ -114,7 +114,7 @@ func autoCommitEnabled(ctx context.Context) bool {
 
 // gitHeadHash returns the abbreviated hash of HEAD.
 func gitHeadHash() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
+	out, err := exec.CommandContext(context.Background(), "git", "rev-parse", "--short", "HEAD").CombinedOutput()
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +123,7 @@ func gitHeadHash() (string, error) {
 
 // gitHeadMessage returns the subject line of the HEAD commit.
 func gitHeadMessage() (string, error) {
-	out, err := exec.Command("git", "log", "-1", "--format=%s").CombinedOutput()
+	out, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%s").CombinedOutput()
 	if err != nil {
 		return "", err
 	}

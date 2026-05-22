@@ -179,7 +179,7 @@ func symlinkSharedDirs(worktreePath string) error {
 			continue
 		}
 		// Check if main repo has this directory
-		mainRepo, err := exec.Command("git", "rev-parse", "--show-toplevel").CombinedOutput()
+		mainRepo, err := exec.CommandContext(context.Background(), "git", "rev-parse", "--show-toplevel").CombinedOutput()
 		if err != nil {
 			continue
 		}

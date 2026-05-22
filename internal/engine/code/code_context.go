@@ -2,6 +2,7 @@ package code
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -411,7 +412,7 @@ func (ce *ContextExtractor) grepForFiles(keywords []string) []string {
 
 	pattern := strings.Join(keywords, "|")
 
-	cmd := exec.Command("grep", "-rl", "--include=*.go", "-E", pattern, ce.ProjectDir)
+	cmd := exec.CommandContext(context.Background(), "grep", "-rl", "--include=*.go", "-E", pattern, ce.ProjectDir)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil

@@ -69,35 +69,35 @@ type Session struct {
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
 
 	// Cost optimization
-	Cascade     *branching.CascadeRouter    // cascade.go — model tier routing
-	Lifecycle   *SessionLifecycle // lifecycle.go — self-improvement loop
-	Reflector   *Reflector        // reflect.go — verbal self-reflection
-	CostTracker *CostTracker      // cost_tracker.go — per-request cost persistence
+	Cascade     *branching.CascadeRouter // cascade.go — model tier routing
+	Lifecycle   *SessionLifecycle        // lifecycle.go — self-improvement loop
+	Reflector   *Reflector               // reflect.go — verbal self-reflection
+	CostTracker *CostTracker             // cost_tracker.go — per-request cost persistence
 
 	// Advanced features
-	Autonomy       AutonomyLevel                // autonomy.go — permission level
-	Sandbox        *DiffSandbox                 // diffsandbox.go — staged file changes
-	Plan           *PlanState                    // subtask.go — user-activated plan
-	Beliefs        *BeliefState                  // belief.go — discovered knowledge
-	Critic         *Critic                        // critic.go — patch pre-screening
-	Backtrack      *BacktrackEngine              // backtrack.go — decision recording
-	Limits         *LimitTracker                  // limits.go — safety limits
-	Teach          TeachConfig                    // teach.go — explanation depth
-	Trajectory     *TrajectoryDistiller           // trajectory.go — multi-run distillation
-	Shadow         *branching.ShadowWorkspace     // shadow.go — edit pre-validation
-	Snapshots      SnapshotTracker                // snapshot integration for auto-tracking
-	ConvoDAG       *storage.DAG                   // conversation DAG for branching/forking
-	Sleeptime      *memory.SleeptimeAgent         // sleeptime.go — background memory consolidation
-	Activity       *memory.ActivityTracker        // activity.go — memory save nudging (Engram pattern)
-	SkillDistiller *memory.SkillDistiller         // skill_distill.go — auto-skill extraction
-	Tracer         *oteltrace.Tracer              // oteltrace.go — distributed tracing spans
-	LintLoop       *LintLoop                      // lint_loop.go — auto lint-fix reflected messages
-	TestLoop       *TestLoop               // test_loop.go — auto test-fix loop
-	FileMentions   *FileMentionDetector    // file_mentions.go — detect referenced files
-	ResponseCache  *ResponseCache          // response_cache.go — cache similar prompts
-	Pipeline       *IntegrationPipeline    // integration.go — unified feature orchestration
-	Files          *FileTracker            // compact_files.go — cumulative file tracking across compactions
-	Steering       *SteeringQueue          // steering.go — user guidance injection between tool batches
+	Autonomy       AutonomyLevel              // autonomy.go — permission level
+	Sandbox        *DiffSandbox               // diffsandbox.go — staged file changes
+	Plan           *PlanState                 // subtask.go — user-activated plan
+	Beliefs        *BeliefState               // belief.go — discovered knowledge
+	Critic         *Critic                    // critic.go — patch pre-screening
+	Backtrack      *BacktrackEngine           // backtrack.go — decision recording
+	Limits         *LimitTracker              // limits.go — safety limits
+	Teach          TeachConfig                // teach.go — explanation depth
+	Trajectory     *TrajectoryDistiller       // trajectory.go — multi-run distillation
+	Shadow         *branching.ShadowWorkspace // shadow.go — edit pre-validation
+	Snapshots      SnapshotTracker            // snapshot integration for auto-tracking
+	ConvoDAG       *storage.DAG               // conversation DAG for branching/forking
+	Sleeptime      *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
+	Activity       *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
+	SkillDistiller *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
+	Tracer         *oteltrace.Tracer          // oteltrace.go — distributed tracing spans
+	LintLoop       *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
+	TestLoop       *TestLoop                  // test_loop.go — auto test-fix loop
+	FileMentions   *FileMentionDetector       // file_mentions.go — detect referenced files
+	ResponseCache  *ResponseCache             // response_cache.go — cache similar prompts
+	Pipeline       *IntegrationPipeline       // integration.go — unified feature orchestration
+	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
+	Steering       *SteeringQueue             // steering.go — user guidance injection between tool batches
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.

@@ -1,6 +1,7 @@
 package code
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -127,7 +128,7 @@ func lookupTestStatus(file, funcName string) string {
 	if idx := strings.LastIndex(file, "/"); idx >= 0 {
 		dir = file[:idx]
 	}
-	cmd := exec.Command("go", "test", "-run", "^"+funcName+"$", "-count=1", "-timeout=10s", dir)
+	cmd := exec.CommandContext(context.Background(), "go", "test", "-run", "^"+funcName+"$", "-count=1", "-timeout=10s", dir)
 	err := cmd.Run()
 	if err == nil {
 		return "PASS"
@@ -375,7 +376,7 @@ type blameEntry struct {
 }
 
 func getGitBlame(file string) []blameEntry {
-	cmd := exec.Command("git", "blame", "--porcelain", file)
+	cmd := exec.CommandContext(context.Background(), "git", "blame", "--porcelain", file)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil
@@ -476,7 +477,7 @@ func loadCoverageData(file string) map[string]float64 {
 	}
 	coverFile := dir + "/coverage.out"
 
-	cmd := exec.Command("cat", coverFile)
+	cmd := exec.CommandContext(context.Background(), "cat", coverFile)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil

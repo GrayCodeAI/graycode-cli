@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -25,7 +26,7 @@ func (ac *AutoCommitter) CommitIfChanged(description string) error {
 		return nil
 	}
 	// Check if there are changes
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := exec.CommandContext(context.Background(), "git", "status", "--porcelain")
 	cmd.Dir = ac.RepoDir
 	out, err := cmd.Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
@@ -33,7 +34,7 @@ func (ac *AutoCommitter) CommitIfChanged(description string) error {
 	}
 
 	// Stage all changes
-	stage := exec.Command("git", "add", "-A")
+	stage := exec.CommandContext(context.Background(), "git", "add", "-A")
 	stage.Dir = ac.RepoDir
 	if err := stage.Run(); err != nil {
 		return err
@@ -43,14 +44,14 @@ func (ac *AutoCommitter) CommitIfChanged(description string) error {
 	msg := ac.generateMessage(description)
 
 	// Commit
-	commit := exec.Command("git", "commit", "-m", msg, "--no-verify")
+	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg, "--no-verify")
 	commit.Dir = ac.RepoDir
 	return commit.Run()
 }
 
 // Undo reverts the last auto-commit.
 func (ac *AutoCommitter) Undo() error {
-	cmd := exec.Command("git", "reset", "--soft", "HEAD~1")
+	cmd := exec.CommandContext(context.Background(), "git", "reset", "--soft", "HEAD~1")
 	cmd.Dir = ac.RepoDir
 	return cmd.Run()
 }

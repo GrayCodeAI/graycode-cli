@@ -1,6 +1,7 @@
 package parallel
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,7 +22,7 @@ func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 	// already created it, so use a subdirectory.
 	wtPath := filepath.Join(dir, "work")
 
-	cmd := exec.Command("git", "worktree", "add", "-b", branchName, wtPath, baseBranch)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branchName, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -36,12 +37,12 @@ func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 // It is safe to call on a path that has already been removed.
 func removeWorktree(repoDir, worktreePath string) error {
 	// Remove the worktree reference from git.
-	cmd := exec.Command("git", "worktree", "remove", "--force", worktreePath)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", worktreePath)
 	cmd.Dir = repoDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// If the directory is already gone, git may complain. Try pruning instead.
-		prune := exec.Command("git", "worktree", "prune")
+		prune := exec.CommandContext(context.Background(), "git", "worktree", "prune")
 		prune.Dir = repoDir
 		_ = prune.Run()
 
@@ -71,14 +72,14 @@ func removeWorktree(repoDir, worktreePath string) error {
 // The caller must ensure no uncommitted changes exist in the main repo.
 func mergeWorktree(repoDir, baseBranch, taskBranch string) error {
 	// Checkout the base branch.
-	checkout := exec.Command("git", "checkout", baseBranch)
+	checkout := exec.CommandContext(context.Background(), "git", "checkout", baseBranch)
 	checkout.Dir = repoDir
 	if out, err := checkout.CombinedOutput(); err != nil {
 		return fmt.Errorf("git checkout %s: %s: %w", baseBranch, strings.TrimSpace(string(out)), err)
 	}
 
 	// Merge the task branch.
-	merge := exec.Command("git", "merge", "--no-ff", taskBranch, "-m",
+	merge := exec.CommandContext(context.Background(), "git", "merge", "--no-ff", taskBranch, "-m",
 		fmt.Sprintf("Merge parallel task branch %s", taskBranch))
 	merge.Dir = repoDir
 	if out, err := merge.CombinedOutput(); err != nil {

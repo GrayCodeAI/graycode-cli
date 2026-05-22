@@ -3,6 +3,7 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -343,7 +344,7 @@ func FormatCIStatus(status *CIStatus) string {
 // DetectProvider parses .git/config or uses gh to detect provider/owner/repo.
 func DetectProvider(projectDir string) (string, string, string) {
 	// Try gh repo view first
-	cmd := exec.Command("gh", "repo", "view", "--json", "owner,name,url")
+	cmd := exec.CommandContext(context.Background(), "gh", "repo", "view", "--json", "owner,name,url")
 	cmd.Dir = projectDir
 	out, err := cmd.Output()
 	if err == nil {
@@ -355,7 +356,7 @@ func DetectProvider(projectDir string) (string, string, string) {
 
 	// Fallback: parse .git/config
 	gitConfigPath := filepath.Join(projectDir, ".git", "config")
-	cmd = exec.Command("cat", gitConfigPath)
+	cmd = exec.CommandContext(context.Background(), "cat", gitConfigPath)
 	out, err = cmd.Output()
 	if err != nil {
 		return "", "", ""
@@ -369,7 +370,7 @@ func (gp *GitProvider) runGH(args ...string) (string, error) {
 	repoFlag := fmt.Sprintf("%s/%s", gp.Owner, gp.Repo)
 	fullArgs := append(args, "--repo", repoFlag)
 
-	cmd := exec.Command("gh", fullArgs...)
+	cmd := exec.CommandContext(context.Background(), "gh", fullArgs...)
 	if gp.Token != "" {
 		cmd.Env = append(cmd.Environ(), "GH_TOKEN="+gp.Token)
 	}

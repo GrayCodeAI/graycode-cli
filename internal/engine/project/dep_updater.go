@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -90,7 +91,7 @@ func (du *DependencyUpdater) ListOutdated() ([]Dependency, error) {
 }
 
 func (du *DependencyUpdater) listOutdatedGo() ([]Dependency, error) {
-	cmd := exec.Command("go", "list", "-m", "-u", "all")
+	cmd := exec.CommandContext(context.Background(), "go", "list", "-m", "-u", "all")
 	cmd.Dir = du.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -130,7 +131,7 @@ func (du *DependencyUpdater) listOutdatedGo() ([]Dependency, error) {
 }
 
 func (du *DependencyUpdater) listOutdatedJS() ([]Dependency, error) {
-	cmd := exec.Command("npm", "outdated", "--json")
+	cmd := exec.CommandContext(context.Background(), "npm", "outdated", "--json")
 	cmd.Dir = du.ProjectDir
 	output, err := cmd.Output()
 	// npm outdated exits with code 1 when there are outdated packages
@@ -164,7 +165,7 @@ func (du *DependencyUpdater) listOutdatedJS() ([]Dependency, error) {
 }
 
 func (du *DependencyUpdater) listOutdatedPython() ([]Dependency, error) {
-	cmd := exec.Command("pip", "list", "--outdated", "--format=json")
+	cmd := exec.CommandContext(context.Background(), "pip", "list", "--outdated", "--format=json")
 	cmd.Dir = du.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -197,7 +198,7 @@ func (du *DependencyUpdater) listOutdatedPython() ([]Dependency, error) {
 }
 
 func (du *DependencyUpdater) listOutdatedRust() ([]Dependency, error) {
-	cmd := exec.Command("cargo", "outdated", "--format=json")
+	cmd := exec.CommandContext(context.Background(), "cargo", "outdated", "--format=json")
 	cmd.Dir = du.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -340,13 +341,13 @@ func (du *DependencyUpdater) ApplyUpdate(dep Dependency) error {
 	switch du.Language {
 	case "go":
 		pkg := dep.Name + "@" + dep.LatestVersion
-		cmd = exec.Command("go", "get", pkg)
+		cmd = exec.CommandContext(context.Background(), "go", "get", pkg)
 	case "javascript":
 		pkg := dep.Name + "@" + dep.LatestVersion
-		cmd = exec.Command("npm", "install", pkg)
+		cmd = exec.CommandContext(context.Background(), "npm", "install", pkg)
 	case "python":
 		pkg := dep.Name + "==" + dep.LatestVersion
-		cmd = exec.Command("pip", "install", pkg)
+		cmd = exec.CommandContext(context.Background(), "pip", "install", pkg)
 	case "rust":
 		return du.applyRustUpdate(dep)
 	default:

@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -589,7 +590,7 @@ func (dr *DiffReporter) addUntrackedFiles(report *WorkspaceDiffReport, untracked
 
 // runGit executes a git command in the project directory and returns output.
 func (dr *DiffReporter) runGit(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = dr.ProjectDir
 	out, err := cmd.Output()
 	if err != nil {

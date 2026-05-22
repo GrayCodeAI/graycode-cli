@@ -1,6 +1,7 @@
 package planning
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -252,7 +253,7 @@ func TestScanGitTasksUncommittedChanges(t *testing.T) {
 
 	// Initialize a git repo with uncommitted changes
 	runGit := func(args ...string) {
-		c := exec.Command("git", args...)
+		c := exec.CommandContext(context.Background(), "git", args...)
 		c.Dir = dir
 		c.Run()
 	}

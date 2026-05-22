@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -910,7 +911,7 @@ func TestClassifyNonConventional(t *testing.T) {
 
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GIT_AUTHOR_DATE=2024-01-01T00:00:00Z", "GIT_COMMITTER_DATE=2024-01-01T00:00:00Z")
 	output, err := cmd.CombinedOutput()

@@ -15,6 +15,10 @@ type FailurePattern = session.FailurePattern
 type SessionConvention = session.SessionConvention
 type LearnerStats = session.LearnerStats
 
-func NewTimeline(sessionID string) *Timeline                       { return session.NewTimeline(sessionID) }
-func NewSessionCompressor(strategy CompressStrategy) *SessionCompressor { return session.NewSessionCompressor(strategy) }
-func NewCrossSessionLearner(dir string) *CrossSessionLearner       { return session.NewCrossSessionLearner(dir) }
+func NewTimeline(sessionID string) *Timeline { return session.NewTimeline(sessionID) }
+func NewSessionCompressor(strategy CompressStrategy) *SessionCompressor {
+	return session.NewSessionCompressor(strategy)
+}
+func NewCrossSessionLearner(dir string) *CrossSessionLearner {
+	return session.NewCrossSessionLearner(dir)
+}

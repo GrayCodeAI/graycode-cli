@@ -27,5 +27,5 @@ func NewSubAgentBudget(mode SubAgentMode, cfg SubAgentConfig) *SubAgentBudget {
 func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 	return agent.FilterToolsForMode(mode, available)
 }
-func NewBackgroundAgentPool() *BackgroundAgentPool { return agent.NewBackgroundAgentPool() }
+func NewBackgroundAgentPool() *BackgroundAgentPool    { return agent.NewBackgroundAgentPool() }
 func FormatResults(results []BackgroundResult) string { return agent.FormatResults(results) }

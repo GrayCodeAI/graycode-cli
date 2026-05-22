@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"context"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -826,14 +827,14 @@ func checkGoCompilation(code string) []GenIssue {
 	}
 
 	// Initialize a module in the temp directory
-	cmd := exec.Command("go", "mod", "init", "temp")
+	cmd := exec.CommandContext(context.Background(), "go", "mod", "init", "temp")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
 		return nil
 	}
 
 	// Try to build
-	cmd = exec.Command("go", "build", ".")
+	cmd = exec.CommandContext(context.Background(), "go", "build", ".")
 	cmd.Dir = tmpDir
 	output, err := cmd.CombinedOutput()
 	if err == nil {

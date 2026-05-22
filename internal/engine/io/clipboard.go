@@ -113,18 +113,18 @@ func ReadClipboard() (string, error) {
 
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("pbpaste")
+		cmd = exec.CommandContext(context.Background(), "pbpaste")
 	case "linux":
 		// Try xclip first, fall back to xsel.
 		if _, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.Command("xclip", "-selection", "clipboard", "-o")
+			cmd = exec.CommandContext(context.Background(), "xclip", "-selection", "clipboard", "-o")
 		} else if _, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.Command("xsel", "--clipboard", "--output")
+			cmd = exec.CommandContext(context.Background(), "xsel", "--clipboard", "--output")
 		} else {
 			return "", fmt.Errorf("clipboard: no clipboard tool found (install xclip or xsel)")
 		}
 	case "windows":
-		cmd = exec.Command("powershell", "-command", "Get-Clipboard")
+		cmd = exec.CommandContext(context.Background(), "powershell", "-command", "Get-Clipboard")
 	default:
 		return "", fmt.Errorf("clipboard: unsupported platform %s", runtime.GOOS)
 	}
@@ -146,17 +146,17 @@ func WriteClipboard(content string) error {
 
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("pbcopy")
+		cmd = exec.CommandContext(context.Background(), "pbcopy")
 	case "linux":
 		if _, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.Command("xclip", "-selection", "clipboard")
+			cmd = exec.CommandContext(context.Background(), "xclip", "-selection", "clipboard")
 		} else if _, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.Command("xsel", "--clipboard", "--input")
+			cmd = exec.CommandContext(context.Background(), "xsel", "--clipboard", "--input")
 		} else {
 			return fmt.Errorf("clipboard: no clipboard tool found (install xclip or xsel)")
 		}
 	case "windows":
-		cmd = exec.Command("powershell", "-command", "Set-Clipboard", "-Value", content)
+		cmd = exec.CommandContext(context.Background(), "powershell", "-command", "Set-Clipboard", "-Value", content)
 		return cmd.Run()
 	default:
 		return fmt.Errorf("clipboard: unsupported platform %s", runtime.GOOS)

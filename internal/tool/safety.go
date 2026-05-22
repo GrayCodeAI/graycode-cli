@@ -319,12 +319,13 @@ func validateURLPublic(ctx context.Context, rawURL string) error {
 	}
 
 	// Resolve the hostname to check against private ranges.
-	ips, err := net.LookupIP(host)
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		// If DNS fails, allow the request — the HTTP client will fail anyway.
 		return nil
 	}
-	for _, ip := range ips {
+	for _, addr := range addrs {
+		ip := addr.IP
 		for _, block := range privateIPBlocks {
 			if block.Contains(ip) {
 				return fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, ip)

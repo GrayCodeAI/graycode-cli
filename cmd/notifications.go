@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os/exec"
 	"runtime"
 	"time"
@@ -19,12 +20,12 @@ func notifyCompletion(duration time.Duration) {
 	switch runtime.GOOS {
 	case "darwin":
 		// macOS: use osascript for native notification
-		_ = exec.Command(
+		_ = exec.CommandContext(context.Background(),
 			"osascript", "-e",
 			`display notification "`+msg+`" with title "Hawk"`,
 		).Start()
 	case "linux":
 		// Linux: use notify-send if available
-		_ = exec.Command("notify-send", "Hawk", msg).Start()
+		_ = exec.CommandContext(context.Background(), "notify-send", "Hawk", msg).Start()
 	}
 }

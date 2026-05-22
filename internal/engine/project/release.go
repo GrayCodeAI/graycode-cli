@@ -2,6 +2,7 @@ package project
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -68,7 +69,7 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 	defer rm.mu.Unlock()
 
 	// Try git tags first
-	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
+	cmd := exec.CommandContext(context.Background(), "git", "describe", "--tags", "--abbrev=0")
 	cmd.Dir = rm.ProjectDir
 	if output, err := cmd.Output(); err == nil {
 		version := strings.TrimSpace(string(output))
@@ -208,7 +209,7 @@ func (rm *ReleaseManager) GatherChanges(sinceTag string) ([]ChangeEntry, error) 
 	}
 
 	// Get commits with hash, author, and message
-	cmd := exec.Command("git", "log", logRange, "--pretty=format:%H|%an|%s%n%b%n---END---")
+	cmd := exec.CommandContext(context.Background(), "git", "log", logRange, "--pretty=format:%H|%an|%s%n%b%n---END---")
 	cmd.Dir = rm.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -399,11 +400,11 @@ func (rm *ReleaseManager) PrepareRelease() (*Release, error) {
 	if currentVersion != "0.0.0" {
 		// Try with v prefix first, then without
 		sinceTag = "v" + currentVersion
-		cmd := exec.Command("git", "rev-parse", sinceTag)
+		cmd := exec.CommandContext(context.Background(), "git", "rev-parse", sinceTag)
 		cmd.Dir = rm.ProjectDir
 		if err := cmd.Run(); err != nil {
 			sinceTag = currentVersion
-			cmd2 := exec.Command("git", "rev-parse", sinceTag)
+			cmd2 := exec.CommandContext(context.Background(), "git", "rev-parse", sinceTag)
 			cmd2.Dir = rm.ProjectDir
 			if err := cmd2.Run(); err != nil {
 				sinceTag = ""
@@ -468,7 +469,7 @@ func (rm *ReleaseManager) gatherStats(sinceTag string, commitCount, contributorC
 		diffRange = "HEAD"
 	}
 
-	cmd := exec.Command("git", "diff", "--stat", diffRange)
+	cmd := exec.CommandContext(context.Background(), "git", "diff", "--stat", diffRange)
 	cmd.Dir = rm.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -672,7 +673,7 @@ func (rm *ReleaseManager) ValidateRelease(release *Release) []string {
 	}
 
 	// Check for uncommitted files
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := exec.CommandContext(context.Background(), "git", "status", "--porcelain")
 	cmd.Dir = rm.ProjectDir
 	output, err := cmd.Output()
 	if err == nil && strings.TrimSpace(string(output)) != "" {

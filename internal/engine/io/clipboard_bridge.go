@@ -1,6 +1,7 @@
 package io
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 )
@@ -12,17 +13,17 @@ type ClipboardBridge struct{}
 // ReadClipboard returns the current clipboard content.
 func (cb *ClipboardBridge) ReadClipboard() (string, error) {
 	// macOS
-	out, err := exec.Command("pbpaste").Output()
+	out, err := exec.CommandContext(context.Background(), "pbpaste").Output()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
 	// Linux (xclip)
-	out, err = exec.Command("xclip", "-selection", "clipboard", "-o").Output()
+	out, err = exec.CommandContext(context.Background(), "xclip", "-selection", "clipboard", "-o").Output()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
 	// Linux (xsel)
-	out, err = exec.Command("xsel", "--clipboard", "--output").Output()
+	out, err = exec.CommandContext(context.Background(), "xsel", "--clipboard", "--output").Output()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
@@ -32,13 +33,13 @@ func (cb *ClipboardBridge) ReadClipboard() (string, error) {
 // WriteClipboard sets the clipboard content.
 func (cb *ClipboardBridge) WriteClipboard(content string) error {
 	// macOS
-	cmd := exec.Command("pbcopy")
+	cmd := exec.CommandContext(context.Background(), "pbcopy")
 	cmd.Stdin = strings.NewReader(content)
 	if err := cmd.Run(); err == nil {
 		return nil
 	}
 	// Linux (xclip)
-	cmd = exec.Command("xclip", "-selection", "clipboard")
+	cmd = exec.CommandContext(context.Background(), "xclip", "-selection", "clipboard")
 	cmd.Stdin = strings.NewReader(content)
 	return cmd.Run()
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -93,7 +94,7 @@ func fixReview(store *ReviewStore, r *ReviewRecord) error {
 		hawkBin = "hawk"
 	}
 
-	cmd := exec.Command(hawkBin, execArgs...)
+	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

@@ -2,6 +2,7 @@ package planning
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -83,7 +84,7 @@ func ScanGitTasks(projectDir string) []*SuggestedTask {
 	var tasks []*SuggestedTask
 
 	// Check for uncommitted changes
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := exec.CommandContext(context.Background(), "git", "status", "--porcelain")
 	cmd.Dir = projectDir
 	out, err := cmd.Output()
 	if err == nil && len(strings.TrimSpace(string(out))) > 0 {
@@ -101,7 +102,7 @@ func ScanGitTasks(projectDir string) []*SuggestedTask {
 	}
 
 	// Check for merge conflicts
-	cmd = exec.Command("git", "diff", "--name-only", "--diff-filter=U")
+	cmd = exec.CommandContext(context.Background(), "git", "diff", "--name-only", "--diff-filter=U")
 	cmd.Dir = projectDir
 	out, err = cmd.Output()
 	if err == nil && len(strings.TrimSpace(string(out))) > 0 {
@@ -124,7 +125,7 @@ func ScanGitTasks(projectDir string) []*SuggestedTask {
 	}
 
 	// Check if behind remote
-	cmd = exec.Command("git", "rev-list", "--count", "HEAD..@{upstream}")
+	cmd = exec.CommandContext(context.Background(), "git", "rev-list", "--count", "HEAD..@{upstream}")
 	cmd.Dir = projectDir
 	out, err = cmd.Output()
 	if err == nil {
@@ -144,7 +145,7 @@ func ScanGitTasks(projectDir string) []*SuggestedTask {
 	}
 
 	// Check for stale branches (merged branches that haven't been deleted)
-	cmd = exec.Command("git", "branch", "--merged", "HEAD")
+	cmd = exec.CommandContext(context.Background(), "git", "branch", "--merged", "HEAD")
 	cmd.Dir = projectDir
 	out, err = cmd.Output()
 	if err == nil {
@@ -313,15 +314,15 @@ func ScanTestFailures(projectDir string) []*SuggestedTask {
 
 	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err == nil {
 		// Go project — run tests with short flag and timeout
-		cmd = exec.Command("go", "test", "-short", "-timeout", "30s", "-json", "./...")
+		cmd = exec.CommandContext(context.Background(), "go", "test", "-short", "-timeout", "30s", "-json", "./...")
 		cmd.Dir = projectDir
 	} else if _, err := os.Stat(filepath.Join(projectDir, "package.json")); err == nil {
 		// Node project
-		cmd = exec.Command("npx", "jest", "--passWithNoTests", "--no-coverage", "--json")
+		cmd = exec.CommandContext(context.Background(), "npx", "jest", "--passWithNoTests", "--no-coverage", "--json")
 		cmd.Dir = projectDir
 	} else if _, err := os.Stat(filepath.Join(projectDir, "Cargo.toml")); err == nil {
 		// Rust project
-		cmd = exec.Command("cargo", "test", "--no-run")
+		cmd = exec.CommandContext(context.Background(), "cargo", "test", "--no-run")
 		cmd.Dir = projectDir
 	} else {
 		return tasks

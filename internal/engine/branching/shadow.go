@@ -1,6 +1,7 @@
 package branching
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -105,7 +106,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 		defer func() { _ = os.Remove(modPath) }()
 	}
 
-	cmd := exec.Command("go", "vet", "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	if err == nil {
@@ -125,7 +126,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 
 // shadowValidatePython runs `python3 -c "import py_compile; ..."` on the temp file.
 func shadowValidatePython(tmpPath, origPath string) []ValidationError {
-	cmd := exec.Command("python3", "-c",
+	cmd := exec.CommandContext(context.Background(), "python3", "-c",
 		fmt.Sprintf("import py_compile; py_compile.compile('%s', doraise=True)", tmpPath))
 	output, err := cmd.CombinedOutput()
 	if err == nil {
@@ -141,7 +142,7 @@ func shadowValidatePython(tmpPath, origPath string) []ValidationError {
 
 // shadowValidateTS runs `npx tsc --noEmit` on the temp file.
 func shadowValidateTS(tmpPath, origPath string) []ValidationError {
-	cmd := exec.Command("npx", "tsc", "--noEmit", "--allowJs", tmpPath)
+	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", tmpPath)
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil

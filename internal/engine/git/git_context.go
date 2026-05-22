@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -57,7 +58,7 @@ func NewGitContext(repoDir string) *GitContext {
 
 // runGit executes a git command in the repo directory and returns its output.
 func (gc *GitContext) runGit(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = gc.RepoDir
 	out, err := cmd.Output()
 	if err != nil {

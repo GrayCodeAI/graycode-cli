@@ -16,7 +16,7 @@ type TestResult = validation.TestResult
 type LintLoop = validation.LintLoop
 type LintResult = validation.LintResult
 
-func NewGenValidator() *GenValidator           { return validation.NewGenValidator() }
-func NewSchemaValidator() *SchemaValidator     { return validation.NewSchemaValidator() }
-func NewTestLoop() *TestLoop                   { return validation.NewTestLoop() }
-func NewLintLoop() *LintLoop                   { return validation.NewLintLoop() }
+func NewGenValidator() *GenValidator       { return validation.NewGenValidator() }
+func NewSchemaValidator() *SchemaValidator { return validation.NewSchemaValidator() }
+func NewTestLoop() *TestLoop               { return validation.NewTestLoop() }
+func NewLintLoop() *LintLoop               { return validation.NewLintLoop() }

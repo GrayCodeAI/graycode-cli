@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -95,7 +96,7 @@ func GitContext() string {
 }
 
 func gitCmd(args ...string) (string, error) {
-	out, err := exec.Command("git", args...).Output()
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
 	return strings.TrimSpace(string(out)), err
 }
 

@@ -81,7 +81,7 @@ func BuildCompactPrompt(variant CompactVariant) string {
 type CompactVariant int
 
 const (
-	CompactBase    CompactVariant = iota
+	CompactBase CompactVariant = iota
 	CompactPartial
 	CompactUpTo
 )

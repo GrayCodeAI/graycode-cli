@@ -28,5 +28,3 @@ func TestFormatCostDisplay(t *testing.T) {
 		})
 	}
 }
-
-

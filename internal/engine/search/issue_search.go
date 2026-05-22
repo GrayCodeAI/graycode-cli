@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -250,7 +251,7 @@ func (idx *IssueIndex) ImportFromGitHub(projectDir string) error {
 		return fmt.Errorf("gh CLI not found: %w", err)
 	}
 
-	cmd := exec.Command(
+	cmd := exec.CommandContext(context.Background(),
 		"gh", "issue", "list",
 		"--state", "all",
 		"--limit", "200",
@@ -296,7 +297,7 @@ var commitFixRef = regexp.MustCompile(`(?i)(?:fix(?:es|ed)?|clos(?:es|ed)?|resol
 // ImportFromCommits extracts issue resolution info from git commit history.
 // It parses "fixes #N" style references and maps them to commit messages.
 func (idx *IssueIndex) ImportFromCommits(projectDir string) error {
-	cmd := exec.Command("git", "log", "--oneline", "--all", "-500")
+	cmd := exec.CommandContext(context.Background(), "git", "log", "--oneline", "--all", "-500")
 	cmd.Dir = projectDir
 
 	output, err := cmd.Output()

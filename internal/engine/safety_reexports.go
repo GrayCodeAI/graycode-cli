@@ -50,6 +50,6 @@ var (
 	ShouldProceed         = safety.ShouldProceed
 	PresetConfig          = safety.PresetConfig
 	ParseAutonomyLevel    = safety.ParseAutonomyLevel
-	ToolSummary          = safety.ToolSummary
-	ToolNeedsPermission  = safety.ToolNeedsPermission
+	ToolSummary           = safety.ToolSummary
+	ToolNeedsPermission   = safety.ToolNeedsPermission
 )
