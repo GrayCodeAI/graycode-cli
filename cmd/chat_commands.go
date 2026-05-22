@@ -55,6 +55,19 @@ func (m *chatModel) slashSuggestionsFor(input string) []string {
 	return m.slashSugCache
 }
 
+// slashMenuOpen is true while the / command picker is visible (Cursor hides the footer then).
+func (m *chatModel) slashMenuOpen() bool {
+	return len(m.slashSuggestionsFor(m.input.Value())) > 0
+}
+
+func (m *chatModel) visibleSlashSuggestionLines() int {
+	n := len(m.slashSuggestionsFor(m.input.Value()))
+	if n > 6 {
+		return 6
+	}
+	return n
+}
+
 func (m *chatModel) syncInputLayout() bool {
 	if m.configOpen {
 		return false
@@ -63,10 +76,7 @@ func (m *chatModel) syncInputLayout() bool {
 	if lines > 10 {
 		lines = 10
 	}
-	visible := len(m.slashSuggestionsFor(m.input.Value()))
-	if visible > 6 {
-		visible = 6
-	}
+	visible := m.visibleSlashSuggestionLines()
 	key := lines<<16 | visible
 	if key == m.layoutKey {
 		return false
