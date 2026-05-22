@@ -6,6 +6,7 @@ package routing
 import (
 	"context"
 	"sort"
+	"sync"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 )
@@ -21,15 +22,23 @@ type ModelInfo struct {
 	Recommended bool    `json:"recommended,omitempty"`
 }
 
+var (
+	catalogOnce   sync.Once
+	cachedCatalog *catalog.CompiledCatalogV1
+)
+
 func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
-	compiled, err := catalog.LoadCatalogV1(context.Background(), catalog.LoadCatalogV1Options{
-		CachePath:    catalog.DefaultCachePath(),
-		RequireCache: false,
+	catalogOnce.Do(func() {
+		compiled, err := catalog.LoadCatalogV1(context.Background(), catalog.LoadCatalogV1Options{
+			CachePath:    catalog.DefaultCachePath(),
+			RequireCache: false,
+		})
+		if err != nil {
+			return
+		}
+		cachedCatalog = compiled
 	})
-	if err != nil {
-		return nil
-	}
-	return compiled
+	return cachedCatalog
 }
 
 func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelInfo {

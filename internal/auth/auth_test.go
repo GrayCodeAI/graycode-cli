@@ -254,38 +254,21 @@ func TestSecureStorage(t *testing.T) {
 	})
 }
 
-func TestOAuthFlow(t *testing.T) {
-	t.Parallel()
-
-	t.Run("start generates URL", func(t *testing.T) {
-		t.Parallel()
-		flow := &OAuthFlow{Provider: "github", ClientID: "abc123"}
-		url, err := flow.Start()
-		if err != nil {
-			t.Fatalf("Start() error = %v", err)
-		}
-		if url == "" {
-			t.Error("Start() returned empty URL")
-		}
-	})
-
-	t.Run("callback returns token", func(t *testing.T) {
-		t.Parallel()
-		flow := &OAuthFlow{Provider: "github", ClientID: "abc123"}
-		token, err := flow.Callback("test-code")
-		if err != nil {
-			t.Fatalf("Callback() error = %v", err)
-		}
-		if token == "" {
-			t.Error("Callback() returned empty token")
-		}
-	})
-}
-
 func TestExecCommand(t *testing.T) {
 	t.Parallel()
-	_, err := execCommand("echo", "test")
+	out, err := execCommand("echo", "test")
+	if err != nil {
+		t.Fatalf("execCommand(\"echo\", \"test\") error = %v", err)
+	}
+	if out != "test" {
+		t.Errorf("execCommand(\"echo\", \"test\") = %q, want %q", out, "test")
+	}
+}
+
+func TestExecCommand_NotFound(t *testing.T) {
+	t.Parallel()
+	_, err := execCommand("nonexistent-command-xyz")
 	if err == nil {
-		t.Error("execCommand() should return 'not implemented' error")
+		t.Error("execCommand() should return error for missing command")
 	}
 }

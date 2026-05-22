@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"context"
 	"sort"
 	"strings"
 
@@ -117,14 +116,7 @@ func SuggestTierForTask(taskType string) eycatalog.ModelTier {
 
 // AllCatalogModelNames returns model IDs from the eyrie catalog cache.
 func AllCatalogModelNames() []string {
-	compiled, err := eycatalog.LoadCatalogV1(context.Background(), eycatalog.LoadCatalogV1Options{
-		CachePath:    eycatalog.DefaultCachePath(),
-		RequireCache: false,
-	})
-	if err != nil {
-		return nil
-	}
-	return catalogModelNames(compiled)
+	return catalogModelNames(eyrieCatalogV1())
 }
 
 func catalogModelNames(compiled *eycatalog.CompiledCatalogV1) []string {
