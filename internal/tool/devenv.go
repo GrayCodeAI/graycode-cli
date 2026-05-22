@@ -13,7 +13,7 @@ import (
 
 // DevEnvTool allows the agent to read, write, and build Docker environments
 // dynamically. When the agent needs a tool that isn't installed, it can modify
-// the Dockerfile and rebuild the container on-the-fly (inspired by herm).
+// the Dockerfile and rebuild the container on-the-fly.
 type DevEnvTool struct {
 	// Manager is the DevEnvManager used for building and caching images.
 	// If nil, the build action will return an error.

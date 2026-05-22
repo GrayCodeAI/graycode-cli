@@ -22,7 +22,7 @@ type containerExecutor interface {
 
 // ContainerSandbox executes commands inside a Docker container, providing
 // full isolation. It supports dynamic Dockerfile generation for on-the-fly
-// environment setup (inspired by herm's DevEnv pattern).
+// environment setup.
 type ContainerSandbox struct {
 	projectDir  string
 	image       string
@@ -57,7 +57,7 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Remove any stale container with the same name from a previous session
 	exec.CommandContext(ctx, "docker", "rm", "-f", name).Run()
 
-	// Create attachments and cache dirs (like herm)
+	// Create attachments and cache dirs
 	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
 	cacheDir := filepath.Join(c.projectDir, ".hawk", "cache")
 	_ = os.MkdirAll(attachDir, 0o755)
@@ -66,7 +66,7 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	args := []string{
 		"run", "-d", "--rm",
 		"--name", name,
-		"-v", c.projectDir + ":" + c.projectDir, // mount at same path (like herm)
+		"-v", c.projectDir + ":" + c.projectDir, // mount at same path
 		"-v", attachDir + ":/attachments:ro",
 		"-v", cacheDir + ":/cache",
 		"-w", c.projectDir,

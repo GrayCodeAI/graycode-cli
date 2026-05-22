@@ -65,7 +65,7 @@ ENV TERM=xterm-256color LANG=C.UTF-8
 }
 
 // shouldUseContainer determines if hawk should run in container mode.
-// Default: ALWAYS (like herm). Container-first, no fallback.
+// Default: ALWAYS Container-first, no fallback.
 // User can opt out with --no-container for host mode.
 func shouldUseContainer() bool {
 	return !noContainer
@@ -84,7 +84,7 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 			}
 		}
 
-		// Ensure image exists locally — pull or build as needed (like herm)
+		// Ensure image exists locally — pull or build as needed
 		image := cs.Image()
 		imgCtx, imgCancel := context.WithTimeout(context.Background(), 300*time.Second)
 		defer imgCancel()
