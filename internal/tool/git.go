@@ -28,7 +28,7 @@ var allowedGitSubcommands = map[string]bool{
 	"tag":      true,
 }
 
-// GitTool executes structured git commands. Inspired by herm's GitTool.
+// GitTool executes structured git commands.
 type GitTool struct {
 	// WorkDir is the git repository working directory. If empty, uses CWD.
 	WorkDir string

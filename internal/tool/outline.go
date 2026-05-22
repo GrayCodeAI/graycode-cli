@@ -13,7 +13,6 @@ import (
 
 // OutlineTool extracts function/type/class signatures from files without
 // reading the full content. Returns a compact outline with line numbers.
-// Inspired by herm's outline tool.
 type OutlineTool struct{}
 
 func (OutlineTool) Name() string      { return "Outline" }

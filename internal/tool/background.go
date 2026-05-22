@@ -9,7 +9,7 @@ import (
 
 // BackgroundAgentManager tracks background sub-agent goroutines so the
 // engine can wait for them and collect their results after the main LLM
-// turn completes. Inspired by herm's bgAgentState pattern.
+// turn completes.
 type BackgroundAgentManager struct {
 	mu      sync.Mutex
 	agents  map[string]*BackgroundAgent

@@ -2,8 +2,8 @@
 
 **Status:** credential + sandbox work complete locally; manual fresh-macOS E2E + CI push pending  
 **Branch (both repos):** `feature/secure-credentials-sandbox`  
-**Out of scope:** conversation DAG (`/fork`, `convo.db` as source of truth), langdag Go import  
-**Reference layout:** herm + langdag sibling repos (already done for hawk + eyrie)
+**Out of scope:** conversation DAG (`/fork`, `convo.db` as source of truth)  
+**Reference layout:** sibling repos (hawk + eyrie)
 
 | Repo | Branch | Local commit |
 |------|--------|--------------|
@@ -139,7 +139,7 @@ hawk preflight
 
 | Date | Iteration | Changes |
 |------|-----------|---------|
-| 2026-05-19 | 0 | Created plan; audited hawk/eyrie/herm state |
+| 2026-05-19 | 0 | Created plan; audited hawk/eyrie state |
 | 2026-05-19 | 1 | setup_status, onboarding PersistAPIKey, welcome CTA, auto /config, block chat until setup |
 | 2026-05-19 | 2 | Eyrie-owned credential fallback (bootstrap catalog, `HasAnyConfiguredDeployment`, placeholder filter); hawk `EvaluateSetup` |
 | 2026-05-19 | 3 | Committed hawk `973671c` + eyrie `2657c72`; moved eyrie WIP off `main` onto `feature/secure-credentials-sandbox` |
