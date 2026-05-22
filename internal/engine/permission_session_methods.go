@@ -53,17 +53,6 @@ func (s *Session) exceededBudget() bool {
 	return s.MaxBudgetUSD > 0 && s.Cost.Total() > s.MaxBudgetUSD
 }
 
-// Duplicated constants from safety/permission.go so engine can use them without importing safety.
-const (
-
-)
-
-type toolCallInfo struct {
-	Name string
-	ID   string
-	Args map[string]interface{}
-}
-
 func boolPtr(v bool) *bool {
 	return &v
 }

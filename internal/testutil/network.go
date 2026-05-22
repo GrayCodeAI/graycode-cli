@@ -1,17 +1,20 @@
 package testutil
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/netutil"
 )
 
 const (
-	LoopbackHost        = "127.0.0.1"
-	LoopbackDynamicAddr = LoopbackHost + ":0"
-	LoopbackNoProxy     = "localhost," + LoopbackHost
+	LoopbackHost        = netutil.LoopbackHost
+	LoopbackDynamicAddr = netutil.LoopbackDynamicAddr
+	LoopbackNoProxy     = netutil.LoopbackNoProxy
 )
 
 func IsLoopbackUnavailable(err error) bool {
@@ -31,7 +34,7 @@ func SkipIfLoopbackUnavailable(t testing.TB, err error) {
 
 func ListenLoopback(t testing.TB) net.Listener {
 	t.Helper()
-	ln, err := net.Listen("tcp", LoopbackDynamicAddr)
+	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", LoopbackDynamicAddr)
 	if err != nil {
 		SkipIfLoopbackUnavailable(t, err)
 		t.Fatalf("listen loopback: %v", err)

@@ -16,6 +16,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/spf13/cobra"
 )
@@ -92,7 +93,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		return sess, nil
 	}
 
-	srv := daemon.New(daemon.Config{Port: daemonPort, Host: "127.0.0.1", APIKey: apiKey}, factory)
+	srv := daemon.New(daemon.Config{Port: daemonPort, Host: netutil.LoopbackHost, APIKey: apiKey}, factory)
 	addr, err := srv.Start()
 	if err != nil {
 		return err
@@ -103,7 +104,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	preheater.Start([]string{
 		"https://api.anthropic.com/v1/messages",
 		"https://api.openai.com/v1/chat/completions",
-		fmt.Sprintf("http://127.0.0.1:%d/v1/health", daemonPort),
+		fmt.Sprintf("http://%s:%d/v1/health", netutil.LoopbackHost, daemonPort),
 	})
 	defer preheater.Stop()
 

@@ -121,15 +121,3 @@ func isTextQuestion(messages []client.EyrieMessage) bool {
 	}
 	return strings.HasSuffix(strings.TrimSpace(lower), "?")
 }
-
-// classifyPromptForBudget extracts a task type string from the current messages
-// for use with DynamicMaxTokens. Returns: "code", "question", "tool", or "code" default.
-func classifyPromptForBudget(messages []client.EyrieMessage) string {
-	if isRecentToolHeavy(messages) {
-		return "tool"
-	}
-	if isTextQuestion(messages) {
-		return "question"
-	}
-	return "code"
-}
