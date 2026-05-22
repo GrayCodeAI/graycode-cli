@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func newMockSession(mc *mockClient) *Session {
@@ -54,7 +54,7 @@ func TestSession_LoadMessages(t *testing.T) {
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "msg1"},
 		{Role: "assistant", Content: "msg2"},
 		{Role: "user", Content: "msg3"},
@@ -114,7 +114,7 @@ func TestSession_Chat_MockResponse(t *testing.T) {
 	s.AddUser("hi")
 
 	// Call Chat directly
-	resp, err := mc.Chat(nil, s.RawMessages(), client.ChatOptions{})
+	resp, err := mc.Chat(nil, s.RawMessages(), types.ChatOptions{})
 	if err != nil {
 		t.Fatalf("Chat error: %v", err)
 	}

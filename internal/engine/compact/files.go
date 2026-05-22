@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type FileTracker struct {
@@ -35,7 +35,7 @@ func (ft *FileTracker) RecordModified(path string) {
 	ft.ModifiedFiles[path]++
 }
 
-func (ft *FileTracker) ExtractFromMessages(messages []client.EyrieMessage) {
+func (ft *FileTracker) ExtractFromMessages(messages []types.EyrieMessage) {
 	for _, msg := range messages {
 		if msg.Role != "assistant" {
 			continue

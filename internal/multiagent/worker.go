@@ -38,7 +38,7 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
 		settings := hawkconfig.LoadSettings()
-		sess := eyrieclient.NewHawkSession(ctx, settings, provider, model, systemPrompt, registry)
+		sess := eyrieclient.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
 
 		// Configure for autonomous operation
 		sess.Autonomy = engine.AutonomyLevel(cfg.AutonomyLevel)

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
 type gatewayModelCount struct {
@@ -216,9 +216,9 @@ func DiscoverCatalogAfterSetup(ctx context.Context, out io.Writer) {
 
 func catalogRefreshFailureHint(ctx context.Context) string {
 	if !HasConfiguredDeployment(ctx) {
-		return "No API keys in " + credentials.PlatformSecretStoreName() + ". Run /config to paste a key or set up Ollama."
+		return "No API keys in " + eyrieclient.PlatformSecretStoreName() + ". Run /config to paste a key or set up Ollama."
 	}
-	return "Check network access and stored keys (" + credentials.PlatformSecretStoreName() + "). Run hawk preflight or /config."
+	return "Check network access and stored keys (" + eyrieclient.PlatformSecretStoreName() + "). Run hawk preflight or /config."
 }
 
 func autoRefreshCatalogEnabled() bool {

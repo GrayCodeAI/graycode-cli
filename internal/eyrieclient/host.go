@@ -79,3 +79,13 @@ func ResolveCredential(ctx context.Context, secret string) runtime.CredentialRes
 func SaveCredential(ctx context.Context, inference runtime.CredentialInference, secret string) error {
 	return runtime.SaveCredential(ctx, inference, secret)
 }
+
+// ClearActiveSelection resets the active model/provider selection.
+func ClearActiveSelection(ctx context.Context) error {
+	return runtime.ClearActiveSelection(ctx)
+}
+
+// HasAnyConfiguredDeployment reports whether at least one deployment has credentials.
+func HasAnyConfiguredDeployment(ctx context.Context) bool {
+	return eyriecfg.HasAnyConfiguredDeployment(ctx)
+}

@@ -3,12 +3,12 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type CompactStrategy interface {
 	Name() string
-	ShouldTrigger(msgs []client.EyrieMessage, tokenCount, threshold int) bool
+	ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool
 	Compact(ctx context.Context, s *Session) (*CompactResult, error)
 }
 
@@ -28,7 +28,7 @@ func NewStrategyRegistry(config CompactConfig) *StrategyRegistry {
 	return r
 }
 
-func (r *StrategyRegistry) SelectStrategy(msgs []client.EyrieMessage, tokenCount int) CompactStrategy {
+func (r *StrategyRegistry) SelectStrategy(msgs []types.EyrieMessage, tokenCount int) CompactStrategy {
 	threshold := r.config.ContextWindowSize - r.config.AutoCompactBuffer - r.config.MaxOutputTokens
 	for _, s := range r.strategies {
 		if s.ShouldTrigger(msgs, tokenCount, threshold) {

@@ -4,47 +4,47 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // mockClient implements ChatClient for testing without real LLM calls.
 type mockClient struct {
 	mu        sync.Mutex
-	responses []*client.EyrieResponse
+	responses []*types.EyrieResponse
 	idx       int
 	calls     []mockCall
 }
 
 type mockCall struct {
 	method   string
-	messages []client.EyrieMessage
+	messages []types.EyrieMessage
 }
 
-func newMockClient(responses ...*client.EyrieResponse) *mockClient {
+func newMockClient(responses ...*types.EyrieResponse) *mockClient {
 	return &mockClient{responses: responses}
 }
 
-func mockTextResponse(text string) *client.EyrieResponse {
-	return &client.EyrieResponse{
+func mockTextResponse(text string) *types.EyrieResponse {
+	return &types.EyrieResponse{
 		Content:      text,
 		FinishReason: "end_turn",
-		Usage:        &client.EyrieUsage{PromptTokens: 50, CompletionTokens: 20, TotalTokens: 70},
+		Usage:        &types.EyrieUsage{PromptTokens: 50, CompletionTokens: 20, TotalTokens: 70},
 	}
 }
 
-func mockToolResponse(toolName string, args map[string]interface{}) *client.EyrieResponse {
-	return &client.EyrieResponse{
+func mockToolResponse(toolName string, args map[string]interface{}) *types.EyrieResponse {
+	return &types.EyrieResponse{
 		FinishReason: "tool_use",
-		ToolCalls: []client.ToolCall{{
+		ToolCalls: []types.ToolCall{{
 			ID:        "call_mock_1",
 			Name:      toolName,
 			Arguments: args,
 		}},
-		Usage: &client.EyrieUsage{PromptTokens: 50, CompletionTokens: 30, TotalTokens: 80},
+		Usage: &types.EyrieUsage{PromptTokens: 50, CompletionTokens: 30, TotalTokens: 80},
 	}
 }
 
-func (m *mockClient) Chat(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
+func (m *mockClient) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -58,13 +58,13 @@ func (m *mockClient) Chat(ctx context.Context, messages []client.EyrieMessage, o
 	return resp, nil
 }
 
-func (m *mockClient) StreamChatContinue(ctx context.Context, messages []client.EyrieMessage, opts client.ChatOptions, cfg client.ContinuationConfig) (*client.StreamResult, error) {
+func (m *mockClient) StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.calls = append(m.calls, mockCall{method: "StreamChatContinue", messages: messages})
 
-	ch := make(chan client.EyrieStreamEvent, 10)
+	ch := make(chan types.EyrieStreamEvent, 10)
 
 	var content string
 	var finishReason string
@@ -78,15 +78,15 @@ func (m *mockClient) StreamChatContinue(ctx context.Context, messages []client.E
 		finishReason = "end_turn"
 	}
 
-	ch <- client.EyrieStreamEvent{Type: "content", Content: content}
-	ch <- client.EyrieStreamEvent{
+	ch <- types.EyrieStreamEvent{Type: "content", Content: content}
+	ch <- types.EyrieStreamEvent{
 		Type:       "done",
 		StopReason: finishReason,
-		Usage:      &client.EyrieUsage{PromptTokens: 50, CompletionTokens: 20, TotalTokens: 70},
+		Usage:      &types.EyrieUsage{PromptTokens: 50, CompletionTokens: 20, TotalTokens: 70},
 	}
 	close(ch)
 
-	return &client.StreamResult{Events: ch}, nil
+	return &types.StreamResult{Events: ch}, nil
 }
 
 func (m *mockClient) SetAPIKey(provider, apiKey string) {}

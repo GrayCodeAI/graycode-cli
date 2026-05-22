@@ -547,8 +547,15 @@ func TestDecisionIncludesFallbackWhenProviderFailing(t *testing.T) {
 
 func TestOllamaShorterTimeouts(t *testing.T) {
 	sr := NewSmartRetry()
+	sr.ConfigureFromProvider("ollama", &testRetryConfig{
+		baseDelayMs: 2000, maxDelayMs: 10000, maxRetries: 3,
+		backoffMultiplier: 1.5, jitterPct: 10,
+	})
 
 	strategy := sr.Strategies["ollama"]
+	if strategy == nil {
+		t.Fatal("ollama strategy should be set after ConfigureFromProvider")
+	}
 	if strategy.MaxDelay != 10*time.Second {
 		t.Errorf("Ollama MaxDelay should be 10s, got %v", strategy.MaxDelay)
 	}
@@ -559,6 +566,20 @@ func TestOllamaShorterTimeouts(t *testing.T) {
 		t.Errorf("Ollama BackoffMultiplier should be 1.5, got %f", strategy.BackoffMultiplier)
 	}
 }
+
+type testRetryConfig struct {
+	baseDelayMs       int
+	maxDelayMs        int
+	maxRetries        int
+	backoffMultiplier float64
+	jitterPct         int
+}
+
+func (c *testRetryConfig) BaseDelayMs() int       { return c.baseDelayMs }
+func (c *testRetryConfig) MaxDelayMs() int         { return c.maxDelayMs }
+func (c *testRetryConfig) MaxRetries() int         { return c.maxRetries }
+func (c *testRetryConfig) BackoffMultiplier() float64 { return c.backoffMultiplier }
+func (c *testRetryConfig) JitterPct() int          { return c.jitterPct }
 
 func retryContains(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {

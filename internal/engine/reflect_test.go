@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // mockLLMClient implements LLMClient for testing.
@@ -16,12 +16,12 @@ type mockLLMClient struct {
 	calls    int
 }
 
-func (m *mockLLMClient) Chat(_ context.Context, msgs []client.EyrieMessage, _ client.ChatOptions) (*client.EyrieResponse, error) {
+func (m *mockLLMClient) Chat(_ context.Context, msgs []types.EyrieMessage, _ types.ChatOptions) (*types.EyrieResponse, error) {
 	m.calls++
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &client.EyrieResponse{Content: m.response}, nil
+	return &types.EyrieResponse{Content: m.response}, nil
 }
 
 func TestNewReflector(t *testing.T) {
@@ -43,7 +43,7 @@ WHAT_TO_DO: Use the project root from the session context instead of hardcoding 
 	}
 
 	r := NewReflector(mock, "test-model")
-	ref, err := r.Reflect(context.Background(), "fix the config parser", []client.EyrieMessage{
+	ref, err := r.Reflect(context.Background(), "fix the config parser", []types.EyrieMessage{
 		{Role: "user", Content: "Fix the config parser to handle nested keys."},
 		{Role: "assistant", Content: "I will edit config.go."},
 	}, "permission denied: /tmp/config.go")
@@ -252,18 +252,18 @@ what_to_do: lowercase fix`
 }
 
 func TestBuildReflectionPrompt_ContainsKeyElements(t *testing.T) {
-	messages := []client.EyrieMessage{
+	messages := []types.EyrieMessage{
 		{Role: "user", Content: "Fix the parser."},
 		{
 			Role:    "assistant",
 			Content: "I will edit parser.go.",
-			ToolUse: []client.ToolCall{
+			ToolUse: []types.ToolCall{
 				{Name: "FileWrite", Arguments: map[string]interface{}{"path": "parser.go"}},
 			},
 		},
 		{
 			Role: "user",
-			ToolResult: &client.ToolResult{
+			ToolResult: &types.ToolResult{
 				ToolUseID: "tc1",
 				Content:   "Error: syntax error on line 42",
 				IsError:   true,

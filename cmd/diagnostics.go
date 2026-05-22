@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -34,7 +32,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("Model: %s\n", modelName))
 	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
 	b.WriteString("\n" + eyrieclient.FormatPreflightReport(eyrieclient.Preflight(context.Background())) + "\n")
-	b.WriteString("\n" + credentials.FormatStorageReport(credentials.StorageReportFor(context.Background())) + "\n")
+	b.WriteString("\n" + eyrieclient.FormatStorageReport(eyrieclient.StorageReportFor(context.Background())) + "\n")
 	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
 	}
@@ -86,7 +84,7 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 
 	ctx := context.Background()
 	apiKeyEnv := primaryAPIKeyEnvForProvider(ctx, provider)
-	apiKey := credentials.LookupSecret(ctx, apiKeyEnv)
+	apiKey := eyrieclient.LookupSecret(ctx, apiKeyEnv)
 	registry.Register("api_key", health.APIKeyChecker(provider, apiKey))
 
 	// Settings validation
@@ -141,7 +139,7 @@ func primaryAPIKeyEnvForProvider(ctx context.Context, provider string) string {
 	if err != nil || compiled == nil {
 		return ""
 	}
-	return catalog.PrimaryAPIKeyEnvForProvider(compiled, provider)
+	return eyrieclient.PrimaryAPIKeyEnvForProvider(compiled, provider)
 }
 
 func settingsSummary(settings hawkconfig.Settings) string {

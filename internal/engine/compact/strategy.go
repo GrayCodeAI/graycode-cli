@@ -3,11 +3,11 @@ package compact
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type CompactResult struct {
-	Messages     []client.EyrieMessage
+	Messages     []types.EyrieMessage
 	Summary      string
 	TokensBefore int
 	TokensAfter  int
@@ -49,7 +49,7 @@ func IsCompactableTool(name string) bool {
 	return compactableTools[name]
 }
 
-func AdjustIndexToPreserveAPIInvariants(msgs []client.EyrieMessage, startIdx int) int {
+func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
 	if startIdx <= 0 {
 		return 0
 	}
@@ -84,7 +84,7 @@ func AdjustIndexToPreserveAPIInvariants(msgs []client.EyrieMessage, startIdx int
 	return idx
 }
 
-func HasTextContent(m client.EyrieMessage) bool {
+func HasTextContent(m types.EyrieMessage) bool {
 	if m.ToolResult != nil {
 		return false
 	}

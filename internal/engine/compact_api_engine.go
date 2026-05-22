@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 )
@@ -12,7 +12,7 @@ type APICompactStrategy struct{}
 
 func (s *APICompactStrategy) Name() string { return "api_compact" }
 
-func (s *APICompactStrategy) ShouldTrigger(msgs []client.EyrieMessage, tokenCount, threshold int) bool {
+func (s *APICompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
 	if tokenCount < 180000 {
 		return false
 	}
