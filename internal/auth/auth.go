@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // TokenStore manages authentication tokens.
@@ -124,23 +126,14 @@ func GenerateNonce() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
-// OAuthFlow handles OAuth authentication flow.
-type OAuthFlow struct {
-	Provider string
-	ClientID string
-}
-
-// Start starts the OAuth flow.
-func (o *OAuthFlow) Start() (string, error) {
-	return fmt.Sprintf("https://auth.example.com/%s?client_id=%s", o.Provider, o.ClientID), nil
-}
-
-// Callback handles the OAuth callback.
-func (o *OAuthFlow) Callback(code string) (string, error) {
-	// Exchange code for token
-	return "token_from_callback", nil
-}
-
 func execCommand(name string, args ...string) (string, error) {
-	return "", fmt.Errorf("not implemented")
+	cmd := exec.Command(name, args...)
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("%s: %w: %s", name, err, strings.TrimSpace(string(exitErr.Stderr)))
+		}
+		return "", fmt.Errorf("%s: %w", name, err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }

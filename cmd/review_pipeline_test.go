@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -78,11 +79,40 @@ func TestDeduplicateFindings(t *testing.T) {
 }
 
 func TestRunReviewPipeline_Empty(t *testing.T) {
-	findings, report := RunReviewPipeline(nil, DefaultConcerns())
+	findings, report := RunReviewPipeline(context.Background(), nil, DefaultConcerns(), func(context.Context, string) (string, error) {
+		return "[]", nil
+	})
 	if len(findings) != 0 {
 		t.Errorf("expected no findings for empty files, got %d", len(findings))
 	}
 	if !strings.Contains(report, "No files") {
 		t.Errorf("expected 'No files' message, got %q", report)
+	}
+}
+
+func TestRunReviewPipeline_NilChatFn(t *testing.T) {
+	_, report := RunReviewPipeline(context.Background(), []string{"main.go"}, DefaultConcerns(), nil)
+	if !strings.Contains(report, "No LLM") {
+		t.Errorf("expected 'No LLM' message, got %q", report)
+	}
+}
+
+func TestRunReviewPipeline_WithMockLLM(t *testing.T) {
+	mockChat := func(_ context.Context, prompt string) (string, error) {
+		if strings.Contains(prompt, "security") {
+			return `[{"file":"auth.go","line":42,"severity":"critical","message":"SQL injection","fix":"use parameterized queries"}]`, nil
+		}
+		return "[]", nil
+	}
+
+	findings, report := RunReviewPipeline(context.Background(), []string{"auth.go"}, DefaultConcerns(), mockChat)
+	if len(findings) == 0 {
+		t.Fatal("expected at least one finding from mock LLM")
+	}
+	if findings[0].Severity != "critical" {
+		t.Errorf("expected critical severity, got %q", findings[0].Severity)
+	}
+	if !strings.Contains(report, "SQL injection") {
+		t.Errorf("report should contain finding, got %q", report)
 	}
 }
