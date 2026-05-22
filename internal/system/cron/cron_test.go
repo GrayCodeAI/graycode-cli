@@ -149,10 +149,10 @@ func TestDeleteAfterRun(t *testing.T) {
 
 	future := time.Now().Add(time.Hour)
 	e.AddJob(&Job{
-		ID:            "j1",
-		Enabled:       true,
+		ID:             "j1",
+		Enabled:        true,
 		DeleteAfterRun: true,
-		Schedule:      Schedule{Kind: ScheduleAt, At: &future},
+		Schedule:       Schedule{Kind: ScheduleAt, At: &future},
 	})
 
 	// Manually set NextRunAt to now so it triggers on the next tick.

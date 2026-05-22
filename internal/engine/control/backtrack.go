@@ -11,9 +11,9 @@ import (
 // choice that can potentially be rolled back if it leads to failure.
 type DecisionPoint struct {
 	TurnIndex    int
-	Description  string                // what was decided
-	Alternatives []string              // other options available
-	Outcome      string                // "success", "failure", or "" (pending)
+	Description  string               // what was decided
+	Alternatives []string             // other options available
+	Outcome      string               // "success", "failure", or "" (pending)
 	Messages     []types.EyrieMessage // conversation state at this point
 }
 

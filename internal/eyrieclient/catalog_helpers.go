@@ -8,9 +8,11 @@ import (
 	"github.com/GrayCodeAI/eyrie/catalog"
 )
 
-type ModelCatalogEntry = catalog.ModelCatalogEntry
-type CompiledCatalogV1 = catalog.CompiledCatalogV1
-type CatalogV1 = catalog.CatalogV1
+type (
+	ModelCatalogEntry = catalog.ModelCatalogEntry
+	CompiledCatalogV1 = catalog.CompiledCatalogV1
+	CatalogV1         = catalog.CatalogV1
+)
 
 func DisplayModelLabel(id, displayName string) string {
 	return catalog.DisplayModelLabel(id, displayName)

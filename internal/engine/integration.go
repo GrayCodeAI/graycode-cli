@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/tok"
 )
 
