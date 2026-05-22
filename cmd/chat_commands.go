@@ -383,7 +383,7 @@ func (m *chatModel) saveSession() {
 	for _, rm := range raw {
 		sm := session.Message{Role: rm.Role, Content: rm.Content}
 		for _, tc := range rm.ToolUse {
-			sm.ToolUse = append(sm.ToolUse, session.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+			sm.ToolUse = append(sm.ToolUse, tc)
 		}
 		if rm.ToolResult != nil {
 			sm.ToolResult = &session.ToolResult{ToolUseID: rm.ToolResult.ToolUseID, Content: rm.ToolResult.Content, IsError: rm.ToolResult.IsError}
@@ -784,7 +784,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			for _, sm := range s.Messages {
 				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
 				for _, tc := range sm.ToolUse {
-					em.ToolUse = append(em.ToolUse, client.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+					em.ToolUse = append(em.ToolUse, tc)
 				}
 				if sm.ToolResult != nil {
 					em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
@@ -828,11 +828,11 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		for _, sm := range saved.Messages {
 			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
 			for _, tc := range sm.ToolUse {
-				em.ToolUse = append(em.ToolUse, client.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
-			}
-			if sm.ToolResult != nil {
-				em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
-			}
+			em.ToolUse = append(em.ToolUse, tc)
+				}
+				if sm.ToolResult != nil {
+					em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
+				}
 			msgs = append(msgs, em)
 			if sm.Role == "user" || sm.Role == "assistant" {
 				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
