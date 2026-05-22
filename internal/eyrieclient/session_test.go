@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	hawkcfg "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func writeProviderConfig(t *testing.T, dir string) {
@@ -20,7 +18,7 @@ func writeProviderConfig(t *testing.T, dir string) {
 	}
 }
 
-func TestBuildChatClientForcedDeploymentRoutingFromHawkEnv(t *testing.T) {
+func TestBuildChatClientWithDeploymentRouting(t *testing.T) {
 	dir := t.TempDir()
 	writeProviderConfig(t, dir)
 	t.Setenv("HOME", dir)
@@ -29,29 +27,13 @@ func TestBuildChatClientForcedDeploymentRoutingFromHawkEnv(t *testing.T) {
 	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
 	t.Setenv("EYRIE_MODEL_CATALOG_REFRESH", "")
 
-	_, _, deploymentRouting := BuildChatClient(context.Background(), hawkcfg.Settings{}, "openai")
+	_, _, deploymentRouting := BuildChatClient(context.Background(), true, "openai")
 	if !deploymentRouting {
-		t.Fatal("expected HAWK_DEPLOYMENT_ROUTING=true to force deployment routing")
+		t.Fatal("expected deployment routing when useDeploymentRouting=true")
 	}
 }
 
-func TestBuildChatClientForcedDeploymentRoutingFromHawkSettings(t *testing.T) {
-	dir := t.TempDir()
-	writeProviderConfig(t, dir)
-	t.Setenv("HOME", dir)
-	t.Setenv("HAWK_CONFIG_DIR", dir)
-	t.Setenv("HAWK_DEPLOYMENT_ROUTING", "")
-	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
-	t.Setenv("EYRIE_MODEL_CATALOG_REFRESH", "")
-	enabled := true
-
-	_, _, deploymentRouting := BuildChatClient(context.Background(), hawkcfg.Settings{DeploymentRouting: &enabled}, "openai")
-	if !deploymentRouting {
-		t.Fatal("expected deployment_routing setting to force deployment routing")
-	}
-}
-
-func TestBuildChatClientLegacyProviderConfigDefaultsToLegacyClient(t *testing.T) {
+func TestBuildChatClientWithoutDeploymentRouting(t *testing.T) {
 	dir := t.TempDir()
 	writeProviderConfig(t, dir)
 	t.Setenv("HOME", dir)
@@ -60,8 +42,8 @@ func TestBuildChatClientLegacyProviderConfigDefaultsToLegacyClient(t *testing.T)
 	t.Setenv("EYRIE_DEPLOYMENT_ROUTING", "")
 	t.Setenv("EYRIE_MODEL_CATALOG_REFRESH", "")
 
-	_, _, deploymentRouting := BuildChatClient(context.Background(), hawkcfg.Settings{}, "openai")
+	_, _, deploymentRouting := BuildChatClient(context.Background(), false, "openai")
 	if deploymentRouting {
-		t.Fatal("legacy provider config should not enable deployment routing unless explicitly requested")
+		t.Fatal("expected legacy client when useDeploymentRouting=false")
 	}
 }

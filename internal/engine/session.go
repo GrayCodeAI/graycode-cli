@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -33,7 +33,7 @@ type SnapshotTracker interface {
 type Session struct {
 	client   ChatClient
 	registry *tool.Registry
-	messages []client.EyrieMessage
+	messages []types.EyrieMessage
 	provider string
 	model    string
 	apiKeys  map[string]string
@@ -64,6 +64,8 @@ type Session struct {
 	Memory         MemoryRecaller
 	YaadBridge     *memory.YaadBridge
 	EnhancedMemory *memory.EnhancedMemoryManager
+	SettingsGet    func(key string) (string, bool)
+	SettingsSet    func(key, value string) error
 
 	PinnedMessages          int // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
@@ -102,7 +104,7 @@ type Session struct {
 
 // NewSession creates a new conversation session with a legacy string-named provider.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewSessionWithClient(client.Client(&client.EyrieConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
+	return NewSessionWithClient(types.NewClient(&types.EyrieConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
 }
 
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
@@ -184,7 +186,7 @@ func (s *Session) SetProvider(provider string) {
 	if s.DeploymentRouting {
 		return
 	}
-	s.client = client.Client(&client.EyrieConfig{Provider: p})
+	s.client = types.NewClient(&types.EyrieConfig{Provider: p})
 	for provider, apiKey := range s.apiKeys {
 		if strings.TrimSpace(apiKey) != "" {
 			s.client.SetAPIKey(provider, apiKey)
@@ -216,7 +218,7 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 }
 
 func (s *Session) AddUser(content string) {
-	s.messages = append(s.messages, client.EyrieMessage{Role: "user", Content: content})
+	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
 	if s.ConvoDAG != nil {
 		parentID := ""
 		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
@@ -230,7 +232,7 @@ func (s *Session) AddUser(content string) {
 }
 
 func (s *Session) AddAssistant(content string) {
-	s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: content})
+	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
 	if s.ConvoDAG != nil {
 		parentID := ""
 		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
@@ -258,7 +260,7 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	s.messages = s.messages[:0]
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			s.messages = append(s.messages, client.EyrieMessage{Role: node.Role, Content: node.Content})
+			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
 	return fork.ID, nil
@@ -279,7 +281,7 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	s.messages = s.messages[:0]
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			s.messages = append(s.messages, client.EyrieMessage{Role: node.Role, Content: node.Content})
+			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
 	return nil
@@ -327,14 +329,14 @@ func (s *Session) SetAllowedDirs(dirs []string) {
 	s.AllowedDirs = append([]string(nil), dirs...)
 }
 
-func (s *Session) LoadMessages(msgs []client.EyrieMessage) {
+func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
 	s.messages = msgs
 }
 
 func (s *Session) MessageCount() int { return len(s.messages) }
 
 // RawMessages returns the conversation messages for persistence.
-func (s *Session) RawMessages() []client.EyrieMessage { return s.messages }
+func (s *Session) RawMessages() []types.EyrieMessage { return s.messages }
 
 // RemoveLastExchange removes the last user+assistant message pair.
 func (s *Session) RemoveLastExchange() {

@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
 
 func TestCompactEstimateTokens(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "Hello world"},
 		{Role: "assistant", Content: strings.Repeat("x", 400)},
 	}
@@ -18,7 +18,7 @@ func TestCompactEstimateTokens(t *testing.T) {
 	if tokens < 1 {
 		t.Errorf("expected at least 1 token, got %d", tokens)
 	}
-	shortMsgs := []client.EyrieMessage{
+	shortMsgs := []types.EyrieMessage{
 		{Role: "user", Content: "hi"},
 	}
 	shortTokens := token.EstimateTokens(shortMsgs)
@@ -30,7 +30,7 @@ func TestCompactEstimateTokens(t *testing.T) {
 func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 	tests := []struct {
 		name     string
-		msgs     []client.EyrieMessage
+		msgs     []types.EyrieMessage
 		startIdx int
 		wantIdx  int
 	}{
@@ -42,7 +42,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 		},
 		{
 			name: "no tool pairs",
-			msgs: []client.EyrieMessage{
+			msgs: []types.EyrieMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "assistant", Content: "hi"},
 				{Role: "user", Content: "bye"},
@@ -52,10 +52,10 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 		},
 		{
 			name: "tool_result at startIdx - moves back past tool_use",
-			msgs: []client.EyrieMessage{
+			msgs: []types.EyrieMessage{
 				{Role: "user", Content: "hello"},
-				{Role: "assistant", Content: "", ToolUse: []client.ToolCall{{ID: "t1", Name: "Bash"}}},
-				{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t1", Content: "output"}},
+				{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
+				{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "output"}},
 				{Role: "assistant", Content: "done"},
 			},
 			startIdx: 2,
@@ -63,7 +63,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 		},
 		{
 			name: "at boundary already",
-			msgs: []client.EyrieMessage{
+			msgs: []types.EyrieMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "assistant", Content: "response"},
 			},
@@ -83,22 +83,22 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 }
 
 func TestMicrocompactMessages(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "read file.go"},
-		{Role: "assistant", ToolUse: []client.ToolCall{{ID: "t1", Name: "Read"}}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t1", Content: "package main\nfunc main() {}"}},
+		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "package main\nfunc main() {}"}},
 		{Role: "assistant", Content: "Here's the file content"},
 		{Role: "user", Content: "now read another"},
-		{Role: "assistant", ToolUse: []client.ToolCall{{ID: "t2", Name: "Read"}}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t2", Content: "package utils\nfunc Helper() {}"}},
+		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t2", Name: "Read"}}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t2", Content: "package utils\nfunc Helper() {}"}},
 		{Role: "assistant", Content: "Here's the second file"},
 		{Role: "user", Content: "and another"},
-		{Role: "assistant", ToolUse: []client.ToolCall{{ID: "t3", Name: "Read"}}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t3", Content: "package config\nfunc Load() {}"}},
+		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t3", Name: "Read"}}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t3", Content: "package config\nfunc Load() {}"}},
 		{Role: "assistant", Content: "Here's the third"},
 		{Role: "user", Content: "one more"},
-		{Role: "assistant", ToolUse: []client.ToolCall{{ID: "t4", Name: "Read"}}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t4", Content: "package api\nfunc Serve() {}"}},
+		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t4", Name: "Read"}}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t4", Content: "package api\nfunc Serve() {}"}},
 		{Role: "assistant", Content: "Here's the fourth"},
 	}
 
@@ -132,10 +132,10 @@ func TestMicrocompactMessages(t *testing.T) {
 }
 
 func TestAPICompactMessages(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "hello"},
-		{Role: "assistant", ToolUse: []client.ToolCall{{ID: "t1", Name: "Bash", Arguments: map[string]interface{}{"command": strings.Repeat("x", 1000)}}}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t1", Content: strings.Repeat("output ", 1000)}},
+		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash", Arguments: map[string]interface{}{"command": strings.Repeat("x", 1000)}}}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: strings.Repeat("output ", 1000)}},
 		{Role: "assistant", Content: "done"},
 	}
 
@@ -158,10 +158,10 @@ func TestAPICompactMessages(t *testing.T) {
 }
 
 func TestAPICompactPreservesMutatingTools(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "edit file"},
-		{Role: "assistant", ToolUse: []client.ToolCall{{ID: "t1", Name: "Edit", Arguments: map[string]interface{}{"old_string": strings.Repeat("x", 1000), "new_string": "y"}}}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t1", Content: strings.Repeat("edited ", 500)}},
+		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Edit", Arguments: map[string]interface{}{"old_string": strings.Repeat("x", 1000), "new_string": "y"}}}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: strings.Repeat("edited ", 500)}},
 		{Role: "assistant", Content: "edited"},
 	}
 
@@ -180,7 +180,7 @@ func TestAPICompactPreservesMutatingTools(t *testing.T) {
 }
 
 func TestCalculateMessagesToKeepIndex(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: strings.Repeat("hello ", 100)},
 		{Role: "assistant", Content: strings.Repeat("response ", 100)},
 		{Role: "user", Content: strings.Repeat("follow up ", 100)},
@@ -205,7 +205,7 @@ func TestCalculateMessagesToKeepIndex(t *testing.T) {
 }
 
 func TestFilterCompactBoundaries(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "[Session memory summary]\nold stuff"},
 		{Role: "assistant", Content: "Understood."},
 		{Role: "user", Content: "real message"},

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestFileTracker_NewFileTracker(t *testing.T) {
@@ -67,10 +67,10 @@ func TestFileTracker_RecordModified_Empty(t *testing.T) {
 func TestFileTracker_ExtractFromMessages(t *testing.T) {
 	t.Parallel()
 	ft := NewFileTracker()
-	messages := []client.EyrieMessage{
+	messages := []types.EyrieMessage{
 		{
 			Role: "assistant",
-			ToolUse: []client.ToolCall{
+			ToolUse: []types.ToolCall{
 				{Name: "Read", Arguments: map[string]interface{}{"path": "main.go"}},
 				{Name: "Write", Arguments: map[string]interface{}{"file_path": "output.go"}},
 			},
@@ -88,8 +88,8 @@ func TestFileTracker_ExtractFromMessages(t *testing.T) {
 func TestFileTracker_ExtractFromMessages_SkipNonAssistant(t *testing.T) {
 	t.Parallel()
 	ft := NewFileTracker()
-	messages := []client.EyrieMessage{
-		{Role: "user", ToolUse: []client.ToolCall{{Name: "Read", Arguments: map[string]interface{}{"path": "x.go"}}}},
+	messages := []types.EyrieMessage{
+		{Role: "user", ToolUse: []types.ToolCall{{Name: "Read", Arguments: map[string]interface{}{"path": "x.go"}}}},
 	}
 	ft.ExtractFromMessages(messages)
 	if len(ft.ReadFiles) != 0 {

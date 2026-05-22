@@ -187,7 +187,7 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 }
 
 func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveModel, systemPrompt string, registry *tool.Registry) *engine.Session {
-	return eyrieclient.NewHawkSession(context.Background(), settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	return eyrieclient.NewHawkSession(context.Background(), hawkconfig.DeploymentRoutingEnabled(settings), effectiveProvider, effectiveModel, systemPrompt, registry)
 }
 
 func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {

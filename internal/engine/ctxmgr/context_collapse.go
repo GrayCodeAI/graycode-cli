@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // CollapseRepeatedMessages finds and collapses similar consecutive messages to
 // save context tokens. It collapses:
 //   - 3+ consecutive tool_results with similar content into a summary
 //   - Repeated error messages into a count
-func CollapseRepeatedMessages(msgs []client.EyrieMessage) []client.EyrieMessage {
+func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 	if len(msgs) < 3 {
 		return msgs
 	}
 
-	result := make([]client.EyrieMessage, 0, len(msgs))
+	result := make([]types.EyrieMessage, 0, len(msgs))
 
 	i := 0
 	for i < len(msgs) {
@@ -30,7 +30,7 @@ func CollapseRepeatedMessages(msgs []client.EyrieMessage) []client.EyrieMessage 
 			runLen := j - i
 			if runLen >= 2 {
 				errText := extractErrorText(msgs[i])
-				result = append(result, client.EyrieMessage{
+				result = append(result, types.EyrieMessage{
 					Role:       msgs[i].Role,
 					Content:    fmt.Sprintf("[Error repeated %d times: %s]", runLen, errText),
 					ToolResult: msgs[i].ToolResult,
@@ -52,10 +52,10 @@ func CollapseRepeatedMessages(msgs []client.EyrieMessage) []client.EyrieMessage 
 				result = append(result, msgs[i])
 				toolName := toolResultSource(msgs[i])
 				collapsed := runLen - 2
-				result = append(result, client.EyrieMessage{
+				result = append(result, types.EyrieMessage{
 					Role:    "user",
 					Content: fmt.Sprintf("[Similar output from %s — %d results collapsed]", toolName, collapsed),
-					ToolResult: &client.ToolResult{
+					ToolResult: &types.ToolResult{
 						ToolUseID: "collapsed",
 						Content:   fmt.Sprintf("[Similar output from %s — %d results collapsed]", toolName, collapsed),
 					},
@@ -76,7 +76,7 @@ func CollapseRepeatedMessages(msgs []client.EyrieMessage) []client.EyrieMessage 
 // isSimilarToolResult checks whether two tool_result messages are similar
 // enough to collapse. Two results are similar if they come from the same tool
 // and their content shares the same first line or prefix (up to 100 chars).
-func isSimilarToolResult(a, b client.EyrieMessage) bool {
+func isSimilarToolResult(a, b types.EyrieMessage) bool {
 	if a.ToolResult == nil || b.ToolResult == nil {
 		return false
 	}
@@ -88,7 +88,7 @@ func isSimilarToolResult(a, b client.EyrieMessage) bool {
 }
 
 // toolResultSource extracts the tool name from a tool_result message.
-func toolResultSource(msg client.EyrieMessage) string {
+func toolResultSource(msg types.EyrieMessage) string {
 	if msg.ToolResult != nil && msg.ToolResult.ToolUseID != "" {
 		return msg.ToolResult.ToolUseID
 	}
@@ -108,7 +108,7 @@ func contentPrefix(s string, n int) string {
 }
 
 // isErrorMessage returns true if a message appears to be an error.
-func isErrorMessage(msg client.EyrieMessage) bool {
+func isErrorMessage(msg types.EyrieMessage) bool {
 	if msg.ToolResult != nil && msg.ToolResult.IsError {
 		return true
 	}
@@ -117,7 +117,7 @@ func isErrorMessage(msg client.EyrieMessage) bool {
 }
 
 // extractErrorText extracts the error text from an error message.
-func extractErrorText(msg client.EyrieMessage) string {
+func extractErrorText(msg types.EyrieMessage) string {
 	if msg.ToolResult != nil && msg.ToolResult.IsError {
 		return msg.ToolResult.Content
 	}

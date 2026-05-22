@@ -3,7 +3,7 @@ package compact
 import (
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type MicroCompactConfig struct {
@@ -25,7 +25,7 @@ type resultInfo struct {
 	toolName string
 }
 
-func MicrocompactMessages(msgs []client.EyrieMessage, cfg MicroCompactConfig) []client.EyrieMessage {
+func MicrocompactMessages(msgs []types.EyrieMessage, cfg MicroCompactConfig) []types.EyrieMessage {
 	var compactableResults []resultInfo
 	for i, m := range msgs {
 		if m.ToolResult == nil {
@@ -47,12 +47,12 @@ func MicrocompactMessages(msgs []client.EyrieMessage, cfg MicroCompactConfig) []
 		clearSet[compactableResults[i].index] = true
 	}
 
-	result := make([]client.EyrieMessage, len(msgs))
+	result := make([]types.EyrieMessage, len(msgs))
 	copy(result, msgs)
 	for idx := range clearSet {
-		result[idx] = client.EyrieMessage{
+		result[idx] = types.EyrieMessage{
 			Role: result[idx].Role,
-			ToolResult: &client.ToolResult{
+			ToolResult: &types.ToolResult{
 				ToolUseID: result[idx].ToolResult.ToolUseID,
 				Content:   "[Old tool result content cleared]",
 				IsError:   result[idx].ToolResult.IsError,
@@ -63,7 +63,7 @@ func MicrocompactMessages(msgs []client.EyrieMessage, cfg MicroCompactConfig) []
 	return result
 }
 
-func ToolNameForResult(m client.EyrieMessage, msgs []client.EyrieMessage) string {
+func ToolNameForResult(m types.EyrieMessage, msgs []types.EyrieMessage) string {
 	if m.ToolResult == nil {
 		return ""
 	}
@@ -78,7 +78,7 @@ func ToolNameForResult(m client.EyrieMessage, msgs []client.EyrieMessage) string
 	return ""
 }
 
-func HasTimeGap(msgs []client.EyrieMessage, threshold time.Duration) bool {
+func HasTimeGap(msgs []types.EyrieMessage, threshold time.Duration) bool {
 	lastTextIdx := -1
 	for i := len(msgs) - 1; i >= 0; i-- {
 		if HasTextContent(msgs[i]) && msgs[i].Role == "assistant" {

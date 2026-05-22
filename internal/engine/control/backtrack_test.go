@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestNewBacktrackEngine(t *testing.T) {
@@ -23,7 +23,7 @@ func TestNewBacktrackEngine(t *testing.T) {
 func TestBacktrackEngine_RecordAndFind(t *testing.T) {
 	be := NewBacktrackEngine()
 
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "Fix the bug"},
 		{Role: "assistant", Content: "I'll try approach A"},
 	}
@@ -61,7 +61,7 @@ func TestBacktrackEngine_RecordAndFind(t *testing.T) {
 func TestBacktrackEngine_GenerateRetryPrompt(t *testing.T) {
 	be := NewBacktrackEngine()
 
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "Refactor the function"},
 	}
 
@@ -94,7 +94,7 @@ func TestBacktrackEngine_GenerateRetryPrompt(t *testing.T) {
 func TestBacktrackEngine_RestoreState(t *testing.T) {
 	be := NewBacktrackEngine()
 
-	originalMsgs := []client.EyrieMessage{
+	originalMsgs := []types.EyrieMessage{
 		{Role: "user", Content: "Step one"},
 		{Role: "assistant", Content: "Done with step one"},
 		{Role: "user", Content: "Step two"},

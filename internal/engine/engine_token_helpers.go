@@ -3,10 +3,10 @@ package engine
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-func isRecentToolHeavy(messages []client.EyrieMessage) bool {
+func isRecentToolHeavy(messages []types.EyrieMessage) bool {
 	const lookback = 3
 	toolTurns := 0
 	assistantSeen := 0
@@ -25,7 +25,7 @@ func isRecentToolHeavy(messages []client.EyrieMessage) bool {
 	return assistantSeen >= lookback && toolTurns == assistantSeen
 }
 
-func isTextQuestion(messages []client.EyrieMessage) bool {
+func isTextQuestion(messages []types.EyrieMessage) bool {
 	var lastUserMsg string
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg := messages[i]
@@ -53,7 +53,7 @@ func isTextQuestion(messages []client.EyrieMessage) bool {
 	return strings.HasSuffix(strings.TrimSpace(lower), "?")
 }
 
-func classifyPromptForBudget(messages []client.EyrieMessage) string {
+func classifyPromptForBudget(messages []types.EyrieMessage) string {
 	if isRecentToolHeavy(messages) {
 		return "tool"
 	}

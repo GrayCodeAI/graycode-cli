@@ -8,6 +8,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // Tool is the interface every hawk tool implements.
@@ -58,6 +59,9 @@ type ToolContext struct {
 	AutoCommit         bool
 	Protected          PathProtector
 	YaadBridge         *memory.YaadBridge
+	Attribution        *types.Attribution
+	SettingsGet        func(key string) (string, bool)
+	SettingsSet        func(key, value string) error
 	// BackgroundManager tracks background sub-agents. If nil, background
 	// mode is not available.
 	BackgroundManager *BackgroundAgentManager

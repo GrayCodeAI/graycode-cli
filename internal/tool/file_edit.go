@@ -127,7 +127,7 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("write: %w", err)
 	}
 	if autoCommitEnabled(ctx) {
-		_ = AutoCommit(path, "Edit", "edited file")
+		_ = AutoCommit(ctx, path, "Edit", "edited file")
 	}
 	return fmt.Sprintf("Edited %s (replaced 1 occurrence)%s", path, fuzzyNote), nil
 }

@@ -27,13 +27,15 @@ type Mission struct {
 
 // Config controls mission orchestration behavior.
 type Config struct {
-	MaxWorkers     int    `json:"max_workers"`
-	WorkerModel    string `json:"worker_model"`
-	ValidatorModel string `json:"validator_model"`
-	RepoDir        string `json:"repo_dir"`
-	BaseBranch     string `json:"base_branch"`
-	AutonomyLevel  int    `json:"autonomy_level"`
-	SkipValidation bool   `json:"skip_validation"`
+	MaxWorkers        int           `json:"max_workers"`
+	WorkerModel       string        `json:"worker_model"`
+	ValidatorModel    string        `json:"validator_model"`
+	RepoDir           string        `json:"repo_dir"`
+	BaseBranch        string        `json:"base_branch"`
+	AutonomyLevel     int           `json:"autonomy_level"`
+	SkipValidation    bool          `json:"skip_validation"`
+	PerWorkerTimeout  time.Duration `json:"per_worker_timeout,omitempty"`
+	MaxRetriesPerFeat int           `json:"max_retries_per_feat,omitempty"`
 }
 
 // Status represents the mission lifecycle.
@@ -158,13 +160,40 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 			m.mu.Lock()
 			feat.Status = FeatureInProgress
 			feat.StartedAt = time.Now()
+			maxRetries := m.Config.MaxRetriesPerFeat
+			if maxRetries <= 0 {
+				maxRetries = 2
+			}
 			m.mu.Unlock()
 
-			handoff, err := workerFn(ctx, feat, missionDir, m.Config)
+			var handoff *Handoff
+			var err error
+			for attempt := 0; attempt <= maxRetries; attempt++ {
+				workerCtx := ctx
+				cancel := func() {}
+				if m.Config.PerWorkerTimeout > 0 {
+					workerCtx, cancel = context.WithTimeout(ctx, m.Config.PerWorkerTimeout)
+				}
+				handoff, err = workerFn(workerCtx, feat, missionDir, m.Config)
+				cancel()
+				if err == nil {
+					break
+				}
+				if attempt < maxRetries {
+					delay := time.Duration(1<<attempt) * time.Second
+					select {
+					case <-time.After(delay):
+					case <-ctx.Done():
+						err = ctx.Err()
+						break
+					}
+				}
+			}
 
 			m.mu.Lock()
 			if err != nil {
 				feat.Status = FeatureFailed
+				feat.Handoff = nil
 			} else {
 				feat.Status = FeatureCompleted
 				feat.Handoff = handoff
@@ -178,19 +207,24 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 
 	wg.Wait()
 
-	allDone := true
+	completed := 0
+	failed := 0
 	for _, f := range m.Features {
-		if f.Status == FeatureFailed {
-			allDone = false
-			break
+		switch f.Status {
+		case FeatureCompleted:
+			completed++
+		case FeatureFailed:
+			failed++
 		}
 	}
 
 	m.mu.Lock()
-	if allDone {
+	if failed == 0 {
 		m.Status = StatusCompleted
-	} else {
+	} else if completed == 0 {
 		m.Status = StatusFailed
+	} else {
+		m.Status = "partial"
 	}
 	m.CompletedAt = time.Now()
 	m.mu.Unlock()
@@ -214,8 +248,14 @@ func (m *Mission) Summary() string {
 	if m.CompletedAt.IsZero() {
 		duration = time.Since(m.StartedAt).Round(time.Second)
 	}
-	return fmt.Sprintf("Mission %s: %d/%d features completed, %d failed (%s)",
-		m.ID, completed, len(m.Features), failed, duration)
+	status := "completed"
+	if failed > 0 && completed > 0 {
+		status = "partial"
+	} else if failed > 0 {
+		status = "failed"
+	}
+	return fmt.Sprintf("Mission %s [%s]: %d/%d features completed, %d failed (%s)",
+		m.ID, status, completed, len(m.Features), failed, duration)
 }
 
 func (m *Mission) createDir() (string, error) {

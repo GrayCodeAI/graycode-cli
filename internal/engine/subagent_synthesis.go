@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // SynthesisPrompt is appended when forcing a sub-agent to summarize.
@@ -16,21 +16,21 @@ const SynthesisPrompt = "You have reached your turn limit. Provide a concise sum
 // The function builds messages from the conversation so far, appends a user
 // message with SynthesisPrompt, and calls the provider with Tools=nil (disabled)
 // to force a text-only response.
-func SynthesizeSubAgent(ctx context.Context, llm LLMClient, model string, conversationSoFar []client.EyrieMessage) (string, error) {
+func SynthesizeSubAgent(ctx context.Context, llm LLMClient, model string, conversationSoFar []types.EyrieMessage) (string, error) {
 	if llm == nil {
 		return "", fmt.Errorf("subagent synthesis: LLM client is nil")
 	}
 
 	// Build messages: conversation so far + synthesis prompt.
-	msgs := make([]client.EyrieMessage, len(conversationSoFar)+1)
+	msgs := make([]types.EyrieMessage, len(conversationSoFar)+1)
 	copy(msgs, conversationSoFar)
-	msgs[len(msgs)-1] = client.EyrieMessage{
+	msgs[len(msgs)-1] = types.EyrieMessage{
 		Role:    "user",
 		Content: SynthesisPrompt,
 	}
 
 	// Call with Tools=nil to disable tool use and force a text summary.
-	opts := client.ChatOptions{
+	opts := types.ChatOptions{
 		Model:     model,
 		Tools:     nil,
 		MaxTokens: 2048,

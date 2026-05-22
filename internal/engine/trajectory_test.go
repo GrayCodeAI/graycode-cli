@@ -4,15 +4,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSummarizeTrajectory_ToolUsage(t *testing.T) {
-	messages := []client.EyrieMessage{
+	messages := []types.EyrieMessage{
 		{
 			Role:    "assistant",
 			Content: "I will edit the file.",
-			ToolUse: []client.ToolCall{
+			ToolUse: []types.ToolCall{
 				{
 					ID:   "tc1",
 					Name: "FileWrite",
@@ -25,7 +25,7 @@ func TestSummarizeTrajectory_ToolUsage(t *testing.T) {
 		{
 			Role:    "user",
 			Content: "Error: permission denied",
-			ToolResult: &client.ToolResult{
+			ToolResult: &types.ToolResult{
 				ToolUseID: "tc1",
 				Content:   "Error: permission denied",
 				IsError:   true,
@@ -46,7 +46,7 @@ func TestSummarizeTrajectory_ToolUsage(t *testing.T) {
 }
 
 func TestSummarizeTrajectory_NoActions(t *testing.T) {
-	messages := []client.EyrieMessage{
+	messages := []types.EyrieMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", Content: "hi there"},
 	}
@@ -60,9 +60,9 @@ func TestSummarizeTrajectory_NoActions(t *testing.T) {
 func TestBestRun_PrefersSuccess(t *testing.T) {
 	td := &TrajectoryDistiller{maxRuns: 3}
 	runs := []TrajectoryRun{
-		{ID: 1, Success: false, Messages: make([]client.EyrieMessage, 10)},
-		{ID: 2, Success: true, Messages: make([]client.EyrieMessage, 5)},
-		{ID: 3, Success: false, Messages: make([]client.EyrieMessage, 15)},
+		{ID: 1, Success: false, Messages: make([]types.EyrieMessage, 10)},
+		{ID: 2, Success: true, Messages: make([]types.EyrieMessage, 5)},
+		{ID: 3, Success: false, Messages: make([]types.EyrieMessage, 15)},
 	}
 
 	best := td.BestRun(runs)
@@ -77,9 +77,9 @@ func TestBestRun_PrefersSuccess(t *testing.T) {
 func TestBestRun_FallsBackToMostProgress(t *testing.T) {
 	td := &TrajectoryDistiller{maxRuns: 3}
 	runs := []TrajectoryRun{
-		{ID: 1, Success: false, Messages: make([]client.EyrieMessage, 5)},
-		{ID: 2, Success: false, Messages: make([]client.EyrieMessage, 12)},
-		{ID: 3, Success: false, Messages: make([]client.EyrieMessage, 8)},
+		{ID: 1, Success: false, Messages: make([]types.EyrieMessage, 5)},
+		{ID: 2, Success: false, Messages: make([]types.EyrieMessage, 12)},
+		{ID: 3, Success: false, Messages: make([]types.EyrieMessage, 8)},
 	}
 
 	best := td.BestRun(runs)

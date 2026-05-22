@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/tok"
 
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
@@ -67,12 +67,12 @@ func (s *Session) smartCompact() {
 		summary += "\n\n" + fileBlock
 	}
 
-	keep := make([]client.EyrieMessage, 0, keepEnd+2)
-	keep = append(keep, client.EyrieMessage{
+	keep := make([]types.EyrieMessage, 0, keepEnd+2)
+	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
 	})
-	keep = append(keep, client.EyrieMessage{
+	keep = append(keep, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
@@ -83,9 +83,9 @@ func (s *Session) smartCompact() {
 func (s *Session) generateSummary() string {
 	// Build a compact version of the conversation for summarization
 	// using the structured compaction prompt from compact_prompt.go
-	var summaryMsgs []client.EyrieMessage
+	var summaryMsgs []types.EyrieMessage
 	compactPrompt := BuildCompactPrompt(CompactBase)
-	summaryMsgs = append(summaryMsgs, client.EyrieMessage{
+	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
 		Role:    "user",
 		Content: compactPrompt + "\n\nConversation:\n",
 	})
@@ -116,7 +116,7 @@ func (s *Session) generateSummary() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := s.client.Chat(ctx, summaryMsgs, client.ChatOptions{
+	resp, err := s.client.Chat(ctx, summaryMsgs, types.ChatOptions{
 		Provider:  s.provider,
 		Model:     s.compactModel(),
 		MaxTokens: 1000,
