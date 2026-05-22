@@ -9,7 +9,7 @@ import (
 
 // BackgroundAgentPool manages async sub-agents that run in the background.
 // When background agents finish, their results are collected for re-injection
-// into the main agent loop (inspired by herm's completion cycles).
+// into the main agent loop.
 type BackgroundAgentPool struct {
 	mu        sync.Mutex
 	pending   []backgroundTask

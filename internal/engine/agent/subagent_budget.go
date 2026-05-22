@@ -1,7 +1,7 @@
 package agent
 
 // subagent_budget.go implements mode-based budget tracking and tool allowlists
-// for sub-agents, extracted from herm's production-grade sub-agent system.
+// sub-agent implementation.
 // It builds on SubAgentMode/constants declared in agent.go.
 
 // SubAgentConfig holds configuration for sub-agent budget and depth limits.
