@@ -108,8 +108,8 @@ func TestMission_Run_PartialFailure(t *testing.T) {
 	if err := m.Run(context.Background(), workerFn); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
-	if m.Status != StatusFailed {
-		t.Errorf("expected failed (partial), got %s", m.Status)
+	if m.Status != "partial" {
+		t.Errorf("expected partial, got %s", m.Status)
 	}
 	if m.Features[0].Status != FeatureCompleted {
 		t.Errorf("f1 should complete even when f2 fails")

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // splitTurnCompact handles the edge case where a single turn's messages
@@ -128,12 +128,12 @@ func (s *Session) splitTurnCompact() {
 	// Keep the second half of the oversized message + everything after
 	remainingMessages := s.messages[splitPoint:]
 
-	keep := make([]client.EyrieMessage, 0, len(remainingMessages)+2)
-	keep = append(keep, client.EyrieMessage{
+	keep := make([]types.EyrieMessage, 0, len(remainingMessages)+2)
+	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: combined.String() + "\n\n[Continue from the recent messages below.]",
 	})
-	keep = append(keep, client.EyrieMessage{
+	keep = append(keep, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
@@ -142,12 +142,12 @@ func (s *Session) splitTurnCompact() {
 }
 
 // generatePartialSummary generates an LLM summary for a subset of messages.
-func (s *Session) generatePartialSummary(messages []client.EyrieMessage) string {
+func (s *Session) generatePartialSummary(messages []types.EyrieMessage) string {
 	if len(messages) == 0 {
 		return ""
 	}
 
-	var summaryMsgs []client.EyrieMessage
+	var summaryMsgs []types.EyrieMessage
 	compactPrompt := BuildCompactPrompt(CompactPartial)
 	var content strings.Builder
 	content.WriteString(compactPrompt)
@@ -166,7 +166,7 @@ func (s *Session) generatePartialSummary(messages []client.EyrieMessage) string 
 		}
 	}
 
-	summaryMsgs = append(summaryMsgs, client.EyrieMessage{
+	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
 		Role:    "user",
 		Content: content.String(),
 	})
@@ -174,7 +174,7 @@ func (s *Session) generatePartialSummary(messages []client.EyrieMessage) string 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := s.client.Chat(ctx, summaryMsgs, client.ChatOptions{
+	resp, err := s.client.Chat(ctx, summaryMsgs, types.ChatOptions{
 		Provider:  s.provider,
 		Model:     s.compactModel(),
 		MaxTokens: 1000,
@@ -186,7 +186,7 @@ func (s *Session) generatePartialSummary(messages []client.EyrieMessage) string 
 }
 
 // summarizeOversizedTurn summarizes the content of a single oversized message.
-func (s *Session) summarizeOversizedTurn(msg client.EyrieMessage) string {
+func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
 	content := msg.Content
 	if content == "" {
 		// If it's a tool result, use that
@@ -205,8 +205,8 @@ func (s *Session) summarizeOversizedTurn(msg client.EyrieMessage) string {
 	}
 	prefix := content[:halfLen]
 
-	var summaryMsgs []client.EyrieMessage
-	summaryMsgs = append(summaryMsgs, client.EyrieMessage{
+	var summaryMsgs []types.EyrieMessage
+	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
 		Role: "user",
 		Content: BuildCompactPrompt(CompactUpTo) + "\n\nSummarize the key information from this content prefix (the rest will be retained verbatim):\n\n" +
 			msg.Role + ": " + prefix + "...",
@@ -215,7 +215,7 @@ func (s *Session) summarizeOversizedTurn(msg client.EyrieMessage) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := s.client.Chat(ctx, summaryMsgs, client.ChatOptions{
+	resp, err := s.client.Chat(ctx, summaryMsgs, types.ChatOptions{
 		Provider:  s.provider,
 		Model:     s.compactModel(),
 		MaxTokens: 500,
@@ -258,12 +258,12 @@ func (s *Session) smartCompactFallback() {
 		summary += "\n\n" + fileBlock
 	}
 
-	keep := make([]client.EyrieMessage, 0, keepEnd+2)
-	keep = append(keep, client.EyrieMessage{
+	keep := make([]types.EyrieMessage, 0, keepEnd+2)
+	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
 	})
-	keep = append(keep, client.EyrieMessage{
+	keep = append(keep, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})

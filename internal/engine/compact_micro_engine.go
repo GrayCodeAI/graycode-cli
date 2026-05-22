@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 )
@@ -13,7 +13,7 @@ type MicroCompactStrategy struct{}
 
 func (s *MicroCompactStrategy) Name() string { return "micro" }
 
-func (s *MicroCompactStrategy) ShouldTrigger(msgs []client.EyrieMessage, tokenCount, threshold int) bool {
+func (s *MicroCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
 	if tokenCount < threshold/2 {
 		return false
 	}

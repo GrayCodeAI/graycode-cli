@@ -3,7 +3,7 @@ package engine
 import (
 	"os"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 const (
@@ -66,9 +66,9 @@ func (s *Session) compact() {
 		return // nothing to compact
 	}
 
-	keep := make([]client.EyrieMessage, 0, len(s.messages)-(cutEnd-cutStart)+1)
+	keep := make([]types.EyrieMessage, 0, len(s.messages)-(cutEnd-cutStart)+1)
 	keep = append(keep, s.messages[:cutStart]...)
-	keep = append(keep, client.EyrieMessage{
+	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Earlier conversation compacted to save context.]",
 	})

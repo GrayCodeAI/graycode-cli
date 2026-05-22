@@ -1,7 +1,7 @@
 package compact
 
 import (
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
@@ -30,7 +30,7 @@ var mutatingTools = map[string]bool{
 	"NotebookEdit": true,
 }
 
-func APICompactMessages(msgs []client.EyrieMessage, cfg APICompactConfig) []client.EyrieMessage {
+func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types.EyrieMessage {
 	totalTokens := token.EstimateTokens(msgs)
 	if totalTokens < cfg.TriggerTokens {
 		return msgs
@@ -41,7 +41,7 @@ func APICompactMessages(msgs []client.EyrieMessage, cfg APICompactConfig) []clie
 		return msgs
 	}
 
-	result := make([]client.EyrieMessage, len(msgs))
+	result := make([]types.EyrieMessage, len(msgs))
 	copy(result, msgs)
 
 	freed := 0
@@ -82,7 +82,7 @@ func APICompactMessages(msgs []client.EyrieMessage, cfg APICompactConfig) []clie
 			if !mutatingTools[toolName] {
 				before := len(m.ToolResult.Content) / 4
 				if before > 100 {
-					m.ToolResult = &client.ToolResult{
+					m.ToolResult = &types.ToolResult{
 						ToolUseID: m.ToolResult.ToolUseID,
 						Content:   "[Old tool result content cleared]",
 						IsError:   m.ToolResult.IsError,
@@ -96,7 +96,7 @@ func APICompactMessages(msgs []client.EyrieMessage, cfg APICompactConfig) []clie
 	return result
 }
 
-func CountClearableToolResults(msgs []client.EyrieMessage) int {
+func CountClearableToolResults(msgs []types.EyrieMessage) int {
 	count := 0
 	for _, m := range msgs {
 		if m.ToolResult != nil && m.ToolResult.Content != "[Old tool result content cleared]" {
@@ -109,6 +109,6 @@ func CountClearableToolResults(msgs []client.EyrieMessage) int {
 	return count
 }
 
-func isThinkingMessage(m client.EyrieMessage) bool {
+func isThinkingMessage(m types.EyrieMessage) bool {
 	return len(m.Content) > 0 && m.Content[0] == '<' && len(m.ToolUse) == 0
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // AutoCompactor orchestrates compaction with circuit breaker protection.
@@ -124,7 +124,7 @@ type SmartCompactStrategy struct{}
 
 func (s *SmartCompactStrategy) Name() string { return "smart" }
 
-func (s *SmartCompactStrategy) ShouldTrigger(msgs []client.EyrieMessage, tokenCount, threshold int) bool {
+func (s *SmartCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
 	return tokenCount >= threshold && len(msgs) > 20
 }
 
@@ -146,7 +146,7 @@ type TruncateStrategy struct{}
 
 func (s *TruncateStrategy) Name() string { return "truncate" }
 
-func (s *TruncateStrategy) ShouldTrigger(_ []client.EyrieMessage, tokenCount, threshold int) bool {
+func (s *TruncateStrategy) ShouldTrigger(_ []types.EyrieMessage, tokenCount, threshold int) bool {
 	return tokenCount >= threshold
 }
 

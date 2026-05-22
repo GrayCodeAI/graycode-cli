@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
@@ -24,7 +24,7 @@ func DefaultSessionMemoryConfig() SessionMemoryConfig {
 	}
 }
 
-func CalculateMessagesToKeepIndex(msgs []client.EyrieMessage, cfg SessionMemoryConfig) int {
+func CalculateMessagesToKeepIndex(msgs []types.EyrieMessage, cfg SessionMemoryConfig) int {
 	if len(msgs) == 0 {
 		return 0
 	}
@@ -54,8 +54,8 @@ func CalculateMessagesToKeepIndex(msgs []client.EyrieMessage, cfg SessionMemoryC
 	return idx
 }
 
-func FilterCompactBoundaries(msgs []client.EyrieMessage) []client.EyrieMessage {
-	result := make([]client.EyrieMessage, 0, len(msgs))
+func FilterCompactBoundaries(msgs []types.EyrieMessage) []types.EyrieMessage {
+	result := make([]types.EyrieMessage, 0, len(msgs))
 	for _, m := range msgs {
 		if IsCompactBoundary(m) {
 			continue
@@ -65,7 +65,7 @@ func FilterCompactBoundaries(msgs []client.EyrieMessage) []client.EyrieMessage {
 	return result
 }
 
-func IsCompactBoundary(m client.EyrieMessage) bool {
+func IsCompactBoundary(m types.EyrieMessage) bool {
 	if m.Role != "user" {
 		return false
 	}

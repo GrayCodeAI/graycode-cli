@@ -1,7 +1,11 @@
 // Package types provides shared types used across GrayCodeAI hawk-related modules.
 package types
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/GrayCodeAI/eyrie/client"
+)
 
 // Severity represents the impact level of a finding.
 type Severity int
@@ -64,15 +68,7 @@ const (
 )
 
 // ToolCall represents a tool invocation requested by the model.
-type ToolCall struct {
-	ID        string                 `json:"id,omitempty"`
-	Name      string                 `json:"name"`
-	Arguments map[string]interface{} `json:"arguments"`
-}
+type ToolCall = client.ToolCall
 
 // ToolResult represents the result of a tool execution.
-type ToolResult struct {
-	ToolUseID string `json:"tool_use_id"`
-	Content   string `json:"content"`
-	IsError   bool   `json:"is_error,omitempty"`
-}
+type ToolResult = client.ToolResult

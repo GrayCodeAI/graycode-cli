@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
 	"github.com/GrayCodeAI/tok"
 )
@@ -264,7 +264,7 @@ func newDefaultBudgetAllocator() *BudgetAllocator {
 // PreQuery runs the full pre-query pipeline: classify intent, select tools, apply
 // context decay, allocate budget, predict cost, build system prompt, scan for
 // injection, and check the response cache.
-func (p *IntegrationPipeline) PreQuery(messages []client.EyrieMessage, userInput string) *PreQueryResult {
+func (p *IntegrationPipeline) PreQuery(messages []types.EyrieMessage, userInput string) *PreQueryResult {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -328,7 +328,7 @@ func (p *IntegrationPipeline) PreQuery(messages []client.EyrieMessage, userInput
 // PostResponse runs the full post-response pipeline: format, score quality,
 // detect file mentions, redact secrets, update timeline, record tokens, cache,
 // and update the experience store.
-func (p *IntegrationPipeline) PostResponse(response string, messages []client.EyrieMessage) *PostResponseResult {
+func (p *IntegrationPipeline) PostResponse(response string, messages []types.EyrieMessage) *PostResponseResult {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -612,7 +612,7 @@ func intentCategory(intent *Intent) string {
 }
 
 // lastUserMessage extracts the last user message from the conversation.
-func lastUserMessage(messages []client.EyrieMessage) string {
+func lastUserMessage(messages []types.EyrieMessage) string {
 	for i := len(messages) - 1; i >= 0; i-- {
 		if messages[i].Role == "user" && messages[i].ToolResult == nil {
 			return messages[i].Content
@@ -622,7 +622,7 @@ func lastUserMessage(messages []client.EyrieMessage) string {
 }
 
 // integrationEstimateTokens gives a rough token count for a message slice.
-func integrationEstimateTokens(messages []client.EyrieMessage) int {
+func integrationEstimateTokens(messages []types.EyrieMessage) int {
 	total := 0
 	for _, m := range messages {
 		total += EstimateStringTokens(m.Content)

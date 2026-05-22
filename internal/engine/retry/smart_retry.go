@@ -51,6 +51,31 @@ type RetryDecision struct {
 	FallbackModel    string
 }
 
+// RetryConfigFromProvider is the interface for provider retry configuration.
+type RetryConfigFromProvider interface {
+	BaseDelayMs() int
+	MaxDelayMs() int
+	MaxRetries() int
+	BackoffMultiplier() float64
+	JitterPct() int
+}
+
+// ConfigureFromProvider sets the retry strategy for a provider from a config source.
+func (sr *SmartRetry) ConfigureFromProvider(provider string, cfg RetryConfigFromProvider) {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	sr.Strategies[provider] = &RetryStrategy{
+		Provider:          provider,
+		BaseDelay:         time.Duration(cfg.BaseDelayMs()) * time.Millisecond,
+		MaxDelay:          time.Duration(cfg.MaxDelayMs()) * time.Millisecond,
+		MaxRetries:        cfg.MaxRetries(),
+		BackoffMultiplier: cfg.BackoffMultiplier(),
+		JitterPct:         float64(cfg.JitterPct()),
+		RetryOn:           []string{"500", "503", "timeout", "server_error", "network"},
+		AbortOn:           []string{"400", "invalid_request"},
+	}
+}
+
 // NewSmartRetry creates a SmartRetry with default strategies per provider.
 func NewSmartRetry() *SmartRetry {
 	sr := &SmartRetry{
@@ -81,18 +106,6 @@ func NewSmartRetry() *SmartRetry {
 		JitterPct:         25,
 		RetryOn:           []string{"429", "500", "503", "rate_limit", "server_error"},
 		AbortOn:           []string{"401", "400", "unauthorized", "invalid_request"},
-	}
-
-	// Ollama: base 2s, max 10s, multiply 1.5x (local, shorter timeouts)
-	sr.Strategies["ollama"] = &RetryStrategy{
-		Provider:          "ollama",
-		BaseDelay:         2 * time.Second,
-		MaxDelay:          10 * time.Second,
-		MaxRetries:        3,
-		BackoffMultiplier: 1.5,
-		JitterPct:         10,
-		RetryOn:           []string{"500", "503", "timeout", "server_error", "network"},
-		AbortOn:           []string{"400", "invalid_request"},
 	}
 
 	return sr

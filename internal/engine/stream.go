@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
@@ -177,7 +177,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
 					ch <- StreamEvent{Type: "content", Content: preResult.CachedResponse}
-					s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
+					s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
 					ch <- StreamEvent{Type: "done"}
 					return
 				}
@@ -228,7 +228,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			activeModel = s.Cascade.SelectModel(lastUserMsg, s.model, "")
 		}
 
-		opts := client.ChatOptions{
+		opts := types.ChatOptions{
 			Provider:      s.provider,
 			Model:         activeModel,
 			MaxTokens:     maxTok,
@@ -286,7 +286,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		var result *client.StreamResult
+		var result *types.StreamResult
 		var err error
 
 		// Use retry for transient errors
@@ -303,7 +303,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
 		}
 
-		contCfg := client.DefaultContinuationConfig()
+		contCfg := types.DefaultContinuationConfig()
 		err = retry.Do(ctx, retryCfg, func() error {
 			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
 			if err != nil {
@@ -341,9 +341,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		var textContent string
-		var toolCalls []client.ToolCall
+		var toolCalls []types.ToolCall
 		var stopReason string
-		var lastUsage *client.EyrieUsage
+		var lastUsage *types.EyrieUsage
 
 		// Streaming with retry for transient stream errors
 		const maxStreamRetries = 2
@@ -449,7 +449,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Check for inline tool calls in text (some providers embed tool calls in text)
 		if len(toolCalls) == 0 && strings.Contains(textContent, "<|tool_calls_section_begin|>") {
-			cleanText, inlineCalls := client.ParseInlineToolCalls(textContent)
+			cleanText, inlineCalls := types.ParseInlineToolCalls(textContent)
 			if len(inlineCalls) > 0 {
 				textContent = cleanText
 				toolCalls = append(toolCalls, inlineCalls...)
@@ -490,8 +490,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Handle max_tokens recovery
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
-			s.messages = append(s.messages, client.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
+			s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent})
+			s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
 			continue
 		}
 
@@ -505,7 +505,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if textContent != "" {
-				s.messages = append(s.messages, client.EyrieMessage{Role: "assistant", Content: textContent})
+				s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent})
 				// Auto-remember corrections and learnings
 				if s.Memory != nil && shouldRemember(textContent) {
 					go s.Memory.Remember(textContent, "assistant_learning")
@@ -523,9 +523,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						memState, _ = s.Memory.Recall("", 2000)
 					}
 					prompt := s.Sleeptime.BuildConsolidationPrompt(transcript, memState)
-					resp, err := s.client.Chat(context.Background(), []client.EyrieMessage{
+					resp, err := s.client.Chat(context.Background(), []types.EyrieMessage{
 						{Role: "user", Content: prompt},
-					}, client.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
+					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
 					if err != nil || resp == nil {
 						return
 					}
@@ -549,9 +549,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					}
 					sd := s.SkillDistiller
 					prompt := sd.BuildSkillPrompt(taskDesc, tools, files, textContent)
-					resp, err := s.client.Chat(context.Background(), []client.EyrieMessage{
+					resp, err := s.client.Chat(context.Background(), []types.EyrieMessage{
 						{Role: "user", Content: prompt},
-					}, client.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
+					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
 					if err != nil || resp == nil {
 						return
 					}
@@ -601,7 +601,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		toolTurns++
 		type toolExecResult struct {
-			tc     client.ToolCall
+			tc     types.ToolCall
 			output string
 			isErr  bool
 		}
@@ -609,8 +609,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Classify tools into concurrent (read-only) and sequential (write) batches
 		safeConcurrent := map[string]bool{"Read": true, "Grep": true, "Glob": true, "LS": true, "WebSearch": true, "WebFetch": true, "ToolSearch": true}
 
-		var concurrentCalls []client.ToolCall
-		var sequentialCalls []client.ToolCall
+		var concurrentCalls []types.ToolCall
+		var sequentialCalls []types.ToolCall
 		for _, tc := range toolCalls {
 			if safeConcurrent[tc.Name] {
 				concurrentCalls = append(concurrentCalls, tc)
@@ -632,7 +632,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		var mu sync.Mutex
 
 		// executeSingleTool handles permission checking and execution for one tool call.
-		executeSingleTool := func(tc client.ToolCall) toolExecResult {
+		executeSingleTool := func(tc types.ToolCall) toolExecResult {
 			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
 			// Trace: start tool span
@@ -872,7 +872,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			var wg sync.WaitGroup
 			for _, tc := range concurrentCalls {
 				wg.Add(1)
-				go func(tc client.ToolCall) {
+				go func(tc types.ToolCall) {
 					defer wg.Done()
 					r := executeSingleTool(tc)
 					mu.Lock()
@@ -903,7 +903,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if assistContent == "" && len(toolCalls) > 0 {
 			assistContent = " " // non-empty to satisfy APIs that reject empty content
 		}
-		s.messages = append(s.messages, client.EyrieMessage{
+		s.messages = append(s.messages, types.EyrieMessage{
 			Role:    "assistant",
 			Content: assistContent,
 			ToolUse: toolCalls,
@@ -914,10 +914,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if resultContent == "" {
 				resultContent = "(no output)"
 			}
-			s.messages = append(s.messages, client.EyrieMessage{
+			s.messages = append(s.messages, types.EyrieMessage{
 				Role:    "user",
 				Content: resultContent,
-				ToolResult: &client.ToolResult{
+				ToolResult: &types.ToolResult{
 					ToolUseID: r.tc.ID,
 					Content:   resultContent,
 					IsError:   r.isErr,
@@ -928,7 +928,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// --- STEERING: Inject user guidance between tool batches ---
 		if s.Steering != nil && s.Steering.HasPending() {
 			for _, steer := range s.Steering.Drain() {
-				s.messages = append(s.messages, client.EyrieMessage{
+				s.messages = append(s.messages, types.EyrieMessage{
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
 				})

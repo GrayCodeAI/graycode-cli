@@ -343,12 +343,29 @@ func TestConfigToolGetsAndSetsSupportedSettings(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
+	var stored string
+	ctx := context.Background()
+	ctx = WithToolContext(ctx, &ToolContext{
+		SettingsGet: func(key string) (string, bool) {
+			if key == "model" {
+				return stored, stored != ""
+			}
+			return "", false
+		},
+		SettingsSet: func(key, value string) error {
+			if key == "model" {
+				stored = value
+			}
+			return nil
+		},
+	})
+
 	setInput, _ := json.Marshal(map[string]string{"action": "set", "key": "model", "value": "test-model"})
-	if _, err := (ConfigTool{}).Execute(context.Background(), setInput); err != nil {
+	if _, err := (ConfigTool{}).Execute(ctx, setInput); err != nil {
 		t.Fatal(err)
 	}
 	getInput, _ := json.Marshal(map[string]string{"action": "get", "key": "model"})
-	out, err := ConfigTool{}.Execute(context.Background(), getInput)
+	out, err := ConfigTool{}.Execute(ctx, getInput)
 	if err != nil {
 		t.Fatal(err)
 	}

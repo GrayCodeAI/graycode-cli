@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 )
@@ -15,7 +15,7 @@ type SessionMemoryStrategy struct{}
 
 func (s *SessionMemoryStrategy) Name() string { return "session_memory" }
 
-func (s *SessionMemoryStrategy) ShouldTrigger(msgs []client.EyrieMessage, tokenCount, threshold int) bool {
+func (s *SessionMemoryStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
 	if tokenCount < threshold {
 		return false
 	}
@@ -49,12 +49,12 @@ func (s *SessionMemoryStrategy) Compact(ctx context.Context, sess *Session) (*Co
 	kept := sess.messages[keepIdx:]
 	kept = compact.FilterCompactBoundaries(kept)
 
-	result := make([]client.EyrieMessage, 0, len(kept)+2)
-	result = append(result, client.EyrieMessage{
+	result := make([]types.EyrieMessage, 0, len(kept)+2)
+	result = append(result, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Session memory summary]\n" + memContent + "\n\n[Continue from the recent messages below.]",
 	})
-	result = append(result, client.EyrieMessage{
+	result = append(result, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Understood. I have the context from the session memory above. Continuing with the recent conversation.",
 	})

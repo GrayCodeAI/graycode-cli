@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // fileMentionsSetupTestProject creates a temporary directory with test files.
@@ -190,7 +190,7 @@ func TestInjectFileMentionContext_NewFiles(t *testing.T) {
 	d := NewFileMentionDetector(dir)
 
 	text := "You need to update `src/auth.go` and `pkg/middleware/rate.go`."
-	messages := []client.EyrieMessage{} // no prior messages
+	messages := []types.EyrieMessage{} // no prior messages
 
 	result := d.InjectFileMentionContext(text, messages)
 
@@ -207,7 +207,7 @@ func TestInjectFileMentionContext_AllAlreadyDiscussed(t *testing.T) {
 	d := NewFileMentionDetector(dir)
 
 	text := "You need to update `src/auth.go`."
-	messages := []client.EyrieMessage{
+	messages := []types.EyrieMessage{
 		{Role: "user", Content: "I'm working on src/auth.go"},
 	}
 

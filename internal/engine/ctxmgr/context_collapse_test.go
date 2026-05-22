@@ -3,11 +3,11 @@ package ctxmgr
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestCollapseRepeatedMessages_NoCollapse(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", Content: "hi"},
 		{Role: "user", Content: "bye"},
@@ -19,11 +19,11 @@ func TestCollapseRepeatedMessages_NoCollapse(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_ToolResults(t *testing.T) {
-	msgs := []client.EyrieMessage{
-		{Role: "user", Content: "run tests", ToolResult: &client.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\ndetails..."}},
-		{Role: "user", Content: "run tests", ToolResult: &client.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\nother details"}},
-		{Role: "user", Content: "run tests", ToolResult: &client.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\nmore details"}},
-		{Role: "user", Content: "run tests", ToolResult: &client.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\nfinal"}},
+	msgs := []types.EyrieMessage{
+		{Role: "user", Content: "run tests", ToolResult: &types.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\ndetails..."}},
+		{Role: "user", Content: "run tests", ToolResult: &types.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\nother details"}},
+		{Role: "user", Content: "run tests", ToolResult: &types.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\nmore details"}},
+		{Role: "user", Content: "run tests", ToolResult: &types.ToolResult{ToolUseID: "Bash", Content: "PASS: all tests passed\nfinal"}},
 	}
 	result := CollapseRepeatedMessages(msgs)
 	// Should collapse to: first + collapsed summary + last = 3
@@ -33,10 +33,10 @@ func TestCollapseRepeatedMessages_ToolResults(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_Errors(t *testing.T) {
-	msgs := []client.EyrieMessage{
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t1", Content: "connection refused", IsError: true}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t2", Content: "connection refused", IsError: true}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "t3", Content: "connection refused", IsError: true}},
+	msgs := []types.EyrieMessage{
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "connection refused", IsError: true}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t2", Content: "connection refused", IsError: true}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t3", Content: "connection refused", IsError: true}},
 	}
 	result := CollapseRepeatedMessages(msgs)
 	if len(result) != 1 {
@@ -48,10 +48,10 @@ func TestCollapseRepeatedMessages_Errors(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_MixedContent(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "hello"},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "Bash", Content: "ok\ndetails"}},
-		{Role: "user", ToolResult: &client.ToolResult{ToolUseID: "Bash", Content: "ok\nother"}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "Bash", Content: "ok\ndetails"}},
+		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "Bash", Content: "ok\nother"}},
 		{Role: "assistant", Content: "done"},
 	}
 	// Only 2 consecutive tool results — not enough to collapse
@@ -62,7 +62,7 @@ func TestCollapseRepeatedMessages_MixedContent(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_ShortInput(t *testing.T) {
-	msgs := []client.EyrieMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "hi"},
 	}
 	result := CollapseRepeatedMessages(msgs)

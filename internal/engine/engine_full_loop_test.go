@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestEngine_FullLoop_TextOnly(t *testing.T) {
@@ -69,14 +69,14 @@ func TestEngine_FullLoop_MultiTurn(t *testing.T) {
 
 func TestEngine_FullLoop_ToolUse(t *testing.T) {
 	mc := newMockClient(
-		&client.EyrieResponse{
+		&types.EyrieResponse{
 			FinishReason: "tool_use",
-			ToolCalls: []client.ToolCall{{
+			ToolCalls: []types.ToolCall{{
 				ID:        "call_1",
 				Name:      "Read",
 				Arguments: map[string]interface{}{"file_path": "/nonexistent"},
 			}},
-			Usage: &client.EyrieUsage{PromptTokens: 50, CompletionTokens: 30},
+			Usage: &types.EyrieUsage{PromptTokens: 50, CompletionTokens: 30},
 		},
 		mockTextResponse("I read the file and here's what I found."),
 	)
