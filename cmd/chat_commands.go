@@ -100,7 +100,7 @@ var slashDescriptions = map[string]string{
 	"/btw":             "Side note without triggering a response",
 	"/bughunter":       "Hunt for bugs in the codebase",
 	"/check":           "Review diff, find issues, auto-fix safe ones, verify before ship",
-	"/design":          "Screenshot-driven UI iteration (Waza method)",
+	"/design":          "Build or improve UI — use /design screenshot|system|component|regress for advanced modes",
 	"/hunt":            "Diagnose root cause of errors before fixing (Waza method)",
 	"/think":           "Turn rough idea into approved plan before coding (Waza method)",
 	"/clean":           "Delete old sessions",
@@ -1037,9 +1037,63 @@ Generate the recap:`, summary.String())
 	case "/check":
 		return m.startPromptCommand("/check", buildCheckPrompt())
 	case "/design":
+		parts := strings.Fields(text)
+		if len(parts) >= 2 {
+			switch parts[1] {
+			case "screenshot":
+				path := strings.TrimSpace(strings.TrimPrefix(text, "/design screenshot"))
+				if path == "" {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design screenshot <path/to/screenshot.png>"})
+					return m, nil
+				}
+				return m.startPromptCommand("/design screenshot", buildDesignScreenshotPrompt(path))
+			case "system":
+				dir := strings.TrimSpace(strings.TrimPrefix(text, "/design system"))
+				if dir == "" {
+					dir = "."
+				}
+				return m.startPromptCommand("/design system", buildDesignSystemPrompt(dir))
+			case "component":
+				rest := strings.TrimSpace(strings.TrimPrefix(text, "/design component"))
+				parts2 := strings.Fields(rest)
+				name := ""
+				fw := ""
+				if len(parts2) >= 1 {
+					name = parts2[0]
+					if len(parts2) >= 2 {
+						fw = parts2[1]
+					}
+				}
+				if name == "" {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design component <name> [framework]"})
+					return m, nil
+				}
+				return m.startPromptCommand("/design component", buildDesignComponentPrompt(name, fw))
+			case "regress":
+				rest := strings.TrimSpace(strings.TrimPrefix(text, "/design regress"))
+				if rest == "" {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design regress <baseline> [current]"})
+					return m, nil
+				}
+				parts2 := strings.Fields(rest)
+				baseline := parts2[0]
+				current := "."
+				if len(parts2) >= 2 {
+					current = parts2[1]
+				}
+				return m.startPromptCommand("/design regress", buildDesignRegressionPrompt(baseline, current))
+			default:
+				topic := strings.TrimSpace(strings.TrimPrefix(text, "/design"))
+				if topic == "" {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design <what to build or improve> or /design screenshot|system|component|regress"})
+					return m, nil
+				}
+				return m.startPromptCommand("/design", buildDesignPrompt(topic))
+			}
+		}
 		topic := strings.TrimSpace(strings.TrimPrefix(text, "/design"))
 		if topic == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design <what to build or improve>"})
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /design <what to build or improve> or /design screenshot|system|component|regress"})
 			return m, nil
 		}
 		return m.startPromptCommand("/design", buildDesignPrompt(topic))
