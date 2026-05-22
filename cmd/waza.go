@@ -97,6 +97,130 @@ If the feedback is vague ("make it better", "not quite right"), ask ONE specific
 Begin by reading the relevant component files.`, topic)
 }
 
+// buildDesignScreenshotPrompt creates the /design screenshot analysis prompt.
+func buildDesignScreenshotPrompt(path string) string {
+	return fmt.Sprintf(`You are in DESIGN SCREENSHOT mode. Analyze a screenshot for visual improvements.
+
+## Screenshot path
+%s
+
+## Process
+1. **Read the screenshot file** and describe what you see — layout, spacing, color palette, typography, component hierarchy.
+2. **Audit against these dimensions**, rating each 1-5 and noting specific issues:
+   - Visual hierarchy: Is the most important content prominent?
+   - Spacing & alignment: Consistent padding, grid alignment?
+   - Color & contrast: Accessible contrast ratios, meaningful color use?
+   - Typography: Readable font sizes, appropriate line-height, limited font faces?
+   - Consistency: Do elements of the same type look the same?
+   - Cognitive load: Is information density appropriate for the task?
+3. **List the top 3 issues** ranked by user impact.
+4. **For each issue**, suggest a specific CSS/component change.
+5. **If a reference design or brand guide exists** in the project, compare against it.
+
+Output a structured report. Be specific — name exact colors, spacing values, and components.`, path)
+}
+
+// buildDesignSystemPrompt creates the /design system extraction prompt.
+func buildDesignSystemPrompt(dir string) string {
+	return fmt.Sprintf(`You are in DESIGN SYSTEM mode. Extract and scaffold a design system from existing UI code.
+
+## Target directory
+%s
+
+## Process
+1. **Scan the codebase** for existing UI components, stylesheets, and configuration files.
+2. **Extract design tokens** by reading:
+   - CSS/Tailwind variables and custom properties
+   - Color values used across components (backgrounds, text, borders, accents)
+   - Typography: font families, sizes, weights, line heights
+   - Spacing: margins, paddings, grid gaps
+   - Border radii, shadows, transitions
+   - Breakpoints / media query values
+3. **Detect patterns**: How are components structured? What prop patterns exist? Error/loading/empty states?
+4. **Generate** a design system scaffold:
+   - tokens.json: All extracted design tokens in a structured format
+   - colors.md: Color palette with usage guidelines and contrast ratios
+   - typography.md: Type scale with usage context
+   - spacing.md: Spacing scale
+   - components/index.md: Catalog of existing components with props and states
+   - CONTRIBUTING.md: Design system contribution guidelines
+5. **Flag inconsistencies**: Where do similar components use different spacing or colors?
+
+Rules: Do not modify existing components. Only create documentation files. If no design tokens are detected, scaffold a minimal set based on framework defaults.`, dir)
+}
+
+// buildDesignComponentPrompt creates the /design component scaffolding prompt.
+func buildDesignComponentPrompt(name, framework string) string {
+	fw := framework
+	if fw == "" {
+		fw = "the project's framework"
+	}
+	return fmt.Sprintf(`You are in DESIGN COMPONENT mode. Scaffold a production-quality UI component.
+
+## Component
+%s
+
+## Framework
+%s
+
+## Requirements
+1. Read existing components in the project to match the style, patterns, and conventions.
+2. Generate a complete component with:
+   - TypeScript/PropTypes type definitions for all props
+   - All visual variants (primary, secondary, outline, ghost, danger — as applicable)
+   - All interactive states: default, hover, active, focus, disabled, loading
+   - All sizes (sm, md, lg) where applicable
+   - Error state, empty state (if content-bearing)
+   - Responsive behavior where applicable
+   - Dark mode support (if project has dark mode)
+3. Accessibility (non-negotiable):
+   - Semantic HTML elements
+   - ARIA roles, labels, and attributes
+   - Keyboard navigation (Enter, Escape, arrow keys for menus/dialogs)
+   - Focus management (auto-focus, focus trap for modals)
+   - Screen reader announcements via aria-live
+4. Write tests:
+   - Renders correctly with default props
+   - Each variant renders without error
+   - Each interactive state works
+   - Keyboard interactions function
+   - Accessibility assertions (jest-axe or equivalent)
+5. Documentation: Add a brief usage example as a doc comment.
+
+Rules: Follow the project's existing patterns exactly (CSS modules, Tailwind, styled-components, etc.). Do not add new dependencies unless absolutely necessary.`, name, fw)
+}
+
+func buildDesignRegressionPrompt(baseline, current string) string {
+	return fmt.Sprintf(`You are in DESIGN REGRESSION mode. Compare current UI against a stored baseline and flag visual differences.
+
+## Baseline reference
+%s
+
+## Current version
+%s
+
+## Process
+1. Capture current state: Take a screenshot of the relevant page or component.
+2. Compare against the baseline on these dimensions:
+   - Layout shifts: Are elements in the same position?
+   - Spacing changes: Are margins/padding consistent with baseline?
+   - Color changes: Any unexpected color shifts — check contrast ratios still pass WCAG AA
+   - Typography changes: Font sizes, weights, families consistent?
+   - Content changes: Missing text, extra elements, different copy?
+   - Responsive: Test at mobile, tablet, desktop breakpoints
+3. Classify each difference:
+   - Intentional: matches a recent change in git log
+   - Regression: unintended visual change — needs fix
+   - Unknown: cannot determine cause — flag for human review
+4. Report: For each regression, provide:
+   - The component and file location
+   - Screenshot comparison description
+   - Git commit that likely caused it (use git blame on relevant files)
+   - Suggested fix
+
+Begin by reading the current UI components and comparing against the baseline description.`, baseline, current)
+}
+
 // buildCheckPrompt creates the /check review prompt (inspired by Waza).
 func buildCheckPrompt() string {
 	return `You are in CHECK mode. Review changes before they ship.
