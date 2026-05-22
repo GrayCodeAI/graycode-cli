@@ -118,7 +118,7 @@ func (c *ContainerSandbox) Stop() error {
 	if !c.running {
 		return nil
 	}
-	cmd := exec.Command("docker", "stop", c.containerID)
+	cmd := exec.CommandContext(context.Background(), "docker", "stop", c.containerID)
 	cmd.Run()
 	c.running = false
 	return nil

@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -506,7 +507,7 @@ func generateID() string {
 
 // gitCurrentBranch returns the current git branch name.
 func gitCurrentBranch(dir string) string {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "--abbrev-ref", "HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -517,7 +518,7 @@ func gitCurrentBranch(dir string) string {
 
 // gitCurrentCommit returns the current git HEAD commit hash.
 func gitCurrentCommit(dir string) string {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {

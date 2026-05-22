@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -125,7 +126,7 @@ func StartBGSession(prompt string, args []string) (*BGSessionInfo, error) {
 
 	// Build command: hawk --print <prompt> with all inherited flags
 	cmdArgs := append([]string{"--print", "--session-id", id, prompt}, args...)
-	cmd := exec.Command("hawk", cmdArgs...)
+	cmd := exec.CommandContext(context.Background(), "hawk", cmdArgs...)
 	cmd.Dir = cwd
 
 	logF, err := os.Create(logFile)

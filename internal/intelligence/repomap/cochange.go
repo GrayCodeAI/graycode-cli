@@ -1,6 +1,7 @@
 package repomap
 
 import (
+	"context"
 	"os/exec"
 	"sort"
 	"strings"
@@ -18,7 +19,7 @@ func BuildCoChangeAnalysis(root string, commitLimit int) (*CoChangeAnalysis, err
 		commitLimit = 100
 	}
 
-	cmd := exec.Command("git", "log", "--name-only", "--pretty=format:", "-"+strings.Repeat("0", 0)+itoa(commitLimit))
+	cmd := exec.CommandContext(context.Background(), "git", "log", "--name-only", "--pretty=format:", "-"+strings.Repeat("0", 0)+itoa(commitLimit))
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

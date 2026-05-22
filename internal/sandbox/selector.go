@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"context"
 	"os/exec"
 	"runtime"
 )
@@ -94,7 +95,7 @@ func bwrapAvailable() bool {
 }
 
 func dockerAvailable() bool {
-	cmd := exec.Command("docker", "info")
+	cmd := exec.CommandContext(context.Background(), "docker", "info")
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run() == nil

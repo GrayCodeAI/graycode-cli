@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -135,7 +136,7 @@ func fixReviewRefine(store *ReviewStore, r *ReviewRecord) error {
 	}
 	execArgs = append(execArgs, prompt)
 
-	cmd := exec.Command(hawkBin, execArgs...)
+	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -159,14 +160,14 @@ func runReviewOnSHA(store *ReviewStore, sha string) error {
 		args = append(args, "--model", refineModel)
 	}
 
-	cmd := exec.Command(hawkBin, args...)
+	cmd := exec.CommandContext(context.Background(), hawkBin, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 func getLatestCommitSHA() string {
-	out, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "rev-parse", "HEAD").Output()
 	if err != nil {
 		return ""
 	}

@@ -1,6 +1,7 @@
 package parallel
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -81,7 +82,7 @@ func (wm *WorktreeManager) Create(branch, baseBranch, taskDescription string) (*
 	id := generateID()
 	wtDir := filepath.Join(wm.BaseDir, ".hawk", "worktrees", id)
 
-	cmd := exec.Command("git", "worktree", "add", "-b", branch, wtDir, baseBranch)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtDir, baseBranch)
 	cmd.Dir = wm.BaseDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -111,7 +112,7 @@ func (wm *WorktreeManager) Remove(id string) error {
 		return fmt.Errorf("worktree %q not found", id)
 	}
 
-	cmd := exec.Command("git", "worktree", "remove", "--force", wt.Path)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wt.Path)
 	cmd.Dir = wm.BaseDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -162,7 +163,7 @@ func (wm *WorktreeManager) MergeBack(id string, strategy string) error {
 	wm.mu.RUnlock()
 
 	// Checkout the base branch.
-	checkout := exec.Command("git", "checkout", baseBranch)
+	checkout := exec.CommandContext(context.Background(), "git", "checkout", baseBranch)
 	checkout.Dir = wm.BaseDir
 	if out, err := checkout.CombinedOutput(); err != nil {
 		return fmt.Errorf("git checkout %s: %s: %w", baseBranch, strings.TrimSpace(string(out)), err)
@@ -172,11 +173,11 @@ func (wm *WorktreeManager) MergeBack(id string, strategy string) error {
 	var mergeCmd *exec.Cmd
 	switch strategy {
 	case "fast-forward":
-		mergeCmd = exec.Command("git", "merge", "--ff-only", branch)
+		mergeCmd = exec.CommandContext(context.Background(), "git", "merge", "--ff-only", branch)
 	case "squash":
-		mergeCmd = exec.Command("git", "merge", "--squash", branch)
+		mergeCmd = exec.CommandContext(context.Background(), "git", "merge", "--squash", branch)
 	case "merge-commit":
-		mergeCmd = exec.Command("git", "merge", "--no-ff", branch, "-m",
+		mergeCmd = exec.CommandContext(context.Background(), "git", "merge", "--no-ff", branch, "-m",
 			fmt.Sprintf("Merge branch '%s' into %s", branch, baseBranch))
 	default:
 		return fmt.Errorf("unsupported merge strategy: %q (use fast-forward, squash, or merge-commit)", strategy)
@@ -189,7 +190,7 @@ func (wm *WorktreeManager) MergeBack(id string, strategy string) error {
 
 	// For squash merges, git does not auto-commit; we need to commit.
 	if strategy == "squash" {
-		commitCmd := exec.Command("git", "commit", "-m",
+		commitCmd := exec.CommandContext(context.Background(), "git", "commit", "-m",
 			fmt.Sprintf("Squash merge branch '%s' into %s", branch, baseBranch))
 		commitCmd.Dir = wm.BaseDir
 		if out, err := commitCmd.CombinedOutput(); err != nil {
@@ -226,7 +227,7 @@ func (wm *WorktreeManager) Cleanup() error {
 	}
 
 	// Prune stale worktree references.
-	prune := exec.Command("git", "worktree", "prune")
+	prune := exec.CommandContext(context.Background(), "git", "worktree", "prune")
 	prune.Dir = wm.BaseDir
 	if out, err := prune.CombinedOutput(); err != nil && firstErr == nil {
 		firstErr = fmt.Errorf("git worktree prune: %s: %w", strings.TrimSpace(string(out)), err)
@@ -284,7 +285,7 @@ func (wm *WorktreeManager) IsClean(id string) (bool, error) {
 		return false, fmt.Errorf("worktree %q not found", id)
 	}
 
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := exec.CommandContext(context.Background(), "git", "status", "--porcelain")
 	cmd.Dir = wt.Path
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -304,7 +305,7 @@ func (wm *WorktreeManager) GetDiff(id string) (string, error) {
 		return "", fmt.Errorf("worktree %q not found", id)
 	}
 
-	cmd := exec.Command("git", "diff", wt.BaseBranch+"..."+wt.Branch)
+	cmd := exec.CommandContext(context.Background(), "git", "diff", wt.BaseBranch+"..."+wt.Branch)
 	cmd.Dir = wm.BaseDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -330,7 +331,7 @@ func (wm *WorktreeManager) FormatMergePreview(id string) string {
 	sb.WriteString("\n")
 
 	// Get commit log between base and branch.
-	logCmd := exec.Command("git", "log", "--oneline", wt.BaseBranch+".."+wt.Branch)
+	logCmd := exec.CommandContext(context.Background(), "git", "log", "--oneline", wt.BaseBranch+".."+wt.Branch)
 	logCmd.Dir = wm.BaseDir
 	logOut, err := logCmd.CombinedOutput()
 	if err != nil {
@@ -348,7 +349,7 @@ func (wm *WorktreeManager) FormatMergePreview(id string) string {
 	}
 
 	// Get diffstat.
-	statCmd := exec.Command("git", "diff", "--stat", wt.BaseBranch+"..."+wt.Branch)
+	statCmd := exec.CommandContext(context.Background(), "git", "diff", "--stat", wt.BaseBranch+"..."+wt.Branch)
 	statCmd.Dir = wm.BaseDir
 	statOut, err := statCmd.CombinedOutput()
 	if err == nil {

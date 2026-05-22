@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -42,12 +43,12 @@ func (sd *SessionDiffAnalyzer) SnapshotStart() {
 	defer sd.mu.Unlock()
 
 	// Use git to capture current state
-	out, err := exec.Command("git", "-C", sd.projectDir, "status", "--porcelain").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "status", "--porcelain").Output()
 	if err != nil {
 		return
 	}
 	// Store current HEAD for later comparison
-	head, err := exec.Command("git", "-C", sd.projectDir, "rev-parse", "HEAD").Output()
+	head, err := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "rev-parse", "HEAD").Output()
 	if err != nil {
 		return
 	}
@@ -67,11 +68,11 @@ func (sd *SessionDiffAnalyzer) AnalyzeEnd() *DiffResult {
 	}
 
 	// Get diff since session start
-	diffCmd := exec.Command("git", "-C", sd.projectDir, "diff", "--name-status", startHead+"..HEAD")
+	diffCmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", "--name-status", startHead+"..HEAD")
 	out, err := diffCmd.Output()
 	if err != nil {
 		// Fall back to uncommitted changes
-		diffCmd = exec.Command("git", "-C", sd.projectDir, "diff", "--name-status", startHead)
+		diffCmd = exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", "--name-status", startHead)
 		out, _ = diffCmd.Output()
 	}
 
@@ -98,7 +99,7 @@ func (sd *SessionDiffAnalyzer) AnalyzeEnd() *DiffResult {
 	}
 
 	// Get new commits since session start
-	logCmd := exec.Command("git", "-C", sd.projectDir, "log", "--oneline", startHead+"..HEAD")
+	logCmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "log", "--oneline", startHead+"..HEAD")
 	logOut, err := logCmd.Output()
 	if err == nil {
 		for _, line := range strings.Split(string(logOut), "\n") {
@@ -169,7 +170,7 @@ func (sd *SessionDiffAnalyzer) detectNewDeps(modifiedFiles []string, startHead s
 		switch base {
 		case "package.json", "go.mod", "Cargo.toml", "pyproject.toml", "requirements.txt":
 			// Get the diff for this specific file
-			cmd := exec.Command("git", "-C", sd.projectDir, "diff", startHead, "--", f)
+			cmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", startHead, "--", f)
 			out, err := cmd.Output()
 			if err != nil {
 				continue

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os/exec"
 	"runtime"
 )
@@ -13,7 +14,7 @@ func preventSleep() func() {
 		return func() {}
 	}
 
-	cmd := exec.Command("caffeinate", "-i")
+	cmd := exec.CommandContext(context.Background(), "caffeinate", "-i")
 	if err := cmd.Start(); err != nil {
 		return func() {}
 	}

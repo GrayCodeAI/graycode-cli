@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 	"github.com/GrayCodeAI/inspect"
 	"github.com/GrayCodeAI/sight"
 	"github.com/GrayCodeAI/tok"
@@ -105,7 +105,7 @@ func TestIntegration_SightReviewStoreRecall(t *testing.T) {
 
 func TestIntegration_InspectScanHTTPTest(t *testing.T) {
 	// 1. Start a test HTTP server with known issues
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		// Intentionally missing security headers
 		fmt.Fprint(w, `<!DOCTYPE html><html>
@@ -259,7 +259,7 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	}
 
 	// 5. Use inspect on a test server
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprint(w, `<!DOCTYPE html><html><head><title>OK</title></head><body>OK</body></html>`)
 	}))

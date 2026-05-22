@@ -1,6 +1,9 @@
 package cmdhistory
 
-import "database/sql"
+import (
+	"context"
+	"database/sql"
+)
 
 const schemaSQL = `
 CREATE TABLE IF NOT EXISTS entries (
@@ -41,9 +44,9 @@ END;
 
 // createSchema initializes the SQLite schema and enables WAL mode.
 func createSchema(db *sql.DB) error {
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+	if _, err := db.ExecContext(context.Background(), "PRAGMA journal_mode=WAL"); err != nil {
 		return err
 	}
-	_, err := db.Exec(schemaSQL)
+	_, err := db.ExecContext(context.Background(), schemaSQL)
 	return err
 }

@@ -133,7 +133,7 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 	s.mu.Unlock()
 
-	ln, err := net.Listen("tcp", s.addr)
+	ln, err := new(net.ListenConfig).Listen(ctx, "tcp", s.addr)
 	if err != nil {
 		return err
 	}

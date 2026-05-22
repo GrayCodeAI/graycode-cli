@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
 	"github.com/GrayCodeAI/tok"
 )
 
@@ -24,7 +25,7 @@ type IntegrationPipeline struct {
 	// Pre-query pipeline
 	IntentClassifier *IntentClassifier
 	ToolSelector     *ToolSelector
-	ContextDecay     *ContextDecay
+	ContextDecay     *ctxmgr.ContextDecay
 	BudgetAllocator  *BudgetAllocator
 	TokenPredictor   *TokenPredictor
 	AdaptivePrompt   *SystemPromptBuilder
@@ -192,7 +193,7 @@ func NewIntegrationPipeline() *IntegrationPipeline {
 		// Pre-query
 		IntentClassifier: NewIntentClassifier(),
 		ToolSelector:     NewToolSelector(defaultToolSet()),
-		ContextDecay:     NewContextDecay(30 * time.Minute),
+		ContextDecay:     ctxmgr.NewContextDecay(30 * time.Minute),
 		BudgetAllocator:  newDefaultBudgetAllocator(),
 		TokenPredictor:   NewTokenPredictor(),
 		AdaptivePrompt:   NewSystemPromptBuilder("", 4096),

@@ -2,6 +2,7 @@ package repomap
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -301,7 +302,7 @@ func FormatGroups(groups []FileGroup) string {
 func CoChangeAnalysisMap(projectDir string) map[string][]string {
 	result := make(map[string][]string)
 
-	cmd := exec.Command("git", "log", "--name-only", "--pretty=format:", "-100")
+	cmd := exec.CommandContext(context.Background(), "git", "log", "--name-only", "--pretty=format:", "-100")
 	cmd.Dir = projectDir
 	out, err := cmd.Output()
 	if err != nil {

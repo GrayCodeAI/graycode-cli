@@ -3,6 +3,7 @@ package fingerprint
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -472,7 +473,7 @@ func detectLicense(dir string) string {
 // the directory is not a git repository.
 func collectGitInfo(dir string) *GitInfo {
 	// Check if it's a git repo.
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "--is-inside-work-tree")
 	cmd.Dir = dir
 	if out, err := cmd.Output(); err != nil || strings.TrimSpace(string(out)) != "true" {
 		return nil
@@ -520,7 +521,7 @@ func collectGitInfo(dir string) *GitInfo {
 
 // gitCmd runs a git command in the given directory and returns its stdout.
 func gitCmd(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

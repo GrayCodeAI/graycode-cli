@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,7 +25,7 @@ func setupTestRepo(t *testing.T) (string, func()) {
 
 	run := func(args ...string) {
 		t.Helper()
-		cmd := exec.Command(args[0], args[1:]...)
+		cmd := exec.CommandContext(context.Background(), args[0], args[1:]...)
 		cmd.Dir = dir
 		out, err := cmd.CombinedOutput()
 		if err != nil {

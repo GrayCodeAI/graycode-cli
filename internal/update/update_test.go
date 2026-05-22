@@ -3,9 +3,10 @@ package update
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestIsNewer(t *testing.T) {
@@ -64,7 +65,7 @@ func TestCheck(t *testing.T) {
 			Body:    "Bug fixes and improvements",
 			URL:     "https://github.com/GrayCodeAI/hawk/releases/tag/v1.0.0",
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(release)
 		}))
@@ -91,7 +92,7 @@ func TestCheck(t *testing.T) {
 			TagName: "v0.2.0",
 			Name:    "Current Release",
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(release)
 		}))
@@ -111,7 +112,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("server error", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer server.Close()
@@ -127,7 +128,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("invalid JSON response", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte("not json"))
 		}))
@@ -145,7 +146,7 @@ func TestCheck(t *testing.T) {
 
 	t.Run("unreachable server", func(t *testing.T) {
 		origURL := updateURL
-		setUpdateURL("http://localhost:1")
+		setUpdateURL("http://" + testutil.LoopbackHost + ":1")
 		defer setUpdateURL(origURL)
 
 		_, err := Check("0.2.0")
@@ -163,7 +164,7 @@ func TestSummary(t *testing.T) {
 			Body:    "Breaking changes",
 			URL:     "https://github.com/GrayCodeAI/hawk/releases/tag/v2.0.0",
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(release)
 		}))
@@ -184,7 +185,7 @@ func TestSummary(t *testing.T) {
 
 	t.Run("up to date", func(t *testing.T) {
 		release := ReleaseInfo{TagName: "v0.2.0"}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(release)
 		}))

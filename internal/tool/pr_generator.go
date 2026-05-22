@@ -570,7 +570,7 @@ func (t *PRGeneratorTool) Execute(ctx context.Context, input json.RawMessage) (s
 // --- Internal helpers ---
 
 func (g *PRGenerator) runGit(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = g.ProjectDir
 	out, err := cmd.Output()
 	if err != nil {

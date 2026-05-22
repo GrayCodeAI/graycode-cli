@@ -14,6 +14,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/client"
 
 	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
@@ -93,7 +94,7 @@ type Intelligence struct {
 type Optimizer struct {
 	Cost        Cost
 	CostTracker *CostTracker
-	Cascade     *CascadeRouter
+	Cascade     *branching.CascadeRouter
 	Router      *modelPkg.Router
 	MaxBudget   float64
 }
@@ -141,7 +142,7 @@ type SessionServices struct {
 	Reflector  *Reflector
 	Critic     *Critic
 	Backtrack  *BacktrackEngine
-	Shadow     *ShadowWorkspace
+	Shadow     *branching.ShadowWorkspace
 	ConvoDAG   *storage.DAG
 	Plan       *PlanState
 	Teach      TeachConfig
@@ -212,7 +213,7 @@ func WithTracing(tracer *oteltrace.Tracer) ServiceOption {
 }
 
 // WithCascade sets the CascadeRouter on the Optimizer.
-func WithCascade(cascade *CascadeRouter) ServiceOption {
+func WithCascade(cascade *branching.CascadeRouter) ServiceOption {
 	return func(ss *SessionServices) {
 		if ss.Optim == nil {
 			ss.Optim = &Optimizer{}

@@ -285,14 +285,14 @@ func persistExecSession(id, model, provider, userMsg, assistantMsg string) {
 }
 
 func createExecWorktree(repoDir, baseBranch, branch string) (string, error) {
-	cmd := exec.Command("mktemp", "-d")
+	cmd := exec.CommandContext(context.Background(), "mktemp", "-d")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
 	wtPath := strings.TrimSpace(string(out))
 
-	gitCmd := exec.Command("git", "worktree", "add", "-b", branch, wtPath, baseBranch)
+	gitCmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
 	gitCmd.Dir = repoDir
 	if errOut, err := gitCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(errOut)), err)
@@ -304,7 +304,7 @@ func cleanupExecWorktree(repoDir, wtPath string) {
 	if wtPath == "" {
 		return
 	}
-	cmd := exec.Command("git", "worktree", "remove", "--force", wtPath)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath)
 	cmd.Dir = repoDir
 	_ = cmd.Run()
 }
