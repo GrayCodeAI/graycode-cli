@@ -25,7 +25,7 @@ func DetectProvider() string {
 }
 
 func RegisterDynamicProvider(name, baseURL, apiKeyEnv string) {
-	client.RegisterDynamicProvider(name, baseURL, apiKeyEnv)
+	_ = client.RegisterDynamicProvider(name, baseURL, apiKeyEnv)
 }
 
 func GetProviderNames() []string {

@@ -206,7 +206,7 @@ func saveEyrieSession(id string, sess *engine.Session) {
 	for _, rm := range raw {
 		sm := session.Message{Role: rm.Role, Content: rm.Content}
 		for _, tc := range rm.ToolUse {
-			sm.ToolUse = append(sm.ToolUse, session.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+			sm.ToolUse = append(sm.ToolUse, tc)
 		}
 		if rm.ToolResult != nil {
 			sm.ToolResult = &session.ToolResult{ToolUseID: rm.ToolResult.ToolUseID, Content: rm.ToolResult.Content, IsError: rm.ToolResult.IsError}
@@ -227,7 +227,7 @@ func toEyrieMessages(saved []session.Message) []client.EyrieMessage {
 	for _, sm := range saved {
 		em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
 		for _, tc := range sm.ToolUse {
-			em.ToolUse = append(em.ToolUse, client.ToolCall{ID: tc.ID, Name: tc.Name, Arguments: tc.Arguments})
+			em.ToolUse = append(em.ToolUse, tc)
 		}
 		if sm.ToolResult != nil {
 			em.ToolResult = &client.ToolResult{ToolUseID: sm.ToolResult.ToolUseID, Content: sm.ToolResult.Content, IsError: sm.ToolResult.IsError}
