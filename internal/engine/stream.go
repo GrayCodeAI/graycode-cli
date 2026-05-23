@@ -974,21 +974,29 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Auto-remember: save noteworthy patterns to yaad after each turn
-		if s.Memory != nil && len(s.messages) >= 2 {
-			lastAssistant := ""
+		// Auto-remember: save conversation context and insights to yaad after each turn
+		if s.Memory != nil {
+			userMsg := ""
+			assistantMsg := ""
 			for i := len(s.messages) - 1; i >= 0; i-- {
-				if s.messages[i].Role == "assistant" && s.messages[i].Content != "" {
-					lastAssistant = s.messages[i].Content
+				m := s.messages[i]
+				if m.Role == "assistant" && m.Content != "" && assistantMsg == "" {
+					assistantMsg = m.Content
+				}
+				if m.Role == "user" && m.ToolResult == nil && userMsg == "" {
+					userMsg = m.Content
+				}
+				if userMsg != "" && assistantMsg != "" {
 					break
 				}
 			}
-			if lastAssistant != "" && shouldRemember(lastAssistant) {
-				content := lastAssistant
-				if len(content) > 500 {
-					content = content[:500]
-				}
-				_ = s.Memory.Remember(content, "insight")
+			if userMsg != "" && assistantMsg != "" {
+				condensed := fmt.Sprintf("Q: %s\nA: %s", truncate(userMsg, 200), truncate(assistantMsg, 300))
+				_ = s.Memory.Remember(condensed, "conversation")
+			}
+			// Also save insights if the response has learning signals
+			if assistantMsg != "" && shouldRemember(assistantMsg) {
+				_ = s.Memory.Remember(truncate(assistantMsg, 500), "insight")
 			}
 		}
 	}
