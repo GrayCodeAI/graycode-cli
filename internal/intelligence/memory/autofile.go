@@ -15,10 +15,10 @@ import (
 // It extracts durable patterns from conversation and writes them to a markdown file
 // that loads at the start of every session.
 type AutoFile struct {
-	mu        sync.Mutex
-	repoDir   string
-	entries   map[string]AutoFileEntry
-	maxLines  int
+	mu       sync.Mutex
+	repoDir  string
+	entries  map[string]AutoFileEntry
+	maxLines int
 }
 
 // AutoFileEntry is a single discovered pattern for the auto-written MEMORY.md.
@@ -26,9 +26,9 @@ type AutoFileEntry struct {
 	Category  string    `json:"category"`
 	Pattern   string    `json:"pattern"`
 	Detail    string    `json:"detail"`
-	Source    string    `json:"source"`    // "user", "agent", "auto"
+	Source    string    `json:"source"` // "user", "agent", "auto"
 	CreatedAt time.Time `json:"created_at"`
-	Hits      int       `json:"hits"`      // how many times this was confirmed
+	Hits      int       `json:"hits"` // how many times this was confirmed
 }
 
 // NewAutoFile creates an AutoFile for the given repo directory.

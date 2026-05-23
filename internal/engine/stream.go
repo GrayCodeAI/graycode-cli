@@ -1010,4 +1010,3 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 	}
 }
-

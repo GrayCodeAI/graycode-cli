@@ -70,8 +70,8 @@ func (e *Engine) Submit(message string) *Submission {
 // Cancel enqueues a cancellation for the current turn.
 func (e *Engine) Cancel() {
 	e.subQ.Submit(&Submission{
-		ID:   uuid.New().String()[:8],
-		Op:   OpCancel,
+		ID: uuid.New().String()[:8],
+		Op: OpCancel,
 	})
 }
 
@@ -115,8 +115,8 @@ func (e *Engine) process(ctx context.Context, sub *Submission) {
 		// Resume will be implemented with session replay support.
 	default:
 		e.evtQ.Push(&Event{
-			ID:    uuid.New().String()[:8],
-			Type:  EventError,
+			ID:      uuid.New().String()[:8],
+			Type:    EventError,
 			Content: fmt.Sprintf("unknown op: %s", sub.Op),
 		})
 	}
