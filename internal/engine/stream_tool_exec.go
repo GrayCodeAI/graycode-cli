@@ -10,6 +10,7 @@ import (
 )
 
 // toolExecResult holds the output of a single tool execution.
+// Used by the agentLoop in stream.go for collecting tool results.
 type toolExecResult struct {
 	tc     types.ToolCall
 	output string
@@ -30,7 +31,7 @@ func classifyToolCalls(calls []types.ToolCall) (concurrent, sequential []types.T
 }
 
 // executeToolCalls runs all tool calls and returns results.
-// Concurrent calls are run in parallel; sequential calls run one at a time.
+// Intended to replace the inline tool execution in stream.go's agentLoop.
 func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCall, ch chan<- StreamEvent) []toolExecResult {
 	concurrentCalls, sequentialCalls := classifyToolCalls(toolCalls)
 
