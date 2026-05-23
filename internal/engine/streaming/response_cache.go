@@ -148,12 +148,18 @@ func normalizePrompt(prompt string) string {
 }
 
 // SimilarityMatch finds the most similar cached prompt above the threshold.
-// Uses word-level Jaccard similarity.
+// Returns a defensive copy to prevent callers from mutating cache state.
 func (rc *ResponseCache) SimilarityMatch(prompt string, threshold float64) (*CacheEntry, float64) {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
 
-	return rc.similarityMatchLocked(prompt, "", threshold)
+	entry, sim := rc.similarityMatchLocked(prompt, "", threshold)
+	if entry == nil {
+		return nil, 0
+	}
+	// Return a shallow copy so callers cannot mutate the cached entry.
+	copied := *entry
+	return &copied, sim
 }
 
 // similarityMatchLocked finds the most similar entry (caller must hold lock).

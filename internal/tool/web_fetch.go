@@ -44,20 +44,22 @@ func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if p.URL == "" {
 		return "", fmt.Errorf("url is required")
 	}
-	if err := validateURLPublic(ctx, p.URL); err != nil {
+	pinnedURL, err := validateURLPublic(ctx, p.URL)
+	if err != nil {
 		return "", err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", p.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", pinnedURL, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "hawk/0.1.0")
+	req.Header.Set("User-Agent", "hawk/0.2.0")
 
-	resp, err := http.DefaultClient.Do(req)
+	client := ssrfSafeClient(ctx, 30*time.Second)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}

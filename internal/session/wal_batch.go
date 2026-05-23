@@ -9,6 +9,10 @@ import (
 // BatchedWAL wraps a WAL and batches Append calls, flushing to disk on a
 // timer (100ms) or when the buffer reaches 10 entries. This reduces the
 // number of f.Sync() calls from one-per-append to one-per-flush.
+//
+// LOCK ORDERING: b.mu must always be acquired before b.wal.mu.
+// The timer callback acquires b.mu then calls flushLocked() which acquires b.wal.mu.
+// Never acquire b.mu while holding b.wal.mu.
 type BatchedWAL struct {
 	wal   *WAL
 	mu    sync.Mutex

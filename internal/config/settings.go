@@ -20,6 +20,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/setup"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 func fetchModelsViaRuntime(ctx context.Context, provider string) ([]catalog.ModelCatalogEntry, error) {
@@ -113,7 +114,7 @@ type MCPServerConfig struct {
 }
 
 func globalSettingsPath() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "settings.json")
 }
 
@@ -125,7 +126,10 @@ func projectSettingsPath() string {
 func LoadGlobalSettings() Settings {
 	var s Settings
 	if data, err := os.ReadFile(globalSettingsPath()); err == nil {
-		_ = json.Unmarshal(data, &s)
+		if err := json.Unmarshal(data, &s); err != nil {
+			// Settings file exists but is malformed — log but don't crash.
+			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", globalSettingsPath(), err)
+		}
 	}
 	return s
 }
@@ -187,19 +191,19 @@ func MergeSettings(base, override Settings) Settings {
 		base.MaxBudgetUSD = override.MaxBudgetUSD
 	}
 	if len(override.AutoAllow) > 0 {
-		base.AutoAllow = append(base.AutoAllow, override.AutoAllow...)
+		base.AutoAllow = override.AutoAllow
 	}
 	if len(override.AllowedTools) > 0 {
-		base.AllowedTools = append(base.AllowedTools, override.AllowedTools...)
+		base.AllowedTools = override.AllowedTools
 	}
 	if len(override.DisallowedTools) > 0 {
-		base.DisallowedTools = append(base.DisallowedTools, override.DisallowedTools...)
+		base.DisallowedTools = override.DisallowedTools
 	}
 	if len(override.MCPServers) > 0 {
-		base.MCPServers = append(base.MCPServers, override.MCPServers...)
+		base.MCPServers = override.MCPServers
 	}
 	if len(override.CustomProviders) > 0 {
-		base.CustomProviders = append(base.CustomProviders, override.CustomProviders...)
+		base.CustomProviders = override.CustomProviders
 	}
 	if override.RepoMap != nil {
 		base.RepoMap = override.RepoMap

@@ -4,13 +4,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 const maxHistoryEntries = 1000
 
 // historyFilePath returns the path to the persistent input history file.
 func historyFilePath() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "history")
 }
 

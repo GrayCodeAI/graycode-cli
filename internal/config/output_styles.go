@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // OutputStyle defines a custom output format loaded from a markdown file.
@@ -31,7 +32,7 @@ func LoadOutputStyles() []OutputStyle {
 	}
 
 	// Global styles
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	globalDir := filepath.Join(home, ".hawk", "output-styles")
 	for _, s := range loadStylesFromDir(globalDir) {
 		if !seen[s.Name] {
@@ -107,7 +108,7 @@ func OutputStyleModTime() time.Time {
 	dirs := []string{}
 	cwd, _ := os.Getwd()
 	dirs = append(dirs, filepath.Join(cwd, ".hawk", "output-styles"))
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	dirs = append(dirs, filepath.Join(home, ".hawk", "output-styles"))
 
 	for _, dir := range dirs {

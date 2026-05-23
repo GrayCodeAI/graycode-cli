@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // UsageGuideline represents a lesson learned from problem-solving experience.
@@ -31,7 +32,7 @@ type EvolvingMemory struct {
 
 // NewEvolvingMemory creates a new EvolvingMemory with the default storage path.
 func NewEvolvingMemory() *EvolvingMemory {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return &EvolvingMemory{
 		path: filepath.Join(home, ".hawk", "memory", "guidelines.json"),
 	}

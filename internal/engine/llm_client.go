@@ -66,6 +66,8 @@ func (r *Reflector) Reflect(ctx context.Context, goal string, msgs []types.Eyrie
 	entry := parseReflectionEntry(resp.Content, attempt, goal)
 	entry.Timestamp = time.Now()
 	r.mu.Lock()
+	// Re-compute attempt number under lock to avoid duplicate numbering.
+	entry.Attempt = len(r.history) + 1
 	r.history = append(r.history, entry)
 	r.mu.Unlock()
 	return &entry, nil

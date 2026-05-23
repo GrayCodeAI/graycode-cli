@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,7 +19,7 @@ import (
 // ─────────────────────────────────────────────────────────────────────────────
 
 func bgSessionsDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "bg-sessions")
 }
 

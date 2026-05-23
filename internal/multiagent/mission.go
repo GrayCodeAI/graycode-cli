@@ -168,6 +168,7 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 
 			var handoff *Handoff
 			var err error
+			retryLoop:
 			for attempt := 0; attempt <= maxRetries; attempt++ {
 				workerCtx := ctx
 				cancel := func() {}
@@ -185,7 +186,7 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 					case <-time.After(delay):
 					case <-ctx.Done():
 						err = ctx.Err()
-						break
+						break retryLoop
 					}
 				}
 			}

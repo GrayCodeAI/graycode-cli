@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 type ErrorPattern struct {
@@ -24,7 +25,7 @@ type ErrorPatternDB struct {
 }
 
 func NewErrorPatternDB() *ErrorPatternDB {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	db := &ErrorPatternDB{
 		path: filepath.Join(home, ".hawk", "error_patterns.json"),
 	}

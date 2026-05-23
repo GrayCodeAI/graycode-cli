@@ -9,7 +9,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"time"
+	"sync"
+)
+
+var (
+	seatbeltTmpFiles   []string
+	seatbeltTmpFilesMu sync.Mutex
 )
 
 // Config describes sandbox configuration.
@@ -233,11 +238,10 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 				profile := GenerateSeatbeltProfile(policy)
 				_, _ = tmpFile.WriteString(profile)
 				_ = tmpFile.Close()
-				// Schedule cleanup after command completes.
-				go func() {
-					time.Sleep(5 * time.Minute)
-					_ = os.Remove(tmpFile.Name())
-				}()
+				// Track temp file for cleanup after session ends.
+				seatbeltTmpFilesMu.Lock()
+				seatbeltTmpFiles = append(seatbeltTmpFiles, tmpFile.Name())
+				seatbeltTmpFilesMu.Unlock()
 				return "sandbox-exec", []string{"-f", tmpFile.Name(), "bash", "-c", command}
 			}
 		}
@@ -258,6 +262,14 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 
 // Close cleans up sandbox resources.
 func (s *Sandbox) Close() error {
+	// Clean up any seatbelt temp files
+	seatbeltTmpFilesMu.Lock()
+	for _, f := range seatbeltTmpFiles {
+		_ = os.Remove(f)
+	}
+	seatbeltTmpFiles = nil
+	seatbeltTmpFilesMu.Unlock()
+
 	if s.root != "" {
 		return os.RemoveAll(s.root)
 	}

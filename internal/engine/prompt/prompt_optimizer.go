@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // LLMClient is the minimal interface needed for prompt optimization.
@@ -48,7 +49,7 @@ type OptimizationStep struct {
 }
 
 func NewPromptOptimizer() *PromptOptimizer {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	path := filepath.Join(home, ".hawk", "prompt_params.json")
 	po := &PromptOptimizer{
 		Parameters: make(map[string]*PromptParameter),

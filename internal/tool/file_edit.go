@@ -114,7 +114,7 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 
 	result := strings.Replace(content, oldStr, newStr, 1)
 	if _, backupErr := BackupFile(path); backupErr != nil {
-		_ = backupErr // best-effort backup
+		return "", fmt.Errorf("backup failed (refusing destructive write): %w", backupErr)
 	}
 
 	// Preserve line endings
@@ -148,7 +148,7 @@ func fuzzyFind(content, oldStr string) (bool, string, float64) {
 	}
 
 	// Strategy 3: Levenshtein-based similarity matching on contiguous line blocks
-	if matched, actual, sim := levenshteinBlockFind(content, oldStr, 0.85); matched {
+	if matched, actual, sim := levenshteinBlockFind(content, oldStr, 0.90); matched {
 		return true, actual, sim
 	}
 

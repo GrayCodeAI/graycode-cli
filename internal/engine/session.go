@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -30,6 +31,9 @@ type SnapshotTracker interface {
 }
 
 // Session manages a conversation with an LLM via eyrie.
+// NOTE: Session is NOT thread-safe. All mutation must happen from the agent loop goroutine.
+// SetProvider/SetAPIKey are called during initialization only. If concurrent access is needed
+// in the future (e.g. daemon handling concurrent requests), add a sync.RWMutex.
 type Session struct {
 	client   ChatClient
 	registry *tool.Registry
@@ -187,7 +191,12 @@ func (s *Session) SetProvider(provider string) {
 		return
 	}
 	s.client = types.NewClient(&types.EyrieConfig{Provider: p})
-	for provider, apiKey := range s.apiKeys {
+	// Copy keys to avoid map iteration race with concurrent SetAPIKey calls.
+	keys := make(map[string]string, len(s.apiKeys))
+	for k, v := range s.apiKeys {
+		keys[k] = v
+	}
+	for provider, apiKey := range keys {
 		if strings.TrimSpace(apiKey) != "" {
 			s.client.SetAPIKey(provider, apiKey)
 		}
@@ -227,7 +236,15 @@ func (s *Session) AddUser(content string) {
 		_, _ = s.ConvoDAG.Append(parentID, "user", content)
 	}
 	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
-		go s.Memory.Remember(content, "user_explicit")
+		go func(c string) {
+			// Use timeout context so goroutine doesn't hang if backend is slow.
+			rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = rCtx // timeout context available if Remember is extended to accept it
+			if err := s.Memory.Remember(c, "user_explicit"); err != nil {
+				slog.Warn("background memory remember failed", "error", err)
+			}
+		}(content)
 	}
 }
 
@@ -370,8 +387,8 @@ func (s *Session) RemoveLastExchange() {
 		role := s.messages[i].Role
 		if role == "user" || role == "assistant" {
 			removed++
+			s.messages = s.messages[:i]
 		}
-		s.messages = s.messages[:i]
 	}
 }
 

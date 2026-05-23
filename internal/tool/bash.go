@@ -27,6 +27,12 @@ var dangerousSubstrings = []string{
 	"> /dev/sd", "> /dev/nv",
 }
 
+// shellFunctionRe matches shell function definitions (bash/zsh): "name() {" or "name () {"
+var shellFunctionRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*\s*\(\s*\)`)
+
+// varExpansionRe matches variable expansion used as a command: $cmd, ${cmd}, etc.
+var varExpansionRe = regexp.MustCompile(`^\$[{(]?[a-zA-Z_][a-zA-Z0-9_]*[)}]?$`)
+
 // suspiciousPatterns indicate commands that need extra scrutiny (force permission prompt).
 var suspiciousPatterns = []string{
 	"eval ", "exec ", "$(", "`", // command substitution / eval
@@ -126,15 +132,40 @@ func (BashTool) Parameters() map[string]interface{} {
 	}
 }
 
-// SegmentCommand splits a command string on &&, ||, ;, and | (respecting quotes)
-// into individual segments for independent analysis.
+// SegmentCommand splits a command string on &&, ||, ;, and | (respecting quotes
+// and heredocs) into individual segments for independent analysis.
 func SegmentCommand(cmd string) []string {
 	var segments []string
 	var current strings.Builder
 	inSingle, inDouble := false, false
+	inHeredoc := false
+	heredocDelim := ""
 	runes := []rune(cmd)
 	for i := 0; i < len(runes); i++ {
 		ch := runes[i]
+
+		// If inside a heredoc body, consume until we find the delimiter on its own line
+		if inHeredoc {
+			current.WriteRune(ch)
+			if ch == '\n' {
+				lineStart := i + 1
+				lineEnd := lineStart
+				for lineEnd < len(runes) && runes[lineEnd] != '\n' {
+					lineEnd++
+				}
+				line := strings.TrimSpace(string(runes[lineStart:lineEnd]))
+				if line == heredocDelim {
+					for j := lineStart; j <= lineEnd && j < len(runes); j++ {
+						current.WriteRune(runes[j])
+					}
+					i = lineEnd
+					inHeredoc = false
+					heredocDelim = ""
+				}
+			}
+			continue
+		}
+
 		if ch == '\'' && !inDouble {
 			inSingle = !inSingle
 			current.WriteRune(ch)
@@ -149,6 +180,43 @@ func SegmentCommand(cmd string) []string {
 			current.WriteRune(ch)
 			continue
 		}
+
+		// Detect heredoc: <<EOF, << EOF, <<-EOF
+		if ch == '<' && i+1 < len(runes) && runes[i+1] == '<' {
+			j := i + 2
+			if j < len(runes) && runes[j] == '-' {
+				j++
+			}
+			for j < len(runes) && runes[j] == ' ' {
+				j++
+			}
+			if j < len(runes) {
+				delimStart := j
+				delimQuote := rune(0)
+				if runes[j] == '\'' || runes[j] == '"' {
+					delimQuote = runes[j]
+					j++
+					delimStart = j
+					for j < len(runes) && runes[j] != delimQuote {
+						j++
+					}
+				} else {
+					for j < len(runes) && runes[j] != ' ' && runes[j] != '\n' && runes[j] != '<' && runes[j] != '>' && runes[j] != '|' && runes[j] != '&' && runes[j] != ';' {
+						j++
+					}
+				}
+				if j > delimStart {
+					heredocDelim = string(runes[delimStart:j])
+					inHeredoc = true
+					for k := i; k < j; k++ {
+						current.WriteRune(runes[k])
+					}
+					i = j - 1
+					continue
+				}
+			}
+		}
+
 		// Check for &&, ||
 		if i+1 < len(runes) && ((ch == '&' && runes[i+1] == '&') || (ch == '|' && runes[i+1] == '|')) {
 			if s := strings.TrimSpace(current.String()); s != "" {
@@ -247,6 +315,24 @@ func isSegmentSuspicious(segment string) bool {
 		base := strings.TrimLeft(word, "\\/")
 		base = strings.TrimSpace(base)
 		if zshDangerousCommands[base] {
+			return true
+		}
+	}
+	// Block shell function definitions (bypasses dangerousCommands check)
+	if shellFunctionRe.MatchString(segment) {
+		return true
+	}
+	// Block variable expansion used as a command (e.g. $cmd -rf /)
+	if len(words) > 0 && varExpansionRe.MatchString(words[0]) {
+		return true
+	}
+	// Block `command` builtin with dangerous commands
+	if len(words) > 1 && words[0] == "command" {
+		cmdBase := words[1]
+		if i := strings.LastIndex(cmdBase, "/"); i >= 0 {
+			cmdBase = cmdBase[i+1:]
+		}
+		if dangerousCommands[cmdBase] {
 			return true
 		}
 	}

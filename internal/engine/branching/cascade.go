@@ -62,7 +62,12 @@ func NewCascadeRouter(defaultModel string, roles routing.ModelRoles) *CascadeRou
 // non-empty the user's explicit choice always wins (override is never
 // downgraded). The returned string is the model name to use for the API call.
 func (cr *CascadeRouter) SelectModel(prompt string, currentModel string, userOverride string) string {
-	if !cr.Enabled {
+	cr.mu.Lock()
+	enabled := cr.Enabled
+	frugal := cr.FrugalMode
+	cr.mu.Unlock()
+
+	if !enabled {
 		return cr.pick(currentModel)
 	}
 
@@ -73,16 +78,16 @@ func (cr *CascadeRouter) SelectModel(prompt string, currentModel string, userOve
 	}
 
 	taskType := classifyPrompt(prompt)
-	selected := cr.modelForTask(taskType)
+	selected := cr.modelForTask(taskType, frugal)
 
 	// When frugal mode is off, never downgrade from what was already set --
 	// only upgrade or keep the same tier.
-	if !cr.FrugalMode && routing.CostTierOf(selected) < routing.CostTierOf(currentModel) {
+	if !frugal && routing.CostTierOf(selected) < routing.CostTierOf(currentModel) {
 		selected = currentModel
 	}
 
 	reason := fmt.Sprintf("classified as %q", taskType)
-	if cr.FrugalMode {
+	if frugal {
 		reason += " (frugal)"
 	}
 	cr.record(currentModel, selected, taskType, reason)
@@ -202,7 +207,7 @@ func classifyPrompt(prompt string) string {
 
 // modelForTask maps a task type to the appropriate model using configured roles
 // and eyrie catalog tier defaults.
-func (cr *CascadeRouter) modelForTask(taskType string) string {
+func (cr *CascadeRouter) modelForTask(taskType string, frugal bool) string {
 	tier := routing.SuggestTierForTask(taskType)
 
 	switch tier {
@@ -212,7 +217,7 @@ func (cr *CascadeRouter) modelForTask(taskType string) string {
 		}
 		return cr.defaultFor(TierCheap)
 	case eycatalog.TierSonnet:
-		if cr.FrugalMode {
+		if frugal {
 			if taskType == "chat" || taskType == "review" {
 				if m := cr.Roles.Commit; m != "" {
 					return m
@@ -225,7 +230,7 @@ func (cr *CascadeRouter) modelForTask(taskType string) string {
 		}
 		return cr.defaultFor(TierMid)
 	case eycatalog.TierOpus:
-		if cr.FrugalMode {
+		if frugal {
 			if m := cr.Roles.Coder; m != "" {
 				return m
 			}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // MemoryLayer identifies which layer a memory belongs to.
@@ -69,7 +70,7 @@ type ZenBrain struct {
 
 // NewZenBrain creates a new ZenBrain with the default storage path.
 func NewZenBrain() *ZenBrain {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return &ZenBrain{
 		path: filepath.Join(home, ".hawk", "memory", "zenbrain.json"),
 	}

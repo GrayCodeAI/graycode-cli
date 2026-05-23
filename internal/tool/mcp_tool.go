@@ -42,12 +42,12 @@ func (m *MCPTool) Aliases() []string                  { return m.aliases }
 func (m *MCPTool) Description() string                { return m.description }
 func (m *MCPTool) Parameters() map[string]interface{} { return m.schema }
 
-func (m *MCPTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (m *MCPTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args map[string]interface{}
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
-	return m.server.CallTool(m.remoteName, args)
+	return m.server.CallTool(ctx, m.remoteName, args)
 }
 
 func normalizeNameForMCP(name string) string {

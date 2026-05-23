@@ -71,9 +71,10 @@ func (r *Registry) Execute(ctx context.Context, event EventType, data map[string
 }
 
 // ExecuteAsync runs hooks asynchronously (fire and forget).
-func (r *Registry) ExecuteAsync(ctx context.Context, event EventType, data map[string]interface{}) {
+// Uses a fresh context to avoid passing a cancelled caller context.
+func (r *Registry) ExecuteAsync(_ context.Context, event EventType, data map[string]interface{}) {
 	go func() {
-		_ = r.Execute(ctx, event, data)
+		_ = r.Execute(context.Background(), event, data)
 	}()
 }
 

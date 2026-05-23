@@ -130,7 +130,8 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 		}
 	}
 
-	// Check symlinks - resolve and verify the target is within project
+	// Check symlinks - resolve and verify the target is within project.
+	// For non-existent files (e.g. write targets), resolve the parent directory symlinks.
 	if target, err := filepath.EvalSymlinks(cleanPath); err == nil {
 		if target != cleanPath && !strings.HasPrefix(target, bc.ProjectRoot) {
 			return &BoundaryViolation{
@@ -139,6 +140,22 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 				Attempted:   cleanPath + " -> " + target,
 				Allowed:     "symlinks must resolve within " + bc.ProjectRoot,
 				Severity:    "CRITICAL",
+			}
+		}
+	} else {
+		// File doesn't exist yet — resolve parent directory symlinks to prevent
+		// writing through a symlink that points outside the project.
+		parent := filepath.Dir(cleanPath)
+		if resolved, evalErr := filepath.EvalSymlinks(parent); evalErr == nil {
+			resolvedFull := filepath.Join(resolved, filepath.Base(cleanPath))
+			if !strings.HasPrefix(resolvedFull, bc.ProjectRoot) {
+				return &BoundaryViolation{
+					Type:        "path",
+					Description: "parent symlink resolves outside project",
+					Attempted:   cleanPath + " (parent -> " + resolved + ")",
+					Allowed:     "symlinks must resolve within " + bc.ProjectRoot,
+					Severity:    "CRITICAL",
+				}
 			}
 		}
 	}

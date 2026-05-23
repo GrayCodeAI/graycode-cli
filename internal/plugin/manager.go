@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 	"unicode"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Plugin represents a loaded plugin with its tools and metadata.
@@ -75,7 +76,7 @@ type SecurityIssue struct {
 // If no directories are provided, defaults to ~/.hawk/plugins/ and .hawk/plugins/.
 func NewPluginManager(dirs ...string) *PluginManager {
 	if len(dirs) == 0 {
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		dirs = []string{
 			filepath.Join(home, ".hawk", "plugins"),
 			filepath.Join(".hawk", "plugins"),

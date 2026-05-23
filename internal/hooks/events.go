@@ -134,14 +134,14 @@ func (eb *EventBus) Emit(event Event) {
 		eb.History = eb.History[drop:]
 	}
 	eb.History = append(eb.History, event)
-	eb.mu.Unlock()
-
-	eb.mu.RLock()
+	// Copy hooks and listeners under the same lock to prevent a gap where
+	// Register/Unregister could modify the hook set between the History
+	// append and the hooks snapshot.
 	hooks := make([]*LifecycleHook, len(eb.Hooks[event.Name]))
 	copy(hooks, eb.Hooks[event.Name])
 	listeners := make([]chan Event, len(eb.Listeners[event.Name]))
 	copy(listeners, eb.Listeners[event.Name])
-	eb.mu.RUnlock()
+	eb.mu.Unlock()
 
 	// Execute synchronous hooks in priority order.
 	for _, h := range hooks {

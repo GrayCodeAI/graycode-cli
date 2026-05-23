@@ -37,6 +37,12 @@ func (as *AutoSaver) Reset() {
 		as.timer.Stop()
 	}
 	as.timer = time.AfterFunc(as.interval, func() {
+		as.mu.Lock()
+		stopped := as.stopped
+		as.mu.Unlock()
+		if stopped {
+			return
+		}
 		as.saveFn()
 		as.Reset()
 	})
