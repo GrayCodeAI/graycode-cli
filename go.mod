@@ -89,5 +89,8 @@ require (
 
 replace (
 	github.com/GrayCodeAI/eyrie => ../eyrie
+	github.com/GrayCodeAI/inspect => ../inspect
+	github.com/GrayCodeAI/sight => ../sight
+	github.com/GrayCodeAI/tok => ../tok
 	github.com/GrayCodeAI/yaad => ../yaad
 )
