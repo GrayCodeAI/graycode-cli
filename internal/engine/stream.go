@@ -246,6 +246,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			activeModel = s.Cascade.SelectModel(lastUserMsg, s.model, "")
 		}
 
+		// Yaad: recall and refresh memories before every LLM call
+		if s.Memory != nil && len(s.messages) > 0 {
+			lastMsg := s.messages[len(s.messages)-1].Content
+			remembered, err := s.Memory.Recall(lastMsg, 3000)
+			if err == nil && remembered != "" {
+				s.ReplaceSystemContextSection("## Relevant Memories\n", "## Relevant Memories\n"+remembered)
+			}
+		}
+
 		opts := types.ChatOptions{
 			Provider:      s.provider,
 			Model:         activeModel,
@@ -301,15 +310,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 			if estCost > 0.50 {
 				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n⚠ This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
-			}
-		}
-
-		// Yaad: recall and refresh memories before every LLM call
-		if s.Memory != nil && len(s.messages) > 0 {
-			lastMsg := s.messages[len(s.messages)-1].Content
-			remembered, err := s.Memory.Recall(lastMsg, 3000)
-			if err == nil && remembered != "" {
-				s.ReplaceSystemContextSection("## Relevant Memories\n", "## Relevant Memories\n"+remembered)
 			}
 		}
 
