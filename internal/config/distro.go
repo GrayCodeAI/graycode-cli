@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Distribution defines a custom hawk distribution (white-label configuration).
@@ -68,7 +69,7 @@ func FindDistribution() *Distribution {
 		"hawk-distro.yaml",
 		".hawk/distro.yaml",
 	}
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	if home != "" {
 		paths = append(paths, filepath.Join(home, ".hawk", "distro.yaml"))
 	}

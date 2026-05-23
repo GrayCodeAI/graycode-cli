@@ -8,6 +8,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 type SessionMemoryConfig struct {
@@ -75,7 +76,7 @@ func IsCompactBoundary(m types.EyrieMessage) bool {
 }
 
 func SessionMemoryPath(sessionID string) string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	if sessionID != "" {
 		return filepath.Join(home, ".hawk", "sessions", sessionID, "memory.md")
 	}

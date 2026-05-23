@@ -86,10 +86,13 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 		return "", err
 	}
 
-	go task.capture(stdout)
-	go task.capture(stderr)
+	var captureWg sync.WaitGroup
+	captureWg.Add(2)
+	go func() { task.capture(stdout); captureWg.Done() }()
+	go func() { task.capture(stderr); captureWg.Done() }()
 	go func() {
 		err := cmd.Wait()
+		captureWg.Wait()
 		task.mu.Lock()
 		if err != nil {
 			task.exitText = err.Error()

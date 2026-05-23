@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -106,6 +108,12 @@ var credentialPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`ghp_[A-Za-z0-9]{36,}`),
 	// GitHub OAuth tokens
 	regexp.MustCompile(`gho_[A-Za-z0-9]{36,}`),
+	// GitLab personal access tokens
+	regexp.MustCompile(`glpat-[A-Za-z0-9_-]{20,}`),
+	// Slack bot/user tokens
+	regexp.MustCompile(`xox[bpsar]-[A-Za-z0-9-]{10,}`),
+	// Stripe secret keys (live and test)
+	regexp.MustCompile(`[sr]k_(live|test)_[A-Za-z0-9]{20,}`),
 	// PEM private keys
 	regexp.MustCompile(`-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----`),
 	// Passwords embedded in connection strings (e.g. postgres://user:pass@...)
@@ -121,6 +129,9 @@ func DetectCredentials(content string) string {
 		"AWS access key (AKIA...)",
 		"GitHub personal access token (ghp_...)",
 		"GitHub OAuth token (gho_...)",
+		"GitLab personal access token (glpat-...)",
+		"Slack token (xox...)",
+		"Stripe secret key",
 		"PEM private key",
 		"password in connection string",
 	}
@@ -152,6 +163,15 @@ var blockedPathSuffixes = []string{
 var blockedBasenames = []string{
 	".env",
 	"credentials.json",
+	".npmrc",
+	".netrc",
+	".pgpass",
+	"kubeconfig",
+	"token.json",
+	"service-account.json",
+	"credentials.yaml",
+	"credentials.yml",
+	"credentials.xml",
 }
 
 // IsSensitivePath returns a non-empty reason when path points to a file
@@ -168,7 +188,7 @@ func IsSensitivePath(path string) string {
 	}
 	clean := filepath.Clean(resolved)
 
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 
 	if home != "" {
 		hawkProv := filepath.Join(home, ".hawk", "provider.json")
@@ -206,12 +226,17 @@ func IsSensitivePath(path string) string {
 		return "access to ~/.env is blocked for security"
 	}
 
-	// Basename checks — blocks */.env and */credentials.json everywhere.
+	// Basename checks — blocks */.env and */credentials.json everywhere,
+	// plus common .env variants (.env.local, .env.production, .env.backup, etc.)
 	base := filepath.Base(clean)
 	for _, b := range blockedBasenames {
 		if base == b {
 			return fmt.Sprintf("access to %s files is blocked for security", b)
 		}
+	}
+	// Block any file starting with ".env" (catches .env.local, .env.production, .env.backup, etc.)
+	if strings.HasPrefix(base, ".env") && base != ".envrc" {
+		return fmt.Sprintf("access to %s files is blocked for security", base)
 	}
 
 	return ""
@@ -250,19 +275,27 @@ const binaryProbeSize = 8192
 // BinaryIndicator is the message returned instead of binary content.
 const BinaryIndicator = "[binary file — not displaying]"
 
-// IsBinaryContent returns true when data contains at least one null byte
-// in the first binaryProbeSize bytes, indicating likely binary content.
+// IsBinaryContent returns true when data appears to be binary, detected by:
+// - Null bytes in the first binaryProbeSize bytes (classic binary indicator)
+// - High ratio of non-text bytes (control characters other than \n, \r, \t)
 func IsBinaryContent(data []byte) bool {
 	end := len(data)
 	if end > binaryProbeSize {
 		end = binaryProbeSize
 	}
+	nonText := 0
 	for i := 0; i < end; i++ {
-		if data[i] == 0 {
-			return true
+		b := data[i]
+		if b == 0 {
+			return true // null byte is a definitive binary indicator
+		}
+		// Count control characters other than common text ones (tab, newline, carriage return)
+		if b < 0x20 && b != '\t' && b != '\n' && b != '\r' {
+			nonText++
 		}
 	}
-	return false
+	// If more than 30% of the probed bytes are non-text control chars, treat as binary.
+	return end > 0 && float64(nonText)/float64(end) > 0.3
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -301,36 +334,71 @@ func WithSSRFSkip(ctx context.Context) context.Context {
 
 // validateURLPublic rejects URLs that resolve to private/link-local IP ranges
 // to prevent SSRF attacks (e.g., fetching AWS metadata at 169.254.169.254).
-func validateURLPublic(ctx context.Context, rawURL string) error {
+// Returns the validated URL with the resolved IP pinned as the host, preventing
+// DNS rebinding attacks where the second resolution returns a private IP.
+func validateURLPublic(ctx context.Context, rawURL string) (string, error) {
 	if ctx.Value(ssrfSkipKey{}) != nil {
-		return nil
+		return rawURL, nil
 	}
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return fmt.Errorf("invalid URL: %w", err)
+		return "", fmt.Errorf("invalid URL: %w", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("blocked: only http/https URLs are allowed")
+		return "", fmt.Errorf("blocked: only http/https URLs are allowed")
 	}
 
 	host := u.Hostname()
 	if host == "" {
-		return fmt.Errorf("blocked: URL has no host")
+		return "", fmt.Errorf("blocked: URL has no host")
 	}
 
 	// Resolve the hostname to check against private ranges.
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
-		// If DNS fails, allow the request — the HTTP client will fail anyway.
-		return nil
+		// DNS failure — block the request rather than allowing potential SSRF bypass.
+		return "", fmt.Errorf("blocked: DNS resolution failed for %q: %w", host, err)
 	}
+	var safeIP string
 	for _, addr := range addrs {
 		ip := addr.IP
 		for _, block := range privateIPBlocks {
 			if block.Contains(ip) {
-				return fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, ip)
+				return "", fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, ip)
 			}
 		}
+		if safeIP == "" {
+			safeIP = ip.String()
+		}
 	}
-	return nil
+	if safeIP == "" {
+		return "", fmt.Errorf("blocked: URL %q resolved to no addresses", rawURL)
+	}
+
+	// Pin the IP to prevent DNS rebinding: replace host with the validated IP.
+	// Preserve the original Host header via a separate mechanism if needed.
+	if u.Port() != "" {
+		u.Host = net.JoinHostPort(safeIP, u.Port())
+	} else {
+		u.Host = safeIP
+	}
+	return u.String(), nil
+}
+
+// ssrfSafeClient returns an http.Client that validates redirect targets
+// against private IP ranges, preventing SSRF via redirect chains.
+func ssrfSafeClient(ctx context.Context, timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("too many redirects")
+			}
+			if ctx.Value(ssrfSkipKey{}) != nil {
+				return nil
+			}
+			_, err := validateURLPublic(ctx, req.URL.String())
+			return err
+		},
+	}
 }

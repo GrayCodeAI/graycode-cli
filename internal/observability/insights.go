@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // InsightsFacet represents an extracted insight category.
@@ -137,7 +138,7 @@ h1 { color: #333; } h2 { color: #555; border-bottom: 1px solid #eee; }
 
 // SaveInsightsReport saves an HTML report to disk.
 func SaveInsightsReport(report *InsightsReport) (string, error) {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	dir := filepath.Join(home, ".hawk", "insights")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
@@ -201,6 +202,6 @@ func generateRecommendations(patterns []string, sessionCount int) []string {
 }
 
 func sessionsDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "sessions")
 }

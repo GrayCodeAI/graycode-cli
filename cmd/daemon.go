@@ -16,6 +16,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/spf13/cobra"
@@ -134,7 +135,7 @@ func generateDaemonAPIKey() (string, error) {
 }
 
 func runDaemonStop(_ *cobra.Command, _ []string) error {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	pidFile := filepath.Join(home, ".hawk", "run", "daemon.json")
 
 	data, err := os.ReadFile(pidFile)
@@ -165,7 +166,7 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 }
 
 func runDaemonStatus(_ *cobra.Command, _ []string) error {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	pidFile := filepath.Join(home, ".hawk", "run", "daemon.json")
 
 	data, err := os.ReadFile(pidFile)

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // FewShotStore collects successful (prompt, response) pairs and injects
@@ -31,7 +32,7 @@ type FewShotExample struct {
 
 // NewFewShotStore creates a store backed by ~/.hawk/fewshot.json.
 func NewFewShotStore() *FewShotStore {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	path := filepath.Join(home, ".hawk", "fewshot.json")
 	fs := &FewShotStore{
 		path:     path,

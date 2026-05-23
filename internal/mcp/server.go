@@ -8,14 +8,46 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 )
+
+// rateLimiter implements a simple sliding-window rate limiter.
+type rateLimiter struct {
+	mu       sync.Mutex
+	window   time.Duration
+	maxCalls int
+	calls    []time.Time
+}
+
+func newRateLimiter(window time.Duration, maxCalls int) *rateLimiter {
+	return &rateLimiter{window: window, maxCalls: maxCalls}
+}
+
+func (rl *rateLimiter) allow() bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	now := time.Now()
+	cutoff := now.Add(-rl.window)
+	// Remove expired entries
+	i := 0
+	for i < len(rl.calls) && rl.calls[i].Before(cutoff) {
+		i++
+	}
+	rl.calls = rl.calls[i:]
+	if len(rl.calls) >= rl.maxCalls {
+		return false
+	}
+	rl.calls = append(rl.calls, now)
+	return true
+}
 
 // MCPServer exposes hawk's capabilities as an MCP server that external
 // clients (IDEs, agents, CLI tools) can connect to via JSON-RPC 2.0 over stdio.
 type MCPServer struct {
-	tools map[string]MCPToolHandler
-	mu    sync.RWMutex
-	info  ServerInfo
+	tools  map[string]MCPToolHandler
+	mu     sync.RWMutex
+	info   ServerInfo
+	limits *rateLimiter
 }
 
 // ServerInfo identifies the MCP server to connecting clients.
@@ -66,8 +98,9 @@ const (
 // NewMCPServer creates a new MCP server with the given identity.
 func NewMCPServer(info ServerInfo) *MCPServer {
 	return &MCPServer{
-		tools: make(map[string]MCPToolHandler),
-		info:  info,
+		tools:  make(map[string]MCPToolHandler),
+		info:   info,
+		limits: newRateLimiter(time.Second, 100), // 100 tool calls per second
 	}
 }
 
@@ -223,6 +256,14 @@ func (s *MCPServer) handleToolsList(req *JSONRPCRequest) *JSONRPCResponse {
 
 // handleToolsCall executes a registered tool.
 func (s *MCPServer) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	// Rate limit tool calls to prevent runaway execution.
+	if !s.limits.allow() {
+		return &JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &RPCError{Code: errCodeInternal, Message: "Rate limit exceeded: too many tool calls"},
+		}
+	}
 	var params struct {
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`

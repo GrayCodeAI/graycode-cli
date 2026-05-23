@@ -73,6 +73,10 @@ func (s *Server) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 			limit = parsed
 		}
 	}
+	const maxLimit = 10000
+	if limit > maxLimit {
+		limit = maxLimit
+	}
 
 	sess, err := session.Load(id)
 	if err != nil {
@@ -129,6 +133,17 @@ func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 			Code:  "missing_id",
 		})
 		return
+	}
+
+	// Validate session ID contains only safe characters (alphanumeric, dash, underscore, dot).
+	for _, c := range id {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.') {
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{
+				Error: "invalid session id: only alphanumeric, dash, underscore, and dot are allowed",
+				Code:  "invalid_id",
+			})
+			return
+		}
 	}
 
 	home, err := os.UserHomeDir()

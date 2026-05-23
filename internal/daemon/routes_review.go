@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strings"
 )
+
+var validSHA = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
 // ReviewRequest is the JSON body for POST /v1/review.
 type ReviewRequest struct {
@@ -38,6 +41,14 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.SHA == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "sha is required"})
+		return
+	}
+	if !validSHA.MatchString(req.SHA) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "sha must be a valid hex git SHA (7-40 characters)"})
+		return
+	}
+	if strings.HasPrefix(req.Concerns, "--") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "concerns must not start with '--'"})
 		return
 	}
 

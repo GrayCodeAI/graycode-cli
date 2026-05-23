@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
@@ -22,7 +23,6 @@ const maxAgentsMDSize = 10 * 1024 // 10KB
 // agentFiles lists project instruction filenames in priority order.
 // AGENTS.md is the canonical name; AGENTS.md is kept for backward compatibility.
 var agentFiles = []string{
-	"AGENTS.md", ".hawk/AGENTS.md", ".agent/AGENTS.md",
 	"AGENTS.md", ".hawk/AGENTS.md", ".agent/AGENTS.md",
 }
 
@@ -96,7 +96,9 @@ func GitContext() string {
 }
 
 func gitCmd(args ...string) (string, error) {
-	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", args...).Output()
 	return strings.TrimSpace(string(out)), err
 }
 

@@ -330,8 +330,22 @@ func (sm *SharedMemory) notifyWatchers(key string, entry *MemEntry) {
 		return
 	}
 
-	// Make a copy to send through channels.
+	// Make a deep copy to send through channels so watchers cannot mutate the
+	// original entry's Value (which may be a map or slice shared with the store).
 	copied := *entry
+	if entry.Value != nil {
+		raw, err := json.Marshal(entry.Value)
+		if err == nil {
+			var deep interface{}
+			if json.Unmarshal(raw, &deep) == nil {
+				copied.Value = deep
+			}
+		}
+	}
+	if entry.Readers != nil {
+		copied.Readers = make([]string, len(entry.Readers))
+		copy(copied.Readers, entry.Readers)
+	}
 	for _, ch := range watchers {
 		select {
 		case ch <- &copied:

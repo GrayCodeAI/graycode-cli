@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // AdaptivePrompt adjusts system prompt sections based on user corrections.
@@ -31,7 +32,7 @@ type PromptAdjustment struct {
 
 // NewAdaptivePrompt creates an adaptive prompt backed by ~/.hawk/adaptive_prompt.json.
 func NewAdaptivePrompt() *AdaptivePrompt {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	ap := &AdaptivePrompt{
 		path: filepath.Join(home, ".hawk", "adaptive_prompt.json"),
 	}
