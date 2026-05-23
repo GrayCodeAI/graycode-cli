@@ -99,12 +99,13 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func constantTimeEqual(a, b string) bool {
-	// Always compare both values to avoid leaking length information.
-	// Pad the shorter value to match the longer one.
-	if len(a) < len(b) {
-		a = a + strings.Repeat("\x00", len(b)-len(a))
-	} else if len(b) < len(a) {
-		b = b + strings.Repeat("\x00", len(a)-len(b))
+	// Compare lengths in constant time first, then content.
+	// This avoids null-byte padding which could produce false positives.
+	if len(a) != len(b) {
+		// Still do a comparison to avoid early-return timing leak.
+		// Compare against a to consume the same time as a matching-length path.
+		subtle.ConstantTimeCompare([]byte(a), []byte(a))
+		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }

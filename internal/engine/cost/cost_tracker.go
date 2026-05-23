@@ -2,11 +2,13 @@ package cost
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
 
@@ -18,7 +20,7 @@ type CostTracker struct {
 }
 
 func NewCostTracker(sessionID string) *CostTracker {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return &CostTracker{
 		sessionID: sessionID,
 		filePath:  filepath.Join(home, ".hawk", "cost.jsonl"),
@@ -55,7 +57,7 @@ func (ct *CostTracker) Entries() []analytics.CostEntry {
 }
 
 func LoadCostHistory() ([]analytics.CostEntry, error) {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	path := filepath.Join(home, ".hawk", "cost.jsonl")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -90,7 +92,10 @@ func (ct *CostTracker) appendToFile(entry analytics.CostEntry) error {
 	}
 	defer func() { _ = f.Close() }()
 
-	data, _ := json.Marshal(entry)
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return fmt.Errorf("marshal cost entry: %w", err)
+	}
 	data = append(data, '\n')
 	_, err = f.Write(data)
 	return err

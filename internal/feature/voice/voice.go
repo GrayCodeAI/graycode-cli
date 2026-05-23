@@ -42,10 +42,10 @@ func (t *Transcriber) transcribeWhisper(path string, audioData []byte) (string, 
 		return "", err
 	}
 	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 	if _, err := tmpFile.Write(audioData); err != nil {
 		return "", err
 	}
-	_ = tmpFile.Close()
 
 	// Run whisper
 	cmd := exec.CommandContext(context.Background(), path, tmpFile.Name(), "-m", t.config.Model, "-l", t.config.Lang)

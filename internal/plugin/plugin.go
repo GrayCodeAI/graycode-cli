@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Manifest defines a hawk plugin.
@@ -48,7 +49,7 @@ func (m *Manifest) Validate() error {
 }
 
 func pluginsDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "plugins")
 }
 

@@ -66,6 +66,7 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	args := []string{
 		"run", "-d", "--rm",
 		"--name", name,
+		"--network", "none",
 		"-v", c.projectDir + ":" + c.projectDir, // mount at same path
 		"-v", attachDir + ":/attachments:ro",
 		"-v", cacheDir + ":/cache",

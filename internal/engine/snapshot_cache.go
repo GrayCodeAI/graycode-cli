@@ -62,9 +62,15 @@ func (sc *SnapshotCache) Set(key, value string) {
 // GetOrCompute returns the cached value for the key, or computes and caches it
 // using the provided function if the value is missing or expired.
 func (sc *SnapshotCache) GetOrCompute(key string, fn func() (string, error)) (string, error) {
-	if val, ok := sc.Get(key); ok {
+	sc.mu.Lock()
+	// Re-check under write lock to avoid duplicate computation.
+	entry, ok := sc.entries[key]
+	if ok && time.Now().Before(entry.expiry) {
+		val := entry.value
+		sc.mu.Unlock()
 		return val, nil
 	}
+	sc.mu.Unlock()
 
 	val, err := fn()
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ProviderConfig defines an LLM provider declaratively via YAML.
@@ -69,7 +70,7 @@ func LoadProviderConfigs(dir string) ([]ProviderConfig, error) {
 
 // DefaultProviderConfigDirs returns standard directories for provider configs.
 func DefaultProviderConfigDirs() []string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return []string{
 		filepath.Join(home, ".hawk", "providers"),
 		".hawk/providers",

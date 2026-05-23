@@ -47,12 +47,16 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err := validatePathAllowed(ctx, p.Destination); err != nil {
 		return "", err
 	}
-	if err := validateURLPublic(ctx, p.URL); err != nil {
+	pinnedURL, err := validateURLPublic(ctx, p.URL)
+	if err != nil {
 		return "", err
 	}
 
-	client := &http.Client{Timeout: 2 * time.Minute}
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, p.URL, nil)
+	client := ssrfSafeClient(ctx, 2*time.Minute)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pinnedURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
@@ -63,18 +67,22 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
-	_ = os.MkdirAll(filepath.Dir(p.Destination), 0o755)
-	f, err := os.Create(p.Destination)
+	// Read content into memory first so we can scan for credentials before writing.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDownloadSize))
 	if err != nil {
-		return "", fmt.Errorf("create file: %w", err)
+		return "", fmt.Errorf("read response: %w", err)
 	}
-	defer func() { _ = f.Close() }()
 
-	n, err := io.Copy(f, io.LimitReader(resp.Body, maxDownloadSize))
-	if err != nil {
+	// Check for credentials in downloaded content (same as FileWriteTool).
+	if warn := DetectCredentials(string(body)); warn != "" {
+		return "", fmt.Errorf("downloaded content contains potential credentials: %s — write blocked", warn)
+	}
+
+	_ = os.MkdirAll(filepath.Dir(p.Destination), 0o755)
+	if err := os.WriteFile(p.Destination, body, 0o644); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 
 	ct := resp.Header.Get("Content-Type")
-	return fmt.Sprintf("Downloaded %d bytes to %s (type: %s)", n, p.Destination, ct), nil
+	return fmt.Sprintf("Downloaded %d bytes to %s (type: %s)", len(body), p.Destination, ct), nil
 }

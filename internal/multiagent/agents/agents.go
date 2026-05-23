@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Agent is a user-defined persona with a custom system prompt.
@@ -126,7 +127,7 @@ func Get(name string) (*Agent, error) {
 
 // DefaultDir returns the user's agent directory (~/.hawk/agents/).
 func DefaultDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "agents")
 }
 

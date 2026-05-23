@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // SkillSource tracks where an installed skill came from.
@@ -347,7 +348,7 @@ func ParseSmartSkillPublic(content string) SmartSkill {
 // Includes hawk's own paths plus cross-agent standard paths for interoperability.
 // Follows the agentskills.io spec and supports gh skill install placement.
 func DefaultSkillDirs() []string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	if home == "" {
 		return []string{".hawk/skills", ".agents/skills"}
 	}

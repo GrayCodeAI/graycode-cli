@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Tip represents a single hawk usage tip.
@@ -48,7 +49,7 @@ func allTips() []Tip {
 
 // tipHistoryPath returns the path to the tip history file.
 func tipHistoryPath() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "tip_history.json")
 }
 
@@ -71,7 +72,7 @@ func loadTipHistory() tipHistory {
 }
 
 func saveTipHistory(h tipHistory) {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	_ = os.MkdirAll(filepath.Join(home, ".hawk"), 0o755)
 	data, _ := json.MarshalIndent(h, "", "  ")
 	_ = os.WriteFile(tipHistoryPath(), data, 0o644)

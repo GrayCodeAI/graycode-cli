@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const maxFileSize = 1 << 30 // 1 GiB
+const maxFileSize = 10 << 20 // 10 MiB
 
 type FileReadTool struct{}
 

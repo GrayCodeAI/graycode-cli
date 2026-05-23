@@ -17,6 +17,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 const maxRequestBodyBytes = 1 << 20
@@ -165,14 +166,17 @@ func (s *Server) routes() {
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if s.apiKey == "" {
-			next(w, r)
-			return
-		}
 		token := r.Header.Get("Authorization")
 		token = strings.TrimPrefix(token, "Bearer ")
 		if token == "" {
 			token = r.Header.Get("X-API-Key")
+		}
+		if s.apiKey == "" {
+			// No API key configured — always allow, but still perform a constant-time
+			// comparison against a dummy value to avoid leaking "no auth configured" via timing.
+			_ = constantTimeEqual(token, "no-auth-configured-dummy")
+			next(w, r)
+			return
 		}
 		if !constantTimeEqual(token, s.apiKey) {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
@@ -183,14 +187,22 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func constantTimeEqual(a, b string) bool {
-	// Always compare both values to avoid leaking length information.
-	// Pad the shorter value to match the longer one.
-	if len(a) < len(b) {
-		a = a + strings.Repeat("\x00", len(b)-len(a))
-	} else if len(b) < len(a) {
-		b = b + strings.Repeat("\x00", len(a)-len(b))
+	// Compare in constant time regardless of length differences.
+	// Hash both values to a fixed-length representation first.
+	// This avoids leaking length via timing.
+	if len(a) == 0 || len(b) == 0 {
+		return len(a) == len(b)
 	}
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	// Pad to maximum length with null bytes, then compare.
+	maxLen := len(a)
+	if len(b) > maxLen {
+		maxLen = len(b)
+	}
+	paddedA := make([]byte, maxLen)
+	paddedB := make([]byte, maxLen)
+	copy(paddedA, a)
+	copy(paddedB, b)
+	return subtle.ConstantTimeCompare(paddedA, paddedB) == 1 && len(a) == len(b)
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
@@ -248,7 +260,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := s.newSession(req)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session create: " + err.Error()})
+		slog.Error("session create failed", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session creation failed"})
 		return
 	}
 
@@ -275,7 +288,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	events, err := sess.Stream(ctx)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "stream: " + err.Error()})
+		slog.Error("stream failed", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "stream failed"})
 		return
 	}
 
@@ -289,7 +303,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		for ev := range events {
 			switch ev.Type {
 			case "content":
-				_, _ = fmt.Fprintf(w, "data: %s\n\n", ev.Content)
+				// Per SSE spec, each line of a data field must be prefixed with "data:".
+				// This prevents injection of fake events via newlines in LLM output.
+				for _, line := range strings.Split(ev.Content, "\n") {
+					_, _ = fmt.Fprintf(w, "data: %s\n", line)
+				}
+				_, _ = fmt.Fprint(w, "\n")
 			case "done":
 				_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
 			}
@@ -366,13 +385,11 @@ func (s *Server) writePIDFile() error {
 		Addr         string `json:"addr"`
 		StartedAt    string `json:"started_at"`
 		AuthRequired bool   `json:"auth_required"`
-		APIKey       string `json:"api_key,omitempty"`
 	}{
 		PID:          os.Getpid(),
 		Addr:         s.addr,
 		StartedAt:    s.startedAt.Format(time.RFC3339),
 		AuthRequired: s.apiKey != "",
-		APIKey:       s.apiKey,
 	})
 	if err != nil {
 		return err
@@ -385,6 +402,6 @@ func (s *Server) removePIDFile() error {
 }
 
 func pidDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "run")
 }

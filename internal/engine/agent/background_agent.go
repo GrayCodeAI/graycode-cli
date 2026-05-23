@@ -96,6 +96,7 @@ func (p *BackgroundAgentPool) WaitAll() []BackgroundResult {
 	copy(pending, p.pending)
 	p.mu.Unlock()
 
+	timedOut := make(map[string]bool)
 	var all []BackgroundResult
 	for _, task := range pending {
 		select {
@@ -107,7 +108,18 @@ func (p *BackgroundAgentPool) WaitAll() []BackgroundResult {
 				Prompt: task.prompt,
 				Error:  context.DeadlineExceeded,
 			})
+			timedOut[task.id] = true
 			task.cancel()
+		}
+	}
+
+	// Drain any results that arrived after timeout to prevent goroutine leaks.
+	for _, task := range pending {
+		if timedOut[task.id] {
+			select {
+			case <-task.done:
+			default:
+			}
 		}
 	}
 
@@ -139,6 +151,13 @@ func (p *BackgroundAgentPool) AllResults() []BackgroundResult {
 	out := make([]BackgroundResult, len(p.results))
 	copy(out, p.results)
 	return out
+}
+
+// ClearResults clears all collected results to free memory.
+func (p *BackgroundAgentPool) ClearResults() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.results = nil
 }
 
 // FormatResults formats background results for injection into the agent context.

@@ -35,6 +35,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Types, styles, and model struct are in chat_model.go
@@ -287,7 +288,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	// Check for crash recovery
 	if recovered := session.CheckForRecovery(); len(recovered) > 0 {
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		walDir := filepath.Join(home, ".hawk", "sessions")
 		for _, rid := range recovered {
 			if rid == sid {
