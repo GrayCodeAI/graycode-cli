@@ -26,6 +26,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 func slashCommands() []string {
@@ -1799,7 +1800,7 @@ Generate the recap:`, summary.String())
 		return m, nil
 
 	case "/export":
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
 		_ = os.MkdirAll(exportDir, 0o755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
@@ -1827,7 +1828,7 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to ~/.hawk/feedback/"})
 			return m, nil
 		}
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		feedDir := filepath.Join(home, ".hawk", "feedback")
 		_ = os.MkdirAll(feedDir, 0o755)
 		report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
@@ -1879,7 +1880,7 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		newName := parts[1]
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		sessDir := filepath.Join(home, ".hawk", "sessions")
 		oldPath := filepath.Join(sessDir, m.sessionID+".jsonl")
 		newPath := filepath.Join(sessDir, newName+".jsonl")
@@ -1895,7 +1896,7 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /tag <label>"})
 			return m, nil
 		}
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		tagFile := filepath.Join(home, ".hawk", "sessions", m.sessionID+".tags")
 		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
@@ -1938,7 +1939,7 @@ Generate the recap:`, summary.String())
 		}
 		return m, nil
 	case "/share":
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		exportDir := filepath.Join(home, ".hawk", "exports")
 		_ = os.MkdirAll(exportDir, 0o755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")

@@ -1,10 +1,12 @@
 package retry
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"math"
-	"math/rand"
+	mrand "math/rand/v2"
+	"math/big"
 	"sort"
 	"strings"
 	"sync"
@@ -202,10 +204,23 @@ func (rq *RetryQueue) CalculateBackoff(attempts int) time.Duration {
 	}
 
 	// Add jitter: up to 25% of the backoff duration
-	jitter := rand.Float64() * 0.25 * backoff
+	jitter := float64(time.Duration(cryptoRandInt64(int64(backoff / 4))))
 	result := time.Duration(backoff + jitter)
 
 	return result
+}
+
+// cryptoRandInt64 returns a cryptographically random int64 in [0, n).
+func cryptoRandInt64(n int64) int64 {
+	if n <= 0 {
+		return 0
+	}
+	bigN := big.NewInt(n)
+	result, err := rand.Int(rand.Reader, bigN)
+	if err != nil {
+		return 0
+	}
+	return result.Int64()
 }
 
 // Prune removes succeeded and permanently failed items that are older than 1 hour.
@@ -319,7 +334,7 @@ func (rq *RetryQueue) generateID(operation string, args map[string]interface{}) 
 	h.Write([]byte(operation))
 	h.Write([]byte(fmt.Sprintf("%v", args)))
 	h.Write([]byte(time.Now().String()))
-	h.Write([]byte(fmt.Sprintf("%d", rand.Int63())))
+	h.Write([]byte(fmt.Sprintf("%d", mrand.Int64())))
 	return fmt.Sprintf("retry_%x", h.Sum(nil))[:16]
 }
 

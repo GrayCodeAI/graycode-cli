@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Message is a persisted conversation message.
@@ -40,7 +41,7 @@ type Session struct {
 }
 
 func sessionsDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "sessions")
 }
 
@@ -214,7 +215,10 @@ func (w *WAL) AppendMeta(model, provider, cwd string) error {
 		"cwd":        cwd,
 		"created_at": time.Now().Format(time.RFC3339),
 	}
-	data, _ := json.Marshal(meta)
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("marshal meta: %w", err)
+	}
 	data = append(data, '\n')
 
 	if _, err := w.f.Write(data); err != nil {

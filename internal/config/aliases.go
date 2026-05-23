@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // DefaultAliases returns the built-in command aliases.
@@ -18,7 +19,7 @@ func DefaultAliases() map[string]string {
 
 // aliasesFilePath returns the path to the aliases config file.
 func aliasesFilePath() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "aliases.json")
 }
 

@@ -223,8 +223,8 @@ func (s *Server) ReadResource(uri string) (string, error) {
 }
 
 // CallTool invokes a tool on the MCP server.
-func (s *Server) CallTool(name string, args map[string]interface{}) (string, error) {
-	result, err := s.call("tools/call", map[string]interface{}{
+func (s *Server) CallTool(ctx context.Context, name string, args map[string]interface{}) (string, error) {
+	result, err := s.callWithTimeout(ctx, "tools/call", map[string]interface{}{
 		"name":      name,
 		"arguments": args,
 	})
@@ -249,10 +249,19 @@ func (s *Server) CallTool(name string, args map[string]interface{}) (string, err
 	return text, nil
 }
 
-// Close shuts down the MCP server.
+// Close shuts down the MCP server, killing the child process if it doesn't exit
+// within 5 seconds of stdin being closed.
 func (s *Server) Close() error {
 	_ = s.stdin.Close()
-	return s.cmd.Wait()
+	done := make(chan error, 1)
+	go func() { done <- s.cmd.Wait() }()
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(5 * time.Second):
+		_ = s.cmd.Process.Kill()
+		return <-done
+	}
 }
 
 func (s *Server) call(method string, params interface{}) (json.RawMessage, error) {

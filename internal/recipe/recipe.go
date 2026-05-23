@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Recipe is the top-level YAML recipe definition.
@@ -152,7 +153,7 @@ type Runner struct {
 
 // NewRunner creates a recipe runner with default directories.
 func NewRunner() *Runner {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return &Runner{
 		RecipeDirs: []string{
 			filepath.Join(home, ".hawk", "recipes"),

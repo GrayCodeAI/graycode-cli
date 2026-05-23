@@ -15,6 +15,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ─── friendlyError ────────────────────────────────────────────────────────────
@@ -203,7 +204,7 @@ func panicRecovery(saveFn func()) {
 		}
 
 		// Log to crash file
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		if home != "" {
 			crashDir := filepath.Join(home, ".hawk")
 			_ = os.MkdirAll(crashDir, 0o755)
@@ -216,7 +217,7 @@ func panicRecovery(saveFn func()) {
 				stack,
 			)
 
-			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 			if err == nil {
 				_, _ = f.WriteString(entry)
 				_ = f.Close()
@@ -285,7 +286,7 @@ var errLoggerOnce sync.Once
 //lint:ignore U1000 Infrastructure used by logError
 func getErrorLogger() *errorLoggerT {
 	errLoggerOnce.Do(func() {
-		home, _ := os.UserHomeDir()
+		home := home.Dir()
 		if home == "" {
 			home = os.TempDir()
 		}
@@ -314,7 +315,7 @@ func (l *errorLoggerT) LogError(context string, err error) {
 		err.Error(),
 	)
 
-	f, ferr := os.OpenFile(l.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, ferr := os.OpenFile(l.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if ferr != nil {
 		return
 	}
@@ -337,7 +338,7 @@ func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 		fmt.Sprintf(format, args...),
 	)
 
-	f, ferr := os.OpenFile(l.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, ferr := os.OpenFile(l.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if ferr != nil {
 		return
 	}

@@ -12,6 +12,7 @@ import (
 // turn completes.
 type BackgroundAgentManager struct {
 	mu      sync.Mutex
+	cond    *sync.Cond
 	agents  map[string]*BackgroundAgent
 	results map[string]*BackgroundResult
 }
@@ -34,10 +35,12 @@ type BackgroundResult struct {
 
 // NewBackgroundAgentManager creates a new manager.
 func NewBackgroundAgentManager() *BackgroundAgentManager {
-	return &BackgroundAgentManager{
+	m := &BackgroundAgentManager{
 		agents:  make(map[string]*BackgroundAgent),
 		results: make(map[string]*BackgroundResult),
 	}
+	m.cond = sync.NewCond(&m.mu)
+	return m
 }
 
 // Spawn starts a background sub-agent goroutine. The agent runs the
@@ -63,6 +66,7 @@ func (m *BackgroundAgentManager) Spawn(ctx context.Context, id, prompt string, s
 			Err:    err,
 			Done:   time.Now(),
 		}
+		m.cond.Broadcast()
 		m.mu.Unlock()
 	}()
 }
@@ -79,18 +83,23 @@ func (m *BackgroundAgentManager) HasPending() bool {
 // before this call).
 func (m *BackgroundAgentManager) WaitForResults(timeout time.Duration) []*BackgroundResult {
 	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		m.mu.Lock()
-		pending := len(m.agents)
-		m.mu.Unlock()
-		if pending == 0 {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	for len(m.agents) > 0 {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+		// Use a timer to wake up on timeout even if no agent completes.
+		timer := time.AfterFunc(remaining, func() {
+			m.mu.Lock()
+			m.cond.Broadcast()
+			m.mu.Unlock()
+		})
+		m.cond.Wait()
+		timer.Stop()
+	}
+
 	results := make([]*BackgroundResult, 0, len(m.results))
 	for _, r := range m.results {
 		results = append(results, r)

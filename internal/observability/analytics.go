@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Event represents an analytics event.
@@ -17,7 +18,7 @@ type Event struct {
 }
 
 func analyticsDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "analytics")
 }
 

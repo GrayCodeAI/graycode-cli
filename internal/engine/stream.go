@@ -445,6 +445,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.log.Warn("stream retry", map[string]interface{}{"attempt": streamAttempt + 1, "error": streamErr.Error()})
 			time.Sleep(time.Duration(streamAttempt+1) * time.Second)
 
+			// Notify consumer to discard previously streamed content for this turn.
+			// The consumer should treat content before this event as stale.
+			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying (attempt %d)", streamAttempt+2)}
+
 			// Re-open the stream for retry
 			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
 			if err != nil {
@@ -535,14 +539,23 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent})
 				// Auto-remember corrections and learnings
 				if s.Memory != nil && shouldRemember(textContent) {
-					go s.Memory.Remember(textContent, "assistant_learning")
+					go func(content string) {
+						// Use timeout context so goroutine doesn't hang if backend is slow.
+						rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+						defer cancel()
+						_ = s.Memory.Remember(content, "assistant_learning")
+						_ = rCtx // timeout context available if Remember is extended to accept it
+					}(textContent)
 				}
 			}
 			// Sleeptime: background memory consolidation
 			if s.Sleeptime != nil && s.Sleeptime.ShouldRun() && s.YaadBridge != nil && s.YaadBridge.Ready() {
+				// Snapshot messages to avoid data race with main loop appending
+				msgs := make([]types.EyrieMessage, len(s.messages))
+				copy(msgs, s.messages)
 				go func() {
 					var transcript []string
-					for _, m := range s.messages {
+					for _, m := range msgs {
 						transcript = append(transcript, m.Role+": "+m.Content)
 					}
 					memState := ""
@@ -550,7 +563,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						memState, _ = s.Memory.Recall("", 2000)
 					}
 					prompt := s.Sleeptime.BuildConsolidationPrompt(transcript, memState)
-					resp, err := s.client.Chat(context.Background(), []types.EyrieMessage{
+					// Use timeout context to prevent goroutine leak if LLM hangs
+					sCtx, sCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					defer sCancel()
+					resp, err := s.client.Chat(sCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
 					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
 					if err != nil || resp == nil {
@@ -561,6 +577,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
 			if s.SkillDistiller != nil && toolTurns >= 5 && s.YaadBridge != nil && s.YaadBridge.Ready() {
+				// Snapshot messages to avoid data race with main loop appending
+				msgs := make([]types.EyrieMessage, len(s.messages))
+				copy(msgs, s.messages)
 				go func() {
 					var tools []string
 					for t := range toolsUsedSet {
@@ -571,12 +590,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						files = append(files, f)
 					}
 					taskDesc := ""
-					if len(s.messages) > 0 {
-						taskDesc = s.messages[0].Content
+					if len(msgs) > 0 {
+						taskDesc = msgs[0].Content
 					}
 					sd := s.SkillDistiller
 					prompt := sd.BuildSkillPrompt(taskDesc, tools, files, textContent)
-					resp, err := s.client.Chat(context.Background(), []types.EyrieMessage{
+					// Use timeout context to prevent goroutine leak if LLM hangs
+					dCtx, dCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					defer dCancel()
+					resp, err := s.client.Chat(dCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
 					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
 					if err != nil || resp == nil {

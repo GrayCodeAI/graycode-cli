@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Memory stores extracted memories from sessions.
@@ -19,7 +20,7 @@ type Memory struct {
 }
 
 func memoryDir() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "memories")
 }
 

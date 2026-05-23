@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json"
@@ -48,7 +49,7 @@ type RegistryClient struct {
 
 // NewRegistryClient creates a registry client with sensible defaults.
 func NewRegistryClient() *RegistryClient {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return &RegistryClient{
 		IndexURL: defaultIndexURL,
 		CacheDir: filepath.Join(home, ".hawk", "cache"),
@@ -192,7 +193,7 @@ func (rc *RegistryClient) Info(name string) (*SkillEntry, error) {
 // Install clones a specific skill from a GitHub repo into the skills directory.
 // If skillName is empty, all skills in the repo are installed.
 func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error) {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	var destBase string
 	switch scope {
 	case "user":
@@ -285,7 +286,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 
 // Remove uninstalls a skill by name from both project and user scope.
 func Remove(name string) error {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	dirs := []string{
 		filepath.Join(".hawk", "skills", name),
 		filepath.Join(home, ".hawk", "skills", name),
@@ -305,7 +306,7 @@ func Remove(name string) error {
 
 // InstalledSkillInfo returns source metadata for an installed skill.
 func InstalledSkillInfo(name string) (SmartSkill, string, bool) {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	dirs := []string{
 		filepath.Join(".hawk", "skills"),
 		filepath.Join(home, ".hawk", "skills"),

@@ -63,7 +63,7 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 			_ = backupErr
 		}
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 	if err := os.WriteFile(path, []byte(p.Content), 0o644); err != nil {

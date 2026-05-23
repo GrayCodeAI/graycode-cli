@@ -374,7 +374,10 @@ func (s *SQLiteStore) AppendMessage(sessionID string, msg *MessageRecord) error 
 		return fmt.Errorf("insert message: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("last insert id: %w", err)
+	}
 	msg.ID = id
 	msg.SessionID = sessionID
 
@@ -562,13 +565,16 @@ func (s *SQLiteStore) SearchSessions(query string) ([]*SessionRecord, error) {
 
 // searchFallback uses LIKE when FTS is not available.
 func (s *SQLiteStore) searchFallback(query string) ([]*SessionRecord, error) {
+	// Escape LIKE wildcards in user input to prevent unintended matches.
+	query = strings.ReplaceAll(query, `%`, `\%`)
+	query = strings.ReplaceAll(query, `_`, `\_`)
 	pattern := "%" + query + "%"
 	rows, err := s.db.QueryContext(context.Background(), `SELECT DISTINCT s.id, s.project_dir, s.provider, s.model,
 		s.created_at, s.updated_at, COALESCE(s.parent_id, ''), s.status,
 		COALESCE(s.title, ''), s.total_tokens, s.total_cost_usd
 		FROM sessions s
 		INNER JOIN messages m ON m.session_id = s.id
-		WHERE m.content LIKE ?
+		WHERE m.content LIKE ? ESCAPE '\'
 		ORDER BY s.updated_at DESC`, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("search sessions: %w", err)

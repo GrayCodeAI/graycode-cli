@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // CodingSoul defines the persistent coding personality and style preferences.
@@ -16,7 +17,7 @@ type CodingSoul struct {
 
 // DefaultSoulPath returns the path to the soul file.
 func DefaultSoulPath() string {
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	return filepath.Join(home, ".hawk", "soul.md")
 }
 

@@ -133,6 +133,11 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	// Build the sandbox-exec command.
 	cmd := exec.CommandContext(ctx, "sandbox-exec", "-f", tmpFile.Name(), "bash", "-c", command)
 
+	// Register the temp file for cleanup (same pattern as WrapCommand in sandbox.go).
+	seatbeltTmpFilesMu.Lock()
+	seatbeltTmpFiles = append(seatbeltTmpFiles, tmpFile.Name())
+	seatbeltTmpFilesMu.Unlock()
+
 	// Pass through environment, ensuring HOME is set.
 	cmd.Env = os.Environ()
 

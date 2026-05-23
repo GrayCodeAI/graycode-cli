@@ -64,7 +64,7 @@ func CheckBudget(spent float64, config BudgetConfig) BudgetStatus {
 		return BudgetExceeded
 	}
 	warnAt := config.WarnAtPercent
-	if warnAt <= 0 {
+	if warnAt <= 0 || warnAt > 100 {
 		warnAt = 80
 	}
 	threshold := config.MaxCostUSD * (warnAt / 100.0)

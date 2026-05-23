@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // WorkflowDef defines a scripted workflow loaded from .hawk/workflows/.
@@ -101,7 +102,7 @@ func loadWorkflow(name string) (*WorkflowDef, error) {
 		filepath.Join(".hawk", "workflows", name+".yaml"),
 	}
 
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	if home != "" {
 		searchPaths = append(
 			searchPaths,
@@ -131,7 +132,7 @@ func loadWorkflow(name string) (*WorkflowDef, error) {
 func ListWorkflows() []WorkflowDef {
 	var workflows []WorkflowDef
 	searchDirs := []string{filepath.Join(".hawk", "workflows")}
-	home, _ := os.UserHomeDir()
+	home := home.Dir()
 	if home != "" {
 		searchDirs = append(searchDirs, filepath.Join(home, ".hawk", "workflows"))
 	}

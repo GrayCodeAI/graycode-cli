@@ -45,7 +45,9 @@ func (br *BackgroundRunner) Delegate(ctx context.Context, prompt string, execFn 
 	br.mu.Unlock()
 
 	go func() {
-		result, err := execFn(ctx, prompt)
+		taskCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer cancel()
+		result, err := execFn(taskCtx, prompt)
 		br.mu.Lock()
 		defer br.mu.Unlock()
 		task.DoneAt = time.Now()
