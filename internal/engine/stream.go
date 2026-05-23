@@ -95,11 +95,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	}
 
 	// Inject remembered context from yaad into system prompt
+	var yaadInjected bool
 	if s.Memory != nil && len(s.messages) > 0 {
 		lastMsg := s.messages[len(s.messages)-1].Content
 		remembered, err := s.Memory.Recall(lastMsg, 2000)
 		if err == nil && remembered != "" {
 			s.AppendSystemContext("## Relevant Memories\n" + remembered)
+			yaadInjected = true
 		}
 	}
 
@@ -301,6 +303,16 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 			if estCost > 0.50 {
 				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n⚠ This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
+			}
+		}
+
+		// Yaad: recall memories before LLM call if not already injected
+		if !yaadInjected && s.Memory != nil && len(s.messages) > 0 {
+			lastMsg := s.messages[len(s.messages)-1].Content
+			remembered, err := s.Memory.Recall(lastMsg, 2000)
+			if err == nil && remembered != "" {
+				s.AppendSystemContext("## Relevant Memories\n" + remembered)
+				yaadInjected = true
 			}
 		}
 
