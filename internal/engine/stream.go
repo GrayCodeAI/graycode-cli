@@ -95,13 +95,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	}
 
 	// Inject remembered context from yaad into system prompt
-	var yaadInjected bool
 	if s.Memory != nil && len(s.messages) > 0 {
 		lastMsg := s.messages[len(s.messages)-1].Content
 		remembered, err := s.Memory.Recall(lastMsg, 2000)
 		if err == nil && remembered != "" {
 			s.AppendSystemContext("## Relevant Memories\n" + remembered)
-			yaadInjected = true
 		}
 	}
 
@@ -306,13 +304,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Yaad: recall memories before LLM call if not already injected
-		if !yaadInjected && s.Memory != nil && len(s.messages) > 0 {
+		// Yaad: recall and refresh memories before every LLM call
+		if s.Memory != nil && len(s.messages) > 0 {
 			lastMsg := s.messages[len(s.messages)-1].Content
-			remembered, err := s.Memory.Recall(lastMsg, 2000)
+			remembered, err := s.Memory.Recall(lastMsg, 3000)
 			if err == nil && remembered != "" {
-				s.AppendSystemContext("## Relevant Memories\n" + remembered)
-				yaadInjected = true
+				s.ReplaceSystemContextSection("## Relevant Memories\n", "## Relevant Memories\n"+remembered)
 			}
 		}
 
