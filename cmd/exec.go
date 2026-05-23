@@ -29,6 +29,8 @@ var (
 	execTag          string
 	execWorktree     bool
 	execWorktreeName string
+	execEphemeral    bool
+	execJSON         bool
 )
 
 // ExecResult is the structured output for --output-format json.
@@ -52,6 +54,9 @@ var execCmd = &cobra.Command{
 
 Supports piping from stdin, JSON output format, and autonomy levels.
 
+Use --ephemeral to skip session persistence (ideal for CI runs).
+Use --json for JSON output (alias for --output-format json).
+
 Autonomy Levels:
   supervised (default)  Ask for permission on every tool call
   basic                 Auto-allow read-only tools
@@ -62,7 +67,8 @@ Autonomy Levels:
 Examples:
   hawk exec "analyze this codebase"
   hawk exec --auto full "fix the tests and commit"
-  hawk exec --output-format json "what files are in src/"
+  hawk exec --json "what files are in src/"
+  hawk exec --ephemeral --json "run tests and report" > result.json
   echo "explain main.go" | hawk exec -
   hawk exec --agent reviewer "review the latest commit"
   hawk exec --model claude-sonnet-4-6 "quick fix: typo in README"`,
@@ -81,10 +87,16 @@ func init() {
 	execCmd.Flags().StringVar(&execTag, "tag", "", "Session tag for categorization")
 	execCmd.Flags().BoolVarP(&execWorktree, "worktree", "w", false, "Run in an isolated git worktree")
 	execCmd.Flags().StringVar(&execWorktreeName, "worktree-name", "", "Branch name for worktree (auto-generated if empty)")
+	execCmd.Flags().BoolVar(&execEphemeral, "ephemeral", false, "Skip session persistence (CI mode)")
+	execCmd.Flags().BoolVarP(&execJSON, "json", "j", false, "JSON output (alias for --output-format json)")
 }
 
 func runExec(_ *cobra.Command, args []string) error {
 	start := time.Now()
+
+	if execJSON {
+		execOutputFormat = "json"
+	}
 
 	prompt, err := resolveExecPrompt(args)
 	if err != nil {
@@ -204,6 +216,8 @@ func runExec(_ *cobra.Command, args []string) error {
 	// Collect response
 	var response strings.Builder
 	var totalIn, totalOut, turns int
+	var execErr string
+	jsonEnc := json.NewEncoder(os.Stdout)
 
 	for ev := range events {
 		switch ev.Type {
@@ -212,6 +226,12 @@ func runExec(_ *cobra.Command, args []string) error {
 			if execOutputFormat == "text" {
 				fmt.Print(ev.Content)
 			}
+			if execOutputFormat == "json" {
+				_ = jsonEnc.Encode(map[string]interface{}{
+					"type":    "content",
+					"content": ev.Content,
+				})
+			}
 		case "usage":
 			if ev.Usage != nil {
 				totalIn += ev.Usage.PromptTokens
@@ -219,42 +239,90 @@ func runExec(_ *cobra.Command, args []string) error {
 				turns++
 			}
 		case "error":
+			execErr = ev.Content
 			if execOutputFormat == "text" {
 				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
 			}
+			if execOutputFormat == "json" {
+				_ = jsonEnc.Encode(map[string]interface{}{
+					"type":    "error",
+					"content": ev.Content,
+				})
+			}
+		case "tool_use":
+			if execOutputFormat == "json" {
+				_ = jsonEnc.Encode(map[string]interface{}{
+					"type": "tool_use",
+					"tool": ev.ToolName,
+				})
+			}
+		case "tool_result":
+			if execOutputFormat == "json" {
+				_ = jsonEnc.Encode(map[string]interface{}{
+					"type":   "tool_result",
+					"tool":   ev.ToolName,
+					"result": ev.Content,
+				})
+			}
 		case "done":
-			// loop will exit when channel closes
+			if execOutputFormat == "json" {
+				_ = jsonEnc.Encode(map[string]interface{}{
+					"type": "done",
+				})
+			}
 		}
 	}
 
-	// Persist session for resume/search
-	sessionID := fmt.Sprintf("exec-%d", start.UnixMilli())
-	persistExecSession(sessionID, effectiveModel, effectiveProvider, prompt, response.String())
+	// Persist session for resume/search (skip in ephemeral/CI mode)
+	exitCode := 0
+	if execErr != "" {
+		exitCode = 1
+	}
+	if !execEphemeral {
+		sessionID := fmt.Sprintf("exec-%d", start.UnixMilli())
+		persistExecSession(sessionID, effectiveModel, effectiveProvider, prompt, response.String())
+	}
 
 	if execOutputFormat == "text" {
 		if !strings.HasSuffix(response.String(), "\n") {
 			fmt.Println()
 		}
+		if exitCode != 0 {
+			return fmt.Errorf("exec failed: %s", execErr)
+		}
 		return nil
 	}
 
-	// JSON output
-	result := ExecResult{
-		SessionID:  sessionID,
-		Response:   response.String(),
-		ExitCode:   0,
-		TokensIn:   totalIn,
-		TokensOut:  totalOut,
-		TurnsTaken: turns,
-		Duration:   time.Since(start).Round(time.Millisecond).String(),
-		Model:      effectiveModel,
-		Worktree:   wtPath,
-		Branch:     wtBranch,
+	if execOutputFormat == "json" {
+		result := ExecResult{
+			SessionID:  fmt.Sprintf("exec-%d", start.UnixMilli()),
+			Response:   response.String(),
+			ExitCode:   exitCode,
+			TokensIn:   totalIn,
+			TokensOut:  totalOut,
+			TurnsTaken: turns,
+			Duration:   time.Since(start).Round(time.Millisecond).String(),
+			Model:      effectiveModel,
+			Worktree:   wtPath,
+			Branch:     wtBranch,
+		}
+		if execOutputFormat == "json" && execEphemeral {
+			_ = jsonEnc.Encode(map[string]interface{}{
+				"type":   "result",
+				"result": result,
+			})
+		}
+		if !execEphemeral {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(result)
+		}
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(result)
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
+	return nil
 }
 
 func resolveExecPrompt(args []string) (string, error) {
