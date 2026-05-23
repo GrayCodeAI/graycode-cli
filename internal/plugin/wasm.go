@@ -63,7 +63,7 @@ func (w *WasmPluginRuntime) ExecuteTool(ctx context.Context, toolName string, in
 	defer cancel()
 
 	rt := wazero.NewRuntime(ctx)
-	defer rt.Close(ctx)
+	defer func() { _ = rt.Close(ctx) }()
 
 	// Enable WASI for basic I/O.
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
@@ -73,7 +73,7 @@ func (w *WasmPluginRuntime) ExecuteTool(ctx context.Context, toolName string, in
 	if err != nil {
 		return "", fmt.Errorf("wasm plugin %q: compile: %w", w.manifest.Name, err)
 	}
-	defer compiled.Close(ctx)
+	defer func() { _ = compiled.Close(ctx) }()
 
 	// Set up stdin/stdout.
 	inputBytes, _ := json.Marshal(input)
