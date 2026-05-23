@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+// truncate shortens a string to maxLen characters, appending "..." if truncated.
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 // toolTimeout returns a per-tool timeout duration based on the tool name.
 // Fast file operations get a shorter deadline while Bash gets a longer one.
 func toolTimeout(name string) time.Duration {
