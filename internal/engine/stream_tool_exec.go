@@ -1,3 +1,7 @@
+// Package engine holds the extracted tool execution types and functions.
+// These are prepared for future integration into the agentLoop.
+//
+//nolint:unused
 package engine
 
 import (
