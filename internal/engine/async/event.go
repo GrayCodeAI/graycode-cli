@@ -28,13 +28,13 @@ type Submission struct {
 type EventType string
 
 const (
-	EventToken     EventType = "token"
-	EventToolCall  EventType = "tool_call"
+	EventToken      EventType = "token"
+	EventToolCall   EventType = "tool_call"
 	EventToolResult EventType = "tool_result"
-	EventDone      EventType = "done"
-	EventError     EventType = "error"
-	EventThinking  EventType = "thinking"
-	EventUsage     EventType = "usage"
+	EventDone       EventType = "done"
+	EventError      EventType = "error"
+	EventThinking   EventType = "thinking"
+	EventUsage      EventType = "usage"
 )
 
 // Event is a single event from the async engine.
