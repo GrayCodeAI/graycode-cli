@@ -1,39 +1,116 @@
-# Dynamic models (eyrie-owned catalog + selection)
+# Dynamic Model Discovery — Hawk Developer Guide
 
-Hawk does **not** ship a hardcoded model list and does **not** store model/provider in `~/.hawk/settings.json`.
+## Overview
 
-| Data | Location |
-|------|----------|
-| Model catalog (IDs, names, pricing) | Eyrie `~/.eyrie/model_catalog.json` |
-| Selected model & provider | Eyrie `~/.hawk/provider.json` (`active_model`, `anthropic_model`, …) |
-| API keys | Eyrie keychain + env |
-| Hawk host prefs (theme, sandbox, tools) | `~/.hawk/settings.json` |
+Hawk uses **eyrie** for all model discovery, provider routing, and credential management. Hawk never calls an LLM API directly or hardcodes provider logic.
 
-## Add a new model
+The model pipeline has three layers:
 
-1. Update the eyrie catalog source (bootstrap JSON, remote discover, or provider API enrichment).
-2. Run catalog refresh (`hawk models refresh`, `/config` → refresh, or restart hawk with keys set).
-3. Hawk shows the new model automatically — no hawk code changes.
+```
+Remote catalog (langdag.com/.../catalog.json)
+    ↓ fetch
+Local cache (~/.eyrie/model_catalog.json)
+    ↓ merge with live API data
+Compiled catalog (in-memory CompiledCatalogV1)
+    ↓ query
+Model picker (eyrieclient.ListModels)
+```
 
-## Change the active model
+## Provider registry
 
-- `/config` → pick model, or `/model <id>`, or `hawk config set model <id>`
-- All of these call `runtime.SetActiveModel` → `provider.json`
+Single source of truth: `eyrie/catalog/registry/providers.go`
 
-Legacy `model` / `provider` keys in `settings.json` are migrated into `provider.json` on first load and removed from hawk settings on save.
+11 providers registered (see `providerSpecs()`):
 
-## Hawk integration surface
+| Provider | ID | Credential | Strategy |
+|----------|----|------------|----------|
+| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | remote_then_live |
+| OpenAI | `openai` | `OPENAI_API_KEY` | remote_then_live |
+| Google Gemini | `gemini` | `GEMINI_API_KEY` | remote_then_live |
+| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` | live_only |
+| xAI (Grok) | `grok` | `XAI_API_KEY` | remote_then_live |
+| Z.AI | `z-ai` | `ZAI_API_KEY` | live_only |
+| CanopyWave | `canopywave` | `CANOPYWAVE_API_KEY` | live_only |
+| OpenCode Go | `opencodego` | `OPENCODEGO_API_KEY` | remote_then_live |
+| Kimi (Moonshot) | `kimi` | `MOONSHOT_API_KEY` | live_only |
+| Xiaomi (MiMo) | `xiaomi` | `XIAOMI_API_KEY` | live_only |
+| Ollama (local) | `ollama` | `OLLAMA_BASE_URL` | live_only |
 
-- TUI and commands call `internal/eyrieclient` → `github.com/GrayCodeAI/eyrie/runtime`.
-- Do **not** import `eyrie/catalog` or `eyrie/setup` from `cmd/` except via `eyrieclient`.
-- `internal/config.ActiveModel` / `SetActiveModel` delegate to eyrie runtime.
+### Model strategies
 
-## Eyrie APIs
+- **remote_then_live**: Models come from the published remote catalog, enriched with live API data (pricing, context windows, capabilities) when credentials are present.
+- **live_only**: Models come exclusively from the live provider API. Without credentials, zero models are available. The remote catalog may seed initial entries but they are replaced entirely on live fetch.
 
-| API | Purpose |
-|-----|---------|
-| `catalog.ModelEntriesForProvider(compiled, provider)` | Filter compiled catalog |
-| `runtime.ModelsForProvider(ctx, provider)` | Load cache + auto-discover if empty |
-| `runtime.ActiveModel` / `SetActiveModel` | Read/write user selection |
-| `runtime.Discover(ctx)` | Refresh from API keys |
-| `setup.BuildSetupUI` | Provider/model groups for UI |
+## Hawk API (via `internal/eyrieclient`)
+
+Hawk production code must use `internal/eyrieclient/` — never import eyrie packages directly.
+
+### Catalog functions
+
+```go
+// Load the compiled catalog from cache
+compiled, err := eyrieclient.LoadCompiledCatalogV1(ctx, opts)
+
+// Query models
+models := eyrieclient.ModelEntriesForProvider(compiled, "anthropic")
+modelID := eyrieclient.FirstModelForProvider(compiled, "anthropic")
+gateway := eyrieclient.GatewayForModel(compiled, "claude-sonnet-4-6")
+providers := eyrieclient.ProviderIDsFromCompiled(compiled)
+liveOnly := eyrieclient.IsLiveOnlyProvider("ollama")
+
+// Display
+label := eyrieclient.DisplayModelLabel(id, displayName)
+owner := eyrieclient.DisplayModelOwner(owner, id)
+```
+
+### Credential functions
+
+```go
+name := eyrieclient.PlatformSecretStoreName()
+hasKey := eyrieclient.HasSecret(ctx, "OPENAI_API_KEY")
+secret := eyrieclient.LookupSecret(ctx, "OPENAI_API_KEY")
+report := eyrieclient.StorageReportFor(ctx)
+```
+
+### Model listing
+
+```go
+// Unified model listing — auto-selects cache or live
+models, err := eyrieclient.ListModels(ctx, eyrieclient.ListModelsOpts{
+    ProviderID: "anthropic",
+    Source:     eyrieclient.ListSourceAuto, // or Cache / Live
+})
+
+// Shortcut for single provider
+models, err := eyrieclient.ListModelsForProvider(ctx, "anthropic")
+```
+
+### Session construction
+
+```go
+// Build a chat client with deployment routing support
+sess := eyrieclient.NewHawkSession(ctx, useDeploymentRouting, provider, model, systemPrompt, registry)
+```
+
+## Adding a new provider
+
+1. Add one `ProviderSpec` row in `eyrie/catalog/registry/providers.go`
+2. Add `CredentialsEnvFallbacks` if the API key has known alternative env var names
+3. If live list API exists: implement fetcher in `catalog/live/fetchers.go` and register in `Registry` map
+4. Add live fetcher key to the provider spec (`LiveFetcherKey`)
+5. Ensure models exist in remote catalog JSON (unless `StrategyLiveOnly`)
+6. Add probe base URL for credential validation
+7. No hawk code changes needed
+
+## Testing model discovery
+
+```bash
+# Refresh catalog and list models for a provider
+EYRIE_MODEL_CATALOG_REFRESH=1 hawk config model list --provider anthropic
+
+# Preflight diagnostics
+hawk preflight
+
+# Doctor check
+hawk doctor
+```
