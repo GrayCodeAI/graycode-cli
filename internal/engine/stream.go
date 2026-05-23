@@ -60,6 +60,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.EnhancedMemory != nil {
 			s.EnhancedMemory.EndSession(success)
 		}
+		// Yaad: save session summary
+		if s.Memory != nil {
+			taskGoal := ""
+			if len(s.messages) > 0 {
+				for _, m := range s.messages {
+					if m.Role == "user" && m.ToolResult == nil && taskGoal == "" {
+						taskGoal = m.Content
+					}
+				}
+			}
+			if taskGoal != "" {
+				summary := fmt.Sprintf("Session goal: %s", taskGoal)
+				if !success {
+					summary += " (interrupted)"
+				}
+				_ = s.Memory.Remember(summary, "session")
+			}
+		}
 	}()
 
 	// Session start hook
@@ -953,6 +971,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			pending := s.Sandbox.List()
 			if len(pending) > 0 {
 				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))}
+			}
+		}
+
+		// Auto-remember: save noteworthy patterns to yaad after each turn
+		if s.Memory != nil && len(s.messages) >= 2 {
+			lastAssistant := ""
+			for i := len(s.messages) - 1; i >= 0; i-- {
+				if s.messages[i].Role == "assistant" && s.messages[i].Content != "" {
+					lastAssistant = s.messages[i].Content
+					break
+				}
+			}
+			if lastAssistant != "" && shouldRemember(lastAssistant) {
+				content := lastAssistant
+				if len(content) > 500 {
+					content = content[:500]
+				}
+				_ = s.Memory.Remember(content, "insight")
 			}
 		}
 	}
