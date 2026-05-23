@@ -15,6 +15,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/spf13/cobra v1.9.1
+	github.com/tetratelabs/wazero v1.11.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0
 	go.opentelemetry.io/otel/sdk v1.43.0
@@ -67,7 +68,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tetratelabs/wazero v1.11.0 // indirect
 	github.com/tiktoken-go/tokenizer v0.7.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect
@@ -87,4 +87,7 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-replace github.com/GrayCodeAI/eyrie => ../eyrie
+replace (
+	github.com/GrayCodeAI/eyrie => ../eyrie
+	github.com/GrayCodeAI/yaad => ../yaad
+)
