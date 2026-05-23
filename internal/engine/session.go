@@ -319,6 +319,27 @@ func (s *Session) AppendSystemContext(content string) {
 	s.system += "\n\n" + content
 }
 
+// ReplaceSystemContextSection replaces the content of a system prompt section identified by its header.
+// If the header is not found, appends the content as a new section.
+func (s *Session) ReplaceSystemContextSection(header, content string) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return
+	}
+	idx := strings.Index(s.system, header)
+	if idx < 0 {
+		s.AppendSystemContext(content)
+		return
+	}
+	rest := s.system[idx+len(header):]
+	endIdx := strings.Index(rest, "\n\n## ")
+	if endIdx < 0 {
+		s.system = s.system[:idx] + content
+	} else {
+		s.system = s.system[:idx] + content + rest[endIdx:]
+	}
+}
+
 // SetLogger replaces the session logger.
 func (s *Session) SetLogger(l *logger.Logger) {
 	s.log = l
