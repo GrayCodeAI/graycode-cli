@@ -14,8 +14,8 @@ import (
 type StructuredEditTool struct{}
 
 func (StructuredEditTool) Name() string      { return "StructuredEdit" }
-func (StructuredEditTool) RiskLevel() string  { return "medium" }
-func (StructuredEditTool) Aliases() []string  { return []string{"sed", "search_replace"} }
+func (StructuredEditTool) RiskLevel() string { return "medium" }
+func (StructuredEditTool) Aliases() []string { return []string{"sed", "search_replace"} }
 
 func (StructuredEditTool) Description() string {
 	return "Apply search-and-replace edits to a file. Provide one or more SEARCH/REPLACE blocks. Each block finds exact text and replaces it. The SEARCH text must match the file contents exactly, including whitespace."
@@ -95,20 +95,20 @@ func (s StructuredEditTool) Execute(ctx context.Context, input json.RawMessage) 
 		replace := block.Replace
 
 		if p.AutoFormat {
-				search = normalizeWhitespace(search)
-			}
+			search = normalizeWhitespace(search)
+		}
 
-			if !strings.Contains(content, search) {
-				skipped++
-				continue
-			}
+		if !strings.Contains(content, search) {
+			skipped++
+			continue
+		}
 
-			if strings.Count(content, search) > 1 {
-				return "", fmt.Errorf("search text found %d times in %s — please provide more context to make the match unique", strings.Count(content, search), p.Path)
-			}
+		if strings.Count(content, search) > 1 {
+			return "", fmt.Errorf("search text found %d times in %s — please provide more context to make the match unique", strings.Count(content, search), p.Path)
+		}
 
-			content = strings.Replace(content, search, replace, 1)
-			applied++
+		content = strings.Replace(content, search, replace, 1)
+		applied++
 	}
 
 	if applied == 0 {
