@@ -47,6 +47,7 @@ func baseTools() []tool.Tool {
 		tool.FileReadTool{},
 		tool.FileWriteTool{},
 		tool.FileEditTool{},
+		tool.StructuredEditTool{},
 		tool.LSTool{},
 		tool.GlobTool{},
 		tool.GrepTool{},
