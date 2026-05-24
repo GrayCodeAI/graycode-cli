@@ -64,8 +64,7 @@ func TestLoadManifest(t *testing.T) {
 
 func TestInstallAndUninstall(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("HOME", dir)
-	defer os.Unsetenv("HOME")
+	t.Setenv("HOME", dir)
 
 	srcDir := t.TempDir()
 	manifestData := `{"name": "test-plugin", "version": "1.0.0"}`
