@@ -31,7 +31,7 @@ go test ./cmd/ -run 'TestDoctor|TestYaad|TestEcosystem|TestSolo' -count=1
 go test ./internal/config/ -run 'Solo|FormatEcosystemPanel' -count=1
 go test ./internal/intelligence/memory/ -run 'FormatYaad|ShouldAutoRemember' -count=1
 
-echo "== verify solo path =="
+echo "== verify developer path =="
 ./scripts/verify-solo-path.sh
 
 echo "== smoke ok =="

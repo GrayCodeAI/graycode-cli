@@ -159,5 +159,5 @@ cd eyrie && git push -u origin feature/secure-credentials-sandbox
 
 ## Related docs
 
-- [`docs/SECURITY-SOLO.md`](../docs/SECURITY-SOLO.md) — solo developer security model
+- [`docs/SECURITY-SOLO.md`](../docs/SECURITY-SOLO.md) — developer security model (keychain, sandbox)
 - [`eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md`](../external/eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md) — discovery edge cases (§9 security updated)

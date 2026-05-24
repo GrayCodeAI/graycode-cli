@@ -34,7 +34,7 @@ func TestFormatSoloPathReport_ContainsSections(t *testing.T) {
 	isolateMilestoneTest(t)
 	out := FormatSoloPathReport(context.Background())
 	for _, want := range []string{
-		"Solo developer path",
+		"Developer path",
 		"Setup",
 		"Security",
 		"Sandbox",

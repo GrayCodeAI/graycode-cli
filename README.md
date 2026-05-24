@@ -5,7 +5,7 @@
 <h1 align="center">AI Coding Agent for Your Terminal</h1>
 
 <p align="center">
-  AI coding agent for your terminal — built for <strong>solo developers</strong>, not teams or enterprises (yet).
+  AI coding agent for your terminal — built for <strong>developers</strong>, not teams or enterprises (yet).
 </p>
 
 <p align="center">
@@ -32,7 +32,7 @@
 
 hawk is an AI-powered coding agent that lives in your terminal. It reads your codebase, writes and edits files, runs tests, and manages git — all through natural language. Unlike IDE-bound tools, hawk works over SSH, in containers, and on any machine with a shell.
 
-**Solo-first:** one developer, one machine. API keys live in your OS keychain (not `.env`). Memory stays local (`~/.yaad/`). Run `hawk solo` to see if you're ready. See [docs/SOLO-FIRST.md](docs/SOLO-FIRST.md).
+**Developer path:** one machine, keychain credentials, local memory. Run `hawk solo` to check readiness. See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md).
 
 - **Model-agnostic** — works with Claude, GPT-4, Gemini, DeepSeek, Ollama, and 75+ models through [eyrie](https://github.com/GrayCodeAI/eyrie)
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
@@ -48,7 +48,7 @@ brew install GrayCodeAI/tap/hawk
 # First run — paste API key in /config (stored in macOS Keychain / Linux keyring)
 hawk
 
-# Verify solo developer readiness
+# Verify readiness
 hawk solo
 ```
 
@@ -138,16 +138,17 @@ hawk exec --agent reviewer "review last commit" # Custom persona
 ### Diagnostics & ecosystem
 
 ```bash
-hawk solo                   # Solo dev readiness (setup + security + sandbox)
+hawk solo                   # Developer path readiness (setup + security + sandbox)
 hawk doctor                  # Full health report (eyrie + yaad + tok panel)
 hawk ecosystem               # Ecosystem panel only
 hawk yaad                    # Persistent memory graph
 hawk yaad search <query>     # Search yaad memories
 hawk preflight               # Quick ready-to-chat check
+make solo                    # Developer path verification
 make smoke                   # Build + quick verification script
 ```
 
-See [docs/SECURITY-SOLO.md](docs/SECURITY-SOLO.md) and [plans/SOLO-DEVELOPER-PATH.md](plans/SOLO-DEVELOPER-PATH.md) for the solo developer path.
+See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md) and [docs/SECURITY-SOLO.md](docs/SECURITY-SOLO.md).
 
 See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
 
@@ -173,7 +174,7 @@ hawk mission --dry-run "What would this decompose into?"
 
 ## Providers
 
-hawk works with any LLM provider. **Solo path:** paste keys in `/config` (stored in OS keychain) — not shell env or `.env`. Use `hawk credentials status` to verify.
+hawk works with any LLM provider. **Developer path:** paste keys in `/config` (stored in OS keychain) — not shell env or `.env`. Use `hawk credentials status` to verify.
 
 | Provider | Key (via `/config`) |
 |---|---|

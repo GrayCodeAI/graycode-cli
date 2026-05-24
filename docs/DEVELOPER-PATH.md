@@ -1,6 +1,6 @@
-# Solo-first product direction
+# Developer path — product direction
 
-hawk is built **for individual developers** — one person, one machine, one workflow. Team and enterprise features are explicitly **later**, not now.
+hawk is built **for developers on their own machines** — not teams or enterprises (yet).
 
 ## Who this is for
 
@@ -21,7 +21,7 @@ hawk is built **for individual developers** — one person, one machine, one wor
 4. **Local-first privacy** — code stays on your machine except to the LLM provider you choose.
 5. **No co-author theater** — commits list the human author only (see CONTRIBUTING).
 
-## Solo developer journey
+## The path
 
 ```
 Install hawk
@@ -36,9 +36,10 @@ Install hawk
 ## Verify
 
 ```bash
-hawk solo              # unified readiness report
+hawk solo              # readiness report
 hawk preflight         # eyrie chat readiness
 hawk credentials status
+make solo              # same checks as CI (verify-solo-path.sh)
 ./scripts/verify-solo-path.sh
 ```
 
@@ -49,14 +50,12 @@ See [SECURITY-SOLO.md](SECURITY-SOLO.md) for keychain-only credentials, Read-too
 ## Architecture reference
 
 - [ecosystem-message-flow.md](ecosystem-message-flow.md) — eyrie · yaad · tok in one chat turn
-- [../plans/SOLO-DEVELOPER-PATH.md](../plans/SOLO-DEVELOPER-PATH.md) — research, gaps, implementation plan
+- [../plans/DEVELOPER-PATH.md](../plans/DEVELOPER-PATH.md) — research, gaps, implementation plan
 
-## What stays in the repo but is not “solo core”
-
-These exist for power users and future team modes; they are not required for the solo path:
+## Optional (not required on the path)
 
 - `hawk mission` — parallel git worktrees
 - Daemon mode — HTTP API for integrations
-- Multi-agent personas — optional `/agents`
+- Multi-agent personas — `/agents`
 
 When adding features, ask: **does this help one developer on their laptop?** If not, defer or gate behind explicit opt-in.
