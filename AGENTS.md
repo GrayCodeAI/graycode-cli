@@ -113,7 +113,10 @@ Derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015
 ```bash
 go build .                    # Build hawk binary
 go test -race ./...           # Run all tests
+./scripts/smoke-hawk.sh       # Quick build + doctor + ecosystem tests
 ```
+
+Ecosystem integration (eyrie · yaad · tok): see [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md).
 
 ### Dependencies
 
