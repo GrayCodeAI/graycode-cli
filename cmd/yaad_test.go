@@ -23,3 +23,18 @@ func TestYaadCmdRejectsInvalidLimit(t *testing.T) {
 		t.Fatalf("expected limit error, got %v", err)
 	}
 }
+
+func TestYaadSearchCmdRuns(t *testing.T) {
+	old := yaadLimit
+	defer func() { yaadLimit = old }()
+	yaadLimit = 5
+	if err := yaadSearchCmd.RunE(yaadSearchCmd, []string{"decision"}); err != nil {
+		t.Fatalf("yaad search command: %v", err)
+	}
+}
+
+func TestYaadSearchCmdRequiresQuery(t *testing.T) {
+	if err := yaadSearchCmd.RunE(yaadSearchCmd, nil); err == nil {
+		t.Fatal("expected error without query")
+	}
+}
