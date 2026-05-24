@@ -16,13 +16,22 @@ set -o pipefail
 echo "== hawk ecosystem =="
 "$BIN" ecosystem >/dev/null
 
+echo "== hawk solo =="
+set +o pipefail
+"$BIN" solo >/dev/null 2>&1 || true
+set -o pipefail
+
 echo "== hawk yaad =="
 "$BIN" yaad --limit 2 >/dev/null || true
 "$BIN" yaad search decision --limit 2 >/dev/null || true
 
 echo "== ecosystem tests =="
 go test ./internal/config/ -run TestFormatEcosystemPanel -count=1
-go test ./cmd/ -run 'TestDoctor|TestYaad|TestEcosystem' -count=1
-go test ./internal/intelligence/memory/ -run 'FormatYaad' -count=1
+go test ./cmd/ -run 'TestDoctor|TestYaad|TestEcosystem|TestSolo' -count=1
+go test ./internal/config/ -run 'Solo|FormatEcosystemPanel' -count=1
+go test ./internal/intelligence/memory/ -run 'FormatYaad|ShouldAutoRemember' -count=1
+
+echo "== verify solo path =="
+./scripts/verify-solo-path.sh
 
 echo "== smoke ok =="
