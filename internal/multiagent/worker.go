@@ -8,7 +8,6 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -38,7 +37,7 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
 		settings := hawkconfig.LoadSettings()
-		sess := eyrieclient.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
+		sess := engine.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
 
 		// Configure for autonomous operation
 		sess.Autonomy = engine.AutonomyLevel(cfg.AutonomyLevel)
