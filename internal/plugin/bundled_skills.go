@@ -37,6 +37,7 @@ category: general
 - Use conventional commits: feat, fix, docs, style, refactor, test, chore
 - Keep subject line under 72 characters
 - Use imperative mood: "Add feature" not "Added feature"
+- Never add Co-authored-by trailers — commits list only the human author
 
 ## Branching
 - Feature branches: feat/description

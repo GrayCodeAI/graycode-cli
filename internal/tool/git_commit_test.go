@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // setupTestRepo creates a temporary git repo and changes into it.
@@ -116,5 +118,64 @@ func TestAutoCommitOutsideGitRepo(t *testing.T) {
 	err := AutoCommit(context.Background(), "/tmp/nonexistent", "Write", "test")
 	if err == nil {
 		t.Fatal("expected error outside git repo")
+	}
+}
+
+func gitCommitBody(t *testing.T) string {
+	t.Helper()
+	out, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%B").CombinedOutput()
+	if err != nil {
+		t.Fatalf("git log: %v", err)
+	}
+	return string(out)
+}
+
+func TestAutoCommitOmitsCoAuthorTrailer(t *testing.T) {
+	dir, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	file := filepath.Join(dir, "hello.txt")
+	if err := os.WriteFile(file, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := WithToolContext(context.Background(), &ToolContext{
+		AutoCommit: true,
+		Attribution: &types.Attribution{
+			TrailerStyle: "co-authored-by",
+		},
+	})
+	if err := AutoCommit(ctx, file, "Write", "wrote file"); err != nil {
+		t.Fatalf("AutoCommit: %v", err)
+	}
+
+	body := gitCommitBody(t)
+	if strings.Contains(strings.ToLower(body), "co-authored-by:") {
+		t.Fatalf("unexpected co-author trailer in commit body: %q", body)
+	}
+}
+
+func TestAutoCommitAssistedByTrailerOptional(t *testing.T) {
+	dir, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	file := filepath.Join(dir, "hello.txt")
+	if err := os.WriteFile(file, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := WithToolContext(context.Background(), &ToolContext{
+		AutoCommit: true,
+		Attribution: &types.Attribution{
+			TrailerStyle: "assisted-by",
+		},
+	})
+	if err := AutoCommit(ctx, file, "Write", "wrote file"); err != nil {
+		t.Fatalf("AutoCommit: %v", err)
+	}
+
+	body := gitCommitBody(t)
+	if !strings.Contains(body, "Assisted-by: Hawk") {
+		t.Fatalf("expected assisted-by trailer, got: %q", body)
 	}
 }
