@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/types"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // LLMClient is the minimal interface needed for prompt optimization.

@@ -7,7 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // AdaptivePrompt adjusts system prompt sections based on user corrections.

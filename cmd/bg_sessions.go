@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/spf13/cobra"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

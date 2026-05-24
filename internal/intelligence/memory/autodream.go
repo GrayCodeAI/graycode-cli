@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // AutoDreamConfig controls when background memory consolidation triggers.

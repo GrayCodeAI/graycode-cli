@@ -8,7 +8,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
-"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 type SessionMemoryConfig struct {

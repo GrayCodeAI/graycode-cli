@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"gopkg.in/yaml.v3"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // WorkflowDef defines a scripted workflow loaded from .hawk/workflows/.

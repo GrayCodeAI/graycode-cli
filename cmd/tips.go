@@ -6,7 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Tip represents a single hawk usage tip.

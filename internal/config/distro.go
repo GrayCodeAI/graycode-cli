@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"gopkg.in/yaml.v3"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Distribution defines a custom hawk distribution (white-label configuration).
