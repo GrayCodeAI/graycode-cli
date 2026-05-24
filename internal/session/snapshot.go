@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Snapshot records a point-in-time copy of a session.

@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 const maxRequestBodyBytes = 1 << 20

@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Memory stores extracted memories from sessions.

@@ -11,8 +11,8 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // startTime records when the process started, used by debugOutput for uptime.

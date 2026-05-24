@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Agent is a user-defined persona with a custom system prompt.

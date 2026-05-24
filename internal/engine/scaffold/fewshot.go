@@ -8,7 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // FewShotStore collects successful (prompt, response) pairs and injects
