@@ -73,6 +73,13 @@ fix: handle empty response body in chat handler
 refactor!: rename ClientV1 to Client (BREAKING CHANGE)
 ```
 
+**Co-authors:** do not add `Co-authored-by:` trailers. Commits should list
+only the human author. Enable the repo hook with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Pull request checklist
 
 Before requesting review:

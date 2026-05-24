@@ -54,7 +54,7 @@ var schemaCmd = &cobra.Command{
 				"attribution": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"trailer_style":  map[string]interface{}{"type": "string", "enum": []string{"none", "co-authored-by", "assisted-by"}, "default": "assisted-by"},
+						"trailer_style":  map[string]interface{}{"type": "string", "enum": []string{"none", "assisted-by"}, "default": "none"},
 						"generated_with": map[string]interface{}{"type": "boolean", "description": "Append 'Generated with Hawk' to commits"},
 					},
 				},
