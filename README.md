@@ -143,6 +143,8 @@ make smoke                   # Build + quick verification script
 
 See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
 
+In the TUI: `/ecosystem`, `/yaad`, `/memory` (AGENTS.md).
+
 ### Daemon Mode
 
 ```bash
