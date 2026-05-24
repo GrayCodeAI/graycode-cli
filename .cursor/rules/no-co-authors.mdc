@@ -1,0 +1,18 @@
+---
+description: Never add Co-authored-by trailers to git commits
+alwaysApply: true
+---
+
+# Git commits — no co-authors
+
+Never add `Co-authored-by:` or `Co-Authored-By:` trailers to commit messages, PR descriptions, or squash-merge bodies.
+
+- Commits must list only the human author (`git config user.name` / `user.email`).
+- Do not attribute Cursor, Claude, Copilot, hawk, or any AI tool as a co-author.
+- If a commit template or tool suggests a co-author trailer, omit it.
+
+Example — do **not** append:
+
+```
+Co-authored-by: Cursor <cursoragent@cursor.com>
+```

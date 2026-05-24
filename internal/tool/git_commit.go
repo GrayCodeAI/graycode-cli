@@ -39,11 +39,11 @@ func AutoCommit(ctx context.Context, path, toolName, description string) error {
 	if tc := GetToolContext(ctx); tc != nil && tc.Attribution != nil {
 		attr := tc.Attribution
 		switch attr.TrailerStyle {
-		case "co-authored-by":
-			msg += "\n\nCo-authored-by: Hawk <hawk@graycode.ai>"
-		case "assisted-by", "":
+		case "assisted-by":
 			msg += "\n\nAssisted-by: Hawk <hawk@graycode.ai>"
-		case "none":
+		case "none", "":
+		default:
+			// co-authored-by and unknown styles are treated as none
 		}
 		if attr.GeneratedWith {
 			msg += "\nGenerated-with: Hawk"
