@@ -50,6 +50,7 @@ type Pool struct {
 	tasks      []*Task
 	maxWorkers int
 	mu         sync.Mutex
+	gitMu      sync.Mutex
 	nextID     int
 }
 
@@ -127,8 +128,11 @@ func (p *Pool) Run(ctx context.Context, workFn func(ctx context.Context, worktre
 			task.Status = StatusRunning
 			p.mu.Unlock()
 
-			// Create worktree.
+			// Create worktree. Git serializes updates to shared worktree metadata,
+			// so avoid racing branch/worktree creation across workers.
+			p.gitMu.Lock()
 			wtPath, err := createWorktree(p.repoDir, p.baseBranch, task.Branch)
+			p.gitMu.Unlock()
 			if err != nil {
 				p.mu.Lock()
 				task.Status = StatusFailed
