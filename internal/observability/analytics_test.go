@@ -9,8 +9,7 @@ import (
 
 func TestLogEvent(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("HOME", dir)
-	defer os.Unsetenv("HOME")
+	t.Setenv("HOME", dir)
 
 	LogEvent("test_event", "session-123", map[string]interface{}{"key": "value"})
 
@@ -29,8 +28,7 @@ func TestLogEvent(t *testing.T) {
 
 func TestSaveAndGetTraces(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("HOME", dir)
-	defer os.Unsetenv("HOME")
+	t.Setenv("HOME", dir)
 
 	trace := &SessionTrace{
 		SessionID:    "test-session",
@@ -63,8 +61,7 @@ func TestSaveAndGetTraces(t *testing.T) {
 
 func TestSummary(t *testing.T) {
 	dir := t.TempDir()
-	os.Setenv("HOME", dir)
-	defer os.Unsetenv("HOME")
+	t.Setenv("HOME", dir)
 
 	// Test empty summary
 	summary := Summary()
