@@ -180,22 +180,33 @@ const genericTemplate = `# Project Instructions
 const behavioralPrinciples = `
 ## Principles
 
+Derived from Andrej Karpathy's observations on common LLM coding mistakes. Bias toward caution over speed; use judgment on trivial tasks.
+
 ### Think Before Coding
 - State assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them — don't pick silently.
-- If a simpler approach exists, say so.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
 ### Simplicity First
 - No features beyond what was asked.
 - No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
 - If you write 200 lines and it could be 50, rewrite it.
+- Ask: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
 ### Surgical Changes
 - Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+- Remove imports/variables/functions that YOUR changes made unused.
 - Every changed line should trace directly to the request.
 
 ### Goal-Driven Execution
-- Transform tasks into verifiable goals with success criteria.
-- Loop until verified: build passes, tests pass, lint clean.
+- "Add validation" → write tests for invalid inputs, then make them pass.
+- "Fix the bug" → write a test that reproduces it, then make it pass.
+- "Refactor X" → ensure tests pass before and after.
+- For multi-step work: [Step] → verify: [check].
+- Strong success criteria let you loop independently. Weak criteria require constant clarification.
 `

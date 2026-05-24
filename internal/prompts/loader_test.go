@@ -28,10 +28,12 @@ func TestBuildSystemPromptContainsSections(t *testing.T) {
 
 	// Verify it contains content from each section
 	for _, want := range []string{
-		"Hawk",             // from role.md
-		"Tool Usage",       // from tools.md
-		"Coding Practices", // from practices.md
-		"Communication",    // from communication.md
+		"Hawk",                    // from role.md
+		"Tool Usage",              // from tools.md
+		"Coding Practices",        // from practices.md
+		"Think Before Coding",     // from practices.md
+		"Would a senior engineer", // from practices.md
+		"Communication",           // from communication.md
 	} {
 		if !strings.Contains(result, want) {
 			t.Errorf("system prompt missing expected section text: %q", want)
@@ -70,8 +72,8 @@ func TestBuildSystemPromptHasSeparators(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSystemPrompt failed: %v", err)
 	}
-	// Should have 5 separators for 6 sections
-	count := strings.Count(result, "---")
+	// Should have 5 separators between 6 main sections
+	count := strings.Count(result, "\n\n---\n\n")
 	if count != 5 {
 		t.Errorf("expected 5 section separators, got %d", count)
 	}
@@ -94,6 +96,9 @@ func TestBuildSubAgentPrompt(t *testing.T) {
 	}
 	if !strings.Contains(result, "sub-agent") {
 		t.Error("sub-agent prompt missing sub-agent identifier")
+	}
+	if !strings.Contains(result, "Coding discipline") {
+		t.Error("sub-agent prompt missing coding discipline section")
 	}
 }
 
