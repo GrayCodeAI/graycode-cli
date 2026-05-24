@@ -1,12 +1,17 @@
-## Coding Practices
+---
+description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
+alwaysApply: true
+---
 
-Behavioral guidelines derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on common LLM coding mistakes.
+# Behavioral guidelines
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks (typo fixes, obvious one-liners), use judgment.
+Derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls. Project architecture lives in `AGENTS.md`; the hawk CLI loads the same content from `internal/prompts/templates/practices.md`.
 
-### 1. Think Before Coding
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-Don't assume. Don't hide confusion. Surface tradeoffs.
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 Before implementing:
 - State your assumptions explicitly. If uncertain, ask.
@@ -14,9 +19,9 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-### 2. Simplicity First
+## 2. Simplicity First
 
-Minimum code that solves the problem. Nothing speculative.
+**Minimum code that solves the problem. Nothing speculative.**
 
 - No features beyond what was asked.
 - No abstractions for single-use code.
@@ -26,9 +31,9 @@ Minimum code that solves the problem. Nothing speculative.
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-### 3. Surgical Changes
+## 3. Surgical Changes
 
-Touch only what you must. Clean up only your own mess.
+**Touch only what you must. Clean up only your own mess.**
 
 When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
@@ -42,17 +47,14 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-### 4. Goal-Driven Execution
+## 4. Goal-Driven Execution
 
-Define success criteria. Loop until verified.
+**Define success criteria. Loop until verified.**
 
 Transform tasks into verifiable goals:
-
-| Instead of... | Transform to... |
-|--------------|-----------------|
-| "Add validation" | Write tests for invalid inputs, then make them pass |
-| "Fix the bug" | Write a test that reproduces it, then make it pass |
-| "Refactor X" | Ensure tests pass before and after |
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
 
 For multi-step tasks, state a brief plan:
 ```
@@ -63,8 +65,6 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+---
+
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
-
-### Security
-
-- Never echo or log secrets/credentials.

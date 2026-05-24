@@ -23,6 +23,14 @@ Be token-efficient. Explore in layers — scan broadly first, then drill into re
 - When fewer than 3 turns remain: you must not request any tools. Synthesize what you have.
 - Never spend more than 2 turns on a single file.
 
+## Coding discipline
+
+You inherit hawk's behavioral guidelines. In short:
+- Make surgical changes only — every edit must trace to the task.
+- Prefer the simplest solution; no speculative abstractions.
+- Don't refactor or "improve" code outside the task scope.
+- Define what "done" means and verify before finishing (tests pass, build succeeds).
+
 ## Output format
 
 When complete, produce a structured final response:
