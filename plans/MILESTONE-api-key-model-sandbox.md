@@ -3,7 +3,7 @@
 **Status:** credential + sandbox work complete locally; manual fresh-macOS E2E + CI push pending  
 **Branch (both repos):** `feature/secure-credentials-sandbox`  
 **Out of scope:** conversation DAG (`/fork`, `convo.db` as source of truth)  
-**Reference layout:** sibling repos (hawk + eyrie)
+**Reference layout:** herm-style external checkouts (hawk + external ecosystem repos)
 
 | Repo | Branch | Local commit |
 |------|--------|--------------|
@@ -160,4 +160,4 @@ cd eyrie && git push -u origin feature/secure-credentials-sandbox
 ## Related docs
 
 - [`docs/SECURITY-SOLO.md`](../docs/SECURITY-SOLO.md) — solo developer security model
-- [`eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md`](../../eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md) — discovery edge cases (§9 security updated)
+- [`eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md`](../external/eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md) — discovery edge cases (§9 security updated)
