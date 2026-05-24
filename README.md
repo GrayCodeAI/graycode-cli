@@ -131,6 +131,18 @@ hawk exec --worktree "add rate limiting"       # Isolated branch
 hawk exec --agent reviewer "review last commit" # Custom persona
 ```
 
+### Diagnostics & ecosystem
+
+```bash
+hawk doctor                  # Full health report (eyrie + yaad + tok panel)
+hawk ecosystem               # Ecosystem panel only
+hawk yaad                    # Persistent memory graph
+hawk preflight               # Quick ready-to-chat check
+make smoke                   # Build + quick verification script
+```
+
+See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
+
 ### Daemon Mode
 
 ```bash
