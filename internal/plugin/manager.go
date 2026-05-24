@@ -12,7 +12,8 @@ import (
 	"sync"
 	"time"
 	"unicode"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Plugin represents a loaded plugin with its tools and metadata.

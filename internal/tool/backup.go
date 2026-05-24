@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // BackupFile creates a backup of a file before modification.

@@ -9,7 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // UsageGuideline represents a lesson learned from problem-solving experience.

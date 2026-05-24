@@ -4,7 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // CodingSoul defines the persistent coding personality and style preferences.

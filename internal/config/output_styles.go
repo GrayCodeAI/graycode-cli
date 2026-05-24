@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // OutputStyle defines a custom output format loaded from a markdown file.

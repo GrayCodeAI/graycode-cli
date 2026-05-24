@@ -7,7 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // AutoMemory manages automatic memory extraction and storage for a project.

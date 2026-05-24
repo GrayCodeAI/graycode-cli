@@ -6,7 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // SkillRating stores a user's rating for a skill.

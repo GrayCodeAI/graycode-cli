@@ -12,7 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json"

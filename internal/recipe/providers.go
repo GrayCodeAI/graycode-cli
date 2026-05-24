@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"gopkg.in/yaml.v3"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ProviderConfig defines an LLM provider declaratively via YAML.

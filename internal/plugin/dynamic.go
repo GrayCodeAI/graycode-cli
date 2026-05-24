@@ -11,7 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // PluginState represents the lifecycle state of a dynamic plugin.

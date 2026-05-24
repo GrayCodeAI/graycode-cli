@@ -15,7 +15,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
-"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // ─── friendlyError ────────────────────────────────────────────────────────────

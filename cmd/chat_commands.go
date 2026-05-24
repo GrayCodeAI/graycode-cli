@@ -19,6 +19,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/project"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
@@ -26,7 +27,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 func slashCommands() []string {

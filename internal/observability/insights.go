@@ -8,7 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // InsightsFacet represents an extracted insight category.

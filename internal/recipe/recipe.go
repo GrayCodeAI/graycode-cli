@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"gopkg.in/yaml.v3"
-"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Recipe is the top-level YAML recipe definition.

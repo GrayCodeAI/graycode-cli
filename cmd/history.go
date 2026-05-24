@@ -4,7 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 const maxHistoryEntries = 1000
