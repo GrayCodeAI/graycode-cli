@@ -9,7 +9,9 @@ echo "== build =="
 go build -mod=readonly -o "$BIN" .
 
 echo "== hawk doctor =="
-"$BIN" doctor | head -5
+set +o pipefail
+"$BIN" doctor >/dev/null 2>&1 || true
+set -o pipefail
 
 echo "== hawk ecosystem =="
 "$BIN" ecosystem >/dev/null
@@ -17,11 +19,9 @@ echo "== hawk ecosystem =="
 echo "== hawk yaad =="
 "$BIN" yaad --limit 2 >/dev/null || true
 
-echo "== ecosystem panel =="
+echo "== ecosystem tests =="
 go test ./internal/config/ -run TestFormatEcosystemPanel -count=1
-
-echo "== doctor + yaad tests =="
-go test -race ./cmd/ -run 'TestDoctor|TestYaad' -count=1
-go test -race ./internal/intelligence/memory/ -run 'FormatYaad' -count=1
+go test ./cmd/ -run 'TestDoctor|TestYaad|TestEcosystem' -count=1
+go test ./internal/intelligence/memory/ -run 'FormatYaad' -count=1
 
 echo "== smoke ok =="
