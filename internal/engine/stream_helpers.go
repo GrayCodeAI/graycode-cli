@@ -3,6 +3,8 @@ package engine
 import (
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
 
 // truncate shortens a string to maxLen characters, appending "..." if truncated.
@@ -38,18 +40,5 @@ func isRetryableStreamError(err error) bool {
 // shouldRemember returns true if the assistant response contains language that
 // suggests a correction, learning, or noteworthy insight worth persisting.
 func shouldRemember(content string) bool {
-	// Require 2+ distinct trigger matches to avoid noise from common words.
-	// Single words like "actually" or "don't" appear in normal conversation.
-	triggers := []string{"actually", "correction", "instead", "don't", "mistake", "should have", "better approach", "wrong", "fix", "note to self"}
-	lower := strings.ToLower(content)
-	hits := 0
-	for _, t := range triggers {
-		if strings.Contains(lower, t) {
-			hits++
-			if hits >= 2 {
-				return true
-			}
-		}
-	}
-	return false
+	return memory.ShouldAutoRemember(content)
 }

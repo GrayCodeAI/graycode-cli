@@ -5,7 +5,7 @@
 <h1 align="center">AI Coding Agent for Your Terminal</h1>
 
 <p align="center">
-  Read, write, and run code with AI — fully local, model-agnostic, open source.
+  AI coding agent for your terminal — built for <strong>solo developers</strong>, not teams or enterprises (yet).
 </p>
 
 <p align="center">
@@ -32,6 +32,8 @@
 
 hawk is an AI-powered coding agent that lives in your terminal. It reads your codebase, writes and edits files, runs tests, and manages git — all through natural language. Unlike IDE-bound tools, hawk works over SSH, in containers, and on any machine with a shell.
 
+**Solo-first:** one developer, one machine. API keys live in your OS keychain (not `.env`). Memory stays local (`~/.yaad/`). Run `hawk solo` to see if you're ready. See [docs/SOLO-FIRST.md](docs/SOLO-FIRST.md).
+
 - **Model-agnostic** — works with Claude, GPT-4, Gemini, DeepSeek, Ollama, and 75+ models through [eyrie](https://github.com/GrayCodeAI/eyrie)
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
@@ -43,12 +45,14 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 # Install
 brew install GrayCodeAI/tap/hawk
 
-# Set your API key
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Start coding
+# First run — paste API key in /config (stored in macOS Keychain / Linux keyring)
 hawk
+
+# Verify solo developer readiness
+hawk solo
 ```
+
+See [docs/SECURITY-SOLO.md](docs/SECURITY-SOLO.md) for the credential model. Do not put API keys in shell env or `.env` for hawk.
 
 Or install via other methods:
 
@@ -81,9 +85,9 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) for a smooth
 | **Code** | `LSP` diagnostics, `CodeSearch`, `NotebookEdit` |
 | **MCP** | `ListMcpResources`, `ReadMcpResource` |
 
-### Multi-Agent Mission Mode
+### Multi-Agent Mission Mode (optional)
 
-Decompose complex work into parallel feature branches:
+For larger tasks, decompose work into parallel feature branches (power-user / future team workflows):
 
 ```bash
 hawk mission "Add auth, rate limiting, and logging"
@@ -134,6 +138,7 @@ hawk exec --agent reviewer "review last commit" # Custom persona
 ### Diagnostics & ecosystem
 
 ```bash
+hawk solo                   # Solo dev readiness (setup + security + sandbox)
 hawk doctor                  # Full health report (eyrie + yaad + tok panel)
 hawk ecosystem               # Ecosystem panel only
 hawk yaad                    # Persistent memory graph
@@ -142,9 +147,11 @@ hawk preflight               # Quick ready-to-chat check
 make smoke                   # Build + quick verification script
 ```
 
+See [docs/SECURITY-SOLO.md](docs/SECURITY-SOLO.md) and [plans/SOLO-DEVELOPER-PATH.md](plans/SOLO-DEVELOPER-PATH.md) for the solo developer path.
+
 See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
 
-In the TUI: `/ecosystem`, `/yaad`, `/yaad search <query>`, `/memory` (AGENTS.md).
+In the TUI: `/solo`, `/ecosystem`, `/yaad`, `/yaad search <query>`, `/memory` (AGENTS.md).
 
 ### Daemon Mode
 
@@ -166,9 +173,9 @@ hawk mission --dry-run "What would this decompose into?"
 
 ## Providers
 
-hawk works with any LLM provider. Set your API key via environment variable or `hawk config key <provider> <key>`:
+hawk works with any LLM provider. **Solo path:** paste keys in `/config` (stored in OS keychain) — not shell env or `.env`. Use `hawk credentials status` to verify.
 
-| Provider | Env Variable |
+| Provider | Key (via `/config`) |
 |---|---|
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
@@ -177,7 +184,7 @@ hawk works with any LLM provider. Set your API key via environment variable or `
 | Grok (xAI) | `XAI_API_KEY` |
 | Groq | `GROQ_API_KEY` |
 | DeepSeek | `DEEPSEEK_API_KEY` |
-| Ollama | `OLLAMA_BASE_URL` (no key) |
+| Ollama | local — no key (`OLLAMA_BASE_URL` optional) |
 
 Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/eyrie).
 For deployment-aware routing, set `"deployment_routing": true` in `.hawk/settings.json`

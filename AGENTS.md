@@ -1,5 +1,16 @@
 # Hawk - AI Coding Agent
 
+## Product direction: solo-first
+
+hawk targets **individual developers** on their own machines — not teams or enterprises (yet). When choosing defaults, docs, and new features, optimize for:
+
+- One person, local config (`~/.hawk/`), OS keychain credentials
+- `hawk solo` / `/config` as the onboarding path
+- Local yaad memory, optional Docker isolation
+- Defer: SSO, org admin, shared memory, fleet sandbox
+
+See `docs/SOLO-FIRST.md`, `docs/SECURITY-SOLO.md`, and `plans/SOLO-DEVELOPER-PATH.md`.
+
 ## Architecture
 
 hawk is a model-agnostic AI coding agent with 60+ packages organized around:
@@ -176,7 +187,8 @@ Active branch: **`feature/secure-credentials-sandbox`** (hawk + external eyrie).
 | Catalog empty / refresh hints | `internal/config/catalog_health.go`, `catalog_startup.go` |
 | No API keys in `provider.json` | eyrie `SanitizeDeploymentConfigForDisk`, hawk `MigrateProviderSecrets` |
 | Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
-| Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md` |
+| Solo developer readiness | `hawk solo`, `/solo`, `internal/config/solo_path.go`, `./scripts/verify-solo-path.sh` |
+| Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md`, `plans/SOLO-DEVELOPER-PATH.md` |
 
 **Not in this milestone:** conversation DAG as source of truth.
 
