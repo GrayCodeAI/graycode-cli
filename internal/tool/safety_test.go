@@ -129,6 +129,15 @@ func TestIsSensitivePath(t *testing.T) {
 	}
 }
 
+func TestIsSensitivePath_HawkConfigDir(t *testing.T) {
+	cfgDir := t.TempDir()
+	t.Setenv("HAWK_CONFIG_DIR", cfgDir)
+	prov := filepath.Join(cfgDir, "provider.json")
+	if reason := IsSensitivePath(prov); reason == "" {
+		t.Fatalf("expected custom HAWK_CONFIG_DIR provider.json blocked, got empty")
+	}
+}
+
 func TestIsSensitivePath_Symlink(t *testing.T) {
 	home, _ := os.UserHomeDir()
 	sshDir := filepath.Join(home, ".ssh")
