@@ -57,7 +57,7 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	summary, err := store.Summary()
 	if err != nil {
@@ -110,7 +110,7 @@ func runReviewShow(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	var review *ReviewRecord
 	if len(args) == 0 {
@@ -144,7 +144,7 @@ func runReviewClose(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	review, err := resolveReview(store, args[0])
 	if err != nil {
@@ -164,7 +164,7 @@ func runReviewList(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	reviews, err := store.ListAll(reviewListLimit)
 	if err != nil {

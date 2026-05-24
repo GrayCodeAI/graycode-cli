@@ -159,7 +159,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	projectDir, _ := os.Getwd()
 	store, err := OpenReviewStore(projectDir)
 	if err == nil {
-		defer store.Close()
+		defer func() { _ = store.Close() }()
 		sha := fmt.Sprintf("analyze-%s-%d", analysisType, time.Now().Unix())
 		id, _ := store.Create(sha)
 		status := ReviewStatusPassed
