@@ -454,3 +454,42 @@ func FormatYaadDetail(maxPerType int) string {
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
+
+// FormatYaadSearch returns human-readable search results for yaad graph memory.
+func FormatYaadSearch(query string, limit int) string {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return "Yaad search: query required"
+	}
+	if limit < 1 {
+		limit = 10
+	}
+
+	bridge := NewYaadBridge()
+	if !bridge.Ready() {
+		return "Yaad: not initialized\nEnsure ~/.yaad/data/ is writable."
+	}
+
+	results, err := bridge.SearchCompact(query, limit)
+	if err != nil {
+		return "Yaad search failed: " + err.Error()
+	}
+	if len(results) == 0 {
+		return fmt.Sprintf("Yaad search: no memories matched %q", query)
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("Yaad search: %q (%d results)\n\n", query, len(results)))
+	for i, r := range results {
+		line := strings.TrimSpace(r.Title)
+		if line == "" {
+			line = "(empty)"
+		}
+		b.WriteString(fmt.Sprintf("%d. [%s] %s", i+1, r.Type, line))
+		if r.Score > 0 {
+			b.WriteString(fmt.Sprintf(" (%.2f)", r.Score))
+		}
+		b.WriteString("\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}

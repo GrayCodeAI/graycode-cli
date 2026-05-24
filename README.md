@@ -137,13 +137,14 @@ hawk exec --agent reviewer "review last commit" # Custom persona
 hawk doctor                  # Full health report (eyrie + yaad + tok panel)
 hawk ecosystem               # Ecosystem panel only
 hawk yaad                    # Persistent memory graph
+hawk yaad search <query>     # Search yaad memories
 hawk preflight               # Quick ready-to-chat check
 make smoke                   # Build + quick verification script
 ```
 
 See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
 
-In the TUI: `/ecosystem`, `/yaad`, `/memory` (AGENTS.md).
+In the TUI: `/ecosystem`, `/yaad`, `/yaad search <query>`, `/memory` (AGENTS.md).
 
 ### Daemon Mode
 
