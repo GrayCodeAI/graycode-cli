@@ -41,7 +41,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 		b.WriteString("\n" + deployReport + "\n")
 	}
 	_ = hawkconfig.MigrateProviderConfig()
-	b.WriteString("\n" + envSummary(provider, modelName) + "\n")
+	b.WriteString("\n" + envSummaryWithSelection(provider, modelName, false) + "\n")
 	b.WriteString("\nGit:\n")
 	if branch := branchSummary(); branch != "" {
 		for _, line := range strings.Split(branch, "\n") {
@@ -109,7 +109,7 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 		})
 	} else {
 		registry.Register("yaad", func(ctx context.Context) health.Check {
-			return health.Check{Name: "yaad", Status: health.Degraded, Message: "Yaad not initialized (run 'yaad init')"}
+			return health.Check{Name: "yaad", Status: health.Degraded, Message: "Yaad not initialized (~/.yaad/data/ not writable)"}
 		})
 	}
 
