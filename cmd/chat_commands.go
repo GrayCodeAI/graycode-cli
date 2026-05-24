@@ -173,7 +173,7 @@ var slashDescriptions = map[string]string{
 	"/vim":             "Toggle vim mode",
 	"/welcome":         "Show welcome screen",
 	"/ecosystem":       "Show eyrie, yaad, and tok integration status",
-	"/solo":            "Solo developer readiness (setup, security, sandbox)",
+	"/solo":            "Developer path readiness (setup, security, sandbox)",
 	"/yaad":            "Show yaad memory (use /yaad search <query> to search)",
 	"/yolo":            "Toggle auto-approve mode",
 	"/cron":            "Show scheduled jobs",

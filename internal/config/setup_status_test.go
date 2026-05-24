@@ -153,11 +153,11 @@ func TestFirstRunSetupHint_NoAutoOpen(t *testing.T) {
 	if hint == "" {
 		t.Fatal("expected hint without credentials")
 	}
-	if strings.Contains(strings.ToLower(hint), "automatically") {
-		t.Fatalf("hint should not auto-open config: %q", hint)
-	}
 	if !strings.Contains(hint, "/config") {
 		t.Fatalf("hint should mention /config: %q", hint)
+	}
+	if !strings.Contains(strings.ToLower(hint), "keychain") {
+		t.Fatalf("hint should mention keychain: %q", hint)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestEvaluateSetupCached_MatchesWarmSnapshot(t *testing.T) {
 	if cached.HasModel {
 		t.Fatal("expected no model selected in isolated home")
 	}
-	if cached.Hint != "Almost ready: pick a model to start chatting" {
+	if cached.Hint != "Almost ready: /config → pick a model, then /solo to verify" {
 		t.Fatalf("hint = %q", cached.Hint)
 	}
 }
