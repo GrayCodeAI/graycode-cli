@@ -1,5 +1,5 @@
 name: Checkout eyrie
-description: Clone eyrie as a sibling repo for hawk go.work (../eyrie)
+description: Clone ecosystem repos into hawk/external for hawk go.work
 
 inputs:
   ref:
@@ -10,20 +10,23 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Clone eyrie
+    - name: Clone ecosystem repos
       shell: bash
       run: |
         set -euo pipefail
-        dest="${GITHUB_WORKSPACE}/../eyrie"
-        if [ -d "$dest/.git" ]; then
-          echo "eyrie already present at $dest"
-          exit 0
-        fi
-        ref="${{ inputs.ref }}"
-        # Fall back to main if the branch doesn't exist on eyrie
-        if ! git ls-remote --heads "https://github.com/GrayCodeAI/eyrie.git" "$ref" | grep -q .; then
-          echo "Branch '$ref' not found on eyrie, falling back to main"
-          ref="main"
-        fi
-        git clone --depth=1 --branch "$ref" \
-          "https://github.com/GrayCodeAI/eyrie.git" "$dest"
+        mkdir -p "${GITHUB_WORKSPACE}/external"
+        for repo in eyrie inspect sight tok trace yaad; do
+          dest="${GITHUB_WORKSPACE}/external/${repo}"
+          if [ -d "$dest/.git" ]; then
+            echo "$repo already present at $dest"
+            continue
+          fi
+          ref="${{ inputs.ref }}"
+          # Fall back to main if the branch doesn't exist on the dependency repo.
+          if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then
+            echo "Branch '$ref' not found on $repo, falling back to main"
+            ref="main"
+          fi
+          git clone --depth=1 --branch "$ref" \
+            "https://github.com/GrayCodeAI/${repo}.git" "$dest"
+        done

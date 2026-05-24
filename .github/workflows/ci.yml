@@ -54,7 +54,7 @@ jobs:
           fi
 
   # -------------------------------------------------------------------------
-  # 2. Module hygiene — tidy, verify (hawk + sibling eyrie via go.work + go.mod replace).
+  # 2. Module hygiene — tidy, verify (hawk + external ecosystem repos via go.work).
   # -------------------------------------------------------------------------
   module:
     name: module hygiene
@@ -70,7 +70,7 @@ jobs:
           cache: true
       - name: go work sync + module consistency
         run: |
-          # Eyrie is a sibling checkout (go.work + replace ../eyrie). go mod tidy can mis-resolve
+          # Ecosystem repos are external checkouts under hawk/external. go mod tidy can mis-resolve
           # workspace modules here; go work sync is the supported workspace hygiene step.
           go work sync
           go build -mod=readonly -o /dev/null .
@@ -81,13 +81,15 @@ jobs:
           fi
       - name: go mod verify
         run: go mod verify
-      - name: eyrie replace points at sibling
+      - name: workspace points at external checkouts
         run: |
-          if ! grep -qE 'replace github\.com/GrayCodeAI/eyrie => \.\./eyrie' go.mod; then
-            echo "::error::go.mod must replace eyrie with ../eyrie (sibling checkout)."
-            grep -nE '^\s*replace\s' go.mod || true
-            exit 1
-          fi
+          for module in eyrie inspect sight tok trace yaad; do
+            if ! grep -q "./external/${module}" go.work; then
+              echo "::error::go.work must include ./external/${module}."
+              cat go.work
+              exit 1
+            fi
+          done
 
   # -------------------------------------------------------------------------
   # 3. Vet + static analysis — compiler-level correctness.
