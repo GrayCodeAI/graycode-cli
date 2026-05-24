@@ -18,7 +18,7 @@ import (
 )
 
 func doctorReport(settings hawkconfig.Settings) string {
-	provider, modelName := effectiveModelAndProvider(settings)
+	modelName, provider := effectiveModelAndProvider(settings)
 	if provider == "" {
 		provider = "auto"
 	}

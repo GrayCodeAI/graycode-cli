@@ -45,7 +45,7 @@ var allSlashCommands = []string{
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
-	"/version", "/vibe", "/vim", "/voice", "/welcome", "/yolo",
+	"/version", "/vibe", "/vim", "/voice", "/welcome", "/yaad", "/yolo",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
@@ -137,7 +137,7 @@ var slashDescriptions = map[string]string{
 	"/lint":            "Run linter, add issues to context",
 	"/loop":            "Schedule recurring command",
 	"/mcp":             "Show MCP server status",
-	"/memory":          "Show project instructions",
+	"/memory":          "Show AGENTS.md project instructions",
 	"/metrics":         "Show session metrics",
 	"/model":           "Switch or view current model",
 	"/new":             "Start a fresh session",
@@ -172,6 +172,7 @@ var slashDescriptions = map[string]string{
 	"/version":         "Show hawk version",
 	"/vim":             "Toggle vim mode",
 	"/welcome":         "Show welcome screen",
+	"/yaad":            "Show yaad persistent memory graph",
 	"/yolo":            "Toggle auto-approve mode",
 	"/cron":            "Show scheduled jobs",
 	"/keybindings":     "Show keyboard shortcuts",
@@ -1164,10 +1165,13 @@ Generate the recap:`, summary.String())
 	case "/memory":
 		md := strings.TrimSpace(hawkconfig.LoadAgentsMD())
 		if md == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No AGENTS.md or .hawk/AGENTS.md project instructions found."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No AGENTS.md or .hawk/AGENTS.md project instructions found.\nUse /yaad for persistent graph memory."})
 		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Project instructions:\n" + md})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Project instructions (AGENTS.md):\n" + md})
 		}
+		return m, nil
+	case "/yaad":
+		m.messages = append(m.messages, displayMsg{role: "system", content: memory.FormatYaadDetail(5)})
 		return m, nil
 	case "/config", "/con", "/conf":
 		if len(parts) >= 3 && parts[1] == "provider" {
