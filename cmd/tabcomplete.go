@@ -38,7 +38,11 @@ func (c *lruCache) get(key string) ([]string, bool) {
 
 	if elem, ok := c.items[key]; ok {
 		c.order.MoveToFront(elem)
-		return elem.Value.(*lruEntry).value, true
+		entry, ok := elem.Value.(*lruEntry)
+		if !ok {
+			return nil, false
+		}
+		return entry.value, true
 	}
 	return nil, false
 }
@@ -50,7 +54,9 @@ func (c *lruCache) put(key string, value []string) {
 
 	if elem, ok := c.items[key]; ok {
 		c.order.MoveToFront(elem)
-		elem.Value.(*lruEntry).value = value
+		if entry, ok := elem.Value.(*lruEntry); ok {
+			entry.value = value
+		}
 		return
 	}
 
@@ -62,7 +68,9 @@ func (c *lruCache) put(key string, value []string) {
 		oldest := c.order.Back()
 		if oldest != nil {
 			c.order.Remove(oldest)
-			delete(c.items, oldest.Value.(*lruEntry).key)
+			if entry, ok := oldest.Value.(*lruEntry); ok {
+				delete(c.items, entry.key)
+			}
 		}
 	}
 }

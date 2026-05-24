@@ -198,7 +198,7 @@ func panicRecovery(saveFn func()) {
 		// Attempt to save session
 		if saveFn != nil {
 			func() {
-				defer func() { recover() }() // don't let save panic again
+				defer func() { _ = recover() }() // don't let save panic again
 				saveFn()
 			}()
 		}
@@ -252,7 +252,7 @@ func signalHandler(saveFn func()) {
 			done := make(chan struct{})
 			go func() {
 				defer func() {
-					recover() // don't let save panic crash the handler
+					_ = recover() // don't let save panic crash the handler
 					close(done)
 				}()
 				saveFn()
