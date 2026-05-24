@@ -102,9 +102,10 @@ Derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015
 
 ## Git commits
 
-- Never add `Co-authored-by:` trailers to commit messages.
+- Never add `Co-authored-by:` or `Co-Authored-By:` trailers to commit messages, PR descriptions, or squash-merge bodies.
 - Commits should list only the human author.
-- Optional: `git config core.hooksPath .githooks` enables a hook that strips co-author trailers locally.
+- Do not attribute Cursor, hawk, Claude, Copilot, or any AI tool as a co-author.
+- Enable the repo hook to strip accidental trailers: `git config core.hooksPath .githooks`
 
 ## Development
 
