@@ -198,7 +198,7 @@ func (s *ReviewStore) Summary() (map[ReviewStatus]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	m := make(map[ReviewStatus]int)
 	for rows.Next() {
 		var status string
@@ -233,7 +233,7 @@ func (s *ReviewStore) query(q string) ([]*ReviewRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var results []*ReviewRecord
 	for rows.Next() {
 		r := &ReviewRecord{}
