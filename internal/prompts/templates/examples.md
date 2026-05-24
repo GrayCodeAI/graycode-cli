@@ -18,3 +18,15 @@ User: "Tests in auth/ are failing"
 2. Use **Read** to examine the failing test and the code it exercises
 3. Use **Edit** to fix the root cause
 4. Use **Bash** to re-run tests and confirm they pass
+
+### Example 4: Ambiguous request — clarify first
+User: "Make the API faster"
+1. State assumptions: which endpoints, what latency target, acceptable tradeoffs?
+2. If unclear, ask one focused question before changing code
+3. Once scoped: measure baseline → apply minimal fix → verify with benchmark or test
+
+### Example 5: Multi-step feature with verification
+User: "Add input validation to the signup handler"
+1. Read signup handler and existing validation patterns → verify: understand current flow
+2. Write tests for invalid inputs → verify: tests fail as expected
+3. Add minimal validation → verify: tests pass, no unrelated files changed
