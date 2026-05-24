@@ -19,6 +19,22 @@ func TestDoctorReport(t *testing.T) {
 	}
 }
 
+func TestDoctorReportProviderModelOrder(t *testing.T) {
+	t.Parallel()
+	settings := hawkconfig.Settings{
+		Model:    "claude-sonnet-4-20250514",
+		Provider: "anthropic",
+	}
+	model, provider := effectiveModelAndProvider(settings)
+	report := doctorReport(settings)
+	if model != "" && !strings.Contains(report, "Model: "+model) {
+		t.Errorf("report should show model %q, got:\n%s", model, report)
+	}
+	if provider != "" && !strings.Contains(report, "Provider: "+provider) {
+		t.Errorf("report should show provider %q, got:\n%s", provider, report)
+	}
+}
+
 func TestSettingsSummary(t *testing.T) {
 	t.Parallel()
 	settings := hawkconfig.Settings{
