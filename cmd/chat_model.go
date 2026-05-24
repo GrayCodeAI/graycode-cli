@@ -170,6 +170,7 @@ type chatModel struct {
 	startedAt                  time.Time
 	toolStartTime              time.Time
 	welcomeCache               string
+	openConfigOnStart          bool // first-run: open /config when TUI starts
 	viewDirty                  bool
 	layoutKey                  int    // input lines + slash menu height fingerprint
 	slashSugInput              string // memoize slashSuggestions per keystroke

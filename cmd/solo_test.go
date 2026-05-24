@@ -20,7 +20,7 @@ func TestSoloCmdPrintsReport(t *testing.T) {
 	// Capture via RunE side effect: solo always prints before error.
 	ctx := context.Background()
 	out := hawkconfig.FormatSoloPathReport(ctx)
-	if !strings.Contains(out, "Solo developer path") {
+	if !strings.Contains(out, "Developer path") {
 		t.Fatalf("unexpected output: %s", out)
 	}
 }
