@@ -420,3 +420,37 @@ func YaadStatus() string {
 	}
 	return b.String()
 }
+
+// FormatYaadDetail returns a human-readable dump of yaad memories for /yaad and diagnostics.
+func FormatYaadDetail(maxPerType int) string {
+	bridge := NewYaadBridge()
+	if !bridge.Ready() {
+		return "Yaad: not initialized\nEnsure ~/.yaad/data/ is writable. Hawk uses yaad as an embedded library (no separate daemon required)."
+	}
+
+	var b strings.Builder
+	b.WriteString(YaadStatus())
+	b.WriteString("\n\nRecent memories:\n")
+
+	nodeTypes := []string{"convention", "decision", "bug", "preference", "task", "skill", "spec", "entity"}
+	any := false
+	for _, nodeType := range nodeTypes {
+		_, contents, err := bridge.SearchByType(nodeType, maxPerType)
+		if err != nil || len(contents) == 0 {
+			continue
+		}
+		any = true
+		b.WriteString(fmt.Sprintf("\n[%s]\n", nodeType))
+		for i, content := range contents {
+			line := strings.TrimSpace(content)
+			if len(line) > 200 {
+				line = line[:200] + "..."
+			}
+			b.WriteString(fmt.Sprintf("  %d. %s\n", i+1, line))
+		}
+	}
+	if !any {
+		b.WriteString("  (none yet — hawk stores memories via CoreMemory tools and auto-remember)\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
