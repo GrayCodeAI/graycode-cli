@@ -76,29 +76,30 @@ go test -race ./...           # Run all tests
 
 | Module | In `go.mod` | In-repo checkout | Used from |
 |--------|-------------|------------------|-----------|
-| eyrie | ✓ | sibling **`../eyrie`** + **`go.work`** + **`replace` in `go.mod`** | Provider client, setup, streaming |
-| sight | ✓ | proxy (optional local `replace`) | `hawk sight`, `internal/bridge/sight` |
-| inspect | ✓ | proxy | Inspect bridges |
-| tok | ✓ | proxy | Tokenizer pipeline |
-| yaad | ✓ | proxy | Memory bridge |
-| trace | — | separate **`trace` CLI** | Session capture only; not a Go import |
+| eyrie | ✓ | external checkout **`./external/eyrie`** + **`go.work`** | Provider client, setup, streaming |
+| sight | ✓ | external checkout **`./external/sight`** + **`go.work`** | `hawk sight`, `internal/bridge/sight` |
+| inspect | ✓ | external checkout **`./external/inspect`** + **`go.work`** | Inspect bridges |
+| tok | ✓ | external checkout **`./external/tok`** + **`go.work`** | Tokenizer pipeline |
+| yaad | ✓ | external checkout **`./external/yaad`** + **`go.work`** | Memory bridge |
+| trace | — | external checkout **`./external/trace`**; separate **`trace` CLI** | Session capture only; not a Go import |
 
-**Eyrie sibling checkout** (hawk + eyrie):
+**External checkouts** (hawk + ecosystem repos):
 
 ```bash
-# hawk-eco layout: clone eyrie next to hawk, then:
+# herm-style layout: clone ecosystem repos under hawk/external, then:
+git submodule update --init external/eyrie external/inspect external/sight external/tok external/trace external/yaad
 cd hawk && go work sync
 ```
 
-Committed **`go.work`** lists `.` and **`../eyrie`**. **`go.mod`** includes **`replace github.com/GrayCodeAI/eyrie => ../eyrie`** (CI enforces this path).
+Committed **`go.work`** lists `.` and the **`./external/*`** ecosystem checkouts. **`go.mod`** keeps normal module requirements for imported modules.
 
 **`shared/types`** forwards **`internal/types`** for **sight**, **inspect**, **tok**, and friends so they never import hawk `internal/` directly.
 
-For sibling clones on one machine, use a **personal** parent **`go.work`** or temporary **`replace`** — do not commit those **`replace`** lines into **`go.mod`**.
+For extra sibling clones on one machine, use a **personal** parent **`go.work`** or temporary **`replace`** — do not commit those **`replace`** lines into **`go.mod`**.
 
 ### CI
 
-- CI clones **eyrie** to **`../eyrie`** via **`.github/actions/checkout-eyrie`**
+- CI clones ecosystem repos to **`./external/*`** via **`.github/actions/checkout-eyrie`**
 - Module hygiene: **`go work sync`** and **`go build -mod=readonly`** (not `go mod tidy`, which mis-resolves workspace Eyrie)
 - golangci-lint with errcheck, staticcheck, gosec, unused, misspell
 - Multi-platform builds (linux/darwin/windows × amd64/arm64)
@@ -115,7 +116,7 @@ For sibling clones on one machine, use a **personal** parent **`go.work`** or te
 
 ## Milestone: API key → model → sandbox
 
-Active branch: **`feature/secure-credentials-sandbox`** (hawk + eyrie sibling).
+Active branch: **`feature/secure-credentials-sandbox`** (hawk + external eyrie).
 
 | Concern | Where |
 |---------|--------|

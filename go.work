@@ -2,7 +2,10 @@ go 1.26.3
 
 use (
 	.
-	../eyrie
+	./external/eyrie
+	./external/inspect
+	./external/sight
+	./external/tok
+	./external/trace
+	./external/yaad
 )
-
-// Clone eyrie next to hawk (hawk-eco/eyrie). CI uses .github/actions/checkout-eyrie.

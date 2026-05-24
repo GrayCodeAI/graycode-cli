@@ -25,11 +25,13 @@ runs:
           done
           echo "Failed to clone $repo after 3 attempts" && return 1
         }
-        clone_with_retry eyrie ../eyrie dev
-        clone_with_retry tok ../tok dev
-        clone_with_retry yaad ../yaad dev
-        clone_with_retry inspect ../inspect dev
-        clone_with_retry sight ../sight dev
+        mkdir -p external
+        clone_with_retry eyrie external/eyrie dev
+        clone_with_retry tok external/tok dev
+        clone_with_retry yaad external/yaad dev
+        clone_with_retry inspect external/inspect dev
+        clone_with_retry sight external/sight dev
+        clone_with_retry trace external/trace dev
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -39,4 +41,4 @@ runs:
     - name: Create workspace
       shell: bash
       run: |
-        printf 'go 1.26.3\n\nuse (\n\t.\n\t../eyrie\n\t../tok\n\t../yaad\n\t../inspect\n\t../sight\n)\n' > go.work
+        printf 'go 1.26.3\n\nuse (\n\t.\n\t./external/eyrie\n\t./external/inspect\n\t./external/sight\n\t./external/tok\n\t./external/trace\n\t./external/yaad\n)\n' > go.work

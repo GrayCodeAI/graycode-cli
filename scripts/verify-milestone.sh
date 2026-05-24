@@ -4,13 +4,23 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "== eyrie (sibling) =="
-EYRIE="../eyrie"
+echo "== eyrie (external) =="
+EYRIE="./external/eyrie"
 if [[ -d "$EYRIE" ]]; then
   (cd "$EYRIE" && go test ./... -count=1 -short)
 else
-  echo "skip: ../eyrie not found"
+  echo "skip: ./external/eyrie not found"
 fi
+
+echo "== external ecosystem modules =="
+for module in yaad tok sight inspect trace; do
+  dir="./external/$module"
+  if [[ -d "$dir" ]]; then
+    (cd "$dir" && go test ./... -count=1 -short)
+  else
+    echo "skip: $dir not found"
+  fi
+done
 
 echo "== hawk unit tests =="
 go test ./... -count=1 -short
