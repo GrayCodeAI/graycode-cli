@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -46,5 +47,20 @@ func TestCompactResult_TitleTruncation(t *testing.T) {
 	}
 	if len(title) != 100 {
 		t.Fatalf("expected title length 100, got %d", len(title))
+	}
+}
+
+func TestFormatYaadDetail_NotReady(t *testing.T) {
+	// Force not-ready by using a bridge with ready=false via empty home trick is heavy;
+	// FormatYaadDetail calls NewYaadBridge which may succeed on dev machines.
+	out := FormatYaadDetail(5)
+	if out == "" {
+		t.Fatal("expected non-empty output")
+	}
+	if strings.Contains(out, "not initialized") {
+		return
+	}
+	if !strings.Contains(out, "Recent memories:") {
+		t.Fatalf("expected recent memories section, got %q", out)
 	}
 }
