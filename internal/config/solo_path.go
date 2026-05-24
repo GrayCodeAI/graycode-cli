@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -39,11 +39,11 @@ type SoloCheck struct {
 
 // SoloPathReport summarizes solo-developer readiness (setup, security, sandbox, ecosystem).
 type SoloPathReport struct {
-	Checks     []SoloCheck
-	ChatReady  bool
+	Checks      []SoloCheck
+	ChatReady   bool
 	SecureReady bool
-	Ready      bool
-	NextStep   string
+	Ready       bool
+	NextStep    string
 }
 
 // EvaluateSoloPath builds the solo developer readiness report.
@@ -64,8 +64,8 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Setup", Name: "credentials", Status: SoloFail,
-			Detail: "No provider credentials configured",
-			FixHint: "Run hawk and /config to paste an API key (or configure Ollama)",
+			Detail:   "No provider credentials configured",
+			FixHint:  "Run hawk and /config to paste an API key (or configure Ollama)",
 			Blocking: true,
 		})
 	}
@@ -79,8 +79,8 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Setup", Name: "model", Status: SoloFail,
-			Detail: "No model selected",
-			FixHint: "Run /config and pick a model from the catalog",
+			Detail:   "No model selected",
+			FixHint:  "Run /config and pick a model from the catalog",
 			Blocking: true,
 		})
 	}
@@ -95,13 +95,13 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	case cat.Exists:
 		checks = append(checks, SoloCheck{
 			Section: "Setup", Name: "catalog", Status: SoloWarn,
-			Detail: "Catalog file present but empty",
+			Detail:  "Catalog file present but empty",
 			FixHint: "Run hawk models refresh after adding credentials",
 		})
 	default:
 		checks = append(checks, SoloCheck{
 			Section: "Setup", Name: "catalog", Status: SoloWarn,
-			Detail: CatalogEmptyHint(ctx),
+			Detail:  CatalogEmptyHint(ctx),
 			FixHint: "Add credentials then run hawk models refresh",
 		})
 	}
@@ -109,14 +109,14 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	if ok, detail := credentials.KeychainWriteAvailable(ctx); ok {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "keychain", Status: SoloPass,
-			Detail: credentials.PlatformSecretStoreName() + " writable",
+			Detail:   credentials.PlatformSecretStoreName() + " writable",
 			Blocking: true,
 		})
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "keychain", Status: SoloWarn,
-			Detail: detail,
-			FixHint: "Unlock keychain or enable secret service (Linux)",
+			Detail:   detail,
+			FixHint:  "Unlock keychain or enable secret service (Linux)",
 			Blocking: true,
 		})
 	}
@@ -124,14 +124,14 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	if hasSecrets, detail := providerJSONHasSecretsOnDisk(); hasSecrets {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "provider.json", Status: SoloFail,
-			Detail: detail,
-			FixHint: "Run hawk start once (MigrateProviderSecrets) or remove secret fields manually",
+			Detail:   detail,
+			FixHint:  "Run hawk start once (MigrateProviderSecrets) or remove secret fields manually",
 			Blocking: true,
 		})
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "provider.json", Status: SoloPass,
-			Detail: "No API secrets on disk (routing only)",
+			Detail:   "No API secrets on disk (routing only)",
 			Blocking: true,
 		})
 	}
@@ -139,13 +139,13 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	if legacy, paths := legacyCredentialFilesPresent(); legacy {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "legacy env", Status: SoloWarn,
-			Detail: "Plaintext credential files: " + strings.Join(paths, ", "),
+			Detail:  "Plaintext credential files: " + strings.Join(paths, ", "),
 			FixHint: "Run hawk credentials migrate",
 		})
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "legacy env", Status: SoloPass,
-			Detail: "No ~/.hawk/env or ~/.hawk/.env files",
+			Detail:   "No ~/.hawk/env or ~/.hawk/.env files",
 			Blocking: true,
 		})
 	}
@@ -158,13 +158,13 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	if reason := tool.IsSensitivePath(provPath); reason != "" {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "read guard", Status: SoloPass,
-			Detail: "Sensitive paths blocked for Read tool",
+			Detail:   "Sensitive paths blocked for Read tool",
 			Blocking: true,
 		})
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Security", Name: "read guard", Status: SoloFail,
-			Detail: "provider.json not blocked by Read tool",
+			Detail:   "provider.json not blocked by Read tool",
 			Blocking: true,
 		})
 	}
@@ -177,7 +177,7 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Sandbox", Name: "docker", Status: SoloWarn,
-			Detail: "Docker not available — Bash runs on host",
+			Detail:  "Docker not available — Bash runs on host",
 			FixHint: "Start Docker for isolated Bash, or use --no-container knowingly",
 		})
 	}
@@ -186,7 +186,7 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	if pre.Ready {
 		checks = append(checks, SoloCheck{
 			Section: "Ecosystem", Name: "eyrie", Status: SoloPass,
-			Detail: "Preflight ready to chat",
+			Detail:   "Preflight ready to chat",
 			Blocking: true,
 		})
 	} else {
@@ -199,8 +199,8 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 		}
 		checks = append(checks, SoloCheck{
 			Section: "Ecosystem", Name: "eyrie", Status: status,
-			Detail: "Preflight not ready — see hawk preflight",
-			FixHint: "Complete /config (credentials + model)",
+			Detail:   "Preflight not ready — see hawk preflight",
+			FixHint:  "Complete /config (credentials + model)",
 			Blocking: true,
 		})
 	}
@@ -215,7 +215,7 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	} else {
 		checks = append(checks, SoloCheck{
 			Section: "Ecosystem", Name: "yaad", Status: SoloWarn,
-			Detail: "Not initialized — memory ops skipped",
+			Detail:  "Not initialized — memory ops skipped",
 			FixHint: "Ensure ~/.yaad/data/ is writable for cross-session memory",
 		})
 	}
