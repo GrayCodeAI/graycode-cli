@@ -11,7 +11,7 @@ import (
 func TestSoloCmdRuns(t *testing.T) {
 	if err := soloCmd.RunE(soloCmd, nil); err == nil {
 		// May pass on dev machines with full setup; at minimum should print report.
-		t.Skip("machine has full solo setup")
+		t.Skip("machine has full developer path setup")
 	}
 	// Fresh test env would fail — covered in config package tests.
 }
