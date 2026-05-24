@@ -17,6 +17,9 @@ func TestDoctorReport(t *testing.T) {
 	if !strings.Contains(report, "Version") {
 		t.Error("report should mention version")
 	}
+	if !strings.Contains(report, "Ecosystem (eyrie · yaad · tok)") {
+		t.Error("report should include ecosystem panel")
+	}
 }
 
 func TestDoctorReportProviderModelOrder(t *testing.T) {

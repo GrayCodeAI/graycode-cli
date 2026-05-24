@@ -33,6 +33,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("Directory: %s\n", cwd))
 	b.WriteString(fmt.Sprintf("Provider: %s\n", provider))
 	b.WriteString(fmt.Sprintf("Model: %s\n", modelName))
+	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), provider, modelName) + "\n")
 	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
 	b.WriteString("\n" + runtime.FormatPreflightReport(runtime.Preflight(context.Background())) + "\n")
 	b.WriteString("\n" + credentials.FormatStorageReport(credentials.StorageReportFor(context.Background())) + "\n")
@@ -54,9 +55,6 @@ func doctorReport(settings hawkconfig.Settings) string {
 	} else {
 		b.WriteString("\nProject instructions: not found (consider creating AGENTS.md)\n")
 	}
-
-	// Yaad memory status
-	b.WriteString("\n" + memory.YaadStatus() + "\n")
 
 	// Bundled skills
 	bundledDir := plugin.BundledSkillsDir()
