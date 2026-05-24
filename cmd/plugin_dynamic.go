@@ -89,7 +89,7 @@ var pluginStatusCmd = &cobra.Command{
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 		_, _ = fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n")
 		for _, s := range statuses {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
 				s.Name, s.Version, s.State, s.ToolCount, s.HookCount)
 		}
 		_ = w.Flush()
@@ -329,7 +329,7 @@ var pluginLogsCmd = &cobra.Command{
 			if ev.Error != "" {
 				errStr = truncatePluginStr(ev.Error, 50)
 			}
-			fmt.Fprintf(
+			_, _ = fmt.Fprintf(
 				w, "%s\t%s\t%s\t%s\n",
 				ev.Timestamp.Format("15:04:05"),
 				ev.PluginName,

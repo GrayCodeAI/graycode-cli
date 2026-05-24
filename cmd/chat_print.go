@@ -144,20 +144,21 @@ func runPrint(text string) error {
 }
 
 func writePrintUsageEvent(sessionID string, usage *engine.StreamUsage) {
+	usageEvent := map[string]int{
+		"prompt_tokens":     usage.PromptTokens,
+		"completion_tokens": usage.CompletionTokens,
+	}
 	event := map[string]interface{}{
 		"type":       "usage",
 		"uuid":       genID(),
 		"session_id": sessionID,
-		"usage": map[string]int{
-			"prompt_tokens":     usage.PromptTokens,
-			"completion_tokens": usage.CompletionTokens,
-		},
+		"usage":      usageEvent,
 	}
 	if usage.CacheReadTokens > 0 {
-		event["usage"].(map[string]int)["cache_read_tokens"] = usage.CacheReadTokens
+		usageEvent["cache_read_tokens"] = usage.CacheReadTokens
 	}
 	if usage.CacheWriteTokens > 0 {
-		event["usage"].(map[string]int)["cache_write_tokens"] = usage.CacheWriteTokens
+		usageEvent["cache_write_tokens"] = usage.CacheWriteTokens
 	}
 	data, _ := json.Marshal(event)
 	fmt.Println(string(data))

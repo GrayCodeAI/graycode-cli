@@ -52,7 +52,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return silentErr(err, "open review store")
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	// Check if already reviewed.
 	if existing, _ := store.GetBySHA(sha); existing != nil && existing.Status != ReviewStatusFailed {

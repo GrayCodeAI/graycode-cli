@@ -138,7 +138,7 @@ func StartBGSession(prompt string, args []string) (*BGSessionInfo, error) {
 	cmd.Stderr = logF
 
 	if err := cmd.Start(); err != nil {
-		logF.Close()
+		_ = logF.Close()
 		return nil, fmt.Errorf("start background session: %w", err)
 	}
 
