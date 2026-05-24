@@ -64,3 +64,23 @@ func TestFormatYaadDetail_NotReady(t *testing.T) {
 		t.Fatalf("expected recent memories section, got %q", out)
 	}
 }
+
+func TestFormatYaadSearch_EmptyQuery(t *testing.T) {
+	out := FormatYaadSearch("  ", 5)
+	if !strings.Contains(out, "query required") {
+		t.Fatalf("expected query required, got %q", out)
+	}
+}
+
+func TestFormatYaadSearch_NotReadyOrResults(t *testing.T) {
+	out := FormatYaadSearch("decision", 5)
+	if out == "" {
+		t.Fatal("expected non-empty output")
+	}
+	if strings.Contains(out, "not initialized") {
+		return
+	}
+	if !strings.Contains(out, "Yaad search:") {
+		t.Fatalf("expected search header, got %q", out)
+	}
+}

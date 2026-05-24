@@ -18,6 +18,7 @@ echo "== hawk ecosystem =="
 
 echo "== hawk yaad =="
 "$BIN" yaad --limit 2 >/dev/null || true
+"$BIN" yaad search decision --limit 2 >/dev/null || true
 
 echo "== ecosystem tests =="
 go test ./internal/config/ -run TestFormatEcosystemPanel -count=1

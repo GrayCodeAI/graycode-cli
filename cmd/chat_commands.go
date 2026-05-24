@@ -173,7 +173,7 @@ var slashDescriptions = map[string]string{
 	"/vim":             "Toggle vim mode",
 	"/welcome":         "Show welcome screen",
 	"/ecosystem":       "Show eyrie, yaad, and tok integration status",
-	"/yaad":            "Show yaad persistent memory graph",
+	"/yaad":            "Show yaad memory (use /yaad search <query> to search)",
 	"/yolo":            "Toggle auto-approve mode",
 	"/cron":            "Show scheduled jobs",
 	"/keybindings":     "Show keyboard shortcuts",
@@ -1172,6 +1172,15 @@ Generate the recap:`, summary.String())
 		}
 		return m, nil
 	case "/yaad":
+		if len(parts) >= 3 && parts[1] == "search" {
+			query := strings.TrimSpace(strings.Join(parts[2:], " "))
+			if query == "" {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /yaad search <query>"})
+				return m, nil
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: memory.FormatYaadSearch(query, 10)})
+			return m, nil
+		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: memory.FormatYaadDetail(5)})
 		return m, nil
 	case "/ecosystem":
