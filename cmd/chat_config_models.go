@@ -8,8 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
 // configModelOption is one row in the /config model picker (display from eyrie, id for settings).
@@ -50,11 +50,11 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		if provider == "" {
 			provider = hawkconfig.DefaultModelProviderFilter(ctx)
 		}
-		entries, err := eyrieclient.ListModelsForProvider(ctx, provider)
+		entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
 		if err != nil {
-			if _, derr := eyrieclient.Discover(ctx); derr == nil {
+			if _, derr := runtime.Discover(ctx); derr == nil {
 				InvalidateModelCacheProvider(provider)
-				entries, err = eyrieclient.ListModelsForProvider(ctx, provider)
+				entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
 			}
 		}
 		if err != nil {
@@ -70,17 +70,16 @@ func fetchModelsAsync(provider string) tea.Cmd {
 	}
 }
 
-func configModelOptionsFromEyrie(entries []eyrieclient.ModelEntry) []configModelOption {
-	out := eyrieclient.ModelOptionsFromEntries(entries)
-	opts := make([]configModelOption, len(out))
-	for i, o := range out {
+func configModelOptionsFromEyrie(entries []runtime.ModelEntry) []configModelOption {
+	opts := make([]configModelOption, len(entries))
+	for i, e := range entries {
 		opts[i] = configModelOption{
-			ID:               o.ID,
-			DisplayName:      catalog.DisplayModelLabel(o.ID, o.DisplayName),
-			Owner:            catalog.DisplayModelOwner(o.Owner, o.ID),
-			ContextWindow:    o.ContextWindow,
-			InputPricePer1M:  o.InputPricePer1M,
-			OutputPricePer1M: o.OutputPricePer1M,
+			ID:               e.ID,
+			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
+			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID),
+			ContextWindow:    e.ContextWindow,
+			InputPricePer1M:  e.InputPricePer1M,
+			OutputPricePer1M: e.OutputPricePer1M,
 		}
 	}
 	return opts

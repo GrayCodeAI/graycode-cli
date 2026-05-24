@@ -9,8 +9,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 type configApplyCredentialsMsg struct {
@@ -36,7 +38,7 @@ func firstRunModelProvider(m chatModel) string {
 
 func resolveKeyAsync(secret string) tea.Cmd {
 	return func() tea.Msg {
-		res := eyrieclient.ResolveCredentialForHost(context.Background(), secret)
+		res := runtime.ResolveCredential(context.Background(), secret)
 		return configKeyResolvedMsg{
 			secret: secret,
 			result: credentialResolveFromRuntime(res),
@@ -44,7 +46,7 @@ func resolveKeyAsync(secret string) tea.Cmd {
 	}
 }
 
-func credentialResolveFromRuntime(res eyrieclient.CredentialResolveResult) hawkconfig.CredentialResolveResult {
+func credentialResolveFromRuntime(res runtime.CredentialResolveResult) hawkconfig.CredentialResolveResult {
 	out := hawkconfig.CredentialResolveResult{
 		FormatOK:    res.FormatOK,
 		FormatError: res.FormatError,
@@ -64,8 +66,8 @@ func credentialResolveFromRuntime(res eyrieclient.CredentialResolveResult) hawkc
 	return out
 }
 
-func credentialOptionFromHawk(in hawkconfig.CredentialInference) eyrieclient.CredentialProviderOption {
-	return eyrieclient.CredentialProviderOption{
+func credentialOptionFromHawk(in hawkconfig.CredentialInference) runtime.CredentialProviderOption {
+	return runtime.CredentialProviderOption{
 		ProviderID:   in.ProviderID,
 		DeploymentID: in.DeploymentID,
 		EnvVar:       in.EnvVar,
@@ -79,7 +81,7 @@ func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret strin
 
 func saveOllamaAsync(baseURL string) tea.Cmd {
 	return func() tea.Msg {
-		inference, err := eyrieclient.LocalCredentialInference(configProviderOllama)
+		inference, err := runtime.LocalCredentialInference(configProviderOllama)
 		if err != nil {
 			return configApplyCredentialsMsg{err: err}
 		}
@@ -96,8 +98,8 @@ func saveOllamaAsync(baseURL string) tea.Cmd {
 func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		rtInf := eyrieclient.InferenceFromOption(credentialOptionFromHawk(inference))
-		if err := eyrieclient.SaveCredentialForHost(ctx, rtInf, secret); err != nil {
+		rtInf := config.InferenceFromOption(credentialOptionFromHawk(inference))
+		if err := runtime.SaveCredential(ctx, rtInf, secret); err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
 				providerID:   inference.ProviderID,
@@ -115,7 +117,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 
-		entries, listErr := eyrieclient.ListModelsForProvider(ctx, inference.ProviderID)
+		entries, listErr := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: inference.ProviderID, Source: runtime.ListSourceAuto})
 		if listErr != nil {
 			return configApplyCredentialsMsg{
 				err:          listErr,
@@ -285,7 +287,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		if msg.providerID == configProviderOllama {
 			return m.returnToOllamaURLAfterError(msg.err)
 		}
-		notice := sanitizeConfigNotice(eyrieclient.FormatSetupError(msg.providerID, msg.err))
+		notice := sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.providerID, msg.err))
 		if hawkconfig.HasConfiguredDeploymentCached(ctx) {
 			notice = "Key saved — " + notice + " · retry in Gateways or Models tab"
 		}
@@ -347,7 +349,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	if err := eyrieclient.RebuildSessionTransport(context.Background(), m.session, hawkconfig.DeploymentRoutingEnabled(m.settings), m.session.Provider()); err != nil {
+	if err := engine.RebuildSessionTransport(context.Background(), m.session, hawkconfig.DeploymentRoutingEnabled(m.settings), m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
 	syncSessionFromPersistedSelection(m.session, m.settings)
