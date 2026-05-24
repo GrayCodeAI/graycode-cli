@@ -11,6 +11,9 @@ go build -mod=readonly -o "$BIN" .
 echo "== hawk doctor =="
 "$BIN" doctor | head -5
 
+echo "== hawk ecosystem =="
+"$BIN" ecosystem >/dev/null
+
 echo "== hawk yaad =="
 "$BIN" yaad --limit 2 >/dev/null || true
 

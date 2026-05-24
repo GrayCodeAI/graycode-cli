@@ -199,6 +199,10 @@ func toolListSummary(registry *tool.Registry) string {
 }
 
 func envSummary(provider, model string) string {
+	return envSummaryWithSelection(provider, model, true)
+}
+
+func envSummaryWithSelection(provider, model string, includeSelection bool) string {
 	compiled, _ := setup.LoadCompiledCatalog(context.Background())
 	var envKeys []string
 	if compiled != nil {
@@ -206,7 +210,10 @@ func envSummary(provider, model string) string {
 	}
 	sort.Strings(envKeys)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, credentials.PlatformSecretStoreName()))
+	if includeSelection {
+		b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\n", provider, model))
+	}
+	b.WriteString(fmt.Sprintf("Credentials (%s):\n", credentials.PlatformSecretStoreName()))
 	ctx := context.Background()
 	for _, key := range envKeys {
 		status := "missing"
