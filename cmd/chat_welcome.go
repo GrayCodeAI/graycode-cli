@@ -8,9 +8,12 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
+	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -196,14 +199,18 @@ func toolListSummary(registry *tool.Registry) string {
 }
 
 func envSummary(provider, model string) string {
-	envKeys := eyrieclient.DiscoveryEnvKeys(context.Background())
+	compiled, _ := setup.LoadCompiledCatalog(context.Background())
+	var envKeys []string
+	if compiled != nil {
+		envKeys = catalog.DiscoveryEnvKeysFromCatalog(compiled)
+	}
 	sort.Strings(envKeys)
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, eyrieclient.PlatformSecretStoreName()))
+	b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\nCredentials (%s):\n", provider, model, credentials.PlatformSecretStoreName()))
 	ctx := context.Background()
 	for _, key := range envKeys {
 		status := "missing"
-		if eyrieclient.HasSecret(ctx, key) {
+		if credentials.HasSecret(ctx, key) {
 			status = "set"
 		}
 		b.WriteString(fmt.Sprintf("  %s: %s\n", key, status))
@@ -228,7 +235,7 @@ Model catalog and routing live in eyrie — hawk is the UI only.`, provider, mod
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (" + eyrieclient.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
+	return "API keys (" + credentials.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {
@@ -254,7 +261,7 @@ func indentedAPIKeyLines() string {
 }
 
 func apiKeyStatusLines() []string {
-	providers := eyrieclient.GetProviderNames()
+	providers := client.Client(nil).GetProviders()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {

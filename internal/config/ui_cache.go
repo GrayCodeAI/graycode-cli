@@ -7,7 +7,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 var uiCacheMu sync.RWMutex
@@ -71,7 +71,7 @@ func credentialSetForGateway(ctx context.Context, compiled *catalog.CompiledCata
 		return false
 	}
 	for _, env := range envs {
-		if eyrieclient.HasSecret(ctx, env) {
+		if credentials.HasSecret(ctx, env) {
 			return true
 		}
 	}

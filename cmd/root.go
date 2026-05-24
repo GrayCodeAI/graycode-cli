@@ -8,7 +8,7 @@ import (
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
@@ -302,8 +302,8 @@ var preflightCmd = &cobra.Command{
 	Use:   "preflight",
 	Short: "Check hawk is ready to chat (catalog, credentials, model)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r := eyrieclient.Preflight(context.Background())
-		cmd.Println(eyrieclient.FormatPreflightReport(r))
+		r := runtime.Preflight(context.Background())
+		cmd.Println(runtime.FormatPreflightReport(r))
 		if !r.Ready {
 			return fmt.Errorf("preflight failed — run hawk and complete /config")
 		}

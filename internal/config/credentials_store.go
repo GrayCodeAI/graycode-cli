@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
-
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
 // PersistAPIKey saves a provider API key via eyrie (OS secret store).
@@ -17,10 +18,10 @@ func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	if secret == "" || envKey == "" {
 		return nil
 	}
-	if err := eyrieclient.ValidateCredentialSecret(envKey, secret); err != nil {
+	if err := eyriecfg.ValidateCredentialSecret(envKey, secret); err != nil {
 		return err
 	}
-	if err := eyrieclient.SetAPIKey(ctx, envKey, secret); err != nil {
+	if err := runtime.SetCredential(ctx, envKey, secret); err != nil {
 		return err
 	}
 	InvalidateConfigUICache()
@@ -32,7 +33,7 @@ func PrepareCredentialDiscovery(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, _ = eyrieclient.MigrateLegacyEnvFile(ctx)
+	_, _ = credentials.MigrateLegacyEnvFile(ctx)
 }
 
 // ModelOption is one hawk /config model row.
@@ -69,7 +70,7 @@ type CredentialResolveResult struct {
 
 // ResolveCredential validates format and lists all providers from eyrie registry.
 func ResolveCredential(ctx context.Context, secret string) CredentialResolveResult {
-	res := eyrieclient.ResolveCredentialForHost(ctx, secret)
+	res := runtime.ResolveCredential(ctx, secret)
 	out := CredentialResolveResult{
 		FormatOK:    res.FormatOK,
 		FormatError: res.FormatError,
@@ -101,7 +102,7 @@ func InferenceFromOption(opt CredentialProviderOption) CredentialInference {
 
 // SaveCredential validates, probes, and stores via eyrie keychain.
 func SaveCredential(ctx context.Context, inference CredentialInference, secret string) error {
-	if err := eyrieclient.SaveCredential(ctx, eyrieclient.CredentialInference{
+	if err := runtime.SaveCredential(ctx, runtime.CredentialInference{
 		ProviderID: inference.ProviderID, DeploymentID: inference.DeploymentID,
 		EnvVar: inference.EnvVar, DisplayName: inference.DisplayName,
 	}, secret); err != nil {
@@ -121,7 +122,7 @@ func FormatCredentialCLIStatus(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	report := eyrieclient.StorageReportFor(ctx)
+	report := credentials.StorageReportFor(ctx)
 	var b strings.Builder
 	fmt.Fprintf(&b, "Credential storage: %s only\n", report.PlatformStore)
 	if report.KeychainWritable {
@@ -150,10 +151,10 @@ func RemoveStoredCredential(ctx context.Context, target string) ([]string, error
 	}
 	var removed []string
 	for _, envKey := range envKeys {
-		if !eyrieclient.HasSecret(ctx, envKey) {
+		if !credentials.HasSecret(ctx, envKey) {
 			continue
 		}
-		if err := eyrieclient.DeleteSecret(ctx, envKey); err != nil {
+		if err := credentials.DeleteSecret(ctx, envKey); err != nil {
 			if len(removed) > 0 {
 				InvalidateConfigUICache()
 			}
@@ -174,7 +175,7 @@ func MaskCredentialForProvider(ctx context.Context, provider string) string {
 		ctx = context.Background()
 	}
 	for _, envKey := range credentialEnvKeysForTarget(provider) {
-		secret := eyrieclient.LookupSecret(ctx, envKey)
+		secret := credentials.LookupSecret(ctx, envKey)
 		if secret == "" {
 			continue
 		}
@@ -237,7 +238,7 @@ func credentialEnvKeysForTarget(target string) []string {
 
 // LocalCredentialInference returns setup metadata for no-key providers (e.g. Ollama).
 func LocalCredentialInference(providerID string) (CredentialInference, error) {
-	inf, err := eyrieclient.LocalCredentialInference(providerID)
+	inf, err := runtime.LocalCredentialInference(providerID)
 	if err != nil {
 		return CredentialInference{}, err
 	}
@@ -254,15 +255,15 @@ func FormatConfigProviderError(providerID string, err error) string {
 	if err == nil {
 		return ""
 	}
-	if formatted := eyrieclient.FormatSetupError(providerID, err); formatted != "" {
-		return formatted
+	if formatted := runtime.FormatSetupError(providerID, err); formatted != nil {
+		return formatted.Error()
 	}
 	return err.Error()
 }
 
 // InferCredentialsFromAPIKey delegates provider detection to eyrie from key shape + catalog.
 func InferCredentialsFromAPIKey(ctx context.Context, secret string) []CredentialInference {
-	in := eyrieclient.InferCredentialsFromAPIKey(ctx, secret)
+	in := runtime.InferCredentialsFromAPIKey(ctx, secret)
 	out := make([]CredentialInference, len(in))
 	for i, c := range in {
 		out[i] = CredentialInference{

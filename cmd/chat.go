@@ -21,11 +21,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/home"
@@ -312,7 +312,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	// Prefetch models for current provider in background so /config and /model are instant
 	go func() {
 		provider := effectiveProvider
-		entries, _ := eyrieclient.ListModelsForProvider(context.Background(), provider)
+		entries, _ := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
@@ -690,7 +690,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.configSaving = false
 		if msg.err != nil {
 			if m.configOpen {
-				m.configNotice = sanitizeConfigNotice(eyrieclient.FormatSetupError(msg.provider, msg.err))
+				m.configNotice = sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.provider, msg.err))
 				m.viewDirty = true
 				m.updateViewportContent()
 			}

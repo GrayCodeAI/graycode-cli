@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
 )
 
 type configGatewayRow struct {
@@ -223,7 +222,7 @@ func (m chatModel) handleConfigGatewayRefreshMsg(msg configGatewayRefreshMsg) ch
 	m.configSaving = false
 	InvalidateModelCacheProvider(msg.providerID)
 	if msg.err != nil {
-		m.configNotice = sanitizeConfigNotice(eyrieclient.FormatSetupError(msg.providerID, msg.err))
+		m.configNotice = sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.providerID, msg.err))
 		return m
 	}
 	m.configNotice = msg.summary
