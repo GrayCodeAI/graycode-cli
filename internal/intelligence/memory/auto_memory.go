@@ -25,21 +25,46 @@ func NewAutoMemory(projectDir string) *AutoMemory {
 	return &AutoMemory{dir: dir}
 }
 
-// triggerWords are words that indicate content worth remembering.
+// triggerWords indicate content worth remembering when multiple appear.
 var triggerWords = []string{
 	"don't", "instead", "correction", "actually", "remember",
+	"mistake", "should have", "better approach", "wrong", "fix",
+}
+
+// strongTriggers fire alone (explicit learning signals).
+var strongTriggers = []string{
+	"note to self", "decision:", "convention:", "always use", "never use",
+	"prefer ", "important:",
+}
+
+// ShouldAutoRemember reports whether assistant content should be persisted to yaad.
+// Requires two weak triggers or one strong trigger to limit noise.
+func ShouldAutoRemember(content string) bool {
+	lower := strings.ToLower(strings.TrimSpace(content))
+	if lower == "" {
+		return false
+	}
+	for _, t := range strongTriggers {
+		if strings.Contains(lower, t) {
+			return true
+		}
+	}
+	hits := 0
+	for _, w := range triggerWords {
+		if strings.Contains(lower, w) {
+			hits++
+			if hits >= 2 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ShouldRemember returns true if content contains trigger words indicating
 // the user is correcting, emphasizing, or asking the assistant to remember something.
 func (am *AutoMemory) ShouldRemember(content string) bool {
-	lower := strings.ToLower(content)
-	for _, w := range triggerWords {
-		if strings.Contains(lower, w) {
-			return true
-		}
-	}
-	return false
+	return ShouldAutoRemember(content)
 }
 
 // Write appends content to a topic-specific markdown file in the memory directory.

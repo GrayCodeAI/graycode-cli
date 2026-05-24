@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -202,6 +203,21 @@ func IsSensitivePath(path string) string {
 		hawkDotEnv := filepath.Join(home, ".hawk", ".env")
 		if clean == hawkDotEnv {
 			return "access to ~/.hawk/.env is blocked for security (API keys)"
+		}
+	}
+
+	if cfgDir := strings.TrimSpace(os.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
+		customProv := filepath.Clean(filepath.Join(cfgDir, "provider.json"))
+		if clean == customProv {
+			return "access to provider.json is blocked for security (API credentials)"
+		}
+		customEnv := filepath.Clean(filepath.Join(cfgDir, "env"))
+		if clean == customEnv {
+			return "access to hawk env file is blocked for security (API keys)"
+		}
+		customDotEnv := filepath.Clean(filepath.Join(cfgDir, ".env"))
+		if clean == customDotEnv {
+			return "access to hawk .env is blocked for security (API keys)"
 		}
 	}
 
