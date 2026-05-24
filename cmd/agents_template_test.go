@@ -70,6 +70,9 @@ func TestGenerateAgentsTemplate_Go(t *testing.T) {
 	if !strings.Contains(out, "Go") {
 		t.Fatal("missing 'Go'")
 	}
+	if !strings.Contains(out, "senior engineer") {
+		t.Fatal("missing behavioral principles")
+	}
 }
 
 func TestGenerateAgentsTemplate_Generic(t *testing.T) {
