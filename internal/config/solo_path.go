@@ -27,7 +27,7 @@ const (
 	SoloFail SoloCheckStatus = "fail"
 )
 
-// SoloCheck is one row in the solo developer readiness report.
+// SoloCheck is one row in the developer path readiness report.
 type SoloCheck struct {
 	Section  string
 	Name     string
@@ -46,7 +46,7 @@ type SoloPathReport struct {
 	NextStep    string
 }
 
-// EvaluateSoloPath builds the solo developer readiness report.
+// EvaluateSoloPath builds the developer path readiness report.
 func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	if ctx == nil {
 		ctx = context.Background()
@@ -259,7 +259,7 @@ func soloNextStep(r SoloPathReport, setup SetupState) string {
 	return "Run hawk preflight for details, then /config if needed"
 }
 
-// FormatSoloPathReport renders the solo developer readiness report for CLI/TUI.
+// FormatSoloPathReport renders the developer path readiness report for CLI/TUI.
 func FormatSoloPathReport(ctx context.Context) string {
 	r := EvaluateSoloPath(ctx)
 	var b strings.Builder
