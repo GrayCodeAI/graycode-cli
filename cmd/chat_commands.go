@@ -45,7 +45,7 @@ var allSlashCommands = []string{
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
-	"/version", "/vibe", "/vim", "/voice", "/welcome", "/yaad", "/yolo",
+	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/yaad", "/yolo",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
@@ -172,6 +172,7 @@ var slashDescriptions = map[string]string{
 	"/version":         "Show hawk version",
 	"/vim":             "Toggle vim mode",
 	"/welcome":         "Show welcome screen",
+	"/ecosystem":       "Show eyrie, yaad, and tok integration status",
 	"/yaad":            "Show yaad persistent memory graph",
 	"/yolo":            "Toggle auto-approve mode",
 	"/cron":            "Show scheduled jobs",
@@ -1172,6 +1173,18 @@ Generate the recap:`, summary.String())
 		return m, nil
 	case "/yaad":
 		m.messages = append(m.messages, displayMsg{role: "system", content: memory.FormatYaadDetail(5)})
+		return m, nil
+	case "/ecosystem":
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		model, provider := effectiveModelAndProvider(settings)
+		if provider == "" {
+			provider = "auto"
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatEcosystemPanel(context.Background(), provider, model)})
 		return m, nil
 	case "/config", "/con", "/conf":
 		if len(parts) >= 3 && parts[1] == "provider" {
