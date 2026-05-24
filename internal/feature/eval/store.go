@@ -6,7 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // StoredResult is the persistent JSON format for eval results.

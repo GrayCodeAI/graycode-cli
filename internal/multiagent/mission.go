@@ -168,7 +168,7 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 
 			var handoff *Handoff
 			var err error
-			retryLoop:
+		retryLoop:
 			for attempt := 0; attempt <= maxRetries; attempt++ {
 				workerCtx := ctx
 				cancel := func() {}

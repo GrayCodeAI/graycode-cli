@@ -10,7 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Persona represents an enhanced agent definition with specific skills,

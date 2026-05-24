@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Cache stores LLM responses keyed by (model, prompt_hash, params) to avoid re-calling APIs.

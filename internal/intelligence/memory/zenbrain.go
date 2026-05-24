@@ -9,7 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-"github.com/GrayCodeAI/hawk/internal/home"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // MemoryLayer identifies which layer a memory belongs to.
