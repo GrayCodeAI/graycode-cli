@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/eyrieclient"
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 )
 
 // SetupState is a single evaluation of first-run /config requirements.
@@ -69,7 +69,7 @@ func hasConfiguredDeployment(ctx context.Context) bool {
 	if hasConfiguredDeploymentCached(ctx) {
 		return true
 	}
-	return eyrieclient.HasAnyConfiguredDeployment(ctx)
+	return eyriecfg.HasAnyConfiguredDeployment(ctx)
 }
 
 // HasSelectedModel reports whether eyrie provider.json has a selected model.
