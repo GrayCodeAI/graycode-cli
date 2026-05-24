@@ -63,13 +63,15 @@ func Welcome(version string) {
 
 	fmt.Println()
 	fmt.Println(center(bold+"Welcome to Hawk!"+reset, 16))
+	fmt.Println(center(dim+"Built for developers — one machine, keychain credentials"+reset, 48))
 
 	fmt.Println()
 	fmt.Println(center(bold+"Quick start:"+reset, 12))
+	fmt.Println(center(hawkC+"hawk"+reset+"                            interactive REPL (/config on first run)", 58))
+	fmt.Println(center(hawkC+"hawk solo"+reset+"                       check readiness", 49))
 	fmt.Println(center(hawkC+"hawk"+reset+" -p \"explain this repo\"     one-shot mode", 49))
-	fmt.Println(center(hawkC+"hawk"+reset+"                            interactive REPL", 49))
 	fmt.Println(center(hawkC+"hawk"+reset+" -c                          continue last session", 54))
-	fmt.Println(center(hawkC+"/config"+reset+"                         first-time setup (API key + model)", 54))
+	fmt.Println(center(hawkC+"/config"+reset+"                         API key (keychain) + model", 54))
 
 	fmt.Println()
 	fmt.Println(center(hawkC+"? for shortcuts"+reset, 15))
@@ -88,7 +90,9 @@ func RunSetup() error {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println(teal + bold + "  First-time setup" + reset)
+	fmt.Println(teal + bold + "  Developer setup" + reset)
+	fmt.Println()
+	fmt.Println(dim + "  Keys are stored in " + credentials.PlatformSecretStoreName() + ", not .env or shell env." + reset)
 	fmt.Println()
 
 	// Provider selection

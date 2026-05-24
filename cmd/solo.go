@@ -12,12 +12,12 @@ var soloStrict bool
 
 var soloCmd = &cobra.Command{
 	Use:   "solo",
-	Short: "Solo developer readiness (setup, security, sandbox, ecosystem)",
-	Long: `Check whether hawk is configured for the solo developer path:
+	Short: "Developer path readiness (setup, security, sandbox, ecosystem)",
+	Long: `Check whether hawk is configured on the developer path:
 API keys in OS secret store, model selected, no secrets on disk,
 Docker isolation when available, and eyrie/yaad/tok integration.
 
-See docs/SECURITY-SOLO.md and plans/SOLO-DEVELOPER-PATH.md.`,
+See docs/DEVELOPER-PATH.md and docs/SECURITY-SOLO.md.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		report := hawkconfig.EvaluateSoloPath(ctx)
@@ -31,7 +31,7 @@ See docs/SECURITY-SOLO.md and plans/SOLO-DEVELOPER-PATH.md.`,
 			}
 		}
 		if !report.Ready {
-			return fmt.Errorf("solo path not ready — %s", report.NextStep)
+			return fmt.Errorf("developer path not ready — %s", report.NextStep)
 		}
 		return nil
 	},

@@ -339,6 +339,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	}
 	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, dockerRunning)
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
+	m.openConfigOnStart = hawkconfig.NeedsFirstRunSetup(context.Background()) &&
+		(saved == nil || len(saved.Messages) == 0)
 
 	// Wire permission system
 	sess.PermissionFn = func(req engine.PermissionRequest) {
@@ -374,6 +376,9 @@ func (m chatModel) Init() tea.Cmd {
 		cwd, _ := os.Getwd()
 		cmds = append(cmds, bootContainerCmd(cwd))
 	}
+	if m.openConfigOnStart {
+		cmds = append(cmds, func() tea.Msg { return autoOpenConfigMsg{} })
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -381,6 +386,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case autoOpenConfigMsg:
+		if !m.openConfigOnStart || m.configOpen {
+			return m, nil
+		}
+		m.openConfigOnStart = false
+		return m.openConfigPanel()
 	case tea.KeyMsg:
 		// Container failed — block all input except quit
 		if m.containerEnabled && m.containerErr != nil {
@@ -636,7 +647,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if setup := hawkconfig.EvaluateSetupCached(context.Background()); setup.NeedsSetup {
 				hint := setup.Hint
 				if hint == "" {
-					hint = "Complete setup in /config (API key and model) before chatting."
+					hint = "Complete setup in /config (keychain + model). Run /solo to check readiness."
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: hint})
 				m.viewDirty = true

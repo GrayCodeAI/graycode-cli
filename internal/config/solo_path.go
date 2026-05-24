@@ -220,7 +220,7 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 		})
 	}
 
-	sample := tok.EstimateTokens("hawk solo developer path")
+	sample := tok.EstimateTokens("hawk developer path readiness")
 	checks = append(checks, SoloCheck{
 		Section: "Ecosystem", Name: "tok", Status: SoloPass,
 		Detail: fmt.Sprintf("Embedded token/compress pipeline OK (sample=%d tokens)", sample),
@@ -263,7 +263,7 @@ func soloNextStep(r SoloPathReport, setup SetupState) string {
 func FormatSoloPathReport(ctx context.Context) string {
 	r := EvaluateSoloPath(ctx)
 	var b strings.Builder
-	b.WriteString("Solo developer path (hawk · eyrie · tok · yaad)\n\n")
+	b.WriteString("Developer path (hawk · eyrie · tok · yaad)\n\n")
 
 	status := "NEEDS SETUP"
 	switch {

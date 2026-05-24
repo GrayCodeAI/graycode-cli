@@ -121,10 +121,10 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	setup := hawkconfig.EvaluateSetupCached(context.Background())
 	needsSetup := setup.NeedsSetup
 	if needsSetup {
-		tip := "Run /config to add an API key, then type your first message"
+		tip := "Get started: /config (OS keychain) · pick a model · /solo to verify"
 		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 	} else {
-		tip := "TIP: /help for commands · /model to switch model"
+		tip := "TIP: /solo readiness · /help commands · /model to switch"
 		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
 		shortcuts := "ctrl+N next model · ctrl+L autonomy · esc cancel"
 		b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
@@ -231,7 +231,9 @@ func configCommandSummary(settings hawkconfig.Settings) string {
 	model := displayConfigValue(hawkconfig.ActiveModel(nil))
 	return fmt.Sprintf(`Setup (eyrie)
 
-  /config  → API key + model
+  /config  → paste API key (OS keychain) + pick model
+  /solo    → verify readiness in TUI
+  hawk solo (CLI)
 
 Current:
   provider: %s

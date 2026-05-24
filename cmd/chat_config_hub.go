@@ -8,6 +8,8 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
+type autoOpenConfigMsg struct{}
+
 func (m chatModel) openConfigPanel() (chatModel, tea.Cmd) {
 	return m.openConfigAtTab(-1)
 }

@@ -40,9 +40,9 @@ func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	}
 	switch {
 	case !hasCreds:
-		st.Hint = "First-time setup: run /config to paste an API key or use Ollama local"
+		st.Hint = "Get started: /config → paste API key (stored in OS keychain, not .env)"
 	case !hasModel:
-		st.Hint = "Almost ready: pick a model to start chatting"
+		st.Hint = "Almost ready: /config → pick a model, then /solo to verify"
 	}
 	return st
 }

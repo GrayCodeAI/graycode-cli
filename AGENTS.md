@@ -1,6 +1,6 @@
 # Hawk - AI Coding Agent
 
-## Product direction: solo-first
+## Product direction: developer path
 
 hawk targets **individual developers** on their own machines — not teams or enterprises (yet). When choosing defaults, docs, and new features, optimize for:
 
@@ -9,7 +9,7 @@ hawk targets **individual developers** on their own machines — not teams or en
 - Local yaad memory, optional Docker isolation
 - Defer: SSO, org admin, shared memory, fleet sandbox
 
-See `docs/SOLO-FIRST.md`, `docs/SECURITY-SOLO.md`, and `plans/SOLO-DEVELOPER-PATH.md`.
+See `docs/DEVELOPER-PATH.md`, `docs/SECURITY-SOLO.md`, and `plans/DEVELOPER-PATH.md`.
 
 ## Architecture
 
@@ -187,8 +187,8 @@ Active branch: **`feature/secure-credentials-sandbox`** (hawk + external eyrie).
 | Catalog empty / refresh hints | `internal/config/catalog_health.go`, `catalog_startup.go` |
 | No API keys in `provider.json` | eyrie `SanitizeDeploymentConfigForDisk`, hawk `MigrateProviderSecrets` |
 | Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
-| Solo developer readiness | `hawk solo`, `/solo`, `internal/config/solo_path.go`, `./scripts/verify-solo-path.sh` |
-| Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md`, `plans/SOLO-DEVELOPER-PATH.md` |
+| Developer path readiness | `hawk solo`, `/solo`, `internal/config/solo_path.go`, `./scripts/verify-solo-path.sh` |
+| Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md`, `plans/DEVELOPER-PATH.md` |
 
 **Not in this milestone:** conversation DAG as source of truth.
 
