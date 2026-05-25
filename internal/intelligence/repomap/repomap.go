@@ -117,6 +117,7 @@ func (rm *RepoMap) Format(maxTokens int) string {
 
 	var b strings.Builder
 	tokenCount := 0
+	filesFormatted := 0
 
 	for _, fm := range rm.Files {
 		// Estimate this file's contribution
@@ -124,7 +125,7 @@ func (rm *RepoMap) Format(maxTokens int) string {
 		tokEst := lineEst * 6          // ~6 tokens per line on average
 
 		if tokenCount+tokEst > maxTokens {
-			remaining := len(rm.Files) - countFormattedFiles(&b)
+			remaining := len(rm.Files) - filesFormatted
 			if remaining > 0 {
 				b.WriteString(fmt.Sprintf("\n... and %d more files\n", remaining))
 			}
@@ -136,19 +137,10 @@ func (rm *RepoMap) Format(maxTokens int) string {
 			b.WriteString(fmt.Sprintf("  %s %s (line %d)\n", sym.Kind, sym.Name, sym.Line))
 		}
 		tokenCount += tokEst
+		filesFormatted++
 	}
 
 	return b.String()
-}
-
-func countFormattedFiles(b *strings.Builder) int {
-	count := 0
-	for _, line := range strings.Split(b.String(), "\n") {
-		if line != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "...") {
-			count++
-		}
-	}
-	return count
 }
 
 func estimateTokens(rm *RepoMap) int {
