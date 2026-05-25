@@ -189,7 +189,7 @@ func TestEvaluateSetupCached_MatchesWarmSnapshot(t *testing.T) {
 	if cached.HasModel {
 		t.Fatal("expected no model selected in isolated home")
 	}
-	if cached.Hint != "Almost ready: /config → pick a model, then /solo to verify" {
+	if cached.Hint != "Almost ready: /config → pick a model, then /path to verify" {
 		t.Fatalf("hint = %q", cached.Hint)
 	}
 }

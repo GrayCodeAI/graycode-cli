@@ -559,7 +559,7 @@ func TestPercentileUnsorted(t *testing.T) {
 
 func TestSingleModelBenchmark(t *testing.T) {
 	models := []ModelConfig{
-		{Name: "solo-model", Provider: "test", Model: "solo"},
+		{Name: "dev-model", Provider: "test", Model: "dev"},
 	}
 	mb := NewModelBenchmark("single-model-test", models)
 	mb.Tasks = []BenchmarkTask{
@@ -582,9 +582,9 @@ func TestSingleModelBenchmark(t *testing.T) {
 		t.Fatalf("RunAll failed: %v", err)
 	}
 
-	result := mb.Results["solo-model"]
+	result := mb.Results["dev-model"]
 	if result == nil {
-		t.Fatal("solo-model result is nil")
+		t.Fatal("dev-model result is nil")
 	}
 
 	// 3 tasks * 3 runs = 9 total. task-b fails all 3 runs = 3 failures.
@@ -601,8 +601,8 @@ func TestSingleModelBenchmark(t *testing.T) {
 
 	// Compare output should work with single model.
 	output := mb.Compare()
-	if !strings.Contains(output, "solo-model") {
-		t.Error("Compare output should contain 'solo-model'")
+	if !strings.Contains(output, "dev-model") {
+		t.Error("Compare output should contain 'dev-model'")
 	}
 
 	// RankModels with single model should return single element.

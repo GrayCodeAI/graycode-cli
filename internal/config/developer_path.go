@@ -18,52 +18,52 @@ import (
 	"github.com/GrayCodeAI/tok"
 )
 
-// SoloCheckStatus is pass, warn, or fail for one readiness row.
-type SoloCheckStatus string
+// PathCheckStatus is pass, warn, or fail for one readiness row.
+type PathCheckStatus string
 
 const (
-	SoloPass SoloCheckStatus = "pass"
-	SoloWarn SoloCheckStatus = "warn"
-	SoloFail SoloCheckStatus = "fail"
+	PathPass PathCheckStatus = "pass"
+	PathWarn PathCheckStatus = "warn"
+	PathFail PathCheckStatus = "fail"
 )
 
-// SoloCheck is one row in the developer path readiness report.
-type SoloCheck struct {
+// PathCheck is one row in the developer path readiness report.
+type PathCheck struct {
 	Section  string
 	Name     string
-	Status   SoloCheckStatus
+	Status   PathCheckStatus
 	Detail   string
 	FixHint  string
 	Blocking bool
 }
 
-// SoloPathReport summarizes solo-developer readiness (setup, security, sandbox, ecosystem).
-type SoloPathReport struct {
-	Checks      []SoloCheck
+// DeveloperPathReport summarizes developer readiness (setup, security, sandbox, ecosystem).
+type DeveloperPathReport struct {
+	Checks      []PathCheck
 	ChatReady   bool
 	SecureReady bool
 	Ready       bool
 	NextStep    string
 }
 
-// EvaluateSoloPath builds the developer path readiness report.
-func EvaluateSoloPath(ctx context.Context) SoloPathReport {
+// EvaluateDeveloperPath builds the developer path readiness report.
+func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	PrepareCredentialDiscovery(ctx)
 
-	var checks []SoloCheck
+	var checks []PathCheck
 
 	setup := EvaluateSetup(ctx)
 	if setup.HasCredentials {
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "credentials", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "credentials", Status: PathPass,
 			Detail: "API key in OS secret store", Blocking: true,
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "credentials", Status: SoloFail,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "credentials", Status: PathFail,
 			Detail:   "No provider credentials configured",
 			FixHint:  "Run hawk and /config to paste an API key (or configure Ollama)",
 			Blocking: true,
@@ -72,13 +72,13 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 
 	if setup.HasModel {
 		model := strings.TrimSpace(ActiveModel(ctx))
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "model", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "model", Status: PathPass,
 			Detail: model, Blocking: true,
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "model", Status: SoloFail,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "model", Status: PathFail,
 			Detail:   "No model selected",
 			FixHint:  "Run /config and pick a model from the catalog",
 			Blocking: true,
@@ -88,33 +88,33 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	cat := CatalogHealthReport(ctx)
 	switch {
 	case cat.Exists && cat.Models > 0:
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "catalog", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "catalog", Status: PathPass,
 			Detail: fmt.Sprintf("%d models cached", cat.Models),
 		})
 	case cat.Exists:
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "catalog", Status: SoloWarn,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "catalog", Status: PathWarn,
 			Detail:  "Catalog file present but empty",
 			FixHint: "Run hawk models refresh after adding credentials",
 		})
 	default:
-		checks = append(checks, SoloCheck{
-			Section: "Setup", Name: "catalog", Status: SoloWarn,
+		checks = append(checks, PathCheck{
+			Section: "Setup", Name: "catalog", Status: PathWarn,
 			Detail:  CatalogEmptyHint(ctx),
 			FixHint: "Add credentials then run hawk models refresh",
 		})
 	}
 
 	if ok, detail := credentials.KeychainWriteAvailable(ctx); ok {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "keychain", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "keychain", Status: PathPass,
 			Detail:   credentials.PlatformSecretStoreName() + " writable",
 			Blocking: true,
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "keychain", Status: SoloWarn,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "keychain", Status: PathWarn,
 			Detail:   detail,
 			FixHint:  "Unlock keychain or enable secret service (Linux)",
 			Blocking: true,
@@ -122,29 +122,29 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	}
 
 	if hasSecrets, detail := providerJSONHasSecretsOnDisk(); hasSecrets {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "provider.json", Status: SoloFail,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "provider.json", Status: PathFail,
 			Detail:   detail,
 			FixHint:  "Run hawk start once (MigrateProviderSecrets) or remove secret fields manually",
 			Blocking: true,
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "provider.json", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "provider.json", Status: PathPass,
 			Detail:   "No API secrets on disk (routing only)",
 			Blocking: true,
 		})
 	}
 
 	if legacy, paths := legacyCredentialFilesPresent(); legacy {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "legacy env", Status: SoloWarn,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "legacy env", Status: PathWarn,
 			Detail:  "Plaintext credential files: " + strings.Join(paths, ", "),
 			FixHint: "Run hawk credentials migrate",
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "legacy env", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "legacy env", Status: PathPass,
 			Detail:   "No ~/.hawk/env or ~/.hawk/.env files",
 			Blocking: true,
 		})
@@ -156,27 +156,27 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 		provPath = filepath.Join(hawkDir, ".hawk", "provider.json")
 	}
 	if reason := tool.IsSensitivePath(provPath); reason != "" {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "read guard", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "read guard", Status: PathPass,
 			Detail:   "Sensitive paths blocked for Read tool",
 			Blocking: true,
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Security", Name: "read guard", Status: SoloFail,
+		checks = append(checks, PathCheck{
+			Section: "Security", Name: "read guard", Status: PathFail,
 			Detail:   "provider.json not blocked by Read tool",
 			Blocking: true,
 		})
 	}
 
 	if sandbox.DockerAvailable() {
-		checks = append(checks, SoloCheck{
-			Section: "Sandbox", Name: "docker", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Sandbox", Name: "docker", Status: PathPass,
 			Detail: "Docker daemon running — Bash runs in container by default",
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Sandbox", Name: "docker", Status: SoloWarn,
+		checks = append(checks, PathCheck{
+			Section: "Sandbox", Name: "docker", Status: PathWarn,
 			Detail:  "Docker not available — Bash runs on host",
 			FixHint: "Start Docker for isolated Bash, or use --no-container knowingly",
 		})
@@ -184,20 +184,20 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 
 	pre := runtime.Preflight(ctx)
 	if pre.Ready {
-		checks = append(checks, SoloCheck{
-			Section: "Ecosystem", Name: "eyrie", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Ecosystem", Name: "eyrie", Status: PathPass,
 			Detail:   "Preflight ready to chat",
 			Blocking: true,
 		})
 	} else {
-		status := SoloWarn
+		status := PathWarn
 		for _, c := range pre.Checks {
 			if c.Status == runtime.PreflightFail {
-				status = SoloFail
+				status = PathFail
 				break
 			}
 		}
-		checks = append(checks, SoloCheck{
+		checks = append(checks, PathCheck{
 			Section: "Ecosystem", Name: "eyrie", Status: status,
 			Detail:   "Preflight not ready — see hawk preflight",
 			FixHint:  "Complete /config (credentials + model)",
@@ -208,42 +208,42 @@ func EvaluateSoloPath(ctx context.Context) SoloPathReport {
 	bridge := memory.NewYaadBridge()
 	if bridge.Ready() {
 		first := strings.Split(memory.YaadStatus(), "\n")[0]
-		checks = append(checks, SoloCheck{
-			Section: "Ecosystem", Name: "yaad", Status: SoloPass,
+		checks = append(checks, PathCheck{
+			Section: "Ecosystem", Name: "yaad", Status: PathPass,
 			Detail: first + " (optional persistent memory)",
 		})
 	} else {
-		checks = append(checks, SoloCheck{
-			Section: "Ecosystem", Name: "yaad", Status: SoloWarn,
+		checks = append(checks, PathCheck{
+			Section: "Ecosystem", Name: "yaad", Status: PathWarn,
 			Detail:  "Not initialized — memory ops skipped",
 			FixHint: "Ensure ~/.yaad/data/ is writable for cross-session memory",
 		})
 	}
 
 	sample := tok.EstimateTokens("hawk developer path readiness")
-	checks = append(checks, SoloCheck{
-		Section: "Ecosystem", Name: "tok", Status: SoloPass,
+	checks = append(checks, PathCheck{
+		Section: "Ecosystem", Name: "tok", Status: PathPass,
 		Detail: fmt.Sprintf("Embedded token/compress pipeline OK (sample=%d tokens)", sample),
 	})
 
-	report := SoloPathReport{Checks: checks}
+	report := DeveloperPathReport{Checks: checks}
 	report.SecureReady = !anyBlockingFail(checks, "Security")
 	report.ChatReady = setup.HasCredentials && setup.HasModel && pre.Ready
 	report.Ready = report.ChatReady && report.SecureReady
-	report.NextStep = soloNextStep(report, setup)
+	report.NextStep = developerPathNextStep(report, setup)
 	return report
 }
 
-func anyBlockingFail(checks []SoloCheck, section string) bool {
+func anyBlockingFail(checks []PathCheck, section string) bool {
 	for _, c := range checks {
-		if c.Section == section && c.Blocking && c.Status == SoloFail {
+		if c.Section == section && c.Blocking && c.Status == PathFail {
 			return true
 		}
 	}
 	return false
 }
 
-func soloNextStep(r SoloPathReport, setup SetupState) string {
+func developerPathNextStep(r DeveloperPathReport, setup SetupState) string {
 	if r.Ready {
 		return "Ready — run hawk and start chatting"
 	}
@@ -259,9 +259,9 @@ func soloNextStep(r SoloPathReport, setup SetupState) string {
 	return "Run hawk preflight for details, then /config if needed"
 }
 
-// FormatSoloPathReport renders the developer path readiness report for CLI/TUI.
-func FormatSoloPathReport(ctx context.Context) string {
-	r := EvaluateSoloPath(ctx)
+// FormatDeveloperPathReport renders the developer path readiness report for CLI/TUI.
+func FormatDeveloperPathReport(ctx context.Context) string {
+	r := EvaluateDeveloperPath(ctx)
 	var b strings.Builder
 	b.WriteString("Developer path (hawk · eyrie · tok · yaad)\n\n")
 
@@ -283,8 +283,8 @@ func FormatSoloPathReport(ctx context.Context) string {
 			if c.Section != sec {
 				continue
 			}
-			b.WriteString(fmt.Sprintf("  %s %s — %s\n", soloStatusGlyph(c.Status), c.Name, c.Detail))
-			if c.FixHint != "" && c.Status != SoloPass {
+			b.WriteString(fmt.Sprintf("  %s %s — %s\n", pathStatusGlyph(c.Status), c.Name, c.Detail))
+			if c.FixHint != "" && c.Status != PathPass {
 				b.WriteString("      → " + c.FixHint + "\n")
 			}
 		}
@@ -292,17 +292,17 @@ func FormatSoloPathReport(ctx context.Context) string {
 	}
 
 	b.WriteString("Next: " + r.NextStep + "\n")
-	b.WriteString("\nDocs: docs/SECURITY-SOLO.md · hawk doctor · hawk preflight\n")
+	b.WriteString("\nDocs: docs/SECURITY-DEVELOPER.md · hawk doctor · hawk preflight\n")
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func soloStatusGlyph(s SoloCheckStatus) string {
+func pathStatusGlyph(s PathCheckStatus) string {
 	switch s {
-	case SoloPass:
+	case PathPass:
 		return "✓"
-	case SoloWarn:
+	case PathWarn:
 		return "!"
-	case SoloFail:
+	case PathFail:
 		return "✗"
 	default:
 		return "?"

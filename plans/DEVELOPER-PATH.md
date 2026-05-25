@@ -1,7 +1,7 @@
 # Developer path — research & plan
 
 **Audience:** One developer on macOS or Linux running hawk locally (no Vault, no team proxy).  
-**Security reference:** [`docs/SECURITY-SOLO.md`](../docs/SECURITY-SOLO.md)  
+**Security reference:** [`docs/SECURITY-DEVELOPER.md`](../docs/SECURITY-DEVELOPER.md)  
 **Product direction:** [`docs/DEVELOPER-PATH.md`](../docs/DEVELOPER-PATH.md)  
 **Related milestone:** [`MILESTONE-api-key-model-sandbox.md`](MILESTONE-api-key-model-sandbox.md)
 
@@ -9,7 +9,7 @@
 
 Hawk’s core loop (eyrie → tok → tools → yaad) is **production-capable for individual developers**. What was missing was a **single, honest readiness report** that ties setup, security, sandbox, and ecosystem together.
 
-This plan adds **`hawk solo`** and **`/solo`** as the canonical “am I good?” check on the developer path.
+This plan adds **`hawk path`** and **`/path`** as the canonical “am I good?” check on the developer path.
 
 ---
 
@@ -42,9 +42,9 @@ Message flow (see [`docs/ecosystem-message-flow.md`](../docs/ecosystem-message-f
 
 | Gap | Severity | Resolution |
 |-----|----------|------------|
-| No unified readiness command | High | `hawk solo` + `FormatSoloPathReport()` |
+| No unified readiness command | High | `hawk path` + `FormatDeveloperPathReport()` |
 | Setup scattered across doctor/preflight/credentials | Medium | Report sections: Setup · Security · Sandbox · Ecosystem |
-| Milestone verify script not in CI smoke | Medium | `scripts/verify-solo-path.sh` + smoke extension |
+| Milestone verify script not in CI smoke | Medium | `scripts/verify-developer-path.sh` + smoke extension |
 | yaad auto-remember too noisy/heuristic | Low | `memory.ShouldAutoRemember()` |
 | `hawk sandbox` = diff sandbox, not Docker | Confusing | Report names “Docker isolation” explicitly |
 | Conversation DAG | Out of scope | Documented as future; `/fork` stays best-effort |
@@ -55,19 +55,19 @@ Message flow (see [`docs/ecosystem-message-flow.md`](../docs/ecosystem-message-f
 
 ### Phase 1 — Readiness report
 
-1. `internal/config/solo_path.go` — structured checks + `FormatSoloPathReport()`
-2. `hawk solo` — human report; exit 1 if chat not ready
-3. TUI `/solo` — same report in chat
+1. `internal/config/path_path.go` — structured checks + `FormatDeveloperPathReport()`
+2. `hawk path` — human report; exit 1 if chat not ready
+3. TUI `/path` — same report in chat
 
 ### Phase 2 — Verification
 
-1. `scripts/verify-solo-path.sh` — milestone + path tests
-2. Extend `scripts/smoke-hawk.sh` with `hawk solo`
-3. `make solo` target
+1. `scripts/verify-developer-path.sh` — milestone + path tests
+2. Extend `scripts/smoke-hawk.sh` with `hawk path`
+3. `make path` target
 
 ### Phase 3 — Onboarding copy
 
-1. Welcome + setup hints (keychain, `/config`, `/solo`)
+1. Welcome + setup hints (keychain, `/config`, `/path`)
 2. Auto-open `/config` on first run
 
 ---
@@ -75,9 +75,9 @@ Message flow (see [`docs/ecosystem-message-flow.md`](../docs/ecosystem-message-f
 ## Verification matrix
 
 ```bash
-make solo                       # verify-solo-path.sh
+make path                       # verify-developer-path.sh
 ./scripts/smoke-hawk.sh
-hawk solo
+hawk path
 hawk preflight
 hawk doctor
 ```
@@ -88,5 +88,5 @@ hawk doctor
 
 | Date | Change |
 |------|--------|
-| 2026-05-24 | Initial research doc; `hawk solo`, verify script, docs |
-| 2026-05-24 | Rename user-facing copy to “developer path” (not “solo developer”) |
+| 2026-05-24 | Initial research doc; `hawk path`, verify script, docs |
+| 2026-05-24 | Rename user-facing copy to “developer path” (not “individual developer”) |

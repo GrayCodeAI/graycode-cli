@@ -2,7 +2,7 @@
 
 Research compiled 2026-05-03. Sources: GitHub repos, official documentation, and project wikis for 40+ tools and systems.
 
-Focus: What can be **fully automated** so a solo developer never thinks about CI/CD plumbing. Each section covers the tool/technique, its solo-dev value, and what hawk's ecosystem should integrate.
+Focus: What can be **fully automated** so a individual developer never thinks about CI/CD plumbing. Each section covers the tool/technique, its individual-dev value, and what hawk's ecosystem should integrate.
 
 ---
 
@@ -37,13 +37,13 @@ Focus: What can be **fully automated** so a solo developer never thinks about CI
 ### act (local runner)
 - **What**: CLI tool (Go, 70.1k stars) that runs GitHub Actions workflows locally using Docker containers. Reads `.github/workflows/`, determines dependencies, pulls/builds container images, executes actions with matching env vars and filesystem layout. v0.2.88 as of May 2026.
 - **How it works**: Replicates GitHub's hosted runner environment in local Docker containers. Supports VS Code extension ("GitHub Local Actions") for IDE integration.
-- **Solo dev value**: Test workflow changes instantly without push-wait-debug cycles. Catches YAML errors, missing secrets, and broken steps before they consume CI minutes. Eliminates the "commit, push, wait 3 minutes, see failure, repeat" loop.
+- **Individual dev value**: Test workflow changes instantly without push-wait-debug cycles. Catches YAML errors, missing secrets, and broken steps before they consume CI minutes. Eliminates the "commit, push, wait 3 minutes, see failure, repeat" loop.
 - **Limitations**: Not 100% fidelity with GitHub-hosted runners (some actions rely on GitHub-specific networking, OIDC tokens, or larger runner features). Service containers and some matrix strategies can diverge.
 
 ### actionlint
 - **What**: Static analysis tool (3.8k stars) for GitHub Actions workflow files. v1.7.12. Multi-layered analysis: syntax validation against official spec, type checking for `${{ }}` expressions, action metadata verification, embedded script analysis via shellcheck/pyflakes, security scanning for script injection.
 - **Errors caught**: Invalid YAML keys, typos, undefined matrix variables, incorrect action input names, type mismatches, untrusted variable usage in scripts, hard-coded credentials, invalid runner labels.
-- **Solo dev value**: Catches workflow bugs statically before any push. Can run as a pre-commit hook. Validates reusable workflow inputs/outputs/secrets. The script injection detection is particularly valuable -- solo devs often don't think about Actions security.
+- **Individual dev value**: Catches workflow bugs statically before any push. Can run as a pre-commit hook. Validates reusable workflow inputs/outputs/secrets. The script injection detection is particularly valuable -- individual devs often don't think about Actions security.
 
 ### Workflow optimization techniques
 - **Dependency caching**: `actions/cache` with `hashFiles('**/go.sum')` keys. GitHub provides 10GB per repo, 7-day TTL on inactive caches. Use `setup-go`/`setup-node` built-in caching for simplicity.
@@ -69,16 +69,16 @@ A `hawk ci init` or `/ci` skill that:
 - **What**: CI reliability platform solving flaky tests, slow builds, and broken main branches. Used by Brex, Faire, Gusto, Zillow, Google.
 - **Flaky test detection**: Automatically detects, quarantines, and eliminates flaky tests across any language, test runner, or CI provider. Provides AI-powered failure analysis identifying duplicate failures and summarizing root causes. Test status history tracking.
 - **Merge queue**: Anti-flake protection keeps failed PRs in queue while downstream PRs test. Intelligent batching handles up to 100 PRs per run with automatic bisection on failure. Parallel queues for non-overlapping changes.
-- **Solo dev value**: Flaky test detection is the killer feature. Solo devs lack the team bandwidth to manually triage intermittent failures. The AI failure summary means you get "this test is flaky because of timezone-dependent date comparison" instead of digging through logs.
+- **Individual dev value**: Flaky test detection is the killer feature. Individual devs lack the team bandwidth to manually triage intermittent failures. The AI failure summary means you get "this test is flaky because of timezone-dependent date comparison" instead of digging through logs.
 
 ### Codecov
 - **What**: Code coverage platform that uploads coverage reports from CI and tracks coverage trends. GitHub Action supports multi-format uploads, matrix testing, OIDC auth.
 - **Key features**: Coverage diff on PRs (which lines of the diff are untested), historical tracking, badge generation, configurable coverage thresholds.
-- **Solo dev value**: Coverage visibility without configuration overhead. The PR comment showing "this change reduces coverage by 2.3%" is a useful guardrail.
+- **Individual dev value**: Coverage visibility without configuration overhead. The PR comment showing "this change reduces coverage by 2.3%" is a useful guardrail.
 
 ### Codacy
 - **What**: Automated code review platform. Detects static analysis issues across 40+ languages. Categories: code style, security, error proneness, performance, unused code. AI-powered issue explanation and automated fix suggestions. Free for open source.
-- **Solo dev value**: Acts as a second pair of eyes. When you don't have a team for code review, automated quality checks catch things you'd miss. The AI fix suggestions save research time.
+- **Individual dev value**: Acts as a second pair of eyes. When you don't have a team for code review, automated quality checks catch things you'd miss. The AI fix suggestions save research time.
 
 ### Hawk integration opportunity
 A `hawk ci analyze` or `/ci-health` command that:
@@ -95,20 +95,20 @@ A `hawk ci analyze` or `/ci-health` command that:
 ### Kamal (formerly MRSK)
 - **What**: Basecamp's deployment tool (14.2k stars, Ruby). v2.11.0. Deploys containerized web apps to bare metal or cloud VMs via SSH. Uses kamal-proxy for zero-downtime container switching. Framework agnostic (built for Rails, works with anything Docker-compatible).
 - **How it works**: SSHKit-based command execution across multiple servers. Pulls Docker images, runs health checks, switches proxy to new containers, cleans up old ones. Configuration via `deploy.yml`.
-- **Solo dev value**: Deploy to a $5/month Hetzner VPS with the same zero-downtime guarantees that big companies get. No Kubernetes learning curve. `kamal deploy` is the entire deployment workflow.
+- **Individual dev value**: Deploy to a $5/month Hetzner VPS with the same zero-downtime guarantees that big companies get. No Kubernetes learning curve. `kamal deploy` is the entire deployment workflow.
 
 ### Coolify
 - **What**: Open-source, self-hosted PaaS alternative to Heroku/Netlify/Vercel (54.5k stars). v4.0.0 (April 2026). PHP/Blade. Manages servers, applications, and databases via SSH. 280+ one-click services. Supports VPS, bare metal, Raspberry Pi.
-- **Solo dev value**: Self-hosted Heroku for $5/month on a VPS. No vendor lock-in. Configurations stored on your servers. One-click database provisioning. Ideal for solo devs who want PaaS convenience without PaaS pricing.
+- **Individual dev value**: Self-hosted Heroku for $5/month on a VPS. No vendor lock-in. Configurations stored on your servers. One-click database provisioning. Ideal for individual devs who want PaaS convenience without PaaS pricing.
 
 ### CapRover
 - **What**: Easy PaaS (13k+ stars) using Docker Swarm + nginx + Let's Encrypt. CLI and web GUI. One-click apps (MariaDB, MySQL, MongoDB, PostgreSQL). No Docker/nginx expertise required. No vendor lock-in.
 - **Comparison to Heroku**: "Heroku charges 250 USD/month for their 2GB instance, the same server is $5 on Hetzner."
-- **Solo dev value**: Lowest barrier to self-hosted deployment. Web dashboard for monitoring. Automatic SSL. But Docker Swarm is being deprecated in favor of Kubernetes, which is a long-term concern.
+- **Individual dev value**: Lowest barrier to self-hosted deployment. Web dashboard for monitoring. Automatic SSL. But Docker Swarm is being deprecated in favor of Kubernetes, which is a long-term concern.
 
 ### Railway
 - **What**: Cloud deployment platform (2M+ developers). Auto-config detection, instant preview environments per PR, 100Gbps internal networking, geographic distribution, centralized monitoring.
-- **Solo dev value**: "Took about 2 minutes to set up my server with a postgres using postgis." Hard spending limits prevent bill shock. Preview environments per PR without configuration. The managed experience means zero ops overhead.
+- **Individual dev value**: "Took about 2 minutes to set up my server with a postgres using postgis." Hard spending limits prevent bill shock. Preview environments per PR without configuration. The managed experience means zero ops overhead.
 
 ### Hawk integration opportunity
 A `/deploy` skill that:
@@ -127,23 +127,23 @@ A `/deploy` skill that:
 - **State management**: Remote state in S3, GCS, Terraform Cloud, etc. State locking prevents concurrent modifications.
 - **Provider ecosystem**: Thousands of providers for every major cloud and SaaS service.
 - **License note**: BSL 1.1 since August 2023 (not fully open-source). OpenTofu (CNCF fork) provides the Apache 2.0 alternative.
-- **Solo dev value**: Infrastructure becomes reviewable, reproducible code. But HCL has a learning curve, and state management adds operational overhead for simple deployments.
+- **Individual dev value**: Infrastructure becomes reviewable, reproducible code. But HCL has a learning curve, and state management adds operational overhead for simple deployments.
 
 ### Pulumi
 - **What**: IaC using real programming languages (Go, TypeScript, Python, Java, C#, YAML). Supports 120+ cloud providers. v3.x. Diff-based deployments, secrets management via Pulumi ESC, automation API for embedding IaC in applications.
 - **Key difference from Terraform**: Write infrastructure in Go/TypeScript/Python instead of learning HCL. Use loops, functions, classes, package management you already know.
-- **Solo dev value**: If you're a Go developer (like hawk's users), you write infrastructure in Go. No context-switching to a DSL. The automation API means hawk could programmatically generate and apply infrastructure.
+- **Individual dev value**: If you're a Go developer (like hawk's users), you write infrastructure in Go. No context-switching to a DSL. The automation API means hawk could programmatically generate and apply infrastructure.
 
 ### SST (Serverless Stack)
 - **What**: Framework for full-stack apps on your own infrastructure (25.9k stars). v4.12.11. TypeScript/Go. Live development environment, component linking system, console for monitoring. Supports Next.js, Remix, Astro.
-- **Solo dev value**: Deploys full-stack apps (frontend + API + database) as a single unit. The live development mode means changes are reflected in your deployed environment in real-time without redeploy cycles.
+- **Individual dev value**: Deploys full-stack apps (frontend + API + database) as a single unit. The live development mode means changes are reflected in your deployed environment in real-time without redeploy cycles.
 
 ### Hawk integration opportunity
 A `/infra` skill that:
 1. Generates Pulumi programs in Go (matching hawk's language) for common patterns (VPS + database, serverless API, static site + CDN)
 2. For Terraform users: validates `.tf` files, suggests best practices, detects drift
 3. Manages state configuration (S3 backend setup, locking)
-4. Generates the minimal infrastructure needed -- solo devs don't need multi-AZ Kubernetes clusters
+4. Generates the minimal infrastructure needed -- individual devs don't need multi-AZ Kubernetes clusters
 5. Could maintain an "infrastructure manifest" in the repo that hawk understands and can modify
 
 ---
@@ -153,17 +153,17 @@ A `/infra` skill that:
 ### semantic-release
 - **What**: Fully automated version management and release. Determines next version from commit messages (Angular convention: `fix:` = patch, `feat:` = minor, `BREAKING CHANGE:` = major). Generates release notes, publishes packages, creates git tags. 9-step process: verify conditions, get last release, analyze commits, verify release, generate notes, prepare, publish, add channel, succeed/fail hooks.
 - **Plugin ecosystem**: Extensive -- npm publish, GitHub releases, changelogs, Slack notifications, Docker image tagging.
-- **Solo dev value**: Tag a release by merging to main. Everything else is automated. No manual version bumping, no forgetting to update CHANGELOG, no mismatched git tags.
+- **Individual dev value**: Tag a release by merging to main. Everything else is automated. No manual version bumping, no forgetting to update CHANGELOG, no mismatched git tags.
 
 ### release-please (Google)
 - **What**: Google's release automation. Creates "Release PRs" that accumulate conventional commits, auto-update CHANGELOG.md and version files. Merging the Release PR triggers the actual release. Supports monorepos with per-package release tracking.
 - **Key difference from semantic-release**: Release-please uses a PR-based workflow (you review the release before it happens). semantic-release is fully autonomous.
-- **Solo dev value**: The PR-based approach gives you a chance to review what's about to release. Good for projects where you want a human checkpoint.
+- **Individual dev value**: The PR-based approach gives you a chance to review what's about to release. Good for projects where you want a human checkpoint.
 
 ### changesets
 - **What**: Version management for monorepos (8k+ stars). Developers declare "changesets" (release intents) specifying packages and bump types. Flattens multiple changes into single releases per package. Auto-updates changelogs, handles internal dependencies, orchestrates multi-package publishing.
 - **Used by**: Chakra UI, Astro, Biome, SvelteKit.
-- **Solo dev value**: If you maintain multiple packages (e.g., hawk core + hawk-skills + hawk-plugins), changesets coordinates their releases. Overkill for single-package projects.
+- **Individual dev value**: If you maintain multiple packages (e.g., hawk core + hawk-skills + hawk-plugins), changesets coordinates their releases. Overkill for single-package projects.
 
 ### Hawk integration opportunity
 Hawk already uses goreleaser (`.goreleaser.yml` with cross-compilation, Homebrew tap, changelog filtering). The natural extension:
@@ -180,15 +180,15 @@ Hawk already uses goreleaser (`.goreleaser.yml` with cross-compilation, Homebrew
 - **What**: Cross-platform dependency automation (21.4k stars, 5000+ releases). 90+ package managers supported (npm, Python, Java, .NET, Go, Docker, Terraform, Kubernetes manifests). Multi-platform: GitHub, GitLab, Bitbucket, Azure DevOps.
 - **Key features**: Automatic PR generation with changelogs and release notes, merge confidence scores (age, adoption rate, pass rates), grouping related updates, scheduling windows, auto-merge for trusted updates.
 - **vs Dependabot**: Renovate supports far more ecosystems and platforms. More configurable (regex managers for custom file formats). Can group updates. Supports monorepos natively. Renovate's merge confidence feature (showing how many other repos successfully upgraded) is unique.
-- **Solo dev value**: Set-and-forget dependency updates. Configure auto-merge for patch updates of trusted packages. Group minor updates into weekly PRs. The merge confidence data means you can auto-merge updates that 95%+ of other repos have safely adopted.
+- **Individual dev value**: Set-and-forget dependency updates. Configure auto-merge for patch updates of trusted packages. Group minor updates into weekly PRs. The merge confidence data means you can auto-merge updates that 95%+ of other repos have safely adopted.
 
 ### Dependabot
 - **What**: GitHub's built-in dependency update tool. Creates PRs with latest versions. Smart version resolution. Rich PR context (changelogs, release notes, commit history). Security updates (minimum non-vulnerable version). 25+ package managers.
-- **Solo dev value**: Zero-configuration if you use GitHub. Just add `.github/dependabot.yml`. Tight integration with GitHub's security advisories means you get security PRs automatically.
+- **Individual dev value**: Zero-configuration if you use GitHub. Just add `.github/dependabot.yml`. Tight integration with GitHub's security advisories means you get security PRs automatically.
 
 ### Socket.dev
 - **What**: Supply chain security platform. Analyzes package behavior rather than just known CVEs -- detects install scripts, network access, filesystem access, obfuscated code, typosquatting. Proactively identifies suspicious package behavior before CVEs are published.
-- **Solo dev value**: Dependabot/Renovate tell you about known vulnerabilities. Socket tells you "this package runs a post-install script that sends data to an unknown server" -- catching supply chain attacks before they're publicly disclosed. Critical for solo devs who can't manually audit every dependency.
+- **Individual dev value**: Dependabot/Renovate tell you about known vulnerabilities. Socket tells you "this package runs a post-install script that sends data to an unknown server" -- catching supply chain attacks before they're publicly disclosed. Critical for individual devs who can't manually audit every dependency.
 
 ### Hawk integration opportunity
 1. Generate optimal `renovate.json` or `.github/dependabot.yml` based on project analysis (auto-detect package managers, set appropriate grouping and scheduling)
@@ -203,7 +203,7 @@ Hawk already uses goreleaser (`.goreleaser.yml` with cross-compilation, Homebrew
 ### Test impact analysis (TIA)
 - **What**: Technique that maps tests to the code they exercise, then only runs tests affected by the current change. Implementations: Launchable (ML-based test selection), Microsoft's TIA in Azure DevOps, Nx's affected commands, Turborepo's task hashing.
 - **How it works**: Static analysis of import graphs + runtime coverage data. When a file changes, determine which test files transitively depend on it. Run only those tests.
-- **Solo dev value**: As test suites grow, running all tests on every push becomes slow. TIA keeps CI fast without sacrificing correctness. For a Go project like hawk, this means running `go test ./analytics/...` when only `analytics/` changed, not `go test ./...`.
+- **Individual dev value**: As test suites grow, running all tests on every push becomes slow. TIA keeps CI fast without sacrificing correctness. For a Go project like hawk, this means running `go test ./analytics/...` when only `analytics/` changed, not `go test ./...`.
 
 ### Test selection strategies
 - **File-based**: Map source files to test files via naming convention or import analysis.
@@ -213,7 +213,7 @@ Hawk already uses goreleaser (`.goreleaser.yml` with cross-compilation, Homebrew
 
 ### Test reporting in CI
 - **test-reporter**: GitHub Action that parses XML/JSON test results from 15+ frameworks and creates GitHub Check Runs with code annotations at failure points. Supports .NET, Go, Java, JavaScript, Python, Ruby, Swift.
-- **Solo dev value**: Failed tests annotated directly on the PR diff, showing exactly which test failed and where. No log digging.
+- **Individual dev value**: Failed tests annotated directly on the PR diff, showing exactly which test failed and where. No log digging.
 
 ### Hawk integration opportunity
 1. A `/test-impact` command that analyzes the current git diff and determines which Go packages are affected, then generates the minimal `go test` command
@@ -241,8 +241,8 @@ Hawk already uses goreleaser (`.goreleaser.yml` with cross-compilation, Homebrew
   uses: bencherdev/bencher@main  # or custom benchstat comparison
 ```
 
-### Solo dev value
-Performance regressions creep in unnoticed without automated detection. A solo dev doesn't have the bandwidth to manually benchmark every change. Automated regression detection catches "this commit made startup 40% slower because it added an import that initializes eagerly."
+### Individual dev value
+Performance regressions creep in unnoticed without automated detection. A individual dev doesn't have the bandwidth to manually benchmark every change. Automated regression detection catches "this commit made startup 40% slower because it added an import that initializes eagerly."
 
 ### Hawk integration opportunity
 1. A `/bench` command that runs Go benchmarks, stores results in `.hawk/benchmarks/`, and compares against the last stored baseline
@@ -258,19 +258,19 @@ Performance regressions creep in unnoticed without automated detection. A solo d
 ### Trivy (Aqua Security)
 - **What**: Comprehensive security scanner (24k+ stars, Go). v0.70.0. Scans container images, filesystems, git repos, VM images, Kubernetes clusters. Detects OS vulnerabilities, software dependency CVEs, IaC misconfigurations, secrets, and license issues. Generates SBOMs.
 - **Integration**: Direct GitHub Actions integration. Supports multiple output formats (table, JSON, SARIF for GitHub security tab).
-- **Solo dev value**: One scanner for everything -- containers, dependencies, IaC, secrets. The SARIF output integrates with GitHub's security tab for a unified view.
+- **Individual dev value**: One scanner for everything -- containers, dependencies, IaC, secrets. The SARIF output integrates with GitHub's security tab for a unified view.
 
 ### Grype (Anchore)
 - **What**: Vulnerability scanner for container images and filesystems (9k+ stars, Go). Broad package support (Alpine, Debian, Ubuntu, RHEL + Python, Java, JavaScript, Go, Ruby, .NET, PHP, Rust). Risk prioritization using EPSS scores and KEV data. OpenVEX support for filtering false positives. Works with Syft-generated SBOMs.
-- **Solo dev value**: EPSS scores answer "how likely is this vulnerability to be exploited in the wild?" -- critical for solo devs who can't fix every CVE and need to prioritize.
+- **Individual dev value**: EPSS scores answer "how likely is this vulnerability to be exploited in the wild?" -- critical for individual devs who can't fix every CVE and need to prioritize.
 
 ### Snyk
 - **What**: Cloud-native security scanning. CLI scans open-source dependencies, application code, container images, and IaC (Terraform, Kubernetes). `snyk test` for dependencies, `snyk code test` for source code, `snyk container test` for images. Continuous monitoring via `snyk monitor`. Multi-language: JavaScript, Python, Java, Go, Ruby, PHP, C#.
-- **Solo dev value**: The `snyk monitor` feature creates a persistent dependency snapshot that alerts you when new vulnerabilities are discovered, even between deploys. The code scanning catches vulnerabilities in your own code, not just dependencies.
+- **Individual dev value**: The `snyk monitor` feature creates a persistent dependency snapshot that alerts you when new vulnerabilities are discovered, even between deploys. The code scanning catches vulnerabilities in your own code, not just dependencies.
 
 ### govulncheck (Go-specific)
 - **What**: Go's official vulnerability scanner. Checks your code's actual call graph against the Go vulnerability database. Only reports vulnerabilities in functions your code actually calls (not just "this package has a CVE somewhere").
-- **Solo dev value**: Far fewer false positives than generic scanners. If the vulnerable function isn't in your call path, it doesn't report it. Hawk's CI already runs `govulncheck ./...`.
+- **Individual dev value**: Far fewer false positives than generic scanners. If the vulnerable function isn't in your call path, it doesn't report it. Hawk's CI already runs `govulncheck ./...`.
 
 ### Hawk integration opportunity
 1. The existing `security-scan` skill should be extended to orchestrate Trivy/Grype/govulncheck and synthesize results
@@ -299,11 +299,11 @@ Performance regressions creep in unnoticed without automated detection. A solo d
 - **What**: CNCF Sandbox project that analyzes and optimizes container images without Dockerfile changes. Dynamic analysis of runtime requirements. Removes unnecessary components.
 - **Size reductions**: Go apps: up to 448x smaller (700MB to 1.56MB). Python: 33x. Ruby: 32x. Node.js: 30x.
 - **Additional features**: `xray` (reveal contents, reverse-engineer Dockerfile), `lint` (Dockerfile best practices), auto-generates Seccomp and AppArmor security profiles.
-- **Solo dev value**: Run `slim build myapp:latest` and get a dramatically smaller, more secure image with zero Dockerfile changes.
+- **Individual dev value**: Run `slim build myapp:latest` and get a dramatically smaller, more secure image with zero Dockerfile changes.
 
 ### ko (Go-specific)
 - **What**: Container image builder for Go apps (8k+ stars). Runs `go build` locally, packages binary into a container. No Docker required. Multi-platform builds, automatic SBOMs, Kubernetes YAML templating.
-- **Solo dev value**: For Go projects like hawk, `ko build ./` is simpler and faster than writing a Dockerfile. Produces minimal images (just the Go binary + base). Perfect for CI where you want to build and push images without Docker-in-Docker.
+- **Individual dev value**: For Go projects like hawk, `ko build ./` is simpler and faster than writing a Dockerfile. Produces minimal images (just the Go binary + base). Perfect for CI where you want to build and push images without Docker-in-Docker.
 
 ### Hawk integration opportunity
 The existing `docker-deploy` skill is a good foundation. Extensions:
@@ -321,22 +321,22 @@ The existing `docker-deploy` skill is a good foundation. Extensions:
 ### Turborepo (Vercel)
 - **What**: High-performance build system for JS/TS monorepos (30.3k stars). Written in Rust. v2.9.7. Intelligent task caching, task orchestration based on dependency graph, remote caching via Vercel.
 - **Key features**: Content-aware hashing (only rebuilds what changed), parallel task execution, pipeline definition in `turbo.json`, incremental builds.
-- **Solo dev value**: If you maintain a monorepo with multiple packages (e.g., frontend + backend + shared lib), Turborepo dramatically speeds up builds. Remote caching means your CI and local dev share the same cache.
+- **Individual dev value**: If you maintain a monorepo with multiple packages (e.g., frontend + backend + shared lib), Turborepo dramatically speeds up builds. Remote caching means your CI and local dev share the same cache.
 
 ### Nx (Nrwl)
 - **What**: Monorepo platform (25k+ stars). "The Monorepo Platform that amplifies both developers and AI agents." Intelligent caching, distributed task execution, project graph visualization, conformance rules, code ownership definitions.
 - **AI features (2026)**: Self-healing AI agents that fix broken PRs and flaky tests. Repo-aware dependency management with AI assistance.
 - **Performance claims**: Payfit: "360x faster deployments from 5 days to 20 minutes." Hetzner Cloud: "60x faster testing from 20 minutes to seconds."
-- **Solo dev value**: The affected command (`nx affected --target=test`) only runs tests in packages affected by the current change. The computation cache means you never rebuild the same thing twice.
+- **Individual dev value**: The affected command (`nx affected --target=test`) only runs tests in packages affected by the current change. The computation cache means you never rebuild the same thing twice.
 
 ### Bazel (Google)
 - **What**: Build and test system for large-scale projects (24k+ stars). "Fast, Correct -- Choose two." Advanced local and distributed caching, dependency analysis, parallel execution. Supports Java, C++, Go, Android, iOS. Extensible rule system.
-- **Solo dev value**: Overkill for most solo dev projects. Bazel's power shows at massive scale (Google-scale monorepos). The learning curve and configuration overhead don't justify the benefits for small-to-medium projects.
+- **Individual dev value**: Overkill for most individual dev projects. Bazel's power shows at massive scale (Google-scale monorepos). The learning curve and configuration overhead don't justify the benefits for small-to-medium projects.
 - **When to use**: Multi-language monorepo with 100+ packages, need hermetic builds, have existing Bazel ecosystem.
 
 ### Hawk integration opportunity
 For hawk's own build system and for projects hawk helps:
-1. Detect monorepo structure and suggest appropriate tool (Turborepo for JS/TS, Nx for full-stack, skip Bazel for solo devs)
+1. Detect monorepo structure and suggest appropriate tool (Turborepo for JS/TS, Nx for full-stack, skip Bazel for individual devs)
 2. Generate `turbo.json` or `nx.json` configuration based on package structure analysis
 3. CI workflow generation with affected-only test runs
 4. For Go specifically: leverage Go's built-in workspace support (`go.work`) which hawk already uses
@@ -348,19 +348,19 @@ For hawk's own build system and for projects hawk helps:
 ### Vercel Previews
 - **What**: Automatic preview deployments on every PR push. Three default environments: Local, Preview, Production. Each deployment gets a unique URL (branch-specific and commit-specific). Custom environments on Pro/Enterprise (staging, QA). Environment-specific variables and secrets.
 - **How it works**: Push to non-production branch or create PR -> automatic preview deployment -> URL posted as PR comment. `vercel deploy` for CLI, `vercel --prod` for production.
-- **Solo dev value**: See your changes live before merging. Share preview URLs with beta testers or clients. No infrastructure to manage.
+- **Individual dev value**: See your changes live before merging. Share preview URLs with beta testers or clients. No infrastructure to manage.
 
 ### Railway
 - **What**: "Every pull request gets its own preview. No surprises after merge." Auto-config detection, 100Gbps internal networking, centralized monitoring.
-- **Solo dev value**: Full-stack preview environments (app + database) per PR. Hard spending limits prevent surprises. 2-minute setup for server + database.
+- **Individual dev value**: Full-stack preview environments (app + database) per PR. Hard spending limits prevent surprises. 2-minute setup for server + database.
 
 ### Netlify
 - **What**: Similar to Vercel for static/JAMstack sites. Deploy Previews on every PR. Branch deploys for staging environments. Split testing (A/B) at the CDN level.
-- **Solo dev value**: Free tier is generous for static sites. PR preview deploys are automatic with zero configuration.
+- **Individual dev value**: Free tier is generous for static sites. PR preview deploys are automatic with zero configuration.
 
 ### Self-hosted alternatives
 - **Coolify**: Self-hosted previews on your own infrastructure. Configure preview environments per branch.
-- **Kubernetes-based**: Namespace-per-PR using tools like `vcluster` or `Argo CD ApplicationSets`. Overkill for solo devs.
+- **Kubernetes-based**: Namespace-per-PR using tools like `vcluster` or `Argo CD ApplicationSets`. Overkill for individual devs.
 
 ### Hawk integration opportunity
 1. Detect project type and recommend preview environment solution (Vercel for Next.js/static, Railway for full-stack, Coolify for self-hosted)
@@ -377,14 +377,14 @@ For hawk's own build system and for projects hawk helps:
 - **Blue/green deployment**: Run two identical environments. Switch traffic from blue (current) to green (new) atomically. Roll back by switching back.
 - **Progressive delivery**: Combine feature flags with deployment strategies. Deploy code to all servers but only enable features for a subset of users.
 
-### Solo dev tools
+### Individual dev tools
 - **Kamal**: Built-in zero-downtime deploys via kamal-proxy. Blue/green by default (new container starts, health check passes, proxy switches).
 - **Cloudflare Workers**: Gradual rollout percentages built into the platform. No infrastructure management.
 - **Feature flags (see section 16)**: Decouple deployment from release. Deploy code everywhere, enable features progressively.
 - **Railway/Vercel**: Canary deployments via preview environments + DNS-level traffic splitting.
 
-### Solo dev value
-Solo devs rarely need sophisticated canary deployments because they typically don't have the traffic to make statistical analysis meaningful. The pragmatic approach: deploy with feature flags, enable for yourself first, then enable for everyone. Kamal's built-in zero-downtime switching covers 95% of solo dev needs.
+### Individual dev value
+Individual devs rarely need sophisticated canary deployments because they typically don't have the traffic to make statistical analysis meaningful. The pragmatic approach: deploy with feature flags, enable for yourself first, then enable for everyone. Kamal's built-in zero-downtime switching covers 95% of individual dev needs.
 
 ### Hawk integration opportunity
 1. For projects using Kamal: validate deployment configuration, generate health check endpoints
@@ -409,8 +409,8 @@ Solo devs rarely need sophisticated canary deployments because they typically do
 - **GitHub Actions**: Re-run a previous successful deployment workflow.
 - **Coolify**: One-click rollback in the web UI.
 
-### Solo dev value
-Without automated rollback, a solo dev's deploy-then-sleep pattern is risky. The minimum viable rollback: deploy behind a health check, auto-revert if the health check fails within 60 seconds. This catches the "deployed broken code at midnight" scenario.
+### Individual dev value
+Without automated rollback, an individual developer's deploy-then-sleep pattern is risky. The minimum viable rollback: deploy behind a health check, auto-revert if the health check fails within 60 seconds. This catches the "deployed broken code at midnight" scenario.
 
 ### Hawk integration opportunity
 1. Generate health check endpoints for web applications (Go: `/healthz` handler, Node: Express middleware)
@@ -426,18 +426,18 @@ Without automated rollback, a solo dev's deploy-then-sleep pattern is risky. The
 - **What**: Online schema migration for MySQL. Triggerless approach -- uses binary log stream instead of triggers. Creates ghost table, copies data incrementally, applies ongoing changes from binlog.
 - **Key features**: True pause (stops writes when throttled), dynamic reconfiguration during migration, testability (run on replica first), postponable cut-over, external hooks.
 - **vs pt-online-schema-change**: gh-ost eliminates triggers (source of many limitations and risks). Better control over the migration process, including genuine suspension.
-- **Solo dev value**: If you have a MySQL database with live traffic, schema changes without downtime. Run on replica first to build confidence.
+- **Individual dev value**: If you have a MySQL database with live traffic, schema changes without downtime. Run on replica first to build confidence.
 
 ### pgroll (xata.io)
 - **What**: PostgreSQL zero-downtime migrations (Go). Expand/contract workflow: creates virtual schemas using views, performs additive changes, synchronizes writes between old and new columns via triggers. Instant rollback. PostgreSQL 14.0+, any service (RDS, Aurora, etc.).
 - **How it works**: Expand phase creates new columns/tables alongside old ones with bidirectional triggers. Contract phase removes old schema when no clients use it. Views provide version isolation.
-- **Solo dev value**: Zero-downtime Postgres schema changes with instant rollback. Single Go binary, no external dependencies. If a migration goes wrong, roll back immediately without data loss.
+- **Individual dev value**: Zero-downtime Postgres schema changes with instant rollback. Single Go binary, no external dependencies. If a migration goes wrong, roll back immediately without data loss.
 
 ### Atlas (Ariga)
 - **What**: Language-agnostic database schema management (6k+ stars, Go). Two workflows: declarative (Terraform-like: define desired state, Atlas plans the migration) and versioned (define desired schema, Atlas generates migration files).
 - **Key features**: 50+ safety analyzers (destructive changes, data-dependent modifications, table locks, backward-incompatible alterations), schema testing, security-as-code (roles, permissions, RLS), 16 ORM integrations, 14+ databases (PostgreSQL, MySQL, SQLite, ClickHouse, Snowflake, etc.).
 - **CI/CD integration**: GitHub Actions, GitLab CI, Kubernetes, Terraform.
-- **Solo dev value**: The declarative workflow is transformative -- describe what your schema should look like, Atlas figures out how to get there. The 50+ safety analyzers catch "this ALTER TABLE will lock the table for 30 minutes" before you run it in production.
+- **Individual dev value**: The declarative workflow is transformative -- describe what your schema should look like, Atlas figures out how to get there. The 50+ safety analyzers catch "this ALTER TABLE will lock the table for 30 minutes" before you run it in production.
 
 ### Hawk integration opportunity
 This is a high-value integration area:
@@ -454,19 +454,19 @@ This is a high-value integration area:
 ### Flipt (GitOps-native)
 - **What**: Open-source feature management (4k+ stars, Go). Git-native: flags stored in Git repositories alongside code. Single binary, no external database. Real-time updates via SSE. GPG commit signing, multiple auth methods.
 - **Key difference**: Flags deploy alongside code via existing CI/CD. No separate feature flag infrastructure. Flags are version-controlled with full Git history.
-- **Solo dev value**: The GitOps approach means no external service to manage. Flags are just files in your repo. `git blame` on a flag config tells you who changed it and when.
+- **Individual dev value**: The GitOps approach means no external service to manage. Flags are just files in your repo. `git blame` on a flag config tells you who changed it and when.
 
 ### Unleash
 - **What**: Open-source feature flag platform (12k+ stars). Activation strategies for targeted releases. 12+ official SDKs. Canary releases, A/B testing, kill switches, multi-environment support. Self-hostable via Docker.
-- **Solo dev value**: More feature-rich than Flipt but requires running a server. The kill switch feature ("disable this feature instantly in production") is valuable for solo devs who deploy and then discover issues.
+- **Individual dev value**: More feature-rich than Flipt but requires running a server. The kill switch feature ("disable this feature instantly in production") is valuable for individual devs who deploy and then discover issues.
 
 ### OpenFeature/flagd
 - **What**: Vendor-neutral standard for feature flag evaluation (CNCF). flagd is the reference implementation. Supports multiple data sources, real-time updates, OpenTelemetry integration.
-- **Solo dev value**: If you start with flagd and later want to switch to LaunchDarkly or Flipt, the OpenFeature SDK abstraction means zero code changes. Good insurance against vendor lock-in.
+- **Individual dev value**: If you start with flagd and later want to switch to LaunchDarkly or Flipt, the OpenFeature SDK abstraction means zero code changes. Good insurance against vendor lock-in.
 
 ### LaunchDarkly
 - **What**: Enterprise feature management (commercial). Trillions of flags/day. Phased releases, attribute-based targeting, maintenance windows. SDKs for Node.js, browser, React Native, edge platforms.
-- **Solo dev value**: Expensive for solo devs. The free tier is limited. Better suited for teams. Solo devs should start with Flipt or Unleash.
+- **Individual dev value**: Expensive for individual devs. The free tier is limited. Better suited for teams. Individual devs should start with Flipt or Unleash.
 
 ### Hawk integration opportunity
 1. A `/flags` skill that sets up Flipt (GitOps approach, matching hawk's Git-centric workflow) with initial configuration
@@ -489,7 +489,7 @@ Hawk's `.goreleaser.yml` already has changelog generation with commit filtering 
 
 ### git-cliff
 - **What**: Highly configurable changelog generator (Go/Rust). Custom templates, regex-based commit parsing, conventional commits support, monorepo support, remote integration (fetch GitHub PR titles/labels). Can generate changelogs for any commit range.
-- **Solo dev value**: More flexibility than goreleaser's built-in changelog. Template system means you can match any changelog format.
+- **Individual dev value**: More flexibility than goreleaser's built-in changelog. Template system means you can match any changelog format.
 
 ### Hawk's existing changelog skill
 The `hawk-skills/changelog/SKILL.md` already defines a workflow: identify commit range, categorize by conventional commit prefix, rewrite technical messages into user-friendly language, format as markdown. This is the right approach -- the AI-powered rewriting transforms "fix: handle nil ptr in session.Resume when WAL corrupt" into "Fixed crash when resuming sessions with corrupted data."
@@ -507,15 +507,15 @@ The `hawk-skills/changelog/SKILL.md` already defines a workflow: identify commit
 ### GoReleaser
 - **What**: Release automation for Go (15.8k stars). v2.15.4. Cross-platform compilation, multiple packaging formats, CI integration. Also supports Rust, Zig, TypeScript, Python. 593 releases.
 - **Hawk's current usage**: Cross-compilation (linux/darwin/windows x amd64/arm64), tar.gz/zip archives, checksums, Homebrew tap, changelog generation. This is a solid configuration.
-- **Solo dev value**: One command (`goreleaser release`) produces binaries for all platforms, publishes to GitHub Releases, updates Homebrew, generates checksums. The entire release pipeline in a single tool.
+- **Individual dev value**: One command (`goreleaser release`) produces binaries for all platforms, publishes to GitHub Releases, updates Homebrew, generates checksums. The entire release pipeline in a single tool.
 
 ### ko (Go container images)
 - **What**: Builds Go container images without Docker. `go build` locally, package into minimal container. Multi-platform, automatic SBOMs, Kubernetes YAML templating.
-- **Solo dev value**: For Go projects that need container images, ko is simpler and faster than Dockerfile-based builds. No Docker-in-Docker in CI. Produces distroless-style minimal images.
+- **Individual dev value**: For Go projects that need container images, ko is simpler and faster than Dockerfile-based builds. No Docker-in-Docker in CI. Produces distroless-style minimal images.
 
 ### crane (container registry tool)
 - **What**: Google's CLI for container registry operations. List tags, tag images, inspect remote images, manage metadata. SLSA provenance verification.
-- **Solo dev value**: Useful for CI scripts that need to check if an image exists, copy images between registries, or inspect deployed images without pulling them.
+- **Individual dev value**: Useful for CI scripts that need to check if an image exists, copy images between registries, or inspect deployed images without pulling them.
 
 ### Hawk integration opportunity
 Hawk already has a strong goreleaser setup. Extensions:
@@ -541,8 +541,8 @@ Hawk already has a strong goreleaser setup. Extensions:
 - **Ephemeral runners**: Use `--ephemeral` flag for security (fresh environment per job) while still benefiting from pre-installed tools via custom images.
 - **Runner groups**: Separate runners for different workloads (fast for lint, beefy for builds).
 
-### Solo dev considerations
-Self-hosted runners make sense when: (1) CI minutes cost more than the hardware, (2) you need specific hardware (GPU, ARM), or (3) builds need large caches. For most solo devs, GitHub's standard runners with proper caching are sufficient. The operational overhead of maintaining self-hosted runners typically isn't worth it.
+### Individual dev considerations
+Self-hosted runners make sense when: (1) CI minutes cost more than the hardware, (2) you need specific hardware (GPU, ARM), or (3) builds need large caches. For most individual devs, GitHub's standard runners with proper caching are sufficient. The operational overhead of maintaining self-hosted runners typically isn't worth it.
 
 ### Hawk integration opportunity
 1. CI cost analysis: estimate monthly cost of current CI usage vs self-hosted alternative
@@ -575,7 +575,7 @@ Self-hosted runners make sense when: (1) CI minutes cost more than the hardware,
 - **AWS spot instances**: 60-90% cheaper than on-demand. Risk of interruption. Good for parallelizable, idempotent CI jobs.
 - **GCP preemptible VMs**: Similar savings. 24-hour maximum lifetime.
 - **Self-hosted on spot**: Run self-hosted GitHub runners on spot instances with auto-scaling group.
-- **Solo dev relevance**: Only relevant if you're running self-hosted. For GitHub-hosted, the cost optimization is in caching and avoiding unnecessary runs.
+- **Individual dev relevance**: Only relevant if you're running self-hosted. For GitHub-hosted, the cost optimization is in caching and avoiding unnecessary runs.
 
 ### Hawk integration opportunity
 This is a high-value area for hawk's analytics/cost-optimization features:
@@ -592,13 +592,13 @@ This is a high-value area for hawk's analytics/cost-optimization features:
 
 ## 21. Hawk Integration Priorities
 
-Based on the research, here are the highest-impact integrations for hawk's solo-developer audience, ordered by value-to-effort ratio:
+Based on the research, here are the highest-impact integrations for hawk's individual-developer audience, ordered by value-to-effort ratio:
 
 ### Tier 1: Immediate high value (low effort, high automation)
 
 | Integration | Why | Effort |
 |---|---|---|
-| **CI workflow generator** (`/ci init`) | Scan project, generate optimized GitHub Actions with caching, matrix builds, path filters, concurrency groups. Most solo devs have suboptimal CI. | Medium |
+| **CI workflow generator** (`/ci init`) | Scan project, generate optimized GitHub Actions with caching, matrix builds, path filters, concurrency groups. Most individual devs have suboptimal CI. | Medium |
 | **actionlint pre-commit hook** | Catch workflow errors before push. Zero ongoing cost. | Low |
 | **Dependency audit** (`/deps audit`) | Run govulncheck + check dependency health. Already partially in CI. | Low |
 | **Test impact analysis** (`/test-impact`) | `go test` only affected packages based on git diff. Saves CI time immediately. | Medium |
@@ -630,12 +630,12 @@ Based on the research, here are the highest-impact integrations for hawk's solo-
 |---|---|---|
 | **Monorepo tools setup** | Only relevant for monorepo projects. Detect and configure Turborepo/Nx. | Medium |
 | **Self-hosted runner setup** | Only relevant when CI costs exceed hardware costs. | Medium |
-| **Canary deployments** | Rarely needed for solo dev traffic levels. | High |
+| **Canary deployments** | Rarely needed for individual dev traffic levels. | High |
 | **Binary signing** | Cosign/sigstore for supply chain security. Important for widely-distributed tools. | Medium |
 
 ### The "zero-thought CI/CD" vision
 
-The ultimate goal for hawk is a single command (or automatic behavior) that gives a solo developer production-grade CI/CD without thinking about it:
+The ultimate goal for hawk is a single command (or automatic behavior) that gives a individual developer production-grade CI/CD without thinking about it:
 
 1. **On project init** (`hawk init`): Detect language, frameworks, dependencies. Generate CI workflow, Dockerfile, deployment config, security scanning, dependency automation. Everything works out of the box.
 
@@ -647,7 +647,7 @@ The ultimate goal for hawk is a single command (or automatic behavior) that give
 
 5. **When things break**: Automated rollback on health check failure, flaky test quarantine, clear error attribution ("this deployment failed because migration X locks table Y for >30 seconds").
 
-The key insight: **hawk should own the entire lifecycle, not just code generation**. A coding agent that can also manage CI/CD, deployments, and infrastructure turns a solo developer into a one-person engineering organization with the operational maturity of a well-staffed team.
+The key insight: **hawk should own the entire lifecycle, not just code generation**. A coding agent that can also manage CI/CD, deployments, and infrastructure turns a individual developer into a one-person engineering organization with the operational maturity of a well-staffed team.
 
 ### Existing hawk infrastructure to build on
 

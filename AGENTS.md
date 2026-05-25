@@ -5,11 +5,11 @@
 hawk targets **individual developers** on their own machines — not teams or enterprises (yet). When choosing defaults, docs, and new features, optimize for:
 
 - One person, local config (`~/.hawk/`), OS keychain credentials
-- `hawk solo` / `/config` as the onboarding path
+- `hawk path` / `/config` as the onboarding path
 - Local yaad memory, optional Docker isolation
 - Defer: SSO, org admin, shared memory, fleet sandbox
 
-See `docs/DEVELOPER-PATH.md`, `docs/SECURITY-SOLO.md`, and `plans/DEVELOPER-PATH.md`.
+See `docs/DEVELOPER-PATH.md`, `docs/SECURITY-DEVELOPER.md`, and `plans/DEVELOPER-PATH.md`.
 
 ## Architecture
 
@@ -187,7 +187,7 @@ Active branch: **`feature/secure-credentials-sandbox`** (hawk + external eyrie).
 | Catalog empty / refresh hints | `internal/config/catalog_health.go`, `catalog_startup.go` |
 | No API keys in `provider.json` | eyrie `SanitizeDeploymentConfigForDisk`, hawk `MigrateProviderSecrets` |
 | Verification tests | `internal/config/milestone_verify_test.go`, `./scripts/verify-milestone.sh` |
-| Developer path readiness | `hawk solo`, `/solo`, `internal/config/solo_path.go`, `./scripts/verify-solo-path.sh` |
+| Developer path readiness | `hawk path`, `/path`, `internal/config/path_path.go`, `./scripts/verify-developer-path.sh` |
 | Plan + phase status | `plans/MILESTONE-api-key-model-sandbox.md`, `plans/DEVELOPER-PATH.md` |
 
 **Not in this milestone:** conversation DAG as source of truth.
