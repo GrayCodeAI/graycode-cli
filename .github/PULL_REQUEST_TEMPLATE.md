@@ -46,4 +46,4 @@ $ make lint
 - [ ] Public APIs have godoc comments and runnable examples where helpful
 - [ ] `CHANGELOG.md` updated under `## [Unreleased]` if user-visible
 - [ ] No secrets, tokens, or PII added to the repo
-- [ ] No `Co-authored-by:` trailers (this is solo-developer work)
+- [ ] No `Co-authored-by:` trailers (this is individual-developer work)

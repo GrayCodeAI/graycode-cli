@@ -647,7 +647,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if setup := hawkconfig.EvaluateSetupCached(context.Background()); setup.NeedsSetup {
 				hint := setup.Hint
 				if hint == "" {
-					hint = "Complete setup in /config (keychain + model). Run /solo to check readiness."
+					hint = "Complete setup in /config (keychain + model). Run /path to check readiness."
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: hint})
 				m.viewDirty = true

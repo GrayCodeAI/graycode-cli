@@ -35,7 +35,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
 .PHONY: all bench build ci clean cover fmt help install lint lint-fix \
-        release security smoke solo test test-10x test-race tidy version vet
+        release security smoke path test test-10x test-race tidy version vet
 
 # ---------------------------------------------------------------------------
 # Default target.
@@ -113,8 +113,8 @@ ci: tidy fmt vet lint test-race security ## Run everything CI runs.
 smoke: ## Quick build + doctor + ecosystem verification.
 	./scripts/smoke-hawk.sh
 
-solo: ## Verify developer path (setup, security, milestone tests).
-	./scripts/verify-solo-path.sh
+path: ## Verify developer path (setup, security, milestone tests).
+	./scripts/verify-developer-path.sh
 
 # ---------------------------------------------------------------------------
 # Misc.

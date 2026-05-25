@@ -32,7 +32,7 @@
 
 hawk is an AI-powered coding agent that lives in your terminal. It reads your codebase, writes and edits files, runs tests, and manages git — all through natural language. Unlike IDE-bound tools, hawk works over SSH, in containers, and on any machine with a shell.
 
-**Developer path:** one machine, keychain credentials, local memory. Run `hawk solo` to check readiness. See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md).
+**Developer path:** one machine, keychain credentials, local memory. Run `hawk path` to check readiness. See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md).
 
 - **Model-agnostic** — works with Claude, GPT-4, Gemini, DeepSeek, Ollama, and 75+ models through [eyrie](https://github.com/GrayCodeAI/eyrie)
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
@@ -49,10 +49,10 @@ brew install GrayCodeAI/tap/hawk
 hawk
 
 # Verify readiness
-hawk solo
+hawk path
 ```
 
-See [docs/SECURITY-SOLO.md](docs/SECURITY-SOLO.md) for the credential model. Do not put API keys in shell env or `.env` for hawk.
+See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential model. Do not put API keys in shell env or `.env` for hawk.
 
 Or install via other methods:
 
@@ -138,21 +138,21 @@ hawk exec --agent reviewer "review last commit" # Custom persona
 ### Diagnostics & ecosystem
 
 ```bash
-hawk solo                   # Developer path readiness (setup + security + sandbox)
+hawk path                   # Developer path readiness (setup + security + sandbox)
 hawk doctor                  # Full health report (eyrie + yaad + tok panel)
 hawk ecosystem               # Ecosystem panel only
 hawk yaad                    # Persistent memory graph
 hawk yaad search <query>     # Search yaad memories
 hawk preflight               # Quick ready-to-chat check
-make solo                    # Developer path verification
+make path                    # Developer path verification
 make smoke                   # Build + quick verification script
 ```
 
-See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md) and [docs/SECURITY-SOLO.md](docs/SECURITY-SOLO.md).
+See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md) and [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
 
 See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
 
-In the TUI: `/solo`, `/ecosystem`, `/yaad`, `/yaad search <query>`, `/memory` (AGENTS.md).
+In the TUI: `/path`, `/ecosystem`, `/yaad`, `/yaad search <query>`, `/memory` (AGENTS.md).
 
 ### Daemon Mode
 

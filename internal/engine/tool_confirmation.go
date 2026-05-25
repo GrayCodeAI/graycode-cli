@@ -13,7 +13,7 @@ const (
 )
 
 // ToolConfirmationRouter decides whether a tool call needs user approval
-// based on the tool name and arguments. Designed for solo devs who want
+// based on the tool name and arguments. Designed for individual devs who want
 // fast iteration without constant y/n prompts for safe operations.
 type ToolConfirmationRouter struct {
 	// Override allows per-tool risk overrides (tool name → risk level)
