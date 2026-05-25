@@ -42,7 +42,7 @@ func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	case !hasCreds:
 		st.Hint = "Get started: /config → paste API key (stored in OS keychain, not .env)"
 	case !hasModel:
-		st.Hint = "Almost ready: /config → pick a model, then /solo to verify"
+		st.Hint = "Almost ready: /config → pick a model, then /path to verify"
 	}
 	return st
 }

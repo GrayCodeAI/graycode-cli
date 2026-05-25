@@ -1,4 +1,4 @@
-# GrayCode AI Ecosystem: World-Class Solo Developer Platform
+# GrayCode AI Ecosystem: World-Class Individual Developer Platform
 
 ## Research Summary
 
@@ -236,7 +236,7 @@ SESSION END
   |-- eyrie: log cost per task for analytics
 ```
 
-### The Solo Developer Multiplier Stack
+### The Individual Developer Multiplier Stack
 
 ```
 WRITE      hawk (AI agent) + tok (compression) ............ 55% speed boost
@@ -325,4 +325,4 @@ LEARN      hawk self-improvement loop ..................... Gets better every se
 | LLM test gen: 80% on simple, <2% on real code | EASE 2024 study | Generate-filter-validate pipeline mandatory |
 | Tuned BM25 beats naive embeddings for code | Sourcegraph (dropped embeddings) | Invest in tokenization before adding vectors |
 | Agent self-improvement needs no weight updates | Reflexion, ExpeL, Voyager | Prompt optimization + memory accumulation suffices |
-| Solo dev productivity = automation density | Laravel/Rails ecosystem study | % of non-creative work handled by machines |
+| Individual dev productivity = automation density | Laravel/Rails ecosystem study | % of non-creative work handled by machines |

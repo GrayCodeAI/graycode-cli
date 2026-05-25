@@ -722,13 +722,13 @@ When a message contains image content blocks, the router should prefer vision-ca
 **P1c. Image input pipeline.**
 Connect `file_read_media.go`'s image reading to the message protocol. When the Read tool encounters an image, it should return an image content block (not just base64 text). This enables "read this screenshot and explain what you see."
 
-### Priority 2: High-value solo developer workflows
+### Priority 2: High-value individual developer workflows
 
 **P2a. Screenshot-to-code command (`/mockup` or `/screenshot-to-code`).**
-Accept an image path, detect the project's framework, generate code. This is the single most requested multi-modal feature for solo developers who often start from a design screenshot.
+Accept an image path, detect the project's framework, generate code. This is the single most requested multi-modal feature for individual developers who often start from a design screenshot.
 
 **P2b. Error screenshot diagnosis.**
-Accept a screenshot of an error (terminal, browser, IDE) and automatically extract + diagnose the issue. Solo developers frequently screenshot errors to share in Slack/Discord -- the same workflow should work with their agent.
+Accept a screenshot of an error (terminal, browser, IDE) and automatically extract + diagnose the issue. Individual developers frequently screenshot errors to share in Slack/Discord -- the same workflow should work with their agent.
 
 **P2c. PDF/document understanding upgrade.**
 Replace pdftotext fallback with vision-model PDF reading. Send PDF pages as images to the vision model. This handles scanned documents, complex layouts, and diagrams that pdftotext misses.

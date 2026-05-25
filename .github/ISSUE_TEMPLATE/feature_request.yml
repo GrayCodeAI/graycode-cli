@@ -7,9 +7,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for proposing a feature. hawk is built for **solo developers**, so
-        we evaluate every request against the question: _"would a single
-        developer working alone benefit from this?"_
+        Thanks for proposing a feature. hawk is built **for developers first**
+        (one machine, local config, keychain credentials) — teams and enterprise
+        come later. We evaluate every request against: _"would a single
+        developer on their own machine benefit from this?"_
 
         Before submitting:
         - Search [existing issues](https://github.com/GrayCodeAI/hawk/issues) to avoid duplicates.
@@ -53,8 +54,8 @@ body:
   - type: checkboxes
     id: principles
     attributes:
-      label: Solo-developer fit
-      description: hawk avoids enterprise scope. Confirm this feature respects that.
+      label: Developer fit
+      description: hawk avoids enterprise scope for now. Confirm this feature respects that.
       options:
         - label: Works with zero configuration (sensible defaults).
         - label: Works offline / does not require a cloud account.

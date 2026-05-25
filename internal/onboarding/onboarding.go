@@ -68,7 +68,7 @@ func Welcome(version string) {
 	fmt.Println()
 	fmt.Println(center(bold+"Quick start:"+reset, 12))
 	fmt.Println(center(hawkC+"hawk"+reset+"                            interactive REPL (/config on first run)", 58))
-	fmt.Println(center(hawkC+"hawk solo"+reset+"                       check readiness", 49))
+	fmt.Println(center(hawkC+"hawk path"+reset+"                       check readiness", 49))
 	fmt.Println(center(hawkC+"hawk"+reset+" -p \"explain this repo\"     one-shot mode", 49))
 	fmt.Println(center(hawkC+"hawk"+reset+" -c                          continue last session", 54))
 	fmt.Println(center(hawkC+"/config"+reset+"                         API key (keychain) + model", 54))

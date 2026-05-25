@@ -2,7 +2,7 @@
 
 Research compiled 2026-05-03. Sources: GitHub repos, API documentation, arXiv papers, and project wikis for 30+ systems.
 
-Goal: determine what hawk should provide so a solo developer can debug issues as effectively as a team with a dedicated SRE.
+Goal: determine what hawk should provide so a individual developer can debug issues as effectively as a team with a dedicated SRE.
 
 ---
 
@@ -26,9 +26,9 @@ Goal: determine what hawk should provide so a solo developer can debug issues as
 16. [Stack Trace Analysis and Deduplication](#16-stack-trace-analysis-and-deduplication)
 17. [Crash Reporting -- Sentry and Bugsnag Patterns](#17-crash-reporting----sentry-and-bugsnag-patterns)
 18. [Real User Monitoring Patterns](#18-real-user-monitoring-patterns)
-19. [Synthetic Monitoring for Solo Developers](#19-synthetic-monitoring-for-solo-developers)
+19. [Synthetic Monitoring for Individual Developers](#19-synthetic-monitoring-for-individual-developers)
 20. [Automated Performance Regression Detection](#20-automated-performance-regression-detection)
-21. [Hawk Integration Strategy -- The Solo SRE](#21-hawk-integration-strategy----the-solo-sre)
+21. [Hawk Integration Strategy -- The Individual SRE](#21-hawk-integration-strategy----the-individual-sre)
 
 ---
 
@@ -78,7 +78,7 @@ Hawk already has `trace/otel_sdk.go` with a build-tag-gated OTel SDK integration
 
 1. **Wire OTel spans into SessionTrace**: The built-in `SessionTrace` tree and the OTel span tree should be a single system. When the `otel` build tag is active, `SessionTrace.StartSpan` should create real OTel spans that propagate context. When inactive, the existing lightweight spans suffice.
 2. **Instrument all agent operations**: Every LLM call (`api.chat`), tool execution (`tool.Bash`, `tool.Edit`), compaction, and permission check should be a span. The span helpers in `trace/spans.go` already cover the main ones -- extend to all 40 tools.
-3. **Export to local file by default**: For a solo dev, running a Collector is overkill. Export OTLP JSON to `~/.hawk/traces/` so the agent can read its own traces for analysis. Add a `hawk traces` subcommand that renders them.
+3. **Export to local file by default**: For an individual developer, running a Collector is overkill. Export OTLP JSON to `~/.hawk/traces/` so the agent can read its own traces for analysis. Add a `hawk traces` subcommand that renders them.
 4. **Metrics for agent health**: Track counters (tool_calls_total, llm_errors_total, cache_hits), gauges (active_goroutines, pending_tool_calls), and histograms (llm_latency, tool_duration) using the existing `metrics/` package, with optional OTel export.
 5. **Log correlation**: The existing `logger/` package should attach trace IDs and span IDs to every log line when tracing is active.
 
@@ -110,7 +110,7 @@ Hawk already has `trace/otel_sdk.go` with a build-tag-gated OTel SDK integration
 
 ### How hawk should integrate
 
-For a solo developer's coding agent, neither Jaeger nor Tempo should be a hard dependency. Instead:
+For a individual developer's coding agent, neither Jaeger nor Tempo should be a hard dependency. Instead:
 
 1. **OTLP export compatibility**: Hawk's OTel integration already exports to any OTLP endpoint. If a developer runs Jaeger or Tempo locally (e.g., via Docker), hawk traces appear automatically.
 2. **Built-in trace viewer**: For developers who do not run a backend, hawk should render trace trees in the terminal. The `SessionTrace.FormatTree()` method already does this -- extend it with color coding, filtering by duration/status, and span detail expansion.
@@ -191,8 +191,8 @@ Axiom is a data platform for event and telemetry data at scale, serving 30k+ org
 
 ### How it helps debugging
 
-- The extreme compression model matters for a solo dev: you can store months of agent telemetry locally without disk concerns.
-- Anomaly-driven alerts are more useful than threshold alerts for a solo dev who cannot manually set thresholds for every metric.
+- The extreme compression model matters for an individual developer: you can store months of agent telemetry locally without disk concerns.
+- Anomaly-driven alerts are more useful than threshold alerts for a individual dev who cannot manually set thresholds for every metric.
 
 ### How hawk should integrate
 
@@ -265,7 +265,7 @@ The most relevant paper for hawk's debugging capabilities.
 
 ### How it helps debugging
 
-AI-assisted debugging transforms the solo dev experience by:
+AI-assisted debugging transforms the individual dev experience by:
 - Automating the hypothesis-test-conclude cycle that developers do manually
 - Providing explanations alongside fixes (the AutoSD insight)
 - Scaling to multi-file, multi-system problems that would take a single developer hours
@@ -495,7 +495,7 @@ Hawk's `profile/profile.go` already provides CPU, memory, and goroutine profilin
 
 1. **`/profile` command in REPL**: `/profile cpu start` begins CPU profiling. `/profile cpu stop` stops and analyzes. The agent reads the pprof output and explains: "Top CPU consumers: (1) regexp.Compile in tool/grep.go:142 -- 23% (consider pre-compiling), (2) json.Marshal in session/save.go:89 -- 15% (consider streaming encoder)."
 2. **Automatic profiling on slow operations**: When a tool call takes >10s or an LLM call takes >30s, automatically capture a goroutine profile and a brief CPU profile. Attach to the span as metadata.
-3. **Project profiling**: `hawk profile run "go test -bench ."` wraps the user's command with profiling, then analyzes the results. This gives the solo dev a one-command profiling workflow.
+3. **Project profiling**: `hawk profile run "go test -bench ."` wraps the user's command with profiling, then analyzes the results. This gives the individual dev a one-command profiling workflow.
 4. **Benchmark regression detection**: `hawk profile compare <before.pprof> <after.pprof>` diffs two profiles and highlights functions that got slower. Pairs with git bisect automation (section 15).
 
 ---
@@ -699,7 +699,7 @@ A coding agent does not have "users" in the browser sense, but the same principl
 
 ---
 
-## 19. Synthetic Monitoring for Solo Developers
+## 19. Synthetic Monitoring for Individual Developers
 
 ### What synthetic monitoring does
 
@@ -707,7 +707,7 @@ Synthetic monitoring probes services at regular intervals from external location
 
 ### Relevance to a coding agent
 
-A solo developer lacks the team to notice when their deployed services go down. Hawk can fill this gap:
+A individual developer lacks the team to notice when their deployed services go down. Hawk can fill this gap:
 
 1. **Scheduled health checks**: Use hawk's existing `CronCreate/CronDelete/CronList` tools to schedule periodic checks of the developer's services.
 2. **API endpoint monitoring**: `hawk monitor add https://api.myapp.com/health --interval 5m --alert slack` pings the endpoint and alerts on failure.
@@ -766,11 +766,11 @@ A solo developer lacks the team to notice when their deployed services go down. 
 
 ---
 
-## 21. Hawk Integration Strategy -- The Solo SRE
+## 21. Hawk Integration Strategy -- The Individual SRE
 
 ### The vision
 
-A solo developer using hawk should have debugging capabilities equivalent to a team with a dedicated SRE. This means hawk must automate the activities an SRE performs:
+A individual developer using hawk should have debugging capabilities equivalent to a team with a dedicated SRE. This means hawk must automate the activities an SRE performs:
 
 | SRE Activity | Hawk Equivalent |
 |-------------|----------------|
@@ -902,7 +902,7 @@ Hawk's existing infrastructure covers significant ground:
     - Implementation: DXM collection, `/dx` dashboard, regression alerts.
     - See section 18 for design.
 
-### Architecture for the Solo SRE
+### Architecture for the Individual SRE
 
 ```
                     +----------------------------------+

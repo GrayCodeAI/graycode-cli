@@ -1,6 +1,6 @@
-# Hawk solo security model
+# Hawk developer security model
 
-This document describes how hawk and eyrie handle API keys and agent isolation for a single developer on macOS or Linux (no Vault, no proxy).
+This document describes how hawk and eyrie handle API keys and agent isolation for an individual developer on macOS or Linux (no Vault, no proxy). Teams and enterprise deployment models come later.
 
 ## Goals
 
@@ -18,7 +18,7 @@ This document describes how hawk and eyrie handle API keys and agent isolation f
 
 On startup, hawk calls `PrepareCredentialDiscovery()` to one-time migrate legacy `~/.hawk/env` / `~/.hawk/.env` into the keychain and delete those files.
 
-Check status: `hawk credentials status` or `hawk preflight`.
+Check status: `hawk credentials status`, `hawk path`, or `hawk preflight`.
 
 ## First-run flow (`/config`)
 

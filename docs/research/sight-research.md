@@ -62,7 +62,7 @@ Research compiled 2026-05-03. Sources: arXiv papers, GitHub repos, tool document
 - **Differentiator**: Predicts future potential risks in code, going beyond static analysis to anticipate maintenance and reliability issues.
 - **Dual objective**: Improve code quality AND enhance developer education by explaining best practices in review comments.
 - **Finding**: Developer sentiment analysis supports that educational review comments increase developer engagement with the review process.
-- **Key insight for sight**: Review comments should be educational, not just diagnostic. For solo developers who lack a human reviewer, sight should explain WHY something is a problem, not just WHAT is wrong. Include links to relevant documentation or patterns.
+- **Key insight for sight**: Review comments should be educational, not just diagnostic. For individual developers who lack a human reviewer, sight should explain WHY something is a problem, not just WHAT is wrong. Include links to relevant documentation or patterns.
 
 ### ContextCRBench -- arXiv:2511.07017 (Nov 2025)
 - **Authors**: Ruida Hu, Xinchen Wang, Xin-Cheng Wen, Zhao Zhang, Bo Jiang, Pengfei Gao, Chao Peng, Cuiyun Gao.
@@ -103,7 +103,7 @@ Research compiled 2026-05-03. Sources: arXiv papers, GitHub repos, tool document
 - **PR analysis**: Branch analysis and pull request decoration with actionable summaries. Integrates with GitHub, GitLab, Bitbucket, Azure DevOps.
 - **Taint analysis**: Tracks data flow for injection vulnerability detection (SQL injection, XSS).
 - **Incremental**: Focuses on new issues in PRs -- does not re-report existing technical debt in unchanged code.
-- **Key insight for sight**: SonarQube's four-category taxonomy (bugs, code smells, vulnerabilities, security hotspots) is well-understood by developers. Sight should adopt a similar multi-concern taxonomy but add LLM-specific categories: logic errors, performance concerns, test coverage gaps, and cross-file consistency issues. Quality gates are valuable for solo developers as automated standards enforcement.
+- **Key insight for sight**: SonarQube's four-category taxonomy (bugs, code smells, vulnerabilities, security hotspots) is well-understood by developers. Sight should adopt a similar multi-concern taxonomy but add LLM-specific categories: logic errors, performance concerns, test coverage gaps, and cross-file consistency issues. Quality gates are valuable for individual developers as automated standards enforcement.
 
 ### Snyk Code
 - **AI-powered SAST**: Uses a machine learning engine trained on millions of open-source commits and vulnerability fixes.
@@ -127,7 +127,7 @@ Research compiled 2026-05-03. Sources: arXiv papers, GitHub repos, tool document
 - **Learnable patterns**: Natural language learnings from chat interactions, path-based review instructions using glob patterns.
 - **Integrated tools**: 40+ linters and scanners (ESLint, Ruff, Semgrep, Trivy).
 - **Key numbers**: Multi-platform (GitHub, GitLab, Azure DevOps, Bitbucket).
-- **Key insight for sight**: CodeRabbit's two-tier model approach (cheap model for summarization, expensive model for analysis) is a proven cost optimization. Sight should adopt this: use a fast/cheap model for diff summarization and impact classification, then route to a strong model only for hunks that need deep analysis. The learnable patterns feature (teaching preferences via chat) is important for solo developers who want to encode their personal standards.
+- **Key insight for sight**: CodeRabbit's two-tier model approach (cheap model for summarization, expensive model for analysis) is a proven cost optimization. Sight should adopt this: use a fast/cheap model for diff summarization and impact classification, then route to a strong model only for hunks that need deep analysis. The learnable patterns feature (teaching preferences via chat) is important for individual developers who want to encode their personal standards.
 
 ### PR-Agent / Qodo (formerly CodiumAI)
 - **Architecture**: Open-source Python-based tool. Platform-agnostic (GitHub, GitLab, BitBucket, Azure DevOps, Gitea). Supports multiple LLM providers (OpenAI, Claude, Deepseek).
@@ -153,7 +153,7 @@ Research compiled 2026-05-03. Sources: arXiv papers, GitHub repos, tool document
 - **Scale**: 700,000+ monthly PRs processed. Developed signal control to prevent low-value comment noise.
 - **Real-world catches**: Detected production bugs in Netflix, NVIDIA, and Meta repositories -- nested retries, data leaks, conflicting implementations invisible in single-file review.
 - **Key finding**: Tools generating excessive feedback get disabled by teams. Restraint is essential.
-- **Key insight for sight**: Greptile's confidence scoring and restraint philosophy is crucial. Sight must aggressively filter findings. A useful rule: if you would not bet $100 that a senior developer would agree with the finding, do not post it. The 48% logic errors finding suggests sight should weight its analysis toward logic/correctness over style. Solo developers care more about "this will break" than "this could be named better."
+- **Key insight for sight**: Greptile's confidence scoring and restraint philosophy is crucial. Sight must aggressively filter findings. A useful rule: if you would not bet $100 that a senior developer would agree with the finding, do not post it. The 48% logic errors finding suggests sight should weight its analysis toward logic/correctness over style. Individual developers care more about "this will break" than "this could be named better."
 
 ---
 
@@ -340,7 +340,7 @@ False positives are the #1 reason code review tools get disabled. Greptile proce
 - **Problem**: LLMs systematically overcorrect -- they classify correct code as non-compliant or defective. This is a false positive generator.
 - **Counterintuitive finding**: More detailed prompts (requiring explanations and proposed corrections) lead to HIGHER misjudgment rates. When LLMs explain their reasoning for flagging code, they talk themselves into seeing problems that do not exist.
 - **Proposed mitigation**: "Fix-guided Verification Filter" -- validate both the original code AND the LLM's proposed fix using tests. If the original passes and the fix does not change behavior, the finding is likely a false positive.
-- **Key insight for sight**: CRITICAL -- do not ask the review LLM to explain and fix issues in the same pass. Separate detection from explanation. First, detect issues with minimal prompting. Then, for each finding, separately generate an explanation and fix. Finally, validate: if the suggested fix would not change any test outcomes, the finding is likely a false positive. For solo developers, this automated validation is especially important because there is no human reviewer to filter FPs.
+- **Key insight for sight**: CRITICAL -- do not ask the review LLM to explain and fix issues in the same pass. Separate detection from explanation. First, detect issues with minimal prompting. Then, for each finding, separately generate an explanation and fix. Finally, validate: if the suggested fix would not change any test outcomes, the finding is likely a false positive. For individual developers, this automated validation is especially important because there is no human reviewer to filter FPs.
 
 ### STAF: Sentence Transformer-based Actionability Filtering (arXiv:2604.18525, Apr 2026)
 - **Architecture**: Uses transformer-based sentence embeddings to classify static analysis findings into actionable vs non-actionable.
@@ -500,11 +500,11 @@ P2 (consider): Performance issues, maintainability concerns
 P3 (optional): Style issues, naming suggestions, documentation gaps
 
 Default behavior:
-- Solo developer mode: Show P0 and P1 only. P2 on request. Never show P3 automatically.
+- Individual developer mode: Show P0 and P1 only. P2 on request. Never show P3 automatically.
 - Team mode: Show P0, P1, P2. P3 in a collapsed section.
 ```
 
-For solo developers, the priority threshold should be HIGH by default. A solo developer using sight as their only reviewer wants a trusted senior engineer who speaks up only when it matters, not a pedantic lint tool that comments on every line.
+For individual developers, the priority threshold should be HIGH by default. A individual developer using sight as their only reviewer wants a trusted senior engineer who speaks up only when it matters, not a pedantic lint tool that comments on every line.
 
 ---
 
@@ -520,7 +520,7 @@ For solo developers, the priority threshold should be HIGH by default. A solo de
 
 ### What sight should learn from history
 
-For a solo developer, historical patterns come from two sources:
+For a individual developer, historical patterns come from two sources:
 
 1. **The developer's own PR history**: What issues does this developer commonly introduce? If they frequently forget error handling, weight that concern higher. If they never have security issues, weight security lower (but never zero).
 2. **The repository's patterns**: What coding conventions exist? What does the test infrastructure look like? What frameworks and patterns are used?
@@ -606,7 +606,7 @@ Use the risk score to:
 
 ## 14. Sight Implementation Priorities
 
-Ordered by impact for a solo developer who needs a reliable automated reviewer:
+Ordered by impact for a individual developer who needs a reliable automated reviewer:
 
 ### P0 -- Implement First (highest impact, table stakes)
 
@@ -624,7 +624,7 @@ Ordered by impact for a solo developer who needs a reliable automated reviewer:
    - Implementation: Git operations + file reading, no LLM needed.
 
 3. **Parallel multi-concern LLM analysis** (Section 6)
-   - Separate prompts for correctness, security, and performance (the three concerns solo devs care about most).
+   - Separate prompts for correctness, security, and performance (the three concerns individual devs care about most).
    - Concern-specific system prompts with relevant taxonomies (CWE for security, complexity heuristics for performance).
    - Run in parallel to minimize wall-clock time.
    - Implementation: LLM calls via eyrie.
@@ -639,7 +639,7 @@ Ordered by impact for a solo developer who needs a reliable automated reviewer:
 5. **Confidence scoring and prioritization** (Section 11)
    - Score each finding on severity, confidence, actionability.
    - Default to high threshold -- show only P0/P1 findings.
-   - Solo developer mode: be a trusted senior engineer, not a pedantic linter.
+   - Individual developer mode: be a trusted senior engineer, not a pedantic linter.
    - Greptile data: 63% of PRs need zero comments. Aspire to this.
 
 6. **Auto-fix generation with confidence tiers** (Section 9)

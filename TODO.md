@@ -1,4 +1,4 @@
-# Hawk Solo-Dev TODO (250+)
+# Hawk Developer Path TODO (250+)
 
 ## Session & Persistence (1-20)
 - [x] 1. Add session auto-save interval (every 30s during idle)

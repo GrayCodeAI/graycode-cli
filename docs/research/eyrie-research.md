@@ -241,7 +241,7 @@ The hawk project already has `retry/retry.go` and `circuit/circuit.go`. Extend w
 - **Dimensions**: RPM (requests/min), ITPM (input tokens/min), OTPM (output tokens/min). Separate limits per model family.
 - **Cache-aware ITPM**: Only uncached input tokens count toward ITPM. With 80% cache hit rate, effective throughput is 5x nominal. This makes prompt caching a rate-limit multiplier, not just a cost saver.
 - **Headers**: Full suite -- `anthropic-ratelimit-{requests,tokens,input-tokens,output-tokens}-{limit,remaining,reset}` plus `retry-after`.
-- **Tier structure**: Tier 1 (50 RPM, 30K ITPM for Sonnet) through Tier 4 (4,000 RPM, 2M ITPM for Sonnet). Solo developers typically at Tier 2-3.
+- **Tier structure**: Tier 1 (50 RPM, 30K ITPM for Sonnet) through Tier 4 (4,000 RPM, 2M ITPM for Sonnet). Individual developers typically at Tier 2-3.
 - **Acceleration limits**: Sharp usage increases trigger additional 429s even within nominal limits. Ramp up gradually.
 
 ### Rate Limiting Algorithms for Eyrie
@@ -371,7 +371,7 @@ A coding agent has distinct routing needs vs. a general chatbot:
 |-----------|----------|-----------|
 | Quality | Highest for code generation | Incorrect code wastes more time than it saves |
 | Latency | High for interactive, low for background | User waiting = highest priority |
-| Cost | Medium | Solo dev budget matters, but correctness matters more |
+| Cost | Medium | Individual dev budget matters, but correctness matters more |
 
 ### Eyrie takeaway
 Implement a multi-objective router with mode switching:
@@ -553,7 +553,7 @@ The hawk project has `auth/`. Ensure:
 
 ## 16. Eyrie Implementation Priorities
 
-Ordered by impact for a solo developer's API spend efficiency:
+Ordered by impact for a individual developer's API spend efficiency:
 
 ### P0 -- Implement immediately (highest ROI)
 
