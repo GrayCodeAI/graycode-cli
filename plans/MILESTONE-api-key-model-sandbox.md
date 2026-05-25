@@ -88,7 +88,7 @@ Credential discovery (eyrie-owned, no hawk hardcoded env lists):
 | 3.2 | Block input when container required but Docker down | done |
 | 3.3 | `ContainerExecutor` wired for bash | done |
 | 3.4 | Read tool blocks credential paths (`safety.go`) | done |
-| 3.5 | Document `--no-container` vs secure mode | done (`SECURITY-SOLO.md`) |
+| 3.5 | Document `--no-container` vs secure mode | done (`SECURITY-DEVELOPER.md`) |
 | 3.6 | Container cannot read host `~/.hawk/env` | done (`isolation_verify_test.go`; skips if Docker down) + `TestIsSensitivePath` |
 | 3.7 | Clarify `/sandbox` vs default container in help | done (help + flag descriptions) |
 
@@ -100,7 +100,7 @@ Credential discovery (eyrie-owned, no hawk hardcoded env lists):
 | 4.2 | Commit matching eyrie credential/catalog changes | done (`2657c72` on same branch) |
 | 4.3 | CI green on both repos | partial (local `go test ./...` pass; GitHub CI not run here) |
 | 4.4 | Update `AGENTS.md` milestone section (not DAG) | done |
-| 4.5 | Update `SECURITY-SOLO.md`, contextual help, diagnostics for keychain-only | done |
+| 4.5 | Update `SECURITY-DEVELOPER.md`, contextual help, diagnostics for keychain-only | done |
 | 4.6 | `hawk preflight` + doctor credential storage section | done |
 
 ## Definition of done
@@ -159,5 +159,5 @@ cd eyrie && git push -u origin feature/secure-credentials-sandbox
 
 ## Related docs
 
-- [`docs/SECURITY-SOLO.md`](../docs/SECURITY-SOLO.md) — developer security model (keychain, sandbox)
+- [`docs/SECURITY-DEVELOPER.md`](../docs/SECURITY-DEVELOPER.md) — developer security model (keychain, sandbox)
 - [`eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md`](../external/eyrie/plans/DYNAMIC-MODEL-DISCOVERY.md) — discovery edge cases (§9 security updated)

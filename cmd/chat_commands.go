@@ -45,7 +45,7 @@ var allSlashCommands = []string{
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
-	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/solo", "/yaad", "/yolo",
+	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad", "/yolo",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
@@ -173,7 +173,7 @@ var slashDescriptions = map[string]string{
 	"/vim":             "Toggle vim mode",
 	"/welcome":         "Show welcome screen",
 	"/ecosystem":       "Show eyrie, yaad, and tok integration status",
-	"/solo":            "Developer path readiness (setup, security, sandbox)",
+	"/path":            "Developer path readiness (setup, security, sandbox)",
 	"/yaad":            "Show yaad memory (use /yaad search <query> to search)",
 	"/yolo":            "Toggle auto-approve mode",
 	"/cron":            "Show scheduled jobs",
@@ -1196,8 +1196,8 @@ Generate the recap:`, summary.String())
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatEcosystemPanel(context.Background(), provider, model)})
 		return m, nil
-	case "/solo":
-		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatSoloPathReport(context.Background())})
+	case "/path":
+		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatDeveloperPathReport(context.Background())})
 		return m, nil
 	case "/config", "/con", "/conf":
 		if len(parts) >= 3 && parts[1] == "provider" {

@@ -8,25 +8,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var soloStrict bool
+var pathStrict bool
 
-var soloCmd = &cobra.Command{
-	Use:   "solo",
+var pathCmd = &cobra.Command{
+	Use:   "path",
 	Short: "Developer path readiness (setup, security, sandbox, ecosystem)",
 	Long: `Check whether hawk is configured on the developer path:
 API keys in OS secret store, model selected, no secrets on disk,
 Docker isolation when available, and eyrie/yaad/tok integration.
 
-See docs/DEVELOPER-PATH.md and docs/SECURITY-SOLO.md.`,
+Built for individual developers first — teams and enterprise later.
+
+See docs/DEVELOPER-PATH.md and docs/SECURITY-DEVELOPER.md.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		report := hawkconfig.EvaluateSoloPath(ctx)
-		cmd.Println(hawkconfig.FormatSoloPathReport(ctx))
+		report := hawkconfig.EvaluateDeveloperPath(ctx)
+		cmd.Println(hawkconfig.FormatDeveloperPathReport(ctx))
 
-		if soloStrict {
+		if pathStrict {
 			for _, c := range report.Checks {
-				if c.Section == "Sandbox" && c.Name == "docker" && c.Status == hawkconfig.SoloWarn {
-					return fmt.Errorf("solo strict: start Docker for isolated Bash")
+				if c.Section == "Sandbox" && c.Name == "docker" && c.Status == hawkconfig.PathWarn {
+					return fmt.Errorf("strict mode: start Docker for isolated Bash")
 				}
 			}
 		}
@@ -38,6 +40,6 @@ See docs/DEVELOPER-PATH.md and docs/SECURITY-SOLO.md.`,
 }
 
 func init() {
-	soloCmd.Flags().BoolVar(&soloStrict, "strict", false, "Also require Docker for Bash isolation")
-	rootCmd.AddCommand(soloCmd)
+	pathCmd.Flags().BoolVar(&pathStrict, "strict", false, "Also require Docker for Bash isolation")
+	rootCmd.AddCommand(pathCmd)
 }

@@ -8,12 +8,12 @@ import (
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
-func TestEvaluateSoloPath_FreshInstall(t *testing.T) {
+func TestEvaluateDeveloperPath_FreshInstall(t *testing.T) {
 	isolateMilestoneTest(t)
 	credentials.SetDefaultStore(emptyCredentialStore{})
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 
-	r := EvaluateSoloPath(context.Background())
+	r := EvaluateDeveloperPath(context.Background())
 	if r.Ready {
 		t.Fatal("expected not ready on fresh install")
 	}
@@ -22,7 +22,7 @@ func TestEvaluateSoloPath_FreshInstall(t *testing.T) {
 	}
 	if !r.SecureReady {
 		for _, c := range r.Checks {
-			if c.Section == "Security" && c.Status == SoloFail {
+			if c.Section == "Security" && c.Status == PathFail {
 				t.Fatalf("unexpected security fail: %+v", c)
 			}
 		}
@@ -30,9 +30,9 @@ func TestEvaluateSoloPath_FreshInstall(t *testing.T) {
 	}
 }
 
-func TestFormatSoloPathReport_ContainsSections(t *testing.T) {
+func TestFormatDeveloperPathReport_ContainsSections(t *testing.T) {
 	isolateMilestoneTest(t)
-	out := FormatSoloPathReport(context.Background())
+	out := FormatDeveloperPathReport(context.Background())
 	for _, want := range []string{
 		"Developer path",
 		"Setup",
@@ -63,11 +63,11 @@ func TestLegacyCredentialFilesPresent_None(t *testing.T) {
 	}
 }
 
-func TestSoloStatusGlyph(t *testing.T) {
-	if soloStatusGlyph(SoloPass) != "✓" {
+func TestPathStatusGlyph(t *testing.T) {
+	if pathStatusGlyph(PathPass) != "✓" {
 		t.Fatal("pass glyph")
 	}
-	if soloStatusGlyph(SoloFail) != "✗" {
+	if pathStatusGlyph(PathFail) != "✗" {
 		t.Fatal("fail glyph")
 	}
 }

@@ -87,7 +87,7 @@ Don't evaluate yet — just group.`
 
 	case BrainstormEvaluate:
 		return `EVALUATE PHASE — Score each cluster on:
-- **Feasibility** (1-5): Can a solo dev build this in reasonable time?
+- **Feasibility** (1-5): Can a individual dev build this in reasonable time?
 - **Impact** (1-5): How much value does this deliver?
 - **Novelty** (1-5): How differentiated is this?
 
