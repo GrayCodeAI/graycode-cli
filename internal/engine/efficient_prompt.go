@@ -291,12 +291,22 @@ func compressWhitespace(s string) string {
 			b.WriteRune(r)
 		}
 	}
-	// Collapse multiple consecutive blank lines into one
-	result := b.String()
-	for strings.Contains(result, "\n\n\n") {
-		result = strings.ReplaceAll(result, "\n\n\n", "\n\n")
+	// Collapse multiple consecutive blank lines into one (single-pass)
+	inNewline := 0
+	final := strings.Builder{}
+	final.Grow(b.Len())
+	for _, r := range b.String() {
+		if r == '\n' {
+			inNewline++
+			if inNewline <= 2 {
+				final.WriteRune('\n')
+			}
+		} else {
+			inNewline = 0
+			final.WriteRune(r)
+		}
 	}
-	return result
+	return final.String()
 }
 
 // removeFiller strips common filler words and phrases.
