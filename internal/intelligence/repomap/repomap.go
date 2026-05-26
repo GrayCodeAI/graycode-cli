@@ -13,9 +13,10 @@ import (
 
 // Symbol represents a top-level code symbol (function, type, class, etc.).
 type Symbol struct {
-	Name string
-	Kind string
-	Line int
+	Name      string
+	Kind      string
+	Line      int
+	Signature string // optional: full function/method signature
 }
 
 // FileMap holds the extracted symbols for a single file.
@@ -134,7 +135,11 @@ func (rm *RepoMap) Format(maxTokens int) string {
 
 		b.WriteString(fm.Path + "\n")
 		for _, sym := range fm.Symbols {
-			b.WriteString(fmt.Sprintf("  %s %s (line %d)\n", sym.Kind, sym.Name, sym.Line))
+			if sym.Signature != "" {
+				b.WriteString(fmt.Sprintf("  %s %s (line %d)\n", sym.Kind, sym.Signature, sym.Line))
+			} else {
+				b.WriteString(fmt.Sprintf("  %s %s (line %d)\n", sym.Kind, sym.Name, sym.Line))
+			}
 		}
 		tokenCount += tokEst
 		filesFormatted++
@@ -172,23 +177,22 @@ func parseFileSymbols(path string) []Symbol {
 		return symbols
 	}
 
+	// Use enhanced AST-based parsers (Go AST, enhanced regex for Python/TS/Rust)
+	symbols, err := ParseFileEnhanced(path)
+	if err == nil && len(symbols) > 0 {
+		cachePut(path, symbols)
+		return symbols
+	}
+
+	// Fallback to legacy regex parsers for unsupported languages
 	ext := filepath.Ext(path)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
 	}
 
-	var symbols []Symbol
 	src := string(data)
 	switch ext {
-	case ".go":
-		symbols = parseGo(src)
-	case ".py":
-		symbols = parsePython(src)
-	case ".ts", ".tsx", ".js", ".jsx":
-		symbols = parseTypeScript(src)
-	case ".rs":
-		symbols = parseRust(src)
 	case ".java":
 		symbols = parseJava(src)
 	case ".c", ".h":

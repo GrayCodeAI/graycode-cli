@@ -1965,7 +1965,51 @@ Generate the recap:`, summary.String())
 		if err != nil || strings.TrimSpace(string(out)) == "" {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Voice requires whisper.cpp. Install with: brew install whisper-cpp"})
 		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Recording... (press Enter when done, Ctrl+C to cancel)\nNote: voice input requires a separate terminal. Use: whisper --model base -f recording.wav | hawk"})
+			// Record audio and transcribe
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Recording audio... (press Enter to stop)"})
+			go func() {
+				// Create temp file for recording
+				tmpFile := filepath.Join(os.TempDir(), "hawk_voice_input.wav")
+				
+				// Record using sox or ffmpeg if available
+				var recordCmd *exec.Cmd
+				if _, err := exec.LookPath("sox"); err == nil {
+					recordCmd = exec.Command("sox", "-d", tmpFile, "trim", "0", "10")
+				} else if _, err := exec.LookPath("ffmpeg"); err == nil {
+					recordCmd = exec.Command("ffmpeg", "-y", "-f", "avfoundation", "-i", ":0", "-t", "10", tmpFile)
+				} else {
+					// Fallback: tell user to record manually
+					m.messages = append(m.messages, displayMsg{role: "system", content: "No audio recorder found. Install sox (brew install sox) or use: whisper --model base -f recording.wav"})
+					return
+				}
+				
+				if err := recordCmd.Run(); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Recording failed: %v", err)})
+					return
+				}
+				
+				// Transcribe with whisper
+				transcribeCmd := exec.Command("whisper", "--model", "base", "--output_format", "txt", "--output_dir", os.TempDir(), tmpFile)
+				if err := transcribeCmd.Run(); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Transcription failed: %v", err)})
+					return
+				}
+				
+				// Read transcription
+				txtFile := strings.TrimSuffix(tmpFile, ".wav") + ".txt"
+				transcription, err := os.ReadFile(txtFile)
+				if err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Could not read transcription"})
+					return
+				}
+				
+				text := strings.TrimSpace(string(transcription))
+				if text != "" {
+					m.input.SetValue(text)
+					m.input.CursorEnd()
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Voice input: %s", text)})
+				}
+			}()
 		}
 		return m, nil
 	case "/share":

@@ -92,6 +92,8 @@ func baseTools() []tool.Tool {
 		tool.MultiEditTool{},
 		tool.DownloadTool{},
 		tool.AgenticFetchTool{},
+		tool.ImpactTool{},
+		tool.GitHistoryTool{},
 	}
 }
 
@@ -246,6 +248,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	vp.MouseWheelEnabled = true
 
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now(), activeSkills: make(map[string]plugin.SmartSkill)}
+	m.commandPalette = NewCommandPalette(initWidth)
 	m.containerEnabled = shouldUseContainer()
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
@@ -460,6 +463,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openConfigOnStart = false
 		return m.openConfigPanel()
 	case tea.KeyMsg:
+		// Command palette (Ctrl+K) — intercept all input when open
+		if m.commandPalette != nil && m.commandPalette.IsOpen() {
+			action, handled := m.commandPalette.Update(msg)
+			if handled {
+				if action != "" {
+					// Execute the selected command
+					m.commandPalette.Close()
+					result, _ := m.handleCommand(action)
+					if result != nil {
+						m = result.(chatModel)
+					}
+					m.viewDirty = true
+					m.updateViewportContent()
+				}
+				return m, nil
+			}
+		}
+
 		// Container failed — block all input except quit
 		if m.containerEnabled && m.containerErr != nil {
 			if msg.String() == "ctrl+c" || msg.String() == "q" {
@@ -578,6 +599,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		switch msg.Type {
+		case tea.KeyCtrlK:
+			// Open command palette
+			if m.commandPalette == nil {
+				m.commandPalette = NewCommandPalette(m.width)
+			}
+			m.commandPalette.Open()
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
 		case tea.KeyCtrlN:
 			models := configModelChoices(m.configModelOptions, false)
 			if len(models) > 1 {
