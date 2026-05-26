@@ -94,6 +94,7 @@ func baseTools() []tool.Tool {
 		tool.AgenticFetchTool{},
 		tool.ImpactTool{},
 		tool.GitHistoryTool{},
+		tool.CodeGraphTool{},
 	}
 }
 
