@@ -157,9 +157,9 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 				if reviewErr == nil && reviewResult != nil && !reviewResult.Approved {
 					// Revert the file to its original state
 					if preEditContent == "" {
-						os.Remove(preEditPath)
+						_ = os.Remove(preEditPath)
 					} else {
-						os.WriteFile(preEditPath, []byte(preEditContent), 0o644)
+						_ = os.WriteFile(preEditPath, []byte(preEditContent), 0o644)
 					}
 					issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
 					if len(reviewResult.Suggestions) > 0 {
