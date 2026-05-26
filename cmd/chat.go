@@ -26,6 +26,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/codegraph"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
@@ -1053,8 +1054,35 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// autoIndexCodegraph runs codegraph indexing in the background on startup.
+// Only indexes if .codegraph/ already exists (user has initialized it before).
+// Uses Sync for incremental updates (only re-indexes changed files).
+func autoIndexCodegraph() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	dbPath := filepath.Join(cwd, ".codegraph", "codegraph.db")
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return // Not initialized, skip
+	}
+
+	cg, err := codegraph.Open(cwd)
+	if err != nil {
+		return
+	}
+	defer cg.Close()
+
+	// Incremental sync — only processes changed files
+	cg.Sync()
+}
+
 func runChat() error {
 	startBackgroundCatalogRefresh(context.Background())
+
+	// Auto-index codegraph in background if .codegraph exists
+	go autoIndexCodegraph()
 
 	ref := &progRef{}
 	systemPrompt, err := buildSystemPrompt()

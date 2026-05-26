@@ -840,3 +840,150 @@ func (cg *CodeGraph) AnalyzeCoupling(topN int) ([]CouplingMetric, error) {
 	}
 	return metrics[:topN], nil
 }
+
+// CrossRepoQuery queries across multiple codegraph databases.
+// Useful for finding relationships between hawk, eyrie, tok, yaad, etc.
+func CrossRepoQuery(repos []string, query string, limit int) (map[string][]Node, error) {
+	results := make(map[string][]Node)
+
+	for _, repoRoot := range repos {
+		cg, err := Open(repoRoot)
+		if err != nil {
+			continue // Skip repos without codegraph
+		}
+
+		nodes, err := cg.Search(query, limit)
+		cg.Close()
+		if err != nil || len(nodes) == 0 {
+			continue
+		}
+
+		results[repoRoot] = nodes
+	}
+
+	return results, nil
+}
+
+// CrossRepoImpact finds the impact of changing a symbol across multiple repos.
+// If a symbol in hawk calls a symbol in eyrie, this traces that cross-repo dependency.
+func CrossRepoImpact(repos []string, symbol string, maxDepth int) (map[string]*ImpactResult, error) {
+	results := make(map[string]*ImpactResult)
+
+	for _, repoRoot := range repos {
+		cg, err := Open(repoRoot)
+		if err != nil {
+			continue
+		}
+
+		// Search for the symbol
+		nodes, err := cg.Search(symbol, 5)
+		if err != nil || len(nodes) == 0 {
+			cg.Close()
+			continue
+		}
+
+		// Get impact for each matching symbol
+		for _, n := range nodes {
+			impact, err := cg.ImpactAnalysis(n.ID, maxDepth)
+			if err != nil {
+				continue
+			}
+			results[repoRoot+":"+n.Name] = impact
+		}
+
+		cg.Close()
+	}
+
+	return results, nil
+}
+
+// FindCrossRepoCalls finds function calls that cross repo boundaries.
+// For example, hawk calling eyrie functions.
+func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
+	type repoSymbol struct {
+		repo string
+		node Node
+	}
+
+	// Build a map of all symbols across repos
+	allSymbols := make(map[string][]repoSymbol) // name -> [{repo, node}]
+	repoNodes := make(map[string]map[string]bool)
+
+	for _, repoRoot := range repos {
+		cg, err := Open(repoRoot)
+		if err != nil {
+			continue
+		}
+
+		repoNodes[repoRoot] = make(map[string]bool)
+
+		// Get all nodes
+		rows, err := cg.db.Query("SELECT id, kind, name, qualified_name, file_path, language, start_line, end_line, signature, docstring, visibility, is_exported FROM nodes")
+		if err != nil {
+			cg.Close()
+			continue
+		}
+
+		nodes, _ := scanNodes(rows)
+		rows.Close()
+
+		for _, n := range nodes {
+			allSymbols[n.Name] = append(allSymbols[n.Name], repoSymbol{repoRoot, n})
+			repoNodes[repoRoot][n.ID] = true
+		}
+
+		cg.Close()
+	}
+
+	// Find calls that reference symbols in other repos
+	var crossCalls []CrossRepoCall
+
+	for _, repoRoot := range repos {
+		cg, err := Open(repoRoot)
+		if err != nil {
+			continue
+		}
+
+		// Get unresolved refs (calls to symbols not in this repo)
+		rows, err := cg.db.Query("SELECT from_node_id, reference_name, file_path, line FROM unresolved_refs")
+		if err != nil {
+			cg.Close()
+			continue
+		}
+
+		for rows.Next() {
+			var fromID, refName, filePath string
+			var line int
+			rows.Scan(&fromID, &refName, &filePath, &line)
+
+			// Check if this reference exists in another repo
+			for _, target := range allSymbols[refName] {
+				if target.repo != repoRoot {
+					crossCalls = append(crossCalls, CrossRepoCall{
+						FromRepo: repoRoot,
+						ToRepo:   target.repo,
+						Symbol:   refName,
+						File:     filePath,
+						Line:     line,
+						Target:   target.node,
+					})
+				}
+			}
+		}
+
+		rows.Close()
+		cg.Close()
+	}
+
+	return crossCalls, nil
+}
+
+// CrossRepoCall represents a function call that crosses repo boundaries.
+type CrossRepoCall struct {
+	FromRepo string `json:"from_repo"`
+	ToRepo   string `json:"to_repo"`
+	Symbol   string `json:"symbol"`
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+	Target   Node   `json:"target"`
+}
