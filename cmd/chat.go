@@ -471,8 +471,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// Execute the selected command
 					m.commandPalette.Close()
 					result, _ := m.handleCommand(action)
-					if result != nil {
-						m = result.(chatModel)
+					if cm, ok := result.(chatModel); ok {
+						m = cm
 					}
 					m.viewDirty = true
 					m.updateViewportContent()
