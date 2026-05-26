@@ -242,11 +242,11 @@ func (po *PromptOptimizer) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &po.Parameters)
+	_ = json.Unmarshal(data, &po.Parameters)
 }
 
 func (po *PromptOptimizer) save() {
-	os.MkdirAll(filepath.Dir(po.Path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(po.Path), 0o755)
 	data, _ := json.MarshalIndent(po.Parameters, "", "  ")
-	os.WriteFile(po.Path, data, 0o644)
+	_ = os.WriteFile(po.Path, data, 0o644)
 }

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"container/list"
 	"sync"
 	"time"
 )
@@ -8,17 +9,28 @@ import (
 // DefaultSnapshotTTL is the default time-to-live for snapshot cache entries.
 const DefaultSnapshotTTL = 10 * time.Second
 
+// defaultMaxSnapshotEntries is the default maximum number of snapshot cache entries.
+const defaultMaxSnapshotEntries = 500
+
 // cachedEntry holds a value and its expiry time.
 type cachedEntry struct {
 	value  string
 	expiry time.Time
 }
 
-// SnapshotCache is a TTL-based cache for project snapshots.
+// lruSnapshotEntry wraps a cachedEntry with an LRU list element.
+type lruSnapshotEntry struct {
+	key   string
+	entry cachedEntry
+}
+
+// SnapshotCache is a TTL-based cache for project snapshots with LRU eviction.
 type SnapshotCache struct {
-	entries map[string]cachedEntry
-	mu      sync.RWMutex
-	ttl     time.Duration
+	entries    map[string]*list.Element
+	order      *list.List
+	mu         sync.RWMutex
+	ttl        time.Duration
+	maxEntries int
 }
 
 // NewSnapshotCache creates a new SnapshotCache with the given TTL.
@@ -28,34 +40,73 @@ func NewSnapshotCache(ttl time.Duration) *SnapshotCache {
 		ttl = DefaultSnapshotTTL
 	}
 	return &SnapshotCache{
-		entries: make(map[string]cachedEntry),
-		ttl:     ttl,
+		entries:    make(map[string]*list.Element),
+		order:      list.New(),
+		ttl:        ttl,
+		maxEntries: defaultMaxSnapshotEntries,
 	}
 }
 
 // Get returns the cached value for the key if it exists and has not expired.
+// Promotes the entry to most recently used on hit.
 func (sc *SnapshotCache) Get(key string) (string, bool) {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
 
-	entry, ok := sc.entries[key]
+	elem, ok := sc.entries[key]
 	if !ok {
 		return "", false
 	}
-	if time.Now().After(entry.expiry) {
+
+	lru := elem.Value.(*lruSnapshotEntry)
+	if time.Now().After(lru.entry.expiry) {
+		// Expired: remove from cache
+		sc.order.Remove(elem)
+		delete(sc.entries, key)
 		return "", false
 	}
-	return entry.value, true
+
+	// Promote to front (most recently used)
+	sc.order.MoveToFront(elem)
+	return lru.entry.value, true
 }
 
 // Set stores a value in the cache with the configured TTL.
+// Evicts the least recently used entry if the cache exceeds its maximum size.
 func (sc *SnapshotCache) Set(key, value string) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
-	sc.entries[key] = cachedEntry{
-		value:  value,
-		expiry: time.Now().Add(sc.ttl),
+	// If entry already exists, update and promote
+	if elem, ok := sc.entries[key]; ok {
+		sc.order.MoveToFront(elem)
+		lru := elem.Value.(*lruSnapshotEntry)
+		lru.entry = cachedEntry{
+			value:  value,
+			expiry: time.Now().Add(sc.ttl),
+		}
+		return
+	}
+
+	// Add new entry
+	lru := &lruSnapshotEntry{
+		key: key,
+		entry: cachedEntry{
+			value:  value,
+			expiry: time.Now().Add(sc.ttl),
+		},
+	}
+	elem := sc.order.PushFront(lru)
+	sc.entries[key] = elem
+
+	// Evict oldest if over capacity
+	if sc.order.Len() > sc.maxEntries {
+		oldest := sc.order.Back()
+		if oldest != nil {
+			sc.order.Remove(oldest)
+			evicted := oldest.Value.(*lruSnapshotEntry)
+			delete(sc.entries, evicted.key)
+		}
 	}
 }
 
@@ -64,11 +115,17 @@ func (sc *SnapshotCache) Set(key, value string) {
 func (sc *SnapshotCache) GetOrCompute(key string, fn func() (string, error)) (string, error) {
 	sc.mu.Lock()
 	// Re-check under write lock to avoid duplicate computation.
-	entry, ok := sc.entries[key]
-	if ok && time.Now().Before(entry.expiry) {
-		val := entry.value
-		sc.mu.Unlock()
-		return val, nil
+	if elem, ok := sc.entries[key]; ok {
+		lru := elem.Value.(*lruSnapshotEntry)
+		if time.Now().Before(lru.entry.expiry) {
+			val := lru.entry.value
+			sc.order.MoveToFront(elem)
+			sc.mu.Unlock()
+			return val, nil
+		}
+		// Expired; remove before recomputing
+		sc.order.Remove(elem)
+		delete(sc.entries, key)
 	}
 	sc.mu.Unlock()
 

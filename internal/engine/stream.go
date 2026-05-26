@@ -367,7 +367,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.Router.RecordSuccess(s.provider, apiDuration)
 		}
 
-		var textContent string
+		var textContent strings.Builder
 		var toolCalls []types.ToolCall
 		var stopReason string
 		var lastUsage *types.EyrieUsage
@@ -386,7 +386,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 				switch ev.Type {
 				case "content":
-					textContent += ev.Content
+					textContent.WriteString(ev.Content)
 					ch <- StreamEvent{Type: "content", Content: ev.Content}
 				case "thinking":
 					ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
@@ -456,7 +456,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				return
 			}
 			// Reset accumulated state for the retry
-			textContent = ""
+			textContent.Reset()
 			toolCalls = nil
 			stopReason = ""
 			lastUsage = nil
@@ -479,10 +479,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Check for inline tool calls in text (some providers embed tool calls in text)
-		if len(toolCalls) == 0 && strings.Contains(textContent, "<|tool_calls_section_begin|>") {
-			cleanText, inlineCalls := types.ParseInlineToolCalls(textContent)
+		if len(toolCalls) == 0 && strings.Contains(textContent.String(), "<|tool_calls_section_begin|>") {
+			cleanText, inlineCalls := types.ParseInlineToolCalls(textContent.String())
 			if len(inlineCalls) > 0 {
-				textContent = cleanText
+				textContent.Reset()
+				textContent.WriteString(cleanText)
 				toolCalls = append(toolCalls, inlineCalls...)
 			}
 		}
@@ -501,7 +502,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		hooks.ExecuteAsync(ctx, hooks.EventPostQuery, map[string]interface{}{
 			"provider": s.provider,
 			"model":    s.model,
-			"content":  textContent,
+			"content":  textContent.String(),
 			"tools":    len(toolCalls),
 		})
 
@@ -521,7 +522,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Handle max_tokens recovery
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent})
+			s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent.String()})
 			s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
 			continue
 		}
@@ -529,23 +530,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// No tool calls — done
 		if len(toolCalls) == 0 {
 			// Integration pipeline: post-response (format, score, redact, cache, learn)
-			if s.Pipeline != nil && textContent != "" {
-				postResult := s.Pipeline.PostResponse(textContent, s.messages)
+			if s.Pipeline != nil && textContent.Len() > 0 {
+				postResult := s.Pipeline.PostResponse(textContent.String(), s.messages)
 				if postResult != nil && postResult.FormattedResponse != "" {
-					textContent = postResult.FormattedResponse
+					textContent.Reset()
+					textContent.WriteString(postResult.FormattedResponse)
 				}
 			}
-			if textContent != "" {
-				s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent})
+			if textContent.Len() > 0 {
+				s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent.String()})
 				// Auto-remember corrections and learnings
-				if s.Memory != nil && shouldRemember(textContent) {
+				if s.Memory != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
 						// Use timeout context so goroutine doesn't hang if backend is slow.
 						rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 						defer cancel()
 						_ = s.Memory.Remember(content, "assistant_learning")
 						_ = rCtx // timeout context available if Remember is extended to accept it
-					}(textContent)
+					}(textContent.String())
 				}
 			}
 			// Sleeptime: background memory consolidation
@@ -594,7 +596,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						taskDesc = msgs[0].Content
 					}
 					sd := s.SkillDistiller
-					prompt := sd.BuildSkillPrompt(taskDesc, tools, files, textContent)
+					prompt := sd.BuildSkillPrompt(taskDesc, tools, files, textContent.String())
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					dCtx, dCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 					defer dCancel()
@@ -788,7 +790,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if data, readErr := readFileContent(p); readErr == nil {
 						origContent = data
 					}
-					intent := textContent // use the LLM's text as intent context
+					intent := textContent.String() // use the LLM's text as intent context
 					verdict := s.Critic.PreScreenPatch(origContent, output, intent)
 					if s.Critic.ShouldBlock(verdict) {
 						issueStr := strings.Join(verdict.Issues, "; ")
@@ -944,11 +946,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			for _, tc := range sequentialCalls {
 				writeNames = append(writeNames, tc.Name)
 			}
-			go s.Snapshots.Track(strings.Join(writeNames, ", "))
+			go func() { _, _ = s.Snapshots.Track(strings.Join(writeNames, ", ")) }()
 		}
 
 		// Append assistant message with tool_use blocks
-		assistContent := textContent
+		assistContent := textContent.String()
 		if assistContent == "" && len(toolCalls) > 0 {
 			assistContent = " " // non-empty to satisfy APIs that reject empty content
 		}
