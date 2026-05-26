@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -195,6 +196,16 @@ func (s *MCPServer) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSO
 		return s.handleToolsList(req)
 	case "tools/call":
 		return s.handleToolsCall(ctx, req)
+	case "resources/list":
+		return s.handleResourcesList(req)
+	case "resources/read":
+		return s.handleResourcesRead(req)
+	case "resources/subscribe":
+		return s.handleResourcesSubscribe(req)
+	case "prompts/list":
+		return s.handlePromptsList(req)
+	case "prompts/get":
+		return s.handlePromptsGet(req)
 	default:
 		return &JSONRPCResponse{
 			JSONRPC: "2.0",
@@ -210,9 +221,11 @@ func (s *MCPServer) handleInitialize(req *JSONRPCRequest) *JSONRPCResponse {
 	s.mu.RUnlock()
 
 	result := map[string]interface{}{
-		"protocolVersion": "2024-11-05",
+		"protocolVersion": "2025-03-26",
 		"capabilities": map[string]interface{}{
-			"tools": map[string]interface{}{},
+			"tools":     map[string]interface{}{},
+			"resources": map[string]interface{}{"subscribe": true},
+			"prompts":   map[string]interface{}{},
 		},
 		"serverInfo": s.info,
 	}
@@ -315,6 +328,173 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *J
 				{"type": "text", "text": result},
 			},
 		},
+	}
+}
+
+// handleResourcesList returns available resources (workspace files).
+func (s *MCPServer) handleResourcesList(req *JSONRPCRequest) *JSONRPCResponse {
+	resources := []map[string]interface{}{
+		{
+			"uri":         "hawk://workspace",
+			"name":        "workspace",
+			"description": "Current workspace directory listing",
+			"mimeType":    "text/plain",
+		},
+		{
+			"uri":         "hawk://session",
+			"name":        "session",
+			"description": "Current session messages",
+			"mimeType":    "application/json",
+		},
+	}
+	return &JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result:  map[string]interface{}{"resources": resources},
+	}
+}
+
+// handleResourcesRead returns resource content.
+func (s *MCPServer) handleResourcesRead(req *JSONRPCRequest) *JSONRPCResponse {
+	var params struct {
+		URI string `json:"uri"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		return &JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &RPCError{Code: errCodeInvalidParams, Message: "Invalid params: " + err.Error()},
+		}
+	}
+
+	var content string
+	switch params.URI {
+	case "hawk://workspace":
+		entries, err := os.ReadDir(".")
+		if err != nil {
+			content = "Error reading workspace: " + err.Error()
+		} else {
+			var names []string
+			for _, e := range entries {
+				if e.IsDir() {
+					names = append(names, e.Name()+"/")
+				} else {
+					names = append(names, e.Name())
+				}
+			}
+			content = "Workspace files:\n" + strings.Join(names, "\n")
+		}
+	case "hawk://session":
+		content = "{}" // placeholder
+	default:
+		return &JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &RPCError{Code: errCodeInvalidParams, Message: fmt.Sprintf("Unknown resource: %s", params.URI)},
+		}
+	}
+
+	return &JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result: map[string]interface{}{
+			"contents": []map[string]interface{}{
+				{"uri": params.URI, "text": content},
+			},
+		},
+	}
+}
+
+// handleResourcesSubscribe handles resource subscription requests.
+func (s *MCPServer) handleResourcesSubscribe(req *JSONRPCRequest) *JSONRPCResponse {
+	return &JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result:  map[string]interface{}{},
+	}
+}
+
+// handlePromptsList returns available prompt templates.
+func (s *MCPServer) handlePromptsList(req *JSONRPCRequest) *JSONRPCResponse {
+	prompts := []map[string]interface{}{
+		{
+			"name":        "review",
+			"description": "Review code changes in the workspace",
+			"arguments": []map[string]interface{}{
+				{"name": "scope", "description": "What to review (e.g., 'staged changes', 'last commit')", "required": false},
+			},
+		},
+		{
+			"name":        "explain",
+			"description": "Explain code or a concept",
+			"arguments": []map[string]interface{}{
+				{"name": "target", "description": "What to explain (file path, function name, concept)", "required": true},
+			},
+		},
+		{
+			"name":        "refactor",
+			"description": "Suggest refactoring improvements",
+			"arguments": []map[string]interface{}{
+				{"name": "file", "description": "File to refactor", "required": true},
+			},
+		},
+	}
+	return &JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result:  map[string]interface{}{"prompts": prompts},
+	}
+}
+
+// handlePromptsGet returns a prompt template with arguments filled in.
+func (s *MCPServer) handlePromptsGet(req *JSONRPCRequest) *JSONRPCResponse {
+	var params struct {
+		Name      string            `json:"name"`
+		Arguments map[string]string `json:"arguments"`
+	}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		return &JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &RPCError{Code: errCodeInvalidParams, Message: "Invalid params: " + err.Error()},
+		}
+	}
+
+	var messages []map[string]interface{}
+	switch params.Name {
+	case "review":
+		scope := params.Arguments["scope"]
+		if scope == "" {
+			scope = "staged changes"
+		}
+		messages = append(messages, map[string]interface{}{
+			"role":    "user",
+			"content": map[string]interface{}{"type": "text", "text": fmt.Sprintf("Please review the %s in the workspace. Focus on correctness, security, and style.", scope)},
+		})
+	case "explain":
+		target := params.Arguments["target"]
+		messages = append(messages, map[string]interface{}{
+			"role":    "user",
+			"content": map[string]interface{}{"type": "text", "text": fmt.Sprintf("Explain %s in detail. Include what it does, how it works, and why it's structured that way.", target)},
+		})
+	case "refactor":
+		file := params.Arguments["file"]
+		messages = append(messages, map[string]interface{}{
+			"role":    "user",
+			"content": map[string]interface{}{"type": "text", "text": fmt.Sprintf("Suggest refactoring improvements for %s. Focus on readability, performance, and maintainability.", file)},
+		})
+	default:
+		return &JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Error:   &RPCError{Code: errCodeMethodNotFound, Message: fmt.Sprintf("Unknown prompt: %s", params.Name)},
+		}
+	}
+
+	return &JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result:  map[string]interface{}{"messages": messages},
 	}
 }
 

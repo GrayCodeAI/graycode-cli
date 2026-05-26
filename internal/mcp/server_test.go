@@ -39,8 +39,8 @@ func TestInitializeHandshake(t *testing.T) {
 	}
 
 	// Check protocol version
-	if pv, ok := result["protocolVersion"].(string); !ok || pv != "2024-11-05" {
-		t.Errorf("expected protocolVersion 2024-11-05, got %v", result["protocolVersion"])
+	if pv, ok := result["protocolVersion"].(string); !ok || pv != "2025-03-26" {
+		t.Errorf("expected protocolVersion 2025-03-26, got %v", result["protocolVersion"])
 	}
 
 	// Check server info

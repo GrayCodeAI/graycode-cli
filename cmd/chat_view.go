@@ -290,8 +290,44 @@ func (m *chatModel) updateViewportContent() {
 		case "tool_use":
 			chatContent.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
-			toolWrapped := wrapText(msg.content, viewWidth-6, 0)
-			chatContent.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+			// Enhanced rendering for tool results with diff info
+			if strings.Contains(msg.content, "diff ") && strings.Contains(msg.content, " lines") {
+				// Split into main content and diff summary
+				parts := strings.SplitN(msg.content, "\ndiff ", 2)
+				mainContent := parts[0]
+				diffPart := ""
+				if len(parts) > 1 {
+					diffPart = "diff " + parts[1]
+				}
+				toolWrapped := wrapText(mainContent, viewWidth-6, 0)
+				chatContent.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+				if diffPart != "" {
+					chatContent.WriteString("\n")
+					diffStyled := renderDiffSummary(diffPart, viewWidth-6)
+					chatContent.WriteString("    " + diffStyled)
+				}
+			} else if strings.Contains(msg.content, "Self-review found issues") {
+				// Highlight self-review rejections
+				chatContent.WriteString(errorStyle.Render("    ✗ " + msg.content))
+			} else if strings.Contains(msg.content, "## Self-Reflection") {
+				// Render reflection with distinct styling
+				parts := strings.SplitN(msg.content, "## Self-Reflection", 2)
+				mainContent := parts[0]
+				reflectionPart := ""
+				if len(parts) > 1 {
+					reflectionPart = "## Self-Reflection" + parts[1]
+				}
+				toolWrapped := wrapText(mainContent, viewWidth-6, 0)
+				chatContent.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+				if reflectionPart != "" {
+					chatContent.WriteString("\n")
+					reflStyled := renderReflectionBox(reflectionPart, viewWidth-6)
+					chatContent.WriteString("    " + reflStyled)
+				}
+			} else {
+				toolWrapped := wrapText(msg.content, viewWidth-6, 0)
+				chatContent.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+			}
 		case "thinking":
 			thinkWrapped := wrapText(msg.content, viewWidth-4, 3)
 			chatContent.WriteString(dimStyle.Render("💭 " + thinkWrapped))
@@ -456,6 +492,12 @@ func (m chatModel) View() string {
 		}
 	}
 
+	// Command palette overlay
+	if m.commandPalette != nil && m.commandPalette.IsOpen() {
+		paletteView := m.commandPalette.Render(viewWidth)
+		return m.viewport.View() + "\n" + paletteView
+	}
+
 	return m.viewport.View() + "\n" + bottomBar.String()
 }
 
@@ -476,4 +518,71 @@ func renderPermissionBox(summary string, width int) string {
 	options := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4")).Render("[y]es  [n]o  [a]lways")
 
 	return border.Render(title + "\n" + body + "\n" + options)
+}
+
+// renderDiffSummary renders a diff summary line with colored +/- indicators.
+func renderDiffSummary(diffLine string, width int) string {
+	addStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("46"))  // green
+	delStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196")) // red
+	fileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Italic(true)
+
+	// Parse "diff <file>: +N -N lines"
+	parts := strings.SplitN(diffLine, ":", 2)
+	if len(parts) != 2 {
+		return dimStyle.Render(diffLine)
+	}
+
+	filePart := strings.TrimSpace(parts[0]) // "diff <file>"
+	statsPart := strings.TrimSpace(parts[1]) // "+N -N lines"
+
+	// Color the +/- numbers
+	styled := statsPart
+	styled = strings.ReplaceAll(styled, "+", addStyle.Render("+"))
+	styled = strings.ReplaceAll(styled, "-", delStyle.Render("-"))
+
+	return fileStyle.Render(filePart) + ": " + styled
+}
+
+// renderReflectionBox renders a self-reflection in a distinct styled box.
+func renderReflectionBox(reflection string, width int) string {
+	boxW := width - 2
+	if boxW < 40 {
+		boxW = 40
+	}
+
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true) // orange
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)   // blue
+	contentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))           // light gray
+
+	var b strings.Builder
+	lines := strings.Split(reflection, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "## ") {
+			b.WriteString(titleStyle.Render(line) + "\n")
+		} else if strings.HasPrefix(line, "**") && strings.Contains(line, ":**") {
+			// "**What failed:** ..." format
+			colonIdx := strings.Index(line, ":**")
+			if colonIdx >= 0 {
+				label := line[:colonIdx+3]
+				rest := line[colonIdx+3:]
+				b.WriteString(labelStyle.Render(label) + contentStyle.Render(rest) + "\n")
+			} else {
+				b.WriteString(contentStyle.Render(line) + "\n")
+			}
+		} else {
+			b.WriteString(contentStyle.Render(line) + "\n")
+		}
+	}
+
+	border := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("214")).
+		Width(boxW).
+		Padding(0, 1)
+
+	return border.Render(strings.TrimRight(b.String(), "\n"))
 }

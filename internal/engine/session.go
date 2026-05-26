@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -106,6 +107,10 @@ type Session struct {
 	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
 	Steering       *SteeringQueue             // steering.go — user guidance injection between tool batches
 	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
+
+	// Few-shot learning and prompt optimization
+	FewShotStore   *FewShotStore              // scaffold/fewshot.go — successful pattern collection
+	AdaptivePrompt *AdaptivePrompt            // adaptive_prompt.go — user preference learning
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.
@@ -378,6 +383,15 @@ func (s *Session) MessageCount() int { return len(s.messages) }
 
 // RawMessages returns the conversation messages for persistence.
 func (s *Session) RawMessages() []types.EyrieMessage { return s.messages }
+
+// Chat implements the LLMClient interface by delegating to the underlying client.
+// This allows Session to be passed to components that need LLM access (e.g. Reflector, SelfReview).
+func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+	if s.client == nil {
+		return nil, fmt.Errorf("session: no LLM client configured")
+	}
+	return s.client.Chat(ctx, msgs, opts)
+}
 
 // RemoveLastExchange removes the last user+assistant message pair.
 func (s *Session) RemoveLastExchange() {

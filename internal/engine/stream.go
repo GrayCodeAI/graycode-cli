@@ -76,6 +76,32 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				_ = s.Memory.Remember(summary, "session")
 			}
 		}
+
+		// Few-shot learning: record successful session patterns
+		if success && s.FewShotStore != nil && len(s.messages) >= 2 {
+			taskGoal := ""
+			response := ""
+			for _, m := range s.messages {
+				if m.Role == "user" && m.ToolResult == nil && taskGoal == "" {
+					taskGoal = m.Content
+				}
+				if m.Role == "assistant" && m.Content != "" {
+					response = m.Content
+				}
+			}
+			if taskGoal != "" && response != "" {
+				s.FewShotStore.Record(taskGoal, response, "general")
+			}
+		}
+
+		// Adaptive prompt: learn from user corrections in this session
+		if s.AdaptivePrompt != nil {
+			for _, m := range s.messages {
+				if m.Role == "user" && m.ToolResult == nil {
+					s.AdaptivePrompt.LearnFromFeedback(m.Content)
+				}
+			}
+		}
 	}()
 
 	// Session start hook
@@ -98,6 +124,21 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		remembered, err := s.Memory.Recall(lastMsg, 2000)
 		if err == nil && remembered != "" {
 			s.AppendSystemContext("## Relevant Memories\n" + remembered)
+		}
+	}
+
+	// Few-shot learning: inject relevant examples from past successful sessions
+	if s.FewShotStore != nil && len(s.messages) > 0 {
+		lastMsg := s.messages[len(s.messages)-1].Content
+		if fewShotCtx := s.FewShotStore.FormatForPrompt(lastMsg); fewShotCtx != "" {
+			s.AppendSystemContext(fewShotCtx)
+		}
+	}
+
+	// Adaptive prompt: inject user preferences learned from corrections
+	if s.AdaptivePrompt != nil {
+		if prefs := s.AdaptivePrompt.FormatForPrompt(); prefs != "" {
+			s.AppendSystemContext(prefs)
 		}
 	}
 
@@ -660,7 +701,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if resultContent == "" {
 				resultContent = "(no output)"
 			}
-			s.messages = append(s.messages, types.EyrieMessage{
+			msg := types.EyrieMessage{
 				Role:    "user",
 				Content: resultContent,
 				ToolResult: &types.ToolResult{
@@ -668,7 +709,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					Content:   resultContent,
 					IsError:   r.isErr,
 				},
-			})
+			}
+			// Multi-modal vision: extract data URIs from tool results and attach as images
+			if !r.isErr && strings.Contains(resultContent, "data:") && strings.Contains(resultContent, ";base64,") {
+				if imgURI := extractDataURI(resultContent); imgURI != "" {
+					msg.Images = []string{imgURI}
+				}
+			}
+			s.messages = append(s.messages, msg)
 		}
 
 		// --- STEERING: Inject user guidance between tool batches ---
@@ -728,4 +776,19 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 	}
+}
+
+// extractDataURI extracts the first base64 data URI from a string.
+// Returns the full data URI (e.g., "data:image/png;base64,...") or empty string.
+func extractDataURI(s string) string {
+	idx := strings.Index(s, "data:")
+	if idx < 0 {
+		return ""
+	}
+	rest := s[idx:]
+	endIdx := strings.IndexAny(rest, " \n\t\"'")
+	if endIdx < 0 {
+		return rest
+	}
+	return rest[:endIdx]
 }

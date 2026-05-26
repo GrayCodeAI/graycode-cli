@@ -1,0 +1,145 @@
+{
+  "name": "hawk-ai",
+  "displayName": "Hawk AI Coding Agent",
+  "description": "AI coding agent for your terminal — VS Code integration",
+  "version": "0.2.0",
+  "publisher": "GrayCodeAI",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "AI",
+    "Linters",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:go",
+    "onLanguage:python",
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:rust"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "hawk.chat",
+        "title": "Hawk: Open Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "hawk.review",
+        "title": "Hawk: Review Changes",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "hawk.explain",
+        "title": "Hawk: Explain Selection",
+        "icon": "$(book)"
+      },
+      {
+        "command": "hawk.refactor",
+        "title": "Hawk: Refactor Selection",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "hawk.test",
+        "title": "Hawk: Generate Tests",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "hawk.impact",
+        "title": "Hawk: Analyze Impact",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "hawk.commit",
+        "title": "Hawk: Smart Commit",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "hawk.status",
+        "title": "Hawk: Show Status",
+        "icon": "$(pulse)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "hawk.chat",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h"
+      },
+      {
+        "command": "hawk.explain",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "Hawk AI",
+      "properties": {
+        "hawk.daemonPort": {
+          "type": "integer",
+          "default": 4590,
+          "description": "Port of the hawk daemon server"
+        },
+        "hawk.daemonHost": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host of the hawk daemon server"
+        },
+        "hawk.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for hawk daemon authentication"
+        },
+        "hawk.autoReview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically review changes on save"
+        },
+        "hawk.showInlineHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline code hints and suggestions"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "hawk.explain",
+          "when": "editorHasSelection",
+          "group": "hawk@1"
+        },
+        {
+          "command": "hawk.refactor",
+          "when": "editorHasSelection",
+          "group": "hawk@2"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "hawk.review",
+          "group": "hawk@1"
+        },
+        {
+          "command": "hawk.commit",
+          "group": "hawk@2"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "test": "node src/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "eslint": "^8.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.0.0"
+  }
+}
