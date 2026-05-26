@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,12 +22,12 @@ var hawkDirectivePattern = regexp.MustCompile(`(?i)(?://|#|--|/\*)\s*hawk:\s*(.+
 // ScanDirectives finds all `// hawk: <command>` comments in source files.
 func ScanDirectives(dir string) []Directive {
 	var directives []Directive
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".hawk" {
 				return filepath.SkipDir
 			}

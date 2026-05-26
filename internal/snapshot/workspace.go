@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -97,9 +98,9 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 
 	// Walk the project directory
 	var totalSize int64
-	err := filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip files we can't read
+			return err // propagate errors
 		}
 
 		// Get relative path
@@ -114,7 +115,7 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 		}
 
 		// Check if this directory should be ignored
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if ignoredDirs[base] {
 				return filepath.SkipDir
@@ -123,8 +124,14 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 		}
 
 		// Skip non-regular files (symlinks, etc.)
-		if !info.Mode().IsRegular() {
+		if !d.Type().IsRegular() {
 			return nil
+		}
+
+		// Get file info for metadata
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
 		}
 
 		// Read file content
@@ -140,8 +147,8 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 		snap.Files[rel] = FileState{
 			Path:    rel,
 			Content: content,
-			Mode:    info.Mode(),
-			ModTime: info.ModTime(),
+			Mode:    fi.Mode(),
+			ModTime: fi.ModTime(),
 			Hash:    hashStr,
 		}
 
@@ -178,9 +185,9 @@ func (s *SnapshotStore) Restore(snapshotID string, projectDir string) error {
 
 	// Collect current files (to know what to delete)
 	currentFiles := make(map[string]bool)
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		rel, relErr := filepath.Rel(projectDir, path)
 		if relErr != nil {
@@ -189,14 +196,14 @@ func (s *SnapshotStore) Restore(snapshotID string, projectDir string) error {
 		if rel == "." {
 			return nil
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if ignoredDirs[base] {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if info.Mode().IsRegular() {
+		if d.Type().IsRegular() {
 			currentFiles[rel] = true
 		}
 		return nil
@@ -318,9 +325,9 @@ func (s *SnapshotStore) Diff(snapshotID string, projectDir string) (*SnapshotDif
 
 	// Collect current file hashes
 	currentFiles := make(map[string]string) // path -> hash
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		rel, relErr := filepath.Rel(projectDir, path)
 		if relErr != nil {
@@ -329,14 +336,14 @@ func (s *SnapshotStore) Diff(snapshotID string, projectDir string) (*SnapshotDif
 		if rel == "." {
 			return nil
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if ignoredDirs[base] {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !info.Mode().IsRegular() {
+		if !d.Type().IsRegular() {
 			return nil
 		}
 		content, readErr := os.ReadFile(path)

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -641,11 +642,11 @@ func (fg *FileGrouper) collectFiles() ([]string, error) {
 		ignoreSet[p] = true
 	}
 
-	err := filepath.Walk(fg.ProjectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(fg.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if ignoreSet[base] {
 				return filepath.SkipDir

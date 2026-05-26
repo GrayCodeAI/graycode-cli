@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -84,11 +85,11 @@ func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added
 	var files []fileWork
 	seenPaths := make(map[string]bool)
 
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, walkErr error) error {
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return nil // skip errors
+			return walkErr
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if ignoreSet[base] {
 				return filepath.SkipDir

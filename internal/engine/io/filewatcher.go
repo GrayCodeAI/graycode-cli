@@ -3,6 +3,7 @@ package io
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -170,9 +171,9 @@ func (fw *FileWatcher) Stop() {
 // scan walks the root directory and builds a snapshot of all tracked files.
 func (fw *FileWatcher) scan() map[string]fileSnapshot {
 	result := make(map[string]fileSnapshot)
-	_ = filepath.Walk(fw.RootDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(fw.RootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		// Get relative path for pattern matching.
 		rel, relErr := filepath.Rel(fw.RootDir, path)
@@ -184,7 +185,7 @@ func (fw *FileWatcher) scan() map[string]fileSnapshot {
 		}
 
 		// Check if directory should be ignored (skip entire subtree).
-		if info.IsDir() {
+		if d.IsDir() {
 			if fw.ShouldIgnore(rel + "/") {
 				return filepath.SkipDir
 			}
@@ -201,9 +202,13 @@ func (fw *FileWatcher) scan() map[string]fileSnapshot {
 			return nil
 		}
 
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
 		result[rel] = fileSnapshot{
-			modTime: info.ModTime(),
-			size:    info.Size(),
+			modTime: fi.ModTime(),
+			size:    fi.Size(),
 		}
 		return nil
 	})

@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -308,14 +308,14 @@ func (ac *Autocompleter) RefreshFiles() {
 	var files []string
 	fileMTimes := make(map[string]time.Time)
 
-	_ = filepath.Walk(ac.ProjectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(ac.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 
 		// Skip hidden directories and common non-essential dirs
-		name := info.Name()
-		if info.IsDir() {
+		name := d.Name()
+		if d.IsDir() {
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" || name == "__pycache__" {
 				return filepath.SkipDir
 			}
@@ -333,7 +333,11 @@ func (ac *Autocompleter) RefreshFiles() {
 		}
 
 		files = append(files, rel)
-		fileMTimes[rel] = info.ModTime()
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
+		fileMTimes[rel] = fi.ModTime()
 
 		// Cap file count
 		if len(files) > 5000 {

@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -225,12 +226,12 @@ func ScanTODOs(projectDir string) []*SuggestedTask {
 
 	markers := []string{"TODO", "FIXME", "HACK"}
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			if skipDirs[info.Name()] {
+		if d.IsDir() {
+			if skipDirs[d.Name()] {
 				return filepath.SkipDir
 			}
 			return nil
@@ -402,12 +403,12 @@ func scanDocsTasks(projectDir string) []*SuggestedTask {
 		return tasks
 	}
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == "vendor" || name == ".git" || name == "node_modules" {
 				return filepath.SkipDir
 			}
@@ -527,12 +528,12 @@ func scanSecurityTasks(projectDir string) []*SuggestedTask {
 
 	foundIssues := make(map[string]bool)
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			if skipDirs[info.Name()] {
+		if d.IsDir() {
+			if skipDirs[d.Name()] {
 				return filepath.SkipDir
 			}
 			return nil

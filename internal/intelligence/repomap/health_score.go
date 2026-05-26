@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -131,12 +132,12 @@ func (hs *HealthScorer) ScoreTestCoverage(dir string) (float64, []HealthIssue) {
 	dirsWithSource := make(map[string]bool)
 	dirsWithTests := make(map[string]bool)
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "vendor" || name == "node_modules" {
 				return filepath.SkipDir
 			}
@@ -229,12 +230,12 @@ func (hs *HealthScorer) ScoreDocumentation(dir string) (float64, []HealthIssue) 
 	totalExported := 0
 	documentedExported := 0
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "vendor" || name == "node_modules" || name == "testdata" {
 				return filepath.SkipDir
 			}
@@ -295,12 +296,12 @@ func (hs *HealthScorer) ScoreComplexity(dir string) (float64, []HealthIssue) {
 	highComplexityCount := 0
 	threshold := 10
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "vendor" || name == "node_modules" || name == "testdata" {
 				return filepath.SkipDir
 			}
@@ -461,12 +462,12 @@ func (hs *HealthScorer) ScoreCodeQuality(dir string) (float64, []HealthIssue) {
 	var longFiles []string
 	var deadCodeFiles []string
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "vendor" || name == "node_modules" || name == "testdata" {
 				return filepath.SkipDir
 			}
@@ -557,14 +558,14 @@ func (hs *HealthScorer) ScoreMaintainability(dir string) (float64, []HealthIssue
 
 	// Check package organization
 	pkgCount := 0
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
 			return nil
 		}
-		if !info.IsDir() {
-			return nil
-		}
-		name := info.Name()
+		name := d.Name()
 		if name == ".git" || name == "vendor" || name == "node_modules" {
 			return filepath.SkipDir
 		}
@@ -581,12 +582,12 @@ func (hs *HealthScorer) ScoreMaintainability(dir string) (float64, []HealthIssue
 
 	// Check naming consistency
 	inconsistentNames := 0
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "vendor" || name == "node_modules" {
 				return filepath.SkipDir
 			}
