@@ -207,6 +207,9 @@ type chatModel struct {
 
 	// Loop cancellation
 	loopCancel context.CancelFunc // cancels the current /loop goroutine
+
+	// PageRank file watcher
+	watcherStop func() // stops the incremental symbol graph file watcher
 }
 
 const streamRenderInterval = 50 * time.Millisecond

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/term"
@@ -28,6 +29,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -366,6 +368,71 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.history = loadInputHistory()
 	m.historyIdx = len(m.history)
 
+	// --watch: build initial symbol graph and start file watcher for incremental PageRank updates
+	if watchFlag {
+		cwd, err := os.Getwd()
+		if err == nil {
+			sg, graphErr := repomap.BuildSymbolGraph(cwd, repomap.Options{
+				MaxFiles:  500,
+				MaxTokens: 2000,
+			})
+			if graphErr == nil && sg != nil {
+				changes := make(chan string, 100)
+				done := make(chan struct{})
+
+				go func() {
+					ticker := time.NewTicker(time.Second)
+					defer ticker.Stop()
+					var pending []string
+					for {
+						select {
+						case <-done:
+							if len(pending) > 0 {
+								sg.UpdateGraph(cwd, pending)
+							}
+							return
+						case <-ticker.C:
+							if len(pending) > 0 {
+								sg.UpdateGraph(cwd, pending)
+								pending = nil
+							}
+						case p, ok := <-changes:
+							if !ok {
+								if len(pending) > 0 {
+									sg.UpdateGraph(cwd, pending)
+								}
+								return
+							}
+							pending = append(pending, p)
+						}
+					}
+				}()
+
+				fw, watcherErr := repomap.NewFileWatcher(cwd, func(path string) {
+					rel, err := filepath.Rel(cwd, path)
+					if err == nil {
+						select {
+						case changes <- rel:
+						default:
+						}
+					}
+				})
+				if watcherErr == nil {
+					var stopOnce sync.Once
+					fw.Start()
+					m.watcherStop = func() {
+						stopOnce.Do(func() {
+							fw.Stop()
+							close(done)
+						})
+					}
+				} else {
+					close(done)
+				}
+			}
+		}
+	}
+
 	return m, nil
 }
 
@@ -396,6 +463,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Container failed — block all input except quit
 		if m.containerEnabled && m.containerErr != nil {
 			if msg.String() == "ctrl+c" || msg.String() == "q" {
+				if m.watcherStop != nil {
+					m.watcherStop()
+				}
 				m.quitting = true
 				return m, tea.Quit
 			}
@@ -457,6 +527,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				m.saveSession()
+				if m.watcherStop != nil {
+					m.watcherStop()
+				}
 				m.quitting = true
 				return m, tea.Quit
 			}
@@ -486,6 +559,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyCtrlC:
 				if time.Since(m.lastCtrlC) < 1*time.Second {
 					m.saveSession()
+					if m.watcherStop != nil {
+						m.watcherStop()
+					}
 					m.quitting = true
 					return m, tea.Quit
 				}
@@ -538,6 +614,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC:
 			if time.Since(m.lastCtrlC) < 1*time.Second {
 				m.saveSession()
+				if m.watcherStop != nil {
+					m.watcherStop()
+				}
 				m.quitting = true
 				return m, tea.Quit
 			}
