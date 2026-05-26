@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/tok"
 )
 
 // ConsensusSampler implements the multi-sample consensus pattern inspired by
@@ -423,8 +425,7 @@ func normalizeKey(s string) string {
 }
 
 func estimateTokens(content string) int {
-	// Rough estimate: ~4 characters per token
-	return len(content) / 4
+	return tok.EstimateTokens(content)
 }
 
 func calculateAgreement(samples []Sample, winner *Sample) float64 {

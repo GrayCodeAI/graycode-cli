@@ -21,10 +21,29 @@ var dangerousCommands = map[string]bool{
 
 // dangerousPatterns catches structural patterns that bypass simple word matching.
 var dangerousSubstrings = []string{
-	"rm -rf /", "rm -rf ~", "rm -rf .",
+	"rm -rf /", "rm -rf /*",
+	"rm -rf ~", "rm -rf .",
 	":(){ :|:& };:", // fork bomb
 	"chmod -r 777 /",
 	"> /dev/sd", "> /dev/nv",
+}
+
+// normalizeCommand normalizes a command to prevent trivial bypass of
+// dangerous-command detection. It expands tilde and collapses repeated root globs.
+func normalizeCommand(cmd string) string {
+	home, _ := os.UserHomeDir()
+	// Expand ~/ and ~ to the user's home directory
+	if home != "" {
+		cmd = strings.ReplaceAll(cmd, "~/", home+"/")
+		if strings.HasPrefix(cmd, "~") && (len(cmd) == 1 || cmd[1] == ' ' || cmd[1] == '\t') {
+			cmd = home + cmd[1:]
+		}
+	}
+	// Collapse repeated /* sequences: rm -rf /* -> rm -rf /
+	for strings.Contains(cmd, "/*") {
+		cmd = strings.ReplaceAll(cmd, "/*", "/")
+	}
+	return cmd
 }
 
 // shellFunctionRe matches shell function definitions (bash/zsh): "name() {" or "name () {"
@@ -290,6 +309,7 @@ func IsSuspicious(command string) bool {
 
 // isSegmentSuspicious checks a single command segment for suspicious patterns.
 func isSegmentSuspicious(segment string) bool {
+	segment = normalizeCommand(segment)
 	lower := strings.ToLower(segment)
 
 	for _, pat := range dangerousSubstrings {
@@ -381,8 +401,11 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return "", fmt.Errorf("blocked: destructive command pattern detected — %s", p.Command)
 	}
 
+	// Normalize command to prevent trivial bypass of dangerous-command detection.
+	normalized := normalizeCommand(p.Command)
+
 	// Hard block: always-dangerous patterns
-	lower := strings.ToLower(p.Command)
+	lower := strings.ToLower(normalized)
 	for _, pat := range dangerousSubstrings {
 		if strings.Contains(lower, pat) {
 			return "", fmt.Errorf("blocked: dangerous command pattern detected")
