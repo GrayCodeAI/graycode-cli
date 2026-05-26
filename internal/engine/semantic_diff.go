@@ -965,7 +965,7 @@ func formatNode(fset *token.FileSet, node ast.Node) string {
 	case *ast.Ident:
 		return t.Name
 	default:
-		return formatFieldType(node.(ast.Expr))
+		return formatFieldType(node.(ast.Expr)) //nolint:errcheck
 	}
 }
 
