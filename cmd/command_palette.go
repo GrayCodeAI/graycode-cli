@@ -19,22 +19,24 @@ type CommandPaletteEntry struct {
 
 // CommandPalette is a Ctrl+K command palette for quick command discovery.
 type CommandPalette struct {
-	open    bool
-	input   textinput.Model
-	entries []CommandPaletteEntry
+	open     bool
+	input    textinput.Model
+	entries  []CommandPaletteEntry
 	filtered []CommandPaletteEntry
-	sel     int
-	width   int
+	sel      int
+	width    int
 }
 
-var paletteTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
-var paletteInputStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(0, 1)
-var paletteItemStyle = lipgloss.NewStyle().Padding(0, 1)
-var paletteSelStyle = lipgloss.NewStyle().Padding(0, 1).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("230"))
-var paletteDescStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-var paletteCategoryStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
-var paletteDimStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-var paletteBoxStyle = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(0, 1)
+var (
+	paletteTitleStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
+	paletteInputStyle    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(0, 1)
+	paletteItemStyle     = lipgloss.NewStyle().Padding(0, 1)
+	paletteSelStyle      = lipgloss.NewStyle().Padding(0, 1).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("230"))
+	paletteDescStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	paletteCategoryStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
+	paletteDimStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	paletteBoxStyle      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(0, 1)
+)
 
 // NewCommandPalette creates a new command palette with all available commands.
 func NewCommandPalette(width int) *CommandPalette {
@@ -59,67 +61,67 @@ func (cp *CommandPalette) buildEntries() []CommandPaletteEntry {
 
 	// Core commands
 	core := map[string]string{
-		"/help":              "Show help and available commands",
-		"/model":             "Switch AI model",
-		"/config":            "Open configuration panel",
-		"/quit":              "Exit hawk",
-		"/clear":             "Clear conversation history",
-		"/compact":           "Compact conversation to save tokens",
-		"/undo":              "Undo the last file change",
-		"/snapshot":          "Save workspace snapshot",
-		"/recover":           "Recover interrupted session",
+		"/help":     "Show help and available commands",
+		"/model":    "Switch AI model",
+		"/config":   "Open configuration panel",
+		"/quit":     "Exit hawk",
+		"/clear":    "Clear conversation history",
+		"/compact":  "Compact conversation to save tokens",
+		"/undo":     "Undo the last file change",
+		"/snapshot": "Save workspace snapshot",
+		"/recover":  "Recover interrupted session",
 	}
 
 	// Workflow commands
 	workflow := map[string]string{
-		"/plan":              "Enter planning mode",
-		"/review":            "Review recent changes",
-		"/commit":            "Create smart commit",
-		"/test":              "Run project tests",
-		"/lint":              "Run linter on changed files",
-		"/format":            "Format code",
-		"/diff":              "Show working diff",
-		"/status":            "Show git status",
+		"/plan":   "Enter planning mode",
+		"/review": "Review recent changes",
+		"/commit": "Create smart commit",
+		"/test":   "Run project tests",
+		"/lint":   "Run linter on changed files",
+		"/format": "Format code",
+		"/diff":   "Show working diff",
+		"/status": "Show git status",
 	}
 
 	// Agent commands
 	agent := map[string]string{
-		"/agent":             "Agent management",
-		"/mission":           "Multi-agent mission mode",
-		"/exec":              "Execute task non-interactively",
-		"/research":          "Autonomous research loop",
-		"/loop":              "Run in loop mode",
+		"/agent":    "Agent management",
+		"/mission":  "Multi-agent mission mode",
+		"/exec":     "Execute task non-interactively",
+		"/research": "Autonomous research loop",
+		"/loop":     "Run in loop mode",
 	}
 
 	// Memory & context
 	memory := map[string]string{
-		"/remember":          "Store information in memory",
-		"/recall":            "Search memory",
-		"/context":           "Export project context",
-		"/search":            "Search sessions",
-		"/sessions":          "List saved sessions",
+		"/remember": "Store information in memory",
+		"/recall":   "Search memory",
+		"/context":  "Export project context",
+		"/search":   "Search sessions",
+		"/sessions": "List saved sessions",
 	}
 
 	// Tools & ecosystem
 	tools := map[string]string{
-		"/tools":             "List available tools",
-		"/mcp":               "Show MCP server config",
-		"/plugin":            "Plugin management",
-		"/skills":            "Community skills",
-		"/sight":             "Code review with sight",
-		"/inspect":           "Site audit",
-		"/yaad":              "Memory graph operations",
-		"/ecosystem":         "Ecosystem panel",
+		"/tools":     "List available tools",
+		"/mcp":       "Show MCP server config",
+		"/plugin":    "Plugin management",
+		"/skills":    "Community skills",
+		"/sight":     "Code review with sight",
+		"/inspect":   "Site audit",
+		"/yaad":      "Memory graph operations",
+		"/ecosystem": "Ecosystem panel",
 	}
 
 	// Diagnostics
 	diag := map[string]string{
-		"/doctor":            "Run health diagnostics",
-		"/path":              "Check developer path readiness",
-		"/cost":              "Show cost analysis",
-		"/rules":             "Show permission rules",
-		"/sandbox":           "Sandbox configuration",
-		"/eval":              "Run evaluations",
+		"/doctor":  "Run health diagnostics",
+		"/path":    "Check developer path readiness",
+		"/cost":    "Show cost analysis",
+		"/rules":   "Show permission rules",
+		"/sandbox": "Sandbox configuration",
+		"/eval":    "Run evaluations",
 	}
 
 	// Settings

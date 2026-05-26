@@ -15,10 +15,13 @@ import (
 // It combines import graph traversal, co-change history, and risk scoring.
 type ImpactTool struct{}
 
-func (ImpactTool) Name() string        { return "Impact" }
-func (ImpactTool) RiskLevel() string   { return "low" }
-func (ImpactTool) Aliases() []string   { return []string{"impact", "blast-radius"} }
-func (ImpactTool) Description() string { return "Analyze cross-file impact of changes: dependencies, dependents, co-change patterns, risk score, and test suggestions." }
+func (ImpactTool) Name() string      { return "Impact" }
+func (ImpactTool) RiskLevel() string { return "low" }
+func (ImpactTool) Aliases() []string { return []string{"impact", "blast-radius"} }
+func (ImpactTool) Description() string {
+	return "Analyze cross-file impact of changes: dependencies, dependents, co-change patterns, risk score, and test suggestions."
+}
+
 func (ImpactTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -130,13 +133,13 @@ func (ImpactTool) Execute(ctx context.Context, input json.RawMessage) (string, e
 
 // ImpactAnalysis holds the full impact analysis result.
 type ImpactAnalysis struct {
-	ChangedFiles []string                 `json:"changed_files"`
-	AllAffected  []string                 `json:"all_affected"`
-	TestFiles    []string                 `json:"test_files"`
-	Depth        int                      `json:"depth"`
-	Impacts      map[string]*FileImpact   `json:"impacts"`
-	RiskScore    int                      `json:"risk_score"`
-	Suggestions  []string                 `json:"suggestions"`
+	ChangedFiles []string               `json:"changed_files"`
+	AllAffected  []string               `json:"all_affected"`
+	TestFiles    []string               `json:"test_files"`
+	Depth        int                    `json:"depth"`
+	Impacts      map[string]*FileImpact `json:"impacts"`
+	RiskScore    int                    `json:"risk_score"`
+	Suggestions  []string               `json:"suggestions"`
 }
 
 // FileImpact holds impact data for a single file.

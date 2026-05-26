@@ -109,8 +109,8 @@ type Session struct {
 	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
 
 	// Few-shot learning and prompt optimization
-	FewShotStore   *FewShotStore              // scaffold/fewshot.go — successful pattern collection
-	AdaptivePrompt *AdaptivePrompt            // adaptive_prompt.go — user preference learning
+	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
+	AdaptivePrompt *AdaptivePrompt // adaptive_prompt.go — user preference learning
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.

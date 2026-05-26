@@ -1970,7 +1970,7 @@ Generate the recap:`, summary.String())
 			go func() {
 				// Create temp file for recording
 				tmpFile := filepath.Join(os.TempDir(), "hawk_voice_input.wav")
-				
+
 				// Record using sox or ffmpeg if available
 				var recordCmd *exec.Cmd
 				if _, err := exec.LookPath("sox"); err == nil {
@@ -1982,19 +1982,19 @@ Generate the recap:`, summary.String())
 					m.messages = append(m.messages, displayMsg{role: "system", content: "No audio recorder found. Install sox (brew install sox) or use: whisper --model base -f recording.wav"})
 					return
 				}
-				
+
 				if err := recordCmd.Run(); err != nil {
 					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Recording failed: %v", err)})
 					return
 				}
-				
+
 				// Transcribe with whisper
 				transcribeCmd := exec.Command("whisper", "--model", "base", "--output_format", "txt", "--output_dir", os.TempDir(), tmpFile)
 				if err := transcribeCmd.Run(); err != nil {
 					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Transcription failed: %v", err)})
 					return
 				}
-				
+
 				// Read transcription
 				txtFile := strings.TrimSuffix(tmpFile, ".wav") + ".txt"
 				transcription, err := os.ReadFile(txtFile)
@@ -2002,7 +2002,7 @@ Generate the recap:`, summary.String())
 					m.messages = append(m.messages, displayMsg{role: "error", content: "Could not read transcription"})
 					return
 				}
-				
+
 				text := strings.TrimSpace(string(transcription))
 				if text != "" {
 					m.input.SetValue(text)
