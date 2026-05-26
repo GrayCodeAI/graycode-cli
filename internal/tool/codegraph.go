@@ -25,8 +25,8 @@ func (CodeGraphTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"action": map[string]interface{}{
 				"type":        "string",
-				"enum":        []string{"search", "callers", "callees", "impact", "context", "index", "sync", "trace", "explore", "files", "status", "stats", "pagerank", "centrality", "communities", "components", "deadcode", "coupling", "cross_repo"},
-				"description": "Action: search/find symbols, callers/who calls, callees/what it calls, impact/breakage radius, context/build task context, index/full re-index, sync/incremental update, trace/call path A→B, explore/multi-symbol source, files/list indexed, status/health check, stats/counts, pagerank/file importance, centrality/bridge files, communities/module clusters, components/isolated subsystems, deadcode/unused code, coupling/tightly coupled files, cross_repo/cross-repo dependencies",
+				"enum":        []string{"search", "callers", "callees", "impact", "context", "index", "sync", "trace", "explore", "files", "status", "stats", "pagerank", "centrality", "communities", "components", "deadcode", "coupling", "cross_repo", "semantic_search", "hybrid_search"},
+				"description": "Action: search/find symbols, callers/who calls, callees/what it calls, impact/breakage radius, context/build task context, index/full re-index, sync/incremental update, trace/call path A→B, explore/multi-symbol source, files/list indexed, status/health check, stats/counts, pagerank/file importance, centrality/bridge files, communities/module clusters, components/isolated subsystems, deadcode/unused code, coupling/tightly coupled files, cross_repo/cross-repo dependencies, semantic_search/embedding-based search, hybrid_search/combined FTS5+semantic",
 			},
 			"query": map[string]interface{}{
 				"type":        "string",
@@ -148,6 +148,10 @@ func (CodeGraphTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return couplingCodeGraph(cg, p.MaxNodes)
 	case "cross_repo":
 		return crossRepoCodeGraph(p.Query, p.MaxNodes)
+	case "semantic_search":
+		return semanticSearchCodeGraph(cg, p.Query, p.MaxNodes)
+	case "hybrid_search":
+		return hybridSearchCodeGraph(cg, p.Query, p.MaxNodes)
 	default:
 		return "", fmt.Errorf("unknown action: %s", p.Action)
 	}
@@ -433,6 +437,64 @@ func statusCodeGraph(cg *codegraph.CodeGraph) (string, error) {
 		for lang, count := range status.FilesByLang {
 			msg += fmt.Sprintf("- %s: %d\n", lang, count)
 		}
+	}
+
+	return msg, nil
+}
+
+func semanticSearchCodeGraph(cg *codegraph.CodeGraph, query string, limit int) (string, error) {
+	if query == "" {
+		return "", fmt.Errorf("query is required for semantic_search")
+	}
+
+	nodes, err := cg.SemanticSearch(query, limit)
+	if err != nil {
+		return "", err
+	}
+
+	if len(nodes) == 0 {
+		return fmt.Sprintf("No semantic matches found for %q", query), nil
+	}
+
+	var msg string
+	msg += fmt.Sprintf("## Semantic Search: %q\n\n", query)
+	msg += fmt.Sprintf("Found %d matches (embedding-based similarity):\n\n", len(nodes))
+
+	for i, n := range nodes {
+		sig := n.QualifiedName
+		if n.Signature != "" {
+			sig = n.Signature
+		}
+		msg += fmt.Sprintf("%d. **%s** `%s` in %s:%d\n", i+1, n.Kind, sig, n.FilePath, n.StartLine)
+	}
+
+	return msg, nil
+}
+
+func hybridSearchCodeGraph(cg *codegraph.CodeGraph, query string, limit int) (string, error) {
+	if query == "" {
+		return "", fmt.Errorf("query is required for hybrid_search")
+	}
+
+	nodes, err := cg.HybridSearch(query, limit)
+	if err != nil {
+		return "", err
+	}
+
+	if len(nodes) == 0 {
+		return fmt.Sprintf("No matches found for %q", query), nil
+	}
+
+	var msg string
+	msg += fmt.Sprintf("## Hybrid Search: %q\n\n", query)
+	msg += fmt.Sprintf("Found %d matches (FTS5 + semantic fusion):\n\n", len(nodes))
+
+	for i, n := range nodes {
+		sig := n.QualifiedName
+		if n.Signature != "" {
+			sig = n.Signature
+		}
+		msg += fmt.Sprintf("%d. **%s** `%s` in %s:%d\n", i+1, n.Kind, sig, n.FilePath, n.StartLine)
 	}
 
 	return msg, nil
