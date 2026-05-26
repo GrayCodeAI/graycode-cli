@@ -34,3 +34,6 @@ cmd/.hawk/
 
 # Yaad memory (local project data)
 .yaad/
+
+# CodeGraph local index
+.codegraph/
