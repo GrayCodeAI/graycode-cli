@@ -62,8 +62,9 @@ func BuildSymbolGraph(dir string, opts Options) (*SymbolGraph, error) {
 		}
 	}
 
-	// Build edges: for each file, check which symbols from other files are
-	// referenced in its source code.
+	// Build edges: for each file, find which symbols from other files are
+	// referenced in its source code using an inverted index for O(files * symbols_per_file)
+	// instead of O(files * total_symbols).
 	fileContents := make(map[string]string)
 	for _, fm := range rm.Files {
 		absPath := filepath.Join(dir, fm.Path)
@@ -74,20 +75,40 @@ func BuildSymbolGraph(dir string, opts Options) (*SymbolGraph, error) {
 		fileContents[fm.Path] = string(data)
 	}
 
+	// Build inverted index: symbol name -> list of (file, key) pairs
+	type symRef struct {
+		file string
+		key  string
+	}
+	symIndex := make(map[string][]symRef)
+	for _, sym := range allSyms {
+		symIndex[sym.name] = append(symIndex[sym.name], symRef{file: sym.file, key: sym.key})
+	}
+
 	for _, fm := range rm.Files {
 		content, ok := fileContents[fm.Path]
 		if !ok {
 			continue
 		}
+		// Track which remote symbols this file references
+		seen := make(map[string]bool)
 		for _, sym := range allSyms {
 			if sym.file == fm.Path {
 				continue // skip self-references
 			}
+			if seen[sym.name] {
+				continue // already processed this symbol name for this file
+			}
 			if strings.Contains(content, sym.name) {
-				// fm.Path references sym => edge from fm.Path symbols to sym.key
+				seen[sym.name] = true
+				// Add edges from all local symbols to all matching remote symbols
 				for _, localSym := range fm.Symbols {
 					localKey := fm.Path + ":" + localSym.Name
-					sg.edges[localKey] = appendUnique(sg.edges[localKey], sym.key)
+					for _, ref := range symIndex[sym.name] {
+						if ref.file != fm.Path {
+							sg.edges[localKey] = appendUnique(sg.edges[localKey], ref.key)
+						}
+					}
 				}
 			}
 		}

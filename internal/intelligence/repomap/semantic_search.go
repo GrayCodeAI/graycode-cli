@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/GrayCodeAI/hawk/internal/scoring"
 )
 
 // Document represents a single indexable unit (function, type, file, or block).
@@ -35,6 +37,7 @@ type SemanticSearchIndex struct {
 	IDF       map[string]float64
 	AvgDocLen float64
 	TotalDocs int
+	scorer    *scoring.BM25Scorer
 	mu        sync.RWMutex
 }
 
@@ -43,6 +46,7 @@ func NewSemanticSearchIndex() *SemanticSearchIndex {
 	return &SemanticSearchIndex{
 		Documents: make(map[string]*Document),
 		IDF:       make(map[string]float64),
+		scorer:    scoring.NewBM25Scorer(0, 0), // defaults: k1=1.2, b=0.75
 	}
 }
 
@@ -207,39 +211,12 @@ func ExpandQuery(query string) []string {
 }
 
 // BM25Score computes the BM25 score for a document given query terms.
-// Uses standard BM25 with k1=1.5, b=0.75.
+// Delegates to the shared BM25Scorer with precomputed IDF values.
 func (si *SemanticSearchIndex) BM25Score(queryTerms []string, doc *Document) float64 {
-	const (
-		k1 = 1.5
-		b  = 0.75
-	)
-
 	if doc.Length == 0 || si.AvgDocLen == 0 {
 		return 0
 	}
-
-	var score float64
-	docLen := float64(doc.Length)
-	avgDL := si.AvgDocLen
-
-	for _, term := range queryTerms {
-		idf, exists := si.IDF[term]
-		if !exists {
-			continue
-		}
-
-		tf := float64(doc.Terms[term])
-		if tf == 0 {
-			continue
-		}
-
-		// BM25 formula
-		numerator := tf * (k1 + 1)
-		denominator := tf + k1*(1-b+b*(docLen/avgDL))
-		score += idf * (numerator / denominator)
-	}
-
-	return score
+	return si.scorer.ScoreWithIDF(queryTerms, doc.Terms, si.IDF, float64(doc.Length), si.AvgDocLen)
 }
 
 // ExtractSnippet finds the most relevant lines from a document containing query terms.
@@ -587,15 +564,14 @@ func extractName(line, ext string) string {
 	}
 
 	// Extract just the name (up to first paren, space, or brace)
-	name := ""
+	var nameBuilder strings.Builder
 	for _, r := range line {
 		if r == '(' || r == '{' || r == ' ' || r == ':' || r == '<' {
 			break
 		}
-		name += string(r)
+		nameBuilder.WriteRune(r)
 	}
-
-	name = strings.TrimSpace(name)
+	name := strings.TrimSpace(nameBuilder.String())
 	if name == "" {
 		name = "anonymous"
 	}

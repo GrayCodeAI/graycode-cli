@@ -131,12 +131,12 @@ func (el *ExperimentLoop) snapshot() (string, error) {
 // restore reverts to a snapshot.
 func (el *ExperimentLoop) restore(ref string) {
 	if ref == "" {
-		exec.CommandContext(context.Background(), "git", "checkout", "--", ".").Run()
+		_ = exec.CommandContext(context.Background(), "git", "checkout", "--", ".").Run()
 		return
 	}
 	cmd := exec.CommandContext(context.Background(), "git", "checkout", "--", ".")
 	cmd.Dir = el.WorkDir
-	cmd.Run()
+	_ = cmd.Run()
 }
 
 // Summary returns a formatted summary of all experiments.

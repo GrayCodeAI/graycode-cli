@@ -78,7 +78,7 @@ func (ts *TreeSitter) FindNode(ctx context.Context, source, searchText string) (
 	}
 
 	rt := wazero.NewRuntime(ctx)
-	defer rt.Close(ctx)
+	defer func() { _ = rt.Close(ctx) }()
 	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 
 	compiled, err := rt.CompileModule(ctx, grammar)
@@ -86,7 +86,7 @@ func (ts *TreeSitter) FindNode(ctx context.Context, source, searchText string) (
 		s, e := ts.fallbackFind(source, searchText)
 		return s, e, nil
 	}
-	defer compiled.Close(ctx)
+	defer func() { _ = compiled.Close(ctx) }()
 
 	// For now, parse and find the node by walking.
 	idx := strings.Index(source, searchText)

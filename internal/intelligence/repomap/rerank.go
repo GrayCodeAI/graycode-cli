@@ -1,10 +1,11 @@
 package repomap
 
 import (
-	"math"
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/GrayCodeAI/hawk/internal/scoring"
 )
 
 // RerankResult pairs a search result with a re-ranking score.
@@ -13,7 +14,7 @@ type RerankResult struct {
 	Score float64
 }
 
-// Rerank re-scores candidates using BM25 (k1=1.2, b=0.75) against the query
+// Rerank re-scores candidates using BM25 against the query
 // and returns the top-K results sorted by descending score.
 func Rerank(query string, candidates []CodeSearchResult, topK int) []RerankResult {
 	if len(candidates) == 0 {
@@ -36,21 +37,27 @@ func Rerank(query string, candidates []CodeSearchResult, topK int) []RerankResul
 		return out
 	}
 
-	// Compute average document length
+	// Compute average document length and per-document term frequencies
 	var totalLen float64
 	docLengths := make([]float64, len(candidates))
+	docTermFreqs := make([]map[string]int, len(candidates))
 	for i, c := range candidates {
 		tokens := rerankTokenize(c.Content)
 		docLengths[i] = float64(len(tokens))
 		totalLen += docLengths[i]
+		tf := make(map[string]int)
+		for _, t := range tokens {
+			tf[t]++
+		}
+		docTermFreqs[i] = tf
 	}
 	avgDL := totalLen / float64(len(candidates))
 	if avgDL == 0 {
 		avgDL = 1
 	}
 
-	// Compute IDF for query terms
-	N := float64(len(candidates))
+	// Compute document frequency for query terms
+	docCount := len(candidates)
 	docFreq := make(map[string]int)
 	for _, c := range candidates {
 		seen := make(map[string]bool)
@@ -62,40 +69,13 @@ func Rerank(query string, candidates []CodeSearchResult, topK int) []RerankResul
 		}
 	}
 
-	idf := make(map[string]float64)
-	for _, qt := range queryTerms {
-		df := float64(docFreq[qt])
-		// Standard BM25 IDF: log((N - df + 0.5) / (df + 0.5) + 1)
-		idf[qt] = math.Log((N-df+0.5)/(df+0.5) + 1.0)
-	}
+	scorer := scoring.NewBM25Scorer(0, 0) // defaults: k1=1.2, b=0.75
 
-	// BM25 parameters
-	const k1 = 1.2
-	const b = 0.75
-
-	// Score each candidate
+	// Score each candidate using the shared BM25 scorer
 	results := make([]RerankResult, len(candidates))
 	for i, c := range candidates {
-		docTokens := rerankTokenize(c.Content)
-		tf := make(map[string]int)
-		for _, t := range docTokens {
-			tf[t]++
-		}
-
-		var score float64
-		dl := docLengths[i]
-		for _, qt := range queryTerms {
-			freq := float64(tf[qt])
-			if freq == 0 {
-				continue
-			}
-			// BM25 formula
-			num := freq * (k1 + 1)
-			denom := freq + k1*(1-b+b*(dl/avgDL))
-			score += idf[qt] * (num / denom)
-		}
-
-		results[i] = RerankResult{Chunk: c, Score: score}
+		s := scorer.Score(queryTerms, docTermFreqs[i], docLengths[i], avgDL, docCount, docFreq)
+		results[i] = RerankResult{Chunk: c, Score: s}
 	}
 
 	// Sort by score descending

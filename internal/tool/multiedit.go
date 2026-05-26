@@ -73,7 +73,7 @@ func (MultiEditTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if err != nil {
 		return "", fmt.Errorf("read file: %w", err)
 	}
-	BackupFile(p.FilePath)
+	_, _ = BackupFile(p.FilePath)
 	content := string(data)
 
 	applied, failed := 0, 0
