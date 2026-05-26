@@ -210,7 +210,7 @@ func TestTruncateOutput(t *testing.T) {
 
 	long := strings.Repeat("A", maxOutputBytes+1000)
 	got := TruncateOutput(long)
-	if !strings.HasSuffix(got, "[output truncated — showing first 50KB]") {
+	if !strings.HasSuffix(got, "[output truncated — showing first 500KB]") {
 		t.Error("expected truncation indicator")
 	}
 	// The prefix should be exactly maxOutputBytes of the original.
