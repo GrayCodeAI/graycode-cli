@@ -13,10 +13,13 @@ import (
 // It shows co-change patterns, commit history for files, and code ownership.
 type GitHistoryTool struct{}
 
-func (GitHistoryTool) Name() string        { return "GitHistory" }
-func (GitHistoryTool) RiskLevel() string   { return "low" }
-func (GitHistoryTool) Aliases() []string   { return []string{"git-history", "cochange"} }
-func (GitHistoryTool) Description() string { return "Mine git history for co-change patterns, file history, and code ownership insights." }
+func (GitHistoryTool) Name() string      { return "GitHistory" }
+func (GitHistoryTool) RiskLevel() string { return "low" }
+func (GitHistoryTool) Aliases() []string { return []string{"git-history", "cochange"} }
+func (GitHistoryTool) Description() string {
+	return "Mine git history for co-change patterns, file history, and code ownership insights."
+}
+
 func (GitHistoryTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
