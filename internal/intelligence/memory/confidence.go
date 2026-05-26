@@ -118,7 +118,7 @@ func (ct *ConfidenceTracker) boostNode(id string, amount float64) {
 		newConf = 1.0
 	}
 	node.Confidence = newConf
-	ct.bridge.store.UpdateNode(context.Background(), node)
+	_ = ct.bridge.store.UpdateNode(context.Background(), node)
 }
 
 func (ct *ConfidenceTracker) penalizeNode(id string, rate float64) {
@@ -144,7 +144,7 @@ func (ct *ConfidenceTracker) penalizeNode(id string, rate float64) {
 		newConf = 0.1
 	}
 	node.Confidence = newConf
-	ct.bridge.store.UpdateNode(context.Background(), node)
+	_ = ct.bridge.store.UpdateNode(context.Background(), node)
 }
 
 // BoostByType boosts all memories of a given type (useful for post-success reinforcement).
