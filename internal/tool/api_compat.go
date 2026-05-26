@@ -157,7 +157,7 @@ func (c *CompatChecker) extractFile(file *ast.File, snap *APISnapshot) {
 			switch d.Tok {
 			case token.TYPE:
 				for _, spec := range d.Specs {
-					ts := spec.(*ast.TypeSpec)
+					ts, _ := spec.(*ast.TypeSpec)
 					if !ast.IsExported(ts.Name.Name) {
 						continue
 					}
@@ -178,7 +178,7 @@ func (c *CompatChecker) extractFile(file *ast.File, snap *APISnapshot) {
 				}
 			case token.CONST:
 				for _, spec := range d.Specs {
-					vs := spec.(*ast.ValueSpec)
+					vs, _ := spec.(*ast.ValueSpec)
 					typeStr := ""
 					if vs.Type != nil {
 						typeStr = exprToString(vs.Type)
@@ -195,7 +195,7 @@ func (c *CompatChecker) extractFile(file *ast.File, snap *APISnapshot) {
 				}
 			case token.VAR:
 				for _, spec := range d.Specs {
-					vs := spec.(*ast.ValueSpec)
+					vs, _ := spec.(*ast.ValueSpec)
 					typeStr := ""
 					if vs.Type != nil {
 						typeStr = exprToString(vs.Type)

@@ -94,7 +94,9 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 	}
 
 	// Update Port with the actual assigned port.
-	np.Port = np.listener.Addr().(*net.TCPAddr).Port
+	if tcpAddr, ok := np.listener.Addr().(*net.TCPAddr); ok {
+		np.Port = tcpAddr.Port
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
