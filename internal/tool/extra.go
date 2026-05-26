@@ -50,7 +50,7 @@ func (NotebookEditTool) Execute(_ context.Context, input json.RawMessage) (strin
 	if !ok || p.CellNumber >= len(cells) {
 		return "", fmt.Errorf("cell %d not found (notebook has %d cells)", p.CellNumber, len(cells))
 	}
-	cell := cells[p.CellNumber].(map[string]interface{})
+	cell, _ := cells[p.CellNumber].(map[string]interface{})
 	lines := strings.Split(p.NewSource, "\n")
 	sourceLines := make([]interface{}, len(lines))
 	for i, l := range lines {
