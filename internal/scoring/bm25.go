@@ -100,4 +100,3 @@ func (s *BM25Scorer) ScoreWithIDF(queryTerms []string, docTermFreq map[string]in
 
 	return score
 }
-
