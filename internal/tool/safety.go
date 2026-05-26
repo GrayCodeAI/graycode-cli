@@ -38,14 +38,14 @@ func ToolTimeout(toolName string) time.Duration {
 // 2. Output size limiting
 // ──────────────────────────────────────────────────────────────────────────────
 
-const maxOutputBytes = 50_000 // 50 KB
+const maxOutputBytes = 500_000 // 500 KB — tune this if your tool outputs are routinely larger
 
 // TruncateOutput trims output to maxOutputBytes and appends an indicator.
 func TruncateOutput(s string) string {
 	if len(s) <= maxOutputBytes {
 		return s
 	}
-	return s[:maxOutputBytes] + "\n[output truncated — showing first 50KB]"
+	return s[:maxOutputBytes] + "\n[output truncated — showing first 500KB]"
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

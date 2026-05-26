@@ -25,6 +25,10 @@ type SymbolNode struct {
 
 // BuildSymbolGraph scans the directory, extracts symbols using the existing
 // repomap parsers, then builds a directed graph by grepping for references.
+//
+// TODO: Incremental update — for large repos this rebuilds the entire symbol
+// graph on every scan. Detect which files changed since the last run and
+// only update their symbol nodes and edges.
 func BuildSymbolGraph(dir string, opts Options) (*SymbolGraph, error) {
 	rm, err := Generate(dir, opts)
 	if err != nil {

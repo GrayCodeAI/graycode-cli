@@ -115,6 +115,11 @@ func (s *MCPServer) RegisterTool(handler MCPToolHandler) {
 // ServeStdio runs the MCP server on stdin/stdout, reading JSON-RPC requests
 // line-by-line and writing responses. It blocks until ctx is cancelled or
 // stdin reaches EOF.
+//
+// Security: stdio is inherently local — stdin/stdout cannot be reached over
+// the network. If an HTTP/SSE endpoint is added in the future, it MUST
+// default to binding on 127.0.0.1 (localhost) only and accept an explicit
+// flag to bind elsewhere.
 func (s *MCPServer) ServeStdio(ctx context.Context) error {
 	return s.Serve(ctx, os.Stdin, os.Stdout)
 }
