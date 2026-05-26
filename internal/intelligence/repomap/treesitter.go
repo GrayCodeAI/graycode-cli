@@ -27,8 +27,9 @@ type TreeSitterParser struct {
 }
 
 // NewTreeSitterParser creates a new parser with default settings.
+// IncludeUnexported is true by default to match regex parser behavior.
 func NewTreeSitterParser() *TreeSitterParser {
-	return &TreeSitterParser{}
+	return &TreeSitterParser{IncludeUnexported: true}
 }
 
 // ParseFile dispatches to the appropriate language parser based on file extension.
@@ -94,17 +95,24 @@ func parseGoAST(path, src string, includeUnexported bool) ([]Symbol, error) {
 			}
 
 			if !includeUnexported && !d.Name.IsExported() && kind == "func" {
-				continue
+				// Always include main() and init() — they're entry points
+				if d.Name.Name != "main" && d.Name.Name != "init" {
+					continue
+				}
 			}
 			// Always include methods (they're part of a type's interface)
 			if kind == "method" && !includeUnexported && !d.Name.IsExported() {
 				continue
 			}
 
+			// Build full signature for functions/methods
+			sig := buildFuncSignature(d)
+
 			symbols = append(symbols, Symbol{
-				Name: name,
-				Kind: kind,
-				Line: fset.Position(d.Pos()).Line,
+				Name:      name,
+				Kind:      kind,
+				Line:      fset.Position(d.Pos()).Line,
+				Signature: sig,
 			})
 
 		case *ast.GenDecl:

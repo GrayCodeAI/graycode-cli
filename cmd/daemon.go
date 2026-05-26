@@ -24,6 +24,7 @@ import (
 
 var (
 	daemonPort   int
+	daemonHost   string
 	daemonAPIKey string
 )
 
@@ -53,6 +54,7 @@ var daemonStatusCmd = &cobra.Command{
 
 func init() {
 	daemonStartCmd.Flags().IntVarP(&daemonPort, "port", "p", 4590, "Port to listen on")
+	daemonStartCmd.Flags().StringVar(&daemonHost, "host", netutil.LoopbackHost, "Host to bind to (default: 127.0.0.1, use 0.0.0.0 for remote access)")
 	daemonStartCmd.Flags().StringVar(&daemonAPIKey, "api-key", "", "API key for protected daemon endpoints (defaults to HAWK_DAEMON_API_KEY or a generated key)")
 	daemonCmd.AddCommand(daemonStartCmd)
 	daemonCmd.AddCommand(daemonStopCmd)
@@ -94,7 +96,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		return sess, nil
 	}
 
-	srv := daemon.New(daemon.Config{Port: daemonPort, Host: netutil.LoopbackHost, APIKey: apiKey}, factory)
+	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
 	addr, err := srv.Start()
 	if err != nil {
 		return err
@@ -105,7 +107,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	preheater.Start([]string{
 		"https://api.anthropic.com/v1/messages",
 		"https://api.openai.com/v1/chat/completions",
-		fmt.Sprintf("http://%s:%d/v1/health", netutil.LoopbackHost, daemonPort),
+		fmt.Sprintf("http://%s:%d/v1/health", daemonHost, daemonPort),
 	})
 	defer preheater.Stop()
 
@@ -113,6 +115,16 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	fmt.Println("Endpoints: GET /v1/health, POST /v1/chat, GET /v1/sessions")
 	fmt.Println("Protected endpoints require Authorization: Bearer <api-key> or X-API-Key.")
 	fmt.Printf("API key: %s\n", apiKey)
+
+	// SSH tunnel hint for remote access
+	if daemonHost == netutil.LoopbackHost {
+		fmt.Println("\nFor remote access via SSH tunnel:")
+		fmt.Printf("  ssh -L %d:127.0.0.1:%d <remote-host>\n", daemonPort, daemonPort)
+		fmt.Printf("  curl http://localhost:%d/v1/health\n", daemonPort)
+	} else {
+		fmt.Println("\nWARNING: Bound to non-localhost. Ensure TLS is configured for production use.")
+	}
+
 	fmt.Println("Press Ctrl+C to stop.")
 
 	// Wait for interrupt

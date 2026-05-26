@@ -2,6 +2,7 @@ package tool
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -86,6 +87,17 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}
 	if IsBinaryContent(data) {
+		// Multi-modal vision: encode images as base64 data URIs
+		if isImageFile(path) {
+			ext := strings.ToLower(filepath.Ext(path))
+			mimeType := imageExtensions[ext]
+			if mimeType == "" {
+				mimeType = "image/png"
+			}
+			encoded := base64.StdEncoding.EncodeToString(data)
+			dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+			return fmt.Sprintf("[IMAGE: %s]\n%s", filepath.Base(path), dataURI), nil
+		}
 		return BinaryIndicator, nil
 	}
 	data = StripBOM(data)
