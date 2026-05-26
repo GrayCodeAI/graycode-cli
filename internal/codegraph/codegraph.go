@@ -1428,3 +1428,19 @@ func (cg *CodeGraph) searchByName(name string, limit int) ([]Node, error) {
 	defer rows.Close()
 	return scanNodes(rows)
 }
+
+// GetNode returns a single node by ID.
+func (cg *CodeGraph) GetNode(id string) (Node, error) {
+	cg.mu.RLock()
+	defer cg.mu.RUnlock()
+
+	var n Node
+	err := cg.db.QueryRow(
+		`SELECT id, kind, name, qualified_name, file_path, language,
+		        start_line, end_line, signature, docstring, visibility, is_exported
+		 FROM nodes WHERE id = ?`, id).Scan(
+		&n.ID, &n.Kind, &n.Name, &n.QualifiedName, &n.FilePath, &n.Language,
+		&n.StartLine, &n.EndLine, &n.Signature, &n.Docstring, &n.Visibility, &n.IsExported,
+	)
+	return n, err
+}
