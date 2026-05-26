@@ -74,24 +74,6 @@ linters:
       - path: internal/magicdocs/
         linters:
           - errcheck
-      # TODO(security): re-enable errcheck for daemon, engine, sandbox, tool, mcp.
-      # These packages handle untrusted input and should not suppress error checks.
-      # Requires fixing all unchecked errors in those packages first.
-      - path: internal/daemon/
-        linters:
-          - errcheck
-      - path: internal/engine/
-        linters:
-          - errcheck
-      - path: internal/sandbox/
-        linters:
-          - errcheck
-      - path: internal/tool/
-        linters:
-          - errcheck
-      - path: internal/mcp/
-        linters:
-          - errcheck
 
 issues:
   max-issues-per-linter: 0

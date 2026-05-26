@@ -54,8 +54,8 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 
 	name := c.containerName()
 
-	// Remove any stale container with the same name from a previous session
-	exec.CommandContext(ctx, "docker", "rm", "-f", name).Run()
+	// Remove any stale container with the same name from a previous session (best-effort)
+	_, _ = exec.CommandContext(ctx, "docker", "rm", "-f", name).CombinedOutput()
 
 	// Create attachments and cache dirs
 	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
@@ -120,7 +120,7 @@ func (c *ContainerSandbox) Stop() error {
 		return nil
 	}
 	cmd := exec.CommandContext(context.Background(), "docker", "stop", c.containerID)
-	cmd.Run()
+	_ = cmd.Run()
 	c.running = false
 	return nil
 }

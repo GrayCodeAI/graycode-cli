@@ -111,7 +111,7 @@ func (s *Sandbox) setupChroot() error {
 		if _, err := os.Stat(bin); err == nil {
 			dest := filepath.Join(s.root, bin)
 			_ = os.MkdirAll(filepath.Dir(dest), 0o755)
-			copyFile(bin, dest)
+			_ = copyFile(bin, dest)
 		}
 	}
 	return nil

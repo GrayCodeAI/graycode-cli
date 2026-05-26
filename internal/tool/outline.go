@@ -108,7 +108,7 @@ func outlineOne(filePath string) (string, error) {
 	if err != nil {
 		return fmt.Sprintf("error: %v", err), nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []string
 	scanner := bufio.NewScanner(f)
@@ -142,7 +142,7 @@ func outlineHeadTail(filePath string) (string, error) {
 	if err != nil {
 		return fmt.Sprintf("error: %v", err), nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var head []string
 	var all []string

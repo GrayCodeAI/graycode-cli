@@ -83,7 +83,7 @@ func (tg *TelegramGateway) getUpdates(ctx context.Context) ([]TelegramUpdate, er
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		OK     bool             `json:"ok"`
@@ -122,7 +122,7 @@ func (tg *TelegramGateway) forwardToHawk(ctx context.Context, prompt string) (st
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	var chatResp struct {
@@ -151,6 +151,6 @@ func (tg *TelegramGateway) sendMessage(ctx context.Context, chatID int64, text s
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return nil
 }
