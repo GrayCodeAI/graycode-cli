@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/codegraph"
@@ -24,8 +25,8 @@ func (CodeGraphTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"action": map[string]interface{}{
 				"type":        "string",
-				"enum":        []string{"search", "callers", "callees", "impact", "context", "index", "sync", "trace", "explore", "files", "status", "stats"},
-				"description": "Action: search/find symbols, callers/who calls, callees/what it calls, impact/breakage radius, context/build task context, index/full re-index, sync/incremental update, trace/call path A→B, explore/multi-symbol source, files/list indexed, status/health check, stats/counts",
+				"enum":        []string{"search", "callers", "callees", "impact", "context", "index", "sync", "trace", "explore", "files", "status", "stats", "pagerank", "centrality", "communities", "components", "deadcode", "coupling"},
+				"description": "Action: search/find symbols, callers/who calls, callees/what it calls, impact/breakage radius, context/build task context, index/full re-index, sync/incremental update, trace/call path A→B, explore/multi-symbol source, files/list indexed, status/health check, stats/counts, pagerank/file importance, centrality/bridge files, communities/module clusters, components/isolated subsystems, deadcode/unused code, coupling/tightly coupled files",
 			},
 			"query": map[string]interface{}{
 				"type":        "string",
@@ -133,6 +134,18 @@ func (CodeGraphTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return statusCodeGraph(cg)
 	case "stats":
 		return statsCodeGraph(cg)
+	case "pagerank":
+		return pagerankCodeGraph(cg, p.MaxNodes)
+	case "centrality":
+		return centralityCodeGraph(cg, p.MaxNodes)
+	case "communities":
+		return communitiesCodeGraph(cg)
+	case "components":
+		return componentsCodeGraph(cg)
+	case "deadcode":
+		return deadcodeCodeGraph(cg)
+	case "coupling":
+		return couplingCodeGraph(cg, p.MaxNodes)
 	default:
 		return "", fmt.Errorf("unknown action: %s", p.Action)
 	}
@@ -429,4 +442,178 @@ func truncateLines(s string, maxLines int) string {
 		return s
 	}
 	return strings.Join(lines[:maxLines], "\n") + "\n..."
+}
+
+func pagerankCodeGraph(cg *codegraph.CodeGraph, topN int) (string, error) {
+	ranks, err := cg.PageRank(20, 0.85)
+	if err != nil {
+		return "", err
+	}
+
+	// Sort by rank
+	type scored struct {
+		id    string
+		score float64
+	}
+	var sorted []scored
+	for id, score := range ranks {
+		sorted = append(sorted, scored{id, score})
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].score > sorted[j].score
+	})
+
+	if topN <= 0 {
+		topN = 20
+	}
+	if topN > len(sorted) {
+		topN = len(sorted)
+	}
+
+	var msg string
+	msg += "## PageRank — File/Symbol Importance\n\n"
+	msg += fmt.Sprintf("Top %d most important symbols (by call graph centrality):\n\n", topN)
+
+	for i, s := range sorted[:topN] {
+		// Load node details
+		node, err := cg.GetNode(s.id)
+		if err != nil {
+			continue
+		}
+		msg += fmt.Sprintf("%d. **%s** `%s` in %s:%d (rank: %.4f)\n",
+			i+1, node.Kind, node.Name, node.FilePath, node.StartLine, s.score)
+	}
+
+	return msg, nil
+}
+
+func centralityCodeGraph(cg *codegraph.CodeGraph, topN int) (string, error) {
+	result, err := cg.BetweennessCentrality(topN)
+	if err != nil {
+		return "", err
+	}
+
+	var msg string
+	msg += "## Betweenness Centrality — Bridge Files\n\n"
+	msg += "High-centrality nodes are \"bridges\" connecting different parts of the codebase.\n"
+	msg += "These are coupling hotspots — changes here have wide ripple effects.\n\n"
+
+	for i, nc := range result.Top {
+		msg += fmt.Sprintf("%d. **%s** `%s` in %s (centrality: %.6f)\n",
+			i+1, nc.Kind, nc.Name, nc.FilePath, nc.Score)
+	}
+
+	return msg, nil
+}
+
+func communitiesCodeGraph(cg *codegraph.CodeGraph) (string, error) {
+	result, err := cg.CommunityDetection()
+	if err != nil {
+		return "", err
+	}
+
+	var msg string
+	msg += "## Community Detection — Module Boundaries\n\n"
+	msg += fmt.Sprintf("Found %d communities (modularity: %.4f)\n\n",
+		len(result.Communities), result.Modularity)
+
+	for i, comm := range result.Communities {
+		if i >= 10 { // Show top 10
+			break
+		}
+		msg += fmt.Sprintf("### Community %d (%d nodes)\n", comm.ID, len(comm.Nodes))
+		// Show first 5 nodes
+		show := 5
+		if show > len(comm.Nodes) {
+			show = len(comm.Nodes)
+		}
+		for _, nodeID := range comm.Nodes[:show] {
+			node, err := cg.GetNode(nodeID)
+			if err != nil {
+				continue
+			}
+			msg += fmt.Sprintf("- %s `%s` in %s\n", node.Kind, node.Name, node.FilePath)
+		}
+		if len(comm.Nodes) > 5 {
+			msg += fmt.Sprintf("- ... and %d more\n", len(comm.Nodes)-5)
+		}
+		msg += "\n"
+	}
+
+	return msg, nil
+}
+
+func componentsCodeGraph(cg *codegraph.CodeGraph) (string, error) {
+	components, err := cg.ConnectedComponents()
+	if err != nil {
+		return "", err
+	}
+
+	var msg string
+	msg += "## Connected Components — Isolated Subsystems\n\n"
+	msg += fmt.Sprintf("Found %d disconnected components:\n\n", len(components))
+
+	for i, comp := range components {
+		if i >= 10 {
+			break
+		}
+		msg += fmt.Sprintf("### Component %d (%d nodes)\n", i+1, len(comp))
+		show := 5
+		if show > len(comp) {
+			show = len(comp)
+		}
+		for _, nodeID := range comp[:show] {
+			node, err := cg.GetNode(nodeID)
+			if err != nil {
+				continue
+			}
+			msg += fmt.Sprintf("- %s `%s` in %s\n", node.Kind, node.Name, node.FilePath)
+		}
+		if len(comp) > 5 {
+			msg += fmt.Sprintf("- ... and %d more\n", len(comp)-5)
+		}
+		msg += "\n"
+	}
+
+	return msg, nil
+}
+
+func deadcodeCodeGraph(cg *codegraph.CodeGraph) (string, error) {
+	dead, err := cg.FindDeadCode()
+	if err != nil {
+		return "", err
+	}
+
+	var msg string
+	msg += "## Dead Code Detection\n\n"
+	msg += fmt.Sprintf("Found %d potentially unused symbols:\n\n", len(dead))
+
+	for i, entry := range dead {
+		if i >= 30 {
+			break
+		}
+		msg += fmt.Sprintf("%d. **%s** `%s` in %s:%d (confidence: %.0f%%) — %s\n",
+			i+1, entry.Node.Kind, entry.Node.Name, entry.Node.FilePath,
+			entry.Node.StartLine, entry.Confidence*100, entry.Reason)
+	}
+
+	return msg, nil
+}
+
+func couplingCodeGraph(cg *codegraph.CodeGraph, topN int) (string, error) {
+	metrics, err := cg.AnalyzeCoupling(topN)
+	if err != nil {
+		return "", err
+	}
+
+	var msg string
+	msg += "## Coupling Analysis — Tightly Coupled Files\n\n"
+	msg += "Files that share many dependencies are tightly coupled.\n\n"
+
+	for i, m := range metrics {
+		msg += fmt.Sprintf("%d. `%s` ↔ `%s` (coupling: %.2f, shared deps: %d)\n",
+			i+1, m.FileA, m.FileB, m.Coupling, m.SharedDeps)
+	}
+
+	return msg, nil
 }
