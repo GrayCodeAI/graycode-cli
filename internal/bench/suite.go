@@ -11,12 +11,12 @@ import (
 
 // BenchmarkResult holds the result of a single benchmark run.
 type BenchmarkResult struct {
-	Name      string        `json:"name"`
-	Duration  time.Duration `json:"duration_ms"`
-	Score     float64       `json:"score"`
-	Metric    string        `json:"metric"`
-	Passed    bool          `json:"passed"`
-	Details   string        `json:"details,omitempty"`
+	Name     string        `json:"name"`
+	Duration time.Duration `json:"duration_ms"`
+	Score    float64       `json:"score"`
+	Metric   string        `json:"metric"`
+	Passed   bool          `json:"passed"`
+	Details  string        `json:"details,omitempty"`
 }
 
 // BenchmarkSuite runs benchmarks across the hawk-eco ecosystem.
@@ -148,5 +148,5 @@ func (s *BenchmarkSuite) SaveJSON(path string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0o644)
 }
