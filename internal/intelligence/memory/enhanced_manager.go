@@ -173,7 +173,7 @@ func (em *EnhancedMemoryManager) Remember(content, category string) error {
 		promoted := em.CrossProject.DetectGlobalPatterns([]string{content})
 		if len(promoted) > 0 {
 			for _, p := range promoted {
-				em.CrossProject.StoreGlobal(p, "preference")
+				_ = em.CrossProject.StoreGlobal(p, "preference")
 			}
 		}
 	}
@@ -199,7 +199,7 @@ func (em *EnhancedMemoryManager) OnToolResult(toolName string, args map[string]i
 		cn := canonicalName(toolName)
 		if cn == "Write" || cn == "Edit" {
 			if path, ok := extractPath(args); ok {
-				go em.CodeLinks.LinkFileToMemories(path)
+				go func() { _ = em.CodeLinks.LinkFileToMemories(path) }()
 			}
 		}
 	}
