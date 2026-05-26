@@ -1,38 +1,66 @@
 // Package types defines stable shared types for GrayCodeAI libraries (sight, inspect, tok, …).
-// Implementations live in github.com/GrayCodeAI/hawk/internal/types; this package forwards them
-// so consumers do not import internal paths from another module.
+// Types are defined here directly so external modules (tok, sight, inspect) can import this
+// package without pulling in hawk/internal or eyrie/client, which would create import cycles.
 package types
 
-import hawkinternal "github.com/GrayCodeAI/hawk/internal/types"
+import "strings"
 
-type (
-	Severity      = hawkinternal.Severity
-	TokenSeverity = hawkinternal.TokenSeverity
-	AuditSeverity = hawkinternal.AuditSeverity
-	ToolCall      = hawkinternal.ToolCall
-	ToolResult    = hawkinternal.ToolResult
-)
+// Severity represents the impact level of a finding.
+type Severity int
 
 const (
-	SeverityInfo     = hawkinternal.SeverityInfo
-	SeverityLow      = hawkinternal.SeverityLow
-	SeverityMedium   = hawkinternal.SeverityMedium
-	SeverityHigh     = hawkinternal.SeverityHigh
-	SeverityCritical = hawkinternal.SeverityCritical
+	SeverityInfo Severity = iota
+	SeverityLow
+	SeverityMedium
+	SeverityHigh
+	SeverityCritical
 )
+
+var severityNames = [...]string{"info", "low", "medium", "high", "critical"}
+
+func (s Severity) String() string {
+	if int(s) < len(severityNames) {
+		return severityNames[s]
+	}
+	return "unknown"
+}
+
+// ParseSeverity converts a string to a Severity.
+func ParseSeverity(s string) Severity {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "critical":
+		return SeverityCritical
+	case "high":
+		return SeverityHigh
+	case "medium":
+		return SeverityMedium
+	case "low":
+		return SeverityLow
+	default:
+		return SeverityInfo
+	}
+}
+
+// AtLeast returns true if s >= threshold.
+func (s Severity) AtLeast(threshold Severity) bool {
+	return s >= threshold
+}
+
+// TokenSeverity defines rule severity for compression error patterns.
+type TokenSeverity string
 
 const (
-	TokenSeverityCritical = hawkinternal.TokenSeverityCritical
-	TokenSeverityHigh     = hawkinternal.TokenSeverityHigh
-	TokenSeverityMedium   = hawkinternal.TokenSeverityMedium
-	TokenSeverityLow      = hawkinternal.TokenSeverityLow
+	TokenSeverityCritical TokenSeverity = "critical"
+	TokenSeverityHigh     TokenSeverity = "high"
+	TokenSeverityMedium   TokenSeverity = "medium"
+	TokenSeverityLow      TokenSeverity = "low"
 )
+
+// AuditSeverity indicates how dangerous a security audit finding is.
+type AuditSeverity string
 
 const (
-	AuditSeverityCritical = hawkinternal.AuditSeverityCritical
-	AuditSeverityWarning  = hawkinternal.AuditSeverityWarning
-	AuditSeverityInfo     = hawkinternal.AuditSeverityInfo
+	AuditSeverityCritical AuditSeverity = "CRITICAL"
+	AuditSeverityWarning  AuditSeverity = "WARNING"
+	AuditSeverityInfo     AuditSeverity = "INFO"
 )
-
-// ParseSeverity converts a string to a Severity (delegates to hawk internal/types).
-var ParseSeverity = hawkinternal.ParseSeverity
