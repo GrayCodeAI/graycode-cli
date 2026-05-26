@@ -35,7 +35,7 @@ func ConnectHTTP(ctx context.Context, name, url string, headers map[string]strin
 	}
 	// Initialize
 	_, err := s.Call(ctx, "initialize", map[string]interface{}{
-		"protocolVersion": "2024-11-05",
+		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]interface{}{},
 		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "1.0.0"},
 	})
@@ -55,7 +55,7 @@ func ConnectSSE(ctx context.Context, name, url string, headers map[string]string
 		client:  &http.Client{Timeout: 120 * time.Second},
 	}
 	_, err := s.Call(ctx, "initialize", map[string]interface{}{
-		"protocolVersion": "2024-11-05",
+		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]interface{}{},
 		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "1.0.0"},
 	})

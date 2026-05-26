@@ -210,6 +210,9 @@ type chatModel struct {
 
 	// PageRank file watcher
 	watcherStop func() // stops the incremental symbol graph file watcher
+
+	// Command palette (Ctrl+K)
+	commandPalette *CommandPalette
 }
 
 const streamRenderInterval = 50 * time.Millisecond

@@ -272,6 +272,15 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 		SkillStore: &lifecycle.SkillDistillerAdapter{SD: sess.SkillDistiller},
 	}
 
+	// Reflector: verbal self-reflection on tool failures (Reflexion-style)
+	sess.Reflector = engine.NewReflector(sess, sess.Model())
+
+	// Few-shot learning: collect successful patterns from sessions
+	sess.FewShotStore = engine.NewFewShotStore()
+
+	// Adaptive prompt: learn user preferences from corrections
+	sess.AdaptivePrompt = engine.NewAdaptivePrompt()
+
 	return nil
 }
 

@@ -54,9 +54,9 @@ func (r *Reflector) Reflect(ctx context.Context, goal string, msgs []types.Eyrie
 	attempt := len(r.history) + 1
 	r.mu.Unlock()
 
-	prompt := "Reflect on this failure:\nGoal: " + goal + "\nError: " + errorContext + "\n\nRespond with:\nWHAT_FAILED: ...\nWHY_FAILED: ...\nWHAT_TO_DO: ..."
-	allMsgs := append(msgs, types.EyrieMessage{Role: "user", Content: prompt})
-	resp, err := r.llm.Chat(ctx, allMsgs, types.ChatOptions{Model: r.model})
+	prompt := buildReflectionPrompt(goal, msgs, errorContext)
+	allMsgs := []types.EyrieMessage{{Role: "user", Content: prompt}}
+	resp, err := r.llm.Chat(ctx, allMsgs, types.ChatOptions{Model: r.model, MaxTokens: 512})
 	if err != nil {
 		return nil, err
 	}
