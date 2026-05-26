@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,11 +39,11 @@ func scanForAIComments(dir string, ignore []string) []AIDirective {
 
 	var directives []AIDirective
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			if ignoreSet[filepath.Base(path)] {
 				return filepath.SkipDir
 			}

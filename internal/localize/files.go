@@ -1,7 +1,7 @@
 package localize
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -48,11 +48,11 @@ func findFiles(rootDir string, query string, maxFiles int) ([]FileMatch, error) 
 
 	var results []FileMatch
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip errors
+			return err // propagate errors
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			if defaultIgnoreDirs[filepath.Base(path)] {
 				return filepath.SkipDir
 			}

@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -25,12 +25,12 @@ func BuildCallGraph(root string) (*CallGraph, error) {
 		callees: make(map[string][]string),
 	}
 
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			if shouldSkipDir(info.Name()) {
+		if d.IsDir() {
+			if shouldSkipDir(d.Name()) {
 				return filepath.SkipDir
 			}
 			return nil

@@ -3,6 +3,7 @@ package magicdocs
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,15 +27,15 @@ type MagicDocFile struct {
 func ScanForMagicDocs(dir string) []MagicDocFile {
 	var docs []MagicDocFile
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 
 		base := filepath.Base(path)
 
 		// Skip hidden directories and common non-source paths
-		if info.IsDir() {
+		if d.IsDir() {
 			if strings.HasPrefix(base, ".") || base == "node_modules" || base == "vendor" || base == "__pycache__" {
 				return filepath.SkipDir
 			}
@@ -47,7 +48,11 @@ func ScanForMagicDocs(dir string) []MagicDocFile {
 			return nil
 		}
 
-		doc := scanFileForMarker(path, info)
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
+		doc := scanFileForMarker(path, fi)
 		if doc != nil {
 			docs = append(docs, *doc)
 		}

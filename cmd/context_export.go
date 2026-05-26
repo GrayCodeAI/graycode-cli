@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -226,12 +227,12 @@ func runGit(dir string, args ...string) (string, error) {
 // findFocusFiles finds files matching the focus string in the directory.
 func findFocusFiles(dir, focus string) []string {
 	var result []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
 				return filepath.SkipDir
 			}
@@ -283,12 +284,12 @@ func renderCXML(dir string) (string, string, error) {
 	var files []struct{ rel, content string }
 	var scanned, skipped int
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		name := info.Name()
-		if info.IsDir() {
+		name := d.Name()
+		if d.IsDir() {
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" || name == "__pycache__" {
 				return filepath.SkipDir
 			}
@@ -304,7 +305,11 @@ func renderCXML(dir string) (string, string, error) {
 			skipped++
 			return nil
 		}
-		if info.Size() > maxFileSize {
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
+		if fi.Size() > maxFileSize {
 			skipped++
 			return nil
 		}

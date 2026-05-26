@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -168,11 +169,11 @@ func ScanDirectory(dir string, patterns []string) []AIComment {
 
 	var allComments []AIComment
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			// Skip common non-source directories
 			if base == ".git" || base == "node_modules" || base == "vendor" || base == "__pycache__" {

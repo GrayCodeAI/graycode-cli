@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -464,11 +465,11 @@ func (pa *ProjectAnalyzer) detectLanguage() string {
 		"Java":       0,
 	}
 
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == "node_modules" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -696,11 +697,11 @@ func (pa *ProjectAnalyzer) countDependencies() int {
 
 func (pa *ProjectAnalyzer) countLOC() int {
 	total := 0
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == "node_modules" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -719,11 +720,11 @@ func (pa *ProjectAnalyzer) assessTestCoverage() string {
 	totalPkgs := 0
 	testedPkgs := 0
 
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if !info.IsDir() {
+		if !d.IsDir() {
 			return nil
 		}
 		base := filepath.Base(path)
@@ -751,11 +752,11 @@ func (pa *ProjectAnalyzer) assessComplexity() string {
 	totalFuncs := 0
 	longFuncs := 0 // functions > 50 lines
 
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -857,11 +858,11 @@ func (pa *ProjectAnalyzer) inferPurpose(info *ModuleInfo) string {
 
 func (pa *ProjectAnalyzer) hasPatternInFiles(pattern string) bool {
 	found := false
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if found || err != nil {
 			return filepath.SkipAll
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -886,11 +887,11 @@ func (pa *ProjectAnalyzer) hasPatternInFiles(pattern string) bool {
 
 func (pa *ProjectAnalyzer) hasPatternInTestFiles(pattern string) bool {
 	found := false
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if found || err != nil {
 			return filepath.SkipAll
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -915,11 +916,11 @@ func (pa *ProjectAnalyzer) hasPatternInTestFiles(pattern string) bool {
 
 func (pa *ProjectAnalyzer) countInterfaces() int {
 	count := 0
-	_ = filepath.Walk(pa.Dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(pa.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -990,11 +991,11 @@ func countFileLines(path string) int {
 
 func findFilesWithPattern(dir string, patterns ...string) []string {
 	var files []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -1022,11 +1023,11 @@ func findFilesWithPattern(dir string, patterns ...string) []string {
 
 func findFactoryPattern(dir string) []string {
 	var files []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -1071,11 +1072,11 @@ func findFactoryPattern(dir string) []string {
 func findStrategyPattern(dir string) []string {
 	// Look for files that define an interface and have sibling files implementing it.
 	var files []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -1120,11 +1121,11 @@ func findStrategyPattern(dir string) []string {
 
 func findFunctionalOptionsPattern(dir string) []string {
 	var files []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir

@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,11 +97,14 @@ func auditContent(path, content string) []AuditFinding {
 // AuditSkillDir scans all SKILL.md files in a directory tree.
 func AuditSkillDir(dir string) AuditResult {
 	var result AuditResult
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
 			return nil
 		}
-		name := strings.ToLower(info.Name())
+		name := strings.ToLower(d.Name())
 		if name != "skill.md" && !strings.HasSuffix(name, ".md") {
 			return nil
 		}

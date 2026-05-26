@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -99,11 +100,11 @@ func (sg *SummaryGenerator) analyzePackages() ([]SummaryPackageInfo, int, int, e
 	totalLOC := 0
 	totalFiles := 0
 
-	err := filepath.Walk(sg.ProjectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(sg.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if summarySkipDir(base) {
 				return filepath.SkipDir
@@ -405,11 +406,11 @@ func FindEntryPoints(projectDir string) []string {
 	var entryPoints []string
 	seen := make(map[string]bool)
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			if summarySkipDir(filepath.Base(path)) {
 				return filepath.SkipDir
 			}
@@ -469,11 +470,11 @@ func FindKeyFiles(projectDir string, limit int) []string {
 	importCounts := make(map[string]int) // how many files import this one
 
 	// First pass: collect all files and count imports
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			if summarySkipDir(filepath.Base(path)) {
 				return filepath.SkipDir
 			}
@@ -640,11 +641,11 @@ func RenderCompact(summary *CodebaseSummary) string {
 func summaryDetectLanguage(projectDir string) string {
 	counts := map[string]int{}
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info == nil {
-			return nil
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			if summarySkipDir(filepath.Base(path)) {
 				return filepath.SkipDir
 			}

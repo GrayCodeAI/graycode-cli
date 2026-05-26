@@ -3,6 +3,7 @@ package project
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -555,11 +556,11 @@ func (mp *MigrationPlanner) executeStep(step *MigrationStep) error {
 func (mp *MigrationPlanner) findFilesContaining(text string) ([]string, error) {
 	var matches []string
 
-	err := filepath.Walk(mp.ProjectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(mp.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip errors
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			// Skip hidden directories, vendor, node_modules.
 			if strings.HasPrefix(base, ".") || base == "vendor" || base == "node_modules" {
@@ -589,11 +590,11 @@ func (mp *MigrationPlanner) globFiles(fileGlob string) ([]string, error) {
 	if fileGlob == "" {
 		// Default: all text files.
 		var files []string
-		err := filepath.Walk(mp.ProjectDir, func(path string, info os.FileInfo, err error) error {
+		err := filepath.WalkDir(mp.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return nil
+				return err
 			}
-			if info.IsDir() {
+			if d.IsDir() {
 				base := filepath.Base(path)
 				if strings.HasPrefix(base, ".") || base == "vendor" || base == "node_modules" {
 					return filepath.SkipDir

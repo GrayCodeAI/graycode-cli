@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -60,13 +61,13 @@ func (ws *WorkspaceState) Scan() error {
 
 	newScanState := make(map[string]*FileState)
 
-	err := filepath.Walk(ws.ProjectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(ws.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip inaccessible files
+			return err // propagate errors
 		}
 
 		// Skip hidden directories and common non-source directories
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if strings.HasPrefix(base, ".") || base == "node_modules" || base == "vendor" || base == "__pycache__" {
 				return filepath.SkipDir
@@ -79,20 +80,25 @@ func (ws *WorkspaceState) Scan() error {
 			return nil
 		}
 
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
+
 		relPath, _ := filepath.Rel(ws.ProjectDir, path)
 		hash, _ := hashFile(path)
 
-		fs := &FileState{
+		fileState := &FileState{
 			Path:        relPath,
-			Size:        info.Size(),
-			ModTime:     info.ModTime(),
+			Size:        fi.Size(),
+			ModTime:     fi.ModTime(),
 			Language:    wsDetectLanguage(path),
 			IsTest:      wsIsTestFile(path),
 			IsGenerated: isGeneratedFile(path),
 			Hash:        hash,
 		}
 
-		newScanState[relPath] = fs
+		newScanState[relPath] = fileState
 		return nil
 	})
 	if err != nil {

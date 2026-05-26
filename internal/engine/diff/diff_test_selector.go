@@ -3,6 +3,7 @@ package diff
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -144,11 +145,11 @@ func BuildDependencyGraph(projectDir string) map[string][]string {
 	modulePath := detectModulePath(projectDir)
 
 	// Walk all Go files and parse imports.
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == ".git" || base == "vendor" || base == "node_modules" {
 				return filepath.SkipDir
@@ -588,11 +589,11 @@ func isTestFile(file string, language string) bool {
 // countAllTests counts all test files in the project.
 func countAllTests(projectDir, language string) int {
 	count := 0
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == ".git" || base == "vendor" || base == "node_modules" {
 				return filepath.SkipDir
