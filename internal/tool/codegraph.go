@@ -25,8 +25,8 @@ func (CodeGraphTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"action": map[string]interface{}{
 				"type":        "string",
-				"enum":        []string{"search", "callers", "callees", "impact", "context", "index", "sync", "trace", "explore", "files", "status", "stats", "pagerank", "centrality", "communities", "components", "deadcode", "coupling"},
-				"description": "Action: search/find symbols, callers/who calls, callees/what it calls, impact/breakage radius, context/build task context, index/full re-index, sync/incremental update, trace/call path A→B, explore/multi-symbol source, files/list indexed, status/health check, stats/counts, pagerank/file importance, centrality/bridge files, communities/module clusters, components/isolated subsystems, deadcode/unused code, coupling/tightly coupled files",
+				"enum":        []string{"search", "callers", "callees", "impact", "context", "index", "sync", "trace", "explore", "files", "status", "stats", "pagerank", "centrality", "communities", "components", "deadcode", "coupling", "cross_repo"},
+				"description": "Action: search/find symbols, callers/who calls, callees/what it calls, impact/breakage radius, context/build task context, index/full re-index, sync/incremental update, trace/call path A→B, explore/multi-symbol source, files/list indexed, status/health check, stats/counts, pagerank/file importance, centrality/bridge files, communities/module clusters, components/isolated subsystems, deadcode/unused code, coupling/tightly coupled files, cross_repo/cross-repo dependencies",
 			},
 			"query": map[string]interface{}{
 				"type":        "string",
@@ -146,6 +146,8 @@ func (CodeGraphTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return deadcodeCodeGraph(cg)
 	case "coupling":
 		return couplingCodeGraph(cg, p.MaxNodes)
+	case "cross_repo":
+		return crossRepoCodeGraph(p.Query, p.MaxNodes)
 	default:
 		return "", fmt.Errorf("unknown action: %s", p.Action)
 	}
@@ -613,6 +615,57 @@ func couplingCodeGraph(cg *codegraph.CodeGraph, topN int) (string, error) {
 	for i, m := range metrics {
 		msg += fmt.Sprintf("%d. `%s` ↔ `%s` (coupling: %.2f, shared deps: %d)\n",
 			i+1, m.FileA, m.FileB, m.Coupling, m.SharedDeps)
+	}
+
+	return msg, nil
+}
+
+func crossRepoCodeGraph(query string, maxNodes int) (string, error) {
+	if query == "" {
+		return "", fmt.Errorf("query is required for cross_repo")
+	}
+
+	// Auto-discover repos with .codegraph/
+	cwd, _ := os.Getwd()
+	parentDir := filepath.Dir(cwd)
+	var repos []string
+
+	entries, err := os.ReadDir(parentDir)
+	if err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				dbPath := filepath.Join(parentDir, entry.Name(), ".codegraph", "codegraph.db")
+				if _, err := os.Stat(dbPath); err == nil {
+					repos = append(repos, filepath.Join(parentDir, entry.Name()))
+				}
+			}
+		}
+	}
+
+	if len(repos) == 0 {
+		return "No repos with .codegraph/ found. Run 'codegraph init' in other repos first.", nil
+	}
+
+	results, err := codegraph.CrossRepoQuery(repos, query, maxNodes)
+	if err != nil {
+		return "", err
+	}
+
+	var msg string
+	msg += fmt.Sprintf("## Cross-Repo Search: %q\n\n", query)
+	msg += fmt.Sprintf("Searched %d repos:\n\n", len(repos))
+
+	for repo, nodes := range results {
+		repoName := filepath.Base(repo)
+		msg += fmt.Sprintf("### %s (%d matches)\n", repoName, len(nodes))
+		for _, n := range nodes {
+			sig := n.QualifiedName
+			if n.Signature != "" {
+				sig = n.Signature
+			}
+			msg += fmt.Sprintf("- **%s** `%s` in %s:%d\n", n.Kind, sig, n.FilePath, n.StartLine)
+		}
+		msg += "\n"
 	}
 
 	return msg, nil
