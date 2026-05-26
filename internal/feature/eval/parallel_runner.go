@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
+	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -151,16 +151,16 @@ func DiscoverTestPackages(projectDir string) ([]string, error) {
 	var packages []string
 	seen := make(map[string]bool)
 
-	err := filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // Skip inaccessible paths.
+			return err // propagate errors
 		}
 		// Skip hidden directories and vendor.
-		name := info.Name()
-		if info.IsDir() && (strings.HasPrefix(name, ".") || name == "vendor" || name == "testdata") {
+		name := d.Name()
+		if d.IsDir() && (strings.HasPrefix(name, ".") || name == "vendor" || name == "testdata") {
 			return filepath.SkipDir
 		}
-		if !info.IsDir() && strings.HasSuffix(name, "_test.go") {
+		if !d.IsDir() && strings.HasSuffix(name, "_test.go") {
 			dir := filepath.Dir(path)
 			if !seen[dir] {
 				seen[dir] = true

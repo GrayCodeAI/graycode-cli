@@ -1,7 +1,7 @@
 package repomap
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -34,12 +34,12 @@ func NewFileWatcher(root string, onChange func(path string)) (*FileWatcher, erro
 	}
 
 	// Add all directories
-	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if name == ".git" || name == "node_modules" || name == "vendor" || strings.HasPrefix(name, ".") {
 				return filepath.SkipDir
 			}

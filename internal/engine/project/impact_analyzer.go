@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -105,12 +106,12 @@ func BuildImportGraph(projectDir string) map[string][]string {
 	// Detect the module path from go.mod.
 	modulePath := detectModulePath(projectDir)
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		// Skip vendor and hidden directories.
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
@@ -431,11 +432,11 @@ func (ia *ImpactAnalyzer) buildTestMapping() {
 	modulePath := detectModulePath(ia.ProjectDir)
 	ia.TestMapping = make(map[string][]string)
 
-	_ = filepath.Walk(ia.ProjectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(ia.ProjectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir

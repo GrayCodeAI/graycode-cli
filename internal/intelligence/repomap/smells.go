@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -608,11 +609,11 @@ func (sd *SmellDetector) ScanDirectory(dir string) []CodeSmell {
 	var mu sync.Mutex
 	var allSmells []CodeSmell
 
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if strings.HasPrefix(base, ".") || base == "vendor" || base == "node_modules" || base == "testdata" {
 				return filepath.SkipDir

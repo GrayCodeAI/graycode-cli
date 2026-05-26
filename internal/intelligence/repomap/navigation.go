@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -79,11 +80,11 @@ func (idx *NavIndex) BuildIndex(projectDir string) error {
 
 	fset := token.NewFileSet()
 
-	err := filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip inaccessible paths
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == "node_modules" || strings.HasPrefix(base, ".") {
 				return filepath.SkipDir

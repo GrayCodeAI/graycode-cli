@@ -3,6 +3,7 @@ package ctxmgr
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -268,13 +269,13 @@ func (f *FileContextProvider) Gather(ctx context.Context, query string) ([]Conte
 
 	var files []fileInfo
 
-	err := filepath.Walk(f.RepoDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(f.RepoDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip errors
+			return err // propagate errors
 		}
 		// Skip hidden directories and common non-source dirs
-		name := info.Name()
-		if info.IsDir() {
+		name := d.Name()
+		if d.IsDir() {
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
 				return filepath.SkipDir
 			}
@@ -284,8 +285,12 @@ func (f *FileContextProvider) Gather(ctx context.Context, query string) ([]Conte
 		ext := filepath.Ext(name)
 		switch ext {
 		case ".go", ".js", ".ts", ".py", ".rs", ".java", ".c", ".cpp", ".h", ".rb", ".jsx", ".tsx":
+			fi, fiErr := d.Info()
+			if fiErr != nil {
+				return fiErr
+			}
 			relPath, _ := filepath.Rel(f.RepoDir, path)
-			files = append(files, fileInfo{path: relPath, modTime: info.ModTime()})
+			files = append(files, fileInfo{path: relPath, modTime: fi.ModTime()})
 		}
 		return nil
 	})
