@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/tok"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -55,9 +57,8 @@ func NewSmartReader(maxTokens int) *SmartReader {
 	}
 }
 
-// estimateTokens approximates token count from text (roughly 1 token per 4 chars).
 func estimateTokens(text string) int {
-	return (len(text) + 3) / 4
+	return tok.EstimateTokens(text)
 }
 
 // ReadFile reads a file intelligently within the token budget.

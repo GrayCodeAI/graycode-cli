@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -104,6 +105,7 @@ type Session struct {
 	Pipeline       *IntegrationPipeline       // integration.go — unified feature orchestration
 	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
 	Steering       *SteeringQueue             // steering.go — user guidance injection between tool batches
+	RateLimiter    *ratelimit.Limiter          // ratelimit — token bucket for LLM API calls
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.
@@ -138,6 +140,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		ResponseCache:     NewResponseCache(1000, 24*time.Hour),
 		Pipeline:          NewIntegrationPipeline(),
 		DeploymentRouting: deploymentRouting,
+		RateLimiter:       ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
