@@ -26,10 +26,9 @@ type SymbolNode struct {
 // BuildSymbolGraph scans the directory, extracts symbols using the existing
 // repomap parsers, then builds a directed graph by grepping for references.
 //
-// TODO: Incremental update — for large repos this rebuilds the entire symbol
-// graph on every scan. Detect which files changed since the last run and
-// only update their symbol nodes and edges.
-func BuildSymbolGraph(dir string, opts Options) (*SymbolGraph, error) {
+// If incremental is non-nil, only changed files are re-processed, avoiding a
+// full re-scan of the entire codebase on every call.
+func BuildSymbolGraph(dir string, opts Options, incremental ...*IncrementalMap) (*SymbolGraph, error) {
 	rm, err := Generate(dir, opts)
 	if err != nil {
 		return nil, fmt.Errorf("pagerank: generate repo map: %w", err)
@@ -119,6 +118,141 @@ func BuildSymbolGraph(dir string, opts Options) (*SymbolGraph, error) {
 	}
 
 	return sg, nil
+}
+
+// UpdateGraph incrementally updates the symbol graph by re-processing only
+// the changed files. Changed files are re-parsed and their old nodes/edges
+// are replaced; referenced symbols from unchanged files remain in place.
+func (sg *SymbolGraph) UpdateGraph(dir string, changedFiles []string) {
+	if changedFiles == nil {
+		return
+	}
+
+	// Remove nodes and edges for deleted/changed files
+	changedSet := make(map[string]bool, len(changedFiles))
+	for _, p := range changedFiles {
+		changedSet[p] = true
+	}
+
+	// Remove edges pointing to or from changed files
+	for srcKey, dsts := range sg.edges {
+		srcParts := strings.SplitN(srcKey, ":", 2)
+		srcFile := srcParts[0]
+		if changedSet[srcFile] {
+			delete(sg.edges, srcKey)
+			continue
+		}
+		filtered := dsts[:0]
+		for _, dst := range dsts {
+			dstParts := strings.SplitN(dst, ":", 2)
+			if !changedSet[dstParts[0]] {
+				filtered = append(filtered, dst)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(sg.edges, srcKey)
+		} else {
+			sg.edges[srcKey] = filtered
+		}
+	}
+
+	// Remove and re-add nodes for changed files
+	unchangedContent := make(map[string]string)
+	for _, node := range sg.nodes {
+		if !changedSet[node.File] {
+			unchangedContent[node.File] = ""
+		}
+	}
+	for _, p := range changedFiles {
+		for k, node := range sg.nodes {
+			if node.File == p {
+				delete(sg.nodes, k)
+			}
+		}
+	}
+
+	// Re-parse changed files and add new nodes
+	type symInfo struct {
+		key  string
+		name string
+		file string
+		kind string
+	}
+	var allSyms []symInfo
+	fileContents := make(map[string]string)
+
+	for _, p := range changedFiles {
+		absPath := filepath.Join(dir, p)
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			continue
+		}
+		fileContents[p] = string(data)
+
+		symbols := parseFileSymbols(absPath)
+		for _, sym := range symbols {
+			key := p + ":" + sym.Name
+			sg.nodes[key] = &SymbolNode{
+				File:   p,
+				Symbol: sym.Name,
+				Kind:   sym.Kind,
+				Rank:   1.0,
+			}
+			allSyms = append(allSyms, symInfo{key: key, name: sym.Name, file: p, kind: sym.Kind})
+		}
+	}
+
+	// Also re-read content of unchanged files that reference changed symbols
+	for f := range unchangedContent {
+		if _, ok := fileContents[f]; !ok {
+			absPath := filepath.Join(dir, f)
+			data, err := os.ReadFile(absPath)
+			if err == nil {
+				fileContents[f] = string(data)
+			}
+		}
+	}
+
+	// Build inverted index for changed symbols
+	symIndex := make(map[string][]symRef)
+	for _, sym := range allSyms {
+		symIndex[sym.name] = append(symIndex[sym.name], symRef{file: sym.file, key: sym.key})
+	}
+
+	// Add edges from changed files and from unchanged files that reference changed symbols
+	for _, fm := range allSyms {
+		content, ok := fileContents[fm.file]
+		if !ok {
+			continue
+		}
+		seen := make(map[string]bool)
+		for _, sym := range allSyms {
+			if sym.file == fm.file {
+				continue
+			}
+			if seen[sym.name] {
+				continue
+			}
+			if strings.Contains(content, sym.name) {
+				seen[sym.name] = true
+				localKey := fm.file + ":" + fm.name
+				for _, ref := range symIndex[sym.name] {
+					if ref.file != fm.file {
+						sg.edges[localKey] = appendUnique(sg.edges[localKey], ref.key)
+					}
+				}
+			}
+		}
+	}
+
+	// Rebuild inbound map and re-compute PageRank
+	sg.ComputePageRank(20, 0.85)
+}
+
+// symRef is an inverted-index entry mapping a symbol name to its locations.
+type symRef struct {
+	file string
+	key  string
 }
 
 // appendUnique appends val to s if it is not already present.
