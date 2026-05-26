@@ -33,7 +33,7 @@ func LoadMultiRepoConfig(projectDir string) *MultiRepoContext {
 	if err != nil {
 		return mrc
 	}
-	yaml.Unmarshal(data, &mrc.Config)
+	_ = yaml.Unmarshal(data, &mrc.Config)
 	return mrc
 }
 
@@ -102,7 +102,7 @@ func extractBoundary(repoPath, relation string) string {
 
 func findFiles(dir string, names []string) []string {
 	var found []string
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			if info != nil && info.IsDir() {
 				name := info.Name()

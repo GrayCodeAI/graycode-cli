@@ -105,7 +105,7 @@ func (p *Preheater) warmOnce(ctx context.Context, endpoints []string) {
 		}
 		resp, err := client.Do(req)
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	}
 	p.mu.Lock()

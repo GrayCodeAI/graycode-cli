@@ -156,7 +156,7 @@ func (s *MCPServer) Serve(ctx context.Context, r io.Reader, w io.Writer) error {
 				Error:   &RPCError{Code: errCodeParseError, Message: "Parse error"},
 			}
 			writeMu.Lock()
-			writeJSON(w, resp)
+			_ = writeJSON(w, resp)
 			writeMu.Unlock()
 			continue
 		}
