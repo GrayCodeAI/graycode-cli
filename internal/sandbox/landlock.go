@@ -162,7 +162,7 @@ func LandlockAvailable() bool {
 		return false
 	}
 	// Kernel returned a valid fd -- close it and report success.
-	syscall.Close(int(fd))
+	_ = syscall.Close(int(fd))
 	return true
 }
 
@@ -193,7 +193,7 @@ func (l *LandlockSandbox) Apply() error {
 		return fmt.Errorf("landlock_create_ruleset: %w", errno)
 	}
 	fd := int(rulesetFD)
-	defer syscall.Close(fd)
+	defer syscall.Close(fd) //nolint:errcheck
 
 	// 3. Add read-write rules.
 	for _, path := range l.readWrite {
@@ -263,7 +263,7 @@ func addPathRule(rulesetFD int, path string, access uint64) error {
 	if err != nil {
 		return err
 	}
-	defer syscall.Close(pathFD)
+	defer syscall.Close(pathFD) //nolint:errcheck
 
 	rule := landlockPathBeneathAttr{
 		allowedAccess: access,
@@ -299,7 +299,7 @@ func bestHandledFS() uint64 {
 			0,
 		)
 		if errno == 0 {
-			syscall.Close(int(fd))
+			_ = syscall.Close(int(fd))
 			return m
 		}
 	}

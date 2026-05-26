@@ -58,7 +58,7 @@ func (sc *SnapshotCache) Get(key string) (string, bool) {
 		return "", false
 	}
 
-	lru := elem.Value.(*lruSnapshotEntry)
+	lru, _ := elem.Value.(*lruSnapshotEntry)
 	if time.Now().After(lru.entry.expiry) {
 		// Expired: remove from cache
 		sc.order.Remove(elem)
@@ -80,7 +80,7 @@ func (sc *SnapshotCache) Set(key, value string) {
 	// If entry already exists, update and promote
 	if elem, ok := sc.entries[key]; ok {
 		sc.order.MoveToFront(elem)
-		lru := elem.Value.(*lruSnapshotEntry)
+		lru, _ := elem.Value.(*lruSnapshotEntry)
 		lru.entry = cachedEntry{
 			value:  value,
 			expiry: time.Now().Add(sc.ttl),
@@ -104,7 +104,7 @@ func (sc *SnapshotCache) Set(key, value string) {
 		oldest := sc.order.Back()
 		if oldest != nil {
 			sc.order.Remove(oldest)
-			evicted := oldest.Value.(*lruSnapshotEntry)
+			evicted, _ := oldest.Value.(*lruSnapshotEntry)
 			delete(sc.entries, evicted.key)
 		}
 	}
@@ -116,7 +116,7 @@ func (sc *SnapshotCache) GetOrCompute(key string, fn func() (string, error)) (st
 	sc.mu.Lock()
 	// Re-check under write lock to avoid duplicate computation.
 	if elem, ok := sc.entries[key]; ok {
-		lru := elem.Value.(*lruSnapshotEntry)
+		lru, _ := elem.Value.(*lruSnapshotEntry)
 		if time.Now().Before(lru.entry.expiry) {
 			val := lru.entry.value
 			sc.order.MoveToFront(elem)
