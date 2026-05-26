@@ -105,7 +105,7 @@ type Session struct {
 	Pipeline       *IntegrationPipeline       // integration.go — unified feature orchestration
 	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
 	Steering       *SteeringQueue             // steering.go — user guidance injection between tool batches
-	RateLimiter    *ratelimit.Limiter          // ratelimit — token bucket for LLM API calls
+	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.
