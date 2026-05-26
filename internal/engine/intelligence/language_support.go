@@ -2,6 +2,7 @@ package intelligence
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -249,11 +250,11 @@ func (r *LanguageRegistry) DetectAll(projectDir string) []*LanguageConfig {
 
 	counts := make(map[string]int)
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			// Skip hidden dirs and common vendor/dependency dirs.
 			if strings.HasPrefix(base, ".") || base == "vendor" || base == "node_modules" || base == "target" || base == "bin" || base == "obj" {

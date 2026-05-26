@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -368,19 +369,23 @@ func captureFiles(dir string) (map[string][]byte, error) {
 		return nil, fmt.Errorf("%q is not a directory", dir)
 	}
 
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // skip unreadable files
+			return err // propagate errors
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			// Skip hidden directories.
-			if strings.HasPrefix(info.Name(), ".") && path != dir {
+			if strings.HasPrefix(d.Name(), ".") && path != dir {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 		// Skip large files (>1MB) to avoid memory issues.
-		if info.Size() > 1<<20 {
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
+		if fi.Size() > 1<<20 {
 			return nil
 		}
 		rel, err := filepath.Rel(dir, path)

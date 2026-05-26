@@ -5,7 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -23,11 +23,11 @@ type DocEntry struct {
 // Extract extracts documentation from Go source files.
 func Extract(dir string) ([]DocEntry, error) {
 	var entries []DocEntry
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() || filepath.Ext(path) != ".go" {
+		if d.IsDir() || filepath.Ext(path) != ".go" {
 			return nil
 		}
 		if strings.HasSuffix(path, "_test.go") {

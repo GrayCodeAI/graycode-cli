@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -341,12 +342,19 @@ func ScanPlugin(pluginDir string) []SecurityIssue {
 	}
 
 	// Scan all files in the plugin directory for hidden Unicode characters
-	_ = filepath.Walk(pluginDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	_ = filepath.WalkDir(pluginDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
 			return nil
 		}
 		// Skip binary files (check first few bytes)
-		if info.Size() > 10*1024*1024 { // Skip files > 10MB
+		fi, fiErr := d.Info()
+		if fiErr != nil {
+			return fiErr
+		}
+		if fi.Size() > 10*1024*1024 { // Skip files > 10MB
 			return nil
 		}
 

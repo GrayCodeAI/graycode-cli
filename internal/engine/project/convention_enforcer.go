@@ -3,6 +3,7 @@ package project
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -62,11 +63,11 @@ func (cs *ConventionSet) LearnConventions(projectDir string) error {
 
 	// Gather Go source files for analysis.
 	var goFiles []string
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == "node_modules" || base == ".git" {
 				return filepath.SkipDir

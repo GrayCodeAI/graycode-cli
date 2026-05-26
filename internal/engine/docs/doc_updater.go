@@ -2,6 +2,7 @@ package docs
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -184,11 +185,11 @@ func (du *DocUpdater) ScanProjectForStaleDocs(projectDir string) []DocUpdate {
 	allSymbols := make(map[string]bool)
 	var goFiles []string
 
-	_ = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			base := filepath.Base(path)
 			if base == "vendor" || base == ".git" || base == "node_modules" {
 				return filepath.SkipDir

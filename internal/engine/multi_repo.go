@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,13 +103,14 @@ func extractBoundary(repoPath, relation string) string {
 
 func findFiles(dir string, names []string) []string {
 	var found []string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			if info != nil && info.IsDir() {
-				name := info.Name()
-				if name == ".git" || name == "node_modules" || name == "vendor" {
-					return filepath.SkipDir
-				}
+	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if name == ".git" || name == "node_modules" || name == "vendor" {
+				return filepath.SkipDir
 			}
 			return nil
 		}
