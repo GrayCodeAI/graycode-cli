@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -18,7 +17,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
-	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
@@ -112,50 +110,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	loopDet := NewLoopDetector(10, DoomLoopThreshold) // 10-step window, 3 repeats = doom loop
 
 	for {
-		// Timeout check: abort if context was cancelled by a time budget
-		if ctx.Err() != nil {
-			ch <- StreamEvent{Type: "content", Content: "\n\nTime budget exhausted."}
-			ch <- StreamEvent{Type: "done"}
-			return
-		}
-
-		// Snowball abort check
-		if snowball.ShouldAbort() {
-			ch <- StreamEvent{Type: "content", Content: "\n\n" + snowball.Summary()}
-			ch <- StreamEvent{Type: "done"}
-			return
-		}
-
-		// Loop detection check (doom loop = hard stop, first loop = warning + inject)
-		if loopDet.IsDoomLoop() {
-			ch <- StreamEvent{Type: "content", Content: "\n\n🛑 " + loopDet.DoomLoopWarning()}
-			ch <- StreamEvent{Type: "done"}
-			return
-		}
-		if loopDet.IsLooping() && !loopDet.Escalated() {
-			loopDet.MarkEscalated()
-			s.AddAssistant(loopDet.LoopWarning())
-			s.AddUser("You are stuck in a loop. Try a completely different approach. If you cannot make progress, explain what's blocking you.")
-		}
-
-		// Safety limits check
-		if s.Limits != nil {
-			if exceeded, reason := s.Limits.IsExceeded(); exceeded {
-				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
-				ch <- StreamEvent{Type: "done"}
-				return
-			}
-		}
-
-		// Enforce MaxTurns budget
-		if s.MaxTurns > 0 && turnCount >= s.MaxTurns {
-			ch <- StreamEvent{Type: "content", Content: "Turn limit reached — stopping."}
-			ch <- StreamEvent{Type: "done"}
+		if !s.checkGuardConditions(ctx, ch, turnCount, snowball, loopDet) {
 			return
 		}
 		turnCount++
 
-		// Record turn for limits tracking
 		if s.Limits != nil {
 			s.Limits.RecordTurn()
 		}
@@ -659,24 +618,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 		toolTurns++
-		type toolExecResult struct {
-			tc     types.ToolCall
-			output string
-			isErr  bool
-		}
-
-		// Classify tools into concurrent (read-only) and sequential (write) batches
-		safeConcurrent := map[string]bool{"Read": true, "Grep": true, "Glob": true, "LS": true, "WebSearch": true, "WebFetch": true, "ToolSearch": true}
-
-		var concurrentCalls []types.ToolCall
-		var sequentialCalls []types.ToolCall
-		for _, tc := range toolCalls {
-			if safeConcurrent[tc.Name] {
-				concurrentCalls = append(concurrentCalls, tc)
-			} else {
-				sequentialCalls = append(sequentialCalls, tc)
-			}
-		}
 
 		// Backtrack: record decision point when tool calls are pending
 		if s.Backtrack != nil && len(toolCalls) > 0 {
@@ -687,274 +628,20 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.Backtrack.RecordDecision(turnCount, strings.Join(toolNames, ", "), nil, s.messages)
 		}
 
-		var results []toolExecResult
-		var mu sync.Mutex
-
-		// executeSingleTool handles permission checking and execution for one tool call.
-		executeSingleTool := func(tc types.ToolCall) toolExecResult {
-			ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
-
-			// Trace: start tool span
-			var toolSpan *oteltrace.Span
-			if s.Tracer != nil {
-				_, toolSpan = oteltrace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
-			}
-
-			// Sync PermissionEngine state from Session fields (backward compat)
-			s.Perm.PromptFn = s.PermissionFn
-			s.Perm.Autonomy = s.Autonomy
-
-			granted, denyMsg := s.Perm.CheckTool(ctx, ToolCallInfo{
-				Name: tc.Name,
-				ID:   tc.ID,
-				Args: tc.Arguments,
-			})
-			if !granted {
-				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
-				if toolSpan != nil {
-					toolSpan.SetTag("denied", "true")
-					toolSpan.Finish()
-				}
-				return toolExecResult{tc: tc, output: denyMsg, isErr: true}
-			}
-			// Pre-tool hook
-			hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{
-				"tool": tc.Name,
-				"args": tc.Arguments,
-			})
-
-			inputJSON, _ := json.Marshal(tc.Arguments)
-			toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
-				AgentSpawnFn: s.AgentSpawnFn,
-				AskUserFn:    s.AskUserFn,
-				YaadBridge:   s.YaadBridge,
-			})
-			if s.ContainerExecutor != nil && s.ContainerExecutor.Running() {
-				toolCtx = tool.WithContainerExecutor(toolCtx, s.ContainerExecutor)
-			}
-			// Apply per-tool timeout so individual tools cannot block indefinitely.
-			toolCtx, toolCancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
-			output, execErr := s.registry.Execute(toolCtx, tc.Name, inputJSON)
-			toolCancel()
-			isErr := execErr != nil
-			if isErr {
-				s.log.Warn("tool execution error", map[string]interface{}{
-					"tool":  tc.Name,
-					"error": execErr.Error(),
-				})
-				output = fmt.Sprintf("Error: %s", execErr.Error())
-				// Backtrack: mark decision as failed on tool error
-				if s.Backtrack != nil {
-					s.Backtrack.MarkOutcome(turnCount, "failure")
-				}
-			} else {
-				s.log.Info("tool executed", map[string]interface{}{
-					"tool":   tc.Name,
-					"output": len(output),
-				})
-			}
-
-			// Limits: record every tool call
-			if s.Limits != nil {
-				s.Limits.RecordToolCall(tc.Name)
-			}
-
-			// Beliefs: record discoveries from read operations
-			canonical := canonicalToolName(tc.Name)
-			if s.Beliefs != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
-				subject := tc.Name
-				if p, ok := pathArgument(tc.Arguments); ok {
-					subject = p
-				}
-				// Use first 200 chars of output as summary
-				contentSummary := output
-				if len(contentSummary) > 200 {
-					contentSummary = contentSummary[:200]
-				}
-				s.Beliefs.Record("file_purpose", subject, contentSummary, turnCount)
-			}
-
-			// Proactive context: inject relevant memories when reading files
-			if s.EnhancedMemory != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
-				if p, ok := pathArgument(tc.Arguments); ok && p != "" {
-					if proactiveCtx := s.EnhancedMemory.ProactiveContextForFile(p); proactiveCtx != "" {
-						s.AppendSystemContext(proactiveCtx)
-					}
-				}
-			}
-
-			// Beliefs: invalidate beliefs when files are modified
-			if s.Beliefs != nil && (canonical == "Write" || canonical == "Edit") {
-				if p, ok := pathArgument(tc.Arguments); ok {
-					s.Beliefs.Invalidate(p)
-				}
-			}
-
-			// Critic: pre-screen Write/Edit patches before accepting
-			if s.Critic != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
-				if p, ok := pathArgument(tc.Arguments); ok {
-					// For writes, original content may be empty (new file)
-					origContent := ""
-					if data, readErr := readFileContent(p); readErr == nil {
-						origContent = data
-					}
-					intent := textContent.String() // use the LLM's text as intent context
-					verdict := s.Critic.PreScreenPatch(origContent, output, intent)
-					if s.Critic.ShouldBlock(verdict) {
-						issueStr := strings.Join(verdict.Issues, "; ")
-						output = fmt.Sprintf("Patch rejected by validator: %s. Try again.", issueStr)
-						isErr = true
-					}
-				}
-			}
-
-			// Shadow: validate edits in a temporary workspace
-			if s.Shadow != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
-				if p, ok := pathArgument(tc.Arguments); ok {
-					validationErrs := s.Shadow.ValidateEdit(p, output)
-					if len(validationErrs) > 0 {
-						var warnings []string
-						for _, ve := range validationErrs {
-							warnings = append(warnings, ve.Message)
-						}
-						output += fmt.Sprintf("\n\nValidation warnings: %s", strings.Join(warnings, "; "))
-					}
-				}
-			}
-
-			// Sandbox: intercept Write/Edit to stage instead of apply
-			sandboxIntercepted := false
-			if s.Sandbox != nil && s.Sandbox.IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
-				if p, ok := pathArgument(tc.Arguments); ok {
-					origContent := ""
-					if data, readErr := readFileContent(p); readErr == nil {
-						origContent = data
-					}
-					action := "overwrite"
-					if canonical == "Edit" {
-						action = "edit"
-					}
-					s.Sandbox.Stage(p, action, origContent, output)
-					output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
-					sandboxIntercepted = true
-				}
-			}
-
-			// Lint loop: run lint on successfully written/edited files and append
-			// reflected error message if lint fails (Aider "reflected_message" pattern).
-			if s.LintLoop != nil && s.LintLoop.Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
-				if p, ok := pathArgument(tc.Arguments); ok {
-					count := s.LintLoop.ReflectionCount(p)
-					if s.LintLoop.ShouldRetry(count) {
-						if lintResult, lintErr := s.LintLoop.RunLint(p); lintErr == nil && lintResult != nil {
-							reflected := s.LintLoop.BuildReflectedMessage(lintResult)
-							if reflected != "" {
-								s.LintLoop.RecordReflection(p)
-								output += "\n\n" + reflected
-							}
-						}
-					}
-				}
-			}
-
-			// Dynamic truncation: 20% of model context window (4 chars/token), floor 5000, hard cap 50KB
-			maxChars := 50000
-			if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-				dynamic := info.ContextSize * 20 / 100 * 4
-				if dynamic < 5000 {
-					dynamic = 5000
-				}
-				if dynamic < maxChars {
-					maxChars = dynamic
-				}
-			}
-			compressBudget := maxChars / 2
-			if len(output) > compressBudget {
-				compressed, tokens := CompressForContext(output, compressBudget/4)
-				if tokens > 0 && tokens < CountTokensFast(output) {
-					output = compressed
-				}
-			}
-			if len(output) > maxChars {
-				output = output[:maxChars] + "\n... (truncated)"
-			}
-
-			// Integration pipeline: post-tool (stall detect, lint, test, error recovery)
-			if s.Pipeline != nil {
-				var execErr error
-				if isErr {
-					execErr = fmt.Errorf("%s", output)
-				}
-				toolResult := s.Pipeline.PostToolExecution(tc.Name, tc.Arguments, output, execErr)
-				if toolResult != nil {
-					if toolResult.StallWarning != "" {
-						output += "\n\n" + toolResult.StallWarning
-					}
-					if toolResult.LintErrors != "" {
-						output += "\n\nLint: " + toolResult.LintErrors
-					}
-					if toolResult.RecoveryAction != "" && toolResult.ShouldRetry {
-						output += "\n\nRecovery suggestion: " + toolResult.RecoveryAction
-					}
-				}
-			}
-
-			// Post-tool hook
-			s.metrics.Counter("tools.executed").Inc()
-			if isErr {
-				s.metrics.Counter("tools.errors").Inc()
-			}
-
-			// Enhanced memory: auto-capture from tool results + proactive context
-			if s.EnhancedMemory != nil {
-				s.EnhancedMemory.OnToolResult(tc.Name, tc.Arguments, output, isErr)
-			}
-
-			hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{
-				"tool":   tc.Name,
-				"output": output,
-				"is_err": isErr,
-			})
-
-			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
-			if toolSpan != nil {
-				if isErr {
-					toolSpan.SetTag("error", "true")
-				}
-				toolSpan.Finish()
-			}
-			return toolExecResult{tc: tc, output: output, isErr: isErr}
-		}
-
-		// Execute concurrent batch (read-only tools) in parallel
-		if len(concurrentCalls) > 0 {
-			var wg sync.WaitGroup
-			for _, tc := range concurrentCalls {
-				wg.Add(1)
-				go func(tc types.ToolCall) {
-					defer wg.Done()
-					r := executeSingleTool(tc)
-					mu.Lock()
-					results = append(results, r)
-					mu.Unlock()
-				}(tc)
-			}
-			wg.Wait()
-		}
-
-		// Execute sequential batch (write tools) one-by-one
-		for _, tc := range sequentialCalls {
-			r := executeSingleTool(tc)
-			results = append(results, r)
-		}
+		results := s.executeToolCalls(ctx, toolCalls, ch, turnCount, textContent.String())
 
 		// Auto-snapshot after write operations for granular undo
-		if len(sequentialCalls) > 0 && s.Snapshots != nil {
+		if s.Snapshots != nil && len(toolCalls) > 0 {
 			var writeNames []string
-			for _, tc := range sequentialCalls {
-				writeNames = append(writeNames, tc.Name)
+			safeConcurrent := map[string]bool{"Read": true, "Grep": true, "Glob": true, "LS": true, "WebSearch": true, "WebFetch": true, "ToolSearch": true}
+			for _, tc := range toolCalls {
+				if !safeConcurrent[tc.Name] {
+					writeNames = append(writeNames, tc.Name)
+				}
 			}
-			go func() { _, _ = s.Snapshots.Track(strings.Join(writeNames, ", ")) }()
+			if len(writeNames) > 0 {
+				go func() { _, _ = s.Snapshots.Track(strings.Join(writeNames, ", ")) }()
+			}
 		}
 
 		// Append assistant message with tool_use blocks
