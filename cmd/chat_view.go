@@ -532,7 +532,7 @@ func renderDiffSummary(diffLine string, width int) string {
 		return dimStyle.Render(diffLine)
 	}
 
-	filePart := strings.TrimSpace(parts[0]) // "diff <file>"
+	filePart := strings.TrimSpace(parts[0])  // "diff <file>"
 	statsPart := strings.TrimSpace(parts[1]) // "+N -N lines"
 
 	// Color the +/- numbers
@@ -551,8 +551,8 @@ func renderReflectionBox(reflection string, width int) string {
 	}
 
 	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true) // orange
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)   // blue
-	contentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))           // light gray
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)  // blue
+	contentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))          // light gray
 
 	var b strings.Builder
 	lines := strings.Split(reflection, "\n")

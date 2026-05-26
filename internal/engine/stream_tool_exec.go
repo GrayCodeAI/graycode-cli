@@ -159,7 +159,7 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 					if preEditContent == "" {
 						os.Remove(preEditPath)
 					} else {
-						os.WriteFile(preEditPath, []byte(preEditContent), 0644)
+						os.WriteFile(preEditPath, []byte(preEditContent), 0o644)
 					}
 					issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
 					if len(reviewResult.Suggestions) > 0 {
