@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/tok"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -516,20 +518,20 @@ func hashFiles(files []string) map[string]string {
 	return state
 }
 
-// estimateTokens provides a rough token count from messages (4 chars per token).
 func estimateTokens(messages []Message) int {
-	total := 0
+	var b strings.Builder
 	for _, msg := range messages {
-		total += len(msg.Content) / 4
+		b.WriteString(msg.Content)
 		for _, tc := range msg.ToolUse {
-			total += len(tc.Name)/4 + 10
+			b.WriteString(tc.Name)
 		}
 		if msg.ToolResult != nil {
-			total += len(msg.ToolResult.Content) / 4
+			b.WriteString(msg.ToolResult.Content)
 		}
 	}
+	total := tok.EstimateTokens(b.String())
 	if total == 0 && len(messages) > 0 {
-		total = len(messages) // minimum 1 token per message
+		total = len(messages)
 	}
 	return total
 }

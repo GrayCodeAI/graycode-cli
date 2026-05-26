@@ -166,7 +166,8 @@ func (s *Sandbox) runDocker(ctx context.Context, command string) (*exec.Cmd, err
 	if !s.config.AllowNetwork {
 		args = append(args, "--network", "none")
 	}
-	args = append(args, "alpine:latest", "sh", "-c", command)
+	// Pin to a specific stable version; update periodically for security patches.
+	args = append(args, "alpine:3.21.3", "sh", "-c", command)
 	return exec.CommandContext(ctx, "docker", args...), nil
 }
 

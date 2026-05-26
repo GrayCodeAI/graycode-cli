@@ -330,6 +330,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
 		}
 
+		// Rate limit: wait for a token before making the LLM call
+		if s.RateLimiter != nil {
+			if err := s.RateLimiter.Wait(ctx); err != nil {
+				ch <- StreamEvent{Type: "error", Content: err.Error()}
+				return
+			}
+		}
+
 		contCfg := types.DefaultContinuationConfig()
 		err = retry.Do(ctx, retryCfg, func() error {
 			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
