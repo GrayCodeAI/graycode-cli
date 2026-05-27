@@ -146,6 +146,7 @@ func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 	case "seatbelt":
 		return s.runSeatbelt(ctx, command)
 	default:
+		fmt.Fprintf(os.Stderr, "WARNING: No sandbox available, running command without isolation\n")
 		return exec.CommandContext(ctx, "bash", "-c", command), nil
 	}
 }
@@ -258,6 +259,7 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 		}
 	}
 	// Fallback: run without sandboxing
+	fmt.Fprintf(os.Stderr, "WARNING: No sandbox backend available, running command without isolation\n")
 	return "bash", []string{"-c", command}
 }
 
