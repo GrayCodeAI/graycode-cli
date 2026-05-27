@@ -3,7 +3,6 @@ package codegraph
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // VectorStore provides zero-dependency vector search using chromem-go.
@@ -240,6 +239,3 @@ func (cvs *CodeVectorStore) Stats() map[string]interface{} {
 }
 
 // Helper to check if string contains substring
-func containsSubstr(s, sub string) bool {
-	return strings.Contains(s, sub)
-}
