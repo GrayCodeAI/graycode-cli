@@ -1075,10 +1075,12 @@ func autoIndexCodegraph() {
 	if err != nil {
 		return
 	}
-	defer cg.Close() //nolint:errcheck
+	defer cg.Close() //nolint:errcheck // best-effort close in background goroutine
 
 	// Incremental sync — only processes changed files
-	cg.Sync() //nolint:errcheck
+	if _, err := cg.Sync(); err != nil {
+		log.Printf("codegraph sync: %v", err)
+	}
 }
 
 func runChat() error {

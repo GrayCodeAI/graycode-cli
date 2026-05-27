@@ -202,7 +202,9 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 			feat.CompletedAt = time.Now()
 			m.mu.Unlock()
 
-			_ = m.persistState()
+			if persistErr := m.persistState(); persistErr != nil {
+				fmt.Fprintf(os.Stderr, "warning: failed to persist mission state: %v\n", persistErr)
+			}
 		}(&m.Features[i])
 	}
 
