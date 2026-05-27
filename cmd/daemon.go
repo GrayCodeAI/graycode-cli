@@ -114,7 +114,16 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	fmt.Printf("hawk daemon running on http://%s\n", addr)
 	fmt.Println("Endpoints: GET /v1/health, POST /v1/chat, GET /v1/sessions")
 	fmt.Println("Protected endpoints require Authorization: Bearer <api-key> or X-API-Key.")
-	fmt.Printf("API key: %s\n", apiKey)
+	if len(apiKey) > 8 {
+		fmt.Printf("API key: %s...%s\n", apiKey[:4], apiKey[len(apiKey)-4:])
+	} else {
+		fmt.Println("API key: (set via --api-key or HAWK_DAEMON_API_KEY)")
+	}
+	keyFile := filepath.Join(home.Dir(), ".hawk", "run", "daemon.key")
+	_ = os.MkdirAll(filepath.Dir(keyFile), 0o700)
+	if err := os.WriteFile(keyFile, []byte(apiKey), 0o600); err == nil {
+		fmt.Printf("Full API key written to %s\n", keyFile)
+	}
 
 	// SSH tunnel hint for remote access
 	if daemonHost == netutil.LoopbackHost {

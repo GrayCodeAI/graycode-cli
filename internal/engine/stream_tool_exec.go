@@ -155,12 +155,22 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 			if newContent, readErr := readFileContent(preEditPath); readErr == nil && newContent != preEditContent {
 				reviewResult, reviewErr := ReviewBeforeWrite(ctx, s.client, s.model, intentText, preEditPath, preEditContent, newContent)
 				if reviewErr == nil && reviewResult != nil && !reviewResult.Approved {
-					// Revert the file to its original state
-					if preEditContent == "" {
-						_ = os.Remove(preEditPath)
-					} else {
-						_ = os.WriteFile(preEditPath, []byte(preEditContent), 0o644)
+				// Revert the file to its original state
+				if preEditContent == "" {
+					if removeErr := os.Remove(preEditPath); removeErr != nil {
+						s.log.Warn("failed to remove file during self-review revert", map[string]interface{}{
+							"path":  preEditPath,
+							"error": removeErr.Error(),
+						})
 					}
+				} else {
+					if writeErr := os.WriteFile(preEditPath, []byte(preEditContent), 0o644); writeErr != nil {
+						s.log.Warn("failed to revert file during self-review", map[string]interface{}{
+							"path":  preEditPath,
+							"error": writeErr.Error(),
+						})
+					}
+				}
 					issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
 					if len(reviewResult.Suggestions) > 0 {
 						issueStr += ". Suggestions: " + strings.Join(reviewResult.Suggestions, "; ")
