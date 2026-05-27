@@ -53,10 +53,11 @@ func Open(root string) (*CodeGraph, error) {
 	return nil, ErrNoCGO
 }
 
-func (cg *CodeGraph) Close() error                                           { return nil }
-func (cg *CodeGraph) IndexFile(filePath string) error                        { return ErrNoCGO }
-func (cg *CodeGraph) IndexDir(dir string) error                              { return ErrNoCGO }
-func (cg *CodeGraph) Search(query string, limit int) ([]Node, error)         { return nil, ErrNoCGO }
+func (cg *CodeGraph) Close() error                                   { return nil }
+func (cg *CodeGraph) IndexFile(filePath string) error                { return ErrNoCGO }
+func (cg *CodeGraph) IndexDir(dir string) error                      { return ErrNoCGO }
+func (cg *CodeGraph) Search(query string, limit int) ([]Node, error) { return nil, ErrNoCGO }
+
 func (cg *CodeGraph) GetCallers(nodeID string, maxDepth int) ([]Node, error) { return nil, ErrNoCGO }
 
 func (cg *CodeGraph) GetCallees(nodeID string, maxDepth int) ([]Node, error) { return nil, ErrNoCGO }
@@ -68,9 +69,13 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 func (cg *CodeGraph) BuildContext(query string, maxNodes int) (string, error) { return "", ErrNoCGO }
 func (cg *CodeGraph) ResolveRefs() error                                      { return ErrNoCGO }
 func (cg *CodeGraph) Stats() (map[string]interface{}, error)                  { return nil, ErrNoCGO }
-func (cg *CodeGraph) GetNode(id string) (Node, error)                         { return Node{}, ErrNoCGO }
-func (cg *CodeGraph) Sync() (*SyncResult, error)                              { return nil, ErrNoCGO }
-func (cg *CodeGraph) Trace(from, to string) ([]Node, error)                   { return nil, ErrNoCGO }
+
+func (cg *CodeGraph) GetNode(id string) (Node, error) { return Node{}, ErrNoCGO }
+
+func (cg *CodeGraph) Sync() (*SyncResult, error) { return nil, ErrNoCGO }
+
+func (cg *CodeGraph) Trace(from, to string) ([]Node, error) { return nil, ErrNoCGO }
+
 func (cg *CodeGraph) Explore(query string, maxFiles int) (*ExploreResult, error) {
 	return nil, ErrNoCGO
 }
@@ -81,7 +86,9 @@ func (cg *CodeGraph) BetweennessCentrality(topN int) (*BetweennessResult, error)
 }
 
 func (cg *CodeGraph) CommunityDetection() (*CommunityDetectionResult, error) { return nil, ErrNoCGO }
-func (cg *CodeGraph) ConnectedComponents() ([][]string, error)               { return nil, ErrNoCGO }
+
+func (cg *CodeGraph) ConnectedComponents() ([][]string, error) { return nil, ErrNoCGO }
+
 func (cg *CodeGraph) PageRank(iterations int, damping float64) (map[string]float64, error) {
 	return nil, ErrNoCGO
 }
@@ -89,10 +96,14 @@ func (cg *CodeGraph) PageRank(iterations int, damping float64) (map[string]float
 func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult, error) {
 	return nil, ErrNoCGO
 }
-func (cg *CodeGraph) AnalyzeCoupling(topN int) ([]CouplingMetric, error)     { return nil, ErrNoCGO }
-func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error)                 { return nil, ErrNoCGO }
+
+func (cg *CodeGraph) AnalyzeCoupling(topN int) ([]CouplingMetric, error) { return nil, ErrNoCGO }
+
+func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) { return nil, ErrNoCGO }
+
 func (cg *CodeGraph) SemanticSearch(query string, limit int) ([]Node, error) { return nil, ErrNoCGO }
-func (cg *CodeGraph) HybridSearch(query string, limit int) ([]Node, error)   { return nil, ErrNoCGO }
+
+func (cg *CodeGraph) HybridSearch(query string, limit int) ([]Node, error) { return nil, ErrNoCGO }
 
 func CrossRepoQuery(repos []string, query string, limit int) (map[string][]Node, error) {
 	return nil, ErrNoCGO
