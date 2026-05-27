@@ -37,3 +37,4 @@ cmd/.hawk/
 
 # CodeGraph local index
 .codegraph/
+# CodeGraph integrated
