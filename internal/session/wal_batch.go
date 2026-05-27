@@ -2,6 +2,8 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -84,7 +86,9 @@ func (b *BatchedWAL) ensureTimerLocked() {
 	b.timer = time.AfterFunc(batchFlushInterval, func() {
 		b.mu.Lock()
 		defer b.mu.Unlock()
-		_ = b.flushLocked()
+		if err := b.flushLocked(); err != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: WAL batch flush failed: %v\n", err)
+		}
 	})
 }
 

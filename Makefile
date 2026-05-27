@@ -46,10 +46,10 @@ all: lint test build ## Default — lint, test, build.
 # Build / install / release.
 # ---------------------------------------------------------------------------
 build: ## Build the binary into bin/$(NAME).
-	CGO_ENABLED=0 go build -ldflags="$(LDFLAGS)" -o bin/$(NAME) $(MAIN_PKG)
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME) $(MAIN_PKG)
 
 install: ## Install the binary to $GOBIN.
-	CGO_ENABLED=0 go install -ldflags="$(LDFLAGS)" $(MAIN_PKG)
+	CGO_ENABLED=0 go install -trimpath -ldflags="$(LDFLAGS)" $(MAIN_PKG)
 
 release: ## Cut a release via goreleaser (requires a clean tree + tag).
 	@command -v $(GORELEASER) >/dev/null 2>&1 || (echo "install: go install github.com/goreleaser/goreleaser/v2@latest" && exit 1)

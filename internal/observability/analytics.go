@@ -32,13 +32,17 @@ func LogEvent(name, sessionID string, properties map[string]interface{}) {
 		Properties: properties,
 	}
 	_ = os.MkdirAll(analyticsDir(), 0o755)
-	data, _ := json.Marshal(event)
-	f, _ := os.OpenFile(filepath.Join(analyticsDir(), "events.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if f != nil {
-		defer func() { _ = f.Close() }()
-		_, _ = f.Write(data)
-		_, _ = f.WriteString("\n")
+	data, err := json.Marshal(event)
+	if err != nil {
+		return
 	}
+	f, err := os.OpenFile(filepath.Join(analyticsDir(), "events.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer func() { _ = f.Close() }()
+	_, _ = f.Write(data)
+	_, _ = f.WriteString("\n")
 }
 
 // SessionTrace tracks session lifecycle events.

@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /usr/bin/fdfind /usr/bin/fd
 
 # Install Go
-RUN curl -fsSL https://go.dev/dl/go1.26.1.linux-$(dpkg --print-architecture).tar.gz \
+RUN curl -fsSL https://go.dev/dl/go1.26.3.linux-$(dpkg --print-architecture).tar.gz \
     | tar -C /usr/local -xz
 
 ENV PATH="/usr/local/go/bin:${PATH}"
