@@ -1072,10 +1072,10 @@ func autoIndexCodegraph() {
 	if err != nil {
 		return
 	}
-	defer cg.Close()
+	defer cg.Close() //nolint:errcheck
 
 	// Incremental sync — only processes changed files
-	cg.Sync()
+	cg.Sync() //nolint:errcheck
 }
 
 func runChat() error {
