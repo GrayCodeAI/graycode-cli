@@ -12,11 +12,11 @@ type BetweennessResult struct {
 }
 
 type NodeCentrality struct {
-	NodeID    string  `json:"node_id"`
-	Name      string  `json:"name"`
-	FilePath  string  `json:"file_path"`
-	Score     float64 `json:"score"`
-	Kind      string  `json:"kind"`
+	NodeID   string  `json:"node_id"`
+	Name     string  `json:"name"`
+	FilePath string  `json:"file_path"`
+	Score    float64 `json:"score"`
+	Kind     string  `json:"kind"`
 }
 
 // BetweennessCentrality computes betweenness centrality for all nodes in the graph.
@@ -505,7 +505,8 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	rows, err := cg.db.Query(
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
-		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`)
+		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -608,7 +609,7 @@ func computeModularity(adj map[string]map[string]float64, community map[string]i
 				for _, w := range adj[j] {
 					kj += w
 				}
-				q += wij - (ki * kj) / (2 * totalWeight)
+				q += wij - (ki*kj)/(2*totalWeight)
 			}
 		}
 	}
@@ -698,7 +699,7 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 	defer cg.mu.RUnlock()
 
 	result := &ImpactResult{
-		Root:    nodeID,
+		Root:     nodeID,
 		Impacted: make(map[string]int), // nodeID -> depth
 	}
 
@@ -722,7 +723,8 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 
 		// Get all nodes that depend on this one
 		rows, _ := cg.db.Query(
-			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.id)
+			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.id,
+		)
 		if rows != nil {
 			for rows.Next() {
 				var source string
@@ -741,7 +743,8 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 		err := cg.db.QueryRow(
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
-			 FROM nodes WHERE id = ?`, id).Scan(
+			 FROM nodes WHERE id = ?`, id,
+		).Scan(
 			&n.ID, &n.Kind, &n.Name, &n.QualifiedName, &n.FilePath, &n.Language,
 			&n.StartLine, &n.EndLine, &n.Signature, &n.Docstring, &n.Visibility, &n.IsExported,
 		)
