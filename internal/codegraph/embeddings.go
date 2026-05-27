@@ -221,7 +221,8 @@ func (cg *CodeGraph) SemanticSearch(query string, limit int) ([]Node, error) {
 	rows, err := cg.db.Query(
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
-		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`)
+		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -80,7 +80,7 @@ type LanguageExtractor struct {
 // Open opens or creates a CodeGraph database at the given path.
 func Open(root string) (*CodeGraph, error) {
 	dbPath := filepath.Join(root, ".codegraph", "codegraph.db")
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, err
 	}
 
@@ -443,14 +443,16 @@ func (cg *CodeGraph) Search(query string, limit int) ([]Node, error) {
 		 JOIN nodes n ON n.id = fts.id
 		 WHERE nodes_fts MATCH ?
 		 ORDER BY rank
-		 LIMIT ?`, query+"*", limit)
+		 LIMIT ?`, query+"*", limit,
+	)
 	if err != nil {
 		// Fallback to LIKE search
 		rows, err = cg.db.Query(
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
 			 FROM nodes WHERE name LIKE ? ORDER BY name LIMIT ?`,
-			"%"+query+"%", limit)
+			"%"+query+"%", limit,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -487,7 +489,8 @@ func (cg *CodeGraph) GetCallers(nodeID string, maxDepth int) ([]Node, error) {
 			        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 			 FROM edges e JOIN nodes n ON n.id = e.source
 			 WHERE e.target = ? AND e.kind IN ('calls', 'references')
-			 LIMIT 50`, current)
+			 LIMIT 50`, current,
+		)
 		if err != nil {
 			continue
 		}
@@ -533,7 +536,8 @@ func (cg *CodeGraph) GetCallees(nodeID string, maxDepth int) ([]Node, error) {
 			        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 			 FROM edges e JOIN nodes n ON n.id = e.target
 			 WHERE e.source = ? AND e.kind IN ('calls', 'references')
-			 LIMIT 50`, current)
+			 LIMIT 50`, current,
+		)
 		if err != nil {
 			continue
 		}
@@ -566,7 +570,8 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 	err := cg.db.QueryRow(
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
-		 FROM nodes WHERE id = ?`, nodeID).Scan(
+		 FROM nodes WHERE id = ?`, nodeID,
+	).Scan(
 		&focalNode.ID, &focalNode.Kind, &focalNode.Name, &focalNode.QualifiedName,
 		&focalNode.FilePath, &focalNode.Language, &focalNode.StartLine, &focalNode.EndLine,
 		&focalNode.Signature, &focalNode.Docstring, &focalNode.Visibility, &focalNode.IsExported,
@@ -602,7 +607,8 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 		err := cg.db.QueryRow(
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
-			 FROM nodes WHERE id = ?`, s.nodeID).Scan(
+			 FROM nodes WHERE id = ?`, s.nodeID,
+		).Scan(
 			&n.ID, &n.Kind, &n.Name, &n.QualifiedName, &n.FilePath, &n.Language,
 			&n.StartLine, &n.EndLine, &n.Signature, &n.Docstring, &n.Visibility, &n.IsExported,
 		)
@@ -614,7 +620,8 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 		// If container, expand children at same depth
 		if containerKinds[n.Kind] {
 			childRows, _ := cg.db.Query(
-				`SELECT target FROM edges WHERE source = ? AND kind = 'contains'`, s.nodeID)
+				`SELECT target FROM edges WHERE source = ? AND kind = 'contains'`, s.nodeID,
+			)
 			if childRows != nil {
 				for childRows.Next() {
 					var childID string
@@ -629,7 +636,8 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 
 		// Traverse incoming edges (things that depend on this node)
 		depRows, _ := cg.db.Query(
-			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.nodeID)
+			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.nodeID,
+		)
 		if depRows != nil {
 			for depRows.Next() {
 				var depID string
@@ -1184,7 +1192,8 @@ func (cg *CodeGraph) Trace(fromName, toName string) ([]Node, error) {
 					err := cg.db.QueryRow(
 						`SELECT id, kind, name, qualified_name, file_path, language,
 						        start_line, end_line, signature, docstring, visibility, is_exported
-						 FROM nodes WHERE id = ?`, id).Scan(
+						 FROM nodes WHERE id = ?`, id,
+					).Scan(
 						&n.ID, &n.Kind, &n.Name, &n.QualifiedName, &n.FilePath, &n.Language,
 						&n.StartLine, &n.EndLine, &n.Signature, &n.Docstring, &n.Visibility, &n.IsExported,
 					)
@@ -1197,7 +1206,8 @@ func (cg *CodeGraph) Trace(fromName, toName string) ([]Node, error) {
 
 			// Expand via call edges
 			edgeRows, _ := cg.db.Query(
-				`SELECT target FROM edges WHERE source = ? AND kind IN ('calls', 'references') LIMIT 20`, current.nodeID)
+				`SELECT target FROM edges WHERE source = ? AND kind IN ('calls', 'references') LIMIT 20`, current.nodeID,
+			)
 			if edgeRows != nil {
 				for edgeRows.Next() {
 					var nextID string
@@ -1328,17 +1338,17 @@ func (cg *CodeGraph) Files(dirFilter string) ([]FileEntry, error) {
 
 // StatusResult holds detailed index health information.
 type StatusResult struct {
-	ProjectRoot  string         `json:"project_root"`
-	DBPath       string         `json:"db_path"`
-	DBSizeBytes  int64          `json:"db_size_bytes"`
-	Files        int            `json:"files"`
-	Nodes        int            `json:"nodes"`
-	Edges        int            `json:"edges"`
-	Unresolved   int            `json:"unresolved_refs"`
-	NodesByKind  map[string]int `json:"nodes_by_kind"`
-	FilesByLang  map[string]int `json:"files_by_lang"`
-	JournalMode  string         `json:"journal_mode"`
-	UpToDate     bool           `json:"up_to_date"`
+	ProjectRoot string         `json:"project_root"`
+	DBPath      string         `json:"db_path"`
+	DBSizeBytes int64          `json:"db_size_bytes"`
+	Files       int            `json:"files"`
+	Nodes       int            `json:"nodes"`
+	Edges       int            `json:"edges"`
+	Unresolved  int            `json:"unresolved_refs"`
+	NodesByKind map[string]int `json:"nodes_by_kind"`
+	FilesByLang map[string]int `json:"files_by_lang"`
+	JournalMode string         `json:"journal_mode"`
+	UpToDate    bool           `json:"up_to_date"`
 }
 
 // Status returns detailed index health and statistics.
@@ -1421,7 +1431,8 @@ func (cg *CodeGraph) searchByName(name string, limit int) ([]Node, error) {
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE name = ? OR name LIKE ? LIMIT ?`,
-		name, "%"+name+"%", limit)
+		name, "%"+name+"%", limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1438,7 +1449,8 @@ func (cg *CodeGraph) GetNode(id string) (Node, error) {
 	err := cg.db.QueryRow(
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
-		 FROM nodes WHERE id = ?`, id).Scan(
+		 FROM nodes WHERE id = ?`, id,
+	).Scan(
 		&n.ID, &n.Kind, &n.Name, &n.QualifiedName, &n.FilePath, &n.Language,
 		&n.StartLine, &n.EndLine, &n.Signature, &n.Docstring, &n.Visibility, &n.IsExported,
 	)
