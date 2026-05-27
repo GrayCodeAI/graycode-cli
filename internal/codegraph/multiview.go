@@ -259,12 +259,12 @@ func buildCFG(cfg *CFGView, node *ast.File, filePath string, fset *token.FileSet
 			})
 		case *ast.ForStmt, *ast.RangeStmt:
 			// Loop node
-			loopID := filePath + ":loop:" + itoa(fset.Position(n.(ast.Node).Pos()).Line)
+			loopID := filePath + ":loop:" + itoa(fset.Position(n.Pos()).Line)
 			cfg.Nodes = append(cfg.Nodes, CFGNode{
 				ID:   loopID,
 				Type: "loop",
 				File: filePath,
-				Line: fset.Position(n.(ast.Node).Pos()).Line,
+				Line: fset.Position(n.Pos()).Line,
 			})
 		}
 		return true
