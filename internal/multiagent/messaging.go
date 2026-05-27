@@ -140,6 +140,7 @@ func (mb *MessageBus) Subscribe(agentID, topic string) {
 }
 
 // Broadcast sends a message from one agent to all others.
+// Broadcasts never fail: agents with full buffers are silently skipped.
 func (mb *MessageBus) Broadcast(from, topic, content string) {
 	msg := AgentMessage{
 		ID:        generateID(),
@@ -149,6 +150,7 @@ func (mb *MessageBus) Broadcast(from, topic, content string) {
 		Priority:  3,
 		Timestamp: time.Now(),
 	}
+	// Safe to ignore: broadcast (no To) never returns errors.
 	_ = mb.Send(msg)
 }
 
@@ -163,6 +165,7 @@ func (mb *MessageBus) RequestHelp(from, description string) string {
 		Timestamp:        time.Now(),
 		RequiresResponse: true,
 	}
+	// Safe to ignore: broadcast (no To) never returns errors.
 	_ = mb.Send(msg)
 	return msg.ID
 }
@@ -178,6 +181,7 @@ func (mb *MessageBus) ReportConflict(from string, files []string, description st
 		Priority:  1,
 		Timestamp: time.Now(),
 	}
+	// Safe to ignore: broadcast (no To) never returns errors.
 	_ = mb.Send(msg)
 }
 
@@ -191,6 +195,7 @@ func (mb *MessageBus) ReportDiscovery(from, discovery string) {
 		Priority:  3,
 		Timestamp: time.Now(),
 	}
+	// Safe to ignore: broadcast (no To) never returns errors.
 	_ = mb.Send(msg)
 }
 
@@ -205,6 +210,7 @@ func (mb *MessageBus) ReportProgress(from string, pct float64, status string) {
 		Priority:  5,
 		Timestamp: time.Now(),
 	}
+	// Safe to ignore: broadcast (no To) never returns errors.
 	_ = mb.Send(msg)
 }
 

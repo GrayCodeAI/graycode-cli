@@ -3,6 +3,7 @@
 package codegraph
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -41,16 +42,21 @@ func (cg *CodeGraph) BetweennessCentrality(topN int) (*BetweennessResult, error)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	nodes := make(map[string]bool)
 	for rows.Next() {
 		var src, tgt string
-		rows.Scan(&src, &tgt) //nolint:errcheck
+		if err := rows.Scan(&src, &tgt); err != nil {
+			return nil, fmt.Errorf("scanning edge row: %w", err)
+		}
 		adj[src] = append(adj[src], tgt)
 		adj[tgt] = append(adj[tgt], src) // undirected for centrality
 		nodes[src] = true
 		nodes[tgt] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating edges: %w", err)
 	}
 
 	// Brandes' algorithm
@@ -192,11 +198,13 @@ func (cg *CodeGraph) CommunityDetection() (*CommunityDetectionResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	for rows.Next() {
 		var src, tgt, kind string
-		rows.Scan(&src, &tgt, &kind) //nolint:errcheck
+		if err := rows.Scan(&src, &tgt, &kind); err != nil {
+			return nil, fmt.Errorf("scanning edge row: %w", err)
+		}
 
 		// Weight by edge type
 		weight := 1.0
@@ -216,6 +224,9 @@ func (cg *CodeGraph) CommunityDetection() (*CommunityDetectionResult, error) {
 		adj[src][tgt] += weight
 		adj[tgt][src] += weight
 		edges = append(edges, edge{src, tgt, weight})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating edges: %w", err)
 	}
 
 	// Collect all nodes
@@ -342,16 +353,21 @@ func (cg *CodeGraph) ConnectedComponents() ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	nodes := make(map[string]bool)
 	for rows.Next() {
 		var src, tgt string
-		rows.Scan(&src, &tgt) //nolint:errcheck
+		if err := rows.Scan(&src, &tgt); err != nil {
+			return nil, fmt.Errorf("scanning edge row: %w", err)
+		}
 		adj[src] = append(adj[src], tgt)
 		adj[tgt] = append(adj[tgt], src)
 		nodes[src] = true
 		nodes[tgt] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating edges: %w", err)
 	}
 
 	// BFS to find components
@@ -438,7 +454,10 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 	if rows != nil {
 		for rows.Next() {
 			var edgeKey string
-			rows.Scan(&edgeKey) //nolint:errcheck
+			if err := rows.Scan(&edgeKey); err != nil {
+				rows.Close()
+				return diff
+			}
 			currentEdges[edgeKey] = true
 			if !beforeEdges[edgeKey] {
 				diff.AddedEdges++
@@ -470,8 +489,15 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	}
 	for rows.Next() {
 		var id string
-		rows.Scan(&id) //nolint:errcheck
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, nil, fmt.Errorf("scanning node row: %w", err)
+		}
 		nodes[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, nil, fmt.Errorf("iterating nodes: %w", err)
 	}
 	rows.Close()
 
@@ -481,8 +507,15 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	}
 	for rows.Next() {
 		var edgeKey string
-		rows.Scan(&edgeKey) //nolint:errcheck
+		if err := rows.Scan(&edgeKey); err != nil {
+			rows.Close()
+			return nil, nil, fmt.Errorf("scanning edge row: %w", err)
+		}
 		edges[edgeKey] = true
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, nil, fmt.Errorf("iterating edges: %w", err)
 	}
 	rows.Close()
 
@@ -512,7 +545,7 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	allNodes, _ := scanNodes(rows)
 
@@ -522,7 +555,10 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	if edgeRows != nil {
 		for edgeRows.Next() {
 			var target string
-			edgeRows.Scan(&target)
+			if err := edgeRows.Scan(&target); err != nil {
+				edgeRows.Close()
+				return nil, fmt.Errorf("scanning referenced target: %w", err)
+			}
 			referenced[target] = true
 		}
 		edgeRows.Close()
@@ -533,7 +569,10 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	if edgeRows != nil {
 		for edgeRows.Next() {
 			var source string
-			edgeRows.Scan(&source)
+			if err := edgeRows.Scan(&source); err != nil {
+				edgeRows.Close()
+				return nil, fmt.Errorf("scanning referenced source: %w", err)
+			}
 			referenced[source] = true
 		}
 		edgeRows.Close()
@@ -642,15 +681,20 @@ func (cg *CodeGraph) PageRank(iterations int, damping float64) (map[string]float
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	for rows.Next() {
 		var src, tgt string
-		rows.Scan(&src, &tgt) //nolint:errcheck
+		if err := rows.Scan(&src, &tgt); err != nil {
+			return nil, fmt.Errorf("scanning edge row: %w", err)
+		}
 		outlinks[src] = append(outlinks[src], tgt)
 		inlinks[tgt] = append(inlinks[tgt], src)
 		nodes[src] = true
 		nodes[tgt] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating edges: %w", err)
 	}
 
 	n := float64(len(nodes))
@@ -730,7 +774,10 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 		if rows != nil {
 			for rows.Next() {
 				var source string
-				rows.Scan(&source) //nolint:errcheck
+				if err := rows.Scan(&source); err != nil {
+					rows.Close()
+					return nil, fmt.Errorf("scanning dependency row for %s: %w", s.id, err)
+				}
 				if !visited[source] {
 					queue = append(queue, step{source, s.depth + 1})
 				}
@@ -797,15 +844,20 @@ func (cg *CodeGraph) AnalyzeCoupling(topN int) ([]CouplingMetric, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	for rows.Next() {
 		var filePath, target string
-		rows.Scan(&filePath, &target)
+		if err := rows.Scan(&filePath, &target); err != nil {
+			return nil, fmt.Errorf("scanning file dependency row: %w", err)
+		}
 		if fileDeps[filePath] == nil {
 			fileDeps[filePath] = make(map[string]bool)
 		}
 		fileDeps[filePath][target] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating file dependencies: %w", err)
 	}
 
 	// Compute pairwise coupling

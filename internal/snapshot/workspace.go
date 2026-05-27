@@ -168,7 +168,10 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 	}
 
 	// Prune if over limit
-	_ = s.prune()
+	if pruneErr := s.prune(); pruneErr != nil {
+		// Non-fatal: log but don't fail the capture
+		fmt.Fprintf(os.Stderr, "warning: snapshot prune failed: %v\n", pruneErr)
+	}
 
 	return snap, nil
 }
@@ -185,7 +188,7 @@ func (s *SnapshotStore) Restore(snapshotID string, projectDir string) error {
 
 	// Collect current files (to know what to delete)
 	currentFiles := make(map[string]bool)
-	_ = filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
+	walkErr := filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -208,12 +211,17 @@ func (s *SnapshotStore) Restore(snapshotID string, projectDir string) error {
 		}
 		return nil
 	})
+	if walkErr != nil {
+		return fmt.Errorf("walking current files: %w", walkErr)
+	}
 
 	// Delete files that weren't in the snapshot
 	for relPath := range currentFiles {
 		if _, exists := snap.Files[relPath]; !exists {
 			fullPath := filepath.Join(projectDir, relPath)
-			_ = os.Remove(fullPath)
+			if removeErr := os.Remove(fullPath); removeErr != nil && !os.IsNotExist(removeErr) {
+				fmt.Fprintf(os.Stderr, "warning: failed to remove %s: %v\n", relPath, removeErr)
+			}
 			// Clean up empty parent dirs
 			removeEmptyParents(filepath.Dir(fullPath), projectDir)
 		}
@@ -234,7 +242,9 @@ func (s *SnapshotStore) Restore(snapshotID string, projectDir string) error {
 		}
 
 		// Restore modification time
-		_ = os.Chtimes(fullPath, fs.ModTime, fs.ModTime)
+		if chtimesErr := os.Chtimes(fullPath, fs.ModTime, fs.ModTime); chtimesErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to restore mtime for %s: %v\n", rel, chtimesErr)
+		}
 	}
 
 	return nil
@@ -404,7 +414,9 @@ func (s *SnapshotStore) prune() error {
 	// Snapshots are sorted newest first; remove from the end
 	for i := s.MaxSnapshots; i < len(snapshots); i++ {
 		path := filepath.Join(s.Dir, snapshots[i].ID+".json.gz")
-		_ = os.Remove(path)
+		if removeErr := os.Remove(path); removeErr != nil && !os.IsNotExist(removeErr) {
+			fmt.Fprintf(os.Stderr, "warning: failed to prune snapshot %s: %v\n", snapshots[i].ID, removeErr)
+		}
 	}
 
 	return nil
@@ -429,10 +441,18 @@ func (s *SnapshotStore) save(snapshot *WorkspaceSnapshot) error {
 	if err != nil {
 		return fmt.Errorf("creating file: %w", err)
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to close snapshot file: %v\n", closeErr)
+		}
+	}()
 
 	gw := gzip.NewWriter(f)
-	defer func() { _ = gw.Close() }()
+	defer func() {
+		if closeErr := gw.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to close gzip writer: %v\n", closeErr)
+		}
+	}()
 
 	enc := json.NewEncoder(gw)
 	if err := enc.Encode(snapshot); err != nil {
@@ -449,13 +469,13 @@ func (s *SnapshotStore) load(id string) (*WorkspaceSnapshot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening snapshot %s: %w", id, err)
 	}
-	defer func() { _ = f.Close() }()
+	defer func() { _ = f.Close() }() // read-only, close error not critical
 
 	gr, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, fmt.Errorf("decompressing snapshot %s: %w", id, err)
 	}
-	defer func() { _ = gr.Close() }()
+	defer func() { _ = gr.Close() }() // read-only, close error not critical
 
 	var snap WorkspaceSnapshot
 	dec := json.NewDecoder(gr)

@@ -31,9 +31,12 @@ func (f *Fields) Put(key, value string) error {
 	return nil
 }
 
+// MustPut is a convenience method that panics on validation errors.
+// Use Put() for error handling. This follows the Go pattern of Must* functions
+// (e.g., regexp.MustCompile) for use in package-level initializers.
 func (f *Fields) MustPut(key, value string) *Fields {
 	if err := f.Put(key, value); err != nil {
-		panic(err)
+		panic("logfield: " + err.Error())
 	}
 	return f
 }
