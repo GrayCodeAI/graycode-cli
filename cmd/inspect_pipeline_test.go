@@ -144,9 +144,9 @@ func TestFormatInspectReport_WithData(t *testing.T) {
 	report := &inspectLib.Report{
 		Target:      "https://example.com",
 		CrawledURLs: 10,
-		Stats: inspectLib.ReportStats{
+		Stats: inspectLib.Stats{
 			FindingsTotal: 5,
-			BySeverity:    map[string]int{"high": 2, "medium": 3},
+			BySeverity:    map[inspectLib.Severity]int{inspectLib.SeverityHigh: 2, inspectLib.SeverityMedium: 3},
 		},
 	}
 	output := formatInspectReport(report)
