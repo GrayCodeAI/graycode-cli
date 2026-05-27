@@ -90,11 +90,7 @@ func (b *Bridge) init(c *client.EyrieClient, provider string, opts ...sightLib.O
 	b.adapter = NewEyrieAdapter(c, provider)
 	// Prepend the provider option so callers don't have to.
 	b.opts = append([]sightLib.Option{sightLib.WithProvider(b.adapter)}, opts...)
-	rev, err := sightLib.NewReviewer(b.opts...)
-	if err != nil {
-		return
-	}
-	b.reviewer = rev
+	b.reviewer = sightLib.NewReviewer(b.opts...)
 	b.ready = true
 }
 

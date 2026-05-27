@@ -224,7 +224,8 @@ func TestSplitCommand(t *testing.T) {
 		expected []string
 	}{
 		{"echo hello", []string{"echo", "hello"}},
-		{"python -c print(1)", []string{"python", "-c", "print(1)"},
+		{
+			"python -c print(1)", []string{"python", "-c", "print(1)"},
 		},
 		{"single", []string{"single"}},
 		{"", nil},

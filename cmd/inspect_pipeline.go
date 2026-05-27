@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	inspectLib "github.com/GrayCodeAI/inspect"
 	hawkInspect "github.com/GrayCodeAI/hawk/internal/bridge/inspect"
+	inspectLib "github.com/GrayCodeAI/inspect"
 )
 
 // InspectPipelineConfig controls how inspect integrates into the review pipeline.

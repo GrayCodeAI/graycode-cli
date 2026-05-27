@@ -9,9 +9,9 @@ import (
 
 // TestFirstConfig controls the test-first fix workflow.
 type TestFirstConfig struct {
-	TestCmd      string // test command to run (e.g. "go test ./...")
-	MaxRounds    int    // maximum fix iterations before giving up
-	FailPattern  string // pattern to match in test output for failures
+	TestCmd     string // test command to run (e.g. "go test ./...")
+	MaxRounds   int    // maximum fix iterations before giving up
+	FailPattern string // pattern to match in test output for failures
 }
 
 // DefaultTestFirstConfig returns sensible defaults for Go projects.

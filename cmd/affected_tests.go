@@ -9,9 +9,9 @@ import (
 
 // AffectedTests holds the result of affected test detection.
 type AffectedTests struct {
-	ChangedFiles   []string
-	AffectedTests  []string
-	TestFileMap    map[string][]string // source file -> test files that import it
+	ChangedFiles  []string
+	AffectedTests []string
+	TestFileMap   map[string][]string // source file -> test files that import it
 }
 
 // DetectAffectedTests analyzes changed files and determines which tests are
@@ -20,8 +20,8 @@ type AffectedTests struct {
 // and packages that import the changed file's package.
 func DetectAffectedTests(changedFiles []string) AffectedTests {
 	result := AffectedTests{
-		ChangedFiles:  changedFiles,
-		TestFileMap:   make(map[string][]string),
+		ChangedFiles: changedFiles,
+		TestFileMap:  make(map[string][]string),
 	}
 
 	seen := map[string]bool{}
