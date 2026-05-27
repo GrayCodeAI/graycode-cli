@@ -1,5 +1,33 @@
 # GrayCode AI Ecosystem: World-Class Individual Developer Platform
 
+## Implementation Status
+
+> Last updated: 2026-05-27
+
+| Phase | Status | Features Done | Notes |
+|-------|--------|---------------|-------|
+| Phase 1: Cost Foundations | **In Progress** | 3/5 | Prompt caching, model cascading, dynamic max_tokens done |
+| Phase 2: Core Intelligence | **In Progress** | 4/5 | Tree-sitter, context budget, import graph, change-set context done |
+| Phase 3: Quality Loop | **In Progress** | 3/5 | Test-first, self-review, affected test detection done |
+| Phase 4: Self-Improvement | **Partial** | 2/5 | Session reflection, skill distillation done |
+| Phase 5: Advanced | **Partial** | 2/5 | Transactional staging, parallel DAG done |
+| Phase 6: Polish | **Partial** | 2/5 | Command palette, progressive disclosure done |
+
+### Completed Features (by ecosystem)
+
+| Repo | Completed | Key Features |
+|------|-----------|--------------|
+| hawk | 60+ | Architect/editor pipeline, context budget, tree-sitter repomap, self-review, undo/restore, multi-file transactions, branching, workflow engine, MCP server, plugin system, session compression, guardian permissions, sandboxing |
+| eyrie | 20+ | Prompt caching, health checks, OTel observability, model cascade router, credential store, catalog system, bedrock/vertex adapters |
+| sight | 10+ | Static analysis rules, multi-concern routing, config system, severity levels, provider interface |
+| inspect | 10+ | API security checks, dependency CVE scanning, multi-format reporting, CI output, browser crawler |
+| tok | 15+ | Secret detection, rate limiting, compression advisor, stream compression, chunking, log crunch |
+| yaad | 15+ | Community detection, drift search, community search, semantic chunking, MCP server, compact mode |
+| trace | 5+ | Diff renderer, session timeline, session capture |
+| SDKs | 10+ | Go SDK, Python SDK, session management, tool support |
+
+---
+
 ## Research Summary
 
 20 parallel research agents analyzed 1000+ papers and OSS repos across: AI agent architectures, token compression, code review automation, graph memory systems, LLM provider optimization, web scanning, developer productivity, context management, MCP ecosystem, sandboxing, evaluation frameworks, planning/reasoning, self-improving agents, multi-modal capabilities, CI/CD automation, RAG for code, terminal UI/DX, testing/verification, observability/debugging, and skill/plugin ecosystems.
@@ -148,8 +176,8 @@
 
 | # | Feature | Research Basis | Impact |
 |---|---------|---------------|--------|
-| 9 | **MCP protocol version 2025-03-26** | Current hawk sends 2024-11-05 | Blocks interop with modern MCP servers |
-| 10 | **Streamable HTTP transport** | New in 2025-03-26, replaces HTTP+SSE | Session management, SSE streaming from POST |
+| 9 | **MCP protocol version 2025-03-26** | DONE — all code and metadata updated | Full interop with modern MCP servers |
+| 10 | **Streamable HTTP transport** | DONE — ConnectHTTP in http.go | Session management, SSE streaming from POST |
 | 11 | **Sampling support** | Server-initiated LLM calls through client | Enables yaad to auto-summarize via hawk's model |
 | 12 | **Notifications handling** | list_changed, progress, logging, resource updates | Currently readLoop ignores all notifications |
 

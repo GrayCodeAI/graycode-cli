@@ -231,36 +231,20 @@ func (cp *CommandPalette) Update(msg tea.KeyMsg) (string, bool) {
 	}
 }
 
-// filter applies fuzzy search to the entries.
+// filter applies fuzzy search to the entries, using scored ranking for
+// relevance. Entries are sorted by score so the best match is first.
 func (cp *CommandPalette) filter(query string) {
-	query = strings.TrimSpace(strings.ToLower(query))
+	query = strings.TrimSpace(query)
 	if query == "" {
 		cp.filtered = cp.entries
 		return
 	}
 
-	var filtered []CommandPaletteEntry
-	for _, e := range cp.entries {
-		name := strings.ToLower(e.Name)
-		desc := strings.ToLower(e.Description)
-		cat := strings.ToLower(e.Category)
-
-		// Exact prefix match on name (highest priority)
-		if strings.HasPrefix(name, query) {
-			filtered = append(filtered, e)
-			continue
-		}
-		// Subsequence match on name
-		if fuzzySubsequence(query, name) {
-			filtered = append(filtered, e)
-			continue
-		}
-		// Substring match on description or category
-		if strings.Contains(desc, query) || strings.Contains(cat, query) {
-			filtered = append(filtered, e)
-		}
+	ranked := RankFuzzyResults(query, cp.entries)
+	cp.filtered = make([]CommandPaletteEntry, 0, len(ranked))
+	for _, r := range ranked {
+		cp.filtered = append(cp.filtered, r.Entry)
 	}
-	cp.filtered = filtered
 }
 
 // fuzzySubsequence checks if query is a subsequence of target.

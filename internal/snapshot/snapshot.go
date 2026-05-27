@@ -61,8 +61,12 @@ func (t *Tracker) Init() error {
 	if err := t.gitWork("init"); err != nil {
 		return err
 	}
-	_ = t.gitWork("config", "user.email", "hawk@snapshot")
-	_ = t.gitWork("config", "user.name", "hawk-snapshot")
+	if err := t.gitWork("config", "user.email", "hawk@snapshot"); err != nil {
+		return fmt.Errorf("config email: %w", err)
+	}
+	if err := t.gitWork("config", "user.name", "hawk-snapshot"); err != nil {
+		return fmt.Errorf("config name: %w", err)
+	}
 	return nil
 }
 
@@ -130,8 +134,12 @@ func (t *Tracker) Diff(from, to string) ([]FileDiff, error) {
 			continue
 		}
 		var adds, dels int
-		_, _ = fmt.Sscanf(parts[0], "%d", &adds)
-		_, _ = fmt.Sscanf(parts[1], "%d", &dels)
+		if _, err := fmt.Sscanf(parts[0], "%d", &adds); err != nil {
+			continue // skip malformed lines
+		}
+		if _, err := fmt.Sscanf(parts[1], "%d", &dels); err != nil {
+			continue // skip malformed lines
+		}
 
 		status := "modified"
 		if adds > 0 && dels == 0 {
@@ -186,8 +194,12 @@ func (t *Tracker) Cleanup(maxAge time.Duration) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	cutoff := time.Now().Add(-maxAge).Format(time.RFC3339)
-	_ = t.gitWork("reflog", "expire", "--expire="+cutoff, "--all")
-	_ = t.gitWork("gc", "--prune="+cutoff)
+	if err := t.gitWork("reflog", "expire", "--expire="+cutoff, "--all"); err != nil {
+		return fmt.Errorf("reflog expire: %w", err)
+	}
+	if err := t.gitWork("gc", "--prune="+cutoff); err != nil {
+		return fmt.Errorf("gc: %w", err)
+	}
 	return nil
 }
 

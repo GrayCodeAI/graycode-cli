@@ -3,6 +3,7 @@ package mission
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -113,7 +114,9 @@ func createWorktree(repoDir, baseBranch, branch string) (string, error) {
 func removeWorktree(repoDir, wtPath string) {
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath)
 	cmd.Dir = repoDir
-	_ = cmd.Run()
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to remove worktree %s: %v\n", wtPath, err)
+	}
 }
 
 func getLastCommit(dir string) string {
