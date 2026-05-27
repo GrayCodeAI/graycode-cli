@@ -473,23 +473,27 @@ func (cg *CodeGraph) GetCallers(nodeID string, maxDepth int) ([]Node, error) {
 
 	var result []Node
 	visited := make(map[string]bool)
-	queue := []string{nodeID}
+	type depthNode struct {
+		id    string
+		depth int
+	}
+	queue := []depthNode{{nodeID, 0}}
 
 	for len(queue) > 0 && len(result) < 100 {
 		current := queue[0]
 		queue = queue[1:]
 
-		if visited[current] {
+		if visited[current.id] || current.depth > maxDepth {
 			continue
 		}
-		visited[current] = true
+		visited[current.id] = true
 
 		rows, err := cg.db.Query(
 			`SELECT n.id, n.kind, n.name, n.qualified_name, n.file_path, n.language,
 			        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 			 FROM edges e JOIN nodes n ON n.id = e.source
 			 WHERE e.target = ? AND e.kind IN ('calls', 'references')
-			 LIMIT 50`, current,
+			 LIMIT 50`, current.id,
 		)
 		if err != nil {
 			continue
@@ -501,7 +505,7 @@ func (cg *CodeGraph) GetCallers(nodeID string, maxDepth int) ([]Node, error) {
 		for _, n := range nodes {
 			if !visited[n.ID] {
 				result = append(result, n)
-				queue = append(queue, n.ID)
+				queue = append(queue, depthNode{n.ID, current.depth + 1})
 			}
 		}
 	}
@@ -520,23 +524,27 @@ func (cg *CodeGraph) GetCallees(nodeID string, maxDepth int) ([]Node, error) {
 
 	var result []Node
 	visited := make(map[string]bool)
-	queue := []string{nodeID}
+	type depthNode struct {
+		id    string
+		depth int
+	}
+	queue := []depthNode{{nodeID, 0}}
 
 	for len(queue) > 0 && len(result) < 100 {
 		current := queue[0]
 		queue = queue[1:]
 
-		if visited[current] {
+		if visited[current.id] || current.depth > maxDepth {
 			continue
 		}
-		visited[current] = true
+		visited[current.id] = true
 
 		rows, err := cg.db.Query(
 			`SELECT n.id, n.kind, n.name, n.qualified_name, n.file_path, n.language,
 			        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 			 FROM edges e JOIN nodes n ON n.id = e.target
 			 WHERE e.source = ? AND e.kind IN ('calls', 'references')
-			 LIMIT 50`, current,
+			 LIMIT 50`, current.id,
 		)
 		if err != nil {
 			continue
@@ -548,7 +556,7 @@ func (cg *CodeGraph) GetCallees(nodeID string, maxDepth int) ([]Node, error) {
 		for _, n := range nodes {
 			if !visited[n.ID] {
 				result = append(result, n)
-				queue = append(queue, n.ID)
+				queue = append(queue, depthNode{n.ID, current.depth + 1})
 			}
 		}
 	}

@@ -235,28 +235,28 @@ func (cg *CodeGraph) SemanticSearch(query string, limit int) ([]Node, error) {
 		node Node
 		sim  float32
 	}
-	var scored_nodes []scored
+	var scoredNodes []scored
 
 	for _, n := range allNodes {
 		vec := GenerateEmbedding(n)
 		sim := CosineSimilarity(queryVec, vec)
 		if sim > 0.1 { // threshold
-			scored_nodes = append(scored_nodes, scored{n, sim})
+			scoredNodes = append(scoredNodes, scored{n, sim})
 		}
 	}
 
 	// Sort by similarity descending
-	sort.Slice(scored_nodes, func(i, j int) bool {
-		return scored_nodes[i].sim > scored_nodes[j].sim
+	sort.Slice(scoredNodes, func(i, j int) bool {
+		return scoredNodes[i].sim > scoredNodes[j].sim
 	})
 
 	// Return top results
 	var results []Node
 	l := limit
-	if l > len(scored_nodes) {
-		l = len(scored_nodes)
+	if l > len(scoredNodes) {
+		l = len(scoredNodes)
 	}
-	for _, s := range scored_nodes[:l] {
+	for _, s := range scoredNodes[:l] {
 		results = append(results, s.node)
 	}
 
