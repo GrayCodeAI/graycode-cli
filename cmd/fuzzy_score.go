@@ -32,7 +32,15 @@ func FuzzyScore(query, target string) int {
 
 	// Substring match
 	if idx := strings.Index(t, q); idx >= 0 {
-		return 50 + len(q)*5 - idx
+		score := 50 + len(q)*5 - idx
+		// Word boundary bonus for substring starting at a separator
+		if idx > 0 {
+			prev := rune(t[idx-1])
+			if prev == '/' || prev == '_' || prev == '-' || prev == ' ' {
+				score += 10
+			}
+		}
+		return score
 	}
 
 	// Subsequence match with scoring

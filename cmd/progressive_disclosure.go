@@ -227,33 +227,3 @@ func GetHelpForLevel(level UserLevel) string {
 		return IntermediateHelp()
 	}
 }
-
-// disclosureCmd is the cobra command for managing disclosure level.
-var disclosureCmd = &cobra.Command{
-	Use:   "level [beginner|intermediate|advanced]",
-	Short: "Set feature disclosure level",
-	Long:  "Control how many features are shown. Beginner shows essentials, advanced shows everything.",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runDisclosure,
-}
-
-var currentDisclosure = DefaultDisclosureConfig()
-
-func init() {
-	// This is registered as a chat command, not a cobra subcommand
-}
-
-func runDisclosure(_ *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		fmt.Printf("Current level: %s\n", currentDisclosure.Level)
-		fmt.Println("Available: beginner, intermediate, advanced")
-		return nil
-	}
-	level, ok := ParseUserLevel(args[0])
-	if !ok {
-		return fmt.Errorf("unknown level %q; use beginner, intermediate, or advanced", args[0])
-	}
-	currentDisclosure.Level = level
-	fmt.Printf("Disclosure level set to: %s\n", level)
-	return nil
-}

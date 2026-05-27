@@ -247,17 +247,6 @@ func (cp *CommandPalette) filter(query string) {
 	}
 }
 
-// fuzzySubsequence checks if query is a subsequence of target.
-func fuzzySubsequence(query, target string) bool {
-	qi := 0
-	for ti := 0; ti < len(target) && qi < len(query); ti++ {
-		if query[qi] == target[ti] {
-			qi++
-		}
-	}
-	return qi == len(query)
-}
-
 // Render renders the command palette as a string.
 func (cp *CommandPalette) Render(viewWidth int) string {
 	if !cp.open {
