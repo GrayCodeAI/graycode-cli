@@ -96,6 +96,9 @@ func baseTools() []tool.Tool {
 		tool.ImpactTool{},
 		tool.GitHistoryTool{},
 		tool.CodeGraphTool{},
+		tool.NilAwayTool{},
+		tool.ReviveTool{},
+		tool.MCPLanguageServerTool{},
 	}
 }
 
