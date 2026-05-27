@@ -5,8 +5,8 @@ import (
 	"unicode"
 )
 
-// FuzzyMatch holds a scored fuzzy match result.
-type FuzzyMatch struct {
+// FuzzyMatchResult holds a scored fuzzy match result.
+type FuzzyMatchResult struct {
 	Score    int
 	MatchIdx []int // indices of matched characters in the target
 }
