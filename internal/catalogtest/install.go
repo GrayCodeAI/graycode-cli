@@ -22,11 +22,13 @@ func InstallGlobal() (cleanup func()) {
 	globalOnce.Do(func() {
 		dir, err := os.MkdirTemp("", "hawk-catalog-*")
 		if err != nil {
-			panic(err)
+			// In TestMain, we can't use t.Fatal, so log and exit.
+			// This is a test helper, so panicking is acceptable but we'll use a clearer message.
+			panic("catalogtest: failed to create temp dir: " + err.Error())
 		}
 		globalPath = filepath.Join(dir, "model_catalog.json")
 		if err := os.WriteFile(globalPath, minimalCatalogJSON, 0o644); err != nil {
-			panic(err)
+			panic("catalogtest: failed to write catalog: " + err.Error())
 		}
 		_ = os.Setenv("EYRIE_MODEL_CATALOG_PATH", globalPath)
 	})
@@ -40,7 +42,7 @@ func Install(t testing.TB) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "model_catalog.json")
 	if err := os.WriteFile(path, minimalCatalogJSON, 0o644); err != nil {
-		panic(err)
+		t.Fatalf("catalogtest: failed to write catalog: %v", err)
 	}
 	t.Setenv("EYRIE_MODEL_CATALOG_PATH", path)
 }
