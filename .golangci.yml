@@ -71,6 +71,9 @@ linters:
       - path: internal/intelligence/repomap/
         linters:
           - errcheck
+      - path: internal/codegraph/
+        linters:
+          - errcheck
       - path: internal/magicdocs/
         linters:
           - errcheck
