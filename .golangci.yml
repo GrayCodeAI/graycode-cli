@@ -74,6 +74,12 @@ linters:
       - path: internal/codegraph/
         linters:
           - errcheck
+      - path: internal/tool/codegraph.go
+        linters:
+          - errcheck
+      - path: internal/tool/lsp.go
+        linters:
+          - errcheck
       - path: internal/magicdocs/
         linters:
           - errcheck
