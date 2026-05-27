@@ -9,22 +9,22 @@ import (
 
 // BlockSection represents a collapsible section in the conversation.
 type BlockSection struct {
-	Title    string
-	Content  string
+	Title     string
+	Content   string
 	Collapsed bool
-	Kind     BlockKind // controls styling
+	Kind      BlockKind // controls styling
 }
 
 // BlockKind categorizes the section type for styling.
 type BlockKind int
 
 const (
-	BlockToolUse    BlockKind = iota // tool calls and results
-	BlockThinking                    // LLM reasoning
-	BlockDiff                        // code diffs
-	BlockTest                        // test output
-	BlockReview                      // review findings
-	BlockPlan                        // planning sections
+	BlockToolUse  BlockKind = iota // tool calls and results
+	BlockThinking                  // LLM reasoning
+	BlockDiff                      // code diffs
+	BlockTest                      // test output
+	BlockReview                    // review findings
+	BlockPlan                      // planning sections
 )
 
 // BlockStyle returns the lipgloss style for a block kind.

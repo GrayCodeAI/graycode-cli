@@ -335,9 +335,9 @@ func TestReadSettingsOverride_WhitespaceOnly(t *testing.T) {
 func TestApiKeyProviderFromSettingKey(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		input        string
+		input          string
 		expectProvider string
-		expectOk     bool
+		expectOk       bool
 	}{
 		{"apikey.openai", "openai", true},
 		{"apikey:anthropic", "anthropic", true},
