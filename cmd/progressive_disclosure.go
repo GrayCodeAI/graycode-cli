@@ -11,9 +11,9 @@ import (
 type UserLevel int
 
 const (
-	LevelBeginner  UserLevel = iota // simplified help, fewer commands shown
-	LevelIntermediate               // standard help
-	LevelAdvanced                   // all commands and options shown
+	LevelBeginner     UserLevel = iota // simplified help, fewer commands shown
+	LevelIntermediate                  // standard help
+	LevelAdvanced                      // all commands and options shown
 )
 
 func (l UserLevel) String() string {
