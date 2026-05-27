@@ -15,10 +15,13 @@ import (
 // CodeGraphTool provides tree-sitter based code intelligence.
 type CodeGraphTool struct{}
 
-func (CodeGraphTool) Name() string        { return "CodeGraph" }
-func (CodeGraphTool) RiskLevel() string   { return "low" }
-func (CodeGraphTool) Aliases() []string   { return []string{"cg", "graph"} }
-func (CodeGraphTool) Description() string { return "Query the code knowledge graph: search symbols, trace callers/callees, compute impact radius, build context." }
+func (CodeGraphTool) Name() string      { return "CodeGraph" }
+func (CodeGraphTool) RiskLevel() string { return "low" }
+func (CodeGraphTool) Aliases() []string { return []string{"cg", "graph"} }
+func (CodeGraphTool) Description() string {
+	return "Query the code knowledge graph: search symbols, trace callers/callees, compute impact radius, build context."
+}
+
 func (CodeGraphTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
