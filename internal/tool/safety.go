@@ -49,7 +49,7 @@ func TruncateOutput(s string) string {
 	truncated := s[:maxOutputBytes]
 	for i := len(truncated) - 1; i >= 0; i-- {
 		if truncated[i]&0xC0 != 0x80 {
-			truncated = truncated[:i]
+			truncated = truncated[:i+1]
 			break
 		}
 	}

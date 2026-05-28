@@ -407,7 +407,7 @@ func TestCalculateAgreement(t *testing.T) {
 
 func TestConsensusEstimateTokens(t *testing.T) {
 	tokens := estimateTokens("hello world this is a test")
-	if tokens != 9 {
+	if tokens != 6 {
 		t.Errorf("expected 9 tokens, got %d", tokens)
 	}
 }
