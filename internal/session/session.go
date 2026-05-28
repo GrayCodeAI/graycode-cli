@@ -16,9 +16,9 @@ import (
 
 // Message is a persisted conversation message.
 type Message struct {
-	Role       string            `json:"role"`
-	Content    string            `json:"content,omitempty"`
-	ToolUse    []types.ToolCall  `json:"tool_use,omitempty"`
+	Role        string             `json:"role"`
+	Content     string             `json:"content,omitempty"`
+	ToolUse     []types.ToolCall   `json:"tool_use,omitempty"`
 	ToolResults []types.ToolResult `json:"tool_results,omitempty"`
 }
 

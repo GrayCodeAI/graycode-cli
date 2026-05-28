@@ -12,7 +12,7 @@ func TestListCheckpoints(t *testing.T) {
 			{Role: "assistant", Content: "hi there"},
 			{Role: "user", Content: "read file.go"},
 			{Role: "assistant", ToolUse: []ToolCall{{ID: "t1", Name: "Read"}}},
-			{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "package main"}},
+			{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "package main"}}},
 			{Role: "assistant", Content: "here's the file"},
 			{Role: "user", Content: "now edit it"},
 		},
