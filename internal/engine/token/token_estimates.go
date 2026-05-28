@@ -32,8 +32,8 @@ func EstimateMessageTokens(m types.EyrieMessage) int {
 			}
 		}
 	}
-	if m.ToolResult != nil {
-		tokens += CountTokens(m.ToolResult.Content)
+	for _, tr := range m.ToolResults {
+		tokens += CountTokens(tr.Content)
 	}
 	return tokens
 }

@@ -25,11 +25,11 @@ func TestSummarizeTrajectory_ToolUsage(t *testing.T) {
 		{
 			Role:    "user",
 			Content: "Error: permission denied",
-			ToolResult: &types.ToolResult{
+			ToolResults: []types.ToolResult{{
 				ToolUseID: "tc1",
 				Content:   "Error: permission denied",
 				IsError:   true,
-			},
+			}},
 		},
 	}
 

@@ -151,8 +151,10 @@ func SummarizeTrajectory(messages []types.EyrieMessage) string {
 		}
 
 		// Track errors.
-		if msg.ToolResult != nil && msg.ToolResult.IsError {
-			failures = append(failures, truncateStr(msg.ToolResult.Content, 100))
+		for _, tr := range msg.ToolResults {
+			if tr.IsError {
+				failures = append(failures, truncateStr(tr.Content, 100))
+			}
 		}
 
 		// Track error mentions in content.

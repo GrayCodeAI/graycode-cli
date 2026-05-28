@@ -105,12 +105,14 @@ func buildReflectionPrompt(goal string, msgs []types.EyrieMessage, errorContext 
 	sb.WriteString("TASK GOAL: " + goal + "\n\n")
 	sb.WriteString("CONVERSATION TRANSCRIPT:\n")
 	for _, m := range msgs {
-		if m.ToolResult != nil {
-			prefix := "[tool_result]"
-			if m.ToolResult.IsError {
-				prefix = "[tool_result ERROR]"
+		if len(m.ToolResults) > 0 {
+			for _, tr := range m.ToolResults {
+				prefix := "[tool_result]"
+				if tr.IsError {
+					prefix = "[tool_result ERROR]"
+				}
+				sb.WriteString(fmt.Sprintf("%s %s\n", prefix, tr.Content))
 			}
-			sb.WriteString(fmt.Sprintf("%s %s\n", prefix, m.ToolResult.Content))
 		} else if len(m.ToolUse) > 0 {
 			for _, tu := range m.ToolUse {
 				sb.WriteString(fmt.Sprintf("[%s] tool_call: %s\n", m.Role, tu.Name))

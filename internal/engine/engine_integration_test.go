@@ -75,11 +75,11 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 	})
 	sess.messages = append(sess.messages, types.EyrieMessage{
 		Role: "user",
-		ToolResult: &types.ToolResult{
+		ToolResults: []types.ToolResult{{
 			ToolUseID: "tc-1",
 			Content:   "hello",
 			IsError:   false,
-		},
+		}},
 	})
 	sess.messages = append(sess.messages, types.EyrieMessage{
 		Role:    "assistant",
@@ -97,7 +97,7 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 	if raw[1].Role != "assistant" || len(raw[1].ToolUse) != 1 {
 		t.Error("second message should be assistant with tool_use")
 	}
-	if raw[2].ToolResult == nil {
+	if len(raw[2].ToolResults) == 0 {
 		t.Error("third message should have tool_result")
 	}
 	if raw[3].Role != "assistant" || raw[3].Content == "" {

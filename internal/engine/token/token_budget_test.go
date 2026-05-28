@@ -33,11 +33,11 @@ func TestDynamicMaxTokens_ToolHeavyPattern(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "read the files"},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "file1 content"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "file1 content"}},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t2", Name: "Read"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t2", Content: "file2 content"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "file2 content"}},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t3", Name: "Grep"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t3", Content: "grep results"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t3", Content: "grep results"}},
 		{Role: "user", Content: "now implement the feature"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "code")
@@ -51,9 +51,9 @@ func TestDynamicMaxTokens_NotEnoughToolTurns(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "do something"},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "output"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t2", Name: "Bash"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t2", Content: "output"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "output"}},
 		{Role: "user", Content: "implement the feature"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "code")
@@ -69,9 +69,9 @@ func TestDynamicMaxTokens_MixedToolAndText(t *testing.T) {
 		{Role: "user", Content: "help me"},
 		{Role: "assistant", Content: "Sure, I can help."},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "output"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t2", Name: "Bash"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t2", Content: "output"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "output"}},
 		{Role: "user", Content: "implement it"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "code")
@@ -172,11 +172,11 @@ func TestIsRecentToolHeavy(t *testing.T) {
 			name: "three tool turns",
 			msgs: []types.EyrieMessage{
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "1", Name: "Read"}}},
-				{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "1"}},
+				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "1"}},
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "2", Name: "Edit"}}},
-				{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "2"}},
+				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "2"}},
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "3", Name: "Bash"}}},
-				{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "3"}},
+				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "3"}},
 			},
 			want: true,
 		},
@@ -185,7 +185,7 @@ func TestIsRecentToolHeavy(t *testing.T) {
 			msgs: []types.EyrieMessage{
 				{Role: "assistant", Content: "let me think"},
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "1", Name: "Read"}}},
-				{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "1"}},
+				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "1"}},
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "2", Name: "Edit"}}},
 			},
 			want: false,
@@ -245,7 +245,7 @@ func TestIsTextQuestion(t *testing.T) {
 			name: "skips tool results",
 			msgs: []types.EyrieMessage{
 				{Role: "user", Content: "Why does this fail?"},
-				{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "error output"}},
+				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "error output"}},
 			},
 			want: true,
 		},

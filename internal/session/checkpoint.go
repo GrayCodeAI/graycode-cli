@@ -525,8 +525,8 @@ func estimateTokens(messages []Message) int {
 		for _, tc := range msg.ToolUse {
 			b.WriteString(tc.Name)
 		}
-		if msg.ToolResult != nil {
-			b.WriteString(msg.ToolResult.Content)
+		for _, tr := range msg.ToolResults {
+			b.WriteString(tr.Content)
 		}
 	}
 	total := tok.EstimateTokens(b.String())
@@ -719,8 +719,8 @@ func sessionContentHash(session *Session) string {
 			h.Write([]byte(tc.Name))
 			h.Write([]byte(tc.ID))
 		}
-		if msg.ToolResult != nil {
-			h.Write([]byte(msg.ToolResult.Content))
+		for _, tr := range msg.ToolResults {
+			h.Write([]byte(tr.Content))
 		}
 	}
 	return fmt.Sprintf("%x", h.Sum(nil))

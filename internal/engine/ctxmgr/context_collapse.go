@@ -31,9 +31,9 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 			if runLen >= 2 {
 				errText := extractErrorText(msgs[i])
 				result = append(result, types.EyrieMessage{
-					Role:       msgs[i].Role,
-					Content:    fmt.Sprintf("[Error repeated %d times: %s]", runLen, errText),
-					ToolResult: msgs[i].ToolResult,
+					Role:        msgs[i].Role,
+					Content:     fmt.Sprintf("[Error repeated %d times: %s]", runLen, errText),
+					ToolResults: msgs[i].ToolResults,
 				})
 				i = j
 				continue
@@ -41,9 +41,9 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 		}
 
 		// Try to collapse consecutive tool_results with similar content
-		if msgs[i].ToolResult != nil {
+		if len(msgs[i].ToolResults) > 0 {
 			j := i + 1
-			for j < len(msgs) && msgs[j].ToolResult != nil && isSimilarToolResult(msgs[i], msgs[j]) {
+			for j < len(msgs) && len(msgs[j].ToolResults) > 0 && isSimilarToolResult(msgs[i], msgs[j]) {
 				j++
 			}
 			runLen := j - i
@@ -55,10 +55,10 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 				result = append(result, types.EyrieMessage{
 					Role:    "user",
 					Content: fmt.Sprintf("[Similar output from %s — %d results collapsed]", toolName, collapsed),
-					ToolResult: &types.ToolResult{
+					ToolResults: []types.ToolResult{{
 						ToolUseID: "collapsed",
 						Content:   fmt.Sprintf("[Similar output from %s — %d results collapsed]", toolName, collapsed),
-					},
+					}},
 				})
 				result = append(result, msgs[j-1])
 				i = j
@@ -77,20 +77,20 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 // enough to collapse. Two results are similar if they come from the same tool
 // and their content shares the same first line or prefix (up to 100 chars).
 func isSimilarToolResult(a, b types.EyrieMessage) bool {
-	if a.ToolResult == nil || b.ToolResult == nil {
+	if len(a.ToolResults) == 0 || len(b.ToolResults) == 0 {
 		return false
 	}
 
-	prefixA := contentPrefix(a.ToolResult.Content, 100)
-	prefixB := contentPrefix(b.ToolResult.Content, 100)
+	prefixA := contentPrefix(a.ToolResults[0].Content, 100)
+	prefixB := contentPrefix(b.ToolResults[0].Content, 100)
 
 	return prefixA == prefixB
 }
 
 // toolResultSource extracts the tool name from a tool_result message.
 func toolResultSource(msg types.EyrieMessage) string {
-	if msg.ToolResult != nil && msg.ToolResult.ToolUseID != "" {
-		return msg.ToolResult.ToolUseID
+	if len(msg.ToolResults) > 0 && msg.ToolResults[0].ToolUseID != "" {
+		return msg.ToolResults[0].ToolUseID
 	}
 	return "tool"
 }
@@ -109,7 +109,7 @@ func contentPrefix(s string, n int) string {
 
 // isErrorMessage returns true if a message appears to be an error.
 func isErrorMessage(msg types.EyrieMessage) bool {
-	if msg.ToolResult != nil && msg.ToolResult.IsError {
+	if len(msg.ToolResults) > 0 && msg.ToolResults[0].IsError {
 		return true
 	}
 	content := strings.ToLower(msg.Content)
@@ -118,8 +118,8 @@ func isErrorMessage(msg types.EyrieMessage) bool {
 
 // extractErrorText extracts the error text from an error message.
 func extractErrorText(msg types.EyrieMessage) string {
-	if msg.ToolResult != nil && msg.ToolResult.IsError {
-		return msg.ToolResult.Content
+	if len(msg.ToolResults) > 0 && msg.ToolResults[0].IsError {
+		return msg.ToolResults[0].Content
 	}
 	return msg.Content
 }
