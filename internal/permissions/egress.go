@@ -19,10 +19,6 @@ var (
 	base64Network       = regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`)
 	envVarInURL         = regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`)
 	curlFileUpload      = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
-	describeSuspicious1 = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
-	describeSuspicious2 = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
-	describeSuspicious3 = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat)\b`)
-	describeSuspicious4 = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
 )
 
 // EgressInspector detects and blocks data exfiltration attempts in shell commands
