@@ -55,7 +55,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 			msgs: []types.EyrieMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
-				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}},
+				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}}},
 				{Role: "assistant", Content: "done"},
 			},
 			startIdx: 2,
@@ -86,19 +86,19 @@ func TestMicrocompactMessages(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "read file.go"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
-		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "package main\nfunc main() {}"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "package main\nfunc main() {}"}}},
 		{Role: "assistant", Content: "Here's the file content"},
 		{Role: "user", Content: "now read another"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t2", Name: "Read"}}},
-		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "package utils\nfunc Helper() {}"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "package utils\nfunc Helper() {}"}}},
 		{Role: "assistant", Content: "Here's the second file"},
 		{Role: "user", Content: "and another"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t3", Name: "Read"}}},
-		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t3", Content: "package config\nfunc Load() {}"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t3", Content: "package config\nfunc Load() {}"}}},
 		{Role: "assistant", Content: "Here's the third"},
 		{Role: "user", Content: "one more"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t4", Name: "Read"}}},
-		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t4", Content: "package api\nfunc Serve() {}"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t4", Content: "package api\nfunc Serve() {}"}}},
 		{Role: "assistant", Content: "Here's the fourth"},
 	}
 
@@ -135,7 +135,7 @@ func TestAPICompactMessages(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash", Arguments: map[string]interface{}{"command": strings.Repeat("x", 1000)}}}},
-		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: strings.Repeat("output ", 1000)}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: strings.Repeat("output ", 1000)}}},
 		{Role: "assistant", Content: "done"},
 	}
 
@@ -161,7 +161,7 @@ func TestAPICompactPreservesMutatingTools(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "edit file"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Edit", Arguments: map[string]interface{}{"old_string": strings.Repeat("x", 1000), "new_string": "y"}}}},
-		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: strings.Repeat("edited ", 500)}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: strings.Repeat("edited ", 500)}}},
 		{Role: "assistant", Content: "edited"},
 	}
 
