@@ -362,7 +362,12 @@ func getRereadState(state DetectorSessionState) *rereadState {
 		state["rereadAfterEdit"] = st
 		return st
 	}
-	return s.(*rereadState)
+	rs, _ := s.(*rereadState)
+	if rs == nil {
+		rs = &rereadState{Countdown: make(map[string]int)}
+		state["rereadAfterEdit"] = rs
+	}
+	return rs
 }
 
 const rereadWindow = 5
