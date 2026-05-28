@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/engine/project"
@@ -24,7 +22,6 @@ import (
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
-	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -382,34 +379,6 @@ func pluginsSummary(rt *plugin.Runtime) string {
 	return b.String()
 }
 
-func (m *chatModel) saveSession() {
-	raw := m.session.RawMessages()
-	if len(raw) == 0 {
-		return
-	}
-	var msgs []session.Message
-	for _, rm := range raw {
-		sm := session.Message{Role: rm.Role, Content: rm.Content}
-		for _, tc := range rm.ToolUse {
-			sm.ToolUse = append(sm.ToolUse, tc)
-		}
-		if len(rm.ToolResults) > 0 {
-			sm.ToolResults = make([]session.ToolResult, len(rm.ToolResults))
-			copy(sm.ToolResults, rm.ToolResults)
-		}
-		msgs = append(msgs, sm)
-	}
-	err := session.Save(&session.Session{
-		ID: m.sessionID, Model: m.session.Model(), Provider: m.session.Provider(),
-		Messages: msgs, CreatedAt: time.Now(),
-	})
-	// On successful save, WAL is no longer needed (session file has everything)
-	if err == nil && m.wal != nil {
-		_ = m.wal.Remove()
-		m.wal = nil
-	}
-}
-
 func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(text)
 	cmd := parts[0]
@@ -421,9 +390,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 
 	switch cmd {
 	case "/quit", "/exit":
-		m.saveSession()
-		m.quitting = true
-		return m, tea.Quit
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/add-dir":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add-dir <path>"})
@@ -446,20 +413,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: branchSummary()})
 		return m, nil
 	case "/clear":
-		// Cancel any running /loop goroutine.
-		if m.loopCancel != nil {
-			m.loopCancel()
-			m.loopCancel = nil
-		}
-		m.messages = nil
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/compact":
-		before := m.session.MessageCount()
-		m.session.SmartCompact()
-		after := m.session.MessageCount()
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compacted: %d → %d messages (LLM summary)", before, after)})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/diff":
 		stat, _ := gitOutput("diff", "--stat")
 		diff, _ := gitOutput("diff")
@@ -747,17 +703,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: filesSummary()})
 		return m, nil
 	case "/history":
-		entries, err := session.List()
-		if err != nil || len(entries) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No saved sessions."})
-			return m, nil
-		}
-		var b strings.Builder
-		for _, e := range entries {
-			b.WriteString(fmt.Sprintf("  %s  %s  %s\n", e.ID, e.UpdatedAt.Format("Jan 02 15:04"), e.Preview))
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/render":
 		renderPath := ""
 		if len(parts) >= 2 {
@@ -775,83 +721,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📋 CXML copied to clipboard.\n%s", stats)})
 		return m, nil
 	case "/recover":
-		candidates := session.ScanForRecovery()
-		if len(candidates) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No interrupted sessions found."})
-			return m, nil
-		}
-		if len(parts) >= 2 {
-			// Resume specific session
-			s, note, err := session.ResumeSession(parts[1])
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			m.sessionID = s.ID
-			m.messages = nil
-			var msgs []client.EyrieMessage
-			for _, sm := range s.Messages {
-				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-				for _, tc := range sm.ToolUse {
-					em.ToolUse = append(em.ToolUse, tc)
-				}
-				if len(sm.ToolResults) > 0 {
-					em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
-					copy(em.ToolResults, sm.ToolResults)
-				}
-				msgs = append(msgs, em)
-				if sm.Role == "user" || sm.Role == "assistant" {
-					m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
-				}
-			}
-			m.session.LoadMessages(msgs)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Recovered: %s\nSession %s ready (%d msgs)", note, s.ID, len(s.Messages))})
-			return m, nil
-		}
-		// List candidates
-		var b strings.Builder
-		b.WriteString(fmt.Sprintf("Found %d interrupted session(s):\n\n", len(candidates)))
-		for i, c := range candidates {
-			shortID := c.SessionID
-			if len(shortID) > 8 {
-				shortID = shortID[:8]
-			}
-			b.WriteString(fmt.Sprintf("%d. [%s] %s — %s (%d msgs, %s)\n",
-				i+1, shortID, c.Interruption, c.CWD, c.MessageCount, formatDuration(c.Age)))
-		}
-		b.WriteString("\nResume with: /recover <session-id>")
-		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/resume":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /resume <session-id>"})
-			return m, nil
-		}
-		saved, err := session.Load(parts[1])
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		m.sessionID = saved.ID
-		m.messages = nil
-		var msgs []client.EyrieMessage
-		for _, sm := range saved.Messages {
-			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-			for _, tc := range sm.ToolUse {
-				em.ToolUse = append(em.ToolUse, tc)
-			}
-			if len(sm.ToolResults) > 0 {
-				em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
-				copy(em.ToolResults, sm.ToolResults)
-			}
-			msgs = append(msgs, em)
-			if sm.Role == "user" || sm.Role == "assistant" {
-				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
-			}
-		}
-		m.session.LoadMessages(msgs)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resumed session %s", saved.ID)})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/commit":
 		stat, _ := gitOutput("diff", "--stat")
 		if strings.TrimSpace(stat) == "" {
@@ -1040,7 +912,7 @@ Generate the recap:`, summary.String())
 		}
 		return m.startPromptCommand("/hunt", buildHuntPrompt(symptom))
 	case "/snapshot":
-		return m.handleSnapshot(text)
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/check":
 		return m.startPromptCommand("/check", buildCheckPrompt())
 	case "/design":
@@ -1203,106 +1075,7 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatDeveloperPathReport(context.Background())})
 		return m, nil
 	case "/config", "/con", "/conf":
-		if len(parts) >= 3 && parts[1] == "provider" {
-			value := strings.TrimSpace(strings.Join(parts[2:], " "))
-			if err := hawkconfig.SetGlobalSetting("provider", value); err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			engineProvider := hawkconfig.NormalizeProviderForEngine(value)
-			m.session.SetProvider(engineProvider)
-			// Use cached model or set first from cache
-			modelCacheMu.RLock()
-			cached, cacheHit := modelCache[engineProvider]
-			modelCacheMu.RUnlock()
-			if cacheHit && len(cached) > 0 {
-				m.session.SetModel(cached[0].ID)
-				_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in eyrie (provider.json).", value, m.session.Model())})
-			return m, nil
-		}
-		if len(parts) >= 3 && parts[1] == "model" {
-			value := strings.TrimSpace(strings.Join(parts[2:], " "))
-			known := configModelChoices(m.configModelOptions, false)
-			if len(known) > 0 {
-				found := false
-				for i, k := range known {
-					if strings.EqualFold(k, value) || strings.EqualFold(m.configModelOptions[i].ID, value) {
-						value = m.configModelOptions[i].ID
-						found = true
-						break
-					}
-				}
-				if !found {
-					hint := "Unknown model: " + value + "\nUse /model to browse available models."
-					m.messages = append(m.messages, displayMsg{role: "error", content: hint})
-					return m, nil
-				}
-			}
-			if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			m.session.SetModel(value)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", value)})
-			return m, nil
-		}
-		if len(parts) >= 2 && parts[1] == "keys" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: apiKeyConfigSummary()})
-			return m, nil
-		}
-		if len(parts) >= 3 && parts[1] == "key" && parts[2] == "remove" {
-			if len(parts) > 3 {
-				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /config key remove"})
-				return m, nil
-			}
-			return m.openConfigRemoveKeyPanel()
-		}
-		if len(parts) >= 3 && parts[1] == "get" {
-			settings, err := loadEffectiveSettings()
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			value, ok := hawkconfig.SettingValue(settings, parts[2])
-			if !ok {
-				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unsupported setting key %q", parts[2])})
-				return m, nil
-			}
-			if strings.TrimSpace(value) == "" {
-				value = "(empty)"
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s = %s", parts[2], value)})
-			return m, nil
-		}
-		if len(parts) >= 4 && parts[1] == "set" {
-			key := parts[2]
-			value := strings.TrimSpace(strings.Join(parts[3:], " "))
-			if err := hawkconfig.SetGlobalSetting(key, value); err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			// Apply common runtime keys immediately.
-			normalizedKey := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "-", ""), "_", ""))
-			switch normalizedKey {
-			case "model":
-				m.session.SetModel(value)
-			case "provider":
-				m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Updated %s = %s", key, value)})
-			return m, nil
-		}
-		settings, err := loadEffectiveSettings()
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		m.settings = settings
-		next, cmd := m.openConfigPanel()
-		*m = next
-		return m, cmd
+		return m.handleConfigCommand(parts, text)
 	case "/mcp":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
 		return m, nil
@@ -1353,320 +1126,7 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: toolListSummary(m.registry)})
 		return m, nil
 	case "/skills":
-		if len(parts) >= 2 {
-			switch parts[1] {
-			case "install":
-				if len(parts) < 3 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills install <owner/repo> [skill-name]"})
-					return m, nil
-				}
-				repo := parts[2]
-				if !strings.Contains(repo, "/") {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills install <owner/repo> [skill-name]"})
-					return m, nil
-				}
-				skillName := ""
-				if len(parts) >= 4 {
-					skillName = parts[3]
-				}
-				rc := plugin.NewRegistryClient()
-				msg, err := rc.Install(repo, skillName, "user")
-				if err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				} else {
-					m.messages = append(m.messages, displayMsg{role: "system", content: msg})
-				}
-				return m, nil
-
-			case "search":
-				query := ""
-				category := ""
-				for i := 2; i < len(parts); i++ {
-					if parts[i] == "--category" && i+1 < len(parts) {
-						category = parts[i+1]
-						i++
-					} else {
-						if query != "" {
-							query += " "
-						}
-						query += parts[i]
-					}
-				}
-				rc := plugin.NewRegistryClient()
-				results, err := rc.Search(query, category)
-				if err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-					return m, nil
-				}
-				if len(results) == 0 {
-					m.messages = append(m.messages, displayMsg{role: "system", content: "No skills found."})
-					return m, nil
-				}
-				var b strings.Builder
-				b.WriteString(fmt.Sprintf("Found %d skill(s):\n\n", len(results)))
-				limit := 20
-				if len(results) < limit {
-					limit = len(results)
-				}
-				for _, e := range results[:limit] {
-					b.WriteString(plugin.FormatSkillEntry(e))
-				}
-				if len(results) > 20 {
-					_, _ = fmt.Fprintf(&b, "\n  ... and %d more. Refine your search.\n", len(results)-20)
-				}
-				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-				return m, nil
-
-			case "trending":
-				limit := 10
-				if len(parts) >= 3 {
-					if n, err := strconv.Atoi(parts[2]); err == nil && n > 0 {
-						limit = n
-					}
-				}
-				rc := plugin.NewRegistryClient()
-				results, err := rc.Trending(limit)
-				if err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-					return m, nil
-				}
-				if len(results) == 0 {
-					m.messages = append(m.messages, displayMsg{role: "system", content: "No trending skills found."})
-					return m, nil
-				}
-				var b strings.Builder
-				b.WriteString("Trending skills:\n\n")
-				for i, e := range results {
-					_, _ = fmt.Fprintf(&b, "  %d. ", i+1)
-					b.WriteString(strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
-				}
-				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-				return m, nil
-
-			case "info":
-				if len(parts) < 3 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills info <name>"})
-					return m, nil
-				}
-				name := parts[2]
-				// Check local first.
-				if skill, path, ok := plugin.InstalledSkillInfo(name); ok {
-					m.messages = append(m.messages, displayMsg{role: "system", content: plugin.FormatSkillInfo(skill, path)})
-					return m, nil
-				}
-				// Fall back to registry.
-				rc := plugin.NewRegistryClient()
-				entry, err := rc.Info(name)
-				if err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-					return m, nil
-				}
-				var b strings.Builder
-				_, _ = fmt.Fprintf(&b, "Skill: %s (not installed)\n", entry.Name)
-				if entry.Version != "" {
-					_, _ = fmt.Fprintf(&b, "Version: %s\n", entry.Version)
-				}
-				if entry.Author != "" {
-					_, _ = fmt.Fprintf(&b, "Author: %s\n", entry.Author)
-				}
-				if entry.Description != "" {
-					_, _ = fmt.Fprintf(&b, "Description: %s\n", entry.Description)
-				}
-				if entry.Repo != "" {
-					_, _ = fmt.Fprintf(&b, "Repo: %s\n", entry.Repo)
-				}
-				_, _ = fmt.Fprintf(&b, "Installs: %d\n", entry.Installs)
-				_, _ = fmt.Fprintf(&b, "\nInstall with: /skills install %s %s\n", entry.Repo, entry.Name)
-				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-				return m, nil
-
-			case "remove":
-				if len(parts) < 3 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills remove <name>"})
-					return m, nil
-				}
-				if err := plugin.Remove(parts[2]); err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				} else {
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Removed skill %q.", parts[2])})
-				}
-				return m, nil
-
-			case "update":
-				name := ""
-				if len(parts) >= 3 {
-					name = parts[2]
-				}
-				// Find installed skills with source metadata and re-install.
-				updated := 0
-				skills := plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
-				for _, s := range skills {
-					if s.Source.Repo == "" {
-						continue
-					}
-					if name != "" && !strings.EqualFold(s.Name, name) {
-						continue
-					}
-					rc := plugin.NewRegistryClient()
-					if _, err := rc.Install(s.Source.Repo, s.Name, "user"); err == nil {
-						updated++
-					}
-				}
-				if updated == 0 {
-					m.messages = append(m.messages, displayMsg{role: "system", content: "No skills to update (only skills with source tracking can be updated)."})
-				} else {
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Updated %d skill(s).", updated)})
-				}
-				return m, nil
-
-			case "publish":
-				if len(parts) < 3 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills publish <skill-dir>\nValidates the skill and shows the command to submit it."})
-					return m, nil
-				}
-				skillDir := parts[2]
-				skillFile := filepath.Join(skillDir, "SKILL.md")
-				if _, err := os.Stat(skillFile); err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("No SKILL.md found in %s", skillDir)})
-					return m, nil
-				}
-				findings, _ := plugin.AuditSkillFile(skillFile)
-				for _, f := range findings {
-					if f.Severity == plugin.SeverityCritical {
-						m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Publish blocked: %s has CRITICAL security findings. Run /skills audit first.", skillFile)})
-						return m, nil
-					}
-				}
-				data, _ := os.ReadFile(skillFile)
-				skill := plugin.ParseSmartSkillPublic(string(data))
-				var issues []string
-				if skill.Name == "" {
-					issues = append(issues, "missing 'name' in frontmatter")
-				}
-				if skill.Description == "" {
-					issues = append(issues, "missing 'description' in frontmatter")
-				}
-				if len(issues) > 0 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Validation failed:\n  - " + strings.Join(issues, "\n  - ")})
-					return m, nil
-				}
-				var b strings.Builder
-				b.WriteString("✓ Skill validated successfully.\n\n")
-				_, _ = fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
-				_, _ = fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
-				if skill.Version != "" {
-					_, _ = fmt.Fprintf(&b, "  Version: %s\n", skill.Version)
-				}
-				b.WriteString("\nTo publish:\n")
-				b.WriteString("  1. Push your skill to a GitHub repo with skills/<name>/SKILL.md\n")
-				b.WriteString("  2. Submit a PR to github.com/GrayCodeAI/hawk-skills to add your repo\n")
-				b.WriteString("  3. Or install directly: /skills install <your-org>/<your-repo>\n")
-				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-				return m, nil
-
-			case "audit":
-				if len(parts) >= 3 {
-					target := parts[2]
-					if info, err := os.Stat(target); err == nil && !info.IsDir() {
-						findings, err := plugin.AuditSkillFile(target)
-						if err != nil {
-							m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-							return m, nil
-						}
-						r := plugin.AuditResult{Findings: findings, Files: 1}
-						m.messages = append(m.messages, displayMsg{role: "system", content: plugin.FormatAuditResult(r)})
-						return m, nil
-					}
-					if _, path, ok := plugin.InstalledSkillInfo(target); ok {
-						findings, _ := plugin.AuditSkillFile(path)
-						r := plugin.AuditResult{Findings: findings, Files: 1}
-						m.messages = append(m.messages, displayMsg{role: "system", content: plugin.FormatAuditResult(r)})
-						return m, nil
-					}
-					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Skill or file %q not found.", target)})
-					return m, nil
-				}
-				result := plugin.AuditAllSkills()
-				m.messages = append(m.messages, displayMsg{role: "system", content: plugin.FormatAuditResult(result)})
-				return m, nil
-
-			case "feedback":
-				if len(parts) < 4 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills feedback <name> <1-5> [comment]"})
-					return m, nil
-				}
-				name := parts[2]
-				rating, err := strconv.Atoi(parts[3])
-				if err != nil || rating < 1 || rating > 5 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Rating must be 1-5."})
-					return m, nil
-				}
-				comment := ""
-				if len(parts) > 4 {
-					comment = strings.Join(parts[4:], " ")
-				}
-				fs := plugin.NewFeedbackStore()
-				if err := fs.Rate(name, rating, comment); err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				} else {
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Rated %s %s", name, plugin.FormatRating(rating))})
-				}
-				return m, nil
-
-			case "use":
-				if len(parts) < 3 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills use <name>"})
-					return m, nil
-				}
-				name := parts[2]
-				skills := plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
-				for _, s := range skills {
-					if strings.EqualFold(s.Name, name) {
-						if m.activeSkills == nil {
-							m.activeSkills = make(map[string]plugin.SmartSkill)
-						}
-						m.activeSkills[s.Name] = s
-						m.session.AddUser(fmt.Sprintf("[Skill activated: %s]\n\n%s", s.Name, s.Content))
-						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Activated skill: %s", s.Name)})
-						return m, nil
-					}
-				}
-				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Skill %q not found. Run /skills to see available skills.", name)})
-				return m, nil
-
-			case "deactivate":
-				if len(parts) < 3 {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /skills deactivate <name>"})
-					return m, nil
-				}
-				name := parts[2]
-				if m.activeSkills != nil {
-					if _, ok := m.activeSkills[name]; ok {
-						delete(m.activeSkills, name)
-						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Deactivated skill: %s", name)})
-						return m, nil
-					}
-				}
-				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Skill %q is not active.", name)})
-				return m, nil
-
-			case "new":
-				desc := "a useful coding skill for this project"
-				if len(parts) >= 3 {
-					desc = strings.Join(parts[2:], " ")
-				}
-				prompt := plugin.BuildNewSkillPrompt(desc)
-				return m.startPromptCommand("/skills new "+desc, prompt)
-			}
-		}
-		// Default: list local skills.
-		out, err := (tool.SkillTool{}).Execute(context.Background(), nil)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: out})
-		}
-		return m, nil
+		return m.handleSkillsCommand(parts, text)
 	case "/learn":
 		cwd, _ := os.Getwd()
 		deep := len(parts) >= 2 && parts[1] == "deep"
@@ -1833,28 +1293,7 @@ Generate the recap:`, summary.String())
 		return m, nil
 
 	case "/export":
-		home := home.Dir()
-		exportDir := filepath.Join(home, ".hawk", "exports")
-		_ = os.MkdirAll(exportDir, 0o755)
-		exportPath := filepath.Join(exportDir, m.sessionID+".md")
-		var md strings.Builder
-		md.WriteString(fmt.Sprintf("# Session %s\n\n", m.sessionID))
-		for _, msg := range m.messages {
-			switch msg.role {
-			case "user":
-				md.WriteString("## User\n" + msg.content + "\n\n")
-			case "assistant":
-				md.WriteString("## Assistant\n" + msg.content + "\n\n")
-			case "system":
-				md.WriteString("_" + msg.content + "_\n\n")
-			}
-		}
-		if err := os.WriteFile(exportPath, []byte(md.String()), 0o644); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Exported to: %s", exportPath)})
-		}
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/feedback":
 		body := strings.TrimSpace(strings.TrimPrefix(text, "/feedback"))
 		if body == "" {
@@ -1908,38 +1347,9 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: profile.Summary()})
 		return m, nil
 	case "/rename":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /rename <new-session-name>"})
-			return m, nil
-		}
-		newName := parts[1]
-		home := home.Dir()
-		sessDir := filepath.Join(home, ".hawk", "sessions")
-		oldPath := filepath.Join(sessDir, m.sessionID+".jsonl")
-		newPath := filepath.Join(sessDir, newName+".jsonl")
-		if err := os.Rename(oldPath, newPath); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-		} else {
-			m.sessionID = newName
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session renamed to: %s", newName)})
-		}
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/tag":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /tag <label>"})
-			return m, nil
-		}
-		home := home.Dir()
-		tagFile := filepath.Join(home, ".hawk", "sessions", m.sessionID+".tags")
-		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-		} else {
-			_, _ = f.WriteString(parts[1] + "\n")
-			_ = f.Close()
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tagged: %s", parts[1])})
-		}
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/stats":
 		days := 30
 		if len(parts) > 1 {
@@ -2016,27 +1426,7 @@ Generate the recap:`, summary.String())
 		}
 		return m, nil
 	case "/share":
-		home := home.Dir()
-		exportDir := filepath.Join(home, ".hawk", "exports")
-		_ = os.MkdirAll(exportDir, 0o755)
-		exportPath := filepath.Join(exportDir, m.sessionID+".md")
-		var md strings.Builder
-		md.WriteString(fmt.Sprintf("# Hawk Session %s\n\n", m.sessionID))
-		md.WriteString(fmt.Sprintf("Model: %s/%s\n\n---\n\n", m.session.Provider(), m.session.Model()))
-		for _, msg := range m.messages {
-			switch msg.role {
-			case "user":
-				md.WriteString("**User:** " + msg.content + "\n\n")
-			case "assistant":
-				md.WriteString("**Hawk:** " + msg.content + "\n\n")
-			}
-		}
-		if err := os.WriteFile(exportPath, []byte(md.String()), 0o644); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session saved to: %s\nShare this file or paste its contents.", exportPath)})
-		}
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/upgrade":
 		return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
 	case "/keybindings":
@@ -2082,11 +1472,7 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: report})
 		return m, nil
 	case "/session":
-		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
-			m.sessionID, m.session.Provider(), m.session.Model(),
-			m.session.Mode, m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.Cost.Summary())
-		m.messages = append(m.messages, displayMsg{role: "system", content: info})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/statusline":
 		m.messages = append(m.messages, displayMsg{role: "system", content: statusLineSummary(m)})
 		return m, nil
@@ -2142,16 +1528,7 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: RenderBreakdown(breakdown, m.contextViz.ContextWindowSize)})
 		return m, nil
 	case "/rewind":
-		if m.session.MessageCount() > 2 {
-			m.session.RemoveLastExchange()
-			if len(m.messages) >= 2 {
-				m.messages = m.messages[:len(m.messages)-2]
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Rewound last exchange."})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Nothing to rewind."})
-		}
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/loop":
 		if len(parts) < 3 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /loop <interval> <command> (e.g., /loop 5m /doctor)"})
@@ -2184,135 +1561,20 @@ Generate the recap:`, summary.String())
 		}()
 		return m, nil
 	case "/fork":
-		// If convodag is active, fork from the current head node
-		if m.session.ConvoDAG != nil {
-			headID := m.session.ConvoHead()
-			if headID == "" {
-				m.messages = append(m.messages, displayMsg{role: "error", content: "No conversation to fork from."})
-				return m, nil
-			}
-			forkID, err := m.session.ForkConversation(headID)
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked at %s → new branch %s\nYou can now take a different approach. Use /branches to see all branches.", headID[:8], forkID[:8])})
-			return m, nil
-		}
-		// Fallback: legacy session fork
-		atIndex := len(m.session.RawMessages()) - 1
-		if len(parts) >= 2 {
-			if idx, err := strconv.Atoi(parts[1]); err == nil {
-				atIndex = idx
-			}
-		}
-		if atIndex < 0 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "No messages to fork from."})
-			return m, nil
-		}
-		forked, err := session.Fork(m.sessionID, atIndex)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked session %s from %s at index %d", forked.ID, m.sessionID, atIndex)})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/search":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /search <query>"})
-			return m, nil
-		}
-		query := strings.TrimSpace(strings.TrimPrefix(text, "/search"))
-		results, err := session.SearchSessions(query, 10)
-		if err != nil || len(results) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No results found."})
-			return m, nil
-		}
-		var b strings.Builder
-		b.WriteString(fmt.Sprintf("Search results for %q:\n", query))
-		for _, r := range results {
-			b.WriteString(fmt.Sprintf("  [%s] msg %d (%s): %s\n", r.SessionID, r.MsgIndex, r.Role, r.Preview))
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/clean":
-		days := 30
-		if len(parts) >= 2 {
-			if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 {
-				days = d
-			}
-		}
-		removed, err := session.CleanOldSessions(time.Duration(days) * 24 * time.Hour)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Cleaned %d sessions older than %d days.", removed, days)})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/audit":
 		m.messages = append(m.messages, displayMsg{role: "system", content: tool.FormatAuditSummary()})
 		return m, nil
 	case "/compress":
-		days := 7
-		if len(parts) >= 2 {
-			if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 {
-				days = d
-			}
-		}
-		count, err := session.CompressOldSessions(time.Duration(days) * 24 * time.Hour)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compressed %d sessions older than %d days.", count, days)})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/integrity":
-		saved, err := session.Load(m.sessionID)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Could not load current session: " + err.Error()})
-			return m, nil
-		}
-		check := session.ValidateIntegrity(saved)
-		var ib strings.Builder
-		if check.Valid {
-			ib.WriteString("Session integrity: VALID\n")
-		} else {
-			ib.WriteString("Session integrity: INVALID\n")
-		}
-		ib.WriteString(fmt.Sprintf("Messages: %d (user: %d, assistant: %d)\n", check.Stats.MessageCount, check.Stats.UserMessages, check.Stats.AssistantMessages))
-		ib.WriteString(fmt.Sprintf("Tool uses: %d, Tool results: %d\n", check.Stats.ToolUses, check.Stats.ToolResults))
-		if check.Stats.OrphanedResults > 0 {
-			ib.WriteString(fmt.Sprintf("Orphaned results: %d\n", check.Stats.OrphanedResults))
-		}
-		for _, w := range check.Warnings {
-			ib.WriteString("  warning: " + w + "\n")
-		}
-		for _, e := range check.Errors {
-			ib.WriteString("  error: " + e + "\n")
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: ib.String()})
-		return m, nil
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/retry":
-		if len(m.history) > 0 {
-			last := m.history[len(m.history)-1]
-			if m.session.MessageCount() > 2 {
-				m.session.RemoveLastExchange()
-				if len(m.messages) >= 2 {
-					m.messages = m.messages[:len(m.messages)-2]
-				}
-			}
-			m.messages = append(m.messages, displayMsg{role: "user", content: last})
-			m.session.AddUser(last)
-			m.waiting = true
-			m.autoScroll = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
-			m.brailleSpinner.SetLabel(m.spinnerVerb)
-			m.startStream()
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "error", content: "No previous message to retry."})
-		return m, nil
-
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/add":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add <file-path> [file-path...]"})
@@ -2416,19 +1678,7 @@ Generate the recap:`, summary.String())
 		return m, nil
 
 	case "/new":
-		m.saveSession()
-		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
-		m.session.LoadMessages(nil)
-		sid := genID()
-		m.sessionID = sid
-		if wal, err := session.NewWAL(sid); err == nil {
-			m.wal = wal
-		}
-		m.termCtx.Reset()
-		m.ghostText.Clear()
-		m.messages = append(m.messages, displayMsg{role: "system", content: "New session started."})
-		return m, nil
-
+		return m.handleSessionCommand(cmd, parts, text)
 	case "/btw":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /btw <message>"})
