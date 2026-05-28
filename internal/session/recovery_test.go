@@ -43,7 +43,7 @@ func TestClassifyInterruption_AssistantWithResolvedTools(t *testing.T) {
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "t1", Name: "Bash"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "pass"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "pass"}}},
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "t2", Name: "Read"},
 		}},
@@ -89,7 +89,7 @@ func TestClassifyInterruption_UserToolResultWithMoreUnresolved(t *testing.T) {
 			{ID: "t1", Name: "Bash"},
 			{ID: "t2", Name: "Read"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 	}
 	// t1 resolved, t2 unresolved, last message is user tool_result -> tool_error
 	interruption, _, _ := classifyInterruption(messages)
@@ -104,7 +104,7 @@ func TestClassifyInterruption_UserToolResultAllResolved(t *testing.T) {
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "t1", Name: "Bash"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 	}
 	// All resolved, last msg is user tool_result -> awaiting_input
 	interruption, _, _ := classifyInterruption(messages)
@@ -135,8 +135,8 @@ func TestFindUnresolvedTools_AllResolved(t *testing.T) {
 			{ID: "t1", Name: "Bash"},
 			{ID: "t2", Name: "Read"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "ok"}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t2", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "ok"}}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t2", Content: "ok"}}},
 	}
 	unresolved := findUnresolvedTools(messages)
 	if len(unresolved) != 0 {
@@ -150,7 +150,7 @@ func TestFindUnresolvedTools_OneUnresolved(t *testing.T) {
 			{ID: "t1", Name: "Bash"},
 			{ID: "t2", Name: "Read"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 	}
 	unresolved := findUnresolvedTools(messages)
 	if len(unresolved) != 1 {
@@ -181,7 +181,7 @@ func TestFindOrphanedToolUses_NoOrphans(t *testing.T) {
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "t1", Name: "Bash"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t1", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 		{Role: "assistant", Content: "done"},
 	}
 	orphaned := findOrphanedToolUses(messages)
@@ -199,7 +199,7 @@ func TestFindOrphanedToolUses_OrphanInEarlierMessage(t *testing.T) {
 		{Role: "assistant", ToolUse: []ToolCall{
 			{ID: "t2", Name: "Read"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "t2", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "t2", Content: "ok"}}},
 	}
 	orphaned := findOrphanedToolUses(messages)
 	if len(orphaned) != 1 {
@@ -349,7 +349,7 @@ func TestClassifyInterruption_RoundTrip(t *testing.T) {
 			{ID: "fix1", Name: "Edit"},
 			{ID: "test1", Name: "Bash"},
 		}},
-		{Role: "user", ToolResult: &ToolResult{ToolUseID: "fix1", Content: "ok"}},
+		{Role: "user", ToolResults: []ToolResult{{ToolUseID: "fix1", Content: "ok"}}},
 	}
 
 	unresolved := findUnresolvedTools(messages)

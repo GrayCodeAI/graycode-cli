@@ -61,8 +61,8 @@ func TestHasTextContent_WhitespaceOnly(t *testing.T) {
 
 func TestHasTextContent_ToolResultIgnored(t *testing.T) {
 	msg := types.EyrieMessage{
-		Role:       "user",
-		Content:    "has content",
+		Role:        "user",
+		Content:     "has content",
 		ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}},
 	}
 	if HasTextContent(msg) {
