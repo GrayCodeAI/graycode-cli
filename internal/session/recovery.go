@@ -137,8 +137,10 @@ func findUnresolvedTools(messages []Message) []string {
 				toolUseIDs[tu.ID] = tu.Name
 			}
 		}
-		if msg.Role == "user" && msg.ToolResult != nil {
-			resolvedIDs[msg.ToolResult.ToolUseID] = true
+		if msg.Role == "user" && len(msg.ToolResults) > 0 {
+			for _, tr := range msg.ToolResults {
+				resolvedIDs[tr.ToolUseID] = true
+			}
 		}
 	}
 
@@ -179,10 +181,10 @@ func classifyInterruption(messages []Message) (InterruptionType, string, string)
 			return InterruptionMidResponse, "", ""
 		}
 	case "user":
-		if last.ToolResult != nil {
+		if len(last.ToolResults) > 0 {
 			// User message is a tool result — check if more tools are pending
 			if len(unresolved) > 0 {
-				return InterruptionToolError, last.ToolResult.ToolUseID, last.ToolResult.ToolUseID
+				return InterruptionToolError, last.ToolResults[0].ToolUseID, last.ToolResults[0].ToolUseID
 			}
 			// Tool result delivered, assistant should respond
 			return InterruptionAwaitingInput, "", ""
@@ -263,8 +265,10 @@ func findOrphanedToolUses(messages []Message) []string {
 				toolUseIDs[tu.ID] = tu.Name
 			}
 		}
-		if msg.Role == "user" && msg.ToolResult != nil {
-			resolvedIDs[msg.ToolResult.ToolUseID] = true
+		if msg.Role == "user" && len(msg.ToolResults) > 0 {
+			for _, tr := range msg.ToolResults {
+				resolvedIDs[tr.ToolUseID] = true
+			}
 		}
 	}
 

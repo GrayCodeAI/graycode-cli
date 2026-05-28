@@ -63,7 +63,7 @@ func TestHasTextContent_ToolResultIgnored(t *testing.T) {
 	msg := types.EyrieMessage{
 		Role:       "user",
 		Content:    "has content",
-		ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "output"},
+		ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}},
 	}
 	if HasTextContent(msg) {
 		t.Error("expected false for tool result messages")
@@ -136,7 +136,7 @@ func TestCompactResult_Fields(t *testing.T) {
 func TestAdjustIndex_StartIndexZero(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "ok"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 	}
 	got := AdjustIndexToPreserveAPIInvariants(msgs, 0)
 	if got != 0 {
@@ -158,9 +158,9 @@ func TestAdjustIndex_UnresolvedToolPair(t *testing.T) {
 	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "do stuff"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t1", Content: "ok"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t2", Name: "Read"}}},
-		{Role: "user", ToolResult: &types.ToolResult{ToolUseID: "t2", Content: "ok"}},
+		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "ok"}}},
 		{Role: "assistant", Content: "done"},
 	}
 	got := AdjustIndexToPreserveAPIInvariants(msgs, 2)

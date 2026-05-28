@@ -35,7 +35,7 @@ func (s *Session) compact() {
 	// Walk cutEnd forward until we're at a clean boundary.
 	for cutEnd < len(s.messages) {
 		msg := s.messages[cutEnd]
-		if msg.ToolResult != nil {
+		if len(msg.ToolResults) > 0 {
 			// This is a tool_result — we'd orphan it. Include it.
 			cutEnd++
 			continue
@@ -54,7 +54,7 @@ func (s *Session) compact() {
 		if msg.Role == "assistant" && len(msg.ToolUse) > 0 {
 			// Include the tool results that follow
 			cutStart++
-			for cutStart < cutEnd && s.messages[cutStart].ToolResult != nil {
+			for cutStart < cutEnd && len(s.messages[cutStart].ToolResults) > 0 {
 				cutStart++
 			}
 			continue

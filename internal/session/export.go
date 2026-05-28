@@ -674,11 +674,14 @@ func redactSessionMessages(s *Session) *Session {
 				}
 			}
 		}
-		if msg.ToolResult != nil {
-			cp.Messages[i].ToolResult = &ToolResult{
-				ToolUseID: msg.ToolResult.ToolUseID,
-				Content:   redactString(msg.ToolResult.Content),
-				IsError:   msg.ToolResult.IsError,
+		if len(msg.ToolResults) > 0 {
+			cp.Messages[i].ToolResults = make([]ToolResult, len(msg.ToolResults))
+			for j, tr := range msg.ToolResults {
+				cp.Messages[i].ToolResults[j] = ToolResult{
+					ToolUseID: tr.ToolUseID,
+					Content:   redactString(tr.Content),
+					IsError:   tr.IsError,
+				}
 			}
 		}
 	}
@@ -739,9 +742,9 @@ func exportSessionMarkdown(s *Session) ([]byte, error) {
 				}
 			}
 		}
-		if msg.ToolResult != nil {
+		for _, tr := range msg.ToolResults {
 			b.WriteString("**Tool Result:**\n")
-			b.WriteString(fmt.Sprintf("```\n%s\n```\n\n", msg.ToolResult.Content))
+			b.WriteString(fmt.Sprintf("```\n%s\n```\n\n", tr.Content))
 		}
 	}
 

@@ -26,7 +26,7 @@ func ListCheckpoints(sess *Session) []Checkpoint {
 	var checkpoints []Checkpoint
 	for i, msg := range sess.Messages {
 		// Only checkpoint at user messages and assistant text responses
-		if msg.Role == "user" && msg.ToolResult == nil {
+		if msg.Role == "user" && len(msg.ToolResults) == 0 {
 			preview := truncatePreview(msg.Content, 80)
 			checkpoints = append(checkpoints, Checkpoint{
 				Index:   i,
@@ -72,7 +72,7 @@ func RewindLastExchange(sess *Session) error {
 	i := len(sess.Messages) - 1
 	for i >= 0 && removed < 2 {
 		msg := sess.Messages[i]
-		if msg.Role == "user" && msg.ToolResult == nil {
+		if msg.Role == "user" && len(msg.ToolResults) == 0 {
 			removed++
 		} else if msg.Role == "assistant" && len(msg.ToolUse) == 0 {
 			removed++

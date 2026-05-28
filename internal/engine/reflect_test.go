@@ -263,11 +263,11 @@ func TestBuildReflectionPrompt_ContainsKeyElements(t *testing.T) {
 		},
 		{
 			Role: "user",
-			ToolResult: &types.ToolResult{
+			ToolResults: []types.ToolResult{{
 				ToolUseID: "tc1",
 				Content:   "Error: syntax error on line 42",
 				IsError:   true,
-			},
+			}},
 		},
 	}
 
