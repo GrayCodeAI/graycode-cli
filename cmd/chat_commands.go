@@ -842,9 +842,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			}
 			if len(sm.ToolResults) > 0 {
 				em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
-				for i, tr := range sm.ToolResults {
-					em.ToolResults[i] = tr
-				}
+				copy(em.ToolResults, sm.ToolResults)
 			}
 			msgs = append(msgs, em)
 			if sm.Role == "user" || sm.Role == "assistant" {
