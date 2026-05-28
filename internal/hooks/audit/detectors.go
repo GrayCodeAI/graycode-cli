@@ -23,12 +23,12 @@ type DetectorHit struct {
 
 // ToolEvent represents a normalized tool event from a transcript.
 type ToolEvent struct {
-	ToolName    string
-	ToolInput   map[string]interface{}
-	CWD         string
-	Timestamp   time.Time
-	SessionID   string
-	Transcript  string
+	ToolName   string
+	ToolInput  map[string]interface{}
+	CWD        string
+	Timestamp  time.Time
+	SessionID  string
+	Transcript string
 }
 
 // DetectorSessionState holds per-session state for stateful detectors.
@@ -211,8 +211,10 @@ var PreferWriteOverHeredoc = Detector{
 	},
 }
 
-var sleepRe = regexp.MustCompile(`\bsleep\s+(\d+(?:\.\d+)?)(m|h|d)?\b`)
-var whileSleepRe = regexp.MustCompile(`\bwhile\b[\s\S]*?\bsleep\b[\s\S]*?\bdone\b`)
+var (
+	sleepRe      = regexp.MustCompile(`\bsleep\s+(\d+(?:\.\d+)?)(m|h|d)?\b`)
+	whileSleepRe = regexp.MustCompile(`\bwhile\b[\s\S]*?\bsleep\b[\s\S]*?\bdone\b`)
+)
 
 const sleepThresholdSeconds = 30
 
@@ -271,11 +273,13 @@ var SleepPollingLoop = Detector{
 	},
 }
 
-var findRe = regexp.MustCompile(`(?:^|[\s;|&])find\s+(?:-\S+\s+)*("[^"]+"|'[^']+'|\S+)`)
-var riskyRoots = map[string]bool{
-	"/": true, "/home": true, "/usr": true, "/etc": true,
-	"/var": true, "/opt": true, "/Users": true,
-}
+var (
+	findRe     = regexp.MustCompile(`(?:^|[\s;|&])find\s+(?:-\S+\s+)*("[^"]+"|'[^']+'|\S+)`)
+	riskyRoots = map[string]bool{
+		"/": true, "/home": true, "/usr": true, "/etc": true,
+		"/var": true, "/opt": true, "/Users": true,
+	}
+)
 
 // FindFromRoot detects `find` against filesystem root.
 var FindFromRoot = Detector{
@@ -312,8 +316,10 @@ var FindFromRoot = Detector{
 	},
 }
 
-var gitCommitRe = regexp.MustCompile(`\bgit\s+commit\b`)
-var noVerifyRe = regexp.MustCompile(`\s--no-verify\b|\s-n\b`)
+var (
+	gitCommitRe = regexp.MustCompile(`\bgit\s+commit\b`)
+	noVerifyRe  = regexp.MustCompile(`\s--no-verify\b|\s-n\b`)
+)
 
 // GitCommitNoVerify detects `git commit --no-verify`.
 var GitCommitNoVerify = Detector{
