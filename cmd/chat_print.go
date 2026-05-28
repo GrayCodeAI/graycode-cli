@@ -212,7 +212,7 @@ func saveEyrieSession(id string, sess *engine.Session) {
 		if len(rm.ToolResults) > 0 {
 			sm.ToolResults = make([]session.ToolResult, len(rm.ToolResults))
 			for i, tr := range rm.ToolResults {
-				sm.ToolResults[i] = session.ToolResult(tr)
+				sm.ToolResults[i] = tr
 			}
 		}
 		msgs = append(msgs, sm)
@@ -236,7 +236,7 @@ func toEyrieMessages(saved []session.Message) []client.EyrieMessage {
 		if len(sm.ToolResults) > 0 {
 			em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
 			for i, tr := range sm.ToolResults {
-				em.ToolResults[i] = client.ToolResult(tr)
+				em.ToolResults[i] = tr
 			}
 		}
 		msgs = append(msgs, em)
