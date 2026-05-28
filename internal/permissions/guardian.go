@@ -180,8 +180,6 @@ func sanitizeStringForPrompt(s string) string {
 	}
 	lines := strings.Split(s, "\n")
 	var filtered []string
-	lower := strings.ToLower(s)
-	_ = lower
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(strings.ToLower(line))
 		// Strip lines that look like prompt injection attempts
@@ -192,12 +190,37 @@ func sanitizeStringForPrompt(s string) string {
 			strings.HasPrefix(trimmed, "user:") ||
 			strings.Contains(trimmed, "ignore previous") ||
 			strings.Contains(trimmed, "disregard ") ||
-			strings.Contains(trimmed, "override instructions") {
+			strings.Contains(trimmed, "override instructions") ||
+			strings.Contains(trimmed, "new instructions") ||
+			strings.Contains(trimmed, "forget everything") ||
+			strings.Contains(trimmed, "your instructions are") ||
+			strings.Contains(trimmed, "[inst]") ||
+			strings.Contains(trimmed, "<<sys>>") ||
+			isBase64Injection(trimmed) {
 			continue
 		}
 		filtered = append(filtered, line)
 	}
 	return strings.Join(filtered, "\n")
+}
+
+// isBase64Injection detects suspiciously long base64 strings that may carry
+// encoded instruction overrides. A base64 block of 80+ characters with no
+// spaces is almost certainly not legitimate user data in a prompt context.
+func isBase64Injection(s string) bool {
+	const minBase64Len = 80
+	if len(s) < minBase64Len {
+		return false
+	}
+	// Check if the line is mostly base64 characters (letters, digits, +, /, =)
+	b64Chars := 0
+	for _, c := range s {
+		if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=' {
+			b64Chars++
+		}
+	}
+	// If 90%+ of characters are base64-legal and the string is long, flag it
+	return b64Chars*100/len(s) >= 90
 }
 
 // parseGuardianResponse parses the LLM's JSON response into a GuardianDecision.

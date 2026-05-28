@@ -690,7 +690,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		// List branches
-		history, err := m.session.ConvoDAG.History(headID)
+		history, err := m.session.ConvoDAG.History(context.Background(), headID)
 		if err != nil || len(history) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "No branches available (linear conversation).\nUse /fork to create a branch."})
 			return m, nil

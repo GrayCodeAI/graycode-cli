@@ -211,8 +211,14 @@ func (s *ReviewStore) Summary() (map[ReviewStatus]int, error) {
 	return m, rows.Err()
 }
 
-// Close closes the database.
+// Close checkpoints the WAL and closes the database.
+// Running PRAGMA wal_checkpoint(TRUNCATE) before close ensures that
+// .db-wal and .db-shm files are cleaned up after all data is safely
+// flushed to the main database file.
 func (s *ReviewStore) Close() error {
+	// Checkpoint WAL to flush all data into the main db and truncate
+	// the WAL file, so no .db-wal / .db-shm files linger on disk.
+	_, _ = s.db.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
 	return s.db.Close()
 }
 

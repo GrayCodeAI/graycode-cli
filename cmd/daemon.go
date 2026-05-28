@@ -142,6 +142,8 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	<-sig
 
 	fmt.Println("\nShutting down...")
+	// Clean up the API key file to avoid leaving secrets on disk.
+	_ = os.Remove(keyFile)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return srv.Stop(ctx)

@@ -29,7 +29,7 @@ func (NotebookEditTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (NotebookEditTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (NotebookEditTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Path       string `json:"path"`
 		CellNumber int    `json:"cell_number"`
@@ -37,6 +37,12 @@ func (NotebookEditTool) Execute(_ context.Context, input json.RawMessage) (strin
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
+	}
+	if err := validatePathAllowed(ctx, p.Path); err != nil {
+		return "", err
+	}
+	if reason := IsSensitivePath(p.Path); reason != "" {
+		return "", fmt.Errorf("blocked: %s", reason)
 	}
 	data, err := os.ReadFile(p.Path)
 	if err != nil {
@@ -50,7 +56,10 @@ func (NotebookEditTool) Execute(_ context.Context, input json.RawMessage) (strin
 	if !ok || p.CellNumber >= len(cells) {
 		return "", fmt.Errorf("cell %d not found (notebook has %d cells)", p.CellNumber, len(cells))
 	}
-	cell, _ := cells[p.CellNumber].(map[string]interface{})
+	cell, ok := cells[p.CellNumber].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("cell %d is not a valid JSON object", p.CellNumber)
+	}
 	lines := strings.Split(p.NewSource, "\n")
 	sourceLines := make([]interface{}, len(lines))
 	for i, l := range lines {
@@ -62,6 +71,12 @@ func (NotebookEditTool) Execute(_ context.Context, input json.RawMessage) (strin
 	}
 	cell["source"] = sourceLines
 	out, _ := json.MarshalIndent(nb, "", " ")
+	if tc := GetToolContext(ctx); tc != nil && tc.Protected != nil && tc.Protected.IsProtected(p.Path) {
+		return "", fmt.Errorf("path %s is protected (read-only)", p.Path)
+	}
+	if cred := DetectCredentials(p.NewSource); cred != "" {
+		return "", fmt.Errorf("content contains a credential (%s) — refusing to write", cred)
+	}
 	if err := os.WriteFile(p.Path, out, 0o644); err != nil {
 		return "", err
 	}

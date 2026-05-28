@@ -18,18 +18,20 @@ type SandboxConfig struct {
 	AllowNetwork bool
 }
 
-// ParseMode converts a string to a Mode, defaulting to ModeOff for
-// unrecognised values.
+// ParseMode converts a string to a Mode. Unrecognized values default to
+// ModeStrict (fail-closed) to prevent accidental sandbox bypass via typos.
 func ParseMode(s string) Mode {
 	switch s {
 	case "strict":
 		return ModeStrict
 	case "workspace":
 		return ModeWorkspace
-	case "off", "":
+	case "off":
 		return ModeOff
+	case "":
+		return ModeStrict
 	default:
-		return ModeOff
+		return ModeStrict
 	}
 }
 
