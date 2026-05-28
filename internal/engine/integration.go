@@ -614,7 +614,7 @@ func intentCategory(intent *Intent) string {
 // lastUserMessage extracts the last user message from the conversation.
 func lastUserMessage(messages []types.EyrieMessage) string {
 	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].Role == "user" && messages[i].ToolResult == nil {
+		if messages[i].Role == "user" && len(messages[i].ToolResults) == 0 {
 			return messages[i].Content
 		}
 	}

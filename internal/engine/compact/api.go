@@ -77,16 +77,21 @@ func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types
 			}
 		}
 
-		if m.ToolResult != nil && m.ToolResult.Content != "[Old tool result content cleared]" {
+		if len(m.ToolResults) > 0 && m.ToolResults[0].Content != "[Old tool result content cleared]" {
 			toolName := ToolNameForResult(*m, result)
 			if !mutatingTools[toolName] {
-				before := len(m.ToolResult.Content) / 4
+				before := len(m.ToolResults[0].Content) / 4
 				if before > 100 {
-					m.ToolResult = &types.ToolResult{
-						ToolUseID: m.ToolResult.ToolUseID,
-						Content:   "[Old tool result content cleared]",
-						IsError:   m.ToolResult.IsError,
+					oldResults := m.ToolResults
+					newResults := make([]types.ToolResult, len(oldResults))
+					for j, tr := range oldResults {
+						newResults[j] = types.ToolResult{
+							ToolUseID: tr.ToolUseID,
+							Content:   "[Old tool result content cleared]",
+							IsError:   tr.IsError,
+						}
 					}
+					m.ToolResults = newResults
 					freed += before
 				}
 			}
@@ -99,7 +104,7 @@ func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types
 func CountClearableToolResults(msgs []types.EyrieMessage) int {
 	count := 0
 	for _, m := range msgs {
-		if m.ToolResult != nil && m.ToolResult.Content != "[Old tool result content cleared]" {
+		if len(m.ToolResults) > 0 && m.ToolResults[0].Content != "[Old tool result content cleared]" {
 			toolName := ToolNameForResult(m, msgs)
 			if !mutatingTools[toolName] {
 				count++

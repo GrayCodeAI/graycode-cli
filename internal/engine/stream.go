@@ -47,7 +47,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if len(s.messages) > 0 {
 				for _, m := range s.messages {
-					if m.Role == "user" && m.ToolResult == nil && outcome.TaskGoal == "" {
+					if m.Role == "user" && len(m.ToolResults) == 0 && outcome.TaskGoal == "" {
 						outcome.TaskGoal = m.Content
 					}
 				}
@@ -63,7 +63,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			taskGoal := ""
 			if len(s.messages) > 0 {
 				for _, m := range s.messages {
-					if m.Role == "user" && m.ToolResult == nil && taskGoal == "" {
+					if m.Role == "user" && len(m.ToolResults) == 0 && taskGoal == "" {
 						taskGoal = m.Content
 					}
 				}
@@ -82,7 +82,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			taskGoal := ""
 			response := ""
 			for _, m := range s.messages {
-				if m.Role == "user" && m.ToolResult == nil && taskGoal == "" {
+				if m.Role == "user" && len(m.ToolResults) == 0 && taskGoal == "" {
 					taskGoal = m.Content
 				}
 				if m.Role == "assistant" && m.Content != "" {
@@ -97,7 +97,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Adaptive prompt: learn from user corrections in this session
 		if s.AdaptivePrompt != nil {
 			for _, m := range s.messages {
-				if m.Role == "user" && m.ToolResult == nil {
+				if m.Role == "user" && len(m.ToolResults) == 0 {
 					s.AdaptivePrompt.LearnFromFeedback(m.Content)
 				}
 			}
@@ -185,7 +185,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.Pipeline != nil {
 			lastUserMsg := ""
 			for i := len(s.messages) - 1; i >= 0; i-- {
-				if s.messages[i].Role == "user" && s.messages[i].ToolResult == nil {
+				if s.messages[i].Role == "user" && len(s.messages[i].ToolResults) == 0 {
 					lastUserMsg = s.messages[i].Content
 					break
 				}
@@ -298,8 +298,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		inputTokens := 0
 		for _, msg := range s.messages {
 			inputTokens += CountTokensFast(msg.Content)
-			if msg.ToolResult != nil {
-				inputTokens += CountTokensFast(msg.ToolResult.Content)
+			for _, tr := range msg.ToolResults {
+				inputTokens += CountTokensFast(tr.Content)
 			}
 		}
 		inputTokens += CountTokensFast(s.system)
@@ -627,7 +627,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if s.Pipeline != nil {
 				taskGoal := ""
 				for _, m := range s.messages {
-					if m.Role == "user" && m.ToolResult == nil {
+					if m.Role == "user" && len(m.ToolResults) == 0 {
 						taskGoal = m.Content
 						break
 					}
@@ -704,11 +704,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			msg := types.EyrieMessage{
 				Role:    "user",
 				Content: resultContent,
-				ToolResult: &types.ToolResult{
+				ToolResults: []types.ToolResult{{
 					ToolUseID: r.tc.ID,
 					Content:   resultContent,
 					IsError:   r.isErr,
-				},
+				}},
 			}
 			// Multi-modal vision: extract data URIs from tool results and attach as images
 			if !r.isErr && strings.Contains(resultContent, "data:") && strings.Contains(resultContent, ";base64,") {
@@ -759,7 +759,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				if m.Role == "assistant" && m.Content != "" && assistantMsg == "" {
 					assistantMsg = m.Content
 				}
-				if m.Role == "user" && m.ToolResult == nil && userMsg == "" {
+				if m.Role == "user" && len(m.ToolResults) == 0 && userMsg == "" {
 					userMsg = m.Content
 				}
 				if userMsg != "" && assistantMsg != "" {

@@ -36,7 +36,7 @@ type MessageResponse struct {
 	Role       string      `json:"role"`
 	Content    string      `json:"content,omitempty"`
 	ToolUse    interface{} `json:"tool_use,omitempty"`
-	ToolResult interface{} `json:"tool_result,omitempty"`
+	ToolResult interface{} `json:"tool_results,omitempty"`
 }
 
 // StatsResponse is the response for GET /v1/stats.

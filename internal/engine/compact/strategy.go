@@ -60,7 +60,7 @@ func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int)
 	idx := startIdx
 	for idx > 0 {
 		msg := msgs[idx]
-		if msg.ToolResult != nil {
+		if len(msg.ToolResults) > 0 {
 			idx--
 			continue
 		}
@@ -68,7 +68,7 @@ func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int)
 			resultCount := len(msg.ToolUse)
 			needed := 0
 			for j := idx + 1; j < len(msgs) && needed < resultCount; j++ {
-				if msgs[j].ToolResult != nil {
+				if len(msgs[j].ToolResults) > 0 {
 					needed++
 				} else {
 					break
@@ -85,7 +85,7 @@ func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int)
 }
 
 func HasTextContent(m types.EyrieMessage) bool {
-	if m.ToolResult != nil {
+	if len(m.ToolResults) > 0 {
 		return false
 	}
 	return strings.TrimSpace(m.Content) != ""

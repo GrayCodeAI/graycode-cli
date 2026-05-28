@@ -19,7 +19,7 @@ func (s *MicroCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCou
 	}
 	compactableCount := 0
 	for _, m := range msgs {
-		if m.ToolResult != nil && compact.IsCompactableTool(compact.ToolNameForResult(m, msgs)) {
+		if len(m.ToolResults) > 0 && compact.IsCompactableTool(compact.ToolNameForResult(m, msgs)) {
 			compactableCount++
 		}
 	}
