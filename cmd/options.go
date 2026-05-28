@@ -189,7 +189,7 @@ func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveMo
 	return engine.NewHawkSession(context.Background(), hawkconfig.DeploymentRoutingEnabled(settings), effectiveProvider, effectiveModel, systemPrompt, registry)
 }
 
-func configureSession(sess *engine.Session, settings hawkconfig.Settings) error {
+func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
 
@@ -240,7 +240,11 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings) error 
 	if err := sess.SetPermissionMode(mode); err != nil {
 		return err
 	}
-	if err := sess.SetMaxTurns(maxTurns); err != nil {
+	effectiveMaxTurns := maxTurns
+	if len(maxTurnsOverride) > 0 && maxTurnsOverride[0] > 0 {
+		effectiveMaxTurns = maxTurnsOverride[0]
+	}
+	if err := sess.SetMaxTurns(effectiveMaxTurns); err != nil {
 		return err
 	}
 

@@ -146,8 +146,7 @@ func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 	case "seatbelt":
 		return s.runSeatbelt(ctx, command)
 	default:
-		fmt.Fprintf(os.Stderr, "WARNING: No sandbox available, running command without isolation\n")
-		return exec.CommandContext(ctx, "bash", "-c", command), nil
+		return nil, fmt.Errorf("no sandbox backend available; install a supported backend (docker, unshare, sandbox-exec) or use --sandbox off to explicitly disable sandboxing")
 	}
 }
 
@@ -223,8 +222,8 @@ func Available() bool {
 
 // WrapCommand wraps a shell command string with sandbox isolation based on
 // the provided SandboxConfig. It returns the executable name and argument
-// list suitable for exec.Command.
-func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
+// list suitable for exec.Command, or an error if no sandbox backend is available.
+func WrapCommand(command string, cfg SandboxConfig) (string, []string, error) {
 	switch runtime.GOOS {
 	case "darwin":
 		if SeatbeltAvailable() {
@@ -244,7 +243,7 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 				seatbeltTmpFilesMu.Lock()
 				seatbeltTmpFiles = append(seatbeltTmpFiles, tmpFile.Name())
 				seatbeltTmpFilesMu.Unlock()
-				return "sandbox-exec", []string{"-f", tmpFile.Name(), "bash", "-c", command}
+				return "sandbox-exec", []string{"-f", tmpFile.Name(), "bash", "-c", command}, nil
 			}
 		}
 	case "linux":
@@ -255,12 +254,11 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string) {
 				args = append(args, "--net")
 			}
 			args = append(args, "bash", "-c", command)
-			return "unshare", args
+			return "unshare", args, nil
 		}
 	}
-	// Fallback: run without sandboxing
-	fmt.Fprintf(os.Stderr, "WARNING: No sandbox backend available, running command without isolation\n")
-	return "bash", []string{"-c", command}
+	// Fail-closed: refuse to run without sandboxing
+	return "", nil, fmt.Errorf("no sandbox backend available; install a supported backend (docker, unshare, sandbox-exec) or use --sandbox off to explicitly disable sandboxing")
 }
 
 // Close cleans up sandbox resources.

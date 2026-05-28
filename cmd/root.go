@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -58,6 +59,7 @@ var (
 	containerMode              bool
 	noContainer                bool
 	recoverFlag                bool
+	allowProjectMCP            bool
 )
 
 // SetVersion sets the version string from main.
@@ -94,6 +96,11 @@ var rootCmd = &cobra.Command{
 		toolsFlagSet = cmd.Flags().Changed("tools")
 		if err := validateRootFlags(); err != nil {
 			return err
+		}
+		if dangerouslySkipPermissions {
+			if err := confirmDangerousSkipPermissions(); err != nil {
+				return err
+			}
 		}
 		if printMode || promptFlag != "" || inputFormat == "stream-json" {
 			if promptFlag == "" {
@@ -162,9 +169,7 @@ func init() {
 	rootCmd.Flags().StringArrayVar(&addDirs, "add-dir", nil, "additional directories to include in session context")
 	rootCmd.Flags().StringArrayVar(&mcpServers, "mcp", nil, "MCP server command")
 	rootCmd.Flags().StringArrayVar(&toolsFlag, "tools", nil, `available tools: "" disables all tools, "default" enables all, or names like "Bash,Edit,Read"`)
-	rootCmd.Flags().StringArrayVar(&allowedToolsFlag, "allowedTools", nil, `comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")`)
 	rootCmd.Flags().StringArrayVar(&allowedToolsFlag, "allowed-tools", nil, `comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")`)
-	rootCmd.Flags().StringArrayVar(&disallowedToolsFlag, "disallowedTools", nil, `comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")`)
 	rootCmd.Flags().StringArrayVar(&disallowedToolsFlag, "disallowed-tools", nil, `comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")`)
 	rootCmd.Flags().StringVar(&permissionMode, "permission-mode", "", "permission mode: default, acceptEdits, bypassPermissions, dontAsk, or plan")
 	rootCmd.Flags().BoolVar(&dangerouslySkipPermissions, "dangerously-skip-permissions", false, "bypass all permission checks")
@@ -190,6 +195,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&refreshCatalogFlag, "refresh-catalog", false, "refresh the eyrie model catalog before starting")
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
+	rootCmd.Flags().BoolVar(&allowProjectMCP, "allow-project-mcp", false, "allow MCP servers defined in project-level .hawk/settings.json (security risk)")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(doctorCmd)
@@ -220,6 +226,38 @@ func init() {
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(recoverCmd)
+}
+
+// confirmDangerousSkipPermissions enforces a safety guard when --dangerously-skip-permissions is set.
+// In a terminal, it prompts for interactive confirmation. In non-interactive mode (CI, scripts),
+// it requires the HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1 environment variable.
+func confirmDangerousSkipPermissions() error {
+	if isStdinTerminal() {
+		fmt.Fprint(os.Stderr, "Are you sure? This disables all safety checks [y/N]: ")
+		scanner := bufio.NewScanner(os.Stdin)
+		if !scanner.Scan() {
+			return fmt.Errorf("--dangerously-skip-permissions requires confirmation")
+		}
+		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		if answer != "y" && answer != "yes" {
+			return fmt.Errorf("--dangerously-skip-permissions declined; aborting")
+		}
+		return nil
+	}
+	// Non-interactive: require explicit env var override.
+	if os.Getenv("HAWK_DANGEROUSLY_SKIP_PERMISSIONS") != "1" {
+		return fmt.Errorf("--dangerously-skip-permissions requires HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1 in non-interactive mode")
+	}
+	return nil
+}
+
+// isStdinTerminal reports whether stdin is connected to a terminal.
+func isStdinTerminal() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 var completionCmd = &cobra.Command{

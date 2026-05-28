@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -98,6 +99,9 @@ func NewRegistry(tools ...Tool) *Registry {
 		if aliased, ok := t.(AliasedTool); ok {
 			for _, alias := range aliased.Aliases() {
 				if alias != "" {
+					if existing, exists := r.tools[alias]; exists && existing.Name() != t.Name() {
+						fmt.Fprintf(os.Stderr, "warning: tool alias %q already registered to %s, overriding with %s\n", alias, existing.Name(), t.Name())
+					}
 					r.tools[alias] = t
 				}
 			}

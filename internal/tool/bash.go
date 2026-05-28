@@ -502,7 +502,11 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		workDir, _ := os.Getwd()
 		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: true}
 		if sandbox.Available() {
-			execName, execArgs = sandbox.WrapCommand(p.Command, cfg)
+			var wrapErr error
+			execName, execArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)
+			if wrapErr != nil {
+				return "", fmt.Errorf("sandbox error: %w", wrapErr)
+			}
 		}
 	}
 

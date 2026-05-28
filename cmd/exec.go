@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,6 +34,23 @@ var (
 	execEphemeral    bool
 	execJSON         bool
 )
+
+// ExitCodeError wraps a non-zero exit code so it can be returned from RunE
+// instead of calling os.Exit directly. This allows deferred cleanup (worktree
+// removal, global state restoration) to run before the process exits.
+type ExitCodeError struct {
+	Code int
+	Err  error
+}
+
+func (e *ExitCodeError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return fmt.Sprintf("exit code %d", e.Code)
+}
+
+func (e *ExitCodeError) Unwrap() error { return e.Err }
 
 // ExecResult is the structured output for --output-format json.
 type ExecResult struct {
@@ -116,7 +135,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		base := getCurrentBranch(cwd)
 		branch := execWorktreeName
 		if branch == "" {
-			branch = fmt.Sprintf("hawk-exec/%d", start.UnixMilli())
+			branch = fmt.Sprintf("hawk-exec/%d-%s", start.UnixMilli(), randomHex(4))
 		}
 		var wtErr error
 		wtPath, wtErr = createExecWorktree(cwd, base, branch)
@@ -130,14 +149,6 @@ func runExec(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// Override global flags so shared helpers pick up exec-specific values
-	if execModel != "" {
-		model = execModel
-	}
-	if execMaxTurns > 0 {
-		maxTurns = execMaxTurns
-	}
-
 	// Load settings
 	settings := hawkconfig.LoadSettings()
 
@@ -148,15 +159,14 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	// If --agent is specified, prepend the agent persona
+	var agentModel string
 	if execAgent != "" {
 		agentDef, err := agents.Get(execAgent)
 		if err != nil {
 			return fmt.Errorf("agent %q: %w", execAgent, err)
 		}
 		systemPrompt = agentDef.Prompt + "\n\n" + systemPrompt
-		if agentDef.Model != "" {
-			model = agentDef.Model
-		}
+		agentModel = agentDef.Model
 	}
 
 	// Create tool registry
@@ -165,12 +175,21 @@ func runExec(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Create engine session
+	// Resolve effective model/provider without mutating globals.
+	// Priority: agent model > exec model > settings > global > auto-detect.
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+	if execModel != "" {
+		effectiveModel = execModel
+	}
+	if agentModel != "" {
+		effectiveModel = agentModel
+	}
+
+	// Create engine session
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 
-	if err := configureSession(sess, settings); err != nil {
+	if err := configureSession(sess, settings, execMaxTurns); err != nil {
 		return err
 	}
 
@@ -279,7 +298,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		exitCode = 1
 	}
 	if !execEphemeral {
-		sessionID := fmt.Sprintf("exec-%d", start.UnixMilli())
+		sessionID := fmt.Sprintf("exec-%d-%s", start.UnixMilli(), randomHex(4))
 		persistExecSession(sessionID, effectiveModel, effectiveProvider, prompt, response.String())
 	}
 
@@ -295,7 +314,7 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	if execOutputFormat == "json" {
 		result := ExecResult{
-			SessionID:  fmt.Sprintf("exec-%d", start.UnixMilli()),
+			SessionID:  fmt.Sprintf("exec-%d-%s", start.UnixMilli(), randomHex(4)),
 			Response:   response.String(),
 			ExitCode:   exitCode,
 			TokensIn:   totalIn,
@@ -320,7 +339,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	if exitCode != 0 {
-		os.Exit(exitCode)
+		return &ExitCodeError{Code: exitCode}
 	}
 	return nil
 }
@@ -375,4 +394,11 @@ func cleanupExecWorktree(repoDir, wtPath string) {
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath)
 	cmd.Dir = repoDir
 	_ = cmd.Run()
+}
+
+// randomHex returns a hex-encoded string of n random bytes.
+func randomHex(n int) string {
+	b := make([]byte, n)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -33,10 +34,10 @@ type SnapshotTracker interface {
 }
 
 // Session manages a conversation with an LLM via eyrie.
-// NOTE: Session is NOT thread-safe. All mutation must happen from the agent loop goroutine.
-// SetProvider/SetAPIKey are called during initialization only. If concurrent access is needed
-// in the future (e.g. daemon handling concurrent requests), add a sync.RWMutex.
+// The mu RWMutex protects messages and system for concurrent access
+// (e.g. daemon handling concurrent requests, background memory goroutines).
 type Session struct {
+	mu       sync.RWMutex
 	client   ChatClient
 	registry *tool.Registry
 	messages []types.EyrieMessage
@@ -235,13 +236,15 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 }
 
 func (s *Session) AddUser(content string) {
+	s.mu.Lock()
 	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
+	s.mu.Unlock()
 	if s.ConvoDAG != nil {
 		parentID := ""
-		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
+		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.ConvoDAG.Append(parentID, "user", content)
+		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content)
 	}
 	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
 		go func(c string) {
@@ -257,13 +260,15 @@ func (s *Session) AddUser(content string) {
 }
 
 func (s *Session) AddAssistant(content string) {
+	s.mu.Lock()
 	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
+	s.mu.Unlock()
 	if s.ConvoDAG != nil {
 		parentID := ""
-		if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
+		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.ConvoDAG.Append(parentID, "assistant", content)
+		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "assistant", content)
 	}
 }
 
@@ -273,21 +278,23 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	if s.ConvoDAG == nil {
 		return "", nil
 	}
-	fork, err := s.ConvoDAG.Fork(nodeID)
+	fork, err := s.ConvoDAG.Fork(context.Background(), nodeID)
 	if err != nil {
 		return "", err
 	}
 	// Rebuild messages from the forked branch
-	history, err := s.ConvoDAG.History(fork.ID)
+	history, err := s.ConvoDAG.History(context.Background(), fork.ID)
 	if err != nil {
 		return "", err
 	}
+	s.mu.Lock()
 	s.messages = s.messages[:0]
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
 			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
+	s.mu.Unlock()
 	return fork.ID, nil
 }
 
@@ -296,19 +303,21 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	if s.ConvoDAG == nil {
 		return nil
 	}
-	if err := s.ConvoDAG.SetHead(nodeID); err != nil {
+	if err := s.ConvoDAG.SetHead(context.Background(), nodeID); err != nil {
 		return err
 	}
-	history, err := s.ConvoDAG.History(nodeID)
+	history, err := s.ConvoDAG.History(context.Background(), nodeID)
 	if err != nil {
 		return err
 	}
+	s.mu.Lock()
 	s.messages = s.messages[:0]
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
 			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
+	s.mu.Unlock()
 	return nil
 }
 
@@ -317,7 +326,7 @@ func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
 	if s.ConvoDAG == nil {
 		return nil, nil
 	}
-	return s.ConvoDAG.Branches(nodeID)
+	return s.ConvoDAG.Branches(context.Background(), nodeID)
 }
 
 // ConvoHead returns the current conversation head node ID.
@@ -325,7 +334,7 @@ func (s *Session) ConvoHead() string {
 	if s.ConvoDAG == nil {
 		return ""
 	}
-	if head, err := s.ConvoDAG.Head(); err == nil && head != nil {
+	if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
 		return head.ID
 	}
 	return ""
@@ -337,6 +346,8 @@ func (s *Session) AppendSystemContext(content string) {
 	if content == "" {
 		return
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if strings.TrimSpace(s.system) == "" {
 		s.system = content
 		return
@@ -351,9 +362,17 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 	if content == "" {
 		return
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	idx := strings.Index(s.system, header)
 	if idx < 0 {
-		s.AppendSystemContext(content)
+		// AppendSystemContext is not called here to avoid double-locking;
+		// replicate its logic inline.
+		if strings.TrimSpace(s.system) == "" {
+			s.system = content
+		} else {
+			s.system += "\n\n" + content
+		}
 		return
 	}
 	rest := s.system[idx+len(header):]
@@ -376,13 +395,23 @@ func (s *Session) SetAllowedDirs(dirs []string) {
 }
 
 func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
+	s.mu.Lock()
 	s.messages = msgs
+	s.mu.Unlock()
 }
 
-func (s *Session) MessageCount() int { return len(s.messages) }
+func (s *Session) MessageCount() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.messages)
+}
 
 // RawMessages returns the conversation messages for persistence.
-func (s *Session) RawMessages() []types.EyrieMessage { return s.messages }
+func (s *Session) RawMessages() []types.EyrieMessage {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.messages
+}
 
 // Chat implements the LLMClient interface by delegating to the underlying client.
 // This allows Session to be passed to components that need LLM access (e.g. Reflector, SelfReview).
@@ -395,6 +424,8 @@ func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts type
 
 // RemoveLastExchange removes the last user+assistant message pair.
 func (s *Session) RemoveLastExchange() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(s.messages) < 2 {
 		return
 	}
