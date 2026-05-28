@@ -11,14 +11,14 @@ import (
 
 // Pre-compiled patterns for exfiltration detection.
 var (
-	curlPostWithData    = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
-	curlDataWithPost    = regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`)
-	curlDataBinary      = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
-	pipeToNetwork       = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`)
-	base64PipeNetwork   = regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`)
-	base64Network       = regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`)
-	envVarInURL         = regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`)
-	curlFileUpload      = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
+	curlPostWithData  = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
+	curlDataWithPost  = regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`)
+	curlDataBinary    = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
+	pipeToNetwork     = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`)
+	base64PipeNetwork = regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`)
+	base64Network     = regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`)
+	envVarInURL       = regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`)
+	curlFileUpload    = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
 )
 
 // EgressInspector detects and blocks data exfiltration attempts in shell commands
