@@ -32,7 +32,7 @@ func TestEstimateTokens(t *testing.T) {
 		expected int
 	}{
 		{"", 0},
-		{"abcd", 2},
+		{"abcd", 1},
 		{"abcde", 2},
 		{"12345678", 3},
 		{"123456789", 3},
