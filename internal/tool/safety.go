@@ -48,8 +48,24 @@ func TruncateOutput(s string) string {
 	// Truncate at rune boundary to avoid splitting multi-byte UTF-8 characters.
 	truncated := s[:maxOutputBytes]
 	for i := len(truncated) - 1; i >= 0; i-- {
-		if truncated[i]&0xC0 != 0x80 {
-			truncated = truncated[:i+1]
+		b := truncated[i]
+		if b&0xC0 != 0x80 {
+			// Found the start byte of a UTF-8 sequence.
+			// Determine how many continuation bytes follow it.
+			seqLen := 1
+			if b&0xE0 == 0xC0 {
+				seqLen = 2
+			} else if b&0xF0 == 0xE0 {
+				seqLen = 3
+			} else if b&0xF8 == 0xF0 {
+				seqLen = 4
+			}
+			// Include the full sequence if it fits, otherwise drop the whole character.
+			if i+seqLen <= len(truncated) {
+				truncated = truncated[:i+seqLen]
+			} else {
+				truncated = truncated[:i]
+			}
 			break
 		}
 	}
