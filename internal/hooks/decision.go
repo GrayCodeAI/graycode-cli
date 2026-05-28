@@ -8,9 +8,9 @@ import (
 
 // DecisionAction constants for HookDecision.Action.
 const (
-	ActionAllow   = "allow"
-	ActionDeny    = "deny"
-	ActionModify  = "modify"
+	ActionAllow    = "allow"
+	ActionDeny     = "deny"
+	ActionModify   = "modify"
 	ActionInstruct = "instruct"
 )
 
