@@ -222,6 +222,14 @@ func (cl *CommitLinter) FixMessage(message string) string {
 		}
 	}
 
+	// Fix 1b: Scope -> lowercase.
+	if parsed.Scope != "" {
+		lowered := strings.ToLower(parsed.Scope)
+		if lowered != parsed.Scope {
+			parsed.Scope = lowered
+		}
+	}
+
 	// Fix 2: Subject too long -> truncate.
 	maxSubject := 72
 	for _, rule := range cl.Rules {
@@ -783,8 +791,9 @@ func isFooter(text string) bool {
 	// Footers typically contain "key: value" or "BREAKING CHANGE:" patterns.
 	lines := strings.Split(text, "\n")
 	trailerPattern := regexp.MustCompile(`^[A-Za-z-]+:\s`)
+	breakingPattern := regexp.MustCompile(`^BREAKING[- ]CHANGE:`)
 	for _, line := range lines {
-		if trailerPattern.MatchString(line) {
+		if trailerPattern.MatchString(line) || breakingPattern.MatchString(line) {
 			return true
 		}
 	}
@@ -798,15 +807,15 @@ func inferTypeFromContent(subject, body string) string {
 		strings.Contains(combined, "patch") || strings.Contains(combined, "resolve") {
 		return "fix"
 	}
+	if strings.Contains(combined, "test") || strings.Contains(combined, "spec") {
+		return "test"
+	}
 	if strings.Contains(combined, "add") || strings.Contains(combined, "new") ||
 		strings.Contains(combined, "feature") || strings.Contains(combined, "implement") {
 		return "feat"
 	}
 	if strings.Contains(combined, "doc") || strings.Contains(combined, "readme") {
 		return "docs"
-	}
-	if strings.Contains(combined, "test") {
-		return "test"
 	}
 	if strings.Contains(combined, "refactor") || strings.Contains(combined, "restructure") {
 		return "refactor"
