@@ -1,0 +1,114 @@
+package cmd
+
+import (
+	"fmt"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+)
+
+// handleConfigCommand handles the /config command and all its subcommands.
+func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model, tea.Cmd) {
+	if len(parts) >= 3 && parts[1] == "provider" {
+		value := strings.TrimSpace(strings.Join(parts[2:], " "))
+		if err := hawkconfig.SetGlobalSetting("provider", value); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		engineProvider := hawkconfig.NormalizeProviderForEngine(value)
+		m.session.SetProvider(engineProvider)
+		// Use cached model or set first from cache
+		modelCacheMu.RLock()
+		cached, cacheHit := modelCache[engineProvider]
+		modelCacheMu.RUnlock()
+		if cacheHit && len(cached) > 0 {
+			m.session.SetModel(cached[0].ID)
+			_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in eyrie (provider.json).", value, m.session.Model())})
+		return m, nil
+	}
+	if len(parts) >= 3 && parts[1] == "model" {
+		value := strings.TrimSpace(strings.Join(parts[2:], " "))
+		known := configModelChoices(m.configModelOptions, false)
+		if len(known) > 0 {
+			found := false
+			for i, k := range known {
+				if strings.EqualFold(k, value) || strings.EqualFold(m.configModelOptions[i].ID, value) {
+					value = m.configModelOptions[i].ID
+					found = true
+					break
+				}
+			}
+			if !found {
+				hint := "Unknown model: " + value + "\nUse /model to browse available models."
+				m.messages = append(m.messages, displayMsg{role: "error", content: hint})
+				return m, nil
+			}
+		}
+		if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		m.session.SetModel(value)
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", value)})
+		return m, nil
+	}
+	if len(parts) >= 2 && parts[1] == "keys" {
+		m.messages = append(m.messages, displayMsg{role: "system", content: apiKeyConfigSummary()})
+		return m, nil
+	}
+	if len(parts) >= 3 && parts[1] == "key" && parts[2] == "remove" {
+		if len(parts) > 3 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /config key remove"})
+			return m, nil
+		}
+		return m.openConfigRemoveKeyPanel()
+	}
+	if len(parts) >= 3 && parts[1] == "get" {
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		value, ok := hawkconfig.SettingValue(settings, parts[2])
+		if !ok {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unsupported setting key %q", parts[2])})
+			return m, nil
+		}
+		if strings.TrimSpace(value) == "" {
+			value = "(empty)"
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s = %s", parts[2], value)})
+		return m, nil
+	}
+	if len(parts) >= 4 && parts[1] == "set" {
+		key := parts[2]
+		value := strings.TrimSpace(strings.Join(parts[3:], " "))
+		if err := hawkconfig.SetGlobalSetting(key, value); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			return m, nil
+		}
+		// Apply common runtime keys immediately.
+		normalizedKey := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "-", ""), "_", ""))
+		switch normalizedKey {
+		case "model":
+			m.session.SetModel(value)
+		case "provider":
+			m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Updated %s = %s", key, value)})
+		return m, nil
+	}
+	settings, err := loadEffectiveSettings()
+	if err != nil {
+		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		return m, nil
+	}
+	m.settings = settings
+	next, cmd := m.openConfigPanel()
+	*m = next
+	return m, cmd
+}
