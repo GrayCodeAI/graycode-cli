@@ -594,10 +594,16 @@ func (s *SQLiteStore) searchFallback(query string) ([]*SessionRecord, error) {
 	return sessions, rows.Err()
 }
 
-// Close closes the underlying database connection.
+// Close checkpoints the WAL and closes the underlying database connection.
+// Running PRAGMA wal_checkpoint(TRUNCATE) before close ensures that
+// .db-wal and .db-shm files are cleaned up after all data is safely
+// flushed to the main database file.
 func (s *SQLiteStore) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Checkpoint WAL to flush all data into the main db and truncate
+	// the WAL file, so no .db-wal / .db-shm files linger on disk.
+	_, _ = s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)")
 	return s.db.Close()
 }
 
@@ -640,7 +646,14 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 		return fmt.Errorf("update token total: %w", err)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit compact: %w", err)
+	}
+
+	// After a large delete, checkpoint the WAL so the freed pages are
+	// reclaimed and .db-wal doesn't grow unbounded.
+	_, _ = s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)")
+	return nil
 }
 
 // GetSessionStats returns aggregate statistics for a session.

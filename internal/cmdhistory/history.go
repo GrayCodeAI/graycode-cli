@@ -285,8 +285,14 @@ func (s *Store) Stats() (*HistoryStats, error) {
 	return stats, nil
 }
 
-// Close closes the underlying database connection.
+// Close checkpoints the WAL and closes the underlying database connection.
+// Running PRAGMA wal_checkpoint(TRUNCATE) before close ensures that
+// .db-wal and .db-shm files are cleaned up after all data is safely
+// flushed to the main database file.
 func (s *Store) Close() error {
+	// Checkpoint WAL to flush all data into the main db and truncate
+	// the WAL file, so no .db-wal / .db-shm files linger on disk.
+	_, _ = s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)")
 	return s.db.Close()
 }
 
