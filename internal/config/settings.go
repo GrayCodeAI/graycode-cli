@@ -134,6 +134,26 @@ func LoadGlobalSettings() Settings {
 	return s
 }
 
+// LoadProjectSettings loads only the project-level .hawk/settings.json.
+// Returns a zero-value Settings if the file does not exist.
+func LoadProjectSettings() Settings {
+	var s Settings
+	if data, err := os.ReadFile(projectSettingsPath()); err == nil {
+		if err := json.Unmarshal(data, &s); err != nil {
+			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", projectSettingsPath(), err)
+		}
+	}
+	return s
+}
+
+// ProjectMCPServers returns MCP servers defined in the project-level
+// .hawk/settings.json (not global). Returns nil if the file does not exist
+// or defines no MCP servers.
+func ProjectMCPServers() []MCPServerConfig {
+	proj := LoadProjectSettings()
+	return proj.MCPServers
+}
+
 // LoadSettings loads settings from global + project, with project overriding global.
 func LoadSettings() Settings {
 	s := LoadGlobalSettings()
@@ -191,13 +211,13 @@ func MergeSettings(base, override Settings) Settings {
 		base.MaxBudgetUSD = override.MaxBudgetUSD
 	}
 	if len(override.AutoAllow) > 0 {
-		base.AutoAllow = override.AutoAllow
+		base.AutoAllow = append(base.AutoAllow, override.AutoAllow...)
 	}
 	if len(override.AllowedTools) > 0 {
-		base.AllowedTools = override.AllowedTools
+		base.AllowedTools = append(base.AllowedTools, override.AllowedTools...)
 	}
 	if len(override.DisallowedTools) > 0 {
-		base.DisallowedTools = override.DisallowedTools
+		base.DisallowedTools = append(base.DisallowedTools, override.DisallowedTools...)
 	}
 	if len(override.MCPServers) > 0 {
 		base.MCPServers = override.MCPServers

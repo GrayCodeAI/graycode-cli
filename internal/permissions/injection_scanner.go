@@ -9,6 +9,28 @@ import (
 	"unicode"
 )
 
+// Pre-compiled patterns for tool output scanning.
+var toolOutputPatterns = []*InjectionPattern{
+	{
+		Name:     "hidden_instruction_in_json",
+		Pattern:  regexp.MustCompile(`(?i)"(instruction|command|system|role)"\s*:\s*"[^"]*ignore`),
+		Severity: "critical",
+		Category: "system_override",
+	},
+	{
+		Name:     "comment_injection",
+		Pattern:  regexp.MustCompile(`(?i)(//|/\*|#|<!--)\s*(ignore|forget|override|new\s+instructions)`),
+		Severity: "high",
+		Category: "system_override",
+	},
+	{
+		Name:     "multiline_hidden_payload",
+		Pattern:  regexp.MustCompile(`(?i)\n\s*\n.*ignore\s+previous`),
+		Severity: "critical",
+		Category: "system_override",
+	},
+}
+
 // InjectionPattern defines a single pattern used to detect prompt injection attempts.
 type InjectionPattern struct {
 	Name     string
@@ -346,26 +368,7 @@ func (s *InjectionScanner) ScanToolOutput(output string) *ScanResult {
 
 	// Additional checks for tool output: look for hidden instructions
 	// in structured data that tools might return
-	hiddenPatterns := []*InjectionPattern{
-		{
-			Name:     "hidden_instruction_in_json",
-			Pattern:  regexp.MustCompile(`(?i)"(instruction|command|system|role)"\s*:\s*"[^"]*ignore`),
-			Severity: "critical",
-			Category: "system_override",
-		},
-		{
-			Name:     "comment_injection",
-			Pattern:  regexp.MustCompile(`(?i)(//|/\*|#|<!--)\s*(ignore|forget|override|new\s+instructions)`),
-			Severity: "high",
-			Category: "system_override",
-		},
-		{
-			Name:     "multiline_hidden_payload",
-			Pattern:  regexp.MustCompile(`(?i)\n\s*\n.*ignore\s+previous`),
-			Severity: "critical",
-			Category: "system_override",
-		},
-	}
+	hiddenPatterns := toolOutputPatterns
 
 	for _, p := range hiddenPatterns {
 		loc := p.Pattern.FindStringIndex(output)

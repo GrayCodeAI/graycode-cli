@@ -9,6 +9,22 @@ import (
 	"sync"
 )
 
+// Pre-compiled patterns for exfiltration detection.
+var (
+	curlPostWithData    = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
+	curlDataWithPost    = regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`)
+	curlDataBinary      = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
+	pipeToNetwork       = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`)
+	base64PipeNetwork   = regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`)
+	base64Network       = regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`)
+	envVarInURL         = regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`)
+	curlFileUpload      = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
+	describeSuspicious1 = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
+	describeSuspicious2 = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
+	describeSuspicious3 = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat)\b`)
+	describeSuspicious4 = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
+)
+
 // EgressInspector detects and blocks data exfiltration attempts in shell commands
 // by checking outbound network destinations before execution.
 type EgressInspector struct {
@@ -210,30 +226,30 @@ func (e *EgressInspector) IsAllowed(host string) bool {
 // IsSuspicious detects patterns commonly associated with data exfiltration.
 func (e *EgressInspector) IsSuspicious(command string) bool {
 	// POST with file data
-	if regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`).MatchString(command) ||
-		regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`).MatchString(command) ||
-		regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`).MatchString(command) {
+	if curlPostWithData.MatchString(command) ||
+		curlDataWithPost.MatchString(command) ||
+		curlDataBinary.MatchString(command) {
 		return true
 	}
 
 	// Pipe to network command (cat file | curl, cat file | nc)
-	if regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`).MatchString(command) {
+	if pipeToNetwork.MatchString(command) {
 		return true
 	}
 
 	// Base64 encoding combined with network send
-	if regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`).MatchString(command) ||
-		regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`).MatchString(command) {
+	if base64PipeNetwork.MatchString(command) ||
+		base64Network.MatchString(command) {
 		return true
 	}
 
 	// Environment variable in URL
-	if regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`).MatchString(command) {
+	if envVarInURL.MatchString(command) {
 		return true
 	}
 
 	// File upload via curl -F
-	if regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`).MatchString(command) {
+	if curlFileUpload.MatchString(command) {
 		return true
 	}
 

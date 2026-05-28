@@ -45,7 +45,15 @@ func TruncateOutput(s string) string {
 	if len(s) <= maxOutputBytes {
 		return s
 	}
-	return s[:maxOutputBytes] + "\n[output truncated — showing first 500KB]"
+	// Truncate at rune boundary to avoid splitting multi-byte UTF-8 characters.
+	truncated := s[:maxOutputBytes]
+	for i := len(truncated) - 1; i >= 0; i-- {
+		if truncated[i]&0xC0 != 0x80 {
+			truncated = truncated[:i]
+			break
+		}
+	}
+	return truncated + "\n[output truncated — showing first 500KB]"
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -117,8 +125,9 @@ var credentialPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`[sr]k_(live|test)_[A-Za-z0-9]{20,}`),
 	// PEM private keys
 	regexp.MustCompile(`-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----`),
-	// Passwords embedded in connection strings (e.g. postgres://user:pass@...)
-	regexp.MustCompile(`://[^:]+:[^@\s]+@`),
+	// Passwords embedded in connection strings (e.g. postgres://user:pass@host/...)
+	// Requires a password component (non-empty between : and @) and a host component after @.
+	regexp.MustCompile(`://[^:]+:[^@\s]+@[^/\s]+`),
 }
 
 // DetectCredentials returns a non-empty description of the first credential
@@ -403,6 +412,8 @@ func validateURLPublic(ctx context.Context, rawURL string) (string, error) {
 
 // ssrfSafeClient returns an http.Client that validates redirect targets
 // against private IP ranges, preventing SSRF via redirect chains.
+// The redirect validator pins the resolved IP so that subsequent connections
+// in the chain cannot be rebinding to a different (private) address.
 func ssrfSafeClient(ctx context.Context, timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,
@@ -413,8 +424,18 @@ func ssrfSafeClient(ctx context.Context, timeout time.Duration) *http.Client {
 			if ctx.Value(ssrfSkipKey{}) != nil {
 				return nil
 			}
-			_, err := validateURLPublic(ctx, req.URL.String())
-			return err
+			pinned, err := validateURLPublic(ctx, req.URL.String())
+			if err != nil {
+				return err
+			}
+			// Replace the redirect URL with the IP-pinned version so the
+			// transport dials the validated address instead of resolving DNS again.
+			parsed, parseErr := url.Parse(pinned)
+			if parseErr != nil {
+				return parseErr
+			}
+			req.URL = parsed
+			return nil
 		},
 	}
 }
