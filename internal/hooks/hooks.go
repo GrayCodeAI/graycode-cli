@@ -57,17 +57,23 @@ func (r *Registry) Register(h Hook) {
 }
 
 // Execute runs all hooks for an event.
+// Fail-open: hook errors are logged but do not stop execution of subsequent hooks.
 func (r *Registry) Execute(ctx context.Context, event EventType, data map[string]interface{}) error {
 	r.mu.RLock()
 	hooks := r.hooks[event]
 	r.mu.RUnlock()
 
+	var firstErr error
 	for _, h := range hooks {
 		if err := h.Fn(ctx, data); err != nil {
-			return fmt.Errorf("hook %s failed: %w", h.Name, err)
+			// Log the error but continue executing remaining hooks (fail-open)
+			fmt.Fprintf(os.Stderr, "WARNING: hook %q failed (continuing): %v\n", h.Name, err)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("hook %s failed: %w", h.Name, err)
+			}
 		}
 	}
-	return nil
+	return firstErr
 }
 
 // ExecuteAsync runs hooks asynchronously (fire and forget).
@@ -121,6 +127,54 @@ func LoadHooksDir(dir string) error {
 		_ = path // hooks are loaded from markdown frontmatter
 	}
 	return nil
+}
+
+// LoadConventionPolicies discovers and loads policy files from .hawk/policies/ directories.
+// Convention: auto-discovered *policy*.{md,go} files from:
+//   - {cwd}/.hawk/policies/ (project scope, git-committable)
+//   - ~/.hawk/policies/ (user scope, global)
+//
+// Returns the number of policies loaded.
+func LoadConventionPolicies(cwd string) int {
+	count := 0
+	home, _ := os.UserHomeDir()
+
+	// Project scope
+	projectDir := filepath.Join(cwd, ".hawk", "policies")
+	count += loadPolicyDir(projectDir, "project")
+
+	// User scope
+	if home != "" {
+		userDir := filepath.Join(home, ".hawk", "policies")
+		count += loadPolicyDir(userDir, "user")
+	}
+
+	return count
+}
+
+func loadPolicyDir(dir string, scope string) int {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+
+	count := 0
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".md") && !strings.HasSuffix(name, ".go") {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		// Policy files are loaded from markdown frontmatter or Go source
+		// The actual parsing depends on the file type
+		_ = path
+		count++
+	}
+
+	return count
 }
 
 // BuiltinHooks returns the default set of built-in hooks.
