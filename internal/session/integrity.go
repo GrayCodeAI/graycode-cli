@@ -53,11 +53,11 @@ func ValidateIntegrity(sess *Session) *IntegrityCheck {
 		switch msg.Role {
 		case "user":
 			stats.UserMessages++
-			if msg.ToolResult != nil {
+			for _, tr := range msg.ToolResults {
 				stats.ToolResults++
-				if !toolUseIDs[msg.ToolResult.ToolUseID] {
+				if !toolUseIDs[tr.ToolUseID] {
 					stats.OrphanedResults++
-					check.Warnings = append(check.Warnings, fmt.Sprintf("message %d: tool_result references unknown tool_use_id %q", i, msg.ToolResult.ToolUseID))
+					check.Warnings = append(check.Warnings, fmt.Sprintf("message %d: tool_result references unknown tool_use_id %q", i, tr.ToolUseID))
 				}
 			}
 		case "assistant":
@@ -70,7 +70,7 @@ func ValidateIntegrity(sess *Session) *IntegrityCheck {
 			check.Warnings = append(check.Warnings, fmt.Sprintf("message %d: unexpected role %q", i, msg.Role))
 		}
 
-		if msg.Content == "" && msg.ToolResult == nil && len(msg.ToolUse) == 0 {
+		if msg.Content == "" && len(msg.ToolResults) == 0 && len(msg.ToolUse) == 0 {
 			stats.EmptyMessages++
 		}
 	}
@@ -78,8 +78,8 @@ func ValidateIntegrity(sess *Session) *IntegrityCheck {
 	// Check for tool_uses without corresponding results
 	resultIDs := make(map[string]bool)
 	for _, msg := range sess.Messages {
-		if msg.ToolResult != nil {
-			resultIDs[msg.ToolResult.ToolUseID] = true
+		for _, tr := range msg.ToolResults {
+			resultIDs[tr.ToolUseID] = true
 		}
 	}
 	for id := range toolUseIDs {

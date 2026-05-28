@@ -19,7 +19,7 @@ type Message struct {
 	Role       string            `json:"role"`
 	Content    string            `json:"content,omitempty"`
 	ToolUse    []types.ToolCall  `json:"tool_use,omitempty"`
-	ToolResult *types.ToolResult `json:"tool_result,omitempty"`
+	ToolResults []types.ToolResult `json:"tool_results,omitempty"`
 }
 
 // ToolCall is an alias to the shared ToolCall type for persistence.

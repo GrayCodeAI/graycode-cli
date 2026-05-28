@@ -190,8 +190,8 @@ func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
 	content := msg.Content
 	if content == "" {
 		// If it's a tool result, use that
-		if msg.ToolResult != nil {
-			content = msg.ToolResult.Content
+		if len(msg.ToolResults) > 0 {
+			content = msg.ToolResults[0].Content
 		}
 	}
 	if content == "" {

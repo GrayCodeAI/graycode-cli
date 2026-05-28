@@ -109,8 +109,8 @@ func (s *Server) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 		if len(msg.ToolUse) > 0 {
 			mr.ToolUse = msg.ToolUse
 		}
-		if msg.ToolResult != nil {
-			mr.ToolResult = msg.ToolResult
+		if len(msg.ToolResults) > 0 {
+			mr.ToolResult = msg.ToolResults
 		}
 		messages = append(messages, mr)
 	}

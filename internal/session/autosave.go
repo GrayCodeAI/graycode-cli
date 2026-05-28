@@ -229,7 +229,7 @@ func ExportToMarkdown(sess *Session) string {
 	for _, msg := range sess.Messages {
 		switch msg.Role {
 		case "user":
-			if msg.ToolResult != nil {
+			if len(msg.ToolResults) > 0 {
 				continue // skip tool results in markdown export
 			}
 			md += "## User\n\n" + msg.Content + "\n\n"

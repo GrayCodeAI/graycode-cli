@@ -29,7 +29,7 @@ func isTextQuestion(messages []types.EyrieMessage) bool {
 	var lastUserMsg string
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg := messages[i]
-		if msg.Role == "user" && msg.ToolResult == nil {
+		if msg.Role == "user" && len(msg.ToolResults) == 0 {
 			lastUserMsg = msg.Content
 			break
 		}
