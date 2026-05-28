@@ -211,7 +211,7 @@ func MergeSettings(base, override Settings) Settings {
 		base.MaxBudgetUSD = override.MaxBudgetUSD
 	}
 	if len(override.AutoAllow) > 0 {
-		base.AutoAllow = append(base.AutoAllow, override.AutoAllow...)
+		base.AutoAllow = override.AutoAllow
 	}
 	if len(override.AllowedTools) > 0 {
 		base.AllowedTools = append(base.AllowedTools, override.AllowedTools...)
