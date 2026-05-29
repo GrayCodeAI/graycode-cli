@@ -41,6 +41,8 @@ func (m *chatModel) startStream() {
 				ref.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
 			case "tool_result":
 				ref.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
+			case "blast_radius":
+				ref.Send(blastRadiusMsg{message: ev.Content})
 			case "usage":
 				// Usage events are only emitted in stream-json print mode
 				// TUI mode ignores them since cost is tracked separately

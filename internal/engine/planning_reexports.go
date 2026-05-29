@@ -6,30 +6,33 @@ package engine
 import "github.com/GrayCodeAI/hawk/internal/engine/planning"
 
 type (
-	ExecutionPlan    = planning.ExecutionPlan
-	ExecutionStep    = planning.ExecutionStep
-	PlannedCall      = planning.PlannedCall
-	ExecutionPlanner = planning.ExecutionPlanner
-	Task             = planning.Task
-	TaskPlan         = planning.TaskPlan
-	TaskDecomposer   = planning.TaskDecomposer
-	Subtask          = planning.Subtask
-	PlanState        = planning.PlanState
-	GoalStatus       = planning.GoalStatus
-	Goal             = planning.Goal
-	GoalEvent        = planning.GoalEvent
-	GoalTracker      = planning.GoalTracker
-	GoalOption       = planning.GoalOption
-	SuggestedTask    = planning.SuggestedTask
-	TaskQueue        = planning.TaskQueue
-	ActionRequired   = planning.ActionRequired
-	FormField        = planning.FormField
-	FormResponse     = planning.FormResponse
-	ActionManager    = planning.ActionManager
+	ExecutionPlan     = planning.ExecutionPlan
+	ExecutionStep     = planning.ExecutionStep
+	PlannedCall       = planning.PlannedCall
+	ExecutionPlanner  = planning.ExecutionPlanner
+	BlastRadius       = planning.BlastRadius
+	BlastRadiusReport = planning.BlastRadiusReport
+	Task              = planning.Task
+	TaskPlan          = planning.TaskPlan
+	TaskDecomposer    = planning.TaskDecomposer
+	Subtask           = planning.Subtask
+	PlanState         = planning.PlanState
+	GoalStatus        = planning.GoalStatus
+	Goal              = planning.Goal
+	GoalEvent         = planning.GoalEvent
+	GoalTracker       = planning.GoalTracker
+	GoalOption        = planning.GoalOption
+	SuggestedTask     = planning.SuggestedTask
+	TaskQueue         = planning.TaskQueue
+	ActionRequired    = planning.ActionRequired
+	FormField         = planning.FormField
+	FormResponse      = planning.FormResponse
+	ActionManager     = planning.ActionManager
 )
 
 var (
 	NewExecutionPlanner = planning.NewExecutionPlanner
+	EstimateBlastRadius = planning.EstimateBlastRadius
 	NewTaskDecomposer   = planning.NewTaskDecomposer
 	NewPlanState        = planning.NewPlanState
 	DecomposePrompt     = planning.DecomposePrompt
@@ -48,4 +51,12 @@ var (
 	Validate            = planning.Validate
 	BuildFormPrompt     = planning.BuildFormPrompt
 	FormatResponse      = planning.FormatResponse
+)
+
+// Blast radius constants re-exported from planning package.
+const (
+	RadiusSmall  = planning.RadiusSmall
+	RadiusMedium = planning.RadiusMedium
+	RadiusLarge  = planning.RadiusLarge
+	RadiusHuge   = planning.RadiusHuge
 )
