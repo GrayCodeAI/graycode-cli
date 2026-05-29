@@ -928,6 +928,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		return m, nil
 
+	case blastRadiusMsg:
+		m.messages = append(m.messages, displayMsg{role: "system", content: msg.message})
+		m.viewDirty = true
+		return m, nil
+
 	case permissionAskMsg:
 		m.permReq = &msg.req
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
