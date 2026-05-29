@@ -101,11 +101,11 @@ func TestDetectCredentials(t *testing.T) {
 		want    bool
 	}{
 		{"OpenAI key", "sk-abcde12345fghijklmnopqrstuvwxyz", true},
-	{"OpenAI key", "sk-abc012345678901234567890123456789", true},
-	{"Anthropic key", "sk-ant-api25-ABCDEFGHIJKLMNOPQRST", true},
-	{"AWS key", "AKIAIOEXAMPLEMPLE012", true},
-	{"GitHub PAT", "ghp_ABCDEfghijklmnopqrstuvwxyz0123456789AB", true},
-	{"GitHub OAuth", "gho_ABCDEfghijklmnopqrstuvwxyz0123456789AB", true},
+		{"OpenAI key", "sk-abc012345678901234567890123456789", true},
+		{"Anthropic key", "sk-ant-api25-ABCDEFGHIJKLMNOPQRST", true},
+		{"AWS key", "AKIAIOEXAMPLEMPLE012", true},
+		{"GitHub PAT", "ghp_ABCDEfghijklmnopqrstuvwxyz0123456789AB", true},
+		{"GitHub OAuth", "gho_ABCDEfghijklmnopqrstuvwxyz0123456789AB", true},
 		{"EC private key", "-----BEGIN EC PRIVATE KEY-----", true},
 		{"OpenSSH private key", "-----BEGIN OPENSSH PRIVATE KEY-----", true},
 		{"Generic private key", "-----BEGIN PRIVATE KEY-----", true},
