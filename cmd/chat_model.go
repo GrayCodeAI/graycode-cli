@@ -129,6 +129,7 @@ type chatModel struct {
 	messages                   []displayMsg
 	partial                    *strings.Builder
 	waiting                    bool
+	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	askReq                     *askUserMsg               // pending ask_user prompt
 	width                      int
