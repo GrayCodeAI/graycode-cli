@@ -1604,6 +1604,8 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 	// Get repo root for worktree pool
 	cwd, _ := os.Getwd()
 
+	// Create grid UI
+	grid := NewAgentGrid(taskDescs, m.width, m.height-10)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("🚀 Spawning %d parallel agents for %d tasks...", workers, len(taskDescs))})
 
 	// Run parallel agents in background
@@ -1613,7 +1615,17 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 			pool.AddTask(desc)
 		}
 
+		// Update grid as agents run
+		taskIdx := 0
 		err := pool.Run(context.Background(), func(ctx context.Context, worktreePath string, task *parallel.Task) (string, error) {
+			pane := grid.GetPane(fmt.Sprintf("%d", taskIdx+1))
+			if pane != nil {
+				pane.SetState(AgentRunning)
+				pane.Append(fmt.Sprintf("Starting in worktree: %s", worktreePath))
+				m.ref.Send(streamChunkMsg(grid.Render()))
+			}
+			taskIdx++
+
 			// Create a new session for this agent with same provider/model
 			agentSession := engine.NewSession(
 				m.session.Provider(),
@@ -1626,6 +1638,10 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 			// Stream the agent's work
 			ch, err := agentSession.Stream(ctx)
 			if err != nil {
+				if pane != nil {
+					pane.SetState(AgentFailed)
+					pane.Append(fmt.Sprintf("Error: %v", err))
+				}
 				return "", err
 			}
 
@@ -1634,14 +1650,28 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 				switch ev.Type {
 				case "content":
 					result.WriteString(ev.Content)
+					if pane != nil {
+						pane.Append(ev.Content)
+					}
 				case "done":
+					if pane != nil {
+						pane.SetState(AgentDone)
+						pane.Append("Task completed")
+					}
 					return result.String(), nil
 				case "error":
+					if pane != nil {
+						pane.SetState(AgentFailed)
+						pane.Append(fmt.Sprintf("Error: %s", ev.Content))
+					}
 					return result.String(), fmt.Errorf("%s", ev.Content)
 				}
 			}
 			return result.String(), nil
 		})
+
+		// Send final grid state
+		m.ref.Send(streamChunkMsg(grid.Render()))
 
 		if err != nil {
 			m.ref.Send(streamErrMsg{err: err})
