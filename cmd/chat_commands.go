@@ -145,6 +145,7 @@ var slashDescriptions = map[string]string{
 	"/power":           "Set power level (1-10)",
 	"/quit":            "Save and exit",
 	"/recover":         "Scan for interrupted sessions and resume",
+	"/refactor":        "Agent-driven refactoring: dedup, dead code, lint fixes",
 	"/resume":          "Resume a saved session",
 	"/retry":           "Redo last message",
 	"/review":          "Code review for bugs and issues",
@@ -626,6 +627,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/review":
 		return m.startPromptCommand("/review", engine.ReviewPrompt(nil))
+	case "/refactor":
+		return m.handleRefactorCommand(parts, text)
 	case "/party":
 		topic := strings.TrimSpace(strings.TrimPrefix(text, "/party"))
 		if topic == "" {
@@ -1681,4 +1684,40 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 	}()
 
 	return m, nil
+}
+
+// handleRefactorCommand runs agent-driven refactoring on the codebase.
+func (m *chatModel) handleRefactorCommand(parts []string, text string) (tea.Model, tea.Cmd) {
+	// Default refactoring scope
+	scope := "."
+	if len(parts) > 1 {
+		scope = parts[1]
+	}
+
+	prompt := fmt.Sprintf(`You are in REFACTOR mode. Perform agent-driven refactoring on the codebase.
+
+## Scope
+%s
+
+## Tasks (execute in order)
+1. **Dead code removal**: Find and remove unused functions, variables, imports
+2. **Deduplication**: Identify and consolidate duplicate code patterns
+3. **Lint fixes**: Run linter and fix all issues
+4. **Import cleanup**: Remove unused imports, organize import groups
+5. **Test coverage**: Add tests for untested critical paths
+
+## Rules
+- Make minimal, safe changes
+- Run tests after each change to verify no regressions
+- If a change is risky, skip it and note why
+- Commit each category of change separately
+
+## Output
+After completing, provide a summary of:
+- Files modified
+- Lines removed/added
+- Issues fixed
+- Any skipped changes and why`, scope)
+
+	return m.startPromptCommand("/refactor", prompt)
 }
