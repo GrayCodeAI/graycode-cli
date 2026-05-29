@@ -222,12 +222,12 @@ func TestDownloadTool_Execute_BlockedScheme(t *testing.T) {
 		"url":         "ftp://example.com/file",
 		"destination": "/tmp/test.txt",
 	})
-	_, err := dt.Execute(ctx, input)
+	_, _ = dt.Execute(ctx, input)
 	// With SSRF skip, the URL validation is skipped, so the error will come from the HTTP client
 	// Without SSRF skip, it would be blocked. Since we use WithSSRFSkip, the error might be different.
 	// Let's test without SSRF skip
 	ctx2 := context.Background()
-	_, err = dt.Execute(ctx2, input)
+	_, err := dt.Execute(ctx2, input)
 	if err == nil {
 		t.Error("expected error for ftp:// URL without SSRF skip")
 	}
