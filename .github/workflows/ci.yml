@@ -36,7 +36,7 @@ jobs:
           cache: true
       - name: gofumpt
         run: |
-          go install mvdan.cc/gofumpt@latest
+          go install mvdan.cc/gofumpt@v0.7.0
           out=$(gofumpt -l .)
           if [ -n "$out" ]; then
             echo "::error::gofumpt would reformat:"
@@ -45,7 +45,7 @@ jobs:
           fi
       - name: goimports
         run: |
-          go install golang.org/x/tools/cmd/goimports@latest
+          go install golang.org/x/tools/cmd/goimports@v0.30.0
           out=$(goimports -l .)
           if [ -n "$out" ]; then
             echo "::error::goimports would reformat:"
@@ -127,7 +127,7 @@ jobs:
           cache: true
       - name: Run golangci-lint
         run: |
-          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.0
           golangci-lint run --timeout=5m --disable=noctx
 
   # -------------------------------------------------------------------------
@@ -153,10 +153,10 @@ jobs:
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%' | tail -1)
           echo "Coverage: ${coverage}%"
           echo "COVERAGE=${coverage}" >> "$GITHUB_ENV"
-      - name: Coverage threshold (minimum 10%)
+      - name: Coverage threshold (minimum 50%)
         run: |
-          if (( $(echo "${COVERAGE} < 10" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below minimum 10%"
+          if (( $(echo "${COVERAGE} < 50" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below minimum 50%"
             exit 1
           fi
       - name: Upload coverage
@@ -165,6 +165,38 @@ jobs:
           name: coverage-${{ github.job }}
           path: coverage.out
           retention-days: 30
+      - name: Enforce test skip policy
+        run: |
+          # Find all t.Skip() calls without a tracking issue comment
+          # Policy: t.Skip() must have a comment with a GitHub issue link on the same or previous line
+          violations=""
+          while IFS= read -r line; do
+            file=$(echo "$line" | cut -d: -f1)
+            lineno=$(echo "$line" | cut -d: -f2)
+            # Check previous line for issue link
+            prev_line=$((lineno - 1))
+            if [ "$prev_line" -gt 0 ]; then
+              prev_content=$(sed -n "${prev_line}p" "$file")
+              if echo "$prev_content" | grep -qE '(github\.com/.*issues/|#\d+|TODO|FIXME|HACK)'; then
+                continue
+              fi
+            fi
+            # Check same line for issue link
+            content=$(sed -n "${lineno}p" "$file")
+            if echo "$content" | grep -qE '(github\.com/.*issues/|#\d+|TODO|FIXME|HACK)'; then
+              continue
+            fi
+            violations="${violations}\n${file}:${lineno}: t.Skip() without tracking issue"
+          done < <(grep -rn 't\.Skip(' --include='*_test.go' . 2>/dev/null | grep -v '// nolint' || true)
+          if [ -n "$violations" ]; then
+            echo "::error::Found t.Skip() without tracking issue:${violations}"
+            echo ""
+            echo "Policy: Every t.Skip() must have a comment linking to a GitHub issue."
+            echo "Example:"
+            echo "  // TODO: https://github.com/GrayCodeAI/hawk/issues/123"
+            echo "  t.Skip(\"not yet implemented\")"
+            exit 1
+          fi
 
   # -------------------------------------------------------------------------
   # 6. Security — vulnerability scan + secret detection.
@@ -184,11 +216,11 @@ jobs:
           cache: true
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
           govulncheck ./...
       - name: gosec (report only)
         run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4
           gosec -exclude=G104,G703,G704,G101,G107,G112,G114,G115,G201,G202,G203,G204,G301,G302,G304,G305,G306,G307,G401,G402,G403,G404,G501,G502,G503,G504,G505,G601,G602 -confidence=medium -severity=high ./... || true
 
   # -------------------------------------------------------------------------
