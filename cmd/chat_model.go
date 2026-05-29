@@ -87,6 +87,7 @@ type (
 	toolResultMsg    struct{ name, content string }
 	permissionAskMsg struct{ req engine.PermissionRequest }
 	thinkingMsg      string
+	blastRadiusMsg   struct{ message string }
 	askUserMsg       struct {
 		question string
 		response chan string
