@@ -142,6 +142,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 	}
 
+	// Agents accumulator: inject learnings from previous sessions
+	if s.AgentsAccum != nil {
+		if learnings := s.AgentsAccum.ForPrompt(5); learnings != "" {
+			s.AppendSystemContext(learnings)
+		}
+	}
+
 	recoveryCount := 0
 	turnCount := 0
 	toolTurns := 0 // turns that used tools (for skill distillation)
