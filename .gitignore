@@ -26,6 +26,8 @@ dist/
 .gocache/
 .gomodcache/
 go.work.sum.hawk/
+inspect-action
+*.test
 
 .hawk/snapshots
 engine/.hawk/
