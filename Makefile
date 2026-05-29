@@ -189,3 +189,7 @@ compat-test: ## Validate compatibility-matrix.json and report the 'next' matrix.
 
 compat-check: ## Strict validation — non-zero exit if any component lacks a version.
 	@go run ./cmd/compat-test -matrix=next -strict
+
+.PHONY: hooks
+hooks:
+	git config core.hooksPath .githooks
