@@ -13,7 +13,17 @@ import (
 
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
 func (s *Session) ShouldAutoCompact() bool {
-	return len(s.messages) >= maxContextMessages
+	// Check message count
+	if len(s.messages) >= maxContextMessages {
+		return true
+	}
+	// Check token count using tok estimation
+	totalTokens := 0
+	for _, msg := range s.messages {
+		totalTokens += tok.EstimateTokens(msg.Content)
+	}
+	// Compact if approaching 80% of typical context window (128K tokens)
+	return totalTokens > 100000
 }
 
 // AutoCompactIfNeeded runs compaction when the conversation exceeds the threshold.
@@ -148,6 +158,19 @@ func extractSummaryFromCompressed(compressed string) string {
 		return ""
 	}
 	return strings.Join(keyPoints, "\n")
+}
+
+// CompressMessageContent compresses a single message's content if it exceeds the limit.
+// Uses tok for fast, zero-cost compression. Returns the original if already short enough.
+func CompressMessageContent(content string, maxTokens int) string {
+	if tok.EstimateTokens(content) <= maxTokens {
+		return content
+	}
+	compressed, stats := tok.Compress(content, tok.WithBudget(maxTokens))
+	if stats.FinalTokens < stats.OriginalTokens {
+		return compressed
+	}
+	return content
 }
 
 // compactModel returns the cheapest available model for the current provider.
