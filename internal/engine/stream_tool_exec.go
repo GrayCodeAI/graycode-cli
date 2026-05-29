@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	hooks "github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
@@ -248,6 +250,18 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	if s.Beliefs != nil && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok {
 			s.Beliefs.Invalidate(p)
+		}
+	}
+
+	// Auto-accumulate learnings into .hawk/agents.md
+	if s.AgentsAccum != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
+			pattern := prompts.ExtractPattern(tc.Name, p, output)
+			s.AgentsAccum.Record(intentText, pattern, []string{p})
+			// Flush periodically (every 5 learnings)
+			if err := s.AgentsAccum.Flush(); err != nil {
+				slog.Warn("failed to flush agents accumulator", "error", err)
+			}
 		}
 	}
 
