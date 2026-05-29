@@ -35,7 +35,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
 .PHONY: all bench build ci clean cover fmt help install lint lint-fix \
-        release security smoke path test test-10x test-race tidy version vet
+        release security setup smoke path test test-10x test-race tidy version vet
 
 # ---------------------------------------------------------------------------
 # Default target.
@@ -127,6 +127,52 @@ version: ## Print the version that will be embedded.
 clean: ## Remove build artefacts.
 	rm -rf bin/ dist/ coverage.out coverage.html
 	go clean -testcache
+
+# ---------------------------------------------------------------------------
+# Setup — bootstrap local development environment.
+# ---------------------------------------------------------------------------
+ECO_REPOS := eyrie inspect sight tok trace yaad
+
+setup: ## Set up local development environment (go.work + external repos).
+	@echo "=== Setting up hawk development environment ==="
+	@mkdir -p external
+	@for repo in $(ECO_REPOS); do \
+		if [ ! -d "external/$$repo" ]; then \
+			echo "Cloning $$repo..."; \
+			git clone --depth=1 "https://github.com/GrayCodeAI/$$repo.git" "external/$$repo" 2>/dev/null || \
+			echo "  ⚠ Could not clone $$repo (may not exist yet or no access)"; \
+		else \
+			echo "✓ external/$$repo already exists"; \
+		fi; \
+	done
+	@echo "Generating go.work..."
+	@echo "module hawk-eco" > go.work
+	@echo "" >> go.work
+	@echo "use (" >> go.work
+	@echo "	." >> go.work
+	@for repo in $(ECO_REPOS); do \
+		if [ -d "external/$$repo" ]; then \
+			echo "	./external/$$repo" >> go.work; \
+		fi; \
+	done
+	@echo ")" >> go.work
+	@go work sync
+	@echo "✓ go.work generated and synced"
+	@echo ""
+	@echo "=== Environment check ==="
+	@echo "Go version: $$(go version)"
+	@echo "GOPATH:     $$(go env GOPATH)"
+	@echo "GOBIN:      $$(go env GOPATH)/bin"
+	@echo ""
+	@echo "=== Installing development tools ==="
+	@command -v $(GOFUMPT)   >/dev/null 2>&1 || go install mvdan.cc/gofumpt@latest
+	@command -v $(GOIMPORTS) >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
+	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest
+	@echo "✓ All tools installed"
+	@echo ""
+	@echo "=== Setup complete! ==="
+	@echo "Run 'make ci' to verify everything works."
 
 help: ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
