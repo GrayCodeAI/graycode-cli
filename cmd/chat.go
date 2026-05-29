@@ -589,6 +589,18 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateViewportContent()
 				return m, nil
 			}
+			// Queue message on Enter while agent is working
+			if msg.Type == tea.KeyEnter {
+				text := strings.TrimSpace(m.input.Value())
+				if text != "" {
+					m.messageQueue = append(m.messageQueue, text)
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📩 Queued: %s", text)})
+					m.input.Reset()
+					m.viewDirty = true
+					m.updateViewportContent()
+				}
+				return m, nil
+			}
 			// Allow typing in input while streaming
 			var cmd tea.Cmd
 			m.input, cmd = m.input.Update(msg)
@@ -975,6 +987,22 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		m.input.Focus()
 		m.saveSession()
+
+		// Process queued messages
+		if len(m.messageQueue) > 0 {
+			nextMsg := m.messageQueue[0]
+			m.messageQueue = m.messageQueue[1:]
+			m.messages = append(m.messages, displayMsg{role: "user", content: nextMsg})
+			m.session.AddUser(nextMsg)
+			m.waiting = true
+			m.autoScroll = true
+			m.viewDirty = true
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
+			m.partial.Reset()
+			m.startStream()
+		}
+
 		return m, nil
 
 	case streamErrMsg:
