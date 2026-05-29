@@ -36,8 +36,40 @@ func classifyToolCalls(calls []types.ToolCall) (concurrent, sequential []types.T
 	return
 }
 
+// extractTargets extracts file paths from a tool call's arguments.
+func extractTargets(tc types.ToolCall) []string {
+	var targets []string
+	// Common argument names for file paths
+	for _, key := range []string{"file_path", "path", "file", "destination"} {
+		if v, ok := tc.Arguments[key]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				targets = append(targets, s)
+			}
+		}
+	}
+	return targets
+}
+
 // executeToolCalls runs all tool calls and returns results.
 func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) []toolExecResult {
+	// Estimate blast radius before execution
+	plannedCalls := make([]PlannedCall, len(toolCalls))
+	for i, tc := range toolCalls {
+		plannedCalls[i] = PlannedCall{
+			ToolName: tc.Name,
+			Args:     tc.Arguments,
+			Targets:  extractTargets(tc),
+		}
+	}
+	blastReport := EstimateBlastRadius(plannedCalls)
+	if blastReport.Radius.NeedsConfirmation() {
+		// Emit blast radius event for TUI display
+		ch <- StreamEvent{
+			Type:    "blast_radius",
+			Content: blastReport.Message,
+		}
+	}
+
 	concurrentCalls, sequentialCalls := classifyToolCalls(toolCalls)
 
 	var results []toolExecResult
