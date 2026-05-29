@@ -18,6 +18,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
@@ -139,6 +140,7 @@ var slashDescriptions = map[string]string{
 	"/permissions":     "Manage permission rules",
 	"/pin":             "Pin last N messages to protect from compaction",
 	"/plan":            "Enter plan mode (read-only)",
+	"/parallel":        "Run N agents in parallel on independent tasks",
 	"/plugins":         "List installed plugins",
 	"/power":           "Set power level (1-10)",
 	"/quit":            "Save and exit",
@@ -986,6 +988,8 @@ Generate the recap:`, summary.String())
 		m.partial.Reset()
 		m.startStream()
 		return m, nil
+	case "/parallel":
+		return m.handleParallelCommand(parts, text)
 	case "/usage":
 		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
 		return m, nil
@@ -1569,4 +1573,82 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
 		return m, nil
 	}
+}
+
+// handleParallelCommand spawns multiple agents in parallel on independent tasks.
+// Usage: /parallel <N> <task1> | <task2> | ...
+func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Model, tea.Cmd) {
+	if len(parts) < 3 {
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /parallel <N> <task1> | <task2> | ...\nExample: /parallel 3 Fix auth bug | Add logging | Update tests"})
+		return m, nil
+	}
+
+	// Parse worker count
+	var workers int
+	if _, err := fmt.Sscanf(parts[1], "%d", &workers); err != nil || workers < 1 || workers > 8 {
+		m.messages = append(m.messages, displayMsg{role: "error", content: "Worker count must be 1-8"})
+		return m, nil
+	}
+
+	// Parse tasks (separated by |)
+	taskStr := strings.Join(parts[2:], " ")
+	taskDescs := strings.Split(taskStr, "|")
+	for i := range taskDescs {
+		taskDescs[i] = strings.TrimSpace(taskDescs[i])
+	}
+	if len(taskDescs) < 2 {
+		m.messages = append(m.messages, displayMsg{role: "error", content: "Need at least 2 tasks separated by |"})
+		return m, nil
+	}
+
+	// Get repo root for worktree pool
+	cwd, _ := os.Getwd()
+
+	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("🚀 Spawning %d parallel agents for %d tasks...", workers, len(taskDescs))})
+
+	// Run parallel agents in background
+	go func() {
+		pool := parallel.NewPool(cwd, "main", workers)
+		for _, desc := range taskDescs {
+			pool.AddTask(desc)
+		}
+
+		err := pool.Run(context.Background(), func(ctx context.Context, worktreePath string, task *parallel.Task) (string, error) {
+			// Create a new session for this agent with same provider/model
+			agentSession := engine.NewSession(
+				m.session.Provider(),
+				m.session.Model(),
+				"You are a coding agent working in an isolated git worktree. Complete the assigned task.",
+				m.registry,
+			)
+			agentSession.AddUser(fmt.Sprintf("Working in isolated worktree: %s\nTask: %s", worktreePath, task.Description))
+
+			// Stream the agent's work
+			ch, err := agentSession.Stream(ctx)
+			if err != nil {
+				return "", err
+			}
+
+			var result strings.Builder
+			for ev := range ch {
+				switch ev.Type {
+				case "content":
+					result.WriteString(ev.Content)
+				case "done":
+					return result.String(), nil
+				case "error":
+					return result.String(), fmt.Errorf("%s", ev.Content)
+				}
+			}
+			return result.String(), nil
+		})
+
+		if err != nil {
+			m.ref.Send(streamErrMsg{err: err})
+		} else {
+			m.ref.Send(streamDoneMsg{})
+		}
+	}()
+
+	return m, nil
 }
