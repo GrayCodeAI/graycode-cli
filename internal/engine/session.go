@@ -259,6 +259,26 @@ func (s *Session) AddUser(content string) {
 	}
 }
 
+// AddUserWithImage adds a user message with an attached image (base64-encoded).
+// The imageType should be "image/png", "image/jpeg", etc.
+func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType string) {
+	s.mu.Lock()
+	msg := types.EyrieMessage{
+		Role:    "user",
+		Content: content,
+		Images:  []string{"data:" + imageType + ";base64," + imageBase64},
+	}
+	s.messages = append(s.messages, msg)
+	s.mu.Unlock()
+	if s.ConvoDAG != nil {
+		parentID := ""
+		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+			parentID = head.ID
+		}
+		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content+" [image attached]")
+	}
+}
+
 func (s *Session) AddAssistant(content string) {
 	s.mu.Lock()
 	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
