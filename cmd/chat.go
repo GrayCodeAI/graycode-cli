@@ -811,7 +811,18 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.session.AppendSystemContext(hints)
 			}
 			m.messages = append(m.messages, displayMsg{role: "user", content: userDisplay})
-			m.session.AddUser(text)
+
+			// Detect image attachments in user input
+			if imgPath := extractImagePath(text); imgPath != "" {
+				if att, err := ReadImageFile(imgPath); err == nil {
+					m.session.AddUserWithImage(text, att.Base64, att.MIMEType)
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📷 Attached image: %s", filepath.Base(imgPath))})
+				} else {
+					m.session.AddUser(text)
+				}
+			} else {
+				m.session.AddUser(text)
+			}
 			if m.wal != nil {
 				_ = m.wal.Append(session.Message{Role: "user", Content: text})
 			}
