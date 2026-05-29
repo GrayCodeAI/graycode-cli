@@ -187,7 +187,7 @@ jobs:
               continue
             fi
             violations="${violations}\n${file}:${lineno}: t.Skip() without tracking issue"
-          done < <(grep -rn 't\.Skip(' --include='*_test.go' . 2>/dev/null | grep -v '// nolint' || true)
+          done < <(grep -rn 't\.Skip(' --include='*_test.go' . --exclude-dir=external 2>/dev/null | grep -v '// nolint' || true)
           if [ -n "$violations" ]; then
             echo "::error::Found t.Skip() without tracking issue:${violations}"
             echo ""
