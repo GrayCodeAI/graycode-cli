@@ -95,6 +95,7 @@ func FormatImageMessage(content string, imgPath string) string {
 //   - Direct file paths ending in image extensions
 //   - @path/to/image.png syntax
 //   - Drag-and-drop paths (quoted or unquoted)
+//   - Paths with spaces (common in drag-and-drop)
 //
 // Returns empty string if no image is found.
 func extractImagePath(text string) string {
@@ -125,5 +126,53 @@ func extractImagePath(text string) string {
 		}
 	}
 
+	// Check for drag-and-drop paths (often quoted with spaces)
+	// Pattern: "path/to my image.png" or '/path/to my image.png'
+	if strings.Contains(text, "\"") || strings.Contains(text, "'") {
+		// Extract quoted strings
+		quoted := extractQuotedPaths(text)
+		for _, path := range quoted {
+			if IsImageFile(path) {
+				if _, err := os.Stat(path); err == nil {
+					return path
+				}
+			}
+		}
+	}
+
+	// Check if the entire text (trimmed) is an image path
+	// This handles drag-and-drop where terminal pastes just the path
+	trimmed := strings.TrimSpace(text)
+	if IsImageFile(trimmed) {
+		if _, err := os.Stat(trimmed); err == nil {
+			return trimmed
+		}
+	}
+
 	return ""
+}
+
+// extractQuotedPaths extracts file paths from quoted strings in text.
+func extractQuotedPaths(text string) []string {
+	var paths []string
+	inQuote := false
+	quoteChar := byte(0)
+	start := 0
+
+	for i := 0; i < len(text); i++ {
+		if !inQuote {
+			if text[i] == '"' || text[i] == '\'' {
+				inQuote = true
+				quoteChar = text[i]
+				start = i + 1
+			}
+		} else {
+			if text[i] == quoteChar {
+				paths = append(paths, text[start:i])
+				inQuote = false
+			}
+		}
+	}
+
+	return paths
 }
