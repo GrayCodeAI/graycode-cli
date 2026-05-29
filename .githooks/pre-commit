@@ -1,0 +1,8 @@
+#!/bin/sh
+# Run ast-grep on staged Go files
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$' || true)
+if [ -n "$STAGED" ]; then
+  if command -v sg >/dev/null 2>&1; then
+    echo "$STAGED" | xargs sg scan 2>&1 | head -20
+  fi
+fi

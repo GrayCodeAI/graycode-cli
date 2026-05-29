@@ -268,6 +268,21 @@ jobs:
           deadcode ./... 2>&1 | head -50
 
   # -------------------------------------------------------------------------
+  # Duplication detection — jscpd.
+  # -------------------------------------------------------------------------
+  jscpd:
+    name: duplication
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: jscpd
+        run: |
+          npx jscpd --min-lines 5 --min-tokens 50 --reporters console --blame --exit-code . 2>&1 | head -50
+
+  # -------------------------------------------------------------------------
   # 9. Cross-platform build matrix — zero CGO, all targets.
   # -------------------------------------------------------------------------
   build:
