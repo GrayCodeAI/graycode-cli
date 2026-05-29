@@ -15,6 +15,7 @@ type ExecutionPlan struct {
 	TotalEstimatedTime time.Duration
 	Parallelizable     bool
 	Dependencies       map[string][]string // step ID -> list of step IDs it depends on
+	BlastRadius        *BlastRadiusReport  // scope analysis of the change
 }
 
 // ExecutionStep represents a single tool invocation within an execution plan.
@@ -99,6 +100,7 @@ func (ep *ExecutionPlanner) Plan(toolCalls []PlannedCall) *ExecutionPlan {
 	plan := &ExecutionPlan{
 		Steps:        steps,
 		Dependencies: deps,
+		BlastRadius:  EstimateBlastRadius(toolCalls),
 	}
 
 	// Group into parallel batches
