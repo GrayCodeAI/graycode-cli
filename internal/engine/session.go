@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -108,6 +110,7 @@ type Session struct {
 	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
 	Steering       *SteeringQueue             // steering.go — user guidance injection between tool batches
 	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
+	AgentsAccum    *prompts.AgentsAccumulator // agents_accumulator.go — auto-capture learnings
 
 	// Few-shot learning and prompt optimization
 	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
@@ -150,6 +153,11 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
+
+	// Initialize agents accumulator for .hawk/agents.md
+	cwd, _ := os.Getwd()
+	s.AgentsAccum = prompts.NewAgentsAccumulator(cwd)
+
 	return s
 }
 
