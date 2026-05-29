@@ -1,0 +1,9 @@
+id: no-fmt-println
+message: Use log.Printf or log.Println instead of fmt.Println in production code
+severity: warning
+language: Go
+rule:
+  pattern: fmt.Println($$$)
+  not:
+    inside:
+      pattern: func Test$$$($$$) { $$$ }
