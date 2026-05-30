@@ -34,14 +34,31 @@ type Registry struct {
 	mu      sync.RWMutex
 	checks  map[string]Checker
 	results map[string]Check
+	timeout time.Duration // per-check timeout; default 5s
 }
 
-// NewRegistry creates a new health check registry.
-func NewRegistry() *Registry {
+// RegistryDeps holds configurable dependencies for Registry.
+// Zero values are filled with production defaults by NewRegistryWithDeps.
+type RegistryDeps struct {
+	Timeout time.Duration // default: 5 * time.Second
+}
+
+// NewRegistryWithDeps creates a new registry from a deps struct.
+// Zero-value fields are replaced with production defaults.
+func NewRegistryWithDeps(deps RegistryDeps) *Registry {
+	if deps.Timeout == 0 {
+		deps.Timeout = 5 * time.Second
+	}
 	return &Registry{
 		checks:  make(map[string]Checker),
 		results: make(map[string]Check),
+		timeout: deps.Timeout,
 	}
+}
+
+// NewRegistry creates a new health check registry with default settings.
+func NewRegistry() *Registry {
+	return NewRegistryWithDeps(RegistryDeps{})
 }
 
 // Register registers a health check.
@@ -62,7 +79,7 @@ func (r *Registry) Run(ctx context.Context) map[string]Check {
 
 	results := make(map[string]Check, len(checks))
 	for name, checker := range checks {
-		checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		checkCtx, cancel := context.WithTimeout(ctx, r.timeout)
 		results[name] = checker(checkCtx)
 		cancel()
 	}
