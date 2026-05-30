@@ -46,9 +46,9 @@ type EnvelopeFn func(ctx context.Context, envelope EventEnvelope) error
 type Hook struct {
 	Name     string
 	Event    EventType
-	Priority int // lower = earlier
+	Priority int                                                          // lower = earlier
 	Fn       func(ctx context.Context, data map[string]interface{}) error // legacy
-	FnV2     EnvelopeFn                                                    // typed envelope (preferred)
+	FnV2     EnvelopeFn                                                   // typed envelope (preferred)
 }
 
 // Registry stores and executes hooks.

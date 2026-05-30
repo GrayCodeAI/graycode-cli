@@ -125,7 +125,8 @@ func TestRunStaged_FullPipeline(t *testing.T) {
 		return &Handoff{Summary: "done " + f.ID, TestsPassed: true}, nil
 	}
 
-	err := m.RunStaged(context.Background(), worker,
+	err := m.RunStaged(
+		context.Background(), worker,
 		WithPRD(func(ctx context.Context, f *Feature) (string, error) {
 			prdCalls++
 			return "prd", nil
