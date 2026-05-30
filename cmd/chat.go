@@ -630,6 +630,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		switch msg.Type {
+		case tea.KeyCtrlA:
+			// Toggle the Agent Status HUD overlay.
+			m.hudOpen = !m.hudOpen
+			if m.hudOpen {
+				m.hudData = m.collectHUDData()
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
 		case tea.KeyCtrlK:
 			// Open command palette
 			if m.commandPalette == nil {

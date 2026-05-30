@@ -52,6 +52,40 @@ type Settings struct {
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`
 	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"` // use catalog deployment router when true / unset + provider.json qualifies
+	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`       // restrict to core tools only for a focused experience
+}
+
+// ToolPreset maps a named preset to a list of allowed tools.
+type ToolPreset struct {
+	Name  string   `json:"name"`
+	Tools []string `json:"tools"` // nil means all tools allowed
+}
+
+// builtinToolPresets defines the built-in tool presets.
+var builtinToolPresets = map[string]ToolPreset{
+	"minimal": {
+		Name:  "minimal",
+		Tools: []string{"Read", "Write", "Edit", "Grep", "Glob", "Bash"},
+	},
+	"readonly": {
+		Name:  "readonly",
+		Tools: []string{"Read", "Grep", "Glob"},
+	},
+	"full": {
+		Name:  "full",
+		Tools: nil, // nil means all tools allowed
+	},
+}
+
+// IsMinimalMode reports whether minimal mode is enabled in the settings.
+func IsMinimalMode(s Settings) bool {
+	return s.MinimalMode != nil && *s.MinimalMode
+}
+
+// ToolPresetByName returns a built-in tool preset by name.
+func ToolPresetByName(name string) (ToolPreset, bool) {
+	p, ok := builtinToolPresets[name]
+	return p, ok
 }
 
 // Attribution controls how hawk identifies itself in git commits.
@@ -246,6 +280,9 @@ func MergeSettings(base, override Settings) Settings {
 	if override.DeploymentRouting != nil {
 		base.DeploymentRouting = override.DeploymentRouting
 	}
+	if override.MinimalMode != nil {
+		base.MinimalMode = override.MinimalMode
+	}
 	if override.ModelRoles != nil {
 		if base.ModelRoles == nil {
 			base.ModelRoles = override.ModelRoles
@@ -335,6 +372,11 @@ func SettingValue(s Settings, key string) (string, bool) {
 		return string(data), true
 	case "deploymentrouting":
 		return DeploymentRoutingLabel(s), true
+	case "minimalmode":
+		if IsMinimalMode(s) {
+			return "true", true
+		}
+		return "false", true
 	default:
 		return "", false
 	}
@@ -381,6 +423,17 @@ func SetGlobalSetting(key, value string) error {
 			s.DeploymentRouting = &enabled
 		default:
 			return fmt.Errorf("deployment_routing must be true or false")
+		}
+	case "minimalmode":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			enabled := true
+			s.MinimalMode = &enabled
+		case "0", "false", "no", "off":
+			enabled := false
+			s.MinimalMode = &enabled
+		default:
+			return fmt.Errorf("minimal_mode must be true or false")
 		}
 	default:
 		return fmt.Errorf("unsupported setting key %q", key)
