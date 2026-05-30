@@ -59,7 +59,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	}
 	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), provider, modelName) + "\n")
 	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
-	b.WriteString("\n" + runtime.FormatPreflightReport(runtime.Preflight(context.Background())) + "\n")
+	b.WriteString("\n" + eyrieruntime.FormatPreflightReport(eyrieruntime.Preflight(context.Background())) + "\n")
 	b.WriteString("\n" + credentials.FormatStorageReport(credentials.StorageReportFor(context.Background())) + "\n")
 	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")

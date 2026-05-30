@@ -40,20 +40,20 @@ var fmtPrintExemptions = map[string]bool{
 // standard telemetry, or use standard env vars (HOME, SHELL, GOPATH, etc.)
 // that don't benefit from EnvManager indirection.
 var getEnvExemptions = map[string]bool{
-	"envmanager.go":           true, // the abstraction layer itself
-	"oteltrace":               true, // OTEL standard env vars
-	"langfuse":                true, // Langfuse standard env vars
-	"config/catalog_":         true, // config package is the abstraction layer
-	"config/deployment":       true, // config package
-	"config/deployments_ui":   true, // config package
-	"auth/auth.go":            true, // HOME for token file path
-	"terminal_context.go":     true, // TMUX, STY, TERM_PROGRAM for terminal detection
-	"sandbox/seatbelt.go":     true, // HOME, GOPATH for sandbox policy
-	"prompts/loader.go":       true, // SHELL for prompt context
-	"health/diagnostics.go":    true, // SHELL, HAWK_MODEL for health checks
-	"tool/safety.go":           true, // HAWK_CONFIG_DIR for security checks
-	"tool/treesitter.go":       true, // HOME for grammar dir (uses os.UserHomeDir)
-	"tool/web_search_brave.go":  true, // BRAVE_SEARCH_API_KEY
+	"envmanager.go":              true, // the abstraction layer itself
+	"oteltrace":                  true, // OTEL standard env vars
+	"langfuse":                   true, // Langfuse standard env vars
+	"config/catalog_":            true, // config package is the abstraction layer
+	"config/deployment":          true, // config package
+	"config/deployments_ui":      true, // config package
+	"auth/auth.go":               true, // HOME for token file path
+	"terminal_context.go":        true, // TMUX, STY, TERM_PROGRAM for terminal detection
+	"sandbox/seatbelt.go":        true, // HOME, GOPATH for sandbox policy
+	"prompts/loader.go":          true, // SHELL for prompt context
+	"health/diagnostics.go":      true, // SHELL, HAWK_MODEL for health checks
+	"tool/safety.go":             true, // HAWK_CONFIG_DIR for security checks
+	"tool/treesitter.go":         true, // HOME for grammar dir (uses os.UserHomeDir)
+	"tool/web_search_brave.go":   true, // BRAVE_SEARCH_API_KEY
 	"tool/web_search_searxng.go": true, // SEARXNG_URL
 }
 
