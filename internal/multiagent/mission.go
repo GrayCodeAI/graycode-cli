@@ -73,7 +73,7 @@ type Feature struct {
 	StartedAt          time.Time     `json:"started_at,omitempty"`
 	CompletedAt        time.Time     `json:"completed_at,omitempty"`
 	PRD                string        `json:"prd,omitempty"`                 // generated product requirements
-	VerificationResult string       `json:"verification_result,omitempty"` // verify-phase outcome
+	VerificationResult string        `json:"verification_result,omitempty"` // verify-phase outcome
 	FixAttempts        int           `json:"fix_attempts,omitempty"`        // number of fix passes applied
 }
 
