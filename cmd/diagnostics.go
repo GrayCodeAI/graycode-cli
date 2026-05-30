@@ -2,13 +2,18 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/runtime"
+	eyrieruntime "github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -30,9 +35,28 @@ func doctorReport(settings hawkconfig.Settings) string {
 	var b strings.Builder
 	b.WriteString("Hawk doctor\n")
 	b.WriteString(fmt.Sprintf("Version: %s\n", version))
+	b.WriteString(fmt.Sprintf("Go version: %s\n", runtime.Version()))
 	b.WriteString(fmt.Sprintf("Directory: %s\n", cwd))
 	b.WriteString(fmt.Sprintf("Provider: %s\n", provider))
 	b.WriteString(fmt.Sprintf("Model: %s\n", modelName))
+
+	// Binary size
+	if exe, err := os.Executable(); err == nil {
+		if info, err := os.Stat(exe); err == nil {
+			b.WriteString(fmt.Sprintf("Binary size: %.1f MB\n", float64(info.Size())/(1024*1024)))
+		}
+	}
+
+	// Ecosystem versions
+	b.WriteString("\nEcosystem versions:\n")
+	for _, repo := range []string{"eyrie", "yaad", "tok", "sight", "inspect", "trace"} {
+		versionFile := filepath.Join("external", repo, "VERSION")
+		if data, err := os.ReadFile(versionFile); err == nil {
+			b.WriteString(fmt.Sprintf("  %s: %s\n", repo, strings.TrimSpace(string(data))))
+		} else {
+			b.WriteString(fmt.Sprintf("  %s: not checked out\n", repo))
+		}
+	}
 	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), provider, modelName) + "\n")
 	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
 	b.WriteString("\n" + runtime.FormatPreflightReport(runtime.Preflight(context.Background())) + "\n")
@@ -112,6 +136,36 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 			return health.Check{Name: "yaad", Status: health.Degraded, Message: "Yaad not initialized (~/.yaad/data/ not writable)"}
 		})
 	}
+
+	// Lefthook installation check
+	registry.Register("lefthook", func(ctx context.Context) health.Check {
+		start := time.Now()
+		_, err := exec.LookPath("lefthook")
+		if err != nil {
+			return health.Check{Name: "lefthook", Status: health.Degraded, Message: "lefthook not installed (git hooks not active)", Duration: time.Since(start)}
+		}
+		return health.Check{Name: "lefthook", Status: health.Healthy, Message: "lefthook installed", Duration: time.Since(start)}
+	})
+
+	// Config syntax check
+	registry.Register("config_syntax", func(ctx context.Context) health.Check {
+		start := time.Now()
+		home, _ := os.UserHomeDir()
+		globalPath := filepath.Join(home, ".hawk", "settings.json")
+		if data, err := os.ReadFile(globalPath); err == nil {
+			var raw json.RawMessage
+			if err := json.Unmarshal(data, &raw); err != nil {
+				return health.Check{Name: "config_syntax", Status: health.Unhealthy, Message: fmt.Sprintf("global settings.json parse error: %v", err), Duration: time.Since(start)}
+			}
+		}
+		if data, err := os.ReadFile(".hawk/settings.json"); err == nil {
+			var raw json.RawMessage
+			if err := json.Unmarshal(data, &raw); err != nil {
+				return health.Check{Name: "config_syntax", Status: health.Unhealthy, Message: fmt.Sprintf("project settings.json parse error: %v", err), Duration: time.Since(start)}
+			}
+		}
+		return health.Check{Name: "config_syntax", Status: health.Healthy, Message: "config files parse OK", Duration: time.Since(start)}
+	})
 
 	results := registry.Run(context.Background())
 	var b strings.Builder

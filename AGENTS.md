@@ -153,3 +153,92 @@ test: add coverage for guardian
 - Do not put API keys in `.env` or shell env for hawk — use `/config` (OS keychain)
 - The `external/` directory is for local dev only; CI clones repos separately
 - `go.work` is for local multi-repo development; it is not committed
+
+## Naming Conventions
+
+- **Tool types**: `FooTool` struct implementing the `Tool` interface (`Name()`, `Description()`, `Parameters()`, `Execute()`)
+- **Config types**: `Settings`, `MCPServerConfig`, `CustomProviderConfig` — no prefix, in `config` package
+- **Engine types**: `Session`, `CoreLoop`, `SafetyLayer`, `Intelligence`, `Optimizer` — in `engine` package
+- **Health checks**: `Checker` func type, `Check` struct with `Name`, `Status`, `Message`
+- **Resilience**: `Breaker` (circuit breaker), `Config` + `Do` (retry), `Limiter` (rate limit)
+- **Error types**: `ValidationError` with `Field`, `Message`, `Value`; `ValidationResult` with `Errors`, `Valid`
+- **Bridges**: `Ready() bool` method, `NewBridge()` constructor, graceful degradation when unavailable
+
+## API Patterns
+
+- **Tool registration**: `tool.NewRegistry(tools...)` → `registry.Get("ToolName")` → `tool.Execute(ctx, input)`
+- **Settings loading**: `config.LoadSettings()` merges global + project; `config.LoadGlobalSettings()` for global-only
+- **Session construction**: `engine.NewSessionWithClient(client, provider, model, systemPrompt, registry, deploymentRouting)`
+- **Service composition**: `engine.NewSessionServices(opts...)` with `WithProvider()`, `WithTools()`, `WithMemory()`, etc.
+- **Health checks**: `health.NewRegistry()` → `registry.Register("name", checker)` → `registry.Run(ctx)` → `registry.Status()`
+- **Circuit breaker**: `circuit.New(cfg)` → `breaker.Call(fn)` or `breaker.Allow()` → `breaker.State()`
+- **Retry**: `retry.Do(ctx, cfg, fn)` with exponential backoff + jitter; `retry.DoWithResult[T]` for typed returns
+- **Config validation**: `config.ValidateSettings(s)` returns `ValidationResult{Errors, Valid}`
+- **Ecosystem panel**: `config.FormatEcosystemPanel(ctx, provider, model)` for diagnostics
+
+## Testing Patterns
+
+- **Table-driven tests** with `t.Run(name, func(t *testing.T){...})` for all multi-case tests
+- **`t.Parallel()`** on all tests that don't share mutable state
+- **`t.TempDir()`** for filesystem isolation (auto-cleanup)
+- **`credentials.MapStore{}`** for credential isolation in tests:
+  ```go
+  store := &credentials.MapStore{}
+  credentials.SetDefaultStore(store)
+  t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+  ```
+- **`bytes.Buffer`** as `io.Writer` for logger output capture
+- **Fuzz tests** for input parsing robustness: `func FuzzFoo(f *testing.F) { ... }`
+- **No mocks framework** — use concrete types and test doubles
+- **Meta-audit tests** in `internal/testaudit/` enforce architectural invariants via go/ast
+
+## Refactoring Guidelines
+
+- **Safe to refactor**: `internal/resilience/` (retry, circuit, ratelimit, health) — no public API
+- **Safe to refactor**: `internal/observability/logger/` — internal only, no external consumers
+- **Safe to refactor**: `internal/system/` (bus, shutdown, retention, cron, staleness)
+- **Caution**: `internal/engine/session.go` Session struct — widely referenced across 30+ sub-packages
+- **Caution**: `internal/config/settings.go` Settings struct — serialized to JSON, dual-format (snake_case + camelCase)
+- **Caution**: `internal/tool/` Tool interface — implemented by 40+ tools
+- **Blocked**: `shared/types/` — exported to eyrie, sight, inspect, tok; changes break ecosystem
+
+## Key File Locations
+
+| What | Where |
+|---|---|
+| CLI entry point | `cmd/root.go` |
+| Agent loop | `internal/engine/session.go` (`Stream()`, `agentLoop()`) |
+| Session services | `internal/engine/session_services.go` |
+| Tool interface | `internal/tool/tool.go` (`Tool`, `Registry`) |
+| Tool context | `internal/tool/tool.go` (`ToolContext`, `WithToolContext`) |
+| Settings | `internal/config/settings.go` (`Settings`, `LoadSettings()`) |
+| Config validation | `internal/config/validator.go` (`ValidateSettings()`) |
+| Config migration | `internal/config/migrate.go` (`MigrationRegistry`) |
+| Env manager | `internal/config/envmanager.go` (`EnvManager`) |
+| Health checks | `internal/resilience/health/health.go` (`Registry`, `Checker`) |
+| Circuit breaker | `internal/resilience/circuit.go` (`Breaker`, `Manager`) |
+| Retry | `internal/resilience/retry/retry.go` (`Do()`, `DoWithResult()`) |
+| Rate limiter | `internal/resilience/ratelimit/ratelimit.go` (`Limiter`) |
+| Logger | `internal/observability/logger/logger.go` (`Logger`) |
+| Metrics | `internal/observability/metrics/metrics.go` (`Counter`, `Gauge`, `Timer`) |
+| OTEL tracing | `internal/observability/oteltrace/trace.go` |
+| Multi-agent missions | `internal/multiagent/mission.go` (`Mission`) |
+| Message bus | `internal/multiagent/messaging.go` (`MessageBus`) |
+| Shared memory | `internal/multiagent/shared_memory.go` (`SharedMemory`) |
+| Session persistence | `internal/session/persist.go` |
+| MCP client | `internal/mcp/mcp.go` |
+| MCP server | `internal/mcp/server.go` |
+| Provider routing | `internal/provider/routing/router.go` |
+| Bridges | `internal/bridge/{inspect,sight,sessioncapture}/bridge.go` |
+| Doctor diagnostics | `cmd/diagnostics.go` |
+| Meta-audit tests | `internal/testaudit/audit_test.go` |
+
+## Anti-Patterns
+
+- **No `os.Getenv` in `internal/`** — use `config.EnvManager` to centralize env access. Exception: `internal/observability/oteltrace/` for telemetry env vars.
+- **No `panic()` for error handling** — return `error` values. Exception: `init()` functions for package-level assertions.
+- **No `fmt.Print` for logging** — use `logger.Logger` with structured fields. Exception: `internal/onboarding/` and `internal/engine/scaffold/` for user-facing CLI output.
+- **No API keys in settings.json** — use OS secret store via `credentials` package and `/config` command.
+- **No importing `internal/` from other ecosystem repos** — use `shared/types/` for cross-repo types.
+- **No global mutable state** — prefer dependency injection via `deps` structs or `context.WithValue`.
+- **No `t.Skip()` without a tracking issue** — every skipped test needs a GitHub issue number.
