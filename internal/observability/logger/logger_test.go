@@ -98,3 +98,26 @@ func TestSetLevel(t *testing.T) {
 		t.Fatal("expected no output after level change")
 	}
 }
+
+func TestNewWithDeps_Defaults(t *testing.T) {
+	l := NewWithDeps(LoggerDeps{})
+	// Level zero-value is Debug (iota=0)
+	if l.level != Debug {
+		t.Fatalf("expected default level Debug (zero-value), got %v", l.level)
+	}
+	if l.output == nil {
+		t.Fatal("expected non-nil default output")
+	}
+}
+
+func TestNewWithDeps_Overrides(t *testing.T) {
+	var buf bytes.Buffer
+	l := NewWithDeps(LoggerDeps{Output: &buf, Level: Warn})
+	if l.level != Warn {
+		t.Fatalf("expected level Warn, got %v", l.level)
+	}
+	l.Warn("test")
+	if !strings.Contains(buf.String(), "test") {
+		t.Fatal("expected output to configured writer")
+	}
+}

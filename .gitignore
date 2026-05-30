@@ -28,6 +28,7 @@ dist/
 go.work.sum.hawk/
 inspect-action
 *.test
+tool.test
 
 .hawk/snapshots
 engine/.hawk/
@@ -40,3 +41,10 @@ cmd/.hawk/
 # CodeGraph local index
 .codegraph/
 # CodeGraph integrated
+
+# AI/IDE tool configs
+.cursor/
+.openclaude/
+.commandcode/
+.antigravitycli/
+.pi/

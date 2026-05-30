@@ -116,3 +116,17 @@ func TestCheckTimestamp(t *testing.T) {
 		t.Fatal("last_checked should not be zero")
 	}
 }
+
+func TestNewRegistryWithDeps_Defaults(t *testing.T) {
+	r := NewRegistryWithDeps(RegistryDeps{})
+	if r.timeout != 5*time.Second {
+		t.Fatalf("expected default timeout 5s, got %v", r.timeout)
+	}
+}
+
+func TestNewRegistryWithDeps_CustomTimeout(t *testing.T) {
+	r := NewRegistryWithDeps(RegistryDeps{Timeout: 2 * time.Second})
+	if r.timeout != 2*time.Second {
+		t.Fatalf("expected timeout 2s, got %v", r.timeout)
+	}
+}

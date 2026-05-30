@@ -257,6 +257,65 @@ func (r *MigrationRegistry) Run(data map[string]interface{}) (map[string]interfa
 	return data, nil
 }
 
+// RunWithSidecar is like Run but tracks applied migrations in a sidecar file
+// adjacent to configPath. Already-applied migrations are skipped.
+func (r *MigrationRegistry) RunWithSidecar(data map[string]interface{}, configPath string) (map[string]interface{}, error) {
+	version := r.getVersion(data)
+	if version >= r.CurrentVersion {
+		return data, nil
+	}
+
+	sorted := make([]Migration, len(r.Migrations))
+	copy(sorted, r.Migrations)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].FromVersion < sorted[j].FromVersion
+	})
+
+	applied := AppliedMigrations(configPath)
+
+	for _, m := range sorted {
+		if m.FromVersion >= version && m.ToVersion <= r.CurrentVersion {
+			if m.FromVersion != version {
+				continue
+			}
+
+			key := MigrationKey(m)
+			if applied[key] {
+				// Already applied — update version and skip
+				data["config_version"] = m.ToVersion
+				version = m.ToVersion
+				continue
+			}
+
+			backup := make(map[string]interface{}, len(data))
+			for k, v := range data {
+				backup[k] = v
+			}
+
+			result, err := m.Migrate(data)
+			if err != nil {
+				for k := range data {
+					delete(data, k)
+				}
+				for k, v := range backup {
+					data[k] = v
+				}
+				return data, fmt.Errorf("migration v%d→v%d failed: %w", m.FromVersion, m.ToVersion, err)
+			}
+			data = result
+			data["config_version"] = m.ToVersion
+			version = m.ToVersion
+
+			if recordErr := RecordAppliedMigration(configPath, key); recordErr != nil {
+				// Non-fatal: log but continue
+				fmt.Fprintf(os.Stderr, "warning: failed to record migration %s: %v\n", key, recordErr)
+			}
+		}
+	}
+
+	return data, nil
+}
+
 // Backup creates a timestamped backup of the config file before migration.
 // Returns the path to the backup file.
 func (r *MigrationRegistry) Backup(configPath string) (string, error) {
