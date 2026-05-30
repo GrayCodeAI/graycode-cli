@@ -69,3 +69,46 @@ published from it. It does not cover:
 
 For hawk-specific threat-model notes, see the README and any docs in
 this repo.
+
+## Config security model
+
+### Clone-and-load attack defense
+
+Project-level `.hawk/settings.json` can be committed to a git repository.
+An attacker who controls a repository could define MCP servers that execute
+arbitrary commands when a developer clones and runs hawk in that directory.
+
+**Mitigation:** Project-level MCP servers are blocked by default. They are
+only loaded when the user explicitly passes `--allow-project-mcp` on the
+command line. Global MCP servers (from `~/.hawk/settings.json`) are always
+loaded.
+
+### Security-sensitive fields
+
+The following settings **cannot** be overridden by project-level config:
+- MCP servers (blocked by default, require explicit `--allow-project-mcp` flag)
+- API keys (never stored in settings.json; use OS secret store via `/config`)
+
+The following settings **can** be overridden by project config:
+- `model`, `provider` (convenience, not a security risk)
+- `theme`, `auto_allow`, `allowed_tools`, `disallowed_tools`
+- `max_budget_usd`, `sandbox`, `autonomy`
+
+### Config merge precedence
+
+1. Global `~/.hawk/settings.json` (lowest priority)
+2. Project `.hawk/settings.json` (overrides global)
+3. CLI `--settings` flag (overrides both)
+4. Environment variables (highest priority for specific keys)
+
+Project-level config CANNOT escalate permissions beyond what global config
+allows. The `MergeSettings` function in `internal/config/settings.go`
+implements field-by-field merging with explicit precedence rules.
+
+### Credential storage
+
+API keys and secrets are stored in the OS secret store (macOS Keychain,
+Linux secret service, Windows Credential Manager) via the `eyrie/credentials`
+package. They are never written to `settings.json`, `.env`, or any file
+in the repository. The `/config` command manages credential storage
+interactively.
