@@ -175,9 +175,33 @@ func PowerPreset(level int) PowerConfig {
 	}
 }
 
+// MinimalPreset returns a PowerConfig for minimal mode: a focused experience
+// with only core tools, the cheapest model, and conservative limits.
+// Tool restriction itself is applied via the "minimal" ToolPreset at registry
+// build time; this preset configures the session's model and budget.
+func MinimalPreset() PowerConfig {
+	haiku, _, _ := routing.TierModels("anthropic")
+	return PowerConfig{
+		Level:           0, // 0 denotes minimal mode (distinct from 1-10)
+		Model:           haiku,
+		MaxTokens:       4096,
+		ContextWindow:   16384,
+		Temperature:     0.3,
+		MaxTurns:        20,
+		ToolParallelism: 1,
+		ReviewDepth:     "none",
+		AutoApply:       false,
+		BudgetUSD:       0.10,
+	}
+}
+
 // ApplyPowerLevel configures a session based on power level.
+// When level is 0, minimal mode is applied.
 func ApplyPowerLevel(sess *engine.Session, level int) {
 	config := PowerPreset(level)
+	if level == 0 {
+		config = MinimalPreset()
+	}
 
 	sess.SetModel(config.Model)
 	if err := sess.SetMaxTurns(config.MaxTurns); err == nil {

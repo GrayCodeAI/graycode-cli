@@ -18,6 +18,15 @@ type Manifest struct {
 	Commands    []CommandDef `json:"commands,omitempty"`
 	Skills      []string     `json:"skills,omitempty"`
 	Hooks       []HookDef    `json:"hooks,omitempty"`
+	Bridge      *BridgeDef   `json:"bridge,omitempty"`
+}
+
+// BridgeDef defines a shell-based bridge plugin that wraps an external CLI binary.
+// This lets community plugins integrate CLI tools without writing Go code.
+type BridgeDef struct {
+	Command string            `json:"command"`        // executable name or path
+	Args    []string          `json:"args,omitempty"` // default arguments prepended to each call
+	Env     map[string]string `json:"env,omitempty"`  // extra environment variables
 }
 
 // CommandDef defines a plugin-provided command.
@@ -45,6 +54,9 @@ func (m *Manifest) Validate() error {
 		if cmd.Name == "" {
 			return fmt.Errorf("command name is required")
 		}
+	}
+	if m.Bridge != nil && m.Bridge.Command == "" {
+		return fmt.Errorf("bridge command is required when bridge is set")
 	}
 	return nil
 }
