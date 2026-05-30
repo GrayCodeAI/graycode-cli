@@ -58,11 +58,6 @@ func parseInternalPackages(t *testing.T, root string) []parsedFile {
 	return files
 }
 
-// isTestFile reports whether the given filename is a test file.
-func isTestFile(filename string) bool {
-	return strings.HasSuffix(filename, "_test.go")
-}
-
 // isExemptPackage reports whether the file path belongs to an exempt package.
 func isExemptPackage(filePath string, exemptions map[string]bool) bool {
 	for exempt := range exemptions {
