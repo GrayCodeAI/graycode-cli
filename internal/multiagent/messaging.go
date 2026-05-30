@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+// ResourceLock represents an exclusive lock on a shared resource (e.g. a file).
+// Prevents conflicting operations when multiple agents work in parallel.
+type ResourceLock struct {
+	Resource   string    `json:"resource"`
+	Owner      string    `json:"owner"`
+	AcquiredAt time.Time `json:"acquired_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+	Priority   int       `json:"priority"`
+}
+
 // AgentMessage represents a message exchanged between agents during a mission.
 type AgentMessage struct {
 	ID               string    `json:"id"`
@@ -28,6 +38,9 @@ type MessageBus struct {
 	subscribers map[string][]string // topic -> agent IDs
 	history     []AgentMessage
 	mu          sync.RWMutex
+
+	locks  map[string]*ResourceLock // resource -> current lock
+	lockMu sync.Mutex               // separate mutex for lock operations
 }
 
 // NewMessageBus creates and returns an initialized MessageBus.
@@ -36,6 +49,7 @@ func NewMessageBus() *MessageBus {
 		channels:    make(map[string]chan AgentMessage),
 		subscribers: make(map[string][]string),
 		history:     make([]AgentMessage, 0),
+		locks:       make(map[string]*ResourceLock),
 	}
 }
 
@@ -310,6 +324,110 @@ func (mb *MessageBus) BuildContextFromMessages(agentID string, maxTokens int) st
 		}
 	}
 	return result
+}
+
+// AcquireLock attempts to acquire an exclusive lock on a resource.
+// Returns nil on success, or an error if the resource is held by another agent.
+// A lock held by the same owner is refreshed (re-entrant). Expired locks are reclaimed.
+func (mb *MessageBus) AcquireLock(resource, owner string, ttl time.Duration) error {
+	mb.lockMu.Lock()
+	defer mb.lockMu.Unlock()
+
+	if existing, ok := mb.locks[resource]; ok {
+		if time.Now().Before(existing.ExpiresAt) && existing.Owner != owner {
+			return fmt.Errorf("resource %q locked by %q until %s", resource, existing.Owner, existing.ExpiresAt.Format(time.RFC3339))
+		}
+	}
+
+	mb.locks[resource] = &ResourceLock{
+		Resource:   resource,
+		Owner:      owner,
+		AcquiredAt: time.Now(),
+		ExpiresAt:  time.Now().Add(ttl),
+		Priority:   3,
+	}
+	return nil
+}
+
+// ReleaseLock releases a lock on a resource, verifying ownership.
+func (mb *MessageBus) ReleaseLock(resource, owner string) error {
+	mb.lockMu.Lock()
+	defer mb.lockMu.Unlock()
+
+	existing, ok := mb.locks[resource]
+	if !ok {
+		return nil // already released; idempotent
+	}
+	if existing.Owner != owner {
+		return fmt.Errorf("resource %q is owned by %q, not %q", resource, existing.Owner, owner)
+	}
+	delete(mb.locks, resource)
+	return nil
+}
+
+// IsLocked reports whether a resource is currently locked by any agent.
+// Expired locks are treated as unlocked.
+func (mb *MessageBus) IsLocked(resource string) bool {
+	mb.lockMu.Lock()
+	defer mb.lockMu.Unlock()
+
+	existing, ok := mb.locks[resource]
+	if !ok {
+		return false
+	}
+	return time.Now().Before(existing.ExpiresAt)
+}
+
+// WaitForLock polls until a resource lock can be acquired or the timeout elapses.
+func (mb *MessageBus) WaitForLock(resource, owner string, timeout time.Duration) error {
+	deadline := time.After(timeout)
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+
+	// Try immediately first.
+	if err := mb.AcquireLock(resource, owner, timeout); err == nil {
+		return nil
+	}
+
+	for {
+		select {
+		case <-deadline:
+			return fmt.Errorf("timeout waiting for lock on %q", resource)
+		case <-ticker.C:
+			if err := mb.AcquireLock(resource, owner, timeout); err == nil {
+				return nil
+			}
+		}
+	}
+}
+
+// CleanupExpiredLocks removes all locks whose expiry time has passed.
+func (mb *MessageBus) CleanupExpiredLocks() {
+	mb.lockMu.Lock()
+	defer mb.lockMu.Unlock()
+
+	now := time.Now()
+	for resource, lock := range mb.locks {
+		if now.After(lock.ExpiresAt) {
+			delete(mb.locks, resource)
+		}
+	}
+}
+
+// TryLockFiles attempts to acquire locks on a set of files for an agent.
+// Returns the list of files that could NOT be locked (held by others).
+// On any contention, it also reports a conflict via the message bus.
+func (mb *MessageBus) TryLockFiles(from string, files []string, ttl time.Duration) []string {
+	var failed []string
+	for _, f := range files {
+		if err := mb.AcquireLock(f, from, ttl); err != nil {
+			failed = append(failed, f)
+		}
+	}
+	if len(failed) > 0 {
+		mb.ReportConflict(from, failed, "could not acquire exclusive locks")
+	}
+	return failed
 }
 
 // generateID creates a random hex ID suitable for message identification.

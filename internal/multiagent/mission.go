@@ -36,30 +36,45 @@ type Config struct {
 	SkipValidation    bool          `json:"skip_validation"`
 	PerWorkerTimeout  time.Duration `json:"per_worker_timeout,omitempty"`
 	MaxRetriesPerFeat int           `json:"max_retries_per_feat,omitempty"`
+
+	// Staged pipeline configuration (oh-my-claudecode-style team workflow).
+	PRDModel          string `json:"prd_model,omitempty"`
+	FixModel          string `json:"fix_model,omitempty"`
+	MaxFixAttempts    int    `json:"max_fix_attempts,omitempty"` // default 3
+	EnablePRDPhase    bool   `json:"enable_prd_phase,omitempty"`
+	EnableVerifyPhase bool   `json:"enable_verify_phase,omitempty"`
 }
 
 // Status represents the mission lifecycle.
 type Status string
 
 const (
-	StatusPlanning   Status = "planning"
-	StatusRunning    Status = "running"
-	StatusValidating Status = "validating"
-	StatusCompleted  Status = "completed"
-	StatusFailed     Status = "failed"
+	StatusPlanning    Status = "planning"
+	StatusPlanningPRD Status = "planning_prd"
+	StatusRunning     Status = "running"
+	StatusExecuting   Status = "executing"
+	StatusVerifying   Status = "verifying"
+	StatusFixing      Status = "fixing"
+	StatusValidating  Status = "validating"
+	StatusCompleted   Status = "completed"
+	StatusFailed      Status = "failed"
+	StatusPartial     Status = "partial"
 )
 
 // Feature is a discrete unit of work assigned to a worker.
 type Feature struct {
-	ID               string        `json:"id"`
-	Description      string        `json:"description"`
-	ExpectedBehavior string        `json:"expected_behavior"`
-	Branch           string        `json:"branch"`
-	WorkerSessionID  string        `json:"worker_session_id,omitempty"`
-	Status           FeatureStatus `json:"status"`
-	Handoff          *Handoff      `json:"handoff,omitempty"`
-	StartedAt        time.Time     `json:"started_at,omitempty"`
-	CompletedAt      time.Time     `json:"completed_at,omitempty"`
+	ID                 string        `json:"id"`
+	Description        string        `json:"description"`
+	ExpectedBehavior   string        `json:"expected_behavior"`
+	Branch             string        `json:"branch"`
+	WorkerSessionID    string        `json:"worker_session_id,omitempty"`
+	Status             FeatureStatus `json:"status"`
+	Handoff            *Handoff      `json:"handoff,omitempty"`
+	StartedAt          time.Time     `json:"started_at,omitempty"`
+	CompletedAt        time.Time     `json:"completed_at,omitempty"`
+	PRD                string        `json:"prd,omitempty"`                 // generated product requirements
+	VerificationResult string       `json:"verification_result,omitempty"` // verify-phase outcome
+	FixAttempts        int           `json:"fix_attempts,omitempty"`        // number of fix passes applied
 }
 
 // FeatureStatus tracks individual feature progress.
@@ -92,6 +107,9 @@ func New(prompt string, cfg Config) *Mission {
 	}
 	if cfg.BaseBranch == "" {
 		cfg.BaseBranch = "main"
+	}
+	if cfg.MaxFixAttempts <= 0 {
+		cfg.MaxFixAttempts = 3
 	}
 	return &Mission{
 		ID:        uuid.New().String()[:8],
@@ -227,12 +245,187 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 	} else if completed == 0 {
 		m.Status = StatusFailed
 	} else {
-		m.Status = "partial"
+		m.Status = StatusPartial
 	}
 	m.CompletedAt = time.Now()
 	m.mu.Unlock()
 
 	return m.persistState()
+}
+
+// PRDFunc generates a product requirements document for a feature.
+type PRDFunc func(ctx context.Context, feature *Feature) (prd string, err error)
+
+// VerifyFunc validates a completed feature's implementation.
+// Returns passed=true if the implementation satisfies the feature's expected behavior.
+type VerifyFunc func(ctx context.Context, feature *Feature, handoff *Handoff) (passed bool, result string, err error)
+
+// FixFunc attempts to fix a feature that failed verification.
+type FixFunc func(ctx context.Context, feature *Feature, verificationResult string, handoff *Handoff) (*Handoff, error)
+
+// GeneratePRD runs the PRD phase: generates a requirements doc for each feature.
+func (m *Mission) GeneratePRD(ctx context.Context, prdFn PRDFunc) error {
+	m.mu.Lock()
+	m.Status = StatusPlanningPRD
+	m.mu.Unlock()
+
+	for i := range m.Features {
+		feat := &m.Features[i]
+		prd, err := prdFn(ctx, feat)
+		if err != nil {
+			return fmt.Errorf("PRD generation failed for %s: %w", feat.ID, err)
+		}
+		m.mu.Lock()
+		feat.PRD = prd
+		m.mu.Unlock()
+	}
+	return m.persistState()
+}
+
+// Verify runs the verify phase: validates each completed feature.
+// Features that fail verification are marked FeatureFailed and their result recorded.
+func (m *Mission) Verify(ctx context.Context, verifyFn VerifyFunc) error {
+	m.mu.Lock()
+	m.Status = StatusVerifying
+	m.mu.Unlock()
+
+	for i := range m.Features {
+		feat := &m.Features[i]
+		if feat.Status != FeatureCompleted {
+			continue
+		}
+		passed, result, err := verifyFn(ctx, feat, feat.Handoff)
+		if err != nil {
+			return fmt.Errorf("verification failed for %s: %w", feat.ID, err)
+		}
+		m.mu.Lock()
+		feat.VerificationResult = result
+		if !passed {
+			feat.Status = FeatureFailed
+		}
+		m.mu.Unlock()
+	}
+	return m.persistState()
+}
+
+// Fix runs the fix loop: for each failed feature with a recorded verification
+// result, attempts up to MaxFixAttempts fixes, re-marking the feature completed on success.
+func (m *Mission) Fix(ctx context.Context, fixFn FixFunc) error {
+	m.mu.Lock()
+	m.Status = StatusFixing
+	maxAttempts := m.Config.MaxFixAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 3
+	}
+	m.mu.Unlock()
+
+	for i := range m.Features {
+		feat := &m.Features[i]
+		if feat.Status != FeatureFailed || feat.VerificationResult == "" {
+			continue
+		}
+		for feat.FixAttempts < maxAttempts {
+			handoff, err := fixFn(ctx, feat, feat.VerificationResult, feat.Handoff)
+			m.mu.Lock()
+			feat.FixAttempts++
+			if err == nil && handoff != nil {
+				feat.Handoff = handoff
+				feat.Status = FeatureCompleted
+				feat.VerificationResult = ""
+				m.mu.Unlock()
+				break
+			}
+			m.mu.Unlock()
+			if err != nil {
+				// Retry until attempts exhausted.
+				continue
+			}
+		}
+	}
+	return m.persistState()
+}
+
+// StagedOption configures RunStaged behavior.
+type StagedOption func(*stagedConfig)
+
+type stagedConfig struct {
+	prdFn    PRDFunc
+	verifyFn VerifyFunc
+	fixFn    FixFunc
+}
+
+// WithPRD supplies the PRD generation function for the staged pipeline.
+func WithPRD(fn PRDFunc) StagedOption { return func(c *stagedConfig) { c.prdFn = fn } }
+
+// WithVerify supplies the verification function for the staged pipeline.
+func WithVerify(fn VerifyFunc) StagedOption { return func(c *stagedConfig) { c.verifyFn = fn } }
+
+// WithFix supplies the fix function for the staged pipeline.
+func WithFix(fn FixFunc) StagedOption { return func(c *stagedConfig) { c.fixFn = fn } }
+
+// RunStaged orchestrates the full team pipeline:
+//
+//	team-plan (already done via Plan) -> team-prd -> team-exec -> team-verify -> team-fix loop
+//
+// PRD and verify phases run only when enabled in Config. The fix loop runs when
+// a fix function is provided and the verify phase is enabled.
+func (m *Mission) RunStaged(ctx context.Context, workerFn WorkerFunc, opts ...StagedOption) error {
+	var sc stagedConfig
+	for _, opt := range opts {
+		opt(&sc)
+	}
+
+	// Phase: team-prd
+	if m.Config.EnablePRDPhase && sc.prdFn != nil {
+		if err := m.GeneratePRD(ctx, sc.prdFn); err != nil {
+			return err
+		}
+	}
+
+	// Phase: team-exec (existing parallel execution)
+	if err := m.Run(ctx, workerFn); err != nil {
+		return err
+	}
+
+	// Phase: team-verify + team-fix
+	if m.Config.EnableVerifyPhase && sc.verifyFn != nil {
+		if err := m.Verify(ctx, sc.verifyFn); err != nil {
+			return err
+		}
+		if sc.fixFn != nil {
+			if err := m.Fix(ctx, sc.fixFn); err != nil {
+				return err
+			}
+		}
+		// Recompute final status after verify/fix.
+		m.recomputeStatus()
+	}
+
+	return m.persistState()
+}
+
+// recomputeStatus recalculates the mission status from feature statuses.
+func (m *Mission) recomputeStatus() {
+	completed := 0
+	failed := 0
+	for _, f := range m.Features {
+		switch f.Status {
+		case FeatureCompleted:
+			completed++
+		case FeatureFailed:
+			failed++
+		}
+	}
+	m.mu.Lock()
+	if failed == 0 {
+		m.Status = StatusCompleted
+	} else if completed == 0 {
+		m.Status = StatusFailed
+	} else {
+		m.Status = StatusPartial
+	}
+	m.CompletedAt = time.Now()
+	m.mu.Unlock()
 }
 
 // Summary returns a human-readable summary of the mission.

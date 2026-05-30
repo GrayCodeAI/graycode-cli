@@ -498,6 +498,12 @@ func (m chatModel) View() string {
 		return m.viewport.View() + "\n" + paletteView
 	}
 
+	// Agent Status HUD overlay
+	if m.hudOpen {
+		hudView := renderAgentStatusPanel(m.hudData, viewWidth)
+		return m.viewport.View() + "\n" + hudView
+	}
+
 	return m.viewport.View() + "\n" + bottomBar.String()
 }
 

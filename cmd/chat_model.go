@@ -137,6 +137,8 @@ type chatModel struct {
 	quitting                   bool
 	blinkClosed                bool
 	slashSel                   int
+	hudOpen                    bool    // Agent Status HUD overlay (Ctrl+A)
+	hudData                    HUDData // latest HUD snapshot
 	configOpen                 bool
 	configTab                  int    // configTabKeys, configTabGateways, configTabModels
 	configMenu                 string // configMenuNone, configMenuProviders

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 // EventType represents a hook event.
@@ -26,12 +27,28 @@ const (
 	EventError         EventType = "error"
 )
 
+// EventEnvelope provides structured, typed metadata for hook events.
+// It wraps the raw payload with tracing and context fields.
+type EventEnvelope struct {
+	Timestamp     time.Time              `json:"timestamp"`
+	Source        string                 `json:"source"`         // e.g. "hooks", "mission", "plugin"
+	SessionID     string                 `json:"session_id"`     // session that triggered the event
+	AgentID       string                 `json:"agent_id"`       // agent that triggered the event
+	CorrelationID string                 `json:"correlation_id"` // traces across hook chains
+	EventType     EventType              `json:"event_type"`
+	Payload       map[string]interface{} `json:"payload"` // event-specific data
+}
+
+// EnvelopeFn is the typed hook function signature using EventEnvelope.
+type EnvelopeFn func(ctx context.Context, envelope EventEnvelope) error
+
 // Hook is a registered hook function.
 type Hook struct {
 	Name     string
 	Event    EventType
 	Priority int // lower = earlier
-	Fn       func(ctx context.Context, data map[string]interface{}) error
+	Fn       func(ctx context.Context, data map[string]interface{}) error // legacy
+	FnV2     EnvelopeFn                                                    // typed envelope (preferred)
 }
 
 // Registry stores and executes hooks.
@@ -59,13 +76,32 @@ func (r *Registry) Register(h Hook) {
 // Execute runs all hooks for an event.
 // Fail-open: hook errors are logged but do not stop execution of subsequent hooks.
 func (r *Registry) Execute(ctx context.Context, event EventType, data map[string]interface{}) error {
+	env := EventEnvelope{
+		Timestamp: time.Now(),
+		Source:    "hooks",
+		EventType: event,
+		Payload:   data,
+	}
+	return r.ExecuteEnvelope(ctx, env)
+}
+
+// ExecuteEnvelope runs all hooks for an event using a typed EventEnvelope.
+// Hooks with FnV2 set receive the envelope directly; legacy Fn hooks receive the payload.
+// Fail-open: hook errors are logged but do not stop execution of subsequent hooks.
+func (r *Registry) ExecuteEnvelope(ctx context.Context, env EventEnvelope) error {
 	r.mu.RLock()
-	hooks := r.hooks[event]
+	hooks := r.hooks[env.EventType]
 	r.mu.RUnlock()
 
 	var firstErr error
 	for _, h := range hooks {
-		if err := h.Fn(ctx, data); err != nil {
+		var err error
+		if h.FnV2 != nil {
+			err = h.FnV2(ctx, env)
+		} else if h.Fn != nil {
+			err = h.Fn(ctx, env.Payload)
+		}
+		if err != nil {
 			// Log the error but continue executing remaining hooks (fail-open)
 			fmt.Fprintf(os.Stderr, "WARNING: hook %q failed (continuing): %v\n", h.Name, err)
 			if firstErr == nil {
@@ -81,6 +117,13 @@ func (r *Registry) Execute(ctx context.Context, event EventType, data map[string
 func (r *Registry) ExecuteAsync(_ context.Context, event EventType, data map[string]interface{}) {
 	go func() {
 		_ = r.Execute(context.Background(), event, data)
+	}()
+}
+
+// ExecuteAsyncEnvelope runs hooks asynchronously using a typed EventEnvelope.
+func (r *Registry) ExecuteAsyncEnvelope(_ context.Context, env EventEnvelope) {
+	go func() {
+		_ = r.ExecuteEnvelope(context.Background(), env)
 	}()
 }
 
@@ -108,6 +151,24 @@ func Execute(ctx context.Context, event EventType, data map[string]interface{}) 
 // ExecuteAsync runs hooks asynchronously on the global registry.
 func ExecuteAsync(ctx context.Context, event EventType, data map[string]interface{}) {
 	global.ExecuteAsync(ctx, event, data)
+}
+
+// ExecuteEnvelope runs all hooks for an event on the global registry using a typed envelope.
+func ExecuteEnvelope(ctx context.Context, env EventEnvelope) error {
+	return global.ExecuteEnvelope(ctx, env)
+}
+
+// ExecuteAsyncEnvelope runs hooks asynchronously on the global registry using a typed envelope.
+func ExecuteAsyncEnvelope(ctx context.Context, env EventEnvelope) {
+	global.ExecuteAsyncEnvelope(ctx, env)
+}
+
+// AdaptLegacyFn wraps a legacy hook function into an EnvelopeFn.
+// The legacy function receives only the payload from the envelope.
+func AdaptLegacyFn(fn func(ctx context.Context, data map[string]interface{}) error) EnvelopeFn {
+	return func(ctx context.Context, env EventEnvelope) error {
+		return fn(ctx, env.Payload)
+	}
 }
 
 // LoadHooksDir loads hooks from a directory.
