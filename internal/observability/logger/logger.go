@@ -61,6 +61,26 @@ func Default() *Logger {
 	return New(os.Stderr, Info)
 }
 
+// LoggerDeps holds configurable dependencies for Logger.
+// Zero values are filled with production defaults by NewWithDeps.
+type LoggerDeps struct {
+	Output io.Writer // default: os.Stderr
+	Level  Level     // default: Info
+}
+
+// NewWithDeps creates a new logger from a deps struct.
+// Zero-value fields are replaced with production defaults.
+// Note: Level zero-value is Debug (iota=0), so use Default() for Info-level logger.
+func NewWithDeps(deps LoggerDeps) *Logger {
+	if deps.Output == nil {
+		deps.Output = os.Stderr
+	}
+	return &Logger{
+		level:  deps.Level,
+		output: deps.Output,
+	}
+}
+
 // SetLevel sets the minimum log level.
 func (l *Logger) SetLevel(level Level) {
 	l.mu.Lock()
@@ -85,6 +105,13 @@ func (l *Logger) log(level Level, msg string, fields map[string]interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	// Logging must never panic — recover unconditionally.
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "logger panic recovered: %v\n", r)
+		}
+	}()
+
 	timestamp := time.Now().Format(time.RFC3339)
 	output := fmt.Sprintf("%s [%s]", timestamp, level)
 	if l.prefix != "" {
@@ -106,6 +133,24 @@ func (l *Logger) log(level Level, msg string, fields map[string]interface{}) {
 	}
 
 	_, _ = fmt.Fprintln(l.output, output)
+}
+
+// SetOutputForTesting replaces the logger's output writer.
+// Test-only; not for production use.
+func (l *Logger) SetOutputForTesting(w io.Writer) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.output = w
+}
+
+// FlushForTesting synchronously flushes any buffered output.
+// Test-only; not for production use.
+func (l *Logger) FlushForTesting() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if bw, ok := l.output.(*bufferedWriter); ok {
+		bw.Flush()
+	}
 }
 
 // Debug logs a debug message.
