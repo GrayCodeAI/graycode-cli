@@ -20,7 +20,8 @@ type TreeSitter struct {
 // NewTreeSitter creates a TreeSitter instance that loads grammars from the given directory.
 func NewTreeSitter(grammarDir string) *TreeSitter {
 	if grammarDir == "" {
-		grammarDir = filepath.Join(os.Getenv("HOME"), ".hawk", "grammars")
+		home, _ := os.UserHomeDir()
+		grammarDir = filepath.Join(home, ".hawk", "grammars")
 	}
 	return &TreeSitter{grammarDir: grammarDir}
 }

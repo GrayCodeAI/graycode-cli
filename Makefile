@@ -193,3 +193,23 @@ compat-check: ## Strict validation — non-zero exit if any component lacks a ve
 .PHONY: hooks
 hooks:
 	git config core.hooksPath .githooks
+# === Cross-platform binary targets (add after existing 'build' target) ===
+
+.PHONY: build-all build-static size-check
+
+build-all: ## Build for all platforms (darwin/linux/windows × amd64/arm64)
+	GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-darwin-amd64 $(MAIN_PKG)
+	GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-darwin-arm64 $(MAIN_PKG)
+	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-amd64 $(MAIN_PKG)
+	GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-arm64 $(MAIN_PKG)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-windows-amd64.exe $(MAIN_PKG)
+
+build-static: ## Build fully static binaries for Linux (musl-compatible)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-amd64-static $(MAIN_PKG)
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-arm64-static $(MAIN_PKG)
+
+size-check: build ## Report binary size and warn if over threshold (50MB)
+	@SIZE=$$(stat -f%z bin/$(NAME) 2>/dev/null || stat -c%s bin/$(NAME) 2>/dev/null); \
+	MB=$$(echo "scale=1; $$SIZE / 1048576" | bc); \
+	echo "Binary size: $${MB} MB"; \
+	if [ $$SIZE -gt 52428800 ]; then echo "WARNING: binary exceeds 50MB"; exit 1; fi

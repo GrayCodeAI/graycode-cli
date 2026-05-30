@@ -113,3 +113,22 @@ func isInsideInit(file *ast.File, pos token.Pos, fset *token.FileSet) bool {
 	}
 	return false
 }
+
+// isInsideMustFunction reports whether pos is inside a Must* function.
+// The Go convention (MustCompile, MustPut, etc.) allows panics in functions
+// prefixed with "Must" — these are intended for package-level initializers.
+func isInsideMustFunction(file *ast.File, pos token.Pos) bool {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		if !strings.HasPrefix(fn.Name.Name, "Must") {
+			continue
+		}
+		if pos > fn.Pos() && pos < fn.End() {
+			return true
+		}
+	}
+	return false
+}
