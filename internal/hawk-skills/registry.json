@@ -99,6 +99,20 @@
       "agents": ["hawk", "claude-code", "github-copilot"],
       "installs": 0,
       "updated_at": "2026-05-30T00:00:00Z"
+    },
+    {
+      "name": "init-deep",
+      "description": "Auto-generate hierarchical AGENTS.md files at key directory levels for AI agent context",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "init-deep",
+      "category": "workflow",
+      "tags": ["context", "agents", "bootstrapping", "documentation", "conventions"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-31T00:00:00Z"
     }
   ]
 }
