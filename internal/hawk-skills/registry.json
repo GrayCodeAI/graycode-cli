@@ -71,6 +71,34 @@
       "agents": ["hawk", "claude-code", "github-copilot"],
       "installs": 0,
       "updated_at": "2026-05-03T00:00:00Z"
+    },
+    {
+      "name": "deep-interview",
+      "description": "Structured interview workflow for requirements gathering before coding",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "deep-interview",
+      "category": "workflow",
+      "tags": ["requirements", "interview", "planning", "specification", "clarification"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-30T00:00:00Z"
+    },
+    {
+      "name": "ralplan",
+      "description": "Structured planning discipline with self-critique before execution",
+      "author": "graycode",
+      "repo": "GrayCodeAI/hawk-skills",
+      "path": "ralplan",
+      "category": "workflow",
+      "tags": ["planning", "review", "critique", "discipline", "methodology"],
+      "version": "1.0.0",
+      "license": "MIT",
+      "agents": ["hawk", "claude-code", "github-copilot"],
+      "installs": 0,
+      "updated_at": "2026-05-30T00:00:00Z"
     }
   ]
 }

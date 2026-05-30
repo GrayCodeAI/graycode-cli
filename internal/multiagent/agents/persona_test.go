@@ -457,12 +457,24 @@ func TestBuiltinPersonas_AreValid(t *testing.T) {
 	builtins := BuiltinPersonas()
 
 	expectedNames := map[string]bool{
-		"default":   false,
-		"reviewer":  false,
-		"architect": false,
-		"debugger":  false,
-		"teacher":   false,
-		"speed":     false,
+		"default":           false,
+		"reviewer":          false,
+		"architect":         false,
+		"debugger":          false,
+		"teacher":           false,
+		"speed":             false,
+		"planner":           false,
+		"executor":          false,
+		"critic":            false,
+		"security-reviewer": false,
+		"test-engineer":     false,
+		"tracer":            false,
+		"verifier":          false,
+		"integrator":        false,
+		"documenter":        false,
+		"devops":            false,
+		"performance":       false,
+		"refactorer":        false,
 	}
 
 	for _, p := range builtins {
@@ -495,6 +507,47 @@ func TestBuiltinPersonas_AreValid(t *testing.T) {
 		if !found {
 			t.Errorf("expected built-in persona %q not found", name)
 		}
+	}
+}
+
+func TestSelectPersona_NewDomains(t *testing.T) {
+	r := NewPersonaRegistry(t.TempDir())
+	for _, p := range BuiltinPersonas() {
+		r.Personas[p.Name] = p
+	}
+
+	cases := []struct {
+		task       string
+		wantDomain string // expertise the selected persona should include
+	}{
+		{"profile and optimize this slow benchmark with high latency", "performance"},
+		{"refactor this module to reduce technical debt and simplify", "refactoring"},
+		{"write the readme and api docs with a tutorial guide", "documentation"},
+		{"add observability: trace spans and structured logging", "tracing"},
+	}
+
+	for _, c := range cases {
+		p := r.SelectPersona(c.task)
+		if p == nil {
+			t.Errorf("task %q selected nil persona", c.task)
+			continue
+		}
+		found := false
+		for _, e := range p.Expertise {
+			if e == c.wantDomain {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("task %q selected %q (expertise %v), expected domain %q",
+				c.task, p.Name, p.Expertise, c.wantDomain)
+		}
+	}
+}
+
+func TestBuiltinPersonas_Count(t *testing.T) {
+	if got := len(BuiltinPersonas()); got != 18 {
+		t.Errorf("expected 18 built-in personas, got %d", got)
 	}
 }
 
