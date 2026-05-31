@@ -32,13 +32,13 @@ var DefaultRuleSources = []RuleSource{
 
 // Rule represents a discovered rule file with precedence metadata.
 type Rule struct {
-	Path      string
-	Content   string
-	Hash      string
-	Source    string // e.g., ".hawk/rules", "AGENTS.md"
-	Local     bool   // true if found in the file's directory tree, false if global
-	Distance  int    // 0 = same directory, 1 = parent, etc.
-	Priority  int    // source priority
+	Path     string
+	Content  string
+	Hash     string
+	Source   string // e.g., ".hawk/rules", "AGENTS.md"
+	Local    bool   // true if found in the file's directory tree, false if global
+	Distance int    // 0 = same directory, 1 = parent, etc.
+	Priority int    // source priority
 }
 
 // RuleDiscoverer discovers rule files using walk-up stack semantics

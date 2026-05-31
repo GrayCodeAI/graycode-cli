@@ -53,10 +53,10 @@ type Location struct {
 
 // SymbolInformation represents an LSP symbol.
 type SymbolInformation struct {
-	Name     string `json:"name"`
-	Kind     int    `json:"kind"`
-	Location Location `json:"location"`
-	ContainerName string `json:"containerName,omitempty"`
+	Name          string   `json:"name"`
+	Kind          int      `json:"kind"`
+	Location      Location `json:"location"`
+	ContainerName string   `json:"containerName,omitempty"`
 }
 
 // WorkspaceEdit represents an LSP workspace edit.
@@ -77,13 +77,13 @@ type RenameCapabilities struct {
 
 // LSPClient communicates with a single language server subprocess.
 type LSPClient struct {
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  *bufio.Scanner
-	mu      sync.Mutex
-	nextID  atomic.Int64
-	pending map[interface{}]chan json.RawMessage
-	closed  atomic.Bool
+	cmd      *exec.Cmd
+	stdin    io.WriteCloser
+	stdout   *bufio.Scanner
+	mu       sync.Mutex
+	nextID   atomic.Int64
+	pending  map[interface{}]chan json.RawMessage
+	closed   atomic.Bool
 	language string
 }
 
@@ -123,10 +123,10 @@ func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClien
 		"processId": cmd.Process.Pid,
 		"capabilities": map[string]interface{}{
 			"textDocument": map[string]interface{}{
-				"definition":      map[string]interface{}{"dynamicRegistration": false},
-				"references":      map[string]interface{}{"dynamicRegistration": false},
-				"documentSymbol":  map[string]interface{}{"dynamicRegistration": false},
-				"rename":          map[string]interface{}{"dynamicRegistration": false, "prepareSupport": true},
+				"definition":         map[string]interface{}{"dynamicRegistration": false},
+				"references":         map[string]interface{}{"dynamicRegistration": false},
+				"documentSymbol":     map[string]interface{}{"dynamicRegistration": false},
+				"rename":             map[string]interface{}{"dynamicRegistration": false, "prepareSupport": true},
 				"publishDiagnostics": map[string]interface{}{"relatedInformation": false},
 			},
 		},

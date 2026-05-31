@@ -76,8 +76,8 @@ type Session struct {
 	SettingsGet    func(key string) (string, bool)
 	SettingsSet    func(key, value string) error
 
-	PinnedMessages          int // messages to protect from compaction (from /pin)
-	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
+	PinnedMessages          int  // messages to protect from compaction (from /pin)
+	AutoCompactThresholdPct int  // token % to trigger auto-compact (default 85)
 	Verbose                 bool // show tool calls, timing, token counts in output
 
 	// Cost optimization

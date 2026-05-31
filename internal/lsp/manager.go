@@ -26,23 +26,23 @@ var ReadOnlyRetryTools = map[string]bool{
 
 // ManagedClient wraps an LSPClient with refcounting and idle tracking.
 type ManagedClient struct {
-	mu         sync.Mutex
-	client     *LSPClient
-	config     ServerConfig
-	language   string
-	refCount   int32
-	waiters    int32
-	lastUsed   time.Time
-	initStart  time.Time
+	mu           sync.Mutex
+	client       *LSPClient
+	config       ServerConfig
+	language     string
+	refCount     int32
+	waiters      int32
+	lastUsed     time.Time
+	initStart    time.Time
 	initializing bool
 }
 
 // LSPManager manages a pool of language server connections.
 type LSPManager struct {
-	mu      sync.RWMutex
-	clients map[string]*ManagedClient // keyed by language
-	config  *LSPConfig
-	closed  atomic.Bool
+	mu         sync.RWMutex
+	clients    map[string]*ManagedClient // keyed by language
+	config     *LSPConfig
+	closed     atomic.Bool
 	stopReaper context.CancelFunc
 }
 
@@ -245,7 +245,7 @@ func (m *LSPManager) Close() error {
 
 // Errors
 var (
-	ErrManagerClosed       = &LSPError{Code: "MANAGER_CLOSED", Message: "LSP manager is closed"}
+	ErrManagerClosed         = &LSPError{Code: "MANAGER_CLOSED", Message: "LSP manager is closed"}
 	ErrLanguageNotConfigured = &LSPError{Code: "LANG_NOT_CONFIGURED", Message: "no LSP server configured for language"}
 )
 
