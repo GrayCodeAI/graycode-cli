@@ -365,6 +365,28 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
+	// Plan/build mode transitions driven by the model's plan tools. Reaching this
+	// point means the tool was granted by the permission engine — which, at
+	// interactive autonomy levels, already prompted the user to approve leaving
+	// plan mode (the approval gate). EnterPlanMode switches into read-only plan
+	// mode; ExitPlanMode hands off to build mode. This is the single source of
+	// truth for the mode (the legacy global flag in internal/tool/plan.go is kept
+	// only for backward compatibility).
+	if !isErr {
+		switch canonicalToolName(tc.Name) {
+		case "EnterPlanMode":
+			s.Perm.ApplyToolState(tc.Name)
+			s.Mode = s.Perm.Mode
+		case "ExitPlanMode":
+			wasPlan := s.Perm.Mode == PermissionModePlan
+			s.Perm.ApplyToolState(tc.Name) // -> default (build) mode
+			s.Mode = s.Perm.Mode
+			if wasPlan {
+				output = "Plan approved — switched to build mode. You may now implement the plan and make changes."
+			}
+		}
+	}
+
 	s.metrics.Counter("tools.executed").Inc()
 	if isErr {
 		s.metrics.Counter("tools.errors").Inc()
