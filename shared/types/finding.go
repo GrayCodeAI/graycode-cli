@@ -8,8 +8,8 @@ import (
 // Finding represents a unified code-analysis concern sourced from sight, inspect, or manual review.
 type Finding struct {
 	ID         string            `json:"id"`
-	Source     string            `json:"source"`     // sight, inspect, manual
-	Concern    string            `json:"concern"`     // e.g. "sql-injection", "broken-auth"
+	Source     string            `json:"source"`  // sight, inspect, manual
+	Concern    string            `json:"concern"` // e.g. "sql-injection", "broken-auth"
 	Severity   Severity          `json:"severity"`
 	File       string            `json:"file,omitempty"`
 	URL        string            `json:"url,omitempty"`
@@ -84,10 +84,10 @@ func (s FindingSlice) ByFile() map[string]FindingSlice {
 
 // FindingSummary provides aggregate counts over a set of findings.
 type FindingSummary struct {
-	Total         int              `json:"total"`
-	BySource      map[string]int   `json:"by_source"`
-	BySeverity    map[string]int   `json:"by_severity"`
-	AvgConfidence float64          `json:"avg_confidence"`
+	Total         int            `json:"total"`
+	BySource      map[string]int `json:"by_source"`
+	BySeverity    map[string]int `json:"by_severity"`
+	AvgConfidence float64        `json:"avg_confidence"`
 }
 
 // Summary returns a FindingSummary for the slice.

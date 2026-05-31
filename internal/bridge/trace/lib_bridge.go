@@ -344,12 +344,12 @@ type noopSession struct {
 	metadata map[string]string
 }
 
-func (s *noopSession) ID() string               { return "noop" }
-func (s *noopSession) Phase() string             { return "noop" }
-func (s *noopSession) TranscriptPath() string    { return "" }
-func (s *noopSession) SpanCount() int            { return 0 }
-func (s *noopSession) StartedAt() time.Time      { return time.Time{} }
-func (s *noopSession) EndedAt() *time.Time       { return nil }
+func (s *noopSession) ID() string                    { return "noop" }
+func (s *noopSession) Phase() string                 { return "noop" }
+func (s *noopSession) TranscriptPath() string        { return "" }
+func (s *noopSession) SpanCount() int                { return 0 }
+func (s *noopSession) StartedAt() time.Time          { return time.Time{} }
+func (s *noopSession) EndedAt() *time.Time           { return nil }
 func (s *noopSession) Close(_ context.Context) error { return nil }
 
 func (s *noopSession) Metadata() map[string]string {
