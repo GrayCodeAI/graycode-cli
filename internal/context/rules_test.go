@@ -31,7 +31,7 @@ func TestRuleDiscoverer_FindsAgentsMd(t *testing.T) {
 	}
 }
 
-func TestRuleDiscoverer_Precendence(t *testing.T) {
+func TestRuleDiscoverer_Precedence(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root"), 0o644)
 	sub := filepath.Join(dir, "src")
