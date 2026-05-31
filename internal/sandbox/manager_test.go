@@ -108,8 +108,8 @@ func TestPolicyManager_CheckTool_DefaultAllow(t *testing.T) {
 
 func TestPolicyManager_CheckTool_DefaultAsk(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0755)
-	os.WriteFile(filepath.Join(dir, ".hawk", "sandbox.jsonc"), []byte(`{"default": "ask"}`), 0644)
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".hawk", "sandbox.jsonc"), []byte(`{"default": "ask"}`), 0o644)
 
 	m := NewPolicyManager(dir)
 
@@ -124,7 +124,7 @@ func TestPolicyManager_CheckTool_DefaultAsk(t *testing.T) {
 
 func TestPolicyManager_CheckTool_PolicyRules(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 	policy := `{
 		"default": "ask",
 		"rules": [
@@ -132,7 +132,7 @@ func TestPolicyManager_CheckTool_PolicyRules(t *testing.T) {
 			{"class": "write", "pattern": "/etc/*", "action": "deny"}
 		]
 	}`
-	os.WriteFile(filepath.Join(dir, ".hawk", "sandbox.jsonc"), []byte(policy), 0644)
+	os.WriteFile(filepath.Join(dir, ".hawk", "sandbox.jsonc"), []byte(policy), 0o644)
 
 	m := NewPolicyManager(dir)
 

@@ -12,17 +12,17 @@ func TestWalkUpDiscoverer_FindsAgentsMd(t *testing.T) {
 	dir := t.TempDir()
 	// Create AGENTS.md at project root
 	agentsMd := "# Project Rules\nUse gofmt."
-	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(agentsMd), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(agentsMd), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Create a subdirectory
 	sub := filepath.Join(dir, "src", "pkg")
-	if err := os.MkdirAll(sub, 0755); err != nil {
+	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	// Read a file deep in the tree
 	target := filepath.Join(sub, "main.go")
-	if err := os.WriteFile(target, []byte("package main"), 0644); err != nil {
+	if err := os.WriteFile(target, []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -48,13 +48,13 @@ func TestWalkUpDiscoverer_FindsAgentsMd(t *testing.T) {
 func TestWalkUpDiscoverer_Deduplication(t *testing.T) {
 	dir := t.TempDir()
 	agentsMd := "# Rules"
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(agentsMd), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(agentsMd), 0o644)
 	sub := filepath.Join(dir, "a", "b")
-	os.MkdirAll(sub, 0755)
+	os.MkdirAll(sub, 0o755)
 	f1 := filepath.Join(sub, "f1.go")
 	f2 := filepath.Join(sub, "f2.go")
-	os.WriteFile(f1, []byte("package a"), 0644)
-	os.WriteFile(f2, []byte("package b"), 0644)
+	os.WriteFile(f1, []byte("package a"), 0o644)
+	os.WriteFile(f2, []byte("package b"), 0o644)
 
 	d := NewWalkUpDiscoverer(dir)
 
@@ -73,14 +73,14 @@ func TestWalkUpDiscoverer_Deduplication(t *testing.T) {
 
 func TestWalkUpDiscoverer_MultipleLevels(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root"), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root"), 0o644)
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
-	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte("# Src Rules"), 0644)
+	os.MkdirAll(sub, 0o755)
+	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte("# Src Rules"), 0o644)
 	deep := filepath.Join(sub, "pkg")
-	os.MkdirAll(deep, 0755)
+	os.MkdirAll(deep, 0o755)
 	target := filepath.Join(deep, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	d := NewWalkUpDiscoverer(dir)
 	discovered := d.Discover(target)
@@ -105,9 +105,9 @@ func TestWalkUpDiscoverer_Truncation(t *testing.T) {
 	for i := range bigContent {
 		bigContent[i] = 'x'
 	}
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), bigContent, 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), bigContent, 0o644)
 	target := filepath.Join(dir, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	d := NewWalkUpDiscoverer(dir).WithMaxFileKB(10) // 10KB cap
 	discovered := d.Discover(target)
@@ -121,9 +121,9 @@ func TestWalkUpDiscoverer_Truncation(t *testing.T) {
 
 func TestWalkUpDiscoverer_HandlePostTool(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Rules"), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Rules"), 0o644)
 	target := filepath.Join(dir, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	d := NewWalkUpDiscoverer(dir)
 	envelope := hooks.EventEnvelope{
@@ -162,9 +162,9 @@ func TestWalkUpDiscoverer_HandlePostTool_IgnoresNonRead(t *testing.T) {
 
 func TestWalkUpDiscoverer_CompactClearsCache(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Rules"), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Rules"), 0o644)
 	target := filepath.Join(dir, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	d := NewWalkUpDiscoverer(dir)
 	d.Discover(target)
