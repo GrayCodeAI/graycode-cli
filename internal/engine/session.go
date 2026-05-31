@@ -78,6 +78,7 @@ type Session struct {
 
 	PinnedMessages          int // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
+	Verbose                 bool // show tool calls, timing, token counts in output
 
 	// Cost optimization
 	Cascade     *branching.CascadeRouter // cascade.go — model tier routing
