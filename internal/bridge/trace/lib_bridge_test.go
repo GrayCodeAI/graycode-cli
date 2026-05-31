@@ -18,12 +18,12 @@ type mockSession struct {
 	metadata       map[string]string
 }
 
-func (s *mockSession) ID() string                { return s.id }
-func (s *mockSession) Phase() string              { return s.phase }
-func (s *mockSession) TranscriptPath() string     { return s.transcriptPath }
-func (s *mockSession) SpanCount() int             { return s.spanCount }
-func (s *mockSession) StartedAt() time.Time       { return s.startedAt }
-func (s *mockSession) EndedAt() *time.Time        { return s.endedAt }
+func (s *mockSession) ID() string                    { return s.id }
+func (s *mockSession) Phase() string                 { return s.phase }
+func (s *mockSession) TranscriptPath() string        { return s.transcriptPath }
+func (s *mockSession) SpanCount() int                { return s.spanCount }
+func (s *mockSession) StartedAt() time.Time          { return s.startedAt }
+func (s *mockSession) EndedAt() *time.Time           { return s.endedAt }
 func (s *mockSession) Close(_ context.Context) error { return nil }
 
 func (s *mockSession) Metadata() map[string]string {

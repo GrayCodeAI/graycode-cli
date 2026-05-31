@@ -32,8 +32,8 @@ const (
 type TypedGrant struct {
 	Action  GrantAction `json:"action"`
 	Class   GrantClass  `json:"class"`
-	Target  string      `json:"target"`  // path pattern or command prefix
-	Scope   string      `json:"scope"`   // "project" | "global"
+	Target  string      `json:"target"` // path pattern or command prefix
+	Scope   string      `json:"scope"`  // "project" | "global"
 	Expires *time.Time  `json:"expires,omitempty"`
 }
 

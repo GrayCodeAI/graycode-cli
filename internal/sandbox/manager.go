@@ -32,9 +32,9 @@ type PolicyConfig struct {
 
 // PolicyManager adds policy-aware tool interception on top of the sandbox.
 type PolicyManager struct {
-	mu         sync.RWMutex
-	projectDir string
-	policy     *PolicyConfig
+	mu            sync.RWMutex
+	projectDir    string
+	policy        *PolicyConfig
 	projectGrants *ApprovalStore
 	globalGrants  *ApprovalStore
 }

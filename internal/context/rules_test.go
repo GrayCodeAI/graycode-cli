@@ -8,11 +8,11 @@ import (
 
 func TestRuleDiscoverer_FindsAgentsMd(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root Rules"), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root Rules"), 0o644)
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
+	os.MkdirAll(sub, 0o755)
 	target := filepath.Join(sub, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)
@@ -33,12 +33,12 @@ func TestRuleDiscoverer_FindsAgentsMd(t *testing.T) {
 
 func TestRuleDiscoverer_Precendence(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root"), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Root"), 0o644)
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
-	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte("# Src"), 0644)
+	os.MkdirAll(sub, 0o755)
+	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte("# Src"), 0o644)
 	target := filepath.Join(sub, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)
@@ -59,10 +59,10 @@ func TestRuleDiscoverer_Precendence(t *testing.T) {
 func TestRuleDiscoverer_Deduplication(t *testing.T) {
 	dir := t.TempDir()
 	sameContent := "# Same content everywhere"
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(sameContent), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(sameContent), 0o644)
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
-	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte(sameContent), 0644)
+	os.MkdirAll(sub, 0o755)
+	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte(sameContent), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(filepath.Join(sub, "main.go"))
@@ -76,14 +76,14 @@ func TestRuleDiscoverer_Deduplication(t *testing.T) {
 func TestRuleDiscoverer_DirectorySources(t *testing.T) {
 	dir := t.TempDir()
 	rulesDir := filepath.Join(dir, ".hawk", "rules")
-	os.MkdirAll(rulesDir, 0755)
-	os.WriteFile(filepath.Join(rulesDir, "naming.md"), []byte("# Naming Conventions"), 0644)
-	os.WriteFile(filepath.Join(rulesDir, "testing.md"), []byte("# Testing Rules"), 0644)
+	os.MkdirAll(rulesDir, 0o755)
+	os.WriteFile(filepath.Join(rulesDir, "naming.md"), []byte("# Naming Conventions"), 0o644)
+	os.WriteFile(filepath.Join(rulesDir, "testing.md"), []byte("# Testing Rules"), 0o644)
 
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
+	os.MkdirAll(sub, 0o755)
 	target := filepath.Join(sub, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)
@@ -101,17 +101,17 @@ func TestRuleDiscoverer_DirectorySources(t *testing.T) {
 
 func TestRuleDiscoverer_LocalVsGlobal(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Local"), 0644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Local"), 0o644)
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
+	os.MkdirAll(sub, 0o755)
 	target := filepath.Join(sub, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	// Add a fake global rule
 	rd.globalDirs = []string{filepath.Join(dir, "global-rules")}
-	os.MkdirAll(filepath.Join(dir, "global-rules"), 0755)
-	os.WriteFile(filepath.Join(dir, "global-rules", "base.md"), []byte("# Global"), 0644)
+	os.MkdirAll(filepath.Join(dir, "global-rules"), 0o755)
+	os.WriteFile(filepath.Join(dir, "global-rules", "base.md"), []byte("# Global"), 0o644)
 
 	rules := rd.Discover(target)
 
@@ -132,14 +132,14 @@ func TestRuleDiscoverer_LocalVsGlobal(t *testing.T) {
 
 func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk", "rules"), 0755)
-	os.MkdirAll(filepath.Join(dir, ".claude", "rules"), 0755)
-	os.WriteFile(filepath.Join(dir, ".hawk", "rules", "a.md"), []byte("# Hawk"), 0644)
-	os.WriteFile(filepath.Join(dir, ".claude", "rules", "b.md"), []byte("# Claude"), 0644)
+	os.MkdirAll(filepath.Join(dir, ".hawk", "rules"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".claude", "rules"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".hawk", "rules", "a.md"), []byte("# Hawk"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".claude", "rules", "b.md"), []byte("# Claude"), 0o644)
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
+	os.MkdirAll(sub, 0o755)
 	target := filepath.Join(sub, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)
@@ -162,7 +162,7 @@ func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 func TestRuleDiscoverer_EmptyProject(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)
@@ -175,13 +175,13 @@ func TestRuleDiscoverer_NestedDirSources(t *testing.T) {
 	dir := t.TempDir()
 	// Create .github/instructions at root
 	ghDir := filepath.Join(dir, ".github", "instructions")
-	os.MkdirAll(ghDir, 0755)
-	os.WriteFile(filepath.Join(ghDir, "pr.md"), []byte("# PR Guidelines"), 0644)
+	os.MkdirAll(ghDir, 0o755)
+	os.WriteFile(filepath.Join(ghDir, "pr.md"), []byte("# PR Guidelines"), 0o644)
 
 	sub := filepath.Join(dir, "src")
-	os.MkdirAll(sub, 0755)
+	os.MkdirAll(sub, 0o755)
 	target := filepath.Join(sub, "main.go")
-	os.WriteFile(target, []byte("package main"), 0644)
+	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)

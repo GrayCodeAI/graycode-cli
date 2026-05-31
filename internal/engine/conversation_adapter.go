@@ -16,7 +16,7 @@ type ConversationMessage struct {
 
 // ConversationConfig holds configuration for a ConversationManager.
 type ConversationConfig struct {
-	MaxHistory        int
+	MaxHistory         int
 	SummarizeThreshold int
 	SystemPrompt       string
 }
@@ -32,11 +32,11 @@ type ConversationState struct {
 // conversation management into hawk's chat session flow. It is safe for
 // concurrent use.
 type ConversationManager struct {
-	mu          sync.RWMutex
-	config      ConversationConfig
-	messages    []ConversationMessage
-	summary     string
-	tokenCount  int
+	mu         sync.RWMutex
+	config     ConversationConfig
+	messages   []ConversationMessage
+	summary    string
+	tokenCount int
 }
 
 // NewConversationManager creates a new ConversationManager with the given config.

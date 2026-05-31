@@ -15,15 +15,18 @@ type LSPStatusTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPStatusTool) Name() string        { return "lsp_status" }
-func (t *LSPStatusTool) Description() string  { return "List configured LSP servers and their connection state." }
-func (t *LSPStatusTool) RiskLevel() string    { return "low" }
+func (t *LSPStatusTool) Name() string { return "lsp_status" }
+func (t *LSPStatusTool) Description() string {
+	return "List configured LSP servers and their connection state."
+}
+func (t *LSPStatusTool) RiskLevel() string { return "low" }
 func (t *LSPStatusTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type":       "object",
 		"properties": map[string]interface{}{},
 	}
 }
+
 func (t *LSPStatusTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	status := t.Manager.Status()
 	var lines []string
@@ -41,9 +44,11 @@ type LSPDiagnosticsTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPDiagnosticsTool) Name() string        { return "lsp_diagnostics" }
-func (t *LSPDiagnosticsTool) Description() string  { return "Get LSP diagnostics (errors, warnings) for a file." }
-func (t *LSPDiagnosticsTool) RiskLevel() string    { return "low" }
+func (t *LSPDiagnosticsTool) Name() string { return "lsp_diagnostics" }
+func (t *LSPDiagnosticsTool) Description() string {
+	return "Get LSP diagnostics (errors, warnings) for a file."
+}
+func (t *LSPDiagnosticsTool) RiskLevel() string { return "low" }
 func (t *LSPDiagnosticsTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -56,6 +61,7 @@ func (t *LSPDiagnosticsTool) Parameters() map[string]interface{} {
 		"required": []string{"path"},
 	}
 }
+
 func (t *LSPDiagnosticsTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args struct {
 		Path string `json:"path"`
@@ -101,20 +107,23 @@ type LSPGotoDefinitionTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPGotoDefinitionTool) Name() string        { return "lsp_goto_definition" }
-func (t *LSPGotoDefinitionTool) Description() string  { return "Go to the definition of a symbol at a position in a file." }
-func (t *LSPGotoDefinitionTool) RiskLevel() string    { return "low" }
+func (t *LSPGotoDefinitionTool) Name() string { return "lsp_goto_definition" }
+func (t *LSPGotoDefinitionTool) Description() string {
+	return "Go to the definition of a symbol at a position in a file."
+}
+func (t *LSPGotoDefinitionTool) RiskLevel() string { return "low" }
 func (t *LSPGotoDefinitionTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"path": map[string]interface{}{"type": "string", "description": "File path"},
-			"line": map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
+			"path":      map[string]interface{}{"type": "string", "description": "File path"},
+			"line":      map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
 			"character": map[string]interface{}{"type": "integer", "description": "Column number (0-based)"},
 		},
 		"required": []string{"path", "line", "character"},
 	}
 }
+
 func (t *LSPGotoDefinitionTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args struct {
 		Path      string `json:"path"`
@@ -154,20 +163,23 @@ type LSPFindReferencesTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPFindReferencesTool) Name() string        { return "lsp_find_references" }
-func (t *LSPFindReferencesTool) Description() string  { return "Find all references to a symbol at a position in a file." }
-func (t *LSPFindReferencesTool) RiskLevel() string    { return "low" }
+func (t *LSPFindReferencesTool) Name() string { return "lsp_find_references" }
+func (t *LSPFindReferencesTool) Description() string {
+	return "Find all references to a symbol at a position in a file."
+}
+func (t *LSPFindReferencesTool) RiskLevel() string { return "low" }
 func (t *LSPFindReferencesTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"path": map[string]interface{}{"type": "string", "description": "File path"},
-			"line": map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
+			"path":      map[string]interface{}{"type": "string", "description": "File path"},
+			"line":      map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
 			"character": map[string]interface{}{"type": "integer", "description": "Column number (0-based)"},
 		},
 		"required": []string{"path", "line", "character"},
 	}
 }
+
 func (t *LSPFindReferencesTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args struct {
 		Path      string `json:"path"`
@@ -207,9 +219,11 @@ type LSPSymbolsTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPSymbolsTool) Name() string        { return "lsp_symbols" }
-func (t *LSPSymbolsTool) Description() string  { return "List all symbols (functions, types, variables) in a file." }
-func (t *LSPSymbolsTool) RiskLevel() string    { return "low" }
+func (t *LSPSymbolsTool) Name() string { return "lsp_symbols" }
+func (t *LSPSymbolsTool) Description() string {
+	return "List all symbols (functions, types, variables) in a file."
+}
+func (t *LSPSymbolsTool) RiskLevel() string { return "low" }
 func (t *LSPSymbolsTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -219,6 +233,7 @@ func (t *LSPSymbolsTool) Parameters() map[string]interface{} {
 		"required": []string{"path"},
 	}
 }
+
 func (t *LSPSymbolsTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args struct {
 		Path string `json:"path"`
@@ -257,20 +272,23 @@ type LSPPrepareRenameTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPPrepareRenameTool) Name() string        { return "lsp_prepare_rename" }
-func (t *LSPPrepareRenameTool) Description() string  { return "Check if a symbol at a position can be renamed." }
-func (t *LSPPrepareRenameTool) RiskLevel() string    { return "low" }
+func (t *LSPPrepareRenameTool) Name() string { return "lsp_prepare_rename" }
+func (t *LSPPrepareRenameTool) Description() string {
+	return "Check if a symbol at a position can be renamed."
+}
+func (t *LSPPrepareRenameTool) RiskLevel() string { return "low" }
 func (t *LSPPrepareRenameTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"path": map[string]interface{}{"type": "string", "description": "File path"},
-			"line": map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
+			"path":      map[string]interface{}{"type": "string", "description": "File path"},
+			"line":      map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
 			"character": map[string]interface{}{"type": "integer", "description": "Column number (0-based)"},
 		},
 		"required": []string{"path", "line", "character"},
 	}
 }
+
 func (t *LSPPrepareRenameTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args struct {
 		Path      string `json:"path"`
@@ -306,21 +324,24 @@ type LSPRenameTool struct {
 	Manager *lsp.LSPManager
 }
 
-func (t *LSPRenameTool) Name() string        { return "lsp_rename" }
-func (t *LSPRenameTool) Description() string  { return "Rename a symbol at a position across the workspace." }
-func (t *LSPRenameTool) RiskLevel() string    { return "medium" }
+func (t *LSPRenameTool) Name() string { return "lsp_rename" }
+func (t *LSPRenameTool) Description() string {
+	return "Rename a symbol at a position across the workspace."
+}
+func (t *LSPRenameTool) RiskLevel() string { return "medium" }
 func (t *LSPRenameTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"path": map[string]interface{}{"type": "string", "description": "File path"},
-			"line": map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
+			"path":      map[string]interface{}{"type": "string", "description": "File path"},
+			"line":      map[string]interface{}{"type": "integer", "description": "Line number (1-based)"},
 			"character": map[string]interface{}{"type": "integer", "description": "Column number (0-based)"},
-			"new_name": map[string]interface{}{"type": "string", "description": "New name for the symbol"},
+			"new_name":  map[string]interface{}{"type": "string", "description": "New name for the symbol"},
 		},
 		"required": []string{"path", "line", "character", "new_name"},
 	}
 }
+
 func (t *LSPRenameTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args struct {
 		Path      string `json:"path"`
@@ -358,7 +379,8 @@ func (t *LSPRenameTool) Execute(ctx context.Context, input json.RawMessage) (str
 
 // RegisterLSPTools adds all 7 LSP tools to the provided slice.
 func RegisterLSPTools(tools []interface{ Name() string }, manager *lsp.LSPManager) []interface{ Name() string } {
-	return append(tools,
+	return append(
+		tools,
 		&LSPStatusTool{Manager: manager},
 		&LSPDiagnosticsTool{Manager: manager},
 		&LSPGotoDefinitionTool{Manager: manager},
