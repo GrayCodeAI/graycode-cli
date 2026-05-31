@@ -5,6 +5,15 @@ import (
 	"strings"
 )
 
+// planModeSystemPrompt is appended to the system prompt (ephemerally) while the
+// session is in plan mode. It steers the model toward read-only research and an
+// explicit approval handoff.
+const planModeSystemPrompt = "\n\n## Plan Mode (read-only)\n" +
+	"You are in PLAN MODE. Research the task by reading files and searching the codebase, then propose a concrete implementation plan. " +
+	"Do NOT write files, run commands that modify state, or make any changes — write/execute tools are blocked and will be denied. " +
+	"When your plan is ready, call the ExitPlanMode tool to ask the user to approve it. " +
+	"Only after the user approves will changes be allowed; if they reject, refine the plan and ask again."
+
 func (s *Session) SetPermissionMode(mode string) error {
 	err := s.Perm.SetMode(mode)
 	if err == nil {
