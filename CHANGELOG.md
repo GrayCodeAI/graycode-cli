@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.github/workflows/release.yml`, and the `update`/`api` test suites, aligning hawk
   with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
 
+### Added
+- REPL magic commands (%reset, %undo, %tokens, %history, %copy, %save, %compact, %model, %clear)
+- Prompt cache keep-alive pings
+- Unified Finding type in shared/types for cross-tool interoperability
+
 ### Added — Production Hardening (top-50 OSS parity)
 - **Stricter linting**: `.golangci.yml` v2 config enabling `errcheck`, `staticcheck`,
   `gocritic` (diagnostic + performance), `unused`, `ineffassign`, `misspell`, `noctx`,
