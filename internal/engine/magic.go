@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // MagicCommand represents a REPL magic command (prefixed with %).
@@ -71,8 +72,21 @@ func ParseMagic(input string) (name, args string) {
 	return
 }
 
-// DefaultMagicRegistry is the package-level registry populated at init time.
-var DefaultMagicRegistry = NewMagicRegistry()
+// DefaultMagicRegistry is the package-level registry populated lazily.
+var (
+	defaultMagicOnce     sync.Once
+	defaultMagicRegistry *MagicRegistry
+)
+
+// DefaultMagicRegistry returns the package-level registry, initializing it on
+// first call. This avoids an init-time cycle with magicHelp referencing the
+// registry before it is fully constructed.
+func DefaultMagicRegistry() *MagicRegistry {
+	defaultMagicOnce.Do(func() {
+		defaultMagicRegistry = NewMagicRegistry()
+	})
+	return defaultMagicRegistry
+}
 
 func (r *MagicRegistry) registerBuiltin() {
 	r.Register(&MagicCommand{
@@ -248,7 +262,7 @@ func magicCompact(session *Session, _ string) string {
 }
 
 func magicHelp(_ *Session, _ string) string {
-	cmds := DefaultMagicRegistry.List()
+	cmds := DefaultMagicRegistry().List()
 	var sb strings.Builder
 	sb.WriteString("Magic Commands\n")
 	sb.WriteString("──────────────\n")
