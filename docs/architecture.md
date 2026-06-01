@@ -5,8 +5,8 @@
 **AI Coding Agent for Your Terminal**
 
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://go.dev/)
-[![Port](https://img.shields.io/badge/Port-4590-orange)]()
-[![Protocol](https://img.shields.io/badge/Protocol-REST-blue)]()
+[![Port](https://img.shields.io/badge/Port-4590-orange)](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml)
+[![Protocol](https://img.shields.io/badge/Protocol-REST-blue)](https://swagger.io/specification/)
 
 </div>
 

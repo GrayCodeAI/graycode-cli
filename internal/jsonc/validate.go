@@ -57,20 +57,6 @@ func (r *ValidationResult) AddErr(err error) {
 	r.Errors = append(r.Errors, err)
 }
 
-// knownFields is the set of top-level field names recognized in
-// Claude Code settings.json. Unknown fields are tolerated.
-var knownFields = map[string]bool{
-	"model":               true,
-	"permissions":         true,
-	"hooks":               true,
-	"mcpServers":          true,
-	"includeCoAuthoredBy": true,
-	"cleanupPeriodDays":   true,
-	"forceLoginMethod":    true,
-	"apiKeyHelper":        true,
-	"env":                 true,
-}
-
 // ValidateClaudeSettings validates a parsed Claude Code settings
 // document (a map[string]interface{}). Returns a ValidationResult
 // describing any issues. The function never returns a non-nil error;
