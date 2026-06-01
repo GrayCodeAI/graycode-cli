@@ -9,8 +9,10 @@ import (
 	"strings"
 )
 
-var ErrPathEscape = errors.New("safewrite: path escapes parent directory")
-var ErrSymlinkTarget = errors.New("safewrite: destination is a symlink")
+var (
+	ErrPathEscape    = errors.New("safewrite: path escapes parent directory")
+	ErrSymlinkTarget = errors.New("safewrite: destination is a symlink")
+)
 
 func WriteFile(path string, data []byte) error {
 	if path == "" {
