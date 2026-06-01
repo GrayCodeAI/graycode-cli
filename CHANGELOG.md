@@ -44,6 +44,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   type with Risk levels (`RiskLow`, `RiskMedium`, `RiskHigh`,
   `RiskBlocked`). Helpers: `Allow`, `Deny`, `RequireApproval`. Additive
   change — existing `GuardianDecision` is unchanged.
+- **`internal/providers`** package: PROVIDERS matrix (34 entries)
+  ported from caveman's `bin/install.js` (PROVIDERS array). Each
+  entry describes an AI coding agent (Claude Code, Cursor, Codex,
+  Aider, etc.) with install mechanism and detection probes. Probe
+  kinds: `command` (PATH), `dir` (filesystem), `vscode-ext`,
+  `cursor-ext`, `macapp`, `jetbrains-plugin`. API: `Get(id)`,
+  `All()`, `Hard()`, `Detect()`. `Soft: true` means detection is
+  best-effort; soft providers are excluded from auto-detect.
+- **`internal/session.GainTracker`**: per-session gain event recording
+  in a new `gains` SQLite table inside the session store. Each event
+  captures original/compressed byte + token counts, mode/tier/model,
+  and a command label. API: `Record`, `AggregateForSession`,
+  `ListForSession`, `PruneForSession`. Scoped to a single session so
+  callers can selectively compact their own history. Companion to
+  tok's `internal/tracking.Tracker` (tok tracks globally, hawk tracks
+  per-session).
 
 ### Added — Production Hardening (top-50 OSS parity)
 - **Stricter linting**: `.golangci.yml` v2 config enabling `errcheck`, `staticcheck`,
