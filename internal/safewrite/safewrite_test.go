@@ -167,3 +167,53 @@ func TestWriteFile_ConcurrentWritesToDifferentPaths(t *testing.T) {
 		t.Errorf("expected 10 files, got %d", len(entries))
 	}
 }
+
+func TestWriteFile_OpenError(t *testing.T) {
+	// Path under a file (not a dir) so mkdirAll fails before we
+	// ever reach the open(O_CREAT) stage.
+	dir := t.TempDir()
+	blocker := filepath.Join(dir, "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	bad := filepath.Join(blocker, "subdir", "data.txt")
+	err := safewrite.WriteFile(bad, []byte("data"))
+	if err == nil {
+		t.Error("expected error when parent is a regular file")
+	}
+}
+
+func TestReadLink_BrokenSymlink(t *testing.T) {
+	// Create a broken symlink and verify WriteFile still
+	// detects it via Lstat (which doesn't follow the link).
+	dir := t.TempDir()
+	broken := filepath.Join(dir, "broken")
+	if err := os.Symlink("/nonexistent/path", broken); err != nil {
+		t.Fatal(err)
+	}
+	err := safewrite.WriteFile(broken, []byte("data"))
+	if !errors.Is(err, safewrite.ErrSymlinkTarget) {
+		t.Errorf("expected ErrSymlinkTarget for broken symlink, got %v", err)
+	}
+}
+
+func TestWriteFile_SymlinkParentDir(t *testing.T) {
+	dir := t.TempDir()
+	// Make the parent dir a symlink (should be rejected).
+	real := filepath.Join(dir, "real")
+	sym := filepath.Join(dir, "sym")
+	if err := os.Mkdir(real, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(real, sym); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(sym, "data.txt")
+	err := safewrite.WriteFile(path, []byte("hello"))
+	if err == nil {
+		t.Error("expected error for symlink parent dir")
+	}
+	if !strings.Contains(err.Error(), "symlink") {
+		t.Errorf("expected symlink in error, got %v", err)
+	}
+}
