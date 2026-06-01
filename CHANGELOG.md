@@ -17,6 +17,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prompt cache keep-alive pings
 - Unified Finding type in shared/types for cross-tool interoperability
 
+### Added — Round 2 of rtk + caveman porting (2026-06-01)
+- **Cavecrew personas** (`internal/multiagent/agents`): three new
+  built-in personas ported from JuliusBrussee/caveman
+  (`cavecrew-investigator`, `cavecrew-builder`, `cavecrew-reviewer`).
+  Each enforces a strict output format so downstream agents can parse
+  outputs mechanically:
+  - `cavecrew-investigator`: `path:line — symbol — note`, max 6 words per note
+  - `cavecrew-builder`: hard-refuses tasks touching 3+ files
+  - `cavecrew-reviewer`: severity emoji (🔴/🟡/🔵/❓) at the start of every line
+  Exposed via `CavecrewPersonas()` helper and `EnsureCavecrew()`
+  registry method; `BuiltinPersonas()` returns 21 (was 18).
+- **`internal/safewrite`** package: hardened atomic file-write utility
+  ported from caveman's `safeWriteFlag`. Refuses symlinks at destination
+  and parent, refuses paths that escape via `..`, opens with
+  `O_NOFOLLOW` via `golang.org/x/sys/unix`, writes to a temp file
+  with mode 0600, syncs to disk, then atomically renames. `ErrSymlinkTarget`
+  and `ErrPathEscape` sentinel errors.
+- **`internal/jsonc`** package: JSON-with-Comments parser and
+  `ValidateClaudeSettings` validator, ported from caveman's settings
+  parser and `validateHookFields`. Accepts `//` and `/* */` comments
+  plus trailing commas in objects and arrays. Validates Claude Code
+  `settings.json` fields (model, permissions, hooks, mcpServers,
+  env) with type checks and value validation.
+- **`internal/permissions/verdict.go`**: unified `PermissionVerdict`
+  type with Risk levels (`RiskLow`, `RiskMedium`, `RiskHigh`,
+  `RiskBlocked`). Helpers: `Allow`, `Deny`, `RequireApproval`. Additive
+  change — existing `GuardianDecision` is unchanged.
+
 ### Added — Production Hardening (top-50 OSS parity)
 - **Stricter linting**: `.golangci.yml` v2 config enabling `errcheck`, `staticcheck`,
   `gocritic` (diagnostic + performance), `unused`, `ineffassign`, `misspell`, `noctx`,
