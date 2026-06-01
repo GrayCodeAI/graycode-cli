@@ -34,8 +34,8 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench build ci clean cover fmt help install lint lint-fix \
-        release security setup smoke path test test-10x test-race tidy version vet
+.PHONY: all bench build ci clean cover cover-new fmt help install lint lint-fix \
+        release security setup smoke path test test-10x test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
 # Default target.
@@ -67,11 +67,17 @@ test-race: ## Run unit tests with the race detector.
 test-10x: ## Run tests 10 times to surface flakes.
 	go test ./... -race -count=10 -timeout=600s
 
+test-new: ## Run only the Round 2 rtk/caveman ported packages (fast iteration).
+	go test -race -count=1 -timeout=60s ./internal/safewrite/... ./internal/jsonc/... ./internal/providers/... ./internal/session/... ./internal/permissions/...
+
 cover: ## Generate a coverage report (coverage.out + coverage.html).
 	go test ./... -race -coverprofile=coverage.out -covermode=atomic -timeout=180s
 	@go tool cover -func=coverage.out | grep "^total:"
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
+
+cover-new: ## Coverage report for Round 2 rtk/caveman ported packages only.
+	go test -cover -timeout=30s ./internal/safewrite/... ./internal/jsonc/... ./internal/providers/... ./internal/session/... ./internal/permissions/...
 
 bench: ## Run benchmarks.
 	go test ./... -bench=. -benchmem -count=3 -timeout=300s
