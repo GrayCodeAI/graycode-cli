@@ -457,24 +457,27 @@ func TestBuiltinPersonas_AreValid(t *testing.T) {
 	builtins := BuiltinPersonas()
 
 	expectedNames := map[string]bool{
-		"default":           false,
-		"reviewer":          false,
-		"architect":         false,
-		"debugger":          false,
-		"teacher":           false,
-		"speed":             false,
-		"planner":           false,
-		"executor":          false,
-		"critic":            false,
-		"security-reviewer": false,
-		"test-engineer":     false,
-		"tracer":            false,
-		"verifier":          false,
-		"integrator":        false,
-		"documenter":        false,
-		"devops":            false,
-		"performance":       false,
-		"refactorer":        false,
+		"default":               false,
+		"reviewer":              false,
+		"architect":             false,
+		"debugger":              false,
+		"teacher":               false,
+		"speed":                 false,
+		"planner":               false,
+		"executor":              false,
+		"critic":                false,
+		"security-reviewer":     false,
+		"test-engineer":         false,
+		"tracer":                false,
+		"verifier":              false,
+		"integrator":            false,
+		"documenter":            false,
+		"devops":                false,
+		"performance":           false,
+		"refactorer":            false,
+		"cavecrew-investigator": false,
+		"cavecrew-builder":      false,
+		"cavecrew-reviewer":     false,
 	}
 
 	for _, p := range builtins {
@@ -546,8 +549,58 @@ func TestSelectPersona_NewDomains(t *testing.T) {
 }
 
 func TestBuiltinPersonas_Count(t *testing.T) {
-	if got := len(BuiltinPersonas()); got != 18 {
-		t.Errorf("expected 18 built-in personas, got %d", got)
+	if got := len(BuiltinPersonas()); got != 21 {
+		t.Errorf("expected 21 built-in personas, got %d", got)
+	}
+}
+
+func TestCavecrewPersonas_ReturnsThree(t *testing.T) {
+	crew := CavecrewPersonas()
+	if len(crew) != 3 {
+		t.Fatalf("expected 3 cavecrew personas, got %d", len(crew))
+	}
+	want := []string{"cavecrew-investigator", "cavecrew-builder", "cavecrew-reviewer"}
+	for i, p := range crew {
+		if p.Name != want[i] {
+			t.Errorf("expected %d-th persona %q, got %q", i, want[i], p.Name)
+		}
+		if p.Description == "" {
+			t.Errorf("cavecrew persona %q has empty description", p.Name)
+		}
+		if p.SystemPrompt == "" {
+			t.Errorf("cavecrew persona %q has empty system prompt", p.Name)
+		}
+		if len(p.Rules) == 0 {
+			t.Errorf("cavecrew persona %q has no rules", p.Name)
+		}
+	}
+}
+
+func TestCavecrewPersonas_AreInBuiltinList(t *testing.T) {
+	// Cavecrew personas must be a subset of BuiltinPersonas so
+	// EnsureBuiltins auto-creates them on first run.
+	builtins := map[string]bool{}
+	for _, p := range BuiltinPersonas() {
+		builtins[p.Name] = true
+	}
+	for _, p := range CavecrewPersonas() {
+		if !builtins[p.Name] {
+			t.Errorf("cavecrew persona %q missing from BuiltinPersonas", p.Name)
+		}
+	}
+}
+
+func TestEnsureCavecrew_WritesFiles(t *testing.T) {
+	dir := t.TempDir()
+	r := NewPersonaRegistry(dir)
+	if err := r.EnsureCavecrew(); err != nil {
+		t.Fatalf("EnsureCavecrew: %v", err)
+	}
+	for _, want := range []string{"cavecrew-investigator.md", "cavecrew-builder.md", "cavecrew-reviewer.md"} {
+		path := filepath.Join(dir, want)
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("expected file %s: %v", want, err)
+		}
 	}
 }
 
