@@ -9,12 +9,12 @@ WORKDIR /build
 RUN git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git /eyrie
 
 COPY go.mod go.sum ./
-# Replace eyrie with local clone for unpublished packages
-RUN echo "" >> go.mod && echo "replace github.com/GrayCodeAI/eyrie => /eyrie" >> go.mod
-
-RUN go mod download && go mod tidy
+RUN go mod download
 
 COPY . .
+# Add replace after source copy so it doesn't get overwritten
+RUN echo "" >> go.mod && echo "replace github.com/GrayCodeAI/eyrie => /eyrie" >> go.mod && go mod tidy
+
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -mod=mod \
     -ldflags="-s -w -X main.Version=$(git describe --tags --always 2>/dev/null || echo dev)" \
     -o hawk .
