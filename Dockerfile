@@ -4,7 +4,14 @@ FROM golang:1.26.3-alpine AS builder
 RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
+
+# Clone eyrie (unpublished dependency with local-only packages)
+RUN git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git /eyrie
+
 COPY go.mod go.sum ./
+# Replace eyrie with local clone for unpublished packages
+RUN echo "replace github.com/GrayCodeAI/eyrie => /eyrie" >> go.mod
+
 RUN go mod download && go mod verify
 
 COPY . .
