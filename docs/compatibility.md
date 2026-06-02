@@ -1,6 +1,6 @@
 # Compatibility Matrix
 
-This eco uses **independent SemVer per repo** (see [VERSIONING.md](./docs/versioning.md)).
+This eco uses **independent SemVer per repo** (see [VERSIONING.md](./versioning.md)).
 That gives each component its own release cadence, but raises an obvious
 question: *which combinations of versions are actually tested together?*
 

@@ -32,7 +32,7 @@
 
 hawk is an AI-powered coding agent that lives in your terminal. It reads your codebase, writes and edits files, runs tests, and manages git — all through natural language. Unlike IDE-bound tools, hawk works over SSH, in containers, and on any machine with a shell.
 
-**Developer path:** one machine, keychain credentials, local memory. Run `hawk path` to check readiness. See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md).
+**Developer path:** one machine, keychain credentials, local memory. Run `hawk path` to check readiness.
 
 - **Model-agnostic** — works with Claude, GPT-4, Gemini, DeepSeek, Ollama, and 75+ models through [eyrie](https://github.com/GrayCodeAI/eyrie)
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
@@ -148,7 +148,7 @@ make path                    # Developer path verification
 make smoke                   # Build + quick verification script
 ```
 
-See [docs/DEVELOPER-PATH.md](docs/DEVELOPER-PATH.md) and [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
+See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
 
 See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
 
