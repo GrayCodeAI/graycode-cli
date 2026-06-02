@@ -911,9 +911,21 @@ func TestClassifyNonConventional(t *testing.T) {
 
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
+	// Lightweight tags with a message when global tag signing is enabled.
+	if len(args) >= 2 && args[0] == "tag" && args[1][0] != '-' {
+		args = []string{"tag", "-m", "test tag", args[1]}
+	}
 	cmd := exec.CommandContext(context.Background(), "git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_AUTHOR_DATE=2024-01-01T00:00:00Z", "GIT_COMMITTER_DATE=2024-01-01T00:00:00Z")
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_DATE=2024-01-01T00:00:00Z",
+		"GIT_COMMITTER_DATE=2024-01-01T00:00:00Z",
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=commit.gpgsign",
+		"GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=tag.gpgsign",
+		"GIT_CONFIG_VALUE_1=false",
+	)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed: %v\noutput: %s", args, err, output)
