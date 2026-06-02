@@ -12,7 +12,7 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 # Ensure binary exists
 if [ ! -f ./hawk ]; then
     echo "Building hawk..."
-    go build -o hawk .
+    go build -o hawk ./cmd/hawk
 fi
 
 echo "=== macOS E2E Tests ==="
