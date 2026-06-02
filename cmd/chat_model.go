@@ -166,29 +166,29 @@ type chatModel struct {
 	spinnerVerb                string
 	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).
 	// Reset each time the user submits a message; updated by usageUpdateMsg.
-	turnInputTokens  int
-	turnOutputTokens int
-	lastCtrlC        time.Time
-	history                    []string
-	historyIdx                 int
-	historyDraft               string // unsent text before navigating history
-	autoScroll                 bool   // whether to auto-scroll viewport to bottom
-	vim                        *VimState
-	contextViz                 *ContextVisualization
-	wal                        *session.WAL
-	startedAt                  time.Time
-	toolStartTime              time.Time
-	welcomeCache               string
-	openConfigOnStart          bool // first-run: open /config when TUI starts
-	viewDirty                  bool
-	layoutKey                  int    // input lines + slash menu height fingerprint
-	slashSugInput              string // memoize slashSuggestions per keystroke
-	slashSugCache              []string
-	connStatusKey              string // gateway+model+creds fingerprint
-	connStatusVal              string
-	partialDirty               bool // stream text changed since last viewport paint
-	lastPartialRender          time.Time
-	activeSkills               map[string]plugin.SmartSkill // per-session activated skills
+	turnInputTokens   int
+	turnOutputTokens  int
+	lastCtrlC         time.Time
+	history           []string
+	historyIdx        int
+	historyDraft      string // unsent text before navigating history
+	autoScroll        bool   // whether to auto-scroll viewport to bottom
+	vim               *VimState
+	contextViz        *ContextVisualization
+	wal               *session.WAL
+	startedAt         time.Time
+	toolStartTime     time.Time
+	welcomeCache      string
+	openConfigOnStart bool // first-run: open /config when TUI starts
+	viewDirty         bool
+	layoutKey         int    // input lines + slash menu height fingerprint
+	slashSugInput     string // memoize slashSuggestions per keystroke
+	slashSugCache     []string
+	connStatusKey     string // gateway+model+creds fingerprint
+	connStatusVal     string
+	partialDirty      bool // stream text changed since last viewport paint
+	lastPartialRender time.Time
+	activeSkills      map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool
