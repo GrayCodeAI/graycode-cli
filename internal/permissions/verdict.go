@@ -125,7 +125,7 @@ func RequireApproval(reason, rule string, risk Risk) PermissionVerdict {
 // IsZero reports whether v is the zero value. Useful for
 // detecting "no verdict produced" cases.
 func (v PermissionVerdict) IsZero() bool {
-	return v.Allowed == false && v.Reason == "" && v.Rule == "" &&
+	return !v.Allowed && v.Reason == "" && v.Rule == "" &&
 		v.Risk == 0 && v.Confidence == 0 && v.Source == ""
 }
 
