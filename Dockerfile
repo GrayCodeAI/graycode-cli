@@ -17,7 +17,7 @@ RUN echo "" >> go.mod && echo "replace github.com/GrayCodeAI/eyrie => /eyrie" >>
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -mod=mod \
     -ldflags="-s -w -X main.Version=$(git describe --tags --always 2>/dev/null || echo dev)" \
-    -o hawk .
+    -o hawk ./cmd/hawk
 
 # Runtime stage — minimal image
 FROM alpine:3.20
