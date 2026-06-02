@@ -1,3 +1,5 @@
+//go:build !windows
+
 // Package safewrite provides a hardened file-write helper that
 // protects against common symlink and permission attacks.
 //
