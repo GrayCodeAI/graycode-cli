@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/charmbracelet/lipgloss"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestRenderChatConnectionStatus_ColorParts(t *testing.T) {
