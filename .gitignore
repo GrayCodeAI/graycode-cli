@@ -48,3 +48,4 @@ cmd/.hawk/
 .commandcode/
 .antigravitycli/
 .pi/
+testdata/compat-test
