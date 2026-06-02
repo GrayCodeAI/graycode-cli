@@ -365,14 +365,16 @@ func (m *chatModel) updateViewportContent() {
 			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(partial, viewWidth-3))
 			chatContent.WriteString("\n\n")
 		} else {
-			// Hawk QuadBlock spinner: random color glyph + verb label
+			// Hawk QuadBlock spinner: animated glyph + color-waved verb label
+			// + trailing 3-dot typing indicator + live ↑/↓ token counters.
 			spinnerLine := m.brailleSpinner.Frame()
 			if !m.toolStartTime.IsZero() {
 				if elapsed := time.Since(m.toolStartTime); elapsed > 2*time.Second {
 					spinnerLine += fmt.Sprintf(" (%.1fs)", elapsed.Seconds())
 				}
 			}
-			spinnerLine += " " + dimStyle.Render("(Press ESC to stop)")
+			spinnerLine += "  " + renderTokenCounters(m.turnInputTokens, m.turnOutputTokens)
+			spinnerLine += "  " + dimStyle.Render("(Press ESC to stop)")
 			chatContent.WriteString(spinnerLine + "\n\n")
 		}
 	}
@@ -591,4 +593,21 @@ func renderReflectionBox(reflection string, width int) string {
 		Padding(0, 1)
 
 	return border.Render(strings.TrimRight(b.String(), "\n"))
+}
+
+// renderTokenCounters formats the live per-turn token counters that ride
+// next to the spinner. Uses ↑ for input (prompt) and ↓ for output
+// (completion) tokens, formatted via formatModelTableContext (e.g. "1.2k",
+// "262k", "1.5m"). Both halves are muted until at least one event has
+// arrived; on first usage update the input figure lands first.
+func renderTokenCounters(inputTokens, outputTokens int) string {
+	if inputTokens == 0 && outputTokens == 0 {
+		return ""
+	}
+	upStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7FB3D5"))   // soft blue
+	downStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#F5B041")) // soft amber
+	sep := dimStyle.Render(" ")
+	up := upStyle.Render("↑ " + formatModelTableContext(inputTokens))
+	down := downStyle.Render("↓ " + formatModelTableContext(outputTokens))
+	return up + sep + down
 }
