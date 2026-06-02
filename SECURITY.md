@@ -7,7 +7,7 @@ minor versions once `1.x` ships. Older versions receive critical-severity
 fixes only on a best-effort basis.
 
 The current canonical version is the contents of the [`VERSION`](./VERSION)
-file at the repo root. See [`VERSIONING.md`](https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md)
+file at the repo root. See [`docs/versioning.md`](https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md)
 for the eco-wide versioning scheme.
 
 ## Reporting a vulnerability

@@ -1,12 +1,12 @@
 # Compatibility Matrix
 
-This eco uses **independent SemVer per repo** (see [VERSIONING.md](./VERSIONING.md)).
+This eco uses **independent SemVer per repo** (see [VERSIONING.md](./docs/versioning.md)).
 That gives each component its own release cadence, but raises an obvious
 question: *which combinations of versions are actually tested together?*
 
 The answer lives in [`testdata/compatibility-matrix.json`](./testdata/compatibility-matrix.json).
 
-Platform/provider capability metadata is separate: [`platform-capabilities.json`](./platform-capabilities.json).
+Platform/provider capability metadata is separate: [`platform-capabilities.json`](./docs/platform-capabilities.json).
 
 ## What it records
 
