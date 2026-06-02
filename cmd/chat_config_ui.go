@@ -16,10 +16,11 @@ func configTitleStyle() lipgloss.Style {
 }
 
 func configSelectedStyle() lipgloss.Style {
-	// Hot pink — active selection. Distinct from the title (orange) so
-	// the user can see which item is the focus without confusing the
-	// panel voice with the focus indicator.
-	return lipgloss.NewStyle().Foreground(activePink).Bold(true)
+	// Brand orange (bold) — the selected item, matching the rest of
+	// the TUI's hawk voice. The title uses plain orange + bold so the
+	// selected item is visually heavier than the title, but the hue is
+	// the same.
+	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Underline(true)
 }
 
 func configAccentStyle() lipgloss.Style {
@@ -83,7 +84,7 @@ func configActiveStyle() lipgloss.Style {
 	// The current gateway/model name in the status line — pink to match
 	// the active-selection color so the "current" indicator and the
 	// "focus" indicator share a visual language.
-	return lipgloss.NewStyle().Foreground(activePink)
+	return lipgloss.NewStyle().Foreground(hawkColor)
 }
 
 func configRowStyle() lipgloss.Style {

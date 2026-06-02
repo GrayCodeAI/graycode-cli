@@ -40,8 +40,8 @@ var (
 
 	slashCmdStyle       = lipgloss.NewStyle().Foreground(textDisabled)
 	slashDescStyle      = lipgloss.NewStyle().Foreground(textDisabled)
-	slashSelCmdStyle    = lipgloss.NewStyle().Foreground(activePink).Bold(true)
-	slashSelDescStyle   = lipgloss.NewStyle().Foreground(activePink)
+	slashSelCmdStyle    = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	slashSelDescStyle   = lipgloss.NewStyle().Foreground(hawkColor)
 	inputBorderStyle    = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(borderDim)
 	ghostHintStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
 	containerErrStyle   = lipgloss.NewStyle().Foreground(errorCoral)
