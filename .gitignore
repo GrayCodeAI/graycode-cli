@@ -49,3 +49,4 @@ cmd/.hawk/
 .antigravitycli/
 .pi/
 testdata/compat-test
+bin/
