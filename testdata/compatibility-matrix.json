@@ -2,7 +2,7 @@
   "$schema": "./compatibility-matrix.schema.json",
   "description": "Cross-repo compatibility tracking for GrayCodeAI repositories. Each `matrix` entry records a combination of component versions that have been tested together. CI runs the matrix on a schedule and on PR to ensure released components stay compatible.",
   "version": "1",
-  "updated": "2026-05-18",
+  "updated": "2026-06-02",
   "components": [
     "hawk",
     "hawk-sdk-go",

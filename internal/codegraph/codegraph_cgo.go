@@ -3,6 +3,7 @@
 package codegraph
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
@@ -193,7 +194,7 @@ func (cg *CodeGraph) createSchema() error {
 		VALUES (new.rowid, new.id, new.name, new.qualified_name, new.docstring, new.signature);
 	END;
 	`
-	_, err := cg.db.Exec(schema)
+	_, err := cg.db.ExecContext(context.Background(), schema)
 	return err
 }
 
@@ -297,8 +298,8 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 
 	// Delete old nodes for this file
 	cg.mu.Lock()
-	_, _ = cg.db.Exec("DELETE FROM nodes WHERE file_path = ?", filePath)
-	_, _ = cg.db.Exec("DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE file_path = ?)", filePath)
+	_, _ = cg.db.ExecContext(context.Background(), "DELETE FROM nodes WHERE file_path = ?", filePath)
+	_, _ = cg.db.ExecContext(context.Background(), "DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE file_path = ?)", filePath)
 	cg.mu.Unlock()
 
 	// Walk AST and extract symbols
@@ -364,7 +365,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 	defer cg.mu.Unlock()
 
 	for _, n := range nodes {
-		_, err := cg.db.Exec(
+		_, err := cg.db.ExecContext(context.Background(),
 			`INSERT OR REPLACE INTO nodes (id, kind, name, qualified_name, file_path, language, start_line, end_line, signature, docstring, visibility, is_exported, updated_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			n.ID, n.Kind, n.Name, n.QualifiedName, n.FilePath, n.Language,
@@ -377,7 +378,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 	}
 
 	for _, e := range edges {
-		_, err := cg.db.Exec(
+		_, err := cg.db.ExecContext(context.Background(),
 			`INSERT INTO edges (source, target, kind, line, metadata) VALUES (?, ?, ?, ?, ?)`,
 			e.Source, e.Target, e.Kind, e.Line, e.Metadata,
 		)
@@ -387,7 +388,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 	}
 
 	for _, ref := range unresolvedRefs {
-		_, err := cg.db.Exec(
+		_, err := cg.db.ExecContext(context.Background(),
 			`INSERT INTO unresolved_refs (from_node_id, reference_name, reference_kind, line, file_path, language)
 			 VALUES (?, ?, ?, ?, ?, ?)`,
 			ref.FromNodeID, ref.ReferenceName, ref.ReferenceKind, ref.Line, ref.FilePath, ref.Language,
@@ -399,7 +400,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 
 	// Update file record
 	hash := sha256Sum(source)
-	_, _ = cg.db.Exec(
+	_, _ = cg.db.ExecContext(context.Background(),
 		`INSERT OR REPLACE INTO files (path, content_hash, language, size, modified_at, indexed_at, node_count)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		filePath, hash, ext, len(source), time.Now().Unix(), time.Now().Unix(), len(nodes),
@@ -438,7 +439,7 @@ func (cg *CodeGraph) Search(query string, limit int) ([]Node, error) {
 	cg.mu.RLock()
 	defer cg.mu.RUnlock()
 
-	rows, err := cg.db.Query(
+	rows, err := cg.db.QueryContext(context.Background(),
 		`SELECT n.id, n.kind, n.name, n.qualified_name, n.file_path, n.language,
 		        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 		 FROM nodes_fts fts
@@ -449,7 +450,7 @@ func (cg *CodeGraph) Search(query string, limit int) ([]Node, error) {
 	)
 	if err != nil {
 		// Fallback to LIKE search
-		rows, err = cg.db.Query(
+		rows, err = cg.db.QueryContext(context.Background(),
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
 			 FROM nodes WHERE name LIKE ? ORDER BY name LIMIT ?`,
@@ -490,7 +491,7 @@ func (cg *CodeGraph) GetCallers(nodeID string, maxDepth int) ([]Node, error) {
 		}
 		visited[current.id] = true
 
-		rows, err := cg.db.Query(
+		rows, err := cg.db.QueryContext(context.Background(),
 			`SELECT n.id, n.kind, n.name, n.qualified_name, n.file_path, n.language,
 			        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 			 FROM edges e JOIN nodes n ON n.id = e.source
@@ -541,7 +542,7 @@ func (cg *CodeGraph) GetCallees(nodeID string, maxDepth int) ([]Node, error) {
 		}
 		visited[current.id] = true
 
-		rows, err := cg.db.Query(
+		rows, err := cg.db.QueryContext(context.Background(),
 			`SELECT n.id, n.kind, n.name, n.qualified_name, n.file_path, n.language,
 			        n.start_line, n.end_line, n.signature, n.docstring, n.visibility, n.is_exported
 			 FROM edges e JOIN nodes n ON n.id = e.target
@@ -577,7 +578,7 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 
 	// Get the focal node
 	var focalNode Node
-	err := cg.db.QueryRow(
+	err := cg.db.QueryRowContext(context.Background(),
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE id = ?`, nodeID,
@@ -614,7 +615,7 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 
 		// Get node
 		var n Node
-		err := cg.db.QueryRow(
+		err := cg.db.QueryRowContext(context.Background(),
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
 			 FROM nodes WHERE id = ?`, s.nodeID,
@@ -629,7 +630,7 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 
 		// If container, expand children at same depth
 		if containerKinds[n.Kind] {
-			childRows, _ := cg.db.Query(
+			childRows, _ := cg.db.QueryContext(context.Background(),
 				`SELECT target FROM edges WHERE source = ? AND kind = 'contains'`, s.nodeID,
 			)
 			if childRows != nil {
@@ -645,7 +646,7 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 		}
 
 		// Traverse incoming edges (things that depend on this node)
-		depRows, _ := cg.db.Query(
+		depRows, _ := cg.db.QueryContext(context.Background(),
 			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.nodeID,
 		)
 		if depRows != nil {
@@ -735,7 +736,7 @@ func (cg *CodeGraph) ResolveRefs() error {
 	cg.mu.Lock()
 	defer cg.mu.Unlock()
 
-	rows, err := cg.db.Query(`SELECT id, from_node_id, reference_name, reference_kind, line, file_path, language FROM unresolved_refs`)
+	rows, err := cg.db.QueryContext(context.Background(), `SELECT id, from_node_id, reference_name, reference_kind, line, file_path, language FROM unresolved_refs`)
 	if err != nil {
 		return err
 	}
@@ -762,7 +763,7 @@ func (cg *CodeGraph) ResolveRefs() error {
 	for _, r := range refs {
 		// Try to find target by name
 		var targetID string
-		err := cg.db.QueryRow(
+		err := cg.db.QueryRowContext(context.Background(),
 			`SELECT id FROM nodes WHERE name = ? OR qualified_name LIKE ? LIMIT 1`,
 			r.name, "%"+r.name,
 		).Scan(&targetID)
@@ -771,7 +772,7 @@ func (cg *CodeGraph) ResolveRefs() error {
 		}
 
 		// Create edge
-		_, err = cg.db.Exec(
+		_, err = cg.db.ExecContext(context.Background(),
 			`INSERT INTO edges (source, target, kind, line) VALUES (?, ?, ?, ?)`,
 			r.fromID, targetID, r.kind, r.line,
 		)
@@ -781,7 +782,7 @@ func (cg *CodeGraph) ResolveRefs() error {
 	}
 
 	// Clean up resolved refs
-	_, _ = cg.db.Exec(`DELETE FROM unresolved_refs`)
+	_, _ = cg.db.ExecContext(context.Background(), `DELETE FROM unresolved_refs`)
 
 	return nil
 }
@@ -794,16 +795,16 @@ func (cg *CodeGraph) Stats() (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
 	var nodeCount, edgeCount, fileCount int
-	cg.db.QueryRow("SELECT COUNT(*) FROM nodes").Scan(&nodeCount)
-	cg.db.QueryRow("SELECT COUNT(*) FROM edges").Scan(&edgeCount)
-	cg.db.QueryRow("SELECT COUNT(*) FROM files").Scan(&fileCount)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM nodes").Scan(&nodeCount)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM edges").Scan(&edgeCount)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&fileCount)
 
 	stats["nodes"] = nodeCount
 	stats["edges"] = edgeCount
 	stats["files"] = fileCount
 
 	// Nodes by kind
-	rows, _ := cg.db.Query("SELECT kind, COUNT(*) FROM nodes GROUP BY kind ORDER BY COUNT(*) DESC")
+	rows, _ := cg.db.QueryContext(context.Background(), "SELECT kind, COUNT(*) FROM nodes GROUP BY kind ORDER BY COUNT(*) DESC")
 	if rows != nil {
 		byKind := make(map[string]int)
 		for rows.Next() {
@@ -1075,7 +1076,7 @@ func (cg *CodeGraph) Sync() (*SyncResult, error) {
 
 	// Get currently tracked files
 	trackedFiles := make(map[string]string) // path -> content_hash
-	rows, err := cg.db.Query("SELECT path, content_hash FROM files")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT path, content_hash FROM files")
 	if err != nil {
 		return nil, err
 	}
@@ -1140,9 +1141,9 @@ func (cg *CodeGraph) Sync() (*SyncResult, error) {
 		if !currentFiles[trackedPath] {
 			absPath := filepath.Join(cg.root, trackedPath)
 			relForDelete := trackedPath
-			cg.db.Exec("DELETE FROM nodes WHERE file_path = ?", absPath)
-			cg.db.Exec("DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE file_path = ?)", absPath)
-			cg.db.Exec("DELETE FROM files WHERE path = ?", relForDelete)
+			cg.db.ExecContext(context.Background(), "DELETE FROM nodes WHERE file_path = ?", absPath)
+			cg.db.ExecContext(context.Background(), "DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE file_path = ?)", absPath)
+			cg.db.ExecContext(context.Background(), "DELETE FROM files WHERE path = ?", relForDelete)
 			result.FilesRemoved++
 		}
 	}
@@ -1199,7 +1200,7 @@ func (cg *CodeGraph) Trace(fromName, toName string) ([]Node, error) {
 				var path []Node
 				for _, id := range current.path {
 					var n Node
-					err := cg.db.QueryRow(
+					err := cg.db.QueryRowContext(context.Background(),
 						`SELECT id, kind, name, qualified_name, file_path, language,
 						        start_line, end_line, signature, docstring, visibility, is_exported
 						 FROM nodes WHERE id = ?`, id,
@@ -1215,7 +1216,7 @@ func (cg *CodeGraph) Trace(fromName, toName string) ([]Node, error) {
 			}
 
 			// Expand via call edges
-			edgeRows, _ := cg.db.Query(
+			edgeRows, _ := cg.db.QueryContext(context.Background(),
 				`SELECT target FROM edges WHERE source = ? AND kind IN ('calls', 'references') LIMIT 20`, current.nodeID,
 			)
 			if edgeRows != nil {
@@ -1331,7 +1332,7 @@ func (cg *CodeGraph) Files(dirFilter string) ([]FileEntry, error) {
 	}
 	query += " ORDER BY path"
 
-	rows, err := cg.db.Query(query, args...)
+	rows, err := cg.db.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1379,13 +1380,13 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 	}
 
 	// Counts
-	cg.db.QueryRow("SELECT COUNT(*) FROM nodes").Scan(&status.Nodes)
-	cg.db.QueryRow("SELECT COUNT(*) FROM edges").Scan(&status.Edges)
-	cg.db.QueryRow("SELECT COUNT(*) FROM files").Scan(&status.Files)
-	cg.db.QueryRow("SELECT COUNT(*) FROM unresolved_refs").Scan(&status.Unresolved)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM nodes").Scan(&status.Nodes)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM edges").Scan(&status.Edges)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&status.Files)
+	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM unresolved_refs").Scan(&status.Unresolved)
 
 	// Nodes by kind
-	rows, _ := cg.db.Query("SELECT kind, COUNT(*) FROM nodes GROUP BY kind ORDER BY COUNT(*) DESC")
+	rows, _ := cg.db.QueryContext(context.Background(), "SELECT kind, COUNT(*) FROM nodes GROUP BY kind ORDER BY COUNT(*) DESC")
 	if rows != nil {
 		for rows.Next() {
 			var kind string
@@ -1397,7 +1398,7 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 	}
 
 	// Files by language
-	rows, _ = cg.db.Query("SELECT language, COUNT(*) FROM files GROUP BY language ORDER BY COUNT(*) DESC")
+	rows, _ = cg.db.QueryContext(context.Background(), "SELECT language, COUNT(*) FROM files GROUP BY language ORDER BY COUNT(*) DESC")
 	if rows != nil {
 		for rows.Next() {
 			var lang string
@@ -1409,11 +1410,11 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 	}
 
 	// Journal mode
-	cg.db.QueryRow("PRAGMA journal_mode").Scan(&status.JournalMode)
+	cg.db.QueryRowContext(context.Background(), "PRAGMA journal_mode").Scan(&status.JournalMode)
 
 	// Check if up to date (no pending changes)
 	status.UpToDate = true
-	fileRows, _ := cg.db.Query("SELECT path, content_hash FROM files")
+	fileRows, _ := cg.db.QueryContext(context.Background(), "SELECT path, content_hash FROM files")
 	if fileRows != nil {
 		for fileRows.Next() {
 			var path, hash string
@@ -1437,7 +1438,7 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 
 // searchByName is an internal search that returns nodes matching a name.
 func (cg *CodeGraph) searchByName(name string, limit int) ([]Node, error) {
-	rows, err := cg.db.Query(
+	rows, err := cg.db.QueryContext(context.Background(),
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE name = ? OR name LIKE ? LIMIT ?`,
@@ -1456,7 +1457,7 @@ func (cg *CodeGraph) GetNode(id string) (Node, error) {
 	defer cg.mu.RUnlock()
 
 	var n Node
-	err := cg.db.QueryRow(
+	err := cg.db.QueryRowContext(context.Background(),
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE id = ?`, id,
