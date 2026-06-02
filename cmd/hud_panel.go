@@ -46,10 +46,10 @@ type HUDMessage struct {
 }
 
 var (
-	hudBorderColor  = lipgloss.Color("#FF5E0E")
-	hudHeaderColor  = lipgloss.Color("#FFD700")
-	hudLabelColor   = lipgloss.Color("#FF5E0E")
-	hudDimHUDColor  = lipgloss.Color("#666666")
+	hudBorderColor  = hudBorderPurple
+	hudHeaderColor  = toolGold
+	hudLabelColor   = hudLabelPink
+	hudDimHUDColor  = textDisabled
 	hudHeaderStyle  = lipgloss.NewStyle().Foreground(hudHeaderColor).Bold(true)
 	hudLabelStyle   = lipgloss.NewStyle().Foreground(hudLabelColor)
 	hudDimHUDStyle  = lipgloss.NewStyle().Foreground(hudDimHUDColor)

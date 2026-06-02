@@ -15,20 +15,20 @@ import (
 // Legacy markdown rendering using lipgloss (used by chat_view.go)
 // ---------------------------------------------------------------------------
 
-// Markdown rendering styles using the project's existing color palette.
+// Markdown rendering styles using the project's purpose-named palette.
 var (
-	mdHeaderStyle     = lipgloss.NewStyle().Foreground(tealColor).Bold(true)
+	mdHeaderStyle     = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
 	mdBoldStyle       = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	mdItalicStyle     = lipgloss.NewStyle().Italic(true)
-	mdInlineCodeStyle = lipgloss.NewStyle().Background(lipgloss.Color("#2A2A3A")).Foreground(lipgloss.Color("#E6E6E6"))
-	mdCodeBlockStyle  = lipgloss.NewStyle().Background(lipgloss.Color("#2A2A3A"))
-	mdCodeLabelStyle  = lipgloss.NewStyle().Foreground(dimColor).Background(lipgloss.Color("#2A2A3A"))
-	mdLinkTextStyle   = lipgloss.NewStyle().Foreground(tealColor)
-	mdLinkURLStyle    = lipgloss.NewStyle().Foreground(dimColor)
-	mdBlockquoteBar   = lipgloss.NewStyle().Foreground(dimColor)
-	mdBlockquoteText  = lipgloss.NewStyle().Foreground(dimColor)
-	mdHRStyle         = lipgloss.NewStyle().Foreground(dimColor)
-	mdBulletStyle     = lipgloss.NewStyle().Foreground(tealColor)
+	mdInlineCodeStyle = lipgloss.NewStyle().Background(bgCode).Foreground(textPrimary)
+	mdCodeBlockStyle  = lipgloss.NewStyle().Background(bgCode)
+	mdCodeLabelStyle  = lipgloss.NewStyle().Foreground(textDisabled).Background(bgCode)
+	mdLinkTextStyle   = lipgloss.NewStyle().Foreground(successTeal)
+	mdLinkURLStyle    = lipgloss.NewStyle().Foreground(textDisabled)
+	mdBlockquoteBar   = lipgloss.NewStyle().Foreground(textDisabled)
+	mdBlockquoteText  = lipgloss.NewStyle().Foreground(textDisabled)
+	mdHRStyle         = lipgloss.NewStyle().Foreground(textDisabled)
+	mdBulletStyle     = lipgloss.NewStyle().Foreground(successTeal)
 )
 
 // Inline regex patterns, compiled once.

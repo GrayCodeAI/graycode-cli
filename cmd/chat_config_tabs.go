@@ -40,7 +40,7 @@ const (
 
 func configTabLabelStyle(active bool) lipgloss.Style {
 	if active {
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+		return lipgloss.NewStyle().Foreground(activePink).Bold(true)
 	}
 	return configMutedStyle()
 }

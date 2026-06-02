@@ -62,8 +62,11 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	mascotC := "\033[38;2;255;94;14m"
 	dimC := "\033[2m"
 	boldC := "\033[1m"
-	greenC := "\033[38;2;78;205;196m"
-	redC := "\033[38;2;224;85;85m"
+	// Indicator colors — same as the rest of the TUI palette (success
+	// teal, error coral) so the ✓/× marks match the colors used
+	// elsewhere for success/error states.
+	greenC := "\033[38;2;78;205;196m" // successTeal
+	redC := "\033[38;2;255;107;107m"  // errorCoral (was 224;85;85)
 	rst := "\033[0m"
 
 	totalW := width
