@@ -2,7 +2,7 @@
 
 Thanks for your interest! This guide covers the conventions used across the
 GrayCodeAI repositories. The shared standards (versioning, release tooling, repo layout)
-are defined in <https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md>.
+are defined in <https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md>.
 
 ## Quick start
 
