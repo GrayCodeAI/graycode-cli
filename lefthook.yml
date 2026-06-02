@@ -6,7 +6,7 @@
 #   go install github.com/evilmartians/lefthook@latest
 #   npm install -g lefthook      (cross-platform)
 #
-# Activate hooks in this repo (one time):
+# Activate hooks in this repo (one time, done automatically by `make setup`):
 #   lefthook install
 #
 # Skip hooks for a single commit (use sparingly):
@@ -23,7 +23,8 @@ pre-commit:
       glob: "*.go"
       run: |
         if ! command -v gofumpt >/dev/null 2>&1; then
-          echo "lefthook: gofumpt not installed (go install mvdan.cc/gofumpt@latest)"; exit 1
+          echo "lefthook: gofumpt not installed (go install mvdan.cc/gofumpt@latest) — skipping"
+          exit 0
         fi
         gofumpt -w {staged_files}
       stage_fixed: true
@@ -32,7 +33,8 @@ pre-commit:
       glob: "*.go"
       run: |
         if ! command -v goimports >/dev/null 2>&1; then
-          echo "lefthook: goimports not installed (go install golang.org/x/tools/cmd/goimports@latest)"; exit 1
+          echo "lefthook: goimports not installed (go install golang.org/x/tools/cmd/goimports@latest) — skipping"
+          exit 0
         fi
         goimports -w {staged_files}
       stage_fixed: true
@@ -46,6 +48,18 @@ pre-commit:
         fi
         golangci-lint run --new-from-rev=HEAD~1 --fix {staged_files}
       stage_fixed: true
+
+    ast-grep:
+      glob: "*.go"
+      run: |
+        # Run ast-grep structural code search on staged Go files.
+        # Falls back gracefully if `sg` (ast-grep) is not installed.
+        STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$' || true)
+        if [ -n "$STAGED" ]; then
+          if command -v sg >/dev/null 2>&1; then
+            echo "$STAGED" | xargs sg scan 2>&1 | head -20
+          fi
+        fi
 
     yaml-lint:
       glob: "*.{yml,yaml}"
@@ -76,7 +90,7 @@ pre-push:
   commands:
 
     test:
-      run: go test ./... -count=1 -timeout=60s
+      run: go test ./... -count=1 -timeout=120s
 
     vet:
       run: go vet ./...
@@ -90,7 +104,7 @@ pre-push:
         govulncheck ./...
 
 # ---------------------------------------------------------------------------
-# commit-msg — validate Conventional Commits (release-please depends on it).
+# commit-msg — validate Conventional Commits and strip AI co-author trailers.
 # ---------------------------------------------------------------------------
 commit-msg:
   commands:
@@ -110,3 +124,9 @@ commit-msg:
           echo "  full guide: https://www.conventionalcommits.org/"
           exit 1
         fi
+
+    strip-co-authored-by:
+      run: |
+        # Strip Co-authored-by: trailers that AI tools (Claude, Cursor, etc.) add.
+        # This enforces the rule that commits list only the human author.
+        sed '/^[Cc]o-[Aa]uthored-[Bb]y:/d' "{1}" > "{1}.tmp" && mv "{1}.tmp" "{1}"

@@ -74,10 +74,11 @@ refactor!: rename ClientV1 to Client (BREAKING CHANGE)
 ```
 
 **Co-authors:** do not add `Co-authored-by:` trailers. Commits should list
-only the human author. Enable the repo hook with:
+only the human author. Hooks are auto-installed by `make setup` via
+[lefthook](https://github.com/evilmartians/lefthook). To re-install manually:
 
 ```bash
-git config core.hooksPath .githooks
+make hooks
 ```
 
 ## Pull request checklist
