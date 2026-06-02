@@ -855,6 +855,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
+			m.startedAt = time.Time{}
 			m.partial.Reset()
 			m.startStream()
 			return m, nil
@@ -1020,6 +1021,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
+			m.startedAt = time.Time{}
 			m.partial.Reset()
 			m.startStream()
 		}
@@ -1062,6 +1064,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		if m.waiting && m.partial.Len() == 0 {
 			m.brailleSpinner.Tick()
+			// Lazy-init startedAt here (Update path) so the spinner
+			// line's elapsed timer has a reference point. Kept out of
+			// the View path so render stays a pure function.
+			if m.startedAt.IsZero() {
+				m.startedAt = time.Now()
+			}
+			// Lerp the displayed token counters toward the engine's
+			// actual numbers — also done here, not in View.
+			m.displayInTok += (float64(m.tokenInputTarget()) - m.displayInTok) * 0.10
+			m.displayOutTok += (float64(m.tokenOutputTarget()) - m.displayOutTok) * 0.10
 			m.viewDirty = true
 		}
 		cmds = append(cmds, cmd)

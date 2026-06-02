@@ -74,7 +74,7 @@ func renderConfigStatusLine(m chatModel) string {
 }
 
 func configActiveStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4"))
+	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
 }
 
 func configRowStyle() lipgloss.Style {

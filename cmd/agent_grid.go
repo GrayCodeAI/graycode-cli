@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#4ECDC4")).Padding(0, 1)
+	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#FF5E0E")).Padding(0, 1)
 	agentDoneStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#4CAF50")).Padding(0, 1)
 	agentFailStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#e05555")).Padding(0, 1)
 	agentIdleStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#666666")).Padding(0, 1)
