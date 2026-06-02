@@ -46,28 +46,11 @@ var spinnerFrames = map[SpinnerStyle][]string{
 // hawkTypingDots is the number of trailing typing-indicator dots.
 const hawkTypingDots = 3
 
-// Standard ANSI color codes — used for the spinner line so the palette
-// is simple and consistent across terminals. Each element gets its own
-// unique hue at the same visual intensity (bright, no bold) so the line
-// reads as a uniform strip of color.
-const (
-	// ansiOrange is the hawk brand orange (#FF5E0E) — same RGB triple
-	// used by chat_welcome.go's logoC/mascotC and by the lipgloss
-	// hawkColor constant. Keep them in sync so the spinner matches the
-	// rest of the TUI pixel-for-pixel.
-	ansiOrange  = "\033[38;2;255;94;14m"
-	ansiGreen   = "\033[92m"
-	ansiYellow  = "\033[93m"
-	ansiBlue    = "\033[94m"
-	ansiMagenta = "\033[95m"
-	ansiCyan    = "\033[96m"
-	ansiWhite   = "\033[97m"
-	ansiDim     = "\033[2m"
-	ansiReset   = "\033[0m"
-)
-
 // colorSpinnerGlyph renders a single glyph in hawk brand orange — the
-// spinner is the visual hero of the line and the brand color.
+// spinner is the visual hero of the line and the brand color. The ANSI
+// escape constants (ansiOrange, ansiReset, etc.) and the icon glyphs
+// (iconDotFilled, iconDotEmpty) live in theme.go so the entire palette
+// is editable from one place.
 func colorSpinnerGlyph(glyph string) string {
 	if glyph == "" {
 		return ""
@@ -137,15 +120,17 @@ func (s *BrailleSpinner) renderLabelLocked() string {
 }
 
 // renderAnimatedDotsLocked returns hawkTypingDots plain circles, with the
-// current position rendered in yellow and the rest dim.
+// current position rendered in yellow and the rest dim. The filled and
+// empty glyphs come from theme.go (iconDotFilled / iconDotEmpty) so they
+// stay in sync with the rest of the TUI.
 func (s *BrailleSpinner) renderAnimatedDotsLocked() string {
 	idx := s.dots % hawkTypingDots
 	out := ""
 	for i := 0; i < hawkTypingDots; i++ {
 		if i == idx {
-			out += ansiYellow + "●" + ansiReset
+			out += ansiYellow + iconDotFilled + ansiReset
 		} else {
-			out += ansiDim + "○" + ansiReset
+			out += ansiDim + iconDotEmpty + ansiReset
 		}
 	}
 	return out

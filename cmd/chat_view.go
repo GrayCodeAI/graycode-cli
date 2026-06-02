@@ -65,7 +65,7 @@ func sanitizeIdentity(s string) string {
 // Continuation lines get indent prepended.
 // wrapText wraps text to fit within the given width.
 // prefixWidth is the visual width of the prefix already printed before the first line
-// (e.g. "⛬ " = 2 columns). Continuation lines are indented to align with the first
+// (e.g. iconAssistantPrefix + " " = 2 columns). Continuation lines are indented to align with the first
 // line's text start position.
 // width is the total terminal width available.
 func wrapText(text string, width int, prefixWidth int) string {
@@ -287,7 +287,7 @@ func (m *chatModel) updateViewportContent() {
 			}
 		case "assistant":
 			content := strings.TrimLeft(msg.content, "\n\r")
-			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(content, viewWidth-3))
+			chatContent.WriteString(hawkC + iconAssistantPrefix + " " + rst + renderMarkdown(content, viewWidth-3))
 		case "tool_use":
 			chatContent.WriteString(toolStyle.Render("⚡ " + msg.content))
 		case "tool_result":
@@ -363,7 +363,7 @@ func (m *chatModel) updateViewportContent() {
 	if m.waiting {
 		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
 		if partial != "" {
-			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(partial, viewWidth-3))
+			chatContent.WriteString(hawkC + iconAssistantPrefix + " " + rst + renderMarkdown(partial, viewWidth-3))
 			chatContent.WriteString("\n\n")
 		} else {
 			// Hawk-native spinner line: brand-orange glyph + green verb
@@ -372,7 +372,7 @@ func (m *chatModel) updateViewportContent() {
 			// out as a structural divider; the hint stays dim so it
 			// doesn't compete with the data.
 			elapsed := m.spinnerElapsed()
-			sep := ansiWhite + "◆" + ansiReset
+			sep := ansiWhite + iconSeparator + ansiReset
 			hint := dimStyle.Render("(Press ESC to stop)")
 			timeStr := ansiBlue + fmt.Sprintf("%.1fs", elapsed.Seconds()) + ansiReset
 			spinnerLine := m.brailleSpinner.Frame()
@@ -519,15 +519,19 @@ func renderPermissionBox(summary string, width int) string {
 	if boxW < 40 {
 		boxW = 40
 	}
+	// Permission dialog: amber border + amber title (warning palette,
+	// distinct from tool gold which is the gold for tool names). White
+	// body so the user can read the summary. Brand-orange options to
+	// match the prompt/cursor voice.
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#FFD700")).
+		BorderForeground(warnAmber).
 		Width(boxW).
 		Padding(0, 1)
 
-	title := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render("⚠ Permission Required")
-	body := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Render(summary)
-	options := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Render("[y]es  [n]o  [a]lways")
+	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(iconWarn + " Permission Required")
+	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es  [n]o  [a]lways")
 
 	return border.Render(title + "\n" + body + "\n" + options)
 }

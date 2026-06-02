@@ -209,12 +209,12 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	}
 	ta.SetWidth(taWidth - 4)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
-	ta.FocusedStyle.Base = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
-	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("#7A7A7A"))
-	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	ta.FocusedStyle.Base = lipgloss.NewStyle().Foreground(textPrimary)
+	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(textPlaceholder)
+	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	ta.BlurredStyle = ta.FocusedStyle
-	ta.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
-	ta.Prompt = "❯ "
+	ta.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
+	ta.Prompt = iconPrompt + " "
 	// Enter submits; Shift+Enter inserts newline
 	ta.KeyMap.InsertNewline.SetKeys("shift+enter")
 
@@ -224,7 +224,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Spinner{Frames: hawkSpinnerFrames, FPS: hawkSpinnerFrameInterval}
-	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	sp.Style = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
 	registry, err := defaultRegistry(settings)
@@ -1262,7 +1262,7 @@ func runChat() error {
 			fmt.Println(hawkC + "█" + rst + "  " + msg.content)
 			fmt.Println()
 		case "assistant":
-			fmt.Println(hawkC + "⛬ " + rst + msg.content)
+			fmt.Println(hawkC + iconAssistantPrefix + " " + rst + msg.content)
 			fmt.Println()
 		case "system":
 			fmt.Println(dimStyle.Render("●  " + msg.content))
@@ -1292,9 +1292,9 @@ func runChat() error {
 		dimStyle.Render(rightStatus))
 
 	border := strings.Repeat("─", viewWidth)
-	borderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
+	borderStyle := lipgloss.NewStyle().Foreground(borderDim)
 	fmt.Println(borderStyle.Render(border))
-	fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true).Render(">") + " ")
+	fmt.Println(lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Render(">") + " ")
 	fmt.Println(borderStyle.Render(border))
 	fmt.Println(dimStyle.Render("? for help"))
 

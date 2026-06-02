@@ -201,7 +201,7 @@ func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTab
 	}
 	prefix := strings.Repeat(" ", modelTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", modelTableIndent-2) + cursorStyle.Render("❯") + " "
+		prefix = strings.Repeat(" ", modelTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
 	}
 
 	ctx := truncateRunes(row.Context, layout.Context)

@@ -25,25 +25,34 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
-var (
-	tealColor    = lipgloss.Color("#4ECDC4")
-	hawkColor    = lipgloss.Color("#FF5E0E")
-	dimColor     = lipgloss.Color("#666666")
-	errorColor   = lipgloss.Color("#e05555")
-	toolColor    = lipgloss.Color("#FFD700")
-	dimStyle     = lipgloss.NewStyle().Foreground(dimColor)
-	errorStyle   = lipgloss.NewStyle().Foreground(errorColor)
-	toolStyle    = lipgloss.NewStyle().Foreground(toolColor).Bold(true)
-	toolDimStyle = lipgloss.NewStyle().Foreground(dimColor)
+// All hawk color/icon/glyph constants live in theme.go. This file holds
+// the pre-built lipgloss styles that combine a color with attributes
+// (bold, italic, border, etc.) for the most common patterns.
 
-	slashCmdStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-	slashDescStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#73767E"))
-	slashSelCmdStyle    = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	slashSelDescStyle   = lipgloss.NewStyle().Foreground(hawkColor)
-	inputBorderStyle    = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(lipgloss.Color("#555555"))
+var (
+	// Pre-built styles for the most common patterns. The color constants
+	// themselves are defined in theme.go; this block only attaches
+	// attributes (bold, italic, border) on top.
+	dimStyle     = lipgloss.NewStyle().Foreground(textDisabled)
+	errorStyle   = lipgloss.NewStyle().Foreground(errorCoral)
+	toolStyle    = lipgloss.NewStyle().Foreground(toolGold).Bold(true)
+	toolDimStyle = lipgloss.NewStyle().Foreground(textDisabled)
+
+	slashCmdStyle       = lipgloss.NewStyle().Foreground(textDisabled)
+	slashDescStyle      = lipgloss.NewStyle().Foreground(textDisabled)
+	slashSelCmdStyle    = lipgloss.NewStyle().Foreground(activePink).Bold(true)
+	slashSelDescStyle   = lipgloss.NewStyle().Foreground(activePink)
+	inputBorderStyle    = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(borderDim)
 	ghostHintStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Italic(true)
-	containerErrStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5555"))
-	containerLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#3BAADA")) // softer Docker blue
+	containerErrStyle   = lipgloss.NewStyle().Foreground(errorCoral)
+	containerLabelStyle = lipgloss.NewStyle().Foreground(containerBlue)
+
+	// Backwards-compatible aliases for callers that still use the old
+	// names. New code should use the purpose-named constants in theme.go.
+	tealColor  = successTeal
+	dimColor   = textDisabled
+	errorColor = errorCoral
+	toolColor  = toolGold
 )
 
 // hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.

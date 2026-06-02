@@ -12,12 +12,19 @@ import (
 )
 
 var (
-	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#FF5E0E")).Padding(0, 1)
-	agentDoneStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#4CAF50")).Padding(0, 1)
-	agentFailStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#e05555")).Padding(0, 1)
-	agentIdleStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#666666")).Padding(0, 1)
-	agentTitleStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFD700"))
-	agentStatusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
+	// Agent grid borders — each state has its own hue so the eye
+	// can read agent state at a glance. Active matches brand (orange),
+	// done matches the success palette, fail matches error, idle
+	// matches disabled.
+	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(hawkColor).Padding(0, 1)
+	agentDoneStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(doneGreen).Padding(0, 1)
+	agentFailStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(errorCoral).Padding(0, 1)
+	agentIdleStyle   = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(textDisabled).Padding(0, 1)
+	// Title is a slightly lighter gold than tool gold so the two read
+	// as related but distinct (agent = person running, tool = thing
+	// being used).
+	agentTitleStyle  = lipgloss.NewStyle().Bold(true).Foreground(agentGold)
+	agentStatusStyle = lipgloss.NewStyle().Foreground(textMuted)
 )
 
 // AgentState represents the current state of a parallel agent.
