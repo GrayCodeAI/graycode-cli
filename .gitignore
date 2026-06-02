@@ -50,3 +50,4 @@ cmd/.hawk/
 .pi/
 testdata/compat-test
 bin/
+.shared-templates/
