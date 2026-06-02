@@ -538,7 +538,7 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	defer cg.mu.RUnlock()
 
 	// Get all nodes
-	rows, err := cg.db.QueryContext(context.Background(), 
+	rows, err := cg.db.QueryContext(context.Background(),
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`,
@@ -769,7 +769,7 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 		result.Impacted[s.id] = s.depth
 
 		// Get all nodes that depend on this one
-		rows, _ := cg.db.QueryContext(context.Background(), 
+		rows, _ := cg.db.QueryContext(context.Background(),
 			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.id,
 		)
 		if rows != nil {
@@ -790,7 +790,7 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 	// Load node details
 	for id, depth := range result.Impacted {
 		var n Node
-		err := cg.db.QueryRowContext(context.Background(), 
+		err := cg.db.QueryRowContext(context.Background(),
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
 			 FROM nodes WHERE id = ?`, id,
