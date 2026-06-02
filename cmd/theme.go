@@ -35,10 +35,10 @@ var hawkColor = lipgloss.Color("#FF5E0E")
 // 2. UI state
 // ---------------------------------------------------------------------------
 
-// activePink is the active/selected highlight. Distinct from hawkColor
-// so the user can see "I am here" without confusing the focus indicator
-// with the brand voice.
-var activePink = lipgloss.Color("#FF1493")
+// (No separate active-selection color — the selected item uses the
+// brand hawk orange so the entire TUI stays on one accent. The title
+// and the selected item share hawkColor; the selected item is
+// distinguished by bold + underline.)
 
 // ---------------------------------------------------------------------------
 // 3. Semantic feedback
