@@ -149,8 +149,10 @@ func (m chatModel) renderConnectionStatusSplit() (modelRendered string, modelVis
 
 func renderChatConnectionModel(gateway, model string) (string, int) {
 	muted := configMutedStyle().Inline(true)
-	accent := configAccentStyle().Inline(true)
-	active := configActiveStyle().Inline(true)
+	// Gateway (provider name) is rendered in agentGold so the user can
+	// tell it apart from the model, which is the brand orange focus.
+	gatewayStyle := lipgloss.NewStyle().Foreground(agentGold).Inline(true)
+	active := configActiveStyle().Inline(true) // model — brand orange
 	sep := muted.Render(" · ")
 	const sepVis = 3
 
@@ -166,7 +168,7 @@ func renderChatConnectionModel(gateway, model string) (string, int) {
 		s := gateway + " · pick model"
 		return lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			accent.Render(gateway),
+			gatewayStyle.Render(gateway),
 			muted.Render(" · pick model"),
 		), len(s)
 	}
@@ -174,7 +176,7 @@ func renderChatConnectionModel(gateway, model string) (string, int) {
 	var b strings.Builder
 	vis := 0
 	if gateway != "" {
-		b.WriteString(accent.Render(gateway))
+		b.WriteString(gatewayStyle.Render(gateway))
 		vis += len(gateway)
 	}
 	if model != "" {
@@ -267,14 +269,16 @@ func formatConnectionContextLabel(m chatModel, windowLabel string) string {
 	pct := contextUsagePercent(m, windowLabel)
 
 	// Per-part coloring so the eye can scan the percentage at a glance:
-	//   "0k"   → tokenSage  (the "value" — always readable as a token count)
+	//   "0k"   → textPrimary (the "value" — primary data, distinct from
+	//                        the sage session-token count in the same
+	//                        status bar so the two don't visually merge)
 	//   "/"    → textMuted  (separator)
 	//   "262k" → textMuted  (the "capacity" — secondary information)
 	//   "ctx " → textMuted  (label)
 	//   "(0%)" → successTeal / warnAmber / errorCoral by threshold
 	//           (the "status" — this is the part that changes meaning)
 	muted := configMutedStyle().Inline(true)
-	valueStyle := lipgloss.NewStyle().Foreground(tokenSage).Inline(true)
+	valueStyle := lipgloss.NewStyle().Foreground(textPrimary).Inline(true)
 	pctStyle := lipgloss.NewStyle().Foreground(contextPercentColor(pct)).Inline(true)
 
 	var b strings.Builder
