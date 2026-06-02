@@ -122,10 +122,47 @@ func absInt(n int) int {
 
 func TestHawkRandomSolidLabel(t *testing.T) {
 	s := NewBrailleSpinner(SpinnerHawk, "Crafting")
+	// Default mode: solid color label (no wave).
+	s.SetWave(false)
 	f := s.Frame()
-	// entire label should be one color — no reset mid-word for multi-char shimmer
+	// Solid label has at most two reset codes: one for glyph, one for label.
 	if strings.Count(f, "\033[0m") > 2 {
 		t.Errorf("expected solid label color, got mixed resets: %q", f)
+	}
+}
+
+func TestHawkWaveLabel_MultipleColorsPerChar(t *testing.T) {
+	s := NewBrailleSpinner(SpinnerHawk, "Crafting")
+	s.SetWave(true)
+	f := s.Frame()
+	// Wave mode: each character of the verb gets its own foreground color,
+	// so we expect N color codes for the N-char verb plus resets.
+	if strings.Count(f, "\033[38;2;") < len("Crafting") {
+		t.Errorf("expected per-character colors in wave mode, got %q", f)
+	}
+	// Wave frames must change as the spinner ticks (color phase shifts).
+	f0 := f
+	s.Tick()
+	s.Tick()
+	if s.Frame() == f0 {
+		t.Error("expected wave frame to change across ticks")
+	}
+}
+
+func TestHawkWaveAnimatedDots_PresentInFrame(t *testing.T) {
+	s := NewBrailleSpinner(SpinnerHawk, "Crafting")
+	s.SetWave(true)
+	f := s.Frame()
+	// Three dots (○ or ●) ride after the verb in wave mode.
+	dots := strings.Count(f, "○") + strings.Count(f, "●")
+	if dots != 3 {
+		t.Errorf("expected 3 trailing dots in wave mode, got %d in %q", dots, f)
+	}
+	// Tick advances the highlighted dot position.
+	idxBefore := s.dots
+	s.Tick()
+	if s.dots == idxBefore {
+		t.Error("expected dot phase to advance on tick")
 	}
 }
 

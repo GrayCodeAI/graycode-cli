@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 )
@@ -97,6 +98,8 @@ type BrailleSpinner struct {
 	text       string
 	glyphColor [3]int
 	labelColor [3]int
+	wave       bool // when true, label is colored as a moving wave
+	dots       int  // 0..2 — position of the highlighted dot in the trailing animation
 	running    bool
 	stopCh     chan struct{}
 }
@@ -138,6 +141,15 @@ func (s *BrailleSpinner) SetLabel(text string) {
 	}
 }
 
+// SetWave enables or disables color-wave animation on the label. When on,
+// each character in the label is colored from a rotating slice of the
+// hawk palette, producing a visible wave that moves with each tick.
+func (s *BrailleSpinner) SetWave(on bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.wave = on
+}
+
 func (s *BrailleSpinner) renderGlyphLocked(glyph string) string {
 	if s.style == SpinnerHawk {
 		return colorHawkRGB(s.glyphColor, glyph)
@@ -145,14 +157,66 @@ func (s *BrailleSpinner) renderGlyphLocked(glyph string) string {
 	return colorSpinnerGlyph(glyph)
 }
 
+// renderWaveLabel colors each character of text with a per-position color
+// drawn from hawkRandomPalette, shifted by the current frame so the
+// bright peak slides across the word.
+func (s *BrailleSpinner) renderWaveLabelLocked(text string) string {
+	if text == "" {
+		return ""
+	}
+	const reset = "\033[0m"
+	var b strings.Builder
+	palette := len(hawkRandomPalette)
+	for i, r := range text {
+		c := hawkRandomPalette[(i*3+s.frame)%palette]
+		fmt.Fprintf(&b, "\033[38;2;%d;%d;%dm%c", c[0], c[1], c[2], r)
+	}
+	b.WriteString(reset)
+	return b.String()
+}
+
+// renderAnimatedDots returns three dots where one is filled and the others
+// are dim, cycling through positions 0..2 with each tick. Used after the
+// verb to show that work is ongoing.
+func (s *BrailleSpinner) renderAnimatedDotsLocked() string {
+	const reset = "\033[0m"
+	dim := "\033[2m"
+	// Bright dot uses hawk orange so it pops against the muted dots.
+	const peakR, peakG, peakB = 255, 94, 14 // matches hawkColor
+	highlightIdx := s.dots % 3
+	var b strings.Builder
+	for i := 0; i < 3; i++ {
+		glyph := "○"
+		if i == highlightIdx {
+			glyph = "●"
+		}
+		if i == highlightIdx {
+			fmt.Fprintf(&b, "\033[38;2;%d;%d;%dm%s", peakR, peakG, peakB, glyph)
+		} else {
+			fmt.Fprintf(&b, "%s%s", dim, glyph)
+		}
+	}
+	b.WriteString(reset)
+	return b.String()
+}
+
 func (s *BrailleSpinner) renderLabelLocked() string {
 	if s.text == "" {
 		return ""
 	}
-	if s.style == SpinnerHawk {
-		return colorHawkRGB(s.labelColor, s.text)
+	var rendered string
+	if s.wave {
+		rendered = s.renderWaveLabelLocked(s.text)
+	} else if s.style == SpinnerHawk {
+		rendered = colorHawkRGB(s.labelColor, s.text)
+	} else {
+		rendered = colorSpinnerGlyph(s.text)
 	}
-	return colorSpinnerGlyph(s.text)
+	// Trailing animated dots ride with every Hawk spinner in wave mode.
+	if s.wave {
+		rendered += " " + s.renderAnimatedDotsLocked()
+	}
+	return rendered
 }
 
 // Frame returns the current rendered frame (spinner + label).
@@ -172,6 +236,7 @@ func (s *BrailleSpinner) Frame() string {
 func (s *BrailleSpinner) Tick() string {
 	s.mu.Lock()
 	s.frame++
+	s.dots = (s.dots + 1) % 3
 	if s.style == SpinnerHawk {
 		s.refreshGlyphColorLocked()
 	}

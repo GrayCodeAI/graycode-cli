@@ -74,6 +74,7 @@ type (
 	streamErrMsg       struct{ err error }
 	blinkTickMsg       struct{}
 	spinnerVerbTickMsg struct{}
+	usageUpdateMsg     struct{ usage *engine.StreamUsage }
 )
 
 type (
@@ -163,7 +164,11 @@ type chatModel struct {
 	configPendingOllamaURL     string
 	pluginRuntime              *plugin.Runtime
 	spinnerVerb                string
-	lastCtrlC                  time.Time
+	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).
+	// Reset each time the user submits a message; updated by usageUpdateMsg.
+	turnInputTokens  int
+	turnOutputTokens int
+	lastCtrlC        time.Time
 	history                    []string
 	historyIdx                 int
 	historyDraft               string // unsent text before navigating history

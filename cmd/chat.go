@@ -286,6 +286,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.modeManager = shellmode.NewModeManager()
 	m.modeManager.LoadPersistedMode()
 	m.brailleSpinner = NewBrailleSpinner(SpinnerHawk, "")
+	m.brailleSpinner.SetWave(true)
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
 
 	// Initialize BMAD/Aeon features
@@ -852,6 +853,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
+			m.turnInputTokens = 0
+			m.turnOutputTokens = 0
 			m.partial.Reset()
 			m.startStream()
 			return m, nil
@@ -978,6 +981,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.SetValue("")
 		return m, nil
 
+	case usageUpdateMsg:
+		if msg.usage != nil {
+			m.turnInputTokens += msg.usage.PromptTokens
+			m.turnOutputTokens += msg.usage.CompletionTokens
+			m.viewDirty = true
+		}
+
 	case streamDoneMsg:
 		m.flushPartialDirty()
 		if m.partial.Len() > 0 {
@@ -1008,6 +1018,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
+			m.turnInputTokens = 0
+			m.turnOutputTokens = 0
 			m.partial.Reset()
 			m.startStream()
 		}
@@ -1202,8 +1214,11 @@ func runChat() error {
 				case "tool_result":
 					p.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
 				case "usage":
-					// Usage events are only emitted in stream-json print mode
-					// TUI mode ignores them since cost is tracked separately
+					// Forward usage events to TUI so the spinner line can show
+					// running ↑/↓ token counts for the current turn.
+					if ev.Usage != nil {
+						p.Send(usageUpdateMsg{usage: ev.Usage})
+					}
 				case "error":
 					p.Send(streamErrMsg{err: fmt.Errorf("%s", ev.Content)})
 					return
