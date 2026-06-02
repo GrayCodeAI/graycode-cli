@@ -6,7 +6,7 @@ cd "$ROOT"
 
 BIN="${SMOKE_HAWK_BIN:-/tmp/hawk-smoke}"
 echo "== build =="
-go build -mod=readonly -o "$BIN" .
+go build -mod=readonly -o "$BIN" ./cmd/hawk
 
 echo "== hawk doctor =="
 set +o pipefail

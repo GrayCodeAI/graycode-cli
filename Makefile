@@ -6,7 +6,7 @@
 # Project metadata
 # ---------------------------------------------------------------------------
 NAME      := hawk
-MAIN_PKG  := .
+MAIN_PKG  := ./cmd/hawk
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
