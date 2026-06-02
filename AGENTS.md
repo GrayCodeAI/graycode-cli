@@ -83,7 +83,7 @@ hawk/
 ### Build & Test
 
 ```bash
-go build .                    # Build binary
+go build ./cmd/hawk           # Build binary
 go test -race ./...           # Run all tests with race detector
 make ci                       # Full CI suite (lint, test, security)
 make cover                    # Coverage report
