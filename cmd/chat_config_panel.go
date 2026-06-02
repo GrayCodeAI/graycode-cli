@@ -83,8 +83,8 @@ func (m chatModel) configPanelView() string {
 }
 
 func (m chatModel) configProviderKeyView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	titleStyle := configTitleStyle()
+	mutedStyle := configMutedStyle()
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("🔑 Paste API key") + "\n")
@@ -99,8 +99,8 @@ func (m chatModel) configProviderKeyView() string {
 }
 
 func (m chatModel) configOllamaURLView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	titleStyle := configTitleStyle()
+	mutedStyle := configMutedStyle()
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("🦙 Ollama local") + "\n")
@@ -161,9 +161,9 @@ func (m chatModel) startConfigModelSearch() (chatModel, tea.Cmd) {
 	m.configInput.Placeholder = "filter by name, owner, id"
 	m.configInput.EchoMode = textinput.EchoNormal
 	m.configInput.EchoCharacter = 0
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(textPrimary)
+	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
 	m.configInput.Focus()
 	m.configSel = 0
 	m.configScroll = 0
@@ -303,7 +303,7 @@ func (m chatModel) configModelsBody() string {
 	rowStyle := configRowStyle()
 	cursorStyle := configSelectedStyle()
 	activeStyle := configActiveStyle()
-	freeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6BCB77"))
+	freeStyle := lipgloss.NewStyle().Foreground(successTeal)
 
 	opts := m.configFilteredModelOptions()
 	total := len(opts)
@@ -402,7 +402,7 @@ func (m chatModel) closeConfigPanel() chatModel {
 func (m *chatModel) restoreChatInput() {
 	m.useConfigInput = false
 	m.input.Reset()
-	m.input.Prompt = "❯ "
+	m.input.Prompt = iconPrompt + " "
 	m.input.Placeholder = `Try "Create a PR with these changes" (Shift+Enter for newline)`
 	m.input.Focus()
 }
@@ -418,13 +418,13 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 	}
 	m.useConfigInput = true
 	m.configInput.Reset()
-	m.configInput.Prompt = " key ❯ "
+	m.configInput.Prompt = " key " + iconPrompt + " "
 	m.configInput.Placeholder = "paste API key"
 	m.configInput.EchoMode = textinput.EchoPassword
 	m.configInput.EchoCharacter = '*'
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(textPrimary)
+	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
 	m.configInput.Focus()
 	return m, textinput.Blink
 }

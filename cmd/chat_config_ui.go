@@ -7,19 +7,25 @@ import (
 )
 
 func configMutedStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
+	return lipgloss.NewStyle().Foreground(textMuted)
 }
 
 func configTitleStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	// Brand orange — title is the voice of the config panel.
+	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 }
 
 func configSelectedStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
+	// Hot pink — active selection. Distinct from the title (orange) so
+	// the user can see which item is the focus without confusing the
+	// panel voice with the focus indicator.
+	return lipgloss.NewStyle().Foreground(activePink).Bold(true)
 }
 
 func configAccentStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	// Accent for inline highlights (breadcrumb, status line values).
+	// Same as title — both are the panel's voice.
+	return lipgloss.NewStyle().Foreground(hawkColor)
 }
 
 func renderConfigBreadcrumb(title string) string {
@@ -74,15 +80,18 @@ func renderConfigStatusLine(m chatModel) string {
 }
 
 func configActiveStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	// The current gateway/model name in the status line — pink to match
+	// the active-selection color so the "current" indicator and the
+	// "focus" indicator share a visual language.
+	return lipgloss.NewStyle().Foreground(activePink)
 }
 
 func configRowStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+	return lipgloss.NewStyle().Foreground(textPrimary)
 }
 
 func configHeaderStyle() lipgloss.Style {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6")).Bold(true)
+	return lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
 }
 
 func configNoticeStyle(notice string) lipgloss.Style {
@@ -95,12 +104,12 @@ func configNoticeStyle(notice string) lipgloss.Style {
 		strings.Contains(n, "rate limit"),
 		strings.Contains(n, "timeout"),
 		strings.Contains(n, "unauthorized"):
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
+		return lipgloss.NewStyle().Foreground(errorCoral)
 	case strings.HasPrefix(notice, "Refreshed"),
 		strings.HasPrefix(notice, "Eyrie:"),
 		strings.Contains(notice, "Removed API key"),
 		strings.Contains(notice, "Setup complete"):
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#6BCB77"))
+		return lipgloss.NewStyle().Foreground(successTeal)
 	default:
 		return configMutedStyle()
 	}
@@ -112,7 +121,7 @@ func renderConfigRefreshActionRow(gatewayName string, cursor bool) string {
 	cursorStyle := configSelectedStyle().Inline(true)
 	prefix := strings.Repeat(" ", configTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render("❯") + " "
+		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
 		return prefix + cursorStyle.Render("Refresh "+gatewayName)
 	}
 	return lipgloss.JoinHorizontal(

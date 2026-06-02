@@ -82,7 +82,7 @@ func renderConfigTableRow(values []string, cursor, active, markEnd bool, layout 
 	}
 	prefix := strings.Repeat(" ", configTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render("❯") + " "
+		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
 	}
 	cols := make([]string, len(values))
 	copy(cols, values)
@@ -109,7 +109,7 @@ func renderConfigTableRow(values []string, cursor, active, markEnd bool, layout 
 func renderConfigTableActionRow(label string, cursor bool, rowStyle, cursorStyle lipgloss.Style) string {
 	prefix := strings.Repeat(" ", configTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render("❯") + " "
+		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
 		return prefix + cursorStyle.Render(label)
 	}
 	return rowStyle.Render(prefix + label)
