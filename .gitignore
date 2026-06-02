@@ -43,6 +43,7 @@ cmd/.hawk/
 # CodeGraph integrated
 
 # AI/IDE tool configs
+.claude/
 .cursor/
 .openclaude/
 .commandcode/
