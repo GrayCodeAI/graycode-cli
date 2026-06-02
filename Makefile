@@ -175,7 +175,11 @@ setup: ## Set up local development environment (go.work + external repos).
 	@command -v $(GOIMPORTS) >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
 	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest
+	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook@latest
 	@echo "✓ All tools installed"
+	@echo ""
+	@echo "=== Installing git hooks ==="
+	@lefthook install || echo "  ⚠ lefthook install failed (run 'make hooks' manually)"
 	@echo ""
 	@echo "=== Setup complete! ==="
 	@echo "Run 'make ci' to verify everything works."
@@ -197,8 +201,9 @@ compat-check: ## Strict validation — non-zero exit if any component lacks a ve
 	@go run ./cmd/compat-test -matrix=next -strict -file=testdata/compatibility-matrix.json
 
 .PHONY: hooks
-hooks:
-	git config core.hooksPath .githooks
+hooks: ## Install git hooks via lefthook (formatting, linting, conventional commits).
+	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
+	lefthook install
 # === Cross-platform binary targets (add after existing 'build' target) ===
 
 .PHONY: build-all build-static size-check
