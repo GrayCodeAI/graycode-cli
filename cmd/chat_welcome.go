@@ -56,6 +56,8 @@ func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 }
 
 func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int, dockerRunning *bool) string {
+	// Brand orange — used for both the HAWK wordmark and the mascot so
+	// the welcome screen stays on theme.
 	logoC := "\033[38;2;255;94;14m"
 	mascotC := "\033[38;2;255;94;14m"
 	dimC := "\033[2m"
