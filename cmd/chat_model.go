@@ -49,8 +49,9 @@ var (
 // hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.
 var hawkSpinnerFrames = hawkQuadBlockGlyphs
 
-// hawkSpinnerFrameInterval — QuadBlock frame cadence (faster than Framer's 100ms default).
-const hawkSpinnerFrameInterval = 70 * time.Millisecond
+// hawkSpinnerFrameInterval — QuadBlock frame cadence (slightly slower
+// than the original 70ms for a calmer feel).
+const hawkSpinnerFrameInterval = 100 * time.Millisecond
 
 // Spinner verbs (from hawk-archive) — picked randomly per session
 var spinnerVerbs = []string{
@@ -166,8 +167,12 @@ type chatModel struct {
 	spinnerVerb                string
 	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).
 	// Reset each time the user submits a message; updated by usageUpdateMsg.
-	turnInputTokens   int
-	turnOutputTokens  int
+	turnInputTokens  int
+	turnOutputTokens int
+	// Display values lerped toward the turn targets each render frame
+	// (factor 0.10). Smooths the counter animation.
+	displayInTok      float64
+	displayOutTok     float64
 	lastCtrlC         time.Time
 	history           []string
 	historyIdx        int
