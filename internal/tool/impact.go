@@ -66,7 +66,7 @@ func (ImpactTool) Execute(ctx context.Context, input json.RawMessage) (string, e
 
 	// If no files specified, get from git diff
 	if len(p.Files) == 0 {
-		files, err := gitDiffFiles(root)
+		files, err := gitDiffFiles(ctx, root)
 		if err != nil {
 			return "", fmt.Errorf("impact: failed to get git diff: %w", err)
 		}
@@ -85,7 +85,7 @@ func (ImpactTool) Execute(ctx context.Context, input json.RawMessage) (string, e
 	}
 
 	// Build co-change analysis
-	coChange, err := buildCoChangeAnalysis(root, 100)
+	coChange, err := buildCoChangeAnalysis(ctx, root, 100)
 	if err != nil {
 		coChange = &simpleCoChange{pairs: make(map[string]map[string]int)}
 	}
@@ -386,14 +386,14 @@ func formatImpactReport(analysis *ImpactAnalysis) string {
 
 // ── Helpers ──
 
-func gitDiffFiles(root string) ([]string, error) {
+func gitDiffFiles(ctx context.Context, root string) ([]string, error) {
 	// Try staged + unstaged
-	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
+	cmd := exec.CommandContext(ctx, "git", "diff", "--name-only", "HEAD")
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
 		// Try initial commit
-		cmd = exec.Command("git", "diff", "--name-only", "--cached")
+		cmd = exec.CommandContext(ctx, "git", "diff", "--name-only", "--cached")
 		cmd.Dir = root
 		out, err = cmd.Output()
 		if err != nil {
@@ -575,8 +575,8 @@ func resolveImport(imp, ext, dir, root string) string {
 	return ""
 }
 
-func buildCoChangeAnalysis(root string, commitLimit int) (*simpleCoChange, error) {
-	cmd := exec.Command("git", "log", "--name-only", "--pretty=format:", fmt.Sprintf("-%d", commitLimit))
+func buildCoChangeAnalysis(ctx context.Context, root string, commitLimit int) (*simpleCoChange, error) {
+	cmd := exec.CommandContext(ctx, "git", "log", "--name-only", "--pretty=format:", fmt.Sprintf("-%d", commitLimit))
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

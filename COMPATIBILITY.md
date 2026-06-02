@@ -4,7 +4,9 @@ This eco uses **independent SemVer per repo** (see [VERSIONING.md](./VERSIONING.
 That gives each component its own release cadence, but raises an obvious
 question: *which combinations of versions are actually tested together?*
 
-The answer lives in [`compatibility-matrix.json`](./compatibility-matrix.json).
+The answer lives in [`testdata/compatibility-matrix.json`](./testdata/compatibility-matrix.json).
+
+Platform/provider capability metadata is separate: [`platform-capabilities.json`](./platform-capabilities.json).
 
 ## What it records
 
@@ -46,7 +48,7 @@ existing consumers.
 `.shared-templates/workflows/compatibility-test.yml.tmpl` is a reusable
 workflow that:
 
-1. Reads `compatibility-matrix.json` from the eco repo.
+1. Reads `testdata/compatibility-matrix.json` from the hawk repo.
 2. Checks out each component at the version listed in the named matrix.
 3. Builds + tests the cross-repo integration scenarios.
 
@@ -68,21 +70,14 @@ It runs on:
 
 ## Validating the file
 
-The file is validated against [`compatibility-matrix.schema.json`](./compatibility-matrix.schema.json)
+The file is validated against [`testdata/compatibility-matrix.schema.json`](./testdata/compatibility-matrix.schema.json)
 in CI. To validate locally:
 
 ```bash
-# Quick check using ajv (Node)
-npx ajv-cli validate \
-  -s compatibility-matrix.schema.json \
-  -d compatibility-matrix.json
+make compat-check   # structural validation + version pins
 
-# Or with Python
-python3 -c "
-import json, jsonschema
-schema = json.load(open('compatibility-matrix.schema.json'))
-data   = json.load(open('compatibility-matrix.json'))
-jsonschema.validate(data, schema)
-print('ok')
-"
+# Or with ajv (Node)
+npx ajv-cli validate \
+  -s testdata/compatibility-matrix.schema.json \
+  -d testdata/compatibility-matrix.json
 ```

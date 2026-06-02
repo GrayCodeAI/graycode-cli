@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -84,7 +85,7 @@ func RunTestFirstWorkflow(cfg TestFirstConfig, chatFn ReviewChatFn) TestFirstRes
 
 // runTests executes the test command and returns output + pass status.
 func runTests(testCmd string) (string, bool) {
-	cmd := exec.Command("sh", "-c", testCmd)
+	cmd := exec.CommandContext(context.Background(), "sh", "-c", testCmd)
 	cmd.Dir, _ = os.Getwd()
 	out, err := cmd.CombinedOutput()
 	output := strings.TrimSpace(string(out))
