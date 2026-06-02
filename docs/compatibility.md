@@ -6,7 +6,7 @@ question: *which combinations of versions are actually tested together?*
 
 The answer lives in [`testdata/compatibility-matrix.json`](./testdata/compatibility-matrix.json).
 
-Platform/provider capability metadata is separate: [`platform-capabilities.json`](./docs/platform-capabilities.json).
+Platform/provider capability metadata is separate: [`platform-capabilities.json`](./platform-capabilities.json).
 
 ## What it records
 
