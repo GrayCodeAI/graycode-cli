@@ -51,3 +51,7 @@ cmd/.hawk/
 testdata/compat-test
 bin/
 .shared-templates/
+
+# Go workspace (local dev only — not committed per AGENTS.md)
+go.work
+go.work.sum
