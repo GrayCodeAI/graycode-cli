@@ -64,7 +64,7 @@ go install github.com/GrayCodeAI/hawk@latest
 curl -fsSL https://raw.githubusercontent.com/GrayCodeAI/hawk/main/install.sh | sh
 
 # From source
-git clone https://github.com/GrayCodeAI/hawk && cd hawk && go build .
+git clone https://github.com/GrayCodeAI/hawk && cd hawk && go build ./cmd/hawk
 ```
 
 ## Features
@@ -220,7 +220,7 @@ hawk/
 │   ├── bridge/             # External bridges (sight, inspect, sessioncapture)
 │   ├── provider/           # Provider routing
 │   └── system/             # Bus, cron, retention, shutdown
-├── docs/                   # Architecture, research notes
+├── docs/                   # Architecture, security, integration docs
 └── testdata/               # Test fixtures
 ```
 
@@ -255,7 +255,7 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 ### Build & Test
 
 ```bash
-go build .                    # Build binary
+go build ./cmd/hawk           # Build binary
 go test -race ./...           # Run all tests with race detector
 make ci                       # Run full CI suite (lint, test, security)
 make cover                    # Generate coverage report
