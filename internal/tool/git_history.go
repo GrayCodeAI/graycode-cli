@@ -70,24 +70,24 @@ func (GitHistoryTool) Execute(ctx context.Context, input json.RawMessage) (strin
 
 	switch p.Action {
 	case "history":
-		return gitFileHistory(root, p.File, p.Limit)
+		return gitFileHistory(ctx, root, p.File, p.Limit)
 	case "cochange":
-		return gitCoChange(root, p.File, p.Limit)
+		return gitCoChange(ctx, root, p.File, p.Limit)
 	case "owners":
-		return gitFileOwners(root, p.File, p.Limit)
+		return gitFileOwners(ctx, root, p.File, p.Limit)
 	case "blame":
-		return gitBlame(root, p.File)
+		return gitBlame(ctx, root, p.File)
 	default:
 		return "", fmt.Errorf("unknown action: %s (use: history, cochange, owners, blame)", p.Action)
 	}
 }
 
-func gitFileHistory(root, file string, limit int) (string, error) {
+func gitFileHistory(ctx context.Context, root, file string, limit int) (string, error) {
 	if file == "" {
 		return "", fmt.Errorf("file is required for history action")
 	}
 
-	cmd := exec.Command("git", "log", "--oneline", "--follow", fmt.Sprintf("-%d", limit), "--", file)
+	cmd := exec.CommandContext(ctx, "git", "log", "--oneline", "--follow", fmt.Sprintf("-%d", limit), "--", file)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
@@ -107,13 +107,13 @@ func gitFileHistory(root, file string, limit int) (string, error) {
 	return b.String(), nil
 }
 
-func gitCoChange(root, file string, limit int) (string, error) {
+func gitCoChange(ctx context.Context, root, file string, limit int) (string, error) {
 	if file == "" {
 		return "", fmt.Errorf("file is required for cochange action")
 	}
 
 	// Get commits that touched this file
-	cmd := exec.Command("git", "log", "--format=%H", "--follow", fmt.Sprintf("-%d", limit*5), "--", file)
+	cmd := exec.CommandContext(ctx, "git", "log", "--format=%H", "--follow", fmt.Sprintf("-%d", limit*5), "--", file)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
@@ -131,7 +131,7 @@ func gitCoChange(root, file string, limit int) (string, error) {
 		if commit == "" {
 			continue
 		}
-		cmd := exec.Command("git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit)
+		cmd := exec.CommandContext(ctx, "git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit)
 		cmd.Dir = root
 		out, err := cmd.Output()
 		if err != nil {
@@ -177,13 +177,13 @@ func gitCoChange(root, file string, limit int) (string, error) {
 	return b.String(), nil
 }
 
-func gitFileOwners(root, file string, limit int) (string, error) {
+func gitFileOwners(ctx context.Context, root, file string, limit int) (string, error) {
 	args := []string{"log", "--format=%an", "--follow", fmt.Sprintf("-%d", limit*10)}
 	if file != "" {
 		args = append(args, "--", file)
 	}
 
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
@@ -236,12 +236,12 @@ func gitFileOwners(root, file string, limit int) (string, error) {
 	return b.String(), nil
 }
 
-func gitBlame(root, file string) (string, error) {
+func gitBlame(ctx context.Context, root, file string) (string, error) {
 	if file == "" {
 		return "", fmt.Errorf("file is required for blame action")
 	}
 
-	cmd := exec.Command("git", "blame", "--line-porcelain", file)
+	cmd := exec.CommandContext(ctx, "git", "blame", "--line-porcelain", file)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
