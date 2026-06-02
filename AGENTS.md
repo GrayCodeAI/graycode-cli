@@ -127,14 +127,12 @@ test: add coverage for guardian
 
 ### Adding a New Feature
 
-1. Check docs/features.md for the feature list and conventions
-2. Place code in the appropriate `internal/` package
-3. Follow existing patterns (e.g., context providers are pluggable)
-4. Add tests and update documentation
+1. Place code in the appropriate `internal/` package
+2. Follow existing patterns (e.g., context providers are pluggable)
+3. Add tests and update documentation
 
 ## File Organization Notes
 
-- `docs/features.md` — Complete feature reference with 100 features across 12 categories
 - `CONTRIBUTING.md` — PR process, commit conventions
 - `docs/` — Architecture details, security model, ecosystem message flow
 - `external/` — Ecosystem repo checkouts for `go.work` development
