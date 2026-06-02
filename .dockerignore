@@ -9,3 +9,5 @@ hawk_bin
 hawk_test_bin
 coverage.out
 coverage.html
+go.work
+go.work.sum
