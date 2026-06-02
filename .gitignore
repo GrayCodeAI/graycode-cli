@@ -53,6 +53,8 @@ testdata/compat-test
 bin/
 .shared-templates/
 
-# Go workspace (local dev only — not committed per AGENTS.md)
-go.work
-go.work.sum
+# Go workspace is committed because CI's `module hygiene` job runs
+# `go work sync` + `-mod=readonly` build and asserts no diff against
+# the committed files. See .github/workflows/ci.yml.
+# (go.work.sum.hawk/ is a per-test artifact and stays ignored.)
+go.work.sum.hawk/

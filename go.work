@@ -1,0 +1,11 @@
+go 1.26.3
+
+use (
+	.
+	./external/eyrie
+	./external/inspect
+	./external/sight
+	./external/tok
+	./external/trace
+	./external/yaad
+)
