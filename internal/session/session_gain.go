@@ -195,7 +195,7 @@ func (g *GainTracker) ListForSession(ctx context.Context, sessionID string, n in
 	if err != nil {
 		return nil, fmt.Errorf("session: list gains: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []GainEvent
 	for rows.Next() {
 		var ev GainEvent

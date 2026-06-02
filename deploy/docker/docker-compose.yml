@@ -1,0 +1,17 @@
+name: hawk
+
+services:
+  hawk:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    image: ghcr.io/graycodeai/hawk:dev
+    ports:
+      - "4590:4590"
+    environment:
+      - HAWK_DAEMON_API_KEY=${HAWK_DAEMON_API_KEY:-}
+      - HAWK_DAEMON_PORT=4590
+      - HAWK_DAEMON_HOST=0.0.0.0
+    env_file:
+      - path: ../../.env.example
+        required: false

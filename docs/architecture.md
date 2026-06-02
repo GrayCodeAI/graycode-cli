@@ -1,114 +1,118 @@
-# Architecture
+<div align="center">
 
-hawk is a terminal-native AI coding agent built in Go. It reads, writes, and runs code through natural language interaction.
+# 🦅 hawk Architecture
 
-## System Overview
+**AI Coding Agent for Your Terminal**
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                      hawk CLI                             │
-│              cmd/ → cobra + bubbletea TUI                 │
-├──────────────────────────────────────────────────────────┤
-│                    internal/engine/                        │
-│         Agent loop, compaction, self-improvement          │
-├──────────┬──────────┬───────────┬──────────┬─────────────┤
-│ internal │ internal │ internal  │ internal │  external   │
-│ /tool/   │/session/ │ /config/  │/sandbox/ │  services   │
-├──────────┴──────────┴───────────┴──────────┴─────────────┤
-│                    eyrie (LLM runtime)                    │
-│        tok (tokenizer)  ·  yaad (memory)  ·  trace       │
-└──────────────────────────────────────────────────────────┘
-```
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://go.dev/)
+[![Port](https://img.shields.io/badge/Port-4590-orange)](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml)
+[![Protocol](https://img.shields.io/badge/Protocol-REST-blue)](https://swagger.io/specification/)
 
-## Directory Structure
+</div>
+
+---
+
+## 🎯 Overview
+
+hawk is an AI-powered coding agent for the terminal. It reads codebases, writes and edits files, runs tests, and manages git — all through natural language. Zero CGO, single static binary for linux/darwin/windows on amd64/arm64.
+
+---
+
+## 🧱 Layered Architecture
 
 ```
 hawk/
-├── cmd/                    # CLI entry point (Cobra + Bubble Tea TUI)
+├── main.go                    ⚡ Entry point — calls cmd.Execute()
+├── api/openapi.yaml           📜 Daemon REST API contract (OpenAPI 3.1)
+├── cmd/                       🖥️ Cobra CLI commands (200+ files)
+│   ├── root.go                ⚙️ Root command, flag definitions
+│   ├── daemon.go              🔮 Daemon start/stop/status
+│   ├── chat.go                💬 Interactive TUI chat
+│   └── ...
 ├── internal/
-│   ├── engine/             # Agent loop, compaction, beliefs, self-review
-│   │   ├── compact/        # Context compaction strategies
-│   │   ├── cost/           # Cost tracking & optimization
-│   │   ├── token/          # Token counting & budget allocation
-│   │   ├── prompt/         # Prompt construction & optimization
-│   │   ├── diff/           # Diff handling, sandbox, summary
-│   │   ├── review/         # Critic, self-assess, consensus
-│   │   ├── control/        # Loop detection, stall, backtrack
-│   │   ├── git/            # Git provider + context
-│   │   └── ...             # 15+ more sub-packages
-│   ├── tool/               # 40+ built-in tools with safety layer
-│   ├── config/             # Settings, budget tracking, validation
-│   ├── session/            # Persistence (JSONL, WAL, checkpoints)
-│   ├── api/                # HTTP API server
-│   ├── daemon/             # Background HTTP/SSE server
-│   ├── sandbox/            # Command isolation (landlock, seccomp)
-│   ├── permissions/        # User approval system with auto-learning
-│   ├── hooks/              # Event-driven plugin system
-│   ├── mcp/                # Model Context Protocol client
-│   ├── intelligence/       # Code intelligence
-│   │   ├── repomap/        # PageRank, BM25, TF-IDF for file relevance
-│   │   ├── memory/         # yaad bridge for persistent cross-session memory
-│   │   └── planner/        # Multi-step planning with decomposition
-│   ├── multiagent/         # Multi-agent orchestration
-│   │   ├── mission/        # Parallel feature execution in worktrees
-│   │   ├── parallel/       # Worktree-based parallel execution
-│   │   └── agents/         # Custom persona loader
-│   ├── observability/      # Analytics, metrics, logging, tracing
-│   ├── resilience/         # Circuit breaker, rate limiting, retries, health
-│   ├── feature/            # eval, fingerprint, voice, IDE, shellmode
-│   ├── bridge/             # External bridges (sight, inspect, sessioncapture)
-│   ├── provider/           # Provider routing
-│   └── system/             # Bus, cron, retention, shutdown, staleness
-├── docs/                   # Architecture, research notes
-└── testdata/               # Test fixtures
+│   ├── api/                   🌐 HTTP server (:4590) — 8 REST endpoints
+│   ├── daemon/                🔮 Daemon lifecycle (PID file, socket)
+│   ├── engine/                🧠 Agent execution loop
+│   │   ├── session.go         🔄 Core agent loop (Stream, agentLoop)
+│   │   ├── ctxmgr/            📦 Context packing and visualization
+│   │   ├── token/             💰 Budget allocation and prediction
+│   │   ├── streaming/         📡 Response cache and stream optimizer
+│   │   ├── planning/          🎯 Goals and task decomposition
+│   │   └── workflow/          🔧 JSON-defined automation pipelines
+│   ├── tool/                  🛠️ 40+ built-in tools
+│   ├── config/                ⚙️ Settings, env manager, migration
+│   ├── session/               💾 SQLite persistence, search, export
+│   ├── permissions/           🛡️ Guardian, rules DSL, boundary checker
+│   ├── sandbox/               🏖️ Landlock + seccomp isolation
+│   ├── intelligence/          🧬 Repo map, AST analysis, deps
+│   ├── multiagent/            👥 Personas, inter-agent messaging
+│   ├── mcp/                   🔌 MCP client and server
+│   ├── bridge/                🌉 Bridges to ecosystem services
+│   └── resilience/            🔄 Circuit breaker, retry, rate limit
+├── shared/types/              📤 Cross-repo exported types
+├── docs/                      📖 Architecture docs
+└── external/                  🔗 Local go.work checkouts
 ```
 
-## Data Flow
+---
+
+## 🌐 Daemon HTTP API (:4590)
+
+| | |
+|---|---|
+| **Contract** | [`api/openapi.yaml`](../api/openapi.yaml) |
+| **Port** | `:4590` (default). Override: `HAWK_DAEMON_PORT` |
+| **Auth** | Bearer token or `X-API-Key`. Set via `HAWK_DAEMON_API_KEY` |
+
+<details>
+<summary><b>📡 Endpoint Summary</b></summary>
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/health` | 🩺 Health check |
+| `GET` | `/v1/version` | 🏷️ Version info |
+| `POST` | `/v1/chat` | 💬 Send message (JSON or SSE) |
+| `GET` | `/v1/sessions` | 📋 List sessions |
+| `GET` | `/v1/sessions/{id}` | 🔍 Get session |
+| `GET` | `/v1/sessions/{id}/messages` | 💬 Get messages |
+| `DELETE` | `/v1/sessions/{id}` | 🗑️ Delete session |
+| `GET` | `/v1/stats` | 📊 Usage statistics |
+
+</details>
+
+---
+
+## 🔗 Ecosystem Integration
+
+| Service | Role | Connection |
+|---------|------|------------|
+| 🦅 **eyrie** | LLM provider runtime | `:8080` — all LLM calls routed here |
+| 🧠 **yaad** | Persistent memory | `:3456` — session context, recall |
+| 👁️ **sight** | Code review | Library — diff-based review |
+| 🔍 **inspect** | Security audit | Library — website scanning |
+| ✂️ **tok** | Token optimization | Library — compression, secrets |
+| 📸 **trace** | Session capture | CLI hook — git-native capture |
+
+> 💡 **hawk never talks to LLM APIs directly** — all calls go through eyrie.
+
+---
+
+## 🛡️ Tool Safety Layer
+
+Every tool call passes through the permission system before execution:
 
 ```
-User prompt
-    │
-    ▼
-┌─────────┐     ┌──────────────┐     ┌─────────┐
-│  cmd/   │────▶│  engine/     │────▶│  eyrie  │
-│ (TUI)   │     │ (agent loop) │     │  (LLM)  │
-└─────────┘     └──────┬───────┘     └────┬────┘
-                       │                  │
-                       ▼                  │
-                 ┌──────────┐             │
-                 │  tool/   │◀────────────┘
-                 │ (execute)│  tool calls + text
-                 └────┬─────┘
-                      │
-                      ▼
-                 ┌──────────┐
-                 │ session/ │  (persist)
-                 └──────────┘
+Tool Call → 🛡️ Guardian (rules DSL) → 🧱 Boundary Checker → 👤 User Approval → 🏖️ Sandbox (landlock/seccomp) → ✅ Execute
 ```
 
-1. **Input** — User types prompt in TUI (`cmd/` via Bubble Tea)
-2. **Context assembly** — `engine/` builds message array with repomap, memory, system prompt
-3. **LLM call** — `eyrie` sends to provider (streaming SSE)
-4. **Response** — LLM returns text + tool calls
-5. **Tool execution** — `engine/` executes via `tool.Registry` (with permission checks)
-6. **Feedback loop** — Tool results fed back to LLM for next turn
-7. **Persistence** — Final response displayed, session saved to WAL
+---
 
-## Key Design Decisions
+## 📐 Key Design Decisions
 
 | Decision | Rationale |
-|---|---|
-| **Single static binary** | Zero runtime dependencies, easy distribution |
-| **Streaming-first** | Token-by-token display, low perceived latency |
-| **WAL crash recovery** | No data loss on unexpected exit |
-| **Permission sandboxing** | All tool calls gated by configurable permission engine |
-| **Model-agnostic** | eyrie abstracts all provider differences |
-| **Offline-capable** | Works with local models (Ollama) without API keys |
-| **`internal/` boundary** | Compiler-enforced privacy, free to refactor |
-
-## Security Model
-
-- **Sandbox** — Landlock (Linux), seccomp-bpf, seatbelt (macOS), no-op on Windows
-- **Permissions** — Ask-before-execution for Bash, Write, Edit; auto-learn from decisions
-- **Secrets** — API keys never logged, masked in config display, stored encrypted at rest
-- **Path validation** — Symlink traversal prevention, no escape from working directory
+|----------|-----------|
+| `main.go` at root | Intentional — goreleaser builds with `main: ./` producing `hawk` binary |
+| `cmd/` is CLI library | Not a binary sub-directory — holds 200+ cobra command files |
+| Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
+| `internal/` is private | Other repos import `shared/types/` only |
+| `external/` | go.work symlinks for local dev — not committed |
