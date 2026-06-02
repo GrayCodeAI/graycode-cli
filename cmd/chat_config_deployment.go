@@ -152,10 +152,10 @@ func toConfigModelOptionsFromHawk(in []hawkconfig.ModelOption) []configModelOpti
 }
 
 func (m chatModel) configProvidersView() string {
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	mutedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8D939E"))
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#E6E6E6"))
+	titleStyle := configTitleStyle()
+	selectedStyle := configSelectedStyle()
+	mutedStyle := configMutedStyle()
+	style := configRowStyle()
 
 	opts := m.configProviderLabels()
 	total := len(opts)
@@ -183,7 +183,7 @@ func (m chatModel) configProvidersView() string {
 		prefix := "  "
 		lineStyle := style
 		if i == m.configSel {
-			prefix = "❯ "
+			prefix = iconPrompt + " "
 			lineStyle = selectedStyle
 		}
 		b.WriteString(lineStyle.Render(prefix+opts[i]) + "\n")
@@ -268,12 +268,12 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 	m.useConfigInput = true
 	m.configInput.Reset()
 	m.configInput.SetValue(defaultURL)
-	m.configInput.Prompt = " url ❯ "
+	m.configInput.Prompt = " url " + iconPrompt + " "
 	m.configInput.Placeholder = defaultURL
 	m.configInput.EchoMode = textinput.EchoNormal
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F2F2F2"))
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E"))
+	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(textPrimary)
+	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
 	m.configInput.Focus()
 	return m, textinput.Blink
 }

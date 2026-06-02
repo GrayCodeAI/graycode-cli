@@ -15,10 +15,13 @@ import (
 )
 
 var (
-	statusCWDColor    = lipgloss.Color("#75B1E2")
-	statusBranchColor = lipgloss.Color("#E5C07B")
-	statusTokenColor  = lipgloss.Color("#98C379")
-	statusCostColor   = lipgloss.Color("#C678DD")
+	// Status bar — each metric its own hue so the bar reads as a
+	// strip of distinct information. Aliases for the global palette
+	// (in case callers want to use these names directly).
+	statusCWDColor    = cwdBlue
+	statusBranchColor = branchYellow
+	statusTokenColor  = tokenSage
+	statusCostColor   = costViolet
 )
 
 // renderStatusBar renders the session stats footer below the input area.

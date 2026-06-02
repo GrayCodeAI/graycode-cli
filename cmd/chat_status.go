@@ -250,9 +250,9 @@ func formatContextUsedLabel(tokens int) string {
 func contextUsageStyle(pct int) lipgloss.Style {
 	switch {
 	case pct >= 95:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B")).Inline(true)
+		return lipgloss.NewStyle().Foreground(errorCoral).Inline(true)
 	case pct >= 80:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB347")).Inline(true)
+		return lipgloss.NewStyle().Foreground(warnAmber).Inline(true)
 	default:
 		return configMutedStyle().Inline(true)
 	}
