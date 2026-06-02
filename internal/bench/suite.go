@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -54,7 +55,7 @@ func runYaadBench(projectDir string) ([]BenchmarkResult, error) {
 	}
 
 	start := time.Now()
-	cmd := exec.Command("go", "test", "-bench=.", "-benchmem", "-count=1", "-timeout=60s", "./engine/...")
+	cmd := exec.CommandContext(context.Background(), "go", "test", "-bench=.", "-benchmem", "-count=1", "-timeout=60s", "./engine/...")
 	cmd.Dir = yaadDir
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
@@ -81,7 +82,7 @@ func runTokBench(projectDir string) ([]BenchmarkResult, error) {
 	}
 
 	start := time.Now()
-	cmd := exec.Command("go", "test", "-bench=.", "-benchmem", "-count=1", "-timeout=60s", "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "test", "-bench=.", "-benchmem", "-count=1", "-timeout=60s", "./...")
 	cmd.Dir = tokDir
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
@@ -108,7 +109,7 @@ func runHawkBuildBench(projectDir string) (BenchmarkResult, error) {
 	}
 
 	start := time.Now()
-	cmd := exec.Command("go", "build", "-o", "/dev/null", ".")
+	cmd := exec.CommandContext(context.Background(), "go", "build", "-o", "/dev/null", ".")
 	cmd.Dir = hawkDir
 	err := cmd.Run()
 	duration := time.Since(start)

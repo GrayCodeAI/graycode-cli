@@ -106,8 +106,8 @@ security: ## Run govulncheck.
 	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || (echo "install: go install golang.org/x/vuln/cmd/govulncheck@latest" && exit 1)
 	$(GOVULNCHECK) ./...
 
-tidy: ## Tidy go.mod / go.sum.
-	go mod tidy
+tidy: ## Sync workspace modules and verify checksums.
+	go work sync
 	go mod verify
 
 # ---------------------------------------------------------------------------
@@ -190,11 +190,11 @@ help: ## Show this help.
 # ---------------------------------------------------------------------------
 .PHONY: compat-test compat-check
 
-compat-test: ## Validate compatibility-matrix.json and report the 'next' matrix.
-	@go run ./cmd/compat-test -matrix=next
+compat-test: ## Validate testdata/compatibility-matrix.json and report the 'next' matrix.
+	@go run ./cmd/compat-test -matrix=next -file=testdata/compatibility-matrix.json
 
 compat-check: ## Strict validation — non-zero exit if any component lacks a version.
-	@go run ./cmd/compat-test -matrix=next -strict
+	@go run ./cmd/compat-test -matrix=next -strict -file=testdata/compatibility-matrix.json
 
 .PHONY: hooks
 hooks:

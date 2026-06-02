@@ -2,7 +2,10 @@
 
 package codegraph
 
-import "sort"
+import (
+	"context"
+	"sort"
+)
 
 // SemanticSearch performs embedding-based semantic search.
 // It generates embeddings for all nodes and finds the most similar
@@ -25,7 +28,7 @@ func (cg *CodeGraph) SemanticSearch(query string, limit int) ([]Node, error) {
 	queryVec := GenerateEmbedding(queryNode)
 
 	// Get all nodes
-	rows, err := cg.db.Query(
+	rows, err := cg.db.QueryContext(context.Background(), 
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`,

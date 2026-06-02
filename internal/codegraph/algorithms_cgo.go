@@ -3,6 +3,7 @@
 package codegraph
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -38,7 +39,7 @@ func (cg *CodeGraph) BetweennessCentrality(topN int) (*BetweennessResult, error)
 
 	// Build adjacency list from edges
 	adj := make(map[string][]string)
-	rows, err := cg.db.Query("SELECT source, target FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements')")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT source, target FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements')")
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (cg *CodeGraph) BetweennessCentrality(topN int) (*BetweennessResult, error)
 		}
 		// Try to get node name and file
 		var name, filePath, kind string
-		err := cg.db.QueryRow("SELECT name, file_path, kind FROM nodes WHERE id = ?", s.id).Scan(&name, &filePath, &kind)
+		err := cg.db.QueryRowContext(context.Background(), "SELECT name, file_path, kind FROM nodes WHERE id = ?", s.id).Scan(&name, &filePath, &kind)
 		if err == nil {
 			nc.Name = name
 			nc.FilePath = filePath
@@ -194,7 +195,7 @@ func (cg *CodeGraph) CommunityDetection() (*CommunityDetectionResult, error) {
 	adj := make(map[string]map[string]float64)
 	var edges []edge
 
-	rows, err := cg.db.Query("SELECT source, target, kind FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements', 'contains')")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT source, target, kind FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements', 'contains')")
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +350,7 @@ func (cg *CodeGraph) ConnectedComponents() ([][]string, error) {
 
 	// Build adjacency list
 	adj := make(map[string][]string)
-	rows, err := cg.db.Query("SELECT source, target FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements')")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT source, target FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements')")
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +427,7 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 
 	// Get current nodes
 	currentNodes := make(map[string]bool)
-	rows, _ := cg.db.Query("SELECT id, file_path FROM nodes")
+	rows, _ := cg.db.QueryContext(context.Background(), "SELECT id, file_path FROM nodes")
 	if rows != nil {
 		for rows.Next() {
 			var id, filePath string
@@ -450,7 +451,7 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 
 	// Get current edges
 	currentEdges := make(map[string]bool)
-	rows, _ = cg.db.Query("SELECT source || '->' || target || ':' || kind FROM edges")
+	rows, _ = cg.db.QueryContext(context.Background(), "SELECT source || '->' || target || ':' || kind FROM edges")
 	if rows != nil {
 		for rows.Next() {
 			var edgeKey string
@@ -483,7 +484,7 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	nodes = make(map[string]bool)
 	edges = make(map[string]bool)
 
-	rows, err := cg.db.Query("SELECT id FROM nodes")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT id FROM nodes")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -501,7 +502,7 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	}
 	rows.Close()
 
-	rows, err = cg.db.Query("SELECT source || '->' || target || ':' || kind FROM edges")
+	rows, err = cg.db.QueryContext(context.Background(), "SELECT source || '->' || target || ':' || kind FROM edges")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -537,7 +538,7 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	defer cg.mu.RUnlock()
 
 	// Get all nodes
-	rows, err := cg.db.Query(
+	rows, err := cg.db.QueryContext(context.Background(), 
 		`SELECT id, kind, name, qualified_name, file_path, language,
 		        start_line, end_line, signature, docstring, visibility, is_exported
 		 FROM nodes WHERE kind IN ('function', 'method', 'class', 'interface', 'struct')`,
@@ -551,7 +552,7 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 
 	// Get all referenced node IDs
 	referenced := make(map[string]bool)
-	edgeRows, _ := cg.db.Query("SELECT DISTINCT target FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements')")
+	edgeRows, _ := cg.db.QueryContext(context.Background(), "SELECT DISTINCT target FROM edges WHERE kind IN ('calls', 'references', 'imports', 'extends', 'implements')")
 	if edgeRows != nil {
 		for edgeRows.Next() {
 			var target string
@@ -565,7 +566,7 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 	}
 
 	// Also mark source nodes as referenced (they're being used)
-	edgeRows, _ = cg.db.Query("SELECT DISTINCT source FROM edges")
+	edgeRows, _ = cg.db.QueryContext(context.Background(), "SELECT DISTINCT source FROM edges")
 	if edgeRows != nil {
 		for edgeRows.Next() {
 			var source string
@@ -677,7 +678,7 @@ func (cg *CodeGraph) PageRank(iterations int, damping float64) (map[string]float
 	inlinks := make(map[string][]string)
 	nodes := make(map[string]bool)
 
-	rows, err := cg.db.Query("SELECT source, target FROM edges WHERE kind IN ('calls', 'references', 'imports')")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT source, target FROM edges WHERE kind IN ('calls', 'references', 'imports')")
 	if err != nil {
 		return nil, err
 	}
@@ -768,7 +769,7 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 		result.Impacted[s.id] = s.depth
 
 		// Get all nodes that depend on this one
-		rows, _ := cg.db.Query(
+		rows, _ := cg.db.QueryContext(context.Background(), 
 			`SELECT source FROM edges WHERE target = ? AND kind IN ('calls', 'references', 'imports', 'extends', 'implements')`, s.id,
 		)
 		if rows != nil {
@@ -789,7 +790,7 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 	// Load node details
 	for id, depth := range result.Impacted {
 		var n Node
-		err := cg.db.QueryRow(
+		err := cg.db.QueryRowContext(context.Background(), 
 			`SELECT id, kind, name, qualified_name, file_path, language,
 			        start_line, end_line, signature, docstring, visibility, is_exported
 			 FROM nodes WHERE id = ?`, id,
@@ -840,7 +841,7 @@ func (cg *CodeGraph) AnalyzeCoupling(topN int) ([]CouplingMetric, error) {
 
 	// Build file -> set of referenced symbols
 	fileDeps := make(map[string]map[string]bool)
-	rows, err := cg.db.Query("SELECT file_path, target FROM edges e JOIN nodes n ON n.id = e.source WHERE e.kind IN ('calls', 'references', 'imports')")
+	rows, err := cg.db.QueryContext(context.Background(), "SELECT file_path, target FROM edges e JOIN nodes n ON n.id = e.source WHERE e.kind IN ('calls', 'references', 'imports')")
 	if err != nil {
 		return nil, err
 	}
@@ -975,7 +976,7 @@ func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
 		repoNodes[repoRoot] = make(map[string]bool)
 
 		// Get all nodes
-		rows, err := cg.db.Query("SELECT id, kind, name, qualified_name, file_path, language, start_line, end_line, signature, docstring, visibility, is_exported FROM nodes")
+		rows, err := cg.db.QueryContext(context.Background(), "SELECT id, kind, name, qualified_name, file_path, language, start_line, end_line, signature, docstring, visibility, is_exported FROM nodes")
 		if err != nil {
 			cg.Close()
 			continue
@@ -1002,7 +1003,7 @@ func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
 		}
 
 		// Get unresolved refs (calls to symbols not in this repo)
-		rows, err := cg.db.Query("SELECT from_node_id, reference_name, file_path, line FROM unresolved_refs")
+		rows, err := cg.db.QueryContext(context.Background(), "SELECT from_node_id, reference_name, file_path, line FROM unresolved_refs")
 		if err != nil {
 			cg.Close()
 			continue

@@ -160,17 +160,23 @@ func report(mf matrixFile, m matrix, strict bool) error {
 	return nil
 }
 
-// findMatrixFile looks for compatibility-matrix.json in the current dir, then
-// walks up looking for one. Returns "" if not found within 6 levels.
+// findMatrixFile locates the cross-repo compatibility matrix (testdata/compatibility-matrix.json).
+// It must not pick hawk/platform-capabilities.json, which is a different document.
 func findMatrixFile() string {
 	dir, err := os.Getwd()
 	if err != nil {
 		return ""
 	}
+	candidates := []string{
+		"testdata/compatibility-matrix.json",
+		"hawk/testdata/compatibility-matrix.json",
+	}
 	for i := 0; i < 6; i++ {
-		p := filepath.Join(dir, "compatibility-matrix.json")
-		if _, err := os.Stat(p); err == nil {
-			return p
+		for _, rel := range candidates {
+			p := filepath.Join(dir, rel)
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
