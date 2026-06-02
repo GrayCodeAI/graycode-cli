@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -20,6 +21,18 @@ func startTestDaemon(t *testing.T, srv *Server) string {
 		testutil.SkipIfLoopbackUnavailable(t, err)
 		t.Fatalf("Start failed: %v", err)
 	}
+
+	// Wait for the server to be ready to accept connections.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return addr
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("daemon at %s not ready after 2s", addr)
 	return addr
 }
 
