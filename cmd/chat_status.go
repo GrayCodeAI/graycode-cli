@@ -189,11 +189,39 @@ func renderChatConnectionModel(gateway, model string) (string, int) {
 }
 
 func renderChatConnectionContext(ctxText string, ctxPct int) (string, int) {
+	// ctxText is already styled by formatConnectionContextLabel (per-part
+	// colors). Return as-is; the visible width is computed by stripping
+	// ANSI escape sequences (the raw string contains 4 styled segments
+	// each wrapped in their own escape).
 	if ctxText == "" {
 		return "", 0
 	}
-	styled := contextUsageStyle(ctxPct).Render(ctxText)
-	return styled, len(ctxText)
+	return ctxText, visibleLen(ctxText)
+}
+
+// visibleLen returns the visible (printed) length of s, ignoring ANSI
+// escape sequences. Used by the footer layout to compute column widths.
+func visibleLen(s string) int {
+	n := 0
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			// Skip until the final byte of the CSI sequence.
+			j := i + 2
+			for j < len(s) {
+				b := s[j]
+				if b >= 0x40 && b <= 0x7e {
+					j++
+					break
+				}
+				j++
+			}
+			i = j
+			continue
+		}
+		n++
+		i++
+	}
+	return n
 }
 
 func renderChatConnectionStatus(gateway, model, ctxText string, ctxPct int) (string, int) {
@@ -237,7 +265,40 @@ func formatConnectionContextLabel(m chatModel, windowLabel string) string {
 	}
 	usedLabel := formatContextUsedLabel(sessionContextUsedTokens(m.session))
 	pct := contextUsagePercent(m, windowLabel)
-	return fmt.Sprintf("%s/%s ctx (%d%%)", usedLabel, windowLabel, pct)
+
+	// Per-part coloring so the eye can scan the percentage at a glance:
+	//   "0k"   → tokenSage  (the "value" — always readable as a token count)
+	//   "/"    → textMuted  (separator)
+	//   "262k" → textMuted  (the "capacity" — secondary information)
+	//   "ctx " → textMuted  (label)
+	//   "(0%)" → successTeal / warnAmber / errorCoral by threshold
+	//           (the "status" — this is the part that changes meaning)
+	muted := configMutedStyle().Inline(true)
+	valueStyle := lipgloss.NewStyle().Foreground(tokenSage).Inline(true)
+	pctStyle := lipgloss.NewStyle().Foreground(contextPercentColor(pct)).Inline(true)
+
+	var b strings.Builder
+	b.WriteString(valueStyle.Render(usedLabel))
+	b.WriteString(muted.Render("/" + windowLabel))
+	b.WriteString(muted.Render(" ctx ("))
+	b.WriteString(pctStyle.Render(fmt.Sprintf("%d%%", pct)))
+	b.WriteString(muted.Render(")"))
+	return b.String()
+}
+
+// contextPercentColor returns the appropriate theme color for a
+// context-window usage percentage. Exposed so the footer test in
+// chat_status_test.go can assert the threshold logic without
+// depending on the full format function.
+func contextPercentColor(pct int) lipgloss.Color {
+	switch {
+	case pct >= 95:
+		return errorCoral
+	case pct >= 80:
+		return warnAmber
+	default:
+		return successTeal
+	}
 }
 
 func formatContextUsedLabel(tokens int) string {
