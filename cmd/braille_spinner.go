@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"fmt"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 )
@@ -20,39 +18,16 @@ const (
 	SpinnerPulse       SpinnerStyle = "pulse"
 	SpinnerSnake       SpinnerStyle = "snake"
 	SpinnerOrbit       SpinnerStyle = "orbit"
+	SpinnerWing        SpinnerStyle = "wing"   // ⫷⫸ — two-frame wing flap
+	SpinnerTalons      SpinnerStyle = "talons" // ⩤⩥⩦⩧ — four-frame talon cycle
 	SpinnerRandom      SpinnerStyle = "random"
 )
 
 // hawkQuadBlockGlyphs is the unicode.framer.website QUADBLOCK spinner (4 frames).
 var hawkQuadBlockGlyphs = []string{"▛", "▜", "▟", "▙"}
 
-// hawkSpinnerBG is the chat viewport background (chat_view.go) — palette is tuned for this.
+// hawkSpinnerBG is the chat viewport background (chat_view.go).
 var hawkSpinnerBG = [3]int{30, 30, 40}
-
-// hawkRandomPalette — 20 natural colors for spinner + verbs on dark bg. No orange
-// (hawk accent #FF5E0E is used elsewhere in the TUI).
-var hawkRandomPalette = [][3]int{
-	{78, 205, 196},  // teal
-	{80, 210, 200},  // aqua
-	{100, 225, 200}, // mint
-	{120, 210, 185}, // seafoam
-	{150, 205, 160}, // sage
-	{175, 220, 130}, // lime
-	{225, 235, 110}, // lemon
-	{235, 205, 90},  // gold
-	{110, 190, 240}, // sky
-	{140, 160, 235}, // cornflower
-	{150, 165, 240}, // periwinkle
-	{140, 150, 225}, // indigo
-	{190, 165, 240}, // lavender
-	{175, 145, 235}, // violet
-	{210, 145, 235}, // orchid
-	{235, 130, 170}, // rose
-	{245, 150, 175}, // blush
-	{210, 145, 195}, // mauve
-	{235, 115, 195}, // fuchsia
-	{70, 200, 165},  // emerald
-}
 
 // spinnerFrames maps style names to their animation frames.
 var spinnerFrames = map[SpinnerStyle][]string{
@@ -64,44 +39,53 @@ var spinnerFrames = map[SpinnerStyle][]string{
 	SpinnerPulse:       {"⠀", "⠄", "⠆", "⠇", "⡇", "⣇", "⣧", "⣷", "⣿", "⣷", "⣧", "⣇", "⡇", "⠇", "⠆", "⠄"},
 	SpinnerSnake:       {"⠈⠁", "⠈⠑", "⠈⠱", "⠈⡱", "⢁⡱", "⢁⡰", "⢁⡠", "⢁⡀", "⢁⠀", "⠁⠀"},
 	SpinnerOrbit:       {"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠", "⣀", "⢠", "⢐", "⢈", "⢁"},
+	SpinnerWing:        {"⫷", "⫸"},
+	SpinnerTalons:      {"⩤", "⩥", "⩦", "⩧"},
 }
 
+// hawkTypingDots is the number of trailing typing-indicator dots.
+const hawkTypingDots = 3
+
+// Standard ANSI color codes — used for the spinner line so the palette
+// is simple and consistent across terminals. Each element gets its own
+// unique hue at the same visual intensity (bright, no bold) so the line
+// reads as a uniform strip of color.
 const (
-	hawkSpinnerANSI  = "\033[38;2;255;94;14m"
-	hawkSpinnerReset = "\033[0m"
+	// ansiOrange is the hawk brand orange (#FF5E0E) — same RGB triple
+	// used by chat_welcome.go's logoC/mascotC and by the lipgloss
+	// hawkColor constant. Keep them in sync so the spinner matches the
+	// rest of the TUI pixel-for-pixel.
+	ansiOrange  = "\033[38;2;255;94;14m"
+	ansiGreen   = "\033[92m"
+	ansiYellow  = "\033[93m"
+	ansiBlue    = "\033[94m"
+	ansiMagenta = "\033[95m"
+	ansiCyan    = "\033[96m"
+	ansiWhite   = "\033[97m"
+	ansiDim     = "\033[2m"
+	ansiReset   = "\033[0m"
 )
 
-func randomHawkColor() [3]int {
-	return hawkRandomPalette[rand.Intn(len(hawkRandomPalette))]
-}
-
-func colorHawkRGB(rgb [3]int, text string) string {
-	if text == "" {
-		return ""
-	}
-	return fmt.Sprintf("\033[38;2;%d;%d;%dm%s\033[0m", rgb[0], rgb[1], rgb[2], text)
-}
-
+// colorSpinnerGlyph renders a single glyph in hawk brand orange — the
+// spinner is the visual hero of the line and the brand color.
 func colorSpinnerGlyph(glyph string) string {
 	if glyph == "" {
 		return ""
 	}
-	return hawkSpinnerANSI + glyph + hawkSpinnerReset
+	return ansiOrange + glyph + ansiReset
 }
 
-// BrailleSpinner renders animated braille spinners with shimmer text.
+// BrailleSpinner renders animated spinners with a single accent color
+// (cyan) for both the glyph and the label.
 type BrailleSpinner struct {
-	mu         sync.Mutex
-	style      SpinnerStyle
-	frames     []string
-	frame      int
-	text       string
-	glyphColor [3]int
-	labelColor [3]int
-	wave       bool // when true, label is colored as a moving wave
-	dots       int  // 0..2 — position of the highlighted dot in the trailing animation
-	running    bool
-	stopCh     chan struct{}
+	mu      sync.Mutex
+	style   SpinnerStyle
+	frames  []string
+	frame   int
+	text    string
+	dots    int // 0..hawkTypingDots-1 — position of the highlighted dot
+	running bool
+	stopCh  chan struct{}
 }
 
 // NewBrailleSpinner creates a spinner with the given style and label text.
@@ -114,109 +98,57 @@ func NewBrailleSpinner(style SpinnerStyle, text string) *BrailleSpinner {
 	if frames == nil {
 		frames = spinnerFrames[SpinnerBraille]
 	}
-	s := &BrailleSpinner{
+	return &BrailleSpinner{
 		style:  style,
 		frames: frames,
 		text:   text,
 		stopCh: make(chan struct{}),
 	}
-	if style == SpinnerHawk {
-		s.glyphColor = randomHawkColor()
-		s.labelColor = randomHawkColor()
-	}
-	return s
 }
 
-func (s *BrailleSpinner) refreshGlyphColorLocked() {
-	s.glyphColor = randomHawkColor()
-}
-
-// SetLabel updates spinner label text and picks a fresh random label color.
+// SetLabel updates spinner label text.
 func (s *BrailleSpinner) SetLabel(text string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.text = text
-	if s.style == SpinnerHawk {
-		s.labelColor = randomHawkColor()
-	}
 }
 
-// SetWave enables or disables color-wave animation on the label. When on,
-// each character in the label is colored from a rotating slice of the
-// hawk palette, producing a visible wave that moves with each tick.
-func (s *BrailleSpinner) SetWave(on bool) {
+// SetWave is kept for backwards compatibility with existing call sites —
+// the line no longer uses a color wave so this is a no-op.
+func (s *BrailleSpinner) SetWave(_ bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.wave = on
 }
 
 func (s *BrailleSpinner) renderGlyphLocked(glyph string) string {
-	if s.style == SpinnerHawk {
-		return colorHawkRGB(s.glyphColor, glyph)
-	}
 	return colorSpinnerGlyph(glyph)
 }
 
-// renderWaveLabel colors each character of text with a per-position color
-// drawn from hawkRandomPalette, shifted by the current frame so the
-// bright peak slides across the word.
-func (s *BrailleSpinner) renderWaveLabelLocked(text string) string {
-	if text == "" {
-		return ""
-	}
-	const reset = "\033[0m"
-	var b strings.Builder
-	palette := len(hawkRandomPalette)
-	for i, r := range text {
-		c := hawkRandomPalette[(i*3+s.frame)%palette]
-		fmt.Fprintf(&b, "\033[38;2;%d;%d;%dm%c", c[0], c[1], c[2], r)
-	}
-	b.WriteString(reset)
-	return b.String()
-}
-
-// renderAnimatedDots returns three dots where one is filled and the others
-// are dim, cycling through positions 0..2 with each tick. Used after the
-// verb to show that work is ongoing.
-func (s *BrailleSpinner) renderAnimatedDotsLocked() string {
-	const reset = "\033[0m"
-	dim := "\033[2m"
-	// Bright dot uses hawk orange so it pops against the muted dots.
-	const peakR, peakG, peakB = 255, 94, 14 // matches hawkColor
-	highlightIdx := s.dots % 3
-	var b strings.Builder
-	for i := 0; i < 3; i++ {
-		glyph := "○"
-		if i == highlightIdx {
-			glyph = "●"
-		}
-		if i == highlightIdx {
-			fmt.Fprintf(&b, "\033[38;2;%d;%d;%dm%s", peakR, peakG, peakB, glyph)
-		} else {
-			fmt.Fprintf(&b, "%s%s", dim, glyph)
-		}
-	}
-	b.WriteString(reset)
-	return b.String()
-}
-
+// renderLabelLocked returns the label in green followed by the trailing
+// animated dots (one yellow dot, two dim dots). The whole group is the
+// "alive" part of the spinner line.
 func (s *BrailleSpinner) renderLabelLocked() string {
 	if s.text == "" {
 		return ""
 	}
-	var rendered string
-	if s.wave {
-		rendered = s.renderWaveLabelLocked(s.text)
-	} else if s.style == SpinnerHawk {
-		rendered = colorHawkRGB(s.labelColor, s.text)
-	} else {
-		rendered = colorSpinnerGlyph(s.text)
+	out := ansiGreen + s.text + ansiReset
+	out += " " + s.renderAnimatedDotsLocked()
+	return out
+}
+
+// renderAnimatedDotsLocked returns hawkTypingDots plain circles, with the
+// current position rendered in yellow and the rest dim.
+func (s *BrailleSpinner) renderAnimatedDotsLocked() string {
+	idx := s.dots % hawkTypingDots
+	out := ""
+	for i := 0; i < hawkTypingDots; i++ {
+		if i == idx {
+			out += ansiYellow + "●" + ansiReset
+		} else {
+			out += ansiDim + "○" + ansiReset
+		}
 	}
-	// Trailing animated dots ride with every Hawk spinner in wave mode.
-	if s.wave {
-		rendered += " " + s.renderAnimatedDotsLocked()
-	}
-	return rendered
+	return out
 }
 
 // Frame returns the current rendered frame (spinner + label).
@@ -232,14 +164,11 @@ func (s *BrailleSpinner) Frame() string {
 	return spinner + "  " + label
 }
 
-// Tick advances to the next frame and picks a fresh random glyph color.
+// Tick advances to the next frame and cycles the dot highlight.
 func (s *BrailleSpinner) Tick() string {
 	s.mu.Lock()
 	s.frame++
-	s.dots = (s.dots + 1) % 3
-	if s.style == SpinnerHawk {
-		s.refreshGlyphColorLocked()
-	}
+	s.dots = (s.dots + 1) % hawkTypingDots
 	s.mu.Unlock()
 	return s.Frame()
 }
@@ -278,12 +207,4 @@ func (s *BrailleSpinner) Stop() {
 		close(s.stopCh)
 		s.running = false
 	}
-}
-
-// renderShimmer colors a label with natural welcome RGB.
-func renderShimmer(text string, _ int) string {
-	if text == "" {
-		return ""
-	}
-	return colorHawkRGB(randomHawkColor(), text)
 }

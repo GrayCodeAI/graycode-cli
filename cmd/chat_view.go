@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/term"
 
@@ -365,16 +366,19 @@ func (m *chatModel) updateViewportContent() {
 			chatContent.WriteString(hawkC + "⛬ " + rst + renderMarkdown(partial, viewWidth-3))
 			chatContent.WriteString("\n\n")
 		} else {
-			// Hawk QuadBlock spinner: animated glyph + color-waved verb label
-			// + trailing 3-dot typing indicator + live ↑/↓ token counters.
+			// Hawk-native spinner line: brand-orange glyph + green verb
+			// + yellow dot indicator, then ◆ blue time ◆ magenta ↓ / cyan
+			// ↑ ◆ dim hint. The ◆ separator is bright white so it stands
+			// out as a structural divider; the hint stays dim so it
+			// doesn't compete with the data.
+			elapsed := m.spinnerElapsed()
+			sep := ansiWhite + "◆" + ansiReset
+			hint := dimStyle.Render("(Press ESC to stop)")
+			timeStr := ansiBlue + fmt.Sprintf("%.1fs", elapsed.Seconds()) + ansiReset
 			spinnerLine := m.brailleSpinner.Frame()
-			if !m.toolStartTime.IsZero() {
-				if elapsed := time.Since(m.toolStartTime); elapsed > 2*time.Second {
-					spinnerLine += fmt.Sprintf(" (%.1fs)", elapsed.Seconds())
-				}
-			}
-			spinnerLine += "  " + renderTokenCounters(m.turnInputTokens, m.turnOutputTokens)
-			spinnerLine += "  " + dimStyle.Render("(Press ESC to stop)")
+			spinnerLine += "  " + sep + "  " + timeStr
+			spinnerLine += "  " + sep + "  " + m.renderTokenCounters()
+			spinnerLine += "  " + sep + "  " + hint
 			chatContent.WriteString(spinnerLine + "\n\n")
 		}
 	}
@@ -523,7 +527,7 @@ func renderPermissionBox(summary string, width int) string {
 
 	title := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render("⚠ Permission Required")
 	body := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Render(summary)
-	options := lipgloss.NewStyle().Foreground(lipgloss.Color("#4ECDC4")).Render("[y]es  [n]o  [a]lways")
+	options := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5E0E")).Render("[y]es  [n]o  [a]lways")
 
 	return border.Render(title + "\n" + body + "\n" + options)
 }
@@ -597,17 +601,82 @@ func renderReflectionBox(reflection string, width int) string {
 
 // renderTokenCounters formats the live per-turn token counters that ride
 // next to the spinner. Uses ↑ for input (prompt) and ↓ for output
-// (completion) tokens, formatted via formatModelTableContext (e.g. "1.2k",
-// "262k", "1.5m"). Both halves are muted until at least one event has
-// arrived; on first usage update the input figure lands first.
-func renderTokenCounters(inputTokens, outputTokens int) string {
-	if inputTokens == 0 && outputTokens == 0 {
-		return ""
+// (completion) tokens. The displayed numbers are lerped each render
+// frame toward the engine's actual values (factor 0.10) so the counter
+// slides smoothly instead of jumping when a usage event arrives
+// mid-stream.
+//
+// Both arrows are always rendered (even at 0). ↓ is magenta (live model
+// output) and ↑ is cyan (session context) — each purpose its own hue,
+// both at the same bright intensity as the rest of the line.
+func (m *chatModel) renderTokenCounters() string {
+	inTok := int(m.displayInTok + 0.5)
+	outTok := int(m.displayOutTok + 0.5)
+
+	var b strings.Builder
+	b.WriteString(ansiMagenta)
+	b.WriteString("↓ ")
+	b.WriteString(formatHawkTokenCount(outTok))
+	b.WriteString(ansiReset)
+	b.WriteString(dimStyle.Render(" "))
+	b.WriteString(ansiCyan)
+	b.WriteString("↑ ")
+	b.WriteString(formatHawkTokenCount(inTok))
+	b.WriteString(ansiReset)
+	return b.String()
+}
+
+// spinnerElapsed returns how long the spinner has been running. Tool
+// start time wins (so per-tool elapsed resets between tools), otherwise
+// we fall back to the moment the current turn started. Lazy-initialized
+// on first render so every submit path gets a valid elapsed time without
+// having to remember to set it explicitly.
+func (m *chatModel) spinnerElapsed() time.Duration {
+	if !m.toolStartTime.IsZero() {
+		return time.Since(m.toolStartTime)
 	}
-	upStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7FB3D5"))   // soft blue
-	downStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#F5B041")) // soft amber
-	sep := dimStyle.Render(" ")
-	up := upStyle.Render("↑ " + formatModelTableContext(inputTokens))
-	down := downStyle.Render("↓ " + formatModelTableContext(outputTokens))
-	return up + sep + down
+	if m.startedAt.IsZero() {
+		m.startedAt = time.Now()
+	}
+	return time.Since(m.startedAt)
+}
+
+// tokenInputTarget is the target value the input-token display lerps
+// toward. Uses the engine's reported number when available, else the
+// session context estimate (real measurement of session state).
+func (m *chatModel) tokenInputTarget() int {
+	if m.turnInputTokens > 0 {
+		return m.turnInputTokens
+	}
+	return sessionContextUsedTokens(m.session)
+}
+
+// tokenOutputTarget is the target value the output-token display lerps
+// toward. Uses the engine's reported number when available, else a live
+// rune count of the streamed partial / 4.
+func (m *chatModel) tokenOutputTarget() int {
+	if m.turnOutputTokens > 0 {
+		return m.turnOutputTokens
+	}
+	return utf8.RuneCountInString(m.partial.String()) / 4
+}
+
+// formatHawkTokenCount renders a token count in hawk's compact form:
+// ≥1m  → "1.5m", ≥10k → "150k", else raw digits.
+func formatHawkTokenCount(tokens int) string {
+	if tokens <= 0 {
+		return "0"
+	}
+	switch {
+	case tokens >= 1_000_000:
+		v := float64(tokens) / 1_000_000
+		if v == float64(int(v)) {
+			return fmt.Sprintf("%dm", int(v))
+		}
+		return fmt.Sprintf("%.1fm", v)
+	case tokens >= 10_000:
+		return fmt.Sprintf("%dk", tokens/1000)
+	default:
+		return fmt.Sprintf("%d", tokens)
+	}
 }
