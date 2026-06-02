@@ -22,9 +22,9 @@ hawk is an AI-powered coding agent for the terminal. It reads codebases, writes 
 
 ```
 hawk/
-├── main.go                    ⚡ Entry point — calls cmd.Execute()
 ├── api/openapi.yaml           📜 Daemon REST API contract (OpenAPI 3.1)
 ├── cmd/                       🖥️ Cobra CLI commands (200+ files)
+│   ├── hawk/main.go           ⚡ Entry point — calls cmd.Execute()
 │   ├── root.go                ⚙️ Root command, flag definitions
 │   ├── daemon.go              🔮 Daemon start/stop/status
 │   ├── chat.go                💬 Interactive TUI chat
@@ -111,7 +111,7 @@ Tool Call → 🛡️ Guardian (rules DSL) → 🧱 Boundary Checker → 👤 Us
 
 | Decision | Rationale |
 |----------|-----------|
-| `main.go` at root | Intentional — goreleaser builds with `main: ./` producing `hawk` binary |
+| `cmd/hawk/main.go` entry point | Standard Go layout — goreleaser builds with `main: ./cmd/hawk` producing `hawk` binary |
 | `cmd/` is CLI library | Not a binary sub-directory — holds 200+ cobra command files |
 | Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
 | `internal/` is private | Other repos import `shared/types/` only |

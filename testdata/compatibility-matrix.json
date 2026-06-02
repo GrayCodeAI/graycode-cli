@@ -1,0 +1,60 @@
+{
+  "$schema": "./compatibility-matrix.schema.json",
+  "description": "Cross-repo compatibility tracking for GrayCodeAI repositories. Each `matrix` entry records a combination of component versions that have been tested together. CI runs the matrix on a schedule and on PR to ensure released components stay compatible.",
+  "version": "1",
+  "updated": "2026-06-02",
+  "components": [
+    "hawk",
+    "hawk-sdk-go",
+    "hawk-sdk-python",
+    "eyrie",
+    "sight",
+    "inspect",
+    "tok",
+    "yaad",
+    "trace"
+  ],
+  "dependencies": {
+    "hawk":            ["eyrie", "sight", "inspect", "tok"],
+    "hawk-sdk-go":     ["hawk"],
+    "hawk-sdk-python": ["hawk"],
+    "sight":           ["hawk", "eyrie"],
+    "inspect":         ["hawk"],
+    "trace":           [],
+    "tok":             ["hawk"],
+    "yaad":            [],
+    "eyrie":           []
+  },
+  "matrices": [
+    {
+      "name": "stable",
+      "description": "Latest tested-together stable combination across the eco. This is what new users get when installing.",
+      "components": {
+        "hawk":            "0.2.0",
+        "hawk-sdk-go":     "0.2.0",
+        "hawk-sdk-python": "0.2.0",
+        "eyrie":           "0.2.0",
+        "sight":           "0.2.0",
+        "inspect":         "0.2.0",
+        "tok":             "0.2.0",
+        "yaad":            "0.2.0",
+        "trace":           "0.2.0"
+      }
+    },
+    {
+      "name": "next",
+      "description": "Combination that the upcoming release will ship — kept up to date by release-please as components advance. Tested in CI on every PR.",
+      "components": {
+        "hawk":            "main",
+        "hawk-sdk-go":     "main",
+        "hawk-sdk-python": "main",
+        "eyrie":           "main",
+        "sight":           "main",
+        "inspect":         "main",
+        "tok":             "main",
+        "yaad":            "main",
+        "trace":           "main"
+      }
+    }
+  ]
+}

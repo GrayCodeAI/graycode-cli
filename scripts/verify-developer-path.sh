@@ -15,7 +15,7 @@ go test ./internal/tool/ -run 'IsSensitivePath' -count=1
 
 echo "== developer path CLI =="
 BIN="${DEV_PATH_HAWK_BIN:-/tmp/hawk-path-verify}"
-go build -mod=readonly -o "$BIN" .
+go build -mod=readonly -o "$BIN" ./cmd/hawk
 set +o pipefail
 "$BIN" path >/dev/null 2>&1 || true
 set -o pipefail
