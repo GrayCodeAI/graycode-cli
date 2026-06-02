@@ -73,7 +73,7 @@ jobs:
           # Ecosystem repos are external checkouts under hawk/external. go mod tidy can mis-resolve
           # workspace modules here; go work sync is the supported workspace hygiene step.
           go work sync
-          go build -mod=readonly -o /dev/null .
+          go build -mod=readonly -o /dev/null ./cmd/hawk
           if ! git diff --quiet -- go.mod go.sum go.work go.work.sum; then
             echo "::error::go.mod / go.sum / go.work files out of date — run 'go work sync' locally and commit"
             git diff -- go.mod go.sum go.work go.work.sum
@@ -315,7 +315,7 @@ jobs:
       - name: Binary size check (linux/amd64 only)
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
-          size=$(go build -trimpath -o /tmp/hawk-bin . && wc -c < /tmp/hawk-bin)
+          size=$(go build -trimpath -o /tmp/hawk-bin ./cmd/hawk && wc -c < /tmp/hawk-bin)
           size_mb=$((size / 1024 / 1024))
           echo "Binary size: ${size_mb}MB"
           if [ "$size_mb" -gt 100 ]; then

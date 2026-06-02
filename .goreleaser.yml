@@ -28,7 +28,7 @@ before:
 # ---------------------------------------------------------------------------
 builds:
   - id: hawk
-    main: ./
+    main: ./cmd/hawk
     binary: hawk
     env:
       - CGO_ENABLED=0
