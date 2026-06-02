@@ -150,7 +150,10 @@ test: add coverage for guardian
 - Do not import `internal/` from other ecosystem repos — use `shared/types/`
 - Do not put API keys in `.env` or shell env for hawk — use `/config` (OS keychain)
 - The `external/` directory is for local dev only; CI clones repos separately
-- `go.work` is for local multi-repo development; it is not committed
+- `go.work` and `go.work.sum` are committed — CI's `module hygiene` job
+  runs `go work sync` and asserts the result is in sync with the repo. Both
+  files point at `./external/*` checkouts; the `.github/actions/checkout-eyrie`
+  action populates `./external/` on CI runners before the build runs.
 
 ## Naming Conventions
 
