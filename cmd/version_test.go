@@ -27,9 +27,9 @@ func TestVersionString(t *testing.T) {
 }
 
 func TestShortVersion(t *testing.T) {
-	Version = "0.2.0"
+	Version = "0.1.0"
 	got := ShortVersion()
-	if got != "0.2.0" {
-		t.Errorf("ShortVersion() = %q, want %q", got, "0.2.0")
+	if got != "0.1.0" {
+		t.Errorf("ShortVersion() = %q, want %q", got, "0.1.0")
 	}
 }

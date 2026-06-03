@@ -1,7 +1,7 @@
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/GrayCodeAI/eyrie v0.2.0 h1:icTILUkW4lqH/ojd0uLO7UuLQam6TM5O+fA51kh5to4=
-github.com/GrayCodeAI/eyrie v0.2.0/go.mod h1:7usV5x9L8imlOGGLVuhX4SIWUpr6iWBk3bAdjqCnuCI=
+github.com/GrayCodeAI/eyrie v0.1.0 h1:Vh5LPhsiyiBctQBylHLOnIJNYkFrqd1618QcUydHvLU=
+github.com/GrayCodeAI/eyrie v0.1.0/go.mod h1:Iznws0IS267Cp9Zb5VsjCaHLewJEGR61Bv9F3hwJujY=
 github.com/GrayCodeAI/inspect v0.2.0 h1:0hk9V6OHrk8ROcZYSfrGN5ADxILLmqCY/dQleTv78Yk=
 github.com/GrayCodeAI/inspect v0.2.0/go.mod h1:IOH0pwvJ5TmNFSRDkLH3nbWbawE/PPaZojV2Lj5BSnU=
 github.com/GrayCodeAI/sight v0.2.0 h1:fH+lPvz0jw9xYi7Nj7W5pWzVUNilG0+9O2y05XuujLc=

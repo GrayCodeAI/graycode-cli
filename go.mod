@@ -3,7 +3,7 @@ module github.com/GrayCodeAI/hawk
 go 1.26.3
 
 require (
-	github.com/GrayCodeAI/eyrie v0.2.0
+	github.com/GrayCodeAI/eyrie v0.1.0
 	github.com/GrayCodeAI/inspect v0.2.0
 	github.com/GrayCodeAI/sight v0.2.0
 	github.com/GrayCodeAI/tok v0.3.0

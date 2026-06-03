@@ -30,10 +30,10 @@
       "name": "stable",
       "description": "Latest tested-together stable combination across the eco. This is what new users get when installing.",
       "components": {
-        "hawk":            "0.2.0",
+        "hawk":            "0.1.0",
         "hawk-sdk-go":     "0.2.0",
         "hawk-sdk-python": "0.2.0",
-        "eyrie":           "0.2.0",
+        "eyrie":           "0.1.0",
         "sight":           "0.2.0",
         "inspect":         "0.2.0",
         "tok":             "0.2.0",
