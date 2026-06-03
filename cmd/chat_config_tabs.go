@@ -115,7 +115,6 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 	ctx := context.Background()
 	m.configOpen = true
-	m.configMenu = configMenuNone
 	m.configEntry = configEntryNone
 	m.configSaving = false
 	m.configSel = 0

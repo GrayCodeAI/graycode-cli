@@ -23,48 +23,12 @@ type configApplyCredentialsMsg struct {
 	modelOptions []configModelOption
 }
 
-type configKeyResolvedMsg struct {
-	secret string
-	result hawkconfig.CredentialResolveResult
-}
-
 func firstRunModelProvider(m chatModel) string {
 	ctx := context.Background()
 	if p := hawkconfig.DefaultModelProviderFilter(ctx); p != "" {
 		return p
 	}
 	return strings.TrimSpace(m.session.Provider())
-}
-
-func resolveKeyAsync(secret string) tea.Cmd {
-	return func() tea.Msg {
-		res := runtime.ResolveCredential(context.Background(), secret)
-		return configKeyResolvedMsg{
-			secret: secret,
-			result: credentialResolveFromRuntime(res),
-		}
-	}
-}
-
-func credentialResolveFromRuntime(res runtime.CredentialResolveResult) hawkconfig.CredentialResolveResult {
-	out := hawkconfig.CredentialResolveResult{
-		FormatOK:                res.FormatOK,
-		FormatError:             res.FormatError,
-		ProbeDisambiguationUsed: res.ProbeDisambiguationUsed,
-		Providers:               make([]hawkconfig.CredentialProviderOption, len(res.Providers)),
-	}
-	for i, p := range res.Providers {
-		out.Providers[i] = hawkconfig.CredentialProviderOption{
-			ProviderID:   p.ProviderID,
-			DeploymentID: p.DeploymentID,
-			EnvVar:       p.EnvVar,
-			DisplayName:  p.DisplayName,
-			Inferred:     p.Inferred,
-			RequiresKey:  p.RequiresKey,
-			Rank:         p.Rank,
-		}
-	}
-	return out
 }
 
 func credentialOptionFromHawk(in hawkconfig.CredentialInference) runtime.CredentialProviderOption {
@@ -152,139 +116,6 @@ func toConfigModelOptionsFromHawk(in []hawkconfig.ModelOption) []configModelOpti
 	return out
 }
 
-func (m chatModel) configProvidersView() string {
-	titleStyle := configTitleStyle()
-	selectedStyle := configSelectedStyle()
-	mutedStyle := configMutedStyle()
-	style := configRowStyle()
-
-	opts := m.configProviderLabels()
-	total := len(opts)
-
-	if m.configSel < m.configScroll {
-		m.configScroll = m.configSel
-	}
-	if m.configSel >= m.configScroll+configWindowSize {
-		m.configScroll = m.configSel - configWindowSize + 1
-	}
-
-	var b strings.Builder
-	b.WriteString(titleStyle.Render("🔑 Select gateway") + "\n\n")
-	if notice := strings.TrimSpace(m.configNotice); notice != "" {
-		b.WriteString(mutedStyle.Render(sanitizeConfigNotice(notice)) + "\n\n")
-	}
-	if m.configScroll > 0 {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more above ···", m.configScroll)) + "\n")
-	}
-	end := m.configScroll + configWindowSize
-	if end > total {
-		end = total
-	}
-	for i := m.configScroll; i < end; i++ {
-		prefix := "  "
-		lineStyle := style
-		if i == m.configSel {
-			prefix = iconPrompt + " "
-			lineStyle = selectedStyle
-		}
-		b.WriteString(lineStyle.Render(prefix+opts[i]) + "\n")
-	}
-	if end < total {
-		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
-	}
-	b.WriteString("\n" + mutedStyle.Render(configProviderPickerHelp(total, m.configProviderOptions)))
-	return b.String()
-}
-
-func configProviderPickerHelp(total int, opts []hawkconfig.CredentialProviderOption) string {
-	if credentialOptionsHaveInference(opts) {
-		return fmt.Sprintf("%d gateways · ★ = suggested · ↑/↓ · enter · esc", total)
-	}
-	return fmt.Sprintf("%d gateways · choose gateway manually · ↑/↓ · enter · esc", total)
-}
-
-func credentialOptionsHaveInference(opts []hawkconfig.CredentialProviderOption) bool {
-	for _, opt := range opts {
-		if opt.Inferred {
-			return true
-		}
-	}
-	return false
-}
-
-func providerPickerNotice(secret string, opts []hawkconfig.CredentialProviderOption, probeUsed bool) string {
-	if credentialOptionsHaveInference(opts) {
-		if probeUsed {
-			return "Select gateway (★ = matched pattern or verified with provider API)"
-		}
-		return "Select gateway (★ = suggested from key shape)"
-	}
-	if isGenericOpenAICompatibleKey(secret) {
-		return "Generic OpenAI-compatible key — choose the gateway it belongs to"
-	}
-	return "Select gateway"
-}
-
-func isGenericOpenAICompatibleKey(secret string) bool {
-	secret = strings.TrimSpace(secret)
-	return strings.HasPrefix(secret, "sk-")
-}
-
-func (m chatModel) configProviderLabels() []string {
-	out := make([]string, len(m.configProviderOptions))
-	for i, p := range m.configProviderOptions {
-		label := strings.TrimSpace(p.DisplayName)
-		if label == "" {
-			label = p.ProviderID
-		}
-		mark := "  "
-		if p.Inferred {
-			mark = "★ "
-		}
-		out[i] = fmt.Sprintf("%s%-22s %s", mark, label, p.ProviderID)
-	}
-	return out
-}
-
-func (m chatModel) handleConfigKeyResolvedMsg(msg configKeyResolvedMsg) (chatModel, tea.Cmd) {
-	secret := strings.TrimSpace(msg.secret)
-	if !msg.result.FormatOK {
-		m.configNotice = sanitizeConfigNotice(msg.result.FormatError)
-		return m.startConfigEntry(configEntryAPIKeyPaste, "")
-	}
-	if secret == "" {
-		m.configNotice = "Paste a valid API key"
-		return m.startConfigEntry(configEntryAPIKeyPaste, "")
-	}
-	m.configPendingKey = secret
-	m.configProviderOptions = msg.result.Providers
-	m.configEntry = configEntryNone
-	m.configMenu = configMenuProviders
-	m.configTab = configTabGateways
-	m.configSel = 0
-	m.configScroll = 0
-	m.configNotice = providerPickerNotice(secret, msg.result.Providers, msg.result.ProbeDisambiguationUsed)
-	m.restoreChatInput()
-	return m, nil
-}
-
-func (m chatModel) handleConfigProviderSelect() (chatModel, tea.Cmd) {
-	idx := m.configSel
-	if idx < 0 || idx >= len(m.configProviderOptions) {
-		return m, nil
-	}
-	opt := m.configProviderOptions[idx]
-	secret := strings.TrimSpace(m.configPendingKey)
-	if secret == "" {
-		m.configNotice = "Session expired — paste your API key again"
-		return m.startConfigEntry(configEntryAPIKeyPaste, "")
-	}
-	inference := hawkconfig.InferenceFromOption(opt)
-	m.configNotice = fmt.Sprintf("Validating key for %s via eyrie…", opt.DisplayName)
-	m.configSaving = true
-	return m, saveProviderKeyAsync(inference, secret)
-}
-
 func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
 	return m.startConfigOllamaURLWithValue(configDefaultOllamaURL)
 }
@@ -292,7 +123,6 @@ func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
 func (m chatModel) startConfigOllamaURLWithValue(url string) (chatModel, tea.Cmd) {
 	m.configEntry = configEntryOllamaURL
 	m.configProvider = configProviderOllama
-	m.configMenu = configMenuNone
 	if strings.TrimSpace(m.configNotice) == "" || strings.TrimSpace(m.configNotice) == "Working…" {
 		m.configNotice = "Confirm Ollama URL (run: ollama serve)"
 	}
@@ -327,9 +157,6 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 			notice = "Key saved — " + notice + " · retry in Gateways or Models tab"
 		}
 		m.configNotice = notice
-		m.configPendingKey = ""
-		m.configProviderOptions = nil
-		m.configMenu = configMenuNone
 		m.configTab = configTabGateways
 		if pid := strings.TrimSpace(msg.providerID); pid != "" {
 			if idx := m.configGatewayRowIndex(pid); idx >= 0 {
@@ -338,10 +165,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		}
 		return m, nil
 	}
-	m.configPendingKey = ""
-	m.configProviderOptions = nil
 	m.configPendingOllamaURL = ""
-	m.configMenu = configMenuNone
 	m.configNotice = msg.summary
 	InvalidateModelCache()
 	m.configModelProvider = msg.providerID
@@ -355,7 +179,6 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	if post := strings.TrimSpace(m.configPostSaveKeysProvider); post != "" {
 		next.configPostSaveKeysProvider = ""
 		next.configTab = configTabGateways
-		next.configMenu = configMenuNone
 		next.configEntry = configEntryNone
 		if idx := next.configGatewayRowIndex(post); idx >= 0 {
 			next.configSel = idx
