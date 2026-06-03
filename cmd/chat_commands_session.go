@@ -73,6 +73,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			msg = fmt.Sprintf("Compacted with fallback: %d → %d messages", before, after)
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: msg})
+		m.compacting = false
+		m.compactStatus = ""
 		m.invalidateConnStatus()
 		return m, nil
 

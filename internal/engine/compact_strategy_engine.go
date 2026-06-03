@@ -20,6 +20,7 @@ type StrategyRegistry struct {
 func NewStrategyRegistry(config CompactConfig) *StrategyRegistry {
 	r := &StrategyRegistry{config: config}
 	r.strategies = []CompactStrategy{
+		&ProviderNativeCompactStrategy{},
 		&MicroCompactStrategy{},
 		&SessionMemoryStrategy{},
 		&SmartCompactStrategy{},
@@ -28,9 +29,12 @@ func NewStrategyRegistry(config CompactConfig) *StrategyRegistry {
 	return r
 }
 
-func (r *StrategyRegistry) SelectStrategy(msgs []types.EyrieMessage, tokenCount int) CompactStrategy {
+func (r *StrategyRegistry) SelectStrategy(sess *Session, msgs []types.EyrieMessage, tokenCount int) CompactStrategy {
 	threshold := r.config.ContextWindowSize - r.config.AutoCompactBuffer - r.config.MaxOutputTokens
 	for _, s := range r.strategies {
+		if _, ok := s.(*ProviderNativeCompactStrategy); ok && (sess == nil || !sess.supportsAnthropicNativeCompaction()) {
+			continue
+		}
 		if s.ShouldTrigger(msgs, tokenCount, threshold) {
 			return s
 		}

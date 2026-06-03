@@ -21,6 +21,9 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 
 func (m *chatModel) startStream() {
 	m.syncSessionSelection()
+	m.compacting = true
+	m.compactStatus = "Compacting context"
+	m.viewDirty = true
 	sess := m.session
 	ref := m.ref
 	ctx, cancel := context.WithCancel(context.Background())
@@ -43,9 +46,16 @@ func (m *chatModel) startStream() {
 				ref.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
 			case "blast_radius":
 				ref.Send(blastRadiusMsg{message: ev.Content})
+			case "compact":
+				ref.Send(compactMsg{
+					strategy:     ev.Content,
+					tokensBefore: ev.TokensBefore,
+					tokensAfter:  ev.TokensAfter,
+				})
 			case "usage":
-				// Usage events are only emitted in stream-json print mode
-				// TUI mode ignores them since cost is tracked separately
+				if ev.Usage != nil {
+					ref.Send(usageUpdateMsg{usage: ev.Usage})
+				}
 			case "error":
 				ref.Send(streamErrMsg{err: fmt.Errorf("%s", ev.Content)})
 				return

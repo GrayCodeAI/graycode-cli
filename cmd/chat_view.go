@@ -604,6 +604,10 @@ func (m chatModel) renderWaitingSpinnerLine() string {
 	sep := ansiDim + " " + iconSpinnerSep + " " + ansiReset
 
 	var b strings.Builder
+	if m.compacting && m.compactStatus != "" {
+		b.WriteString(ansiYellow + m.compactStatus + ansiReset)
+		b.WriteString(sep)
+	}
 	b.WriteString(m.brailleSpinner.Frame())
 	b.WriteString(sep)
 	b.WriteString(ansiTeal + fmt.Sprintf("%.1fs", m.spinnerElapsed().Seconds()) + ansiReset)

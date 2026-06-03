@@ -15,6 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
@@ -80,6 +81,11 @@ type Session struct {
 	AutoCompactThresholdPct int  // token % to trigger auto-compact (default 85)
 	ContextWindowCached     int  // catalog context window; 0 → governor default
 	AutoCompactor           *AutoCompactor
+	persistID               string
+	lastPromptTokens        int
+	lastCompletionTokens    int
+	checkpointMgr           *session.CheckpointManager
+	OnCompaction            OnCompaction
 	Verbose                 bool // show tool calls, timing, token counts in output
 
 	// Cost optimization
@@ -488,11 +494,14 @@ func (s *Session) RemoveLastExchange() {
 
 // StreamEvent is sent from the engine to the TUI.
 type StreamEvent struct {
-	Type     string // content, thinking, tool_use, tool_result, usage, done, error
+	Type     string // content, thinking, tool_use, tool_result, usage, compact, done, error
 	Content  string
 	ToolName string
 	ToolID   string
 	Usage    *StreamUsage // usage data for this event
+	// Compaction metadata (Type == "compact")
+	TokensBefore int
+	TokensAfter  int
 }
 
 // StreamUsage tracks token usage for a single stream event.

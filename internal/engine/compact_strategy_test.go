@@ -50,7 +50,7 @@ func TestStrategyRegistry_SelectStrategy(t *testing.T) {
 	registry := NewStrategyRegistry(cfg)
 
 	msgs := makeMessages(5)
-	strategy := registry.SelectStrategy(msgs, cfg.ContextWindowSize)
+	strategy := registry.SelectStrategy(nil, msgs, cfg.ContextWindowSize)
 	if strategy.Name() != "truncate" {
 		t.Errorf("expected truncate for high token count with few messages, got %s", strategy.Name())
 	}
