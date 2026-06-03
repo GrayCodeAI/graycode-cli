@@ -82,8 +82,11 @@ func modelTableRowFromOption(o configModelOption) modelTableRow {
 	if owner == "" {
 		owner = "—"
 	}
-	free := o.InputPricePer1M <= 0 && o.OutputPricePer1M <= 0
-	price := formatModelTablePriceCompact(o.InputPricePer1M, o.OutputPricePer1M)
+	free := o.PriceKnown && o.InputPricePer1M <= 0 && o.OutputPricePer1M <= 0
+	price := "—"
+	if o.PriceKnown {
+		price = formatModelTablePriceCompact(o.InputPricePer1M, o.OutputPricePer1M)
+	}
 	if free && price == "—" {
 		price = "free"
 	}

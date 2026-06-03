@@ -82,7 +82,7 @@ func (m chatModel) configTabShellView(body string) string {
 }
 
 func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
-	if tab < configTabKeys || tab > configTabModels {
+	if tab < configTabGateways || tab > configTabModels {
 		return m, nil
 	}
 	if m.configTab == configTabModels && tab != configTabModels {
@@ -90,9 +90,9 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 	}
 	ctx := context.Background()
 	if tab == configTabModels && !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		tab = configTabKeys
-		m.configNotice = "Add an API key first — select Add API key, press enter, paste"
-		m.configSel = m.configKeysAddRowIndex()
+		tab = configTabGateways
+		m.configNotice = "Select a gateway first · enter · paste API key"
+		m = m.focusConfigActiveGateway()
 	}
 	m.configTab = tab
 	m.configSel = 0
@@ -128,7 +128,7 @@ func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 		if setup.HasCredentials {
 			tab = configTabModels
 		} else {
-			tab = configTabKeys
+			tab = configTabGateways
 		}
 	}
 	m.configTab = tab
@@ -137,12 +137,11 @@ func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 		m.configNotice = ""
 		return m.beginConfigModelsTab()
 	}
-	if tab == configTabKeys && !setup.HasCredentials {
-		m.configNotice = "Select Add API key · press enter · paste your key"
-		m.configSel = 0
-	}
 	if tab == configTabGateways {
 		m = m.focusConfigActiveGateway()
+		if !setup.HasCredentials {
+			m.configNotice = "Select a gateway · press enter · paste your API key"
+		}
 	}
 	return m, nil
 }
