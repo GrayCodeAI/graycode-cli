@@ -25,6 +25,17 @@ func NewAutoCompactor(config CompactConfig) *AutoCompactor {
 	}
 }
 
+// Configure updates compaction settings and rebuilds the strategy registry.
+func (ac *AutoCompactor) Configure(config CompactConfig) {
+	if ac == nil {
+		return
+	}
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	ac.config = config
+	ac.registry = NewStrategyRegistry(config)
+}
+
 // GetAutoCompactThreshold returns the token count at which auto-compaction triggers.
 func (ac *AutoCompactor) GetAutoCompactThreshold() int {
 	return ac.config.ContextWindowSize - ac.config.AutoCompactBuffer - ac.config.MaxOutputTokens

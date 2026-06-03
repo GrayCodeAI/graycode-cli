@@ -285,6 +285,11 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	// Adaptive prompt: learn user preferences from corrections
 	sess.AdaptivePrompt = engine.NewAdaptivePrompt()
 
+	if pct := settings.AutoCompactThresholdPct; pct > 0 {
+		sess.AutoCompactThresholdPct = pct
+	}
+	sess.EnsureAutoCompactor()
+
 	return nil
 }
 

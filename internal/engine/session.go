@@ -78,6 +78,8 @@ type Session struct {
 
 	PinnedMessages          int  // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int  // token % to trigger auto-compact (default 85)
+	ContextWindowCached     int  // catalog context window; 0 → governor default
+	AutoCompactor           *AutoCompactor
 	Verbose                 bool // show tool calls, timing, token counts in output
 
 	// Cost optimization
@@ -154,6 +156,8 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	}
 	s.Cost.Model = model
 	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
+	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
+	s.refreshContextWindowCache()
 
 	// Initialize agents accumulator for .hawk/agents.md
 	cwd, _ := os.Getwd()
@@ -200,6 +204,7 @@ func (s *Session) SetModel(model string) {
 	s.model = strings.TrimSpace(model)
 	s.Cost.Model = s.model
 	s.syncCascadeDefaultModel()
+	s.refreshContextWindowCache()
 }
 
 // syncCascadeDefaultModel keeps the cascade router aligned after /config model picks.

@@ -124,8 +124,15 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 	}
 
 	model, contextLabel = modelStatusMeta(gw, modelID)
-	if contextLabel == "" || contextLabel == "—" {
-		contextLabel = "0k"
+	if contextLabel == "" || contextLabel == "—" || contextLabel == "0k" {
+		if m.session != nil {
+			if w := m.session.ContextWindowSize(); w > 0 {
+				contextLabel = formatModelTableContext(w)
+			}
+		}
+		if contextLabel == "" || contextLabel == "—" {
+			contextLabel = formatModelTableContext(engine.DefaultContextWindow)
+		}
 	}
 	return gateway, model, contextLabel
 }
