@@ -303,7 +303,7 @@ func (m chatModel) configModelsBody() string {
 	rowStyle := configRowStyle()
 	cursorStyle := configSelectedStyle()
 	activeStyle := configActiveStyle()
-	freeStyle := lipgloss.NewStyle().Foreground(successTeal)
+	freeStyle := lipgloss.NewStyle().Foreground(doneGreen)
 
 	opts := m.configFilteredModelOptions()
 	total := len(opts)
@@ -647,8 +647,8 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	next = next.closeConfigPanel()
 	if !hawkconfig.EvaluateSetupCached(context.Background()).NeedsSetup {
 		next.messages = append(next.messages, displayMsg{
-			role:    "system",
-			content: fmt.Sprintf("Setup complete — chatting with %s", next.session.Model()),
+			role:    "setup_complete",
+			content: next.session.Model(),
 		})
 	}
 	return next, cmd

@@ -69,7 +69,7 @@ func renderStatusBarRight(m *chatModel) (rendered string, visLen int) {
 
 	tokenStyle := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
 	costStyle := lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
-	timeStyle := lipgloss.NewStyle().Foreground(tealColor).Inline(true)
+	timeStyle := lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 
 	tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
@@ -144,6 +144,35 @@ func formatSessionDuration(d time.Duration) string {
 func formatTokenCountWithCommas(tokens int) string {
 	p := message.NewPrinter(language.English)
 	return p.Sprintf("%d tokens", tokens)
+}
+
+func renderContainerFooterLeft(m chatModel) (rendered string, visLen int) {
+	bold, dim := containerFooterLeft(m)
+	visLen = runewidth.StringWidth(bold + dim)
+
+	if m.containerEnabled && m.containerErr != nil {
+		return containerErrStyle.Bold(true).Render(bold) + containerErrStyle.Render(dim), visLen
+	}
+	if m.containerEnabled {
+		return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim), visLen
+	}
+
+	labelStyle := lipgloss.NewStyle().Foreground(warnAmber).Bold(true)
+	return labelStyle.Render(bold) + dimStyle.Render(dim), visLen
+}
+
+func renderContainerFooterDetail(detail string) string {
+	if detail == "" {
+		return ""
+	}
+	statusStyle := lipgloss.NewStyle().Foreground(textPlaceholder).Inline(true)
+	okStyle := lipgloss.NewStyle().Foreground(doneGreen).Inline(true)
+	sep := " · "
+	status, ok, found := strings.Cut(detail, sep)
+	if !found {
+		return statusStyle.Render(detail)
+	}
+	return statusStyle.Render(status) + configMutedStyle().Inline(true).Render(sep) + okStyle.Render(ok)
 }
 
 // containerFooterLeft is the bold + dim text on the top footer row (left side).
