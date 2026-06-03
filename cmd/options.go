@@ -290,17 +290,22 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	}
 	sess.EnsureAutoCompactor()
 
+	if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
+		sess.Autonomy = lvl
+	}
+
 	return nil
 }
 
 // bindChatSession wires TUI-only session metadata (persist id, compaction callbacks).
-func bindChatSession(sess *engine.Session, sessionID string) {
+func bindChatSession(sess *engine.Session, sessionID string, containerRequired bool) {
 	if sess == nil {
 		return
 	}
 	if id := strings.TrimSpace(sessionID); id != "" {
 		sess.SetPersistID(id)
 	}
+	sess.ContainerRequired = containerRequired
 }
 
 func validateRootFlags() error {

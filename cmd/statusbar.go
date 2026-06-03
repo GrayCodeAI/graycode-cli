@@ -185,7 +185,11 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 		return bold, " Docker is not running. Start Docker and try again."
 	}
 	if m.containerReady && strings.TrimSpace(m.containerStatus) != "" {
-		return bold, fmt.Sprintf(" %s · no approval needed", strings.TrimSpace(m.containerStatus))
+		tier := "Edit"
+		if m.session != nil && m.session.Autonomy != 0 {
+			tier = autonomyTierName(m.session.Autonomy)
+		}
+		return bold, fmt.Sprintf(" %s · %s", strings.TrimSpace(m.containerStatus), tier)
 	}
 	if strings.TrimSpace(m.containerStatus) != "" {
 		return bold, " " + strings.TrimSpace(m.containerStatus)
