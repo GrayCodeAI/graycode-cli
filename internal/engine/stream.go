@@ -10,12 +10,10 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
-	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 )
 
@@ -171,21 +169,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
 			s.Beliefs.Prune(turnCount)
 		}
-		// Auto-compact if conversation is too long (message count)
-		if len(s.messages) > maxContextMessages {
-			s.messages = ctxmgr.CollapseRepeatedMessages(s.messages)
-			if len(s.messages) > maxContextMessages {
-				s.smartCompact()
-			}
-		}
-
-		// Auto-compact if token usage exceeds context budget allocation
-		convTokens := EstimateTokens(s.messages)
-		if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-			budget := ctxmgr.NewContextBudget(info.ContextSize)
-			if budget.ShouldCompact(convTokens) {
-				s.smartCompact()
-			}
+		// Context governor: collapse → micro/smart/truncate (settings threshold %).
+		if strat, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
+			s.log.Info("context compacted", map[string]interface{}{
+				"strategy": strat,
+				"messages": len(s.messages),
+			})
 		}
 
 		// Integration pipeline: pre-query (intent, tools, budget, injection scan, cache)
@@ -234,10 +223,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Dynamic max_tokens based on task type and recent tool patterns
 		taskType := classifyPromptForBudget(s.messages)
-		contextSize := 200000
-		if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-			contextSize = info.ContextSize
-		}
+		contextSize := s.ContextWindowSize()
 		maxTok := DynamicMaxTokens(s.messages, contextSize, taskType)
 
 		// Model cascade: select optimal model for this request

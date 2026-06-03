@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -65,9 +66,14 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 
 	case "/compact":
 		before := m.session.MessageCount()
-		m.session.SmartCompact()
+		strat, tokBefore, tokAfter, err := m.session.CompactConversation(context.Background())
 		after := m.session.MessageCount()
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Compacted: %d → %d messages (LLM summary)", before, after)})
+		msg := fmt.Sprintf("Compacted (%s): %d → %d messages, ~%dk → ~%dk tokens", strat, before, after, tokBefore/1000, tokAfter/1000)
+		if err != nil {
+			msg = fmt.Sprintf("Compacted with fallback: %d → %d messages", before, after)
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: msg})
+		m.invalidateConnStatus()
 		return m, nil
 
 	case "/history":

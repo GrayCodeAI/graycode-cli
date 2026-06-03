@@ -15,7 +15,6 @@ import (
 	hooks "github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // toolExecResult holds the output of a single tool execution.
@@ -326,8 +325,8 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	}
 
 	maxChars := 50000
-	if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-		dynamic := info.ContextSize * 20 / 100 * 4
+	if window := s.ContextWindowSize(); window > 0 {
+		dynamic := window * 20 / 100 * 4
 		if dynamic < 5000 {
 			dynamic = 5000
 		}
@@ -345,6 +344,7 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	if len(output) > maxChars {
 		output = output[:maxChars] + "\n... (truncated)"
 	}
+	output = maybeSpillToolOutput(output, canonical, tc.ID)
 
 	if s.Pipeline != nil {
 		var execErr error
