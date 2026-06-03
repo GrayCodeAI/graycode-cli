@@ -909,14 +909,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return next, nil
 
-	case configKeyResolvedMsg:
-		next, cmd := m.handleConfigKeyResolvedMsg(msg)
-		if m.configOpen {
-			next.viewDirty = true
-			next.updateViewportContent()
-		}
-		return next, cmd
-
 	case configRemoveCredentialMsg:
 		next, cmd := m.handleConfigRemoveCredentialMsg(msg)
 		if m.configOpen {

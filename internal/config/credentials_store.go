@@ -197,17 +197,18 @@ func maskCredentialSecret(secret string) string {
 	return secret[:4] + strings.Repeat("•", len(secret)-6) + secret[len(secret)-2:]
 }
 
-// CredentialInferenceForProvider returns save metadata for a configured gateway.
+// CredentialInferenceForProvider returns save metadata for a gateway chosen in /config.
 func CredentialInferenceForProvider(providerID string) (CredentialInference, error) {
 	providerID = catalogProviderID(normalizeProviderName(strings.TrimSpace(providerID)))
-	envKey := ProviderAPIKeyEnv(providerID)
-	if envKey == "" {
-		return CredentialInference{}, fmt.Errorf("unknown provider %q", providerID)
+	inf, err := runtime.InferenceForProvider(providerID)
+	if err != nil {
+		return CredentialInference{}, err
 	}
 	return CredentialInference{
-		ProviderID:  providerID,
-		EnvVar:      envKey,
-		DisplayName: GatewayDisplayName(providerID),
+		ProviderID:   inf.ProviderID,
+		DeploymentID: inf.DeploymentID,
+		EnvVar:       inf.EnvVar,
+		DisplayName:  inf.DisplayName,
 	}, nil
 }
 
@@ -263,7 +264,7 @@ func FormatConfigProviderError(providerID string, err error) string {
 	return err.Error()
 }
 
-// InferCredentialsFromAPIKey delegates provider detection to eyrie from key shape + catalog.
+// InferCredentialsFromAPIKey is deprecated; select gateway first, then paste the key.
 func InferCredentialsFromAPIKey(ctx context.Context, secret string) []CredentialInference {
 	in := runtime.InferCredentialsFromAPIKey(ctx, secret)
 	out := make([]CredentialInference, len(in))
