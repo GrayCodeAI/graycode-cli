@@ -667,7 +667,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyCtrlL:
 			if m.containerEnabled && !m.containerReady {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy tiers (Inspect · Edit · Run · Trust) unlock when the container is ready."})
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for sandbox — tiers unlock when container is ready."})
 				m.viewDirty = true
 				m.updateViewportContent()
 				return m, nil
