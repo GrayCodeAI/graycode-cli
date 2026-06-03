@@ -3,10 +3,11 @@ package config
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
-
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
@@ -17,7 +18,12 @@ var (
 	credConfigured map[string]bool
 	credHasAny     bool
 	credValid      bool
+	credSnapMu     sync.Mutex
+	credSnapAt     time.Time
+	credSnapStore  map[string]string
 )
+
+const gatewayCredSnapshotTTL = 5 * time.Second
 
 // InvalidateConfigUICache drops in-memory catalog and credential snapshots (call after refresh/key changes).
 func InvalidateConfigUICache() {
@@ -26,6 +32,11 @@ func InvalidateConfigUICache() {
 	credValid = false
 	credConfigured = nil
 	uiCacheMu.Unlock()
+	credSnapMu.Lock()
+	credSnapAt = time.Time{}
+	credSnapStore = nil
+	credSnapMu.Unlock()
+	InvalidateCatalogHealthCache()
 }
 
 // RefreshConfigCredSnapshot re-reads keychain status for setup gateways (call when opening /config).
@@ -34,12 +45,12 @@ func RefreshConfigCredSnapshot(ctx context.Context) {
 		ctx = context.Background()
 	}
 	PrepareCredentialDiscovery(ctx)
-	compiled := compiledCatalogOrBootstrap()
+	stored := gatewayCredentialSnapshot(ctx)
 	gateways := AllSetupGateways()
 	configured := make(map[string]bool, len(gateways))
 	hasAny := false
 	for _, p := range gateways {
-		if credentialSetForGateway(ctx, compiled, p) {
+		if gatewayConfiguredFromStored(p, stored) {
 			configured[p] = true
 			hasAny = true
 		}
@@ -51,6 +62,43 @@ func RefreshConfigCredSnapshot(ctx context.Context) {
 	uiCacheMu.Unlock()
 }
 
+// gatewayCredentialSnapshot loads only setup-gateway env keys (not the full discovery list).
+func gatewayCredentialSnapshot(ctx context.Context) map[string]string {
+	credSnapMu.Lock()
+	if credSnapStore != nil && time.Since(credSnapAt) < gatewayCredSnapshotTTL {
+		out := credSnapStore
+		credSnapMu.Unlock()
+		return out
+	}
+	credSnapMu.Unlock()
+
+	out := make(map[string]string)
+	for _, gw := range AllSetupGateways() {
+		for _, env := range credentialEnvKeysForTarget(gw) {
+			if _, ok := out[env]; ok {
+				continue
+			}
+			if secret := credentials.LookupSecret(ctx, env); secret != "" {
+				out[env] = secret
+			}
+		}
+	}
+	credSnapMu.Lock()
+	credSnapStore = out
+	credSnapAt = time.Now()
+	credSnapMu.Unlock()
+	return out
+}
+
+func gatewayConfiguredFromStored(providerID string, stored map[string]string) bool {
+	for _, env := range credentialEnvKeysForTarget(providerID) {
+		if strings.TrimSpace(stored[env]) != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func ensureCredSnapshot(ctx context.Context) {
 	uiCacheMu.RLock()
 	valid := credValid
@@ -59,23 +107,6 @@ func ensureCredSnapshot(ctx context.Context) {
 		return
 	}
 	RefreshConfigCredSnapshot(ctx)
-}
-
-func credentialSetForGateway(ctx context.Context, compiled *catalog.CompiledCatalogV1, provider string) bool {
-	if compiled == nil {
-		return false
-	}
-	provider = catalogProviderID(provider)
-	envs := catalog.APIKeyEnvsForProvider(compiled, provider)
-	if len(envs) == 0 {
-		return false
-	}
-	for _, env := range envs {
-		if credentials.HasSecret(ctx, env) {
-			return true
-		}
-	}
-	return false
 }
 
 // ConfiguredCredentialProviders returns setup gateways with a stored API key (cached for TUI).

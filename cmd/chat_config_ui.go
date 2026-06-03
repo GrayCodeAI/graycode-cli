@@ -106,7 +106,9 @@ func configNoticeStyle(notice string) lipgloss.Style {
 	case strings.HasPrefix(notice, "Refreshed"),
 		strings.HasPrefix(notice, "Eyrie:"),
 		strings.Contains(notice, "Removed API key"),
-		strings.Contains(notice, "Setup complete"):
+		strings.Contains(notice, "Setup complete"),
+		strings.Contains(n, "key saved"),
+		strings.Contains(notice, "Key updated"):
 		return lipgloss.NewStyle().Foreground(successTeal)
 	default:
 		return configMutedStyle()
@@ -135,6 +137,10 @@ func renderConfigNotice(notice string) string {
 		return ""
 	}
 	return configNoticeStyle(notice).Render(notice)
+}
+
+func (m chatModel) configNoticeForView() string {
+	return m.configNotice
 }
 
 func (m chatModel) configHelpLine() string {

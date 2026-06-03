@@ -21,6 +21,7 @@ const (
 	configEntryAPIKeyPaste = "apikey-paste"
 	configEntryOllamaURL   = "ollama-url"
 	configEntryKeyView     = "key-view"
+	configEntryXiaomiRegion = "xiaomi-region"
 )
 
 // Providers referenced by config UI flows.

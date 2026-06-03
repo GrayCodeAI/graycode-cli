@@ -176,16 +176,20 @@ hawk mission --dry-run "What would this decompose into?"
 
 hawk works with any LLM provider. **Developer path:** paste keys in `/config` (stored in OS keychain) — not shell env or `.env`. Use `hawk credentials status` to verify.
 
-| Provider | Key (via `/config`) |
-|---|---|
-| Anthropic | `ANTHROPIC_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Gemini | `GEMINI_API_KEY` |
-| OpenRouter | `OPENROUTER_API_KEY` |
-| Grok (xAI) | `XAI_API_KEY` |
-| Groq | `GROQ_API_KEY` |
-| DeepSeek | `DEEPSEEK_API_KEY` |
-| Ollama | local — no key (`OLLAMA_BASE_URL` optional) |
+| Provider | ID | Key (via `/config`) |
+|---|---|---|
+| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` |
+| OpenAI | `openai` | `OPENAI_API_KEY` |
+| Google Gemini | `gemini` | `GEMINI_API_KEY` |
+| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
+| xAI (Grok) | `grok` | `XAI_API_KEY` |
+| Z.AI | `z-ai` | `ZAI_API_KEY` |
+| CanopyWave | `canopywave` | `CANOPYWAVE_API_KEY` |
+| OpenCode Go | `opencodego` | `OPENCODEGO_API_KEY` |
+| Kimi (Moonshot) | `kimi` | `MOONSHOT_API_KEY` |
+| Xiaomi (MiMo) Pay-as-you-go | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
+| Xiaomi (MiMo) Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (pick region in `/config`) |
+| Ollama (local) | `ollama` | `OLLAMA_BASE_URL` (no API key) |
 
 Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/eyrie).
 For deployment-aware routing, set `"deployment_routing": true` in `.hawk/settings.json`

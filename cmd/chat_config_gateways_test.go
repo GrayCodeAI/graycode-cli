@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func chatModelForConfigPasteTest() chatModel {
@@ -38,6 +38,28 @@ func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	}
 	if !strings.Contains(view, "Select a gateway") {
 		t.Fatalf("expected gateway-first setup hint without credentials, got:\n%s", view)
+	}
+}
+
+func TestConfigGatewaysView_ShowsSaveOrProbeNotice(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+
+	m := chatModel{
+		configTab:    configTabGateways,
+		configSel:    0,
+		configNotice: "Key saved in " + credentialsStoreLabel() + " — provider rejected this key: credential probe failed: invalid API key (HTTP 401)",
+		width:        120,
+		height:       40,
+	}
+	view := m.configTabShellView(m.configGatewaysView())
+	if !strings.Contains(view, "Key saved") || !strings.Contains(view, "rejected") {
+		t.Fatalf("expected visible save/probe notice, got:\n%s", view)
 	}
 }
 
@@ -122,6 +144,37 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 	}
 }
 
+func TestHandleConfigGatewaysSelect_TokenPlanNoKeyShowsRegion(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+
+	m := chatModel{configTab: configTabGateways}
+	rows := m.configGatewayRows()
+	idx := -1
+	for i, row := range rows {
+		if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		t.Fatal("expected xiaomi_mimo_token_plan gateway row")
+	}
+	m.configSel = idx
+	next, _ := m.handleConfigGatewaysSelect()
+	if next.configEntry != configEntryXiaomiRegion {
+		t.Fatalf("entry = %q, want xiaomi region picker", next.configEntry)
+	}
+	if next.configProvider != hawkconfig.ProviderXiaomiTokenPlan {
+		t.Fatalf("provider = %q", next.configProvider)
+	}
+}
+
 func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
@@ -133,11 +186,19 @@ func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
 
 	m := chatModelForConfigPasteTest()
 	m.configTab = configTabGateways
-	m.configSel = 0
 	gwRows := m.configGatewayRows()
 	if len(gwRows) == 0 {
 		t.Fatal("expected gateway rows")
 	}
+	sel := 0
+	for i, row := range gwRows {
+		if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+			continue
+		}
+		sel = i
+		break
+	}
+	m.configSel = sel
 	next, cmd := m.handleConfigGatewaysSelect()
 	if next.configTab != configTabGateways {
 		t.Fatalf("tab = %d, want Gateways", next.configTab)
@@ -145,8 +206,8 @@ func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
 	if next.configEntry != configEntryAPIKeyPaste {
 		t.Fatalf("entry = %q, want API key paste", next.configEntry)
 	}
-	if next.configProvider != gwRows[0].ID {
-		t.Fatalf("provider = %q, want %s", next.configProvider, gwRows[0].ID)
+	if next.configProvider != gwRows[sel].ID {
+		t.Fatalf("provider = %q, want %s", next.configProvider, gwRows[sel].ID)
 	}
 	if !strings.Contains(next.configNotice, "Paste API key") {
 		t.Fatalf("notice = %q", next.configNotice)

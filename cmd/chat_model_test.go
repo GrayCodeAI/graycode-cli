@@ -72,6 +72,22 @@ func TestChatModel_SlashClear(t *testing.T) {
 	}
 }
 
+func TestFormatQuitResumeMessage(t *testing.T) {
+	got := formatQuitResumeMessage("44418bdd52745678")
+	want := "Thank you for using Hawk!\n\nTo resume this session, run: hawk --resume 44418bdd52745678\n"
+	if got != want {
+		t.Fatalf("quit message mismatch:\nwant %q\ngot  %q", want, got)
+	}
+}
+
+func TestFormatQuitResumeMessage_NoSession(t *testing.T) {
+	got := formatQuitResumeMessage("")
+	want := "Thank you for using Hawk!\n"
+	if got != want {
+		t.Fatalf("quit message mismatch:\nwant %q\ngot  %q", want, got)
+	}
+}
+
 func TestChatModel_SlashModel(t *testing.T) {
 	m := newTestChatModel()
 	result, _ := m.handleCommand("/model")

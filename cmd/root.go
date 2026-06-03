@@ -78,10 +78,6 @@ var rootCmd = &cobra.Command{
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Credential store reads OS secret store on demand (not shell env).
-		hawkconfig.PrepareCredentialDiscovery(context.Background())
-		_ = hawkconfig.MigrateProviderSecrets()
-
 		if versionFlag {
 			if buildDate != "" && buildDate != "unknown" {
 				cmd.Println(fmt.Sprintf("%s (Hawk) built %s", version, buildDate))
@@ -102,6 +98,10 @@ var rootCmd = &cobra.Command{
 				return err
 			}
 		}
+		// Defer credential migration until chat/print (keeps cold paths fast).
+		hawkconfig.PrepareCredentialDiscovery(context.Background())
+		_ = hawkconfig.MigrateProviderSecrets()
+
 		if printMode || promptFlag != "" || inputFormat == "stream-json" {
 			if promptFlag == "" {
 				stdinPrompt, err := readPromptFromStdin(inputFormat)

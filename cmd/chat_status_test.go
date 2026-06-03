@@ -191,14 +191,14 @@ func TestWelcomeDockerRunning_States(t *testing.T) {
 
 func TestBuildWelcomeMessage_IncludesDockerWhenEnabled(t *testing.T) {
 	running := true
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, &running)
+	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, &running, false)
 	if !strings.Contains(msg, "Docker") {
 		t.Fatalf("expected Docker indicator in welcome, got snippet without it")
 	}
 }
 
 func TestBuildWelcomeMessage_OmitsDockerWhenDisabled(t *testing.T) {
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil)
+	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil, false)
 	if strings.Contains(msg, "Docker") {
 		t.Fatal("expected no Docker indicator when container mode disabled")
 	}
@@ -211,17 +211,14 @@ func TestNormalizeModelDisplayName_ShortensSlug(t *testing.T) {
 	}
 }
 
-func TestWelcomeHeader_CompactAfterChat(t *testing.T) {
+func TestWelcomeHeader_StaysFullAfterChat(t *testing.T) {
 	m := chatModel{
 		welcomeCache: "BIG LOGO",
 		messages:     []displayMsg{{role: "user", content: "Hi"}},
 	}
-	got := m.welcomeHeader()
-	if strings.Contains(got, "BIG LOGO") {
-		t.Fatal("expected compact header after chat, got full welcome")
-	}
-	if !strings.Contains(got, "/welcome") {
-		t.Fatalf("expected compact hint, got %q", got)
+	got := m.renderFixedWelcomePane(80)
+	if !strings.Contains(got, "BIG LOGO") {
+		t.Fatalf("expected full welcome in fixed pane, got %q", got)
 	}
 }
 
@@ -240,7 +237,7 @@ func TestShowWelcomeBanner_WithMessages(t *testing.T) {
 
 func TestBuildWelcomeMessage_UsesDisplayVersion(t *testing.T) {
 	SetVersion("dev")
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil)
+	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil, false)
 	if strings.Contains(msg, "vdev") {
 		t.Fatal("welcome should not show vdev; DisplayVersion should read VERSION file or dev")
 	}

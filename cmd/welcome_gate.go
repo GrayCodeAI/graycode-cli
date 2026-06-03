@@ -24,7 +24,7 @@ const workInputPlaceholder = `Try "Create a PR with these changes" (Shift+Enter 
 const (
 	welcomeGateMinTopPad  = 2
 	welcomeGateMaxTopPad  = 8
-	welcomeGateClusterGap = 1 // blank lines between status chips and footer rule
+	welcomeGateClusterGap = 2 // blank lines between status chips and action row
 )
 
 // initialUIPhase picks welcome gate vs work from how hawk was launched.
@@ -69,12 +69,11 @@ func welcomeGateRule(width int) string {
 
 func (m chatModel) renderWelcomeGateActionRow(width int) string {
 	primary, needsSetup := m.gateActionHint()
-	glyph := lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Inline(true).Render("↵  ")
-	textStyle := lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Inline(true)
+	textStyle := lipgloss.NewStyle().Foreground(hudLabelPink).Bold(true).Inline(true)
 	if needsSetup {
 		textStyle = lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Inline(true)
 	}
-	line := glyph + textStyle.Render(primary)
+	line := textStyle.Render("↵  " + primary)
 	return lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Render(line)
 }
 
@@ -89,12 +88,7 @@ func (m chatModel) renderWelcomeGateChromeRow(width int) string {
 }
 
 func (m chatModel) renderWelcomeGateFooter(width int) string {
-	return lipgloss.JoinVertical(lipgloss.Left,
-		welcomeGateRule(width),
-		m.renderWelcomeGateActionRow(width),
-		"",
-		m.renderWelcomeGateChromeRow(width),
-	)
+	return m.renderWelcomeGateActionRow(width)
 }
 
 // renderWelcomeGate lays out hero + footer as one cluster (no huge gap between logo and chrome).
@@ -108,22 +102,24 @@ func (m chatModel) renderWelcomeGate(width, height int) string {
 
 	footer := m.renderWelcomeGateFooter(width)
 	footerH := lipgloss.Height(footer)
+	chrome := m.renderWelcomeGateChromeRow(width)
+	chromeH := lipgloss.Height(chrome)
 
 	hero := strings.Trim(m.welcomeCache, "\n")
 	heroLines := strings.Split(hero, "\n")
 	contentH := len(heroLines)
 
 	clusterH := contentH + welcomeGateClusterGap + footerH
-	slack := height - clusterH
+	slack := height - clusterH - chromeH
 	topPad := welcomeGateMinTopPad
 	if slack > welcomeGateMinTopPad {
-		topPad = slack / 5
+		topPad = slack / 4
 	}
 	if topPad > welcomeGateMaxTopPad {
 		topPad = welcomeGateMaxTopPad
 	}
 
-	maxContent := height - topPad - welcomeGateClusterGap - footerH
+	maxContent := height - topPad - welcomeGateClusterGap - footerH - chromeH
 	if maxContent < 1 {
 		maxContent = 1
 		topPad = 0
@@ -149,6 +145,13 @@ func (m chatModel) renderWelcomeGate(width, height int) string {
 		b.WriteString(strings.Repeat("\n", welcomeGateClusterGap))
 	}
 	b.WriteString(footer)
+	usedH := topPad + contentH + welcomeGateClusterGap + footerH + chromeH
+	if bottomPad := height - usedH; bottomPad > 0 {
+		b.WriteString(strings.Repeat("\n", bottomPad))
+	} else {
+		b.WriteByte('\n')
+	}
+	b.WriteString(chrome)
 	return b.String()
 }
 
@@ -167,6 +170,8 @@ func (m chatModel) stripWelcomeMessages() chatModel {
 // enterWorkPhase transitions from the welcome gate into the normal work TUI.
 func (m chatModel) enterWorkPhase() (chatModel, tea.Cmd) {
 	m.phase = phaseWork
+	m.welcomeDismissed = true
+	m.welcomeCache = ""
 	m = m.stripWelcomeMessages()
 	m.viewDirty = true
 	m.autoScroll = true

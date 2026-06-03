@@ -84,8 +84,8 @@ func TestEvaluateSetup_WithoutCredentials(t *testing.T) {
 	if !st.NeedsSetup {
 		t.Fatal("expected setup needed without credentials")
 	}
-	if st.Hint == "" {
-		t.Fatal("expected non-empty setup hint")
+	if st.Hint != "" {
+		t.Fatalf("expected no welcome banner hint without credentials, got %q", st.Hint)
 	}
 }
 
@@ -150,14 +150,8 @@ func TestFirstRunSetupHint_NoAutoOpen(t *testing.T) {
 	})
 
 	hint := FirstRunSetupHint(context.Background())
-	if hint == "" {
-		t.Fatal("expected hint without credentials")
-	}
-	if !strings.Contains(hint, "/config") {
-		t.Fatalf("hint should mention /config: %q", hint)
-	}
-	if !strings.Contains(strings.ToLower(hint), "keychain") {
-		t.Fatalf("hint should mention keychain: %q", hint)
+	if hint != "" {
+		t.Fatalf("expected no splash hint without credentials, got %q", hint)
 	}
 }
 
@@ -189,7 +183,7 @@ func TestEvaluateSetupCached_MatchesWarmSnapshot(t *testing.T) {
 	if cached.HasModel {
 		t.Fatal("expected no model selected in isolated home")
 	}
-	if cached.Hint != "Almost ready: /config → pick a model, then /path to verify" {
+	if cached.Hint != "Almost ready: /config → finish setup" {
 		t.Fatalf("hint = %q", cached.Hint)
 	}
 }

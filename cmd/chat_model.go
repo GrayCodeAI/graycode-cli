@@ -89,6 +89,13 @@ type (
 		strategy                  string
 		tokensBefore, tokensAfter int
 	}
+	compactTickMsg struct{}
+	compactDoneMsg struct {
+		strategy                  string
+		tokensBefore, tokensAfter int
+		err                       error
+		beforeCount, afterCount   int
+	}
 )
 
 type (
@@ -155,7 +162,7 @@ type chatModel struct {
 	hudOpen                    bool    // Agent Status HUD overlay (Ctrl+A)
 	hudData                    HUDData // latest HUD snapshot
 	configOpen                 bool
-	configTab                  int    // configTabGateways, configTabModels
+	configTab                  int // configTabGateways, configTabModels
 	configSel                  int
 	configScroll               int // scroll offset for long lists
 	configNotice               string
@@ -170,41 +177,53 @@ type chatModel struct {
 	configKeysPendingRemove    string              // provider awaiting delete confirmation
 	configKeysRemoveStep       int                 // 1 = first prompt, 2 = final confirm
 	configReplaceProvider      string              // replace-key flow target gateway
-	configPostSaveKeysProvider string // return to Gateways tab after replace save
-	configSaving               bool   // blocks hub/list input while async credential work runs
+	configPostSaveKeysProvider string              // return to Gateways tab after replace save
+	configSaving               bool                // blocks hub/list input while async credential work runs
 	configPendingOllamaURL     string
+	configXiaomiRegionSel      int // Token Plan region picker index
 	pluginRuntime              *plugin.Runtime
 	spinnerVerb                string
 	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).
 	// Reset each time the user submits a message; updated by usageUpdateMsg.
 	turnInputTokens  int
 	turnOutputTokens int
-	compacting bool // true while context governor runs (spinner label = Compacting context)
+	compacting       bool // stream auto-compact: spinner label = Compacting context
+	manualCompacting bool // user ran /compact: show progress panel above input
+	compactBarUsed   int  // context tokens snapshot at /compact start
+	compactBarWindow int  // context window snapshot at /compact start
+	compactCancel    context.CancelFunc
 	// Display values lerped toward the turn targets each render frame
 	// (factor 0.10). Smooths the counter animation.
-	displayInTok      float64
-	displayOutTok     float64
-	lastCtrlC         time.Time
-	history           []string
-	historyIdx        int
-	historyDraft      string // unsent text before navigating history
-	autoScroll        bool   // whether to auto-scroll viewport to bottom
-	vim               *VimState
-	contextViz        *ContextVisualization
-	wal               *session.WAL
-	startedAt         time.Time
-	toolStartTime     time.Time
-	welcomeCache      string
-	openConfigOnStart bool // first-run: open /config when TUI starts
-	viewDirty         bool
-	layoutKey         int    // input lines + slash menu height fingerprint
-	slashSugInput     string // memoize slashSuggestions per keystroke
-	slashSugCache     []string
-	connStatusKey     string // gateway+model+creds fingerprint
-	connStatusVal     string
-	partialDirty      bool // stream text changed since last viewport paint
-	lastPartialRender time.Time
-	activeSkills      map[string]plugin.SmartSkill // per-session activated skills
+	displayInTok        float64
+	displayOutTok       float64
+	lastCtrlC           time.Time
+	history             []string
+	historyIdx          int
+	historyDraft        string // unsent text before navigating history
+	autoScroll          bool   // whether viewport is pinned to bottom
+	streamFollow        bool   // follow streaming output (Grok-style; toggle with /follow)
+	uiFocus             uiFocusArea
+	contentLines        int // total lines in scrollback content (for footer position)
+	vim                 *VimState
+	contextViz          *ContextVisualization
+	wal                 *session.WAL
+	startedAt           time.Time // per-turn timer (spinner + turn elapsed)
+	sessionStartedAt    time.Time // whole chat session (footer duration)
+	toolStartTime       time.Time
+	welcomeCache        string
+	welcomeDismissed    bool
+	phase               uiPhase
+	sandboxReadyPending bool // defer sandbox system line until after welcome gate
+	openConfigOnStart   bool // first-run: open /config after welcome gate (Enter)
+	viewDirty           bool
+	layoutKey           int    // input lines + slash menu height fingerprint
+	slashSugInput       string // memoize slashSuggestions per keystroke
+	slashSugCache       []string
+	connStatusKey       string // gateway+model+creds fingerprint
+	connStatusVal       string
+	partialDirty        bool // stream text changed since last viewport paint
+	lastPartialRender   time.Time
+	activeSkills        map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool

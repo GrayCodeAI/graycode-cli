@@ -17,6 +17,15 @@ func modelStatusMeta(gateway, modelID string) (displayName, contextLabel string)
 		return "", ""
 	}
 	displayName = shortModelID(modelID)
+	if opt, ok := lookupModelOption(gateway, modelID); ok {
+		if n := strings.TrimSpace(opt.DisplayName); n != "" {
+			displayName = n
+		}
+		if opt.ContextWindow > 0 {
+			contextLabel = formatModelTableContext(opt.ContextWindow)
+		}
+		return normalizeModelDisplayName(modelID, displayName), contextLabel
+	}
 	for _, o := range loadConfigModelOptions(gateway) {
 		if o.ID != modelID {
 			continue
@@ -130,13 +139,22 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 	model, contextLabel = modelStatusMeta(gw, modelID)
 	if contextLabel == "" || contextLabel == "—" || contextLabel == "0k" {
 		if m.session != nil {
-			if w := m.session.ContextWindowSize(); w > 0 {
+			if w := m.session.ContextWindowCached; w > 0 {
+				contextLabel = formatModelTableContext(w)
+			} else if w := m.session.ContextWindowSize(); w > 0 && w != engine.DefaultContextWindow {
 				contextLabel = formatModelTableContext(w)
 			}
 		}
-		if contextLabel == "" || contextLabel == "—" {
-			contextLabel = formatModelTableContext(engine.DefaultContextWindow)
+		if (contextLabel == "" || contextLabel == "—") && isXiaomiMimoProvider(gw) {
+			if w := platformContextForNativeModel(modelID); w > 0 {
+				contextLabel = formatModelTableContext(w)
+				if m.session != nil {
+					m.session.ContextWindowCached = w
+					m.session.EnsureAutoCompactor()
+				}
+			}
 		}
+		// Omit ctx segment until a real window is known — never show the 128k default.
 	}
 	return gateway, model, contextLabel
 }

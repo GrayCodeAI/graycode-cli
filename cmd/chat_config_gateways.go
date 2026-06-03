@@ -25,6 +25,7 @@ type configGatewayRefreshMsg struct {
 }
 
 func (m chatModel) configGatewayRows() []configGatewayRow {
+	ctx := context.Background()
 	providers := hawkconfig.AllSetupGateways()
 	configured := configuredGatewayKeys()
 	active := strings.TrimSpace(m.configModelProvider)
@@ -44,10 +45,19 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 			}
 			modelCacheMu.RUnlock()
 		}
+		hasKey := configured[id] || hawkconfig.HasStoredCredentialForProvider(ctx, id)
+		display := hawkconfig.GatewayDisplayName(id)
+		if id == hawkconfig.ProviderXiaomiTokenPlan {
+			if reg := hawkconfig.XiaomiTokenPlanRegionLabel(); reg != "" {
+				display += " · " + reg
+			} else {
+				display += " · region required"
+			}
+		}
 		rows = append(rows, configGatewayRow{
 			ID:          id,
-			DisplayName: hawkconfig.GatewayDisplayName(id),
-			HasKey:      configured[id] || id == configProviderOllama && configured[configProviderOllama],
+			DisplayName: display,
+			HasKey:      hasKey,
 			ModelCount:  count,
 			Active:      hawkconfig.NormalizeProviderForEngine(id) == hawkconfig.NormalizeProviderForEngine(active),
 		})
@@ -99,6 +109,10 @@ func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
 	}
 	idx := m.configGatewayRefreshTargetIndex(rows)
 	row := rows[idx]
+	if row.ID == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(row.ID) {
+		m.configNotice = "Pick Token Plan region (cn / sgp / ams) before refresh"
+		return m.startConfigXiaomiTokenPlanRegion(), nil
+	}
 	if !row.HasKey {
 		m.configNotice = fmt.Sprintf("Select %s and press enter to paste an API key", row.DisplayName)
 		return m, nil
@@ -188,9 +202,17 @@ func (m chatModel) configGatewaysView() string {
 		name := hawkconfig.GatewayDisplayName(m.configKeysPendingRemove)
 		b.WriteString("\n" + mutedStyle.Render(indent+configGatewayRemovePrompt(m.configKeysRemoveStep, name)))
 	} else if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		b.WriteString("\n" + mutedStyle.Render(indent+"Select a gateway · enter · paste API key · then Models tab"))
+		hint := "Select a gateway · enter · paste API key · then Models tab"
+		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
+			hint = "Token Plan: enter pick region (cn/sgp/ams) then key · g change region"
+		}
+		b.WriteString("\n" + mutedStyle.Render(indent + hint))
 	} else {
-		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "enter use gateway · k view key · delete remove · r refresh"))
+		hints := "enter use gateway · k view key · delete remove · r refresh"
+		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
+			hints = "enter · g region · k key · delete · r refresh"
+		}
+		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, hints))
 	}
 	return m.configTabShellView(b.String())
 }
@@ -230,6 +252,12 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 		return m, nil
 	}
 	row := rows[m.configSel]
+	if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+		if !row.HasKey || hawkconfig.NeedsXiaomiTokenPlanRegion(row.ID) {
+			m.configGatewayFocus = m.configSel
+			return m.startConfigXiaomiTokenPlanRegion(), nil
+		}
+	}
 	if !row.HasKey {
 		if row.ID == configProviderOllama {
 			return m.startConfigOllamaURL()

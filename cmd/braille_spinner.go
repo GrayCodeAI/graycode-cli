@@ -94,12 +94,18 @@ func (s *BrailleSpinner) SetLabel(text string) {
 // The verb and typing dots always use the 20-color wave; this is a no-op.
 func (s *BrailleSpinner) SetWave(_ bool) {}
 
+// GlyphChar returns the current spinner glyph only (no verb or typing dots).
+func (s *BrailleSpinner) GlyphChar() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.frames[s.frame%len(s.frames)]
+}
+
 // Frame returns the current rendered frame (glyph + verb + dots, all in the wave).
 func (s *BrailleSpinner) Frame() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	glyph := s.frames[s.frame%len(s.frames)]
-	return renderSpinnerWaveLine(glyph, s.text, s.wavePhase, s.dots)
+	return renderSpinnerWaveLine(s.frames[s.frame%len(s.frames)], s.text, s.wavePhase, s.dots)
 }
 
 // Tick advances to the next frame and cycles the dot highlight.

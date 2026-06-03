@@ -33,7 +33,7 @@ var allSlashCommands = []string{
 	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 	"/copy", "/cost", "/cron", "/ctx", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
-	"/export", "/fast", "/feedback", "/files", "/focus", "/fork", "/help", "/history", "/hooks", "/init",
+	"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/help", "/history", "/home", "/hooks", "/init",
 	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
 	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
@@ -119,6 +119,8 @@ var slashDescriptions = map[string]string{
 	"/exit":            "Save and exit",
 	"/explain":         "Trace code back to the commit that created it",
 	"/export":          "Export session",
+	"/follow":          "Toggle stream follow (auto-scroll)",
+	"/home":            "Scroll to welcome screen",
 	"/feedback":        "Submit feedback about hawk",
 	"/fast":            "Toggle fast mode",
 	"/files":           "Show modified files",
@@ -1386,20 +1388,25 @@ Generate the recap:`, summary.String())
 		}
 		return m, nil
 	case "/ctx", "/ctx-viz":
-		if m.contextViz == nil {
-			m.contextViz = NewContextVisualization(200000)
+		m.messages = append(m.messages, displayMsg{role: "system", content: formatSessionContextUsage(m)})
+		m.viewDirty = true
+		return m, nil
+	case "/home":
+		m.goHome()
+		m.updateViewportContent()
+		return m, nil
+	case "/follow":
+		m.streamFollow = !m.streamFollow
+		if m.streamFollow {
+			m.autoScroll = true
+			m.viewport.GotoBottom()
 		}
-		tokens := m.session.MessageCount() * 200 // rough estimate
-		m.contextViz.Update(tokens)
-		breakdown := TokenBreakdown{
-			Total:      tokens,
-			UserMsgs:   tokens / 3,
-			Assistant:  tokens / 3,
-			ToolResult: tokens / 4,
-			ToolUse:    tokens / 12,
-			System:     tokens / 12,
+		state := "off"
+		if m.streamFollow {
+			state = "on"
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: RenderBreakdown(breakdown, m.contextViz.ContextWindowSize)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Stream follow: " + state + " (scroll up or Tab→scrollback freezes view during replies)"})
+		m.viewDirty = true
 		return m, nil
 	case "/rewind":
 		return m.handleSessionCommand(cmd, parts, text)

@@ -40,9 +40,9 @@ func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	}
 	switch {
 	case !hasCreds:
-		st.Hint = "Get started: /config → paste API key (stored in OS keychain, not .env)"
+		// Splash uses footer "Press Enter to set up and start" only — no duplicate line here.
 	case !hasModel:
-		st.Hint = "Almost ready: /config → pick a model, then /path to verify"
+		st.Hint = "Almost ready: /config → finish setup"
 	}
 	return st
 }
@@ -57,19 +57,19 @@ func HasConfiguredDeployment(ctx context.Context) bool {
 }
 
 func hasConfiguredDeployment(ctx context.Context) bool {
-	rows, err := ListDeploymentRows(ctx)
-	if err == nil {
-		for _, row := range rows {
-			if row.Configured {
-				return true
-			}
-		}
-	}
 	RefreshConfigCredSnapshot(ctx)
 	if hasConfiguredDeploymentCached(ctx) {
 		return true
 	}
-	return eyriecfg.HasAnyConfiguredDeployment(ctx)
+	env := eyriecfg.DiscoveryEnvMap(ctx)
+	if len(env) > 0 {
+		for _, v := range env {
+			if strings.TrimSpace(v) != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // HasSelectedModel reports whether eyrie provider.json has a selected model.

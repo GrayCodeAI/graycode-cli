@@ -482,8 +482,11 @@ func BoolPtr(b bool) *bool { return &b }
 // Hawk: API keys from OS secret store only (no .env)
 // ─────────────────────────────────────────────────────────────
 
-// ProviderAPIKeyEnv returns the API key env var from eyrie deployment env_fallbacks.
+// ProviderAPIKeyEnv returns the API key env var for a provider (registry first for setup gateways).
 func ProviderAPIKeyEnv(provider string) string {
+	if env := SetupGatewayCredentialEnv(provider); env != "" {
+		return env
+	}
 	compiled := compiledCatalogOrBootstrap()
 	if compiled == nil {
 		return ""
@@ -565,7 +568,9 @@ func providerCredentialEnvAliases(provider string) []string {
 	case "gemini", "google":
 		return []string{"GOOGLE_API_KEY"}
 	case "grok", "xai":
-		return []string{"GROK_API_KEY"}
+		return nil
+	case "xiaomi_mimo", "xiaomi_mimo_payg":
+		return []string{"XIAOMI_MIMO_API_KEY"}
 	default:
 		return nil
 	}
@@ -574,6 +579,9 @@ func providerCredentialEnvAliases(provider string) []string {
 // NormalizeProviderForEngine maps hawk provider aliases to eyrie canonical names.
 // This is the boundary where hawk names become engine/eyrie names.
 func NormalizeProviderForEngine(provider string) string {
+	if gw := setupGatewayRegistryID(provider); catalog.IsSetupGateway(gw) {
+		return gw
+	}
 	p := normalizeProviderName(provider)
 	switch p {
 	case "xai":
@@ -653,6 +661,9 @@ func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.Compi
 }
 
 func catalogProviderID(provider string) string {
+	if gw := setupGatewayRegistryID(provider); catalog.IsSetupGateway(gw) {
+		return gw
+	}
 	switch NormalizeProviderForEngine(provider) {
 	case "gemini":
 		return "google"
