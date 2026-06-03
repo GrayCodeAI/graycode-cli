@@ -41,16 +41,11 @@ func shortModelID(id string) string {
 }
 
 func (m chatModel) configTabItemCount() int {
-	switch {
-	case m.configMenu == configMenuProviders:
-		return len(m.configProviderOptions)
-	default:
-		switch m.configTab {
-		case configTabGateways:
-			return len(m.configGatewayRows()) + 1
-		case configTabModels:
-			return len(m.configFilteredModelOptions())
-		}
+	switch m.configTab {
+	case configTabGateways:
+		return len(m.configGatewayRows()) + 1
+	case configTabModels:
+		return len(m.configFilteredModelOptions())
 	}
 	return 0
 }
@@ -64,9 +59,6 @@ func (m chatModel) configPanelView() string {
 	}
 	if m.configEntry == configEntryOllamaURL {
 		return m.configOllamaURLView()
-	}
-	if m.configMenu == configMenuProviders {
-		return m.configProvidersView()
 	}
 	switch m.configTab {
 	case configTabGateways:
@@ -383,14 +375,11 @@ func (m chatModel) configModelsBody() string {
 func (m chatModel) closeConfigPanel() chatModel {
 	m.configOpen = false
 	m.configTab = configTabGateways
-	m.configMenu = configMenuNone
 	m.configSel = 0
 	m.configScroll = 0
 	m.configNotice = ""
 	m.configEntry = configEntryNone
 	m.configProvider = ""
-	m.configPendingKey = ""
-	m.configProviderOptions = nil
 	m.configPendingOllamaURL = ""
 	m.configSaving = false
 	m.configModelOptions = nil
@@ -573,13 +562,6 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 
 	switch msg.Type {
 	case tea.KeyEsc:
-		if m.configMenu == configMenuProviders {
-			m.configPendingKey = ""
-			m.configProviderOptions = nil
-			m.configMenu = configMenuNone
-			m.configTab = configTabGateways
-			return m.startConfigEntry(configEntryAPIKeyPaste, "")
-		}
 		if m.configTab == configTabModels && strings.TrimSpace(m.configModelSearch) != "" {
 			return m.stopConfigModelSearch(true), nil
 		}
@@ -588,18 +570,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 		return m.closeConfigPanel(), nil
 	case tea.KeyLeft:
-		if m.configMenu != configMenuNone {
-			return m, nil
-		}
 		tab := m.configTab - 1
 		if tab < configTabGateways {
 			tab = configTabModels
 		}
 		return m.switchConfigTab(tab)
 	case tea.KeyRight:
-		if m.configMenu != configMenuNone {
-			return m, nil
-		}
 		tab := m.configTab + 1
 		if tab > configTabModels {
 			tab = configTabGateways
@@ -626,9 +602,6 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m.handleConfigGatewaysDelete(), nil
 		}
 	case tea.KeyEnter:
-		if m.configMenu == configMenuProviders {
-			return m.handleConfigProviderSelect()
-		}
 		switch m.configTab {
 		case configTabGateways:
 			return m.handleConfigGatewaysSelect()
