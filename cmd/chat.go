@@ -241,6 +241,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	if err != nil {
 		return chatModel{}, err
 	}
+	bindChatSession(sess, sid)
 
 	// Initialize conversation DAG for branching support
 	if home, err := os.UserHomeDir(); err == nil {
@@ -926,6 +927,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamChunkMsg:
+		m.compacting = false
+		m.compactStatus = ""
 		m.partial.WriteString(string(msg))
 		m.markPartialDirty()
 		return m, nil
@@ -977,10 +980,26 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.usage != nil {
 			m.turnInputTokens += msg.usage.PromptTokens
 			m.turnOutputTokens += msg.usage.CompletionTokens
+			m.invalidateConnStatus()
 			m.viewDirty = true
 		}
 
+	case compactMsg:
+		m.compacting = false
+		m.compactStatus = ""
+		line := fmt.Sprintf("Context compacted (%s): ~%s → ~%s tokens",
+			msg.strategy,
+			formatHawkTokenCount(msg.tokensBefore),
+			formatHawkTokenCount(msg.tokensAfter),
+		)
+		m.messages = append(m.messages, displayMsg{role: "system", content: line})
+		m.invalidateConnStatus()
+		m.viewDirty = true
+		return m, nil
+
 	case streamDoneMsg:
+		m.compacting = false
+		m.compactStatus = ""
 		m.flushPartialDirty()
 		if m.partial.Len() > 0 {
 			content := sanitizeIdentity(m.partial.String())
@@ -1216,9 +1235,13 @@ func runChat() error {
 					p.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
 				case "tool_result":
 					p.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
+				case "compact":
+					p.Send(compactMsg{
+						strategy:     ev.Content,
+						tokensBefore: ev.TokensBefore,
+						tokensAfter:  ev.TokensAfter,
+					})
 				case "usage":
-					// Forward usage events to TUI so the spinner line can show
-					// running ↑/↓ token counts for the current turn.
 					if ev.Usage != nil {
 						p.Send(usageUpdateMsg{usage: ev.Usage})
 					}

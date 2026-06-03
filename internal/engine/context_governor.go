@@ -97,11 +97,13 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 
 	s.EnsureAutoCompactor()
 	if strat, ok := s.AutoCompactor.AutoCompactIfNeeded(ctx, s); ok {
-		return strat, true
+		return strat, true // recordCompaction emitted inside AutoCompactIfNeeded
 	}
 
 	if len(s.messages) > maxContextMessages {
+		before := EstimateTokens(s.messages)
 		s.smartCompact()
+		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.messages), false)
 		return "smart_message_cap", true
 	}
 
@@ -109,7 +111,9 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	window := s.ContextWindowSize()
 	budget := ctxmgr.NewContextBudget(window)
 	if budget.ShouldCompact(convTokens) {
+		before := EstimateTokens(s.messages)
 		s.smartCompact()
+		s.recordCompaction("smart_budget", before, EstimateTokens(s.messages), false)
 		return "smart_budget", true
 	}
 
@@ -130,6 +134,7 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 		strategy = "smart_fallback"
 	}
 	tokensAfter = EstimateTokens(s.messages)
+	s.recordCompaction(strategy, tokensBefore, tokensAfter, true)
 	return strategy, tokensBefore, tokensAfter, nil
 }
 

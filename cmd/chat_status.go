@@ -52,8 +52,12 @@ func (m *chatModel) invalidateConnStatus() {
 func (m chatModel) connStatusFingerprint() string {
 	gw, model := m.sessionGatewayModel()
 	creds := strings.Join(hawkconfig.ConfiguredCredentialProviders(), ",")
+	api := 0
+	if m.session != nil {
+		api = m.session.LastPromptTokens()
+	}
 	used := sessionContextUsedTokens(m.session)
-	return gw + "\x00" + model + "\x00" + creds + "\x00" + fmt.Sprintf("%d", used)
+	return gw + "\x00" + model + "\x00" + creds + "\x00" + fmt.Sprintf("%d", used) + "\x00" + fmt.Sprintf("%d", api)
 }
 
 func (m chatModel) sessionGatewayModel() (gateway, model string) {
@@ -245,7 +249,7 @@ func sessionContextUsedTokens(sess *engine.Session) int {
 	if sess == nil {
 		return 0
 	}
-	return engine.EstimateTokens(sess.RawMessages())
+	return sess.ContextUsedTokens()
 }
 
 func contextUsagePercent(m chatModel, windowLabel string) int {

@@ -293,6 +293,16 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	return nil
 }
 
+// bindChatSession wires TUI-only session metadata (persist id, compaction callbacks).
+func bindChatSession(sess *engine.Session, sessionID string) {
+	if sess == nil {
+		return
+	}
+	if id := strings.TrimSpace(sessionID); id != "" {
+		sess.SetPersistID(id)
+	}
+}
+
 func validateRootFlags() error {
 	if outputFormat != "text" && outputFormat != "json" && outputFormat != "stream-json" {
 		return fmt.Errorf("--output-format must be one of: text, json, stream-json")

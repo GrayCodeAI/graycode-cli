@@ -170,11 +170,19 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.Beliefs.Prune(turnCount)
 		}
 		// Context governor: collapse → micro/smart/truncate (settings threshold %).
+		tokensBefore := EstimateTokens(s.messages)
 		if strat, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
+			tokensAfter := EstimateTokens(s.messages)
 			s.log.Info("context compacted", map[string]interface{}{
 				"strategy": strat,
 				"messages": len(s.messages),
 			})
+			ch <- StreamEvent{
+				Type:         "compact",
+				Content:      strat,
+				TokensBefore: tokensBefore,
+				TokensAfter:  tokensAfter,
+			}
 		}
 
 		// Integration pipeline: pre-query (intent, tools, budget, injection scan, cache)
@@ -410,6 +418,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					}
 				case "usage":
 					if ev.Usage != nil {
+						s.RecordAPIUsage(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
 						s.Cost.Add(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
 						lastUsage = ev.Usage
 						// Persist cost entry for analytics
