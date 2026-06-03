@@ -4,10 +4,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
+
+func chatModelForConfigPasteTest() chatModel {
+	ti := textinput.New()
+	ti.Width = 40
+	ti, _ = ti.Update(tea.WindowSizeMsg{Width: 40, Height: 1})
+	return chatModel{configInput: ti, input: textarea.New()}
+}
 
 func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
@@ -26,8 +36,8 @@ func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	if !strings.Contains(view, "key required") {
 		t.Fatalf("expected key-required model cells without credentials, got:\n%s", view)
 	}
-	if !strings.Contains(view, "Catalog count appears after a saved key") {
-		t.Fatalf("expected key requirement hint without credentials, got:\n%s", view)
+	if !strings.Contains(view, "Select a gateway") {
+		t.Fatalf("expected gateway-first setup hint without credentials, got:\n%s", view)
 	}
 }
 
@@ -112,7 +122,7 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 	}
 }
 
-func TestHandleConfigGatewaysSelect_NoKeyRedirectsToKeys(t *testing.T) {
+func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -121,15 +131,25 @@ func TestHandleConfigGatewaysSelect_NoKeyRedirectsToKeys(t *testing.T) {
 		hawkconfig.InvalidateConfigUICache()
 	})
 
-	m := chatModel{configTab: configTabGateways, configSel: 0}
-	next, _ := m.handleConfigGatewaysSelect()
-	if next.configTab != configTabKeys {
-		t.Fatalf("tab = %d, want Keys", next.configTab)
+	m := chatModelForConfigPasteTest()
+	m.configTab = configTabGateways
+	m.configSel = 0
+	gwRows := m.configGatewayRows()
+	if len(gwRows) == 0 {
+		t.Fatal("expected gateway rows")
 	}
-	if next.configSel != 0 {
-		t.Fatalf("sel = %d, want Add API key row", next.configSel)
+	next, cmd := m.handleConfigGatewaysSelect()
+	if next.configTab != configTabGateways {
+		t.Fatalf("tab = %d, want Gateways", next.configTab)
 	}
-	if !strings.Contains(next.configNotice, "Add an API key") {
+	if next.configEntry != configEntryAPIKeyPaste {
+		t.Fatalf("entry = %q, want API key paste", next.configEntry)
+	}
+	if next.configProvider != gwRows[0].ID {
+		t.Fatalf("provider = %q, want %s", next.configProvider, gwRows[0].ID)
+	}
+	if !strings.Contains(next.configNotice, "Paste API key") {
 		t.Fatalf("notice = %q", next.configNotice)
 	}
+	_ = cmd
 }

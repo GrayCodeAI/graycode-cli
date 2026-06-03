@@ -199,6 +199,18 @@ func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 func (s *Session) SetModel(model string) {
 	s.model = strings.TrimSpace(model)
 	s.Cost.Model = s.model
+	s.syncCascadeDefaultModel()
+}
+
+// syncCascadeDefaultModel keeps the cascade router aligned after /config model picks.
+func (s *Session) syncCascadeDefaultModel() {
+	if s == nil || s.Cascade == nil {
+		return
+	}
+	if m := strings.TrimSpace(s.model); m != "" {
+		s.Cascade.DefaultModel = m
+		s.Cascade.Roles = modelPkg.DefaultRoles(m)
+	}
 }
 
 // SetProvider updates the active provider for subsequent requests.

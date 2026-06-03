@@ -8,22 +8,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
-func TestConfigKeysRows_IncludesActions(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-
-	m := chatModel{}
-	rows := m.configKeysRows(hawkconfig.ConfiguredCredentialProviders())
-	if len(rows) < 2 {
-		t.Fatalf("expected add + ollama actions, got %d rows", len(rows))
-	}
-	if rows[len(rows)-2].kind != configKeysActionAdd {
-		t.Fatalf("expected Add API key row, got %q", rows[len(rows)-2].kind)
-	}
-}
-
-func TestConfiguredCredentialProviders_UsedByKeysTab(t *testing.T) {
+func TestConfigGatewayRows_ShowsSavedKey(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -31,38 +16,58 @@ func TestConfiguredCredentialProviders_UsedByKeysTab(t *testing.T) {
 		credentials.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-
 	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
-	m := chatModel{}
-	rows := m.configKeysRows(hawkconfig.ConfiguredCredentialProviders())
-	found := false
-	for _, r := range rows {
-		if r.kind == configKeysRowCredential && r.provider == "openrouter" {
+	rows := chatModel{}.configGatewayRows()
+	var found bool
+	for _, row := range rows {
+		if row.ID == "openrouter" && row.HasKey {
 			found = true
+			break
 		}
 	}
 	if !found {
-		t.Fatalf("expected openrouter credential row, got %+v", rows)
-	}
-	providers := hawkconfig.ConfiguredCredentialProviders()
-	if len(providers) == 0 {
-		t.Fatal("expected configured providers")
+		t.Fatalf("expected openrouter row with HasKey, got %+v", rows)
 	}
 }
 
-func TestRemoveCredentialAsyncMessage(t *testing.T) {
+func TestConfiguredCredentialProviders_UsedByGatewaysTab(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
 	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	hawkconfig.InvalidateConfigUICache()
 
-	msg := removeCredentialAsync("openrouter")()
+	got := hawkconfig.ConfiguredCredentialProviders()
+	if len(got) != 1 || got[0] != "openrouter" {
+		t.Fatalf("configured = %v", got)
+	}
+}
+
+func TestRemoveCredentialAsync(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	hawkconfig.InvalidateConfigUICache()
+
+	cmd := removeCredentialAsync("openrouter")
+	if cmd == nil {
+		t.Fatal("expected cmd")
+	}
+	msg := cmd()
 	rem, ok := msg.(configRemoveCredentialMsg)
 	if !ok {
-		t.Fatalf("unexpected msg type %T", msg)
+		t.Fatalf("msg type %T", msg)
 	}
 	if rem.err != nil {
 		t.Fatal(rem.err)
@@ -76,7 +81,7 @@ func TestRemoveCredentialAsyncMessage(t *testing.T) {
 }
 
 func TestConfigTabLabels(t *testing.T) {
-	if len(configTabLabels) != 3 || configTabLabels[1] != "Gateways" {
+	if len(configTabLabels) != 2 || configTabLabels[0] != "Gateways" {
 		t.Fatalf("tabs = %v", configTabLabels)
 	}
 }

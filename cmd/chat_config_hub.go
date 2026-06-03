@@ -36,7 +36,7 @@ func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
 
 func (m chatModel) returnToOllamaURLAfterError(err error) (chatModel, tea.Cmd) {
 	m.configSaving = false
-	m.configTab = configTabKeys
+	m.configTab = configTabGateways
 	url := strings.TrimSpace(m.configPendingOllamaURL)
 	if url == "" {
 		url = configDefaultOllamaURL

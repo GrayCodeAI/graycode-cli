@@ -32,7 +32,7 @@ func renderConfigBreadcrumb(title string) string {
 	accent := configAccentStyle().Inline(true)
 	return lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		muted.Render("Keys › "),
+		muted.Render("Gateways › "),
 		accent.Render(title),
 	)
 }
@@ -57,8 +57,8 @@ func renderConfigStatusLine(m chatModel) string {
 			lipgloss.Left,
 			muted.Render("Gateway: "),
 			muted.Render("none"),
-			muted.Render(" · no API key — add one in "),
-			accent.Render("Keys"),
+			muted.Render(" · no API key — select a gateway in "),
+			accent.Render("Gateways"),
 		)
 	}
 
@@ -155,11 +155,14 @@ func (m chatModel) configHelpLine() string {
 		}
 		return muted.Render("enter replace key · delete remove · esc back")
 	}
-	if m.configTab == configTabKeys && m.configKeysPendingRemove != "" {
+	if m.configTab == configTabGateways && m.configKeysPendingRemove != "" {
 		if m.configKeysRemoveStep >= 2 {
 			return renderMainHelp("enter again to permanently remove · esc cancel")
 		}
 		return renderMainHelp("enter continue · esc cancel")
+	}
+	if m.configTab == configTabGateways {
+		return renderMainHelp("←/→ tabs · ↑/↓ · enter · k view key · delete remove · esc close")
 	}
 	if m.configTab == configTabModels {
 		if m.configModelSearchActive {

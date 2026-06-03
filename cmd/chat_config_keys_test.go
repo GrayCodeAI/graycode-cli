@@ -4,72 +4,50 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
-func TestConfigKeysRows_NoRemoveAction(t *testing.T) {
-	m := chatModel{}
-	for _, row := range m.configKeysRows(nil) {
-		if row.kind == "remove" {
-			t.Fatalf("remove action should be merged into credential rows, got %+v", row)
+func TestConfigGatewaysView_KeyHintsWithCredentials(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	hawkconfig.InvalidateConfigUICache()
+
+	m := chatModel{configTab: configTabGateways}
+	view := m.configGatewaysView()
+	if !strings.Contains(view, "k view key") {
+		t.Fatalf("expected key management hint, got:\n%s", view)
+	}
+}
+
+func TestConfigGatewaysKeyView_OpenWithK(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	hawkconfig.InvalidateConfigUICache()
+
+	rows := chatModel{}.configGatewayRows()
+	sel := 0
+	for i, row := range rows {
+		if row.ID == "openrouter" {
+			sel = i
+			break
 		}
 	}
-}
-
-func TestConfigKeysView_HintWhenCredentialsPresent(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
-	})
-	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
-	hawkconfig.InvalidateConfigUICache()
-
-	m := chatModel{}
-	view := m.configKeysView()
-	if !strings.Contains(view, "enter open key · delete remove") {
-		t.Fatalf("expected open/remove hint, got:\n%s", view)
-	}
-	if strings.Contains(view, "Remove API key") {
-		t.Fatal("separate Remove API key row should not exist")
-	}
-}
-
-func TestConfigKeysView_NoRemoveHintWithoutCredentials(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
-	})
-
-	m := chatModel{}
-	view := m.configKeysView()
-	if !strings.Contains(view, "Add API key") {
-		t.Fatalf("expected Add API key row, got:\n%s", view)
-	}
-	if !strings.Contains(view, "No API keys yet") {
-		t.Fatalf("expected empty-state hint, got:\n%s", view)
-	}
-}
-
-func TestConfigKeysSelect_OpensKeyView(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
-	})
-	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
-	hawkconfig.InvalidateConfigUICache()
-
-	m := chatModel{configTab: configTabKeys, configSel: 0}
-	next, _ := m.handleConfigKeysSelect()
+	m := chatModel{configTab: configTabGateways, configSel: sel}
+	next, _ := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
 	if next.configEntry != configEntryKeyView {
 		t.Fatalf("expected key view, got entry=%q", next.configEntry)
 	}
@@ -78,7 +56,7 @@ func TestConfigKeysSelect_OpensKeyView(t *testing.T) {
 	}
 }
 
-func TestConfigKeysDelete_PendingRemove(t *testing.T) {
+func TestConfigGatewaysDelete_PendingRemove(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -89,8 +67,16 @@ func TestConfigKeysDelete_PendingRemove(t *testing.T) {
 	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
-	m := chatModel{configTab: configTabKeys, configSel: 0}
-	next := m.handleConfigKeysDelete()
+	rows := chatModel{}.configGatewayRows()
+	sel := 0
+	for i, row := range rows {
+		if row.ID == "openrouter" {
+			sel = i
+			break
+		}
+	}
+	m := chatModel{configTab: configTabGateways, configSel: sel}
+	next := m.handleConfigGatewaysDelete()
 	if next.configKeysPendingRemove != "openrouter" {
 		t.Fatalf("pending remove = %q", next.configKeysPendingRemove)
 	}
@@ -99,7 +85,7 @@ func TestConfigKeysDelete_PendingRemove(t *testing.T) {
 	}
 }
 
-func TestConfigKeysDelete_DoubleConfirm(t *testing.T) {
+func TestConfigGatewaysDelete_DoubleConfirm(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -110,28 +96,33 @@ func TestConfigKeysDelete_DoubleConfirm(t *testing.T) {
 	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
-	m := chatModel{configTab: configTabKeys, configSel: 0}
-	m = m.handleConfigKeysDelete()
-	next, cmd := m.handleConfigKeysSelect()
+	rows := chatModel{}.configGatewayRows()
+	sel := 0
+	for i, row := range rows {
+		if row.ID == "openrouter" {
+			sel = i
+			break
+		}
+	}
+	m := chatModel{configTab: configTabGateways, configSel: sel}
+	m = m.handleConfigGatewaysDelete()
+	next, cmd := m.handleConfigGatewaysSelect()
 	if cmd != nil {
-		t.Fatal("first enter should not remove yet")
+		t.Fatal("expected no cmd on first confirm enter")
 	}
 	if next.configKeysRemoveStep != 2 {
-		t.Fatalf("remove step = %d, want 2 after first enter", next.configKeysRemoveStep)
+		t.Fatalf("remove step = %d, want 2", next.configKeysRemoveStep)
 	}
-	if next.configKeysPendingRemove != "openrouter" {
-		t.Fatalf("pending remove = %q", next.configKeysPendingRemove)
-	}
-	next, cmd = next.handleConfigKeysSelect()
+	next, cmd = next.handleConfigGatewaysSelect()
 	if cmd == nil {
-		t.Fatal("second enter should start remove")
+		t.Fatal("expected remove cmd on final confirm")
 	}
-	if next.configSaving != true {
+	if !next.configSaving {
 		t.Fatal("expected saving state after final confirm")
 	}
 }
 
-func TestOpenConfigRemoveKeyPanel_OpensKeysTab(t *testing.T) {
+func TestOpenConfigRemoveKeyPanel_OpensGatewaysTab(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -142,8 +133,8 @@ func TestOpenConfigRemoveKeyPanel_OpensKeysTab(t *testing.T) {
 
 	m := chatModel{}
 	next, _ := m.openConfigRemoveKeyPanel()
-	if !next.configOpen || next.configTab != configTabKeys {
-		t.Fatalf("expected keys tab open, got open=%v tab=%d", next.configOpen, next.configTab)
+	if !next.configOpen || next.configTab != configTabGateways {
+		t.Fatalf("expected gateways tab open, got open=%v tab=%d", next.configOpen, next.configTab)
 	}
 	if next.configNotice != "No stored API keys" {
 		t.Fatalf("notice = %q", next.configNotice)
