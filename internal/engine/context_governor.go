@@ -87,6 +87,23 @@ func (s *Session) refreshContextWindowCache() {
 	s.EnsureAutoCompactor()
 }
 
+// WillCompactBeforeTurn reports whether the next ManageContextBeforeTurn call will compact.
+func (s *Session) WillCompactBeforeTurn() bool {
+	if s == nil {
+		return false
+	}
+	s.EnsureAutoCompactor()
+	if s.AutoCompactor.ShouldAutoCompact(s) {
+		return true
+	}
+	if len(s.messages) > maxContextMessages {
+		return true
+	}
+	convTokens := EstimateTokens(s.messages)
+	budget := ctxmgr.NewContextBudget(s.ContextWindowSize())
+	return budget.ShouldCompact(convTokens)
+}
+
 // ManageContextBeforeTurn collapses noise, then compacts via the strategy registry when needed.
 // Returns the compaction strategy name (if any) and whether messages were reduced.
 func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string, compacted bool) {

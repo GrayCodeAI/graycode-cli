@@ -933,8 +933,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamChunkMsg:
-		m.compacting = false
-		m.compactStatus = ""
+		if m.compacting {
+			m.compacting = false
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
+		}
 		m.partial.WriteString(string(msg))
 		m.markPartialDirty()
 		return m, nil
@@ -990,9 +992,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 		}
 
+	case compactStartMsg:
+		m.compacting = true
+		m.brailleSpinner.SetLabel("Compacting context")
+		m.viewDirty = true
+		return m, nil
+
 	case compactMsg:
 		m.compacting = false
-		m.compactStatus = ""
+		m.brailleSpinner.SetLabel(m.spinnerVerb)
 		line := fmt.Sprintf("Context compacted (%s): ~%s → ~%s tokens",
 			msg.strategy,
 			formatHawkTokenCount(msg.tokensBefore),
@@ -1004,8 +1012,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamDoneMsg:
-		m.compacting = false
-		m.compactStatus = ""
+		if m.compacting {
+			m.compacting = false
+			m.brailleSpinner.SetLabel(m.spinnerVerb)
+		}
 		m.flushPartialDirty()
 		if m.partial.Len() > 0 {
 			content := sanitizeIdentity(m.partial.String())
@@ -1248,6 +1258,8 @@ func runChat() error {
 					p.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
 				case "tool_result":
 					p.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
+				case "compact_start":
+					p.Send(compactStartMsg{})
 				case "compact":
 					p.Send(compactMsg{
 						strategy:     ev.Content,

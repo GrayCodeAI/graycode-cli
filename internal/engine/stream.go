@@ -171,6 +171,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		// Context governor: collapse → micro/smart/truncate (settings threshold %).
 		tokensBefore := EstimateTokens(s.messages)
+		if s.WillCompactBeforeTurn() {
+			ch <- StreamEvent{Type: "compact_start"}
+		}
 		if strat, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
 			tokensAfter := EstimateTokens(s.messages)
 			s.log.Info("context compacted", map[string]interface{}{
