@@ -5,8 +5,7 @@ package cmd
 // Fields on chatModel use these values:
 //   - configTab       — main tab (Gateways / Models)
 //   - configEntry     — input overlay (API key paste, Ollama URL, key view)
-//   - configMenu      — list overlay (gateway pick after paste)
-//   - configProvider  — provider id while an entry overlay is open
+//   - configProvider  — gateway id while an entry overlay is open
 
 // Config tabs (configTab).
 const (
@@ -22,12 +21,6 @@ const (
 	configEntryAPIKeyPaste = "apikey-paste"
 	configEntryOllamaURL   = "ollama-url"
 	configEntryKeyView     = "key-view"
-)
-
-// Config menu overlays (configMenu).
-const (
-	configMenuNone      = ""
-	configMenuProviders = "providers"
 )
 
 // Providers referenced by config UI flows.

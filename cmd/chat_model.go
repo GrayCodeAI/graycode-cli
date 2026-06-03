@@ -152,7 +152,6 @@ type chatModel struct {
 	hudData                    HUDData // latest HUD snapshot
 	configOpen                 bool
 	configTab                  int    // configTabGateways, configTabModels
-	configMenu                 string // configMenuNone, configMenuProviders
 	configSel                  int
 	configScroll               int // scroll offset for long lists
 	configNotice               string
@@ -167,10 +166,8 @@ type chatModel struct {
 	configKeysPendingRemove    string              // provider awaiting delete confirmation
 	configKeysRemoveStep       int                 // 1 = first prompt, 2 = final confirm
 	configReplaceProvider      string              // replace-key flow target gateway
-	configPostSaveKeysProvider string              // return to Gateways tab after replace save
-	configPendingKey           string
-	configProviderOptions      []hawkconfig.CredentialProviderOption
-	configSaving               bool // blocks hub/list input while async credential work runs
+	configPostSaveKeysProvider string // return to Gateways tab after replace save
+	configSaving               bool   // blocks hub/list input while async credential work runs
 	configPendingOllamaURL     string
 	pluginRuntime              *plugin.Runtime
 	spinnerVerb                string
