@@ -56,7 +56,7 @@ func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "hawk/0.2.0")
+	req.Header.Set("User-Agent", "hawk/0.1.0")
 
 	client := ssrfSafeClient(ctx, 30*time.Second)
 	resp, err := client.Do(req)
