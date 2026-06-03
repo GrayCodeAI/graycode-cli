@@ -1108,7 +1108,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session.Autonomy == 0 {
 				m.session.Autonomy = DefaultContainerAutonomy
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ready · default autonomy " + autonomyTierName(m.session.Autonomy) + " (ctrl+L to change)"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ready · default autonomy " + renderAutonomyTierLabel(m.session.Autonomy) + " (ctrl+L to change)"})
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
