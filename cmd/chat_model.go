@@ -55,12 +55,11 @@ var (
 	toolColor  = toolGold
 )
 
-// hawkSpinnerFrames uses plain QuadBlock glyphs for the compact bubbles spinner.
-var hawkSpinnerFrames = hawkQuadBlockGlyphs
+// hawkSpinnerFrames feeds the bubbles spinner (matches BrailleSpinner default).
+var hawkSpinnerFrames = hawkSpinnerGlyphs
 
-// hawkSpinnerFrameInterval — QuadBlock frame cadence (slightly slower
-// than the original 70ms for a calmer feel).
-const hawkSpinnerFrameInterval = 100 * time.Millisecond
+// hawkSpinnerFrameInterval — compass frame cadence.
+const hawkSpinnerFrameInterval = 80 * time.Millisecond
 
 // Spinner verbs (from hawk-archive) — picked randomly per session
 var spinnerVerbs = []string{
