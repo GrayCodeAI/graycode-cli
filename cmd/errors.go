@@ -44,10 +44,12 @@ func friendlyError(err error) string {
 		{[]string{"openrouter_api_key", "openrouter api key"}, "OPENROUTER_API_KEY", "OpenRouter"},
 		{[]string{"canopywave_api_key", "canopywave api key"}, "CANOPYWAVE_API_KEY", "CanopyWave"},
 		{[]string{"zai_api_key", "z.ai api key", "z-ai api key"}, "ZAI_API_KEY", "Z.AI"},
-		{[]string{"xai_api_key", "xai api key", "grok api key"}, "XAI_API_KEY", "xAI/Grok"},
+		{[]string{"xai_api_key", "xai api key"}, "XAI_API_KEY", "xAI (Grok)"},
 		{[]string{"opencodego_api_key", "opencodego api key"}, "OPENCODEGO_API_KEY", "OpenCodeGo"},
-		{[]string{"moonshot_api_key", "moonshot api key", "kimi api key"}, "MOONSHOT_API_KEY", "Kimi (Moonshot)"},
-		{[]string{"xiaomi_api_key", "xiaomi api key", "mimo api key"}, "XIAOMI_API_KEY", "Xiaomi (MiMo)"},
+		{[]string{"moonshot_api_key", "moonshot api key"}, "MOONSHOT_API_KEY", "Kimi (Moonshot)"},
+		{[]string{"xiaomi_mimo_payg_api_key", "xiaomi mimo payg"}, "XIAOMI_MIMO_PAYG_API_KEY", "Xiaomi (MiMo) Pay-as-you-go"},
+		{[]string{"xiaomi_mimo_token_plan_api_key", "xiaomi mimo token plan"}, "XIAOMI_MIMO_TOKEN_PLAN_API_KEY", "Xiaomi (MiMo) Token Plan"},
+		{[]string{"xiaomi_mimo_api_key", "xiaomi mimo api key"}, "XIAOMI_MIMO_PAYG_API_KEY", "Xiaomi (MiMo)"},
 	}
 	for _, pk := range providerKeys {
 		for _, pat := range pk.patterns {
@@ -440,8 +442,10 @@ func providerDNSHost(provider string) string {
 		return "api.z.ai"
 	case "kimi", "moonshotai":
 		return "api.moonshot.ai"
-	case "xiaomi", "mimo":
+	case "xiaomi_mimo", "xiaomi_mimo_payg":
 		return "api.xiaomimimo.com"
+	case "xiaomi_mimo_token_plan":
+		return "token-plan-*.xiaomimimo.com"
 	default:
 		return ""
 	}

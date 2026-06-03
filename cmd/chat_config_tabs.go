@@ -73,7 +73,7 @@ func (m chatModel) configTabShellView(body string) string {
 		dividerWidth = 52
 	}
 	b.WriteString(configMutedStyle().Render(strings.Repeat("─", dividerWidth)) + "\n\n")
-	if notice := renderConfigNotice(m.configNotice); notice != "" {
+	if notice := renderConfigNotice(m.configNoticeForView()); notice != "" {
 		b.WriteString(notice + "\n\n")
 	}
 	b.WriteString(body)

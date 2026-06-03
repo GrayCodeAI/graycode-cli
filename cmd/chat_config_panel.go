@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -60,6 +61,9 @@ func (m chatModel) configPanelView() string {
 	if m.configEntry == configEntryOllamaURL {
 		return m.configOllamaURLView()
 	}
+	if m.configEntry == configEntryXiaomiRegion {
+		return m.configXiaomiRegionView()
+	}
 	switch m.configTab {
 	case configTabGateways:
 		return m.configGatewaysView()
@@ -79,6 +83,13 @@ func (m chatModel) configProviderKeyView() string {
 	if provider != "" {
 		title = "🔑 " + hawkconfig.GatewayDisplayName(provider)
 		hint = "paste key for this gateway only · " + hint
+	}
+	if provider == hawkconfig.ProviderXiaomiTokenPlan {
+		reg := hawkconfig.XiaomiTokenPlanRegionLabel()
+		if reg == "" {
+			reg = "not set — esc and pick region with g or enter on gateway row"
+		}
+		hint = "region " + reg + " · tp- keys only · " + hint
 	}
 
 	var b strings.Builder
@@ -437,10 +448,18 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		return m, saveOllamaAsync(value)
 	case configEntryAPIKeyPaste:
 		if value == "" {
+			provider := strings.TrimSpace(m.configProvider)
 			m.configEntry = configEntryNone
 			m.configProvider = ""
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
+			m.configTab = configTabGateways
+			m.configNotice = "No API key entered — paste your key, then press enter"
+			if provider != "" {
+				if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+					m.configSel = idx
+				}
+			}
 			return m, nil
 		}
 		provider := strings.TrimSpace(m.configReplaceProvider)
@@ -455,18 +474,36 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 			m.restoreChatInput()
 			return m, nil
 		}
+		if provider == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
+			m.configEntry = configEntryNone
+			m.wipeConfigKeyInput()
+			m.restoreChatInput()
+			m.configPostSaveKeysProvider = provider
+			m.configNotice = "Pick Token Plan region before pasting key"
+			return m.startConfigXiaomiTokenPlanRegion(), nil
+		}
 		m.configEntry = configEntryNone
 		m.configProvider = ""
 		m.wipeConfigKeyInput()
 		m.restoreChatInput()
 		inference, err := hawkconfig.CredentialInferenceForProvider(provider)
 		if err != nil {
-			m.configNotice = sanitizeConfigNotice(err.Error())
-			return m.startConfigKeyForProvider(provider)
+			m.configTab = configTabGateways
+			m.configNotice = "Could not save key: " + sanitizeConfigNotice(err.Error())
+			if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+				m.configSel = idx
+			}
+			return m, nil
 		}
 		m.configPostSaveKeysProvider = provider
 		m.configSaving = true
-		m.configNotice = fmt.Sprintf("Validating key for %s…", inference.DisplayName)
+		notice := fmt.Sprintf("Validating key for %s…", inference.DisplayName)
+		if hint := xiaomi.KeyMismatchHint(xiaomi.BillingTokenPlan, value); provider == hawkconfig.ProviderXiaomiTokenPlan && hint != "" {
+			notice = hint + " · " + notice
+		} else if hint := xiaomi.KeyMismatchHint(xiaomi.BillingPayAsYouGo, value); provider == xiaomi.ProviderPayAsYouGo && hint != "" {
+			notice = hint + " · " + notice
+		}
+		m.configNotice = notice
 		return m, saveProviderKeyAsync(inference, value)
 	default:
 		m.configEntry = configEntryNone
@@ -514,6 +551,18 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		return m.finishConfigEntry()
+	case tea.KeyCtrlV:
+		if pasted, err := pasteFromClipboard(); err == nil {
+			pasted = strings.TrimSpace(pasted)
+			if pasted != "" {
+				m.configInput.SetValue(pasted)
+			} else {
+				m.configNotice = "Clipboard is empty"
+			}
+		} else {
+			m.configNotice = "Clipboard paste failed — use terminal paste (Cmd+V)"
+		}
+		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.configInput, cmd = m.configInput.Update(msg)
@@ -527,6 +576,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		return m.handleConfigKeyViewKey(msg)
+	}
+	if m.configEntry == configEntryXiaomiRegion {
+		if m.configSaving {
+			return m, nil
+		}
+		return m.handleConfigXiaomiRegionKey(msg)
 	}
 	if m.configEntry != configEntryNone {
 		if m.configSaving {
@@ -550,6 +605,10 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		case "k", "K":
 			if row, ok := m.selectedConfigGateway(); ok && row.HasKey && row.ID != configProviderOllama {
 				return m.startConfigKeyView(row.ID), nil
+			}
+		case "g", "G":
+			if row, ok := m.selectedConfigGateway(); ok && row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+				return m.startConfigXiaomiTokenPlanRegion(), nil
 			}
 		}
 	}

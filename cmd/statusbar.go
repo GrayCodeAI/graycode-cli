@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
@@ -30,13 +29,12 @@ func renderStatusBar(m *chatModel, width int) string {
 	if width < 20 {
 		width = 80
 	}
-
-	left, leftVis := renderStatusBarLeft()
-	right, rightVis := renderStatusBarRight(m)
-	return padStatusBarLine(left, right, leftVis, rightVis, width)
+	left := renderStatusBarLeft()
+	right := renderStatusBarRight(m)
+	return layoutFooterRow(left, right, width)
 }
 
-func renderStatusBarLeft() (rendered string, visLen int) {
+func renderStatusBarLeft() string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
@@ -45,7 +43,6 @@ func renderStatusBarLeft() (rendered string, visLen int) {
 	cwdStyle := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
 	pathText := display + ":"
 	parts := []string{cwdStyle.Render(pathText)}
-	visLen = runewidth.StringWidth(pathText)
 
 	if branch, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil && branch != "" {
 		if branch == "HEAD" {
@@ -55,60 +52,62 @@ func renderStatusBarLeft() (rendered string, visLen int) {
 			branchStyle := lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
 			branchText := "⎇ " + branch
 			parts = append(parts, branchStyle.Render(branchText))
-			visLen += 1 + runewidth.StringWidth(branchText)
 		}
 	}
 
-	return strings.Join(parts, " "), visLen
+	return strings.Join(parts, " ")
 }
 
-func renderStatusBarRight(m *chatModel) (rendered string, visLen int) {
+func renderStatusBarRight(m *chatModel) string {
 	if m == nil || m.session == nil {
-		return "", 0
+		return ""
 	}
 
 	tokenStyle := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
 	costStyle := lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
 	timeStyle := lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
+	focusStyle := lipgloss.NewStyle().Foreground(infoSky).Inline(true)
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 
 	tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
-	tokenText := "● " + formatTokenCountWithCommas(tokens)
+	tokenText := "● " + formatTokenCountCompact(tokens) + " tokens"
 	costText := fmt.Sprintf("$%.2f", m.session.Cost.Total())
 	timerText := "⏱ " + formatSessionDuration(sessionDuration(m))
 
-	parts := []string{
+	var meta []string
+	if m.inScrollbackFocus() {
+		meta = append(meta, focusStyle.Render("⧉"))
+	}
+	if pos := m.scrollPositionLabel(); m.chatScrollbarVisible() && pos != "" {
+		meta = append(meta, dim.Render(pos))
+	}
+	if m.waiting && !m.streamFollow {
+		meta = append(meta, dim.Render("⏸"))
+	}
+
+	parts := append(meta,
 		tokenStyle.Render(tokenText),
 		costStyle.Render(costText),
 		timeStyle.Render(timerText),
-	}
-	plain := []string{tokenText, costText, timerText}
-
+	)
 	if m.vim != nil && m.vim.IsEnabled() {
-		vimText := m.vim.ModeString()
-		parts = append(parts, dim.Render(vimText))
-		plain = append(plain, vimText)
+		parts = append(parts, dim.Render(m.vim.ModeString()))
 	}
-
-	sep := dim.Render(" · ")
-	joined := strings.Join(parts, sep)
-	visLen = runewidth.StringWidth(strings.Join(plain, " · "))
-	return joined, visLen
+	return strings.Join(parts, dim.Render(" · "))
 }
 
 func sessionDuration(m *chatModel) time.Duration {
-	if m == nil || m.startedAt.IsZero() {
+	if m == nil {
 		return 0
 	}
-	return time.Since(m.startedAt)
-}
-
-func padStatusBarLine(left, right string, leftVis, rightVis, width int) string {
-	gap := width - leftVis - rightVis
-	if gap < 1 {
-		gap = 1
+	start := m.sessionStartedAt
+	if start.IsZero() {
+		start = m.startedAt
 	}
-	return left + strings.Repeat(" ", gap) + right
+	if start.IsZero() {
+		return 0
+	}
+	return time.Since(start)
 }
 
 func shortenHomePath(path string) string {
@@ -146,19 +145,18 @@ func formatTokenCountWithCommas(tokens int) string {
 	return p.Sprintf("%d tokens", tokens)
 }
 
-func renderContainerFooterLeft(m chatModel) (rendered string, visLen int) {
+func renderContainerFooterLeft(m chatModel) string {
 	bold, dim := containerFooterLeft(m)
-	visLen = runewidth.StringWidth(bold + dim)
 
 	if m.containerEnabled && m.containerErr != nil {
-		return containerErrStyle.Bold(true).Render(bold) + containerErrStyle.Render(dim), visLen
+		return containerErrStyle.Bold(true).Render(bold) + containerErrStyle.Render(dim)
 	}
 	if m.containerEnabled {
-		return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim, m.session), visLen
+		return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim, m.session)
 	}
 
 	labelStyle := lipgloss.NewStyle().Foreground(warnAmber).Bold(true)
-	return labelStyle.Render(bold) + dimStyle.Render(dim), visLen
+	return labelStyle.Render(bold) + dimStyle.Render(dim)
 }
 
 func renderContainerFooterDetail(detail string, sess *engine.Session) string {
@@ -194,7 +192,8 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 		if m.session != nil && m.session.Autonomy != 0 {
 			tier = autonomyTierName(m.session.Autonomy)
 		}
-		return bold, fmt.Sprintf(" %s · %s", strings.TrimSpace(m.containerStatus), tier)
+		status := shortenFooterContainerStatus(strings.TrimSpace(m.containerStatus))
+		return bold, fmt.Sprintf(" %s · %s", status, tier)
 	}
 	if strings.TrimSpace(m.containerStatus) != "" {
 		return bold, " " + strings.TrimSpace(m.containerStatus)

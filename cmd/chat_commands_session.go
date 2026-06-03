@@ -45,6 +45,13 @@ func (m *chatModel) saveSession() {
 	}
 }
 
+func formatQuitResumeMessage(sessionID string) string {
+	if strings.TrimSpace(sessionID) == "" {
+		return "Thank you for using Hawk!\n"
+	}
+	return fmt.Sprintf("Thank you for using Hawk!\n\nTo resume this session, run: hawk --resume %s\n", sessionID)
+}
+
 // handleSessionCommand dispatches session-management slash commands.
 func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string) (tea.Model, tea.Cmd) {
 	switch cmd {

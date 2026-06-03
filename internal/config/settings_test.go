@@ -181,6 +181,28 @@ func TestNormalizeProviderName(t *testing.T) {
 	}
 }
 
+func TestNormalizeProviderForEngine_XiaomiAliases(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"xiaomi_mimo_token_plan", "xiaomi_mimo_token_plan"},
+		{"xiaomi-mimo-token-plan", "xiaomi_mimo_token_plan"},
+		{"XIAOMI_MIMO_TOKEN_PLAN", "xiaomi_mimo_token_plan"},
+		{"xiaomi_mimo_payg", "xiaomi_mimo_payg"},
+		{"xiaomi-mimo-payg", "xiaomi_mimo_payg"},
+		{"xai", "grok"},
+	}
+
+	for _, tt := range tests {
+		got := NormalizeProviderForEngine(tt.input)
+		if got != tt.expected {
+			t.Errorf("NormalizeProviderForEngine(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
 func TestSplitSettingList(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -286,8 +308,9 @@ func TestProviderCredentialEnvAliases(t *testing.T) {
 		{"anthropic", true},
 		{"gemini", true},
 		{"google", true},
-		{"grok", true},
-		{"xai", true},
+		{"grok", false},
+		{"xai", false},
+		{"xiaomi_mimo_payg", true},
 		{"openai", false},
 	}
 

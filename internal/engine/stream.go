@@ -12,7 +12,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 )
@@ -421,30 +420,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					}
 				case "usage":
 					if ev.Usage != nil {
-						s.RecordAPIUsage(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
-						s.Cost.Add(ev.Usage.PromptTokens, ev.Usage.CompletionTokens)
 						lastUsage = ev.Usage
-						// Persist cost entry for analytics
-						if s.CostTracker != nil {
-							inPrice, outPrice := ModelPricing(activeModel)
-							cost := float64(ev.Usage.PromptTokens)*inPrice/1_000_000 + float64(ev.Usage.CompletionTokens)*outPrice/1_000_000
-							_ = s.CostTracker.Record(analytics.CostEntry{
-								Model:        activeModel,
-								TaskType:     taskType,
-								InputTokens:  ev.Usage.PromptTokens,
-								OutputTokens: ev.Usage.CompletionTokens,
-								CostUSD:      cost,
-								Duration:     time.Since(apiStart),
-								Kept:         true,
-							})
-						}
-						ch <- StreamEvent{
-							Type: "usage",
-							Usage: &StreamUsage{
-								PromptTokens:     ev.Usage.PromptTokens,
-								CompletionTokens: ev.Usage.CompletionTokens,
-							},
-						}
+						s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, activeModel, taskType, apiStart)
 					}
 				case "error":
 					streamErr = fmt.Errorf("%s", ev.Error)
@@ -486,6 +463,18 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			toolCalls = nil
 			stopReason = ""
 			lastUsage = nil
+		}
+
+		// Providers like OpenCode Go often omit stream usage; estimate so billing footer updates.
+		if lastUsage == nil && (textContent.Len() > 0 || len(toolCalls) > 0) {
+			completionEst := estimateStreamCompletionTokens(textContent.String(), toolCalls)
+			if inputTokens > 0 || completionEst > 0 {
+				s.recordStreamUsage(ch, inputTokens, completionEst, activeModel, taskType, apiStart)
+				lastUsage = &types.EyrieUsage{
+					PromptTokens:     inputTokens,
+					CompletionTokens: completionEst,
+				}
+			}
 		}
 
 		// Snowball detector: record usage after each API response

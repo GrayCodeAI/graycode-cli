@@ -17,7 +17,6 @@ git.sr.ht/~sbinet/gg v0.6.0/go.mod h1:uucygbfC9wVPQIfrmwM2et0imr8L7KQWywX0xpFMm9
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0/go.mod h1:P4WPRUkOhJC13W//jWpyfJNDAIpvRbAUIYLX/4jtlE0=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0/go.mod h1:ZPpqegjbE99EPKsu3iUWV22A04wzGPcAY/ziSIQEEgs=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0/go.mod h1:cSgYe11MCNYunTnRXrKiR/tHc0eoKjICUuWpNZoVCOo=
-github.com/GrayCodeAI/eyrie v0.1.0/go.mod h1:Iznws0IS267Cp9Zb5VsjCaHLewJEGR61Bv9F3hwJujY=
 github.com/GrayCodeAI/hawk v0.2.0/go.mod h1:ppjbB+dlYJ6IGYZywBM+KHwhRqN/uG2RGBsQloXk8A8=
 github.com/GrayCodeAI/inspect v0.1.0 h1:zQSYALPuodpbVpUPLELhvuBy4FYnWLzYo1NjwUigChI=
 github.com/GrayCodeAI/inspect v0.1.0/go.mod h1:IOH0pwvJ5TmNFSRDkLH3nbWbawE/PPaZojV2Lj5BSnU=
@@ -41,6 +40,7 @@ github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2/go.mod h1:qwXFYgsP6T7X
 github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/cpuguy83/go-md2man/v2 v2.0.7/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
+github.com/cyphar/filepath-securejoin v0.6.1/go.mod h1:A8hd4EnAeyujCJRrICiOWqjS1AX0a9kM5XL+NwKoYSc=
 github.com/dlclark/regexp2 v1.12.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/dlclark/regexp2cg v0.2.0/go.mod h1:K2c4ctxtSQjzgeMKKgi1rEflZVVJWZWlUUdmtjOp/y8=
 github.com/dlclark/regexp2cg v0.7.2/go.mod h1:Gtyx3xhJ8ZXoXJVZ0Cxm0qcnyjZvwUltpXOuz7WkLFw=

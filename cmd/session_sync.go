@@ -38,7 +38,10 @@ func syncSessionFromPersistedSelection(sess *engine.Session, settings hawkconfig
 
 func (m *chatModel) syncSessionSelection() {
 	syncSessionFromPersistedSelection(m.session, m.settings)
-	m.invalidateConnStatus()
+	if m.session != nil {
+		gw, model := m.sessionGatewayModel()
+		applyLiveModelMetadata(m.session, gw, model)
+	}
 }
 
 func (m *chatModel) ensureSessionReadyForChat() error {

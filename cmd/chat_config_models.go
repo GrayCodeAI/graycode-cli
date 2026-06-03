@@ -10,6 +10,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // configModelOption is one row in the /config model picker (display from eyrie, id for settings).
@@ -24,8 +25,10 @@ type configModelOption struct {
 }
 
 var (
-	modelCache   = make(map[string][]configModelOption)
-	modelCacheMu sync.RWMutex
+	modelCache         = make(map[string][]configModelOption)
+	modelCacheMu       sync.RWMutex
+	modelSyncAttempted = make(map[string]bool)
+	modelSyncMu        sync.Mutex
 )
 
 // InvalidateModelCache clears all in-memory model picker rows.
@@ -33,14 +36,22 @@ func InvalidateModelCache() {
 	modelCacheMu.Lock()
 	modelCache = make(map[string][]configModelOption)
 	modelCacheMu.Unlock()
+	modelSyncMu.Lock()
+	modelSyncAttempted = make(map[string]bool)
+	modelSyncMu.Unlock()
+	invalidatePlatformContextCache()
 	hawkconfig.InvalidateConfigUICache()
 }
 
 // InvalidateModelCacheProvider drops one gateway's cached picker rows.
 func InvalidateModelCacheProvider(provider string) {
+	provider = strings.TrimSpace(provider)
 	modelCacheMu.Lock()
-	delete(modelCache, strings.TrimSpace(provider))
+	delete(modelCache, provider)
 	modelCacheMu.Unlock()
+	modelSyncMu.Lock()
+	delete(modelSyncAttempted, provider)
+	modelSyncMu.Unlock()
 	hawkconfig.InvalidateConfigUICache()
 }
 
@@ -162,6 +173,94 @@ func (m chatModel) configModelSearchQuery() string {
 
 func (m chatModel) configFilteredModelOptions() []configModelOption {
 	return filterConfigModelOptions(m.configModelOptions, m.configModelSearchQuery())
+}
+
+// ensureModelCacheLoaded tries a one-time live ListModels when the in-memory cache is cold.
+// Footer context (e.g. 1.0m for mimo-v2.5-pro) comes from the platform API merge, not the 128k default.
+func ensureModelCacheLoaded(provider string) {
+	provider = strings.TrimSpace(provider)
+	if provider == "" {
+		return
+	}
+	modelCacheMu.RLock()
+	if cached, ok := modelCache[provider]; ok && len(cached) > 0 {
+		modelCacheMu.RUnlock()
+		return
+	}
+	modelCacheMu.RUnlock()
+
+	modelSyncMu.Lock()
+	if modelSyncAttempted[provider] {
+		modelSyncMu.Unlock()
+		return
+	}
+	modelSyncAttempted[provider] = true
+	modelSyncMu.Unlock()
+
+	ctx := context.Background()
+	entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+	if err != nil {
+		if _, derr := runtime.Discover(ctx); derr == nil {
+			entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+		}
+	}
+	if err != nil || len(entries) == 0 {
+		modelSyncMu.Lock()
+		delete(modelSyncAttempted, provider)
+		modelSyncMu.Unlock()
+		return
+	}
+	opts := configModelOptionsFromEyrie(entries)
+	modelCacheMu.Lock()
+	modelCache[provider] = opts
+	modelCacheMu.Unlock()
+}
+
+// lookupModelOption returns live-cached catalog metadata for a provider/model pair.
+func lookupModelOption(provider, modelID string) (configModelOption, bool) {
+	provider = strings.TrimSpace(provider)
+	modelID = strings.TrimSpace(modelID)
+	if provider == "" || modelID == "" {
+		return configModelOption{}, false
+	}
+	ensureModelCacheLoaded(provider)
+	for _, o := range loadConfigModelOptions(provider) {
+		if o.ID == modelID {
+			return o, true
+		}
+	}
+	return configModelOption{}, false
+}
+
+// applyModelOptionToSession copies live context window (and pricing when known) into the session.
+func applyModelOptionToSession(sess *engine.Session, opt configModelOption) {
+	if sess == nil {
+		return
+	}
+	if opt.ContextWindow > 0 {
+		sess.ContextWindowCached = opt.ContextWindow
+		sess.EnsureAutoCompactor()
+	}
+	if opt.PriceKnown {
+		engine.RegisterLivePricing(opt.ID, opt.InputPricePer1M, opt.OutputPricePer1M)
+	}
+}
+
+func applyLiveModelMetadata(sess *engine.Session, provider, modelID string) {
+	if opt, ok := lookupModelOption(provider, modelID); ok {
+		applyModelOptionToSession(sess, opt)
+		if sess != nil && sess.ContextWindowCached > 0 {
+			return
+		}
+	}
+	if isXiaomiMimoProvider(provider) {
+		if w := platformContextForNativeModel(modelID); w > 0 {
+			applyModelOptionToSession(sess, configModelOption{
+				ID:            modelID,
+				ContextWindow: w,
+			})
+		}
+	}
 }
 
 func loadConfigModelOptions(provider string) []configModelOption {

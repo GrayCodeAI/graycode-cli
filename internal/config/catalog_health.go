@@ -5,10 +5,19 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 )
+
+var (
+	catalogHealthMu    sync.Mutex
+	catalogHealthCache CatalogHealth
+	catalogHealthAt    time.Time
+)
+
+const catalogHealthCacheTTL = 15 * time.Second
 
 // CatalogHealth summarizes the on-disk eyrie model catalog for doctor / status output.
 type CatalogHealth struct {
@@ -28,6 +37,32 @@ type CatalogHealth struct {
 // CatalogHealthReport inspects ~/.eyrie/model_catalog.json (or EYRIE_MODEL_CATALOG_PATH).
 func CatalogHealthReport(ctx context.Context) CatalogHealth {
 	path := catalog.DefaultCachePath()
+	catalogHealthMu.Lock()
+	if !catalogHealthAt.IsZero() && time.Since(catalogHealthAt) < catalogHealthCacheTTL && catalogHealthCache.CachePath == path {
+		h := catalogHealthCache
+		catalogHealthMu.Unlock()
+		return h
+	}
+	catalogHealthMu.Unlock()
+
+	h := catalogHealthReportUncached(ctx)
+
+	catalogHealthMu.Lock()
+	catalogHealthCache = h
+	catalogHealthAt = time.Now()
+	catalogHealthMu.Unlock()
+	return h
+}
+
+// InvalidateCatalogHealthCache drops cached catalog health (after refresh).
+func InvalidateCatalogHealthCache() {
+	catalogHealthMu.Lock()
+	catalogHealthAt = time.Time{}
+	catalogHealthMu.Unlock()
+}
+
+func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
+	path := catalog.DefaultCachePath()
 	h := CatalogHealth{CachePath: path}
 	exists, mod, size, err := catalog.CacheInfo(path)
 	if err != nil {
@@ -41,13 +76,18 @@ func CatalogHealthReport(ctx context.Context) CatalogHealth {
 		h.Error = "cache missing — hawk will discover automatically on start"
 		return h
 	}
-	compiled, err := catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
-		CachePath:    path,
-		RequireCache: true,
-	})
-	if err != nil {
-		h.Error = err.Error()
-		return h
+	var compiled *catalog.CompiledCatalogV1
+	if c, ok := cachedCompiledCatalog(); ok && c != nil {
+		compiled = c
+	} else {
+		compiled, err = catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
+			CachePath:    path,
+			RequireCache: true,
+		})
+		if err != nil {
+			h.Error = err.Error()
+			return h
+		}
 	}
 	h.Models = len(compiled.ModelsByID)
 	h.Deployments = len(compiled.DeploymentsByID)

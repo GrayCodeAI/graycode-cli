@@ -1,23 +1,25 @@
 package config
 
 import (
+	"context"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/catalogtest"
 )
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()
-	if len(gws) != 11 {
-		t.Fatalf("expected 11 setup gateways, got %d: %v", len(gws), gws)
+	if len(gws) != 12 {
+		t.Fatalf("expected 12 setup gateways, got %d: %v", len(gws), gws)
 	}
 	for _, id := range gws {
 		if id == "ai21" || id == "alibaba" {
 			t.Fatalf("owner slug %q should not be a gateway", id)
 		}
 	}
-	want := map[string]bool{"gemini": true, "grok": true, "openrouter": true, "kimi": true, "xiaomi": true}
+	want := map[string]bool{"gemini": true, "grok": true, "openrouter": true, "kimi": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true}
 	for id := range want {
 		found := false
 		for _, gw := range gws {
@@ -46,6 +48,52 @@ func containsString(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func TestSetupGatewayRegistryID_PreservesUnderscores(t *testing.T) {
+	if got := setupGatewayRegistryID("xiaomi_mimo_payg"); got != "xiaomi_mimo_payg" {
+		t.Fatalf("xiaomi_mimo_payg = %q", got)
+	}
+	if got := setupGatewayRegistryID("xiaomi_mimo"); got != "xiaomi_mimo_payg" {
+		t.Fatalf("legacy xiaomi_mimo = %q", got)
+	}
+}
+
+func TestCredentialInferenceForProvider_XiaomiPayg(t *testing.T) {
+	inf, err := CredentialInferenceForProvider("xiaomi_mimo_payg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inf.ProviderID != "xiaomi_mimo_payg" || inf.EnvVar != "XIAOMI_MIMO_PAYG_API_KEY" {
+		t.Fatalf("unexpected inference: %+v", inf)
+	}
+}
+
+func TestHasStoredCredentialForProvider_XiaomiPayg(t *testing.T) {
+	InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		InvalidateConfigUICache()
+	})
+	_ = store.Set(context.Background(), credentials.AccountForEnv("XIAOMI_MIMO_PAYG_API_KEY"), "test-xiaomi-key-12345678")
+	if env := SetupGatewayCredentialEnv("xiaomi_mimo_payg"); env != "XIAOMI_MIMO_PAYG_API_KEY" {
+		t.Fatalf("env = %q", env)
+	}
+	if !HasStoredCredentialForProvider(context.Background(), "xiaomi_mimo_payg") {
+		t.Fatal("expected stored credential for xiaomi_mimo_payg")
+	}
+	RefreshConfigCredSnapshot(context.Background())
+	found := false
+	for _, p := range configuredCredentialProvidersCached(context.Background()) {
+		if p == "xiaomi_mimo_payg" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("cred cache should include xiaomi_mimo_payg")
+	}
 }
 
 func TestGatewayDisplayName(t *testing.T) {

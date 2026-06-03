@@ -198,7 +198,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 
 func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Settings) (chatModel, error) {
 	ta := textarea.New()
-	ta.Placeholder = `Try "Create a PR with these changes" (Shift+Enter for newline)`
+	ta.Placeholder = workInputPlaceholder
 	ta.CharLimit = 0
 	ta.ShowLineNumbers = false
 	ta.MaxHeight = 10
@@ -257,16 +257,20 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			initHeight = h
 		}
 	}
-	// Reserve lines for the bottom bar
-	vpHeight := initHeight - 6
-	if vpHeight < 4 {
-		vpHeight = 4
-	}
-	vp := viewport.New(initWidth, vpHeight)
+	vp := viewport.New(initWidth, minChatViewportLines)
 	vp.MouseWheelEnabled = true
 
-	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now(), activeSkills: make(map[string]plugin.SmartSkill)}
+	now := time.Now()
+	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)}
+	applyLiveModelMetadata(sess, effectiveProvider, effectiveModel)
 	m.commandPalette = NewCommandPalette(initWidth)
+	// Pre-warm footer connection line so ctx (e.g. 0k/1.0m) shows on first paint.
+	if m.session != nil && m.session.ContextWindowCached > 0 {
+		m.connStatusVal = m.buildConnectionStatusPlain()
+		m.connStatusKey = m.connStatusFingerprint()
+	}
+	m.phase = initialUIPhase(m.hasChatMessages(), promptFlag != "")
+	m = m.withSyncedLayout()
 	m.containerEnabled = shouldUseContainer()
 	bindChatSession(sess, sid, m.containerEnabled)
 	if m.containerEnabled {
@@ -333,7 +337,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}()
 
-	// Prefetch models for current provider in background so /config and /model are instant
+	// Prefetch live models for the active provider so footer ctx/pricing stay current.
 	go func() {
 		provider := effectiveProvider
 		entries, _ := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
@@ -342,6 +346,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			modelCacheMu.Lock()
 			modelCache[provider] = opts
 			modelCacheMu.Unlock()
+			if ref != nil {
+				ref.Send(modelsFetchedMsg{options: opts, provider: provider})
+			}
 		}
 	}()
 
@@ -361,8 +368,11 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		ok := sandbox.DockerAvailable()
 		dockerRunning = &ok
 	}
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, dockerRunning)
-	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
+	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, dockerRunning, m.phase == phaseWelcomeGate)
+	// Welcome scrollback only when skipping the gate (resume / -p). Gate users already saw the splash.
+	if m.phase == phaseWork {
+		m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
+	}
 	m.openConfigOnStart = hawkconfig.NeedsFirstRunSetup(context.Background()) &&
 		(saved == nil || len(saved.Messages) == 0)
 
@@ -459,13 +469,19 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.input.Focus(), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
+		cmds = append(cmds, fetchModelsAsync(gw))
+	}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
 		cwd, _ := os.Getwd()
 		cmds = append(cmds, bootContainerCmd(cwd))
 	}
-	if m.openConfigOnStart {
+	if m.phase == phaseWork {
+		cmds = append(cmds, m.input.Focus())
+	}
+	if m.phase == phaseWork && m.openConfigOnStart {
 		cmds = append(cmds, func() tea.Msg { return autoOpenConfigMsg{} })
 	}
 	return tea.Batch(cmds...)
@@ -482,6 +498,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openConfigOnStart = false
 		return m.openConfigPanel()
 	case tea.KeyMsg:
+		if next, cmd, handled := m.handleWelcomeGateKey(msg); handled {
+			return next, cmd
+		}
+
 		// Command palette (Ctrl+K) — intercept all input when open
 		if m.commandPalette != nil && m.commandPalette.IsOpen() {
 			action, handled := m.commandPalette.Update(msg)
@@ -498,6 +518,45 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
+		}
+
+		if m.manualCompacting {
+			if isCompactCancelKey(msg) {
+				return m.cancelManualCompact("Compaction cancelled.")
+			}
+			if msg.Type == tea.KeyEnter {
+				return m, nil
+			}
+			// Allow typing in the input while compaction runs (Esc cancels).
+		}
+
+		if m.inScrollbackFocus() {
+			switch msg.Type {
+			case tea.KeyTab:
+				return m.cycleUIFocus()
+			case tea.KeyEsc:
+				m.uiFocus = focusPrompt
+				m.viewDirty = true
+				return m, m.input.Focus()
+			}
+			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
+				return m, cmd
+			}
+			if m.routeKeyToViewport(msg) {
+				var cmd tea.Cmd
+				m.viewport, cmd = m.viewport.Update(msg)
+				if m.viewport.AtBottom() {
+					m.autoScroll = true
+				} else {
+					m.autoScroll = false
+				}
+				return m, cmd
+			}
+			return m, nil
+		}
+
+		if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
+			return m, cmd
 		}
 
 		// Container failed — block all input except quit
@@ -618,7 +677,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, tea.Quit
 				}
 				m.lastCtrlC = time.Now()
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Press Ctrl+C again to quit."})
+				m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
 				m.viewDirty = true
 				m.updateViewportContent()
 				return m, nil
@@ -692,7 +751,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 			m.lastCtrlC = time.Now()
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Press Ctrl+C again to quit."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
 			m.viewDirty = true
 			m.updateViewportContent()
 			return m, nil
@@ -713,6 +772,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input.CursorEnd()
 				return m, nil
 			}
+			return m.cycleUIFocus()
 		case tea.KeyUp:
 			sugs := m.slashSuggestionsFor(m.input.Value())
 			if len(sugs) > 0 {
@@ -722,6 +782,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.slashSel--
 				}
 				return m, nil
+			}
+			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
+				return m, cmd
 			}
 			if len(m.history) > 0 {
 				if m.historyIdx == len(m.history) {
@@ -740,6 +803,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.slashSel = (m.slashSel + 1) % len(sugs)
 				return m, nil
 			}
+			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
+				return m, cmd
+			}
 			if m.historyIdx < len(m.history)-1 {
 				m.historyIdx++
 				m.input.SetValue(m.history[m.historyIdx])
@@ -756,115 +822,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case tea.KeyEnter:
-			if m.containerEnabled && m.containerErr != nil {
-				return m, nil
-			}
-			if m.containerEnabled && !m.containerReady {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for container — agent tools are disabled until the sandbox is ready."})
-				m.viewDirty = true
-				m.updateViewportContent()
-				return m, nil
-			}
-			text := strings.TrimSpace(m.input.Value())
-			if text == "" {
-				return m, nil
-			}
-			if sugs := m.slashSuggestionsFor(text); len(sugs) > 0 {
-				if m.slashSel < 0 || m.slashSel >= len(sugs) {
-					m.slashSel = 0
-				}
-				m.input.SetValue(applySlashSuggestion(sugs[m.slashSel]))
-				m.input.CursorEnd()
-				return m, nil
-			}
-			m.history = append(m.history, text)
-			m.historyIdx = len(m.history)
-			m.historyDraft = ""
-			m.input.Reset()
-			if strings.HasPrefix(text, "/") {
-				result, cmd := m.handleCommand(text)
-				m.viewDirty = true
-				m.updateViewportContent()
-				return result, cmd
-			}
-			// Shell escape: !command runs directly without AI
-			if strings.HasPrefix(text, "!") {
-				m.termCtx.MarkCommand(text[1:])
-				return m.handleShellEscape(text[1:])
-			}
-			// Mode-aware classification: in auto mode, classify input
-			classification := m.modeManager.ClassifyWithMode(text)
-			if classification == shellmode.ClassShell && !strings.HasPrefix(text, "!") {
-				// Auto-detected as shell command — execute directly
-				m.termCtx.MarkCommand(text)
-				return m.handleShellEscape(text)
-			}
-			// ClassAgent or ClassNeutral → route to AI
-			if setup := hawkconfig.EvaluateSetupCached(context.Background()); setup.NeedsSetup {
-				hint := setup.Hint
-				if hint == "" {
-					hint = "Complete setup in /config (keychain + model). Run /path to check readiness."
-				}
-				m.messages = append(m.messages, displayMsg{role: "system", content: hint})
-				m.viewDirty = true
-				m.updateViewportContent()
-				return m, nil
-			}
-			if err := m.ensureSessionReadyForChat(); err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				m.viewDirty = true
-				m.updateViewportContent()
-				return m, nil
-			}
-			// @ mention: resolve file references and include as context.
-			text = m.handleMentions(text)
-			userDisplay := text
-			// Build delta-based terminal context for the query (LLM only — not shown in TUI).
-			text = m.termCtx.BuildContext(text)
-			// Scale-adaptive: classify task complexity
-			scale := engine.ClassifyScale(text)
-			behavior := engine.GetBehavior(scale)
-			_ = behavior // used for future turn limiting
-			// Inject self-improvement lessons
-			if lessons := m.selfImprover.ForPrompt(5); lessons != "" {
-				m.session.AppendSystemContext(lessons)
-			}
-			// Inject coding soul
-			if soul := m.codingSoul.ForPrompt(); soul != "" {
-				m.session.AppendSystemContext(soul)
-			}
-			// Load hints from CWD
-			cwd, _ := os.Getwd()
-			if hints := m.hintsLoader.LoadHints(cwd); hints != "" {
-				m.session.AppendSystemContext(hints)
-			}
-			m.messages = append(m.messages, displayMsg{role: "user", content: userDisplay})
-
-			// Detect image attachments in user input
-			if imgPath := extractImagePath(text); imgPath != "" {
-				if att, err := ReadImageFile(imgPath); err == nil {
-					m.session.AddUserWithImage(text, att.Base64, att.MIMEType)
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📷 Attached image: %s", filepath.Base(imgPath))})
-				} else {
-					m.session.AddUser(text)
-				}
-			} else {
-				m.session.AddUser(text)
-			}
-			if m.wal != nil {
-				_ = m.wal.Append(session.Message{Role: "user", Content: text})
-			}
-			m.waiting = true
-			m.autoScroll = true
-			m.viewDirty = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
-			m.brailleSpinner.SetLabel(m.spinnerVerb)
-			m.turnInputTokens = 0
-			m.turnOutputTokens = 0
-			m.startedAt = time.Time{}
-			m.partial.Reset()
-			m.startStream()
-			return m, nil
+			return m.submitUserMessage()
 		}
 
 	case modelsFetchedMsg:
@@ -890,11 +848,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if m.configOpen {
 			m.configNotice = hawkconfig.CatalogEmptyHint(context.Background())
 		}
+		if m.session != nil && msg.provider != "" {
+			gw, _ := m.sessionGatewayModel()
+			if gw == "" {
+				gw = msg.provider
+			}
+			if strings.TrimSpace(gw) == strings.TrimSpace(msg.provider) {
+				applyLiveModelMetadata(m.session, gw, m.session.Model())
+			}
+		}
+		m.invalidateConnStatus()
+		m.viewDirty = true
 		if m.configOpen {
 			if m.configTab == configTabModels {
 				m = m.focusConfigActiveModelSelection()
 			}
-			m.viewDirty = true
 			m.updateViewportContent()
 		}
 		return m, nil
@@ -933,7 +901,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamChunkMsg:
-		if m.compacting {
+		if m.compacting && !m.manualCompacting {
 			m.compacting = false
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 		}
@@ -957,12 +925,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case toolResultMsg:
-		content := msg.content
-		totalLen := len(content)
-		if totalLen > 800 {
-			content = content[:800] + fmt.Sprintf(" … (%d more chars)", totalLen-800)
-		}
-		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, content)})
+		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, msg.content)})
 		m.viewDirty = true
 		return m, nil
 
@@ -991,11 +954,32 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.invalidateConnStatus()
 			m.viewDirty = true
 		}
+		return m, nil
+
+	case compactTickMsg:
+		if m.manualCompacting {
+			if m.brailleSpinner != nil {
+				m.brailleSpinner.Tick()
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			cmds := []tea.Cmd{compactTickCmd()}
+			if !m.input.Focused() {
+				cmds = append(cmds, m.input.Focus())
+			}
+			return m, tea.Batch(cmds...)
+		}
+		return m, nil
+
+	case compactDoneMsg:
+		return m.finishManualCompact(msg)
 
 	case compactStartMsg:
-		m.compacting = true
-		m.brailleSpinner.SetLabel("Compacting context")
-		m.viewDirty = true
+		if !m.manualCompacting {
+			m.compacting = true
+			m.brailleSpinner.SetLabel("Compacting context")
+			m.viewDirty = true
+		}
 		return m, nil
 
 	case compactMsg:
@@ -1016,6 +1000,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.compacting = false
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 		}
+		m.invalidateConnStatus()
 		m.flushPartialDirty()
 		if m.partial.Len() > 0 {
 			content := sanitizeIdentity(m.partial.String())
@@ -1066,6 +1051,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case blinkTickMsg:
 		m.blinkClosed = !m.blinkClosed
+		m.rebuildWelcomeCache(m.blinkClosed)
+		m.viewDirty = true
 		cmds = append(cmds, blinkTickCmd())
 		return m, tea.Batch(cmds...)
 
@@ -1081,7 +1068,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.input.SetWidth(msg.Width - 4)
+		if !m.onWelcomeGate() {
+			m.input.SetWidth(msg.Width - 4)
+		}
 		m.rebuildWelcomeCache(false)
 		m.viewDirty = true
 
@@ -1118,7 +1107,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session.Autonomy == 0 {
 				m.session.Autonomy = DefaultContainerAutonomy
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.Autonomy)})
+			if m.phase == phaseWelcomeGate {
+				m.sandboxReadyPending = true
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.Autonomy)})
+			}
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
@@ -1129,7 +1122,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewportContent()
 	}
 
-	if !m.waiting {
+	if !m.waiting && m.uiFocus == focusPrompt {
 		// Clear ghost text when user starts typing
 		if m.ghostText.Active() && m.input.Value() != "" {
 			m.ghostText.Clear()
@@ -1156,7 +1149,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
 	}
-	if !m.input.Focused() {
+	if m.uiFocus == focusPrompt && !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
 
@@ -1169,10 +1162,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Re-enable when they scroll back to bottom.
 	if m.viewport.AtBottom() {
 		m.autoScroll = true
+		if m.uiFocus == focusPrompt {
+			m.streamFollow = true
+		}
 	} else {
 		m.autoScroll = false
+		if m.uiFocus == focusScrollback {
+			m.streamFollow = false
+		}
 	}
 
+	m = m.withSyncedLayout()
 	// Update viewport content when messages change or input layout shifts (slash menu / multiline).
 	if m.viewDirty || m.syncInputLayout() {
 		m.updateViewportContent()
@@ -1233,7 +1233,7 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m)
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
@@ -1289,6 +1289,11 @@ func runChat() error {
 	fm, ok := finalModel.(chatModel)
 	if !ok {
 		return fmt.Errorf("unexpected final model type: %T", finalModel)
+	}
+	if fm.quitting {
+		fm.saveSession()
+		fmt.Print(formatQuitResumeMessage(fm.sessionID))
+		return nil
 	}
 	hawkC := "\033[38;2;255;94;14m"
 	rst := "\033[0m"
