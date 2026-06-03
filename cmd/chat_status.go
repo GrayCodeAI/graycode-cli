@@ -149,10 +149,8 @@ func (m chatModel) renderConnectionStatusSplit() (modelRendered string, modelVis
 
 func renderChatConnectionModel(gateway, model string) (string, int) {
 	muted := configMutedStyle().Inline(true)
-	// Gateway (provider name) is rendered in agentGold so the user can
-	// tell it apart from the model, which is the brand orange focus.
-	gatewayStyle := lipgloss.NewStyle().Foreground(agentGold).Inline(true)
-	active := configActiveStyle().Inline(true) // model — brand orange
+	gatewayStyle := configAccentStyle().Inline(true)
+	active := configActiveStyle().Inline(true)
 	sep := muted.Render(" · ")
 	const sepVis = 3
 
@@ -301,7 +299,7 @@ func contextPercentColor(pct int) lipgloss.Color {
 	case pct >= 80:
 		return warnAmber
 	default:
-		return successTeal
+		return doneGreen
 	}
 }
 

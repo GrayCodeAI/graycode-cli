@@ -28,6 +28,24 @@ func (m chatModel) hasChatMessages() bool {
 	return false
 }
 
+func renderSetupCompleteMessage(model string) string {
+	success := lipgloss.NewStyle().Foreground(doneGreen).Bold(true).Inline(true)
+	muted := configMutedStyle().Inline(true)
+	active := configActiveStyle().Inline(true)
+	model = strings.TrimSpace(model)
+	if model == "" {
+		model = "selected model"
+	}
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		success.Render("Setup complete"),
+		muted.Render(" · ready to chat with "),
+		active.Render(model),
+		muted.Render(" "),
+		success.Render("✓"),
+	)
+}
+
 // welcomeHeader returns the full logo before chat, then a one-line banner after.
 func (m chatModel) welcomeHeader() string {
 	if !m.showWelcomeBanner() {
@@ -337,6 +355,8 @@ func (m *chatModel) updateViewportContent() {
 		case "system":
 			sysWrapped := wrapText(msg.content, viewWidth-2, 0)
 			chatContent.WriteString(dimStyle.Render(sysWrapped))
+		case "setup_complete":
+			chatContent.WriteString(renderSetupCompleteMessage(msg.content))
 		case "permission":
 			chatContent.WriteString(renderPermissionBox(msg.content, viewWidth))
 		case "question":
@@ -415,27 +435,16 @@ func (m chatModel) View() string {
 			totalW = 80
 		}
 		slashOpen := m.slashMenuOpen()
-		var leftBold, leftDim string
-		leftBold, leftDim = containerFooterLeft(m)
+		leftRendered, leftVisLen := renderContainerFooterLeft(m)
 		modelRendered, modelVisLen, ctxRendered, ctxVisLen := m.renderConnectionStatusSplit()
 		const ctxSepVis = 3
 		rightVisLen := modelVisLen + ctxVisLen
 		if ctxVisLen > 0 && modelVisLen > 0 {
 			rightVisLen += ctxSepVis
 		}
-		leftPlain := leftBold + leftDim
-		leftVisLen := runewidth.StringWidth(leftPlain)
 		gap := totalW - leftVisLen - rightVisLen
 		if gap < 1 {
 			gap = 1
-		}
-		var leftRendered string
-		if m.containerEnabled && m.containerErr != nil {
-			leftRendered = containerErrStyle.Bold(true).Render(leftBold) + containerErrStyle.Render(leftDim)
-		} else if m.containerEnabled {
-			leftRendered = containerLabelStyle.Render(leftBold) + dimStyle.Render(leftDim)
-		} else {
-			leftRendered = lipgloss.NewStyle().Bold(true).Render(leftBold) + dimStyle.Render(leftDim)
 		}
 		rightLine := modelRendered
 		if ctxVisLen > 0 {

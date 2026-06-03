@@ -9,7 +9,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
-func TestConfigGatewaysView_CatalogHeaderWithoutKeys(t *testing.T) {
+func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -23,8 +23,11 @@ func TestConfigGatewaysView_CatalogHeaderWithoutKeys(t *testing.T) {
 	if !strings.Contains(view, "Catalog") {
 		t.Fatalf("expected Catalog column header, got:\n%s", view)
 	}
-	if !strings.Contains(view, "add key in Keys tab") {
-		t.Fatalf("expected keys hint without credentials, got:\n%s", view)
+	if !strings.Contains(view, "key required") {
+		t.Fatalf("expected key-required model cells without credentials, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Catalog count appears after a saved key") {
+		t.Fatalf("expected key requirement hint without credentials, got:\n%s", view)
 	}
 }
 
@@ -74,6 +77,38 @@ func TestConfigGatewayRefreshTargetIndex_UsesFocusOnRefreshRow(t *testing.T) {
 	idx := m.configGatewayRefreshTargetIndex(rows)
 	if idx != 1 || rows[idx].DisplayName != "OpenRouter" {
 		t.Fatalf("expected focus row OpenRouter, got %d", idx)
+	}
+}
+
+func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	hawkconfig.InvalidateConfigUICache()
+
+	sess := &engine.Session{}
+	sess.SetProvider("openrouter")
+	m := chatModel{
+		configTab:           configTabGateways,
+		session:             sess,
+		configModelProvider: "openrouter",
+	}
+	next := m.focusConfigActiveGateway()
+	rows := next.configGatewayRows()
+	active := next.activeGatewayRowIndex(rows)
+	if active < 0 {
+		t.Fatal("expected active gateway row")
+	}
+	if next.configSel != active {
+		t.Fatalf("configSel = %d, want active row %d", next.configSel, active)
+	}
+	if next.configScroll > next.configSel || next.configSel >= next.configScroll+configWindowSize {
+		t.Fatalf("active row not visible: sel=%d scroll=%d", next.configSel, next.configScroll)
 	}
 }
 
