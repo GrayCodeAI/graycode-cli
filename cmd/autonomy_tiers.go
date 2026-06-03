@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Four container autonomy tiers (Inspect → Edit → Run → Trust).
@@ -61,12 +63,50 @@ func autonomyTierHint(level engine.AutonomyLevel) string {
 	}
 }
 
+func autonomyTierColor(level engine.AutonomyLevel) lipgloss.Color {
+	switch level {
+	case engine.AutonomyBasic:
+		return tierInspect
+	case engine.AutonomySemi:
+		return tierEdit
+	case engine.AutonomyFull:
+		return tierRun
+	case engine.AutonomyYOLO:
+		return tierTrust
+	default:
+		return tierEdit
+	}
+}
+
+func autonomyTierStyle(level engine.AutonomyLevel) lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(autonomyTierColor(level)).Bold(true).Inline(true)
+}
+
+func renderAutonomyTierLabel(level engine.AutonomyLevel) string {
+	return autonomyTierStyle(level).Render(autonomyTierName(level))
+}
+
 func formatAutonomyTierMessage(level engine.AutonomyLevel) string {
-	name := autonomyTierName(level)
+	name := renderAutonomyTierLabel(level)
 	if hint := autonomyTierHint(level); hint != "" {
 		return fmt.Sprintf("Autonomy → %s (%s)", name, hint)
 	}
 	return fmt.Sprintf("Autonomy → %s", name)
+}
+
+func autonomyLevelForTierName(name string) engine.AutonomyLevel {
+	switch strings.TrimSpace(name) {
+	case "Inspect":
+		return engine.AutonomyBasic
+	case "Edit":
+		return engine.AutonomySemi
+	case "Run":
+		return engine.AutonomyFull
+	case "Trust":
+		return engine.AutonomyYOLO
+	default:
+		return DefaultContainerAutonomy
+	}
 }
 
 // autonomyFromSettings maps settings.json autonomy (1–4) to a tier level.

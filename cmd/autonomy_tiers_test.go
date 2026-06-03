@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestAutonomyTierNames(t *testing.T) {
@@ -36,5 +37,22 @@ func TestAutonomyFromSettings(t *testing.T) {
 	}
 	if autonomyFromSettings(0) != 0 {
 		t.Fatal("settings 0 should leave unset")
+	}
+}
+
+func TestAutonomyTierColorsDistinct(t *testing.T) {
+	levels := []engine.AutonomyLevel{
+		engine.AutonomyBasic,
+		engine.AutonomySemi,
+		engine.AutonomyFull,
+		engine.AutonomyYOLO,
+	}
+	seen := make(map[lipgloss.Color]bool)
+	for _, l := range levels {
+		c := autonomyTierColor(l)
+		if seen[c] {
+			t.Fatalf("duplicate color for tier %v", l)
+		}
+		seen[c] = true
 	}
 }

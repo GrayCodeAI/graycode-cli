@@ -154,25 +154,30 @@ func renderContainerFooterLeft(m chatModel) (rendered string, visLen int) {
 		return containerErrStyle.Bold(true).Render(bold) + containerErrStyle.Render(dim), visLen
 	}
 	if m.containerEnabled {
-		return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim), visLen
+		return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim, m.session), visLen
 	}
 
 	labelStyle := lipgloss.NewStyle().Foreground(warnAmber).Bold(true)
 	return labelStyle.Render(bold) + dimStyle.Render(dim), visLen
 }
 
-func renderContainerFooterDetail(detail string) string {
+func renderContainerFooterDetail(detail string, sess *engine.Session) string {
 	if detail == "" {
 		return ""
 	}
 	statusStyle := lipgloss.NewStyle().Foreground(textPlaceholder).Inline(true)
-	okStyle := lipgloss.NewStyle().Foreground(doneGreen).Inline(true)
 	sep := " · "
-	status, ok, found := strings.Cut(detail, sep)
+	status, tierPart, found := strings.Cut(detail, sep)
 	if !found {
 		return statusStyle.Render(detail)
 	}
-	return statusStyle.Render(status) + configMutedStyle().Inline(true).Render(sep) + okStyle.Render(ok)
+	level := DefaultContainerAutonomy
+	if sess != nil && sess.Autonomy != 0 {
+		level = sess.Autonomy
+	} else {
+		level = autonomyLevelForTierName(tierPart)
+	}
+	return statusStyle.Render(status) + configMutedStyle().Inline(true).Render(sep) + autonomyTierStyle(level).Render(strings.TrimSpace(tierPart))
 }
 
 // containerFooterLeft is the bold + dim text on the top footer row (left side).
