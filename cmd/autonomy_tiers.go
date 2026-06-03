@@ -48,18 +48,19 @@ func nextAutonomyTier(level engine.AutonomyLevel) engine.AutonomyLevel {
 	return containerAutonomyTiers[(autonomyTierIndex(level)+1)%len(containerAutonomyTiers)]
 }
 
-func autonomyTierHint(level engine.AutonomyLevel) string {
+// autonomyTierDescription is plain-language copy shown when the user changes tier (ctrl+L).
+func autonomyTierDescription(level engine.AutonomyLevel) string {
 	switch level {
 	case engine.AutonomyBasic:
-		return "read & search only"
+		return "Read and search the codebase only. File changes and terminal commands need your approval."
 	case engine.AutonomySemi:
-		return "edits auto · shell asks"
+		return "Read and edit files automatically. Terminal commands need your approval."
 	case engine.AutonomyFull:
-		return "shell auto · risky asks"
+		return "Read, edit, and run most terminal commands in the container. Risky commands still need your approval."
 	case engine.AutonomyYOLO:
-		return "minimal prompts"
+		return "Almost no approval prompts. Use only when you fully trust this session."
 	default:
-		return ""
+		return "Read and edit files automatically. Terminal commands need your approval."
 	}
 }
 
@@ -87,11 +88,12 @@ func renderAutonomyTierLabel(level engine.AutonomyLevel) string {
 }
 
 func formatAutonomyTierMessage(level engine.AutonomyLevel) string {
-	name := renderAutonomyTierLabel(level)
-	if hint := autonomyTierHint(level); hint != "" {
-		return fmt.Sprintf("Autonomy → %s (%s)", name, hint)
-	}
-	return fmt.Sprintf("Autonomy → %s", name)
+	return fmt.Sprintf("Autonomy %s — %s", renderAutonomyTierLabel(level), autonomyTierDescription(level))
+}
+
+func formatSandboxReadyAutonomyMessage(level engine.AutonomyLevel) string {
+	return fmt.Sprintf("Sandbox ready. Default tier %s — %s Press ctrl+L to switch Inspect · Edit · Run · Trust.",
+		renderAutonomyTierLabel(level), autonomyTierDescription(level))
 }
 
 func autonomyLevelForTierName(name string) engine.AutonomyLevel {

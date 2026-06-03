@@ -667,7 +667,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyCtrlL:
 			if m.containerEnabled && !m.containerReady {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy tiers unlock when the container is ready."})
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy tiers (Inspect · Edit · Run · Trust) unlock when the container is ready."})
 				m.viewDirty = true
 				m.updateViewportContent()
 				return m, nil
@@ -1108,7 +1108,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session.Autonomy == 0 {
 				m.session.Autonomy = DefaultContainerAutonomy
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ready · default autonomy " + renderAutonomyTierLabel(m.session.Autonomy) + " (ctrl+L to change)"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.Autonomy)})
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
