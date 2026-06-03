@@ -188,7 +188,7 @@ func renderModelTableHeader(layout modelTableLayout, headerStyle, metaStyle lipg
 func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTableLayout, _, cursorStyle, activeStyle, metaStyle, freeStyle lipgloss.Style) string {
 	meta := metaStyle
 	priceStyle := metaStyle
-	if row.Free && !cursor && !active {
+	if row.Free {
 		priceStyle = freeStyle
 	}
 	if active && !cursor {
@@ -266,15 +266,15 @@ func truncateRunes(s string, maxCols int) string {
 	return b.String() + "…"
 }
 
-func modelTableScrollHint(above, below int, muted lipgloss.Style) string {
+func modelTableScrollHint(above, below int, style lipgloss.Style) string {
 	prefix := strings.Repeat(" ", modelTableIndent)
 	switch {
 	case above > 0 && below > 0:
-		return muted.Render(fmt.Sprintf("%s↑ %d above · ↓ %d below", prefix, above, below))
+		return style.Render(fmt.Sprintf("%s↑ %d above · ↓ %d below", prefix, above, below))
 	case above > 0:
-		return muted.Render(fmt.Sprintf("%s↑ %d above", prefix, above))
+		return style.Render(fmt.Sprintf("%s↑ %d above", prefix, above))
 	case below > 0:
-		return muted.Render(fmt.Sprintf("%s↓ %d below", prefix, below))
+		return style.Render(fmt.Sprintf("%s↓ %d below", prefix, below))
 	default:
 		return ""
 	}
