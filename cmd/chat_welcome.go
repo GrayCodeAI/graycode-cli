@@ -131,7 +131,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	} else {
 		tip := "TIP: /path readiness · /help commands · /model to switch"
 		b.WriteString("\n" + center(boldC+tip+rst, len(tip)) + "\n")
-		shortcuts := "ctrl+N next model · ctrl+L autonomy · esc cancel"
+		shortcuts := "ctrl+N next model · ctrl+L Inspect/Edit/Run/Trust · esc cancel"
 		b.WriteString(center(dimC+shortcuts+rst, len(shortcuts)) + "\n")
 	}
 

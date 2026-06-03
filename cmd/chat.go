@@ -241,8 +241,6 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	if err != nil {
 		return chatModel{}, err
 	}
-	bindChatSession(sess, sid)
-
 	// Initialize conversation DAG for branching support
 	if home, err := os.UserHomeDir(); err == nil {
 		dagPath := filepath.Join(home, ".hawk", "sessions", "convo.db")
@@ -270,6 +268,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, startedAt: time.Now(), activeSkills: make(map[string]plugin.SmartSkill)}
 	m.commandPalette = NewCommandPalette(initWidth)
 	m.containerEnabled = shouldUseContainer()
+	bindChatSession(sess, sid, m.containerEnabled)
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
 	} else if noContainer {
@@ -667,18 +666,19 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateViewportContent()
 			return m, nil
 		case tea.KeyCtrlL:
-			modes := []string{"default", "acceptEdits", "bypassPermissions"}
-			current := string(m.session.Mode)
-			idx := 0
-			for i, md := range modes {
-				if md == current {
-					idx = (i + 1) % len(modes)
-					break
-				}
+			if m.containerEnabled && !m.containerReady {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy tiers unlock when the container is ready."})
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
 			}
-			_ = m.session.SetPermissionMode(modes[idx])
-			labels := map[string]string{"default": "Off", "acceptEdits": "Auto-edit", "bypassPermissions": "Full Auto"}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy → %s", labels[modes[idx]])})
+			next := nextAutonomyTier(m.session.Autonomy)
+			if m.session.Autonomy == 0 || autonomyTierIndex(m.session.Autonomy) < 0 {
+				next = DefaultContainerAutonomy
+			}
+			m.session.Autonomy = next
+			m.invalidateConnStatus()
+			m.messages = append(m.messages, displayMsg{role: "system", content: formatAutonomyTierMessage(next)})
 			m.viewDirty = true
 			m.updateViewportContent()
 			return m, nil
@@ -757,6 +757,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case tea.KeyEnter:
 			if m.containerEnabled && m.containerErr != nil {
+				return m, nil
+			}
+			if m.containerEnabled && !m.containerReady {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for container — agent tools are disabled until the sandbox is ready."})
+				m.viewDirty = true
+				m.updateViewportContent()
 				return m, nil
 			}
 			text := strings.TrimSpace(m.input.Value())
@@ -1097,6 +1103,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session != nil {
 				m.session.ContainerExecutor = msg.sandbox
 			}
+		}
+		if msg.ready && m.session != nil {
+			if m.session.Autonomy == 0 {
+				m.session.Autonomy = DefaultContainerAutonomy
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Sandbox ready · default autonomy " + autonomyTierName(m.session.Autonomy) + " (ctrl+L to change)"})
+			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
 			m.input.Blur()
