@@ -73,6 +73,12 @@ var doneGreen = lipgloss.Color("#4CAF50")
 // container output reads as its own zone in the status footer.
 var containerBlue = lipgloss.Color("#3BAADA")
 
+// Autonomy tier colors (Inspect → Edit → Run → Trust), coolest to hottest.
+var tierInspect = lipgloss.Color("#75B1E2") // infoSky — read-only
+var tierEdit    = lipgloss.Color("#4ECDC4") // successTeal — default work
+var tierRun     = lipgloss.Color("#FFB347") // warnAmber — shell
+var tierTrust   = lipgloss.Color("#FF6B6B") // errorCoral — minimal gates
+
 // ---------------------------------------------------------------------------
 // 5. HUD overlay
 // ---------------------------------------------------------------------------
