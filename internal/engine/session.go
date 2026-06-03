@@ -57,6 +57,8 @@ type Session struct {
 
 	// ContainerExecutor runs Bash in an isolated container when set (no API keys in container env).
 	ContainerExecutor tool.ContainerExecutor
+	// ContainerRequired blocks tools until ContainerExecutor is running (container-first mode).
+	ContainerRequired bool
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)

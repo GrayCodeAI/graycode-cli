@@ -101,6 +101,14 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) toolExecResult {
 	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
+	if s.ContainerRequired {
+		if s.ContainerExecutor == nil || !s.ContainerExecutor.Running() {
+			msg := "Container not ready — tools are disabled until the sandbox is running."
+			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
+			return toolExecResult{tc: tc, output: msg, isErr: true}
+		}
+	}
+
 	var toolSpan *oteltrace.Span
 	if s.Tracer != nil {
 		_, toolSpan = oteltrace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
