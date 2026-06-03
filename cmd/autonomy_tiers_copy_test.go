@@ -12,10 +12,10 @@ func TestAutonomyTierDescriptions_PlainLanguage(t *testing.T) {
 		level engine.AutonomyLevel
 		need  []string
 	}{
-		{engine.AutonomyBasic, []string{"Read and search", "need your approval"}},
-		{engine.AutonomySemi, []string{"edit files automatically", "Terminal commands need your approval"}},
-		{engine.AutonomyFull, []string{"most terminal commands", "Risky commands still"}},
-		{engine.AutonomyYOLO, []string{"Almost no approval", "fully trust"}},
+		{engine.AutonomyBasic, []string{"Look only", "shell ask"}},
+		{engine.AutonomySemi, []string{"Auto edits", "shell asks"}},
+		{engine.AutonomyFull, []string{"Auto shell", "risky"}},
+		{engine.AutonomyYOLO, []string{"Rare prompts", "trust"}},
 	}
 	for _, tc := range cases {
 		desc := autonomyTierDescription(tc.level)
@@ -32,8 +32,8 @@ func TestFormatAutonomyTierMessage_NoArrowJargon(t *testing.T) {
 	if strings.Contains(msg, "→") {
 		t.Fatalf("expected no arrow jargon, got %q", msg)
 	}
-	if strings.Contains(msg, "shell auto") {
-		t.Fatalf("expected plain language, got %q", msg)
+	if len(msg) > 120 {
+		t.Fatalf("message too long (%d chars): %q", len(msg), msg)
 	}
 	if !strings.Contains(msg, "Run") {
 		t.Fatalf("expected tier name in message, got %q", msg)
