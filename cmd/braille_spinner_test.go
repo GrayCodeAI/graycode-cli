@@ -12,17 +12,16 @@ func TestBrailleSpinner_Tick(t *testing.T) {
 	if f1 == f2 {
 		t.Error("expected different frames after tick")
 	}
-	// Glyph is hawk brand orange.
-	if !strings.Contains(f1, ansiOrange) {
-		t.Error("expected orange spinner glyph")
+	// Glyph uses the 20-color wave (not fixed orange).
+	if !frameContainsSpinnerWave(f1) {
+		t.Error("expected wave-colored spinner glyph")
 	}
-	// Label is bright green.
-	if !strings.Contains(f1, ansiGreen) {
-		t.Error("expected green verb label")
+	// Verb + dots use the 20-color wave palette.
+	if !frameContainsSpinnerWave(f1) {
+		t.Error("expected wave-colored verb label")
 	}
-	// Filled dot is bright yellow.
-	if !strings.Contains(f1, ansiYellow) {
-		t.Error("expected yellow filled dot")
+	if !strings.Contains(f1, iconDotFilled) {
+		t.Error("expected filled typing dot")
 	}
 }
 
@@ -49,31 +48,38 @@ func TestBrailleSpinner_Random(t *testing.T) {
 	}
 }
 
-func TestHawkQuadBlock_Frames(t *testing.T) {
-	if len(hawkQuadBlockGlyphs) != 4 {
-		t.Fatalf("expected 4 QuadBlock glyphs, got %d", len(hawkQuadBlockGlyphs))
+func TestHawkSpinner_Frames(t *testing.T) {
+	if len(hawkSpinnerGlyphs) != 4 {
+		t.Fatalf("expected 4 compass glyphs, got %d", len(hawkSpinnerGlyphs))
 	}
-	if hawkQuadBlockGlyphs[3] != "▙" {
-		t.Fatalf("expected last QuadBlock frame ▙, got %q", hawkQuadBlockGlyphs[3])
+	if hawkSpinnerGlyphs[0] != "◐" {
+		t.Fatalf("expected first compass frame ◐, got %q", hawkSpinnerGlyphs[0])
 	}
 	s := NewBrailleSpinner(SpinnerHawk, "Working")
 	f0 := s.Frame()
-	if !strings.Contains(f0, "▛") {
-		t.Fatalf("expected QuadBlock glyph, got %q", f0)
+	if !strings.Contains(f0, "◐") {
+		t.Fatalf("expected compass glyph, got %q", f0)
 	}
 	s.Tick()
 	s.Tick()
 	s.Tick()
-	if !strings.Contains(s.Frame(), "▙") {
-		t.Fatalf("expected frame cycle to reach ▙, got %q", s.Frame())
+	if !strings.Contains(s.Frame(), "◒") {
+		t.Fatalf("expected frame cycle to reach ◒, got %q", s.Frame())
+	}
+}
+
+func TestHawkQuadBlock_LegacyFrames(t *testing.T) {
+	s := NewBrailleSpinner(SpinnerHawkQuad, "Working")
+	if !strings.Contains(s.Frame(), "▛") {
+		t.Fatalf("expected QuadBlock glyph, got %q", s.Frame())
 	}
 }
 
 func TestHawkAnimatedDots_PresentInFrame(t *testing.T) {
 	s := NewBrailleSpinner(SpinnerHawk, "Crafting")
 	f := s.Frame()
-	// Three plain circles ride after the verb: one bold cyan, two dim.
-	total := strings.Count(f, "●") + strings.Count(f, "○")
+	// Three progress dots ride after the verb: one bright, two dim.
+	total := strings.Count(f, iconDotFilled) + strings.Count(f, iconDotEmpty)
 	if total != hawkTypingDots {
 		t.Errorf("expected %d trailing circle-dots, got %d in %q", hawkTypingDots, total, f)
 	}

@@ -286,7 +286,6 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.modeManager = shellmode.NewModeManager()
 	m.modeManager.LoadPersistedMode()
 	m.brailleSpinner = NewBrailleSpinner(SpinnerHawk, "")
-	m.brailleSpinner.SetWave(true)
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
 
 	// Initialize BMAD/Aeon features

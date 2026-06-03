@@ -386,20 +386,7 @@ func (m *chatModel) updateViewportContent() {
 			chatContent.WriteString(hawkC + iconAssistantPrefix + " " + rst + renderMarkdown(partial, viewWidth-3))
 			chatContent.WriteString("\n\n")
 		} else {
-			// Hawk-native spinner line: brand-orange glyph + green verb
-			// + yellow dot indicator, then ◆ blue time ◆ magenta ↓ / cyan
-			// ↑ ◆ dim hint. The ◆ separator is bright white so it stands
-			// out as a structural divider; the hint stays dim so it
-			// doesn't compete with the data.
-			elapsed := m.spinnerElapsed()
-			sep := ansiWhite + iconSeparator + ansiReset
-			hint := dimStyle.Render("(Press ESC to stop)")
-			timeStr := ansiBlue + fmt.Sprintf("%.1fs", elapsed.Seconds()) + ansiReset
-			spinnerLine := m.brailleSpinner.Frame()
-			spinnerLine += "  " + sep + "  " + timeStr
-			spinnerLine += "  " + sep + "  " + m.renderTokenCounters()
-			spinnerLine += "  " + sep + "  " + hint
-			chatContent.WriteString(spinnerLine + "\n\n")
+			chatContent.WriteString(m.renderWaitingSpinnerLine() + "\n\n")
 		}
 	}
 
@@ -612,6 +599,21 @@ func renderReflectionBox(reflection string, width int) string {
 	return border.Render(strings.TrimRight(b.String(), "\n"))
 }
 
+// renderWaitingSpinnerLine is the live status strip while the model works.
+func (m chatModel) renderWaitingSpinnerLine() string {
+	sep := ansiDim + " " + iconSpinnerSep + " " + ansiReset
+
+	var b strings.Builder
+	b.WriteString(m.brailleSpinner.Frame())
+	b.WriteString(sep)
+	b.WriteString(ansiTeal + fmt.Sprintf("%.1fs", m.spinnerElapsed().Seconds()) + ansiReset)
+	b.WriteString(sep)
+	b.WriteString(m.renderTokenCounters())
+	b.WriteString(" ")
+	b.WriteString(ansiDim + "(esc stop)" + ansiReset)
+	return b.String()
+}
+
 // renderTokenCounters formats the live per-turn token counters that ride
 // next to the spinner. Uses ↑ for input (prompt) and ↓ for output
 // (completion) tokens. The displayed numbers are lerped each render
@@ -627,13 +629,13 @@ func (m *chatModel) renderTokenCounters() string {
 	outTok := int(m.displayOutTok + 0.5)
 
 	var b strings.Builder
+	b.WriteString(ansiMagenta + ansiBold + "↓" + ansiReset)
 	b.WriteString(ansiMagenta)
-	b.WriteString("↓ ")
 	b.WriteString(formatHawkTokenCount(outTok))
 	b.WriteString(ansiReset)
-	b.WriteString(dimStyle.Render(" "))
+	b.WriteString(ansiDim + "  " + ansiReset)
+	b.WriteString(ansiCyan + ansiBold + "↑" + ansiReset)
 	b.WriteString(ansiCyan)
-	b.WriteString("↑ ")
 	b.WriteString(formatHawkTokenCount(inTok))
 	b.WriteString(ansiReset)
 	return b.String()

@@ -142,9 +142,7 @@ var bgCode = lipgloss.Color("#2A2A3A")
 // rendered at the same bright intensity so the line reads as a uniform
 // strip.
 //
-//   glyph:  ansiOrange   — brand orange (matches the HAWK logo)
-//   verb:   ansiGreen    — "in progress" action
-//   dot:    ansiYellow   — filled typing-indicator dot
+//   glyph/verb/dot: spinnerWaveColors — 20-color flowing wave (spinner_wave.go)
 //   time:   ansiBlue     — elapsed seconds
 //   ↓:      ansiMagenta  — live model output
 //   ↑:      ansiCyan     — session context input
@@ -160,7 +158,10 @@ const (
 	ansiMagenta = "\033[95m"
 	ansiCyan    = "\033[96m"
 	ansiWhite   = "\033[97m"
+	ansiTeal    = "\033[38;2;78;205;196m" // matches successTeal — spinner elapsed
 	ansiDim     = "\033[2m"
+	ansiItalic  = "\033[3m"
+	ansiBold    = "\033[1m"
 	ansiReset   = "\033[0m"
 )
 
@@ -184,11 +185,11 @@ const (
 	iconToolBullet = "●"
 
 	// Typing indicator dots — one filled, two empty. See braille_spinner.go.
-	iconDotFilled = "●"
-	iconDotEmpty  = "○"
+	iconDotFilled = "▪"
+	iconDotEmpty  = "▫"
 
-	// Separator between the spinner and the metadata columns.
-	iconSeparator = "◆"
+	// Soft separator on the live status / spinner line.
+	iconSpinnerSep = "·"
 
 	// Warning / permission prompt prefix.
 	iconWarn = "⚠"
