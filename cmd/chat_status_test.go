@@ -66,9 +66,9 @@ func TestContextPercentColor(t *testing.T) {
 		pct  int
 		want lipgloss.Color
 	}{
-		{0, successTeal},
-		{50, successTeal},
-		{79, successTeal},
+		{0, doneGreen},
+		{50, doneGreen},
+		{79, doneGreen},
 		{80, warnAmber},
 		{94, warnAmber},
 		{95, errorCoral},

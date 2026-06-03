@@ -22,10 +22,11 @@ func TestSession_compactConfig_ThresholdPct(t *testing.T) {
 	s.AutoCompactThresholdPct = 85
 	s.ContextWindowCached = 100_000
 	cfg := s.compactConfig()
-	want := 100_000 - 85_000
+	// Compaction triggers at 85% of a 100k window → 85k tokens.
+	want := 85_000
 	got := cfg.ContextWindowSize - cfg.AutoCompactBuffer - cfg.MaxOutputTokens
 	if got != want {
-		t.Fatalf("threshold tokens = %d, want %d", got, want)
+		t.Fatalf("compact trigger at %d tokens, want %d", got, want)
 	}
 }
 

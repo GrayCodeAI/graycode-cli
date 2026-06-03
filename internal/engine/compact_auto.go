@@ -67,6 +67,7 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 		return "", false
 	}
 
+	tokensBefore := EstimateTokens(sess.messages)
 	strategy, err := ac.RunCompaction(ctx, sess)
 	if err != nil {
 		ac.mu.Lock()
@@ -77,19 +78,23 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 			"failures": ac.consecutiveFailures,
 		})
 		sess.compact()
+		tokensAfter := EstimateTokens(sess.messages)
+		sess.recordCompaction("truncate_fallback", tokensBefore, tokensAfter, false)
 		return "truncate_fallback", true
 	}
 
 	ac.mu.Lock()
 	ac.consecutiveFailures = 0
 	ac.mu.Unlock()
+	tokensAfter := EstimateTokens(sess.messages)
+	sess.recordCompaction(strategy, tokensBefore, tokensAfter, false)
 	return strategy, true
 }
 
 // RunCompaction selects and executes the best compaction strategy.
 func (ac *AutoCompactor) RunCompaction(ctx context.Context, sess *Session) (string, error) {
 	tokenCount := EstimateTokens(sess.messages)
-	strategy := ac.registry.SelectStrategy(sess.messages, tokenCount)
+	strategy := ac.registry.SelectStrategy(sess, sess.messages, tokenCount)
 
 	sess.log.Info("running compaction", map[string]interface{}{
 		"strategy": strategy.Name(),
@@ -112,6 +117,7 @@ func (ac *AutoCompactor) RunCompaction(ctx context.Context, sess *Session) (stri
 		"tokens_after":  result.TokensAfter,
 		"reduction":     result.TokensBefore - result.TokensAfter,
 	})
+	// recordCompaction is called by AutoCompactIfNeeded / CompactConversation callers
 
 	return result.Strategy, nil
 }
