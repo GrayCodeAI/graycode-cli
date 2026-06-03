@@ -63,18 +63,20 @@ type CredentialProviderOption struct {
 
 // CredentialResolveResult is eyrie paste-key resolution (all providers + inferred hints).
 type CredentialResolveResult struct {
-	FormatOK    bool
-	FormatError string
-	Providers   []CredentialProviderOption
+	FormatOK                bool
+	FormatError             string
+	Providers               []CredentialProviderOption
+	ProbeDisambiguationUsed bool
 }
 
 // ResolveCredential validates format and lists all providers from eyrie registry.
 func ResolveCredential(ctx context.Context, secret string) CredentialResolveResult {
 	res := runtime.ResolveCredential(ctx, secret)
 	out := CredentialResolveResult{
-		FormatOK:    res.FormatOK,
-		FormatError: res.FormatError,
-		Providers:   make([]CredentialProviderOption, len(res.Providers)),
+		FormatOK:                res.FormatOK,
+		FormatError:             res.FormatError,
+		ProbeDisambiguationUsed: res.ProbeDisambiguationUsed,
+		Providers:               make([]CredentialProviderOption, len(res.Providers)),
 	}
 	for i, p := range res.Providers {
 		out.Providers[i] = CredentialProviderOption{

@@ -46,8 +46,6 @@ func (m chatModel) configTabItemCount() int {
 		return len(m.configProviderOptions)
 	default:
 		switch m.configTab {
-		case configTabKeys:
-			return len(m.configKeysRows(hawkconfig.ConfiguredCredentialProviders()))
 		case configTabGateways:
 			return len(m.configGatewayRows()) + 1
 		case configTabModels:
@@ -71,24 +69,29 @@ func (m chatModel) configPanelView() string {
 		return m.configProvidersView()
 	}
 	switch m.configTab {
-	case configTabKeys:
-		return m.configKeysView()
 	case configTabGateways:
 		return m.configGatewaysView()
 	case configTabModels:
 		return m.configModelsTabView()
 	default:
-		return m.configKeysView()
+		return m.configGatewaysView()
 	}
 }
 
 func (m chatModel) configProviderKeyView() string {
 	titleStyle := configTitleStyle()
 	mutedStyle := configMutedStyle()
+	provider := strings.TrimSpace(m.configProvider)
+	title := "🔑 Paste API key"
+	hint := "validates with provider API · stored in " + credentialsStoreLabel()
+	if provider != "" {
+		title = "🔑 " + hawkconfig.GatewayDisplayName(provider)
+		hint = "paste key for this gateway only · " + hint
+	}
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("🔑 Paste API key") + "\n")
-	b.WriteString(mutedStyle.Render("eyrie validates key · pick gateway · models load from cache") + "\n\n")
+	b.WriteString(titleStyle.Render(title) + "\n")
+	b.WriteString(mutedStyle.Render(hint) + "\n\n")
 	if m.useConfigInput {
 		b.WriteString(m.configInput.View() + "\n")
 	} else {
@@ -379,7 +382,7 @@ func (m chatModel) configModelsBody() string {
 
 func (m chatModel) closeConfigPanel() chatModel {
 	m.configOpen = false
-	m.configTab = configTabKeys
+	m.configTab = configTabGateways
 	m.configMenu = configMenuNone
 	m.configSel = 0
 	m.configScroll = 0
@@ -446,30 +449,36 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 	case configEntryAPIKeyPaste:
 		if value == "" {
 			m.configEntry = configEntryNone
+			m.configProvider = ""
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
 			return m, nil
 		}
-		if replace := strings.TrimSpace(m.configReplaceProvider); replace != "" {
-			m.configReplaceProvider = ""
+		provider := strings.TrimSpace(m.configReplaceProvider)
+		if provider == "" {
+			provider = strings.TrimSpace(m.configProvider)
+		}
+		m.configReplaceProvider = ""
+		if provider == "" {
+			m.configNotice = "Select a gateway on the Gateways tab first"
 			m.configEntry = configEntryNone
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
-			inference, err := hawkconfig.CredentialInferenceForProvider(replace)
-			if err != nil {
-				m.configNotice = sanitizeConfigNotice(err.Error())
-				return m.startConfigKeyView(replace), nil
-			}
-			m.configPostSaveKeysProvider = replace
-			m.configSaving = true
-			m.configNotice = fmt.Sprintf("Saving key for %s…", inference.DisplayName)
-			return m, saveProviderKeyAsync(inference, value)
+			return m, nil
 		}
-		m.configNotice = "Resolving gateways via eyrie…"
 		m.configEntry = configEntryNone
+		m.configProvider = ""
 		m.wipeConfigKeyInput()
 		m.restoreChatInput()
-		return m, resolveKeyAsync(value)
+		inference, err := hawkconfig.CredentialInferenceForProvider(provider)
+		if err != nil {
+			m.configNotice = sanitizeConfigNotice(err.Error())
+			return m.startConfigKeyForProvider(provider)
+		}
+		m.configPostSaveKeysProvider = provider
+		m.configSaving = true
+		m.configNotice = fmt.Sprintf("Validating key for %s…", inference.DisplayName)
+		return m, saveProviderKeyAsync(inference, value)
 	default:
 		m.configEntry = configEntryNone
 		m.restoreChatInput()
@@ -484,21 +493,29 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		case configEntryOllamaURL:
 			m.configEntry = configEntryNone
 			m.configProvider = ""
-			m.configTab = configTabKeys
+			if m.configTab == configTabGateways {
+				if idx := m.configGatewayRowIndex(configProviderOllama); idx >= 0 {
+					m.configSel = idx
+				}
+			}
 			m.configNotice = ""
 			m.restoreChatInput()
 			return m, nil
 		case configEntryAPIKeyPaste:
-			if replace := strings.TrimSpace(m.configReplaceProvider); replace != "" {
-				m.configReplaceProvider = ""
-				m.configEntry = configEntryNone
-				m.wipeConfigKeyInput()
-				m.restoreChatInput()
-				return m.startConfigKeyView(replace), nil
+			provider := strings.TrimSpace(m.configReplaceProvider)
+			if provider == "" {
+				provider = strings.TrimSpace(m.configProvider)
 			}
+			m.configReplaceProvider = ""
 			m.configEntry = configEntryNone
 			m.configProvider = ""
+			m.wipeConfigKeyInput()
 			m.restoreChatInput()
+			if provider != "" {
+				if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+					m.configSel = idx
+				}
+			}
 			return m, nil
 		default:
 			m.configEntry = configEntryNone
@@ -541,6 +558,10 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		switch string(msg.Runes) {
 		case "r", "R":
 			return m.refreshConfigGateway()
+		case "k", "K":
+			if row, ok := m.selectedConfigGateway(); ok && row.HasKey && row.ID != configProviderOllama {
+				return m.startConfigKeyView(row.ID), nil
+			}
 		}
 	}
 	n := m.configTabItemCount()
@@ -556,14 +577,14 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			m.configPendingKey = ""
 			m.configProviderOptions = nil
 			m.configMenu = configMenuNone
-			m.configTab = configTabKeys
+			m.configTab = configTabGateways
 			return m.startConfigEntry(configEntryAPIKeyPaste, "")
 		}
 		if m.configTab == configTabModels && strings.TrimSpace(m.configModelSearch) != "" {
 			return m.stopConfigModelSearch(true), nil
 		}
-		if m.configTab == configTabKeys {
-			return m.handleConfigKeysEsc(), nil
+		if m.configTab == configTabGateways {
+			return m.handleConfigGatewaysEsc(), nil
 		}
 		return m.closeConfigPanel(), nil
 	case tea.KeyLeft:
@@ -571,7 +592,7 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		tab := m.configTab - 1
-		if tab < configTabKeys {
+		if tab < configTabGateways {
 			tab = configTabModels
 		}
 		return m.switchConfigTab(tab)
@@ -581,7 +602,7 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 		tab := m.configTab + 1
 		if tab > configTabModels {
-			tab = configTabKeys
+			tab = configTabGateways
 		}
 		return m.switchConfigTab(tab)
 	case tea.KeyUp:
@@ -601,16 +622,14 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		m.configSel = (m.configSel + 1) % n
 		return m.trackConfigGatewayFocus(), nil
 	case tea.KeyDelete, tea.KeyBackspace:
-		if m.configTab == configTabKeys && m.configKeysPendingRemove == "" {
-			return m.handleConfigKeysDelete(), nil
+		if m.configTab == configTabGateways && m.configKeysPendingRemove == "" {
+			return m.handleConfigGatewaysDelete(), nil
 		}
 	case tea.KeyEnter:
 		if m.configMenu == configMenuProviders {
 			return m.handleConfigProviderSelect()
 		}
 		switch m.configTab {
-		case configTabKeys:
-			return m.handleConfigKeysSelect()
 		case configTabGateways:
 			return m.handleConfigGatewaysSelect()
 		case configTabModels:

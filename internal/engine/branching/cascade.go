@@ -79,11 +79,18 @@ func (cr *CascadeRouter) SelectModel(prompt string, currentModel string, userOve
 
 	taskType := classifyPrompt(prompt)
 	selected := cr.modelForTask(taskType, frugal)
+	if strings.TrimSpace(selected) == "" {
+		selected = cr.pick(currentModel)
+	}
 
 	// When frugal mode is off, never downgrade from what was already set --
 	// only upgrade or keep the same tier.
-	if !frugal && routing.CostTierOf(selected) < routing.CostTierOf(currentModel) {
+	if !frugal && strings.TrimSpace(selected) != "" && strings.TrimSpace(currentModel) != "" &&
+		routing.CostTierOf(selected) < routing.CostTierOf(currentModel) {
 		selected = currentModel
+	}
+	if strings.TrimSpace(selected) == "" {
+		selected = cr.pick(currentModel)
 	}
 
 	reason := fmt.Sprintf("classified as %q", taskType)

@@ -56,9 +56,18 @@ func TestComputeModelTableLayoutLeftPacked(t *testing.T) {
 
 func TestModelTableRowFromOptionFree(t *testing.T) {
 	row := modelTableRowFromOption(configModelOption{
-		ID: "baidu/cobuddy:free", DisplayName: "baidu/cobuddy:free", Owner: "baidu",
+		ID: "baidu/cobuddy:free", DisplayName: "baidu/cobuddy:free", Owner: "baidu", PriceKnown: true,
 	})
 	if row.Price != "free" || !row.Free {
+		t.Fatalf("row = %+v", row)
+	}
+}
+
+func TestModelTableRowFromOptionUnknownPrice(t *testing.T) {
+	row := modelTableRowFromOption(configModelOption{
+		ID: "deepseek-v4-flash", DisplayName: "deepseek-v4-flash", Owner: "opencode",
+	})
+	if row.Price != "—" || row.Free {
 		t.Fatalf("row = %+v", row)
 	}
 }

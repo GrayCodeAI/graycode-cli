@@ -48,9 +48,10 @@ func resolveKeyAsync(secret string) tea.Cmd {
 
 func credentialResolveFromRuntime(res runtime.CredentialResolveResult) hawkconfig.CredentialResolveResult {
 	out := hawkconfig.CredentialResolveResult{
-		FormatOK:    res.FormatOK,
-		FormatError: res.FormatError,
-		Providers:   make([]hawkconfig.CredentialProviderOption, len(res.Providers)),
+		FormatOK:                res.FormatOK,
+		FormatError:             res.FormatError,
+		ProbeDisambiguationUsed: res.ProbeDisambiguationUsed,
+		Providers:               make([]hawkconfig.CredentialProviderOption, len(res.Providers)),
 	}
 	for i, p := range res.Providers {
 		out.Providers[i] = hawkconfig.CredentialProviderOption{
@@ -191,8 +192,42 @@ func (m chatModel) configProvidersView() string {
 	if end < total {
 		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ··· %d more below ···", total-end)) + "\n")
 	}
-	b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("%d gateways · ★ = suggested · ↑/↓ · enter · esc", total)))
+	b.WriteString("\n" + mutedStyle.Render(configProviderPickerHelp(total, m.configProviderOptions)))
 	return b.String()
+}
+
+func configProviderPickerHelp(total int, opts []hawkconfig.CredentialProviderOption) string {
+	if credentialOptionsHaveInference(opts) {
+		return fmt.Sprintf("%d gateways · ★ = suggested · ↑/↓ · enter · esc", total)
+	}
+	return fmt.Sprintf("%d gateways · choose gateway manually · ↑/↓ · enter · esc", total)
+}
+
+func credentialOptionsHaveInference(opts []hawkconfig.CredentialProviderOption) bool {
+	for _, opt := range opts {
+		if opt.Inferred {
+			return true
+		}
+	}
+	return false
+}
+
+func providerPickerNotice(secret string, opts []hawkconfig.CredentialProviderOption, probeUsed bool) string {
+	if credentialOptionsHaveInference(opts) {
+		if probeUsed {
+			return "Select gateway (★ = matched pattern or verified with provider API)"
+		}
+		return "Select gateway (★ = suggested from key shape)"
+	}
+	if isGenericOpenAICompatibleKey(secret) {
+		return "Generic OpenAI-compatible key — choose the gateway it belongs to"
+	}
+	return "Select gateway"
+}
+
+func isGenericOpenAICompatibleKey(secret string) bool {
+	secret = strings.TrimSpace(secret)
+	return strings.HasPrefix(secret, "sk-")
 }
 
 func (m chatModel) configProviderLabels() []string {
@@ -225,10 +260,10 @@ func (m chatModel) handleConfigKeyResolvedMsg(msg configKeyResolvedMsg) (chatMod
 	m.configProviderOptions = msg.result.Providers
 	m.configEntry = configEntryNone
 	m.configMenu = configMenuProviders
-	m.configTab = configTabKeys
+	m.configTab = configTabGateways
 	m.configSel = 0
 	m.configScroll = 0
-	m.configNotice = "Select gateway (★ = suggested from key shape)"
+	m.configNotice = providerPickerNotice(secret, msg.result.Providers, msg.result.ProbeDisambiguationUsed)
 	m.restoreChatInput()
 	return m, nil
 }
@@ -292,13 +327,14 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 			notice = "Key saved — " + notice + " · retry in Gateways or Models tab"
 		}
 		m.configNotice = notice
-		if strings.TrimSpace(m.configPendingKey) != "" && len(m.configProviderOptions) > 0 {
-			m.configMenu = configMenuProviders
-			m.configTab = configTabKeys
-			m.configSel = 0
-		} else {
-			m.configMenu = configMenuNone
-			m.configTab = configTabKeys
+		m.configPendingKey = ""
+		m.configProviderOptions = nil
+		m.configMenu = configMenuNone
+		m.configTab = configTabGateways
+		if pid := strings.TrimSpace(msg.providerID); pid != "" {
+			if idx := m.configGatewayRowIndex(pid); idx >= 0 {
+				m.configSel = idx
+			}
 		}
 		return m, nil
 	}
@@ -318,10 +354,10 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	next.invalidateConnStatus()
 	if post := strings.TrimSpace(m.configPostSaveKeysProvider); post != "" {
 		next.configPostSaveKeysProvider = ""
-		next.configTab = configTabKeys
+		next.configTab = configTabGateways
 		next.configMenu = configMenuNone
 		next.configEntry = configEntryNone
-		if idx := next.configKeysCredentialIndex(post); idx >= 0 {
+		if idx := next.configGatewayRowIndex(post); idx >= 0 {
 			next.configSel = idx
 		}
 		next.configNotice = "Key updated for " + hawkconfig.GatewayDisplayName(post)
@@ -336,7 +372,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		if msg.providerID == configProviderOllama {
 			return next.returnToOllamaURLAfterError(fmt.Errorf("no models installed — run: ollama pull llama3.2"))
 		}
-		next.configTab = configTabKeys
+		next.configTab = configTabGateways
 		next.configNotice = "No models in catalog for " + msg.providerID + " — try another gateway"
 		return next, cmd
 	}
