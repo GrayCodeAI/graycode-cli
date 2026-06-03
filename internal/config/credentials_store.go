@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
 )
+
+var credentialDiscoveryPrepared sync.Once
 
 // PersistAPIKey saves a provider API key via eyrie (OS secret store).
 func PersistAPIKey(ctx context.Context, envKey, secret string) error {
@@ -28,12 +31,15 @@ func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	return nil
 }
 
-// PrepareCredentialDiscovery migrates any legacy ~/.hawk/env keys into the OS secret store.
+// PrepareCredentialDiscovery migrates any legacy ~/.hawk/env keys into the OS secret store (once per process).
 func PrepareCredentialDiscovery(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_, _ = credentials.MigrateLegacyEnvFile(ctx)
+	credentialDiscoveryPrepared.Do(func() {
+		_, _ = credentials.MigrateLegacyEnvFile(ctx)
+	})
+	ApplyXiaomiTokenPlanRegionEnv(ctx)
 }
 
 // ModelOption is one hawk /config model row.
@@ -61,7 +67,7 @@ type CredentialProviderOption struct {
 	Rank         int
 }
 
-// CredentialResolveResult is eyrie paste-key resolution (all providers + inferred hints).
+// CredentialResolveResult is eyrie paste-key resolution (format check + full provider list; no prefix inference).
 type CredentialResolveResult struct {
 	FormatOK                bool
 	FormatError             string
@@ -112,6 +118,19 @@ func SaveCredential(ctx context.Context, inference CredentialInference, secret s
 	}
 	InvalidateConfigUICache()
 	return nil
+}
+
+// HasStoredCredentialForProvider reports whether the OS secret store has a key for this gateway.
+func HasStoredCredentialForProvider(ctx context.Context, providerID string) bool {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	for _, envKey := range credentialEnvKeysForTarget(providerID) {
+		if credentials.HasSecret(ctx, envKey) {
+			return true
+		}
+	}
+	return false
 }
 
 // ConfiguredCredentialProviders returns setup gateways with a stored API key.
@@ -199,7 +218,7 @@ func maskCredentialSecret(secret string) string {
 
 // CredentialInferenceForProvider returns save metadata for a gateway chosen in /config.
 func CredentialInferenceForProvider(providerID string) (CredentialInference, error) {
-	providerID = catalogProviderID(normalizeProviderName(strings.TrimSpace(providerID)))
+	providerID = setupGatewayRegistryID(providerID)
 	inf, err := runtime.InferenceForProvider(providerID)
 	if err != nil {
 		return CredentialInference{}, err
@@ -216,7 +235,7 @@ func credentialEnvKeysForTarget(target string) []string {
 	if strings.Contains(target, "_") && strings.ToUpper(target) == target {
 		return []string{strings.TrimSpace(target)}
 	}
-	provider := catalogProviderID(normalizeProviderName(target))
+	provider := setupGatewayRegistryID(target)
 	seen := map[string]struct{}{}
 	var keys []string
 	add := func(k string) {
@@ -229,6 +248,9 @@ func credentialEnvKeysForTarget(target string) []string {
 		}
 		seen[k] = struct{}{}
 		keys = append(keys, k)
+	}
+	if env := SetupGatewayCredentialEnv(provider); env != "" {
+		add(env)
 	}
 	if primary := ProviderAPIKeyEnv(provider); primary != "" {
 		add(primary)

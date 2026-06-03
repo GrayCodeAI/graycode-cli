@@ -4,10 +4,26 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 func TestRenderStatusBar_SignatureExists(t *testing.T) {
 	var _ func(*chatModel, int) string = renderStatusBar
+}
+
+func TestRenderStatusBarRight_IncludesTokensLabel(t *testing.T) {
+	m := &chatModel{session: &engine.Session{}}
+	m.session.Cost.PromptTokens = 1200
+	m.session.Cost.CompletionTokens = 300
+	got := renderStatusBarRight(m)
+	if !strings.Contains(got, "tokens") {
+		t.Fatalf("expected tokens label in footer right, got %q", got)
+	}
+	if !strings.Contains(got, "●") {
+		t.Fatalf("expected bullet prefix, got %q", got)
+	}
 }
 
 func TestShortenHomePath(t *testing.T) {
@@ -41,14 +57,22 @@ func TestFormatTokenCountWithCommas(t *testing.T) {
 	}
 }
 
-func TestPadStatusBarLine(t *testing.T) {
+func TestLayoutFooterRow_NoWrap(t *testing.T) {
 	left := "left"
 	right := "right"
-	result := padStatusBarLine(left, right, len(left), len(right), 20)
-	if len(result) != 20 {
-		t.Fatalf("expected width 20, got %d (%q)", len(result), result)
+	result := layoutFooterRow(left, right, 20)
+	if lipgloss.Width(result) > 20 {
+		t.Fatalf("expected visual width <= 20, got %q", result)
 	}
 	if !strings.HasPrefix(result, left) || !strings.HasSuffix(result, right) {
 		t.Fatalf("unexpected layout: %q", result)
+	}
+}
+
+func TestLayoutFooterRow_TruncatesOverflow(t *testing.T) {
+	long := strings.Repeat("x", 80)
+	result := layoutFooterRow("ok", long, 40)
+	if lipgloss.Width(result) > 40 {
+		t.Fatalf("footer row overflow: width=%d", lipgloss.Width(result))
 	}
 }

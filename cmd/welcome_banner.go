@@ -32,7 +32,7 @@ var hawkLogoArtLines = []string{
 const (
 	hawkBlockCellW     = 8
 	hawkBlockLetterGap = 1
-	hawkBlockWordGap   = 2
+	hawkBlockWordGap   = 4
 )
 
 // welcomeWordLines — "WELCOME" block (row-aligned, fixed grid).

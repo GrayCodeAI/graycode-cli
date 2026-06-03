@@ -63,6 +63,9 @@ func saveOllamaAsync(baseURL string) tea.Cmd {
 func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
+		if inference.ProviderID == hawkconfig.ProviderXiaomiTokenPlan {
+			hawkconfig.ApplyXiaomiTokenPlanRegionEnv(ctx)
+		}
 		rtInf := config.InferenceFromOption(credentialOptionFromHawk(inference))
 		if err := runtime.SaveCredential(ctx, rtInf, secret); err != nil {
 			return configApplyCredentialsMsg{
@@ -146,15 +149,22 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg) (chatModel, tea.Cmd) {
 	m.configSaving = false
 	ctx := context.Background()
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 	if msg.err != nil {
-		hawkconfig.RefreshConfigCredSnapshot(ctx)
 		m.invalidateConnStatus()
 		if msg.providerID == configProviderOllama {
 			return m.returnToOllamaURLAfterError(msg.err)
 		}
 		notice := sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.providerID, msg.err))
-		if hawkconfig.HasConfiguredDeploymentCached(ctx) {
-			notice = "Key saved — " + notice + " · retry in Gateways or Models tab"
+		saved := hawkconfig.HasStoredCredentialForProvider(ctx, msg.providerID) ||
+			strings.Contains(strings.ToLower(msg.err.Error()), "key saved in keychain")
+		if saved {
+			notice = "Key saved in " + credentialsStoreLabel() + " — provider rejected this key: " + notice
+			if !strings.Contains(strings.ToLower(notice), "refresh") {
+				notice += " · press r on " + hawkconfig.GatewayDisplayName(msg.providerID) + " to retry"
+			}
+		} else {
+			notice = "Could not save key — " + notice
 		}
 		m.configNotice = notice
 		m.configTab = configTabGateways
@@ -203,7 +213,6 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	next.configSel = 0
 	next.configScroll = 0
 	next.configModelOptions = msg.modelOptions
-	next.configNotice = "Gateway: " + msg.providerID + " — pick a model"
 	return next, cmd
 }
 

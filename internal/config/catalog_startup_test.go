@@ -11,6 +11,7 @@ import (
 )
 
 func TestCatalogReady_MissingCache(t *testing.T) {
+	InvalidateCatalogHealthCache()
 	dir := t.TempDir()
 	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	if CatalogReady(context.Background()) {
@@ -19,6 +20,7 @@ func TestCatalogReady_MissingCache(t *testing.T) {
 }
 
 func TestCatalogReady_WithCache(t *testing.T) {
+	InvalidateCatalogHealthCache()
 	catalogtest.Install(t)
 	h := CatalogHealthReport(context.Background())
 	if h.Error != "" || h.Models == 0 {

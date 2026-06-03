@@ -208,4 +208,10 @@ const (
 
 	// Star (used in config tabs to mark "highlighted" rows).
 	iconStar = "★"
+
+	// quitFooterHint — exit hint in splash/footer chrome (work TUI uses double Ctrl+C).
+	quitFooterHint = "ctrl+c · quit"
+
+	// quitAgainMsg — shown in chat when the user presses Ctrl+C once.
+	quitAgainMsg = "Press Ctrl+C again to quit."
 )

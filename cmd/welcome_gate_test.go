@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/viewport"
+
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -61,10 +64,51 @@ func TestRenderWelcomeGate_QuitHintNotTruncated(t *testing.T) {
 		height:       24,
 		phase:        phaseWelcomeGate,
 		welcomeCache: buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil, true),
+		input:        textarea.New(),
+		viewport:     viewport.New(80, 8),
 	}
 	out := m.renderWelcomeGate(80, 24)
 	if !strings.Contains(out, quitFooterHint) {
 		t.Fatalf("quit hint should be fully visible, got:\n%s", out)
+	}
+}
+
+func TestRenderWelcomeGate_ChromeAnchorsBottom(t *testing.T) {
+	m := chatModel{
+		width:        80,
+		height:       30,
+		phase:        phaseWelcomeGate,
+		welcomeCache: buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil, true),
+	}
+	out := m.renderWelcomeGate(80, 30)
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) == 0 || !strings.Contains(lines[len(lines)-1], quitFooterHint) {
+		t.Fatalf("welcome gate chrome should anchor to bottom, got:\n%s", out)
+	}
+}
+
+func TestEnterWorkPhase_DismissesWelcomeHeader(t *testing.T) {
+	ta := textarea.New()
+	ta.SetHeight(1)
+	ta.SetWidth(76)
+	m := chatModel{
+		width:        80,
+		height:       24,
+		phase:        phaseWelcomeGate,
+		welcomeCache: buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, nil, true),
+		input:        ta,
+		viewport:     viewport.New(80, 8),
+	}
+	next, _ := m.enterWorkPhase()
+	if next.phase != phaseWork {
+		t.Fatal("enter should move welcome gate to work phase")
+	}
+	if next.welcomeCache != "" || !next.welcomeDismissed {
+		t.Fatalf("enter should dismiss welcome cache, dismissed=%v cache=%q", next.welcomeDismissed, next.welcomeCache)
+	}
+	next.rebuildWelcomeCache(false)
+	if next.welcomeCache != "" {
+		t.Fatalf("dismissed welcome should not rebuild in work phase:\n%s", next.welcomeCache)
 	}
 }
 

@@ -65,8 +65,9 @@ func AllSetupGateways() []string {
 }
 
 // setupGatewayRegistryID maps catalog/engine aliases to credential registry gateway ids.
+// Registry ids keep underscores (e.g. xiaomi_mimo); do not hyphenate via normalizeProviderName.
 func setupGatewayRegistryID(provider string) string {
-	p := normalizeProviderName(provider)
+	p := strings.ToLower(strings.TrimSpace(provider))
 	switch p {
 	case "google":
 		return "gemini"
@@ -74,9 +75,24 @@ func setupGatewayRegistryID(provider string) string {
 		return "grok"
 	case "zai":
 		return "z-ai"
+	case "xiaomi_mimo", "xiaomi-mimo":
+		return "xiaomi_mimo_payg"
+	case "xiaomi_mimo_token_plan", "xiaomi-mimo-token-plan":
+		return "xiaomi_mimo_token_plan"
+	case "xiaomi_mimo_payg", "xiaomi-mimo-payg":
+		return "xiaomi_mimo_payg"
 	default:
 		return p
 	}
+}
+
+// SetupGatewayCredentialEnv returns the registry env var for a setup gateway (e.g. XIAOMI_MIMO_API_KEY).
+func SetupGatewayCredentialEnv(providerID string) string {
+	spec, ok := registry.DefaultRegistry.Get(setupGatewayRegistryID(providerID))
+	if !ok || !spec.RequiresKey {
+		return ""
+	}
+	return strings.TrimSpace(spec.CredentialEnv)
 }
 
 // IsSetupGateway reports whether id is a registered setup gateway.

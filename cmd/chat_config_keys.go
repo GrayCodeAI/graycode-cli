@@ -46,6 +46,13 @@ func (m chatModel) configKeyDetailView() string {
 	b.WriteString(mutedStyle.Render("  Gateway: ") + accentStyle.Render(displayName) + "\n")
 	b.WriteString(mutedStyle.Render("  Key: ") + activeStyle.Render(masked) + "\n")
 	b.WriteString(mutedStyle.Render("  Stored in: "+credentialsStoreLabel()) + "\n")
+	if provider == hawkconfig.ProviderXiaomiTokenPlan {
+		reg := hawkconfig.XiaomiTokenPlanRegionLabel()
+		if reg == "" {
+			reg = "(not set — press g)"
+		}
+		b.WriteString(mutedStyle.Render("  Region: ") + accentStyle.Render(reg) + "\n")
+	}
 	return m.configTabShellView(b.String())
 }
 
@@ -63,12 +70,21 @@ func (m chatModel) startConfigKeyForProvider(provider string) (chatModel, tea.Cm
 	if provider == "" {
 		return m, nil
 	}
+	if provider == hawkconfig.ProviderXiaomiTokenPlan {
+		if hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
+			return m.startConfigXiaomiTokenPlanRegion(), nil
+		}
+	}
 	name := hawkconfig.GatewayDisplayName(provider)
 	m.configNotice = "Paste API key for " + name
 	return m.startConfigEntry(configEntryAPIKeyPaste, provider)
 }
 
 func (m chatModel) startConfigKeyReplace(provider string) (chatModel, tea.Cmd) {
+	if provider == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
+		m.configPostSaveKeysProvider = provider
+		return m.startConfigXiaomiTokenPlanRegion(), nil
+	}
 	m.configReplaceProvider = provider
 	m.configEntry = configEntryNone
 	m.configNotice = "Paste replacement API key for " + hawkconfig.GatewayDisplayName(provider)
@@ -148,7 +164,12 @@ func (m chatModel) handleConfigKeyViewKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		return m.startConfigKeyReplace(provider)
+	case tea.KeyRunes:
+		if provider == hawkconfig.ProviderXiaomiTokenPlan && strings.EqualFold(string(msg.Runes), "g") {
+			return m.startConfigXiaomiTokenPlanRegion(), nil
+		}
 	default:
 		return m, nil
 	}
+	return m, nil
 }

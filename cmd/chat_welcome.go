@@ -48,6 +48,10 @@ func (m chatModel) welcomeDockerRunning() *bool {
 }
 
 func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
+	if m.welcomeDismissed && !m.onWelcomeGate() {
+		m.welcomeCache = ""
+		return
+	}
 	width := m.width
 	if width <= 0 {
 		width = 80
@@ -69,11 +73,10 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	// Indicator colors — same as the rest of the TUI palette (success
 	// teal, error coral) so the ✓/× marks match the colors used
 	// elsewhere for success/error states.
-	greenC := "\033[38;2;78;205;196m"  // successTeal
-	redC := "\033[38;2;255;107;107m"   // errorCoral
-	amberC := "\033[38;2;255;179;71m"  // warnAmber
-	dockerC := "\033[38;2;59;170;218m" // containerBlue — Docker label
-	sepC := "\033[38;2;102;102;102m"   // textDisabled — chip separators
+	greenC := "\033[38;2;78;205;196m" // successTeal
+	redC := "\033[38;2;255;107;107m"  // errorCoral
+	amberC := "\033[38;2;255;179;71m" // warnAmber
+	sepC := "\033[38;2;102;102;102m"  // textDisabled — chip separators
 	rst := "\033[0m"
 
 	totalW := width
@@ -158,10 +161,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 			b.WriteString("\n" + center(len(hint), amberC+hint+rst) + "\n")
 		}
 	}
-	if forGate {
-		tip := "ctrl+k command palette  ·  /help quick reference"
-		b.WriteString("\n" + center(len(tip), mutedC+tip+rst) + "\n")
-	} else if !needsSetup {
+	if !forGate && !needsSetup {
 		tip := "TIP: /help commands · /model to switch"
 		b.WriteString("\n" + center(len(tip), boldC+tip+rst) + "\n")
 		shortcutsPlain := "Tab scrollback · Up/Dn · PgUp/PgDn · /home · /ctx · ctrl+N · ctrl+L"
@@ -171,28 +171,38 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
 
+	skillsOK := false
+	mcpOK := mcpCount > 0
+	agentsOK := hawkconfig.LoadAgentsMD() != ""
+
 	skillMark := redC + "×" + rst
 	mcpMark := greenC + "✓" + rst
 	if mcpCount == 0 {
 		mcpMark = redC + "×" + rst
 	}
 	hawkMark := greenC + "✓" + rst
-	if hawkconfig.LoadAgentsMD() == "" {
+	if !agentsOK {
 		hawkMark = redC + "×" + rst
 	}
 
-	gateChip := func(label string, count int, mark string) string {
-		return mark + " " + mutedC + label + rst + " " + bodyC + fmt.Sprintf("%d", count) + rst
+	gateMarkBox := func(ok bool) string {
+		if ok {
+			return greenC + "✓" + rst
+		}
+		return redC + "×" + rst
+	}
+	gateChip := func(label string, count int, ok bool) string {
+		return gateMarkBox(ok) + " " + mutedC + label + rst + " " + mutedC + "(" + rst + bodyC + fmt.Sprintf("%d", count) + rst + mutedC + ")" + rst
 	}
 	gateChipPlain := func(label string, count int) string {
-		return "x " + label + " " + fmt.Sprintf("%d", count)
+		return "x " + label + " (" + fmt.Sprintf("%d", count) + ")"
 	}
 	if forGate {
 		chipSep := sepC + " · " + rst
-		agentsChip := hawkMark + " " + mutedC + "AGENTS" + rst
+		agentsChip := gateMarkBox(agentsOK) + " " + mutedC + "AGENTS" + rst
 		parts := []string{
-			gateChip("Skills", skillsCount, skillMark),
-			gateChip("MCP", mcpCount, mcpMark),
+			gateChip("Skills", skillsCount, skillsOK),
+			gateChip("MCP", mcpCount, mcpOK),
 			agentsChip,
 		}
 		plain := []string{
@@ -201,11 +211,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 			"x AGENTS",
 		}
 		if dockerRunning != nil {
-			dMark := redC + "×" + rst
-			if *dockerRunning {
-				dMark = greenC + "✓" + rst
-			}
-			parts = append(parts, dMark+" "+dockerC+"Docker"+rst)
+			parts = append(parts, gateMarkBox(*dockerRunning)+" "+mutedC+"Docker"+rst)
 			plain = append(plain, "x Docker")
 		}
 		indicators := strings.Join(parts, chipSep)

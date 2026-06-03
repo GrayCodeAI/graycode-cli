@@ -15,6 +15,9 @@ func ApplyEyrieCredentialsForProvider(ctx context.Context, providerID string) (*
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	PrepareCredentialDiscovery(ctx)
+	if providerID == ProviderXiaomiTokenPlan {
+		ApplyXiaomiTokenPlanRegionEnv(ctx)
+	}
 	result, err := setup.ApplyCredentialsForProvider(ctx, providerID, eyriecfg.DiscoveryCredentials(ctx))
 	if err != nil {
 		return nil, err
@@ -41,6 +44,9 @@ func RefreshGatewayCatalog(ctx context.Context, providerID string) (string, erro
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	PrepareCredentialDiscovery(ctx)
+	if providerID == ProviderXiaomiTokenPlan {
+		ApplyXiaomiTokenPlanRegionEnv(ctx)
+	}
 	result, err := setup.DiscoverProviderCatalog(ctx, providerID, eyriecfg.DiscoveryCredentials(ctx))
 	if err != nil {
 		return "", err

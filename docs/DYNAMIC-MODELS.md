@@ -20,26 +20,30 @@ Model picker (eyrieclient.ListModels)
 
 Single source of truth: `eyrie/catalog/registry/providers.go`
 
-11 providers registered (see `providerSpecs()`):
+12 setup gateways registered (see `providerSpecs()` in eyrie):
 
-| Provider | ID | Credential | Strategy |
-|----------|----|------------|----------|
-| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | remote_then_live |
-| OpenAI | `openai` | `OPENAI_API_KEY` | remote_then_live |
-| Google Gemini | `gemini` | `GEMINI_API_KEY` | remote_then_live |
-| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` | live_only |
-| xAI (Grok) | `grok` | `XAI_API_KEY` | remote_then_live |
-| Z.AI | `z-ai` | `ZAI_API_KEY` | live_only |
-| CanopyWave | `canopywave` | `CANOPYWAVE_API_KEY` | live_only |
-| OpenCode Go | `opencodego` | `OPENCODEGO_API_KEY` | remote_then_live |
-| Kimi (Moonshot) | `kimi` | `MOONSHOT_API_KEY` | live_only |
-| Xiaomi (MiMo) | `xiaomi` | `XIAOMI_API_KEY` | live_only |
-| Ollama (local) | `ollama` | `OLLAMA_BASE_URL` | live_only |
+| Provider | ID | Credential |
+|----------|----|------------|
+| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` |
+| OpenAI | `openai` | `OPENAI_API_KEY` |
+| Google Gemini | `gemini` | `GEMINI_API_KEY` |
+| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
+| xAI (Grok) | `grok` | `XAI_API_KEY` |
+| Z.AI | `z-ai` | `ZAI_API_KEY` |
+| CanopyWave | `canopywave` | `CANOPYWAVE_API_KEY` |
+| OpenCode Go | `opencodego` | `OPENCODEGO_API_KEY` |
+| Kimi (Moonshot) | `kimi` | `MOONSHOT_API_KEY` |
+| Xiaomi (MiMo) Pay-as-you-go | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
+| Xiaomi (MiMo) Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` |
+| Ollama (local) | `ollama` | `OLLAMA_BASE_URL` |
 
-### Model strategies
+### Xiaomi MiMo
 
-- **remote_then_live**: Models come from the published remote catalog, enriched with live API data (pricing, context windows, capabilities) when credentials are present.
-- **live_only**: Models come exclusively from the live provider API. Without credentials, zero models are available. The remote catalog may seed initial entries but they are replaced entirely on live fetch.
+Two `/config` gateway rows (not one). Each product uses a **single key** for both OpenAI-compat (`/v1/chat/completions`) and Anthropic-compat (`/v1/messages`) on the matching host. Token Plan requires region `cn`, `sgp`, or `ams` before paste. Legacy `XIAOMI_MIMO_API_KEY` maps to pay-as-you-go. Details: `eyrie/docs/guides/CREDENTIAL-SETUP-FLOW.md` (MiMo section).
+
+### Model discovery (all gateways)
+
+Every setup gateway lists models from the provider’s live API (or Ollama tags) only. Without credentials (or Ollama URL), zero models. After paste/save, `/config` probes and `ListModels` hits the live fetcher only. There is no remote-catalog bootstrap for picker models.
 
 ## Hawk API (via `internal/eyrieclient`)
 
@@ -75,10 +79,10 @@ report := eyrieclient.StorageReportFor(ctx)
 ### Model listing
 
 ```go
-// Unified model listing — auto-selects cache or live
+// Unified model listing — live API for setup providers
 models, err := eyrieclient.ListModels(ctx, eyrieclient.ListModelsOpts{
     ProviderID: "anthropic",
-    Source:     eyrieclient.ListSourceAuto, // or Cache / Live
+    Source:     eyrieclient.ListSourceAuto, // live for registry providers
 })
 
 // Shortcut for single provider
@@ -98,8 +102,7 @@ sess := eyrieclient.NewHawkSession(ctx, useDeploymentRouting, provider, model, s
 2. Add `CredentialsEnvFallbacks` if the API key has known alternative env var names
 3. If live list API exists: implement fetcher in `catalog/live/fetchers.go` and register in `Registry` map
 4. Add live fetcher key to the provider spec (`LiveFetcherKey`)
-5. Ensure models exist in remote catalog JSON (unless `StrategyLiveOnly`)
-6. Add probe base URL for credential validation
+5. Add probe base URL for credential validation
 7. No hawk code changes needed
 
 ## Testing model discovery

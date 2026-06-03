@@ -3,58 +3,10 @@ hawk
 *.exe
 *.dll
 *.so
-*.dylib
 
-# Test
-*.test
-*.out
-coverage.txt
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Build
-dist/
-.gocache/
-.gomodcache/
-go.work.sum.hawk/
-inspect-action
-*.test
-tool.test
-
-.hawk/snapshots
-engine/.hawk/
-cmd/.hawk/
-.hawk/
-
-# Yaad memory (local project data)
-.yaad/
-
-# CodeGraph local index
-.codegraph/
-# CodeGraph integrated
-
-# AI/IDE tool configs
+# Dev tool state
 .claude/
-.cursor/
-.openclaude/
-.commandcode/
-.antigravitycli/
-.pi/
-testdata/compat-test
-bin/
-.shared-templates/
+.codegraph/
 
-# Go workspace is committed because CI's `module hygiene` job runs
-# `go work sync` + `-mod=readonly` build and asserts no diff against
-# the committed files. See .github/workflows/ci.yml.
-# (go.work.sum.hawk/ is a per-test artifact and stays ignored.)
-go.work.sum.hawk/
+# Cache / local data
+*.codegraph.db
