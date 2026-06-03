@@ -22,8 +22,9 @@ func (s *Session) ShouldAutoCompact() bool {
 	for _, msg := range s.messages {
 		totalTokens += tok.EstimateTokens(msg.Content)
 	}
-	// Compact if approaching 80% of typical context window (128K tokens)
-	return totalTokens > 100000
+	window := s.ContextWindowSize()
+	threshold := window * s.compactThresholdPct() / 100
+	return totalTokens > threshold
 }
 
 // AutoCompactIfNeeded runs compaction when the conversation exceeds the threshold.
