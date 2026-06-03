@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -55,28 +54,30 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, tea.Quit
 
 	case "/clear":
+		if m.manualCompacting {
+			return m.cancelManualCompact("Compaction cancelled.")
+		}
 		// Cancel any running /loop goroutine.
 		if m.loopCancel != nil {
 			m.loopCancel()
 			m.loopCancel = nil
 		}
-		m.messages = nil
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Conversation cleared."})
+		m.messages = []displayMsg{{role: "system", content: "Conversation cleared."}}
+		m.viewDirty = true
+		m.autoScroll = false
 		return m, nil
 
 	case "/compact":
-		before := m.session.MessageCount()
-		strat, tokBefore, tokAfter, err := m.session.CompactConversation(context.Background())
-		after := m.session.MessageCount()
-		msg := fmt.Sprintf("Compacted (%s): %d → %d messages, ~%dk → ~%dk tokens", strat, before, after, tokBefore/1000, tokAfter/1000)
-		if err != nil {
-			msg = fmt.Sprintf("Compacted with fallback: %d → %d messages", before, after)
+		if m.manualCompacting {
+			return m.cancelManualCompact("Compaction cancelled.")
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: msg})
-		m.compacting = false
-		m.brailleSpinner.SetLabel(m.spinnerVerb)
-		m.invalidateConnStatus()
-		return m, nil
+		if m.waiting {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Wait for the current response to finish, then run /compact."})
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
+		}
+		return m.startManualCompact()
 
 	case "/history":
 		entries, err := session.List()
@@ -105,7 +106,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 				return m, nil
 			}
 			m.sessionID = s.ID
-			m.messages = nil
+			m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
 			var msgs []client.EyrieMessage
 			for _, sm := range s.Messages {
 				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
@@ -123,6 +124,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			}
 			m.session.LoadMessages(msgs)
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Recovered: %s\nSession %s ready (%d msgs)", note, s.ID, len(s.Messages))})
+			m.viewDirty = true
+			m.autoScroll = false
 			return m, nil
 		}
 		// List candidates
@@ -151,7 +154,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			return m, nil
 		}
 		m.sessionID = saved.ID
-		m.messages = nil
+		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
 		var msgs []client.EyrieMessage
 		for _, sm := range saved.Messages {
 			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
@@ -169,6 +172,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		}
 		m.session.LoadMessages(msgs)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resumed session %s", saved.ID)})
+		m.viewDirty = true
+		m.autoScroll = false
 		return m, nil
 
 	case "/fork":

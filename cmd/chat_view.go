@@ -46,19 +46,10 @@ func renderSetupCompleteMessage(model string) string {
 	)
 }
 
-// welcomeHeader returns the full logo before chat, then a one-line banner after.
+// welcomeHeader returns the welcome text for /config overlay only (main TUI uses a fixed pane).
 func (m chatModel) welcomeHeader() string {
 	if !m.showWelcomeBanner() {
 		return ""
-	}
-	for _, msg := range m.messages {
-		if msg.role == "welcome" {
-			return m.welcomeCache + "\n\n"
-		}
-	}
-	if m.hasChatMessages() {
-		line := fmt.Sprintf("hawk %s · /help · /welcome for startup screen", DisplayVersion())
-		return dimStyle.Render(line) + "\n\n"
 	}
 	return m.welcomeCache + "\n\n"
 }
@@ -218,21 +209,30 @@ func wrapText(text string, width int, prefixWidth int) string {
 
 // chatBottomBarLines counts fixed rows below the chat viewport (must stay in sync with View).
 func (m chatModel) chatBottomBarLines() int {
+	if m.onWelcomeGate() {
+		return 0 // gate draws its own footer inside renderWelcomeGate
+	}
 	if m.configOpen {
 		return 0
 	}
-	inputLines := strings.Count(m.input.Value(), "\n") + 1
-	if inputLines > 10 {
-		inputLines = 10
+	footerW := m.width
+	if footerW < 40 {
+		footerW = 80
 	}
-	slashOpen := m.slashMenuOpen()
-	lines := 1 + 2 + inputLines // container/model row + input box borders + content
-	if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
-		lines++
+	inputBoxLines := m.measureInputBoxLines(footerW)
+	lines := 1 + inputBoxLines // container/model row + input box (measured)
+	if m.ghostText != nil {
+		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
+			lines++
+		}
 	}
 	lines += m.visibleSlashSuggestionLines()
-	if !slashOpen {
-		lines++ // session stats row below input
+	lines++ // session stats row (always shown — tokens · cost · duration)
+	if m.manualCompacting {
+		lines += 2 // "Compacting conversation..." + progress bar
+	}
+	if m.inScrollbackFocus() {
+		lines++ // scrollback focus hint
 	}
 	return lines
 }
@@ -243,28 +243,20 @@ func (m *chatModel) updateViewportContent() {
 		viewWidth = 80
 	}
 
-	// Always recalculate viewport height to track input box size changes
-	bottomBarLines := m.chatBottomBarLines()
-	newVPHeight := m.height - bottomBarLines
-	if newVPHeight < 4 {
-		newVPHeight = 4
-	}
-	if m.viewport.Height != newVPHeight {
-		m.viewport.Height = newVPHeight
-		m.viewport.Width = viewWidth
-	}
+	*m = m.withSyncedLayout()
 
 	if !m.viewDirty {
 		return
 	}
 	m.viewDirty = false
 
-	// /config overlay: skip rebuilding full chat history (keep welcome on first run).
+	if m.onWelcomeGate() {
+		return
+	}
+
+	// /config overlay: config panel only (welcome was on the gate, not repeated here).
 	if m.configOpen {
 		var content strings.Builder
-		if m.showWelcomeBanner() {
-			content.WriteString(m.welcomeHeader())
-		}
 		content.WriteString(m.configPanelView())
 		m.viewport.SetContent(content.String())
 		return
@@ -275,9 +267,6 @@ func (m *chatModel) updateViewportContent() {
 	bgDark := "\033[48;2;30;30;40m"
 
 	var chatContent strings.Builder
-	if m.showWelcomeBanner() {
-		chatContent.WriteString(m.welcomeHeader())
-	}
 
 	for i, msg := range m.messages {
 		switch msg.role {
@@ -344,7 +333,8 @@ func (m *chatModel) updateViewportContent() {
 					chatContent.WriteString("    " + reflStyled)
 				}
 			} else {
-				toolWrapped := wrapText(msg.content, viewWidth-6, 0)
+				display := formatToolResultDisplay(msg.content)
+				toolWrapped := wrapText(display, viewWidth-6, 0)
 				chatContent.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
 			}
 		case "thinking":
@@ -380,7 +370,7 @@ func (m *chatModel) updateViewportContent() {
 		}
 	}
 
-	if m.waiting {
+	if m.waiting && !m.manualCompacting {
 		partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
 		if partial != "" {
 			chatContent.WriteString(hawkC + iconAssistantPrefix + " " + rst + renderMarkdown(partial, viewWidth-3))
@@ -391,10 +381,20 @@ func (m *chatModel) updateViewportContent() {
 	}
 
 	atBottom := m.viewport.AtBottom()
+	preserveScroll := !m.autoScroll && !atBottom
+	prevYOffset := m.viewport.YOffset
 	contentStr := chatContent.String()
+	m.contentLines = strings.Count(contentStr, "\n") + 1
+	if m.contentLines < 1 {
+		m.contentLines = 1
+	}
 
 	m.viewport.SetContent(contentStr)
-	if atBottom || m.autoScroll {
+	m.viewport.Width = m.chatViewportWidth(viewWidth)
+	switch {
+	case preserveScroll:
+		m.viewport.SetYOffset(prevYOffset)
+	case atBottom || (m.autoScroll && m.streamFollow):
 		m.viewport.GotoBottom()
 	}
 }
@@ -403,14 +403,26 @@ func (m chatModel) View() string {
 	if m.quitting {
 		return ""
 	}
+	m = m.withSyncedLayout()
 
 	viewWidth := m.width
+	viewHeight := m.height
 	if viewWidth <= 0 {
-		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
 			viewWidth = w
+			if h > 0 {
+				viewHeight = h
+			}
 		} else {
 			viewWidth = 80
 		}
+	}
+	if viewHeight <= 0 {
+		viewHeight = 24
+	}
+
+	if m.onWelcomeGate() {
+		return m.renderWelcomeGate(viewWidth, viewHeight)
 	}
 
 	// Build the fixed bottom bar
@@ -422,35 +434,37 @@ func (m chatModel) View() string {
 			totalW = 80
 		}
 		slashOpen := m.slashMenuOpen()
-		leftRendered, leftVisLen := renderContainerFooterLeft(m)
-		modelRendered, modelVisLen, ctxRendered, ctxVisLen := m.renderConnectionStatusSplit()
-		const ctxSepVis = 3
-		rightVisLen := modelVisLen + ctxVisLen
-		if ctxVisLen > 0 && modelVisLen > 0 {
-			rightVisLen += ctxSepVis
-		}
-		gap := totalW - leftVisLen - rightVisLen
-		if gap < 1 {
-			gap = 1
-		}
+		footerW := m.footerContentWidth(totalW)
+		leftRendered := renderContainerFooterLeft(m)
+		modelRendered, _, ctxRendered, ctxVisLen := m.renderConnectionStatusSplit()
 		rightLine := modelRendered
 		if ctxVisLen > 0 {
-			if modelVisLen > 0 {
+			if modelRendered != "" {
 				rightLine += configMutedStyle().Inline(true).Render(" · ")
 			}
 			rightLine += ctxRendered
 		}
-		bottomBar.WriteString(leftRendered + strings.Repeat(" ", gap) + rightLine + "\n")
-		inputBox := inputBorderStyle.Width(totalW).Render(func() string {
+		topRow := layoutFooterRow(leftRendered, rightLine, footerW)
+		bottomBar.WriteString(m.finishFooterLine(topRow, totalW) + "\n")
+		if m.manualCompacting {
+			compactLine := clipFooterLine(m.renderCompactProgressPanel(footerW), footerW)
+			bottomBar.WriteString(m.finishFooterLine(compactLine, totalW) + "\n")
+		}
+		if bar := m.renderScrollbackFocusBar(footerW); bar != "" {
+			bottomBar.WriteString(m.finishFooterLine(bar, totalW) + "\n")
+		}
+		inputBox := inputBorderStyle.Width(footerW).Render(func() string {
 			if m.useConfigInput {
 				return m.configInput.View()
 			}
 			return m.input.View()
 		}())
 		bottomBar.WriteString(inputBox + "\n")
-		// Ghost text suggestion (shown below input when active)
-		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
-			bottomBar.WriteString(ghostHintStyle.Render("  → "+ghost+" (Tab to accept)") + "\n")
+		if m.ghostText != nil {
+			if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
+				ghostLine := ghostHintStyle.Render("  → " + ghost + " (Tab to accept)")
+				bottomBar.WriteString(m.finishFooterLine(ghostLine, totalW) + "\n")
+			}
 		}
 		if slashOpen {
 			if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
@@ -489,24 +503,37 @@ func (m chatModel) View() string {
 					}
 				}
 			}
-		} else {
-			bottomBar.WriteString(renderStatusBar(&m, totalW) + "\n")
 		}
+		stats := renderStatusBar(&m, footerW)
+		bottomBar.WriteString(m.finishFooterLine(stats, totalW) + "\n")
 	}
+
+	var frame strings.Builder
+	if welcome := m.renderFixedWelcomePane(viewWidth); welcome != "" {
+		frame.WriteString(welcome)
+		frame.WriteByte('\n')
+	}
+	frame.WriteString(m.renderChatPane())
 
 	// Command palette overlay
 	if m.commandPalette != nil && m.commandPalette.IsOpen() {
 		paletteView := m.commandPalette.Render(viewWidth)
-		return m.viewport.View() + "\n" + paletteView
+		frame.WriteByte('\n')
+		frame.WriteString(paletteView)
+		return frame.String()
 	}
 
 	// Agent Status HUD overlay
 	if m.hudOpen {
 		hudView := renderAgentStatusPanel(m.hudData, viewWidth)
-		return m.viewport.View() + "\n" + hudView
+		frame.WriteByte('\n')
+		frame.WriteString(hudView)
+		return frame.String()
 	}
 
-	return m.viewport.View() + "\n" + bottomBar.String()
+	frame.WriteByte('\n')
+	frame.WriteString(bottomBar.String())
+	return frame.String()
 }
 
 // renderPermissionBox renders a visually distinct permission prompt box.
