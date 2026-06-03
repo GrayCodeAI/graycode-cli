@@ -12,7 +12,7 @@ import (
 var updateGolden = flag.Bool("update-golden", false, "update golden files")
 
 func TestGoldenHelp(t *testing.T) {
-	SetVersion("0.2.0")
+	SetVersion("0.1.0")
 	SetBuildDate("test")
 
 	tests := []struct {

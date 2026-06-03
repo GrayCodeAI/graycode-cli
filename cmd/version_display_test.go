@@ -11,13 +11,13 @@ import (
 
 func TestDisplayVersion_FromVERSIONFile(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "VERSION"), []byte("0.2.0\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "VERSION"), []byte("0.1.0\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(dir)
 	SetVersion("dev")
-	if got := DisplayVersion(); got != "0.2.0" {
-		t.Fatalf("DisplayVersion() = %q, want 0.2.0", got)
+	if got := DisplayVersion(); got != "0.1.0" {
+		t.Fatalf("DisplayVersion() = %q, want 0.1.0", got)
 	}
 }
 
