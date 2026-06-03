@@ -74,7 +74,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: msg})
 		m.compacting = false
-		m.compactStatus = ""
+		m.brailleSpinner.SetLabel(m.spinnerVerb)
 		m.invalidateConnStatus()
 		return m, nil
 
