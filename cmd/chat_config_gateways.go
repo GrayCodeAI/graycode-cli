@@ -126,9 +126,11 @@ func (m chatModel) configGatewaysView() string {
 		if row.HasKey {
 			key = "✓"
 		}
-		models := "—"
-		if row.ModelCount > 0 {
+		models := "key required"
+		if row.HasKey && row.ModelCount > 0 {
 			models = fmt.Sprintf("%d", row.ModelCount)
+		} else if row.HasKey {
+			models = "—"
 		}
 		tableData[i] = []string{row.DisplayName, key, models, ""}
 		layoutData[i] = append([]string(nil), tableData[i]...)
@@ -173,7 +175,7 @@ func (m chatModel) configGatewaysView() string {
 	ctx := context.Background()
 	indent := strings.Repeat(" ", configTableIndent)
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		b.WriteString("\n" + mutedStyle.Render(indent+"Catalog = models in eyrie cache · add key in Keys tab to use them"))
+		b.WriteString("\n" + mutedStyle.Render(indent+"Catalog count appears after a saved key · key required to use a gateway"))
 	} else {
 		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "r refresh · enter select · ↓ refresh row"))
 	}
@@ -236,6 +238,13 @@ func (m chatModel) focusConfigActiveGateway() chatModel {
 	rows := m.configGatewayRows()
 	if i := m.activeGatewayRowIndex(rows); i >= 0 {
 		m.configGatewayFocus = i
+		m.configSel = i
+		if m.configSel < m.configScroll {
+			m.configScroll = m.configSel
+		}
+		if m.configSel >= m.configScroll+configWindowSize {
+			m.configScroll = m.configSel - configWindowSize + 1
+		}
 	}
 	return m
 }

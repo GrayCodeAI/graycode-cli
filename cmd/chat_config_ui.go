@@ -16,11 +16,9 @@ func configTitleStyle() lipgloss.Style {
 }
 
 func configSelectedStyle() lipgloss.Style {
-	// Brand orange (bold) — the selected item, matching the rest of
-	// the TUI's hawk voice. The title uses plain orange + bold so the
-	// selected item is visually heavier than the title, but the hue is
-	// the same.
-	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Underline(true)
+	// Brand orange (bold) marks the focused row. Keep it distinct from
+	// the active/current value, which uses configActiveStyle.
+	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 }
 
 func configAccentStyle() lipgloss.Style {
@@ -81,10 +79,9 @@ func renderConfigStatusLine(m chatModel) string {
 }
 
 func configActiveStyle() lipgloss.Style {
-	// The current gateway/model name in the status line — pink to match
-	// the active-selection color so the "current" indicator and the
-	// "focus" indicator share a visual language.
-	return lipgloss.NewStyle().Foreground(hawkColor)
+	// Current gateway/model value. Teal keeps "active/current" separate
+	// from the orange cursor selection.
+	return lipgloss.NewStyle().Foreground(successTeal).Bold(true)
 }
 
 func configRowStyle() lipgloss.Style {
@@ -142,6 +139,10 @@ func renderConfigNotice(notice string) string {
 
 func (m chatModel) configHelpLine() string {
 	muted := configMutedStyle()
+	indent := strings.Repeat(" ", configTableIndent)
+	renderMainHelp := func(text string) string {
+		return muted.Render(indent + text)
+	}
 	if m.configSaving {
 		return muted.Render(m.spinner.View() + " working…")
 	}
@@ -156,15 +157,15 @@ func (m chatModel) configHelpLine() string {
 	}
 	if m.configTab == configTabKeys && m.configKeysPendingRemove != "" {
 		if m.configKeysRemoveStep >= 2 {
-			return muted.Render("enter again to permanently remove · esc cancel")
+			return renderMainHelp("enter again to permanently remove · esc cancel")
 		}
-		return muted.Render("enter continue · esc cancel")
+		return renderMainHelp("enter continue · esc cancel")
 	}
 	if m.configTab == configTabModels {
 		if m.configModelSearchActive {
-			return muted.Render("↑/↓ navigate · enter select · esc clear search")
+			return renderMainHelp("↑/↓ navigate · enter select · esc clear search")
 		}
-		return muted.Render("↑/↓ navigate · enter select · / search · esc close")
+		return renderMainHelp("↑/↓ navigate · enter select · / search · esc close")
 	}
-	return muted.Render("←/→ tabs · ↑/↓ · enter · esc close")
+	return renderMainHelp("←/→ tabs · ↑/↓ · enter · esc close")
 }

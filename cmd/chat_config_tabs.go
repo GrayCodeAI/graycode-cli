@@ -141,5 +141,8 @@ func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 		m.configNotice = "Select Add API key · press enter · paste your key"
 		m.configSel = 0
 	}
+	if tab == configTabGateways {
+		m = m.focusConfigActiveGateway()
+	}
 	return m, nil
 }
