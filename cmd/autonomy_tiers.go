@@ -58,7 +58,7 @@ func autonomyTierDescription(level engine.AutonomyLevel) string {
 	case engine.AutonomyFull:
 		return "Auto shell — risky ops ask first"
 	case engine.AutonomyYOLO:
-		return "Few gates — trust this session"
+		return "Few asks — trust this session"
 	default:
 		return "Auto edits — shell asks first"
 	}

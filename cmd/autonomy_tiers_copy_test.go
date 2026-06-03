@@ -15,7 +15,7 @@ func TestAutonomyTierDescriptions_PlainLanguage(t *testing.T) {
 		{engine.AutonomyBasic, []string{"Look only", "shell ask"}},
 		{engine.AutonomySemi, []string{"Auto edits", "shell asks"}},
 		{engine.AutonomyFull, []string{"Auto shell", "risky"}},
-		{engine.AutonomyYOLO, []string{"Few gates", "trust"}},
+		{engine.AutonomyYOLO, []string{"Few asks", "trust"}},
 	}
 	for _, tc := range cases {
 		desc := autonomyTierDescription(tc.level)
