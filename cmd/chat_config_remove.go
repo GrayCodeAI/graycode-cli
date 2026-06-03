@@ -42,7 +42,7 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 		m.session.SetProvider("")
 		m.session.SetModel("")
 	}
-	m.configTab = configTabKeys
+	m.configTab = configTabGateways
 	m.configSel = 0
 	m.configScroll = 0
 	m.configNotice = fmt.Sprintf("Removed API key for %s", hawkconfig.GatewayDisplayName(msg.provider))
@@ -55,7 +55,7 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 }
 
 func (m chatModel) openConfigRemoveKeyPanel() (chatModel, tea.Cmd) {
-	next, cmd := m.openConfigAtTab(configTabKeys)
+	next, cmd := m.openConfigAtTab(configTabGateways)
 	if len(hawkconfig.ConfiguredCredentialProviders()) == 0 {
 		next.configNotice = "No stored API keys"
 	}

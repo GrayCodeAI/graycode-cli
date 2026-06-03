@@ -241,7 +241,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		maxTok := DynamicMaxTokens(s.messages, contextSize, taskType)
 
 		// Model cascade: select optimal model for this request
-		activeModel := s.model
+		activeModel := strings.TrimSpace(s.model)
+		if activeModel == "" {
+			activeModel = strings.TrimSpace(s.Cost.Model)
+		}
 		if s.Cascade != nil && s.Cascade.Enabled {
 			lastUserMsg := ""
 			for i := len(s.messages) - 1; i >= 0; i-- {
@@ -250,7 +253,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					break
 				}
 			}
-			activeModel = s.Cascade.SelectModel(lastUserMsg, s.model, "")
+			activeModel = s.Cascade.SelectModel(lastUserMsg, activeModel, "")
+		}
+		if strings.TrimSpace(activeModel) == "" {
+			ch <- StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"}
+			return
 		}
 
 		// Yaad: recall and refresh memories before every LLM call

@@ -55,6 +55,16 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 	return rows
 }
 
+func (m chatModel) configGatewayRowIndex(provider string) int {
+	provider = strings.TrimSpace(provider)
+	for i, row := range m.configGatewayRows() {
+		if row.ID == provider {
+			return i
+		}
+	}
+	return -1
+}
+
 func (m chatModel) activeGatewayRowIndex(rows []configGatewayRow) int {
 	for i, row := range rows {
 		if row.Active {
@@ -90,7 +100,7 @@ func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
 	idx := m.configGatewayRefreshTargetIndex(rows)
 	row := rows[idx]
 	if !row.HasKey {
-		m.configNotice = fmt.Sprintf("Add an API key for %s first — Keys tab → Add API key", row.DisplayName)
+		m.configNotice = fmt.Sprintf("Select %s and press enter to paste an API key", row.DisplayName)
 		return m, nil
 	}
 	m.configSaving = true
@@ -174,15 +184,43 @@ func (m chatModel) configGatewaysView() string {
 
 	ctx := context.Background()
 	indent := strings.Repeat(" ", configTableIndent)
-	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
-		b.WriteString("\n" + mutedStyle.Render(indent+"Catalog count appears after a saved key · key required to use a gateway"))
+	if m.configKeysPendingRemove != "" {
+		name := hawkconfig.GatewayDisplayName(m.configKeysPendingRemove)
+		b.WriteString("\n" + mutedStyle.Render(indent+configGatewayRemovePrompt(m.configKeysRemoveStep, name)))
+	} else if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
+		b.WriteString("\n" + mutedStyle.Render(indent+"Select a gateway · enter · paste API key · then Models tab"))
 	} else {
-		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "r refresh · enter select · ↓ refresh row"))
+		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, "enter use gateway · k view key · delete remove · r refresh"))
 	}
 	return m.configTabShellView(b.String())
 }
 
+func (m chatModel) selectedConfigGateway() (configGatewayRow, bool) {
+	rows := m.configGatewayRows()
+	if m.configSel < 0 || m.configSel >= len(rows) {
+		return configGatewayRow{}, false
+	}
+	return rows[m.configSel], true
+}
+
+func (m chatModel) handleConfigGatewaysDelete() chatModel {
+	if row, ok := m.selectedConfigGateway(); ok && row.HasKey {
+		return m.beginConfigGatewayKeyRemove(row.ID)
+	}
+	return m
+}
+
+func (m chatModel) handleConfigGatewaysEsc() chatModel {
+	if m.configKeysPendingRemove != "" {
+		return m.clearConfigGatewayKeyRemove()
+	}
+	return m.closeConfigPanel()
+}
+
 func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
+	if m.configKeysPendingRemove != "" {
+		return m.advanceConfigGatewayKeyRemove()
+	}
 	rows := m.configGatewayRows()
 	refreshIdx := len(rows)
 	if m.configSel == refreshIdx {
@@ -196,10 +234,8 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 		if row.ID == configProviderOllama {
 			return m.startConfigOllamaURL()
 		}
-		m.configTab = configTabKeys
-		m.configSel = m.configKeysAddRowIndex()
-		m.configNotice = fmt.Sprintf("Add an API key for %s first — Keys tab → Add API key", row.DisplayName)
-		return m, nil
+		m.configGatewayFocus = m.configSel
+		return m.startConfigKeyForProvider(row.ID)
 	}
 	gw := row.ID
 	m.configGatewayFocus = m.configSel

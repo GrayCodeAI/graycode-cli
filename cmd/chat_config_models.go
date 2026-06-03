@@ -20,6 +20,7 @@ type configModelOption struct {
 	ContextWindow    int
 	InputPricePer1M  float64
 	OutputPricePer1M float64
+	PriceKnown       bool
 }
 
 var (
@@ -80,6 +81,7 @@ func configModelOptionsFromEyrie(entries []runtime.ModelEntry) []configModelOpti
 			ContextWindow:    e.ContextWindow,
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
+			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
 		}
 	}
 	return opts
@@ -95,9 +97,31 @@ func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []config
 			ContextWindow:    e.ContextWindow,
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
+			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
 		}
 	}
 	return opts
+}
+
+func modelOptionPriceKnown(id, displayName string, input, output float64, contextWindow int) bool {
+	if input > 0 || output > 0 {
+		return true
+	}
+	if modelOptionLooksExplicitlyFree(id, displayName) {
+		return true
+	}
+	// OpenAI-compatible /models endpoints often omit pricing fields. If the
+	// catalog also carries context, a zero price is intentional catalog metadata;
+	// when both price and context are absent, keep price unknown.
+	return contextWindow > 0
+}
+
+func modelOptionLooksExplicitlyFree(id, displayName string) bool {
+	text := strings.ToLower(strings.TrimSpace(id) + " " + strings.TrimSpace(displayName))
+	return strings.Contains(text, ":free") ||
+		strings.Contains(text, "/free") ||
+		strings.HasSuffix(text, "-free") ||
+		strings.Contains(text, " free")
 }
 
 func filterConfigModelOptions(opts []configModelOption, query string) []configModelOption {
