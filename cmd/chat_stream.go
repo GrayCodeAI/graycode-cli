@@ -21,9 +21,6 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 
 func (m *chatModel) startStream() {
 	m.syncSessionSelection()
-	m.compacting = true
-	m.compactStatus = "Compacting context"
-	m.viewDirty = true
 	sess := m.session
 	ref := m.ref
 	ctx, cancel := context.WithCancel(context.Background())
@@ -46,6 +43,8 @@ func (m *chatModel) startStream() {
 				ref.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
 			case "blast_radius":
 				ref.Send(blastRadiusMsg{message: ev.Content})
+			case "compact_start":
+				ref.Send(compactStartMsg{})
 			case "compact":
 				ref.Send(compactMsg{
 					strategy:     ev.Content,

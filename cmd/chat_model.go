@@ -84,8 +84,9 @@ type (
 	blinkTickMsg       struct{}
 	spinnerVerbTickMsg struct{}
 	usageUpdateMsg     struct{ usage *engine.StreamUsage }
+	compactStartMsg    struct{}
 	compactMsg         struct {
-		strategy               string
+		strategy                  string
 		tokensBefore, tokensAfter int
 	}
 )
@@ -178,8 +179,7 @@ type chatModel struct {
 	// Reset each time the user submits a message; updated by usageUpdateMsg.
 	turnInputTokens  int
 	turnOutputTokens int
-	compacting       bool   // true while context governor runs
-	compactStatus    string // short label on spinner line
+	compacting bool // true while context governor runs (spinner label = Compacting context)
 	// Display values lerped toward the turn targets each render frame
 	// (factor 0.10). Smooths the counter animation.
 	displayInTok      float64
