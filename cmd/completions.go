@@ -6,9 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // FlagInfo describes a CLI flag for completion generation.
@@ -50,212 +54,19 @@ func NewCompletionGenerator() *CompletionGenerator {
 }
 
 func (g *CompletionGenerator) populateCommands() {
-	g.Commands = []CommandInfo{
-		{
-			Name:        "exec",
-			Description: "Execute a single command non-interactively",
-			Flags: []FlagInfo{
-				{Name: "output-format", Short: "o", Description: "Output format: text or json", Type: "string", Choices: []string{"text", "json"}},
-				{Name: "auto", Description: "Autonomy level", Type: "string", Choices: []string{"supervised", "basic", "semi", "full", "yolo"}},
-				{Name: "model", Short: "m", Description: "Model ID to use", Type: "string"},
-				{Name: "max-turns", Description: "Maximum agentic turns", Type: "int"},
-				{Name: "cwd", Description: "Working directory", Type: "string"},
-				{Name: "agent", Description: "Agent persona to use", Type: "string"},
-				{Name: "session-id", Short: "s", Description: "Continue an existing session", Type: "string"},
-			},
-		},
-		{
-			Name:        "daemon",
-			Description: "Start the hawk background daemon",
-		},
-		{
-			Name:        "mission",
-			Description: "Multi-agent orchestration on parallel git branches",
-		},
-		{
-			Name:        "search",
-			Description: "Search code using semantic and structural queries",
-		},
-		{
-			Name:        "agent",
-			Description: "Manage agent personas",
-		},
-		{
-			Name:        "doctor",
-			Description: "Run local diagnostics",
-		},
-		{
-			Name:        "config",
-			Description: "Show or update settings",
-			Subcommands: []CommandInfo{
-				{Name: "get", Description: "Get a setting value"},
-				{Name: "set", Description: "Set a setting value"},
-				{Name: "provider", Description: "Set the LLM provider"},
-				{Name: "model", Description: "Set the model"},
-				{Name: "keys", Description: "Show API key configuration"},
-			},
-		},
-		{
-			Name:        "sessions",
-			Description: "List saved sessions",
-		},
-		{
-			Name:        "tools",
-			Description: "List built-in tools",
-		},
-		{
-			Name:        "skills",
-			Description: "Manage skills",
-			Subcommands: []CommandInfo{
-				{Name: "list", Description: "List installed skills"},
-				{Name: "search", Description: "Search the community skill registry"},
-				{Name: "install", Description: "Install a skill"},
-				{Name: "remove", Description: "Remove a skill"},
-				{Name: "info", Description: "Show skill details"},
-				{Name: "trending", Description: "Show trending skills"},
-				{Name: "audit", Description: "Audit installed skills"},
-			},
-		},
-		{
-			Name:        "completion",
-			Description: "Generate shell completion script",
-			Subcommands: []CommandInfo{
-				{Name: "bash", Description: "Generate bash completion"},
-				{Name: "zsh", Description: "Generate zsh completion"},
-				{Name: "fish", Description: "Generate fish completion"},
-				{Name: "powershell", Description: "Generate PowerShell completion"},
-			},
-		},
-		{
-			Name:        "research",
-			Description: "Autonomous research loop",
-			Flags: []FlagInfo{
-				{Name: "grep", Description: "Grep pattern to extract metric", Type: "string"},
-				{Name: "direction", Description: "Optimization direction", Type: "string", Choices: []string{"lower", "higher"}},
-				{Name: "budget", Description: "Time budget per experiment in minutes", Type: "int"},
-				{Name: "branch", Description: "Git branch prefix", Type: "string"},
-				{Name: "results", Description: "Results TSV file path", Type: "string"},
-			},
-		},
-		{
-			Name:        "context",
-			Description: "Export project context as a single document",
-			Flags: []FlagInfo{
-				{Name: "focus", Description: "Focus on a specific area", Type: "string"},
-				{Name: "output", Short: "o", Description: "Write context to a file", Type: "string"},
-			},
-		},
-		{
-			Name:        "version",
-			Description: "Print hawk version",
-		},
-		{
-			Name:        "setup",
-			Description: "Run first-time setup again",
-		},
-		{
-			Name:        "plugin",
-			Description: "Manage plugins",
-			Subcommands: []CommandInfo{
-				{Name: "list", Description: "List installed plugins"},
-				{Name: "install", Description: "Install a plugin"},
-				{Name: "uninstall", Description: "Uninstall a plugin"},
-			},
-		},
-		{
-			Name:        "mcp",
-			Description: "Show MCP server configuration",
-		},
-		{
-			Name:        "inspect",
-			Description: "Inspect session or context state",
-		},
-		{
-			Name:        "plan",
-			Description: "Enter plan mode (read-only analysis)",
-		},
-		{
-			Name:        "rules",
-			Description: "Manage project rules",
-		},
-		{
-			Name:        "sandbox",
-			Description: "Bash permission profile (strict/workspace/off); not Docker container mode",
-		},
-		{
-			Name:        "cost",
-			Description: "Show token usage and cost summary",
-		},
-		{
-			Name:        "snapshot",
-			Description: "Manage session snapshots",
-		},
-		{
-			Name:        "sight",
-			Description: "Visual analysis tools",
-		},
-		{
-			Name:        "fingerprint",
-			Description: "Show project fingerprint",
-		},
-	}
+	g.Commands = commandInfosFromCobra(rootCmd.Commands())
+	augmentCommandInfos(g.Commands)
 }
 
 func (g *CompletionGenerator) populateFlags() {
-	g.Flags = []FlagInfo{
-		{Name: "provider", Description: "LLM provider", Type: "string", Choices: nil}, // choices filled from Providers
-		{Name: "model", Short: "m", Description: "Model to use", Type: "string"},
-		{Name: "print", Short: "p", Description: "Print response and exit", Type: "bool"},
-		{Name: "resume", Short: "r", Description: "Resume a saved session by ID", Type: "string"},
-		{Name: "continue", Short: "c", Description: "Continue the most recent conversation", Type: "bool"},
-		{Name: "mcp", Description: "MCP server command", Type: "string"},
-		{Name: "allowed-tools", Description: "Tool permission rules to allow", Type: "string"},
-		{Name: "disallowed-tools", Description: "Tool permission rules to deny", Type: "string"},
-		{Name: "permission-mode", Description: "Permission mode", Type: "string", Choices: []string{"default", "acceptEdits", "bypassPermissions", "dontAsk", "plan"}},
-		{Name: "dangerously-skip-permissions", Description: "Bypass all permission checks", Type: "bool"},
-		{Name: "max-turns", Description: "Maximum number of agentic turns", Type: "int"},
-		{Name: "max-budget-usd", Description: "Maximum estimated API spend in USD", Type: "string"},
-		{Name: "system-prompt", Description: "System prompt to use", Type: "string"},
-		{Name: "system-prompt-file", Description: "Read system prompt from a file", Type: "string"},
-		{Name: "append-system-prompt", Description: "Append text to system prompt", Type: "string"},
-		{Name: "append-system-prompt-file", Description: "Read text from a file and append it to the system prompt", Type: "string"},
-		{Name: "output-format", Description: "Output format for --print", Type: "string", Choices: []string{"text", "json", "stream-json"}},
-		{Name: "input-format", Description: "Input format for --print", Type: "string", Choices: []string{"text", "stream-json"}},
-		{Name: "no-session-persistence", Description: "Disable session persistence in print mode", Type: "bool"},
-		{Name: "session-id", Description: "Use a specific session ID", Type: "string"},
-		{Name: "settings", Description: "Path to a settings JSON file", Type: "string"},
-		{Name: "add-dir", Description: "Additional directories to include", Type: "string"},
-		{Name: "tools", Description: "Available tools configuration", Type: "string"},
-		{Name: "sandbox", Description: "Bash permission profile (not Docker; use --no-container for host)", Type: "string", Choices: []string{"strict", "workspace", "off"}},
-		{Name: "auto-commit", Description: "Auto-commit file changes", Type: "bool"},
-		{Name: "watch", Description: "Watch working directory for file changes", Type: "bool"},
-		{Name: "vibe", Description: "Vibe coding mode", Type: "bool"},
-		{Name: "power", Description: "Power level 1-10", Type: "int"},
-		{Name: "timeout", Description: "Time budget for the operation", Type: "string"},
-		{Name: "council", Description: "Consult multiple models", Type: "bool"},
-		{Name: "teach", Description: "Explain reasoning as the agent works", Type: "bool"},
-		{Name: "teach-depth", Description: "Explanation depth: 1=what, 2=why, 3=how", Type: "int"},
-		{Name: "auto-skill", Description: "Auto-detect project and install matching skills", Type: "bool"},
-		{Name: "container", Description: "Force container mode", Type: "bool"},
-		{Name: "no-container", Description: "Disable container mode", Type: "bool"},
-		{Name: "version", Short: "v", Description: "Output the version number", Type: "bool"},
-		{Name: "fork-session", Description: "Create a new session ID when resuming", Type: "bool"},
-	}
+	g.Flags = flagsFromFlagSet(rootCmd.Flags())
 }
 
 func (g *CompletionGenerator) populateProviders() {
-	g.Providers = []string{
-		"anthropic",
-		"openai",
-		"gemini",
-		"openrouter",
-		"grok",
-		"groq",
-		"deepseek",
-		"mistral",
-		"bedrock",
-		"vertex",
-		"ollama",
+	providers := registry.All()
+	g.Providers = make([]string, 0, len(providers))
+	for _, provider := range providers {
+		g.Providers = append(g.Providers, provider.ProviderID)
 	}
 }
 
@@ -601,6 +412,10 @@ func (g *CompletionGenerator) GenerateFish() string {
 
 // GenerateJSON returns a machine-readable JSON completion spec for IDE integration.
 func (g *CompletionGenerator) GenerateJSON() string {
+	v := strings.TrimSpace(version)
+	if v == "" {
+		v = "dev"
+	}
 	spec := struct {
 		Name          string        `json:"name"`
 		Version       string        `json:"version"`
@@ -611,7 +426,7 @@ func (g *CompletionGenerator) GenerateJSON() string {
 		Models        []string      `json:"models"`
 	}{
 		Name:          "hawk",
-		Version:       "1.0.0",
+		Version:       v,
 		Commands:      g.Commands,
 		GlobalFlags:   g.Flags,
 		SlashCommands: g.SlashCommands,
@@ -624,6 +439,104 @@ func (g *CompletionGenerator) GenerateJSON() string {
 		return "{}"
 	}
 	return string(data)
+}
+
+func commandInfosFromCobra(cmds []*cobra.Command) []CommandInfo {
+	infos := make([]CommandInfo, 0, len(cmds))
+	for _, cmd := range cmds {
+		if cmd.Hidden {
+			continue
+		}
+		info := CommandInfo{
+			Name:        cmd.Name(),
+			Description: strings.TrimSpace(cmd.Short),
+			Flags:       flagsFromFlagSet(cmd.NonInheritedFlags()),
+		}
+		info.Subcommands = commandInfosFromCobra(cmd.Commands())
+		infos = append(infos, info)
+	}
+	return infos
+}
+
+func augmentCommandInfos(commands []CommandInfo) {
+	for i := range commands {
+		switch commands[i].Name {
+		case "completion":
+			commands[i].Subcommands = []CommandInfo{
+				{Name: "bash", Description: "Generate bash completion"},
+				{Name: "zsh", Description: "Generate zsh completion"},
+				{Name: "fish", Description: "Generate fish completion"},
+				{Name: "powershell", Description: "Generate PowerShell completion"},
+				{Name: "json", Description: "Generate machine-readable completion metadata"},
+			}
+		case "config":
+			commands[i].Subcommands = []CommandInfo{
+				{Name: "get", Description: "Get a setting value"},
+				{Name: "set", Description: "Set a setting value"},
+				{Name: "provider", Description: "Set the LLM provider"},
+				{Name: "model", Description: "Set the model"},
+				{Name: "keys", Description: "Show API key configuration"},
+				{Name: "routing-preview", Description: "Show routing JSON for a model"},
+				{Name: "migrate-deployments", Description: "Upgrade legacy provider config to deployments v2"},
+			}
+		}
+		if len(commands[i].Subcommands) > 0 {
+			augmentCommandInfos(commands[i].Subcommands)
+		}
+	}
+}
+
+func flagsFromFlagSet(fs *pflag.FlagSet) []FlagInfo {
+	if fs == nil {
+		return nil
+	}
+	var flags []FlagInfo
+	fs.VisitAll(func(f *pflag.Flag) {
+		if f == nil || f.Name == "help" {
+			return
+		}
+		flags = append(flags, FlagInfo{
+			Name:        f.Name,
+			Short:       f.Shorthand,
+			Description: f.Usage,
+			Type:        normalizeFlagType(f.Value.Type()),
+			Choices:     flagChoices(f.Name),
+		})
+	})
+	sort.SliceStable(flags, func(i, j int) bool {
+		return flags[i].Name < flags[j].Name
+	})
+	return flags
+}
+
+func normalizeFlagType(flagType string) string {
+	switch flagType {
+	case "bool":
+		return "bool"
+	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+		return "int"
+	default:
+		return "string"
+	}
+}
+
+func flagChoices(name string) []string {
+	switch name {
+	case "permission-mode":
+		return []string{"default", "acceptEdits", "bypassPermissions", "dontAsk", "plan"}
+	case "output-format":
+		return []string{"text", "json", "stream-json"}
+	case "input-format":
+		return []string{"text", "stream-json"}
+	case "sandbox":
+		return []string{"strict", "workspace", "off"}
+	case "direction":
+		return []string{"lower", "higher"}
+	case "auto":
+		return []string{"supervised", "basic", "semi", "full", "yolo"}
+	default:
+		return nil
+	}
 }
 
 // InstallCompletion returns the filesystem path where the completion script

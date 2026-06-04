@@ -76,7 +76,14 @@ var rootCmd = &cobra.Command{
 	Use:   "hawk [prompt]",
 	Short: "AI coding agent powered by eyrie",
 	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
-	Args:  cobra.ArbitraryArgs,
+	Example: `  hawk
+  hawk -p "explain this repo"
+  hawk exec "fix failing tests"
+  hawk preflight
+  hawk path`,
+	Args:          cobra.ArbitraryArgs,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if versionFlag {
 			if buildDate != "" && buildDate != "unknown" {
@@ -261,7 +268,7 @@ func isStdinTerminal() bool {
 }
 
 var completionCmd = &cobra.Command{
-	Use:   "completion [bash|zsh|fish|powershell]",
+	Use:   "completion [bash|zsh|fish|powershell|json]",
 	Short: "Generate shell completion script",
 	Long: `To load completions:
 
@@ -288,9 +295,13 @@ PowerShell:
   # To load completions for every new session, run:
   hawk completion powershell > hawk.ps1
   # and source this file from your PowerShell profile.
+
+JSON:
+  hawk completion json
+  # Print a machine-readable command/flag spec for IDE integration.
 `,
 	DisableFlagsInUseLine: true,
-	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell", "json"},
 	Args:                  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		switch args[0] {
@@ -302,6 +313,9 @@ PowerShell:
 			_ = cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true)
 		case "powershell":
 			_ = cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
+		case "json":
+			_, _ = cmd.OutOrStdout().Write([]byte(NewCompletionGenerator().GenerateJSON()))
+			_, _ = cmd.OutOrStdout().Write([]byte("\n"))
 		}
 	},
 }

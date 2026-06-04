@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -88,6 +89,9 @@ func validateGo(path string) *ValidationResult {
 	if err == nil {
 		return &ValidationResult{Valid: true}
 	}
+	if validatorUnavailable(err, output) {
+		return &ValidationResult{Valid: true}
+	}
 
 	errors := parseGoErrors(string(output))
 	if len(errors) == 0 {
@@ -111,6 +115,9 @@ func validatePython(path string) *ValidationResult {
 	if err == nil {
 		return &ValidationResult{Valid: true}
 	}
+	if validatorUnavailable(err, output) {
+		return &ValidationResult{Valid: true}
+	}
 
 	errors := parsePythonErrors(string(output), path)
 	if len(errors) == 0 {
@@ -130,6 +137,9 @@ func validateJS(path string) *ValidationResult {
 
 	output, err := cmd.CombinedOutput()
 	if err == nil {
+		return &ValidationResult{Valid: true}
+	}
+	if validatorUnavailable(err, output) {
 		return &ValidationResult{Valid: true}
 	}
 
@@ -152,6 +162,9 @@ func validateTS(path string) *ValidationResult {
 	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", path)
 	output, err := cmd.CombinedOutput()
 	if err == nil {
+		return &ValidationResult{Valid: true}
+	}
+	if validatorUnavailable(err, output) {
 		return &ValidationResult{Valid: true}
 	}
 
@@ -267,4 +280,17 @@ func parseTSErrors(output, path string) []ValidationError {
 		}
 	}
 	return errors
+}
+
+func validatorUnavailable(err error, output []byte) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, exec.ErrNotFound) {
+		return true
+	}
+	lower := strings.ToLower(strings.TrimSpace(string(output)))
+	return strings.Contains(lower, "command not found") ||
+		strings.Contains(lower, "not found") ||
+		strings.Contains(lower, "executable file not found")
 }

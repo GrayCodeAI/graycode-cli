@@ -85,6 +85,7 @@ func TestEnforceSizeNoop(t *testing.T) {
 
 func TestEnforceSizeRemovesOldest(t *testing.T) {
 	oldTime := time.Now().Add(-time.Hour)
+	sameTime := time.Now()
 
 	// Case 1: Both files fit under limit — nothing removed.
 	dir1 := t.TempDir()
@@ -104,9 +105,11 @@ func TestEnforceSizeRemovesOldest(t *testing.T) {
 
 	midFile := filepath.Join(dir2, "mid.dat")
 	os.WriteFile(midFile, make([]byte, 400_000), 0o644)
+	os.Chtimes(midFile, sameTime, sameTime)
 
 	newFile := filepath.Join(dir2, "new.dat")
 	os.WriteFile(newFile, make([]byte, 800_000), 0o644)
+	os.Chtimes(newFile, sameTime, sameTime)
 
 	result = EnforceSize(dir2, Policy{MaxSizeMB: 1})
 	// After removing old (400KB): 1.2MB left, still over.
