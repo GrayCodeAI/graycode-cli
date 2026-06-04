@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"sync"
 	"testing"
 
 	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
@@ -54,5 +55,19 @@ func TestRolesForProvider(t *testing.T) {
 	}
 	if CostTierOf(roles.Commit) >= CostTierOf(roles.Planner) {
 		t.Errorf("commit tier should be cheaper than planner: %v vs %v", roles.Commit, roles.Planner)
+	}
+}
+
+func TestCostTierOf_FallsBackWithoutLoadedCatalog(t *testing.T) {
+	catalogOnce = sync.Once{}
+	catalogOnce.Do(func() {})
+	cachedCatalog = nil
+	t.Cleanup(func() {
+		catalogOnce = sync.Once{}
+		cachedCatalog = nil
+	})
+
+	if got := CostTierOf("gpt-4o-mini"); got != CostTierCheap {
+		t.Fatalf("CostTierOf fallback = %v, want %v", got, CostTierCheap)
 	}
 }

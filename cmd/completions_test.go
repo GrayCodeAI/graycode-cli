@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/eyrie/catalog/registry"
 )
 
 func TestNewCompletionGenerator(t *testing.T) {
@@ -254,7 +257,7 @@ func TestGenerateJSONContainsCommands(t *testing.T) {
 		cmdNames[cmd.Name] = true
 	}
 
-	expected := []string{"exec", "daemon", "mission", "search", "agent", "doctor", "config", "sessions", "tools", "skills"}
+	expected := []string{"exec", "daemon", "mission", "search", "agent", "doctor", "preflight", "path", "recover", "config", "sessions", "tools", "skills"}
 	for _, name := range expected {
 		if !cmdNames[name] {
 			t.Errorf("JSON should contain command %q", name)
@@ -273,14 +276,13 @@ func TestGenerateJSONContainsProviders(t *testing.T) {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 
-	expectedProviders := []string{"anthropic", "openai", "gemini", "openrouter", "grok", "groq", "deepseek", "mistral", "bedrock", "vertex", "ollama"}
 	providerSet := make(map[string]bool)
 	for _, p := range result.Providers {
 		providerSet[p] = true
 	}
-	for _, p := range expectedProviders {
-		if !providerSet[p] {
-			t.Errorf("JSON should contain provider %q", p)
+	for _, p := range registry.All() {
+		if !providerSet[p.ProviderID] {
+			t.Errorf("JSON should contain provider %q", p.ProviderID)
 		}
 	}
 }
@@ -371,14 +373,13 @@ func TestInstallCompletionUnsupportedShell(t *testing.T) {
 func TestAllProvidersPresent(t *testing.T) {
 	g := NewCompletionGenerator()
 
-	expectedProviders := []string{"anthropic", "openai", "gemini", "openrouter", "grok", "groq", "deepseek", "mistral", "bedrock", "vertex", "ollama"}
 	providerSet := make(map[string]bool)
 	for _, p := range g.Providers {
 		providerSet[p] = true
 	}
-	for _, p := range expectedProviders {
-		if !providerSet[p] {
-			t.Errorf("Provider %q should be present in CompletionGenerator.Providers", p)
+	for _, p := range registry.All() {
+		if !providerSet[p.ProviderID] {
+			t.Errorf("Provider %q should be present in CompletionGenerator.Providers", p.ProviderID)
 		}
 	}
 }
@@ -387,10 +388,9 @@ func TestAllProvidersInBashCompletion(t *testing.T) {
 	g := NewCompletionGenerator()
 	bash := g.GenerateBash()
 
-	expectedProviders := []string{"anthropic", "openai", "gemini", "openrouter", "grok", "groq", "deepseek", "mistral", "bedrock", "vertex", "ollama"}
-	for _, p := range expectedProviders {
-		if !strings.Contains(bash, p) {
-			t.Errorf("Bash completion should contain provider %q", p)
+	for _, p := range registry.All() {
+		if !strings.Contains(bash, p.ProviderID) {
+			t.Errorf("Bash completion should contain provider %q", p.ProviderID)
 		}
 	}
 }
@@ -399,10 +399,9 @@ func TestAllProvidersInZshCompletion(t *testing.T) {
 	g := NewCompletionGenerator()
 	zsh := g.GenerateZsh()
 
-	expectedProviders := []string{"anthropic", "openai", "gemini", "openrouter", "grok", "groq", "deepseek", "mistral", "bedrock", "vertex", "ollama"}
-	for _, p := range expectedProviders {
-		if !strings.Contains(zsh, p) {
-			t.Errorf("Zsh completion should contain provider %q", p)
+	for _, p := range registry.All() {
+		if !strings.Contains(zsh, p.ProviderID) {
+			t.Errorf("Zsh completion should contain provider %q", p.ProviderID)
 		}
 	}
 }
@@ -411,11 +410,46 @@ func TestAllProvidersInFishCompletion(t *testing.T) {
 	g := NewCompletionGenerator()
 	fish := g.GenerateFish()
 
-	expectedProviders := []string{"anthropic", "openai", "gemini", "openrouter", "grok", "groq", "deepseek", "mistral", "bedrock", "vertex", "ollama"}
-	for _, p := range expectedProviders {
-		if !strings.Contains(fish, p) {
-			t.Errorf("Fish completion should contain provider %q", p)
+	for _, p := range registry.All() {
+		if !strings.Contains(fish, p.ProviderID) {
+			t.Errorf("Fish completion should contain provider %q", p.ProviderID)
 		}
+	}
+}
+
+func TestCompletionJSONCommand(t *testing.T) {
+	SetVersion("test-version")
+
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"completion", "json"})
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("rootCmd.Execute() error = %v", err)
+	}
+
+	var result struct {
+		Version  string `json:"version"`
+		Commands []struct {
+			Name string `json:"name"`
+		} `json:"commands"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		t.Fatalf("completion json output should be valid JSON: %v\n%s", err, buf.String())
+	}
+	if result.Version != "test-version" {
+		t.Fatalf("completion json version = %q, want test-version", result.Version)
+	}
+	foundPath := false
+	for _, cmd := range result.Commands {
+		if cmd.Name == "path" {
+			foundPath = true
+			break
+		}
+	}
+	if !foundPath {
+		t.Fatal("completion json should include the path command")
 	}
 }
 
