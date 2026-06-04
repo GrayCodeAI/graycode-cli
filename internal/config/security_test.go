@@ -62,6 +62,7 @@ func TestMergeSettings_AllowedToolsAppend(t *testing.T) {
 
 func TestValidateSettings_ValidConfig(t *testing.T) {
 	// This test uses the global catalog test setup from main_test.go
+	t.Setenv("HAWK_CONFIG_DIR", t.TempDir())
 	s := Settings{
 		MaxBudgetUSD: 10.0,
 	}
