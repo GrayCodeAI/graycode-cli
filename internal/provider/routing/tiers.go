@@ -252,30 +252,51 @@ func tierFromCatalogFamily(modelName string) (eycatalog.ModelTier, bool) {
 }
 
 func tierFromEyrieCandidates(modelName string) (eycatalog.ModelTier, bool) {
-	info, ok := Find(modelName)
-	if !ok {
-		return "", false
+	provider := ""
+	if info, ok := Find(modelName); ok {
+		provider = canonicalProvider(info.Provider)
 	}
-	provider := canonicalProvider(info.Provider)
 
 	for _, tier := range []eycatalog.ModelTier{eycatalog.TierHaiku, eycatalog.TierSonnet, eycatalog.TierOpus} {
-		for _, cand := range eycatalog.GetProviderModelCandidates(provider, tier) {
-			if modelsMatch(modelName, cand) {
-				return tier, true
+		if provider != "" {
+			for _, cand := range eycatalog.GetProviderModelCandidates(provider, tier) {
+				if modelsMatch(modelName, cand) {
+					return tier, true
+				}
+			}
+		}
+		for _, key := range tierFallbackKeys(tier) {
+			cfg, ok := eycatalog.AllModelConfigs[key]
+			if !ok {
+				continue
+			}
+			if provider != "" {
+				if id := cfg[provider]; id != "" && modelsMatch(modelName, id) {
+					return tier, true
+				}
+				continue
+			}
+			for _, id := range cfg {
+				if modelsMatch(modelName, id) {
+					return tier, true
+				}
 			}
 		}
 	}
-
-	for key, cfg := range eycatalog.AllModelConfigs {
-		tier := modelKeyTier(key)
-		if tier == "" {
-			continue
-		}
-		if id := cfg[provider]; id != "" && modelsMatch(modelName, id) {
-			return tier, true
-		}
-	}
 	return "", false
+}
+
+func tierFallbackKeys(tier eycatalog.ModelTier) []eycatalog.ModelKey {
+	switch tier {
+	case eycatalog.TierHaiku:
+		return []eycatalog.ModelKey{"haiku45", "haiku35"}
+	case eycatalog.TierSonnet:
+		return []eycatalog.ModelKey{"sonnet46", "sonnet45", "sonnet40", "sonnet37", "sonnet35"}
+	case eycatalog.TierOpus:
+		return []eycatalog.ModelKey{"opus46", "opus45", "opus41", "opus40"}
+	default:
+		return nil
+	}
 }
 
 func tierFromCatalogPricing(modelName string) (CostTier, bool) {

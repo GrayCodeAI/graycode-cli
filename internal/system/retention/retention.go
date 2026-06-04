@@ -3,6 +3,7 @@ package retention
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -96,14 +97,15 @@ func EnforceSize(dir string, policy Policy) CleanupResult {
 		return result
 	}
 
-	// Sort oldest first
-	for i := 0; i < len(files)-1; i++ {
-		for j := i + 1; j < len(files); j++ {
-			if files[j].modTime.Before(files[i].modTime) {
-				files[i], files[j] = files[j], files[i]
-			}
+	// Sort oldest first. When mtimes are equal, keep a deterministic tie-breaker
+	// so cleanup does not arbitrarily delete a newer-looking file on coarse-grained
+	// filesystems.
+	sort.SliceStable(files, func(i, j int) bool {
+		if files[i].modTime.Equal(files[j].modTime) {
+			return files[i].name < files[j].name
 		}
-	}
+		return files[i].modTime.Before(files[j].modTime)
+	})
 
 	for _, f := range files {
 		if totalSize <= maxBytes {
