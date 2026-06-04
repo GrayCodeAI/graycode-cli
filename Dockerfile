@@ -1,19 +1,16 @@
 # Build stage
-FROM golang:1.26.3-alpine AS builder
+FROM golang:1.26.4-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
-
-# Clone eyrie (unpublished dependency with local-only packages)
-RUN git clone --depth=1 https://github.com/GrayCodeAI/eyrie.git /eyrie
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 # Add replace after source copy so it doesn't get overwritten
-RUN echo "" >> go.mod && echo "replace github.com/GrayCodeAI/eyrie => /eyrie" >> go.mod && go mod tidy
+RUN echo "" >> go.mod && echo "replace github.com/GrayCodeAI/eyrie => ./external/eyrie" >> go.mod && go mod tidy
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -mod=mod \
     -ldflags="-s -w -X main.Version=$(git describe --tags --always 2>/dev/null || echo dev)" \

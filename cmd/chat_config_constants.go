@@ -17,10 +17,10 @@ var configTabLabels = []string{"Gateways", "Models"}
 
 // Config entry overlays (configEntry).
 const (
-	configEntryNone        = ""
-	configEntryAPIKeyPaste = "apikey-paste"
-	configEntryOllamaURL   = "ollama-url"
-	configEntryKeyView     = "key-view"
+	configEntryNone         = ""
+	configEntryAPIKeyPaste  = "apikey-paste"
+	configEntryOllamaURL    = "ollama-url"
+	configEntryKeyView      = "key-view"
 	configEntryXiaomiRegion = "xiaomi-region"
 )
 

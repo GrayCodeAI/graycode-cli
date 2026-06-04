@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestRenderStatusBar_SignatureExists(t *testing.T) {

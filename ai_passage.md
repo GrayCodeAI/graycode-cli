@@ -51,4 +51,3 @@ Artificial Intelligence represents one of the most significant technological rev
 As we continue to develop and deploy AI systems, we must remain mindful of our values and aspirations as a society. Technology is not deterministic—we have the agency to shape how AI develops and how it is used. By approaching AI with both enthusiasm for its possibilities and seriousness about its risks, we can work toward a future where artificial intelligence serves to augment human potential and contribute to the flourishing of our species.
 
 The story of AI is still being written, and we are all authors of that story. The choices we make today about research priorities, ethical guidelines, regulatory frameworks, and educational investments will determine whether AI becomes a force for broad human betterment or a source of increased inequality and social tension. The technology itself is neutral; what matters is how we choose to wield it.
-
