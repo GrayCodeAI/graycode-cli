@@ -50,17 +50,6 @@ const welcomeToBannerMinWidth = 61
 // welcomeToPhraseMinWidth is the visible width for the combined "WELCOME TO" block.
 var welcomeToPhraseMinWidth = blockLinesWidth(welcomeToPhraseLines)
 
-// welcomeGateBannerWidth returns the widest row across WELCOME + TO blocks.
-func welcomeGateBannerWidth() int {
-	w := welcomeToPhraseMinWidth
-	for _, line := range welcomeToWordLines {
-		if n := runewidth.StringWidth(line); n > w {
-			w = n
-		}
-	}
-	return w
-}
-
 func composeHawkBlockLines(text string) []string {
 	rows := make([]string, 5)
 	words := strings.Fields(text)

@@ -106,15 +106,6 @@ func renderConfigTableRow(values []string, cursor, active, markEnd bool, layout 
 	return prefix + renderConfigTableLine(cols, layout, styles)
 }
 
-func renderConfigTableActionRow(label string, cursor bool, rowStyle, cursorStyle lipgloss.Style) string {
-	prefix := strings.Repeat(" ", configTableIndent)
-	if cursor {
-		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
-		return prefix + cursorStyle.Render(label)
-	}
-	return rowStyle.Render(prefix + label)
-}
-
 func renderConfigTableLine(values []string, layout configTableLayout, styles []lipgloss.Style) string {
 	parts := make([]string, len(values))
 	for i, v := range values {

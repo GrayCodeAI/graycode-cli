@@ -339,17 +339,6 @@ func formatContextUsedLabel(tokens int) string {
 	return formatModelTableContext(tokens)
 }
 
-func contextUsageStyle(pct int) lipgloss.Style {
-	switch {
-	case pct >= 95:
-		return lipgloss.NewStyle().Foreground(errorCoral).Inline(true)
-	case pct >= 80:
-		return lipgloss.NewStyle().Foreground(warnAmber).Inline(true)
-	default:
-		return configMutedStyle().Inline(true)
-	}
-}
-
 // chatBottomRightStatus is the deployment line on the input bar.
 func (m *chatModel) chatBottomRightStatus() string {
 	return m.chatConnectionStatus()

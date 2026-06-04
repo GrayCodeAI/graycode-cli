@@ -142,7 +142,7 @@ func anthropicNativeCompact(ctx context.Context, sess *Session, tokensBefore int
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("anthropic compaction HTTP %d: %s", resp.StatusCode, truncateErrBody(respBody))

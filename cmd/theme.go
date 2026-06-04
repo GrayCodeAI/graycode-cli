@@ -189,9 +189,6 @@ const (
 	// message in the viewport.
 	iconAssistantPrefix = "⛬"
 
-	// Tool result / error bullet (used in the non-TUI exit dump).
-	iconToolBullet = "●"
-
 	// Typing indicator dots — one filled, two empty. See braille_spinner.go.
 	iconDotFilled = "▪"
 	iconDotEmpty  = "▫"
@@ -201,15 +198,6 @@ const (
 
 	// Warning / permission prompt prefix.
 	iconWarn = "⚠"
-
-	// Tool / skill activation indicator.
-	iconTool = "⚡"
-
-	// Markdown bullet.
-	iconBullet = "•"
-
-	// Star (used in config tabs to mark "highlighted" rows).
-	iconStar = "★"
 
 	// quitFooterHint — exit hint in splash/footer chrome (work TUI uses double Ctrl+C).
 	quitFooterHint = "ctrl+c · quit"

@@ -18,7 +18,7 @@ import (
 // so prompts complete without a real provider.
 func testFactory() (*engine.Session, error) {
 	registry := tool.NewRegistry(tool.FileReadTool{})
-	s := engine.NewSession("", "", "test", registry)
+	s := engine.NewSession("test", "mock-model", "test", registry)
 	s.SetTestClient(engine.NewMockClientForTest())
 	return s, nil
 }

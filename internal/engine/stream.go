@@ -173,15 +173,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.WillCompactBeforeTurn() {
 			ch <- StreamEvent{Type: "compact_start"}
 		}
-		if strat, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
+		if compactStrategy, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
 			tokensAfter := EstimateTokens(s.messages)
 			s.log.Info("context compacted", map[string]interface{}{
-				"strategy": strat,
+				"strategy": compactStrategy,
 				"messages": len(s.messages),
 			})
 			ch <- StreamEvent{
 				Type:         "compact",
-				Content:      strat,
+				Content:      compactStrategy,
 				TokensBefore: tokensBefore,
 				TokensAfter:  tokensAfter,
 			}

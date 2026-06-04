@@ -113,8 +113,8 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	s.messages = ctxmgr.CollapseRepeatedMessages(s.messages)
 
 	s.EnsureAutoCompactor()
-	if strat, ok := s.AutoCompactor.AutoCompactIfNeeded(ctx, s); ok {
-		return strat, true // recordCompaction emitted inside AutoCompactIfNeeded
+	if compactStrategy, ok := s.AutoCompactor.AutoCompactIfNeeded(ctx, s); ok {
+		return compactStrategy, true // recordCompaction emitted inside AutoCompactIfNeeded
 	}
 
 	if len(s.messages) > maxContextMessages {

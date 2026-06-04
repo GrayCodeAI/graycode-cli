@@ -231,12 +231,12 @@ func runManualCompactCmd(ctx context.Context, sess *engine.Session) tea.Cmd {
 			return compactDoneMsg{err: fmt.Errorf("no session")}
 		}
 		before := sess.MessageCount()
-		strat, tokBefore, tokAfter, err := sess.CompactConversation(ctx)
+		compactStrategy, tokBefore, tokAfter, err := sess.CompactConversation(ctx)
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) && err == nil {
 			err = ctx.Err()
 		}
 		return compactDoneMsg{
-			strategy:     strat,
+			strategy:     compactStrategy,
 			tokensBefore: tokBefore,
 			tokensAfter:  tokAfter,
 			err:          err,
