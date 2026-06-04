@@ -83,13 +83,6 @@ func (m chatModel) scrollPositionLabel() string {
 	return fmt.Sprintf("%d-%d/%d", top, bottom, m.contentLines)
 }
 
-func (m chatModel) uiFocusLabel() string {
-	if m.inScrollbackFocus() {
-		return "scrollback"
-	}
-	return "prompt"
-}
-
 func formatSessionContextUsage(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return "No active session."
@@ -136,6 +129,6 @@ func (m chatModel) renderScrollbackFocusBar(width int) string {
 	if width < len(hint)+4 {
 		width = len(hint) + 4
 	}
-	style := lipgloss.NewStyle().Foreground(infoSky).Bold(true).Inline(true)
+	style := lipgloss.NewStyle().Foreground(infoSky).Bold(true).Inline(true).Width(width)
 	return style.Render("  " + hint)
 }

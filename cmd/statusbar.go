@@ -169,7 +169,7 @@ func renderContainerFooterDetail(detail string, sess *engine.Session) string {
 	if !found {
 		return statusStyle.Render(detail)
 	}
-	level := DefaultContainerAutonomy
+	var level engine.AutonomyLevel
 	if sess != nil && sess.Autonomy != 0 {
 		level = sess.Autonomy
 	} else {
