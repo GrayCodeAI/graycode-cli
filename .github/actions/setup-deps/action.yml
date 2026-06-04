@@ -41,4 +41,4 @@ runs:
     - name: Create workspace
       shell: bash
       run: |
-        printf 'go 1.26.3\n\nuse (\n\t.\n\t./external/eyrie\n\t./external/inspect\n\t./external/sight\n\t./external/tok\n\t./external/trace\n\t./external/yaad\n)\n' > go.work
+        printf 'go 1.26.4\n\nuse (\n\t.\n\t./external/eyrie\n\t./external/inspect\n\t./external/sight\n\t./external/tok\n\t./external/trace\n\t./external/yaad\n)\n' > go.work

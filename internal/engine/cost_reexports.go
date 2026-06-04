@@ -21,6 +21,7 @@ func FormatCostDisplay(totalUSD float64) string       { return cost.FormatCostDi
 func ModelPricing(modelName string) (inputPricePerM, outputPricePerM float64) {
 	return cost.ModelPricing(modelName)
 }
+
 func RegisterLivePricing(model string, inputPerM, outputPerM float64) {
 	cost.RegisterLivePricing(model, inputPerM, outputPerM)
 }

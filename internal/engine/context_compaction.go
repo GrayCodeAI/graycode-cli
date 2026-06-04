@@ -143,4 +143,3 @@ func (s *Session) recordCompaction(strategy string, tokensBefore, tokensAfter in
 		Manual:       manual,
 	})
 }
-

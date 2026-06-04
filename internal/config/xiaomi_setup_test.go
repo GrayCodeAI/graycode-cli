@@ -11,8 +11,8 @@ func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", dir)
 	cfg := &eyriecfg.ProviderConfig{
-		Version:                   "2",
-		XiaomiMimoTokenPlanRegion: "cn",
+		Version:                    "2",
+		XiaomiMimoTokenPlanRegion:  "cn",
 		XiaomiMimoTokenPlanBaseURL: "https://token-plan-cn.xiaomimimo.com/v1",
 	}
 	if err := eyriecfg.SaveProviderConfig(cfg, ""); err != nil {

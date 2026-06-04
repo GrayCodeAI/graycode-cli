@@ -15,13 +15,13 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -79,9 +79,9 @@ type Session struct {
 	SettingsGet    func(key string) (string, bool)
 	SettingsSet    func(key, value string) error
 
-	PinnedMessages          int  // messages to protect from compaction (from /pin)
-	AutoCompactThresholdPct int  // token % to trigger auto-compact (default 85)
-	ContextWindowCached     int  // catalog context window; 0 → governor default
+	PinnedMessages          int // messages to protect from compaction (from /pin)
+	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
+	ContextWindowCached     int // catalog context window; 0 → governor default
 	AutoCompactor           *AutoCompactor
 	persistID               string
 	lastPromptTokens        int
