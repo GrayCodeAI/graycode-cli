@@ -46,27 +46,6 @@ func (m chatModel) gateActionHint() (primary string, needsSetup bool) {
 	return "Press Enter to start", false
 }
 
-func welcomeGateRule(width int) string {
-	const ornament = " · "
-	ruleW := width - 4
-	if ruleW > 56 {
-		ruleW = 56
-	}
-	if ruleW < len(ornament)+8 {
-		ruleW = len(ornament) + 8
-	}
-	side := (ruleW - len(ornament)) / 2
-	if side < 2 {
-		side = 2
-	}
-	rule := strings.Repeat("─", side) + ornament + strings.Repeat("─", ruleW-side-len(ornament))
-	return lipgloss.NewStyle().
-		Width(width).
-		Align(lipgloss.Center).
-		Foreground(borderDim).
-		Render(rule)
-}
-
 func (m chatModel) renderWelcomeGateActionRow(width int) string {
 	primary, needsSetup := m.gateActionHint()
 	textStyle := lipgloss.NewStyle().Foreground(hudLabelPink).Bold(true).Inline(true)

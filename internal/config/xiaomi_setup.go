@@ -63,9 +63,7 @@ func XiaomiTokenPlanRegionLabel() string {
 
 // ApplyXiaomiTokenPlanRegionEnv sets process env from provider.json before credential probe.
 func ApplyXiaomiTokenPlanRegionEnv(ctx context.Context) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	_ = ctx
 	cfg := eyriecfg.LoadProviderConfig("")
 	if cfg == nil {
 		return

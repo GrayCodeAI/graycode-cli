@@ -30,9 +30,6 @@ var hawkSpinnerGlyphs = []string{"◐", "◓", "◑", "◒"}
 // hawkQuadBlockGlyphs is the legacy QUADBLOCK animation (kept for tests / bubbles compat).
 var hawkQuadBlockGlyphs = []string{"▛", "▜", "▟", "▙"}
 
-// hawkSpinnerBG is the chat viewport background (chat_view.go).
-var hawkSpinnerBG = [3]int{30, 30, 40}
-
 // spinnerFrames maps style names to their animation frames.
 var spinnerFrames = map[SpinnerStyle][]string{
 	SpinnerBraille:     {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},

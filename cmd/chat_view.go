@@ -46,14 +46,6 @@ func renderSetupCompleteMessage(model string) string {
 	)
 }
 
-// welcomeHeader returns the welcome text for /config overlay only (main TUI uses a fixed pane).
-func (m chatModel) welcomeHeader() string {
-	if !m.showWelcomeBanner() {
-		return ""
-	}
-	return m.welcomeCache + "\n\n"
-}
-
 // sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 var (
 	reModelName = regexp.MustCompile(`(?i)\b(I['` + "\u2018\u2019" + `]m|I am|my name is)\s+\*{0,2}(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)\*{0,2}`)

@@ -47,12 +47,9 @@ var (
 	containerErrStyle   = lipgloss.NewStyle().Foreground(errorCoral)
 	containerLabelStyle = lipgloss.NewStyle().Foreground(containerBlue)
 
-	// Backwards-compatible aliases for callers that still use the old
-	// names. New code should use the purpose-named constants in theme.go.
-	tealColor  = successTeal
-	dimColor   = textDisabled
-	errorColor = errorCoral
-	toolColor  = toolGold
+	// Backwards-compatible alias for callers that still use the old name.
+	// New code should use the purpose-named constants in theme.go.
+	dimColor = textDisabled
 )
 
 // hawkSpinnerFrames feeds the bubbles spinner (matches BrailleSpinner default).
@@ -205,7 +202,6 @@ type chatModel struct {
 	uiFocus             uiFocusArea
 	contentLines        int // total lines in scrollback content (for footer position)
 	vim                 *VimState
-	contextViz          *ContextVisualization
 	wal                 *session.WAL
 	startedAt           time.Time // per-turn timer (spinner + turn elapsed)
 	sessionStartedAt    time.Time // whole chat session (footer duration)
