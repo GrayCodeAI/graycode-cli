@@ -109,7 +109,7 @@ func TestUnmarshal_UnterminatedBlockComment(t *testing.T) {
 
 func TestUnmarshal_RealisticClaudeSettings(t *testing.T) {
 	// A realistic Claude Code settings.json with comments and trailing
-	// commas, like the caveman settings.js writes.
+	// commas, like validated settings files may include.
 	src := []byte(`{
   // Permissions configuration
   "permissions": {

@@ -1,6 +1,6 @@
 // validate.go: pre-write validation for Claude Code settings fields.
 //
-// The caveman validateHookFields function (bin/lib/settings.js)
+// Settings.json hook-field validation.
 // performs a Zod-style pre-check on Claude Code settings.json before
 // writing. This file ports that check to native Go, using the
 // encoding/json conventions of the existing internal/config package.

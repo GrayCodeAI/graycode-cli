@@ -89,7 +89,7 @@ func TestCheck(t *testing.T) {
 
 	t.Run("no update available", func(t *testing.T) {
 		release := ReleaseInfo{
-			TagName: "v0.2.0",
+			TagName: "v0.1.0",
 			Name:    "Current Release",
 		}
 		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +102,7 @@ func TestCheck(t *testing.T) {
 		setUpdateURL(server.URL)
 		defer setUpdateURL(origURL)
 
-		result, err := Check("0.2.0")
+		result, err := Check("0.1.0")
 		if err != nil {
 			t.Fatalf("Check() error = %v", err)
 		}
@@ -121,7 +121,7 @@ func TestCheck(t *testing.T) {
 		setUpdateURL(server.URL)
 		defer setUpdateURL(origURL)
 
-		_, err := Check("0.2.0")
+		_, err := Check("0.1.0")
 		if err == nil {
 			t.Error("Check() should return error on server failure")
 		}
@@ -138,7 +138,7 @@ func TestCheck(t *testing.T) {
 		setUpdateURL(server.URL)
 		defer setUpdateURL(origURL)
 
-		_, err := Check("0.2.0")
+		_, err := Check("0.1.0")
 		if err == nil {
 			t.Error("Check() should return error on invalid JSON")
 		}
@@ -149,7 +149,7 @@ func TestCheck(t *testing.T) {
 		setUpdateURL("http://" + testutil.LoopbackHost + ":1")
 		defer setUpdateURL(origURL)
 
-		_, err := Check("0.2.0")
+		_, err := Check("0.1.0")
 		if err == nil {
 			t.Error("Check() should return error for unreachable server")
 		}
@@ -184,7 +184,7 @@ func TestSummary(t *testing.T) {
 	})
 
 	t.Run("up to date", func(t *testing.T) {
-		release := ReleaseInfo{TagName: "v0.2.0"}
+		release := ReleaseInfo{TagName: "v0.1.0"}
 		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(release)
@@ -195,7 +195,7 @@ func TestSummary(t *testing.T) {
 		setUpdateURL(server.URL)
 		defer setUpdateURL(origURL)
 
-		result := Summary("0.2.0")
+		result := Summary("0.1.0")
 		if !strings.Contains(result, "up to date") {
 			t.Errorf("Summary() = %q, want to contain 'up to date'", result)
 		}

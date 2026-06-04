@@ -15,7 +15,7 @@ Platform/provider capability metadata is separate: [`platform-capabilities.json`
   "components":   ["hawk", "eyrie", ...],   // canonical eco roster
   "dependencies": { "hawk": ["eyrie", ...] }, // who depends on who
   "matrices": [
-    { "name": "stable", "components": { "hawk": "0.2.0", "eyrie": "0.2.0", ... } },
+    { "name": "stable", "components": { "hawk": "0.1.0", "eyrie": "0.1.0", ... } },
     { "name": "next",   "components": { "hawk": "main",  "eyrie": "main",  ... } }
   ]
 }

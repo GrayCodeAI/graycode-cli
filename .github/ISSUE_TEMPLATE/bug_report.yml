@@ -48,7 +48,7 @@ body:
     attributes:
       label: hawk version
       description: Output of `hawk version` (or `hawk --version`).
-      placeholder: "0.2.0"
+      placeholder: "0.1.0"
     validations:
       required: true
 
