@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	anthropicCompactBeta   = "compact-2026-01-12"
-	anthropicCompactEdit   = "compact_20260112"
+	anthropicCompactBeta    = "compact-2026-01-12"
+	anthropicCompactEdit    = "compact_20260112"
 	anthropicMinCompactTrig = 50_000
 )
 

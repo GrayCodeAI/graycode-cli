@@ -206,7 +206,7 @@ func (m chatModel) configGatewaysView() string {
 		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
 			hint = "Token Plan: enter pick region (cn/sgp/ams) then key · g change region"
 		}
-		b.WriteString("\n" + mutedStyle.Render(indent + hint))
+		b.WriteString("\n" + mutedStyle.Render(indent+hint))
 	} else {
 		hints := "enter use gateway · k view key · delete remove · r refresh"
 		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
