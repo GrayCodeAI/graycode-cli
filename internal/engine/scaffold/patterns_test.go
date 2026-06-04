@@ -216,7 +216,7 @@ func TestRegisterAndRemove(t *testing.T) {
 		Description:  "Updated description",
 		SystemPrompt: "You are very helpful.",
 		UserTemplate: "Please: {{INPUT}}",
-		Version:      "0.2.0",
+		Version:      "0.1.0",
 		Author:       "test",
 	}
 	pl.Register(p2)

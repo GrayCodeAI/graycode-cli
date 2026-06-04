@@ -11,7 +11,7 @@
 // normal Go interface{} (or other target type) populated as if
 // the comments were never there.
 //
-// Source: github.com/JuliusBrussee/caveman,
+// GrayCode native implementation.
 // bin/lib/settings.js (parseJSONC). Ported to native Go.
 package jsonc
 

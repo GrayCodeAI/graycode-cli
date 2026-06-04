@@ -236,7 +236,7 @@ func TestValidate_IncludeCoAuthoredBy(t *testing.T) {
 }
 
 func TestValidate_RealisticDocument(t *testing.T) {
-	// The exact document format from the caveman settings.js test
+	// The exact document format from settings validation tests
 	src := []byte(`{
 		"model": "claude-sonnet-4-6",
 		"permissions": {

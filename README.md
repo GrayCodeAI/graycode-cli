@@ -39,32 +39,30 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
 - **Extensible** — 40+ built-in tools, MCP server support, community skill registry
 
-## Quick Start
+## Status
+
+**Hawk is in active development.** There is no public install script or release channel yet. We are building features, tests, and hardening in the open.
+
+Follow [GrayCode](https://github.com/GrayCodeAI) for progress. When Hawk is ready to try, we will announce it on [graycodeai.gateandtech.in](https://graycodeai.gateandtech.in/changelog).
+
+## Quick Start (contributors — from source)
 
 ```bash
-# Install
-brew install GrayCodeAI/tap/hawk
+git clone https://github.com/GrayCodeAI/hawk && cd hawk
+go build -o hawk ./cmd/hawk
+./hawk
 
 # First run — paste API key in /config (stored in macOS Keychain / Linux keyring)
-hawk
-
 # Verify readiness
-hawk path
+./hawk path
 ```
 
 See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential model. Do not put API keys in shell env or `.env` for hawk.
 
-Or install via other methods:
+Optional for contributors:
 
 ```bash
-# Go install
-go install github.com/GrayCodeAI/hawk@latest
-
-# Install script (with checksum verification)
-curl -fsSL https://raw.githubusercontent.com/GrayCodeAI/hawk/main/install.sh | sh
-
-# From source
-git clone https://github.com/GrayCodeAI/hawk && cd hawk && go build ./cmd/hawk
+go install github.com/GrayCodeAI/hawk@latest   # requires a published tag
 ```
 
 ## Features

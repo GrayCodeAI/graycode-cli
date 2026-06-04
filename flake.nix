@@ -13,7 +13,7 @@
         
         hawk = pkgs.buildGoModule rec {
           pname = "hawk";
-          version = "0.2.0";
+          version = "0.1.0";
           
           src = ./.;
           

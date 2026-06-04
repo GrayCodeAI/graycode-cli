@@ -816,7 +816,7 @@ func BuiltinPersonas() []*Persona {
 			},
 			CreatedAt: now,
 		},
-		// --- Cavecrew personas (ported from JuliusBrussee/caveman) ---
+		// --- Cavecrew personas (built into GrayCode Hawk) ---
 		// Three compact, opinionated personas for multi-agent crews.
 		// Each enforces a strict output format so downstream agents
 		// can parse the output mechanically.
@@ -892,7 +892,7 @@ func BuiltinPersonas() []*Persona {
 }
 
 // CavecrewPersonas returns just the three cavecrew personas
-// (investigator, builder, reviewer) ported from JuliusBrussee/caveman.
+// (investigator, builder, reviewer) built into GrayCode Hawk.
 // These are a strict, format-driven subset of the full BuiltinPersonas
 // list; callers that want only the cavecrew subset can use this
 // function instead of BuiltinPersonas.
@@ -992,7 +992,7 @@ func (r *PersonaRegistry) EnsureBuiltins() error {
 
 // EnsureCavecrew creates just the three cavecrew personas
 // (investigator, builder, reviewer) if they do not exist. Callers
-// who want only the caveman-format-driven subset can call this
+// who want only the compact-format-driven subset can call this
 // instead of EnsureBuiltins.
 //
 // Cavecrew personas are already part of BuiltinPersonas, so calling

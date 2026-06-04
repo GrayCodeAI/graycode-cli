@@ -1,5 +1,5 @@
 // Package providers catalogs the AI coding agents that hawk can be
-// invoked from. The matrix is ported from JuliusBrussee/caveman's
+// invoked from. The matrix is built into GrayCode Hawk's
 // bin/install.js (PROVIDERS array, 34 entries) and adapted to native Go.
 //
 // Each entry in the matrix describes:
@@ -17,7 +17,7 @@
 // The Detected field is populated by Detect() when a probe succeeds
 // (e.g. the command is on PATH, the directory exists, etc.).
 //
-// Source: github.com/JuliusBrussee/caveman, bin/install.js.
+// GrayCode native implementation. bin/install.js.
 // Ported to native Go.
 package providers
 
@@ -341,7 +341,7 @@ func macAppPresent(name string) bool {
 // needle is present in ~/.config/JetBrains/<product>/plugins or
 // ~/Library/Application Support/JetBrains/<product>/plugins.
 //
-// Implementation note: the caveman version is more thorough (walks
+// Implementation note: a full directory walk variant is more thorough (walks
 // every product dir). This port covers the common cases; extend
 // per-product as needed.
 func jetbrainsPluginPresent(needle string) bool {
