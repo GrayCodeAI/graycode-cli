@@ -8,7 +8,7 @@
 // level (low/medium/high/blocked) and a Rule string identifying
 // which check fired.
 //
-// Source: github.com/JuliusBrussee/caveman, hooks/permission.js
+// GrayCode native implementation. hooks/permission.js
 // (PermissionVerdict). Ported to native Go.
 package permissions
 

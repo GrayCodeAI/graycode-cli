@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Version re-baselined to `0.2.0`** across `main.go`, `api/server.go`, `flake.nix`,
+- **Version re-baselined to `0.1.0`** across `main.go`, `api/server.go`, `flake.nix`,
   `.github/workflows/release.yml`, and the `update`/`api` test suites, aligning hawk
   with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
 
@@ -17,9 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prompt cache keep-alive pings
 - Unified Finding type in shared/types for cross-tool interoperability
 
-### Added — Round 2 of rtk + caveman porting (2026-06-01)
+### Added — Round 2 ecosystem improvements (2026-06-01)
 - **Cavecrew personas** (`internal/multiagent/agents`): three new
-  built-in personas ported from JuliusBrussee/caveman
+  built-in personas built into GrayCode Hawk
   (`cavecrew-investigator`, `cavecrew-builder`, `cavecrew-reviewer`).
   Each enforces a strict output format so downstream agents can parse
   outputs mechanically:
@@ -29,13 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Exposed via `CavecrewPersonas()` helper and `EnsureCavecrew()`
   registry method; `BuiltinPersonas()` returns 21 (was 18).
 - **`internal/safewrite`** package: hardened atomic file-write utility
-  ported from caveman's `safeWriteFlag`. Refuses symlinks at destination
+  native GrayCode hardened atomic writes. Refuses symlinks at destination
   and parent, refuses paths that escape via `..`, opens with
   `O_NOFOLLOW` via `golang.org/x/sys/unix`, writes to a temp file
   with mode 0600, syncs to disk, then atomically renames. `ErrSymlinkTarget`
   and `ErrPathEscape` sentinel errors.
 - **`internal/jsonc`** package: JSON-with-Comments parser and
-  `ValidateClaudeSettings` validator, ported from caveman's settings
+  `ValidateClaudeSettings` validator, native GrayCode settings
   parser and `validateHookFields`. Accepts `//` and `/* */` comments
   plus trailing commas in objects and arrays. Validates Claude Code
   `settings.json` fields (model, permissions, hooks, mcpServers,
@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `RiskBlocked`). Helpers: `Allow`, `Deny`, `RequireApproval`. Additive
   change — existing `GuardianDecision` is unchanged.
 - **`internal/providers`** package: PROVIDERS matrix (34 entries)
-  ported from caveman's `bin/install.js` (PROVIDERS array). Each
+  native GrayCode PROVIDERS matrix. Each
   entry describes an AI coding agent (Claude Code, Cursor, Codex,
   Aider, etc.) with install mechanism and detection probes. Probe
   kinds: `command` (PATH), `dir` (filesystem), `vscode-ext`,
@@ -135,7 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `generateSummary()` now uses cheapest available model per provider instead of primary model
 - Ecosystem roadmap added: `ECOSYSTEM-ROADMAP.md` with 30-feature prioritized implementation plan
 
-## [0.2.0] — 2026-05-01
+## [0.1.0] — 2026-05-01
 
 ### Added
 - **Bash Security**: zsh bypass protection, process substitution blocking, IFS injection detection, carriage return prevention, ANSI-C quoting detection, git commit safety

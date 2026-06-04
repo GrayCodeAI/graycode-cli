@@ -5,7 +5,7 @@ repository that follows this layout. Adopted 2026-05-14.
 
 ## TL;DR
 
-- Every repo has a `VERSION` file at the root (plain text, e.g. `0.2.0`).
+- Every repo has a `VERSION` file at the root (plain text, e.g. `0.1.0`).
 - `VERSION` is the single source of truth — everything else (code, build
   tooling, release tooling, CI, package metadata) reads from it.
 - Versions are independent per repo, following [SemVer](https://semver.org).
@@ -98,7 +98,7 @@ func init() {
 
 ## What's banned
 
-- Hardcoding a version in source code (e.g. `const Version = "0.2.0"`). Always
+- Hardcoding a version in source code (e.g. `const Version = "0.1.0"`). Always
   read from `VERSION` or a build-time injection.
 - Maintaining a version string in two places (e.g. `pyproject.toml` AND
   `_version.py`) — they drift, always.

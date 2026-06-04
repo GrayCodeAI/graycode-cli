@@ -7,7 +7,7 @@
 // session and per-day aggregations are available without joining
 // against an external DB.
 //
-// Source: similar in spirit to rtk-ai/rtk's src/core/tracking.rs
+// Per-session gain tracking for compression stats
 // and tok's internal/tracking, but session-scoped.
 //
 // Usage:

@@ -4,7 +4,7 @@
 // protects against common symlink and permission attacks.
 //
 // The function in this package — WriteFile — performs the same
-// security checks as caveman's safeWriteFlag:
+// hardened atomic write security checks:
 //
 //  1. Refuses to follow symlinks (O_NOFOLLOW).
 //  2. Writes to a temporary file in the same directory first.
@@ -14,7 +14,7 @@
 //  5. Refuses to operate on paths that already exist as symlinks
 //     pointing elsewhere (TOCTOU-resistant).
 //
-// Source: github.com/JuliusBrussee/caveman,
+// GrayCode native implementation.
 // bin/install.js (safeWriteFlag). Ported to native Go.
 //
 // This is a low-level utility intended for hooks and other code

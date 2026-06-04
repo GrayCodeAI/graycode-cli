@@ -67,7 +67,7 @@ test-race: ## Run unit tests with the race detector.
 test-10x: ## Run tests 10 times to surface flakes.
 	go test ./... -race -count=10 -timeout=600s
 
-test-new: ## Run only the Round 2 rtk/caveman ported packages (fast iteration).
+test-new: ## Run only the Round 2 ecosystem packages (fast iteration).
 	go test -race -count=1 -timeout=60s ./internal/safewrite/... ./internal/jsonc/... ./internal/providers/... ./internal/session/... ./internal/permissions/...
 
 cover: ## Generate a coverage report (coverage.out + coverage.html).
@@ -76,7 +76,7 @@ cover: ## Generate a coverage report (coverage.out + coverage.html).
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
 
-cover-new: ## Coverage report for Round 2 rtk/caveman ported packages only.
+cover-new: ## Coverage report for Round 2 ecosystem packages only.
 	go test -cover -timeout=30s ./internal/safewrite/... ./internal/jsonc/... ./internal/providers/... ./internal/session/... ./internal/permissions/...
 
 bench: ## Run benchmarks.
