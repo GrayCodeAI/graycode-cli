@@ -94,7 +94,7 @@ type HealthResponse struct {
 
 // New creates a new daemon server. If factory is nil, chat endpoint returns an error.
 func New(cfg Config, factory SessionFactory) *Server {
-	if cfg.Port <= 0 {
+	if cfg.Port < 0 {
 		cfg.Port = DefaultConfig().Port
 	}
 	if cfg.Host == "" {
