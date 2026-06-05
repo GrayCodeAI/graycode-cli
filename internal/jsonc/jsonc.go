@@ -145,9 +145,7 @@ func PrettyError(err error) string {
 		return ""
 	}
 	msg := err.Error()
-	if strings.HasPrefix(msg, "jsonc: ") {
-		msg = strings.TrimPrefix(msg, "jsonc: ")
-	}
+	msg = strings.TrimPrefix(msg, "jsonc: ")
 	return msg
 }
 

@@ -775,12 +775,8 @@ func (r *MarkdownRenderer) renderTableFromLines(tableLines []string, width int) 
 func parseTableRow(line string) []string {
 	// Remove leading/trailing |
 	line = strings.TrimSpace(line)
-	if strings.HasPrefix(line, "|") {
-		line = line[1:]
-	}
-	if strings.HasSuffix(line, "|") {
-		line = line[:len(line)-1]
-	}
+	line = strings.TrimPrefix(line, "|")
+	line = strings.TrimSuffix(line, "|")
 	parts := strings.Split(line, "|")
 	cells := make([]string, len(parts))
 	for i, p := range parts {
@@ -1078,11 +1074,7 @@ func hasIncompleteElement(s string) bool {
 			fenceCount++
 		}
 	}
-	if fenceCount%2 != 0 {
-		return true
-	}
-
-	return false
+	return fenceCount%2 != 0
 }
 
 // findSafeRenderPoint finds the longest prefix that can be safely rendered.

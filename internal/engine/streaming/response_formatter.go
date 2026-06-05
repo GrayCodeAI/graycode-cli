@@ -380,7 +380,7 @@ func describeChange(ruleName, before, after string) string {
 	case "fix_code_fence_language_labels":
 		return "Fixed code fence language label to lowercase"
 	case "remove_filler_prefixes":
-		return fmt.Sprintf("Removed filler prefix")
+		return "Removed filler prefix"
 	case "remove_trailing_offers":
 		return "Removed trailing offer phrase"
 	case "normalize_bullet_styles":

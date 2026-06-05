@@ -25,9 +25,7 @@ func (m *chatModel) saveSession() {
 	var msgs []session.Message
 	for _, rm := range raw {
 		sm := session.Message{Role: rm.Role, Content: rm.Content}
-		for _, tc := range rm.ToolUse {
-			sm.ToolUse = append(sm.ToolUse, tc)
-		}
+		sm.ToolUse = append(sm.ToolUse, rm.ToolUse...)
 		if len(rm.ToolResults) > 0 {
 			sm.ToolResults = make([]session.ToolResult, len(rm.ToolResults))
 			copy(sm.ToolResults, rm.ToolResults)
@@ -117,9 +115,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			var msgs []client.EyrieMessage
 			for _, sm := range s.Messages {
 				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-				for _, tc := range sm.ToolUse {
-					em.ToolUse = append(em.ToolUse, tc)
-				}
+				em.ToolUse = append(em.ToolUse, sm.ToolUse...)
 				if len(sm.ToolResults) > 0 {
 					em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
 					copy(em.ToolResults, sm.ToolResults)
@@ -165,9 +161,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		var msgs []client.EyrieMessage
 		for _, sm := range saved.Messages {
 			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-			for _, tc := range sm.ToolUse {
-				em.ToolUse = append(em.ToolUse, tc)
-			}
+			em.ToolUse = append(em.ToolUse, sm.ToolUse...)
 			if len(sm.ToolResults) > 0 {
 				em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
 				copy(em.ToolResults, sm.ToolResults)

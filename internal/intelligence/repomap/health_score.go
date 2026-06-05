@@ -921,7 +921,7 @@ func calculateCyclomaticComplexity(fn *ast.FuncDecl) int {
 	}
 	complexity := 1
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		switch n.(type) {
+		switch n := n.(type) {
 		case *ast.IfStmt:
 			complexity++
 		case *ast.ForStmt:
@@ -933,8 +933,7 @@ func calculateCyclomaticComplexity(fn *ast.FuncDecl) int {
 		case *ast.CommClause:
 			complexity++
 		case *ast.BinaryExpr:
-			bin := n.(*ast.BinaryExpr)
-			if bin.Op.String() == "&&" || bin.Op.String() == "||" {
+			if n.Op.String() == "&&" || n.Op.String() == "||" {
 				complexity++
 			}
 		}

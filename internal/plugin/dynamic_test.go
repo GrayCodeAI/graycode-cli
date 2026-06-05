@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -375,7 +376,7 @@ func TestDynamicPluginManager_ExecuteTool_NotFound(t *testing.T) {
 	t.Parallel()
 	dm := NewDynamicPluginManager(nil, nil, nil)
 
-	_, err := dm.ExecuteTool(nil, "nonexistent", "tool", nil)
+	_, err := dm.ExecuteTool(context.TODO(), "nonexistent", "tool", nil)
 	if err == nil {
 		t.Error("expected error executing tool on nonexistent plugin")
 	}
@@ -399,7 +400,7 @@ func TestDynamicPluginManager_ExecuteTool_NotActive(t *testing.T) {
 	dm.DiscoverAll()
 
 	// Plugin is in "discovered" state, not active
-	_, err := dm.ExecuteTool(nil, "inactive-plugin", "echo", nil)
+	_, err := dm.ExecuteTool(context.TODO(), "inactive-plugin", "echo", nil)
 	if err == nil {
 		t.Error("expected error executing tool on inactive plugin")
 	}

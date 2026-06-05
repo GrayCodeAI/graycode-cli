@@ -114,7 +114,7 @@ func TestSession_Chat_MockResponse(t *testing.T) {
 	s.AddUser("hi")
 
 	// Call Chat directly
-	resp, err := mc.Chat(nil, s.RawMessages(), types.ChatOptions{})
+	resp, err := mc.Chat(context.TODO(), s.RawMessages(), types.ChatOptions{})
 	if err != nil {
 		t.Fatalf("Chat error: %v", err)
 	}

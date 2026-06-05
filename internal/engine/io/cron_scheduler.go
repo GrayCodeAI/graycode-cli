@@ -435,10 +435,7 @@ func matchesCron(expr *CronExpr, t time.Time) bool {
 		return false
 	}
 	dow := int(t.Weekday()) // Sunday=0
-	if !containsInt(expr.DayOfWeek, dow) {
-		return false
-	}
-	return true
+	return containsInt(expr.DayOfWeek, dow)
 }
 
 // containsInt checks if a value exists in a slice.

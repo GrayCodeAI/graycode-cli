@@ -211,11 +211,7 @@ func (tp *ThinkingProtocol) ShouldThinkFirst(task string) bool {
 	for _, ind := range fileIndicators {
 		fileCount += strings.Count(lower, ind)
 	}
-	if fileCount > 1 {
-		return true
-	}
-
-	return false
+	return fileCount > 1
 }
 
 // FormatThinking formats thinking steps for display to the user.

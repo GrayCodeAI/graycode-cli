@@ -45,14 +45,13 @@ func TestDetector_RecordContradiction(t *testing.T) {
 	d.RecordRuleUsed("rule-1", time.Now())
 	d.RecordContradiction("rule-1", "user uses snake_case instead of camelCase")
 
-	stale := d.CheckStaleness(0) // threshold 0 means everything is stale
 	// The rule was just used so it won't be stale by time alone,
 	// but with only 1 contradiction it won't appear either.
 	// Add more contradictions.
 	d.RecordContradiction("rule-1", "user uses snake_case again")
 	d.RecordContradiction("rule-1", "user still uses snake_case")
 
-	stale = d.CheckStaleness(24 * time.Hour * 365) // High threshold so time isn't the factor.
+	stale := d.CheckStaleness(24 * time.Hour * 365) // High threshold so time isn't the factor.
 	found := false
 	for _, s := range stale {
 		if s.ID == "rule-1" {
