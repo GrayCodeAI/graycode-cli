@@ -492,7 +492,7 @@ func buildRecommendation(entry *MalwareEntry) string {
 	case strings.Contains(entry.Description, "protestware"):
 		return "Pin to a safe version before the malicious release or switch to a community fork."
 	case strings.Contains(entry.Description, "typosquat"):
-		return fmt.Sprintf("This is a typosquat package. Remove immediately and install the legitimate package instead.")
+		return "This is a typosquat package. Remove immediately and install the legitimate package instead."
 	default:
 		return "Remove this package immediately. It is known malware."
 	}
@@ -575,10 +575,7 @@ func containsHomoglyph(name, target string) bool {
 			return true
 		}
 		normalized = strings.ReplaceAll(target, "rn", "m")
-		if normalized == name {
-			return true
-		}
-		return false
+		return normalized == name
 	}
 
 	diffCount := 0

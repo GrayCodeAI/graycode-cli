@@ -489,6 +489,7 @@ func extractReturns(signature string) string {
 	// Find matching closing paren
 	depth := 0
 	paramEnd := -1
+scanLoop:
 	for i := paramStart; i < len(signature); i++ {
 		switch signature[i] {
 		case '(':
@@ -497,11 +498,8 @@ func extractReturns(signature string) string {
 			depth--
 			if depth == 0 {
 				paramEnd = i
-				break
+				break scanLoop
 			}
-		}
-		if paramEnd >= 0 {
-			break
 		}
 	}
 	if paramEnd < 0 || paramEnd >= len(signature)-1 {

@@ -560,10 +560,3 @@ func TestProjectSavingsEmpty(t *testing.T) {
 		t.Errorf("expected 0 savings for nil recommendations, got %f", total)
 	}
 }
-
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}

@@ -465,9 +465,7 @@ func stripPleasantries(s string) string {
 	result := s
 	// Only strip pleasantries at the beginning of the text or after newlines
 	for _, p := range pleasantries {
-		if strings.HasPrefix(result, p) {
-			result = result[len(p):]
-		}
+		result = strings.TrimPrefix(result, p)
 		result = strings.ReplaceAll(result, "\n"+p, "\n")
 	}
 	return result

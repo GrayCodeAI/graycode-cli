@@ -342,7 +342,7 @@ func TestDetectUnicodeAttacks(t *testing.T) {
 
 	t.Run("zero_width_characters", func(t *testing.T) {
 		// Zero-width space U+200B
-		input := "hello​world"
+		input := "hello\u200Bworld"
 		threats := scanner.DetectUnicodeAttacks(input)
 		if len(threats) == 0 {
 			t.Error("expected threats for zero-width character")
@@ -361,7 +361,7 @@ func TestDetectUnicodeAttacks(t *testing.T) {
 
 	t.Run("bidi_override", func(t *testing.T) {
 		// Right-to-left override U+202E
-		input := "normal‮text"
+		input := "normal\u202Etext"
 		threats := scanner.DetectUnicodeAttacks(input)
 		found := false
 		for _, th := range threats {
@@ -393,7 +393,7 @@ func TestDetectUnicodeAttacks(t *testing.T) {
 
 	t.Run("invisible_separator", func(t *testing.T) {
 		// Word joiner U+2060
-		input := "test⁠data"
+		input := "test\u2060data"
 		threats := scanner.DetectUnicodeAttacks(input)
 		found := false
 		for _, th := range threats {

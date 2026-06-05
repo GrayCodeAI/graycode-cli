@@ -232,9 +232,7 @@ func (pm *PluginManager) ListTools() []PluginTool {
 
 	var tools []PluginTool
 	for _, p := range pm.Loaded {
-		for _, t := range p.Tools {
-			tools = append(tools, t)
-		}
+		tools = append(tools, p.Tools...)
 	}
 	return tools
 }

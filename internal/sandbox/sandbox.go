@@ -202,14 +202,10 @@ func (s *Sandbox) runSeatbelt(ctx context.Context, command string) (*exec.Cmd, e
 	policy.AllowWrite = s.config.AllowWrite
 
 	// Add configured readable dirs.
-	for _, d := range s.config.ReadOnlyDirs {
-		policy.ReadablePaths = append(policy.ReadablePaths, d)
-	}
+	policy.ReadablePaths = append(policy.ReadablePaths, s.config.ReadOnlyDirs...)
 
 	// Add configured writable dirs.
-	for _, d := range s.config.WritableDirs {
-		policy.WritablePaths = append(policy.WritablePaths, d)
-	}
+	policy.WritablePaths = append(policy.WritablePaths, s.config.WritableDirs...)
 
 	return RunSeatbelted(ctx, command, policy)
 }

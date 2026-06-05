@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // CodeGenerator manages code generation templates and renders them on demand.
@@ -929,7 +932,7 @@ func (cg *CodeGenerator) Generate(templateName string, vars map[string]string) (
 	funcMap := template.FuncMap{
 		"lower": strings.ToLower,
 		"upper": strings.ToUpper,
-		"title": strings.Title,
+		"title": cases.Title(language.English).String,
 	}
 
 	t, err := template.New(templateName).Funcs(funcMap).Parse(tmpl.Template)

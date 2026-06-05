@@ -295,7 +295,7 @@ func TestSecurityScanHiddenUnicode(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "plugin.json"), []byte(manifest), 0o644)
 
 	// Create a file with hidden Unicode characters (zero-width space U+200B)
-	suspicious := "normal text​hidden content"
+	suspicious := "normal text\u200Bhidden content"
 	os.WriteFile(filepath.Join(dir, "script.sh"), []byte(suspicious), 0o644)
 
 	issues := ScanPlugin(dir)
@@ -323,7 +323,7 @@ func TestSecurityScanBiDiOverride(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "plugin.json"), []byte(manifest), 0o644)
 
 	// BiDi right-to-left override U+202E
-	bidi := "normal‮evil code"
+	bidi := "normal\u202Eevil code"
 	os.WriteFile(filepath.Join(dir, "readme.txt"), []byte(bidi), 0o644)
 
 	issues := ScanPlugin(dir)

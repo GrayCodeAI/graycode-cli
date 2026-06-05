@@ -136,7 +136,7 @@ func TestLoadSettingsProjectMergeIncludesArchiveFields(t *testing.T) {
 	defer os.Chdir(orig)
 
 	settings := LoadSettings()
-	if got := ActiveModel(nil); got != "project" {
+	if got := ActiveModel(context.TODO()); got != "project" {
 		t.Fatalf("expected project model in eyrie, got %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {
@@ -170,7 +170,7 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	}
 
 	settings := LoadGlobalSettings()
-	if got := ActiveModel(nil); got != "test-model" {
+	if got := ActiveModel(context.TODO()); got != "test-model" {
 		t.Fatalf("unexpected active model: %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {

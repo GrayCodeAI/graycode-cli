@@ -32,18 +32,6 @@ func mockTextResponse(text string) *types.EyrieResponse {
 	}
 }
 
-func mockToolResponse(toolName string, args map[string]interface{}) *types.EyrieResponse {
-	return &types.EyrieResponse{
-		FinishReason: "tool_use",
-		ToolCalls: []types.ToolCall{{
-			ID:        "call_mock_1",
-			Name:      toolName,
-			Arguments: args,
-		}},
-		Usage: &types.EyrieUsage{PromptTokens: 50, CompletionTokens: 30, TotalTokens: 80},
-	}
-}
-
 func (m *mockClient) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -95,13 +83,4 @@ func (m *mockClient) callCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return len(m.calls)
-}
-
-func (m *mockClient) lastCall() mockCall {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if len(m.calls) == 0 {
-		return mockCall{}
-	}
-	return m.calls[len(m.calls)-1]
 }

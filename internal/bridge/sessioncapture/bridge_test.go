@@ -1,6 +1,9 @@
 package sessioncapture
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestNewBridge_NoTrace(t *testing.T) {
 	// Save and clear PATH so trace won't be found
@@ -13,7 +16,7 @@ func TestNewBridge_NoTrace(t *testing.T) {
 
 func TestBridge_EnableWithoutCLI(t *testing.T) {
 	b := &Bridge{ready: false}
-	err := b.Enable(nil, "/tmp")
+	err := b.Enable(context.TODO(), "/tmp")
 	if err == nil {
 		t.Error("expected error when trace CLI not found")
 	}
@@ -21,7 +24,7 @@ func TestBridge_EnableWithoutCLI(t *testing.T) {
 
 func TestBridge_StatusWithoutCLI(t *testing.T) {
 	b := &Bridge{ready: false}
-	s, err := b.GetStatus(nil, "/tmp")
+	s, err := b.GetStatus(context.TODO(), "/tmp")
 	if err == nil {
 		t.Error("expected error when trace CLI not found")
 	}
