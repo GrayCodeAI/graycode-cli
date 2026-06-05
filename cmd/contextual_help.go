@@ -624,11 +624,7 @@ func fuzzyMatch(query, target string) bool {
 			break
 		}
 	}
-	if suffixLen >= 3 {
-		return true
-	}
-
-	return false
+	return suffixLen >= 3
 }
 
 // SuggestHelp returns relevant help entries based on the current context.

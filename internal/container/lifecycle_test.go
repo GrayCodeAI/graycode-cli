@@ -9,18 +9,6 @@ import (
 	"testing"
 )
 
-// mockCmd creates a fake exec.CommandContext that returns the given stdout/stderr/exit.
-func mockCmd(stdout, stderr string, exitCode int) func(ctx context.Context, name string, args ...string) *exec.Cmd {
-	return func(ctx context.Context, name string, args ...string) *exec.Cmd {
-		// We use "echo" to simulate stdout. For more complex mocking,
-		// we use a test helper binary approach via Go's TestHelperProcess pattern.
-		cs := []string{"-test.run=TestHelperProcess", "--", stdout, stderr, fmt.Sprintf("%d", exitCode)}
-		cmd := exec.CommandContext(ctx, "/bin/sh", "-c", fmt.Sprintf("printf '%%s' %q; exit %d", stdout, exitCode))
-		_ = cs // suppress unused
-		return cmd
-	}
-}
-
 // mockCmdWithRecorder returns a mock that records all invocations.
 type invocation struct {
 	name string

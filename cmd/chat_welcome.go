@@ -299,8 +299,8 @@ func envSummaryWithSelection(provider, model string, includeSelection bool) stri
 
 func configCommandSummary(settings hawkconfig.Settings) string {
 	_ = settings
-	provider := displayConfigValue(hawkconfig.ActiveProvider(nil))
-	model := displayConfigValue(hawkconfig.ActiveModel(nil))
+	provider := displayConfigValue(hawkconfig.ActiveProvider(context.TODO()))
+	model := displayConfigValue(hawkconfig.ActiveModel(context.TODO()))
 	return fmt.Sprintf(`Setup (eyrie)
 
   /config  → paste API key (OS keychain) + pick model

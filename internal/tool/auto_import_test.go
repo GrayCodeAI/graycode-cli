@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -509,7 +510,7 @@ func main() {
 		"apply": false,
 	})
 
-	result, err := tool.Execute(nil, input)
+	result, err := tool.Execute(context.TODO(), input)
 	if err != nil {
 		t.Fatalf("Execute() error: %v", err)
 	}
@@ -539,7 +540,7 @@ func main() {
 		"apply": true,
 	})
 
-	result, err := tool.Execute(nil, input)
+	result, err := tool.Execute(context.TODO(), input)
 	if err != nil {
 		t.Fatalf("Execute() error: %v", err)
 	}
@@ -561,7 +562,7 @@ func TestAutoImportTool_Execute_EmptyCode(t *testing.T) {
 		"code": "",
 	})
 
-	_, err := tool.Execute(nil, input)
+	_, err := tool.Execute(context.TODO(), input)
 	if err == nil {
 		t.Error("expected error for empty code")
 	}
@@ -582,7 +583,7 @@ func main() {
 		"apply": false,
 	})
 
-	result, err := tool.Execute(nil, input)
+	result, err := tool.Execute(context.TODO(), input)
 	if err != nil {
 		t.Fatalf("Execute() error: %v", err)
 	}

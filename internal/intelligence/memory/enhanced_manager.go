@@ -349,7 +349,7 @@ func (em *EnhancedMemoryManager) DiagnosticReport(_ context.Context) string {
 	// Retrieval metrics
 	if em.Retrieval != nil {
 		r := em.Retrieval.Report()
-		sb.WriteString(fmt.Sprintf("\nRetrieval:\n"))
+		sb.WriteString("\nRetrieval:\n")
 		sb.WriteString(fmt.Sprintf("  Total recalls: %d\n", r.TotalRecalls))
 		sb.WriteString(fmt.Sprintf("  Hit rate: %.1f%%\n", r.HitRate*100))
 		sb.WriteString(fmt.Sprintf("  Avg results: %.1f\n", r.AvgResultCount))
@@ -359,7 +359,7 @@ func (em *EnhancedMemoryManager) DiagnosticReport(_ context.Context) string {
 	// Auto-capture metrics
 	if em.AutoCapture != nil {
 		m := em.AutoCapture.Metrics()
-		sb.WriteString(fmt.Sprintf("\nAuto-Capture:\n"))
+		sb.WriteString("\nAuto-Capture:\n")
 		sb.WriteString(fmt.Sprintf("  Captured: %d\n", m.Captured))
 		sb.WriteString(fmt.Sprintf("  Skipped: %d\n", m.Skipped))
 		sb.WriteString(fmt.Sprintf("  Conventions: %d\n", m.ConventionsOut))
@@ -370,7 +370,7 @@ func (em *EnhancedMemoryManager) DiagnosticReport(_ context.Context) string {
 	// Continuity
 	if em.Continuity != nil {
 		r := em.Continuity.Report()
-		sb.WriteString(fmt.Sprintf("\nContinuity:\n"))
+		sb.WriteString("\nContinuity:\n")
 		sb.WriteString(fmt.Sprintf("  Sessions tracked: %d\n", r.TotalSessions))
 		sb.WriteString(fmt.Sprintf("  Avg score: %.0f/100\n", r.AvgScore))
 		sb.WriteString(fmt.Sprintf("  Memory contribution: %.1f%%\n", r.MemoryContribution*100))

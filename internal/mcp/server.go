@@ -217,9 +217,6 @@ func (s *MCPServer) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSO
 
 // handleInitialize responds to the MCP initialize handshake.
 func (s *MCPServer) handleInitialize(req *JSONRPCRequest) *JSONRPCResponse {
-	s.mu.RLock()
-	s.mu.RUnlock()
-
 	result := map[string]interface{}{
 		"protocolVersion": "2025-03-26",
 		"capabilities": map[string]interface{}{

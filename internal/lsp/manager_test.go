@@ -1,6 +1,7 @@
 package lsp
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -49,7 +50,7 @@ func TestManagerExecute_LanguageNotConfigured(t *testing.T) {
 	m := NewManager(cfg)
 	defer m.Close()
 
-	err := m.Execute(nil, "haskell", true, func(c *LSPClient) error { return nil })
+	err := m.Execute(context.TODO(), "haskell", true, func(c *LSPClient) error { return nil })
 	if err == nil {
 		t.Error("expected error for unconfigured language")
 	}
@@ -67,7 +68,7 @@ func TestManagerExecute_ClosedManager(t *testing.T) {
 	m := NewManager(cfg)
 	m.Close()
 
-	err := m.Execute(nil, "go", true, func(c *LSPClient) error { return nil })
+	err := m.Execute(context.TODO(), "go", true, func(c *LSPClient) error { return nil })
 	if err == nil {
 		t.Error("expected error from closed manager")
 	}

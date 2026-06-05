@@ -19,8 +19,8 @@ func GenerateReport(result *SuiteResult) string {
 
 	// Summary section.
 	sb.WriteString("## Summary\n\n")
-	sb.WriteString(fmt.Sprintf("| Metric | Value |\n"))
-	sb.WriteString(fmt.Sprintf("|--------|-------|\n"))
+	sb.WriteString("| Metric | Value |\n")
+	sb.WriteString("|--------|-------|\n")
 	sb.WriteString(fmt.Sprintf("| Total Tasks | %d |\n", result.TotalTasks))
 	sb.WriteString(fmt.Sprintf("| Passed | %d |\n", result.Passed))
 	sb.WriteString(fmt.Sprintf("| Failed | %d |\n", result.Failed))

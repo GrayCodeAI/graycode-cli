@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -55,9 +54,4 @@ func TestSpinnerWave_GlyphUsesWaveColor(t *testing.T) {
 	if !frameContainsSpinnerWave(f) {
 		t.Fatal("expected wave color on spinner glyph")
 	}
-}
-
-func fmtSpinnerWaveNeedle(index int) string {
-	c := spinnerWaveColors[index%spinnerWaveLen]
-	return fmt.Sprintf("38;2;%d;%d;%d", c[0], c[1], c[2])
 }

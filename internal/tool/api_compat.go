@@ -1,3 +1,10 @@
+// Package tool provides built-in tools for the hawk coding agent.
+//
+// Deprecated APIs: parser.ParseDir and ast.Package are deprecated since Go 1.25/1.22.
+// A future refactor should migrate to golang.org/x/tools/go/packages, but the current
+// implementation is functional and the migration is non-trivial.
+//
+//nolint:staticcheck
 package tool
 
 import (
@@ -96,6 +103,7 @@ func (c *CompatChecker) Snapshot(path string) (*APISnapshot, error) {
 	defer c.mu.Unlock()
 
 	fset := token.NewFileSet()
+	//lint:ignore SA1019 parser.ParseDir is deprecated; migration to go/packages is non-trivial
 	pkgs, err := parser.ParseDir(fset, path, func(fi os.FileInfo) bool {
 		name := fi.Name()
 		return !strings.HasSuffix(name, "_test.go")
@@ -109,6 +117,7 @@ func (c *CompatChecker) Snapshot(path string) (*APISnapshot, error) {
 	}
 
 	// Take the first package found.
+	//lint:ignore SA1019 ast.Package is deprecated; migration to go/types is non-trivial
 	var pkg *ast.Package
 	var pkgName string
 	for name, p := range pkgs {

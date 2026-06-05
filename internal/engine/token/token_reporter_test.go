@@ -299,7 +299,7 @@ func TestCheckBudgetNoDuplicateAlerts(t *testing.T) {
 
 	// Second check at same level should not create a new alert.
 	alertCount := len(tr.Alerts)
-	alert = tr.CheckBudget()
+	_ = tr.CheckBudget()
 	if len(tr.Alerts) != alertCount {
 		t.Error("should not duplicate alerts")
 	}

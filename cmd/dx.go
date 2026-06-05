@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -66,10 +67,10 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	}
 	b.WriteString("\nProvider:\n")
 	b.WriteString(fmt.Sprintf("  Provider:    %s\n", effectiveProvider))
-	b.WriteString(fmt.Sprintf("  API key:     %s\n", maskedKeyStatus(hawkconfig.ActiveProvider(nil))))
+	b.WriteString(fmt.Sprintf("  API key:     %s\n", maskedKeyStatus(hawkconfig.ActiveProvider(context.TODO()))))
 
 	// Model configured (eyrie provider.json)
-	effectiveModel := strings.TrimSpace(hawkconfig.ActiveModel(nil))
+	effectiveModel := strings.TrimSpace(hawkconfig.ActiveModel(context.TODO()))
 	if effectiveModel == "" {
 		effectiveModel = "(not configured)"
 	}

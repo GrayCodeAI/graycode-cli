@@ -38,8 +38,6 @@ func TestNewErrorRecovery(t *testing.T) {
 func TestRecover_FileNotFound(t *testing.T) {
 	er := NewErrorRecovery()
 
-	err := errors.New("open /tmp/test_dir/atuh.go: no such file or directory")
-
 	// Create a temp directory with a file to test Levenshtein matching.
 	dir := t.TempDir()
 	authFile := filepath.Join(dir, "auth.go")
@@ -49,7 +47,7 @@ func TestRecover_FileNotFound(t *testing.T) {
 
 	// Use an error referencing the temp dir with a typo.
 	typoPath := filepath.Join(dir, "atuh.go")
-	err = fmt.Errorf("open %s: no such file or directory", typoPath)
+	err := fmt.Errorf("open %s: no such file or directory", typoPath)
 
 	ctx := &RecoveryContext{
 		Error:    err,

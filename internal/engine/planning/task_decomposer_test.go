@@ -318,6 +318,7 @@ func TestDecompose_ConcurrentSafe(t *testing.T) {
 			plan := td.Decompose(g)
 			if plan == nil {
 				t.Errorf("Decompose(%q) returned nil", g)
+				return
 			}
 			if len(plan.Tasks) == 0 {
 				t.Errorf("Decompose(%q) returned empty tasks", g)

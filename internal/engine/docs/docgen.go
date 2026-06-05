@@ -1,3 +1,10 @@
+// Package docs provides documentation generation utilities.
+//
+// Deprecated APIs: parser.ParseDir and ast.Package are deprecated since Go 1.25/1.22.
+// A future refactor should migrate to golang.org/x/tools/go/packages, but the current
+// implementation is functional and the migration is non-trivial.
+//
+//nolint:staticcheck
 package docs
 
 import (
@@ -153,6 +160,7 @@ func (dg *DocGenerator) findPackages(dir string, depth int) ([]PackageDoc, error
 
 func (dg *DocGenerator) parseGoPackage(dir string) (*PackageDoc, error) {
 	fset := token.NewFileSet()
+	//lint:ignore SA1019 parser.ParseDir is deprecated; migration to go/packages is non-trivial
 	pkgs, err := parser.ParseDir(fset, dir, func(info os.FileInfo) bool {
 		return !strings.HasSuffix(info.Name(), "_test.go")
 	}, parser.ParseComments)
@@ -164,6 +172,7 @@ func (dg *DocGenerator) parseGoPackage(dir string) (*PackageDoc, error) {
 		return nil, nil
 	}
 
+	//lint:ignore SA1019 ast.Package is deprecated; migration to go/types is non-trivial
 	var astPkg *ast.Package
 	for _, p := range pkgs {
 		if !strings.HasSuffix(p.Name, "_test") {
@@ -777,6 +786,7 @@ func (dg *DocGenerator) InferDescription(projectDir string) string {
 	goFiles, _ := filepath.Glob(filepath.Join(projectDir, "*.go"))
 	if len(goFiles) > 0 {
 		fset := token.NewFileSet()
+		//lint:ignore SA1019 parser.ParseDir is deprecated; migration to go/packages is non-trivial
 		pkgs, err := parser.ParseDir(fset, projectDir, nil, parser.ParseComments)
 		if err == nil {
 			for _, pkg := range pkgs {
