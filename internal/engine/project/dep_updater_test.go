@@ -36,7 +36,7 @@ func TestClassifyUpdate_Minor(t *testing.T) {
 		{"v1.0.0", "v1.1.0", "minor"},
 		{"v2.1.0", "v2.3.0", "minor"},
 		{"v1.0.0", "v1.5.3", "minor"},
-		{"0.1.0", "0.1.0", "minor"},
+		{"0.1.0", "0.2.0", "minor"},
 	}
 
 	for _, tt := range tests {

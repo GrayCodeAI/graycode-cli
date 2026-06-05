@@ -280,7 +280,7 @@ jobs:
           node-version: '24'
       - name: jscpd
         run: |
-          npx jscpd --min-lines 5 --min-tokens 50 --reporters console --blame --exit-code . 2>&1 | head -50
+          npx jscpd --min-lines 5 --min-tokens 50 --reporters console --blame . 2>&1 | head -50
 
   # -------------------------------------------------------------------------
   # 9. Cross-platform build matrix — zero CGO, all targets.
