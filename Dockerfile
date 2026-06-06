@@ -12,15 +12,14 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# Add replace after source copy so it doesn't get overwritten
-RUN echo "" >> go.mod && echo "replace github.com/GrayCodeAI/eyrie => /eyrie" >> go.mod && go mod tidy
-
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -mod=mod \
+# Use go.work to resolve the local eyrie checkout — avoids mutating go.mod at build time.
+RUN go work init . /eyrie && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath \
     -ldflags="-s -w -X main.Version=$(git describe --tags --always 2>/dev/null || echo dev)" \
     -o hawk ./cmd/hawk
 
-# Runtime stage — minimal image
-FROM alpine:3.20
+# Runtime stage — Alpine (hawk requires git + bash for workspace operations; distroless excluded)
+FROM alpine:3.21
 
 RUN apk add --no-cache ca-certificates git bash tini && \
     adduser -D -u 1000 -h /home/hawk hawk
