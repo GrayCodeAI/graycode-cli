@@ -90,7 +90,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	}
 
 	b.WriteString(fmt.Sprintf("Configured MCP servers: %d\n", len(settings.MCPServers)+len(mcpServers)))
-	b.WriteString(fmt.Sprintf("Built-in tools: %d\n", len(baseTools())))
+	b.WriteString(fmt.Sprintf("Built-in tools: %d\n", len(allTools())))
 
 	// Session recovery status
 	recoveryCandidates := session.ScanForRecovery()
@@ -238,7 +238,7 @@ func sessionsSummary() string {
 }
 
 func builtInToolsSummary() string {
-	tools := baseTools()
+	tools := allTools()
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("Built-in tools (%d):\n", len(tools)))
 	for _, t := range tools {

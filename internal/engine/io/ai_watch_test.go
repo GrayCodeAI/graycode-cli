@@ -1,9 +1,11 @@
 package io
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -567,6 +569,123 @@ func TestRemoveComment_LineOutOfRange(t *testing.T) {
 	if !strings.Contains(err.Error(), "out of range") {
 		t.Errorf("expected out of range error, got: %v", err)
 	}
+}
+
+func TestStartFsnotify_InitialAndNewComments(t *testing.T) {
+	dir := t.TempDir()
+
+	// A file with a directive already present before watching starts.
+	existing := filepath.Join(dir, "existing.go")
+	if err := os.WriteFile(existing, []byte("package main\n// ai: existing directive\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	w := NewAIWatcher(dir, []string{"*.go"})
+	w.Debounce = 50 * time.Millisecond
+
+	var mu sync.Mutex
+	var seen []string
+	w.OnComment = func(c AIComment) {
+		mu.Lock()
+		seen = append(seen, c.Comment)
+		mu.Unlock()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- w.StartFsnotify(ctx) }()
+
+	// Wait for the initial scan to deliver the existing directive.
+	waitFor(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, s := range seen {
+			if s == "existing directive" {
+				return true
+			}
+		}
+		return false
+	}, 2*time.Second, "initial directive not detected")
+
+	// Now create a new file with a directive; the fsnotify backend should pick it up.
+	added := filepath.Join(dir, "added.go")
+	if err := os.WriteFile(added, []byte("package main\n// ai: added directive\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	waitFor(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, s := range seen {
+			if s == "added directive" {
+				return true
+			}
+		}
+		return false
+	}, 3*time.Second, "newly-added directive not detected")
+
+	w.Stop()
+	select {
+	case <-errCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("StartFsnotify did not return after Stop")
+	}
+}
+
+func TestStartFsnotify_OnChangeFiresPerBurst(t *testing.T) {
+	dir := t.TempDir()
+	w := NewAIWatcher(dir, []string{"*.go"})
+	w.Debounce = 50 * time.Millisecond
+
+	var mu sync.Mutex
+	changes := 0
+	w.OnChange = func() {
+		mu.Lock()
+		changes++
+		mu.Unlock()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error, 1)
+	go func() { errCh <- w.StartFsnotify(ctx) }()
+
+	// Give the initial scan/watch setup a moment.
+	time.Sleep(100 * time.Millisecond)
+
+	// Write a file with no ai: comment at all — OnComment would not fire, but
+	// OnChange must, since the file tree changed.
+	if err := os.WriteFile(filepath.Join(dir, "plain.go"), []byte("package main\n// AI! act now\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	waitFor(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return changes >= 1
+	}, 3*time.Second, "OnChange did not fire on filesystem change")
+
+	w.Stop()
+	select {
+	case <-errCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("StartFsnotify did not return after Stop")
+	}
+}
+
+// waitFor polls cond until it returns true or the timeout elapses.
+func waitFor(t *testing.T, cond func() bool, timeout time.Duration, msg string) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if cond() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal(msg)
 }
 
 func TestNewAIWatcher_Defaults(t *testing.T) {

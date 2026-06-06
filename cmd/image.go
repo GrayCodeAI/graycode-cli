@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"bytes"
+	"compress/zlib"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"mime"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -149,6 +153,166 @@ func extractImagePath(text string) string {
 		}
 	}
 
+	return ""
+}
+
+// IsPDFFile returns true if the path points to a PDF file.
+func IsPDFFile(path string) bool {
+	return strings.ToLower(filepath.Ext(path)) == ".pdf"
+}
+
+// ReadPDFText reads a PDF and extracts its text content using stdlib only.
+//
+// eyrie does not expose a native document/PDF content block, so PDFs are
+// degraded to text and injected inline. This is a best-effort extractor: it
+// inflates FlateDecode content streams and pulls text from PDF text-showing
+// operators (Tj / TJ). It does not handle every PDF (encrypted, scanned-image,
+// or exotic font encodings will yield little or no text); callers should treat
+// empty output as "no extractable text" rather than an error.
+//
+// TODO: swap in a dedicated PDF library (e.g. ledongthuc/pdf) for layout-aware
+// extraction if one is added to go.mod; the interface here is intentionally
+// stable so that change is internal.
+func ReadPDFText(path string) (string, error) {
+	clean := filepath.Clean(path)
+	info, err := os.Stat(clean)
+	if err != nil {
+		return "", fmt.Errorf("pdf file not found: %s", path)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("path is a directory, not a pdf: %s", path)
+	}
+	if !IsPDFFile(clean) {
+		return "", fmt.Errorf("not a pdf file: %s", path)
+	}
+	data, err := os.ReadFile(clean)
+	if err != nil {
+		return "", fmt.Errorf("failed to read pdf: %w", err)
+	}
+	if !bytes.HasPrefix(data, []byte("%PDF-")) {
+		return "", fmt.Errorf("not a valid pdf (missing %%PDF header): %s", path)
+	}
+	return extractPDFText(data), nil
+}
+
+var (
+	pdfStreamRe = regexp.MustCompile(`(?s)stream\r?\n(.*?)\r?\nendstream`)
+	// Text shown via (literal) Tj or [ ... ] TJ operators.
+	pdfTjRe = regexp.MustCompile(`\((?:[^()\\]|\\.)*\)`)
+)
+
+// extractPDFText pulls readable text from raw PDF bytes. Exported behavior is
+// covered by ReadPDFText; kept separate so tests can exercise byte input.
+func extractPDFText(data []byte) string {
+	var out strings.Builder
+	for _, match := range pdfStreamRe.FindAllSubmatch(data, -1) {
+		raw := match[1]
+		content := raw
+		// Try to inflate; if it isn't zlib-compressed, fall back to raw bytes.
+		if inflated, ok := inflate(raw); ok {
+			content = inflated
+		}
+		for _, lit := range pdfTjRe.FindAll(content, -1) {
+			out.WriteString(decodePDFString(lit))
+		}
+	}
+	return strings.TrimSpace(collapsePDFWhitespace(out.String()))
+}
+
+// inflate attempts zlib (FlateDecode) decompression of a PDF stream body.
+func inflate(b []byte) ([]byte, bool) {
+	r, err := zlib.NewReader(bytes.NewReader(bytes.TrimSpace(b)))
+	if err != nil {
+		return nil, false
+	}
+	defer func() { _ = r.Close() }()
+	out, err := io.ReadAll(r)
+	if err != nil || len(out) == 0 {
+		return nil, false
+	}
+	return out, true
+}
+
+// decodePDFString converts a PDF literal string token like "(Hello\)world)"
+// into its plain text, handling the common backslash escapes.
+func decodePDFString(lit []byte) string {
+	s := string(lit)
+	s = strings.TrimPrefix(s, "(")
+	s = strings.TrimSuffix(s, ")")
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			next := s[i+1]
+			switch next {
+			case 'n':
+				b.WriteByte('\n')
+			case 'r':
+				b.WriteByte('\r')
+			case 't':
+				b.WriteByte('\t')
+			case '(', ')', '\\':
+				b.WriteByte(next)
+			default:
+				b.WriteByte(next)
+			}
+			i++
+			continue
+		}
+		b.WriteByte(s[i])
+	}
+	return b.String() + " "
+}
+
+// collapsePDFWhitespace squeezes runs of whitespace so extracted text reads
+// cleanly when injected into a prompt.
+func collapsePDFWhitespace(s string) string {
+	var b strings.Builder
+	prevSpace := false
+	for _, r := range s {
+		if r == ' ' || r == '\t' || r == '\r' {
+			if !prevSpace {
+				b.WriteByte(' ')
+				prevSpace = true
+			}
+			continue
+		}
+		prevSpace = r == '\n'
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+// extractPDFPath looks for a PDF file reference in user input, mirroring
+// extractImagePath: it checks @-mentions, bare words, and quoted paths.
+// Returns empty string if no existing PDF is found.
+func extractPDFPath(text string) string {
+	consider := func(candidate string) string {
+		candidate = strings.Trim(candidate, "\"'")
+		if IsPDFFile(candidate) {
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate
+			}
+		}
+		return ""
+	}
+	for _, part := range strings.Fields(text) {
+		if strings.HasPrefix(part, "@") {
+			if p := consider(strings.TrimPrefix(part, "@")); p != "" {
+				return p
+			}
+		}
+		if p := consider(part); p != "" {
+			return p
+		}
+	}
+	for _, q := range extractQuotedPaths(text) {
+		if p := consider(q); p != "" {
+			return p
+		}
+	}
+	if p := consider(strings.TrimSpace(text)); p != "" {
+		return p
+	}
 	return ""
 }
 

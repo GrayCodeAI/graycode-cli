@@ -106,10 +106,21 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 
 	if imgPath := extractImagePath(text); imgPath != "" {
 		if att, err := ReadImageFile(imgPath); err == nil {
-			m.session.AddUserWithImage(text, att.Base64, att.MIMEType)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📷 Attached image: %s", filepath.Base(imgPath))})
+			if m.session.AddUserWithAttachment(text, att.Base64, att.MIMEType) {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📷 Attached image: %s", filepath.Base(imgPath))})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Model %q has no vision support — image %s sent as text-only note.", m.session.Model(), filepath.Base(imgPath))})
+			}
 		} else {
 			m.session.AddUser(text)
+		}
+	} else if pdfPath := extractPDFPath(text); pdfPath != "" {
+		if extracted, err := ReadPDFText(pdfPath); err == nil && strings.TrimSpace(extracted) != "" {
+			m.session.AddUserWithDocumentText(text, filepath.Base(pdfPath), extracted)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📄 Extracted text from PDF: %s", filepath.Base(pdfPath))})
+		} else {
+			m.session.AddUser(text)
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Could not extract text from PDF: %s", filepath.Base(pdfPath))})
 		}
 	} else {
 		m.session.AddUser(text)

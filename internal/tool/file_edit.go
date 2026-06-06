@@ -129,7 +129,8 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if autoCommitEnabled(ctx) {
 		_ = AutoCommit(ctx, path, "Edit", "edited file")
 	}
-	return fmt.Sprintf("Edited %s (replaced 1 occurrence)%s", path, fuzzyNote), nil
+	lintNote := postWriteLint(ctx, path)
+	return fmt.Sprintf("Edited %s (replaced 1 occurrence)%s%s", path, fuzzyNote, lintNote), nil
 }
 
 // --- Fuzzy matching helpers ---

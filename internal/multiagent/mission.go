@@ -3,6 +3,7 @@ package mission
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -473,4 +474,337 @@ func (m *Mission) persistState() error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(m.Dir, "mission.json"), data, 0o644)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Durable workflow (LangGraph-style) — named step boundaries, state persistence
+// across failures, explicit human-in-the-loop checkpoint gates, and resume from
+// the last completed step on restart.
+//
+// A Workflow is a linear sequence of named steps. After every step completes,
+// the workflow state is persisted to disk (workflow.json) alongside the mission
+// JSON store. If the process crashes mid-run, Resume picks up from the first
+// step that has not reached StepCompleted. Steps may be marked as human-in-the-
+// loop gates: when reached, the workflow halts with ErrAwaitingApproval until an
+// operator calls Approve (or Reject), making the gate decision itself durable.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// StepStatus tracks the lifecycle of a single workflow step.
+type StepStatus string
+
+const (
+	StepPending        StepStatus = "pending"
+	StepRunning        StepStatus = "running"
+	StepCompleted      StepStatus = "completed"
+	StepFailed         StepStatus = "failed"
+	StepAwaitingApprov StepStatus = "awaiting_approval"
+	StepRejected       StepStatus = "rejected"
+)
+
+// ErrAwaitingApproval is returned by Workflow.Run when execution halts at a
+// human-in-the-loop checkpoint gate. The workflow state is durable at this
+// point: a later Resume after Approve/Reject continues from the gate.
+var ErrAwaitingApproval = errors.New("workflow halted: awaiting human approval at checkpoint gate")
+
+// WorkflowStep is a durable, named unit of work in a Workflow.
+type WorkflowStep struct {
+	Name        string     `json:"name"`
+	Status      StepStatus `json:"status"`
+	HumanGate   bool       `json:"human_gate,omitempty"` // requires Approve before running
+	Approved    bool       `json:"approved,omitempty"`
+	StartedAt   time.Time  `json:"started_at,omitempty"`
+	CompletedAt time.Time  `json:"completed_at,omitempty"`
+	Attempts    int        `json:"attempts,omitempty"`
+	Error       string     `json:"error,omitempty"`
+	// Output is an opaque, JSON-serializable result the step produced. It is
+	// persisted so resumed runs can read prior step output without re-running.
+	Output json.RawMessage `json:"output,omitempty"`
+}
+
+// StepFunc executes a single workflow step. The returned bytes (may be nil) are
+// persisted as the step's durable Output.
+type StepFunc func(ctx context.Context, state *WorkflowState) (output json.RawMessage, err error)
+
+// WorkflowState is the durable, serializable state of a Workflow. The bag of
+// shared values (Values) lets steps pass data forward across restarts.
+type WorkflowState struct {
+	ID        string            `json:"id"`
+	Name      string            `json:"name"`
+	Steps     []WorkflowStep    `json:"steps"`
+	Values    map[string]string `json:"values,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
+	Dir       string            `json:"-"`
+}
+
+// Workflow is a durable, resumable sequence of named steps.
+type Workflow struct {
+	state *WorkflowState
+	funcs map[string]StepFunc
+	mu    sync.Mutex
+}
+
+// NewWorkflow creates a durable workflow with the given name and ordered step
+// definitions. Each definition contributes a named step and its executor. dir
+// is where workflow.json is persisted; if empty, persistence is skipped.
+type StepDef struct {
+	Name      string
+	Fn        StepFunc
+	HumanGate bool
+}
+
+// NewWorkflow constructs a Workflow from ordered step definitions.
+func NewWorkflow(name, dir string, defs ...StepDef) *Workflow {
+	steps := make([]WorkflowStep, 0, len(defs))
+	funcs := make(map[string]StepFunc, len(defs))
+	for _, d := range defs {
+		steps = append(steps, WorkflowStep{
+			Name:      d.Name,
+			Status:    StepPending,
+			HumanGate: d.HumanGate,
+		})
+		funcs[d.Name] = d.Fn
+	}
+	return &Workflow{
+		state: &WorkflowState{
+			ID:        uuid.New().String()[:8],
+			Name:      name,
+			Steps:     steps,
+			Values:    map[string]string{},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Dir:       dir,
+		},
+		funcs: funcs,
+	}
+}
+
+// workflowStatePath returns the on-disk location of a workflow's durable state.
+func workflowStatePath(dir string) string {
+	return filepath.Join(dir, "workflow.json")
+}
+
+// LoadWorkflow reads a previously persisted workflow from dir and rebinds the
+// supplied step executors by name. Steps whose names are not present in defs are
+// left without an executor (Resume will error if it needs to run them).
+func LoadWorkflow(dir string, defs ...StepDef) (*Workflow, error) {
+	data, err := os.ReadFile(workflowStatePath(dir))
+	if err != nil {
+		return nil, err
+	}
+	var st WorkflowState
+	if err := json.Unmarshal(data, &st); err != nil {
+		return nil, fmt.Errorf("parse workflow state: %w", err)
+	}
+	st.Dir = dir
+	if st.Values == nil {
+		st.Values = map[string]string{}
+	}
+	funcs := make(map[string]StepFunc, len(defs))
+	for _, d := range defs {
+		funcs[d.Name] = d.Fn
+		// Reconcile HumanGate flag from the definition (executors aren't persisted).
+		for i := range st.Steps {
+			if st.Steps[i].Name == d.Name {
+				st.Steps[i].HumanGate = d.HumanGate
+			}
+		}
+	}
+	return &Workflow{state: &st, funcs: funcs}, nil
+}
+
+// State returns a snapshot pointer to the workflow's durable state.
+func (w *Workflow) State() *WorkflowState { return w.state }
+
+// SetValue stores a shared value visible to subsequent steps and across restarts.
+func (w *Workflow) SetValue(key, val string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.state.Values == nil {
+		w.state.Values = map[string]string{}
+	}
+	w.state.Values[key] = val
+}
+
+// persist writes the workflow state to disk atomically (temp + rename). It is a
+// no-op when Dir is empty. Callers must NOT hold w.mu (it locks internally).
+func (w *Workflow) persist() error {
+	w.mu.Lock()
+	if w.state.Dir == "" {
+		w.mu.Unlock()
+		return nil
+	}
+	w.state.UpdatedAt = time.Now()
+	dir := w.state.Dir
+	data, err := json.MarshalIndent(w.state, "", "  ")
+	w.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	target := workflowStatePath(dir)
+	tmp := target + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, target)
+}
+
+// nextRunnable returns the index of the first step that still needs to run, or
+// -1 if all steps are completed. A failed or rejected step is considered
+// runnable again (resume retries it).
+func (w *Workflow) nextRunnable() int {
+	for i := range w.state.Steps {
+		switch w.state.Steps[i].Status {
+		case StepCompleted:
+			continue
+		default:
+			return i
+		}
+	}
+	return -1
+}
+
+// Run executes steps from the first non-completed step to the end. It persists
+// after every step transition so a crash leaves a resumable state. When it
+// reaches an un-approved human gate it persists StepAwaitingApprov and returns
+// ErrAwaitingApproval. Resume is an alias for Run after Approve.
+func (w *Workflow) Run(ctx context.Context) error {
+	for {
+		w.mu.Lock()
+		idx := w.nextRunnable()
+		w.mu.Unlock()
+		if idx < 0 {
+			return w.persist() // all completed
+		}
+
+		w.mu.Lock()
+		step := &w.state.Steps[idx]
+
+		// Human-in-the-loop gate: halt durably until approved.
+		if step.HumanGate && !step.Approved {
+			step.Status = StepAwaitingApprov
+			w.mu.Unlock()
+			if err := w.persist(); err != nil {
+				return err
+			}
+			return ErrAwaitingApproval
+		}
+		if step.Status == StepRejected {
+			w.mu.Unlock()
+			return fmt.Errorf("workflow halted: step %q was rejected", step.Name)
+		}
+
+		fn := w.funcs[step.Name]
+		step.Status = StepRunning
+		step.StartedAt = time.Now()
+		step.Attempts++
+		state := w.state
+		w.mu.Unlock()
+
+		if err := w.persist(); err != nil {
+			return err
+		}
+
+		if fn == nil {
+			w.mu.Lock()
+			step.Status = StepFailed
+			step.Error = "no executor bound for step"
+			w.mu.Unlock()
+			_ = w.persist()
+			return fmt.Errorf("workflow step %q has no executor", step.Name)
+		}
+
+		if err := ctx.Err(); err != nil {
+			w.mu.Lock()
+			step.Status = StepFailed
+			step.Error = err.Error()
+			w.mu.Unlock()
+			_ = w.persist()
+			return err
+		}
+
+		output, err := fn(ctx, state)
+
+		w.mu.Lock()
+		if err != nil {
+			step.Status = StepFailed
+			step.Error = err.Error()
+			w.mu.Unlock()
+			_ = w.persist()
+			return fmt.Errorf("workflow step %q failed: %w", step.Name, err)
+		}
+		step.Status = StepCompleted
+		step.Error = ""
+		step.Output = output
+		step.CompletedAt = time.Now()
+		w.mu.Unlock()
+
+		if err := w.persist(); err != nil {
+			return err
+		}
+	}
+}
+
+// Resume continues a workflow from the last completed step. It is identical to
+// Run; the name documents intent at call sites after a restart.
+func (w *Workflow) Resume(ctx context.Context) error { return w.Run(ctx) }
+
+// Approve records human approval for the named gate step, making the decision
+// durable, so a subsequent Resume proceeds past the gate.
+func (w *Workflow) Approve(name string) error {
+	w.mu.Lock()
+	for i := range w.state.Steps {
+		if w.state.Steps[i].Name == name {
+			if !w.state.Steps[i].HumanGate {
+				w.mu.Unlock()
+				return fmt.Errorf("step %q is not a human-in-the-loop gate", name)
+			}
+			w.state.Steps[i].Approved = true
+			w.state.Steps[i].Status = StepPending
+			w.mu.Unlock()
+			return w.persist()
+		}
+	}
+	w.mu.Unlock()
+	return fmt.Errorf("workflow step %q not found", name)
+}
+
+// Reject records a human rejection for the named gate step. A rejected gate
+// halts the workflow on the next Run/Resume.
+func (w *Workflow) Reject(name string) error {
+	w.mu.Lock()
+	for i := range w.state.Steps {
+		if w.state.Steps[i].Name == name {
+			w.state.Steps[i].Approved = false
+			w.state.Steps[i].Status = StepRejected
+			w.mu.Unlock()
+			return w.persist()
+		}
+	}
+	w.mu.Unlock()
+	return fmt.Errorf("workflow step %q not found", name)
+}
+
+// LastCompletedStep returns the name of the most recently completed step, or ""
+// if none have completed yet. Useful for reporting resume points.
+func (w *Workflow) LastCompletedStep() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	last := ""
+	for i := range w.state.Steps {
+		if w.state.Steps[i].Status == StepCompleted {
+			last = w.state.Steps[i].Name
+		}
+	}
+	return last
+}
+
+// Done reports whether every step has reached StepCompleted.
+func (w *Workflow) Done() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.nextRunnable() < 0
 }

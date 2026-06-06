@@ -29,6 +29,9 @@ type ContainerSandbox struct {
 	containerID string
 	mu          sync.Mutex
 	running     bool
+	// runtime carries declarative runtime_extra_deps / runtime_startup_env_vars.
+	// The empty value reproduces the prior behavior.
+	runtime RuntimeConfig
 }
 
 // NewContainerSandbox creates a container sandbox for the given project.
@@ -36,7 +39,16 @@ func NewContainerSandbox(projectDir string) *ContainerSandbox {
 	return &ContainerSandbox{
 		projectDir: projectDir,
 		image:      resolveImage(projectDir),
+		runtime:    LoadRuntimeConfig(projectDir),
 	}
+}
+
+// SetRuntimeConfig overrides the declarative runtime config (extra deps and
+// startup env vars). Additive: an empty config restores prior behavior.
+func (c *ContainerSandbox) SetRuntimeConfig(cfg RuntimeConfig) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.runtime = cfg
 }
 
 // DockerAvailable returns true if Docker daemon is reachable.
@@ -71,9 +83,13 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 		"-v", attachDir + ":/attachments:ro",
 		"-v", cacheDir + ":/cache",
 		"-w", c.projectDir,
+	}
+	// Inject declarative startup env vars (additive; nil when none configured).
+	args = append(args, c.runtime.StartupEnvArgs()...)
+	args = append(args,
 		c.image,
 		"sleep", "infinity",
-	}
+	)
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	out, err := cmd.CombinedOutput()
@@ -156,6 +172,11 @@ func (c *ContainerSandbox) SetImage(img string) {
 // BuildFromDockerfile builds a new image from a Dockerfile in the project.
 // Returns the image tag that can be used for subsequent Start calls.
 func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile string) (string, error) {
+	// Append declarative runtime_extra_deps RUN layers (no-op when empty).
+	c.mu.Lock()
+	dockerfile = c.runtime.AppendExtraDeps(dockerfile)
+	c.mu.Unlock()
+
 	hash := sha256.Sum256([]byte(dockerfile))
 	tag := fmt.Sprintf("hawk-sandbox:%x", hash[:6])
 

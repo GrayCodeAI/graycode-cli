@@ -40,6 +40,9 @@ type DevEnvManager struct {
 	// hot-swap. The session should stop the old container and start a new one
 	// with the given image tag. May be nil.
 	OnSwapNeeded func(req SwapRequest)
+	// runtime carries declarative runtime_extra_deps. When non-empty, the
+	// extra-deps RUN layers are appended to the Dockerfile before building.
+	runtime RuntimeConfig
 }
 
 // NewDevEnvManager creates a new DevEnvManager for the given project directory.
@@ -48,7 +51,16 @@ func NewDevEnvManager(projectDir string) *DevEnvManager {
 		projectDir: projectDir,
 		imageCache: make(map[string]CachedImage),
 		buildFn:    defaultBuildFn,
+		runtime:    LoadRuntimeConfig(projectDir),
 	}
+}
+
+// SetRuntimeConfig overrides the declarative runtime config used when building
+// images. Additive: an empty config restores prior behavior.
+func (d *DevEnvManager) SetRuntimeConfig(cfg RuntimeConfig) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.runtime = cfg
 }
 
 // defaultBuildFn builds a Docker image from the given Dockerfile path,
@@ -71,7 +83,18 @@ func (d *DevEnvManager) GetOrBuild(ctx context.Context, dockerfile string) (stri
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	hash, err := hashDockerfile(dockerfile)
+	// When extra deps are configured, materialize an augmented Dockerfile so the
+	// extra-deps RUN layers participate in the build and the content hash.
+	buildPath := dockerfile
+	if !d.runtime.IsEmpty() {
+		augmented, err := d.augmentDockerfile(dockerfile)
+		if err != nil {
+			return "", fmt.Errorf("augmenting dockerfile: %w", err)
+		}
+		buildPath = augmented
+	}
+
+	hash, err := hashDockerfile(buildPath)
 	if err != nil {
 		return "", fmt.Errorf("hashing dockerfile: %w", err)
 	}
@@ -87,7 +110,7 @@ func (d *DevEnvManager) GetOrBuild(ctx context.Context, dockerfile string) (stri
 
 	tag := fmt.Sprintf("hawk-devenv-%s:%s", key, hash[:12])
 
-	if err := d.buildFn(ctx, dockerfile, tag); err != nil {
+	if err := d.buildFn(ctx, buildPath, tag); err != nil {
 		return "", fmt.Errorf("building image: %w", err)
 	}
 
@@ -166,6 +189,23 @@ func (d *DevEnvManager) RebuildAndForceSwap(ctx context.Context, dockerfilePath 
 	}
 
 	return tag, nil
+}
+
+// augmentDockerfile reads the Dockerfile at path, appends the runtime
+// extra-deps RUN layers, and writes the result to a sibling
+// "Dockerfile.hawk-runtime" file. Returns the path to the augmented file. The
+// caller holds d.mu.
+func (d *DevEnvManager) augmentDockerfile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	augmented := d.runtime.AppendExtraDeps(string(data))
+	outPath := filepath.Join(filepath.Dir(path), "Dockerfile.hawk-runtime")
+	if err := os.WriteFile(outPath, []byte(augmented), 0o644); err != nil {
+		return "", err
+	}
+	return outPath, nil
 }
 
 // hashDockerfile computes a SHA-256 hash of the Dockerfile contents.

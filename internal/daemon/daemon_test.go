@@ -71,6 +71,85 @@ func TestDaemon_Health(t *testing.T) {
 	}
 }
 
+func TestDaemon_Ready(t *testing.T) {
+	factory := func(req ChatRequest) (*engine.Session, error) { return nil, nil }
+
+	tests := []struct {
+		name       string
+		factory    SessionFactory
+		readyFn    func() (bool, string)
+		wantStatus int
+		wantReady  bool
+	}{
+		{
+			name:       "no engine wired is not ready",
+			factory:    nil,
+			wantStatus: http.StatusServiceUnavailable,
+			wantReady:  false,
+		},
+		{
+			name:       "engine wired is ready",
+			factory:    factory,
+			wantStatus: http.StatusOK,
+			wantReady:  true,
+		},
+		{
+			name:       "custom probe forces not ready",
+			factory:    factory,
+			readyFn:    func() (bool, string) { return false, "provider unreachable" },
+			wantStatus: http.StatusServiceUnavailable,
+			wantReady:  false,
+		},
+		{
+			name:       "custom probe forces ready",
+			factory:    nil,
+			readyFn:    func() (bool, string) { return true, "" },
+			wantStatus: http.StatusOK,
+			wantReady:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, tt.factory)
+			if tt.readyFn != nil {
+				srv.SetReadyFn(tt.readyFn)
+			}
+			addr := startTestDaemon(t, srv)
+			defer srv.Stop(context.Background())
+
+			// Liveness is always 200 regardless of readiness.
+			hResp, err := http.Get("http://" + addr + "/v1/health")
+			if err != nil {
+				t.Fatalf("GET /v1/health failed: %v", err)
+			}
+			hResp.Body.Close()
+			if hResp.StatusCode != http.StatusOK {
+				t.Errorf("health: expected 200, got %d", hResp.StatusCode)
+			}
+
+			resp, err := http.Get("http://" + addr + "/v1/ready")
+			if err != nil {
+				t.Fatalf("GET /v1/ready failed: %v", err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != tt.wantStatus {
+				t.Errorf("ready: expected %d, got %d", tt.wantStatus, resp.StatusCode)
+			}
+			var ready ReadyResponse
+			if err := json.NewDecoder(resp.Body).Decode(&ready); err != nil {
+				t.Fatalf("decode ready: %v", err)
+			}
+			if ready.Ready != tt.wantReady {
+				t.Errorf("ready.Ready = %v, want %v (reason=%q)", ready.Ready, tt.wantReady, ready.Reason)
+			}
+			if !tt.wantReady && ready.Reason == "" {
+				t.Error("expected a non-empty reason when not ready")
+			}
+		})
+	}
+}
+
 func TestDaemon_Chat_NoEngine(t *testing.T) {
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
 	addr := startTestDaemon(t, srv)

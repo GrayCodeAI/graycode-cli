@@ -5,9 +5,37 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 )
+
+// managedSource is the synthetic source name for IT-managed (org policy) rules.
+const managedSource = "managed"
+
+// defaultManagedPaths returns the platform-specific IT-managed policy file
+// locations. These are intended to be writable only by administrators and take
+// precedence over all user/project rules, so they cannot be overridden.
+func defaultManagedPaths() []string {
+	switch runtime.GOOS {
+	case "darwin":
+		return []string{"/Library/Application Support/HawkCode/HAWK.md"}
+	default:
+		// Linux and other unix-like systems.
+		return []string{"/etc/hawk-code/HAWK.md"}
+	}
+}
+
+// htmlCommentRe matches HTML block comments (<!-- ... -->), including multi-line
+// spans. It is non-greedy so adjacent comments are stripped independently.
+var htmlCommentRe = regexp.MustCompile(`(?s)<!--.*?-->`)
+
+// stripHTMLComments removes all HTML block comments (<!-- ... -->) from the
+// given content before it is injected as rule/instruction context.
+func stripHTMLComments(s string) string {
+	return htmlCommentRe.ReplaceAllString(s, "")
+}
 
 // RuleSource defines a source of rule files with precedence.
 type RuleSource struct {
@@ -44,10 +72,11 @@ type Rule struct {
 // RuleDiscoverer discovers rule files using walk-up stack semantics
 // with 4-level precedence: local vs global → distance → source priority → path.
 type RuleDiscoverer struct {
-	projectRoot string
-	sources     []RuleSource
-	globalDirs  []string // user-home rule directories
-	cache       *InjectionCache
+	projectRoot  string
+	sources      []RuleSource
+	globalDirs   []string // user-home rule directories
+	managedPaths []string // IT-managed (org policy) rule files; highest, non-excludable precedence
+	cache        *InjectionCache
 }
 
 // NewRuleDiscoverer creates a rule discoverer for the given project.
@@ -62,10 +91,11 @@ func NewRuleDiscoverer(projectRoot string) *RuleDiscoverer {
 		}
 	}
 	return &RuleDiscoverer{
-		projectRoot: projectRoot,
-		sources:     DefaultRuleSources,
-		globalDirs:  globalDirs,
-		cache:       NewInjectionCache(),
+		projectRoot:  projectRoot,
+		sources:      DefaultRuleSources,
+		globalDirs:   globalDirs,
+		managedPaths: defaultManagedPaths(),
+		cache:        NewInjectionCache(),
 	}
 }
 
@@ -81,6 +111,10 @@ func (rd *RuleDiscoverer) Discover(filePath string) []Rule {
 	}
 
 	var rules []Rule
+
+	// Collect IT-managed (org policy) rules first — highest, non-excludable precedence.
+	managedRules := rd.collectManaged()
+	rules = append(rules, managedRules...)
 
 	// Collect local rules (walk-up from file directory to project root)
 	localRules := rd.collectLocal(dir)
@@ -134,6 +168,30 @@ func (rd *RuleDiscoverer) collectLocal(dir string) []Rule {
 	return rules
 }
 
+// collectManaged loads IT-managed (org policy) rule files. These are given the
+// highest precedence (Local=true, Distance/Priority below any real rule) so they
+// sort ahead of all user/project/global rules and cannot be overridden.
+func (rd *RuleDiscoverer) collectManaged() []Rule {
+	var rules []Rule
+	for _, path := range rd.managedPaths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		content := stripHTMLComments(string(data))
+		rules = append(rules, Rule{
+			Path:     path,
+			Content:  content,
+			Hash:     fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
+			Source:   managedSource,
+			Local:    true,
+			Distance: -1, // sorts before distance 0 (closest local rule)
+			Priority: -1, // sorts before priority 1 (highest source priority)
+		})
+	}
+	return rules
+}
+
 func (rd *RuleDiscoverer) collectGlobal() []Rule {
 	var rules []Rule
 	for _, globalDir := range rd.globalDirs {
@@ -150,10 +208,11 @@ func (rd *RuleDiscoverer) collectGlobal() []Rule {
 			if err != nil {
 				continue
 			}
+			content := stripHTMLComments(string(data))
 			rules = append(rules, Rule{
 				Path:     path,
-				Content:  string(data),
-				Hash:     fmt.Sprintf("%x", sha256.Sum256(data)),
+				Content:  content,
+				Hash:     fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 				Source:   filepath.Base(globalDir),
 				Local:    false,
 				Distance: 999,
@@ -180,10 +239,11 @@ func (rd *RuleDiscoverer) scanDir(baseDir string, src RuleSource) []Rule {
 		if err != nil {
 			continue
 		}
+		content := stripHTMLComments(string(data))
 		rules = append(rules, Rule{
 			Path:     path,
-			Content:  string(data),
-			Hash:     fmt.Sprintf("%x", sha256.Sum256(data)),
+			Content:  content,
+			Hash:     fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 			Source:   src.Name,
 			Local:    true,
 			Distance: dirLevel(rd.projectRoot, baseDir),
@@ -199,10 +259,11 @@ func (rd *RuleDiscoverer) checkFile(baseDir string, src RuleSource) *Rule {
 	if err != nil {
 		return nil
 	}
+	content := stripHTMLComments(string(data))
 	return &Rule{
 		Path:     path,
-		Content:  string(data),
-		Hash:     fmt.Sprintf("%x", sha256.Sum256(data)),
+		Content:  content,
+		Hash:     fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 		Source:   src.Name,
 		Local:    true,
 		Distance: dirLevel(rd.projectRoot, baseDir),

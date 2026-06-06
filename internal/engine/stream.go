@@ -272,6 +272,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			System:        s.system,
 			EnableCaching: s.provider == "anthropic",
 		}
+		// Structured output: request a JSON-schema-constrained response when set.
+		// See structured_output.go for validation + single-retry on the
+		// non-streaming path.
+		if s.OutputSchema != "" {
+			opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: s.OutputSchema}
+		}
 		// Inject beliefs as ephemeral context (not persisted to s.system)
 		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
 			if summary := s.Beliefs.FormatForPrompt(); summary != "" {

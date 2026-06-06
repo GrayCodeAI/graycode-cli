@@ -126,6 +126,15 @@ type Session struct {
 	// Few-shot learning and prompt optimization
 	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
 	AdaptivePrompt *AdaptivePrompt // adaptive_prompt.go — user preference learning
+
+	// OutputSchema, when non-empty, requests a JSON-schema-constrained response.
+	// It is plumbed into eyrie's ChatOptions.ResponseFormat (json_schema) and the
+	// model output is validated against it. See structured_output.go.
+	OutputSchema string // structured_output.go — JSON schema for constrained output
+
+	// Approval, when non-nil and enabled, gates high-risk tool actions behind an
+	// explicit human confirmation. Nil keeps existing behavior unchanged.
+	Approval *ApprovalGate // approval_gate.go — human-in-the-loop gate
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.
