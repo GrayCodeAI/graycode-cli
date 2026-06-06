@@ -35,6 +35,24 @@ type Server struct {
 	sessions   sync.Map // sessionID -> *Session
 	newSession SessionFactory
 	apiKey     string
+	gateways   *gatewayManager
+
+	// readyFn reports whether the daemon's dependencies (session store and
+	// provider connectivity) are initialized and the server can serve real
+	// traffic. It is consulted by GET /v1/ready. When nil, readiness falls
+	// back to "session factory wired" (see Ready). Set via SetReadyFn.
+	readyMu sync.RWMutex
+	readyFn func() (bool, string)
+}
+
+// ReadyResponse is the JSON response from GET /v1/ready.
+type ReadyResponse struct {
+	// Ready is true only when every dependency is initialized.
+	Ready bool `json:"ready"`
+	// Reason describes why the daemon is not ready (empty when ready).
+	Reason string `json:"reason,omitempty"`
+	// Uptime is the time since the server started.
+	Uptime string `json:"uptime"`
 }
 
 // Config holds daemon configuration.
@@ -43,6 +61,9 @@ type Config struct {
 	Host    string `json:"host"`
 	LogFile string `json:"log_file"`
 	APIKey  string `json:"api_key,omitempty"`
+	// Gateways configures optional messaging bridges (Telegram/Discord/Slack).
+	// All are disabled by default; the daemon starts normally when none are set.
+	Gateways GatewaysConfig `json:"gateways,omitempty"`
 }
 
 // DefaultConfig returns reasonable defaults.
@@ -109,6 +130,11 @@ func New(cfg Config, factory SessionFactory) *Server {
 		apiKey:     cfg.APIKey,
 	}
 	s.routes()
+	// Build the messaging-bridge manager. The daemon URL is finalised in Start
+	// (port 0 resolves to a real port there); we pass the configured addr now so
+	// Slack can register its webhook route on the mux, and patch the forward URL
+	// for poll-based gateways at Start time.
+	s.gateways = newGatewayManager(cfg.Gateways, "http://"+s.addr, cfg.APIKey, s)
 	s.server = &http.Server{
 		Addr:         s.addr,
 		Handler:      s.mux,
@@ -138,12 +164,21 @@ func (s *Server) Start() (string, error) {
 		slog.Warn("failed to write PID file", "error", err)
 	}
 
+	// Point poll-based gateways at the now-resolved daemon URL and launch them.
+	if s.gateways != nil {
+		s.gateways.setDaemonURL("http://" + actualAddr)
+		s.gateways.Start(context.Background())
+	}
+
 	slog.Info("hawk daemon started", "addr", actualAddr)
 	return actualAddr, nil
 }
 
 // Stop gracefully shuts down the daemon.
 func (s *Server) Stop(ctx context.Context) error {
+	if s.gateways != nil {
+		s.gateways.Stop()
+	}
 	_ = s.removePIDFile()
 	return s.server.Shutdown(ctx)
 }
@@ -153,8 +188,37 @@ func (s *Server) Addr() string {
 	return s.addr
 }
 
+// SetReadyFn installs a custom readiness probe. The probe should return
+// (true, "") when all dependencies (session store, provider connectivity) are
+// initialized, or (false, reason) otherwise. Passing nil restores the default
+// probe. This is additive and safe to call concurrently with serving.
+func (s *Server) SetReadyFn(fn func() (bool, string)) {
+	s.readyMu.Lock()
+	s.readyFn = fn
+	s.readyMu.Unlock()
+}
+
+// ready evaluates readiness using the installed probe, falling back to the
+// default check (session factory wired) when none is set.
+func (s *Server) ready() (bool, string) {
+	s.readyMu.RLock()
+	fn := s.readyFn
+	s.readyMu.RUnlock()
+	if fn != nil {
+		return fn()
+	}
+	// Default readiness: the session store map is always initialized once New
+	// runs, so the remaining dependency is provider connectivity, which the
+	// cmd layer wires as the session factory. No factory => cannot serve chat.
+	if s.newSession == nil {
+		return false, "engine not configured"
+	}
+	return true, ""
+}
+
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /v1/health", s.handleHealth)
+	s.mux.HandleFunc("GET /v1/ready", s.handleReady)
 	s.mux.HandleFunc("POST /v1/chat", s.auth(s.handleChat))
 	s.mux.HandleFunc("GET /v1/sessions", s.auth(s.handleListSessions))
 	s.mux.HandleFunc("GET /v1/sessions/{id}", s.auth(s.handleGetSession))
@@ -235,6 +299,23 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 		StartedAt: s.startedAt.Format(time.RFC3339),
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// handleReady is the readiness probe. Unlike /v1/health (liveness, always 200
+// while the process is up), /v1/ready returns 200 only when all dependencies
+// are initialized and 503 otherwise, so orchestrators can gate traffic.
+func (s *Server) handleReady(w http.ResponseWriter, _ *http.Request) {
+	ok, reason := s.ready()
+	resp := ReadyResponse{
+		Ready:  ok,
+		Reason: reason,
+		Uptime: time.Since(s.startedAt).Round(time.Second).String(),
+	}
+	status := http.StatusOK
+	if !ok {
+		status = http.StatusServiceUnavailable
+	}
+	writeJSON(w, status, resp)
 }
 
 func wantsSSE(r *http.Request) bool {

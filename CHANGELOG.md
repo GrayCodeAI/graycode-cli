@@ -13,6 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
 
 ### Added
+- **Watch mode (`--watch`)**: file-watcher loop that acts on `AI!` (do-now) and `AI?` (answer) code comments. Off by default.
+- **GitHub Action** (`.github/actions/hawk`): interactive mode on `@hawk` mentions, automation mode on labeled issues/PRs, and skill dispatch for `/`-prefixed prompts.
+- **Messaging gateways**: opt-in Telegram, Discord, and Slack gateways on the daemon for chatting with hawk from messaging apps.
+- **AST repo-map** (`internal/context/repomap`): structural repository map for richer model context.
+- **Auto codebase analysis on first run** (`internal/autoinit`): opt-in seeding of project context.
+- **Auto-lint / auto-fix cycle**: runs the matching linter after edits and iterates on fixes with bounded retries (opt-in).
+- **Image / multimodal context** (`internal/engine/vision.go`): feed screenshots/images to vision-capable models.
+- **Plan & Explore sub-agent modes**: read-only `plan` (task decomposition) and `explore` (codebase investigation) modes; explore supports `quick`/`medium`/`very-thorough` thoroughness budgets.
+- **Persona `color` and `hooks`**: per-agent display color and lifecycle hook (`pre_run`/`post_run`) fields.
+- **YAML agents & eval tasks**: define personas and eval tasks in YAML alongside markdown personas.
+- **IT-managed policy tier** (`internal/context/rules.go`): non-excludable org-policy rule tier with highest precedence; strips HTML comments from rule files.
+- **SQL exploration tool** (`internal/tool/sql.go`): read-only database exploration tool.
+- **Conventional-commit generation**: `SmartCommit` and the diff summarizer produce Conventional Commit messages from staged changes.
+- **Durable workflows + named checkpoints** (`internal/multiagent`): LangGraph-style resumable workflows with named, persisted step boundaries.
+- **Human-in-the-loop approval gates** (`internal/engine/approval_gate.go`): durable approve/reject gates within workflows.
+- **Structured output** (`internal/engine/structured_output.go`): JSON-Schema-constrained responses, validated and retried once on mismatch.
+- **MCP WebSocket transport** (`internal/mcp/ws.go`): opt-in WebSocket transport in addition to stdio/HTTP.
+- **`GET /v1/ready`**: dependency-aware readiness endpoint on the daemon.
 - REPL magic commands (%reset, %undo, %tokens, %history, %copy, %save, %compact, %model, %clear)
 - Prompt cache keep-alive pings
 - Unified Finding type in shared/types for cross-tool interoperability

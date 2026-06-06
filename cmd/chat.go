@@ -37,6 +37,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/startup"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -45,7 +46,8 @@ import (
 // Welcome message and config summary helpers are in chat_welcome.go
 // Slash command handling and helpers are in chat_commands.go
 
-func baseTools() []tool.Tool {
+func essentialTools() []tool.Tool {
+	// Core tools needed for basic agent operation - always loaded at startup
 	return []tool.Tool{
 		tool.BashTool{},
 		tool.FileReadTool{},
@@ -65,6 +67,13 @@ func baseTools() []tool.Tool {
 		tool.TaskOutputTool{},
 		tool.TaskStopTool{},
 		tool.LSPTool{},
+		tool.MultiEditTool{},
+	}
+}
+
+func optionalTools() []tool.Tool {
+	// Specialized tools that can be lazy-loaded on demand
+	return []tool.Tool{
 		tool.EnterPlanModeTool{},
 		tool.ExitPlanModeTool{},
 		tool.NotebookEditTool{},
@@ -90,7 +99,6 @@ func baseTools() []tool.Tool {
 		tool.CoreMemoryAppendTool{},
 		tool.CoreMemoryReplaceTool{},
 		tool.CoreMemoryRethinkTool{},
-		tool.MultiEditTool{},
 		tool.DownloadTool{},
 		tool.AgenticFetchTool{},
 		tool.ImpactTool{},
@@ -99,11 +107,13 @@ func baseTools() []tool.Tool {
 		tool.NilAwayTool{},
 		tool.ReviveTool{},
 		tool.MCPLanguageServerTool{},
+		tool.SQLTool{},
 	}
 }
 
 func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
-	tools := baseTools()
+	// Load essential tools first for fast startup
+	tools := essentialTools()
 	if tool.IsPowerShellAvailable() {
 		tools = append(tools, tool.PowerShellTool{})
 	}
@@ -155,7 +165,22 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return tool.NewRegistry(filtered...), nil
+	registry := tool.NewRegistry(filtered...)
+
+	// Lazy-load optional tools in background
+	go func() {
+		for _, t := range optionalTools() {
+			_ = registry.Register(t)
+		}
+	}()
+
+	return registry, nil
+}
+
+func allTools() []tool.Tool {
+	t := essentialTools()
+	t = append(t, optionalTools()...)
+	return t
 }
 
 func genID() string {
@@ -197,6 +222,9 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 }
 
 func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Settings) (chatModel, error) {
+	startup.MarkPhase("newChatModel:total")
+
+	startup.MarkPhase("newChatModel:ui-init")
 	ta := textarea.New()
 	ta.Placeholder = workInputPlaceholder
 	ta.CharLimit = 0
@@ -225,29 +253,47 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	sp := spinner.New()
 	sp.Spinner = spinner.Spinner{Frames: hawkSpinnerFrames, FPS: hawkSpinnerFrameInterval}
 	sp.Style = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	startup.EndPhase("newChatModel:ui-init")
 
+	startup.MarkPhase("newChatModel:effectiveModelAndProvider")
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+	startup.EndPhase("newChatModel:effectiveModelAndProvider")
+
+	startup.MarkPhase("newChatModel:defaultRegistry")
 	registry, err := defaultRegistry(settings)
 	if err != nil {
 		return chatModel{}, err
 	}
+	startup.EndPhase("newChatModel:defaultRegistry")
+
+	startup.MarkPhase("newChatModel:newHawkSession")
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	startup.EndPhase("newChatModel:newHawkSession")
+
+	startup.MarkPhase("newChatModel:configureSession")
 	syncSessionFromPersistedSelection(sess, settings)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if err := configureSession(sess, settings); err != nil {
 		return chatModel{}, err
 	}
+	startup.EndPhase("newChatModel:configureSession")
+
+	startup.MarkPhase("newChatModel:prepareSession")
 	sid, saved, err := prepareSession(sess)
 	if err != nil {
 		return chatModel{}, err
 	}
+	startup.EndPhase("newChatModel:prepareSession")
+
 	// Initialize conversation DAG for branching support
+	startup.MarkPhase("newChatModel:dag")
 	if home, err := os.UserHomeDir(); err == nil {
 		dagPath := filepath.Join(home, ".hawk", "sessions", "convo.db")
 		if dag, err := storage.NewDAG(dagPath, sid); err == nil {
 			sess.ConvoDAG = dag
 		}
 	}
+	startup.EndPhase("newChatModel:dag")
 
 	initWidth := 80
 	initHeight := 24
@@ -263,7 +309,11 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	now := time.Now()
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)}
 	applyLiveModelMetadata(sess, effectiveProvider, effectiveModel)
+
+	startup.MarkPhase("newChatModel:commandPalette")
 	m.commandPalette = NewCommandPalette(initWidth)
+	startup.EndPhase("newChatModel:commandPalette")
+
 	// Pre-warm footer connection line so ctx (e.g. 0k/1.0m) shows on first paint.
 	if m.session != nil && m.session.ContextWindowCached > 0 {
 		m.connStatusVal = m.buildConnectionStatusPlain()
@@ -284,6 +334,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	}
 
 	// Initialize lacy-inspired features
+	startup.MarkPhase("newChatModel:lacy-features")
 	m.termCtx = sessioncapture.NewTerminalContext()
 	m.inputIndicator = &InputIndicator{}
 	m.ghostText = NewGhostText()
@@ -291,14 +342,18 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.modeManager.LoadPersistedMode()
 	m.brailleSpinner = NewBrailleSpinner(SpinnerHawk, "")
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
+	startup.EndPhase("newChatModel:lacy-features")
 
 	// Initialize BMAD/Aeon features
+	startup.MarkPhase("newChatModel:bmad-features")
 	m.hintsLoader = engine.NewHintsLoader()
 	m.sourceRoots = engine.NewSourceRoots()
 	m.selfImprover = engine.NewSelfImprover()
 	m.codingSoul = engine.LoadCodingSoul()
+	startup.EndPhase("newChatModel:bmad-features")
 
 	// Initialize taste and staleness subsystems.
+	startup.MarkPhase("newChatModel:taste-staleness")
 	m.stalenessDetector = staleness.NewDetector()
 	if store, err := taste.NewStore(""); err == nil {
 		cwd, _ := os.Getwd()
@@ -307,14 +362,18 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			m.tasteHooks = hooks
 		}
 	}
+	startup.EndPhase("newChatModel:taste-staleness")
 
 	// Initialize write-ahead log for crash recovery
+	startup.MarkPhase("newChatModel:wal")
 	if wal, err := session.NewWAL(sid); err == nil {
 		m.wal = wal
 		_ = wal.AppendMeta(effectiveModel, effectiveProvider, "")
 	}
+	startup.EndPhase("newChatModel:wal")
 
 	// Check for crash recovery
+	startup.MarkPhase("newChatModel:crash-recovery")
 	if recovered := session.CheckForRecovery(); len(recovered) > 0 {
 		home := home.Dir()
 		walDir := filepath.Join(home, ".hawk", "sessions")
@@ -328,6 +387,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			}
 		}
 	}
+	startup.EndPhase("newChatModel:crash-recovery")
 
 	// Warm code index in background so first CodeSearch is fast
 	go func() {
@@ -352,6 +412,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}()
 
+	startup.EndPhase("newChatModel:total")
+
 	// Warm credential + catalog caches so typing and status bar stay instant.
 	_ = hawkconfig.CompiledCatalogV1()
 	hawkconfig.RefreshConfigCredSnapshot(context.Background())
@@ -360,6 +422,11 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	pr := plugin.NewRuntime()
 	_ = pr.LoadAll()
 	pr.RegisterHooks()
+
+	// Print startup profile if requested (after critical path is done)
+	if startupProfileFlag {
+		startup.PrintReport()
+	}
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
@@ -1212,6 +1279,11 @@ func runChat() error {
 
 	// Auto-index codegraph in background if .codegraph exists
 	go autoIndexCodegraph()
+
+	// One-time, gated codebase analysis for projects with no context file.
+	// Runs in the background and never blocks startup; fully opt-out via
+	// HAWK_DISABLE_AUTO_INIT. No-op for projects that already have context.
+	maybeAutoInit(context.Background())
 
 	ref := &progRef{}
 	systemPrompt, err := buildSystemPrompt()

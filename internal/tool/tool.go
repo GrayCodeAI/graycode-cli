@@ -8,6 +8,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/lint"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -66,6 +67,9 @@ type ToolContext struct {
 	// BackgroundManager tracks background sub-agents. If nil, background
 	// mode is not available.
 	BackgroundManager *BackgroundAgentManager
+	// Lint configures the optional post-write auto-lint cycle. The zero value
+	// (Enabled=false) keeps linting off so users are not surprised.
+	Lint lint.Config
 }
 
 // ctxKey is the context key for ToolContext.
@@ -158,4 +162,22 @@ func (r *Registry) Execute(ctx context.Context, name string, input json.RawMessa
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}
 	return t.Execute(ctx, input)
+}
+
+// Register adds a tool to the registry after creation.
+// Returns error if a tool with the same name already exists (unless it's an alias).
+func (r *Registry) Register(t Tool) error {
+	if _, exists := r.tools[t.Name()]; exists {
+		return fmt.Errorf("tool %q already registered", t.Name())
+	}
+	r.tools[t.Name()] = t
+	r.primary = append(r.primary, t)
+	if aliased, ok := t.(AliasedTool); ok {
+		for _, alias := range aliased.Aliases() {
+			if alias != "" {
+				r.tools[alias] = t
+			}
+		}
+	}
+	return nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	ctxrepomap "github.com/GrayCodeAI/hawk/internal/context/repomap"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
@@ -103,6 +104,22 @@ func buildSystemPrompt() (string, error) {
 // injectRepoMap generates a repo map of the current directory and appends
 // it to the system prompt when the repo_map setting is enabled.
 func injectRepoMap(base string) string {
+	// --repo-map opts into the AST-ranked, PageRank-weighted overview (Aider
+	// parity) at the --map-tokens budget, independent of the settings toggle.
+	if repoMapFlag {
+		cwd, err := os.Getwd()
+		if err == nil {
+			budget := mapTokensFlag
+			if budget <= 0 {
+				budget = ctxrepomap.DefaultBudget
+			}
+			if formatted, err := ctxrepomap.RepoMap(cwd, budget); err == nil && formatted != "" {
+				base += "\n\n# Repository Map\n" + formatted
+			}
+		}
+		return base
+	}
+
 	settings := hawkconfig.LoadSettings()
 	if settings.RepoMap == nil || !*settings.RepoMap {
 		return base

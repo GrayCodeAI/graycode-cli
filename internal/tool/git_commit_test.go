@@ -179,3 +179,202 @@ func TestAutoCommitAssistedByTrailerOptional(t *testing.T) {
 		t.Fatalf("expected assisted-by trailer, got: %q", body)
 	}
 }
+
+func TestGenerateCommitMessageWithMockModel(t *testing.T) {
+	orig := CommitMessageChatFn
+	defer func() { CommitMessageChatFn = orig }()
+
+	tests := []struct {
+		name       string
+		modelReply string
+		modelErr   bool
+		wantPrefix string
+	}{
+		{
+			name:       "already conventional feat",
+			modelReply: "feat: add SQL exploration tool",
+			wantPrefix: "feat:",
+		},
+		{
+			name:       "already conventional fix with scope",
+			modelReply: "fix(tool): handle nil rows",
+			wantPrefix: "fix(tool):",
+		},
+		{
+			// The underlying generator's response parser already coerces
+			// free-form replies into a conventional subject, so we only assert
+			// the result is conventional (not a specific prefix).
+			name:       "non-conventional reply is conventionalized",
+			modelReply: "wire up the database connection",
+			wantPrefix: "",
+		},
+		{
+			// On model error the generator falls back to rule-based output,
+			// which is always conventional. We only assert it has a type prefix.
+			name:       "model error falls back to rule-based",
+			modelErr:   true,
+			modelReply: "",
+			wantPrefix: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			CommitMessageChatFn = func(_ context.Context, _ string) (string, error) {
+				if tc.modelErr {
+					return "", errNoCommitModel
+				}
+				return tc.modelReply, nil
+			}
+
+			msg, err := GenerateCommitMessage(context.Background(), "diff --git a/x b/x\n+hello", "add a thing")
+			if err != nil {
+				t.Fatalf("GenerateCommitMessage: %v", err)
+			}
+			if msg == "" {
+				t.Fatal("expected non-empty message")
+			}
+			if !isConventionalSubject(msg) {
+				t.Fatalf("expected conventional subject, got %q", msg)
+			}
+			if tc.wantPrefix != "" && !strings.HasPrefix(msg, tc.wantPrefix) {
+				t.Fatalf("expected prefix %q, got %q", tc.wantPrefix, msg)
+			}
+		})
+	}
+}
+
+func TestIsConventionalSubject(t *testing.T) {
+	tests := []struct {
+		msg  string
+		want bool
+	}{
+		{"feat: add thing", true},
+		{"fix(scope): bug", true},
+		{"refactor!: breaking", true},
+		{"revert: undo it", true},
+		{"chore: deps\n\nbody text", true},
+		{"just a plain message", false},
+		{"WIP: not a type", false},
+		{"", false},
+	}
+	for _, tc := range tests {
+		if got := isConventionalSubject(tc.msg); got != tc.want {
+			t.Errorf("isConventionalSubject(%q) = %v, want %v", tc.msg, got, tc.want)
+		}
+	}
+}
+
+func TestAttributionModesIndependent(t *testing.T) {
+	tests := []struct {
+		name             string
+		modes            *AttributionModes
+		wantCoAuthor     bool
+		wantAuthorEnv    bool
+		wantCommitterEnv bool
+	}{
+		{
+			name:  "nil modes: nothing applied",
+			modes: nil,
+		},
+		{
+			name:         "co-authored-by only",
+			modes:        &AttributionModes{CoAuthoredBy: "Hawk <hawk@graycode.ai>"},
+			wantCoAuthor: true,
+		},
+		{
+			name:          "author only",
+			modes:         &AttributionModes{Author: "Alice <alice@example.com>"},
+			wantAuthorEnv: true,
+		},
+		{
+			name:             "committer only",
+			modes:            &AttributionModes{Committer: "Bob <bob@example.com>"},
+			wantCommitterEnv: true,
+		},
+		{
+			name: "all three independently",
+			modes: &AttributionModes{
+				Author:       "Alice <alice@example.com>",
+				Committer:    "Bob <bob@example.com>",
+				CoAuthoredBy: "Hawk <hawk@graycode.ai>",
+			},
+			wantCoAuthor:     true,
+			wantAuthorEnv:    true,
+			wantCommitterEnv: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Co-authored-by trailer is applied to the message body.
+			msg := applyAttributionModes("feat: x", tc.modes)
+			hasCo := strings.Contains(msg, "Co-authored-by: Hawk <hawk@graycode.ai>")
+			if hasCo != tc.wantCoAuthor {
+				t.Errorf("co-author trailer present=%v, want %v (msg=%q)", hasCo, tc.wantCoAuthor, msg)
+			}
+
+			// Author/Committer overrides are applied to the env, not the body.
+			env := commitEnv(nil, tc.modes)
+			hasAuthor := envHasKey(env, "GIT_AUTHOR_NAME")
+			hasCommitter := envHasKey(env, "GIT_COMMITTER_NAME")
+			if hasAuthor != tc.wantAuthorEnv {
+				t.Errorf("GIT_AUTHOR_NAME present=%v, want %v", hasAuthor, tc.wantAuthorEnv)
+			}
+			if hasCommitter != tc.wantCommitterEnv {
+				t.Errorf("GIT_COMMITTER_NAME present=%v, want %v", hasCommitter, tc.wantCommitterEnv)
+			}
+		})
+	}
+}
+
+func envHasKey(env []string, key string) bool {
+	for _, e := range env {
+		if strings.HasPrefix(e, key+"=") {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCommitStagedWithAttribution(t *testing.T) {
+	dir, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	file := filepath.Join(dir, "x.txt")
+	if err := os.WriteFile(file, []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.CommandContext(context.Background(), "git", "add", "x.txt").CombinedOutput(); err != nil {
+		t.Fatalf("git add: %s (%v)", out, err)
+	}
+
+	modes := &AttributionModes{
+		Author:       "Alice <alice@example.com>",
+		CoAuthoredBy: "Hawk <hawk@graycode.ai>",
+	}
+	if err := CommitStaged(context.Background(), "feat: add x", modes); err != nil {
+		t.Fatalf("CommitStaged: %v", err)
+	}
+
+	body := gitCommitBody(t)
+	if !strings.Contains(body, "Co-authored-by: Hawk <hawk@graycode.ai>") {
+		t.Fatalf("expected co-author trailer, got: %q", body)
+	}
+
+	authorEmail, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%ae").CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(authorEmail)) != "alice@example.com" {
+		t.Fatalf("expected author override, got: %q", authorEmail)
+	}
+	// Committer should NOT have been overridden (independent toggles).
+	committerEmail, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%ce").CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(committerEmail)) == "alice@example.com" {
+		t.Fatal("committer should not have been overridden when only Author is set")
+	}
+}

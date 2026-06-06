@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 // AIComment represents a detected AI instruction comment in a source file.
@@ -31,6 +33,11 @@ type AIWatcher struct {
 	Patterns  []string // file glob patterns to watch (e.g., "*.go", "*.py")
 	Debounce  time.Duration
 	OnComment func(comment AIComment)
+	// OnChange, if set, fires once per debounced filesystem-change burst when using
+	// the fsnotify backend (StartFsnotify), regardless of whether any AIComment was
+	// matched. It lets callers run their own directive grammar (e.g. AI!/AI? tokens)
+	// on every change rather than relying solely on this package's ai: detection.
+	OnChange func()
 
 	done chan struct{}
 	mu   sync.Mutex
@@ -263,6 +270,104 @@ func (w *AIWatcher) Start(ctx context.Context) error {
 			w.poll()
 		}
 	}
+}
+
+// StartFsnotify begins watching the directory tree for AI comments using the
+// fsnotify event-driven backend instead of the polling loop used by Start. It
+// performs an initial scan (firing OnComment for every existing comment), then
+// re-scans only when filesystem write/create/rename events arrive, debounced by
+// the configured Debounce interval. It blocks until ctx is cancelled or Stop is
+// called. Callers that want event-driven detection should prefer this method and
+// fall back to Start (polling) when it returns an error (e.g. the platform has no
+// fsnotify support).
+func (w *AIWatcher) StartFsnotify(ctx context.Context) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = watcher.Close() }()
+
+	// Watch the root and every existing subdirectory (fsnotify is not recursive).
+	if err := w.addWatchDirs(watcher); err != nil {
+		return err
+	}
+
+	// Initial scan so directives already present are processed immediately.
+	w.mu.Lock()
+	initial := ScanDirectory(w.RootDir, w.Patterns)
+	for _, c := range initial {
+		hash := commentHash(c)
+		w.known[hash] = c
+		if w.OnComment != nil {
+			w.OnComment(c)
+		}
+	}
+	w.mu.Unlock()
+
+	// Debounce timer: filesystem events tend to arrive in bursts.
+	var debounce *time.Timer
+	debounceC := make(chan struct{}, 1)
+	arm := func() {
+		if debounce != nil {
+			debounce.Stop()
+		}
+		debounce = time.AfterFunc(w.Debounce, func() {
+			select {
+			case debounceC <- struct{}{}:
+			default:
+			}
+		})
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-w.done:
+			return nil
+		case <-debounceC:
+			// Newly created directories must be added to the watch set so
+			// nested files are observed going forward.
+			_ = w.addWatchDirs(watcher)
+			w.poll()
+			if w.OnChange != nil {
+				w.OnChange()
+			}
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return nil
+			}
+			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Remove) != 0 {
+				arm()
+			}
+		case _, ok := <-watcher.Errors:
+			if !ok {
+				return nil
+			}
+			// Non-fatal: a single watch error should not tear down the loop.
+		}
+	}
+}
+
+// addWatchDirs registers the root directory and all of its subdirectories with
+// the fsnotify watcher, skipping the same noise directories ScanDirectory skips.
+// Adding an already-watched directory is a no-op, so this is safe to call again
+// when new directories appear.
+func (w *AIWatcher) addWatchDirs(watcher *fsnotify.Watcher) error {
+	return filepath.WalkDir(w.RootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		base := filepath.Base(path)
+		if base == ".git" || base == "node_modules" || base == "vendor" || base == "__pycache__" {
+			return filepath.SkipDir
+		}
+		_ = watcher.Add(path)
+		return nil
+	})
 }
 
 // poll scans the directory and detects new or removed AI comments.

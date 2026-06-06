@@ -131,6 +131,17 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		return toolExecResult{tc: tc, output: denyMsg, isErr: true}
 	}
 
+	// Human-in-the-loop approval gate for high-risk actions (additive; no-op
+	// unless s.Approval is configured and enabled). See approval_gate.go.
+	if approved, approvalDeny := s.CheckApproval(ctx, tc.Name, tc.Arguments); !approved {
+		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: approvalDeny}
+		if toolSpan != nil {
+			toolSpan.SetTag("approval_denied", "true")
+			toolSpan.Finish()
+		}
+		return toolExecResult{tc: tc, output: approvalDeny, isErr: true}
+	}
+
 	hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{
 		"tool": tc.Name,
 		"args": tc.Arguments,

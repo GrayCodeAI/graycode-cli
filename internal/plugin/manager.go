@@ -19,13 +19,15 @@ import (
 
 // Plugin represents a loaded plugin with its tools and metadata.
 type Plugin struct {
-	Name        string
-	Version     string
-	Description string
-	Author      string
-	Tools       []PluginTool
-	Path        string
-	Manifest    *ToolManifest
+	Name         string
+	Version      string
+	Description  string
+	Author       string
+	Tools        []PluginTool
+	Path         string
+	Manifest     *ToolManifest
+	WasmManifest *WasmManifest
+	WasmRuntime  *WasmPluginRuntime
 }
 
 // PluginTool represents a single tool provided by a plugin.
@@ -36,6 +38,7 @@ type PluginTool struct {
 	Command     string
 	Timeout     time.Duration
 	PluginName  string // namespaced: which plugin owns this tool
+	IsWasm      bool   // true if this tool is from a WASM plugin
 }
 
 // ToolManifest is the manifest loaded from plugin.json for subprocess-based plugins.
@@ -47,6 +50,25 @@ type ToolManifest struct {
 	Tools          []ManifestTool `json:"tools"`
 	Permissions    []string       `json:"permissions"`
 	MinHawkVersion string         `json:"min_hawk_version"`
+}
+
+// WasmManifest is the manifest for WASM-based plugins.
+type WasmManifest struct {
+	Name           string        `json:"name"`
+	Version        string        `json:"version"`
+	Description    string        `json:"description"`
+	Author         string        `json:"author"`
+	Tools          []WasmToolDef `json:"tools"`
+	Permissions    []string      `json:"permissions"`
+	MinHawkVersion string        `json:"min_hawk_version"`
+	WasmPath       string        `json:"wasm_path"` // relative path to .wasm file
+}
+
+// WasmToolDef defines a tool in a WASM plugin manifest.
+type WasmToolDef struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	InputSchema map[string]interface{} `json:"input_schema"`
 }
 
 // ManifestTool defines a tool in the manifest file.
@@ -108,6 +130,24 @@ func (pm *PluginManager) Discover() ([]*Plugin, error) {
 				continue
 			}
 			pluginPath := filepath.Join(dir, entry.Name())
+
+			// First try to load as WASM plugin
+			wasmManifest, wasmErr := ParseWasmManifest(pluginPath)
+			if wasmErr == nil {
+				if seen[wasmManifest.Name] {
+					continue
+				}
+				seen[wasmManifest.Name] = true
+
+				p, err := wasmManifestToPlugin(wasmManifest, pluginPath)
+				if err != nil {
+					continue
+				}
+				plugins = append(plugins, p)
+				continue
+			}
+
+			// Fall back to subprocess plugin
 			manifest, err := ParseManifest(pluginPath)
 			if err != nil {
 				continue
@@ -135,6 +175,18 @@ func (pm *PluginManager) Load(name string) (*Plugin, error) {
 
 	for _, dir := range pm.PluginDirs {
 		pluginPath := filepath.Join(dir, name)
+
+		// Try WASM first
+		wasmManifest, wasmErr := ParseWasmManifest(pluginPath)
+		if wasmErr == nil {
+			p, err := wasmManifestToPlugin(wasmManifest, pluginPath)
+			if err == nil {
+				pm.Loaded[name] = p
+				return p, nil
+			}
+		}
+
+		// Fall back to subprocess plugin
 		manifest, err := ParseManifest(pluginPath)
 		if err != nil {
 			continue
@@ -192,7 +244,12 @@ func (pm *PluginManager) Execute(ctx context.Context, pluginName, toolName strin
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Parse command and args
+	// Handle WASM tools
+	if tool.IsWasm && p.WasmRuntime != nil {
+		return p.WasmRuntime.ExecuteTool(ctx, toolName, input)
+	}
+
+	// Parse command and args (subprocess-based)
 	parts := strings.Fields(tool.Command)
 	if len(parts) == 0 {
 		return "", fmt.Errorf("tool %q has empty command", toolName)
@@ -501,4 +558,63 @@ func isTextContent(data []byte) bool {
 		}
 	}
 	return true
+}
+
+// ParseWasmManifest reads and parses a plugin.json file for a WASM plugin.
+func ParseWasmManifest(pluginDir string) (*WasmManifest, error) {
+	path := filepath.Join(pluginDir, "plugin.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest: %w", err)
+	}
+
+	var manifest WasmManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("parse manifest: %w", err)
+	}
+
+	// Validate required fields
+	if manifest.Name == "" {
+		return nil, fmt.Errorf("manifest missing required field: name")
+	}
+	if manifest.Version == "" {
+		return nil, fmt.Errorf("manifest missing required field: version")
+	}
+	if manifest.WasmPath == "" {
+		return nil, fmt.Errorf("wasm plugin missing required field: wasm_path")
+	}
+
+	return &manifest, nil
+}
+
+// wasmManifestToPlugin converts a WasmManifest to a Plugin struct with WASM runtime.
+func wasmManifestToPlugin(manifest *WasmManifest, path string) (*Plugin, error) {
+	// The WASM runtime expects the plugin directory path (containing plugin.json)
+	wasmRuntime, err := NewWasmPluginRuntime(path)
+	if err != nil {
+		return nil, fmt.Errorf("create wasm runtime: %w", err)
+	}
+
+	p := &Plugin{
+		Name:         manifest.Name,
+		Version:      manifest.Version,
+		Description:  manifest.Description,
+		Author:       manifest.Author,
+		Path:         path,
+		WasmManifest: manifest,
+		WasmRuntime:  wasmRuntime,
+	}
+
+	for _, mt := range manifest.Tools {
+		p.Tools = append(p.Tools, PluginTool{
+			Name:        mt.Name,
+			Description: mt.Description,
+			InputSchema: mt.InputSchema,
+			Timeout:     30 * time.Second,
+			PluginName:  manifest.Name,
+			IsWasm:      true,
+		})
+	}
+
+	return p, nil
 }
