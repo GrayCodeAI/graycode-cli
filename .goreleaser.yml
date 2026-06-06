@@ -123,6 +123,11 @@ changelog:
 # Release — auto-detect prereleases (rc/beta tags). Created on the repo
 # itself (not a separate release repo).
 # ---------------------------------------------------------------------------
+sboms:
+  - artifacts: archive
+    documents:
+      - "${artifact}.spdx.sbom.json"
+
 release:
   draft: false
   prerelease: auto
