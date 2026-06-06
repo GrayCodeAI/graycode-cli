@@ -185,7 +185,7 @@ func wsDial(ctx context.Context, rawURL string, headers map[string]string) (net.
 		_ = conn.Close()
 		return nil, nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusSwitchingProtocols {
 		_ = conn.Close()
@@ -234,7 +234,7 @@ func (s *WSServer) readLoop() {
 		case wsOpClose:
 			return
 		case wsOpPing:
-			s.writeFrame(wsOpPong, payload)
+			_ = s.writeFrame(wsOpPong, payload)
 			continue
 		case wsOpPong:
 			continue
