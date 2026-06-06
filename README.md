@@ -80,7 +80,7 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) for a smooth
 | **Git** | `GitCommit`, `SmartCommit`, `EnterWorktree`, `ExitWorktree` |
 | **Web** | `WebFetch`, `WebSearch`, `CodeSearch` |
 | **Tasks** | `TodoWrite`, `TaskCreate`, `TaskList`, `TaskUpdate` |
-| **Code** | `LSP` diagnostics, `CodeSearch`, `NotebookEdit` |
+| **Code** | `LSP` diagnostics, `CodeSearch`, `NotebookEdit`, `SQL` (read-only DB exploration) |
 | **MCP** | `ListMcpResources`, `ReadMcpResource` |
 
 ### Multi-Agent Mission Mode (optional)
@@ -109,7 +109,55 @@ hawk asks before running dangerous tools. Auto-mode learns from your decisions, 
 
 ### MCP & LSP Support
 
-Connect external tools via [Model Context Protocol](https://modelcontextprotocol.io/) and get code intelligence through Language Server Protocol.
+Connect external tools via [Model Context Protocol](https://modelcontextprotocol.io/) and get code intelligence through Language Server Protocol. MCP also supports a WebSocket transport (opt-in) in addition to stdio/HTTP.
+
+### Watch Mode (AI-comment loop)
+
+`hawk --watch` watches your tree for `AI!` (do it now) and `AI?` (answer my question) comments and acts on them automatically — leave a directive in code, save, and hawk responds. Off by default; enabled via the `--watch` flag.
+
+### CI / GitHub Action
+
+A bundled GitHub Action (`.github/actions/hawk`) runs hawk in your pipeline: interactive mode on `@hawk` mentions in issue/PR comments, automation mode on labeled issues/PRs, and skill dispatch when a prompt begins with `/` (e.g. `/code-review`).
+
+### Messaging Gateways (opt-in)
+
+The daemon exposes Telegram, Discord, and Slack gateways so you can chat with hawk from your messaging app. Disabled by default; enabled per-channel via daemon config.
+
+### AST Repo-Map & Codebase Analysis
+
+An AST-based repository map (`internal/context/repomap`) gives the model a structural overview of your code. On first run, hawk can auto-analyze the codebase to seed context (default-off, opt-in).
+
+### Auto-Lint / Auto-Fix Cycle
+
+After edits, hawk can run the matching linter and iterate on fixes (bounded retries) before handing back. Opt-in; preserves existing behavior when disabled.
+
+### Image / Multimodal Context
+
+Feed screenshots and images into the conversation for vision-capable models (`internal/engine/vision.go`).
+
+### Plan & Explore Sub-Agents
+
+Read-only sub-agent modes: `plan` decomposes a task into steps, `explore` investigates the codebase with a configurable thoroughness budget (`quick` / `medium` / `very-thorough`).
+
+### Conventional-Commit Generation
+
+`SmartCommit` and the diff summarizer generate Conventional Commit messages from your staged changes.
+
+### Durable Workflows & Approval Gates
+
+LangGraph-style durable workflows with named, resumable step checkpoints and optional human-in-the-loop approval gates that persist the gate decision.
+
+### Structured Output
+
+Request JSON-Schema-constrained responses; results are validated against the schema and retried once on mismatch.
+
+### YAML Agents & Tasks
+
+Define personas and eval tasks in YAML (in addition to markdown personas), including per-agent display `color` and lifecycle `hooks`.
+
+### IT-Managed Policy Tier
+
+An optional, non-excludable org-policy rule tier (highest precedence) with HTML-comment stripping of rule files for IT-managed deployments.
 
 ## Usage
 
@@ -160,7 +208,7 @@ hawk daemon status             # Check if running
 hawk daemon stop               # Graceful shutdown
 ```
 
-Endpoints: `GET /v1/health`, `POST /v1/chat` (JSON or SSE streaming)
+Endpoints: `GET /v1/health`, `GET /v1/ready` (dependency-aware readiness), `POST /v1/chat` (JSON or SSE streaming)
 
 ### Mission Mode
 

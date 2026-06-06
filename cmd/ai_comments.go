@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -80,6 +81,86 @@ func scanForAIComments(dir string, ignore []string) []AIDirective {
 	})
 
 	return directives
+}
+
+// aiDispatchFn is the LLM/agent execution path used to act on a single AI
+// directive. It defaults to runAIDirectivePrint (which drives the same chat/agent
+// stream as `runPrint`), but is a package-level variable so tests can substitute
+// a mock without standing up a real model.
+var aiDispatchFn = runAIDirectivePrint
+
+// runAIDirectivePrint dispatches a single AI directive to the existing print
+// execution path. The prompt is built from the directive so the agent edits the
+// referenced file in place.
+func runAIDirectivePrint(d AIDirective) error {
+	return runPrint(formatDirectivePrompt(d))
+}
+
+// formatDirectivePrompt builds a targeted prompt for a single AI directive.
+// AI! directives instruct the agent to act now; AI? directives ask it to answer
+// the embedded question.
+func formatDirectivePrompt(d AIDirective) string {
+	var b strings.Builder
+	if d.Mode == "?" {
+		b.WriteString(fmt.Sprintf(
+			"An AI question comment was found at %s:%d.\n\nQuestion: %s\n\n",
+			d.Path, d.Line, d.Instruction))
+		b.WriteString("Answer the question. If a code change is warranted, make it. ")
+	} else {
+		b.WriteString(fmt.Sprintf(
+			"An AI instruction comment was found at %s:%d.\n\nInstruction: %s\n\n",
+			d.Path, d.Line, d.Instruction))
+		b.WriteString("Implement this change now, editing the file in place. ")
+	}
+	b.WriteString(fmt.Sprintf(
+		"The directive lives in the file %s; after you finish, the AI comment token will be removed automatically.\n",
+		d.Path))
+	return b.String()
+}
+
+// processAIDirectives scans dir for AI!/AI? directives, dispatches each one to
+// the configured execution path, and strips the AI comment token from the file
+// after a successful dispatch. It returns the number of directives that were
+// successfully processed (token stripped). Errors from individual directives are
+// reported to stderr and do not abort the remaining directives.
+//
+// Directives are processed from the bottom of each file upward so that removing a
+// line never shifts the line numbers of directives not yet handled in the same
+// file.
+func processAIDirectives(dir string, ignore []string) int {
+	directives := scanForAIComments(dir, ignore)
+	if len(directives) == 0 {
+		return 0
+	}
+
+	// Sort by file then descending line so earlier-line removals don't invalidate
+	// the line numbers of later directives in the same file.
+	sort.SliceStable(directives, func(i, j int) bool {
+		if directives[i].Path != directives[j].Path {
+			return directives[i].Path < directives[j].Path
+		}
+		return directives[i].Line > directives[j].Line
+	})
+
+	processed := 0
+	for _, d := range directives {
+		if err := aiDispatchFn(d); err != nil {
+			fmt.Fprintf(os.Stderr, "AI directive %s:%d failed: %v\n", d.Path, d.Line, err)
+			continue
+		}
+		// Resolve back to an absolute path for removal; scan returns paths
+		// relative to dir.
+		full := d.Path
+		if !filepath.IsAbs(full) {
+			full = filepath.Join(dir, d.Path)
+		}
+		if err := removeAIComment(full, d.Line); err != nil {
+			fmt.Fprintf(os.Stderr, "AI directive %s:%d: failed to strip token: %v\n", d.Path, d.Line, err)
+			continue
+		}
+		processed++
+	}
+	return processed
 }
 
 // formatDirectivesAsPrompt formats found directives into a prompt string.

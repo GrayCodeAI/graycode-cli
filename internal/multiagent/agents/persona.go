@@ -33,7 +33,20 @@ type Persona struct {
 	CreatedAt          time.Time        `json:"created_at"`
 	UsageCount         int              `json:"usage_count"`
 	SuccessRate        float64          `json:"success_rate"`
+	// Color is an optional display color for the persona (e.g. "blue",
+	// "#ff8800"), used by UIs to distinguish agents. Mirrors Claude Code's
+	// per-agent color frontmatter field.
+	Color string `json:"color,omitempty"`
+	// Hooks maps lifecycle event names (e.g. "pre_run", "post_run") to a
+	// shell command or handler string to invoke for this agent. Mirrors
+	// Claude Code's per-agent hooks.
+	Hooks PersonaHooks `json:"hooks,omitempty"`
 }
+
+// PersonaHooks maps a lifecycle event name to the command/handler to run.
+// Common keys include "pre_run", "post_run", and "on_error", but any key is
+// permitted so the set can grow without breaking the loader.
+type PersonaHooks map[string]string
 
 // PersonaExample stores an input/output example for few-shot prompting.
 type PersonaExample struct {
@@ -405,6 +418,12 @@ func parsePersonaContent(content, path string) (*Persona, error) {
 			p.UsageCount = parseInt(val)
 		case "success_rate":
 			p.SuccessRate = parseFloat(val)
+		case "color":
+			p.Color = val
+		case "hooks":
+			if h := parseYAMLMap(val); len(h) > 0 {
+				p.Hooks = h
+			}
 		}
 	}
 
@@ -461,6 +480,12 @@ func RenderPersonaFile(persona *Persona) string {
 	}
 	if len(persona.ExcludedTools) > 0 {
 		sb.WriteString(fmt.Sprintf("excluded_tools: [%s]\n", strings.Join(persona.ExcludedTools, ", ")))
+	}
+	if persona.Color != "" {
+		sb.WriteString(fmt.Sprintf("color: %s\n", persona.Color))
+	}
+	if len(persona.Hooks) > 0 {
+		sb.WriteString(fmt.Sprintf("hooks: {%s}\n", renderHooks(persona.Hooks)))
 	}
 	if !persona.CreatedAt.IsZero() {
 		sb.WriteString(fmt.Sprintf("created_at: %s\n", persona.CreatedAt.Format(time.RFC3339)))
@@ -1035,6 +1060,71 @@ func parseYAMLList(val string) []string {
 		}
 	}
 	return result
+}
+
+// parseYAMLMap parses an inline YAML flow map like
+// `{pre_run: cmd a, post_run: cmd b}` into a map. Keys and values are trimmed
+// and may be quoted. Entries without a colon are skipped. Returns nil for an
+// empty or `{}` value.
+//
+// Note: this is a deliberately small parser for inline flow maps only; it does
+// not support nested maps or values that themselves contain commas. That is
+// sufficient for per-agent hook commands.
+func parseYAMLMap(val string) map[string]string {
+	val = strings.TrimSpace(val)
+	if val == "" || val == "{}" {
+		return nil
+	}
+	if strings.HasPrefix(val, "{") && strings.HasSuffix(val, "}") {
+		val = val[1 : len(val)-1]
+	}
+	result := make(map[string]string)
+	for _, pair := range strings.Split(val, ",") {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+		idx := strings.Index(pair, ":")
+		if idx < 0 {
+			continue
+		}
+		k := strings.TrimSpace(pair[:idx])
+		v := strings.TrimSpace(pair[idx+1:])
+		v = trimQuotes(v)
+		k = trimQuotes(k)
+		if k != "" {
+			result[k] = v
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+// trimQuotes removes a single pair of surrounding single or double quotes.
+func trimQuotes(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
+// renderHooks renders a hooks map as an inline YAML flow map body (without the
+// surrounding braces), with keys sorted for deterministic output.
+func renderHooks(hooks map[string]string) string {
+	keys := make([]string, 0, len(hooks))
+	for k := range hooks {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s: %s", k, hooks[k]))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // parseFloat converts a string to float64, returning 0 on failure.

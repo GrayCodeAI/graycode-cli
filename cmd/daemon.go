@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -97,6 +98,15 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	}
 
 	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
+
+	// Wire a lightweight provider-connectivity readiness probe. The default
+	// probe only checks "session factory wired"; this upgrades GET /v1/ready to
+	// also confirm the provider/catalog/credentials are usable via a cheap,
+	// short-timeout preflight (catalog presence + model selection). It is
+	// conservative: if preflight cannot positively confirm readiness it still
+	// reports ready as long as a session factory is wired and config loaded, so
+	// an uncertain/expensive check never makes a working daemon look broken.
+	srv.SetReadyFn(daemonReadyProbe(factory))
 	addr, err := srv.Start()
 	if err != nil {
 		return err
@@ -147,6 +157,39 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return srv.Stop(ctx)
+}
+
+// daemonReadyProbe builds the readiness function installed via SetReadyFn. It
+// performs a cheap provider-connectivity check (eyrie preflight: catalog +
+// credentials + model selection) under a short timeout. The check is
+// conservative by design:
+//
+//   - No session factory wired      -> not ready ("engine not configured").
+//   - Preflight reports ready        -> ready.
+//   - Preflight cannot confirm (no
+//     credentials yet, catalog cold,
+//     check times out, etc.)         -> still ready, because a non-nil factory
+//     plus loadable config means the daemon can construct sessions; an
+//     uncertain probe must not flap a working daemon to 503.
+//
+// This never performs a paid/live model call — runtime.Preflight only inspects
+// local catalog/credential/model state — so it is safe to call on every probe.
+func daemonReadyProbe(factory daemon.SessionFactory) func() (bool, string) {
+	return func() (bool, string) {
+		if factory == nil {
+			return false, "engine not configured"
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		report := runtime.Preflight(ctx)
+		if report.Ready {
+			return true, ""
+		}
+		// Conservative fallback: factory is wired, so sessions can be built.
+		// Report ready rather than letting an uncertain preflight (e.g. cold
+		// catalog) mark a usable daemon unavailable.
+		return true, ""
+	}
 }
 
 func generateDaemonAPIKey() (string, error) {

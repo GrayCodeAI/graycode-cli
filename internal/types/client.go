@@ -18,6 +18,7 @@ type (
 	EyrieTool          = client.EyrieTool
 	EyrieClient        = client.EyrieClient
 	Provider           = client.Provider
+	ResponseFormat     = client.ResponseFormat
 )
 
 func DefaultContinuationConfig() ContinuationConfig {

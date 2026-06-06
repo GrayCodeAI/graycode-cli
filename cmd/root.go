@@ -49,6 +49,9 @@ var (
 	sandboxFlag                string
 	autoCommitFlag             bool
 	watchFlag                  bool
+	repoMapFlag                bool
+	mapTokensFlag              int
+	replFlag                   bool
 	vibeMode                   bool
 	powerLevel                 int
 	timeout                    time.Duration
@@ -60,6 +63,7 @@ var (
 	noContainer                bool
 	recoverFlag                bool
 	allowProjectMCP            bool
+	startupProfileFlag         bool
 )
 
 // SetVersion sets the version string from main.
@@ -109,19 +113,25 @@ var rootCmd = &cobra.Command{
 		hawkconfig.PrepareCredentialDiscovery(context.Background())
 		_ = hawkconfig.MigrateProviderSecrets()
 
-		if printMode || promptFlag != "" || inputFormat == "stream-json" {
-			if promptFlag == "" {
+		if printMode || promptFlag != "" || inputFormat == "stream-json" || replFlag || watchFlag {
+			if promptFlag == "" && !replFlag && !watchFlag {
 				stdinPrompt, err := readPromptFromStdin(inputFormat)
 				if err != nil {
 					return err
 				}
 				promptFlag = stdinPrompt
 			}
-			if promptFlag == "" {
+			if promptFlag == "" && !replFlag && !watchFlag {
 				return fmt.Errorf("prompt required in print mode")
 			}
 			if err := ensureCatalogBeforeAgent(context.Background(), true); err != nil {
 				return err
+			}
+			if replFlag {
+				return runRepl()
+			}
+			if watchFlag {
+				return runWatch(promptFlag)
 			}
 			return runPrint(promptFlag)
 		}
@@ -188,7 +198,10 @@ func init() {
 	rootCmd.Flags().StringVar(&appendSystemPromptFile, "append-system-prompt-file", "", "read text from a file and append it to the system prompt")
 	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "Bash permission profile: strict, workspace, or off (not Docker; see --no-container)")
 	rootCmd.Flags().BoolVar(&autoCommitFlag, "auto-commit", false, "auto-commit file changes made by Write and Edit tools")
-	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes")
+	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes and re-run on changes")
+	rootCmd.Flags().BoolVar(&repoMapFlag, "repo-map", false, "inject an AST-ranked repository map (Aider-style) into the system prompt")
+	rootCmd.Flags().IntVar(&mapTokensFlag, "map-tokens", 1024, "token budget for the --repo-map overview")
+	rootCmd.Flags().BoolVar(&replFlag, "repl", false, "start interactive REPL mode (like aider) for multi-turn conversation without TUI")
 	rootCmd.Flags().BoolVar(&vibeMode, "vibe", false, "vibe coding mode: auto-apply, auto-run, no confirmations")
 	rootCmd.Flags().IntVar(&powerLevel, "power", 5, "power level 1-10 (auto-configures model, context, review depth)")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 0, "time budget for the operation (e.g., 2m, 5m, 1h)")
@@ -203,8 +216,10 @@ func init() {
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.Flags().BoolVar(&allowProjectMCP, "allow-project-mcp", false, "allow MCP servers defined in project-level .hawk/settings.json (security risk)")
+	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
+	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(doctorCmd)
 	rootCmd.AddCommand(preflightCmd)
 	rootCmd.AddCommand(credentialsCmd)
@@ -331,6 +346,16 @@ var versionCmd = &cobra.Command{
 var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Run first-time setup again",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		onboarding.Welcome(version)
+		return onboarding.RunSetup()
+	},
+}
+
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Interactive onboarding wizard for first-time setup",
+	Long:  "Launch the interactive setup wizard to configure credentials, select providers/models, and initialize hawk.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		onboarding.Welcome(version)
 		return onboarding.RunSetup()

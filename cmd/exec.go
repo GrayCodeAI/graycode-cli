@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/spf13/cobra"
 )
@@ -120,6 +121,27 @@ func runExec(_ *cobra.Command, args []string) error {
 	prompt, err := resolveExecPrompt(args)
 	if err != nil {
 		return err
+	}
+
+	// GitHub Actions integration: when running inside a runner, derive the
+	// prompt and mode (interactive vs automation) from the triggering event.
+	if gha := detectGitHubActions(os.Getenv, os.ReadFile); gha.Active {
+		if gha.Prompt != "" {
+			prompt = gha.Prompt
+		}
+		if gha.Mode == GHAModeInteractive {
+			prompt = "Respond conversationally to the following GitHub comment that mentioned you:\n\n" + prompt
+		}
+	}
+
+	// Skill dispatch: a prompt beginning with "/" is a slash-command skill
+	// invocation. Expand it into the skill's instructions before running.
+	if isSkillDispatch(prompt) {
+		expanded, derr := dispatchSkill(defaultSkillRunner, prompt)
+		if derr != nil {
+			return derr
+		}
+		prompt = expanded
 	}
 
 	if execCWD != "" {
@@ -356,6 +378,194 @@ func resolveExecPrompt(args []string) (string, error) {
 		return strings.TrimSpace(string(data)), nil
 	}
 	return args[0], nil
+}
+
+// --- GitHub Actions integration ---------------------------------------------
+
+// GHAMode is the operating mode derived from a GitHub Actions event.
+type GHAMode string
+
+const (
+	// GHAModeNone means we are not running inside GitHub Actions.
+	GHAModeNone GHAMode = ""
+	// GHAModeInteractive is used when a human mentioned @hawk in a comment and
+	// expects a conversational reply.
+	GHAModeInteractive GHAMode = "interactive"
+	// GHAModeAutomation is used for label/issue triggers where hawk should act
+	// autonomously on the issue/PR body.
+	GHAModeAutomation GHAMode = "automation"
+)
+
+// ghMention is the trigger token that promotes an event to interactive mode.
+const ghMention = "@hawk"
+
+// GHAContext captures the relevant fields parsed from the GitHub Actions
+// environment and event payload.
+type GHAContext struct {
+	Active    bool    // GITHUB_ACTIONS == "true"
+	EventName string  // GITHUB_EVENT_NAME
+	Mode      GHAMode // resolved operating mode
+	Prompt    string  // event-derived prompt body
+	Mention   bool    // whether an @hawk mention was found in a comment
+}
+
+// inGitHubActions reports whether the process is running inside a GitHub
+// Actions runner.
+func inGitHubActions() bool {
+	return os.Getenv("GITHUB_ACTIONS") == "true"
+}
+
+// detectGitHubActions inspects the GitHub Actions environment and the event
+// payload at GITHUB_EVENT_PATH to decide between interactive and automation
+// mode. It returns a context whose Active field is false when not running under
+// GitHub Actions (in which case the caller should keep the original prompt).
+//
+// getenv and readFile are injected for testability; pass os.Getenv and
+// os.ReadFile in production.
+func detectGitHubActions(getenv func(string) string, readFile func(string) ([]byte, error)) GHAContext {
+	ctx := GHAContext{}
+	if getenv("GITHUB_ACTIONS") != "true" {
+		return ctx
+	}
+	ctx.Active = true
+	ctx.EventName = getenv("GITHUB_EVENT_NAME")
+
+	var payload map[string]interface{}
+	if path := getenv("GITHUB_EVENT_PATH"); path != "" {
+		if data, err := readFile(path); err == nil {
+			_ = json.Unmarshal(data, &payload)
+		}
+	}
+
+	commentBody := ghCommentBody(payload)
+	ctx.Mention = strings.Contains(strings.ToLower(commentBody), ghMention)
+
+	switch ctx.EventName {
+	case "issue_comment", "pull_request_review_comment":
+		if ctx.Mention {
+			ctx.Mode = GHAModeInteractive
+			ctx.Prompt = ghStripMention(commentBody)
+			return ctx
+		}
+		// A comment without a mention is treated as automation against the
+		// comment body so the action can still be invoked deliberately.
+		ctx.Mode = GHAModeAutomation
+		ctx.Prompt = strings.TrimSpace(commentBody)
+		return ctx
+	default:
+		// issues, pull_request, schedule, workflow_dispatch, etc.
+		ctx.Mode = GHAModeAutomation
+		ctx.Prompt = ghIssueBody(payload)
+		return ctx
+	}
+}
+
+// ghCommentBody extracts the comment text from an issue_comment or
+// pull_request_review_comment payload.
+func ghCommentBody(payload map[string]interface{}) string {
+	if payload == nil {
+		return ""
+	}
+	if c, ok := payload["comment"].(map[string]interface{}); ok {
+		if body, ok := c["body"].(string); ok {
+			return body
+		}
+	}
+	return ""
+}
+
+// ghIssueBody extracts a title + body prompt from an issues or pull_request
+// payload, falling back to the comment body.
+func ghIssueBody(payload map[string]interface{}) string {
+	if payload == nil {
+		return ""
+	}
+	for _, key := range []string{"issue", "pull_request"} {
+		if obj, ok := payload[key].(map[string]interface{}); ok {
+			title, _ := obj["title"].(string)
+			body, _ := obj["body"].(string)
+			combined := strings.TrimSpace(title + "\n\n" + body)
+			if combined != "" {
+				return combined
+			}
+		}
+	}
+	return strings.TrimSpace(ghCommentBody(payload))
+}
+
+// ghStripMention removes the leading @hawk mention from a comment so the
+// remaining text becomes the prompt.
+func ghStripMention(body string) string {
+	out := body
+	lower := strings.ToLower(out)
+	if idx := strings.Index(lower, ghMention); idx >= 0 {
+		out = out[:idx] + out[idx+len(ghMention):]
+	}
+	return strings.TrimSpace(out)
+}
+
+// --- Skill dispatch ---------------------------------------------------------
+
+// skillRunner resolves and renders a skill into a prompt prefix. It is an
+// interface so tests can substitute a mock implementation.
+type skillRunner interface {
+	// Run returns the rendered skill content for the given skill name, or an
+	// error if the skill cannot be found.
+	Run(name string) (string, error)
+}
+
+// pluginSkillRunner is the production skillRunner backed by hawk's local skill
+// store (.hawk/skills, ~/.hawk/skills, ...).
+type pluginSkillRunner struct{}
+
+func (pluginSkillRunner) Run(name string) (string, error) {
+	skills := plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+	for _, s := range skills {
+		if strings.EqualFold(s.Name, name) {
+			return fmt.Sprintf("[Skill: %s]\n\n%s", s.Name, s.Content), nil
+		}
+	}
+	return "", fmt.Errorf("skill %q not found (run `hawk skills` to list available skills)", name)
+}
+
+// defaultSkillRunner is overridable in tests.
+var defaultSkillRunner skillRunner = pluginSkillRunner{}
+
+// isSkillDispatch reports whether a resolved prompt is a slash-command skill
+// invocation (e.g. "/deep-research foo bar").
+func isSkillDispatch(prompt string) bool {
+	p := strings.TrimSpace(prompt)
+	return strings.HasPrefix(p, "/") && len(p) > 1 && !strings.HasPrefix(p, "//")
+}
+
+// parseSkillInvocation splits a "/name arg1 arg2" prompt into the skill name
+// and trailing argument string.
+func parseSkillInvocation(prompt string) (name, args string) {
+	p := strings.TrimSpace(prompt)
+	p = strings.TrimPrefix(p, "/")
+	fields := strings.SplitN(p, " ", 2)
+	name = strings.TrimSpace(fields[0])
+	if len(fields) > 1 {
+		args = strings.TrimSpace(fields[1])
+	}
+	return name, args
+}
+
+// dispatchSkill renders a slash-command prompt into an expanded prompt by
+// resolving the named skill through the runner and appending any user args.
+func dispatchSkill(runner skillRunner, prompt string) (string, error) {
+	name, args := parseSkillInvocation(prompt)
+	if name == "" {
+		return "", fmt.Errorf("empty skill name in %q", prompt)
+	}
+	rendered, err := runner.Run(name)
+	if err != nil {
+		return "", err
+	}
+	if args != "" {
+		return rendered + "\n\nArguments: " + args, nil
+	}
+	return rendered, nil
 }
 
 func persistExecSession(id, model, provider, userMsg, assistantMsg string) {

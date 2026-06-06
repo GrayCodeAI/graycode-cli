@@ -886,3 +886,119 @@ func TestParseYAMLList(t *testing.T) {
 
 // Ensure unused imports are referenced
 var _ = time.Now
+
+const colorHooksPersonaFile = `---
+name: colorful
+description: Persona with color and hooks
+color: blue
+hooks: {pre_run: echo start, post_run: echo done}
+expertise: [backend]
+---
+You are a colorful agent.
+`
+
+func TestParsePersonaFile_ColorAndHooks(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "colorful.md")
+	if err := os.WriteFile(path, []byte(colorHooksPersonaFile), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := ParsePersonaFile(path)
+	if err != nil {
+		t.Fatalf("ParsePersonaFile failed: %v", err)
+	}
+
+	if p.Color != "blue" {
+		t.Errorf("expected color 'blue', got %q", p.Color)
+	}
+	if len(p.Hooks) != 2 {
+		t.Fatalf("expected 2 hooks, got %d: %v", len(p.Hooks), p.Hooks)
+	}
+	if got := p.Hooks["pre_run"]; got != "echo start" {
+		t.Errorf("pre_run hook = %q, want %q", got, "echo start")
+	}
+	if got := p.Hooks["post_run"]; got != "echo done" {
+		t.Errorf("post_run hook = %q, want %q", got, "echo done")
+	}
+}
+
+func TestParsePersonaFile_NoColorHooks(t *testing.T) {
+	// Existing personas without color/hooks must still parse cleanly.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "plain.md")
+	if err := os.WriteFile(path, []byte(samplePersonaFile), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p, err := ParsePersonaFile(path)
+	if err != nil {
+		t.Fatalf("ParsePersonaFile failed: %v", err)
+	}
+	if p.Color != "" {
+		t.Errorf("expected empty color, got %q", p.Color)
+	}
+	if p.Hooks != nil {
+		t.Errorf("expected nil hooks, got %v", p.Hooks)
+	}
+}
+
+func TestRenderPersonaFile_ColorHooksRoundTrip(t *testing.T) {
+	orig := &Persona{
+		Name:      "rt",
+		Color:     "#ff8800",
+		Hooks:     PersonaHooks{"pre_run": "setup.sh", "on_error": "alert.sh"},
+		Expertise: []string{"backend"},
+	}
+	rendered := RenderPersonaFile(orig)
+	if !strings.Contains(rendered, "color: #ff8800") {
+		t.Errorf("rendered output missing color line:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "hooks: {") {
+		t.Errorf("rendered output missing hooks line:\n%s", rendered)
+	}
+
+	got, err := parsePersonaContent(rendered, "rt.md")
+	if err != nil {
+		t.Fatalf("re-parse failed: %v", err)
+	}
+	if got.Color != orig.Color {
+		t.Errorf("round-trip color = %q, want %q", got.Color, orig.Color)
+	}
+	if len(got.Hooks) != len(orig.Hooks) {
+		t.Fatalf("round-trip hooks count = %d, want %d", len(got.Hooks), len(orig.Hooks))
+	}
+	for k, v := range orig.Hooks {
+		if got.Hooks[k] != v {
+			t.Errorf("round-trip hook %q = %q, want %q", k, got.Hooks[k], v)
+		}
+	}
+}
+
+func TestParseYAMLMap(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want map[string]string
+	}{
+		{"empty", "", nil},
+		{"empty braces", "{}", nil},
+		{"single", "{a: b}", map[string]string{"a": "b"}},
+		{"multi", "{a: b, c: d}", map[string]string{"a": "b", "c": "d"}},
+		{"no braces", "a: b", map[string]string{"a": "b"}},
+		{"quoted value", `{a: "b c"}`, map[string]string{"a": "b c"}},
+		{"skips bad entry", "{a: b, junk}", map[string]string{"a": "b"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseYAMLMap(tt.in)
+			if len(got) != len(tt.want) {
+				t.Fatalf("parseYAMLMap(%q) = %v, want %v", tt.in, got, tt.want)
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Errorf("parseYAMLMap(%q)[%q] = %q, want %q", tt.in, k, got[k], v)
+				}
+			}
+		})
+	}
+}

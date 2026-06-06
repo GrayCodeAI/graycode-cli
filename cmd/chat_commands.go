@@ -37,7 +37,7 @@ var allSlashCommands = []string{
 	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
 	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
-	"/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
+	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
@@ -487,12 +487,23 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		if hawkconfig.DeploymentRoutingEnabled(m.settings) {
 			arg = hawkconfig.ResolveCanonicalModel(arg)
 		}
+		prevModel := m.session.Model()
+		if strings.EqualFold(strings.TrimSpace(prevModel), strings.TrimSpace(arg)) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Already using %s — no change.", prevModel)})
+			return m, nil
+		}
 		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
+		// Mid-session switch: SetModel only re-routes subsequent requests; the
+		// conversation history on the session is left intact, so context carries
+		// over to the new model. Count messages to confirm nothing was dropped.
+		msgCount := len(m.session.RawMessages())
 		m.session.SetModel(arg)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", m.session.Model())})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
+			"Model switched: %s → %s\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json).",
+			prevModel, m.session.Model(), msgCount)})
 		return m, nil
 	case "/branches":
 		if m.session.ConvoDAG == nil {
@@ -1249,6 +1260,8 @@ Generate the recap:`, summary.String())
 	case "/plugin":
 		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
 		return m, nil
+	case "/image":
+		return m.handleImageCommand(parts, text)
 	case "/voice":
 		out, err := exec.CommandContext(context.Background(), "which", "whisper").CombinedOutput()
 		if err != nil || strings.TrimSpace(string(out)) == "" {

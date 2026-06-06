@@ -3,6 +3,7 @@ package context
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -168,6 +169,102 @@ func TestRuleDiscoverer_EmptyProject(t *testing.T) {
 	rules := rd.Discover(target)
 	if len(rules) != 0 {
 		t.Errorf("expected 0 rules in empty project, got %d", len(rules))
+	}
+}
+
+func TestRuleDiscoverer_ManagedTierPrecedence(t *testing.T) {
+	dir := t.TempDir()
+	// A project rule that would normally have top precedence.
+	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("# Project Policy"), 0o644)
+	target := filepath.Join(dir, "main.go")
+	os.WriteFile(target, []byte("package main"), 0o644)
+
+	// Stand in for the IT-managed policy file (default paths are system-level).
+	managed := filepath.Join(dir, "managed-HAWK.md")
+	os.WriteFile(managed, []byte("# Org Policy"), 0o644)
+
+	rd := NewRuleDiscoverer(dir)
+	rd.managedPaths = []string{managed}
+
+	rules := rd.Discover(target)
+	if len(rules) < 2 {
+		t.Fatalf("expected at least 2 rules (managed + project), got %d", len(rules))
+	}
+	if rules[0].Source != managedSource {
+		t.Fatalf("expected managed rule first, got source %q content %q", rules[0].Source, rules[0].Content)
+	}
+	if rules[0].Content != "# Org Policy" {
+		t.Errorf("managed content mismatch: got %q", rules[0].Content)
+	}
+	// Managed must outrank the project HAWK.md regardless of project precedence.
+	for i, r := range rules {
+		if r.Source == "HAWK.md" && i == 0 {
+			t.Error("project HAWK.md should not outrank managed tier")
+		}
+	}
+}
+
+func TestRuleDiscoverer_ManagedTierMissing(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("# Project"), 0o644)
+	target := filepath.Join(dir, "main.go")
+	os.WriteFile(target, []byte("package main"), 0o644)
+
+	rd := NewRuleDiscoverer(dir)
+	rd.managedPaths = []string{filepath.Join(dir, "does-not-exist.md")}
+
+	rules := rd.Discover(target)
+	for _, r := range rules {
+		if r.Source == managedSource {
+			t.Error("no managed rule should be produced when the file is absent")
+		}
+	}
+}
+
+func TestStripHTMLComments(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"none", "# Title\nbody", "# Title\nbody"},
+		{"inline", "a <!-- secret --> b", "a  b"},
+		{"multiline", "head\n<!--\nhidden\nlines\n-->\ntail", "head\n\ntail"},
+		{"multiple", "<!--x-->keep<!--y-->", "keep"},
+		{"only", "<!-- everything -->", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := stripHTMLComments(tt.in); got != tt.want {
+				t.Errorf("stripHTMLComments(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRuleDiscoverer_StripsHTMLCommentsOnLoad(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("# Rules\n<!-- internal note: do not ship -->\nUse tabs."), 0o644)
+	target := filepath.Join(dir, "main.go")
+	os.WriteFile(target, []byte("package main"), 0o644)
+
+	rd := NewRuleDiscoverer(dir)
+	rules := rd.Discover(target)
+
+	found := false
+	for _, r := range rules {
+		if r.Source == "HAWK.md" {
+			found = true
+			if strings.Contains(r.Content, "internal note") {
+				t.Errorf("HTML comment not stripped from loaded content: %q", r.Content)
+			}
+			if !strings.Contains(r.Content, "Use tabs.") {
+				t.Errorf("non-comment content lost: %q", r.Content)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("HAWK.md rule not loaded")
 	}
 }
 
