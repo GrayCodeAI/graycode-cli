@@ -409,12 +409,6 @@ type GHAContext struct {
 	Mention   bool    // whether an @hawk mention was found in a comment
 }
 
-// inGitHubActions reports whether the process is running inside a GitHub
-// Actions runner.
-func inGitHubActions() bool {
-	return os.Getenv("GITHUB_ACTIONS") == "true"
-}
-
 // detectGitHubActions inspects the GitHub Actions environment and the event
 // payload at GITHUB_EVENT_PATH to decide between interactive and automation
 // mode. It returns a context whose Active field is false when not running under

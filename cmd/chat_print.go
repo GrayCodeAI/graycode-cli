@@ -453,7 +453,7 @@ func runWatchPolling(root string) error {
 
 func getLastModTime(root string) time.Time {
 	var latest time.Time
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
