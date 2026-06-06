@@ -62,7 +62,7 @@ var langSpecs = map[string]langSpec{
 			regexp.MustCompile(`(?m)^\s*require(?:_relative)?\s+['"]([^'"]+)['"]`),
 		},
 	},
-	"c": cSpec(),
+	"c":   cSpec(),
 	"cpp": cSpec(),
 }
 

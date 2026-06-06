@@ -257,10 +257,10 @@ func TestEstimateTokens(t *testing.T) {
 
 func TestBuild_SkipsVendorAndHidden(t *testing.T) {
 	root := writeTree(t, map[string]string{
-		"main.go":              "package main\nfunc main() {}\n",
-		"vendor/dep/dep.go":    "package dep\nfunc V() {}\n",
-		".git/hooks/pre.go":    "package x\nfunc G() {}\n",
-		"node_modules/m/i.js":  "export function n() {}\n",
+		"main.go":             "package main\nfunc main() {}\n",
+		"vendor/dep/dep.go":   "package dep\nfunc V() {}\n",
+		".git/hooks/pre.go":   "package x\nfunc G() {}\n",
+		"node_modules/m/i.js": "export function n() {}\n",
 	})
 	g, err := Build(root)
 	if err != nil {
