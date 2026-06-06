@@ -232,7 +232,7 @@ func panicRecovery(saveFn func()) {
 		_, _ = fmt.Fprintf(os.Stderr, "Details logged to ~/.hawk/crash.log\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n\n")
 		_, _ = fmt.Fprintf(os.Stderr, "panic: %v\n", r)
-		os.Exit(1)
+		os.Exit(1) // os.Exit intentional: panic recovery, defer already unwound
 	}
 }
 
@@ -269,7 +269,7 @@ func signalHandler(saveFn func()) {
 		}
 
 		_, _ = fmt.Fprintf(os.Stderr, "Goodbye.\n")
-		os.Exit(0)
+		os.Exit(0) // os.Exit intentional: signal handler, must terminate process
 	}()
 }
 

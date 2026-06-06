@@ -168,7 +168,7 @@ func runSightReview(ctx context.Context, bridge *hawkSight.Bridge, diff string) 
 	}
 
 	if result.Failed() {
-		os.Exit(1)
+		return fmt.Errorf("sight: one or more checks failed")
 	}
 	return nil
 }

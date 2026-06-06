@@ -91,7 +91,7 @@ Examples:
 		}
 
 		if report.Failed() {
-			os.Exit(1)
+			return fmt.Errorf("inspect: one or more checks failed")
 		}
 		return nil
 	},

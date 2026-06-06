@@ -1,6 +1,6 @@
 module github.com/GrayCodeAI/hawk
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/GrayCodeAI/eyrie v0.1.0
