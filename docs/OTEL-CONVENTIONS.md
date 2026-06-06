@@ -15,7 +15,7 @@ conventions (`gen_ai.*`) where they exist, and add a small set of ecosystem
 extensions (`cost.usd`, `session.id`, `agent.id`) for the cross-cutting
 concerns that the GenAI spec does not yet standardize.
 
-- Upstream spec: https://opentelemetry.io/docs/specs/semconv/gen-ai/
+- Upstream spec: <https://opentelemetry.io/docs/specs/semconv/gen-ai/>
 
 ## Reference implementation
 
