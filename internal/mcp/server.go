@@ -62,7 +62,22 @@ type MCPToolHandler struct {
 	Name        string
 	Description string
 	InputSchema map[string]interface{}
+	// Annotations carry behavioral hints (read-only, destructive, …) so a
+	// connecting client can self-throttle — e.g. ask the user before a tool
+	// that may run shell commands or edit files. Nil means "no hints".
+	Annotations *ToolAnnotations
 	Handler     func(ctx context.Context, params json.RawMessage) (string, error)
+}
+
+// ToolAnnotations are the optional MCP tool behavior hints from the spec.
+// All fields are advisory and pointer-typed so an unset hint is omitted from
+// the wire payload rather than sent as a misleading false.
+type ToolAnnotations struct {
+	Title           string `json:"title,omitempty"`
+	ReadOnlyHint    *bool  `json:"readOnlyHint,omitempty"`
+	DestructiveHint *bool  `json:"destructiveHint,omitempty"`
+	IdempotentHint  *bool  `json:"idempotentHint,omitempty"`
+	OpenWorldHint   *bool  `json:"openWorldHint,omitempty"`
 }
 
 // JSON-RPC 2.0 request from a client.
@@ -251,6 +266,7 @@ func (s *MCPServer) handleToolsList(req *JSONRPCRequest) *JSONRPCResponse {
 		Name        string                 `json:"name"`
 		Description string                 `json:"description"`
 		InputSchema map[string]interface{} `json:"inputSchema"`
+		Annotations *ToolAnnotations       `json:"annotations,omitempty"`
 	}
 
 	tools := make([]toolSchema, 0, len(s.tools))
@@ -259,6 +275,7 @@ func (s *MCPServer) handleToolsList(req *JSONRPCRequest) *JSONRPCResponse {
 			Name:        t.Name,
 			Description: t.Description,
 			InputSchema: t.InputSchema,
+			Annotations: t.Annotations,
 		})
 	}
 
