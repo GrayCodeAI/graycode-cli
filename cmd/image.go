@@ -170,7 +170,7 @@ func IsPDFFile(path string) bool {
 // or exotic font encodings will yield little or no text); callers should treat
 // empty output as "no extractable text" rather than an error.
 //
-// TODO: swap in a dedicated PDF library (e.g. ledongthuc/pdf) for layout-aware
+// Swap in a dedicated PDF library (e.g. ledongthuc/pdf) for layout-aware
 // extraction if one is added to go.mod; the interface here is intentionally
 // stable so that change is internal.
 func ReadPDFText(path string) (string, error) {
