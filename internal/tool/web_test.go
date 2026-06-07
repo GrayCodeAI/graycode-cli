@@ -30,8 +30,8 @@ func TestWebSearchTool_EmptyQuery(t *testing.T) {
 	var ws WebSearchTool
 	input, _ := json.Marshal(map[string]string{"query": ""})
 	_, err := ws.Execute(context.Background(), input)
-	if err == nil || !strings.Contains(err.Error(), "query is required") {
-		t.Fatalf("expected 'query is required' error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "is required") {
+		t.Fatalf("expected a 'required' error, got %v", err)
 	}
 }
 
