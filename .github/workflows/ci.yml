@@ -20,6 +20,12 @@ concurrency:
 
 env:
   GO_VERSION: "1.26.4"
+  # GrayCodeAI sibling modules are resolved from the local external/ submodules via
+  # go.work; their go.mod require versions (v0.1.0) intentionally do not match the
+  # frozen public proxy/sumdb snapshot, so bypass the proxy + checksum DB for them.
+  GOPRIVATE: "github.com/GrayCodeAI/*"
+  GONOSUMDB: "github.com/GrayCodeAI/*"
+  GONOSUMCHECK: "1"
 
 jobs:
   # -------------------------------------------------------------------------
