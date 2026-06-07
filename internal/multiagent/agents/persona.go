@@ -17,13 +17,19 @@ import (
 // Persona represents an enhanced agent definition with specific skills,
 // model preferences, and behavioral configuration.
 type Persona struct {
-	Name               string           `json:"name"`
-	Description        string           `json:"description"`
-	Model              string           `json:"model"`
-	Provider           string           `json:"provider"`
-	SystemPrompt       string           `json:"system_prompt"`
-	Tools              []string         `json:"tools"`
-	ExcludedTools      []string         `json:"excluded_tools"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Model         string   `json:"model"`
+	Provider      string   `json:"provider"`
+	SystemPrompt  string   `json:"system_prompt"`
+	Tools         []string `json:"tools"`
+	ExcludedTools []string `json:"excluded_tools"`
+	// ReadOnly declares that this persona must never mutate the workspace. It is
+	// a machine-readable contract (stronger than listing Edit/Write in
+	// ExcludedTools, since it also forbids mutation via Bash): orchestrators
+	// should run a ReadOnly persona with a read-only tool registry. Used by the
+	// validation half of an implement-then-validate agent pair.
+	ReadOnly           bool             `json:"read_only,omitempty"`
 	Temperature        float64          `json:"temperature"`
 	MaxTokens          int              `json:"max_tokens"`
 	Expertise          []string         `json:"expertise"`
@@ -408,6 +414,8 @@ func parsePersonaContent(content, path string) (*Persona, error) {
 			p.Tools = parseYAMLList(val)
 		case "excluded_tools":
 			p.ExcludedTools = parseYAMLList(val)
+		case "read_only":
+			p.ReadOnly = val == "true" || val == "yes"
 		case "rules":
 			p.Rules = parseYAMLList(val)
 		case "created_at":
@@ -480,6 +488,9 @@ func RenderPersonaFile(persona *Persona) string {
 	}
 	if len(persona.ExcludedTools) > 0 {
 		sb.WriteString(fmt.Sprintf("excluded_tools: [%s]\n", strings.Join(persona.ExcludedTools, ", ")))
+	}
+	if persona.ReadOnly {
+		sb.WriteString("read_only: true\n")
 	}
 	if persona.Color != "" {
 		sb.WriteString(fmt.Sprintf("color: %s\n", persona.Color))
@@ -556,7 +567,7 @@ func BuiltinPersonas() []*Persona {
 		{
 			Name:               "reviewer",
 			Description:        "Security and correctness focused code reviewer",
-			Model:              "claude-sonnet-4-6",
+			Model:              "", // inherit session model (was claude-sonnet-4-6)
 			Temperature:        0.2,
 			Expertise:          []string{"security", "backend", "testing"},
 			CommunicationStyle: "concise",
@@ -574,7 +585,7 @@ func BuiltinPersonas() []*Persona {
 		{
 			Name:               "architect",
 			Description:        "High-level system design with minimal code",
-			Model:              "claude-opus-4-6",
+			Model:              "", // inherit session model (was claude-opus-4-6)
 			Temperature:        0.7,
 			MaxTokens:          16384,
 			Expertise:          []string{"backend", "devops"},
@@ -634,7 +645,7 @@ func BuiltinPersonas() []*Persona {
 		{
 			Name:               "speed",
 			Description:        "Fast and concise, uses cheapest model",
-			Model:              "claude-haiku-3-5",
+			Model:              "", // inherit session model (was claude-haiku-3-5)
 			Temperature:        0.3,
 			MaxTokens:          4096,
 			Expertise:          []string{"backend", "frontend"},
@@ -684,7 +695,7 @@ func BuiltinPersonas() []*Persona {
 		{
 			Name:               "critic",
 			Description:        "Reviews plans and code for flaws before commitment",
-			Model:              "claude-sonnet-4-6",
+			Model:              "", // inherit session model (was claude-sonnet-4-6)
 			Temperature:        0.2,
 			Expertise:          []string{"backend", "testing", "security"},
 			CommunicationStyle: "concise",
@@ -701,7 +712,7 @@ func BuiltinPersonas() []*Persona {
 		{
 			Name:               "security-reviewer",
 			Description:        "Deep security-focused code reviewer",
-			Model:              "claude-sonnet-4-6",
+			Model:              "", // inherit session model (was claude-sonnet-4-6)
 			Temperature:        0.2,
 			MaxTokens:          8192,
 			Expertise:          []string{"security", "backend"},
@@ -751,7 +762,7 @@ func BuiltinPersonas() []*Persona {
 		{
 			Name:               "verifier",
 			Description:        "Validates implementations against specifications",
-			Model:              "claude-sonnet-4-6",
+			Model:              "", // inherit session model (was claude-sonnet-4-6)
 			Temperature:        0.2,
 			Expertise:          []string{"testing", "backend"},
 			CommunicationStyle: "concise",
@@ -762,6 +773,34 @@ func BuiltinPersonas() []*Persona {
 				"Provide evidence for every pass or fail verdict",
 				"Run the actual tests rather than assuming",
 				"Report partial completion honestly",
+			},
+			CreatedAt: now,
+		},
+		{
+			// validator is the read-only half of an implement-then-validate
+			// agent pair: a separate agent reviews the implementation worker's
+			// output without the ability to change it. Unlike verifier it is
+			// ReadOnly (no Bash), so its sign-off cannot be tainted by mutating
+			// the very code it judges.
+			Name:        "validator",
+			Description: "Read-only validator of an implementation it did not write",
+			// Model intentionally left empty: a validator should run on whatever
+			// model the user has configured for the session rather than pinning a
+			// specific name that may not exist on their provider. (Several
+			// built-ins pin claude-sonnet-4-6; this one deliberately inherits.)
+			Model:              "",
+			Temperature:        0.1,
+			Expertise:          []string{"testing", "backend", "security"},
+			CommunicationStyle: "concise",
+			ReadOnly:           true,
+			Tools:              []string{"Read", "Grep", "Glob", "LS"},
+			ExcludedTools:      []string{"Edit", "Write", "Bash"},
+			SystemPrompt:       "You are a read-only validation agent. You did not write the code under review and you cannot modify it. Inspect the implementation against the stated expected behavior and report, per acceptance criterion, a concrete PASS or FAIL with file:line evidence. Never assume — cite what you actually read.",
+			Rules: []string{
+				"You are read-only: never propose to edit, write, or run shell commands",
+				"Cite file:line evidence for every PASS or FAIL",
+				"Judge against the expected behavior, not your own preferences",
+				"Report partial or unclear completion honestly rather than rounding up",
 			},
 			CreatedAt: now,
 		},
