@@ -231,11 +231,24 @@ func (s *Server) CallTool(ctx context.Context, name string, args map[string]inte
 	if err != nil {
 		return "", err
 	}
+	return parseToolCallResult(result)
+}
+
+// parseToolCallResult decodes an MCP tools/call result into flattened text.
+//
+// It honors the spec's isError flag: when the remote tool reports a failure
+// (isError:true), the content carries the failure detail and this returns it as
+// a Go error so the agent loop surfaces it to the model — which can then
+// self-correct — instead of mistaking a failure for a successful result.
+// hawk's own MCP server sets this flag (internal/mcp/server.go), so the client
+// must read it for symmetry. An undecodable result falls back to the raw bytes.
+func parseToolCallResult(result json.RawMessage) (string, error) {
 	var resp struct {
 		Content []struct {
 			Type string `json:"type"`
 			Text string `json:"text"`
 		} `json:"content"`
+		IsError bool `json:"isError"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
 		return string(result), nil
@@ -245,6 +258,12 @@ func (s *Server) CallTool(ctx context.Context, name string, args map[string]inte
 		if c.Type == "text" {
 			text += c.Text
 		}
+	}
+	if resp.IsError {
+		if text == "" {
+			text = "remote MCP tool reported an error"
+		}
+		return text, fmt.Errorf("MCP tool error: %s", text)
 	}
 	return text, nil
 }
