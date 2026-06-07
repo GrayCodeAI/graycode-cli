@@ -6,7 +6,18 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/term"
 )
+
+// stdoutIsTerminal reports whether stdout is connected to a terminal (TTY).
+// When stdout is a pipe or file — which is exactly the case when an agent or
+// shell script captures hawk's output — this is false, and color/Unicode
+// chrome must be suppressed so the payload stays clean. It is a var so tests
+// can override it.
+var stdoutIsTerminal = func() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
 
 // TreeNode represents a node in a tree structure for FormatTree.
 type TreeNode struct {
@@ -544,9 +555,16 @@ func DetectColorSupport() bool {
 		return false
 	}
 
+	// Stdout is not a TTY (piped to an agent, file, or another process):
+	// suppress ANSI so the captured output is clean. An explicit FORCE_COLOR
+	// above already overrode this for callers that pipe but still want color.
+	if !stdoutIsTerminal() {
+		return false
+	}
+
 	// Check TERM
-	term := os.Getenv("TERM")
-	if term == "dumb" || term == "" {
+	t := os.Getenv("TERM")
+	if t == "dumb" || t == "" {
 		return false
 	}
 
@@ -555,6 +573,12 @@ func DetectColorSupport() bool {
 
 // DetectUnicodeSupport checks if the terminal supports Unicode characters.
 func DetectUnicodeSupport() bool {
+	// Non-TTY stdout: emit ASCII so box-drawing/glyphs don't corrupt captured
+	// output. FORCE_COLOR is a color signal only, so it does not override here.
+	if !stdoutIsTerminal() {
+		return false
+	}
+
 	lang := os.Getenv("LANG")
 	lcAll := os.Getenv("LC_ALL")
 	lcCtype := os.Getenv("LC_CTYPE")

@@ -10,6 +10,15 @@ import (
 // This avoids importing the tool package (which already imports mcp).
 type ToolExecutor func(ctx context.Context, name string, input json.RawMessage) (string, error)
 
+// boolPtr returns a pointer to b, for the pointer-typed MCP annotation hints.
+func boolPtr(b bool) *bool { return &b }
+
+// readOnlyAnnotations marks a tool that only reads/inspects and never mutates
+// the workspace, so a client can run it without prompting.
+func readOnlyAnnotations(title string) *ToolAnnotations {
+	return &ToolAnnotations{Title: title, ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false)}
+}
+
 // RegisterDefaultTools registers hawk's standard capabilities as MCP tools.
 // If executor is non-nil, tools that delegate to hawk's tool registry will
 // use it for execution; otherwise those tools return a not-configured error.
@@ -26,8 +35,15 @@ func RegisterDefaultTools(server *MCPServer, executor ToolExecutor) {
 // hawkChatTool sends a prompt to hawk and returns the response.
 func hawkChatTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_chat",
-		Description: "Send a prompt to the hawk AI coding agent and receive a response.",
+		Name: "hawk_chat",
+		Description: "Send a prompt to the hawk AI coding agent and receive a response. " +
+			"WARNING: this runs an autonomous agent that may execute shell commands and modify files.",
+		Annotations: &ToolAnnotations{
+			Title:           "Run hawk agent",
+			ReadOnlyHint:    boolPtr(false),
+			DestructiveHint: boolPtr(true),
+			OpenWorldHint:   boolPtr(true),
+		},
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -58,6 +74,7 @@ func hawkSearchTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_search",
 		Description: "Search across hawk sessions and conversation history.",
+		Annotations: readOnlyAnnotations("Search hawk sessions"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -93,6 +110,7 @@ func hawkMemoryRecallTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_memory_recall",
 		Description: "Recall stored information from hawk's persistent memory (yaad).",
+		Annotations: readOnlyAnnotations("Recall from hawk memory"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -128,6 +146,11 @@ func hawkMemoryStoreTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_memory_store",
 		Description: "Store information in hawk's persistent memory (yaad) for future recall.",
+		Annotations: &ToolAnnotations{
+			Title:           "Store in hawk memory",
+			ReadOnlyHint:    boolPtr(false),
+			DestructiveHint: boolPtr(false), // additive write, does not destroy existing data
+		},
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -168,6 +191,7 @@ func hawkReviewTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_review",
 		Description: "Trigger a code review using hawk's sight module. Analyzes code for quality, style, and potential issues.",
+		Annotations: readOnlyAnnotations("Review code (sight)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -203,6 +227,7 @@ func hawkScanTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_scan",
 		Description: "Trigger a security scan using hawk's inspect module. Identifies vulnerabilities and security issues.",
+		Annotations: readOnlyAnnotations("Security scan (inspect)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -239,6 +264,7 @@ func hawkCompressTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_compress",
 		Description: "Compress text using hawk's tok module to reduce token usage while preserving meaning.",
+		Annotations: readOnlyAnnotations("Compress text (tok)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
