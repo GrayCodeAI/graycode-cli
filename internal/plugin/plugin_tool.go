@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/GrayCodeAI/hawk/internal/mcp"
 )
 
 // PluginToolAdapter wraps a PluginTool as a tool.Tool interface
@@ -27,16 +29,14 @@ func (a *PluginToolAdapter) Description() string {
 	return fmt.Sprintf("Tool %q from plugin %q", a.tool.Name, a.plugin.Plugin.Name)
 }
 
-// Parameters returns the JSON schema for tool input.
+// Parameters returns the JSON schema for tool input, pruned to the subset that
+// strict OpenAI-compatible function-calling endpoints accept. MCP servers may
+// publish full JSON Schema documents; mcp.SanitizeToolSchema keeps only
+// {type, properties, required} (and a per-property keyword subset) so a verbose
+// upstream schema does not get a tool rejected by the provider. A nil schema
+// yields the canonical empty-object schema.
 func (a *PluginToolAdapter) Parameters() map[string]interface{} {
-	if a.tool.InputSchema != nil {
-		return a.tool.InputSchema
-	}
-	// Default: accept any JSON object
-	return map[string]interface{}{
-		"type":       "object",
-		"properties": map[string]interface{}{},
-	}
+	return mcp.SanitizeToolSchema(a.tool.InputSchema)
 }
 
 // Execute runs the tool via the plugin manager.
