@@ -7,6 +7,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/cmd"
 	"github.com/GrayCodeAI/hawk/internal/api"
+	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
@@ -42,10 +43,14 @@ func main() {
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		// An explicit ExitCodeError (e.g. a wrapped Bash exit status) wins —
+		// it already carries the intended code. Otherwise classify the failure
+		// into the stable exit-code taxonomy so callers can branch on the
+		// reason (auth vs rate-limit vs network) instead of seeing a bare 1.
 		var exitErr *cmd.ExitCodeError
 		if errors.As(err, &exitErr) {
 			os.Exit(exitErr.Code)
 		}
-		os.Exit(1)
+		os.Exit(hawkerr.ClassifyExitCode(err))
 	}
 }

@@ -7,6 +7,38 @@ import (
 	"time"
 )
 
+func TestDetectColorSupport_NonTTYStdout(t *testing.T) {
+	orig := stdoutIsTerminal
+	defer func() { stdoutIsTerminal = orig }()
+
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("FORCE_COLOR", "")
+	t.Setenv("TERM", "xterm-256color")
+
+	// Piped stdout (not a TTY) with a normal TERM must still disable color —
+	// this is the "agent captured ANSI escapes in its JSON" regression.
+	stdoutIsTerminal = func() bool { return false }
+	if DetectColorSupport() {
+		t.Error("DetectColorSupport() = true for non-TTY stdout; want false")
+	}
+	if DetectUnicodeSupport() {
+		t.Error("DetectUnicodeSupport() = true for non-TTY stdout; want false")
+	}
+
+	// A TTY with a good TERM keeps color.
+	stdoutIsTerminal = func() bool { return true }
+	if !DetectColorSupport() {
+		t.Error("DetectColorSupport() = false for TTY stdout; want true")
+	}
+
+	// FORCE_COLOR overrides the non-TTY gate (deliberate piped color).
+	stdoutIsTerminal = func() bool { return false }
+	t.Setenv("FORCE_COLOR", "1")
+	if !DetectColorSupport() {
+		t.Error("DetectColorSupport() = false with FORCE_COLOR over a pipe; want true")
+	}
+}
+
 func newTestFormatter(color, unicode bool, width int) *OutputFormatter {
 	theme := OutputTheme{}
 	if color {
@@ -552,6 +584,12 @@ func TestDetectColorSupport(t *testing.T) {
 }
 
 func TestDetectUnicodeSupport(t *testing.T) {
+	// These subtests exercise the locale-env logic, so pin stdout to a TTY;
+	// the non-TTY suppression gate is covered by TestDetectColorSupport_NonTTYStdout.
+	origIsTTY := stdoutIsTerminal
+	stdoutIsTerminal = func() bool { return true }
+	defer func() { stdoutIsTerminal = origIsTTY }()
+
 	t.Run("UTF-8 lang", func(t *testing.T) {
 		origLang := os.Getenv("LANG")
 		origLcAll := os.Getenv("LC_ALL")

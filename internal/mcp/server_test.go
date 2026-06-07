@@ -143,6 +143,75 @@ func TestToolsList(t *testing.T) {
 		if toolMap["inputSchema"] == nil {
 			t.Error("tool missing inputSchema")
 		}
+		// Neither alpha nor beta declared annotations, so the field must be
+		// omitted entirely (omitempty) rather than sent as null.
+		if _, present := toolMap["annotations"]; present {
+			t.Errorf("tool %v should omit annotations when unset", toolMap["name"])
+		}
+	}
+}
+
+func TestToolsListAnnotations(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server.RegisterTool(MCPToolHandler{
+		Name:        "danger",
+		Description: "Runs an agent",
+		InputSchema: map[string]interface{}{"type": "object"},
+		Annotations: &ToolAnnotations{
+			Title:           "Run agent",
+			ReadOnlyHint:    boolPtr(false),
+			DestructiveHint: boolPtr(true),
+		},
+		Handler: func(ctx context.Context, params json.RawMessage) (string, error) { return "ok", nil },
+	})
+
+	resp := sendRequest(t, server, `{"jsonrpc":"2.0","id":7,"method":"tools/list"}`+"\n")
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+	tools := resp.Result.(map[string]interface{})["tools"].([]interface{})
+	if len(tools) != 1 {
+		t.Fatalf("expected 1 tool, got %d", len(tools))
+	}
+	ann, ok := tools[0].(map[string]interface{})["annotations"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected annotations map, got %T", tools[0].(map[string]interface{})["annotations"])
+	}
+	if ann["destructiveHint"] != true {
+		t.Errorf("destructiveHint = %v, want true", ann["destructiveHint"])
+	}
+	if ann["readOnlyHint"] != false {
+		t.Errorf("readOnlyHint = %v, want false", ann["readOnlyHint"])
+	}
+	if ann["title"] != "Run agent" {
+		t.Errorf("title = %v, want %q", ann["title"], "Run agent")
+	}
+	// idempotentHint was never set, so it must be omitted.
+	if _, present := ann["idempotentHint"]; present {
+		t.Error("idempotentHint should be omitted when unset")
+	}
+}
+
+// TestDefaultToolsHaveAnnotations guards that every default-registered tool
+// carries a risk hint, so a future tool addition can't silently ship without
+// one for connecting clients to self-throttle on.
+func TestDefaultToolsHaveAnnotations(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	RegisterDefaultTools(server, nil)
+
+	resp := sendRequest(t, server, `{"jsonrpc":"2.0","id":8,"method":"tools/list"}`+"\n")
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %+v", resp.Error)
+	}
+	tools := resp.Result.(map[string]interface{})["tools"].([]interface{})
+	if len(tools) == 0 {
+		t.Fatal("no default tools registered")
+	}
+	for _, raw := range tools {
+		tm := raw.(map[string]interface{})
+		if _, ok := tm["annotations"].(map[string]interface{}); !ok {
+			t.Errorf("default tool %v missing annotations", tm["name"])
+		}
 	}
 }
 

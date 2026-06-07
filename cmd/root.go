@@ -466,7 +466,10 @@ var configCmd = &cobra.Command{
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
-	Short: "Show MCP server configuration",
+	Short: "Show MCP configuration; run or register hawk as an MCP server",
+	Long: "With no subcommand, summarizes the MCP servers hawk connects to (consumes).\n" +
+		"  hawk mcp serve   — run hawk itself as an MCP server over stdio\n" +
+		"  hawk mcp config  — print the JSON block to register hawk in Claude Desktop/Cursor/Windsurf",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		settings, err := loadEffectiveSettings()
 		if err != nil {

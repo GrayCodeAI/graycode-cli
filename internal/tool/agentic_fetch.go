@@ -4,7 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"sync"
 )
+
+// maxAgenticFetchConcurrency bounds how many pages are fetched and summarized
+// in parallel when a batch of URLs is supplied, matching the WebSearch cap so
+// the SSRF-aware fetch client does not face a connection storm.
+const maxAgenticFetchConcurrency = 4
 
 // AgenticFetchTool spawns a sub-agent to fetch, process, and summarize web content.
 type AgenticFetchTool struct{}
@@ -20,22 +27,33 @@ func (AgenticFetchTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"url":   map[string]interface{}{"type": "string", "description": "URL to fetch and analyze"},
-			"query": map[string]interface{}{"type": "string", "description": "What to look for or extract from the page"},
+			"url": map[string]interface{}{"type": "string", "description": "URL to fetch and analyze. Provide this OR urls (not both)."},
+			"urls": map[string]interface{}{
+				"type":        "array",
+				"items":       map[string]interface{}{"type": "string"},
+				"description": "Multiple URLs to fetch and summarize concurrently against the same query, in a single call.",
+			},
+			"query": map[string]interface{}{"type": "string", "description": "What to look for or extract from the page(s)"},
 		},
 	}
 }
 
-func (AgenticFetchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+func (t AgenticFetchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
-		URL   string `json:"url"`
-		Query string `json:"query"`
+		URL   string   `json:"url"`
+		URLs  []string `json:"urls"`
+		Query string   `json:"query"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
-	if p.URL == "" {
-		return "", fmt.Errorf("url is required")
+
+	urls := p.URLs
+	if p.URL != "" {
+		urls = append(urls, p.URL)
+	}
+	if len(urls) == 0 {
+		return "", fmt.Errorf("url or urls is required")
 	}
 	if p.Query == "" {
 		p.Query = "Extract the key information from this page."
@@ -43,17 +61,55 @@ func (AgenticFetchTool) Execute(ctx context.Context, input json.RawMessage) (str
 
 	tc := GetToolContext(ctx)
 	if tc == nil || tc.AgentSpawnFn == nil {
-		// Fallback: do a direct fetch if no sub-agent available.
-		return (WebFetchTool{}).Execute(ctx, input)
+		// Fallback: do a direct fetch if no sub-agent available. Only the
+		// single-URL case maps onto WebFetch's input shape.
+		if len(urls) == 1 {
+			fetchInput, _ := json.Marshal(map[string]string{"url": urls[0]})
+			return (WebFetchTool{}).Execute(ctx, fetchInput)
+		}
+		return "", fmt.Errorf("batch agentic fetch requires a sub-agent, which is unavailable in this context")
 	}
 
-	prompt := fmt.Sprintf(`You are a web research agent. Your task:
+	if len(urls) == 1 {
+		return tc.AgentSpawnFn(ctx, t.researchPrompt(urls[0], p.Query))
+	}
+
+	// Batch: summarize each URL concurrently, bounded, with labeled sections.
+	outputs := make([]string, len(urls))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxAgenticFetchConcurrency)
+	for i, u := range urls {
+		wg.Add(1)
+		go func(idx int, u string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			out, err := tc.AgentSpawnFn(ctx, t.researchPrompt(u, p.Query))
+			if err != nil {
+				outputs[idx] = fmt.Sprintf("## %s\n\nError: %v", u, err)
+				return
+			}
+			outputs[idx] = fmt.Sprintf("## %s\n\n%s", u, out)
+		}(i, u)
+	}
+	wg.Wait()
+
+	return strings.Join(outputs, "\n\n---\n\n"), nil
+}
+
+// researchPrompt builds the sub-agent instruction for one URL. It includes an
+// explicit relevance-refusal contract: if the page does not address the query,
+// the sub-agent returns a short "NO_RELEVANT_INFORMATION" signal instead of
+// padding a vague summary, keeping the caller's context clean.
+func (AgenticFetchTool) researchPrompt(url, query string) string {
+	return fmt.Sprintf(`You are a web research agent. Your task:
 1. Fetch the URL: %s
 2. Extract information relevant to: %s
-3. Return a concise, well-structured summary of the relevant content.
-4. Include specific details, code examples, or data points — not vague descriptions.
+3. If the page genuinely does not contain information relevant to the query,
+   respond with exactly "NO_RELEVANT_INFORMATION" and one short sentence on why
+   — do not invent or pad a summary.
+4. Otherwise, return a concise, well-structured summary of the relevant content,
+   including specific details, code examples, or data points — not vague descriptions.
 
-Use the WebFetch tool to retrieve the page content, then analyze and summarize it.`, p.URL, p.Query)
-
-	return tc.AgentSpawnFn(ctx, prompt)
+Use the WebFetch tool to retrieve the page content, then analyze and summarize it.`, url, query)
 }

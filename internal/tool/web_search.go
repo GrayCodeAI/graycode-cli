@@ -8,8 +8,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
+
+// maxWebSearchConcurrency bounds the number of search backends contacted in
+// parallel when a batch of queries is issued, so a large queries[] array does
+// not open a burst of outbound connections (and trip provider rate limits).
+const maxWebSearchConcurrency = 4
 
 // searchResult is the shared result type for all search backends.
 type searchResult struct {
@@ -33,7 +39,12 @@ func (WebSearchTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"query": map[string]interface{}{
 				"type":        "string",
-				"description": "Search query",
+				"description": "Search query. Provide this OR queries (not both).",
+			},
+			"queries": map[string]interface{}{
+				"type":        "array",
+				"items":       map[string]interface{}{"type": "string"},
+				"description": "Multiple search queries to run concurrently in a single call. Use this to research several things at once instead of issuing one WebSearch per query.",
 			},
 			"numResults": map[string]interface{}{
 				"type":        "integer",
@@ -49,22 +60,31 @@ func (WebSearchTool) Parameters() map[string]interface{} {
 				"default":     "web",
 			},
 		},
-		"required": []string{"query"},
+		// Either query or queries must be supplied; validated in Execute since
+		// JSON Schema "required" cannot express an exclusive-or cleanly.
 	}
 }
 
-func (WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+func (t WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
-		Query      string `json:"query"`
-		NumResults int    `json:"numResults"`
-		SearchType string `json:"searchType"`
+		Query      string   `json:"query"`
+		Queries    []string `json:"queries"`
+		NumResults int      `json:"numResults"`
+		SearchType string   `json:"searchType"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
-	if p.Query == "" {
-		return "", fmt.Errorf("query is required")
+
+	// Normalize the single/batch surfaces into one list of queries.
+	queries := p.Queries
+	if p.Query != "" {
+		queries = append(queries, p.Query)
 	}
+	if len(queries) == 0 {
+		return "", fmt.Errorf("query or queries is required")
+	}
+
 	if p.NumResults <= 0 {
 		p.NumResults = 5
 	}
@@ -75,16 +95,58 @@ func (WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (string
 		p.SearchType = "web"
 	}
 
-	// Try providers in order: Brave → SearXNG → DuckDuckGo
+	// Single query: keep the original output shape (no batch header).
+	if len(queries) == 1 {
+		out, err := t.searchOne(ctx, queries[0], p.NumResults)
+		if err != nil {
+			return "", err
+		}
+		return out, nil
+	}
+
+	// Batch: fan out concurrently, bounded, and label each result section so
+	// the agent can attribute results to their query in one tool call.
+	outputs := make([]string, len(queries))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxWebSearchConcurrency)
+	for i, q := range queries {
+		wg.Add(1)
+		go func(idx int, query string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			out, err := t.searchOne(ctx, query, p.NumResults)
+			if err != nil {
+				outputs[idx] = fmt.Sprintf("Search results for: %s\n\nError: %v", query, err)
+				return
+			}
+			outputs[idx] = out
+		}(i, q)
+	}
+	wg.Wait()
+
+	var sb strings.Builder
+	for i, out := range outputs {
+		if i > 0 {
+			sb.WriteString("\n\n---\n\n")
+		}
+		sb.WriteString(out)
+	}
+	return sb.String(), nil
+}
+
+// searchOne runs a single query through the provider cascade
+// (Brave → SearXNG → DuckDuckGo) and returns formatted results.
+func (WebSearchTool) searchOne(ctx context.Context, query string, numResults int) (string, error) {
 	var results []searchResult
 	var err error
 
 	// 1. Brave Search
 	brave := newBraveClient()
 	if brave.available() {
-		results, err = brave.search(ctx, p.Query, p.NumResults)
+		results, err = brave.search(ctx, query, numResults)
 		if err == nil {
-			return formatSearchResults(p.Query, results), nil
+			return formatSearchResults(query, results), nil
 		}
 		// Fall through to next provider on error
 	}
@@ -92,19 +154,19 @@ func (WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (string
 	// 2. SearXNG
 	searxng := newSearxngClient()
 	if searxng.available() {
-		results, err = searxng.search(ctx, p.Query, p.NumResults)
+		results, err = searxng.search(ctx, query, numResults)
 		if err == nil {
-			return formatSearchResults(p.Query, results), nil
+			return formatSearchResults(query, results), nil
 		}
 		// Fall through to DuckDuckGo on error
 	}
 
 	// 3. DuckDuckGo (fallback)
-	results, err = duckDuckGoSearch(ctx, p.Query, p.NumResults)
+	results, err = duckDuckGoSearch(ctx, query, numResults)
 	if err != nil {
 		return "", fmt.Errorf("all search providers failed: %w", err)
 	}
-	return formatSearchResults(p.Query, results), nil
+	return formatSearchResults(query, results), nil
 }
 
 // formatSearchResults formats results as numbered structured text.
