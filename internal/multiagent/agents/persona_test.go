@@ -470,6 +470,7 @@ func TestBuiltinPersonas_AreValid(t *testing.T) {
 		"test-engineer":         false,
 		"tracer":                false,
 		"verifier":              false,
+		"validator":             false,
 		"integrator":            false,
 		"documenter":            false,
 		"devops":                false,
@@ -549,8 +550,8 @@ func TestSelectPersona_NewDomains(t *testing.T) {
 }
 
 func TestBuiltinPersonas_Count(t *testing.T) {
-	if got := len(BuiltinPersonas()); got != 21 {
-		t.Errorf("expected 21 built-in personas, got %d", got)
+	if got := len(BuiltinPersonas()); got != 22 {
+		t.Errorf("expected 22 built-in personas, got %d", got)
 	}
 }
 

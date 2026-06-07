@@ -499,8 +499,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 
-		// Check for inline tool calls in text (some providers embed tool calls in text)
-		if len(toolCalls) == 0 && strings.Contains(textContent.String(), "<|tool_calls_section_begin|>") {
+		// Check for inline tool calls in text (some providers embed tool calls in
+		// text): Moonshot/kimi <|tool_calls_section_begin|> or Hermes/Nous
+		// <tool_call> (Qwen and most OpenAI-compatible local models).
+		if len(toolCalls) == 0 && (strings.Contains(textContent.String(), "<|tool_calls_section_begin|>") || strings.Contains(textContent.String(), "<tool_call>")) {
 			cleanText, inlineCalls := types.ParseInlineToolCalls(textContent.String())
 			if len(inlineCalls) > 0 {
 				textContent.Reset()

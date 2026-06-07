@@ -96,6 +96,88 @@ func baseWorkerTools() []tool.Tool {
 	}
 }
 
+// readOnlyWorkerTools is the tool set for a read-only validation worker. It
+// deliberately omits every mutating tool — no Write, no Edit, and no Bash
+// (Bash can mutate the tree via rm/git/etc.) — so the validator cannot change
+// the implementation it is judging. This mirrors the two-agent pattern where a
+// separate read-only agent validates an implementation worker's output: the
+// guarantee comes from the registry, not just the prompt.
+func readOnlyWorkerTools() []tool.Tool {
+	return []tool.Tool{
+		tool.FileReadTool{},
+		tool.GrepTool{},
+		tool.GlobTool{},
+		tool.LSTool{},
+	}
+}
+
+// ReadOnlyValidationWorker returns a WorkerFunc that reviews an already-produced
+// implementation without modifying it. It runs in the same worktree the
+// implementation worker committed to (passed via cfg.RepoDir / the handed-off
+// branch) using a read-only tool registry, and returns its verdict as the
+// Handoff.Summary. It never commits and reports no FilesChanged of its own.
+//
+// This is the validation half of the implement-then-validate pair: pipeline an
+// EngineWorker (implementation) into a ReadOnlyValidationWorker (validation) so
+// the agent that writes the code is never the agent that signs off on it.
+func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
+	return func(ctx context.Context, feature *Feature, missionDir string, cfg Config) (*Handoff, error) {
+		if cfg.WorkerModel != "" {
+			model = cfg.WorkerModel
+		}
+
+		wtPath, err := createWorktree(cfg.RepoDir, cfg.BaseBranch, feature.Branch)
+		if err != nil {
+			return nil, fmt.Errorf("worktree: %w", err)
+		}
+		defer removeWorktree(cfg.RepoDir, wtPath)
+
+		validationPrompt := fmt.Sprintf(
+			"You are validating the implementation of feature: %s\n\nDescription: %s\n\n"+
+				"Expected behavior: %s\n\nWorking directory: %s\n\n"+
+				"You are READ-ONLY: you can read, search, and list files but cannot modify, "+
+				"write, or run shell commands. Inspect the code against the expected behavior "+
+				"and report, for each acceptance criterion, a concrete PASS or FAIL with the "+
+				"file:line evidence you based it on. Do not assume — cite what you actually read.",
+			feature.ID, feature.Description, feature.ExpectedBehavior, wtPath,
+		)
+
+		registry := tool.NewRegistry(readOnlyWorkerTools()...)
+		settings := hawkconfig.LoadSettings()
+		sess := engine.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
+
+		sess.Autonomy = engine.AutonomyLevel(cfg.AutonomyLevel)
+		if sess.Autonomy < engine.AutonomyFull {
+			sess.Autonomy = engine.AutonomyFull
+		}
+		sess.MaxTurns = 30
+		sess.PermissionFn = func(req engine.PermissionRequest) {
+			if req.Response != nil {
+				req.Response <- true
+			}
+		}
+
+		sess.AddUser(validationPrompt)
+
+		events, err := sess.Stream(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("stream: %w", err)
+		}
+
+		var response strings.Builder
+		for ev := range events {
+			if ev.Type == "content" {
+				response.WriteString(ev.Content)
+			}
+		}
+
+		return &Handoff{
+			RepoPath: wtPath,
+			Summary:  truncate(response.String(), 500),
+		}, nil
+	}
+}
+
 func createWorktree(repoDir, baseBranch, branch string) (string, error) {
 	dir, err := exec.CommandContext(context.Background(), "mktemp", "-d").Output()
 	if err != nil {
