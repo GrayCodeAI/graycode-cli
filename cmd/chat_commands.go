@@ -33,7 +33,7 @@ var allSlashCommands = []string{
 	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 	"/copy", "/cost", "/cron", "/ctx", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
-	"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/help", "/history", "/home", "/hooks", "/init",
+	"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/glm", "/help", "/history", "/home", "/hooks", "/init",
 	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
 	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
@@ -115,6 +115,7 @@ var slashDescriptions = map[string]string{
 	"/doctor":          "Run diagnostics (build, test, lint)",
 	"/drop":            "Remove file from context",
 	"/effort":          "Set reasoning effort level",
+	"/glm":             "Toggle GLM/Z.ai extended reasoning (on|off|default)",
 	"/env":             "Show environment info",
 	"/exit":            "Save and exit",
 	"/explain":         "Trace code back to the commit that created it",
@@ -503,7 +504,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.session.SetModel(arg)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
 			"Model switched: %s → %s\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json).",
-			prevModel, m.session.Model(), msgCount)})
+			prevModel, m.session.Model(), msgCount,
+		)})
 		return m, nil
 	case "/branches":
 		if m.session.ConvoDAG == nil {
@@ -1144,6 +1146,31 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Reasoning effort → %s", level)})
 		default:
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid levels: low, medium, high"})
+		}
+		return m, nil
+	case "/glm":
+		if len(parts) < 2 {
+			cur, _ := hawkconfig.SettingValue(hawkconfig.LoadSettings(), "glmthinking")
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /glm <on|off|default> — toggle GLM/Z.ai extended reasoning\nCurrent: " + cur})
+			return m, nil
+		}
+		switch strings.ToLower(parts[1]) {
+		case "on":
+			_ = hawkconfig.SetGlobalSetting("glmthinking", "true")
+			enabled := true
+			m.session.GLMThinkingEnabled = &enabled
+			m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → enabled"})
+		case "off":
+			_ = hawkconfig.SetGlobalSetting("glmthinking", "false")
+			disabled := false
+			m.session.GLMThinkingEnabled = &disabled
+			m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → disabled"})
+		case "default":
+			_ = hawkconfig.SetGlobalSetting("glmthinking", "default")
+			m.session.GLMThinkingEnabled = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → default (model decides)"})
+		default:
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid options: on, off, default"})
 		}
 		return m, nil
 	case "/vim":
