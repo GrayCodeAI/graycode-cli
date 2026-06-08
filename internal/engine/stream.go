@@ -272,6 +272,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			System:        s.system,
 			EnableCaching: s.provider == "anthropic",
 		}
+		// GLM/Z.ai extended reasoning toggle: only meaningful for the z-ai
+		// provider, where eyrie emits thinking={type:enabled|disabled}.
+		if s.provider == "z-ai" && s.GLMThinkingEnabled != nil {
+			opts.GLMThinkingEnabled = s.GLMThinkingEnabled
+		}
 		// Structured output: request a JSON-schema-constrained response when set.
 		// See structured_output.go for validation + single-retry on the
 		// non-streaming path.
