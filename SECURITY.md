@@ -44,8 +44,8 @@ We follow [coordinated vulnerability disclosure](https://en.wikipedia.org/wiki/C
 
 ## Security practices in this repo
 
-- **Dependency monitoring:** automated via Dependabot (see
-  `.github/dependabot.yml`).
+- **Dependency monitoring:** vulnerable dependencies are detected by
+  `govulncheck`, which runs on every CI build (see "Vulnerability scanning").
 - **Static analysis:** `golangci-lint` / `ruff` / `mypy` enforced in CI.
 - **Vulnerability scanning:** `govulncheck` (Go) / `pip-audit` (Python) run
   on every CI build.
