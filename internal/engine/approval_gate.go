@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"strings"
+	"sync"
 )
 
 // approval_gate.go implements human-in-the-loop approval gates for high-risk
@@ -26,6 +27,22 @@ const (
 	ApprovalExternalAPI  ApprovalCategory = "external_api"
 )
 
+// ApprovalResponse is the typed result of a human approval gate decision.
+// It extends the previous bool return with an ApproveForSession option that
+// caches the decision for the session lifetime so the human is not prompted
+// again for the same category.
+type ApprovalResponse int
+
+const (
+	// ApprovalReject denies the action.
+	ApprovalReject ApprovalResponse = iota
+	// ApprovalApprove allows this one action.
+	ApprovalApprove
+	// ApprovalApproveForSession allows all future actions of the same category
+	// within this session without prompting again.
+	ApprovalApproveForSession
+)
+
 // ApprovalGate is a config-driven human-in-the-loop gate. It is consulted after
 // the normal permission check passes, for tools/actions that match one of the
 // configured high-risk categories. When the active autonomy level is at or
@@ -45,11 +62,15 @@ type ApprovalGate struct {
 	// Defaults to the zero value (AutonomySupervised), meaning every level above
 	// supervised gates flagged actions.
 	MaxAutoApprove AutonomyLevel
-	// ConfirmFn asks the human to confirm an action. It returns true to allow.
-	// When nil the gate falls back to Session.AskUserFn, and if that is also nil
-	// the action is denied (fail-closed) so a misconfigured gate never silently
-	// auto-approves a high-risk action.
-	ConfirmFn func(req ApprovalRequest) bool
+	// ConfirmFn asks the human to confirm an action. The typed ApprovalResponse
+	// lets callers return ApprovalApproveForSession to skip future prompts for
+	// the same category. When nil the gate falls back to Session.AskUserFn.
+	// If both are nil the action is denied (fail-closed).
+	ConfirmFn func(req ApprovalRequest) ApprovalResponse
+
+	// sessionApprovals caches categories the human approved for the full session.
+	sessionMu       sync.Mutex
+	sessionApproved map[ApprovalCategory]bool
 }
 
 // ApprovalRequest describes a gated action presented to the human.
@@ -118,6 +139,24 @@ func isNetworkCommand(cmd string) bool {
 	return false
 }
 
+// sessionApprove records a session-wide approval for a category.
+func (g *ApprovalGate) sessionApprove(cat ApprovalCategory) {
+	g.sessionMu.Lock()
+	defer g.sessionMu.Unlock()
+	if g.sessionApproved == nil {
+		g.sessionApproved = make(map[ApprovalCategory]bool)
+	}
+	g.sessionApproved[cat] = true
+}
+
+// isSessionApproved returns true if the category was previously approved for
+// the full session.
+func (g *ApprovalGate) isSessionApproved(cat ApprovalCategory) bool {
+	g.sessionMu.Lock()
+	defer g.sessionMu.Unlock()
+	return g.sessionApproved[cat]
+}
+
 // CheckApproval consults the approval gate for a tool call. It returns
 // (allowed, denyMessage). When the gate is disabled, the action is not
 // high-risk, or the autonomy level is within the auto-approve threshold, it
@@ -141,6 +180,11 @@ func (s *Session) CheckApproval(_ context.Context, toolName string, args map[str
 		return true, ""
 	}
 
+	// Session-wide approval: human already chose "approve for session" earlier.
+	if g.isSessionApproved(cat) {
+		return true, ""
+	}
+
 	req := ApprovalRequest{
 		ToolName: canonicalToolName(toolName),
 		Category: cat,
@@ -149,20 +193,35 @@ func (s *Session) CheckApproval(_ context.Context, toolName string, args map[str
 	}
 
 	if g.ConfirmFn != nil {
-		if g.ConfirmFn(req) {
+		resp := g.ConfirmFn(req)
+		switch resp {
+		case ApprovalApproveForSession:
+			g.sessionApprove(cat)
 			return true, ""
+		case ApprovalApprove:
+			return true, ""
+		default:
+			return false, "Action denied by human approval gate (" + string(cat) + ")."
 		}
-		return false, "Action denied by human approval gate (" + string(cat) + ")."
 	}
 
 	// Fall back to the session's generic ask-user callback.
 	if s.AskUserFn != nil {
-		q := "Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no)"
+		q := "Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no/session)"
 		ans, err := s.AskUserFn(q)
-		if err == nil && isAffirmative(ans) {
-			return true, ""
+		if err != nil {
+			return false, "Action denied by human approval gate (" + string(cat) + ")."
 		}
-		return false, "Action denied by human approval gate (" + string(cat) + ")."
+		switch strings.ToLower(strings.TrimSpace(ans)) {
+		case "session", "s", "approve-session", "yes-session":
+			g.sessionApprove(cat)
+			return true, ""
+		default:
+			if isAffirmative(ans) {
+				return true, ""
+			}
+			return false, "Action denied by human approval gate (" + string(cat) + ")."
+		}
 	}
 
 	// No way to ask: fail closed.
