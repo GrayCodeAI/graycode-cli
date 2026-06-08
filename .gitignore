@@ -15,3 +15,6 @@ hawk
 .gocache/
 *.codegraph.db
 .DS_Store
+
+# Test artifacts
+coverage.out
