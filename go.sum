@@ -9,10 +9,17 @@ github.com/BobuSumisu/aho-corasick v1.0.3 h1:uuf+JHwU9CHP2Vx+wAy6jcksJThhJS9ehR8
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/GrayCodeAI/eyrie v0.1.0 h1:Vh5LPhsiyiBctQBylHLOnIJNYkFrqd1618QcUydHvLU=
+github.com/GrayCodeAI/eyrie v0.1.0/go.mod h1:Iznws0IS267Cp9Zb5VsjCaHLewJEGR61Bv9F3hwJujY=
 github.com/GrayCodeAI/inspect v0.1.0 h1:cYURqxVMD0hJp42NVzxFWiarYxVtmYNCB+Rg9aoblfE=
+github.com/GrayCodeAI/inspect v0.1.0/go.mod h1:IOH0pwvJ5TmNFSRDkLH3nbWbawE/PPaZojV2Lj5BSnU=
 github.com/GrayCodeAI/sight v0.1.0 h1:p0NQyAA/pwo3b1Eye6UxjVw2x3H+gPPzmBava6H3Wrs=
+github.com/GrayCodeAI/sight v0.1.0/go.mod h1:Nmq6CEf3fXhrrJzPhGRRldEnKtqWHvuWMG+OHjRv2wo=
 github.com/GrayCodeAI/tok v0.1.0 h1:rzM6QpOKs2+lnCUGi4Ra6wpRljGtCzlrY5H1JW+I13U=
+github.com/GrayCodeAI/tok v0.1.0/go.mod h1:JLV+xe2sbHfQjqX66u4tOMTNXqHW0OhkMQqY8wIm1aI=
 github.com/GrayCodeAI/trace v0.1.0 h1:favfKoX8pLV/TSs8EMnaFe4hLepR6djX9ByIqY6YtM8=
+github.com/GrayCodeAI/trace v0.1.0/go.mod h1:sPBHmg0kctNnRJ/bRIq9rmPFKje31BEnWdBbrNc4tRM=
+github.com/GrayCodeAI/yaad v0.1.0 h1:VoNcREYW36LfkqbFRm3U9hdpiNMh2iB7UPoPy1Xm5uc=
+github.com/GrayCodeAI/yaad v0.1.0/go.mod h1:uKu+u22cVALLopdMBIzt0a4VMiPx+WOdjqkgtoUbzjY=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
