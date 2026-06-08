@@ -27,12 +27,12 @@ func TestApprovalGate_FlaggedDestructiveRequiresApproval(t *testing.T) {
 	s.Autonomy = AutonomyFull // above MaxAutoApprove default (supervised)
 	s.Approval = &ApprovalGate{
 		Enabled: true,
-		ConfirmFn: func(req ApprovalRequest) bool {
+		ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
 			approvedCalls++
 			if req.Category != ApprovalFileDeletion {
 				t.Errorf("expected file_deletion category, got %s", req.Category)
 			}
-			return false // human denies
+			return ApprovalReject // human denies
 		},
 	}
 
@@ -53,7 +53,7 @@ func TestApprovalGate_HumanApproves(t *testing.T) {
 	s.Autonomy = AutonomyFull
 	s.Approval = &ApprovalGate{
 		Enabled:   true,
-		ConfirmFn: func(req ApprovalRequest) bool { return true },
+		ConfirmFn: func(req ApprovalRequest) ApprovalResponse { return ApprovalApprove },
 	}
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "curl http://example.com"})
 	if !ok {
@@ -68,7 +68,7 @@ func TestApprovalGate_AutoApproveThreshold(t *testing.T) {
 	s.Approval = &ApprovalGate{
 		Enabled:        true,
 		MaxAutoApprove: AutonomySemi,
-		ConfirmFn:      func(req ApprovalRequest) bool { called = true; return false },
+		ConfirmFn:      func(req ApprovalRequest) ApprovalResponse { called = true; return ApprovalReject },
 	}
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
 	if !ok {
@@ -85,7 +85,7 @@ func TestApprovalGate_NonRiskyActionNotGated(t *testing.T) {
 	s.Autonomy = AutonomyYOLO
 	s.Approval = &ApprovalGate{
 		Enabled:   true,
-		ConfirmFn: func(req ApprovalRequest) bool { called = true; return false },
+		ConfirmFn: func(req ApprovalRequest) ApprovalResponse { called = true; return ApprovalReject },
 	}
 	// A plain read-style command is not high-risk.
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "ls -la"})
@@ -104,7 +104,7 @@ func TestApprovalGate_CategoryFilter(t *testing.T) {
 	s.Approval = &ApprovalGate{
 		Enabled:    true,
 		Categories: map[ApprovalCategory]bool{ApprovalNetwork: true}, // only network gated
-		ConfirmFn:  func(req ApprovalRequest) bool { called = true; return false },
+		ConfirmFn:  func(req ApprovalRequest) ApprovalResponse { called = true; return ApprovalReject },
 	}
 	// File deletion is not in the enabled category set => allowed.
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
@@ -132,7 +132,7 @@ func TestApprovalGate_FlaggedTool(t *testing.T) {
 	s.Approval = &ApprovalGate{
 		Enabled:      true,
 		FlaggedTools: map[string]ApprovalCategory{"Write": ApprovalExternalAPI},
-		ConfirmFn:    func(req ApprovalRequest) bool { denied = true; return false },
+		ConfirmFn:    func(req ApprovalRequest) ApprovalResponse { denied = true; return ApprovalReject },
 	}
 	ok, _ := s.CheckApproval(context.Background(), "Write", map[string]interface{}{"file_path": "/x"})
 	if ok {
