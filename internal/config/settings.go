@@ -51,8 +51,9 @@ type Settings struct {
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`
-	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"` // use catalog deployment router when true / unset + provider.json qualifies
-	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`       // restrict to core tools only for a focused experience
+	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`   // use catalog deployment router when true / unset + provider.json qualifies
+	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`         // restrict to core tools only for a focused experience
+	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"` // GLM/Z.ai extended reasoning toggle; nil = model default
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.
@@ -377,6 +378,14 @@ func SettingValue(s Settings, key string) (string, bool) {
 			return "true", true
 		}
 		return "false", true
+	case "glmthinking", "glmthinkingenabled":
+		if s.GLMThinkingEnabled == nil {
+			return "default", true
+		}
+		if *s.GLMThinkingEnabled {
+			return "true", true
+		}
+		return "false", true
 	default:
 		return "", false
 	}
@@ -434,6 +443,19 @@ func SetGlobalSetting(key, value string) error {
 			s.MinimalMode = &enabled
 		default:
 			return fmt.Errorf("minimal_mode must be true or false")
+		}
+	case "glmthinking", "glmthinkingenabled":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			enabled := true
+			s.GLMThinkingEnabled = &enabled
+		case "0", "false", "no", "off":
+			enabled := false
+			s.GLMThinkingEnabled = &enabled
+		case "default", "null", "nil", "":
+			s.GLMThinkingEnabled = nil
+		default:
+			return fmt.Errorf("glm_thinking must be true, false, or default")
 		}
 	default:
 		return fmt.Errorf("unsupported setting key %q", key)

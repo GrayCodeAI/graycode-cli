@@ -89,6 +89,9 @@ type Session struct {
 	checkpointMgr           *session.CheckpointManager
 	OnCompaction            OnCompaction
 	Verbose                 bool // show tool calls, timing, token counts in output
+	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
+	// (applied only when provider is "z-ai"). nil leaves the model default.
+	GLMThinkingEnabled *bool
 
 	// Cost optimization
 	Cascade     *branching.CascadeRouter // cascade.go — model tier routing
