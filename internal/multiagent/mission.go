@@ -23,7 +23,13 @@ type Mission struct {
 	StartedAt   time.Time `json:"started_at"`
 	CompletedAt time.Time `json:"completed_at,omitempty"`
 	Config      Config    `json:"config"`
-	mu          sync.Mutex
+
+	// ApprovalGate is an optional typed human-in-the-loop gate that intercepts
+	// tool calls matching a flagged risk category before they execute.
+	// When nil the gate is a no-op and all tool calls proceed automatically.
+	ApprovalGate *MissionApprovalGate `json:"-"`
+
+	mu sync.Mutex
 }
 
 // Config controls mission orchestration behavior.
