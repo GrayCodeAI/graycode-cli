@@ -90,9 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `lint`, `fmt`, `vet`, `security`, `bench`, `clean`, `install`, `release`, `help`.
 - **Container**: Dockerfile uses `tini` init, embeds tzdata, verifies deps, runs as
   non-root.
-- **Repository hygiene**: `.editorconfig` for cross-editor consistency,
-  `.github/dependabot.yml` for automated dep updates, `CONTRIBUTING.md` with the
-  full contributor workflow.
+- **Repository hygiene**: `.editorconfig` for cross-editor consistency and
+  `CONTRIBUTING.md` with the full contributor workflow.
 
 ### Fixed — Correctness
 - 240+ unchecked error returns hardened across `session`, `engine`, `tool`, `config`,
