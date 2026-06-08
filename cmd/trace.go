@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	tracecli "github.com/GrayCodeAI/trace/cmd/trace/cli"
+	tracecli "github.com/GrayCodeAI/trace/cli"
 )
 
 // trace is a sibling library consumed by hawk, not a standalone product. Its full
