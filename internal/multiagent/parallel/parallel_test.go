@@ -26,6 +26,14 @@ func initTestRepo(t *testing.T) string {
 		t.Helper()
 		cmd := exec.CommandContext(context.Background(), args[0], args[1:]...)
 		cmd.Dir = dir
+		cmd.Env = append(
+			os.Environ(),
+			"GIT_CONFIG_COUNT=2",
+			"GIT_CONFIG_KEY_0=commit.gpgsign",
+			"GIT_CONFIG_VALUE_0=false",
+			"GIT_CONFIG_KEY_1=tag.gpgsign",
+			"GIT_CONFIG_VALUE_1=false",
+		)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("command %v failed: %s: %v", args, out, err)
@@ -35,6 +43,8 @@ func initTestRepo(t *testing.T) string {
 	run("git", "init", "-b", "main")
 	run("git", "config", "user.email", "test@hawk.dev")
 	run("git", "config", "user.name", "Hawk Test")
+	run("git", "config", "commit.gpgsign", "false")
+	run("git", "config", "tag.gpgsign", "false")
 
 	// Create an initial commit so branches can be made.
 	readme := filepath.Join(dir, "README.md")
@@ -335,6 +345,18 @@ func TestMergeWorktree(t *testing.T) {
 		t.Helper()
 		cmd := exec.CommandContext(context.Background(), "git", args...)
 		cmd.Dir = dir
+		cmd.Env = append(
+			os.Environ(),
+			"GIT_AUTHOR_NAME=Hawk Test",
+			"GIT_AUTHOR_EMAIL=test@hawk.dev",
+			"GIT_COMMITTER_NAME=Hawk Test",
+			"GIT_COMMITTER_EMAIL=test@hawk.dev",
+			"GIT_CONFIG_COUNT=2",
+			"GIT_CONFIG_KEY_0=commit.gpgsign",
+			"GIT_CONFIG_VALUE_0=false",
+			"GIT_CONFIG_KEY_1=tag.gpgsign",
+			"GIT_CONFIG_VALUE_1=false",
+		)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v in %s: %s: %v", args, dir, out, err)

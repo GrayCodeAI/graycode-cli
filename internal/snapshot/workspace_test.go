@@ -20,6 +20,8 @@ func setupWorkspaceProject(t *testing.T) string {
 	runCmd(t, dir, "git", "init")
 	runCmd(t, dir, "git", "config", "user.email", "test@test.com")
 	runCmd(t, dir, "git", "config", "user.name", "Test")
+	runCmd(t, dir, "git", "config", "commit.gpgsign", "false")
+	runCmd(t, dir, "git", "config", "tag.gpgsign", "false")
 
 	// Create project files
 	os.MkdirAll(filepath.Join(dir, "pkg"), 0o755)
@@ -37,6 +39,14 @@ func runCmd(t *testing.T, dir, name string, args ...string) {
 	t.Helper()
 	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Dir = dir
+	cmd.Env = append(
+		os.Environ(),
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=commit.gpgsign",
+		"GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=tag.gpgsign",
+		"GIT_CONFIG_VALUE_1=false",
+	)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("%s %v failed: %s: %v", name, args, out, err)
 	}
@@ -365,6 +375,8 @@ func TestEmptyProject(t *testing.T) {
 	runCmd(t, dir, "git", "init")
 	runCmd(t, dir, "git", "config", "user.email", "test@test.com")
 	runCmd(t, dir, "git", "config", "user.name", "Test")
+	runCmd(t, dir, "git", "config", "commit.gpgsign", "false")
+	runCmd(t, dir, "git", "config", "tag.gpgsign", "false")
 
 	storeDir := filepath.Join(t.TempDir(), "snapshots")
 	store := NewSnapshotStore(storeDir)
@@ -387,6 +399,8 @@ func TestLargeFile_Handling(t *testing.T) {
 	runCmd(t, dir, "git", "init")
 	runCmd(t, dir, "git", "config", "user.email", "test@test.com")
 	runCmd(t, dir, "git", "config", "user.name", "Test")
+	runCmd(t, dir, "git", "config", "commit.gpgsign", "false")
+	runCmd(t, dir, "git", "config", "tag.gpgsign", "false")
 
 	// Create a 1MB file
 	largeContent := make([]byte, 1024*1024)
@@ -600,6 +614,8 @@ func TestCapture_FileMode(t *testing.T) {
 	runCmd(t, dir, "git", "init")
 	runCmd(t, dir, "git", "config", "user.email", "test@test.com")
 	runCmd(t, dir, "git", "config", "user.name", "Test")
+	runCmd(t, dir, "git", "config", "commit.gpgsign", "false")
+	runCmd(t, dir, "git", "config", "tag.gpgsign", "false")
 
 	// Create file with specific mode
 	os.WriteFile(filepath.Join(dir, "script.sh"), []byte("#!/bin/bash\necho hello\n"), 0o755)
