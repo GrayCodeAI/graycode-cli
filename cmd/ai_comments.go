@@ -104,17 +104,20 @@ func formatDirectivePrompt(d AIDirective) string {
 	if d.Mode == "?" {
 		b.WriteString(fmt.Sprintf(
 			"An AI question comment was found at %s:%d.\n\nQuestion: %s\n\n",
-			d.Path, d.Line, d.Instruction))
+			d.Path, d.Line, d.Instruction,
+		))
 		b.WriteString("Answer the question. If a code change is warranted, make it. ")
 	} else {
 		b.WriteString(fmt.Sprintf(
 			"An AI instruction comment was found at %s:%d.\n\nInstruction: %s\n\n",
-			d.Path, d.Line, d.Instruction))
+			d.Path, d.Line, d.Instruction,
+		))
 		b.WriteString("Implement this change now, editing the file in place. ")
 	}
 	b.WriteString(fmt.Sprintf(
 		"The directive lives in the file %s; after you finish, the AI comment token will be removed automatically.\n",
-		d.Path))
+		d.Path,
+	))
 	return b.String()
 }
 

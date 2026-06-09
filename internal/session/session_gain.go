@@ -116,7 +116,8 @@ func (g *GainTracker) Record(ctx context.Context, ev GainEvent) error {
 	if ev.Timestamp.IsZero() {
 		ev.Timestamp = time.Now()
 	}
-	_, err := g.store.db.ExecContext(ctx, `
+	_, err := g.store.db.ExecContext(
+		ctx, `
 		INSERT INTO gains
 		  (session_id, ts, command, original_bytes, compressed_bytes,
 		   original_tokens, compressed_tokens, mode, tier, model)
