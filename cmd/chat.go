@@ -1052,7 +1052,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case compactMsg:
 		m.compacting = false
 		m.brailleSpinner.SetLabel(m.spinnerVerb)
-		line := fmt.Sprintf("Context compacted (%s): ~%s → ~%s tokens",
+		line := fmt.Sprintf(
+			"Context compacted (%s): ~%s → ~%s tokens",
 			msg.strategy,
 			formatHawkTokenCount(msg.tokensBefore),
 			formatHawkTokenCount(msg.tokensAfter),

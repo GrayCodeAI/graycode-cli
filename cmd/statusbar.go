@@ -85,7 +85,8 @@ func renderStatusBarRight(m *chatModel) string {
 		meta = append(meta, dim.Render("⏸"))
 	}
 
-	parts := append(meta,
+	parts := append(
+		meta,
 		tokenStyle.Render(tokenText),
 		costStyle.Render(costText),
 		timeStyle.Render(timerText),
