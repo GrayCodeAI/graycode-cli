@@ -86,7 +86,8 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	}
 	// Inject declarative startup env vars (additive; nil when none configured).
 	args = append(args, c.runtime.StartupEnvArgs()...)
-	args = append(args,
+	args = append(
+		args,
 		c.image,
 		"sleep", "infinity",
 	)
