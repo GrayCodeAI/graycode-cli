@@ -67,6 +67,12 @@ func (t *Tracker) Init() error {
 	if err := t.gitWork("config", "user.name", "hawk-snapshot"); err != nil {
 		return fmt.Errorf("config name: %w", err)
 	}
+	if err := t.gitWork("config", "commit.gpgsign", "false"); err != nil {
+		return fmt.Errorf("config commit signing: %w", err)
+	}
+	if err := t.gitWork("config", "tag.gpgsign", "false"); err != nil {
+		return fmt.Errorf("config tag signing: %w", err)
+	}
 	return nil
 }
 

@@ -463,6 +463,14 @@ type gitTestCmd struct {
 func (g *gitTestCmd) CombinedOutput() ([]byte, error) {
 	cmd := exec.CommandContext(context.Background(), "git", g.args...)
 	cmd.Dir = g.dir
+	cmd.Env = append(
+		os.Environ(),
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=commit.gpgsign",
+		"GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=tag.gpgsign",
+		"GIT_CONFIG_VALUE_1=false",
+	)
 	return cmd.CombinedOutput()
 }
 
