@@ -54,12 +54,14 @@ func (s *Session) ChatStructured(ctx context.Context, msgs []types.EyrieMessage,
 	} else {
 		// Retry once with a corrective instruction.
 		retryMsgs := append([]types.EyrieMessage(nil), msgs...)
-		retryMsgs = append(retryMsgs,
+		retryMsgs = append(
+			retryMsgs,
 			types.EyrieMessage{Role: "assistant", Content: responseText(resp)},
 			types.EyrieMessage{Role: "user", Content: fmt.Sprintf(
 				"Your previous response did not conform to the required JSON schema (%s). "+
 					"Respond again with ONLY valid JSON that matches the schema. Schema:\n%s",
-				vErr.Error(), schema)},
+				vErr.Error(), schema,
+			)},
 		)
 		retryResp, retryErr := s.client.Chat(ctx, retryMsgs, opts)
 		if retryErr != nil {
