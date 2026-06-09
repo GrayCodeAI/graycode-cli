@@ -29,6 +29,11 @@ func setupTestRepo(t *testing.T) (string, func()) {
 			"GIT_AUTHOR_EMAIL=alice@example.com",
 			"GIT_COMMITTER_NAME=Alice",
 			"GIT_COMMITTER_EMAIL=alice@example.com",
+			"GIT_CONFIG_COUNT=2",
+			"GIT_CONFIG_KEY_0=commit.gpgsign",
+			"GIT_CONFIG_VALUE_0=false",
+			"GIT_CONFIG_KEY_1=tag.gpgsign",
+			"GIT_CONFIG_VALUE_1=false",
 		)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -46,6 +51,11 @@ func setupTestRepo(t *testing.T) (string, func()) {
 			"GIT_AUTHOR_EMAIL="+email,
 			"GIT_COMMITTER_NAME="+author,
 			"GIT_COMMITTER_EMAIL="+email,
+			"GIT_CONFIG_COUNT=2",
+			"GIT_CONFIG_KEY_0=commit.gpgsign",
+			"GIT_CONFIG_VALUE_0=false",
+			"GIT_CONFIG_KEY_1=tag.gpgsign",
+			"GIT_CONFIG_VALUE_1=false",
 		)
 		out, err := cmd.CombinedOutput()
 		if err != nil {

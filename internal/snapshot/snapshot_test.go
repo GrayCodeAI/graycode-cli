@@ -14,6 +14,8 @@ func setupTestProject(t *testing.T) string {
 	run(t, dir, "git", "init")
 	run(t, dir, "git", "config", "user.email", "test@test.com")
 	run(t, dir, "git", "config", "user.name", "Test")
+	run(t, dir, "git", "config", "commit.gpgsign", "false")
+	run(t, dir, "git", "config", "tag.gpgsign", "false")
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644)
 	run(t, dir, "git", "add", ".")
 	run(t, dir, "git", "commit", "-m", "initial")
@@ -24,6 +26,14 @@ func run(t *testing.T, dir, name string, args ...string) {
 	t.Helper()
 	cmd := exec.CommandContext(context.Background(), name, args...)
 	cmd.Dir = dir
+	cmd.Env = append(
+		os.Environ(),
+		"GIT_CONFIG_COUNT=2",
+		"GIT_CONFIG_KEY_0=commit.gpgsign",
+		"GIT_CONFIG_VALUE_0=false",
+		"GIT_CONFIG_KEY_1=tag.gpgsign",
+		"GIT_CONFIG_VALUE_1=false",
+	)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("%s %v failed: %s: %v", name, args, out, err)
 	}
