@@ -448,12 +448,23 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		ref.Send(permissionAskMsg{req: req})
 	}
 
-	// Wire ask_user tool
+	// High-risk action gate (network, destructive bash) — additive layer on top
+	// of the permission engine; falls back to AskUserFn for confirmation.
+	sess.Approval = &engine.ApprovalGate{
+		Enabled:        true,
+		MaxAutoApprove: engine.AutonomySemi,
+	}
+
+	// Wire ask_user tool (5-minute timeout matches permission prompts).
 	sess.AskUserFn = func(question string) (string, error) {
 		resp := make(chan string, 1)
 		ref.Send(askUserMsg{question: question, response: resp})
-		answer := <-resp
-		return answer, nil
+		select {
+		case answer := <-resp:
+			return answer, nil
+		case <-time.After(5 * time.Minute):
+			return "", fmt.Errorf("question timed out")
+		}
 	}
 
 	if saved != nil {
@@ -626,17 +637,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Container failed — block all input except quit
-		if m.containerEnabled && m.containerErr != nil {
-			if msg.String() == "ctrl+c" || msg.String() == "q" {
-				if m.watcherStop != nil {
-					m.watcherStop()
-				}
-				m.quitting = true
-				return m, tea.Quit
-			}
-			return m, nil
-		}
 		// Permission prompt active — handle y/n
 		if m.permReq != nil {
 			switch msg.String() {
@@ -681,6 +681,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cancel != nil {
 					m.cancel()
 					m.cancel = nil
+					m.streamCancelled = true
 					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
 					if m.partial.Len() > 0 {
 						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
@@ -703,6 +704,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cancel != nil {
 					m.cancel()
 					m.cancel = nil
+					m.streamCancelled = true
 					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
 					if m.partial.Len() > 0 {
 						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
@@ -974,10 +976,26 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.partial.WriteString(string(msg))
 		m.markPartialDirty()
+		if m.viewDirty {
+			m.updateViewportContent()
+		}
 		return m, nil
 
 	case thinkingMsg:
-		m.messages = append(m.messages, displayMsg{role: "thinking", content: string(msg)})
+		chunk := string(msg)
+		if n := len(m.messages); n > 0 && m.messages[n-1].role == "thinking" {
+			m.messages[n-1].content += chunk
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "thinking", content: chunk})
+		}
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
+	case streamRetryMsg:
+		m.partial.Reset()
+		m.messages = stripCurrentTurnThinking(m.messages)
+		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ " + msg.content})
 		m.viewDirty = true
 		return m, nil
 
@@ -1004,6 +1022,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case permissionAskMsg:
 		m.permReq = &msg.req
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
+		m.viewDirty = true
 		return m, nil
 
 	case askUserMsg:
@@ -1064,6 +1083,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamDoneMsg:
+		if m.streamCancelled {
+			m.streamCancelled = false
+			m.waiting = false
+			m.cancel = nil
+			m.toolStartTime = time.Time{}
+			m.viewDirty = true
+			return m, nil
+		}
 		if m.compacting {
 			m.compacting = false
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
@@ -1079,6 +1106,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Generate ghost text suggestion from AI response
 			m.ghostText.Suggest(content)
 			m.partial.Reset()
+		} else if turnHadThinkingOnly(m.messages) {
+			// Model sent reasoning tokens but no answer — common with reasoning
+			// models when the provider drops the post-reasoning content.
+			m.messages = append(m.messages, displayMsg{
+				role:    "error",
+				content: friendlyError(fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")),
+			})
 		}
 		m.waiting = false
 		m.cancel = nil
@@ -1183,7 +1217,18 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
-			m.input.Blur()
+			// Fall back to host mode so chat still works (container is optional).
+			m.containerEnabled = false
+			m.containerReady = false
+			if m.session != nil {
+				m.session.ContainerRequired = false
+				m.session.ContainerExecutor = nil
+			}
+			m.messages = append(m.messages, displayMsg{
+				role:    "system",
+				content: "Container unavailable — running on host. " + msg.err.Error(),
+			})
+			m.input.Focus()
 		}
 		m.rebuildWelcomeCache(m.blinkClosed)
 		m.viewDirty = true
@@ -1321,37 +1366,7 @@ func runChat() error {
 				p.Send(streamErrMsg{err: err})
 				return
 			}
-			for ev := range ch {
-				switch ev.Type {
-				case "content":
-					p.Send(streamChunkMsg(ev.Content))
-				case "thinking":
-					p.Send(thinkingMsg(ev.Content))
-				case "tool_use":
-					p.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
-				case "tool_result":
-					p.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
-				case "compact_start":
-					p.Send(compactStartMsg{})
-				case "compact":
-					p.Send(compactMsg{
-						strategy:     ev.Content,
-						tokensBefore: ev.TokensBefore,
-						tokensAfter:  ev.TokensAfter,
-					})
-				case "usage":
-					if ev.Usage != nil {
-						p.Send(usageUpdateMsg{usage: ev.Usage})
-					}
-				case "error":
-					p.Send(streamErrMsg{err: fmt.Errorf("%s", ev.Content)})
-					return
-				case "done":
-					p.Send(streamDoneMsg{})
-					return
-				}
-			}
-			p.Send(streamDoneMsg{})
+			pumpStreamEvents(ref, ch)
 		}()
 	}
 

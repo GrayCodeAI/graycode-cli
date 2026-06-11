@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -65,10 +66,17 @@ ENV TERM=xterm-256color LANG=C.UTF-8
 }
 
 // shouldUseContainer determines if hawk should run in container mode.
-// Default: ALWAYS Container-first, no fallback.
-// User can opt out with --no-container for host mode.
+// Default: container-first when Docker is available. Opt out with --no-container
+// or HAWK_NO_CONTAINER=1 (useful on low-memory hosts where docker pull/build
+// can trigger jetsam kills).
 func shouldUseContainer() bool {
-	return !noContainer
+	if noContainer {
+		return false
+	}
+	if v := strings.TrimSpace(os.Getenv("HAWK_NO_CONTAINER")); v == "1" || strings.EqualFold(v, "true") {
+		return false
+	}
+	return true
 }
 
 // bootContainerCmd starts the container in the background and sends status
@@ -84,23 +92,19 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 			}
 		}
 
-		// Ensure image exists locally — pull or build as needed
+		// Only start when the image is already local. Pull/build during TUI
+		// startup can spike memory (jetsam "killed" on 8GB Macs) and block chat.
 		image := cs.Image()
-		imgCtx, imgCancel := context.WithTimeout(context.Background(), 300*time.Second)
+		imgCtx, imgCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer imgCancel()
 		checkCmd := exec.CommandContext(imgCtx, "docker", "image", "inspect", image)
 		if checkCmd.Run() != nil {
-			// Image not available locally — try pull first
-			pullCmd := exec.CommandContext(imgCtx, "docker", "pull", image)
-			if pullCmd.Run() != nil {
-				// Pull failed — build from bundled Dockerfile
-				built := buildHawkImage(imgCtx, image)
-				if !built {
-					return containerStatusMsg{
-						status: "image build failed",
-						err:    fmt.Errorf("could not pull or build %s", image),
-					}
-				}
+			return containerStatusMsg{
+				status: "image missing",
+				err: fmt.Errorf(
+					"container image %s is not local — run: docker pull %s\nOr restart with --no-container for host mode",
+					image, image,
+				),
 			}
 		}
 

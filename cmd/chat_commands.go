@@ -525,6 +525,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.messages = nil
+			m.invalidateViewportCache()
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Switched to branch %s", targetID)})
 			for _, msg := range m.session.RawMessages() {
 				m.messages = append(m.messages, displayMsg{role: msg.Role, content: msg.Content})
