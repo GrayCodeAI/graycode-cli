@@ -152,7 +152,7 @@ setup: ## Set up local development environment (go.work + external repos).
 		fi; \
 	done
 	@echo "Generating go.work..."
-	@echo "module hawk-eco" > go.work
+	@echo "go 1.26.4" > go.work
 	@echo "" >> go.work
 	@echo "use (" >> go.work
 	@echo "	." >> go.work
@@ -219,8 +219,8 @@ build-static: ## Build fully static binaries for Linux (musl-compatible)
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-amd64-static $(MAIN_PKG)
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-arm64-static $(MAIN_PKG)
 
-size-check: build ## Report binary size and warn if over threshold (50MB)
+size-check: build ## Report binary size and warn if over threshold (100MB, matching CI).
 	@SIZE=$$(stat -f%z bin/$(NAME) 2>/dev/null || stat -c%s bin/$(NAME) 2>/dev/null); \
 	MB=$$(echo "scale=1; $$SIZE / 1048576" | bc); \
 	echo "Binary size: $${MB} MB"; \
-	if [ $$SIZE -gt 52428800 ]; then echo "WARNING: binary exceeds 50MB"; exit 1; fi
+	if [ $$SIZE -gt 104857600 ]; then echo "ERROR: binary exceeds 100MB (CI threshold)"; exit 1; fi
