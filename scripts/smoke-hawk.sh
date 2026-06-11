@@ -21,10 +21,6 @@ set +o pipefail
 "$BIN" path >/dev/null 2>&1 || true
 set -o pipefail
 
-echo "== hawk yaad =="
-"$BIN" yaad --limit 2 >/dev/null || true
-"$BIN" yaad search decision --limit 2 >/dev/null || true
-
 echo "== ecosystem tests =="
 go test ./internal/config/ -run TestFormatEcosystemPanel -count=1
 go test ./cmd/ -run 'TestDoctor|TestYaad|TestEcosystem|TestPath' -count=1
