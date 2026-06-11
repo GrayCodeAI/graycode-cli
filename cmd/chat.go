@@ -320,7 +320,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		m.connStatusKey = m.connStatusFingerprint()
 	}
 	m.phase = initialUIPhase(m.hasChatMessages(), promptFlag != "")
-	m = m.withSyncedLayout()
+	m = m.syncViewportMouseWheel().withSyncedLayout()
 	m.containerEnabled = shouldUseContainer()
 	bindChatSession(sess, sid, m.containerEnabled)
 	if m.containerEnabled {
@@ -1258,34 +1258,37 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		cmds = append(cmds, cmd)
+		if wheel, ok := msg.(tea.MouseMsg); !ok || !tea.MouseEvent(wheel).IsWheel() {
+			var cmd tea.Cmd
+			m.input, cmd = m.input.Update(msg)
+			cmds = append(cmds, cmd)
+		}
 	}
 	if m.uiFocus == focusPrompt && !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
 
-	// Update viewport for scroll events (mouse wheel, page up/down)
-	var vpCmd tea.Cmd
-	m.viewport, vpCmd = m.viewport.Update(msg)
-	cmds = append(cmds, vpCmd)
+	// Mouse wheel over the input footer must not scroll chat (Up/Down = history).
+	if m.shouldRouteMouseToViewport(msg) {
+		var vpCmd tea.Cmd
+		m.viewport, vpCmd = m.viewport.Update(msg)
+		cmds = append(cmds, vpCmd)
 
-	// If user scrolled away from bottom, disable auto-scroll.
-	// Re-enable when they scroll back to bottom.
-	if m.viewport.AtBottom() {
-		m.autoScroll = true
-		if m.uiFocus == focusPrompt {
-			m.streamFollow = true
-		}
-	} else {
-		m.autoScroll = false
-		if m.uiFocus == focusScrollback {
-			m.streamFollow = false
+		// If user scrolled away from bottom, disable auto-scroll.
+		if m.viewport.AtBottom() {
+			m.autoScroll = true
+			if m.uiFocus == focusPrompt {
+				m.streamFollow = true
+			}
+		} else {
+			m.autoScroll = false
+			if m.uiFocus == focusScrollback {
+				m.streamFollow = false
+			}
 		}
 	}
 
-	m = m.withSyncedLayout()
+	m = m.syncViewportMouseWheel().withSyncedLayout()
 	// Update viewport content when messages change or input layout shifts (slash menu / multiline).
 	if m.viewDirty || m.syncInputLayout() {
 		m.updateViewportContent()
@@ -1351,7 +1354,7 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)

@@ -191,7 +191,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	if !forGate && !needsSetup {
 		tip := "TIP: /help commands · /model to switch"
 		b.WriteString("\n" + center(len(tip), boldC+tip+rst) + "\n")
-		shortcutsPlain := "Tab scrollback · Up/Dn · PgUp/PgDn · /home · /ctx · ctrl+N · ctrl+L"
+		shortcutsPlain := "Wheel chat · Up/Dn history · Tab scrollback · PgUp/PgDn · /home · /ctx · ctrl+N · ctrl+L"
 		b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
 	}
 
