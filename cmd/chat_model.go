@@ -227,7 +227,7 @@ type chatModel struct {
 	vpRenderedMsgs  int
 	vpRenderWidth   int
 	vpLastMsgLen    int
-	activeSkills        map[string]plugin.SmartSkill // per-session activated skills
+	activeSkills    map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool
