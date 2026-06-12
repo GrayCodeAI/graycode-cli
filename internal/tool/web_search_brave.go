@@ -7,8 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 // braveClient is a Brave Search API client.
@@ -24,7 +25,7 @@ type braveClient struct {
 // the BRAVE_SEARCH_API_KEY environment variable.
 func newBraveClient() *braveClient {
 	return &braveClient{
-		apiKey: os.Getenv("BRAVE_SEARCH_API_KEY"),
+		apiKey: env.Getenv("BRAVE_SEARCH_API_KEY"),
 		http: &http.Client{
 			Timeout: 15 * time.Second,
 		},

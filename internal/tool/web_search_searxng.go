@@ -7,9 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 // searxngClient is a SearXNG API client.
@@ -23,7 +24,7 @@ type searxngClient struct {
 // newSearxngClient creates a new SearXNG client, reading the instance URL from
 // the SEARXNG_URL environment variable.
 func newSearxngClient() *searxngClient {
-	baseURL := os.Getenv("SEARXNG_URL")
+	baseURL := env.Getenv("SEARXNG_URL")
 	// Ensure no trailing slash
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &searxngClient{
