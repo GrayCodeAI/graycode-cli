@@ -547,7 +547,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
 	}
@@ -568,7 +568,24 @@ func (m chatModel) Init() tea.Cmd {
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
+		mm := m
+		mm.sanitizeInput()
+		m = mm
+	}
+
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if mouseTrackingEnabled() {
+			cmds = append(cmds, m.applyMouseScroll(msg))
+		}
+		m.sanitizeInput()
+		m = m.syncViewportMouseWheel().withSyncedLayout()
+		if m.viewDirty || m.syncInputLayout() {
+			m.updateViewportContent()
+		}
+		return m, tea.Batch(cmds...)
+
 	case autoOpenConfigMsg:
 		if !m.openConfigOnStart || m.configOpen {
 			return m, nil
@@ -576,6 +593,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openConfigOnStart = false
 		return m.openConfigPanel()
 	case tea.KeyMsg:
+		if isMouseSequenceLeak(msg) {
+			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
+				m.sanitizeInput()
+				return m, cmd
+			}
+			m.sanitizeInput()
+			return m, nil
+		}
 		if next, cmd, handled := m.handleWelcomeGateKey(msg); handled {
 			return next, cmd
 		}
@@ -670,10 +695,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateViewportContent()
 				return m, nil
 			}
-			// Let textarea handle other keys
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			return m, cmd
+			return m, m.updateInput(msg)
 		}
 		if m.waiting {
 			if msg.Type == tea.KeyCtrlC {
@@ -729,10 +751,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
-			// Allow typing in input while streaming
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			return m, cmd
+			return m, m.updateInput(msg)
 		}
 		if m.configOpen {
 			switch msg.Type {
@@ -1258,34 +1277,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		if wheel, ok := msg.(tea.MouseMsg); !ok || !tea.MouseEvent(wheel).IsWheel() {
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			cmds = append(cmds, cmd)
+		if shouldForwardToInput(msg) {
+			cmds = append(cmds, m.updateInput(msg))
+		} else {
+			m.sanitizeInput()
 		}
 	}
 	if m.uiFocus == focusPrompt && !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
-	}
-
-	// Mouse wheel over the input footer must not scroll chat (Up/Down = history).
-	if m.shouldRouteMouseToViewport(msg) {
-		var vpCmd tea.Cmd
-		m.viewport, vpCmd = m.viewport.Update(msg)
-		cmds = append(cmds, vpCmd)
-
-		// If user scrolled away from bottom, disable auto-scroll.
-		if m.viewport.AtBottom() {
-			m.autoScroll = true
-			if m.uiFocus == focusPrompt {
-				m.streamFollow = true
-			}
-		} else {
-			m.autoScroll = false
-			if m.uiFocus == focusScrollback {
-				m.streamFollow = false
-			}
-		}
 	}
 
 	m = m.syncViewportMouseWheel().withSyncedLayout()
@@ -1354,7 +1353,11 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	programOpts := []tea.ProgramOption{tea.WithAltScreen()}
+	if mouseTrackingEnabled() {
+		programOpts = append(programOpts, tea.WithMouseCellMotion())
+	}
+	p := tea.NewProgram(m, programOpts...)
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
@@ -1374,6 +1377,7 @@ func runChat() error {
 	}
 
 	finalModel, err := p.Run()
+	writeTerminalMouse(disableMouseCSI)
 	if err != nil {
 		return err
 	}
