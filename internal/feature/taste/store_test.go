@@ -15,8 +15,8 @@ func TestStore_SaveAndLoad(t *testing.T) {
 	profile.Update(CategoryNaming, Signal{Value: "camelCase", Confidence: 0.8})
 	profile.Update(CategoryComments, Signal{Value: "minimal", Confidence: 0.6})
 
-	if err := store.Save("test-project", profile); err != nil {
-		t.Fatalf("Save: %v", err)
+	if saveErr := store.Save("test-project", profile); saveErr != nil {
+		t.Fatalf("Save: %v", saveErr)
 	}
 
 	loaded, err := store.Load("test-project")
@@ -70,8 +70,8 @@ func TestStore_ExportAndImport(t *testing.T) {
 	profile := NewProfile("export-test")
 	profile.Update(CategoryNaming, Signal{Value: "snake_case", Confidence: 0.9})
 
-	if err := store.Save("export-test", profile); err != nil {
-		t.Fatalf("Save: %v", err)
+	if saveErr := store.Save("export-test", profile); saveErr != nil {
+		t.Fatalf("Save: %v", saveErr)
 	}
 
 	data, err := store.Export("export-test")
@@ -86,8 +86,8 @@ func TestStore_ExportAndImport(t *testing.T) {
 		t.Fatalf("NewStore2: %v", err)
 	}
 
-	if err := store2.Import(data); err != nil {
-		t.Fatalf("Import: %v", err)
+	if importErr := store2.Import(data); importErr != nil {
+		t.Fatalf("Import: %v", importErr)
 	}
 
 	loaded, err := store2.Load("export-test")
@@ -130,8 +130,8 @@ func TestStore_Delete(t *testing.T) {
 
 	store.Save("delete-me", NewProfile("delete-me"))
 
-	if err := store.Delete("delete-me"); err != nil {
-		t.Fatalf("Delete: %v", err)
+	if deleteErr := store.Delete("delete-me"); deleteErr != nil {
+		t.Fatalf("Delete: %v", deleteErr)
 	}
 
 	// Load should return a fresh profile after deletion.

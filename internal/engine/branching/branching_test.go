@@ -517,8 +517,8 @@ func TestExportImportRoundTrip(t *testing.T) {
 
 	// Verify it's valid JSON.
 	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		t.Fatalf("exported data is not valid JSON: %v", err)
+	if unmarshalErr := json.Unmarshal(data, &raw); unmarshalErr != nil {
+		t.Fatalf("exported data is not valid JSON: %v", unmarshalErr)
 	}
 
 	// Import into a new manager.

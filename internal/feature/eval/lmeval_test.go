@@ -30,8 +30,8 @@ func TestResultStore_SaveLoad(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("file not created: %v", err)
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Fatalf("file not created: %v", statErr)
 	}
 
 	loaded, err := store.Load(path)

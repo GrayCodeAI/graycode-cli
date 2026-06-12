@@ -135,7 +135,9 @@ func TestRestore_BringsBackOriginalState(t *testing.T) {
 	// Make changes
 	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// CHANGED\nfunc main() {}\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "new_file.go"), []byte("package main\n"), 0o644)
-	os.Remove(filepath.Join(dir, "README.md"))
+	if removeErr := os.Remove(filepath.Join(dir, "README.md")); removeErr != nil {
+		t.Fatalf("remove README: %v", removeErr)
+	}
 
 	// Verify changes exist
 	content, _ := os.ReadFile(filepath.Join(dir, "main.go"))
@@ -159,7 +161,7 @@ func TestRestore_BringsBackOriginalState(t *testing.T) {
 	}
 
 	// Verify new file was deleted
-	if _, err := os.Stat(filepath.Join(dir, "new_file.go")); !os.IsNotExist(err) {
+	if _, statErr := os.Stat(filepath.Join(dir, "new_file.go")); !os.IsNotExist(statErr) {
 		t.Error("new_file.go should be deleted after restore")
 	}
 

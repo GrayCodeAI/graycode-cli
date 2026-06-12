@@ -136,8 +136,8 @@ func (m *Manager) Get(name string, cfg Config) *Limiter {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if l, ok := m.limiters[name]; ok {
-		return l
+	if existingL, ok := m.limiters[name]; ok {
+		return existingL
 	}
 	l = New(cfg)
 	m.limiters[name] = l

@@ -273,8 +273,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.MarkPhase("newChatModel:configureSession")
 	syncSessionFromPersistedSelection(sess, settings)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if err := configureSession(sess, settings); err != nil {
-		return chatModel{}, err
+	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+		return chatModel{}, cfgErr
 	}
 	startup.EndPhase("newChatModel:configureSession")
 
@@ -399,15 +399,15 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	// Prefetch live models for the active provider so footer ctx/pricing stay current.
 	go func() {
-		provider := effectiveProvider
-		entries, _ := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+		providerName := effectiveProvider
+		entries, _ := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: providerName, Source: runtime.ListSourceAuto})
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
-			modelCache[provider] = opts
+			modelCache[providerName] = opts
 			modelCacheMu.Unlock()
 			if ref != nil {
-				ref.Send(modelsFetchedMsg{options: opts, provider: provider})
+				ref.Send(modelsFetchedMsg{options: opts, provider: providerName})
 			}
 		}
 	}()
@@ -1068,11 +1068,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.viewDirty = true
 			m.updateViewportContent()
-			cmds := []tea.Cmd{compactTickCmd()}
+			localCmds := []tea.Cmd{compactTickCmd()}
 			if !m.input.Focused() {
-				cmds = append(cmds, m.input.Focus())
+				localCmds = append(localCmds, m.input.Focus())
 			}
-			return m, tea.Batch(cmds...)
+			return m, tea.Batch(localCmds...)
 		}
 		return m, nil
 
@@ -1306,7 +1306,7 @@ func autoIndexCodegraph() {
 	}
 
 	dbPath := filepath.Join(cwd, ".codegraph", "codegraph.db")
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(dbPath); os.IsNotExist(statErr) {
 		return // Not initialized, skip
 	}
 
@@ -1367,9 +1367,9 @@ func runChat() error {
 		ctx, cancel := context.WithCancel(context.Background())
 		_ = cancel // will be cancelled when program exits
 		go func() {
-			ch, err := sess.Stream(ctx)
-			if err != nil {
-				p.Send(streamErrMsg{err: err})
+			ch, streamErr := sess.Stream(ctx)
+			if streamErr != nil {
+				p.Send(streamErrMsg{err: streamErr})
 				return
 			}
 			pumpStreamEvents(ref, ch)

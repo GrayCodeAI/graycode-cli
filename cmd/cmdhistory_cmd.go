@@ -83,8 +83,8 @@ var cmdHistoryRecentCmd = &cobra.Command{
 
 		n := 20
 		if len(args) > 0 {
-			parsed, err := strconv.Atoi(args[0])
-			if err != nil {
+			parsed, parseErr := strconv.Atoi(args[0])
+			if parseErr != nil {
 				return fmt.Errorf("invalid number: %s", args[0])
 			}
 			n = parsed
@@ -165,8 +165,8 @@ func openCmdHistoryStore() (*cmdhistory.Store, error) {
 	dbPath := filepath.Join(home, ".hawk", "cmd-history.db")
 
 	// Ensure the directory exists.
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
-		return nil, fmt.Errorf("cannot create history directory: %w", err)
+	if mkErr := os.MkdirAll(filepath.Dir(dbPath), 0o755); mkErr != nil {
+		return nil, fmt.Errorf("cannot create history directory: %w", mkErr)
 	}
 
 	store, err := cmdhistory.New(dbPath)

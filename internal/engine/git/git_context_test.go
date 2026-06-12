@@ -159,8 +159,8 @@ func TestGetUncommitted(t *testing.T) {
 	}
 
 	// Modify a file
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// modified\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// modified\n"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	files, err = gc.GetUncommitted()
@@ -425,8 +425,8 @@ func TestGetDiffSummary(t *testing.T) {
 	}
 
 	// Modify a file
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// changed\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\n// changed\n"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	summary, err = gc.GetDiffSummary()

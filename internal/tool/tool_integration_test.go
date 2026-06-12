@@ -27,8 +27,8 @@ func TestIntegration_BashThenRead(t *testing.T) {
 	}
 
 	// Verify the file exists on disk.
-	if _, err := os.Stat(filePath); err != nil {
-		t.Fatalf("expected file to exist after bash: %v", err)
+	if _, statErr := os.Stat(filePath); statErr != nil {
+		t.Fatalf("expected file to exist after bash: %v", statErr)
 	}
 
 	// Read reads it back.

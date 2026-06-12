@@ -888,7 +888,7 @@ func summaryFindJSEntryPoints(packageJSONPath string, projectDir string) []strin
 	var pkg struct {
 		Main string `json:"main"`
 	}
-	if err := json.Unmarshal(data, &pkg); err != nil {
+	if unmarshalErr := json.Unmarshal(data, &pkg); unmarshalErr != nil {
 		return nil
 	}
 

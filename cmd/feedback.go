@@ -95,8 +95,8 @@ func saveFeedbackLocal(report FeedbackReport) error {
 	}
 
 	dir := filepath.Join(home, ".hawk", "feedback")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("create feedback directory: %w", err)
+	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+		return fmt.Errorf("create feedback directory: %w", mkErr)
 	}
 
 	filename := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))

@@ -362,8 +362,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Rate limit: wait for a token before making the LLM call
 		if s.RateLimiter != nil {
-			if err := s.RateLimiter.Wait(ctx); err != nil {
-				ch <- StreamEvent{Type: "error", Content: err.Error()}
+			if waitErr := s.RateLimiter.Wait(ctx); waitErr != nil {
+				ch <- StreamEvent{Type: "error", Content: waitErr.Error()}
 				return
 			}
 		}
@@ -464,9 +464,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				break
 			}
 			if streamAttempt >= maxStreamRetries {
-				if thinkingOnly {
-					streamErr = fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")
-				}
 				break
 			}
 			retryReason := "transient stream error"

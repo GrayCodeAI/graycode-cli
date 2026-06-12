@@ -67,8 +67,8 @@ func RestoreFromBackup(path string) error {
 	for _, e := range entries {
 		name := e.Name()
 		if len(name) > len(baseName)+1 && name[:len(baseName)] == baseName {
-			info, err := e.Info()
-			if err != nil {
+			info, infoErr := e.Info()
+			if infoErr != nil {
 				continue
 			}
 			if info.ModTime().After(latestTime) {
@@ -124,16 +124,16 @@ func UndoLatest() (string, error) {
 			continue
 		}
 		subDir := filepath.Join(backupsRoot, d.Name())
-		entries, err := os.ReadDir(subDir)
-		if err != nil {
+		entries, readErr := os.ReadDir(subDir)
+		if readErr != nil {
 			continue
 		}
 		for _, e := range entries {
 			if strings.HasPrefix(e.Name(), ".") {
 				continue
 			}
-			info, err := e.Info()
-			if err != nil {
+			info, infoErr := e.Info()
+			if infoErr != nil {
 				continue
 			}
 			if info.ModTime().After(bestTime) {

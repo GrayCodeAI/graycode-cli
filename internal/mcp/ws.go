@@ -174,9 +174,9 @@ func wsDial(ctx context.Context, rawURL string, headers map[string]string) (net.
 	}
 	b.WriteString("\r\n")
 
-	if _, err := io.WriteString(conn, b.String()); err != nil {
+	if _, writeErr := io.WriteString(conn, b.String()); writeErr != nil {
 		_ = conn.Close()
-		return nil, nil, err
+		return nil, nil, writeErr
 	}
 
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))

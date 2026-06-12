@@ -115,12 +115,12 @@ func (tx *Transaction) Add(op FileOperation) error {
 		if info.IsDir() {
 			return fmt.Errorf("cannot rename %s: is a directory", op.OldPath)
 		}
-		if _, err := os.Stat(op.Path); err == nil {
+		if _, statErr := os.Stat(op.Path); statErr == nil {
 			return fmt.Errorf("cannot rename to %s: file already exists", op.Path)
 		}
-		data, err := os.ReadFile(op.OldPath)
-		if err != nil {
-			return fmt.Errorf("cannot read %s for backup: %w", op.OldPath, err)
+		data, readErr := os.ReadFile(op.OldPath)
+		if readErr != nil {
+			return fmt.Errorf("cannot read %s for backup: %w", op.OldPath, readErr)
 		}
 		op.OldContent = data
 		if op.Mode == 0 {
