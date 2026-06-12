@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // DiagnosticResult holds the outcome of a single diagnostic check.
@@ -367,7 +368,7 @@ func checkAPIKeySet() DiagnosticResult {
 
 func checkModelConfigured() DiagnosticResult {
 	start := time.Now()
-	model := os.Getenv("HAWK_MODEL")
+	model := config.Getenv("HAWK_MODEL")
 	if model == "" {
 		return DiagnosticResult{
 			Name:     "model_configured",
