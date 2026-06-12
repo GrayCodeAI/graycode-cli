@@ -74,7 +74,6 @@ func (cp *CommandPalette) buildEntries() []CommandPaletteEntry {
 
 	// Workflow commands
 	workflow := map[string]string{
-		"/plan":   "Enter planning mode",
 		"/review": "Review recent changes",
 		"/commit": "Create smart commit",
 		"/test":   "Run project tests",
@@ -116,21 +115,18 @@ func (cp *CommandPalette) buildEntries() []CommandPaletteEntry {
 
 	// Diagnostics
 	diag := map[string]string{
-		"/doctor":  "Run health diagnostics",
-		"/path":    "Check developer path readiness",
-		"/cost":    "Show cost analysis",
-		"/rules":   "Show permission rules",
-		"/sandbox": "Sandbox configuration",
-		"/eval":    "Run evaluations",
+		"/doctor": "Run health diagnostics",
+		"/path":   "Check developer path readiness",
+		"/cost":   "Show cost analysis",
+		"/rules":  "Show permission rules",
+		"/eval":   "Run evaluations",
 	}
 
 	// Settings
 	settings := map[string]string{
-		"/acceptEdits":       "Toggle auto-edit mode",
-		"/bypassPermissions": "Toggle full auto mode",
-		"/default":           "Reset to default permissions",
-		"/vim":               "Toggle vim mode",
-		"/theme":             "Change color theme",
+		"/permissions": "Permission Center",
+		"/vim":         "Toggle vim mode",
+		"/theme":       "Change color theme",
 	}
 
 	addEntries := func(category string, cmds map[string]string) {

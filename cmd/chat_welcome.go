@@ -79,6 +79,13 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	sepC := "\033[38;2;102;102;102m"  // textDisabled — chip separators
 	rst := "\033[0m"
 
+	// Status marks — green ✓ = present, dim ○ = none (not an error),
+	// red × = actual problem (e.g. Docker enabled but not running). Using a
+	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
+	markPresent := greenC + "✓" + rst
+	markNone := sepC + "○" + rst
+	markErr := redC + "×" + rst
+
 	totalW := width
 	if totalW < 40 {
 		totalW = 80
@@ -149,6 +156,26 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		b.WriteString(center(visW, combined) + "\n")
 	}
 
+	if forGate {
+		if model, provider := effectiveModelAndProvider(settings); model != "" {
+			var plainParts, styledParts []string
+			if provider != "" {
+				plainParts = append(plainParts, provider)
+				styledParts = append(styledParts, mutedC+provider+rst)
+			}
+			short := normalizeModelDisplayName(model, model)
+			plainParts = append(plainParts, short)
+			styledParts = append(styledParts, bodyC+short+rst)
+			mode := permissionModeLabel(sess)
+			plainParts = append(plainParts, mode)
+			styledParts = append(styledParts, mutedC+mode+rst)
+
+			sep := sepC + " · " + rst
+			plain := strings.Join(plainParts, " · ")
+			b.WriteString("\n" + center(len(plain), strings.Join(styledParts, sep)) + "\n")
+		}
+	}
+
 	if !forGate {
 		verLine := fmt.Sprintf("v%s", DisplayVersion())
 		b.WriteString("\n" + center(len(verLine), dimC+verLine+rst) + "\n")
@@ -164,45 +191,36 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	if !forGate && !needsSetup {
 		tip := "TIP: /help commands · /model to switch"
 		b.WriteString("\n" + center(len(tip), boldC+tip+rst) + "\n")
-		shortcutsPlain := "Tab scrollback · Up/Dn · PgUp/PgDn · /home · /ctx · ctrl+N · ctrl+L"
+		shortcutsPlain := "PgUp/Dn scroll chat · Up/Dn history · Tab scrollback · /home · /ctx · ctrl+N · ctrl+L"
 		b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
 	}
 
 	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
-
-	skillsOK := false
-	mcpOK := mcpCount > 0
 	agentsOK := hawkconfig.LoadAgentsMD() != ""
 
-	skillMark := redC + "×" + rst
-	mcpMark := greenC + "✓" + rst
-	if mcpCount == 0 {
-		mcpMark = redC + "×" + rst
-	}
-	hawkMark := greenC + "✓" + rst
-	if !agentsOK {
-		hawkMark = redC + "×" + rst
-	}
-
-	gateMarkBox := func(ok bool) string {
-		if ok {
-			return greenC + "✓" + rst
+	mark := func(present bool) string {
+		if present {
+			return markPresent
 		}
-		return redC + "×" + rst
+		return markNone
 	}
-	gateChip := func(label string, count int, ok bool) string {
-		return gateMarkBox(ok) + " " + mutedC + label + rst + " " + mutedC + "(" + rst + bodyC + fmt.Sprintf("%d", count) + rst + mutedC + ")" + rst
+	skillMark := mark(skillsCount > 0)
+	mcpMark := mark(mcpCount > 0)
+	hawkMark := mark(agentsOK)
+
+	gateChip := func(label string, count int) string {
+		return mark(count > 0) + " " + mutedC + label + rst + " " + mutedC + "(" + rst + bodyC + fmt.Sprintf("%d", count) + rst + mutedC + ")" + rst
 	}
 	gateChipPlain := func(label string, count int) string {
 		return "x " + label + " (" + fmt.Sprintf("%d", count) + ")"
 	}
 	if forGate {
 		chipSep := sepC + " · " + rst
-		agentsChip := gateMarkBox(agentsOK) + " " + mutedC + "AGENTS" + rst
+		agentsChip := mark(agentsOK) + " " + mutedC + "AGENTS" + rst
 		parts := []string{
-			gateChip("Skills", skillsCount, skillsOK),
-			gateChip("MCP", mcpCount, mcpOK),
+			gateChip("Skills", skillsCount),
+			gateChip("MCP", mcpCount),
 			agentsChip,
 		}
 		plain := []string{
@@ -211,7 +229,11 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 			"x AGENTS",
 		}
 		if dockerRunning != nil {
-			parts = append(parts, gateMarkBox(*dockerRunning)+" "+mutedC+"Docker"+rst)
+			dockerMark := markErr
+			if *dockerRunning {
+				dockerMark = markPresent
+			}
+			parts = append(parts, dockerMark+" "+mutedC+"Docker"+rst)
 			plain = append(plain, "x Docker")
 		}
 		indicators := strings.Join(parts, chipSep)
@@ -240,14 +262,6 @@ func actLine(saved *session.Session, sessionID string) string {
 		return "Resumed session " + sessionID[:8]
 	}
 	return ""
-}
-
-func permissionCommandArg(text, action string) string {
-	prefix := "/permissions " + action
-	if !strings.HasPrefix(text, prefix) {
-		return ""
-	}
-	return strings.TrimSpace(strings.TrimPrefix(text, prefix))
 }
 
 func toolListSummary(registry *tool.Registry) string {

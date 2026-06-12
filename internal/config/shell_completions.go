@@ -30,7 +30,7 @@ _hawk() {
     '--continue[Resume last session]'
     '--session-id[Resume specific session]:session_id'
     '--output-format[Output format (text/json/stream-json)]:format:(text json stream-json)'
-    '--permission-mode[Permission mode]:mode:(default acceptEdits bypassPermissions plan)'
+    '--permission-mode[Advanced permission mode]:mode:(default edits bypass dontask plan)'
     '--tools[Comma-separated tool list]:tools'
     '--add-dir[Additional allowed directory]:directory:_directories'
     '--verbose[Enable verbose logging]'
@@ -73,7 +73,7 @@ func BashCompletion() string {
       return 0
       ;;
     --permission-mode)
-      COMPREPLY=($(compgen -W "default acceptEdits bypassPermissions plan" -- "$cur"))
+      COMPREPLY=($(compgen -W "default edits bypass dontask plan" -- "$cur"))
       return 0
       ;;
     --add-dir)
@@ -108,7 +108,7 @@ complete -c hawk -l model -d 'Model to use' -x -a 'claude-sonnet-4-20250514 clau
 complete -c hawk -l provider -d 'Provider' -x -a 'anthropic openai gemini openrouter groq deepseek mistral ollama'
 complete -c hawk -l continue -d 'Resume last session'
 complete -c hawk -l output-format -d 'Output format' -x -a 'text json stream-json'
-complete -c hawk -l permission-mode -d 'Permission mode' -x -a 'default acceptEdits bypassPermissions plan'
+complete -c hawk -l permission-mode -d 'Advanced permission mode' -x -a 'default edits bypass dontask plan'
 complete -c hawk -l verbose -d 'Enable verbose logging'
 complete -c hawk -l no-color -d 'Disable colors'
 `

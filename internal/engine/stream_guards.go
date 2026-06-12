@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -12,7 +13,11 @@ import (
 // On first-stage loop detection, injects a break-loop message and continues.
 func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEvent, turnCount int, snowball *branching.SnowballDetector, loopDet *LoopDetector) bool {
 	if ctx.Err() != nil {
-		ch <- StreamEvent{Type: "content", Content: "\n\nTime budget exhausted."}
+		msg := "Request cancelled."
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			msg = "Time budget exhausted."
+		}
+		ch <- StreamEvent{Type: "content", Content: "\n\n" + msg}
 		ch <- StreamEvent{Type: "done"}
 		return false
 	}

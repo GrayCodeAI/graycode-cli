@@ -40,8 +40,11 @@ func (pe *PermissionEngine) SetMode(mode string) error {
 func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (bool, string) {
 	isSafe := !ToolNeedsPermission(tc.Name, tc.Args)
 	autoCfg := PresetConfig(pe.Autonomy)
-	if !autoCfg.NeedsPermission(tc.Name, isSafe) || pe.PromptFn == nil {
+	if !autoCfg.NeedsPermission(tc.Name, isSafe) {
 		return true, ""
+	}
+	if pe.PromptFn == nil {
+		return false, "Permission prompt unavailable."
 	}
 
 	summary := ToolSummary(tc.Name, tc.Args)

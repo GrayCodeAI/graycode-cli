@@ -189,7 +189,7 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 		return bold, " Docker is not running. Start Docker and try again."
 	}
 	if m.containerReady && strings.TrimSpace(m.containerStatus) != "" {
-		tier := "Edit"
+		tier := "Builder"
 		if m.session != nil && m.session.Autonomy != 0 {
 			tier = autonomyTierName(m.session.Autonomy)
 		}

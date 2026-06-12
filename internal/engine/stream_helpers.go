@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 )
 
 // truncate shortens a string to maxLen characters, appending "..." if truncated.
@@ -30,11 +31,12 @@ func toolTimeout(name string) time.Duration {
 
 // isRetryableStreamError checks if a streaming error is transient and worth retrying.
 func isRetryableStreamError(err error) bool {
+	if retry.IsRetryable(err) {
+		return true
+	}
 	msg := err.Error()
 	return strings.Contains(msg, "connection reset") ||
-		strings.Contains(msg, "timeout") ||
-		strings.Contains(msg, "EOF") ||
-		strings.Contains(msg, "broken pipe")
+		strings.Contains(msg, "EOF")
 }
 
 // shouldRemember returns true if the assistant response contains language that

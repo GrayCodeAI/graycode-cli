@@ -78,6 +78,15 @@ func friendlyError(err error) string {
 		return "A tool execution timed out. The command may be taking too long.\n  Try breaking the task into smaller steps."
 	}
 
+	// ── Reasoning-only response (thinking tokens but no answer) ───────────
+	if strings.Contains(low, "error_only_reasoning") ||
+		strings.Contains(low, "reasoning tokens but no answer") ||
+		strings.Contains(low, "reasoning but no answer") {
+		return "The model produced internal reasoning but no reply.\n" +
+			"  This often happens with reasoning models on OpenCode Go / MiniMax when the provider drops the answer after thinking.\n" +
+			"  Try /model to switch model, or pick a non-reasoning model for simple chat."
+	}
+
 	// ── Rate limiting (429) ───────────────────────────────────────────────
 	if strings.Contains(low, "429") || strings.Contains(low, "rate limit") || strings.Contains(low, "rate_limit") || strings.Contains(low, "too many requests") {
 		base := "Rate limited by the API provider."

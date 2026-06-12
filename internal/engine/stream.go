@@ -205,8 +205,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					ch <- StreamEvent{Type: "done"}
 					return
 				}
-				// Injection detected: warn but continue
 				if preResult.InjectionRisk != nil && preResult.InjectionRisk.IsRisky {
+					if preResult.InjectionRisk.RiskLevel == "high" {
+						ch <- StreamEvent{Type: "error", Content: "High-risk prompt injection detected. Message blocked."}
+						return
+					}
 					s.log.Warn("injection risk detected", map[string]interface{}{
 						"level": preResult.InjectionRisk.RiskLevel,
 					})
@@ -407,11 +410,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		var stopReason string
 		var lastUsage *types.EyrieUsage
 
-		// Streaming with retry for transient stream errors
+		// Streaming with retry for transient stream errors and reasoning-only responses.
 		const maxStreamRetries = 2
 		var streamErr error
+		var sawThinking bool
 		for streamAttempt := 0; streamAttempt <= maxStreamRetries; streamAttempt++ {
 			streamErr = nil
+			sawThinking = false
 			for ev := range result.Events {
 				select {
 				case <-ctx.Done():
@@ -424,6 +429,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					textContent.WriteString(ev.Content)
 					ch <- StreamEvent{Type: "content", Content: ev.Content}
 				case "thinking":
+					if strings.TrimSpace(ev.Thinking) != "" {
+						sawThinking = true
+					}
 					ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
 				case "tool_call":
 					if ev.ToolCall != nil {
@@ -450,18 +458,31 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			result.Close()
 
-			if streamErr == nil {
+			thinkingOnly := streamErr == nil && textContent.Len() == 0 && len(toolCalls) == 0 && sawThinking
+			shouldRetry := thinkingOnly || (streamErr != nil && isRetryableStreamError(streamErr))
+			if !shouldRetry {
 				break
 			}
-			if !isRetryableStreamError(streamErr) {
+			if streamAttempt >= maxStreamRetries {
+				if thinkingOnly {
+					streamErr = fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")
+				}
 				break
 			}
-			s.log.Warn("stream retry", map[string]interface{}{"attempt": streamAttempt + 1, "error": streamErr.Error()})
+			retryReason := "transient stream error"
+			if thinkingOnly {
+				retryReason = "reasoning-only response"
+				streamErr = fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")
+			}
+			s.log.Warn("stream retry", map[string]interface{}{
+				"attempt": streamAttempt + 1,
+				"reason":  retryReason,
+				"error":   streamErr.Error(),
+			})
 			time.Sleep(time.Duration(streamAttempt+1) * time.Second)
 
 			// Notify consumer to discard previously streamed content for this turn.
-			// The consumer should treat content before this event as stale.
-			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying (attempt %d)", streamAttempt+2)}
+			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)}
 
 			// Re-open the stream for retry
 			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
@@ -474,6 +495,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			toolCalls = nil
 			stopReason = ""
 			lastUsage = nil
+			streamErr = nil
 		}
 
 		// Providers like OpenCode Go often omit stream usage; estimate so billing footer updates.
