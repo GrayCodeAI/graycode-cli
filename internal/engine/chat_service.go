@@ -174,14 +174,21 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 	return opts
 }
 
-// Stream issues a streaming LLM call with retry, rate-limit, and circuit-
-// breaker accounting. The returned *types.StreamResult's Events channel
-// emits EyrieStreamEvent values; the caller must Close() the result when
-// done.
+// Stream issues a streaming LLM call with retry, rate-limit, and
+// emergency-compact. The returned *types.StreamResult's Events channel
+// emits EyrieStreamEvent values; the caller must Close() the result
+// when done.
 //
 // On context cancellation mid-call, returns the cancellation error wrapped
 // with whatever partial state the upstream had emitted (caller should
 // check ctx.Err()).
+//
+// Note: the ChatService intentionally does NOT touch the legacy circuit-
+// breaker router on success/failure. The Session-level agent loop
+// (stream.go) is responsible for that recording, because it has the full
+// apiStart timestamp it wants to feed to Router.RecordSuccess. Putting
+// that responsibility here would either duplicate the call or force the
+// service to invent a "started at" argument that doesn't otherwise exist.
 func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
 	// Rate limit: wait for a token before making the LLM call
 	if c.rateLimiter != nil {
@@ -204,10 +211,8 @@ func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage,
 		return callErr
 	})
 	if err != nil {
-		c.recordFailure(err)
 		return nil, err
 	}
-	c.recordSuccess()
 	return result, nil
 }
 
@@ -216,23 +221,6 @@ func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage,
 // incremental events.
 func (c *ChatService) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	return c.client.Chat(ctx, messages, opts)
-}
-
-// recordSuccess records a successful LLM call against the legacy circuit-
-// breaker router. No-op when DeploymentRouting is on (the DeploymentRouter
-// has its own breakers).
-func (c *ChatService) recordSuccess() {
-	if c.router != nil && !c.deploymentRouting {
-		c.router.RecordSuccess(c.provider, 0)
-	}
-}
-
-// recordFailure records a failed LLM call against the legacy circuit-
-// breaker router. No-op when DeploymentRouting is on.
-func (c *ChatService) recordFailure(err error) {
-	if c.router != nil && !c.deploymentRouting {
-		c.router.RecordFailure(c.provider, err)
-	}
 }
 
 // isContextOverflow reports whether err looks like a "context too long"

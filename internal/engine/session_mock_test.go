@@ -10,7 +10,9 @@ import (
 
 func newMockSession(mc *mockClient) *Session {
 	s := NewSession("", "mock-model", "You are a test assistant.", nil)
-	s.client = mc
+	// SetTestClient also reattaches the ChatService so the agent
+	// loop's s.ChatLLM().Stream call site sees the mock.
+	s.SetTestClient(mc)
 	return s
 }
 

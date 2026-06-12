@@ -13,7 +13,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -269,24 +268,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		opts := types.ChatOptions{
-			Provider:      s.provider,
-			Model:         activeModel,
-			MaxTokens:     maxTok,
-			System:        s.system,
-			EnableCaching: s.provider == "anthropic",
-		}
-		// GLM/Z.ai extended reasoning toggle: only meaningful for the z-ai
-		// provider, where eyrie emits thinking={type:enabled|disabled}.
-		if s.provider == "z-ai" && s.GLMThinkingEnabled != nil {
-			opts.GLMThinkingEnabled = s.GLMThinkingEnabled
-		}
-		// Structured output: request a JSON-schema-constrained response when set.
-		// See structured_output.go for validation + single-retry on the
-		// non-streaming path.
-		if s.OutputSchema != "" {
-			opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: s.OutputSchema}
-		}
+		// Build the LLM ChatOptions via the ChatService. The service owns
+		// the GLMThinking toggle, output schema, anthropic caching flag,
+		// and the active provider/model — building opts manually here
+		// would duplicate that logic.
+		baseOpts := s.ChatLLM().BuildOptions(s.system, activeModel, maxTok, nil)
+		opts := baseOpts
 		// Inject beliefs as ephemeral context (not persisted to s.system)
 		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
 			if summary := s.Beliefs.FormatForPrompt(); summary != "" {
@@ -299,8 +286,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.Perm != nil && s.Perm.Mode == PermissionModePlan {
 			opts.System += planModeSystemPrompt
 		}
-		if s.registry != nil {
-			opts.Tools = s.registry.EyrieTools()
+		if s.Tools() != nil && s.Tools().Registry() != nil {
+			opts.Tools = s.Tools().Registry().EyrieTools()
 		}
 
 		// Inject memory metadata from yaad
@@ -344,43 +331,21 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		var result *types.StreamResult
-		var err error
-
-		// Use retry for transient errors
-		retryCfg := retry.DefaultConfig()
-		retryCfg.MaxRetries = 2
-		retryCfg.BaseDelay = 500 * time.Millisecond
-
-		s.metrics.Counter("api.requests").Inc()
-		apiStart := time.Now()
-
 		// Trace: start agent loop span for this turn
 		var loopSpan *oteltrace.Span
 		if s.Tracer != nil {
 			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
 		}
 
-		// Rate limit: wait for a token before making the LLM call
-		if s.RateLimiter != nil {
-			if waitErr := s.RateLimiter.Wait(ctx); waitErr != nil {
-				ch <- StreamEvent{Type: "error", Content: waitErr.Error()}
-				return
-			}
-		}
-
-		contCfg := types.DefaultContinuationConfig()
-		err = retry.Do(ctx, retryCfg, func() error {
-			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
-			if err != nil {
-				if strings.Contains(err.Error(), "too long") || strings.Contains(err.Error(), "too many tokens") {
-					s.compact()
-					result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
-				}
-			}
-			return err
-		})
-
+		// Issue the LLM call via the ChatService. The service handles
+		// rate limit, retry, and emergency compact internally; the
+		// api.requests counter is incremented inside ChatService.Stream.
+		// We keep the apiDuration timer + circuit-breaker recording here
+		// at the Session level so we can feed the real latency to
+		// Router.RecordSuccess (the service has no start-time argument
+		// and deliberately stays out of circuit-breaker accounting).
+		apiStart := time.Now()
+		result, err := s.ChatLLM().Stream(ctx, s.messages, opts)
 		apiDuration := time.Since(apiStart)
 		s.metrics.Timer("api.latency").Record(apiDuration)
 		s.metrics.Timer("api.last_latency").Record(apiDuration)
@@ -390,7 +355,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if loopSpan != nil {
 				oteltrace.EndSpanWithError(loopSpan, err)
 			}
-			// Record failure for circuit breaker
+			// Record failure for circuit breaker (legacy single-provider clients only)
 			if s.Router != nil && !s.DeploymentRouting {
 				s.Router.RecordFailure(s.provider, err)
 			}
@@ -401,7 +366,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 
-		// Record success for circuit breaker
+		// Record success for circuit breaker (legacy single-provider clients only)
 		if s.Router != nil && !s.DeploymentRouting {
 			s.Router.RecordSuccess(s.provider, apiDuration)
 		}
@@ -488,8 +453,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// Notify consumer to discard previously streamed content for this turn.
 			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)}
 
-			// Re-open the stream for retry
-			result, err = s.client.StreamChatContinue(ctx, s.messages, opts, contCfg)
+			// Re-open the stream for retry. We bypass the ChatService
+			// here on purpose: ChatService.Stream has its own retry
+			// loop, and stacking that on top of this secondary
+			// stream-error retry would double-retry network blips.
+			// The session agent loop owns this layer.
+			result, err = s.ChatLLM().Client().StreamChatContinue(ctx, s.messages, opts, types.DefaultContinuationConfig())
 			if err != nil {
 				ch <- StreamEvent{Type: "error", Content: err.Error()}
 				return
@@ -573,7 +542,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Handle max_tokens recovery
+		// Handle max_tokens recovery.
+		//
+		// Two strategies coexist:
+		//   1. Engine-level (this block): when no tool calls, append the
+		//      partial assistant text and a 'Continue from where you left
+		//      off.' user turn, then loop. Cheap (single retry) but
+		//      pollutes the conversation with a synthetic user message.
+		//   2. Client-level (eyrie/client.StreamChatWithContinuation,
+		//      deprecated in eyrie v0.3.0): handles max_tokens even with
+		//      tool calls by recursing StreamChat internally. Cleaner
+		//      conversation but appends a synthetic 'Continue.' user
+		//      turn too.
+		//
+		// Both still produce a synthetic user message; the eyrie
+		// conversation engine (OutputGroupID-based continuation) avoids
+		// this but is not what hawk's agent loop uses today. A future
+		// refactor could port hawk to eyrie/conversation.Engine.Prompt
+		// and drop the synthetic user message entirely.
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
 			s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent.String()})
@@ -622,7 +608,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					sCtx, sCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 					defer sCancel()
-					resp, err := s.client.Chat(sCtx, []types.EyrieMessage{
+					resp, err := s.ChatLLM().Chat(sCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
 					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
 					if err != nil || resp == nil {
@@ -654,7 +640,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					dCtx, dCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 					defer dCancel()
-					resp, err := s.client.Chat(dCtx, []types.EyrieMessage{
+					resp, err := s.ChatLLM().Chat(dCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
 					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
 					if err != nil || resp == nil {
