@@ -327,7 +327,6 @@ func (s *Session) Persistence() *PersistenceService { return s.persist }
 
 // Tools returns the extracted ToolService (Phase 6).
 func (s *Session) Tools() *ToolService { return s.tools }
-
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
 	s.model = strings.TrimSpace(model)
