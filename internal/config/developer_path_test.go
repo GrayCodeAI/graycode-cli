@@ -32,6 +32,8 @@ func TestEvaluateDeveloperPath_FreshInstall(t *testing.T) {
 
 func TestFormatDeveloperPathReport_ContainsSections(t *testing.T) {
 	isolateMilestoneTest(t)
+	credentials.SetDefaultStore(emptyCredentialStore{})
+	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 	out := FormatDeveloperPathReport(context.Background())
 	for _, want := range []string{
 		"Developer path",
