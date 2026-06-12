@@ -6,12 +6,12 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/env"
 	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
@@ -231,7 +231,7 @@ func IsSensitivePath(path string) string {
 		}
 	}
 
-	if cfgDir := strings.TrimSpace(os.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
+	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
 		customProv := filepath.Clean(filepath.Join(cfgDir, "provider.json"))
 		if clean == customProv {
 			return "access to provider.json is blocked for security (API credentials)"
