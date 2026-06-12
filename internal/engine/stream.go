@@ -535,7 +535,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Handle max_tokens recovery
+		// Handle max_tokens recovery.
+		//
+		// Two strategies coexist:
+		//   1. Engine-level (this block): when no tool calls, append the
+		//      partial assistant text and a 'Continue from where you left
+		//      off.' user turn, then loop. Cheap (single retry) but
+		//      pollutes the conversation with a synthetic user message.
+		//   2. Client-level (eyrie/client.StreamChatWithContinuation,
+		//      deprecated in eyrie v0.3.0): handles max_tokens even with
+		//      tool calls by recursing StreamChat internally. Cleaner
+		//      conversation but appends a synthetic 'Continue.' user
+		//      turn too.
+		//
+		// Both still produce a synthetic user message; the eyrie
+		// conversation engine (OutputGroupID-based continuation) avoids
+		// this but is not what hawk's agent loop uses today. A future
+		// refactor could port hawk to eyrie/conversation.Engine.Prompt
+		// and drop the synthetic user message entirely.
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
 			s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent.String()})
