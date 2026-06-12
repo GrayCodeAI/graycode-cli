@@ -87,7 +87,7 @@ func ImplementGate(validateCmd string, workDir string) QualityGate {
 		Phase: GateImplement,
 		Check: func() GateResult {
 			el := &ExperimentLoop{WorkDir: workDir, ValidateCmd: validateCmd, Timeout: 60_000_000_000}
-			passed, output := el.validate(context.TODO())
+			passed, output := el.validate(context.Background())
 			if passed {
 				return GateResult{Phase: GateImplement, Passed: true, Reason: "build/tests pass"}
 			}

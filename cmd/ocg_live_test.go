@@ -14,7 +14,7 @@ import (
 
 func TestLiveOpenCodeGoMiniMaxM3FullHawkPath(t *testing.T) {
 	if credentials.LookupSecret(context.Background(), "OPENCODEGO_API_KEY") == "" {
-		t.Skip("OPENCODEGO_API_KEY not configured")
+		t.Skip("OPENCODEGO_API_KEY not configured") // TODO: https://github.com/GrayCodeAI/hawk/issues/29
 	}
 	settings, err := loadEffectiveSettings()
 	if err != nil {
