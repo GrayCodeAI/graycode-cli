@@ -12,10 +12,10 @@ func TestAutonomyTierDescriptions_PlainLanguage(t *testing.T) {
 		level engine.AutonomyLevel
 		need  []string
 	}{
-		{engine.AutonomyBasic, []string{"Look only", "shell ask"}},
-		{engine.AutonomySemi, []string{"Auto edits", "shell asks"}},
-		{engine.AutonomyFull, []string{"Auto shell", "risky"}},
-		{engine.AutonomyYOLO, []string{"Few asks", "trust"}},
+		{engine.AutonomyBasic, []string{"Explore only", "commands ask"}},
+		{engine.AutonomySemi, []string{"File changes auto-approve", "commands ask"}},
+		{engine.AutonomyFull, []string{"Commands auto-run", "risky"}},
+		{engine.AutonomyYOLO, []string{"Minimal prompts", "highest-risk"}},
 	}
 	for _, tc := range cases {
 		desc := autonomyTierDescription(tc.level)
@@ -35,7 +35,7 @@ func TestFormatAutonomyTierMessage_NoArrowJargon(t *testing.T) {
 	if len(msg) > 120 {
 		t.Fatalf("message too long (%d chars): %q", len(msg), msg)
 	}
-	if !strings.Contains(msg, "Run") {
+	if !strings.Contains(msg, "Operator") {
 		t.Fatalf("expected tier name in message, got %q", msg)
 	}
 }

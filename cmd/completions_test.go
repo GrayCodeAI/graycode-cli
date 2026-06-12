@@ -76,7 +76,7 @@ func TestGenerateBashContainsPermissionMode(t *testing.T) {
 	if !strings.Contains(bash, "--permission-mode") {
 		t.Error("Bash completion should contain --permission-mode")
 	}
-	modes := []string{"default", "acceptEdits", "bypassPermissions", "dontAsk", "plan"}
+	modes := []string{"default", "edits", "bypass", "dontask", "plan"}
 	for _, m := range modes {
 		if !strings.Contains(bash, m) {
 			t.Errorf("Bash completion should contain permission mode %q", m)

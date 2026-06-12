@@ -420,13 +420,13 @@ func (ac *Autocompleter) completeFlags(prefix string) []Suggestion {
 		{"--max-budget-usd", "Maximum API spend"},
 		{"--system-prompt", "System prompt to use"},
 		{"--output-format", "Output format"},
-		{"--sandbox", "Sandbox mode"},
+		{"--sandbox", "Permission sandbox"},
 		{"--auto-commit", "Auto-commit changes"},
 		{"--watch", "Watch for file changes"},
 		{"--vibe", "Vibe coding mode"},
 		{"--power", "Power level 1-10"},
 		{"--timeout", "Time budget"},
-		{"--permission-mode", "Permission mode"},
+		{"--permission-mode", "Advanced permission mode"},
 		{"--session-id", "Session ID"},
 	}
 

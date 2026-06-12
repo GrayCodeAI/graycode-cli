@@ -320,7 +320,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		m.connStatusKey = m.connStatusFingerprint()
 	}
 	m.phase = initialUIPhase(m.hasChatMessages(), promptFlag != "")
-	m = m.withSyncedLayout()
+	m = m.syncViewportMouseWheel().withSyncedLayout()
 	m.containerEnabled = shouldUseContainer()
 	bindChatSession(sess, sid, m.containerEnabled)
 	if m.containerEnabled {
@@ -448,12 +448,23 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		ref.Send(permissionAskMsg{req: req})
 	}
 
-	// Wire ask_user tool
+	// High-risk action gate (network, destructive bash) — additive layer on top
+	// of the permission engine; falls back to AskUserFn for confirmation.
+	sess.Approval = &engine.ApprovalGate{
+		Enabled:        true,
+		MaxAutoApprove: engine.AutonomySemi,
+	}
+
+	// Wire ask_user tool (5-minute timeout matches permission prompts).
 	sess.AskUserFn = func(question string) (string, error) {
 		resp := make(chan string, 1)
 		ref.Send(askUserMsg{question: question, response: resp})
-		answer := <-resp
-		return answer, nil
+		select {
+		case answer := <-resp:
+			return answer, nil
+		case <-time.After(5 * time.Minute):
+			return "", fmt.Errorf("question timed out")
+		}
 	}
 
 	if saved != nil {
@@ -536,7 +547,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
 	}
@@ -557,7 +568,24 @@ func (m chatModel) Init() tea.Cmd {
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
+		mm := m
+		mm.sanitizeInput()
+		m = mm
+	}
+
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if mouseTrackingEnabled() {
+			cmds = append(cmds, m.applyMouseScroll(msg))
+		}
+		m.sanitizeInput()
+		m = m.syncViewportMouseWheel().withSyncedLayout()
+		if m.viewDirty || m.syncInputLayout() {
+			m.updateViewportContent()
+		}
+		return m, tea.Batch(cmds...)
+
 	case autoOpenConfigMsg:
 		if !m.openConfigOnStart || m.configOpen {
 			return m, nil
@@ -565,6 +593,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openConfigOnStart = false
 		return m.openConfigPanel()
 	case tea.KeyMsg:
+		if isMouseSequenceLeak(msg) {
+			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
+				m.sanitizeInput()
+				return m, cmd
+			}
+			m.sanitizeInput()
+			return m, nil
+		}
 		if next, cmd, handled := m.handleWelcomeGateKey(msg); handled {
 			return next, cmd
 		}
@@ -626,17 +662,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Container failed — block all input except quit
-		if m.containerEnabled && m.containerErr != nil {
-			if msg.String() == "ctrl+c" || msg.String() == "q" {
-				if m.watcherStop != nil {
-					m.watcherStop()
-				}
-				m.quitting = true
-				return m, tea.Quit
-			}
-			return m, nil
-		}
 		// Permission prompt active — handle y/n
 		if m.permReq != nil {
 			switch msg.String() {
@@ -670,10 +695,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateViewportContent()
 				return m, nil
 			}
-			// Let textarea handle other keys
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			return m, cmd
+			return m, m.updateInput(msg)
 		}
 		if m.waiting {
 			if msg.Type == tea.KeyCtrlC {
@@ -681,6 +703,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cancel != nil {
 					m.cancel()
 					m.cancel = nil
+					m.streamCancelled = true
 					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
 					if m.partial.Len() > 0 {
 						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
@@ -703,6 +726,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cancel != nil {
 					m.cancel()
 					m.cancel = nil
+					m.streamCancelled = true
 					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
 					if m.partial.Len() > 0 {
 						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
@@ -727,10 +751,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
-			// Allow typing in input while streaming
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			return m, cmd
+			return m, m.updateInput(msg)
 		}
 		if m.configOpen {
 			switch msg.Type {
@@ -974,10 +995,26 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.partial.WriteString(string(msg))
 		m.markPartialDirty()
+		if m.viewDirty {
+			m.updateViewportContent()
+		}
 		return m, nil
 
 	case thinkingMsg:
-		m.messages = append(m.messages, displayMsg{role: "thinking", content: string(msg)})
+		chunk := string(msg)
+		if n := len(m.messages); n > 0 && m.messages[n-1].role == "thinking" {
+			m.messages[n-1].content += chunk
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "thinking", content: chunk})
+		}
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
+	case streamRetryMsg:
+		m.partial.Reset()
+		m.messages = stripCurrentTurnThinking(m.messages)
+		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ " + msg.content})
 		m.viewDirty = true
 		return m, nil
 
@@ -1004,6 +1041,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case permissionAskMsg:
 		m.permReq = &msg.req
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
+		m.viewDirty = true
 		return m, nil
 
 	case askUserMsg:
@@ -1064,6 +1102,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case streamDoneMsg:
+		if m.streamCancelled {
+			m.streamCancelled = false
+			m.waiting = false
+			m.cancel = nil
+			m.toolStartTime = time.Time{}
+			m.viewDirty = true
+			return m, nil
+		}
 		if m.compacting {
 			m.compacting = false
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
@@ -1079,6 +1125,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Generate ghost text suggestion from AI response
 			m.ghostText.Suggest(content)
 			m.partial.Reset()
+		} else if turnHadThinkingOnly(m.messages) {
+			// Model sent reasoning tokens but no answer — common with reasoning
+			// models when the provider drops the post-reasoning content.
+			m.messages = append(m.messages, displayMsg{
+				role:    "error",
+				content: friendlyError(fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")),
+			})
 		}
 		m.waiting = false
 		m.cancel = nil
@@ -1183,7 +1236,18 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
-			m.input.Blur()
+			// Fall back to host mode so chat still works (container is optional).
+			m.containerEnabled = false
+			m.containerReady = false
+			if m.session != nil {
+				m.session.ContainerRequired = false
+				m.session.ContainerExecutor = nil
+			}
+			m.messages = append(m.messages, displayMsg{
+				role:    "system",
+				content: "Container unavailable — running on host. " + msg.err.Error(),
+			})
+			m.input.Focus()
 		}
 		m.rebuildWelcomeCache(m.blinkClosed)
 		m.viewDirty = true
@@ -1213,34 +1277,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		cmds = append(cmds, cmd)
+		if shouldForwardToInput(msg) {
+			cmds = append(cmds, m.updateInput(msg))
+		} else {
+			m.sanitizeInput()
+		}
 	}
 	if m.uiFocus == focusPrompt && !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
 
-	// Update viewport for scroll events (mouse wheel, page up/down)
-	var vpCmd tea.Cmd
-	m.viewport, vpCmd = m.viewport.Update(msg)
-	cmds = append(cmds, vpCmd)
-
-	// If user scrolled away from bottom, disable auto-scroll.
-	// Re-enable when they scroll back to bottom.
-	if m.viewport.AtBottom() {
-		m.autoScroll = true
-		if m.uiFocus == focusPrompt {
-			m.streamFollow = true
-		}
-	} else {
-		m.autoScroll = false
-		if m.uiFocus == focusScrollback {
-			m.streamFollow = false
-		}
-	}
-
-	m = m.withSyncedLayout()
+	m = m.syncViewportMouseWheel().withSyncedLayout()
 	// Update viewport content when messages change or input layout shifts (slash menu / multiline).
 	if m.viewDirty || m.syncInputLayout() {
 		m.updateViewportContent()
@@ -1306,7 +1353,11 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	programOpts := []tea.ProgramOption{tea.WithAltScreen()}
+	if mouseTrackingEnabled() {
+		programOpts = append(programOpts, tea.WithMouseCellMotion())
+	}
+	p := tea.NewProgram(m, programOpts...)
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
@@ -1321,41 +1372,12 @@ func runChat() error {
 				p.Send(streamErrMsg{err: err})
 				return
 			}
-			for ev := range ch {
-				switch ev.Type {
-				case "content":
-					p.Send(streamChunkMsg(ev.Content))
-				case "thinking":
-					p.Send(thinkingMsg(ev.Content))
-				case "tool_use":
-					p.Send(toolUseMsg{name: ev.ToolName, id: ev.ToolID})
-				case "tool_result":
-					p.Send(toolResultMsg{name: ev.ToolName, content: ev.Content})
-				case "compact_start":
-					p.Send(compactStartMsg{})
-				case "compact":
-					p.Send(compactMsg{
-						strategy:     ev.Content,
-						tokensBefore: ev.TokensBefore,
-						tokensAfter:  ev.TokensAfter,
-					})
-				case "usage":
-					if ev.Usage != nil {
-						p.Send(usageUpdateMsg{usage: ev.Usage})
-					}
-				case "error":
-					p.Send(streamErrMsg{err: fmt.Errorf("%s", ev.Content)})
-					return
-				case "done":
-					p.Send(streamDoneMsg{})
-					return
-				}
-			}
-			p.Send(streamDoneMsg{})
+			pumpStreamEvents(ref, ch)
 		}()
 	}
 
 	finalModel, err := p.Run()
+	writeTerminalMouse(disableMouseCSI)
 	if err != nil {
 		return err
 	}

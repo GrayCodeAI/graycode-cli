@@ -110,6 +110,16 @@ refactor: extract context packing logic
 test: add coverage for guardian
 ```
 
+### Commit Signing
+
+- Signed commits are required in this repo.
+- Git is configured for SSH signing with `commit.gpgsign=true` and the user's
+  SSH signing key.
+- In sandboxed agent sessions, `git commit` may fail even when the key is
+  unlocked because the sandbox cannot access `SSH_AUTH_SOCK`.
+- When that happens, run `git commit` outside the sandbox or with an
+  unsandboxed/escalated execution path so git can talk to the host SSH agent.
+
 ### Code Style
 
 - `gofmt` and `go vet` are mandatory (enforced by CI)

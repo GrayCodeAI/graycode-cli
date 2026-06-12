@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Four container autonomy tiers (Inspect → Edit → Run → Trust).
+// Four container autonomy tiers (Scout → Builder → Operator → Autonomous).
 var containerAutonomyTiers = []engine.AutonomyLevel{
 	engine.AutonomyBasic,
 	engine.AutonomySemi,
@@ -17,10 +17,10 @@ var containerAutonomyTiers = []engine.AutonomyLevel{
 }
 
 var containerAutonomyTierNames = []string{
-	"Inspect",
-	"Edit",
-	"Run",
-	"Trust",
+	"Scout",
+	"Builder",
+	"Operator",
+	"Autonomous",
 }
 
 // DefaultContainerAutonomy is the tier applied when the sandbox becomes ready.
@@ -32,7 +32,7 @@ func autonomyTierName(level engine.AutonomyLevel) string {
 			return containerAutonomyTierNames[i]
 		}
 	}
-	return "Inspect"
+	return "Builder"
 }
 
 func autonomyTierIndex(level engine.AutonomyLevel) int {
@@ -41,7 +41,7 @@ func autonomyTierIndex(level engine.AutonomyLevel) int {
 			return i
 		}
 	}
-	return 1 // default Edit
+	return 1 // default Builder
 }
 
 func nextAutonomyTier(level engine.AutonomyLevel) engine.AutonomyLevel {
@@ -52,15 +52,15 @@ func nextAutonomyTier(level engine.AutonomyLevel) engine.AutonomyLevel {
 func autonomyTierDescription(level engine.AutonomyLevel) string {
 	switch level {
 	case engine.AutonomyBasic:
-		return "Look only — edits & shell ask first"
+		return "Explore only — edits and commands ask first"
 	case engine.AutonomySemi:
-		return "Auto edits — shell asks first"
+		return "File changes auto-approve — commands ask first"
 	case engine.AutonomyFull:
-		return "Auto shell — risky ops ask first"
+		return "Commands auto-run — risky actions ask first"
 	case engine.AutonomyYOLO:
-		return "Few asks — trust this session"
+		return "Minimal prompts — only the highest-risk actions stop"
 	default:
-		return "Auto edits — shell asks first"
+		return "File changes auto-approve — commands ask first"
 	}
 }
 
@@ -98,13 +98,13 @@ func formatSandboxReadyAutonomyMessage(level engine.AutonomyLevel) string {
 
 func autonomyLevelForTierName(name string) engine.AutonomyLevel {
 	switch strings.TrimSpace(name) {
-	case "Inspect":
+	case "Scout":
 		return engine.AutonomyBasic
-	case "Edit":
+	case "Builder":
 		return engine.AutonomySemi
-	case "Run":
+	case "Operator":
 		return engine.AutonomyFull
-	case "Trust":
+	case "Autonomous":
 		return engine.AutonomyYOLO
 	default:
 		return DefaultContainerAutonomy

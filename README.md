@@ -103,9 +103,37 @@ hawk skills install go-review # Install from GitHub
 hawk skills audit             # Security scan installed skills
 ```
 
-### Permission System
+### Permission Center
 
-hawk asks before running dangerous tools. Auto-mode learns from your decisions, with emergency killswitch support.
+hawk now exposes one visible permission command center in chat:
+
+```text
+/permissions
+/permissions tier <scout|builder|operator|autonomous>
+/permissions sandbox <strict|workspace|off>
+/permissions mode <default|edits|bypass|dontask|plan>
+/permissions allow <rule>
+/permissions deny <rule>
+/permissions rules
+/permissions reset
+/permissions save [project|global]
+```
+
+The model is:
+
+- `Tier` controls autonomy:
+  - `Scout`
+  - `Builder`
+  - `Operator`
+  - `Autonomous`
+- `Sandbox` controls the execution boundary:
+  - `strict`
+  - `workspace`
+  - `off`
+- `Rules` control explicit allow/deny exceptions.
+
+For normal chat usage, `/permissions` is the main control surface. Older
+permission chat commands have been removed in favor of this single flow.
 
 ### MCP & LSP Support
 
@@ -170,11 +198,25 @@ hawk -c                           # Continue latest session
 hawk --provider openai --model gpt-4o  # Override provider
 ```
 
+### Permission Examples
+
+```bash
+# Inside the TUI
+/permissions
+/permissions tier builder
+/permissions sandbox workspace
+/permissions mode plan
+/permissions allow Bash(git:*)
+/permissions deny Bash(rm -rf *)
+/permissions save project
+```
+
 ### Non-Interactive Mode
 
 ```bash
 hawk -p "explain this repo"                    # Print response, exit
 hawk -p "fix tests" --allowed-tools "Bash(go test:*) Edit Read"
+hawk -p "review this repo" --permission-mode plan --sandbox workspace
 hawk exec "refactor auth module"               # Full engine, non-interactive
 hawk exec --auto full "add error handling"     # Full autonomy
 hawk exec --worktree "add rate limiting"       # Isolated branch
