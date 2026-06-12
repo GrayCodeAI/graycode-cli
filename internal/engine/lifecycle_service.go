@@ -170,29 +170,29 @@ func (s *LifecycleService) SnapshotTurnProgress(tokens int, progress float64) {
 // Setter accessors used by NewSessionWithClient and the agent loop
 // to wire optional collaborators. All nil-safe.
 
-func (s *LifecycleService) SetCascade(c *branching.CascadeRouter)        { s.cascade = c }
+func (s *LifecycleService) SetCascade(c *branching.CascadeRouter)       { s.cascade = c }
 func (s *LifecycleService) SetLifecycle(l *SessionLifecycle)            { s.lifecycle = l }
-func (s *LifecycleService) SetReflector(r *Reflector)                  { s.reflector = r }
-func (s *LifecycleService) SetCritic(c *Critic)                          { s.critic = c }
+func (s *LifecycleService) SetReflector(r *Reflector)                   { s.reflector = r }
+func (s *LifecycleService) SetCritic(c *Critic)                         { s.critic = c }
 func (s *LifecycleService) SetShadow(sh *branching.ShadowWorkspace)     { s.shadow = sh }
 func (s *LifecycleService) SetFewShotStore(f *FewShotStore)             { s.fewShotStore = f }
 func (s *LifecycleService) SetAdaptivePrompt(a *AdaptivePrompt)         { s.adaptivePrompt = a }
-func (s *LifecycleService) SetActivity(act *memory.ActivityTracker)        { s.activity = act }
+func (s *LifecycleService) SetActivity(act *memory.ActivityTracker)     { s.activity = act }
 func (s *LifecycleService) SetAgentsAccum(a *prompts.AgentsAccumulator) { s.agentsAccum = a }
 func (s *LifecycleService) SetSteering(st *SteeringQueue)               { s.steering = st }
 
 // Accessors used by stream.go and the agent loop. nil-safe.
-func (s *LifecycleService) Beliefs() *BeliefState                        { return s.beliefs }
-func (s *LifecycleService) Backtrack() *BacktrackEngine                  { return s.backtrack }
-func (s *LifecycleService) Limits() *LimitTracker                        { return s.limits }
-func (s *LifecycleService) Critic() *Critic                              { return s.critic }
-func (s *LifecycleService) Shadow() *branching.ShadowWorkspace          { return s.shadow }
-func (s *LifecycleService) Reflector() *Reflector                        { return s.reflector }
-func (s *LifecycleService) FewShotStore() *FewShotStore                  { return s.fewShotStore }
-func (s *LifecycleService) AdaptivePrompt() *AdaptivePrompt              { return s.adaptivePrompt }
-func (s *LifecycleService) Activity() *memory.ActivityTracker            { return s.activity }
-func (s *LifecycleService) AgentsAccum() *prompts.AgentsAccumulator       { return s.agentsAccum }
-func (s *LifecycleService) ResponseCache() *ResponseCache                { return s.responseCache }
-func (s *LifecycleService) Pipeline() *IntegrationPipeline              { return s.pipeline }
-func (s *LifecycleService) Steering() *SteeringQueue                    { return s.steering }
-func (s *LifecycleService) Lifecycle() *SessionLifecycle                { return s.lifecycle }
+func (s *LifecycleService) Beliefs() *BeliefState                   { return s.beliefs }
+func (s *LifecycleService) Backtrack() *BacktrackEngine             { return s.backtrack }
+func (s *LifecycleService) Limits() *LimitTracker                   { return s.limits }
+func (s *LifecycleService) Critic() *Critic                         { return s.critic }
+func (s *LifecycleService) Shadow() *branching.ShadowWorkspace      { return s.shadow }
+func (s *LifecycleService) Reflector() *Reflector                   { return s.reflector }
+func (s *LifecycleService) FewShotStore() *FewShotStore             { return s.fewShotStore }
+func (s *LifecycleService) AdaptivePrompt() *AdaptivePrompt         { return s.adaptivePrompt }
+func (s *LifecycleService) Activity() *memory.ActivityTracker       { return s.activity }
+func (s *LifecycleService) AgentsAccum() *prompts.AgentsAccumulator { return s.agentsAccum }
+func (s *LifecycleService) ResponseCache() *ResponseCache           { return s.responseCache }
+func (s *LifecycleService) Pipeline() *IntegrationPipeline          { return s.pipeline }
+func (s *LifecycleService) Steering() *SteeringQueue                { return s.steering }
+func (s *LifecycleService) Lifecycle() *SessionLifecycle            { return s.lifecycle }

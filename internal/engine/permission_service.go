@@ -28,10 +28,10 @@ type PermissionService struct {
 	// memory/autoMode/classifier/bypassKill are the legacy
 	// PermissionEngine sub-fields, re-exported as top-level fields for
 	// backward compat.
-	memory      *PermissionMemory
-	autoMode    *permissions.AutoModeState
-	classifier  *permissions.Classifier
-	bypassKill  *permissions.BypassKillswitch
+	memory     *PermissionMemory
+	autoMode   *permissions.AutoModeState
+	classifier *permissions.Classifier
+	bypassKill *permissions.BypassKillswitch
 	// mode is the active permission mode (e.g. plan, normal, auto).
 	mode PermissionMode
 	// maxTurns / maxBudgetUSD are the per-session cost/scope caps.
