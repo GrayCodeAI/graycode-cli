@@ -434,6 +434,27 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return "", fmt.Errorf("blocked: destructive command pattern detected — %s", p.Command)
 	}
 
+	// AST safety layer: walk the bash AST looking for nested dangers
+	// (substitution bodies containing destructive commands, heredoc
+	// bodies with eval/exec, process substitutions). This is the
+	// second-pass safety check that catches what the regex layer
+	// misses — for example, the regex layer flags `echo $(rm -rf /)`
+	// because the outer string contains "rm -rf", but it does NOT flag
+	// the safer-looking `echo $(date +%Y)`. The AST layer is the one
+	// that actually checks the INNER content. The findings are
+	// surfaced as a hard-block error so a future sub-agent turn cannot
+	// build on top of a command that contains a nested destructive
+	// command.
+	astFindings := bashASTAnalyze(p.Command)
+	if len(astFindings) > 0 {
+		// Format findings as a single error message.
+		var parts []string
+		for _, f := range astFindings {
+			parts = append(parts, f.String())
+		}
+		return "", fmt.Errorf("blocked: AST safety layer flagged %d finding(s): %s", len(astFindings), strings.Join(parts, "; "))
+	}
+
 	// Normalize command to prevent trivial bypass of dangerous-command detection.
 	normalized := normalizeCommand(p.Command)
 
