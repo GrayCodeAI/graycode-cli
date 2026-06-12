@@ -40,11 +40,29 @@ type SnapshotTracker interface {
 // The mu RWMutex protects messages and system for concurrent access
 // (e.g. daemon handling concurrent requests, background memory goroutines).
 //
-// Phase 1 of the god-object decomposition (see docs/session-decomposition.md)
-// has extracted the LLM transport into *ChatService. The legacy fields
-// (client, provider, model, apiKeys, Router, DeploymentRouting,
-// RateLimiter, GLMThinkingEnabled, OutputSchema) are now thin shims that
-// delegate to s.Chat. They will be removed in Phase 7.
+// Phases 1-7 of the god-object decomposition (see
+// docs/session-decomposition.md) have extracted the 35-collaborator
+// god object into 7 cohesive sub-services. Session is now a thin
+// orchestrator that delegates to:
+//
+//	llm            *ChatService        (Phase 1: LLM transport)
+//	perms          *PermissionService  (Phase 2: safety/approval)
+//	life           *LifecycleService   (Phase 3: self-improvement loop)
+//	memory         *MemoryService      (Phase 4: yaad bridge)
+//	persist        *PersistenceService (Phase 5: conversation store)
+//	tools          *ToolService        (Phase 6: tool execution)
+//
+// The legacy fields (client, provider, model, apiKeys, Router,
+// DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
+// Classifier, BypassKill, Mode, MaxTurns, MaxBudgetUSD, AllowedDirs,
+// PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
+// messages, system, Cascade, Lifecycle, Reflector, CostTracker,
+// Beliefs, Critic, Backtrack, Limits, Trajectory, Shadow, etc.) stay
+// on Session for backward compat with code that reads them directly.
+// They are all thin forwarders to the new sub-services. The agent
+// loop (stream.go) is being migrated to use the sub-services one
+// call site at a time. Once every call site is migrated, the
+// legacy fields will be removed.
 type Session struct {
 	mu       sync.RWMutex
 	client   ChatClient
@@ -72,6 +90,15 @@ type Session struct {
 	// Named lowercase (unexported) to avoid colliding with the public
 	// Session.Chat() method used by Reflector and SelfReview.
 	llm *ChatService
+	// perms (Phase 2), life (Phase 3), memory (Phase 4), persist
+	// (Phase 5), tools (Phase 6) are the remaining 5 sub-services.
+	// All optional; nil is the default and the agent loop preserves
+	// its `if s.X != nil` branching.
+	perms   *PermissionService
+	life    *LifecycleService
+	memory  *MemoryService
+	persist *PersistenceService
+	tools   *ToolService
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
@@ -238,6 +265,25 @@ func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 // session was constructed without going through NewSessionWithClient,
 // which should not happen in production.
 func (s *Session) ChatLLM() *ChatService { return s.llm }
+
+// PermSvc returns the extracted PermissionService (Phase 2). Returns
+// nil only if the session was constructed without
+// NewSessionWithClient, which should not happen in production.
+func (s *Session) PermSvc() *PermissionService { return s.perms }
+
+// LifecycleSvc returns the extracted LifecycleService (Phase 3).
+func (s *Session) LifecycleSvc() *LifecycleService { return s.life }
+
+// MemorySvc returns the extracted MemoryService (Phase 4).
+func (s *Session) MemorySvc() *MemoryService { return s.memory }
+
+// Persistence returns the extracted PersistenceService (Phase 5).
+// Provides the messages slice and system prompt (read/write) with
+// the underlying RWMutex.
+func (s *Session) Persistence() *PersistenceService { return s.persist }
+
+// Tools returns the extracted ToolService (Phase 6).
+func (s *Session) Tools() *ToolService { return s.tools }
 
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
