@@ -14,6 +14,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
@@ -476,7 +477,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"reason":  retryReason,
 				"error":   streamErr.Error(),
 			})
-			time.Sleep(time.Duration(streamAttempt+1) * time.Second)
+			select {
+			case <-time.After(time.Duration(streamAttempt+1) * time.Second):
+			case <-ctx.Done():
+				ch <- StreamEvent{Type: "error", Content: "stream retry cancelled: " + ctx.Err().Error()}
+				result.Close()
+				return
+			}
 
 			// Notify consumer to discard previously streamed content for this turn.
 			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)}
@@ -713,9 +720,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Auto-snapshot after write operations for granular undo
 		if s.Snapshots != nil && len(toolCalls) > 0 {
 			var writeNames []string
-			safeConcurrent := map[string]bool{"Read": true, "Grep": true, "Glob": true, "LS": true, "WebSearch": true, "WebFetch": true, "ToolSearch": true}
 			for _, tc := range toolCalls {
-				if !safeConcurrent[tc.Name] {
+				if !tool.IsReadOnly(tc.Name) {
 					writeNames = append(writeNames, tc.Name)
 				}
 			}
