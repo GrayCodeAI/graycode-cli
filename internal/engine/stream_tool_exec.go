@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -63,6 +64,18 @@ func extractTargets(tc types.ToolCall) []string {
 // discover non-conventional argument names.
 var filePathLikeKeySubstrings = []string{"path", "file", "dir", "destination", "target"}
 
+func filePathPropertyPriority(name string) int {
+	lower := strings.ToLower(name)
+	switch {
+	case strings.Contains(lower, "src"), strings.Contains(lower, "source"), strings.Contains(lower, "input"):
+		return 0
+	case strings.Contains(lower, "dst"), strings.Contains(lower, "dest"), strings.Contains(lower, "output"), strings.Contains(lower, "target"), strings.Contains(lower, "backup"):
+		return 2
+	default:
+		return 1
+	}
+}
+
 // ExtractTargetsFromSchema walks the tool's JSON Schema to discover file-path
 // arguments in the tool call. It does this by:
 //  1. Reading `parameters` (the JSON Schema map) to enumerate property names.
@@ -82,7 +95,19 @@ func ExtractTargetsFromSchema(t tool.Tool, tc types.ToolCall) []string {
 		// a JSON Schema (e.g. an LLM-emitted tool or a tests-only stub).
 		return extractTargets(tc)
 	}
-	for propName, propDef := range props {
+	propNames := make([]string, 0, len(props))
+	for propName := range props {
+		propNames = append(propNames, propName)
+	}
+	slices.SortStableFunc(propNames, func(a, b string) int {
+		pa, pb := filePathPropertyPriority(a), filePathPropertyPriority(b)
+		if pa != pb {
+			return pa - pb
+		}
+		return strings.Compare(a, b)
+	})
+	for _, propName := range propNames {
+		propDef := props[propName]
 		propNameLower := strings.ToLower(propName)
 		// Convention 1: property name contains a file-path substring.
 		nameMatches := false
