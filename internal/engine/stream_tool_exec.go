@@ -26,9 +26,8 @@ type toolExecResult struct {
 
 // classifyToolCalls splits tool calls into concurrent (read-only) and sequential (write) batches.
 func classifyToolCalls(calls []types.ToolCall) (concurrent, sequential []types.ToolCall) {
-	safeConcurrent := map[string]bool{"Read": true, "Grep": true, "Glob": true, "LS": true, "WebSearch": true, "WebFetch": true, "ToolSearch": true}
 	for _, tc := range calls {
-		if safeConcurrent[tc.Name] {
+		if tool.IsReadOnly(tc.Name) {
 			concurrent = append(concurrent, tc)
 		} else {
 			sequential = append(sequential, tc)
@@ -207,28 +206,33 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 			if newContent, readErr := readFileContent(preEditPath); readErr == nil && newContent != preEditContent {
 				reviewResult, reviewErr := ReviewBeforeWrite(ctx, s.client, s.model, intentText, preEditPath, preEditContent, newContent)
 				if reviewErr == nil && reviewResult != nil && !reviewResult.Approved {
-					// Revert the file to its original state
+					// Revert the file to its original state. If revert fails we
+					// MUST surface that as a hard tool error: silently leaving
+					// the rejected diff on disk would let a downstream turn
+					// build on top of code the LLM just said was wrong.
+					var revertErr error
 					if preEditContent == "" {
-						if removeErr := os.Remove(preEditPath); removeErr != nil {
-							s.log.Warn("failed to remove file during self-review revert", map[string]interface{}{
-								"path":  preEditPath,
-								"error": removeErr.Error(),
-							})
-						}
+						revertErr = os.Remove(preEditPath)
 					} else {
-						if writeErr := os.WriteFile(preEditPath, []byte(preEditContent), 0o644); writeErr != nil {
-							s.log.Warn("failed to revert file during self-review", map[string]interface{}{
-								"path":  preEditPath,
-								"error": writeErr.Error(),
-							})
+						revertErr = os.WriteFile(preEditPath, []byte(preEditContent), 0o644)
+					}
+					if revertErr != nil {
+						s.log.Error("self-review revert failed; rejecting diff loudly", map[string]interface{}{
+							"path":  preEditPath,
+							"error": revertErr.Error(),
+						})
+						output = fmt.Sprintf("Self-review rejected the change AND the revert failed: %s. "+
+							"Original review issues: %s. Manual intervention required.",
+							revertErr.Error(), strings.Join(reviewResult.Issues, "; "))
+						isErr = true
+					} else {
+						issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
+						if len(reviewResult.Suggestions) > 0 {
+							issueStr += ". Suggestions: " + strings.Join(reviewResult.Suggestions, "; ")
 						}
+						output = issueStr + ". Please fix these issues and try again."
+						isErr = true
 					}
-					issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
-					if len(reviewResult.Suggestions) > 0 {
-						issueStr += ". Suggestions: " + strings.Join(reviewResult.Suggestions, "; ")
-					}
-					output = issueStr + ". Please fix these issues and try again."
-					isErr = true
 				} else if reviewErr == nil && reviewResult != nil && reviewResult.Approved {
 					// Append diff summary to output for TUI display
 					diffSummary := generateDiffSummary(preEditContent, newContent, preEditPath)
