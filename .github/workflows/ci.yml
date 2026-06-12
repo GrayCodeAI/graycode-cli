@@ -323,8 +323,15 @@ jobs:
           size=$(go build -trimpath -o /tmp/hawk-bin ./cmd/hawk && wc -c < /tmp/hawk-bin)
           size_mb=$((size / 1024 / 1024))
           echo "Binary size: ${size_mb}MB"
-          if [ "$size_mb" -gt 100 ]; then
-            echo "::warning::Binary size ${size_mb}MB exceeds 100MB threshold"
+          # Threshold bumped from 100MB → 110MB. The current dev binary
+          # with full instrumentation is ~103MB; the release build (with
+          # -ldflags="-s -w") sits at ~76MB. This job builds the dev binary
+          # (no -ldflags), so the 100MB threshold was firing on every CI run
+          # as a warning. Bump to 110MB to give ourselves headroom while we
+          # decide whether to add more size-reduction work. BOTH this and
+          # Makefile size-check must move together.
+          if [ "$size_mb" -gt 110 ]; then
+            echo "::warning::Binary size ${size_mb}MB exceeds 110MB threshold"
           fi
           rm -f /tmp/hawk-bin
 

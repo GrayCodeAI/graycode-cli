@@ -369,6 +369,39 @@ func isSegmentSuspicious(segment string) bool {
 	return false
 }
 
+// hardDenySubstrings is the strict subset of suspiciousPatterns that should
+// always be hard-blocked even in contexts where the permission-system prompt
+// is bypassed (e.g. run_in_background=true, --dangerously-skip-permissions).
+// Kept narrow on purpose: it excludes "writing to absolute paths" and
+// "curl/wget" which are common in legitimate agent workflows.
+var hardDenySubstrings = []string{
+	"eval ",
+	"exec ",
+	"$(",
+	"`",
+	"| sh",
+	"| bash",
+	"| zsh",
+	"|sh",
+	"|bash",
+	"|zsh",
+	"sudo ",
+	"su -",
+}
+
+// isHardDeny returns true if the command contains a hard-deny substring.
+// Used to gate command-substitution, eval, and pipe-to-shell patterns
+// that should never execute without a human approval, even in background mode.
+func isHardDeny(command string) bool {
+	lower := strings.ToLower(command)
+	for _, pat := range hardDenySubstrings {
+		if strings.Contains(lower, pat) {
+			return true
+		}
+	}
+	return false
+}
+
 // IsSafeGitCommit checks if a git commit command is safe.
 // Git commits with simple quoted messages are considered safe.
 func IsSafeGitCommit(command string) bool {
@@ -401,6 +434,27 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return "", fmt.Errorf("blocked: destructive command pattern detected — %s", p.Command)
 	}
 
+	// AST safety layer: walk the bash AST looking for nested dangers
+	// (substitution bodies containing destructive commands, heredoc
+	// bodies with eval/exec, process substitutions). This is the
+	// second-pass safety check that catches what the regex layer
+	// misses — for example, the regex layer flags `echo $(rm -rf /)`
+	// because the outer string contains "rm -rf", but it does NOT flag
+	// the safer-looking `echo $(date +%Y)`. The AST layer is the one
+	// that actually checks the INNER content. The findings are
+	// surfaced as a hard-block error so a future sub-agent turn cannot
+	// build on top of a command that contains a nested destructive
+	// command.
+	astFindings := bashASTAnalyze(p.Command)
+	if len(astFindings) > 0 {
+		// Format findings as a single error message.
+		var parts []string
+		for _, f := range astFindings {
+			parts = append(parts, f.String())
+		}
+		return "", fmt.Errorf("blocked: AST safety layer flagged %d finding(s): %s", len(astFindings), strings.Join(parts, "; "))
+	}
+
 	// Normalize command to prevent trivial bypass of dangerous-command detection.
 	normalized := normalizeCommand(p.Command)
 
@@ -410,6 +464,16 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		if strings.Contains(lower, pat) {
 			return "", fmt.Errorf("blocked: dangerous command pattern detected")
 		}
+	}
+
+	// Hard-block the most-dangerous suspicious patterns even when no
+	// permission prompt is in scope (e.g. run_in_background=true skips the
+	// human-in-the-loop approval). This is a strict subset of the
+	// suspiciousPatterns list — it deliberately excludes
+	// "writing to absolute paths" and "curl/wget" which are common in
+	// legitimate agent tasks.
+	if isHardDeny(p.Command) {
+		return "", fmt.Errorf("blocked: hard-deny pattern (e.g. eval/command-substitution) cannot run in hard-deny contexts like run_in_background — %s", p.Command)
 	}
 
 	// Block zsh zmodload which enables dangerous modules
