@@ -246,7 +246,7 @@ test: add coverage for guardian
 
 ## Anti-Patterns
 
-- **No `os.Getenv` in `internal/`** — use `config.EnvManager` to centralize env access. Exception: `internal/observability/oteltrace/` for telemetry env vars.
+- **No `os.Getenv` in `internal/`** — use `env.Getenv` (in `internal/env/`) for simple reads, or `config.Getenv` if the package can import `internal/config` without cycles. `config.EnvManager` is for profile/secret management. Exceptions: `internal/observability/oteltrace/` for telemetry env vars; runtime environment probes (e.g. `TMUX`, `STY`, `TERM_PROGRAM`, `SHELL`, `GOPATH`) which are set by the OS/terminal and not by config.
 - **No `panic()` for error handling** — return `error` values. Exception: `init()` functions for package-level assertions.
 - **No `fmt.Print` for logging** — use `logger.Logger` with structured fields. Exception: `internal/onboarding/` and `internal/engine/scaffold/` for user-facing CLI output.
 - **No API keys in settings.json** — use OS secret store via `credentials` package and `/config` command.

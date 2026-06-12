@@ -17,6 +17,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // markerName is the file written under the project's .hawk directory once an
@@ -64,7 +66,7 @@ type Decision struct {
 
 // Disabled reports whether auto-init is disabled via the environment.
 func Disabled() bool {
-	return isTruthy(os.Getenv(disableEnv))
+	return isTruthy(config.Getenv(disableEnv))
 }
 
 // HasContext reports whether root already contains a project context file.
@@ -105,7 +107,7 @@ func MaybeRun(ctx context.Context, opts Options) (Decision, error) {
 
 	disabled := opts.disableEnvValue
 	if disabled == "" {
-		disabled = os.Getenv(disableEnv)
+		disabled = config.Getenv(disableEnv)
 	}
 	if isTruthy(disabled) {
 		return Decision{Skipped: "disabled via " + disableEnv}, nil

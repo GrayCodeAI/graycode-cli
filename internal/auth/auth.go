@@ -93,8 +93,19 @@ func (s *SecureStorage) setMacOS(account, token string) error {
 	return err
 }
 
+func homeDir() string {
+	if runtime.GOOS == "windows" {
+		if d := os.Getenv("USERPROFILE"); d != "" {
+			return d
+		}
+		return os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+	}
+	home, _ := os.UserHomeDir()
+	return home
+}
+
 func (s *SecureStorage) getFile(account string) (string, error) {
-	path := filepath.Join(os.Getenv("HOME"), ".hawk", ".tokens")
+	path := filepath.Join(homeDir(), ".hawk", ".tokens")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -107,7 +118,7 @@ func (s *SecureStorage) getFile(account string) (string, error) {
 }
 
 func (s *SecureStorage) setFile(account, token string) error {
-	path := filepath.Join(os.Getenv("HOME"), ".hawk", ".tokens")
+	path := filepath.Join(homeDir(), ".hawk", ".tokens")
 	var tokens map[string]string
 	if data, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(data, &tokens)

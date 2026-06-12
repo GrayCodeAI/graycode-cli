@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 // EnvVar represents a single environment variable with metadata.
@@ -30,6 +31,13 @@ type EnvManager struct {
 	Profiles      map[string][]string `json:"profiles"`
 	ActiveProfile string              `json:"active_profile"`
 	mu            sync.RWMutex
+}
+
+// Getenv returns the value of an environment variable.
+// Delegates to internal/env to avoid import cycles for callers in packages
+// that already import internal/config.
+func Getenv(key string) string {
+	return env.Getenv(key)
 }
 
 // NewEnvManager creates a new EnvManager with initialized maps.
