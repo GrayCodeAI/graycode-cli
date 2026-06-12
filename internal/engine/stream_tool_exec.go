@@ -196,10 +196,25 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		_, toolSpan = oteltrace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
 	}
 
-	s.Perm.PromptFn = s.PermissionFn
-	s.Perm.Autonomy = s.Autonomy
-
-	granted, denyMsg := s.Perm.CheckTool(ctx, ToolCallInfo{
+	// Delegate to the extracted PermissionService (Phase 7 migration).
+	// s.PermSvc() is never nil because NewSessionWithClient always
+	// constructs it and aliases it to s.Perm via WithEngine(pe). The
+	// legacy s.Perm field is now a thin shim that reads the same
+	// engine.
+	//
+	// We still sync the legacy fields (PermissionFn, Autonomy) to the
+	// service before each call because external code (cmd/, daemon/,
+	// multiagent/) writes to those fields directly, and the engine
+	// only consults the values it holds. The sync is cheap (two
+	// pointer assignments) and removes a class of "settings lost"
+	// bugs when callers mutate the session after construction.
+	if s.PermissionFn != nil {
+		s.PermSvc().SetPermissionFn(s.PermissionFn)
+	}
+	if s.Autonomy != 0 {
+		s.PermSvc().SetAutonomy(s.Autonomy)
+	}
+	granted, denyMsg := s.PermSvc().CheckTool(ctx, ToolCallInfo{
 		Name: tc.Name,
 		ID:   tc.ID,
 		Args: tc.Arguments,

@@ -58,9 +58,6 @@ type LifecycleService struct {
 	lifecycle *SessionLifecycle
 	// log is the session logger.
 	log *logger.Logger
-	// startTime is the wall-clock start of this Session, set by
-	// Stream() so OnSessionEnd can compute Duration.
-	startTime time.Time
 }
 
 // NewLifecycleService constructs a LifecycleService with all default

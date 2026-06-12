@@ -15,8 +15,13 @@ type ChatClient interface {
 }
 
 // SetTestClient replaces the session's LLM client. For testing only.
+// Also reattaches the ChatService so the agent loop's `s.ChatLLM().Stream`
+// call site sees the mock (Phase 7 migration).
 func (s *Session) SetTestClient(c ChatClient) {
 	s.client = c
+	if s.llm != nil {
+		s.llm.Reattach(c, s.provider)
+	}
 }
 
 // NewMockClientForTest creates a mock ChatClient that returns canned text responses.

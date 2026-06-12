@@ -188,6 +188,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
 func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string, registry *tool.Registry, deploymentRouting bool) *Session {
 	pe := NewPermissionEngine()
+	log := logger.Default()
 	s := &Session{
 		client:            chat,
 		registry:          registry,
@@ -195,7 +196,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		model:             model,
 		apiKeys:           map[string]string{},
 		system:            systemPrompt,
-		log:               logger.Default(),
+		log:               log,
 		metrics:           metrics.NewRegistry(),
 		Perm:              pe,
 		Permissions:       pe.Memory,
@@ -223,10 +224,49 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	cwd, _ := os.Getwd()
 	s.AgentsAccum = prompts.NewAgentsAccumulator(cwd)
 
+	// -----------------------------------------------------------------------
+	// Wire the 6 sub-services extracted in Phases 1-6 of the god-object
+	// decomposition (see docs/session-decomposition.md). New code should
+	// prefer the sub-service getters (s.ChatLLM(), s.PermSvc(), etc.) over
+	// the legacy fields. The legacy fields stay on Session for backward
+	// compat with external code (cmd/, daemon/, multiagent/, etc.) that
+	// reads them directly. They will be removed in a follow-up cleanup PR
+	// once all call sites are migrated.
+	//
+	// For each service whose state is also held as a Session field, we
+	// point the Session field at the service's instance so reads stay
+	// in sync (the two are aliases, not duplicates).
+	// -----------------------------------------------------------------------
+	s.llm = NewChatService(chat, ChatServiceConfig{
+		Provider:          provider,
+		Model:             model,
+		APIKeys:           s.apiKeys,
+		Router:            s.Router,
+		DeploymentRouting: deploymentRouting,
+		RateLimiter:       s.RateLimiter,
+		Metrics:           s.metrics,
+	})
+	s.perms = NewPermissionService(log).WithEngine(pe)
+	s.life = NewLifecycleService(log)
+	s.memory = NewMemoryService(log)
+	s.persist = NewPersistenceService(log)
+	s.persist.SetSystem(systemPrompt)
+	s.tools = NewToolService(registry)
+
+	// Alias legacy fields at the service instances so legacy readers see
+	// the same state as new code that goes through the sub-service getters.
+	s.Limits = s.life.Limits()
+	s.Beliefs = s.life.Beliefs()
+	s.Backtrack = s.life.Backtrack()
+	s.ResponseCache = s.life.ResponseCache()
+	s.Pipeline = s.life.Pipeline()
+
 	return s
 }
 
 // ReattachTransport swaps the LLM client after deployment routing or provider.json changes.
+// Also reattaches the ChatService so the agent loop's `s.ChatLLM().Stream`
+// call site picks up the new client (Phase 7 migration).
 func (s *Session) ReattachTransport(chat ChatClient, provider string, deploymentRouting bool) {
 	if chat == nil {
 		return
@@ -236,6 +276,9 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 		s.provider = strings.TrimSpace(provider)
 	}
 	s.DeploymentRouting = deploymentRouting
+	if s.llm != nil {
+		s.llm.Reattach(chat, s.provider)
+	}
 	for name, key := range s.apiKeys {
 		if strings.TrimSpace(key) != "" {
 			s.client.SetAPIKey(name, key)

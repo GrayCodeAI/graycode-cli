@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -22,7 +21,6 @@ type ToolService struct {
 	tracer            *oteltrace.Tracer
 	snapshots         SnapshotTracker
 	bgManager         *tool.BackgroundAgentManager
-	mu                sync.Mutex
 }
 
 // NewToolService constructs a ToolService with the given registry.
