@@ -90,7 +90,28 @@ var destructivePatterns = []string{
 	"dd if=",
 	"mkfs",
 	":(){ :|:& };:",
+	// find -delete and find -exec rm are rm-equivalent and must be hard-blocked
+	// because they bypass the dangerousSubstrings check (no literal "rm" in the
+	// command). Caught by IsDestructiveCommand so background tasks (which
+	// skip the IsSuspicious permission prompt) are still blocked.
+	//
+	// The trailing-word form (e.g. "find -delete", "find -exec rm") below
+	// matches the canonical forms. The "find ... -delete" mid-command form
+	// is caught separately by findDeleteFlagRe below.
+	"find -delete",
+	"find -exec rm",
+	"find -execdir rm",
 }
+
+// findDeleteFlagRe matches the `-delete` flag in any position of a find
+// command (e.g. "find /tmp -type f -name '*.log' -delete"). The -delete
+// flag is rm-equivalent and must be hard-blocked even when it appears
+// mid-command.
+var findDeleteFlagRe = regexp.MustCompile(`(?:^|\s)find\b[^\n;&|]*-delete\b`)
+
+// findExecRmRe matches "find ... -exec rm" / "-execdir rm" patterns with
+// any number of intervening flags. The `-exec rm` form is rm-equivalent.
+var findExecRmRe = regexp.MustCompile(`(?:^|\s)find\b[^\n;&|]*-exec(?:dir)?\s+rm\b`)
 
 // IsDestructiveCommand returns true when the command contains a pattern that
 // is considered destructive.  This is a superset intended for pre-execution
@@ -104,6 +125,15 @@ func IsDestructiveCommand(command string) bool {
 			return true
 		}
 	}
+	// find -delete / find -exec rm with intervening flags (e.g.
+	// "find /tmp -type f -name '*.log' -delete" or
+	// "find . -name '*.tmp' -exec rm {} +")
+	if findDeleteFlagRe.MatchString(command) {
+		return true
+	}
+	if findExecRmRe.MatchString(command) {
+		return true
+	}
 	// Also check each segment independently
 	for _, seg := range SegmentCommand(command) {
 		segLower := strings.ToLower(seg)
@@ -111,6 +141,12 @@ func IsDestructiveCommand(command string) bool {
 			if strings.Contains(segLower, strings.ToLower(pat)) {
 				return true
 			}
+		}
+		if findDeleteFlagRe.MatchString(seg) {
+			return true
+		}
+		if findExecRmRe.MatchString(seg) {
+			return true
 		}
 	}
 	return false

@@ -39,6 +39,12 @@ type SnapshotTracker interface {
 // Session manages a conversation with an LLM via eyrie.
 // The mu RWMutex protects messages and system for concurrent access
 // (e.g. daemon handling concurrent requests, background memory goroutines).
+//
+// Phase 1 of the god-object decomposition (see docs/session-decomposition.md)
+// has extracted the LLM transport into *ChatService. The legacy fields
+// (client, provider, model, apiKeys, Router, DeploymentRouting,
+// RateLimiter, GLMThinkingEnabled, OutputSchema) are now thin shims that
+// delegate to s.Chat. They will be removed in Phase 7.
 type Session struct {
 	mu       sync.RWMutex
 	client   ChatClient
@@ -59,6 +65,13 @@ type Session struct {
 	ContainerExecutor tool.ContainerExecutor
 	// ContainerRequired blocks tools until ContainerExecutor is running (container-first mode).
 	ContainerRequired bool
+
+	// llm is the LLM transport service (Phase 1 extraction). All new
+	// code should go through s.llm.* rather than touching the legacy
+	// client/provider/model/apiKeys/Router/DeploymentRouting fields.
+	// Named lowercase (unexported) to avoid colliding with the public
+	// Session.Chat() method used by Reflector and SelfReview.
+	llm *ChatService
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
@@ -218,6 +231,13 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 func (s *Session) Model() string              { return s.model }
 func (s *Session) Provider() string           { return s.provider }
 func (s *Session) Metrics() *metrics.Registry { return s.metrics }
+
+// ChatLLM returns the extracted ChatService (Phase 1 of the god-object
+// decomposition). New code should prefer this over the legacy Client /
+// Provider / Model / APIKeys / Router fields. Returns nil only if the
+// session was constructed without going through NewSessionWithClient,
+// which should not happen in production.
+func (s *Session) ChatLLM() *ChatService { return s.llm }
 
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
