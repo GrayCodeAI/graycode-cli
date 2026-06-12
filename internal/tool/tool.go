@@ -83,7 +83,6 @@ type ToolContext struct {
 // ctxKey is the context key for ToolContext.
 type ctxKey struct{}
 
-
 // WithToolContext attaches a ToolContext to a context.
 func WithToolContext(ctx context.Context, tc *ToolContext) context.Context {
 	return context.WithValue(ctx, ctxKey{}, tc)
