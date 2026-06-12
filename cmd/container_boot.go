@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -21,48 +19,6 @@ type containerStatusMsg struct {
 	ready   bool
 	err     error
 	sandbox *sandbox.ContainerSandbox
-}
-
-// buildHawkImage builds the hawk container image from the bundled Dockerfile.
-// It writes the Dockerfile to a temp dir and runs docker build.
-func buildHawkImage(ctx context.Context, tag string) bool {
-	dockerfile := `FROM ubuntu:24.04
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl wget jq tree ripgrep fd-find make gcc g++ \
-    python3 python3-pip python3-venv \
-    nodejs npm \
-    ca-certificates openssh-client unzip xz-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/fdfind /usr/bin/fd
-# Install Go
-RUN curl -fsSL https://go.dev/dl/go1.26.1.linux-$(dpkg --print-architecture).tar.gz | tar -C /usr/local -xz
-ENV PATH="/usr/local/go/bin:${PATH}"
-ENV GOPATH="/root/go"
-ENV PATH="${GOPATH}/bin:${PATH}"
-ENV TERM=xterm-256color LANG=C.UTF-8
-`
-	// Use platform-appropriate arch
-	platform := runtime.GOARCH
-	if platform == "arm64" {
-		platform = "linux/arm64"
-	} else {
-		platform = "linux/amd64"
-	}
-
-	tmpDir, err := os.MkdirTemp("", "hawk-build-")
-	if err != nil {
-		return false
-	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	dfPath := filepath.Join(tmpDir, "Dockerfile")
-	if err := os.WriteFile(dfPath, []byte(dockerfile), 0o644); err != nil {
-		return false
-	}
-
-	cmd := exec.CommandContext(ctx, "docker", "build", "--platform", platform, "-t", tag, "-f", dfPath, tmpDir)
-	return cmd.Run() == nil
 }
 
 // shouldUseContainer determines if hawk should run in container mode.

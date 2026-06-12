@@ -264,14 +264,6 @@ func actLine(saved *session.Session, sessionID string) string {
 	return ""
 }
 
-func permissionCommandArg(text, action string) string {
-	prefix := "/permissions " + action
-	if !strings.HasPrefix(text, prefix) {
-		return ""
-	}
-	return strings.TrimSpace(strings.TrimPrefix(text, prefix))
-}
-
 func toolListSummary(registry *tool.Registry) string {
 	if registry == nil {
 		return "No tools enabled."
