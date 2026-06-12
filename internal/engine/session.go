@@ -40,11 +40,29 @@ type SnapshotTracker interface {
 // The mu RWMutex protects messages and system for concurrent access
 // (e.g. daemon handling concurrent requests, background memory goroutines).
 //
-// Phase 1 of the god-object decomposition (see docs/session-decomposition.md)
-// has extracted the LLM transport into *ChatService. The legacy fields
-// (client, provider, model, apiKeys, Router, DeploymentRouting,
-// RateLimiter, GLMThinkingEnabled, OutputSchema) are now thin shims that
-// delegate to s.Chat. They will be removed in Phase 7.
+// Phases 1-7 of the god-object decomposition (see
+// docs/session-decomposition.md) have extracted the 35-collaborator
+// god object into 7 cohesive sub-services. Session is now a thin
+// orchestrator that delegates to:
+//
+//	llm            *ChatService        (Phase 1: LLM transport)
+//	perms          *PermissionService  (Phase 2: safety/approval)
+//	life           *LifecycleService   (Phase 3: self-improvement loop)
+//	memory         *MemoryService      (Phase 4: yaad bridge)
+//	persist        *PersistenceService (Phase 5: conversation store)
+//	tools          *ToolService        (Phase 6: tool execution)
+//
+// The legacy fields (client, provider, model, apiKeys, Router,
+// DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
+// Classifier, BypassKill, Mode, MaxTurns, MaxBudgetUSD, AllowedDirs,
+// PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
+// messages, system, Cascade, Lifecycle, Reflector, CostTracker,
+// Beliefs, Critic, Backtrack, Limits, Trajectory, Shadow, etc.) stay
+// on Session for backward compat with code that reads them directly.
+// They are all thin forwarders to the new sub-services. The agent
+// loop (stream.go) is being migrated to use the sub-services one
+// call site at a time. Once every call site is migrated, the
+// legacy fields will be removed.
 type Session struct {
 	mu       sync.RWMutex
 	client   ChatClient
@@ -72,6 +90,15 @@ type Session struct {
 	// Named lowercase (unexported) to avoid colliding with the public
 	// Session.Chat() method used by Reflector and SelfReview.
 	llm *ChatService
+	// perms (Phase 2), life (Phase 3), memory (Phase 4), persist
+	// (Phase 5), tools (Phase 6) are the remaining 5 sub-services.
+	// All optional; nil is the default and the agent loop preserves
+	// its `if s.X != nil` branching.
+	perms   *PermissionService
+	life    *LifecycleService
+	memory  *MemoryService
+	persist *PersistenceService
+	tools   *ToolService
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
@@ -161,6 +188,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
 func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string, registry *tool.Registry, deploymentRouting bool) *Session {
 	pe := NewPermissionEngine()
+	log := logger.Default()
 	s := &Session{
 		client:            chat,
 		registry:          registry,
@@ -168,7 +196,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		model:             model,
 		apiKeys:           map[string]string{},
 		system:            systemPrompt,
-		log:               logger.Default(),
+		log:               log,
 		metrics:           metrics.NewRegistry(),
 		Perm:              pe,
 		Permissions:       pe.Memory,
@@ -196,10 +224,49 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	cwd, _ := os.Getwd()
 	s.AgentsAccum = prompts.NewAgentsAccumulator(cwd)
 
+	// -----------------------------------------------------------------------
+	// Wire the 6 sub-services extracted in Phases 1-6 of the god-object
+	// decomposition (see docs/session-decomposition.md). New code should
+	// prefer the sub-service getters (s.ChatLLM(), s.PermSvc(), etc.) over
+	// the legacy fields. The legacy fields stay on Session for backward
+	// compat with external code (cmd/, daemon/, multiagent/, etc.) that
+	// reads them directly. They will be removed in a follow-up cleanup PR
+	// once all call sites are migrated.
+	//
+	// For each service whose state is also held as a Session field, we
+	// point the Session field at the service's instance so reads stay
+	// in sync (the two are aliases, not duplicates).
+	// -----------------------------------------------------------------------
+	s.llm = NewChatService(chat, ChatServiceConfig{
+		Provider:          provider,
+		Model:             model,
+		APIKeys:           s.apiKeys,
+		Router:            s.Router,
+		DeploymentRouting: deploymentRouting,
+		RateLimiter:       s.RateLimiter,
+		Metrics:           s.metrics,
+	})
+	s.perms = NewPermissionService(log).WithEngine(pe)
+	s.life = NewLifecycleService(log)
+	s.memory = NewMemoryService(log)
+	s.persist = NewPersistenceService(log)
+	s.persist.SetSystem(systemPrompt)
+	s.tools = NewToolService(registry)
+
+	// Alias legacy fields at the service instances so legacy readers see
+	// the same state as new code that goes through the sub-service getters.
+	s.Limits = s.life.Limits()
+	s.Beliefs = s.life.Beliefs()
+	s.Backtrack = s.life.Backtrack()
+	s.ResponseCache = s.life.ResponseCache()
+	s.Pipeline = s.life.Pipeline()
+
 	return s
 }
 
 // ReattachTransport swaps the LLM client after deployment routing or provider.json changes.
+// Also reattaches the ChatService so the agent loop's `s.ChatLLM().Stream`
+// call site picks up the new client (Phase 7 migration).
 func (s *Session) ReattachTransport(chat ChatClient, provider string, deploymentRouting bool) {
 	if chat == nil {
 		return
@@ -209,6 +276,9 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 		s.provider = strings.TrimSpace(provider)
 	}
 	s.DeploymentRouting = deploymentRouting
+	if s.llm != nil {
+		s.llm.Reattach(chat, s.provider)
+	}
 	for name, key := range s.apiKeys {
 		if strings.TrimSpace(key) != "" {
 			s.client.SetAPIKey(name, key)
@@ -238,6 +308,25 @@ func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 // session was constructed without going through NewSessionWithClient,
 // which should not happen in production.
 func (s *Session) ChatLLM() *ChatService { return s.llm }
+
+// PermSvc returns the extracted PermissionService (Phase 2). Returns
+// nil only if the session was constructed without
+// NewSessionWithClient, which should not happen in production.
+func (s *Session) PermSvc() *PermissionService { return s.perms }
+
+// LifecycleSvc returns the extracted LifecycleService (Phase 3).
+func (s *Session) LifecycleSvc() *LifecycleService { return s.life }
+
+// MemorySvc returns the extracted MemoryService (Phase 4).
+func (s *Session) MemorySvc() *MemoryService { return s.memory }
+
+// Persistence returns the extracted PersistenceService (Phase 5).
+// Provides the messages slice and system prompt (read/write) with
+// the underlying RWMutex.
+func (s *Session) Persistence() *PersistenceService { return s.persist }
+
+// Tools returns the extracted ToolService (Phase 6).
+func (s *Session) Tools() *ToolService { return s.tools }
 
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
