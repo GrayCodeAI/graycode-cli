@@ -99,8 +99,8 @@ func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClien
 	if err != nil {
 		return nil, fmt.Errorf("lsp: stdout pipe: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("lsp: start %s: %w", cfg.Command, err)
+	if startErr := cmd.Start(); startErr != nil {
+		return nil, fmt.Errorf("lsp: start %s: %w", cfg.Command, startErr)
 	}
 
 	c := &LSPClient{

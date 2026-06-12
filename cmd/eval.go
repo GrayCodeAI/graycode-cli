@@ -124,15 +124,15 @@ func runEval(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("no tasks matched the given filters")
 	}
 
-	model := evalModel
-	if model == "" {
-		model = "default"
+	modelName := evalModel
+	if modelName == "" {
+		modelName = "default"
 	}
 
-	fmt.Printf("Running %d tasks with model %s...\n", len(tasks), model)
+	fmt.Printf("Running %d tasks with model %s...\n", len(tasks), modelName)
 
 	suite := &eval.BenchmarkSuite{Name: "hawk-eval", Tasks: tasks}
-	runner := eval.NewRunner(model, "")
+	runner := eval.NewRunner(modelName, "")
 	runner.NoCache = evalNoCache
 	if !evalNoCache {
 		runner.Cache = eval.DefaultCache()

@@ -802,9 +802,9 @@ Generate the recap:`, summary.String())
 	case "/check":
 		return m.startPromptCommand("/check", buildCheckPrompt())
 	case "/design":
-		parts := strings.Fields(text)
-		if len(parts) >= 2 {
-			switch parts[1] {
+		fields := strings.Fields(text)
+		if len(fields) >= 2 {
+			switch fields[1] {
 			case "screenshot":
 				path := strings.TrimSpace(strings.TrimPrefix(text, "/design screenshot"))
 				if path == "" {
@@ -922,11 +922,11 @@ Generate the recap:`, summary.String())
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		model, provider := effectiveModelAndProvider(settings)
-		if provider == "" {
-			provider = "auto"
+		modelName, providerName := effectiveModelAndProvider(settings)
+		if providerName == "" {
+			providerName = "auto"
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatEcosystemPanel(context.Background(), provider, model)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName)})
 		return m, nil
 	case "/path":
 		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatDeveloperPathReport(context.Background())})
@@ -1294,11 +1294,11 @@ Generate the recap:`, summary.String())
 					return
 				}
 
-				text := strings.TrimSpace(string(transcription))
-				if text != "" {
-					m.input.SetValue(text)
+				transcript := strings.TrimSpace(string(transcription))
+				if transcript != "" {
+					m.input.SetValue(transcript)
 					m.input.CursorEnd()
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Voice input: %s", text)})
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Voice input: %s", transcript)})
 				}
 			}()
 		}

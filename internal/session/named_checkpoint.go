@@ -74,8 +74,8 @@ func SaveNamedCheckpoint(name string, s *Session) (*NamedCheckpoint, error) {
 		return nil, fmt.Errorf("marshal session: %w", err)
 	}
 	var snap Session
-	if err := json.Unmarshal(raw, &snap); err != nil {
-		return nil, fmt.Errorf("copy session: %w", err)
+	if unmarshalErr := json.Unmarshal(raw, &snap); unmarshalErr != nil {
+		return nil, fmt.Errorf("copy session: %w", unmarshalErr)
 	}
 
 	cp := &NamedCheckpoint{
@@ -85,8 +85,8 @@ func SaveNamedCheckpoint(name string, s *Session) (*NamedCheckpoint, error) {
 	}
 
 	dir := namedCheckpointsDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("create checkpoints directory: %w", err)
+	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+		return nil, fmt.Errorf("create checkpoints directory: %w", mkErr)
 	}
 
 	data, err := json.MarshalIndent(cp, "", "  ")

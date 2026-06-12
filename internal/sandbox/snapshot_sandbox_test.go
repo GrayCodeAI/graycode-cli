@@ -101,8 +101,8 @@ func TestPauseAndResume(t *testing.T) {
 	os.WriteFile(filepath.Join(workDir, "new.txt"), []byte("new file"), 0o644)
 
 	// Pause.
-	if err := mgr.Pause(sb.ID); err != nil {
-		t.Fatalf("Pause failed: %v", err)
+	if pauseErr := mgr.Pause(sb.ID); pauseErr != nil {
+		t.Fatalf("Pause failed: %v", pauseErr)
 	}
 	if sb.Status != "paused" {
 		t.Errorf("expected status paused, got %q", sb.Status)
@@ -113,8 +113,8 @@ func TestPauseAndResume(t *testing.T) {
 
 	// Verify persisted to disk.
 	path := filepath.Join(dir, sb.ID+".json")
-	if _, err := os.Stat(path); err != nil {
-		t.Errorf("expected persisted file at %s: %v", path, err)
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Errorf("expected persisted file at %s: %v", path, statErr)
 	}
 
 	// Wipe work dir to simulate environment teardown.

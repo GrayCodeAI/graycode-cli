@@ -490,15 +490,15 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	}
 	for rows.Next() {
 		var id string
-		if err := rows.Scan(&id); err != nil {
+		if scanErr := rows.Scan(&id); scanErr != nil {
 			rows.Close()
-			return nil, nil, fmt.Errorf("scanning node row: %w", err)
+			return nil, nil, fmt.Errorf("scanning node row: %w", scanErr)
 		}
 		nodes[id] = true
 	}
-	if err := rows.Err(); err != nil {
+	if iterErr := rows.Err(); iterErr != nil {
 		rows.Close()
-		return nil, nil, fmt.Errorf("iterating nodes: %w", err)
+		return nil, nil, fmt.Errorf("iterating nodes: %w", iterErr)
 	}
 	rows.Close()
 

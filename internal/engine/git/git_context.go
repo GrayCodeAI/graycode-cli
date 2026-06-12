@@ -86,7 +86,7 @@ func (gc *GitContext) GetFileInfo(path string) (*GitFileInfo, error) {
 	lines := strings.Split(logOut, "\n")
 	if len(lines) >= 4 {
 		info.LastAuthor = lines[1]
-		if t, err := time.Parse(time.RFC3339, lines[2]); err == nil {
+		if t, parseErr := time.Parse(time.RFC3339, lines[2]); parseErr == nil {
 			info.LastModified = t
 		}
 		info.LastCommitMsg = lines[3]
@@ -95,7 +95,7 @@ func (gc *GitContext) GetFileInfo(path string) (*GitFileInfo, error) {
 	// Count commits touching this file
 	countOut, err := gc.runGit("rev-list", "--count", "HEAD", "--", path)
 	if err == nil {
-		if n, err := strconv.Atoi(countOut); err == nil {
+		if n, parseErr := strconv.Atoi(countOut); parseErr == nil {
 			info.CommitCount = n
 		}
 	}
@@ -392,8 +392,8 @@ func (gc *GitContext) BuildContextForFile(path string) string {
 	commitCount := 0
 	for _, c := range recentCommits {
 		// Check if this commit touched the file
-		filesOut, err := gc.runGit("diff-tree", "--no-commit-id", "-r", "--name-only", c.Hash)
-		if err == nil {
+		filesOut, diffErr := gc.runGit("diff-tree", "--no-commit-id", "-r", "--name-only", c.Hash)
+		if diffErr == nil {
 			for _, f := range strings.Split(filesOut, "\n") {
 				if strings.TrimSpace(f) == path {
 					commitCount++
@@ -434,8 +434,8 @@ func (gc *GitContext) BuildContextForSession() string {
 		// Check how far ahead of main
 		aheadBehind := ""
 		for _, base := range []string{"main", "master"} {
-			out, err := gc.runGit("rev-list", "--count", base+"..HEAD")
-			if err == nil {
+			out, revErr := gc.runGit("rev-list", "--count", base+"..HEAD")
+			if revErr == nil {
 				if n, _ := strconv.Atoi(out); n > 0 {
 					aheadBehind = fmt.Sprintf(" (ahead of %s by %d commits)", base, n)
 				}

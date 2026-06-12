@@ -109,8 +109,8 @@ func RunDream(ctx context.Context, cfg AutoDreamConfig, agentFn func(ctx context
 		if e.IsDir() || filepath.Ext(e.Name()) != ".md" {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(memDir, e.Name()))
-		if err != nil {
+		data, readErr := os.ReadFile(filepath.Join(memDir, e.Name()))
+		if readErr != nil {
 			continue
 		}
 		memoryContent += fmt.Sprintf("--- %s ---\n%s\n\n", e.Name(), string(data))

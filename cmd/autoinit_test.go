@@ -37,7 +37,7 @@ func TestAutoInitRunner_WritesContextFileOnce(t *testing.T) {
 	}
 
 	ctxFile := filepath.Join(root, autoInitContextFile)
-	if _, err := os.Stat(ctxFile); err != nil {
+	if _, statErr := os.Stat(ctxFile); statErr != nil {
 		t.Fatalf("expected context file %s to be written: %v", autoInitContextFile, err)
 	}
 

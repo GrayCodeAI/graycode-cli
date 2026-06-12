@@ -338,9 +338,9 @@ func TestRotatingWriter(t *testing.T) {
 	// Write enough data to trigger rotation.
 	data := bytes.Repeat([]byte("A"), 60)
 	for i := 0; i < 5; i++ {
-		_, err := rw.Write(data)
-		if err != nil {
-			t.Fatalf("write %d failed: %v", i, err)
+		_, writeErr := rw.Write(data)
+		if writeErr != nil {
+			t.Fatalf("write %d failed: %v", i, writeErr)
 		}
 	}
 

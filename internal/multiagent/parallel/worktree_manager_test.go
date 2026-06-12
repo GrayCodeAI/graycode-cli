@@ -397,8 +397,8 @@ func TestIsClean(t *testing.T) {
 
 	// Create an uncommitted file.
 	dirty := filepath.Join(wt.Path, "dirty.txt")
-	if err := os.WriteFile(dirty, []byte("uncommitted\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(dirty, []byte("uncommitted\n"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	clean, err = wm.IsClean(wt.ID)
@@ -428,8 +428,8 @@ func TestGetDiff(t *testing.T) {
 
 	// Make a commit in the worktree.
 	newFile := filepath.Join(wt.Path, "diffed.txt")
-	if err := os.WriteFile(newFile, []byte("new content\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(newFile, []byte("new content\n"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 	runGitIn(t, wt.Path, "add", "diffed.txt")
 	runGitIn(t, wt.Path, "commit", "-m", "add diffed.txt")

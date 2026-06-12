@@ -39,8 +39,8 @@ func runPrint(text string) error {
 
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if err := configureSession(sess, settings); err != nil {
-		return err
+	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+		return cfgErr
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -261,8 +261,8 @@ func runRepl() error {
 
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if err := configureSession(sess, settings); err != nil {
-		return err
+	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+		return cfgErr
 	}
 
 	reader := bufio.NewReader(os.Stdin)

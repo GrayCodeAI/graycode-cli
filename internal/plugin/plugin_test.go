@@ -84,8 +84,8 @@ func TestInstallAndUninstall(t *testing.T) {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
 
-	if err := Uninstall("test-plugin"); err != nil {
-		t.Fatal(err)
+	if uninstallErr := Uninstall("test-plugin"); uninstallErr != nil {
+		t.Fatal(uninstallErr)
 	}
 
 	plugins, err = List()

@@ -55,11 +55,11 @@ var modelsStatusCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		model, _ := effectiveModelAndProvider(settings)
+		modelName, _ := effectiveModelAndProvider(settings)
 		if len(args) > 0 {
-			model = args[0]
+			modelName = args[0]
 		}
-		report, err := hawkconfig.DeploymentStatusReport(ctx, model)
+		report, err := hawkconfig.DeploymentStatusReport(ctx, modelName)
 		if err != nil {
 			return err
 		}
@@ -73,8 +73,8 @@ var modelsRoutingPreviewCmd = &cobra.Command{
 	Short: "Print effective deployment routing JSON for a model",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		model := args[0]
-		out, err := hawkconfig.RoutingPreviewJSON(context.Background(), model)
+		modelName := args[0]
+		out, err := hawkconfig.RoutingPreviewJSON(context.Background(), modelName)
 		if err != nil {
 			return err
 		}
@@ -87,20 +87,20 @@ var modelsListCmd = &cobra.Command{
 	Use:   "list [provider]",
 	Short: "List models from the eyrie catalog cache (or live provider API)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		provider := ""
+		providerName := ""
 		if len(args) > 0 {
-			provider = args[0]
+			providerName = args[0]
 		}
 		ctx := context.Background()
 		var models []catalog.ModelCatalogEntry
 		var err error
 		if modelsListLive {
-			if provider == "" {
+			if providerName == "" {
 				return fmt.Errorf("provider required with --live (e.g. hawk models list canopywave --live --json)")
 			}
-			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.NormalizeProviderForEngine(provider))
+			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.NormalizeProviderForEngine(providerName))
 		} else {
-			models, err = hawkconfig.FetchModelsForProvider(provider)
+			models, err = hawkconfig.FetchModelsForProvider(providerName)
 		}
 		if err != nil {
 			return err
@@ -137,8 +137,8 @@ var modelsListCmd = &cobra.Command{
 			return nil
 		}
 		cmd.Printf("%d models", len(models))
-		if provider != "" {
-			cmd.Printf(" for provider %q", provider)
+		if providerName != "" {
+			cmd.Printf(" for provider %q", providerName)
 		}
 		cmd.Println()
 		rows := make([]modelTableRow, len(models))

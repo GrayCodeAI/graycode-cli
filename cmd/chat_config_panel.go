@@ -77,14 +77,14 @@ func (m chatModel) configPanelView() string {
 func (m chatModel) configProviderKeyView() string {
 	titleStyle := configTitleStyle()
 	mutedStyle := configMutedStyle()
-	provider := strings.TrimSpace(m.configProvider)
+	providerName := strings.TrimSpace(m.configProvider)
 	title := "🔑 Paste API key"
 	hint := "validates with provider API · stored in " + credentialsStoreLabel()
-	if provider != "" {
-		title = "🔑 " + hawkconfig.GatewayDisplayName(provider)
+	if providerName != "" {
+		title = "🔑 " + hawkconfig.GatewayDisplayName(providerName)
 		hint = "paste key for this gateway only · " + hint
 	}
-	if provider == hawkconfig.ProviderXiaomiTokenPlan {
+	if providerName == hawkconfig.ProviderXiaomiTokenPlan {
 		reg := hawkconfig.XiaomiTokenPlanRegionLabel()
 		if reg == "" {
 			reg = "not set — esc and pick region with g or enter on gateway row"
@@ -243,8 +243,8 @@ func (m chatModel) configPanelViewWidth() int {
 
 func (m chatModel) configActiveModelID() string {
 	if m.session != nil {
-		if model := strings.TrimSpace(m.session.Model()); model != "" {
-			return model
+		if modelName := strings.TrimSpace(m.session.Model()); modelName != "" {
+			return modelName
 		}
 	}
 	return strings.TrimSpace(hawkconfig.ActiveModel(context.Background()))
@@ -448,37 +448,37 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		return m, saveOllamaAsync(value)
 	case configEntryAPIKeyPaste:
 		if value == "" {
-			provider := strings.TrimSpace(m.configProvider)
+			providerName := strings.TrimSpace(m.configProvider)
 			m.configEntry = configEntryNone
 			m.configProvider = ""
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
 			m.configTab = configTabGateways
 			m.configNotice = "No API key entered — paste your key, then press enter"
-			if provider != "" {
-				if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+			if providerName != "" {
+				if idx := m.configGatewayRowIndex(providerName); idx >= 0 {
 					m.configSel = idx
 				}
 			}
 			return m, nil
 		}
-		provider := strings.TrimSpace(m.configReplaceProvider)
-		if provider == "" {
-			provider = strings.TrimSpace(m.configProvider)
+		providerName := strings.TrimSpace(m.configReplaceProvider)
+		if providerName == "" {
+			providerName = strings.TrimSpace(m.configProvider)
 		}
 		m.configReplaceProvider = ""
-		if provider == "" {
+		if providerName == "" {
 			m.configNotice = "Select a gateway on the Gateways tab first"
 			m.configEntry = configEntryNone
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
 			return m, nil
 		}
-		if provider == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
+		if providerName == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(providerName) {
 			m.configEntry = configEntryNone
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
-			m.configPostSaveKeysProvider = provider
+			m.configPostSaveKeysProvider = providerName
 			m.configNotice = "Pick Token Plan region before pasting key"
 			return m.startConfigXiaomiTokenPlanRegion(), nil
 		}
@@ -486,21 +486,21 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		m.configProvider = ""
 		m.wipeConfigKeyInput()
 		m.restoreChatInput()
-		inference, err := hawkconfig.CredentialInferenceForProvider(provider)
+		inference, err := hawkconfig.CredentialInferenceForProvider(providerName)
 		if err != nil {
 			m.configTab = configTabGateways
 			m.configNotice = "Could not save key: " + sanitizeConfigNotice(err.Error())
-			if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+			if idx := m.configGatewayRowIndex(providerName); idx >= 0 {
 				m.configSel = idx
 			}
 			return m, nil
 		}
-		m.configPostSaveKeysProvider = provider
+		m.configPostSaveKeysProvider = providerName
 		m.configSaving = true
 		notice := fmt.Sprintf("Validating key for %s…", inference.DisplayName)
-		if hint := xiaomi.KeyMismatchHint(xiaomi.BillingTokenPlan, value); provider == hawkconfig.ProviderXiaomiTokenPlan && hint != "" {
+		if hint := xiaomi.KeyMismatchHint(xiaomi.BillingTokenPlan, value); providerName == hawkconfig.ProviderXiaomiTokenPlan && hint != "" {
 			notice = hint + " · " + notice
-		} else if hint := xiaomi.KeyMismatchHint(xiaomi.BillingPayAsYouGo, value); provider == xiaomi.ProviderPayAsYouGo && hint != "" {
+		} else if hint := xiaomi.KeyMismatchHint(xiaomi.BillingPayAsYouGo, value); providerName == xiaomi.ProviderPayAsYouGo && hint != "" {
 			notice = hint + " · " + notice
 		}
 		m.configNotice = notice
@@ -528,17 +528,17 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			m.restoreChatInput()
 			return m, nil
 		case configEntryAPIKeyPaste:
-			provider := strings.TrimSpace(m.configReplaceProvider)
-			if provider == "" {
-				provider = strings.TrimSpace(m.configProvider)
+			providerName := strings.TrimSpace(m.configReplaceProvider)
+			if providerName == "" {
+				providerName = strings.TrimSpace(m.configProvider)
 			}
 			m.configReplaceProvider = ""
 			m.configEntry = configEntryNone
 			m.configProvider = ""
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
-			if provider != "" {
-				if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+			if providerName != "" {
+				if idx := m.configGatewayRowIndex(providerName); idx >= 0 {
 					m.configSel = idx
 				}
 			}

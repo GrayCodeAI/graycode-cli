@@ -36,8 +36,8 @@ func TestLiveOpenCodeGoMiniMaxM3FullHawkPath(t *testing.T) {
 
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(ioDiscard{}, logger.Info))
-	if err := configureSession(sess, settings); err != nil {
-		t.Fatal(err)
+	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+		t.Fatal(cfgErr)
 	}
 	sess.AddUser("Hi")
 
