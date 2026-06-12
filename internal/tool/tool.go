@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -86,6 +87,53 @@ func GetToolContext(ctx context.Context) *ToolContext {
 		return tc
 	}
 	return nil
+}
+
+// ReadOnlyTools is the canonical allowlist of tool names whose execution is
+// side-effect-free and therefore safe to run in parallel with each other
+// within a single agent turn. Consumers (engine/stream.go classifyToolCalls,
+// engine/stream.go safeSnapshotTools) MUST go through this set instead of
+// redefining it inline. To add a new read-only tool, append its canonical
+// name here AND ensure canonicalToolName normalises all of its aliases.
+var ReadOnlyTools = map[string]bool{
+	"Read":       true,
+	"Grep":       true,
+	"Glob":       true,
+	"LS":         true,
+	"WebSearch":  true,
+	"WebFetch":   true,
+	"ToolSearch": true,
+}
+
+// IsReadOnly reports whether the given (possibly-aliased) tool name is in
+// the read-only allowlist. It first canonicalises the name so an LLM-emitted
+// alias like "read" or "file_read" still classifies correctly.
+func IsReadOnly(name string) bool {
+	return ReadOnlyTools[canonicalForReadOnly(name)]
+}
+
+// canonicalForReadOnly is a small case-folded map lookup; it intentionally
+// duplicates a subset of engine.canonicalToolName to avoid an import cycle
+// (tool → engine would be a cycle because engine imports tool). The map
+// below MUST be kept in sync with engine.permission_session_methods.canonicalToolName.
+func canonicalForReadOnly(name string) string {
+	switch strings.ToLower(name) {
+	case "read", "file_read":
+		return "Read"
+	case "grep":
+		return "Grep"
+	case "glob":
+		return "Glob"
+	case "ls":
+		return "LS"
+	case "websearch", "web_search":
+		return "WebSearch"
+	case "webfetch", "web_fetch":
+		return "WebFetch"
+	case "toolsearch", "tool_search":
+		return "ToolSearch"
+	}
+	return name
 }
 
 // Registry holds all registered tools.
