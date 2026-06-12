@@ -83,15 +83,15 @@ func (g *CompletionGenerator) populateSlashCommands() {
 		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks",
 		"/hunt", "/init", "/integrity", "/keybindings", "/learn", "/lint", "/loop",
 		"/mcp", "/memory", "/metrics", "/model", "/new", "/output-style",
-		"/permissions", "/pin", "/plan", "/plugin", "/plugins", "/power",
+		"/permissions", "/pin", "/plugin", "/plugins", "/power",
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog",
 		"/release-notes", "/reload-plugins", "/remote-env", "/rename", "/render",
 		"/research", "/resume", "/retry", "/review", "/rewind", "/run",
-		"/sandbox", "/search", "/security-review", "/session", "/share", "/skills",
+		"/search", "/security-review", "/session", "/share", "/skills",
 		"/snapshot", "/stats", "/status", "/statusline", "/summary", "/tag", "/tasks",
 		"/test", "/theme", "/think", "/think-back", "/thinkback", "/thinkback-play",
 		"/tokens", "/tools", "/undo", "/upgrade", "/usage", "/version", "/vibe",
-		"/vim", "/voice", "/welcome", "/yolo",
+		"/vim", "/voice", "/welcome",
 	}
 }
 
@@ -523,7 +523,7 @@ func normalizeFlagType(flagType string) string {
 func flagChoices(name string) []string {
 	switch name {
 	case "permission-mode":
-		return []string{"default", "acceptEdits", "bypassPermissions", "dontAsk", "plan"}
+		return []string{"default", "edits", "bypass", "dontask", "plan"}
 	case "output-format":
 		return []string{"text", "json", "stream-json"}
 	case "input-format":

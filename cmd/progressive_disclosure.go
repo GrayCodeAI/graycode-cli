@@ -119,7 +119,7 @@ Workflow:
   /diff              Show git diff
   /lint [cmd]        Run linter
   /check             Full pre-ship check (review + fix + verify)
-  /plan              Enter read-only planning mode
+  /permissions       Permission center for tier, sandbox, mode, rules
   /research <cmd>    Autonomous research loop
   /vibe              Enter vibe coding mode
   /think <topic>     Turn idea into approved plan
@@ -203,8 +203,7 @@ Diagnostics:
 System:
   /version           Show version
   /env               Show environment
-  /sandbox           Toggle approval mode
-  /yolo              Toggle auto-approve
+  /permissions       Permission center
   /vim               Toggle vim mode
   /theme <t>         Set theme
   /voice             Toggle voice input

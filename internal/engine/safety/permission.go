@@ -29,6 +29,15 @@ func NewPermissionMemory() *PermissionMemory {
 	return &PermissionMemory{allowAll: make(map[string]bool)}
 }
 
+// Reset clears all allow/deny memory so the active rule set can be rebuilt.
+func (pm *PermissionMemory) Reset() {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	pm.allowRules = nil
+	pm.denyRules = nil
+	pm.allowAll = make(map[string]bool)
+}
+
 // PermissionMode controls how permission prompts are handled.
 type PermissionMode string
 
