@@ -36,11 +36,19 @@ func classifyToolCalls(calls []types.ToolCall) (concurrent, sequential []types.T
 	return
 }
 
-// extractTargets extracts file paths from a tool call's arguments.
+// filePathArgKeys is the list of argument names that are conventionally
+// file paths. Tools with non-standard names silently fall through and
+// extractTargets returns an empty list. For a more robust extraction, see
+// ExtractTargetsFromSchema which walks the tool's JSON Schema.
+var filePathArgKeys = []string{"file_path", "path", "file", "destination"}
+
+// extractTargets extracts file paths from a tool call's arguments using a
+// hardcoded allowlist of conventional argument names. New tools with
+// non-standard names fall through and produce no targets. For
+// schema-aware extraction, see ExtractTargetsFromSchema.
 func extractTargets(tc types.ToolCall) []string {
 	var targets []string
-	// Common argument names for file paths
-	for _, key := range []string{"file_path", "path", "file", "destination"} {
+	for _, key := range filePathArgKeys {
 		if v, ok := tc.Arguments[key]; ok {
 			if s, ok := v.(string); ok && s != "" {
 				targets = append(targets, s)
@@ -50,15 +58,89 @@ func extractTargets(tc types.ToolCall) []string {
 	return targets
 }
 
+// filePathLikeKeySubstrings are substrings in JSON Schema property names that
+// strongly suggest a file-path argument. Used by ExtractTargetsFromSchema to
+// discover non-conventional argument names.
+var filePathLikeKeySubstrings = []string{"path", "file", "dir", "destination", "target"}
+
+// ExtractTargetsFromSchema walks the tool's JSON Schema to discover file-path
+// arguments in the tool call. It does this by:
+//  1. Reading `parameters` (the JSON Schema map) to enumerate property names.
+//  2. Selecting properties whose name contains a filePathLikeKeySubstrings
+//     match (case-insensitive), or whose `description` field mentions a path
+//     synonym.
+//  3. Extracting the value of each selected property from tc.Arguments.
+//
+// Tools that don't follow the conventional {file_path, path, file, destination}
+// naming can now have their file targets correctly extracted.
+func ExtractTargetsFromSchema(t tool.Tool, tc types.ToolCall) []string {
+	var targets []string
+	params := t.Parameters()
+	props, _ := params["properties"].(map[string]interface{})
+	if props == nil {
+		// Fall back to the conventional allowlist if the tool doesn't expose
+		// a JSON Schema (e.g. an LLM-emitted tool or a tests-only stub).
+		return extractTargets(tc)
+	}
+	for propName, propDef := range props {
+		propNameLower := strings.ToLower(propName)
+		// Convention 1: property name contains a file-path substring.
+		nameMatches := false
+		for _, sub := range filePathLikeKeySubstrings {
+			if strings.Contains(propNameLower, sub) {
+				nameMatches = true
+				break
+			}
+		}
+		// Convention 2: property description mentions "path", "file", or
+		// "directory" — strong signal of a file-path argument.
+		descMatches := false
+		if pd, ok := propDef.(map[string]interface{}); ok {
+			if desc, ok := pd["description"].(string); ok {
+				dl := strings.ToLower(desc)
+				if strings.Contains(dl, "path") || strings.Contains(dl, "file") || strings.Contains(dl, "directory") {
+					descMatches = true
+				}
+			}
+		}
+		if !nameMatches && !descMatches {
+			continue
+		}
+		// Type must be a string for us to treat it as a file path.
+		if pd, ok := propDef.(map[string]interface{}); ok {
+			if typ, ok := pd["type"].(string); ok && typ != "string" {
+				continue
+			}
+		}
+		v, ok := tc.Arguments[propName]
+		if !ok {
+			continue
+		}
+		if s, ok := v.(string); ok && s != "" {
+			targets = append(targets, s)
+		}
+	}
+	return targets
+}
+
 // executeToolCalls runs all tool calls and returns results.
 func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) []toolExecResult {
-	// Estimate blast radius before execution
+	// Estimate blast radius before execution. Use the schema-aware target
+	// extractor when the tool is registered (so non-conventional argument
+	// names like "target_path" or "destFile" are still picked up); fall back
+	// to the conventional extractor otherwise.
 	plannedCalls := make([]PlannedCall, len(toolCalls))
 	for i, tc := range toolCalls {
+		var targets []string
+		if t, ok := s.registry.Get(tc.Name); ok {
+			targets = ExtractTargetsFromSchema(t, tc)
+		} else {
+			targets = extractTargets(tc)
+		}
 		plannedCalls[i] = PlannedCall{
 			ToolName: tc.Name,
 			Args:     tc.Arguments,
-			Targets:  extractTargets(tc),
+			Targets:  targets,
 		}
 	}
 	blastReport := EstimateBlastRadius(plannedCalls)
@@ -170,7 +252,19 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
-	output, execErr := s.registry.Execute(toolCtx, tc.Name, inputJSON)
+	// Apply the per-tool retry policy for transient errors. Tools can opt out
+	// by setting a zero-value RetryPolicy on themselves (via the
+	// RetryPolicyProvider interface) — Read/Write/Edit etc. don't opt out and
+	// get the default policy of 2 retries (3 attempts total) with 200ms→2s
+	// exponential backoff.
+	t, _ := s.registry.Get(tc.Name)
+	var output string
+	var execErr error
+	if rpp, ok := t.(tool.RetryPolicyProvider); ok {
+		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, rpp.RetryPolicy())
+	} else {
+		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, tool.DefaultRetryPolicy())
+	}
 	toolCancel()
 	isErr := execErr != nil
 	if isErr {
