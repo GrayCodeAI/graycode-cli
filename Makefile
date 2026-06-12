@@ -219,8 +219,12 @@ build-static: ## Build fully static binaries for Linux (musl-compatible)
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-amd64-static $(MAIN_PKG)
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-arm64-static $(MAIN_PKG)
 
-size-check: build ## Report binary size and warn if over threshold (100MB, matching CI).
+size-check: build ## Report binary size and warn if over threshold (110MB, matching CI).
 	@SIZE=$$(stat -f%z bin/$(NAME) 2>/dev/null || stat -c%s bin/$(NAME) 2>/dev/null); \
 	MB=$$(echo "scale=1; $$SIZE / 1048576" | bc); \
 	echo "Binary size: $${MB} MB"; \
-	if [ $$SIZE -gt 104857600 ]; then echo "ERROR: binary exceeds 100MB (CI threshold)"; exit 1; fi
+	# Threshold matches CI (.github/workflows/ci.yml). CI emits a warning
+	# (::warning::) not an error so the build doesn't fail; we mirror that here
+	# so `make size-check` and CI agree on what's acceptable. Bump the threshold
+	# in both places if you intentionally grow the binary past 110MB.
+	if [ $$SIZE -gt 115343360 ]; then echo "::warning::Binary size $${MB} MB exceeds 110 MB threshold (CI gate)"; fi

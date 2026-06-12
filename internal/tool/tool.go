@@ -38,6 +38,13 @@ type PathProtector interface {
 	IsProtected(path string) bool
 }
 
+// RetryPolicyProvider is an optional interface a tool can implement to
+// customise the retry policy applied to its transient errors. Tools that
+// don't implement it get tool.DefaultRetryPolicy (2 retries, 200ms→2s).
+type RetryPolicyProvider interface {
+	RetryPolicy() RetryPolicy
+}
+
 // CodeSearchResult is returned by CodeSearchFn.
 type CodeSearchResult struct {
 	Path      string
