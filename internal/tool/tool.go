@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
@@ -145,6 +146,7 @@ func canonicalForReadOnly(name string) string {
 
 // Registry holds all registered tools.
 type Registry struct {
+	mu      sync.RWMutex
 	tools   map[string]Tool
 	primary []Tool
 }
@@ -171,12 +173,16 @@ func NewRegistry(tools ...Tool) *Registry {
 
 // Get returns a tool by name.
 func (r *Registry) Get(name string) (Tool, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	t, ok := r.tools[name]
 	return t, ok
 }
 
 // PrimaryTools returns the model-visible tools registered in this registry.
 func (r *Registry) PrimaryTools() []Tool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	out := make([]Tool, len(r.primary))
 	copy(out, r.primary)
 	return out
@@ -184,6 +190,8 @@ func (r *Registry) PrimaryTools() []Tool {
 
 // Filter returns a new Registry containing only tools whose names are in the allowlist.
 func (r *Registry) Filter(allow []string) *Registry {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	set := make(map[string]bool, len(allow))
 	for _, name := range allow {
 		set[name] = true
@@ -199,6 +207,8 @@ func (r *Registry) Filter(allow []string) *Registry {
 
 // EyrieTools converts all tools to eyrie tool definitions for the API.
 func (r *Registry) EyrieTools() []client.EyrieTool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	out := make([]client.EyrieTool, 0, len(r.primary))
 	for _, t := range r.primary {
 		out = append(out, client.EyrieTool{
@@ -212,6 +222,8 @@ func (r *Registry) EyrieTools() []client.EyrieTool {
 
 // Execute runs a tool by name with the given JSON input.
 func (r *Registry) Execute(ctx context.Context, name string, input json.RawMessage) (string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	t, ok := r.tools[name]
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", name)
@@ -222,6 +234,8 @@ func (r *Registry) Execute(ctx context.Context, name string, input json.RawMessa
 // Register adds a tool to the registry after creation.
 // Returns error if a tool with the same name already exists (unless it's an alias).
 func (r *Registry) Register(t Tool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, exists := r.tools[t.Name()]; exists {
 		return fmt.Errorf("tool %q already registered", t.Name())
 	}
