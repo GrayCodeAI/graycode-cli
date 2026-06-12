@@ -43,7 +43,7 @@ func NewPersistenceService(log *logger.Logger) *PersistenceService {
 		log = logger.Default()
 	}
 	return &PersistenceService{
-		log:                    log,
+		log:                     log,
 		autoCompactThresholdPct: DefaultAutoCompactThresholdPct,
 	}
 }

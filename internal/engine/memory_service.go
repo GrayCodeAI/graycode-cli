@@ -93,7 +93,7 @@ func (s *MemoryService) OnSessionEnd(success bool) {
 
 // Accessors.
 func (s *MemoryService) Yaad() *memory.YaadBridge { return s.yaad }
-func (s *MemoryService) Memory() MemoryRecaller { return s.memory }
+func (s *MemoryService) Memory() MemoryRecaller   { return s.memory }
 func (s *MemoryService) Enhanced() *memory.EnhancedMemoryManager {
 	return s.enhanced
 }
