@@ -218,8 +218,8 @@ func (m *Manager) Get(name string) *Breaker {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	// Double-check
-	if b, ok := m.breakers[name]; ok {
-		return b
+	if existingB, ok := m.breakers[name]; ok {
+		return existingB
 	}
 	b = New(m.config)
 	m.breakers[name] = b

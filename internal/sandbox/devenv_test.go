@@ -69,8 +69,8 @@ func TestDevEnvManager_GetOrBuild_RebuildsOnChange(t *testing.T) {
 	}
 
 	// Modify Dockerfile
-	if err := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo v2"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(dockerfile, []byte("FROM alpine:latest\nRUN echo v2"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	tag2, err := mgr.GetOrBuild(ctx, dockerfile)

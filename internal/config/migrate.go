@@ -343,8 +343,8 @@ func (r *MigrationRegistry) MigrateFile(path string) error {
 	}
 
 	var data map[string]interface{}
-	if err := json.Unmarshal(rawData, &data); err != nil {
-		return fmt.Errorf("failed to parse config JSON: %w", err)
+	if unmarshalErr := json.Unmarshal(rawData, &data); unmarshalErr != nil {
+		return fmt.Errorf("failed to parse config JSON: %w", unmarshalErr)
 	}
 
 	if !r.NeedsMigration(data) {

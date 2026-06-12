@@ -40,7 +40,7 @@ func (b *YaadBridge) init() {
 		return
 	}
 	dbDir := filepath.Join(home, ".yaad", "data")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if mkErr := os.MkdirAll(dbDir, 0o755); mkErr != nil {
 		return
 	}
 	dbPath := filepath.Join(dbDir, "yaad.db")

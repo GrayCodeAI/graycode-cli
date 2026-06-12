@@ -46,9 +46,9 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 	var reviews []*ReviewRecord
 	if len(args) > 0 {
 		for _, ref := range args {
-			r, err := resolveReview(store, ref)
-			if err != nil {
-				return err
+			r, resolveErr := resolveReview(store, ref)
+			if resolveErr != nil {
+				return resolveErr
 			}
 			reviews = append(reviews, r)
 		}

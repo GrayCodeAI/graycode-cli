@@ -59,14 +59,14 @@ func (m *chatModel) invalidateConnStatus() {
 }
 
 func (m chatModel) connStatusFingerprint() string {
-	gw, model := m.sessionGatewayModel()
+	gw, modelName := m.sessionGatewayModel()
 	creds := strings.Join(hawkconfig.ConfiguredCredentialProviders(), ",")
 	api := 0
 	if m.session != nil {
 		api = m.session.LastPromptTokens()
 	}
 	used := sessionContextUsedTokens(m.session)
-	return gw + "\x00" + model + "\x00" + creds + "\x00" + fmt.Sprintf("%d", used) + "\x00" + fmt.Sprintf("%d", api)
+	return gw + "\x00" + modelName + "\x00" + creds + "\x00" + fmt.Sprintf("%d", used) + "\x00" + fmt.Sprintf("%d", api)
 }
 
 func (m chatModel) sessionGatewayModel() (gateway, model string) {
@@ -103,11 +103,11 @@ func (m *chatModel) chatConnectionStatus() string {
 }
 
 func (m chatModel) buildConnectionStatusPlain() string {
-	gw, model, ctxLabel := m.connectionStatusParts()
-	if gw == "" && model == "" {
+	gw, modelName, ctxLabel := m.connectionStatusParts()
+	if gw == "" && modelName == "" {
 		return "pick model"
 	}
-	if model == "" {
+	if modelName == "" {
 		if gw == "" {
 			return "pick model"
 		}
@@ -116,13 +116,13 @@ func (m chatModel) buildConnectionStatusPlain() string {
 	if ctxLabel != "" && ctxLabel != "—" {
 		ctxText := formatConnectionContextLabel(m, ctxLabel)
 		if ctxText != "" {
-			return fmt.Sprintf("%s · %s · %s", gw, model, ctxText)
+			return fmt.Sprintf("%s · %s · %s", gw, modelName, ctxText)
 		}
 	}
 	if gw == "" {
-		return model
+		return modelName
 	}
-	return gw + " · " + model
+	return gw + " · " + modelName
 }
 
 func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string) {
@@ -167,9 +167,9 @@ func (m chatModel) renderConnectionStatusSplit() (modelRendered string, modelVis
 		return "", 0, "", 0
 	}
 
-	gw, model, ctxLabel := m.connectionStatusParts()
+	gw, modelName, ctxLabel := m.connectionStatusParts()
 	ctxText := formatConnectionContextLabel(m, ctxLabel)
-	modelRendered, modelVis = renderChatConnectionModel(gw, model)
+	modelRendered, modelVis = renderChatConnectionModel(gw, modelName)
 	if ctxText != "" {
 		ctxRendered, ctxVis = renderChatConnectionContext(ctxText, contextUsagePercent(m, ctxLabel))
 	}

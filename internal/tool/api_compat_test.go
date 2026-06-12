@@ -410,8 +410,8 @@ func TestSaveAndLoadSnapshot(t *testing.T) {
 	}
 
 	savePath := filepath.Join(t.TempDir(), "baseline.json")
-	if err := cc.SaveSnapshot(snap, savePath); err != nil {
-		t.Fatalf("SaveSnapshot failed: %v", err)
+	if saveErr := cc.SaveSnapshot(snap, savePath); saveErr != nil {
+		t.Fatalf("SaveSnapshot failed: %v", saveErr)
 	}
 
 	loaded, err := cc.LoadSnapshot(savePath)

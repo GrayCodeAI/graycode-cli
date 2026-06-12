@@ -157,13 +157,13 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	}
 
 	if forGate {
-		if model, provider := effectiveModelAndProvider(settings); model != "" {
+		if modelName, providerName := effectiveModelAndProvider(settings); modelName != "" {
 			var plainParts, styledParts []string
-			if provider != "" {
-				plainParts = append(plainParts, provider)
-				styledParts = append(styledParts, mutedC+provider+rst)
+			if providerName != "" {
+				plainParts = append(plainParts, providerName)
+				styledParts = append(styledParts, mutedC+providerName+rst)
 			}
-			short := normalizeModelDisplayName(model, model)
+			short := normalizeModelDisplayName(modelName, modelName)
 			plainParts = append(plainParts, short)
 			styledParts = append(styledParts, bodyC+short+rst)
 			mode := permissionModeLabel(sess)
@@ -313,8 +313,8 @@ func envSummaryWithSelection(provider, model string, includeSelection bool) stri
 
 func configCommandSummary(settings hawkconfig.Settings) string {
 	_ = settings
-	provider := displayConfigValue(hawkconfig.ActiveProvider(context.TODO()))
-	model := displayConfigValue(hawkconfig.ActiveModel(context.TODO()))
+	providerName := displayConfigValue(hawkconfig.ActiveProvider(context.Background()))
+	modelName := displayConfigValue(hawkconfig.ActiveModel(context.Background()))
 	return fmt.Sprintf(`Setup (eyrie)
 
   /config  → paste API key (OS keychain) + pick model
@@ -326,7 +326,7 @@ Current:
   model:    %s
   keys:     %s
 
-Model catalog and routing live in eyrie — hawk is the UI only.`, provider, model, configuredKeyList())
+Model catalog and routing live in eyrie — hawk is the UI only.`, providerName, modelName, configuredKeyList())
 }
 
 func apiKeyConfigSummary() string {

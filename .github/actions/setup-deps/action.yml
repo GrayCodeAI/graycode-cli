@@ -18,7 +18,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
       run: |
         clone_with_retry() {
-          local repo=$1 dest=$2 branch=${3:-dev}
+          local repo=$1 dest=$2 branch=${3:-main}
           for i in 1 2 3; do
             git clone --depth=1 --branch "$branch" "https://x-access-token:${GH_TOKEN}@github.com/GrayCodeAI/${repo}.git" "$dest" && return 0
             echo "Retry $i for $repo..." && sleep $((i * 5))
@@ -26,15 +26,15 @@ runs:
           echo "Failed to clone $repo after 3 attempts" && return 1
         }
         mkdir -p external
-        clone_with_retry eyrie external/eyrie dev
-        clone_with_retry tok external/tok dev
-        clone_with_retry yaad external/yaad dev
-        clone_with_retry inspect external/inspect dev
-        clone_with_retry sight external/sight dev
-        clone_with_retry trace external/trace dev
+        clone_with_retry eyrie external/eyrie main
+        clone_with_retry tok external/tok main
+        clone_with_retry yaad external/yaad main
+        clone_with_retry inspect external/inspect main
+        clone_with_retry sight external/sight main
+        clone_with_retry trace external/trace main
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
       with:
         go-version: ${{ inputs.go-version }}
 

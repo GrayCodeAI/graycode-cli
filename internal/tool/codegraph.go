@@ -700,7 +700,7 @@ func crossRepoCodeGraph(query string, maxNodes int) (string, error) {
 		for _, entry := range entries {
 			if entry.IsDir() {
 				dbPath := filepath.Join(parentDir, entry.Name(), ".codegraph", "codegraph.db")
-				if _, err := os.Stat(dbPath); err == nil {
+				if _, statErr := os.Stat(dbPath); statErr == nil {
 					repos = append(repos, filepath.Join(parentDir, entry.Name()))
 				}
 			}

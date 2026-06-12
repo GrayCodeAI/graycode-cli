@@ -303,7 +303,7 @@ func TestSaveLoad(t *testing.T) {
 
 	// Verify file exists
 	path := filepath.Join(dir, "consolidated_memory.json")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
 		t.Fatal("expected consolidated_memory.json to exist")
 	}
 

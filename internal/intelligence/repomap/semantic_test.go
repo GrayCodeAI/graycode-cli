@@ -73,8 +73,8 @@ func TestSemanticIndexSaveLoad(t *testing.T) {
 	}
 
 	savePath := filepath.Join(dir, "index.gob")
-	if err := idx.Save(savePath); err != nil {
-		t.Fatal(err)
+	if saveErr := idx.Save(savePath); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	loaded, err := LoadSemanticIndex(savePath)

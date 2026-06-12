@@ -150,7 +150,7 @@ func TestChatModel_SlashUnknown(t *testing.T) {
 }
 
 func TestChatModel_ManyCommands(t *testing.T) {
-	t.Skip("flaky: race condition with global state access")
+	t.Skip("flaky: race condition with global state access") // TODO: https://github.com/GrayCodeAI/hawk/issues/26
 	commands := []string{
 		"/context", "/env", "/hooks", "/stats",
 		"/compact", "/diff", "/branch", "/vim",
@@ -224,7 +224,7 @@ func TestChatModel_SlashExport(t *testing.T) {
 }
 
 func TestChatModel_StreamingCommands(t *testing.T) {
-	t.Skip("flaky: race condition with startStream goroutines")
+	t.Skip("flaky: race condition with startStream goroutines") // TODO: https://github.com/GrayCodeAI/hawk/issues/27
 	// These trigger startStream but progRef is nil-safe so they won't panic
 	commands := []string{
 		"/doctor", "/commit", "/review",

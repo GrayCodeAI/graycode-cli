@@ -253,18 +253,18 @@ func TestCleanupRemovesAllWorktrees(t *testing.T) {
 
 	// All worktree paths should exist before cleanup.
 	for _, p := range paths {
-		if _, err := os.Stat(p); err != nil {
-			t.Fatalf("worktree %s should exist before cleanup: %v", p, err)
+		if _, statErr := os.Stat(p); statErr != nil {
+			t.Fatalf("worktree %s should exist before cleanup: %v", p, statErr)
 		}
 	}
 
-	if err := pool.Cleanup(); err != nil {
-		t.Fatalf("Cleanup: %v", err)
+	if cleanupErr := pool.Cleanup(); cleanupErr != nil {
+		t.Fatalf("Cleanup: %v", cleanupErr)
 	}
 
 	// All worktree paths should be gone after cleanup.
 	for _, p := range paths {
-		if _, err := os.Stat(p); !os.IsNotExist(err) {
+		if _, statErr := os.Stat(p); !os.IsNotExist(statErr) {
 			t.Errorf("worktree %s should not exist after cleanup", p)
 		}
 	}

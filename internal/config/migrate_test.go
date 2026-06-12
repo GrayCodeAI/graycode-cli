@@ -466,7 +466,7 @@ func TestBackupCreation(t *testing.T) {
 	}
 
 	// Verify backup file exists
-	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(backupPath); os.IsNotExist(statErr) {
 		t.Fatal("backup file should exist")
 	}
 
@@ -802,13 +802,13 @@ func TestMigrateFileEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(configPath, data, 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(configPath, data, 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	r := NewMigrationRegistry()
-	if err := r.MigrateFile(configPath); err != nil {
-		t.Fatalf("MigrateFile failed: %v", err)
+	if migrateErr := r.MigrateFile(configPath); migrateErr != nil {
+		t.Fatalf("MigrateFile failed: %v", migrateErr)
 	}
 
 	// Read back the migrated config
@@ -818,8 +818,8 @@ func TestMigrateFileEndToEnd(t *testing.T) {
 	}
 
 	var result map[string]interface{}
-	if err := json.Unmarshal(migratedData, &result); err != nil {
-		t.Fatalf("failed to parse migrated config: %v", err)
+	if unmarshalErr := json.Unmarshal(migratedData, &result); unmarshalErr != nil {
+		t.Fatalf("failed to parse migrated config: %v", unmarshalErr)
 	}
 
 	// Verify version
@@ -877,13 +877,13 @@ func TestMigrateFileAlreadyCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(configPath, data, 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(configPath, data, 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	r := NewMigrationRegistry()
-	if err := r.MigrateFile(configPath); err != nil {
-		t.Fatalf("MigrateFile should succeed for current config: %v", err)
+	if migrateErr := r.MigrateFile(configPath); migrateErr != nil {
+		t.Fatalf("MigrateFile should succeed for current config: %v", migrateErr)
 	}
 
 	// Verify no backup was created (no migration needed)

@@ -23,9 +23,9 @@ import (
 )
 
 func doctorReport(settings hawkconfig.Settings) string {
-	modelName, provider := effectiveModelAndProvider(settings)
-	if provider == "" {
-		provider = "auto"
+	modelName, providerName := effectiveModelAndProvider(settings)
+	if providerName == "" {
+		providerName = "auto"
 	}
 	if modelName == "" {
 		modelName = "default"
@@ -37,7 +37,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("Version: %s\n", version))
 	b.WriteString(fmt.Sprintf("Go version: %s\n", runtime.Version()))
 	b.WriteString(fmt.Sprintf("Directory: %s\n", cwd))
-	b.WriteString(fmt.Sprintf("Provider: %s\n", provider))
+	b.WriteString(fmt.Sprintf("Provider: %s\n", providerName))
 	b.WriteString(fmt.Sprintf("Model: %s\n", modelName))
 
 	// Binary size
