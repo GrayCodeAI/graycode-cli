@@ -144,7 +144,7 @@ func TestGenerateConditionEvaluation(t *testing.T) {
 	}
 
 	dockerPath := filepath.Join(outputDir1, "myapi/Dockerfile")
-	if _, err := os.Stat(dockerPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(dockerPath); os.IsNotExist(statErr) {
 		t.Error("Dockerfile should be created when WithDocker is true")
 	}
 
@@ -387,8 +387,8 @@ func TestLoadTemplateFromJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshaling template: %v", err)
 	}
-	if err := os.WriteFile(jsonPath, data, 0o644); err != nil {
-		t.Fatalf("writing template file: %v", err)
+	if writeErr := os.WriteFile(jsonPath, data, 0o644); writeErr != nil {
+		t.Fatalf("writing template file: %v", writeErr)
 	}
 
 	// Load it
@@ -581,7 +581,7 @@ func TestGeneratePythonCLITemplate(t *testing.T) {
 	}
 
 	// Check tests are created
-	if _, err := os.Stat(filepath.Join(outputDir, "mycli/tests/test_cli.py")); os.IsNotExist(err) {
+	if _, statErr := os.Stat(filepath.Join(outputDir, "mycli/tests/test_cli.py")); os.IsNotExist(statErr) {
 		t.Error("test_cli.py should be created when WithTests is true")
 	}
 

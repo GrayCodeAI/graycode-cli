@@ -60,8 +60,8 @@ func TestProposeModifyAndApply(t *testing.T) {
 		t.Errorf("expected original content, got %q", c.Original)
 	}
 
-	if err := sb.Apply(); err != nil {
-		t.Fatalf("Apply error: %v", err)
+	if applyErr := sb.Apply(); applyErr != nil {
+		t.Fatalf("Apply error: %v", applyErr)
 	}
 
 	data, err := os.ReadFile(origPath)

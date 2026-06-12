@@ -378,7 +378,7 @@ func ScanTestFailures(projectDir string) []*SuggestedTask {
 	}
 
 	// If we detected failures but couldn't parse test names
-	if len(failedTests) == 0 && err != nil {
+	if len(failedTests) == 0 {
 		tasks = append(tasks, &SuggestedTask{
 			ID:          generateTaskID(),
 			Title:       "Fix failing tests",

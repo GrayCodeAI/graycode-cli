@@ -16,11 +16,11 @@ var ecosystemCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		model, provider := effectiveModelAndProvider(settings)
-		if provider == "" {
-			provider = "auto"
+		modelName, providerName := effectiveModelAndProvider(settings)
+		if providerName == "" {
+			providerName = "auto"
 		}
-		cmd.Println(hawkconfig.FormatEcosystemPanel(context.Background(), provider, model))
+		cmd.Println(hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName))
 		return nil
 	},
 }

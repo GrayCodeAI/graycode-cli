@@ -166,7 +166,7 @@ func (er *ErrorRecovery) Recover(err error, ctx *RecoveryContext) (*RecoveryResu
 	if ctx == nil {
 		ctx = &RecoveryContext{}
 	}
-	if ctx.ErrorMsg == "" && err != nil {
+	if ctx.ErrorMsg == "" {
 		ctx.ErrorMsg = err.Error()
 	}
 	if ctx.Error == nil {

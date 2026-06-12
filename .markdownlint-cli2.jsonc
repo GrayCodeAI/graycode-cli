@@ -1,0 +1,21 @@
+{
+  "config": {
+    "default": true,
+    "line-length": false,
+    "no-inline-html": false,
+    "first-line-h1": false,
+    "no-duplicate-heading": false,
+    "no-emphasis-as-heading": false,
+    "blanks-around-headings": false,
+    "blanks-around-lists": false,
+    "blanks-around-fences": false,
+    "fenced-code-language": false,
+    "table-column-style": false,
+    "no-space-in-emphasis": false,
+    "ol-prefix": false,
+    "link-fragments": false,
+    "blanks-around-tables": false,
+    "table-column-count": false,
+    "single-trailing-newline": false
+  }
+}

@@ -10,7 +10,7 @@ import (
 
 func TestPathCmdRuns(t *testing.T) {
 	if err := pathCmd.RunE(pathCmd, nil); err == nil {
-		t.Skip("machine has full developer path setup")
+		t.Skip("machine has full developer path setup") // TODO: https://github.com/GrayCodeAI/hawk/issues/30
 	}
 }
 

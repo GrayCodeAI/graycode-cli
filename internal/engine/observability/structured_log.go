@@ -312,8 +312,8 @@ func (rw *RotatingWriter) Write(p []byte) (n int, err error) {
 	defer rw.mu.Unlock()
 
 	if rw.size+int64(len(p)) > rw.MaxSize {
-		if err := rw.rotate(); err != nil {
-			return 0, err
+		if rotateErr := rw.rotate(); rotateErr != nil {
+			return 0, rotateErr
 		}
 	}
 

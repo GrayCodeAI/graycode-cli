@@ -372,8 +372,8 @@ func TestRoundTrip_ClaudeCodeToHawk(t *testing.T) {
 	}
 
 	// Export to hawk.
-	if err := Export(dir, FormatHawk, imported); err != nil {
-		t.Fatal(err)
+	if exportErr := Export(dir, FormatHawk, imported); exportErr != nil {
+		t.Fatal(exportErr)
 	}
 
 	// Re-import from hawk.
@@ -415,15 +415,15 @@ func TestRoundTrip_CursorToHawkToClaudeCode(t *testing.T) {
 	}
 
 	// Export to hawk, then to Claude Code.
-	if err := Export(dir, FormatHawk, imported); err != nil {
-		t.Fatal(err)
+	if exportErr := Export(dir, FormatHawk, imported); exportErr != nil {
+		t.Fatal(exportErr)
 	}
 	hawkRules, err := Import(dir, FormatHawk)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Export(dir, FormatClaudeCode, hawkRules); err != nil {
-		t.Fatal(err)
+	if exportErr := Export(dir, FormatClaudeCode, hawkRules); exportErr != nil {
+		t.Fatal(exportErr)
 	}
 
 	// Re-import from Claude Code.
@@ -456,15 +456,15 @@ func TestRoundTrip_HawkToCursorToHawk(t *testing.T) {
 	}
 
 	// Export to hawk, import, export to cursor, import from cursor, export back to hawk.
-	if err := Export(dir, FormatHawk, original); err != nil {
-		t.Fatal(err)
+	if exportErr := Export(dir, FormatHawk, original); exportErr != nil {
+		t.Fatal(exportErr)
 	}
 	fromHawk, err := Import(dir, FormatHawk)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Export(dir, FormatCursor, fromHawk); err != nil {
-		t.Fatal(err)
+	if exportErr := Export(dir, FormatCursor, fromHawk); exportErr != nil {
+		t.Fatal(exportErr)
 	}
 	fromCursor, err := Import(dir, FormatCursor)
 	if err != nil {
@@ -473,8 +473,8 @@ func TestRoundTrip_HawkToCursorToHawk(t *testing.T) {
 
 	// Re-export back to hawk in a fresh directory.
 	dir2 := t.TempDir()
-	if err := Export(dir2, FormatHawk, fromCursor); err != nil {
-		t.Fatal(err)
+	if exportErr := Export(dir2, FormatHawk, fromCursor); exportErr != nil {
+		t.Fatal(exportErr)
 	}
 	final, err := Import(dir2, FormatHawk)
 	if err != nil {

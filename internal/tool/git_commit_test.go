@@ -85,8 +85,8 @@ func TestAutoCommitAndRevert(t *testing.T) {
 	}
 
 	// Revert the auto-commit.
-	if err := RevertLastAutoCommit(); err != nil {
-		t.Fatalf("RevertLastAutoCommit: %v", err)
+	if revertErr := RevertLastAutoCommit(); revertErr != nil {
+		t.Fatalf("RevertLastAutoCommit: %v", revertErr)
 	}
 
 	// After revert, HEAD should point to the commit before auto-commit.

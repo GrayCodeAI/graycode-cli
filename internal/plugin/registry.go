@@ -213,14 +213,14 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 
 	url := "https://github.com/" + repo + ".git"
 	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, tmpDir)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("git clone failed: %s\n%s", err, string(out))
+	if out, cloneErr := cmd.CombinedOutput(); cloneErr != nil {
+		return "", fmt.Errorf("git clone failed: %s\n%s", cloneErr, string(out))
 	}
 
 	// Discover skills in the cloned repo.
 	skillsRoot := tmpDir
 	// Check for skills/ subdirectory (agentskills.io convention).
-	if info, err := os.Stat(filepath.Join(tmpDir, "skills")); err == nil && info.IsDir() {
+	if info, statErr := os.Stat(filepath.Join(tmpDir, "skills")); statErr == nil && info.IsDir() {
 		skillsRoot = filepath.Join(tmpDir, "skills")
 	}
 

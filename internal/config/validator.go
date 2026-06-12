@@ -50,7 +50,7 @@ func ValidateSettings(s Settings) ValidationResult {
 	// Validate model selection (stored in eyrie provider.json)
 	activeModel := strings.TrimSpace(s.Model)
 	if activeModel == "" {
-		activeModel = ActiveModel(context.TODO())
+		activeModel = ActiveModel(context.Background())
 	}
 	if activeModel != "" && strings.Contains(activeModel, " ") {
 		errors = append(errors, ValidationError{
@@ -62,7 +62,7 @@ func ValidateSettings(s Settings) ValidationResult {
 
 	activeProvider := strings.TrimSpace(s.Provider)
 	if activeProvider == "" {
-		activeProvider = ActiveProvider(context.TODO())
+		activeProvider = ActiveProvider(context.Background())
 	}
 	// Hawk: validate API key is in the OS secret store (not in settings)
 	if activeProvider != "" {

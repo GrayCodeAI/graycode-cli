@@ -265,8 +265,8 @@ func (dg *DepGraph) BuildFromPackageJSON(projectDir string) error {
 		Dependencies    map[string]string `json:"dependencies"`
 		DevDependencies map[string]string `json:"devDependencies"`
 	}
-	if err := json.Unmarshal(data, &pkgJSON); err != nil {
-		return fmt.Errorf("depgraph: parse package.json: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &pkgJSON); unmarshalErr != nil {
+		return fmt.Errorf("depgraph: parse package.json: %w", unmarshalErr)
 	}
 
 	dg.Root = pkgJSON.Name

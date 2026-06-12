@@ -419,7 +419,7 @@ func TestFeedbackCollectorSaveAndLoad(t *testing.T) {
 
 	// Verify file exists
 	path := filepath.Join(dir, "feedback.json")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
 		t.Fatal("feedback.json was not created")
 	}
 

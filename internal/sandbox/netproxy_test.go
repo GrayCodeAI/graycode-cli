@@ -409,8 +409,8 @@ func TestStop_Clean(t *testing.T) {
 	conn.Close()
 
 	// Stop the proxy.
-	if err := proxy.Stop(); err != nil {
-		t.Fatalf("Stop() error = %v", err)
+	if stopErr := proxy.Stop(); stopErr != nil {
+		t.Fatalf("Stop() error = %v", stopErr)
 	}
 
 	// Give it a moment to close.

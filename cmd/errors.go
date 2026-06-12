@@ -377,20 +377,20 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	var warnings []StartupWarning
 
 	// 1. Check API key for configured provider
-	provider := hawkconfig.NormalizeProviderForEngine(settings.Provider)
-	if provider != "" && provider != "ollama" {
-		envKey := hawkconfig.ProviderAPIKeyEnv(provider)
+	providerName := hawkconfig.NormalizeProviderForEngine(settings.Provider)
+	if providerName != "" && providerName != "ollama" {
+		envKey := hawkconfig.ProviderAPIKeyEnv(providerName)
 		if envKey != "" && os.Getenv(envKey) == "" {
 			warnings = append(warnings, StartupWarning{
 				Check:   "api_key",
-				Message: fmt.Sprintf("No API key found for %s. Set %s in your environment or run /config.", provider, envKey),
+				Message: fmt.Sprintf("No API key found for %s. Set %s in your environment or run /config.", providerName, envKey),
 			})
 		}
 	}
 
 	// 2. Quick network reachability check (DNS lookup, no full HTTP request)
-	if provider != "" && provider != "ollama" {
-		host := providerDNSHost(provider)
+	if providerName != "" && providerName != "ollama" {
+		host := providerDNSHost(providerName)
 		if host != "" {
 			if _, err := net.LookupHost(host); err != nil {
 				warnings = append(warnings, StartupWarning{

@@ -55,7 +55,7 @@ func TestDaemonReadyProbe_AffectsReadyEndpoint(t *testing.T) {
 	// Wait for the listener.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		if c, err := net.DialTimeout("tcp", addr, 50*time.Millisecond); err == nil {
+		if c, dialErr := net.DialTimeout("tcp", addr, 50*time.Millisecond); dialErr == nil {
 			c.Close()
 			break
 		}

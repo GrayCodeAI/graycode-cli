@@ -30,9 +30,9 @@ func ReadGitState(dir string) (*GitState, error) {
 	// If .git is a file, it's a worktree reference
 	worktree := false
 	if !info.IsDir() {
-		data, err := os.ReadFile(gitDir)
-		if err != nil {
-			return nil, err
+		data, readErr := os.ReadFile(gitDir)
+		if readErr != nil {
+			return nil, readErr
 		}
 		line := strings.TrimSpace(string(data))
 		if strings.HasPrefix(line, "gitdir: ") {

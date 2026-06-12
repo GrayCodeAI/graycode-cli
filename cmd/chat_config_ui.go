@@ -47,7 +47,7 @@ func renderConfigGatewayLine(displayName string) string {
 }
 
 func renderConfigStatusLine(m chatModel) string {
-	gateway, model, configured := m.configStatus()
+	gateway, modelName, configured := m.configStatus()
 	muted := configMutedStyle().Inline(true)
 	accent := configAccentStyle().Inline(true)
 	active := configActiveStyle().Inline(true)
@@ -70,10 +70,10 @@ func renderConfigStatusLine(m chatModel) string {
 		muted.Render("Gateway: "),
 		gatewayStyle.Render(gateway),
 	}
-	if model == "" {
+	if modelName == "" {
 		parts = append(parts, muted.Render(" · no model selected"))
 	} else {
-		parts = append(parts, muted.Render(" · Model: "), active.Render(model))
+		parts = append(parts, muted.Render(" · Model: "), active.Render(modelName))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Left, parts...)
 }

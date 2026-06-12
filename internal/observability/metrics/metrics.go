@@ -151,8 +151,8 @@ func (r *Registry) Counter(name string) *Counter {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if c, ok := r.counters[name]; ok {
-		return c
+	if existingC, ok := r.counters[name]; ok {
+		return existingC
 	}
 	c = &Counter{}
 	r.counters[name] = c
@@ -170,8 +170,8 @@ func (r *Registry) Gauge(name string) *Gauge {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if g, ok := r.gauges[name]; ok {
-		return g
+	if existingG, ok := r.gauges[name]; ok {
+		return existingG
 	}
 	g = &Gauge{}
 	r.gauges[name] = g
@@ -189,8 +189,8 @@ func (r *Registry) Timer(name string) *Timer {
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if t, ok := r.timers[name]; ok {
-		return t
+	if existingT, ok := r.timers[name]; ok {
+		return existingT
 	}
 	t = NewTimer()
 	r.timers[name] = t

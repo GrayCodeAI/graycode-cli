@@ -290,7 +290,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 		return err
 	}
 
-	tree, err := cg.parser.ParseCtx(context.TODO(), nil, source)
+	tree, err := cg.parser.ParseCtx(context.Background(), nil, source)
 	if err != nil {
 		return err
 	}
