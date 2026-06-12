@@ -68,6 +68,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.loopCancel = nil
 		}
 		m.messages = []displayMsg{{role: "system", content: "Conversation cleared."}}
+		m.invalidateViewportCache()
 		m.viewDirty = true
 		m.autoScroll = false
 		return m, nil
@@ -111,6 +112,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 				return m, nil
 			}
 			m.sessionID = s.ID
+			m.invalidateViewportCache()
 			m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
 			var msgs []client.EyrieMessage
 			for _, sm := range s.Messages {
@@ -157,6 +159,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			return m, nil
 		}
 		m.sessionID = saved.ID
+		m.invalidateViewportCache()
 		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
 		var msgs []client.EyrieMessage
 		for _, sm := range saved.Messages {
@@ -378,6 +381,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 
 	case "/new":
 		m.saveSession()
+		m.invalidateViewportCache()
 		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
 		m.session.LoadMessages(nil)
 		sid := genID()
@@ -393,7 +397,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 	case "/session":
 		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
 			m.sessionID, m.session.Provider(), m.session.Model(),
-			m.session.Mode, m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.Cost.Summary())
+			permissionModeLabel(m.session), m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.Cost.Summary())
 		m.messages = append(m.messages, displayMsg{role: "system", content: info})
 		return m, nil
 

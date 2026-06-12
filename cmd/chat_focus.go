@@ -35,6 +35,7 @@ func (m *chatModel) cycleUIFocus() (chatModel, tea.Cmd) {
 	if m.inScrollbackFocus() {
 		m.uiFocus = focusPrompt
 		m.viewDirty = true
+		*m = m.syncViewportMouseWheel()
 		return *m, m.input.Focus()
 	}
 	m.uiFocus = focusScrollback
@@ -42,6 +43,7 @@ func (m *chatModel) cycleUIFocus() (chatModel, tea.Cmd) {
 	m.streamFollow = false
 	m.input.Blur()
 	m.viewDirty = true
+	*m = m.syncViewportMouseWheel()
 	return *m, nil
 }
 
@@ -125,7 +127,7 @@ func (m chatModel) renderScrollbackFocusBar(width int) string {
 	if !m.inScrollbackFocus() {
 		return ""
 	}
-	hint := "scroll · Tab prompt · Up/Dn · PgUp/PgDn"
+	hint := "wheel/Up/Dn scroll chat · Tab → prompt (Up/Dn history)"
 	if width < len(hint)+4 {
 		width = len(hint) + 4
 	}

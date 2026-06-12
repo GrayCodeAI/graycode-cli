@@ -19,9 +19,6 @@ import (
 
 // submitUserMessage handles Enter on a non-empty prompt (slash commands, shell, or agent turn).
 func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
-	if m.containerEnabled && m.containerErr != nil {
-		return m, nil
-	}
 	if m.containerEnabled && !m.containerReady {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for container — agent tools are disabled until the sandbox is ready."})
 		m.viewDirty = true

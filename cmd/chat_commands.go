@@ -35,13 +35,13 @@ var allSlashCommands = []string{
 	"/copy", "/cost", "/cron", "/ctx", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 	"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/glm", "/help", "/history", "/home", "/hooks", "/init",
 	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plan", "/plugin", "/plugins",
+	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plugin", "/plugins",
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
-	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/sandbox", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
+	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
-	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad", "/yolo",
+	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
@@ -140,9 +140,8 @@ var slashDescriptions = map[string]string{
 	"/metrics":         "Show session metrics",
 	"/model":           "Switch or view current model",
 	"/new":             "Start a fresh session",
-	"/permissions":     "Manage permission rules",
+	"/permissions":     "Permission Center for tier, sandbox, mode, and rules",
 	"/pin":             "Pin last N messages to protect from compaction",
-	"/plan":            "Enter plan mode (read-only)",
 	"/parallel":        "Run N agents in parallel on independent tasks",
 	"/plugins":         "List installed plugins",
 	"/power":           "Set power level (1-10)",
@@ -154,7 +153,6 @@ var slashDescriptions = map[string]string{
 	"/review":          "Code review for bugs and issues",
 	"/rewind":          "Undo last exchange",
 	"/run":             "Run command, add output to context",
-	"/sandbox":         "Toggle approval mode (not Docker; use default container or --no-container)",
 	"/search":          "Search across sessions",
 	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
 	"/stale":           "Show stale rules that may need updating or removal",
@@ -176,7 +174,6 @@ var slashDescriptions = map[string]string{
 	"/ecosystem":       "Show eyrie, yaad, and tok integration status",
 	"/path":            "Developer path readiness (setup, security, sandbox)",
 	"/yaad":            "Show yaad memory (use /yaad search <query> to search)",
-	"/yolo":            "Toggle auto-approve mode",
 	"/cron":            "Show scheduled jobs",
 	"/keybindings":     "Show keyboard shortcuts",
 	"/output-style":    "Change output style",
@@ -343,10 +340,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /model              — Show current model
 /models             — List available models
 /output-style       — Set output verbosity
-/permissions allow  — Always allow a tool or rule
-/permissions deny   — Always deny a tool or rule
-/permissions mode   — Set permission mode
-/plan               — Enter plan mode (read-only)
+/permissions       — Show tier, sandbox, mode, rules, and effective behavior
+/permissions tier  — Set the autonomy tier
+/permissions mode  — Set the advanced permission mode
+/permissions allow — Add an allow rule
+/permissions deny  — Add a deny rule
+/permissions save  — Persist the current permission policy
 /plugins            — List installed plugins
 /pr-comments        — Ask hawk to handle PR comments
 /release-notes      — Draft release notes
@@ -354,7 +353,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /resume <id>        — Resume session
 /review             — Ask hawk to review changes
 /rewind             — Undo last exchange
-/sandbox            — Toggle approval mode (Docker isolation: default container; --no-container for host)
 /security-review    — Ask hawk to review security risks
 /share              — Share session
 /learn              — LLM-powered skill advisor (deep, update)
@@ -525,6 +523,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.messages = nil
+			m.invalidateViewportCache()
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Switched to branch %s", targetID)})
 			for _, msg := range m.session.RawMessages() {
 				m.messages = append(m.messages, displayMsg{role: msg.Role, content: msg.Content})
@@ -863,35 +862,6 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		return m.startPromptCommand("/design", buildDesignPrompt(topic))
-	case "/permissions":
-		if len(parts) >= 2 {
-			switch parts[1] {
-			case "allow":
-				spec := permissionCommandArg(text, "allow")
-				if spec != "" {
-					m.session.Permissions.AllowSpec(spec)
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Always allowing: %s", spec)})
-					return m, nil
-				}
-			case "deny":
-				spec := permissionCommandArg(text, "deny")
-				if spec != "" {
-					m.session.Permissions.DenySpec(spec)
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Always denying: %s", spec)})
-					return m, nil
-				}
-			case "mode":
-				mode := permissionCommandArg(text, "mode")
-				if err := m.session.SetPermissionMode(mode); err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				} else {
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission mode: %s", m.session.Mode)})
-				}
-				return m, nil
-			}
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /permissions allow <rule>, /permissions deny <rule>, /permissions mode <mode>\nExamples: /permissions allow Bash(git:*), /permissions deny Write(*.env), /permissions mode plan"})
-		return m, nil
 	case "/status":
 		toolCount := 0
 		if m.registry != nil {
@@ -900,7 +870,7 @@ Generate the recap:`, summary.String())
 		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
 			m.sessionID, m.session.Provider(), m.session.Model(),
 			m.modeManager.Current().String(),
-			m.session.Mode, m.session.MessageCount(), toolCount, m.session.Cost.Summary())
+			permissionModeLabel(m.session), m.session.MessageCount(), toolCount, m.session.Cost.Summary())
 		if len(addDirs) > 0 {
 			info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
 		}
@@ -998,14 +968,6 @@ Generate the recap:`, summary.String())
 		}
 		prompt := BuildResearchPrompt(cfg)
 		return m.startPromptCommand("/research", prompt)
-	case "/plan":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Plan mode: hawk will only read and discuss, no modifications."})
-		_ = m.session.SetPermissionMode(string(engine.PermissionModePlan))
-		m.session.AddUser("Enter plan mode. Only read files and discuss plans — do not write files or run commands that modify state until I say to proceed.")
-		m.waiting = true
-		m.partial.Reset()
-		m.startStream()
-		return m, nil
 	case "/parallel":
 		return m.handleParallelCommand(parts, text)
 	case "/usage":
@@ -1343,19 +1305,13 @@ Generate the recap:`, summary.String())
 		return m, nil
 	case "/share":
 		return m.handleSessionCommand(cmd, parts, text)
+	case "/permissions":
+		next, cmd := m.handlePermissionsCommand(parts)
+		return next, cmd
 	case "/upgrade":
 		return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
 	case "/keybindings":
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter       — Submit\n  Ctrl+C      — Cancel/Exit\n  Ctrl+L      — Clear\n  Up/Down     — History\n  Tab         — Complete"})
-		return m, nil
-	case "/sandbox":
-		if string(m.session.Mode) == "acceptEdits" {
-			_ = m.session.SetPermissionMode("default")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Approval mode ON — all actions require confirmation. (Docker tool isolation is separate: default container mode, or --no-container on host.)"})
-		} else {
-			_ = m.session.SetPermissionMode("acceptEdits")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Approval mode relaxed — file edits auto-approved; other actions still prompt. (Docker tool isolation unchanged.)"})
-		}
 		return m, nil
 	case "/output-style":
 		if len(parts) < 2 {
@@ -1586,16 +1542,6 @@ Generate the recap:`, summary.String())
 
 	case "/tokens":
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Messages: %d\nEstimated tokens: ~%d", m.session.MessageCount(), m.session.MessageCount()*200)})
-		return m, nil
-
-	case "/yolo":
-		if string(m.session.Mode) == "bypassPermissions" {
-			_ = m.session.SetPermissionMode("default")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Yolo mode OFF — all actions require approval."})
-		} else {
-			_ = m.session.SetPermissionMode("bypassPermissions")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "⚠ Yolo mode ON — all tool calls auto-approved."})
-		}
 		return m, nil
 
 	case "/new":

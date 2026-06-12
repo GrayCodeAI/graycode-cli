@@ -81,6 +81,16 @@ only the human author. Hooks are auto-installed by `make setup` via
 make hooks
 ```
 
+## Commit signing
+
+Signed commits are required in this repo.
+
+- Git is configured for SSH commit signing.
+- In sandboxed agent sessions, `git commit` can fail even when the signing key
+  is unlocked because the sandbox cannot access the host `SSH_AUTH_SOCK`.
+- When signing is required, run `git commit` outside the sandbox or through an
+  unsandboxed/escalated execution path.
+
 ## Pull request checklist
 
 Before requesting review:

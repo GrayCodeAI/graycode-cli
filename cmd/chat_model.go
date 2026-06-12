@@ -77,6 +77,7 @@ var spinnerVerbs = []string{
 type (
 	streamChunkMsg     string
 	streamDoneMsg      struct{}
+	streamRetryMsg     struct{ content string }
 	streamErrMsg       struct{ err error }
 	blinkTickMsg       struct{}
 	spinnerVerbTickMsg struct{}
@@ -148,6 +149,7 @@ type chatModel struct {
 	messages                   []displayMsg
 	partial                    *strings.Builder
 	waiting                    bool
+	streamCancelled            bool                      // user cancelled; suppress late streamDone side effects
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	askReq                     *askUserMsg               // pending ask_user prompt
@@ -219,7 +221,13 @@ type chatModel struct {
 	connStatusVal       string
 	partialDirty        bool // stream text changed since last viewport paint
 	lastPartialRender   time.Time
-	activeSkills        map[string]plugin.SmartSkill // per-session activated skills
+
+	// Incremental viewport cache (see chat_viewport_render.go).
+	vpStableContent string
+	vpRenderedMsgs  int
+	vpRenderWidth   int
+	vpLastMsgLen    int
+	activeSkills    map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool

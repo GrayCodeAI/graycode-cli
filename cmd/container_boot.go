@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,53 +21,18 @@ type containerStatusMsg struct {
 	sandbox *sandbox.ContainerSandbox
 }
 
-// buildHawkImage builds the hawk container image from the bundled Dockerfile.
-// It writes the Dockerfile to a temp dir and runs docker build.
-func buildHawkImage(ctx context.Context, tag string) bool {
-	dockerfile := `FROM ubuntu:24.04
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl wget jq tree ripgrep fd-find make gcc g++ \
-    python3 python3-pip python3-venv \
-    nodejs npm \
-    ca-certificates openssh-client unzip xz-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/fdfind /usr/bin/fd
-# Install Go
-RUN curl -fsSL https://go.dev/dl/go1.26.1.linux-$(dpkg --print-architecture).tar.gz | tar -C /usr/local -xz
-ENV PATH="/usr/local/go/bin:${PATH}"
-ENV GOPATH="/root/go"
-ENV PATH="${GOPATH}/bin:${PATH}"
-ENV TERM=xterm-256color LANG=C.UTF-8
-`
-	// Use platform-appropriate arch
-	platform := runtime.GOARCH
-	if platform == "arm64" {
-		platform = "linux/arm64"
-	} else {
-		platform = "linux/amd64"
-	}
-
-	tmpDir, err := os.MkdirTemp("", "hawk-build-")
-	if err != nil {
-		return false
-	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
-
-	dfPath := filepath.Join(tmpDir, "Dockerfile")
-	if err := os.WriteFile(dfPath, []byte(dockerfile), 0o644); err != nil {
-		return false
-	}
-
-	cmd := exec.CommandContext(ctx, "docker", "build", "--platform", platform, "-t", tag, "-f", dfPath, tmpDir)
-	return cmd.Run() == nil
-}
-
 // shouldUseContainer determines if hawk should run in container mode.
-// Default: ALWAYS Container-first, no fallback.
-// User can opt out with --no-container for host mode.
+// Default: container-first when Docker is available. Opt out with --no-container
+// or HAWK_NO_CONTAINER=1 (useful on low-memory hosts where docker pull/build
+// can trigger jetsam kills).
 func shouldUseContainer() bool {
-	return !noContainer
+	if noContainer {
+		return false
+	}
+	if v := strings.TrimSpace(os.Getenv("HAWK_NO_CONTAINER")); v == "1" || strings.EqualFold(v, "true") {
+		return false
+	}
+	return true
 }
 
 // bootContainerCmd starts the container in the background and sends status
@@ -84,23 +48,19 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 			}
 		}
 
-		// Ensure image exists locally — pull or build as needed
+		// Only start when the image is already local. Pull/build during TUI
+		// startup can spike memory (jetsam "killed" on 8GB Macs) and block chat.
 		image := cs.Image()
-		imgCtx, imgCancel := context.WithTimeout(context.Background(), 300*time.Second)
+		imgCtx, imgCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer imgCancel()
 		checkCmd := exec.CommandContext(imgCtx, "docker", "image", "inspect", image)
 		if checkCmd.Run() != nil {
-			// Image not available locally — try pull first
-			pullCmd := exec.CommandContext(imgCtx, "docker", "pull", image)
-			if pullCmd.Run() != nil {
-				// Pull failed — build from bundled Dockerfile
-				built := buildHawkImage(imgCtx, image)
-				if !built {
-					return containerStatusMsg{
-						status: "image build failed",
-						err:    fmt.Errorf("could not pull or build %s", image),
-					}
-				}
+			return containerStatusMsg{
+				status: "image missing",
+				err: fmt.Errorf(
+					"container image %s is not local — run: docker pull %s\nOr restart with --no-container for host mode",
+					image, image,
+				),
 			}
 		}
 

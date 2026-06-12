@@ -61,7 +61,11 @@ func (m chatModel) renderWelcomeGateChromeRow(width int) string {
 	if err != nil {
 		cwd = "."
 	}
-	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("  " + shortenHomePath(cwd))
+	display := shortenHomePath(cwd)
+	if br, gerr := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); gerr == nil && br != "" && br != "HEAD" {
+		display += ":" + br
+	}
+	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("  " + display)
 	right := lipgloss.NewStyle().Foreground(textDisabled).Inline(true).Render(quitFooterHint)
 	return layoutFooterRow(left, right, width)
 }

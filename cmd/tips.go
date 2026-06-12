@@ -25,7 +25,7 @@ func allTips() []Tip {
 		{ID: "slash-diff", Text: "Use /diff to review changes made during this session.", Category: "git"},
 		{ID: "slash-commit", Text: "Use /commit to auto-commit changes with a generated message.", Category: "git"},
 		{ID: "slash-doctor", Text: "Use /doctor to run diagnostics on your project.", Category: "project"},
-		{ID: "slash-plan", Text: "Use /plan to enter read-only mode for safe exploration.", Category: "safety"},
+		{ID: "slash-plan", Text: "Use /permissions mode plan to enter read-only mode for safe exploration.", Category: "safety"},
 		{ID: "tab-complete", Text: "Press Tab to autocomplete slash commands.", Category: "shortcuts"},
 		{ID: "history-nav", Text: "Press Up/Down to navigate command history.", Category: "shortcuts"},
 		{ID: "esc-cancel", Text: "Press Esc to cancel a running query.", Category: "shortcuts"},
