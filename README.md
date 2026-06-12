@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/GrayCodeAI/hawk/raw/main/assets/logo.svg" alt="hawk" width="480"/>
+  <img src="https://openclipart.org/download/325423/red-shouldered-hawk.svg" alt="hawk" width="480"/>
 </p>
 
 <h1 align="center">AI Coding Agent for Your Terminal</h1>
