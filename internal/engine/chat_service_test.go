@@ -120,7 +120,8 @@ func TestChatService_ChatDelegatesToClient(t *testing.T) {
 		Provider: "anthropic",
 		Model:    "claude-opus-4",
 	})
-	resp, err := svc.Chat(context.Background(),
+	resp, err := svc.Chat(
+		context.Background(),
 		[]types.EyrieMessage{{Role: "user", Content: "hi"}},
 		svc.BuildOptions("sys", "claude-opus-4", 1024, nil),
 	)
@@ -139,6 +140,7 @@ type errClient struct{ err error }
 func (e *errClient) Chat(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions) (*types.EyrieResponse, error) {
 	return nil, e.err
 }
+
 func (e *errClient) StreamChatContinue(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
 	return nil, e.err
 }
