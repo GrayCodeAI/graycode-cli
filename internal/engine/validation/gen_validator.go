@@ -822,14 +822,14 @@ func checkGoCompilation(code string) []GenIssue {
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tmpFile := filepath.Join(tmpDir, "generated.go")
-	if err := os.WriteFile(tmpFile, []byte(code), 0o644); err != nil {
+	if writeErr := os.WriteFile(tmpFile, []byte(code), 0o644); writeErr != nil {
 		return nil
 	}
 
 	// Initialize a module in the temp directory
 	cmd := exec.CommandContext(context.Background(), "go", "mod", "init", "temp")
 	cmd.Dir = tmpDir
-	if err := cmd.Run(); err != nil {
+	if runErr := cmd.Run(); runErr != nil {
 		return nil
 	}
 

@@ -35,8 +35,8 @@ func SetXiaomiTokenPlanRegion(region string) error {
 		cfg = &eyriecfg.ProviderConfig{}
 	}
 	cfg.XiaomiMimoTokenPlanRegion = string(normalized)
-	if err := eyriecfg.SaveProviderConfig(cfg, ""); err != nil {
-		return err
+	if saveErr := eyriecfg.SaveProviderConfig(cfg, ""); saveErr != nil {
+		return saveErr
 	}
 	_ = os.Setenv(eyriecfg.EnvXiaomiTokenPlanRegion, string(normalized))
 	base, err := eyriecfg.ResolveXiaomiOpenAIBase(ProviderXiaomiTokenPlan, cfg)

@@ -213,8 +213,8 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 		PID  int    `json:"pid"`
 		Addr string `json:"addr"`
 	}
-	if err := json.Unmarshal(data, &info); err != nil {
-		return fmt.Errorf("invalid PID file: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &info); unmarshalErr != nil {
+		return fmt.Errorf("invalid PID file: %w", unmarshalErr)
 	}
 
 	proc, err := os.FindProcess(info.PID)
@@ -246,7 +246,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		Addr      string `json:"addr"`
 		StartedAt string `json:"started_at"`
 	}
-	if err := json.Unmarshal(data, &info); err != nil {
+	if unmarshalErr := json.Unmarshal(data, &info); unmarshalErr != nil {
 		fmt.Println("Status: unknown (invalid PID file)")
 		return nil
 	}

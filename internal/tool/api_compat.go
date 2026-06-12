@@ -688,8 +688,8 @@ func (t *APICompatTool) Execute(ctx context.Context, input json.RawMessage) (str
 		if savePath == "" {
 			savePath = params.PackagePath + "/.api_baseline.json"
 		}
-		if err := t.checker.SaveSnapshot(current, savePath); err != nil {
-			return "", err
+		if saveErr := t.checker.SaveSnapshot(current, savePath); saveErr != nil {
+			return "", saveErr
 		}
 		return fmt.Sprintf("Saved API baseline to %s (%d functions, %d types, %d interfaces)",
 			savePath, len(current.Functions), len(current.Types), len(current.Interfaces)), nil

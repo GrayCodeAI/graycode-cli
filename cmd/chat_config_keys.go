@@ -37,16 +37,16 @@ func (m chatModel) configKeyDetailView() string {
 	mutedStyle := configMutedStyle()
 	accentStyle := configAccentStyle()
 	activeStyle := configActiveStyle()
-	provider := strings.TrimSpace(m.configProvider)
-	displayName := hawkconfig.GatewayDisplayName(provider)
-	masked := hawkconfig.MaskCredentialForProvider(context.Background(), provider)
+	providerName := strings.TrimSpace(m.configProvider)
+	displayName := hawkconfig.GatewayDisplayName(providerName)
+	masked := hawkconfig.MaskCredentialForProvider(context.Background(), providerName)
 
 	var b strings.Builder
 	b.WriteString(renderConfigBreadcrumb(displayName+" key") + "\n\n")
 	b.WriteString(mutedStyle.Render("  Gateway: ") + accentStyle.Render(displayName) + "\n")
 	b.WriteString(mutedStyle.Render("  Key: ") + activeStyle.Render(masked) + "\n")
 	b.WriteString(mutedStyle.Render("  Stored in: "+credentialsStoreLabel()) + "\n")
-	if provider == hawkconfig.ProviderXiaomiTokenPlan {
+	if providerName == hawkconfig.ProviderXiaomiTokenPlan {
 		reg := hawkconfig.XiaomiTokenPlanRegionLabel()
 		if reg == "" {
 			reg = "(not set — press g)"
@@ -111,13 +111,13 @@ func (m chatModel) clearConfigGatewayKeyRemove() chatModel {
 }
 
 func (m chatModel) advanceConfigGatewayKeyRemove() (chatModel, tea.Cmd) {
-	provider := strings.TrimSpace(m.configKeysPendingRemove)
-	if provider == "" {
+	trimmedProvider := strings.TrimSpace(m.configKeysPendingRemove)
+	if trimmedProvider == "" {
 		return m, nil
 	}
 	if m.configKeysRemoveStep < 2 {
 		m.configKeysRemoveStep = 2
-		name := hawkconfig.GatewayDisplayName(provider)
+		name := hawkconfig.GatewayDisplayName(trimmedProvider)
 		m.configNotice = configGatewayRemoveNotice(2, name)
 		return m, nil
 	}
@@ -125,47 +125,47 @@ func (m chatModel) advanceConfigGatewayKeyRemove() (chatModel, tea.Cmd) {
 }
 
 func (m chatModel) confirmConfigGatewayKeyRemove() (chatModel, tea.Cmd) {
-	provider := strings.TrimSpace(m.configKeysPendingRemove)
-	if provider == "" {
+	trimmedProvider := strings.TrimSpace(m.configKeysPendingRemove)
+	if trimmedProvider == "" {
 		return m, nil
 	}
 	m.configKeysPendingRemove = ""
 	m.configKeysRemoveStep = 0
 	m.configSaving = true
-	m.configNotice = fmt.Sprintf("Removing key for %s…", hawkconfig.GatewayDisplayName(provider))
+	m.configNotice = fmt.Sprintf("Removing key for %s…", hawkconfig.GatewayDisplayName(trimmedProvider))
 	if m.configEntry == configEntryKeyView {
 		m.configEntry = configEntryNone
 		m.configProvider = ""
 	}
-	return m, removeCredentialAsync(provider)
+	return m, removeCredentialAsync(trimmedProvider)
 }
 
 func (m chatModel) handleConfigKeyViewKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	provider := strings.TrimSpace(m.configProvider)
+	trimmedProvider := strings.TrimSpace(m.configProvider)
 	switch msg.Type {
 	case tea.KeyEsc:
 		m.configEntry = configEntryNone
 		m.configProvider = ""
 		m = m.clearConfigGatewayKeyRemove()
-		if idx := m.configGatewayRowIndex(provider); idx >= 0 {
+		if idx := m.configGatewayRowIndex(trimmedProvider); idx >= 0 {
 			m.configSel = idx
 		}
 		return m, nil
 	case tea.KeyDelete, tea.KeyBackspace:
-		if provider == "" {
+		if trimmedProvider == "" {
 			return m, nil
 		}
-		return m.beginConfigGatewayKeyRemove(provider), nil
+		return m.beginConfigGatewayKeyRemove(trimmedProvider), nil
 	case tea.KeyEnter:
 		if m.configKeysPendingRemove != "" {
 			return m.advanceConfigGatewayKeyRemove()
 		}
-		if provider == "" {
+		if trimmedProvider == "" {
 			return m, nil
 		}
-		return m.startConfigKeyReplace(provider)
+		return m.startConfigKeyReplace(trimmedProvider)
 	case tea.KeyRunes:
-		if provider == hawkconfig.ProviderXiaomiTokenPlan && strings.EqualFold(string(msg.Runes), "g") {
+		if trimmedProvider == hawkconfig.ProviderXiaomiTokenPlan && strings.EqualFold(string(msg.Runes), "g") {
 			return m.startConfigXiaomiTokenPlanRegion(), nil
 		}
 	default:

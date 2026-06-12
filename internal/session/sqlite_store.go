@@ -478,8 +478,8 @@ func (s *SQLiteStore) DeleteSession(id string) error {
 	defer func() { _ = tx.Rollback() }()
 
 	// Delete messages first (FK constraint).
-	if _, err := tx.ExecContext(context.Background(), "DELETE FROM messages WHERE session_id = ?", id); err != nil {
-		return fmt.Errorf("delete messages: %w", err)
+	if _, execErr := tx.ExecContext(context.Background(), "DELETE FROM messages WHERE session_id = ?", id); execErr != nil {
+		return fmt.Errorf("delete messages: %w", execErr)
 	}
 
 	result, err := tx.ExecContext(context.Background(), "DELETE FROM sessions WHERE id = ?", id)
@@ -636,8 +636,8 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 	// Recalculate total tokens.
 	var totalTokens int
 	row := tx.QueryRowContext(context.Background(), "SELECT COALESCE(SUM(tokens), 0) FROM messages WHERE session_id = ?", sessionID)
-	if err := row.Scan(&totalTokens); err != nil {
-		return fmt.Errorf("sum tokens: %w", err)
+	if scanErr := row.Scan(&totalTokens); scanErr != nil {
+		return fmt.Errorf("sum tokens: %w", scanErr)
 	}
 
 	_, err = tx.ExecContext(context.Background(), "UPDATE sessions SET total_tokens = ?, updated_at = ? WHERE id = ?",

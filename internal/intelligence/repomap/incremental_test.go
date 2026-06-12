@@ -157,8 +157,8 @@ func TestIncrementalMap_DetectsModifiedFiles(t *testing.T) {
 	}
 
 	// Modify the file (add a new function)
-	if err := os.WriteFile(goFile, []byte("package main\n\nfunc main() {}\n\nfunc helper() {}\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(goFile, []byte("package main\n\nfunc main() {}\n\nfunc helper() {}\n"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	// Second update: should detect the change
@@ -207,8 +207,8 @@ func TestIncrementalMap_RemovesDeletedFiles(t *testing.T) {
 	}
 
 	// Delete helper.go
-	if err := os.Remove(helperFile); err != nil {
-		t.Fatal(err)
+	if removeErr := os.Remove(helperFile); removeErr != nil {
+		t.Fatal(removeErr)
 	}
 
 	// Second update: should detect deletion
@@ -264,8 +264,8 @@ func TestIncrementalMap_SymbolPreservation(t *testing.T) {
 	}
 
 	// Modify only b.go
-	if err := os.WriteFile(filepath.Join(rootDir, "b.go"), []byte("package main\n\nfunc BetaV2() {}\n"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(rootDir, "b.go"), []byte("package main\n\nfunc BetaV2() {}\n"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	changed, err := im.Update(rootDir)
@@ -304,11 +304,11 @@ func TestIncrementalMap_SaveAndReload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := im1.Update(rootDir); err != nil {
-		t.Fatal(err)
+	if _, updateErr := im1.Update(rootDir); updateErr != nil {
+		t.Fatal(updateErr)
 	}
-	if err := im1.Save(); err != nil {
-		t.Fatalf("Save failed: %v", err)
+	if saveErr := im1.Save(); saveErr != nil {
+		t.Fatalf("Save failed: %v", saveErr)
 	}
 
 	// Reload from cache

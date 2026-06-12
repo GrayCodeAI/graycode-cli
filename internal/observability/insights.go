@@ -45,16 +45,16 @@ func GenerateInsights(days int, analysisFn func(content string) ([]InsightsFacet
 		if e.IsDir() {
 			continue
 		}
-		info, err := e.Info()
-		if err != nil || info.ModTime().Before(cutoff) {
+		info, infoErr := e.Info()
+		if infoErr != nil || info.ModTime().Before(cutoff) {
 			continue
 		}
 		if filepath.Ext(e.Name()) != ".jsonl" {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(sessDir, e.Name()))
-		if err != nil {
+		data, readErr := os.ReadFile(filepath.Join(sessDir, e.Name()))
+		if readErr != nil {
 			continue
 		}
 		transcripts = append(transcripts, string(data))

@@ -248,13 +248,13 @@ func (s *Store) Stats() (*HistoryStats, error) {
 
 	for cmdRows.Next() {
 		var cc CommandCount
-		if err := cmdRows.Scan(&cc.Command, &cc.Count); err != nil {
-			return nil, fmt.Errorf("scan command count: %w", err)
+		if scanErr := cmdRows.Scan(&cc.Command, &cc.Count); scanErr != nil {
+			return nil, fmt.Errorf("scan command count: %w", scanErr)
 		}
 		stats.TopCommands = append(stats.TopCommands, cc)
 	}
-	if err := cmdRows.Err(); err != nil {
-		return nil, err
+	if iterErr := cmdRows.Err(); iterErr != nil {
+		return nil, iterErr
 	}
 
 	// Top 10 directories by frequency.

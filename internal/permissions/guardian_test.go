@@ -126,9 +126,9 @@ func TestGuardian_CircuitBreakerResetsOnAllow(t *testing.T) {
 	g.ChatFn = chatFn2
 
 	for i := 0; i < 3; i++ {
-		_, err := g.Review(ctx, req)
-		if err != nil {
-			t.Fatalf("unexpected circuit breaker on denial %d after reset: %v", i+1, err)
+		_, reviewErr := g.Review(ctx, req)
+		if reviewErr != nil {
+			t.Fatalf("unexpected circuit breaker on denial %d after reset: %v", i+1, reviewErr)
 		}
 	}
 

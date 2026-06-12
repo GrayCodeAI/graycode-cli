@@ -47,11 +47,11 @@ func TestVerify_ContainerDoesNotExposeHostHawkHome(t *testing.T) {
 		t.Fatal(err)
 	}
 	hawkEnv := filepath.Join(home, ".hawk", "env")
-	if _, err := os.Stat(hawkEnv); err != nil {
+	if _, statErr := os.Stat(hawkEnv); statErr != nil {
 		// Create a marker file so we can detect accidental host mount exposure.
 		_ = os.MkdirAll(filepath.Dir(hawkEnv), 0o700)
-		if err := os.WriteFile(hawkEnv, []byte("export VERIFY_HAWK_HOME_SECRET=1\n"), 0o600); err != nil {
-			t.Fatal(err)
+		if writeErr := os.WriteFile(hawkEnv, []byte("export VERIFY_HAWK_HOME_SECRET=1\n"), 0o600); writeErr != nil {
+			t.Fatal(writeErr)
 		}
 		t.Cleanup(func() { _ = os.Remove(hawkEnv) })
 	}
@@ -63,8 +63,8 @@ func TestVerify_ContainerDoesNotExposeHostHawkHome(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	if err := cs.Start(ctx); err != nil {
-		t.Fatalf("container start: %v", err)
+	if startErr := cs.Start(ctx); startErr != nil {
+		t.Fatalf("container start: %v", startErr)
 	}
 	t.Cleanup(func() { _ = cs.Stop() })
 

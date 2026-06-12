@@ -399,13 +399,13 @@ func splitIntoDocuments(path, content string) []*Document {
 
 	// Convert builders to documents
 	for _, b := range builders {
-		content := strings.Join(b.lines, "\n")
-		terms := buildTermFrequency(content)
+		blockContent := strings.Join(b.lines, "\n")
+		terms := buildTermFrequency(blockContent)
 		docID := fmt.Sprintf("%s:%s", path, b.name)
 		docs = append(docs, &Document{
 			ID:      docID,
 			Path:    path,
-			Content: content,
+			Content: blockContent,
 			Terms:   terms,
 			Length:  countTerms(terms),
 			Type:    b.docType,

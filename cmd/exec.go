@@ -145,8 +145,8 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	if execCWD != "" {
-		if err := os.Chdir(execCWD); err != nil {
-			return fmt.Errorf("chdir %s: %w", execCWD, err)
+		if chdirErr := os.Chdir(execCWD); chdirErr != nil {
+			return fmt.Errorf("chdir %s: %w", execCWD, chdirErr)
 		}
 	}
 
@@ -166,8 +166,8 @@ func runExec(_ *cobra.Command, args []string) error {
 		}
 		wtBranch = branch
 		defer cleanupExecWorktree(cwd, wtPath)
-		if err := os.Chdir(wtPath); err != nil {
-			return fmt.Errorf("chdir worktree: %w", err)
+		if chdirErr := os.Chdir(wtPath); chdirErr != nil {
+			return fmt.Errorf("chdir worktree: %w", chdirErr)
 		}
 	}
 
@@ -183,9 +183,9 @@ func runExec(_ *cobra.Command, args []string) error {
 	// If --agent is specified, prepend the agent persona
 	var agentModel string
 	if execAgent != "" {
-		agentDef, err := agents.Get(execAgent)
-		if err != nil {
-			return fmt.Errorf("agent %q: %w", execAgent, err)
+		agentDef, lookupErr := agents.Get(execAgent)
+		if lookupErr != nil {
+			return fmt.Errorf("agent %q: %w", execAgent, lookupErr)
 		}
 		systemPrompt = agentDef.Prompt + "\n\n" + systemPrompt
 		agentModel = agentDef.Model
@@ -211,8 +211,8 @@ func runExec(_ *cobra.Command, args []string) error {
 	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 
-	if err := configureSession(sess, settings, execMaxTurns); err != nil {
-		return err
+	if cfgErr := configureSession(sess, settings, execMaxTurns); cfgErr != nil {
+		return cfgErr
 	}
 
 	// Apply autonomy level
@@ -231,9 +231,9 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	// Resume existing session if --session-id provided
 	if execSessionID != "" {
-		saved, err := session.Load(execSessionID)
-		if err != nil {
-			return fmt.Errorf("resume session %s: %w", execSessionID, err)
+		saved, lookupErr := session.Load(execSessionID)
+		if lookupErr != nil {
+			return fmt.Errorf("resume session %s: %w", execSessionID, lookupErr)
 		}
 		sess.LoadMessages(toEyrieMessages(saved.Messages))
 	}

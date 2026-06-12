@@ -143,12 +143,12 @@ func lspReferences(root, filePath string, line int, symbol string) (string, erro
 	// Get symbol name
 	sym := symbol
 	if sym == "" && line > 0 {
-		absPath, err := filepath.Abs(filePath)
-		if err != nil {
+		absPath, absErr := filepath.Abs(filePath)
+		if absErr != nil {
 			absPath = filePath
 		}
-		source, err := os.ReadFile(absPath)
-		if err == nil {
+		source, readErr := os.ReadFile(absPath)
+		if readErr == nil {
 			lines := strings.Split(string(source), "\n")
 			if line <= len(lines) {
 				sym = extractSymbolFromLine(lines[line-1])

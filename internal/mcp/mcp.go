@@ -83,8 +83,8 @@ func Connect(ctx context.Context, name, command string, args ...string) (*Server
 	if err != nil {
 		return nil, fmt.Errorf("mcp: stdout pipe: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("mcp: start %s: %w", command, err)
+	if startErr := cmd.Start(); startErr != nil {
+		return nil, fmt.Errorf("mcp: start %s: %w", command, startErr)
 	}
 
 	scanner := bufio.NewScanner(stdout)

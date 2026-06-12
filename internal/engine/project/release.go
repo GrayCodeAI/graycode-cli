@@ -402,11 +402,11 @@ func (rm *ReleaseManager) PrepareRelease() (*Release, error) {
 		sinceTag = "v" + currentVersion
 		cmd := exec.CommandContext(context.Background(), "git", "rev-parse", sinceTag)
 		cmd.Dir = rm.ProjectDir
-		if err := cmd.Run(); err != nil {
+		if runErr := cmd.Run(); runErr != nil {
 			sinceTag = currentVersion
 			cmd2 := exec.CommandContext(context.Background(), "git", "rev-parse", sinceTag)
 			cmd2.Dir = rm.ProjectDir
-			if err := cmd2.Run(); err != nil {
+			if runErr := cmd2.Run(); runErr != nil {
 				sinceTag = ""
 			}
 		}

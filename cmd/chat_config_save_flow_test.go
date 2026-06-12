@@ -109,7 +109,7 @@ func TestConfigGatewaysSelect_AddKeyOpensPaste(t *testing.T) {
 		}
 	}
 	if sel < 0 {
-		t.Skip("all gateways already have keys in this environment")
+		t.Skip("all gateways already have keys in this environment") // TODO: https://github.com/GrayCodeAI/hawk/issues/28
 	}
 	m.configSel = sel
 	next, _ := m.handleConfigGatewaysSelect()
