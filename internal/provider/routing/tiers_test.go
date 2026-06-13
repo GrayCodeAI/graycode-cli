@@ -8,20 +8,10 @@ import (
 )
 
 func TestCostTierOf_CatalogModels(t *testing.T) {
-	anthropicHaiku, anthropicSonnet, anthropicOpus := TierModels("anthropic")
-	openaiHaiku, openaiSonnet, _ := TierModels("openai")
-	geminiHaiku, _, _ := TierModels("gemini")
-
 	tests := []struct {
 		model string
 		tier  CostTier
 	}{
-		{anthropicHaiku, CostTierCheap},
-		{openaiHaiku, CostTierCheap},
-		{geminiHaiku, CostTierCheap},
-		{anthropicSonnet, CostTierMid},
-		{openaiSonnet, CostTierMid},
-		{anthropicOpus, CostTierExpensive},
 		{"unknown-model-xyz", CostTierMid},
 	}
 
@@ -38,23 +28,27 @@ func TestCostTierOf_CatalogModels(t *testing.T) {
 	}
 }
 
-func TestPreferredModelForTier(t *testing.T) {
+func TestPreferredModelForTier_NilCatalog(t *testing.T) {
+	// Without a catalog, PreferredModelForTier returns empty
 	got := PreferredModelForTier("anthropic", eycatalog.TierHaiku, "")
-	if got == "" {
-		t.Fatal("expected preferred haiku model for anthropic")
-	}
-	if CostTierOf(got) != CostTierCheap {
-		t.Errorf("preferred haiku model %q should be cheap tier", got)
+	if got != "" {
+		t.Fatalf("expected empty haiku model without catalog, got %q", got)
 	}
 }
 
-func TestRolesForProvider(t *testing.T) {
-	roles := RolesForProvider("anthropic")
-	if roles.Planner == "" || roles.Coder == "" || roles.Commit == "" {
-		t.Fatal("expected non-empty roles from catalog")
+func TestPreferredModelForTier_WithFallback(t *testing.T) {
+	// With a fallback, it returns the fallback
+	got := PreferredModelForTier("anthropic", eycatalog.TierHaiku, "fallback-model")
+	if got != "fallback-model" {
+		t.Fatalf("expected fallback model, got %q", got)
 	}
-	if CostTierOf(roles.Commit) >= CostTierOf(roles.Planner) {
-		t.Errorf("commit tier should be cheaper than planner: %v vs %v", roles.Commit, roles.Planner)
+}
+
+func TestRolesForProvider_NilCatalog(t *testing.T) {
+	// Without a catalog, roles are empty
+	roles := RolesForProvider("anthropic")
+	if roles.Planner != "" || roles.Coder != "" || roles.Commit != "" {
+		t.Fatal("expected empty roles without catalog")
 	}
 }
 

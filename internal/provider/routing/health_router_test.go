@@ -137,6 +137,12 @@ func TestHealthRouter_ModelForTask(t *testing.T) {
 
 	_, sonnet, _ := TierModels("anthropic")
 	haiku, openaiHaiku, _ := TierModels("openai")
+
+	// Without a live catalog, tier models are empty — skip if so
+	if sonnet == "" && haiku == "" {
+		t.Skip("no tier models available without live catalog (fully dynamic)")
+	}
+
 	model := hr.ModelForTask(tinyFile, sonnet)
 	lightModels := map[string]bool{}
 	for _, m := range hr.tiers[0].Models {
