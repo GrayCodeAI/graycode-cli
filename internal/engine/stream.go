@@ -376,7 +376,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		var stopReason string
 		var lastUsage *types.EyrieUsage
 
-		// Streaming with retry for transient stream errors and reasoning-only responses.
+		// Streaming with retry for transient stream errors. Reasoning-only
+		// responses recover via non-streaming Chat (OpenCode Go / MiniMax) instead
+		// of repeating the same broken stream.
 		const maxStreamRetries = 2
 		var streamErr error
 		var sawThinking bool
@@ -425,7 +427,26 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			result.Close()
 
 			thinkingOnly := streamErr == nil && textContent.Len() == 0 && len(toolCalls) == 0 && sawThinking
-			shouldRetry := thinkingOnly || (streamErr != nil && isRetryableStreamError(streamErr))
+			if thinkingOnly {
+				if resp, chatErr := s.ChatLLM().Chat(ctx, s.messages, opts); chatErr == nil && resp != nil && strings.TrimSpace(resp.Content) != "" {
+					content := resp.Content
+					textContent.WriteString(content)
+					ch <- StreamEvent{Type: "content", Content: content}
+					if len(resp.ToolCalls) > 0 {
+						toolCalls = append(toolCalls, resp.ToolCalls...)
+					}
+					if resp.FinishReason != "" {
+						stopReason = resp.FinishReason
+					}
+					streamErr = nil
+					break
+				}
+				ch <- StreamEvent{Type: "error", Content: "The model produced internal reasoning but no reply."}
+				result.Close()
+				return
+			}
+
+			shouldRetry := streamErr != nil && isRetryableStreamError(streamErr)
 			if !shouldRetry {
 				break
 			}
@@ -433,10 +454,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				break
 			}
 			retryReason := "transient stream error"
-			if thinkingOnly {
-				retryReason = "reasoning-only response"
-				streamErr = fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")
-			}
 			s.log.Warn("stream retry", map[string]interface{}{
 				"attempt": streamAttempt + 1,
 				"reason":  retryReason,

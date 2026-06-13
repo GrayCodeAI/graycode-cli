@@ -54,6 +54,7 @@ type Settings struct {
 	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`   // use catalog deployment router when true / unset + provider.json qualifies
 	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`         // restrict to core tools only for a focused experience
 	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"` // GLM/Z.ai extended reasoning toggle; nil = model default
+	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`            // TUI mouse capture; false preserves native click-drag copy
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.
@@ -386,6 +387,14 @@ func SettingValue(s Settings, key string) (string, bool) {
 			return "true", true
 		}
 		return "false", true
+	case "tuimouse":
+		if s.TuiMouse == nil {
+			return "default (on)", true
+		}
+		if *s.TuiMouse {
+			return "true", true
+		}
+		return "false", true
 	default:
 		return "", false
 	}
@@ -456,6 +465,19 @@ func SetGlobalSetting(key, value string) error {
 			s.GLMThinkingEnabled = nil
 		default:
 			return fmt.Errorf("glm_thinking must be true, false, or default")
+		}
+	case "tuimouse":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on", "enable":
+			enabled := true
+			s.TuiMouse = &enabled
+		case "0", "false", "no", "off", "disable":
+			enabled := false
+			s.TuiMouse = &enabled
+		case "default", "null", "nil", "":
+			s.TuiMouse = nil
+		default:
+			return fmt.Errorf("tui_mouse must be true, false, or default")
 		}
 	default:
 		return fmt.Errorf("unsupported setting key %q", key)

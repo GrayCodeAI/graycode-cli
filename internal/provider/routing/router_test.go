@@ -10,9 +10,6 @@ func TestNewRouter(t *testing.T) {
 	if r == nil {
 		t.Fatal("expected non-nil router")
 	}
-	if len(r.fallbackChain) == 0 {
-		t.Error("expected non-empty fallback chain")
-	}
 }
 
 func TestRouter_SelectProvider_Preferred(t *testing.T) {
@@ -27,7 +24,7 @@ func TestRouter_SelectProvider_Preferred(t *testing.T) {
 	}
 }
 
-func TestRouter_SelectProvider_Fallback(t *testing.T) {
+func TestRouter_SelectProvider_Unavailable(t *testing.T) {
 	r := NewRouter(StrategyLatency)
 
 	// Mark preferred as down
@@ -35,15 +32,18 @@ func TestRouter_SelectProvider_Fallback(t *testing.T) {
 		r.RecordFailure("anthropic", nil)
 	}
 
-	provider, err := r.SelectProvider("anthropic")
-	if err != nil {
-		t.Fatalf("SelectProvider error: %v", err)
+	_, err := r.SelectProvider("anthropic")
+	if err == nil {
+		t.Error("expected error when provider circuit is open")
 	}
-	if provider == "anthropic" {
-		t.Error("should have fallen back from anthropic")
-	}
-	if provider != "openai" {
-		t.Errorf("expected openai as first fallback, got %s", provider)
+}
+
+func TestRouter_SelectProvider_Empty(t *testing.T) {
+	r := NewRouter(StrategyLatency)
+
+	_, err := r.SelectProvider("")
+	if err == nil {
+		t.Error("expected error when no provider specified")
 	}
 }
 
@@ -151,26 +151,25 @@ func TestRouter_SelectProviderForModel(t *testing.T) {
 	}
 }
 
+func TestRouter_SelectProviderForModel_ProviderDown(t *testing.T) {
+	r := NewRouter(StrategyBalanced)
+
+	// Mark openai as down
+	for i := 0; i < 3; i++ {
+		r.RecordFailure("openai", nil)
+	}
+
+	_, _, err := r.SelectProviderForModel("gpt-4o")
+	if err == nil {
+		t.Error("expected error when model's provider is down")
+	}
+}
+
 func TestRouter_SelectProviderForModel_Unknown(t *testing.T) {
 	r := NewRouter(StrategyBalanced)
 
 	_, _, err := r.SelectProviderForModel("nonexistent-model")
 	if err == nil {
 		t.Error("expected error for unknown model")
-	}
-}
-
-func TestRouter_SetFallbackChain(t *testing.T) {
-	r := NewRouter(StrategyLatency)
-	r.SetFallbackChain([]string{"gemini", "openai"})
-
-	// Mark preferred as down
-	for i := 0; i < 3; i++ {
-		r.RecordFailure("anthropic", nil)
-	}
-
-	provider, _ := r.SelectProvider("anthropic")
-	if provider != "gemini" {
-		t.Errorf("expected gemini as first fallback after chain change, got %s", provider)
 	}
 }

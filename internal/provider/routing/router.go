@@ -58,13 +58,12 @@ const (
 	latencyEMAAlpha       = 0.3
 )
 
-// Router provides health-aware provider routing with fallback.
+// Router provides health-aware provider routing.
 type Router struct {
-	mu            sync.RWMutex
-	health        map[string]*ProviderHealth
-	circuits      map[string]*circuitBreaker
-	fallbackChain []string
-	strategy      RoutingStrategy
+	mu       sync.RWMutex
+	health   map[string]*ProviderHealth
+	circuits map[string]*circuitBreaker
+	strategy RoutingStrategy
 }
 
 type circuitBreaker struct {
@@ -74,45 +73,30 @@ type circuitBreaker struct {
 	halfOpenPass int
 }
 
-// NewRouter creates a new provider router with a default fallback chain.
+// NewRouter creates a new provider router.
 func NewRouter(strategy RoutingStrategy) *Router {
 	return &Router{
 		health:   make(map[string]*ProviderHealth),
 		circuits: make(map[string]*circuitBreaker),
-		fallbackChain: []string{
-			"anthropic", "openai", "gemini", "openrouter", "groq", "deepseek",
-		},
 		strategy: strategy,
 	}
 }
 
-// SetFallbackChain sets the provider fallback order.
-func (r *Router) SetFallbackChain(chain []string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.fallbackChain = chain
-}
-
-// SelectProvider chooses the best available provider, falling back if needed.
+// SelectProvider returns the preferred provider if it's available, or an error
+// if the provider's circuit breaker is open. No cross-provider fallback.
 func (r *Router) SelectProvider(preferred string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if preferred != "" && r.isAvailable(preferred) {
+	if preferred == "" {
+		return "", fmt.Errorf("no provider specified")
+	}
+
+	if r.isAvailable(preferred) {
 		return preferred, nil
 	}
 
-	for _, provider := range r.fallbackChain {
-		if r.isAvailable(provider) {
-			return provider, nil
-		}
-	}
-
-	// All providers down, return preferred anyway
-	if preferred != "" {
-		return preferred, nil
-	}
-	return "", fmt.Errorf("no available providers")
+	return "", fmt.Errorf("provider %q is unavailable (circuit open)", preferred)
 }
 
 // SelectProviderForModel chooses the best provider for a specific model.

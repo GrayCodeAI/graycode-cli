@@ -14,6 +14,9 @@ import (
 func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.Cmd) {
 	m.messages = append(m.messages, displayMsg{role: "user", content: display})
 	m.session.AddUser(prompt)
+	m.turnSawThinking = false
+	m.turnHadAssistantOutput = false
+	m.turnHadToolActivity = false
 	m.waiting = true
 	m.viewDirty = true
 	m.partial.Reset()

@@ -150,6 +150,9 @@ type chatModel struct {
 	partial                    *strings.Builder
 	waiting                    bool
 	streamCancelled            bool                      // user cancelled; suppress late streamDone side effects
+	turnSawThinking            bool                      // current turn received hidden reasoning
+	turnHadAssistantOutput     bool                      // current turn produced assistant text
+	turnHadToolActivity        bool                      // current turn produced tool activity
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	askReq                     *askUserMsg               // pending ask_user prompt
@@ -193,34 +196,37 @@ type chatModel struct {
 	compactCancel    context.CancelFunc
 	// Display values lerped toward the turn targets each render frame
 	// (factor 0.10). Smooths the counter animation.
-	displayInTok        float64
-	displayOutTok       float64
-	lastCtrlC           time.Time
-	history             []string
-	historyIdx          int
-	historyDraft        string // unsent text before navigating history
-	autoScroll          bool   // whether viewport is pinned to bottom
-	streamFollow        bool   // follow streaming output (Grok-style; toggle with /follow)
-	uiFocus             uiFocusArea
-	contentLines        int // total lines in scrollback content (for footer position)
-	vim                 *VimState
-	wal                 *session.WAL
-	startedAt           time.Time // per-turn timer (spinner + turn elapsed)
-	sessionStartedAt    time.Time // whole chat session (footer duration)
-	toolStartTime       time.Time
-	welcomeCache        string
-	welcomeDismissed    bool
-	phase               uiPhase
-	sandboxReadyPending bool // defer sandbox system line until after welcome gate
-	openConfigOnStart   bool // first-run: open /config after welcome gate (Enter)
-	viewDirty           bool
-	layoutKey           int    // input lines + slash menu height fingerprint
-	slashSugInput       string // memoize slashSuggestions per keystroke
-	slashSugCache       []string
-	connStatusKey       string // gateway+model+creds fingerprint
-	connStatusVal       string
-	partialDirty        bool // stream text changed since last viewport paint
-	lastPartialRender   time.Time
+	displayInTok         float64
+	displayOutTok        float64
+	lastCtrlC            time.Time
+	history              []string
+	historyIdx           int
+	historyDraft         string // unsent text before navigating history
+	autoScroll           bool   // whether viewport is pinned to bottom
+	streamFollow         bool   // follow streaming output (Grok-style; toggle with /follow)
+	uiFocus              uiFocusArea
+	contentLines         int   // total lines in scrollback content (for footer position)
+	lastMouseY           int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
+	mouseOverride        *bool // runtime /mouse toggle; persisted via settings
+	vim                  *VimState
+	wal                  *session.WAL
+	startedAt            time.Time // per-turn timer (spinner + turn elapsed)
+	sessionStartedAt     time.Time // whole chat session (footer duration)
+	toolStartTime        time.Time
+	welcomeCache         string
+	welcomeDismissed     bool
+	phase                uiPhase
+	sandboxReadyPending  bool // defer sandbox system line until after welcome gate
+	openConfigOnStart    bool // first-run: open /config after welcome gate (Enter)
+	viewDirty            bool
+	layoutKey            int    // input lines + slash menu height fingerprint
+	cachedBottomBarLines int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
+	slashSugInput        string // memoize slashSuggestions per keystroke
+	slashSugCache        []string
+	connStatusKey        string // gateway+model+creds fingerprint
+	connStatusVal        string
+	partialDirty         bool // stream text changed since last viewport paint
+	lastPartialRender    time.Time
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string

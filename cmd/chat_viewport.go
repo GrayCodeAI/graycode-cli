@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,26 +12,18 @@ import (
 var mouseSGRLeakRE = regexp.MustCompile(`(?:\x1b)?\[?<[0-9;.+^$*-]+[Mm]`)
 
 // mouseSGRLeakPartialRE matches CSI mouse bytes split across KeyRunes events.
-var mouseSGRLeakPartialRE = regexp.MustCompile(`^[\[<]?<?[0-9;.+^$*-]*[Mm]?$`)
+// Must include "[" or "<" + digit — never a bare letter (typing "m" must pass through).
+var mouseSGRLeakPartialRE = regexp.MustCompile(`^(?:\x1b\[|\[)(?:<[0-9;.+^$*-]*)?[Mm]?$|^<[0-9][0-9;.+^$*-]*[Mm]?$`)
 
 // mouseSGRLeakTailRE matches tails like "<64;84;24M" or "65;84;24M".
-var mouseSGRLeakTailRE = regexp.MustCompile(`^<?[0-9]+(?:;[0-9]+)*[Mm]$`)
+var mouseSGRLeakTailRE = regexp.MustCompile(`^<?[0-9]+(?:;[0-9]+)+[Mm]$`)
 
 // mouseSGRStripRE removes complete and partial SGR mouse garbage from input text.
-var mouseSGRStripRE = regexp.MustCompile(`(?:\x1b)?\[?<[0-9;.+^$*-]*[Mm]?`)
+// Requires "<" + digit or a bracket-led CSI prefix so words ending in "m" are kept.
+var mouseSGRStripRE = regexp.MustCompile(`(?:\x1b)?\[?<[0-9][0-9;.+^$*-]*[Mm]?|(?:\x1b)?\[(?:<[0-9;.+^$*-]*)?[Mm]?|<?[0-9]+(?:;[0-9]+)+[Mm]`)
 
 // mouseSGRReportRE parses xterm SGR mouse reports (e.g. "[<65;99;16M" or "<65;99;16M").
 var mouseSGRReportRE = regexp.MustCompile(`(?:\x1b)?\[?<(\d+);(\d+);(\d+)([Mm])`)
-
-// mouseTrackingEnabled is on by default for split-pane wheel scroll (chat yes, input no).
-// Set HAWK_MOUSE=0 to disable wheel scrolling entirely (broken terminals).
-func mouseTrackingEnabled() bool {
-	v := strings.TrimSpace(os.Getenv("HAWK_MOUSE"))
-	if v == "0" || strings.EqualFold(v, "false") || strings.EqualFold(v, "off") {
-		return false
-	}
-	return true
-}
 
 func isMouseRuneLeak(s string) bool {
 	if s == "" {
@@ -60,6 +51,9 @@ func isMouseSequenceLeak(msg tea.KeyMsg) bool {
 
 // stripMouseLeaks removes accumulated SGR mouse garbage from an input value.
 func stripMouseLeaks(s string) string {
+	if s == "" || (!strings.Contains(s, "<") && !strings.Contains(s, "\x1b")) {
+		return s
+	}
 	for {
 		next := mouseSGRStripRE.ReplaceAllString(s, "")
 		if next == s {
@@ -67,6 +61,13 @@ func stripMouseLeaks(s string) string {
 		}
 		s = next
 	}
+}
+
+func inputMayContainMouseLeaks(s string) bool {
+	if s == "" {
+		return false
+	}
+	return strings.Contains(s, "<") || strings.Contains(s, "\x1b")
 }
 
 // shouldForwardToInput keeps mouse events and leaked CSI bytes out of the textarea.
@@ -124,19 +125,39 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 
 // chatPaneTopY is the first terminal row of the scrollable chat pane (sync with View).
 func (m chatModel) chatPaneTopY() int {
-	top := m.fixedWelcomeLineCount()
-	if top > 0 {
-		top++
+	if m.height <= 0 {
+		return m.fixedWelcomeLineCount()
+	}
+	m = m.withSyncedLayout()
+	top := m.footerTopY() - m.viewport.Height
+	if top < m.fixedWelcomeLineCount() {
+		top = m.fixedWelcomeLineCount()
 	}
 	return top
 }
 
-// bottomBarTopY is the first terminal row of the fixed footer (input + stats).
-func (m chatModel) bottomBarTopY() int {
+// footerTopY is the first terminal row of the fixed footer (input + stats), exclusive
+// upper bound for the scrollable chat pane. Keep in sync with View().
+func (m chatModel) footerTopY() int {
 	if m.height <= 0 {
 		return 0
 	}
+	m = m.withSyncedLayout()
 	return m.height - m.chatBottomBarLines()
+}
+
+// bottomBarTopY is the first terminal row of the fixed footer (alias for mouse routing).
+func (m chatModel) bottomBarTopY() int {
+	return m.footerTopY()
+}
+
+// mouseInFooterZone reports whether a mouse event is over the fixed footer (input + stats).
+func (m chatModel) mouseInFooterZone(mouse tea.MouseMsg) bool {
+	if m.height <= 0 {
+		return false
+	}
+	m = m.withSyncedLayout()
+	return mouse.Y >= m.footerTopY()
 }
 
 // mouseInChatPane reports whether a mouse event is over the chat viewport region.
@@ -145,16 +166,46 @@ func (m chatModel) mouseInChatPane(mouse tea.MouseMsg) bool {
 		return true
 	}
 	top := m.chatPaneTopY()
-	bottom := m.bottomBarTopY()
-	if bottom <= top {
+	footerTop := m.footerTopY()
+	if footerTop <= top {
 		return mouse.Y >= top
 	}
-	return mouse.Y >= top && mouse.Y < bottom
+	return mouse.Y >= top && mouse.Y < footerTop
 }
 
-// syncViewportMouseWheel enables wheel scrolling only when mouse tracking is on.
+// trackMousePosition remembers the last pointer row for wheel routing.
+func (m *chatModel) trackMousePosition(msg tea.MouseMsg) {
+	if msg.Y < 0 {
+		return
+	}
+	// Cursor wheel leaks often report the footer row; keep the last motion/chat row instead.
+	if tea.MouseEvent(msg).IsWheel() && !m.mouseInChatPane(msg) {
+		return
+	}
+	m.lastMouseY = msg.Y
+}
+
+// effectiveWheelY picks the row used to route wheel events. Cursor's integrated terminal
+// often reports wheel at the bottom row even when the pointer is over chat; prefer the
+// last known pointer row only for that stale bottom-row report.
+func (m chatModel) effectiveWheelY(msg tea.MouseMsg) int {
+	y := msg.Y
+	if m.lastMouseY < 0 || !m.mouseInFooterZone(msg) || m.height <= 0 {
+		return y
+	}
+	if y < m.height-1 {
+		return y
+	}
+	if m.mouseInChatPane(tea.MouseMsg{Y: m.lastMouseY}) {
+		return m.lastMouseY
+	}
+	return y
+}
+
+// syncViewportMouseWheel disables bubbletea viewport auto-wheel; hawk routes wheel
+// events manually so chat scrolls only when the pointer is over the chat pane.
 func (m chatModel) syncViewportMouseWheel() chatModel {
-	m.viewport.MouseWheelEnabled = mouseTrackingEnabled() && !m.configOpen && !m.onWelcomeGate()
+	m.viewport.MouseWheelEnabled = false
 	return m
 }
 
@@ -162,7 +213,7 @@ func (m chatModel) syncViewportMouseWheel() chatModel {
 // Standard split-pane UX: wheel over chat scrolls history; wheel over input is ignored;
 // arrows in prompt focus navigate input history (see routeKeyToViewport).
 func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
-	if !mouseTrackingEnabled() {
+	if !m.mouseEnabled() {
 		return false
 	}
 	mouse, isMouse := msg.(tea.MouseMsg)
@@ -175,13 +226,50 @@ func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
 	if m.configOpen || m.onWelcomeGate() {
 		return false
 	}
-	if !m.viewportScrollable() {
-		return false
-	}
 	if m.inScrollbackFocus() {
 		return true
 	}
-	return m.mouseInChatPane(mouse)
+	return m.wheelRoutesToChat(mouse)
+}
+
+// wheelRoutesToChat reports whether a wheel event should scroll chat history.
+func (m chatModel) wheelRoutesToChat(mouse tea.MouseMsg) bool {
+	route := mouse
+	route.Y = m.effectiveWheelY(mouse)
+	return m.mouseInChatPane(route)
+}
+
+// applyMouseScroll routes a mouse event to the chat viewport and syncs follow mode.
+func (m *chatModel) applyMouseScroll(msg tea.MouseMsg) tea.Cmd {
+	if !tea.MouseEvent(msg).IsWheel() {
+		if !m.shouldRouteMouseToViewport(msg) {
+			return nil
+		}
+	} else if !m.wheelRoutesToChat(msg) {
+		return nil
+	}
+	switch msg.Button {
+	case tea.MouseButtonWheelDown:
+		m.viewport.ScrollDown(m.viewport.MouseWheelDelta)
+	case tea.MouseButtonWheelUp:
+		m.viewport.ScrollUp(m.viewport.MouseWheelDelta)
+	default:
+		var vpCmd tea.Cmd
+		m.viewport, vpCmd = m.viewport.Update(msg)
+		if vpCmd != nil {
+			return vpCmd
+		}
+	}
+	if m.viewport.AtBottom() {
+		m.autoScroll = true
+		if m.uiFocus == focusPrompt {
+			m.streamFollow = true
+		}
+	} else {
+		m.autoScroll = false
+		m.streamFollow = false
+	}
+	return nil
 }
 
 // applyViewportScroll updates the chat viewport and syncs auto-scroll with scroll position.
@@ -225,6 +313,13 @@ func mouseMsgFromSGRMatch(match []string) (tea.MouseMsg, bool) {
 	if err1 != nil || err2 != nil || err3 != nil {
 		return tea.MouseMsg{}, false
 	}
+	// SGR coordinates are 1-based; bubbletea uses 0-based (see parseSGRMouseEvent).
+	if x > 0 {
+		x--
+	}
+	if y > 0 {
+		y--
+	}
 	btn, ok := wheelButtonFromSGR(btnCode)
 	if !ok {
 		return tea.MouseMsg{}, false
@@ -241,7 +336,7 @@ func mouseMsgFromSGRMatch(match []string) (tea.MouseMsg, bool) {
 // literal "[<65;x;yM" / "<65;x;yM" KeyRunes instead of tea.MouseMsg. Routes by Y:
 // chat scrolls, input/footer is ignored.
 func (m *chatModel) tryScrollFromMouseLeak(msg tea.KeyMsg) (bool, tea.Cmd) {
-	if !mouseTrackingEnabled() {
+	if !m.mouseEnabled() {
 		return false, nil
 	}
 	matches := mouseSGRReportRE.FindAllStringSubmatch(string(msg.Runes), -1)
@@ -254,38 +349,28 @@ func (m *chatModel) tryScrollFromMouseLeak(msg tea.KeyMsg) (bool, tea.Cmd) {
 		if !ok {
 			continue
 		}
-		if m.shouldRouteMouseToViewport(mouse) {
+		m.trackMousePosition(mouse)
+		if m.wheelRoutesToChat(mouse) {
 			cmd = m.applyMouseScroll(mouse)
 		}
 	}
 	return true, cmd
 }
 
-// applyMouseScroll routes a mouse event to the chat viewport and syncs follow mode.
-func (m *chatModel) applyMouseScroll(msg tea.MouseMsg) tea.Cmd {
-	if !m.shouldRouteMouseToViewport(msg) {
-		return nil
+func (m *chatModel) ensurePromptInputFocus() tea.Cmd {
+	if m.uiFocus == focusPrompt && !m.configOpen && !m.waiting && !m.useConfigInput {
+		return m.input.Focus()
 	}
-	var vpCmd tea.Cmd
-	m.viewport, vpCmd = m.viewport.Update(msg)
-	if m.viewport.AtBottom() {
-		m.autoScroll = true
-		if m.uiFocus == focusPrompt {
-			m.streamFollow = true
-		}
-	} else {
-		m.autoScroll = false
-		if m.uiFocus == focusScrollback {
-			m.streamFollow = false
-		}
-	}
-	return vpCmd
+	return nil
 }
 
-// sanitizeInput strips any SGR mouse garbage already present in the textarea.
-func (m *chatModel) sanitizeInput() {
-	cleaned := stripMouseLeaks(m.input.Value())
-	if cleaned != m.input.Value() {
+func (m *chatModel) sanitizeInputIfNeeded() {
+	val := m.input.Value()
+	if !inputMayContainMouseLeaks(val) {
+		return
+	}
+	cleaned := stripMouseLeaks(val)
+	if cleaned != val {
 		m.input.SetValue(cleaned)
 		m.input.CursorEnd()
 	}
@@ -294,11 +379,13 @@ func (m *chatModel) sanitizeInput() {
 // updateInput forwards a message to the textarea when it is safe (not mouse noise).
 func (m *chatModel) updateInput(msg tea.Msg) tea.Cmd {
 	if !shouldForwardToInput(msg) {
-		m.sanitizeInput()
+		m.sanitizeInputIfNeeded()
 		return nil
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
-	m.sanitizeInput()
+	if inputMayContainMouseLeaks(m.input.Value()) {
+		m.sanitizeInputIfNeeded()
+	}
 	return cmd
 }

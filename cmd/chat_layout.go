@@ -46,10 +46,8 @@ func (m chatModel) withSyncedLayout() chatModel {
 	}
 	bottomH := m.chatBottomBarLines()
 	welcomeH := m.fixedWelcomeLineCount()
+	// View() draws welcome text then a newline; the next row is the first chat line.
 	vpH := m.height - bottomH - welcomeH
-	if welcomeH > 0 {
-		vpH--
-	}
 	if m.onWelcomeGate() {
 		vpH = minChatViewportLines
 	}
@@ -77,6 +75,7 @@ func (m chatModel) measureInputBoxLines(footerW int) int {
 		view = m.configInput.View()
 	}
 	box := inputBorderStyle.Width(footerW).Render(view)
+	box = clipRenderedBlock(box, footerW)
 	lines := strings.Split(strings.TrimRight(box, "\n"), "\n")
 	if len(lines) == 0 {
 		return 3

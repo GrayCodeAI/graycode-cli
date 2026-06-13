@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestRouteKeyToViewport_ArrowsInPromptFocus(t *testing.T) {
@@ -81,23 +83,24 @@ func TestShouldRouteMouseToViewport_SplitPaneUX(t *testing.T) {
 	}
 }
 
-func TestSyncViewportMouseWheel_EnabledByDefault(t *testing.T) {
+func TestSyncViewportMouseWheel_ManualRouting(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "")
 	vp := viewport.New(80, 10)
 	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork}
 	m = m.syncViewportMouseWheel()
-	if !m.viewport.MouseWheelEnabled {
-		t.Fatal("wheel should be enabled by default")
+	if m.viewport.MouseWheelEnabled {
+		t.Fatal("viewport auto-wheel must stay off; hawk routes wheel by pane")
 	}
 }
 
 func TestSyncViewportMouseWheel_DisabledWithOptOut(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "0")
 	vp := viewport.New(80, 10)
-	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork}
+	disabled := false
+	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork, settings: hawkconfig.Settings{TuiMouse: &disabled}}
 	m = m.syncViewportMouseWheel()
 	if m.viewport.MouseWheelEnabled {
-		t.Fatal("wheel should be disabled when HAWK_MOUSE=0")
+		t.Fatal("wheel should be disabled when mouse capture is off")
 	}
 }
 
@@ -114,7 +117,7 @@ func TestTryScrollFromMouseLeak_SplitPaneByY(t *testing.T) {
 	m = m.withSyncedLayout()
 	before := m.viewport.YOffset
 
-	chatLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;5M")}
+	chatLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;6M")} // SGR Y is 1-based → row 5
 	handled, _ := m.tryScrollFromMouseLeak(chatLeak)
 	if !handled {
 		t.Fatal("expected chat leak to be consumed")
@@ -124,13 +127,28 @@ func TestTryScrollFromMouseLeak_SplitPaneByY(t *testing.T) {
 	}
 
 	m.viewport.SetYOffset(before)
-	inputLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;22M")}
+	inputLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;23M")} // 1-based footer row
 	handled, _ = m.tryScrollFromMouseLeak(inputLeak)
 	if !handled {
 		t.Fatal("expected input leak to be consumed")
 	}
 	if m.viewport.YOffset != before {
 		t.Fatal("wheel leak over input should not scroll viewport")
+	}
+}
+
+func TestLetterMNotTreatedAsMouseLeak(t *testing.T) {
+	for _, s := range []string{"m", "M", "hello", "lam", "vim", "make"} {
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+		if isMouseSequenceLeak(msg) {
+			t.Fatalf("%q must not be filtered as mouse leak", s)
+		}
+		if shouldForwardToInput(msg) != true {
+			t.Fatalf("%q must forward to input", s)
+		}
+	}
+	if got := stripMouseLeaks("make vim lam"); got != "make vim lam" {
+		t.Fatalf("stripMouseLeaks removed letters from words: %q", got)
 	}
 }
 
@@ -176,6 +194,59 @@ func TestMouseSequenceLeak_CursorConcatenated(t *testing.T) {
 	}
 	if got := stripMouseLeaks(leak); got != "" {
 		t.Fatalf("stripMouseLeaks = %q, want empty", got)
+	}
+}
+
+func TestEffectiveWheelY_CursorStaleFooterRow(t *testing.T) {
+	vp := viewport.New(80, 14)
+	vp.SetContent(strings.Repeat("line\n", 40))
+	m := chatModel{
+		viewport:   vp,
+		input:      textarea.New(),
+		height:     24,
+		width:      80,
+		uiFocus:    focusPrompt,
+		lastMouseY: 8, // pointer was over chat
+	}
+	m = m.withSyncedLayout()
+
+	staleFooter := tea.MouseMsg{Y: m.height - 1, Button: tea.MouseButtonWheelDown}
+	if !m.wheelRoutesToChat(staleFooter) {
+		t.Fatal("stale bottom-row wheel Y should route to chat when pointer was over chat")
+	}
+
+	m.lastMouseY = m.footerTopY() + 1
+	if m.wheelRoutesToChat(staleFooter) {
+		t.Fatal("stale bottom-row wheel Y must not scroll when pointer was over input")
+	}
+
+	explicitFooter := tea.MouseMsg{Y: m.footerTopY(), Button: tea.MouseButtonWheelDown}
+	if m.wheelRoutesToChat(explicitFooter) {
+		t.Fatal("explicit footer wheel row must not scroll chat")
+	}
+}
+
+func TestApplyMouseScroll_ClearsStreamFollow(t *testing.T) {
+	vp := viewport.New(80, 14)
+	vp.SetContent(strings.Repeat("line\n", 40))
+	vp.GotoBottom()
+	m := chatModel{
+		viewport:     vp,
+		input:        textarea.New(),
+		height:       24,
+		width:        80,
+		uiFocus:      focusPrompt,
+		autoScroll:   true,
+		streamFollow: true,
+		contentLines: 40,
+	}
+	m = m.withSyncedLayout()
+	m.applyMouseScroll(tea.MouseMsg{
+		Y:      m.chatPaneTopY(),
+		Button: tea.MouseButtonWheelUp,
+	})
+	if m.streamFollow {
+		t.Fatal("manual wheel scroll must disable stream follow")
 	}
 }
 
