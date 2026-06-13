@@ -53,6 +53,9 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 	if m.viewport.YOffset != before {
 		t.Fatalf("pass %d: wheel over input must not scroll chat (before=%d after=%d)", pass, before, m.viewport.YOffset)
 	}
+	if !m.input.Focused() {
+		t.Fatalf("pass %d: input must stay focused after mouse wheel so typing still works", pass)
+	}
 
 	up := tea.KeyMsg{Type: tea.KeyUp}
 	m.history = []string{"first", "second"}
@@ -74,4 +77,33 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 func TestUpdate_MouseWheelSplitPane(t *testing.T) {
 	runMouseScrollSplitPanePass(t, 1)
 	runMouseScrollSplitPanePass(t, 2)
+}
+
+func TestUpdate_InputHistoryWhileWaiting(t *testing.T) {
+	m := chatModel{
+		viewport: viewport.New(80, 14),
+		input:    textarea.New(),
+		height:   24,
+		width:    80,
+		uiFocus:  focusPrompt,
+		phase:    phaseWork,
+		waiting:  true,
+		history:  []string{"first", "second"},
+	}
+	m.historyIdx = len(m.history)
+	m = m.withSyncedLayout()
+
+	up := tea.KeyMsg{Type: tea.KeyUp}
+	next, _ := m.Update(up)
+	m = next.(chatModel)
+	if m.input.Value() != "second" {
+		t.Fatalf("up while waiting should navigate history, got %q", m.input.Value())
+	}
+
+	down := tea.KeyMsg{Type: tea.KeyDown}
+	next, _ = m.Update(down)
+	m = next.(chatModel)
+	if m.input.Value() != "" {
+		t.Fatalf("down while waiting should restore empty draft, got %q", m.input.Value())
+	}
 }

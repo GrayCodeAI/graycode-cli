@@ -304,7 +304,6 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}
 	vp := viewport.New(initWidth, minChatViewportLines)
-	vp.MouseWheelEnabled = true
 
 	now := time.Now()
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)}
@@ -565,6 +564,59 @@ func (m chatModel) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+// applyPromptArrowKey handles Up/Down in the prompt: slash menu navigation or input history.
+// Returns true when the key was consumed so callers skip textarea/updateInput handling.
+func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
+	if m.uiFocus != focusPrompt || m.configOpen {
+		return false
+	}
+	switch msg.Type {
+	case tea.KeyUp, tea.KeyDown:
+	default:
+		return false
+	}
+	sugs := m.slashSuggestionsFor(m.input.Value())
+	if len(sugs) > 0 {
+		switch msg.Type {
+		case tea.KeyUp:
+			if m.slashSel <= 0 {
+				m.slashSel = len(sugs) - 1
+			} else {
+				m.slashSel--
+			}
+		case tea.KeyDown:
+			m.slashSel = (m.slashSel + 1) % len(sugs)
+		}
+		return true
+	}
+	switch msg.Type {
+	case tea.KeyUp:
+		if len(m.history) > 0 {
+			if m.historyIdx == len(m.history) {
+				m.historyDraft = m.input.Value()
+			}
+			if m.historyIdx > 0 {
+				m.historyIdx--
+				m.input.SetValue(m.history[m.historyIdx])
+				m.input.CursorEnd()
+			}
+		}
+		return true
+	case tea.KeyDown:
+		if m.historyIdx < len(m.history)-1 {
+			m.historyIdx++
+			m.input.SetValue(m.history[m.historyIdx])
+			m.input.CursorEnd()
+		} else if m.historyIdx == len(m.history)-1 {
+			m.historyIdx = len(m.history)
+			m.input.SetValue(m.historyDraft)
+			m.input.CursorEnd()
+		}
+		return true
+	}
+	return false
+}
+
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -583,6 +635,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = m.syncViewportMouseWheel().withSyncedLayout()
 		if m.viewDirty || m.syncInputLayout() {
 			m.updateViewportContent()
+		}
+		if focus := m.ensurePromptInputFocus(); focus != nil {
+			cmds = append(cmds, focus)
 		}
 		return m, tea.Batch(cmds...)
 
@@ -606,9 +661,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if isMouseSequenceLeak(msg) {
 			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
 				m.sanitizeInput()
+				if focus := m.ensurePromptInputFocus(); focus != nil {
+					return m, tea.Batch(cmd, focus)
+				}
 				return m, cmd
 			}
 			m.sanitizeInput()
+			if focus := m.ensurePromptInputFocus(); focus != nil {
+				return m, focus
+			}
 			return m, nil
 		}
 		if next, cmd, handled := m.handleWelcomeGateKey(msg); handled {
@@ -761,6 +822,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
+			if m.applyPromptArrowKey(msg) {
+				return m, nil
+			}
 			return m, m.updateInput(msg)
 		}
 		if m.configOpen {
@@ -871,49 +935,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			return m.cycleUIFocus()
-		case tea.KeyUp:
-			sugs := m.slashSuggestionsFor(m.input.Value())
-			if len(sugs) > 0 {
-				if m.slashSel <= 0 {
-					m.slashSel = len(sugs) - 1
-				} else {
-					m.slashSel--
-				}
+		case tea.KeyUp, tea.KeyDown:
+			if m.applyPromptArrowKey(msg) {
 				return m, nil
 			}
-			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
-				return m, cmd
-			}
-			if len(m.history) > 0 {
-				if m.historyIdx == len(m.history) {
-					m.historyDraft = m.input.Value()
-				}
-				if m.historyIdx > 0 {
-					m.historyIdx--
-					m.input.SetValue(m.history[m.historyIdx])
-					m.input.CursorEnd()
-				}
-			}
-			return m, nil
-		case tea.KeyDown:
-			sugs := m.slashSuggestionsFor(m.input.Value())
-			if len(sugs) > 0 {
-				m.slashSel = (m.slashSel + 1) % len(sugs)
-				return m, nil
-			}
-			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
-				return m, cmd
-			}
-			if m.historyIdx < len(m.history)-1 {
-				m.historyIdx++
-				m.input.SetValue(m.history[m.historyIdx])
-				m.input.CursorEnd()
-			} else if m.historyIdx == len(m.history)-1 {
-				m.historyIdx = len(m.history)
-				m.input.SetValue(m.historyDraft)
-				m.input.CursorEnd()
-			}
-			return m, nil
 		case tea.KeyEsc:
 			if len(m.slashSuggestionsFor(m.input.Value())) > 0 {
 				m.slashSel = 0

@@ -97,7 +97,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	}
 	*m = m.syncViewportMouseWheel()
 	if m.viewport.MouseWheelEnabled {
-		t.Fatalf("pass %d: wheel should be off when mouse capture disabled", pass)
+		t.Fatalf("pass %d: viewport auto-wheel must stay off", pass)
 	}
 
 	m.handleMouseCommand([]string{"/mouse", "on"})

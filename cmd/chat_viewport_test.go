@@ -83,13 +83,13 @@ func TestShouldRouteMouseToViewport_SplitPaneUX(t *testing.T) {
 	}
 }
 
-func TestSyncViewportMouseWheel_EnabledByDefault(t *testing.T) {
+func TestSyncViewportMouseWheel_ManualRouting(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "")
 	vp := viewport.New(80, 10)
 	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork}
 	m = m.syncViewportMouseWheel()
-	if !m.viewport.MouseWheelEnabled {
-		t.Fatal("wheel should be enabled by default")
+	if m.viewport.MouseWheelEnabled {
+		t.Fatal("viewport auto-wheel must stay off; hawk routes wheel by pane")
 	}
 }
 
@@ -117,7 +117,7 @@ func TestTryScrollFromMouseLeak_SplitPaneByY(t *testing.T) {
 	m = m.withSyncedLayout()
 	before := m.viewport.YOffset
 
-	chatLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;5M")}
+	chatLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;6M")} // SGR Y is 1-based → row 5
 	handled, _ := m.tryScrollFromMouseLeak(chatLeak)
 	if !handled {
 		t.Fatal("expected chat leak to be consumed")
@@ -127,13 +127,28 @@ func TestTryScrollFromMouseLeak_SplitPaneByY(t *testing.T) {
 	}
 
 	m.viewport.SetYOffset(before)
-	inputLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;22M")}
+	inputLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;23M")} // 1-based footer row
 	handled, _ = m.tryScrollFromMouseLeak(inputLeak)
 	if !handled {
 		t.Fatal("expected input leak to be consumed")
 	}
 	if m.viewport.YOffset != before {
 		t.Fatal("wheel leak over input should not scroll viewport")
+	}
+}
+
+func TestLetterMNotTreatedAsMouseLeak(t *testing.T) {
+	for _, s := range []string{"m", "M", "hello", "lam", "vim", "make"} {
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+		if isMouseSequenceLeak(msg) {
+			t.Fatalf("%q must not be filtered as mouse leak", s)
+		}
+		if shouldForwardToInput(msg) != true {
+			t.Fatalf("%q must forward to input", s)
+		}
+	}
+	if got := stripMouseLeaks("make vim lam"); got != "make vim lam" {
+		t.Fatalf("stripMouseLeaks removed letters from words: %q", got)
 	}
 }
 
