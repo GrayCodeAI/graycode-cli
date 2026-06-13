@@ -50,7 +50,6 @@ var (
 	expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
 )
 
-
 // TierModels returns eyrie-preferred model IDs for haiku, sonnet, and opus tiers.
 func TierModels(provider string) (haiku, sonnet, opus string) {
 	return PreferredModelForTier(provider, eycatalog.TierHaiku, ""),

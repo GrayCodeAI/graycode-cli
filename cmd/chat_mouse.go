@@ -91,7 +91,7 @@ func (m *chatModel) handleMouseCommand(parts []string) {
 		m.setMouseEnabled(false)
 		_ = hawkconfig.SetGlobalSetting("tui_mouse", "false")
 		m.messages = append(m.messages, displayMsg{
-			role: "system",
+			role:    "system",
 			content: "Mouse capture off — use click-drag to select text. /copy and Ctrl+Shift+C still work.",
 		})
 	case "toggle":

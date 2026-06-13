@@ -54,7 +54,7 @@ type Settings struct {
 	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`   // use catalog deployment router when true / unset + provider.json qualifies
 	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`         // restrict to core tools only for a focused experience
 	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"` // GLM/Z.ai extended reasoning toggle; nil = model default
-	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`              // TUI mouse capture; false preserves native click-drag copy
+	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`            // TUI mouse capture; false preserves native click-drag copy
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.
