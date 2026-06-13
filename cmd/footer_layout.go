@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -87,6 +88,21 @@ func clipFooterLine(line string, width int) string {
 		return line
 	}
 	return ansi.Truncate(line, width, "…")
+}
+
+// clipRenderedBlock ensures every line in a lipgloss-rendered block fits the
+// terminal width. Prevents UTF-8 box-drawing borders from wrapping into � glyphs.
+func clipRenderedBlock(s string, width int) string {
+	if width < 1 || s == "" {
+		return s
+	}
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		if lipgloss.Width(line) > width {
+			lines[i] = ansi.Truncate(line, width, "")
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func shortenFooterContainerStatus(status string) string {

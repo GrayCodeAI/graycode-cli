@@ -333,6 +333,7 @@ func (m chatModel) View() string {
 			}
 			return m.input.View()
 		}())
+		inputBox = clipRenderedBlock(inputBox, footerW)
 		bottomBar.WriteString(inputBox + "\n")
 		if m.ghostText != nil {
 			if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
