@@ -319,6 +319,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		m.connStatusKey = m.connStatusFingerprint()
 	}
 	m.phase = initialUIPhase(m.hasChatMessages(), promptFlag != "")
+	m.invalidateInputLayoutCache()
+	(&m).refreshInputLayoutIfNeeded()
 	m = m.syncViewportMouseWheel().withSyncedLayout()
 	m.containerEnabled = shouldUseContainer()
 	bindChatSession(sess, sid, m.containerEnabled)
@@ -620,26 +622,24 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
-		mm := m
-		mm.sanitizeInput()
-		m = mm
-	}
-
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
-			m.trackMousePosition(msg)
-			cmds = append(cmds, m.applyMouseScroll(msg))
-		}
-		m.sanitizeInput()
-		m = m.syncViewportMouseWheel().withSyncedLayout()
-		// Do not refresh viewport on wheel — viewDirty during streaming would fight manual scroll.
-		if m.syncInputLayout() {
-			m.updateViewportContent()
-		}
-		if focus := m.ensurePromptInputFocus(); focus != nil {
-			cmds = append(cmds, focus)
+			if tea.MouseEvent(msg).IsWheel() {
+				m.trackMousePosition(msg)
+				cmds = append(cmds, m.applyMouseScroll(msg))
+				m.sanitizeInputIfNeeded()
+				m = m.syncViewportMouseWheel().withSyncedLayout()
+				if m.syncInputLayout() {
+					m.updateViewportContent()
+				}
+				if focus := m.ensurePromptInputFocus(); focus != nil {
+					cmds = append(cmds, focus)
+				}
+			} else {
+				// Motion events (?1003): track pointer only — avoid layout/sanitize/focus per move.
+				m.trackMousePosition(msg)
+			}
 		}
 		return m, tea.Batch(cmds...)
 
@@ -662,13 +662,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if isMouseSequenceLeak(msg) {
 			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
-				m.sanitizeInput()
+				m.sanitizeInputIfNeeded()
 				if focus := m.ensurePromptInputFocus(); focus != nil {
 					return m, tea.Batch(cmd, focus)
 				}
 				return m, cmd
 			}
-			m.sanitizeInput()
+			m.sanitizeInputIfNeeded()
 			if focus := m.ensurePromptInputFocus(); focus != nil {
 				return m, focus
 			}
@@ -1242,8 +1242,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.onWelcomeGate() {
 			m.input.SetWidth(msg.Width - 4)
 		}
+		m.invalidateInputLayoutCache()
 		m.rebuildWelcomeCache(false)
 		m.viewDirty = true
+		m.refreshInputLayoutIfNeeded()
+		m = m.withSyncedLayout()
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -1329,17 +1332,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if shouldForwardToInput(msg) {
 			cmds = append(cmds, m.updateInput(msg))
-		} else {
-			m.sanitizeInput()
 		}
 	}
 	if m.uiFocus == focusPrompt && !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
 
-	m = m.syncViewportMouseWheel().withSyncedLayout()
-	// Update viewport content when messages change or input layout shifts (slash menu / multiline).
-	if m.viewDirty || m.syncInputLayout() {
+	layoutChanged := m.refreshInputLayoutIfNeeded()
+	if layoutChanged {
+		m = m.withSyncedLayout()
+	}
+	if m.viewDirty || layoutChanged {
 		m.updateViewportContent()
 	}
 

@@ -220,6 +220,7 @@ type chatModel struct {
 	openConfigOnStart   bool // first-run: open /config after welcome gate (Enter)
 	viewDirty           bool
 	layoutKey           int    // input lines + slash menu height fingerprint
+	cachedBottomBarLines int   // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
 	slashSugInput       string // memoize slashSuggestions per keystroke
 	slashSugCache       []string
 	connStatusKey       string // gateway+model+creds fingerprint

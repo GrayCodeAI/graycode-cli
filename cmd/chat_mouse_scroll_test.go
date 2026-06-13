@@ -74,6 +74,32 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 	}
 }
 
+func TestUpdate_MouseMotionDoesNotReflowLayout(t *testing.T) {
+	vp := viewport.New(80, 14)
+	vp.SetContent(strings.Repeat("line\n", 40))
+	m := chatModel{
+		viewport:             vp,
+		input:                textarea.New(),
+		height:               24,
+		width:                80,
+		uiFocus:              focusPrompt,
+		phase:                phaseWork,
+		cachedBottomBarLines: 10,
+		layoutKey:            65536,
+	}
+	before := m.viewport.Height
+
+	motion := tea.MouseMsg{Y: 8, X: 10, Action: tea.MouseActionMotion}
+	next, _ := m.Update(motion)
+	m = next.(chatModel)
+	if m.viewport.Height != before {
+		t.Fatal("mouse motion should not trigger layout reflow")
+	}
+	if m.lastMouseY != 8 {
+		t.Fatalf("motion should track pointer row, got %d", m.lastMouseY)
+	}
+}
+
 func TestUpdate_MouseWheelSplitPane(t *testing.T) {
 	runMouseScrollSplitPanePass(t, 1)
 	runMouseScrollSplitPanePass(t, 2)

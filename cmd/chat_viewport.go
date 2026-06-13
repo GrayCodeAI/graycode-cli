@@ -51,6 +51,9 @@ func isMouseSequenceLeak(msg tea.KeyMsg) bool {
 
 // stripMouseLeaks removes accumulated SGR mouse garbage from an input value.
 func stripMouseLeaks(s string) string {
+	if s == "" || (!strings.Contains(s, "<") && !strings.Contains(s, "\x1b")) {
+		return s
+	}
 	for {
 		next := mouseSGRStripRE.ReplaceAllString(s, "")
 		if next == s {
@@ -58,6 +61,13 @@ func stripMouseLeaks(s string) string {
 		}
 		s = next
 	}
+}
+
+func inputMayContainMouseLeaks(s string) bool {
+	if s == "" {
+		return false
+	}
+	return strings.Contains(s, "<") || strings.Contains(s, "\x1b")
 }
 
 // shouldForwardToInput keeps mouse events and leaked CSI bytes out of the textarea.
@@ -367,22 +377,32 @@ func (m *chatModel) ensurePromptInputFocus() tea.Cmd {
 	return nil
 }
 
-func (m *chatModel) sanitizeInput() {
-	cleaned := stripMouseLeaks(m.input.Value())
-	if cleaned != m.input.Value() {
+func (m *chatModel) sanitizeInputIfNeeded() {
+	val := m.input.Value()
+	if !inputMayContainMouseLeaks(val) {
+		return
+	}
+	cleaned := stripMouseLeaks(val)
+	if cleaned != val {
 		m.input.SetValue(cleaned)
 		m.input.CursorEnd()
 	}
 }
 
+func (m *chatModel) sanitizeInput() {
+	m.sanitizeInputIfNeeded()
+}
+
 // updateInput forwards a message to the textarea when it is safe (not mouse noise).
 func (m *chatModel) updateInput(msg tea.Msg) tea.Cmd {
 	if !shouldForwardToInput(msg) {
-		m.sanitizeInput()
+		m.sanitizeInputIfNeeded()
 		return nil
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
-	m.sanitizeInput()
+	if inputMayContainMouseLeaks(m.input.Value()) {
+		m.sanitizeInputIfNeeded()
+	}
 	return cmd
 }

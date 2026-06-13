@@ -201,12 +201,16 @@ func wrapText(text string, width int, prefixWidth int) string {
 
 // chatBottomBarLines counts fixed rows below the chat viewport (must stay in sync with View).
 func (m chatModel) chatBottomBarLines() int {
-	if m.onWelcomeGate() {
-		return 0 // gate draws its own footer inside renderWelcomeGate
-	}
-	if m.configOpen {
+	if m.onWelcomeGate() || m.configOpen {
 		return 0
 	}
+	if m.cachedBottomBarLines > 0 {
+		return m.cachedBottomBarLines
+	}
+	return m.computeChatBottomBarLines()
+}
+
+func (m chatModel) computeChatBottomBarLines() int {
 	footerW := m.width
 	if footerW < 40 {
 		footerW = 80

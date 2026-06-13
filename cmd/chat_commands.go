@@ -66,21 +66,49 @@ func (m *chatModel) visibleSlashSuggestionLines() int {
 	return n
 }
 
-func (m *chatModel) syncInputLayout() bool {
+func (m chatModel) inputAreaLayoutKey() int {
 	if m.configOpen {
-		return false
+		return 0
 	}
 	lines := strings.Count(m.input.Value(), "\n") + 1
 	if lines > 10 {
 		lines = 10
 	}
-	visible := m.visibleSlashSuggestionLines()
-	key := lines<<16 | visible
-	if key == m.layoutKey {
+	key := lines<<16 | m.visibleSlashSuggestionLines()
+	if m.manualCompacting {
+		key |= 1 << 15
+	}
+	if m.inScrollbackFocus() {
+		key |= 1 << 14
+	}
+	if m.ghostText != nil {
+		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
+			key |= 1 << 13
+		}
+	}
+	return key
+}
+
+func (m *chatModel) invalidateInputLayoutCache() {
+	m.layoutKey = -1
+	m.cachedBottomBarLines = 0
+}
+
+func (m *chatModel) refreshInputLayoutIfNeeded() bool {
+	if m.configOpen {
+		return false
+	}
+	key := m.inputAreaLayoutKey()
+	if key == m.layoutKey && m.cachedBottomBarLines > 0 {
 		return false
 	}
 	m.layoutKey = key
+	m.cachedBottomBarLines = m.computeChatBottomBarLines()
 	return true
+}
+
+func (m *chatModel) syncInputLayout() bool {
+	return m.refreshInputLayoutIfNeeded()
 }
 
 func slashAliases() map[string]string {
