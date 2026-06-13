@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,16 +22,6 @@ var mouseSGRStripRE = regexp.MustCompile(`(?:\x1b)?\[?<[0-9;.+^$*-]*[Mm]?`)
 
 // mouseSGRReportRE parses xterm SGR mouse reports (e.g. "[<65;99;16M" or "<65;99;16M").
 var mouseSGRReportRE = regexp.MustCompile(`(?:\x1b)?\[?<(\d+);(\d+);(\d+)([Mm])`)
-
-// mouseTrackingEnabled is on by default for split-pane wheel scroll (chat yes, input no).
-// Set HAWK_MOUSE=0 to disable wheel scrolling entirely (broken terminals).
-func mouseTrackingEnabled() bool {
-	v := strings.TrimSpace(os.Getenv("HAWK_MOUSE"))
-	if v == "0" || strings.EqualFold(v, "false") || strings.EqualFold(v, "off") {
-		return false
-	}
-	return true
-}
 
 func isMouseRuneLeak(s string) bool {
 	if s == "" {
@@ -154,7 +143,7 @@ func (m chatModel) mouseInChatPane(mouse tea.MouseMsg) bool {
 
 // syncViewportMouseWheel enables wheel scrolling only when mouse tracking is on.
 func (m chatModel) syncViewportMouseWheel() chatModel {
-	m.viewport.MouseWheelEnabled = mouseTrackingEnabled() && !m.configOpen && !m.onWelcomeGate()
+	m.viewport.MouseWheelEnabled = m.mouseEnabled() && !m.configOpen && !m.onWelcomeGate()
 	return m
 }
 
@@ -162,7 +151,7 @@ func (m chatModel) syncViewportMouseWheel() chatModel {
 // Standard split-pane UX: wheel over chat scrolls history; wheel over input is ignored;
 // arrows in prompt focus navigate input history (see routeKeyToViewport).
 func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
-	if !mouseTrackingEnabled() {
+	if !m.mouseEnabled() {
 		return false
 	}
 	mouse, isMouse := msg.(tea.MouseMsg)
@@ -241,7 +230,7 @@ func mouseMsgFromSGRMatch(match []string) (tea.MouseMsg, bool) {
 // literal "[<65;x;yM" / "<65;x;yM" KeyRunes instead of tea.MouseMsg. Routes by Y:
 // chat scrolls, input/footer is ignored.
 func (m *chatModel) tryScrollFromMouseLeak(msg tea.KeyMsg) (bool, tea.Cmd) {
-	if !mouseTrackingEnabled() {
+	if !m.mouseEnabled() {
 		return false, nil
 	}
 	matches := mouseSGRReportRE.FindAllStringSubmatch(string(msg.Runes), -1)

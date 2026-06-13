@@ -547,7 +547,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{initTerminalMouseCmd(), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
 	}
@@ -576,7 +576,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		if mouseTrackingEnabled() {
+		if m.mouseEnabled() {
 			cmds = append(cmds, m.applyMouseScroll(msg))
 		}
 		m.sanitizeInput()
@@ -593,6 +593,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openConfigOnStart = false
 		return m.openConfigPanel()
 	case tea.KeyMsg:
+		// Ctrl+\ enters native terminal selection mode. Available in every UI
+		// state (welcome gate, permissions, prompt, scrollback) so users always
+		// have a way to copy text out of the chat — the alt-screen +
+		// mouse-tracking combination otherwise breaks native text selection.
+		if msg.Type == tea.KeyCtrlBackslash {
+			return m, enterSelectionMode(m.ref, m.copyableTranscript(), m.mouseEnabled())
+		}
+		if isCopyToClipboardKey(msg) {
+			return m.handleCopyShortcut()
+		}
 		if isMouseSequenceLeak(msg) {
 			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
 				m.sanitizeInput()
@@ -993,6 +1003,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.compacting = false
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 		}
+		m.turnHadAssistantOutput = true
 		m.partial.WriteString(string(msg))
 		m.markPartialDirty()
 		if m.viewDirty {
@@ -1001,24 +1012,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case thinkingMsg:
-		chunk := string(msg)
-		if n := len(m.messages); n > 0 && m.messages[n-1].role == "thinking" {
-			m.messages[n-1].content += chunk
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "thinking", content: chunk})
-		}
-		m.viewDirty = true
-		m.updateViewportContent()
+		m.turnSawThinking = true
 		return m, nil
 
 	case streamRetryMsg:
 		m.partial.Reset()
 		m.messages = stripCurrentTurnThinking(m.messages)
+		m.turnSawThinking = false
+		m.turnHadAssistantOutput = false
+		m.turnHadToolActivity = false
 		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ " + msg.content})
 		m.viewDirty = true
 		return m, nil
 
 	case toolUseMsg:
+		m.turnHadToolActivity = true
 		if m.partial.Len() > 0 {
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
 			m.partial.Reset()
@@ -1029,6 +1037,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case toolResultMsg:
+		m.turnHadToolActivity = true
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, msg.content)})
 		m.viewDirty = true
 		return m, nil
@@ -1036,6 +1045,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case blastRadiusMsg:
 		m.messages = append(m.messages, displayMsg{role: "system", content: msg.message})
 		m.viewDirty = true
+		return m, nil
+
+	case selectionResumedMsg:
+		// Returned from enterSelectionMode. The terminal has been
+		// restored; just trigger a redraw so the viewport reflects the
+		// state that was visible before selection.
+		m.viewDirty = true
+		m.updateViewportContent()
 		return m, nil
 
 	case permissionAskMsg:
@@ -1125,7 +1142,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Generate ghost text suggestion from AI response
 			m.ghostText.Suggest(content)
 			m.partial.Reset()
-		} else if turnHadThinkingOnly(m.messages) {
+		} else if m.turnSawThinking && !m.turnHadAssistantOutput && !m.turnHadToolActivity {
 			// Model sent reasoning tokens but no answer — common with reasoning
 			// models when the provider drops the post-reasoning content.
 			m.messages = append(m.messages, displayMsg{
@@ -1133,6 +1150,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				content: friendlyError(fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")),
 			})
 		}
+		m.turnSawThinking = false
+		m.turnHadAssistantOutput = false
+		m.turnHadToolActivity = false
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
@@ -1151,6 +1171,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
+			m.turnSawThinking = false
+			m.turnHadAssistantOutput = false
+			m.turnHadToolActivity = false
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
 			m.startedAt = time.Time{}
@@ -1350,11 +1373,14 @@ func runChat() error {
 	if promptFlag != "" {
 		m.messages = append(m.messages, displayMsg{role: "user", content: promptFlag})
 		m.session.AddUser(promptFlag)
+		m.turnSawThinking = false
+		m.turnHadAssistantOutput = false
+		m.turnHadToolActivity = false
 		m.waiting = true
 	}
 
 	programOpts := []tea.ProgramOption{tea.WithAltScreen()}
-	if mouseTrackingEnabled() {
+	if m.mouseEnabled() {
 		programOpts = append(programOpts, tea.WithMouseCellMotion())
 	}
 	p := tea.NewProgram(m, programOpts...)

@@ -150,6 +150,9 @@ type chatModel struct {
 	partial                    *strings.Builder
 	waiting                    bool
 	streamCancelled            bool                      // user cancelled; suppress late streamDone side effects
+	turnSawThinking            bool                      // current turn received hidden reasoning
+	turnHadAssistantOutput     bool                      // current turn produced assistant text
+	turnHadToolActivity        bool                      // current turn produced tool activity
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	askReq                     *askUserMsg               // pending ask_user prompt
@@ -203,6 +206,7 @@ type chatModel struct {
 	streamFollow        bool   // follow streaming output (Grok-style; toggle with /follow)
 	uiFocus             uiFocusArea
 	contentLines        int // total lines in scrollback content (for footer position)
+	mouseOverride       *bool // runtime /mouse toggle; persisted via settings
 	vim                 *VimState
 	wal                 *session.WAL
 	startedAt           time.Time // per-turn timer (spinner + turn elapsed)

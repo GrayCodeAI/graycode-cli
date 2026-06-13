@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestRouteKeyToViewport_ArrowsInPromptFocus(t *testing.T) {
@@ -94,10 +96,11 @@ func TestSyncViewportMouseWheel_EnabledByDefault(t *testing.T) {
 func TestSyncViewportMouseWheel_DisabledWithOptOut(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "0")
 	vp := viewport.New(80, 10)
-	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork}
+	disabled := false
+	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork, settings: hawkconfig.Settings{TuiMouse: &disabled}}
 	m = m.syncViewportMouseWheel()
 	if m.viewport.MouseWheelEnabled {
-		t.Fatal("wheel should be disabled when HAWK_MOUSE=0")
+		t.Fatal("wheel should be disabled when mouse capture is off")
 	}
 }
 

@@ -18,17 +18,17 @@ func writeTerminalMouse(mode string) {
 	_, _ = os.Stdout.WriteString(mode)
 }
 
-func syncTerminalMouse() {
-	if mouseTrackingEnabled() {
+func syncTerminalMouse(enabled bool) {
+	if enabled {
 		writeTerminalMouse(enableMouseCSI)
 	} else {
 		writeTerminalMouse(disableMouseCSI)
 	}
 }
 
-func initTerminalMouseCmd() tea.Cmd {
+func initTerminalMouseCmd(enabled bool) tea.Cmd {
 	return func() tea.Msg {
-		syncTerminalMouse()
+		syncTerminalMouse(enabled)
 		return nil
 	}
 }
