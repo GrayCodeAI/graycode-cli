@@ -441,8 +441,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					streamErr = nil
 					break
 				}
-				streamErr = fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")
-				break
+				ch <- StreamEvent{Type: "error", Content: "The model produced internal reasoning but no reply."}
+				result.Close()
+				return
 			}
 
 			shouldRetry := streamErr != nil && isRetryableStreamError(streamErr)

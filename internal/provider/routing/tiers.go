@@ -251,21 +251,3 @@ func tierFromCatalogPricing(modelName string) (CostTier, bool) {
 		return CostTierMid, true
 	}
 }
-
-func modelsMatch(a, b string) bool {
-	a = strings.TrimSpace(a)
-	b = strings.TrimSpace(b)
-	if a == "" || b == "" {
-		return false
-	}
-	if strings.EqualFold(a, b) {
-		return true
-	}
-	compiled := eyrieCatalogV1()
-	if compiled == nil {
-		return false
-	}
-	canonA, okA := compiled.CanonicalModelForAliasOrID(a)
-	canonB, okB := compiled.CanonicalModelForAliasOrID(b)
-	return okA && okB && canonA == canonB
-}

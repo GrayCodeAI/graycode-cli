@@ -86,19 +86,6 @@ func (m chatModel) viewportScrollable() bool {
 	return !(m.viewport.AtTop() && m.viewport.AtBottom())
 }
 
-// chatHasScrollOverflow reports whether chat history can be scrolled (for wheel routing).
-// Prefer contentLines over viewport AtTop/AtBottom, which can both be true while pinned to bottom.
-func (m chatModel) chatHasScrollOverflow() bool {
-	h := m.viewport.Height
-	if h <= 0 {
-		return false
-	}
-	if m.contentLines > h {
-		return true
-	}
-	return m.viewportScrollable()
-}
-
 // routeKeyToViewport returns true when the key should scroll chat history instead of the input.
 func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 	if m.configOpen {
@@ -387,10 +374,6 @@ func (m *chatModel) sanitizeInputIfNeeded() {
 		m.input.SetValue(cleaned)
 		m.input.CursorEnd()
 	}
-}
-
-func (m *chatModel) sanitizeInput() {
-	m.sanitizeInputIfNeeded()
 }
 
 // updateInput forwards a message to the textarea when it is safe (not mouse noise).

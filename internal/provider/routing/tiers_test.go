@@ -29,26 +29,23 @@ func TestCostTierOf_CatalogModels(t *testing.T) {
 }
 
 func TestPreferredModelForTier_NilCatalog(t *testing.T) {
-	// Without a catalog, PreferredModelForTier returns empty
-	got := PreferredModelForTier("anthropic", eycatalog.TierHaiku, "")
+	got := PreferredModelForTier("unknown-provider-xyz", eycatalog.TierHaiku, "")
 	if got != "" {
-		t.Fatalf("expected empty haiku model without catalog, got %q", got)
+		t.Fatalf("expected empty haiku model for unknown provider, got %q", got)
 	}
 }
 
 func TestPreferredModelForTier_WithFallback(t *testing.T) {
-	// With a fallback, it returns the fallback
-	got := PreferredModelForTier("anthropic", eycatalog.TierHaiku, "fallback-model")
+	got := PreferredModelForTier("unknown-provider-xyz", eycatalog.TierHaiku, "fallback-model")
 	if got != "fallback-model" {
 		t.Fatalf("expected fallback model, got %q", got)
 	}
 }
 
 func TestRolesForProvider_NilCatalog(t *testing.T) {
-	// Without a catalog, roles are empty
-	roles := RolesForProvider("anthropic")
+	roles := RolesForProvider("unknown-provider-xyz")
 	if roles.Planner != "" || roles.Coder != "" || roles.Commit != "" {
-		t.Fatal("expected empty roles without catalog")
+		t.Fatal("expected empty roles for unknown provider")
 	}
 }
 

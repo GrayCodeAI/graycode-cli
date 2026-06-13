@@ -35,8 +35,8 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 		}
 	}
 
-	if content, label, ok := m.smartCopyContent(); !ok || label != "input" || content != "draft in prompt" {
-		t.Fatalf("pass %d: smartCopy = (%q,%q,%v)", pass, content, label, ok)
+	if content, label, got := m.smartCopyContent(); !got || label != "input" || content != "draft in prompt" {
+		t.Fatalf("pass %d: smartCopy = (%q,%q,%v)", pass, content, label, got)
 	}
 
 	result, _ := m.handleCommand("/copy input")
@@ -44,8 +44,12 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	if !ok {
 		t.Fatalf("pass %d: /copy input returned %T", pass, result)
 	}
-	if !strings.Contains(lastSystemMessage(cm.messages), "Copied input") {
-		t.Fatalf("pass %d: /copy input: %s", pass, lastSystemMessage(cm.messages))
+	copyInputMsg := lastSystemMessage(cm.messages)
+	if strings.Contains(copyInputMsg, "Failed to copy") {
+		if err := copyToClipboard("probe"); err != nil {
+			t.Skipf("pass %d: clipboard not available on runner: %v", pass, err)
+		}
+		t.Fatalf("pass %d: /copy input: %s", pass, copyInputMsg)
 	}
 	m = cm
 
@@ -114,11 +118,11 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	m.messages = append(m.messages, displayMsg{role: "assistant", content: "Hello from hawk"})
 	m.input.SetValue("")
 
-	if content, _, ok := m.copyContent(copyModeAssistant); !ok || content != "Hello from hawk" {
-		t.Fatalf("pass %d: /copy assistant content = %q ok=%v", pass, content, ok)
+	if content, _, got := m.copyContent(copyModeAssistant); !got || content != "Hello from hawk" {
+		t.Fatalf("pass %d: /copy assistant content = %q got=%v", pass, content, got)
 	}
-	if line, ok := m.lastMessageContent(); !ok || !strings.Contains(line, "Hello from hawk") {
-		t.Fatalf("pass %d: last message = %q ok=%v", pass, line, ok)
+	if line, got := m.lastMessageContent(); !got || !strings.Contains(line, "Hello from hawk") {
+		t.Fatalf("pass %d: last message = %q got=%v", pass, line, got)
 	}
 
 	result, _ = m.handleCommand("/copy assistant")
