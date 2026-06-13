@@ -76,6 +76,19 @@ func (m chatModel) viewportScrollable() bool {
 	return !(m.viewport.AtTop() && m.viewport.AtBottom())
 }
 
+// chatHasScrollOverflow reports whether chat history can be scrolled (for wheel routing).
+// Prefer contentLines over viewport AtTop/AtBottom, which can both be true while pinned to bottom.
+func (m chatModel) chatHasScrollOverflow() bool {
+	h := m.viewport.Height
+	if h <= 0 {
+		return false
+	}
+	if m.contentLines > h {
+		return true
+	}
+	return m.viewportScrollable()
+}
+
 // routeKeyToViewport returns true when the key should scroll chat history instead of the input.
 func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 	if m.configOpen {
@@ -115,7 +128,15 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 
 // chatPaneTopY is the first terminal row of the scrollable chat pane (sync with View).
 func (m chatModel) chatPaneTopY() int {
-	return m.fixedWelcomeLineCount()
+	if m.height <= 0 {
+		return m.fixedWelcomeLineCount()
+	}
+	m = m.withSyncedLayout()
+	top := m.footerTopY() - m.viewport.Height
+	if top < m.fixedWelcomeLineCount() {
+		top = m.fixedWelcomeLineCount()
+	}
+	return top
 }
 
 // footerTopY is the first terminal row of the fixed footer (input + stats), exclusive
@@ -125,12 +146,21 @@ func (m chatModel) footerTopY() int {
 		return 0
 	}
 	m = m.withSyncedLayout()
-	return m.chatPaneTopY() + m.viewport.Height
+	return m.height - m.chatBottomBarLines()
 }
 
 // bottomBarTopY is the first terminal row of the fixed footer (alias for mouse routing).
 func (m chatModel) bottomBarTopY() int {
 	return m.footerTopY()
+}
+
+// mouseInFooterZone reports whether a mouse event is over the fixed footer (input + stats).
+func (m chatModel) mouseInFooterZone(mouse tea.MouseMsg) bool {
+	if m.height <= 0 {
+		return false
+	}
+	m = m.withSyncedLayout()
+	return mouse.Y >= m.footerTopY()
 }
 
 // mouseInChatPane reports whether a mouse event is over the chat viewport region.
@@ -144,6 +174,35 @@ func (m chatModel) mouseInChatPane(mouse tea.MouseMsg) bool {
 		return mouse.Y >= top
 	}
 	return mouse.Y >= top && mouse.Y < footerTop
+}
+
+// trackMousePosition remembers the last pointer row for wheel routing.
+func (m *chatModel) trackMousePosition(msg tea.MouseMsg) {
+	if msg.Y < 0 {
+		return
+	}
+	// Cursor wheel leaks often report the footer row; keep the last motion/chat row instead.
+	if tea.MouseEvent(msg).IsWheel() && !m.mouseInChatPane(msg) {
+		return
+	}
+	m.lastMouseY = msg.Y
+}
+
+// effectiveWheelY picks the row used to route wheel events. Cursor's integrated terminal
+// often reports wheel at the bottom row even when the pointer is over chat; prefer the
+// last known pointer row only for that stale bottom-row report.
+func (m chatModel) effectiveWheelY(msg tea.MouseMsg) int {
+	y := msg.Y
+	if m.lastMouseY < 0 || !m.mouseInFooterZone(msg) || m.height <= 0 {
+		return y
+	}
+	if y < m.height-1 {
+		return y
+	}
+	if m.mouseInChatPane(tea.MouseMsg{Y: m.lastMouseY}) {
+		return m.lastMouseY
+	}
+	return y
 }
 
 // syncViewportMouseWheel disables bubbletea viewport auto-wheel; hawk routes wheel
@@ -170,13 +229,50 @@ func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
 	if m.configOpen || m.onWelcomeGate() {
 		return false
 	}
-	if !m.viewportScrollable() {
-		return false
-	}
 	if m.inScrollbackFocus() {
 		return true
 	}
-	return m.mouseInChatPane(mouse)
+	return m.wheelRoutesToChat(mouse)
+}
+
+// wheelRoutesToChat reports whether a wheel event should scroll chat history.
+func (m chatModel) wheelRoutesToChat(mouse tea.MouseMsg) bool {
+	route := mouse
+	route.Y = m.effectiveWheelY(mouse)
+	return m.mouseInChatPane(route)
+}
+
+// applyMouseScroll routes a mouse event to the chat viewport and syncs follow mode.
+func (m *chatModel) applyMouseScroll(msg tea.MouseMsg) tea.Cmd {
+	if !tea.MouseEvent(msg).IsWheel() {
+		if !m.shouldRouteMouseToViewport(msg) {
+			return nil
+		}
+	} else if !m.wheelRoutesToChat(msg) {
+		return nil
+	}
+	switch msg.Button {
+	case tea.MouseButtonWheelDown:
+		m.viewport.ScrollDown(m.viewport.MouseWheelDelta)
+	case tea.MouseButtonWheelUp:
+		m.viewport.ScrollUp(m.viewport.MouseWheelDelta)
+	default:
+		var vpCmd tea.Cmd
+		m.viewport, vpCmd = m.viewport.Update(msg)
+		if vpCmd != nil {
+			return vpCmd
+		}
+	}
+	if m.viewport.AtBottom() {
+		m.autoScroll = true
+		if m.uiFocus == focusPrompt {
+			m.streamFollow = true
+		}
+	} else {
+		m.autoScroll = false
+		m.streamFollow = false
+	}
+	return nil
 }
 
 // applyViewportScroll updates the chat viewport and syncs auto-scroll with scroll position.
@@ -256,45 +352,14 @@ func (m *chatModel) tryScrollFromMouseLeak(msg tea.KeyMsg) (bool, tea.Cmd) {
 		if !ok {
 			continue
 		}
-		if m.shouldRouteMouseToViewport(mouse) {
+		m.trackMousePosition(mouse)
+		if m.wheelRoutesToChat(mouse) {
 			cmd = m.applyMouseScroll(mouse)
 		}
 	}
 	return true, cmd
 }
 
-// applyMouseScroll routes a mouse event to the chat viewport and syncs follow mode.
-func (m *chatModel) applyMouseScroll(msg tea.MouseMsg) tea.Cmd {
-	if !m.shouldRouteMouseToViewport(msg) {
-		return nil
-	}
-	switch msg.Button {
-	case tea.MouseButtonWheelDown:
-		m.viewport.ScrollDown(m.viewport.MouseWheelDelta)
-	case tea.MouseButtonWheelUp:
-		m.viewport.ScrollUp(m.viewport.MouseWheelDelta)
-	default:
-		var vpCmd tea.Cmd
-		m.viewport, vpCmd = m.viewport.Update(msg)
-		if vpCmd != nil {
-			return vpCmd
-		}
-	}
-	if m.viewport.AtBottom() {
-		m.autoScroll = true
-		if m.uiFocus == focusPrompt {
-			m.streamFollow = true
-		}
-	} else {
-		m.autoScroll = false
-		if m.uiFocus == focusScrollback {
-			m.streamFollow = false
-		}
-	}
-	return nil
-}
-
-// sanitizeInput strips any SGR mouse garbage already present in the textarea.
 func (m *chatModel) ensurePromptInputFocus() tea.Cmd {
 	if m.uiFocus == focusPrompt && !m.configOpen && !m.waiting && !m.useConfigInput {
 		return m.input.Focus()

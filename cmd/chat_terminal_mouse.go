@@ -11,7 +11,7 @@ import (
 // scroll events to arrive as literal "[<65;99;16M" KeyRunes in the input.
 const (
 	disableMouseCSI = "\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l"
-	enableMouseCSI  = "\x1b[?1006h\x1b[?1002h"
+	enableMouseCSI  = "\x1b[?1006h\x1b[?1002h\x1b[?1003h"
 )
 
 func writeTerminalMouse(mode string) {

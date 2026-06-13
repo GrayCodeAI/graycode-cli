@@ -629,11 +629,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
+			m.trackMousePosition(msg)
 			cmds = append(cmds, m.applyMouseScroll(msg))
 		}
 		m.sanitizeInput()
 		m = m.syncViewportMouseWheel().withSyncedLayout()
-		if m.viewDirty || m.syncInputLayout() {
+		// Do not refresh viewport on wheel — viewDirty during streaming would fight manual scroll.
+		if m.syncInputLayout() {
 			m.updateViewportContent()
 		}
 		if focus := m.ensurePromptInputFocus(); focus != nil {

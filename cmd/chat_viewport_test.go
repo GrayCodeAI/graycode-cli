@@ -197,6 +197,59 @@ func TestMouseSequenceLeak_CursorConcatenated(t *testing.T) {
 	}
 }
 
+func TestEffectiveWheelY_CursorStaleFooterRow(t *testing.T) {
+	vp := viewport.New(80, 14)
+	vp.SetContent(strings.Repeat("line\n", 40))
+	m := chatModel{
+		viewport:   vp,
+		input:      textarea.New(),
+		height:     24,
+		width:      80,
+		uiFocus:    focusPrompt,
+		lastMouseY: 8, // pointer was over chat
+	}
+	m = m.withSyncedLayout()
+
+	staleFooter := tea.MouseMsg{Y: m.height - 1, Button: tea.MouseButtonWheelDown}
+	if !m.wheelRoutesToChat(staleFooter) {
+		t.Fatal("stale bottom-row wheel Y should route to chat when pointer was over chat")
+	}
+
+	m.lastMouseY = m.footerTopY() + 1
+	if m.wheelRoutesToChat(staleFooter) {
+		t.Fatal("stale bottom-row wheel Y must not scroll when pointer was over input")
+	}
+
+	explicitFooter := tea.MouseMsg{Y: m.footerTopY(), Button: tea.MouseButtonWheelDown}
+	if m.wheelRoutesToChat(explicitFooter) {
+		t.Fatal("explicit footer wheel row must not scroll chat")
+	}
+}
+
+func TestApplyMouseScroll_ClearsStreamFollow(t *testing.T) {
+	vp := viewport.New(80, 14)
+	vp.SetContent(strings.Repeat("line\n", 40))
+	vp.GotoBottom()
+	m := chatModel{
+		viewport:     vp,
+		input:        textarea.New(),
+		height:       24,
+		width:        80,
+		uiFocus:      focusPrompt,
+		autoScroll:   true,
+		streamFollow: true,
+		contentLines: 40,
+	}
+	m = m.withSyncedLayout()
+	m.applyMouseScroll(tea.MouseMsg{
+		Y:      m.chatPaneTopY(),
+		Button: tea.MouseButtonWheelUp,
+	})
+	if m.streamFollow {
+		t.Fatal("manual wheel scroll must disable stream follow")
+	}
+}
+
 func TestWelcomeHeader_AlwaysFull(t *testing.T) {
 	m := chatModel{
 		welcomeCache: "HAWK LOGO",

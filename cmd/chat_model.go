@@ -206,6 +206,7 @@ type chatModel struct {
 	streamFollow        bool   // follow streaming output (Grok-style; toggle with /follow)
 	uiFocus             uiFocusArea
 	contentLines        int // total lines in scrollback content (for footer position)
+	lastMouseY          int // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
 	mouseOverride       *bool // runtime /mouse toggle; persisted via settings
 	vim                 *VimState
 	wal                 *session.WAL
