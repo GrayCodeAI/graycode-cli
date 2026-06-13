@@ -17,7 +17,7 @@ func testTierModels(t *testing.T, provider string) (haiku, sonnet, opus string) 
 	sonnet = routing.PreferredModelForTier(provider, eycatalog.TierSonnet, "")
 	opus = routing.PreferredModelForTier(provider, eycatalog.TierOpus, "")
 	if haiku == "" || sonnet == "" || opus == "" {
-		t.Fatalf("eyrie catalog missing tier models for provider %q", provider)
+		t.Skipf("no tier models for %q without live catalog (fully dynamic)", provider)
 	}
 	return haiku, sonnet, opus
 }

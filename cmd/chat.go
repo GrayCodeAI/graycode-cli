@@ -304,7 +304,6 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}
 	vp := viewport.New(initWidth, minChatViewportLines)
-	vp.MouseWheelEnabled = true
 
 	now := time.Now()
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)}
@@ -320,6 +319,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		m.connStatusKey = m.connStatusFingerprint()
 	}
 	m.phase = initialUIPhase(m.hasChatMessages(), promptFlag != "")
+	m.invalidateInputLayoutCache()
+	(&m).refreshInputLayoutIfNeeded()
 	m = m.syncViewportMouseWheel().withSyncedLayout()
 	m.containerEnabled = shouldUseContainer()
 	bindChatSession(sess, sid, m.containerEnabled)
@@ -547,7 +548,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{initTerminalMouseCmd(), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
 	}
@@ -565,24 +566,80 @@ func (m chatModel) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+// applyPromptArrowKey handles Up/Down in the prompt: slash menu navigation or input history.
+// Returns true when the key was consumed so callers skip textarea/updateInput handling.
+func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
+	if m.uiFocus != focusPrompt || m.configOpen {
+		return false
+	}
+	switch msg.Type {
+	case tea.KeyUp, tea.KeyDown:
+	default:
+		return false
+	}
+	sugs := m.slashSuggestionsFor(m.input.Value())
+	if len(sugs) > 0 {
+		switch msg.Type {
+		case tea.KeyUp:
+			if m.slashSel <= 0 {
+				m.slashSel = len(sugs) - 1
+			} else {
+				m.slashSel--
+			}
+		case tea.KeyDown:
+			m.slashSel = (m.slashSel + 1) % len(sugs)
+		}
+		return true
+	}
+	switch msg.Type {
+	case tea.KeyUp:
+		if len(m.history) > 0 {
+			if m.historyIdx == len(m.history) {
+				m.historyDraft = m.input.Value()
+			}
+			if m.historyIdx > 0 {
+				m.historyIdx--
+				m.input.SetValue(m.history[m.historyIdx])
+				m.input.CursorEnd()
+			}
+		}
+		return true
+	case tea.KeyDown:
+		if m.historyIdx < len(m.history)-1 {
+			m.historyIdx++
+			m.input.SetValue(m.history[m.historyIdx])
+			m.input.CursorEnd()
+		} else if m.historyIdx == len(m.history)-1 {
+			m.historyIdx = len(m.history)
+			m.input.SetValue(m.historyDraft)
+			m.input.CursorEnd()
+		}
+		return true
+	}
+	return false
+}
+
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
-		mm := m
-		mm.sanitizeInput()
-		m = mm
-	}
-
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		if mouseTrackingEnabled() {
-			cmds = append(cmds, m.applyMouseScroll(msg))
-		}
-		m.sanitizeInput()
-		m = m.syncViewportMouseWheel().withSyncedLayout()
-		if m.viewDirty || m.syncInputLayout() {
-			m.updateViewportContent()
+		if m.mouseEnabled() {
+			if tea.MouseEvent(msg).IsWheel() {
+				m.trackMousePosition(msg)
+				cmds = append(cmds, m.applyMouseScroll(msg))
+				m.sanitizeInputIfNeeded()
+				m = m.syncViewportMouseWheel().withSyncedLayout()
+				if m.syncInputLayout() {
+					m.updateViewportContent()
+				}
+				if focus := m.ensurePromptInputFocus(); focus != nil {
+					cmds = append(cmds, focus)
+				}
+			} else {
+				// Motion events (?1003): track pointer only — avoid layout/sanitize/focus per move.
+				m.trackMousePosition(msg)
+			}
 		}
 		return m, tea.Batch(cmds...)
 
@@ -593,12 +650,28 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.openConfigOnStart = false
 		return m.openConfigPanel()
 	case tea.KeyMsg:
+		// Ctrl+\ enters native terminal selection mode. Available in every UI
+		// state (welcome gate, permissions, prompt, scrollback) so users always
+		// have a way to copy text out of the chat — the alt-screen +
+		// mouse-tracking combination otherwise breaks native text selection.
+		if msg.Type == tea.KeyCtrlBackslash {
+			return m, enterSelectionMode(m.ref, m.copyableTranscript(), m.mouseEnabled())
+		}
+		if isCopyToClipboardKey(msg) {
+			return m.handleCopyShortcut()
+		}
 		if isMouseSequenceLeak(msg) {
 			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
-				m.sanitizeInput()
+				m.sanitizeInputIfNeeded()
+				if focus := m.ensurePromptInputFocus(); focus != nil {
+					return m, tea.Batch(cmd, focus)
+				}
 				return m, cmd
 			}
-			m.sanitizeInput()
+			m.sanitizeInputIfNeeded()
+			if focus := m.ensurePromptInputFocus(); focus != nil {
+				return m, focus
+			}
 			return m, nil
 		}
 		if next, cmd, handled := m.handleWelcomeGateKey(msg); handled {
@@ -751,6 +824,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
+			if m.applyPromptArrowKey(msg) {
+				return m, nil
+			}
 			return m, m.updateInput(msg)
 		}
 		if m.configOpen {
@@ -861,49 +937,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			return m.cycleUIFocus()
-		case tea.KeyUp:
-			sugs := m.slashSuggestionsFor(m.input.Value())
-			if len(sugs) > 0 {
-				if m.slashSel <= 0 {
-					m.slashSel = len(sugs) - 1
-				} else {
-					m.slashSel--
-				}
+		case tea.KeyUp, tea.KeyDown:
+			if m.applyPromptArrowKey(msg) {
 				return m, nil
 			}
-			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
-				return m, cmd
-			}
-			if len(m.history) > 0 {
-				if m.historyIdx == len(m.history) {
-					m.historyDraft = m.input.Value()
-				}
-				if m.historyIdx > 0 {
-					m.historyIdx--
-					m.input.SetValue(m.history[m.historyIdx])
-					m.input.CursorEnd()
-				}
-			}
-			return m, nil
-		case tea.KeyDown:
-			sugs := m.slashSuggestionsFor(m.input.Value())
-			if len(sugs) > 0 {
-				m.slashSel = (m.slashSel + 1) % len(sugs)
-				return m, nil
-			}
-			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
-				return m, cmd
-			}
-			if m.historyIdx < len(m.history)-1 {
-				m.historyIdx++
-				m.input.SetValue(m.history[m.historyIdx])
-				m.input.CursorEnd()
-			} else if m.historyIdx == len(m.history)-1 {
-				m.historyIdx = len(m.history)
-				m.input.SetValue(m.historyDraft)
-				m.input.CursorEnd()
-			}
-			return m, nil
 		case tea.KeyEsc:
 			if len(m.slashSuggestionsFor(m.input.Value())) > 0 {
 				m.slashSel = 0
@@ -993,6 +1030,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.compacting = false
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 		}
+		m.turnHadAssistantOutput = true
 		m.partial.WriteString(string(msg))
 		m.markPartialDirty()
 		if m.viewDirty {
@@ -1001,24 +1039,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case thinkingMsg:
-		chunk := string(msg)
-		if n := len(m.messages); n > 0 && m.messages[n-1].role == "thinking" {
-			m.messages[n-1].content += chunk
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "thinking", content: chunk})
-		}
-		m.viewDirty = true
-		m.updateViewportContent()
+		m.turnSawThinking = true
 		return m, nil
 
 	case streamRetryMsg:
 		m.partial.Reset()
 		m.messages = stripCurrentTurnThinking(m.messages)
+		m.turnSawThinking = false
+		m.turnHadAssistantOutput = false
+		m.turnHadToolActivity = false
 		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ " + msg.content})
 		m.viewDirty = true
 		return m, nil
 
 	case toolUseMsg:
+		m.turnHadToolActivity = true
 		if m.partial.Len() > 0 {
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
 			m.partial.Reset()
@@ -1029,6 +1064,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case toolResultMsg:
+		m.turnHadToolActivity = true
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, msg.content)})
 		m.viewDirty = true
 		return m, nil
@@ -1036,6 +1072,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case blastRadiusMsg:
 		m.messages = append(m.messages, displayMsg{role: "system", content: msg.message})
 		m.viewDirty = true
+		return m, nil
+
+	case selectionResumedMsg:
+		// Returned from enterSelectionMode. The terminal has been
+		// restored; just trigger a redraw so the viewport reflects the
+		// state that was visible before selection.
+		m.viewDirty = true
+		m.updateViewportContent()
 		return m, nil
 
 	case permissionAskMsg:
@@ -1125,7 +1169,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Generate ghost text suggestion from AI response
 			m.ghostText.Suggest(content)
 			m.partial.Reset()
-		} else if turnHadThinkingOnly(m.messages) {
+		} else if m.turnSawThinking && !m.turnHadAssistantOutput && !m.turnHadToolActivity {
 			// Model sent reasoning tokens but no answer — common with reasoning
 			// models when the provider drops the post-reasoning content.
 			m.messages = append(m.messages, displayMsg{
@@ -1133,6 +1177,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				content: friendlyError(fmt.Errorf("error_only_reasoning: model produced reasoning but no answer")),
 			})
 		}
+		m.turnSawThinking = false
+		m.turnHadAssistantOutput = false
+		m.turnHadToolActivity = false
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
@@ -1151,6 +1198,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
+			m.turnSawThinking = false
+			m.turnHadAssistantOutput = false
+			m.turnHadToolActivity = false
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
 			m.startedAt = time.Time{}
@@ -1192,8 +1242,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.onWelcomeGate() {
 			m.input.SetWidth(msg.Width - 4)
 		}
+		m.invalidateInputLayoutCache()
 		m.rebuildWelcomeCache(false)
 		m.viewDirty = true
+		m.refreshInputLayoutIfNeeded()
+		m = m.withSyncedLayout()
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -1279,17 +1332,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if shouldForwardToInput(msg) {
 			cmds = append(cmds, m.updateInput(msg))
-		} else {
-			m.sanitizeInput()
 		}
 	}
 	if m.uiFocus == focusPrompt && !m.input.Focused() {
 		cmds = append(cmds, m.input.Focus())
 	}
 
-	m = m.syncViewportMouseWheel().withSyncedLayout()
-	// Update viewport content when messages change or input layout shifts (slash menu / multiline).
-	if m.viewDirty || m.syncInputLayout() {
+	layoutChanged := m.refreshInputLayoutIfNeeded()
+	if layoutChanged {
+		m = m.withSyncedLayout()
+	}
+	if m.viewDirty || layoutChanged {
 		m.updateViewportContent()
 	}
 
@@ -1350,11 +1403,14 @@ func runChat() error {
 	if promptFlag != "" {
 		m.messages = append(m.messages, displayMsg{role: "user", content: promptFlag})
 		m.session.AddUser(promptFlag)
+		m.turnSawThinking = false
+		m.turnHadAssistantOutput = false
+		m.turnHadToolActivity = false
 		m.waiting = true
 	}
 
 	programOpts := []tea.ProgramOption{tea.WithAltScreen()}
-	if mouseTrackingEnabled() {
+	if m.mouseEnabled() {
 		programOpts = append(programOpts, tea.WithMouseCellMotion())
 	}
 	p := tea.NewProgram(m, programOpts...)

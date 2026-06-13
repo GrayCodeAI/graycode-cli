@@ -193,14 +193,8 @@ func DefaultModelForProvider(provider string) string {
 			return id
 		}
 	}
-	if id := catalog.GetProviderDefaultModel(provider, nil); id != "" {
-		return id
-	}
-	// Live-only providers (openrouter, z-ai, canopywave, ollama) have no
-	// static models in the catalog — fetch from the live API, but only
-	// when credentials are configured (avoids hitting public APIs like
-	// OpenRouter's /models endpoint when no key is set).
-	if catalog.IsLiveOnlyProvider(provider) && APIKeyForProvider(provider) != "" {
+	// All providers are fully dynamic — try live API if credentials are available.
+	if APIKeyForProvider(provider) != "" {
 		models, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
 			ProviderID: provider,
 			Source:     runtime.ListSourceAuto,

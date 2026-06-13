@@ -87,7 +87,7 @@ func (g *CompletionGenerator) populateSlashCommands() {
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog",
 		"/release-notes", "/reload-plugins", "/remote-env", "/rename", "/render",
 		"/research", "/resume", "/retry", "/review", "/rewind", "/run",
-		"/search", "/security-review", "/session", "/share", "/skills",
+		"/search", "/security-review", "/select", "/mouse", "/session", "/share", "/skills",
 		"/snapshot", "/stats", "/status", "/statusline", "/summary", "/tag", "/tasks",
 		"/test", "/theme", "/think", "/think-back", "/thinkback", "/thinkback-play",
 		"/tokens", "/tools", "/undo", "/upgrade", "/usage", "/version", "/vibe",

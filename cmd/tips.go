@@ -30,6 +30,7 @@ func allTips() []Tip {
 		{ID: "history-nav", Text: "Press Up/Down to navigate command history.", Category: "shortcuts"},
 		{ID: "esc-cancel", Text: "Press Esc to cancel a running query.", Category: "shortcuts"},
 		{ID: "ctrl-c-quit", Text: "Press Ctrl+C twice to quit hawk.", Category: "shortcuts"},
+		{ID: "copy-chat", Text: "Ctrl+Shift+C or /copy copies chat; /copy input copies your draft; /mouse off enables click-drag select.", Category: "shortcuts"},
 		{ID: "vim-mode", Text: "Use /vim to toggle vim-style keybindings.", Category: "editing"},
 		{ID: "model-switch", Text: "Use /model <name> to switch LLM models on the fly.", Category: "config"},
 		{ID: "provider-switch", Text: "Use /config provider <name> to change providers.", Category: "config"},

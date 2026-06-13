@@ -125,6 +125,9 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	if m.wal != nil {
 		_ = m.wal.Append(session.Message{Role: "user", Content: text})
 	}
+	m.turnSawThinking = false
+	m.turnHadAssistantOutput = false
+	m.turnHadToolActivity = false
 	m.waiting = true
 	m.autoScroll = true
 	m.viewDirty = true

@@ -39,7 +39,7 @@ var allSlashCommands = []string{
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
-	"/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
+	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
 }
@@ -66,21 +66,49 @@ func (m *chatModel) visibleSlashSuggestionLines() int {
 	return n
 }
 
-func (m *chatModel) syncInputLayout() bool {
+func (m chatModel) inputAreaLayoutKey() int {
 	if m.configOpen {
-		return false
+		return 0
 	}
 	lines := strings.Count(m.input.Value(), "\n") + 1
 	if lines > 10 {
 		lines = 10
 	}
-	visible := m.visibleSlashSuggestionLines()
-	key := lines<<16 | visible
-	if key == m.layoutKey {
+	key := lines<<16 | m.visibleSlashSuggestionLines()
+	if m.manualCompacting {
+		key |= 1 << 15
+	}
+	if m.inScrollbackFocus() {
+		key |= 1 << 14
+	}
+	if m.ghostText != nil {
+		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
+			key |= 1 << 13
+		}
+	}
+	return key
+}
+
+func (m *chatModel) invalidateInputLayoutCache() {
+	m.layoutKey = -1
+	m.cachedBottomBarLines = 0
+}
+
+func (m *chatModel) refreshInputLayoutIfNeeded() bool {
+	if m.configOpen {
+		return false
+	}
+	key := m.inputAreaLayoutKey()
+	if key == m.layoutKey && m.cachedBottomBarLines > 0 {
 		return false
 	}
 	m.layoutKey = key
+	m.cachedBottomBarLines = m.computeChatBottomBarLines()
 	return true
+}
+
+func (m *chatModel) syncInputLayout() bool {
+	return m.refreshInputLayoutIfNeeded()
 }
 
 func slashAliases() map[string]string {
@@ -108,7 +136,7 @@ var slashDescriptions = map[string]string{
 	"/compress":        "Compress old sessions",
 	"/config":          "Open settings panel",
 	"/context":         "Show current context",
-	"/copy":            "Copy last response to clipboard",
+	"/copy":            "Copy chat or input to clipboard (/copy all|input|last|assistant)",
 	"/cost":            "Show token usage and cost",
 	"/council":         "Run LLM Council (multi-model consensus)",
 	"/diff":            "Show git diff (preview changes)",
@@ -154,6 +182,8 @@ var slashDescriptions = map[string]string{
 	"/rewind":          "Undo last exchange",
 	"/run":             "Run command, add output to context",
 	"/search":          "Search across sessions",
+	"/select":          "Pause TUI for native text selection (Ctrl+\\)",
+	"/mouse":           "Toggle TUI mouse capture for native click-drag copy",
 	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
 	"/stale":           "Show stale rules that may need updating or removal",
 	"/security-review": "Security audit",
@@ -315,7 +345,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /config             — Show settings
 /commands           — List available slash commands
 /context            — Show current context
-/copy               — Copy last response
+/copy               — Copy chat or input (all|input|last|assistant)
 /cost               — Token usage and cost
 /cron               — List scheduled cron jobs
 /diff               — Review changes
@@ -354,6 +384,8 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 /review             — Ask hawk to review changes
 /rewind             — Undo last exchange
 /security-review    — Ask hawk to review security risks
+/select             — Pause TUI for native text selection
+/mouse              — Toggle mouse capture (off = click-drag copy)
 /share              — Share session
 /learn              — LLM-powered skill advisor (deep, update)
 /skills             — List, search, install, remove skills
@@ -1035,17 +1067,13 @@ Generate the recap:`, summary.String())
 	case "/agents":
 		return m.startPromptCommand("/agents", "List all active agents and teammates in the current session. Show their status and assigned tasks.")
 	case "/copy":
-		for i := len(m.messages) - 1; i >= 0; i-- {
-			if m.messages[i].role == "assistant" {
-				if err := copyToClipboard(m.messages[i].content); err != nil {
-					m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to copy: " + err.Error()})
-				} else {
-					m.messages = append(m.messages, displayMsg{role: "system", content: "Copied to clipboard."})
-				}
-				return m, nil
-			}
-		}
-		m.messages = append(m.messages, displayMsg{role: "error", content: "No assistant response to copy."})
+		return m.handleCopyCommand(parts)
+	case "/select":
+		// Pause the TUI so the user can use their terminal's native
+		// text selection. Same as Ctrl+\ — see enterSelectionMode.
+		return m, enterSelectionMode(m.ref, m.copyableTranscript(), m.mouseEnabled())
+	case "/mouse":
+		m.handleMouseCommand(parts)
 		return m, nil
 	case "/undo":
 		restored, err := tool.UndoLatest()
@@ -1311,7 +1339,7 @@ Generate the recap:`, summary.String())
 	case "/upgrade":
 		return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
 	case "/keybindings":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter       — Submit\n  Ctrl+C      — Cancel/Exit\n  Ctrl+L      — Clear\n  Up/Down     — History\n  Tab         — Complete"})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter           — Submit\n  Ctrl+C          — Cancel/Exit\n  Ctrl+Shift+C    — Copy (input draft or chat)\n  Ctrl+\\          — Native text selection\n  Ctrl+L          — Clear\n  Up/Down         — History\n  Tab             — Complete\n  /mouse off      — Enable click-drag copy"})
 		return m, nil
 	case "/output-style":
 		if len(parts) < 2 {
