@@ -16,22 +16,15 @@ const (
 	CostTierExpensive
 )
 
-// CostTierOf resolves a model's cost tier from eyrie catalog data (family, tier
-// candidates, and within-provider pricing). Unknown models default to mid-tier.
+// CostTierOf resolves a model's cost tier from eyrie catalog data (family and
+// within-provider pricing). Unknown models default to mid-tier.
 func CostTierOf(modelName string) CostTier {
-	if tier, ok := tierFromEyrieModelConfigs(modelName); ok {
-		return mapEyrieTier(tier)
-	}
 	if tier, ok := tierFromCatalogFamily(modelName); ok {
-		return mapEyrieTier(tier)
-	}
-	if tier, ok := tierFromEyrieCandidates(modelName); ok {
 		return mapEyrieTier(tier)
 	}
 	if tier, ok := tierFromCatalogPricing(modelName); ok {
 		return tier
 	}
-	// Last resort: infer tier from common model name patterns.
 	return tierFromName(modelName)
 }
 
@@ -56,33 +49,6 @@ var (
 	cheapPatterns     = []string{"haiku", "mini", "flash", "lite", "nano", "micro", "small", "tiny"}
 	expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
 )
-
-func tierFromEyrieModelConfigs(modelName string) (eycatalog.ModelTier, bool) {
-	modelName = strings.TrimSpace(modelName)
-	if modelName == "" {
-		return "", false
-	}
-
-	seen := map[eycatalog.ModelTier]bool{}
-	for key, cfg := range eycatalog.AllModelConfigs {
-		tier := modelKeyTier(key)
-		if tier == "" {
-			continue
-		}
-		for _, id := range cfg {
-			if modelsMatch(modelName, id) {
-				seen[tier] = true
-			}
-		}
-	}
-	if len(seen) != 1 {
-		return "", false
-	}
-	for tier := range seen {
-		return tier, true
-	}
-	return "", false
-}
 
 // TierModels returns eyrie-preferred model IDs for haiku, sonnet, and opus tiers.
 func TierModels(provider string) (haiku, sonnet, opus string) {
@@ -251,54 +217,6 @@ func tierFromCatalogFamily(modelName string) (eycatalog.ModelTier, bool) {
 	return "", false
 }
 
-func tierFromEyrieCandidates(modelName string) (eycatalog.ModelTier, bool) {
-	provider := ""
-	if info, ok := Find(modelName); ok {
-		provider = canonicalProvider(info.Provider)
-	}
-
-	for _, tier := range []eycatalog.ModelTier{eycatalog.TierHaiku, eycatalog.TierSonnet, eycatalog.TierOpus} {
-		if provider != "" {
-			for _, cand := range eycatalog.GetProviderModelCandidates(provider, tier) {
-				if modelsMatch(modelName, cand) {
-					return tier, true
-				}
-			}
-		}
-		for _, key := range tierFallbackKeys(tier) {
-			cfg, ok := eycatalog.AllModelConfigs[key]
-			if !ok {
-				continue
-			}
-			if provider != "" {
-				if id := cfg[provider]; id != "" && modelsMatch(modelName, id) {
-					return tier, true
-				}
-				continue
-			}
-			for _, id := range cfg {
-				if modelsMatch(modelName, id) {
-					return tier, true
-				}
-			}
-		}
-	}
-	return "", false
-}
-
-func tierFallbackKeys(tier eycatalog.ModelTier) []eycatalog.ModelKey {
-	switch tier {
-	case eycatalog.TierHaiku:
-		return []eycatalog.ModelKey{"haiku45", "haiku35"}
-	case eycatalog.TierSonnet:
-		return []eycatalog.ModelKey{"sonnet46", "sonnet45", "sonnet40", "sonnet37", "sonnet35"}
-	case eycatalog.TierOpus:
-		return []eycatalog.ModelKey{"opus46", "opus45", "opus41", "opus40"}
-	default:
-		return nil
-	}
-}
-
 func tierFromCatalogPricing(modelName string) (CostTier, bool) {
 	info, ok := Find(modelName)
 	if !ok || info.InputPrice <= 0 {
@@ -332,36 +250,4 @@ func tierFromCatalogPricing(modelName string) (CostTier, bool) {
 	default:
 		return CostTierMid, true
 	}
-}
-
-func modelKeyTier(key eycatalog.ModelKey) eycatalog.ModelTier {
-	s := string(key)
-	switch {
-	case strings.HasPrefix(s, "haiku"):
-		return eycatalog.TierHaiku
-	case strings.HasPrefix(s, "sonnet"):
-		return eycatalog.TierSonnet
-	case strings.HasPrefix(s, "opus"):
-		return eycatalog.TierOpus
-	default:
-		return ""
-	}
-}
-
-func modelsMatch(a, b string) bool {
-	a = strings.TrimSpace(a)
-	b = strings.TrimSpace(b)
-	if a == "" || b == "" {
-		return false
-	}
-	if strings.EqualFold(a, b) {
-		return true
-	}
-	compiled := eyrieCatalogV1()
-	if compiled == nil {
-		return false
-	}
-	canonA, okA := compiled.CanonicalModelForAliasOrID(a)
-	canonB, okB := compiled.CanonicalModelForAliasOrID(b)
-	return okA && okB && canonA == canonB
 }
