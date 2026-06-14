@@ -130,4 +130,3 @@ func TestGatewayDisplayName_XiaomiTokenPlanHyphen(t *testing.T) {
 		t.Fatalf("GatewayDisplayName(underscore) = %q, want nice name", got)
 	}
 }
-
