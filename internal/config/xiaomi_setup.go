@@ -38,10 +38,10 @@ func SetXiaomiTokenPlanRegion(region string) error {
 	if saveErr := eyriecfg.SaveProviderConfig(cfg, ""); saveErr != nil {
 		return saveErr
 	}
-	_ = os.Setenv(eyriecfg.EnvXiaomiTokenPlanRegion, string(normalized))
-	base, err := eyriecfg.ResolveXiaomiOpenAIBase(ProviderXiaomiTokenPlan, cfg)
+	_ = os.Setenv(eyriecfg.EnvXiaomiMimoTokenPlanRegion, string(normalized))
+	base, err := eyriecfg.ResolveXiaomiMimoOpenAIBase(ProviderXiaomiTokenPlan, cfg)
 	if err == nil && base != "" {
-		_ = os.Setenv(eyriecfg.EnvXiaomiTokenPlanBaseURL, base)
+		_ = os.Setenv(eyriecfg.EnvXiaomiMimoTokenPlanBaseURL, base)
 		cfg.XiaomiMimoTokenPlanBaseURL = base
 		_ = eyriecfg.SaveProviderConfig(cfg, "")
 	}
@@ -69,9 +69,9 @@ func ApplyXiaomiTokenPlanRegionEnv(ctx context.Context) {
 		return
 	}
 	if r := strings.TrimSpace(cfg.XiaomiMimoTokenPlanRegion); r != "" {
-		_ = os.Setenv(eyriecfg.EnvXiaomiTokenPlanRegion, r)
+		_ = os.Setenv(eyriecfg.EnvXiaomiMimoTokenPlanRegion, r)
 	}
-	if base, err := eyriecfg.ResolveXiaomiOpenAIBase(ProviderXiaomiTokenPlan, cfg); err == nil && base != "" {
-		_ = os.Setenv(eyriecfg.EnvXiaomiTokenPlanBaseURL, base)
+	if base, err := eyriecfg.ResolveXiaomiMimoOpenAIBase(ProviderXiaomiTokenPlan, cfg); err == nil && base != "" {
+		_ = os.Setenv(eyriecfg.EnvXiaomiMimoTokenPlanBaseURL, base)
 	}
 }
