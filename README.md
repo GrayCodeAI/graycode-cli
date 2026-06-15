@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/logo.png" alt="Hawk" width="260" />
-</p>
-
 <h1 align="center">AI Coding Agent for Your Terminal</h1>
 
 <p align="center">
