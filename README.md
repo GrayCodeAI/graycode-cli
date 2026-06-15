@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="https://openclipart.org/download/325423/red-shouldered-hawk.svg" alt="hawk" width="480"/>
+  <img src="assets/logo.svg" alt="hawk" width="580"/>
 </p>
-
-<h1 align="center">AI Coding Agent for Your Terminal</h1>
 
 <p align="center">
   AI coding agent for your terminal — built for <strong>developers</strong>, not teams or enterprises (yet).
