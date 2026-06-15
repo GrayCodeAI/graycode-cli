@@ -12,29 +12,28 @@
     }
   </style>
 
-  <!-- Centered iconic hawk wing mark - exact match to the image you uploaded -->
-  <g transform="translate(260, 85)">
-    <!-- Left wing (5 layered feathers) -->
-    <polygon class="mark" points="-4,-5 -55,-55 -70,-38 -58,-25"/>
-    <polygon class="mark" points="-4,-5 -70,-38 -88,-18 -72,-3"/>
-    <polygon class="mark" points="-4,-5 -88,-18 -102,2 -84,15"/>
-    <polygon class="mark" points="-4,-5 -102,2 -110,24 -88,32"/>
-    <polygon class="mark" points="-4,-5 -110,24 -112,48 -88,48"/>
+  <!-- Centered iconic hawk wing mark - exact match to the image you uploaded (bold geometric wings) -->
+  <g transform="translate(260, 82)">
+    <!-- Left wing feathers - 5 layers, fanned and pointed -->
+    <polygon class="mark" points="0,0 -48,-52 -64,-36 -52,-22"/>
+    <polygon class="mark" points="0,0 -64,-36 -82,-16 -66,-2"/>
+    <polygon class="mark" points="0,0 -82,-16 -98,6 -80,16"/>
+    <polygon class="mark" points="0,0 -98,6 -110,28 -88,34"/>
+    <polygon class="mark" points="0,0 -110,28 -112,52 -88,50"/>
 
-    <!-- Right wing (symmetric) -->
-    <polygon class="mark" points="4,-5 55,-55 70,-38 58,-25"/>
-    <polygon class="mark" points="4,-5 70,-38 88,-18 72,-3"/>
-    <polygon class="mark" points="4,-5 88,-18 102,2 84,15"/>
-    <polygon class="mark" points="4,-5 102,2 110,24 88,32"/>
-    <polygon class="mark" points="4,-5 110,24 112,48 88,48"/>
+    <!-- Right wing feathers -->
+    <polygon class="mark" points="0,0 48,-52 64,-36 52,-22"/>
+    <polygon class="mark" points="0,0 64,-36 82,-16 66,-2"/>
+    <polygon class="mark" points="0,0 82,-16 98,6 80,16"/>
+    <polygon class="mark" points="0,0 98,6 110,28 88,34"/>
+    <polygon class="mark" points="0,0 110,28 112,52 88,50"/>
 
-    <!-- Central body / chest V -->
-    <polygon class="mark" points="0,-6 -16,8 0,26 16,8"/>
+    <!-- Central body - strong V / diamond shape -->
+    <polygon class="mark" points="0,-5 -20,9 0,32 20,9"/>
 
-    <!-- Head with the small V detail from your image -->
-    <circle class="mark" cx="0" cy="-20" r="8.5"/>
-    <!-- Small V in head -->
-    <polygon class="mark" points="0,-28 -4,-20 0,-13 4,-20"/>
+    <!-- Head on top with small V cutout detail -->
+    <circle class="mark" cx="0" cy="-23" r="9.5"/>
+    <polygon class="mark" points="0,-31 -5.5,-23 0,-15 5.5,-23"/>
   </g>
 
   <!-- Wordmark -->
