@@ -86,7 +86,7 @@ func setupGatewayRegistryID(provider string) string {
 	}
 }
 
-// SetupGatewayCredentialEnv returns the registry env var for a setup gateway (e.g. XIAOMI_MIMO_API_KEY).
+// SetupGatewayCredentialEnv returns the registry env var for a setup gateway (e.g. XIAOMI_MIMO_PAYG_API_KEY).
 func SetupGatewayCredentialEnv(providerID string) string {
 	spec, ok := registry.DefaultRegistry.Get(setupGatewayRegistryID(providerID))
 	if !ok || !spec.RequiresKey {

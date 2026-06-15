@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://openclipart.org/download/325423/red-shouldered-hawk.svg" alt="hawk" width="480"/>
-</p>
-
 <h1 align="center">AI Coding Agent for Your Terminal</h1>
 
 <p align="center">
