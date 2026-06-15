@@ -19,7 +19,7 @@ func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 			t.Fatalf("owner slug %q should not be a gateway", id)
 		}
 	}
-	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true, "z-ai-coding": true}
+	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true, "zai_payg": true, "zai_coding": true}
 	for id := range want {
 		found := false
 		for _, gw := range gws {
@@ -56,6 +56,12 @@ func TestSetupGatewayRegistryID_PreservesUnderscores(t *testing.T) {
 	}
 	if got := setupGatewayRegistryID("xiaomi_mimo"); got != "xiaomi_mimo_payg" {
 		t.Fatalf("legacy xiaomi_mimo = %q", got)
+	}
+	if got := setupGatewayRegistryID("zai_payg"); got != "zai_payg" {
+		t.Fatalf("zai_payg = %q", got)
+	}
+	if got := setupGatewayRegistryID("zai_coding"); got != "zai_coding" {
+		t.Fatalf("zai_coding = %q", got)
 	}
 }
 

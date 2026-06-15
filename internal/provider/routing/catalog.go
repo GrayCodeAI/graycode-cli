@@ -152,8 +152,7 @@ func canonicalProvider(provider string) string {
 		return "google"
 	case "grok":
 		return "xai"
-	case "zai":
-		return "z-ai"
+	// Z.AI uses zai_payg and zai_coding directly — no aliases.
 	default:
 		return provider
 	}

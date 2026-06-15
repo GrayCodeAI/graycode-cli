@@ -9,17 +9,20 @@ import (
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 )
 
-const ProviderZAICoding = "z-ai-coding"
+const (
+	ProviderZAIPayg   = "zai_payg"
+	ProviderZAICoding = "zai_coding"
+)
 
-// NeedsZAIRegion reports whether the Z.AI gateway (especially Coding Plan) still needs a region pick.
+// NeedsZAIRegion reports whether the Z.AI gateway still needs a region pick for the chosen plan.
 func NeedsZAIRegion(providerID string) bool {
 	p := strings.TrimSpace(providerID)
-	if p != ProviderZAICoding && p != "z-ai" {
+	if p != ProviderZAICoding {
 		return false
 	}
 	cfg := eyriecfg.LoadProviderConfig("")
 	if cfg == nil {
-		return true // first time, offer choice
+		return true
 	}
 	region := zaiRegionFromConfig(cfg, p)
 	_, err := zai.NormalizeRegion(region)
@@ -36,7 +39,7 @@ func zaiRegionFromConfig(cfg *eyriecfg.ProviderConfig, providerID string) string
 	return cfg.ZAIRegion
 }
 
-// SetZAIRegion persists the region for the given Z.AI gateway and syncs env + base URL for probe/discovery.
+// SetZAIRegion persists the region (international or cn) for the given Z.AI gateway and syncs env + derived base.
 func SetZAIRegion(providerID, region string) error {
 	normalized, err := zai.NormalizeRegion(region)
 	if err != nil {
@@ -58,10 +61,8 @@ func SetZAIRegion(providerID, region string) error {
 		return saveErr
 	}
 
-	// Set a region env for any code that wants it
 	_ = os.Setenv("ZAI_REGION", string(normalized))
 
-	// Derive and set the appropriate base override so fetchers and client pick the right host
 	plan, _ := zai.PlanForProvider(providerID)
 	base, err := zai.ResolveOpenAIBase(plan, normalized, "")
 	if err == nil && base != "" {
@@ -77,7 +78,7 @@ func SetZAIRegion(providerID, region string) error {
 	return nil
 }
 
-// ZAIRegionLabel returns the saved region for UI or "" .
+// ZAIRegionLabel returns the saved region label or "".
 func ZAIRegionLabel(providerID string) string {
 	cfg := eyriecfg.LoadProviderConfig("")
 	if cfg == nil {
@@ -91,7 +92,7 @@ func ZAIRegionLabel(providerID string) string {
 	return string(norm)
 }
 
-// ApplyZAIRegionEnv sets process envs from provider.json before credential probe / live fetch.
+// ApplyZAIRegionEnv sets process envs from provider.json before probe/fetch/chat.
 func ApplyZAIRegionEnv(ctx context.Context) {
 	_ = ctx
 	cfg := eyriecfg.LoadProviderConfig("")
@@ -102,16 +103,19 @@ func ApplyZAIRegionEnv(ctx context.Context) {
 	// General
 	if r := strings.TrimSpace(cfg.ZAIRegion); r != "" {
 		_ = os.Setenv("ZAI_REGION", r)
-		if base, err := zai.ResolveOpenAIBase(zai.PlanGeneral, zai.Region(r), cfg.ZAIBaseURL); err == nil && base != "" {
+		plan := zai.PlanGeneral
+		norm, _ := zai.NormalizeRegion(r)
+		if base, err := zai.ResolveOpenAIBase(plan, norm, cfg.ZAIBaseURL); err == nil && base != "" {
 			_ = os.Setenv("ZAI_BASE_URL", base)
 		}
 	}
 
-	// Coding Plan (higher priority override if both present)
+	// Coding Plan
 	if r := strings.TrimSpace(cfg.ZAICodingRegion); r != "" {
-		_ = os.Setenv("ZAI_REGION", r)
+		_ = os.Setenv("ZAI_CODING_REGION", r)
 		plan := zai.PlanCoding
-		if base, err := zai.ResolveOpenAIBase(plan, zai.Region(r), cfg.ZAICodingBaseURL); err == nil && base != "" {
+		norm, _ := zai.NormalizeRegion(r)
+		if base, err := zai.ResolveOpenAIBase(plan, norm, cfg.ZAICodingBaseURL); err == nil && base != "" {
 			_ = os.Setenv("ZAI_CODING_BASE_URL", base)
 		}
 	}

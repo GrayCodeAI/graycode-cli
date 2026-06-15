@@ -65,7 +65,8 @@ func AllSetupGateways() []string {
 }
 
 // setupGatewayRegistryID maps catalog/engine aliases to credential registry gateway ids.
-// Registry ids keep underscores (e.g. xiaomi_mimo); do not hyphenate via normalizeProviderName.
+// Most registry IDs use underscores for multi-word plans (e.g. xiaomi_mimo_token_plan).
+// Z.AI uses underscore naming for uniformity with Xiaomi/MiniMax plan splits: zai_payg and zai_coding (no legacy aliases).
 func setupGatewayRegistryID(provider string) string {
 	p := strings.ToLower(strings.TrimSpace(provider))
 	switch p {
@@ -73,10 +74,10 @@ func setupGatewayRegistryID(provider string) string {
 		return "gemini"
 	case "xai":
 		return "grok"
-	case "zai":
-		return "z-ai"
-	case "z-ai-coding", "zai-coding", "z-ai_coding", "zaicoding":
-		return "z-ai-coding"
+	case "zai_payg":
+		return "zai_payg"
+	case "zai_coding":
+		return "zai_coding"
 	case "xiaomi_mimo", "xiaomi-mimo":
 		return "xiaomi_mimo_payg"
 	case "xiaomi_mimo_token_plan", "xiaomi-mimo-token-plan":

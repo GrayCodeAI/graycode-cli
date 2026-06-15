@@ -13,7 +13,7 @@ var zaiRegions = []struct {
 	id    string
 	label string
 }{
-	{id: "global", label: "Global (api.z.ai) — recommended for most users"},
+	{id: "international", label: "International (api.z.ai)"},
 	{id: "cn", label: "China (open.bigmodel.cn)"},
 }
 
@@ -74,9 +74,10 @@ func (m chatModel) configZAIRegionView() string {
 func (m chatModel) handleConfigZAIRegionKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
+		prov := m.configProvider
 		m.configEntry = configEntryNone
 		m.configProvider = ""
-		if idx := m.configGatewayRowIndex(m.configProvider); idx >= 0 {
+		if idx := m.configGatewayRowIndex(prov); idx >= 0 {
 			m.configSel = idx
 		}
 		m.configNotice = ""

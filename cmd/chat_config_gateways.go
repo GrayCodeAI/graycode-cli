@@ -54,9 +54,11 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 				display += " · region required"
 			}
 		}
-		if id == hawkconfig.ProviderZAICoding || id == "z-ai" {
+		if id == hawkconfig.ProviderZAICoding {
 			if reg := hawkconfig.ZAIRegionLabel(id); reg != "" {
 				display += " · " + reg
+			} else {
+				display += " · region"
 			}
 		}
 		rows = append(rows, configGatewayRow{
@@ -118,10 +120,11 @@ func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
 		m.configNotice = "Pick Token Plan region (cn / sgp / ams) before refresh"
 		return m.startConfigXiaomiTokenPlanRegion(), nil
 	}
-	if (row.ID == hawkconfig.ProviderZAICoding || row.ID == "z-ai") && hawkconfig.NeedsZAIRegion(row.ID) {
-		m.configNotice = "Pick Z.AI region before refresh"
+	if row.ID == hawkconfig.ProviderZAICoding && hawkconfig.NeedsZAIRegion(row.ID) {
+		m.configNotice = "Pick Coding Plan region (international / cn) before refresh"
 		return m.startConfigZAIRegion(row.ID), nil
 	}
+
 	if !row.HasKey {
 		m.configNotice = fmt.Sprintf("Select %s and press enter to paste an API key", row.DisplayName)
 		return m, nil
@@ -215,18 +218,20 @@ func (m chatModel) configGatewaysView() string {
 		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
 			hint = "Token Plan: enter pick region (cn/sgp/ams) then key · g change region"
 		}
-		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].ID == hawkconfig.ProviderZAICoding || rows[targetIdx].ID == "z-ai") {
-			hint = "Z.AI: enter pick region (global/cn) then key · g change region"
+		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderZAICoding {
+			hint = "Coding Plan: enter pick region (international/cn) then key · g change region"
 		}
+
 		b.WriteString("\n" + mutedStyle.Render(indent+hint))
 	} else {
 		hints := "enter use gateway · k view key · delete remove · r refresh"
 		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
 			hints = "enter · g region · k key · delete · r refresh"
 		}
-		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].ID == hawkconfig.ProviderZAICoding || rows[targetIdx].ID == "z-ai") {
+		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderZAICoding {
 			hints = "enter · g region · k key · delete · r refresh"
 		}
+
 		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, hints))
 	}
 	return m.configTabShellView(b.String())
@@ -273,12 +278,11 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 			return m.startConfigXiaomiTokenPlanRegion(), nil
 		}
 	}
-	if row.ID == hawkconfig.ProviderZAICoding || row.ID == "z-ai" {
-		if !row.HasKey || hawkconfig.NeedsZAIRegion(row.ID) {
-			m.configGatewayFocus = m.configSel
-			return m.startConfigZAIRegion(row.ID), nil
-		}
+	if row.ID == hawkconfig.ProviderZAICoding && (!row.HasKey || hawkconfig.NeedsZAIRegion(row.ID)) {
+		m.configGatewayFocus = m.configSel
+		return m.startConfigZAIRegion(row.ID), nil
 	}
+
 	if !row.HasKey {
 		if row.ID == configProviderOllama {
 			return m.startConfigOllamaURL()

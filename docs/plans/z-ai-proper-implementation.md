@@ -25,7 +25,7 @@ The architecture (ProviderSpec + live fetchers + decorator clients + Hawk gatewa
 
 **The gap is only specialization surface for Z.AI**, exactly analogous to the pre-split state of Xiaomi MiMo (which received dedicated `xiaomi_mimo_token_plan` + `payg`, region picker, `catalog/xiaomi/`, dual-protocol client, Hawk UI, config resolution, and detailed docs).
 
-This plan adds **one new setup gateway** (`z-ai-coding`) while keeping the existing `z-ai` (general) fully backward-compatible. Total setup gateways become 19. No breaking changes for existing users.
+This plan adds **one new setup gateway** (`z_ai_coding`) while keeping the existing `z-ai` (general) fully backward-compatible. Total setup gateways become 19. No breaking changes for existing users.
 
 ---
 
@@ -118,18 +118,18 @@ Add after the existing z-ai (keep the original as general payg for backward comp
     // ... (unchanged, general /paas/v4)
 },
 {
-    ProviderID: "z-ai-coding", DisplayName: "Z.AI — Coding Plan", DeploymentID: "z-ai-coding-direct", SortOrder: 7, // or 19 after re-sort
+    ProviderID: "z_ai_coding", DisplayName: "Z.AI — Coding Plan", DeploymentID: "z_ai_coding-direct", SortOrder: 7, // or 19 after re-sort
     RequiresKey: true, CredentialEnv: "ZAI_CODING_API_KEY",
     BaseURLEnv: []string{"ZAI_CODING_BASE_URL", "ZAI_BASE_URL", "OPENAI_BASE_URL", "OPENAI_API_BASE"},
     ProbeKind:  ProbeOpenAIModels, ProbeBaseURL: "https://api.z.ai/api/coding/paas/v4",
-    LiveFetcherKey: "z-ai-coding", LiveCatalogKey: "z-ai-coding",
+    LiveFetcherKey: "z_ai_coding", LiveCatalogKey: "z_ai_coding",
     APIProtocolID: "openai-chat-completions", AdapterID: "z-ai",
 },
 ```
 
-(Alternative naming: `z_ai_coding_plan` to match `xiaomi_mimo_token_plan` verbosity. `z-ai-coding` is shorter and clear in TUI. Choose one; document alias handling.)
+(Alternative naming: `z_ai_coding_plan` to match `xiaomi_mimo_token_plan` verbosity. `z_ai_coding` is shorter and clear in TUI. Choose one; document alias handling.)
 
-Add `case "z-ai-coding", "zai-coding", "z-ai_coding": return "z-ai-coding"` in Hawk's `setupGatewayRegistryID`.
+Add `case "z_ai_coding", "zai-coding", "z-ai_coding": return "z_ai_coding"` in Hawk's `setupGatewayRegistryID`.
 
 ### 4.2 New Eyrie Package: catalog/zai/ (modeled exactly on catalog/xiaomi/)
 - `endpoints.go`:
@@ -147,18 +147,18 @@ Add `case "z-ai-coding", "zai-coding", "z-ai_coding": return "z-ai-coding"` in H
 - Keep `FetchZAI` for the `z-ai` key (general).
 - Add:
   ```go
-  "z-ai-coding": FetchZAICoding,
+  "z_ai_coding": FetchZAICoding,
   ```
 - Implement `FetchZAICoding` (or a single `FetchZAIWithPlan`):
-  - Resolve base via new `config.ResolveZAIOpenAIBase("z-ai-coding", cfg)` (or env first).
+  - Resolve base via new `config.ResolveZAIOpenAIBase("z_ai_coding", cfg)` (or env first).
   - Call `fetchOpenAICompatModels(..., resolvedBase, key, "Bearer")`.
-  - Same OpenRouter enrichment (or "z-ai-coding/" if they publish distinct).
+  - Same OpenRouter enrichment (or "z_ai_coding/" if they publish distinct).
 - Export `DefaultZAICodingBaseURL` etc. in `config/providers.go`.
 
 Update Registry map and any `fetchers_test` / `live_test`.
 
 ### 4.4 Client + Deployment + Config (minimal)
-- `setup/deployment.go`: Add case `"z-ai-coding-direct":` → resolve base (via new config helper + LoadProviderConfig) then `NewOpenAIClient(apiKey, resolved, &client.ZAICompat)`. Reuse the same compat (thinking "zai" format applies).
+- `setup/deployment.go`: Add case `"z_ai_coding-direct":` → resolve base (via new config helper + LoadProviderConfig) then `NewOpenAIClient(apiKey, resolved, &client.ZAICompat)`. Reuse the same compat (thinking "zai" format applies).
 - `config/providers.go`: Add `DefaultZAICodingOpenAIBaseURL`.
 - `config/xai_profile.go` or new `config/zai_profile.go` (or extend existing ZAI bits):
   - Env consts: `EnvZAICodingAPIKey`, `EnvZAICodingBaseURL`, `EnvZAICodingRegion` (or plan-specific).
@@ -170,7 +170,7 @@ Update Registry map and any `fetchers_test` / `live_test`.
 ### 4.5 Hawk Surface (UI + Bridge)
 - `internal/config/zai_setup.go` (new, modeled 1:1 on `xiaomi_setup.go`):
   ```go
-  const ProviderZAICoding = "z-ai-coding"
+  const ProviderZAICoding = "z_ai_coding"
 
   func NeedsZAIRegionOrPlan(providerID string) bool { ... }
   func SetZAIRegion(...) error { ... }
@@ -184,7 +184,7 @@ Update Registry map and any `fetchers_test` / `live_test`.
 - `cmd/chat_config_gateways.go`:
   - In select + hints: if row.ID == hawkconfig.ProviderZAICoding && needs region/plan → launch zai flow (like Xiaomi).
   - Update any hardcoded Xiaomi-only hints to a helper or switch.
-- Update `catalog_gateways_test.go`: change `18` → `19`, add "z-ai-coding" to want list or remove brittle explicit map.
+- Update `catalog_gateways_test.go`: change `18` → `19`, add "z_ai_coding" to want list or remove brittle explicit map.
 - `eyrie_apply.go`, startup, cache invalidation: call the new Apply hook for the coding provider.
 - `catalog_api.go`: add alias cases in `setupGatewayRegistryID` (keep the switch small; long-term consider adding `Aliases []string` to ProviderSpec + derive logic in eyrie registry to kill the switch).
 
@@ -202,15 +202,15 @@ Update Registry map and any `fetchers_test` / `live_test`.
 2. Add consts + `ResolveZAIOpenAIBase` (and region/plan types) in a new `external/eyrie/catalog/zai/endpoints.go` (copy structure from xiaomi/endpoints.go; include CN bases once confirmed).
 3. Update `external/eyrie/catalog/live/fetchers.go`:
    - New default const.
-   - New fetcher func + registration `"z-ai-coding": FetchZAICoding`.
+   - New fetcher func + registration `"z_ai_coding": FetchZAICoding`.
    - (FetchZAI stays for the general key.)
 4. `external/eyrie/config/providers.go`: new `DefaultZAICodingOpenAIBaseURL`.
-5. `external/eyrie/setup/deployment.go`: add case for `z-ai-coding-direct` (resolve base first).
+5. `external/eyrie/setup/deployment.go`: add case for `z_ai_coding-direct` (resolve base first).
 6. Wire minimal profile/env bits (can live in existing ZAI sections or small new `zai_profile.go` modeled on `xiaomi_profile.go`).
 7. Update `external/eyrie/catalog/live/zai_test.go` (or add `zai_coding_test.go`) + any live parity tests.
 8. `go test -race ./external/eyrie/catalog/...` (and full package).
 
-**Deliverable:** `z-ai-coding` appears in `registry.All()` and can be resolved; live fetch works when `ZAI_CODING_API_KEY` + correct base is set.
+**Deliverable:** `z_ai_coding` appears in `registry.All()` and can be resolved; live fetch works when `ZAI_CODING_API_KEY` + correct base is set.
 
 ### Phase 1 — Eyrie Config + Runtime Polish
 - Full resolution + provider.json storage for region/plan (parallel to `XiaomiMimo*` fields).
@@ -226,7 +226,7 @@ Update Registry map and any `fetchers_test` / `live_test`.
    - Add conditionals for the coding provider ID in select/hints (extract a small helper if the if-chain grows).
 4. Edit `internal/config/catalog_api.go` (add cases to the switch for aliases).
 5. Edit `internal/config/eyrie_apply.go`, `catalog_startup.go`, ui caches etc. to call Apply hook for coding provider.
-6. Update `internal/config/catalog_gateways_test.go` (19 gateways, "z-ai-coding" present).
+6. Update `internal/config/catalog_gateways_test.go` (19 gateways, "z_ai_coding" present).
 7. `go test -race ./internal/config/... ./cmd/... -run 'Gateway|ZAI|Config'`.
 
 ### Phase 3 — Tests & Hardening
@@ -247,7 +247,7 @@ Update Registry map and any `fetchers_test` / `live_test`.
 - Optional: contribute richer z-ai entries (including coding variants) to the reference catalog JSON.
 
 ### Phase 5 — Git / PR Hygiene (AGENTS.md)
-- Work on feature branch only: `git checkout -b feat/z-ai-coding-plan-support`.
+- Work on feature branch only: `git checkout -b feat/z_ai_coding-plan-support`.
 - Conventional commits (no co-author trailers — lefthook + history rules).
 - `go fmt` / `go vet` / `golangci-lint` clean locally.
 - Full `-race` + `make smoke` + `make ci` (or background) must be green before PR.
@@ -310,7 +310,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/catalog/zai"
 )
 
-const ProviderZAICoding = "z-ai-coding"
+const ProviderZAICoding = "z_ai_coding"
 
 func NeedsZAIRegionOrPlan(providerID string) bool { /* similar to Xiaomi */ }
 func SetZAIRegionOrPlan(...) error { /* persist to provider.json via eyriecfg, set envs, derive base */ }

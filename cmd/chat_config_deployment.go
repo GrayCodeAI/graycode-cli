@@ -66,7 +66,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 		if inference.ProviderID == hawkconfig.ProviderXiaomiTokenPlan {
 			hawkconfig.ApplyXiaomiTokenPlanRegionEnv(ctx)
 		}
-		if inference.ProviderID == hawkconfig.ProviderZAICoding || inference.ProviderID == "z-ai" {
+		if inference.ProviderID == hawkconfig.ProviderZAICoding {
 			hawkconfig.ApplyZAIRegionEnv(ctx)
 		}
 		rtInf := config.InferenceFromOption(credentialOptionFromHawk(inference))
