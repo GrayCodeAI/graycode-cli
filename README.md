@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="hawk" width="520"/>
+  <img src="assets/logo.png" alt="Hawk" width="260" />
 </p>
+
+<h1 align="center">AI Coding Agent for Your Terminal</h1>
 
 <p align="center">
   AI coding agent for your terminal — built for <strong>developers</strong>, not teams or enterprises (yet).
