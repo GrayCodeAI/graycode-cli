@@ -302,12 +302,12 @@ Update Registry map and any `fetchers_test` / `live_test`.
 package config
 
 import (
-	"context"
-	"os"
-	"strings"
+  "context"
+  "os"
+  "strings"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/catalog/zai"
+  eyriecfg "github.com/GrayCodeAI/eyrie/config"
+  "github.com/GrayCodeAI/eyrie/catalog/zai"
 )
 
 const ProviderZAICoding = "z_ai_coding"
