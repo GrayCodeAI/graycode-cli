@@ -1,91 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 154" width="580" height="154" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 160" width="580" height="160" role="img" aria-labelledby="title desc">
   <title id="title">hawk</title>
   <desc id="desc">AI Coding Agent — terminal-first, developer-focused.</desc>
 
   <style>
-    .logo-bg { fill: #f8fafc; stroke: #e2e8f0; }
-    .hawk-body, .hawk-head { fill: #1e2937; stroke: #0f172a; }
-    .hawk-wing { fill: #334155; stroke: #0f172a; }
-    .hawk-beak { fill: #f59e0b; }
-    .hawk-beak-outline { stroke: #c2410f; }
-    .beak-highlight { stroke: #fed7aa; }
-    .hawk-text { fill: #1e2937; }
-    .hawk-subtext { fill: #64748b; }
-    .tail { fill: #475569; stroke: #0f172a; }
-    .talon { fill: #f59e0b; stroke: #c2410f; }
-    .detail-stroke { stroke: #475569; }
+    .logo-bg { fill: #f8fafc; stroke: #e5e7eb; }
+    .hawk-body { fill: #5c4033; }
+    .hawk-wing { fill: #6b4e31; }
+    .hawk-head { fill: #5c4033; }
+    .hawk-beak { fill: #e67e22; }
+    .hawk-beak-outline { stroke: #b85c1f; }
+    .beak-highlight { stroke: #f5d08d; }
+    .hawk-eye { fill: #f4d03f; stroke: #7d6608; }
+    .hawk-pupil { fill: #1a140f; }
+    .hawk-text { fill: #2c241e; }
+    .hawk-subtext { fill: #6b5b4f; }
+    .hawk-detail { stroke: #3d2b22; }
+    .hawk-frame { stroke: #d4c3b0; }
 
     @media (prefers-color-scheme: dark) {
-      .logo-bg { fill: #0f172a; stroke: #334155; }
-      .hawk-body, .hawk-head { fill: #e5e7eb; stroke: #1e2937; stroke-width: 1.5; }
-      .hawk-wing { fill: #d1d5db; stroke: #1e2937; stroke-width: 1.5; }
-      .hawk-beak { fill: #fb923c; }
-      .hawk-beak-outline { stroke: #9f3410; }
-      .beak-highlight { stroke: #fef3c7; }
-      .hawk-text { fill: #f8fafc; }
-      .hawk-subtext { fill: #94a3b8; }
-      .tail { fill: #64748b; stroke: #334155; }
-      .talon { fill: #fb923c; stroke: #c2410f; }
-      .detail-stroke { stroke: #64748b; }
+      .logo-bg { fill: #1c2526; stroke: #3a4547; }
+      .hawk-body { fill: #c8b39e; }
+      .hawk-wing { fill: #b39a80; }
+      .hawk-head { fill: #c8b39e; }
+      .hawk-beak { fill: #f39c12; }
+      .hawk-beak-outline { stroke: #c97a1a; }
+      .beak-highlight { stroke: #f8e3b3; }
+      .hawk-eye { fill: #f7dc6f; stroke: #a67c00; }
+      .hawk-pupil { fill: #0f0c08; }
+      .hawk-text { fill: #f5f0e8; }
+      .hawk-subtext { fill: #b8a99a; }
+      .hawk-detail { stroke: #5c4633; }
+      .hawk-frame { stroke: #4a5c5e; }
     }
   </style>
 
-  <!-- Subtle theme-aware background frame for presence on both light and dark GitHub -->
-  <rect x="6" y="6" width="568" height="142" rx="18" class="logo-bg" stroke-width="1.25"/>
+  <!-- Clean theme-aware frame -->
+  <rect x="8" y="8" width="564" height="144" rx="20" class="logo-bg" stroke-width="1.5" stroke="currentColor" style="stroke:var(--frame-stroke, #d4c3b0)"/>
 
-  <!-- Hawk illustration (core expressive forms preserved + simplified for clarity at small sizes) -->
-  <g transform="translate(14, 12) scale(0.95)">
-    <!-- Left wing (back) -->
-    <path d="M 75 45 C 65 35, 55 30, 45 32 C 35 34, 25 40, 20 50 C 15 60, 18 75, 30 85 C 40 92, 55 95, 70 90 C 80 85, 85 75, 85 65 C 85 55, 80 50, 75 45 Z" 
-          class="hawk-wing" stroke-width="1.1" stroke-linejoin="round"/>
+  <!-- Majestic realistic hawk (side profile, real bird of prey look) -->
+  <g transform="translate(28, 22)">
 
-    <!-- Body / Torso -->
-    <path d="M 75 45 C 70 40, 75 35, 85 32 C 95 28, 110 25, 125 28 C 140 30, 150 35, 155 42 C 160 50, 158 60, 150 68 C 142 76, 130 80, 115 78 C 100 76, 85 70, 80 62 C 75 55, 73 50, 75 45 Z" 
-          class="hawk-body" stroke-width="1.1" stroke-linejoin="round"/>
+    <!-- Main body / chest -->
+    <ellipse cx="92" cy="68" rx="38" ry="32" class="hawk-body"/>
+    
+    <!-- Back / wing base -->
+    <path d="M 58 52 Q 42 48 36 62 Q 34 82 52 90 Q 68 88 74 72 Z" class="hawk-wing"/>
+    
+    <!-- Upper wing feathers -->
+    <path d="M 52 54 Q 38 52 34 64" fill="none" class="hawk-detail" stroke-width="2.5" opacity="0.7"/>
+    <path d="M 48 58 Q 36 58 34 68" fill="none" class="hawk-detail" stroke-width="2" opacity="0.6"/>
+    <path d="M 56 62 Q 42 66 40 76" fill="none" class="hawk-detail" stroke-width="1.8" opacity="0.55"/>
 
     <!-- Head -->
-    <path d="M 125 28 C 130 22, 138 18, 148 20 C 158 22, 165 28, 168 35 C 170 42, 168 50, 162 55 C 156 60, 148 62, 140 58 C 132 54, 128 48, 127 40 C 126 35, 125 30, 125 28 Z" 
-          class="hawk-head" stroke-width="1.1" stroke-linejoin="round"/>
+    <ellipse cx="128" cy="46" rx="26" ry="22" class="hawk-head"/>
+    
+    <!-- Head feather texture -->
+    <path d="M 110 38 Q 118 34 126 38" fill="none" class="hawk-detail" stroke-width="1.5" opacity="0.4"/>
+    <path d="M 116 42 Q 124 39 130 43" fill="none" class="hawk-detail" stroke-width="1.2" opacity="0.35"/>
 
-    <!-- Beak (hooked) -->
-    <path d="M 168 35 C 175 33, 182 35, 188 40 C 192 44, 190 50, 185 52 C 180 54, 175 52, 172 48 C 170 44, 168 40, 168 35 Z" 
-          class="hawk-beak hawk-beak-outline" stroke-width="0.9"/>
-    <!-- Beak highlight -->
-    <path d="M 170 38 Q 178 38 182 42" fill="none" class="beak-highlight" stroke-width="1.1" opacity="0.65"/>
+    <!-- Fierce real hawk eye -->
+    <ellipse cx="142" cy="42" rx="7.5" ry="6" class="hawk-eye"/>
+    <ellipse cx="143.5" cy="42" rx="3.2" ry="2.8" class="hawk-pupil"/>
+    <!-- Eye highlight / catchlight -->
+    <circle cx="145" cy="40" r="1.4" fill="#fff" opacity="0.9"/>
 
-    <!-- Eye (predatory, with catchlight) -->
-    <ellipse cx="152" cy="38" rx="5" ry="4" fill="#fde047" stroke="#854d0e" stroke-width="0.8"/>
-    <ellipse cx="153" cy="37" rx="2" ry="1.6" fill="#1e2937"/>
-    <circle cx="153.6" cy="36.4" r="0.9" fill="#fff"/>
+    <!-- Strong supraorbital ridge (real hawk brow) -->
+    <path d="M 128 34 Q 138 31 148 35" fill="none" class="hawk-detail" stroke-width="2.5" opacity="0.8"/>
 
-    <!-- Fierce brow ridge -->
-    <path d="M 145 32 Q 152 28 160 32" fill="none" stroke-width="1.6" opacity="0.65" class="detail-stroke"/>
+    <!-- Signature hooked beak - very realistic -->
+    <!-- Upper mandible -->
+    <path d="M 155 42 Q 168 39 175 48 Q 177 54 172 56" class="hawk-beak" stroke-width="0.5"/>
+    <!-- Lower mandible -->
+    <path d="M 155 46 Q 165 48 172 54" class="hawk-beak" stroke-width="0.5"/>
+    <!-- Beak outline for definition -->
+    <path d="M 155 42 Q 168 39 175 48 Q 177 54 172 56" fill="none" class="hawk-beak-outline" stroke-width="1.2"/>
+    <!-- Beak highlight / cere area -->
+    <path d="M 156 44 Q 162 43 166 47" fill="none" class="beak-highlight" stroke-width="1.8" opacity="0.65"/>
 
-    <!-- Right wing (front, extended) -->
-    <path d="M 110 35 C 120 25, 135 18, 150 20 C 165 22, 180 28, 195 38 C 210 48, 220 60, 225 75 C 228 85, 220 95, 210 100 C 200 105, 185 102, 175 95 C 165 88, 155 80, 145 72 C 135 64, 125 55, 118 48 C 112 42, 110 38, 110 35 Z" 
-          class="hawk-wing" stroke-width="1.1" stroke-linejoin="round"/>
+    <!-- Nostril detail -->
+    <circle cx="162" cy="46" r="1.1" fill="#3d2b22" opacity="0.6"/>
 
-    <!-- Tail feathers -->
-    <path d="M 70 90 C 65 95, 60 105, 58 115 C 62 110, 68 105, 75 100 C 80 96, 78 92, 75 90 Z" 
-          class="tail" stroke-width="0.9"/>
-    <path d="M 80 92 C 78 100, 75 110, 73 118 C 78 112, 84 106, 88 100 C 90 96, 86 93, 80 92 Z" 
-          class="tail" stroke-width="0.9"/>
+    <!-- Neck / shoulder connection -->
+    <path d="M 108 58 Q 118 62 122 72" fill="none" class="hawk-detail" stroke-width="3" opacity="0.5"/>
 
-    <!-- Legs + Talons -->
-    <path d="M 95 78 C 98 85, 100 92, 98 98 C 96 102, 92 103, 90 100 C 88 97, 90 92, 92 88 C 94 84, 95 80, 95 78 Z" class="talon" stroke-width="0.7"/>
-    <path d="M 90 100 L 86 106" fill="none" class="talon" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M 92 102 L 89 108" fill="none" class="talon" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M 95 101 L 94 107" fill="none" class="talon" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Folded primary wing feathers (realistic layering) -->
+    <path d="M 68 70 Q 54 78 48 96" fill="none" class="hawk-detail" stroke-width="2.8" opacity="0.65"/>
+    <path d="M 72 74 Q 58 84 54 100" fill="none" class="hawk-detail" stroke-width="2.2" opacity="0.5"/>
+    <path d="M 78 78 Q 64 90 62 104" fill="none" class="hawk-detail" stroke-width="1.6" opacity="0.4"/>
 
-    <path d="M 115 76 C 118 83, 120 90, 118 96 C 116 100, 112 101, 110 98 C 108 95, 110 90, 112 86 C 114 82, 115 78, 115 76 Z" class="talon" stroke-width="0.7"/>
-    <path d="M 110 98 L 106 104" fill="none" class="talon" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M 112 100 L 109 107" fill="none" class="talon" stroke-width="1.7" stroke-linecap="round"/>
-    <path d="M 115 99 L 114 106" fill="none" class="talon" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Tail (real red-tailed hawk suggestion) -->
+    <path d="M 58 90 Q 46 102 44 118 Q 52 114 62 108" class="hawk-wing"/>
+    <path d="M 64 92 Q 54 106 52 120" fill="none" class="hawk-detail" stroke-width="1.8" opacity="0.6"/>
+    <path d="M 70 94 Q 62 110 60 122" fill="none" class="hawk-detail" stroke-width="1.4" opacity="0.45"/>
+
   </g>
 
-  <!-- Wordmark -->
-  <text x="302" y="76" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        font-size="53" font-weight="800" letter-spacing="-1.7" class="hawk-text">hawk</text>
-  <text x="302" y="99" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-        font-size="12.5" font-weight="600" letter-spacing="1.7" class="hawk-subtext">AI CODING AGENT</text>
+  <!-- Wordmark - strong, modern, balanced with the bird -->
+  <text x="305" y="72" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="54" font-weight="800" letter-spacing="-1.8" class="hawk-text">hawk</text>
+  <text x="305" y="96" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="12.5" font-weight="600" letter-spacing="1.6" class="hawk-subtext">AI CODING AGENT</text>
 </svg>
