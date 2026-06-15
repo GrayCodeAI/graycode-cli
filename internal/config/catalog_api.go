@@ -75,6 +75,8 @@ func setupGatewayRegistryID(provider string) string {
 		return "grok"
 	case "zai":
 		return "z-ai"
+	case "z-ai-coding", "zai-coding", "z-ai_coding", "zaicoding":
+		return "z-ai-coding"
 	case "xiaomi_mimo", "xiaomi-mimo":
 		return "xiaomi_mimo_payg"
 	case "xiaomi_mimo_token_plan", "xiaomi-mimo-token-plan":

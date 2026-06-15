@@ -22,6 +22,7 @@ const (
 	configEntryOllamaURL    = "ollama-url"
 	configEntryKeyView      = "key-view"
 	configEntryXiaomiRegion = "xiaomi-region"
+	configEntryZAIRegion    = "zai-region"
 )
 
 // Providers referenced by config UI flows.

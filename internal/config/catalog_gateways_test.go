@@ -11,15 +11,15 @@ import (
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()
-	if len(gws) != 18 {
-		t.Fatalf("expected 18 setup gateways, got %d: %v", len(gws), gws)
+	if len(gws) != 19 {
+		t.Fatalf("expected 19 setup gateways, got %d: %v", len(gws), gws)
 	}
 	for _, id := range gws {
 		if id == "ai21" || id == "alibaba" {
 			t.Fatalf("owner slug %q should not be a gateway", id)
 		}
 	}
-	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true}
+	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true, "z-ai-coding": true}
 	for id := range want {
 		found := false
 		for _, gw := range gws {

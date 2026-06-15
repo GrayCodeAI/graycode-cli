@@ -75,6 +75,12 @@ func (m chatModel) startConfigKeyForProvider(provider string) (chatModel, tea.Cm
 			return m.startConfigXiaomiTokenPlanRegion(), nil
 		}
 	}
+	if provider == hawkconfig.ProviderZAICoding || provider == "z-ai" {
+		if hawkconfig.NeedsZAIRegion(provider) {
+			m.configPostSaveKeysProvider = provider
+			return m.startConfigZAIRegion(provider), nil
+		}
+	}
 	name := hawkconfig.GatewayDisplayName(provider)
 	m.configNotice = "Paste API key for " + name
 	return m.startConfigEntry(configEntryAPIKeyPaste, provider)
@@ -84,6 +90,10 @@ func (m chatModel) startConfigKeyReplace(provider string) (chatModel, tea.Cmd) {
 	if provider == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
 		m.configPostSaveKeysProvider = provider
 		return m.startConfigXiaomiTokenPlanRegion(), nil
+	}
+	if (provider == hawkconfig.ProviderZAICoding || provider == "z-ai") && hawkconfig.NeedsZAIRegion(provider) {
+		m.configPostSaveKeysProvider = provider
+		return m.startConfigZAIRegion(provider), nil
 	}
 	m.configReplaceProvider = provider
 	m.configEntry = configEntryNone

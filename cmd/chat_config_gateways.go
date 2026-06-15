@@ -54,6 +54,11 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 				display += " · region required"
 			}
 		}
+		if id == hawkconfig.ProviderZAICoding || id == "z-ai" {
+			if reg := hawkconfig.ZAIRegionLabel(id); reg != "" {
+				display += " · " + reg
+			}
+		}
 		rows = append(rows, configGatewayRow{
 			ID:          id,
 			DisplayName: display,
@@ -112,6 +117,10 @@ func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
 	if row.ID == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(row.ID) {
 		m.configNotice = "Pick Token Plan region (cn / sgp / ams) before refresh"
 		return m.startConfigXiaomiTokenPlanRegion(), nil
+	}
+	if (row.ID == hawkconfig.ProviderZAICoding || row.ID == "z-ai") && hawkconfig.NeedsZAIRegion(row.ID) {
+		m.configNotice = "Pick Z.AI region before refresh"
+		return m.startConfigZAIRegion(row.ID), nil
 	}
 	if !row.HasKey {
 		m.configNotice = fmt.Sprintf("Select %s and press enter to paste an API key", row.DisplayName)
@@ -206,10 +215,16 @@ func (m chatModel) configGatewaysView() string {
 		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
 			hint = "Token Plan: enter pick region (cn/sgp/ams) then key · g change region"
 		}
+		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].ID == hawkconfig.ProviderZAICoding || rows[targetIdx].ID == "z-ai") {
+			hint = "Z.AI: enter pick region (global/cn) then key · g change region"
+		}
 		b.WriteString("\n" + mutedStyle.Render(indent+hint))
 	} else {
 		hints := "enter use gateway · k view key · delete remove · r refresh"
 		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
+			hints = "enter · g region · k key · delete · r refresh"
+		}
+		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].ID == hawkconfig.ProviderZAICoding || rows[targetIdx].ID == "z-ai") {
 			hints = "enter · g region · k key · delete · r refresh"
 		}
 		b.WriteString("\n" + configTableSelectionFooter(len(rows), m.configScroll, end, mutedStyle, hints))
@@ -256,6 +271,12 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 		if !row.HasKey || hawkconfig.NeedsXiaomiTokenPlanRegion(row.ID) {
 			m.configGatewayFocus = m.configSel
 			return m.startConfigXiaomiTokenPlanRegion(), nil
+		}
+	}
+	if row.ID == hawkconfig.ProviderZAICoding || row.ID == "z-ai" {
+		if !row.HasKey || hawkconfig.NeedsZAIRegion(row.ID) {
+			m.configGatewayFocus = m.configSel
+			return m.startConfigZAIRegion(row.ID), nil
 		}
 	}
 	if !row.HasKey {
