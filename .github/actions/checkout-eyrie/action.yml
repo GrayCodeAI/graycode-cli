@@ -21,12 +21,19 @@ runs:
             echo "$repo already present at $dest"
             continue
           fi
-          ref="${{ inputs.ref }}"
-          # Fall back to main if the branch doesn't exist on the dependency repo.
-          if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then
-            echo "Branch '$ref' not found on $repo, falling back to main"
-            ref="main"
+          commit=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}' || true)
+          if [ -n "$commit" ]; then
+            echo "Cloning $repo at submodule commit $commit"
+            git clone --depth=1 "https://github.com/GrayCodeAI/${repo}.git" "$dest"
+            (cd "$dest" && git checkout --quiet "$commit")
+          else
+            ref="${{ inputs.ref }}"
+            # Fall back to main if the branch doesn't exist on the dependency repo.
+            if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then
+              echo "Branch '$ref' not found on $repo, falling back to main"
+              ref="main"
+            fi
+            git clone --depth=1 --branch "$ref" \
+              "https://github.com/GrayCodeAI/${repo}.git" "$dest"
           fi
-          git clone --depth=1 --branch "$ref" \
-            "https://github.com/GrayCodeAI/${repo}.git" "$dest"
         done
