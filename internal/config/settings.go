@@ -614,7 +614,7 @@ func providerCredentialEnvAliases(provider string) []string {
 	case "grok", "xai":
 		return nil
 	case "xiaomi_mimo", "xiaomi_mimo_payg":
-		return []string{"XIAOMI_MIMO_API_KEY"}
+		return []string{"XIAOMI_MIMO_PAYG_API_KEY"}
 	default:
 		return nil
 	}

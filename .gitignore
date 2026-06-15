@@ -10,9 +10,16 @@ hawk
 .commandcode/
 .hawk/
 .yaad/
+.openclaude/
+.grok/
+.hermes/
+.qoder/
 
 # Cache / local data
 .gocache/
+.gocache-*/
+.gomodcache/
+.gomodcache-*/
 *.codegraph.db
 .DS_Store
 
