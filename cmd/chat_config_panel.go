@@ -64,6 +64,9 @@ func (m chatModel) configPanelView() string {
 	if m.configEntry == configEntryXiaomiRegion {
 		return m.configXiaomiRegionView()
 	}
+	if m.configEntry == configEntryZAIRegion {
+		return m.configZAIRegionView()
+	}
 	switch m.configTab {
 	case configTabGateways:
 		return m.configGatewaysView()
@@ -582,6 +585,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		return m.handleConfigXiaomiRegionKey(msg)
+	}
+	if m.configEntry == configEntryZAIRegion {
+		if m.configSaving {
+			return m, nil
+		}
+		return m.handleConfigZAIRegionKey(msg)
 	}
 	if m.configEntry != configEntryNone {
 		if m.configSaving {

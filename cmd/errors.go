@@ -43,7 +43,8 @@ func friendlyError(err error) string {
 		{[]string{"gemini_api_key", "google_api_key", "gemini api key"}, "GEMINI_API_KEY", "Gemini"},
 		{[]string{"openrouter_api_key", "openrouter api key"}, "OPENROUTER_API_KEY", "OpenRouter"},
 		{[]string{"canopywave_api_key", "canopywave api key"}, "CANOPYWAVE_API_KEY", "CanopyWave"},
-		{[]string{"zai_api_key", "z.ai api key", "z-ai api key"}, "ZAI_API_KEY", "Z.AI"},
+		{[]string{"zai_payg_api_key", "zai_api_key"}, "ZAI_API_KEY", "Z.AI"},
+		{[]string{"zai_coding_api_key", "zai_coding_api_key"}, "ZAI_CODING_API_KEY", "Z.AI Coding Plan"},
 		{[]string{"xai_api_key", "xai api key"}, "XAI_API_KEY", "xAI (Grok)"},
 		{[]string{"opencodego_api_key", "opencodego api key"}, "OPENCODEGO_API_KEY", "OpenCodeGo"},
 		{[]string{"moonshot_api_key", "moonshot api key"}, "MOONSHOT_API_KEY", "Kimi (Moonshot)"},
@@ -447,7 +448,7 @@ func providerDNSHost(provider string) string {
 		return "api.x.ai"
 	case "canopywave":
 		return "inference.canopywave.io"
-	case "z-ai", "zai":
+	case "zai_payg", "zai_coding":
 		return "api.z.ai"
 	case "kimi", "moonshotai":
 		return "api.moonshot.ai"

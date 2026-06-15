@@ -162,9 +162,9 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 		EnableCaching: c.provider == "anthropic",
 		Tools:         tools,
 	}
-	// GLM/Z.ai extended reasoning toggle: only meaningful for the z-ai
-	// provider, where eyrie emits thinking={type:enabled|disabled}.
-	if c.provider == "z-ai" && c.glmThinkingEnabled != nil {
+	// GLM/Z.ai extended reasoning toggle: only meaningful for Z.AI
+	// providers, where eyrie emits thinking={type:enabled|disabled}.
+	if isZAIProvider(c.provider) && c.glmThinkingEnabled != nil {
 		opts.GLMThinkingEnabled = c.glmThinkingEnabled
 	}
 	// Structured output: request a JSON-schema-constrained response when set.
@@ -236,6 +236,16 @@ func isContextOverflow(err error) bool {
 
 func contains(s, sub string) bool {
 	return len(sub) > 0 && len(s) >= len(sub) && (s == sub || (len(s) > 0 && indexOf(s, sub) >= 0))
+}
+
+// isZAIProvider reports whether the provider is a Z.AI gateway (payg or coding).
+func isZAIProvider(provider string) bool {
+	switch provider {
+	case "zai_payg", "zai_coding":
+		return true
+	default:
+		return false
+	}
 }
 
 func indexOf(s, sub string) int {

@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🦅 hawk Architecture
+# <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> hawk Architecture
 
 **AI Coding Agent for Your Terminal**
 
@@ -12,51 +12,51 @@
 
 ---
 
-## 🎯 Overview
+## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/target.svg" width="16" height="16" alt="target" /> Overview
 
 hawk is an AI-powered coding agent for the terminal. It reads codebases, writes and edits files, runs tests, and manages git — all through natural language. Zero CGO, single static binary for linux/darwin/windows on amd64/arm64.
 
 ---
 
-## 🧱 Layered Architecture
+## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/blocks.svg" width="16" height="16" alt="blocks" /> Layered Architecture
 
 ```
 hawk/
-├── api/openapi.yaml           📜 Daemon REST API contract (OpenAPI 3.1)
-├── cmd/                       🖥️ Cobra CLI commands (200+ files)
-│   ├── hawk/main.go           ⚡ Entry point — calls cmd.Execute()
-│   ├── root.go                ⚙️ Root command, flag definitions
-│   ├── daemon.go              🔮 Daemon start/stop/status
-│   ├── chat.go                💬 Interactive TUI chat
+├── api/openapi.yaml           <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/file-text.svg" width="16" height="16" alt="file-text" /> Daemon REST API contract (OpenAPI 3.1)
+├── cmd/                       <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/terminal.svg" width="16" height="16" alt="terminal" /> Cobra CLI commands (200+ files)
+│   ├── hawk/main.go           <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/zap.svg" width="16" height="16" alt="zap" /> Entry point — calls cmd.Execute()
+│   ├── root.go                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/settings.svg" width="16" height="16" alt="settings" /> Root command, flag definitions
+│   ├── daemon.go              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/server.svg" width="16" height="16" alt="server" /> Daemon start/stop/status
+│   ├── chat.go                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/message-square.svg" width="16" height="16" alt="message-square" /> Interactive TUI chat
 │   └── ...
 ├── internal/
-│   ├── api/                   🌐 HTTP server (:4590) — 8 REST endpoints
-│   ├── daemon/                🔮 Daemon lifecycle (PID file, socket)
-│   ├── engine/                🧠 Agent execution loop
-│   │   ├── session.go         🔄 Core agent loop (Stream, agentLoop)
-│   │   ├── ctxmgr/            📦 Context packing and visualization
-│   │   ├── token/             💰 Budget allocation and prediction
-│   │   ├── streaming/         📡 Response cache and stream optimizer
-│   │   ├── planning/          🎯 Goals and task decomposition
-│   │   └── workflow/          🔧 JSON-defined automation pipelines
-│   ├── tool/                  🛠️ 40+ built-in tools
-│   ├── config/                ⚙️ Settings, env manager, migration
-│   ├── session/               💾 SQLite persistence, search, export
-│   ├── permissions/           🛡️ Guardian, rules DSL, boundary checker
-│   ├── sandbox/               🏖️ Landlock + seccomp isolation
-│   ├── intelligence/          🧬 Repo map, AST analysis, deps
-│   ├── multiagent/            👥 Personas, inter-agent messaging
-│   ├── mcp/                   🔌 MCP client and server
-│   ├── bridge/                🌉 Bridges to ecosystem services
-│   └── resilience/            🔄 Circuit breaker, retry, rate limit
-├── shared/types/              📤 Cross-repo exported types
-├── docs/                      📖 Architecture docs
-└── external/                  🔗 Local go.work checkouts
+│   ├── api/                   <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/globe.svg" width="16" height="16" alt="globe" /> HTTP server (:4590) — 8 REST endpoints
+│   ├── daemon/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/server.svg" width="16" height="16" alt="server" /> Daemon lifecycle (PID file, socket)
+│   ├── engine/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> Agent execution loop
+│   │   ├── session.go         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/refresh-cw.svg" width="16" height="16" alt="refresh-cw" /> Core agent loop (Stream, agentLoop)
+│   │   ├── ctxmgr/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/package.svg" width="16" height="16" alt="package" /> Context packing and visualization
+│   │   ├── token/             <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/coins.svg" width="16" height="16" alt="coins" /> Budget allocation and prediction
+│   │   ├── streaming/         <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/radio.svg" width="16" height="16" alt="radio" /> Response cache and stream optimizer
+│   │   ├── planning/          <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/target.svg" width="16" height="16" alt="target" /> Goals and task decomposition
+│   │   └── workflow/          <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/wrench.svg" width="16" height="16" alt="wrench" /> JSON-defined automation pipelines
+│   ├── tool/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/hammer.svg" width="16" height="16" alt="hammer" /> 40+ built-in tools
+│   ├── config/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/settings.svg" width="16" height="16" alt="settings" /> Settings, env manager, migration
+│   ├── session/               <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/database.svg" width="16" height="16" alt="database" /> SQLite persistence, search, export
+│   ├── permissions/           <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/shield.svg" width="16" height="16" alt="shield" /> Guardian, rules DSL, boundary checker
+│   ├── sandbox/               <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/box.svg" width="16" height="16" alt="box" /> Landlock + seccomp isolation
+│   ├── intelligence/          <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/git-branch.svg" width="16" height="16" alt="git-branch" /> Repo map, AST analysis, deps
+│   ├── multiagent/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/users.svg" width="16" height="16" alt="users" /> Personas, inter-agent messaging
+│   ├── mcp/                   <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/plug.svg" width="16" height="16" alt="plug" /> MCP client and server
+│   ├── bridge/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Bridges to ecosystem services
+│   └── resilience/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/refresh-cw.svg" width="16" height="16" alt="refresh-cw" /> Circuit breaker, retry, rate limit
+├── shared/types/              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/share-2.svg" width="16" height="16" alt="share-2" /> Cross-repo exported types
+├── docs/                      <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/book-open.svg" width="16" height="16" alt="book-open" /> Architecture docs
+└── external/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Local go.work checkouts
 ```
 
 ---
 
-## 🌐 Daemon HTTP API (:4590)
+## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/globe.svg" width="16" height="16" alt="globe" /> Daemon HTTP API (:4590)
 
 | | |
 |---|---|
@@ -65,49 +65,49 @@ hawk/
 | **Auth** | Bearer token or `X-API-Key`. Set via `HAWK_DAEMON_API_KEY` |
 
 <details>
-<summary><b>📡 Endpoint Summary</b></summary>
+<summary><b><img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/radio.svg" width="16" height="16" alt="radio" /> Endpoint Summary</b></summary>
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/v1/health` | 🩺 Health check |
-| `GET` | `/v1/version` | 🏷️ Version info |
-| `POST` | `/v1/chat` | 💬 Send message (JSON or SSE) |
-| `GET` | `/v1/sessions` | 📋 List sessions |
-| `GET` | `/v1/sessions/{id}` | 🔍 Get session |
-| `GET` | `/v1/sessions/{id}/messages` | 💬 Get messages |
-| `DELETE` | `/v1/sessions/{id}` | 🗑️ Delete session |
-| `GET` | `/v1/stats` | 📊 Usage statistics |
+| `GET` | `/v1/health` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/heart.svg" width="16" height="16" alt="heart" /> Health check |
+| `GET` | `/v1/version` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/tag.svg" width="16" height="16" alt="tag" /> Version info |
+| `POST` | `/v1/chat` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/message-square.svg" width="16" height="16" alt="message-square" /> Send message (JSON or SSE) |
+| `GET` | `/v1/sessions` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/list.svg" width="16" height="16" alt="list" /> List sessions |
+| `GET` | `/v1/sessions/{id}` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/search.svg" width="16" height="16" alt="search" /> Get session |
+| `GET` | `/v1/sessions/{id}/messages` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/message-square.svg" width="16" height="16" alt="message-square" /> Get messages |
+| `DELETE` | `/v1/sessions/{id}` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/trash-2.svg" width="16" height="16" alt="trash-2" /> Delete session |
+| `GET` | `/v1/stats` | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bar-chart.svg" width="16" height="16" alt="bar-chart" /> Usage statistics |
 
 </details>
 
 ---
 
-## 🔗 Ecosystem Integration
+## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Ecosystem Integration
 
 | Service | Role | Connection |
 |---------|------|------------|
-| 🦅 **eyrie** | LLM provider runtime | `:8080` — all LLM calls routed here |
-| 🧠 **yaad** | Persistent memory | `:3456` — session context, recall |
-| 👁️ **sight** | Code review | Library — diff-based review |
-| 🔍 **inspect** | Security audit | Library — website scanning |
-| ✂️ **tok** | Token optimization | Library — compression, secrets |
-| 📸 **trace** | Session capture | CLI hook — git-native capture |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> **eyrie** | LLM provider runtime | `:8080` — all LLM calls routed here |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> **yaad** | Persistent memory | `:3456` — session context, recall |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/eye.svg" width="16" height="16" alt="eye" /> **sight** | Code review | Library — diff-based review |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/search.svg" width="16" height="16" alt="search" /> **inspect** | Security audit | Library — website scanning |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/scissors.svg" width="16" height="16" alt="scissors" /> **tok** | Token optimization | Library — compression, secrets |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/camera.svg" width="16" height="16" alt="camera" /> **trace** | Session capture | CLI hook — git-native capture |
 
-> 💡 **hawk never talks to LLM APIs directly** — all calls go through eyrie.
+> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> **hawk never talks to LLM APIs directly** — all calls go through eyrie.
 
 ---
 
-## 🛡️ Tool Safety Layer
+## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/shield.svg" width="16" height="16" alt="shield" /> Tool Safety Layer
 
 Every tool call passes through the permission system before execution:
 
 ```
-Tool Call → 🛡️ Guardian (rules DSL) → 🧱 Boundary Checker → 👤 User Approval → 🏖️ Sandbox (landlock/seccomp) → ✅ Execute
+Tool Call → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/shield.svg" width="16" height="16" alt="shield" /> Guardian (rules DSL) → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/blocks.svg" width="16" height="16" alt="blocks" /> Boundary Checker → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/user.svg" width="16" height="16" alt="user" /> User Approval → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/box.svg" width="16" height="16" alt="box" /> Sandbox (landlock/seccomp) → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/check-circle.svg" width="16" height="16" alt="check-circle" /> Execute
 ```
 
 ---
 
-## 📐 Key Design Decisions
+## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/ruler.svg" width="16" height="16" alt="ruler" /> Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
