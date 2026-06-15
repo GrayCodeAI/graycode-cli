@@ -311,7 +311,7 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 		sess.Autonomy = lvl
 	}
 
-	// GLM/Z.ai extended reasoning toggle (applied in the stream loop for z-ai).
+	// GLM/Z.AI extended reasoning toggle (applied in the stream loop for zai_coding/zai_payg).
 	sess.GLMThinkingEnabled = settings.GLMThinkingEnabled
 
 	return nil

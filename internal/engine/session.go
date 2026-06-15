@@ -130,7 +130,7 @@ type Session struct {
 	OnCompaction            OnCompaction
 	Verbose                 bool // show tool calls, timing, token counts in output
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
-	// (applied only when provider is "z-ai"). nil leaves the model default.
+	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 	GLMThinkingEnabled *bool
 
 	// Cost optimization

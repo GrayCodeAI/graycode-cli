@@ -44,19 +44,19 @@ func TestChatService_BuildOptions_NonAnthropicCaching(t *testing.T) {
 func TestChatService_BuildOptions_GLMThinking(t *testing.T) {
 	enabled := true
 	svc := NewChatService(NewMockClientForTest(), ChatServiceConfig{
-		Provider:           "z-ai",
+		Provider:           "zai_payg",
 		Model:              "glm-4",
 		GLMThinkingEnabled: &enabled,
 	})
 	opts := svc.BuildOptions("sys", "glm-4", 1024, nil)
 	if opts.GLMThinkingEnabled == nil || !*opts.GLMThinkingEnabled {
-		t.Error("expected GLMThinkingEnabled=true for z-ai")
+		t.Error("expected GLMThinkingEnabled=true for zai_payg")
 	}
-	// Sanity: setting GLMThinkingEnabled on a non-z-ai provider is ignored.
+	// Sanity: setting GLMThinkingEnabled on a non-zai provider is ignored.
 	svc2 := NewChatService(NewMockClientForTest(), ChatServiceConfig{Provider: "openai", GLMThinkingEnabled: &enabled})
 	opts2 := svc2.BuildOptions("sys", "gpt-4o", 1024, nil)
 	if opts2.GLMThinkingEnabled != nil {
-		t.Error("GLMThinkingEnabled should be nil for non-z-ai provider")
+		t.Error("GLMThinkingEnabled should be nil for non-zai provider")
 	}
 }
 
