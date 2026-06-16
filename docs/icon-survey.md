@@ -31,11 +31,11 @@ docs) or a different approach?
 
 ## Why not Lucide?
 
-Lucide (https://lucide.dev) is the project's visual identity for docs
+Lucide (<https://lucide.dev>) is the project's visual identity for docs
 and web surfaces (see `docs/architecture.md`, which embeds Lucide SVGs).
 It is an SVG-only icon set — **there is no standard PUA mapping for
 Lucide in Nerd Fonts**. The Nerd Fonts cheat sheet
-(https://www.nerdfonts.com/cheat-sheet) confirms the available icon
+(<https://www.nerdfonts.com/cheat-sheet>) confirms the available icon
 sets are: `nf-cod-*` (VS Code Codicons), `nf-fa-*` (FontAwesome),
 `nf-mdi-*` (Material Design), `nf-oct-*` (GitHub Octicons), `nf-pom-*`
 (Pomicons), `nf-seti-*` (Seti-UI), `nf-pl-*` (Powerline), and
