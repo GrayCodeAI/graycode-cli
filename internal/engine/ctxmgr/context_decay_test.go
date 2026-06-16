@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewContextDecay(t *testing.T) {
@@ -330,8 +332,8 @@ func TestFormatEntries(t *testing.T) {
 	if !strings.Contains(result, "Context (decayed):") {
 		t.Error("missing header")
 	}
-	if !strings.Contains(result, "\U0001f4cc") {
-		t.Error("missing pin emoji for pinned entry")
+	if !strings.Contains(result, icons.Pin()) {
+		t.Error("missing pin glyph for pinned entry")
 	}
 	if !strings.Contains(result, "(fading)") {
 		t.Error("missing fading indicator")

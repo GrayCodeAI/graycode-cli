@@ -146,15 +146,15 @@ func TestFormatTasks(t *testing.T) {
 		t.Fatal("expected Run: command")
 	}
 	// Red circle for priority 1
-	if !strings.Contains(result, "\U0001f534") {
+	if !strings.Contains(result, "CRIT") {
 		t.Fatal("expected red indicator for priority 1")
 	}
 	// Yellow circle for priority 2-3
-	if !strings.Contains(result, "\U0001f7e1") {
+	if !strings.Contains(result, "MED") {
 		t.Fatal("expected yellow indicator for priority 2-3")
 	}
 	// Blue circle for priority 4-5
-	if !strings.Contains(result, "\U0001f535") {
+	if !strings.Contains(result, "INFO") {
 		t.Fatal("expected blue indicator for priority 4-5")
 	}
 }

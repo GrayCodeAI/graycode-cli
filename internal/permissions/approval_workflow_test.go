@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewApprovalWorkflow(t *testing.T) {
@@ -389,13 +391,13 @@ func TestFormatHistory(t *testing.T) {
 	if !strings.Contains(output, "Approval History") {
 		t.Error("expected 'Approval History' header")
 	}
-	if !strings.Contains(output, "✓") {
+	if !strings.Contains(output, icons.CheckBold()) {
 		t.Error("expected approved icon")
 	}
-	if !strings.Contains(output, "✗") {
+	if !strings.Contains(output, icons.CloseThick()) {
 		t.Error("expected denied icon")
 	}
-	if !strings.Contains(output, "⏰") {
+	if !strings.Contains(output, "[time]") {
 		t.Error("expected expired icon")
 	}
 }
@@ -419,7 +421,7 @@ func TestFormatHistoryWithLimit(t *testing.T) {
 	// Header + separator + 2 entries = 4 lines
 	entryCount := 0
 	for _, line := range lines {
-		if strings.Contains(line, "✓") {
+		if strings.Contains(line, icons.CheckBold()) {
 			entryCount++
 		}
 	}

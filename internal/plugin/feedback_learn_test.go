@@ -76,9 +76,9 @@ func TestFormatRating(t *testing.T) {
 		rating int
 		want   string
 	}{
-		{1, "★☆☆☆☆"},
-		{3, "★★★☆☆"},
-		{5, "★★★★★"},
+		{1, "*oooo"},
+		{3, "***oo"},
+		{5, "*****"},
 	}
 	for _, tt := range tests {
 		got := FormatRating(tt.rating)

@@ -46,11 +46,11 @@ func TestBlastRadiusString(t *testing.T) {
 }
 
 func TestBlastRadiusEmoji(t *testing.T) {
-	if RadiusSmall.Emoji() != "🟢" {
-		t.Errorf("expected green circle for small")
+	if RadiusSmall.Emoji() != "LOW" {
+		t.Errorf("expected LOW token for small, got %q", RadiusSmall.Emoji())
 	}
-	if RadiusHuge.Emoji() != "🔴" {
-		t.Errorf("expected red circle for huge")
+	if RadiusHuge.Emoji() != "CRIT" {
+		t.Errorf("expected CRIT token for huge, got %q", RadiusHuge.Emoji())
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewTrajectoryInspector(t *testing.T) {
@@ -465,11 +467,11 @@ func TestTrajectoryInspectorEventIcon(t *testing.T) {
 		eventType string
 		want      string
 	}{
-		{"thought", "\U0001f4ad"},
-		{"action", "\U0001f527"},
-		{"observation", "\U0001f441"},
-		{"error", "❌"},
-		{"decision", "✅"},
+		{"thought", "NOTE:"},
+		{"action", "FIX:"},
+		{"observation", "VIEW:"},
+		{"error", icons.CloseThick()},
+		{"decision", icons.CheckBold()},
 		{"unknown", "•"},
 	}
 

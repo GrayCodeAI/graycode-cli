@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewStallDetector(t *testing.T) {
@@ -207,7 +209,7 @@ func TestStallDetectorBuildEscalation(t *testing.T) {
 		Suggestion:  "Try reading the file first",
 	}
 	msg = sd.BuildEscalation(result)
-	if !strings.Contains(msg, "⚠ Stall detected") {
+	if !strings.Contains(msg, icons.Alert()+" Stall detected") {
 		t.Errorf("expected soft warning marker, got %q", msg)
 	}
 	if !strings.Contains(msg, "repeated 3 times") {
