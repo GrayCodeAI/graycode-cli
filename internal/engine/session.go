@@ -77,11 +77,17 @@ type Session struct {
 	Cost     Cost
 	Router   *modelPkg.Router
 	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
+	//
+	// Deprecated: use s.ChatLLM().DeploymentRouting() (Phase 1 sub-service).
 	DeploymentRouting bool
 
 	// ContainerExecutor runs Bash in an isolated container when set (no API keys in container env).
+	//
+	// Deprecated: use s.Tools().ContainerExecutor() (Phase 6 sub-service).
 	ContainerExecutor tool.ContainerExecutor
 	// ContainerRequired blocks tools until ContainerExecutor is running (container-first mode).
+	//
+	// Deprecated: use s.Tools().ContainerRequired() (Phase 6 sub-service).
 	ContainerRequired bool
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
@@ -102,15 +108,27 @@ type Session struct {
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
+	//
+	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
+	//   Permissions, AutoMode, Classifier, BypassKill, Mode, PermissionFn.
 	Permissions    *PermissionMemory             // use Perm.Memory
 	AutoMode       *permissions.AutoModeState    // use Perm.AutoMode
 	Classifier     *permissions.Classifier       // use Perm.Classifier
 	BypassKill     *permissions.BypassKillswitch // use Perm.BypassKill
 	Mode           PermissionMode                // use Perm.Mode
+	//
+	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
+	//   MaxTurns, MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
+	//   EnhancedMemory, Cascade, Lifecycle, Reflector, CostTracker,
+	//   ConvoDAG, Sleeptime, Activity, SkillDistiller, AutoCompactor,
+	//   FewShotStore, AdaptivePrompt.
 	MaxTurns       int
 	MaxBudgetUSD   float64
 	AllowedDirs    []string
 	PermissionFn   func(PermissionRequest) // use Perm.PromptFn
+	//
+	// Deprecated: use s.MemorySvc() (Phase 4 sub-service) for:
+	//   Memory, YaadBridge, EnhancedMemory.
 	AgentSpawnFn   func(ctx context.Context, prompt string) (string, error)
 	AskUserFn      func(question string) (string, error)
 	Memory         MemoryRecaller
@@ -134,12 +152,43 @@ type Session struct {
 	GLMThinkingEnabled *bool
 
 	// Cost optimization
+	//
+	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
+	//   Cascade, Lifecycle, Reflector, CostTracker.
 	Cascade     *branching.CascadeRouter // cascade.go — model tier routing
 	Lifecycle   *SessionLifecycle        // lifecycle.go — self-improvement loop
 	Reflector   *Reflector               // reflect.go — verbal self-reflection
 	CostTracker *CostTracker             // cost_tracker.go — per-request cost persistence
 
 	// Advanced features
+	//
+	// Deprecated: most of these have been folded into sub-services.
+	//   Autonomy       -> s.PermSvc().Autonomy()
+	//   Sandbox        -> s.Tools().Sandbox()
+	//   Plan           -> s.Tools().PlanState()
+	//   Beliefs        -> s.LifecycleSvc().Beliefs()
+	//   Critic         -> s.LifecycleSvc().Critic()
+	//   Backtrack      -> s.LifecycleSvc().Backtrack()
+	//   Limits         -> s.LifecycleSvc().Limits()
+	//   Trajectory     -> s.LifecycleSvc().Trajectory()
+	//   Shadow         -> s.LifecycleSvc().Shadow()
+	//   ConvoDAG       -> s.Persistence().DAG()
+	//   Sleeptime      -> s.MemorySvc().Sleeptime()
+	//   Activity       -> s.MemorySvc().Activity()
+	//   SkillDistiller -> s.MemorySvc().SkillDistiller()
+	//   RateLimiter    -> s.ChatLLM().RateLimiter()
+	//   AgentsAccum    -> s.LifecycleSvc().AgentsAccum()
+	//   FewShotStore   -> s.LifecycleSvc().FewShot()
+	//   AdaptivePrompt -> s.LifecycleSvc().AdaptivePrompt()
+	//   LintLoop       -> s.LifecycleSvc().LintLoop()
+	//   TestLoop       -> s.LifecycleSvc().TestLoop()
+	//   FileMentions   -> s.MemorySvc().FileMentions()
+	//   ResponseCache  -> s.LifecycleSvc().ResponseCache()
+	//   Pipeline       -> s.LifecycleSvc().Pipeline()
+	//   Files          -> s.Persistence().Files()
+	//   Steering       -> s.Persistence().Steering()
+	//   Snapshots      -> s.Persistence().Snapshots()
+	//   Tracer         -> global; passed to services at construction.
 	Autonomy       AutonomyLevel              // autonomy.go — permission level
 	Sandbox        *DiffSandbox               // diffsandbox.go — staged file changes
 	Plan           *PlanState                 // subtask.go — user-activated plan
@@ -167,6 +216,9 @@ type Session struct {
 	AgentsAccum    *prompts.AgentsAccumulator // agents_accumulator.go — auto-capture learnings
 
 	// Few-shot learning and prompt optimization
+	//
+	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
+	//   FewShotStore, AdaptivePrompt.
 	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
 	AdaptivePrompt *AdaptivePrompt // adaptive_prompt.go — user preference learning
 
@@ -327,6 +379,46 @@ func (s *Session) Persistence() *PersistenceService { return s.persist }
 
 // Tools returns the extracted ToolService (Phase 6).
 func (s *Session) Tools() *ToolService { return s.tools }
+
+// SubServices is the composed view of the 6 sub-services extracted
+// in Phases 1-6 of the god-object decomposition. New code should
+// prefer the SubServices() accessor over the legacy Session fields.
+// Existing code (cmd/, daemon/, multiagent/, …) continues to use
+// the legacy fields until they're migrated.
+//
+// SubServices is a struct (not an interface) because all 6
+// sub-services are concrete types; this keeps the API discoverable
+// via godoc and avoids the indirection cost of interface dispatch
+// on the agent-loop hot path.
+//
+// Note: this is distinct from the older *SessionServices returned
+// by Services(), which is a bridge view over the LEGACY fields
+// (CoreLoop, SafetyLayer, Intelligence, etc.). SubServices is the
+// new canonical view; SessionServices will be removed once legacy
+// migration is complete.
+type SubServices struct {
+	LLM         *ChatService
+	Perms       *PermissionService
+	Life        *LifecycleService
+	Memory      *MemoryService
+	Persistence *PersistenceService
+	Tools       *ToolService
+}
+
+// SubServices returns the 6 new sub-services. All sub-services are
+// non-nil for a session constructed via NewSessionWithClient (the
+// only production constructor); the nil cases are reachable only
+// via direct struct literal construction in tests.
+func (s *Session) SubServices() SubServices {
+	return SubServices{
+		LLM:         s.llm,
+		Perms:       s.perms,
+		Life:        s.life,
+		Memory:      s.memory,
+		Persistence: s.persist,
+		Tools:       s.tools,
+	}
+}
 
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
