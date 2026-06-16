@@ -1,3 +1,12 @@
+//go:build live_test
+// +build live_test
+
+// Live integration test for the OpenCodeGo provider adapter end-to-end.
+// Opt-in only — not run by default `go test ./...` or CI. Run with:
+//
+//	OPENCODEGO_API_KEY=... go test -tags=live_test -run TestLiveOpenCodeGoMiniMaxM3FullHawkPath ./cmd
+//
+// Or via `make test-live` in this repo.
 package cmd
 
 import (
