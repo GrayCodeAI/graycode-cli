@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -41,6 +43,54 @@ type MessageBus struct {
 
 	locks  map[string]*ResourceLock // resource -> current lock
 	lockMu sync.Mutex               // separate mutex for lock operations
+
+	// droppedCount counts messages that could not be delivered because
+	// the target agent's channel was full. Incremented atomically so it
+	// can be read via Stats() without acquiring mu. Surfaced via WARN logs
+	// (sampled to avoid spam — see logDroppedMessage).
+	droppedCount atomic.Int64
+}
+
+// BusStats is a snapshot of MessageBus runtime counters.
+type BusStats struct {
+	// Dropped is the cumulative number of messages that could not be
+	// delivered to a registered agent because its channel was full.
+	// Includes both broadcast and direct-send drops.
+	Dropped int64
+	// Agents is the number of currently registered agents.
+	Agents int
+	// Locks is the number of currently held resource locks.
+	Locks int
+	// HistorySz is the number of messages retained in history.
+	HistorySz int
+}
+
+// Stats returns a snapshot of MessageBus counters. Safe for concurrent use.
+func (mb *MessageBus) Stats() BusStats {
+	mb.mu.RLock()
+	defer mb.mu.RUnlock()
+	return BusStats{
+		Dropped:   mb.droppedCount.Load(),
+		Agents:    len(mb.channels),
+		Locks:     len(mb.locks),
+		HistorySz: len(mb.history),
+	}
+}
+
+// logDroppedMessage records a dropped-message event. Sampling: logs the
+// first drop and then every 100th, to avoid log spam when an agent is
+// stuck or the bus is under sustained pressure.
+func (mb *MessageBus) logDroppedMessage(from, to, topic string) {
+	n := mb.droppedCount.Load()
+	if n != 1 && n%100 != 0 {
+		return
+	}
+	slog.Warn("message bus: dropped message (channel full)",
+		"from", from,
+		"to", to,
+		"topic", topic,
+		"dropped_total", n,
+	)
 }
 
 // NewMessageBus creates and returns an initialized MessageBus.
@@ -114,6 +164,8 @@ func (mb *MessageBus) Send(msg AgentMessage) error {
 		select {
 		case ch <- msg:
 		default:
+			mb.droppedCount.Add(1)
+			mb.logDroppedMessage(msg.From, msg.To, msg.Topic)
 			return fmt.Errorf("channel full for agent %q", msg.To)
 		}
 		return nil
@@ -133,7 +185,8 @@ func (mb *MessageBus) Send(msg AgentMessage) error {
 		select {
 		case ch <- msg:
 		default:
-			// Skip agents with full buffers rather than blocking
+			mb.droppedCount.Add(1)
+			mb.logDroppedMessage(msg.From, agentID, msg.Topic)
 		}
 	}
 	return nil
