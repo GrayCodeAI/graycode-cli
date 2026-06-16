@@ -63,6 +63,18 @@ type SubcommandRegistry struct {
 	aliasOf map[string]string // alias -> primary name
 }
 
+// subcommandRegistry is the package-level registry that
+// subcommand implementations (in chat_subcommand_*.go files) register
+// themselves into via init() functions. The dispatcher in
+// handleCommand will look up commands here once the migration is
+// complete; for now the switch statement in chat_commands.go is
+// still the active dispatch path.
+//
+// Subcommand files should NOT construct their own registry; they
+// should call subcommandRegistry.Register(&mySubcommand{}) in an
+// init() function.
+var subcommandRegistry = NewSubcommandRegistry()
+
 // NewSubcommandRegistry creates an empty registry. Subcommands are
 // registered via Register() (typically from per-file init() funcs
 // or from a single aggregate init that imports each subcommand).

@@ -303,3 +303,63 @@ func cmdName(i, j int) string {
 	}
 	return sb.String()
 }
+
+// --- migrated command: /branch ---
+//
+// These tests verify the first command migrated from
+// chat_commands.go into the new SubcommandRegistry pattern. They
+// run as a sanity check that the init() registration works and
+// the subcommand's contract is honored.
+
+func TestBranchSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("branch")
+	if !ok {
+		t.Fatal("/branch not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "branch" {
+		t.Errorf("Name = %q, want branch", cmd.Name())
+	}
+	if cmd.Description() == "" {
+		t.Error("Description is empty; should describe the command for /help")
+	}
+	if cmd.Usage() != "" {
+		t.Errorf("Usage = %q, want empty (no args)", cmd.Usage())
+	}
+	if len(cmd.Aliases()) != 0 {
+		t.Errorf("Aliases = %v, want empty", cmd.Aliases())
+	}
+}
+
+func TestBranchSubcommand_NotInChatCommands(t *testing.T) {
+	// Regression guard: the migrated /branch case in chat_commands.go
+	// should be removed so the dispatcher doesn't double-fire.
+	// (This is a TODO for the next sub-PR; the case is still
+	// present in chat_commands.go today.)
+	t.Skip("TODO: remove /branch case from chat_commands.go when handleCommand migrates to the registry")
+}
+
+func TestBranchSubcommand_SizeIncreasesAfterRegistration(t *testing.T) {
+	// The init() in chat_subcommand_branch.go registers one command.
+	// Verify the package-level registry is non-empty (i.e. the
+	// init() function ran when the package was loaded).
+	if subcommandRegistry.Size() < 1 {
+		t.Errorf("subcommandRegistry.Size = %d, want >= 1 (init() should have registered /branch)",
+			subcommandRegistry.Size())
+	}
+}
+
+func TestSubcommandRegistry_AllContainsBranch(t *testing.T) {
+	// All() should include /branch (along with any other
+	// subcommands added by future init() functions).
+	all := subcommandRegistry.All()
+	found := false
+	for _, c := range all {
+		if c.Name() == "branch" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("/branch not in subcommandRegistry.All()")
+	}
+}
