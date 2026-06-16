@@ -6,6 +6,8 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -221,5 +223,118 @@ func TestAllExportedTypesHaveDocComments(t *testing.T) {
 				})
 			}
 		}
+	}
+}
+
+// legacySessionFields is the canonical list of Session fields marked
+// Deprecated in internal/engine/session.go. The H6 god-object
+// decomposition extracted these into 6 sub-services (LLM, Perms,
+// Life, Memory, Persistence, Tools). New code should go through
+// the sub-services; this audit tracks the migration progress.
+//
+// The list is hand-curated from the Deprecated: comments on the
+// Session struct. If a field is added or removed there, update this
+// list.
+var legacySessionFields = []string{
+	"Permissions", "AutoMode", "Classifier", "BypassKill", "Mode",
+	"MaxTurns", "MaxBudgetUSD", "AllowedDirs", "PermissionFn",
+	"Memory", "YaadBridge", "EnhancedMemory",
+	"Cascade", "Lifecycle", "Reflector", "CostTracker",
+	"Autonomy", "Sandbox", "Plan", "Beliefs", "Critic", "Backtrack",
+	"Limits", "Trajectory", "Shadow", "Snapshots", "ConvoDAG",
+	"Sleeptime", "Activity", "SkillDistiller", "Tracer",
+	"LintLoop", "TestLoop", "FileMentions", "ResponseCache",
+	"Pipeline", "Files", "Steering", "RateLimiter", "AgentsAccum",
+	"FewShotStore", "AdaptivePrompt", "OutputSchema", "Approval",
+	"SettingsGet", "SettingsSet", "AgentSpawnFn", "AskUserFn",
+	"Verbose", "GLMThinkingEnabled", "PinnedMessages",
+	"AutoCompactThresholdPct", "ContextWindowCached",
+	"AutoCompactor", "persistID", "lastPromptTokens",
+	"lastCompletionTokens", "checkpointMgr", "OnCompaction",
+	"Router", "apiKeys", "provider", "model", "system",
+	"Cost", "ContainerExecutor", "ContainerRequired",
+	"DeploymentRouting",
+}
+
+// TestSessionLegacyFieldAccessAudit counts how many call sites still
+// access the legacy Session fields directly (e.g. `s.Memory`,
+// `s.Permissions`). These are the migration targets for the H6
+// god-object decomposition: new code should go through
+// `s.SubServices().X().Y()` instead.
+//
+// The rule is currently soft-fail (tech-debt log) so that
+// in-progress migrations don't break CI. To hard-fail once
+// migration is complete, change t.Logf to t.Errorf in this test.
+//
+// Audited directories: cmd/, internal/daemon/, internal/engine/,
+// internal/multiagent/, internal/session/, internal/snapshot/.
+// The audit is per-file: each access counts as one (no de-dup of
+// the same field in the same file).
+func TestSessionLegacyFieldAccessAudit(t *testing.T) {
+	root := repoRoot(t)
+	dirs := []string{
+		filepath.Join(root, "cmd"),
+		filepath.Join(root, "internal", "daemon"),
+		filepath.Join(root, "internal", "engine"),
+		filepath.Join(root, "internal", "multiagent"),
+		filepath.Join(root, "internal", "session"),
+		filepath.Join(root, "internal", "snapshot"),
+	}
+
+	// Build a single regex matching any of the legacy fields as
+	// a `s.<Field>` access. Whitespace between the dot and the
+	// field name is allowed (rare but legal). We deliberately
+	// exclude `s.SubServices()` and `s.Services()` so the new
+	// access paths don't get counted.
+	quoted := make([]string, len(legacySessionFields))
+	for i, f := range legacySessionFields {
+		quoted[i] = regexp.QuoteMeta(f)
+	}
+	pattern := regexp.MustCompile(`\bs\.\s*(?:` + strings.Join(quoted, "|") + `)\b`)
+
+	total := 0
+	perFile := map[string]int{}
+	for _, dir := range dirs {
+		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+			if !strings.HasSuffix(path, ".go") {
+				return nil
+			}
+			// Skip the deprecation source file itself.
+			if strings.HasSuffix(path, "session.go") && strings.Contains(path, "internal/engine/session.go") {
+				return nil
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+			rel, _ := filepath.Rel(root, path)
+			matches := pattern.FindAll(data, -1)
+			if len(matches) > 0 {
+				perFile[rel] = len(matches)
+				total += len(matches)
+			}
+			return nil
+		})
+	}
+
+	if total == 0 {
+		t.Log("H6 MIGRATION COMPLETE: no legacy Session field access in cmd/ or internal/.")
+		return
+	}
+
+	// Sort for deterministic output.
+	sorted := make([]string, 0, len(perFile))
+	for f := range perFile {
+		sorted = append(sorted, f)
+	}
+	sort.Strings(sorted)
+
+	t.Logf("H6 MIGRATION: %d legacy Session field accesses across %d files. New code should use s.SubServices().X().Y() instead.",
+		total, len(perFile))
+	for _, f := range sorted {
+		t.Logf("  %s: %d", f, perFile[f])
 	}
 }
