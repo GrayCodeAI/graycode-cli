@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // AuditSeverity indicates how dangerous a finding is.
@@ -134,7 +136,7 @@ func AuditAllSkills() AuditResult {
 // FormatAuditResult formats audit findings for display.
 func FormatAuditResult(r AuditResult) string {
 	if len(r.Findings) == 0 {
-		return fmt.Sprintf("Scanned %d file(s). No security issues found. ✓", r.Files)
+		return fmt.Sprintf("Scanned %d file(s). No security issues found. "+icons.CheckBold(), r.Files)
 	}
 
 	var b strings.Builder
@@ -155,7 +157,7 @@ func FormatAuditResult(r AuditResult) string {
 
 	b.WriteString("\n")
 	if critical > 0 {
-		_, _ = fmt.Fprintf(&b, "⚠ %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
+		_, _ = fmt.Fprintf(&b, icons.Alert()+" %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
 	}
 	if warning > 0 {
 		_, _ = fmt.Fprintf(&b, "  %d WARNING(s) — invisible characters that may hide content.\n", warning)

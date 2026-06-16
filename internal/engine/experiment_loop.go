@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ExperimentResult holds the outcome of a single autonomous experiment.
@@ -147,9 +149,9 @@ func (el *ExperimentLoop) Summary() string {
 	var sb strings.Builder
 	kept, discarded := 0, 0
 	for _, r := range el.Results {
-		status := "✗ REVERTED"
+		status := icons.CloseThick() + " REVERTED"
 		if r.Kept {
-			status = "✓ KEPT"
+			status = icons.CheckBold() + " KEPT"
 			kept++
 		} else {
 			discarded++

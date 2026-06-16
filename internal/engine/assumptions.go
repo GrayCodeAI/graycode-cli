@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // AssumptionStatus tracks whether an assumption has been verified.
@@ -96,12 +98,12 @@ func (at *AssumptionTracker) Summary() string {
 	}
 	var sb strings.Builder
 	for _, a := range at.Assumptions {
-		icon := "❓"
+		icon := icons.Question()
 		switch a.Status {
 		case AssumptionConfirmed:
-			icon = "✅"
+			icon = icons.CheckBold()
 		case AssumptionFailed:
-			icon = "❌"
+			icon = icons.CloseThick()
 		}
 		sb.WriteString(fmt.Sprintf("  %s %s", icon, a.Text))
 		if a.Proof != "" {

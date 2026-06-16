@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Spec is a frozen specification that defines what to build.
@@ -63,9 +65,9 @@ func (s *Spec) Format() string {
 	if len(s.OutOfScope) > 0 {
 		sb.WriteString("**NOT in scope:** " + strings.Join(s.OutOfScope, ", ") + "\n")
 	}
-	status := "⏳ PENDING APPROVAL"
+	status := icons.Hourglass() + " PENDING APPROVAL"
 	if s.Approved {
-		status = "✅ APPROVED"
+		status = icons.CheckBold() + " APPROVED"
 	}
 	sb.WriteString("\n" + status)
 	return sb.String()

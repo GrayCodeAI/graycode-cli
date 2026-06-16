@@ -195,13 +195,13 @@ func FilterBySeverity(comments []ReviewComment, minSeverity string) []ReviewComm
 func severityIcon(s string) string {
 	switch s {
 	case "error":
-		return "\U0001f534"
+		return "CRIT"
 	case "warning":
-		return "\U0001f7e1"
+		return "MED"
 	case "info":
-		return "\U0001f7e2"
+		return "LOW"
 	default:
-		return "⚪"
+		return "-"
 	}
 }
 

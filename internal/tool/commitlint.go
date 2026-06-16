@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // CommitLinter validates commit messages against configurable rules following
@@ -280,16 +282,16 @@ func FormatLintResult(result *LintResult) string {
 	var sb strings.Builder
 
 	if result.Valid {
-		sb.WriteString("✓ Commit lint passed\n")
+		sb.WriteString(icons.CheckBold() + " Commit lint passed\n")
 	} else {
-		sb.WriteString("⚠ Commit lint:\n")
+		sb.WriteString(icons.Alert() + " Commit lint:\n")
 	}
 
 	for _, e := range result.Errors {
-		sb.WriteString(fmt.Sprintf("✗ %s\n", e))
+		sb.WriteString(fmt.Sprintf(icons.CloseThick()+" %s\n", e))
 	}
 	for _, w := range result.Warnings {
-		sb.WriteString(fmt.Sprintf("⚠ %s\n", w))
+		sb.WriteString(fmt.Sprintf(icons.Alert()+" %s\n", w))
 	}
 
 	return sb.String()

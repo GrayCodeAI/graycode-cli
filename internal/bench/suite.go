@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // BenchmarkResult holds the result of a single benchmark run.
@@ -132,9 +134,9 @@ func (s *BenchmarkSuite) FormatReport() string {
 	report += "|-----------|----------|-------|--------|\n"
 
 	for _, r := range s.Results {
-		status := "✓"
+		status := icons.CheckBold()
 		if !r.Passed {
-			status = "✗"
+			status = icons.CloseThick()
 		}
 		report += fmt.Sprintf("| %s | %s | %.0fms | %s |\n",
 			r.Name, r.Duration.Round(time.Millisecond), r.Score, status)

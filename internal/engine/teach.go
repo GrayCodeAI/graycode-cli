@@ -1,6 +1,10 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+)
 
 // TeachConfig controls explanation depth.
 type TeachConfig struct {
@@ -27,5 +31,5 @@ func FormatTeachingMoment(action, reasoning string) string {
 	if reasoning == "" {
 		return action
 	}
-	return fmt.Sprintf("\U0001f4a1 %s\n\n%s", reasoning, action)
+	return fmt.Sprintf(icons.Brain()+" %s\n\n%s", reasoning, action)
 }

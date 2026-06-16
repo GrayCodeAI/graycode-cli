@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Pre-compiled patterns for exfiltration detection.
@@ -267,10 +269,10 @@ func (e *EgressInspector) FormatAttempt(attempt *EgressAttempt) string {
 	if len(attempt.Destinations) > 0 {
 		sb.WriteString("\nDestinations:\n")
 		for _, dest := range attempt.Destinations {
-			marker := "✓"
+			marker := icons.CheckBold()
 			reason := "allowed"
 			if !e.IsAllowed(dest.Host) {
-				marker = "✗"
+				marker = icons.CloseThick()
 				reason = "not in allowlist"
 			}
 			portStr := ""

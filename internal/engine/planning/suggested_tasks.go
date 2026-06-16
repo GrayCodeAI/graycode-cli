@@ -682,11 +682,11 @@ func FormatTasks(tasks []*SuggestedTask) string {
 		var indicator string
 		switch {
 		case task.Priority <= 1:
-			indicator = "\U0001f534" // red circle
+			indicator = "CRIT" // red circle
 		case task.Priority <= 3:
-			indicator = "\U0001f7e1" // yellow circle
+			indicator = "MED" // yellow circle
 		default:
-			indicator = "\U0001f535" // blue circle
+			indicator = "INFO" // blue circle
 		}
 
 		sb.WriteString(fmt.Sprintf("%d. %s [%s] %s\n", i+1, indicator, task.Category, task.Title))

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // SLO defines a Service Level Objective for a performance metric.
@@ -290,11 +292,11 @@ func (pb *PerfBudget) formatCurrent(slo *SLO) string {
 func (pb *PerfBudget) formatStatus(slo *SLO) string {
 	switch slo.Status {
 	case "met":
-		return "✓ MET"
+		return icons.CheckBold() + " MET"
 	case "at_risk":
-		return "⚠ AT RISK"
+		return icons.Alert() + " AT RISK"
 	case "violated":
-		return "✗ VIOLATED"
+		return icons.CloseThick() + " VIOLATED"
 	default:
 		return slo.Status
 	}

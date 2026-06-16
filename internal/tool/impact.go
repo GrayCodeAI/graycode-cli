@@ -317,13 +317,13 @@ func formatImpactReport(analysis *ImpactAnalysis) string {
 
 	// Risk score
 	riskLabel := "LOW"
-	riskColor := "🟢"
+	riskColor := "LOW"
 	if analysis.RiskScore > 60 {
 		riskLabel = "HIGH"
-		riskColor = "🔴"
+		riskColor = "CRIT"
 	} else if analysis.RiskScore > 30 {
 		riskLabel = "MEDIUM"
-		riskColor = "🟡"
+		riskColor = "MED"
 	}
 	b.WriteString(fmt.Sprintf("**Risk Score:** %s %d/100 (%s)\n\n", riskColor, analysis.RiskScore, riskLabel))
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // timeoutDeadlineKey is the context key for storing the deadline used by RemainingTime.
@@ -55,7 +57,7 @@ func RemainingTime(ctx context.Context) string {
 	}
 	formatted := remaining.Truncate(time.Second).String()
 	if remaining < time.Minute {
-		return fmt.Sprintf("\u26a0 %s remaining", formatted)
+		return fmt.Sprintf(icons.Alert()+" %s remaining", formatted)
 	}
 	return fmt.Sprintf("%s remaining", formatted)
 }

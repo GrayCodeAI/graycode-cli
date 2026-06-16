@@ -104,14 +104,14 @@ func (fs *FeedbackStore) List() []SkillRating {
 	return ratings
 }
 
-// FormatRating returns a star string like "★★★☆☆".
+// FormatRating returns a star string like "*" + "*" + "*" + "o" + "o".
 func FormatRating(rating int) string {
 	s := ""
 	for i := 0; i < 5; i++ {
 		if i < rating {
-			s += "★"
+			s += "*"
 		} else {
-			s += "☆"
+			s += "o"
 		}
 	}
 	return s

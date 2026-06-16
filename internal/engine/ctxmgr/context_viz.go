@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ContextVisualizer provides a real-time view of context window usage,
@@ -324,10 +326,10 @@ func (cv *ContextVisualizer) WarnIfCritical() string {
 	pct := cv.usedPercentage()
 
 	if pct > 95 {
-		return fmt.Sprintf("\U0001f534 Context %d%% full — compacting now", int(pct))
+		return fmt.Sprintf("CRIT"+" Context %d%% full — compacting now", int(pct))
 	}
 	if pct > 85 {
-		return fmt.Sprintf("⚠ Context %d%% full — auto-compact will trigger soon", int(pct))
+		return fmt.Sprintf(icons.Alert()+" Context %d%% full — auto-compact will trigger soon", int(pct))
 	}
 	return ""
 }

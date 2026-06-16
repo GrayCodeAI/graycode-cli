@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Convention represents a single coding convention that can be enforced on generated code.
@@ -649,7 +651,7 @@ func FormatViolations(violations []Violation) string {
 			detail = fmt.Sprintf(": %s", v.Code)
 		}
 
-		sb.WriteString(fmt.Sprintf("⚠ %s%s%s\n", desc, detail, location))
+		sb.WriteString(fmt.Sprintf(icons.Alert()+" %s%s%s\n", desc, detail, location))
 	}
 
 	return sb.String()

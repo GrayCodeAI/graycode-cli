@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -315,15 +317,15 @@ func FormatRecoveryCandidates(candidates []RecoveryCandidate) string {
 		var status string
 		switch c.Interruption {
 		case InterruptionMidTool:
-			status = fmt.Sprintf("⚡ interrupted: %s", c.LastToolName)
+			status = fmt.Sprintf(icons.Bolt()+" interrupted: %s", c.LastToolName)
 		case InterruptionMidResponse:
-			status = "⚡ interrupted: mid-response"
+			status = icons.Bolt() + " interrupted: mid-response"
 		case InterruptionToolError:
-			status = "⚡ interrupted: tool error"
+			status = icons.Bolt() + " interrupted: tool error"
 		case InterruptionAwaitingInput:
-			status = "⏸ awaiting input"
+			status = icons.Pause() + " awaiting input"
 		default:
-			status = "✓ complete"
+			status = icons.CheckBold() + " complete"
 		}
 
 		age := formatAge(c.Age)

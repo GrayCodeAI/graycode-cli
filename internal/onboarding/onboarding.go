@@ -11,6 +11,8 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 const (
@@ -159,11 +161,11 @@ func RunSetup() error {
 
 		// Validate key format before saving
 		if warning, valid := validateAPIKey(selected.name, apiKey); !valid {
-			fmt.Printf("  %s⚠ %s%s\n", red, warning, reset)
+			fmt.Printf("  %s"+icons.Alert()+" %s%s\n", red, warning, reset)
 			fmt.Println(red + "  API key not saved. Please check your key and try again." + reset)
 			return fmt.Errorf("invalid API key")
 		} else if warning != "" {
-			fmt.Printf("  %s⚠ %s (saving anyway)%s\n", dim, warning, reset)
+			fmt.Printf("  %s"+icons.Alert()+" %s (saving anyway)%s\n", dim, warning, reset)
 		}
 
 		ctx := context.Background()
@@ -177,13 +179,13 @@ func RunSetup() error {
 		}
 
 		fmt.Println()
-		fmt.Printf("  %s✓ API key saved to %s%s\n", teal, credentials.PlatformSecretStoreName(), reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" API key saved to %s%s\n", teal, credentials.PlatformSecretStoreName(), reset)
 	} else if selected.name == "ollama" {
 		_ = hawkconfig.SetActiveProvider(context.Background(), "ollama")
-		fmt.Printf("  %s✓ Ollama selected (make sure ollama is running)%s\n", teal, reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
 		_ = hawkconfig.SetActiveProvider(context.Background(), selected.name)
-		fmt.Printf("  %s✓ Using %s (credential already in %s)%s\n", teal, selected.name, credentials.PlatformSecretStoreName(), reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, selected.name, credentials.PlatformSecretStoreName(), reset)
 	}
 
 	// Security notes

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // GenValidator checks generated code for correctness before writing to disk.
@@ -602,9 +604,9 @@ func FormatValidation(v *GenValidation) string {
 	sb.WriteString("\n")
 
 	for _, issue := range v.Issues {
-		icon := "✗"
+		icon := icons.CloseThick()
 		if issue.Severity == "warning" {
-			icon = "⚠"
+			icon = icons.Alert()
 		} else if issue.Severity == "info" {
 			icon = "ℹ"
 		}

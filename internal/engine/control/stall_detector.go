@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // StallEntry represents a single recorded tool invocation in the stall detection window.
@@ -219,9 +221,9 @@ func (sd *StallDetector) BuildEscalation(result *StallResult) string {
 
 	switch result.Level {
 	case "hard":
-		b.WriteString("🚨 HARD STALL DETECTED")
+		b.WriteString("ALERT:" + " HARD STALL DETECTED")
 	case "soft":
-		b.WriteString("⚠ Stall detected")
+		b.WriteString(icons.Alert() + " Stall detected")
 	}
 
 	if result.RepeatCount > 0 {

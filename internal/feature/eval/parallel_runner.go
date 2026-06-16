@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ParallelRunner executes test packages concurrently using a worker pool.
@@ -321,7 +323,7 @@ func FormatResult(result *RunnerResult) string {
 
 	for _, pkg := range result.Packages {
 		if pkg.Failed > 0 {
-			b.WriteString(fmt.Sprintf("✗ %-20s %d passed, %d FAILED (%s)\n",
+			b.WriteString(fmt.Sprintf(icons.CloseThick()+" %-20s %d passed, %d FAILED (%s)\n",
 				pkg.Package, pkg.Passed, pkg.Failed, formatDuration(pkg.Duration)))
 			// List failed test details.
 			for _, tc := range pkg.Tests {
@@ -332,13 +334,13 @@ func FormatResult(result *RunnerResult) string {
 				}
 			}
 		} else if pkg.Error != "" {
-			b.WriteString(fmt.Sprintf("✗ %-20s ERROR: %s\n", pkg.Package, pkg.Error))
+			b.WriteString(fmt.Sprintf(icons.CloseThick()+" %-20s ERROR: %s\n", pkg.Package, pkg.Error))
 		} else {
 			skipped := ""
 			if pkg.Skipped > 0 {
 				skipped = fmt.Sprintf(", %d skipped", pkg.Skipped)
 			}
-			b.WriteString(fmt.Sprintf("✓ %-20s %d passed%s (%s)\n",
+			b.WriteString(fmt.Sprintf(icons.CheckBold()+" %-20s %d passed%s (%s)\n",
 				pkg.Package, pkg.Passed, skipped, formatDuration(pkg.Duration)))
 		}
 	}

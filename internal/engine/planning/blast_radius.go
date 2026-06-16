@@ -43,15 +43,15 @@ func (r BlastRadius) String() string {
 func (r BlastRadius) Emoji() string {
 	switch r {
 	case RadiusSmall:
-		return "🟢"
+		return "LOW"
 	case RadiusMedium:
-		return "🟡"
+		return "MED"
 	case RadiusLarge:
-		return "🟠"
+		return "HIGH"
 	case RadiusHuge:
-		return "🔴"
+		return "CRIT"
 	default:
-		return "⚪"
+		return "-"
 	}
 }
 

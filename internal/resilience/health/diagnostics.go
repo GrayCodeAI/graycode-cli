@@ -14,6 +14,8 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/config"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // DiagnosticResult holds the outcome of a single diagnostic check.
@@ -143,13 +145,13 @@ func FormatResults(suite *DiagnosticSuite) string {
 		var icon string
 		switch r.Status {
 		case "pass":
-			icon = "✓" // checkmark
+			icon = icons.CheckBold() // checkmark
 			passCount++
 		case "warn":
-			icon = "⚠" // warning
+			icon = icons.Alert() // warning
 			warnCount++
 		case "fail":
-			icon = "✗" // x mark
+			icon = icons.CloseThick() // x mark
 			failCount++
 		default:
 			icon = "?"

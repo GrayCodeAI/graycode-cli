@@ -790,11 +790,11 @@ func severityRank(severity string) int {
 func severityIcon(severity string) string {
 	switch severity {
 	case "critical":
-		return "\U0001f534"
+		return "CRIT"
 	case "major":
-		return "\U0001f7e1"
+		return "MED"
 	case "minor":
-		return "\U0001f7e2"
+		return "LOW"
 	default:
 		return "•"
 	}

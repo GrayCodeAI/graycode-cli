@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"fmt"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // GatePhase represents a phase in the spec-driven workflow.
@@ -100,9 +102,9 @@ func ImplementGate(validateCmd string, workDir string) QualityGate {
 func FormatGateResults(results []GateResult) string {
 	var s string
 	for _, r := range results {
-		icon := "✅"
+		icon := icons.CheckBold()
 		if !r.Passed {
-			icon = "❌"
+			icon = icons.CloseThick()
 		}
 		s += fmt.Sprintf("  %s [%s] %s\n", icon, r.Phase, r.Reason)
 	}

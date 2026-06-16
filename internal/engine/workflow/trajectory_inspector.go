@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // TrajectoryEvent represents a single event in an agent's trajectory.
@@ -396,15 +398,15 @@ func (ti *TrajectoryInspector) countRapidActions() int {
 func eventIcon(eventType string) string {
 	switch eventType {
 	case "thought":
-		return "\U0001f4ad" // 💭
+		return "NOTE:" // 💭
 	case "action":
-		return "\U0001f527" // 🔧
+		return "FIX:" // 🔧
 	case "observation":
-		return "\U0001f441" // 👁
+		return "VIEW:" // 👁
 	case "error":
-		return "❌" // ❌
+		return icons.CloseThick() // ❌
 	case "decision":
-		return "✅" // ✅
+		return icons.CheckBold() // ✅
 	default:
 		return "•" // •
 	}
