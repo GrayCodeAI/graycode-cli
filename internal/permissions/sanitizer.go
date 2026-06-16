@@ -89,6 +89,63 @@ func buildInvisibleRunes() map[rune]string {
 // invisibleRunes contains Unicode code points that are invisible/control characters.
 var invisibleRunes = buildInvisibleRunes()
 
+// legitimateScriptTables is the allow-list of Unicode scripts
+// for the strip-invisible step. Characters that appear in
+// invisibleRunes but whose Unicode script is one of these tables
+// are NOT stripped — they're preserved as legitimate parts of
+// native-script text.
+//
+// The original invisibleRunes list included a few entries that
+// turned out to be visible or semantically meaningful in their
+// native script (e.g., U+115F/U+1160 Hangul fillers,
+// U+17B4/U+17B5 Khmer vowels, U+061C Arabic letter mark).
+// Stripping those mangled legitimate CJK, Khmer, and Arabic text.
+// The allow-list below is the defense: any future addition to
+// invisibleRunes is also protected for these scripts.
+//
+// Pure format / BIDI-mark characters (in the "Common" or
+// "Inherited" script) are NOT in this list — for those, stripping
+// is the safe default.
+var legitimateScriptTables = func() []*unicode.RangeTable {
+	// Use a function literal so the tables are evaluated once
+	// at init (not per call). This matters for the StripInvisible
+	// hot path which can be called per-token.
+	return []*unicode.RangeTable{
+		unicode.Latin,
+		unicode.Cyrillic,
+		unicode.Greek,
+		unicode.Han,        // CJK ideographs
+		unicode.Hiragana,
+		unicode.Katakana,
+		unicode.Hangul, // Korean
+		unicode.Arabic,
+		unicode.Hebrew,
+		unicode.Devanagari,
+		unicode.Thai,
+		unicode.Tibetan,
+		unicode.Georgian,
+		unicode.Armenian,
+		unicode.Ethiopic,
+		unicode.Khmer,
+		unicode.Myanmar,
+	}
+}()
+
+// isLegitimateScript reports whether r belongs to one of the
+// allow-listed scripts. This is the defense against the original
+// invisibleRunes list incorrectly including some visible/script
+// characters (e.g., U+17B4 Khmer vowel, U+115F Hangul filler).
+// When a "would-be-invisible" character is in a legitimate script,
+// we keep it.
+func isLegitimateScript(r rune) bool {
+	for _, table := range legitimateScriptTables {
+		if unicode.Is(table, r) {
+			return true
+		}
+	}
+	return false
+}
+
 // cyrillicToLatin maps Cyrillic homoglyphs to their Latin equivalents.
 var cyrillicToLatin = map[rune]rune{
 	0x0430: 'a', // Cyrillic a -> Latin a
@@ -222,6 +279,17 @@ func (s *InputSanitizer) Sanitize(input string) *SanitizeResult {
 // StripInvisibleChars removes invisible Unicode characters from text.
 // This includes zero-width space/joiner/non-joiner, BOM markers,
 // bidirectional overrides, invisible separators, and tag characters.
+//
+// Some entries in invisibleRunes (e.g., U+115F Hangul filler,
+// U+17B4 Khmer vowel) are actually visible or semantically
+// meaningful in their native script. To avoid mangling legitimate
+// non-Latin text, characters in invisibleRunes whose Unicode script
+// is in legitimateScriptTables are NOT stripped — they're preserved.
+//
+// The check is per-character: invisible-rune entries whose script
+// is NOT in the allow-list ARE stripped, since stripping is the
+// safe default for those. Pure Common/Inherited characters (BIDI
+// marks, format chars) are always stripped.
 func StripInvisibleChars(text string) (string, []SanitizeChange) {
 	var changes []SanitizeChange
 	var cleaned strings.Builder
@@ -229,19 +297,24 @@ func StripInvisibleChars(text string) (string, []SanitizeChange) {
 
 	pos := 0
 	for _, r := range text {
+		shouldStrip := false
+
 		if _, isInvisible := invisibleRunes[r]; isInvisible {
+			if !isLegitimateScript(r) {
+				shouldStrip = true
+			}
+		} else if r >= 0xE0001 && r <= 0xE007F {
+			// Tag characters (U+E0001 to U+E007F) — always strip.
+			// These are pure injection vectors with no legitimate use
+			// in any script.
+			shouldStrip = true
+		}
+
+		if shouldStrip {
 			changes = append(changes, SanitizeChange{
 				Type:        "stripped",
 				Position:    pos,
 				Original:    fmt.Sprintf("U+%04X", r),
-				Replacement: "",
-			})
-		} else if r >= 0xE0001 && r <= 0xE007F {
-			// Tag characters (U+E0001 to U+E007F)
-			changes = append(changes, SanitizeChange{
-				Type:        "stripped",
-				Position:    pos,
-				Original:    fmt.Sprintf("U+%05X", r),
 				Replacement: "",
 			})
 		} else {
