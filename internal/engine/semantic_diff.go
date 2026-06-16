@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // SemanticDiff holds the result of semantic analysis of a diff.
@@ -465,7 +467,7 @@ func GenerateSummary(diff *SemanticDiff) string {
 			sb.WriteString(fmt.Sprintf("+ Added: %s\n", formatChangeLine(c)))
 		case "function_removed", "import_removed":
 			if c.Breaking {
-				sb.WriteString(fmt.Sprintf("⚠ Breaking: %s\n", formatChangeLine(c)))
+				sb.WriteString(fmt.Sprintf(icons.Alert()+" Breaking: %s\n", formatChangeLine(c)))
 			} else {
 				sb.WriteString(fmt.Sprintf("- Removed: %s\n", formatChangeLine(c)))
 			}
@@ -473,10 +475,10 @@ func GenerateSummary(diff *SemanticDiff) string {
 			modifications++
 			sb.WriteString(fmt.Sprintf("~ Modified: %s\n", formatChangeLine(c)))
 		case "signature_changed":
-			sb.WriteString(fmt.Sprintf("⚠ Breaking: %s\n", formatChangeLine(c)))
+			sb.WriteString(fmt.Sprintf(icons.Alert()+" Breaking: %s\n", formatChangeLine(c)))
 		case "type_changed":
 			if c.Breaking {
-				sb.WriteString(fmt.Sprintf("⚠ Breaking: %s\n", formatChangeLine(c)))
+				sb.WriteString(fmt.Sprintf(icons.Alert()+" Breaking: %s\n", formatChangeLine(c)))
 			} else {
 				modifications++
 				sb.WriteString(fmt.Sprintf("~ Modified: %s\n", formatChangeLine(c)))

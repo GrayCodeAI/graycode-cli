@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ProjectSignal represents a detected project characteristic.
@@ -171,11 +173,11 @@ func RunAutoSkill(dir string) (string, error) {
 	for _, skill := range recommended {
 		msg, err := rc.Install(skill.Repo, skill.Name, "project")
 		if err != nil {
-			_, _ = fmt.Fprintf(&b, "  ✗ %s — %v\n", skill.Name, err)
+			_, _ = fmt.Fprintf(&b, "  "+icons.CloseThick()+" %s — %v\n", skill.Name, err)
 			continue
 		}
 		_ = msg
-		_, _ = fmt.Fprintf(&b, "  ✓ %s — %s\n", skill.Name, skill.Description)
+		_, _ = fmt.Fprintf(&b, "  "+icons.CheckBold()+" %s — %s\n", skill.Name, skill.Description)
 		installed++
 	}
 

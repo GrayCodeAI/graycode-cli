@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 type CodeAction struct {
@@ -536,17 +538,17 @@ func computeConfidence(rule ActionRule) float64 {
 func categoryIcon(category string) string {
 	switch category {
 	case "refactor":
-		return "\U0001f527"
+		return "FIX:"
 	case "performance":
-		return "⚡"
+		return icons.Bolt()
 	case "security":
-		return "\U0001f512"
+		return "LOCK:"
 	case "style":
-		return "\U0001f3a8"
+		return "STYLE:"
 	case "fix":
-		return "\U0001f41b"
+		return "BUG:"
 	default:
-		return "\U0001f4a1"
+		return icons.Brain()
 	}
 }
 

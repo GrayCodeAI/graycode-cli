@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // StagingArea provides a local staging area for agent edits, allowing review
@@ -233,7 +235,7 @@ func (sa *StagingArea) FormatStaging() string {
 		for i, hunk := range change.Hunks {
 			status := "○" // open circle - pending
 			if hunk.Approved {
-				status = "✓" // checkmark - approved
+				status = icons.CheckBold() // checkmark - approved
 			} else {
 				allApproved = false
 			}

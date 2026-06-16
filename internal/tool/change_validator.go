@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ChangeValidator runs a battery of validation checks before allowing changes
@@ -215,14 +217,14 @@ func FormatReport(report *ValidationReport) string {
 
 	for _, check := range report.Checks {
 		if check.Passed {
-			sb.WriteString(fmt.Sprintf("✓ %s: %s\n", check.CheckName, check.Message))
+			sb.WriteString(fmt.Sprintf(icons.CheckBold()+" %s: %s\n", check.CheckName, check.Message))
 		} else if check.Severity == "warning" {
-			sb.WriteString(fmt.Sprintf("⚠ %s: %s\n", check.CheckName, check.Message))
+			sb.WriteString(fmt.Sprintf(icons.Alert()+" %s: %s\n", check.CheckName, check.Message))
 			for _, detail := range check.Details {
 				sb.WriteString(fmt.Sprintf("  - %s\n", detail))
 			}
 		} else {
-			sb.WriteString(fmt.Sprintf("✗ %s: %s\n", check.CheckName, check.Message))
+			sb.WriteString(fmt.Sprintf(icons.CloseThick()+" %s: %s\n", check.CheckName, check.Message))
 			for _, detail := range check.Details {
 				sb.WriteString(fmt.Sprintf("  - %s\n", detail))
 			}

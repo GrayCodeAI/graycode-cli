@@ -473,7 +473,7 @@ func FormatViolation(v *BoundaryViolation) string {
 		return ""
 	}
 	return fmt.Sprintf(
-		"⛔ BOUNDARY VIOLATION: %s\nAttempted: %s\nBoundary: %s\nSeverity: %s",
+		"[deny]"+" BOUNDARY VIOLATION: %s\nAttempted: %s\nBoundary: %s\nSeverity: %s",
 		v.Description,
 		v.Attempted,
 		v.Allowed,

@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // HealthScore represents the overall health assessment of a project.
@@ -764,9 +766,9 @@ func FormatScore(score *HealthScore) string {
 	if len(score.Issues) > 0 {
 		sb.WriteString(fmt.Sprintf("\nIssues (%d):\n", len(score.Issues)))
 		for _, issue := range score.Issues {
-			icon := "⚠"
+			icon := icons.Alert()
 			if issue.Severity == "error" {
-				icon = "✗"
+				icon = icons.CloseThick()
 			}
 			sb.WriteString(fmt.Sprintf("  %s %s: %s\n", icon, issue.Dimension, issue.Description))
 		}
@@ -775,7 +777,7 @@ func FormatScore(score *HealthScore) string {
 	if len(score.Strengths) > 0 {
 		sb.WriteString("\nStrengths:\n")
 		for _, s := range score.Strengths {
-			sb.WriteString(fmt.Sprintf("  ✓ %s\n", s))
+			sb.WriteString(fmt.Sprintf("  "+icons.CheckBold()+" %s\n", s))
 		}
 	}
 
@@ -843,7 +845,7 @@ func CompareScores(before, after *HealthScore) string {
 	if len(newIssues) > 0 {
 		sb.WriteString(fmt.Sprintf("\nNew Issues (%d):\n", len(newIssues)))
 		for _, issue := range newIssues {
-			sb.WriteString(fmt.Sprintf("  ⚠ %s: %s\n", issue.Dimension, issue.Description))
+			sb.WriteString(fmt.Sprintf("  "+icons.Alert()+" %s: %s\n", issue.Dimension, issue.Description))
 		}
 	}
 
@@ -852,7 +854,7 @@ func CompareScores(before, after *HealthScore) string {
 	if len(resolved) > 0 {
 		sb.WriteString(fmt.Sprintf("\nResolved Issues (%d):\n", len(resolved)))
 		for _, issue := range resolved {
-			sb.WriteString(fmt.Sprintf("  ✓ %s: %s\n", issue.Dimension, issue.Description))
+			sb.WriteString(fmt.Sprintf("  "+icons.CheckBold()+" %s: %s\n", issue.Dimension, issue.Description))
 		}
 	}
 

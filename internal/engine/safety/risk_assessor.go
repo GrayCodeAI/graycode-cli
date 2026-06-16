@@ -5,6 +5,8 @@ import (
 	"math"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // RiskAssessment holds the result of evaluating how risky a proposed code change is.
@@ -248,9 +250,9 @@ func FormatAssessment(assessment *RiskAssessment) string {
 		bar := riskRenderBar(f.Score)
 		warning := ""
 		if f.Score >= 0.9 {
-			warning = "  \U0001f534"
+			warning = "  " + "CRIT"
 		} else if f.Score >= 0.7 {
-			warning = "  ⚠"
+			warning = "  " + icons.Alert()
 		}
 		sb.WriteString(fmt.Sprintf("  %-30s %.1f  %s%s\n", label, f.Score, bar, warning))
 	}

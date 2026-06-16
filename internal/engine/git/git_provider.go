@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // GitProvider integrates with GitHub/GitLab/Bitbucket APIs for issue management,
@@ -255,7 +257,7 @@ func FormatIssues(issues []GitIssue) string {
 	for _, issue := range issues {
 		stateIcon := "○" // open
 		if issue.State == "closed" {
-			stateIcon = "✓"
+			stateIcon = icons.CheckBold()
 		}
 		b.WriteString(fmt.Sprintf("%s #%d %s", stateIcon, issue.Number, issue.Title))
 		if len(issue.Labels) > 0 {
@@ -280,9 +282,9 @@ func FormatPRs(prs []PullRequest) string {
 	for _, pr := range prs {
 		stateIcon := "○" // open
 		if pr.State == "merged" {
-			stateIcon = "✓"
+			stateIcon = icons.CheckBold()
 		} else if pr.State == "closed" {
-			stateIcon = "✗"
+			stateIcon = icons.CloseThick()
 		}
 		draft := ""
 		if pr.Draft {
@@ -314,10 +316,10 @@ func FormatCIStatus(status *CIStatus) string {
 
 		switch check.Status {
 		case "success":
-			icon = "✓"
+			icon = icons.CheckBold()
 			detail = fmt.Sprintf("(%s)", formatCIDuration(check.Duration))
 		case "failure":
-			icon = "✗"
+			icon = icons.CloseThick()
 			detail = fmt.Sprintf("(failed after %s)", formatCIDuration(check.Duration))
 			failed++
 		case "pending":

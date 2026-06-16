@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // DocLintResult holds the documentation quality analysis for a single file.
@@ -597,12 +599,12 @@ func (dl *DocLinter) FormatReport(results []*DocLintResult) string {
 		sb.WriteString(fmt.Sprintf("%s (Score: %.0f/100)\n", r.File, r.Score))
 
 		for _, issue := range r.Issues {
-			icon := "⚠"
+			icon := icons.Alert()
 			switch issue.Severity {
 			case "error":
-				icon = "✗"
+				icon = icons.CloseThick()
 			case "info":
-				icon = "✓"
+				icon = icons.CheckBold()
 			}
 			sb.WriteString(fmt.Sprintf("  %s L%d: %s\n", icon, issue.Line, issue.Message))
 
@@ -615,7 +617,7 @@ func (dl *DocLinter) FormatReport(results []*DocLintResult) string {
 		}
 
 		if len(r.Issues) == 0 {
-			sb.WriteString("  ✓ All exported symbols documented\n")
+			sb.WriteString("  " + icons.CheckBold() + " All exported symbols documented\n")
 		}
 		sb.WriteString("\n")
 	}

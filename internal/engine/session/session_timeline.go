@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // TimelineEvent represents a single event in a session timeline.
@@ -318,17 +320,17 @@ func (t *Timeline) getMilestonesLocked() []TimelineEvent {
 func timelineEventIcon(eventType string) string {
 	switch eventType {
 	case "action":
-		return "\U0001f50d" // magnifying glass
+		return icons.Magnify() // magnifying glass
 	case "decision":
-		return "\U0001f4a1" // light bulb
+		return icons.Brain() // light bulb
 	case "milestone":
-		return "✅" // check mark
+		return icons.CheckBold() // check mark
 	case "error":
-		return "❌" // cross mark
+		return icons.CloseThick() // cross mark
 	case "user_input":
-		return "\U0001f4dd" // memo
+		return "EDIT:" // memo
 	case "file_change":
-		return "✏️" // pencil
+		return "[edit]" // pencil
 	default:
 		return "•" // bullet
 	}

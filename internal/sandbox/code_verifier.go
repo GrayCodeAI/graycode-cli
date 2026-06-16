@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // CodeVerifier performs static analysis of generated code before execution,
@@ -363,10 +365,10 @@ func FormatResult(result *VerificationResult) string {
 	for _, v := range result.Violations {
 		if v.Severity == "warning" {
 			warningCount++
-			sb.WriteString(fmt.Sprintf("⚠ L%d: %s\n", v.Line, v.Reason))
+			sb.WriteString(fmt.Sprintf("%s L%d: %s\n", icons.Alert(), v.Line, v.Reason))
 		} else {
 			errorCount++
-			sb.WriteString(fmt.Sprintf("✗ L%d: %s\n", v.Line, v.Reason))
+			sb.WriteString(fmt.Sprintf("%s L%d: %s\n", icons.CloseThick(), v.Line, v.Reason))
 		}
 	}
 

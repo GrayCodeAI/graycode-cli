@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // SelfHealer implements a wolverine-inspired self-healing execution loop.
@@ -483,7 +485,7 @@ func FormatHealResult(result *HealResult) string {
 
 	for _, a := range result.Attempts {
 		if a.Success {
-			b.WriteString(fmt.Sprintf("Attempt %d: SUCCESS ✓\n", a.Attempt))
+			b.WriteString(fmt.Sprintf("Attempt %d: SUCCESS "+icons.CheckBold()+"\n", a.Attempt))
 		} else {
 			errSummary := extractErrorSummary(a.Error)
 			b.WriteString(fmt.Sprintf("Attempt %d: FAILED (%s)\n", a.Attempt, errSummary))

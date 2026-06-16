@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ApprovalRequest represents a request for approval of a high-risk operation.
@@ -287,7 +289,7 @@ func (wf *ApprovalWorkflow) checkPolicyLocked(tool string, risk string) *Approva
 // FormatRequest formats an approval request for display to the user.
 func FormatRequest(req *ApprovalRequest) string {
 	var sb strings.Builder
-	sb.WriteString("⚠ Approval Required:\n")
+	sb.WriteString(icons.Alert() + " Approval Required:\n")
 	sb.WriteString(fmt.Sprintf("  Tool: %s\n", req.Tool))
 
 	// Show relevant args
@@ -332,11 +334,11 @@ func FormatHistory(history []*ApprovalRequest, limit int) string {
 		statusIcon := " "
 		switch req.Status {
 		case "approved":
-			statusIcon = "✓"
+			statusIcon = icons.CheckBold()
 		case "denied":
-			statusIcon = "✗"
+			statusIcon = icons.CloseThick()
 		case "expired":
-			statusIcon = "⏰"
+			statusIcon = "[time]"
 		}
 
 		sb.WriteString(fmt.Sprintf(

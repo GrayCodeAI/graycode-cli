@@ -483,14 +483,14 @@ func (co *CostOptimizer) FormatReport() string {
 	if len(co.Recommendations) > 0 {
 		b.WriteString("\nRecommendations:\n")
 		for _, rec := range co.Recommendations {
-			icon := "\U0001f535"
+			icon := "INFO"
 			label := "LOW"
 			switch rec.Priority {
 			case "high":
-				icon = "\U0001f7e2"
+				icon = "LOW"
 				label = "HIGH"
 			case "medium":
-				icon = "\U0001f7e1"
+				icon = "MED"
 				label = "MED"
 			}
 			b.WriteString(fmt.Sprintf("%s %s: %s (saves ~$%.2f/day)\n", icon, label, rec.Action, rec.EstimatedSavings))

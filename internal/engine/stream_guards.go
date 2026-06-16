@@ -29,7 +29,7 @@ func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEven
 	}
 
 	if loopDet.IsDoomLoop() {
-		ch <- StreamEvent{Type: "content", Content: "\n\n🛑 " + loopDet.DoomLoopWarning()}
+		ch <- StreamEvent{Type: "content", Content: "\n\n" + "STOP:" + " " + loopDet.DoomLoopWarning()}
 		ch <- StreamEvent{Type: "done"}
 		return false
 	}

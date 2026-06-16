@@ -16,6 +16,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/tok"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // PathCheckStatus is pass, warn, or fail for one readiness row.
@@ -299,11 +301,11 @@ func FormatDeveloperPathReport(ctx context.Context) string {
 func pathStatusGlyph(s PathCheckStatus) string {
 	switch s {
 	case PathPass:
-		return "✓"
+		return icons.CheckBold()
 	case PathWarn:
 		return "!"
 	case PathFail:
-		return "✗"
+		return icons.CloseThick()
 	default:
 		return "?"
 	}

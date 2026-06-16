@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // CoverageReport holds overall coverage metrics and per-file details.
@@ -518,9 +520,9 @@ func FormatReport(report *CoverageReport) string {
 			bar := renderBar(fc.Percentage, 20)
 			status := ""
 			if fc.Percentage == 0 {
-				status = "  ✗"
+				status = "  " + icons.CloseThick()
 			} else if fc.Percentage < 50 {
-				status = "  ⚠"
+				status = "  " + icons.Alert()
 			}
 
 			sb.WriteString(fmt.Sprintf("  %-*s  %3.0f%%  %s%s\n",

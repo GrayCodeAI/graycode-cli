@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Ticket represents a linked issue/ticket from any tracking system.
@@ -354,10 +356,10 @@ func FormatComplianceResult(result *ComplianceResult) string {
 	sb.WriteString("\n")
 
 	for _, s := range result.Satisfied {
-		sb.WriteString(fmt.Sprintf("✓ %s\n", s))
+		sb.WriteString(fmt.Sprintf(icons.CheckBold()+" %s\n", s))
 	}
 	for _, u := range result.Unsatisfied {
-		sb.WriteString(fmt.Sprintf("✗ %s\n", u))
+		sb.WriteString(fmt.Sprintf(icons.CloseThick()+" %s\n", u))
 	}
 
 	if len(result.Suggestions) > 0 {

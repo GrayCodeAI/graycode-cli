@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // GitHookInstaller manages installation and lifecycle of git hooks for
@@ -292,9 +294,9 @@ func (g *GitHookInstaller) FormatStatus() string {
 
 	for _, h := range hooks {
 		if g.Installed[h.name] {
-			_, _ = fmt.Fprintf(&b, "  ✓ %s (%s)\n", h.name, h.desc)
+			_, _ = fmt.Fprintf(&b, "  "+icons.CheckBold()+" %s (%s)\n", h.name, h.desc)
 		} else {
-			_, _ = fmt.Fprintf(&b, "  ✗ %s (not installed)\n", h.name)
+			_, _ = fmt.Fprintf(&b, "  "+icons.CloseThick()+" %s (not installed)\n", h.name)
 		}
 	}
 

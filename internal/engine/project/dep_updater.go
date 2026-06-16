@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // DependencyUpdater detects outdated packages and helps update them safely.
@@ -451,7 +453,7 @@ func FormatOutdated(deps []Dependency) string {
 	sb.WriteString("Outdated Dependencies:\n")
 
 	if len(security) > 0 {
-		sb.WriteString("\n⚠ SECURITY:\n")
+		sb.WriteString("\n" + icons.Alert() + " SECURITY:\n")
 		for _, dep := range security {
 			sb.WriteString(fmt.Sprintf("  %-40s %s → %s (%s, security fix)\n",
 				dep.Name, dep.CurrentVersion, dep.LatestVersion, dep.UpdateType))
@@ -459,7 +461,7 @@ func FormatOutdated(deps []Dependency) string {
 	}
 
 	if len(patchDeps) > 0 {
-		sb.WriteString("\n\U0001f7e2 PATCH:\n")
+		sb.WriteString("\n" + "LOW" + " PATCH:\n")
 		for _, dep := range patchDeps {
 			sb.WriteString(fmt.Sprintf("  %-40s %s → %s (%s)\n",
 				dep.Name, dep.CurrentVersion, dep.LatestVersion, dep.UpdateType))
@@ -467,7 +469,7 @@ func FormatOutdated(deps []Dependency) string {
 	}
 
 	if len(minorDeps) > 0 {
-		sb.WriteString("\n\U0001f4e6 MINOR:\n")
+		sb.WriteString("\n" + "PKG:" + " MINOR:\n")
 		for _, dep := range minorDeps {
 			sb.WriteString(fmt.Sprintf("  %-40s %s → %s (%s)\n",
 				dep.Name, dep.CurrentVersion, dep.LatestVersion, dep.UpdateType))
@@ -475,7 +477,7 @@ func FormatOutdated(deps []Dependency) string {
 	}
 
 	if len(majorDeps) > 0 {
-		sb.WriteString("\n\U0001f534 MAJOR:\n")
+		sb.WriteString("\n" + "CRIT" + " MAJOR:\n")
 		for _, dep := range majorDeps {
 			sb.WriteString(fmt.Sprintf("  %-40s %s → %s (%s, breaking changes likely)\n",
 				dep.Name, dep.CurrentVersion, dep.LatestVersion, dep.UpdateType))
@@ -537,7 +539,7 @@ func FormatPlan(plan *UpdatePlan) string {
 	for i, dep := range plan.Dependencies {
 		prefix := "  "
 		if dep.SecurityFix {
-			prefix = "⚠ "
+			prefix = icons.Alert() + " "
 		}
 		sb.WriteString(fmt.Sprintf("  %d. %s%-40s %s → %s (%s)\n",
 			i+1, prefix, dep.Name, dep.CurrentVersion, dep.LatestVersion, dep.UpdateType))

@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // APISnapshot captures the full public API surface of a Go package.
@@ -566,29 +568,29 @@ func (c *CompatChecker) FormatChanges(changes []BreakingChange) string {
 		case "breaking":
 			if ch.Type == "method_added" {
 				caution++
-				sb.WriteString(fmt.Sprintf("⚠ CAUTION: %s method added (breaks implementors)\n", ch.Symbol))
+				sb.WriteString(fmt.Sprintf(icons.Alert()+" CAUTION: %s method added (breaks implementors)\n", ch.Symbol))
 				sb.WriteString(fmt.Sprintf("   added: %s\n", ch.New))
 			} else {
 				breaking++
 				switch ch.Type {
 				case "removed":
-					sb.WriteString(fmt.Sprintf("✗ BREAKING: %s removed\n", ch.Symbol))
+					sb.WriteString(fmt.Sprintf(icons.CloseThick()+" BREAKING: %s removed\n", ch.Symbol))
 				case "signature_changed":
-					sb.WriteString(fmt.Sprintf("✗ BREAKING: %s signature changed\n", ch.Symbol))
+					sb.WriteString(fmt.Sprintf(icons.CloseThick()+" BREAKING: %s signature changed\n", ch.Symbol))
 					sb.WriteString(fmt.Sprintf("   was: %s\n", ch.Old))
 					sb.WriteString(fmt.Sprintf("   now: %s\n", ch.New))
 				case "type_changed":
-					sb.WriteString(fmt.Sprintf("✗ BREAKING: %s type changed\n", ch.Symbol))
+					sb.WriteString(fmt.Sprintf(icons.CloseThick()+" BREAKING: %s type changed\n", ch.Symbol))
 					sb.WriteString(fmt.Sprintf("   was: %s\n", ch.Old))
 					sb.WriteString(fmt.Sprintf("   now: %s\n", ch.New))
 				case "field_removed":
-					sb.WriteString(fmt.Sprintf("✗ BREAKING: %s field removed\n", ch.Symbol))
+					sb.WriteString(fmt.Sprintf(icons.CloseThick()+" BREAKING: %s field removed\n", ch.Symbol))
 					sb.WriteString(fmt.Sprintf("   was: %s\n", ch.Old))
 				}
 			}
 		case "compatible":
 			compatible++
-			sb.WriteString(fmt.Sprintf("✓ COMPATIBLE: %s added\n", ch.Symbol))
+			sb.WriteString(fmt.Sprintf(icons.CheckBold()+" COMPATIBLE: %s added\n", ch.Symbol))
 		}
 	}
 

@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ComplexityReport holds complexity metrics for a single file.
@@ -794,11 +796,11 @@ func (ca *ComplexityAnalyzer) FormatReport(report *ComplexityReport) string {
 	sb.WriteString(fmt.Sprintf("%-25s %4s %4s %4s %4s\n", "Function", "CC", "Cog", "LOC", "Nest"))
 
 	for _, fn := range report.Functions {
-		status := "✓"
+		status := icons.CheckBold()
 		if fn.Cyclomatic > ca.HighCyclomatic*2 || fn.Cognitive > ca.HighCognitive*2 {
-			status = "\U0001f534 CRITICAL"
+			status = "CRIT" + " CRITICAL"
 		} else if fn.Cyclomatic > ca.HighCyclomatic || fn.Cognitive > ca.HighCognitive {
-			status = "⚠ HIGH"
+			status = icons.Alert() + " HIGH"
 		}
 
 		name := fn.Name

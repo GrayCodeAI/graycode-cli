@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ProactiveContext provides file-aware, topic-aware memory injection.
@@ -193,7 +195,7 @@ func (pc *ProactiveContext) ImpactAnalysis(ctx context.Context, changedFile stri
 		return ""
 	}
 
-	return fmt.Sprintf("⚠ File %s changed — %d memories may be affected:\n%s",
+	return fmt.Sprintf(icons.Alert()+" File %s changed — %d memories may be affected:\n%s",
 		basename, len(lines), strings.Join(lines, "\n"))
 }
 

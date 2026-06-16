@@ -3,6 +3,8 @@ package engine
 import (
 	"fmt"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Persona represents a specialized agent persona for party mode.
@@ -16,12 +18,12 @@ type Persona struct {
 
 // BuiltinPersonas are the default personas available in party mode.
 var BuiltinPersonas = []Persona{
-	{Code: "architect", Name: "Winston", Title: "System Architect", Icon: "🏗️", Style: "Measured, trade-offs over verdicts, boring technology for stability"},
-	{Code: "developer", Name: "Amelia", Title: "Senior Engineer", Icon: "💻", Style: "Precise, test-first, commit-message brevity, every statement citable"},
-	{Code: "reviewer", Name: "Marcus", Title: "Code Reviewer", Icon: "🔍", Style: "Adversarial, must find issues, no rubber-stamping"},
-	{Code: "pm", Name: "John", Title: "Product Manager", Icon: "📋", Style: "User value first, asks why, short questions sharp follow-ups"},
-	{Code: "security", Name: "Kai", Title: "Security Engineer", Icon: "🛡️", Style: "Paranoid, assumes breach, checks every input/output boundary"},
-	{Code: "devops", Name: "Riley", Title: "DevOps Engineer", Icon: "⚙️", Style: "Automation-first, infrastructure as code, observability obsessed"},
+	{Code: "architect", Name: "Winston", Title: "System Architect", Icon: "BUILD:" + "️", Style: "Measured, trade-offs over verdicts, boring technology for stability"},
+	{Code: "developer", Name: "Amelia", Title: "Senior Engineer", Icon: "DEV:", Style: "Precise, test-first, commit-message brevity, every statement citable"},
+	{Code: "reviewer", Name: "Marcus", Title: "Code Reviewer", Icon: icons.Magnify(), Style: "Adversarial, must find issues, no rubber-stamping"},
+	{Code: "pm", Name: "John", Title: "Product Manager", Icon: "LIST:", Style: "User value first, asks why, short questions sharp follow-ups"},
+	{Code: "security", Name: "Kai", Title: "Security Engineer", Icon: "SHIELD:" + "️", Style: "Paranoid, assumes breach, checks every input/output boundary"},
+	{Code: "devops", Name: "Riley", Title: "DevOps Engineer", Icon: icons.Cog() + "️", Style: "Automation-first, infrastructure as code, observability obsessed"},
 }
 
 // PartySession manages a multi-persona discussion.

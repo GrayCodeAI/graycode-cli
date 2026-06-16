@@ -14,6 +14,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
@@ -327,7 +329,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if inPrice, outPrice := ModelPricing(s.model); true {
 			estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 			if estCost > 0.50 {
-				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n⚠ This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
+				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n"+icons.Alert()+" This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
 			}
 		}
 

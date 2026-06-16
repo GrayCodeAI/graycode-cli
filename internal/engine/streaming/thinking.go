@@ -221,7 +221,7 @@ func (tp *ThinkingProtocol) FormatThinking(steps []ThinkingStep) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("\xf0\x9f\x92\xad Thinking Process:\n")
+	sb.WriteString("NOTE: Thinking Process:\n")
 
 	// Group by phase
 	phaseOrder := []ThinkingPhase{PhaseUnderstand, PhasePlan, PhaseExecute, PhaseVerify, PhaseReflect}

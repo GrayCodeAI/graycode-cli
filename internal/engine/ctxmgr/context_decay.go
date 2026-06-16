@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ContextDecay manages context entries with time-based importance decay.
@@ -280,7 +282,7 @@ func (cd *ContextDecay) FormatEntries(entries []DecayEntry) string {
 	for _, entry := range entries {
 		pin := ""
 		if entry.Pinned {
-			pin = " \U0001f4cc"
+			pin = " " + icons.Pin()
 		}
 
 		fading := ""

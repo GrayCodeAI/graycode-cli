@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // CommandSuggestion represents a single proactive command suggestion.
@@ -271,7 +273,7 @@ func FormatCommandSuggestions(suggestions []*CommandSuggestion) string {
 	sb.WriteString("Suggestions:\n")
 
 	for i, s := range suggestions {
-		sb.WriteString(fmt.Sprintf("%d. \U0001f4a1 %s (confidence: %.2f)\n", i+1, capitalizeSuggestion(s.Command), s.Confidence))
+		sb.WriteString(fmt.Sprintf("%d. "+icons.Brain()+" %s (confidence: %.2f)\n", i+1, capitalizeSuggestion(s.Command), s.Confidence))
 		sb.WriteString(fmt.Sprintf("   %s\n", s.Description))
 	}
 
