@@ -126,4 +126,7 @@ const (
 	// outside any Nerd Font set so a patched font never renders an
 	// unrelated glyph. ASCII fallback is always used for the Ollama row.
 	puaLlama = "\ue00a" // Pomicons last slot — rendered as a generic icon in Nerd Fonts
+
+	// Nerd Fonts v3 Codicons pin (nf-cod-pin, 60203 → EB6B).
+	puaPin = "\ueb6b"
 )
