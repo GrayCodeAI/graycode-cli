@@ -35,7 +35,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
 .PHONY: all bench build ci clean cover cover-new fmt help install lint lint-fix \
-        release security setup smoke path test test-10x test-new test-race tidy version vet
+        release security setup smoke path test test-10x test-live test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
 # Default target.
@@ -69,6 +69,11 @@ test-10x: ## Run tests 10 times to surface flakes.
 
 test-new: ## Run only the Round 2 ecosystem packages (fast iteration).
 	go test -race -count=1 -timeout=60s ./internal/safewrite/... ./internal/jsonc/... ./internal/providers/... ./internal/session/... ./internal/permissions/...
+
+test-live: ## Run opt-in live integration tests (requires real LLM credentials).
+	@echo "Running live integration tests — requires OPENCODEGO_API_KEY"
+	OPENCODEGO_API_KEY?=$$(grep -v '^#' .envrc 2>/dev/null | grep OPENCODEGO_API_KEY | head -1 | cut -d= -f2-)
+	go test -tags=live_test -count=1 -timeout=300s ./cmd/...
 
 cover: ## Generate a coverage report (coverage.out + coverage.html).
 	go test ./... -race -coverprofile=coverage.out -covermode=atomic -timeout=180s
