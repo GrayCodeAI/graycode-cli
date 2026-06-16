@@ -49,6 +49,33 @@ type MessageBus struct {
 	// can be read via Stats() without acquiring mu. Surfaced via WARN logs
 	// (sampled to avoid spam — see logDroppedMessage).
 	droppedCount atomic.Int64
+
+	// responseWaiters tracks in-flight WaitForResponse calls, keyed by
+	// the messageID they are waiting on. Send() closes the waiter's
+	// done channel when a matching response is appended to history,
+	// replacing the old 10ms busy-poll.
+	//
+	// Protected by mu (the same lock that protects history — the two
+	// are always updated together under the same critical section).
+	responseWaiters map[string][]*responseWaiter
+
+	// lockWaiters tracks in-flight WaitForLock calls, keyed by resource.
+	// ReleaseLock() closes the waiter's done channel, replacing the old
+	// 20ms busy-poll.
+	//
+	// Protected by lockMu (the same lock that protects locks).
+	lockWaiters map[string][]*lockWaiter
+}
+
+// responseWaiter is a single in-flight WaitForResponse call.
+type responseWaiter struct {
+	done chan struct{} // closed by Send when a matching response arrives
+	msg  *AgentMessage // populated by Send before closing done
+}
+
+// lockWaiter is a single in-flight WaitForLock call.
+type lockWaiter struct {
+	done chan struct{} // closed by ReleaseLock when the lock is released
 }
 
 // BusStats is a snapshot of MessageBus runtime counters.
@@ -96,10 +123,12 @@ func (mb *MessageBus) logDroppedMessage(from, to, topic string) {
 // NewMessageBus creates and returns an initialized MessageBus.
 func NewMessageBus() *MessageBus {
 	return &MessageBus{
-		channels:    make(map[string]chan AgentMessage),
-		subscribers: make(map[string][]string),
-		history:     make([]AgentMessage, 0),
-		locks:       make(map[string]*ResourceLock),
+		channels:       make(map[string]chan AgentMessage),
+		subscribers:    make(map[string][]string),
+		history:        make([]AgentMessage, 0),
+		locks:          make(map[string]*ResourceLock),
+		responseWaiters: make(map[string][]*responseWaiter),
+		lockWaiters:    make(map[string][]*lockWaiter),
 	}
 }
 
@@ -154,6 +183,19 @@ func (mb *MessageBus) Send(msg AgentMessage) error {
 	}
 
 	mb.history = append(mb.history, msg)
+
+	// Signal any in-flight WaitForResponse callers. Must happen while
+	// still holding mb.mu so the waiter's defer-cleanup can't race
+	// with us (the waiter's defer also acquires mb.mu to remove itself).
+	if msg.ResponseTo != "" {
+		if waiters := mb.responseWaiters[msg.ResponseTo]; len(waiters) > 0 {
+			for _, w := range waiters {
+				w.msg = &msg
+				close(w.done)
+			}
+			delete(mb.responseWaiters, msg.ResponseTo)
+		}
+	}
 
 	if msg.To != "" {
 		// Deliver to specific agent
@@ -305,25 +347,81 @@ func (mb *MessageBus) GetHistory(topic string, limit int) []AgentMessage {
 }
 
 // WaitForResponse blocks until a response to the given messageID arrives or timeout elapses.
+//
+// Implementation: push-based via a per-call done channel. The caller
+// registers as a waiter; Send() closes the done channel when a matching
+// response is appended to history. This replaces the previous 10ms
+// busy-poll (which missed sub-tick responses and burned CPU under load).
+//
+// Race: a response may have been appended to history just before the
+// waiter registers. The fast path below checks history first, so a
+// late-arriving WaitForResponse still finds the answer.
 func (mb *MessageBus) WaitForResponse(messageID string, timeout time.Duration) (*AgentMessage, error) {
-	deadline := time.After(timeout)
-	ticker := time.NewTicker(10 * time.Millisecond)
-	defer ticker.Stop()
+	// Fast path: check history for an already-recorded response.
+	if msg := mb.findResponse(messageID); msg != nil {
+		return msg, nil
+	}
 
-	for {
-		select {
-		case <-deadline:
-			return nil, errors.New("timeout waiting for response")
-		case <-ticker.C:
-			mb.mu.RLock()
-			for i := range mb.history {
-				if mb.history[i].ResponseTo == messageID {
-					msg := mb.history[i]
-					mb.mu.RUnlock()
-					return &msg, nil
-				}
-			}
-			mb.mu.RUnlock()
+	// Slow path: register as waiter, wait for done or timeout.
+	w := &responseWaiter{done: make(chan struct{})}
+
+	mb.mu.Lock()
+	// Double-check history under the write lock to close the race with Send.
+	if msg := mb.findResponseLocked(messageID); msg != nil {
+		mb.mu.Unlock()
+		return msg, nil
+	}
+	mb.responseWaiters[messageID] = append(mb.responseWaiters[messageID], w)
+	mb.mu.Unlock()
+
+	defer mb.removeResponseWaiter(messageID, w)
+
+	select {
+	case <-w.done:
+		if w.msg == nil {
+			return nil, errors.New("response waiter signaled without message")
+		}
+		return w.msg, nil
+	case <-time.After(timeout):
+		return nil, errors.New("timeout waiting for response")
+	}
+}
+
+// findResponse scans history for a response to messageID. Read-locked.
+func (mb *MessageBus) findResponse(messageID string) *AgentMessage {
+	mb.mu.RLock()
+	defer mb.mu.RUnlock()
+	return findResponseInSlice(mb.history, messageID)
+}
+
+// findResponseLocked is the write-lock variant (caller holds mb.mu).
+func (mb *MessageBus) findResponseLocked(messageID string) *AgentMessage {
+	return findResponseInSlice(mb.history, messageID)
+}
+
+func findResponseInSlice(history []AgentMessage, messageID string) *AgentMessage {
+	for i := range history {
+		if history[i].ResponseTo == messageID {
+			msg := history[i]
+			return &msg
+		}
+	}
+	return nil
+}
+
+// removeResponseWaiter is the defer-cleanup for WaitForResponse.
+// Removes the waiter from the per-messageID list so a later response
+// (or a never-arriving response that timed out) doesn't leave a
+// dangling entry. Safe to call after the waiter's done has already
+// been closed — the entry has already been removed by Send.
+func (mb *MessageBus) removeResponseWaiter(messageID string, w *responseWaiter) {
+	mb.mu.Lock()
+	defer mb.mu.Unlock()
+	waiters := mb.responseWaiters[messageID]
+	for i, ww := range waiters {
+		if ww == w {
+			mb.responseWaiters[messageID] = append(waiters[:i], waiters[i+1:]...)
+			return
 		}
 	}
 }
@@ -415,6 +513,18 @@ func (mb *MessageBus) ReleaseLock(resource, owner string) error {
 		return fmt.Errorf("resource %q is owned by %q, not %q", resource, existing.Owner, owner)
 	}
 	delete(mb.locks, resource)
+
+	// Wake up any in-flight WaitForLock callers. Each waiter's done
+	// channel is closed exactly once; the subsequent AcquireLock
+	// race-loser will loop and re-register (or be cleaned up by
+	// its defer if it has already timed out).
+	if waiters := mb.lockWaiters[resource]; len(waiters) > 0 {
+		for _, w := range waiters {
+			close(w.done)
+		}
+		delete(mb.lockWaiters, resource)
+	}
+
 	return nil
 }
 
@@ -431,25 +541,59 @@ func (mb *MessageBus) IsLocked(resource string) bool {
 	return time.Now().Before(existing.ExpiresAt)
 }
 
-// WaitForLock polls until a resource lock can be acquired or the timeout elapses.
+// WaitForLock blocks until a resource lock can be acquired or the timeout elapses.
+//
+// Implementation: push-based via a per-call done channel. The caller
+// registers as a waiter; ReleaseLock() closes the done channel when
+// the lock is freed. This replaces the previous 20ms busy-poll.
+//
+// After each signal (or on entry, before registering) the caller
+// re-attempts AcquireLock. If a different waiter won the race, the
+// caller loops and waits for the next signal. This is the standard
+// "thundering herd" pattern; in practice there are only a few waiters
+// per resource so the cost is negligible.
 func (mb *MessageBus) WaitForLock(resource, owner string, timeout time.Duration) error {
-	deadline := time.After(timeout)
-	ticker := time.NewTicker(20 * time.Millisecond)
-	defer ticker.Stop()
-
-	// Try immediately first.
+	// Fast path: try immediately; the lock can be acquired without
+	// waiting if no one else holds it.
 	if err := mb.AcquireLock(resource, owner, timeout); err == nil {
 		return nil
 	}
 
+	w := &lockWaiter{done: make(chan struct{})}
+
+	mb.lockMu.Lock()
+	mb.lockWaiters[resource] = append(mb.lockWaiters[resource], w)
+	mb.lockMu.Unlock()
+
+	defer mb.removeLockWaiter(resource, w)
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
 	for {
 		select {
-		case <-deadline:
-			return fmt.Errorf("timeout waiting for lock on %q", resource)
-		case <-ticker.C:
+		case <-w.done:
+			// Lock was released. Retry immediately; if another waiter
+			// won the race, loop and wait for the next signal.
 			if err := mb.AcquireLock(resource, owner, timeout); err == nil {
 				return nil
 			}
+		case <-timer.C:
+			return fmt.Errorf("timeout waiting for lock on %q", resource)
+		}
+	}
+}
+
+// removeLockWaiter is the defer-cleanup for WaitForLock. Symmetric
+// with removeResponseWaiter.
+func (mb *MessageBus) removeLockWaiter(resource string, w *lockWaiter) {
+	mb.lockMu.Lock()
+	defer mb.lockMu.Unlock()
+	waiters := mb.lockWaiters[resource]
+	for i, ww := range waiters {
+		if ww == w {
+			mb.lockWaiters[resource] = append(waiters[:i], waiters[i+1:]...)
+			return
 		}
 	}
 }
