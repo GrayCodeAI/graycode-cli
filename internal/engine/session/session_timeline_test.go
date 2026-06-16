@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewTimeline(t *testing.T) {
@@ -484,17 +486,17 @@ func TestCapitalizeFirst(t *testing.T) {
 }
 
 func TestEventIcon(t *testing.T) {
-	icons := map[string]string{
-		"action":      "\U0001f50d",
-		"decision":    "\U0001f4a1",
-		"milestone":   "✅",
-		"error":       "❌",
-		"user_input":  "\U0001f4dd",
-		"file_change": "✏️",
+	want := map[string]string{
+		"action":      icons.Magnify(),
+		"decision":    icons.Brain(),
+		"milestone":   icons.CheckBold(),
+		"error":       icons.CloseThick(),
+		"user_input":  "EDIT:",
+		"file_change": "[edit]",
 		"unknown":     "•",
 	}
 
-	for eventType, expected := range icons {
+	for eventType, expected := range want {
 		got := timelineEventIcon(eventType)
 		if got != expected {
 			t.Errorf("timelineEventIcon(%q) = %q, want %q", eventType, got, expected)

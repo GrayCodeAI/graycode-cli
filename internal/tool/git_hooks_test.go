@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func setupHooksTestDir(t *testing.T) string {
@@ -393,16 +395,16 @@ func TestFormatStatus(t *testing.T) {
 	if !strings.Contains(status, "Git Hooks:") {
 		t.Error("missing header")
 	}
-	if !strings.Contains(status, "✓ pre-commit") {
+	if !strings.Contains(status, icons.CheckBold()+" pre-commit") {
 		t.Error("pre-commit should show as installed")
 	}
-	if !strings.Contains(status, "✓ prepare-commit-msg") {
+	if !strings.Contains(status, icons.CheckBold()+" prepare-commit-msg") {
 		t.Error("prepare-commit-msg should show as installed")
 	}
-	if !strings.Contains(status, "✗ post-commit (not installed)") {
+	if !strings.Contains(status, icons.CloseThick()+" post-commit (not installed)") {
 		t.Error("post-commit should show as not installed")
 	}
-	if !strings.Contains(status, "✗ pre-push (not installed)") {
+	if !strings.Contains(status, icons.CloseThick()+" pre-push (not installed)") {
 		t.Error("pre-push should show as not installed")
 	}
 }

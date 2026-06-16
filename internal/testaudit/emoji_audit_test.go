@@ -36,6 +36,15 @@ var emojiAuditPathExempt = []string{
 	"/internal/multiagent/agents/",
 	"/internal/ui/icons/", // The icon registry itself holds the PUA codepoints.
 	"/internal/testaudit/",
+	// test_loop.go scans external compiler / test-runner stdout for
+	// status glyphs (✓/✗/✔/✕/✅/❌/⚠) as part of its test-result
+	// parser vocabulary. The literals are not hawk's own output; they
+	// appear in compiler messages the parser has to recognise.
+	"/internal/engine/validation/test_loop.go",
+	// test_fixtures.go contains canned compiler / linter output used
+	// as fixture data for parser tests; the emoji are part of the
+	// captured external tool output, not hawk's own rendering.
+	"/internal/tool/test_fixtures.go",
 }
 
 // isEmojiOrDingbat reports whether r is a glyph that should never appear
@@ -202,7 +211,7 @@ func TestNoEmojiInInternalExceptIcons(t *testing.T) {
 				}
 				pos := pf.FSet.Position(bl.Pos())
 				violations++
-				t.Logf("TECH DEBT: emoji/dingbat rune %U at %s:%d — use internal/ui/icons", r, rel, pos.Line)
+				t.Errorf("emoji/dingbat rune %U at %s:%d — use internal/ui/icons", r, rel, pos.Line)
 			}
 			return true
 		})

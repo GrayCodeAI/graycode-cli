@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestEvaluateDeveloperPath_FreshInstall(t *testing.T) {
@@ -66,10 +67,10 @@ func TestLegacyCredentialFilesPresent_None(t *testing.T) {
 }
 
 func TestPathStatusGlyph(t *testing.T) {
-	if pathStatusGlyph(PathPass) != "✓" {
+	if pathStatusGlyph(PathPass) != icons.CheckBold() {
 		t.Fatal("pass glyph")
 	}
-	if pathStatusGlyph(PathFail) != "✗" {
+	if pathStatusGlyph(PathFail) != icons.CloseThick() {
 		t.Fatal("fail glyph")
 	}
 }

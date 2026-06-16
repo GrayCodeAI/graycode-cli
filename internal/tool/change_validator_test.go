@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewChangeValidator(t *testing.T) {
@@ -243,10 +245,10 @@ func TestFormatReport_AllPassed(t *testing.T) {
 	if !strings.Contains(formatted, "Pre-Commit Validation:") {
 		t.Error("missing header")
 	}
-	if !strings.Contains(formatted, "✓ syntax: all files compile") {
+	if !strings.Contains(formatted, icons.CheckBold()+" syntax: all files compile") {
 		t.Error("missing syntax check line")
 	}
-	if !strings.Contains(formatted, "✓ format: properly formatted") {
+	if !strings.Contains(formatted, icons.CheckBold()+" format: properly formatted") {
 		t.Error("missing format check line")
 	}
 	if !strings.Contains(formatted, "Result: PASSED") {
@@ -279,13 +281,13 @@ func TestFormatReport_Blocked(t *testing.T) {
 	}
 
 	formatted := FormatReport(report)
-	if !strings.Contains(formatted, "✗ lint: 2 issues found") {
+	if !strings.Contains(formatted, icons.CloseThick()+" lint: 2 issues found") {
 		t.Errorf("missing lint failure line, got:\n%s", formatted)
 	}
 	if !strings.Contains(formatted, "src/auth.go:42: error return value not checked") {
 		t.Error("missing lint detail")
 	}
-	if !strings.Contains(formatted, "⚠ size:") {
+	if !strings.Contains(formatted, icons.Alert()+" size:") {
 		t.Error("missing size warning")
 	}
 	if !strings.Contains(formatted, "BLOCKED") {

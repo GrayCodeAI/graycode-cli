@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestExtractTicketRef_BranchName(t *testing.T) {
@@ -382,10 +384,10 @@ func TestFormatComplianceResult(t *testing.T) {
 	if !strings.Contains(output, "3/4 criteria met") {
 		t.Error("output should contain criteria count")
 	}
-	if !strings.Contains(output, "✓ Token validation endpoint") {
+	if !strings.Contains(output, icons.CheckBold()+" Token validation endpoint") {
 		t.Error("output should contain satisfied criterion with checkmark")
 	}
-	if !strings.Contains(output, "✗ Documentation for API changes") {
+	if !strings.Contains(output, icons.CloseThick()+" Documentation for API changes") {
 		t.Error("output should contain unsatisfied criterion with X mark")
 	}
 	if !strings.Contains(output, "Suggestions:") {

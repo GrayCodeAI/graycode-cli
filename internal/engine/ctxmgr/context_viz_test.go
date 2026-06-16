@@ -3,6 +3,8 @@ package ctxmgr
 import (
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewContextVisualizer(t *testing.T) {
@@ -395,8 +397,8 @@ func TestWarnIfCritical_Warning(t *testing.T) {
 	if warn == "" {
 		t.Fatal("87%% usage should produce warning")
 	}
-	if !strings.Contains(warn, "⚠") {
-		t.Errorf("warning level should have ⚠, got: %s", warn)
+	if !strings.Contains(warn, icons.Alert()) {
+		t.Errorf("warning level should have alert glyph, got: %s", warn)
 	}
 	if !strings.Contains(warn, "auto-compact") {
 		t.Errorf("warning should mention auto-compact, got: %s", warn)

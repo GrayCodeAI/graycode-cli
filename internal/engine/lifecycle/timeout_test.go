@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestWithTimeout_SetsDeadline(t *testing.T) {
@@ -42,7 +44,7 @@ func TestRemainingTime_Warning(t *testing.T) {
 	defer cancel()
 
 	result := RemainingTime(ctx2)
-	if !strings.Contains(result, "⚠") {
+	if !strings.Contains(result, icons.Alert()) {
 		t.Errorf("expected warning symbol for <1min, got %q", result)
 	}
 	if !strings.Contains(result, "remaining") {

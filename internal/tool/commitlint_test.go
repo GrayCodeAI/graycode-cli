@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewCommitLinter_DefaultRules(t *testing.T) {
@@ -341,7 +343,7 @@ func TestFormatLintResult_Valid(t *testing.T) {
 	result := &LintResult{Valid: true}
 	output := FormatLintResult(result)
 
-	if !strings.Contains(output, "✓") {
+	if !strings.Contains(output, icons.CheckBold()) {
 		t.Errorf("expected checkmark for valid result, got: %q", output)
 	}
 }
@@ -353,10 +355,10 @@ func TestFormatLintResult_WithErrors(t *testing.T) {
 	}
 	output := FormatLintResult(result)
 
-	if !strings.Contains(output, "⚠") {
+	if !strings.Contains(output, icons.Alert()) {
 		t.Errorf("expected warning symbol, got: %q", output)
 	}
-	if !strings.Contains(output, "✗") {
+	if !strings.Contains(output, icons.CloseThick()) {
 		t.Errorf("expected error cross, got: %q", output)
 	}
 	if !strings.Contains(output, "yolo") {

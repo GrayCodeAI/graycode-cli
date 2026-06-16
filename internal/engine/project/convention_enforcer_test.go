@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewConventionSet(t *testing.T) {
@@ -490,7 +492,7 @@ func TestFormatViolations(t *testing.T) {
 	if !strings.Contains(output, "─") {
 		t.Error("missing separator line")
 	}
-	if !strings.Contains(output, "⚠") {
+	if !strings.Contains(output, icons.Alert()) {
 		t.Error("missing warning symbol")
 	}
 	if !strings.Contains(output, "naming") {

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewGitProvider(t *testing.T) {
@@ -38,7 +40,7 @@ func TestFormatIssues(t *testing.T) {
 	if !strings.Contains(result, "○ #1 Bug in login [bug] (@alice)") {
 		t.Errorf("expected open issue format, got:\n%s", result)
 	}
-	if !strings.Contains(result, "✓ #2 Add dark mode [feature] (@bob)") {
+	if !strings.Contains(result, icons.CheckBold()+" #2 Add dark mode [feature] (@bob)") {
 		t.Errorf("expected closed issue format, got:\n%s", result)
 	}
 	if !strings.Contains(result, "○ #3 Docs update (@carol)") {
@@ -72,10 +74,10 @@ func TestFormatPRs(t *testing.T) {
 	if !strings.Contains(result, "○ #11 WIP: Refactor [draft] (refactor/core → main)") {
 		t.Errorf("expected draft PR format, got:\n%s", result)
 	}
-	if !strings.Contains(result, "✓ #9 Fix typo (fix/typo → main)") {
+	if !strings.Contains(result, icons.CheckBold()+" #9 Fix typo (fix/typo → main)") {
 		t.Errorf("expected merged PR format, got:\n%s", result)
 	}
-	if !strings.Contains(result, "✗ #8 Old PR (old → main)") {
+	if !strings.Contains(result, icons.CloseThick()+" #8 Old PR (old → main)") {
 		t.Errorf("expected closed PR format, got:\n%s", result)
 	}
 }
@@ -104,13 +106,13 @@ func TestFormatCIStatus(t *testing.T) {
 	if !strings.Contains(result, "CI Status: feature/auth") {
 		t.Errorf("expected CI status header, got:\n%s", result)
 	}
-	if !strings.Contains(result, "✓ lint (12s)") {
+	if !strings.Contains(result, icons.CheckBold()+" lint (12s)") {
 		t.Errorf("expected lint check, got:\n%s", result)
 	}
-	if !strings.Contains(result, "✓ test (45s)") {
+	if !strings.Contains(result, icons.CheckBold()+" test (45s)") {
 		t.Errorf("expected test check, got:\n%s", result)
 	}
-	if !strings.Contains(result, "✗ build (failed after 23s)") {
+	if !strings.Contains(result, icons.CloseThick()+" build (failed after 23s)") {
 		t.Errorf("expected build check, got:\n%s", result)
 	}
 	if !strings.Contains(result, "○ deploy (pending)") {

@@ -3,6 +3,8 @@ package eval
 import (
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestParseCoverageProfile(t *testing.T) {
@@ -312,10 +314,10 @@ func TestFormatReport(t *testing.T) {
 	}
 
 	// Check warning indicators.
-	if !strings.Contains(output, "✗") {
+	if !strings.Contains(output, icons.CloseThick()) {
 		t.Error("missing zero-coverage indicator")
 	}
-	if !strings.Contains(output, "⚠") {
+	if !strings.Contains(output, icons.Alert()) {
 		t.Error("missing low-coverage warning")
 	}
 

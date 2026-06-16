@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewSuggestionEngine(t *testing.T) {
@@ -362,8 +364,8 @@ func TestFormatCommandSuggestions(t *testing.T) {
 	if !strings.Contains(result, "2.") {
 		t.Fatal("expected numbered item 2")
 	}
-	if !strings.Contains(result, "\U0001f4a1") {
-		t.Fatal("expected lightbulb emoji")
+	if !strings.Contains(result, icons.Brain()) {
+		t.Fatal("expected lightbulb glyph")
 	}
 	if !strings.Contains(result, "Run tests") {
 		t.Fatal("expected capitalized command 'Run tests'")

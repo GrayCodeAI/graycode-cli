@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewParallelRunner_DefaultWorkers(t *testing.T) {
@@ -259,7 +261,7 @@ func TestFormatResult_AllPassing(t *testing.T) {
 	if !strings.Contains(output, "4 workers") {
 		t.Error("expected output to contain worker count")
 	}
-	if !strings.Contains(output, "✓") {
+	if !strings.Contains(output, icons.CheckBold()) {
 		t.Error("expected checkmark for passing packages")
 	}
 	if !strings.Contains(output, "Total: 15 passed, 0 failed, 0 skipped") {
@@ -292,7 +294,7 @@ func TestFormatResult_WithFailures(t *testing.T) {
 
 	output := FormatResult(result)
 
-	if !strings.Contains(output, "✗") {
+	if !strings.Contains(output, icons.CloseThick()) {
 		t.Error("expected failure marker for failing packages")
 	}
 	if !strings.Contains(output, "2 FAILED") {

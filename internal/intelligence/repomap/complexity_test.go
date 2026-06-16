@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestAnalyzeGoAST_SimpleFunction(t *testing.T) {
@@ -348,7 +350,7 @@ func TestFormatReport(t *testing.T) {
 	if !strings.Contains(output, "HIGH") {
 		t.Error("expected HIGH warning for handleRequest")
 	}
-	if !strings.Contains(output, "✓") {
+	if !strings.Contains(output, icons.CheckBold()) {
 		t.Error("expected checkmark for simple functions")
 	}
 	if !strings.Contains(output, "Functions=3") {
