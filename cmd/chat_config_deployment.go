@@ -13,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 type configApplyCredentialsMsg struct {
@@ -139,7 +140,7 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 	m.useConfigInput = true
 	m.configInput.Reset()
 	m.configInput.SetValue(defaultURL)
-	m.configInput.Prompt = " url " + iconPrompt + " "
+	m.configInput.Prompt = " url " + icons.ChevronRight() + " "
 	m.configInput.Placeholder = defaultURL
 	m.configInput.EchoMode = textinput.EchoNormal
 	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)

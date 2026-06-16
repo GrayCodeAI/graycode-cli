@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestDetectColorSupport_NonTTYStdout(t *testing.T) {
@@ -74,10 +76,12 @@ func TestNewOutputFormatter(t *testing.T) {
 
 func TestFormatSuccess(t *testing.T) {
 	t.Run("unicode with color", func(t *testing.T) {
+		icons.SetMode(icons.ModeNerd)
+		t.Cleanup(func() { icons.SetMode(icons.ModeAuto) })
 		f := newTestFormatter(true, true, 80)
 		result := f.FormatSuccess("done")
-		if !strings.Contains(result, "✔") {
-			t.Errorf("expected unicode checkmark, got: %s", result)
+		if !strings.Contains(result, icons.Nerd("check_bold")) {
+			t.Errorf("expected Nerd check_bold, got: %s", result)
 		}
 		if !strings.Contains(result, "done") {
 			t.Errorf("expected message 'done', got: %s", result)
@@ -101,10 +105,12 @@ func TestFormatSuccess(t *testing.T) {
 
 func TestFormatError(t *testing.T) {
 	t.Run("unicode with color", func(t *testing.T) {
+		icons.SetMode(icons.ModeNerd)
+		t.Cleanup(func() { icons.SetMode(icons.ModeAuto) })
 		f := newTestFormatter(true, true, 80)
 		result := f.FormatError("failed")
-		if !strings.Contains(result, "✘") {
-			t.Errorf("expected unicode X, got: %s", result)
+		if !strings.Contains(result, icons.Nerd("close_thick")) {
+			t.Errorf("expected Nerd close_thick, got: %s", result)
 		}
 		if !strings.Contains(result, "\033[31m") {
 			t.Errorf("expected red color code, got: %s", result)
@@ -122,10 +128,12 @@ func TestFormatError(t *testing.T) {
 
 func TestFormatWarning(t *testing.T) {
 	t.Run("unicode with color", func(t *testing.T) {
+		icons.SetMode(icons.ModeNerd)
+		t.Cleanup(func() { icons.SetMode(icons.ModeAuto) })
 		f := newTestFormatter(true, true, 80)
 		result := f.FormatWarning("careful")
-		if !strings.Contains(result, "⚠") {
-			t.Errorf("expected unicode warning, got: %s", result)
+		if !strings.Contains(result, icons.Nerd("alert")) {
+			t.Errorf("expected Nerd alert, got: %s", result)
 		}
 		if !strings.Contains(result, "\033[33m") {
 			t.Errorf("expected yellow color code, got: %s", result)
@@ -143,10 +151,12 @@ func TestFormatWarning(t *testing.T) {
 
 func TestFormatInfo(t *testing.T) {
 	t.Run("unicode with color", func(t *testing.T) {
+		icons.SetMode(icons.ModeNerd)
+		t.Cleanup(func() { icons.SetMode(icons.ModeAuto) })
 		f := newTestFormatter(true, true, 80)
 		result := f.FormatInfo("note")
-		if !strings.Contains(result, "●") {
-			t.Errorf("expected unicode circle, got: %s", result)
+		if !strings.Contains(result, icons.Nerd("circle_filled")) {
+			t.Errorf("expected Nerd circle_filled, got: %s", result)
 		}
 		if !strings.Contains(result, "\033[34m") {
 			t.Errorf("expected blue color code, got: %s", result)

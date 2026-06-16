@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 )
@@ -82,7 +83,7 @@ func renderConfigTableRow(values []string, cursor, active, markEnd bool, layout 
 	}
 	prefix := strings.Repeat(" ", configTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
+		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(icons.ChevronRight()) + " "
 	}
 	cols := make([]string, len(values))
 	copy(cols, values)

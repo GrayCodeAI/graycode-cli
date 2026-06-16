@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // HUDData is a snapshot of agent/mission/memory state rendered by the HUD panel.
@@ -87,7 +89,7 @@ func renderAgentStatusPanel(data HUDData, width int) string {
 
 func renderHUDMissionSection(data HUDData, width int) string {
 	var b strings.Builder
-	b.WriteString(hudSectionStyle.Render("▸ Mission"))
+	b.WriteString(hudSectionStyle.Render(icons.CaretRight() + " Mission"))
 	b.WriteString("\n")
 	if data.MissionID == "" {
 		b.WriteString(hudDimHUDStyle.Render("  no active mission"))

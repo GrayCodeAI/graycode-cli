@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ProgressStep represents a single step in a multi-step task.
@@ -258,8 +260,8 @@ func (pt *ProgressTracker) RenderDone() string {
 		}
 	}
 
-	return fmt.Sprintf("✓ %s complete (%s)\n  %d steps, %d failures",
-		pt.Title, formatDurationShort(elapsed), len(pt.Steps), failures)
+	return fmt.Sprintf("%s %s complete (%s)\n  %d steps, %d failures",
+		icons.CheckBold(), pt.Title, formatDurationShort(elapsed), len(pt.Steps), failures)
 }
 
 // IsComplete returns true if all steps have finished (done, failed, or skipped).
@@ -348,18 +350,20 @@ func (pt *ProgressTracker) overallProgress() float64 {
 }
 
 // stepIcon returns the display icon for a step based on its status.
+// All glyphs come from internal/ui/icons so the audit test in
+// internal/testaudit can enforce "no emoji" in cmd/.
 func (pt *ProgressTracker) stepIcon(status string) string {
 	switch status {
 	case "done":
-		return "✓"
+		return icons.CheckBold()
 	case "active":
-		return "●"
+		return icons.CircleFilled()
 	case "failed":
-		return "✗"
+		return icons.CloseThick()
 	case "skipped":
-		return "—"
+		return icons.Pause()
 	default: // pending
-		return "○"
+		return icons.CircleOutline()
 	}
 }
 

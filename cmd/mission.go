@@ -13,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	mission "github.com/GrayCodeAI/hawk/internal/multiagent"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/spf13/cobra"
 )
 
@@ -113,9 +114,9 @@ func runMission(_ *cobra.Command, args []string) error {
 	fmt.Println(m.Summary())
 	fmt.Println()
 	for _, f := range m.Features {
-		status := "✓"
+		status := icons.CheckBold() + " "
 		if f.Status == mission.FeatureFailed {
-			status = "✗"
+			status = icons.CloseThick() + " "
 		}
 		branch := f.Branch
 		if f.Handoff != nil && f.Handoff.CommitID != "" {

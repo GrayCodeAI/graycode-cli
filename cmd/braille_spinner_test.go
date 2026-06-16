@@ -3,6 +3,8 @@ package cmd
 import (
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestBrailleSpinner_Tick(t *testing.T) {
@@ -20,7 +22,7 @@ func TestBrailleSpinner_Tick(t *testing.T) {
 	if !frameContainsSpinnerWave(f1) {
 		t.Error("expected wave-colored verb label")
 	}
-	if !strings.Contains(f1, iconDotFilled) {
+	if !strings.Contains(f1, icons.CircleFilled()) {
 		t.Error("expected filled typing dot")
 	}
 }
@@ -79,7 +81,7 @@ func TestHawkAnimatedDots_PresentInFrame(t *testing.T) {
 	s := NewBrailleSpinner(SpinnerHawk, "Crafting")
 	f := s.Frame()
 	// Three progress dots ride after the verb: one bright, two dim.
-	total := strings.Count(f, iconDotFilled) + strings.Count(f, iconDotEmpty)
+	total := strings.Count(f, icons.CircleFilled()) + strings.Count(f, icons.CircleOutline())
 	if total != hawkTypingDots {
 		t.Errorf("expected %d trailing circle-dots, got %d in %q", hawkTypingDots, total, f)
 	}

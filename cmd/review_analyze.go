@@ -10,6 +10,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
 )
@@ -171,11 +172,11 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 
 	// Print results.
 	if len(result.Findings) == 0 {
-		fmt.Printf("✓ No %s issues found.\n", analysisType)
+		fmt.Printf("%s No %s issues found.\n", icons.CheckBold(), analysisType)
 		return nil
 	}
 
-	fmt.Printf("⚠ %d %s finding(s):\n\n", len(result.Findings), analysisType)
+	fmt.Printf("%s %d %s finding(s):\n\n", icons.Alert(), len(result.Findings), analysisType)
 	for i, f := range result.Findings {
 		sev := severityStyle(f.Severity.String())
 		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, f.File, f.Line)

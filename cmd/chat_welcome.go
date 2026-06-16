@@ -17,6 +17,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func welcomeDockerSegment(dockerRunning *bool, greenC, redC, rst string) (segment string, visLen int) {
@@ -25,7 +26,7 @@ func welcomeDockerSegment(dockerRunning *bool, greenC, redC, rst string) (segmen
 	}
 	mark := redC + "×" + rst
 	if *dockerRunning {
-		mark = greenC + "✓" + rst
+		mark = greenC + icons.CheckBold() + " " + rst
 	}
 	segment = "  Docker " + mark
 	return segment, len("  Docker x")
@@ -82,7 +83,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	// Status marks — green ✓ = present, dim ○ = none (not an error),
 	// red × = actual problem (e.g. Docker enabled but not running). Using a
 	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
-	markPresent := greenC + "✓" + rst
+	markPresent := greenC + "+" + icons.CheckBold() + " " + rst
 	markNone := sepC + "○" + rst
 	markErr := redC + "×" + rst
 

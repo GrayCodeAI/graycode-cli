@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ImageAttachment represents an image ready to be attached to a message.
@@ -89,9 +91,9 @@ func IsImageFile(path string) bool {
 // FormatImageMessage formats a user message with image attachment info for display.
 func FormatImageMessage(content string, imgPath string) string {
 	if content == "" {
-		return fmt.Sprintf("📷 [Image: %s]", filepath.Base(imgPath))
+		return fmt.Sprintf("%s [Image: %s]", icons.Image(), filepath.Base(imgPath))
 	}
-	return fmt.Sprintf("%s\n📷 [Image: %s]", content, filepath.Base(imgPath))
+	return fmt.Sprintf("%s\n%s [Image: %s]", content, icons.Image(), filepath.Base(imgPath))
 }
 
 // extractImagePath looks for image file references in user input.

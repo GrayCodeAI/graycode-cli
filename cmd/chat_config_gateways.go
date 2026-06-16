@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 type configGatewayRow struct {
@@ -160,7 +161,7 @@ func (m chatModel) configGatewaysView() string {
 	for i, row := range rows {
 		key := "—"
 		if row.HasKey {
-			key = "✓"
+			key = "+" + icons.CheckBold() + " "
 		}
 		models := "key required"
 		if row.HasKey && row.ModelCount > 0 {
@@ -171,7 +172,7 @@ func (m chatModel) configGatewaysView() string {
 		tableData[i] = []string{row.DisplayName, key, models, ""}
 		layoutData[i] = append([]string(nil), tableData[i]...)
 		if row.Active {
-			layoutData[i][3] = "●"
+			layoutData[i][3] = icons.CircleFilled()
 		}
 	}
 	layout := computeConfigTableLayout(m.configPanelViewWidth(), headers, layoutData, []int{2, 2, 2, 2}, true)

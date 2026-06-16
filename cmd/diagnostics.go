@@ -20,6 +20,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func doctorReport(settings hawkconfig.Settings) string {
@@ -171,11 +172,11 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 	var b strings.Builder
 	b.WriteString("Health checks:\n")
 	for _, check := range results {
-		status := "✓"
+		status := icons.CheckBold() + " "
 		if check.Status == health.Unhealthy {
-			status = "✗"
+			status = icons.CloseThick() + " "
 		} else if check.Status == health.Degraded {
-			status = "!"
+			status = icons.Alert() + " "
 		}
 		b.WriteString(fmt.Sprintf("  %s %s: %s\n", status, check.Name, check.Message))
 	}

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -41,13 +42,13 @@ const (
 func (s AgentState) String() string {
 	switch s {
 	case AgentIdle:
-		return "⏳ Idle"
+		return icons.Hourglass() + " Idle"
 	case AgentRunning:
-		return "🔄 Running"
+		return icons.Refresh() + " Running"
 	case AgentDone:
-		return "✅ Done"
+		return icons.CheckDecagram() + " Done"
 	case AgentFailed:
-		return "❌ Failed"
+		return icons.Cancel() + " Failed"
 	default:
 		return "Unknown"
 	}

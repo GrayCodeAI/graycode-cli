@@ -11,6 +11,7 @@ import (
 	"golang.org/x/text/message"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var (
@@ -50,7 +51,7 @@ func renderStatusBarLeft() string {
 		}
 		if branch != "" {
 			branchStyle := lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
-			branchText := "⎇ " + branch
+			branchText := icons.Branch() + " " + branch
 			parts = append(parts, branchStyle.Render(branchText))
 		}
 	}
@@ -72,7 +73,7 @@ func renderStatusBarRight(m *chatModel) string {
 	tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
 	tokenText := "● " + formatTokenCountCompact(tokens) + " tokens"
 	costText := fmt.Sprintf("$%.2f", m.session.Cost.Total())
-	timerText := "⏱ " + formatSessionDuration(sessionDuration(m))
+	timerText := icons.ClockOutline() + " " + formatSessionDuration(sessionDuration(m))
 
 	var meta []string
 	if m.inScrollbackFocus() {
@@ -82,7 +83,7 @@ func renderStatusBarRight(m *chatModel) string {
 		meta = append(meta, dim.Render(pos))
 	}
 	if m.waiting && !m.streamFollow {
-		meta = append(meta, dim.Render("⏸"))
+		meta = append(meta, dim.Render(icons.Pause()))
 	}
 
 	parts := append(

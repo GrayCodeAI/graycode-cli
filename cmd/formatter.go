@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"golang.org/x/term"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // stdoutIsTerminal reports whether stdout is connected to a terminal (TTY).
@@ -86,7 +88,7 @@ func (f *OutputFormatter) FormatSuccess(msg string) string {
 
 	icon := "[ok]"
 	if f.UnicodeEnabled {
-		icon = "✔"
+		icon = icons.CheckBold() + " "
 	}
 	if f.ColorEnabled {
 		return fmt.Sprintf("%s%s %s%s", f.Theme.Success, icon, msg, f.Theme.Reset)
@@ -101,12 +103,12 @@ func (f *OutputFormatter) FormatError(msg string) string {
 
 	icon := "[X]"
 	if f.UnicodeEnabled {
-		icon = "✘"
+		icon = icons.CloseThick() + " "
 	}
 	if f.ColorEnabled {
-		return fmt.Sprintf("%s%s %s%s", f.Theme.Error, icon, msg, f.Theme.Reset)
+		return fmt.Sprintf("%s%s%s%s", f.Theme.Error, icon, msg, f.Theme.Reset)
 	}
-	return fmt.Sprintf("%s %s", icon, msg)
+	return fmt.Sprintf("%s%s", icon, msg)
 }
 
 // FormatWarning formats a warning message with a yellow triangle.
@@ -116,7 +118,7 @@ func (f *OutputFormatter) FormatWarning(msg string) string {
 
 	icon := "[!]"
 	if f.UnicodeEnabled {
-		icon = "⚠"
+		icon = "!" + icons.Alert() + " "
 	}
 	if f.ColorEnabled {
 		return fmt.Sprintf("%s%s %s%s", f.Theme.Warning, icon, msg, f.Theme.Reset)
@@ -131,7 +133,7 @@ func (f *OutputFormatter) FormatInfo(msg string) string {
 
 	icon := "[i]"
 	if f.UnicodeEnabled {
-		icon = "●"
+		icon = icons.CircleFilled() + " "
 	}
 	if f.ColorEnabled {
 		return fmt.Sprintf("%s%s %s%s", f.Theme.Info, icon, msg, f.Theme.Reset)

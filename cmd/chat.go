@@ -40,6 +40,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/startup"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Types, styles, and model struct are in chat_model.go
@@ -242,7 +243,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	ta.BlurredStyle = ta.FocusedStyle
 	ta.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
-	ta.Prompt = iconPrompt + " "
+	ta.Prompt = icons.ChevronRight() + " "
 	// Enter submits; Shift+Enter inserts newline
 	ta.KeyMap.InsertNewline.SetKeys("shift+enter")
 
@@ -740,16 +741,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y", "Y":
 				m.permReq.Response <- true
-				m.messages = append(m.messages, displayMsg{role: "system", content: "✓ Allowed"})
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Allowed"})
 				m.permReq = nil
 			case "n", "N":
 				m.permReq.Response <- false
-				m.messages = append(m.messages, displayMsg{role: "system", content: "✗ Denied"})
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Denied"})
 				m.permReq = nil
 			case "a", "A":
 				m.permReq.Response <- true
 				m.session.Perm.Memory.AlwaysAllow(m.permReq.ToolName)
-				m.messages = append(m.messages, displayMsg{role: "system", content: "✓ Always allowed: " + m.permReq.ToolName})
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + m.permReq.ToolName})
 				m.permReq = nil
 			}
 			m.viewDirty = true
@@ -777,7 +778,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cancel()
 					m.cancel = nil
 					m.streamCancelled = true
-					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
+					m.messages = append(m.messages, displayMsg{role: "system", content: icons.Stop() + " Cancelled."})
 					if m.partial.Len() > 0 {
 						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
 						m.partial.Reset()
@@ -800,7 +801,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cancel()
 					m.cancel = nil
 					m.streamCancelled = true
-					m.messages = append(m.messages, displayMsg{role: "system", content: "⏹ Cancelled."})
+					m.messages = append(m.messages, displayMsg{role: "system", content: icons.Stop() + " Cancelled."})
 					if m.partial.Len() > 0 {
 						m.messages = append(m.messages, displayMsg{role: "assistant", content: m.partial.String()})
 						m.partial.Reset()
@@ -817,7 +818,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				text := strings.TrimSpace(m.input.Value())
 				if text != "" {
 					m.messageQueue = append(m.messageQueue, text)
-					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📩 Queued: %s", text)})
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Queued: %s", icons.Mail(), text)})
 					m.input.Reset()
 					m.viewDirty = true
 					m.updateViewportContent()
@@ -1090,7 +1091,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case askUserMsg:
 		m.askReq = &msg
-		m.messages = append(m.messages, displayMsg{role: "question", content: "❓ " + msg.question})
+		m.messages = append(m.messages, displayMsg{role: "question", content: icons.HelpCircle() + " " + msg.question})
 		m.viewDirty = true
 		m.input.Focus()
 		m.input.SetValue("")
@@ -1457,7 +1458,7 @@ func runChat() error {
 			fmt.Println(hawkC + "█" + rst + "  " + msg.content)
 			fmt.Println()
 		case "assistant":
-			fmt.Println(hawkC + iconAssistantPrefix + " " + rst + msg.content)
+			fmt.Println(hawkC + icons.Robot() + " " + rst + msg.content)
 			fmt.Println()
 		case "system":
 			fmt.Println(dimStyle.Render("●  " + msg.content))

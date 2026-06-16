@@ -3,6 +3,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -121,7 +122,7 @@ func renderConfigRefreshActionRow(gatewayName string, cursor bool) string {
 	cursorStyle := configSelectedStyle().Inline(true)
 	prefix := strings.Repeat(" ", configTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
+		prefix = strings.Repeat(" ", configTableIndent-2) + cursorStyle.Render(icons.ChevronRight()) + " "
 		return prefix + cursorStyle.Render("Refresh "+gatewayName)
 	}
 	return lipgloss.JoinHorizontal(

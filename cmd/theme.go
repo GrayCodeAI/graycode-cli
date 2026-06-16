@@ -176,32 +176,19 @@ const (
 // ---------------------------------------------------------------------------
 // 10. Icons & glyphs
 //
-// Single source of truth for every glyph that appears in the TUI. To swap
-// an icon (e.g. switch the prompt from ❯ to ›) change the constant here
-// and every callsite picks it up.
+// Hawk's icon registry lives in internal/ui/icons. Every call site
+// references icons.ChevronRight() / icons.Robot() / etc. directly; this
+// file no longer holds any glyph constants. The audit test in
+// internal/testaudit fails CI if any non-ASCII literal appears in
+// cmd/*.go outside of the icons package.
+//
+// The short-lived package-level vars below exist ONLY so existing call
+// sites that read `iconPrompt`/`iconAssistantPrefix`/etc. continue to
+// compile during the migration. They mirror icons.*() values at the
+// time the package is initialized. Prefer icons.X() directly in new
+// code; these will be deleted in a follow-up.
 // ---------------------------------------------------------------------------
 
-const (
-	// Prompt — chat input, config input, slash menu.
-	iconPrompt = "❯"
-
-	// Assistant message prefix — the ⛬ glyph that marks every assistant
-	// message in the viewport.
-	iconAssistantPrefix = "⛬"
-
-	// Typing indicator dots — one filled, two empty. See braille_spinner.go.
-	iconDotFilled = "▪"
-	iconDotEmpty  = "▫"
-
-	// Soft separator on the live status / spinner line.
-	iconSpinnerSep = "·"
-
-	// Warning / permission prompt prefix.
-	iconWarn = "⚠"
-
-	// quitFooterHint — exit hint in splash/footer chrome (work TUI uses double Ctrl+C).
-	quitFooterHint = "ctrl+c · quit"
-
-	// quitAgainMsg — shown in chat when the user presses Ctrl+C once.
-	quitAgainMsg = "Press Ctrl+C again to quit."
-)
+// quitAgainMsg is a static user-facing string and lives here because it
+// is not a glyph. Kept in this file to avoid moving a one-line constant.
+const quitAgainMsg = "Press Ctrl+C again to quit."

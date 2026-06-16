@@ -11,6 +11,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // UI focus areas — Grok Build cycles Prompt ↔ Scrollback (Tab).
@@ -105,7 +106,7 @@ func formatSessionContextUsage(m *chatModel) string {
 	}
 	b.WriteString("Tab: prompt ↔ scrollback · /home: welcome · /export: save transcript")
 	if pct >= engine.DefaultAutoCompactThresholdPct {
-		b.WriteString("\n⚠ Approaching auto-compact threshold — consider /compact")
+		b.WriteString("\n" + icons.Alert() + " Approaching auto-compact threshold — consider /compact")
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

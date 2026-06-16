@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var reviewCmd = &cobra.Command{
@@ -59,7 +61,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 	if _, err := os.Stat(hookPath); err == nil && !reviewInitForce {
 		existing, _ := os.ReadFile(hookPath)
 		if strings.Contains(string(existing), "hawk review") {
-			fmt.Println("✓ hawk review hook already installed")
+			fmt.Println(icons.CheckBold() + " hawk review hook already installed")
 			return nil
 		}
 		return fmt.Errorf("post-commit hook already exists at %s\nUse --force to overwrite, or manually add:\n  %s", hookPath, strings.TrimSpace(hookScript))
@@ -73,7 +75,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 	projectDir, _ := os.Getwd()
 	_ = os.MkdirAll(filepath.Join(projectDir, ".hawk"), 0o755)
 
-	fmt.Printf("✓ Installed post-commit hook at %s\n", hookPath)
+	fmt.Printf("%s Installed post-commit hook at %s\n", icons.CheckBold(), hookPath)
 	fmt.Println("  Every commit will now be reviewed automatically.")
 	fmt.Println("  View reviews: hawk review status")
 	fmt.Println("  Interactive:  hawk review tui")

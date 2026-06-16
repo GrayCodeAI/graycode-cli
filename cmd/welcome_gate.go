@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 type uiPhase int
@@ -52,7 +53,7 @@ func (m chatModel) renderWelcomeGateActionRow(width int) string {
 	if needsSetup {
 		textStyle = lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Inline(true)
 	}
-	line := textStyle.Render("↵  " + primary)
+	line := textStyle.Render(icons.Return() + "  " + primary)
 	return lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Render(line)
 }
 
@@ -66,7 +67,7 @@ func (m chatModel) renderWelcomeGateChromeRow(width int) string {
 		display += ":" + br
 	}
 	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("  " + display)
-	right := lipgloss.NewStyle().Foreground(textDisabled).Inline(true).Render(quitFooterHint)
+	right := lipgloss.NewStyle().Foreground(textDisabled).Inline(true).Render("ctrl+c " + icons.CircleOutline() + " quit")
 	return layoutFooterRow(left, right, width)
 }
 

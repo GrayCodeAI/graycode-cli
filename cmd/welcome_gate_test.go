@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestRenderWelcomeGate_HAWKBrandingAndFooter(t *testing.T) {
@@ -18,7 +19,7 @@ func TestRenderWelcomeGate_HAWKBrandingAndFooter(t *testing.T) {
 		welcomeCache: buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 100, nil, true),
 	}
 	out := m.renderWelcomeGate(100, 30)
-	for _, want := range []string{welcomeToPhraseLines[0], "███████", "Press Enter", quitFooterHint, " · ", "↵"} {
+	for _, want := range []string{welcomeToPhraseLines[0], "███████", "Press Enter", "ctrl+c " + icons.CircleOutline() + " quit", " · ", icons.Return()} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("renderWelcomeGate missing %q", want)
 		}
@@ -68,7 +69,7 @@ func TestRenderWelcomeGate_QuitHintNotTruncated(t *testing.T) {
 		viewport:     viewport.New(80, 8),
 	}
 	out := m.renderWelcomeGate(80, 24)
-	if !strings.Contains(out, quitFooterHint) {
+	if !strings.Contains(out, "ctrl+c "+icons.CircleOutline()+" quit") {
 		t.Fatalf("quit hint should be fully visible, got:\n%s", out)
 	}
 }
@@ -82,7 +83,7 @@ func TestRenderWelcomeGate_ChromeAnchorsBottom(t *testing.T) {
 	}
 	out := m.renderWelcomeGate(80, 30)
 	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
-	if len(lines) == 0 || !strings.Contains(lines[len(lines)-1], quitFooterHint) {
+	if len(lines) == 0 || !strings.Contains(lines[len(lines)-1], "ctrl+c "+icons.CircleOutline()+" quit") {
 		t.Fatalf("welcome gate chrome should anchor to bottom, got:\n%s", out)
 	}
 }

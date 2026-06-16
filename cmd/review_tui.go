@@ -8,6 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var reviewTUICmd = &cobra.Command{
@@ -165,7 +167,7 @@ func (m reviewTUIModel) View() string {
 		b.WriteString(fmt.Sprintf("  Review #%d — %s [%s]\n\n", r.ID, r.SHA[:8], r.MaxSeverity))
 
 		if len(r.Findings) == 0 {
-			b.WriteString("  No findings — clean ✓\n")
+			b.WriteString("  No findings — clean " + icons.CheckBold() + "\n")
 		} else {
 			remaining := m.height - listHeight - 6
 			for i, f := range r.Findings {

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func (m chatModel) configStatus() (gateway, model string, configured bool) {
@@ -32,11 +33,14 @@ func (m chatModel) configStatus() (gateway, model string, configured bool) {
 	return gw, model, true
 }
 
-const (
-	configTabDotFilled = "●"
-	configTabDotEmpty  = "○"
-	configTabGap       = 4
-)
+const configTabGap = 4
+
+func configTabDot(active bool) string {
+	if active {
+		return icons.CircleFilled()
+	}
+	return icons.CircleOutline()
+}
 
 func configTabLabelStyle(active bool) lipgloss.Style {
 	if active {
@@ -54,10 +58,7 @@ func renderConfigTabBar(active int) string {
 		if i > 0 {
 			parts = append(parts, strings.Repeat(" ", configTabGap))
 		}
-		dot := configTabDotEmpty
-		if i == active {
-			dot = configTabDotFilled
-		}
+		dot := configTabDot(i == active)
 		parts = append(parts, configTabLabelStyle(i == active).Render(dot+" "+label))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
@@ -65,7 +66,7 @@ func renderConfigTabBar(active int) string {
 
 func (m chatModel) configTabShellView(body string) string {
 	var b strings.Builder
-	b.WriteString(configTitleStyle().Render("⚙ Setup") + "\n")
+	b.WriteString(configTitleStyle().Render(icons.Cog()+" Setup") + "\n")
 	b.WriteString(renderConfigStatusLine(m) + "\n\n")
 	b.WriteString(renderConfigTabBar(m.configTab) + "\n")
 	dividerWidth := m.width - 2

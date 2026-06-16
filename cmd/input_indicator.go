@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // InputClass represents the classification of user input.
@@ -69,13 +70,13 @@ func (ind *InputIndicator) Classify(input string, mode shellmode.Mode) InputClas
 func (ind *InputIndicator) Render() string {
 	switch ind.current {
 	case InputClassShell:
-		return indicatorShell.Render("●")
+		return indicatorShell.Render(icons.CircleFilled())
 	case InputClassAgent:
-		return indicatorAgent.Render("●")
+		return indicatorAgent.Render(icons.CircleFilled())
 	case InputClassSlash:
-		return indicatorSlash.Render("●")
+		return indicatorSlash.Render(icons.CircleFilled())
 	default:
-		return indicatorNeutral.Render("○")
+		return indicatorNeutral.Render(icons.CircleOutline())
 	}
 }
 

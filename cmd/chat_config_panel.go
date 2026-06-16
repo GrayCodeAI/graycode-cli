@@ -11,6 +11,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func configModelChoices(opts []configModelOption, showProvider bool) []string {
@@ -81,10 +82,10 @@ func (m chatModel) configProviderKeyView() string {
 	titleStyle := configTitleStyle()
 	mutedStyle := configMutedStyle()
 	providerName := strings.TrimSpace(m.configProvider)
-	title := "🔑 Paste API key"
+	title := icons.Key() + " Paste API key"
 	hint := "validates with provider API · stored in " + credentialsStoreLabel()
 	if providerName != "" {
-		title = "🔑 " + hawkconfig.GatewayDisplayName(providerName)
+		title = icons.Key() + " " + hawkconfig.GatewayDisplayName(providerName)
 		hint = "paste key for this gateway only · " + hint
 	}
 	if providerName == hawkconfig.ProviderXiaomiTokenPlan {
@@ -112,7 +113,7 @@ func (m chatModel) configOllamaURLView() string {
 	mutedStyle := configMutedStyle()
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("🦙 Ollama local") + "\n")
+	b.WriteString(titleStyle.Render(icons.Llama()+" Ollama local") + "\n")
 	b.WriteString(mutedStyle.Render("no API key · eyrie discovers installed models") + "\n\n")
 	if notice := strings.TrimSpace(m.configNotice); notice != "" {
 		b.WriteString(mutedStyle.Render(sanitizeConfigNotice(notice)) + "\n\n")
@@ -166,7 +167,7 @@ func (m chatModel) startConfigModelSearch() (chatModel, tea.Cmd) {
 	m.useConfigInput = true
 	m.configInput.Reset()
 	m.configInput.SetValue(m.configModelSearch)
-	m.configInput.Prompt = strings.Repeat(" ", modelTableIndent) + "search ❯ "
+	m.configInput.Prompt = strings.Repeat(" ", modelTableIndent) + "search " + icons.ChevronRight() + " "
 	m.configInput.Placeholder = "filter by name, owner, id"
 	m.configInput.EchoMode = textinput.EchoNormal
 	m.configInput.EchoCharacter = 0
@@ -408,7 +409,7 @@ func (m chatModel) closeConfigPanel() chatModel {
 func (m *chatModel) restoreChatInput() {
 	m.useConfigInput = false
 	m.input.Reset()
-	m.input.Prompt = iconPrompt + " "
+	m.input.Prompt = icons.ChevronRight() + " "
 	m.input.Placeholder = `Try "Create a PR with these changes" (Shift+Enter for newline)`
 	m.input.Focus()
 }
@@ -424,7 +425,7 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 	}
 	m.useConfigInput = true
 	m.configInput.Reset()
-	m.configInput.Prompt = " key " + iconPrompt + " "
+	m.configInput.Prompt = " key " + icons.ChevronRight() + " "
 	m.configInput.Placeholder = "paste API key"
 	m.configInput.EchoMode = textinput.EchoPassword
 	m.configInput.EchoCharacter = '*'
