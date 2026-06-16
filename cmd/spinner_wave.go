@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // spinnerWaveColors — 20 distinct hues; the wave flows glyph → verb → ▪▫▫.
@@ -65,10 +67,10 @@ func renderSpinnerWaveLine(glyph, verb string, wavePhase, dotPhase int) string {
 	b.WriteString(renderSpinnerWaveSlot(' ', wavePhase+pos, head == pos, false))
 	pos++
 	for i := 0; i < hawkTypingDots; i++ {
-		g := iconDotEmpty
+		g := icons.CircleOutline()
 		bold := false
 		if i == dotPhase%hawkTypingDots {
-			g = iconDotFilled
+			g = icons.CircleFilled()
 			bold = true
 		}
 		b.WriteString(renderSpinnerWaveSlotGlyph(g, wavePhase+pos, head == pos, bold))

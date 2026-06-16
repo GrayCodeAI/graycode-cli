@@ -10,6 +10,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // explainCode traces a file/line back to the git commit and session that created it.
@@ -86,7 +87,7 @@ func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
 
 	// Smart reroute: if command failed with NL markers, offer to send to AI
 	if result.ExitCode != 0 && shellmode.RerouteCandidate(command, result.Stderr, result.ExitCode) {
-		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ Natural language detected in failed command — rerouting to AI..."})
+		m.messages = append(m.messages, displayMsg{role: "system", content: icons.Refresh() + " Natural language detected in failed command — rerouting to AI..."})
 		m.termCtx.MarkExitCode(result.ExitCode)
 		query := m.termCtx.BuildContext(command)
 		m.messages = append(m.messages, displayMsg{role: "user", content: command})
@@ -139,7 +140,7 @@ func (m *chatModel) handleNamespacedSkill(cmd, fullText string) (tea.Model, tea.
 	// Check for chain conflicts
 	conflicts := plugin.ResolveChainConflicts(*matched, m.activeSkills)
 	if len(conflicts) > 0 {
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Conflicts with active skill(s): %s", strings.Join(conflicts, ", "))})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Conflicts with active skill(s): %s", icons.Alert(), strings.Join(conflicts, ", "))})
 	}
 
 	m.activeSkills[matched.Name] = *matched
@@ -151,7 +152,7 @@ func (m *chatModel) handleNamespacedSkill(cmd, fullText string) (tea.Model, tea.
 		prompt = fmt.Sprintf("[Skill: %s activated]\n%s", matched.Name, prompt)
 	}
 
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚡ Skill activated: %s", matched.Name)})
+	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Skill activated: %s", icons.Bolt(), matched.Name)})
 	m.messages = append(m.messages, displayMsg{role: "user", content: args})
 	m.session.AddUser(prompt)
 	m.waiting = true

@@ -12,6 +12,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // handleSkillsCommand handles the /skills command and all its subcommands.
@@ -214,7 +215,7 @@ func (m *chatModel) handleSkillsCommand(parts []string, text string) (tea.Model,
 				return m, nil
 			}
 			var b strings.Builder
-			b.WriteString("✓ Skill validated successfully.\n\n")
+			b.WriteString(icons.CheckBold() + " Skill validated successfully.\n\n")
 			_, _ = fmt.Fprintf(&b, "  Name: %s\n", skill.Name)
 			_, _ = fmt.Fprintf(&b, "  Description: %s\n", skill.Description)
 			if skill.Version != "" {

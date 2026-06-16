@@ -1,6 +1,10 @@
 package cmd
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+)
 
 // Viewport render cache — avoids re-wrapping and re-rendering markdown for the
 // entire scrollback on every 50ms stream tick. Stable prefix is cached; only
@@ -44,9 +48,9 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 		}
 	case "assistant":
 		content := strings.TrimLeft(msg.content, "\n\r")
-		b.WriteString(hawkC + iconAssistantPrefix + " " + rst + renderMarkdown(content, viewWidth-3))
+		b.WriteString(hawkC + icons.Robot() + " " + rst + renderMarkdown(content, viewWidth-3))
 	case "tool_use":
-		b.WriteString(toolStyle.Render("⚡ " + msg.content))
+		b.WriteString(toolStyle.Render(icons.Bolt() + " " + msg.content))
 	case "tool_result":
 		if strings.Contains(msg.content, "diff ") && strings.Contains(msg.content, " lines") {
 			parts := strings.SplitN(msg.content, "\ndiff ", 2)
@@ -63,7 +67,7 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 				b.WriteString("    " + diffStyled)
 			}
 		} else if strings.Contains(msg.content, "Self-review found issues") {
-			b.WriteString(errorStyle.Render("    ✗ " + msg.content))
+			b.WriteString(errorStyle.Render("    " + icons.CloseThick() + " " + msg.content))
 		} else if strings.Contains(msg.content, "## Self-Reflection") {
 			parts := strings.SplitN(msg.content, "## Self-Reflection", 2)
 			mainContent := parts[0]
@@ -85,7 +89,7 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 		}
 	case "thinking":
 		thinkWrapped := wrapText(msg.content, viewWidth-4, 3)
-		b.WriteString(dimStyle.Render("💭 " + thinkWrapped))
+		b.WriteString(dimStyle.Render(icons.Brain() + " " + thinkWrapped))
 	case "welcome":
 		// rendered in fixed welcome pane, not scrollback
 	case "system":
@@ -144,7 +148,7 @@ func (m chatModel) renderStreamTail(viewWidth int) string {
 
 	partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
 	if partial != "" {
-		return hawkC + iconAssistantPrefix + " " + rst + renderMarkdown(partial, viewWidth-3) + "\n\n"
+		return hawkC + icons.Robot() + " " + rst + renderMarkdown(partial, viewWidth-3) + "\n\n"
 	}
 	return m.renderWaitingSpinnerLine() + "\n\n"
 }

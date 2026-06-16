@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 )
@@ -42,7 +43,7 @@ func renderSetupCompleteMessage(model string) string {
 		muted.Render(" · ready to chat with "),
 		active.Render(model),
 		muted.Render(" "),
-		success.Render("✓"),
+		success.Render(icons.CheckBold()+" "),
 	)
 }
 
@@ -66,7 +67,7 @@ func sanitizeIdentity(s string) string {
 // Continuation lines get indent prepended.
 // wrapText wraps text to fit within the given width.
 // prefixWidth is the visual width of the prefix already printed before the first line
-// (e.g. iconAssistantPrefix + " " = 2 columns). Continuation lines are indented to align with the first
+// (e.g. icons.Robot() + " " = 2 columns). Continuation lines are indented to align with the first
 // line's text start position.
 // width is the total terminal width available.
 func wrapText(text string, width int, prefixWidth int) string {
@@ -431,7 +432,7 @@ func renderPermissionBox(summary string, width int) string {
 		Width(boxW).
 		Padding(0, 1)
 
-	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(iconWarn + " Permission Required")
+	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert() + " Permission Required")
 	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
 	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es  [n]o  [a]lways")
 
@@ -507,7 +508,7 @@ func renderReflectionBox(reflection string, width int) string {
 
 // renderWaitingSpinnerLine is the live status strip while the model works.
 func (m chatModel) renderWaitingSpinnerLine() string {
-	sep := ansiDim + " " + iconSpinnerSep + " " + ansiReset
+	sep := ansiDim + " " + icons.CircleOutline() + " " + ansiReset
 
 	var b strings.Builder
 	b.WriteString(m.brailleSpinner.Frame())

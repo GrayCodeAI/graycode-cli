@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // Notification represents a single notification event.
@@ -236,15 +238,15 @@ func FormatHistory(notifications []Notification) string {
 func notificationIcon(level string) string {
 	switch level {
 	case "info":
-		return "\U0001f514" // bell emoji
+		return icons.Bell()
 	case "success":
-		return "✅" // check mark
+		return icons.CheckDecagram() + " "
 	case "warning":
-		return "⚠️" // warning sign
+		return icons.Alert() + " "
 	case "error":
-		return "❌" // cross mark
+		return icons.Cancel() + " "
 	default:
-		return "\U0001f514"
+		return icons.Bell()
 	}
 }
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	sightLib "github.com/GrayCodeAI/sight"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestReviewStore_CreateAndGet(t *testing.T) {
@@ -206,11 +208,11 @@ func TestStatusIcon(t *testing.T) {
 		status ReviewStatus
 		want   string
 	}{
-		{ReviewStatusPassed, "✓"},
-		{ReviewStatusOpen, "⚠"},
-		{ReviewStatusFailed, "✗"},
-		{ReviewStatusRunning, "⟳"},
-		{ReviewStatusPending, "·"},
+		{ReviewStatusPassed, icons.CheckBold() + " "},
+		{ReviewStatusOpen, icons.Alert() + " "},
+		{ReviewStatusFailed, icons.CloseThick() + " "},
+		{ReviewStatusRunning, icons.RotateVariant() + " "},
+		{ReviewStatusPending, "."},
 	}
 	for _, tt := range tests {
 		got := statusIcon(tt.status)

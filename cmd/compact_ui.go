@@ -12,6 +12,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 const compactProgressBarWidth = 40
@@ -97,7 +98,7 @@ func (m chatModel) renderCompactProgressPanel(totalWidth int) string {
 		totalWidth = 80
 	}
 	used, window, barPct := m.contextUsagePercentForBar()
-	glyph := "●"
+	glyph := icons.CircleFilled()
 	if m.brailleSpinner != nil {
 		glyph = m.brailleSpinner.GlyphChar()
 	}

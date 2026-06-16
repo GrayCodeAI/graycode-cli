@@ -3,6 +3,8 @@ package cmd
 import (
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestSpinnerWave_AdvancesOnTick(t *testing.T) {
@@ -37,7 +39,7 @@ func TestSpinnerWave_FlowsThroughGlyphVerbAndDots(t *testing.T) {
 	if out0 == out1 {
 		t.Fatal("expected wave head shift to change output")
 	}
-	if strings.Count(out0, iconDotFilled) != 1 {
+	if strings.Count(out0, icons.CircleFilled()) != 1 {
 		t.Fatalf("expected one filled dot, got %q", out0)
 	}
 	if !strings.Contains(out0, "◐") {

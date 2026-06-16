@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewProgressTracker(t *testing.T) {
@@ -197,17 +199,17 @@ func TestRender(t *testing.T) {
 	}
 
 	// Check completed steps have checkmark
-	if !strings.Contains(output, "✓ Read existing auth code") {
+	if !strings.Contains(output, icons.CheckBold()+" Plan approach") {
 		t.Error("render missing completed step icon")
 	}
 
 	// Check active step has bullet
-	if !strings.Contains(output, "● Implement JWT middleware") {
+	if !strings.Contains(output, icons.CircleFilled()+" Implement JWT middleware") {
 		t.Error("render missing active step icon")
 	}
 
 	// Check pending steps have circle
-	if !strings.Contains(output, "○ Write tests") {
+	if !strings.Contains(output, icons.CircleOutline()+" Write tests") {
 		t.Error("render missing pending step icon")
 	}
 
@@ -242,7 +244,7 @@ func TestRenderWithFailedStep(t *testing.T) {
 
 	output := pt.Render()
 
-	if !strings.Contains(output, "✗ Test") {
+	if !strings.Contains(output, icons.CloseThick()+" Test") {
 		t.Error("render missing failed step icon")
 	}
 	if !strings.Contains(output, "assertion error in test_foo") {
@@ -292,7 +294,7 @@ func TestRenderDone(t *testing.T) {
 
 	output := pt.RenderDone()
 
-	if !strings.Contains(output, "✓ JWT Authentication complete") {
+	if !strings.Contains(output, icons.CheckBold()+" JWT Authentication complete") {
 		t.Errorf("done render missing completion message, got: %q", output)
 	}
 	if !strings.Contains(output, "3 steps, 0 failures") {

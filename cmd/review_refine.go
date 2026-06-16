@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var (
@@ -75,9 +77,9 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 				continue
 			}
 			if err := fixReviewRefine(store, r); err != nil {
-				fmt.Printf("  ✗ #%d fix failed: %v\n", r.ID, err)
+				fmt.Printf("  %s #%d fix failed: %v\n", icons.CloseThick(), r.ID, err)
 			} else {
-				fmt.Printf("  ✓ #%d fix applied\n", r.ID)
+				fmt.Printf("  %s #%d fix applied\n", icons.CheckBold(), r.ID)
 			}
 		}
 
@@ -90,14 +92,14 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 
 		fmt.Printf("  Reviewing %s...\n", latestSHA[:8])
 		if err := runReviewOnSHA(store, latestSHA); err != nil {
-			fmt.Printf("  ✗ Review failed: %v\n", err)
+			fmt.Printf("  %s Review failed: %v\n", icons.CloseThick(), err)
 			break
 		}
 
 		// Check if the new review passed.
 		newReview, _ := store.GetBySHA(latestSHA)
 		if newReview != nil && newReview.Status == ReviewStatusPassed {
-			fmt.Printf("\n✓ All clean after %d iteration(s)!\n", iter)
+			fmt.Printf("\n%s All clean after %d iteration(s)!\n", icons.CheckBold(), iter)
 			return nil
 		}
 
@@ -107,7 +109,7 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 		} else {
 			reviews, _ = store.ListOpen()
 			if len(reviews) == 0 {
-				fmt.Printf("\n✓ All reviews resolved after %d iteration(s)!\n", iter)
+				fmt.Printf("\n%s All reviews resolved after %d iteration(s)!\n", icons.CheckBold(), iter)
 				return nil
 			}
 		}
@@ -116,7 +118,7 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 	// Report remaining issues.
 	remaining, _ := store.ListOpen()
 	if len(remaining) > 0 {
-		fmt.Printf("\n⚠ %d review(s) still open after %d iterations.\n", len(remaining), refineMaxIter)
+		fmt.Printf("\n%s %d review(s) still open after %d iterations.\n", icons.Alert(), len(remaining), refineMaxIter)
 		fmt.Println("  Run 'hawk review show' to inspect, or increase --max-iterations.")
 	}
 	return nil

@@ -6,6 +6,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestRenderConfigTabBar_DotIndicators(t *testing.T) {
@@ -18,10 +19,10 @@ func TestRenderConfigTabBar_DotIndicators(t *testing.T) {
 	if strings.Contains(got, "Keys") {
 		t.Fatalf("Keys tab should be merged into Gateways, got %q", got)
 	}
-	if !strings.Contains(got, configTabDotFilled) {
+	if !strings.Contains(got, icons.CircleFilled()) {
 		t.Fatalf("expected filled dot for active tab, got %q", got)
 	}
-	if !strings.Contains(got, configTabDotEmpty) {
+	if !strings.Contains(got, icons.CircleOutline()) {
 		t.Fatalf("expected empty dot for inactive tabs, got %q", got)
 	}
 }

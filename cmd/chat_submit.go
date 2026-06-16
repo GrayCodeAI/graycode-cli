@@ -15,6 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // submitUserMessage handles Enter on a non-empty prompt (slash commands, shell, or agent turn).
@@ -104,9 +105,9 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	if imgPath := extractImagePath(text); imgPath != "" {
 		if att, err := ReadImageFile(imgPath); err == nil {
 			if m.session.AddUserWithAttachment(text, att.Base64, att.MIMEType) {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📷 Attached image: %s", filepath.Base(imgPath))})
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Attached image: %s", icons.Image(), filepath.Base(imgPath))})
 			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Model %q has no vision support — image %s sent as text-only note.", m.session.Model(), filepath.Base(imgPath))})
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Model %q has no vision support — image %s sent as text-only note.", icons.Alert(), m.session.Model(), filepath.Base(imgPath))})
 			}
 		} else {
 			m.session.AddUser(text)
@@ -114,10 +115,10 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	} else if pdfPath := extractPDFPath(text); pdfPath != "" {
 		if extracted, err := ReadPDFText(pdfPath); err == nil && strings.TrimSpace(extracted) != "" {
 			m.session.AddUserWithDocumentText(text, filepath.Base(pdfPath), extracted)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📄 Extracted text from PDF: %s", filepath.Base(pdfPath))})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Extracted text from PDF: %s", icons.FileDocument(), filepath.Base(pdfPath))})
 		} else {
 			m.session.AddUser(text)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Could not extract text from PDF: %s", filepath.Base(pdfPath))})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Could not extract text from PDF: %s", icons.Alert(), filepath.Base(pdfPath))})
 		}
 	} else {
 		m.session.AddUser(text)

@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var (
@@ -64,10 +66,10 @@ func runReviewFix(_ *cobra.Command, args []string) error {
 
 	for _, r := range reviews {
 		if err := fixReview(store, r); err != nil {
-			fmt.Printf("✗ Review #%d (%s): %v\n", r.ID, r.SHA[:8], err)
+			fmt.Printf("%s Review #%d (%s): %v\n", icons.CloseThick(), r.ID, r.SHA[:8], err)
 			continue
 		}
-		fmt.Printf("✓ Review #%d (%s) fixed\n", r.ID, r.SHA[:8])
+		fmt.Printf("%s Review #%d (%s) fixed\n", icons.CheckBold(), r.ID, r.SHA[:8])
 	}
 	return nil
 }

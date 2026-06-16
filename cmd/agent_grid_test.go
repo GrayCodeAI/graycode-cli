@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestAgentStateString(t *testing.T) {
@@ -9,10 +11,10 @@ func TestAgentStateString(t *testing.T) {
 		state AgentState
 		want  string
 	}{
-		{AgentIdle, "⏳ Idle"},
-		{AgentRunning, "🔄 Running"},
-		{AgentDone, "✅ Done"},
-		{AgentFailed, "❌ Failed"},
+		{AgentIdle, icons.Hourglass() + " Idle"},
+		{AgentRunning, icons.Refresh() + " Running"},
+		{AgentDone, icons.CheckDecagram() + " Done"},
+		{AgentFailed, icons.Cancel() + " Failed"},
 	}
 	for _, tc := range tests {
 		if got := tc.state.String(); got != tc.want {

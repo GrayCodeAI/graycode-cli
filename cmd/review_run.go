@@ -10,6 +10,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/client"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
 )
@@ -153,10 +154,10 @@ func getCommitDiff(sha string) (string, error) {
 
 func printReviewSummary(sha string, result *sightLib.Result) {
 	if len(result.Findings) == 0 {
-		fmt.Printf("✓ %s — no issues found (%d files reviewed)\n", sha[:8], result.Stats.FilesReviewed)
+		fmt.Printf("%s %s — no issues found (%d files reviewed)\n", icons.CheckBold(), sha[:8], result.Stats.FilesReviewed)
 		return
 	}
-	fmt.Printf("⚠ %s — %d findings (max severity: %s)\n", sha[:8], len(result.Findings), result.MaxSeverity())
+	fmt.Printf("%s %s — %d findings (max severity: %s)\n", icons.Alert(), sha[:8], len(result.Findings), result.MaxSeverity())
 	for _, f := range result.Findings {
 		fmt.Printf("  [%s] %s:%d — %s\n", f.Severity, f.File, f.Line, f.Message)
 	}

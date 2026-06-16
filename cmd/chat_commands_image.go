@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // handleImageCommand implements the /image slash command:
@@ -52,9 +54,9 @@ func (m *chatModel) handleImageCommand(parts []string, text string) (tea.Model, 
 		}
 		m.messages = append(m.messages, displayMsg{role: "user", content: display})
 		if m.session.AddUserWithAttachment(prompt, att.Base64, att.MIMEType) {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📷 Attached image: %s", filepath.Base(path))})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Attached image: %s", icons.Image(), filepath.Base(path))})
 		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("⚠ Model %q has no vision support — image %s sent as text-only note.", m.session.Model(), filepath.Base(path))})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Model %q has no vision support — image %s sent as text-only note.", icons.Alert(), m.session.Model(), filepath.Base(path))})
 		}
 	case IsPDFFile(path):
 		extracted, err := ReadPDFText(path)
@@ -66,9 +68,9 @@ func (m *chatModel) handleImageCommand(parts []string, text string) (tea.Model, 
 			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("No extractable text found in PDF: %s", filepath.Base(path))})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "user", content: fmt.Sprintf("%s\n📄 [PDF: %s]", prompt, filepath.Base(path))})
+		m.messages = append(m.messages, displayMsg{role: "user", content: fmt.Sprintf("%s\n%s [PDF: %s]", prompt, icons.FileDocument(), filepath.Base(path))})
 		m.session.AddUserWithDocumentText(prompt, filepath.Base(path), extracted)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📄 Extracted text from PDF: %s", filepath.Base(path))})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Extracted text from PDF: %s", icons.FileDocument(), filepath.Base(path))})
 	default:
 		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unsupported attachment: %s (supported: png, jpg, jpeg, gif, webp, bmp, pdf)", filepath.Base(path))})
 		return m, nil

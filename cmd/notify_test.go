@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestNewNotifier(t *testing.T) {
@@ -171,17 +173,17 @@ func TestFormatNotification(t *testing.T) {
 	if !strings.Contains(result, "2m 15s") {
 		t.Errorf("expected duration in output, got %q", result)
 	}
-	if !strings.Contains(result, "✅") {
+	if !strings.Contains(result, icons.CheckDecagram()) {
 		t.Errorf("expected success icon in output, got %q", result)
 	}
 }
 
 func TestFormatNotificationLevels(t *testing.T) {
 	levels := map[string]string{
-		"info":    "\U0001f514",
-		"success": "✅",
-		"warning": "⚠️",
-		"error":   "❌",
+		"info":    icons.Bell(),
+		"success": icons.CheckDecagram(),
+		"warning": icons.Alert(),
+		"error":   icons.Cancel(),
 	}
 
 	for level, expectedIcon := range levels {

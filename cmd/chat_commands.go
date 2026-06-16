@@ -23,6 +23,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func slashCommands() []string {
@@ -422,7 +423,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			Models:   engine.DefaultCouncilModels(),
 			Chairman: m.session.Model(),
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("🏛 Council convened: %s (chairman: %s)", strings.Join(cfg.Models, ", "), cfg.Chairman)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Council convened: %s (chairman: %s)", icons.Robot(), strings.Join(cfg.Models, ", "), cfg.Chairman)})
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Stage 1: Querying all models..."})
 
 		result, err := engine.RunCouncil(context.Background(), query, cfg, m.session)
@@ -634,7 +635,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to copy: " + err.Error()})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("📋 CXML copied to clipboard.\n%s", stats)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s CXML copied to clipboard.\n%s", icons.FileDocument(), stats)})
 		return m, nil
 	case "/recover":
 		return m.handleSessionCommand(cmd, parts, text)
@@ -1630,7 +1631,7 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 
 	// Create grid UI
 	grid := NewAgentGrid(taskDescs, m.width, m.height-10)
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("🚀 Spawning %d parallel agents for %d tasks...", workers, len(taskDescs))})
+	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Spawning %d parallel agents for %d tasks...", icons.Bolt(), workers, len(taskDescs))})
 
 	// Run parallel agents in background
 	go func() {

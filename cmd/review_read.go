@@ -9,6 +9,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var reviewStatusCmd = &cobra.Command{
@@ -154,7 +156,7 @@ func runReviewClose(_ *cobra.Command, args []string) error {
 	if err := store.SetStatus(review.ID, ReviewStatusClosed); err != nil {
 		return err
 	}
-	fmt.Printf("✓ Closed review #%d (%s)\n", review.ID, review.SHA[:8])
+	fmt.Printf("%s Closed review #%d (%s)\n", icons.CheckBold(), review.ID, review.SHA[:8])
 	return nil
 }
 
@@ -211,7 +213,7 @@ func printReviewDetail(r *ReviewRecord) {
 	fmt.Println()
 
 	if len(r.Findings) == 0 {
-		fmt.Println(header.Render("No findings — clean commit ✓"))
+		fmt.Println(header.Render("No findings — clean commit " + icons.CheckBold()))
 		return
 	}
 
@@ -232,19 +234,19 @@ func printReviewDetail(r *ReviewRecord) {
 func statusIcon(s ReviewStatus) string {
 	switch s {
 	case ReviewStatusPassed:
-		return "✓"
+		return icons.CheckBold() + " "
 	case ReviewStatusOpen:
-		return "⚠"
+		return icons.Alert() + " "
 	case ReviewStatusFixed:
-		return "✓"
+		return icons.CheckBold() + " "
 	case ReviewStatusClosed:
-		return "✗"
+		return icons.CloseThick() + " "
 	case ReviewStatusFailed:
-		return "✗"
+		return icons.CloseThick() + " "
 	case ReviewStatusRunning:
-		return "⟳"
+		return icons.RotateVariant() + " "
 	default:
-		return "·"
+		return "."
 	}
 }
 

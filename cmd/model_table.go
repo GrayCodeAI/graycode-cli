@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 )
@@ -204,7 +205,7 @@ func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTab
 	}
 	prefix := strings.Repeat(" ", modelTableIndent)
 	if cursor {
-		prefix = strings.Repeat(" ", modelTableIndent-2) + cursorStyle.Render(iconPrompt) + " "
+		prefix = strings.Repeat(" ", modelTableIndent-2) + cursorStyle.Render(icons.ChevronRight()) + " "
 	}
 
 	ctx := truncateRunes(row.Context, layout.Context)
