@@ -24,7 +24,11 @@ runs:
           commit=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}' || true)
           if [ -n "$commit" ]; then
             echo "Cloning $repo at submodule commit $commit"
-            git clone --depth=1 "https://github.com/GrayCodeAI/${repo}.git" "$dest"
+            # Full clone so the pinned commit is reachable even after
+            # the dependency repo's main has been rewritten past it
+            # (e.g. by a squash-merge). A depth-1 clone can't check
+            # out older commits and fails with "unable to read tree".
+            git clone "https://github.com/GrayCodeAI/${repo}.git" "$dest"
             (cd "$dest" && git checkout --quiet "$commit")
           else
             ref="${{ inputs.ref }}"
