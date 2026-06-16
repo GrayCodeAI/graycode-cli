@@ -22,6 +22,21 @@
 //   - Nerd Fonts v3 Octicons    (F400..F533) — https://primer.style/octicons
 //   - Nerd Fonts v3 Pomicons    (E000..E00A) — pomodoro set
 //   - Nerd Fonts v3 Custom      (E5FA..E6B7) — seti-ui
+//
+// Why this and not Lucide SVG?
+//
+//	Lucide (https://lucide.dev) is the project's visual identity for docs
+//	and web surfaces (see docs/architecture.md). It is an SVG-only icon
+//	set — there is no standard PUA mapping for Lucide in Nerd Fonts, so
+//	the icon shapes cannot be rendered in a plain terminal. The two
+//	realistic options are (a) build and ship a custom Nerd Font that
+//	embeds a Lucide subset (large infrastructure dependency, no
+//	toolchain in CI), or (b) render Lucide SVGs as Unicode block art at
+//	print time (slow, error-prone, breaks captured output). The Go-CLI
+//	ecosystem (charmbracelet, spf13/cobra, github/cli, k9s) uses the
+//	PUA-or-ASCII approach we have here; the surveys of those projects
+//	are recorded in scripts/ICONICONSURVEY.md. The 0-emoji audit in
+//	internal/testaudit enforces that policy going forward.
 package icons
 
 // Nerd Font PUA codepoints. Every entry is in the basic Private Use Area
