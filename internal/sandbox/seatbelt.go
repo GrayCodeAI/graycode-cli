@@ -13,6 +13,27 @@ import (
 	"strings"
 )
 
+// Tier controls the sandbox's security posture. The new default is
+// TierWorkspace (allow workspace writes, deny process exec) which is
+// safer than the legacy TierOff default. Existing users who rely on
+// process exec can opt back in via Tier=TierOff in their config.
+type Tier string
+
+const (
+	// TierStrict denies everything: no writes, no process exec,
+	// no network. The agent can only read.
+	TierStrict Tier = "strict"
+	// TierWorkspace is the new default. Allows writes to the
+	// workspace + scratch dir, but denies process exec. An agent
+	// that needs to run Bash must either be in container mode
+	// (ContainerExecutor) or have Tier set to TierOff.
+	TierWorkspace Tier = "workspace"
+	// TierOff is the legacy default. Allow everything: writes,
+	// process exec, network. Used by users who need the full
+	// pre-tier behavior.
+	TierOff Tier = "off"
+)
+
 // SeatbeltPolicy describes the permissions for a macOS seatbelt sandbox profile.
 type SeatbeltPolicy struct {
 	AllowNetwork  bool     // allow outbound/inbound network access
@@ -21,6 +42,7 @@ type SeatbeltPolicy struct {
 	WritablePaths []string // paths allowed for file-write*
 	AllowProcess  bool     // allow spawning child processes (process-exec*)
 	AllowSysctl   bool     // allow sysctl-read
+	Tier          Tier     // security tier (strict / workspace / off)
 }
 
 // GenerateSeatbeltProfile generates a valid Apple sandbox-exec SBPL
@@ -66,8 +88,13 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 }
 
 // DefaultHawkPolicy creates a sensible default SeatbeltPolicy for hawk
-// operations in the given working directory.
-func DefaultHawkPolicy(workDir string) *SeatbeltPolicy {
+// operations in the given working directory. The tier parameter
+// selects the security posture:
+//
+//   - TierStrict: deny everything
+//   - TierWorkspace (new default): allow workspace writes, no process
+//   - TierOff: legacy behavior (allow everything)
+func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
 	home := os.Getenv("HOME")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -97,14 +124,37 @@ func DefaultHawkPolicy(workDir string) *SeatbeltPolicy {
 		hawkDir,
 	}
 
-	return &SeatbeltPolicy{
+	p := &SeatbeltPolicy{
 		AllowNetwork:  true,
-		AllowWrite:    true,
+		AllowSysctl:   true,
 		ReadablePaths: readPaths,
 		WritablePaths: writePaths,
-		AllowProcess:  true,
-		AllowSysctl:   true,
+		Tier:          tier,
 	}
+
+	// Apply the tier's policy on top of the defaults. Tier takes
+	// precedence over the legacy AllowWrite/AllowProcess fields
+	// so the new safe default is enforced regardless of legacy
+	// config values.
+	switch tier {
+	case TierStrict:
+		p.AllowWrite = false
+		p.AllowProcess = false
+	case TierWorkspace:
+		p.AllowWrite = true
+		p.AllowProcess = false
+	case TierOff, "":
+		// Legacy behavior: allow everything.
+		p.AllowWrite = true
+		p.AllowProcess = true
+	default:
+		// Unknown tier: log via fallback to TierOff. Caller can
+		// override by setting Tier explicitly to a known value.
+		p.AllowWrite = true
+		p.AllowProcess = true
+	}
+
+	return p
 }
 
 // RunSeatbelted creates an exec.Cmd that runs the given command inside a

@@ -23,19 +23,25 @@ type Config struct {
 	Type         string   `json:"type"` // "namespace", "docker", "chroot", "seatbelt", "none"
 	AllowNetwork bool     `json:"allow_network"`
 	AllowWrite   bool     `json:"allow_write"`
+	Tier         Tier     `json:"tier"` // security tier (strict / workspace / off)
 	ReadOnlyDirs []string `json:"read_only_dirs"`
 	WritableDirs []string `json:"writable_dirs"`
 	MaxMemoryMB  int      `json:"max_memory_mb"`
 	MaxCPUPct    int      `json:"max_cpu_pct"`
 }
 
-// DefaultConfig returns a default sandbox configuration.
+// DefaultConfig returns a default sandbox configuration. The new
+// default is TierWorkspace (allow workspace writes, deny process
+// exec) which is safer than the legacy TierOff behavior. Users who
+// need the full legacy behavior (process exec + writes) can set
+// Tier=TierOff in their config.
 func DefaultConfig() *Config {
 	return &Config{
 		Enabled:      true,
 		Type:         "auto",
 		AllowNetwork: true,
-		AllowWrite:   true,
+		AllowWrite:   true, // legacy field; tier takes precedence
+		Tier:         TierWorkspace,
 		MaxMemoryMB:  512,
 		MaxCPUPct:    50,
 	}
@@ -197,9 +203,12 @@ func (s *Sandbox) runSeatbelt(ctx context.Context, command string) (*exec.Cmd, e
 		workDir = s.config.ReadOnlyDirs[0]
 	}
 
-	policy := DefaultHawkPolicy(workDir)
+	policy := DefaultHawkPolicy(workDir, s.config.Tier)
 	policy.AllowNetwork = s.config.AllowNetwork
-	policy.AllowWrite = s.config.AllowWrite
+	// NOTE: AllowWrite is now set by DefaultHawkPolicy based on the
+	// tier (TierWorkspace → true, TierStrict → false). The legacy
+	// Config.AllowWrite field is preserved for JSON backward compat
+	// but no longer overrides the tier.
 
 	// Add configured readable dirs.
 	policy.ReadablePaths = append(policy.ReadablePaths, s.config.ReadOnlyDirs...)
@@ -227,7 +236,7 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string, error) {
 			if workDir == "" {
 				workDir, _ = os.Getwd()
 			}
-			policy := DefaultHawkPolicy(workDir)
+			policy := DefaultHawkPolicy(workDir, TierOff) // WrapCommand's SandboxConfig has no Tier field
 			policy.AllowNetwork = cfg.AllowNetwork
 			// Write profile to temp file
 			tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")
