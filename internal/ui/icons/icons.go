@@ -29,6 +29,32 @@ const (
 	ASCIIFile          = "[f]"
 	ASCIIQuestion      = "?"
 	ASCIIMail          = "[m]"
+	ASCIIRefresh       = "[r]"
+	ASCIIHourglass     = "[..]"
+	ASCIICheckCircle   = "[ok]"
+	ASCIICloseCircle   = "[x]"
+	ASCIIImage         = "[img]"
+	ASCIIFileDocument  = "[doc]"
+	ASCIIKey           = "[key]"
+	ASCIICog           = "[*]"
+	ASCIIMagnify       = "/"
+	ASCIIBolt          = "!"
+	ASCIIBrain         = "[think]"
+	ASCIIEmail         = "[m]"
+	ASCIIHelpCircle    = "?"
+	ASCIIBranch        = "(|)"
+	ASCIIClockOutline  = "[t]"
+	ASCIIPause         = "[||]"
+	ASCIIExpandAll     = "[+]"
+	ASCIICaretRight    = ">"
+	ASCIICaretDown     = "v"
+	ASCIITriangleSmall = ">"
+	ASCIICircleHalf    = "o"
+	ASCIICircleQuarter = "."
+	ASCIICircleSlice5  = "."
+	ASCIICircleSlice6  = "."
+	ASCIIRotateVariant = "[r]"
+	ASCIILlama         = "[ollama]"
 )
 
 // registry maps the human-friendly glyph name to (Nerd, ASCII) pair.
@@ -41,13 +67,13 @@ var registry = []struct {
 }{
 	{"chevron_right", puaChevronRight, ASCIIPrompt},
 	{"robot", puaRobot, ASCIIRobot},
-	{"circle_filled", puaCircleMedium, ASCIICircleFilled},
-	{"circle_outline", puaCircle, ASCIICircleOutline},
+	{"circle_filled", puaCircleFilled, ASCIICircleFilled},
+	{"circle_outline", puaCircleOutline, ASCIICircleOutline},
 	{"alert", puaAlert, ASCIIAlert},
 	{"check_bold", puaCheckBold, ASCIICheck},
 	{"close_thick", puaCloseThick, ASCIICross},
 	{"ballot_x", puaCloseThick, ASCIIBallotX},
-	{"block", puaCircleMedium, ASCIIBlock},
+	{"block", puaCircleFilled, ASCIIBlock},
 	{"return", puaArrowUpBold, ASCIIReturn},
 	{"arrow_right", puaArrowRight, ASCIIArrowRight},
 	{"arrow_left", puaArrowLeft, ASCIIArrowLeft},
@@ -64,6 +90,34 @@ var registry = []struct {
 	{"file", puaFile, ASCIIFile},
 	{"question", puaQuestion, ASCIIQuestion},
 	{"mail", puaMail, ASCIIMail},
+	{"refresh", puaRefresh, ASCIIRefresh},
+	{"hourglass", puaHourglass, ASCIIHourglass},
+	{"check_circle", puaCheckCircle, ASCIICheckCircle},
+	{"close_circle", puaCloseCircle, ASCIICloseCircle},
+	{"image", puaImage, ASCIIImage},
+	{"file_document", puaFileDocument, ASCIIFileDocument},
+	{"key", puaKey, ASCIIKey},
+	{"cog", puaCog, ASCIICog},
+	{"magnify", puaMagnify, ASCIIMagnify},
+	{"bolt", puaBolt, ASCIIBolt},
+	{"brain", puaBrain, ASCIIBrain},
+	{"email", puaEmail, ASCIIEmail},
+	{"help_circle", puaHelpCircle, ASCIIHelpCircle},
+	{"branch", puaBranch, ASCIIBranch},
+	{"clock_outline", puaClockOutline, ASCIIClockOutline},
+	{"pause", puaPause, ASCIIPause},
+	{"expand_all", puaExpandAll, ASCIIExpandAll},
+	{"caret_right", puaCaretRight, ASCIICaretRight},
+	{"caret_down", puaCaretDown, ASCIICaretDown},
+	{"triangle_small", puaTriangleSmall, ASCIITriangleSmall},
+	{"circle_half", puaCircleHalf, ASCIICircleHalf},
+	{"circle_quarter", puaCircleQuarter, ASCIICircleQuarter},
+	{"circle_slice_5", puaCircleSlice5, ASCIICircleSlice5},
+	{"circle_slice_6", puaCircleSlice6, ASCIICircleSlice6},
+	{"rotate_variant", puaRotateVariant, ASCIIRotateVariant},
+	{"llama", puaLlama, ASCIILlama},
+	{"check", puaCheckBold, ASCIICheck},
+	{"close", puaCloseThick, ASCIICross},
 }
 
 func lookup(name string) (string, string, bool) {
@@ -150,3 +204,31 @@ func AlertOctagram() string { return Glyph("alert_octagram") }
 func File() string          { return Glyph("file") }
 func Question() string      { return Glyph("question") }
 func Mail() string          { return Glyph("mail") }
+func Refresh() string       { return Glyph("refresh") }
+func Hourglass() string     { return Glyph("hourglass") }
+func CheckCircle() string   { return Glyph("check_circle") }
+func CloseCircle() string   { return Glyph("close_circle") }
+func Image() string         { return Glyph("image") }
+func FileDocument() string  { return Glyph("file_document") }
+func Key() string           { return Glyph("key") }
+func Cog() string           { return Glyph("cog") }
+func Magnify() string       { return Glyph("magnify") }
+func Bolt() string          { return Glyph("bolt") }
+func Brain() string         { return Glyph("brain") }
+func Email() string         { return Glyph("email") }
+func HelpCircle() string    { return Glyph("help_circle") }
+func Branch() string        { return Glyph("branch") }
+func ClockOutline() string  { return Glyph("clock_outline") }
+func Pause() string         { return Glyph("pause") }
+func ExpandAll() string     { return Glyph("expand_all") }
+func CaretRight() string    { return Glyph("caret_right") }
+func CaretDown() string     { return Glyph("caret_down") }
+func TriangleSmall() string { return Glyph("triangle_small") }
+func CircleHalf() string    { return Glyph("circle_half") }
+func CircleQuarter() string { return Glyph("circle_quarter") }
+func CircleSlice5() string  { return Glyph("circle_slice_5") }
+func CircleSlice6() string  { return Glyph("circle_slice_6") }
+func Check() string         { return Glyph("check") }
+func Close() string         { return Glyph("close") }
+func RotateVariant() string { return Glyph("rotate_variant") }
+func Llama() string         { return Glyph("llama") }
