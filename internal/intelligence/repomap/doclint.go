@@ -1,4 +1,4 @@
-// Package repomap: doclint.go checks Go (and selectively other) source
+// doclint.go checks Go (and selectively other) source
 // files for missing, outdated, incomplete, or unclear doc comments on
 // exported symbols, and produces a per-file DocLintResult with a score
 // and issue list. The result feeds the documentation-coverage dimension

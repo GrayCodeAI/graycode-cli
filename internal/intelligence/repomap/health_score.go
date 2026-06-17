@@ -1,4 +1,4 @@
-// Package repomap: health_score.go rolls the individual signals
+// health_score.go rolls the individual signals
 // (complexity, smells, dead code, doc coverage, ownership, duplication)
 // into a single weighted HealthScore with per-dimension breakdowns,
 // issue lists, and a letter grade. CompareScores produces a "before /

@@ -1,4 +1,4 @@
-// Package repomap: imports.go builds a file-level ImportGraph from a Go
+// imports.go builds a file-level ImportGraph from a Go
 // project, mapping each file to its imports and reverse-mapping dependents.
 // The graph is the cheapest cross-file signal in the package and is used by
 // ChangeSetContext, PredictRelevantFiles, and the symbol reranker.

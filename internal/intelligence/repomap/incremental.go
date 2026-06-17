@@ -1,4 +1,4 @@
-// Package repomap: incremental.go defines the CodeIndexer interface
+// incremental.go defines the CodeIndexer interface
 // (the contract the repomap package uses to push code chunks to and
 // query code chunks from a downstream store such as the memory package's
 // YaadBridge) and IncrementalReindex, which diffs the project tree

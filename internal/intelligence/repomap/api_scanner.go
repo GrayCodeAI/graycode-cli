@@ -1,4 +1,4 @@
-// Package repomap: api_scanner.go discovers HTTP endpoints in a project
+// api_scanner.go discovers HTTP endpoints in a project
 // by detecting the framework (Chi, net/http, Gin, Echo, Gorilla mux, or
 // Fiber) and extracting route declarations into an APIMap. FormatAPIMap
 // renders the routes as text; GenerateOpenAPI produces a 3.x OpenAPI

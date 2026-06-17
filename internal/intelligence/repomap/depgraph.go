@@ -1,4 +1,4 @@
-// Package repomap: depgraph.go constructs a package-level dependency graph
+// depgraph.go constructs a package-level dependency graph
 // for Go (via go.mod + go/parser ImportsOnly) and JavaScript/TypeScript
 // (via package.json + import/require regexes). It computes topological
 // order, layers, cycles, hot paths, and renders the result as DOT,
