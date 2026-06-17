@@ -13,7 +13,7 @@ func (c *costSubcommand) Aliases() []string   { return nil }
 func (c *costSubcommand) Description() string { return "print session cost and token usage summary" }
 func (c *costSubcommand) Usage() string       { return "" }
 func (c *costSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-	m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
+	m.messages = append(m.messages, displayMsg{role: "system", content: m.session.CostValue().Summary()})
 	return m, nil
 }
 

@@ -139,7 +139,7 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 	model, contextLabel = modelStatusMeta(gw, modelID)
 	if contextLabel == "" || contextLabel == "—" || contextLabel == "0k" {
 		if m.session != nil {
-			if w := m.session.ContextWindowCached; w > 0 {
+			if w := m.session.ContextWindowCachedValue(); w > 0 {
 				contextLabel = formatModelTableContext(w)
 			} else if w := m.session.ContextWindowSize(); w > 0 && w != engine.DefaultContextWindow {
 				contextLabel = formatModelTableContext(w)
@@ -149,7 +149,7 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 			if w := platformContextForNativeModel(modelID); w > 0 {
 				contextLabel = formatModelTableContext(w)
 				if m.session != nil {
-					m.session.ContextWindowCached = w
+					m.session.SetContextWindowCached(w)
 					m.session.EnsureAutoCompactor()
 				}
 			}

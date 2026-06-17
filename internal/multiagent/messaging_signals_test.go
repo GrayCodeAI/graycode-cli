@@ -339,75 +339,67 @@ func TestWaitForLock_WaiterCleanedUpOnTimeout(t *testing.T) {
 
 // TestWaitForLock_MultipleWaiters_OnlyOneAcquires: two waiters on
 // the same resource; ReleaseLock wakes both; only one acquires; the
-// other re-registers and waits again.
+// other returns an error (does not re-register, see M7).
 func TestWaitForLock_MultipleWaiters_OnlyOneAcquires(t *testing.T) {
 	mb := NewMessageBus()
 	if err := mb.AcquireLock("res-shared", "owner-a", time.Second); err != nil {
 		t.Fatalf("AcquireLock: %v", err)
 	}
 
-	results := make(chan string, 2)
+	type result struct {
+		owner string
+		err   error
+	}
+	results := make(chan result, 2)
 	for _, owner := range []string{"owner-b", "owner-c"} {
 		owner := owner
 		go func() {
 			err := mb.WaitForLock("res-shared", owner, 500*time.Millisecond)
-			if err != nil {
-				results <- "err:" + err.Error()
-			} else {
-				results <- "acquired:" + owner
-			}
+			results <- result{owner, err}
 		}()
 	}
 	time.Sleep(20 * time.Millisecond)
 
 	// First release: both waiters wake, one acquires, the other
-	// re-registers and waits again.
+	// returns an error (M7: no re-register, no busy-spin).
 	if err := mb.ReleaseLock("res-shared", "owner-a"); err != nil {
 		t.Fatalf("ReleaseLock: %v", err)
 	}
 
-	// One of the two should acquire.
-	select {
-	case r := <-results:
-		if !strings.HasPrefix(r, "acquired:") {
-			t.Fatalf("first waiter did not acquire: %s", r)
-		}
-	case <-time.After(200 * time.Millisecond):
-		t.Fatal("no first waiter result")
-	}
-
-	// The other should still be waiting. Release again so it can acquire.
-	mb.lockMu.Lock()
-	holder := ""
-	for res, lock := range mb.locks {
-		if res == "res-shared" {
-			holder = lock.Owner
+	var winner result
+	var loser result
+	gotBoth := 0
+	for gotBoth < 2 {
+		select {
+		case r := <-results:
+			if r.err == nil {
+				winner = r
+			} else {
+				loser = r
+			}
+			gotBoth++
+		case <-time.After(200 * time.Millisecond):
+			t.Fatalf("only %d/2 waiter results", gotBoth)
 		}
 	}
-	mb.lockMu.Unlock()
-	if holder == "" {
-		t.Fatal("expected a holder after first acquisition")
+	if winner.err != nil {
+		t.Fatalf("first waiter did not acquire: err=%v", winner.err)
 	}
-	if err := mb.ReleaseLock("res-shared", holder); err != nil {
-		t.Fatalf("ReleaseLock 2: %v", err)
+	if loser.err == nil {
+		t.Fatalf("second waiter unexpectedly acquired: %+v", loser)
 	}
-
-	select {
-	case r := <-results:
-		if !strings.HasPrefix(r, "acquired:") {
-			t.Fatalf("second waiter did not acquire: %s", r)
-		}
-		if strings.TrimPrefix(r, "acquired:") == holder {
-			t.Errorf("second waiter is the same as first: %s", holder)
-		}
-	case <-time.After(300 * time.Millisecond):
-		t.Fatal("no second waiter result")
+	if winner.owner == loser.owner {
+		t.Errorf("both waiters are the same: %s", winner.owner)
 	}
 }
 
-// TestWaitForLock_OwnerMismatchOnRelease: a ReleaseLock from a
-// non-owner does not wake waiters.
-func TestWaitForLock_OwnerMismatchOnRelease(t *testing.T) {
+// TestReleaseLock_NonOwnerReturnsError verifies that ReleaseLock
+// returns an error when the caller is not the lock owner. The
+// error is independent of any waiter (which the next test covers).
+// Renamed from TestWaitForLock_OwnerMismatchOnRelease — the original
+// name claimed the test was about "waiters not being woken", but
+// the body only checked the error return (see M10 in the code review).
+func TestReleaseLock_NonOwnerReturnsError(t *testing.T) {
 	mb := NewMessageBus()
 	_ = mb.AcquireLock("res-1", "owner-a", time.Second)
 	_ = mb.AcquireLock("res-1", "owner-b", time.Second) // should fail but...
@@ -420,16 +412,83 @@ func TestWaitForLock_OwnerMismatchOnRelease(t *testing.T) {
 	}
 }
 
+// TestWaitForLock_ReleaseByNonOwnerDoesNotWakeWaiter is the
+// matching waiter-assertion test that the original
+// TestWaitForLock_OwnerMismatchOnRelease claimed to be. It
+// registers a real waiter, attempts a ReleaseLock from a
+// non-owner (which returns an error and must NOT close the
+// waiter's done channel), and verifies the waiter times out
+// at the configured timeout (rather than being woken by the
+// failed ReleaseLock).
+func TestWaitForLock_ReleaseByNonOwnerDoesNotWakeWaiter(t *testing.T) {
+	mb := NewMessageBus()
+	if err := mb.AcquireLock("res-1", "owner-a", time.Second); err != nil {
+		t.Fatalf("AcquireLock: %v", err)
+	}
+
+	// Register a waiter in a goroutine. The waiter uses a short
+	// timeout (80ms) so the test runs quickly if the failed
+	// ReleaseLock does not wake it.
+	timeout := 80 * time.Millisecond
+	type result struct {
+		err error
+	}
+	results := make(chan result, 1)
+	go func() {
+		err := mb.WaitForLock("res-1", "owner-b", timeout)
+		results <- result{err}
+	}()
+	// Give the waiter time to register.
+	time.Sleep(20 * time.Millisecond)
+
+	// Attempt ReleaseLock from the wrong owner. This must NOT
+	// wake the waiter; the waiter should time out at ~timeout.
+	err := mb.ReleaseLock("res-1", "owner-b") // wrong owner
+	if err == nil {
+		t.Fatal("expected error on owner mismatch, got nil")
+	}
+
+	// The waiter should now time out (not be woken early).
+	select {
+	case r := <-results:
+		if r.err == nil {
+			t.Fatal("waiter was unexpectedly woken by failed ReleaseLock (M10 regression)")
+		}
+		if !strings.Contains(r.err.Error(), "timeout") {
+			t.Errorf("waiter err = %q, want 'timeout'", r.err.Error())
+		}
+	case <-time.After(timeout + 200*time.Millisecond):
+		t.Fatal("waiter did not return within timeout window")
+	}
+}
+
 // TestStats_NotAffectedByWaiters: responseWaiters and lockWaiters
 // do not appear in Stats; they are internal channels, not counters.
+//
+// The previous implementation launched a goroutine calling
+// WaitForResponse and never joined it — the goroutine ran for
+// 100ms after the test exited (M11 goroutine leak). Fixed by
+// using a done channel and a 1-second timeout to coordinate
+// the goroutine's lifetime with the test's.
 func TestStats_NotAffectedByWaiters(t *testing.T) {
 	mb := NewMessageBus()
 	_ = mb.Register("a")
 	_ = mb.Register("b")
 	_ = mb.Send(AgentMessage{ID: "req", From: "a", To: "b"})
+
+	// Use a done channel + 1-second timeout to join the goroutine.
+	// WaitForResponse returns after the configured 100ms timeout
+	// (no matching response is sent), so the goroutine completes
+	// well before the 1-second join deadline.
+	done := make(chan struct{})
 	go func() {
 		_, _ = mb.WaitForResponse("req", 100*time.Millisecond)
+		close(done)
 	}()
+
+	// Give the goroutine a moment to register as a waiter so the
+	// Stats() assertion below is meaningful (the waiter exists in
+	// the responseWaiters map at this point).
 	time.Sleep(10 * time.Millisecond)
 	stats := mb.Stats()
 	// HistorySz should reflect the seeded message; Agents 2; Dropped 0.
@@ -438,5 +497,15 @@ func TestStats_NotAffectedByWaiters(t *testing.T) {
 	}
 	if stats.Dropped != 0 {
 		t.Errorf("Dropped = %d, want 0", stats.Dropped)
+	}
+
+	// Join the goroutine via the done channel + 1-second timeout.
+	// If the goroutine is still running after 1s, fail loudly.
+	select {
+	case <-done:
+		// Goroutine completed (the WaitForResponse timeout fired
+		// and the waiter cleaned itself up).
+	case <-time.After(1 * time.Second):
+		t.Fatal("WaitForResponse goroutine did not return within 1s; M11 goroutine leak")
 	}
 }

@@ -192,7 +192,7 @@ func (m chatModel) flushSandboxReadyMessage() chatModel {
 	m.sandboxReadyPending = false
 	m.messages = append(m.messages, displayMsg{
 		role:    "system",
-		content: formatSandboxReadyAutonomyMessage(m.session.Autonomy),
+		content: formatSandboxReadyAutonomyMessage(m.session.PermSvc().Autonomy()),
 	})
 	m.viewDirty = true
 	return m

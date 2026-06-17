@@ -70,9 +70,9 @@ func renderStatusBarRight(m *chatModel) string {
 	focusStyle := lipgloss.NewStyle().Foreground(infoSky).Inline(true)
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 
-	tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
+	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
 	tokenText := "● " + formatTokenCountCompact(tokens) + " tokens"
-	costText := fmt.Sprintf("$%.2f", m.session.Cost.Total())
+	costText := fmt.Sprintf("$%.2f", m.session.CostValue().Total())
 	timerText := icons.ClockOutline() + " " + formatSessionDuration(sessionDuration(m))
 
 	var meta []string
@@ -191,8 +191,8 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 	}
 	if m.containerReady && strings.TrimSpace(m.containerStatus) != "" {
 		tier := "Builder"
-		if m.session != nil && m.session.Autonomy != 0 {
-			tier = autonomyTierName(m.session.Autonomy)
+		if m.session != nil && m.session.PermSvc().Autonomy() != 0 {
+			tier = autonomyTierName(m.session.PermSvc().Autonomy())
 		}
 		status := shortenFooterContainerStatus(strings.TrimSpace(m.containerStatus))
 		return bold, fmt.Sprintf(" %s · %s", status, tier)
@@ -251,7 +251,7 @@ func statusLineSummary(m *chatModel) string {
 		branch, _ = gitOutput("rev-parse", "--short", "HEAD")
 	}
 	gw, model, _ := m.connectionStatusParts()
-	tokens := m.session.Cost.PromptTokens + m.session.Cost.CompletionTokens
+	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
 	return fmt.Sprintf(
 		"Status line (footer)\n  cwd: %s\n  branch: %s\n  gateway: %s\n  model: %s\n  tokens: %s\n  cost: $%.2f\n  duration: %s\n  %s",
 		shortenHomePath(cwd),
@@ -259,8 +259,8 @@ func statusLineSummary(m *chatModel) string {
 		gw,
 		model,
 		formatTokenCountWithCommas(tokens),
-		m.session.Cost.Total(),
+		m.session.CostValue().Total(),
 		formatSessionDuration(sessionDuration(m)),
-		m.session.Cost.Summary(),
+		m.session.CostValue().Summary(),
 	)
 }

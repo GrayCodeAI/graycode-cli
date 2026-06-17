@@ -123,7 +123,7 @@ func (m *chatModel) mcpSummary() string {
 
 func sessionStats(sess *engine.Session, id string) string {
 	return fmt.Sprintf("Session: %s\nMessages: %d\nModel: %s/%s\n%s",
-		id, sess.MessageCount(), sess.Provider(), sess.Model(), sess.Cost.Summary())
+		id, sess.MessageCount(), sess.Provider(), sess.Model(), sess.CostValue().Summary())
 }
 
 func hooksSummary() string {

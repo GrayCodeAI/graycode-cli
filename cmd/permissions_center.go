@@ -157,7 +157,7 @@ func permissionCenterSummary(m *chatModel) string {
 	b.WriteString(fmt.Sprintf("  Mode: %s\n", permissionModeLabel(m.session)))
 	b.WriteString(fmt.Sprintf("  Rules: %d allow, %d deny\n", len(allowRules), len(denyRules)))
 	b.WriteString(fmt.Sprintf("  Behavior: %s\n", permissionBehaviorSummary(level)))
-	b.WriteString(fmt.Sprintf("  Mode behavior: %s\n", permissionModeSummary(m.session.Mode)))
+	b.WriteString(fmt.Sprintf("  Mode behavior: %s\n", permissionModeSummary(m.session.ModeValue())))
 	if len(allowRules) > 0 {
 		b.WriteString("  Allow: " + strings.Join(allowRules, ", ") + "\n")
 	}
@@ -298,7 +298,7 @@ func resetPermissionCenter(m *chatModel) {
 	if m == nil || m.session == nil {
 		return
 	}
-	m.session.Autonomy = DefaultContainerAutonomy
+	m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 	m.settings.Autonomy = permissionTierSettingValue(DefaultContainerAutonomy)
 	m.settings.Sandbox = defaultPermissionSandbox
 	sandboxFlag = defaultPermissionSandbox
@@ -324,7 +324,7 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 		m.messages = append(m.messages, displayMsg{role: "system", content: permissionCenterSummary(m)})
 	case "mode":
 		if len(parts) < 3 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Current mode: %s\nBehavior: %s\nUsage: /permissions mode <default|edits|bypass|dontask|plan>", permissionModeLabel(m.session), permissionModeSummary(m.session.Mode))})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Current mode: %s\nBehavior: %s\nUsage: /permissions mode <default|edits|bypass|dontask|plan>", permissionModeLabel(m.session), permissionModeSummary(m.session.ModeValue()))})
 			return *m, nil
 		}
 		mode, label, ok := normalizePermissionMode(parts[2])
@@ -347,7 +347,7 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid tiers: scout, builder, operator, autonomous"})
 			return *m, nil
 		}
-		m.session.Autonomy = level
+		m.session.PermSvc().SetAutonomy(level)
 		m.settings.Autonomy = permissionTierSettingValue(level)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission tier → %s\nBehavior: %s", label, permissionBehaviorSummary(level))})
 	case "sandbox":

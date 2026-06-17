@@ -89,7 +89,10 @@ func NewSubcommandRegistry() *SubcommandRegistry {
 // all aliases are indexed. If a name is already registered, this
 // is a no-op (the existing entry is kept) — duplicate registration
 // is treated as a configuration error but doesn't panic, so test
-// ordering and re-init don't blow up the binary.
+// ordering and re-init don't blow up the binary. The same applies
+// to alias collisions: if any of the subcommand's aliases is already
+// registered (either as a primary or as another alias), registration
+// is rejected (see M5 in the code review).
 func (r *SubcommandRegistry) Register(cmd ChatSubcommand) {
 	if cmd == nil {
 		return
@@ -99,6 +102,11 @@ func (r *SubcommandRegistry) Register(cmd ChatSubcommand) {
 	name := cmd.Name()
 	if _, exists := r.primary[name]; exists {
 		return // duplicate
+	}
+	for _, alias := range cmd.Aliases() {
+		if _, exists := r.aliasOf[alias]; exists {
+			return // alias collision
+		}
 	}
 	r.primary[name] = cmd
 	for _, alias := range cmd.Aliases() {

@@ -12,7 +12,7 @@ import (
 
 func newTestChatModel() *chatModel {
 	sess := engine.NewSession("", "test-model", "you are helpful", nil)
-	sess.MaxTurns = 1
+	sess.PermSvc().SetMaxTurns(1)
 	sess.SetTestClient(engine.NewMockClientForTest())
 
 	m := &chatModel{
