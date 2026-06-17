@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"go/ast"
 	"strings"
 	"testing"
 )
@@ -689,5 +690,22 @@ func TestGenerateSummaryNoAPIs(t *testing.T) {
 	summary := GenerateSummary(diff)
 	if strings.Contains(summary, "Affected APIs:") {
 		t.Error("should not contain Affected APIs when there are none")
+	}
+}
+
+// TestFormatNodeNonExprRegression guards H10 — a non-ast.Expr node (e.g. *ast.Comment)
+// must not panic; the comma-ok form should fall through to "unknown".
+func TestFormatNodeNonExprRegression(t *testing.T) {
+	// *ast.Comment is ast.Node but not ast.Expr. Pre-fix this panicked
+	// with "interface conversion: *ast.Comment is not ast.Expr".
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("formatNode panicked on non-Expr node: %v", r)
+		}
+	}()
+
+	got := formatNode(nil, &ast.Comment{Text: "x"})
+	if got != "unknown" {
+		t.Errorf("formatNode(*ast.Comment) = %q, want %q", got, "unknown")
 	}
 }
