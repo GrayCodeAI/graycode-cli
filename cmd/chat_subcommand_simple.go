@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -587,6 +591,323 @@ func init() {
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Messages: %d\nEstimated tokens: ~%d", m.session.MessageCount(), m.session.MessageCount()*200)})
+			return m, nil
+		},
+	})
+
+	// /research — set up a research experiment
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "research",
+		description: "set up a research experiment (--grep, --direction, --budget, --branch, --results)",
+		usage:       "/research [flags] <metric-command>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /research [--grep <pattern>] [--direction lower|higher] [--budget <min>] [--branch <prefix>] [--results <file>] <metric-command>\nExample: /research go test -bench .\nExample: /research --grep '^val_bpb:' --direction lower uv run train.py"})
+				return m, nil
+			}
+			argText := strings.TrimSpace(strings.TrimPrefix(text, "/research"))
+			cfg := parseResearchArgs(argText)
+			if cfg.MetricCmd == "" {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Metric command is required."})
+				return m, nil
+			}
+			prompt := BuildResearchPrompt(cfg)
+			return m.startPromptCommand("/research", prompt)
+		},
+	})
+
+	// /explain <file>:<line> — trace code back to the commit that created it
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "explain",
+		description: "trace code back to the commit that created it",
+		usage:       "/explain <file>:<line>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /explain <file>:<line>  — trace code back to the commit that created it"})
+				return m, nil
+			}
+			arg := args[0]
+			path := arg
+			line := 1
+			if idx := strings.LastIndex(arg, ":"); idx > 0 {
+				path = arg[:idx]
+				if n, err := strconv.Atoi(arg[idx+1:]); err == nil {
+					line = n
+				}
+			}
+			result, err := explainCode(path, line)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "assistant", content: result})
+			}
+			return m, nil
+		},
+	})
+
+	// /feedback <msg> — submit feedback saved to ~/.hawk/feedback/
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "feedback",
+		description: "submit feedback (saved to ~/.hawk/feedback/)",
+		usage:       "/feedback <message>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			body := strings.TrimSpace(strings.TrimPrefix(text, "/feedback"))
+			if body == "" {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to ~/.hawk/feedback/"})
+				return m, nil
+			}
+			homeDir := home.Dir()
+			feedDir := filepath.Join(homeDir, ".hawk", "feedback")
+			_ = os.MkdirAll(feedDir, 0o755)
+			report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
+				time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)
+			fname := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))
+			fpath := filepath.Join(feedDir, fname)
+			if err := os.WriteFile(fpath, []byte(report), 0o644); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to save feedback: " + err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Feedback saved to %s", fpath)})
+			}
+			return m, nil
+		},
+	})
+
+	// /stale [duration] — show stale permission rules
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "stale",
+		description: "show stale permission rules that may need removal",
+		usage:       "/stale [duration]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if m.stalenessDetector == nil {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No staleness data available yet. Rules will be tracked as they are used."})
+				return m, nil
+			}
+			threshold := 7 * 24 * time.Hour // 7 days default
+			if len(args) >= 1 {
+				if d, err := time.ParseDuration(args[0]); err == nil {
+					threshold = d
+				}
+			}
+			staleRules := m.stalenessDetector.CheckStaleness(threshold)
+			if len(staleRules) == 0 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No stale rules detected. All rules have been used within the threshold."})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: stalenessFormatReport(staleRules)})
+			}
+			return m, nil
+		},
+	})
+
+	// /taste — show learned coding style preferences
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "taste",
+		description: "show learned coding style preferences",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			store, err := tasteStoreForSession()
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Taste store error: " + err.Error()})
+				return m, nil
+			}
+			cwd, _ := os.Getwd()
+			projectID := filepath.Base(cwd)
+			profile, err := store.Load(projectID)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Load taste profile: " + err.Error()})
+				return m, nil
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: profile.Summary()})
+			return m, nil
+		},
+	})
+
+	// /stats [days] — session statistics
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "stats",
+		description: "show session statistics (analytics.ComputeStats)",
+		usage:       "/stats [days]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			days := 30
+			if len(args) >= 1 {
+				if d, err := strconv.Atoi(args[0]); err == nil && d > 0 {
+					days = d
+				}
+			}
+			stats, err := analytics.ComputeStats(days)
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "system", content: sessionStats(m.session, m.sessionID)})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: analytics.FormatStats(stats)})
+			}
+			return m, nil
+		},
+	})
+
+	// /image — handle image input
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "image",
+		description: "add an image to the conversation (delegates to handleImageCommand)",
+		usage:       "/image <path>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			return m.handleImageCommand(append([]string{"/image"}, args...), text)
+		},
+	})
+
+	// /provider-status — show deployment status
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "provider-status",
+		description: "show provider deployment status",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			report, err := hawkconfig.DeploymentStatusReport(context.Background(), m.session.Model())
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Provider status failed: %v", err)})
+				return m, nil
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: report})
+			return m, nil
+		},
+	})
+
+	// /refresh-model-catalog — refresh the model catalog
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "refresh-model-catalog",
+		description: "refresh the model catalog",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			summary, err := hawkconfig.RefreshModelCatalogV1(context.Background())
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Model catalog refresh failed: %v", err)})
+				return m, nil
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: summary})
+			return m, nil
+		},
+	})
+
+	// /insights [days] — generate session insights
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "insights",
+		description: "generate session insights report",
+		usage:       "/insights [days]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			days := 30
+			if len(args) >= 1 {
+				if d, err := strconv.Atoi(args[0]); err == nil && d > 0 {
+					days = d
+				}
+			}
+			report, err := analytics.GenerateInsights(days, nil)
+			if err != nil {
+				return m.startPromptCommand("/insights", "Generate a concise report of patterns, friction, wins, and suggested improvements from this session.")
+			}
+			path, saveErr := analytics.SaveInsightsReport(report)
+			if saveErr != nil {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Insights: %d sessions scanned, %d patterns found. (Failed to save: %v)", report.SessionsScanned, len(report.TopPatterns), saveErr)})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Insights report saved: %s\n%d sessions scanned, %d patterns.", path, report.SessionsScanned, len(report.TopPatterns))})
+			}
+			return m, nil
+		},
+	})
+
+	// /ctx, /ctx-viz — show session context usage
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "ctx",
+		aliases:     []string{"ctx-viz"},
+		description: "show session context usage",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: formatSessionContextUsage(m)})
+			m.viewDirty = true
+			return m, nil
+		},
+	})
+
+	// /home — go to home view
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "home",
+		description: "go to the home view",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.goHome()
+			m.updateViewportContent()
+			return m, nil
+		},
+	})
+
+	// /follow — toggle stream-follow mode
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "follow",
+		description: "toggle stream-follow mode (auto-scroll during replies)",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.streamFollow = !m.streamFollow
+			if m.streamFollow {
+				m.autoScroll = true
+				m.viewport.GotoBottom()
+			}
+			state := "off"
+			if m.streamFollow {
+				state = "on"
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Stream follow: " + state + " (scroll up or Tab→scrollback freezes view during replies)"})
+			m.viewDirty = true
+			return m, nil
+		},
+	})
+
+	// /btw <note> — add a background note the model should keep in mind
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "btw",
+		description: "add a background note the model should keep in mind",
+		usage:       "/btw <note>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /btw <message>"})
+				return m, nil
+			}
+			note := strings.TrimSpace(strings.TrimPrefix(text, "/btw"))
+			m.session.AddUser(fmt.Sprintf("[Background note — do not respond to this directly, just acknowledge and keep it in mind]\n%s", note))
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Noted: %s", note)})
+			return m, nil
+		},
+	})
+
+	// /loop <interval> <command> — run a command on an interval
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "loop",
+		description: "run a command on an interval (e.g., /loop 5m /doctor)",
+		usage:       "/loop <interval> <command>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 2 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /loop <interval> <command> (e.g., /loop 5m /doctor)"})
+				return m, nil
+			}
+			interval, err := time.ParseDuration(args[0])
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Invalid interval %q: %v", args[0], err)})
+				return m, nil
+			}
+			loopCmd := strings.Join(args[1:], " ")
+			if m.loopCancel != nil {
+				m.loopCancel()
+			}
+			loopCtx, loopCancel := context.WithCancel(context.Background())
+			m.loopCancel = loopCancel
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Loop started: %s every %s (stop with /clear)", loopCmd, interval)})
+			go func() {
+				ticker := time.NewTicker(interval)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-loopCtx.Done():
+						return
+					case <-ticker.C:
+						m.ref.Send(loopTickMsg{command: loopCmd})
+					}
+				}
+			}()
 			return m, nil
 		},
 	})
