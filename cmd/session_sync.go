@@ -11,7 +11,7 @@ import (
 
 // syncSessionFromPersistedSelection copies eyrie provider.json selection into the
 // live session when the session fields are empty (status bar can show ActiveModel
-// while s.model is still unset, which breaks deployment routing).
+// while the model field is still unset, which breaks deployment routing).
 func syncSessionFromPersistedSelection(sess *engine.Session, settings hawkconfig.Settings) {
 	if sess == nil {
 		return

@@ -15,8 +15,8 @@ func TestRenderStatusBar_SignatureExists(t *testing.T) {
 
 func TestRenderStatusBarRight_IncludesTokensLabel(t *testing.T) {
 	m := &chatModel{session: &engine.Session{}}
-	m.session.Cost.PromptTokens = 1200
-	m.session.Cost.CompletionTokens = 300
+	m.session.CostValue().PromptTokens = 1200
+	m.session.CostValue().CompletionTokens = 300
 	got := renderStatusBarRight(m)
 	if !strings.Contains(got, "tokens") {
 		t.Fatalf("expected tokens label in footer right, got %q", got)

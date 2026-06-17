@@ -315,7 +315,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:commandPalette")
 
 	// Pre-warm footer connection line so ctx (e.g. 0k/1.0m) shows on first paint.
-	if m.session != nil && m.session.ContextWindowCached > 0 {
+	if m.session != nil && m.session.ContextWindowCachedValue() > 0 {
 		m.connStatusVal = m.buildConnectionStatusPlain()
 		m.connStatusKey = m.connStatusFingerprint()
 	}

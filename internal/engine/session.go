@@ -740,6 +740,36 @@ func (s *Session) SetConvoDAG(dag *storage.DAG) {
 	}
 }
 
+// SetContextWindowCached sets the catalog context window. New code
+// should call this instead of writing to the legacy
+// s.ContextWindowCached field directly.
+func (s *Session) SetContextWindowCached(n int) {
+	s.ContextWindowCached = n
+	if s.persist != nil {
+		s.persist.SetContextWindowCached(n)
+	}
+}
+
+// ModeValue returns the active permission mode, with the
+// PermissionService's mode taking precedence over the legacy
+// s.Mode field. Used by /permissions summary, /status, and the
+// chat footer to render the active permission mode.
+func (s *Session) ModeValue() PermissionMode {
+	if s.perms != nil {
+		return s.perms.Mode()
+	}
+	return s.Mode
+}
+
+// SetMode replaces the active permission mode. New code should
+// call this instead of writing to the legacy s.Mode field.
+func (s *Session) SetMode(mode PermissionMode) {
+	s.Mode = mode
+	if s.perms != nil {
+		_ = s.perms.SetMode(string(mode))
+	}
+}
+
 // ContextWindowCachedValue returns the cached context window size.
 // New code should call this instead of reading s.ContextWindowCached
 // directly. Falls back to the legacy field for back-compat with

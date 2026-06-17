@@ -149,7 +149,7 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 			if w := platformContextForNativeModel(modelID); w > 0 {
 				contextLabel = formatModelTableContext(w)
 				if m.session != nil {
-					m.session.Persistence().SetContextWindowCached(w)
+					m.session.SetContextWindowCached(w)
 					m.session.EnsureAutoCompactor()
 				}
 			}
