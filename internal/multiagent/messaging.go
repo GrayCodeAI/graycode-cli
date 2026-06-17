@@ -548,11 +548,19 @@ func (mb *MessageBus) IsLocked(resource string) bool {
 // registers as a waiter; ReleaseLock() closes the done channel when
 // the lock is freed. This replaces the previous 20ms busy-poll.
 //
-// After each signal (or on entry, before registering) the caller
-// re-attempts AcquireLock. If a different waiter won the race, the
-// caller loops and waits for the next signal. This is the standard
-// "thundering herd" pattern; in practice there are only a few waiters
-// per resource so the cost is negligible.
+// Once ReleaseLock closes our done channel, the channel stays closed
+// for the lifetime of the waiter. The previous implementation re-entered
+// the select after each signal, which (a) busy-spinned calling
+// AcquireLock on the same closed-channel signal under contention and
+// (b) raced the timer.C case: both `<-w.done` and `<-timer.C` are
+// ready, and select picks randomly — so the timeout could be missed
+// or the function could loop indefinitely waiting on the second signal
+// from a ReleaseLock that never re-fires. (See M7 in the code review.)
+//
+// Fix: use a one-shot select. On the first signal (w.done or timer),
+// try AcquireLock exactly once. If it succeeds, return nil; if the
+// timer fired, return a timeout error. There is no second loop, so
+// no busy-spin and no select race.
 func (mb *MessageBus) WaitForLock(resource, owner string, timeout time.Duration) error {
 	// Fast path: try immediately; the lock can be acquired without
 	// waiting if no one else holds it.
@@ -571,17 +579,17 @@ func (mb *MessageBus) WaitForLock(resource, owner string, timeout time.Duration)
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
-	for {
-		select {
-		case <-w.done:
-			// Lock was released. Retry immediately; if another waiter
-			// won the race, loop and wait for the next signal.
-			if err := mb.AcquireLock(resource, owner, timeout); err == nil {
-				return nil
-			}
-		case <-timer.C:
-			return fmt.Errorf("timeout waiting for lock on %q", resource)
+	select {
+	case <-w.done:
+		// Lock was released by another agent. Try to acquire it.
+		// If we lose the race to a sibling waiter, return an error
+		// rather than re-registering and looping (M7 fix: no busy-spin).
+		if err := mb.AcquireLock(resource, owner, timeout); err != nil {
+			return err
 		}
+		return nil
+	case <-timer.C:
+		return fmt.Errorf("timeout waiting for lock on %q", resource)
 	}
 }
 

@@ -339,69 +339,57 @@ func TestWaitForLock_WaiterCleanedUpOnTimeout(t *testing.T) {
 
 // TestWaitForLock_MultipleWaiters_OnlyOneAcquires: two waiters on
 // the same resource; ReleaseLock wakes both; only one acquires; the
-// other re-registers and waits again.
+// other returns an error (does not re-register, see M7).
 func TestWaitForLock_MultipleWaiters_OnlyOneAcquires(t *testing.T) {
 	mb := NewMessageBus()
 	if err := mb.AcquireLock("res-shared", "owner-a", time.Second); err != nil {
 		t.Fatalf("AcquireLock: %v", err)
 	}
 
-	results := make(chan string, 2)
+	type result struct {
+		owner string
+		err   error
+	}
+	results := make(chan result, 2)
 	for _, owner := range []string{"owner-b", "owner-c"} {
 		owner := owner
 		go func() {
 			err := mb.WaitForLock("res-shared", owner, 500*time.Millisecond)
-			if err != nil {
-				results <- "err:" + err.Error()
-			} else {
-				results <- "acquired:" + owner
-			}
+			results <- result{owner, err}
 		}()
 	}
 	time.Sleep(20 * time.Millisecond)
 
 	// First release: both waiters wake, one acquires, the other
-	// re-registers and waits again.
+	// returns an error (M7: no re-register, no busy-spin).
 	if err := mb.ReleaseLock("res-shared", "owner-a"); err != nil {
 		t.Fatalf("ReleaseLock: %v", err)
 	}
 
-	// One of the two should acquire.
-	select {
-	case r := <-results:
-		if !strings.HasPrefix(r, "acquired:") {
-			t.Fatalf("first waiter did not acquire: %s", r)
-		}
-	case <-time.After(200 * time.Millisecond):
-		t.Fatal("no first waiter result")
-	}
-
-	// The other should still be waiting. Release again so it can acquire.
-	mb.lockMu.Lock()
-	holder := ""
-	for res, lock := range mb.locks {
-		if res == "res-shared" {
-			holder = lock.Owner
+	var winner result
+	var loser result
+	gotBoth := 0
+	for gotBoth < 2 {
+		select {
+		case r := <-results:
+			if r.err == nil {
+				winner = r
+			} else {
+				loser = r
+			}
+			gotBoth++
+		case <-time.After(200 * time.Millisecond):
+			t.Fatalf("only %d/2 waiter results", gotBoth)
 		}
 	}
-	mb.lockMu.Unlock()
-	if holder == "" {
-		t.Fatal("expected a holder after first acquisition")
+	if winner.err != nil {
+		t.Fatalf("first waiter did not acquire: err=%v", winner.err)
 	}
-	if err := mb.ReleaseLock("res-shared", holder); err != nil {
-		t.Fatalf("ReleaseLock 2: %v", err)
+	if loser.err == nil {
+		t.Fatalf("second waiter unexpectedly acquired: %+v", loser)
 	}
-
-	select {
-	case r := <-results:
-		if !strings.HasPrefix(r, "acquired:") {
-			t.Fatalf("second waiter did not acquire: %s", r)
-		}
-		if strings.TrimPrefix(r, "acquired:") == holder {
-			t.Errorf("second waiter is the same as first: %s", holder)
-		}
-	case <-time.After(300 * time.Millisecond):
-		t.Fatal("no second waiter result")
+	if winner.owner == loser.owner {
+		t.Errorf("both waiters are the same: %s", winner.owner)
 	}
 }
 
