@@ -234,7 +234,9 @@ func TestDaemon_RejectsUnknownFields(t *testing.T) {
 func TestDaemon_Chat_WithEngine(t *testing.T) {
 	factory := func(req ChatRequest) (*engine.Session, error) {
 		sess := engine.NewSession("", "test-model", "you are helpful", nil)
-		sess.MaxTurns = 1
+		if err := sess.SetMaxTurns(1); err != nil {
+			t.Fatalf("set max turns: %v", err)
+		}
 		return sess, nil
 	}
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, factory)

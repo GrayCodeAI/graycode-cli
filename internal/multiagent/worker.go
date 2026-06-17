@@ -41,11 +41,14 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		sess := engine.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
 
 		// Configure for autonomous operation
-		sess.Autonomy = engine.AutonomyLevel(cfg.AutonomyLevel)
-		if sess.Autonomy < engine.AutonomyFull {
-			sess.Autonomy = engine.AutonomyFull
+		level := engine.AutonomyLevel(cfg.AutonomyLevel)
+		if level < engine.AutonomyFull {
+			level = engine.AutonomyFull
 		}
-		sess.MaxTurns = 30
+		sess.PermSvc().SetAutonomy(level)
+		if err := sess.SetMaxTurns(30); err != nil {
+			return nil, fmt.Errorf("set max turns: %w", err)
+		}
 
 		// Auto-approve everything in mission workers
 		sess.PermissionFn = func(req engine.PermissionRequest) {
@@ -146,11 +149,14 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		settings := hawkconfig.LoadSettings()
 		sess := engine.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
 
-		sess.Autonomy = engine.AutonomyLevel(cfg.AutonomyLevel)
-		if sess.Autonomy < engine.AutonomyFull {
-			sess.Autonomy = engine.AutonomyFull
+		level := engine.AutonomyLevel(cfg.AutonomyLevel)
+		if level < engine.AutonomyFull {
+			level = engine.AutonomyFull
 		}
-		sess.MaxTurns = 30
+		sess.PermSvc().SetAutonomy(level)
+		if err := sess.SetMaxTurns(30); err != nil {
+			return nil, fmt.Errorf("set max turns: %w", err)
+		}
 		sess.PermissionFn = func(req engine.PermissionRequest) {
 			if req.Response != nil {
 				req.Response <- true
