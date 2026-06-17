@@ -104,12 +104,28 @@ func (mb *MessageBus) Stats() BusStats {
 	}
 }
 
+// dropLogEveryN controls the sampling rate for dropped-message
+// WARN logs. The first drop and then every Nth drop are logged;
+// the rest are silent (just bump the counter). The default (100)
+// balances observability against log volume when an agent is stuck
+// or the bus is under sustained pressure. Lower it for more
+// visibility; raise it for quieter logs.
+const dropLogEveryN = 100
+
 // logDroppedMessage records a dropped-message event. Sampling: logs the
-// first drop and then every 100th, to avoid log spam when an agent is
-// stuck or the bus is under sustained pressure.
+// first drop and then every Nth drop (see dropLogEveryN), to avoid
+// log spam when an agent is stuck or the bus is under sustained
+// pressure (see M9 in the code review).
+//
+// IMPORTANT: callers MUST hold mb.mu (write lock) when invoking this
+// method. The sampling decision uses the atomic droppedCount to avoid
+// holding mb.mu for the slog.Warn call (which can serialize on the
+// slog handler's internal mutex if the handler is slow — see M8).
+// The actual slog.Warn runs synchronously; for high-throughput drop
+// scenarios consider a buffered channel + background drainer.
 func (mb *MessageBus) logDroppedMessage(from, to, topic string) {
 	n := mb.droppedCount.Load()
-	if n != 1 && n%100 != 0 {
+	if n != 1 && n%dropLogEveryN != 0 {
 		return
 	}
 	slog.Warn(
@@ -169,70 +185,105 @@ func (mb *MessageBus) Unregister(agentID string) {
 // Send delivers a message to a specific agent or broadcasts to all.
 // If msg.To is set, delivers to that specific agent.
 // If msg.To is empty, broadcasts to all registered agents (except sender).
+//
+// The dropped-message WARN log is performed after mb.mu is released
+// (see M8): a slow slog handler should not serialize bus operations.
+// We snapshot the (from, to, topic) of each drop into a local slice
+// while still holding the lock, then iterate the slice after the
+// inner function returns and the lock has been released.
 func (mb *MessageBus) Send(msg AgentMessage) error {
-	mb.mu.Lock()
-	defer mb.mu.Unlock()
+	// sentErr is set inside the locked section for two cases:
+	//   - msg.To names an agent that isn't registered
+	//   - msg.To names a registered agent whose channel is full
+	// The first case is a hard error; the second is "channel full
+	// for agent %q" (the original error return) and is also propagated
+	// to the caller. Both were returned under the lock in the old
+	// implementation; the new implementation collects the error and
+	// returns it after the lock is released.
+	var sentErr error
+	var drops []dropEvent
 
-	if msg.ID == "" {
-		msg.ID = generateID()
-	}
-	if msg.Timestamp.IsZero() {
-		msg.Timestamp = time.Now()
-	}
-	if msg.Priority == 0 {
-		msg.Priority = 3
-	}
+	func() {
+		mb.mu.Lock()
+		defer mb.mu.Unlock()
 
-	mb.history = append(mb.history, msg)
+		if msg.ID == "" {
+			msg.ID = generateID()
+		}
+		if msg.Timestamp.IsZero() {
+			msg.Timestamp = time.Now()
+		}
+		if msg.Priority == 0 {
+			msg.Priority = 3
+		}
 
-	// Signal any in-flight WaitForResponse callers. Must happen while
-	// still holding mb.mu so the waiter's defer-cleanup can't race
-	// with us (the waiter's defer also acquires mb.mu to remove itself).
-	if msg.ResponseTo != "" {
-		if waiters := mb.responseWaiters[msg.ResponseTo]; len(waiters) > 0 {
-			for _, w := range waiters {
-				w.msg = &msg
-				close(w.done)
+		mb.history = append(mb.history, msg)
+
+		// Signal any in-flight WaitForResponse callers. Must happen while
+		// still holding mb.mu so the waiter's defer-cleanup can't race
+		// with us (the waiter's defer also acquires mb.mu to remove itself).
+		if msg.ResponseTo != "" {
+			if waiters := mb.responseWaiters[msg.ResponseTo]; len(waiters) > 0 {
+				for _, w := range waiters {
+					w.msg = &msg
+					close(w.done)
+				}
+				delete(mb.responseWaiters, msg.ResponseTo)
 			}
-			delete(mb.responseWaiters, msg.ResponseTo)
 		}
-	}
 
-	if msg.To != "" {
-		// Deliver to specific agent
-		ch, ok := mb.channels[msg.To]
-		if !ok {
-			return fmt.Errorf("agent %q not registered", msg.To)
+		if msg.To != "" {
+			ch, ok := mb.channels[msg.To]
+			if !ok {
+				sentErr = fmt.Errorf("agent %q not registered", msg.To)
+				return
+			}
+			select {
+			case ch <- msg:
+			default:
+				mb.droppedCount.Add(1)
+				sentErr = fmt.Errorf("channel full for agent %q", msg.To)
+				drops = append(drops, dropEvent{from: msg.From, to: msg.To, topic: msg.Topic})
+			}
+			return
 		}
-		select {
-		case ch <- msg:
-		default:
-			mb.droppedCount.Add(1)
-			mb.logDroppedMessage(msg.From, msg.To, msg.Topic)
-			return fmt.Errorf("channel full for agent %q", msg.To)
-		}
-		return nil
-	}
 
-	// Broadcast to all agents except sender
-	for agentID, ch := range mb.channels {
-		if agentID == msg.From {
-			continue
-		}
-		// If topic-based, only send to subscribers of that topic
-		if msg.Topic != "" && len(mb.subscribers[msg.Topic]) > 0 {
-			if !contains(mb.subscribers[msg.Topic], agentID) {
+		// Broadcast to all agents except sender
+		for agentID, ch := range mb.channels {
+			if agentID == msg.From {
 				continue
 			}
+			// If topic-based, only send to subscribers of that topic
+			if msg.Topic != "" && len(mb.subscribers[msg.Topic]) > 0 {
+				if !contains(mb.subscribers[msg.Topic], agentID) {
+					continue
+				}
+			}
+			select {
+			case ch <- msg:
+			default:
+				mb.droppedCount.Add(1)
+				drops = append(drops, dropEvent{from: msg.From, to: agentID, topic: msg.Topic})
+			}
 		}
-		select {
-		case ch <- msg:
-		default:
-			mb.droppedCount.Add(1)
-			mb.logDroppedMessage(msg.From, agentID, msg.Topic)
-		}
+	}()
+
+	// Log drops outside the lock so a slow slog handler (file I/O,
+	// network sink) doesn't serialize bus operations (M8 fix).
+	for _, d := range drops {
+		mb.logDroppedMessage(d.from, d.to, d.topic)
 	}
-	return nil
+
+	return sentErr
+}
+
+// dropEvent is a snapshot of a single drop, captured under mb.mu and
+// logged outside the lock (M8). The fields are plain copies; no
+// pointers into bus state.
+type dropEvent struct {
+	from  string
+	to    string
+	topic string
 }
 
 // Subscribe registers an agent to receive messages for a given topic.
@@ -548,11 +599,19 @@ func (mb *MessageBus) IsLocked(resource string) bool {
 // registers as a waiter; ReleaseLock() closes the done channel when
 // the lock is freed. This replaces the previous 20ms busy-poll.
 //
-// After each signal (or on entry, before registering) the caller
-// re-attempts AcquireLock. If a different waiter won the race, the
-// caller loops and waits for the next signal. This is the standard
-// "thundering herd" pattern; in practice there are only a few waiters
-// per resource so the cost is negligible.
+// Once ReleaseLock closes our done channel, the channel stays closed
+// for the lifetime of the waiter. The previous implementation re-entered
+// the select after each signal, which (a) busy-spinned calling
+// AcquireLock on the same closed-channel signal under contention and
+// (b) raced the timer.C case: both `<-w.done` and `<-timer.C` are
+// ready, and select picks randomly — so the timeout could be missed
+// or the function could loop indefinitely waiting on the second signal
+// from a ReleaseLock that never re-fires. (See M7 in the code review.)
+//
+// Fix: use a one-shot select. On the first signal (w.done or timer),
+// try AcquireLock exactly once. If it succeeds, return nil; if the
+// timer fired, return a timeout error. There is no second loop, so
+// no busy-spin and no select race.
 func (mb *MessageBus) WaitForLock(resource, owner string, timeout time.Duration) error {
 	// Fast path: try immediately; the lock can be acquired without
 	// waiting if no one else holds it.
@@ -571,17 +630,17 @@ func (mb *MessageBus) WaitForLock(resource, owner string, timeout time.Duration)
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
-	for {
-		select {
-		case <-w.done:
-			// Lock was released. Retry immediately; if another waiter
-			// won the race, loop and wait for the next signal.
-			if err := mb.AcquireLock(resource, owner, timeout); err == nil {
-				return nil
-			}
-		case <-timer.C:
-			return fmt.Errorf("timeout waiting for lock on %q", resource)
+	select {
+	case <-w.done:
+		// Lock was released by another agent. Try to acquire it.
+		// If we lose the race to a sibling waiter, return an error
+		// rather than re-registering and looping (M7 fix: no busy-spin).
+		if err := mb.AcquireLock(resource, owner, timeout); err != nil {
+			return err
 		}
+		return nil
+	case <-timer.C:
+		return fmt.Errorf("timeout waiting for lock on %q", resource)
 	}
 }
 

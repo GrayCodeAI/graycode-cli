@@ -296,16 +296,16 @@ func init() {
 			case "on":
 				_ = hawkconfig.SetGlobalSetting("glmthinking", "true")
 				enabled := true
-				m.session.GLMThinkingEnabled = &enabled
+				m.session.SetGLMThinkingEnabled(&enabled)
 				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → enabled"})
 			case "off":
 				_ = hawkconfig.SetGlobalSetting("glmthinking", "false")
 				disabled := false
-				m.session.GLMThinkingEnabled = &disabled
+				m.session.SetGLMThinkingEnabled(&disabled)
 				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → disabled"})
 			case "default":
 				_ = hawkconfig.SetGlobalSetting("glmthinking", "default")
-				m.session.GLMThinkingEnabled = nil
+				m.session.SetGLMThinkingEnabled(nil)
 				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → default (model decides)"})
 			default:
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid options: on, off, default"})

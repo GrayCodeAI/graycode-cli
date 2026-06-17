@@ -163,33 +163,37 @@ type Session struct {
 
 	// Advanced features
 	//
-	// Deprecated: most of these have been folded into sub-services.
+	// Deprecated: most of these have been folded into sub-services;
+	// a few remain as legacy fields without a sub-service accessor
+	// (Trajectory, LintLoop, TestLoop, FileMentions, Files, Snapshots,
+	// Tracer). For those, keep reading the legacy field — they're
+	// populated at session construction and don't have a setter.
 	//   Autonomy       -> s.PermSvc().Autonomy()
 	//   Sandbox        -> s.Tools().Sandbox()
-	//   Plan           -> s.Tools().PlanState()
+	//   Plan           -> s.Plan (legacy field; not yet on a sub-service)
 	//   Beliefs        -> s.LifecycleSvc().Beliefs()
 	//   Critic         -> s.LifecycleSvc().Critic()
 	//   Backtrack      -> s.LifecycleSvc().Backtrack()
 	//   Limits         -> s.LifecycleSvc().Limits()
-	//   Trajectory     -> s.LifecycleSvc().Trajectory()
+	//   Trajectory     -> legacy field; not yet on a sub-service
 	//   Shadow         -> s.LifecycleSvc().Shadow()
 	//   ConvoDAG       -> s.Persistence().DAG()
 	//   Sleeptime      -> s.MemorySvc().Sleeptime()
 	//   Activity       -> s.MemorySvc().Activity()
 	//   SkillDistiller -> s.MemorySvc().SkillDistiller()
-	//   RateLimiter    -> s.ChatLLM().RateLimiter()
+	//   RateLimiter    -> s.RateLimiter (legacy field; not yet on ChatLLM)
 	//   AgentsAccum    -> s.LifecycleSvc().AgentsAccum()
-	//   FewShotStore   -> s.LifecycleSvc().FewShot()
+	//   FewShotStore   -> s.LifecycleSvc().FewShotStore()
 	//   AdaptivePrompt -> s.LifecycleSvc().AdaptivePrompt()
-	//   LintLoop       -> s.LifecycleSvc().LintLoop()
-	//   TestLoop       -> s.LifecycleSvc().TestLoop()
-	//   FileMentions   -> s.MemorySvc().FileMentions()
+	//   LintLoop       -> legacy field; not yet on a sub-service
+	//   TestLoop       -> legacy field; not yet on a sub-service
+	//   FileMentions   -> legacy field; not yet on a sub-service
 	//   ResponseCache  -> s.LifecycleSvc().ResponseCache()
 	//   Pipeline       -> s.LifecycleSvc().Pipeline()
-	//   Files          -> s.Persistence().Files()
+	//   Files          -> legacy field; not yet on Persistence
 	//   Steering       -> s.Persistence().Steering()
-	//   Snapshots      -> s.Persistence().Snapshots()
-	//   Tracer         -> global; passed to services at construction.
+	//   Snapshots      -> legacy field; not yet on Persistence
+	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
 	Autonomy       AutonomyLevel              // autonomy.go — permission level
 	Sandbox        *DiffSandbox               // diffsandbox.go — staged file changes
 	Plan           *PlanState                 // subtask.go — user-activated plan
@@ -496,24 +500,28 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 }
 
 func (s *Session) AddUser(content string) {
-	s.Persistence().AddUser(content)
-	if s.ConvoDAG != nil {
-		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
-			parentID = head.ID
-		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content)
-	}
-	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
-		go func(c string) {
-			// Use timeout context so goroutine doesn't hang if backend is slow.
-			rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_ = rCtx // timeout context available if Remember is extended to accept it
-			if err := s.Memory.Remember(c, "user_explicit"); err != nil {
-				slog.Warn("background memory remember failed", "error", err)
+	if p := s.Persistence(); p != nil {
+		p.AddUser(content)
+		if dag := p.DAG(); dag != nil {
+			parentID := ""
+			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+				parentID = head.ID
 			}
-		}(content)
+			_, _ = dag.Append(context.Background(), parentID, "user", content)
+		}
+	}
+	if memSvc := s.MemorySvc(); memSvc != nil {
+		if mem := memSvc.Memory(); mem != nil && strings.Contains(strings.ToLower(content), "remember") {
+			go func(c string) {
+				// Use timeout context so goroutine doesn't hang if backend is slow.
+				rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				_ = rCtx // timeout context available if Remember is extended to accept it
+				if err := mem.Remember(c, "user_explicit"); err != nil {
+					slog.Warn("background memory remember failed", "error", err)
+				}
+			}(content)
+		}
 	}
 }
 
@@ -528,38 +536,47 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 	}
 	s.messages = append(s.messages, msg)
 	s.mu.Unlock()
-	if s.ConvoDAG != nil {
-		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
-			parentID = head.ID
+	if p := s.Persistence(); p != nil {
+		if dag := p.DAG(); dag != nil {
+			parentID := ""
+			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+				parentID = head.ID
+			}
+			_, _ = dag.Append(context.Background(), parentID, "user", content+" [image attached]")
 		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content+" [image attached]")
 	}
 }
 
 func (s *Session) AddAssistant(content string) {
-	s.Persistence().AddAssistant(content)
-	if s.ConvoDAG != nil {
-		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
-			parentID = head.ID
+	if p := s.Persistence(); p != nil {
+		p.AddAssistant(content)
+		if dag := p.DAG(); dag != nil {
+			parentID := ""
+			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+				parentID = head.ID
+			}
+			_, _ = dag.Append(context.Background(), parentID, "assistant", content)
 		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "assistant", content)
 	}
 }
 
 // ForkConversation creates a new branch from a specific point in history.
 // Returns the fork node ID and the messages up to that point.
 func (s *Session) ForkConversation(nodeID string) (string, error) {
-	if s.ConvoDAG == nil {
+	p := s.Persistence()
+	if p == nil {
 		return "", nil
 	}
-	fork, err := s.ConvoDAG.Fork(context.Background(), nodeID)
+	dag := p.DAG()
+	if dag == nil {
+		return "", nil
+	}
+	fork, err := dag.Fork(context.Background(), nodeID)
 	if err != nil {
 		return "", err
 	}
 	// Rebuild messages from the forked branch
-	history, err := s.ConvoDAG.History(context.Background(), fork.ID)
+	history, err := dag.History(context.Background(), fork.ID)
 	if err != nil {
 		return "", err
 	}
@@ -576,13 +593,18 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 
 // SwitchBranch navigates to a different branch point and rebuilds messages.
 func (s *Session) SwitchBranch(nodeID string) error {
-	if s.ConvoDAG == nil {
+	p := s.Persistence()
+	if p == nil {
 		return nil
 	}
-	if err := s.ConvoDAG.SetHead(context.Background(), nodeID); err != nil {
+	dag := p.DAG()
+	if dag == nil {
+		return nil
+	}
+	if err := dag.SetHead(context.Background(), nodeID); err != nil {
 		return err
 	}
-	history, err := s.ConvoDAG.History(context.Background(), nodeID)
+	history, err := dag.History(context.Background(), nodeID)
 	if err != nil {
 		return err
 	}
@@ -599,18 +621,28 @@ func (s *Session) SwitchBranch(nodeID string) error {
 
 // ListBranches returns child nodes (alternative branches) from a given node.
 func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
-	if s.ConvoDAG == nil {
+	p := s.Persistence()
+	if p == nil {
 		return nil, nil
 	}
-	return s.ConvoDAG.Branches(context.Background(), nodeID)
+	dag := p.DAG()
+	if dag == nil {
+		return nil, nil
+	}
+	return dag.Branches(context.Background(), nodeID)
 }
 
 // ConvoHead returns the current conversation head node ID.
 func (s *Session) ConvoHead() string {
-	if s.ConvoDAG == nil {
+	p := s.Persistence()
+	if p == nil {
 		return ""
 	}
-	if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+	dag := p.DAG()
+	if dag == nil {
+		return ""
+	}
+	if head, err := dag.Head(context.Background()); err == nil && head != nil {
 		return head.ID
 	}
 	return ""
@@ -677,6 +709,16 @@ func (s *Session) SetAutoCompactThresholdPct(pct int) {
 	s.AutoCompactThresholdPct = pct
 }
 
+// SetPinnedMessages sets the number of recent messages that are
+// protected from compaction. New code should call this instead of
+// writing to the legacy s.PinnedMessages field directly.
+func (s *Session) SetPinnedMessages(n int) {
+	s.PinnedMessages = n
+	if s.persist != nil {
+		s.persist.SetPinnedMessages(n)
+	}
+}
+
 // SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle.
 // New code should call this instead of writing to the legacy
 // s.GLMThinkingEnabled field directly.
@@ -695,6 +737,16 @@ func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
 // s.ContainerRequired field directly.
 func (s *Session) SetContainerRequired(v bool) {
 	s.ContainerRequired = v
+}
+
+// SetContainerExecutor sets the container executor and updates
+// the ToolService so the legacy s.ContainerExecutor field and
+// s.Tools().ContainerExecutor() stay in sync.
+func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
+	s.ContainerExecutor = ce
+	if s.tools != nil {
+		s.tools.WithContainerExecutor(ce, s.ContainerRequired)
+	}
 }
 
 // SetAskUserFn sets the user-prompt callback. New code should
@@ -717,6 +769,36 @@ func (s *Session) SetConvoDAG(dag *storage.DAG) {
 	s.ConvoDAG = dag
 	if s.persist != nil {
 		s.persist.SetDAG(dag)
+	}
+}
+
+// SetContextWindowCached sets the catalog context window. New code
+// should call this instead of writing to the legacy
+// s.ContextWindowCached field directly.
+func (s *Session) SetContextWindowCached(n int) {
+	s.ContextWindowCached = n
+	if s.persist != nil {
+		s.persist.SetContextWindowCached(n)
+	}
+}
+
+// ModeValue returns the active permission mode, with the
+// PermissionService's mode taking precedence over the legacy
+// s.Mode field. Used by /permissions summary, /status, and the
+// chat footer to render the active permission mode.
+func (s *Session) ModeValue() PermissionMode {
+	if s.perms != nil {
+		return s.perms.Mode()
+	}
+	return s.Mode
+}
+
+// SetMode replaces the active permission mode. New code should
+// call this instead of writing to the legacy s.Mode field.
+func (s *Session) SetMode(mode PermissionMode) {
+	s.Mode = mode
+	if s.perms != nil {
+		_ = s.perms.SetMode(string(mode))
 	}
 }
 

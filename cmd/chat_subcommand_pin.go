@@ -25,7 +25,7 @@ func (p *pinSubcommand) Handle(m *chatModel, args []string, text string) (tea.Mo
 			n = parsed
 		}
 	}
-	m.session.PinnedMessages = n
+	m.session.SetPinnedMessages(n)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Pinned last %d messages (protected from compaction).", n)})
 	return m, nil
 }

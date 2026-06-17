@@ -32,7 +32,7 @@ func buildStatusInfo(m *chatModel) string {
 	info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
 		m.sessionID, m.session.Provider(), m.session.Model(),
 		m.modeManager.Current().String(),
-		permissionModeLabel(m.session), m.session.MessageCount(), toolCount, m.session.Cost.Summary())
+		permissionModeLabel(m.session), m.session.MessageCount(), toolCount, m.session.CostValue().Summary())
 	if len(addDirs) > 0 {
 		info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
 	}

@@ -76,7 +76,7 @@ func (m chatModel) restoreSnapshot(hash string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Restored to snapshot %s. Files have been reverted.", hash)})
+	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Restored snapshot %q — file changes reverted.", hash)})
 	return m, nil
 }
 
