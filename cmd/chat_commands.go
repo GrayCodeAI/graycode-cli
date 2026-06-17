@@ -17,7 +17,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -405,12 +404,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		ApplyPowerLevel(m.session, level)
 		m.messages = append(m.messages, displayMsg{role: "system", content: DescribePower(level)})
 		return m, nil
-	case "/vibe":
-		prompt := "Enter vibe coding mode. Auto-apply all changes, run tests after each edit, and iterate until tests pass. Start by reading the project structure."
-		if len(parts) > 1 {
-			prompt = strings.TrimSpace(strings.TrimPrefix(text, "/vibe"))
-		}
-		return m.startPromptCommand("/vibe", prompt)
+
 	case "/research":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /research [--grep <pattern>] [--direction lower|higher] [--budget <min>] [--branch <prefix>] [--results <file>] <metric-command>\nExample: /research go test -bench .\nExample: /research --grep '^val_bpb:' --direction lower uv run train.py"})
@@ -424,100 +418,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		prompt := BuildResearchPrompt(cfg)
 		return m.startPromptCommand("/research", prompt)
-	case "/parallel":
-		return m.handleParallelCommand(parts, text)
 
-	case "/skills":
-		return m.handleSkillsCommand(parts, text)
-	case "/learn":
-		cwd, _ := os.Getwd()
-		deep := len(parts) >= 2 && parts[1] == "deep"
-		update := len(parts) >= 2 && parts[1] == "update"
-		ctx := plugin.GatherLearnContext(cwd)
-		if deep || update {
-			ctx.SourceInfo = plugin.GatherDeepSourceInfo(cwd)
-		}
-		if update {
-			summary := plugin.FormatLearnSummary(ctx, true)
-			prompt := plugin.BuildLearnUpdatePrompt(ctx)
-			return m.startPromptCommand(summary, prompt)
-		}
-		summary := plugin.FormatLearnSummary(ctx, deep)
-		prompt := plugin.BuildLearnPrompt(ctx)
-		return m.startPromptCommand(summary, prompt)
-
-	case "/tasks":
-		tasks := tool.GetTaskStore().List()
-		if len(tasks) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No tasks."})
-			return m, nil
-		}
-		var b strings.Builder
-		for _, t := range tasks {
-			status := string(t.Status)
-			icon := "○"
-			if t.Status == tool.TaskStatusCompleted {
-				icon = "●"
-			} else if t.Status == tool.TaskStatusInProgress {
-				icon = "◐"
-			}
-			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n", icon, t.ID, status, t.Subject))
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-		return m, nil
-	case "/cron":
-		jobs := tool.GetCronScheduler().List()
-		if len(jobs) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No scheduled jobs."})
-			return m, nil
-		}
-		var b strings.Builder
-		for _, j := range jobs {
-			jtype := "recurring"
-			if !j.Recurring {
-				jtype = "one-shot"
-			}
-			b.WriteString(fmt.Sprintf("  %s [%s] %s next: %s\n", j.ID, jtype, j.Schedule, j.NextRun.Format("Jan 02 15:04")))
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
-		return m, nil
-
-	case "/glm":
-		if len(parts) < 2 {
-			cur, _ := hawkconfig.SettingValue(hawkconfig.LoadSettings(), "glmthinking")
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /glm <on|off|default> — toggle GLM/Z.ai extended reasoning\nCurrent: " + cur})
-			return m, nil
-		}
-		switch strings.ToLower(parts[1]) {
-		case "on":
-			_ = hawkconfig.SetGlobalSetting("glmthinking", "true")
-			enabled := true
-			m.session.GLMThinkingEnabled = &enabled
-			m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → enabled"})
-		case "off":
-			_ = hawkconfig.SetGlobalSetting("glmthinking", "false")
-			disabled := false
-			m.session.GLMThinkingEnabled = &disabled
-			m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → disabled"})
-		case "default":
-			_ = hawkconfig.SetGlobalSetting("glmthinking", "default")
-			m.session.GLMThinkingEnabled = nil
-			m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → default (model decides)"})
-		default:
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid options: on, off, default"})
-		}
-		return m, nil
-	case "/vim":
-		if m.vim == nil {
-			m.vim = NewVimState()
-		}
-		m.vim.SetEnabled(!m.vim.IsEnabled())
-		state := "disabled"
-		if m.vim.IsEnabled() {
-			state = "enabled (press Esc for NORMAL mode)"
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Vim mode " + state})
-		return m, nil
 	case "/explain":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /explain <file>:<line>  — trace code back to the commit that created it"})
@@ -612,15 +513,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: analytics.FormatStats(stats)})
 		}
 		return m, nil
-	case "/hooks":
-		m.messages = append(m.messages, displayMsg{role: "system", content: hooksSummary()})
-		return m, nil
-	case "/plugins":
-		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
-		return m, nil
-	case "/plugin":
-		m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
-		return m, nil
+
 	case "/image":
 		return m.handleImageCommand(parts, text)
 	case "/voice":
@@ -680,11 +573,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	case "/permissions":
 		next, cmd := m.handlePermissionsCommand(parts)
 		return next, cmd
-	case "/upgrade":
-		return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
-	case "/keybindings":
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter           — Submit\n  Ctrl+C          — Cancel/Exit\n  Ctrl+Shift+C    — Copy (input draft or chat)\n  Ctrl+\\          — Native text selection\n  Ctrl+L          — Clear\n  Up/Down         — History\n  Tab             — Complete\n  /mouse off      — Enable click-drag copy"})
-		return m, nil
+
 	case "/output-style":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /output-style <concise|normal|detailed>"})
@@ -699,14 +588,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid styles: concise, normal, detailed"})
 		}
 		return m, nil
-	case "/thinkback":
-		return m.startPromptCommand("/thinkback", "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered.")
-	case "/think-back":
-		return m.startPromptCommand("/think-back", "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered.")
-	case "/thinkback-play":
-		return m.startPromptCommand("/thinkback-play", "Replay the recent reasoning path and summarize key pivots, mistakes avoided, and better alternatives.")
-	case "/ultrareview":
-		return m.startPromptCommand("/ultrareview", "Perform a deep, adversarial code review of this change set. Prioritize correctness, security, regressions, and missing tests.")
+
 	case "/provider-status":
 		report, err := hawkconfig.DeploymentStatusReport(context.Background(), m.session.Model())
 		if err != nil {
@@ -717,12 +599,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/session":
 		return m.handleSessionCommand(cmd, parts, text)
-	case "/statusline":
-		m.messages = append(m.messages, displayMsg{role: "system", content: statusLineSummary(m)})
-		return m, nil
-	case "/remote-env":
-		m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})
-		return m, nil
+
 	case "/reload-plugins":
 		if m.pluginRuntime != nil {
 			_ = m.pluginRuntime.LoadAll()

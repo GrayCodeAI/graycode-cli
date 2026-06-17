@@ -3,11 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -162,6 +164,265 @@ func init() {
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			return m.startPromptCommand("/agents", "List all active agents and teammates in the current session. Show their status and assigned tasks.")
+		},
+	})
+
+	// /parallel — run commands in parallel
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "parallel",
+		description: "run commands in parallel (delegates to handleParallelCommand)",
+		usage:       "/parallel [args...]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			return m.handleParallelCommand(append([]string{"/parallel"}, args...), text)
+		},
+	})
+
+	// /skills — list, search, install, remove skills
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "skills",
+		description: "list, search, install, remove skills",
+		usage:       "/skills [subcommand]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			return m.handleSkillsCommand(append([]string{"/skills"}, args...), text)
+		},
+	})
+
+	// /tasks — show task list
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "tasks",
+		description: "show the current task list",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			tasks := tool.GetTaskStore().List()
+			if len(tasks) == 0 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No tasks."})
+				return m, nil
+			}
+			var b strings.Builder
+			for _, t := range tasks {
+				status := string(t.Status)
+				icon := "○"
+				if t.Status == tool.TaskStatusCompleted {
+					icon = "●"
+				} else if t.Status == tool.TaskStatusInProgress {
+					icon = "◐"
+				}
+				b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n", icon, t.ID, status, t.Subject))
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+			return m, nil
+		},
+	})
+
+	// /vibe — enter vibe coding mode
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "vibe",
+		description: "enter vibe coding mode (auto-apply all changes)",
+		usage:       "/vibe [additional prompt]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			prompt := "Enter vibe coding mode. Auto-apply all changes, run tests after each edit, and iterate until tests pass. Start by reading the project structure."
+			if len(args) > 0 {
+				prompt = strings.TrimSpace(strings.TrimPrefix(text, "/vibe"))
+			}
+			return m.startPromptCommand("/vibe", prompt)
+		},
+	})
+
+	// /learn — LLM-powered skill advisor
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "learn",
+		description: "LLM-powered skill advisor (deep, update)",
+		usage:       "/learn [deep|update]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			cwd, _ := os.Getwd()
+			deep := len(args) >= 1 && args[0] == "deep"
+			update := len(args) >= 1 && args[0] == "update"
+			ctx := plugin.GatherLearnContext(cwd)
+			if deep || update {
+				ctx.SourceInfo = plugin.GatherDeepSourceInfo(cwd)
+			}
+			if update {
+				summary := plugin.FormatLearnSummary(ctx, true)
+				prompt := plugin.BuildLearnUpdatePrompt(ctx)
+				return m.startPromptCommand(summary, prompt)
+			}
+			summary := plugin.FormatLearnSummary(ctx, deep)
+			prompt := plugin.BuildLearnPrompt(ctx)
+			return m.startPromptCommand(summary, prompt)
+		},
+	})
+
+	// /cron — list scheduled cron jobs
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "cron",
+		description: "list scheduled cron jobs",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			jobs := tool.GetCronScheduler().List()
+			if len(jobs) == 0 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No scheduled jobs."})
+				return m, nil
+			}
+			var b strings.Builder
+			for _, j := range jobs {
+				jtype := "recurring"
+				if !j.Recurring {
+					jtype = "one-shot"
+				}
+				b.WriteString(fmt.Sprintf("  %s [%s] %s next: %s\n", j.ID, jtype, j.Schedule, j.NextRun.Format("Jan 02 15:04")))
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+			return m, nil
+		},
+	})
+
+	// /glm <on|off|default> — toggle GLM/Z.ai extended reasoning
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "glm",
+		description: "toggle GLM/Z.ai extended reasoning",
+		usage:       "/glm <on|off|default>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				cur, _ := hawkconfig.SettingValue(hawkconfig.LoadSettings(), "glmthinking")
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /glm <on|off|default> — toggle GLM/Z.ai extended reasoning\nCurrent: " + cur})
+				return m, nil
+			}
+			switch strings.ToLower(args[0]) {
+			case "on":
+				_ = hawkconfig.SetGlobalSetting("glmthinking", "true")
+				enabled := true
+				m.session.GLMThinkingEnabled = &enabled
+				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → enabled"})
+			case "off":
+				_ = hawkconfig.SetGlobalSetting("glmthinking", "false")
+				disabled := false
+				m.session.GLMThinkingEnabled = &disabled
+				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → disabled"})
+			case "default":
+				_ = hawkconfig.SetGlobalSetting("glmthinking", "default")
+				m.session.GLMThinkingEnabled = nil
+				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → default (model decides)"})
+			default:
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid options: on, off, default"})
+			}
+			return m, nil
+		},
+	})
+
+	// /vim — toggle vim mode
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "vim",
+		description: "toggle vim mode",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if m.vim == nil {
+				m.vim = NewVimState()
+			}
+			m.vim.SetEnabled(!m.vim.IsEnabled())
+			state := "disabled"
+			if m.vim.IsEnabled() {
+				state = "enabled (press Esc for NORMAL mode)"
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Vim mode " + state})
+			return m, nil
+		},
+	})
+
+	// /hooks — show configured hooks
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "hooks",
+		description: "show configured hooks",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: hooksSummary()})
+			return m, nil
+		},
+	})
+
+	// /plugins — list installed plugins
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "plugins",
+		description: "list installed plugins",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
+			return m, nil
+		},
+	})
+
+	// /plugin — alias for /plugins
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "plugin",
+		description: "list installed plugins (alias for /plugins)",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: pluginsSummary(m.pluginRuntime)})
+			return m, nil
+		},
+	})
+
+	// /upgrade — check for updates
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "upgrade",
+		description: "check for hawk updates",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
+		},
+	})
+
+	// /keybindings — show keybindings
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "keybindings",
+		description: "show keybindings",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter           — Submit\n  Ctrl+C          — Cancel/Exit\n  Ctrl+Shift+C    — Copy (input draft or chat)\n  Ctrl+\\          — Native text selection\n  Ctrl+L          — Clear\n  Up/Down         — History\n  Tab             — Complete\n  /mouse off      — Enable click-drag copy"})
+			return m, nil
+		},
+	})
+
+	// /statusline — print compact status line
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "statusline",
+		description: "print a compact status line",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: statusLineSummary(m)})
+			return m, nil
+		},
+	})
+
+	// /remote-env — show remote env summary
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "remote-env",
+		description: "show the remote env summary",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})
+			return m, nil
+		},
+	})
+
+	// /thinkback, /think-back, /thinkback-play — review reasoning
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "thinkback",
+		aliases:     []string{"think-back", "thinkback-play"},
+		description: "review reasoning decisions (thinkback/think-back/thinkback-play)",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			summary := "Review the thinking/reasoning from this conversation and highlight key decision points and alternatives considered."
+			return m.startPromptCommand("/thinkback", summary)
+		},
+	})
+
+	// /ultrareview — adversarial code review
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "ultrareview",
+		description: "perform a deep, adversarial code review",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			return m.startPromptCommand("/ultrareview", "Perform a deep, adversarial code review of this change set. Prioritize correctness, security, regressions, and missing tests.")
 		},
 	})
 }
