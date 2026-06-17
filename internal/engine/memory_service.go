@@ -5,7 +5,6 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // MemoryService is the Session's view of the memory layer: yaad bridge,
@@ -142,8 +141,3 @@ func (s *MemoryService) Activity() *memory.ActivityTracker { return s.activity }
 func (s *MemoryService) IsZero() bool {
 	return s == nil || (s.memory == nil && s.yaad == nil && s.enhanced == nil && s.skillDistiller == nil && s.sleeptime == nil && s.activity == nil)
 }
-
-// _ unused-import workaround: keep types referenced even when none
-// of the methods actually destructure EyrieMessage directly. The
-// agent loop reads s.messages via the persistence service.
-var _ = (*types.EyrieMessage)(nil)

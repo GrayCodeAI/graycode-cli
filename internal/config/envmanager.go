@@ -89,8 +89,6 @@ func (em *EnvManager) Load(sources ...string) error {
 			ev.Value = osVal
 			ev.Source = "env"
 		}
-		_ = ev
-		_ = key
 	}
 
 	return nil
