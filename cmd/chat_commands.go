@@ -288,20 +288,18 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	switch cmd {
-	default:
-		if m.pluginRuntime != nil && m.pluginRuntime.IsCommand(cmd[1:]) {
-			out, err := m.pluginRuntime.ExecuteCommand(cmd[1:], parts[1:])
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: out})
-			}
-			return m, nil
+	// Fallback: plugin commands and unknown-command error.
+	if m.pluginRuntime != nil && m.pluginRuntime.IsCommand(cmd[1:]) {
+		out, err := m.pluginRuntime.ExecuteCommand(cmd[1:], parts[1:])
+		if err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: out})
 		}
-		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
 		return m, nil
 	}
+	m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+	return m, nil
 }
 
 // handleParallelCommand spawns multiple agents in parallel on independent tasks.
