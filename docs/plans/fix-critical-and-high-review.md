@@ -2,7 +2,7 @@
 
 > Branch: `fix/critical-and-high-review-2026-06`
 > PR: https://github.com/GrayCodeAI/hawk/pull/50
-> Status: **✅ COMPLETE — all 9 items committed, 9 PRs merged into the branch.**
+> Status: **✅ COMPLETE — all 9 items + extensive follow-up committed.**
 > Constraint: **no new go.mod / go.sum dependencies** for any item in this plan.
 
 ## Completion summary
@@ -23,10 +23,51 @@ Plus follow-up work (already merged into the same branch):
 
 | Step | Title | Status | Commit |
 |------|-------|--------|--------|
-| Meta-audit | `TestSessionLegacyFieldAccessAudit` (soft-fail, tracks migration progress) | ✅ committed | `f2e8337` |
+| Meta-audit | `TestSessionLegacyFieldAccessAudit` (cmd/ hard-fail at 30, internal/ soft-fail) | ✅ committed | `f2e8337` + hard-fail in `a05f6f8` |
 | H5 first migrated command | `/branch` → `chat_subcommand_branch.go` (exemplar) | ✅ committed | `d56c9f7` |
+| H6 cmd/ migrations | s.Permissions → PermSvc().Memory(), s.Autonomy → PermSvc().Autonomy(), s.PermissionFn, s.Mode, s.MaxTurns, s.Memory, s.YaadBridge, s.EnhancedMemory | ✅ committed | `5c972e0`, `b8d6543`, `b5e7585` |
+| H5 batch-2 | 9 more slash commands (version, env, doctor, init, focus, pin, files, commit, session) | ✅ committed | `cae49d1` |
+| H5 batch-3 | 19 more slash commands (render, review, refactor, mode, model, context, memory, soul, etc.) | ✅ committed | `3aafc34` |
+| H5 batch-4 | Dispatcher wired + 35 cases removed from switch | ✅ committed | `0714223` |
+| H5 batch-5 | 11 more cases removed | ✅ committed | `ee15873` |
+| H5 batch-6 | 11 more slash commands + cases removed (council, dream, away, yaad, etc.) | ✅ committed | `1c8d7e6` (cmd) + `0bbaf6b` (cases) |
+| H5 batch-7 | delegatingCommand helper + 9 simple commands (copy, select, mouse, etc.) | ✅ committed | `b7d2b5b` + `0bbaf6b` |
+| H5 batch-8 | 15 more commands (parallel, skills, tasks, vibe, learn, etc.) | ✅ committed | `034190a` |
+| H5 batch-9 | 14 session-delegating commands (export, rename, tag, etc.) | ✅ committed | `1dd0c83` |
+| H5 batch-10 | 10 inline-impl commands (power, output-style, add, drop, run, test, lint, tokens) | ✅ committed | `68a3742` |
+| H5 batch-11 | 16 more commands (recipe, design, research, explain, feedback, stats, etc.) | ✅ committed | (final) |
+| H5 final | /voice (last remaining) + default case restored | ✅ committed | `e1121ca` |
 
-**Net diff**: 9 production-code changes + 8 test files; all tests pass with `-race`; `go vet ./...` clean; `go.mod` / `go.sum` unchanged. **No new dependencies.**
+**Net diff**: 22 production-code changes + 10 test files; all tests pass with `-race`; `go vet ./...` clean; `go.mod` / `go.sum` unchanged. **No new dependencies.**
+
+## H5: Slash command migration (full scope)
+
+All 50+ slash commands in `cmd/chat_commands.go` (1745 lines) have been migrated to the `SubcommandRegistry` pattern. Each command is now in its own file under `cmd/chat_subcommand_*.go`, with the `handleCommand` dispatcher consulting the registry first and falling through to the legacy switch (now only the `default` case for plugin commands and unknown-command errors).
+
+**`chat_commands.go` size**: 1745 → 440 lines (-75%). The 440 remaining lines are imports, the registry dispatcher (20 lines), the `default` case (15 lines), and helper functions (`handleNamespacedSkill`, `handleParallelCommand`, etc.).
+
+## H6: Session field migration (cmd/ done; internal/ in progress)
+
+The `s.Permissions` / `s.Autonomy` / `s.PermissionFn` / `s.Mode` / `s.MaxTurns` / `s.Memory` / `s.YaadBridge` / `s.EnhancedMemory` legacy fields in `cmd/` are now routed through the `PermissionService` and `MemoryService` sub-services via setters and getters. The `PermissionService.Memory()/AutoMode()/Classifier()/BypassKill()` getters and `MemoryService.SetMemory/SetYaad/SetEnhanced()` setters were added as part of this PR.
+
+**Meta-audit** (`TestSessionLegacyFieldAccessAudit`) currently reports:
+- **Total**: 458 legacy accesses across 45 files
+- **cmd/**: 30 sites (hard-fail at 30; well-known backlog of Cascade, Lifecycle, FewShotStore, AdaptivePrompt, ConvoDAG, AskUserFn, Approval, ContextWindowCached, Cost)
+- **internal/engine/**: ~300 sites (largest: stream.go 120, stream_tool_exec.go 53, session_services.go 33, compact_split.go 15, compact.go 12, context_compaction.go 11)
+- **Other internal/**: ~50 sites (multiagent/worker.go 10, session/sqlite_store.go 4, daemon/daemon.go 4)
+
+The `cmd/` sub-PR is mostly done (8 fields migrated, ~30 sites remaining are write-only or one-shot config). The `internal/engine/` sub-PRs are pending — these are large refactors that should be done in separate sub-PRs per the original 30/60/90 plan.
+
+The audit is hard-fail for `cmd/` (regression guard) and soft-fail for `internal/` (progress tracker).
+
+## Open follow-up work (separate sub-PRs, not in this PR)
+
+These were documented in the original plan as out-of-scope-for-this-PR. They remain open for follow-up sub-PRs:
+
+1. **H6 internal/engine/ migration** — migrate the 290+ legacy accesses in `internal/engine/stream.go`, `stream_tool_exec.go`, `session_services.go`, etc. to the new sub-service getters. Each engine sub-PR should target one file or one field at a time.
+2. **H6 cmd/ final 30 sites** — migrate the remaining 30 cmd/ sites (Cascade, Lifecycle, FewShotStore, AdaptivePrompt, ConvoDAG, AskUserFn, Approval, etc.). These mostly need sub-service setters added first.
+3. **H5 dispatcher replacement** — the legacy `default:` case in `handleCommand` is still there for plugin commands. Eventually the dispatcher should be removed entirely; for now it serves as a backstop.
+4. **H5 help text** — `staticHelpText()` in `chat_subcommand_help.go` is a curated subset of available commands. Update it to include the new commands added in batches 6-11.
 
 ## Open follow-up work (not in this PR — separate plans)
 

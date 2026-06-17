@@ -346,6 +346,30 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 		return
 	}
 
+	// Hard-fail threshold for cmd/ — once the cmd/ sub-PR is done,
+	// any new legacy access in cmd/ is a regression. The internal/
+	// sub-PRs are still in progress (largest backlog is in
+	// internal/engine/stream.go with ~120 sites), so internal/
+	// remains soft-fail until those sub-PRs land.
+	//
+	// Current cmd/ backlog (2026-06-17):
+	//   options.go 18, chat.go 3, chat_print.go 3, chat_config_models.go 2,
+	//   chat_commands_util.go 1, session_sync.go 1, snapshot_cmd.go 1,
+	//   mission.go 1, chat_model_test.go 1
+	// Many of these are non-trivial (Cascade, Lifecycle, FewShotStore,
+	// AdaptivePrompt, ConvoDAG, AskUserFn, Approval, etc.) and need
+	// sub-service setters added to be migrated.
+	const cmdHardFailThreshold = 30
+	var cmdLegacy int
+	for f, n := range perFile {
+		if strings.HasPrefix(f, "cmd/") {
+			cmdLegacy += n
+		}
+	}
+	if cmdLegacy > cmdHardFailThreshold {
+		t.Errorf("H6 cmd/ REGRESSION: %d legacy Session field accesses in cmd/ (was %d, should not increase). The cmd/ sub-PR is done; do not add new legacy access in cmd/.", cmdLegacy, cmdHardFailThreshold)
+	}
+
 	// Sort for deterministic output.
 	sorted := make([]string, 0, len(perFile))
 	for f := range perFile {
@@ -353,7 +377,7 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 	}
 	sort.Strings(sorted)
 
-	t.Logf("H6 MIGRATION: %d legacy Session field accesses across %d files. New code should use s.SubServices().X().Y() instead.",
+	t.Logf("H6 MIGRATION (soft-fail): %d legacy Session field accesses across %d files. New code should use s.SubServices().X().Y() instead.",
 		total, len(perFile))
 	for _, f := range sorted {
 		t.Logf("  %s: %d", f, perFile[f])
