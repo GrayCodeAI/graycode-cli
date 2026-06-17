@@ -1,0 +1,23 @@
+package cmd
+
+import (
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/GrayCodeAI/hawk/internal/engine"
+)
+
+// reviewSubcommand implements the /review slash command. It
+// prompts the model to review recent changes.
+type reviewSubcommand struct{}
+
+func (r *reviewSubcommand) Name() string        { return "review" }
+func (r *reviewSubcommand) Aliases() []string   { return nil }
+func (r *reviewSubcommand) Description() string { return "ask the model to review changes" }
+func (r *reviewSubcommand) Usage() string       { return "" }
+func (r *reviewSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+	return m.startPromptCommand("/review", engine.ReviewPrompt(nil))
+}
+
+func init() {
+	subcommandRegistry.Register(&reviewSubcommand{})
+}

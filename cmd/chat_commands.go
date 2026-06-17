@@ -14,8 +14,6 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/engine/project"
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
@@ -343,112 +341,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "assistant", content: result.Synthesis})
 		return m, nil
 
-	case "/mode":
-		if len(parts) == 1 {
-			// Show current mode
-			current := m.modeManager.Current()
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Mode: %s (auto | shell | agent)", current.String())})
-			return m, nil
-		}
-		arg := strings.ToLower(parts[1])
-		if arg == "toggle" {
-			newMode := m.modeManager.Toggle()
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Mode → %s", newMode.String())})
-			return m, nil
-		}
-		mode, ok := shellmode.ParseMode(arg)
-		if !ok {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /mode [auto|shell|agent|toggle]"})
-			return m, nil
-		}
-		m.modeManager.Set(mode)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Mode → %s", mode.String())})
-		return m, nil
-	case "/model":
-		if len(parts) == 1 {
-			next, cmd := m.openConfigAtTab(configTabModels)
-			*m = next
-			return m, cmd
-		}
-		arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
-		arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
-		if arg == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /model <model-name> or /model set <model-name>"})
-			return m, nil
-		}
-		// Validate model against known models for current provider
-		known := configModelChoices(m.configModelOptions, false)
-		if len(known) > 0 {
-			found := false
-			for i, k := range known {
-				if strings.EqualFold(k, arg) || strings.EqualFold(m.configModelOptions[i].ID, arg) {
-					arg = m.configModelOptions[i].ID
-					found = true
-					break
-				}
-			}
-			if !found {
-				// Show available models as hint
-				hint := "Unknown model: " + arg + "\nAvailable models for " + m.session.Provider() + ":\n"
-				max := 10
-				if len(known) < max {
-					max = len(known)
-				}
-				for _, k := range known[:max] {
-					hint += "  " + k + "\n"
-				}
-				if len(known) > 10 {
-					hint += fmt.Sprintf("  ... and %d more (use /model to browse)", len(known)-10)
-				}
-				m.messages = append(m.messages, displayMsg{role: "error", content: hint})
-				return m, nil
-			}
-		}
-		if hawkconfig.DeploymentRoutingEnabled(m.settings) {
-			arg = hawkconfig.ResolveCanonicalModel(arg)
-		}
-		prevModel := m.session.Model()
-		if strings.EqualFold(strings.TrimSpace(prevModel), strings.TrimSpace(arg)) {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Already using %s — no change.", prevModel)})
-			return m, nil
-		}
-		if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		// Mid-session switch: SetModel only re-routes subsequent requests; the
-		// conversation history on the session is left intact, so context carries
-		// over to the new model. Count messages to confirm nothing was dropped.
-		msgCount := len(m.session.RawMessages())
-		m.session.SetModel(arg)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-			"Model switched: %s → %s\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json).",
-			prevModel, m.session.Model(), msgCount,
-		)})
-		return m, nil
-
-	case "/render":
-		renderPath := ""
-		if len(parts) >= 2 {
-			renderPath = strings.TrimSpace(strings.TrimPrefix(text, "/render"))
-		}
-		cxml, stats, err := renderCXML(renderPath)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		if err := copyToClipboard(cxml); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to copy: " + err.Error()})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s CXML copied to clipboard.\n%s", icons.FileDocument(), stats)})
-		return m, nil
-
-	case "/review":
-		return m.startPromptCommand("/review", engine.ReviewPrompt(nil))
-	case "/refactor":
-		return m.handleRefactorCommand(parts, text)
-
 	case "/dream":
 		projectDir, _ := os.Getwd()
 		status := memory.YaadStatus()
@@ -507,18 +399,6 @@ Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Generating recap..."})
 		return m.startPromptCommand("/away", awayPrompt)
 
-	case "/soul":
-		arg := strings.TrimSpace(strings.TrimPrefix(text, "/soul"))
-		if arg == "init" {
-			return m.startPromptCommand("/soul init", engine.InitSoulPrompt())
-		}
-		soul := engine.LoadCodingSoul()
-		if soul.Style == "" && soul.Preferences == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No soul file found. Run /soul init to generate one."})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: soul.ForPrompt()})
-		}
-		return m, nil
 	case "/recipe":
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/recipe"))
 		if arg == "" || arg == "list" {
@@ -548,19 +428,6 @@ Generate the recap:`, summary.String())
 		}
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Recipe not found: " + arg})
 		return m, nil
-
-	case "/pr-comments":
-		return m.startPromptCommand("/pr-comments", "Review open PR comments or, if unavailable, inspect the current diff and suggest responses or fixes for likely review comments.")
-
-	case "/hunt":
-		symptom := strings.TrimSpace(strings.TrimPrefix(text, "/hunt"))
-		if symptom == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /hunt <error or symptom>"})
-			return m, nil
-		}
-		return m.startPromptCommand("/hunt", buildHuntPrompt(symptom))
-	case "/snapshot":
-		return m.handleSessionCommand(cmd, parts, text)
 
 	case "/design":
 		fields := strings.Fields(text)
@@ -624,34 +491,6 @@ Generate the recap:`, summary.String())
 		}
 		return m.startPromptCommand("/design", buildDesignPrompt(topic))
 
-	case "/context":
-		arg := strings.TrimSpace(strings.TrimPrefix(text, "/context"))
-		if arg == "init" {
-			cwd, _ := os.Getwd()
-			pc := project.NewProjectContext(cwd)
-			return m.startPromptCommand("/context init", pc.InitPrompt())
-		}
-		if arg == "show" {
-			cwd, _ := os.Getwd()
-			pc := project.NewProjectContext(cwd)
-			content := pc.Load()
-			if content == "" {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "No project context files found. Run /context init to generate."})
-			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: content})
-			}
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.BuildContextWithDirs(addDirs)})
-		return m, nil
-	case "/memory":
-		md := strings.TrimSpace(hawkconfig.LoadAgentsMD())
-		if md == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No AGENTS.md or .hawk/AGENTS.md project instructions found.\nUse /yaad for persistent graph memory."})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Project instructions (AGENTS.md):\n" + md})
-		}
-		return m, nil
 	case "/yaad":
 		if len(parts) >= 3 && parts[1] == "search" {
 			query := strings.TrimSpace(strings.Join(parts[2:], " "))
