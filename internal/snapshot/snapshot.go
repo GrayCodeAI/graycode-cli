@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Tracker maintains a shadow git repository that records every file change
@@ -36,10 +38,13 @@ type FileDiff struct {
 }
 
 // New creates a Tracker for the given project directory.
+// The shadow git repository lives under the user's home dir (~/.hawk/snapshots)
+// rather than under projectDir, so that running hawk from inside a Go project
+// root no longer creates a nested <cwd>/cmd/.hawk/ tree at runtime.
 func New(projectDir string) *Tracker {
 	return &Tracker{
 		projectDir: projectDir,
-		shadowDir:  filepath.Join(projectDir, ".hawk", "snapshots"),
+		shadowDir:  filepath.Join(home.Dir(), ".hawk", "snapshots"),
 	}
 }
 

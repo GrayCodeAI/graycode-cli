@@ -2,11 +2,13 @@ package engine
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
+	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/tok"
 )
@@ -189,6 +191,11 @@ type SessionSummary struct {
 // NewIntegrationPipeline initializes all subsystems and returns a ready-to-use
 // pipeline orchestrator.
 func NewIntegrationPipeline() *IntegrationPipeline {
+	// Resolve the user's home dir once so the learning-pipeline stores do not
+	// leak into <cwd>/.hawk/ when hawk is run from inside its own source tree.
+	// See L2 in docs/plans/fix-critical-and-high-review.md.
+	homeRoot := home.Dir()
+
 	return &IntegrationPipeline{
 		// Pre-query
 		IntentClassifier: NewIntentClassifier(),
@@ -214,9 +221,9 @@ func NewIntegrationPipeline() *IntegrationPipeline {
 		OutputRedactor:   NewOutputRedactor(),
 
 		// Learning
-		ExperienceStore:   NewExperienceStore(".hawk/experience"),
-		KnowledgeBase:     NewKnowledgeBase(".hawk/knowledge"),
-		FeedbackCollector: NewFeedbackCollector(".hawk/feedback"),
+		ExperienceStore:   NewExperienceStore(filepath.Join(homeRoot, ".hawk", "experience")),
+		KnowledgeBase:     NewKnowledgeBase(filepath.Join(homeRoot, ".hawk", "knowledge")),
+		FeedbackCollector: NewFeedbackCollector(filepath.Join(homeRoot, ".hawk", "feedback")),
 		SelfAssessor:      NewSelfAssessor(),
 
 		// Session management
