@@ -235,19 +235,19 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	sess.SetAPIKeys(hawkconfig.LoadAPIKeysFromStore())
 
 	for _, spec := range settings.AutoAllow {
-		sess.Permissions.AllowSpec(spec)
+		sess.PermSvc().Memory().AllowSpec(spec)
 	}
 	for _, spec := range settings.AllowedTools {
-		sess.Permissions.AllowSpec(spec)
+		sess.PermSvc().Memory().AllowSpec(spec)
 	}
 	for _, spec := range settings.DisallowedTools {
-		sess.Permissions.DenySpec(spec)
+		sess.PermSvc().Memory().DenySpec(spec)
 	}
 	for _, spec := range parseToolListFromCLI(allowedToolsFlag) {
-		sess.Permissions.AllowSpec(spec)
+		sess.PermSvc().Memory().AllowSpec(spec)
 	}
 	for _, spec := range parseToolListFromCLI(disallowedToolsFlag) {
-		sess.Permissions.DenySpec(spec)
+		sess.PermSvc().Memory().DenySpec(spec)
 	}
 
 	mode := permissionMode
@@ -308,7 +308,7 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	sess.EnsureAutoCompactor()
 
 	if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
-		sess.Autonomy = lvl
+		sess.PermSvc().SetAutonomy(lvl)
 	}
 
 	// GLM/Z.AI extended reasoning toggle (applied in the stream loop for zai_coding/zai_payg).

@@ -217,12 +217,12 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	// Apply autonomy level
 	if execAutoLevel != "" {
-		sess.Autonomy = engine.ParseAutonomyLevel(execAutoLevel)
+		sess.PermSvc().SetAutonomy(engine.ParseAutonomyLevel(execAutoLevel))
 	}
 
 	// In exec mode, auto-approve based on autonomy level (no TUI to ask)
 	sess.PermissionFn = func(req engine.PermissionRequest) {
-		cfg := engine.PresetConfig(sess.Autonomy)
+		cfg := engine.PresetConfig(sess.PermSvc().Autonomy())
 		allowed := !cfg.NeedsPermission(req.ToolName, false)
 		if req.Response != nil {
 			req.Response <- allowed
