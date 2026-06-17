@@ -294,7 +294,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer tree.Close()
+	defer tree.Close() //nolint:errcheck // deferred Close on read-only tree is cleanup-only
 
 	// Delete old nodes for this file
 	cg.mu.Lock()
@@ -466,7 +466,7 @@ func (cg *CodeGraph) Search(query string, limit int) ([]Node, error) {
 			return nil, err
 		}
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	return scanNodes(rows)
 }
@@ -752,7 +752,7 @@ func (cg *CodeGraph) ResolveRefs() error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	type ref struct {
 		id       int
@@ -1352,7 +1352,7 @@ func (cg *CodeGraph) Files(dirFilter string) ([]FileEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	var files []FileEntry
 	for rows.Next() {
@@ -1464,7 +1464,7 @@ func (cg *CodeGraph) searchByName(name string, limit int) ([]Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 	return scanNodes(rows)
 }
 
