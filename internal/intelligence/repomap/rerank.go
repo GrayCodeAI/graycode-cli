@@ -1,4 +1,4 @@
-// Package repomap: rerank.go applies a BM25-over-BM25 reranking pass to a
+// rerank.go applies a BM25-over-BM25 reranking pass to a
 // candidate set of code chunks. It is used after a faster but less precise
 // retrieval step (semantic similarity, PageRank, or import-graph proximity)
 // to surface the chunks that are most relevant to the query terms.

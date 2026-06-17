@@ -1,4 +1,4 @@
-// Package repomap: watcher.go wraps fsnotify.Watcher to monitor a project
+// watcher.go wraps fsnotify.Watcher to monitor a project
 // tree for file-system events and invoke a callback when a supported
 // source file changes. It is the runtime hook used to keep the in-memory
 // symbol index in sync with the working tree during a long-running session.

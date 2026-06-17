@@ -1,4 +1,4 @@
-// Package repomap: semantic.go provides the lower-level chunked TF-IDF
+// semantic.go provides the lower-level chunked TF-IDF
 // index used by the reranker. BuildSemanticIndex scans a directory, splits
 // source files into ~40-line CodeChunks, and stores the result on disk
 // (gob-encoded) for fast reload on subsequent sessions.

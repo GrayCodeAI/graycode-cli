@@ -1,4 +1,4 @@
-// Package repomap: patterns.go loads a .hawk/repomap-patterns.json file
+// patterns.go loads a .hawk/repomap-patterns.json file
 // (if present) describing which files to include or exclude from indexing,
 // and falls back to DefaultIndexPatterns otherwise. The result is consumed
 // by Generate, BuildSemanticIndex, and the watcher to skip unwanted trees.

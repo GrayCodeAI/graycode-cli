@@ -1,4 +1,4 @@
-// Package repomap: parser.go contains the original regex-based Go symbol
+// parser.go contains the original regex-based Go symbol
 // extractor. It is retained as a fast, dependency-free path; new code should
 // prefer the AST-based EnhancedGoParser in parser_enhanced.go and the
 // tree-sitter-style extractor in treesitter.go.

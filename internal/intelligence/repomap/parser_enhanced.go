@@ -1,4 +1,4 @@
-// Package repomap: parser_enhanced.go wraps the standard-library go/parser
+// parser_enhanced.go wraps the standard-library go/parser
 // and go/ast packages to extract symbols, methods, embedded types, and
 // interface satisfaction from Go source. It replaces the legacy regex path
 // for Go without requiring CGO or a tree-sitter binary.

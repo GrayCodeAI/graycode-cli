@@ -1,4 +1,4 @@
-// Package repomap: summary.go produces the LLM-facing CodebaseSummary:
+// summary.go produces the LLM-facing CodebaseSummary:
 // a high-level description of the project, its packages, entry points,
 // key files, and inferred architecture. RenderForPrompt and RenderCompact
 // emit the summary in token-bounded forms suitable for injection at the
