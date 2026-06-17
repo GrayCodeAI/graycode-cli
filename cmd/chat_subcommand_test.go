@@ -363,3 +363,114 @@ func TestSubcommandRegistry_AllContainsBranch(t *testing.T) {
 		t.Error("/branch not in subcommandRegistry.All()")
 	}
 }
+
+// --- migrated commands: /version, /env, /doctor, /init, /focus,
+//     /pin, /files, /commit, /session ---
+//
+// These tests verify the second batch of commands migrated from
+// chat_commands.go into the new SubcommandRegistry pattern.
+
+func TestVersionSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("version")
+	if !ok {
+		t.Fatal("/version not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "version" {
+		t.Errorf("Name = %q, want version", cmd.Name())
+	}
+	if cmd.Description() == "" {
+		t.Error("Description is empty; should describe the command for /help")
+	}
+}
+
+func TestEnvSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("env")
+	if !ok {
+		t.Fatal("/env not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "env" {
+		t.Errorf("Name = %q, want env", cmd.Name())
+	}
+}
+
+func TestDoctorSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("doctor")
+	if !ok {
+		t.Fatal("/doctor not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "doctor" {
+		t.Errorf("Name = %q, want doctor", cmd.Name())
+	}
+}
+
+func TestInitSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("init")
+	if !ok {
+		t.Fatal("/init not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "init" {
+		t.Errorf("Name = %q, want init", cmd.Name())
+	}
+}
+
+func TestFocusSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("focus")
+	if !ok {
+		t.Fatal("/focus not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "focus" {
+		t.Errorf("Name = %q, want focus", cmd.Name())
+	}
+	if cmd.Usage() == "" {
+		t.Error("Usage is empty; /focus requires path args")
+	}
+}
+
+func TestPinSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("pin")
+	if !ok {
+		t.Fatal("/pin not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "pin" {
+		t.Errorf("Name = %q, want pin", cmd.Name())
+	}
+}
+
+func TestFilesSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("files")
+	if !ok {
+		t.Fatal("/files not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "files" {
+		t.Errorf("Name = %q, want files", cmd.Name())
+	}
+}
+
+func TestCommitSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("commit")
+	if !ok {
+		t.Fatal("/commit not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "commit" {
+		t.Errorf("Name = %q, want commit", cmd.Name())
+	}
+}
+
+func TestSessionSubcommand_AliasesRegistered(t *testing.T) {
+	// sessionSubcommand has 8 names: /clear (primary), /compact,
+	// /diff, /recover, /resume, /history, /quit, /exit.
+	for _, name := range []string{"clear", "compact", "diff", "recover", "resume", "history", "quit", "exit"} {
+		if _, ok := subcommandRegistry.Lookup(name); !ok {
+			t.Errorf("/%s not registered (session subcommand should cover all)", name)
+		}
+	}
+}
+
+func TestSubcommandRegistry_MigratedCount(t *testing.T) {
+	// After the H5 batch-2 migration, the registry should have
+	// at least: branch, version, env, doctor, init, focus, pin,
+	// files, commit, session (10 total).
+	if got := subcommandRegistry.Size(); got < 10 {
+		t.Errorf("subcommandRegistry.Size = %d, want >= 10 (after H5 batch-2)", got)
+	}
+}
