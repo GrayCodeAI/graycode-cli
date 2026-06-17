@@ -1,3 +1,10 @@
+// Package repomap: incremental.go defines the CodeIndexer interface
+// (the contract the repomap package uses to push code chunks to and
+// query code chunks from a downstream store such as the memory package's
+// YaadBridge) and IncrementalReindex, which diffs the project tree
+// against a CodeIndexer's known file set and reindexes only added or
+// changed files, removing deleted ones. ComputeFileHash returns the
+// SHA-256 used to detect content changes.
 package repomap
 
 import (

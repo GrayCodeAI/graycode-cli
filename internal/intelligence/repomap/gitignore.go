@@ -1,3 +1,7 @@
+// Package repomap: gitignore.go composes .gitignore rules from a project
+// root, walking parent directories so that nested gitignore files (and
+// the .git/info/exclude and global gitignore) all take effect. The resulting
+// GitignoreRules is consulted by the file walk in Generate.
 package repomap
 
 import (

@@ -1,3 +1,8 @@
+// Package repomap: incremental_map.go is the persistent, on-disk symbol
+// cache. It stores per-file SHA-256 hashes and the corresponding symbol
+// lists in .hawk/repomap-cache.json (or a caller-provided directory). On
+// regeneration only files whose hash changed are re-parsed, and deleted
+// files are evicted, so the index stays accurate without a full rebuild.
 package repomap
 
 import (

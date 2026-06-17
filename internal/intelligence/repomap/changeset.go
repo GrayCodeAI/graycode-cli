@@ -1,3 +1,8 @@
+// Package repomap: changeset.go derives a focused ChangeSetContext from
+// a git diff (working tree or a range against a base ref). The context
+// lists changed files, files affected by the changes (dependents), and
+// files needed to understand the changes (imports), and is used to build
+// smaller, change-set-aware LLM prompts.
 package repomap
 
 import (

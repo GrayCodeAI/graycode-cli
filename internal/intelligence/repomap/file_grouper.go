@@ -1,3 +1,8 @@
+// Package repomap: file_grouper.go identifies sets of files that should
+// be edited as a unit (Go packages, feature slices, layered modules,
+// test/source pairs, configuration groups). The resulting FileGroups are
+// used by the context builder to include whole groups in a single
+// prompt, not disjoint individual files.
 package repomap
 
 import (

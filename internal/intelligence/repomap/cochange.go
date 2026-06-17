@@ -1,3 +1,7 @@
+// Package repomap: cochange.go mines the last N git commits to build a
+// co-occurrence matrix of files that change together, and exposes
+// RelatedFiles for "what else should I look at" recommendations after a
+// file has been touched.
 package repomap
 
 import (
