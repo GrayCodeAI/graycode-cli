@@ -728,9 +728,7 @@ func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
 }
 
 func (s *Session) MessageCount() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.messages)
+	return len(s.Persistence().RawMessages())
 }
 
 // RawMessages returns the conversation messages for persistence.
@@ -751,20 +749,20 @@ func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts type
 
 // RemoveLastExchange removes the last user+assistant message pair.
 func (s *Session) RemoveLastExchange() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if len(s.messages) < 2 {
+	msgs := s.Persistence().RawMessages()
+	if len(msgs) < 2 {
 		return
 	}
 	// Remove from the end until we've removed one user and one assistant message
 	removed := 0
-	for i := len(s.messages) - 1; i >= 0 && removed < 2; i-- {
-		role := s.messages[i].Role
+	for i := len(msgs) - 1; i >= 0 && removed < 2; i-- {
+		role := msgs[i].Role
 		if role == "user" || role == "assistant" {
 			removed++
-			s.messages = s.messages[:i]
+			msgs = msgs[:i]
 		}
 	}
+	s.Persistence().SetRawMessages(msgs)
 }
 
 // StreamEvent is sent from the engine to the TUI.

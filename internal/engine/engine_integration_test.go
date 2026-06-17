@@ -171,7 +171,7 @@ func TestIntegration_SessionResume(t *testing.T) {
 	if resumed.MessageCount() != 3 {
 		t.Fatalf("expected 3 messages after resume, got %d", resumed.MessageCount())
 	}
-	if resumed.RawMessages()[2].Content != "What is 3+3?" {
+	if resumed.Persistence().RawMessages()[2].Content != "What is 3+3?" {
 		t.Fatal("continuation message not appended correctly")
 	}
 }
