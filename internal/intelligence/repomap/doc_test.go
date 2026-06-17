@@ -24,21 +24,21 @@ func ExampleGenerate() {
 	// Two supported files: one Go, one Python. Both have a function
 	// and a type declaration so the example exercises the AST and
 	// regex paths.
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
+	if writeErr := os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
 
 func main() {}
 
 type Server struct{}
-`), 0o644); err != nil {
-		panic(err)
+`), 0o644); writeErr != nil {
+		panic(writeErr)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte(`class App:
+	if writeErr := os.WriteFile(filepath.Join(dir, "app.py"), []byte(`class App:
     pass
 
 def run():
     pass
-`), 0o644); err != nil {
-		panic(err)
+`), 0o644); writeErr != nil {
+		panic(writeErr)
 	}
 
 	rm, err := Generate(dir, Options{MaxFiles: 100, MaxTokens: 5000})
@@ -60,21 +60,21 @@ def run():
 func TestExampleGenerate_isRunnable(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
+	if writeErr := os.WriteFile(filepath.Join(dir, "main.go"), []byte(`package main
 
 func main() {}
 
 type Server struct{}
-`), 0o644); err != nil {
-		t.Fatal(err)
+`), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte(`class App:
+	if writeErr := os.WriteFile(filepath.Join(dir, "app.py"), []byte(`class App:
     pass
 
 def run():
     pass
-`), 0o644); err != nil {
-		t.Fatal(err)
+`), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	rm, err := Generate(dir, Options{MaxFiles: 100, MaxTokens: 5000})
