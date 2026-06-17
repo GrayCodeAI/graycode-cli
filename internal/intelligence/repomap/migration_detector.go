@@ -1,3 +1,8 @@
+// migration_detector.go applies a set of MigrationRule
+// patterns to a project and reports MigrationOpportunities - patterns that
+// could be updated to a newer API, a more idiomatic construct, or a more
+// secure/performant alternative. AutoFix can rewrite selected patterns
+// in-place. Results feed the health score's "deprecated APIs" dimension.
 package repomap
 
 import (

@@ -1,3 +1,7 @@
+// ownership.go combines git history with CODEOWNERS-style
+// rules to compute per-file ownership: primary owner, contributors,
+// recency, and bus-factor risk. It is consumed by the health-score
+// dimension that flags orphaned files.
 package repomap
 
 import (

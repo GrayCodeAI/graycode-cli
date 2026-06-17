@@ -1,3 +1,9 @@
+// complexity.go computes cyclomatic and cognitive
+// complexity per function (Go files via go/ast, other languages via
+// brace-tracking regex), aggregates a ComplexityReport per file, and
+// surfaces refactoring suggestions and a MaintainabilityIndex for the
+// health score. FindHotspots walks an entire project and returns the
+// highest-complexity functions first.
 package repomap
 
 import (

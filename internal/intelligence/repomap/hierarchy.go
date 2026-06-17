@@ -1,3 +1,7 @@
+// hierarchy.go builds a three-level summary of a project
+// (project -> package -> file) by grouping scanned files into Go packages
+// and recording the exported symbols of each. It is consumed by the
+// summary generator to produce an LLM-friendly project overview.
 package repomap
 
 import (
