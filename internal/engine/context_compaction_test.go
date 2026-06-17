@@ -5,7 +5,7 @@ import (
 )
 
 func TestContextUsedTokens_PrefersAPI(t *testing.T) {
-	s := NewSession("", "test", "sys", nil)
+	s := newTestSession()
 	s.AddUser("hello")
 	if got := s.ContextUsedTokens(); got <= 0 {
 		t.Fatalf("expected estimate > 0, got %d", got)

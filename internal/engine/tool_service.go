@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/diff"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -15,12 +16,13 @@ import (
 // and the per-tool timeout. Extracted from Session in Phase 6 of the
 // god-object decomposition (see docs/session-decomposition.md).
 type ToolService struct {
-	registry          *tool.Registry
+	registry         *tool.Registry
 	containerExecutor tool.ContainerExecutor
 	containerRequired bool
-	tracer            *oteltrace.Tracer
-	snapshots         SnapshotTracker
-	bgManager         *tool.BackgroundAgentManager
+	tracer           *oteltrace.Tracer
+	snapshots        SnapshotTracker
+	bgManager        *tool.BackgroundAgentManager
+	sandbox          *diff.DiffSandbox
 }
 
 // NewToolService constructs a ToolService with the given registry.
@@ -122,6 +124,14 @@ func (s *ToolService) ContainerRequired() bool { return s.containerRequired }
 
 // ContainerExecutor returns the configured container executor, or nil.
 func (s *ToolService) ContainerExecutor() tool.ContainerExecutor { return s.containerExecutor }
+
+// Sandbox returns the diff sandbox (staged file changes for
+// review before apply). New code should access this through
+// s.Tools().Sandbox().
+func (s *ToolService) Sandbox() *diff.DiffSandbox { return s.sandbox }
+
+// SetSandbox attaches the diff sandbox.
+func (s *ToolService) SetSandbox(sb *diff.DiffSandbox) { s.sandbox = sb }
 
 // marshalInput serializes a tool call's args to JSON.
 func marshalInput(tc types.ToolCall) json.RawMessage {

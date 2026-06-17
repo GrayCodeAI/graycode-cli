@@ -41,7 +41,7 @@ func TestSessionLifecycle(t *testing.T) {
 	}
 
 	// Test raw messages
-	raw := sess.RawMessages()
+	raw := sess.Persistence().RawMessages()
 	if len(raw) != 2 {
 		t.Fatalf("expected 2 raw messages, got %d", len(raw))
 	}

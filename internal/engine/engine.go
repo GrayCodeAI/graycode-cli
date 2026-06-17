@@ -23,18 +23,18 @@ func (s *Session) compact() {
 	if s.PinnedMessages > keepEnd {
 		keepEnd = s.PinnedMessages
 	}
-	if len(s.messages) <= keepEnd+4 {
+	if len(s.Persistence().RawMessages()) <= keepEnd+4 {
 		return
 	}
 	// Keep first 4 and last keepEnd, but ensure we don't break tool pairs.
 	cutStart := 4
-	cutEnd := len(s.messages) - keepEnd
+	cutEnd := len(s.Persistence().RawMessages()) - keepEnd
 
 	// Ensure cutEnd doesn't land in the middle of a tool_use/tool_result pair.
 	// A tool_result (user msg with ToolResult) must follow its tool_use (assistant msg with ToolUse).
 	// Walk cutEnd forward until we're at a clean boundary.
-	for cutEnd < len(s.messages) {
-		msg := s.messages[cutEnd]
+	for cutEnd < len(s.Persistence().RawMessages()) {
+		msg := s.Persistence().RawMessages()[cutEnd]
 		if len(msg.ToolResults) > 0 {
 			// This is a tool_result — we'd orphan it. Include it.
 			cutEnd++
@@ -50,11 +50,11 @@ func (s *Session) compact() {
 
 	// Also walk cutStart forward to not orphan pairs at the beginning
 	for cutStart < cutEnd {
-		msg := s.messages[cutStart]
+		msg := s.Persistence().RawMessages()[cutStart]
 		if msg.Role == "assistant" && len(msg.ToolUse) > 0 {
 			// Include the tool results that follow
 			cutStart++
-			for cutStart < cutEnd && len(s.messages[cutStart].ToolResults) > 0 {
+			for cutStart < cutEnd && len(s.Persistence().RawMessages()[cutStart].ToolResults) > 0 {
 				cutStart++
 			}
 			continue
@@ -66,14 +66,14 @@ func (s *Session) compact() {
 		return // nothing to compact
 	}
 
-	keep := make([]types.EyrieMessage, 0, len(s.messages)-(cutEnd-cutStart)+1)
-	keep = append(keep, s.messages[:cutStart]...)
+	keep := make([]types.EyrieMessage, 0, len(s.Persistence().RawMessages())-(cutEnd-cutStart)+1)
+	keep = append(keep, s.Persistence().RawMessages()[:cutStart]...)
 	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Earlier conversation compacted to save context.]",
 	})
-	keep = append(keep, s.messages[cutEnd:]...)
-	s.messages = keep
+	keep = append(keep, s.Persistence().RawMessages()[cutEnd:]...)
+	s.Persistence().SetRawMessages( keep);
 }
 
 // readFileContent reads a file from disk and returns its content as a string.

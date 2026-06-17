@@ -22,12 +22,12 @@ import (
 // of the keepCount messages multiplied by 3 (a single message uses more than
 // 3x the average of the kept tail).
 func (s *Session) SplitTurnNeeded(keepCount int) bool {
-	if len(s.messages) <= keepCount {
+	if len(s.Persistence().RawMessages()) <= keepCount {
 		return false
 	}
 
 	// Calculate token budget: average of last keepCount messages * 3
-	tail := s.messages[len(s.messages)-keepCount:]
+	tail := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepCount:]
 	totalTokens := 0
 	for _, msg := range tail {
 		totalTokens += EstimateMessageTokens(msg)
@@ -59,12 +59,12 @@ func (s *Session) splitTurnCompact() {
 	if s.PinnedMessages > keepEnd {
 		keepEnd = s.PinnedMessages
 	}
-	if len(s.messages) <= keepEnd {
+	if len(s.Persistence().RawMessages()) <= keepEnd {
 		return
 	}
 
 	// Find the oversized message in the tail
-	tail := s.messages[len(s.messages)-keepEnd:]
+	tail := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]
 	totalTokens := 0
 	for _, msg := range tail {
 		totalTokens += EstimateMessageTokens(msg)
@@ -90,20 +90,20 @@ func (s *Session) splitTurnCompact() {
 	}
 
 	// Split point in the full message array
-	tailStart := len(s.messages) - keepEnd
+	tailStart := len(s.Persistence().RawMessages()) - keepEnd
 	splitPoint := tailStart + oversizedIdx
 
 	// Extract file tracking before compaction
 	if s.Files == nil {
 		s.Files = NewFileTracker()
 	}
-	s.Files.ExtractFromMessages(s.messages[:splitPoint])
+	s.Files.ExtractFromMessages(s.Persistence().RawMessages()[:splitPoint])
 
 	// Phase 1: Summarize everything before the oversized turn
-	phase1Summary := s.generatePartialSummary(s.messages[:splitPoint])
+	phase1Summary := s.generatePartialSummary(s.Persistence().RawMessages()[:splitPoint])
 
 	// Phase 2: Summarize the first half of the oversized turn's content
-	oversizedMsg := s.messages[splitPoint]
+	oversizedMsg := s.Persistence().RawMessages()[splitPoint]
 	phase2Summary := s.summarizeOversizedTurn(oversizedMsg)
 
 	// Build the combined summary
@@ -126,7 +126,7 @@ func (s *Session) splitTurnCompact() {
 
 	// Reconstruct messages: summary + tail from oversized turn onward
 	// Keep the second half of the oversized message + everything after
-	remainingMessages := s.messages[splitPoint:]
+	remainingMessages := s.Persistence().RawMessages()[splitPoint:]
 
 	keep := make([]types.EyrieMessage, 0, len(remainingMessages)+2)
 	keep = append(keep, types.EyrieMessage{
@@ -138,7 +138,7 @@ func (s *Session) splitTurnCompact() {
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
 	keep = append(keep, remainingMessages...)
-	s.messages = keep
+	s.Persistence().SetRawMessages( keep);
 }
 
 // generatePartialSummary generates an LLM summary for a subset of messages.
@@ -229,7 +229,7 @@ func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
 // smartCompactFallback is the original smartCompact logic used when split-turn
 // is detected but no oversized message is found (edge case fallback).
 func (s *Session) smartCompactFallback() {
-	if len(s.messages) <= 20 {
+	if len(s.Persistence().RawMessages()) <= 20 {
 		return
 	}
 
@@ -241,7 +241,7 @@ func (s *Session) smartCompactFallback() {
 	if s.Files == nil {
 		s.Files = NewFileTracker()
 	}
-	compactedMsgs := s.messages[:len(s.messages)-keepEnd]
+	compactedMsgs := s.Persistence().RawMessages()[:len(s.Persistence().RawMessages())-keepEnd]
 	s.Files.ExtractFromMessages(compactedMsgs)
 	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
 		s.Files.ParseFromSummary(compactedMsgs[0].Content)
@@ -267,6 +267,6 @@ func (s *Session) smartCompactFallback() {
 		Role:    "assistant",
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
-	keep = append(keep, s.messages[len(s.messages)-keepEnd:]...)
-	s.messages = keep
+	keep = append(keep, s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]...)
+	s.Persistence().SetRawMessages( keep);
 }

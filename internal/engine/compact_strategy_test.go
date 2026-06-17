@@ -72,7 +72,7 @@ func TestTruncateStrategy(t *testing.T) {
 	if result.Strategy != "truncate" {
 		t.Errorf("expected strategy 'truncate', got %q", result.Strategy)
 	}
-	if len(sess.messages) >= 100 {
+	if len(sess.Persistence().RawMessages()) >= 100 {
 		t.Error("messages should have been reduced")
 	}
 }

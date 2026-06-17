@@ -39,29 +39,29 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	// Self-improvement: run OnSessionEnd when the loop exits (regardless of how)
 	defer func() {
 		success := ctx.Err() == nil
-		if s.Lifecycle != nil {
+		if s.LifecycleSvc().Lifecycle() != nil {
 			outcome := SessionOutcome{
 				Success:  success,
 				Duration: time.Since(sessionStart),
 			}
-			if len(s.messages) > 0 {
-				for _, m := range s.messages {
+			if len(s.Persistence().RawMessages()) > 0 {
+				for _, m := range s.Persistence().RawMessages() {
 					if m.Role == "user" && len(m.ToolResults) == 0 && outcome.TaskGoal == "" {
 						outcome.TaskGoal = m.Content
 					}
 				}
 			}
-			_ = s.Lifecycle.OnSessionEnd(ctx, s, outcome)
+			_ = s.LifecycleSvc().Lifecycle().OnSessionEnd(ctx, s, outcome)
 		}
 		// Enhanced memory: session-end processing (confidence, diff, continuity)
-		if s.EnhancedMemory != nil {
-			s.EnhancedMemory.EndSession(success)
+		if s.MemorySvc().Enhanced() != nil {
+			s.MemorySvc().Enhanced().EndSession(success)
 		}
 		// Yaad: save session summary
-		if s.Memory != nil {
+		if s.MemorySvc().Memory() != nil {
 			taskGoal := ""
-			if len(s.messages) > 0 {
-				for _, m := range s.messages {
+			if len(s.Persistence().RawMessages()) > 0 {
+				for _, m := range s.Persistence().RawMessages() {
 					if m.Role == "user" && len(m.ToolResults) == 0 && taskGoal == "" {
 						taskGoal = m.Content
 					}
@@ -72,15 +72,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				if !success {
 					summary += " (interrupted)"
 				}
-				_ = s.Memory.Remember(summary, "session")
+				_ = s.MemorySvc().Memory().Remember(summary, "session")
 			}
 		}
 
 		// Few-shot learning: record successful session patterns
-		if success && s.FewShotStore != nil && len(s.messages) >= 2 {
+		if success && s.LifecycleSvc().FewShotStore() != nil && len(s.Persistence().RawMessages()) >= 2 {
 			taskGoal := ""
 			response := ""
-			for _, m := range s.messages {
+			for _, m := range s.Persistence().RawMessages() {
 				if m.Role == "user" && len(m.ToolResults) == 0 && taskGoal == "" {
 					taskGoal = m.Content
 				}
@@ -89,15 +89,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if taskGoal != "" && response != "" {
-				s.FewShotStore.Record(taskGoal, response, "general")
+				s.LifecycleSvc().FewShotStore().Record(taskGoal, response, "general")
 			}
 		}
 
 		// Adaptive prompt: learn from user corrections in this session
-		if s.AdaptivePrompt != nil {
-			for _, m := range s.messages {
+		if s.LifecycleSvc().AdaptivePrompt() != nil {
+			for _, m := range s.Persistence().RawMessages() {
 				if m.Role == "user" && len(m.ToolResults) == 0 {
-					s.AdaptivePrompt.LearnFromFeedback(m.Content)
+					s.LifecycleSvc().AdaptivePrompt().LearnFromFeedback(m.Content)
 				}
 			}
 		}
@@ -110,33 +110,33 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	})
 
 	// Self-improvement: inject learned guidelines and skills from prior sessions
-	if s.Lifecycle != nil && len(s.messages) > 0 {
-		lastMsg := s.messages[len(s.messages)-1].Content
-		if learnedCtx := s.Lifecycle.OnSessionStart(ctx, lastMsg); learnedCtx != "" {
+	if s.LifecycleSvc().Lifecycle() != nil && len(s.Persistence().RawMessages()) > 0 {
+		lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
+		if learnedCtx := s.LifecycleSvc().Lifecycle().OnSessionStart(ctx, lastMsg); learnedCtx != "" {
 			s.AppendSystemContext(learnedCtx)
 		}
 	}
 
 	// Inject remembered context from yaad into system prompt
-	if s.Memory != nil && len(s.messages) > 0 {
-		lastMsg := s.messages[len(s.messages)-1].Content
-		remembered, err := s.Memory.Recall(lastMsg, 2000)
+	if s.MemorySvc().Memory() != nil && len(s.Persistence().RawMessages()) > 0 {
+		lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
+		remembered, err := s.MemorySvc().Memory().Recall(lastMsg, 2000)
 		if err == nil && remembered != "" {
 			s.AppendSystemContext("## Relevant Memories\n" + remembered)
 		}
 	}
 
 	// Few-shot learning: inject relevant examples from past successful sessions
-	if s.FewShotStore != nil && len(s.messages) > 0 {
-		lastMsg := s.messages[len(s.messages)-1].Content
-		if fewShotCtx := s.FewShotStore.FormatForPrompt(lastMsg); fewShotCtx != "" {
+	if s.LifecycleSvc().FewShotStore() != nil && len(s.Persistence().RawMessages()) > 0 {
+		lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
+		if fewShotCtx := s.LifecycleSvc().FewShotStore().FormatForPrompt(lastMsg); fewShotCtx != "" {
 			s.AppendSystemContext(fewShotCtx)
 		}
 	}
 
 	// Adaptive prompt: inject user preferences learned from corrections
-	if s.AdaptivePrompt != nil {
-		if prefs := s.AdaptivePrompt.FormatForPrompt(); prefs != "" {
+	if s.LifecycleSvc().AdaptivePrompt() != nil {
+		if prefs := s.LifecycleSvc().AdaptivePrompt().FormatForPrompt(); prefs != "" {
 			s.AppendSystemContext(prefs)
 		}
 	}
@@ -162,24 +162,24 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		turnCount++
 
-		if s.Limits != nil {
-			s.Limits.RecordTurn()
+		if s.LifecycleSvc().Limits() != nil {
+			s.LifecycleSvc().Limits().RecordTurn()
 		}
 
 		// Belief maintenance: prune stale beliefs (injected at query time below)
-		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
-			s.Beliefs.Prune(turnCount)
+		if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
+			s.LifecycleSvc().Beliefs().Prune(turnCount)
 		}
 		// Context governor: collapse → micro/smart/truncate (settings threshold %).
-		tokensBefore := EstimateTokens(s.messages)
+		tokensBefore := EstimateTokens(s.Persistence().RawMessages())
 		if s.WillCompactBeforeTurn() {
 			ch <- StreamEvent{Type: "compact_start"}
 		}
 		if compactStrategy, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
-			tokensAfter := EstimateTokens(s.messages)
+			tokensAfter := EstimateTokens(s.Persistence().RawMessages())
 			s.log.Info("context compacted", map[string]interface{}{
 				"strategy": compactStrategy,
-				"messages": len(s.messages),
+				"messages": len(s.Persistence().RawMessages()),
 			})
 			ch <- StreamEvent{
 				Type:         "compact",
@@ -190,20 +190,20 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Integration pipeline: pre-query (intent, tools, budget, injection scan, cache)
-		if s.Pipeline != nil {
+		if s.LifecycleSvc().Pipeline() != nil {
 			lastUserMsg := ""
-			for i := len(s.messages) - 1; i >= 0; i-- {
-				if s.messages[i].Role == "user" && len(s.messages[i].ToolResults) == 0 {
-					lastUserMsg = s.messages[i].Content
+			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+				if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
+					lastUserMsg = s.Persistence().RawMessages()[i].Content
 					break
 				}
 			}
-			preResult := s.Pipeline.PreQuery(s.messages, lastUserMsg)
+			preResult := s.LifecycleSvc().Pipeline().PreQuery(s.Persistence().RawMessages(), lastUserMsg)
 			if preResult != nil {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
 					ch <- StreamEvent{Type: "content", Content: preResult.CachedResponse}
-					s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
+					s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}));
 					ch <- StreamEvent{Type: "done"}
 					return
 				}
@@ -218,7 +218,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 				// Apply adaptive system prompt if generated
 				if preResult.SystemPrompt != "" {
-					s.system = preResult.SystemPrompt
+					s.Persistence().SetSystem(preResult.SystemPrompt)
 				}
 			}
 		}
@@ -227,34 +227,34 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		_ = hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
 			"provider": s.provider,
 			"model":    s.model,
-			"messages": len(s.messages),
+			"messages": len(s.Persistence().RawMessages()),
 		})
 
 		s.log.Info("stream query", map[string]interface{}{
 			"provider": s.provider,
 			"model":    s.model,
-			"messages": len(s.messages),
+			"messages": len(s.Persistence().RawMessages()),
 		})
 
 		// Dynamic max_tokens based on task type and recent tool patterns
-		taskType := classifyPromptForBudget(s.messages)
+		taskType := classifyPromptForBudget(s.Persistence().RawMessages())
 		contextSize := s.ContextWindowSize()
-		maxTok := DynamicMaxTokens(s.messages, contextSize, taskType)
+		maxTok := DynamicMaxTokens(s.Persistence().RawMessages(), contextSize, taskType)
 
 		// Model cascade: select optimal model for this request
 		activeModel := strings.TrimSpace(s.model)
 		if activeModel == "" {
 			activeModel = strings.TrimSpace(s.Cost.Model)
 		}
-		if s.Cascade != nil && s.Cascade.Enabled {
+		if s.LifecycleSvc().Cascade() != nil && s.LifecycleSvc().Cascade().Enabled {
 			lastUserMsg := ""
-			for i := len(s.messages) - 1; i >= 0; i-- {
-				if s.messages[i].Role == "user" {
-					lastUserMsg = s.messages[i].Content
+			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+				if s.Persistence().RawMessages()[i].Role == "user" {
+					lastUserMsg = s.Persistence().RawMessages()[i].Content
 					break
 				}
 			}
-			activeModel = s.Cascade.SelectModel(lastUserMsg, activeModel, "")
+			activeModel = s.LifecycleSvc().Cascade().SelectModel(lastUserMsg, activeModel, "")
 		}
 		if strings.TrimSpace(activeModel) == "" {
 			ch <- StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"}
@@ -262,9 +262,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Yaad: recall and refresh memories before every LLM call
-		if s.Memory != nil && len(s.messages) > 0 {
-			lastMsg := s.messages[len(s.messages)-1].Content
-			remembered, err := s.Memory.Recall(lastMsg, 3000)
+		if s.MemorySvc().Memory() != nil && len(s.Persistence().RawMessages()) > 0 {
+			lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
+			remembered, err := s.MemorySvc().Memory().Recall(lastMsg, 3000)
 			if err == nil && remembered != "" {
 				s.ReplaceSystemContextSection("## Relevant Memories\n", "## Relevant Memories\n"+remembered)
 			}
@@ -274,17 +274,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// the GLMThinking toggle, output schema, anthropic caching flag,
 		// and the active provider/model — building opts manually here
 		// would duplicate that logic.
-		baseOpts := s.ChatLLM().BuildOptions(s.system, activeModel, maxTok, nil)
+		baseOpts := s.ChatLLM().BuildOptions(s.Persistence().System(), activeModel, maxTok, nil)
 		opts := baseOpts
-		// Inject beliefs as ephemeral context (not persisted to s.system)
-		if s.Beliefs != nil && s.Beliefs.Size() > 0 {
-			if summary := s.Beliefs.FormatForPrompt(); summary != "" {
+		// Inject beliefs as ephemeral context (not persisted to s.Persistence().System())
+		if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
+			if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
 				opts.System += "\n\n## Agent Beliefs\n" + summary
 			}
 		}
 		// Plan mode: steer the model to research and propose a plan only, and to
 		// call ExitPlanMode for approval before any changes. Ephemeral (not
-		// persisted to s.system) so it disappears once build mode resumes.
+		// persisted to s.Persistence().System()) so it disappears once build mode resumes.
 		if s.Perm != nil && s.Perm.Mode == PermissionModePlan {
 			opts.System += planModeSystemPrompt
 		}
@@ -293,10 +293,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Inject memory metadata from yaad
-		if s.YaadBridge != nil && s.YaadBridge.Ready() {
-			if _, contents, err := s.YaadBridge.SearchByType("convention", 100); err == nil {
+		if s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
+			if _, contents, err := s.MemorySvc().Yaad().SearchByType("convention", 100); err == nil {
 				convCount := len(contents)
-				if _, dContents, err := s.YaadBridge.SearchByType("decision", 100); err == nil {
+				if _, dContents, err := s.MemorySvc().Yaad().SearchByType("decision", 100); err == nil {
 					decCount := len(dContents)
 					total := convCount + decCount
 					if total > 0 {
@@ -307,8 +307,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Circuit breaker: select provider with failover (legacy single-provider clients only).
-		if s.Router != nil && !s.DeploymentRouting {
-			if selectedProvider, err := s.Router.SelectProvider(s.provider); err == nil && selectedProvider != s.provider {
+		if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
+			if selectedProvider, err := s.ChatLLM().Router().SelectProvider(s.provider); err == nil && selectedProvider != s.provider {
 				s.log.Info("provider failover", map[string]interface{}{"from": s.provider, "to": selectedProvider})
 				opts.Provider = selectedProvider
 			}
@@ -316,13 +316,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Count actual input tokens for precise budget tracking
 		inputTokens := 0
-		for _, msg := range s.messages {
+		for _, msg := range s.Persistence().RawMessages() {
 			inputTokens += CountTokensFast(msg.Content)
 			for _, tr := range msg.ToolResults {
 				inputTokens += CountTokensFast(tr.Content)
 			}
 		}
-		inputTokens += CountTokensFast(s.system)
+		inputTokens += CountTokensFast(s.Persistence().System())
 		s.log.Info("token count", map[string]interface{}{"input_tokens": inputTokens, "model": s.model})
 
 		// Cost warning for expensive calls
@@ -336,7 +336,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Trace: start agent loop span for this turn
 		var loopSpan *oteltrace.Span
 		if s.Tracer != nil {
-			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.messages))
+			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.Persistence().RawMessages()))
 		}
 
 		// Issue the LLM call via the ChatService. The service handles
@@ -347,7 +347,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Router.RecordSuccess (the service has no start-time argument
 		// and deliberately stays out of circuit-breaker accounting).
 		apiStart := time.Now()
-		result, err := s.ChatLLM().Stream(ctx, s.messages, opts)
+		result, err := s.ChatLLM().Stream(ctx, s.Persistence().RawMessages(), opts)
 		apiDuration := time.Since(apiStart)
 		s.metrics.Timer("api.latency").Record(apiDuration)
 		s.metrics.Timer("api.last_latency").Record(apiDuration)
@@ -358,8 +358,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				oteltrace.EndSpanWithError(loopSpan, err)
 			}
 			// Record failure for circuit breaker (legacy single-provider clients only)
-			if s.Router != nil && !s.DeploymentRouting {
-				s.Router.RecordFailure(s.provider, err)
+			if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
+				s.ChatLLM().Router().RecordFailure(s.provider, err)
 			}
 			s.log.Error("stream error", map[string]interface{}{
 				"error": err.Error(),
@@ -369,8 +369,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Record success for circuit breaker (legacy single-provider clients only)
-		if s.Router != nil && !s.DeploymentRouting {
-			s.Router.RecordSuccess(s.provider, apiDuration)
+		if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
+			s.ChatLLM().Router().RecordSuccess(s.provider, apiDuration)
 		}
 
 		var textContent strings.Builder
@@ -430,7 +430,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 			thinkingOnly := streamErr == nil && textContent.Len() == 0 && len(toolCalls) == 0 && sawThinking
 			if thinkingOnly {
-				if resp, chatErr := s.ChatLLM().Chat(ctx, s.messages, opts); chatErr == nil && resp != nil && strings.TrimSpace(resp.Content) != "" {
+				if resp, chatErr := s.ChatLLM().Chat(ctx, s.Persistence().RawMessages(), opts); chatErr == nil && resp != nil && strings.TrimSpace(resp.Content) != "" {
 					content := resp.Content
 					textContent.WriteString(content)
 					ch <- StreamEvent{Type: "content", Content: content}
@@ -477,7 +477,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// loop, and stacking that on top of this secondary
 			// stream-error retry would double-retry network blips.
 			// The session agent loop owns this layer.
-			result, err = s.ChatLLM().Client().StreamChatContinue(ctx, s.messages, opts, types.DefaultContinuationConfig())
+			result, err = s.ChatLLM().Client().StreamChatContinue(ctx, s.Persistence().RawMessages(), opts, types.DefaultContinuationConfig())
 			if err != nil {
 				ch <- StreamEvent{Type: "error", Content: err.Error()}
 				return
@@ -555,8 +555,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Activity nudge: remind agent to persist learnings if idle
-		if s.Activity != nil {
-			if nudge := s.Activity.NudgeMessage(); nudge != "" {
+		if s.MemorySvc().Activity() != nil {
+			if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
 				s.AppendSystemContext(nudge)
 			}
 		}
@@ -581,49 +581,49 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// and drop the synthetic user message entirely.
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent.String()})
-			s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
+			s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}));
+			s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "user", Content: "Continue from where you left off."}));
 			continue
 		}
 
 		// No tool calls — done
 		if len(toolCalls) == 0 {
 			// Integration pipeline: post-response (format, score, redact, cache, learn)
-			if s.Pipeline != nil && textContent.Len() > 0 {
-				postResult := s.Pipeline.PostResponse(textContent.String(), s.messages)
+			if s.LifecycleSvc().Pipeline() != nil && textContent.Len() > 0 {
+				postResult := s.LifecycleSvc().Pipeline().PostResponse(textContent.String(), s.Persistence().RawMessages())
 				if postResult != nil && postResult.FormattedResponse != "" {
 					textContent.Reset()
 					textContent.WriteString(postResult.FormattedResponse)
 				}
 			}
 			if textContent.Len() > 0 {
-				s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: textContent.String()})
+				s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}));
 				// Auto-remember corrections and learnings
-				if s.Memory != nil && shouldRemember(textContent.String()) {
+				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
 						// Use timeout context so goroutine doesn't hang if backend is slow.
 						rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 						defer cancel()
-						_ = s.Memory.Remember(content, "assistant_learning")
+						_ = s.MemorySvc().Memory().Remember(content, "assistant_learning")
 						_ = rCtx // timeout context available if Remember is extended to accept it
 					}(textContent.String())
 				}
 			}
 			// Sleeptime: background memory consolidation
-			if s.Sleeptime != nil && s.Sleeptime.ShouldRun() && s.YaadBridge != nil && s.YaadBridge.Ready() {
+			if s.MemorySvc().Sleeptime() != nil && s.MemorySvc().Sleeptime().ShouldRun() && s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
 				// Snapshot messages to avoid data race with main loop appending
-				msgs := make([]types.EyrieMessage, len(s.messages))
-				copy(msgs, s.messages)
+				msgs := make([]types.EyrieMessage, len(s.Persistence().RawMessages()))
+				copy(msgs, s.Persistence().RawMessages())
 				go func() {
 					var transcript []string
 					for _, m := range msgs {
 						transcript = append(transcript, m.Role+": "+m.Content)
 					}
 					memState := ""
-					if s.Memory != nil {
-						memState, _ = s.Memory.Recall("", 2000)
+					if s.MemorySvc().Memory() != nil {
+						memState, _ = s.MemorySvc().Memory().Recall("", 2000)
 					}
-					prompt := s.Sleeptime.BuildConsolidationPrompt(transcript, memState)
+					prompt := s.MemorySvc().Sleeptime().BuildConsolidationPrompt(transcript, memState)
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					sCtx, sCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 					defer sCancel()
@@ -633,14 +633,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if err != nil || resp == nil {
 						return
 					}
-					lifecycle.ParseAndApplyMemoryOps(s.YaadBridge, resp.Content)
+					lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Yaad(), resp.Content)
 				}()
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
-			if s.SkillDistiller != nil && toolTurns >= 5 && s.YaadBridge != nil && s.YaadBridge.Ready() {
+			if s.MemorySvc().SkillDistiller() != nil && toolTurns >= 5 && s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
 				// Snapshot messages to avoid data race with main loop appending
-				msgs := make([]types.EyrieMessage, len(s.messages))
-				copy(msgs, s.messages)
+				msgs := make([]types.EyrieMessage, len(s.Persistence().RawMessages()))
+				copy(msgs, s.Persistence().RawMessages())
 				go func() {
 					var tools []string
 					for t := range toolsUsedSet {
@@ -654,7 +654,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if len(msgs) > 0 {
 						taskDesc = msgs[0].Content
 					}
-					sd := s.SkillDistiller
+					sd := s.MemorySvc().SkillDistiller()
 					prompt := sd.BuildSkillPrompt(taskDesc, tools, files, textContent.String())
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					dCtx, dCancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -670,26 +670,26 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						return
 					}
 					content, _ := json.Marshal(skill)
-					_ = s.YaadBridge.Remember(string(content), "skill")
+					_ = s.MemorySvc().Yaad().Remember(string(content), "skill")
 				}()
 			}
 			ch <- StreamEvent{Type: "done"}
 			// Integration pipeline: end-session (assess, learn, store experience)
-			if s.Pipeline != nil {
+			if s.LifecycleSvc().Pipeline() != nil {
 				taskGoal := ""
-				for _, m := range s.messages {
+				for _, m := range s.Persistence().RawMessages() {
 					if m.Role == "user" && len(m.ToolResults) == 0 {
 						taskGoal = m.Content
 						break
 					}
 				}
-				go s.Pipeline.EndSession(ctx.Err() == nil, taskGoal)
+				go s.LifecycleSvc().Pipeline().EndSession(ctx.Err() == nil, taskGoal)
 			}
 			// Session end hook
 			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
 				"provider": s.provider,
 				"model":    s.model,
-				"messages": len(s.messages),
+				"messages": len(s.Persistence().RawMessages()),
 			})
 			return
 		}
@@ -712,12 +712,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		toolTurns++
 
 		// Backtrack: record decision point when tool calls are pending
-		if s.Backtrack != nil && len(toolCalls) > 0 {
+		if s.LifecycleSvc().Backtrack() != nil && len(toolCalls) > 0 {
 			var toolNames []string
 			for _, tc := range toolCalls {
 				toolNames = append(toolNames, tc.Name)
 			}
-			s.Backtrack.RecordDecision(turnCount, strings.Join(toolNames, ", "), nil, s.messages)
+			s.LifecycleSvc().Backtrack().RecordDecision(turnCount, strings.Join(toolNames, ", "), nil, s.Persistence().RawMessages())
 		}
 
 		results := s.executeToolCalls(ctx, toolCalls, ch, turnCount, textContent.String())
@@ -740,11 +740,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if assistContent == "" && len(toolCalls) > 0 {
 			assistContent = " " // non-empty to satisfy APIs that reject empty content
 		}
-		s.messages = append(s.messages, types.EyrieMessage{
+		s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
 			Role:    "assistant",
 			Content: assistContent,
 			ToolUse: toolCalls,
-		})
+		}))
 		// Append tool results as proper tool_result messages
 		for _, r := range results {
 			resultContent := r.output
@@ -766,16 +766,16 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					msg.Images = []string{imgURI}
 				}
 			}
-			s.messages = append(s.messages, msg)
+			s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), msg));
 		}
 
 		// --- STEERING: Inject user guidance between tool batches ---
-		if s.Steering != nil && s.Steering.HasPending() {
-			for _, steer := range s.Steering.Drain() {
-				s.messages = append(s.messages, types.EyrieMessage{
+		if s.Persistence().Steering() != nil && s.Persistence().Steering().HasPending() {
+			for _, steer := range s.Persistence().Steering().Drain() {
+				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
-				})
+				}))
 				ch <- StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"}
 			}
 		}
@@ -793,19 +793,19 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Sandbox: notify about staged changes after all tools in this turn
-		if s.Sandbox != nil && s.Sandbox.IsEnabled() {
-			pending := s.Sandbox.List()
+		if s.Tools().Sandbox() != nil && s.Tools().Sandbox().IsEnabled() {
+			pending := s.Tools().Sandbox().List()
 			if len(pending) > 0 {
 				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))}
 			}
 		}
 
 		// Auto-remember: save conversation context and insights to yaad after each turn
-		if s.Memory != nil {
+		if s.MemorySvc().Memory() != nil {
 			userMsg := ""
 			assistantMsg := ""
-			for i := len(s.messages) - 1; i >= 0; i-- {
-				m := s.messages[i]
+			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+				m := s.Persistence().RawMessages()[i]
 				if m.Role == "assistant" && m.Content != "" && assistantMsg == "" {
 					assistantMsg = m.Content
 				}
@@ -818,11 +818,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if userMsg != "" && assistantMsg != "" {
 				condensed := fmt.Sprintf("Q: %s\nA: %s", truncate(userMsg, 200), truncate(assistantMsg, 300))
-				_ = s.Memory.Remember(condensed, "conversation")
+				_ = s.MemorySvc().Memory().Remember(condensed, "conversation")
 			}
 			// Also save insights if the response has learning signals
 			if assistantMsg != "" && shouldRemember(assistantMsg) {
-				_ = s.Memory.Remember(truncate(assistantMsg, 500), "insight")
+				_ = s.MemorySvc().Memory().Remember(truncate(assistantMsg, 500), "insight")
 			}
 		}
 	}

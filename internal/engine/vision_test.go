@@ -60,7 +60,7 @@ func TestAddUserWithAttachment_VisionModel(t *testing.T) {
 		t.Fatal("expected attached=true for vision-capable model")
 	}
 
-	msgs := s.RawMessages()
+	msgs := s.Persistence().RawMessages()
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}
@@ -85,7 +85,7 @@ func TestAddUserWithAttachment_DefaultMediaType(t *testing.T) {
 	if !s.AddUserWithAttachment("hi", "ZZZ", "") {
 		t.Fatal("expected attached=true")
 	}
-	img := s.RawMessages()[0].Images[0]
+	img := s.Persistence().RawMessages()[0].Images[0]
 	if !strings.HasPrefix(img, "data:image/png;base64,") {
 		t.Errorf("expected default image/png media type, got %q", img)
 	}
@@ -102,7 +102,7 @@ func TestAddUserWithAttachment_NonVisionModelDegrades(t *testing.T) {
 		t.Fatal("expected attached=false for non-vision model")
 	}
 
-	msgs := s.RawMessages()
+	msgs := s.Persistence().RawMessages()
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}
@@ -136,7 +136,7 @@ func TestAddUserWithDocumentText(t *testing.T) {
 
 	s.AddUserWithDocumentText("summarize", "report.pdf", "line one\nline two")
 
-	msgs := s.RawMessages()
+	msgs := s.Persistence().RawMessages()
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}

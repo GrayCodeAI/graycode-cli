@@ -34,7 +34,7 @@ func TestEngine_FullLoop_TextOnly(t *testing.T) {
 		t.Error("expected content event from stream")
 	}
 
-	msgs := s.RawMessages()
+	msgs := s.Persistence().RawMessages()
 	if len(msgs) < 2 {
 		t.Errorf("expected at least 2 messages (user+assistant), got %d", len(msgs))
 	}

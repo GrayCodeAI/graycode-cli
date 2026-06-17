@@ -484,9 +484,7 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 }
 
 func (s *Session) AddUser(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
-	s.mu.Unlock()
+	s.Persistence().AddUser(content)
 	if s.ConvoDAG != nil {
 		parentID := ""
 		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
@@ -528,9 +526,7 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 }
 
 func (s *Session) AddAssistant(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
-	s.mu.Unlock()
+	s.Persistence().AddAssistant(content)
 	if s.ConvoDAG != nil {
 		parentID := ""
 		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
@@ -709,12 +705,15 @@ func (s *Session) SetConvoDAG(dag *storage.DAG) {
 
 // ContextWindowCachedValue returns the cached context window size.
 // New code should call this instead of reading s.ContextWindowCached
-// directly.
+// directly. Falls back to the legacy field for back-compat with
+// code paths that still write to s.ContextWindowCached.
 func (s *Session) ContextWindowCachedValue() int {
-	if s.persist == nil {
-		return s.ContextWindowCached
+	if s.persist != nil {
+		if w := s.persist.ContextWindowCached(); w > 0 {
+			return w
+		}
 	}
-	return s.persist.ContextWindowCached()
+	return s.ContextWindowCached
 }
 
 // CostValue returns the session's cost accumulator (a pointer
@@ -725,9 +724,7 @@ func (s *Session) CostValue() *Cost {
 }
 
 func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
-	s.mu.Lock()
-	s.messages = msgs
-	s.mu.Unlock()
+	s.Persistence().SetRawMessages(msgs)
 }
 
 func (s *Session) MessageCount() int {

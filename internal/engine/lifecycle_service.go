@@ -185,6 +185,7 @@ func (s *LifecycleService) Limits() *LimitTracker                   { return s.l
 func (s *LifecycleService) Critic() *Critic                         { return s.critic }
 func (s *LifecycleService) Shadow() *branching.ShadowWorkspace      { return s.shadow }
 func (s *LifecycleService) Reflector() *Reflector                   { return s.reflector }
+func (s *LifecycleService) Cascade() *branching.CascadeRouter        { return s.cascade }
 func (s *LifecycleService) FewShotStore() *FewShotStore             { return s.fewShotStore }
 func (s *LifecycleService) AdaptivePrompt() *AdaptivePrompt         { return s.adaptivePrompt }
 func (s *LifecycleService) Activity() *memory.ActivityTracker       { return s.activity }

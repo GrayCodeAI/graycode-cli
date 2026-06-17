@@ -24,6 +24,13 @@ type MemoryService struct {
 	yaad *memory.YaadBridge
 	// enhanced is the post-session memory manager.
 	enhanced *memory.EnhancedMemoryManager
+	// skillDistiller produces reusable skill patterns from past
+	// session tool-call sequences.
+	skillDistiller *memory.SkillDistiller
+	// sleeptime runs background memory consolidation.
+	sleeptime *memory.SleeptimeAgent
+	// activity tracks memory-save nudges (Engram pattern).
+	activity *memory.ActivityTracker
 	// log is the session logger.
 	log *logger.Logger
 }
@@ -110,9 +117,30 @@ func (s *MemoryService) SetYaad(y *memory.YaadBridge) { s.yaad = y }
 // SetEnhanced replaces the legacy enhanced memory manager.
 func (s *MemoryService) SetEnhanced(e *memory.EnhancedMemoryManager) { s.enhanced = e }
 
+// SetSkillDistiller replaces the legacy skill distiller.
+func (s *MemoryService) SetSkillDistiller(sd *memory.SkillDistiller) { s.skillDistiller = sd }
+
+// SetSleeptime replaces the legacy background consolidator.
+func (s *MemoryService) SetSleeptime(st *memory.SleeptimeAgent) { s.sleeptime = st }
+
+// SetActivity replaces the legacy activity tracker.
+func (s *MemoryService) SetActivity(act *memory.ActivityTracker) { s.activity = act }
+
+// SkillDistiller returns the legacy skill distiller. New code
+// should access this through s.MemorySvc().SkillDistiller().
+func (s *MemoryService) SkillDistiller() *memory.SkillDistiller { return s.skillDistiller }
+
+// Sleeptime returns the background memory consolidator. New code
+// should access this through s.MemorySvc().Sleeptime().
+func (s *MemoryService) Sleeptime() *memory.SleeptimeAgent { return s.sleeptime }
+
+// Activity returns the memory-save activity nudger. New code
+// should access this through s.MemorySvc().Activity().
+func (s *MemoryService) Activity() *memory.ActivityTracker { return s.activity }
+
 // IsZero reports whether the service has any memory wired.
 func (s *MemoryService) IsZero() bool {
-	return s == nil || (s.memory == nil && s.yaad == nil && s.enhanced == nil)
+	return s == nil || (s.memory == nil && s.yaad == nil && s.enhanced == nil && s.skillDistiller == nil && s.sleeptime == nil && s.activity == nil)
 }
 
 // _ unused-import workaround: keep types referenced even when none

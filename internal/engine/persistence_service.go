@@ -4,6 +4,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/GrayCodeAI/eyrie/storage"
+
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -31,10 +33,12 @@ type PersistenceService struct {
 	autoCompactThresholdPct int
 	// contextWindowCached is the catalog context window; 0 → governor default.
 	contextWindowCached int
+	// dag is the conversation DAG (for branching).
+	dag *storage.DAG
+	// steering is the per-iteration user-guidance queue.
+	steering *SteeringQueue
 	// logger.
 	log *logger.Logger
-	// log/slog default for compatibility (some legacy code reads s.log).
-	_ noopLog
 }
 
 // NewPersistenceService constructs an empty PersistenceService.
@@ -52,17 +56,54 @@ func NewPersistenceService(log *logger.Logger) *PersistenceService {
 func (s *PersistenceService) Messages() []types.EyrieMessage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]types.EyrieMessage, len(s.messages))
-	copy(out, s.messages)
+	raw := s.RawMessages()
+	out := make([]types.EyrieMessage, len(raw))
+	copy(out, raw)
 	return out
+}
+
+// SetRawMessages replaces the message slice. Used by code paths
+// that previously wrote to s.messages directly. Pass-by-reference
+// to keep the slice header mutable. Safe on a nil receiver.
+func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.messages = msgs
+	s.mu.Unlock()
 }
 
 // RawMessages returns the live slice (no copy). Callers MUST NOT mutate.
 // Used by the agent loop's hot path where copy overhead matters.
+// Safe to call on a nil receiver (returns nil).
 func (s *PersistenceService) RawMessages() []types.EyrieMessage {
+	if s == nil {
+		return nil
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.messages
+}
+// DAG returns the conversation DAG. New code should access this
+// through s.Persistence().DAG().
+func (s *PersistenceService) DAG() *storage.DAG { return s.dag }
+
+// SetDAG attaches the conversation DAG.
+func (s *PersistenceService) SetDAG(dag *storage.DAG) { s.dag = dag }
+
+// Steering returns the per-iteration user-guidance queue. New
+// code should access this through s.Persistence().Steering().
+func (s *PersistenceService) Steering() *SteeringQueue { return s.steering }
+
+// SetSteering attaches the user-guidance queue.
+func (s *PersistenceService) SetSteering(sq *SteeringQueue) { s.steering = sq }
+
+// AddAssistant appends an assistant message.
+func (s *PersistenceService) AddAssistant(content string) {
+	s.mu.Lock()
+	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
+	s.mu.Unlock()
 }
 
 // SetMessages replaces the transcript.
@@ -72,8 +113,11 @@ func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 	s.mu.Unlock()
 }
 
-// AddUser appends a user message.
+// AddUser appends a user message. Safe on a nil receiver.
 func (s *PersistenceService) AddUser(content string) {
+	if s == nil {
+		return
+	}
 	s.mu.Lock()
 	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
 	s.mu.Unlock()
@@ -82,26 +126,22 @@ func (s *PersistenceService) AddUser(content string) {
 // AddUserWithImage appends a user message with an inline image.
 func (s *PersistenceService) AddUserWithImage(content, imageBase64, imageType string) {
 	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{
+	s.SetRawMessages(append(s.RawMessages(), types.EyrieMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{imageBase64},
-	})
+	}))
 	s.mu.Unlock()
 	_ = imageType // reserved for future typing
 }
 
-// AddAssistant appends an assistant message.
-func (s *PersistenceService) AddAssistant(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
-	s.mu.Unlock()
-}
-
 // AppendSystemContext appends a string to the system prompt.
 func (s *PersistenceService) AppendSystemContext(content string) {
+	if s == nil {
+		return
+	}
 	s.mu.Lock()
-	s.system = s.system + content
+	s.system += content
 	s.mu.Unlock()
 }
 
@@ -113,7 +153,7 @@ func (s *PersistenceService) ReplaceSystemContextSection(header, content string)
 	defer s.mu.Unlock()
 	idx := strings.Index(s.system, header)
 	if idx < 0 {
-		s.system = s.system + content
+		s.system += content
 		return
 	}
 	end := idx + len(header)
@@ -134,6 +174,9 @@ func (s *PersistenceService) System() string {
 
 // SetSystem replaces the system prompt entirely.
 func (s *PersistenceService) SetSystem(sys string) {
+	if s == nil {
+		return
+	}
 	s.mu.Lock()
 	s.system = sys
 	s.mu.Unlock()
@@ -143,23 +186,23 @@ func (s *PersistenceService) SetSystem(sys string) {
 func (s *PersistenceService) MessageCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return len(s.messages)
+	return len(s.RawMessages())
 }
 
 // RemoveLastExchange removes the last (assistant, user) pair.
 func (s *PersistenceService) RemoveLastExchange() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.messages) < 2 {
+	if len(s.RawMessages()) < 2 {
 		return
 	}
-	s.messages = s.messages[:len(s.messages)-2]
+	s.SetRawMessages( s.RawMessages()[:len(s.RawMessages())-2]);
 }
 
 // LoadMessages replaces the transcript with a fresh slice.
 func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	s.messages = msgs
+	s.SetRawMessages( msgs);
 	s.mu.Unlock()
 }
 
