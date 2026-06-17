@@ -37,7 +37,7 @@ func (cg *CodeGraph) SemanticSearch(query string, limit int) ([]Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck // deferred Close on read-only rows is cleanup-only
 
 	allNodes, _ := scanNodes(rows)
 
