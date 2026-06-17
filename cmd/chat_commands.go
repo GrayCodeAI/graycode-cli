@@ -15,7 +15,6 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/home"
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
@@ -301,104 +300,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 
 	switch cmd {
 
-	case "/council":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /council <question>"})
-			return m, nil
-		}
-		query := strings.TrimSpace(strings.TrimPrefix(text, "/council"))
-		cfg := engine.CouncilConfig{
-			Models:   engine.DefaultCouncilModels(),
-			Chairman: m.session.Model(),
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Council convened: %s (chairman: %s)", icons.Robot(), strings.Join(cfg.Models, ", "), cfg.Chairman)})
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Stage 1: Querying all models..."})
-
-		result, err := engine.RunCouncil(context.Background(), query, cfg, m.session)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Council failed: " + err.Error()})
-			return m, nil
-		}
-
-		for _, r := range result.Responses {
-			preview := r.Response
-			if len(preview) > 200 {
-				preview = preview[:200] + "..."
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("  [%s] %s", r.Model, preview)})
-		}
-
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Stage 2: Ranking responses..."})
-		for _, r := range result.Rankings {
-			preview := r.Ranking
-			if len(preview) > 200 {
-				preview = preview[:200] + "..."
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("  [%s] %s", r.Model, preview)})
-		}
-
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Stage 3: Chairman synthesizing..."})
-		m.messages = append(m.messages, displayMsg{role: "assistant", content: result.Synthesis})
-		return m, nil
-
-	case "/dream":
-		projectDir, _ := os.Getwd()
-		status := memory.YaadStatus()
-		if strings.Contains(status, "not initialized") || strings.Contains(status, "no memories") {
-			m.messages = append(m.messages, displayMsg{role: "system", content: status + "\nRun 'yaad' to start storing memories, or use /memory to view AGENTS.md."})
-			return m, nil
-		}
-		yaadCtx := memory.LoadYaadContext(projectDir)
-		if yaadCtx == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No yaad memories found to consolidate."})
-			return m, nil
-		}
-		dreamPrompt := `Review the yaad memories below and consolidate them into a coherent summary.
-Focus on: recurring patterns, user preferences learned, project context that should persist,
-and any corrections or feedback. Remove redundant or outdated entries.
-Write the consolidated result as clear, organized yaad memory nodes.
-
-` + yaadCtx
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Running memory consolidation...\n" + status})
-		return m.startPromptCommand("/dream", dreamPrompt)
-	case "/away":
-		messages := m.session.RawMessages()
-		if len(messages) < 4 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Not enough conversation history for a recap."})
-			return m, nil
-		}
-		// Build recent conversation summary
-		start := 0
-		if len(messages) > 30 {
-			start = len(messages) - 30
-		}
-		var summary strings.Builder
-		for _, msg := range messages[start:] {
-			preview := msg.Content
-			if len(preview) > 200 {
-				preview = preview[:200] + "..."
-			}
-			if msg.Role == "user" && preview != "" {
-				summary.WriteString(fmt.Sprintf("User: %s\n", preview))
-			} else if msg.Role == "assistant" && msg.Content != "" {
-				summary.WriteString(fmt.Sprintf("Assistant: %s\n", preview))
-			}
-		}
-		awayPrompt := fmt.Sprintf(`You are generating a brief "while you were away" recap for a coding session.
-
-Rules:
-- 1-3 sentences maximum
-- Focus on what was accomplished and what's next
-- Do NOT include status reports or tool call details
-- Be concise and actionable
-
-Recent conversation:
-%s
-
-Generate the recap:`, summary.String())
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Generating recap..."})
-		return m.startPromptCommand("/away", awayPrompt)
-
 	case "/recipe":
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/recipe"))
 		if arg == "" || arg == "list" {
@@ -491,38 +392,6 @@ Generate the recap:`, summary.String())
 		}
 		return m.startPromptCommand("/design", buildDesignPrompt(topic))
 
-	case "/yaad":
-		if len(parts) >= 3 && parts[1] == "search" {
-			query := strings.TrimSpace(strings.Join(parts[2:], " "))
-			if query == "" {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /yaad search <query>"})
-				return m, nil
-			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: memory.FormatYaadSearch(query, 10)})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: memory.FormatYaadDetail(5)})
-		return m, nil
-	case "/ecosystem":
-		settings, err := loadEffectiveSettings()
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		modelName, providerName := effectiveModelAndProvider(settings)
-		if providerName == "" {
-			providerName = "auto"
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName)})
-		return m, nil
-	case "/path":
-		m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatDeveloperPathReport(context.Background())})
-		return m, nil
-	case "/config", "/con", "/conf":
-		return m.handleConfigCommand(parts, text)
-	case "/mcp":
-		m.messages = append(m.messages, displayMsg{role: "system", content: m.mcpSummary()})
-		return m, nil
 	case "/power":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /power <1-10>\n" + DescribePower(5)})
@@ -557,12 +426,7 @@ Generate the recap:`, summary.String())
 		return m.startPromptCommand("/research", prompt)
 	case "/parallel":
 		return m.handleParallelCommand(parts, text)
-	case "/usage":
-		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
-		return m, nil
-	case "/tools":
-		m.messages = append(m.messages, displayMsg{role: "system", content: toolListSummary(m.registry)})
-		return m, nil
+
 	case "/skills":
 		return m.handleSkillsCommand(parts, text)
 	case "/learn":
@@ -581,9 +445,7 @@ Generate the recap:`, summary.String())
 		summary := plugin.FormatLearnSummary(ctx, deep)
 		prompt := plugin.BuildLearnPrompt(ctx)
 		return m.startPromptCommand(summary, prompt)
-	case "/welcome":
-		m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
-		return m, nil
+
 	case "/tasks":
 		tasks := tool.GetTaskStore().List()
 		if len(tasks) == 0 {
