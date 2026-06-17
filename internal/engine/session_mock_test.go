@@ -23,7 +23,7 @@ func TestSession_AddUser(t *testing.T) {
 
 	s.AddUser("hello world")
 
-	msgs := s.RawMessages()
+	msgs := s.Persistence().RawMessages()
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}
@@ -42,7 +42,7 @@ func TestSession_AddAssistant(t *testing.T) {
 
 	s.AddAssistant("here is my response")
 
-	msgs := s.RawMessages()
+	msgs := s.Persistence().RawMessages()
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message, got %d", len(msgs))
 	}
@@ -63,8 +63,8 @@ func TestSession_LoadMessages(t *testing.T) {
 	}
 	s.LoadMessages(msgs)
 
-	if len(s.RawMessages()) != 3 {
-		t.Errorf("RawMessages() length = %d, want 3", len(s.RawMessages()))
+	if len(s.Persistence().RawMessages()) != 3 {
+		t.Errorf("RawMessages() length = %d, want 3", len(s.Persistence().RawMessages()))
 	}
 }
 
@@ -116,7 +116,7 @@ func TestSession_Chat_MockResponse(t *testing.T) {
 	s.AddUser("hi")
 
 	// Call Chat directly
-	resp, err := mc.Chat(context.TODO(), s.RawMessages(), types.ChatOptions{})
+	resp, err := mc.Chat(context.TODO(), s.Persistence().RawMessages(), types.ChatOptions{})
 	if err != nil {
 		t.Fatalf("Chat error: %v", err)
 	}

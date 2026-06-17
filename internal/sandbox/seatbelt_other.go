@@ -17,16 +17,12 @@ type SeatbeltPolicy struct {
 	WritablePaths []string
 	AllowProcess  bool
 	AllowSysctl   bool
+	Tier          Tier
 }
 
 // GenerateSeatbeltProfile is a stub on non-darwin platforms.
 func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 	return ""
-}
-
-// DefaultHawkPolicy is a stub on non-darwin platforms.
-func DefaultHawkPolicy(workDir string) *SeatbeltPolicy {
-	return &SeatbeltPolicy{}
 }
 
 // RunSeatbelted is not available on non-darwin platforms.

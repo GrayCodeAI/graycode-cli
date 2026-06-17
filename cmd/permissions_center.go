@@ -42,10 +42,17 @@ func permissionTierSettingValue(level engine.AutonomyLevel) int {
 }
 
 func effectivePermissionTier(sess *engine.Session) engine.AutonomyLevel {
-	if sess == nil || sess.Autonomy == 0 {
+	if sess == nil {
 		return DefaultContainerAutonomy
 	}
-	return sess.Autonomy
+	perms := sess.PermSvc()
+	if perms == nil {
+		return DefaultContainerAutonomy
+	}
+	if perms.Autonomy() == 0 {
+		return DefaultContainerAutonomy
+	}
+	return perms.Autonomy()
 }
 
 func normalizePermissionSandbox(raw string) (string, string, bool) {
@@ -221,27 +228,31 @@ func rebuildSessionPermissionRules(sess *engine.Session, settings hawkconfig.Set
 	if sess == nil {
 		return
 	}
-	if sess.Permissions == nil {
-		sess.Permissions = engine.NewPermissionMemory()
+	mem := sess.PermSvc().Memory()
+	if mem == nil {
+		mem = engine.NewPermissionMemory()
+		if sess.Perm != nil {
+			sess.Perm.Memory = mem
+		}
 	}
-	sess.Permissions.Reset()
-	if sess.Perm != nil {
-		sess.Perm.Memory = sess.Permissions
+	mem.Reset()
+	if sess.Perm != nil && sess.Perm.Memory == nil {
+		sess.Perm.Memory = mem
 	}
 	for _, spec := range settings.AutoAllow {
-		sess.Permissions.AllowSpec(spec)
+		mem.AllowSpec(spec)
 	}
 	for _, spec := range settings.AllowedTools {
-		sess.Permissions.AllowSpec(spec)
+		mem.AllowSpec(spec)
 	}
 	for _, spec := range settings.DisallowedTools {
-		sess.Permissions.DenySpec(spec)
+		mem.DenySpec(spec)
 	}
 	for _, spec := range parseToolListFromCLI(allowedToolsFlag) {
-		sess.Permissions.AllowSpec(spec)
+		mem.AllowSpec(spec)
 	}
 	for _, spec := range parseToolListFromCLI(disallowedToolsFlag) {
-		sess.Permissions.DenySpec(spec)
+		mem.DenySpec(spec)
 	}
 }
 

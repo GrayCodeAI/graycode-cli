@@ -14,12 +14,12 @@ import (
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
 func (s *Session) ShouldAutoCompact() bool {
 	// Check message count
-	if len(s.messages) >= maxContextMessages {
+	if len(s.Persistence().RawMessages()) >= maxContextMessages {
 		return true
 	}
 	// Check token count using tok estimation
 	totalTokens := 0
-	for _, msg := range s.messages {
+	for _, msg := range s.Persistence().RawMessages() {
 		totalTokens += tok.EstimateTokens(msg.Content)
 	}
 	window := s.ContextWindowSize()
@@ -38,7 +38,7 @@ func (s *Session) AutoCompactIfNeeded() bool {
 
 // smartCompact uses the LLM to generate a summary of the conversation being compacted.
 func (s *Session) smartCompact() {
-	if len(s.messages) <= 20 {
+	if len(s.Persistence().RawMessages()) <= 20 {
 		return
 	}
 
@@ -58,7 +58,7 @@ func (s *Session) smartCompact() {
 	if s.Files == nil {
 		s.Files = NewFileTracker()
 	}
-	compactedMsgs := s.messages[:len(s.messages)-keepEnd]
+	compactedMsgs := s.Persistence().RawMessages()[:len(s.Persistence().RawMessages())-keepEnd]
 	s.Files.ExtractFromMessages(compactedMsgs)
 	// Also parse any previous tracked-files from existing summary
 	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
@@ -87,8 +87,8 @@ func (s *Session) smartCompact() {
 		Role:    "assistant",
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
-	keep = append(keep, s.messages[len(s.messages)-keepEnd:]...)
-	s.messages = keep
+	keep = append(keep, s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]...)
+	s.Persistence().SetRawMessages(keep)
 }
 
 func (s *Session) generateSummary() string {
@@ -102,7 +102,7 @@ func (s *Session) generateSummary() string {
 	})
 
 	// Add a condensed version of messages
-	for _, m := range s.messages {
+	for _, m := range s.Persistence().RawMessages() {
 		if m.Role == "user" || m.Role == "assistant" {
 			content := m.Content
 			if len(content) > 500 {

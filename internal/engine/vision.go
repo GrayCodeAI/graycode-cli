@@ -91,19 +91,19 @@ func (s *Session) AddUserWithAttachment(content, imageBase64, mediaType string) 
 	}
 
 	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{
+	s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{"data:" + mediaType + ";base64," + imageBase64},
-	})
+	}))
 	s.mu.Unlock()
 
-	if s.ConvoDAG != nil {
+	if s.Persistence().DAG() != nil {
 		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+		if head, err := s.Persistence().DAG().Head(context.Background()); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content+" [image attached]")
+		_, _ = s.Persistence().DAG().Append(context.Background(), parentID, "user", content+" [image attached]")
 	}
 	return true
 }

@@ -147,6 +147,11 @@ func New(cfg Config, factory SessionFactory) *Server {
 
 // Start begins serving in the background. Returns the listening address.
 func (s *Server) Start() (string, error) {
+	if err := s.validateAuthConfig(); err != nil {
+		return "", err
+	}
+	s.warnInsecureAuthConfig()
+
 	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", s.addr)
 	if err != nil {
 		return "", fmt.Errorf("daemon listen: %w", err)
@@ -172,6 +177,52 @@ func (s *Server) Start() (string, error) {
 
 	slog.Info("hawk daemon started", "addr", actualAddr)
 	return actualAddr, nil
+}
+
+// validateAuthConfig refuses to start the daemon with no API key on a
+// non-loopback bind. The auth middleware (see auth) silently allows every
+// request when apiKey == "", so a misconfigured production daemon would
+// be wide open. The only safe no-key mode is loopback bind.
+func (s *Server) validateAuthConfig() error {
+	if s.apiKey != "" {
+		return nil
+	}
+	host, _, err := net.SplitHostPort(s.addr)
+	if err != nil {
+		return fmt.Errorf("daemon: invalid bind address %q: %w", s.addr, err)
+	}
+	if !isLoopbackHost(host) {
+		return fmt.Errorf("daemon: apiKey is empty and bind address %q is not loopback; refusing to start. Set Config.APIKey or bind to %s", s.addr, netutil.LoopbackHost)
+	}
+	return nil
+}
+
+// warnInsecureAuthConfig logs a WARN line when the daemon is started
+// without an API key, even on a loopback bind. The user may not have
+// intended to run an unauthenticated daemon.
+func (s *Server) warnInsecureAuthConfig() {
+	if s.apiKey != "" {
+		return
+	}
+	slog.Warn(
+		"hawk daemon started without API key authentication; only loopback access allowed",
+		"addr", s.addr,
+		"hint", "Set Config.APIKey to enable authentication, or keep the default loopback bind.",
+	)
+}
+
+// isLoopbackHost reports whether host is a loopback address: an IP in
+// 127.0.0.0/8 or ::1, the literal "localhost", or an empty string
+// (which SplitHostPort returns when the address has no host part —
+// treated as non-loopback to fail safe).
+func isLoopbackHost(host string) bool {
+	if host == "" || host == "localhost" {
+		return host == "localhost" // "" is unsafe; "localhost" is loopback
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
 }
 
 // Stop gracefully shuts down the daemon.

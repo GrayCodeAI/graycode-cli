@@ -14,6 +14,29 @@ import (
 // consecutive requests and should fall back to user prompting.
 var ErrCircuitBreakerOpen = errors.New("guardian circuit breaker open: too many consecutive denials, falling back to user")
 
+// ErrGuardianUnparseable is returned by parseGuardianResponse when the
+// LLM's response does not contain a parseable JSON object. A
+// parseable response is one with a brace-balanced `{...}` substring
+// that decodes as a GuardianDecision. This is a distinct error from
+// transport/timeout failures so callers (and tests) can distinguish
+// "the LLM gave us garbage" from "the LLM call failed entirely".
+var ErrGuardianUnparseable = errors.New("guardian: no parseable JSON in LLM response")
+
+// defaultMaxConsecutiveDenials is the cap on consecutive denials
+// before the circuit breaker opens and the guardian falls back to
+// user prompting. The cap is configurable per Guardian instance via
+// SetMaxConsecutiveDenials; this is just the safe default.
+const defaultMaxConsecutiveDenials = 5
+
+// minCap / maxCap bound SetMaxConsecutiveDenials. A cap of 1
+// effectively disables the guardian (any single denial breaks the
+// circuit); a cap above 20 means the guardian can keep denying for
+// many requests before falling back, which is rarely desired.
+const (
+	minGuardianCap = 1
+	maxGuardianCap = 20
+)
+
 // Guardian is an LLM-powered automatic permission reviewer that decides
 // permissions on behalf of the user, reducing approval fatigue.
 type Guardian struct {
@@ -49,9 +72,30 @@ func NewGuardian(chatFn func(context.Context, string) (string, error)) *Guardian
 		Provider:              "anthropic",
 		Model:                 "claude-haiku",
 		Timeout:               15 * time.Second,
-		MaxConsecutiveDenials: 3,
+		MaxConsecutiveDenials: defaultMaxConsecutiveDenials,
 		ChatFn:                chatFn,
 	}
+}
+
+// SetMaxConsecutiveDenials updates the circuit-breaker cap and clamps
+// it to [minGuardianCap, maxGuardianCap]. The cap is the number of
+// consecutive denials before the guardian opens its circuit and
+// falls back to user prompting. A cap of 1 makes the guardian
+// advisory-only (any single denial breaks the circuit); the default
+// is 5, suitable for typical permission-review workloads where
+// false positives in a row are rare. Returns the clamped value so
+// callers can log the effective cap.
+func (g *Guardian) SetMaxConsecutiveDenials(n int) int {
+	if n < minGuardianCap {
+		n = minGuardianCap
+	}
+	if n > maxGuardianCap {
+		n = maxGuardianCap
+	}
+	g.mu.Lock()
+	g.MaxConsecutiveDenials = n
+	g.mu.Unlock()
+	return n
 }
 
 // Review evaluates a tool call and returns a decision on whether it should be allowed.
@@ -224,22 +268,36 @@ func isBase64Injection(s string) bool {
 }
 
 // parseGuardianResponse parses the LLM's JSON response into a GuardianDecision.
+//
+// The LLM is asked to respond with JSON, but it may include
+// surrounding explanation ("Sure, here is the JSON: {...} and I
+// considered...") or even emit multiple JSON objects (e.g., when
+// the LLM streams tokens and the first object is a partial
+// tool-call rather than the permission review). The parser walks
+// the response, finds the first brace-balanced `{...}` substring
+// (respecting string literals and escape sequences), and attempts
+// to decode it as a GuardianDecision.
+//
+// If no parseable JSON object is found, ErrGuardianUnparseable is
+// returned. Callers (Review) treat this as "the LLM gave us garbage"
+// and do NOT increment the circuit breaker — a parse failure is a
+// model artefact, not a security signal.
 func parseGuardianResponse(response string) (*GuardianDecision, error) {
 	response = strings.TrimSpace(response)
 
-	// Try to extract JSON from the response if it contains extra text
-	start := strings.Index(response, "{")
-	end := strings.LastIndex(response, "}")
-	if start >= 0 && end > start {
-		response = response[start : end+1]
+	candidate := extractFirstJSONObject(response)
+	if candidate == "" {
+		return nil, fmt.Errorf("%w: no JSON object found in %q", ErrGuardianUnparseable, truncateForLog(response, 200))
 	}
 
 	var decision GuardianDecision
-	if err := json.Unmarshal([]byte(response), &decision); err != nil {
-		return nil, fmt.Errorf("invalid JSON in response %q: %w", response, err)
+	if err := json.Unmarshal([]byte(candidate), &decision); err != nil {
+		return nil, fmt.Errorf("%w: %v in %q", ErrGuardianUnparseable, err, truncateForLog(candidate, 200))
 	}
 
-	// Validate confidence range
+	// Validate confidence range. Models occasionally emit
+	// out-of-range values; clamp rather than reject so the rest of
+	// the decision (allowed/reason) still flows through.
 	if decision.Confidence < 0 {
 		decision.Confidence = 0
 	}
@@ -248,4 +306,66 @@ func parseGuardianResponse(response string) (*GuardianDecision, error) {
 	}
 
 	return &decision, nil
+}
+
+// extractFirstJSONObject walks response and returns the first
+// brace-balanced `{...}` substring, or "" if none is found.
+//
+// A brace-balanced substring starts with `{` and ends with the
+// matching `}` (counting nested braces), respecting JSON string
+// literals and escape sequences. This is more robust than
+// `strings.Index(response, "{")` + `strings.LastIndex(response, "}")`
+// when the LLM emits explanatory text containing literal braces or
+// multiple JSON objects (e.g., a partial stream followed by the
+// real answer).
+func extractFirstJSONObject(response string) string {
+	for i := 0; i < len(response); i++ {
+		if response[i] != '{' {
+			continue
+		}
+		depth := 0
+		inString := false
+		escape := false
+		for j := i; j < len(response); j++ {
+			c := response[j]
+			if escape {
+				escape = false
+				continue
+			}
+			// Inside a string literal, only \" matters for brace
+			// tracking; any other backslash is just a literal
+			// character (e.g., \\).
+			if c == '\\' && inString {
+				escape = true
+				continue
+			}
+			if c == '"' {
+				inString = !inString
+				continue
+			}
+			if inString {
+				continue
+			}
+			if c == '{' {
+				depth++
+				continue
+			}
+			if c == '}' {
+				depth--
+				if depth == 0 {
+					return response[i : j+1]
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// truncateForLog truncates s to max bytes for error messages; long
+// LLM responses shouldn't bloat the log.
+func truncateForLog(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
 }

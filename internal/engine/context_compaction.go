@@ -61,7 +61,7 @@ func (s *Session) ContextUsedTokens() int {
 	if p := s.LastPromptTokens(); p > 0 {
 		return p
 	}
-	return EstimateTokens(s.RawMessages())
+	return EstimateTokens(s.Persistence().RawMessages())
 }
 
 func (s *Session) notifyCompaction(ev CompactionEvent) {

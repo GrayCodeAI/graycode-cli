@@ -22,6 +22,7 @@ import (
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -77,11 +78,17 @@ type Session struct {
 	Cost     Cost
 	Router   *modelPkg.Router
 	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
+	//
+	// Deprecated: use s.ChatLLM().DeploymentRouting() (Phase 1 sub-service).
 	DeploymentRouting bool
 
 	// ContainerExecutor runs Bash in an isolated container when set (no API keys in container env).
+	//
+	// Deprecated: use s.Tools().ContainerExecutor() (Phase 6 sub-service).
 	ContainerExecutor tool.ContainerExecutor
 	// ContainerRequired blocks tools until ContainerExecutor is running (container-first mode).
+	//
+	// Deprecated: use s.Tools().ContainerRequired() (Phase 6 sub-service).
 	ContainerRequired bool
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
@@ -102,15 +109,27 @@ type Session struct {
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
-	Permissions    *PermissionMemory             // use Perm.Memory
-	AutoMode       *permissions.AutoModeState    // use Perm.AutoMode
-	Classifier     *permissions.Classifier       // use Perm.Classifier
-	BypassKill     *permissions.BypassKillswitch // use Perm.BypassKill
-	Mode           PermissionMode                // use Perm.Mode
-	MaxTurns       int
-	MaxBudgetUSD   float64
-	AllowedDirs    []string
-	PermissionFn   func(PermissionRequest) // use Perm.PromptFn
+	//
+	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
+	//   Permissions, AutoMode, Classifier, BypassKill, Mode, PermissionFn.
+	Permissions *PermissionMemory             // use Perm.Memory
+	AutoMode    *permissions.AutoModeState    // use Perm.AutoMode
+	Classifier  *permissions.Classifier       // use Perm.Classifier
+	BypassKill  *permissions.BypassKillswitch // use Perm.BypassKill
+	Mode        PermissionMode                // use Perm.Mode
+	//
+	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
+	//   MaxTurns, MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
+	//   EnhancedMemory, Cascade, Lifecycle, Reflector, CostTracker,
+	//   ConvoDAG, Sleeptime, Activity, SkillDistiller, AutoCompactor,
+	//   FewShotStore, AdaptivePrompt.
+	MaxTurns     int
+	MaxBudgetUSD float64
+	AllowedDirs  []string
+	PermissionFn func(PermissionRequest) // use Perm.PromptFn
+	//
+	// Deprecated: use s.MemorySvc() (Phase 4 sub-service) for:
+	//   Memory, YaadBridge, EnhancedMemory.
 	AgentSpawnFn   func(ctx context.Context, prompt string) (string, error)
 	AskUserFn      func(question string) (string, error)
 	Memory         MemoryRecaller
@@ -134,12 +153,43 @@ type Session struct {
 	GLMThinkingEnabled *bool
 
 	// Cost optimization
+	//
+	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
+	//   Cascade, Lifecycle, Reflector, CostTracker.
 	Cascade     *branching.CascadeRouter // cascade.go — model tier routing
 	Lifecycle   *SessionLifecycle        // lifecycle.go — self-improvement loop
 	Reflector   *Reflector               // reflect.go — verbal self-reflection
 	CostTracker *CostTracker             // cost_tracker.go — per-request cost persistence
 
 	// Advanced features
+	//
+	// Deprecated: most of these have been folded into sub-services.
+	//   Autonomy       -> s.PermSvc().Autonomy()
+	//   Sandbox        -> s.Tools().Sandbox()
+	//   Plan           -> s.Tools().PlanState()
+	//   Beliefs        -> s.LifecycleSvc().Beliefs()
+	//   Critic         -> s.LifecycleSvc().Critic()
+	//   Backtrack      -> s.LifecycleSvc().Backtrack()
+	//   Limits         -> s.LifecycleSvc().Limits()
+	//   Trajectory     -> s.LifecycleSvc().Trajectory()
+	//   Shadow         -> s.LifecycleSvc().Shadow()
+	//   ConvoDAG       -> s.Persistence().DAG()
+	//   Sleeptime      -> s.MemorySvc().Sleeptime()
+	//   Activity       -> s.MemorySvc().Activity()
+	//   SkillDistiller -> s.MemorySvc().SkillDistiller()
+	//   RateLimiter    -> s.ChatLLM().RateLimiter()
+	//   AgentsAccum    -> s.LifecycleSvc().AgentsAccum()
+	//   FewShotStore   -> s.LifecycleSvc().FewShot()
+	//   AdaptivePrompt -> s.LifecycleSvc().AdaptivePrompt()
+	//   LintLoop       -> s.LifecycleSvc().LintLoop()
+	//   TestLoop       -> s.LifecycleSvc().TestLoop()
+	//   FileMentions   -> s.MemorySvc().FileMentions()
+	//   ResponseCache  -> s.LifecycleSvc().ResponseCache()
+	//   Pipeline       -> s.LifecycleSvc().Pipeline()
+	//   Files          -> s.Persistence().Files()
+	//   Steering       -> s.Persistence().Steering()
+	//   Snapshots      -> s.Persistence().Snapshots()
+	//   Tracer         -> global; passed to services at construction.
 	Autonomy       AutonomyLevel              // autonomy.go — permission level
 	Sandbox        *DiffSandbox               // diffsandbox.go — staged file changes
 	Plan           *PlanState                 // subtask.go — user-activated plan
@@ -167,6 +217,9 @@ type Session struct {
 	AgentsAccum    *prompts.AgentsAccumulator // agents_accumulator.go — auto-capture learnings
 
 	// Few-shot learning and prompt optimization
+	//
+	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
+	//   FewShotStore, AdaptivePrompt.
 	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
 	AdaptivePrompt *AdaptivePrompt // adaptive_prompt.go — user preference learning
 
@@ -255,11 +308,23 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 
 	// Alias legacy fields at the service instances so legacy readers see
 	// the same state as new code that goes through the sub-service getters.
+	// After this point, mutations to the sub-service internal state
+	// (e.g., s.memory.SetMemory(...)) need a corresponding write to the
+	// legacy field — see the various Set* helpers (SetConvoDAG,
+	// SetSnapshots, etc.) which perform the dual write.
 	s.Limits = s.life.Limits()
 	s.Beliefs = s.life.Beliefs()
 	s.Backtrack = s.life.Backtrack()
 	s.ResponseCache = s.life.ResponseCache()
 	s.Pipeline = s.life.Pipeline()
+	// Fields read by AddUser/AddAssistant/AddUserWithImage/ForkConversation/
+	// SwitchBranch: alias them so legacy direct-field reads return
+	// the sub-service state.
+	s.Memory = s.memory.Memory()
+	s.YaadBridge = s.memory.Yaad()
+	s.EnhancedMemory = s.memory.Enhanced()
+	s.ConvoDAG = s.persist.DAG()
+	s.Steering = s.persist.Steering()
 
 	return s
 }
@@ -328,6 +393,46 @@ func (s *Session) Persistence() *PersistenceService { return s.persist }
 // Tools returns the extracted ToolService (Phase 6).
 func (s *Session) Tools() *ToolService { return s.tools }
 
+// SubServices is the composed view of the 6 sub-services extracted
+// in Phases 1-6 of the god-object decomposition. New code should
+// prefer the SubServices() accessor over the legacy Session fields.
+// Existing code (cmd/, daemon/, multiagent/, …) continues to use
+// the legacy fields until they're migrated.
+//
+// SubServices is a struct (not an interface) because all 6
+// sub-services are concrete types; this keeps the API discoverable
+// via godoc and avoids the indirection cost of interface dispatch
+// on the agent-loop hot path.
+//
+// Note: this is distinct from the older *SessionServices returned
+// by Services(), which is a bridge view over the LEGACY fields
+// (CoreLoop, SafetyLayer, Intelligence, etc.). SubServices is the
+// new canonical view; SessionServices will be removed once legacy
+// migration is complete.
+type SubServices struct {
+	LLM         *ChatService
+	Perms       *PermissionService
+	Life        *LifecycleService
+	Memory      *MemoryService
+	Persistence *PersistenceService
+	Tools       *ToolService
+}
+
+// SubServices returns the 6 new sub-services. All sub-services are
+// non-nil for a session constructed via NewSessionWithClient (the
+// only production constructor); the nil cases are reachable only
+// via direct struct literal construction in tests.
+func (s *Session) SubServices() SubServices {
+	return SubServices{
+		LLM:         s.llm,
+		Perms:       s.perms,
+		Life:        s.life,
+		Memory:      s.memory,
+		Persistence: s.persist,
+		Tools:       s.tools,
+	}
+}
+
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
 	s.model = strings.TrimSpace(model)
@@ -391,9 +496,7 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 }
 
 func (s *Session) AddUser(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
-	s.mu.Unlock()
+	s.Persistence().AddUser(content)
 	if s.ConvoDAG != nil {
 		parentID := ""
 		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
@@ -435,9 +538,7 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 }
 
 func (s *Session) AddAssistant(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
-	s.mu.Unlock()
+	s.Persistence().AddAssistant(content)
 	if s.ConvoDAG != nil {
 		parentID := ""
 		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
@@ -569,16 +670,82 @@ func (s *Session) SetAllowedDirs(dirs []string) {
 	s.AllowedDirs = append([]string(nil), dirs...)
 }
 
+// SetAutoCompactThresholdPct sets the auto-compact threshold.
+// New code should call this instead of writing to the legacy
+// s.AutoCompactThresholdPct field directly.
+func (s *Session) SetAutoCompactThresholdPct(pct int) {
+	s.AutoCompactThresholdPct = pct
+}
+
+// SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle.
+// New code should call this instead of writing to the legacy
+// s.GLMThinkingEnabled field directly.
+func (s *Session) SetGLMThinkingEnabled(v *bool) {
+	s.GLMThinkingEnabled = v
+}
+
+// SetSnapshots attaches the snapshot tracker. New code should call
+// this instead of writing to the legacy s.Snapshots field directly.
+func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
+	s.Snapshots = snap
+}
+
+// SetContainerRequired sets the container-first mode flag.
+// New code should call this instead of writing to the legacy
+// s.ContainerRequired field directly.
+func (s *Session) SetContainerRequired(v bool) {
+	s.ContainerRequired = v
+}
+
+// SetAskUserFn sets the user-prompt callback. New code should
+// call this instead of writing to the legacy s.AskUserFn field.
+func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
+	s.AskUserFn = fn
+}
+
+// SetApproval sets the high-risk action gate. New code should
+// call this instead of writing to the legacy s.Approval field.
+func (s *Session) SetApproval(a *ApprovalGate) {
+	s.Approval = a
+}
+
+// SetConvoDAG attaches the conversation DAG. New code should
+// call this instead of writing to the legacy s.ConvoDAG field.
+// The DAG is also propagated to the persistence service so
+// s.Persistence().DAG() and the legacy field stay in sync.
+func (s *Session) SetConvoDAG(dag *storage.DAG) {
+	s.ConvoDAG = dag
+	if s.persist != nil {
+		s.persist.SetDAG(dag)
+	}
+}
+
+// ContextWindowCachedValue returns the cached context window size.
+// New code should call this instead of reading s.ContextWindowCached
+// directly. Falls back to the legacy field for back-compat with
+// code paths that still write to s.ContextWindowCached.
+func (s *Session) ContextWindowCachedValue() int {
+	if s.persist != nil {
+		if w := s.persist.ContextWindowCached(); w > 0 {
+			return w
+		}
+	}
+	return s.ContextWindowCached
+}
+
+// CostValue returns the session's cost accumulator (a pointer
+// to a value type, so its methods can be called). New code
+// should call this instead of reading s.Cost directly.
+func (s *Session) CostValue() *Cost {
+	return &s.Cost
+}
+
 func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
-	s.mu.Lock()
-	s.messages = msgs
-	s.mu.Unlock()
+	s.Persistence().SetRawMessages(msgs)
 }
 
 func (s *Session) MessageCount() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.messages)
+	return len(s.Persistence().RawMessages())
 }
 
 // RawMessages returns the conversation messages for persistence.
@@ -599,20 +766,20 @@ func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts type
 
 // RemoveLastExchange removes the last user+assistant message pair.
 func (s *Session) RemoveLastExchange() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if len(s.messages) < 2 {
+	msgs := s.Persistence().RawMessages()
+	if len(msgs) < 2 {
 		return
 	}
 	// Remove from the end until we've removed one user and one assistant message
 	removed := 0
-	for i := len(s.messages) - 1; i >= 0 && removed < 2; i-- {
-		role := s.messages[i].Role
+	for i := len(msgs) - 1; i >= 0 && removed < 2; i-- {
+		role := msgs[i].Role
 		if role == "user" || role == "assistant" {
 			removed++
-			s.messages = s.messages[:i]
+			msgs = msgs[:i]
 		}
 	}
+	s.Persistence().SetRawMessages(msgs)
 }
 
 // StreamEvent is sent from the engine to the TUI.

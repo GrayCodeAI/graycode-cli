@@ -1,6 +1,10 @@
 package sandbox
 
-import "context"
+import (
+	"context"
+	"os"
+	"path/filepath"
+)
 
 // Mode represents the sandbox isolation level.
 type Mode string
@@ -11,11 +15,108 @@ const (
 	ModeOff       Mode = "off"       // no restrictions
 )
 
+// Tier controls the sandbox's security posture. The new default is
+// TierWorkspace (allow workspace writes, deny process exec) which is
+// safer than the legacy TierOff default. Existing users who rely on
+// process exec can opt back in via Tier=TierOff in their config.
+type Tier string
+
+const (
+	// TierStrict denies everything: no writes, no process exec,
+	// no network. The agent can only read.
+	TierStrict Tier = "strict"
+	// TierWorkspace is the new default. Allows writes to the
+	// workspace + scratch dir, but denies process exec. An agent
+	// that needs to run Bash must either be in container mode
+	// (ContainerExecutor) or have Tier set to TierOff.
+	TierWorkspace Tier = "workspace"
+	// TierOff is the legacy default. Allow everything: writes,
+	// process exec, network. Used by users who need the full
+	// pre-tier behavior.
+	TierOff Tier = "off"
+)
+
 // SandboxConfig describes how a command should be sandboxed.
 type SandboxConfig struct {
 	Mode         Mode
 	WorkspaceDir string
 	AllowNetwork bool
+	// Tier selects the security tier (strict / workspace / off).
+	// Empty defaults to TierOff for back-compat with legacy
+	// callers that don't know about tiers. New callers should
+	// set Tier explicitly (typically TierWorkspace to match
+	// the Config.Tier default in DefaultConfig).
+	Tier Tier
+}
+
+// DefaultHawkPolicy creates a sensible default SeatbeltPolicy for hawk
+// operations in the given working directory. The tier parameter
+// selects the security posture:
+//
+//   - TierStrict: deny everything
+//   - TierWorkspace (new default): allow workspace writes, no process
+//   - TierOff: legacy behavior (allow everything)
+func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
+	home := os.Getenv("HOME")
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = filepath.Join(home, "go")
+	}
+
+	hawkDir := filepath.Join(home, ".hawk")
+
+	readPaths := []string{
+		workDir,
+		"/usr",
+		"/bin",
+		"/Library",
+		"/System",
+		"/dev",
+		"/tmp",
+		"/private/tmp",
+		hawkDir,
+		gopath,
+	}
+
+	writePaths := []string{
+		workDir,
+		"/tmp",
+		"/private/tmp",
+		"/dev/null",
+		hawkDir,
+	}
+
+	p := &SeatbeltPolicy{
+		AllowNetwork:  true,
+		AllowSysctl:   true,
+		ReadablePaths: readPaths,
+		WritablePaths: writePaths,
+		Tier:          tier,
+	}
+
+	// Apply the tier's policy on top of the defaults. Tier takes
+	// precedence over the legacy AllowWrite/AllowProcess fields
+	// so the new safe default is enforced regardless of legacy
+	// config values.
+	switch tier {
+	case TierStrict:
+		p.AllowWrite = false
+		p.AllowProcess = false
+	case TierWorkspace:
+		p.AllowWrite = true
+		p.AllowProcess = false
+	case TierOff, "":
+		// Legacy behavior: allow everything.
+		p.AllowWrite = true
+		p.AllowProcess = true
+	default:
+		// Unknown tier: log via fallback to TierOff. Caller can
+		// override by setting Tier explicitly to a known value.
+		p.AllowWrite = true
+		p.AllowProcess = true
+	}
+
+	return p
 }
 
 // ParseMode converts a string to a Mode. Unrecognized values default to

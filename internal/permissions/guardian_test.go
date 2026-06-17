@@ -431,8 +431,8 @@ func TestNewGuardian_Defaults(t *testing.T) {
 	if g.Timeout != 15*time.Second {
 		t.Errorf("expected Timeout 15s, got %v", g.Timeout)
 	}
-	if g.MaxConsecutiveDenials != 3 {
-		t.Errorf("expected MaxConsecutiveDenials 3, got %d", g.MaxConsecutiveDenials)
+	if g.MaxConsecutiveDenials != 5 {
+		t.Errorf("expected MaxConsecutiveDenials 5, got %d", g.MaxConsecutiveDenials)
 	}
 	if g.ChatFn == nil {
 		t.Error("expected ChatFn to be set")
