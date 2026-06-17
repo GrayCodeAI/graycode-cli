@@ -290,11 +290,12 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 	for i, f := range legacySessionFields {
 		quoted[i] = regexp.QuoteMeta(f)
 	}
-	// Match `s.Field` or `sess.Field` as a bare token. We then
-	// post-filter to exclude method calls (Field followed by `(`),
-	// which are not legacy access — they're the proper way to
-	// interact with the field via its getter/setter methods.
-	fieldPattern := regexp.MustCompile(`\bs(?:ess)?\.\s*(?:` + strings.Join(quoted, "|") + `)\b`)
+	// Match `s.Field`, `sess.Field`, or `m.session.Field` as a bare
+	// token. We then post-filter to exclude method calls (Field
+	// followed by `(`), which are not legacy access — they're the
+	// proper way to interact with the field via its getter/setter
+	// methods.
+	fieldPattern := regexp.MustCompile(`\b(?:s|sess|m\.session)\.\s*(?:` + strings.Join(quoted, "|") + `)\b`)
 
 	total := 0
 	perFile := map[string]int{}
@@ -352,12 +353,12 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 	// internal/engine/stream.go with ~120 sites), so internal/
 	// remains soft-fail until those sub-PRs land.
 	//
-	// Current cmd/ backlog (2026-06-17):
-	//   chat_model_test.go 1, session_sync.go 1, snapshot_cmd.go 1,
-	//   chat_commands_util.go 1
-	// All 4 are test files or false positives (method calls
-	// matching the field pattern). The cmd/ sub-PR is complete.
-	const cmdHardFailThreshold = 4
+	// M1 (2026-06-17): audit now matches `m.session.X` (was `s.X` /
+	// `sess.X` only — a blind spot that missed all chatModel access).
+	// Threshold lowered to 0; remaining false-positives are
+	// method calls (Field followed by `(`) that the post-filter
+	// already strips out.
+	const cmdHardFailThreshold = 0
 	var cmdLegacy int
 	for f, n := range perFile {
 		if strings.HasPrefix(f, "cmd/") {

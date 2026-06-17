@@ -707,6 +707,16 @@ func (s *Session) SetContainerRequired(v bool) {
 	s.ContainerRequired = v
 }
 
+// SetContainerExecutor sets the container executor and updates
+// the ToolService so the legacy s.ContainerExecutor field and
+// s.Tools().ContainerExecutor() stay in sync.
+func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
+	s.ContainerExecutor = ce
+	if s.tools != nil {
+		s.tools.WithContainerExecutor(ce, s.ContainerRequired)
+	}
+}
+
 // SetAskUserFn sets the user-prompt callback. New code should
 // call this instead of writing to the legacy s.AskUserFn field.
 func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {

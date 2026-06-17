@@ -298,7 +298,7 @@ func resetPermissionCenter(m *chatModel) {
 	if m == nil || m.session == nil {
 		return
 	}
-	m.session.Autonomy = DefaultContainerAutonomy
+	m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 	m.settings.Autonomy = permissionTierSettingValue(DefaultContainerAutonomy)
 	m.settings.Sandbox = defaultPermissionSandbox
 	sandboxFlag = defaultPermissionSandbox
@@ -347,7 +347,7 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid tiers: scout, builder, operator, autonomous"})
 			return *m, nil
 		}
-		m.session.Autonomy = level
+		m.session.PermSvc().SetAutonomy(level)
 		m.settings.Autonomy = permissionTierSettingValue(level)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission tier → %s\nBehavior: %s", label, permissionBehaviorSummary(level))})
 	case "sandbox":

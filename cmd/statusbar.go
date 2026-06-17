@@ -191,8 +191,8 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 	}
 	if m.containerReady && strings.TrimSpace(m.containerStatus) != "" {
 		tier := "Builder"
-		if m.session != nil && m.session.Autonomy != 0 {
-			tier = autonomyTierName(m.session.Autonomy)
+		if m.session != nil && m.session.PermSvc().Autonomy() != 0 {
+			tier = autonomyTierName(m.session.PermSvc().Autonomy())
 		}
 		status := shortenFooterContainerStatus(strings.TrimSpace(m.containerStatus))
 		return bold, fmt.Sprintf(" %s · %s", status, tier)

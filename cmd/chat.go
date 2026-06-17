@@ -896,11 +896,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateViewportContent()
 				return m, nil
 			}
-			next := nextAutonomyTier(m.session.Autonomy)
-			if m.session.Autonomy == 0 || autonomyTierIndex(m.session.Autonomy) < 0 {
+			next := nextAutonomyTier(m.session.PermSvc().Autonomy())
+			if m.session.PermSvc().Autonomy() == 0 || autonomyTierIndex(m.session.PermSvc().Autonomy()) < 0 {
 				next = DefaultContainerAutonomy
 			}
-			m.session.Autonomy = next
+			m.session.PermSvc().SetAutonomy(next)
 			m.invalidateConnStatus()
 			m.messages = append(m.messages, displayMsg{role: "system", content: formatAutonomyTierMessage(next)})
 			m.viewDirty = true
@@ -1275,17 +1275,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.sandbox != nil {
 			m.containerSandbox = msg.sandbox
 			if m.session != nil {
-				m.session.ContainerExecutor = msg.sandbox
+				m.session.SetContainerExecutor(msg.sandbox)
 			}
 		}
 		if msg.ready && m.session != nil {
-			if m.session.Autonomy == 0 {
-				m.session.Autonomy = DefaultContainerAutonomy
+			if m.session.PermSvc().Autonomy() == 0 {
+				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
 			if m.phase == phaseWelcomeGate {
 				m.sandboxReadyPending = true
 			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.Autonomy)})
+				m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.PermSvc().Autonomy())})
 			}
 			m.invalidateConnStatus()
 		}
@@ -1294,8 +1294,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containerEnabled = false
 			m.containerReady = false
 			if m.session != nil {
-				m.session.ContainerRequired = false
-				m.session.ContainerExecutor = nil
+				m.session.SetContainerRequired(false)
+				m.session.SetContainerExecutor(nil)
 			}
 			m.messages = append(m.messages, displayMsg{
 				role:    "system",

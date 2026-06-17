@@ -163,7 +163,7 @@ func (m *chatModel) collectHUDData() HUDData {
 	data := HUDData{
 		MissionStatus: "idle",
 	}
-	if m.session != nil && m.session.YaadBridge != nil && m.session.YaadBridge.Ready() {
+	if m.session != nil && m.session.MemorySvc().Yaad() != nil && m.session.MemorySvc().Yaad().Ready() {
 		data.MemoryReady = true
 	}
 	return data
