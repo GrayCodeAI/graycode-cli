@@ -236,20 +236,6 @@ func TestMigrationExample_HelpSubcommand(t *testing.T) {
 	}
 }
 
-// helpSubcommand is a canonical example of how a real subcommand
-// will look once migrated from chat_commands.go.
-type helpSubcommand struct{}
-
-func (h *helpSubcommand) Name() string        { return "help" }
-func (h *helpSubcommand) Aliases() []string   { return []string{"commands"} }
-func (h *helpSubcommand) Description() string { return "show this help" }
-func (h *helpSubcommand) Usage() string       { return "" }
-func (h *helpSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-	// Real implementation would render the help text and append
-	// it to m.messages. The test just verifies the dispatch path.
-	return m, nil
-}
-
 // --- concurrency ---
 
 func TestSubcommandRegistry_ConcurrentRegisterAndLookup(t *testing.T) {
