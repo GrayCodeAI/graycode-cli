@@ -11,6 +11,27 @@ const (
 	ModeOff       Mode = "off"       // no restrictions
 )
 
+// Tier controls the sandbox's security posture. The new default is
+// TierWorkspace (allow workspace writes, deny process exec) which is
+// safer than the legacy TierOff default. Existing users who rely on
+// process exec can opt back in via Tier=TierOff in their config.
+type Tier string
+
+const (
+	// TierStrict denies everything: no writes, no process exec,
+	// no network. The agent can only read.
+	TierStrict Tier = "strict"
+	// TierWorkspace is the new default. Allows writes to the
+	// workspace + scratch dir, but denies process exec. An agent
+	// that needs to run Bash must either be in container mode
+	// (ContainerExecutor) or have Tier set to TierOff.
+	TierWorkspace Tier = "workspace"
+	// TierOff is the legacy default. Allow everything: writes,
+	// process exec, network. Used by users who need the full
+	// pre-tier behavior.
+	TierOff Tier = "off"
+)
+
 // SandboxConfig describes how a command should be sandboxed.
 type SandboxConfig struct {
 	Mode         Mode
