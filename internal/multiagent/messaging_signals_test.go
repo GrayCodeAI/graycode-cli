@@ -464,14 +464,31 @@ func TestWaitForLock_ReleaseByNonOwnerDoesNotWakeWaiter(t *testing.T) {
 
 // TestStats_NotAffectedByWaiters: responseWaiters and lockWaiters
 // do not appear in Stats; they are internal channels, not counters.
+//
+// The previous implementation launched a goroutine calling
+// WaitForResponse and never joined it — the goroutine ran for
+// 100ms after the test exited (M11 goroutine leak). Fixed by
+// using a done channel and a 1-second timeout to coordinate
+// the goroutine's lifetime with the test's.
 func TestStats_NotAffectedByWaiters(t *testing.T) {
 	mb := NewMessageBus()
 	_ = mb.Register("a")
 	_ = mb.Register("b")
 	_ = mb.Send(AgentMessage{ID: "req", From: "a", To: "b"})
+
+	// Use a done channel + 1-second timeout to join the goroutine.
+	// WaitForResponse returns after the configured 100ms timeout
+	// (no matching response is sent), so the goroutine completes
+	// well before the 1-second join deadline.
+	done := make(chan struct{})
 	go func() {
 		_, _ = mb.WaitForResponse("req", 100*time.Millisecond)
+		close(done)
 	}()
+
+	// Give the goroutine a moment to register as a waiter so the
+	// Stats() assertion below is meaningful (the waiter exists in
+	// the responseWaiters map at this point).
 	time.Sleep(10 * time.Millisecond)
 	stats := mb.Stats()
 	// HistorySz should reflect the seeded message; Agents 2; Dropped 0.
@@ -480,5 +497,15 @@ func TestStats_NotAffectedByWaiters(t *testing.T) {
 	}
 	if stats.Dropped != 0 {
 		t.Errorf("Dropped = %d, want 0", stats.Dropped)
+	}
+
+	// Join the goroutine via the done channel + 1-second timeout.
+	// If the goroutine is still running after 1s, fail loudly.
+	select {
+	case <-done:
+		// Goroutine completed (the WaitForResponse timeout fired
+		// and the waiter cleaned itself up).
+	case <-time.After(1 * time.Second):
+		t.Fatal("WaitForResponse goroutine did not return within 1s; M11 goroutine leak")
 	}
 }
