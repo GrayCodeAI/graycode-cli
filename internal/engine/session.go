@@ -163,33 +163,37 @@ type Session struct {
 
 	// Advanced features
 	//
-	// Deprecated: most of these have been folded into sub-services.
+	// Deprecated: most of these have been folded into sub-services;
+	// a few remain as legacy fields without a sub-service accessor
+	// (Trajectory, LintLoop, TestLoop, FileMentions, Files, Snapshots,
+	// Tracer). For those, keep reading the legacy field — they're
+	// populated at session construction and don't have a setter.
 	//   Autonomy       -> s.PermSvc().Autonomy()
 	//   Sandbox        -> s.Tools().Sandbox()
-	//   Plan           -> s.Tools().PlanState()
+	//   Plan           -> s.Plan (legacy field; not yet on a sub-service)
 	//   Beliefs        -> s.LifecycleSvc().Beliefs()
 	//   Critic         -> s.LifecycleSvc().Critic()
 	//   Backtrack      -> s.LifecycleSvc().Backtrack()
 	//   Limits         -> s.LifecycleSvc().Limits()
-	//   Trajectory     -> s.LifecycleSvc().Trajectory()
+	//   Trajectory     -> legacy field; not yet on a sub-service
 	//   Shadow         -> s.LifecycleSvc().Shadow()
 	//   ConvoDAG       -> s.Persistence().DAG()
 	//   Sleeptime      -> s.MemorySvc().Sleeptime()
 	//   Activity       -> s.MemorySvc().Activity()
 	//   SkillDistiller -> s.MemorySvc().SkillDistiller()
-	//   RateLimiter    -> s.ChatLLM().RateLimiter()
+	//   RateLimiter    -> s.RateLimiter (legacy field; not yet on ChatLLM)
 	//   AgentsAccum    -> s.LifecycleSvc().AgentsAccum()
-	//   FewShotStore   -> s.LifecycleSvc().FewShot()
+	//   FewShotStore   -> s.LifecycleSvc().FewShotStore()
 	//   AdaptivePrompt -> s.LifecycleSvc().AdaptivePrompt()
-	//   LintLoop       -> s.LifecycleSvc().LintLoop()
-	//   TestLoop       -> s.LifecycleSvc().TestLoop()
-	//   FileMentions   -> s.MemorySvc().FileMentions()
+	//   LintLoop       -> legacy field; not yet on a sub-service
+	//   TestLoop       -> legacy field; not yet on a sub-service
+	//   FileMentions   -> legacy field; not yet on a sub-service
 	//   ResponseCache  -> s.LifecycleSvc().ResponseCache()
 	//   Pipeline       -> s.LifecycleSvc().Pipeline()
-	//   Files          -> s.Persistence().Files()
+	//   Files          -> legacy field; not yet on Persistence
 	//   Steering       -> s.Persistence().Steering()
-	//   Snapshots      -> s.Persistence().Snapshots()
-	//   Tracer         -> global; passed to services at construction.
+	//   Snapshots      -> legacy field; not yet on Persistence
+	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
 	Autonomy       AutonomyLevel              // autonomy.go — permission level
 	Sandbox        *DiffSandbox               // diffsandbox.go — staged file changes
 	Plan           *PlanState                 // subtask.go — user-activated plan
