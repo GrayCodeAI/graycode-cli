@@ -51,6 +51,11 @@ type PermissionService struct {
 
 // NewPermissionService constructs a PermissionService with a fresh
 // PermissionEngine. Tests can inject a custom engine via WithEngine.
+//
+// Note: mode is intentionally left at the zero value (PermissionMode(""))
+// so that IsZero() correctly reports true for a freshly constructed
+// service. Callers that want the default mode should call SetMode
+// (or set the field directly during tests). See M4 in the code review.
 func NewPermissionService(log *logger.Logger) *PermissionService {
 	if log == nil {
 		log = logger.Default()
@@ -62,7 +67,6 @@ func NewPermissionService(log *logger.Logger) *PermissionService {
 		autoMode:   pe.AutoMode,
 		classifier: pe.Classifier,
 		bypassKill: pe.BypassKill,
-		mode:       PermissionModeDefault,
 		log:        log,
 	}
 }
@@ -185,8 +189,9 @@ func (s *PermissionService) BypassKill() *permissions.BypassKillswitch { return 
 
 // IsZero reports whether this service has been fully configured.
 // A zero PermissionService has no approval gate, no custom permission
-// fn, and the default mode — that's the "freshly constructed" state
-// used by NewSessionWithClient.
+// fn, and an empty mode — that's the "freshly constructed" state
+// used by NewSessionWithClient (the constructor no longer pre-sets
+// mode = PermissionModeDefault, see M4 in the code review).
 func (s *PermissionService) IsZero() bool {
-	return s == nil || (s.approval == nil && s.permissionFn == nil && s.mode == PermissionModeDefault)
+	return s == nil || (s.approval == nil && s.permissionFn == nil && s.mode == "")
 }
