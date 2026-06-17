@@ -146,14 +146,6 @@ func pluginsSummary(rt *plugin.Runtime) string {
 	return b.String()
 }
 
-func truncate(s string, max int) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "…"
-}
-
 // tasteStoreForSession returns a taste store using the default location.
 func tasteStoreForSession() (*taste.Store, error) {
 	return taste.NewStore("")

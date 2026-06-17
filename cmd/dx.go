@@ -358,7 +358,7 @@ func exportJSON(messages []displayMsg, sessionID string) (string, error) {
 // retryLastPrompt finds and returns the last user message for re-sending.
 // Returns an empty string if no user messages are found.
 func retryLastPrompt(sess *engine.Session) string {
-	msgs := sess.RawMessages()
+	msgs := sess.Persistence().RawMessages()
 	for i := len(msgs) - 1; i >= 0; i-- {
 		if msgs[i].Role == "user" && strings.TrimSpace(msgs[i].Content) != "" {
 			return msgs[i].Content

@@ -565,6 +565,16 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	if sbMode := sandbox.ModeFromContext(ctx); sbMode != sandbox.ModeOff {
 		workDir, _ := os.Getwd()
 		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: true}
+		// Map the legacy Mode to the corresponding Tier. ModeStrict
+		// → TierStrict (deny all), ModeWorkspace → TierWorkspace
+		// (allow workspace writes, deny process exec — the new safe
+		// default), ModeOff is handled above so we never get here.
+		switch sbMode {
+		case sandbox.ModeStrict:
+			cfg.Tier = sandbox.TierStrict
+		case sandbox.ModeWorkspace:
+			cfg.Tier = sandbox.TierWorkspace
+		}
 		if sandbox.Available() {
 			var wrapErr error
 			execName, execArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)

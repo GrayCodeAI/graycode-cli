@@ -177,10 +177,10 @@ func TestSession_Services_Bridge(t *testing.T) {
 	s := NewSession("anthropic", "claude-sonnet-4-20250514", "You are helpful.", reg)
 	s.MaxBudgetUSD = 3.50
 	s.Autonomy = AutonomyFull
-	s.Sandbox = &DiffSandbox{}
-	s.Memory = &mockMemoryRecaller{}
-	s.YaadBridge = &memory.YaadBridge{}
-	s.Cascade = &branching.CascadeRouter{Enabled: true}
+	s.Tools().SetSandbox(&DiffSandbox{})
+	s.MemorySvc().SetMemory(&mockMemoryRecaller{})
+	s.MemorySvc().SetYaad(&memory.YaadBridge{})
+	s.LifecycleSvc().SetCascade(&branching.CascadeRouter{Enabled: true})
 
 	svc := s.Services()
 
@@ -202,10 +202,10 @@ func TestSession_Services_Bridge(t *testing.T) {
 	if svc.Safety.Perm != s.Perm {
 		t.Error("Safety.Perm should reference same PermissionEngine")
 	}
-	if svc.Safety.Sandbox != s.Sandbox {
+	if svc.Safety.Sandbox != s.Tools().Sandbox() {
 		t.Error("Safety.Sandbox should reference same DiffSandbox")
 	}
-	if svc.Safety.Limits != s.Limits {
+	if svc.Safety.Limits != s.LifecycleSvc().Limits() {
 		t.Error("Safety.Limits should reference same LimitTracker")
 	}
 	if svc.Safety.Autonomy != AutonomyFull {
@@ -213,13 +213,13 @@ func TestSession_Services_Bridge(t *testing.T) {
 	}
 
 	// Intel mappings
-	if svc.Intel.Beliefs != s.Beliefs {
+	if svc.Intel.Beliefs != s.LifecycleSvc().Beliefs() {
 		t.Error("Intel.Beliefs should reference same BeliefState")
 	}
-	if svc.Intel.Memory != s.Memory {
+	if svc.Intel.Memory != s.MemorySvc().Memory() {
 		t.Error("Intel.Memory should reference same MemoryRecaller")
 	}
-	if svc.Intel.YaadBridge != s.YaadBridge {
+	if svc.Intel.YaadBridge != s.MemorySvc().Yaad() {
 		t.Error("Intel.YaadBridge should reference same YaadBridge")
 	}
 
@@ -227,10 +227,10 @@ func TestSession_Services_Bridge(t *testing.T) {
 	if svc.Optim.MaxBudget != 3.50 {
 		t.Errorf("Optim.MaxBudget: expected 3.50, got %f", svc.Optim.MaxBudget)
 	}
-	if svc.Optim.Router != s.Router {
+	if svc.Optim.Router != s.ChatLLM().Router() {
 		t.Error("Optim.Router should reference same Router")
 	}
-	if svc.Optim.Cascade != s.Cascade {
+	if svc.Optim.Cascade != s.LifecycleSvc().Cascade() {
 		t.Error("Optim.Cascade should reference same CascadeRouter")
 	}
 
@@ -243,7 +243,7 @@ func TestSession_Services_Bridge(t *testing.T) {
 	}
 
 	// Advanced features
-	if svc.Backtrack != s.Backtrack {
+	if svc.Backtrack != s.LifecycleSvc().Backtrack() {
 		t.Error("Backtrack should reference same engine")
 	}
 }

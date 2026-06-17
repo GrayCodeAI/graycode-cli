@@ -37,7 +37,7 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 	}
 	subSystemPrompt, err := prompts.BuildSubAgentPrompt(subPromptCtx)
 	if err != nil {
-		subSystemPrompt = s.system
+		subSystemPrompt = s.Persistence().System()
 	}
 
 	sub := s.SubSession(model, subSystemPrompt, registry)
@@ -67,14 +67,14 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 }
 
 func (s *Session) resolveSubAgentModel(mode SubAgentMode) string {
-	if s.Cascade == nil {
+	if s.LifecycleSvc().Cascade() == nil {
 		return s.model
 	}
 	switch mode {
 	case SubAgentExplore:
-		return s.Cascade.SelectModel("summarize", s.model, "")
+		return s.LifecycleSvc().Cascade().SelectModel("summarize", s.model, "")
 	case SubAgentGeneral:
-		return s.Cascade.SelectModel("implement", s.model, "")
+		return s.LifecycleSvc().Cascade().SelectModel("implement", s.model, "")
 	default:
 		return s.model
 	}

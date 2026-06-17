@@ -33,7 +33,7 @@ func TestSetModelPreservesHistory(t *testing.T) {
 	}
 
 	// History must be fully preserved — same count and same content/order.
-	after := s.RawMessages()
+	after := s.Persistence().RawMessages()
 	if len(after) != len(history) {
 		t.Fatalf("history length after switch = %d, want %d (context was dropped!)", len(after), len(history))
 	}

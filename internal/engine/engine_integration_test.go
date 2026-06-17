@@ -66,28 +66,28 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 
 	// Simulate the engine receiving an assistant text reply + tool call + tool result
 	// by manually building the message sequence that agentLoop would produce.
-	sess.messages = append(sess.messages, types.EyrieMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Sure, let me check that file.",
 		ToolUse: []types.ToolCall{
 			{ID: "tc-1", Name: "Bash", Arguments: map[string]interface{}{"command": "echo hello"}},
 		},
-	})
-	sess.messages = append(sess.messages, types.EyrieMessage{
+	}))
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
 		Role: "user",
 		ToolResults: []types.ToolResult{{
 			ToolUseID: "tc-1",
 			Content:   "hello",
 			IsError:   false,
 		}},
-	})
-	sess.messages = append(sess.messages, types.EyrieMessage{
+	}))
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
 		Role:    "assistant",
 		Content: "The command ran successfully and returned 'hello'.",
-	})
+	}))
 
 	// Verify the full sequence is intact.
-	raw := sess.RawMessages()
+	raw := sess.Persistence().RawMessages()
 	if len(raw) != 4 {
 		t.Fatalf("expected 4 messages in flow, got %d", len(raw))
 	}
@@ -134,9 +134,9 @@ func TestIntegration_SessionResume(t *testing.T) {
 		ID:       "resume-test",
 		Model:    "test-model",
 		Provider: "test",
-		Messages: make([]session.Message, 0, len(sess.RawMessages())),
+		Messages: make([]session.Message, 0, len(sess.Persistence().RawMessages())),
 	}
-	for _, m := range sess.RawMessages() {
+	for _, m := range sess.Persistence().RawMessages() {
 		persisted.Messages = append(persisted.Messages, session.Message{
 			Role:    m.Role,
 			Content: m.Content,
@@ -171,7 +171,7 @@ func TestIntegration_SessionResume(t *testing.T) {
 	if resumed.MessageCount() != 3 {
 		t.Fatalf("expected 3 messages after resume, got %d", resumed.MessageCount())
 	}
-	if resumed.RawMessages()[2].Content != "What is 3+3?" {
+	if resumed.Persistence().RawMessages()[2].Content != "What is 3+3?" {
 		t.Fatal("continuation message not appended correctly")
 	}
 }
@@ -210,7 +210,7 @@ func TestIntegration_CompactionTrigger(t *testing.T) {
 
 	// The compacted conversation should contain the compaction marker.
 	found := false
-	for _, m := range sess.RawMessages() {
+	for _, m := range sess.Persistence().RawMessages() {
 		if m.Content == "[Earlier conversation compacted to save context.]" {
 			found = true
 			break

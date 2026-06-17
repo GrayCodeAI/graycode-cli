@@ -238,7 +238,9 @@ func applyModelOptionToSession(sess *engine.Session, opt configModelOption) {
 		return
 	}
 	if opt.ContextWindow > 0 {
-		sess.ContextWindowCached = opt.ContextWindow
+		if persist := sess.Persistence(); persist != nil {
+			persist.SetContextWindowCached(opt.ContextWindow)
+		}
 		sess.EnsureAutoCompactor()
 	}
 	if opt.PriceKnown {
@@ -249,7 +251,11 @@ func applyModelOptionToSession(sess *engine.Session, opt configModelOption) {
 func applyLiveModelMetadata(sess *engine.Session, provider, modelID string) {
 	if opt, ok := lookupModelOption(provider, modelID); ok {
 		applyModelOptionToSession(sess, opt)
-		if sess != nil && sess.ContextWindowCached > 0 {
+		cw := 0
+		if persist := sess.Persistence(); persist != nil {
+			cw = persist.ContextWindowCached()
+		}
+		if sess != nil && cw > 0 {
 			return
 		}
 	}

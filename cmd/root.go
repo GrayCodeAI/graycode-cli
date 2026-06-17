@@ -10,6 +10,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
@@ -111,7 +112,7 @@ var rootCmd = &cobra.Command{
 		}
 		// Defer credential migration until chat/print (keeps cold paths fast).
 		hawkconfig.PrepareCredentialDiscovery(context.Background())
-		_ = hawkconfig.MigrateProviderSecrets()
+		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 
 		if printMode || promptFlag != "" || inputFormat == "stream-json" || replFlag || watchFlag {
 			if promptFlag == "" && !replFlag && !watchFlag {
@@ -636,4 +637,28 @@ Examples:
 		}
 		return nil
 	},
+}
+
+// logMigrateProviderSecretsError surfaces a non-nil error from
+// hawkconfig.MigrateProviderSecrets via the structured logger.
+//
+// MigrateProviderSecrets is a one-time hygiene pass that strips API keys
+// from the on-disk provider.json (a known-bad location — see AGENTS.md).
+// If it fails, the keys remain in the file and the user must be told so
+// they can run hawk /config to move them to the OS keychain. Previously
+// the error was silently discarded (cmd/root.go:114), so a failure left
+// the user with secrets in plaintext and no indication that anything was
+// wrong.
+//
+// We log and continue rather than failing startup: the migration is
+// best-effort, and a missing or unreadable provider.json is not
+// fatal — the rest of the app can still function.
+func logMigrateProviderSecretsError(l *logger.Logger, err error) {
+	if err == nil {
+		return
+	}
+	l.Warn(
+		"provider secret migration failed; API keys may remain in provider.json. Run `hawk /config` to move them to the OS keychain.",
+		map[string]interface{}{"err": err.Error()},
+	)
 }

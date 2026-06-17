@@ -39,8 +39,8 @@ func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEven
 		s.AddUser("You are stuck in a loop. Try a completely different approach. If you cannot make progress, explain what's blocking you.")
 	}
 
-	if s.Limits != nil {
-		if exceeded, reason := s.Limits.IsExceeded(); exceeded {
+	if s.LifecycleSvc().Limits() != nil {
+		if exceeded, reason := s.LifecycleSvc().Limits().IsExceeded(); exceeded {
 			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
 			ch <- StreamEvent{Type: "done"}
 			return false

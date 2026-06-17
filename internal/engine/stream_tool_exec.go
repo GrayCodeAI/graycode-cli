@@ -207,8 +207,8 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) toolExecResult {
 	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
-	if s.ContainerRequired {
-		if s.ContainerExecutor == nil || !s.ContainerExecutor.Running() {
+	if s.Tools().ContainerRequired() {
+		if s.Tools().ContainerExecutor() == nil || !s.Tools().ContainerExecutor().Running() {
 			msg := "Container not ready — tools are disabled until the sandbox is running."
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
 			return toolExecResult{tc: tc, output: msg, isErr: true}
@@ -272,10 +272,10 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
 		AgentSpawnFn: s.AgentSpawnFn,
 		AskUserFn:    s.AskUserFn,
-		YaadBridge:   s.YaadBridge,
+		YaadBridge:   s.MemorySvc().Yaad(),
 	})
-	if s.ContainerExecutor != nil && s.ContainerExecutor.Running() {
-		toolCtx = tool.WithContainerExecutor(toolCtx, s.ContainerExecutor)
+	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
+		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
 	}
 	toolCtx, toolCancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
 
@@ -313,13 +313,13 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 			"error": execErr.Error(),
 		})
 		output = fmt.Sprintf("Error: %s", execErr.Error())
-		if s.Backtrack != nil {
-			s.Backtrack.MarkOutcome(turnCount, "failure")
+		if s.LifecycleSvc().Backtrack() != nil {
+			s.LifecycleSvc().Backtrack().MarkOutcome(turnCount, "failure")
 		}
 
 		// LLM Reflection on Failure: ask the model WHY this failed
-		if s.Reflector != nil && shouldReflect(tc.Name, execErr) {
-			reflection, refErr := s.Reflector.Reflect(ctx, intentText, s.messages, output)
+		if s.LifecycleSvc().Reflector() != nil && shouldReflect(tc.Name, execErr) {
+			reflection, refErr := s.LifecycleSvc().Reflector().Reflect(ctx, intentText, s.Persistence().RawMessages(), output)
 			if refErr == nil && reflection != nil {
 				output += fmt.Sprintf("\n\n## Self-Reflection\n"+
 					"**What failed:** %s\n"+
@@ -378,12 +378,12 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
-	if s.Limits != nil {
-		s.Limits.RecordToolCall(tc.Name)
+	if s.LifecycleSvc().Limits() != nil {
+		s.LifecycleSvc().Limits().RecordToolCall(tc.Name)
 	}
 
 	canonical := canonicalToolName(tc.Name)
-	if s.Beliefs != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
+	if s.LifecycleSvc().Beliefs() != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
 		subject := tc.Name
 		if p, ok := pathArgument(tc.Arguments); ok {
 			subject = p
@@ -392,20 +392,20 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		if len(contentSummary) > 200 {
 			contentSummary = contentSummary[:200]
 		}
-		s.Beliefs.Record("file_purpose", subject, contentSummary, turnCount)
+		s.LifecycleSvc().Beliefs().Record("file_purpose", subject, contentSummary, turnCount)
 	}
 
-	if s.EnhancedMemory != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
+	if s.MemorySvc().Enhanced() != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
 		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
-			if proactiveCtx := s.EnhancedMemory.ProactiveContextForFile(p); proactiveCtx != "" {
+			if proactiveCtx := s.MemorySvc().Enhanced().ProactiveContextForFile(p); proactiveCtx != "" {
 				s.AppendSystemContext(proactiveCtx)
 			}
 		}
 	}
 
-	if s.Beliefs != nil && (canonical == "Write" || canonical == "Edit") {
+	if s.LifecycleSvc().Beliefs() != nil && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok {
-			s.Beliefs.Invalidate(p)
+			s.LifecycleSvc().Beliefs().Invalidate(p)
 		}
 	}
 
@@ -421,14 +421,14 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
-	if s.Critic != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+	if s.LifecycleSvc().Critic() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok {
 			origContent := ""
 			if data, readErr := readFileContent(p); readErr == nil {
 				origContent = data
 			}
-			verdict := s.Critic.PreScreenPatch(origContent, output, intentText)
-			if s.Critic.ShouldBlock(verdict) {
+			verdict := s.LifecycleSvc().Critic().PreScreenPatch(origContent, output, intentText)
+			if s.LifecycleSvc().Critic().ShouldBlock(verdict) {
 				issueStr := strings.Join(verdict.Issues, "; ")
 				output = fmt.Sprintf("Patch rejected by validator: %s. Try again.", issueStr)
 				isErr = true
@@ -436,9 +436,9 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
-	if s.Shadow != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+	if s.LifecycleSvc().Shadow() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok {
-			validationErrs := s.Shadow.ValidateEdit(p, output)
+			validationErrs := s.LifecycleSvc().Shadow().ValidateEdit(p, output)
 			if len(validationErrs) > 0 {
 				var warnings []string
 				for _, ve := range validationErrs {
@@ -450,7 +450,7 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	}
 
 	sandboxIntercepted := false
-	if s.Sandbox != nil && s.Sandbox.IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
+	if s.Tools().Sandbox() != nil && s.Tools().Sandbox().IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok {
 			origContent := ""
 			if data, readErr := readFileContent(p); readErr == nil {
@@ -460,7 +460,7 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 			if canonical == "Edit" {
 				action = "edit"
 			}
-			s.Sandbox.Stage(p, action, origContent, output)
+			s.Tools().Sandbox().Stage(p, action, origContent, output)
 			output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
 			sandboxIntercepted = true
 		}
@@ -503,12 +503,12 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	}
 	output = maybeSpillToolOutput(output, canonical, tc.ID)
 
-	if s.Pipeline != nil {
+	if s.LifecycleSvc().Pipeline() != nil {
 		var execErr error
 		if isErr {
 			execErr = fmt.Errorf("%s", output)
 		}
-		toolResult := s.Pipeline.PostToolExecution(tc.Name, tc.Arguments, output, execErr)
+		toolResult := s.LifecycleSvc().Pipeline().PostToolExecution(tc.Name, tc.Arguments, output, execErr)
 		if toolResult != nil {
 			if toolResult.StallWarning != "" {
 				output += "\n\n" + toolResult.StallWarning
@@ -549,8 +549,8 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		s.metrics.Counter("tools.errors").Inc()
 	}
 
-	if s.EnhancedMemory != nil {
-		s.EnhancedMemory.OnToolResult(tc.Name, tc.Arguments, output, isErr)
+	if s.MemorySvc().Enhanced() != nil {
+		s.MemorySvc().Enhanced().OnToolResult(tc.Name, tc.Arguments, output, isErr)
 	}
 
 	hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{

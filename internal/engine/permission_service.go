@@ -168,6 +168,21 @@ func (s *PermissionService) AllowedDirs() []string { return s.allowedDirs }
 // Autonomy returns the autonomy level.
 func (s *PermissionService) Autonomy() AutonomyLevel { return s.autonomy }
 
+// Memory returns the legacy PermissionMemory shim. The shim is
+// kept in sync with the engine's classification state; callers
+// that historically used `sess.Permissions.AllowSpec(...)` should
+// migrate to `sess.PermSvc().Memory().AllowSpec(...)`.
+func (s *PermissionService) Memory() *PermissionMemory { return s.memory }
+
+// AutoMode returns the legacy AutoModeState shim.
+func (s *PermissionService) AutoMode() *permissions.AutoModeState { return s.autoMode }
+
+// Classifier returns the legacy Classifier shim.
+func (s *PermissionService) Classifier() *permissions.Classifier { return s.classifier }
+
+// BypassKill returns the legacy BypassKillswitch shim.
+func (s *PermissionService) BypassKill() *permissions.BypassKillswitch { return s.bypassKill }
+
 // IsZero reports whether this service has been fully configured.
 // A zero PermissionService has no approval gate, no custom permission
 // fn, and the default mode — that's the "freshly constructed" state

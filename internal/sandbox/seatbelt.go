@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -21,6 +20,7 @@ type SeatbeltPolicy struct {
 	WritablePaths []string // paths allowed for file-write*
 	AllowProcess  bool     // allow spawning child processes (process-exec*)
 	AllowSysctl   bool     // allow sysctl-read
+	Tier          Tier     // security tier (strict / workspace / off)
 }
 
 // GenerateSeatbeltProfile generates a valid Apple sandbox-exec SBPL
@@ -63,48 +63,6 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 	}
 
 	return b.String()
-}
-
-// DefaultHawkPolicy creates a sensible default SeatbeltPolicy for hawk
-// operations in the given working directory.
-func DefaultHawkPolicy(workDir string) *SeatbeltPolicy {
-	home := os.Getenv("HOME")
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = filepath.Join(home, "go")
-	}
-
-	hawkDir := filepath.Join(home, ".hawk")
-
-	readPaths := []string{
-		workDir,
-		"/usr",
-		"/bin",
-		"/Library",
-		"/System",
-		"/dev",
-		"/tmp",
-		"/private/tmp",
-		hawkDir,
-		gopath,
-	}
-
-	writePaths := []string{
-		workDir,
-		"/tmp",
-		"/private/tmp",
-		"/dev/null",
-		hawkDir,
-	}
-
-	return &SeatbeltPolicy{
-		AllowNetwork:  true,
-		AllowWrite:    true,
-		ReadablePaths: readPaths,
-		WritablePaths: writePaths,
-		AllowProcess:  true,
-		AllowSysctl:   true,
-	}
 }
 
 // RunSeatbelted creates an exec.Cmd that runs the given command inside a

@@ -172,8 +172,8 @@ func renderContainerFooterDetail(detail string, sess *engine.Session) string {
 		return statusStyle.Render(detail)
 	}
 	var level engine.AutonomyLevel
-	if sess != nil && sess.Autonomy != 0 {
-		level = sess.Autonomy
+	if sess != nil && sess.PermSvc().Autonomy() != 0 {
+		level = sess.PermSvc().Autonomy()
 	} else {
 		level = autonomyLevelForTierName(tierPart)
 	}

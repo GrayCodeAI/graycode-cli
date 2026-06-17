@@ -31,7 +31,10 @@ func (s *Session) ContextWindowSize() int {
 	if s == nil {
 		return DefaultContextWindow
 	}
-	return ResolveModelContextWindow(s.model, s.ContextWindowCached)
+	if w := s.ContextWindowCachedValue(); w > 0 {
+		return w
+	}
+	return ResolveModelContextWindow(s.model, 0)
 }
 
 // EnsureAutoCompactor initializes the compaction orchestrator from session settings.
@@ -96,10 +99,10 @@ func (s *Session) WillCompactBeforeTurn() bool {
 	if s.AutoCompactor.ShouldAutoCompact(s) {
 		return true
 	}
-	if len(s.messages) > maxContextMessages {
+	if len(s.Persistence().RawMessages()) > maxContextMessages {
 		return true
 	}
-	convTokens := EstimateTokens(s.messages)
+	convTokens := EstimateTokens(s.Persistence().RawMessages())
 	budget := ctxmgr.NewContextBudget(s.ContextWindowSize())
 	return budget.ShouldCompact(convTokens)
 }
@@ -110,27 +113,27 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	if s == nil {
 		return "", false
 	}
-	s.messages = ctxmgr.CollapseRepeatedMessages(s.messages)
+	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 
 	s.EnsureAutoCompactor()
 	if compactStrategy, ok := s.AutoCompactor.AutoCompactIfNeeded(ctx, s); ok {
 		return compactStrategy, true // recordCompaction emitted inside AutoCompactIfNeeded
 	}
 
-	if len(s.messages) > maxContextMessages {
-		before := EstimateTokens(s.messages)
+	if len(s.Persistence().RawMessages()) > maxContextMessages {
+		before := EstimateTokens(s.Persistence().RawMessages())
 		s.smartCompact()
-		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.messages), false)
+		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.Persistence().RawMessages()), false)
 		return "smart_message_cap", true
 	}
 
-	convTokens := EstimateTokens(s.messages)
+	convTokens := EstimateTokens(s.Persistence().RawMessages())
 	window := s.ContextWindowSize()
 	budget := ctxmgr.NewContextBudget(window)
 	if budget.ShouldCompact(convTokens) {
-		before := EstimateTokens(s.messages)
+		before := EstimateTokens(s.Persistence().RawMessages())
 		s.smartCompact()
-		s.recordCompaction("smart_budget", before, EstimateTokens(s.messages), false)
+		s.recordCompaction("smart_budget", before, EstimateTokens(s.Persistence().RawMessages()), false)
 		return "smart_budget", true
 	}
 
@@ -142,15 +145,15 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 	if s == nil {
 		return "", 0, 0, fmt.Errorf("no session")
 	}
-	s.messages = ctxmgr.CollapseRepeatedMessages(s.messages)
+	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 	s.EnsureAutoCompactor()
-	tokensBefore = EstimateTokens(s.messages)
+	tokensBefore = EstimateTokens(s.Persistence().RawMessages())
 	strategy, err = s.AutoCompactor.RunCompaction(ctx, s)
 	if err != nil {
 		s.smartCompact()
 		strategy = "smart_fallback"
 	}
-	tokensAfter = EstimateTokens(s.messages)
+	tokensAfter = EstimateTokens(s.Persistence().RawMessages())
 	s.recordCompaction(strategy, tokensBefore, tokensAfter, true)
 	return strategy, tokensBefore, tokensAfter, nil
 }
@@ -158,6 +161,6 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 // ShouldCompactByBudget reports whether conversation tokens exceed the configured % of window.
 func (s *Session) ShouldCompactByBudget() bool {
 	window := s.ContextWindowSize()
-	conv := EstimateTokens(s.messages)
+	conv := EstimateTokens(s.Persistence().RawMessages())
 	return conv >= window*s.compactThresholdPct()/100
 }

@@ -248,6 +248,10 @@ func isZAIProvider(provider string) bool {
 	}
 }
 
+// Router returns the legacy single-provider circuit breaker. New
+// code should access this through s.ChatLLM().Router().
+func (c *ChatService) Router() *modelPkg.Router { return c.router }
+
 func indexOf(s, sub string) int {
 	for i := 0; i+len(sub) <= len(s); i++ {
 		if s[i:i+len(sub)] == sub {
