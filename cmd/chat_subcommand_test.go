@@ -27,10 +27,10 @@ type mockSubcommand struct {
 	customModel tea.Model
 }
 
-func (m *mockSubcommand) Name() string             { return m.name }
-func (m *mockSubcommand) Aliases() []string        { return m.aliases }
-func (m *mockSubcommand) Description() string      { return m.description }
-func (m *mockSubcommand) Usage() string            { return m.usage }
+func (m *mockSubcommand) Name() string        { return m.name }
+func (m *mockSubcommand) Aliases() []string   { return m.aliases }
+func (m *mockSubcommand) Description() string { return m.description }
+func (m *mockSubcommand) Usage() string       { return m.usage }
 func (m *mockSubcommand) Handle(ml *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	m.calls++
 	m.lastArgs = args
@@ -203,10 +203,10 @@ func TestSubcommandInterface_DefaultImplementationsAreEmpty(t *testing.T) {
 // only Name" path.
 type zeroSubcommand struct{ name string }
 
-func (z *zeroSubcommand) Name() string                                          { return z.name }
-func (z *zeroSubcommand) Aliases() []string                                     { return nil }
-func (z *zeroSubcommand) Description() string                                   { return "" }
-func (z *zeroSubcommand) Usage() string                                         { return "" }
+func (z *zeroSubcommand) Name() string        { return z.name }
+func (z *zeroSubcommand) Aliases() []string   { return nil }
+func (z *zeroSubcommand) Description() string { return "" }
+func (z *zeroSubcommand) Usage() string       { return "" }
 func (z *zeroSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
@@ -508,5 +508,67 @@ func TestHandleCommand_RoutesToRegistry(t *testing.T) {
 	// that the dispatch logic exists in the file.
 	if subcommandRegistry.Size() < 20 {
 		t.Errorf("subcommandRegistry.Size = %d, want >= 20 (after H5 batch-3)", subcommandRegistry.Size())
+	}
+}
+
+// --- migrated commands: /run, /test, /lint, /snapshot ---
+//
+// H2 fix: these four commands were listed in slash autocomplete
+// but had no subcommand file, so the registry-based dispatcher
+// hit the "Unknown command" fallback. Tests below assert each
+// is now registered with a non-empty description.
+
+func TestRunSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("run")
+	if !ok {
+		t.Fatal("/run not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "run" {
+		t.Errorf("Name = %q, want run", cmd.Name())
+	}
+	if cmd.Description() == "" {
+		t.Error("Description is empty")
+	}
+	if cmd.Usage() == "" {
+		t.Error("Usage is empty; /run requires a command argument")
+	}
+}
+
+func TestTestSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("test")
+	if !ok {
+		t.Fatal("/test not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "test" {
+		t.Errorf("Name = %q, want test", cmd.Name())
+	}
+	if cmd.Description() == "" {
+		t.Error("Description is empty")
+	}
+}
+
+func TestLintSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("lint")
+	if !ok {
+		t.Fatal("/lint not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "lint" {
+		t.Errorf("Name = %q, want lint", cmd.Name())
+	}
+	if cmd.Description() == "" {
+		t.Error("Description is empty")
+	}
+}
+
+func TestSnapshotSubcommand_Registered(t *testing.T) {
+	cmd, ok := subcommandRegistry.Lookup("snapshot")
+	if !ok {
+		t.Fatal("/snapshot not registered in subcommandRegistry")
+	}
+	if cmd.Name() != "snapshot" {
+		t.Errorf("Name = %q, want snapshot", cmd.Name())
+	}
+	if cmd.Description() == "" {
+		t.Error("Description is empty")
 	}
 }
