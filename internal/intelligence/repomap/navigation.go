@@ -1,3 +1,7 @@
+// navigation.go implements an LSP-free "go to definition /
+// find references / find implementations / find callers / find callees"
+// index for a Go project. The index is built in-memory from go/parser ASTs
+// and is consulted by the Hawk CLI's navigate subcommand.
 package repomap
 
 import (

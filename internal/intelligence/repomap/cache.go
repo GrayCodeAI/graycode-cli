@@ -1,3 +1,6 @@
+// cache.go implements the in-process LRU symbol cache keyed
+// by (path, modtime). It is consulted by parseFileSymbols before re-parsing
+// and is cleared on process exit; for a persistent cache, use IncrementalMap.
 package repomap
 
 import (

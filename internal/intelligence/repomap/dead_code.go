@@ -1,3 +1,9 @@
+// dead_code.go flags top-level declarations (functions,
+// methods, types, vars, consts) that appear to be unreferenced. It is
+// deliberately conservative: declarations reachable from tests, interface
+// implementations, or via reflection are not flagged. FormatDeadCode
+// produces a human-readable summary, GenerateRemovalPlan a structured
+// edit script.
 package repomap
 
 import (

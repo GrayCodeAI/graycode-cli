@@ -1,3 +1,7 @@
+// shapley.go applies a Shapley-value-based ranking over
+// code chunks to score their marginal contribution to a task's context
+// set. It complements PageRank by accounting for redundancy across the
+// selected chunks, not just the in-graph centrality of each one.
 package repomap
 
 import (

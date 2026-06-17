@@ -1,3 +1,8 @@
+// semantic_search.go is the BM25-ranked full-text search
+// engine over the Document set produced by the navigation index. It
+// tokenises queries, expands them with ExpandQuery, and returns SearchHit
+// results with snippet extraction. This is the search backend used by the
+// Hawk CLI's "find" subcommand.
 package repomap
 
 import (

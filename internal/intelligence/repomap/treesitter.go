@@ -1,3 +1,8 @@
+// treesitter.go is the "tree-sitter-inspired" scope-aware
+// extractor. It uses go/ast for Go and a small scope-tracking regex engine
+// for other languages, returning the same shape of symbol list a real
+// tree-sitter parser would. ParseFileEnhanced and ParseSourceEnhanced are
+// the canonical entry points used by the rest of the package.
 package repomap
 
 import (

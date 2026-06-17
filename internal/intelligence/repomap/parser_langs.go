@@ -1,3 +1,8 @@
+// parser_langs.go holds the regex-based symbol extractors
+// for every non-Go language the repomap knows about (C, C++, Java, C#,
+// PHP, Ruby, Kotlin, Swift, Scala, Lua, Dart, Elixir, Haskell, ...). Each
+// language has its own parseX function that the dispatcher in repomap.go
+// selects by file extension.
 package repomap
 
 import (
