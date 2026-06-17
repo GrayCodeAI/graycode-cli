@@ -326,11 +326,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		s.log.Info("token count", map[string]interface{}{"input_tokens": inputTokens, "model": s.model})
 
 		// Cost warning for expensive calls
-		if inPrice, outPrice := ModelPricing(s.model); true {
-			estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
-			if estCost > 0.50 {
-				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n"+icons.Alert()+" This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
-			}
+		inPrice, outPrice := ModelPricing(s.model)
+		estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
+		if estCost > 0.50 {
+			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n"+icons.Alert()+" This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
 		}
 
 		// Trace: start agent loop span for this turn

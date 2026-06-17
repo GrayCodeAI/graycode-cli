@@ -115,7 +115,8 @@ func (s *URLScraper) Fetch(ctx context.Context, rawURL string) (*ScrapeResult, e
 	req.Header.Set("User-Agent", s.UserAgent)
 	req.Header.Set("Accept", "text/html, application/json, text/plain, */*")
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: s.Timeout}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching URL: %w", err)
 	}

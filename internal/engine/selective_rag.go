@@ -236,6 +236,3 @@ func classifyQuery(query string) string {
 	}
 	return "simple"
 }
-
-// Compile-time check
-var _ = estimateTokens

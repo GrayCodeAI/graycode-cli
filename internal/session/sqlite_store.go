@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -603,7 +604,9 @@ func (s *SQLiteStore) Close() error {
 	defer s.mu.Unlock()
 	// Checkpoint WAL to flush all data into the main db and truncate
 	// the WAL file, so no .db-wal / .db-shm files linger on disk.
-	_, _ = s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)")
+	if _, err := s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+		slog.Warn("wal checkpoint before close failed", "error", err)
+	}
 	return s.db.Close()
 }
 
@@ -652,7 +655,9 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 
 	// After a large delete, checkpoint the WAL so the freed pages are
 	// reclaimed and .db-wal doesn't grow unbounded.
-	_, _ = s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)")
+	if _, err := s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+		return fmt.Errorf("wal checkpoint after compact: %w", err)
+	}
 	return nil
 }
 

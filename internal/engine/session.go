@@ -244,6 +244,9 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
 func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string, registry *tool.Registry, deploymentRouting bool) *Session {
+	if provider == "" || model == "" {
+		slog.Warn("NewSessionWithClient called with empty provider or model; runtime errors may follow", "provider", provider, "model", model)
+	}
 	pe := NewPermissionEngine()
 	log := logger.Default()
 	s := &Session{
@@ -528,15 +531,8 @@ func (s *Session) AddUser(content string) {
 // AddUserWithImage adds a user message with an attached image (base64-encoded).
 // The imageType should be "image/png", "image/jpeg", etc.
 func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType string) {
-	s.mu.Lock()
-	msg := types.EyrieMessage{
-		Role:    "user",
-		Content: content,
-		Images:  []string{"data:" + imageType + ";base64," + imageBase64},
-	}
-	s.messages = append(s.messages, msg)
-	s.mu.Unlock()
 	if p := s.Persistence(); p != nil {
+		p.AddUser(content + " [image attached]")
 		if dag := p.DAG(); dag != nil {
 			parentID := ""
 			if head, err := dag.Head(context.Background()); err == nil && head != nil {
@@ -545,6 +541,14 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 			_, _ = dag.Append(context.Background(), parentID, "user", content+" [image attached]")
 		}
 	}
+	s.mu.Lock()
+	msg := types.EyrieMessage{
+		Role:    "user",
+		Content: content,
+		Images:  []string{"data:" + imageType + ";base64," + imageBase64},
+	}
+	s.messages = append(s.messages, msg)
+	s.mu.Unlock()
 }
 
 func (s *Session) AddAssistant(content string) {
