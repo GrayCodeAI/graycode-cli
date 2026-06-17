@@ -397,12 +397,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	// Set autonomy
 	if req.Autonomy != "" {
-		sess.Autonomy = engine.ParseAutonomyLevel(req.Autonomy)
+		sess.PermSvc().SetAutonomy(engine.ParseAutonomyLevel(req.Autonomy))
 	}
 
 	// Auto-approve permissions based on autonomy (non-interactive)
 	sess.PermissionFn = func(pr engine.PermissionRequest) {
-		cfg := engine.PresetConfig(sess.Autonomy)
+		cfg := engine.PresetConfig(sess.PermSvc().Autonomy())
 		allowed := !cfg.NeedsPermission(pr.ToolName, false)
 		if pr.Response != nil {
 			pr.Response <- allowed
@@ -410,7 +410,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.MaxTurns > 0 {
-		sess.MaxTurns = req.MaxTurns
+		if err := sess.SetMaxTurns(req.MaxTurns); err != nil {
+			slog.Error("invalid max turns", "err", err, "max_turns", req.MaxTurns)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid max_turns"})
+			return
+		}
 	}
 
 	sess.AddUser(req.Prompt)
