@@ -85,6 +85,24 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		}
 		return m.startManualCompact()
 
+	case "/diff":
+		stat, _ := gitOutput("diff", "--stat")
+		diff, _ := gitOutput("diff")
+		if strings.TrimSpace(diff) == "" {
+			stat, _ = gitOutput("diff", "--cached", "--stat")
+			diff, _ = gitOutput("diff", "--cached")
+		}
+		if strings.TrimSpace(diff) == "" {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No changes detected."})
+			return m, nil
+		}
+		output := stat + "\n\n" + diff
+		if len(output) > 10000 {
+			output = stat + "\n\n(diff too large, showing stat only)"
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: output})
+		return m, nil
+
 	case "/history":
 		entries, err := session.List()
 		if err != nil || len(entries) == 0 {
