@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"sort"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // helpSubcommand implements the /help and /commands slash commands.
-// It prints the static help table of all available slash commands.
+// It prints the dynamically-generated help table of all registered
+// subcommands (sorted by name, with description).
 type helpSubcommand struct{}
 
 func (h *helpSubcommand) Name() string        { return "help" }
@@ -13,54 +17,62 @@ func (h *helpSubcommand) Aliases() []string   { return []string{"commands"} }
 func (h *helpSubcommand) Description() string { return "show this help" }
 func (h *helpSubcommand) Usage() string       { return "" }
 func (h *helpSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-	m.messages = append(m.messages, displayMsg{role: "system", content: staticHelpText()})
+	m.messages = append(m.messages, displayMsg{role: "system", content: dynamicHelpText()})
 	return m, nil
 }
 
-// staticHelpText returns the canonical help table. The list is
-// curated by hand so it stays under the 70-column terminal width.
-func staticHelpText() string {
-	return `/add-dir <path>     — Add a directory to context
-/branch             — Show git branch/status
-/clear              — Clear display
-/compact            — Compact conversation (LLM summary)
-/commit             — Auto-commit changes
-/context            — Show current context
-/cost               — Token usage and cost
-/diff               — Review changes
-/doctor             — Run diagnostics
-/env                — Show provider environment status
-/files              — Show modified files
-/help               — This help message
-/history            — List saved sessions
-/init               — Analyze project
-/metrics            — Show collected metrics
-/model              — Show current model
-/permissions        — Show tier, sandbox, mode, rules, and effective behavior
-/recover            — Recover a session
-/refresh            — Refresh context files
-/review             — Ask hawk to review changes
-/render             — Toggle raw vs rendered output
-/reset              — Reset session state
-/resume <id>        — Resume session
-/revert             — Revert file changes
-/security-review    — Ask hawk to review security risks
-/snapshot           — Snapshot session
-/spec               — Generate spec from conversation
-/status             — Session status
-/summary            — Summarize the current session
-/tag <label>        — Tag session
-/think              — Toggle think mode
-/theme <t>          — Set theme (dark/light/auto)
-/thinkback          — Review reasoning decisions
-/tools              — List enabled tools
-/usage              — Token usage
-/version            — Show hawk version
-/vim                — Toggle vim mode
-/welcome            — Show startup summary
-/quit               — Exit hawk`
+// dynamicHelpText generates the help table from the live
+// SubcommandRegistry. Each entry is formatted as
+// `/<name> <args>     — <description>`.
+//
+// The longest name (including args) determines the column
+// width, capped at 40 columns to fit a 70-column terminal.
+func dynamicHelpText() string {
+	all := subcommandRegistry.All()
+	type entry struct {
+		cmd  string
+		desc string
+	}
+	entries := make([]entry, 0, len(all))
+	maxLen := 0
+	for _, sub := range all {
+		usage := sub.Usage()
+		// Usage strings may or may not start with a space;
+		// normalize so the column separator lands on the same
+		// place for every line.
+		if usage != "" && !strings.HasPrefix(usage, " ") {
+			usage = " " + usage
+		}
+		cmd := "/" + sub.Name() + usage
+		entries = append(entries, entry{cmd: cmd, desc: sub.Description()})
+		if len(cmd) > maxLen {
+			maxLen = len(cmd)
+		}
+	}
+	if maxLen > 40 {
+		maxLen = 40
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].cmd < entries[j].cmd
+	})
+	var b strings.Builder
+	for _, e := range entries {
+		pad := maxLen - len(e.cmd) + 1
+		if pad < 1 {
+			pad = 1
+		}
+		b.WriteString(e.cmd)
+		for i := 0; i < pad; i++ {
+			b.WriteByte(' ')
+		}
+		b.WriteString("— ")
+		b.WriteString(e.desc)
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func init() {
 	subcommandRegistry.Register(&helpSubcommand{})
 }
+
