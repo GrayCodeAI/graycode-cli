@@ -85,6 +85,7 @@ func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	defer s.mu.RUnlock()
 	return s.messages
 }
+
 // DAG returns the conversation DAG. New code should access this
 // through s.Persistence().DAG().
 func (s *PersistenceService) DAG() *storage.DAG { return s.dag }
@@ -124,15 +125,22 @@ func (s *PersistenceService) AddUser(content string) {
 }
 
 // AddUserWithImage appends a user message with an inline image.
+// The image is stored as a data URL ("data:<imageType>;base64,<base64>")
+// so the LLM-side eyrie client can decode it from the message body
+// without any extra metadata channel. imageType is "image/png",
+// "image/jpeg", etc.
 func (s *PersistenceService) AddUserWithImage(content, imageBase64, imageType string) {
+	if s == nil {
+		return
+	}
+	dataURL := "data:" + imageType + ";base64," + imageBase64
 	s.mu.Lock()
-	s.SetRawMessages(append(s.RawMessages(), types.EyrieMessage{
+	s.messages = append(s.messages, types.EyrieMessage{
 		Role:    "user",
 		Content: content,
-		Images:  []string{imageBase64},
-	}))
+		Images:  []string{dataURL},
+	})
 	s.mu.Unlock()
-	_ = imageType // reserved for future typing
 }
 
 // AppendSystemContext appends a string to the system prompt.
@@ -196,13 +204,13 @@ func (s *PersistenceService) RemoveLastExchange() {
 	if len(s.RawMessages()) < 2 {
 		return
 	}
-	s.SetRawMessages( s.RawMessages()[:len(s.RawMessages())-2]);
+	s.SetRawMessages(s.RawMessages()[:len(s.RawMessages())-2])
 }
 
 // LoadMessages replaces the transcript with a fresh slice.
 func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	s.SetRawMessages( msgs);
+	s.SetRawMessages(msgs)
 	s.mu.Unlock()
 }
 
