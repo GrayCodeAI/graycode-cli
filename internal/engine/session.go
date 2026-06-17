@@ -497,20 +497,20 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 
 func (s *Session) AddUser(content string) {
 	s.Persistence().AddUser(content)
-	if s.ConvoDAG != nil {
+	if dag := s.Persistence().DAG(); dag != nil {
 		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+		if head, err := dag.Head(context.Background()); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content)
+		_, _ = dag.Append(context.Background(), parentID, "user", content)
 	}
-	if s.Memory != nil && strings.Contains(strings.ToLower(content), "remember") {
+	if mem := s.MemorySvc().Memory(); mem != nil && strings.Contains(strings.ToLower(content), "remember") {
 		go func(c string) {
 			// Use timeout context so goroutine doesn't hang if backend is slow.
 			rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			_ = rCtx // timeout context available if Remember is extended to accept it
-			if err := s.Memory.Remember(c, "user_explicit"); err != nil {
+			if err := mem.Remember(c, "user_explicit"); err != nil {
 				slog.Warn("background memory remember failed", "error", err)
 			}
 		}(content)
@@ -528,38 +528,39 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 	}
 	s.messages = append(s.messages, msg)
 	s.mu.Unlock()
-	if s.ConvoDAG != nil {
+	if dag := s.Persistence().DAG(); dag != nil {
 		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+		if head, err := dag.Head(context.Background()); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "user", content+" [image attached]")
+		_, _ = dag.Append(context.Background(), parentID, "user", content+" [image attached]")
 	}
 }
 
 func (s *Session) AddAssistant(content string) {
 	s.Persistence().AddAssistant(content)
-	if s.ConvoDAG != nil {
+	if dag := s.Persistence().DAG(); dag != nil {
 		parentID := ""
-		if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+		if head, err := dag.Head(context.Background()); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.ConvoDAG.Append(context.Background(), parentID, "assistant", content)
+		_, _ = dag.Append(context.Background(), parentID, "assistant", content)
 	}
 }
 
 // ForkConversation creates a new branch from a specific point in history.
 // Returns the fork node ID and the messages up to that point.
 func (s *Session) ForkConversation(nodeID string) (string, error) {
-	if s.ConvoDAG == nil {
+	dag := s.Persistence().DAG()
+	if dag == nil {
 		return "", nil
 	}
-	fork, err := s.ConvoDAG.Fork(context.Background(), nodeID)
+	fork, err := dag.Fork(context.Background(), nodeID)
 	if err != nil {
 		return "", err
 	}
 	// Rebuild messages from the forked branch
-	history, err := s.ConvoDAG.History(context.Background(), fork.ID)
+	history, err := dag.History(context.Background(), fork.ID)
 	if err != nil {
 		return "", err
 	}
@@ -576,13 +577,14 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 
 // SwitchBranch navigates to a different branch point and rebuilds messages.
 func (s *Session) SwitchBranch(nodeID string) error {
-	if s.ConvoDAG == nil {
+	dag := s.Persistence().DAG()
+	if dag == nil {
 		return nil
 	}
-	if err := s.ConvoDAG.SetHead(context.Background(), nodeID); err != nil {
+	if err := dag.SetHead(context.Background(), nodeID); err != nil {
 		return err
 	}
-	history, err := s.ConvoDAG.History(context.Background(), nodeID)
+	history, err := dag.History(context.Background(), nodeID)
 	if err != nil {
 		return err
 	}
@@ -599,18 +601,20 @@ func (s *Session) SwitchBranch(nodeID string) error {
 
 // ListBranches returns child nodes (alternative branches) from a given node.
 func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
-	if s.ConvoDAG == nil {
+	dag := s.Persistence().DAG()
+	if dag == nil {
 		return nil, nil
 	}
-	return s.ConvoDAG.Branches(context.Background(), nodeID)
+	return dag.Branches(context.Background(), nodeID)
 }
 
 // ConvoHead returns the current conversation head node ID.
 func (s *Session) ConvoHead() string {
-	if s.ConvoDAG == nil {
+	dag := s.Persistence().DAG()
+	if dag == nil {
 		return ""
 	}
-	if head, err := s.ConvoDAG.Head(context.Background()); err == nil && head != nil {
+	if head, err := dag.Head(context.Background()); err == nil && head != nil {
 		return head.ID
 	}
 	return ""
