@@ -289,130 +289,20 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		return m.handleNamespacedSkill(cmd, text)
 	}
 
+	// SubcommandRegistry dispatch. Migrations live in
+	// chat_subcommand_<name>.go files. Each registers itself in
+	// init(); we look up by the slash name minus the leading "/".
+	// If the registry has a handler, dispatch and return.
+	if strings.HasPrefix(cmd, "/") {
+		name := strings.TrimPrefix(cmd, "/")
+		if sub, ok := subcommandRegistry.Lookup(name); ok {
+			args := parts[1:]
+			return sub.Handle(m, args, text)
+		}
+	}
+
 	switch cmd {
-	case "/quit", "/exit":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/add-dir":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add-dir <path>"})
-			return m, nil
-		}
-		dirArg := strings.TrimSpace(strings.TrimPrefix(text, "/add-dir"))
-		abs, contextBlock, err := additionalDirContext(dirArg)
-		if err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-			return m, nil
-		}
-		if !hasString(addDirs, abs) {
-			addDirs = append(addDirs, abs)
-			m.session.AppendSystemContext(contextBlock)
-			m.session.SetAllowedDirs(addDirs)
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Added directory to context: " + abs})
-		return m, nil
-	case "/branch":
-		m.messages = append(m.messages, displayMsg{role: "system", content: branchSummary()})
-		return m, nil
-	case "/clear":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/compact":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/diff":
-		stat, _ := gitOutput("diff", "--stat")
-		diff, _ := gitOutput("diff")
-		if strings.TrimSpace(diff) == "" {
-			stat, _ = gitOutput("diff", "--cached", "--stat")
-			diff, _ = gitOutput("diff", "--cached")
-		}
-		if strings.TrimSpace(diff) == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No changes detected."})
-			return m, nil
-		}
-		output := stat + "\n\n" + diff
-		if len(output) > 10000 {
-			output = stat + "\n\n(diff too large, showing stat only)"
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: output})
-		return m, nil
-	case "/help", "/commands":
-		help := `/add-dir <path>     — Add a directory to context
-/agents             — List active agents/teammates
-/branch             — Show git branch/status
-/bughunter          — Ask hawk to hunt for bugs
-/clear              — Clear display
-/color              — Set agent color
-/compact            — Compact conversation (LLM summary)
-/commit             — Auto-commit changes
-/config             — Show settings
-/commands           — List available slash commands
-/context            — Show current context
-/copy               — Copy chat or input (all|input|last|assistant)
-/cost               — Token usage and cost
-/cron               — List scheduled cron jobs
-/diff               — Review changes
-/doctor             — Run diagnostics
-/dream              — Run memory consolidation
-/away               — Generate session recap
-/effort <level>     — Set reasoning effort (low/medium/high)
-/env                — Show provider environment status
-/export             — Export session to JSON
-/fast               — Toggle fast mode
-/feedback <msg>     — Submit feedback (saved to ~/.hawk/feedback/)
-/files              — Show modified files
-/help               — This help message
-/history            — List saved sessions
-/hooks              — Show configured hooks
-/init               — Analyze project
-/keybindings        — Show keybindings
-/loop <int> <cmd>   — Run a command on interval
-/mcp                — Show MCP status
-/memory             — Show loaded project instructions
-/metrics            — Show collected metrics
-/model              — Show current model
-/models             — List available models
-/output-style       — Set output verbosity
-/permissions       — Show tier, sandbox, mode, rules, and effective behavior
-/permissions tier  — Set the autonomy tier
-/permissions mode  — Set the advanced permission mode
-/permissions allow — Add an allow rule
-/permissions deny  — Add a deny rule
-/permissions save  — Persist the current permission policy
-/plugins            — List installed plugins
-/pr-comments        — Ask hawk to handle PR comments
-/release-notes      — Draft release notes
-/rename <name>      — Rename current session
-/resume <id>        — Resume session
-/review             — Ask hawk to review changes
-/rewind             — Undo last exchange
-/security-review    — Ask hawk to review security risks
-/select             — Pause TUI for native text selection
-/mouse              — Toggle mouse capture (off = click-drag copy)
-/share              — Share session
-/learn              — LLM-powered skill advisor (deep, update)
-/skills             — List, search, install, remove skills
-/stale              — Show stale rules that may need removal
-/stats              — Session statistics
-/status             — Session status
-/summary            — Summarize the current session
-/tag <label>        — Tag session
-/taste              — Show learned coding style preferences
-/tasks              — Show task list
-/teams              — Show team info
-/theme <t>          — Set theme (dark/light/auto)
-/thinkback          — Review reasoning decisions
-/tools              — List enabled tools
-/upgrade            — Check for updates
-/usage              — Token usage
-/version            — Show hawk version
-/vim                — Toggle vim mode
-/voice              — Toggle voice mode
-/welcome            — Show startup summary
-/quit               — Exit hawk`
-		m.messages = append(m.messages, displayMsg{role: "system", content: help})
-		return m, nil
-	case "/cost":
-		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Cost.Summary()})
-		return m, nil
+
 	case "/council":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /council <question>"})
@@ -452,9 +342,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Stage 3: Chairman synthesizing..."})
 		m.messages = append(m.messages, displayMsg{role: "assistant", content: result.Synthesis})
 		return m, nil
-	case "/metrics":
-		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.Metrics().Format()})
-		return m, nil
+
 	case "/mode":
 		if len(parts) == 1 {
 			// Show current mode
@@ -538,89 +426,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			prevModel, m.session.Model(), msgCount,
 		)})
 		return m, nil
-	case "/branches":
-		if m.session.ConvoDAG == nil {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation branches (DAG not active)."})
-			return m, nil
-		}
-		headID := m.session.ConvoHead()
-		if headID == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation history."})
-			return m, nil
-		}
-		// If /branches <id> — switch to that branch
-		if len(parts) >= 2 {
-			targetID := parts[1]
-			if err := m.session.SwitchBranch(targetID); err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
-				return m, nil
-			}
-			m.messages = nil
-			m.invalidateViewportCache()
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Switched to branch %s", targetID)})
-			for _, msg := range m.session.RawMessages() {
-				m.messages = append(m.messages, displayMsg{role: msg.Role, content: msg.Content})
-			}
-			return m, nil
-		}
-		// List branches
-		history, err := m.session.ConvoDAG.History(context.Background(), headID)
-		if err != nil || len(history) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No branches available (linear conversation).\nUse /fork to create a branch."})
-			return m, nil
-		}
-		var branchInfo strings.Builder
-		branchInfo.WriteString("Conversation branches:\n")
-		found := false
-		for i := len(history) - 1; i >= 0; i-- {
-			branches, _ := m.session.ListBranches(history[i].ID)
-			if len(branches) > 1 {
-				found = true
-				branchInfo.WriteString(fmt.Sprintf("\n  Fork at: %s (%s)\n", history[i].ID[:8], history[i].Role))
-				for _, b := range branches {
-					marker := "  "
-					if b.ID == headID {
-						marker = "→ "
-					}
-					branchInfo.WriteString(fmt.Sprintf("    %s%s (%s: %s)\n", marker, b.ID[:8], b.Role, truncate(b.Content, 40)))
-				}
-			}
-		}
-		if !found {
-			branchInfo.WriteString("  No fork points yet.\n  Use /fork to create a branch.")
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: branchInfo.String()})
-		return m, nil
-	case "/version":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("hawk v%s", DisplayVersion())})
-		return m, nil
-	case "/env":
-		m.messages = append(m.messages, displayMsg{role: "system", content: envSummary(m.session.Provider(), m.session.Model())})
-		return m, nil
-	case "/focus":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /focus <path> [path...]"})
-			return m, nil
-		}
-		paths := strings.TrimSpace(strings.TrimPrefix(text, "/focus"))
-		m.session.AppendSystemContext("FOCUS: Only work with these files/directories: " + paths + ". Ignore files outside this scope unless explicitly asked.")
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Focus set: " + paths})
-		return m, nil
-	case "/pin":
-		n := 2 // default: pin last exchange (user + assistant)
-		if len(parts) >= 2 {
-			if parsed, err := strconv.Atoi(parts[1]); err == nil && parsed > 0 {
-				n = parsed
-			}
-		}
-		m.session.PinnedMessages = n
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Pinned last %d messages (protected from compaction).", n)})
-		return m, nil
-	case "/files":
-		m.messages = append(m.messages, displayMsg{role: "system", content: filesSummary()})
-		return m, nil
-	case "/history":
-		return m.handleSessionCommand(cmd, parts, text)
+
 	case "/render":
 		renderPath := ""
 		if len(parts) >= 2 {
@@ -637,68 +443,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s CXML copied to clipboard.\n%s", icons.FileDocument(), stats)})
 		return m, nil
-	case "/recover":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/resume":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/commit":
-		stat, _ := gitOutput("diff", "--stat")
-		if strings.TrimSpace(stat) == "" {
-			stat, _ = gitOutput("diff", "--cached", "--stat")
-		}
-		if strings.TrimSpace(stat) != "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Changes to commit:\n" + stat})
-		}
-		return m.startPromptCommand("/commit", "Review the changes I've made, then create a git commit with an appropriate commit message. Use git add for specific files and git commit.")
-	case "/doctor":
-		return m.startPromptCommand("/doctor", "Run diagnostics on this project: check if it builds, run tests, check for lint errors. Report any issues found.")
-	case "/init":
-		initPrompt := "Analyze this project: read the README, check the directory structure, identify the language/framework, build system, and test runner. Report progress as you go (e.g., 'Analyzing file 5/20...'). Give me a brief summary."
-		if _, err := os.Stat("AGENTS.md"); os.IsNotExist(err) {
-			pt := detectAgentsProjectType()
-			initPrompt += fmt.Sprintf("\n\nNote: No AGENTS.md found. I detected project type %q. After your analysis, suggest running /agents-init to generate one.", pt)
-		}
-		return m.startPromptCommand("/init", initPrompt)
-	case "/agents-init":
-		if _, err := os.Stat("AGENTS.md"); err == nil {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "AGENTS.md already exists. Remove it first to regenerate."})
-			return m, nil
-		}
-		pt := detectAgentsProjectType()
-		content := GenerateAgentsTemplate(pt)
-		if err := os.WriteFile("AGENTS.md", []byte(content), 0o644); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to write AGENTS.md: " + err.Error()})
-			return m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Created AGENTS.md (detected: %s). Edit it to match your project.", pt)})
-		return m, nil
+
 	case "/review":
 		return m.startPromptCommand("/review", engine.ReviewPrompt(nil))
 	case "/refactor":
 		return m.handleRefactorCommand(parts, text)
-	case "/party":
-		topic := strings.TrimSpace(strings.TrimPrefix(text, "/party"))
-		if topic == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /party <topic to discuss>"})
-			return m, nil
-		}
-		ps := engine.NewPartySession(topic, nil)
-		return m.startPromptCommand("/party", ps.GeneratePrompt(1))
-	case "/brainstorm":
-		topic := strings.TrimSpace(strings.TrimPrefix(text, "/brainstorm"))
-		if topic == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /brainstorm <topic>"})
-			return m, nil
-		}
-		return m.startPromptCommand("/brainstorm", engine.BrainstormPrompt(engine.BrainstormSetup, topic, ""))
-	case "/investigate":
-		ctx := strings.TrimSpace(strings.TrimPrefix(text, "/investigate"))
-		if ctx == "" {
-			ctx = "the issue described above"
-		}
-		return m.startPromptCommand("/investigate", engine.InvestigatePrompt(engine.InvestigateReproduce, ctx))
-	case "/checkpoint":
-		return m.startPromptCommand("/checkpoint", engine.CheckpointPrompts(engine.CheckpointOrientation, nil))
+
 	case "/dream":
 		projectDir, _ := os.Getwd()
 		status := memory.YaadStatus()
@@ -756,15 +506,7 @@ Recent conversation:
 Generate the recap:`, summary.String())
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Generating recap..."})
 		return m.startPromptCommand("/away", awayPrompt)
-	case "/reflect":
-		return m.startPromptCommand("/reflect", engine.ReflectPrompt("this session so far"))
-	case "/spec":
-		arg := strings.TrimSpace(strings.TrimPrefix(text, "/spec"))
-		if arg == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /spec <what to build>"})
-			return m, nil
-		}
-		return m.startPromptCommand("/spec", engine.SpecGeneratePrompt(arg))
+
 	case "/soul":
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/soul"))
 		if arg == "init" {
@@ -806,23 +548,10 @@ Generate the recap:`, summary.String())
 		}
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Recipe not found: " + arg})
 		return m, nil
-	case "/security-review":
-		return m.startPromptCommand("/security-review", "Review the repository for security risks. Focus on command execution, file permissions, secret exposure, network access, authentication, and unsafe defaults.")
-	case "/bughunter":
-		return m.startPromptCommand("/bughunter", "Hunt for likely bugs in the current codebase and changes. Prioritize concrete defects that can be reproduced or fixed.")
-	case "/summary":
-		return m.startPromptCommand("/summary", "Summarize the current session, important decisions, modified files, test status, and remaining work.")
-	case "/release-notes":
-		return m.startPromptCommand("/release-notes", "Draft concise release notes for the current changes, grouped by user-facing improvements, fixes, and compatibility notes.")
+
 	case "/pr-comments":
 		return m.startPromptCommand("/pr-comments", "Review open PR comments or, if unavailable, inspect the current diff and suggest responses or fixes for likely review comments.")
-	case "/think":
-		topic := strings.TrimSpace(strings.TrimPrefix(text, "/think"))
-		if topic == "" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /think <what to plan>"})
-			return m, nil
-		}
-		return m.startPromptCommand("/think", buildThinkPrompt(topic))
+
 	case "/hunt":
 		symptom := strings.TrimSpace(strings.TrimPrefix(text, "/hunt"))
 		if symptom == "" {
@@ -832,8 +561,7 @@ Generate the recap:`, summary.String())
 		return m.startPromptCommand("/hunt", buildHuntPrompt(symptom))
 	case "/snapshot":
 		return m.handleSessionCommand(cmd, parts, text)
-	case "/check":
-		return m.startPromptCommand("/check", buildCheckPrompt())
+
 	case "/design":
 		fields := strings.Fields(text)
 		if len(fields) >= 2 {
@@ -895,20 +623,7 @@ Generate the recap:`, summary.String())
 			return m, nil
 		}
 		return m.startPromptCommand("/design", buildDesignPrompt(topic))
-	case "/status":
-		toolCount := 0
-		if m.registry != nil {
-			toolCount = len(m.registry.EyrieTools())
-		}
-		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
-			m.sessionID, m.session.Provider(), m.session.Model(),
-			m.modeManager.Current().String(),
-			permissionModeLabel(m.session), m.session.MessageCount(), toolCount, m.session.Cost.Summary())
-		if len(addDirs) > 0 {
-			info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: info})
-		return m, nil
+
 	case "/context":
 		arg := strings.TrimSpace(strings.TrimPrefix(text, "/context"))
 		if arg == "init" {
