@@ -214,24 +214,15 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	cwd, _ := os.Getwd()
 	snap := snapshot.New(cwd)
 	if err := snap.Init(); err == nil {
-		sess.Snapshots = snap
+		sess.SetSnapshots(snap)
 	}
 
 	// Initialize enhanced memory system (yaad bridge + auto-capture + proactive + metrics)
 	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
 	if enhancedMem.Yaad.Ready() {
-	sess.MemorySvc().SetMemory(enhancedMem)
-	sess.MemorySvc().SetYaad(enhancedMem.Yaad)
-	sess.MemorySvc().SetEnhanced(enhancedMem)
-	if sess.Memory == nil {
-		sess.Memory = enhancedMem
-	}
-	if sess.YaadBridge == nil {
-		sess.YaadBridge = enhancedMem.Yaad
-	}
-	if sess.EnhancedMemory == nil {
-		sess.EnhancedMemory = enhancedMem
-	}
+		sess.MemorySvc().SetMemory(enhancedMem)
+		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
+		sess.MemorySvc().SetEnhanced(enhancedMem)
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
 	// Hawk: API keys from OS secret store only
@@ -292,27 +283,27 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	if settings.ModelRoles != nil {
 		roles = *settings.ModelRoles
 	}
-	sess.Cascade = branching.NewCascadeRouter(sess.Model(), roles)
-	sess.Cascade.Enabled = true
-	sess.Cascade.FrugalMode = settings.Frugal
+	cascade := branching.NewCascadeRouter(sess.Model(), roles)
+	cascade.Enabled = true
+	cascade.FrugalMode = settings.Frugal
+	sess.LifecycleSvc().SetCascade(cascade)
 
 	// Session lifecycle: self-improvement loop (learn from sessions)
-	sess.Lifecycle = &lifecycle.SessionLifecycle{
-		Memory:     &lifecycle.EvolvingMemoryAdapter{EM: memory.NewEvolvingMemory()},
-		SkillStore: &lifecycle.SkillDistillerAdapter{SD: sess.SkillDistiller},
-	}
+	sess.LifecycleSvc().SetLifecycle(&lifecycle.SessionLifecycle{
+		Memory: &lifecycle.EvolvingMemoryAdapter{EM: memory.NewEvolvingMemory()},
+	})
 
 	// Reflector: verbal self-reflection on tool failures (Reflexion-style)
-	sess.Reflector = engine.NewReflector(sess, sess.Model())
+	sess.LifecycleSvc().SetReflector(engine.NewReflector(sess, sess.Model()))
 
 	// Few-shot learning: collect successful patterns from sessions
-	sess.FewShotStore = engine.NewFewShotStore()
+	sess.LifecycleSvc().SetFewShotStore(engine.NewFewShotStore())
 
 	// Adaptive prompt: learn user preferences from corrections
-	sess.AdaptivePrompt = engine.NewAdaptivePrompt()
+	sess.LifecycleSvc().SetAdaptivePrompt(engine.NewAdaptivePrompt())
 
 	if pct := settings.AutoCompactThresholdPct; pct > 0 {
-		sess.AutoCompactThresholdPct = pct
+		sess.SetAutoCompactThresholdPct(pct)
 	}
 	sess.EnsureAutoCompactor()
 
@@ -321,7 +312,7 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	}
 
 	// GLM/Z.AI extended reasoning toggle (applied in the stream loop for zai_coding/zai_payg).
-	sess.GLMThinkingEnabled = settings.GLMThinkingEnabled
+	sess.SetGLMThinkingEnabled(settings.GLMThinkingEnabled)
 
 	return nil
 }
@@ -334,7 +325,7 @@ func bindChatSession(sess *engine.Session, sessionID string, containerRequired b
 	if id := strings.TrimSpace(sessionID); id != "" {
 		sess.SetPersistID(id)
 	}
-	sess.ContainerRequired = containerRequired
+	sess.SetContainerRequired(containerRequired)
 }
 
 func validateRootFlags() error {

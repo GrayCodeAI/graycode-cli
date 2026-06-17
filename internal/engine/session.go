@@ -22,6 +22,7 @@ import (
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -659,6 +660,33 @@ func (s *Session) SetLogger(l *logger.Logger) {
 // SetAllowedDirs sets directories that file tools are allowed to access.
 func (s *Session) SetAllowedDirs(dirs []string) {
 	s.AllowedDirs = append([]string(nil), dirs...)
+}
+
+// SetAutoCompactThresholdPct sets the auto-compact threshold.
+// New code should call this instead of writing to the legacy
+// s.AutoCompactThresholdPct field directly.
+func (s *Session) SetAutoCompactThresholdPct(pct int) {
+	s.AutoCompactThresholdPct = pct
+}
+
+// SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle.
+// New code should call this instead of writing to the legacy
+// s.GLMThinkingEnabled field directly.
+func (s *Session) SetGLMThinkingEnabled(v *bool) {
+	s.GLMThinkingEnabled = v
+}
+
+// SetSnapshots attaches the snapshot tracker. New code should call
+// this instead of writing to the legacy s.Snapshots field directly.
+func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
+	s.Snapshots = snap
+}
+
+// SetContainerRequired sets the container-first mode flag.
+// New code should call this instead of writing to the legacy
+// s.ContainerRequired field directly.
+func (s *Session) SetContainerRequired(v bool) {
+	s.ContainerRequired = v
 }
 
 func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
