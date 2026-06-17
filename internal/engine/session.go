@@ -112,21 +112,21 @@ type Session struct {
 	//
 	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
 	//   Permissions, AutoMode, Classifier, BypassKill, Mode, PermissionFn.
-	Permissions    *PermissionMemory             // use Perm.Memory
-	AutoMode       *permissions.AutoModeState    // use Perm.AutoMode
-	Classifier     *permissions.Classifier       // use Perm.Classifier
-	BypassKill     *permissions.BypassKillswitch // use Perm.BypassKill
-	Mode           PermissionMode                // use Perm.Mode
+	Permissions *PermissionMemory             // use Perm.Memory
+	AutoMode    *permissions.AutoModeState    // use Perm.AutoMode
+	Classifier  *permissions.Classifier       // use Perm.Classifier
+	BypassKill  *permissions.BypassKillswitch // use Perm.BypassKill
+	Mode        PermissionMode                // use Perm.Mode
 	//
 	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
 	//   MaxTurns, MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
 	//   EnhancedMemory, Cascade, Lifecycle, Reflector, CostTracker,
 	//   ConvoDAG, Sleeptime, Activity, SkillDistiller, AutoCompactor,
 	//   FewShotStore, AdaptivePrompt.
-	MaxTurns       int
-	MaxBudgetUSD   float64
-	AllowedDirs    []string
-	PermissionFn   func(PermissionRequest) // use Perm.PromptFn
+	MaxTurns     int
+	MaxBudgetUSD float64
+	AllowedDirs  []string
+	PermissionFn func(PermissionRequest) // use Perm.PromptFn
 	//
 	// Deprecated: use s.MemorySvc() (Phase 4 sub-service) for:
 	//   Memory, YaadBridge, EnhancedMemory.
@@ -308,11 +308,23 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 
 	// Alias legacy fields at the service instances so legacy readers see
 	// the same state as new code that goes through the sub-service getters.
+	// After this point, mutations to the sub-service internal state
+	// (e.g., s.memory.SetMemory(...)) need a corresponding write to the
+	// legacy field — see the various Set* helpers (SetConvoDAG,
+	// SetSnapshots, etc.) which perform the dual write.
 	s.Limits = s.life.Limits()
 	s.Beliefs = s.life.Beliefs()
 	s.Backtrack = s.life.Backtrack()
 	s.ResponseCache = s.life.ResponseCache()
 	s.Pipeline = s.life.Pipeline()
+	// Fields read by AddUser/AddAssistant/AddUserWithImage/ForkConversation/
+	// SwitchBranch: alias them so legacy direct-field reads return
+	// the sub-service state.
+	s.Memory = s.memory.Memory()
+	s.YaadBridge = s.memory.Yaad()
+	s.EnhancedMemory = s.memory.Enhanced()
+	s.ConvoDAG = s.persist.DAG()
+	s.Steering = s.persist.Steering()
 
 	return s
 }
@@ -699,8 +711,13 @@ func (s *Session) SetApproval(a *ApprovalGate) {
 
 // SetConvoDAG attaches the conversation DAG. New code should
 // call this instead of writing to the legacy s.ConvoDAG field.
+// The DAG is also propagated to the persistence service so
+// s.Persistence().DAG() and the legacy field stay in sync.
 func (s *Session) SetConvoDAG(dag *storage.DAG) {
 	s.ConvoDAG = dag
+	if s.persist != nil {
+		s.persist.SetDAG(dag)
+	}
 }
 
 // ContextWindowCachedValue returns the cached context window size.
