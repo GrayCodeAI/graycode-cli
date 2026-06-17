@@ -104,9 +104,18 @@ func (mb *MessageBus) Stats() BusStats {
 	}
 }
 
+// dropLogEveryN controls the sampling rate for dropped-message
+// WARN logs. The first drop and then every Nth drop are logged;
+// the rest are silent (just bump the counter). The default (100)
+// balances observability against log volume when an agent is stuck
+// or the bus is under sustained pressure. Lower it for more
+// visibility; raise it for quieter logs.
+const dropLogEveryN = 100
+
 // logDroppedMessage records a dropped-message event. Sampling: logs the
-// first drop and then every 100th, to avoid log spam when an agent is
-// stuck or the bus is under sustained pressure.
+// first drop and then every Nth drop (see dropLogEveryN), to avoid
+// log spam when an agent is stuck or the bus is under sustained
+// pressure (see M9 in the code review).
 //
 // IMPORTANT: callers MUST hold mb.mu (write lock) when invoking this
 // method. The sampling decision uses the atomic droppedCount to avoid
@@ -116,7 +125,7 @@ func (mb *MessageBus) Stats() BusStats {
 // scenarios consider a buffered channel + background drainer.
 func (mb *MessageBus) logDroppedMessage(from, to, topic string) {
 	n := mb.droppedCount.Load()
-	if n != 1 && n%100 != 0 {
+	if n != 1 && n%dropLogEveryN != 0 {
 		return
 	}
 	slog.Warn(
