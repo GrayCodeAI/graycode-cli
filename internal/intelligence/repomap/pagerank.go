@@ -1,3 +1,9 @@
+// Package repomap: pagerank.go builds a per-symbol reference graph from a
+// project (file:symbol nodes with directed "is referenced by" edges) and
+// runs a damped PageRank iteration over it. BuildSymbolGraph accepts an
+// optional IncrementalMap so only changed files are re-processed on each
+// invocation. TopSymbols returns the highest-ranked symbols for prompt
+// inclusion.
 package repomap
 
 import (

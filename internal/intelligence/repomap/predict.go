@@ -1,3 +1,8 @@
+// Package repomap: predict.go predicts which files in a project are most
+// likely to be relevant to the next edit, given the user's prompt, recent
+// edits (a RecentEditTracker), the import graph, and a symbol map. The
+// output is consumed by the change-set-aware context builder to populate
+// a small, focused working set.
 package repomap
 
 import (

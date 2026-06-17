@@ -1,3 +1,10 @@
+// Package repomap: smells.go detects classic design smells (god object,
+// long parameter list, feature envy, data clump, primitive obsession,
+// long method, excessive imports, large file) via AST and heuristic rules.
+// Each smell has a severity, a category, and a refactoring suggestion that
+// is rendered by FormatSmells for inclusion in the health score.
+//
+// Package repomap
 package repomap
 
 import (

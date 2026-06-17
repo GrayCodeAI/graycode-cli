@@ -1,3 +1,8 @@
+// Package repomap: interface_extract.go returns just the exported API
+// surface of a Go file (function signatures, type declarations, constants)
+// with bodies stripped, for use in prompt contexts where body text is
+// unaffordable. The output is roughly an order of magnitude smaller than
+// the source it summarises.
 package repomap
 
 import (
