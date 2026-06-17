@@ -23,7 +23,9 @@ func init() {
 		description: "copy chat or input (all|input|last|assistant)",
 		usage:       "/copy <all|input|last|assistant>",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			return m.handleCopyCommand(args)
+			// handleCopyCommand expects parts[0] to be the command
+			// name. The registry dispatcher strips it, so re-add it.
+			return m.handleCopyCommand(append([]string{"/copy"}, args...))
 		},
 	})
 
@@ -43,7 +45,9 @@ func init() {
 		description: "toggle mouse capture (off = click-drag copy)",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			m.handleMouseCommand(args)
+			// handleMouseCommand expects parts[0] to be the command
+			// name. The registry dispatcher strips it, so re-add it.
+			m.handleMouseCommand(append([]string{"/mouse"}, args...))
 			return m, nil
 		},
 	})
