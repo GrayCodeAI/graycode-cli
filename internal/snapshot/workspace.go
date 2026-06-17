@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // WorkspaceSnapshot captures the full state of a project at a point in time.
@@ -68,10 +70,12 @@ var ignoredDirs = map[string]bool{
 }
 
 // NewSnapshotStore creates a new SnapshotStore with the given directory.
-// If dir is empty, defaults to ".hawk/snapshots/".
+// If dir is empty, defaults to "~/.hawk/snapshots" (the user's home dir) so
+// that state does not leak into <cwd>/.hawk/ when hawk is run from inside
+// a Go project root.
 func NewSnapshotStore(dir string) *SnapshotStore {
 	if dir == "" {
-		dir = filepath.Join(".hawk", "snapshots")
+		dir = filepath.Join(home.Dir(), ".hawk", "snapshots")
 	}
 	return &SnapshotStore{
 		Dir:          dir,

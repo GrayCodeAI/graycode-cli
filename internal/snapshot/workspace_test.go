@@ -602,7 +602,14 @@ func TestRestore_PreservesGitDir(t *testing.T) {
 
 func TestNewSnapshotStore_DefaultDir(t *testing.T) {
 	store := NewSnapshotStore("")
-	expected := filepath.Join(".hawk", "snapshots")
+	// L2: the default path is now home-relative (~/.hawk/snapshots) so
+	// state stops leaking into <cwd>/.hawk/ when hawk is run from
+	// inside a Go project root.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("os.UserHomeDir: %v", err)
+	}
+	expected := filepath.Join(home, ".hawk", "snapshots")
 	if store.Dir != expected {
 		t.Errorf("expected default dir %q, got %q", expected, store.Dir)
 	}
