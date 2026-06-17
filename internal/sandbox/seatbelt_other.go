@@ -25,14 +25,6 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 	return ""
 }
 
-// DefaultHawkPolicy is a stub on non-darwin platforms. The tier
-// parameter is honored for API consistency (so callers don't have
-// to special-case darwin vs other platforms), but the returned
-// policy is empty.
-func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
-	return &SeatbeltPolicy{Tier: tier}
-}
-
 // RunSeatbelted is not available on non-darwin platforms.
 func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) (*exec.Cmd, error) {
 	return nil, fmt.Errorf("seatbelt sandboxing is only available on macOS")

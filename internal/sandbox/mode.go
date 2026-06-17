@@ -1,6 +1,10 @@
 package sandbox
 
-import "context"
+import (
+	"context"
+	"os"
+	"path/filepath"
+)
 
 // Mode represents the sandbox isolation level.
 type Mode string
@@ -43,6 +47,76 @@ type SandboxConfig struct {
 	// set Tier explicitly (typically TierWorkspace to match
 	// the Config.Tier default in DefaultConfig).
 	Tier Tier
+}
+
+// DefaultHawkPolicy creates a sensible default SeatbeltPolicy for hawk
+// operations in the given working directory. The tier parameter
+// selects the security posture:
+//
+//   - TierStrict: deny everything
+//   - TierWorkspace (new default): allow workspace writes, no process
+//   - TierOff: legacy behavior (allow everything)
+func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
+	home := os.Getenv("HOME")
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = filepath.Join(home, "go")
+	}
+
+	hawkDir := filepath.Join(home, ".hawk")
+
+	readPaths := []string{
+		workDir,
+		"/usr",
+		"/bin",
+		"/Library",
+		"/System",
+		"/dev",
+		"/tmp",
+		"/private/tmp",
+		hawkDir,
+		gopath,
+	}
+
+	writePaths := []string{
+		workDir,
+		"/tmp",
+		"/private/tmp",
+		"/dev/null",
+		hawkDir,
+	}
+
+	p := &SeatbeltPolicy{
+		AllowNetwork:  true,
+		AllowSysctl:   true,
+		ReadablePaths: readPaths,
+		WritablePaths: writePaths,
+		Tier:          tier,
+	}
+
+	// Apply the tier's policy on top of the defaults. Tier takes
+	// precedence over the legacy AllowWrite/AllowProcess fields
+	// so the new safe default is enforced regardless of legacy
+	// config values.
+	switch tier {
+	case TierStrict:
+		p.AllowWrite = false
+		p.AllowProcess = false
+	case TierWorkspace:
+		p.AllowWrite = true
+		p.AllowProcess = false
+	case TierOff, "":
+		// Legacy behavior: allow everything.
+		p.AllowWrite = true
+		p.AllowProcess = true
+	default:
+		// Unknown tier: log via fallback to TierOff. Caller can
+		// override by setting Tier explicitly to a known value.
+		p.AllowWrite = true
+		p.AllowProcess = true
+	}
+
+	return p
 }
 
 // ParseMode converts a string to a Mode. Unrecognized values default to
