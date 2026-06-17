@@ -18,7 +18,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/recipe"
-	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -391,20 +390,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m.startPromptCommand("/design", buildDesignPrompt(topic))
 
-	case "/power":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /power <1-10>\n" + DescribePower(5)})
-			return m, nil
-		}
-		level, err := strconv.Atoi(parts[1])
-		if err != nil || level < 1 || level > 10 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Power level must be 1-10."})
-			return m, nil
-		}
-		ApplyPowerLevel(m.session, level)
-		m.messages = append(m.messages, displayMsg{role: "system", content: DescribePower(level)})
-		return m, nil
-
 	case "/research":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /research [--grep <pattern>] [--direction lower|higher] [--budget <min>] [--branch <prefix>] [--results <file>] <metric-command>\nExample: /research go test -bench .\nExample: /research --grep '^val_bpb:' --direction lower uv run train.py"})
@@ -564,25 +549,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "/permissions":
-		next, cmd := m.handlePermissionsCommand(parts)
-		return next, cmd
-
-	case "/output-style":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /output-style <concise|normal|detailed>"})
-			return m, nil
-		}
-		style := strings.ToLower(parts[1])
-		switch style {
-		case "concise", "normal", "detailed":
-			_ = hawkconfig.SetGlobalSetting("outputStyle", style)
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Output style → %s", style)})
-		default:
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid styles: concise, normal, detailed"})
-		}
-		return m, nil
-
 	case "/provider-status":
 		report, err := hawkconfig.DeploymentStatusReport(context.Background(), m.session.Model())
 		if err != nil {
@@ -592,12 +558,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: report})
 		return m, nil
 
-	case "/reload-plugins":
-		if m.pluginRuntime != nil {
-			_ = m.pluginRuntime.LoadAll()
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
-		return m, nil
 	case "/refresh-model-catalog":
 		summary, err := hawkconfig.RefreshModelCatalogV1(context.Background())
 		if err != nil {
@@ -676,98 +636,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 				}
 			}
 		}()
-		return m, nil
-
-	case "/add":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add <file-path> [file-path...]"})
-			return m, nil
-		}
-		var added []string
-		for _, f := range parts[1:] {
-			content, err := os.ReadFile(f)
-			if err != nil {
-				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Cannot read %s: %v", f, err)})
-				continue
-			}
-			m.session.AddUser(fmt.Sprintf("[File: %s]\n```\n%s\n```", f, string(content)))
-			added = append(added, f)
-		}
-		if len(added) > 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Added to context: %s", strings.Join(added, ", "))})
-		}
-		return m, nil
-
-	case "/drop":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /drop <file-path>"})
-			return m, nil
-		}
-		file := parts[1]
-		m.session.AddUser(fmt.Sprintf("[System: The file %s has been removed from context. Disregard any previous content from this file.]", file))
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Dropped %s from context.", file)})
-		return m, nil
-
-	case "/run":
-		if len(parts) < 2 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /run <command>"})
-			return m, nil
-		}
-		cmdStr := strings.TrimSpace(strings.TrimPrefix(text, "/run"))
-		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
-			return m, nil
-		}
-		out, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
-		result := strings.TrimSpace(string(out))
-		if err != nil {
-			result += "\n" + err.Error()
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("$ %s\n%s", cmdStr, result)})
-		m.session.AddUser(fmt.Sprintf("[Command output: %s]\n```\n%s\n```", cmdStr, result))
-		return m, nil
-
-	case "/test":
-		cmdStr := "go test ./..."
-		if len(parts) >= 2 {
-			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/test"))
-		}
-		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
-			return m, nil
-		}
-		out, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
-		result := strings.TrimSpace(string(out))
-		if err != nil {
-			result += "\n" + err.Error()
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tests failed:\n%s", result)})
-			m.session.AddUser(fmt.Sprintf("[Test failures]\n```\n%s\n```\nPlease fix these test failures.", result))
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "All tests passed."})
-		}
-		return m, nil
-
-	case "/lint":
-		cmdStr := "golangci-lint run ./..."
-		if len(parts) >= 2 {
-			cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/lint"))
-		}
-		if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
-			return m, nil
-		}
-		out, _ := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
-		result := strings.TrimSpace(string(out))
-		if result == "" {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No lint issues."})
-		} else {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Lint issues:\n%s", result)})
-			m.session.AddUser(fmt.Sprintf("[Lint output]\n```\n%s\n```\nPlease fix these lint issues.", result))
-		}
-		return m, nil
-
-	case "/tokens":
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Messages: %d\nEstimated tokens: ~%d", m.session.MessageCount(), m.session.MessageCount()*200)})
 		return m, nil
 
 	case "/btw":

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -470,6 +471,122 @@ func init() {
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: tool.FormatAuditSummary()})
+			return m, nil
+		},
+	})
+
+	// /power <1-10> — set reasoning power level
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "power",
+		description: "set reasoning power level (1-10)",
+		usage:       "/power <1-10>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /power <1-10>\n" + DescribePower(5)})
+				return m, nil
+			}
+			level, err := strconv.Atoi(args[0])
+			if err != nil || level < 1 || level > 10 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Power level must be 1-10."})
+				return m, nil
+			}
+			ApplyPowerLevel(m.session, level)
+			m.messages = append(m.messages, displayMsg{role: "system", content: DescribePower(level)})
+			return m, nil
+		},
+	})
+
+	// /output-style <style> — set output verbosity
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "output-style",
+		description: "set output verbosity (concise|normal|detailed)",
+		usage:       "/output-style <concise|normal|detailed>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /output-style <concise|normal|detailed>"})
+				return m, nil
+			}
+			style := strings.ToLower(args[0])
+			switch style {
+			case "concise", "normal", "detailed":
+				_ = hawkconfig.SetGlobalSetting("outputStyle", style)
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Output style → %s", style)})
+			default:
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid styles: concise, normal, detailed"})
+			}
+			return m, nil
+		},
+	})
+
+	// /reload-plugins — reload the plugin runtime
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "reload-plugins",
+		description: "reload installed plugins",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if m.pluginRuntime != nil {
+				_ = m.pluginRuntime.LoadAll()
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
+			return m, nil
+		},
+	})
+
+	// /permissions — show/set permission rules
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "permissions",
+		description: "show/set permission rules (delegates to handlePermissionsCommand)",
+		usage:       "/permissions [subcommand]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			next, cmd := m.handlePermissionsCommand(append([]string{"/permissions"}, args...))
+			return next, cmd
+		},
+	})
+
+	// /add <file...> — add file content to context
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "add",
+		description: "add file content to the model context",
+		usage:       "/add <file-path> [file-path...]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add <file-path> [file-path...]"})
+				return m, nil
+			}
+			var added []string
+			for _, f := range args {
+				content, err := os.ReadFile(f)
+				if err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Cannot read %s: %v", f, err)})
+					continue
+				}
+				m.session.AddUser(fmt.Sprintf("[File: %s]\n```\n%s\n```", f, string(content)))
+				added = append(added, f)
+			}
+			if len(added) > 0 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Added to context: %s", strings.Join(added, ", "))})
+			}
+			return m, nil
+		},
+	})
+
+	// /drop — drop the last N messages from context
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "drop",
+		description: "drop the last N messages from context (delegates to handleSessionCommand)",
+		usage:       "/drop [N]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			return m.handleSessionCommand("/drop", append([]string{"/drop"}, args...), text)
+		},
+	})
+
+	// /tokens — show estimated token usage
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "tokens",
+		description: "show estimated token usage",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Messages: %d\nEstimated tokens: ~%d", m.session.MessageCount(), m.session.MessageCount()*200)})
 			return m, nil
 		},
 	})
