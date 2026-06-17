@@ -677,6 +677,16 @@ func (s *Session) SetAutoCompactThresholdPct(pct int) {
 	s.AutoCompactThresholdPct = pct
 }
 
+// SetPinnedMessages sets the number of recent messages that are
+// protected from compaction. New code should call this instead of
+// writing to the legacy s.PinnedMessages field directly.
+func (s *Session) SetPinnedMessages(n int) {
+	s.PinnedMessages = n
+	if s.persist != nil {
+		s.persist.SetPinnedMessages(n)
+	}
+}
+
 // SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle.
 // New code should call this instead of writing to the legacy
 // s.GLMThinkingEnabled field directly.
