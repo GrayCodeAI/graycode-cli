@@ -299,7 +299,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			next(w, r)
 			return
 		}
-			if !constantTimeEqual(token, s.apiKey) {
+		if !constantTimeEqual(token, s.apiKey) {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
@@ -308,17 +308,14 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func constantTimeEqual(a, b string) bool {
-	// Compare in constant time. Use the maximum of both lengths for
-	// padding so that length differences do not leak via timing.
-	maxLen := len(a)
-	if len(b) > maxLen {
-		maxLen = len(b)
+	// Length mismatch check short-circuits via early return, which
+	// leaks the length difference via timing. This is an accepted
+	// trade-off for bearer-token authentication — tokens are fixed
+	// length and the comparison result is not secret.
+	if len(a) != len(b) {
+		return false
 	}
-	paddedA := make([]byte, maxLen)
-	paddedB := make([]byte, maxLen)
-	copy(paddedA, a)
-	copy(paddedB, b)
-	return subtle.ConstantTimeCompare(paddedA, paddedB) == 1
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
