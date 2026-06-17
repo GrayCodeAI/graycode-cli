@@ -98,6 +98,18 @@ func (s *MemoryService) Enhanced() *memory.EnhancedMemoryManager {
 	return s.enhanced
 }
 
+// SetMemory replaces the legacy memory implementation. Used by
+// external packages that previously wrote to sess.Memory directly.
+// Both views stay in sync: the Session.Memory alias points to the
+// same value.
+func (s *MemoryService) SetMemory(m MemoryRecaller) { s.memory = m }
+
+// SetYaad replaces the legacy Yaad bridge.
+func (s *MemoryService) SetYaad(y *memory.YaadBridge) { s.yaad = y }
+
+// SetEnhanced replaces the legacy enhanced memory manager.
+func (s *MemoryService) SetEnhanced(e *memory.EnhancedMemoryManager) { s.enhanced = e }
+
 // IsZero reports whether the service has any memory wired.
 func (s *MemoryService) IsZero() bool {
 	return s == nil || (s.memory == nil && s.yaad == nil && s.enhanced == nil)

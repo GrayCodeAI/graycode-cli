@@ -220,9 +220,18 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	// Initialize enhanced memory system (yaad bridge + auto-capture + proactive + metrics)
 	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
 	if enhancedMem.Yaad.Ready() {
+	sess.MemorySvc().SetMemory(enhancedMem)
+	sess.MemorySvc().SetYaad(enhancedMem.Yaad)
+	sess.MemorySvc().SetEnhanced(enhancedMem)
+	if sess.Memory == nil {
 		sess.Memory = enhancedMem
+	}
+	if sess.YaadBridge == nil {
 		sess.YaadBridge = enhancedMem.Yaad
+	}
+	if sess.EnhancedMemory == nil {
 		sess.EnhancedMemory = enhancedMem
+	}
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
 	// Hawk: API keys from OS secret store only
