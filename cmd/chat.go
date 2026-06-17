@@ -291,7 +291,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	if home, err := os.UserHomeDir(); err == nil {
 		dagPath := filepath.Join(home, ".hawk", "sessions", "convo.db")
 		if dag, err := storage.NewDAG(dagPath, sid); err == nil {
-			sess.ConvoDAG = dag
+			sess.SetConvoDAG(dag)
 		}
 	}
 	startup.EndPhase("newChatModel:dag")
@@ -452,13 +452,13 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	// High-risk action gate (network, destructive bash) — additive layer on top
 	// of the permission engine; falls back to AskUserFn for confirmation.
-	sess.Approval = &engine.ApprovalGate{
+	sess.SetApproval(&engine.ApprovalGate{
 		Enabled:        true,
 		MaxAutoApprove: engine.AutonomySemi,
-	}
+	})
 
 	// Wire ask_user tool (5-minute timeout matches permission prompts).
-	sess.AskUserFn = func(question string) (string, error) {
+	sess.SetAskUserFn(func(question string) (string, error) {
 		resp := make(chan string, 1)
 		ref.Send(askUserMsg{question: question, response: resp})
 		select {
@@ -467,7 +467,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		case <-time.After(5 * time.Minute):
 			return "", fmt.Errorf("question timed out")
 		}
-	}
+	})
 
 	if saved != nil {
 		for _, sm := range saved.Messages {

@@ -31,7 +31,7 @@ func (s *Session) ContextWindowSize() int {
 	if s == nil {
 		return DefaultContextWindow
 	}
-	return ResolveModelContextWindow(s.model, s.ContextWindowCached)
+	return ResolveModelContextWindow(s.model, s.ContextWindowCachedValue())
 }
 
 // EnsureAutoCompactor initializes the compaction orchestrator from session settings.

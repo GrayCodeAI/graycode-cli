@@ -50,11 +50,11 @@ func runPrint(text string) error {
 		answer = strings.TrimSpace(strings.ToLower(answer))
 		req.Response <- answer == "y" || answer == "yes"
 	})
-	sess.AskUserFn = func(question string) (string, error) {
+	sess.SetAskUserFn(func(question string) (string, error) {
 		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
 		answer, _ := reader.ReadString('\n')
 		return strings.TrimSpace(answer), nil
-	}
+	})
 
 	sessionID, _, err := prepareSession(sess)
 	if err != nil {
@@ -174,7 +174,7 @@ func writePrintResult(result, sessionID string, sess *engine.Session, isError bo
 		"result":         result,
 		"session_id":     sessionID,
 		"uuid":           genID(),
-		"total_cost_usd": sess.Cost.Total(),
+		"total_cost_usd": sess.CostValue().Total(),
 	}
 	if isError {
 		event["subtype"] = "error_during_execution"
@@ -272,11 +272,11 @@ func runRepl() error {
 		answer = strings.TrimSpace(strings.ToLower(answer))
 		req.Response <- answer == "y" || answer == "yes"
 	})
-	sess.AskUserFn = func(question string) (string, error) {
+	sess.SetAskUserFn(func(question string) (string, error) {
 		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
 		answer, _ := reader.ReadString('\n')
 		return strings.TrimSpace(answer), nil
-	}
+	})
 
 	sessionID, _, err := prepareSession(sess)
 	if err != nil {

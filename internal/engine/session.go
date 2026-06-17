@@ -689,6 +689,41 @@ func (s *Session) SetContainerRequired(v bool) {
 	s.ContainerRequired = v
 }
 
+// SetAskUserFn sets the user-prompt callback. New code should
+// call this instead of writing to the legacy s.AskUserFn field.
+func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
+	s.AskUserFn = fn
+}
+
+// SetApproval sets the high-risk action gate. New code should
+// call this instead of writing to the legacy s.Approval field.
+func (s *Session) SetApproval(a *ApprovalGate) {
+	s.Approval = a
+}
+
+// SetConvoDAG attaches the conversation DAG. New code should
+// call this instead of writing to the legacy s.ConvoDAG field.
+func (s *Session) SetConvoDAG(dag *storage.DAG) {
+	s.ConvoDAG = dag
+}
+
+// ContextWindowCachedValue returns the cached context window size.
+// New code should call this instead of reading s.ContextWindowCached
+// directly.
+func (s *Session) ContextWindowCachedValue() int {
+	if s.persist == nil {
+		return s.ContextWindowCached
+	}
+	return s.persist.ContextWindowCached()
+}
+
+// CostValue returns the session's cost accumulator (a pointer
+// to a value type, so its methods can be called). New code
+// should call this instead of reading s.Cost directly.
+func (s *Session) CostValue() *Cost {
+	return &s.Cost
+}
+
 func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
 	s.messages = msgs

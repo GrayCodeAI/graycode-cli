@@ -353,13 +353,11 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 	// remains soft-fail until those sub-PRs land.
 	//
 	// Current cmd/ backlog (2026-06-17):
-	//   options.go 18, chat.go 3, chat_print.go 3, chat_config_models.go 2,
-	//   chat_commands_util.go 1, session_sync.go 1, snapshot_cmd.go 1,
-	//   mission.go 1, chat_model_test.go 1
-	// Many of these are non-trivial (Cascade, Lifecycle, FewShotStore,
-	// AdaptivePrompt, ConvoDAG, AskUserFn, Approval, etc.) and need
-	// sub-service setters added to be migrated.
-	const cmdHardFailThreshold = 30
+	//   chat_model_test.go 1, session_sync.go 1, snapshot_cmd.go 1,
+	//   chat_commands_util.go 1
+	// All 4 are test files or false positives (method calls
+	// matching the field pattern). The cmd/ sub-PR is complete.
+	const cmdHardFailThreshold = 4
 	var cmdLegacy int
 	for f, n := range perFile {
 		if strings.HasPrefix(f, "cmd/") {
