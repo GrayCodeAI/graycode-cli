@@ -42,10 +42,17 @@ func permissionTierSettingValue(level engine.AutonomyLevel) int {
 }
 
 func effectivePermissionTier(sess *engine.Session) engine.AutonomyLevel {
-	if sess == nil || sess.PermSvc().Autonomy() == 0 {
+	if sess == nil {
 		return DefaultContainerAutonomy
 	}
-	return sess.PermSvc().Autonomy()
+	perms := sess.PermSvc()
+	if perms == nil {
+		return DefaultContainerAutonomy
+	}
+	if perms.Autonomy() == 0 {
+		return DefaultContainerAutonomy
+	}
+	return perms.Autonomy()
 }
 
 func normalizePermissionSandbox(raw string) (string, string, bool) {

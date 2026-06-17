@@ -446,9 +446,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		(saved == nil || len(saved.Messages) == 0)
 
 	// Wire permission system
-	sess.PermissionFn = func(req engine.PermissionRequest) {
+	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
 		ref.Send(permissionAskMsg{req: req})
-	}
+	})
 
 	// High-risk action gate (network, destructive bash) — additive layer on top
 	// of the permission engine; falls back to AskUserFn for confirmation.

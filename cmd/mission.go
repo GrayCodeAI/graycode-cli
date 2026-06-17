@@ -144,12 +144,12 @@ func planWithLLM(ctx context.Context, prompt, provider, model string, settings h
 	sess := newHawkSession(settings, provider, model, planPrompt, registry)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	_ = configureSession(sess, settings)
-	sess.MaxTurns = 1
-	sess.PermissionFn = func(req engine.PermissionRequest) {
+	sess.PermSvc().SetMaxTurns(1)
+	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
 		if req.Response != nil {
 			req.Response <- true
 		}
-	}
+	})
 
 	sess.AddUser(planPrompt)
 	events, err := sess.Stream(ctx)

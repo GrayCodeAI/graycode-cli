@@ -221,13 +221,13 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	// In exec mode, auto-approve based on autonomy level (no TUI to ask)
-	sess.PermissionFn = func(req engine.PermissionRequest) {
+	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
 		cfg := engine.PresetConfig(sess.PermSvc().Autonomy())
 		allowed := !cfg.NeedsPermission(req.ToolName, false)
 		if req.Response != nil {
 			req.Response <- allowed
 		}
-	}
+	})
 
 	// Resume existing session if --session-id provided
 	if execSessionID != "" {

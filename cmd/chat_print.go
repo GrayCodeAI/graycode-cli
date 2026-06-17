@@ -44,12 +44,12 @@ func runPrint(text string) error {
 	}
 
 	reader := bufio.NewReader(os.Stdin)
-	sess.PermissionFn = func(req engine.PermissionRequest) {
+	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
 		_, _ = fmt.Fprintf(os.Stderr, "\nAllow %s: %s [y/N] ", req.ToolName, req.Summary)
 		answer, _ := reader.ReadString('\n')
 		answer = strings.TrimSpace(strings.ToLower(answer))
 		req.Response <- answer == "y" || answer == "yes"
-	}
+	})
 	sess.AskUserFn = func(question string) (string, error) {
 		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
 		answer, _ := reader.ReadString('\n')
@@ -266,12 +266,12 @@ func runRepl() error {
 	}
 
 	reader := bufio.NewReader(os.Stdin)
-	sess.PermissionFn = func(req engine.PermissionRequest) {
+	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
 		_, _ = fmt.Fprintf(os.Stderr, "\nAllow %s: %s [y/N] ", req.ToolName, req.Summary)
 		answer, _ := reader.ReadString('\n')
 		answer = strings.TrimSpace(strings.ToLower(answer))
 		req.Response <- answer == "y" || answer == "yes"
-	}
+	})
 	sess.AskUserFn = func(question string) (string, error) {
 		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
 		answer, _ := reader.ReadString('\n')

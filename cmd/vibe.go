@@ -79,7 +79,7 @@ func VibeLoop(ctx context.Context, sess *engine.Session, prompt string, config V
 	}
 
 	// Configure session for full autonomy
-	sess.Mode = engine.PermissionModeBypassPermissions
+	sess.PermSvc().SetMode(string(engine.PermissionModeBypassPermissions))
 
 	currentPrompt := prompt
 

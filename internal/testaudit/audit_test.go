@@ -290,7 +290,11 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 	for i, f := range legacySessionFields {
 		quoted[i] = regexp.QuoteMeta(f)
 	}
-	pattern := regexp.MustCompile(`\bs\.\s*(?:` + strings.Join(quoted, "|") + `)\b`)
+	// Match `s.Field` or `sess.Field` as a bare token. We then
+	// post-filter to exclude method calls (Field followed by `(`),
+	// which are not legacy access — they're the proper way to
+	// interact with the field via its getter/setter methods.
+	fieldPattern := regexp.MustCompile(`\bs(?:ess)?\.\s*(?:` + strings.Join(quoted, "|") + `)\b`)
 
 	total := 0
 	perFile := map[string]int{}
@@ -311,10 +315,27 @@ func TestSessionLegacyFieldAccessAudit(t *testing.T) {
 				return nil
 			}
 			rel, _ := filepath.Rel(root, path)
-			matches := pattern.FindAll(data, -1)
-			if len(matches) > 0 {
-				perFile[rel] = len(matches)
-				total += len(matches)
+			text := string(data)
+			matches := fieldPattern.FindAllString(text, -1)
+			filtered := matches[:0]
+			rest := text
+			for range matches {
+				loc := fieldPattern.FindStringIndex(rest)
+				if loc == nil {
+					break
+				}
+				// Check what follows the match; if `(`, it's a
+				// method call, skip.
+				after := rest[loc[1]:]
+				trimmed := strings.TrimLeft(after, " \t")
+				if !strings.HasPrefix(trimmed, "(") {
+					filtered = append(filtered, "x")
+				}
+				rest = rest[loc[1]:]
+			}
+			if len(filtered) > 0 {
+				perFile[rel] = len(filtered)
+				total += len(filtered)
 			}
 			return nil
 		})
