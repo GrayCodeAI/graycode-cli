@@ -213,7 +213,7 @@ func ApplyPowerLevel(sess *engine.Session, level int) {
 
 	// Configure autonomy based on power level
 	if config.AutoApply {
-		sess.PermSvc().SetMode(string(engine.PermissionModeAcceptEdits))
+		_ = sess.PermSvc().SetMode(string(engine.PermissionModeAcceptEdits))
 	}
 }
 

@@ -233,7 +233,3 @@ func (s *PersistenceService) ContextWindowCached() int { return s.contextWindowC
 
 // SetContextWindowCached replaces the catalog context window.
 func (s *PersistenceService) SetContextWindowCached(n int) { s.contextWindowCached = n }
-
-// noopLog is a placeholder type so the unused _ field doesn't trigger
-// the "unused field" linter.
-type noopLog struct{}

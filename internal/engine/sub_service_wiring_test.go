@@ -58,20 +58,20 @@ func TestSession_NewSessionWithClient_WiresAllSubServices(t *testing.T) {
 		t.Error("LifecycleSvc().Limits() should not be nil")
 	}
 	// The legacy fields must point at the service's instances.
-	if s.LifecycleSvc().Limits() != s.LifecycleSvc().Limits() {
-		t.Error("s.LifecycleSvc().Limits() should be the same instance as LifecycleSvc().Limits()")
+	if s.Limits != s.LifecycleSvc().Limits() {
+		t.Error("s.Limits should be the same instance as LifecycleSvc().Limits()")
 	}
-	if s.LifecycleSvc().Beliefs() != s.LifecycleSvc().Beliefs() {
-		t.Error("s.LifecycleSvc().Beliefs() should be the same instance as LifecycleSvc().Beliefs()")
+	if s.Beliefs != s.LifecycleSvc().Beliefs() {
+		t.Error("s.Beliefs should be the same instance as LifecycleSvc().Beliefs()")
 	}
-	if s.LifecycleSvc().Backtrack() != s.LifecycleSvc().Backtrack() {
-		t.Error("s.LifecycleSvc().Backtrack() should be the same instance as LifecycleSvc().Backtrack()")
+	if s.Backtrack != s.LifecycleSvc().Backtrack() {
+		t.Error("s.Backtrack should be the same instance as LifecycleSvc().Backtrack()")
 	}
-	if s.LifecycleSvc().ResponseCache() != s.LifecycleSvc().ResponseCache() {
-		t.Error("s.LifecycleSvc().ResponseCache() should be the same instance as LifecycleSvc().ResponseCache()")
+	if s.ResponseCache != s.LifecycleSvc().ResponseCache() {
+		t.Error("s.ResponseCache should be the same instance as LifecycleSvc().ResponseCache()")
 	}
-	if s.LifecycleSvc().Pipeline() != s.LifecycleSvc().Pipeline() {
-		t.Error("s.LifecycleSvc().Pipeline() should be the same instance as LifecycleSvc().Pipeline()")
+	if s.Pipeline != s.LifecycleSvc().Pipeline() {
+		t.Error("s.Pipeline should be the same instance as LifecycleSvc().Pipeline()")
 	}
 
 	// MemoryService: empty by default (no memory wired).
