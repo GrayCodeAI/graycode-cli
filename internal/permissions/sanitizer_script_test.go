@@ -270,6 +270,20 @@ func TestLegitimateScriptTables_ContainCoreScripts(t *testing.T) {
 		{"Devanagari", 'अ'},
 		{"Thai", 'ก'},
 		{"Khmer", 'ក'},
+		// Major Indic scripts — added in the H5 fix to
+		// round-trip native text through the sanitizer
+		// without mangling script-internal "invisible"
+		// code points (vowel signs, viramas, etc.).
+		{"Bengali", 'ব'},   // U+09AC
+		{"Tamil", 'த'},     // U+0BA4
+		{"Telugu", 'త'},    // U+0C24
+		{"Malayalam", 'മ'}, // U+0D2E
+		{"Sinhala", 'ස'},   // U+0DC3
+		{"Lao", 'ລ'},       // U+0EA5
+		{"Mongolian", 'ᠮ'}, // U+183E (Mongolian letter M; the script starts at U+1800)
+		{"Gurmukhi", 'ਮ'},  // U+0A2E (Punjabi)
+		{"Gujarati", 'ગ'},  // U+0A97
+		{"Oriya", 'ବ'},     // U+0B2C (Odia)
 	}
 	for _, tc := range required {
 		if !isLegitimateScript(tc.r) {
@@ -286,7 +300,7 @@ func TestStripInvisibleChars_BytesValid(t *testing.T) {
 		"Hello\u200B",
 		"\u200BHello",
 		"中\u200B文",
-		"中\u17B4文",  // Khmer vowel in CJK context — preserved
+		"中\u17B4文",           // Khmer vowel in CJK context — preserved
 		"مرحبا\u061Cبالعالم", // Arabic with ALM — preserved
 		"mixed\u200E\u200Ftext",
 	}

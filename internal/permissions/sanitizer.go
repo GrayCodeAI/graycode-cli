@@ -114,7 +114,7 @@ var legitimateScriptTables = func() []*unicode.RangeTable {
 		unicode.Latin,
 		unicode.Cyrillic,
 		unicode.Greek,
-		unicode.Han,        // CJK ideographs
+		unicode.Han, // CJK ideographs
 		unicode.Hiragana,
 		unicode.Katakana,
 		unicode.Hangul, // Korean
@@ -128,6 +128,22 @@ var legitimateScriptTables = func() []*unicode.RangeTable {
 		unicode.Ethiopic,
 		unicode.Khmer,
 		unicode.Myanmar,
+		// Major Indic and SE-Asian scripts. Each covers a
+		// national language that round-trips through the
+		// sanitizer: a "would-be-invisible" rune in one of
+		// these scripts (e.g. a Bengali vowel sign, a
+		// Mongolian NNBSP) is legitimate text, not an
+		// injection vector.
+		unicode.Bengali,   // U+0980-U+09FF
+		unicode.Tamil,     // U+0B80-U+0BFF
+		unicode.Telugu,    // U+0C00-U+0C7F
+		unicode.Malayalam, // U+0D00-U+0D7F
+		unicode.Sinhala,   // U+0D80-U+0DFF
+		unicode.Lao,       // U+0E80-U+0EFF
+		unicode.Mongolian, // U+1800-U+18AF
+		unicode.Gurmukhi,  // U+0A00-U+0A7F (Punjabi)
+		unicode.Gujarati,  // U+0A80-U+0AFF
+		unicode.Oriya,     // U+0B00-U+0B7F (Odia)
 	}
 }()
 
