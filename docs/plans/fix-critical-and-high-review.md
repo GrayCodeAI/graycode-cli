@@ -1,7 +1,7 @@
 # Plan: Fix Critical + High-Impact Review Findings — hawk
 
 > Branch: `fix/critical-and-high-review-2026-06`
-> PR: https://github.com/GrayCodeAI/hawk/pull/50
+> PR: <https://github.com/GrayCodeAI/hawk/pull/50>
 > Status: **✅ COMPLETE — all 9 items + extensive follow-up committed.**
 > Constraint: **no new go.mod / go.sum dependencies** for any item in this plan.
 
