@@ -500,24 +500,28 @@ func (s *Session) SetAPIKeys(apiKeys map[string]string) {
 }
 
 func (s *Session) AddUser(content string) {
-	s.Persistence().AddUser(content)
-	if dag := s.Persistence().DAG(); dag != nil {
-		parentID := ""
-		if head, err := dag.Head(context.Background()); err == nil && head != nil {
-			parentID = head.ID
-		}
-		_, _ = dag.Append(context.Background(), parentID, "user", content)
-	}
-	if mem := s.MemorySvc().Memory(); mem != nil && strings.Contains(strings.ToLower(content), "remember") {
-		go func(c string) {
-			// Use timeout context so goroutine doesn't hang if backend is slow.
-			rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_ = rCtx // timeout context available if Remember is extended to accept it
-			if err := mem.Remember(c, "user_explicit"); err != nil {
-				slog.Warn("background memory remember failed", "error", err)
+	if p := s.Persistence(); p != nil {
+		p.AddUser(content)
+		if dag := p.DAG(); dag != nil {
+			parentID := ""
+			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+				parentID = head.ID
 			}
-		}(content)
+			_, _ = dag.Append(context.Background(), parentID, "user", content)
+		}
+	}
+	if memSvc := s.MemorySvc(); memSvc != nil {
+		if mem := memSvc.Memory(); mem != nil && strings.Contains(strings.ToLower(content), "remember") {
+			go func(c string) {
+				// Use timeout context so goroutine doesn't hang if backend is slow.
+				rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				_ = rCtx // timeout context available if Remember is extended to accept it
+				if err := mem.Remember(c, "user_explicit"); err != nil {
+					slog.Warn("background memory remember failed", "error", err)
+				}
+			}(content)
+		}
 	}
 }
 
@@ -532,30 +536,38 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 	}
 	s.messages = append(s.messages, msg)
 	s.mu.Unlock()
-	if dag := s.Persistence().DAG(); dag != nil {
-		parentID := ""
-		if head, err := dag.Head(context.Background()); err == nil && head != nil {
-			parentID = head.ID
+	if p := s.Persistence(); p != nil {
+		if dag := p.DAG(); dag != nil {
+			parentID := ""
+			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+				parentID = head.ID
+			}
+			_, _ = dag.Append(context.Background(), parentID, "user", content+" [image attached]")
 		}
-		_, _ = dag.Append(context.Background(), parentID, "user", content+" [image attached]")
 	}
 }
 
 func (s *Session) AddAssistant(content string) {
-	s.Persistence().AddAssistant(content)
-	if dag := s.Persistence().DAG(); dag != nil {
-		parentID := ""
-		if head, err := dag.Head(context.Background()); err == nil && head != nil {
-			parentID = head.ID
+	if p := s.Persistence(); p != nil {
+		p.AddAssistant(content)
+		if dag := p.DAG(); dag != nil {
+			parentID := ""
+			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+				parentID = head.ID
+			}
+			_, _ = dag.Append(context.Background(), parentID, "assistant", content)
 		}
-		_, _ = dag.Append(context.Background(), parentID, "assistant", content)
 	}
 }
 
 // ForkConversation creates a new branch from a specific point in history.
 // Returns the fork node ID and the messages up to that point.
 func (s *Session) ForkConversation(nodeID string) (string, error) {
-	dag := s.Persistence().DAG()
+	p := s.Persistence()
+	if p == nil {
+		return "", nil
+	}
+	dag := p.DAG()
 	if dag == nil {
 		return "", nil
 	}
@@ -581,7 +593,11 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 
 // SwitchBranch navigates to a different branch point and rebuilds messages.
 func (s *Session) SwitchBranch(nodeID string) error {
-	dag := s.Persistence().DAG()
+	p := s.Persistence()
+	if p == nil {
+		return nil
+	}
+	dag := p.DAG()
 	if dag == nil {
 		return nil
 	}
@@ -605,7 +621,11 @@ func (s *Session) SwitchBranch(nodeID string) error {
 
 // ListBranches returns child nodes (alternative branches) from a given node.
 func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
-	dag := s.Persistence().DAG()
+	p := s.Persistence()
+	if p == nil {
+		return nil, nil
+	}
+	dag := p.DAG()
 	if dag == nil {
 		return nil, nil
 	}
@@ -614,7 +634,11 @@ func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
 
 // ConvoHead returns the current conversation head node ID.
 func (s *Session) ConvoHead() string {
-	dag := s.Persistence().DAG()
+	p := s.Persistence()
+	if p == nil {
+		return ""
+	}
+	dag := p.DAG()
 	if dag == nil {
 		return ""
 	}
