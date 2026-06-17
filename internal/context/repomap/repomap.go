@@ -1,13 +1,35 @@
-// Package repomap builds an AST-ranked overview of a codebase within a token
-// budget, in the spirit of Aider's repository map.
+// Package repomap is the prompt-injection shim that produces a token-budgeted
+// repository overview for hawk's context layer. It builds an import/refer
+// graph over the source files in root, ranks the nodes with a PageRank
+// pass, and renders the highest-ranked files (and their top symbols) as a
+// compact text block capped at Options.Budget tokens.
 //
-// It constructs a graph where files are nodes and edges are import/reference
-// dependencies, ranks the nodes with a PageRank-like pass, and emits a compact
-// textual map (file -> key symbols) constrained to a configurable token budget.
+// # Relationship to internal/intelligence/repomap
 //
-// The package is intentionally dependency-light: Go files are parsed with
-// go/parser + go/ast; other languages fall back to a small regex extractor.
-// Only the standard library is used.
+// hawk ships a second package, internal/intelligence/repomap, that exposes
+// a much larger surface: call graphs, search, quality signals, API
+// scanning, incremental indexing, and so on. That package is the deep
+// analysis engine. THIS package is intentionally narrow: one entry point
+// (RepoMap), a single Graph type, a self-contained scan/rank/render
+// pipeline, and a stdlib-only dependency surface. The two packages share
+// no code; they merely share a name and a goal (a useful map of a
+// repository). The deep package's doc.go spells this out from the other
+// side of the boundary.
+//
+// Callers that need more than a budgeted text block - symbol-level
+// navigation, BM25 search, dead-code detection, OpenAPI export, etc. -
+// should import internal/intelligence/repomap directly instead of
+// extending this one.
+//
+// # Implementation notes
+//
+// Go files are parsed with go/parser and go/ast; other languages fall
+// back to a small regex extractor. Only the standard library is used.
+// Files larger than 1 MiB, hidden directories, and a small set of
+// well-known build/vendor trees are skipped during the scan. The
+// PageRank pass uses the standard damped iteration with dangling-mass
+// redistribution and exits early once the total node-to-node delta
+// drops below 1e-9.
 package repomap
 
 import (
