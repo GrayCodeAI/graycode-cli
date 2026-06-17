@@ -425,6 +425,54 @@ func init() {
 			return m.startPromptCommand("/ultrareview", "Perform a deep, adversarial code review of this change set. Prioritize correctness, security, regressions, and missing tests.")
 		},
 	})
+
+	// --- session-delegating commands ---
+	//
+	// These all dispatch to m.handleSessionCommand (a chatModel
+	// method that owns the per-name session-management logic).
+	// Each /command is registered separately so the dispatcher
+	// can route them by name.
+
+	sessionDelegates := []struct {
+		name        string
+		description string
+	}{
+		{"export", "export session to JSON (delegates to handleSessionCommand)"},
+		{"rename", "rename the current session (delegates to handleSessionCommand)"},
+		{"tag", "tag the current session (delegates to handleSessionCommand)"},
+		{"session", "list saved sessions (delegates to handleSessionCommand)"},
+		{"share", "share session (delegates to handleSessionCommand)"},
+		{"search", "search across sessions (delegates to handleSessionCommand)"},
+		{"clean", "clean up old sessions (delegates to handleSessionCommand)"},
+		{"compress", "compress session storage (delegates to handleSessionCommand)"},
+		{"integrity", "verify session integrity (delegates to handleSessionCommand)"},
+		{"retry", "retry the last failed action (delegates to handleSessionCommand)"},
+		{"rewind", "rewind to a previous checkpoint (delegates to handleSessionCommand)"},
+		{"fork", "fork the current session (delegates to handleSessionCommand)"},
+		{"new", "start a new session (delegates to handleSessionCommand)"},
+	}
+	for _, sd := range sessionDelegates {
+		name := sd.name
+		subcommandRegistry.Register(&delegatingCommand{
+			name:        name,
+			description: sd.description,
+			usage:       "/" + name,
+			handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+				return m.handleSessionCommand("/"+name, append([]string{"/" + name}, args...), text)
+			},
+		})
+	}
+
+	// /audit — show audit summary (delegates to tool.FormatAuditSummary)
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "audit",
+		description: "show audit summary",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			m.messages = append(m.messages, displayMsg{role: "system", content: tool.FormatAuditSummary()})
+			return m, nil
+		},
+	})
 }
 
 // delegatingCommand is a ChatSubcommand implementation that wraps

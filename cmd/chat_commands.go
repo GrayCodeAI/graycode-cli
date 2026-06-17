@@ -441,8 +441,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "/export":
-		return m.handleSessionCommand(cmd, parts, text)
 	case "/feedback":
 		body := strings.TrimSpace(strings.TrimPrefix(text, "/feedback"))
 		if body == "" {
@@ -495,10 +493,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: profile.Summary()})
 		return m, nil
-	case "/rename":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/tag":
-		return m.handleSessionCommand(cmd, parts, text)
+
 	case "/stats":
 		days := 30
 		if len(parts) > 1 {
@@ -568,8 +563,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			}()
 		}
 		return m, nil
-	case "/share":
-		return m.handleSessionCommand(cmd, parts, text)
+
 	case "/permissions":
 		next, cmd := m.handlePermissionsCommand(parts)
 		return next, cmd
@@ -597,8 +591,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: report})
 		return m, nil
-	case "/session":
-		return m.handleSessionCommand(cmd, parts, text)
 
 	case "/reload-plugins":
 		if m.pluginRuntime != nil {
@@ -653,8 +645,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Stream follow: " + state + " (scroll up or Tab→scrollback freezes view during replies)"})
 		m.viewDirty = true
 		return m, nil
-	case "/rewind":
-		return m.handleSessionCommand(cmd, parts, text)
+
 	case "/loop":
 		if len(parts) < 3 {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /loop <interval> <command> (e.g., /loop 5m /doctor)"})
@@ -686,21 +677,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 			}
 		}()
 		return m, nil
-	case "/fork":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/search":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/clean":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/audit":
-		m.messages = append(m.messages, displayMsg{role: "system", content: tool.FormatAuditSummary()})
-		return m, nil
-	case "/compress":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/integrity":
-		return m.handleSessionCommand(cmd, parts, text)
-	case "/retry":
-		return m.handleSessionCommand(cmd, parts, text)
+
 	case "/add":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /add <file-path> [file-path...]"})
@@ -793,8 +770,6 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Messages: %d\nEstimated tokens: ~%d", m.session.MessageCount(), m.session.MessageCount()*200)})
 		return m, nil
 
-	case "/new":
-		return m.handleSessionCommand(cmd, parts, text)
 	case "/btw":
 		if len(parts) < 2 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /btw <message>"})
