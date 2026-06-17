@@ -393,9 +393,13 @@ func TestWaitForLock_MultipleWaiters_OnlyOneAcquires(t *testing.T) {
 	}
 }
 
-// TestWaitForLock_OwnerMismatchOnRelease: a ReleaseLock from a
-// non-owner does not wake waiters.
-func TestWaitForLock_OwnerMismatchOnRelease(t *testing.T) {
+// TestReleaseLock_NonOwnerReturnsError verifies that ReleaseLock
+// returns an error when the caller is not the lock owner. The
+// error is independent of any waiter (which the next test covers).
+// Renamed from TestWaitForLock_OwnerMismatchOnRelease — the original
+// name claimed the test was about "waiters not being woken", but
+// the body only checked the error return (see M10 in the code review).
+func TestReleaseLock_NonOwnerReturnsError(t *testing.T) {
 	mb := NewMessageBus()
 	_ = mb.AcquireLock("res-1", "owner-a", time.Second)
 	_ = mb.AcquireLock("res-1", "owner-b", time.Second) // should fail but...
@@ -405,6 +409,56 @@ func TestWaitForLock_OwnerMismatchOnRelease(t *testing.T) {
 	err := mb.ReleaseLock("res-1", "owner-b") // wrong owner
 	if err == nil {
 		t.Fatal("expected error on owner mismatch, got nil")
+	}
+}
+
+// TestWaitForLock_ReleaseByNonOwnerDoesNotWakeWaiter is the
+// matching waiter-assertion test that the original
+// TestWaitForLock_OwnerMismatchOnRelease claimed to be. It
+// registers a real waiter, attempts a ReleaseLock from a
+// non-owner (which returns an error and must NOT close the
+// waiter's done channel), and verifies the waiter times out
+// at the configured timeout (rather than being woken by the
+// failed ReleaseLock).
+func TestWaitForLock_ReleaseByNonOwnerDoesNotWakeWaiter(t *testing.T) {
+	mb := NewMessageBus()
+	if err := mb.AcquireLock("res-1", "owner-a", time.Second); err != nil {
+		t.Fatalf("AcquireLock: %v", err)
+	}
+
+	// Register a waiter in a goroutine. The waiter uses a short
+	// timeout (80ms) so the test runs quickly if the failed
+	// ReleaseLock does not wake it.
+	timeout := 80 * time.Millisecond
+	type result struct {
+		err error
+	}
+	results := make(chan result, 1)
+	go func() {
+		err := mb.WaitForLock("res-1", "owner-b", timeout)
+		results <- result{err}
+	}()
+	// Give the waiter time to register.
+	time.Sleep(20 * time.Millisecond)
+
+	// Attempt ReleaseLock from the wrong owner. This must NOT
+	// wake the waiter; the waiter should time out at ~timeout.
+	err := mb.ReleaseLock("res-1", "owner-b") // wrong owner
+	if err == nil {
+		t.Fatal("expected error on owner mismatch, got nil")
+	}
+
+	// The waiter should now time out (not be woken early).
+	select {
+	case r := <-results:
+		if r.err == nil {
+			t.Fatal("waiter was unexpectedly woken by failed ReleaseLock (M10 regression)")
+		}
+		if !strings.Contains(r.err.Error(), "timeout") {
+			t.Errorf("waiter err = %q, want 'timeout'", r.err.Error())
+		}
+	case <-time.After(timeout + 200*time.Millisecond):
+		t.Fatal("waiter did not return within timeout window")
 	}
 }
 
