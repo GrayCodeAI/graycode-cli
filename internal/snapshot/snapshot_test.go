@@ -51,8 +51,8 @@ func TestTracker_Init(t *testing.T) {
 		t.Fatalf("Second Init failed: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dir, ".hawk", "snapshots", ".git")); err != nil {
-		t.Error("shadow git repo not initialized")
+	if _, err := os.Stat(filepath.Join(tracker.shadowDir, ".git")); err != nil {
+		t.Errorf("shadow git repo not initialized at %s: %v", tracker.shadowDir, err)
 	}
 }
 

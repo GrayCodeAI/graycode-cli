@@ -31,7 +31,7 @@ var BannedPrefixes = []string{
 }
 
 // cosmetic flags that don't affect safety
-var cosmenticFlags = map[string]bool{
+var cosmeticFlags = map[string]bool{
 	"--color":    true,
 	"--no-color": true,
 	"-v":         true,
@@ -142,7 +142,7 @@ func (c *Canonicalizer) canonicalizeSingle(cmd string) string {
 	// Strip cosmetic flags
 	var filtered []string
 	for _, tok := range tokens {
-		if !cosmenticFlags[tok] {
+		if !cosmeticFlags[tok] {
 			filtered = append(filtered, tok)
 		}
 	}
@@ -324,7 +324,7 @@ func (c *Canonicalizer) GeneratePattern(command string) string {
 		tok := tokens[argIdx]
 		if strings.HasPrefix(tok, "-") {
 			// Skip cosmetic flags from the pattern
-			if !cosmenticFlags[tok] {
+			if !cosmeticFlags[tok] {
 				prefix = append(prefix, tok)
 			}
 			argIdx++
