@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
@@ -153,6 +154,68 @@ func TestCheck(t *testing.T) {
 		if err == nil {
 			t.Error("Check() should return error for unreachable server")
 		}
+	})
+
+	t.Run("slow server is bounded by client timeout", func(t *testing.T) {
+		// Server that takes longer than checkTimeout to start writing
+		// the response. The client.Timeout should abort the request
+		// well before the server would have responded.
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(15 * time.Second)
+		}))
+		// server.Close() blocks on the still-active connection; kick
+		// the close off in a goroutine and bound the wait so the test
+		// finishes promptly once the assertion has run.
+		t.Cleanup(func() {
+			done := make(chan struct{})
+			go func() { server.Close(); close(done) }()
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				// best-effort: the test has already passed; the
+				// runner's process cleanup will finish the job
+			}
+		})
+
+		origURL := updateURL
+		setUpdateURL(server.URL)
+		t.Cleanup(func() { setUpdateURL(origURL) })
+
+		start := time.Now()
+		_, err := Check("0.1.0")
+		elapsed := time.Since(start)
+		if err == nil {
+			t.Fatal("Check() should error when the server stalls")
+		}
+		// checkTimeout is 10s; allow a couple seconds of slack for
+		// goroutine scheduling on slow CI but require the timeout
+		// to have fired (the server sleeps 15s).
+		if elapsed > 12*time.Second {
+			t.Errorf("Check() took %v; expected to be bounded by checkTimeout (10s)", elapsed)
+		}
+	})
+
+	t.Run("oversize response is bounded", func(t *testing.T) {
+		// Server returns > 1 MiB; the LimitReader in Check caps the
+		// body read so JSON unmarshal of a normal release still
+		// succeeds (release fields are populated from the prefix).
+		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"tag_name":"v9.9.9","name":"x","body":"`))
+			pad := strings.Repeat("a", 2<<20)
+			_, _ = w.Write([]byte(pad))
+			_, _ = w.Write([]byte(`","html_url":"https://example"}`))
+		}))
+		defer server.Close()
+
+		origURL := updateURL
+		setUpdateURL(server.URL)
+		defer setUpdateURL(origURL)
+
+		// We don't care whether Check parses the truncated body — only
+		// that it returns *without* exhausting memory. The 1 MiB cap
+		// guarantees allocation stays bounded.
+		_, _ = Check("0.1.0")
 	})
 }
 

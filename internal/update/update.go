@@ -8,7 +8,19 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 )
+
+// checkTimeout bounds the time a single update-check HTTP request can take.
+// The package's public entry point runs the request through context.Background
+// (so it cannot be cancelled by the caller), so without an http.Client
+// Timeout a slow or hijacked response could hang the binary on launch
+// forever. 10s is generous for a single GET against api.github.com.
+const checkTimeout = 10 * time.Second
+
+// maxResponseBytes caps the body read so a malicious or compromised
+// api.github.com response cannot exhaust memory.
+const maxResponseBytes = 1 << 20 // 1 MiB
 
 var updateURL = "https://api.github.com/repos/GrayCodeAI/hawk/releases/latest"
 
@@ -26,14 +38,14 @@ type ReleaseInfo struct {
 
 // Check checks for available updates.
 func Check(currentVersion string) (*ReleaseInfo, error) {
-	req, err := http.NewRequestWithContext(context.Background(), "GET", updateURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, updateURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "hawk-cli")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: checkTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -44,7 +56,7 @@ func Check(currentVersion string) (*ReleaseInfo, error) {
 		return nil, fmt.Errorf("update check failed: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 	if err != nil {
 		return nil, err
 	}
