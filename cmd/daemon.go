@@ -97,6 +97,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		return sess, nil
 	}
 
+	daemon.SetVersion(version)
 	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
 
 	// Wire a lightweight provider-connectivity readiness probe. The default

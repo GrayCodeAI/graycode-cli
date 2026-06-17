@@ -26,6 +26,12 @@ const maxRequestBodyBytes = 1 << 20
 // The caller (cmd package) provides this, wiring system prompts, tools, keys.
 type SessionFactory func(req ChatRequest) (*engine.Session, error)
 
+// version is set via SetVersion from main.go at startup.
+var version = "0.0.0"
+
+// SetVersion propagates the canonical hawk version into the daemon.
+func SetVersion(v string) { version = v }
+
 // Server is the hawk daemon HTTP server for programmatic/CI access.
 type Server struct {
 	addr       string
@@ -293,7 +299,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			next(w, r)
 			return
 		}
-		if !constantTimeEqual(token, s.apiKey) {
+			if !constantTimeEqual(token, s.apiKey) {
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
@@ -302,13 +308,8 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func constantTimeEqual(a, b string) bool {
-	// Compare in constant time regardless of length differences.
-	// Hash both values to a fixed-length representation first.
-	// This avoids leaking length via timing.
-	if len(a) == 0 || len(b) == 0 {
-		return len(a) == len(b)
-	}
-	// Pad to maximum length with null bytes, then compare.
+	// Compare in constant time. Use the maximum of both lengths for
+	// padding so that length differences do not leak via timing.
 	maxLen := len(a)
 	if len(b) > maxLen {
 		maxLen = len(b)
@@ -317,7 +318,7 @@ func constantTimeEqual(a, b string) bool {
 	paddedB := make([]byte, maxLen)
 	copy(paddedA, a)
 	copy(paddedB, b)
-	return subtle.ConstantTimeCompare(paddedA, paddedB) == 1 && len(a) == len(b)
+	return subtle.ConstantTimeCompare(paddedA, paddedB) == 1
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
@@ -344,7 +345,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 
 	resp := HealthResponse{
 		Status:    "ok",
-		Version:   "0.1.0",
+		Version:   version,
 		Uptime:    time.Since(s.startedAt).Round(time.Second).String(),
 		Sessions:  sessionCount,
 		StartedAt: s.startedAt.Format(time.RFC3339),
@@ -430,6 +431,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
 		flusher, _ := w.(http.Flusher)
 
 		for ev := range events {
