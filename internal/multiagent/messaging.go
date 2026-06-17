@@ -112,7 +112,8 @@ func (mb *MessageBus) logDroppedMessage(from, to, topic string) {
 	if n != 1 && n%100 != 0 {
 		return
 	}
-	slog.Warn("message bus: dropped message (channel full)",
+	slog.Warn(
+		"message bus: dropped message (channel full)",
 		"from", from,
 		"to", to,
 		"topic", topic,
@@ -123,12 +124,12 @@ func (mb *MessageBus) logDroppedMessage(from, to, topic string) {
 // NewMessageBus creates and returns an initialized MessageBus.
 func NewMessageBus() *MessageBus {
 	return &MessageBus{
-		channels:       make(map[string]chan AgentMessage),
-		subscribers:    make(map[string][]string),
-		history:        make([]AgentMessage, 0),
-		locks:          make(map[string]*ResourceLock),
+		channels:        make(map[string]chan AgentMessage),
+		subscribers:     make(map[string][]string),
+		history:         make([]AgentMessage, 0),
+		locks:           make(map[string]*ResourceLock),
 		responseWaiters: make(map[string][]*responseWaiter),
-		lockWaiters:    make(map[string][]*lockWaiter),
+		lockWaiters:     make(map[string][]*lockWaiter),
 	}
 }
 

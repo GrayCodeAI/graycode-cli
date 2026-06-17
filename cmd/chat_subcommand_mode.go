@@ -13,10 +13,12 @@ import (
 // changes the chat's mode (auto, shell, agent, or toggle).
 type modeSubcommand struct{}
 
-func (mo *modeSubcommand) Name() string        { return "mode" }
-func (mo *modeSubcommand) Aliases() []string   { return nil }
-func (mo *modeSubcommand) Description() string { return "show or change the chat mode (auto|shell|agent|toggle)" }
-func (mo *modeSubcommand) Usage() string       { return "/mode [auto|shell|agent|toggle]" }
+func (mo *modeSubcommand) Name() string      { return "mode" }
+func (mo *modeSubcommand) Aliases() []string { return nil }
+func (mo *modeSubcommand) Description() string {
+	return "show or change the chat mode (auto|shell|agent|toggle)"
+}
+func (mo *modeSubcommand) Usage() string { return "/mode [auto|shell|agent|toggle]" }
 func (mo *modeSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	if len(args) == 0 {
 		current := m.modeManager.Current()

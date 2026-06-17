@@ -14,10 +14,12 @@ import (
 // and copies it to the clipboard.
 type renderSubcommand struct{}
 
-func (r *renderSubcommand) Name() string        { return "render" }
-func (r *renderSubcommand) Aliases() []string   { return nil }
-func (r *renderSubcommand) Description() string { return "convert session to CXML and copy to clipboard" }
-func (r *renderSubcommand) Usage() string       { return "/render [path]" }
+func (r *renderSubcommand) Name() string      { return "render" }
+func (r *renderSubcommand) Aliases() []string { return nil }
+func (r *renderSubcommand) Description() string {
+	return "convert session to CXML and copy to clipboard"
+}
+func (r *renderSubcommand) Usage() string { return "/render [path]" }
 func (r *renderSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	renderPath := ""
 	if len(args) >= 1 {

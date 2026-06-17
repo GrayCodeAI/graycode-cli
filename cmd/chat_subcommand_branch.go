@@ -16,10 +16,12 @@ import (
 // statement in chat_commands.go is the active dispatch path.
 type branchSubcommand struct{}
 
-func (b *branchSubcommand) Name() string        { return "branch" }
-func (b *branchSubcommand) Aliases() []string   { return nil }
-func (b *branchSubcommand) Description() string { return "show current branch, HEAD, upstream, and status" }
-func (b *branchSubcommand) Usage() string       { return "" }
+func (b *branchSubcommand) Name() string      { return "branch" }
+func (b *branchSubcommand) Aliases() []string { return nil }
+func (b *branchSubcommand) Description() string {
+	return "show current branch, HEAD, upstream, and status"
+}
+func (b *branchSubcommand) Usage() string { return "" }
 func (b *branchSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	m.messages = append(m.messages, displayMsg{role: "system", content: branchSummary()})
 	return m, nil

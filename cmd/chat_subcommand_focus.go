@@ -11,10 +11,12 @@ import (
 // with the given paths.
 type focusSubcommand struct{}
 
-func (f *focusSubcommand) Name() string        { return "focus" }
-func (f *focusSubcommand) Aliases() []string   { return nil }
-func (f *focusSubcommand) Description() string { return "restrict agent focus to specific files/directories" }
-func (f *focusSubcommand) Usage() string       { return "/focus <path> [path...]" }
+func (f *focusSubcommand) Name() string      { return "focus" }
+func (f *focusSubcommand) Aliases() []string { return nil }
+func (f *focusSubcommand) Description() string {
+	return "restrict agent focus to specific files/directories"
+}
+func (f *focusSubcommand) Usage() string { return "/focus <path> [path...]" }
 func (f *focusSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	if len(args) < 1 {
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /focus <path> [path...]"})

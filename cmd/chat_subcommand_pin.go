@@ -12,10 +12,12 @@ import (
 // compaction.
 type pinSubcommand struct{}
 
-func (p *pinSubcommand) Name() string        { return "pin" }
-func (p *pinSubcommand) Aliases() []string   { return nil }
-func (p *pinSubcommand) Description() string { return "pin the last N exchanges as protected from compaction" }
-func (p *pinSubcommand) Usage() string       { return "/pin [N]" }
+func (p *pinSubcommand) Name() string      { return "pin" }
+func (p *pinSubcommand) Aliases() []string { return nil }
+func (p *pinSubcommand) Description() string {
+	return "pin the last N exchanges as protected from compaction"
+}
+func (p *pinSubcommand) Usage() string { return "/pin [N]" }
 func (p *pinSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	n := 2
 	if len(args) >= 1 {

@@ -113,7 +113,7 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	if s == nil {
 		return "", false
 	}
-	s.Persistence().SetRawMessages( ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()));
+	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 
 	s.EnsureAutoCompactor()
 	if compactStrategy, ok := s.AutoCompactor.AutoCompactIfNeeded(ctx, s); ok {
@@ -145,7 +145,7 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 	if s == nil {
 		return "", 0, 0, fmt.Errorf("no session")
 	}
-	s.Persistence().SetRawMessages( ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()));
+	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 	s.EnsureAutoCompactor()
 	tokensBefore = EstimateTokens(s.Persistence().RawMessages())
 	strategy, err = s.AutoCompactor.RunCompaction(ctx, s)

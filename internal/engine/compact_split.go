@@ -138,7 +138,7 @@ func (s *Session) splitTurnCompact() {
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
 	keep = append(keep, remainingMessages...)
-	s.Persistence().SetRawMessages( keep);
+	s.Persistence().SetRawMessages(keep)
 }
 
 // generatePartialSummary generates an LLM summary for a subset of messages.
@@ -268,5 +268,5 @@ func (s *Session) smartCompactFallback() {
 		Content: "Understood. I have the context from the summary above. Continuing.",
 	})
 	keep = append(keep, s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]...)
-	s.Persistence().SetRawMessages( keep);
+	s.Persistence().SetRawMessages(keep)
 }

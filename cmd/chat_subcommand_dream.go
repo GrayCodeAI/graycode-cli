@@ -14,10 +14,12 @@ import (
 // the model to summarize and clean them up.
 type dreamSubcommand struct{}
 
-func (d *dreamSubcommand) Name() string        { return "dream" }
-func (d *dreamSubcommand) Aliases() []string   { return nil }
-func (d *dreamSubcommand) Description() string { return "consolidate yaad memories into a coherent summary" }
-func (d *dreamSubcommand) Usage() string       { return "" }
+func (d *dreamSubcommand) Name() string      { return "dream" }
+func (d *dreamSubcommand) Aliases() []string { return nil }
+func (d *dreamSubcommand) Description() string {
+	return "consolidate yaad memories into a coherent summary"
+}
+func (d *dreamSubcommand) Usage() string { return "" }
 func (d *dreamSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	projectDir, _ := os.Getwd()
 	status := memory.YaadStatus()

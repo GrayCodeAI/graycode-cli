@@ -42,4 +42,3 @@ func buildStatusInfo(m *chatModel) string {
 func init() {
 	subcommandRegistry.Register(&statusSubcommand{})
 }
-

@@ -11,10 +11,12 @@ import (
 // as a template, but only if one doesn't already exist.
 type agentsInitSubcommand struct{}
 
-func (a *agentsInitSubcommand) Name() string        { return "agents-init" }
-func (a *agentsInitSubcommand) Aliases() []string   { return nil }
-func (a *agentsInitSubcommand) Description() string { return "generate AGENTS.md from project-type template" }
-func (a *agentsInitSubcommand) Usage() string       { return "" }
+func (a *agentsInitSubcommand) Name() string      { return "agents-init" }
+func (a *agentsInitSubcommand) Aliases() []string { return nil }
+func (a *agentsInitSubcommand) Description() string {
+	return "generate AGENTS.md from project-type template"
+}
+func (a *agentsInitSubcommand) Usage() string { return "" }
 func (a *agentsInitSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	if _, err := os.Stat("AGENTS.md"); err == nil {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "AGENTS.md already exists. Remove it first to regenerate."})

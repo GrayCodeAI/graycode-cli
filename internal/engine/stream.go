@@ -203,7 +203,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
 					ch <- StreamEvent{Type: "content", Content: preResult.CachedResponse}
-					s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}));
+					s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}))
 					ch <- StreamEvent{Type: "done"}
 					return
 				}
@@ -581,8 +581,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// and drop the synthetic user message entirely.
 		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}));
-			s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "user", Content: "Continue from where you left off."}));
+			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
+			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "user", Content: "Continue from where you left off."}))
 			continue
 		}
 
@@ -597,7 +597,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if textContent.Len() > 0 {
-				s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}));
+				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
 				// Auto-remember corrections and learnings
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
@@ -766,7 +766,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					msg.Images = []string{imgURI}
 				}
 			}
-			s.Persistence().SetRawMessages( append(s.Persistence().RawMessages(), msg));
+			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), msg))
 		}
 
 		// --- STEERING: Inject user guidance between tool batches ---

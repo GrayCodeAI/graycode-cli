@@ -11,9 +11,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/home"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -925,10 +925,10 @@ type delegatingCommand struct {
 	handler     func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd)
 }
 
-func (d *delegatingCommand) Name() string             { return d.name }
-func (d *delegatingCommand) Aliases() []string        { return d.aliases }
-func (d *delegatingCommand) Description() string      { return d.description }
-func (d *delegatingCommand) Usage() string            { return d.usage }
+func (d *delegatingCommand) Name() string        { return d.name }
+func (d *delegatingCommand) Aliases() []string   { return d.aliases }
+func (d *delegatingCommand) Description() string { return d.description }
+func (d *delegatingCommand) Usage() string       { return d.usage }
 func (d *delegatingCommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	return d.handler(m, args, text)
 }

@@ -12,10 +12,12 @@ import (
 // asks the model to generate ideas on a topic.
 type brainstormSubcommand struct{}
 
-func (b *brainstormSubcommand) Name() string        { return "brainstorm" }
-func (b *brainstormSubcommand) Aliases() []string   { return nil }
-func (b *brainstormSubcommand) Description() string { return "ask the model to brainstorm ideas on a topic" }
-func (b *brainstormSubcommand) Usage() string       { return "/brainstorm <topic>" }
+func (b *brainstormSubcommand) Name() string      { return "brainstorm" }
+func (b *brainstormSubcommand) Aliases() []string { return nil }
+func (b *brainstormSubcommand) Description() string {
+	return "ask the model to brainstorm ideas on a topic"
+}
+func (b *brainstormSubcommand) Usage() string { return "/brainstorm <topic>" }
 func (b *brainstormSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	topic := strings.TrimSpace(strings.TrimPrefix(text, "/brainstorm"))
 	if topic == "" {

@@ -204,7 +204,8 @@ func (s *Server) warnInsecureAuthConfig() {
 	if s.apiKey != "" {
 		return
 	}
-	slog.Warn("hawk daemon started without API key authentication; only loopback access allowed",
+	slog.Warn(
+		"hawk daemon started without API key authentication; only loopback access allowed",
 		"addr", s.addr,
 		"hint", "Set Config.APIKey to enable authentication, or keep the default loopback bind.",
 	)

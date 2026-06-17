@@ -13,10 +13,12 @@ import (
 // model picker or sets the active model for the session.
 type modelSubcommand struct{}
 
-func (mo *modelSubcommand) Name() string        { return "model" }
-func (mo *modelSubcommand) Aliases() []string   { return nil }
-func (mo *modelSubcommand) Description() string { return "show the model picker or set the active model" }
-func (mo *modelSubcommand) Usage() string       { return "/model [model-name|set <model-name>]" }
+func (mo *modelSubcommand) Name() string      { return "model" }
+func (mo *modelSubcommand) Aliases() []string { return nil }
+func (mo *modelSubcommand) Description() string {
+	return "show the model picker or set the active model"
+}
+func (mo *modelSubcommand) Usage() string { return "/model [model-name|set <model-name>]" }
 func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	if len(args) == 0 {
 		next, cmd := m.openConfigAtTab(configTabModels)

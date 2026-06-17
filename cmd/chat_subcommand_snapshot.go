@@ -14,6 +14,7 @@ func (s *snapshotSubcommand) Name() string { return "snapshot" }
 func (s *snapshotSubcommand) Aliases() []string {
 	return nil
 }
+
 func (s *snapshotSubcommand) Description() string {
 	return "manage file snapshots: list, restore <hash>, diff <hash>"
 }

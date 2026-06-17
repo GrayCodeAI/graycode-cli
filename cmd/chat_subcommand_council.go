@@ -16,10 +16,12 @@ import (
 // rank the responses, then have the chairman synthesize.
 type councilSubcommand struct{}
 
-func (co *councilSubcommand) Name() string        { return "council" }
-func (co *councilSubcommand) Aliases() []string   { return nil }
-func (co *councilSubcommand) Description() string { return "convene a multi-model council to discuss a question" }
-func (co *councilSubcommand) Usage() string       { return "/council <question>" }
+func (co *councilSubcommand) Name() string      { return "council" }
+func (co *councilSubcommand) Aliases() []string { return nil }
+func (co *councilSubcommand) Description() string {
+	return "convene a multi-model council to discuss a question"
+}
+func (co *councilSubcommand) Usage() string { return "/council <question>" }
 func (co *councilSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	if len(args) < 1 {
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /council <question>"})

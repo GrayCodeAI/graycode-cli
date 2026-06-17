@@ -15,10 +15,11 @@ import (
 // session command names.
 type sessionSubcommand struct{}
 
-func (s *sessionSubcommand) Name() string      { return "clear" }
+func (s *sessionSubcommand) Name() string { return "clear" }
 func (s *sessionSubcommand) Aliases() []string {
 	return []string{"compact", "diff", "recover", "resume", "history", "quit", "exit"}
 }
+
 func (s *sessionSubcommand) Description() string {
 	return "session management: clear, compact, diff, recover, resume, history, quit, exit"
 }

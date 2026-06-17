@@ -73,7 +73,7 @@ func (s *Session) compact() {
 		Content: "[Earlier conversation compacted to save context.]",
 	})
 	keep = append(keep, s.Persistence().RawMessages()[cutEnd:]...)
-	s.Persistence().SetRawMessages( keep);
+	s.Persistence().SetRawMessages(keep)
 }
 
 // readFileContent reads a file from disk and returns its content as a string.

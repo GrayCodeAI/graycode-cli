@@ -16,13 +16,13 @@ import (
 // and the per-tool timeout. Extracted from Session in Phase 6 of the
 // god-object decomposition (see docs/session-decomposition.md).
 type ToolService struct {
-	registry         *tool.Registry
+	registry          *tool.Registry
 	containerExecutor tool.ContainerExecutor
 	containerRequired bool
-	tracer           *oteltrace.Tracer
-	snapshots        SnapshotTracker
-	bgManager        *tool.BackgroundAgentManager
-	sandbox          *diff.DiffSandbox
+	tracer            *oteltrace.Tracer
+	snapshots         SnapshotTracker
+	bgManager         *tool.BackgroundAgentManager
+	sandbox           *diff.DiffSandbox
 }
 
 // NewToolService constructs a ToolService with the given registry.

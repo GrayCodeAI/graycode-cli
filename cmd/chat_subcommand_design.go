@@ -11,10 +11,16 @@ import (
 // sub-action (screenshot, system, component, regress, or default).
 type designSubcommand struct{}
 
-func (d *designSubcommand) Name() string        { return "design" }
-func (d *designSubcommand) Aliases() []string   { return nil }
-func (d *designSubcommand) Description() string { return "design a feature (screenshot|system|component|regress)" }
-func (d *designSubcommand) Usage() string       { return "/design [screenshot|system|component|regress] [args...]" }
+func (d *designSubcommand) Name() string      { return "design" }
+func (d *designSubcommand) Aliases() []string { return nil }
+func (d *designSubcommand) Description() string {
+	return "design a feature (screenshot|system|component|regress)"
+}
+
+func (d *designSubcommand) Usage() string {
+	return "/design [screenshot|system|component|regress] [args...]"
+}
+
 func (d *designSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	fields := strings.Fields(text)
 	if len(fields) >= 2 {

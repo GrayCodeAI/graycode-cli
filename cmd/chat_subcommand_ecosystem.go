@@ -12,10 +12,12 @@ import (
 // shows the formatted ecosystem panel (provider, model, env).
 type ecosystemSubcommand struct{}
 
-func (e *ecosystemSubcommand) Name() string        { return "ecosystem" }
-func (e *ecosystemSubcommand) Aliases() []string   { return nil }
-func (e *ecosystemSubcommand) Description() string { return "show the ecosystem panel (provider, model, env)" }
-func (e *ecosystemSubcommand) Usage() string       { return "" }
+func (e *ecosystemSubcommand) Name() string      { return "ecosystem" }
+func (e *ecosystemSubcommand) Aliases() []string { return nil }
+func (e *ecosystemSubcommand) Description() string {
+	return "show the ecosystem panel (provider, model, env)"
+}
+func (e *ecosystemSubcommand) Usage() string { return "" }
 func (e *ecosystemSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	settings, err := loadEffectiveSettings()
 	if err != nil {

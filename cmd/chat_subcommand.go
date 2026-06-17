@@ -14,13 +14,13 @@ import (
 // 2026-06) into one file per command.
 //
 // Migration path from the existing handleCommand switch statement:
-//   1. Create a new file cmd/chat_subcommand_<name>.go with a
-//      type implementing ChatSubcommand.
-//   2. Implement the existing handler logic in Handle().
-//   3. Register the subcommand in init() or in a package-level
-//      subcommand registry.
-//   4. Replace the case in handleCommand with a lookup against
-//      the registry.
+//  1. Create a new file cmd/chat_subcommand_<name>.go with a
+//     type implementing ChatSubcommand.
+//  2. Implement the existing handler logic in Handle().
+//  3. Register the subcommand in init() or in a package-level
+//     subcommand registry.
+//  4. Replace the case in handleCommand with a lookup against
+//     the registry.
 //
 // The interface lives in this file (not chat_commands.go) so that
 // subcommand implementations can be defined in any file without

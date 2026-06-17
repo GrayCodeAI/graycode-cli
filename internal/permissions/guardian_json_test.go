@@ -273,7 +273,7 @@ func TestGuardian_ParseFailureDoesNotIncrementCounter(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		_, err := g.Review(context.Background(), GuardianRequest{
-			ToolName: "Bash",
+			ToolName:  "Bash",
 			Arguments: map[string]interface{}{"cmd": "ls"},
 		})
 		if !errors.Is(err, ErrGuardianUnparseable) {
@@ -298,7 +298,7 @@ func TestGuardian_SuccessfulDenyIncrementsCounter(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		_, _ = g.Review(context.Background(), GuardianRequest{
-			ToolName: "Bash",
+			ToolName:  "Bash",
 			Arguments: map[string]interface{}{"cmd": "rm -rf /"},
 		})
 	}
@@ -318,7 +318,7 @@ func TestGuardian_SurroundingTextDoesNotBreakParse(t *testing.T) {
 		return "I reviewed this. The answer is: {\"allowed\": true, \"reason\": \"safe\", \"confidence\": 0.95} That's my call.", nil
 	})
 	d, err := g.Review(context.Background(), GuardianRequest{
-		ToolName: "Bash",
+		ToolName:  "Bash",
 		Arguments: map[string]interface{}{"cmd": "ls"},
 	})
 	if err != nil {

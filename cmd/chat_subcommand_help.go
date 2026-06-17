@@ -75,4 +75,3 @@ func dynamicHelpText() string {
 func init() {
 	subcommandRegistry.Register(&helpSubcommand{})
 }
-
