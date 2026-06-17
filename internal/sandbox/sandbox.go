@@ -229,6 +229,15 @@ func Available() bool {
 // the provided SandboxConfig. It returns the executable name and argument
 // list suitable for exec.Command, or an error if no sandbox backend is available.
 func WrapCommand(command string, cfg SandboxConfig) (string, []string, error) {
+	// Resolve the tier once. Empty string (legacy callers that
+	// don't know about Tier) keeps the old TierOff behavior;
+	// new callers can pass TierWorkspace to get the safer
+	// default. This makes the new Config.Tier=TierWorkspace
+	// default effective through the legacy SandboxConfig path.
+	tier := cfg.Tier
+	if tier == "" {
+		tier = TierOff
+	}
 	switch runtime.GOOS {
 	case "darwin":
 		if SeatbeltAvailable() {
@@ -236,7 +245,7 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string, error) {
 			if workDir == "" {
 				workDir, _ = os.Getwd()
 			}
-			policy := DefaultHawkPolicy(workDir, TierOff) // WrapCommand's SandboxConfig has no Tier field
+			policy := DefaultHawkPolicy(workDir, tier)
 			policy.AllowNetwork = cfg.AllowNetwork
 			// Write profile to temp file
 			tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")

@@ -16,6 +16,12 @@ type SandboxConfig struct {
 	Mode         Mode
 	WorkspaceDir string
 	AllowNetwork bool
+	// Tier selects the security tier (strict / workspace / off).
+	// Empty defaults to TierOff for back-compat with legacy
+	// callers that don't know about tiers. New callers should
+	// set Tier explicitly (typically TierWorkspace to match
+	// the Config.Tier default in DefaultConfig).
+	Tier Tier
 }
 
 // ParseMode converts a string to a Mode. Unrecognized values default to
