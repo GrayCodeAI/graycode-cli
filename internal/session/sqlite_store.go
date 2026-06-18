@@ -128,10 +128,20 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 
+	// SQLite serializes writes; a single connection avoids "database is
+	// locked" errors under concurrent access.
+	db.SetMaxOpenConns(1)
+
 	// Enable WAL mode for better concurrent read performance.
 	if _, err := db.ExecContext(context.Background(), "PRAGMA journal_mode=WAL"); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("set WAL mode: %w", err)
+	}
+
+	// Set a busy timeout so concurrent writers wait instead of failing.
+	if _, err := db.ExecContext(context.Background(), "PRAGMA busy_timeout=5000"); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("set busy timeout: %w", err)
 	}
 
 	// Enable foreign keys.
