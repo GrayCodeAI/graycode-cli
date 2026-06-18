@@ -76,9 +76,19 @@ func NewWithAPIKey(addr, apiKey string) *Server {
 
 // registerRoutes sets up the HTTP endpoints.
 func (s *Server) registerRoutes() {
-	s.mux.HandleFunc("GET /health", s.handleHealth)
-	s.mux.HandleFunc("GET /version", s.handleVersion)
-	s.mux.HandleFunc("POST /chat", s.auth(s.handleChat))
+	s.mux.HandleFunc("GET /health", securityHeaders(s.handleHealth))
+	s.mux.HandleFunc("GET /version", securityHeaders(s.handleVersion))
+	s.mux.HandleFunc("POST /chat", securityHeaders(s.auth(s.handleChat)))
+}
+
+// securityHeaders sets standard HTTP security headers on every response.
+func securityHeaders(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Cache-Control", "no-store")
+		next(w, r)
+	}
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
