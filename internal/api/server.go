@@ -5,11 +5,13 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 const maxRequestBodyBytes = 1 << 20
@@ -74,9 +76,19 @@ func NewWithAPIKey(addr, apiKey string) *Server {
 
 // registerRoutes sets up the HTTP endpoints.
 func (s *Server) registerRoutes() {
-	s.mux.HandleFunc("GET /health", s.handleHealth)
-	s.mux.HandleFunc("GET /version", s.handleVersion)
-	s.mux.HandleFunc("POST /chat", s.auth(s.handleChat))
+	s.mux.HandleFunc("GET /health", securityHeaders(s.handleHealth))
+	s.mux.HandleFunc("GET /version", securityHeaders(s.handleVersion))
+	s.mux.HandleFunc("POST /chat", securityHeaders(s.auth(s.handleChat)))
+}
+
+// securityHeaders sets standard HTTP security headers on every response.
+func securityHeaders(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Cache-Control", "no-store")
+		next(w, r)
+	}
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
@@ -110,6 +122,35 @@ func constantTimeEqual(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
+// validateAuthConfig refuses to start the server with no API key on a
+// non-loopback bind. The auth middleware silently allows every request when
+// the API key is empty, so a misconfigured server would be wide open. The
+// only safe no-key mode is loopback bind.
+func (s *Server) validateAuthConfig() error {
+	if s.apiKey != "" {
+		return nil
+	}
+	host, _, err := net.SplitHostPort(s.addr)
+	if err != nil {
+		return fmt.Errorf("api: invalid bind address %q: %w", s.addr, err)
+	}
+	if !isLoopbackHost(host) {
+		return fmt.Errorf("api: apiKey is empty and bind address %q is not loopback; refusing to start. Set apiKey or bind to 127.0.0.1", s.addr)
+	}
+	return nil
+}
+
+// isLoopbackHost reports whether host is a loopback address.
+func isLoopbackHost(host string) bool {
+	if host == "" || host == "localhost" {
+		return host == "localhost" // "" is unsafe; "localhost" is loopback
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
+}
+
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	dec := json.NewDecoder(r.Body)
@@ -127,10 +168,17 @@ func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) bool {
 
 // Start starts the HTTP server. It blocks until the context is cancelled or an error occurs.
 func (s *Server) Start(ctx context.Context) error {
+	if err := s.validateAuthConfig(); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	s.server = &http.Server{
-		Addr:    s.addr,
-		Handler: s.mux,
+		Addr:              s.addr,
+		Handler:           s.mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 	s.mu.Unlock()
 
@@ -151,7 +199,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return err
 }
 
-// Stop gracefully shuts down the HTTP server.
+// Stop gracefully shuts down the HTTP server with a 15-second timeout.
 func (s *Server) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	srv := s.server
@@ -160,7 +208,12 @@ func (s *Server) Stop(ctx context.Context) error {
 	if srv == nil {
 		return nil
 	}
-	return srv.Shutdown(ctx)
+	// Use a bounded timeout so Stop cannot hang indefinitely if a
+	// client keeps a connection open. The caller's ctx is respected
+	// if it has a shorter deadline.
+	shutdownCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	return srv.Shutdown(shutdownCtx)
 }
 
 // Handler returns the underlying http.Handler for testing purposes.

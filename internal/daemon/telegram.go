@@ -152,17 +152,23 @@ func (tg *TelegramGateway) handleMessage(ctx context.Context, msg *TelegramMessa
 		response = fmt.Sprintf("Error: %v", err)
 	}
 
-	// Format for Telegram (truncate if too long)
-	if len(response) > 4000 {
-		response = response[:4000] + "\n\n... (truncated)"
+	// Format for Telegram (truncate if too long, at rune boundary)
+	if len([]rune(response)) > 4000 {
+		response = string([]rune(response)[:4000]) + "\n\n... (truncated)"
 	}
 
 	_ = tg.sendMessage(ctx, msg.Chat.ID, response)
 }
 
 func (tg *TelegramGateway) forwardToHawk(ctx context.Context, prompt string) (string, error) {
-	payload := fmt.Sprintf(`{"prompt":%q}`, prompt)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tg.DaemonAddr+"/v1/chat", strings.NewReader(payload))
+	// Use json.Marshal for safe JSON encoding instead of fmt.Sprintf
+	// with %q, which does not handle all JSON edge cases (e.g., control
+	// characters, surrogate pairs).
+	payload, err := json.Marshal(map[string]string{"prompt": prompt})
+	if err != nil {
+		return "", fmt.Errorf("encode prompt: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tg.DaemonAddr+"/v1/chat", strings.NewReader(string(payload)))
 	if err != nil {
 		return "", err
 	}
@@ -177,7 +183,8 @@ func (tg *TelegramGateway) forwardToHawk(ctx context.Context, prompt string) (st
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	body, _ := io.ReadAll(resp.Body)
+	// Limit response body to 1 MiB to prevent memory exhaustion.
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var chatResp struct {
 		Response string `json:"response"`
 	}
