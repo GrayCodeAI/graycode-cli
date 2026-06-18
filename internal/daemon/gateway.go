@@ -29,7 +29,7 @@ func forwardToHawk(ctx context.Context, client *http.Client, daemonAddr, apiKey,
 		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var chatResp struct {
 		Response string `json:"response"`
 	}

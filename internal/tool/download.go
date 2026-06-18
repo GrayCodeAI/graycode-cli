@@ -47,7 +47,7 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err := validatePathAllowed(ctx, p.Destination); err != nil {
 		return "", err
 	}
-	pinnedURL, err := validateURLPublic(ctx, p.URL)
+	pinnedURL, origHost, err := validateURLPublic(ctx, p.URL)
 	if err != nil {
 		return "", err
 	}
@@ -56,6 +56,10 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pinnedURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("create request: %w", err)
+	}
+	// Preserve the original Host header for virtual-host routing.
+	if origHost != "" {
+		req.Host = origHost
 	}
 	resp, err := client.Do(req)
 	if err != nil {

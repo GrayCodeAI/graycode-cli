@@ -94,9 +94,11 @@ func RetryExecutor(ctx context.Context, t Tool, input []byte, policy RetryPolicy
 			break
 		}
 		// Wait, respecting ctx cancellation.
+		timer := time.NewTimer(delay)
 		select {
-		case <-time.After(delay):
+		case <-timer.C:
 		case <-ctx.Done():
+			timer.Stop()
 			return out, ctx.Err()
 		}
 		delay *= 2

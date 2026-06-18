@@ -76,10 +76,12 @@ func Do(ctx context.Context, cfg Config, fn func() error) error {
 			return err
 		}
 		delay := backoff(i, cfg.BaseDelay, cfg.MaxDelay, cfg.Multiplier)
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return ctx.Err()
-		case <-time.After(delay):
+		case <-timer.C:
 		}
 	}
 	return err
@@ -102,10 +104,12 @@ func DoWithResult[T any](ctx context.Context, cfg Config, fn func() (T, error)) 
 			return result, err
 		}
 		delay := backoff(i, cfg.BaseDelay, cfg.MaxDelay, cfg.Multiplier)
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return result, ctx.Err()
-		case <-time.After(delay):
+		case <-timer.C:
 		}
 	}
 	return result, err

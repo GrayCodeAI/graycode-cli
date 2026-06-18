@@ -256,9 +256,12 @@ func isBase64Injection(s string) bool {
 	if len(s) < minBase64Len {
 		return false
 	}
-	// Check if the line is mostly base64 characters (letters, digits, +, /, =)
+	// Count base64-legal bytes (all ASCII). Using byte iteration instead
+	// of rune iteration keeps the count consistent with len(s) (which is
+	// a byte count), so the ratio is correct for multi-byte UTF-8 input.
 	b64Chars := 0
-	for _, c := range s {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
 		if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=' {
 			b64Chars++
 		}
