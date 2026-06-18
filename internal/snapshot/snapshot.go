@@ -83,6 +83,12 @@ func (t *Tracker) Init() error {
 
 // Track takes a snapshot of the current project state. Returns the commit hash.
 func (t *Tracker) Track(message string) (string, error) {
+	return t.TrackCtx(context.Background(), message)
+}
+
+// TrackCtx is like Track but respects ctx, allowing callers to bound slow
+// git operations (e.g., a hung filesystem) and avoid goroutine leaks.
+func (t *Tracker) TrackCtx(ctx context.Context, message string) (string, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -91,23 +97,23 @@ func (t *Tracker) Track(message string) (string, error) {
 	}
 
 	// Add all files from project dir
-	if err := t.gitWork("add", "--all", t.projectDir); err != nil {
+	if err := t.gitWorkCtx(ctx, "add", "--all", t.projectDir); err != nil {
 		return "", fmt.Errorf("add: %w", err)
 	}
 
 	// Check if there are changes to commit
-	if err := t.gitWork("diff", "--cached", "--quiet"); err == nil {
+	if err := t.gitWorkCtx(ctx, "diff", "--cached", "--quiet"); err == nil {
 		// No changes — return current HEAD
-		out, _ := t.gitWorkOutput("rev-parse", "--short", "HEAD")
+		out, _ := t.gitWorkOutputCtx(ctx, "rev-parse", "--short", "HEAD")
 		return strings.TrimSpace(out), nil
 	}
 
 	// Commit
-	if err := t.gitWork("commit", "-m", message, "--allow-empty"); err != nil {
+	if err := t.gitWorkCtx(ctx, "commit", "-m", message, "--allow-empty"); err != nil {
 		return "", fmt.Errorf("commit: %w", err)
 	}
 
-	out, err := t.gitWorkOutput("rev-parse", "--short", "HEAD")
+	out, err := t.gitWorkOutputCtx(ctx, "rev-parse", "--short", "HEAD")
 	if err != nil {
 		return "", err
 	}
@@ -215,7 +221,11 @@ func (t *Tracker) Cleanup(maxAge time.Duration) error {
 }
 
 func (t *Tracker) gitWork(args ...string) error {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	return t.gitWorkCtx(context.Background(), args...)
+}
+
+func (t *Tracker) gitWorkCtx(ctx context.Context, args ...string) error {
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = t.shadowDir
 	cmd.Env = append(
 		os.Environ(),
@@ -230,7 +240,11 @@ func (t *Tracker) gitWork(args ...string) error {
 }
 
 func (t *Tracker) gitWorkOutput(args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	return t.gitWorkOutputCtx(context.Background(), args...)
+}
+
+func (t *Tracker) gitWorkOutputCtx(ctx context.Context, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = t.shadowDir
 	cmd.Env = append(
 		os.Environ(),

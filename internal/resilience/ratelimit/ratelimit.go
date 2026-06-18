@@ -70,10 +70,12 @@ func (l *Limiter) Wait(ctx context.Context) error {
 		}
 		l.mu.Unlock()
 
+		timer := time.NewTimer(waitTime)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return ctx.Err()
-		case <-time.After(waitTime):
+		case <-timer.C:
 			// Try again
 		}
 	}

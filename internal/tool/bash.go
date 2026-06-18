@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -128,6 +129,29 @@ func ContainerExecutorFromContext(ctx context.Context) ContainerExecutor {
 		return ce
 	}
 	return nil
+}
+
+// limitedWriter is an io.Writer that caps the total bytes stored in its
+// internal buffer. Once the limit is reached, subsequent writes are silently
+// discarded (but still counted). This prevents unbounded memory growth from
+// commands that produce huge output (e.g., cat /dev/urandom, yes) — the
+// command continues to run and is eventually killed by the context timeout,
+// but the process memory stays bounded.
+type limitedWriter struct {
+	buf      bytes.Buffer
+	maxBytes int
+}
+
+func (w *limitedWriter) Write(p []byte) (int, error) {
+	if w.buf.Len() >= w.maxBytes {
+		return len(p), nil // silently discard, keep the command unblocked
+	}
+	remaining := w.maxBytes - w.buf.Len()
+	if len(p) > remaining {
+		w.buf.Write(p[:remaining])
+		return len(p), nil
+	}
+	return w.buf.Write(p)
 }
 
 type BashTool struct{}
@@ -585,10 +609,24 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 
 	cmd := exec.CommandContext(ctx, execName, execArgs...)
-	out, err := cmd.CombinedOutput()
-	result := string(out)
+	// Use a limitedWriter to cap output at maxOutputBytes instead of
+	// CombinedOutput, which buffers the entire output in memory. A command
+	// like `yes` or `cat /dev/urandom` can produce GBs before the timeout
+	// kills it; the limitedWriter keeps memory bounded while the command
+	// continues to run (writes are silently discarded after the cap).
+	var lw limitedWriter
+	// Cap one byte above maxOutputBytes so that TruncateOutput's > branch
+	// fires when the cap is reached. At exactly maxOutputBytes (no discard)
+	// TruncateOutput returns unchanged, which is correct.
+	lw.maxBytes = maxOutputBytes + 1
+	cmd.Stdout = &lw
+	cmd.Stderr = &lw
+	err := cmd.Run()
+	result := lw.buf.String()
 
-	// Apply safety output truncation (50KB).
+	// Apply safety output truncation (50KB) — the limitedWriter may have
+	// captured up to maxOutputBytes (500KB), so we still truncate for the
+	// final result returned to the model.
 	result = TruncateOutput(result)
 	result = strings.TrimRight(result, "\n")
 

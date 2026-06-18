@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 )
@@ -59,15 +60,41 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	// Backup existing file before overwriting
 	if _, statErr := os.Stat(path); statErr == nil {
 		if _, backupErr := BackupFile(path); backupErr != nil {
-			// Best-effort backup — log but don't block the write
-			_ = backupErr
+			// Log the backup failure so the user knows the original may
+			// be lost on a bad write. Previously this was silently dropped.
+			slog.Warn("file write: backup failed, proceeding with overwrite", "path", path, "error", backupErr)
 		}
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
-	if err := os.WriteFile(path, []byte(p.Content), 0o644); err != nil {
-		return "", fmt.Errorf("write: %w", err)
+	// Write atomically: temp file in the same directory → sync → rename.
+	// This prevents file corruption if the process crashes mid-write,
+	// which os.WriteFile (truncate-then-write) cannot guarantee.
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".hawk-write-*")
+	if err != nil {
+		return "", fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }() // cleanup if rename fails
+
+	if _, err := tmp.Write([]byte(p.Content)); err != nil {
+		_ = tmp.Close()
+		return "", fmt.Errorf("write temp: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return "", fmt.Errorf("sync temp: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return "", fmt.Errorf("close temp: %w", err)
+	}
+	if err := os.Chmod(tmpPath, 0o644); err != nil {
+		return "", fmt.Errorf("chmod temp: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return "", fmt.Errorf("rename: %w", err)
 	}
 	if autoCommitEnabled(ctx) {
 		_ = AutoCommit(ctx, path, "Write", "wrote file")

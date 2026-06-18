@@ -460,9 +460,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"reason":  retryReason,
 				"error":   streamErr.Error(),
 			})
+			retryTimer := time.NewTimer(time.Duration(streamAttempt+1) * time.Second)
 			select {
-			case <-time.After(time.Duration(streamAttempt+1) * time.Second):
+			case <-retryTimer.C:
 			case <-ctx.Done():
+				retryTimer.Stop()
 				ch <- StreamEvent{Type: "error", Content: "stream retry cancelled: " + ctx.Err().Error()}
 				result.Close()
 				return
@@ -730,7 +732,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if len(writeNames) > 0 {
-				go func() { _, _ = s.Snapshots.Track(strings.Join(writeNames, ", ")) }()
+				go func() {
+					// Bound the snapshot so a slow filesystem doesn't
+					// leak a goroutine after the session ends.
+					snapCtx, snapCancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer snapCancel()
+					_, _ = s.Snapshots.TrackCtx(snapCtx, strings.Join(writeNames, ", "))
+				}()
 			}
 		}
 

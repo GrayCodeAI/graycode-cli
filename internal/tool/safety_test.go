@@ -654,7 +654,7 @@ func TestResolvePath_Symlink(t *testing.T) {
 
 func TestValidateURLPublic_SkipContext(t *testing.T) {
 	ctx := WithSSRFSkip(t.Context())
-	got, err := validateURLPublic(ctx, "http://127.0.0.1/metadata")
+	got, _, err := validateURLPublic(ctx, "http://127.0.0.1/metadata")
 	if err != nil {
 		t.Fatalf("expected no error with SSRF skip, got: %v", err)
 	}
@@ -665,7 +665,7 @@ func TestValidateURLPublic_SkipContext(t *testing.T) {
 
 func TestValidateURLPublic_InvalidURL(t *testing.T) {
 	ctx := t.Context()
-	_, err := validateURLPublic(ctx, "://invalid")
+	_, _, err := validateURLPublic(ctx, "://invalid")
 	if err == nil {
 		t.Error("expected error for invalid URL")
 	}
@@ -679,7 +679,7 @@ func TestValidateURLPublic_BlockedScheme(t *testing.T) {
 		"javascript:alert(1)",
 	}
 	for _, u := range cases {
-		_, err := validateURLPublic(ctx, u)
+		_, _, err := validateURLPublic(ctx, u)
 		if err == nil {
 			t.Errorf("expected error for URL scheme %q", u)
 		}
@@ -688,7 +688,7 @@ func TestValidateURLPublic_BlockedScheme(t *testing.T) {
 
 func TestValidateURLPublic_NoHost(t *testing.T) {
 	ctx := t.Context()
-	_, err := validateURLPublic(ctx, "http:///path")
+	_, _, err := validateURLPublic(ctx, "http:///path")
 	if err == nil {
 		t.Error("expected error for URL with no host")
 	}

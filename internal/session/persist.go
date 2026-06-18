@@ -21,13 +21,26 @@ func SaveMessages(path string, messages []Message) error {
 		return fmt.Errorf("marshal messages: %w", err)
 	}
 
-	// Atomic write: temp file + rename to avoid partial writes.
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	// Atomic write: temp file → sync → rename to avoid partial writes.
+	tmp, err := os.CreateTemp(dir, ".hawk-session-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create session temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }() // cleanup if rename fails
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
 		return fmt.Errorf("write session temp file: %w", err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("sync session temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close session temp file: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("rename session file: %w", err)
 	}
 	return nil

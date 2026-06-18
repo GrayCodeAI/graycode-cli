@@ -35,6 +35,7 @@ type MemoryRecaller interface {
 // SnapshotTracker abstracts the snapshot system so engine doesn't import snapshot directly.
 type SnapshotTracker interface {
 	Track(message string) (string, error)
+	TrackCtx(ctx context.Context, message string) (string, error)
 }
 
 // Session manages a conversation with an LLM via eyrie.

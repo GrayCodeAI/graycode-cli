@@ -108,7 +108,11 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 	})
 
 	np.server = &http.Server{
-		Handler: mux,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      5 * time.Minute, // long for CONNECT tunnels
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go func() {
