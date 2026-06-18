@@ -410,8 +410,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.MaxTurns > 0 {
-		if err := sess.SetMaxTurns(req.MaxTurns); err != nil {
-			slog.Error("invalid max turns", "err", err, "max_turns", req.MaxTurns)
+		if setErr := sess.SetMaxTurns(req.MaxTurns); setErr != nil {
+			slog.Error("invalid max turns", "err", setErr, "max_turns", req.MaxTurns)
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid max_turns"})
 			return
 		}

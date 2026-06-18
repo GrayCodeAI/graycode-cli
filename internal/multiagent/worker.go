@@ -46,8 +46,8 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			level = engine.AutonomyFull
 		}
 		sess.PermSvc().SetAutonomy(level)
-		if err := sess.SetMaxTurns(30); err != nil {
-			return nil, fmt.Errorf("set max turns: %w", err)
+		if setErr := sess.SetMaxTurns(30); setErr != nil {
+			return nil, fmt.Errorf("set max turns: %w", setErr)
 		}
 
 		// Auto-approve everything in mission workers
@@ -154,8 +154,8 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 			level = engine.AutonomyFull
 		}
 		sess.PermSvc().SetAutonomy(level)
-		if err := sess.SetMaxTurns(30); err != nil {
-			return nil, fmt.Errorf("set max turns: %w", err)
+		if setErr := sess.SetMaxTurns(30); setErr != nil {
+			return nil, fmt.Errorf("set max turns: %w", setErr)
 		}
 		sess.PermissionFn = func(req engine.PermissionRequest) {
 			if req.Response != nil {
