@@ -25,18 +25,18 @@ func SetClientVersion(v string) { clientVersion = v }
 
 // Server represents a connected MCP server.
 type Server struct {
-	Name    string
-	Command string
-	Args    []string
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  io.ReadCloser
-	mu      sync.Mutex
-	nextID  int
-	reader  *bufio.Scanner
-	pending map[int]chan json.RawMessage // response channels keyed by request ID
-	pendErrors map[int]string            // error details keyed by request ID
-	pendMu  sync.Mutex
+	Name       string
+	Command    string
+	Args       []string
+	cmd        *exec.Cmd
+	stdin      io.WriteCloser
+	stdout     io.ReadCloser
+	mu         sync.Mutex
+	nextID     int
+	reader     *bufio.Scanner
+	pending    map[int]chan json.RawMessage // response channels keyed by request ID
+	pendErrors map[int]string               // error details keyed by request ID
+	pendMu     sync.Mutex
 }
 
 // Tool is a tool exposed by an MCP server.
