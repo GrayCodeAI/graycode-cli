@@ -205,10 +205,19 @@ compat-test: ## Validate testdata/compatibility-matrix.json and report the 'next
 compat-check: ## Strict validation — non-zero exit if any component lacks a version.
 	@go run ./cmd/compat-test -matrix=next -strict -file=testdata/compatibility-matrix.json
 
-.PHONY: hooks
+.PHONY: hooks sync-submodules sync-clone
 hooks: ## Install git hooks via lefthook (formatting, linting, conventional commits).
 	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
 	lefthook install
+
+sync-submodules: ## Fetch and checkout latest origin/main for all external/ submodules.
+	git submodule foreach 'git fetch origin && git checkout origin/main 2>/dev/null || git checkout origin/HEAD'
+	@echo "Submodule heads:"
+	@git submodule status
+
+sync-clone: ## Hard-reset hawk and submodules to origin/main (post history rewrite).
+	@chmod +x scripts/sync-clone.sh scripts/commit-clean.sh
+	@./scripts/sync-clone.sh
 # === Cross-platform binary targets (add after existing 'build' target) ===
 
 .PHONY: build-all build-static size-check

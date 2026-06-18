@@ -81,6 +81,20 @@ only the human author. Hooks are auto-installed by `make setup` via
 make hooks
 ```
 
+**Cursor / IDE commits:** some editors inject `Co-authored-by: Cursor` via their
+own git hooks. Use the clean commit helper to bypass IDE hooks while keeping
+lefthook checks on normal commits:
+
+```bash
+./scripts/commit-clean.sh -m "fix(scope): your message"
+```
+
+**After a history rewrite:** reset stale local SHAs with:
+
+```bash
+./scripts/sync-clone.sh
+```
+
 ## Commit signing
 
 Signed commits are required in this repo.
