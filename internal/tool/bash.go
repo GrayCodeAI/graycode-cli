@@ -615,7 +615,10 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	// kills it; the limitedWriter keeps memory bounded while the command
 	// continues to run (writes are silently discarded after the cap).
 	var lw limitedWriter
-	lw.maxBytes = maxOutputBytes
+	// Cap one byte above maxOutputBytes so that TruncateOutput's > branch
+	// fires when the cap is reached. At exactly maxOutputBytes (no discard)
+	// TruncateOutput returns unchanged, which is correct.
+	lw.maxBytes = maxOutputBytes + 1
 	cmd.Stdout = &lw
 	cmd.Stderr = &lw
 	err := cmd.Run()

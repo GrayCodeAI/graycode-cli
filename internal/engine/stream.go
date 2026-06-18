@@ -737,8 +737,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					// leak a goroutine after the session ends.
 					snapCtx, snapCancel := context.WithTimeout(context.Background(), 30*time.Second)
 					defer snapCancel()
-					_ = snapCtx // Track doesn't accept ctx yet; timeout ready for future API
-					_, _ = s.Snapshots.Track(strings.Join(writeNames, ", "))
+					_, _ = s.Snapshots.TrackCtx(snapCtx, strings.Join(writeNames, ", "))
 				}()
 			}
 		}

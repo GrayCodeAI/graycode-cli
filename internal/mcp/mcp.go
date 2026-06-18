@@ -169,8 +169,9 @@ func (s *Server) readLoop() {
 	for id, ch := range s.pending {
 		close(ch)
 		delete(s.pending, id)
-	}
-	for id := range s.pendErrors {
+		// Clean up pendErrors only for requests that will never be
+		// answered. Entries for already-signaled requests (no longer in
+		// s.pending) are left for the caller to reap.
 		delete(s.pendErrors, id)
 	}
 	s.pendMu.Unlock()

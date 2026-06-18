@@ -443,19 +443,12 @@ func validateURLPublic(ctx context.Context, rawURL string) (pinnedURL, originalH
 	var safeIP string
 	for _, addr := range addrs {
 		ip := addr.IP
-		// Check for IPv4-mapped IPv6 addresses (::ffff:a.b.c.d), which
-		// bypass IPv4 CIDR checks because net.IPNet.Contains compares
-		// byte representations and an IPv4 block (4 bytes) does not
-		// contain a 16-byte IPv6 address even if it is mapped.
-		checkIPs := []net.IP{ip}
-		if v4 := ip.To4(); v4 != nil && !ip.Equal(v4) {
-			checkIPs = append(checkIPs, v4)
-		}
-		for _, checkIP := range checkIPs {
-			for _, block := range privateIPBlocks {
-				if block.Contains(checkIP) {
-					return "", "", fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, checkIP)
-				}
+		// net.IPNet.Contains calls ip.To4() internally, so IPv4-mapped IPv6
+		// addresses (::ffff:a.b.c.d) are correctly checked against IPv4 CIDR
+		// blocks — no separate handling needed.
+		for _, block := range privateIPBlocks {
+			if block.Contains(ip) {
+				return "", "", fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, ip)
 			}
 		}
 		if safeIP == "" {
