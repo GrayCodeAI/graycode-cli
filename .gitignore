@@ -25,3 +25,6 @@ hawk
 
 # Test artifacts
 coverage.out
+
+# Lefthook-generated git hook wrappers
+.githooks/
