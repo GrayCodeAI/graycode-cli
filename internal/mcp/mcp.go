@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"sync"
@@ -34,6 +35,7 @@ type Server struct {
 	nextID  int
 	reader  *bufio.Scanner
 	pending map[int]chan json.RawMessage // response channels keyed by request ID
+	pendErrors map[int]string            // error details keyed by request ID
 	pendMu  sync.Mutex
 }
 
@@ -91,14 +93,15 @@ func Connect(ctx context.Context, name, command string, args ...string) (*Server
 	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024) // 1MB buffer
 
 	s := &Server{
-		Name:    name,
-		Command: command,
-		Args:    args,
-		cmd:     cmd,
-		stdin:   stdin,
-		stdout:  stdout,
-		reader:  scanner,
-		pending: make(map[int]chan json.RawMessage),
+		Name:       name,
+		Command:    command,
+		Args:       args,
+		cmd:        cmd,
+		stdin:      stdin,
+		stdout:     stdout,
+		reader:     scanner,
+		pending:    make(map[int]chan json.RawMessage),
+		pendErrors: make(map[int]string),
 	}
 
 	// Start background reader to dispatch responses and notifications
@@ -142,6 +145,11 @@ func (s *Server) readLoop() {
 			s.pendMu.Unlock()
 			if ok {
 				if msg.Error != nil {
+					// Store error details so the caller can include them
+					// in the returned error instead of a generic message.
+					s.pendMu.Lock()
+					s.pendErrors[msg.ID] = fmt.Sprintf("code %d: %s", msg.Error.Code, msg.Error.Message)
+					s.pendMu.Unlock()
 					ch <- nil // signal error via nil
 				} else {
 					ch <- msg.Result
@@ -152,11 +160,18 @@ func (s *Server) readLoop() {
 		}
 		// Otherwise it's a notification — ignore for now
 	}
-	// Scanner done — close all pending channels
+	// Scanner done — log the cause if it was an error (e.g., oversized
+	// response exceeding the 1MB buffer), then close all pending channels.
+	if err := s.reader.Err(); err != nil {
+		slog.Warn("mcp: stdout reader stopped", "server", s.Name, "error", err)
+	}
 	s.pendMu.Lock()
 	for id, ch := range s.pending {
 		close(ch)
 		delete(s.pending, id)
+	}
+	for id := range s.pendErrors {
+		delete(s.pendErrors, id)
 	}
 	s.pendMu.Unlock()
 }
@@ -309,6 +324,7 @@ func (s *Server) callWithTimeout(ctx context.Context, method string, params inte
 	if err != nil {
 		s.pendMu.Lock()
 		delete(s.pending, id)
+		delete(s.pendErrors, id)
 		s.pendMu.Unlock()
 		return nil, fmt.Errorf("write: %w", err)
 	}
@@ -319,23 +335,40 @@ func (s *Server) callWithTimeout(ctx context.Context, method string, params inte
 		timeout = time.Until(deadline)
 	}
 
+	// Use time.NewTimer + Stop instead of time.After to avoid leaking
+	// the timer in the runtime when the response arrives or ctx is
+	// cancelled before the timeout fires.
+	timer := time.NewTimer(timeout)
 	select {
 	case result, ok := <-ch:
+		timer.Stop()
 		if !ok {
 			return nil, fmt.Errorf("mcp: connection closed")
 		}
 		if result == nil {
+			// Include the server's error code and message if available,
+			// instead of a generic "server returned error" with no detail.
+			s.pendMu.Lock()
+			errMsg := s.pendErrors[id]
+			delete(s.pendErrors, id)
+			s.pendMu.Unlock()
+			if errMsg != "" {
+				return nil, fmt.Errorf("mcp: server error: %s", errMsg)
+			}
 			return nil, fmt.Errorf("mcp: server returned error")
 		}
 		return result, nil
-	case <-time.After(timeout):
+	case <-timer.C:
 		s.pendMu.Lock()
 		delete(s.pending, id)
+		delete(s.pendErrors, id)
 		s.pendMu.Unlock()
 		return nil, fmt.Errorf("mcp: call %s timed out after %s", method, timeout)
 	case <-ctx.Done():
+		timer.Stop()
 		s.pendMu.Lock()
 		delete(s.pending, id)
+		delete(s.pendErrors, id)
 		s.pendMu.Unlock()
 		return nil, ctx.Err()
 	}

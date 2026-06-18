@@ -385,10 +385,13 @@ var privateIPBlocks []*net.IPNet
 func init() {
 	for _, cidr := range []string{
 		"127.0.0.0/8",    // loopback
+		"0.0.0.0/8",      // "this network" (RFC 1122)
 		"10.0.0.0/8",     // private
 		"172.16.0.0/12",  // private
 		"192.168.0.0/16", // private
 		"169.254.0.0/16", // link-local / cloud metadata
+		"100.64.0.0/10",  // CGN (RFC 6598)
+		"198.18.0.0/15",  // benchmark testing (RFC 2544)
 		"::1/128",        // IPv6 loopback
 		"fc00::/7",       // IPv6 unique local
 		"fe80::/10",      // IPv6 link-local
@@ -411,37 +414,48 @@ func WithSSRFSkip(ctx context.Context) context.Context {
 
 // validateURLPublic rejects URLs that resolve to private/link-local IP ranges
 // to prevent SSRF attacks (e.g., fetching AWS metadata at 169.254.169.254).
-// Returns the validated URL with the resolved IP pinned as the host, preventing
-// DNS rebinding attacks where the second resolution returns a private IP.
-func validateURLPublic(ctx context.Context, rawURL string) (string, error) {
+// Returns the validated URL with the resolved IP pinned as the host (preventing
+// DNS rebinding) and the original hostname (so callers can preserve the Host
+// header for virtual-host routing).
+func validateURLPublic(ctx context.Context, rawURL string) (pinnedURL, originalHost string, err error) {
 	if ctx.Value(ssrfSkipKey{}) != nil {
-		return rawURL, nil
+		return rawURL, "", nil
 	}
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return "", fmt.Errorf("invalid URL: %w", err)
+		return "", "", fmt.Errorf("invalid URL: %w", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", fmt.Errorf("blocked: only http/https URLs are allowed")
+		return "", "", fmt.Errorf("blocked: only http/https URLs are allowed")
 	}
 
 	host := u.Hostname()
 	if host == "" {
-		return "", fmt.Errorf("blocked: URL has no host")
+		return "", "", fmt.Errorf("blocked: URL has no host")
 	}
 
 	// Resolve the hostname to check against private ranges.
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		// DNS failure — block the request rather than allowing potential SSRF bypass.
-		return "", fmt.Errorf("blocked: DNS resolution failed for %q: %w", host, err)
+		return "", "", fmt.Errorf("blocked: DNS resolution failed for %q: %w", host, err)
 	}
 	var safeIP string
 	for _, addr := range addrs {
 		ip := addr.IP
-		for _, block := range privateIPBlocks {
-			if block.Contains(ip) {
-				return "", fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, ip)
+		// Check for IPv4-mapped IPv6 addresses (::ffff:a.b.c.d), which
+		// bypass IPv4 CIDR checks because net.IPNet.Contains compares
+		// byte representations and an IPv4 block (4 bytes) does not
+		// contain a 16-byte IPv6 address even if it is mapped.
+		checkIPs := []net.IP{ip}
+		if v4 := ip.To4(); v4 != nil && !ip.Equal(v4) {
+			checkIPs = append(checkIPs, v4)
+		}
+		for _, checkIP := range checkIPs {
+			for _, block := range privateIPBlocks {
+				if block.Contains(checkIP) {
+					return "", "", fmt.Errorf("blocked: URL %q resolves to private IP %s", rawURL, checkIP)
+				}
 			}
 		}
 		if safeIP == "" {
@@ -449,17 +463,18 @@ func validateURLPublic(ctx context.Context, rawURL string) (string, error) {
 		}
 	}
 	if safeIP == "" {
-		return "", fmt.Errorf("blocked: URL %q resolved to no addresses", rawURL)
+		return "", "", fmt.Errorf("blocked: URL %q resolved to no addresses", rawURL)
 	}
 
 	// Pin the IP to prevent DNS rebinding: replace host with the validated IP.
-	// Preserve the original Host header via a separate mechanism if needed.
+	// The caller should set req.Host to originalHost to preserve virtual-host
+	// routing (most web servers route by Host header, not by IP).
 	if u.Port() != "" {
 		u.Host = net.JoinHostPort(safeIP, u.Port())
 	} else {
 		u.Host = safeIP
 	}
-	return u.String(), nil
+	return u.String(), host, nil
 }
 
 // ssrfSafeClient returns an http.Client that validates redirect targets
@@ -476,7 +491,7 @@ func ssrfSafeClient(ctx context.Context, timeout time.Duration) *http.Client {
 			if ctx.Value(ssrfSkipKey{}) != nil {
 				return nil
 			}
-			pinned, err := validateURLPublic(ctx, req.URL.String())
+			pinned, origHost, err := validateURLPublic(ctx, req.URL.String())
 			if err != nil {
 				return err
 			}
@@ -487,6 +502,11 @@ func ssrfSafeClient(ctx context.Context, timeout time.Duration) *http.Client {
 				return parseErr
 			}
 			req.URL = parsed
+			// Preserve the original Host header so virtual-host routing
+			// works correctly on the redirect target.
+			if origHost != "" {
+				req.Host = origHost
+			}
 			return nil
 		},
 	}
