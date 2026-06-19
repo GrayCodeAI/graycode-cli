@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/GrayCodeAI/hawk/cmd"
-	"github.com/GrayCodeAI/hawk/internal/api"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -37,7 +36,6 @@ func main() {
 	// to avoid an import cycle with main.
 	cmd.SetVersion(Version)
 	cmd.SetBuildDate(BuildDate)
-	api.SetVersion(Version)
 	mcp.SetClientVersion(Version)
 	sandbox.ContainerImageTag = Version
 
