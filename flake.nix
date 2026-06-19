@@ -29,6 +29,8 @@
           "github.com/GrayCodeAI/yaad"    = yaad;
         };
 
+        # GrayCode modules currently follow github.com/<org>/<name>, so the
+        # last path segment matches the sibling checkout directory name.
         dirOf = mod: lib.last (lib.splitString "/" mod);
         goVer = lib.removePrefix "go" "${pkgs.go_1_26.version}";
 
@@ -41,6 +43,9 @@
           mkdir -p external
           ${lib.concatStringsSep "\n" (lib.mapAttrsToList (mod: src:
             "cp -r ${src} external/${dirOf mod}"
+          ) siblings)}
+          ${lib.concatStringsSep "\n" (lib.mapAttrsToList (mod: _:
+            "tmp_go_mod=$(mktemp) && awk '$0 != \"replace ${mod} => ./external/${dirOf mod}\"' go.mod > \"$tmp_go_mod\" && mv \"$tmp_go_mod\" go.mod"
           ) siblings)}
           ${lib.concatStringsSep "\n" (lib.mapAttrsToList (mod: _:
             "echo \"replace ${mod} => ./external/${dirOf mod}\" >> go.mod"
