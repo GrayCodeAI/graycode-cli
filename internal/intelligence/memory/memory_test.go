@@ -2,15 +2,21 @@ package memory
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-func TestSaveAndLoad(t *testing.T) {
+func setTestStorage(t *testing.T) {
+	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	storage.SetTestDirs(t, dir)
+}
+
+func TestSaveAndLoad(t *testing.T) {
+	setTestStorage(t)
 
 	m := &Memory{
 		Content: "Important decision about architecture",
@@ -40,8 +46,7 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestSave_SetsDefaults(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	m := &Memory{Content: "test"}
 	if err := Save(m); err != nil {
@@ -56,8 +61,7 @@ func TestSave_SetsDefaults(t *testing.T) {
 }
 
 func TestSave_PreservesExistingID(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	m := &Memory{ID: "custom-id", Content: "test"}
 	if err := Save(m); err != nil {
@@ -69,8 +73,7 @@ func TestSave_PreservesExistingID(t *testing.T) {
 }
 
 func TestLoad_NotFound(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	_, err := Load("nonexistent")
 	if err == nil {
@@ -79,8 +82,7 @@ func TestLoad_NotFound(t *testing.T) {
 }
 
 func TestList_Empty(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	memories, err := List()
 	if err != nil {
@@ -92,8 +94,7 @@ func TestList_Empty(t *testing.T) {
 }
 
 func TestList_Multiple(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	for i := 0; i < 5; i++ {
 		m := &Memory{ID: fmt.Sprintf("mem_%d", i), Content: "memory content"}
@@ -112,8 +113,7 @@ func TestList_Multiple(t *testing.T) {
 }
 
 func TestSearch_ByContent(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	memories := []*Memory{
 		{Content: "Architecture decision: use Go for the backend"},
@@ -136,8 +136,7 @@ func TestSearch_ByContent(t *testing.T) {
 }
 
 func TestSearch_ByTag(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	m := &Memory{Content: "some content", Tags: []string{"golang", "backend"}}
 	if err := Save(m); err != nil {
@@ -154,8 +153,7 @@ func TestSearch_ByTag(t *testing.T) {
 }
 
 func TestSearch_NoMatch(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	m := &Memory{Content: "architecture decision"}
 	if err := Save(m); err != nil {
@@ -172,8 +170,7 @@ func TestSearch_NoMatch(t *testing.T) {
 }
 
 func TestSearch_CaseInsensitive(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	m := &Memory{Content: "IMPORTANT architecture DECISION"}
 	if err := Save(m); err != nil {
@@ -276,8 +273,8 @@ func TestConsolidate_AllUnique(t *testing.T) {
 func TestMemoryDir(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	stateDir := filepath.Join(dir, "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	storage.SetTestDirs(t, dir)
+	stateDir := storage.StateDir()
 
 	d := memoryDir()
 	if !strings.HasPrefix(d, stateDir) {
@@ -289,10 +286,19 @@ func TestMemoryDir(t *testing.T) {
 }
 
 func TestSaveAndLoad_WithNoHome(t *testing.T) {
+	dir := t.TempDir()
 	t.Setenv("HOME", "/nonexistent-path-12345")
+	storage.SetTestDirs(t, dir)
+
 	m := &Memory{Content: "test"}
-	err := Save(m)
-	if err == nil {
-		_ = os.Remove("/nonexistent-path-12345/.hawk/memories/" + m.ID + ".json")
+	if err := Save(m); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(m.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Content != m.Content {
+		t.Fatalf("content mismatch: %q vs %q", loaded.Content, m.Content)
 	}
 }

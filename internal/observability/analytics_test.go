@@ -6,13 +6,22 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
+
+func setTestStorage(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	storage.SetTestDirs(t, dir)
+}
 
 func TestLogEvent(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	stateDir := filepath.Join(dir, "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	storage.SetTestDirs(t, dir)
+	stateDir := storage.StateDir()
 
 	LogEvent("test_event", "session-123", map[string]interface{}{"key": "value"})
 
@@ -30,8 +39,7 @@ func TestLogEvent(t *testing.T) {
 }
 
 func TestSaveAndGetTraces(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	trace := &SessionTrace{
 		SessionID:    "test-session",
@@ -63,8 +71,7 @@ func TestSaveAndGetTraces(t *testing.T) {
 }
 
 func TestSummary(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	setTestStorage(t)
 
 	// Test empty summary
 	summary := Summary()
