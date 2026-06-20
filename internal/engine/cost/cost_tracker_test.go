@@ -1,17 +1,15 @@
 package cost
 
 import (
-	"os"
 	"testing"
 	"time"
 
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestCostTracker_NewAndRecord(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	ct := NewCostTracker("test-session")
 	if ct == nil {
@@ -31,9 +29,7 @@ func TestCostTracker_NewAndRecord(t *testing.T) {
 }
 
 func TestCostTracker_SessionTotal(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	ct := NewCostTracker("total-test")
 	_ = ct.Record(analytics.CostEntry{CostUSD: 0.01, Timestamp: time.Now()})
@@ -46,9 +42,7 @@ func TestCostTracker_SessionTotal(t *testing.T) {
 }
 
 func TestCostTracker_Entries(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	ct := NewCostTracker("entries-test")
 	_ = ct.Record(analytics.CostEntry{Model: "m1", CostUSD: 0.01, Timestamp: time.Now()})
@@ -61,9 +55,7 @@ func TestCostTracker_Entries(t *testing.T) {
 }
 
 func TestLoadCostHistory(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	ct := NewCostTracker("history-test")
 	_ = ct.Record(analytics.CostEntry{Model: "test", CostUSD: 0.05, Timestamp: time.Now()})

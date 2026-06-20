@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Rule is defined in rules.go with the Action type.
@@ -52,5 +54,5 @@ func Load(path string) ([]Rule, error) {
 
 // DefaultPath returns the default permissions file path for a project directory.
 func DefaultPath(projectDir string) string {
-	return filepath.Join(projectDir, ".hawk", "permissions.json")
+	return filepath.Join(storage.ProjectStateDir(projectDir), "permissions.json")
 }

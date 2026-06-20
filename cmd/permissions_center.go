@@ -259,7 +259,7 @@ func rebuildSessionPermissionRules(sess *engine.Session, settings hawkconfig.Set
 func savePermissionSettings(scope string, settings hawkconfig.Settings, level engine.AutonomyLevel) (string, error) {
 	scope = strings.ToLower(strings.TrimSpace(scope))
 	if scope == "" {
-		scope = "project"
+		scope = "global"
 	}
 	settings.Autonomy = permissionTierSettingValue(level)
 	settings.Sandbox = effectivePermissionSandbox(settings)
@@ -268,16 +268,7 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 
 	switch scope {
 	case "project":
-		target := hawkconfig.LoadProjectSettings()
-		target.AutoAllow = append([]string{}, settings.AutoAllow...)
-		target.AllowedTools = append([]string{}, settings.AllowedTools...)
-		target.DisallowedTools = append([]string{}, settings.DisallowedTools...)
-		target.Autonomy = settings.Autonomy
-		target.Sandbox = settings.Sandbox
-		if err := hawkconfig.SaveProject(target); err != nil {
-			return "", err
-		}
-		return ".hawk/settings.json", nil
+		return "", fmt.Errorf("project-local settings writes are disabled; use scope \"global\" or an explicit --settings file")
 	case "global":
 		target := hawkconfig.LoadGlobalSettings()
 		target.AutoAllow = append([]string{}, settings.AutoAllow...)
@@ -288,7 +279,7 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 		if err := hawkconfig.SaveGlobal(target); err != nil {
 			return "", err
 		}
-		return "~/.hawk/settings.json", nil
+		return "user settings", nil
 	default:
 		return "", fmt.Errorf("valid save scopes: project, global")
 	}

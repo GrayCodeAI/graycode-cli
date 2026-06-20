@@ -239,7 +239,7 @@ func TestDefaultSkillDirsCrossAgent(t *testing.T) {
 		if strings.Contains(d, ".codex/skills") {
 			found["codex"] = true
 		}
-		if strings.Contains(d, ".hawk/skills") {
+		if strings.Contains(d, "hawk") && strings.Contains(d, "skills") && !strings.Contains(d, ".hawk/skills") {
 			found["hawk"] = true
 		}
 	}
@@ -248,7 +248,7 @@ func TestDefaultSkillDirsCrossAgent(t *testing.T) {
 			t.Errorf("expected %s skills directory", agent)
 		}
 	}
-	if len(dirs) < 8 {
-		t.Errorf("expected at least 8 dirs, got %d", len(dirs))
+	if len(dirs) < 7 {
+		t.Errorf("expected at least 7 dirs, got %d", len(dirs))
 	}
 }

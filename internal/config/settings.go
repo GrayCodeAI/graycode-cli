@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
@@ -19,7 +20,6 @@ import (
 	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -150,56 +150,23 @@ type MCPServerConfig struct {
 }
 
 func globalSettingsPath() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "settings.json")
+	return storage.SettingsPath()
 }
 
-func projectSettingsPath() string {
-	return filepath.Join(".hawk", "settings.json")
-}
-
-// LoadGlobalSettings loads only ~/.hawk/settings.json.
+// LoadGlobalSettings loads only Hawk's user config settings.json.
 func LoadGlobalSettings() Settings {
 	var s Settings
 	if data, err := os.ReadFile(globalSettingsPath()); err == nil {
 		if err := json.Unmarshal(data, &s); err != nil {
-			// Settings file exists but is malformed — log but don't crash.
 			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", globalSettingsPath(), err)
 		}
 	}
 	return s
 }
 
-// LoadProjectSettings loads only the project-level .hawk/settings.json.
-// Returns a zero-value Settings if the file does not exist.
-func LoadProjectSettings() Settings {
-	var s Settings
-	if data, err := os.ReadFile(projectSettingsPath()); err == nil {
-		if err := json.Unmarshal(data, &s); err != nil {
-			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", projectSettingsPath(), err)
-		}
-	}
-	return s
-}
-
-// ProjectMCPServers returns MCP servers defined in the project-level
-// .hawk/settings.json (not global). Returns nil if the file does not exist
-// or defines no MCP servers.
-func ProjectMCPServers() []MCPServerConfig {
-	proj := LoadProjectSettings()
-	return proj.MCPServers
-}
-
-// LoadSettings loads settings from global + project, with project overriding global.
+// LoadSettings loads settings from user config.
 func LoadSettings() Settings {
 	s := LoadGlobalSettings()
-	// Project overrides
-	var proj Settings
-	if data, err := os.ReadFile(projectSettingsPath()); err == nil {
-		if json.Unmarshal(data, &proj) == nil {
-			s = MergeSettings(s, proj)
-		}
-	}
 	migrateLegacyModelProvider(&s)
 	return s
 }
@@ -326,17 +293,6 @@ func SaveGlobal(s Settings) error {
 	return os.WriteFile(globalSettingsPath(), data, 0o644)
 }
 
-// SaveProject saves settings to the project config file.
-func SaveProject(s Settings) error {
-	s = stripHostModelSelection(s)
-	_ = os.MkdirAll(".hawk", 0o755)
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(projectSettingsPath(), data, 0o644)
-}
-
 // SettingValue returns a display-safe value for a supported setting key.
 func SettingValue(s Settings, key string) (string, bool) {
 	normalized := normalizeSettingKey(key)
@@ -400,7 +356,7 @@ func SettingValue(s Settings, key string) (string, bool) {
 	}
 }
 
-// SetGlobalSetting updates a supported scalar/list setting in ~/.hawk/settings.json.
+// SetGlobalSetting updates a supported scalar/list setting in Hawk user config.
 // Hawk: API keys are NOT stored in settings.json. Use /config and the OS secret store.
 func SetGlobalSetting(key, value string) error {
 	s := LoadGlobalSettings()

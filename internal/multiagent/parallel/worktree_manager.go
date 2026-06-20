@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // WorktreeStatus represents the lifecycle state of a managed worktree.
@@ -63,7 +65,7 @@ func generateID() string {
 }
 
 // Create creates a new git worktree on a new branch derived from baseBranch.
-// The worktree is stored under .hawk/worktrees/ within the base directory.
+// The worktree is stored under Hawk's project state directory.
 func (wm *WorktreeManager) Create(branch, baseBranch, taskDescription string) (*Worktree, error) {
 	wm.mu.Lock()
 	defer wm.mu.Unlock()
@@ -80,7 +82,7 @@ func (wm *WorktreeManager) Create(branch, baseBranch, taskDescription string) (*
 	}
 
 	id := generateID()
-	wtDir := filepath.Join(wm.BaseDir, ".hawk", "worktrees", id)
+	wtDir := filepath.Join(storage.ProjectStateDir(wm.BaseDir), "worktrees", id)
 
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtDir, baseBranch)
 	cmd.Dir = wm.BaseDir

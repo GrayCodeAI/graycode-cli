@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Manifest defines a hawk plugin.
@@ -62,8 +62,7 @@ func (m *Manifest) Validate() error {
 }
 
 func pluginsDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "plugins")
+	return filepath.Join(storage.StateDir(), "plugins")
 }
 
 // LoadManifest loads a plugin manifest from a directory.

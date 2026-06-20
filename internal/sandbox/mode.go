@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Mode represents the sandbox isolation level.
@@ -63,7 +65,9 @@ func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
 		gopath = filepath.Join(home, "go")
 	}
 
-	hawkDir := filepath.Join(home, ".hawk")
+	configDir := storage.ConfigDir()
+	stateDir := storage.StateDir()
+	cacheDir := storage.CacheDir()
 
 	readPaths := []string{
 		workDir,
@@ -74,7 +78,9 @@ func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
 		"/dev",
 		"/tmp",
 		"/private/tmp",
-		hawkDir,
+		configDir,
+		stateDir,
+		cacheDir,
 		gopath,
 	}
 
@@ -83,7 +89,9 @@ func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
 		"/tmp",
 		"/private/tmp",
 		"/dev/null",
-		hawkDir,
+		configDir,
+		stateDir,
+		cacheDir,
 	}
 
 	p := &SeatbeltPolicy{

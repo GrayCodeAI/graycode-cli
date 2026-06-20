@@ -36,7 +36,7 @@ func TestRedactSessionMessages(t *testing.T) {
 func TestExport_JSON(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk/sessions", 0o755)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
 
 	sess := &Session{
 		ID: "export-json", Model: "test", CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -56,7 +56,7 @@ func TestExport_JSON(t *testing.T) {
 func TestExport_Markdown(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk/sessions", 0o755)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
 
 	sess := &Session{
 		ID: "export-md", Model: "test", CreatedAt: time.Now(), UpdatedAt: time.Now(),

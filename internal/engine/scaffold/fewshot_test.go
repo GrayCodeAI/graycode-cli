@@ -1,14 +1,13 @@
 package scaffold
 
 import (
-	"os"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestFewShotStore_RecordAndRetrieve(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	fs := NewFewShotStore()
 	fs.Record("fix the login bug", "I fixed it by adding nil check", "debug")
@@ -20,9 +19,7 @@ func TestFewShotStore_RecordAndRetrieve(t *testing.T) {
 }
 
 func TestFewShotStore_FormatForPrompt(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	fs := NewFewShotStore()
 	fs.Record("write tests", "Added table-driven tests", "test")
@@ -32,9 +29,7 @@ func TestFewShotStore_FormatForPrompt(t *testing.T) {
 }
 
 func TestFewShotStore_Empty(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	fs := NewFewShotStore()
 	results := fs.Retrieve("anything", 5)

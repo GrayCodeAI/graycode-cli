@@ -30,7 +30,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -38,6 +37,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/startup"
+	hawkstorage "github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -152,11 +152,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	// Initialize conversation DAG for branching support
 	startup.MarkPhase("newChatModel:dag")
-	if home, err := os.UserHomeDir(); err == nil {
-		dagPath := filepath.Join(home, ".hawk", "sessions", "convo.db")
-		if dag, err := storage.NewDAG(dagPath, sid); err == nil {
-			sess.SetConvoDAG(dag)
-		}
+	dagPath := filepath.Join(hawkstorage.SessionsDir(), "convo.db")
+	if dag, err := storage.NewDAG(dagPath, sid); err == nil {
+		sess.SetConvoDAG(dag)
 	}
 	startup.EndPhase("newChatModel:dag")
 
@@ -241,8 +239,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	// Check for crash recovery
 	startup.MarkPhase("newChatModel:crash-recovery")
 	if recovered := session.CheckForRecovery(); len(recovered) > 0 {
-		home := home.Dir()
-		walDir := filepath.Join(home, ".hawk", "sessions")
+		walDir := hawkstorage.SessionsDir()
 		for _, rid := range recovered {
 			if rid == sid {
 				continue // current session WAL

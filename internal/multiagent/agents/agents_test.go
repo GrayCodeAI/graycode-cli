@@ -107,8 +107,9 @@ func TestListAll_FromDir(t *testing.T) {
 	}
 	defer os.Setenv("HOME", origHome) //nolint:errcheck
 
-	// Create ~/.hawk/agents
-	agentDir := filepath.Join(dir, ".hawk", "agents")
+	stateDir := filepath.Join(dir, "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
+	agentDir := filepath.Join(stateDir, "agents")
 	if err := os.MkdirAll(agentDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +122,7 @@ func TestListAll_FromDir(t *testing.T) {
 		t.Fatalf("ListAll failed: %v", err)
 	}
 	if len(agents) < 1 {
-		t.Error("expected at least 1 agent from ~/.hawk/agents/")
+		t.Error("expected at least 1 agent from user state agents dir")
 	}
 }
 

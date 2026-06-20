@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // SkillSource tracks where an installed skill came from.
@@ -351,18 +352,17 @@ func ParseSmartSkillPublic(content string) SmartSkill {
 func DefaultSkillDirs() []string {
 	home := home.Dir()
 	if home == "" {
-		return []string{".hawk/skills", ".agents/skills"}
+		return []string{".agents/skills"}
 	}
 	return []string{
 		// Project-level directories.
-		".hawk/skills",   // hawk project skills
 		".agents/skills", // agentskills.io shared dir (gh skill install default)
 		".claude/skills", // Claude Code project skills
 		".codex/skills",  // Codex project skills
 		// User-level directories.
-		filepath.Join(home, ".hawk", "skills"),   // hawk global skills
-		filepath.Join(home, ".agents", "skills"), // agentskills.io global shared
-		filepath.Join(home, ".claude", "skills"), // Claude Code global skills
-		filepath.Join(home, ".codex", "skills"),  // Codex global skills
+		filepath.Join(storage.StateDir(), "skills"), // hawk global skills
+		filepath.Join(home, ".agents", "skills"),    // agentskills.io global shared
+		filepath.Join(home, ".claude", "skills"),    // Claude Code global skills
+		filepath.Join(home, ".codex", "skills"),     // Codex global skills
 	}
 }

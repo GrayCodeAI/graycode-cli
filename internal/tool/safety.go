@@ -13,6 +13,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/env"
 	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -265,6 +266,11 @@ func IsSensitivePath(path string) string {
 		if clean == hawkDotEnv {
 			return "access to ~/.hawk/.env is blocked for security (API keys)"
 		}
+	}
+
+	providerPath := filepath.Clean(storage.ProviderConfigPath())
+	if clean == providerPath {
+		return "access to provider.json is blocked for security (API credentials)"
 	}
 
 	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {

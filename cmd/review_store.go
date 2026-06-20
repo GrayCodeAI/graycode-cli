@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	sightLib "github.com/GrayCodeAI/sight"
 )
 
@@ -64,7 +66,11 @@ type ReviewStore struct {
 
 // OpenReviewStore opens or creates the review database.
 func OpenReviewStore(projectDir string) (*ReviewStore, error) {
-	dbPath := filepath.Join(projectDir, ".hawk", "reviews.db")
+	dbDir := storage.ProjectStateDir(projectDir)
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return nil, fmt.Errorf("create review db directory: %w", err)
+	}
+	dbPath := filepath.Join(dbDir, "reviews.db")
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open review db: %w", err)

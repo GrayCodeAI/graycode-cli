@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // FewShotStore collects successful (prompt, response) pairs and injects
@@ -31,10 +31,9 @@ type FewShotExample struct {
 	UsedCount int       `json:"used_count"`
 }
 
-// NewFewShotStore creates a store backed by ~/.hawk/fewshot.json.
+// NewFewShotStore creates a store backed by Hawk's user state.
 func NewFewShotStore() *FewShotStore {
-	home := home.Dir()
-	path := filepath.Join(home, ".hawk", "fewshot.json")
+	path := filepath.Join(storage.StateDir(), "fewshot.json")
 	fs := &FewShotStore{
 		path:     path,
 		maxStore: 50,

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // TokenStore manages authentication tokens.
@@ -93,19 +95,8 @@ func (s *SecureStorage) setMacOS(account, token string) error {
 	return err
 }
 
-func homeDir() string {
-	if runtime.GOOS == "windows" {
-		if d := os.Getenv("USERPROFILE"); d != "" {
-			return d
-		}
-		return os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-	}
-	home, _ := os.UserHomeDir()
-	return home
-}
-
 func (s *SecureStorage) getFile(account string) (string, error) {
-	path := filepath.Join(homeDir(), ".hawk", ".tokens")
+	path := filepath.Join(storage.ConfigDir(), ".tokens")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -118,7 +109,10 @@ func (s *SecureStorage) getFile(account string) (string, error) {
 }
 
 func (s *SecureStorage) setFile(account, token string) error {
-	path := filepath.Join(homeDir(), ".hawk", ".tokens")
+	path := filepath.Join(storage.ConfigDir(), ".tokens")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
 	var tokens map[string]string
 	if data, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(data, &tokens)

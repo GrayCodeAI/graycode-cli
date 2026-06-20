@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Agent is a user-defined persona with a custom system prompt.
-// Stored as markdown files with YAML frontmatter in ~/.hawk/agents/.
+// Stored as markdown files with YAML frontmatter in Hawk user state.
 type Agent struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -87,8 +87,7 @@ func Parse(content, filePath string) (*Agent, error) {
 	return agent, nil
 }
 
-// ListAll discovers all agent definitions from the standard directories.
-// Search order: ~/.hawk/agents/, .hawk/agents/ (project-local).
+// ListAll discovers all agent definitions from Hawk user state.
 func ListAll() ([]*Agent, error) {
 	var agents []*Agent
 
@@ -126,25 +125,14 @@ func Get(name string) (*Agent, error) {
 	return nil, fmt.Errorf("agent %q not found", name)
 }
 
-// DefaultDir returns the user's agent directory (~/.hawk/agents/).
+// DefaultDir returns the user's agent directory.
 func DefaultDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "agents")
+	return storage.PersonasDir()
 }
 
 // agentDirs returns the list of directories to search for agents.
 func agentDirs() []string {
-	dirs := []string{DefaultDir()}
-
-	// Project-local agents
-	if cwd, err := os.Getwd(); err == nil {
-		localDir := filepath.Join(cwd, ".hawk", "agents")
-		if info, err := os.Stat(localDir); err == nil && info.IsDir() {
-			dirs = append(dirs, localDir)
-		}
-	}
-
-	return dirs
+	return []string{DefaultDir()}
 }
 
 func parseYAMLLine(line string) (key, val string, ok bool) {

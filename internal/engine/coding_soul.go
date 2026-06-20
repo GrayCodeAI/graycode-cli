@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // CodingSoul defines the persistent coding personality and style preferences.
-// Loaded from .hawk/soul.md — your coding DNA that hawk follows across all sessions.
+// Loaded from Hawk user state.
 type CodingSoul struct {
 	Style       string // communication style
 	Preferences string // coding preferences
@@ -18,8 +18,7 @@ type CodingSoul struct {
 
 // DefaultSoulPath returns the path to the soul file.
 func DefaultSoulPath() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "soul.md")
+	return filepath.Join(storage.StateDir(), "soul.md")
 }
 
 // LoadCodingSoul reads the soul file. Returns empty soul if not found.
@@ -27,12 +26,7 @@ func LoadCodingSoul() *CodingSoul {
 	path := DefaultSoulPath()
 	data, err := os.ReadFile(path)
 	if err != nil {
-		// Also check project-local
-		data, err = os.ReadFile(".hawk/soul.md")
-		if err != nil {
-			return &CodingSoul{Path: path}
-		}
-		path = ".hawk/soul.md"
+		return &CodingSoul{Path: path}
 	}
 	content := string(data)
 	soul := &CodingSoul{Path: path}
@@ -67,7 +61,7 @@ func (s *CodingSoul) ForPrompt() string {
 
 // InitSoulPrompt returns a prompt to generate an initial soul.md.
 func InitSoulPrompt() string {
-	return `Generate a .hawk/soul.md file based on my coding patterns. Analyze my recent code and infer:
+	return `Generate a coding soul profile for Hawk user state based on my coding patterns. Analyze my recent code and infer:
 
 ## Style
 - How I communicate (terse vs verbose, formal vs casual)

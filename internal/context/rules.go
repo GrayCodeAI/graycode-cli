@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // managedSource is the synthetic source name for IT-managed (org policy) rules.
@@ -39,14 +41,14 @@ func stripHTMLComments(s string) string {
 
 // RuleSource defines a source of rule files with precedence.
 type RuleSource struct {
-	Name     string // directory or file name (e.g., ".hawk/rules", "AGENTS.md")
+	Name     string // directory or file name (e.g., ".agents/rules", "AGENTS.md")
 	Priority int    // lower = higher priority
 	IsDir    bool   // true = scan directory recursively for *.md files
 }
 
 // DefaultRuleSources lists rule sources in priority order.
 var DefaultRuleSources = []RuleSource{
-	{".hawk/rules", 1, true},
+	{".agents/rules", 1, true},
 	{".omo/rules", 2, true},
 	{".claude/rules", 3, true},
 	{".cursor/rules", 4, true},
@@ -63,7 +65,7 @@ type Rule struct {
 	Path     string
 	Content  string
 	Hash     string
-	Source   string // e.g., ".hawk/rules", "AGENTS.md"
+	Source   string // e.g., ".agents/rules", "AGENTS.md"
 	Local    bool   // true if found in the file's directory tree, false if global
 	Distance int    // 0 = same directory, 1 = parent, etc.
 	Priority int    // source priority
@@ -85,7 +87,7 @@ func NewRuleDiscoverer(projectRoot string) *RuleDiscoverer {
 	var globalDirs []string
 	if home != "" {
 		globalDirs = []string{
-			filepath.Join(home, ".hawk", "rules"),
+			filepath.Join(storage.StateDir(), "rules"),
 			filepath.Join(home, ".omo", "rules"),
 			filepath.Join(home, ".claude", "rules"),
 		}

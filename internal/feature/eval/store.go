@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // StoredResult is the persistent JSON format for eval results.
@@ -50,10 +50,9 @@ type ResultStore struct {
 	Dir string
 }
 
-// DefaultResultStore returns a store at ~/.hawk/eval/results/.
+// DefaultResultStore returns a store in Hawk's user state directory.
 func DefaultResultStore() *ResultStore {
-	home := home.Dir()
-	return &ResultStore{Dir: filepath.Join(home, ".hawk", "eval", "results")}
+	return &ResultStore{Dir: filepath.Join(storage.StateDir(), "eval", "results")}
 }
 
 // Save writes a SuiteResult to disk as JSON.

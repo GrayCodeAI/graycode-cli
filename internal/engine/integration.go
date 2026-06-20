@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/tok"
 )
@@ -194,7 +194,7 @@ func NewIntegrationPipeline() *IntegrationPipeline {
 	// Resolve the user's home dir once so the learning-pipeline stores do not
 	// leak into <cwd>/.hawk/ when hawk is run from inside its own source tree.
 	// See L2 in docs/plans/fix-critical-and-high-review.md.
-	homeRoot := home.Dir()
+	stateRoot := storage.StateDir()
 
 	return &IntegrationPipeline{
 		// Pre-query
@@ -221,9 +221,9 @@ func NewIntegrationPipeline() *IntegrationPipeline {
 		OutputRedactor:   NewOutputRedactor(),
 
 		// Learning
-		ExperienceStore:   NewExperienceStore(filepath.Join(homeRoot, ".hawk", "experience")),
-		KnowledgeBase:     NewKnowledgeBase(filepath.Join(homeRoot, ".hawk", "knowledge")),
-		FeedbackCollector: NewFeedbackCollector(filepath.Join(homeRoot, ".hawk", "feedback")),
+		ExperienceStore:   NewExperienceStore(filepath.Join(stateRoot, "experience")),
+		KnowledgeBase:     NewKnowledgeBase(filepath.Join(stateRoot, "knowledge")),
+		FeedbackCollector: NewFeedbackCollector(filepath.Join(stateRoot, "feedback")),
 		SelfAssessor:      NewSelfAssessor(),
 
 		// Session management

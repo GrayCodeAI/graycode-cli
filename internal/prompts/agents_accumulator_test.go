@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 func TestNewAgentsAccumulator(t *testing.T) {
@@ -13,7 +15,7 @@ func TestNewAgentsAccumulator(t *testing.T) {
 	if acc == nil {
 		t.Fatal("expected non-nil accumulator")
 	}
-	if acc.filePath != filepath.Join(dir, ".hawk", "agents.md") {
+	if acc.filePath != filepath.Join(storage.ProjectStateDir(dir), "agents.md") {
 		t.Errorf("unexpected path: %s", acc.filePath)
 	}
 }

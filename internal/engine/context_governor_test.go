@@ -38,9 +38,10 @@ func TestMaybeSpillToolOutput_SmallUnchanged(t *testing.T) {
 }
 
 func TestMaybeSpillToolOutput_LargeSpills(t *testing.T) {
+	t.Setenv("HAWK_CACHE_DIR", t.TempDir())
 	in := strings.Repeat("x", toolOutputSpillMinChars+100)
 	got := maybeSpillToolOutput(in, "Bash", "call-1")
-	if !strings.Contains(got, ".hawk/scratch/") {
+	if !strings.Contains(got, "/scratch/") {
 		t.Fatalf("expected spill path in output, got %q", got[:200])
 	}
 	if strings.Contains(got, strings.Repeat("x", toolOutputSpillMinChars)) {

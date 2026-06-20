@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // --- Skill dispatch tests ---------------------------------------------------
@@ -216,15 +218,12 @@ func TestResolveExecPrompt_Empty(t *testing.T) {
 func TestPersistExecSession(t *testing.T) {
 	// Set up temp session dir
 	dir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
-	os.MkdirAll(filepath.Join(dir, ".hawk", "sessions"), 0o755)
+	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
 
 	persistExecSession("test-123", "claude-opus", "anthropic", "hello", "world")
 
 	// Check file exists
-	path := filepath.Join(dir, ".hawk", "sessions", "test-123.jsonl")
+	path := filepath.Join(storage.SessionsDir(), "test-123.jsonl")
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("session file not created: %v", err)
 	}

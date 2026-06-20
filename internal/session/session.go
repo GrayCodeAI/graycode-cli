@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -41,8 +41,7 @@ type Session struct {
 }
 
 func sessionsDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "sessions")
+	return storage.SessionsDir()
 }
 
 func legacyPathFor(id string) string {
@@ -321,12 +320,17 @@ func Load(id string) (*Session, error) {
 	if s, err := loadJSONL(id); err == nil {
 		return s, nil
 	}
-	// Fall back to legacy JSON
-	return loadLegacyJSON(id)
+	if s, err := loadLegacyJSON(id); err == nil {
+		return s, nil
+	}
+	return nil, fmt.Errorf("session %s not found", id)
 }
 
 func loadJSONL(id string) (*Session, error) {
-	path := jsonlPathFor(id)
+	return loadJSONLFile(jsonlPathFor(id), id)
+}
+
+func loadJSONLFile(path, id string) (*Session, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -387,10 +391,13 @@ func loadJSONL(id string) (*Session, error) {
 }
 
 func loadLegacyJSON(id string) (*Session, error) {
-	path := legacyPathFor(id)
+	return loadLegacyJSONFile(legacyPathFor(id))
+}
+
+func loadLegacyJSONFile(path string) (*Session, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("session %s not found", id)
+		return nil, err
 	}
 	var s Session
 	if err := json.Unmarshal(data, &s); err != nil {

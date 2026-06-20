@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json"
@@ -50,10 +50,9 @@ type RegistryClient struct {
 
 // NewRegistryClient creates a registry client with sensible defaults.
 func NewRegistryClient() *RegistryClient {
-	home := home.Dir()
 	return &RegistryClient{
 		IndexURL: defaultIndexURL,
-		CacheDir: filepath.Join(home, ".hawk", "cache"),
+		CacheDir: filepath.Join(storage.CacheDir(), "skills"),
 		client:   &http.Client{Timeout: 15 * time.Second},
 	}
 }
@@ -194,13 +193,12 @@ func (rc *RegistryClient) Info(name string) (*SkillEntry, error) {
 // Install clones a specific skill from a GitHub repo into the skills directory.
 // If skillName is empty, all skills in the repo are installed.
 func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error) {
-	home := home.Dir()
 	var destBase string
 	switch scope {
 	case "user":
-		destBase = filepath.Join(home, ".hawk", "skills")
+		destBase = filepath.Join(storage.StateDir(), "skills")
 	default: // "project"
-		destBase = filepath.Join(".hawk", "skills")
+		destBase = filepath.Join(storage.ProjectStateDir("."), "skills")
 	}
 	_ = os.MkdirAll(destBase, 0o755)
 
@@ -285,12 +283,10 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	return fmt.Sprintf("Installed %d skill(s): %s", len(installed), strings.Join(installed, ", ")), nil
 }
 
-// Remove uninstalls a skill by name from both project and user scope.
+// Remove uninstalls a skill by name from Hawk user state.
 func Remove(name string) error {
-	home := home.Dir()
 	dirs := []string{
-		filepath.Join(".hawk", "skills", name),
-		filepath.Join(home, ".hawk", "skills", name),
+		filepath.Join(storage.StateDir(), "skills", name),
 	}
 	removed := false
 	for _, d := range dirs {
@@ -307,10 +303,8 @@ func Remove(name string) error {
 
 // InstalledSkillInfo returns source metadata for an installed skill.
 func InstalledSkillInfo(name string) (SmartSkill, string, bool) {
-	home := home.Dir()
 	dirs := []string{
-		filepath.Join(".hawk", "skills"),
-		filepath.Join(home, ".hawk", "skills"),
+		filepath.Join(storage.StateDir(), "skills"),
 	}
 	for _, dir := range dirs {
 		skillFile := filepath.Join(dir, name, "SKILL.md")

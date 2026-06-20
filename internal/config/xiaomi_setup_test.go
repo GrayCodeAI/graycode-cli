@@ -9,6 +9,7 @@ import (
 
 func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
 	t.Setenv("HAWK_CONFIG_DIR", dir)
 	cfg := &eyriecfg.ProviderConfig{
 		Version:                    "2",
@@ -34,6 +35,7 @@ func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 
 func TestNeedsXiaomiTokenPlanRegion_InvalidAndMissing(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
 	t.Setenv("HAWK_CONFIG_DIR", dir)
 
 	if !NeedsXiaomiTokenPlanRegion(ProviderXiaomiTokenPlan) {

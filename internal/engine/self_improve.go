@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // SelfImproveEntry records a lesson learned from a mistake.
@@ -27,8 +27,7 @@ type SelfImprover struct {
 
 // NewSelfImprover loads or creates the improvement log.
 func NewSelfImprover() *SelfImprover {
-	home := home.Dir()
-	path := filepath.Join(home, ".hawk", "self-improve.json")
+	path := filepath.Join(storage.StateDir(), "self-improve.json")
 	si := &SelfImprover{Path: path}
 	si.load()
 	return si

@@ -20,6 +20,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -151,18 +152,11 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 	// Config syntax check
 	registry.Register("config_syntax", func(ctx context.Context) health.Check {
 		start := time.Now()
-		home, _ := os.UserHomeDir()
-		globalPath := filepath.Join(home, ".hawk", "settings.json")
+		globalPath := storage.SettingsPath()
 		if data, err := os.ReadFile(globalPath); err == nil {
 			var raw json.RawMessage
 			if err := json.Unmarshal(data, &raw); err != nil {
 				return health.Check{Name: "config_syntax", Status: health.Unhealthy, Message: fmt.Sprintf("global settings.json parse error: %v", err), Duration: time.Since(start)}
-			}
-		}
-		if data, err := os.ReadFile(".hawk/settings.json"); err == nil {
-			var raw json.RawMessage
-			if err := json.Unmarshal(data, &raw); err != nil {
-				return health.Check{Name: "config_syntax", Status: health.Unhealthy, Message: fmt.Sprintf("project settings.json parse error: %v", err), Duration: time.Since(start)}
 			}
 		}
 		return health.Check{Name: "config_syntax", Status: health.Healthy, Message: "config files parse OK", Duration: time.Since(start)}

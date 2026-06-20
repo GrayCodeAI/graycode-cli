@@ -377,7 +377,9 @@ func TestConfigToolGetsAndSetsSupportedSettings(t *testing.T) {
 func TestSkillToolListsAndReadsSkills(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	dir := filepath.Join(home, ".hawk", "skills", "review")
+	stateDir := filepath.Join(home, "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
+	dir := filepath.Join(stateDir, "skills", "review")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

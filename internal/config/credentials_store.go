@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
 )
-
-var credentialDiscoveryPrepared sync.Once
 
 // PersistAPIKey saves a provider API key via eyrie (OS secret store).
 func PersistAPIKey(ctx context.Context, envKey, secret string) error {
@@ -31,14 +28,11 @@ func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	return nil
 }
 
-// PrepareCredentialDiscovery migrates any legacy ~/.hawk/env keys into the OS secret store (once per process).
+// PrepareCredentialDiscovery prepares runtime credential discovery without reading legacy files.
 func PrepareCredentialDiscovery(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	credentialDiscoveryPrepared.Do(func() {
-		_, _ = credentials.MigrateLegacyEnvFile(ctx)
-	})
 	ApplyXiaomiTokenPlanRegionEnv(ctx)
 }
 

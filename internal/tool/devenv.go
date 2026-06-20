@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // DevEnvTool allows the agent to read, write, and build Docker environments
@@ -55,14 +56,14 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	}
 
 	workDir, _ := os.Getwd()
-	dfPath := filepath.Join(workDir, ".hawk", "Dockerfile")
+	dfPath := filepath.Join(storage.ProjectStateDir(workDir), "Dockerfile")
 
 	switch p.Action {
 	case "read":
 		content, err := os.ReadFile(dfPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return "No Dockerfile found at .hawk/Dockerfile. Use action='write' to create one.", nil
+				return "No Hawk dev environment Dockerfile found. Use action='write' to create one in Hawk user state.", nil
 			}
 			return "", err
 		}

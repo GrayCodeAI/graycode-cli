@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/hooks/audit"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -175,16 +176,11 @@ type SessionInfo struct {
 }
 
 func discoverSessions(days int, projectFilter string) ([]SessionInfo, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
 	cutoff := time.Now().AddDate(0, 0, -days)
 	var sessions []SessionInfo
 
 	// Scan hawk sessions directory
-	hawkDir := filepath.Join(home, ".hawk", "sessions")
+	hawkDir := storage.SessionsDir()
 	entries, err := os.ReadDir(hawkDir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err

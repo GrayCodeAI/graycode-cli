@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"strings"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -85,22 +83,8 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	if tool.IsPowerShellAvailable() {
 		tools = append(tools, tool.PowerShellTool{})
 	}
-	// Detect project-level MCP servers (supply chain attack vector).
-	// Project .hawk/settings.json can be committed to a repo and define
-	// arbitrary commands that execute on clone. Gate behind --allow-project-mcp.
-	projectMCPServers := hawkconfig.ProjectMCPServers()
-	projectMCPNames := make(map[string]bool, len(projectMCPServers))
-	for _, cfg := range projectMCPServers {
-		if cfg.Name != "" {
-			projectMCPNames[cfg.Name] = true
-		}
-	}
 	for _, cfg := range settings.MCPServers {
 		if cfg.Name == "" || cfg.Command == "" {
-			continue
-		}
-		if projectMCPNames[cfg.Name] && !allowProjectMCP {
-			fmt.Fprintf(os.Stderr, "hawk: skipping project-level MCP server %q (defined in .hawk/settings.json); use --allow-project-mcp to enable\n", cfg.Name)
 			continue
 		}
 		mcpTools, err := tool.LoadMCPTools(context.Background(), cfg.Name, cfg.Command, cfg.Args...)

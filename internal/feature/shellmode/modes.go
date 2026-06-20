@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Mode represents the REPL routing mode.
@@ -64,22 +66,14 @@ func (mm *ModeManager) Toggle() Mode {
 }
 
 func (mm *ModeManager) persist() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return
-	}
-	dir := filepath.Join(home, ".hawk")
+	dir := storage.StateDir()
 	_ = os.MkdirAll(dir, 0o755)
 	_ = os.WriteFile(filepath.Join(dir, "mode"), []byte(mm.current.String()), 0o644)
 }
 
 // LoadPersistedMode restores mode from disk.
 func (mm *ModeManager) LoadPersistedMode() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return
-	}
-	data, err := os.ReadFile(filepath.Join(home, ".hawk", "mode"))
+	data, err := os.ReadFile(filepath.Join(storage.StateDir(), "mode"))
 	if err != nil {
 		return
 	}

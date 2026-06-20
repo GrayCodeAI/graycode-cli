@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,7 @@ var feedbackCmd = &cobra.Command{
 	Short: "Submit feedback about hawk",
 	Long: `Capture feedback about your hawk experience. By default, opens a
 GitHub issue template URL in your browser. Use --local to save feedback
-to ~/.hawk/feedback/ for later submission.
+to Hawk's user state directory for later submission.
 
 Categories: bug, feature, ux, performance, other
 
@@ -89,12 +90,7 @@ func runFeedback(_ *cobra.Command, args []string) error {
 }
 
 func saveFeedbackLocal(report FeedbackReport) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("get home directory: %w", err)
-	}
-
-	dir := filepath.Join(home, ".hawk", "feedback")
+	dir := filepath.Join(storage.StateDir(), "feedback")
 	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
 		return fmt.Errorf("create feedback directory: %w", mkErr)
 	}
