@@ -14,10 +14,10 @@ type ProjectContext struct {
 
 // ProjectContextFiles are the files hawk auto-loads for project context.
 var ProjectContextFiles = []string{
-	".hawk/project-context.md",
-	".hawk/conventions.md",
-	".hawk/architecture.md",
-	".hawk/debt.md",
+	"AGENTS.md",
+	"PROJECT_CONTEXT.md",
+	"ARCHITECTURE.md",
+	"TECH_DEBT.md",
 }
 
 // NewProjectContext creates a context loader for the given project directory.
@@ -62,7 +62,7 @@ func (pc *ProjectContext) HasContext() bool {
 
 // InitPrompt returns a prompt for hawk to generate initial project-context.md.
 func (pc *ProjectContext) InitPrompt() string {
-	return `Analyze this project and generate a .hawk/project-context.md file with:
+	return `Analyze this project and generate a PROJECT_CONTEXT.md file with:
 
 ## Technology Stack & Versions
 - List all languages, frameworks, and key dependencies with versions

@@ -76,8 +76,7 @@ func TestAdversarialReview_Empty(t *testing.T) {
 
 func TestProjectContext_Load(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".hawk", "project-context.md"), []byte("## Stack\n- Go 1.21\n- PostgreSQL"), 0o644)
+	os.WriteFile(filepath.Join(dir, "PROJECT_CONTEXT.md"), []byte("## Stack\n- Go 1.21\n- PostgreSQL"), 0o644)
 
 	pc := NewProjectContext(dir)
 	content := pc.Load()

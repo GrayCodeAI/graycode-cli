@@ -1,5 +1,5 @@
 // Package prompts manages workspace context for hawk sessions.
-// This file implements auto-accumulation of learnings into .hawk/agents.md.
+// This file implements auto-accumulation of learnings into Hawk user state.
 package prompts
 
 import (
@@ -9,10 +9,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // AgentsAccumulator captures learnings from successful edits and appends
-// them to .hawk/agents.md for future sessions to benefit from.
+// them to user state for future sessions to benefit from.
 type AgentsAccumulator struct {
 	projectDir string
 	filePath   string
@@ -32,7 +34,7 @@ type Learning struct {
 func NewAgentsAccumulator(projectDir string) *AgentsAccumulator {
 	return &AgentsAccumulator{
 		projectDir: projectDir,
-		filePath:   filepath.Join(projectDir, ".hawk", "agents.md"),
+		filePath:   filepath.Join(storage.ProjectStateDir(projectDir), "agents.md"),
 	}
 }
 
@@ -49,7 +51,7 @@ func (a *AgentsAccumulator) Record(context string, pattern string, files []strin
 	})
 }
 
-// Flush writes all buffered learnings to .hawk/agents.md.
+// Flush writes all buffered learnings to Hawk user state.
 func (a *AgentsAccumulator) Flush() error {
 	a.mu.Lock()
 	learnings := make([]Learning, len(a.buffer))
@@ -61,10 +63,9 @@ func (a *AgentsAccumulator) Flush() error {
 		return nil
 	}
 
-	// Ensure .hawk directory exists
 	dir := filepath.Dir(a.filePath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("creating .hawk directory: %w", err)
+		return fmt.Errorf("creating agents accumulator directory: %w", err)
 	}
 
 	// Read existing content

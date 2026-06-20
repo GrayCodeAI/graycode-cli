@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 func TestTokenStore(t *testing.T) {
@@ -152,11 +154,6 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		hawkDir := filepath.Join(dir, ".hawk")
-		if err := os.MkdirAll(hawkDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-
 		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("anthropic", "sk-test-token"); err != nil {
 			t.Fatalf("setFile() error = %v", err)
@@ -174,11 +171,6 @@ func TestSecureStorage(t *testing.T) {
 	t.Run("file-based overwrite", func(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
-
-		hawkDir := filepath.Join(dir, ".hawk")
-		if err := os.MkdirAll(hawkDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
 
 		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("provider", "old-token"); err != nil {
@@ -201,17 +193,12 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		hawkDir := filepath.Join(dir, ".hawk")
-		if err := os.MkdirAll(hawkDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-
 		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("test", "secret"); err != nil {
 			t.Fatal(err)
 		}
 
-		path := filepath.Join(hawkDir, ".tokens")
+		path := filepath.Join(storage.ConfigDir(), ".tokens")
 		info, err := os.Stat(path)
 		if err != nil {
 			t.Fatal(err)
@@ -226,11 +213,6 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		hawkDir := filepath.Join(dir, ".hawk")
-		if err := os.MkdirAll(hawkDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-
 		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("provider1", "token1"); err != nil {
 			t.Fatal(err)
@@ -239,7 +221,7 @@ func TestSecureStorage(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		data, err := os.ReadFile(filepath.Join(hawkDir, ".tokens"))
+		data, err := os.ReadFile(filepath.Join(storage.ConfigDir(), ".tokens"))
 		if err != nil {
 			t.Fatal(err)
 		}

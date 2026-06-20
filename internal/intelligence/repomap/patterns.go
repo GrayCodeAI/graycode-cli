@@ -1,12 +1,7 @@
-// patterns.go loads a .hawk/repomap-patterns.json file
-// (if present) describing which files to include or exclude from indexing,
-// and falls back to DefaultIndexPatterns otherwise. The result is consumed
-// by Generate, BuildSemanticIndex, and the watcher to skip unwanted trees.
+// patterns.go defines default include/exclude rules for repo indexing.
 package repomap
 
 import (
-	"encoding/json"
-	"os"
 	"path/filepath"
 )
 
@@ -57,20 +52,7 @@ func (p IndexPatterns) ShouldIndex(path string) bool {
 	return false
 }
 
-// LoadIndexPatterns reads from .hawk/index.json or uses defaults.
+// LoadIndexPatterns returns the built-in index patterns.
 func LoadIndexPatterns() IndexPatterns {
-	configPath := filepath.Join(".hawk", "index.json")
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return DefaultIndexPatterns()
-	}
-	var patterns IndexPatterns
-	if err := json.Unmarshal(data, &patterns); err != nil {
-		return DefaultIndexPatterns()
-	}
-	// Merge with defaults: if exclude is empty, use defaults
-	if len(patterns.Exclude) == 0 {
-		patterns.Exclude = DefaultIndexPatterns().Exclude
-	}
-	return patterns
+	return DefaultIndexPatterns()
 }

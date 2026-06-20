@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -97,8 +96,9 @@ func TestAppendToHistory_EmptySkipped(t *testing.T) {
 }
 
 func TestHistoryFilePath(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	expected := filepath.Join(home, ".hawk", "history")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
+	expected := filepath.Join(stateDir, "history")
 	if got := historyFilePath(); got != expected {
 		t.Fatalf("got %q, want %q", got, expected)
 	}

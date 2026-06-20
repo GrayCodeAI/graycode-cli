@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"gopkg.in/yaml.v3"
 )
 
@@ -70,10 +70,9 @@ func LoadProviderConfigs(dir string) ([]ProviderConfig, error) {
 
 // DefaultProviderConfigDirs returns standard directories for provider configs.
 func DefaultProviderConfigDirs() []string {
-	home := home.Dir()
 	return []string{
-		filepath.Join(home, ".hawk", "providers"),
-		".hawk/providers",
+		filepath.Join(storage.StateDir(), "providers"),
+		filepath.Join(".agents", "providers"),
 	}
 }
 

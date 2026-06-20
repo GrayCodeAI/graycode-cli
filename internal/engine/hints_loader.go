@@ -7,7 +7,7 @@ import (
 )
 
 // HintsFilenames are the files hawk auto-loads for project context.
-var HintsFilenames = []string{".hawkhints", "AGENTS.md", ".hawk/AGENTS.md"}
+var HintsFilenames = []string{".hawkhints", "AGENTS.md"}
 
 // HintsLoader discovers and loads project-specific hint files from the
 // working directory and subdirectories the agent explores.

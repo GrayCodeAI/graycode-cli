@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -10,11 +11,13 @@ import (
 func TestLogEvent(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	stateDir := filepath.Join(dir, "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
 
 	LogEvent("test_event", "session-123", map[string]interface{}{"key": "value"})
 
 	// Verify file was created
-	data, err := os.ReadFile(dir + "/.hawk/analytics/events.jsonl")
+	data, err := os.ReadFile(filepath.Join(stateDir, "analytics", "events.jsonl"))
 	if err != nil {
 		t.Fatal(err)
 	}

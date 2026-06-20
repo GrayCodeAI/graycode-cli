@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // UsageGuideline represents a lesson learned from problem-solving experience.
@@ -28,14 +28,13 @@ type UsageGuideline struct {
 type EvolvingMemory struct {
 	mu         sync.Mutex
 	guidelines []UsageGuideline
-	path       string // ~/.hawk/memory/guidelines.json
+	path       string
 }
 
 // NewEvolvingMemory creates a new EvolvingMemory with the default storage path.
 func NewEvolvingMemory() *EvolvingMemory {
-	home := home.Dir()
 	return &EvolvingMemory{
-		path: filepath.Join(home, ".hawk", "memory", "guidelines.json"),
+		path: filepath.Join(storage.StateDir(), "memory", "guidelines.json"),
 	}
 }
 

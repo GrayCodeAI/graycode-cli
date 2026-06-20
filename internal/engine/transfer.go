@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // TransferLearning enables cross-session knowledge transfer.
@@ -32,11 +32,10 @@ type TransferPattern struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-// NewTransferLearning creates a store backed by ~/.hawk/transfer.json.
+// NewTransferLearning creates a store backed by Hawk user state.
 func NewTransferLearning() *TransferLearning {
-	home := home.Dir()
 	tl := &TransferLearning{
-		path: filepath.Join(home, ".hawk", "transfer.json"),
+		path: filepath.Join(storage.StateDir(), "transfer.json"),
 	}
 	tl.load()
 	return tl

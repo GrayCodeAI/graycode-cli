@@ -13,6 +13,7 @@ func TestAtomicSave(t *testing.T) {
 	origHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
+	sessDir := setTestSessionsDir(t, tmp)
 
 	sess := &Session{
 		ID:       "test-atomic-1",
@@ -32,7 +33,7 @@ func TestAtomicSave(t *testing.T) {
 	}
 
 	// File should exist (no .tmp leftover)
-	path := filepath.Join(tmp, ".hawk", "sessions", "test-atomic-1.jsonl")
+	path := filepath.Join(sessDir, "test-atomic-1.jsonl")
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("session file not found: %v", err)
 	}
@@ -61,6 +62,7 @@ func TestAtomicSave_OverwritesCleanly(t *testing.T) {
 	origHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
+	setTestSessionsDir(t, tmp)
 
 	sess := &Session{
 		ID:       "test-overwrite",
@@ -89,7 +91,7 @@ func TestWAL_BasicAppend(t *testing.T) {
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
 
-	os.MkdirAll(filepath.Join(tmp, ".hawk", "sessions"), 0o755)
+	os.MkdirAll(setTestSessionsDir(t, tmp), 0o755)
 
 	wal, err := NewWAL("test-wal-1")
 	if err != nil {
@@ -128,14 +130,15 @@ func TestWAL_Remove(t *testing.T) {
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
 
-	os.MkdirAll(filepath.Join(tmp, ".hawk", "sessions"), 0o755)
+	sessDir := setTestSessionsDir(t, tmp)
+	os.MkdirAll(sessDir, 0o755)
 
 	wal, _ := NewWAL("test-wal-remove")
 	wal.Append(Message{Role: "user", Content: "test"})
 	wal.Remove()
 
 	// WAL file should be gone
-	path := filepath.Join(tmp, ".hawk", "sessions", "test-wal-remove.wal")
+	path := filepath.Join(sessDir, "test-wal-remove.wal")
 	if _, err := os.Stat(path); err == nil {
 		t.Error("WAL file should be removed")
 	}
@@ -152,6 +155,7 @@ func TestWAL_NoRecoveryIfNoWAL(t *testing.T) {
 	origHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
+	setTestSessionsDir(t, tmp)
 
 	recovered, err := RecoverFromWAL("nonexistent")
 	if err != nil {
@@ -168,7 +172,7 @@ func TestCheckForRecovery(t *testing.T) {
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
 
-	dir := filepath.Join(tmp, ".hawk", "sessions")
+	dir := setTestSessionsDir(t, tmp)
 	os.MkdirAll(dir, 0o755)
 
 	// Create some WAL files
@@ -204,7 +208,7 @@ func TestList_UsesFileModTime(t *testing.T) {
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
 
-	dir := filepath.Join(tmp, ".hawk", "sessions")
+	dir := setTestSessionsDir(t, tmp)
 	os.MkdirAll(dir, 0o755)
 
 	// Create two session files with different mod times
@@ -237,7 +241,7 @@ func TestCorruptedLineSkipped(t *testing.T) {
 	os.Setenv("HOME", tmp)
 	defer os.Setenv("HOME", origHome)
 
-	dir := filepath.Join(tmp, ".hawk", "sessions")
+	dir := setTestSessionsDir(t, tmp)
 	os.MkdirAll(dir, 0o755)
 
 	// Write a file with one corrupted line

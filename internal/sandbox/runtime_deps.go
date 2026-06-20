@@ -9,7 +9,7 @@ import (
 )
 
 // RuntimeConfig declares additive runtime customizations for a container
-// sandbox. It is parsed from .hawk/runtime.jsonc (project) and is fully
+// sandbox. It is parsed from .agents/runtime.jsonc (project) and is fully
 // optional: the empty value reproduces the current behavior exactly.
 type RuntimeConfig struct {
 	// RuntimeExtraDeps is a list of shell commands run during image build,
@@ -26,12 +26,12 @@ func (c RuntimeConfig) IsEmpty() bool {
 	return len(c.RuntimeExtraDeps) == 0 && len(c.RuntimeStartupEnvVars) == 0
 }
 
-// LoadRuntimeConfig reads .hawk/runtime.jsonc from projectDir. A missing file
+// LoadRuntimeConfig reads .agents/runtime.jsonc from projectDir. A missing file
 // yields a zero RuntimeConfig and no error; a malformed file is logged and
 // also yields a zero config (fail-open to current behavior, since this is
 // purely additive).
 func LoadRuntimeConfig(projectDir string) RuntimeConfig {
-	path := filepath.Join(projectDir, ".hawk", "runtime.jsonc")
+	path := filepath.Join(projectDir, ".agents", "runtime.jsonc")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return RuntimeConfig{}

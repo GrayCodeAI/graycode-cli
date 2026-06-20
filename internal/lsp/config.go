@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // ServerConfig defines how to launch a language server for a given language.
@@ -29,19 +31,16 @@ var (
 	configOnce   sync.Once
 )
 
-// LoadConfig merges project-level (.hawk/lsp.json) and global (~/.hawk/lsp.json)
+// LoadConfig merges project-level (.agents/lsp.json) and global user-state
 // LSP configuration. Project-level overrides global.
 func LoadConfig(projectDir string) *LSPConfig {
 	configOnce.Do(func() {
 		globalConfig = &LSPConfig{Servers: make(map[string]ServerConfig)}
 		// Load global config
-		home, _ := os.UserHomeDir()
-		if home != "" {
-			loadConfigFile(filepath.Join(home, ".hawk", "lsp.json"), globalConfig)
-		}
+		loadConfigFile(filepath.Join(storage.StateDir(), "lsp.json"), globalConfig)
 		// Load project config (overrides global)
 		if projectDir != "" {
-			loadConfigFile(filepath.Join(projectDir, ".hawk", "lsp.json"), globalConfig)
+			loadConfigFile(filepath.Join(projectDir, ".agents", "lsp.json"), globalConfig)
 		}
 		// Apply built-in defaults for unconfigured languages
 		applyDefaults(globalConfig)

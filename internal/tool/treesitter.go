@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
@@ -20,8 +21,7 @@ type TreeSitter struct {
 // NewTreeSitter creates a TreeSitter instance that loads grammars from the given directory.
 func NewTreeSitter(grammarDir string) *TreeSitter {
 	if grammarDir == "" {
-		home, _ := os.UserHomeDir()
-		grammarDir = filepath.Join(home, ".hawk", "grammars")
+		grammarDir = filepath.Join(storage.CacheDir(), "grammars")
 	}
 	return &TreeSitter{grammarDir: grammarDir}
 }

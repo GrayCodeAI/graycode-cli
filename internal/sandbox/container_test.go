@@ -2,7 +2,10 @@ package sandbox
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 func TestDockerAvailable(t *testing.T) {
@@ -44,11 +47,11 @@ func TestResolveImage_Default(t *testing.T) {
 
 func TestResolveImage_WithDockerfile(t *testing.T) {
 	dir := t.TempDir()
-	hawkDir := dir + "/.hawk"
-	if err := mkdirAll(hawkDir); err != nil {
+	dockerDir := storage.ProjectStateDir(dir)
+	if err := mkdirAll(dockerDir); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeFile(hawkDir+"/Dockerfile", "FROM node:20\nRUN npm install"); err != nil {
+	if err := writeFile(filepath.Join(dockerDir, "Dockerfile"), "FROM node:20\nRUN npm install"); err != nil {
 		t.Fatal(err)
 	}
 	img := resolveImage(dir)

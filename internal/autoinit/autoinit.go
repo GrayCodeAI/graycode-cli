@@ -19,9 +19,10 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-// markerName is the file written under the project's .hawk directory once an
+// markerName is the file written under the project's user-state directory once an
 // auto-init run has been attempted. Its presence (regardless of run outcome)
 // prevents repeated attempts on subsequent invocations.
 const markerName = "auto-init.done"
@@ -81,7 +82,7 @@ func HasContext(root string) bool {
 
 // MarkerPath returns the path to the auto-init marker file for root.
 func MarkerPath(root string) string {
-	return filepath.Join(root, ".hawk", markerName)
+	return filepath.Join(storage.ProjectStateDir(root), markerName)
 }
 
 // HasRun reports whether auto-init has already been attempted for root.
@@ -139,7 +140,7 @@ func MaybeRun(ctx context.Context, opts Options) (Decision, error) {
 }
 
 func writeMarker(root string) error {
-	dir := filepath.Join(root, ".hawk")
+	dir := storage.ProjectStateDir(root)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}

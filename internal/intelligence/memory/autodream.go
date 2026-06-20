@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // AutoDreamConfig controls when background memory consolidation triggers.
@@ -141,6 +141,5 @@ func RunDream(ctx context.Context, cfg AutoDreamConfig, agentFn func(ctx context
 }
 
 func autoDreamMemoryDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "memory")
+	return filepath.Join(storage.StateDir(), "memory")
 }

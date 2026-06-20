@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 type CostTracker struct {
@@ -20,10 +20,9 @@ type CostTracker struct {
 }
 
 func NewCostTracker(sessionID string) *CostTracker {
-	home := home.Dir()
 	return &CostTracker{
 		sessionID: sessionID,
-		filePath:  filepath.Join(home, ".hawk", "cost.jsonl"),
+		filePath:  filepath.Join(storage.StateDir(), "cost.jsonl"),
 	}
 }
 
@@ -57,8 +56,7 @@ func (ct *CostTracker) Entries() []analytics.CostEntry {
 }
 
 func LoadCostHistory() ([]analytics.CostEntry, error) {
-	home := home.Dir()
-	path := filepath.Join(home, ".hawk", "cost.jsonl")
+	path := filepath.Join(storage.StateDir(), "cost.jsonl")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

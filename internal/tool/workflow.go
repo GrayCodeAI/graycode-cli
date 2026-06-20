@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"gopkg.in/yaml.v3"
 )
 
-// WorkflowDef defines a scripted workflow loaded from .hawk/workflows/.
+// WorkflowDef defines a scripted workflow.
 type WorkflowDef struct {
 	Name        string         `yaml:"name" json:"name"`
 	Description string         `yaml:"description" json:"description"`
@@ -28,13 +28,13 @@ type WorkflowStep struct {
 	OnError string `yaml:"on_error" json:"on_error"`
 }
 
-// WorkflowTool executes scripted workflows from .hawk/workflows/.
+// WorkflowTool executes scripted workflows.
 type WorkflowTool struct{}
 
 func (WorkflowTool) Name() string      { return "Workflow" }
 func (WorkflowTool) Aliases() []string { return []string{"workflow"} }
 func (WorkflowTool) Description() string {
-	return "Execute a scripted workflow defined in .hawk/workflows/"
+	return "Execute a scripted workflow"
 }
 
 func (WorkflowTool) Parameters() map[string]interface{} {
@@ -43,7 +43,7 @@ func (WorkflowTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"workflow": map[string]interface{}{
 				"type":        "string",
-				"description": "Name of the workflow to execute (from .hawk/workflows/)",
+				"description": "Name of the workflow to execute",
 			},
 			"args": map[string]interface{}{
 				"type":        "object",
@@ -96,19 +96,11 @@ func (WorkflowTool) Execute(ctx context.Context, input json.RawMessage) (string,
 }
 
 func loadWorkflow(name string) (*WorkflowDef, error) {
-	// Search in .hawk/workflows/ relative to cwd, then home
 	searchPaths := []string{
-		filepath.Join(".hawk", "workflows", name+".yml"),
-		filepath.Join(".hawk", "workflows", name+".yaml"),
-	}
-
-	home := home.Dir()
-	if home != "" {
-		searchPaths = append(
-			searchPaths,
-			filepath.Join(home, ".hawk", "workflows", name+".yml"),
-			filepath.Join(home, ".hawk", "workflows", name+".yaml"),
-		)
+		filepath.Join(storage.StateDir(), "workflows", name+".yml"),
+		filepath.Join(storage.StateDir(), "workflows", name+".yaml"),
+		filepath.Join(".agents", "workflows", name+".yml"),
+		filepath.Join(".agents", "workflows", name+".yaml"),
 	}
 
 	for _, path := range searchPaths {
@@ -125,17 +117,13 @@ func loadWorkflow(name string) (*WorkflowDef, error) {
 		}
 		return &def, nil
 	}
-	return nil, fmt.Errorf("workflow %q not found in .hawk/workflows/", name)
+	return nil, fmt.Errorf("workflow %q not found", name)
 }
 
 // ListWorkflows discovers available workflows.
 func ListWorkflows() []WorkflowDef {
 	var workflows []WorkflowDef
-	searchDirs := []string{filepath.Join(".hawk", "workflows")}
-	home := home.Dir()
-	if home != "" {
-		searchDirs = append(searchDirs, filepath.Join(home, ".hawk", "workflows"))
-	}
+	searchDirs := []string{filepath.Join(storage.StateDir(), "workflows"), filepath.Join(".agents", "workflows")}
 
 	seen := make(map[string]bool)
 	for _, dir := range searchDirs {

@@ -71,10 +71,6 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("write hook: %w", err)
 	}
 
-	// Ensure .hawk directory exists for the review DB.
-	projectDir, _ := os.Getwd()
-	_ = os.MkdirAll(filepath.Join(projectDir, ".hawk"), 0o755)
-
 	fmt.Printf("%s Installed post-commit hook at %s\n", icons.CheckBold(), hookPath)
 	fmt.Println("  Every commit will now be reviewed automatically.")
 	fmt.Println("  View reviews: hawk review status")

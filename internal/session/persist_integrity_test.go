@@ -1,8 +1,8 @@
 package session
 
 import (
-	"fmt"
-	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -10,7 +10,6 @@ import (
 func TestSaveAndLoadMessages(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(fmt.Sprintf("%s/.hawk/sessions", dir), 0o755)
 
 	msgs := []Message{
 		{Role: "user", Content: "hello"},
@@ -34,10 +33,18 @@ func TestSaveAndLoadMessages(t *testing.T) {
 func TestSessionPath(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	stateDir := filepath.Join(dir, "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
 
 	path := SessionPath(dir, "test-id")
 	if path == "" {
 		t.Error("SessionPath should return non-empty")
+	}
+	if strings.Contains(path, ".hawk") {
+		t.Fatalf("SessionPath() leaked project .hawk path: %q", path)
+	}
+	if !strings.HasPrefix(path, stateDir) {
+		t.Fatalf("SessionPath() = %q, want under %q", path, stateDir)
 	}
 }
 
@@ -79,7 +86,7 @@ func TestStats(t *testing.T) {
 func TestLoadLatest(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(fmt.Sprintf("%s/.hawk/sessions", dir), 0o755)
+	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
 
 	sess := &Session{
 		ID: "latest-test", Model: "test", CWD: dir, CreatedAt: time.Now(), UpdatedAt: time.Now(),

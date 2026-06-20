@@ -17,9 +17,9 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -130,7 +130,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	} else {
 		fmt.Println("API key: (set via --api-key or HAWK_DAEMON_API_KEY)")
 	}
-	keyFile := filepath.Join(home.Dir(), ".hawk", "run", "daemon.key")
+	keyFile := filepath.Join(storage.DaemonRunDir(), "daemon.key")
 	_ = os.MkdirAll(filepath.Dir(keyFile), 0o700)
 	if err := os.WriteFile(keyFile, []byte(apiKey), 0o600); err == nil {
 		fmt.Printf("Full API key written to %s\n", keyFile)
@@ -202,8 +202,7 @@ func generateDaemonAPIKey() (string, error) {
 }
 
 func runDaemonStop(_ *cobra.Command, _ []string) error {
-	home := home.Dir()
-	pidFile := filepath.Join(home, ".hawk", "run", "daemon.json")
+	pidFile := filepath.Join(storage.DaemonRunDir(), "daemon.json")
 
 	data, err := os.ReadFile(pidFile)
 	if err != nil {
@@ -233,8 +232,7 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 }
 
 func runDaemonStatus(_ *cobra.Command, _ []string) error {
-	home := home.Dir()
-	pidFile := filepath.Join(home, ".hawk", "run", "daemon.json")
+	pidFile := filepath.Join(storage.DaemonRunDir(), "daemon.json")
 
 	data, err := os.ReadFile(pidFile)
 	if err != nil {

@@ -46,7 +46,7 @@ type LifecycleService struct {
 	adaptivePrompt *AdaptivePrompt
 	// activity tracker.
 	activity *memory.ActivityTracker
-	// agents-accumulator (.hawk/agents.md).
+	// agents accumulator.
 	agentsAccum *prompts.AgentsAccumulator
 	// response cache (used in agentLoop for cache hits).
 	responseCache *ResponseCache
@@ -83,7 +83,7 @@ func NewLifecycleService(log *logger.Logger) *LifecycleService {
 
 // OnSessionStart is called by Stream() at the beginning of each session.
 // Injects learned guidelines + few-shot examples + user-preference
-// learning + .hawk/agents.md learnings into the system prompt.
+// learning + accumulated project learnings into the system prompt.
 func (s *LifecycleService) OnSessionStart(ctx context.Context, s2 *Session, lastUserMsg string) string {
 	if s.lifecycle != nil {
 		if ctx := s.lifecycle.OnSessionStart(ctx, lastUserMsg); ctx != "" {

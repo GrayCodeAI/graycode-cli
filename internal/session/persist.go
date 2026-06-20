@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // SaveMessages serializes a slice of conversation messages to a JSON file
@@ -64,7 +66,7 @@ func LoadMessages(path string) ([]Message, error) {
 }
 
 // SessionPath returns the file path for a session within a project directory.
-// Sessions are stored under .hawk/sessions/{id}.json.
+// Sessions are stored under the user state directory, partitioned by project.
 func SessionPath(projectDir, sessionID string) string {
-	return filepath.Join(projectDir, ".hawk", "sessions", sessionID+".json")
+	return filepath.Join(storage.ProjectStateDir(projectDir), "sessions", sessionID+".json")
 }

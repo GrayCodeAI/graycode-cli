@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // handleGetSession handles GET /v1/sessions/{id} — get session detail.
@@ -146,17 +147,7 @@ func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, ErrorResponse{
-			Error:   "failed to determine sessions directory",
-			Code:    "internal_error",
-			Details: err.Error(),
-		})
-		return
-	}
-
-	sessionsDir := filepath.Join(home, ".hawk", "sessions")
+	sessionsDir := storage.SessionsDir()
 	jsonlPath := filepath.Join(sessionsDir, id+".jsonl")
 	jsonPath := filepath.Join(sessionsDir, id+".json")
 

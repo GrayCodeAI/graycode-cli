@@ -292,7 +292,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	path := filepath.Join(dir, ".hawk", "rules")
+	path := filepath.Join(dir, ".agents", "rules")
 
 	if err := original.SaveToFile(path); err != nil {
 		t.Fatalf("SaveToFile error: %v", err)

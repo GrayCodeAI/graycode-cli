@@ -3,6 +3,7 @@ package memory
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -275,10 +276,12 @@ func TestConsolidate_AllUnique(t *testing.T) {
 func TestMemoryDir(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	stateDir := filepath.Join(dir, "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
 
 	d := memoryDir()
-	if !strings.Contains(d, ".hawk") {
-		t.Errorf("memoryDir() = %q, should contain .hawk", d)
+	if !strings.HasPrefix(d, stateDir) {
+		t.Errorf("memoryDir() = %q, should be under %q", d, stateDir)
 	}
 	if !strings.Contains(d, "memories") {
 		t.Errorf("memoryDir() = %q, should contain memories", d)

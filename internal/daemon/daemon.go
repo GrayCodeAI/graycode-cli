@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 const maxRequestBodyBytes = 1 << 20
@@ -538,6 +538,5 @@ func (s *Server) removePIDFile() error {
 }
 
 func pidDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "run")
+	return storage.DaemonRunDir()
 }

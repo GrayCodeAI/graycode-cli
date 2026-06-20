@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 const (
 	storeVersion = 1
-	storeDirName = "taste"
 )
 
 // storeEnvelope wraps a profile with versioning metadata for serialization.
@@ -21,20 +22,16 @@ type storeEnvelope struct {
 	Profile    *Profile  `json:"profile"`
 }
 
-// Store manages file-based persistence for taste profiles at ~/.hawk/taste/.
+// Store manages file-based persistence for taste profiles.
 type Store struct {
 	baseDir string
 }
 
 // NewStore creates a store rooted at the given base directory.
-// If baseDir is empty, it defaults to ~/.hawk/taste/.
+// If baseDir is empty, it defaults to Hawk's user state taste directory.
 func NewStore(baseDir string) (*Store, error) {
 	if baseDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("cannot determine home directory: %w", err)
-		}
-		baseDir = filepath.Join(home, ".hawk", storeDirName)
+		baseDir = storage.TasteDir()
 	}
 
 	if err := os.MkdirAll(baseDir, 0o755); err != nil {

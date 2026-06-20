@@ -46,7 +46,7 @@ pre-commit:
           echo "lefthook: golangci-lint not installed — skipping (install: https://golangci-lint.run/usage/install/)"
           exit 0
         fi
-        golangci-lint run --new-from-rev=HEAD~1 --fix {staged_files}
+        golangci-lint run --new-from-rev=HEAD~1 --fix ./...
       stage_fixed: true
 
     ast-grep:

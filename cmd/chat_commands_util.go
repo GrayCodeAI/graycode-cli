@@ -127,7 +127,7 @@ func sessionStats(sess *engine.Session, id string) string {
 }
 
 func hooksSummary() string {
-	return "Hooks: pre_query, post_query, pre_tool, post_tool, session_start, session_end, permission_ask, error\nConfigure in .hawk/settings.json or ~/.hawk/settings.json"
+	return "Hooks: pre_query, post_query, pre_tool, post_tool, session_start, session_end, permission_ask, error\nConfigure in Hawk user settings"
 }
 
 func pluginsSummary(rt *plugin.Runtime) string {

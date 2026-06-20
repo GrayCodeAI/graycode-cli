@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Cache stores LLM responses keyed by (model, prompt_hash, params) to avoid re-calling APIs.
@@ -24,10 +24,9 @@ type CacheEntry struct {
 	CostUSD  float64 `json:"cost_usd"`
 }
 
-// DefaultCache returns a cache at ~/.hawk/eval/cache/.
+// DefaultCache returns a cache in Hawk's user cache directory.
 func DefaultCache() *Cache {
-	home := home.Dir()
-	return &Cache{Dir: filepath.Join(home, ".hawk", "eval", "cache")}
+	return &Cache{Dir: filepath.Join(storage.CacheDir(), "eval", "cache")}
 }
 
 // Key computes a cache key from model and prompt.
