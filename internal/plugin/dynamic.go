@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // PluginState represents the lifecycle state of a dynamic plugin.
@@ -132,10 +132,8 @@ type DynamicPluginManager struct {
 // NewDynamicPluginManager creates a new DynamicPluginManager with the given directories and registries.
 func NewDynamicPluginManager(dirs []string, tools ToolRegistrar, hooks HookRegistrar) *DynamicPluginManager {
 	if len(dirs) == 0 {
-		home := home.Dir()
 		dirs = []string{
-			filepath.Join(home, ".hawk", "plugins"),
-			filepath.Join(".hawk", "plugins"),
+			filepath.Join(storage.StateDir(), "plugins"),
 		}
 	}
 	return &DynamicPluginManager{
@@ -388,8 +386,7 @@ func (dm *DynamicPluginManager) Get(name string) (*DynamicPlugin, bool) {
 
 // InstallFromGitHub clones a repo into the plugins directory.
 func (dm *DynamicPluginManager) InstallFromGitHub(repo string) error {
-	home := home.Dir()
-	destDir := filepath.Join(home, ".hawk", "plugins")
+	destDir := filepath.Join(storage.StateDir(), "plugins")
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return fmt.Errorf("create plugins dir: %w", err)
 	}

@@ -15,7 +15,7 @@ type RepoRelation struct {
 	Relation string `yaml:"relation"` // "dependency", "types", "service", "shared"
 }
 
-// MultiRepoConfig is loaded from .hawk/repos.yaml.
+// MultiRepoConfig is loaded from .agents/repos.yaml.
 type MultiRepoConfig struct {
 	Repos []RepoRelation `yaml:"repos"`
 }
@@ -26,10 +26,10 @@ type MultiRepoContext struct {
 	BaseDir string
 }
 
-// LoadMultiRepoConfig reads .hawk/repos.yaml from the project root.
+// LoadMultiRepoConfig reads .agents/repos.yaml from the project root.
 func LoadMultiRepoConfig(projectDir string) *MultiRepoContext {
 	mrc := &MultiRepoContext{BaseDir: projectDir}
-	path := filepath.Join(projectDir, ".hawk", "repos.yaml")
+	path := filepath.Join(projectDir, ".agents", "repos.yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return mrc

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // BundledSkill defines a skill that ships with hawk.
@@ -169,8 +169,7 @@ category: general
 
 // BundledSkillsDir returns the directory where bundled skills are extracted.
 func BundledSkillsDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "bundled-skills")
+	return storage.BundledSkillsDir()
 }
 
 // ExtractBundledSkills extracts bundled skills to the user directory.

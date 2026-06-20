@@ -15,7 +15,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // ─── friendlyError ────────────────────────────────────────────────────────────
@@ -180,13 +180,13 @@ func friendlyError(err error) string {
 	// ── Disk full ─────────────────────────────────────────────────────────
 	if strings.Contains(low, "no space left") || strings.Contains(low, "disk full") ||
 		strings.Contains(low, "not enough space") || strings.Contains(low, "disk quota") {
-		return "Disk is full or quota exceeded. Free up space and try again.\n  Check ~/.hawk/sessions/ for old sessions you can remove."
+		return "Disk is full or quota exceeded. Free up space and try again.\n  Check Hawk's user state sessions directory for old sessions you can remove."
 	}
 
 	// ── Invalid JSON in config/settings ───────────────────────────────────
 	if (strings.Contains(low, "json") || strings.Contains(low, "unmarshal") || strings.Contains(low, "syntax error")) &&
 		(strings.Contains(low, "settings") || strings.Contains(low, "config") || strings.Contains(low, "parse") || strings.Contains(low, "invalid character")) {
-		return "Invalid JSON in configuration. Check your settings files for syntax errors:\n  ~/.hawk/settings.json\n  .hawk/settings.json\n  Tip: use a JSON linter or 'cat ~/.hawk/settings.json | python3 -m json.tool' to find the issue."
+		return "Invalid JSON in configuration. Check your Hawk settings.json files for syntax errors.\n  Tip: use a JSON linter to find the issue."
 	}
 
 	// ── TLS / certificate errors ──────────────────────────────────────────
@@ -200,7 +200,7 @@ func friendlyError(err error) string {
 
 // ─── panicRecovery ────────────────────────────────────────────────────────────
 // Catches panics, saves the current session state, logs the stack trace to
-// ~/.hawk/crash.log, and exits with a user-friendly message.
+// Hawk's user state crash log, and exits with a user-friendly message.
 
 //lint:ignore U1000 Infrastructure wired in main.go for production builds
 func panicRecovery(saveFn func()) {
@@ -216,9 +216,8 @@ func panicRecovery(saveFn func()) {
 		}
 
 		// Log to crash file
-		home := home.Dir()
-		if home != "" {
-			crashDir := filepath.Join(home, ".hawk")
+		crashDir := storage.StateDir()
+		if crashDir != "" {
 			_ = os.MkdirAll(crashDir, 0o755)
 			crashLog := filepath.Join(crashDir, "crash.log")
 
@@ -239,7 +238,7 @@ func panicRecovery(saveFn func()) {
 		// Print user-friendly message
 		_, _ = fmt.Fprintf(os.Stderr, "\nhawk encountered an unexpected error and needs to exit.\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
-		_, _ = fmt.Fprintf(os.Stderr, "Details logged to ~/.hawk/crash.log\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Details logged to %s\n", filepath.Join(storage.StateDir(), "crash.log"))
 		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n\n")
 		_, _ = fmt.Fprintf(os.Stderr, "panic: %v\n", r)
 		os.Exit(1) // os.Exit intentional: panic recovery, defer already unwound
@@ -284,7 +283,7 @@ func signalHandler(saveFn func()) {
 }
 
 // ─── errorLogger ──────────────────────────────────────────────────────────────
-// Writes errors to ~/.hawk/error.log with timestamps. Thread-safe.
+// Writes errors to Hawk's user state error log with timestamps. Thread-safe.
 
 type errorLoggerT struct {
 	mu   sync.Mutex
@@ -298,11 +297,10 @@ var errLoggerOnce sync.Once
 //lint:ignore U1000 Infrastructure used by logError
 func getErrorLogger() *errorLoggerT {
 	errLoggerOnce.Do(func() {
-		home := home.Dir()
-		if home == "" {
-			home = os.TempDir()
+		dir := storage.StateDir()
+		if dir == "" {
+			dir = os.TempDir()
 		}
-		dir := filepath.Join(home, ".hawk")
 		_ = os.MkdirAll(dir, 0o755)
 		errLogger = &errorLoggerT{
 			path: filepath.Join(dir, "error.log"),
@@ -311,7 +309,7 @@ func getErrorLogger() *errorLoggerT {
 	return errLogger
 }
 
-// LogError writes a timestamped error entry to ~/.hawk/error.log.
+// LogError writes a timestamped error entry to the Hawk error log.
 func (l *errorLoggerT) LogError(context string, err error) {
 	if l == nil || err == nil {
 		return
@@ -335,7 +333,7 @@ func (l *errorLoggerT) LogError(context string, err error) {
 	_, _ = f.WriteString(entry)
 }
 
-// LogErrorf writes a formatted, timestamped error entry to ~/.hawk/error.log.
+// LogErrorf writes a formatted, timestamped error entry to the Hawk error log.
 func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 	if l == nil {
 		return
@@ -403,30 +401,22 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	}
 
 	// 3. Check sessions directory is writable
-	home, err := os.UserHomeDir()
-	if err != nil {
+	sessDir := storage.SessionsDir()
+	if err := os.MkdirAll(sessDir, 0o755); err != nil {
 		warnings = append(warnings, StartupWarning{
 			Check:   "sessions_dir",
-			Message: "Cannot determine home directory. Session persistence may not work.",
+			Message: fmt.Sprintf("Cannot create sessions directory %s: %v", sessDir, err),
 		})
 	} else {
-		sessDir := filepath.Join(home, ".hawk", "sessions")
-		if err := os.MkdirAll(sessDir, 0o755); err != nil {
+		// Try writing a temp file to verify writability
+		tmpPath := filepath.Join(sessDir, ".write_test")
+		if err := os.WriteFile(tmpPath, []byte("ok"), 0o644); err != nil {
 			warnings = append(warnings, StartupWarning{
 				Check:   "sessions_dir",
-				Message: fmt.Sprintf("Cannot create sessions directory %s: %v", sessDir, err),
+				Message: fmt.Sprintf("Sessions directory %s is not writable: %v", sessDir, err),
 			})
 		} else {
-			// Try writing a temp file to verify writability
-			tmpPath := filepath.Join(sessDir, ".write_test")
-			if err := os.WriteFile(tmpPath, []byte("ok"), 0o644); err != nil {
-				warnings = append(warnings, StartupWarning{
-					Check:   "sessions_dir",
-					Message: fmt.Sprintf("Sessions directory %s is not writable: %v", sessDir, err),
-				})
-			} else {
-				_ = os.Remove(tmpPath)
-			}
+			_ = os.Remove(tmpPath)
 		}
 	}
 

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +19,7 @@ import (
 // ─────────────────────────────────────────────────────────────────────────────
 
 func bgSessionsDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "bg-sessions")
+	return filepath.Join(storage.StateDir(), "bg-sessions")
 }
 
 // BGSessionInfo tracks a running background session.

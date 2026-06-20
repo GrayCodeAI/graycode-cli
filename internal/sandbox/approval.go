@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // GrantAction represents the action of a grant.
@@ -55,13 +57,12 @@ func NewApprovalStore(filePath string) *ApprovalStore {
 
 // NewProjectApprovalStore creates an approval store for a project directory.
 func NewProjectApprovalStore(projectDir string) *ApprovalStore {
-	return NewApprovalStore(filepath.Join(projectDir, ".hawk", "sandbox.grants.jsonc"))
+	return NewApprovalStore(filepath.Join(storage.ProjectStateDir(projectDir), "sandbox.grants.jsonc"))
 }
 
 // NewGlobalApprovalStore creates an approval store for the user's home directory.
 func NewGlobalApprovalStore() *ApprovalStore {
-	home, _ := os.UserHomeDir()
-	return NewApprovalStore(filepath.Join(home, ".hawk", "sandbox.grants.jsonc"))
+	return NewApprovalStore(filepath.Join(storage.StateDir(), "sandbox.grants.jsonc"))
 }
 
 func (s *ApprovalStore) load() {

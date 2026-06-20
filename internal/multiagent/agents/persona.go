@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Persona represents an enhanced agent definition with specific skills,
@@ -69,11 +69,10 @@ type PersonaRegistry struct {
 }
 
 // NewPersonaRegistry creates a new registry with the given storage directory.
-// If dir is empty, it defaults to ~/.hawk/agents/.
+// If dir is empty, it defaults to Hawk's user state agents directory.
 func NewPersonaRegistry(dir string) *PersonaRegistry {
 	if dir == "" {
-		home := home.Dir()
-		dir = filepath.Join(home, ".hawk", "agents")
+		dir = storage.PersonasDir()
 	}
 	return &PersonaRegistry{
 		Personas: make(map[string]*Persona),

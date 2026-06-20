@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 const (
@@ -14,7 +16,7 @@ const (
 	toolOutputSpillPreview  = 2_000
 )
 
-// maybeSpillToolOutput writes very large tool output to .hawk/scratch/ and returns a short handle.
+// maybeSpillToolOutput writes very large tool output to Hawk's user cache and returns a short handle.
 func maybeSpillToolOutput(output, toolName, toolID string) string {
 	if len(output) <= toolOutputSpillMinChars {
 		return output
@@ -23,7 +25,7 @@ func maybeSpillToolOutput(output, toolName, toolID string) string {
 	if err != nil {
 		return truncateToolOutput(output, toolOutputSpillMinChars)
 	}
-	dir := filepath.Join(cwd, ".hawk", "scratch")
+	dir := filepath.Join(storage.ProjectCacheDir(cwd), "scratch")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return truncateToolOutput(output, toolOutputSpillMinChars)
 	}

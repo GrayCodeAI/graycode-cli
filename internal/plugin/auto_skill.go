@@ -171,7 +171,7 @@ func RunAutoSkill(dir string) (string, error) {
 
 	installed := 0
 	for _, skill := range recommended {
-		msg, err := rc.Install(skill.Repo, skill.Name, "project")
+		msg, err := rc.Install(skill.Repo, skill.Name, "user")
 		if err != nil {
 			_, _ = fmt.Fprintf(&b, "  "+icons.CloseThick()+" %s — %v\n", skill.Name, err)
 			continue
@@ -182,7 +182,7 @@ func RunAutoSkill(dir string) (string, error) {
 	}
 
 	if installed > 0 {
-		_, _ = fmt.Fprintf(&b, "\nInstalled %d skill(s) to .hawk/skills/", installed)
+		_, _ = fmt.Fprintf(&b, "\nInstalled %d skill(s) to Hawk user state", installed)
 	}
 	return b.String(), nil
 }

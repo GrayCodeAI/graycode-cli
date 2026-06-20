@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -49,8 +49,7 @@ type OptimizationStep struct {
 }
 
 func NewPromptOptimizer() *PromptOptimizer {
-	home := home.Dir()
-	path := filepath.Join(home, ".hawk", "prompt_params.json")
+	path := filepath.Join(storage.StateDir(), "prompt_params.json")
 	po := &PromptOptimizer{
 		Parameters: make(map[string]*PromptParameter),
 		Path:       path,

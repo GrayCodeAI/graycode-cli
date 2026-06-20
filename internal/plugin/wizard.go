@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // BuildNewSkillPrompt creates an LLM prompt for the skill creator wizard.
@@ -49,9 +51,9 @@ allowed-tools: Read Write Bash Grep
 ...`, description)
 }
 
-// SaveNewSkill writes a SKILL.md to the project skills directory.
+// SaveNewSkill writes a SKILL.md to Hawk user state.
 func SaveNewSkill(name, content string) (string, error) {
-	dir := filepath.Join(".hawk", "skills", name)
+	dir := filepath.Join(storage.StateDir(), "skills", name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("create skill dir: %w", err)
 	}

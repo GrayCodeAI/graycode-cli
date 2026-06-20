@@ -1,14 +1,13 @@
 package prompt
 
 import (
-	"os"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestPromptTuner_RecordAndBest(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	pt := NewPromptTuner()
 	pt.RecordOutcome("tools", "Use tools freely", true)
@@ -20,9 +19,7 @@ func TestPromptTuner_RecordAndBest(t *testing.T) {
 }
 
 func TestPromptTuner_Report(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	pt := NewPromptTuner()
 	pt.RecordOutcome("style", "concise", true)
@@ -35,9 +32,7 @@ func TestPromptTuner_Report(t *testing.T) {
 }
 
 func TestPromptTuner_BestVariant_Empty(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	testutil.IsolateStorage(t)
 
 	pt := NewPromptTuner()
 	best, _ := pt.BestVariant("nonexistent")

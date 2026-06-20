@@ -7,7 +7,7 @@ import (
 // TestNamedCheckpointRoundTrip verifies a labeled session snapshot saves and
 // restores with full message history, model, and provider intact.
 func TestNamedCheckpointRoundTrip(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestSessionsDir(t, t.TempDir())
 
 	orig := &Session{
 		ID:       "sess-1",
@@ -55,7 +55,7 @@ func TestNamedCheckpointRoundTrip(t *testing.T) {
 // TestNamedCheckpointSnapshotIsImmutable verifies the snapshot is a deep copy:
 // mutating the live session after saving does not change the saved checkpoint.
 func TestNamedCheckpointSnapshotIsImmutable(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestSessionsDir(t, t.TempDir())
 
 	s := &Session{ID: "s", Messages: []Message{{Role: "user", Content: "v1"}}}
 	if _, err := SaveNamedCheckpoint("snap", s); err != nil {
@@ -77,7 +77,7 @@ func TestNamedCheckpointSnapshotIsImmutable(t *testing.T) {
 // TestNamedCheckpointOverwriteAndList verifies re-saving a label overwrites it
 // and that List/Delete behave.
 func TestNamedCheckpointOverwriteAndList(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestSessionsDir(t, t.TempDir())
 
 	if _, err := SaveNamedCheckpoint("a", &Session{ID: "a1"}); err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestNamedCheckpointOverwriteAndList(t *testing.T) {
 
 // TestNamedCheckpointErrors covers nil/empty inputs and missing checkpoints.
 func TestNamedCheckpointErrors(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestSessionsDir(t, t.TempDir())
 
 	if _, err := SaveNamedCheckpoint("", &Session{}); err == nil {
 		t.Error("expected error for empty name")

@@ -10,7 +10,7 @@ import (
 
 func TestLoadRuntimeConfig(t *testing.T) {
 	dir := t.TempDir()
-	hawkDir := filepath.Join(dir, ".hawk")
+	hawkDir := filepath.Join(dir, ".agents")
 	if err := os.MkdirAll(hawkDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestLoadRuntimeConfigMissing(t *testing.T) {
 
 func TestLoadRuntimeConfigMalformed(t *testing.T) {
 	dir := t.TempDir()
-	hawkDir := filepath.Join(dir, ".hawk")
+	hawkDir := filepath.Join(dir, ".agents")
 	_ = os.MkdirAll(hawkDir, 0o755)
 	_ = os.WriteFile(filepath.Join(hawkDir, "runtime.jsonc"), []byte("{ not json"), 0o644)
 	cfg := LoadRuntimeConfig(dir)

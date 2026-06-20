@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestLoadAgentsMD(t *testing.T) {
@@ -63,7 +64,7 @@ func TestBuildContextWithDirs(t *testing.T) {
 }
 
 func TestLoadSettingsWithJSONOverride(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateStorage(t)
 	settings, err := LoadSettingsWithOverride(`{"model":"test-model","allowedTools":["Read"],"disallowedTools":["Write"]}`)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +81,7 @@ func TestLoadSettingsWithJSONOverride(t *testing.T) {
 }
 
 func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateStorage(t)
 	settings, err := LoadSettingsWithOverride(`{
 		"autoAllow":["Read"],
 		"maxBudgetUSD":1.25,
@@ -112,32 +113,21 @@ func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
 	}
 }
 
-func TestLoadSettingsProjectMergeIncludesArchiveFields(t *testing.T) {
+func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 	home := t.TempDir()
-	project := t.TempDir()
 	t.Setenv("HOME", home)
-	if err := os.MkdirAll(filepath.Join(home, ".hawk"), 0o755); err != nil {
+	configDir := filepath.Join(home, "config")
+	t.Setenv("HAWK_CONFIG_DIR", configDir)
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(home, ".hawk", "settings.json"), []byte(`{"model":"global","allowedTools":["Read"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{"model":"global","allowedTools":["Read"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(project, ".hawk"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(project, ".hawk", "settings.json"), []byte(`{"model":"project","disallowedTools":["Write"],"mcpServers":[{"name":"demo","command":"demo-mcp"}]}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	orig, _ := os.Getwd()
-	if err := os.Chdir(project); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chdir(orig)
 
 	settings := LoadSettings()
-	if got := ActiveModel(context.TODO()); got != "project" {
-		t.Fatalf("expected project model in eyrie, got %q (settings.model=%q)", got, settings.Model)
+	if got := ActiveModel(context.TODO()); got != "global" {
+		t.Fatalf("expected global model in eyrie, got %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {
 		t.Fatalf("model must not remain in hawk settings.json, got %q", settings.Model)
@@ -145,11 +135,11 @@ func TestLoadSettingsProjectMergeIncludesArchiveFields(t *testing.T) {
 	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Read" {
 		t.Fatalf("expected global allowedTools, got %v", settings.AllowedTools)
 	}
-	if len(settings.DisallowedTools) != 1 || settings.DisallowedTools[0] != "Write" {
-		t.Fatalf("expected project disallowedTools, got %v", settings.DisallowedTools)
+	if len(settings.DisallowedTools) != 0 {
+		t.Fatalf("unexpected disallowedTools, got %v", settings.DisallowedTools)
 	}
-	if len(settings.MCPServers) != 1 || settings.MCPServers[0].Name != "demo" {
-		t.Fatalf("expected project mcpServers, got %v", settings.MCPServers)
+	if len(settings.MCPServers) != 0 {
+		t.Fatalf("unexpected mcpServers, got %v", settings.MCPServers)
 	}
 }
 
@@ -195,41 +185,13 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	}
 }
 
-func TestLoadAgentsMD_AgentDir(t *testing.T) {
+func TestLoadAgentsMD_VisibleFile(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".agent", "AGENTS.md"), []byte("agent dir instructions"), 0o644)
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("project instructions"), 0o644)
 
 	md := LoadAgentsMDFrom(dir)
-	if md != "agent dir instructions" {
-		t.Fatalf("expected .agent/AGENTS.md content, got %q", md)
-	}
-}
-
-func TestLoadAgentsMD_HawkDirPriority(t *testing.T) {
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".hawk", "AGENTS.md"), []byte("hawk dir"), 0o644)
-	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".agent", "AGENTS.md"), []byte("agent dir"), 0o644)
-
-	md := LoadAgentsMDFrom(dir)
-	if md != "hawk dir" {
-		t.Fatalf("expected .hawk/ to take priority, got %q", md)
-	}
-}
-
-func TestLoadAgentDir_Hawk(t *testing.T) {
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
-
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
-
-	got := LoadAgentDir()
-	if !strings.HasSuffix(got, ".hawk") || got == "" {
-		t.Fatalf("expected path ending in .hawk, got %q", got)
+	if md != "project instructions" {
+		t.Fatalf("expected AGENTS.md content, got %q", md)
 	}
 }
 
@@ -257,20 +219,5 @@ func TestLoadAgentDir_Neither(t *testing.T) {
 	got := LoadAgentDir()
 	if got != "" {
 		t.Fatalf("expected empty, got %q", got)
-	}
-}
-
-func TestLoadAgentDir_HawkPriority(t *testing.T) {
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
-	os.MkdirAll(filepath.Join(dir, ".agent"), 0o755)
-
-	orig, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(orig)
-
-	got := LoadAgentDir()
-	if !strings.HasSuffix(got, ".hawk") || got == "" {
-		t.Fatalf("expected .hawk priority, got %q", got)
 	}
 }

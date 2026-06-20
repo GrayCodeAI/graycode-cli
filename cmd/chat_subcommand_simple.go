@@ -12,9 +12,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/home"
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -645,19 +645,18 @@ func init() {
 		},
 	})
 
-	// /feedback <msg> — submit feedback saved to ~/.hawk/feedback/
+	// /feedback <msg> — submit feedback saved to Hawk user state.
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "feedback",
-		description: "submit feedback (saved to ~/.hawk/feedback/)",
+		description: "submit feedback (saved to Hawk user state)",
 		usage:       "/feedback <message>",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			body := strings.TrimSpace(strings.TrimPrefix(text, "/feedback"))
 			if body == "" {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to ~/.hawk/feedback/"})
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to Hawk user state."})
 				return m, nil
 			}
-			homeDir := home.Dir()
-			feedDir := filepath.Join(homeDir, ".hawk", "feedback")
+			feedDir := filepath.Join(storage.StateDir(), "feedback")
 			_ = os.MkdirAll(feedDir, 0o755)
 			report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
 				time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)

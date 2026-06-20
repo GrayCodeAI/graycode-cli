@@ -3,8 +3,8 @@ package engine
 import (
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -19,7 +19,7 @@ type CompactionEvent struct {
 // OnCompaction is invoked after compaction (TUI, logging, etc.).
 type OnCompaction func(CompactionEvent)
 
-// PersistID is the on-disk session id under ~/.hawk/sessions/.
+// PersistID is the on-disk session id under Hawk's user state sessions dir.
 // Set from the TUI when a chat session is created or resumed.
 func (s *Session) SetPersistID(id string) {
 	if s == nil {
@@ -97,7 +97,7 @@ func (s *Session) checkpointDir() string {
 	if id == "" {
 		return ""
 	}
-	return filepath.Join(home.Dir(), ".hawk", "sessions", id, "checkpoints")
+	return filepath.Join(storage.SessionsDir(), id, "checkpoints")
 }
 
 func (s *Session) checkpointManager() *session.CheckpointManager {

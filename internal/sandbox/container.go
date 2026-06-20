@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Compile-time check: ContainerSandbox implements tool.ContainerExecutor.
@@ -69,9 +71,9 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Remove any stale container with the same name from a previous session (best-effort)
 	_, _ = exec.CommandContext(ctx, "docker", "rm", "-f", name).CombinedOutput()
 
-	// Create attachments and cache dirs
-	attachDir := filepath.Join(c.projectDir, ".hawk", "attachments")
-	cacheDir := filepath.Join(c.projectDir, ".hawk", "cache")
+	// Create attachments and cache dirs outside the project workspace.
+	attachDir := filepath.Join(storage.ProjectStateDir(c.projectDir), "attachments")
+	cacheDir := filepath.Join(storage.ProjectCacheDir(c.projectDir), "container")
 	_ = os.MkdirAll(attachDir, 0o755)
 	_ = os.MkdirAll(cacheDir, 0o755)
 
@@ -181,7 +183,7 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 	hash := sha256.Sum256([]byte(dockerfile))
 	tag := fmt.Sprintf("hawk-sandbox:%x", hash[:6])
 
-	dfPath := filepath.Join(c.projectDir, ".hawk", "Dockerfile")
+	dfPath := filepath.Join(storage.ProjectStateDir(c.projectDir), "Dockerfile")
 	if err := os.MkdirAll(filepath.Dir(dfPath), 0o755); err != nil {
 		return "", err
 	}
@@ -220,7 +222,7 @@ func defaultHawkImage() string {
 }
 
 func resolveImage(projectDir string) string {
-	dfPath := filepath.Join(projectDir, ".hawk", "Dockerfile")
+	dfPath := filepath.Join(storage.ProjectStateDir(projectDir), "Dockerfile")
 	if _, err := os.Stat(dfPath); err == nil {
 		content, err := os.ReadFile(dfPath)
 		if err == nil && len(content) > 0 {

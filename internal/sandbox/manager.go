@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // PolicyDecision represents the outcome of a policy check.
@@ -53,13 +55,10 @@ func NewPolicyManager(projectDir string) *PolicyManager {
 
 func (m *PolicyManager) loadPolicy() {
 	// Load project policy
-	loadPolicyFile(filepath.Join(m.projectDir, ".hawk", "sandbox.jsonc"), m.policy)
+	loadPolicyFile(filepath.Join(m.projectDir, ".agents", "sandbox.jsonc"), m.policy)
 	// Load global policy (overrides defaults but not project)
 	globalPolicy := &PolicyConfig{}
-	home, _ := os.UserHomeDir()
-	if home != "" {
-		loadPolicyFile(filepath.Join(home, ".hawk", "sandbox.jsonc"), globalPolicy)
-	}
+	loadPolicyFile(filepath.Join(storage.StateDir(), "sandbox.jsonc"), globalPolicy)
 	// Project rules take precedence
 	if len(globalPolicy.Rules) > 0 && len(m.policy.Rules) == 0 {
 		m.policy.Rules = globalPolicy.Rules

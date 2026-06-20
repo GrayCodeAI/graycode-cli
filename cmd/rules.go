@@ -67,7 +67,7 @@ var rulesImportCmd = &cobra.Command{
 			return fmt.Errorf("export to hawk format failed: %w", err)
 		}
 
-		cmd.Println(fmt.Sprintf("Imported %d rule(s) from %s to .hawk/rules/.", len(imported), rulesImportFrom))
+		cmd.Println(fmt.Sprintf("Imported %d rule(s) from %s to .agents/rules/.", len(imported), rulesImportFrom))
 		for _, r := range imported {
 			cmd.Println(fmt.Sprintf("  - %s", r.Name))
 		}
@@ -90,7 +90,7 @@ var rulesExportCmd = &cobra.Command{
 		}
 
 		if len(hawkRules) == 0 {
-			cmd.Println("No hawk rules found in .hawk/rules/. Nothing to export.")
+			cmd.Println("No hawk rules found in .agents/rules/. Nothing to export.")
 			return nil
 		}
 

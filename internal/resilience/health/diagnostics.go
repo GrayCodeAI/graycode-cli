@@ -14,6 +14,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -298,18 +299,7 @@ func checkDiskSpace() DiagnosticResult {
 
 func checkConfigFileValid() DiagnosticResult {
 	start := time.Now()
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return DiagnosticResult{
-			Name:     "config_file_valid",
-			Status:   "warn",
-			Message:  "Could not determine home directory",
-			Fix:      "Set HOME environment variable",
-			Duration: time.Since(start),
-		}
-	}
-
-	configPath := filepath.Join(home, ".hawk", "config.json")
+	configPath := filepath.Join(storage.ConfigDir(), "config.json")
 	info, err := os.Stat(configPath)
 	if os.IsNotExist(err) {
 		return DiagnosticResult{
@@ -325,7 +315,7 @@ func checkConfigFileValid() DiagnosticResult {
 			Name:     "config_file_valid",
 			Status:   "fail",
 			Message:  fmt.Sprintf("Error accessing config: %v", err),
-			Fix:      "Check file permissions on ~/.hawk/config.json",
+			Fix:      "Check file permissions on Hawk's config directory",
 			Duration: time.Since(start),
 		}
 	}
@@ -390,18 +380,7 @@ func checkModelConfigured() DiagnosticResult {
 
 func checkSessionDirWritable() DiagnosticResult {
 	start := time.Now()
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return DiagnosticResult{
-			Name:     "session_dir_writable",
-			Status:   "fail",
-			Message:  "Could not determine home directory",
-			Fix:      "Set HOME environment variable",
-			Duration: time.Since(start),
-		}
-	}
-
-	sessionDir := filepath.Join(home, ".hawk", "sessions")
+	sessionDir := storage.SessionsDir()
 	return checkDirWritable("session_dir_writable", sessionDir, start)
 }
 
@@ -465,17 +444,7 @@ func checkNodeBinary() DiagnosticResult {
 
 func checkConfigDirWritable() DiagnosticResult {
 	start := time.Now()
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return DiagnosticResult{
-			Name:     "config_dir_writable",
-			Status:   "fail",
-			Message:  "Could not determine home directory",
-			Fix:      "Set HOME environment variable",
-			Duration: time.Since(start),
-		}
-	}
-	configDir := filepath.Join(home, ".hawk")
+	configDir := storage.ConfigDir()
 	return checkDirWritable("config_dir_writable", configDir, start)
 }
 

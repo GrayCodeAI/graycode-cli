@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -25,7 +25,7 @@ const (
 const toolDisplayMaxChars = 12000 // preview cap in scrollback (Grok uses ~20k for bash)
 
 func sessionExportPath(sessionID string) string {
-	return filepath.Join(home.Dir(), ".hawk", "exports", sessionID+".md")
+	return filepath.Join(storage.StateDir(), "exports", sessionID+".md")
 }
 
 func (m *chatModel) inScrollbackFocus() bool {

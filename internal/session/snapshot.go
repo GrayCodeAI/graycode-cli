@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Snapshot records a point-in-time copy of a session.
@@ -30,8 +30,7 @@ type SnapshotStore struct {
 
 // NewSnapshotStore creates a new snapshot store for the given session.
 func NewSnapshotStore(sessionID string) *SnapshotStore {
-	home := home.Dir()
-	dir := filepath.Join(home, ".hawk", "sessions", sessionID, "snapshots")
+	dir := filepath.Join(storage.SessionsDir(), sessionID, "snapshots")
 	return &SnapshotStore{
 		sessionID: sessionID,
 		dir:       dir,

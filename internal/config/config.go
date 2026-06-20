@@ -12,7 +12,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
 
-// LoadAgentsMD reads AGENTS.md (or AGENTS.md for backward compatibility) from the current directory or parents.
+// LoadAgentsMD reads AGENTS.md from the current directory or parents.
 func LoadAgentsMD() string {
 	dir, _ := os.Getwd()
 	return LoadAgentsMDFrom(dir)
@@ -21,12 +21,11 @@ func LoadAgentsMD() string {
 const maxAgentsMDSize = 10 * 1024 // 10KB
 
 // agentFiles lists project instruction filenames in priority order.
-// AGENTS.md is the canonical name; AGENTS.md is kept for backward compatibility.
 var agentFiles = []string{
-	"AGENTS.md", ".hawk/AGENTS.md", ".agent/AGENTS.md",
+	"AGENTS.md",
 }
 
-// LoadAgentsMDFrom reads AGENTS.md (or AGENTS.md fallback) from start or its parents.
+// LoadAgentsMDFrom reads AGENTS.md from start or its parents.
 func LoadAgentsMDFrom(start string) string {
 	dir := start
 	if dir == "" {
@@ -54,18 +53,15 @@ func LoadAgentsMDFrom(start string) string {
 	return ""
 }
 
-// LoadAgentDir returns the path to .hawk/ or .agent/ directory, whichever exists.
-// .hawk/ takes priority. Returns empty string if neither exists.
+// LoadAgentDir returns the path to .agent/ if it exists.
 func LoadAgentDir() string {
 	dir, _ := os.Getwd()
 	if abs, err := filepath.Abs(dir); err == nil {
 		dir = abs
 	}
-	for _, name := range []string{".hawk", ".agent"} {
-		p := filepath.Join(dir, name)
-		if info, err := os.Stat(p); err == nil && info.IsDir() {
-			return p
-		}
+	p := filepath.Join(dir, ".agent")
+	if info, err := os.Stat(p); err == nil && info.IsDir() {
+		return p
 	}
 	return ""
 }

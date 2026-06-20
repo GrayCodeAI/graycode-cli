@@ -281,7 +281,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
 	s.refreshContextWindowCache()
 
-	// Initialize agents accumulator for .hawk/agents.md
+	// Initialize agents accumulator for project learnings.
 	cwd, _ := os.Getwd()
 	s.AgentsAccum = prompts.NewAgentsAccumulator(cwd)
 

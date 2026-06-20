@@ -25,7 +25,7 @@ func (r *recipeSubcommand) Handle(m *chatModel, args []string, text string) (tea
 		rn := recipe.NewRunner()
 		recipes := rn.List()
 		if len(recipes) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No recipes found in ~/.hawk/recipes/ or .hawk/recipes/"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No recipes found in Hawk user state or .agents/recipes/"})
 		} else {
 			var list string
 			for _, r := range recipes {

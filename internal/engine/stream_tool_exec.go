@@ -409,7 +409,7 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
-	// Auto-accumulate learnings into .hawk/agents.md
+	// Auto-accumulate learnings into Hawk user state.
 	if s.AgentsAccum != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
 			pattern := prompts.ExtractPattern(tc.Name, p, output)
