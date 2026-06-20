@@ -63,7 +63,6 @@ var (
 	containerMode              bool
 	noContainer                bool
 	recoverFlag                bool
-	allowProjectMCP            bool
 	startupProfileFlag         bool
 )
 
@@ -148,7 +147,7 @@ var rootCmd = &cobra.Command{
 
 		// Extract bundled skills on first run.
 		if n, _ := plugin.ExtractBundledSkills(); n > 0 {
-			fmt.Printf("Extracted %d bundled skills to ~/.hawk/bundled-skills/\n", n)
+			fmt.Printf("Extracted %d bundled skills to Hawk user state\n", n)
 		}
 
 		// Recovery: scan for interrupted sessions before launching TUI.
@@ -216,7 +215,6 @@ func init() {
 	rootCmd.Flags().BoolVar(&refreshCatalogFlag, "refresh-catalog", false, "refresh the eyrie model catalog before starting")
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
-	rootCmd.Flags().BoolVar(&allowProjectMCP, "allow-project-mcp", false, "allow MCP servers defined in project-level .hawk/settings.json (security risk)")
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)

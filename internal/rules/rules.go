@@ -11,7 +11,7 @@ import (
 type Format string
 
 const (
-	FormatHawk       Format = "hawk"       // .hawk/rules/*.md
+	FormatHawk       Format = "hawk"       // .agents/rules/*.md
 	FormatCursor     Format = "cursor"     // .cursorrules or .cursor/rules/*.mdc
 	FormatClaudeCode Format = "claudecode" // CLAUDE.md
 	FormatCopilot    Format = "copilot"    // .github/copilot-instructions.md
@@ -115,7 +115,7 @@ func (e *UnsupportedFormatError) Error() string {
 func formatCandidates(dir string, f Format) []string {
 	switch f {
 	case FormatHawk:
-		return []string{filepath.Join(dir, ".hawk", "rules")}
+		return []string{filepath.Join(dir, ".agents", "rules")}
 	case FormatCursor:
 		return []string{
 			filepath.Join(dir, ".cursor", "rules"),

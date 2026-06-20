@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // AuditEntry records a file modification event.
@@ -37,8 +37,7 @@ var (
 // GetAuditLog returns the global audit log instance.
 func GetAuditLog() *AuditLog {
 	auditOnce.Do(func() {
-		home := home.Dir()
-		dir := filepath.Join(home, ".hawk", "audit")
+		dir := filepath.Join(storage.StateDir(), "audit")
 		_ = os.MkdirAll(dir, 0o755)
 
 		today := time.Now().Format("2006-01-02")
@@ -110,9 +109,8 @@ func RecordFileDelete(toolName, path string) {
 
 // TodayEntries reads today's audit entries.
 func TodayEntries() ([]AuditEntry, error) {
-	home := home.Dir()
 	today := time.Now().Format("2006-01-02")
-	path := filepath.Join(home, ".hawk", "audit", today+".jsonl")
+	path := filepath.Join(storage.StateDir(), "audit", today+".jsonl")
 
 	data, err := os.ReadFile(path)
 	if err != nil {

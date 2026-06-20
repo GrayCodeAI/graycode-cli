@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 func TestParseManifestValid(t *testing.T) {
@@ -670,16 +672,12 @@ func TestMultiplePluginsSameToolNameNamespacing(t *testing.T) {
 
 func TestNewPluginManagerDefaultDirs(t *testing.T) {
 	pm := NewPluginManager()
-	if len(pm.PluginDirs) != 2 {
-		t.Fatalf("expected 2 default dirs, got %d", len(pm.PluginDirs))
+	if len(pm.PluginDirs) != 1 {
+		t.Fatalf("expected 1 default dir, got %d", len(pm.PluginDirs))
 	}
 
-	home, _ := os.UserHomeDir()
-	if pm.PluginDirs[0] != filepath.Join(home, ".hawk", "plugins") {
+	if pm.PluginDirs[0] != filepath.Join(storage.StateDir(), "plugins") {
 		t.Errorf("unexpected first dir: %s", pm.PluginDirs[0])
-	}
-	if pm.PluginDirs[1] != filepath.Join(".hawk", "plugins") {
-		t.Errorf("unexpected second dir: %s", pm.PluginDirs[1])
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 type PromptTuner struct {
@@ -28,9 +28,8 @@ type PromptVariant struct {
 }
 
 func NewPromptTuner() *PromptTuner {
-	home := home.Dir()
 	pt := &PromptTuner{
-		path: filepath.Join(home, ".hawk", "prompt_tuning.json"),
+		path: filepath.Join(storage.StateDir(), "prompt_tuning.json"),
 	}
 	pt.load()
 	return pt

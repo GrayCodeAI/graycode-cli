@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/planner"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +17,7 @@ var planCmd = &cobra.Command{
 	Use:   "plan",
 	Short: "Create and manage structured development plans",
 	Long: `plan helps you create, list, and track structured development plans.
-Plans are stored as JSON files in .hawk/plans/.
+Plans are stored in Hawk's user state directory, partitioned by project.
 
 Subcommands:
   create <description>   Create a new plan (generates a plan prompt)
@@ -41,7 +42,7 @@ var planCreateCmd = &cobra.Command{
 		cmd.Println("--- User ---")
 		cmd.Println(prompt.User)
 		cmd.Println()
-		cmd.Println("Once you have the LLM response, save it as a JSON file in .hawk/plans/.")
+		cmd.Println("Once you have the LLM response, save it with an explicit output path or import it into Hawk plans.")
 		return nil
 	},
 }
@@ -50,7 +51,7 @@ var planListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all saved plans",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		plansDir := filepath.Join(".", ".hawk", "plans")
+		plansDir := currentProjectPlansDir()
 		entries, err := os.ReadDir(plansDir)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -115,7 +116,7 @@ var planDoneCmd = &cobra.Command{
 	Use:   "done <task-id>",
 	Short: "Mark a task as completed in the most recent plan",
 	Long: `Mark a task as done by its numeric ID. This operates on the most
-recently modified plan in .hawk/plans/.
+recently modified plan in Hawk's user state directory for the current project.
 
 To target a specific plan, set the plan name as the first argument
 followed by the task ID: hawk plan done <name> <task-id>`,
@@ -170,18 +171,19 @@ func init() {
 	planCmd.AddCommand(planDoneCmd)
 }
 
-// resolvePlanPath converts a plan name to a file path in .hawk/plans/.
+// resolvePlanPath converts a plan name to a file path in Hawk's user state dir.
 func resolvePlanPath(name string) string {
+	plansDir := currentProjectPlansDir()
 	// If the name already has a .json extension, use it directly.
 	if strings.HasSuffix(name, ".json") {
-		return filepath.Join(".", ".hawk", "plans", name)
+		return filepath.Join(plansDir, name)
 	}
-	return filepath.Join(".", ".hawk", "plans", name+".json")
+	return filepath.Join(plansDir, name+".json")
 }
 
 // mostRecentPlan returns the path to the most recently modified plan.
 func mostRecentPlan() (string, error) {
-	plansDir := filepath.Join(".", ".hawk", "plans")
+	plansDir := currentProjectPlansDir()
 	entries, err := os.ReadDir(plansDir)
 	if err != nil {
 		return "", fmt.Errorf("no plans directory found: %w", err)
@@ -205,7 +207,15 @@ func mostRecentPlan() (string, error) {
 	}
 
 	if newest == "" {
-		return "", fmt.Errorf("no plans found in .hawk/plans/")
+		return "", fmt.Errorf("no plans found")
 	}
 	return newest, nil
+}
+
+func currentProjectPlansDir() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "."
+	}
+	return storage.PlansDir(cwd)
 }

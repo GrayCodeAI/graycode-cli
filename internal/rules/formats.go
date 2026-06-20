@@ -7,16 +7,16 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Hawk: .hawk/rules/*.md
+// Hawk: .agents/rules/*.md
 // ---------------------------------------------------------------------------
 
 func readHawk(dir string) ([]Rule, error) {
-	rulesDir := filepath.Join(dir, ".hawk", "rules")
+	rulesDir := filepath.Join(dir, ".agents", "rules")
 	return readMDDir(rulesDir, ".md", FormatHawk)
 }
 
 func writeHawk(dir string, rules []Rule) error {
-	rulesDir := filepath.Join(dir, ".hawk", "rules")
+	rulesDir := filepath.Join(dir, ".agents", "rules")
 	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		return err
 	}

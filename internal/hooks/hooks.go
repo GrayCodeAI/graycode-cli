@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // EventType represents a hook event.
@@ -190,25 +192,21 @@ func LoadHooksDir(dir string) error {
 	return nil
 }
 
-// LoadConventionPolicies discovers and loads policy files from .hawk/policies/ directories.
+// LoadConventionPolicies discovers and loads convention policy files.
 // Convention: auto-discovered *policy*.{md,go} files from:
-//   - {cwd}/.hawk/policies/ (project scope, git-committable)
-//   - ~/.hawk/policies/ (user scope, global)
+//   - {cwd}/.agents/policies/ (project scope)
+//   - Hawk user state policies directory
 //
 // Returns the number of policies loaded.
 func LoadConventionPolicies(cwd string) int {
 	count := 0
-	home, _ := os.UserHomeDir()
-
 	// Project scope
-	projectDir := filepath.Join(cwd, ".hawk", "policies")
+	projectDir := filepath.Join(cwd, ".agents", "policies")
 	count += loadPolicyDir(projectDir, "project")
 
 	// User scope
-	if home != "" {
-		userDir := filepath.Join(home, ".hawk", "policies")
-		count += loadPolicyDir(userDir, "user")
-	}
+	userDir := filepath.Join(storage.StateDir(), "policies")
+	count += loadPolicyDir(userDir, "user")
 
 	return count
 }

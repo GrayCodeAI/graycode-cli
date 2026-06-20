@@ -12,8 +12,8 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // startTime records when the process started, used by debugOutput for uptime.
@@ -78,8 +78,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 
 	// Session directory status
 	b.WriteString("\nSession directory:\n")
-	home := home.Dir()
-	sessDir := filepath.Join(home, ".hawk", "sessions")
+	sessDir := storage.SessionsDir()
 	if info, err := os.Stat(sessDir); err != nil {
 		b.WriteString(fmt.Sprintf("  Status:      missing (%s)\n", sessDir))
 	} else if !info.IsDir() {

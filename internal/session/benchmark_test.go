@@ -3,7 +3,6 @@ package session
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -178,8 +177,7 @@ func BenchmarkSessionList_50Sessions(b *testing.B) {
 	}
 
 	// Verify files exist.
-	home := os.Getenv("HOME")
-	dir := filepath.Join(home, ".hawk", "sessions")
+	dir := sessionsDir()
 	entries, _ := os.ReadDir(dir)
 	if len(entries) < 50 {
 		b.Fatalf("expected at least 50 session files, got %d", len(entries))

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Event represents an analytics event.
@@ -19,8 +19,7 @@ type Event struct {
 }
 
 func analyticsDir() string {
-	home := home.Dir()
-	return filepath.Join(home, ".hawk", "analytics")
+	return filepath.Join(storage.StateDir(), "analytics")
 }
 
 // LogEvent logs an analytics event.

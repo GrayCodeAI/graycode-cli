@@ -342,7 +342,7 @@ func TestFormatCandidates_Hawk(t *testing.T) {
 	if len(candidates) != 1 {
 		t.Fatalf("expected 1 candidate, got %d", len(candidates))
 	}
-	if candidates[0] != filepath.Join("/project", ".hawk", "rules") {
+	if candidates[0] != filepath.Join("/project", ".agents", "rules") {
 		t.Errorf("unexpected path: %q", candidates[0])
 	}
 }

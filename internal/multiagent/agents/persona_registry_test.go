@@ -533,12 +533,18 @@ func TestParsePersonaFile_NameFromFilename(t *testing.T) {
 }
 
 func TestNewPersonaRegistry_DefaultDir(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("HAWK_STATE_DIR", stateDir)
+
 	r := NewPersonaRegistry("")
 	if r.Dir == "" {
 		t.Error("default dir should not be empty")
 	}
-	if !strings.Contains(r.Dir, ".hawk") {
-		t.Errorf("default dir should contain .hawk, got %q", r.Dir)
+	if strings.Contains(r.Dir, ".hawk") {
+		t.Errorf("default dir should not contain .hawk, got %q", r.Dir)
+	}
+	if !strings.HasPrefix(r.Dir, stateDir) {
+		t.Errorf("default dir should be under state dir %q, got %q", stateDir, r.Dir)
 	}
 }
 

@@ -483,7 +483,7 @@ func NewErrorContext() *ErrorContext {
 			"Check which paths are allowed by the sandbox configuration",
 			"Request permission for the specific operation",
 			"Verify the file is within the project directory",
-			"Check sandbox settings in .hawk/settings.json",
+			"Check sandbox settings in Hawk user settings",
 		},
 		Examples: []string{
 			"// Ensure operations target files within the project root",

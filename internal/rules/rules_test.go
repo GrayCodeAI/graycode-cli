@@ -14,7 +14,7 @@ import (
 
 func TestDetect_HawkRules(t *testing.T) {
 	dir := t.TempDir()
-	rulesDir := filepath.Join(dir, ".hawk", "rules")
+	rulesDir := filepath.Join(dir, ".agents", "rules")
 	must(t, os.MkdirAll(rulesDir, 0o755))
 	must(t, os.WriteFile(filepath.Join(rulesDir, "style.md"), []byte("Use gofmt."), 0o644))
 
@@ -92,7 +92,7 @@ func TestDetect_Multiple(t *testing.T) {
 	dir := t.TempDir()
 
 	// Set up hawk
-	hawkDir := filepath.Join(dir, ".hawk", "rules")
+	hawkDir := filepath.Join(dir, ".agents", "rules")
 	must(t, os.MkdirAll(hawkDir, 0o755))
 	must(t, os.WriteFile(filepath.Join(hawkDir, "a.md"), []byte("rule a"), 0o644))
 
@@ -218,7 +218,7 @@ func TestImport_Gemini(t *testing.T) {
 
 func TestImport_Hawk(t *testing.T) {
 	dir := t.TempDir()
-	rulesDir := filepath.Join(dir, ".hawk", "rules")
+	rulesDir := filepath.Join(dir, ".agents", "rules")
 	must(t, os.MkdirAll(rulesDir, 0o755))
 	must(t, os.WriteFile(filepath.Join(rulesDir, "style.md"), []byte("Use gofmt.\n"), 0o644))
 	must(t, os.WriteFile(filepath.Join(rulesDir, "docs.md"),
@@ -259,7 +259,7 @@ func TestExport_Hawk(t *testing.T) {
 	}
 
 	// Verify files were written.
-	data, err := os.ReadFile(filepath.Join(dir, ".hawk", "rules", "style.md"))
+	data, err := os.ReadFile(filepath.Join(dir, ".agents", "rules", "style.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

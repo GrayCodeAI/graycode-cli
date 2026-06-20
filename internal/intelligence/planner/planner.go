@@ -1,6 +1,6 @@
 // Package planner implements structured planning that generates artifacts before
 // coding begins. It produces a Plan containing tasks, design notes, and risk
-// analysis, and can persist/load plans as JSON files under .hawk/plans/.
+// analysis, and can persist/load plans as JSON files under Hawk user state.
 package planner
 
 import (
@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Plan represents a structured development plan.
@@ -103,10 +105,10 @@ func ParsePlan(response string) (*Plan, error) {
 	return &plan, nil
 }
 
-// Save writes the plan to .hawk/plans/{sanitized-title}.json under the given dir.
+// Save writes the plan to Hawk project state.
 // Returns the path of the saved file.
 func Save(dir string, plan *Plan) (string, error) {
-	plansDir := filepath.Join(dir, ".hawk", "plans")
+	plansDir := storage.PlansDir(dir)
 	if err := os.MkdirAll(plansDir, 0o755); err != nil {
 		return "", fmt.Errorf("planner: cannot create plans directory: %w", err)
 	}

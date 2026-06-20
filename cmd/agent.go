@@ -15,7 +15,7 @@ import (
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Manage custom agent personas",
-	Long:  "Create, list, and manage custom agent personas stored in ~/.hawk/agents/.",
+	Long:  "Create, list, and manage custom agent personas stored in Hawk user state.",
 }
 
 var agentListCmd = &cobra.Command{

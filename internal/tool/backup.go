@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // BackupFile creates a backup of a file before modification.
@@ -110,8 +110,7 @@ func ListBackups(path string) []string {
 // UndoLatest finds the most recent backup across all files and restores it.
 // Returns the restored file path for display, or an error if no backups exist.
 func UndoLatest() (string, error) {
-	home := home.Dir()
-	backupsRoot := filepath.Join(home, ".hawk", "backups")
+	backupsRoot := filepath.Join(storage.StateDir(), "backups")
 	dirs, err := os.ReadDir(backupsRoot)
 	if err != nil {
 		return "", fmt.Errorf("no file changes to undo")
@@ -168,7 +167,6 @@ func UndoLatest() (string, error) {
 }
 
 func backupDirFor(path string) string {
-	home := home.Dir()
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		absPath = path
@@ -176,7 +174,7 @@ func backupDirFor(path string) string {
 	// Hash the directory to create a unique backup subdir
 	dir := filepath.Dir(absPath)
 	hash := simpleHash(dir)
-	return filepath.Join(home, ".hawk", "backups", hash)
+	return filepath.Join(storage.StateDir(), "backups", hash)
 }
 
 func simpleHash(s string) string {

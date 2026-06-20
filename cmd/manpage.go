@@ -83,11 +83,9 @@ func GenerateManPage() string {
 
 	// Files
 	b.WriteString(".SH FILES\n")
-	b.WriteString(".TP\n\\fB~/.hawk/settings.json\\fR\nGlobal configuration file\n")
-	b.WriteString(".TP\n\\fB.hawk/settings.json\\fR\nProject-level configuration\n")
-	b.WriteString(".TP\n\\fBAGENTS.md\\fR\nProject instructions file (also reads AGENTS.md for backward compatibility)\n")
-	b.WriteString(".TP\n\\fB~/.hawk/sessions/\\fR\nSaved session data\n")
-	b.WriteString(".TP\n\\fB~/.hawk/templates/\\fR\nPrompt templates\n")
+	b.WriteString(".TP\n\\fBHawk user config directory\\fR\nGlobal configuration files\n")
+	b.WriteString(".TP\n\\fBAGENTS.md\\fR\nProject instructions file\n")
+	b.WriteString(".TP\n\\fBHawk user state directory\\fR\nSaved session data, plans, skills, and runtime state\n")
 
 	// Credentials (stored in OS secret service — use /config, not .env)
 	b.WriteString(".SH CREDENTIALS\n")

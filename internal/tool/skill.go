@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 type SkillTool struct{}
@@ -39,7 +41,7 @@ func (SkillTool) Execute(_ context.Context, input json.RawMessage) (string, erro
 	skills := discoverSkills()
 	if p.Skill == "" {
 		if len(skills) == 0 {
-			return "No skills found in .hawk/skills, ~/.hawk/skills, or .codex/skills.", nil
+			return "No skills found in Hawk user state, .agents/skills, or .codex/skills.", nil
 		}
 		names := make([]string, 0, len(skills))
 		for name := range skills {
@@ -90,13 +92,20 @@ func discoverSkills() map[string]string {
 
 func skillRoots() []string {
 	var roots []string
+	roots = append(roots, filepath.Join(storage.StateDir(), "skills"))
 	if cwd, err := os.Getwd(); err == nil {
-		roots = append(roots, filepath.Join(cwd, ".hawk", "skills"))
+		roots = append(
+			roots,
+			filepath.Join(cwd, ".agents", "skills"),
+			filepath.Join(cwd, ".claude", "skills"),
+			filepath.Join(cwd, ".codex", "skills"),
+		)
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		roots = append(
 			roots,
-			filepath.Join(home, ".hawk", "skills"),
+			filepath.Join(home, ".agents", "skills"),
+			filepath.Join(home, ".claude", "skills"),
 			filepath.Join(home, ".codex", "skills"),
 		)
 	}

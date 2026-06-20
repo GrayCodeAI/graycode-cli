@@ -12,8 +12,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // saveSession persists the current session to disk.
@@ -234,8 +234,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/export":
-		homeDir := home.Dir()
-		exportDir := filepath.Join(homeDir, ".hawk", "exports")
+		exportDir := filepath.Join(storage.StateDir(), "exports")
 		_ = os.MkdirAll(exportDir, 0o755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
@@ -258,8 +257,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/share":
-		homeDir := home.Dir()
-		exportDir := filepath.Join(homeDir, ".hawk", "exports")
+		exportDir := filepath.Join(storage.StateDir(), "exports")
 		_ = os.MkdirAll(exportDir, 0o755)
 		exportPath := filepath.Join(exportDir, m.sessionID+".md")
 		var md strings.Builder
@@ -286,8 +284,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			return m, nil
 		}
 		newName := parts[1]
-		homeDir := home.Dir()
-		sessDir := filepath.Join(homeDir, ".hawk", "sessions")
+		sessDir := storage.SessionsDir()
 		oldPath := filepath.Join(sessDir, m.sessionID+".jsonl")
 		newPath := filepath.Join(sessDir, newName+".jsonl")
 		if err := os.Rename(oldPath, newPath); err != nil {
@@ -303,8 +300,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /tag <label>"})
 			return m, nil
 		}
-		homeDir := home.Dir()
-		tagFile := filepath.Join(homeDir, ".hawk", "sessions", m.sessionID+".tags")
+		tagFile := filepath.Join(storage.SessionsDir(), m.sessionID+".tags")
 		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})

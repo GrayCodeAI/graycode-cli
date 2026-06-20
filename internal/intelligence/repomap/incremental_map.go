@@ -1,6 +1,6 @@
 // incremental_map.go is the persistent, on-disk symbol
 // cache. It stores per-file SHA-256 hashes and the corresponding symbol
-// lists in .hawk/repomap-cache.json (or a caller-provided directory). On
+// lists in the Hawk cache directory (or a caller-provided directory). On
 // regeneration only files whose hash changed are re-parsed, and deleted
 // files are evicted, so the index stays accurate without a full rebuild.
 package repomap
@@ -12,10 +12,12 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // IncrementalMap maintains a cached symbol index that only reprocesses changed files.
-// It stores file hashes (SHA-256 of content) in a cache file (.hawk/repomap-cache.json).
+// It stores file hashes (SHA-256 of content) in a cache file.
 // On regeneration, only files whose hash changed are re-parsed. Symbols from changed
 // files are merged into the existing map, and symbols from deleted files are removed.
 type IncrementalMap struct {
@@ -32,8 +34,11 @@ type FileCache struct {
 }
 
 // NewIncrementalMap loads or creates a repomap cache.
-// cacheDir is the directory where the cache file will be stored (typically ".hawk").
+// cacheDir is the directory where the cache file will be stored.
 func NewIncrementalMap(cacheDir string) (*IncrementalMap, error) {
+	if cacheDir == "" {
+		cacheDir = storage.RepoMapCacheDir(".")
+	}
 	cacheFile := filepath.Join(cacheDir, "repomap-cache.json")
 
 	im := &IncrementalMap{

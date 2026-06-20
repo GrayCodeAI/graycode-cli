@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"gopkg.in/yaml.v3"
 )
 
@@ -153,11 +153,10 @@ type Runner struct {
 
 // NewRunner creates a recipe runner with default directories.
 func NewRunner() *Runner {
-	home := home.Dir()
 	return &Runner{
 		RecipeDirs: []string{
-			filepath.Join(home, ".hawk", "recipes"),
-			".hawk/recipes",
+			filepath.Join(storage.StateDir(), "recipes"),
+			filepath.Join(".agents", "recipes"),
 		},
 		Timeout: 30 * time.Minute,
 	}

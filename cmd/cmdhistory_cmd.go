@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/GrayCodeAI/hawk/internal/cmdhistory"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -158,11 +159,7 @@ func init() {
 }
 
 func openCmdHistoryStore() (*cmdhistory.Store, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	dbPath := filepath.Join(home, ".hawk", "cmd-history.db")
+	dbPath := filepath.Join(storage.StateDir(), "cmd-history.db")
 
 	// Ensure the directory exists.
 	if mkErr := os.MkdirAll(filepath.Dir(dbPath), 0o755); mkErr != nil {

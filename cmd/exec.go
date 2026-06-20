@@ -102,7 +102,7 @@ func init() {
 	execCmd.Flags().StringVarP(&execModel, "model", "m", "", "Model ID to use")
 	execCmd.Flags().IntVar(&execMaxTurns, "max-turns", 0, "Maximum agentic turns (0 = unlimited)")
 	execCmd.Flags().StringVar(&execCWD, "cwd", "", "Working directory")
-	execCmd.Flags().StringVar(&execAgent, "agent", "", "Agent persona to use (from ~/.hawk/agents/)")
+	execCmd.Flags().StringVar(&execAgent, "agent", "", "Agent persona to use (from Hawk user state)")
 	execCmd.Flags().StringVarP(&execSessionID, "session-id", "s", "", "Continue an existing session")
 	execCmd.Flags().StringVar(&execTag, "tag", "", "Session tag for categorization")
 	execCmd.Flags().BoolVarP(&execWorktree, "worktree", "w", false, "Run in an isolated git worktree")
@@ -508,8 +508,7 @@ type skillRunner interface {
 	Run(name string) (string, error)
 }
 
-// pluginSkillRunner is the production skillRunner backed by hawk's local skill
-// store (.hawk/skills, ~/.hawk/skills, ...).
+// pluginSkillRunner is the production skillRunner backed by Hawk skill storage.
 type pluginSkillRunner struct{}
 
 func (pluginSkillRunner) Run(name string) (string, error) {

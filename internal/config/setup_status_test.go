@@ -2,13 +2,12 @@ package config
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestHasConfiguredDeployment_FromStore(t *testing.T) {
@@ -33,9 +32,7 @@ func (emptyCredentialStore) Delete(context.Context, string) error        { retur
 
 func isolateCredentialEnv(t *testing.T) {
 	t.Helper()
-	home := t.TempDir()
-	_ = os.MkdirAll(filepath.Join(home, ".hawk"), 0o700)
-	t.Setenv("HOME", home)
+	testutil.IsolateStorage(t)
 }
 
 func TestHasConfiguredDeployment_RejectsPlaceholder(t *testing.T) {

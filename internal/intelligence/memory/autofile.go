@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // AutoFile manages a user-visible MEMORY.md that auto-discovers project conventions.
@@ -47,7 +49,7 @@ func NewAutoFile(repoDir string) *AutoFile {
 
 // MemoryPath returns the path to the memory file.
 func (af *AutoFile) MemoryPath() string {
-	return filepath.Join(af.repoDir, ".hawk", "MEMORY.md")
+	return filepath.Join(storage.ProjectStateDir(af.repoDir), "MEMORY.md")
 }
 
 // load reads existing memory entries from MEMORY.md.

@@ -1,14 +1,15 @@
 package cmd
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestLoadInputHistory_Empty(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateStorage(t)
 	history := loadInputHistory()
 	if len(history) != 0 {
 		t.Fatalf("expected empty history, got %d entries", len(history))
@@ -16,8 +17,7 @@ func TestLoadInputHistory_Empty(t *testing.T) {
 }
 
 func TestSaveAndLoadInputHistory(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testutil.IsolateStorage(t)
 
 	entries := []string{"hello", "world", "test"}
 	saveInputHistory(entries)
@@ -34,8 +34,7 @@ func TestSaveAndLoadInputHistory(t *testing.T) {
 }
 
 func TestSaveInputHistory_Deduplication(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testutil.IsolateStorage(t)
 
 	entries := []string{"hello", "world", "hello", "test", "world"}
 	saveInputHistory(entries)
@@ -52,8 +51,7 @@ func TestSaveInputHistory_Deduplication(t *testing.T) {
 }
 
 func TestSaveInputHistory_MaxEntries(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testutil.IsolateStorage(t)
 
 	var entries []string
 	for i := 0; i < 1500; i++ {
@@ -68,8 +66,7 @@ func TestSaveInputHistory_MaxEntries(t *testing.T) {
 }
 
 func TestAppendToHistory(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testutil.IsolateStorage(t)
 
 	appendToHistory("first command")
 	appendToHistory("second command")
@@ -84,8 +81,7 @@ func TestAppendToHistory(t *testing.T) {
 }
 
 func TestAppendToHistory_EmptySkipped(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
+	testutil.IsolateStorage(t)
 
 	appendToHistory("")
 	appendToHistory("  ")
@@ -97,8 +93,9 @@ func TestAppendToHistory_EmptySkipped(t *testing.T) {
 }
 
 func TestHistoryFilePath(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	expected := filepath.Join(home, ".hawk", "history")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
+	expected := filepath.Join(stateDir, "history")
 	if got := historyFilePath(); got != expected {
 		t.Fatalf("got %q, want %q", got, expected)
 	}

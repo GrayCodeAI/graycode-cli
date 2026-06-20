@@ -10,7 +10,7 @@ import (
 func TestAcquireLock(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(fmt.Sprintf("%s/.hawk/sessions", dir), 0o755)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
 
 	lock, err := AcquireLock("test-lock")
 	if err != nil {
@@ -25,7 +25,7 @@ func TestAcquireLock(t *testing.T) {
 func TestAcquireLock_AlreadyLocked(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(fmt.Sprintf("%s/.hawk/sessions", dir), 0o755)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
 
 	lock1, err := AcquireLock("locked-session")
 	if err != nil {
@@ -49,7 +49,7 @@ func TestAcquireLock_AlreadyLocked(t *testing.T) {
 func TestAcquireLock_StaleLock(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	sessDir := setTestSessionsDir(t, dir)
 	_ = os.MkdirAll(sessDir, 0o755)
 
 	// Create a stale lock (>5 min old)
@@ -71,7 +71,7 @@ func TestAcquireLock_StaleLock(t *testing.T) {
 func TestLockFile_Release(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(fmt.Sprintf("%s/.hawk/sessions", dir), 0o755)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
 
 	lock, _ := AcquireLock("release-test")
 	lock.Release()
@@ -87,7 +87,7 @@ func TestLockFile_Release(t *testing.T) {
 func TestLockFile_Refresh(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(fmt.Sprintf("%s/.hawk/sessions", dir), 0o755)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
 
 	lock, _ := AcquireLock("refresh-test")
 	defer lock.Release()
@@ -163,7 +163,7 @@ func TestContainsTag(t *testing.T) {
 func TestCleanOldSessions(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	sessDir := setTestSessionsDir(t, dir)
 	_ = os.MkdirAll(sessDir, 0o755)
 
 	// Create old sessions
@@ -187,7 +187,7 @@ func TestCleanOldSessions(t *testing.T) {
 func TestExportToMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	sessDir := setTestSessionsDir(t, dir)
 	_ = os.MkdirAll(sessDir, 0o755)
 
 	sess := &Session{
@@ -211,7 +211,7 @@ func TestExportToMarkdown(t *testing.T) {
 func TestSearchSessions_Integration(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	sessDir := fmt.Sprintf("%s/.hawk/sessions", dir)
+	sessDir := setTestSessionsDir(t, dir)
 	_ = os.MkdirAll(sessDir, 0o755)
 
 	sess := &Session{

@@ -76,7 +76,7 @@ func TestRuleDiscoverer_Deduplication(t *testing.T) {
 
 func TestRuleDiscoverer_DirectorySources(t *testing.T) {
 	dir := t.TempDir()
-	rulesDir := filepath.Join(dir, ".hawk", "rules")
+	rulesDir := filepath.Join(dir, ".agents", "rules")
 	os.MkdirAll(rulesDir, 0o755)
 	os.WriteFile(filepath.Join(rulesDir, "naming.md"), []byte("# Naming Conventions"), 0o644)
 	os.WriteFile(filepath.Join(rulesDir, "testing.md"), []byte("# Testing Rules"), 0o644)
@@ -91,12 +91,12 @@ func TestRuleDiscoverer_DirectorySources(t *testing.T) {
 
 	found := 0
 	for _, r := range rules {
-		if r.Source == ".hawk/rules" {
+		if r.Source == ".agents/rules" {
 			found++
 		}
 	}
 	if found != 2 {
-		t.Errorf("expected 2 rules from .hawk/rules, got %d", found)
+		t.Errorf("expected 2 rules from .agents/rules, got %d", found)
 	}
 }
 
@@ -133,9 +133,9 @@ func TestRuleDiscoverer_LocalVsGlobal(t *testing.T) {
 
 func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, ".hawk", "rules"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".agents", "rules"), 0o755)
 	os.MkdirAll(filepath.Join(dir, ".claude", "rules"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".hawk", "rules", "a.md"), []byte("# Hawk"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".agents", "rules", "a.md"), []byte("# Hawk"), 0o644)
 	os.WriteFile(filepath.Join(dir, ".claude", "rules", "b.md"), []byte("# Claude"), 0o644)
 	sub := filepath.Join(dir, "src")
 	os.MkdirAll(sub, 0o755)
@@ -145,10 +145,10 @@ func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 	rd := NewRuleDiscoverer(dir)
 	rules := rd.Discover(target)
 
-	// .hawk/rules (priority 1) should come before .claude/rules (priority 3)
+	// .agents/rules (priority 1) should come before .claude/rules (priority 3)
 	var hawkIdx, claudeIdx int
 	for i, r := range rules {
-		if r.Source == ".hawk/rules" {
+		if r.Source == ".agents/rules" {
 			hawkIdx = i
 		}
 		if r.Source == ".claude/rules" {
@@ -156,7 +156,7 @@ func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 		}
 	}
 	if hawkIdx >= claudeIdx {
-		t.Error(".hawk/rules should have higher precedence than .claude/rules")
+		t.Error(".agents/rules should have higher precedence than .claude/rules")
 	}
 }
 
