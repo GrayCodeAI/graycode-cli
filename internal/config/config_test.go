@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestLoadAgentsMD(t *testing.T) {
@@ -63,7 +64,7 @@ func TestBuildContextWithDirs(t *testing.T) {
 }
 
 func TestLoadSettingsWithJSONOverride(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateStorage(t)
 	settings, err := LoadSettingsWithOverride(`{"model":"test-model","allowedTools":["Read"],"disallowedTools":["Write"]}`)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +81,7 @@ func TestLoadSettingsWithJSONOverride(t *testing.T) {
 }
 
 func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	testutil.IsolateStorage(t)
 	settings, err := LoadSettingsWithOverride(`{
 		"autoAllow":["Read"],
 		"maxBudgetUSD":1.25,

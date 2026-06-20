@@ -1,15 +1,14 @@
 package engine
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestAdaptivePrompt_New(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
+	testutil.IsolateStorage(t)
 
 	ap := NewAdaptivePrompt()
 	if ap == nil {
@@ -21,11 +20,7 @@ func TestAdaptivePrompt_New(t *testing.T) {
 }
 
 func TestAdaptivePrompt_LearnFromFeedback(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	if err := os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.IsolateStorage(t)
 
 	ap := NewAdaptivePrompt()
 
@@ -60,11 +55,7 @@ func TestAdaptivePrompt_LearnFromFeedback(t *testing.T) {
 }
 
 func TestAdaptivePrompt_FormatForPrompt(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	if err := os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.IsolateStorage(t)
 
 	ap := NewAdaptivePrompt()
 	ap.LearnFromFeedback("don't add trailing whitespace to files")
@@ -80,11 +71,7 @@ func TestAdaptivePrompt_FormatForPrompt(t *testing.T) {
 }
 
 func TestAdaptivePrompt_Count(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	if err := os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.IsolateStorage(t)
 
 	ap := NewAdaptivePrompt()
 	if ap.Count() != 0 {
@@ -98,11 +85,7 @@ func TestAdaptivePrompt_Count(t *testing.T) {
 }
 
 func TestAdaptivePrompt_Persistence(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("HOME", dir)
-	if err := os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.IsolateStorage(t)
 
 	ap1 := NewAdaptivePrompt()
 	ap1.LearnFromFeedback("don't add unnecessary dependencies")
