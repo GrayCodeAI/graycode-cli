@@ -19,6 +19,9 @@ These items are already completed in the current workspace.
 - migrated `sight` and `inspect` to import contracts
 - switched Hawk `internal/types/severity.go` to re-export from contracts
 - converted `hawk/shared/types` into a compatibility shim
+- removed the duplicate severity/finding definitions in `tok/types` (tok was the
+  original shared-types host); `tok/types` now re-exports
+  `hawk-core-contracts/types` as a deprecated compatibility shim
 
 ### Tool contract migration
 - added `hawk-core-contracts/tools`

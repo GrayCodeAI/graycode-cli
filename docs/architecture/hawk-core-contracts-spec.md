@@ -27,54 +27,57 @@ Not allowed:
 - engine implementations
 - Hawk application internals
 
-## Initial package layout
+## Package layout
+
+Implemented today:
 
 ```text
 hawk-core-contracts/
-├── types/
-├── review/
-├── verify/
-├── events/
-├── policy/
-├── tools/
-├── engines/
-├── sessions/
+├── types/    # findings + severity vocabulary
+├── review/   # code-review result contracts
+├── verify/   # verification result contracts
+├── events/   # trace/tool event schemas
+├── policy/   # permission/guardian decision contracts
+├── tools/    # provider-neutral tool call/result
 └── README.md
 ```
 
-## Initial contracts to move
+Planned, not yet implemented (do not document as present until the package exists):
 
-### Findings
-- `Severity`
-- `Finding`
-- `ReviewFinding`
-- `VerificationFinding`
+```text
+├── engines/   # engine request/response envelopes
+└── sessions/  # session id/state/summary contracts
+```
 
-### Events
-- `TraceEvent`
-- `SessionEvent`
-- `ToolEvent`
-- `VerificationEvent`
+## Implemented contracts
 
-### Policy
-- `PolicyDecision`
-- `ApprovalRequirement`
-- `ExecutionBoundary`
+These are the types that actually live in `hawk-core-contracts` today. Keep this
+list in sync with the code (it is the inventory the dependency rules assume).
 
-### Tools
-- `ToolCall`
-- `ToolResult`
-- `ToolError`
+### `types/`
+- `Severity`, `AuditSeverity`, `TokenSeverity`
+- `Finding`, `FindingSlice`, `FindingSummary`
+- helpers: `ParseSeverity`, `FindingFromSight`, `FindingFromInspect`
 
-### Engines
-- `EngineRequest`
-- `EngineResponse`
-- engine-specific input/output envelopes
+### `review/`
+- `Result`, `Finding`, `InlineComment`, `Stats`, `ConfidenceBreakdown`
 
-### Sessions
-- `SessionID`
-- `SessionState`
-- `SessionSummary`
+### `verify/`
+- `Report`, `Finding`, `Stats`
+
+### `events/`
+- `TraceEvent`, `ToolEvent`, `UsageInfo`
+
+### `policy/`
+- `GuardianDecision`, `PermissionRequest`, `PermissionVerdict`, `Risk`
+- helpers: `Allow`, `Deny`, `RequireApproval`, `ParseRisk`
+
+### `tools/`
+- `ToolCall`, `ToolResult`
+
+### Planned (not yet in the module)
+- engines: `EngineRequest`, `EngineResponse`, engine-specific envelopes
+- sessions: `SessionID`, `SessionState`, `SessionSummary`
 
 ## Migration order
 

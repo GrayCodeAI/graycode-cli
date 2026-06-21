@@ -2,6 +2,8 @@
 
 ## Required graph
 
+These edges always hold:
+
 ```text
 hawk -> eyrie
 hawk -> yaad
@@ -11,17 +13,34 @@ hawk -> sight
 hawk -> inspect
 hawk -> hawk-core-contracts
 
-eyrie -> hawk-core-contracts
-yaad  -> hawk-core-contracts
-tok   -> hawk-core-contracts
-trace -> hawk-core-contracts
-sight -> hawk-core-contracts
-inspect -> hawk-core-contracts
-
 hawk-sdk-go -> hawk public API/contracts
 hawk-sdk-python -> hawk public API/contracts
 hawk-community-skills -> hawk plugin/skill API
 ```
+
+## Contract edges
+
+An engine depends on `hawk-core-contracts` **only when it produces or consumes a
+cross-repo contract** (a shared finding, severity, event, etc.). Engines that
+expose no cross-repo type stay contract-free — adding the dependency "to be
+consistent" is a violation of "keep the graph minimal", not an improvement.
+
+Current state (keep in sync with the code; the boundary guards enforce the
+*forbidden* edges below, not these contract edges):
+
+```text
+sight   -> hawk-core-contracts   # severity/finding vocabulary
+inspect -> hawk-core-contracts   # severity/finding vocabulary
+tok     -> hawk-core-contracts   # types/ re-exports contracts (compat shim)
+
+eyrie   -> (none)   # provider/transport types are eyrie-local
+yaad    -> (none)   # memory event types are yaad-local
+trace   -> (none)   # trace/redaction event types are trace-local
+```
+
+If `eyrie`, `yaad`, or `trace` later needs to emit or accept a shared
+finding/event, the type moves into `hawk-core-contracts` first and the engine
+adds the contract edge then — not before.
 
 ## Forbidden graph
 
@@ -54,12 +73,28 @@ Provider-specific code should not leak into memory, review, verify, or trace eng
 
 Based on current local structure:
 
-- `sight -> hawk/shared/types` removed
-- `inspect -> hawk/shared/types` removed
-- review any `eyrie` or `yaad` dependency on `tok` and reduce it to contracts or Hawk orchestration where possible
+- `sight -> hawk/shared/types` removed (now `sight -> hawk-core-contracts`)
+- `inspect -> hawk/shared/types` removed (now `inspect -> hawk-core-contracts`)
+- `tok/types` duplicate definitions removed; `tok/types` now re-exports
+  `hawk-core-contracts/types` as a deprecated compat shim
+- review any `eyrie` or `yaad` dependency on `tok` and reduce it to contracts or
+  Hawk orchestration where possible
 
-## Enforcement ideas
+## Enforcement
 
-- document allowed import boundaries in each repo README
-- add CI checks for forbidden import paths
-- keep `hawk-core-contracts` versioned and minimal
+These were previously "ideas"; they are now implemented:
+
+- each support repo documents its import boundary in its README
+  ("Ecosystem Boundaries" section)
+- CI runs `scripts/check-ecosystem-boundaries.sh` in every support repo, and
+  Hawk additionally runs `check-shared-types-imports.sh` and
+  `check-eyrie-client-imports.sh`
+- `hawk-core-contracts` is kept minimal (leaf module, no external dependencies)
+
+Still open:
+
+- `hawk-core-contracts` is consumed via local `replace` directives at `v0.0.0`;
+  it is not yet a tagged/published module
+- the boundary guard scripts depend on `rg`; when `rg` is absent they pass
+  vacuously, so CI images must provide ripgrep (or the scripts should fall back
+  to `git grep`)
