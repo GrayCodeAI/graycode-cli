@@ -50,6 +50,52 @@ Users / SDKs / Skills
             hawk-core-contracts
 ```
 
+## Current vs proposed
+
+Current implementation in this repo:
+
+```text
+hawk
+  -> eyrie
+  -> yaad
+  -> tok
+  -> trace
+  -> sight
+  -> inspect
+  -> hawk-core-contracts
+
+support engines
+  -> hawk-core-contracts only when they need shared contracts
+  x-> each other
+```
+
+Proposed steady-state architecture:
+
+```text
+SDKs / Skills / future integrations
+                |
+                v
+              Hawk
+                |
+   +------------+------------+------------+------------+------------+------------+
+   |            |            |            |            |            |            |
+   v            v            v            v            v            v            v
+ Eyrie        Yaad         Tok         Trace        Sight       Inspect    public APIs
+   \            |            |            |            |            /
+    +-----------+------------+------------+------------+-----------+
+                                 |
+                                 v
+                      hawk-core-contracts
+```
+
+This means:
+
+- Hawk is the product and orchestration boundary
+- all six engines stay at the same architectural level
+- engines remain independent from each other
+- shared cross-repo vocabulary lives below them in `hawk-core-contracts`
+- SDKs and community skills consume Hawk, not the engines directly
+
 ## Hawk responsibilities
 
 Hawk owns:
@@ -157,8 +203,10 @@ Status:
 - align SDKs and skills to Hawk public interfaces only
 
 Status:
-- still future work
-- Hawk SDK and skill repos should consume Hawk public contracts and plugin surfaces only
+- policy is now explicit and guarded in Hawk docs
+- `hawk-sdk-go` is covered by the support-repo coupling guard so it cannot grow
+  direct engine imports
+- broader non-Go consumer enforcement remains future work
 
 ### Phase 6
 - deprecate and eventually remove `hawk/shared/types`

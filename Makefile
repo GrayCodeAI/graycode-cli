@@ -34,7 +34,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench build ci clean contracts-guard ecosystem-guard eyrie-client-guard cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench build ci clean contracts-guard ecosystem-guard eyrie-client-guard peer-guard cover cover-new fmt help install lint lint-fix \
         release security setup smoke path test test-10x test-live test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
@@ -108,6 +108,9 @@ ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or dep
 eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk transport adapters.
 	bash ./scripts/check-eyrie-client-imports.sh
 
+peer-guard: ## Fail if support engines import each other instead of depending only on Hawk contracts.
+	bash ./scripts/check-support-repo-coupling.sh
+
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
 	$(GOLANGCI) run ./... --timeout=5m
@@ -127,7 +130,7 @@ tidy: ## Sync workspace modules and verify checksums.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy fmt vet contracts-guard ecosystem-guard eyrie-client-guard lint test-race security ## Run everything CI runs.
+ci: tidy fmt vet contracts-guard ecosystem-guard eyrie-client-guard peer-guard lint test-race security ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 smoke: ## Quick build + doctor + ecosystem verification.
@@ -151,12 +154,14 @@ clean: ## Remove build artefacts.
 # ---------------------------------------------------------------------------
 # Setup — bootstrap local development environment.
 # ---------------------------------------------------------------------------
+FOUNDATION_REPOS := hawk-core-contracts
 ECO_REPOS := eyrie inspect sight tok trace yaad
+WORKSPACE_REPOS := $(FOUNDATION_REPOS) $(ECO_REPOS)
 
 setup: ## Set up local development environment (go.work + external repos).
 	@echo "=== Setting up hawk development environment ==="
 	@mkdir -p external
-	@for repo in $(ECO_REPOS); do \
+	@for repo in $(WORKSPACE_REPOS); do \
 		if [ ! -d "external/$$repo" ]; then \
 			echo "Cloning $$repo..."; \
 			git clone --depth=1 "https://github.com/GrayCodeAI/$$repo.git" "external/$$repo" 2>/dev/null || \
@@ -168,14 +173,12 @@ setup: ## Set up local development environment (go.work + external repos).
 	@echo "Generating go.work..."
 	@echo "go 1.26.4" > go.work
 	@echo "" >> go.work
-	@echo "use (" >> go.work
-	@echo "	." >> go.work
-	@if [ -d "external/hawk-core-contracts" ]; then \
-		echo "	./external/hawk-core-contracts" >> go.work; \
-	fi
-	@for repo in $(ECO_REPOS); do \
+	@echo "use ." >> go.work
+	@echo "" >> go.work
+	@echo "replace (" >> go.work
+	@for repo in $(WORKSPACE_REPOS); do \
 		if [ -d "external/$$repo" ]; then \
-			echo "	./external/$$repo" >> go.work; \
+			echo "	github.com/GrayCodeAI/$$repo => ./external/$$repo" >> go.work; \
 		fi; \
 	done
 	@echo ")" >> go.work

@@ -16,3 +16,11 @@ Documents:
 Core rule:
 
 `hawk` is the product. The other Hawk repos are capabilities that power it.
+
+Final target shape:
+
+- `hawk` is the orchestrator and only primary product surface
+- six peer support engines sit below Hawk:
+  `eyrie`, `yaad`, `tok`, `trace`, `sight`, `inspect`
+- `hawk-core-contracts` sits below those engines as the shared contract layer
+- SDKs and community skills sit above Hawk as consumers of Hawk public surfaces

@@ -64,6 +64,8 @@ jobs:
         run: bash ./scripts/check-ecosystem-boundaries.sh
       - name: eyrie client boundary guard
         run: bash ./scripts/check-eyrie-client-imports.sh
+      - name: support repo coupling guard
+        run: bash ./scripts/check-support-repo-coupling.sh
 
   # -------------------------------------------------------------------------
   # 2. Module hygiene — tidy, verify (hawk + external ecosystem repos via go.work).
@@ -95,7 +97,7 @@ jobs:
         run: go mod verify
       - name: workspace points at external checkouts
         run: |
-          for module in eyrie inspect sight tok trace yaad; do
+          for module in hawk-core-contracts eyrie inspect sight tok trace yaad; do
             if ! grep -q "./external/${module}" go.work; then
               echo "::error::go.work must include ./external/${module}."
               cat go.work

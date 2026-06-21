@@ -18,6 +18,27 @@ hawk-sdk-python -> hawk public API/contracts
 hawk-community-skills -> hawk plugin/skill API
 ```
 
+Product shape:
+
+```text
+top
+  hawk-sdk-go / hawk-sdk-python / hawk-community-skills
+                         |
+                         v
+                       hawk
+                         |
+      +------------------+------------------+
+      |         |         |        |        |
+      v         v         v        v        v
+    eyrie     yaad      tok      trace    sight    inspect
+      \         |         |        |        |         /
+       +--------+---------+--------+--------+--------+
+                               |
+                               v
+                    hawk-core-contracts
+bottom
+```
+
 ## Contract edges
 
 An engine depends on `hawk-core-contracts` **only when it produces or consumes a
@@ -77,8 +98,7 @@ Based on current local structure:
 - `inspect -> hawk/shared/types` removed (now `inspect -> hawk-core-contracts`)
 - `tok/types` duplicate definitions removed; `tok/types` now re-exports
   `hawk-core-contracts/types` as a deprecated compat shim
-- review any `eyrie` or `yaad` dependency on `tok` and reduce it to contracts or
-  Hawk orchestration where possible
+- keep support engines peer-isolated as new features are added
 
 ## Enforcement
 
@@ -87,14 +107,14 @@ These were previously "ideas"; they are now implemented:
 - each support repo documents its import boundary in its README
   ("Ecosystem Boundaries" section)
 - CI runs `scripts/check-ecosystem-boundaries.sh` in every support repo, and
-  Hawk additionally runs `check-shared-types-imports.sh` and
-  `check-eyrie-client-imports.sh`
+  Hawk additionally runs `check-shared-types-imports.sh`,
+  `check-eyrie-client-imports.sh`, and `check-support-repo-coupling.sh`
 - `hawk-core-contracts` is kept minimal (leaf module, no external dependencies)
 
 Still open:
 
-- `hawk-core-contracts` is consumed via local `replace` directives at `v0.0.0`;
-  it is not yet a tagged/published module
+- `hawk/shared/types` remains as a deprecated compatibility layer until downstream
+  migration evidence is complete
 - the boundary guard scripts depend on `rg`; when `rg` is absent they pass
   vacuously, so CI images must provide ripgrep (or the scripts should fall back
   to `git grep`)

@@ -314,11 +314,17 @@ hawk/
 
 ### Ecosystem
 
-hawk integrates these GrayCodeAI repos in three ways:
+hawk integrates these GrayCodeAI repos in three layers:
 
-- **`go.mod` modules:** **eyrie**, **sight**, **inspect**, **tok**, **yaad** — pinned module requirements.
-- **External checkout + `go.work`:** **eyrie**, **sight**, **inspect**, **tok**, **yaad**, **trace** — clone ecosystem repos under `external/<repo>`. `go.work` lists the local external checkouts. CI clones the same layout via **`.github/actions/checkout-eyrie`**.
-- **Optional CLI (no Go import):** **trace** — installed separately; `hawk` shells into `trace` for session capture when present.
+- **Primary product:** **hawk** is the only end-user product surface in this ecosystem.
+- **Support engines mounted by Hawk:** **eyrie**, **yaad**, **tok**, **trace**, **sight**, **inspect**. Hawk imports or shells into these engines behind its own command surface.
+- **Shared foundation:** **hawk-core-contracts** holds the neutral cross-repo types that keep the engines independent from Hawk internals.
+
+Local development uses:
+
+- **`go.mod` modules:** pinned requirements for the support engines and `hawk-core-contracts`
+- **External checkout + `go.work`:** clone support repos under `external/<repo>`; `go.work` maps the module paths to those local checkouts
+- **Submodules in this repo:** the same external layout is pinned under `external/` for reproducible CI and multi-repo work
 
 Cross-repo contracts now live in **`github.com/GrayCodeAI/hawk-core-contracts`** so support repos do not depend on Hawk internals. The legacy `hawk/shared/types` package is now a deprecated compatibility layer and should not be used for new code.
 
@@ -341,7 +347,8 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 | **inspect** | [GrayCodeAI/inspect](https://github.com/GrayCodeAI/inspect) | Site audit library |
 | **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Tokenizer & compression |
 | **yaad** | [GrayCodeAI/yaad](https://github.com/GrayCodeAI/yaad) | Graph-based memory |
-| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture CLI |
+| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture and replay engine mounted as `hawk trace ...` |
+| **hawk-core-contracts** | [GrayCodeAI/hawk-core-contracts](https://github.com/GrayCodeAI/hawk-core-contracts) | Shared contracts and neutral cross-repo vocabulary |
 
 ## Development
 
