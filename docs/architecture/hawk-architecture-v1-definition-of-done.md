@@ -17,55 +17,62 @@ v1 does **not** require a single unified contract layer for runtime, persistence
 
 ## v1 checklist
 
+Status note:
+
+- checked items below are verified in the local `hawk-eco` workspace
+- unchecked items are intentionally reserved for external branch / release /
+  publication state that this workspace audit cannot prove
+
 ### Product and dependency graph
 
-- [ ] `hawk` is the only primary end-user product in the ecosystem
-- [ ] Hawk coordinates engines; engines do not import each other
-- [ ] SDKs and community skills consume Hawk public surfaces, not engines directly
-- [ ] `graycode-core` and other company/platform repos stay outside Hawk runtime dependencies
+- [x] `hawk` is the only primary end-user product in the ecosystem
+- [x] Hawk coordinates engines; engines do not import each other
+- [x] SDKs and community skills consume Hawk public surfaces, not engines directly
+- [x] `graycode-core` and other company/platform repos stay outside Hawk runtime dependencies
 
 ### Forbidden edges stay forbidden
 
-- [ ] no support repo imports `hawk/internal/*`
-- [ ] no support repo imports removed `hawk/shared/types`
-- [ ] no SDK/skills repo references support engines as primary dependencies
-- [ ] Hawk production code imports `eyrie/client` only at the transport adapter edge
+- [x] no support repo imports `hawk/internal/*`
+- [x] no support repo imports removed `hawk/shared/types`
+- [x] no SDK/skills repo references support engines as primary dependencies
+- [x] Hawk production code imports `eyrie/client` only at the transport adapter edge
 
 ### `hawk-core-contracts` (implemented packages only)
 
 These packages are in scope for v1:
 
-- [ ] `types/` — severity and finding vocabulary
-- [ ] `review/` — neutral review results
-- [ ] `verify/` — neutral verification reports
-- [ ] `tools/` — persisted tool call/result contracts
-- [ ] `events/` — normalized audit/trace event subset used by Hawk
-- [ ] `policy/` — permission and guardian decision contracts
+- [x] `types/` — severity and finding vocabulary
+- [x] `review/` — neutral review results
+- [x] `verify/` — neutral verification reports
+- [x] `tools/` — persisted tool call/result contracts
+- [x] `events/` — normalized audit/trace event subset used by Hawk
+- [x] `policy/` — permission and guardian decision contracts
 
 Adoption bar:
 
-- [ ] `sight` and `inspect` import contracts for shared severity/findings and expose boundary adapters
+- [x] `sight` and `inspect` import contracts for shared severity/findings and expose boundary adapters
 - [x] `tok/types` compatibility shim removed from the local ecosystem
-- [ ] `eyrie`, `yaad`, and `trace` remain contract-free unless they gain a true cross-repo type
+- [x] `eyrie`, `yaad`, and `trace` remain contract-free unless they gain a true cross-repo type
 
 ### Hawk integration seams
 
-- [ ] session persistence uses `hawk-core-contracts/tools`, not `eyrie/client` tool types
-- [ ] review persistence and inspect/review bridge paths use neutral `review` / `verify` contracts
-- [ ] Hawk owns runtime transport DTOs in `internal/types` and adapts to `eyrie/client` at the edge
-- [ ] `hawk trace ...` remains a Hawk-mounted subcommand, not a competing product surface
+- [x] session persistence uses `hawk-core-contracts/tools`, not `eyrie/client` tool types
+- [x] review persistence and inspect/review bridge paths use neutral `review` / `verify` contracts
+- [x] Hawk owns runtime transport DTOs in `internal/types` and adapts to `eyrie/client` at the edge
+- [x] `hawk trace ...` remains a Hawk-mounted subcommand, not a competing product surface
 
 ### Enforcement
 
-- [ ] Hawk CI runs ecosystem, shared-types, eyrie-client, and peer-coupling guards
-- [ ] each support repo runs `check-ecosystem-boundaries.sh` in CI
-- [ ] Go SDK runs consumer boundary guard in CI
-- [ ] Python SDK and community skills run consumer boundary guards in CI
-- [ ] architecture docs do not describe removed or planned packages as currently shipped
-- [ ] lefthook strips `Co-authored-by:` trailers so commits list only the human author
+- [x] Hawk CI runs ecosystem, shared-types, eyrie-client, and peer-coupling guards
+- [x] each support repo runs `check-ecosystem-boundaries.sh` in CI
+- [x] Go SDK runs consumer boundary guard in CI
+- [x] Python SDK and community skills run consumer boundary guards in CI
+- [x] architecture docs do not describe removed or planned packages as currently shipped
+- [x] lefthook strips `Co-authored-by:` trailers so commits list only the human author
 
 ### Ship state
 
+- [ ] local architecture commits are pushed and merged to upstream default branches
 - [ ] open architecture PRs for engines, consumers, and Hawk integration are merged to `main`
 - [ ] published module versions used by Hawk match the merged contract changes
 

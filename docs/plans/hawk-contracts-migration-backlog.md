@@ -1,8 +1,13 @@
 # Plan: Hawk Contracts Migration Backlog
 
-> Status: active
+> Status: locally complete
 > Scope: Hawk ecosystem architecture cleanup after introducing `hawk-core-contracts`
 > Goal: keep `hawk` as the product while moving stable cross-repo contracts out of Hawk internals
+
+External follow-up still outside the scope of this local workspace audit:
+
+- confirm upstream branches contain the final architecture commits
+- confirm published module tags/releases match the merged contract changes
 
 ## Done
 
@@ -68,20 +73,28 @@ These items are already completed in the current workspace.
 - switched Hawk review persistence to neutral review contracts
 - switched Hawk review/inspect bridge paths to return neutral review/verify contracts
 
-## Next
+## Remaining external follow-up
 
-These are the highest-value follow-up tasks.
+These are the highest-value follow-up tasks that this local workspace cannot
+prove automatically.
 
-### 1. Extend standalone import guards to the remaining support repos
-Done:
-- `sight`
-- `inspect`
-- `tok`
-- `eyrie`
-- `yaad`
-- `trace`
+### 1. Confirm upstream/default-branch convergence
 
-### 2. Decide whether Hawk session/API message DTOs should fully stop using `eyrie/client` types
+Local state:
+- implemented and verified in this workspace
+
+Still external:
+- confirm the same commits are merged on the intended upstream default branches
+
+### 2. Confirm release/publication convergence
+
+Local state:
+- Hawk local integration snapshot points at architecture-aligned support-repo revisions
+
+Still external:
+- confirm released module versions used by Hawk match the merged contract changes
+
+### 3. Decide whether Hawk session/API message DTOs should fully stop using `eyrie/client` types
 Current state:
 - session persistence uses neutral tool contracts
 - Hawk now owns the runtime message DTO in `internal/types.EyrieMessage`

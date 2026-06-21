@@ -110,7 +110,6 @@ These were previously "ideas"; they are now implemented:
 
 Still open:
 
-- `hawk/shared/types` has been removed from Hawk
 - the boundary guard scripts depend on `rg`; when `rg` is absent they pass
   vacuously, so CI images must provide ripgrep (or the scripts should fall back
   to `git grep`)
