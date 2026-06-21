@@ -350,6 +350,8 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 | **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture and replay engine mounted as `hawk trace ...` |
 | **hawk-core-contracts** | [GrayCodeAI/hawk-core-contracts](https://github.com/GrayCodeAI/hawk-core-contracts) | Shared contracts and neutral cross-repo vocabulary |
 
+For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/hawk-current-vs-proposed.md](docs/architecture/hawk-current-vs-proposed.md).
+
 ## Development
 
 ### Prerequisites

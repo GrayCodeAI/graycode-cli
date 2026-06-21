@@ -4,6 +4,7 @@ This directory holds the implementation planning docs for Hawk as a model-agnost
 
 Documents:
 
+- `hawk-current-vs-proposed.md` - current workspace shape vs target Hawk-centered repo architecture
 - `hawk-product-architecture.md` - target architecture and runtime flow
 - `hawk-repo-roles.md` - role of each Hawk repo in the product ecosystem
 - `hawk-dependency-rules.md` - import and ownership boundaries
