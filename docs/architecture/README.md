@@ -14,6 +14,7 @@ Documents:
 - `hawk-review-verify-lifecycle.md` - review and verification lifecycle
 - `hawk-trace-event-model.md` - trace and audit event model
 - `hawk-contract-migration-inventory.md` - current shared-type usage and migration order
+- `hawk-architecture-v1-definition-of-done.md` - realistic shipping bar for architecture v1
 
 Core rule:
 
