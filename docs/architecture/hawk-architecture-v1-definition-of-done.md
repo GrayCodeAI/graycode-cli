@@ -62,6 +62,7 @@ Adoption bar:
 - [ ] Go SDK runs consumer boundary guard in CI
 - [ ] Python SDK and community skills run consumer boundary guards in CI
 - [ ] architecture docs do not describe removed or planned packages as currently shipped
+- [ ] lefthook strips `Co-authored-by:` trailers so commits list only the human author
 
 ### Ship state
 
