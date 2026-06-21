@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 )
 
 // ErrCircuitBreakerOpen is returned when the guardian has denied too many
@@ -59,11 +61,7 @@ type GuardianRequest struct {
 }
 
 // GuardianDecision represents the guardian's decision on a permission request.
-type GuardianDecision struct {
-	Allowed    bool    `json:"allowed"`
-	Reason     string  `json:"reason"`
-	Confidence float64 `json:"confidence"`
-}
+type GuardianDecision = contracts.GuardianDecision
 
 // NewGuardian creates a new Guardian with sensible defaults.
 func NewGuardian(chatFn func(context.Context, string) (string, error)) *Guardian {

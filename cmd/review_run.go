@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
@@ -87,9 +88,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	// Build sight bridge.
 	prov := provider
 	if prov == "" {
-		prov = client.DetectProvider()
+		prov = types.DetectProvider()
 	}
-	eyrieClient := client.Client(&client.EyrieConfig{Provider: prov})
+	eyrieClient := types.NewClient(&types.ClientConfig{Provider: prov})
 
 	var opts []sightLib.Option
 	if reviewRunModel != "" {
@@ -117,7 +118,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	}
 
 	// Run review.
-	result, err := bridge.Review(ctx, diff)
+	result, err := bridge.ReviewContracts(ctx, diff)
 	if err != nil {
 		_ = store.SetStatus(id, ReviewStatusFailed)
 		return silentErr(err, "sight review")
@@ -152,7 +153,7 @@ func getCommitDiff(sha string) (string, error) {
 	return string(out), nil
 }
 
-func printReviewSummary(sha string, result *sightLib.Result) {
+func printReviewSummary(sha string, result *reviewcontracts.Result) {
 	if len(result.Findings) == 0 {
 		fmt.Printf("%s %s — no issues found (%d files reviewed)\n", icons.CheckBold(), sha[:8], result.Stats.FilesReviewed)
 		return

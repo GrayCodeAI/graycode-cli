@@ -58,6 +58,12 @@ jobs:
             echo "$out" | head -20
             exit 1
           fi
+      - name: shared types import guard
+        run: bash ./scripts/check-shared-types-imports.sh
+      - name: ecosystem boundary guard
+        run: bash ./scripts/check-ecosystem-boundaries.sh
+      - name: eyrie client boundary guard
+        run: bash ./scripts/check-eyrie-client-imports.sh
 
   # -------------------------------------------------------------------------
   # 2. Module hygiene — tidy, verify (hawk + external ecosystem repos via go.work).

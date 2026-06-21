@@ -1,66 +1,42 @@
-// Package types defines stable shared types for GrayCodeAI libraries (sight, inspect, tok, …).
-// Types are defined here directly so external modules (tok, sight, inspect) can import this
-// package without pulling in hawk/internal or eyrie/client, which would create import cycles.
+// Package types is a deprecated compatibility layer for shared Hawk ecosystem types.
+// New cross-repo contracts belong in github.com/GrayCodeAI/hawk-core-contracts/types.
 package types
 
-import "strings"
+import contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
 
+// Deprecated: use github.com/GrayCodeAI/hawk-core-contracts/types.Severity.
 // Severity represents the impact level of a finding.
-type Severity int
+type Severity = contracts.Severity
 
 const (
-	SeverityInfo Severity = iota
-	SeverityLow
-	SeverityMedium
-	SeverityHigh
-	SeverityCritical
+	SeverityInfo     = contracts.SeverityInfo
+	SeverityLow      = contracts.SeverityLow
+	SeverityMedium   = contracts.SeverityMedium
+	SeverityHigh     = contracts.SeverityHigh
+	SeverityCritical = contracts.SeverityCritical
 )
-
-var severityNames = [...]string{"info", "low", "medium", "high", "critical"}
-
-func (s Severity) String() string {
-	if int(s) < len(severityNames) {
-		return severityNames[s]
-	}
-	return "unknown"
-}
 
 // ParseSeverity converts a string to a Severity.
-func ParseSeverity(s string) Severity {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "critical":
-		return SeverityCritical
-	case "high":
-		return SeverityHigh
-	case "medium":
-		return SeverityMedium
-	case "low":
-		return SeverityLow
-	default:
-		return SeverityInfo
-	}
-}
+// Deprecated: use github.com/GrayCodeAI/hawk-core-contracts/types.ParseSeverity.
+var ParseSeverity = contracts.ParseSeverity
 
-// AtLeast returns true if s >= threshold.
-func (s Severity) AtLeast(threshold Severity) bool {
-	return s >= threshold
-}
-
+// Deprecated: use github.com/GrayCodeAI/hawk-core-contracts/types.TokenSeverity.
 // TokenSeverity defines rule severity for compression error patterns.
-type TokenSeverity string
+type TokenSeverity = contracts.TokenSeverity
 
 const (
-	TokenSeverityCritical TokenSeverity = "critical"
-	TokenSeverityHigh     TokenSeverity = "high"
-	TokenSeverityMedium   TokenSeverity = "medium"
-	TokenSeverityLow      TokenSeverity = "low"
+	TokenSeverityCritical = contracts.TokenSeverityCritical
+	TokenSeverityHigh     = contracts.TokenSeverityHigh
+	TokenSeverityMedium   = contracts.TokenSeverityMedium
+	TokenSeverityLow      = contracts.TokenSeverityLow
 )
 
+// Deprecated: use github.com/GrayCodeAI/hawk-core-contracts/types.AuditSeverity.
 // AuditSeverity indicates how dangerous a security audit finding is.
-type AuditSeverity string
+type AuditSeverity = contracts.AuditSeverity
 
 const (
-	AuditSeverityCritical AuditSeverity = "CRITICAL"
-	AuditSeverityWarning  AuditSeverity = "WARNING"
-	AuditSeverityInfo     AuditSeverity = "INFO"
+	AuditSeverityCritical = contracts.AuditSeverityCritical
+	AuditSeverityWarning  = contracts.AuditSeverityWarning
+	AuditSeverityInfo     = contracts.AuditSeverityInfo
 )

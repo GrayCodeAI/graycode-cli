@@ -34,7 +34,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench build ci clean cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench build ci clean contracts-guard ecosystem-guard eyrie-client-guard cover cover-new fmt help install lint lint-fix \
         release security setup smoke path test test-10x test-live test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
@@ -99,6 +99,15 @@ fmt: ## Format source files (gofumpt + goimports).
 vet: ## Run go vet.
 	go vet ./...
 
+contracts-guard: ## Fail on new imports of hawk/shared/types outside compatibility paths.
+	bash ./scripts/check-shared-types-imports.sh
+
+ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or deprecated hawk/shared/types.
+	bash ./scripts/check-ecosystem-boundaries.sh
+
+eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk transport adapters.
+	bash ./scripts/check-eyrie-client-imports.sh
+
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
 	$(GOLANGCI) run ./... --timeout=5m
@@ -118,7 +127,7 @@ tidy: ## Sync workspace modules and verify checksums.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy fmt vet lint test-race security ## Run everything CI runs.
+ci: tidy fmt vet contracts-guard ecosystem-guard eyrie-client-guard lint test-race security ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 smoke: ## Quick build + doctor + ecosystem verification.
@@ -161,6 +170,9 @@ setup: ## Set up local development environment (go.work + external repos).
 	@echo "" >> go.work
 	@echo "use (" >> go.work
 	@echo "	." >> go.work
+	@if [ -d "external/hawk-core-contracts" ]; then \
+		echo "	./external/hawk-core-contracts" >> go.work; \
+	fi
 	@for repo in $(ECO_REPOS); do \
 		if [ -d "external/$$repo" ]; then \
 			echo "	./external/$$repo" >> go.work; \

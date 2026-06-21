@@ -9,7 +9,6 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -17,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -357,7 +357,7 @@ func indentedAPIKeyLines() string {
 }
 
 func apiKeyStatusLines() []string {
-	providers := client.Client(nil).GetProviders()
+	providers := types.NewClient(nil).GetProviders()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {

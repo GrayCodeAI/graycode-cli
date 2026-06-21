@@ -27,6 +27,12 @@ type parsedFile struct {
 // parses all non-test .go files, and returns them keyed by package import path.
 func parseInternalPackages(t *testing.T, root string) []parsedFile {
 	t.Helper()
+	return parseGoFiles(t, root)
+}
+
+// parseGoFiles walks a directory tree, parses all non-test .go files, and returns them.
+func parseGoFiles(t *testing.T, root string) []parsedFile {
+	t.Helper()
 
 	var files []parsedFile
 

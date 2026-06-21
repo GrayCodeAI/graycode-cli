@@ -2,8 +2,11 @@ module github.com/GrayCodeAI/hawk
 
 go 1.26.4
 
+replace github.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts
+
 require (
 	github.com/GrayCodeAI/eyrie v0.1.0
+	github.com/GrayCodeAI/hawk-core-contracts v0.0.0
 	github.com/GrayCodeAI/inspect v0.1.0
 	github.com/GrayCodeAI/sight v0.1.0
 	github.com/GrayCodeAI/tok v0.1.0

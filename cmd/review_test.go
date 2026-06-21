@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	sightLib "github.com/GrayCodeAI/sight"
+	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -53,12 +54,12 @@ func TestReviewStore_Update(t *testing.T) {
 
 	id, _ := store.Create("sha123")
 
-	result := &sightLib.Result{
-		Findings: []sightLib.Finding{
-			{Concern: "security", Severity: sightLib.SeverityHigh, File: "main.go", Line: 10, Message: "SQL injection"},
-			{Concern: "bugs", Severity: sightLib.SeverityMedium, File: "handler.go", Line: 20, Message: "nil deref"},
+	result := &reviewcontracts.Result{
+		Findings: []reviewcontracts.Finding{
+			{Concern: "security", Severity: contracts.SeverityHigh, File: "main.go", Line: 10, Message: "SQL injection"},
+			{Concern: "bugs", Severity: contracts.SeverityMedium, File: "handler.go", Line: 20, Message: "nil deref"},
 		},
-		Stats: sightLib.Stats{TokensUsed: 500},
+		Stats: reviewcontracts.Stats{TokensUsed: 500},
 	}
 
 	err = store.Update(id, ReviewStatusOpen, result)
@@ -183,8 +184,8 @@ func TestReviewStore_SetStatus(t *testing.T) {
 func TestBuildFixPrompt(t *testing.T) {
 	r := &ReviewRecord{
 		SHA: "abc12345deadbeef0000000000000000000000ff",
-		Findings: []sightLib.Finding{
-			{Severity: sightLib.SeverityHigh, File: "main.go", Line: 10, Message: "SQL injection", Fix: "use parameterized query"},
+		Findings: []reviewcontracts.Finding{
+			{Severity: contracts.SeverityHigh, File: "main.go", Line: 10, Message: "SQL injection", Fix: "use parameterized query"},
 		},
 	}
 

@@ -16,6 +16,8 @@
 
 hawk is an AI-powered coding agent for the terminal. It reads codebases, writes and edits files, runs tests, and manages git — all through natural language. Zero CGO, single static binary for linux/darwin/windows on amd64/arm64.
 
+Detailed planning docs for the Hawk product architecture live in [`docs/architecture/`](architecture/README.md).
+
 ---
 
 ## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/blocks.svg" width="16" height="16" alt="blocks" /> Layered Architecture
@@ -49,7 +51,7 @@ hawk/
 │   ├── mcp/                   <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/plug.svg" width="16" height="16" alt="plug" /> MCP client and server
 │   ├── bridge/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Bridges to ecosystem services
 │   └── resilience/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/refresh-cw.svg" width="16" height="16" alt="refresh-cw" /> Circuit breaker, retry, rate limit
-├── shared/types/              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/share-2.svg" width="16" height="16" alt="share-2" /> Cross-repo exported types
+├── shared/types/              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/share-2.svg" width="16" height="16" alt="share-2" /> Deprecated compatibility layer; keep only for legacy downstreams
 ├── docs/                      <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/book-open.svg" width="16" height="16" alt="book-open" /> Architecture docs
 └── external/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Local go.work checkouts
 ```
@@ -114,5 +116,7 @@ Tool Call → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/i
 | `cmd/hawk/main.go` entry point | Standard Go layout — goreleaser builds with `main: ./cmd/hawk` producing `hawk` binary |
 | `cmd/` is CLI library | Not a binary sub-directory — holds 200+ cobra command files |
 | Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
-| `internal/` is private | Other repos import `shared/types/` only |
+| `internal/` is private | Other repos should not import `internal/*` |
 | `external/` | go.work symlinks for local dev — not committed |
+
+> Planned cleanup: shared cross-repo types should move from Hawk-owned export locations into a dedicated `hawk-core-contracts` layer.

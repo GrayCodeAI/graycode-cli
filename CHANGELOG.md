@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Version re-baselined to `0.1.0`** across `cmd/hawk/main.go`, `cmd/daemon.go`,
   `flake.nix`, `.github/workflows/release.yml`, and the `update`/daemon test suites, aligning hawk
   with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
+- **Architecture boundary hardening**: Hawk now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `eyrie/client` usage restricted to internal adapters and guarded in CI.
+- **`shared/types` deprecation tightened**: compatibility symbols are now explicitly marked deprecated in code, and local boundary checks enforce migration away from that package.
 
 ### Added
 - **Watch mode (`--watch`)**: file-watcher loop that acts on `AI!` (do-now) and `AI?` (answer) code comments. Off by default.

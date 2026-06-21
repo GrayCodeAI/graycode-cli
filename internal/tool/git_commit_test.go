@@ -244,6 +244,42 @@ func TestGenerateCommitMessageWithMockModel(t *testing.T) {
 	}
 }
 
+func TestGenerateCommitMessagePrefersContextChatFn(t *testing.T) {
+	orig := CommitMessageChatFn
+	defer func() { CommitMessageChatFn = orig }()
+
+	CommitMessageChatFn = func(_ context.Context, _ string) (string, error) {
+		return "fix: global should not be used", nil
+	}
+	ctx := WithToolContext(context.Background(), &ToolContext{
+		CommitMessageChatFn: func(_ context.Context, _ string) (string, error) {
+			return "feat: use context commit model", nil
+		},
+	})
+
+	msg, err := GenerateCommitMessage(ctx, "diff --git a/x b/x\n+hello", "add a thing")
+	if err != nil {
+		t.Fatalf("GenerateCommitMessage: %v", err)
+	}
+	if !strings.HasPrefix(msg, "feat: use context commit model") {
+		t.Fatalf("expected context chat function result, got %q", msg)
+	}
+}
+
+func TestGenerateCommitMessageFallsBackWithoutChatFn(t *testing.T) {
+	orig := CommitMessageChatFn
+	defer func() { CommitMessageChatFn = orig }()
+	CommitMessageChatFn = nil
+
+	msg, err := GenerateCommitMessage(context.Background(), "diff --git a/README.md b/README.md\n+docs", "update docs")
+	if err != nil {
+		t.Fatalf("GenerateCommitMessage: %v", err)
+	}
+	if msg == "" || !isConventionalSubject(msg) {
+		t.Fatalf("expected conventional fallback message, got %q", msg)
+	}
+}
+
 func TestIsConventionalSubject(t *testing.T) {
 	tests := []struct {
 		msg  string

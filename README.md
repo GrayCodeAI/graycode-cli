@@ -320,7 +320,16 @@ hawk integrates these GrayCodeAI repos in three ways:
 - **External checkout + `go.work`:** **eyrie**, **sight**, **inspect**, **tok**, **yaad**, **trace** — clone ecosystem repos under `external/<repo>`. `go.work` lists the local external checkouts. CI clones the same layout via **`.github/actions/checkout-eyrie`**.
 - **Optional CLI (no Go import):** **trace** — installed separately; `hawk` shells into `trace` for session capture when present.
 
-Cross-repo types (severity, etc.) are exported from **`github.com/GrayCodeAI/hawk/shared/types`** so **sight** / **inspect** / **tok** do not import **`internal/`**.
+Cross-repo contracts now live in **`github.com/GrayCodeAI/hawk-core-contracts`** so support repos do not depend on Hawk internals. The legacy `hawk/shared/types` package is now a deprecated compatibility layer and should not be used for new code.
+
+Current contract packages:
+
+- `hawk-core-contracts/types` — severity, findings
+- `hawk-core-contracts/review` — normalized review findings, comments, stats, results
+- `hawk-core-contracts/verify` — normalized verification findings, stats, reports
+- `hawk-core-contracts/tools` — tool call/result contracts
+- `hawk-core-contracts/events` — normalized tool/trace events
+- `hawk-core-contracts/policy` — permission and policy verdict contracts
 
 You may keep a **personal** parent **`go.work`** that lists alternate clones on disk for multi-repo development.
 

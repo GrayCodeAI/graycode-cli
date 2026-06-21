@@ -5,10 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
-
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSessionMemoryStrategy_ShouldTrigger(t *testing.T) {
@@ -61,7 +60,7 @@ func TestTruncateStrategy(t *testing.T) {
 		messages: makeMessages(100),
 		log:      newTestLogger(),
 		metrics:  newTestMetrics(),
-		client:   client.Client(&client.EyrieConfig{Provider: "test"}),
+		client:   types.NewClient(&types.ClientConfig{Provider: "test"}),
 	}
 
 	s := &TruncateStrategy{}
@@ -77,13 +76,13 @@ func TestTruncateStrategy(t *testing.T) {
 	}
 }
 
-func makeMessages(n int) []client.EyrieMessage {
-	msgs := make([]client.EyrieMessage, n)
+func makeMessages(n int) []types.EyrieMessage {
+	msgs := make([]types.EyrieMessage, n)
 	for i := range msgs {
 		if i%2 == 0 {
-			msgs[i] = client.EyrieMessage{Role: "user", Content: strings.Repeat("message ", 50)}
+			msgs[i] = types.EyrieMessage{Role: "user", Content: strings.Repeat("message ", 50)}
 		} else {
-			msgs[i] = client.EyrieMessage{Role: "assistant", Content: strings.Repeat("response ", 50)}
+			msgs[i] = types.EyrieMessage{Role: "assistant", Content: strings.Repeat("response ", 50)}
 		}
 	}
 	return msgs
