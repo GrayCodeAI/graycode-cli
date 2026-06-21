@@ -20,8 +20,9 @@ These items are already completed in the current workspace.
 - switched Hawk `internal/types/severity.go` to re-export from contracts
 - removed `hawk/shared/types` after local ecosystem migration
 - removed the duplicate severity/finding definitions in `tok/types` (tok was the
-  original shared-types host); `tok/types` now re-exports
-  `hawk-core-contracts/types` as a deprecated compatibility shim
+  original shared-types host)
+- removed the `tok/types` compatibility shim after verifying no in-workspace
+  importers remained
 
 ### Tool contract migration
 - added `hawk-core-contracts/tools`

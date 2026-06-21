@@ -45,7 +45,7 @@ These packages are in scope for v1:
 Adoption bar:
 
 - [ ] `sight` and `inspect` import contracts for shared severity/findings and expose boundary adapters
-- [ ] `tok/types` re-exports contracts only as a deprecated shim (removal tracked separately)
+- [x] `tok/types` compatibility shim removed from the local ecosystem
 - [ ] `eyrie`, `yaad`, and `trace` remain contract-free unless they gain a true cross-repo type
 
 ### Hawk integration seams

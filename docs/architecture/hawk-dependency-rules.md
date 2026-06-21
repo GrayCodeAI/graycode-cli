@@ -52,8 +52,6 @@ Current state (keep in sync with the code; the boundary guards enforce the
 ```text
 sight   -> hawk-core-contracts   # severity/finding vocabulary
 inspect -> hawk-core-contracts   # severity/finding vocabulary
-tok     -> hawk-core-contracts   # types/ re-exports contracts (compat shim)
-
 eyrie   -> (none)   # provider/transport types are eyrie-local
 yaad    -> (none)   # memory event types are yaad-local
 trace   -> (none)   # trace/redaction event types are trace-local
@@ -96,8 +94,7 @@ Based on current local structure:
 
 - `sight -> hawk/shared/types` removed
 - `inspect -> hawk/shared/types` removed
-- `tok/types` duplicate definitions removed; `tok/types` now re-exports
-  `hawk-core-contracts/types` as a deprecated compat shim
+- `tok/types` compatibility shim removed
 - keep support engines peer-isolated as new features are added
 
 ## Enforcement
