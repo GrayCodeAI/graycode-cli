@@ -735,6 +735,33 @@ func TestTransactionTool_ExecuteEmptyOperations(t *testing.T) {
 	}
 }
 
+func TestTransactionTool_RejectsCredentialContent(t *testing.T) {
+	dir := t.TempDir()
+	createPath := filepath.Join(dir, "secrets.txt")
+
+	input := transactionInput{
+		Operations: []struct {
+			Type       string `json:"type"`
+			Path       string `json:"path"`
+			OldPath    string `json:"old_path,omitempty"`
+			Content    string `json:"content,omitempty"`
+			NewContent string `json:"new_content,omitempty"`
+			Mode       int    `json:"mode,omitempty"`
+		}{
+			{Type: "create", Path: createPath, Content: "token=sk-abcdefghijklmnopqrstuvwxyz"},
+		},
+	}
+
+	data, _ := json.Marshal(input)
+	_, err := (TransactionTool{}).Execute(context.Background(), data)
+	if err == nil || !strings.Contains(err.Error(), "contains a credential") {
+		t.Fatalf("expected credential rejection, got %v", err)
+	}
+	if _, statErr := os.Stat(createPath); !os.IsNotExist(statErr) {
+		t.Fatalf("expected file not to be created, stat err = %v", statErr)
+	}
+}
+
 func TestTransaction_RenameRequiresOldPath(t *testing.T) {
 	dir := t.TempDir()
 	tx := NewTransaction()

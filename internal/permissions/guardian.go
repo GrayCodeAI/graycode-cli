@@ -299,6 +299,11 @@ func parseGuardianResponse(response string) (*GuardianDecision, error) {
 	// Validate confidence range. Models occasionally emit
 	// out-of-range values; clamp rather than reject so the rest of
 	// the decision (allowed/reason) still flows through.
+	// NaN fails both < 0 and > 1, so handle it first (self-comparison is
+	// the standard NaN test) and treat it as lowest confidence — fail safe.
+	if decision.Confidence != decision.Confidence { //nolint:staticcheck // NaN check
+		decision.Confidence = 0
+	}
 	if decision.Confidence < 0 {
 		decision.Confidence = 0
 	}

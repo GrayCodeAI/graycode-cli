@@ -56,7 +56,11 @@ func NewPersistenceService(log *logger.Logger) *PersistenceService {
 func (s *PersistenceService) Messages() []types.EyrieMessage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	raw := s.RawMessages()
+	// Read s.messages directly; the lock is already held. Calling
+	// RawMessages() here would recursively RLock and can deadlock if a
+	// writer arrives between the two read locks (Go's RWMutex forbids
+	// recursive read-locking).
+	raw := s.messages
 	out := make([]types.EyrieMessage, len(raw))
 	copy(out, raw)
 	return out
@@ -194,23 +198,29 @@ func (s *PersistenceService) SetSystem(sys string) {
 func (s *PersistenceService) MessageCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return len(s.RawMessages())
+	// Direct field read; lock already held (avoid recursive RLock).
+	return len(s.messages)
 }
 
 // RemoveLastExchange removes the last (assistant, user) pair.
 func (s *PersistenceService) RemoveLastExchange() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.RawMessages()) < 2 {
+	// Operate on s.messages directly: the write lock is held, so calling
+	// the RawMessages()/SetRawMessages() accessors (which lock again) would
+	// deadlock.
+	if len(s.messages) < 2 {
 		return
 	}
-	s.SetRawMessages(s.RawMessages()[:len(s.RawMessages())-2])
+	s.messages = s.messages[:len(s.messages)-2]
 }
 
 // LoadMessages replaces the transcript with a fresh slice.
 func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	s.SetRawMessages(msgs)
+	// Assign directly; the lock is held, so SetRawMessages() (which locks
+	// again) would deadlock on a recursive write lock.
+	s.messages = msgs
 	s.mu.Unlock()
 }
 
