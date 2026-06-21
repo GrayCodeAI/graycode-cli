@@ -102,6 +102,9 @@ vet: ## Run go vet.
 contracts-guard: ## Fail on new imports of hawk/shared/types outside compatibility paths.
 	bash ./scripts/check-shared-types-imports.sh
 
+shared-types-retirement-guard: ## Verify the local ecosystem no longer imports hawk/shared/types.
+	bash ./scripts/check-shared-types-retirement-readiness.sh
+
 ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or deprecated hawk/shared/types.
 	bash ./scripts/check-ecosystem-boundaries.sh
 

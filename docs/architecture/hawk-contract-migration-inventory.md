@@ -190,3 +190,9 @@ Update docs that currently describe `hawk/shared/types` as the cross-repo API.
 
 ### Step 6
 Deprecate `hawk/shared/types` after all external consumers migrate. In progress.
+
+Current status:
+
+- local ecosystem migration is complete
+- deletion is still gated on downstream compatibility outside this workspace
+- see `hawk-shared-types-removal-plan.md`

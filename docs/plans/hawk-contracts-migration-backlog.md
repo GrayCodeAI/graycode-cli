@@ -144,6 +144,12 @@ Only after:
 
 Until then it stays as a compatibility shim.
 
+Current status:
+
+- local workspace is ready for retirement
+- external downstream compatibility is not yet proven from this repo alone
+- removal should happen only as an explicit breaking-change release step
+
 ## Non-goals
 
 Do not do these without a separate decision:
