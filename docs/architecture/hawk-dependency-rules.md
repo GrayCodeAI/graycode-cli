@@ -68,7 +68,7 @@ adds the contract edge then — not before.
 ```text
 engine -> engine
 engine -> hawk/internal/*
-engine -> hawk/shared/* as a long-term public dependency
+engine -> hawk/shared/* as a public dependency
 sdk -> engine
 skills -> engine
 ```
@@ -94,8 +94,8 @@ Provider-specific code should not leak into memory, review, verify, or trace eng
 
 Based on current local structure:
 
-- `sight -> hawk/shared/types` removed (now `sight -> hawk-core-contracts`)
-- `inspect -> hawk/shared/types` removed (now `inspect -> hawk-core-contracts`)
+- `sight -> hawk/shared/types` removed
+- `inspect -> hawk/shared/types` removed
 - `tok/types` duplicate definitions removed; `tok/types` now re-exports
   `hawk-core-contracts/types` as a deprecated compat shim
 - keep support engines peer-isolated as new features are added
@@ -113,8 +113,7 @@ These were previously "ideas"; they are now implemented:
 
 Still open:
 
-- `hawk/shared/types` remains as a deprecated compatibility layer until downstream
-  migration evidence is complete
+- `hawk/shared/types` has been removed from Hawk
 - the boundary guard scripts depend on `rg`; when `rg` is absent they pass
   vacuously, so CI images must provide ripgrep (or the scripts should fall back
   to `git grep`)

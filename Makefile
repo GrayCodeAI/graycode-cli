@@ -99,13 +99,10 @@ fmt: ## Format source files (gofumpt + goimports).
 vet: ## Run go vet.
 	go vet ./...
 
-contracts-guard: ## Fail on new imports of hawk/shared/types outside compatibility paths.
+contracts-guard: ## Fail on any legacy imports of removed hawk/shared/types.
 	bash ./scripts/check-shared-types-imports.sh
 
-shared-types-retirement-guard: ## Verify the local ecosystem no longer imports hawk/shared/types.
-	bash ./scripts/check-shared-types-retirement-readiness.sh
-
-ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or deprecated hawk/shared/types.
+ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or removed hawk/shared/types.
 	bash ./scripts/check-ecosystem-boundaries.sh
 
 eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk transport adapters.

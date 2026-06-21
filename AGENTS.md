@@ -62,7 +62,6 @@ hawk/
 │   ├── daemon/             # Background HTTP/SSE server
 │   ├── resilience/         # Circuit breaker, rate limiting, health checks
 │   └── feature/            # Eval, fingerprint, scaffolding
-├── shared/types/           # Deprecated compatibility layer; migrate to hawk-core-contracts
 ├── docs/                   # Architecture docs, research notes
 └── testdata/               # Test fixtures
 ```
@@ -79,8 +78,8 @@ hawk/
   never talks to LLM APIs directly, and production code should go through
   `internal/types` transport adapters instead of importing `eyrie/client`.
 - **Shared contracts:** cross-repo types now live in `hawk-core-contracts`
-  (`types`, `review`, `verify`, `tools`, `events`, `policy`). Hawk production
-  code should not add new imports of `hawk/shared/types`.
+  (`types`, `review`, `verify`, `tools`, `events`, `policy`). The old
+  `hawk/shared/types` path has been removed.
 
 ## Development Guidelines
 
@@ -150,7 +149,7 @@ test: add coverage for guardian
 - `CONTRIBUTING.md` — PR process, commit conventions
 - `docs/` — Architecture details, security model, ecosystem message flow
 - `external/` — Ecosystem repo checkouts for `go.work` development
-- `shared/types/` — Deprecated compatibility types; new cross-repo contracts belong in `hawk-core-contracts`
+- `hawk-core-contracts/` — Shared cross-repo contracts; use this instead of any legacy Hawk-owned shared-type path
 
 ## Testing Philosophy
 
@@ -216,7 +215,7 @@ test: add coverage for guardian
 - **Caution**: `internal/engine/session.go` Session struct — widely referenced across 30+ sub-packages
 - **Caution**: `internal/config/settings.go` Settings struct — serialized to JSON, dual-format (snake_case + camelCase)
 - **Caution**: `internal/tool/` Tool interface — implemented by 40+ tools
-- **Migration-sensitive**: `shared/types/` remains only as a deprecated compatibility layer for legacy downstreams; do not add new imports.
+- **Migration-sensitive**: `hawk/shared/types` has been removed; use `hawk-core-contracts/types` instead.
 
 ## Key File Locations
 

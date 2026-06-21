@@ -188,7 +188,7 @@ Status:
 
 Status:
 - completed for current workspace boundaries
-- local/CI guards now block support-repo imports of `hawk/internal/*` and deprecated `hawk/shared/types`
+- local/CI guards now block support-repo imports of `hawk/internal/*` and removed legacy `hawk/shared/types`
 
 ### Phase 4
 - harden orchestration boundaries in Hawk
@@ -209,8 +209,11 @@ Status:
 - broader non-Go consumer enforcement remains future work
 
 ### Phase 6
-- deprecate and eventually remove `hawk/shared/types`
-- keep compatibility warnings and guardrails in place until downstream migration evidence is complete
+- remove legacy `hawk/shared/types`
+- keep import guards in place so the old path cannot return
+
+Status:
+- completed in the local ecosystem
 
 ## Done criteria
 

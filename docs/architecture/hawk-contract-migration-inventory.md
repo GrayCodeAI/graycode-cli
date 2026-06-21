@@ -8,22 +8,10 @@ This document captures the current shared-type coupling that should be moved int
 
 ### `hawk/shared/types`
 
-Files:
+Status: removed
 
-- `shared/types/severity.go`
-- `shared/types/finding.go`
-
-Current exported concepts:
-
-- `Severity`
-- `ParseSeverity`
-- `TokenSeverity`
-- `AuditSeverity`
-- `Finding`
-- `FindingSlice`
-- `FindingSummary`
-- `FindingFromSight`
-- `FindingFromInspect`
+The legacy Hawk-owned shared type shim has been deleted. Shared severity and
+finding contracts now live only in `hawk-core-contracts/types`.
 
 ## Current external consumers
 
@@ -188,11 +176,12 @@ Update `hawk/internal/types/severity.go` to re-export from `hawk-core-contracts/
 ### Step 5
 Update docs that currently describe `hawk/shared/types` as the cross-repo API.
 
+Status: completed.
+
 ### Step 6
-Deprecate `hawk/shared/types` after all external consumers migrate. In progress.
+Remove `hawk/shared/types` after local migration completes. Completed.
 
 Current status:
 
 - local ecosystem migration is complete
-- deletion is still gated on downstream compatibility outside this workspace
-- see `hawk-shared-types-removal-plan.md`
+- Hawk no longer ships the `hawk/shared/types` package

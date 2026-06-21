@@ -326,7 +326,7 @@ Local development uses:
 - **External checkout + `go.work`:** clone support repos under `external/<repo>`; `go.work` maps the module paths to those local checkouts
 - **Submodules in this repo:** the same external layout is pinned under `external/` for reproducible CI and multi-repo work
 
-Cross-repo contracts now live in **`github.com/GrayCodeAI/hawk-core-contracts`** so support repos do not depend on Hawk internals. The legacy `hawk/shared/types` package is now a deprecated compatibility layer and should not be used for new code.
+Cross-repo contracts now live in **`github.com/GrayCodeAI/hawk-core-contracts`** so support repos do not depend on Hawk internals. The old `hawk/shared/types` path has been removed; use `hawk-core-contracts/types` for shared severity and finding contracts.
 
 Current contract packages:
 

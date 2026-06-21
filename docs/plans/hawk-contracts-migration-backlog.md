@@ -18,7 +18,7 @@ These items are already completed in the current workspace.
 - moved severity and finding definitions into contracts
 - migrated `sight` and `inspect` to import contracts
 - switched Hawk `internal/types/severity.go` to re-export from contracts
-- converted `hawk/shared/types` into a compatibility shim
+- removed `hawk/shared/types` after local ecosystem migration
 - removed the duplicate severity/finding definitions in `tok/types` (tok was the
   original shared-types host); `tok/types` now re-exports
   `hawk-core-contracts/types` as a deprecated compatibility shim
@@ -51,7 +51,7 @@ These items are already completed in the current workspace.
 - added `check-eyrie-client-imports.sh`
 - wired both guards into `Makefile` and CI
 - wired the `eyrie/client` boundary guard into `Makefile` and CI
-- tightened `shared/types` deprecation comments on the compatibility package itself
+- added a legacy import guard so the removed `shared/types` path cannot return
 - extended the ecosystem boundary guard to scan sibling engine repos when present locally
 - updated docs across Hawk, sight, inspect, and external workspace copies
 - added standalone boundary guards in `sight` and `inspect`
@@ -136,19 +136,12 @@ Possible later additions:
 Do not move every internal event shape by default.
 
 ### 6. Remove `hawk/shared/types`
-Only after:
-- no external repos import it
-- no compatibility reason remains
-- release/migration notes are ready
-- deprecation warnings have been visible long enough for downstream users
-
-Until then it stays as a compatibility shim.
+Completed for the local ecosystem.
 
 Current status:
 
-- local workspace is ready for retirement
-- external downstream compatibility is not yet proven from this repo alone
-- removal should happen only as an explicit breaking-change release step
+- Hawk no longer ships `hawk/shared/types`
+- local import guards prevent the old path from returning
 
 ## Non-goals
 
@@ -175,7 +168,7 @@ Do not do these without a separate decision:
 - completed: added neutral review/verification result contracts and wired Hawk bridge/persistence edges
 
 ### PR 5
-- remove `hawk/shared/types` only when safe
+- completed: removed `hawk/shared/types` from the local ecosystem and kept a legacy import guard
 
 ## Success criteria
 
@@ -184,6 +177,6 @@ The migration is in a good long-term state when:
 - `hawk-core-contracts` is the only source of truth for shared contracts
 - support repos do not import `hawk/internal/*`
 - support repos do not import `hawk/shared/types`
-- compatibility shims are temporary and clearly documented
+- removed compatibility shims do not return
 - CI prevents regressions
 - new shared contracts are added deliberately, not by habit

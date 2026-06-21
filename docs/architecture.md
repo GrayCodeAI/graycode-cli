@@ -51,10 +51,12 @@ hawk/
 │   ├── mcp/                   <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/plug.svg" width="16" height="16" alt="plug" /> MCP client and server
 │   ├── bridge/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Bridges to ecosystem services
 │   └── resilience/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/refresh-cw.svg" width="16" height="16" alt="refresh-cw" /> Circuit breaker, retry, rate limit
-├── shared/types/              <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/share-2.svg" width="16" height="16" alt="share-2" /> Deprecated compatibility layer; keep only for legacy downstreams
 ├── docs/                      <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/book-open.svg" width="16" height="16" alt="book-open" /> Architecture docs
 └── external/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Local go.work checkouts
 ```
+
+Legacy note: `hawk/shared/types` has been removed. Shared cross-repo severity
+and finding contracts now live in `hawk-core-contracts/types`.
 
 ---
 

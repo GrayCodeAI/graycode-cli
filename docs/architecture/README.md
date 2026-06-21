@@ -9,7 +9,6 @@ Documents:
 - `hawk-product-architecture.md` - target architecture and runtime flow
 - `hawk-repo-roles.md` - role of each Hawk repo in the product ecosystem
 - `hawk-dependency-rules.md` - import and ownership boundaries
-- `hawk-shared-types-removal-plan.md` - explicit retirement gate for the deprecated shared/types shim
 - `hawk-core-contracts-spec.md` - shared contracts layer and current status
 - `hawk-provider-abstraction.md` - provider/runtime abstraction design
 - `hawk-review-verify-lifecycle.md` - review and verification lifecycle

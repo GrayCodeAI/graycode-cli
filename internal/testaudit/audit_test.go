@@ -221,10 +221,9 @@ func TestNoDirectEyrieClientImportsOutsideAdapters(t *testing.T) {
 	}
 }
 
-// TestNoDirectSharedTypesImportsOutsideCompatibilityPackage verifies Hawk does
-// not reintroduce the deprecated shared/types compatibility package into
-// production code. The package remains only for legacy downstream users.
-func TestNoDirectSharedTypesImportsOutsideCompatibilityPackage(t *testing.T) {
+// TestNoDirectSharedTypesImports verifies Hawk does not reintroduce the removed
+// legacy shared/types import path into production code.
+func TestNoDirectSharedTypesImports(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
 		filepath.Join(root, "internal"),
@@ -241,7 +240,7 @@ func TestNoDirectSharedTypesImportsOutsideCompatibilityPackage(t *testing.T) {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; use hawk-core-contracts instead", rel, pos.Line)
+				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use hawk-core-contracts instead", rel, pos.Line)
 			}
 		}
 	}

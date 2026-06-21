@@ -12,11 +12,11 @@ violations="$(
 )"
 
 if [[ -n "${violations}" ]]; then
-  echo "forbidden imports of github.com/GrayCodeAI/hawk/shared/types found:"
+  echo "forbidden imports of removed github.com/GrayCodeAI/hawk/shared/types found:"
   echo "${violations}"
   echo
-  echo "use github.com/GrayCodeAI/hawk-core-contracts/types instead"
+  echo "hawk/shared/types has been removed; use github.com/GrayCodeAI/hawk-core-contracts/types instead"
   exit 1
 fi
 
-echo "shared/types import guard passed"
+echo "legacy shared/types import guard passed"

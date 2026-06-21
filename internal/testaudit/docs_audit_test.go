@@ -74,7 +74,7 @@ func TestArchitectureDocsMentionCurrentReviewVerifyContracts(t *testing.T) {
 	}
 }
 
-func TestArchitectureDocsDescribeSharedTypesAsDeprecated(t *testing.T) {
+func TestArchitectureDocsDescribeSharedTypesAsRemoved(t *testing.T) {
 	root := repoRoot(t)
 
 	files := []string{
@@ -93,8 +93,8 @@ func TestArchitectureDocsDescribeSharedTypesAsDeprecated(t *testing.T) {
 		if !strings.Contains(content, "shared/types") {
 			t.Fatalf("expected %s to mention shared/types", rel)
 		}
-		if !strings.Contains(content, "deprecated") {
-			t.Fatalf("expected %s to describe shared/types as deprecated", rel)
+		if !strings.Contains(content, "removed") {
+			t.Fatalf("expected %s to describe shared/types as removed", rel)
 		}
 	}
 }
