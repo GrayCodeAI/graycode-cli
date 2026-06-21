@@ -401,7 +401,9 @@ func (dm *DynamicPluginManager) InstallFromGitHub(repo string) error {
 		url = "https://github.com/" + repo + ".git"
 	}
 
-	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, pluginDir)
+	// "--" terminates option parsing so a url is never interpreted as a git
+	// flag (defense-in-depth; isFullURL already forces an http(s):// prefix).
+	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", "--", url, pluginDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %w\n%s", err, string(out))
