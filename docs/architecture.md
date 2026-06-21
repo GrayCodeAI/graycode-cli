@@ -120,5 +120,4 @@ Tool Call → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/i
 | Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
 | `internal/` is private | Other repos should not import `internal/*` |
 | `external/` | go.work symlinks for local dev — not committed |
-
-> Planned cleanup: shared cross-repo types should move from Hawk-owned export locations into a dedicated `hawk-core-contracts` layer.
+| `hawk-core-contracts` | Shared cross-repo severity, findings, review, verify, tools, events, and policy contracts — engines import this instead of `hawk/internal` or removed `hawk/shared/types` |
