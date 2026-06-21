@@ -26,6 +26,7 @@ runs:
           echo "Failed to clone $repo after 3 attempts" && return 1
         }
         mkdir -p external
+        clone_with_retry hawk-core-contracts external/hawk-core-contracts main
         clone_with_retry eyrie external/eyrie main
         clone_with_retry tok external/tok main
         clone_with_retry yaad external/yaad main
@@ -41,4 +42,4 @@ runs:
     - name: Create workspace
       shell: bash
       run: |
-        printf 'go 1.26.4\n\nuse (\n\t.\n\t./external/eyrie\n\t./external/hawk-core-contracts\n\t./external/inspect\n\t./external/sight\n\t./external/tok\n\t./external/trace\n\t./external/yaad\n)\n' > go.work
+        printf 'go 1.26.4\n\nuse .\n\nreplace (\n\tgithub.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts\n\tgithub.com/GrayCodeAI/eyrie => ./external/eyrie\n\tgithub.com/GrayCodeAI/inspect => ./external/inspect\n\tgithub.com/GrayCodeAI/sight => ./external/sight\n\tgithub.com/GrayCodeAI/tok => ./external/tok\n\tgithub.com/GrayCodeAI/trace => ./external/trace\n\tgithub.com/GrayCodeAI/yaad => ./external/yaad\n)\n' > go.work
