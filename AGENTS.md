@@ -148,7 +148,7 @@ test: add coverage for guardian
 
 - `CONTRIBUTING.md` — PR process, commit conventions
 - `docs/` — Architecture details, security model, ecosystem message flow
-- `external/` — Ecosystem repo checkouts for `go.work` development
+- `external/` — Pinned ecosystem submodules used by `go.work` for local and CI integration
 - `hawk-core-contracts/` — Shared cross-repo contracts; use this instead of any legacy Hawk-owned shared-type path
 
 ## Testing Philosophy
@@ -162,11 +162,11 @@ test: add coverage for guardian
 
 - Do not import `internal/` from other ecosystem repos — use `hawk-core-contracts`
 - Do not put API keys in `.env` or shell env for hawk — use `/config` (OS keychain)
-- The `external/` directory is for local dev only; CI clones repos separately
+- The `external/` directory is part of the committed integration layout
 - `go.work` and `go.work.sum` are committed — CI's `module hygiene` job
   runs `go work sync` and asserts the result is in sync with the repo. Both
-  files point at `./external/*` checkouts; the `.github/actions/checkout-eyrie`
-  action populates `./external/` on CI runners before the build runs.
+  files point at `./external/*` submodules so Hawk can build against pinned
+  support-repo revisions.
 
 ## Naming Conventions
 
