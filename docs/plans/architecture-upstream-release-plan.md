@@ -207,4 +207,3 @@ This plan is complete when:
 - Hawk verification passes against those SHAs
 - any required published module versions match the merged architecture state
 - no repo needs the old architecture path or compatibility shims
-
