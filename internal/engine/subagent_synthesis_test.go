@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/client"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSynthesizeSubAgent(t *testing.T) {
@@ -14,7 +15,7 @@ func TestSynthesizeSubAgent(t *testing.T) {
 
 		mockClient := &mockLLMForSynthesis{provider: mock}
 
-		conversation := []client.EyrieMessage{
+		conversation := []types.EyrieMessage{
 			{Role: "user", Content: "Find all Go files with errors"},
 			{Role: "assistant", Content: "I'll search for Go files."},
 		}
@@ -62,7 +63,7 @@ func TestSynthesizeSubAgent(t *testing.T) {
 	})
 
 	t.Run("nil client returns error", func(t *testing.T) {
-		conversation := []client.EyrieMessage{
+		conversation := []types.EyrieMessage{
 			{Role: "user", Content: "test"},
 		}
 		_, err := SynthesizeSubAgent(context.Background(), nil, "model", conversation)
@@ -75,7 +76,7 @@ func TestSynthesizeSubAgent(t *testing.T) {
 		mock := client.NewMockProvider(client.MockModeError)
 		mockClient := &mockLLMForSynthesis{provider: mock}
 
-		conversation := []client.EyrieMessage{
+		conversation := []types.EyrieMessage{
 			{Role: "user", Content: "test"},
 		}
 
@@ -90,7 +91,7 @@ func TestSynthesizeSubAgent(t *testing.T) {
 		mock.Response = ""
 		mockClient := &mockLLMForSynthesis{provider: mock}
 
-		conversation := []client.EyrieMessage{
+		conversation := []types.EyrieMessage{
 			{Role: "user", Content: "test"},
 		}
 
@@ -106,6 +107,10 @@ type mockLLMForSynthesis struct {
 	provider *client.MockProvider
 }
 
-func (m *mockLLMForSynthesis) Chat(ctx context.Context, msgs []client.EyrieMessage, opts client.ChatOptions) (*client.EyrieResponse, error) {
-	return m.provider.Chat(ctx, msgs, opts)
+func (m *mockLLMForSynthesis) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+	resp, err := m.provider.Chat(ctx, types.ToClientMessages(msgs), types.ToClientChatOptions(opts))
+	if err != nil {
+		return nil, err
+	}
+	return types.FromClientResponse(resp), nil
 }

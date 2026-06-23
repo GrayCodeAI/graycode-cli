@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/lint"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -60,19 +59,20 @@ type CodeSearchResult struct {
 
 // ToolContext carries session-level functions for tools that need them.
 type ToolContext struct {
-	AgentSpawnFn       func(ctx context.Context, prompt string) (string, error)
-	AskUserFn          func(question string) (string, error)
-	CodeSearchFn       func(ctx context.Context, query string, limit int) ([]CodeSearchResult, error)
-	RefreshCodeIndexFn func(ctx context.Context) error
-	AvailableTools     []Tool
-	AllowedDirectories []string
-	SandboxMode        sandbox.Mode
-	AutoCommit         bool
-	Protected          PathProtector
-	YaadBridge         *memory.YaadBridge
-	Attribution        *types.Attribution
-	SettingsGet        func(key string) (string, bool)
-	SettingsSet        func(key, value string) error
+	AgentSpawnFn        func(ctx context.Context, prompt string) (string, error)
+	AskUserFn           func(question string) (string, error)
+	CodeSearchFn        func(ctx context.Context, query string, limit int) ([]CodeSearchResult, error)
+	RefreshCodeIndexFn  func(ctx context.Context) error
+	CommitMessageChatFn func(ctx context.Context, prompt string) (string, error)
+	AvailableTools      []Tool
+	AllowedDirectories  []string
+	SandboxMode         sandbox.Mode
+	AutoCommit          bool
+	Protected           PathProtector
+	YaadBridge          *memory.YaadBridge
+	Attribution         *types.Attribution
+	SettingsGet         func(key string) (string, bool)
+	SettingsSet         func(key, value string) error
 	// BackgroundManager tracks background sub-agents. If nil, background
 	// mode is not available.
 	BackgroundManager *BackgroundAgentManager
@@ -205,13 +205,13 @@ func (r *Registry) Filter(allow []string) *Registry {
 	return NewRegistry(filtered...)
 }
 
-// EyrieTools converts all tools to eyrie tool definitions for the API.
-func (r *Registry) EyrieTools() []client.EyrieTool {
+// EyrieTools converts all tools to Hawk runtime tool definitions for the API boundary.
+func (r *Registry) EyrieTools() []types.EyrieTool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	out := make([]client.EyrieTool, 0, len(r.primary))
+	out := make([]types.EyrieTool, 0, len(r.primary))
 	for _, t := range r.primary {
-		out = append(out, client.EyrieTool{
+		out = append(out, types.EyrieTool{
 			Name:        t.Name(),
 			Description: t.Description(),
 			Parameters:  t.Parameters(),

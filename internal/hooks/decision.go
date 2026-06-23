@@ -130,33 +130,10 @@ func ExecuteDecisionHooks(event string, data map[string]interface{}) *HookDecisi
 			continue
 		}
 
-		// Execute with fail-open: catch panics and log errors
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Warn("decision hook panicked (fail-open)",
-						"hook", h.Config.Name,
-						"event", event,
-						"tool", toolName,
-						"panic", r)
-				}
-			}()
-			if decision := h.Fn(event, data); decision != nil {
-				// Return the decision (caller will handle it)
-				// We can't return from inside the closure, so we use a wrapper
-			}
-		}()
-
-		// Execute again to get the result (the closure above was for panic recovery)
-		decision := func() *HookDecision {
-			defer func() *HookDecision {
-				if r := recover(); r != nil {
-					return nil
-				}
-				return nil
-			}()
-			return h.Fn(event, data)
-		}()
+		// Execute exactly once with fail-open panic recovery. The previous
+		// implementation invoked h.Fn twice (once in a discard closure, once
+		// to capture the result), double-firing side-effecting hooks.
+		decision := safeExecuteHook(h, event, data, toolName)
 		if decision != nil {
 			return decision
 		}

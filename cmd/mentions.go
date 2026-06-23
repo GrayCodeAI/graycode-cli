@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/mention"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // handleMentions processes @-prefixed file mentions in user input.
@@ -29,6 +30,16 @@ func (m *chatModel) handleMentions(text string) string {
 	// Read each mentioned file and append to session context.
 	var contextParts []string
 	for _, path := range result.MentionedFiles {
+		// Enforce the same sensitive-path block the Read/Write tools use.
+		// Otherwise `@~/.ssh/id_rsa` or `@/etc/passwd` would sidestep the
+		// security boundary and inject secrets into the LLM context.
+		if reason := tool.IsSensitivePath(path); reason != "" {
+			m.messages = append(m.messages, displayMsg{
+				role:    "error",
+				content: fmt.Sprintf("Refused to read @%s: %s", path, reason),
+			})
+			continue
+		}
 		content, err := os.ReadFile(path)
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{

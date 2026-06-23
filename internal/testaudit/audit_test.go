@@ -59,6 +59,15 @@ var getEnvExemptions = map[string]bool{
 	"tool/web_search_searxng.go": true, // SEARXNG_URL
 }
 
+// Direct eyrie/client imports are only allowed at the Hawk transport adapter edge
+// and in a small number of tests that explicitly exercise provider mocks.
+var eyrieClientImportExemptions = map[string]bool{
+	"internal/types/client.go":                true,
+	"internal/types/client_test.go":           true,
+	"internal/bridge/sight/bridge.go":         true,
+	"internal/engine/subagent_synthesis_test": true,
+}
+
 // TestNoRawPanicInInternal verifies that no non-test .go file in internal/
 // calls panic() outside of init() functions.
 func TestNoRawPanicInInternal(t *testing.T) {
@@ -182,6 +191,59 @@ func TestNoDirectOsGetenvInInternal(t *testing.T) {
 	}
 
 	t.Logf("Total os.Getenv violations in internal/: %d (logged as tech debt)", violationCount)
+}
+
+// TestNoDirectEyrieClientImportsOutsideAdapters verifies Hawk does not bypass
+// its own transport seam by importing eyrie/client directly in production code.
+func TestNoDirectEyrieClientImportsOutsideAdapters(t *testing.T) {
+	root := repoRoot(t)
+	paths := []string{
+		filepath.Join(root, "internal"),
+		filepath.Join(root, "cmd"),
+	}
+
+	for _, dir := range paths {
+		files := parseGoFiles(t, dir)
+		for _, pf := range files {
+			rel := relPath(root, pf.Path)
+			if isExemptPackage(rel, eyrieClientImportExemptions) {
+				continue
+			}
+			for _, imp := range pf.File.Imports {
+				path := strings.Trim(imp.Path.Value, `"`)
+				if path != "github.com/GrayCodeAI/eyrie/client" {
+					continue
+				}
+				pos := pf.FSet.Position(imp.Pos())
+				t.Fatalf("forbidden direct eyrie/client import at %s:%d; go through internal/types transport adapters instead", rel, pos.Line)
+			}
+		}
+	}
+}
+
+// TestNoDirectSharedTypesImports verifies Hawk does not reintroduce the removed
+// legacy shared/types import path into production code.
+func TestNoDirectSharedTypesImports(t *testing.T) {
+	root := repoRoot(t)
+	paths := []string{
+		filepath.Join(root, "internal"),
+		filepath.Join(root, "cmd"),
+	}
+
+	for _, dir := range paths {
+		files := parseGoFiles(t, dir)
+		for _, pf := range files {
+			rel := relPath(root, pf.Path)
+			for _, imp := range pf.File.Imports {
+				path := strings.Trim(imp.Path.Value, `"`)
+				if path != "github.com/GrayCodeAI/hawk/shared/types" {
+					continue
+				}
+				pos := pf.FSet.Position(imp.Pos())
+				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use hawk-core-contracts instead", rel, pos.Line)
+			}
+		}
+	}
 }
 
 // TestAllExportedTypesHaveDocComments verifies that all exported type

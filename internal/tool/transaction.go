@@ -480,6 +480,14 @@ func (TransactionTool) Execute(ctx context.Context, input json.RawMessage) (stri
 		if content == "" && op.NewContent != "" {
 			content = op.NewContent
 		}
+		// Scan new file content for credentials, mirroring the FileWrite /
+		// FileEdit guard. Without this, AtomicMultiEdit is a bypass for the
+		// anti-exfil check: an LLM could persist a stolen API key to disk.
+		if op.Type == "create" || op.Type == "modify" {
+			if cred := DetectCredentials(content); cred != "" {
+				return "", fmt.Errorf("content for %s contains a credential (%s) — refusing to write", op.Path, cred)
+			}
+		}
 		mode := os.FileMode(0o644)
 		if op.Mode != 0 {
 			mode = os.FileMode(op.Mode)

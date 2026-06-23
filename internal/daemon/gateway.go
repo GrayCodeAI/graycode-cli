@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -147,7 +148,9 @@ func (a *authorizer) tryPair(senderID, text string) (isPair, ok bool) {
 	if len(fields) > 1 {
 		supplied = fields[1]
 	}
-	if supplied != a.pairingCode {
+	// Constant-time compare so the pairing code is not exposed to a timing
+	// oracle.
+	if subtle.ConstantTimeCompare([]byte(supplied), []byte(a.pairingCode)) != 1 {
 		return true, false
 	}
 	a.allow[senderID] = struct{}{}

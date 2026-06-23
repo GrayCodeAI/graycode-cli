@@ -1,48 +1,41 @@
-// Package types provides shared types used across GrayCodeAI hawk-related modules.
-// Severity, TokenSeverity, and AuditSeverity are forwarded from the shared package.
-// ToolCall and ToolResult come from eyrie/client.
+// Package types provides Hawk-owned runtime types and shared compatibility aliases.
+// Severity, TokenSeverity, and AuditSeverity are forwarded from hawk-core-contracts/types.
+// Provider-facing compatibility now lives in explicit adapters inside internal/types/client.go.
 package types
 
 import (
-	"github.com/GrayCodeAI/eyrie/client"
-	"github.com/GrayCodeAI/hawk/shared/types"
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
 )
 
 // Severity represents the impact level of a finding.
-type Severity = types.Severity
+type Severity = contracts.Severity
 
 const (
-	SeverityInfo     = types.SeverityInfo
-	SeverityLow      = types.SeverityLow
-	SeverityMedium   = types.SeverityMedium
-	SeverityHigh     = types.SeverityHigh
-	SeverityCritical = types.SeverityCritical
+	SeverityInfo     = contracts.SeverityInfo
+	SeverityLow      = contracts.SeverityLow
+	SeverityMedium   = contracts.SeverityMedium
+	SeverityHigh     = contracts.SeverityHigh
+	SeverityCritical = contracts.SeverityCritical
 )
 
 // ParseSeverity converts a string to a Severity.
-var ParseSeverity = types.ParseSeverity
+var ParseSeverity = contracts.ParseSeverity
 
 // TokenSeverity defines rule severity for compression error patterns.
-type TokenSeverity = types.TokenSeverity
+type TokenSeverity = contracts.TokenSeverity
 
 const (
-	TokenSeverityCritical = types.TokenSeverityCritical
-	TokenSeverityHigh     = types.TokenSeverityHigh
-	TokenSeverityMedium   = types.TokenSeverityMedium
-	TokenSeverityLow      = types.TokenSeverityLow
+	TokenSeverityCritical = contracts.TokenSeverityCritical
+	TokenSeverityHigh     = contracts.TokenSeverityHigh
+	TokenSeverityMedium   = contracts.TokenSeverityMedium
+	TokenSeverityLow      = contracts.TokenSeverityLow
 )
 
 // AuditSeverity indicates how dangerous a security audit finding is.
-type AuditSeverity = types.AuditSeverity
+type AuditSeverity = contracts.AuditSeverity
 
 const (
-	AuditSeverityCritical = types.AuditSeverityCritical
-	AuditSeverityWarning  = types.AuditSeverityWarning
-	AuditSeverityInfo     = types.AuditSeverityInfo
+	AuditSeverityCritical = contracts.AuditSeverityCritical
+	AuditSeverityWarning  = contracts.AuditSeverityWarning
+	AuditSeverityInfo     = contracts.AuditSeverityInfo
 )
-
-// ToolCall represents a tool invocation requested by the model.
-type ToolCall = client.ToolCall
-
-// ToolResult represents the result of a tool execution.
-type ToolResult = client.ToolResult

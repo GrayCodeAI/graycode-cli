@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // TestSession_SetConvoDAG_DualWrite is a regression guard for the
@@ -117,5 +118,33 @@ func TestPersistenceService_AddUserWithImage_DataURL(t *testing.T) {
 	}
 	if msgs[0].Content != "look at this" {
 		t.Errorf("content = %q, want 'look at this'", msgs[0].Content)
+	}
+}
+
+func TestPersistenceService_RemoveLastExchangeAndCount(t *testing.T) {
+	t.Parallel()
+
+	ps := NewPersistenceService(nil)
+	ps.LoadMessages([]types.EyrieMessage{
+		{Role: "user", Content: "u1"},
+		{Role: "assistant", Content: "a1"},
+		{Role: "user", Content: "u2"},
+		{Role: "assistant", Content: "a2"},
+	})
+
+	if got := ps.MessageCount(); got != 4 {
+		t.Fatalf("MessageCount() = %d, want 4", got)
+	}
+
+	ps.RemoveLastExchange()
+	msgs := ps.Messages()
+	if len(msgs) != 2 {
+		t.Fatalf("len(Messages()) = %d, want 2", len(msgs))
+	}
+	if msgs[0].Content != "u1" || msgs[1].Content != "a1" {
+		t.Fatalf("unexpected remaining messages: %#v", msgs)
+	}
+	if got := ps.MessageCount(); got != 2 {
+		t.Fatalf("MessageCount() after remove = %d, want 2", got)
 	}
 }

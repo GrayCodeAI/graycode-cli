@@ -8,6 +8,20 @@ import (
 	"time"
 )
 
+const (
+	// maxAgentPromptBytes caps a sub-agent prompt so a single LLM-emitted
+	// tool call cannot balloon memory with an enormous prompt.
+	maxAgentPromptBytes = 256 * 1024 // 256KB
+	// maxParallelAgentTasks caps how many sub-agents a single MultiAgent call
+	// will fan out to, bounding goroutine and memory growth from an
+	// LLM-supplied tasks array.
+	maxParallelAgentTasks = 32
+	// maxConcurrentAgentTasks bounds how many sub-agents run at once in the
+	// synchronous MultiAgent path so we don't fire dozens of LLM calls
+	// simultaneously.
+	maxConcurrentAgentTasks = 8
+)
+
 type AgentTool struct{}
 
 func (AgentTool) Name() string      { return "Agent" }
@@ -48,6 +62,9 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
+	}
+	if len(p.Prompt) > maxAgentPromptBytes {
+		return "", fmt.Errorf("agent prompt too large: %d bytes (max %d)", len(p.Prompt), maxAgentPromptBytes)
 	}
 	tc := GetToolContext(ctx)
 	if tc == nil || tc.AgentSpawnFn == nil {
@@ -161,6 +178,14 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
+	if len(p.Tasks) > maxParallelAgentTasks {
+		return "", fmt.Errorf("too many tasks: %d (max %d)", len(p.Tasks), maxParallelAgentTasks)
+	}
+	for _, task := range p.Tasks {
+		if len(task) > maxAgentPromptBytes {
+			return "", fmt.Errorf("task prompt too large: %d bytes (max %d)", len(task), maxAgentPromptBytes)
+		}
+	}
 	tc := GetToolContext(ctx)
 	if tc == nil || tc.AgentSpawnFn == nil {
 		return "", fmt.Errorf("agent spawning not configured")
@@ -187,10 +212,13 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	}
 	results := make([]result, len(p.Tasks))
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentAgentTasks)
 	for i, task := range p.Tasks {
 		wg.Add(1)
 		go func(idx int, prompt string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			out, err := tc.AgentSpawnFn(ctx, prompt)
 			results[idx] = result{idx: idx, output: out, err: err}
 		}(i, task)

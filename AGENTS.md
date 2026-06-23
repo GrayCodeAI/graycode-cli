@@ -62,7 +62,6 @@ hawk/
 │   ├── daemon/             # Background HTTP/SSE server
 │   ├── resilience/         # Circuit breaker, rate limiting, health checks
 │   └── feature/            # Eval, fingerprint, scaffolding
-├── shared/types/           # Cross-repo exported types (severity, etc.)
 ├── docs/                   # Architecture docs, research notes
 └── testdata/               # Test fixtures
 ```
@@ -70,13 +69,17 @@ hawk/
 ## Key Design Decisions
 
 - **Zero CGO:** Pure Go, cross-compilable. Tree-sitter is optional.
-- **`internal/` is private:** Other repos import `shared/types/` only.
+- **`internal/` is private:** Cross-repo contracts belong in `hawk-core-contracts`, not `internal/`.
 - **Tool safety layer:** Every tool call goes through permissions (guardian,
   rules DSL, boundary checker) before execution.
 - **Engine-first:** The agent loop in `internal/engine/` orchestrates context
   packing, tool dispatch, streaming, and session persistence.
 - **Ecosystem integration:** eyrie handles all LLM API communication. hawk
-  never talks to LLM APIs directly.
+  never talks to LLM APIs directly, and production code should go through
+  `internal/types` transport adapters instead of importing `eyrie/client`.
+- **Shared contracts:** cross-repo types now live in `hawk-core-contracts`
+  (`types`, `review`, `verify`, `tools`, `events`, `policy`). The old
+  `hawk/shared/types` path has been removed.
 
 ## Development Guidelines
 
@@ -145,8 +148,8 @@ test: add coverage for guardian
 
 - `CONTRIBUTING.md` — PR process, commit conventions
 - `docs/` — Architecture details, security model, ecosystem message flow
-- `external/` — Ecosystem repo checkouts for `go.work` development
-- `shared/types/` — Types exported for sight/inspect/tok (they must not import `internal/`)
+- `external/` — Pinned ecosystem submodules used by `go.work` for local and CI integration
+- `hawk-core-contracts/` — Shared cross-repo contracts; use this instead of any legacy Hawk-owned shared-type path
 
 ## Testing Philosophy
 
@@ -157,13 +160,13 @@ test: add coverage for guardian
 
 ## Common Pitfalls
 
-- Do not import `internal/` from other ecosystem repos — use `shared/types/`
+- Do not import `internal/` from other ecosystem repos — use `hawk-core-contracts`
 - Do not put API keys in `.env` or shell env for hawk — use `/config` (OS keychain)
-- The `external/` directory is for local dev only; CI clones repos separately
+- The `external/` directory is part of the committed integration layout
 - `go.work` and `go.work.sum` are committed — CI's `module hygiene` job
   runs `go work sync` and asserts the result is in sync with the repo. Both
-  files point at `./external/*` checkouts; the `.github/actions/checkout-eyrie`
-  action populates `./external/` on CI runners before the build runs.
+  files point at `./external/*` submodules so Hawk can build against pinned
+  support-repo revisions.
 
 ## Naming Conventions
 
@@ -202,6 +205,7 @@ test: add coverage for guardian
 - **Fuzz tests** for input parsing robustness: `func FuzzFoo(f *testing.F) { ... }`
 - **No mocks framework** — use concrete types and test doubles
 - **Meta-audit tests** in `internal/testaudit/` enforce architectural invariants via go/ast
+  including transport-boundary and deprecated-compatibility-package checks.
 
 ## Refactoring Guidelines
 
@@ -211,7 +215,7 @@ test: add coverage for guardian
 - **Caution**: `internal/engine/session.go` Session struct — widely referenced across 30+ sub-packages
 - **Caution**: `internal/config/settings.go` Settings struct — serialized to JSON, dual-format (snake_case + camelCase)
 - **Caution**: `internal/tool/` Tool interface — implemented by 40+ tools
-- **Blocked**: `shared/types/` — exported to eyrie, sight, inspect, tok; changes break ecosystem
+- **Migration-sensitive**: `hawk/shared/types` has been removed; use `hawk-core-contracts/types` instead.
 
 ## Key File Locations
 
@@ -250,6 +254,6 @@ test: add coverage for guardian
 - **No `panic()` for error handling** — return `error` values. Exception: `init()` functions for package-level assertions.
 - **No `fmt.Print` for logging** — use `logger.Logger` with structured fields. Exception: `internal/onboarding/` and `internal/engine/scaffold/` for user-facing CLI output.
 - **No API keys in settings.json** — use OS secret store via `credentials` package and `/config` command.
-- **No importing `internal/` from other ecosystem repos** — use `shared/types/` for cross-repo types.
+- **No importing `internal/` from other ecosystem repos** — use `hawk-core-contracts` for cross-repo types.
 - **No global mutable state** — prefer dependency injection via `deps` structs or `context.WithValue`.
 - **No `t.Skip()` without a tracking issue** — every skipped test needs a GitHub issue number.

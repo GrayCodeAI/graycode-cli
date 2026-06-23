@@ -51,6 +51,10 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "concerns must not start with '--'"})
 		return
 	}
+	if strings.HasPrefix(req.Model, "--") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "model must not start with '--'"})
+		return
+	}
 
 	// Trigger review asynchronously via hawk review run.
 	go func() {

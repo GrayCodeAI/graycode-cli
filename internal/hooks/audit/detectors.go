@@ -10,7 +10,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
+
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/events"
 )
 
 // DetectorHit represents one detected occurrence of wasteful behavior.
@@ -22,14 +23,7 @@ type DetectorHit struct {
 }
 
 // ToolEvent represents a normalized tool event from a transcript.
-type ToolEvent struct {
-	ToolName   string
-	ToolInput  map[string]interface{}
-	CWD        string
-	Timestamp  time.Time
-	SessionID  string
-	Transcript string
-}
+type ToolEvent = contracts.ToolEvent
 
 // DetectorSessionState holds per-session state for stateful detectors.
 type DetectorSessionState = map[string]interface{}

@@ -22,20 +22,19 @@ ARG BUILD_DATE=unknown
 
 COPY . .
 
-# Clone every sibling hawk imports into ./external, then generate a go.work that
-# resolves them locally. NOTE: the committed go.work/go.work.sum are excluded by
-# .dockerignore, so we must (re)create the workspace here. Do NOT run
-# 'go mod download' first — the frozen-proxy v0.1.0 fails checksum verification.
+# external/<repo> are committed submodules pinned to the integrated revisions
+# (populated by `submodules: recursive` in .github/workflows/docker.yml, or
+# `git submodule update --init --recursive` for a local `docker build`). Build
+# against those pinned checkouts via a generated go.work — the committed
+# go.work/go.work.sum are excluded by .dockerignore, and the public proxy froze
+# v0.1.0 at older commits. Do NOT run 'go mod download' first.
 #
 # main.Version / main.Commit / main.BuildDate are baked in from the ARGs above;
 # this is the only correct source — `git describe` would always return empty
 # because `.dockerignore` excludes `.git/` from the build context.
-RUN rm -rf external go.work go.work.sum && mkdir -p external && \
-    for repo in eyrie inspect sight tok trace yaad; do \
-      git clone --depth=1 "https://github.com/GrayCodeAI/${repo}.git" "external/${repo}"; \
-    done && \
+RUN rm -f go.work go.work.sum && \
     { echo "go 1.26.4"; echo; echo "use ."; echo; echo "replace ("; \
-      for repo in eyrie inspect sight tok trace yaad; do \
+      for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
         echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
       done; echo ")"; } > go.work && \
     CGO_ENABLED=0 GOOS=linux go build -trimpath \

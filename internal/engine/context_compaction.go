@@ -118,18 +118,7 @@ func (s *Session) checkpointManager() *session.CheckpointManager {
 }
 
 func rawToSessionMessages(raw []types.EyrieMessage) []session.Message {
-	out := make([]session.Message, 0, len(raw))
-	for _, rm := range raw {
-		sm := session.Message{Role: rm.Role, Content: rm.Content}
-		if len(rm.ToolUse) > 0 {
-			sm.ToolUse = append(sm.ToolUse, rm.ToolUse...)
-		}
-		if len(rm.ToolResults) > 0 {
-			sm.ToolResults = append(sm.ToolResults, rm.ToolResults...)
-		}
-		out = append(out, sm)
-	}
-	return out
+	return session.FromRuntimeMessages(raw)
 }
 
 func (s *Session) recordCompaction(strategy string, tokensBefore, tokensAfter int, manual bool) {

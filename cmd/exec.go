@@ -235,7 +235,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		if lookupErr != nil {
 			return fmt.Errorf("resume session %s: %w", execSessionID, lookupErr)
 		}
-		sess.LoadMessages(toEyrieMessages(saved.Messages))
+		sess.LoadMessages(session.ToRuntimeMessages(saved.Messages))
 	}
 
 	// Add the user prompt
