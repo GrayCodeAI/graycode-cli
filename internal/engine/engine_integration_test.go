@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/session"
@@ -280,9 +281,11 @@ func TestIntegration_PermissionFlow(t *testing.T) {
 	// Simulate calling the permission function.
 	resp := make(chan bool, 1)
 	sess.PermissionFn(PermissionRequest{
-		ToolName: "Write",
-		ToolID:   "test-id",
-		Summary:  "/tmp/new-file.txt",
+		PermissionRequest: contracts.PermissionRequest{
+			ToolName: "Write",
+			ToolID:   "test-id",
+			Summary:  "/tmp/new-file.txt",
+		},
 		Response: resp,
 	})
 	if !permCalled {

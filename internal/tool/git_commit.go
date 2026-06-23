@@ -160,15 +160,19 @@ func isConventionalSubject(msg string) bool {
 }
 
 // GenerateCommitMessage produces a Conventional Commits message for the given
-// diff and goal. It delegates to the existing CommitMessageGenerator, using
-// CommitMessageChatFn as the LLM seam and falling back to the deterministic
-// rule-based generator when no model is wired up.
+// diff and goal. It delegates to the existing CommitMessageGenerator, using a
+// ToolContext-scoped commit chat function when available, then the package-level
+// CommitMessageChatFn seam, and finally the deterministic rule-based generator.
 //
 // The returned message is normalized: if the output does not already begin with
 // a Conventional Commits type prefix, a "chore: " prefix is added.
 func GenerateCommitMessage(ctx context.Context, diff, goal string) (string, error) {
+	chatFn := CommitMessageChatFn
+	if tc := GetToolContext(ctx); tc != nil && tc.CommitMessageChatFn != nil {
+		chatFn = tc.CommitMessageChatFn
+	}
 	gen := &CommitMessageGenerator{
-		ChatFn:                 CommitMessageChatFn,
+		ChatFn:                 chatFn,
 		FallbackToConventional: true,
 		Style:                  "conventional",
 		IncludeBody:            true,

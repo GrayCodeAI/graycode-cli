@@ -31,6 +31,11 @@ type CronScheduler struct {
 	next int
 }
 
+// maxCronJobs caps the number of concurrently scheduled jobs so an LLM
+// cannot create unbounded jobs in a tight loop (each Create stores an entry
+// in the in-memory map).
+const maxCronJobs = 256
+
 var globalCronScheduler = &CronScheduler{jobs: make(map[string]*CronJob)}
 
 func GetCronScheduler() *CronScheduler { return globalCronScheduler }
@@ -43,6 +48,9 @@ func (s *CronScheduler) Create(schedule, prompt string, recurring, durable bool)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if len(s.jobs) >= maxCronJobs {
+		return nil, fmt.Errorf("cron job limit reached (%d); delete existing jobs first", maxCronJobs)
+	}
 	s.next++
 	id := fmt.Sprintf("cron_%d", s.next)
 

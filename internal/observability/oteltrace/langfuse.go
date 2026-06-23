@@ -10,6 +10,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/events"
 )
 
 // LangfuseClient sends traces to Langfuse for LLM observability.
@@ -29,25 +31,10 @@ type event struct {
 }
 
 // TraceEvent represents a single LLM call trace.
-type TraceEvent struct {
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Input     string            `json:"input,omitempty"`
-	Output    string            `json:"output,omitempty"`
-	Model     string            `json:"model,omitempty"`
-	StartTime time.Time         `json:"startTime"`
-	EndTime   time.Time         `json:"endTime,omitempty"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	Usage     *UsageInfo        `json:"usage,omitempty"`
-}
+type TraceEvent = contracts.TraceEvent
 
 // UsageInfo tracks token usage.
-type UsageInfo struct {
-	PromptTokens     int     `json:"promptTokens"`
-	CompletionTokens int     `json:"completionTokens"`
-	TotalTokens      int     `json:"totalTokens"`
-	CostUSD          float64 `json:"costUSD,omitempty"`
-}
+type UsageInfo = contracts.UsageInfo
 
 // NewLangfuseClient creates a client from environment variables.
 // Requires LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, and optionally LANGFUSE_HOST.

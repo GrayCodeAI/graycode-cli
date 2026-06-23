@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	verifycontracts "github.com/GrayCodeAI/hawk-core-contracts/verify"
 	inspectLib "github.com/GrayCodeAI/inspect"
 )
 
@@ -51,4 +52,13 @@ func (b *Bridge) Run(ctx context.Context, target string, opts ...inspectLib.Opti
 		return s.Scan(ctx, target)
 	}
 	return b.scanner.Scan(ctx, target)
+}
+
+// RunContracts performs a verification scan and returns the neutral verification contract.
+func (b *Bridge) RunContracts(ctx context.Context, target string, opts ...inspectLib.Option) (*verifycontracts.Report, error) {
+	report, err := b.Run(ctx, target, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return inspectLib.ToContractReport(report), nil
 }

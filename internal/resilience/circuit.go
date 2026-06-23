@@ -38,6 +38,9 @@ type Breaker struct {
 	failures        int
 	lastFailureTime time.Time
 	successCount    int
+	// halfOpenCalls counts probe calls dispatched in the half-open state so
+	// a burst of traffic cannot all slip through to a recovering service.
+	halfOpenCalls int
 
 	maxFailures      int
 	timeout          time.Duration
@@ -88,15 +91,22 @@ func (b *Breaker) Allow() bool {
 		if time.Since(b.lastFailureTime) > b.timeout {
 			b.state = HalfOpen
 			b.successCount = 0
+			b.halfOpenCalls = 1 // this first probe counts against the budget
 			return true
 		}
 		return false
 	}
 
-	if b.state == HalfOpen && b.successCount >= b.halfOpenMaxCalls {
-		b.state = Closed
-		b.failures = 0
-		b.successCount = 0
+	if b.state == HalfOpen {
+		// Bound the number of in-flight probe calls so a traffic burst does
+		// not all slip through to a service that is still recovering. Once the
+		// probe budget is spent, fail fast until RecordSuccess closes the
+		// circuit or RecordFailure reopens it.
+		if b.halfOpenCalls >= b.halfOpenMaxCalls {
+			return false
+		}
+		b.halfOpenCalls++
+		return true
 	}
 
 	return true
@@ -113,6 +123,7 @@ func (b *Breaker) RecordSuccess() {
 			b.state = Closed
 			b.failures = 0
 			b.successCount = 0
+			b.halfOpenCalls = 0
 		}
 		return
 	}

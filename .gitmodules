@@ -16,3 +16,6 @@
 [submodule "external/trace"]
 	path = external/trace
 	url = https://github.com/GrayCodeAI/trace.git
+[submodule "external/hawk-core-contracts"]
+	path = external/hawk-core-contracts
+	url = https://github.com/GrayCodeAI/hawk-core-contracts.git

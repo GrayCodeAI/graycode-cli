@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 )
 
 // ErrCircuitBreakerOpen is returned when the guardian has denied too many
@@ -59,11 +61,7 @@ type GuardianRequest struct {
 }
 
 // GuardianDecision represents the guardian's decision on a permission request.
-type GuardianDecision struct {
-	Allowed    bool    `json:"allowed"`
-	Reason     string  `json:"reason"`
-	Confidence float64 `json:"confidence"`
-}
+type GuardianDecision = contracts.GuardianDecision
 
 // NewGuardian creates a new Guardian with sensible defaults.
 func NewGuardian(chatFn func(context.Context, string) (string, error)) *Guardian {
@@ -301,6 +299,11 @@ func parseGuardianResponse(response string) (*GuardianDecision, error) {
 	// Validate confidence range. Models occasionally emit
 	// out-of-range values; clamp rather than reject so the rest of
 	// the decision (allowed/reason) still flows through.
+	// NaN fails both < 0 and > 1, so handle it first (self-comparison is
+	// the standard NaN test) and treat it as lowest confidence — fail safe.
+	if decision.Confidence != decision.Confidence { //nolint:staticcheck // NaN check
+		decision.Confidence = 0
+	}
 	if decision.Confidence < 0 {
 		decision.Confidence = 0
 	}

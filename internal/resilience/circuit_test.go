@@ -122,6 +122,27 @@ func TestBreakerHalfOpenFailure(t *testing.T) {
 	}
 }
 
+func TestBreakerHalfOpenProbeBudget(t *testing.T) {
+	b := New(Config{MaxFailures: 1, Timeout: 50 * time.Millisecond, HalfOpenMaxCalls: 2})
+
+	_ = b.Call(func() error { return errors.New("fail") })
+	if b.State() != Open {
+		t.Fatalf("expected open state, got %s", b.State())
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	if !b.Allow() {
+		t.Fatal("expected first half-open probe to be allowed")
+	}
+	if !b.Allow() {
+		t.Fatal("expected second half-open probe to be allowed")
+	}
+	if b.Allow() {
+		t.Fatal("expected probe budget to block additional half-open calls")
+	}
+}
+
 func TestCallWithResult(t *testing.T) {
 	b := New(Config{MaxFailures: 3})
 

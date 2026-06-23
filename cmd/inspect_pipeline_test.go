@@ -3,7 +3,8 @@ package cmd
 import (
 	"testing"
 
-	inspectLib "github.com/GrayCodeAI/inspect"
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
+	verifycontracts "github.com/GrayCodeAI/hawk-core-contracts/verify"
 )
 
 func TestInspectToReviewFindings_NilReport(t *testing.T) {
@@ -16,7 +17,7 @@ func TestInspectToReviewFindings_NilReport(t *testing.T) {
 
 func TestInspectToReviewFindings_EmptyReport(t *testing.T) {
 	t.Parallel()
-	report := &inspectLib.Report{
+	report := &verifycontracts.Report{
 		Target: "https://example.com",
 	}
 	findings := InspectToReviewFindings(report)
@@ -27,20 +28,20 @@ func TestInspectToReviewFindings_EmptyReport(t *testing.T) {
 
 func TestInspectToReviewFindings_WithFindings(t *testing.T) {
 	t.Parallel()
-	report := &inspectLib.Report{
+	report := &verifycontracts.Report{
 		Target: "https://example.com",
-		Findings: []inspectLib.Finding{
+		Findings: []verifycontracts.Finding{
 			{
 				Check:    "security",
 				URL:      "https://example.com/login",
-				Severity: inspectLib.SeverityHigh,
+				Severity: contracts.SeverityHigh,
 				Message:  "Missing CSP header",
 				Fix:      "Add Content-Security-Policy header",
 			},
 			{
 				Check:    "a11y",
 				URL:      "https://example.com/about",
-				Severity: inspectLib.SeverityMedium,
+				Severity: contracts.SeverityMedium,
 				Message:  "Missing alt text on image",
 			},
 		},
@@ -68,14 +69,14 @@ func TestInspectToReviewFindings_WithFindings(t *testing.T) {
 func TestMapInspectSeverity(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		input inspectLib.Severity
+		input contracts.Severity
 		want  string
 	}{
-		{inspectLib.SeverityCritical, "critical"},
-		{inspectLib.SeverityHigh, "high"},
-		{inspectLib.SeverityMedium, "medium"},
-		{inspectLib.SeverityLow, "low"},
-		{inspectLib.Severity(999), "low"},
+		{contracts.SeverityCritical, "critical"},
+		{contracts.SeverityHigh, "high"},
+		{contracts.SeverityMedium, "medium"},
+		{contracts.SeverityLow, "low"},
+		{contracts.Severity(999), "low"},
 	}
 
 	for _, tt := range tests {
@@ -141,12 +142,12 @@ func TestFormatInspectReport_Nil(t *testing.T) {
 
 func TestFormatInspectReport_WithData(t *testing.T) {
 	t.Parallel()
-	report := &inspectLib.Report{
+	report := &verifycontracts.Report{
 		Target:      "https://example.com",
 		CrawledURLs: 10,
-		Stats: inspectLib.Stats{
+		Stats: verifycontracts.Stats{
 			FindingsTotal: 5,
-			BySeverity:    map[inspectLib.Severity]int{inspectLib.SeverityHigh: 2, inspectLib.SeverityMedium: 3},
+			BySeverity:    map[contracts.Severity]int{contracts.SeverityHigh: 2, contracts.SeverityMedium: 3},
 		},
 	}
 	output := formatInspectReport(report)

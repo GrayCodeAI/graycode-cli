@@ -6,14 +6,13 @@ import (
 	"strings"
 	"sync"
 
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // PermissionRequest is sent from engine to TUI when a tool needs approval.
 type PermissionRequest struct {
-	ToolName string
-	ToolID   string
-	Summary  string
+	contracts.PermissionRequest
 	Response chan bool
 }
 

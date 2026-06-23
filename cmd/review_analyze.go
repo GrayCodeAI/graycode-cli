@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
@@ -125,9 +126,9 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	// Build sight bridge for analysis.
 	prov := provider
 	if prov == "" {
-		prov = client.DetectProvider()
+		prov = types.DetectProvider()
 	}
-	eyrieClient := client.Client(&client.EyrieConfig{Provider: prov})
+	eyrieClient := types.NewClient(&types.ClientConfig{Provider: prov})
 
 	var opts []sightLib.Option
 	if analyzeModel != "" {
@@ -151,7 +152,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	analysisInput := fmt.Sprintf("# Analysis Type: %s\n\n%s\n\n---\n\n%s", analysisType, prompt, content)
 
 	fmt.Printf("Analyzing (%s)...\n", analysisType)
-	result, err := bridge.Review(ctx, analysisInput)
+	result, err := bridge.ReviewContracts(ctx, analysisInput)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
@@ -229,7 +230,7 @@ func getAnalysisContent(patterns []string) (string, error) {
 	return b.String(), nil
 }
 
-func autoFixAnalysis(result *sightLib.Result) error {
+func autoFixAnalysis(result *reviewcontracts.Result) error {
 	var b strings.Builder
 	b.WriteString("Fix the following analysis findings:\n\n")
 	for i, f := range result.Findings {

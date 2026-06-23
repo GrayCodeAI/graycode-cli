@@ -92,3 +92,22 @@ func TestDecisionHookNilWhenEmpty(t *testing.T) {
 		t.Fatalf("expected nil when no hooks registered, got %+v", decision)
 	}
 }
+
+func TestExecuteDecisionHooks_ExecutesHookOnlyOnce(t *testing.T) {
+	ResetDecisionHooks()
+	defer ResetDecisionHooks()
+
+	calls := 0
+	RegisterDecisionHook(func(event string, data map[string]interface{}) *HookDecision {
+		calls++
+		return &HookDecision{Action: "allow", Reason: "once"}
+	})
+
+	decision := ExecuteDecisionHooks("any_event", nil)
+	if decision == nil {
+		t.Fatal("expected decision")
+	}
+	if calls != 1 {
+		t.Fatalf("hook called %d times, want 1", calls)
+	}
+}

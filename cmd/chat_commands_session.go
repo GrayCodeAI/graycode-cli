@@ -11,7 +11,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
@@ -22,19 +21,9 @@ func (m *chatModel) saveSession() {
 	if len(raw) == 0 {
 		return
 	}
-	var msgs []session.Message
-	for _, rm := range raw {
-		sm := session.Message{Role: rm.Role, Content: rm.Content}
-		sm.ToolUse = append(sm.ToolUse, rm.ToolUse...)
-		if len(rm.ToolResults) > 0 {
-			sm.ToolResults = make([]session.ToolResult, len(rm.ToolResults))
-			copy(sm.ToolResults, rm.ToolResults)
-		}
-		msgs = append(msgs, sm)
-	}
 	err := session.Save(&session.Session{
 		ID: m.sessionID, Model: m.session.Model(), Provider: m.session.Provider(),
-		Messages: msgs, CreatedAt: time.Now(),
+		Messages: session.FromRuntimeMessages(raw), CreatedAt: time.Now(),
 	})
 	// On successful save, WAL is no longer needed (session file has everything)
 	if err == nil && m.wal != nil {
@@ -132,15 +121,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.sessionID = s.ID
 			m.invalidateViewportCache()
 			m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
-			var msgs []client.EyrieMessage
+			msgs := session.ToRuntimeMessages(s.Messages)
 			for _, sm := range s.Messages {
-				em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-				em.ToolUse = append(em.ToolUse, sm.ToolUse...)
-				if len(sm.ToolResults) > 0 {
-					em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
-					copy(em.ToolResults, sm.ToolResults)
-				}
-				msgs = append(msgs, em)
 				if sm.Role == "user" || sm.Role == "assistant" {
 					m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
 				}
@@ -179,15 +161,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		m.sessionID = saved.ID
 		m.invalidateViewportCache()
 		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
-		var msgs []client.EyrieMessage
+		msgs := session.ToRuntimeMessages(saved.Messages)
 		for _, sm := range saved.Messages {
-			em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-			em.ToolUse = append(em.ToolUse, sm.ToolUse...)
-			if len(sm.ToolResults) > 0 {
-				em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
-				copy(em.ToolResults, sm.ToolResults)
-			}
-			msgs = append(msgs, em)
 			if sm.Role == "user" || sm.Role == "assistant" {
 				m.messages = append(m.messages, displayMsg{role: sm.Role, content: sm.Content})
 			}

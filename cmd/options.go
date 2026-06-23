@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	ctxrepomap "github.com/GrayCodeAI/hawk/internal/context/repomap"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -23,6 +22,7 @@ import (
 	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func buildSystemPrompt() (string, error) {
@@ -156,7 +156,7 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 		if cp.Name == "" || cp.BaseURL == "" {
 			continue
 		}
-		_ = client.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
+		_ = types.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
 	}
 	return settings, nil
 }
@@ -185,7 +185,7 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	// so users with ANTHROPIC_API_KEY don't get confusing errors about canopywave.
 	normalized := hawkconfig.NormalizeProviderForEngine(effectiveProvider)
 	if normalized != "" && hawkconfig.APIKeyForProvider(normalized) == "" {
-		detected := client.DetectProvider()
+		detected := types.DetectProvider()
 		if detected != "" && hawkconfig.APIKeyForProvider(detected) != "" {
 			normalized = detected
 			effectiveModel = ""
