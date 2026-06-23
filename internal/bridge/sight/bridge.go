@@ -4,30 +4,30 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/client"
+	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	sightLib "github.com/GrayCodeAI/sight"
 )
 
 // EyrieAdapter implements sight's Provider interface using hawk's eyrie client.
-// It translates between sight.Message/sight.ChatOpts and eyrie's
-// client.EyrieMessage/client.ChatOptions.
+// It translates between sight.Message/sight.ChatOpts and Hawk runtime DTOs.
 type EyrieAdapter struct {
-	client   *client.EyrieClient
+	client   *types.EyrieClient
 	provider string
 }
 
 // NewEyrieAdapter creates an adapter that satisfies sight.Provider using
 // the given eyrie client and provider name (e.g. "anthropic", "openai").
-func NewEyrieAdapter(c *client.EyrieClient, provider string) *EyrieAdapter {
+func NewEyrieAdapter(c *types.EyrieClient, provider string) *EyrieAdapter {
 	return &EyrieAdapter{client: c, provider: provider}
 }
 
 // Chat translates a sight LLM request into an eyrie call and returns the
 // result in sight's Response format.
 func (a *EyrieAdapter) Chat(ctx context.Context, messages []sightLib.Message, opts sightLib.ChatOpts) (*sightLib.Response, error) {
-	eyrieMessages := make([]client.EyrieMessage, len(messages))
+	eyrieMessages := make([]types.EyrieMessage, len(messages))
 	for i, m := range messages {
-		eyrieMessages[i] = client.EyrieMessage{
+		eyrieMessages[i] = types.EyrieMessage{
 			Role:    m.Role,
 			Content: m.Content,
 		}
@@ -39,7 +39,7 @@ func (a *EyrieAdapter) Chat(ctx context.Context, messages []sightLib.Message, op
 		temp = &t
 	}
 
-	eyrieOpts := client.ChatOptions{
+	eyrieOpts := types.ChatOptions{
 		Provider:    a.provider,
 		Model:       opts.Model,
 		MaxTokens:   opts.MaxTokens,
@@ -74,16 +74,16 @@ type Bridge struct {
 	ready    bool
 }
 
-// NewBridge creates a bridge to the sight library using the given eyrie
-// client and provider name. Additional sight options (model, concerns, etc.)
-// are applied to all operations.
-func NewBridge(c *client.EyrieClient, provider string, opts ...sightLib.Option) *Bridge {
+// NewBridge creates a bridge to the sight library using the given Hawk
+// transport client and provider name. Additional sight options (model,
+// concerns, etc.) are applied to all operations.
+func NewBridge(c *types.EyrieClient, provider string, opts ...sightLib.Option) *Bridge {
 	b := &Bridge{}
 	b.init(c, provider, opts...)
 	return b
 }
 
-func (b *Bridge) init(c *client.EyrieClient, provider string, opts ...sightLib.Option) {
+func (b *Bridge) init(c *types.EyrieClient, provider string, opts ...sightLib.Option) {
 	if c == nil {
 		return
 	}
@@ -109,6 +109,15 @@ func (b *Bridge) Review(ctx context.Context, diff string) (*sightLib.Result, err
 	defer b.mu.Unlock()
 
 	return b.reviewer.Review(ctx, diff)
+}
+
+// ReviewContracts performs a review and returns the neutral review contract.
+func (b *Bridge) ReviewContracts(ctx context.Context, diff string) (*reviewcontracts.Result, error) {
+	result, err := b.Review(ctx, diff)
+	if err != nil {
+		return nil, err
+	}
+	return sightLib.ToContractResult(result), nil
 }
 
 // Describe generates a PR description from a unified diff string.

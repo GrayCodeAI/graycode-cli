@@ -95,4 +95,5 @@ hawk yaad                # inspect memory graph
 | **yaad** | SQLite memory graph at `~/.yaad/data/` | No (degrades gracefully) |
 | **tok** | Token estimate + context compression | Yes (embedded, no config) |
 
-Workspace checkouts live under `external/{eyrie,yaad,tok}` and are wired via root `go.work`.
+Pinned support-repo submodules live under `external/{eyrie,yaad,tok}` and are
+wired via root `go.work`.

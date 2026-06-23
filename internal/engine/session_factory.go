@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/setup"
 
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // BuildChatClient returns an LLM client and whether deployment routing is active.
@@ -17,10 +17,10 @@ func BuildChatClient(ctx context.Context, useDeploymentRouting bool, legacyProvi
 	if useDeploymentRouting {
 		p, err := setup.DeploymentProvider(ctx, cfg)
 		if err == nil {
-			return NewProviderChatClient(p), legacyProvider, true
+			return NewProviderChatClient(types.WrapClientProvider(p)), legacyProvider, true
 		}
 	}
-	c := client.Client(&client.EyrieConfig{Provider: legacyProvider})
+	c := types.NewClient(&types.ClientConfig{Provider: legacyProvider})
 	return c, legacyProvider, false
 }
 

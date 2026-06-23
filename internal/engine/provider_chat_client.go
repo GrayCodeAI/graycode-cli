@@ -8,11 +8,11 @@ import (
 
 // providerChatClient adapts any eyrie types.Provider to ChatClient (continuations + streaming).
 type providerChatClient struct {
-	p types.Provider
+	p types.ChatProvider
 }
 
 // NewProviderChatClient wraps a catalog-backed provider (e.g. DeploymentRouter) for Session use.
-func NewProviderChatClient(p types.Provider) ChatClient {
+func NewProviderChatClient(p types.ChatProvider) ChatClient {
 	return &providerChatClient{p: p}
 }
 

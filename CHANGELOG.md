@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Version re-baselined to `0.1.0`** across `cmd/hawk/main.go`, `cmd/daemon.go`,
   `flake.nix`, `.github/workflows/release.yml`, and the `update`/daemon test suites, aligning hawk
   with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
+- **Architecture boundary hardening**: Hawk now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `eyrie/client` usage restricted to internal adapters and guarded in CI.
+- **`shared/types` removed**: Hawk no longer ships the old shared type path, and local boundary checks now block any attempt to reintroduce it.
 
 ### Added
 - **Watch mode (`--watch`)**: file-watcher loop that acts on `AI!` (do-now) and `AI?` (answer) code comments. Off by default.
@@ -33,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`GET /v1/ready`**: dependency-aware readiness endpoint on the daemon.
 - REPL magic commands (%reset, %undo, %tokens, %history, %copy, %save, %compact, %model, %clear)
 - Prompt cache keep-alive pings
-- Unified Finding type in shared/types for cross-tool interoperability
+- Unified finding/severity contracts now live in `hawk-core-contracts/types`
 
 ### Added — Round 2 ecosystem improvements (2026-06-01)
 - **Cavecrew personas** (`internal/multiagent/agents`): three new

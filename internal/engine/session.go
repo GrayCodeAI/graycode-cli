@@ -240,7 +240,7 @@ type Session struct {
 
 // NewSession creates a new conversation session with a legacy string-named provider.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewSessionWithClient(types.NewClient(&types.EyrieConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
+	return NewSessionWithClient(types.NewClient(&types.ClientConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
 }
 
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
@@ -467,7 +467,7 @@ func (s *Session) SetProvider(provider string) {
 	if s.DeploymentRouting {
 		return
 	}
-	s.client = types.NewClient(&types.EyrieConfig{Provider: p})
+	s.client = types.NewClient(&types.ClientConfig{Provider: p})
 	// Copy keys to avoid map iteration race with concurrent SetAPIKey calls.
 	keys := make(map[string]string, len(s.apiKeys))
 	for k, v := range s.apiKeys {

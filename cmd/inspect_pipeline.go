@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
+	verifycontracts "github.com/GrayCodeAI/hawk-core-contracts/verify"
 	hawkInspect "github.com/GrayCodeAI/hawk/internal/bridge/inspect"
 	inspectLib "github.com/GrayCodeAI/inspect"
 )
@@ -31,7 +33,7 @@ func DefaultInspectPipelineConfig(target string) InspectPipelineConfig {
 
 // InspectToReviewFindings converts an inspect report into ReviewFindings
 // so they can be displayed alongside code review findings.
-func InspectToReviewFindings(report *inspectLib.Report) []ReviewFinding {
+func InspectToReviewFindings(report *verifycontracts.Report) []ReviewFinding {
 	if report == nil {
 		return nil
 	}
@@ -52,15 +54,15 @@ func InspectToReviewFindings(report *inspectLib.Report) []ReviewFinding {
 }
 
 // mapInspectSeverity converts inspect severity to review severity.
-func mapInspectSeverity(sev inspectLib.Severity) string {
+func mapInspectSeverity(sev contracts.Severity) string {
 	switch sev {
-	case inspectLib.SeverityCritical:
+	case contracts.SeverityCritical:
 		return "critical"
-	case inspectLib.SeverityHigh:
+	case contracts.SeverityHigh:
 		return "high"
-	case inspectLib.SeverityMedium:
+	case contracts.SeverityMedium:
 		return "medium"
-	case inspectLib.SeverityLow:
+	case contracts.SeverityLow:
 		return "low"
 	default:
 		return "low"
@@ -89,7 +91,7 @@ func RunInspectPipeline(ctx context.Context, cfg InspectPipelineConfig) ([]Revie
 		return nil, "", fmt.Errorf("inspect bridge failed to initialize")
 	}
 
-	report, err := bridge.Run(ctx, cfg.Target)
+	report, err := bridge.RunContracts(ctx, cfg.Target)
 	if err != nil {
 		return nil, "", fmt.Errorf("inspect scan failed: %w", err)
 	}
@@ -123,7 +125,7 @@ func MergeInspectWithReview(reviewFindings, inspectFindings []ReviewFinding) []R
 }
 
 // formatInspectReport creates a concise text summary of an inspect report.
-func formatInspectReport(report *inspectLib.Report) string {
+func formatInspectReport(report *verifycontracts.Report) string {
 	if report == nil {
 		return "No inspect report."
 	}

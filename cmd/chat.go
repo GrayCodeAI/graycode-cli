@@ -76,7 +76,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	sess.LoadMessages(toEyrieMessages(saved.Messages))
+	sess.LoadMessages(session.ToRuntimeMessages(saved.Messages))
 	if forkSessionFlag {
 		if sessionIDFlag != "" {
 			id = sessionIDFlag

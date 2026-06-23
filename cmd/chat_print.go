@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	aiwatch "github.com/GrayCodeAI/hawk/internal/engine/io"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
@@ -205,37 +204,13 @@ func saveEyrieSession(id string, sess *engine.Session) {
 	if len(raw) == 0 {
 		return
 	}
-	var msgs []session.Message
-	for _, rm := range raw {
-		sm := session.Message{Role: rm.Role, Content: rm.Content}
-		sm.ToolUse = append(sm.ToolUse, rm.ToolUse...)
-		if len(rm.ToolResults) > 0 {
-			sm.ToolResults = make([]session.ToolResult, len(rm.ToolResults))
-			copy(sm.ToolResults, rm.ToolResults)
-		}
-		msgs = append(msgs, sm)
-	}
 	_ = session.Save(&session.Session{
 		ID:        id,
 		Model:     sess.Model(),
 		Provider:  sess.Provider(),
-		Messages:  msgs,
+		Messages:  session.FromRuntimeMessages(raw),
 		CreatedAt: time.Now(),
 	})
-}
-
-func toEyrieMessages(saved []session.Message) []client.EyrieMessage {
-	msgs := make([]client.EyrieMessage, 0, len(saved))
-	for _, sm := range saved {
-		em := client.EyrieMessage{Role: sm.Role, Content: sm.Content}
-		em.ToolUse = append(em.ToolUse, sm.ToolUse...)
-		if len(sm.ToolResults) > 0 {
-			em.ToolResults = make([]client.ToolResult, len(sm.ToolResults))
-			copy(em.ToolResults, sm.ToolResults)
-		}
-		msgs = append(msgs, em)
-	}
-	return msgs
 }
 
 // runRepl starts an interactive REPL mode for multi-turn conversation without TUI.

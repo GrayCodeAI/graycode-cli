@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 )
 
@@ -81,9 +82,11 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 	// Ask user
 	resp := make(chan bool, 1)
 	pe.PromptFn(PermissionRequest{
-		ToolName: tc.Name,
-		ToolID:   tc.ID,
-		Summary:  summary,
+		PermissionRequest: contracts.PermissionRequest{
+			ToolName: tc.Name,
+			ToolID:   tc.ID,
+			Summary:  summary,
+		},
 		Response: resp,
 	})
 	select {

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	"github.com/GrayCodeAI/hawk/internal/storage"
-	sightLib "github.com/GrayCodeAI/sight"
 )
 
 // ReviewStatus represents the state of a review.
@@ -32,7 +32,7 @@ type ReviewRecord struct {
 	ID          int64
 	SHA         string
 	Status      ReviewStatus
-	Findings    []sightLib.Finding
+	Findings    []reviewcontracts.Finding
 	Report      string
 	MaxSeverity string
 	TokensUsed  int
@@ -142,7 +142,7 @@ func (s *ReviewStore) Create(sha string) (int64, error) {
 }
 
 // Update sets the review result after completion.
-func (s *ReviewStore) Update(id int64, status ReviewStatus, result *sightLib.Result) error {
+func (s *ReviewStore) Update(id int64, status ReviewStatus, result *reviewcontracts.Result) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
