@@ -589,16 +589,26 @@ func FromClientStreamResult(stream *client.StreamResult) *StreamResult {
 		return nil
 	}
 	out := make(chan EyrieStreamEvent, 64)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		defer close(out)
+		defer cancel()
 		for ev := range stream.Events {
-			out <- FromClientStreamEvent(ev)
+			select {
+			case out <- FromClientStreamEvent(ev):
+			case <-ctx.Done():
+				stream.Close()
+				return
+			}
 		}
 	}()
 	return &StreamResult{
 		Events:    out,
 		RequestID: stream.RequestID,
-		cancel:    stream.Close,
+		cancel: func() {
+			cancel()
+			stream.Close()
+		},
 	}
 }
 

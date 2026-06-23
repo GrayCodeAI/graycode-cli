@@ -12,14 +12,18 @@ import (
 
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/tools"
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // Message is a persisted conversation message.
 type Message struct {
-	Role        string                 `json:"role"`
-	Content     string                 `json:"content,omitempty"`
-	ToolUse     []contracts.ToolCall   `json:"tool_use,omitempty"`
-	ToolResults []contracts.ToolResult `json:"tool_results,omitempty"`
+	Role         string                 `json:"role"`
+	Content      string                 `json:"content,omitempty"`
+	Thinking     string                 `json:"thinking,omitempty"`
+	ContentParts []types.ContentPart    `json:"content_parts,omitempty"`
+	Images       []string               `json:"images,omitempty"`
+	ToolUse      []contracts.ToolCall   `json:"tool_use,omitempty"`
+	ToolResults  []contracts.ToolResult `json:"tool_results,omitempty"`
 }
 
 // ToolCall is an alias to the shared ToolCall type for persistence.

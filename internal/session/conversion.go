@@ -10,10 +10,13 @@ func FromRuntimeMessages(in []types.EyrieMessage) []Message {
 	out := make([]Message, len(in))
 	for i, msg := range in {
 		out[i] = Message{
-			Role:        msg.Role,
-			Content:     msg.Content,
-			ToolUse:     FromRuntimeToolCalls(msg.ToolUse),
-			ToolResults: FromRuntimeToolResults(msg.ToolResults),
+			Role:         msg.Role,
+			Content:      msg.Content,
+			Thinking:     msg.Thinking,
+			ContentParts: msg.ContentParts,
+			Images:       msg.Images,
+			ToolUse:      FromRuntimeToolCalls(msg.ToolUse),
+			ToolResults:  FromRuntimeToolResults(msg.ToolResults),
 		}
 	}
 	return out
@@ -59,10 +62,13 @@ func ToRuntimeMessages(in []Message) []types.EyrieMessage {
 	out := make([]types.EyrieMessage, len(in))
 	for i, msg := range in {
 		out[i] = types.EyrieMessage{
-			Role:        msg.Role,
-			Content:     msg.Content,
-			ToolUse:     ToRuntimeToolCalls(msg.ToolUse),
-			ToolResults: ToRuntimeToolResults(msg.ToolResults),
+			Role:         msg.Role,
+			Content:      msg.Content,
+			Thinking:     msg.Thinking,
+			ContentParts: msg.ContentParts,
+			Images:       msg.Images,
+			ToolUse:      ToRuntimeToolCalls(msg.ToolUse),
+			ToolResults:  ToRuntimeToolResults(msg.ToolResults),
 		}
 	}
 	return out

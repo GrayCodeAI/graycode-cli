@@ -64,8 +64,6 @@ jobs:
         run: bash ./scripts/check-ecosystem-boundaries.sh
       - name: eyrie client boundary guard
         run: bash ./scripts/check-eyrie-client-imports.sh
-      - name: support repo coupling guard
-        run: bash ./scripts/check-support-repo-coupling.sh
 
   # -------------------------------------------------------------------------
   # 2. Module hygiene — tidy, verify (hawk + external ecosystem repos via go.work).
@@ -122,6 +120,8 @@ jobs:
           cache: true
       - name: go vet
         run: go vet ./...
+      - name: support repo coupling guard
+        run: bash ./scripts/check-support-repo-coupling.sh
 
   # -------------------------------------------------------------------------
   # 4. Lint — golangci-lint with project-specific config.
