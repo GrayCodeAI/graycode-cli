@@ -294,7 +294,7 @@ func FormatDeveloperPathReport(ctx context.Context) string {
 	}
 
 	b.WriteString("Next: " + r.NextStep + "\n")
-	b.WriteString("\nDocs: docs/SECURITY-DEVELOPER.md · hawk doctor · hawk preflight\n")
+	b.WriteString("\nDocs: docs/DEVELOPER-PATH.md · docs/SECURITY-DEVELOPER.md · hawk doctor · hawk preflight\n")
 	return strings.TrimRight(b.String(), "\n")
 }
 
