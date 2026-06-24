@@ -204,11 +204,11 @@ setup: ## Set up local development environment (go.work + external repos).
 	@echo "GOBIN:      $$(go env GOPATH)/bin"
 	@echo ""
 	@echo "=== Installing development tools ==="
-	@command -v $(GOFUMPT)   >/dev/null 2>&1 || go install mvdan.cc/gofumpt@latest
-	@command -v $(GOIMPORTS) >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
-	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest
-	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook@latest
+	@command -v $(GOFUMPT)   >/dev/null 2>&1 || go install mvdan.cc/gofumpt@latest || echo "  ⚠ Could not install gofumpt"
+	@command -v $(GOIMPORTS) >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest || echo "  ⚠ Could not install goimports"
+	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest || echo "  ⚠ Could not install golangci-lint"
+	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest || echo "  ⚠ Could not install govulncheck"
+	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook@latest || echo "  ⚠ Could not install lefthook"
 	@echo "✓ All tools installed"
 	@echo ""
 	@echo "=== Installing git hooks ==="
