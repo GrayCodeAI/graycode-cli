@@ -162,12 +162,25 @@ setup: ## Set up local development environment (go.work + external repos).
 	@echo "=== Setting up hawk development environment ==="
 	@mkdir -p external
 	@for repo in $(WORKSPACE_REPOS); do \
-		if [ ! -d "external/$$repo" ]; then \
-			echo "Cloning $$repo..."; \
-			git clone --depth=1 "https://github.com/GrayCodeAI/$$repo.git" "external/$$repo" 2>/dev/null || \
-			echo "  ⚠ Could not clone $$repo (may not exist yet or no access)"; \
+		dest="external/$$repo"; \
+		if [ -d "$$dest/.git" ]; then \
+			echo "✓ $$dest already exists"; \
 		else \
-			echo "✓ external/$$repo already exists"; \
+			commit=$$(git ls-tree HEAD "$$dest" 2>/dev/null | awk '{print $$3}' || true); \
+			if [ -n "$$commit" ]; then \
+				echo "Cloning $$repo at pinned commit $$commit..."; \
+				git clone "https://github.com/GrayCodeAI/$$repo.git" "$$dest" 2>/dev/null && \
+				(cd "$$dest" && git checkout --quiet "$$commit") || \
+				echo "  ⚠ Could not clone $$repo at pinned commit $$commit"; \
+			else \
+				ref=$$(git branch --show-current 2>/dev/null || echo main); \
+				if ! git ls-remote --heads "https://github.com/GrayCodeAI/$$repo.git" "$$ref" | grep -q .; then \
+					ref=main; \
+				fi; \
+				echo "Cloning $$repo at branch $$ref..."; \
+				git clone --depth=1 --branch "$$ref" "https://github.com/GrayCodeAI/$$repo.git" "$$dest" 2>/dev/null || \
+				echo "  ⚠ Could not clone $$repo (may not exist yet or no access)"; \
+			fi; \
 		fi; \
 	done
 	@echo "Generating go.work..."
