@@ -8,7 +8,7 @@ violations="$(
   git grep -n 'github\.com/GrayCodeAI/hawk/shared/types' -- '*.go' \
     ':(exclude)external/**' \
     ':(exclude)shared/types/**' \
-    ':(exclude)**/*_test.go' || true
+    ':(exclude)internal/testaudit/audit_test.go' || true
 )"
 
 if [[ -n "${violations}" ]]; then
