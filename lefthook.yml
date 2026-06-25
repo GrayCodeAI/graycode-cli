@@ -103,6 +103,18 @@ pre-push:
         fi
         govulncheck ./...
 
+    boundary-shared-types:
+      run: bash scripts/check-shared-types-imports.sh
+
+    boundary-eyrie-client:
+      run: bash scripts/check-eyrie-client-imports.sh
+
+    boundary-support-repo:
+      run: bash scripts/check-support-repo-coupling.sh
+
+    boundary-ecosystem:
+      run: bash scripts/check-ecosystem-boundaries.sh
+
 # ---------------------------------------------------------------------------
 # commit-msg — validate Conventional Commits and strip AI co-author trailers.
 # ---------------------------------------------------------------------------
