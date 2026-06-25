@@ -11,36 +11,50 @@ case "$ARCH" in
   aarch64|arm64) ARCH="arm64" ;;
 esac
 
+ARCHIVE_EXT="tar.gz"
+EXTRACT_CMD="tar xz -C \"$TMP\" -f \"$ARCHIVE\""
+BIN_NAME="$BINARY"
+
+case "$OS" in
+  mingw*|msys*|cygwin*)
+    OS="windows"
+    ARCHIVE_EXT="zip"
+    EXTRACT_CMD="unzip -q \"$ARCHIVE\" -d \"$TMP\""
+    BIN_NAME="${BINARY}.exe"
+    ;;
+esac
+
 LATEST=$(curl -sL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
 if [ -z "$LATEST" ]; then
   echo "Error: could not determine latest version"
   exit 1
 fi
 
-URL="https://github.com/$REPO/releases/download/v${LATEST}/${BINARY}_${LATEST}_${OS}_${ARCH}.tar.gz"
+ARCHIVE_NAME="${BINARY}_${LATEST}_${OS}_${ARCH}.${ARCHIVE_EXT}"
+URL="https://github.com/$REPO/releases/download/v${LATEST}/${ARCHIVE_NAME}"
 echo "Downloading hawk v${LATEST} for ${OS}/${ARCH}..."
 
 TMP=$(mktemp -d)
-TARBALL="$TMP/${BINARY}_${LATEST}_${OS}_${ARCH}.tar.gz"
-curl -sL "$URL" -o "$TARBALL"
+ARCHIVE="$TMP/${ARCHIVE_NAME}"
+curl -sL "$URL" -o "$ARCHIVE"
 
 CHECKSUMS_URL="https://github.com/$REPO/releases/download/v${LATEST}/checksums.txt"
 CHECKSUMS="$TMP/checksums.txt"
 curl -sL "$CHECKSUMS_URL" -o "$CHECKSUMS"
 
 if command -v sha256sum >/dev/null 2>&1; then
-  ACTUAL=$(sha256sum "$TARBALL" | awk '{print $1}')
+  ACTUAL=$(sha256sum "$ARCHIVE" | awk '{print $1}')
 elif command -v shasum >/dev/null 2>&1; then
-  ACTUAL=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
+  ACTUAL=$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')
 else
   echo "Error: no sha256sum or shasum found; cannot verify checksum"
   rm -rf "$TMP"
   exit 1
 fi
 
-EXPECTED=$(grep "${BINARY}_${LATEST}_${OS}_${ARCH}.tar.gz" "$CHECKSUMS" | awk '{print $1}')
+EXPECTED=$(grep "${ARCHIVE_NAME}" "$CHECKSUMS" | awk '{print $1}')
 if [ -z "$EXPECTED" ]; then
-  echo "Error: checksum not found for ${BINARY}_${LATEST}_${OS}_${ARCH}.tar.gz in checksums.txt"
+  echo "Error: checksum not found for ${ARCHIVE_NAME} in checksums.txt"
   rm -rf "$TMP"
   exit 1
 fi
@@ -54,15 +68,21 @@ if [ "$ACTUAL" != "$EXPECTED" ]; then
 fi
 echo "Checksum verified."
 
-tar xz -C "$TMP" -f "$TARBALL"
+if [ "$OS" = "windows" ] && ! command -v unzip >/dev/null 2>&1; then
+  echo "Error: unzip is required to install Windows release archives"
+  rm -rf "$TMP"
+  exit 1
+fi
+
+eval "$EXTRACT_CMD"
 
 INSTALL_DIR="/usr/local/bin"
 if [ ! -w "$INSTALL_DIR" ]; then
   echo "Installing to $INSTALL_DIR (requires sudo)..."
-  sudo mv "$TMP/$BINARY" "$INSTALL_DIR/"
+  sudo mv "$TMP/$BIN_NAME" "$INSTALL_DIR/"
 else
-  mv "$TMP/$BINARY" "$INSTALL_DIR/"
+  mv "$TMP/$BIN_NAME" "$INSTALL_DIR/"
 fi
 
 rm -rf "$TMP"
-echo "hawk v${LATEST} installed to $INSTALL_DIR/$BINARY"
+echo "hawk v${LATEST} installed to $INSTALL_DIR/$BIN_NAME"
