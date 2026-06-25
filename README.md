@@ -37,7 +37,7 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 
 ## Status
 
-**Hawk is in active development.** There is no public install script or release channel yet. We are building features, tests, and hardening in the open.
+**Hawk is in active development.** Contributor source builds are the primary path today while we keep hardening the product in the open. Tagged releases and install assets may exist for validation, but they are not the recommended first path yet.
 
 Follow [GrayCode](https://github.com/GrayCodeAI) for progress. When Hawk is ready to try, we will announce it on [graycodeai.gateandtech.in](https://graycodeai.gateandtech.in/changelog).
 
@@ -45,6 +45,7 @@ Follow [GrayCode](https://github.com/GrayCodeAI) for progress. When Hawk is read
 
 ```bash
 git clone https://github.com/GrayCodeAI/hawk && cd hawk
+make setup   # clones required support repos into external/ and syncs go.work
 go build -o hawk ./cmd/hawk
 ./hawk
 
@@ -58,7 +59,7 @@ See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential 
 Optional for contributors:
 
 ```bash
-go install github.com/GrayCodeAI/hawk@latest   # requires a published tag
+go install github.com/GrayCodeAI/hawk@latest   # only after Hawk and support repo tags are published
 ```
 
 ## Features
