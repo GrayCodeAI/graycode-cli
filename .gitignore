@@ -20,6 +20,7 @@ hawk
 .gocache-*/
 .gomodcache/
 .gomodcache-*/
+.gopath/
 .tmp/
 *.codegraph.db
 .DS_Store
