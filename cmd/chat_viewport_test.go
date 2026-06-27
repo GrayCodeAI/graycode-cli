@@ -86,7 +86,7 @@ func TestShouldRouteMouseToViewport_SplitPaneUX(t *testing.T) {
 func TestSyncViewportMouseWheel_ManualRouting(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "")
 	vp := viewport.New(80, 10)
-	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork}
+	m := chatModel{viewport: vp, uiFocus: focusPrompt}
 	m = m.syncViewportMouseWheel()
 	if m.viewport.MouseWheelEnabled {
 		t.Fatal("viewport auto-wheel must stay off; hawk routes wheel by pane")
@@ -97,7 +97,7 @@ func TestSyncViewportMouseWheel_DisabledWithOptOut(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "0")
 	vp := viewport.New(80, 10)
 	disabled := false
-	m := chatModel{viewport: vp, uiFocus: focusPrompt, phase: phaseWork, settings: hawkconfig.Settings{TuiMouse: &disabled}}
+	m := chatModel{viewport: vp, uiFocus: focusPrompt, settings: hawkconfig.Settings{TuiMouse: &disabled}}
 	m = m.syncViewportMouseWheel()
 	if m.viewport.MouseWheelEnabled {
 		t.Fatal("wheel should be disabled when mouse capture is off")

@@ -97,12 +97,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
-	case autoOpenConfigMsg:
-		if !m.openConfigOnStart || m.configOpen {
-			return m, nil
-		}
-		m.openConfigOnStart = false
-		return m.openConfigPanel()
 	case tea.KeyMsg:
 		// Ctrl+\ enters native terminal selection mode. Available in every UI
 		// state (welcome gate, permissions, prompt, scrollback) so users always
@@ -128,10 +122,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		if next, cmd, handled := m.handleWelcomeGateKey(msg); handled {
-			return next, cmd
-		}
-
 		// Command palette (Ctrl+K) — intercept all input when open
 		if m.commandPalette != nil && m.commandPalette.IsOpen() {
 			action, handled := m.commandPalette.Update(msg)
@@ -693,9 +683,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		if !m.onWelcomeGate() {
-			m.input.SetWidth(msg.Width - 4)
-		}
+		m.input.SetWidth(msg.Width - 4)
 		m.invalidateInputLayoutCache()
 		m.rebuildWelcomeCache(false)
 		m.viewDirty = true
@@ -735,11 +723,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session.PermSvc().Autonomy() == 0 {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
-			if m.phase == phaseWelcomeGate {
-				m.sandboxReadyPending = true
-			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.PermSvc().Autonomy())})
-			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.PermSvc().Autonomy())})
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
