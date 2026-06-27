@@ -223,7 +223,7 @@ func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
 	if !tea.MouseEvent(mouse).IsWheel() {
 		return m.inScrollbackFocus()
 	}
-	if m.configOpen || m.onWelcomeGate() {
+	if m.configOpen {
 		return false
 	}
 	if m.inScrollbackFocus() {

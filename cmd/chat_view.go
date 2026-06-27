@@ -19,16 +19,6 @@ func (m chatModel) showWelcomeBanner() bool {
 	return strings.TrimSpace(m.welcomeCache) != ""
 }
 
-func (m chatModel) hasChatMessages() bool {
-	for _, msg := range m.messages {
-		switch msg.role {
-		case "user", "assistant", "tool_use", "tool_result":
-			return true
-		}
-	}
-	return false
-}
-
 func renderSetupCompleteMessage(model string) string {
 	success := lipgloss.NewStyle().Foreground(doneGreen).Bold(true).Inline(true)
 	muted := configMutedStyle().Inline(true)
@@ -202,7 +192,7 @@ func wrapText(text string, width int, prefixWidth int) string {
 
 // chatBottomBarLines counts fixed rows below the chat viewport (must stay in sync with View).
 func (m chatModel) chatBottomBarLines() int {
-	if m.onWelcomeGate() || m.configOpen {
+	if m.configOpen {
 		return 0
 	}
 	if m.cachedBottomBarLines > 0 {
@@ -247,11 +237,7 @@ func (m *chatModel) updateViewportContent() {
 	}
 	m.viewDirty = false
 
-	if m.onWelcomeGate() {
-		return
-	}
-
-	// /config overlay: config panel only (welcome was on the gate, not repeated here).
+	// /config overlay: config panel only.
 	if m.configOpen {
 		var content strings.Builder
 		content.WriteString(m.configPanelView())
@@ -285,23 +271,12 @@ func (m chatModel) View() string {
 	m = m.withSyncedLayout()
 
 	viewWidth := m.width
-	viewHeight := m.height
 	if viewWidth <= 0 {
-		if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
 			viewWidth = w
-			if h > 0 {
-				viewHeight = h
-			}
 		} else {
 			viewWidth = 80
 		}
-	}
-	if viewHeight <= 0 {
-		viewHeight = 24
-	}
-
-	if m.onWelcomeGate() {
-		return m.renderWelcomeGate(viewWidth, viewHeight)
 	}
 
 	// Build the fixed bottom bar
