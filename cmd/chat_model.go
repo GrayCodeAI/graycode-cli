@@ -215,10 +215,6 @@ type chatModel struct {
 	sessionStartedAt     time.Time // whole chat session (footer duration)
 	toolStartTime        time.Time
 	welcomeCache         string
-	welcomeDismissed     bool
-	phase                uiPhase
-	sandboxReadyPending  bool // defer sandbox system line until after welcome gate
-	openConfigOnStart    bool // first-run: open /config after welcome gate (Enter)
 	viewDirty            bool
 	layoutKey            int    // input lines + slash menu height fingerprint
 	cachedBottomBarLines int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded

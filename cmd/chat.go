@@ -48,6 +48,8 @@ import (
 // Tool-registry construction (essential/optional tools) is in chat_tools.go
 // The Bubble Tea event loop (Update, applyPromptArrowKey) is in chat_update.go
 
+const workInputPlaceholder = `Ask Hawk to inspect, edit, or run something... (Shift+Enter for newline)`
+
 func genID() string {
 	b := make([]byte, 8)
 	_, _ = cryptorand.Read(b)
@@ -181,7 +183,6 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		m.connStatusVal = m.buildConnectionStatusPlain()
 		m.connStatusKey = m.connStatusFingerprint()
 	}
-	m.phase = initialUIPhase(m.hasChatMessages(), promptFlag != "")
 	m.invalidateInputLayoutCache()
 	(&m).refreshInputLayoutIfNeeded()
 	m = m.syncViewportMouseWheel().withSyncedLayout()
@@ -298,13 +299,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		ok := sandbox.DockerAvailable()
 		dockerRunning = &ok
 	}
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, dockerRunning, m.phase == phaseWelcomeGate)
-	// Welcome scrollback only when skipping the gate (resume / -p). Gate users already saw the splash.
-	if m.phase == phaseWork {
-		m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
-	}
-	m.openConfigOnStart = hawkconfig.NeedsFirstRunSetup(context.Background()) &&
-		(saved == nil || len(saved.Messages) == 0)
+	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, initHeight, dockerRunning)
+	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 
 	// Wire permission system
 	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
@@ -419,12 +415,7 @@ func (m chatModel) Init() tea.Cmd {
 		cwd, _ := os.Getwd()
 		cmds = append(cmds, bootContainerCmd(cwd))
 	}
-	if m.phase == phaseWork {
-		cmds = append(cmds, m.input.Focus())
-	}
-	if m.phase == phaseWork && m.openConfigOnStart {
-		cmds = append(cmds, func() tea.Msg { return autoOpenConfigMsg{} })
-	}
+	cmds = append(cmds, m.input.Focus())
 	return tea.Batch(cmds...)
 }
 

@@ -104,7 +104,7 @@ func formatSessionContextUsage(m *chatModel) string {
 	} else {
 		b.WriteString("Stream follow: off (/follow on)\n")
 	}
-	b.WriteString("Tab: prompt ↔ scrollback · /home: welcome · /export: save transcript")
+	b.WriteString("Tab: prompt ↔ scrollback · /home: top of chat · /export: save transcript")
 	if pct >= engine.DefaultAutoCompactThresholdPct {
 		b.WriteString("\n" + icons.Alert() + " Approaching auto-compact threshold — consider /compact")
 	}
