@@ -49,26 +49,23 @@ func (m chatModel) welcomeDockerRunning() *bool {
 }
 
 func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
-	if m.welcomeDismissed && !m.onWelcomeGate() {
-		m.welcomeCache = ""
-		return
-	}
 	width := m.width
 	if width <= 0 {
 		width = 80
 	}
-	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, blinkClosed, width, m.welcomeDockerRunning(), m.onWelcomeGate())
+	height := m.height
+	if height <= 0 {
+		height = 24
+	}
+	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, blinkClosed, width, height, m.welcomeDockerRunning())
 }
 
-// buildWelcomeMessage renders the branded HAWK welcome block (logo, mascot, tips, status).
-// forGate omits the version line and uses a tighter layout for the splash screen.
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width int, dockerRunning *bool, forGate bool) string {
+// buildWelcomeMessage renders the branded inline HAWK welcome block.
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width, height int, dockerRunning *bool) string {
 	// Brand orange — used for both the HAWK wordmark and the mascot so
 	// the welcome screen stays on theme.
 	logoC := "\033[38;2;255;94;14m" // brand orange — WELCOME TO + HAWK wordmark
 	mascotC := "\033[38;2;255;94;14m"
-	mutedC := "\033[38;2;158;158;158m" // textMuted — labels
-	bodyC := "\033[38;2;240;240;240m"  // textPrimary — chip counts
 	dimC := "\033[2m"
 	boldC := "\033[1m"
 	// Indicator colors — same as the rest of the TUI palette (success
@@ -85,12 +82,17 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
 	markPresent := greenC + "+" + icons.CheckBold() + " " + rst
 	markNone := sepC + "○" + rst
-	markErr := redC + "×" + rst
 
 	totalW := width
 	if totalW < 40 {
 		totalW = 80
 	}
+	totalH := height
+	if totalH <= 0 {
+		totalH = 24
+	}
+	compact := totalH <= 24 || totalW < 88
+	tight := totalH <= 20 || totalW < 72
 
 	center := func(visW int, styled string) string {
 		if visW <= 0 {
@@ -115,32 +117,12 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		mascot[1] = " ▄█ ─  ─ █▄ "
 	}
 
-	showMascot := totalW >= 60
+	showMascot := totalW >= 60 && !tight
 
 	var b strings.Builder
 
-	if forGate {
-		if totalW >= welcomeToPhraseMinWidth {
-			for _, line := range welcomeToPhraseLines {
-				vis := runewidth.StringWidth(line)
-				b.WriteString(center(vis, logoC+line+rst) + "\n")
-			}
-		} else if totalW >= welcomeToBannerMinWidth {
-			for _, line := range welcomeWordLines {
-				vis := runewidth.StringWidth(line)
-				b.WriteString(center(vis, logoC+line+rst) + "\n")
-			}
-			b.WriteString("\n")
-			for _, line := range welcomeToWordLines {
-				vis := runewidth.StringWidth(line)
-				b.WriteString(center(vis, logoC+line+rst) + "\n")
-			}
-		} else {
-			fallback := "WELCOME TO"
-			b.WriteString(center(len(fallback), logoC+fallback+rst) + "\n")
-		}
-		b.WriteString("\n")
-	}
+	// Top breathing room so the wordmark isn't flush against the terminal edge.
+	b.WriteString("\n\n")
 
 	for i := 0; i < len(art); i++ {
 		line := art[i]
@@ -157,43 +139,44 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		b.WriteString(center(visW, combined) + "\n")
 	}
 
-	if forGate {
-		if modelName, providerName := effectiveModelAndProvider(settings); modelName != "" {
-			var plainParts, styledParts []string
-			if providerName != "" {
-				plainParts = append(plainParts, providerName)
-				styledParts = append(styledParts, mutedC+providerName+rst)
-			}
-			short := normalizeModelDisplayName(modelName, modelName)
-			plainParts = append(plainParts, short)
-			styledParts = append(styledParts, bodyC+short+rst)
-			mode := permissionModeLabel(sess)
-			plainParts = append(plainParts, mode)
-			styledParts = append(styledParts, mutedC+mode+rst)
-
-			sep := sepC + " · " + rst
-			plain := strings.Join(plainParts, " · ")
-			b.WriteString("\n" + center(len(plain), strings.Join(styledParts, sep)) + "\n")
-		}
-	}
-
-	if !forGate {
-		verLine := fmt.Sprintf("v%s", DisplayVersion())
-		b.WriteString("\n" + center(len(verLine), dimC+verLine+rst) + "\n")
-	}
+	verLine := fmt.Sprintf("v%s", DisplayVersion())
+	b.WriteByte('\n')
+	b.WriteString(center(len(verLine), dimC+verLine+rst) + "\n")
 
 	setup := hawkconfig.EvaluateSetupCached(context.Background())
 	needsSetup := setup.NeedsSetup
 	if needsSetup {
-		if hint := setup.Hint; hint != "" && !forGate {
-			b.WriteString("\n" + center(len(hint), amberC+hint+rst) + "\n")
+		if hint := setup.Hint; hint != "" {
+			b.WriteByte('\n')
+			b.WriteString(center(len(hint), amberC+hint+rst) + "\n")
 		}
 	}
-	if !forGate && !needsSetup {
-		tip := "TIP: /help commands · /model to switch"
-		b.WriteString("\n" + center(len(tip), boldC+tip+rst) + "\n")
-		shortcutsPlain := "PgUp/Dn scroll chat · Up/Dn history · Tab scrollback · /home · /ctx · ctrl+N · ctrl+L"
+	if needsSetup {
+		quick := "Quick start: /config to connect Hawk · /help for commands"
+		b.WriteByte('\n')
+		b.WriteString(center(len(quick), boldC+quick+rst) + "\n")
+		example := "After setup, try: explain this repo · fix the failing test · add tests for cmd/eval"
+		if tight {
+			example = "After setup, try: explain this repo · fix the failing test"
+		}
+		b.WriteString(center(runewidth.StringWidth(example), dimC+example+rst) + "\n")
+	}
+	if !needsSetup {
+		tip := "TIP: /help commands · /model to switch · /config to adjust setup"
+		if tight {
+			tip = "TIP: /help · /model · /config"
+		}
+		b.WriteByte('\n')
+		b.WriteString(center(len(tip), boldC+tip+rst) + "\n")
+		shortcutsPlain := "Try: explain this repo · fix the failing test · add tests for cmd/eval"
+		if tight {
+			shortcutsPlain = "Try: explain this repo · fix the failing test"
+		}
 		b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
+		if !compact {
+			shortcutsPlain = "PgUp/Dn scroll chat · Up/Dn history · Tab scrollback · /home · /ctx · ctrl+N · ctrl+L"
+			b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
+		}
 	}
 
 	skillsCount := 0
@@ -210,45 +193,14 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	mcpMark := mark(mcpCount > 0)
 	hawkMark := mark(agentsOK)
 
-	gateChip := func(label string, count int) string {
-		return mark(count > 0) + " " + mutedC + label + rst + " " + mutedC + "(" + rst + bodyC + fmt.Sprintf("%d", count) + rst + mutedC + ")" + rst
+	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
+	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
+	if dockerSeg, _ := welcomeDockerSegment(dockerRunning, greenC, redC, rst); dockerSeg != "" {
+		indicators += dockerSeg
+		indVis += "  Docker x"
 	}
-	gateChipPlain := func(label string, count int) string {
-		return "x " + label + " (" + fmt.Sprintf("%d", count) + ")"
-	}
-	if forGate {
-		chipSep := sepC + " · " + rst
-		agentsChip := mark(agentsOK) + " " + mutedC + "AGENTS" + rst
-		parts := []string{
-			gateChip("Skills", skillsCount),
-			gateChip("MCP", mcpCount),
-			agentsChip,
-		}
-		plain := []string{
-			gateChipPlain("Skills", skillsCount),
-			gateChipPlain("MCP", mcpCount),
-			"x AGENTS",
-		}
-		if dockerRunning != nil {
-			dockerMark := markErr
-			if *dockerRunning {
-				dockerMark = markPresent
-			}
-			parts = append(parts, dockerMark+" "+mutedC+"Docker"+rst)
-			plain = append(plain, "x Docker")
-		}
-		indicators := strings.Join(parts, chipSep)
-		indVis := strings.Join(plain, " · ")
-		b.WriteString("\n" + center(len(indVis), indicators) + "\n")
-	} else {
-		indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
-		indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
-		if dockerSeg, _ := welcomeDockerSegment(dockerRunning, greenC, redC, rst); dockerSeg != "" {
-			indicators += dockerSeg
-			indVis += "  Docker x"
-		}
-		b.WriteString("\n" + center(len(indVis), indicators) + "\n")
-	}
+	b.WriteByte('\n')
+	b.WriteString(center(len(indVis), indicators) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")

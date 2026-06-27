@@ -24,7 +24,6 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 		height:   24,
 		width:    80,
 		uiFocus:  focusPrompt,
-		phase:    phaseWork,
 	}
 	m = m.syncViewportMouseWheel().withSyncedLayout()
 	before := m.viewport.YOffset
@@ -83,7 +82,6 @@ func TestUpdate_MouseMotionDoesNotReflowLayout(t *testing.T) {
 		height:               24,
 		width:                80,
 		uiFocus:              focusPrompt,
-		phase:                phaseWork,
 		cachedBottomBarLines: 10,
 		layoutKey:            65536,
 	}
@@ -112,7 +110,6 @@ func TestUpdate_InputHistoryWhileWaiting(t *testing.T) {
 		height:   24,
 		width:    80,
 		uiFocus:  focusPrompt,
-		phase:    phaseWork,
 		waiting:  true,
 		history:  []string{"first", "second"},
 	}

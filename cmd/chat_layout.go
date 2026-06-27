@@ -8,7 +8,7 @@ const minChatViewportLines = 4
 
 // fixedWelcomeLineCount reserves room for the branded welcome pane above chat.
 func (m chatModel) fixedWelcomeLineCount() int {
-	if strings.TrimSpace(m.welcomeCache) == "" || m.onWelcomeGate() {
+	if strings.TrimSpace(m.welcomeCache) == "" {
 		return 0
 	}
 	lines := strings.Split(strings.TrimRight(m.welcomeCache, "\n"), "\n")
@@ -48,9 +48,6 @@ func (m chatModel) withSyncedLayout() chatModel {
 	welcomeH := m.fixedWelcomeLineCount()
 	// View() draws welcome text then a newline; the next row is the first chat line.
 	vpH := m.height - bottomH - welcomeH
-	if m.onWelcomeGate() {
-		vpH = minChatViewportLines
-	}
 	if vpH < minChatViewportLines {
 		vpH = minChatViewportLines
 	}

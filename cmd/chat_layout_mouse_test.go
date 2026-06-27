@@ -18,7 +18,6 @@ func TestView_LineCountMatchesHeight(t *testing.T) {
 		input:        textarea.New(),
 		viewport:     viewport.New(80, 8),
 		ghostText:    NewGhostText(),
-		phase:        phaseWork,
 	}
 	m = m.withSyncedLayout()
 	got := m.View()
@@ -57,7 +56,6 @@ func TestMouseWheelDelta_SGRUsesZeroBasedY(t *testing.T) {
 		height:   24,
 		width:    80,
 		uiFocus:  focusPrompt,
-		phase:    phaseWork,
 	}
 	m = m.withSyncedLayout()
 	before := m.viewport.YOffset
