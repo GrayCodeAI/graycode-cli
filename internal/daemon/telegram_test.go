@@ -2,20 +2,38 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 )
+
+func newIPv4TelegramServer(t *testing.T, h http.Handler) *httptest.Server {
+	t.Helper()
+	ln, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		if errors.Is(err, os.ErrPermission) || strings.Contains(err.Error(), "operation not permitted") {
+			t.Skipf("sandbox does not allow local listeners: %v", err)
+		}
+		t.Fatalf("listen tcp4: %v", err)
+	}
+	srv := httptest.NewUnstartedServer(h)
+	srv.Listener = ln
+	srv.Start()
+	return srv
+}
 
 // telegramMockAPI captures sendMessage calls and serves a fake Telegram + hawk
 // endpoint. The Telegram bot API base is hardcoded in telegram.go, so we instead
 // drive handleMessage directly and observe outbound sends via a mock daemon.
 func TestTelegram_HandleMessage_Authorization(t *testing.T) {
 	// Mock hawk daemon /v1/chat.
-	hawk := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	hawk := newIPv4TelegramServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, ChatResponse{Response: "hawk-reply"})
 	}))
 	defer hawk.Close()
@@ -92,9 +110,12 @@ func TestTelegramSenderID(t *testing.T) {
 	}
 }
 
-func TestTelegram_NilAuthAllowsAll(t *testing.T) {
-	// The bare constructor leaves auth nil: legacy behaviour, all senders pass.
-	hawk := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestTelegram_BareConstructorFailsClosed(t *testing.T) {
+	// The bare constructor seeds an empty authorizer, so it must refuse all
+	// senders (no pairing code / allowlist) rather than forwarding to hawk.
+	hawkCalled := false
+	hawk := newIPv4TelegramServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hawkCalled = true
 		writeJSON(w, http.StatusOK, ChatResponse{Response: "ok"})
 	}))
 	defer hawk.Close()
@@ -113,8 +134,11 @@ func TestTelegram_NilAuthAllowsAll(t *testing.T) {
 	m := &TelegramMessage{Text: "hi"}
 	m.Chat.ID = 1
 	tg.handleMessage(context.Background(), m)
-	if len(sends) != 1 || sends[0] != "ok" {
-		t.Fatalf("expected forwarded reply 'ok', got %v", sends)
+	if len(sends) != 1 || !strings.Contains(sends[0], "Unauthorized") {
+		t.Fatalf("expected an Unauthorized reply, got %v", sends)
+	}
+	if hawkCalled {
+		t.Fatal("bare constructor must not forward unauthorized messages to hawk")
 	}
 }
 
