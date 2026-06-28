@@ -9,6 +9,7 @@ require (
 	github.com/GrayCodeAI/sight v0.1.0
 	github.com/GrayCodeAI/tok v0.1.0
 	github.com/GrayCodeAI/yaad v0.1.0
+	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
@@ -81,6 +82,7 @@ require (
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/cel-go v0.27.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect

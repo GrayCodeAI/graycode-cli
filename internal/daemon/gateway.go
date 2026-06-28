@@ -77,12 +77,13 @@ type TelegramConfig struct {
 	AllowList []string `json:"allow_list,omitempty"`
 }
 
-// DiscordConfig configures the Discord gateway.
+// DiscordConfig configures the Discord Gateway (WebSocket) bridge. The bot's own
+// user ID is learned from the Gateway READY event, so no application/channel IDs
+// need to be configured; the bot responds to DMs and to @mentions in any guild
+// channel it can see.
 type DiscordConfig struct {
-	Enabled bool   `json:"enabled,omitempty"`
-	Token   string `json:"token,omitempty"` // bot token
-	// AppID is the application/bot user ID, used to detect @mentions.
-	AppID       string   `json:"app_id,omitempty"`
+	Enabled     bool     `json:"enabled,omitempty"`
+	Token       string   `json:"token,omitempty"` // bot token
 	PairingCode string   `json:"pairing_code,omitempty"`
 	AllowList   []string `json:"allow_list,omitempty"`
 }
@@ -157,6 +158,48 @@ func (a *authorizer) tryPair(senderID, text string) (isPair, ok bool) {
 	return true, true
 }
 
+// asyncDispatcher runs message handlers in bounded goroutines and tracks them so
+// a gateway can drain in-flight work on shutdown. It replaces ad-hoc `go f()`
+// spawns that had no concurrency limit and were not tied to the gateway lifecycle.
+type asyncDispatcher struct {
+	sem chan struct{}
+	wg  sync.WaitGroup
+}
+
+// newAsyncDispatcher builds a dispatcher allowing at most max concurrent handlers.
+func newAsyncDispatcher(max int) *asyncDispatcher {
+	if max <= 0 {
+		max = 8
+	}
+	return &asyncDispatcher{sem: make(chan struct{}, max)}
+}
+
+// run executes fn in a bounded goroutine unless ctx is already done. It blocks
+// only to acquire a concurrency slot (respecting ctx cancellation), then runs fn
+// asynchronously. Handlers are tracked so wait can drain them on shutdown.
+func (d *asyncDispatcher) run(ctx context.Context, fn func()) {
+	select {
+	case <-ctx.Done():
+		return
+	case d.sem <- struct{}{}:
+	}
+	d.wg.Add(1)
+	go func() {
+		defer d.wg.Done()
+		defer func() { <-d.sem }()
+		fn()
+	}()
+}
+
+// wait blocks until all dispatched handlers have finished.
+func (d *asyncDispatcher) wait() { d.wg.Wait() }
+
+// daemonURLSetter is implemented by poll/forward gateways whose forward target is
+// only known once the daemon's real listening address resolves (port 0 at Start).
+type daemonURLSetter interface {
+	setDaemonURL(url string)
+}
+
 // gatewayManager owns the lifecycle of all enabled gateways for a daemon.
 type gatewayManager struct {
 	mu       sync.Mutex
@@ -190,13 +233,8 @@ func (m *gatewayManager) setDaemonURL(url string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, g := range m.gateways {
-		switch gw := g.(type) {
-		case *TelegramGateway:
-			gw.DaemonAddr = url
-		case *DiscordGateway:
-			gw.daemonAddr = url
-		case *SlackGateway:
-			gw.daemonAddr = url
+		if s, ok := g.(daemonURLSetter); ok {
+			s.setDaemonURL(url)
 		}
 	}
 }
