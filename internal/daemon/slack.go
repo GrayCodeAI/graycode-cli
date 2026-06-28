@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +41,13 @@ type SlackGateway struct {
 	auth       *authorizer
 	server     *Server
 	path       string
+	dispatch   *asyncDispatcher
+
+	// mu guards runCtx, which is set to the Start context so webhook-triggered
+	// handlers run under (and are cancelled by) the gateway lifecycle rather than
+	// a detached context.Background().
+	mu     sync.Mutex
+	runCtx context.Context
 
 	// now is overridable for deterministic signature-skew tests.
 	now func() time.Time
@@ -58,6 +67,8 @@ func newSlackGateway(cfg SlackConfig, daemonAddr, apiKey string, s *Server) *Sla
 		auth:       newAuthorizer(cfg.PairingCode, cfg.AllowList),
 		server:     s,
 		path:       path,
+		dispatch:   newAsyncDispatcher(8),
+		runCtx:     context.Background(),
 		now:        time.Now,
 	}
 	if s != nil {
@@ -69,15 +80,32 @@ func newSlackGateway(cfg SlackConfig, daemonAddr, apiKey string, s *Server) *Sla
 // Name implements Gateway.
 func (g *SlackGateway) Name() string { return "slack" }
 
+// setDaemonURL implements daemonURLSetter. Slack forwards to the daemon via
+// forwardToHawk, so it needs the resolved address even though it replies via the
+// Slack Web API.
+func (g *SlackGateway) setDaemonURL(url string) { g.daemonAddr = url }
+
 // Start implements Gateway. The webhook is already registered at construction; we
-// simply block until the daemon shuts the gateway down.
+// record the lifecycle context (so handlers are cancelled on shutdown), block
+// until the daemon stops the gateway, then drain in-flight handlers.
 func (g *SlackGateway) Start(ctx context.Context) error {
+	g.mu.Lock()
+	g.runCtx = ctx
+	g.mu.Unlock()
 	<-ctx.Done()
+	g.dispatch.wait()
 	return ctx.Err()
 }
 
 // Stop implements Gateway.
 func (g *SlackGateway) Stop() error { return nil }
+
+// handlerContext returns the current lifecycle context for webhook-triggered work.
+func (g *SlackGateway) handlerContext() context.Context {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.runCtx
+}
 
 // slackEnvelope is the outer Events API payload.
 type slackEnvelope struct {
@@ -124,7 +152,9 @@ func (g *SlackGateway) handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if env.Type == "event_callback" && env.Event.Type == "app_mention" && env.Event.BotID == "" {
-		go g.handleMention(context.Background(), env.Event)
+		ctx := g.handlerContext()
+		ev := env.Event
+		g.dispatch.run(ctx, func() { g.handleMention(ctx, ev) })
 	}
 }
 
@@ -137,14 +167,14 @@ func (g *SlackGateway) handleMention(ctx context.Context, ev slackEventInner) {
 
 	if isPair, ok := g.auth.tryPair(ev.User, text); isPair {
 		if ok {
-			_ = g.postMessage(ctx, ev.Channel, threadTS, "Paired. You can now chat with hawk.")
+			g.reply(ctx, ev.Channel, threadTS, "Paired. You can now chat with hawk.")
 		} else {
-			_ = g.postMessage(ctx, ev.Channel, threadTS, "Pairing failed: invalid code.")
+			g.reply(ctx, ev.Channel, threadTS, "Pairing failed: invalid code.")
 		}
 		return
 	}
 	if !g.auth.allowed(ev.User) {
-		_ = g.postMessage(ctx, ev.Channel, threadTS, "Unauthorized. Send /pair <code> to authorize.")
+		g.reply(ctx, ev.Channel, threadTS, "Unauthorized. Send /pair <code> to authorize.")
 		return
 	}
 
@@ -152,7 +182,14 @@ func (g *SlackGateway) handleMention(ctx context.Context, ev slackEventInner) {
 	if err != nil {
 		reply = fmt.Sprintf("Error: %v", err)
 	}
-	_ = g.postMessage(ctx, ev.Channel, threadTS, reply)
+	g.reply(ctx, ev.Channel, threadTS, reply)
+}
+
+// reply posts a threaded message and logs (rather than swallows) any failure.
+func (g *SlackGateway) reply(ctx context.Context, channel, threadTS, text string) {
+	if err := g.postMessage(ctx, channel, threadTS, text); err != nil {
+		slog.Error("slack postMessage failed", "channel", channel, "error", err)
+	}
 }
 
 // stripSlackMention removes a leading <@U...> mention from the message text.
@@ -218,6 +255,22 @@ func (g *SlackGateway) postMessage(ctx context.Context, channel, threadTS, text 
 	if err != nil {
 		return err
 	}
-	_ = resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
+	// Slack returns HTTP 200 with {"ok":false,"error":"..."} on logical failures
+	// (bad token, not_in_channel, ...), so the status code alone is insufficient.
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	var result struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		if resp.StatusCode/100 != 2 {
+			return fmt.Errorf("slack chat.postMessage: HTTP %d", resp.StatusCode)
+		}
+		return nil
+	}
+	if !result.OK {
+		return fmt.Errorf("slack chat.postMessage: %s", result.Error)
+	}
 	return nil
 }
