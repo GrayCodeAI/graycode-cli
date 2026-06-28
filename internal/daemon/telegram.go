@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,9 +23,11 @@ type TelegramGateway struct {
 
 	// apiKey, when set, is sent as a Bearer token on forwarded daemon requests.
 	apiKey string
-	// auth, when set, enforces a pairing-code/allowlist policy. When nil, all
-	// senders are permitted (legacy behaviour for the bare constructor).
-	auth *authorizer
+	// auth enforces a pairing-code/allowlist policy. It is always non-nil; the
+	// bare constructor seeds an empty (fail-closed) authorizer that refuses all
+	// senders until a pairing code or allowlist is configured.
+	auth     *authorizer
+	dispatch *asyncDispatcher
 }
 
 // TelegramUpdate represents an incoming Telegram message.
@@ -45,12 +48,16 @@ type TelegramMessage struct {
 	} `json:"from"`
 }
 
-// NewTelegramGateway creates a gateway with the given bot token.
+// NewTelegramGateway creates a gateway with the given bot token. The authorizer
+// is seeded empty and therefore fails closed: no sender is authorized until a
+// pairing code or allowlist is supplied (see newTelegramGatewayFromConfig).
 func NewTelegramGateway(token, daemonAddr string) *TelegramGateway {
 	return &TelegramGateway{
 		Token:      token,
 		DaemonAddr: daemonAddr,
 		client:     &http.Client{Timeout: 30 * time.Second},
+		auth:       newAuthorizer("", nil),
+		dispatch:   newAsyncDispatcher(8),
 	}
 }
 
@@ -65,6 +72,9 @@ func newTelegramGatewayFromConfig(cfg TelegramConfig, daemonAddr, apiKey string)
 
 // Name implements Gateway.
 func (tg *TelegramGateway) Name() string { return "telegram" }
+
+// setDaemonURL implements daemonURLSetter.
+func (tg *TelegramGateway) setDaemonURL(url string) { tg.DaemonAddr = url }
 
 // Start implements Gateway by delegating to the long-poll Run loop.
 func (tg *TelegramGateway) Start(ctx context.Context) error { return tg.Run(ctx) }
@@ -82,27 +92,51 @@ func telegramSenderID(msg *TelegramMessage) string {
 	return fmt.Sprintf("%d", msg.Chat.ID)
 }
 
-// Run starts the long-polling loop. Blocks until context is cancelled.
+// Run starts the long-polling loop. Blocks until context is cancelled, then
+// drains any in-flight message handlers before returning.
 func (tg *TelegramGateway) Run(ctx context.Context) error {
+	const (
+		baseBackoff = time.Second
+		maxBackoff  = 30 * time.Second
+	)
+	backoff := baseBackoff
 	for {
 		select {
 		case <-ctx.Done():
+			tg.dispatch.wait()
 			return ctx.Err()
 		default:
 		}
 
 		updates, err := tg.getUpdates(ctx)
 		if err != nil {
-			time.Sleep(5 * time.Second)
+			if ctx.Err() != nil {
+				tg.dispatch.wait()
+				return ctx.Err()
+			}
+			slog.Warn("telegram getUpdates failed; backing off", "backoff", backoff, "error", err)
+			// Context-aware sleep with exponential backoff so a bad token or
+			// outage does not hot-loop and Stop is honored promptly.
+			select {
+			case <-ctx.Done():
+				tg.dispatch.wait()
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+			if backoff *= 2; backoff > maxBackoff {
+				backoff = maxBackoff
+			}
 			continue
 		}
+		backoff = baseBackoff
 
 		for _, u := range updates {
 			tg.offset = u.UpdateID + 1
 			if u.Message == nil || u.Message.Text == "" {
 				continue
 			}
-			go tg.handleMessage(ctx, u.Message)
+			msg := u.Message
+			tg.dispatch.run(ctx, func() { tg.handleMessage(ctx, msg) })
 		}
 	}
 }
@@ -120,30 +154,32 @@ func (tg *TelegramGateway) getUpdates(ctx context.Context) ([]TelegramUpdate, er
 	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
-		OK     bool             `json:"ok"`
-		Result []TelegramUpdate `json:"result"`
+		OK          bool             `json:"ok"`
+		Description string           `json:"description"`
+		Result      []TelegramUpdate `json:"result"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
+	}
+	if !result.OK {
+		return nil, fmt.Errorf("telegram getUpdates: %s", result.Description)
 	}
 	return result.Result, nil
 }
 
 func (tg *TelegramGateway) handleMessage(ctx context.Context, msg *TelegramMessage) {
-	if tg.auth != nil {
-		sender := telegramSenderID(msg)
-		if isPair, ok := tg.auth.tryPair(sender, msg.Text); isPair {
-			if ok {
-				_ = tg.sendMessage(ctx, msg.Chat.ID, "Paired. You can now chat with hawk.")
-			} else {
-				_ = tg.sendMessage(ctx, msg.Chat.ID, "Pairing failed: invalid code.")
-			}
-			return
+	sender := telegramSenderID(msg)
+	if isPair, ok := tg.auth.tryPair(sender, msg.Text); isPair {
+		if ok {
+			tg.reply(ctx, msg.Chat.ID, "Paired. You can now chat with hawk.")
+		} else {
+			tg.reply(ctx, msg.Chat.ID, "Pairing failed: invalid code.")
 		}
-		if !tg.auth.allowed(sender) {
-			_ = tg.sendMessage(ctx, msg.Chat.ID, "Unauthorized. Send /pair <code> to authorize.")
-			return
-		}
+		return
+	}
+	if !tg.auth.allowed(sender) {
+		tg.reply(ctx, msg.Chat.ID, "Unauthorized. Send /pair <code> to authorize.")
+		return
 	}
 
 	// Forward to hawk daemon
@@ -157,7 +193,14 @@ func (tg *TelegramGateway) handleMessage(ctx context.Context, msg *TelegramMessa
 		response = string([]rune(response)[:4000]) + "\n\n... (truncated)"
 	}
 
-	_ = tg.sendMessage(ctx, msg.Chat.ID, response)
+	tg.reply(ctx, msg.Chat.ID, response)
+}
+
+// reply sends text and logs (rather than swallows) any delivery failure.
+func (tg *TelegramGateway) reply(ctx context.Context, chatID int64, text string) {
+	if err := tg.sendMessage(ctx, chatID, text); err != nil {
+		slog.Error("telegram sendMessage failed", "chat", chatID, "error", err)
+	}
 }
 
 func (tg *TelegramGateway) forwardToHawk(ctx context.Context, prompt string) (string, error) {
@@ -211,6 +254,21 @@ func (tg *TelegramGateway) sendMessage(ctx context.Context, chatID int64, text s
 	if err != nil {
 		return err
 	}
-	_ = resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	var result struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		// Non-JSON body: fall back to the HTTP status for a useful error.
+		if resp.StatusCode/100 != 2 {
+			return fmt.Errorf("telegram sendMessage: HTTP %d", resp.StatusCode)
+		}
+		return nil
+	}
+	if !result.OK {
+		return fmt.Errorf("telegram sendMessage: %s", result.Description)
+	}
 	return nil
 }

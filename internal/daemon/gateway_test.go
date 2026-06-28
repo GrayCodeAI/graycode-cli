@@ -7,13 +7,34 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
+
+func newIPv4GatewayServer(t *testing.T, h http.Handler) *httptest.Server {
+	t.Helper()
+	ln, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		if errors.Is(err, os.ErrPermission) || strings.Contains(err.Error(), "operation not permitted") {
+			t.Skipf("sandbox does not allow local listeners: %v", err)
+		}
+		t.Fatalf("listen tcp4: %v", err)
+	}
+	srv := httptest.NewUnstartedServer(h)
+	srv.Listener = ln
+	srv.Start()
+	return srv
+}
 
 // Compile-time assertions that all three gateways satisfy Gateway.
 var (
@@ -192,7 +213,7 @@ func TestAuthorizer_PairingAndAllowlist(t *testing.T) {
 
 func TestForwardToHawk(t *testing.T) {
 	var gotAuth, gotPrompt string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newIPv4GatewayServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		var body struct {
 			Prompt string `json:"prompt"`
@@ -346,59 +367,85 @@ func TestSlackGateway_RejectsBadSignature(t *testing.T) {
 }
 
 func TestDiscordGateway_HandleMessage_FlowsThroughAllowlist(t *testing.T) {
-	var posted []string
-	// Mock Discord REST for postMessage.
-	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			Content string `json:"content"`
-		}
-		_ = decodeForTest(r, &body)
-		posted = append(posted, body.Content)
-		w.WriteHeader(http.StatusOK)
+	hawk := newIPv4GatewayServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, ChatResponse{Response: "hawk-reply"})
 	}))
-	defer mock.Close()
-	old := discordAPIBase
-	discordAPIBase = mock.URL
-	defer func() { discordAPIBase = old }()
+	defer hawk.Close()
 
-	g := newDiscordGateway(DiscordConfig{Token: "bot", AppID: "BOT", PairingCode: "code"}, "http://x", "")
+	g := newDiscordGateway(DiscordConfig{Token: "bot", PairingCode: "code"}, hawk.URL, "")
+	var sent []string
+	send := func(s string) error { sent = append(sent, s); return nil }
 
-	// Unauthorized non-pair mention -> "Unauthorized" reply.
-	g.handleMessage(context.Background(), discordMessage{
-		ID: "1", ChannelID: "C", Content: "<@BOT> hello", GuildID: "G",
-		Author:   discordUser{ID: "u1"},
-		Mentions: []discordUser{{ID: "BOT"}},
-	})
-	// Pair, then it should be authorized.
-	g.handleMessage(context.Background(), discordMessage{
-		ID: "2", ChannelID: "C", Content: "<@BOT> /pair code", GuildID: "G",
-		Author:   discordUser{ID: "u1"},
-		Mentions: []discordUser{{ID: "BOT"}},
-	})
+	// Unauthorized non-pair message -> "Unauthorized", no hawk call.
+	g.handleMessage(context.Background(), "u1", "C", "hello", send)
+	// Wrong pairing code -> failure.
+	g.handleMessage(context.Background(), "u1", "C", "/pair nope", send)
+	// Correct pairing code -> paired.
+	g.handleMessage(context.Background(), "u1", "C", "/pair code", send)
+	// Authorized -> forwarded to hawk.
+	g.handleMessage(context.Background(), "u1", "C", "do it", send)
 
-	if len(posted) < 2 {
-		t.Fatalf("expected at least 2 posts, got %d: %v", len(posted), posted)
+	if len(sent) != 4 {
+		t.Fatalf("expected 4 sends, got %d: %v", len(sent), sent)
 	}
-	if posted[0] == "" || posted[1] == "" {
-		t.Errorf("unexpected empty replies: %v", posted)
+	if !strings.Contains(sent[0], "Unauthorized") {
+		t.Errorf("sent[0]=%q want Unauthorized", sent[0])
+	}
+	if !strings.Contains(sent[1], "failed") {
+		t.Errorf("sent[1]=%q want pairing failure", sent[1])
+	}
+	if !strings.Contains(sent[2], "Paired") {
+		t.Errorf("sent[2]=%q want Paired", sent[2])
+	}
+	if sent[3] != "hawk-reply" {
+		t.Errorf("sent[3]=%q want hawk-reply", sent[3])
 	}
 	if !g.auth.allowed("u1") {
 		t.Errorf("u1 should be allowed after pairing")
 	}
 }
 
-func TestDiscordGateway_IgnoresBotsAndNonMentions(t *testing.T) {
-	g := newDiscordGateway(DiscordConfig{Token: "bot", AppID: "BOT"}, "http://x", "")
-	// Bot author -> ignored (no panic, no post attempt path beyond guard).
-	g.handleMessage(context.Background(), discordMessage{
-		ID: "1", ChannelID: "C", GuildID: "G", Author: discordUser{ID: "x", Bot: true},
-	})
-	// Guild message without mention -> ignored.
-	g.handleMessage(context.Background(), discordMessage{
-		ID: "2", ChannelID: "C", GuildID: "G", Content: "no mention", Author: discordUser{ID: "y"},
-	})
-	if g.auth.allowed("x") || g.auth.allowed("y") {
-		t.Errorf("no sender should be allowed")
+func TestWantsDiscordMessage(t *testing.T) {
+	const self = "BOT"
+	mc := func(authorID string, bot bool, guildID string, mentionIDs ...string) *discordgo.MessageCreate {
+		mentions := make([]*discordgo.User, 0, len(mentionIDs))
+		for _, id := range mentionIDs {
+			mentions = append(mentions, &discordgo.User{ID: id})
+		}
+		return &discordgo.MessageCreate{Message: &discordgo.Message{
+			Author:   &discordgo.User{ID: authorID, Bot: bot},
+			GuildID:  guildID,
+			Mentions: mentions,
+		}}
+	}
+
+	cases := []struct {
+		name string
+		msg  *discordgo.MessageCreate
+		want bool
+	}{
+		{"dm accepted", mc("u1", false, ""), true},
+		{"guild mention accepted", mc("u1", false, "G", self), true},
+		{"guild no mention ignored", mc("u1", false, "G"), false},
+		{"bot author ignored", mc("x", true, "G", self), false},
+		{"self ignored", mc(self, false, ""), false},
+	}
+	for _, tc := range cases {
+		if got := wantsDiscordMessage(tc.msg, self); got != tc.want {
+			t.Errorf("%s: wantsDiscordMessage=%v want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestStripDiscordMention(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"<@BOT> hello", "hello"},
+		{"<@!BOT>  spaced  ", "spaced"},
+		{"no mention here", "no mention here"},
+	} {
+		if got := stripDiscordMention(tc.in, "BOT"); got != tc.want {
+			t.Errorf("stripDiscordMention(%q)=%q want %q", tc.in, got, tc.want)
+		}
 	}
 }
 
