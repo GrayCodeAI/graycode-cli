@@ -8,6 +8,7 @@ import (
 )
 
 func TestMaybeRun_RunsOnceThenSkips(t *testing.T) {
+	setTestStateDir(t)
 	root := t.TempDir()
 	calls := 0
 	run := func(ctx context.Context, r string) error {
@@ -50,6 +51,7 @@ func TestMaybeRun_RunsOnceThenSkips(t *testing.T) {
 }
 
 func TestMaybeRun_SkipsWhenContextExists(t *testing.T) {
+	setTestStateDir(t)
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("# x"), 0o644); err != nil {
 		t.Fatal(err)
@@ -71,6 +73,7 @@ func TestMaybeRun_SkipsWhenContextExists(t *testing.T) {
 }
 
 func TestMaybeRun_Disabled(t *testing.T) {
+	setTestStateDir(t)
 	root := t.TempDir()
 	calls := 0
 	run := func(ctx context.Context, r string) error { calls++; return nil }
@@ -92,6 +95,7 @@ func TestMaybeRun_Disabled(t *testing.T) {
 }
 
 func TestMaybeRun_ForceIgnoresExistingContext(t *testing.T) {
+	setTestStateDir(t)
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "HAWK.md"), []byte("# x"), 0o644); err != nil {
 		t.Fatal(err)
@@ -109,6 +113,7 @@ func TestMaybeRun_ForceIgnoresExistingContext(t *testing.T) {
 }
 
 func TestMaybeRun_MarkerWrittenOnRunnerError(t *testing.T) {
+	setTestStateDir(t)
 	root := t.TempDir()
 	run := func(ctx context.Context, r string) error { return context.Canceled }
 
@@ -125,6 +130,7 @@ func TestMaybeRun_MarkerWrittenOnRunnerError(t *testing.T) {
 }
 
 func TestMaybeRun_NoRunnerStillGates(t *testing.T) {
+	setTestStateDir(t)
 	root := t.TempDir()
 	dec, err := MaybeRun(context.Background(), Options{Root: root})
 	if err != nil {
@@ -135,6 +141,31 @@ func TestMaybeRun_NoRunnerStillGates(t *testing.T) {
 	}
 	if !HasRun(root) {
 		t.Error("expected marker written even without a runner")
+	}
+}
+
+func TestMaybeRun_ReturnsMarkerWriteError(t *testing.T) {
+	root := t.TempDir()
+	stateFile := filepath.Join(t.TempDir(), "state")
+	if err := os.WriteFile(stateFile, []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HAWK_STATE_DIR", stateFile)
+	calls := 0
+	run := func(context.Context, string) error {
+		calls++
+		return nil
+	}
+
+	dec, err := MaybeRun(context.Background(), Options{Root: root, Run: run})
+	if err == nil {
+		t.Fatal("expected marker write error")
+	}
+	if dec.Skipped != "marker write failed" {
+		t.Fatalf("Skipped = %q, want marker write failed", dec.Skipped)
+	}
+	if calls != 0 {
+		t.Fatalf("runner should not run when marker cannot be written, got %d calls", calls)
 	}
 }
 
@@ -149,4 +180,9 @@ func TestHasContext(t *testing.T) {
 	if !HasContext(root) {
 		t.Error("dir with CLAUDE.md should have context")
 	}
+}
+
+func setTestStateDir(t *testing.T) {
+	t.Helper()
+	t.Setenv("HAWK_STATE_DIR", filepath.Join(t.TempDir(), "state"))
 }
