@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	ctxrepomap "github.com/GrayCodeAI/hawk/internal/context/repomap"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -162,48 +163,28 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 }
 
 func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
-	ctx := context.Background()
-	hawkconfig.SyncSelectionWithCredentials(ctx)
-	if !hawkconfig.HasConfiguredDeployment(ctx) {
-		return "", ""
-	}
-	effectiveModel := hawkconfig.ActiveModel(ctx)
-	if strings.TrimSpace(model) != "" {
-		effectiveModel = strings.TrimSpace(model)
-	}
-	if strings.TrimSpace(settings.Model) != "" {
-		effectiveModel = strings.TrimSpace(settings.Model)
-	}
-	effectiveProvider := hawkconfig.ActiveProvider(ctx)
-	if strings.TrimSpace(provider) != "" {
-		effectiveProvider = strings.TrimSpace(provider)
-	}
-	if strings.TrimSpace(settings.Provider) != "" {
-		effectiveProvider = strings.TrimSpace(settings.Provider)
-	}
-	// If the configured provider's API key is missing, fall back to auto-detection
-	// so users with ANTHROPIC_API_KEY don't get confusing errors about canopywave.
-	normalized := hawkconfig.NormalizeProviderForEngine(effectiveProvider)
-	if normalized != "" && hawkconfig.APIKeyForProvider(normalized) == "" {
-		detected := types.DetectProvider()
-		if detected != "" && hawkconfig.APIKeyForProvider(detected) != "" {
-			normalized = detected
-			effectiveModel = ""
-		}
-	}
-	if normalized != "" && strings.TrimSpace(effectiveModel) == "" {
-		if resolved := hawkconfig.DefaultModelForProvider(normalized); resolved != "" {
-			effectiveModel = resolved
-		}
-	}
-	if hawkconfig.DeploymentRoutingEnabled(settings) && strings.TrimSpace(effectiveModel) != "" {
-		effectiveModel = hawkconfig.ResolveCanonicalModel(effectiveModel)
-	}
-	return effectiveModel, normalized
+	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
+		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
+	})
+	return selection.Model, selection.Provider
 }
 
 func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveModel, systemPrompt string, registry *tool.Registry) *engine.Session {
-	return engine.NewHawkSession(context.Background(), hawkconfig.DeploymentRoutingEnabled(settings), effectiveProvider, effectiveModel, systemPrompt, registry)
+	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
+		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
+	})
+	return engine.NewHawkSession(context.Background(), selection, effectiveProvider, effectiveModel, systemPrompt, registry)
+}
+
+func firstNonEmptyTrimmed(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
@@ -226,10 +207,9 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
 	// Hawk: API keys from OS secret store only
-	normalizedProvider := hawkconfig.NormalizeProviderForEngine(settings.Provider)
-	if normalizedProvider != "" {
-		if key := hawkconfig.APIKeyForProvider(normalizedProvider); key != "" {
-			sess.SetAPIKey(normalizedProvider, key)
+	if providerName := strings.TrimSpace(sess.Provider()); providerName != "" {
+		if key := hawkconfig.APIKeyForProvider(providerName); key != "" {
+			sess.SetAPIKey(providerName, key)
 		}
 	}
 	sess.SetAPIKeys(hawkconfig.LoadAPIKeysFromStore())

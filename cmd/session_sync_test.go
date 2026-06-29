@@ -27,8 +27,7 @@ func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) 
 	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
 
 	sess := engine.NewSession("", "", "test", nil)
-	settings := hawkconfig.Settings{}
-	syncSessionFromPersistedSelection(sess, settings)
+	syncSessionFromPersistedSelection(sess)
 
 	if got := sess.Model(); got != "moonshotai/kimi-k2.6" {
 		t.Fatalf("model = %q, want moonshotai/kimi-k2.6", got)

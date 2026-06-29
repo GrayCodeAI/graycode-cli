@@ -33,7 +33,7 @@ func PrepareCredentialDiscovery(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ApplyXiaomiTokenPlanRegionEnv(ctx)
+	runtime.PrepareCredentialDiscovery(ctx)
 }
 
 // ModelOption is one hawk /config model row.
@@ -116,15 +116,7 @@ func SaveCredential(ctx context.Context, inference CredentialInference, secret s
 
 // HasStoredCredentialForProvider reports whether the OS secret store has a key for this gateway.
 func HasStoredCredentialForProvider(ctx context.Context, providerID string) bool {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	for _, envKey := range credentialEnvKeysForTarget(providerID) {
-		if credentials.HasSecret(ctx, envKey) {
-			return true
-		}
-	}
-	return false
+	return runtime.HasStoredCredential(ctx, providerID)
 }
 
 // ConfiguredCredentialProviders returns setup gateways with a stored API key.
@@ -212,7 +204,7 @@ func maskCredentialSecret(secret string) string {
 
 // CredentialInferenceForProvider returns save metadata for a gateway chosen in /config.
 func CredentialInferenceForProvider(providerID string) (CredentialInference, error) {
-	providerID = setupGatewayRegistryID(providerID)
+	providerID = runtime.SetupGatewayID(providerID)
 	inf, err := runtime.InferenceForProvider(providerID)
 	if err != nil {
 		return CredentialInference{}, err
@@ -229,30 +221,7 @@ func credentialEnvKeysForTarget(target string) []string {
 	if strings.Contains(target, "_") && strings.ToUpper(target) == target {
 		return []string{strings.TrimSpace(target)}
 	}
-	provider := setupGatewayRegistryID(target)
-	seen := map[string]struct{}{}
-	var keys []string
-	add := func(k string) {
-		k = strings.TrimSpace(k)
-		if k == "" {
-			return
-		}
-		if _, ok := seen[k]; ok {
-			return
-		}
-		seen[k] = struct{}{}
-		keys = append(keys, k)
-	}
-	if env := SetupGatewayCredentialEnv(provider); env != "" {
-		add(env)
-	}
-	if primary := ProviderAPIKeyEnv(provider); primary != "" {
-		add(primary)
-	}
-	for _, alt := range providerCredentialEnvAliases(provider) {
-		add(alt)
-	}
-	return keys
+	return runtime.CredentialEnvKeys(target)
 }
 
 // LocalCredentialInference returns setup metadata for no-key providers (e.g. Ollama).

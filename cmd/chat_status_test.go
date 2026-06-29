@@ -163,8 +163,11 @@ func TestChatConnectionStatus_NoGatewayNoModel(t *testing.T) {
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
-	if got != "pick model" {
-		t.Fatalf("status = %q", got)
+	if !strings.Contains(got, "Anthropic · ") {
+		t.Fatalf("expected runtime-selected anthropic status, got %q", got)
+	}
+	if strings.Contains(got, "pick model") {
+		t.Fatalf("expected auto-selected model when only anthropic credentials exist, got %q", got)
 	}
 }
 

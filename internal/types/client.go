@@ -29,6 +29,13 @@ type ChatProvider interface {
 	Name() string
 }
 
+// ChatClient is the session-level agent-loop client interface.
+type ChatClient interface {
+	Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error)
+	StreamChatContinue(ctx context.Context, messages []EyrieMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error)
+	SetAPIKey(provider, apiKey string)
+}
+
 // ResponseFormat specifies the desired output format for a Hawk runtime request.
 type ResponseFormat struct {
 	Type   string `json:"type"`
@@ -220,6 +227,14 @@ func WrapClientProvider(p client.Provider) ChatProvider {
 	return &providerAdapter{inner: p}
 }
 
+// NewLazyChatProvider builds a lazy Eyrie provider behind Hawk's transport seam.
+func NewLazyChatProvider(cfg *ClientConfig) ChatProvider {
+	if cfg == nil {
+		return nil
+	}
+	return WrapClientProvider(client.NewLazyProvider(ToClientConfig(cfg)))
+}
+
 func StreamChatWithContinuation(ctx context.Context, p ChatProvider, messages []EyrieMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error) {
 	if p == nil {
 		return nil, nil
@@ -300,6 +315,12 @@ func (p *providerAdapter) Ping(ctx context.Context) error {
 
 func (p *providerAdapter) Name() string {
 	return p.inner.Name()
+}
+
+func (p *providerAdapter) SetAPIKey(provider, apiKey string) {
+	if setter, ok := p.inner.(interface{ SetAPIKey(string, string) }); ok {
+		setter.SetAPIKey(provider, apiKey)
+	}
 }
 
 // ToClientConfig converts Hawk-owned transport config into the provider-runtime shape.
