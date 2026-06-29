@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/charmbracelet/lipgloss"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -76,11 +77,25 @@ func (m chatModel) sessionGatewayModel() (gateway, model string) {
 	}
 	if gateway == "" || model == "" {
 		ctx := context.Background()
-		if gateway == "" {
-			gateway = hawkconfig.ActiveGateway(ctx)
-		}
-		if model == "" {
-			model = strings.TrimSpace(hawkconfig.ActiveModel(ctx))
+		explicitGateway, explicitModel := explicitSelection(ctx)
+		if explicitGateway != "" || explicitModel != "" {
+			if gateway == "" {
+				gateway = explicitGateway
+			}
+			if model == "" {
+				model = explicitModel
+			}
+		} else {
+			selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
+				ProviderOverride: gateway,
+				ModelOverride:    model,
+			})
+			if gateway == "" {
+				gateway = strings.TrimSpace(selection.Provider)
+			}
+			if model == "" {
+				model = strings.TrimSpace(selection.Model)
+			}
 		}
 	}
 	return gateway, model
