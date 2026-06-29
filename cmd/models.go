@@ -98,7 +98,7 @@ var modelsListCmd = &cobra.Command{
 			if providerName == "" {
 				return fmt.Errorf("provider required with --live (e.g. hawk models list canopywave --live --json)")
 			}
-			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.NormalizeProviderForEngine(providerName))
+			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.ActiveProviderID(providerName))
 		} else {
 			models, err = hawkconfig.FetchModelsForProvider(providerName)
 		}

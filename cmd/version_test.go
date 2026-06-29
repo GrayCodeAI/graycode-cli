@@ -3,6 +3,7 @@ package cmd
 import "testing"
 
 func TestSetVersion(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	SetVersion("1.2.3")
 	if version != "1.2.3" {
 		t.Errorf("version = %q, want %q", version, "1.2.3")
@@ -10,6 +11,7 @@ func TestSetVersion(t *testing.T) {
 }
 
 func TestSetBuildDate(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	SetBuildDate("2026-01-01")
 	if buildDate != "2026-01-01" {
 		t.Errorf("buildDate = %q, want %q", buildDate, "2026-01-01")
@@ -17,6 +19,7 @@ func TestSetBuildDate(t *testing.T) {
 }
 
 func TestVersionString(t *testing.T) {
+	preserveLibraryVersionState(t)
 	Version = "test-ver"
 	Commit = "abc123"
 	Date = "2026-05-15"
@@ -27,6 +30,7 @@ func TestVersionString(t *testing.T) {
 }
 
 func TestShortVersion(t *testing.T) {
+	preserveLibraryVersionState(t)
 	Version = "0.1.0"
 	got := ShortVersion()
 	if got != "0.1.0" {

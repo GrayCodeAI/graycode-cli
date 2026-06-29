@@ -121,10 +121,10 @@ func init() {
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			savedModel := hawkconfig.ActiveModel(context.Background())
 			if m.session.Model() == savedModel {
-				norm := hawkconfig.NormalizeProviderForEngine(m.session.Provider())
-				fastModel := hawkconfig.CheapestModelForProvider(norm, m.session.Model())
+				providerName := strings.TrimSpace(m.session.Provider())
+				fastModel := hawkconfig.CheapestModelForProvider(providerName, m.session.Model())
 				if strings.TrimSpace(fastModel) == "" {
-					fastModel = hawkconfig.DefaultModelForProvider(norm)
+					fastModel = hawkconfig.DefaultModelForProvider(providerName)
 				}
 				if strings.TrimSpace(fastModel) == "" {
 					m.messages = append(m.messages, displayMsg{role: "error", content: "Fast mode: no catalog model resolved for this provider"})

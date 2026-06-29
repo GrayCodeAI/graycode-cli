@@ -17,11 +17,10 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		engineProvider := hawkconfig.NormalizeProviderForEngine(value)
-		m.session.SetProvider(engineProvider)
+		m.syncSessionSelection()
 		// Use cached model or set first from cache
 		modelCacheMu.RLock()
-		cached, cacheHit := modelCache[engineProvider]
+		cached, cacheHit := modelCache[m.session.Provider()]
 		modelCacheMu.RUnlock()
 		if cacheHit && len(cached) > 0 {
 			m.session.SetModel(cached[0].ID)
@@ -52,8 +51,8 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		m.session.SetModel(value)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", value)})
+		m.syncSessionSelection()
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", m.session.Model())})
 		return m, nil
 	}
 	if len(parts) >= 2 && parts[1] == "keys" {
@@ -95,9 +94,9 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 		normalizedKey := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(key, "-", ""), "_", ""))
 		switch normalizedKey {
 		case "model":
-			m.session.SetModel(value)
+			m.syncSessionSelection()
 		case "provider":
-			m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(value))
+			m.syncSessionSelection()
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Updated %s = %s", key, value)})
 		return m, nil

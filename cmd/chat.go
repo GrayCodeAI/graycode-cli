@@ -138,7 +138,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:newHawkSession")
 
 	startup.MarkPhase("newChatModel:configureSession")
-	syncSessionFromPersistedSelection(sess, settings)
+	syncSessionFromPersistedSelection(sess)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
 	if cfgErr := configureSession(sess, settings); cfgErr != nil {
 		return chatModel{}, cfgErr

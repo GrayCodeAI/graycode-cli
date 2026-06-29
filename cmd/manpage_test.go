@@ -6,6 +6,7 @@ import (
 )
 
 func TestGenerateManPage(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	version = "1.0.0"
 	page := GenerateManPage()
 
@@ -48,6 +49,7 @@ func TestGenerateManPage(t *testing.T) {
 }
 
 func TestGenerateManPage_EmptyVersion(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	version = ""
 	page := GenerateManPage()
 	if !strings.Contains(page, "dev") {

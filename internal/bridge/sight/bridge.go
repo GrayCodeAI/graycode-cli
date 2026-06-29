@@ -12,13 +12,13 @@ import (
 // EyrieAdapter implements sight's Provider interface using hawk's eyrie client.
 // It translates between sight.Message/sight.ChatOpts and Hawk runtime DTOs.
 type EyrieAdapter struct {
-	client   *types.EyrieClient
+	client   types.ChatProvider
 	provider string
 }
 
 // NewEyrieAdapter creates an adapter that satisfies sight.Provider using
 // the given eyrie client and provider name (e.g. "anthropic", "openai").
-func NewEyrieAdapter(c *types.EyrieClient, provider string) *EyrieAdapter {
+func NewEyrieAdapter(c types.ChatProvider, provider string) *EyrieAdapter {
 	return &EyrieAdapter{client: c, provider: provider}
 }
 
@@ -77,13 +77,13 @@ type Bridge struct {
 // NewBridge creates a bridge to the sight library using the given Hawk
 // transport client and provider name. Additional sight options (model,
 // concerns, etc.) are applied to all operations.
-func NewBridge(c *types.EyrieClient, provider string, opts ...sightLib.Option) *Bridge {
+func NewBridge(c types.ChatProvider, provider string, opts ...sightLib.Option) *Bridge {
 	b := &Bridge{}
 	b.init(c, provider, opts...)
 	return b
 }
 
-func (b *Bridge) init(c *types.EyrieClient, provider string, opts ...sightLib.Option) {
+func (b *Bridge) init(c types.ChatProvider, provider string, opts ...sightLib.Option) {
 	if c == nil {
 		return
 	}

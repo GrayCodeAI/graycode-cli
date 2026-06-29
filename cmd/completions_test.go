@@ -418,6 +418,7 @@ func TestAllProvidersInFishCompletion(t *testing.T) {
 }
 
 func TestCompletionJSONCommand(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	SetVersion("test-version")
 
 	buf := new(bytes.Buffer)

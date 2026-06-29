@@ -181,7 +181,7 @@ func TestNormalizeProviderName(t *testing.T) {
 	}
 }
 
-func TestNormalizeProviderForEngine_XiaomiAliases(t *testing.T) {
+func TestActiveProviderID_XiaomiAliases(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		input    string
@@ -196,9 +196,9 @@ func TestNormalizeProviderForEngine_XiaomiAliases(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := NormalizeProviderForEngine(tt.input)
+		got := ActiveProviderID(tt.input)
 		if got != tt.expected {
-			t.Errorf("NormalizeProviderForEngine(%q) = %q, want %q", tt.input, got, tt.expected)
+			t.Errorf("ActiveProviderID(%q) = %q, want %q", tt.input, got, tt.expected)
 		}
 	}
 }
@@ -279,7 +279,7 @@ func TestSettings_UnmarshalJSON_SnakeCase(t *testing.T) {
 	}
 }
 
-func TestNormalizeProviderForEngine(t *testing.T) {
+func TestActiveProviderID(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		input    string
@@ -289,12 +289,16 @@ func TestNormalizeProviderForEngine(t *testing.T) {
 		{"openai", "openai"},
 		{"xai", "grok"},
 		{"XAI", "grok"},
+		{"zai_coding", "zai_coding"},
+		{"z-ai-coding", "zai_coding"},
+		{"zai_payg", "zai_payg"},
+		{"z-ai-payg", "zai_payg"},
 	}
 
 	for _, tt := range tests {
-		got := NormalizeProviderForEngine(tt.input)
+		got := ActiveProviderID(tt.input)
 		if got != tt.expected {
-			t.Errorf("NormalizeProviderForEngine(%q) = %q, want %q", tt.input, got, tt.expected)
+			t.Errorf("ActiveProviderID(%q) = %q, want %q", tt.input, got, tt.expected)
 		}
 	}
 }

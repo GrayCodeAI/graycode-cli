@@ -14,8 +14,10 @@ import (
 func isolateCredentialHome(t *testing.T) {
 	t.Helper()
 	home := t.TempDir()
-	_ = os.MkdirAll(filepath.Join(home, ".hawk"), 0o700)
+	hawkDir := filepath.Join(home, ".hawk")
+	_ = os.MkdirAll(hawkDir, 0o700)
 	t.Setenv("HOME", home)
+	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
 }
 
 func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {

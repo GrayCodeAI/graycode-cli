@@ -3,12 +3,12 @@ package config
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 var (
@@ -147,7 +147,7 @@ func EnsureCatalogAvailable(ctx context.Context) error {
 
 // CatalogCachePathForDisplay returns the path users should care about.
 func CatalogCachePathForDisplay() string {
-	if p := strings.TrimSpace(os.Getenv("EYRIE_MODEL_CATALOG_PATH")); p != "" {
+	if p := strings.TrimSpace(env.Getenv("EYRIE_MODEL_CATALOG_PATH")); p != "" {
 		return p
 	}
 	return catalog.DefaultCachePath()

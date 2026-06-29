@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 type gatewayModelCount struct {
@@ -222,7 +223,7 @@ func catalogRefreshFailureHint(ctx context.Context) string {
 }
 
 func autoRefreshCatalogEnabled() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("HAWK_AUTO_REFRESH_CATALOG"))) {
+	switch strings.ToLower(strings.TrimSpace(env.Getenv("HAWK_AUTO_REFRESH_CATALOG"))) {
 	case "0", "false", "no", "off":
 		return false
 	default:
@@ -231,7 +232,7 @@ func autoRefreshCatalogEnabled() bool {
 }
 
 func catalogRefreshAlways() bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("HAWK_CATALOG_REFRESH_ALWAYS"))) {
+	switch strings.ToLower(strings.TrimSpace(env.Getenv("HAWK_CATALOG_REFRESH_ALWAYS"))) {
 	case "1", "true", "yes", "on":
 		return true
 	default:
