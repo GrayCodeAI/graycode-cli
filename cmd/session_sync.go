@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
@@ -50,26 +49,8 @@ func (m *chatModel) syncSessionSelection() {
 
 func (m *chatModel) ensureSessionReadyForChat() error {
 	m.syncSessionSelection()
-	if strings.TrimSpace(m.session.Model()) != "" {
-		return nil
-	}
-
-	ctx := context.Background()
-	explicitProvider, explicitModel := explicitSelection(ctx)
-	if explicitProvider != "" && explicitModel == "" {
+	if strings.TrimSpace(m.session.Model()) == "" {
 		return fmt.Errorf("no model selected — open /config, go to Models, and pick one")
 	}
-
-	selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
-		ProviderOverride: strings.TrimSpace(m.session.Provider()),
-		ModelOverride:    strings.TrimSpace(m.session.Model()),
-	})
-	if strings.TrimSpace(selection.Model) == "" {
-		return fmt.Errorf("no model selected — open /config, go to Models, and pick one")
-	}
-	if strings.TrimSpace(m.session.Provider()) == "" && strings.TrimSpace(selection.Provider) != "" {
-		m.session.SetProvider(selection.Provider)
-	}
-	m.session.SetModel(selection.Model)
 	return nil
 }
