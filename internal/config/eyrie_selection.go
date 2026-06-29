@@ -20,7 +20,12 @@ func ActiveProvider(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.ActiveProvider(ctx)
+	return runtime.ActiveProviderID(runtime.ActiveProvider(ctx))
+}
+
+// ActiveProviderID canonicalizes a host-facing provider/gateway id through Eyrie runtime.
+func ActiveProviderID(provider string) string {
+	return runtime.ActiveProviderID(provider)
 }
 
 // SetActiveModel persists model selection to eyrie provider.json.
@@ -36,7 +41,7 @@ func SetActiveProvider(ctx context.Context, provider string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.SetActiveProvider(ctx, provider)
+	return runtime.SetActiveProvider(ctx, runtime.ActiveProviderID(provider))
 }
 
 // migrateLegacyModelProvider moves model/provider from ~/.hawk/settings.json into eyrie once.

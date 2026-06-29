@@ -491,7 +491,7 @@ func ProviderAPIKeyEnv(provider string) string {
 	if compiled == nil {
 		return ""
 	}
-	return catalog.PrimaryAPIKeyEnvForProvider(compiled, catalogProviderID(provider))
+	return catalog.PrimaryAPIKeyEnvForProvider(compiled, runtime.CatalogProviderID(provider))
 }
 
 // EnvKeyStatus returns set, empty, or local from the OS credential store.
@@ -500,7 +500,7 @@ func EnvKeyStatus(provider string) string {
 	if compiled == nil {
 		return "empty"
 	}
-	provider = catalogProviderID(provider)
+	provider = runtime.CatalogProviderID(provider)
 	envs := catalog.APIKeyEnvsForProvider(compiled, provider)
 	if len(envs) == 0 {
 		return "local"
@@ -546,14 +546,14 @@ func APIKeyForProvider(provider string) string {
 	if compiled == nil {
 		return ""
 	}
-	provider = catalogProviderID(provider)
+	provider = runtime.CatalogProviderID(provider)
 	ctx := context.Background()
 	for _, env := range catalog.APIKeyEnvsForProvider(compiled, provider) {
 		if v := credentials.LookupSecret(ctx, env); v != "" {
 			return v
 		}
 	}
-	for _, env := range providerCredentialEnvAliases(provider) {
+	for _, env := range runtime.CredentialEnvKeys(provider) {
 		if v := credentials.LookupSecret(ctx, env); v != "" {
 			return v
 		}
@@ -562,33 +562,18 @@ func APIKeyForProvider(provider string) string {
 }
 
 func providerCredentialEnvAliases(provider string) []string {
-	switch strings.ToLower(provider) {
-	case "anthropic":
-		return []string{"CLAUDE_API_KEY"}
-	case "gemini", "google":
-		return []string{"GOOGLE_API_KEY"}
-	case "grok", "xai":
-		return nil
-	case "xiaomi_mimo", "xiaomi_mimo_payg":
-		return []string{"XIAOMI_MIMO_PAYG_API_KEY"}
-	default:
-		return nil
+	primary := strings.TrimSpace(ProviderAPIKeyEnv(provider))
+	seen := map[string]bool{}
+	var out []string
+	for _, env := range runtime.CredentialEnvKeys(provider) {
+		env = strings.TrimSpace(env)
+		if env == "" || env == primary || seen[env] {
+			continue
+		}
+		seen[env] = true
+		out = append(out, env)
 	}
-}
-
-// NormalizeProviderForEngine maps hawk provider aliases to eyrie canonical names.
-// This is the boundary where hawk names become engine/eyrie names.
-func NormalizeProviderForEngine(provider string) string {
-	if gw := setupGatewayRegistryID(provider); catalog.IsSetupGateway(gw) {
-		return gw
-	}
-	p := normalizeProviderName(provider)
-	switch p {
-	case "xai":
-		return "grok" // eyrie calls it "grok", env var is XAI_API_KEY
-	default:
-		return p
-	}
+	return out
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -598,7 +583,7 @@ func NormalizeProviderForEngine(provider string) string {
 // FetchModelsForProvider returns models from the eyrie catalog (dynamic; no hawk hardcoded lists).
 // RefreshModelCatalogV1 is the explicit network refresh boundary.
 func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error) {
-	provider = catalogProviderID(provider)
+	provider = runtime.CatalogProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
@@ -615,7 +600,7 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 	}
 	// Custom OpenAI-compatible providers: single model from settings, not hawk catalog data.
 	for _, cp := range LoadSettings().CustomProviders {
-		if NormalizeProviderForEngine(cp.Name) != provider {
+		if runtime.ActiveProviderID(cp.Name) != provider {
 			continue
 		}
 		if id := strings.TrimSpace(cp.Model); id != "" {
@@ -658,18 +643,4 @@ func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.Compi
 		CachePath:    catalog.DefaultCachePath(),
 		RequireCache: false,
 	})
-}
-
-func catalogProviderID(provider string) string {
-	if gw := setupGatewayRegistryID(provider); catalog.IsSetupGateway(gw) {
-		return gw
-	}
-	switch NormalizeProviderForEngine(provider) {
-	case "gemini":
-		return "google"
-	case "grok":
-		return "xai"
-	default:
-		return NormalizeProviderForEngine(provider)
-	}
 }

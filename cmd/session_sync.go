@@ -5,39 +5,37 @@ import (
 	"fmt"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // syncSessionFromPersistedSelection copies eyrie provider.json selection into the
 // live session when the session fields are empty (status bar can show ActiveModel
 // while the model field is still unset, which breaks deployment routing).
-func syncSessionFromPersistedSelection(sess *engine.Session, settings hawkconfig.Settings) {
+func syncSessionFromPersistedSelection(sess *engine.Session) {
 	if sess == nil {
 		return
 	}
-	ctx := context.Background()
-	hawkconfig.SyncSelectionWithCredentials(ctx)
+	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+		ProviderOverride: strings.TrimSpace(sess.Provider()),
+		ModelOverride:    strings.TrimSpace(sess.Model()),
+	})
 
 	if strings.TrimSpace(sess.Model()) == "" {
-		model := strings.TrimSpace(hawkconfig.ActiveModel(ctx))
-		if model != "" && hawkconfig.DeploymentRoutingEnabled(settings) {
-			model = hawkconfig.ResolveCanonicalModel(model)
-		}
-		if model != "" {
-			sess.SetModel(model)
+		if selection.Model != "" {
+			sess.SetModel(selection.Model)
 		}
 	}
 
 	if strings.TrimSpace(sess.Provider()) == "" {
-		if provider := strings.TrimSpace(hawkconfig.ActiveProvider(ctx)); provider != "" {
-			sess.SetProvider(hawkconfig.NormalizeProviderForEngine(provider))
+		if selection.Provider != "" {
+			sess.SetProvider(selection.Provider)
 		}
 	}
 }
 
 func (m *chatModel) syncSessionSelection() {
-	syncSessionFromPersistedSelection(m.session, m.settings)
+	syncSessionFromPersistedSelection(m.session)
 	if m.session != nil {
 		gw, model := m.sessionGatewayModel()
 		applyLiveModelMetadata(m.session, gw, model)

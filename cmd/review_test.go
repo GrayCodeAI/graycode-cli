@@ -9,11 +9,19 @@ import (
 	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
 
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+func setReviewTestDirs(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	storage.SetTestDirs(t, root)
+	return root
+}
+
 func TestReviewStore_CreateAndGet(t *testing.T) {
-	dir := t.TempDir()
+	dir := setReviewTestDirs(t)
 	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 
 	store, err := OpenReviewStore(dir)
@@ -43,7 +51,7 @@ func TestReviewStore_CreateAndGet(t *testing.T) {
 }
 
 func TestReviewStore_Update(t *testing.T) {
-	dir := t.TempDir()
+	dir := setReviewTestDirs(t)
 	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 
 	store, err := OpenReviewStore(dir)
@@ -83,7 +91,7 @@ func TestReviewStore_Update(t *testing.T) {
 }
 
 func TestReviewStore_GetBySHA(t *testing.T) {
-	dir := t.TempDir()
+	dir := setReviewTestDirs(t)
 	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 
 	store, err := OpenReviewStore(dir)
@@ -105,7 +113,7 @@ func TestReviewStore_GetBySHA(t *testing.T) {
 }
 
 func TestReviewStore_ListOpen(t *testing.T) {
-	dir := t.TempDir()
+	dir := setReviewTestDirs(t)
 	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 
 	store, err := OpenReviewStore(dir)
@@ -132,7 +140,7 @@ func TestReviewStore_ListOpen(t *testing.T) {
 }
 
 func TestReviewStore_Summary(t *testing.T) {
-	dir := t.TempDir()
+	dir := setReviewTestDirs(t)
 	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 
 	store, err := OpenReviewStore(dir)
@@ -162,7 +170,7 @@ func TestReviewStore_Summary(t *testing.T) {
 }
 
 func TestReviewStore_SetStatus(t *testing.T) {
-	dir := t.TempDir()
+	dir := setReviewTestDirs(t)
 	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
 
 	store, err := OpenReviewStore(dir)

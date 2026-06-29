@@ -202,7 +202,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	}
 	if msg.providerID == configProviderOllama {
 		_ = hawkconfig.SetGlobalSetting("provider", configProviderOllama)
-		next.session.SetProvider(hawkconfig.NormalizeProviderForEngine(configProviderOllama))
+		next.syncSessionSelection()
 	}
 	next.configGuideAfterKey = false
 	if len(msg.modelOptions) == 0 {
@@ -221,10 +221,14 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	if err := engine.RebuildSessionTransport(context.Background(), m.session, hawkconfig.DeploymentRoutingEnabled(m.settings), m.session.Provider()); err != nil {
+	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+		ProviderOverride: firstNonEmptyTrimmed(m.session.Provider(), m.settings.Provider),
+		ModelOverride:    firstNonEmptyTrimmed(m.session.Model(), m.settings.Model),
+	})
+	if err := engine.RebuildSessionTransport(context.Background(), m.session, selection, m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
-	syncSessionFromPersistedSelection(m.session, m.settings)
+	syncSessionFromPersistedSelection(m.session)
 	m.invalidateConnStatus()
 	return m, nil
 }

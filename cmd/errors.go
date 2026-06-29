@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -376,7 +377,10 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	var warnings []StartupWarning
 
 	// 1. Check API key for configured provider
-	providerName := hawkconfig.NormalizeProviderForEngine(settings.Provider)
+	providerName := strings.TrimSpace(settings.Provider)
+	if providerName == "" {
+		providerName = strings.TrimSpace(hawkconfig.ActiveProvider(context.Background()))
+	}
 	if providerName != "" && providerName != "ollama" {
 		envKey := hawkconfig.ProviderAPIKeyEnv(providerName)
 		if envKey != "" && os.Getenv(envKey) == "" {
