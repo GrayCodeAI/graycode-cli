@@ -40,9 +40,10 @@ func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	}
 	switch {
 	case !hasCreds:
-		st.Hint = "Almost ready: run /config to connect a provider and model"
+		// Splash uses footer guidance only until credentials exist.
+		st.Hint = ""
 	case !hasModel:
-		st.Hint = "Almost ready: run /config to choose a model"
+		st.Hint = "Almost ready: /config → finish setup"
 	}
 	return st
 }
