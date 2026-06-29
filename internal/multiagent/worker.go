@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -37,8 +37,11 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
-		settings := hawkconfig.LoadSettings()
-		sess := engine.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
+		selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
+			ProviderOverride: provider,
+			ModelOverride:    model,
+		})
+		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
 
 		// Configure for autonomous operation
 		level := engine.AutonomyLevel(cfg.AutonomyLevel)
@@ -146,8 +149,11 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		)
 
 		registry := tool.NewRegistry(readOnlyWorkerTools()...)
-		settings := hawkconfig.LoadSettings()
-		sess := engine.NewHawkSession(ctx, hawkconfig.DeploymentRoutingEnabled(settings), provider, model, systemPrompt, registry)
+		selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
+			ProviderOverride: provider,
+			ModelOverride:    model,
+		})
+		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
 
 		level := engine.AutonomyLevel(cfg.AutonomyLevel)
 		if level < engine.AutonomyFull {

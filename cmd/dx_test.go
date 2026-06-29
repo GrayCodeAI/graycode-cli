@@ -13,6 +13,7 @@ import (
 )
 
 func TestDoctorOutputContainsSections(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	version = "test-dx-version"
 	settings := hawkconfig.Settings{
 		Provider: "openai",
@@ -47,6 +48,7 @@ func TestDoctorOutputContainsSections(t *testing.T) {
 }
 
 func TestDoctorOutputWithMCPServers(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	version = "test-dx-version"
 	settings := hawkconfig.Settings{
 		Provider: "anthropic",

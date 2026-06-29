@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	"github.com/GrayCodeAI/eyrie/runtime"
 )
+
+type GatewayStatus = runtime.GatewayStatus
 
 // CompiledCatalogV1 loads the eyrie catalog from cache or bootstrap wiring (no network).
 func CompiledCatalogV1() *catalog.CompiledCatalogV1 {
@@ -42,7 +43,7 @@ func AllCatalogProviders() []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, id := range catalog.ProviderIDsFromCompiled(compiled) {
-		p := catalogProviderID(id)
+		p := runtime.CatalogProviderID(id)
 		if p == "" || seen[p] {
 			continue
 		}
@@ -56,59 +57,21 @@ func AllCatalogProviders() []string {
 // AllSetupGateways returns gateway IDs where users paste API keys (eyrie registry only).
 // Aggregator owner slugs from OpenRouter/CanopyWave catalogs (ai21, alibaba, …) are excluded.
 func AllSetupGateways() []string {
-	specs := registry.CredentialRegistry()
-	out := make([]string, len(specs))
-	for i, s := range specs {
-		out[i] = s.ProviderID
-	}
-	return out
-}
-
-// setupGatewayRegistryID maps catalog/engine aliases to credential registry gateway ids.
-// Most registry IDs use underscores for multi-word plans (e.g. xiaomi_mimo_token_plan).
-// Z.AI uses underscore naming for uniformity with Xiaomi/MiniMax plan splits: zai_payg and zai_coding (no legacy aliases).
-func setupGatewayRegistryID(provider string) string {
-	p := strings.ToLower(strings.TrimSpace(provider))
-	switch p {
-	case "google":
-		return "gemini"
-	case "xai":
-		return "grok"
-	case "zai_payg":
-		return "zai_payg"
-	case "zai_coding":
-		return "zai_coding"
-	case "xiaomi_mimo", "xiaomi-mimo":
-		return "xiaomi_mimo_payg"
-	case "xiaomi_mimo_token_plan", "xiaomi-mimo-token-plan":
-		return "xiaomi_mimo_token_plan"
-	case "xiaomi_mimo_payg", "xiaomi-mimo-payg":
-		return "xiaomi_mimo_payg"
-	default:
-		return p
-	}
+	return runtime.SetupGateways()
 }
 
 // SetupGatewayCredentialEnv returns the registry env var for a setup gateway (e.g. XIAOMI_MIMO_PAYG_API_KEY).
 func SetupGatewayCredentialEnv(providerID string) string {
-	spec, ok := registry.DefaultRegistry.Get(setupGatewayRegistryID(providerID))
-	if !ok || !spec.RequiresKey {
-		return ""
-	}
-	return strings.TrimSpace(spec.CredentialEnv)
+	return runtime.SetupGatewayCredentialEnv(providerID)
 }
 
 // IsSetupGateway reports whether id is a registered setup gateway.
 func IsSetupGateway(providerID string) bool {
-	return catalog.IsSetupGateway(setupGatewayRegistryID(providerID))
+	return runtime.IsSetupGateway(providerID)
 }
 
 func GatewayDisplayName(gatewayID string) string {
-	gatewayID = setupGatewayRegistryID(gatewayID)
-	if name := registry.DisplayName(gatewayID); name != gatewayID {
-		return name
-	}
-	return gatewayID
+	return runtime.GatewayDisplayName(gatewayID)
 }
 
 // ActiveGateway returns the user's setup gateway (never an aggregator owner slug like moonshotai).
@@ -116,15 +79,17 @@ func ActiveGateway(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if p := catalogProviderID(ActiveProvider(ctx)); catalog.IsSetupGateway(p) {
-		return setupGatewayRegistryID(p)
+	return runtime.ActiveGateway(ctx)
+}
+
+func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []GatewayStatus {
+	if ctx == nil {
+		ctx = context.Background()
 	}
-	if m := strings.TrimSpace(ActiveModel(ctx)); m != "" {
-		if gw := GatewayForModel(m); gw != "" {
-			return setupGatewayRegistryID(gw)
-		}
-	}
-	return ""
+	return runtime.GatewayStatuses(ctx, runtime.GatewayStatusOpts{
+		ActiveProvider: activeProvider,
+		ActiveModel:    activeModel,
+	})
 }
 
 // GatewayForModel resolves the setup gateway for a model id.
@@ -134,20 +99,7 @@ func GatewayForModel(modelID string) string {
 
 // ShouldClearSelectionAfterCredentialRemove reports whether provider/model should reset.
 func ShouldClearSelectionAfterCredentialRemove(ctx context.Context, removedProvider string) bool {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	removedProvider = catalogProviderID(removedProvider)
-	if !HasConfiguredDeployment(ctx) {
-		return true
-	}
-	if gw := ActiveGateway(ctx); gw == removedProvider {
-		return true
-	}
-	if m := strings.TrimSpace(ActiveModel(ctx)); m != "" && GatewayForModel(m) == removedProvider {
-		return true
-	}
-	return false
+	return runtime.ShouldClearSelectionAfterCredentialRemove(ctx, removedProvider)
 }
 
 // ClearActiveSelection removes persisted provider/model from provider.json.
@@ -163,63 +115,16 @@ func SyncSelectionWithCredentials(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if !HasConfiguredDeployment(ctx) {
-		if HasSelectedModel() || strings.TrimSpace(ActiveProvider(ctx)) != "" {
-			_ = ClearActiveSelection(ctx)
-		}
-		return
-	}
-	gw := ActiveGateway(ctx)
-	if gw == "" {
-		return
-	}
-	if !credentialConfiguredForGateway(ctx, gw) {
-		_ = ClearActiveSelection(ctx)
-	}
-}
-
-func credentialConfiguredForGateway(ctx context.Context, gateway string) bool {
-	ensureCredSnapshot(ctx)
-	uiCacheMu.RLock()
-	defer uiCacheMu.RUnlock()
-	if !credValid {
-		return false
-	}
-	gateway = setupGatewayRegistryID(gateway)
-	return credConfigured[gateway]
+	runtime.SyncSelectionWithCredentials(ctx)
 }
 
 func DefaultModelForProvider(provider string) string {
-	compiled := CompiledCatalogV1()
-	if compiled != nil {
-		if id := catalog.FirstModelForProvider(compiled, provider); id != "" {
-			return id
-		}
-	}
-	// All providers are fully dynamic — try live API if credentials are available.
-	if APIKeyForProvider(provider) != "" {
-		models, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{
-			ProviderID: provider,
-			Source:     runtime.ListSourceAuto,
-		})
-		if err == nil && len(models) > 0 {
-			return models[0].ID
-		}
-	}
-	return ""
+	return runtime.DefaultModelForProvider(context.Background(), provider)
 }
 
 // CachedModelCountForProvider returns model count from the on-disk catalog only (no network).
 func CachedModelCountForProvider(provider string) int {
-	provider = setupGatewayRegistryID(provider)
-	if provider == "" {
-		return 0
-	}
-	compiled := CompiledCatalogV1()
-	if compiled == nil {
-		return 0
-	}
-	return len(catalog.ModelEntriesForProvider(compiled, provider))
+	return runtime.CachedModelCountForProvider(context.Background(), provider)
 }
 
 func ModelIDsForProvider(provider string) ([]string, error) {
@@ -262,7 +167,7 @@ func ProviderOfModel(modelName string) string {
 	}
 	if canonical, ok := compiled.CanonicalModelForAliasOrID(modelName); ok {
 		if model := compiled.ModelsByID[canonical]; model.ID != "" {
-			return catalogProviderID(model.ProviderID)
+			return runtime.CatalogProviderID(model.ProviderID)
 		}
 	}
 	return ""
@@ -323,7 +228,7 @@ func ProviderIDForDeployment(deploymentID string) string {
 	if !ok {
 		return ""
 	}
-	return catalogProviderID(dep.ProviderID)
+	return runtime.CatalogProviderID(dep.ProviderID)
 }
 
 // PrimaryAPIKeyEnvForDeployment returns the env var name for a deployment's API key.
@@ -333,28 +238,4 @@ func PrimaryAPIKeyEnvForDeployment(deploymentID string) string {
 		return ""
 	}
 	return catalog.PrimaryAPIKeyEnvForDeployment(compiled, deploymentID)
-}
-
-// ConfigProviderList returns provider names for the /config UI from catalog + custom providers.
-func ConfigProviderList(custom []CustomProviderConfig) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, p := range AllCatalogProviders() {
-		engine := NormalizeProviderForEngine(p)
-		if engine == "" || seen[engine] {
-			continue
-		}
-		seen[engine] = true
-		out = append(out, engine)
-	}
-	for _, cp := range custom {
-		name := strings.TrimSpace(cp.Name)
-		if name == "" || seen[name] {
-			continue
-		}
-		seen[name] = true
-		out = append(out, name)
-	}
-	sort.Strings(out)
-	return out
 }

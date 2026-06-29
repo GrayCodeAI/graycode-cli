@@ -12,11 +12,13 @@ import (
 )
 
 type configGatewayRow struct {
-	ID          string
-	DisplayName string
-	HasKey      bool
-	ModelCount  int
-	Active      bool
+	ID             string
+	DisplayName    string
+	HasKey         bool
+	ModelCount     int
+	Active         bool
+	RegionLabel    string
+	RegionRequired bool
 }
 
 type configGatewayRefreshMsg struct {
@@ -27,47 +29,52 @@ type configGatewayRefreshMsg struct {
 
 func (m chatModel) configGatewayRows() []configGatewayRow {
 	ctx := context.Background()
-	providers := hawkconfig.AllSetupGateways()
-	configured := configuredGatewayKeys()
 	active := strings.TrimSpace(m.configModelProvider)
+	activeModel := ""
 	if active == "" && m.session != nil {
 		active = strings.TrimSpace(m.session.Provider())
 	}
-	var rows []configGatewayRow
-	for _, id := range providers {
-		if id == "" {
+	if m.session != nil {
+		activeModel = strings.TrimSpace(m.session.Model())
+	}
+	statuses := hawkconfig.GatewayStatuses(ctx, active, activeModel)
+	rows := make([]configGatewayRow, 0, len(statuses))
+	for _, status := range statuses {
+		if status.ID == "" {
 			continue
 		}
-		count := hawkconfig.CachedModelCountForProvider(id)
+		count := status.ModelCount
 		if count == 0 {
 			modelCacheMu.RLock()
-			if cached, ok := modelCache[id]; ok {
+			if cached, ok := modelCache[status.ID]; ok {
 				count = len(cached)
 			}
 			modelCacheMu.RUnlock()
 		}
-		hasKey := configured[id] || hawkconfig.HasStoredCredentialForProvider(ctx, id)
-		display := hawkconfig.GatewayDisplayName(id)
-		if id == hawkconfig.ProviderXiaomiTokenPlan {
-			if reg := hawkconfig.XiaomiTokenPlanRegionLabel(); reg != "" {
+		hasKey := status.HasStoredCredential
+		display := status.DisplayName
+		if status.ID == hawkconfig.ProviderXiaomiTokenPlan {
+			if reg := status.RegionLabel; reg != "" {
 				display += " · " + reg
 			} else {
 				display += " · region required"
 			}
 		}
-		if id == hawkconfig.ProviderZAICoding {
-			if reg := hawkconfig.ZAIRegionLabel(id); reg != "" {
+		if status.ID == hawkconfig.ProviderZAICoding {
+			if reg := status.RegionLabel; reg != "" {
 				display += " · " + reg
 			} else {
 				display += " · region"
 			}
 		}
 		rows = append(rows, configGatewayRow{
-			ID:          id,
-			DisplayName: display,
-			HasKey:      hasKey,
-			ModelCount:  count,
-			Active:      hawkconfig.NormalizeProviderForEngine(id) == hawkconfig.NormalizeProviderForEngine(active),
+			ID:             status.ID,
+			DisplayName:    display,
+			HasKey:         hasKey,
+			ModelCount:     count,
+			Active:         status.Active || hawkconfig.ActiveProviderID(status.ID) == hawkconfig.ActiveProviderID(active),
+			RegionLabel:    status.RegionLabel,
+			RegionRequired: status.RegionRequired,
 		})
 	}
 	return rows
@@ -117,11 +124,11 @@ func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
 	}
 	idx := m.configGatewayRefreshTargetIndex(rows)
 	row := rows[idx]
-	if row.ID == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(row.ID) {
+	if row.ID == hawkconfig.ProviderXiaomiTokenPlan && row.RegionRequired {
 		m.configNotice = "Pick Token Plan region (cn / sgp / ams) before refresh"
 		return m.startConfigXiaomiTokenPlanRegion(), nil
 	}
-	if row.ID == hawkconfig.ProviderZAICoding && hawkconfig.NeedsZAIRegion(row.ID) {
+	if row.ID == hawkconfig.ProviderZAICoding && row.RegionRequired {
 		m.configNotice = "Pick Coding Plan region (international / cn) before refresh"
 		return m.startConfigZAIRegion(row.ID), nil
 	}
@@ -274,12 +281,12 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 	}
 	row := rows[m.configSel]
 	if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
-		if !row.HasKey || hawkconfig.NeedsXiaomiTokenPlanRegion(row.ID) {
+		if !row.HasKey || row.RegionRequired {
 			m.configGatewayFocus = m.configSel
 			return m.startConfigXiaomiTokenPlanRegion(), nil
 		}
 	}
-	if row.ID == hawkconfig.ProviderZAICoding && (!row.HasKey || hawkconfig.NeedsZAIRegion(row.ID)) {
+	if row.ID == hawkconfig.ProviderZAICoding && (!row.HasKey || row.RegionRequired) {
 		m.configGatewayFocus = m.configSel
 		return m.startConfigZAIRegion(row.ID), nil
 	}
@@ -295,7 +302,9 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 	m.configGatewayFocus = m.configSel
 	m.configModelProvider = gw
 	_ = hawkconfig.SetGlobalSetting("provider", gw)
-	m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(gw))
+	if active := hawkconfig.ActiveProvider(context.Background()); active != "" {
+		m.session.SetProvider(active)
+	}
 	m.configTab = configTabModels
 	m.configSel = 0
 	m.configScroll = 0
@@ -343,7 +352,15 @@ func (m chatModel) trackConfigGatewayFocus() chatModel {
 	if m.configTab != configTabGateways {
 		return m
 	}
-	rows := len(hawkconfig.AllSetupGateways())
+	active := strings.TrimSpace(m.configModelProvider)
+	activeModel := ""
+	if m.session != nil {
+		if active == "" {
+			active = strings.TrimSpace(m.session.Provider())
+		}
+		activeModel = strings.TrimSpace(m.session.Model())
+	}
+	rows := len(hawkconfig.GatewayStatuses(context.Background(), active, activeModel))
 	if m.configSel >= 0 && m.configSel < rows {
 		m.configGatewayFocus = m.configSel
 	}

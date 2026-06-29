@@ -50,18 +50,24 @@ func containsString(list []string, s string) bool {
 	return false
 }
 
-func TestSetupGatewayRegistryID_PreservesUnderscores(t *testing.T) {
-	if got := setupGatewayRegistryID("xiaomi_mimo_payg"); got != "xiaomi_mimo_payg" {
+func TestSetupGatewayID_PreservesUnderscores(t *testing.T) {
+	if got := ActiveProviderID("xiaomi_mimo_payg"); got != "xiaomi_mimo_payg" {
 		t.Fatalf("xiaomi_mimo_payg = %q", got)
 	}
-	if got := setupGatewayRegistryID("xiaomi_mimo"); got != "xiaomi_mimo_payg" {
+	if got := ActiveProviderID("xiaomi_mimo"); got != "xiaomi_mimo_payg" {
 		t.Fatalf("legacy xiaomi_mimo = %q", got)
 	}
-	if got := setupGatewayRegistryID("zai_payg"); got != "zai_payg" {
+	if got := ActiveProviderID("zai_payg"); got != "zai_payg" {
 		t.Fatalf("zai_payg = %q", got)
 	}
-	if got := setupGatewayRegistryID("zai_coding"); got != "zai_coding" {
+	if got := ActiveProviderID("z-ai-payg"); got != "zai_payg" {
+		t.Fatalf("z-ai-payg = %q", got)
+	}
+	if got := ActiveProviderID("zai_coding"); got != "zai_coding" {
 		t.Fatalf("zai_coding = %q", got)
+	}
+	if got := ActiveProviderID("z-ai-coding"); got != "zai_coding" {
+		t.Fatalf("z-ai-coding = %q", got)
 	}
 }
 

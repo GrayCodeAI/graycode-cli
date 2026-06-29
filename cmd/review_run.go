@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/eyrie/runtime"
 	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -85,12 +86,21 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build sight bridge.
-	prov := provider
-	if prov == "" {
-		prov = types.DetectProvider()
+	// Build sight bridge from the runtime-owned transport resolution.
+	transport, err := runtime.ResolveChatTransport(context.Background(), runtime.ChatTransportOpts{
+		Selection: runtime.SelectionOpts{
+			ProviderOverride: strings.TrimSpace(provider),
+			ModelOverride:    reviewRunModel,
+		},
+	})
+	if err != nil {
+		_ = store.SetStatus(id, ReviewStatusFailed)
+		return silentErr(fmt.Errorf("resolve runtime transport: %w", err), "init bridge")
 	}
-	eyrieClient := types.NewClient(&types.ClientConfig{Provider: prov})
+	if transport.Provider == nil {
+		_ = store.SetStatus(id, ReviewStatusFailed)
+		return silentErr(fmt.Errorf("runtime transport unavailable for provider %q", transport.Selection.Provider), "init bridge")
+	}
 
 	var opts []sightLib.Option
 	if reviewRunModel != "" {
@@ -104,7 +114,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		opts = append(opts, sightLib.WithConcerns(concerns...))
 	}
 
-	bridge := hawkSight.NewBridge(eyrieClient, prov, opts...)
+	bridge := hawkSight.NewBridge(types.WrapClientProvider(transport.Provider), transport.Selection.Provider, opts...)
 	if !bridge.Ready() {
 		_ = store.SetStatus(id, ReviewStatusFailed)
 		return silentErr(fmt.Errorf("sight bridge not ready"), "init bridge")

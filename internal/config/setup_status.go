@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
 // SetupState is a single evaluation of first-run /config requirements.
@@ -21,7 +21,7 @@ func EvaluateSetup(ctx context.Context) SetupState {
 		ctx = context.Background()
 	}
 	PrepareCredentialDiscovery(ctx)
-	return evaluateSetupFrom(hasConfiguredDeployment(ctx), HasSelectedModel())
+	return evaluateSetupFrom(runtime.HasConfiguredDeployment(ctx), HasSelectedModel())
 }
 
 // EvaluateSetupCached uses the in-memory credential snapshot (fast; for TUI hot paths).
@@ -40,7 +40,8 @@ func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	}
 	switch {
 	case !hasCreds:
-		// Splash uses footer "Press Enter to set up and start" only — no duplicate line here.
+		// Splash uses footer guidance only until credentials exist.
+		st.Hint = ""
 	case !hasModel:
 		st.Hint = "Almost ready: /config → finish setup"
 	}
@@ -52,24 +53,7 @@ func HasConfiguredDeployment(ctx context.Context) bool {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	PrepareCredentialDiscovery(ctx)
-	return hasConfiguredDeployment(ctx)
-}
-
-func hasConfiguredDeployment(ctx context.Context) bool {
-	RefreshConfigCredSnapshot(ctx)
-	if hasConfiguredDeploymentCached(ctx) {
-		return true
-	}
-	env := eyriecfg.DiscoveryEnvMap(ctx)
-	if len(env) > 0 {
-		for _, v := range env {
-			if strings.TrimSpace(v) != "" {
-				return true
-			}
-		}
-	}
-	return false
+	return runtime.HasConfiguredDeployment(ctx)
 }
 
 // HasSelectedModel reports whether eyrie provider.json has a selected model.

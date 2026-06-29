@@ -697,11 +697,10 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	m.session.SetModel(modelID)
 	if gw := strings.TrimSpace(m.configModelProvider); gw != "" {
 		_ = hawkconfig.SetGlobalSetting("provider", gw)
-		m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(gw))
 	} else if prov := hawkconfig.ProviderOfModel(modelID); prov != "" {
 		_ = hawkconfig.SetGlobalSetting("provider", prov)
-		m.session.SetProvider(hawkconfig.NormalizeProviderForEngine(prov))
 	}
+	m.syncSessionSelection()
 	next, cmd := m.rebuildSessionTransport()
 	next.invalidateConnStatus()
 	next = next.stopConfigModelSearch(true)

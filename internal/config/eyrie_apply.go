@@ -2,11 +2,10 @@ package config
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/setup"
 )
 
@@ -14,14 +13,7 @@ import (
 func ApplyEyrieCredentialsForProvider(ctx context.Context, providerID string) (*setup.ApplyCredentialsResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	PrepareCredentialDiscovery(ctx)
-	if providerID == ProviderXiaomiTokenPlan {
-		ApplyXiaomiTokenPlanRegionEnv(ctx)
-	}
-	if providerID == ProviderZAICoding {
-		ApplyZAIRegionEnv(ctx)
-	}
-	result, err := setup.ApplyCredentialsForProvider(ctx, providerID, eyriecfg.DiscoveryCredentials(ctx))
+	result, err := runtime.ApplyCredentialsForProvider(ctx, providerID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,33 +38,9 @@ func ApplyEyrieCredentials(ctx context.Context) (*setup.ApplyCredentialsResult, 
 func RefreshGatewayCatalog(ctx context.Context, providerID string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	PrepareCredentialDiscovery(ctx)
-	if providerID == ProviderXiaomiTokenPlan {
-		ApplyXiaomiTokenPlanRegionEnv(ctx)
-	}
-	if providerID == ProviderZAICoding {
-		ApplyZAIRegionEnv(ctx)
-	}
-	result, err := setup.DiscoverProviderCatalog(ctx, providerID, eyriecfg.DiscoveryCredentials(ctx))
-	if err != nil {
-		return "", err
-	}
-	n := 0
-	if result.Compiled != nil {
-		n = len(catalog.ModelEntriesForProvider(result.Compiled, providerID))
-	}
-	return fmt.Sprintf("Refreshed %s (%d models)", providerID, n), nil
+	return runtime.RefreshGatewayCatalog(ctx, providerID)
 }
 
 func FormatApplyCredentialsSummary(result *setup.ApplyCredentialsResult) string {
-	if result == nil || result.Catalog == nil || result.Catalog.Compiled == nil {
-		return "Eyrie credentials applied"
-	}
-	nModels := len(result.Catalog.Compiled.ModelsByID)
-	nDeps := 0
-	if result.ProviderConfig != nil {
-		nDeps = len(result.ProviderConfig.Deployments)
-	}
-	return fmt.Sprintf("Eyrie: %d models, %d deployments configured, routing updated → %s",
-		nModels, nDeps, result.ProviderConfigPath)
+	return runtime.FormatApplyCredentialsSummary(result)
 }
