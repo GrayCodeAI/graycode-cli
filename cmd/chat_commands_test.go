@@ -52,6 +52,7 @@ func TestHandleCommandAddDir(t *testing.T) {
 }
 
 func TestLocalSlashCommands(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	version = "test-version"
 	sess := engine.NewSession("openai", "gpt-4o", "base", tool.NewRegistry(tool.LSTool{}))
 	m := &chatModel{
@@ -80,6 +81,7 @@ func TestLocalSlashCommands(t *testing.T) {
 }
 
 func TestDiagnosticSummaries(t *testing.T) {
+	preserveCLICompilerVersionState(t)
 	version = "test-version"
 	settings := hawkconfig.Settings{
 		Provider: "openai",
