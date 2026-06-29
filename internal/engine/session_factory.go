@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/runtime"
@@ -14,7 +15,7 @@ import (
 func transportBoolPtr(v bool) *bool { return &v }
 
 // BuildChatClient returns an LLM client and whether deployment routing is active.
-func BuildChatClient(ctx context.Context, selection runtime.SelectionState, legacyProvider string) (ChatClient, string, bool) {
+func BuildChatClient(ctx context.Context, selection runtime.SelectionState, legacyProvider string) (ChatClient, string, bool, error) {
 	provider := strings.TrimSpace(selection.Provider)
 	if provider == "" {
 		provider = legacyProvider
@@ -33,16 +34,20 @@ func BuildChatClient(ctx context.Context, selection runtime.SelectionState, lega
 		if label == "" {
 			label = provider
 		}
-		return NewProviderChatClient(types.WrapClientProvider(transport.Provider)), label, transport.Selection.DeploymentRouting
+		return NewProviderChatClient(types.WrapClientProvider(transport.Provider)), label, transport.Selection.DeploymentRouting, nil
 	}
-	return NewProviderChatClient(types.NewLazyChatProvider(&types.ClientConfig{
-		Provider: provider,
-	})), provider, false
+	if err != nil {
+		return nil, provider, false, fmt.Errorf("eyrie transport: %w", err)
+	}
+	return nil, provider, false, fmt.Errorf("eyrie transport: no provider resolved for %q", provider)
 }
 
 // NewHawkSession constructs a Session using an engine-resolved selection.
 func NewHawkSession(ctx context.Context, selection runtime.SelectionState, provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	chat, label, deploy := BuildChatClient(ctx, selection, provider)
+	chat, label, deploy, err := BuildChatClient(ctx, selection, provider)
+	if err != nil {
+		chat = NewUnavailableChatClient(err)
+	}
 	resolvedModel := strings.TrimSpace(selection.Model)
 	if resolvedModel == "" {
 		resolvedModel = model
@@ -55,7 +60,10 @@ func RebuildSessionTransport(ctx context.Context, s *Session, selection runtime.
 	if s == nil {
 		return errors.New("session is nil")
 	}
-	chat, label, deploy := BuildChatClient(ctx, selection, legacyProvider)
+	chat, label, deploy, err := BuildChatClient(ctx, selection, legacyProvider)
+	if err != nil {
+		return err
+	}
 	s.ReattachTransport(chat, label, deploy)
 	return nil
 }

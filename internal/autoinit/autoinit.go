@@ -99,8 +99,8 @@ func HasRun(root string) bool {
 //  4. Otherwise                            -> run, then mark.
 //
 // The marker is written whenever a run is attempted (even on runner error) so
-// a failing analysis is not retried on every invocation. MaybeRun never
-// returns an error for gating decisions; it only propagates a runner error.
+// a failing analysis is not retried on every invocation. Marker write failures
+// are returned before running because otherwise auto-init can retry forever.
 func MaybeRun(ctx context.Context, opts Options) (Decision, error) {
 	if opts.Root == "" {
 		return Decision{Skipped: "no project root"}, nil
@@ -121,13 +121,17 @@ func MaybeRun(ctx context.Context, opts Options) (Decision, error) {
 	if !opts.Force && HasContext(opts.Root) {
 		// Project already has context: record the marker so we never probe
 		// again, and skip the analysis.
-		_ = writeMarker(opts.Root)
+		if err := writeMarker(opts.Root); err != nil {
+			return Decision{Skipped: "project already has context"}, err
+		}
 		return Decision{Skipped: "project already has context"}, nil
 	}
 
 	// Write the marker before running so a crash mid-analysis does not cause a
 	// retry storm on every subsequent invocation.
-	_ = writeMarker(opts.Root)
+	if err := writeMarker(opts.Root); err != nil {
+		return Decision{Skipped: "marker write failed"}, err
+	}
 
 	if opts.Run == nil {
 		return Decision{Skipped: "no runner configured"}, nil
