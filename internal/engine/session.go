@@ -246,7 +246,7 @@ func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
 func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string, registry *tool.Registry, deploymentRouting bool) *Session {
 	if provider == "" || model == "" {
-		slog.Warn("NewSessionWithClient called with empty provider or model; runtime errors may follow", "provider", provider, "model", model)
+		slog.Debug("NewSessionWithClient called with empty provider or model", "provider", provider, "model", model)
 	}
 	pe := NewPermissionEngine()
 	log := logger.Default()

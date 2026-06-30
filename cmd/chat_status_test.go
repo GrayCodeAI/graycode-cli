@@ -194,16 +194,30 @@ func TestWelcomeDockerRunning_States(t *testing.T) {
 
 func TestBuildWelcomeMessage_IncludesDockerWhenEnabled(t *testing.T) {
 	running := true
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, 24, &running)
+	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, &running)
 	if !strings.Contains(msg, "Docker") {
 		t.Fatalf("expected Docker indicator in welcome, got snippet without it")
 	}
 }
 
 func TestBuildWelcomeMessage_OmitsDockerWhenDisabled(t *testing.T) {
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, 24, nil)
+	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, nil)
 	if strings.Contains(msg, "Docker") {
 		t.Fatal("expected no Docker indicator when container mode disabled")
+	}
+}
+
+func TestContainerFooterLeft_HostModeCopy(t *testing.T) {
+	sess := &engine.Session{}
+	bold, dim := containerFooterLeft(chatModel{session: sess, containerEnabled: false})
+	if bold != "Host mode:" {
+		t.Fatalf("bold = %q, want Host mode:", bold)
+	}
+	if !strings.Contains(dim, "commands run on your machine") {
+		t.Fatalf("dim = %q, want host execution hint", dim)
+	}
+	if !strings.Contains(dim, "ask before tools") {
+		t.Fatalf("dim = %q, want approval hint", dim)
 	}
 }
 
@@ -240,7 +254,7 @@ func TestShowWelcomeBanner_WithMessages(t *testing.T) {
 
 func TestBuildWelcomeMessage_UsesDisplayVersion(t *testing.T) {
 	SetVersion("dev")
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, false, 80, 24, nil)
+	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, nil)
 	if strings.Contains(msg, "vdev") {
 		t.Fatal("welcome should not show vdev; DisplayVersion should read VERSION file or dev")
 	}
