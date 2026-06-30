@@ -1,6 +1,10 @@
 package routing
 
-import "strings"
+import (
+	"strings"
+
+	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
+)
 
 // Role identifies the purpose of a model within a multi-model workflow.
 type Role string
@@ -24,73 +28,35 @@ type ModelRoles struct {
 // DefaultRoles returns a ModelRoles where every role uses primaryModel except
 // Commit, which defaults to the cheapest available model from the catalog.
 func DefaultRoles(primaryModel string) ModelRoles {
-	commit := CheapestForProvider(providerOf(primaryModel), primaryModel)
-	return ModelRoles{
-		Planner:  primaryModel,
-		Coder:    primaryModel,
-		Reviewer: primaryModel,
-		Commit:   commit,
-	}
+	return fromEyrieRoles(eycatalog.DefaultModelRolesV1(eyrieCatalogV1(), primaryModel))
 }
 
 // ModelForRole returns the model name assigned to role, falling back to the
 // Coder model (primary) if the role-specific field is empty.
 func (r ModelRoles) ModelForRole(role Role) string {
-	var m string
-	switch role {
-	case RolePlanner:
-		m = r.Planner
-	case RoleCoder:
-		m = r.Coder
-	case RoleReviewer:
-		m = r.Reviewer
-	case RoleCommit:
-		m = r.Commit
-	}
-	if strings.TrimSpace(m) == "" {
-		if strings.TrimSpace(r.Coder) != "" {
-			return r.Coder
-		}
-		return primaryModel()
-	}
-	return m
+	return eycatalog.ModelForRoleV1(eyrieCatalogV1(), toEyrieRoles(r), eycatalog.ModelRole(role))
 }
 
 // CheapestForProvider queries eyrie's catalog at runtime and returns the
 // cheapest model for the given provider. No hardcoded model names.
 func CheapestForProvider(provider, fallback string) string {
-	models := ByProvider(provider)
-	if len(models) == 0 {
-		return fallback
-	}
-	cheapest := models[0]
-	for _, m := range models[1:] {
-		if m.InputPrice > 0 && m.InputPrice < cheapest.InputPrice {
-			cheapest = m
-		}
-	}
-	if cheapest.Name != "" {
-		return cheapest.Name
-	}
-	return fallback
+	return eycatalog.CheapestModelForProviderV1(eyrieCatalogV1(), provider, fallback)
 }
 
-// providerOf extracts the provider from a model name by looking it up in the catalog.
-func providerOf(modelName string) string {
-	info, ok := Find(modelName)
-	if ok {
-		return canonicalProvider(info.Provider)
+func toEyrieRoles(r ModelRoles) eycatalog.ModelRoleAssignments {
+	return eycatalog.ModelRoleAssignments{
+		Planner:  strings.TrimSpace(r.Planner),
+		Coder:    strings.TrimSpace(r.Coder),
+		Reviewer: strings.TrimSpace(r.Reviewer),
+		Commit:   strings.TrimSpace(r.Commit),
 	}
-	return ""
 }
 
-// primaryModel returns a reasonable fallback by querying what's available.
-func primaryModel() string {
-	providers := AllProviders()
-	for _, p := range providers {
-		if m := DefaultModel(p); m != "" {
-			return m
-		}
+func fromEyrieRoles(r eycatalog.ModelRoleAssignments) ModelRoles {
+	return ModelRoles{
+		Planner:  strings.TrimSpace(r.Planner),
+		Coder:    strings.TrimSpace(r.Coder),
+		Reviewer: strings.TrimSpace(r.Reviewer),
+		Commit:   strings.TrimSpace(r.Commit),
 	}
-	return ""
 }
