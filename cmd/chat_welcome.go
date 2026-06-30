@@ -57,11 +57,15 @@ func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	if height <= 0 {
 		height = 24
 	}
-	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, blinkClosed, width, height, m.welcomeDockerRunning())
+	skillsCount := 0
+	if m.pluginRuntime != nil {
+		skillsCount = len(m.pluginRuntime.SmartSkills)
+	}
+	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning())
 }
 
 // buildWelcomeMessage renders the branded inline HAWK welcome block.
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, blinkClosed bool, width, height int, dockerRunning *bool) string {
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
 	// Brand orange — used for both the HAWK wordmark and the mascot so
 	// the welcome screen stays on theme.
 	logoC := "\033[38;2;255;94;14m" // brand orange — WELCOME TO + HAWK wordmark
@@ -145,6 +149,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 	setup := hawkconfig.EvaluateSetupCached(context.Background())
 	needsSetup := setup.NeedsSetup
+	modeGuidance := welcomeModeGuidance(dockerRunning, tight)
 	if needsSetup {
 		if hint := setup.Hint; hint != "" {
 			b.WriteByte('\n')
@@ -152,19 +157,22 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		}
 	}
 	if needsSetup {
-		quick := "Quick start: /config to connect Hawk · /help for commands"
+		quick := "Quick start: /config to connect a provider and pick a model · /help for commands"
 		b.WriteByte('\n')
 		b.WriteString(center(len(quick), boldC+quick+rst) + "\n")
-		example := "After setup, try: explain this repo · fix the failing test · add tests for cmd/eval"
+		example := "Then ask: explain this repo · fix the failing test · add tests for cmd/eval"
 		if tight {
-			example = "After setup, try: explain this repo · fix the failing test"
+			example = "Then ask: explain this repo · fix the failing test"
 		}
 		b.WriteString(center(runewidth.StringWidth(example), dimC+example+rst) + "\n")
+		if modeGuidance != "" {
+			b.WriteString(center(runewidth.StringWidth(modeGuidance), dimC+modeGuidance+rst) + "\n")
+		}
 	}
 	if !needsSetup {
-		tip := "TIP: /help commands · /model to switch · /config to adjust setup"
+		tip := "Ready: ask Hawk to inspect, edit, or run code · /config and /help stay available"
 		if tight {
-			tip = "TIP: /help · /model · /config"
+			tip = "Ready: ask Hawk to work · /help · /config"
 		}
 		b.WriteByte('\n')
 		b.WriteString(center(len(tip), boldC+tip+rst) + "\n")
@@ -177,9 +185,11 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 			shortcutsPlain = "PgUp/Dn scroll chat · Up/Dn history · Tab scrollback · /home · /ctx · ctrl+N · ctrl+L"
 			b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
 		}
+		if modeGuidance != "" {
+			b.WriteString(center(runewidth.StringWidth(modeGuidance), dimC+modeGuidance+rst) + "\n")
+		}
 	}
 
-	skillsCount := 0
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
 	agentsOK := hawkconfig.LoadAgentsMD() != ""
 
@@ -208,6 +218,26 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	}
 
 	return b.String()
+}
+
+func welcomeModeGuidance(dockerRunning *bool, tight bool) string {
+	switch {
+	case dockerRunning == nil:
+		if tight {
+			return "Host mode runs commands locally · /permissions changes approvals"
+		}
+		return "Host mode runs commands on your machine · /permissions changes approvals"
+	case *dockerRunning:
+		if tight {
+			return "Container mode isolates tool execution · /permissions changes approvals"
+		}
+		return "Container mode isolates tool execution when available · /permissions changes approvals"
+	default:
+		if tight {
+			return "Docker unavailable, so commands run locally · /permissions changes approvals"
+		}
+		return "Docker is unavailable, so Hawk runs commands on your machine · /permissions changes approvals"
+	}
 }
 
 func actLine(saved *session.Session, sessionID string) string {

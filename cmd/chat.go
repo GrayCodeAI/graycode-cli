@@ -123,7 +123,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:ui-init")
 
 	startup.MarkPhase("newChatModel:effectiveModelAndProvider")
-	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+	selection := resolveSelection(settings)
+	effectiveModel, effectiveProvider := selection.Model, selection.Provider
 	startup.EndPhase("newChatModel:effectiveModelAndProvider")
 
 	startup.MarkPhase("newChatModel:defaultRegistry")
@@ -134,7 +135,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:defaultRegistry")
 
 	startup.MarkPhase("newChatModel:newHawkSession")
-	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess := newHawkSessionFromSelection(selection, systemPrompt, registry)
 	startup.EndPhase("newChatModel:newHawkSession")
 
 	startup.MarkPhase("newChatModel:configureSession")
@@ -299,7 +300,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		ok := sandbox.DockerAvailable()
 		dockerRunning = &ok
 	}
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, false, initWidth, initHeight, dockerRunning)
+	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, dockerRunning)
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 
 	// Wire permission system
@@ -446,6 +447,7 @@ func autoIndexCodegraph() {
 }
 
 func runChat() error {
+	startup.Reset()
 	startBackgroundCatalogRefresh(context.Background())
 
 	// Auto-index codegraph in background if .codegraph exists

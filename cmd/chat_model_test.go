@@ -3,11 +3,17 @@ package cmd
 import (
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/viewport"
 )
 
 func newTestChatModel() *chatModel {
@@ -16,6 +22,8 @@ func newTestChatModel() *chatModel {
 	sess.SetTestClient(engine.NewMockClientForTest())
 
 	m := &chatModel{
+		input:          textarea.New(),
+		viewport:       viewport.New(120, 12),
 		session:        sess,
 		registry:       tool.NewRegistry(),
 		partial:        &strings.Builder{},
@@ -27,8 +35,25 @@ func newTestChatModel() *chatModel {
 		termCtx:        sessioncapture.NewTerminalContext(),
 		ghostText:      NewGhostText(),
 		inputIndicator: &InputIndicator{},
+		hintsLoader:    engine.NewHintsLoader(),
+		selfImprover:   engine.NewSelfImprover(),
+		codingSoul:     engine.LoadCodingSoul(),
+		brailleSpinner: NewBrailleSpinner(SpinnerHawk, "Thinking"),
 	}
 	return m
+}
+
+func isolateChatCommandSweepEnv(t *testing.T) {
+	t.Helper()
+	root := t.TempDir()
+	storage.SetTestDirs(t, root)
+	isolateCredentialHome(t)
+	hawkconfig.InvalidateConfigUICache()
+	credentials.SetDefaultStore(&credentials.MapStore{})
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
 }
 
 func TestChatModel_SlashHelp(t *testing.T) {
@@ -150,7 +175,6 @@ func TestChatModel_SlashUnknown(t *testing.T) {
 }
 
 func TestChatModel_ManyCommands(t *testing.T) {
-	t.Skip("flaky: race condition with global state access") // TODO: https://github.com/GrayCodeAI/hawk/issues/26
 	commands := []string{
 		"/context", "/env", "/hooks", "/stats",
 		"/compact", "/diff", "/branch", "/vim",
@@ -187,11 +211,20 @@ func TestChatModel_ManyCommands(t *testing.T) {
 
 	for _, cmd := range commands {
 		t.Run(cmd, func(t *testing.T) {
+			isolateChatCommandSweepEnv(t)
 			m := newTestChatModel()
 			result, _ := m.handleCommand(cmd)
 			if result == nil {
 				t.Errorf("%s returned nil model", cmd)
 			}
+			cm := requireChatModel(t, result)
+			if cm.cancel != nil {
+				cm.cancel()
+			}
+			if cm.loopCancel != nil {
+				cm.loopCancel()
+			}
+			time.Sleep(10 * time.Millisecond)
 		})
 	}
 }
@@ -224,8 +257,7 @@ func TestChatModel_SlashExport(t *testing.T) {
 }
 
 func TestChatModel_StreamingCommands(t *testing.T) {
-	t.Skip("flaky: race condition with startStream goroutines") // TODO: https://github.com/GrayCodeAI/hawk/issues/27
-	// These trigger startStream but progRef is nil-safe so they won't panic
+	// These trigger startStream; cancel promptly so the test doesn't leak workers.
 	commands := []string{
 		"/doctor", "/commit", "/review",
 		"/summary", "/security-review",
@@ -235,12 +267,18 @@ func TestChatModel_StreamingCommands(t *testing.T) {
 
 	for _, cmd := range commands {
 		t.Run(cmd, func(t *testing.T) {
+			isolateChatCommandSweepEnv(t)
 			m := newTestChatModel()
 			m.session.AddUser("some context for the command")
 			result, _ := m.handleCommand(cmd)
 			if result == nil {
 				t.Errorf("%s returned nil model", cmd)
 			}
+			cm := requireChatModel(t, result)
+			if cm.cancel != nil {
+				cm.cancel()
+			}
+			time.Sleep(10 * time.Millisecond)
 		})
 	}
 }

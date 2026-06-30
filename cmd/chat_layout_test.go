@@ -37,7 +37,7 @@ func TestView_PinsWelcomeAboveViewport(t *testing.T) {
 	if !strings.HasPrefix(got, "HAWK LOGO") {
 		t.Fatalf("welcome should be pinned at top, got prefix: %q", got[:min(40, len(got))])
 	}
-	if !strings.Contains(got, "Default") && !strings.Contains(got, "Container:") {
+	if !strings.Contains(got, "Host mode:") && !strings.Contains(got, "Container:") {
 		t.Fatalf("footer should be present at bottom")
 	}
 }
