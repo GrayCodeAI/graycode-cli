@@ -227,14 +227,6 @@ func WrapClientProvider(p client.Provider) ChatProvider {
 	return &providerAdapter{inner: p}
 }
 
-// NewLazyChatProvider builds a lazy Eyrie provider behind Hawk's transport seam.
-func NewLazyChatProvider(cfg *ClientConfig) ChatProvider {
-	if cfg == nil {
-		return nil
-	}
-	return WrapClientProvider(client.NewLazyProvider(ToClientConfig(cfg)))
-}
-
 func StreamChatWithContinuation(ctx context.Context, p ChatProvider, messages []EyrieMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error) {
 	if p == nil {
 		return nil, nil
