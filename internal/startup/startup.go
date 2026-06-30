@@ -18,6 +18,13 @@ var (
 	start    = time.Now()
 )
 
+func Reset() {
+	phasesMu.Lock()
+	defer phasesMu.Unlock()
+	phases = nil
+	start = time.Now()
+}
+
 func MarkPhase(name string) {
 	phasesMu.Lock()
 	defer phasesMu.Unlock()

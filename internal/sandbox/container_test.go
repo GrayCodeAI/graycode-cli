@@ -3,6 +3,7 @@ package sandbox
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -11,6 +12,27 @@ import (
 func TestDockerAvailable(t *testing.T) {
 	// Just verify the function doesn't panic
 	_ = DockerAvailable()
+}
+
+func TestDockerAvailable_UsesShortLivedCache(t *testing.T) {
+	resetDockerAvailabilityCache()
+	t.Cleanup(resetDockerAvailabilityCache)
+
+	var calls atomic.Int32
+	dockerAvailabilityProbe = func() bool {
+		calls.Add(1)
+		return true
+	}
+
+	if !DockerAvailable() {
+		t.Fatal("expected cached probe to return true")
+	}
+	if !DockerAvailable() {
+		t.Fatal("expected second cached probe to return true")
+	}
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("docker availability probe calls = %d, want 1", got)
+	}
 }
 
 func TestContainerSandbox_New(t *testing.T) {

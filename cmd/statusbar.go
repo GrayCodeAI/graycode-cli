@@ -183,7 +183,7 @@ func renderContainerFooterDetail(detail string, sess *engine.Session) string {
 // containerFooterLeft is the bold + dim text on the top footer row (left side).
 func containerFooterLeft(m chatModel) (bold, dim string) {
 	if !m.containerEnabled {
-		return permissionModeLabel(m.session), permissionModeHint(m.session)
+		return "Host mode:", hostModeHint(m.session)
 	}
 	bold = "Container:"
 	if m.containerErr != nil {
@@ -203,6 +203,24 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 	return bold, " starting…"
 }
 
+func hostModeHint(sess *engine.Session) string {
+	if sess == nil || sess.Perm == nil {
+		return " commands run on your machine · ask before tools"
+	}
+	switch sess.Perm.Mode {
+	case engine.PermissionModeBypassPermissions:
+		return " commands run on your machine · tools auto-approved"
+	case engine.PermissionModeAcceptEdits:
+		return " commands run on your machine · auto-approve edits"
+	case engine.PermissionModeDontAsk:
+		return " commands run on your machine · tools blocked"
+	case engine.PermissionModePlan:
+		return " commands run on your machine · read-only exploration"
+	default:
+		return " commands run on your machine · ask before tools"
+	}
+}
+
 // permissionModeLabel returns the display label for the current permission mode.
 func permissionModeLabel(sess *engine.Session) string {
 	if sess == nil || sess.Perm == nil {
@@ -219,25 +237,6 @@ func permissionModeLabel(sess *engine.Session) string {
 		return "Plan (Read Only)"
 	default:
 		return "Default"
-	}
-}
-
-// permissionModeHint returns a short description for the current permission mode.
-func permissionModeHint(sess *engine.Session) string {
-	if sess == nil || sess.Perm == nil {
-		return " - tools require approval"
-	}
-	switch sess.Perm.Mode {
-	case engine.PermissionModeBypassPermissions:
-		return " - all tools auto-approved"
-	case engine.PermissionModeAcceptEdits:
-		return " - file edits auto-approved"
-	case engine.PermissionModeDontAsk:
-		return " - all tools blocked"
-	case engine.PermissionModePlan:
-		return " - read-only exploration"
-	default:
-		return " - tools require approval"
 	}
 }
 

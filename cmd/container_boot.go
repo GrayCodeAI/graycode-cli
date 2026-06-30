@@ -29,10 +29,13 @@ func shouldUseContainer() bool {
 	if noContainer {
 		return false
 	}
+	if containerMode {
+		return true
+	}
 	if v := strings.TrimSpace(os.Getenv("HAWK_NO_CONTAINER")); v == "1" || strings.EqualFold(v, "true") {
 		return false
 	}
-	return true
+	return sandbox.DockerAvailable()
 }
 
 // bootContainerCmd starts the container in the background and sends status
