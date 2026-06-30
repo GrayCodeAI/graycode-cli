@@ -162,20 +162,31 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 	return settings, nil
 }
 
-func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
-	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+func resolveSelection(settings hawkconfig.Settings) runtime.SelectionState {
+	return runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
 		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
 	})
+}
+
+func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
+	selection := resolveSelection(settings)
 	return selection.Model, selection.Provider
 }
 
+func newHawkSessionFromSelection(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
+	return engine.NewHawkSession(context.Background(), selection, selection.Provider, selection.Model, systemPrompt, registry)
+}
+
 func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveModel, systemPrompt string, registry *tool.Registry) *engine.Session {
-	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
-		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
-		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
-	})
-	return engine.NewHawkSession(context.Background(), selection, effectiveProvider, effectiveModel, systemPrompt, registry)
+	selection := resolveSelection(settings)
+	if strings.TrimSpace(selection.Provider) == "" {
+		selection.Provider = effectiveProvider
+	}
+	if strings.TrimSpace(selection.Model) == "" {
+		selection.Model = effectiveModel
+	}
+	return newHawkSessionFromSelection(selection, systemPrompt, registry)
 }
 
 func firstNonEmptyTrimmed(values ...string) string {
@@ -212,7 +223,6 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 			sess.SetAPIKey(providerName, key)
 		}
 	}
-	sess.SetAPIKeys(hawkconfig.LoadAPIKeysFromStore())
 
 	for _, spec := range settings.AutoAllow {
 		sess.PermSvc().Memory().AllowSpec(spec)

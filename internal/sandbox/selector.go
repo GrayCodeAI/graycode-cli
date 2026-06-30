@@ -4,6 +4,8 @@ import (
 	"context"
 	"os/exec"
 	"runtime"
+	"sync"
+	"time"
 )
 
 // IsolationLevel represents the desired sandbox strength.
@@ -94,9 +96,37 @@ func bwrapAvailable() bool {
 	return err == nil
 }
 
+const dockerAvailabilityTTL = 2 * time.Second
+
+var (
+	dockerAvailabilityMu      sync.Mutex
+	dockerAvailabilityChecked time.Time
+	dockerAvailabilityCached  bool
+	dockerAvailabilityProbe   = probeDockerAvailable
+)
+
 func dockerAvailable() bool {
+	dockerAvailabilityMu.Lock()
+	defer dockerAvailabilityMu.Unlock()
+	if !dockerAvailabilityChecked.IsZero() && time.Since(dockerAvailabilityChecked) < dockerAvailabilityTTL {
+		return dockerAvailabilityCached
+	}
+	dockerAvailabilityCached = dockerAvailabilityProbe()
+	dockerAvailabilityChecked = time.Now()
+	return dockerAvailabilityCached
+}
+
+func probeDockerAvailable() bool {
 	cmd := exec.CommandContext(context.Background(), "docker", "info")
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run() == nil
+}
+
+func resetDockerAvailabilityCache() {
+	dockerAvailabilityMu.Lock()
+	defer dockerAvailabilityMu.Unlock()
+	dockerAvailabilityChecked = time.Time{}
+	dockerAvailabilityCached = false
+	dockerAvailabilityProbe = probeDockerAvailable
 }

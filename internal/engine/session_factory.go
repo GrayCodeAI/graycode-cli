@@ -12,23 +12,17 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-func transportBoolPtr(v bool) *bool { return &v }
-
 // BuildChatClient returns an LLM client and whether deployment routing is active.
 func BuildChatClient(ctx context.Context, selection runtime.SelectionState, legacyProvider string) (ChatClient, string, bool, error) {
 	provider := strings.TrimSpace(selection.Provider)
 	if provider == "" {
 		provider = legacyProvider
 	}
-	transport, err := runtime.ResolveChatTransport(ctx, runtime.ChatTransportOpts{
-		Selection: runtime.SelectionOpts{
-			ProviderOverride: provider,
-			ModelOverride:    selection.Model,
-			// Preserve the engine-resolved routing decision. Transport
-			// construction itself remains in Eyrie.
-			DeploymentRoutingOverride: transportBoolPtr(selection.DeploymentRouting),
-		},
-	})
+	resolvedSelection := selection
+	if strings.TrimSpace(resolvedSelection.Provider) == "" {
+		resolvedSelection.Provider = provider
+	}
+	transport, err := runtime.ResolveChatTransportFromSelection(ctx, resolvedSelection)
 	if err == nil && transport.Provider != nil {
 		label := strings.TrimSpace(transport.Selection.Provider)
 		if label == "" {
