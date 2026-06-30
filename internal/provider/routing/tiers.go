@@ -8,47 +8,18 @@ import (
 )
 
 // CostTier is a relative cost band for cascade routing (cheap / mid / expensive).
-type CostTier int
+type CostTier = eycatalog.ModelCostTier
 
 const (
-	CostTierCheap CostTier = iota
-	CostTierMid
-	CostTierExpensive
+	CostTierCheap     = eycatalog.CostTierCheap
+	CostTierMid       = eycatalog.CostTierMid
+	CostTierExpensive = eycatalog.CostTierExpensive
 )
 
-// CostTierOf resolves a model's cost tier from eyrie catalog data (family and
-// within-provider pricing). Unknown models default to mid-tier.
+// CostTierOf resolves a model's cost tier from eyrie catalog policy.
 func CostTierOf(modelName string) CostTier {
-	if tier, ok := tierFromCatalogFamily(modelName); ok {
-		return mapEyrieTier(tier)
-	}
-	if tier, ok := tierFromCatalogPricing(modelName); ok {
-		return tier
-	}
-	return tierFromName(modelName)
+	return eycatalog.ModelCostTierOf(eyrieCatalogV1(), modelName)
 }
-
-// tierFromName infers cost tier from well-known model name patterns.
-// This is a fallback when the eyrie catalog is unavailable or incomplete.
-func tierFromName(modelName string) CostTier {
-	lower := strings.ToLower(strings.TrimSpace(modelName))
-	for _, pat := range cheapPatterns {
-		if strings.Contains(lower, pat) {
-			return CostTierCheap
-		}
-	}
-	for _, pat := range expensivePatterns {
-		if strings.Contains(lower, pat) {
-			return CostTierExpensive
-		}
-	}
-	return CostTierMid
-}
-
-var (
-	cheapPatterns     = []string{"haiku", "mini", "flash", "lite", "nano", "micro", "small", "tiny"}
-	expensivePatterns = []string{"opus", "pro", "max", "ultra", "heavy", "large", "o1", "o3"}
-)
 
 // TierModels returns eyrie-preferred model IDs for haiku, sonnet, and opus tiers.
 func TierModels(provider string) (haiku, sonnet, opus string) {
@@ -122,12 +93,9 @@ func catalogModelNames(compiled *eycatalog.CompiledCatalogV1) []string {
 // DefaultHealthTiers builds complexity-based routing tiers from the eyrie catalog.
 func DefaultHealthTiers(primaryProvider string) []ModelTier {
 	primaryProvider = canonicalProvider(primaryProvider)
-	if primaryProvider == "" {
-		primaryProvider = "anthropic"
-	}
-	light := tierModelList(primaryProvider, eycatalog.TierHaiku, "openai", "gemini")
-	standard := tierModelList(primaryProvider, eycatalog.TierSonnet, "openai", "gemini")
-	heavy := tierModelList(primaryProvider, eycatalog.TierOpus, "openai", "gemini")
+	light := tierModelList(primaryProvider, eycatalog.TierHaiku)
+	standard := tierModelList(primaryProvider, eycatalog.TierSonnet)
+	heavy := tierModelList(primaryProvider, eycatalog.TierOpus)
 	return []ModelTier{
 		{Name: "light", Models: light, MaxComplexity: 10.0},
 		{Name: "standard", Models: standard, MaxComplexity: 30.0},
@@ -135,119 +103,26 @@ func DefaultHealthTiers(primaryProvider string) []ModelTier {
 	}
 }
 
-func tierModelList(primaryProvider string, tier eycatalog.ModelTier, extraProviders ...string) []string {
+func tierModelList(primaryProvider string, tier eycatalog.ModelTier) []string {
 	seen := map[string]bool{}
 	var out []string
-	add := func(m string) {
-		m = strings.TrimSpace(m)
-		if m != "" && !seen[m] {
-			seen[m] = true
-			out = append(out, m)
+	for _, model := range eycatalog.PreferredModelsForTierV1(eyrieCatalogV1(), primaryProvider, tier, 3) {
+		model = strings.TrimSpace(model)
+		if model == "" || seen[model] {
+			continue
 		}
-	}
-	add(PreferredModelForTier(primaryProvider, tier, ""))
-	for _, p := range extraProviders {
-		add(PreferredModelForTier(p, tier, ""))
+		seen[model] = true
+		out = append(out, model)
 	}
 	return out
 }
 
 // PreferredModelForTier returns the eyrie-preferred model for a provider and tier.
 func PreferredModelForTier(provider string, tier eycatalog.ModelTier, fallback string) string {
-	provider = canonicalProvider(provider)
-	if provider == "" {
-		return fallback
-	}
-	if m := eycatalog.GetPreferredProviderModel(provider, tier, nil); m != "" {
-		return m
-	}
-	return fallback
+	return eycatalog.PreferredProviderModelV1(eyrieCatalogV1(), provider, tier, fallback)
 }
 
 // MostExpensiveForProvider picks the highest input-priced model for a provider.
 func MostExpensiveForProvider(provider, fallback string) string {
-	models := ByProvider(canonicalProvider(provider))
-	if len(models) == 0 {
-		return fallback
-	}
-	best := models[0]
-	for _, m := range models[1:] {
-		if m.InputPrice > best.InputPrice {
-			best = m
-		}
-	}
-	if best.Name != "" {
-		return best.Name
-	}
-	return fallback
-}
-
-func mapEyrieTier(tier eycatalog.ModelTier) CostTier {
-	switch tier {
-	case eycatalog.TierHaiku:
-		return CostTierCheap
-	case eycatalog.TierOpus:
-		return CostTierExpensive
-	default:
-		return CostTierMid
-	}
-}
-
-func tierFromCatalogFamily(modelName string) (eycatalog.ModelTier, bool) {
-	compiled := eyrieCatalogV1()
-	if compiled == nil {
-		return "", false
-	}
-	canonical := modelName
-	if c, ok := compiled.CanonicalModelForAliasOrID(modelName); ok {
-		canonical = c
-	}
-	model := compiled.ModelsByID[canonical]
-	if model.ID == "" {
-		return "", false
-	}
-	switch strings.ToLower(strings.TrimSpace(model.Family)) {
-	case "haiku", "cheap", "lite", "flash", "mini":
-		return eycatalog.TierHaiku, true
-	case "opus", "pro", "max", "heavy", "ultra":
-		return eycatalog.TierOpus, true
-	case "sonnet", "standard", "balanced", "medium":
-		return eycatalog.TierSonnet, true
-	}
-	return "", false
-}
-
-func tierFromCatalogPricing(modelName string) (CostTier, bool) {
-	info, ok := Find(modelName)
-	if !ok || info.InputPrice <= 0 {
-		return 0, false
-	}
-	models := ByProvider(canonicalProvider(info.Provider))
-	if len(models) < 2 {
-		return 0, false
-	}
-
-	prices := make([]float64, 0, len(models))
-	seen := map[float64]bool{}
-	for _, m := range models {
-		if m.InputPrice <= 0 || seen[m.InputPrice] {
-			continue
-		}
-		seen[m.InputPrice] = true
-		prices = append(prices, m.InputPrice)
-	}
-	if len(prices) < 2 {
-		return 0, false
-	}
-	sort.Float64s(prices)
-
-	price := info.InputPrice
-	switch {
-	case price <= prices[0]:
-		return CostTierCheap, true
-	case price >= prices[len(prices)-1]:
-		return CostTierExpensive, true
-	default:
-		return CostTierMid, true
-	}
+	return eycatalog.MostExpensiveModelForProviderV1(eyrieCatalogV1(), provider, fallback)
 }

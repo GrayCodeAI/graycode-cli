@@ -57,6 +57,17 @@ func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelI
 	}
 }
 
+func fromEyrieEntry(entry catalog.ModelCatalogEntry, provider string) ModelInfo {
+	return ModelInfo{
+		Name:        entry.ID,
+		Provider:    provider,
+		ContextSize: entry.ContextWindow,
+		InputPrice:  entry.InputPricePer1M,
+		OutputPrice: entry.OutputPricePer1M,
+		Description: entry.DisplayName,
+	}
+}
+
 // Find looks up a model by name via eyrie's JSON catalog.
 func Find(name string) (ModelInfo, bool) {
 	if compiled := eyrieCatalogV1(); compiled != nil {
@@ -71,19 +82,13 @@ func Find(name string) (ModelInfo, bool) {
 
 // ByProvider returns all models for a given provider from eyrie's catalog.
 func ByProvider(provider string) []ModelInfo {
-	provider = canonicalProvider(provider)
+	provider = catalog.CanonicalProviderID(provider)
 	compiled := eyrieCatalogV1()
 	out := []ModelInfo{}
 	if compiled != nil {
-		modelIDs := make([]string, 0, len(compiled.ModelsByID))
-		for id, model := range compiled.ModelsByID {
-			if canonicalProvider(model.ProviderID) == provider {
-				modelIDs = append(modelIDs, id)
-			}
-		}
-		sort.Strings(modelIDs)
-		for _, id := range modelIDs {
-			out = append(out, fromEyrieV1(compiled.ModelsByID[id], firstOffering(compiled, id, "")))
+		entries := catalog.ModelEntriesForProvider(compiled, provider)
+		for _, entry := range entries {
+			out = append(out, fromEyrieEntry(entry, provider))
 		}
 	}
 	return out
@@ -104,26 +109,12 @@ func Recommended(provider string) (ModelInfo, bool) {
 
 // DefaultModel returns the first catalog model for a provider via eyrie JSON.
 func DefaultModel(provider string) string {
-	models := ByProvider(provider)
-	if len(models) > 0 {
-		return models[0].Name
-	}
-	return ""
+	return catalog.ProviderDefaultModelV1(eyrieCatalogV1(), provider, "")
 }
 
 // AllProviders returns all canonical model owner providers from eyrie's catalog.
 func AllProviders() []string {
-	seen := map[string]bool{}
-	var out []string
-	if compiled := eyrieCatalogV1(); compiled != nil {
-		for _, model := range compiled.ModelsByID {
-			provider := canonicalProvider(model.ProviderID)
-			if provider != "" && !seen[provider] {
-				seen[provider] = true
-				out = append(out, provider)
-			}
-		}
-	}
+	out := catalog.AllModelProvidersV1(eyrieCatalogV1())
 	sort.Strings(out)
 	return out
 }
@@ -147,13 +138,5 @@ func firstOffering(compiled *catalog.CompiledCatalogV1, canonicalModelID, deploy
 }
 
 func canonicalProvider(provider string) string {
-	switch provider {
-	case "gemini":
-		return "google"
-	case "grok":
-		return "xai"
-	// Z.AI uses zai_payg and zai_coding directly — no aliases.
-	default:
-		return provider
-	}
+	return catalog.CanonicalProviderID(provider)
 }

@@ -221,6 +221,39 @@ func TestNoDirectEyrieClientImportsOutsideAdapters(t *testing.T) {
 	}
 }
 
+// TestNoLazyProviderConstructionInHawk verifies Hawk does not construct lazy
+// provider transports directly. Provider/model transport resolution belongs in Eyrie.
+func TestNoLazyProviderConstructionInHawk(t *testing.T) {
+	root := repoRoot(t)
+	paths := []string{
+		filepath.Join(root, "internal"),
+		filepath.Join(root, "cmd"),
+	}
+
+	for _, dir := range paths {
+		files := parseGoFiles(t, dir)
+		for _, pf := range files {
+			rel := relPath(root, pf.Path)
+			if strings.HasSuffix(rel, "_test.go") {
+				continue
+			}
+			ast.Inspect(pf.File, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "NewLazyProvider" {
+					return true
+				}
+				pos := pf.FSet.Position(call.Pos())
+				t.Fatalf("forbidden eyrie lazy provider construction at %s:%d; use runtime.ResolveChatTransport", rel, pos.Line)
+				return true
+			})
+		}
+	}
+}
+
 // TestNoDirectSharedTypesImports verifies Hawk does not reintroduce the removed
 // legacy shared/types import path into production code.
 func TestNoDirectSharedTypesImports(t *testing.T) {
