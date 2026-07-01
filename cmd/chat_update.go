@@ -706,6 +706,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.startedAt = time.Time{}
 			m.partial.Reset()
 			m.startStream()
+			return m, tea.Batch(m.spinner.Tick, spinnerVerbTickCmd())
 		}
 
 		return m, nil
@@ -725,7 +726,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmds...)
 		}
 		cmds = append(cmds, spinnerVerbTickCmd())
-		if m.partial.Len() == 0 {
+		if strings.TrimSpace(m.partial.String()) == "" {
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
@@ -745,26 +746,25 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
-		if m.waiting && m.partial.Len() == 0 {
-			m.brailleSpinner.Tick()
-			// Lazy-init startedAt here (Update path) so the spinner
-			// line's elapsed timer has a reference point. Kept out of
-			// the View path so render stays a pure function.
-			if m.startedAt.IsZero() {
-				m.startedAt = time.Now()
+		if m.waiting {
+			if strings.TrimSpace(m.partial.String()) == "" {
+				m.brailleSpinner.Tick()
+				if m.startedAt.IsZero() {
+					m.startedAt = time.Now()
+				}
+				m.viewDirty = true
 			}
-			// Lerp the displayed token counters toward the engine's
-			// actual numbers — also done here, not in View.
 			m.displayInTok += (float64(m.tokenInputTarget()) - m.displayInTok) * 0.10
 			m.displayOutTok += (float64(m.tokenOutputTarget()) - m.displayOutTok) * 0.10
-			m.viewDirty = true
+		}
+
+		if cmd != nil {
 			cmds = append(cmds, cmd)
+		} else if m.waiting {
+			cmds = append(cmds, m.spinner.Tick)
 		}
 		if !m.waiting {
 			return m, tea.Batch(cmds...)
-		}
-		if cmd == nil {
-			cmds = append(cmds, m.spinner.Tick)
 		}
 
 	case containerStatusMsg:
