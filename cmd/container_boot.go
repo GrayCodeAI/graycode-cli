@@ -35,7 +35,9 @@ func shouldUseContainer() bool {
 	if v := strings.TrimSpace(os.Getenv("HAWK_NO_CONTAINER")); v == "1" || strings.EqualFold(v, "true") {
 		return false
 	}
-	return sandbox.DockerAvailable()
+	// Default to container-first and let bootContainerCmd probe Docker asynchronously
+	// after the TUI is already visible.
+	return true
 }
 
 // bootContainerCmd starts the container in the background and sends status

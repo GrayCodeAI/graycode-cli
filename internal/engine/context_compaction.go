@@ -61,7 +61,30 @@ func (s *Session) ContextUsedTokens() int {
 	if p := s.LastPromptTokens(); p > 0 {
 		return p
 	}
-	return EstimateTokens(s.Persistence().RawMessages())
+	msgs := s.Persistence().RawMessages()
+	count := len(msgs)
+	var lastLen int
+	if count > 0 {
+		lastLen = len(msgs[count-1].Content)
+	}
+
+	s.mu.RLock()
+	if s.estTokensMsgCount == count && s.estTokensLastLen == lastLen && s.estTokensCache > 0 {
+		cache := s.estTokensCache
+		s.mu.RUnlock()
+		return cache
+	}
+	s.mu.RUnlock()
+
+	est := EstimateTokens(msgs)
+
+	s.mu.Lock()
+	s.estTokensMsgCount = count
+	s.estTokensLastLen = lastLen
+	s.estTokensCache = est
+	s.mu.Unlock()
+
+	return est
 }
 
 func (s *Session) notifyCompaction(ev CompactionEvent) {

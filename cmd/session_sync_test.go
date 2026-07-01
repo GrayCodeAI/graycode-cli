@@ -73,7 +73,6 @@ func TestEnsureSessionReadyForChat_NoModel(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
 

@@ -86,10 +86,48 @@ func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.GatewayStatuses(ctx, runtime.GatewayStatusOpts{
-		ActiveProvider: activeProvider,
-		ActiveModel:    activeModel,
-	})
+	ensureCredSnapshot(ctx)
+
+	active := activeProvider
+	if active == "" && activeModel != "" {
+		active = GatewayForModel(activeModel)
+	}
+	if active == "" {
+		active = ActiveGateway(ctx)
+	}
+
+	uiCacheMu.RLock()
+	configured := credConfigured
+	uiCacheMu.RUnlock()
+
+	compiled := compiledCatalogOrBootstrap()
+	gateways := runtime.SetupGateways()
+	statuses := make([]GatewayStatus, 0, len(gateways))
+
+	for _, providerID := range gateways {
+		count := 0
+		if compiled != nil {
+			count = len(catalog.ModelEntriesForProvider(compiled, providerID))
+		}
+
+		hasKey := false
+		if configured != nil {
+			hasKey = configured[providerID]
+		}
+
+		statuses = append(statuses, GatewayStatus{
+			ID:                      providerID,
+			DisplayName:             runtime.GatewayDisplayName(providerID),
+			HasStoredCredential:     hasKey,
+			HasConfiguredDeployment: hasKey,
+			ModelCount:              count,
+			Active:                  providerID == active,
+			RegionLabel:             runtime.GatewayRegionLabel(providerID),
+			RegionRequired:          runtime.GatewayNeedsRegion(providerID),
+		})
+	}
+
+	return statuses
 }
 
 // GatewayForModel resolves the setup gateway for a model id.

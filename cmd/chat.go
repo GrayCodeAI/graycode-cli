@@ -34,7 +34,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/startup"
 	hawkstorage "github.com/GrayCodeAI/hawk/internal/storage"
@@ -123,7 +122,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:ui-init")
 
 	startup.MarkPhase("newChatModel:effectiveModelAndProvider")
-	selection := resolveSelection(settings)
+	selection := startupSelection(settings)
 	effectiveModel, effectiveProvider := selection.Model, selection.Provider
 	startup.EndPhase("newChatModel:effectiveModelAndProvider")
 
@@ -135,13 +134,13 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:defaultRegistry")
 
 	startup.MarkPhase("newChatModel:newHawkSession")
-	sess := newHawkSessionFromSelection(selection, systemPrompt, registry)
+	sess := newStartupHawkSession(selection, systemPrompt, registry)
 	startup.EndPhase("newChatModel:newHawkSession")
 
 	startup.MarkPhase("newChatModel:configureSession")
 	syncSessionFromPersistedSelection(sess)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+	if cfgErr := configureSessionStartup(sess, settings); cfgErr != nil {
 		return chatModel{}, cfgErr
 	}
 	startup.EndPhase("newChatModel:configureSession")
@@ -279,14 +278,8 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	startup.EndPhase("newChatModel:total")
 
-	// Warm credential + catalog caches so typing and status bar stay instant.
-	_ = hawkconfig.CompiledCatalogV1()
-	hawkconfig.RefreshConfigCredSnapshot(context.Background())
-
-	// Initialize plugin runtime
+	// Start with an empty plugin runtime so first paint stays fast.
 	pr := plugin.NewRuntime()
-	_ = pr.LoadAll()
-	pr.RegisterHooks()
 
 	// Print startup profile if requested (after critical path is done)
 	if startupProfileFlag {
@@ -295,12 +288,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
-	var dockerRunning *bool
-	if m.containerEnabled {
-		ok := sandbox.DockerAvailable()
-		dockerRunning = &ok
-	}
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, dockerRunning)
+	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil)
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 
 	// Wire permission system
@@ -337,6 +325,24 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 
 	m.history = loadInputHistory()
 	m.historyIdx = len(m.history)
+
+	// Warm catalog/credential caches after the first frame instead of blocking startup.
+	go func() {
+		_ = hawkconfig.CompiledCatalogV1()
+		hawkconfig.RefreshConfigCredSnapshot(context.Background())
+	}()
+
+	// Load plugins/skills after startup and refresh welcome indicators when ready.
+	go func() {
+		runtime := plugin.NewRuntime()
+		if err := runtime.LoadAll(); err != nil {
+			return
+		}
+		runtime.RegisterHooks()
+		if ref != nil {
+			ref.Send(pluginRuntimeReadyMsg{runtime: runtime})
+		}
+	}()
 
 	// --watch: build initial symbol graph and start file watcher for incremental PageRank updates
 	if watchFlag {
@@ -407,9 +413,12 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled())}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
+		if isXiaomiMimoProvider(gw) {
+			cmds = append(cmds, fetchPlatformContextIndexCmd())
+		}
 	}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
@@ -459,7 +468,7 @@ func runChat() error {
 	maybeAutoInit(context.Background())
 
 	ref := &progRef{}
-	systemPrompt, err := buildSystemPrompt()
+	systemPrompt, err := buildStartupSystemPrompt()
 	if err != nil {
 		return err
 	}
@@ -473,6 +482,9 @@ func runChat() error {
 	}
 
 	if promptFlag != "" {
+		if e := (&m).ensureSessionReadyForChat(); e != nil {
+			return e
+		}
 		m.messages = append(m.messages, displayMsg{role: "user", content: promptFlag})
 		m.session.AddUser(promptFlag)
 		m.turnSawThinking = false
@@ -489,6 +501,12 @@ func runChat() error {
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
+
+	go func() {
+		if extra := strings.TrimSpace(buildDeferredWorkspacePromptContext()); extra != "" {
+			ref.Send(systemPromptContextReadyMsg{context: extra})
+		}
+	}()
 
 	if promptFlag != "" {
 		sess := m.session

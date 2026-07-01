@@ -27,6 +27,14 @@ import (
 )
 
 func buildSystemPrompt() (string, error) {
+	return buildSystemPromptWithOptions(true, true)
+}
+
+func buildStartupSystemPrompt() (string, error) {
+	return buildSystemPromptWithOptions(false, false)
+}
+
+func buildSystemPromptWithOptions(includeWorkspaceContext, includeRepoMap bool) (string, error) {
 	if systemPromptFlag != "" && systemPromptFile != "" {
 		return "", fmt.Errorf("cannot use both --system-prompt and --system-prompt-file")
 	}
@@ -37,17 +45,20 @@ func buildSystemPrompt() (string, error) {
 	// Build modular template-based system prompt
 	ctx := prompts.DefaultContext()
 
-	// Gather workspace context and inject into prompt context
+	var ws *prompts.WorkspaceContext
 	cwd, _ := os.Getwd()
-	ws := prompts.GatherWorkspaceContext(cwd)
-	if ws != nil {
-		ctx.GitBranch = ws.GitBranch
-		ctx.GitStatus = ws.GitStatus
-		if len(ws.RecentCommits) > 0 {
-			ctx.RecentCommits = strings.Join(ws.RecentCommits, " / ")
-		}
-		if len(ws.TopFiles) > 0 {
-			ctx.TopFiles = strings.Join(ws.TopFiles, " ")
+	if includeWorkspaceContext {
+		// Gather workspace context and inject into prompt context
+		ws = prompts.GatherWorkspaceContext(cwd)
+		if ws != nil {
+			ctx.GitBranch = ws.GitBranch
+			ctx.GitStatus = ws.GitStatus
+			if len(ws.RecentCommits) > 0 {
+				ctx.RecentCommits = strings.Join(ws.RecentCommits, " / ")
+			}
+			if len(ws.TopFiles) > 0 {
+				ctx.TopFiles = strings.Join(ws.TopFiles, " ")
+			}
 		}
 	}
 
@@ -97,10 +108,33 @@ func buildSystemPrompt() (string, error) {
 	}
 
 	// Inject repo map into system prompt if enabled in settings.
-	base = injectRepoMap(base)
+	if includeRepoMap {
+		base = injectRepoMap(base)
+	}
 
 	return base, nil
 }
+
+func buildDeferredWorkspacePromptContext() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	var sections []string
+	if ws := prompts.GatherWorkspaceContext(cwd); ws != nil {
+		if formatted := strings.TrimSpace(ws.Format()); formatted != "" {
+			sections = append(sections, formatted)
+		}
+	}
+	// Repo map remains opt-in and is appended after first paint for chat startup.
+	base := injectRepoMap("")
+	if trimmed := strings.TrimSpace(base); trimmed != "" {
+		sections = append(sections, trimmed)
+	}
+	return strings.Join(sections, "\n\n")
+}
+
+const startupPlaceholderProvider = "anthropic"
 
 // injectRepoMap generates a repo map of the current directory and appends
 // it to the system prompt when the repo_map setting is enabled.
@@ -169,6 +203,31 @@ func resolveSelection(settings hawkconfig.Settings) runtime.SelectionState {
 	})
 }
 
+func startupSelection(settings hawkconfig.Settings) runtime.SelectionState {
+	providerOverride := firstNonEmptyTrimmed(provider, settings.Provider)
+	modelOverride := firstNonEmptyTrimmed(model, settings.Model)
+
+	explicitProvider, explicitModel := explicitSelection(context.Background())
+
+	providerID := runtime.NormalizeProviderID(firstNonEmptyTrimmed(providerOverride, explicitProvider))
+	modelID := strings.TrimSpace(firstNonEmptyTrimmed(modelOverride, explicitModel))
+
+	if providerID == "" && modelID != "" {
+		providerID = runtime.NormalizeProviderID(hawkconfig.ProviderOfModel(modelID))
+	}
+	if modelID == "" && providerID != "" {
+		modelID = strings.TrimSpace(hawkconfig.DefaultModelForProvider(providerID))
+	}
+	if providerID == "" {
+		providerID = startupPlaceholderProvider
+	}
+
+	return runtime.SelectionState{
+		Provider: providerID,
+		Model:    modelID,
+	}
+}
+
 func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	selection := resolveSelection(settings)
 	return selection.Model, selection.Provider
@@ -176,6 +235,14 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 
 func newHawkSessionFromSelection(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
 	return engine.NewHawkSession(context.Background(), selection, selection.Provider, selection.Model, systemPrompt, registry)
+}
+
+func newStartupHawkSession(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
+	providerID := strings.TrimSpace(selection.Provider)
+	if providerID == "" {
+		providerID = startupPlaceholderProvider
+	}
+	return engine.NewSession(providerID, strings.TrimSpace(selection.Model), systemPrompt, registry)
 }
 
 func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveModel, systemPrompt string, registry *tool.Registry) *engine.Session {
@@ -199,30 +266,16 @@ func firstNonEmptyTrimmed(values ...string) string {
 }
 
 func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
+	if err := configureSessionStartup(sess, settings, maxTurnsOverride...); err != nil {
+		return err
+	}
+	configureSessionHeavy(sess)
+	return nil
+}
+
+func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
-
-	// Initialize snapshot tracker for granular undo
-	cwd, _ := os.Getwd()
-	snap := snapshot.New(cwd)
-	if err := snap.Init(); err == nil {
-		sess.SetSnapshots(snap)
-	}
-
-	// Initialize enhanced memory system (yaad bridge + auto-capture + proactive + metrics)
-	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
-	if enhancedMem.Yaad.Ready() {
-		sess.MemorySvc().SetMemory(enhancedMem)
-		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
-		sess.MemorySvc().SetEnhanced(enhancedMem)
-		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
-	}
-	// Hawk: API keys from OS secret store only
-	if providerName := strings.TrimSpace(sess.Provider()); providerName != "" {
-		if key := hawkconfig.APIKeyForProvider(providerName); key != "" {
-			sess.SetAPIKey(providerName, key)
-		}
-	}
 
 	for _, spec := range settings.AutoAllow {
 		sess.PermSvc().Memory().AllowSpec(spec)
@@ -305,6 +358,32 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 	sess.SetGLMThinkingEnabled(settings.GLMThinkingEnabled)
 
 	return nil
+}
+
+func configureSessionHeavy(sess *engine.Session) {
+	cwd, _ := os.Getwd()
+
+	// Snapshot git repo setup is useful, but it should not block the first TUI frame.
+	snap := snapshot.New(cwd)
+	if err := snap.Init(); err == nil {
+		sess.SetSnapshots(snap)
+	}
+
+	// Memory initialization touches persisted state and optional bridges.
+	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
+	if enhancedMem.Yaad.Ready() {
+		sess.MemorySvc().SetMemory(enhancedMem)
+		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
+		sess.MemorySvc().SetEnhanced(enhancedMem)
+		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
+	}
+
+	// Direct-provider sessions still accept explicit API key injection.
+	if providerName := strings.TrimSpace(sess.Provider()); providerName != "" {
+		if key := hawkconfig.APIKeyForProvider(providerName); key != "" {
+			sess.SetAPIKey(providerName, key)
+		}
+	}
 }
 
 // bindChatSession wires TUI-only session metadata (persist id, compaction callbacks).

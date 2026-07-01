@@ -73,12 +73,29 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 	return false
 }
 
+func shouldReturnToPromptOnType(msg tea.KeyMsg) bool {
+	if msg.Type != tea.KeyRunes || len(msg.Runes) == 0 {
+		return false
+	}
+	if isMouseSequenceLeak(msg) {
+		return false
+	}
+	return true
+}
+
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
+			if m.configOpen {
+				if next, handled := m.handleConfigMouse(msg); handled {
+					next.viewDirty = true
+					next.updateViewportContent()
+					return next, nil
+				}
+			}
 			if tea.MouseEvent(msg).IsWheel() {
 				m.trackMousePosition(msg)
 				cmds = append(cmds, m.applyMouseScroll(msg))
@@ -109,6 +126,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleCopyShortcut()
 		}
 		if isMouseSequenceLeak(msg) {
+			if m.configOpen {
+				if next, handled := m.handleConfigMouseLeak(msg); handled {
+					next.viewDirty = true
+					next.updateViewportContent()
+					return next, nil
+				}
+			}
 			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
 				m.sanitizeInputIfNeeded()
 				if focus := m.ensurePromptInputFocus(); focus != nil {
@@ -158,6 +182,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.uiFocus = focusPrompt
 				m.viewDirty = true
 				return m, m.input.Focus()
+			}
+			if shouldReturnToPromptOnType(msg) {
+				m.uiFocus = focusPrompt
+				m.viewDirty = true
+				cmds = append(cmds, m.input.Focus())
+				cmds = append(cmds, m.updateInput(msg))
+				m.updateViewportContent()
+				return m, tea.Batch(cmds...)
 			}
 			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
 				return m, cmd
@@ -397,6 +429,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.submitUserMessage()
 		}
 
+	case platformContextIndexMsg:
+		updatePlatformContextCache(msg)
+		m.invalidateConnStatus()
+		m.viewDirty = true
+		return m, nil
+
 	case modelsFetchedMsg:
 		m.configSaving = false
 		if msg.err != nil {
@@ -436,6 +474,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m = m.focusConfigActiveModelSelection()
 			}
 			m.updateViewportContent()
+		}
+		return m, nil
+
+	case pluginRuntimeReadyMsg:
+		if msg.runtime != nil {
+			m.pluginRuntime = msg.runtime
+			m.rebuildWelcomeCache(m.blinkClosed)
+			m.viewDirty = true
+			m.updateViewportContent()
+		}
+		return m, nil
+
+	case systemPromptContextReadyMsg:
+		if m.session != nil && strings.TrimSpace(msg.context) != "" {
+			m.session.AppendSystemContext(msg.context)
 		}
 		return m, nil
 
@@ -667,16 +720,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.Focus()
 		return m, nil
 
-	case blinkTickMsg:
-		m.blinkClosed = !m.blinkClosed
-		m.rebuildWelcomeCache(m.blinkClosed)
-		m.viewDirty = true
-		cmds = append(cmds, blinkTickCmd())
-		return m, tea.Batch(cmds...)
-
 	case spinnerVerbTickMsg:
+		if !m.waiting {
+			return m, tea.Batch(cmds...)
+		}
 		cmds = append(cmds, spinnerVerbTickCmd())
-		if m.waiting && m.partial.Len() == 0 {
+		if m.partial.Len() == 0 {
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
@@ -709,8 +758,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.displayInTok += (float64(m.tokenInputTarget()) - m.displayInTok) * 0.10
 			m.displayOutTok += (float64(m.tokenOutputTarget()) - m.displayOutTok) * 0.10
 			m.viewDirty = true
+			cmds = append(cmds, cmd)
 		}
-		cmds = append(cmds, cmd)
+		if !m.waiting {
+			return m, tea.Batch(cmds...)
+		}
+		if cmd == nil {
+			cmds = append(cmds, m.spinner.Tick)
+		}
 
 	case containerStatusMsg:
 		m.containerStatus = msg.status

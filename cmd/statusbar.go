@@ -30,15 +30,18 @@ func renderStatusBar(m *chatModel, width int) string {
 	if width < 20 {
 		width = 80
 	}
-	left := renderStatusBarLeft()
+	left := renderStatusBarLeft(m)
 	right := renderStatusBarRight(m)
 	return layoutFooterRow(left, right, width)
 }
 
-func renderStatusBarLeft() string {
+func renderStatusBarLeft(m *chatModel) string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
+	}
+	if m != nil && m.statusLeftKey == cwd && m.statusLeftVal != "" {
+		return m.statusLeftVal
 	}
 	display := shortenHomePath(cwd)
 	cwdStyle := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
@@ -56,7 +59,12 @@ func renderStatusBarLeft() string {
 		}
 	}
 
-	return strings.Join(parts, " ")
+	out := strings.Join(parts, " ")
+	if m != nil {
+		m.statusLeftKey = cwd
+		m.statusLeftVal = out
+	}
+	return out
 }
 
 func renderStatusBarRight(m *chatModel) string {
@@ -73,8 +81,6 @@ func renderStatusBarRight(m *chatModel) string {
 	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
 	tokenText := "● " + formatTokenCountCompact(tokens) + " tokens"
 	costText := fmt.Sprintf("$%.2f", m.session.CostValue().Total())
-	timerText := icons.ClockOutline() + " " + formatSessionDuration(sessionDuration(m))
-
 	var meta []string
 	if m.inScrollbackFocus() {
 		meta = append(meta, focusStyle.Render("⧉"))
@@ -90,8 +96,11 @@ func renderStatusBarRight(m *chatModel) string {
 		meta,
 		tokenStyle.Render(tokenText),
 		costStyle.Render(costText),
-		timeStyle.Render(timerText),
 	)
+	if m.waiting || m.manualCompacting {
+		timerText := icons.ClockOutline() + " " + formatSessionDuration(sessionDuration(m))
+		parts = append(parts, timeStyle.Render(timerText))
+	}
 	if m.vim != nil && m.vim.IsEnabled() {
 		parts = append(parts, dim.Render(m.vim.ModeString()))
 	}

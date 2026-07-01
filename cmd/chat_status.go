@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/charmbracelet/lipgloss"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -75,27 +74,20 @@ func (m chatModel) sessionGatewayModel() (gateway, model string) {
 		gateway = strings.TrimSpace(m.session.Provider())
 		model = strings.TrimSpace(m.session.Model())
 	}
-	if gateway == "" || model == "" {
-		ctx := context.Background()
-		explicitGateway, explicitModel := explicitSelection(ctx)
-		if explicitGateway != "" || explicitModel != "" {
-			if gateway == "" {
-				gateway = explicitGateway
-			}
-			if model == "" {
-				model = explicitModel
-			}
-		} else {
-			selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
-				ProviderOverride: gateway,
-				ModelOverride:    model,
-			})
-			if gateway == "" {
-				gateway = strings.TrimSpace(selection.Provider)
-			}
-			if model == "" {
-				model = strings.TrimSpace(selection.Model)
-			}
+	explicitGateway, explicitModel := explicitSelection(context.Background())
+	if gateway == "" && explicitGateway != "" {
+		gateway = explicitGateway
+	}
+	if model == "" && explicitModel != "" {
+		model = explicitModel
+	}
+	if gateway == "" && model != "" {
+		gateway = strings.TrimSpace(hawkconfig.ProviderOfModel(model))
+	}
+	if explicitGateway == "" && explicitModel == "" && model == "" {
+		switch strings.TrimSpace(gateway) {
+		case "", startupPlaceholderProvider:
+			gateway = ""
 		}
 	}
 	return gateway, model
@@ -103,6 +95,9 @@ func (m chatModel) sessionGatewayModel() (gateway, model string) {
 
 func (m *chatModel) chatConnectionStatus() string {
 	ctx := context.Background()
+	if !hawkconfig.CredentialSnapshotReady() {
+		return ""
+	}
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		return ""
 	}
@@ -178,6 +173,9 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 // footer segments so context can sit flush on the right edge.
 func (m chatModel) renderConnectionStatusSplit() (modelRendered string, modelVis int, ctxRendered string, ctxVis int) {
 	ctx := context.Background()
+	if !hawkconfig.CredentialSnapshotReady() {
+		return "", 0, "", 0
+	}
 	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		return "", 0, "", 0
 	}

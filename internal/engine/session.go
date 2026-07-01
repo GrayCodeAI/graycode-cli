@@ -146,6 +146,9 @@ type Session struct {
 	persistID               string
 	lastPromptTokens        int
 	lastCompletionTokens    int
+	estTokensCache          int
+	estTokensMsgCount       int
+	estTokensLastLen        int
 	checkpointMgr           *session.CheckpointManager
 	OnCompaction            OnCompaction
 	Verbose                 bool // show tool calls, timing, token counts in output

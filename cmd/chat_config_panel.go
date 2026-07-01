@@ -131,8 +131,18 @@ const configWindowSize = 10
 
 func (m chatModel) configModelsTabView() string {
 	var body strings.Builder
-	body.WriteString(m.renderConfigModelSearchLine())
-	body.WriteString("\n\n")
+	gw := strings.TrimSpace(m.configModelProvider)
+	if gw == "" && m.session != nil {
+		gw = strings.TrimSpace(m.session.Provider())
+	}
+	if gw != "" {
+		body.WriteString(renderConfigGatewayLine(hawkconfig.GatewayDisplayName(gw)) + "\n\n")
+	}
+
+	if len(m.configModelOptions) > 0 || m.configModelSearchActive {
+		body.WriteString(m.renderConfigModelSearchLine())
+		body.WriteString("\n\n")
+	}
 	body.WriteString(m.configModelsBody())
 	return m.configTabShellView(body.String())
 }
@@ -160,7 +170,7 @@ func (m chatModel) renderConfigModelSearchLine() string {
 }
 
 func (m chatModel) startConfigModelSearch() (chatModel, tea.Cmd) {
-	if m.configTab != configTabModels {
+	if m.configTab != configTabModels || len(m.configModelOptions) == 0 {
 		return m, nil
 	}
 	m.configModelSearchActive = true
@@ -342,11 +352,8 @@ func (m chatModel) configModelsBody() string {
 
 	var b strings.Builder
 	gw := strings.TrimSpace(m.configModelProvider)
-	if gw == "" {
+	if gw == "" && m.session != nil {
 		gw = strings.TrimSpace(m.session.Provider())
-	}
-	if gw != "" {
-		b.WriteString(renderConfigGatewayLine(hawkconfig.GatewayDisplayName(gw)) + "\n\n")
 	}
 
 	if total == 0 {
@@ -389,6 +396,7 @@ func (m chatModel) configModelsBody() string {
 
 func (m chatModel) closeConfigPanel() chatModel {
 	m.configOpen = false
+	m.uiFocus = focusPrompt
 	m.configTab = configTabGateways
 	m.configSel = 0
 	m.configScroll = 0
@@ -407,6 +415,7 @@ func (m chatModel) closeConfigPanel() chatModel {
 }
 
 func (m *chatModel) restoreChatInput() {
+	m.uiFocus = focusPrompt
 	m.useConfigInput = false
 	m.input.Reset()
 	m.input.Prompt = icons.ChevronRight() + " "
@@ -574,7 +583,92 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	}
 }
 
+const configWheelStep = 5
+
+func configPageStep() int {
+	if configWindowSize <= 2 {
+		return 1
+	}
+	return configWindowSize - 1
+}
+
+func (m chatModel) configMoveSelection(delta int) chatModel {
+	if delta == 0 {
+		return m
+	}
+	n := m.configTabItemCount()
+	if n <= 0 {
+		m.configSel = 0
+		return m
+	}
+	if m.configSel < 0 {
+		m.configSel = 0
+	} else if m.configSel >= n {
+		m.configSel = n - 1
+	}
+	next := m.configSel + delta
+	if next < 0 {
+		next = 0
+	} else if next >= n {
+		next = n - 1
+	}
+	m.configSel = next
+	if m.configTab == configTabGateways {
+		return m.trackConfigGatewayFocus()
+	}
+	return m
+}
+
+func (m chatModel) handleConfigMouse(msg tea.MouseMsg) (chatModel, bool) {
+	if !tea.MouseEvent(msg).IsWheel() || m.configSaving {
+		return m, false
+	}
+	switch m.configEntry {
+	case configEntryNone, configEntryKeyView:
+	default:
+		return m, false
+	}
+	step := configWheelStep
+	if m.configEntry == configEntryKeyView {
+		step = 1
+	}
+	switch msg.Button {
+	case tea.MouseButtonWheelUp:
+		return m.configMoveSelection(-step), true
+	case tea.MouseButtonWheelDown:
+		return m.configMoveSelection(step), true
+	default:
+		return m, false
+	}
+}
+
+func (m chatModel) handleConfigMouseLeak(msg tea.KeyMsg) (chatModel, bool) {
+	matches := mouseSGRReportRE.FindAllStringSubmatch(string(msg.Runes), -1)
+	if len(matches) == 0 {
+		return m, false
+	}
+	handledAny := false
+	for _, match := range matches {
+		mouse, ok := mouseMsgFromSGRMatch(match)
+		if !ok {
+			continue
+		}
+		next, handled := m.handleConfigMouse(mouse)
+		if handled {
+			m = next
+			handledAny = true
+		}
+	}
+	return m, handledAny
+}
+
 func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
+	if m.configSaving && msg.Type == tea.KeyEsc {
+		if m.configTab == configTabGateways {
+			return m.handleConfigGatewaysEsc(), nil
+		}
+		return m.closeConfigPanel(), nil
+	}
 	if m.configEntry == configEntryKeyView {
 		if m.configSaving {
 			return m, nil
@@ -665,6 +759,19 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		m.configSel = (m.configSel + 1) % n
+		return m.trackConfigGatewayFocus(), nil
+	case tea.KeyPgUp:
+		return m.configMoveSelection(-configPageStep()), nil
+	case tea.KeyPgDown:
+		return m.configMoveSelection(configPageStep()), nil
+	case tea.KeyHome:
+		m.configSel = 0
+		return m.trackConfigGatewayFocus(), nil
+	case tea.KeyEnd:
+		if n == 0 {
+			return m, nil
+		}
+		m.configSel = n - 1
 		return m.trackConfigGatewayFocus(), nil
 	case tea.KeyDelete, tea.KeyBackspace:
 		if m.configTab == configTabGateways && m.configKeysPendingRemove == "" {

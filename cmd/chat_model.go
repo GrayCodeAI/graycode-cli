@@ -102,6 +102,12 @@ type (
 		provider string
 		err      error
 	}
+	pluginRuntimeReadyMsg struct {
+		runtime *plugin.Runtime
+	}
+	systemPromptContextReadyMsg struct {
+		context string
+	}
 	loopTickMsg      struct{ command string }
 	toolUseMsg       struct{ name, id string }
 	toolResultMsg    struct{ name, content string }
@@ -213,6 +219,7 @@ type chatModel struct {
 	wal                  *session.WAL
 	startedAt            time.Time // per-turn timer (spinner + turn elapsed)
 	sessionStartedAt     time.Time // whole chat session (footer duration)
+	sessionBootstrapDone bool
 	toolStartTime        time.Time
 	welcomeCache         string
 	viewDirty            bool
@@ -224,6 +231,8 @@ type chatModel struct {
 	connStatusVal        string
 	partialDirty         bool // stream text changed since last viewport paint
 	lastPartialRender    time.Time
+	statusLeftKey        string
+	statusLeftVal        string
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string

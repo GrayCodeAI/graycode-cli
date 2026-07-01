@@ -47,10 +47,31 @@ func (m *chatModel) syncSessionSelection() {
 	}
 }
 
+func (m *chatModel) bootstrapSessionForChat() error {
+	if m == nil || m.session == nil || m.sessionBootstrapDone {
+		return nil
+	}
+
+	selection := resolveSelection(m.settings)
+	if strings.TrimSpace(selection.Provider) == "" || strings.TrimSpace(selection.Model) == "" {
+		return fmt.Errorf("no model selected — open /config, go to Models, and pick one")
+	}
+
+	m.session.SetProvider(selection.Provider)
+	m.session.SetModel(selection.Model)
+	if err := engine.RebuildSessionTransport(context.Background(), m.session, selection, selection.Provider); err != nil {
+		return err
+	}
+	configureSessionHeavy(m.session)
+	applyLiveModelMetadata(m.session, selection.Provider, selection.Model)
+	m.sessionBootstrapDone = true
+	return nil
+}
+
 func (m *chatModel) ensureSessionReadyForChat() error {
 	m.syncSessionSelection()
-	if strings.TrimSpace(m.session.Model()) == "" {
-		return fmt.Errorf("no model selected — open /config, go to Models, and pick one")
+	if err := m.bootstrapSessionForChat(); err != nil {
+		return err
 	}
 	return nil
 }

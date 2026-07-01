@@ -105,6 +105,7 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
 	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
 	sess := &engine.Session{}
 	sess.SetProvider("openrouter")
@@ -138,6 +139,7 @@ func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
@@ -160,14 +162,12 @@ func TestChatConnectionStatus_NoGatewayNoModel(t *testing.T) {
 	_ = store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
-	if !strings.Contains(got, "Anthropic · ") {
-		t.Fatalf("expected runtime-selected anthropic status, got %q", got)
-	}
-	if strings.Contains(got, "pick model") {
-		t.Fatalf("expected auto-selected model when only anthropic credentials exist, got %q", got)
+	if got != "pick model" {
+		t.Fatalf("expected pick model when no explicit selection is saved, got %q", got)
 	}
 }
 
