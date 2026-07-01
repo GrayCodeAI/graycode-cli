@@ -570,7 +570,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case blastRadiusMsg:
-		m.messages = append(m.messages, displayMsg{role: "system", content: msg.message})
+		m.messages = append(m.messages, displayMsg{role: "warning", content: msg.message})
 		m.viewDirty = true
 		return m, nil
 
