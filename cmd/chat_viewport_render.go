@@ -104,6 +104,9 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 		b.WriteString(toolStyle.Render(qWrapped))
 	case "usage":
 		b.WriteString(dimStyle.Render("  " + msg.content))
+	case "warning":
+		warnWrapped := wrapText(msg.content, viewWidth-8, 0)
+		b.WriteString(warnStyle.Render(warnWrapped))
 	case "error":
 		errWrapped := wrapText(msg.content, viewWidth-8, 7)
 		b.WriteString(errorStyle.Render("error: " + errWrapped))

@@ -35,6 +35,7 @@ var (
 	// attributes (bold, italic, border) on top.
 	dimStyle     = lipgloss.NewStyle().Foreground(textDisabled)
 	errorStyle   = lipgloss.NewStyle().Foreground(errorCoral)
+	warnStyle    = lipgloss.NewStyle().Foreground(warnAmber)
 	toolStyle    = lipgloss.NewStyle().Foreground(toolGold).Bold(true)
 	toolDimStyle = lipgloss.NewStyle().Foreground(textDisabled)
 
