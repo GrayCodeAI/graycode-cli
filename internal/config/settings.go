@@ -55,6 +55,7 @@ type Settings struct {
 	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`         // restrict to core tools only for a focused experience
 	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"` // GLM/Z.ai extended reasoning toggle; nil = model default
 	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`            // TUI mouse capture; false preserves native click-drag copy
+	ReplMode                *bool                  `json:"repl_mode,omitempty"`            // Start in REPL mode instead of TUI
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.

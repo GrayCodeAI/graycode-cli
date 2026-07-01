@@ -61,6 +61,7 @@ var schemaCmd = &cobra.Command{
 				"repo_map":                   map[string]interface{}{"type": "boolean"},
 				"repo_map_max_tokens":        map[string]interface{}{"type": "integer"},
 				"auto_compact_threshold_pct": map[string]interface{}{"type": "integer", "default": 85},
+				"repl_mode":                  map[string]interface{}{"type": "boolean", "description": "Start in REPL mode instead of TUI"},
 			},
 		}
 		data, _ := json.MarshalIndent(schema, "", "  ")

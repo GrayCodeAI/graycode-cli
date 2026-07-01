@@ -113,6 +113,14 @@ var rootCmd = &cobra.Command{
 		hawkconfig.PrepareCredentialDiscovery(context.Background())
 		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 
+		if !replFlag {
+			if settings, err := loadEffectiveSettings(); err == nil {
+				if settings.ReplMode != nil && *settings.ReplMode {
+					replFlag = true
+				}
+			}
+		}
+
 		if printMode || promptFlag != "" || inputFormat == "stream-json" || replFlag || watchFlag {
 			if promptFlag == "" && !replFlag && !watchFlag {
 				stdinPrompt, err := readPromptFromStdin(inputFormat)
