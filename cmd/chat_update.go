@@ -358,7 +358,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				for i, md := range models {
 					if md == current {
 						idx = (i + 1) % len(models)
-						break
 					}
 				}
 				m.session.SetModel(models[idx])
@@ -536,7 +535,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.viewDirty {
 			m.updateViewportContent()
 		}
-		return m, nil
 
 	case thinkingMsg:
 		m.turnSawThinking = true
@@ -550,7 +548,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.turnHadToolActivity = false
 		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ " + msg.content})
 		m.viewDirty = true
-		return m, nil
 
 	case toolUseMsg:
 		m.turnHadToolActivity = true
@@ -561,18 +558,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "tool_use", content: msg.name})
 		m.toolStartTime = time.Now()
 		m.viewDirty = true
-		return m, nil
 
 	case toolResultMsg:
 		m.turnHadToolActivity = true
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, msg.content)})
 		m.viewDirty = true
-		return m, nil
 
 	case blastRadiusMsg:
 		m.messages = append(m.messages, displayMsg{role: "warning", content: msg.message})
 		m.viewDirty = true
-		return m, nil
 
 	case selectionResumedMsg:
 		// Returned from enterSelectionMode. The terminal has been
@@ -580,13 +574,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// state that was visible before selection.
 		m.viewDirty = true
 		m.updateViewportContent()
-		return m, nil
 
 	case permissionAskMsg:
 		m.permReq = &msg.req
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
 		m.viewDirty = true
-		return m, nil
 
 	case askUserMsg:
 		m.askReq = &msg
@@ -594,7 +586,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		m.input.Focus()
 		m.input.SetValue("")
-		return m, nil
 
 	case usageUpdateMsg:
 		if msg.usage != nil {
@@ -603,7 +594,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.invalidateConnStatus()
 			m.viewDirty = true
 		}
-		return m, nil
 
 	case compactTickMsg:
 		if m.manualCompacting {
@@ -618,7 +608,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(localCmds...)
 		}
-		return m, nil
 
 	case compactDoneMsg:
 		return m.finishManualCompact(msg)
@@ -629,7 +618,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel("Compacting context")
 			m.viewDirty = true
 		}
-		return m, nil
 
 	case compactMsg:
 		m.compacting = false
@@ -643,7 +631,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: line})
 		m.invalidateConnStatus()
 		m.viewDirty = true
-		return m, nil
 
 	case streamDoneMsg:
 		if m.streamCancelled {
@@ -652,7 +639,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 			m.toolStartTime = time.Time{}
 			m.viewDirty = true
-			return m, nil
+
 		}
 		if m.compacting {
 			m.compacting = false
@@ -709,8 +696,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.spinner.Tick, spinnerVerbTickCmd())
 		}
 
-		return m, nil
-
 	case streamErrMsg:
 		m.messages = append(m.messages, displayMsg{role: "error", content: friendlyError(msg.err)})
 		m.partial.Reset()
@@ -719,7 +704,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.toolStartTime = time.Time{}
 		m.viewDirty = true
 		m.input.Focus()
-		return m, nil
 
 	case spinnerVerbTickMsg:
 		if !m.waiting {
@@ -731,7 +715,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
 		}
-		return m, tea.Batch(cmds...)
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
