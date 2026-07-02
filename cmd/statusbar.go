@@ -97,10 +97,15 @@ func renderStatusBarRight(m *chatModel) string {
 		tokenStyle.Render(tokenText),
 		costStyle.Render(costText),
 	)
+
+	clockText := icons.ClockOutline() + " " + time.Now().Format("15:04")
+	parts = append(parts, timeStyle.Render(clockText))
+
 	if m.waiting || m.manualCompacting {
-		timerText := icons.ClockOutline() + " " + formatSessionDuration(sessionDuration(m))
+		timerText := formatSessionDuration(sessionDuration(m))
 		parts = append(parts, timeStyle.Render(timerText))
 	}
+
 	if m.vim != nil && m.vim.IsEnabled() {
 		parts = append(parts, dim.Render(m.vim.ModeString()))
 	}
