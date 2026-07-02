@@ -114,18 +114,24 @@ var cwdBlue = lipgloss.Color("#75B1E2")
 // 7. Text hierarchy (five levels of visual weight for prose)
 // ---------------------------------------------------------------------------
 
+// Neutral text/structure colors are adaptive: the Dark variant is the
+// original value (so dark terminals — the default — render identically),
+// and the Light variant is dark ink so prose and borders stay legible on
+// light terminals, where the old near-white values were invisible.
+// lipgloss selects the variant from the detected terminal background.
+
 // textPrimary — body text, primary prose.
-var textPrimary = lipgloss.Color("#F0F0F0")
+var textPrimary = lipgloss.AdaptiveColor{Light: "#1A1A1A", Dark: "#F0F0F0"}
 
 // textMuted — secondary/muted prose.
-var textMuted = lipgloss.Color("#9E9E9E")
+var textMuted = lipgloss.AdaptiveColor{Light: "#6B6B6B", Dark: "#9E9E9E"}
 
 // textPlaceholder — input field placeholder.
 var textPlaceholder = lipgloss.Color("#7A7A7A")
 
 // textDisabled — disabled, idle, slash menu (non-selected), blockquote,
 // markdown HR.
-var textDisabled = lipgloss.Color("#666666")
+var textDisabled = lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#666666"}
 
 // textWhite — bright text (permission body, code foreground).
 var textWhite = lipgloss.Color("#FFFFFF")
@@ -135,7 +141,7 @@ var textWhite = lipgloss.Color("#FFFFFF")
 // ---------------------------------------------------------------------------
 
 // borderDim — input/panel/divider border.
-var borderDim = lipgloss.Color("#555555")
+var borderDim = lipgloss.AdaptiveColor{Light: "#C6C6C6", Dark: "#555555"}
 
 // bgCode — code block background.
 var bgCode = lipgloss.Color("#2A2A3A")
