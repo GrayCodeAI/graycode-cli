@@ -1,14 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // testSubcommand implements the /test slash command. It runs
@@ -27,14 +23,12 @@ func (t *testSubcommand) Handle(m *chatModel, args []string, text string) (tea.M
 	if len(args) >= 1 {
 		cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/test"))
 	}
-	if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
-		m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+	result, isErr := runSlashShellCommand(m, cmdStr)
+	if isErr {
+		m.messages = append(m.messages, displayMsg{role: "error", content: result})
 		return m, nil
 	}
-	out, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
-	result := strings.TrimSpace(string(out))
-	if err != nil {
-		result += "\n" + err.Error()
+	if shellCommandFailed(result, isErr) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Tests failed:\n%s", result)})
 		m.session.AddUser(fmt.Sprintf("[Test failures]\n```\n%s\n```\nPlease fix these test failures.", result))
 	} else {

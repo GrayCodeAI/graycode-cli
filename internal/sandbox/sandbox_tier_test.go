@@ -84,6 +84,9 @@ func TestDefaultHawkPolicy_TierStrict(t *testing.T) {
 	if p.AllowProcess {
 		t.Error("AllowProcess = true, want false (TierStrict denies process exec)")
 	}
+	if p.AllowNetwork {
+		t.Error("AllowNetwork = true, want false (TierStrict denies network)")
+	}
 }
 
 func TestDefaultHawkPolicy_TierOff(t *testing.T) {
@@ -139,18 +142,25 @@ func TestTierConstants(t *testing.T) {
 	}
 }
 
-// --- DefaultHawkPolicy always sets network and sysctl to true (the
-// "always allowed" operations). Tier only affects write/process. ---
-
-func TestDefaultHawkPolicy_AllTiersKeepNetworkAndSysctl(t *testing.T) {
-	for _, tier := range []Tier{TierStrict, TierWorkspace, TierOff, "", Tier("nonsense")} {
-		t.Run(string(tier), func(t *testing.T) {
-			p := DefaultHawkPolicy("/tmp/work", tier)
-			if !p.AllowNetwork {
-				t.Errorf("tier=%s: AllowNetwork = false, want true", tier)
+func TestDefaultHawkPolicy_NetworkByTier(t *testing.T) {
+	cases := []struct {
+		tier Tier
+		want bool
+	}{
+		{TierStrict, false},
+		{TierWorkspace, true},
+		{TierOff, true},
+		{"", true},
+		{Tier("nonsense"), true},
+	}
+	for _, tc := range cases {
+		t.Run(string(tc.tier), func(t *testing.T) {
+			p := DefaultHawkPolicy("/tmp/work", tc.tier)
+			if p.AllowNetwork != tc.want {
+				t.Errorf("AllowNetwork = %v, want %v", p.AllowNetwork, tc.want)
 			}
 			if !p.AllowSysctl {
-				t.Errorf("tier=%s: AllowSysctl = false, want true", tier)
+				t.Errorf("tier=%s: AllowSysctl = false, want true", tc.tier)
 			}
 		})
 	}

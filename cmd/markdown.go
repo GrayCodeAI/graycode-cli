@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -287,9 +288,34 @@ func parseOrderedList(line string) (string, string) {
 	return numPart + ".", strings.TrimSpace(trimmed[dotIdx+2:])
 }
 
+func protectInlineCode(text string, render func(string) string) (string, func(string) string) {
+	var replacements []string
+	protected := reInlineCode.ReplaceAllStringFunc(text, func(m string) string {
+		parts := reInlineCode.FindStringSubmatch(m)
+		if len(parts) < 2 {
+			return m
+		}
+		placeholder := fmt.Sprintf("\x00HAWK_INLINE_CODE_%d\x00", len(replacements))
+		replacements = append(replacements, render(parts[1]))
+		return placeholder
+	})
+	restore := func(s string) string {
+		for i, repl := range replacements {
+			s = strings.ReplaceAll(s, fmt.Sprintf("\x00HAWK_INLINE_CODE_%d\x00", i), repl)
+		}
+		return s
+	}
+	return protected, restore
+}
+
 // renderInlineFormatting applies inline markdown (bold, italic, inline code, links)
 // to a line of text.
 func renderInlineFormatting(text string, width int) string {
+	protected, restore := protectInlineCode(text, func(code string) string {
+		return mdInlineCodeStyle.Render(code)
+	})
+	text = protected
+
 	// Process links first (they contain brackets that could interfere)
 	text = reMDLink.ReplaceAllStringFunc(text, func(m string) string {
 		parts := reMDLink.FindStringSubmatch(m)
@@ -297,15 +323,6 @@ func renderInlineFormatting(text string, width int) string {
 			return m
 		}
 		return mdLinkTextStyle.Render(parts[1]) + " " + mdLinkURLStyle.Render("("+parts[2]+")")
-	})
-
-	// Inline code (before bold/italic so backtick content is not further parsed)
-	text = reInlineCode.ReplaceAllStringFunc(text, func(m string) string {
-		parts := reInlineCode.FindStringSubmatch(m)
-		if len(parts) < 2 {
-			return m
-		}
-		return mdInlineCodeStyle.Render(parts[1])
 	})
 
 	// Bold
@@ -335,7 +352,7 @@ func renderInlineFormatting(text string, width int) string {
 		return prefix + mdItalicStyle.Render(parts[1]) + suffix
 	})
 
-	return text
+	return restore(text)
 }
 
 // mdWordWrap wraps text to the specified width, respecting word boundaries.

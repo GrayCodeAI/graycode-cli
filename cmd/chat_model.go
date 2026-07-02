@@ -207,13 +207,14 @@ type chatModel struct {
 	spinnerVerb                string
 	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).
 	// Reset each time the user submits a message; updated by usageUpdateMsg.
-	turnInputTokens  int
-	turnOutputTokens int
-	compacting       bool // stream auto-compact: spinner label = Compacting context
-	manualCompacting bool // user ran /compact: show progress panel above input
-	compactBarUsed   int  // context tokens snapshot at /compact start
-	compactBarWindow int  // context window snapshot at /compact start
-	compactCancel    context.CancelFunc
+	turnInputTokens          int
+	turnOutputTokens         int
+	turnEstimatedOutputRunes int
+	compacting               bool // stream auto-compact: spinner label = Compacting context
+	manualCompacting         bool // user ran /compact: show progress panel above input
+	compactBarUsed           int  // context tokens snapshot at /compact start
+	compactBarWindow         int  // context window snapshot at /compact start
+	compactCancel            context.CancelFunc
 	// Display values lerped toward the turn targets each render frame
 	// (factor 0.10). Smooths the counter animation.
 	displayInTok         float64
@@ -249,6 +250,7 @@ type chatModel struct {
 	partialRenderPending bool
 	statusLeftKey        string
 	statusLeftVal        string
+	statusLeftBranch     string
 	statusLeftAt         time.Time // last branch lookup; refreshed on a short TTL
 
 	// Incremental viewport cache (see chat_viewport_render.go).

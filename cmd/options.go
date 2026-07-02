@@ -230,6 +230,9 @@ func startupSelection(settings hawkconfig.Settings) runtime.SelectionState {
 
 func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	selection := resolveSelection(settings)
+	if !selection.HasConfiguredDeployment {
+		return "", ""
+	}
 	return selection.Model, selection.Provider
 }
 

@@ -209,22 +209,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/export":
-		exportDir := filepath.Join(storage.StateDir(), "exports")
-		_ = os.MkdirAll(exportDir, 0o755)
-		exportPath := filepath.Join(exportDir, m.sessionID+".md")
-		var md strings.Builder
-		md.WriteString(fmt.Sprintf("# Session %s\n\n", m.sessionID))
-		for _, msg := range m.messages {
-			switch msg.role {
-			case "user":
-				md.WriteString("## User\n" + msg.content + "\n\n")
-			case "assistant":
-				md.WriteString("## Assistant\n" + msg.content + "\n\n")
-			case "system":
-				md.WriteString("_" + msg.content + "_\n\n")
-			}
-		}
-		if err := os.WriteFile(exportPath, []byte(md.String()), 0o644); err != nil {
+		exportPath, err := writeRedactedChatMarkdownExport(m)
+		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Exported to: %s", exportPath)})
@@ -232,21 +218,8 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/share":
-		exportDir := filepath.Join(storage.StateDir(), "exports")
-		_ = os.MkdirAll(exportDir, 0o755)
-		exportPath := filepath.Join(exportDir, m.sessionID+".md")
-		var md strings.Builder
-		md.WriteString(fmt.Sprintf("# Hawk Session %s\n\n", m.sessionID))
-		md.WriteString(fmt.Sprintf("Model: %s/%s\n\n---\n\n", m.session.Provider(), m.session.Model()))
-		for _, msg := range m.messages {
-			switch msg.role {
-			case "user":
-				md.WriteString("**User:** " + msg.content + "\n\n")
-			case "assistant":
-				md.WriteString("**Hawk:** " + msg.content + "\n\n")
-			}
-		}
-		if err := os.WriteFile(exportPath, []byte(md.String()), 0o644); err != nil {
+		exportPath, err := writeRedactedChatMarkdownExport(m)
+		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
 			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Session saved to: %s\nShare this file or paste its contents.", exportPath)})

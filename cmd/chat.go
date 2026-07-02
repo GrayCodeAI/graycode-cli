@@ -178,7 +178,9 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.commandPalette = NewCommandPalette(initWidth)
 	startup.EndPhase("newChatModel:commandPalette")
 
-	// Pre-warm footer connection line so ctx (e.g. 0k/1.0m) shows on first paint.
+	// Pre-warm footer status/connection lines so the first paint does not run
+	// shell/git probes from View().
+	m.refreshStatusBarLeft(true)
 	if m.session != nil && m.session.ContextWindowCachedValue() > 0 {
 		m.connStatusVal = m.buildConnectionStatusPlain()
 		m.connStatusKey = m.connStatusFingerprint()

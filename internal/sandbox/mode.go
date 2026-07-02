@@ -111,6 +111,7 @@ func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
 	case TierStrict:
 		p.AllowWrite = false
 		p.AllowProcess = false
+		p.AllowNetwork = false
 	case TierWorkspace:
 		p.AllowWrite = true
 		p.AllowProcess = false

@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"golang.org/x/term"
 
@@ -605,13 +604,13 @@ func (m *chatModel) tokenInputTarget() int {
 }
 
 // tokenOutputTarget is the target value the output-token display lerps
-// toward. Uses the engine's reported number when available, else a live
-// rune count of the streamed partial / 4.
+// toward. Uses the engine's reported number when available, else the
+// incremental rune count accumulated as streaming chunks arrive.
 func (m *chatModel) tokenOutputTarget() int {
 	if m.turnOutputTokens > 0 {
 		return m.turnOutputTokens
 	}
-	return utf8.RuneCountInString(m.partial.String()) / 4
+	return m.turnEstimatedOutputRunes / 4
 }
 
 // formatHawkTokenCount renders a token count in hawk's compact form:

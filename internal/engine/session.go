@@ -583,18 +583,20 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Rebuild messages from the forked branch
+	// Rebuild messages from the forked branch.
 	history, err := dag.History(context.Background(), fork.ID)
 	if err != nil {
 		return "", err
 	}
-	s.mu.Lock()
-	s.messages = s.messages[:0]
+	msgs := make([]types.EyrieMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
+	p.SetRawMessages(msgs)
+	s.mu.Lock()
+	s.messages = append(s.messages[:0], msgs...)
 	s.mu.Unlock()
 	return fork.ID, nil
 }
@@ -616,13 +618,15 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	s.messages = s.messages[:0]
+	msgs := make([]types.EyrieMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
+	p.SetRawMessages(msgs)
+	s.mu.Lock()
+	s.messages = append(s.messages[:0], msgs...)
 	s.mu.Unlock()
 	return nil
 }
@@ -839,7 +843,18 @@ func (s *Session) MessageCount() int {
 }
 
 // RawMessages returns the conversation messages for persistence.
+//
+// PersistenceService is the single source of truth for the live transcript:
+// AddUser/AddAssistant and the agent loop (stream.go) all write through it,
+// and compaction/governor paths read it. The legacy s.messages field is kept
+// only for Sessions constructed without a PersistenceService (some unit
+// tests). Delegating here means TUI/CLI consumers — notably saveSession,
+// which returned early when the legacy slice was empty — see the real,
+// populated transcript instead of a stale empty slice.
 func (s *Session) RawMessages() []types.EyrieMessage {
+	if p := s.Persistence(); p != nil {
+		return p.RawMessages()
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.messages

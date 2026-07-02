@@ -1,6 +1,9 @@
 package engine
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestPermissionMemoryAlwaysAllow(t *testing.T) {
 	pm := NewPermissionMemory()
@@ -74,6 +77,29 @@ func TestPermissionModeParsing(t *testing.T) {
 	}
 	if err := s.SetPermissionMode("bad"); err == nil {
 		t.Fatal("expected invalid permission mode error")
+	}
+}
+
+func TestPermissionEngine_ModeDecisionDoesNotRequirePrompt(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Autonomy = AutonomySupervised
+	if err := pe.SetMode("plan"); err != nil {
+		t.Fatal(err)
+	}
+	granted, deny := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "echo hello"}})
+	if granted {
+		t.Fatal("plan mode should deny Bash without requiring a prompt")
+	}
+	if deny != "Permission denied by permission mode." {
+		t.Fatalf("deny = %q, want permission-mode denial", deny)
+	}
+
+	if err := pe.SetMode("bypassPermissions"); err != nil {
+		t.Fatal(err)
+	}
+	granted, deny = pe.CheckTool(context.Background(), ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "echo hello"}})
+	if !granted || deny != "" {
+		t.Fatalf("bypass mode CheckTool = (%v, %q), want granted", granted, deny)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -88,6 +89,11 @@ func shouldReturnToPromptOnType(msg tea.KeyMsg) bool {
 
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	if _, isMouse := msg.(tea.MouseMsg); !isMouse {
+		if m.refreshStatusBarLeft(false) {
+			m.viewDirty = true
+		}
+	}
 
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
@@ -596,7 +602,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 		}
 		m.turnHadAssistantOutput = true
-		m.partial.WriteString(string(msg))
+		chunk := string(msg)
+		m.partial.WriteString(chunk)
+		if m.turnOutputTokens == 0 {
+			m.turnEstimatedOutputRunes += utf8.RuneCountInString(chunk)
+		}
 		if cmd := m.markPartialDirty(); cmd != nil {
 			cmds = append(cmds, cmd)
 		}
@@ -621,6 +631,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamRetryMsg:
 		m.partial.Reset()
+		m.turnEstimatedOutputRunes = 0
 		m.messages = stripCurrentTurnThinking(m.messages)
 		m.turnSawThinking = false
 		m.turnHadAssistantOutput = false
@@ -795,6 +806,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.turnHadToolActivity = false
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
+			m.turnEstimatedOutputRunes = 0
 			m.startedAt = time.Time{}
 			m.partial.Reset()
 			m.startStream()

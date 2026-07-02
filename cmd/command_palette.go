@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -57,98 +58,56 @@ func NewCommandPalette(width int) *CommandPalette {
 
 // buildEntries builds the full list of palette entries from slash commands.
 func (cp *CommandPalette) buildEntries() []CommandPaletteEntry {
-	var entries []CommandPaletteEntry
-
-	// Core commands
-	core := map[string]string{
-		"/help":     "Show help and available commands",
-		"/model":    "Switch AI model",
-		"/config":   "Open configuration panel",
-		"/quit":     "Exit hawk",
-		"/clear":    "Clear conversation history",
-		"/compact":  "Compact conversation to save tokens",
-		"/undo":     "Undo the last file change",
-		"/snapshot": "Save workspace snapshot",
-		"/recover":  "Recover interrupted session",
+	commands := slashCommands()
+	entries := make([]CommandPaletteEntry, 0, len(commands))
+	for _, name := range commands {
+		desc := slashCommandDescription(name)
+		entries = append(entries, CommandPaletteEntry{
+			Name:        name,
+			Description: desc,
+			Category:    slashCommandCategory(name),
+			Action:      name,
+		})
 	}
-
-	// Workflow commands
-	workflow := map[string]string{
-		"/review": "Review recent changes",
-		"/commit": "Create smart commit",
-		"/test":   "Run project tests",
-		"/lint":   "Run linter on changed files",
-		"/format": "Format code",
-		"/diff":   "Show working diff",
-		"/status": "Show git status",
-	}
-
-	// Agent commands
-	agent := map[string]string{
-		"/agent":    "Agent management",
-		"/mission":  "Multi-agent mission mode",
-		"/exec":     "Execute task non-interactively",
-		"/research": "Autonomous research loop",
-		"/loop":     "Run in loop mode",
-	}
-
-	// Memory & context
-	memory := map[string]string{
-		"/remember": "Store information in memory",
-		"/recall":   "Search memory",
-		"/context":  "Export project context",
-		"/search":   "Search sessions",
-		"/sessions": "List saved sessions",
-	}
-
-	// Tools & ecosystem
-	tools := map[string]string{
-		"/tools":     "List available tools",
-		"/mcp":       "Show MCP server config",
-		"/plugin":    "Plugin management",
-		"/skills":    "Community skills",
-		"/sight":     "Code review with sight",
-		"/inspect":   "Site audit",
-		"/yaad":      "Memory graph operations",
-		"/ecosystem": "Ecosystem panel",
-	}
-
-	// Diagnostics
-	diag := map[string]string{
-		"/doctor": "Run health diagnostics",
-		"/path":   "Check developer path readiness",
-		"/cost":   "Show cost analysis",
-		"/rules":  "Show permission rules",
-		"/eval":   "Run evaluations",
-	}
-
-	// Settings
-	settings := map[string]string{
-		"/permissions": "Permission Center",
-		"/vim":         "Toggle vim mode",
-		"/theme":       "Change color theme",
-	}
-
-	addEntries := func(category string, cmds map[string]string) {
-		for name, desc := range cmds {
-			entries = append(entries, CommandPaletteEntry{
-				Name:        name,
-				Description: desc,
-				Category:    category,
-				Action:      name,
-			})
+	sort.SliceStable(entries, func(i, j int) bool {
+		if entries[i].Category != entries[j].Category {
+			return entries[i].Category < entries[j].Category
 		}
-	}
-
-	addEntries("Core", core)
-	addEntries("Workflow", workflow)
-	addEntries("Agent", agent)
-	addEntries("Memory", memory)
-	addEntries("Tools", tools)
-	addEntries("Diagnostics", diag)
-	addEntries("Settings", settings)
-
+		return entries[i].Name < entries[j].Name
+	})
 	return entries
+}
+
+func slashCommandDescription(name string) string {
+	if desc := slashDescriptions[name]; desc != "" {
+		return desc
+	}
+	cmdName := strings.TrimPrefix(name, "/")
+	if cmd, ok := subcommandRegistry.Lookup(cmdName); ok {
+		return cmd.Description()
+	}
+	return "Run " + name
+}
+
+func slashCommandCategory(name string) string {
+	switch name {
+	case "/help", "/model", "/config", "/quit", "/exit", "/clear", "/compact", "/undo", "/snapshot", "/recover", "/new", "/copy", "/welcome":
+		return "Core"
+	case "/review", "/commit", "/test", "/lint", "/diff", "/status", "/audit", "/security-review", "/check", "/bughunter", "/hunt", "/ultrareview":
+		return "Workflow"
+	case "/agents", "/agents-init", "/mission", "/exec", "/research", "/loop", "/council", "/dream", "/investigate", "/vibe":
+		return "Agent"
+	case "/memory", "/context", "/ctx", "/search", "/history", "/session", "/sessions", "/export", "/share", "/fork", "/branches", "/branch":
+		return "Memory"
+	case "/tools", "/mcp", "/plugin", "/plugins", "/skills", "/files", "/image", "/render", "/yaad", "/ecosystem", "/path":
+		return "Tools"
+	case "/doctor", "/cost", "/usage", "/metrics", "/stats", "/integrity", "/stale", "/tokens", "/provider-status":
+		return "Diagnostics"
+	case "/permissions", "/vim", "/theme", "/color", "/mouse", "/select", "/focus", "/follow", "/output-style", "/statusline", "/keybindings", "/voice", "/remote-env", "/refresh-model-catalog":
+		return "Settings"
+	default:
+		return "Other"
+	}
 }
 
 // Open opens the command palette.

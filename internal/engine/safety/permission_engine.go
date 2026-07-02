@@ -44,12 +44,14 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 	if !autoCfg.NeedsPermission(tc.Name, isSafe) {
 		return true, ""
 	}
-	if pe.PromptFn == nil {
-		return false, "Permission prompt unavailable."
-	}
-
 	summary := ToolSummary(tc.Name, tc.Args)
 
+	if decision := pe.modeDecision(tc.Name); decision != nil {
+		if !*decision {
+			return false, "Permission denied by permission mode."
+		}
+		return true, ""
+	}
 	if pe.BypassKill.IsEnabled() {
 		return true, ""
 	}
@@ -66,17 +68,14 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 			return false, "Permission denied (auto-mode)."
 		}
 	}
-	if decision := pe.modeDecision(tc.Name); decision != nil {
-		if !*decision {
-			return false, "Permission denied by permission mode."
-		}
-		return true, ""
-	}
 	if decision := pe.Memory.Check(tc.Name, summary); decision != nil {
 		if !*decision {
 			return false, "Permission denied (rule)."
 		}
 		return true, ""
+	}
+	if pe.PromptFn == nil {
+		return false, "Permission prompt unavailable."
 	}
 
 	// Ask user

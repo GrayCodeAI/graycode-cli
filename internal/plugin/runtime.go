@@ -68,6 +68,22 @@ func (r *Runtime) ExecuteCommand(name string, args []string) (string, error) {
 }
 
 // RegisterHooks registers all plugin hooks with the hook registry.
+func pluginHookEnvKey(key string) string {
+	var b strings.Builder
+	b.WriteString("HAWK_")
+	for _, r := range strings.ToUpper(key) {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			b.WriteRune(r)
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	if b.Len() == len("HAWK_") {
+		b.WriteString("DATA")
+	}
+	return b.String()
+}
+
 func (r *Runtime) RegisterHooks() {
 	for event, hookList := range r.hooks {
 		for _, h := range hookList {
@@ -79,7 +95,7 @@ func (r *Runtime) RegisterHooks() {
 					c := exec.CommandContext(ctx, "bash", "-c", cmd)
 					c.Env = os.Environ()
 					for k, v := range data {
-						c.Env = append(c.Env, fmt.Sprintf("%s=%v", strings.ToUpper(k), v))
+						c.Env = append(c.Env, fmt.Sprintf("%s=%v", pluginHookEnvKey(k), v))
 					}
 					out, err := c.CombinedOutput()
 					if err != nil {

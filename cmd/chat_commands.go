@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,7 +15,33 @@ import (
 )
 
 func slashCommands() []string {
-	return allSlashCommands
+	seen := make(map[string]bool, len(allSlashCommands)+subcommandRegistry.Size())
+	out := make([]string, 0, len(allSlashCommands)+subcommandRegistry.Size())
+	add := func(name string) {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return
+		}
+		if !strings.HasPrefix(name, "/") {
+			name = "/" + name
+		}
+		if seen[name] {
+			return
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	for _, name := range allSlashCommands {
+		add(name)
+	}
+	for _, cmd := range subcommandRegistry.All() {
+		add(cmd.Name())
+		for _, alias := range cmd.Aliases() {
+			add(alias)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 var allSlashCommands = []string{

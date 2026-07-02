@@ -42,3 +42,20 @@ func TestStreamRenderTickMsg_FlushesDeferredPartial(t *testing.T) {
 		t.Fatal("expected lastPartialRender to be updated")
 	}
 }
+
+func TestStreamChunkMsg_UpdatesIncrementalOutputEstimate(t *testing.T) {
+	m := newTestChatModel()
+	next, _ := m.Update(streamChunkMsg("abcdé"))
+	cm := requireChatModel(t, next)
+
+	if got := cm.turnEstimatedOutputRunes; got != 5 {
+		t.Fatalf("turnEstimatedOutputRunes = %d, want 5", got)
+	}
+	if got := cm.tokenOutputTarget(); got != 1 {
+		t.Fatalf("tokenOutputTarget() = %d, want 1", got)
+	}
+	cm.turnOutputTokens = 9
+	if got := cm.tokenOutputTarget(); got != 9 {
+		t.Fatalf("provider usage should override estimate, got %d", got)
+	}
+}

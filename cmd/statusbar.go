@@ -22,6 +22,14 @@ var (
 	statusBranchColor = branchYellow
 	statusTokenColor  = tokenSage
 	statusCostColor   = costViolet
+
+	statusCwdStyle    = lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
+	statusBranchStyle = lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
+	statusTokenStyle  = lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
+	statusCostStyle   = lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
+	statusClockStyle  = lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
+	statusFocusStyle  = lipgloss.NewStyle().Foreground(infoSky).Inline(true)
+	statusDimStyle    = lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 )
 
 // renderStatusBar renders the session stats footer below the input area.
@@ -39,38 +47,70 @@ func renderStatusBar(m *chatModel, width int) string {
 // branch switch shows up in the status bar within a few seconds.
 const statusBranchTTL = 5 * time.Second
 
-func renderStatusBarLeft(m *chatModel) string {
+func (m *chatModel) refreshStatusBarLeft(force bool) bool {
+	if m == nil {
+		return false
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
 	}
-	if m != nil && m.statusLeftKey == cwd && m.statusLeftVal != "" &&
-		time.Since(m.statusLeftAt) < statusBranchTTL {
-		return m.statusLeftVal
+	if !force && m.statusLeftKey == cwd && m.statusLeftVal != "" && time.Since(m.statusLeftAt) < statusBranchTTL {
+		return false
 	}
-	display := shortenHomePath(cwd)
-	cwdStyle := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
-	pathText := display + ":"
-	parts := []string{cwdStyle.Render(pathText)}
-
-	if branch, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil && branch != "" {
+	branch := ""
+	if b, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil && b != "" {
+		branch = b
 		if branch == "HEAD" {
 			branch, _ = gitOutput("rev-parse", "--short", "HEAD")
 		}
-		if branch != "" {
-			branchStyle := lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
-			branchText := icons.Branch() + " " + branch
-			parts = append(parts, branchStyle.Render(branchText))
-		}
 	}
+	m.statusLeftKey = cwd
+	m.statusLeftVal = shortenHomePath(cwd)
+	m.statusLeftBranch = branch
+	m.statusLeftAt = time.Now()
+	return true
+}
 
-	out := strings.Join(parts, " ")
-	if m != nil {
-		m.statusLeftKey = cwd
-		m.statusLeftVal = out
-		m.statusLeftAt = time.Now()
+func renderStatusBarLeft(m *chatModel) string {
+	cwd, ok := cachedStatusLeftCwd(m)
+	if !ok {
+		return ""
 	}
-	return out
+	if branch := cachedStatusBranch(m); branch != "" {
+		cwdStyle := statusCwdStyle.Render(cwd + ":")
+		branchStyle := statusBranchStyle.Render(icons.Branch() + " " + branch)
+		return strings.Join([]string{cwdStyle, branchStyle}, " ")
+	}
+	return statusCwdStyle.Render(cwd + ":")
+}
+
+func cachedStatusLeftCwd(m *chatModel) (string, bool) {
+	if m == nil {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return ".", false
+		}
+		return shortenHomePath(cwd), true
+	}
+	if m.statusLeftVal == "" {
+		return "", false
+	}
+	return m.statusLeftVal, true
+}
+
+func cachedStatusBranch(m *chatModel) string {
+	if m == nil {
+		branch, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD")
+		if err != nil || branch == "" {
+			return ""
+		}
+		if branch == "HEAD" {
+			branch, _ = gitOutput("rev-parse", "--short", "HEAD")
+		}
+		return branch
+	}
+	return m.statusLeftBranch
 }
 
 func renderStatusBarRight(m *chatModel) string {
@@ -78,27 +118,21 @@ func renderStatusBarRight(m *chatModel) string {
 		return ""
 	}
 
-	tokenStyle := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
-	costStyle := lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
-	timeStyle := lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
-	focusStyle := lipgloss.NewStyle().Foreground(infoSky).Inline(true)
-	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
-
 	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
 	tokenText := icons.Database() + " " + formatTokenCountCompact(tokens) + " tokens"
 	costText := fmt.Sprintf("%s %.2f", icons.Ruby(), m.session.CostValue().Total())
 	var meta []string
 	if m.inScrollbackFocus() {
-		meta = append(meta, focusStyle.Render("⧉"))
+		meta = append(meta, statusFocusStyle.Render("⧉"))
 	}
 	if m.waiting && !m.streamFollow {
-		meta = append(meta, dim.Render(icons.Pause()))
+		meta = append(meta, statusDimStyle.Render(icons.Pause()))
 	}
 
 	parts := append(
 		meta,
-		tokenStyle.Render(tokenText),
-		costStyle.Render(costText),
+		statusTokenStyle.Render(tokenText),
+		statusCostStyle.Render(costText),
 	)
 
 	sessionDur := time.Duration(0)
@@ -106,17 +140,17 @@ func renderStatusBarRight(m *chatModel) string {
 		sessionDur = time.Since(m.sessionStartedAt)
 	}
 	clockText := icons.ClockOutline() + " " + formatSessionDuration(sessionDur)
-	parts = append(parts, timeStyle.Render(clockText))
+	parts = append(parts, statusClockStyle.Render(clockText))
 
 	if m.waiting || m.manualCompacting {
 		timerText := formatSessionDuration(requestDuration(m))
-		parts = append(parts, timeStyle.Render(timerText))
+		parts = append(parts, statusClockStyle.Render(timerText))
 	}
 
 	if m.vim != nil && m.vim.IsEnabled() {
-		parts = append(parts, dim.Render(m.vim.ModeString()))
+		parts = append(parts, statusDimStyle.Render(m.vim.ModeString()))
 	}
-	return strings.Join(parts, dim.Render(" · "))
+	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
 func sessionDuration(m *chatModel) time.Duration {
