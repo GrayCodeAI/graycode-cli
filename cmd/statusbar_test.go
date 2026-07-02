@@ -21,7 +21,7 @@ func TestRenderStatusBarRight_IncludesTokensLabel(t *testing.T) {
 	if !strings.Contains(got, "tokens") {
 		t.Fatalf("expected tokens label in footer right, got %q", got)
 	}
-	if !strings.Contains(got, "●") {
+	if !strings.Contains(got, "[db]") {
 		t.Fatalf("expected bullet prefix, got %q", got)
 	}
 }

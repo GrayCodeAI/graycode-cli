@@ -121,7 +121,7 @@ const (
 	puaEmail          = "\ueb1c" // nf-cod-mail           (60188)
 	puaHelpCircle     = "\ueaa4" // nf-cod-info           (60020) — closest match
 	puaBranch         = "\uec5f" // nf-cod-git-branch     (60527)
-	puaClockOutline   = "\ueab2" // nf-cod-history        (60034)
+	puaClockOutline   = "\uf017" // nf-fa-clock_o         (61463)
 	puaPause          = "\uead1" // nf-cod-debug-pause    (60113)
 	puaExpandAll      = "\uebc1" // nf-cod-expand-all     (60309)
 	puaCaretRight     = "\ueb06" // nf-cod-chevron_right  (60086)
@@ -144,4 +144,7 @@ const (
 
 	// Nerd Fonts v3 Codicons pin (nf-cod-pin, 60203 → EB6B).
 	puaPin = "\ueb6b"
+
+	puaDatabase = "\ueb1e" // nf-cod-database
+	puaRuby     = "\ueb34" // nf-cod-ruby
 )

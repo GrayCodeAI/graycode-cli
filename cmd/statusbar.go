@@ -79,8 +79,8 @@ func renderStatusBarRight(m *chatModel) string {
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 
 	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
-	tokenText := "● " + formatTokenCountCompact(tokens) + " tokens"
-	costText := fmt.Sprintf("$%.2f", m.session.CostValue().Total())
+	tokenText := icons.Database() + " " + formatTokenCountCompact(tokens) + " tokens"
+	costText := fmt.Sprintf("%s %.2f", icons.Ruby(), m.session.CostValue().Total())
 	var meta []string
 	if m.inScrollbackFocus() {
 		meta = append(meta, focusStyle.Render("⧉"))
@@ -98,11 +98,15 @@ func renderStatusBarRight(m *chatModel) string {
 		costStyle.Render(costText),
 	)
 
-	clockText := icons.ClockOutline() + " " + time.Now().Format("15:04")
+	sessionDur := time.Duration(0)
+	if !m.sessionStartedAt.IsZero() {
+		sessionDur = time.Since(m.sessionStartedAt)
+	}
+	clockText := icons.ClockOutline() + " " + formatSessionDuration(sessionDur)
 	parts = append(parts, timeStyle.Render(clockText))
 
 	if m.waiting || m.manualCompacting {
-		timerText := formatSessionDuration(sessionDuration(m))
+		timerText := formatSessionDuration(requestDuration(m))
 		parts = append(parts, timeStyle.Render(timerText))
 	}
 
@@ -124,6 +128,13 @@ func sessionDuration(m *chatModel) time.Duration {
 		return 0
 	}
 	return time.Since(start)
+}
+
+func requestDuration(m *chatModel) time.Duration {
+	if m == nil || m.startedAt.IsZero() {
+		return 0
+	}
+	return time.Since(m.startedAt)
 }
 
 func shortenHomePath(path string) string {

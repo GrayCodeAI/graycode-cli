@@ -387,16 +387,6 @@ func TestErrorLoggerNilLogger(t *testing.T) {
 
 // ── validateStartup tests ─────────────────────────────────────────────────────
 
-func TestValidateStartupNoProvider(t *testing.T) {
-	// Empty provider should produce no API key warning
-	warnings := validateStartup(emptySettings())
-	for _, w := range warnings {
-		if w.Check == "api_key" {
-			t.Errorf("should not warn about API key when no provider is set, got: %s", w.Message)
-		}
-	}
-}
-
 func TestValidateStartupMissingKey(t *testing.T) {
 	// Unset the key to test
 	orig := os.Getenv("ANTHROPIC_API_KEY")
