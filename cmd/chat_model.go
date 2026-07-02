@@ -156,8 +156,12 @@ type chatModel struct {
 	messages                   []displayMsg
 	partial                    *strings.Builder
 	waiting                    bool
-	streamCancelled            bool                      // user cancelled; suppress late streamDone side effects
-	turnSawThinking            bool                      // current turn received hidden reasoning
+	streamCancelled            bool // user cancelled; suppress late streamDone side effects
+	turnSawThinking            bool // current turn received hidden reasoning
+	lastArrowTime              time.Time
+	lastArrowDt                time.Duration
+	arrowBurstActive           bool
+	isKeyRepeat                bool
 	turnHadAssistantOutput     bool                      // current turn produced assistant text
 	turnHadToolActivity        bool                      // current turn produced tool activity
 	messageQueue               []string                  // queued messages while agent is working

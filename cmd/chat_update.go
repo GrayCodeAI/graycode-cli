@@ -125,6 +125,31 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if isCopyToClipboardKey(msg) {
 			return m.handleCopyShortcut()
 		}
+
+		s := msg.String()
+		if s == "up" || s == "down" {
+			now := time.Now()
+			dt := now.Sub(m.lastArrowTime)
+			m.lastArrowTime = now
+
+			if dt < 60*time.Millisecond {
+				if !m.arrowBurstActive {
+					if m.lastArrowDt >= 200*time.Millisecond && m.lastArrowDt <= 800*time.Millisecond {
+						m.isKeyRepeat = true
+					} else {
+						m.arrowBurstActive = true
+						m.isKeyRepeat = false
+					}
+				}
+			} else {
+				m.arrowBurstActive = false
+				m.isKeyRepeat = false
+			}
+			m.lastArrowDt = dt
+		} else {
+			m.arrowBurstActive = false
+			m.isKeyRepeat = false
+		}
 		if isMouseSequenceLeak(msg) {
 			if m.configOpen {
 				if next, handled := m.handleConfigMouseLeak(msg); handled {

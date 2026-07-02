@@ -99,6 +99,14 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 		}
 		return false
 	}
+
+	// Terminal agnostic mouse scroll detection:
+	// If the terminal translates mouse wheel into a rapid burst of Up/Down keys,
+	// we intercept them and route them to the chat history.
+	if m.arrowBurstActive && (s == "up" || s == "down") {
+		return m.viewportScrollable()
+	}
+
 	if !m.viewportScrollable() {
 		return false
 	}
