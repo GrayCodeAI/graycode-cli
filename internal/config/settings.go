@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
@@ -154,12 +155,48 @@ func globalSettingsPath() string {
 	return storage.SettingsPath()
 }
 
+// settingsCache memoizes the raw settings file bytes for the process
+// lifetime, keyed on (path, mtime, size) so external edits and SaveGlobal are
+// always picked up while repeated startup loads skip the disk read. Only raw
+// bytes are cached — each call unmarshals a fresh value, because callers
+// (e.g. MergeSettings) mutate reference fields like ModelRoles in place.
+var settingsCache struct {
+	sync.Mutex
+	valid   bool
+	path    string
+	modTime time.Time
+	size    int64
+	data    []byte
+}
+
+func readSettingsFileCached(path string) ([]byte, error) {
+	fi, statErr := os.Stat(path)
+	settingsCache.Lock()
+	defer settingsCache.Unlock()
+	if statErr == nil && settingsCache.valid && settingsCache.path == path &&
+		settingsCache.modTime.Equal(fi.ModTime()) && settingsCache.size == fi.Size() {
+		return settingsCache.data, nil
+	}
+	data, err := os.ReadFile(path)
+	if err == nil && statErr == nil {
+		settingsCache.valid = true
+		settingsCache.path = path
+		settingsCache.modTime = fi.ModTime()
+		settingsCache.size = fi.Size()
+		settingsCache.data = data
+	} else {
+		settingsCache.valid = false
+	}
+	return data, err
+}
+
 // LoadGlobalSettings loads only Hawk's user config settings.json.
 func LoadGlobalSettings() Settings {
 	var s Settings
-	if data, err := os.ReadFile(globalSettingsPath()); err == nil {
+	path := globalSettingsPath()
+	if data, err := readSettingsFileCached(path); err == nil {
 		if err := json.Unmarshal(data, &s); err != nil {
-			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", globalSettingsPath(), err)
+			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", path, err)
 		}
 	}
 	return s
@@ -291,7 +328,8 @@ func SaveGlobal(s Settings) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(globalSettingsPath(), data, 0o644)
+	// 0600: per-user config; keep it unreadable to other local users.
+	return os.WriteFile(globalSettingsPath(), data, 0o600)
 }
 
 // SettingValue returns a display-safe value for a supported setting key.

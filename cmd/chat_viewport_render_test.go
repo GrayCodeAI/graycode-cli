@@ -172,3 +172,60 @@ func findWidthSensitiveViewportScenario(t *testing.T) (string, int, int, int, in
 	t.Fatal("failed to find width-sensitive content for viewport render test")
 	return "", 0, 0, 0, 0
 }
+
+func TestRenderStreamTail_IncrementalMatchesFullRender(t *testing.T) {
+	full := "# Title\n\nFirst paragraph with **bold** text.\n\n" +
+		"- item one\n- item two\n\n" +
+		"```go\nfunc main() {\n\tfmt.Println(\"hi\")\n}\n```\n\n" +
+		"> a quote line\n\nSecond paragraph after a fence.\n\n\nTrailing text"
+	chunks := []int{3, 9, 20, 41, 55, 70, 90, 120, 150, len(full)}
+
+	m := &chatModel{width: 100, partial: &strings.Builder{}}
+	for _, end := range chunks {
+		if end > len(full) {
+			end = len(full)
+		}
+		m.partial.Reset()
+		m.partial.WriteString(full[:end])
+
+		got := m.renderStreamTail(100)
+		raw := strings.TrimLeft(full[:end], "\n\r")
+		// Compare against a single-pass render of the same partial: force
+		// "prefix == whole raw" so the fresh model renders without splitting.
+		fresh := &chatModel{width: 100, partial: &strings.Builder{}}
+		fresh.partial.WriteString(full[:end])
+		fresh.streamMDPrefixRaw = raw
+		fresh.streamMDPrefixOut = renderMarkdown(sanitizeIdentity(raw), 97)
+		fresh.streamMDWidth = 100
+		want := fresh.renderStreamTail(100)
+		if got != want {
+			t.Fatalf("incremental render diverged at %d bytes:\n got: %q\nwant: %q", end, got, want)
+		}
+	}
+}
+
+func TestStreamStableBoundary_NeverInsideFence(t *testing.T) {
+	raw := "before\n\n```txt\ntext with\n\nblank line inside fence\n\nmore\n```\nafter"
+	b := streamStableBoundary(raw)
+	if want := len("before\n\n"); b != want {
+		t.Fatalf("boundary = %d, want %d (must not split inside code fence)", b, want)
+	}
+	if b > 0 && strings.Count(raw[:b], "```")%2 != 0 {
+		t.Fatal("boundary leaves an unbalanced fence in the prefix")
+	}
+}
+
+func TestTrailingNewlines(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"abc", ""},
+		{"abc\n\n", "\n\n"},
+		{"abc\n \n\n", "\n\n\n"},
+		{"abc\n\t\n", "\n\n"},
+		{"\n\n", "\n\n"},
+	}
+	for _, tt := range tests {
+		if got := trailingNewlines(tt.in); got != tt.want {
+			t.Errorf("trailingNewlines(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}

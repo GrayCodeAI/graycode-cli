@@ -15,11 +15,14 @@ func (m *chatModel) invalidateViewportCache() {
 	m.vpRenderedMsgs = 0
 	m.vpRenderWidth = 0
 	m.vpLastMsgLen = 0
+	m.streamMDPrefixRaw = ""
+	m.streamMDPrefixOut = ""
+	m.streamMDWidth = 0
 }
 
 func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidth int) string {
-	hawkC := "\033[38;2;255;94;14m"
-	rst := "\033[0m"
+	hawkC := ansiOrange
+	rst := ansiReset
 	bgDark := "\033[48;2;30;30;40m"
 
 	var b strings.Builder
@@ -145,15 +148,86 @@ func renderMessagesRange(messages []displayMsg, start, end int, viewWidth int) s
 	return b.String()
 }
 
-func (m chatModel) renderStreamTail(viewWidth int) string {
-	hawkC := "\033[38;2;255;94;14m"
-	rst := "\033[0m"
-
-	partial := sanitizeIdentity(strings.TrimLeft(m.partial.String(), "\n\r"))
-	if partial != "" {
-		return hawkC + icons.Robot() + " " + rst + renderMarkdown(partial, viewWidth-3) + "\n\n"
+// renderStreamTail renders the live streaming partial. The stable prefix
+// (every completed markdown block) is sanitized+rendered once and cached, so
+// each 50ms tick only re-renders the small tail after the last block
+// boundary instead of the whole accumulated response (which is O(n²) over a
+// long stream). The cache self-validates via HasPrefix, so width changes,
+// stream restarts, and partial resets all fall back to a clean rebuild.
+func (m *chatModel) renderStreamTail(viewWidth int) string {
+	raw := strings.TrimLeft(m.partial.String(), "\n\r")
+	if raw == "" {
+		return m.renderWaitingSpinnerLine() + "\n\n"
 	}
-	return m.renderWaitingSpinnerLine() + "\n\n"
+
+	if m.streamMDWidth != viewWidth || !strings.HasPrefix(raw, m.streamMDPrefixRaw) {
+		m.streamMDPrefixRaw = ""
+		m.streamMDPrefixOut = ""
+		m.streamMDWidth = viewWidth
+	}
+	if boundary := streamStableBoundary(raw); boundary > len(m.streamMDPrefixRaw) {
+		prefix := raw[:boundary]
+		m.streamMDPrefixOut = renderMarkdown(sanitizeIdentity(prefix), viewWidth-3)
+		m.streamMDPrefixRaw = prefix
+	}
+
+	out := m.streamMDPrefixOut
+	if tail := raw[len(m.streamMDPrefixRaw):]; tail != "" {
+		rendered := renderMarkdown(sanitizeIdentity(tail), viewWidth-3)
+		if out != "" {
+			// renderMarkdown trims trailing newlines; re-insert the blank-line
+			// run that separated prefix from tail in the raw text.
+			out += trailingNewlines(m.streamMDPrefixRaw) + rendered
+		} else {
+			out = rendered
+		}
+	}
+	return ansiOrange + icons.Robot() + " " + ansiReset + out + "\n\n"
+}
+
+// streamStableBoundary returns the offset just past the last blank-line
+// block separator in raw that lies outside a fenced code block, mirroring
+// renderMarkdown's fence rules (any ``` opens; a bare ``` closes). Splitting
+// there and rendering the halves independently reproduces the full render.
+func streamStableBoundary(raw string) int {
+	boundary := 0
+	inFence := false
+	pos := 0
+	for {
+		nl := strings.IndexByte(raw[pos:], '\n')
+		if nl < 0 {
+			break
+		}
+		trimmed := strings.TrimSpace(raw[pos : pos+nl])
+		if !inFence && strings.HasPrefix(trimmed, "```") {
+			inFence = true
+		} else if inFence && trimmed == "```" {
+			inFence = false
+		}
+		lineEnd := pos + nl + 1
+		if !inFence && lineEnd < len(raw) && raw[lineEnd] == '\n' {
+			boundary = lineEnd + 1
+		}
+		pos = lineEnd
+	}
+	return boundary
+}
+
+// trailingNewlines returns the newlines in s's trailing whitespace run —
+// the blank-line separator renderMarkdown trims from a prefix render.
+func trailingNewlines(s string) string {
+	n := 0
+	for i := len(s) - 1; i >= 0; i-- {
+		switch s[i] {
+		case '\n':
+			n++
+		case ' ', '\t', '\r':
+			// blank-line content; keep scanning
+		default:
+			return strings.Repeat("\n", n)
+		}
+	}
+	return strings.Repeat("\n", n)
 }
 
 // assembleViewportContent builds scrollback using the render cache. Returns the

@@ -3,6 +3,7 @@ package cmd
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
@@ -370,9 +371,30 @@ func mdWordWrap(text string, width int) string {
 	return result.String()
 }
 
-// visibleWidth returns the display width of a string, stripping ANSI escape codes.
+// visibleWidth returns the display width of a string, skipping ANSI escape
+// codes. Implemented as a direct scan (no regex, no allocation) because it is
+// called per word on the streaming render path.
 func visibleWidth(s string) int {
-	return runewidth.StringWidth(stripAnsi(s))
+	w := 0
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			// CSI sequence: skip until the final byte (an ASCII letter).
+			j := i + 2
+			for j < len(s) {
+				c := s[j]
+				j++
+				if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+					break
+				}
+			}
+			i = j
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		w += runewidth.RuneWidth(r)
+		i += size
+	}
+	return w
 }
 
 // reAnsi matches ANSI escape sequences for stripping in width calculations.

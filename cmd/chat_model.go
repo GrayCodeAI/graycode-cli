@@ -249,13 +249,21 @@ type chatModel struct {
 	partialRenderPending bool
 	statusLeftKey        string
 	statusLeftVal        string
+	statusLeftAt         time.Time // last branch lookup; refreshed on a short TTL
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string
 	vpRenderedMsgs  int
 	vpRenderWidth   int
 	vpLastMsgLen    int
-	activeSkills    map[string]plugin.SmartSkill // per-session activated skills
+
+	// Streaming-partial render cache: rendered output of the completed
+	// markdown blocks of m.partial (see renderStreamTail).
+	streamMDPrefixRaw string
+	streamMDPrefixOut string
+	streamMDWidth     int
+
+	activeSkills map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool
