@@ -206,7 +206,7 @@ func TestRenderStreamTail_IncrementalMatchesFullRender(t *testing.T) {
 
 func TestStreamStableBoundary_NeverInsideFence(t *testing.T) {
 	raw := "before\n\n```txt\ntext with\n\nblank line inside fence\n\nmore\n```\nafter"
-	b := streamStableBoundary(raw)
+	b := streamStableBoundary(raw, 0)
 	if want := len("before\n\n"); b != want {
 		t.Fatalf("boundary = %d, want %d (must not split inside code fence)", b, want)
 	}
@@ -226,6 +226,52 @@ func TestTrailingNewlines(t *testing.T) {
 	for _, tt := range tests {
 		if got := trailingNewlines(tt.in); got != tt.want {
 			t.Errorf("trailingNewlines(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+// longStreamDoc builds a realistic multi-block markdown response for
+// benchmarking the streaming render path.
+func longStreamDoc() string {
+	var b strings.Builder
+	for i := 0; i < 40; i++ {
+		b.WriteString("## Section heading number ")
+		b.WriteString(strings.Repeat("x", 3))
+		b.WriteString("\n\nThis is a paragraph of prose with some **bold** and `code` spans ")
+		b.WriteString("that wraps across the viewport width to exercise the wrapper.\n\n")
+		b.WriteString("- first bullet item in the list\n- second bullet item\n- third\n\n")
+		b.WriteString("```go\nfunc example() {\n\tfmt.Println(\"block\")\n}\n```\n\n")
+	}
+	return b.String()
+}
+
+// BenchmarkRenderStreamTail_Cached measures the incremental (cached) streaming
+// render across the full lifetime of a long response, one render per tick.
+func BenchmarkRenderStreamTail_Cached(b *testing.B) {
+	doc := longStreamDoc()
+	steps := 50
+	for n := 0; n < b.N; n++ {
+		m := &chatModel{width: 100, partial: &strings.Builder{}}
+		for s := 1; s <= steps; s++ {
+			end := len(doc) * s / steps
+			m.partial.Reset()
+			m.partial.WriteString(doc[:end])
+			_ = m.renderStreamTail(100)
+		}
+	}
+}
+
+// BenchmarkRenderStreamTail_Naive reproduces the pre-cache behavior:
+// re-render the entire accumulated partial every tick. Kept as a baseline
+// to quantify the incremental cache's win.
+func BenchmarkRenderStreamTail_Naive(b *testing.B) {
+	doc := longStreamDoc()
+	steps := 50
+	for n := 0; n < b.N; n++ {
+		for s := 1; s <= steps; s++ {
+			end := len(doc) * s / steps
+			raw := strings.TrimLeft(doc[:end], "\n\r")
+			_ = renderMarkdown(sanitizeIdentity(raw), 97)
 		}
 	}
 }

@@ -165,34 +165,34 @@ func (m *chatModel) renderStreamTail(viewWidth int) string {
 		m.streamMDPrefixOut = ""
 		m.streamMDWidth = viewWidth
 	}
-	if boundary := streamStableBoundary(raw); boundary > len(m.streamMDPrefixRaw) {
-		prefix := raw[:boundary]
-		m.streamMDPrefixOut = renderMarkdown(sanitizeIdentity(prefix), viewWidth-3)
-		m.streamMDPrefixRaw = prefix
+	// Fold any newly-completed blocks into the cached prefix, rendering ONLY
+	// the new blocks (not the whole prefix) so cost stays linear over the
+	// stream. The scan resumes from the last boundary, always outside a fence.
+	if boundary := streamStableBoundary(raw, len(m.streamMDPrefixRaw)); boundary > len(m.streamMDPrefixRaw) {
+		newBlocks := raw[len(m.streamMDPrefixRaw):boundary]
+		rendered := renderMarkdown(sanitizeIdentity(newBlocks), viewWidth-3)
+		m.streamMDPrefixOut = appendRendered(m.streamMDPrefixOut, rendered, m.streamMDPrefixRaw)
+		m.streamMDPrefixRaw = raw[:boundary]
 	}
 
 	out := m.streamMDPrefixOut
 	if tail := raw[len(m.streamMDPrefixRaw):]; tail != "" {
 		rendered := renderMarkdown(sanitizeIdentity(tail), viewWidth-3)
-		if out != "" {
-			// renderMarkdown trims trailing newlines; re-insert the blank-line
-			// run that separated prefix from tail in the raw text.
-			out += trailingNewlines(m.streamMDPrefixRaw) + rendered
-		} else {
-			out = rendered
-		}
+		out = appendRendered(out, rendered, m.streamMDPrefixRaw)
 	}
 	return ansiOrange + icons.Robot() + " " + ansiReset + out + "\n\n"
 }
 
-// streamStableBoundary returns the offset just past the last blank-line
-// block separator in raw that lies outside a fenced code block, mirroring
+// streamStableBoundary returns the offset just past the last blank-line block
+// separator in raw that lies outside a fenced code block, mirroring
 // renderMarkdown's fence rules (any ``` opens; a bare ``` closes). Splitting
 // there and rendering the halves independently reproduces the full render.
-func streamStableBoundary(raw string) int {
-	boundary := 0
+// The scan starts at from, which callers guarantee is a previous boundary
+// (always outside a fence), so the whole buffer is not re-scanned each tick.
+func streamStableBoundary(raw string, from int) int {
+	boundary := from
 	inFence := false
-	pos := 0
+	pos := from
 	for {
 		nl := strings.IndexByte(raw[pos:], '\n')
 		if nl < 0 {
@@ -211,6 +211,16 @@ func streamStableBoundary(raw string) int {
 		pos = lineEnd
 	}
 	return boundary
+}
+
+// appendRendered concatenates a freshly rendered segment onto already-rendered
+// output, re-inserting the blank-line separator renderMarkdown trims. prevRaw
+// is the raw text behind out, whose trailing blank lines are the separator.
+func appendRendered(out, rendered, prevRaw string) string {
+	if out == "" {
+		return rendered
+	}
+	return out + trailingNewlines(prevRaw) + rendered
 }
 
 // trailingNewlines returns the newlines in s's trailing whitespace run —
