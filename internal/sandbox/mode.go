@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
@@ -142,6 +143,29 @@ func ParseMode(s string) Mode {
 	default:
 		return ModeStrict
 	}
+}
+
+// ModeAllowsNetwork reports whether a command run under the given mode
+// should be allowed outbound network access.
+//
+// The seatbelt policy historically allowed network for every tier, so a
+// sandboxed command could still exfiltrate data. This makes network denial
+// actually reachable and gives strict mode its documented "no network"
+// posture, while keeping it on for workspace builds (package managers,
+// module fetches). HAWK_SANDBOX_NETWORK overrides the default either way:
+//
+//	HAWK_SANDBOX_NETWORK=0|off|no|false → deny in all modes
+//	HAWK_SANDBOX_NETWORK=1|on|yes|true  → allow in all modes
+func ModeAllowsNetwork(m Mode) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("HAWK_SANDBOX_NETWORK"))) {
+	case "0", "off", "no", "false":
+		return false
+	case "1", "on", "yes", "true":
+		return true
+	}
+	// Default: strict denies (read-only, no exfiltration path); workspace
+	// keeps network so ordinary builds still work.
+	return m != ModeStrict
 }
 
 // modeCtxKey is the context key for sandbox Mode.
