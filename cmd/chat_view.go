@@ -19,6 +19,23 @@ func (m chatModel) showWelcomeBanner() bool {
 	return strings.TrimSpace(m.welcomeCache) != ""
 }
 
+// hasRealMessages counts messages that are actual chat content (not just the
+// welcome header, usage hints, or setup_complete banners).
+func (m chatModel) hasRealMessages() int {
+	n := 0
+	for _, msg := range m.messages {
+		switch msg.role {
+		case "welcome", "usage", "setup_complete":
+			// skip decoration-only messages
+		default:
+			if msg.role != "" {
+				n++
+			}
+		}
+	}
+	return n
+}
+
 func renderSetupCompleteMessage(model string) string {
 	success := lipgloss.NewStyle().Foreground(doneGreen).Bold(true).Inline(true)
 	muted := configMutedStyle().Inline(true)
@@ -254,9 +271,15 @@ func (m *chatModel) updateViewportContent() {
 		m.contentLines = 1
 	}
 
+	welcomeOnly := m.hasRealMessages() == 0 && !m.waiting
+
 	m.viewport.SetContent(contentStr)
 	m.viewport.Width = m.chatViewportWidth(viewWidth)
 	switch {
+	case welcomeOnly:
+		// Start at top so the user sees the welcome screen without needing
+		// to scroll up.
+		m.viewport.GotoTop()
 	case preserveScroll:
 		m.viewport.SetYOffset(prevYOffset)
 	case atBottom || (m.autoScroll && m.streamFollow):

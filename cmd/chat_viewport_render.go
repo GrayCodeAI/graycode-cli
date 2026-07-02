@@ -192,8 +192,17 @@ func (m *chatModel) assembleViewportContent(viewWidth int) string {
 		m.vpLastMsgLen = 0
 	}
 
+	welcome := m.renderWelcomeScreen(viewWidth)
+
+	// Welcome-only state: no real messages yet — return just the welcome
+	// screen so the viewport starts at top and the content fills it
+	// naturally. Once the user sends a message, real content takes over.
+	if m.vpRenderedMsgs == 0 && !m.waiting && welcome != "" {
+		return welcome
+	}
+
 	content := m.vpStableContent
-	if welcome := m.renderWelcomeScreen(viewWidth); welcome != "" {
+	if welcome != "" {
 		content = welcome + "\n\n" + content
 	}
 	if m.waiting && !m.manualCompacting {
