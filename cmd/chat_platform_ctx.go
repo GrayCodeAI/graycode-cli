@@ -16,8 +16,6 @@ var platformCtxCache struct {
 	at  time.Time
 }
 
-const platformCtxCacheTTL = 10 * time.Minute
-
 func isXiaomiMimoProvider(provider string) bool {
 	p := strings.ToLower(strings.TrimSpace(provider))
 	p = strings.ReplaceAll(p, "-", "_")

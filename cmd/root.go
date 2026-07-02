@@ -95,11 +95,7 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if versionFlag {
-			if buildDate != "" && buildDate != "unknown" {
-				cmd.Println(fmt.Sprintf("%s (Hawk) built %s", version, buildDate))
-			} else {
-				cmd.Println(fmt.Sprintf("%s (Hawk)", version))
-			}
+			cmd.Println(versionLine())
 			return nil
 		}
 		if promptFlag == "" && len(args) > 0 {
@@ -348,7 +344,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print hawk version",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Println("hawk", version)
+		cmd.Println(versionLine())
 	},
 }
 

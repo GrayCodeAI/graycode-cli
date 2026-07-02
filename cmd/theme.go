@@ -166,7 +166,10 @@ const (
 	ansiMagenta = "\033[95m"
 	ansiCyan    = "\033[96m"
 	ansiWhite   = "\033[97m"
-	ansiTeal    = "\033[38;2;78;205;196m" // matches successTeal — spinner elapsed
+	ansiTeal    = "\033[38;2;78;205;196m"  // matches successTeal — spinner elapsed
+	ansiCoral   = "\033[38;2;255;107;107m" // matches errorCoral
+	ansiAmber   = "\033[38;2;255;179;71m"  // matches warnAmber
+	ansiGrayDim = "\033[38;2;102;102;102m" // matches textDisabled
 	ansiDim     = "\033[2m"
 	ansiItalic  = "\033[3m"
 	ansiBold    = "\033[1m"

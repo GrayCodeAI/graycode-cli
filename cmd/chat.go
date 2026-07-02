@@ -549,8 +549,8 @@ func runChat() error {
 		fmt.Print(formatQuitResumeMessage(fm.sessionID))
 		return nil
 	}
-	hawkC := "\033[38;2;255;94;14m"
-	rst := "\033[0m"
+	hawkC := ansiOrange
+	rst := ansiReset
 
 	fmt.Print(fm.welcomeCache)
 	fmt.Println()

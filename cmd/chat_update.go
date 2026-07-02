@@ -743,7 +743,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 			m.toolStartTime = time.Time{}
 			m.viewDirty = true
-
 		}
 		if m.compacting {
 			m.compacting = false

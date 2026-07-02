@@ -35,12 +35,17 @@ func renderStatusBar(m *chatModel, width int) string {
 	return layoutFooterRow(left, right, width)
 }
 
+// statusBranchTTL bounds how long the cwd+branch segment is cached, so a
+// branch switch shows up in the status bar within a few seconds.
+const statusBranchTTL = 5 * time.Second
+
 func renderStatusBarLeft(m *chatModel) string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
 	}
-	if m != nil && m.statusLeftKey == cwd && m.statusLeftVal != "" {
+	if m != nil && m.statusLeftKey == cwd && m.statusLeftVal != "" &&
+		time.Since(m.statusLeftAt) < statusBranchTTL {
 		return m.statusLeftVal
 	}
 	display := shortenHomePath(cwd)
@@ -63,6 +68,7 @@ func renderStatusBarLeft(m *chatModel) string {
 	if m != nil {
 		m.statusLeftKey = cwd
 		m.statusLeftVal = out
+		m.statusLeftAt = time.Now()
 	}
 	return out
 }

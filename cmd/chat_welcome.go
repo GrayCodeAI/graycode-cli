@@ -97,24 +97,25 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot) string {
 	// Brand orange — used for both the HAWK wordmark and the mascot so
-	// the welcome screen stays on theme.
-	logoC := "\033[38;2;255;94;14m" // brand orange — WELCOME TO + HAWK wordmark
-	mascotC := "\033[38;2;255;94;14m"
-	dimC := "\033[2m"
-	boldC := "\033[1m"
+	// the welcome screen stays on theme. All escapes come from the theme
+	// palette (theme.go) so a rebrand stays a one-file change.
+	logoC := ansiOrange
+	mascotC := ansiOrange
+	dimC := ansiDim
+	boldC := ansiBold
 	// Indicator colors — same as the rest of the TUI palette (success
 	// teal, error coral) so the ✓/× marks match the colors used
 	// elsewhere for success/error states.
-	greenC := "\033[38;2;78;205;196m" // successTeal
-	redC := "\033[38;2;255;107;107m"  // errorCoral
-	amberC := "\033[38;2;255;179;71m" // warnAmber
-	sepC := "\033[38;2;102;102;102m"  // textDisabled — chip separators
-	rst := "\033[0m"
+	greenC := ansiTeal
+	redC := ansiCoral
+	amberC := ansiAmber
+	sepC := ansiGrayDim
+	rst := ansiReset
 
 	// Status marks — green ✓ = present, dim ○ = none (not an error),
 	// red × = actual problem (e.g. Docker enabled but not running). Using a
 	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
-	markPresent := greenC + "+" + icons.CheckBold() + " " + rst
+	markPresent := greenC + icons.CheckBold() + " " + rst
 	markNone := sepC + "○" + rst
 
 	totalW := width
@@ -174,7 +175,7 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 
 	verLine := fmt.Sprintf("v%s", DisplayVersion())
 	b.WriteByte('\n')
-	b.WriteString(center(len(verLine), dimC+verLine+rst) + "\n")
+	b.WriteString(center(runewidth.StringWidth(verLine), dimC+verLine+rst) + "\n")
 
 	setup := snapshot.setup
 	needsSetup := setup.NeedsSetup
@@ -182,13 +183,13 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	if needsSetup {
 		if hint := setup.Hint; hint != "" {
 			b.WriteByte('\n')
-			b.WriteString(center(len(hint), amberC+hint+rst) + "\n")
+			b.WriteString(center(runewidth.StringWidth(hint), amberC+hint+rst) + "\n")
 		}
 	}
 	if needsSetup {
 		quick := "Quick start: /config to connect a provider and pick a model · /help for commands"
 		b.WriteByte('\n')
-		b.WriteString(center(len(quick), boldC+quick+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(quick), boldC+quick+rst) + "\n")
 		example := "Then ask: explain this repo · fix the failing test · add tests for cmd/eval"
 		if tight {
 			example = "Then ask: explain this repo · fix the failing test"
@@ -204,7 +205,7 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 			tip = "TIP: /new starts a clean session"
 		}
 		b.WriteByte('\n')
-		b.WriteString(center(len(tip), boldC+tip+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(tip), boldC+tip+rst) + "\n")
 		shortcutsRow1 := "ctrl+N for new session · ctrl+L for autonomy"
 		shortcutsRow2 := "/help for commands · /config for setup · /permissions for approvals"
 		if tight {
@@ -230,17 +231,15 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	hawkMark := mark(agentsOK)
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
-	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
 	if dockerSeg, _ := welcomeDockerSegment(dockerRunning, greenC, redC, rst); dockerSeg != "" {
 		indicators += dockerSeg
-		indVis += "  Docker x"
 	}
 	b.WriteByte('\n')
-	b.WriteString(center(len(indVis), indicators) + "\n")
+	b.WriteString(center(visibleWidth(indicators), indicators) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
-		b.WriteString(center(len(resume), dimC+resume+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(resume), dimC+resume+rst) + "\n")
 	}
 
 	return b.String()
