@@ -23,6 +23,9 @@ import (
 // applyPromptArrowKey handles Up/Down in the prompt: slash menu navigation or input history.
 // Returns true when the key was consumed so callers skip textarea/updateInput handling.
 func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
+	if m.arrowBurstActive {
+		return true
+	}
 	if m.uiFocus != focusPrompt || m.configOpen {
 		return false
 	}
@@ -114,7 +117,70 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case processArrowTickMsg:
+		if m.pendingArrow != nil && m.arrowSeq == msg.seq {
+			msgToProcess := *m.pendingArrow
+			m.pendingArrow = nil
+			m.arrowBurstActive = false
+			m.processingGenuineArrow = true
+			next, cmd := m.Update(msgToProcess)
+			if nextModel, ok := next.(chatModel); ok {
+				nextModel.processingGenuineArrow = false
+				return nextModel, cmd
+			}
+			return next, cmd
+		}
+		return m, nil
+
 	case tea.KeyMsg:
+		s := msg.String()
+		if (s == "up" || s == "down") && !m.processingGenuineArrow {
+			now := time.Now()
+			dt := now.Sub(m.lastArrowTime)
+			m.lastArrowTime = now
+			m.arrowSeq++
+			seq := m.arrowSeq
+
+			if dt < 30*time.Millisecond {
+				m.arrowBurstActive = true
+				if m.pendingArrow != nil {
+					pMsg := *m.pendingArrow
+					m.pendingArrow = nil
+					m.processingGenuineArrow = true
+					next, cmd := m.Update(pMsg)
+					if nextModel, ok := next.(chatModel); ok {
+						m = nextModel
+					}
+					m.processingGenuineArrow = false
+					if cmd != nil {
+						cmds = append(cmds, cmd)
+					}
+				}
+				// Proceed to process `msg` immediately (fall through with m.arrowBurstActive = true)
+			} else {
+				m.arrowBurstActive = false
+				m.pendingArrow = &msg
+				return m, tea.Tick(30*time.Millisecond, func(t time.Time) tea.Msg {
+					return processArrowTickMsg{seq: seq}
+				})
+			}
+		} else {
+			if m.pendingArrow != nil && !m.processingGenuineArrow {
+				pMsg := *m.pendingArrow
+				m.pendingArrow = nil
+				m.arrowBurstActive = false
+				m.processingGenuineArrow = true
+				next, cmd := m.Update(pMsg)
+				if nextModel, ok := next.(chatModel); ok {
+					m = nextModel
+				}
+				m.processingGenuineArrow = false
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			}
+		}
+
 		// Ctrl+\ enters native terminal selection mode. Available in every UI
 		// state (welcome gate, permissions, prompt, scrollback) so users always
 		// have a way to copy text out of the chat — the alt-screen +

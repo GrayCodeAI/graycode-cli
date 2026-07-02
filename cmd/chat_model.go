@@ -106,6 +106,9 @@ type (
 	pluginRuntimeReadyMsg struct {
 		runtime *plugin.Runtime
 	}
+	processArrowTickMsg struct {
+		seq int
+	}
 	systemPromptContextReadyMsg struct {
 		context string
 	}
@@ -156,8 +159,13 @@ type chatModel struct {
 	messages                   []displayMsg
 	partial                    *strings.Builder
 	waiting                    bool
-	streamCancelled            bool                      // user cancelled; suppress late streamDone side effects
-	turnSawThinking            bool                      // current turn received hidden reasoning
+	streamCancelled            bool // user cancelled; suppress late streamDone side effects
+	turnSawThinking            bool // current turn received hidden reasoning
+	arrowSeq                   int
+	pendingArrow               *tea.KeyMsg
+	arrowBurstActive           bool
+	lastArrowTime              time.Time
+	processingGenuineArrow     bool
 	turnHadAssistantOutput     bool                      // current turn produced assistant text
 	turnHadToolActivity        bool                      // current turn produced tool activity
 	messageQueue               []string                  // queued messages while agent is working

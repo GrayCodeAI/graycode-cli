@@ -228,17 +228,6 @@ func TestNormalizeModelDisplayName_ShortensSlug(t *testing.T) {
 	}
 }
 
-func TestWelcomeHeader_StaysFullAfterChat(t *testing.T) {
-	m := chatModel{
-		welcomeCache: "BIG LOGO",
-		messages:     []displayMsg{{role: "user", content: "Hi"}},
-	}
-	got := m.renderFixedWelcomePane(80)
-	if !strings.Contains(got, "BIG LOGO") {
-		t.Fatalf("expected full welcome in fixed pane, got %q", got)
-	}
-}
-
 func TestShowWelcomeBanner_WithMessages(t *testing.T) {
 	m := chatModel{
 		welcomeCache: "welcome",

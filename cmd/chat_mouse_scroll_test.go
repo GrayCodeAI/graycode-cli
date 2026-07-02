@@ -63,7 +63,10 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 	if m.routeKeyToViewport(up) {
 		t.Fatalf("pass %d: up in prompt focus should not route to viewport", pass)
 	}
-	next, _ = m.Update(up)
+	next, cmd := m.Update(up)
+	if cmd != nil {
+		next, _ = next.(chatModel).Update(cmd())
+	}
 	m = next.(chatModel)
 	if m.input.Value() != "second" {
 		t.Fatalf("pass %d: up should navigate input history, got %q", pass, m.input.Value())
@@ -117,14 +120,20 @@ func TestUpdate_InputHistoryWhileWaiting(t *testing.T) {
 	m = m.withSyncedLayout()
 
 	up := tea.KeyMsg{Type: tea.KeyUp}
-	next, _ := m.Update(up)
+	next, cmd := m.Update(up)
+	if cmd != nil {
+		next, _ = next.Update(cmd())
+	}
 	m = next.(chatModel)
 	if m.input.Value() != "second" {
 		t.Fatalf("up while waiting should navigate history, got %q", m.input.Value())
 	}
 
 	down := tea.KeyMsg{Type: tea.KeyDown}
-	next, _ = m.Update(down)
+	next, cmd = m.Update(down)
+	if cmd != nil {
+		next, _ = next.Update(cmd())
+	}
 	m = next.(chatModel)
 	if m.input.Value() != "" {
 		t.Fatalf("down while waiting should restore empty draft, got %q", m.input.Value())

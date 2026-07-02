@@ -35,8 +35,8 @@ func TestRouteKeyToViewport_ScrollbackFocus(t *testing.T) {
 	vp := viewport.New(80, 10)
 	vp.SetContent(strings.Repeat("line\n", 30))
 	m := chatModel{viewport: vp, uiFocus: focusScrollback}
-	if !m.routeKeyToViewport(tea.KeyMsg{Type: tea.KeyUp}) {
-		t.Fatal("up should scroll in scrollback focus")
+	if m.routeKeyToViewport(tea.KeyMsg{Type: tea.KeyUp}) {
+		t.Fatal("up should NOT scroll in scrollback focus")
 	}
 }
 

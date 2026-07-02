@@ -193,6 +193,9 @@ func (m *chatModel) assembleViewportContent(viewWidth int) string {
 	}
 
 	content := m.vpStableContent
+	if welcome := m.renderWelcomeScreen(viewWidth); welcome != "" {
+		content = welcome + "\n\n" + content
+	}
 	if m.waiting && !m.manualCompacting {
 		content += m.renderStreamTail(viewWidth)
 	}

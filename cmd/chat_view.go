@@ -364,10 +364,6 @@ func (m chatModel) View() string {
 	}
 
 	var frame strings.Builder
-	if welcome := m.renderFixedWelcomePane(viewWidth); welcome != "" {
-		frame.WriteString(welcome)
-		frame.WriteByte('\n')
-	}
 	frame.WriteString(m.renderChatPane())
 
 	// Command palette overlay

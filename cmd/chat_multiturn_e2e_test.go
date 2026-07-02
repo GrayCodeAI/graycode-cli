@@ -128,22 +128,34 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 		t.Fatalf("queued second turn should reset per-turn tokens, got in=%d out=%d", m.turnInputTokens, m.turnOutputTokens)
 	}
 
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, cmd := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if cmd != nil {
+		result, _ = result.(chatModel).Update(cmd())
+	}
 	m = requireChatModel(t, result)
 	if got := m.input.Value(); got != "second question" {
 		t.Fatalf("first history recall = %q, want second question", got)
 	}
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, cmd = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if cmd != nil {
+		result, _ = result.(chatModel).Update(cmd())
+	}
 	m = requireChatModel(t, result)
 	if got := m.input.Value(); got != "first question" {
 		t.Fatalf("second history recall = %q, want first question", got)
 	}
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	result, cmd = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if cmd != nil {
+		result, _ = result.(chatModel).Update(cmd())
+	}
 	m = requireChatModel(t, result)
 	if got := m.input.Value(); got != "second question" {
 		t.Fatalf("history down = %q, want second question", got)
 	}
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	result, cmd = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if cmd != nil {
+		result, _ = result.(chatModel).Update(cmd())
+	}
 	m = requireChatModel(t, result)
 	if got := m.input.Value(); got != "" {
 		t.Fatalf("history should return to draft input, got %q", got)

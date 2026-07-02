@@ -4,9 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -34,22 +31,6 @@ func TestBuildWelcomeMessage_InlineShowsStarterPrompts(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("inline welcome missing %q in:\n%s", want, out)
 		}
-	}
-}
-
-func TestFixedWelcomeLineCount_ReservesInlineHeaderSpace(t *testing.T) {
-	ta := textarea.New()
-	ta.SetWidth(96)
-	ta.SetHeight(1)
-	m := chatModel{
-		width:        100,
-		height:       30,
-		welcomeCache: buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, nil),
-		input:        ta,
-		viewport:     viewport.New(100, 8),
-	}
-	if got := m.fixedWelcomeLineCount(); got == 0 {
-		t.Fatal("expected inline welcome to reserve layout space")
 	}
 }
 

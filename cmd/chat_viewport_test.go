@@ -23,8 +23,8 @@ func TestRouteKeyToViewport_ArrowsInPromptFocus(t *testing.T) {
 		t.Fatal("up in prompt focus should use input history, not scroll chat")
 	}
 	m.uiFocus = focusScrollback
-	if !m.routeKeyToViewport(up) {
-		t.Fatal("up in scrollback focus should scroll when not at top")
+	if m.routeKeyToViewport(up) {
+		t.Fatal("up in scrollback focus should NOT scroll chat")
 	}
 }
 
@@ -247,19 +247,5 @@ func TestApplyMouseScroll_ClearsStreamFollow(t *testing.T) {
 	})
 	if m.streamFollow {
 		t.Fatal("manual wheel scroll must disable stream follow")
-	}
-}
-
-func TestWelcomeHeader_AlwaysFull(t *testing.T) {
-	m := chatModel{
-		welcomeCache: "HAWK LOGO",
-		messages: []displayMsg{
-			{role: "user", content: "hi"},
-			{role: "assistant", content: "hello"},
-		},
-	}
-	got := m.renderFixedWelcomePane(80)
-	if !strings.Contains(got, "HAWK LOGO") {
-		t.Fatalf("welcome should remain in fixed pane: %q", got)
 	}
 }

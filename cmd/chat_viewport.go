@@ -88,13 +88,19 @@ func (m chatModel) viewportScrollable() bool {
 
 // routeKeyToViewport returns true when the key should scroll chat history instead of the input.
 func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
+	if m.arrowBurstActive {
+		if m.lastMouseY >= 0 {
+			return m.mouseInChatPane(tea.MouseMsg{Y: m.lastMouseY})
+		}
+		return true
+	}
 	if m.configOpen {
 		return false
 	}
 	s := msg.String()
 	if m.inScrollbackFocus() {
 		switch s {
-		case "pgup", "pgdown", "ctrl+u", "ctrl+d", "u", "d", "f", "b", "up", "k", "down", "j", " ":
+		case "pgup", "pgdown", "ctrl+u", "ctrl+d", "u", "d", "f", "b", "k", "j", " ":
 			return m.viewportScrollable()
 		}
 		return false
@@ -126,12 +132,12 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 // chatPaneTopY is the first terminal row of the scrollable chat pane (sync with View).
 func (m chatModel) chatPaneTopY() int {
 	if m.height <= 0 {
-		return m.fixedWelcomeLineCount()
+		return 0
 	}
 	m = m.withSyncedLayout()
 	top := m.footerTopY() - m.viewport.Height
-	if top < m.fixedWelcomeLineCount() {
-		top = m.fixedWelcomeLineCount()
+	if top < 0 {
+		top = 0
 	}
 	return top
 }

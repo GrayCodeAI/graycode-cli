@@ -6,37 +6,15 @@ import (
 
 const minChatViewportLines = 4
 
-// fixedWelcomeLineCount reserves room for the branded welcome pane above chat.
-func (m chatModel) fixedWelcomeLineCount() int {
+// renderWelcomeScreen returns the branded welcome pane to be prepended to the chat viewport.
+func (m chatModel) renderWelcomeScreen(width int) string {
 	if strings.TrimSpace(m.welcomeCache) == "" {
-		return 0
-	}
-	lines := strings.Split(strings.TrimRight(m.welcomeCache, "\n"), "\n")
-	count := len(lines)
-	if m.height <= 0 {
-		return count
-	}
-	max := m.height - m.chatBottomBarLines() - minChatViewportLines - 1
-	if max < 0 {
-		max = 0
-	}
-	if count > max {
-		count = max
-	}
-	return count
-}
-
-// renderFixedWelcomePane draws the welcome screen above the scrollable chat viewport.
-func (m chatModel) renderFixedWelcomePane(width int) string {
-	if m.fixedWelcomeLineCount() == 0 {
 		return ""
 	}
-	lines := strings.Split(strings.TrimRight(m.welcomeCache, "\n"), "\n")
-	max := m.fixedWelcomeLineCount()
-	if len(lines) > max {
-		lines = lines[:max]
+	if len(m.messages) > 1 {
+		return ""
 	}
-	return strings.Join(lines, "\n")
+	return strings.TrimRight(m.welcomeCache, "\n")
 }
 
 // withSyncedLayout returns m with viewport size reserved for welcome + bottom chrome.
@@ -45,9 +23,8 @@ func (m chatModel) withSyncedLayout() chatModel {
 		return m
 	}
 	bottomH := m.chatBottomBarLines()
-	welcomeH := m.fixedWelcomeLineCount()
-	// View() draws welcome text then a newline; the next row is the first chat line.
-	vpH := m.height - bottomH - welcomeH
+	// Viewport takes all available space above the bottom bar.
+	vpH := m.height - bottomH
 	if vpH < minChatViewportLines {
 		vpH = minChatViewportLines
 	}
