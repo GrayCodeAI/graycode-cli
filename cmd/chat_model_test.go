@@ -22,25 +22,34 @@ func newTestChatModel() *chatModel {
 	sess.SetTestClient(engine.NewMockClientForTest())
 
 	m := &chatModel{
-		input:          textarea.New(),
-		viewport:       viewport.New(120, 12),
-		session:        sess,
-		registry:       tool.NewRegistry(),
-		partial:        &strings.Builder{},
-		sessionID:      "test-session",
-		width:          120,
-		height:         40,
-		ref:            &progRef{},
-		modeManager:    shellmode.NewModeManager(),
-		termCtx:        sessioncapture.NewTerminalContext(),
-		ghostText:      NewGhostText(),
-		inputIndicator: &InputIndicator{},
-		hintsLoader:    engine.NewHintsLoader(),
-		selfImprover:   engine.NewSelfImprover(),
-		codingSoul:     engine.LoadCodingSoul(),
-		brailleSpinner: NewBrailleSpinner(SpinnerHawk, "Thinking"),
+		input:             textarea.New(),
+		viewport:          viewport.New(120, 12),
+		session:           sess,
+		registry:          tool.NewRegistry(),
+		partial:           &strings.Builder{},
+		sessionID:         "test-session",
+		width:             120,
+		height:            40,
+		ref:               &progRef{},
+		modeManager:       shellmode.NewModeManager(),
+		termCtx:           sessioncapture.NewTerminalContext(),
+		ghostText:         NewGhostText(),
+		inputIndicator:    &InputIndicator{},
+		hintsLoader:       engine.NewHintsLoader(),
+		selfImprover:      engine.NewSelfImprover(),
+		codingSoul:        engine.LoadCodingSoul(),
+		brailleSpinner:    NewBrailleSpinner(SpinnerHawk, "Thinking"),
+		testStreamStarter: func() {},
 	}
 	return m
+}
+
+func TestNewTestChatModel_DisablesAsyncStreamLauncher(t *testing.T) {
+	m := newTestChatModel()
+	m.startStream()
+	if m.cancel != nil {
+		t.Fatal("test model should not start a background stream")
+	}
 }
 
 func isolateChatCommandSweepEnv(t *testing.T) {

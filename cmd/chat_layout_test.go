@@ -28,3 +28,25 @@ func TestView_PinsWelcomeAboveViewport(t *testing.T) {
 		t.Fatalf("footer should be present at bottom")
 	}
 }
+
+func TestPrimeInitialViewportContent_RendersWelcomeBeforeFirstFrame(t *testing.T) {
+	m := chatModel{
+		height:       24,
+		width:        80,
+		welcomeCache: "HAWK LOGO\nv0.1.0",
+		input:        textarea.New(),
+		viewport:     viewport.New(80, 8),
+		ghostText:    NewGhostText(),
+	}
+	m = m.withSyncedLayout()
+
+	if strings.Contains(m.viewport.View(), "HAWK LOGO") {
+		t.Fatal("expected empty initial viewport before priming")
+	}
+
+	m.primeInitialViewportContent()
+
+	if !strings.Contains(m.viewport.View(), "HAWK LOGO") {
+		t.Fatalf("expected primed viewport to include welcome content, got %q", m.viewport.View())
+	}
+}

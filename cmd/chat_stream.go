@@ -73,6 +73,10 @@ func pumpStreamEvents(ref *progRef, ch <-chan engine.StreamEvent) {
 }
 
 func (m *chatModel) startStream() {
+	if m.testStreamStarter != nil {
+		m.testStreamStarter()
+		return
+	}
 	m.streamCancelled = false
 	m.syncSessionSelection()
 	sess := m.session

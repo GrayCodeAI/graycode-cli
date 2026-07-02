@@ -34,10 +34,11 @@ func (m chatModel) chatHasOverflow() bool {
 }
 
 // chatScrollbarVisible reports when chat scrollbar should be displayed.
-// Per professional CLI UX standards, the scrollbar is hidden during live auto-scroll (at bottom),
-// and appears smoothly when the user scrolls back into history.
+// Show it whenever the chat overflows so users get a stable, truthful indicator
+// of position. Hiding it at the bottom leaves slight-overflow cases looking
+// broken and makes the reserved gutter appear accidental.
 func (m chatModel) chatScrollbarVisible() bool {
-	return m.chatHasOverflow() && !m.autoScroll
+	return m.chatHasOverflow()
 }
 
 // chatViewportWidth returns the usable viewport width.
@@ -73,17 +74,15 @@ func (m chatModel) renderScrollbar() string {
 		return ""
 	}
 
-	// Thumb size: compact, proportional, minimum 1 row. Reduced by 25% per UX requirement.
-	thumbSize := (vpH * vpH * 3) / (totalLines * 8)
+	// Thumb size: proportional to the visible fraction of the scrollback.
+	// Do not artificially cap it: when content only slightly overflows, the
+	// thumb should nearly fill the track instead of looking like a tiny stub.
+	thumbSize := (vpH * vpH) / totalLines
 	if thumbSize < 1 {
 		thumbSize = 1
 	}
-	maxThumb := vpH / 5
-	if maxThumb < 1 {
-		maxThumb = 1
-	}
-	if thumbSize > maxThumb {
-		thumbSize = maxThumb
+	if thumbSize > vpH {
+		thumbSize = vpH
 	}
 
 	// Track space available for the thumb to move within.

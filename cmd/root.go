@@ -66,6 +66,11 @@ var (
 	startupProfileFlag         bool
 )
 
+var (
+	recoverEnsureCatalogBeforeAgent = ensureCatalogBeforeAgent
+	recoverRunChat                  = runChat
+)
+
 // SetVersion sets the version string from main.
 func SetVersion(v string) {
 	version = v
@@ -393,7 +398,7 @@ var preflightCmd = &cobra.Command{
 }
 
 var configCmd = &cobra.Command{
-	Use:   "config [provider <name>|model <name>|get <key>|set <key> <value>]",
+	Use:   "config [get|set|provider|model|keys|routing-preview|migrate-deployments]",
 	Short: "Show or update settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
@@ -504,38 +509,11 @@ var toolsCmd = &cobra.Command{
 }
 
 var pluginCmd = &cobra.Command{
-	Use:   "plugin [list|install <dir>|uninstall <name>]",
+	Use:   "plugin",
 	Short: "Manage plugins",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			cmd.Println(plugin.Summary())
-			return nil
-		}
-		switch args[0] {
-		case "list":
-			cmd.Println(plugin.Summary())
-			return nil
-		case "install":
-			if len(args) < 2 {
-				return fmt.Errorf("usage: hawk plugin install <directory>")
-			}
-			if err := plugin.Install(args[1]); err != nil {
-				return err
-			}
-			cmd.Println("installed", args[1])
-			return nil
-		case "uninstall":
-			if len(args) < 2 {
-				return fmt.Errorf("usage: hawk plugin uninstall <name>")
-			}
-			if err := plugin.Uninstall(args[1]); err != nil {
-				return err
-			}
-			cmd.Println("uninstalled", args[1])
-			return nil
-		default:
-			return fmt.Errorf("unknown plugin action %q", args[0])
-		}
+		cmd.Println(plugin.Summary())
+		return nil
 	},
 }
 
@@ -622,15 +600,14 @@ Examples:
   hawk --recover            # Auto-resume most recent interrupted session`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
-			// Resume specific session
 			s, note, err := session.ResumeSession(args[0])
 			if err != nil {
 				return err
 			}
 			cmd.Println(note)
-			cmd.Printf("Session %s ready to resume (%d messages, %s/%s)\n",
+			cmd.Printf("Resuming session %s (%d messages, %s/%s)\n",
 				s.ID, len(s.Messages), s.Provider, s.Model)
-			return nil
+			return resumeRecoveredSession(context.Background(), s.ID)
 		}
 
 		// Scan and list
@@ -643,6 +620,15 @@ Examples:
 		}
 		return nil
 	},
+}
+
+func resumeRecoveredSession(ctx context.Context, sessionID string) error {
+	resumeID = sessionID
+	continueFlag = false
+	if err := recoverEnsureCatalogBeforeAgent(ctx, false); err != nil {
+		return err
+	}
+	return recoverRunChat()
 }
 
 // logMigrateProviderSecretsError surfaces a non-nil error from

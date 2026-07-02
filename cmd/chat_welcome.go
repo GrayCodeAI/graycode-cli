@@ -20,6 +20,11 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+type welcomeStatusSnapshot struct {
+	setup    hawkconfig.SetupState
+	agentsOK bool
+}
+
 func welcomeDockerSegment(dockerRunning *bool, greenC, redC, rst string) (segment string, visLen int) {
 	if dockerRunning == nil {
 		return "", 0
@@ -48,6 +53,27 @@ func (m chatModel) welcomeDockerRunning() *bool {
 	return &ok
 }
 
+func loadWelcomeStatusSnapshot() welcomeStatusSnapshot {
+	ctx := context.Background()
+	return welcomeStatusSnapshot{
+		setup:    hawkconfig.EvaluateSetupCached(ctx),
+		agentsOK: hawkconfig.LoadAgentsMD() != "",
+	}
+}
+
+func (m *chatModel) refreshWelcomeStatusSnapshot() {
+	snapshot := loadWelcomeStatusSnapshot()
+	m.welcomeSetupState = snapshot.setup
+	m.welcomeAgentsOK = snapshot.agentsOK
+}
+
+func (m chatModel) welcomeStatusSnapshot() welcomeStatusSnapshot {
+	return welcomeStatusSnapshot{
+		setup:    m.welcomeSetupState,
+		agentsOK: m.welcomeAgentsOK,
+	}
+}
+
 func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	width := m.width
 	if width <= 0 {
@@ -61,11 +87,15 @@ func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	if m.pluginRuntime != nil {
 		skillsCount = len(m.pluginRuntime.SmartSkills)
 	}
-	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning())
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot())
 }
 
 // buildWelcomeMessage renders the branded inline HAWK welcome block.
 func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
+	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, blinkClosed, width, height, dockerRunning, loadWelcomeStatusSnapshot())
+}
+
+func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot) string {
 	// Brand orange — used for both the HAWK wordmark and the mascot so
 	// the welcome screen stays on theme.
 	logoC := "\033[38;2;255;94;14m" // brand orange — WELCOME TO + HAWK wordmark
@@ -146,7 +176,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	b.WriteByte('\n')
 	b.WriteString(center(len(verLine), dimC+verLine+rst) + "\n")
 
-	setup := hawkconfig.EvaluateSetupCached(context.Background())
+	setup := snapshot.setup
 	needsSetup := setup.NeedsSetup
 	modeGuidance := welcomeModeGuidance(dockerRunning, tight)
 	if needsSetup {
@@ -187,7 +217,7 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	}
 
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
-	agentsOK := hawkconfig.LoadAgentsMD() != ""
+	agentsOK := snapshot.agentsOK
 
 	mark := func(present bool) string {
 		if present {

@@ -76,15 +76,15 @@ var spinnerVerbs = []string{
 }
 
 type (
-	streamChunkMsg     string
-	streamDoneMsg      struct{}
-	streamRetryMsg     struct{ content string }
-	streamErrMsg       struct{ err error }
-	blinkTickMsg       struct{}
-	spinnerVerbTickMsg struct{}
-	usageUpdateMsg     struct{ usage *engine.StreamUsage }
-	compactStartMsg    struct{}
-	compactMsg         struct {
+	streamChunkMsg      string
+	streamRenderTickMsg struct{}
+	streamDoneMsg       struct{}
+	streamRetryMsg      struct{ content string }
+	streamErrMsg        struct{ err error }
+	spinnerVerbTickMsg  struct{}
+	usageUpdateMsg      struct{ usage *engine.StreamUsage }
+	compactStartMsg     struct{}
+	compactMsg          struct {
 		strategy                  string
 		tokensBefore, tokensAfter int
 	}
@@ -112,16 +112,18 @@ type (
 	systemPromptContextReadyMsg struct {
 		context string
 	}
-	loopTickMsg      struct{ command string }
-	toolUseMsg       struct{ name, id string }
-	toolResultMsg    struct{ name, content string }
-	permissionAskMsg struct{ req engine.PermissionRequest }
-	thinkingMsg      string
-	blastRadiusMsg   struct{ message string }
-	askUserMsg       struct {
+	loopTickMsg                struct{ command string }
+	toolUseMsg                 struct{ name, id string }
+	toolResultMsg              struct{ name, content string }
+	permissionAskMsg           struct{ req engine.PermissionRequest }
+	permissionPromptTimeoutMsg struct{ seq int }
+	thinkingMsg                string
+	blastRadiusMsg             struct{ message string }
+	askUserMsg                 struct {
 		question string
 		response chan string
 	}
+	askUserPromptTimeoutMsg struct{ seq int }
 )
 
 type displayMsg struct {
@@ -170,7 +172,9 @@ type chatModel struct {
 	turnHadToolActivity        bool                      // current turn produced tool activity
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
-	askReq                     *askUserMsg               // pending ask_user prompt
+	permReqSeq                 int
+	askReq                     *askUserMsg // pending ask_user prompt
+	askReqSeq                  int
 	width                      int
 	height                     int
 	quitting                   bool
@@ -231,6 +235,8 @@ type chatModel struct {
 	sessionBootstrapDone bool
 	toolStartTime        time.Time
 	welcomeCache         string
+	welcomeSetupState    hawkconfig.SetupState
+	welcomeAgentsOK      bool
 	viewDirty            bool
 	layoutKey            int    // input lines + slash menu height fingerprint
 	cachedBottomBarLines int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
@@ -240,6 +246,7 @@ type chatModel struct {
 	connStatusVal        string
 	partialDirty         bool // stream text changed since last viewport paint
 	lastPartialRender    time.Time
+	partialRenderPending bool
 	statusLeftKey        string
 	statusLeftVal        string
 
@@ -267,6 +274,9 @@ type chatModel struct {
 	ghostText      *GhostText
 	modeManager    *shellmode.ModeManager
 	brailleSpinner *BrailleSpinner
+	// testStreamStarter overrides the async stream launcher in tests that
+	// manually inject stream events and need deterministic cleanup.
+	testStreamStarter func()
 
 	// BMAD/Aeon-inspired features
 	hintsLoader  *engine.HintsLoader
@@ -286,13 +296,20 @@ type chatModel struct {
 
 const streamRenderInterval = 50 * time.Millisecond
 
-func (m *chatModel) markPartialDirty() {
+func (m *chatModel) markPartialDirty() tea.Cmd {
 	m.partialDirty = true
 	if time.Since(m.lastPartialRender) >= streamRenderInterval {
 		m.viewDirty = true
 		m.lastPartialRender = time.Now()
 		m.partialDirty = false
+		m.partialRenderPending = false
+		return nil
 	}
+	if m.partialRenderPending {
+		return nil
+	}
+	m.partialRenderPending = true
+	return tea.Tick(streamRenderInterval, func(time.Time) tea.Msg { return streamRenderTickMsg{} })
 }
 
 func (m *chatModel) flushPartialDirty() {
@@ -300,12 +317,17 @@ func (m *chatModel) flushPartialDirty() {
 		m.viewDirty = true
 		m.partialDirty = false
 	}
-}
-
-func blinkTickCmd() tea.Cmd {
-	return tea.Tick(2200*time.Millisecond, func(time.Time) tea.Msg { return blinkTickMsg{} })
+	m.partialRenderPending = false
 }
 
 func spinnerVerbTickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(time.Time) tea.Msg { return spinnerVerbTickMsg{} })
+}
+
+func permissionPromptTimeoutCmd(seq int) tea.Cmd {
+	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return permissionPromptTimeoutMsg{seq: seq} })
+}
+
+func askUserPromptTimeoutCmd(seq int) tea.Cmd {
+	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return askUserPromptTimeoutMsg{seq: seq} })
 }

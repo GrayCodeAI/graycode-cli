@@ -597,10 +597,23 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.turnHadAssistantOutput = true
 		m.partial.WriteString(string(msg))
-		m.markPartialDirty()
+		if cmd := m.markPartialDirty(); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 		if m.viewDirty {
 			m.updateViewportContent()
 		}
+		return m, tea.Batch(cmds...)
+
+	case streamRenderTickMsg:
+		m.partialRenderPending = false
+		if m.partialDirty {
+			m.viewDirty = true
+			m.partialDirty = false
+			m.lastPartialRender = time.Now()
+			m.updateViewportContent()
+		}
+		return m, nil
 
 	case thinkingMsg:
 		m.turnSawThinking = true
@@ -643,15 +656,40 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case permissionAskMsg:
 		m.permReq = &msg.req
+		m.permReqSeq++
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
 		m.viewDirty = true
+		m.updateViewportContent()
+		return m, permissionPromptTimeoutCmd(m.permReqSeq)
+
+	case permissionPromptTimeoutMsg:
+		if m.permReq != nil && m.permReqSeq == msg.seq {
+			m.permReq = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Permission prompt timed out."})
+			m.viewDirty = true
+			m.updateViewportContent()
+		}
+		return m, nil
 
 	case askUserMsg:
 		m.askReq = &msg
+		m.askReqSeq++
 		m.messages = append(m.messages, displayMsg{role: "question", content: icons.HelpCircle() + " " + msg.question})
 		m.viewDirty = true
 		m.input.Focus()
 		m.input.SetValue("")
+		m.updateViewportContent()
+		return m, askUserPromptTimeoutCmd(m.askReqSeq)
+
+	case askUserPromptTimeoutMsg:
+		if m.askReq != nil && m.askReqSeq == msg.seq {
+			m.askReq = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Question timed out."})
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, m.input.Focus()
+		}
+		return m, nil
 
 	case usageUpdateMsg:
 		if msg.usage != nil {
@@ -733,6 +771,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.turnSawThinking = false
 		m.turnHadAssistantOutput = false
 		m.turnHadToolActivity = false
+		m.permReq = nil
+		m.askReq = nil
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
@@ -765,6 +805,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case streamErrMsg:
 		m.messages = append(m.messages, displayMsg{role: "error", content: friendlyError(msg.err)})
 		m.partial.Reset()
+		m.permReq = nil
+		m.askReq = nil
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}

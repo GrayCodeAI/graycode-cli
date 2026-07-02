@@ -265,16 +265,13 @@ func (m *chatModel) updateViewportContent() {
 	atBottom := m.viewport.AtBottom()
 	preserveScroll := !m.autoScroll && !atBottom
 	prevYOffset := m.viewport.YOffset
-	contentStr := m.assembleViewportContent(viewWidth)
-	m.contentLines = strings.Count(contentStr, "\n") + 1
-	if m.contentLines < 1 {
-		m.contentLines = 1
-	}
+	contentStr, contentWidth, contentLines := m.renderViewportContentForLayout(viewWidth)
+	m.contentLines = contentLines
 
 	welcomeOnly := m.hasRealMessages() == 0 && !m.waiting
 
+	m.viewport.Width = contentWidth
 	m.viewport.SetContent(contentStr)
-	m.viewport.Width = m.chatViewportWidth(viewWidth)
 	switch {
 	case welcomeOnly:
 		// Start at top so the user sees the welcome screen without needing
@@ -285,6 +282,46 @@ func (m *chatModel) updateViewportContent() {
 	case atBottom || (m.autoScroll && m.streamFollow):
 		m.viewport.GotoBottom()
 	}
+}
+
+func (m *chatModel) primeInitialViewportContent() {
+	m.viewDirty = true
+	m.updateViewportContent()
+}
+
+func (m *chatModel) renderViewportContentForLayout(viewWidth int) (string, int, int) {
+	contentWidth := viewWidth
+	if contentWidth < 20 {
+		contentWidth = 80
+	}
+
+	contentStr := m.assembleViewportContent(contentWidth)
+	contentLines := renderedLineCount(contentStr)
+
+	// Overflow changes the usable width once the scrollbar gutter is visible.
+	// Re-render once at the final width so wrapping, line counting, and
+	// scrollbar state all describe the same layout.
+	if m.viewport.Height > 0 && contentLines > m.viewport.Height && viewWidth >= 20 {
+		narrowWidth := viewWidth - scrollbarWidth
+		if narrowWidth < 1 {
+			narrowWidth = 1
+		}
+		if narrowWidth != contentWidth {
+			contentWidth = narrowWidth
+			contentStr = m.assembleViewportContent(contentWidth)
+			contentLines = renderedLineCount(contentStr)
+		}
+	}
+
+	return contentStr, contentWidth, contentLines
+}
+
+func renderedLineCount(s string) int {
+	lines := strings.Count(s, "\n") + 1
+	if lines < 1 {
+		return 1
+	}
+	return lines
 }
 
 func (m chatModel) View() string {

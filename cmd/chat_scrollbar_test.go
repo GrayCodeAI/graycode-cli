@@ -11,6 +11,7 @@ func TestChatScrollbarVisible_WhenContentOverflows(t *testing.T) {
 	m := chatModel{
 		viewport:     viewportWithSize(80, 20),
 		contentLines: 200,
+		autoScroll:   true,
 	}
 	if !m.chatScrollbarVisible() {
 		t.Fatal("expected scrollable when content exceeds viewport height")
@@ -69,6 +70,24 @@ func TestRenderScrollbar_TopAndBottom(t *testing.T) {
 	lines = strings.Split(sb, "\n")
 	if !strings.Contains(lines[9], scrollbarThumbGlyph) {
 		t.Fatalf("expected thumb at bottom row when YOffset=max, got %q", lines[9])
+	}
+}
+
+func TestRenderScrollbar_SlightOverflowUsesLargeThumb(t *testing.T) {
+	m := chatModel{
+		viewport:     viewportWithSize(80, 10),
+		contentLines: 11,
+	}
+	sb := m.renderScrollbar()
+	lines := strings.Split(sb, "\n")
+	thumbRows := 0
+	for _, line := range lines {
+		if strings.Contains(line, scrollbarThumbGlyph) {
+			thumbRows++
+		}
+	}
+	if thumbRows < 8 {
+		t.Fatalf("expected large thumb for slight overflow, got %d thumb rows", thumbRows)
 	}
 }
 

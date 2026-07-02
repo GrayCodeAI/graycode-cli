@@ -205,6 +205,8 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		modelCacheMu.Unlock()
 	}
 	next, cmd := m.rebuildSessionTransport()
+	next.refreshWelcomeStatusSnapshot()
+	next.rebuildWelcomeCache(next.blinkClosed)
 	next.invalidateConnStatus()
 	if post := strings.TrimSpace(m.configPostSaveKeysProvider); post != "" {
 		next.configPostSaveKeysProvider = ""

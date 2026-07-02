@@ -127,6 +127,16 @@ var pluginInstallDynamicCmd = &cobra.Command{
 	},
 }
 
+var pluginListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List installed plugins",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.Println(plugin.Summary())
+		return nil
+	},
+}
+
 var pluginUninstallCmd = &cobra.Command{
 	Use:   "uninstall <name>",
 	Short: "Uninstall a plugin (deactivate and remove from disk)",
@@ -352,6 +362,7 @@ func truncatePluginStr(s string, maxLen int) string {
 func init() {
 	pluginStatusCmd.Flags().Bool("json", false, "output as JSON")
 
+	pluginCmd.AddCommand(pluginListCmd)
 	pluginCmd.AddCommand(pluginActivateCmd)
 	pluginCmd.AddCommand(pluginDeactivateCmd)
 	pluginCmd.AddCommand(pluginReloadCmd)

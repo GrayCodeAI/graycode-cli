@@ -50,6 +50,8 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 		m.configNotice += " — add an API key to continue"
 	}
 	next, cmd := m.rebuildSessionTransport()
+	next.refreshWelcomeStatusSnapshot()
+	next.rebuildWelcomeCache(next.blinkClosed)
 	next.invalidateConnStatus()
 	return next, cmd
 }

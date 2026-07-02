@@ -69,7 +69,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 		err   error
 	)
 	if resumeID != "" {
-		saved, err = session.Load(resumeID)
+		saved, _, err = session.ResumeSession(resumeID)
 	} else {
 		cwd, _ := os.Getwd()
 		saved, err = session.LoadLatestForCWD(cwd)
@@ -276,20 +276,18 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}()
 
-	startup.EndPhase("newChatModel:total")
-
 	// Start with an empty plugin runtime so first paint stays fast.
+	startup.MarkPhase("newChatModel:plugin-runtime")
 	pr := plugin.NewRuntime()
-
-	// Print startup profile if requested (after critical path is done)
-	if startupProfileFlag {
-		startup.PrintReport()
-	}
+	startup.EndPhase("newChatModel:plugin-runtime")
 	m.pluginRuntime = pr
 
 	// Welcome message inside TUI
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil)
+	startup.MarkPhase("newChatModel:welcome")
+	m.refreshWelcomeStatusSnapshot()
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil, m.welcomeStatusSnapshot())
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
+	startup.EndPhase("newChatModel:welcome")
 
 	// Wire permission system
 	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
@@ -323,8 +321,14 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}
 
+	startup.MarkPhase("newChatModel:history")
 	m.history = loadInputHistory()
 	m.historyIdx = len(m.history)
+	startup.EndPhase("newChatModel:history")
+
+	startup.MarkPhase("newChatModel:first-paint")
+	m.primeInitialViewportContent()
+	startup.EndPhase("newChatModel:first-paint")
 
 	// Warm catalog/credential caches after the first frame instead of blocking startup.
 	go func() {
@@ -345,6 +349,7 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	}()
 
 	// --watch: build initial symbol graph and start file watcher for incremental PageRank updates
+	startup.MarkPhase("newChatModel:watch")
 	if watchFlag {
 		cwd, err := os.Getwd()
 		if err == nil {
@@ -407,6 +412,14 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 				}
 			}
 		}
+	}
+	startup.EndPhase("newChatModel:watch")
+
+	startup.EndPhase("newChatModel:total")
+
+	// Print startup profile after the full synchronous chat init path completes.
+	if startupProfileFlag {
+		startup.PrintReport()
 	}
 
 	return m, nil

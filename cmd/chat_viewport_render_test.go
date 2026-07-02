@@ -3,6 +3,8 @@ package cmd
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/bubbles/viewport"
 )
 
 func TestAssembleViewportContent_IncrementalMatchesFullRebuild(t *testing.T) {
@@ -96,4 +98,77 @@ func TestAssembleViewportContent_WidthChangeRebuilds(t *testing.T) {
 	if m.vpRenderWidth != 60 {
 		t.Fatalf("expected width 60 after resize, got %d", m.vpRenderWidth)
 	}
+}
+
+func TestUpdateViewportContent_RewrapsAfterScrollbarGutterAppears(t *testing.T) {
+	content, fullWidth, narrowWidth, fullWidthLines, narrowWidthLines := findWidthSensitiveViewportScenario(t)
+	viewportHeight := fullWidthLines - 1
+	if viewportHeight < 1 {
+		viewportHeight = 1
+	}
+
+	m := &chatModel{
+		messages: []displayMsg{{role: "system", content: content}},
+		viewport: viewport.New(fullWidth, viewportHeight),
+		width:    fullWidth,
+	}
+	m.viewDirty = true
+
+	m.updateViewportContent()
+
+	if !m.chatHasOverflow() {
+		t.Fatalf(
+			"expected overflow after re-wrapping for scrollbar width (viewportHeight=%d fullWidthLines=%d narrowWidthLines=%d contentLines=%d viewportWidth=%d)",
+			viewportHeight,
+			fullWidthLines,
+			narrowWidthLines,
+			m.contentLines,
+			m.viewport.Width,
+		)
+	}
+	if !m.chatScrollbarVisible() {
+		t.Fatal("expected scrollbar to become visible after re-wrap")
+	}
+	if m.viewport.Width != narrowWidth {
+		t.Fatalf("expected viewport width %d with scrollbar gutter, got %d", narrowWidth, m.viewport.Width)
+	}
+	if m.contentLines != narrowWidthLines {
+		t.Fatalf("expected contentLines %d after narrow re-wrap, got %d", narrowWidthLines, m.contentLines)
+	}
+}
+
+func findWidthSensitiveViewportScenario(t *testing.T) (string, int, int, int, int) {
+	t.Helper()
+
+	patterns := []string{
+		"alpha ",
+		"alpha beta ",
+		"alpha beta gamma ",
+		"one two three four five ",
+		"short mediumlength extralongword ",
+		"supercalifragilisticexpialidocious",
+		"0123456789012345678901234567890123456789",
+	}
+
+	for fullWidth := 21; fullWidth <= 60; fullWidth++ {
+		narrowWidth := fullWidth - 1
+		for _, pattern := range patterns {
+			for n := 4; n < 160; n++ {
+				content := strings.TrimSpace(strings.Repeat(pattern, n))
+
+				fullModel := &chatModel{messages: []displayMsg{{role: "system", content: content}}}
+				fullLines := renderedLineCount(fullModel.assembleViewportContent(fullWidth))
+
+				narrowModel := &chatModel{messages: []displayMsg{{role: "system", content: content}}}
+				narrowLines := renderedLineCount(narrowModel.assembleViewportContent(narrowWidth))
+
+				if narrowLines > fullLines {
+					return content, fullWidth, narrowWidth, fullLines, narrowLines
+				}
+			}
+		}
+	}
+
+	t.Fatal("failed to find width-sensitive content for viewport render test")
+	return "", 0, 0, 0, 0
 }
