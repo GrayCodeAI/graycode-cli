@@ -511,7 +511,7 @@ func runChat() error {
 	if promptFlag != "" {
 		sess := m.session
 		ctx, cancel := context.WithCancel(context.Background())
-		_ = cancel // will be cancelled when program exits
+		m.cancel = cancel
 		go func() {
 			ch, streamErr := sess.Stream(ctx)
 			if streamErr != nil {

@@ -85,9 +85,6 @@ func renderStatusBarRight(m *chatModel) string {
 	if m.inScrollbackFocus() {
 		meta = append(meta, focusStyle.Render("⧉"))
 	}
-	if pos := m.scrollPositionLabel(); m.chatScrollbarVisible() && pos != "" {
-		meta = append(meta, dim.Render(pos))
-	}
 	if m.waiting && !m.streamFollow {
 		meta = append(meta, dim.Render(icons.Pause()))
 	}

@@ -11,9 +11,6 @@ func (m chatModel) renderWelcomeScreen(width int) string {
 	if strings.TrimSpace(m.welcomeCache) == "" {
 		return ""
 	}
-	if len(m.messages) > 1 {
-		return ""
-	}
 	return strings.TrimRight(m.welcomeCache, "\n")
 }
 

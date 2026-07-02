@@ -830,7 +830,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session.PermSvc().Autonomy() == 0 {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.PermSvc().Autonomy())})
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {

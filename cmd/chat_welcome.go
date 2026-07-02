@@ -95,7 +95,6 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	if totalH <= 0 {
 		totalH = 24
 	}
-	compact := totalH <= 24 || totalW < 88
 	tight := totalH <= 20 || totalW < 72
 
 	center := func(visW int, styled string) string {
@@ -170,24 +169,21 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		}
 	}
 	if !needsSetup {
-		tip := "Ready: ask Hawk to inspect, edit, or run code · /config and /help stay available"
+		tip := "TIP: Use /new to start a fresh session with clean context"
 		if tight {
-			tip = "Ready: ask Hawk to work · /help · /config"
+			tip = "TIP: /new starts a clean session"
 		}
 		b.WriteByte('\n')
 		b.WriteString(center(len(tip), boldC+tip+rst) + "\n")
-		shortcutsPlain := "Try: explain this repo · fix the failing test · add tests for cmd/eval"
+		shortcutsRow1 := "ctrl+N for new session · ctrl+L for autonomy"
+		shortcutsRow2 := "/help for commands · /config for setup · /permissions for approvals"
 		if tight {
-			shortcutsPlain = "Try: explain this repo · fix the failing test"
+			shortcutsRow1 = "ctrl+N new session · ctrl+L autonomy"
+			shortcutsRow2 = "/help · /config · /permissions"
 		}
-		b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
-		if !compact {
-			shortcutsPlain = "PgUp/Dn scroll chat · Up/Dn history · Tab scrollback · /home · /ctx · ctrl+N · ctrl+L"
-			b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
-		}
-		if modeGuidance != "" {
-			b.WriteString(center(runewidth.StringWidth(modeGuidance), dimC+modeGuidance+rst) + "\n")
-		}
+		b.WriteByte('\n')
+		b.WriteString(center(runewidth.StringWidth(shortcutsRow1), dimC+shortcutsRow1+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(shortcutsRow2), dimC+shortcutsRow2+rst) + "\n")
 	}
 
 	mcpCount := len(settings.MCPServers) + len(mcpServers)

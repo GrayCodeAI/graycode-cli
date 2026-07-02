@@ -91,11 +91,6 @@ func formatAutonomyTierMessage(level engine.AutonomyLevel) string {
 	return fmt.Sprintf("Autonomy %s — %s", renderAutonomyTierLabel(level), autonomyTierDescription(level))
 }
 
-func formatSandboxReadyAutonomyMessage(level engine.AutonomyLevel) string {
-	return fmt.Sprintf("Sandbox ready · %s — %s · ctrl+L cycles tiers",
-		renderAutonomyTierLabel(level), autonomyTierDescription(level))
-}
-
 func autonomyLevelForTierName(name string) engine.AutonomyLevel {
 	switch strings.TrimSpace(name) {
 	case "Scout":

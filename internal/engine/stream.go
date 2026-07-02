@@ -386,42 +386,46 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		for streamAttempt := 0; streamAttempt <= maxStreamRetries; streamAttempt++ {
 			streamErr = nil
 			sawThinking = false
-			for ev := range result.Events {
+		eventLoop:
+			for {
 				select {
 				case <-ctx.Done():
 					result.Close()
 					return
-				default:
-				}
-				switch ev.Type {
-				case "content":
-					textContent.WriteString(ev.Content)
-					ch <- StreamEvent{Type: "content", Content: ev.Content}
-				case "thinking":
-					if strings.TrimSpace(ev.Thinking) != "" {
-						sawThinking = true
+				case ev, ok := <-result.Events:
+					if !ok {
+						break eventLoop
 					}
-					ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
-				case "tool_call":
-					if ev.ToolCall != nil {
-						toolCalls = append(toolCalls, *ev.ToolCall)
-					}
-				case "usage":
-					if ev.Usage != nil {
-						lastUsage = ev.Usage
-						s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, activeModel, taskType, apiStart)
-					}
-				case "error":
-					streamErr = fmt.Errorf("%s", ev.Error)
-					if isRetryableStreamError(streamErr) {
-						break // break switch, will check in outer loop
-					}
-					ch <- StreamEvent{Type: "error", Content: ev.Error}
-					result.Close()
-					return
-				case "done":
-					if ev.StopReason != "" {
-						stopReason = ev.StopReason
+					switch ev.Type {
+					case "content":
+						textContent.WriteString(ev.Content)
+						ch <- StreamEvent{Type: "content", Content: ev.Content}
+					case "thinking":
+						if strings.TrimSpace(ev.Thinking) != "" {
+							sawThinking = true
+						}
+						ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
+					case "tool_call":
+						if ev.ToolCall != nil {
+							toolCalls = append(toolCalls, *ev.ToolCall)
+						}
+					case "usage":
+						if ev.Usage != nil {
+							lastUsage = ev.Usage
+							s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, activeModel, taskType, apiStart)
+						}
+					case "error":
+						streamErr = fmt.Errorf("%s", ev.Error)
+						if isRetryableStreamError(streamErr) {
+							break // break switch, will check in outer loop
+						}
+						ch <- StreamEvent{Type: "error", Content: ev.Error}
+						result.Close()
+						return
+					case "done":
+						if ev.StopReason != "" {
+							stopReason = ev.StopReason
+						}
 					}
 				}
 			}
