@@ -5,22 +5,16 @@ import (
 	"strings"
 )
 
-// planModeSystemPrompt is appended to the system prompt (ephemerally) while the
-// session is in plan mode. It steers the model toward read-only research and an
-// explicit approval handoff.
-const planModeSystemPrompt = "\n\n## Plan Mode (read-only)\n" +
-	"You are in PLAN MODE. Research the task by reading files and searching the codebase, then propose a concrete implementation plan. " +
-	"Do NOT write files, run commands that modify state, or make any changes — write/execute tools are blocked and will be denied. " +
-	"When your plan is ready, call the ExitPlanMode tool to ask the user to approve it. " +
-	"Only after the user approves will changes be allowed; if they reject, refine the plan and ask again."
-
-func (s *Session) SetPermissionMode(mode string) error {
-	err := s.Perm.SetMode(mode)
-	if err == nil {
-		s.Mode = s.Perm.Mode
-	}
-	return err
-}
+// specStageSystemPrompt is appended to the system prompt (ephemerally) while
+// a spec workflow is active and not yet approved for implementation. It
+// steers the model through Specify -> Plan -> Tasks and then an explicit
+// approval handoff, mirroring the old Plan Mode's research-then-approve
+// shape but with a real, persisted document at each stage.
+const specStageSystemPrompt = "\n\n## Spec Stage (workflow gate)\n" +
+	"You are working through a spec-driven workflow. Research is unrestricted, but write/execute tools are blocked until you complete the workflow. " +
+	"Call `Specify` with your understanding of the problem to write spec.md. Then call `Plan` with your technical approach to write plan.md. " +
+	"Then call `Tasks` with a breakdown to write tasks.md. " +
+	"When all three are written, call `ApproveImplementation` to ask the user to approve moving to implementation — only after they approve will Write/Edit/Bash be permitted."
 
 func (s *Session) SetMaxTurns(turns int) error {
 	if turns < 0 {
@@ -38,32 +32,8 @@ func (s *Session) SetMaxBudgetUSD(amount float64) error {
 	return nil
 }
 
-func (s *Session) modeDecision(name string) *bool {
-	toolName := canonicalToolName(name)
-	switch s.Mode {
-	case PermissionModeBypassPermissions:
-		return boolPtr(true)
-	case PermissionModeDontAsk:
-		return boolPtr(false)
-	case PermissionModePlan:
-		if toolName == "ExitPlanMode" {
-			return nil
-		}
-		return boolPtr(false)
-	case PermissionModeAcceptEdits:
-		if toolName == "Write" || toolName == "Edit" || toolName == "NotebookEdit" {
-			return boolPtr(true)
-		}
-	}
-	return nil
-}
-
 func (s *Session) exceededBudget() bool {
 	return s.MaxBudgetUSD > 0 && s.Cost.Total() > s.MaxBudgetUSD
-}
-
-func boolPtr(v bool) *bool {
-	return &v
 }
 
 func pathArgument(args map[string]interface{}) (string, bool) {
@@ -104,10 +74,14 @@ func canonicalToolName(name string) string {
 		return "TodoWrite"
 	case "lsp":
 		return "LSP"
-	case "enter_plan_mode", "enterplanmode":
-		return "EnterPlanMode"
-	case "exit_plan_mode", "exitplanmode":
-		return "ExitPlanMode"
+	case "specify":
+		return "Specify"
+	case "plan":
+		return "Plan"
+	case "tasks":
+		return "Tasks"
+	case "approve_implementation", "approveimplementation":
+		return "ApproveImplementation"
 	case "notebook_edit", "notebookedit":
 		return "NotebookEdit"
 	case "config":

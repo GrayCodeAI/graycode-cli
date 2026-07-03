@@ -192,7 +192,7 @@ func TestChatModel_ManyCommands(t *testing.T) {
 		"/compact", "/diff", "/branch", "/vim",
 		"/power", "/fast", "/effort",
 		"/memory", "/plugins", "/mcp",
-		"/sandbox", "/permissions",
+		"/sandbox", "/autonomy",
 		"/usage", "/metrics", "/integrity",
 		"/keybindings", "/cron", "/tasks",
 		"/files", "/branches", "/provider-status",

@@ -257,6 +257,9 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 			tier = autonomyTierName(m.session.PermSvc().Autonomy())
 		}
 		status := shortenFooterContainerStatus(strings.TrimSpace(m.containerStatus))
+		if stage := currentSpecStage(m.session); stage != engine.SpecStageNone && stage != engine.SpecStageImplementing {
+			return bold, fmt.Sprintf(" %s · %s · spec:%s", status, tier, specStageDisplayName(stage))
+		}
 		return bold, fmt.Sprintf(" %s · %s", status, tier)
 	}
 	if strings.TrimSpace(m.containerStatus) != "" {
@@ -269,37 +272,10 @@ func hostModeHint(sess *engine.Session) string {
 	if sess == nil || sess.Perm == nil {
 		return " commands run on your machine · ask before tools"
 	}
-	switch sess.Perm.Mode {
-	case engine.PermissionModeBypassPermissions:
-		return " commands run on your machine · tools auto-approved"
-	case engine.PermissionModeAcceptEdits:
-		return " commands run on your machine · auto-approve edits"
-	case engine.PermissionModeDontAsk:
-		return " commands run on your machine · tools blocked"
-	case engine.PermissionModePlan:
-		return " commands run on your machine · read-only exploration"
-	default:
-		return " commands run on your machine · ask before tools"
+	if sess.Perm.Stage != engine.SpecStageNone && sess.Perm.Stage != engine.SpecStageImplementing {
+		return " commands run on your machine · spec stage active — writes/commands gated"
 	}
-}
-
-// permissionModeLabel returns the display label for the current permission mode.
-func permissionModeLabel(sess *engine.Session) string {
-	if sess == nil || sess.Perm == nil {
-		return "Default"
-	}
-	switch sess.Perm.Mode {
-	case engine.PermissionModeBypassPermissions:
-		return "Bypass (All Allowed)"
-	case engine.PermissionModeAcceptEdits:
-		return "Auto (Edits Allowed)"
-	case engine.PermissionModeDontAsk:
-		return "Deny (All Blocked)"
-	case engine.PermissionModePlan:
-		return "Plan (Read Only)"
-	default:
-		return "Default"
-	}
+	return " commands run on your machine · " + autonomyTierDescription(sess.PermSvc().Autonomy())
 }
 
 func statusLineSummary(m *chatModel) string {

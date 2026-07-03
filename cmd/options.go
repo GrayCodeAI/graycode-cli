@@ -299,12 +299,11 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 		sess.PermSvc().Memory().DenySpec(spec)
 	}
 
-	mode := permissionMode
 	if dangerouslySkipPermissions {
-		mode = string(engine.PermissionModeBypassPermissions)
+		sess.PermSvc().SetAutonomy(engine.AutonomyYOLO)
 	}
-	if err := sess.SetPermissionMode(mode); err != nil {
-		return err
+	if dryRunFlag {
+		sess.PermSvc().SetDryRun(true)
 	}
 	effectiveMaxTurns := maxTurns
 	if len(maxTurnsOverride) > 0 && maxTurnsOverride[0] > 0 {
@@ -418,12 +417,6 @@ func validateRootFlags() error {
 	}
 	if sessionIDFlag != "" && (continueFlag || resumeID != "") && !forkSessionFlag {
 		return fmt.Errorf("--session-id can only be used with --continue or --resume when --fork-session is also specified")
-	}
-	if permissionMode != "" {
-		var s engine.Session
-		if err := s.SetPermissionMode(permissionMode); err != nil {
-			return err
-		}
 	}
 	if maxTurns < 0 {
 		return fmt.Errorf("--max-turns must be non-negative")

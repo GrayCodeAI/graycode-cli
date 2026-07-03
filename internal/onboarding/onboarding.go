@@ -195,7 +195,7 @@ func RunSetup() error {
 	fmt.Println("  " + bold + "Security notes:" + reset)
 	fmt.Println("  1. hawk can make mistakes — always review changes")
 	fmt.Println("  2. hawk will ask before running commands or writing files")
-	fmt.Println("  3. Use /permissions allow <tool> to auto-approve tools")
+	fmt.Println("  3. Use /autonomy allow <tool> to auto-approve tools")
 	fmt.Println()
 	fmt.Println(dim + "  ─────────────────────────────────────────" + reset)
 	fmt.Println()

@@ -67,39 +67,34 @@ func TestPermissionMemoryDenyOverridesAllow(t *testing.T) {
 	}
 }
 
-func TestPermissionModeParsing(t *testing.T) {
+func TestPermissionServiceAutonomyRoundTrip(t *testing.T) {
 	s := NewSession("", "", "", nil)
-	if err := s.SetPermissionMode("acceptEdits"); err != nil {
-		t.Fatal(err)
-	}
-	if s.Mode != PermissionModeAcceptEdits {
-		t.Fatalf("got %q", s.Mode)
-	}
-	if err := s.SetPermissionMode("bad"); err == nil {
-		t.Fatal("expected invalid permission mode error")
+	s.PermSvc().SetAutonomy(AutonomySemi)
+	if s.PermSvc().Autonomy() != AutonomySemi {
+		t.Fatalf("got %v", s.PermSvc().Autonomy())
 	}
 }
 
-func TestPermissionEngine_ModeDecisionDoesNotRequirePrompt(t *testing.T) {
+func TestPermissionEngine_SpecGateDeniesWithoutPrompt(t *testing.T) {
 	pe := NewPermissionEngine()
 	pe.Autonomy = AutonomySupervised
-	if err := pe.SetMode("plan"); err != nil {
-		t.Fatal(err)
-	}
+	pe.Stage = SpecStageSpecify
 	granted, deny := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "echo hello"}})
 	if granted {
-		t.Fatal("plan mode should deny Bash without requiring a prompt")
+		t.Fatal("spec stage should deny Bash without requiring a prompt")
 	}
-	if deny != "Permission denied by permission mode." {
-		t.Fatalf("deny = %q, want permission-mode denial", deny)
+	if deny == "" {
+		t.Fatal("expected a spec-gate denial reason")
 	}
 
-	if err := pe.SetMode("bypassPermissions"); err != nil {
-		t.Fatal(err)
-	}
+	pe.Autonomy = AutonomyYOLO
+	pe.Stage = SpecStageNone
 	granted, deny = pe.CheckTool(context.Background(), ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "echo hello"}})
-	if !granted || deny != "" {
-		t.Fatalf("bypass mode CheckTool = (%v, %q), want granted", granted, deny)
+	if !granted {
+		t.Fatal("AutonomyYOLO with no active spec stage should grant Bash")
+	}
+	if deny != "" {
+		t.Fatalf("deny = %q, want empty", deny)
 	}
 }
 

@@ -148,12 +148,13 @@ func TestSession_Chat_MockResponse(t *testing.T) {
 	}
 }
 
-func TestSession_SetPermissionMode(t *testing.T) {
+func TestSession_SetAutonomy(t *testing.T) {
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	if err := s.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Errorf("SetPermissionMode error: %v", err)
+	s.PermSvc().SetAutonomy(AutonomyYOLO)
+	if s.PermSvc().Autonomy() != AutonomyYOLO {
+		t.Errorf("SetAutonomy did not take effect, got %v", s.PermSvc().Autonomy())
 	}
 }
 

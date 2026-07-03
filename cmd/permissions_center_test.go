@@ -45,32 +45,22 @@ func TestEffectivePermissionRules(t *testing.T) {
 	}
 }
 
-func TestPermissionCenterSummary(t *testing.T) {
+func TestAutonomyCenterSummary(t *testing.T) {
 	perm := engine.NewPermissionEngine()
-	perm.Mode = engine.PermissionModeAcceptEdits
+	perm.Autonomy = engine.AutonomySemi
+	perm.Stage = engine.SpecStageSpecify
 	model := &chatModel{
-		session: &engine.Session{Autonomy: engine.AutonomySemi, Mode: engine.PermissionModeAcceptEdits, Perm: perm},
+		session: &engine.Session{Autonomy: engine.AutonomySemi, Perm: perm},
 		settings: hawkconfig.Settings{
 			Sandbox:         "workspace",
 			AllowedTools:    []string{"Bash(git:*)"},
 			DisallowedTools: []string{"Bash(rm -rf *)"},
 		},
 	}
-	out := permissionCenterSummary(model)
-	for _, fragment := range []string{"Permission Center", "Tier: Builder", "Sandbox: Workspace", "Mode: Auto (Edits Allowed)", "Rules: 1 allow, 1 deny"} {
+	out := autonomyCenterSummary(model)
+	for _, fragment := range []string{"Autonomy Center", "Tier: Builder", "Sandbox: Workspace", "Spec stage: Specify", "Rules: 1 allow, 1 deny"} {
 		if !strings.Contains(out, fragment) {
 			t.Fatalf("summary %q missing %q", out, fragment)
 		}
-	}
-}
-
-func TestNormalizePermissionMode(t *testing.T) {
-	mode, label, ok := normalizePermissionMode("bypass")
-	if !ok || mode != engine.PermissionModeBypassPermissions || label != "Bypass Permissions" {
-		t.Fatalf("bypass = (%q, %q, %v)", mode, label, ok)
-	}
-	mode, _, ok = normalizePermissionMode("plan")
-	if !ok || mode != engine.PermissionModePlan {
-		t.Fatalf("plan = (%q, %v)", mode, ok)
 	}
 }

@@ -3,13 +3,13 @@ package cmd
 import (
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 func TestRunSubcommand_UsesBashToolForSafeCommand(t *testing.T) {
 	m := newTestChatModel()
-	if err := m.session.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Fatal(err)
-	}
+	m.session.PermSvc().SetAutonomy(engine.AutonomyYOLO)
 
 	result, _ := (&runSubcommand{}).Handle(m, []string{"printf", "hello"}, "/run printf hello")
 	cm := requireChatModel(t, result)
@@ -30,11 +30,9 @@ func TestRunSubcommand_UsesBashToolForSafeCommand(t *testing.T) {
 	}
 }
 
-func TestRunSubcommand_RespectsPlanPermissionMode(t *testing.T) {
+func TestRunSubcommand_RespectsSpecStageGate(t *testing.T) {
 	m := newTestChatModel()
-	if err := m.session.SetPermissionMode("plan"); err != nil {
-		t.Fatal(err)
-	}
+	m.session.PermSvc().SetSpecStage(engine.SpecStageSpecify)
 
 	result, _ := (&runSubcommand{}).Handle(m, []string{"printf", "hello"}, "/run printf hello")
 	cm := requireChatModel(t, result)
@@ -46,8 +44,8 @@ func TestRunSubcommand_RespectsPlanPermissionMode(t *testing.T) {
 	if last.role != "error" {
 		t.Fatalf("last role = %q, want error", last.role)
 	}
-	if !strings.Contains(last.content, "Permission denied by permission mode") {
-		t.Fatalf("display output = %q, want permission denial", last.content)
+	if !strings.Contains(last.content, "Spec stage active") {
+		t.Fatalf("display output = %q, want spec-gate denial", last.content)
 	}
 	if got := len(cm.session.RawMessages()); got != 0 {
 		t.Fatalf("session messages = %d, want 0 after denied command", got)
@@ -56,9 +54,7 @@ func TestRunSubcommand_RespectsPlanPermissionMode(t *testing.T) {
 
 func TestRunSubcommand_BashToolBlocksEnvDumpEvenWhenBypassed(t *testing.T) {
 	m := newTestChatModel()
-	if err := m.session.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Fatal(err)
-	}
+	m.session.PermSvc().SetAutonomy(engine.AutonomyYOLO)
 
 	result, _ := (&runSubcommand{}).Handle(m, []string{"env"}, "/run env")
 	cm := requireChatModel(t, result)
@@ -77,9 +73,7 @@ func TestRunSubcommand_BashToolBlocksEnvDumpEvenWhenBypassed(t *testing.T) {
 
 func TestTestSubcommand_DetectsNonzeroExit(t *testing.T) {
 	m := newTestChatModel()
-	if err := m.session.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Fatal(err)
-	}
+	m.session.PermSvc().SetAutonomy(engine.AutonomyYOLO)
 
 	result, _ := (&testSubcommand{}).Handle(m, []string{"false"}, "/test false")
 	cm := requireChatModel(t, result)

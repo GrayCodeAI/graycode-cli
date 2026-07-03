@@ -56,7 +56,7 @@ type SnapshotTracker interface {
 //
 // The legacy fields (client, provider, model, apiKeys, Router,
 // DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
-// Classifier, BypassKill, Mode, MaxTurns, MaxBudgetUSD, AllowedDirs,
+// Classifier, BypassKill, MaxTurns, MaxBudgetUSD, AllowedDirs,
 // PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
 // messages, system, Cascade, Lifecycle, Reflector, CostTracker,
 // Beliefs, Critic, Backtrack, Limits, Trajectory, Shadow, etc.) stay
@@ -112,12 +112,11 @@ type Session struct {
 	// Backward-compatible accessors below (will be removed after full migration)
 	//
 	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
-	//   Permissions, AutoMode, Classifier, BypassKill, Mode, PermissionFn.
+	//   Permissions, AutoMode, Classifier, BypassKill, PermissionFn.
 	Permissions *PermissionMemory             // use Perm.Memory
 	AutoMode    *permissions.AutoModeState    // use Perm.AutoMode
 	Classifier  *permissions.Classifier       // use Perm.Classifier
 	BypassKill  *permissions.BypassKillswitch // use Perm.BypassKill
-	Mode        PermissionMode                // use Perm.Mode
 	//
 	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
 	//   MaxTurns, MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
@@ -807,26 +806,6 @@ func (s *Session) SetContextWindowCached(n int) {
 	s.ContextWindowCached = n
 	if s.persist != nil {
 		s.persist.SetContextWindowCached(n)
-	}
-}
-
-// ModeValue returns the active permission mode, with the
-// PermissionService's mode taking precedence over the legacy
-// s.Mode field. Used by /permissions summary, /status, and the
-// chat footer to render the active permission mode.
-func (s *Session) ModeValue() PermissionMode {
-	if s.perms != nil {
-		return s.perms.Mode()
-	}
-	return s.Mode
-}
-
-// SetMode replaces the active permission mode. New code should
-// call this instead of writing to the legacy s.Mode field.
-func (s *Session) SetMode(mode PermissionMode) {
-	s.Mode = mode
-	if s.perms != nil {
-		_ = s.perms.SetMode(string(mode))
 	}
 }
 

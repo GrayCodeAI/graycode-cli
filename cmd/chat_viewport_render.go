@@ -51,11 +51,19 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 		}
 	case "assistant":
 		content := strings.TrimLeft(msg.content, "\n\r")
+		if strings.TrimSpace(content) == "" {
+			// The model called a tool without any preceding text — skip the
+			// message entirely rather than leaving an orphan "◈" line.
+			return ""
+		}
 		b.WriteString(hawkC + icons.Robot() + " " + rst + renderMarkdown(content, viewWidth-3))
 	case "tool_use":
-		b.WriteString(toolStyle.Render(icons.Bolt() + " " + msg.content))
+		b.WriteString(toolStyle.Render(icons.CircleFilled() + " " + msg.content))
 	case "tool_result":
-		if strings.Contains(msg.content, "diff ") && strings.Contains(msg.content, " lines") {
+		if looksLikeGitDiff(msg.content) {
+			rendered := renderGitDiffOutput(msg.content, viewWidth-6)
+			b.WriteString("    " + strings.ReplaceAll(rendered, "\n", "\n    "))
+		} else if strings.Contains(msg.content, "diff ") && strings.Contains(msg.content, " lines") {
 			parts := strings.SplitN(msg.content, "\ndiff ", 2)
 			mainContent := parts[0]
 			diffPart := ""
@@ -116,6 +124,15 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 	}
 
 	switch msg.role {
+	case "user":
+		if i+1 < len(messages) && messages[i+1].role == "tool_use" {
+			// A tool call the model runs immediately in response to this
+			// command reads as a continuation of it, not a new block — no
+			// blank-line gap.
+			b.WriteByte('\n')
+		} else {
+			b.WriteString("\n\n")
+		}
 	case "tool_use":
 		if i+1 < len(messages) && messages[i+1].role == "tool_result" {
 			b.WriteByte('\n')

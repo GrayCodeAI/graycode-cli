@@ -11,8 +11,8 @@ import (
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()
-	if len(gws) != 19 {
-		t.Fatalf("expected 19 setup gateways, got %d: %v", len(gws), gws)
+	if len(gws) != 22 {
+		t.Fatalf("expected 22 setup gateways, got %d: %v", len(gws), gws)
 	}
 	for _, id := range gws {
 		if id == "ai21" || id == "alibaba" {

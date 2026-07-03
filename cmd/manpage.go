@@ -47,7 +47,6 @@ func GenerateManPage() string {
 		{"--system-prompt TEXT", "Custom system prompt"},
 		{"--system-prompt-file FILE", "Read system prompt from file"},
 		{"--append-system-prompt TEXT", "Append text to system prompt"},
-		{"--permission-mode MODE", "Advanced permission mode: default, edits, bypass, dontask, or plan"},
 		{"--sandbox MODE", "Permission sandbox: strict, workspace, or off"},
 		{"--max-turns N", "Maximum agentic turns in non-interactive mode"},
 		{"--max-budget-usd AMOUNT", "Maximum estimated API spend in USD"},

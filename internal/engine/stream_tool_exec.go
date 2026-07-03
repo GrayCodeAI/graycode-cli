@@ -329,6 +329,8 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		AgentSpawnFn: s.AgentSpawnFn,
 		AskUserFn:    s.AskUserFn,
 		YaadBridge:   s.MemorySvc().Yaad(),
+		SpecSlugGet:  func() string { return s.Perm.SpecSlug },
+		SpecSlugSet:  func(slug string) { s.Perm.SpecSlug = slug },
 	})
 	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
@@ -590,25 +592,18 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	}
 
-	// Plan/build mode transitions driven by the model's plan tools. Reaching this
-	// point means the tool was granted by the permission engine — which, at
-	// interactive autonomy levels, already prompted the user to approve leaving
-	// plan mode (the approval gate). EnterPlanMode switches into read-only plan
-	// mode; ExitPlanMode hands off to build mode. This is the single source of
-	// truth for the mode (the legacy global flag in internal/tool/plan.go is kept
-	// only for backward compatibility).
+	// Spec-stage transitions driven by the model's spec workflow tools.
+	// Reaching this point means the tool was granted by the permission
+	// engine — for ApproveImplementation specifically, that always meant a
+	// real user prompt (see PermissionEngine.CheckTool's spec gate), so this
+	// is the approval handoff into Implementing.
 	if !isErr {
 		switch canonicalToolName(tc.Name) {
-		case "EnterPlanMode":
-			s.Perm.ApplyToolState(tc.Name)
-			s.Mode = s.Perm.Mode
-		case "ExitPlanMode":
-			wasPlan := s.Perm.Mode == PermissionModePlan
-			s.Perm.ApplyToolState(tc.Name) // -> default (build) mode
-			s.Mode = s.Perm.Mode
-			if wasPlan {
-				output = "Plan approved — switched to build mode. You may now implement the plan and make changes."
-			}
+		case "Specify", "Plan", "Tasks":
+			s.Perm.AdvanceSpecStage(tc.Name)
+		case "ApproveImplementation":
+			s.Perm.AdvanceSpecStage(tc.Name)
+			output = "Spec approved — switched to implementation. You may now make changes."
 		}
 	}
 

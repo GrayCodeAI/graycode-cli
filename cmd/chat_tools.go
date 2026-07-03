@@ -52,8 +52,10 @@ func essentialTools() []tool.Tool {
 func optionalTools() []tool.Tool {
 	// Specialized tools that can be lazy-loaded on demand
 	return []tool.Tool{
-		tool.EnterPlanModeTool{},
-		tool.ExitPlanModeTool{},
+		tool.SpecifyTool{},
+		tool.PlanTool{},
+		tool.TasksTool{},
+		tool.ApproveImplementationTool{},
 		tool.NotebookEditTool{},
 		tool.EnterWorktreeTool{},
 		tool.ExitWorktreeTool{},

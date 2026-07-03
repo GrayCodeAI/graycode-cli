@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -25,7 +26,15 @@ import (
 // Returns true when the key was consumed so callers skip textarea/updateInput handling.
 func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 	if m.arrowBurstActive {
-		return true
+		// Only swallow further Up/Down here — they were already routed by
+		// the burst-coalescing logic in Update(). Any other key (typing,
+		// Escape, etc.) must still reach the input; arrowBurstActive is a
+		// short-lived timing flag, not a general input lock.
+		switch msg.Type {
+		case tea.KeyUp, tea.KeyDown:
+			return true
+		}
+		return false
 	}
 	if m.uiFocus != focusPrompt || m.configOpen {
 		return false
@@ -150,6 +159,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case processArrowTickMsg:
+		// A matching seq means no newer arrow keypress has arrived since this
+		// tick was armed, so the burst is over — clear the flag unconditionally.
+		// Without this, a burst's final keypress (which arms no tick of its
+		// own) would leave arrowBurstActive stuck true forever, silently
+		// swallowing every subsequent keystroke (see applyPromptArrowKey).
+		if m.arrowSeq == msg.seq {
+			m.arrowBurstActive = false
+		}
 		if m.pendingArrow != nil && m.arrowSeq == msg.seq {
 			msgToProcess := *m.pendingArrow
 			m.pendingArrow = nil
@@ -188,7 +205,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						cmds = append(cmds, cmd)
 					}
 				}
-				// Proceed to process `msg` immediately (fall through with m.arrowBurstActive = true)
+				// Proceed to process `msg` immediately (fall through with m.arrowBurstActive = true).
+				// Arm a trailing tick so that if this is the last keypress of
+				// the burst, arrowBurstActive still gets cleared once things
+				// go quiet — otherwise it would stay stuck true forever.
+				cmds = append(cmds, tea.Tick(30*time.Millisecond, func(t time.Time) tea.Msg {
+					return processArrowTickMsg{seq: seq}
+				}))
 			} else {
 				m.arrowBurstActive = false
 				m.pendingArrow = &msg
@@ -262,6 +285,43 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Autonomy tier picker (/autonomy) — intercept all input when open
+		if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
+			chosen, handled := m.autonomyPicker.Update(msg)
+			if handled {
+				if chosen != nil && m.session != nil {
+					m.session.PermSvc().SetAutonomy(chosen.Level)
+					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", chosen.Name, chosen.Description)})
+				}
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
+		}
+
+		// Spec workflow picker (/spec) — intercept all input when open
+		if m.specPicker != nil && m.specPicker.IsOpen() {
+			chosen, handled := m.specPicker.Update(msg)
+			if handled {
+				if chosen != nil && m.session != nil {
+					switch chosen.Action {
+					case specActionStart:
+						m.session.PermSvc().SetSpecStage(engine.SpecStageSpecify)
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated until spec.md, plan.md, and tasks.md are written and ApproveImplementation is approved."})
+					case specActionStatus:
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Spec stage: %s", specStageLabel(m.session))})
+					case specActionReset:
+						m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the trust tier again."})
+					}
+				}
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
+		}
+
 		if m.manualCompacting {
 			if isCompactCancelKey(msg) {
 				return m.cancelManualCompact("Compaction cancelled.")
@@ -306,7 +366,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
-			return m, cmd
+			return m, tea.Batch(append(cmds, cmd)...)
 		}
 
 		// Permission prompt active — handle y/n
@@ -402,7 +462,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			if m.applyPromptArrowKey(msg) {
-				return m, nil
+				return m, tea.Batch(cmds...)
 			}
 			return m, m.updateInput(msg)
 		}
@@ -515,7 +575,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.cycleUIFocus()
 		case tea.KeyUp, tea.KeyDown:
 			if m.applyPromptArrowKey(msg) {
-				return m, nil
+				return m, tea.Batch(cmds...)
 			}
 		case tea.KeyEsc:
 			if len(m.slashSuggestionsFor(m.input.Value())) > 0 {
@@ -700,7 +760,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case toolResultMsg:
 		m.turnHadToolActivity = true
-		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, msg.content)})
+		// No "[ToolName] " prefix here — the preceding tool_use message
+		// already renders the tool's name as this block's header.
+		m.messages = append(m.messages, displayMsg{role: "tool_result", content: msg.content})
 		m.viewDirty = true
 
 	case blastRadiusMsg:
@@ -941,6 +1003,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session != nil {
 				m.session.SetContainerRequired(false)
 				m.session.SetContainerExecutor(nil)
+				applyDefaultHostAutonomy(m.session)
 			}
 			m.messages = append(m.messages, displayMsg{
 				role:    "system",

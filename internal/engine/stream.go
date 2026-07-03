@@ -282,11 +282,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				opts.System += "\n\n## Agent Beliefs\n" + summary
 			}
 		}
-		// Plan mode: steer the model to research and propose a plan only, and to
-		// call ExitPlanMode for approval before any changes. Ephemeral (not
-		// persisted to s.Persistence().System()) so it disappears once build mode resumes.
-		if s.Perm != nil && s.Perm.Mode == PermissionModePlan {
-			opts.System += planModeSystemPrompt
+		// Spec stage: steer the model through Specify -> Plan -> Tasks and an
+		// explicit approval handoff before any changes. Ephemeral (not
+		// persisted to s.Persistence().System()) so it disappears once the
+		// stage advances to Implementing.
+		if s.Perm != nil && s.Perm.Stage != SpecStageNone && s.Perm.Stage != SpecStageImplementing {
+			opts.System += specStageSystemPrompt
 		}
 		if s.Tools() != nil && s.Tools().Registry() != nil {
 			opts.Tools = s.Tools().Registry().EyrieTools()

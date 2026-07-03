@@ -59,13 +59,13 @@ func TestChatJourney_ConfigPermissionsAndCoreCommands(t *testing.T) {
 		t.Fatalf("session provider = %q, want openrouter", got)
 	}
 
-	result, _ = m.handleCommand("/permissions allow Bash(git:*)")
+	result, _ = m.handleCommand("/autonomy allow Bash(git:*)")
 	m = requireChatModel(t, result)
 	if got := lastSystemMessage(m.messages); !strings.Contains(got, "Allow rules updated.") {
 		t.Fatalf("unexpected allow update message: %q", got)
 	}
 
-	result, _ = m.handleCommand("/permissions rules")
+	result, _ = m.handleCommand("/autonomy rules")
 	m = requireChatModel(t, result)
 	if got := lastSystemMessage(m.messages); !strings.Contains(got, "Bash(git:*)") {
 		t.Fatalf("permission rules summary missing allow rule: %q", got)

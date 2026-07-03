@@ -357,9 +357,9 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/session":
-		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
+		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nSpec stage: %s\nMessages: %d\nTools: %d\n%s",
 			m.sessionID, m.session.Provider(), m.session.Model(),
-			permissionModeLabel(m.session), m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.CostValue().Summary())
+			specStageLabel(m.session), m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.CostValue().Summary())
 		m.messages = append(m.messages, displayMsg{role: "system", content: info})
 		return m, nil
 

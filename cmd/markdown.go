@@ -36,10 +36,11 @@ var (
 
 // Inline regex patterns, compiled once.
 var (
-	reInlineCode = regexp.MustCompile("`([^`]+)`")
-	reMDBold     = regexp.MustCompile(`\*\*(.+?)\*\*`)
-	reMDItalic   = regexp.MustCompile(`(?:^|[^*])\*([^*]+?)\*(?:[^*]|$)`)
-	reMDLink     = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+	reInlineCode  = regexp.MustCompile("`([^`]+)`")
+	reMDBold      = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	reMDItalic    = regexp.MustCompile(`(?:^|[^*])\*([^*]+?)\*(?:[^*]|$)`)
+	reMDLink      = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+	reTableSepCol = regexp.MustCompile(`^:?-+:?$`)
 )
 
 // renderMarkdown converts a markdown string into styled ANSI terminal output
@@ -102,6 +103,22 @@ func renderMarkdown(content string, width int) string {
 				result.WriteByte('\n')
 			}
 			i++
+			continue
+		}
+
+		// GFM table: a "| a | b |" row immediately followed by a "|---|---|" separator.
+		if isTableRow(line) && i+1 < len(lines) && isTableSeparatorRow(lines[i+1]) {
+			header := splitTableRow(line)
+			aligns := parseTableAligns(lines[i+1])
+			j := i + 2
+			var rows [][]string
+			for j < len(lines) && isTableRow(lines[j]) {
+				rows = append(rows, splitTableRow(lines[j]))
+				j++
+			}
+			result.WriteString(renderMarkdownTable(header, aligns, rows, width))
+			result.WriteByte('\n')
+			i = j
 			continue
 		}
 
@@ -286,6 +303,203 @@ func parseOrderedList(line string) (string, string) {
 		}
 	}
 	return numPart + ".", strings.TrimSpace(trimmed[dotIdx+2:])
+}
+
+// isTableRow reports whether line looks like a GFM table row (contains a pipe).
+func isTableRow(line string) bool {
+	return strings.Contains(strings.TrimSpace(line), "|")
+}
+
+// isTableSeparatorRow reports whether line is a GFM table header separator,
+// e.g. "|---|---|", "| :-- | --: | :-: |".
+func isTableSeparatorRow(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" || !strings.Contains(trimmed, "-") {
+		return false
+	}
+	cells := splitTableRow(trimmed)
+	if len(cells) == 0 {
+		return false
+	}
+	for _, c := range cells {
+		if !reTableSepCol.MatchString(strings.TrimSpace(c)) {
+			return false
+		}
+	}
+	return true
+}
+
+// splitTableRow splits a "| a | b |" row into trimmed cells, tolerating rows
+// without leading/trailing pipes.
+func splitTableRow(line string) []string {
+	trimmed := strings.TrimSpace(line)
+	trimmed = strings.TrimPrefix(trimmed, "|")
+	trimmed = strings.TrimSuffix(trimmed, "|")
+	parts := strings.Split(trimmed, "|")
+	cells := make([]string, len(parts))
+	for i, p := range parts {
+		cells[i] = strings.TrimSpace(p)
+	}
+	return cells
+}
+
+// tableAlign values for a column's text alignment.
+const (
+	tableAlignLeft = iota
+	tableAlignRight
+	tableAlignCenter
+)
+
+// parseTableAligns reads column alignment from a separator row's colon placement.
+func parseTableAligns(sepLine string) []int {
+	cells := splitTableRow(sepLine)
+	aligns := make([]int, len(cells))
+	for i, c := range cells {
+		left := strings.HasPrefix(c, ":")
+		right := strings.HasSuffix(c, ":")
+		switch {
+		case left && right:
+			aligns[i] = tableAlignCenter
+		case right:
+			aligns[i] = tableAlignRight
+		default:
+			aligns[i] = tableAlignLeft
+		}
+	}
+	return aligns
+}
+
+// renderMarkdownTable renders a GFM table as a box-drawn table, wrapping and
+// shrinking columns as needed to fit width.
+func renderMarkdownTable(header []string, aligns []int, rows [][]string, width int) string {
+	cols := len(header)
+	if cols == 0 {
+		return ""
+	}
+	for len(aligns) < cols {
+		aligns = append(aligns, tableAlignLeft)
+	}
+	normalize := func(cells []string) []string {
+		out := make([]string, cols)
+		copy(out, cells)
+		return out
+	}
+	for i, r := range rows {
+		rows[i] = normalize(r)
+	}
+
+	styledHeader := make([]string, cols)
+	styledRows := make([][]string, len(rows))
+	naturalW := make([]int, cols)
+	for i, h := range header {
+		styledHeader[i] = mdBoldStyle.Render(renderInlineFormatting(h, width))
+		if w := visibleWidth(styledHeader[i]); w > naturalW[i] {
+			naturalW[i] = w
+		}
+	}
+	for ri, row := range rows {
+		styledRows[ri] = make([]string, cols)
+		for ci, cell := range row {
+			styled := renderInlineFormatting(cell, width)
+			styledRows[ri][ci] = styled
+			if w := visibleWidth(styled); w > naturalW[ci] {
+				naturalW[ci] = w
+			}
+		}
+	}
+
+	const maxColW = 40
+	colW := make([]int, cols)
+	total := 0
+	for i, w := range naturalW {
+		if w > maxColW {
+			w = maxColW
+		}
+		if w < 3 {
+			w = 3
+		}
+		colW[i] = w
+		total += w
+	}
+
+	overhead := (cols + 1) + cols*2 // vertical bars + one space of padding either side
+	if avail := width - overhead; avail > 0 && total > avail {
+		scale := float64(avail) / float64(total)
+		for i := range colW {
+			w := int(float64(colW[i]) * scale)
+			if w < 4 {
+				w = 4
+			}
+			colW[i] = w
+		}
+	}
+
+	hBar := func(left, mid, right string) string {
+		var b strings.Builder
+		b.WriteString(left)
+		for i, w := range colW {
+			b.WriteString(strings.Repeat("─", w+2))
+			if i < cols-1 {
+				b.WriteString(mid)
+			}
+		}
+		b.WriteString(right)
+		return mdHRStyle.Render(b.String())
+	}
+	bar := mdHRStyle.Render("│")
+
+	renderRow := func(cells []string) string {
+		wrappedCols := make([][]string, cols)
+		maxLines := 1
+		for i, c := range cells {
+			lines := strings.Split(mdWordWrap(c, colW[i]), "\n")
+			wrappedCols[i] = lines
+			if len(lines) > maxLines {
+				maxLines = len(lines)
+			}
+		}
+		var rb strings.Builder
+		for ln := 0; ln < maxLines; ln++ {
+			rb.WriteString(bar)
+			for i := 0; i < cols; i++ {
+				var cellLine string
+				if ln < len(wrappedCols[i]) {
+					cellLine = wrappedCols[i][ln]
+				}
+				pad := colW[i] - visibleWidth(cellLine)
+				if pad < 0 {
+					pad = 0
+				}
+				var aligned string
+				switch aligns[i] {
+				case tableAlignRight:
+					aligned = strings.Repeat(" ", pad) + cellLine
+				case tableAlignCenter:
+					lp := pad / 2
+					aligned = strings.Repeat(" ", lp) + cellLine + strings.Repeat(" ", pad-lp)
+				default:
+					aligned = cellLine + strings.Repeat(" ", pad)
+				}
+				rb.WriteString(" " + aligned + " " + bar)
+			}
+			rb.WriteByte('\n')
+		}
+		return strings.TrimRight(rb.String(), "\n")
+	}
+
+	var out strings.Builder
+	out.WriteString(hBar("┌", "┬", "┐"))
+	out.WriteByte('\n')
+	out.WriteString(renderRow(styledHeader))
+	out.WriteByte('\n')
+	out.WriteString(hBar("├", "┼", "┤"))
+	out.WriteByte('\n')
+	for _, row := range styledRows {
+		out.WriteString(renderRow(row))
+		out.WriteByte('\n')
+	}
+	out.WriteString(hBar("└", "┴", "┘"))
+	return out.String()
 }
 
 func protectInlineCode(text string, render func(string) string) (string, func(string) string) {

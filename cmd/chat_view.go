@@ -433,6 +433,22 @@ func (m chatModel) View() string {
 		return frame.String()
 	}
 
+	// Autonomy tier picker overlay
+	if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
+		pickerView := m.autonomyPicker.Render(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
+		return frame.String()
+	}
+
+	// Spec workflow picker overlay
+	if m.specPicker != nil && m.specPicker.IsOpen() {
+		pickerView := m.specPicker.Render(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
+		return frame.String()
+	}
+
 	// Agent Status HUD overlay
 	if m.hudOpen {
 		hudView := renderAgentStatusPanel(m.hudData, viewWidth)
@@ -446,27 +462,17 @@ func (m chatModel) View() string {
 	return frame.String()
 }
 
-// renderPermissionBox renders a visually distinct permission prompt box.
+// renderPermissionBox renders a compact inline permission prompt.
 func renderPermissionBox(summary string, width int) string {
-	boxW := width - 4
-	if boxW < 40 {
-		boxW = 40
-	}
-	// Permission dialog: amber border + amber title (warning palette,
-	// distinct from tool gold which is the gold for tool names). White
-	// body so the user can read the summary. Brand-orange options to
-	// match the prompt/cursor voice.
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(warnAmber).
-		Width(boxW).
-		Padding(0, 1)
-
-	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert() + " Permission Required")
+	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert())
 	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es  [n]o  [a]lways")
-
-	return border.Render(title + "\n" + body + "\n" + options)
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways")
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		lipgloss.NewStyle().Inline(true).Render(title+" "),
+		lipgloss.NewStyle().Inline(true).MaxWidth(width-30).Render(body),
+		lipgloss.NewStyle().Inline(true).Render("  "+options),
+	)
 }
 
 // renderDiffSummary renders a diff summary line with colored +/- indicators.

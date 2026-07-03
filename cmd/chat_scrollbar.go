@@ -11,8 +11,8 @@ const scrollbarWidth = 1
 
 // Scrollbar glyph palette — tuned to look premium in dark terminals.
 const (
-	scrollbarTrackGlyph  = "│" // thin vertical line for the track
-	scrollbarThumbGlyph  = "▊" // left three-quarters block for the thumb (thicker, solid, modern CLI style)
+	scrollbarTrackGlyph  = " " // blank track — the gutter itself provides the visual rhythm
+	scrollbarThumbGlyph  = "┃" // heavy vertical line for the thumb (visible without reading as a solid block)
 	scrollbarTopGlyph    = "╷" // cap at the very top of the track
 	scrollbarBottomGlyph = "╵" // cap at the very bottom of the track
 )
@@ -112,12 +112,8 @@ func (m chatModel) renderScrollbar() string {
 	for row := 0; row < vpH; row++ {
 		if row >= thumbTop && row <= thumbBottom {
 			sb.WriteString(scrollbarThumbStyle.Render(scrollbarThumbGlyph))
-		} else if row == 0 {
-			sb.WriteString(scrollbarTrackStyle.Render(scrollbarTopGlyph))
-		} else if row == vpH-1 {
-			sb.WriteString(scrollbarTrackStyle.Render(scrollbarBottomGlyph))
 		} else {
-			sb.WriteString(scrollbarTrackStyle.Render(scrollbarTrackGlyph))
+			sb.WriteString(" ")
 		}
 		if row < vpH-1 {
 			sb.WriteByte('\n')

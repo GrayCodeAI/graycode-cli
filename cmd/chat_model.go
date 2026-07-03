@@ -315,6 +315,12 @@ type chatModel struct {
 
 	// Command palette (Ctrl+K)
 	commandPalette *CommandPalette
+
+	// Autonomy tier picker (/autonomy)
+	autonomyPicker *AutonomyPicker
+
+	// Spec workflow picker (/spec)
+	specPicker *SpecPicker
 }
 
 const streamRenderInterval = 50 * time.Millisecond

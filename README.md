@@ -102,23 +102,30 @@ hawk skills audit             # Security scan installed skills
 
 ### Permission Center
 
-hawk now exposes one visible permission command center in chat:
+hawk exposes two independent chat command centers — trust tier and the
+spec-driven workflow gate — rather than one merged permission mode:
 
 ```text
-/permissions
-/permissions tier <scout|builder|operator|autonomous>
-/permissions sandbox <strict|workspace|off>
-/permissions mode <default|edits|bypass|dontask|plan>
-/permissions allow <rule>
-/permissions deny <rule>
-/permissions rules
-/permissions reset
-/permissions save [project|global]
+/autonomy
+/autonomy tier <scout|builder|operator|autonomous>
+/autonomy sandbox <strict|workspace|off>
+/autonomy dry-run <on|off>
+/autonomy allow <rule>
+/autonomy deny <rule>
+/autonomy rules
+/autonomy reset
+/autonomy save [project|global]
+
+/spec
+/spec [what to build]
+/spec status
+/spec reset
 ```
 
 The model is:
 
-- `Tier` controls autonomy:
+- `Tier` controls autonomy (bare `/autonomy` opens a picker for this):
+  - `Always Ask` — prompts for permission on every tool call
   - `Scout`
   - `Builder`
   - `Operator`
@@ -127,10 +134,18 @@ The model is:
   - `strict`
   - `workspace`
   - `off`
+- `Dry-run` is a kill switch: denies every tool call unconditionally,
+  regardless of tier or spec stage.
 - `Rules` control explicit allow/deny exceptions.
+- `Spec` is a separate, independent workflow gate (bare `/spec` opens a
+  picker): starting it walks the model through `Specify → Plan → Tasks`,
+  writing real files to `.hawk/specs/<slug>/`, and blocks Write/Edit/Bash
+  until you approve moving to implementation — at **any** trust tier,
+  including Autonomous.
 
-For normal chat usage, `/permissions` is the main control surface. Older
-permission chat commands have been removed in favor of this single flow.
+`/autonomy` and `/spec` are the main control surfaces for normal chat usage.
+Older merged permission-mode chat commands have been removed in favor of
+these two independent flows.
 
 ### MCP & LSP Support
 
@@ -199,13 +214,14 @@ hawk --provider openai --model gpt-4o  # Override provider
 
 ```bash
 # Inside the TUI
-/permissions
-/permissions tier builder
-/permissions sandbox workspace
-/permissions mode plan
-/permissions allow Bash(git:*)
-/permissions deny Bash(rm -rf *)
-/permissions save project
+/autonomy
+/autonomy tier builder
+/autonomy sandbox workspace
+/autonomy allow Bash(git:*)
+/autonomy deny Bash(rm -rf *)
+/autonomy save project
+
+/spec add dark mode support
 ```
 
 ### Non-Interactive Mode

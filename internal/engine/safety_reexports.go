@@ -10,8 +10,8 @@ type (
 	OutputRedactor     = safety.OutputRedactor
 	PermissionRequest  = safety.PermissionRequest
 	PermissionMemory   = safety.PermissionMemory
-	PermissionMode     = safety.PermissionMode
 	PermissionEngine   = safety.PermissionEngine
+	SpecStage          = safety.SpecStage
 	ProtectedPaths     = safety.ProtectedPaths
 	RiskAssessment     = safety.RiskAssessment
 	RiskFactor         = safety.RiskFactor
@@ -24,16 +24,16 @@ type (
 )
 
 const (
-	AutonomySupervised              = safety.AutonomySupervised
-	AutonomyBasic                   = safety.AutonomyBasic
-	AutonomySemi                    = safety.AutonomySemi
-	AutonomyFull                    = safety.AutonomyFull
-	AutonomyYOLO                    = safety.AutonomyYOLO
-	PermissionModeDefault           = safety.PermissionModeDefault
-	PermissionModeAcceptEdits       = safety.PermissionModeAcceptEdits
-	PermissionModeBypassPermissions = safety.PermissionModeBypassPermissions
-	PermissionModeDontAsk           = safety.PermissionModeDontAsk
-	PermissionModePlan              = safety.PermissionModePlan
+	AutonomySupervised    = safety.AutonomySupervised
+	AutonomyBasic         = safety.AutonomyBasic
+	AutonomySemi          = safety.AutonomySemi
+	AutonomyFull          = safety.AutonomyFull
+	AutonomyYOLO          = safety.AutonomyYOLO
+	SpecStageNone         = safety.SpecStageNone
+	SpecStageSpecify      = safety.SpecStageSpecify
+	SpecStagePlan         = safety.SpecStagePlan
+	SpecStageTasks        = safety.SpecStageTasks
+	SpecStageImplementing = safety.SpecStageImplementing
 )
 
 var (

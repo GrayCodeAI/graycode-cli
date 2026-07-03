@@ -59,23 +59,25 @@ func TestSessionLifecycle(t *testing.T) {
 	}
 }
 
-// TestPermissionModes tests all permission modes.
-func TestPermissionModes(t *testing.T) {
+// TestTrustTiersAndSpecStageRoundTrip tests that every autonomy tier and
+// spec stage can be set and read back correctly.
+func TestTrustTiersAndSpecStageRoundTrip(t *testing.T) {
 	sess := NewSession("", "", "test", nil)
 
-	modes := []string{"default", "acceptEdits", "bypassPermissions", "dontAsk", "plan"}
-	for _, mode := range modes {
-		if err := sess.SetPermissionMode(mode); err != nil {
-			t.Errorf("SetPermissionMode(%q) failed: %v", mode, err)
-		}
-		if string(sess.Mode) != mode {
-			t.Errorf("expected mode %q, got %q", mode, sess.Mode)
+	tiers := []AutonomyLevel{AutonomySupervised, AutonomyBasic, AutonomySemi, AutonomyFull, AutonomyYOLO}
+	for _, tier := range tiers {
+		sess.PermSvc().SetAutonomy(tier)
+		if sess.PermSvc().Autonomy() != tier {
+			t.Errorf("expected autonomy %v, got %v", tier, sess.PermSvc().Autonomy())
 		}
 	}
 
-	// Test invalid mode
-	if err := sess.SetPermissionMode("invalid"); err == nil {
-		t.Fatal("expected error for invalid mode")
+	stages := []SpecStage{SpecStageNone, SpecStageSpecify, SpecStagePlan, SpecStageTasks, SpecStageImplementing}
+	for _, stage := range stages {
+		sess.PermSvc().SetSpecStage(stage)
+		if sess.PermSvc().SpecStage() != stage {
+			t.Errorf("expected spec stage %v, got %v", stage, sess.PermSvc().SpecStage())
+		}
 	}
 }
 

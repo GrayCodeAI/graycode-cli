@@ -39,8 +39,8 @@ var (
 	toolsFlagSet               bool
 	allowedToolsFlag           []string
 	disallowedToolsFlag        []string
-	permissionMode             string
 	dangerouslySkipPermissions bool
+	dryRunFlag                 bool
 	maxTurns                   int
 	maxBudgetUSD               float64
 	systemPromptFlag           string
@@ -197,15 +197,15 @@ func init() {
 	rootCmd.Flags().StringArrayVar(&toolsFlag, "tools", nil, `available tools: "" disables all tools, "default" enables all, or names like "Bash,Edit,Read"`)
 	rootCmd.Flags().StringArrayVar(&allowedToolsFlag, "allowed-tools", nil, `comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")`)
 	rootCmd.Flags().StringArrayVar(&disallowedToolsFlag, "disallowed-tools", nil, `comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")`)
-	rootCmd.Flags().StringVar(&permissionMode, "permission-mode", "", "advanced permission mode: default, edits, bypass, dontask, or plan (same as /permissions mode)")
 	rootCmd.Flags().BoolVar(&dangerouslySkipPermissions, "dangerously-skip-permissions", false, "bypass all permission checks")
+	rootCmd.Flags().BoolVar(&dryRunFlag, "dry-run", false, "deny every tool call unconditionally (preview only, nothing executes)")
 	rootCmd.Flags().IntVar(&maxTurns, "max-turns", 0, "maximum number of agentic turns in non-interactive mode")
 	rootCmd.Flags().Float64Var(&maxBudgetUSD, "max-budget-usd", 0, "maximum estimated API spend in USD")
 	rootCmd.Flags().StringVar(&systemPromptFlag, "system-prompt", "", "system prompt to use for the session")
 	rootCmd.Flags().StringVar(&systemPromptFile, "system-prompt-file", "", "read system prompt from a file")
 	rootCmd.Flags().StringVar(&appendSystemPromptFlag, "append-system-prompt", "", "append text to the default or custom system prompt")
 	rootCmd.Flags().StringVar(&appendSystemPromptFile, "append-system-prompt-file", "", "read text from a file and append it to the system prompt")
-	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "permission sandbox: strict, workspace, or off (same as /permissions sandbox; not Docker container mode)")
+	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "permission sandbox: strict, workspace, or off (same as /autonomy sandbox; not Docker container mode)")
 	rootCmd.Flags().BoolVar(&autoCommitFlag, "auto-commit", false, "auto-commit file changes made by Write and Edit tools")
 	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes and re-run on changes")
 	rootCmd.Flags().BoolVar(&repoMapFlag, "repo-map", false, "inject an AST-ranked repository map (Aider-style) into the system prompt")

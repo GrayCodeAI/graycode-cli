@@ -103,7 +103,7 @@ func slashCommandCategory(name string) string {
 		return "Tools"
 	case "/doctor", "/cost", "/usage", "/metrics", "/stats", "/integrity", "/stale", "/tokens", "/provider-status":
 		return "Diagnostics"
-	case "/permissions", "/vim", "/theme", "/color", "/mouse", "/select", "/focus", "/follow", "/output-style", "/statusline", "/keybindings", "/voice", "/remote-env", "/refresh-model-catalog":
+	case "/autonomy", "/spec", "/vim", "/theme", "/color", "/mouse", "/select", "/focus", "/follow", "/output-style", "/statusline", "/keybindings", "/voice", "/remote-env", "/refresh-model-catalog":
 		return "Settings"
 	default:
 		return "Other"

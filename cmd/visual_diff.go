@@ -32,18 +32,21 @@ type DiffTheme struct {
 	Reset   string
 }
 
-// DefaultDiffTheme returns a DiffTheme with standard terminal colors.
+// DefaultDiffTheme returns a DiffTheme using hawk's semantic palette so diff
+// output reads consistently with the rest of the UI: additions in doneGreen,
+// deletions in errorCoral, hunk markers in infoSky, file headers in
+// containerBlue — each color mapped to one meaning, never reused for another.
 func DefaultDiffTheme() DiffTheme {
 	return DiffTheme{
-		Added:   "\033[32m",
-		Removed: "\033[31m",
-		Changed: "\033[33m",
-		Context: "\033[2m",
-		LineNo:  "\033[2m",
-		Header:  "\033[1m",
-		WordAdd: "\033[32;1m",
-		WordDel: "\033[31;1m",
-		Reset:   "\033[0m",
+		Added:   ansiDone,
+		Removed: ansiCoral,
+		Changed: ansiSky,
+		Context: ansiGrayDim,
+		LineNo:  ansiGrayDim,
+		Header:  ansiContBlue + ansiBold,
+		WordAdd: ansiDone + ansiBold,
+		WordDel: ansiCoral + ansiBold,
+		Reset:   ansiReset,
 	}
 }
 
@@ -70,6 +73,89 @@ func NewVisualDiff(width int) *VisualDiff {
 	}
 }
 
+// vdDiffLine is one parsed line of a unified diff, tagged by its role.
+type vdDiffLine struct {
+	text     string
+	lineType byte // '+', '-', ' ', '@', 'd'
+}
+
+// isIsolatedReplacePair reports whether parsed[i] is a lone '-' immediately
+// followed by a lone '+' — a genuine single-line replacement. Word-level
+// diffing is only meaningful for that case; inside a multi-line add/remove
+// block, naively pairing each '-' with the next '+' pairs unrelated lines
+// (e.g. the last removed line with the first added line) and produces
+// nonsensical highlighting, so those blocks render as plain colored lines.
+func isIsolatedReplacePair(parsed []vdDiffLine, i int) bool {
+	if i+1 >= len(parsed) || parsed[i].lineType != '-' || parsed[i+1].lineType != '+' {
+		return false
+	}
+	if i > 0 && parsed[i-1].lineType == '-' {
+		return false
+	}
+	if i+2 < len(parsed) && parsed[i+2].lineType == '+' {
+		return false
+	}
+	return true
+}
+
+// looksLikeGitDiff reports whether content is a raw `git diff`-style patch
+// (as opposed to plain command output that happens to contain a "-").
+func looksLikeGitDiff(content string) bool {
+	return strings.Contains(content, "diff --git ") ||
+		strings.Contains(content, "\n@@ ") || strings.HasPrefix(content, "@@ ")
+}
+
+// renderGitDiffOutput renders a full `git diff` transcript (potentially many
+// files) with per-file headers plus colorized, line-numbered hunks. This is
+// what turns a wall of flat gray patch text into something scannable: file
+// paths stand out in containerBlue, additions/deletions in doneGreen/errorCoral,
+// hunk markers in infoSky, and metadata (index/mode lines) stays dim.
+func renderGitDiffOutput(content string, width int) string {
+	vd := NewVisualDiff(width)
+	fileHeaderStyle := ansiContBlue + ansiBold
+	metaStyle := ansiGrayDim
+
+	lines := strings.Split(content, "\n")
+	var out strings.Builder
+	var hunk []string
+
+	flushHunk := func() {
+		if len(hunk) == 0 {
+			return
+		}
+		rendered := strings.TrimRight(vd.RenderInline(strings.Join(hunk, "\n")), "\n")
+		if rendered != "" {
+			out.WriteString(rendered)
+			out.WriteByte('\n')
+		}
+		hunk = hunk[:0]
+	}
+
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "diff --git "):
+			flushHunk()
+			label := strings.TrimPrefix(line, "diff --git ")
+			if fields := strings.Fields(label); len(fields) == 2 {
+				label = strings.TrimPrefix(fields[1], "b/")
+			}
+			out.WriteString(fileHeaderStyle + label + ansiReset + "\n")
+		case strings.HasPrefix(line, "index "),
+			strings.HasPrefix(line, "new file mode"),
+			strings.HasPrefix(line, "deleted file mode"),
+			strings.HasPrefix(line, "similarity index"),
+			strings.HasPrefix(line, "rename from"),
+			strings.HasPrefix(line, "rename to"):
+			flushHunk()
+			out.WriteString(metaStyle + line + ansiReset + "\n")
+		default:
+			hunk = append(hunk, line)
+		}
+	}
+	flushHunk()
+	return strings.TrimRight(out.String(), "\n")
+}
+
 // RenderInline renders a unified diff with colors and line numbers.
 func (vd *VisualDiff) RenderInline(diff string) string {
 	if diff == "" {
@@ -83,28 +169,24 @@ func (vd *VisualDiff) RenderInline(diff string) string {
 	newLine := 0
 
 	// Collect lines for word-level diffing
-	type diffLine struct {
-		text     string
-		lineType byte // '+', '-', ' ', '@', 'd'
-	}
-	var parsed []diffLine
+	var parsed []vdDiffLine
 
 	for _, line := range lines {
 		if len(line) == 0 {
-			parsed = append(parsed, diffLine{text: "", lineType: ' '})
+			parsed = append(parsed, vdDiffLine{text: "", lineType: ' '})
 			continue
 		}
 		switch {
 		case strings.HasPrefix(line, "@@"):
-			parsed = append(parsed, diffLine{text: line, lineType: '@'})
+			parsed = append(parsed, vdDiffLine{text: line, lineType: '@'})
 		case strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++"):
-			parsed = append(parsed, diffLine{text: line, lineType: 'd'})
+			parsed = append(parsed, vdDiffLine{text: line, lineType: 'd'})
 		case line[0] == '+':
-			parsed = append(parsed, diffLine{text: line[1:], lineType: '+'})
+			parsed = append(parsed, vdDiffLine{text: line[1:], lineType: '+'})
 		case line[0] == '-':
-			parsed = append(parsed, diffLine{text: line[1:], lineType: '-'})
+			parsed = append(parsed, vdDiffLine{text: line[1:], lineType: '-'})
 		default:
-			parsed = append(parsed, diffLine{text: line, lineType: ' '})
+			parsed = append(parsed, vdDiffLine{text: line, lineType: ' '})
 		}
 	}
 
@@ -120,7 +202,7 @@ func (vd *VisualDiff) RenderInline(diff string) string {
 			oldLine, newLine = parseHunkHeader(dl.text)
 		case '-':
 			// Check if next lines are '+' for word-level diff
-			if vd.WordLevel && i+1 < len(parsed) && parsed[i+1].lineType == '+' {
+			if vd.WordLevel && isIsolatedReplacePair(parsed, i) {
 				oldRendered, newRendered := vd.RenderWordDiff(dl.text, parsed[i+1].text)
 				if vd.ShowLineNumbers {
 					out.WriteString(fmt.Sprintf("%s%4d%s %s-%s%s\n",
@@ -193,28 +275,24 @@ func (vd *VisualDiff) RenderSideBySide(diff string) string {
 	oldLine := 0
 	newLine := 0
 
-	type diffLine struct {
-		text     string
-		lineType byte
-	}
-	var parsed []diffLine
+	var parsed []vdDiffLine
 
 	for _, line := range lines {
 		if len(line) == 0 {
-			parsed = append(parsed, diffLine{text: "", lineType: ' '})
+			parsed = append(parsed, vdDiffLine{text: "", lineType: ' '})
 			continue
 		}
 		switch {
 		case strings.HasPrefix(line, "@@"):
-			parsed = append(parsed, diffLine{text: line, lineType: '@'})
+			parsed = append(parsed, vdDiffLine{text: line, lineType: '@'})
 		case strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++"):
-			parsed = append(parsed, diffLine{text: line, lineType: 'd'})
+			parsed = append(parsed, vdDiffLine{text: line, lineType: 'd'})
 		case line[0] == '+':
-			parsed = append(parsed, diffLine{text: line[1:], lineType: '+'})
+			parsed = append(parsed, vdDiffLine{text: line[1:], lineType: '+'})
 		case line[0] == '-':
-			parsed = append(parsed, diffLine{text: line[1:], lineType: '-'})
+			parsed = append(parsed, vdDiffLine{text: line[1:], lineType: '-'})
 		default:
-			parsed = append(parsed, diffLine{text: line, lineType: ' '})
+			parsed = append(parsed, vdDiffLine{text: line, lineType: ' '})
 		}
 	}
 
@@ -236,7 +314,7 @@ func (vd *VisualDiff) RenderSideBySide(diff string) string {
 			oldLine, newLine = parseHunkHeader(dl.text)
 		case '-':
 			// Check for paired addition
-			if vd.WordLevel && i+1 < len(parsed) && parsed[i+1].lineType == '+' {
+			if vd.WordLevel && isIsolatedReplacePair(parsed, i) {
 				oldRendered, newRendered := vd.RenderWordDiff(dl.text, parsed[i+1].text)
 				leftContent := vdTruncate(vdStripAnsi(dl.text), contentWidth)
 				_ = leftContent

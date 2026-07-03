@@ -66,9 +66,7 @@ func (t *countedReadTool) Execute(ctx context.Context, input json.RawMessage) (s
 
 func TestExecuteToolCalls_PreservesOriginalOrder(t *testing.T) {
 	sess := NewSession("test", "test", "system", tool.NewRegistry(orderedReadTool{}))
-	if err := sess.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Fatal(err)
-	}
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
 	calls := []types.ToolCall{
 		{ID: "slow", Name: "Read", Arguments: map[string]interface{}{"id": 1, "delay": 30}},
 		{ID: "fast", Name: "Read", Arguments: map[string]interface{}{"id": 2, "delay": 1}},
@@ -91,9 +89,7 @@ func TestExecuteToolCalls_PreservesOriginalOrder(t *testing.T) {
 func TestExecuteToolCalls_BoundsReadOnlyConcurrency(t *testing.T) {
 	read := &countedReadTool{}
 	sess := NewSession("test", "test", "system", tool.NewRegistry(read))
-	if err := sess.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Fatal(err)
-	}
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
 	calls := make([]types.ToolCall, maxConcurrentReadOnlyToolCalls+6)
 	for i := range calls {
 		calls[i] = types.ToolCall{ID: fmt.Sprintf("r%d", i), Name: "Read", Arguments: map[string]interface{}{"id": i}}

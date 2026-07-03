@@ -197,12 +197,15 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	bindChatSession(sess, sid, m.containerEnabled)
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
-	} else if noContainer {
-		m.messages = append(m.messages, displayMsg{
-			role: "system",
-			content: "--no-container runs tools on the host without sandbox isolation. " +
-				"Use default container mode for safer agent execution.",
-		})
+	} else {
+		applyDefaultHostAutonomy(sess)
+		if noContainer {
+			m.messages = append(m.messages, displayMsg{
+				role: "system",
+				content: "--no-container runs tools on the host without sandbox isolation. " +
+					"Use default container mode for safer agent execution.",
+			})
+		}
 	}
 
 	// Initialize lacy-inspired features

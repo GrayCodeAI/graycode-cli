@@ -207,10 +207,10 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		b.WriteByte('\n')
 		b.WriteString(center(runewidth.StringWidth(tip), boldC+tip+rst) + "\n")
 		shortcutsRow1 := "ctrl+N for new session · ctrl+L for autonomy"
-		shortcutsRow2 := "/help for commands · /config for setup · /permissions for approvals"
+		shortcutsRow2 := "/help for commands · /config for setup · /autonomy for approvals"
 		if tight {
 			shortcutsRow1 = "ctrl+N new session · ctrl+L autonomy"
-			shortcutsRow2 = "/help · /config · /permissions"
+			shortcutsRow2 = "/help · /config · /autonomy"
 		}
 		b.WriteByte('\n')
 		b.WriteString(center(runewidth.StringWidth(shortcutsRow1), dimC+shortcutsRow1+rst) + "\n")
@@ -249,19 +249,19 @@ func welcomeModeGuidance(dockerRunning *bool, tight bool) string {
 	switch {
 	case dockerRunning == nil:
 		if tight {
-			return "Host mode runs commands locally · /permissions changes approvals"
+			return "Host mode runs commands locally · /autonomy changes approvals"
 		}
-		return "Host mode runs commands on your machine · /permissions changes approvals"
+		return "Host mode runs commands on your machine · /autonomy changes approvals"
 	case *dockerRunning:
 		if tight {
-			return "Container mode isolates tool execution · /permissions changes approvals"
+			return "Container mode isolates tool execution · /autonomy changes approvals"
 		}
-		return "Container mode isolates tool execution when available · /permissions changes approvals"
+		return "Container mode isolates tool execution when available · /autonomy changes approvals"
 	default:
 		if tight {
-			return "Docker unavailable, so commands run locally · /permissions changes approvals"
+			return "Docker unavailable, so commands run locally · /autonomy changes approvals"
 		}
-		return "Docker is unavailable, so Hawk runs commands on your machine · /permissions changes approvals"
+		return "Docker is unavailable, so Hawk runs commands on your machine · /autonomy changes approvals"
 	}
 }
 
