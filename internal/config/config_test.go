@@ -63,6 +63,61 @@ func TestBuildContextWithDirs(t *testing.T) {
 	}
 }
 
+func TestBuildStartupContextWithDirs_ExcludesHeavyInstructions(t *testing.T) {
+	root := t.TempDir()
+	extra := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("root instructions"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(extra, "AGENTS.md"), []byte("extra instructions"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig, _ := os.Getwd()
+	_ = os.Chdir(root)
+	defer os.Chdir(orig)
+
+	ctx := BuildStartupContextWithDirs([]string{extra})
+	if !strings.Contains(ctx, "Working directory:") {
+		t.Fatal("expected working directory in startup context")
+	}
+	if !strings.Contains(ctx, "Additional directory:") {
+		t.Fatal("expected additional directory in startup context")
+	}
+	if strings.Contains(ctx, "root instructions") || strings.Contains(ctx, "extra instructions") {
+		t.Fatal("startup context should not include heavy instruction content")
+	}
+}
+
+func TestBuildDeferredContextWithDirs_IncludesInstructionContent(t *testing.T) {
+	root := t.TempDir()
+	extra := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("root instructions"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "CLAUDE.md"), []byte("claude instructions"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(extra, "AGENTS.md"), []byte("extra instructions"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig, _ := os.Getwd()
+	_ = os.Chdir(root)
+	defer os.Chdir(orig)
+
+	ctx := BuildDeferredContextWithDirs([]string{extra})
+	if !strings.Contains(ctx, "root instructions") {
+		t.Fatal("expected root AGENTS instructions in deferred context")
+	}
+	if !strings.Contains(ctx, "claude instructions") {
+		t.Fatal("expected cross-agent instructions in deferred context")
+	}
+	if !strings.Contains(ctx, "extra instructions") {
+		t.Fatal("expected additional directory instructions in deferred context")
+	}
+}
+
 func TestLoadSettingsWithJSONOverride(t *testing.T) {
 	testutil.IsolateStorage(t)
 	settings, err := LoadSettingsWithOverride(`{"model":"test-model","allowedTools":["Read"],"disallowedTools":["Write"]}`)

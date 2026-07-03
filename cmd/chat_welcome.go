@@ -13,7 +13,6 @@ import (
 	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -49,8 +48,9 @@ func (m chatModel) welcomeDockerRunning() *bool {
 		ok := false
 		return &ok
 	}
-	ok := sandbox.DockerAvailable()
-	return &ok
+	// Avoid probing Docker before first paint. The async container bootstrap
+	// path updates the welcome panel once it knows the real state.
+	return nil
 }
 
 func loadWelcomeStatusSnapshot() welcomeStatusSnapshot {

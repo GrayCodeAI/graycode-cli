@@ -178,6 +178,11 @@ func TestWelcomeDockerRunning_States(t *testing.T) {
 	}
 
 	m.containerEnabled = true
+	m.containerStatus = "checking docker…"
+	if m.welcomeDockerRunning() != nil {
+		t.Fatal("expected nil while container status is still checking")
+	}
+
 	m.containerReady = true
 	running := m.welcomeDockerRunning()
 	if running == nil || !*running {
@@ -189,6 +194,35 @@ func TestWelcomeDockerRunning_States(t *testing.T) {
 	stopped := m.welcomeDockerRunning()
 	if stopped == nil || *stopped {
 		t.Fatalf("expected running=false when container errored, got %v", stopped)
+	}
+}
+
+func TestStartupWarmMsg_RefreshesFooterCache(t *testing.T) {
+	m := chatModel{}
+	nextModel, _ := m.Update(startupWarmMsg{
+		statusLeftKey:    "/tmp/project",
+		statusLeftVal:    "~/project",
+		statusLeftBranch: "main",
+		connStatusVal:    "OpenRouter · gpt-4",
+		connStatusKey:    "cache-key",
+		welcomeSetup:     hawkconfig.SetupState{NeedsSetup: true},
+		welcomeAgentsOK:  true,
+	})
+	next := nextModel.(chatModel)
+	if next.statusLeftVal != "~/project" {
+		t.Fatalf("statusLeftVal = %q, want %q", next.statusLeftVal, "~/project")
+	}
+	if next.statusLeftBranch != "main" {
+		t.Fatalf("statusLeftBranch = %q, want %q", next.statusLeftBranch, "main")
+	}
+	if next.connStatusVal != "OpenRouter · gpt-4" {
+		t.Fatalf("connStatusVal = %q, want %q", next.connStatusVal, "OpenRouter · gpt-4")
+	}
+	if !next.welcomeSetupState.NeedsSetup {
+		t.Fatal("welcome setup snapshot should refresh from startup warm msg")
+	}
+	if !next.welcomeAgentsOK {
+		t.Fatal("welcome agents snapshot should refresh from startup warm msg")
 	}
 }
 

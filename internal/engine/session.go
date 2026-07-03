@@ -667,12 +667,17 @@ func (s *Session) AppendSystemContext(content string) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if strings.TrimSpace(s.system) == "" {
 		s.system = content
-		return
+	} else {
+		s.system += "\n\n" + content
 	}
-	s.system += "\n\n" + content
+	updated := s.system
+	persist := s.persist
+	s.mu.Unlock()
+	if persist != nil {
+		persist.SetSystem(updated)
+	}
 }
 
 // ReplaceSystemContextSection replaces the content of a system prompt section identified by its header.
@@ -683,7 +688,6 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	idx := strings.Index(s.system, header)
 	if idx < 0 {
 		// AppendSystemContext is not called here to avoid double-locking;
@@ -701,6 +705,12 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 		s.system = s.system[:idx] + content
 	} else {
 		s.system = s.system[:idx] + content + rest[endIdx:]
+	}
+	updated := s.system
+	persist := s.persist
+	s.mu.Unlock()
+	if persist != nil {
+		persist.SetSystem(updated)
 	}
 }
 

@@ -63,3 +63,69 @@ func TestUpdate_TypingInScrollbackReturnsToPrompt(t *testing.T) {
 		t.Fatalf("input = %q, want %q", got, "a")
 	}
 }
+
+func TestUpdate_BlurMsg_BlursPromptInput(t *testing.T) {
+	m := chatModel{
+		uiFocus:  focusPrompt,
+		input:    textarea.New(),
+		viewport: viewport.New(80, 10),
+	}
+	m.input.Focus()
+
+	nextModel, _ := m.Update(tea.BlurMsg{})
+	next := nextModel.(chatModel)
+	if next.input.Focused() {
+		t.Fatal("prompt input should blur on terminal blur")
+	}
+}
+
+func TestUpdate_FocusMsg_RefocusesPromptInput(t *testing.T) {
+	m := chatModel{
+		uiFocus:  focusPrompt,
+		input:    textarea.New(),
+		viewport: viewport.New(80, 10),
+	}
+	m.input.Blur()
+
+	nextModel, cmd := m.Update(tea.FocusMsg{})
+	next := nextModel.(chatModel)
+	if cmd == nil {
+		t.Fatal("focus regain should schedule prompt refocus command")
+	}
+	if !next.input.Focused() {
+		t.Fatal("prompt input should refocus on terminal focus")
+	}
+}
+
+func TestUpdate_PromptKeepAlive_RefocusesBlurredPrompt(t *testing.T) {
+	m := chatModel{
+		uiFocus:  focusPrompt,
+		input:    textarea.New(),
+		viewport: viewport.New(80, 10),
+	}
+	m.input.Blur()
+
+	nextModel, cmd := m.Update(promptKeepAliveMsg{})
+	next := nextModel.(chatModel)
+	if cmd == nil {
+		t.Fatal("prompt keepalive should reschedule itself")
+	}
+	if !next.input.Focused() {
+		t.Fatal("prompt keepalive should refocus the prompt when idle")
+	}
+}
+
+func TestChatProgramOptions_IncludeFocusReporting(t *testing.T) {
+	withMouse := tea.NewProgram(chatModel{}, chatProgramOptions(true)...)
+	withoutMouse := tea.NewProgram(chatModel{}, chatProgramOptions(false)...)
+
+	if withMouse == nil || withoutMouse == nil {
+		t.Fatal("expected program construction to succeed")
+	}
+	if len(chatProgramOptions(true)) != 3 {
+		t.Fatalf("mouse-enabled startup should include alt-screen, focus reporting, and mouse motion; got %d options", len(chatProgramOptions(true)))
+	}
+	if len(chatProgramOptions(false)) != 2 {
+		t.Fatalf("mouse-disabled startup should include alt-screen and focus reporting; got %d options", len(chatProgramOptions(false)))
+	}
+}

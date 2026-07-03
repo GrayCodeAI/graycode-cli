@@ -82,6 +82,7 @@ type (
 	streamRetryMsg      struct{ content string }
 	streamErrMsg        struct{ err error }
 	spinnerVerbTickMsg  struct{}
+	promptKeepAliveMsg  struct{}
 	usageUpdateMsg      struct{ usage *engine.StreamUsage }
 	compactStartMsg     struct{}
 	compactMsg          struct {
@@ -105,6 +106,15 @@ type (
 	}
 	pluginRuntimeReadyMsg struct {
 		runtime *plugin.Runtime
+	}
+	startupWarmMsg struct {
+		statusLeftKey    string
+		statusLeftVal    string
+		statusLeftBranch string
+		connStatusVal    string
+		connStatusKey    string
+		welcomeSetup     hawkconfig.SetupState
+		welcomeAgentsOK  bool
 	}
 	processArrowTickMsg struct {
 		seq int
@@ -217,41 +227,44 @@ type chatModel struct {
 	compactCancel            context.CancelFunc
 	// Display values lerped toward the turn targets each render frame
 	// (factor 0.10). Smooths the counter animation.
-	displayInTok         float64
-	displayOutTok        float64
-	lastCtrlC            time.Time
-	history              []string
-	historyIdx           int
-	historyDraft         string // unsent text before navigating history
-	autoScroll           bool   // whether viewport is pinned to bottom
-	streamFollow         bool   // follow streaming output (Grok-style; toggle with /follow)
-	uiFocus              uiFocusArea
-	contentLines         int   // total lines in scrollback content (for footer position)
-	lastMouseY           int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
-	mouseOverride        *bool // runtime /mouse toggle; persisted via settings
-	vim                  *VimState
-	wal                  *session.WAL
-	startedAt            time.Time // per-turn timer (spinner + turn elapsed)
-	sessionStartedAt     time.Time // whole chat session (footer duration)
-	sessionBootstrapDone bool
-	toolStartTime        time.Time
-	welcomeCache         string
-	welcomeSetupState    hawkconfig.SetupState
-	welcomeAgentsOK      bool
-	viewDirty            bool
-	layoutKey            int    // input lines + slash menu height fingerprint
-	cachedBottomBarLines int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
-	slashSugInput        string // memoize slashSuggestions per keystroke
-	slashSugCache        []string
-	connStatusKey        string // gateway+model+creds fingerprint
-	connStatusVal        string
-	partialDirty         bool // stream text changed since last viewport paint
-	lastPartialRender    time.Time
-	partialRenderPending bool
-	statusLeftKey        string
-	statusLeftVal        string
-	statusLeftBranch     string
-	statusLeftAt         time.Time // last branch lookup; refreshed on a short TTL
+	displayInTok                 float64
+	displayOutTok                float64
+	lastCtrlC                    time.Time
+	history                      []string
+	historyIdx                   int
+	historyDraft                 string // unsent text before navigating history
+	autoScroll                   bool   // whether viewport is pinned to bottom
+	streamFollow                 bool   // follow streaming output (Grok-style; toggle with /follow)
+	uiFocus                      uiFocusArea
+	contentLines                 int   // total lines in scrollback content (for footer position)
+	lastMouseY                   int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
+	mouseOverride                *bool // runtime /mouse toggle; persisted via settings
+	vim                          *VimState
+	wal                          *session.WAL
+	startedAt                    time.Time // per-turn timer (spinner + turn elapsed)
+	sessionStartedAt             time.Time // whole chat session (footer duration)
+	sessionBootstrapDone         bool
+	toolStartTime                time.Time
+	welcomeCache                 string
+	welcomeSetupState            hawkconfig.SetupState
+	welcomeAgentsOK              bool
+	viewDirty                    bool
+	layoutKey                    int    // input lines + slash menu height fingerprint
+	cachedBottomBarLines         int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
+	slashSugInput                string // memoize slashSuggestions per keystroke
+	slashSugCache                []string
+	connStatusKey                string // gateway+model+creds fingerprint
+	connStatusVal                string
+	deferredSystemContext        string
+	deferredSystemContextReady   bool
+	deferredSystemContextApplied bool
+	partialDirty                 bool // stream text changed since last viewport paint
+	lastPartialRender            time.Time
+	partialRenderPending         bool
+	statusLeftKey                string
+	statusLeftVal                string
+	statusLeftBranch             string
+	statusLeftAt                 time.Time // last branch lookup; refreshed on a short TTL
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string
@@ -332,6 +345,10 @@ func (m *chatModel) flushPartialDirty() {
 
 func spinnerVerbTickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(time.Time) tea.Msg { return spinnerVerbTickMsg{} })
+}
+
+func promptKeepAliveCmd() tea.Cmd {
+	return tea.Tick(15*time.Second, func(time.Time) tea.Msg { return promptKeepAliveMsg{} })
 }
 
 func permissionPromptTimeoutCmd(seq int) tea.Cmd {

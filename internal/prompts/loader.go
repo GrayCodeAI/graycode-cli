@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -36,6 +37,11 @@ type PromptContext struct {
 // mainSections lists the template files assembled into the system prompt, in order.
 var mainSections = []string{"role.md", "execution.md", "tools.md", "practices.md", "examples.md", "communication.md"}
 
+var (
+	embeddedTemplateMu    sync.RWMutex
+	embeddedTemplateCache = make(map[string]*template.Template)
+)
+
 // DefaultContext builds a PromptContext from the current environment.
 func DefaultContext() PromptContext {
 	wd, _ := os.Getwd()
@@ -52,11 +58,11 @@ func DefaultContext() PromptContext {
 func BuildSystemPrompt(ctx PromptContext) (string, error) {
 	var sections []string
 	for _, name := range mainSections {
-		raw, err := LoadTemplate(name)
+		tmpl, err := loadTemplateForRender(name)
 		if err != nil {
 			return "", err
 		}
-		rendered, err := renderTemplate(name, raw, ctx)
+		rendered, err := renderTemplate(name, tmpl, ctx)
 		if err != nil {
 			return "", err
 		}
@@ -67,17 +73,20 @@ func BuildSystemPrompt(ctx PromptContext) (string, error) {
 
 // BuildSubAgentPrompt assembles the sub-agent variant of the system prompt.
 func BuildSubAgentPrompt(ctx PromptContext) (string, error) {
-	raw, err := LoadTemplate("subagent.md")
+	tmpl, err := loadTemplateForRender("subagent.md")
 	if err != nil {
 		return "", err
 	}
-	return renderTemplate("subagent.md", raw, ctx)
+	return renderTemplate("subagent.md", tmpl, ctx)
 }
 
 // LoadTemplate loads a single template by name.
 // It checks Hawk user config prompts first, then falls back to embedded.
 func LoadTemplate(name string) (string, error) {
-	// Check user override directory first
+	return loadTemplateSource(name)
+}
+
+func loadTemplateSource(name string) (string, error) {
 	overridePath := filepath.Join(storage.ConfigDir(), "prompts", name)
 	if data, readErr := os.ReadFile(overridePath); readErr == nil {
 		return string(data), nil
@@ -89,6 +98,39 @@ func LoadTemplate(name string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+func loadTemplateForRender(name string) (*template.Template, error) {
+	overridePath := filepath.Join(storage.ConfigDir(), "prompts", name)
+	if data, readErr := os.ReadFile(overridePath); readErr == nil {
+		return template.New(name).Parse(string(data))
+	}
+	return cachedEmbeddedTemplate(name)
+}
+
+func cachedEmbeddedTemplate(name string) (*template.Template, error) {
+	embeddedTemplateMu.RLock()
+	tmpl := embeddedTemplateCache[name]
+	embeddedTemplateMu.RUnlock()
+	if tmpl != nil {
+		return tmpl, nil
+	}
+	data, err := embeddedTemplates.ReadFile("templates/" + name)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := template.New(name).Parse(string(data))
+	if err != nil {
+		return nil, err
+	}
+	embeddedTemplateMu.Lock()
+	if existing := embeddedTemplateCache[name]; existing != nil {
+		parsed = existing
+	} else {
+		embeddedTemplateCache[name] = parsed
+	}
+	embeddedTemplateMu.Unlock()
+	return parsed, nil
 }
 
 // ListTemplates returns all available template names from the embedded templates.
@@ -108,11 +150,7 @@ func ListTemplates() []string {
 }
 
 // renderTemplate executes a Go text/template against the given context.
-func renderTemplate(name, raw string, ctx PromptContext) (string, error) {
-	tmpl, err := template.New(name).Parse(raw)
-	if err != nil {
-		return "", err
-	}
+func renderTemplate(name string, tmpl *template.Template, ctx PromptContext) (string, error) {
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, ctx); err != nil {
 		return "", err

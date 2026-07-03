@@ -9,6 +9,25 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
+func (m *chatModel) ensureDeferredSystemContext() {
+	if m == nil || m.session == nil || m.deferredSystemContextApplied {
+		return
+	}
+
+	contextBlock := strings.TrimSpace(m.deferredSystemContext)
+	if contextBlock == "" && !m.deferredSystemContextReady {
+		contextBlock = strings.TrimSpace(buildDeferredWorkspacePromptContext())
+		m.deferredSystemContext = contextBlock
+		m.deferredSystemContextReady = true
+	}
+	if contextBlock == "" {
+		return
+	}
+
+	m.session.AppendSystemContext(contextBlock)
+	m.deferredSystemContextApplied = true
+}
+
 func explicitSelection(ctx context.Context) (provider, model string) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -73,5 +92,6 @@ func (m *chatModel) ensureSessionReadyForChat() error {
 	if err := m.bootstrapSessionForChat(); err != nil {
 		return err
 	}
+	m.ensureDeferredSystemContext()
 	return nil
 }

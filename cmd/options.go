@@ -71,7 +71,7 @@ func buildSystemPromptWithOptions(includeWorkspaceContext, includeRepoMap bool) 
 		modularPrompt = ""
 	}
 
-	base := prompt.System() + "\n\n" + hawkconfig.BuildContextWithDirs(addDirs)
+	base := prompt.System() + "\n\n" + hawkconfig.BuildStartupContextWithDirs(addDirs)
 	if modularPrompt != "" {
 		base += "\n\n" + modularPrompt
 	}
@@ -121,6 +121,9 @@ func buildDeferredWorkspacePromptContext() string {
 		return ""
 	}
 	var sections []string
+	if deferred := strings.TrimSpace(hawkconfig.BuildDeferredContextWithDirs(addDirs)); deferred != "" {
+		sections = append(sections, deferred)
+	}
 	if ws := prompts.GatherWorkspaceContext(cwd); ws != nil {
 		if formatted := strings.TrimSpace(ws.Format()); formatted != "" {
 			sections = append(sections, formatted)

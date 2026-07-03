@@ -96,6 +96,32 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case tea.FocusMsg:
+		m.viewDirty = true
+		m.updateViewportContent()
+		if focus := m.ensurePromptInputFocus(); focus != nil {
+			return m, focus
+		}
+		return m, nil
+
+	case tea.BlurMsg:
+		if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
+			m.input.Blur()
+		}
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
+	case promptKeepAliveMsg:
+		if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
+			if !m.input.Focused() {
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, tea.Batch(promptKeepAliveCmd(), m.input.Focus())
+			}
+		}
+		return m, promptKeepAliveCmd()
+
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
 			if m.configOpen {
@@ -557,9 +583,32 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case startupWarmMsg:
+		if strings.TrimSpace(msg.statusLeftVal) != "" {
+			m.statusLeftKey = msg.statusLeftKey
+			m.statusLeftVal = msg.statusLeftVal
+			m.statusLeftBranch = msg.statusLeftBranch
+			m.statusLeftAt = time.Now()
+		}
+		if msg.connStatusKey != "" || msg.connStatusVal != "" {
+			m.connStatusKey = msg.connStatusKey
+			m.connStatusVal = msg.connStatusVal
+		}
+		m.welcomeSetupState = msg.welcomeSetup
+		m.welcomeAgentsOK = msg.welcomeAgentsOK
+		m.rebuildWelcomeCache(m.blinkClosed)
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
 	case systemPromptContextReadyMsg:
-		if m.session != nil && strings.TrimSpace(msg.context) != "" {
-			m.session.AppendSystemContext(msg.context)
+		if contextBlock := strings.TrimSpace(msg.context); contextBlock != "" {
+			m.deferredSystemContext = contextBlock
+			m.deferredSystemContextReady = true
+			if m.session != nil && !m.deferredSystemContextApplied {
+				m.session.AppendSystemContext(contextBlock)
+				m.deferredSystemContextApplied = true
+			}
 		}
 		return m, nil
 

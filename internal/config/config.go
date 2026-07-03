@@ -114,39 +114,60 @@ func BuildContext() string {
 	return BuildContextWithDirs(nil)
 }
 
+// BuildStartupContextWithDirs assembles only the cheap context needed before
+// the first UI paint. Expensive repository scans are deferred.
+func BuildStartupContextWithDirs(addDirs []string) string {
+	cwd, extras := normalizeContextDirs(addDirs)
+	parts := []string{"Working directory: " + cwd}
+	for _, dir := range extras {
+		parts = append(parts, "Additional directory: "+dir)
+	}
+	return strings.Join(parts, "\n")
+}
+
+// BuildDeferredContextWithDirs assembles the heavier repository-specific
+// context that can safely be appended after the initial UI render.
+func BuildDeferredContextWithDirs(addDirs []string) string {
+	cwd, extras := normalizeContextDirs(addDirs)
+	var parts []string
+	if git := GitContext(); git != "" {
+		parts = append(parts, git)
+	}
+	if md := LoadAgentsMDFrom(cwd); md != "" {
+		parts = append(parts, "Project instructions (AGENTS.md):\n"+md)
+	}
+	parts = append(parts, loadCrossAgentInstructions(cwd)...)
+	for _, dir := range extras {
+		if md := LoadAgentsMDFrom(dir); md != "" {
+			parts = append(parts, "Additional directory instructions ("+dir+"):\n"+md)
+		}
+	}
+	if yaad := loadYaadMemories(cwd); yaad != "" {
+		parts = append(parts, yaad)
+	}
+	return strings.Join(parts, "\n")
+}
+
 // BuildContextWithDirs assembles context including additional user-specified directories.
 func BuildContextWithDirs(addDirs []string) string {
-	var parts []string
+	startupCtx := BuildStartupContextWithDirs(addDirs)
+	deferredCtx := BuildDeferredContextWithDirs(addDirs)
+	switch {
+	case startupCtx == "":
+		return deferredCtx
+	case deferredCtx == "":
+		return startupCtx
+	default:
+		return startupCtx + "\n" + deferredCtx
+	}
+}
+
+func normalizeContextDirs(addDirs []string) (string, []string) {
 	cwd, _ := os.Getwd()
 	if abs, err := filepath.Abs(cwd); err == nil {
 		cwd = abs
 	}
-	parts = append(parts, "Working directory: "+cwd)
-	if git := GitContext(); git != "" {
-		parts = append(parts, git)
-	}
-	if md := LoadAgentsMD(); md != "" {
-		parts = append(parts, "Project instructions (AGENTS.md):\n"+md)
-	}
-	// Cross-agent context files: read instructions from other coding agents.
-	crossAgentFiles := []string{
-		"CLAUDE.md", "CLAUDE.local.md",
-		"GEMINI.md",
-		".cursorrules",
-		".github/copilot-instructions.md",
-		"crush.md", "CRUSH.md",
-	}
-	for _, name := range crossAgentFiles {
-		data, err := os.ReadFile(filepath.Join(cwd, name))
-		if err != nil {
-			continue
-		}
-		content := string(data)
-		if len(content) > maxAgentsMDSize {
-			content = content[:maxAgentsMDSize]
-		}
-		parts = append(parts, fmt.Sprintf("Cross-agent instructions (%s):\n%s", name, content))
-	}
+	var extras []string
 	for _, dir := range addDirs {
 		dir = strings.TrimSpace(dir)
 		if dir == "" {
@@ -158,14 +179,30 @@ func BuildContextWithDirs(addDirs []string) string {
 		if dir == cwd {
 			continue
 		}
-		parts = append(parts, "Additional directory: "+dir)
-		if md := LoadAgentsMDFrom(dir); md != "" {
-			parts = append(parts, "Additional directory instructions ("+dir+"):\n"+md)
+		extras = append(extras, dir)
+	}
+	return cwd, extras
+}
+
+func loadCrossAgentInstructions(cwd string) []string {
+	crossAgentFiles := []string{
+		"CLAUDE.md", "CLAUDE.local.md",
+		"GEMINI.md",
+		".cursorrules",
+		".github/copilot-instructions.md",
+		"crush.md", "CRUSH.md",
+	}
+	var parts []string
+	for _, name := range crossAgentFiles {
+		data, err := os.ReadFile(filepath.Join(cwd, name))
+		if err != nil {
+			continue
 		}
+		content := string(data)
+		if len(content) > maxAgentsMDSize {
+			content = content[:maxAgentsMDSize]
+		}
+		parts = append(parts, fmt.Sprintf("Cross-agent instructions (%s):\n%s", name, content))
 	}
-	// Inject yaad memories (graph-native persistent memory).
-	if yaad := loadYaadMemories(cwd); yaad != "" {
-		parts = append(parts, yaad)
-	}
-	return strings.Join(parts, "\n")
+	return parts
 }
