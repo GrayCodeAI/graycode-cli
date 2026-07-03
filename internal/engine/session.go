@@ -697,6 +697,12 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 		} else {
 			s.system += "\n\n" + content
 		}
+		updated := s.system
+		persist := s.persist
+		s.mu.Unlock()
+		if persist != nil {
+			persist.SetSystem(updated)
+		}
 		return
 	}
 	rest := s.system[idx+len(header):]
