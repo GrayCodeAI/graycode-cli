@@ -17,10 +17,8 @@ const (
 	scrollbarBottomGlyph = "╵" // cap at the very bottom of the track
 )
 
-var (
-	// scrollbarThumbStyle — brand orange thumb so it pops.
-	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
-)
+// scrollbarThumbStyle — brand orange thumb so it pops.
+var scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
 
 // chatHasOverflow reports whether chat content exceeds the viewport height.
 func (m chatModel) chatHasOverflow() bool {
