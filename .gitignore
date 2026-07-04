@@ -31,3 +31,4 @@ coverage.out
 # Lefthook-generated git hook wrappers
 .githooks/
 __pycache__/
+hawk_bin
