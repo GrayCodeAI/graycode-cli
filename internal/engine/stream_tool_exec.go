@@ -25,18 +25,6 @@ type toolExecResult struct {
 	isErr  bool
 }
 
-// classifyToolCalls splits tool calls into concurrent (read-only) and sequential (write) batches.
-func classifyToolCalls(calls []types.ToolCall) (concurrent, sequential []types.ToolCall) {
-	for _, tc := range calls {
-		if tool.IsReadOnly(tc.Name) {
-			concurrent = append(concurrent, tc)
-		} else {
-			sequential = append(sequential, tc)
-		}
-	}
-	return
-}
-
 // filePathArgKeys is the list of argument names that are conventionally
 // file paths. Tools with non-standard names silently fall through and
 // extractTargets returns an empty list. For a more robust extraction, see

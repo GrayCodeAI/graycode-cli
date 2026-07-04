@@ -45,4 +45,3 @@ The update command SHALL report effective artifact behavior when delivery intent
 - **AND** at least one updated tool is `skills-invocable`
 - **THEN** output SHALL include a clear note that those tools use skills as their command surface
 - **AND** output SHALL avoid implying that command generation was skipped due to an error
-

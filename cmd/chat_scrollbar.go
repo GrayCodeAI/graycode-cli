@@ -20,8 +20,6 @@ const (
 var (
 	// scrollbarThumbStyle — brand orange thumb so it pops.
 	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
-	// scrollbarTrackStyle — very dim grey track so it doesn't distract.
-	scrollbarTrackStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
 )
 
 // chatHasOverflow reports whether chat content exceeds the viewport height.

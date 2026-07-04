@@ -578,7 +578,7 @@ func runChat() error {
 	}
 	systemPrompt := promptRes.text
 	settings := settingsRes.settings
-	m, err := newChatModelWithRegistry(ref, systemPrompt, settings, registryRes.registry)
+	m, err := newChatModel(ref, systemPrompt, settings)
 	if err != nil {
 		return err
 	}
