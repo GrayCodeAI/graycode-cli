@@ -536,13 +536,13 @@ func init() {
 		},
 	})
 
-	// /permissions — show/set permission rules
+	// /autonomy — show/set trust tier, sandbox, and rules
 	subcommandRegistry.Register(&delegatingCommand{
-		name:        "permissions",
-		description: "show/set permission rules (delegates to handlePermissionsCommand)",
-		usage:       "/permissions [subcommand]",
+		name:        "autonomy",
+		description: "show/set trust tier, sandbox, and rules (delegates to handleAutonomyCommand)",
+		usage:       "/autonomy [subcommand]",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			next, cmd := m.handlePermissionsCommand(append([]string{"/permissions"}, args...))
+			next, cmd := m.handleAutonomyCommand(append([]string{"/autonomy"}, args...))
 			return next, cmd
 		},
 	})

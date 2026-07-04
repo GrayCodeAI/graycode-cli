@@ -88,13 +88,26 @@ func (m chatModel) viewportScrollable() bool {
 
 // routeKeyToViewport returns true when the key should scroll chat history instead of the input.
 func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
+	if m.arrowBurstActive {
+		// Only Up/Down are part of the burst this flag describes. Any other
+		// key (typing, Escape, ...) must fall through to the normal routing
+		// below rather than being swept into viewport-scroll handling.
+		switch msg.Type {
+		case tea.KeyUp, tea.KeyDown:
+			if m.lastMouseY >= 0 {
+				return m.mouseInChatPane(tea.MouseMsg{Y: m.lastMouseY})
+			}
+			return true
+		}
+		return false
+	}
 	if m.configOpen {
 		return false
 	}
 	s := msg.String()
 	if m.inScrollbackFocus() {
 		switch s {
-		case "pgup", "pgdown", "ctrl+u", "ctrl+d", "u", "d", "f", "b", "up", "k", "down", "j", " ":
+		case "pgup", "pgdown", "ctrl+u", "ctrl+d", "u", "d", "f", "b", "k", "j", " ":
 			return m.viewportScrollable()
 		}
 		return false
@@ -103,20 +116,24 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 		return false
 	}
 	switch s {
-	case "pgup", "pgdown", "ctrl+u", "ctrl+d", "u", "d", "f", "b":
+	case "pgup", "pgdown", "ctrl+u", "ctrl+d":
 		return true
-	case "up", "k", "down", "j":
-		// Prompt focus: Up/Down always drive input history (Charm chat-input pattern).
+	case "up", "k", "u", "b", "down", "j", "d", "f":
+		// Prompt focus: these are plain typeable letters (u/d/f/b) as well as
+		// Up/Down — they must reach the input as text/history nav, not be
+		// hijacked as vim-style pager scroll keys (Charm chat-input pattern).
 		if m.uiFocus == focusPrompt {
 			return false
 		}
 		if strings.TrimSpace(m.input.Value()) != "" {
 			return false
 		}
-		if s == "up" || s == "k" {
+		switch s {
+		case "up", "k", "u", "b":
 			return !m.viewport.AtTop()
+		default:
+			return !m.viewport.AtBottom()
 		}
-		return !m.viewport.AtBottom()
 	case " ":
 		return strings.TrimSpace(m.input.Value()) == ""
 	}
@@ -126,12 +143,12 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 // chatPaneTopY is the first terminal row of the scrollable chat pane (sync with View).
 func (m chatModel) chatPaneTopY() int {
 	if m.height <= 0 {
-		return m.fixedWelcomeLineCount()
+		return 0
 	}
 	m = m.withSyncedLayout()
 	top := m.footerTopY() - m.viewport.Height
-	if top < m.fixedWelcomeLineCount() {
-		top = m.fixedWelcomeLineCount()
+	if top < 0 {
+		top = 0
 	}
 	return top
 }

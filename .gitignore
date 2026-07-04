@@ -30,3 +30,4 @@ coverage.out
 
 # Lefthook-generated git hook wrappers
 .githooks/
+__pycache__/

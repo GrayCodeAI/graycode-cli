@@ -73,6 +73,12 @@ type ToolContext struct {
 	Attribution         *types.Attribution
 	SettingsGet         func(key string) (string, bool)
 	SettingsSet         func(key, value string) error
+	// SpecSlugGet/SpecSlugSet let the Specify/Plan/Tasks tools read and
+	// write the active spec workflow's directory slug without any
+	// package-level state — each session supplies its own closures over
+	// its own PermissionEngine.SpecSlug field.
+	SpecSlugGet func() string
+	SpecSlugSet func(string)
 	// BackgroundManager tracks background sub-agents. If nil, background
 	// mode is not available.
 	BackgroundManager *BackgroundAgentManager

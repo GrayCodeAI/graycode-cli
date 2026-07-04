@@ -396,49 +396,56 @@ func TestIntegration_MaxTurns(t *testing.T) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Additional: permission mode integration
+// Additional: trust tier + spec stage integration
 // ──────────────────────────────────────────────────────────────────────────────
 
-func TestIntegration_PermissionModes(t *testing.T) {
+func TestIntegration_TrustTiersAndSpecStage(t *testing.T) {
 	sess := newTestSession()
+	ctx := context.Background()
 
-	// bypassPermissions mode allows everything.
-	sess.SetPermissionMode("bypassPermissions")
-	decision := sess.modeDecision("Write")
-	if decision == nil || !*decision {
-		t.Fatal("bypassPermissions should allow Write")
-	}
-
-	// dontAsk mode denies everything.
-	sess.SetPermissionMode("dontAsk")
-	decision = sess.modeDecision("Bash")
-	if decision == nil || *decision {
-		t.Fatal("dontAsk should deny Bash")
+	// AutonomyYOLO allows everything.
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	granted, _ := sess.PermSvc().CheckTool(ctx, ToolCallInfo{Name: "Write", Args: map[string]interface{}{"path": "x.txt"}})
+	if !granted {
+		t.Fatal("AutonomyYOLO should allow Write")
 	}
 
-	// acceptEdits mode allows Write/Edit but not Bash.
-	sess.SetPermissionMode("acceptEdits")
-	decision = sess.modeDecision("Write")
-	if decision == nil || !*decision {
-		t.Fatal("acceptEdits should allow Write")
+	// AutonomySemi allows Write/Edit but not Bash (falls through to prompt).
+	sess.PermSvc().SetAutonomy(AutonomySemi)
+	sess.PermSvc().SetPermissionFn(func(req PermissionRequest) {
+		if req.Response != nil {
+			req.Response <- false
+		}
+	})
+	granted, _ = sess.PermSvc().CheckTool(ctx, ToolCallInfo{Name: "Write", Args: map[string]interface{}{"path": "x.txt"}})
+	if !granted {
+		t.Fatal("AutonomySemi should allow Write")
 	}
-	decision = sess.modeDecision("Edit")
-	if decision == nil || !*decision {
-		t.Fatal("acceptEdits should allow Edit")
-	}
-	decision = sess.modeDecision("Bash")
-	if decision != nil {
-		t.Fatal("acceptEdits should not decide on Bash (returns nil = ask user)")
+	granted, _ = sess.PermSvc().CheckTool(ctx, ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "rm -rf /"}})
+	if granted {
+		t.Fatal("AutonomySemi should ask (and here deny) for Bash")
 	}
 
-	// plan mode denies all except ExitPlanMode.
-	sess.SetPermissionMode("plan")
-	decision = sess.modeDecision("Write")
-	if decision == nil || *decision {
-		t.Fatal("plan mode should deny Write")
+	// Spec stage gate denies Write regardless of tier, even at YOLO.
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.PermSvc().SetSpecStage(SpecStageSpecify)
+	granted, denyMsg := sess.PermSvc().CheckTool(ctx, ToolCallInfo{Name: "Write", Args: map[string]interface{}{"path": "x.txt"}})
+	if granted {
+		t.Fatal("spec stage should deny Write even at AutonomyYOLO")
 	}
-	decision = sess.modeDecision("ExitPlanMode")
-	if decision != nil {
-		t.Fatal("plan mode should return nil for ExitPlanMode (ask user)")
+	if denyMsg == "" {
+		t.Fatal("expected a deny reason for spec-gated Write")
+	}
+
+	// Reads remain unrestricted during spec stage.
+	granted, _ = sess.PermSvc().CheckTool(ctx, ToolCallInfo{Name: "Read", Args: map[string]interface{}{"path": "x.txt"}})
+	if !granted {
+		t.Fatal("reads should be unrestricted during spec stage")
+	}
+
+	// Specify/Plan/Tasks tools are always allowed during spec stage.
+	granted, _ = sess.PermSvc().CheckTool(ctx, ToolCallInfo{Name: "Specify", Args: map[string]interface{}{}})
+	if !granted {
+		t.Fatal("Specify should always be allowed during spec stage")
 	}
 }

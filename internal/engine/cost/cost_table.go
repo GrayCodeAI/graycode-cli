@@ -20,7 +20,7 @@ var livePricing sync.Map // model id -> [2]float64{input per 1M, output per 1M}
 // Overrides compiled-catalog defaults for footer cost and pre-request estimates.
 func RegisterLivePricing(model string, inputPerM, outputPerM float64) {
 	model = strings.TrimSpace(model)
-	if model == "" || (inputPerM <= 0 && outputPerM <= 0) {
+	if model == "" || inputPerM < 0 || outputPerM < 0 {
 		return
 	}
 	livePricing.Store(model, [2]float64{inputPerM, outputPerM})
@@ -29,12 +29,12 @@ func RegisterLivePricing(model string, inputPerM, outputPerM float64) {
 func ModelPricing(modelName string) (inputPricePerM, outputPricePerM float64) {
 	modelName = strings.TrimSpace(modelName)
 	if v, ok := livePricing.Load(modelName); ok {
-		if p, ok := v.([2]float64); ok && (p[0] > 0 || p[1] > 0) {
+		if p, ok := v.([2]float64); ok {
 			return p[0], p[1]
 		}
 	}
 	info, ok := routing.Find(modelName)
-	if ok && (info.InputPrice > 0 || info.OutputPrice > 0) {
+	if ok {
 		return info.InputPrice, info.OutputPrice
 	}
 	// Fall back to tier-based defaults so routing decisions still produce

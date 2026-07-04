@@ -12,7 +12,11 @@ import (
 func MigrateProviderSecrets() error {
 	path := eyriecfg.GetProviderConfigPath()
 	marker := path + ".secrets-migrated"
+	backup := path + ".pre-secret-migrate.bak"
 	if _, err := os.Stat(marker); err == nil {
+		// Migration already done: remove any leftover plaintext backup from
+		// earlier versions that kept it around.
+		_ = os.Remove(backup)
 		return nil
 	}
 	data, err := os.ReadFile(path)
@@ -37,12 +41,14 @@ func MigrateProviderSecrets() error {
 		_ = os.WriteFile(marker, []byte("ok\n"), 0o600)
 		return nil
 	}
-	backup := path + ".pre-secret-migrate.bak"
+	// Keep a backup only while the rewrite is in flight; it holds plaintext
+	// secrets, so it must not outlive a successful migration.
 	_ = os.WriteFile(backup, data, 0o600)
 	if err := eyriecfg.SaveProviderConfig(&cfg, path); err != nil {
 		return err
 	}
 	_ = os.WriteFile(marker, []byte("ok\n"), 0o600)
+	_ = os.Remove(backup)
 	return nil
 }
 

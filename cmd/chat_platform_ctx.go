@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var platformCtxCache struct {
@@ -14,8 +15,6 @@ var platformCtxCache struct {
 	idx map[string]int
 	at  time.Time
 }
-
-const platformCtxCacheTTL = 10 * time.Minute
 
 func isXiaomiMimoProvider(provider string) bool {
 	p := strings.ToLower(strings.TrimSpace(provider))
@@ -28,7 +27,7 @@ func isXiaomiMimoProvider(provider string) bool {
 	}
 }
 
-// platformContextForNativeModel reads the public MiMo platform catalog (no API key).
+// platformContextForNativeModel reads the public MiMo platform catalog (no API key) from cache.
 func platformContextForNativeModel(modelID string) int {
 	modelID = xiaomi.NativeModelID(strings.TrimSpace(modelID))
 	if modelID == "" {
@@ -38,10 +37,22 @@ func platformContextForNativeModel(modelID string) int {
 	platformCtxCache.mu.Lock()
 	defer platformCtxCache.mu.Unlock()
 
-	if platformCtxCache.idx == nil || time.Since(platformCtxCache.at) > platformCtxCacheTTL {
+	if platformCtxCache.idx == nil {
+		return 0
+	}
+	return platformCtxCache.idx[modelID]
+}
+
+type platformContextIndexMsg struct {
+	idx map[string]int
+	err error
+}
+
+func fetchPlatformContextIndexCmd() tea.Cmd {
+	return func() tea.Msg {
 		idx, err := xiaomi.FetchPlatformModelsIndex(context.Background(), "")
 		if err != nil {
-			return 0
+			return platformContextIndexMsg{err: err}
 		}
 		m := make(map[string]int, len(idx))
 		for k, pm := range idx {
@@ -49,10 +60,22 @@ func platformContextForNativeModel(modelID string) int {
 				m[xiaomi.NativeModelID(k)] = pm.ContextLength
 			}
 		}
-		platformCtxCache.idx = m
-		platformCtxCache.at = time.Now()
+		return platformContextIndexMsg{idx: m}
 	}
-	return platformCtxCache.idx[modelID]
+}
+
+func updatePlatformContextCache(msg platformContextIndexMsg) {
+	platformCtxCache.mu.Lock()
+	defer platformCtxCache.mu.Unlock()
+	if msg.err != nil {
+		if platformCtxCache.idx == nil {
+			platformCtxCache.idx = make(map[string]int)
+		}
+		platformCtxCache.at = time.Now()
+		return
+	}
+	platformCtxCache.idx = msg.idx
+	platformCtxCache.at = time.Now()
 }
 
 func invalidatePlatformContextCache() {

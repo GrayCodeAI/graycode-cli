@@ -4,12 +4,20 @@ Usage:
   hawk [prompt] [flags]
   hawk [command]
 
+Examples:
+  hawk
+  hawk -p "explain this repo"
+  hawk exec "fix failing tests"
+  hawk preflight
+  hawk path
+
 Available Commands:
   acp         Run hawk as an Agent Client Protocol (ACP) server
   agent       Manage custom agent personas
   attach      Attach to a running background session
   audit       Analyze past sessions for wasteful patterns
   bg          Run a session in the background
+  checkpoint  Save and restore named session checkpoints
   completion  Generate shell completion script
   config      Show or update settings
   context     Export project context as a single document for use in any LLM
@@ -24,8 +32,8 @@ Available Commands:
   fingerprint Generate a repository fingerprint (languages, deps, git info)
   help        Help about any command
   history     Search and browse command history
-  inspect     Scan a website for broken links, security issues, accessibility violations, and more
-  mcp         Show MCP server configuration
+  init        Interactive onboarding wizard for first-time setup
+  mcp         Show MCP configuration; run or register hawk as an MCP server
   mission     Run a multi-agent mission (parallel feature execution)
   models      Deployment-aware model catalog (via eyrie)
   path        Developer path readiness (setup, security, sandbox, ecosystem)
@@ -35,6 +43,7 @@ Available Commands:
   preflight   Check hawk is ready to chat (catalog, credentials, model)
   recover     Scan for interrupted sessions and resume
   research    Autonomous research loop (Karpathy autoresearch pattern)
+  resume      Restore a named session checkpoint and resume it
   review      Continuous AI code review on commits
   rules       Detect, import, and export AI coding rules between tool formats
   sandbox     View, apply, or discard pending diff sandbox changes
@@ -42,19 +51,16 @@ Available Commands:
   search      Search across saved sessions
   sessions    List saved sessions
   setup       Run first-time setup again
-  sight       AI-powered code review on the current branch diff
   skills      Manage skills (list, search, install, remove, audit, info, trending)
   snapshot    Manage file snapshots (undo any change)
   stats       Show usage statistics and cost analytics
   taste       Manage taste profile (learned coding style preferences)
   tools       List built-in tools
-  trace       Git-native session capture — rewind, checkpoint, and audit AI sessions
+  trace       Trace CLI
   version     Print hawk version
-  yaad        Yaad persistent memory graph
 
 Flags:
       --add-dir stringArray                additional directories to include in session context
-      --allow-project-mcp                  allow MCP servers defined in project-level .hawk/settings.json (security risk)
       --allowed-tools stringArray          comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")
       --append-system-prompt string        append text to the default or custom system prompt
       --append-system-prompt-file string   read text from a file and append it to the system prompt
@@ -65,9 +71,11 @@ Flags:
       --council                            consult multiple models and synthesize best answer
       --dangerously-skip-permissions       bypass all permission checks
       --disallowed-tools stringArray       comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")
+      --dry-run                            deny every tool call unconditionally (preview only, nothing executes)
       --fork-session                       when resuming, create a new session ID instead of reusing the original
   -h, --help                               help for hawk
       --input-format string                input format for --print: "text" or "stream-json" (default "text")
+      --map-tokens int                     token budget for the --repo-map overview (default 1024)
       --max-budget-usd float               maximum estimated API spend in USD
       --max-turns int                      maximum number of agentic turns in non-interactive mode
       --mcp stringArray                    MCP server command
@@ -76,17 +84,19 @@ Flags:
       --no-container                       disable container mode (run on host with permission prompts)
       --no-session-persistence             disable session persistence in print mode
       --output-format string               output format for --print: "text", "json", or "stream-json" (default "text")
-      --permission-mode string             permission mode: default, acceptEdits, bypassPermissions, dontAsk, or plan
       --power int                          power level 1-10 (auto-configures model, context, review depth) (default 5)
   -p, --print                              print response and exit
       --prompt string                      send a single prompt and exit (legacy alias for --print)
       --provider string                    LLM provider (anthropic, openai, gemini, etc.)
       --recover                            scan for interrupted sessions and offer to resume
       --refresh-catalog                    refresh the eyrie model catalog before starting
+      --repl                               start interactive REPL mode (like aider) for multi-turn conversation without TUI
+      --repo-map                           inject an AST-ranked repository map (Aider-style) into the system prompt
   -r, --resume string                      resume a saved session by ID
-      --sandbox string                     Bash permission profile: strict, workspace, or off (not Docker; see --no-container)
+      --sandbox string                     permission sandbox: strict, workspace, or off (same as /autonomy sandbox; not Docker container mode)
       --session-id string                  use a specific session ID for the conversation
       --settings string                    path to a settings JSON file or a JSON string to load for this session
+      --startup-profile                    print startup performance profile
       --system-prompt string               system prompt to use for the session
       --system-prompt-file string          read system prompt from a file
       --teach                              explain reasoning as the agent works
@@ -95,6 +105,6 @@ Flags:
       --tools stringArray                  available tools: "" disables all tools, "default" enables all, or names like "Bash,Edit,Read"
   -v, --version                            output the version number
       --vibe                               vibe coding mode: auto-apply, auto-run, no confirmations
-      --watch                              watch the working directory for file changes
+      --watch                              watch the working directory for file changes and re-run on changes
 
 Use "hawk [command] --help" for more information about a command.

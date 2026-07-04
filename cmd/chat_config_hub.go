@@ -22,11 +22,21 @@ func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
 	if strings.TrimSpace(m.configModelProvider) == "" {
 		m.configModelProvider = firstRunModelProvider(m)
 	}
+	if strings.TrimSpace(m.configModelProvider) == "" {
+		m.configTab = configTabGateways
+		m.configNotice = "Select a gateway · press enter · paste your API key"
+		return m.focusConfigActiveGateway(), nil
+	}
 	m.configModelOptions = loadConfigModelOptions(m.configModelProvider)
 	if len(m.configModelOptions) == 0 {
 		m.configSaving = true
 		m.configNotice = "Loading models…"
-		return m, fetchModelsAsync(m.configModelProvider)
+		var cmds []tea.Cmd
+		cmds = append(cmds, fetchModelsAsync(m.configModelProvider))
+		if isXiaomiMimoProvider(m.configModelProvider) {
+			cmds = append(cmds, fetchPlatformContextIndexCmd())
+		}
+		return m, tea.Batch(cmds...)
 	}
 	m = m.focusConfigActiveModelSelection()
 	return m, nil

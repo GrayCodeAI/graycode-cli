@@ -13,12 +13,16 @@ import (
 	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
+
+type welcomeStatusSnapshot struct {
+	setup    hawkconfig.SetupState
+	agentsOK bool
+}
 
 func welcomeDockerSegment(dockerRunning *bool, greenC, redC, rst string) (segment string, visLen int) {
 	if dockerRunning == nil {
@@ -44,8 +48,30 @@ func (m chatModel) welcomeDockerRunning() *bool {
 		ok := false
 		return &ok
 	}
-	ok := sandbox.DockerAvailable()
-	return &ok
+	// Avoid probing Docker before first paint. The async container bootstrap
+	// path updates the welcome panel once it knows the real state.
+	return nil
+}
+
+func loadWelcomeStatusSnapshot() welcomeStatusSnapshot {
+	ctx := context.Background()
+	return welcomeStatusSnapshot{
+		setup:    hawkconfig.EvaluateSetupCached(ctx),
+		agentsOK: hawkconfig.LoadAgentsMD() != "",
+	}
+}
+
+func (m *chatModel) refreshWelcomeStatusSnapshot() {
+	snapshot := loadWelcomeStatusSnapshot()
+	m.welcomeSetupState = snapshot.setup
+	m.welcomeAgentsOK = snapshot.agentsOK
+}
+
+func (m chatModel) welcomeStatusSnapshot() welcomeStatusSnapshot {
+	return welcomeStatusSnapshot{
+		setup:    m.welcomeSetupState,
+		agentsOK: m.welcomeAgentsOK,
+	}
 }
 
 func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
@@ -61,30 +87,35 @@ func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	if m.pluginRuntime != nil {
 		skillsCount = len(m.pluginRuntime.SmartSkills)
 	}
-	m.welcomeCache = buildWelcomeMessage(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning())
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot())
 }
 
 // buildWelcomeMessage renders the branded inline HAWK welcome block.
 func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
+	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, blinkClosed, width, height, dockerRunning, loadWelcomeStatusSnapshot())
+}
+
+func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot) string {
 	// Brand orange — used for both the HAWK wordmark and the mascot so
-	// the welcome screen stays on theme.
-	logoC := "\033[38;2;255;94;14m" // brand orange — WELCOME TO + HAWK wordmark
-	mascotC := "\033[38;2;255;94;14m"
-	dimC := "\033[2m"
-	boldC := "\033[1m"
+	// the welcome screen stays on theme. All escapes come from the theme
+	// palette (theme.go) so a rebrand stays a one-file change.
+	logoC := ansiOrange
+	mascotC := ansiOrange
+	dimC := ansiDim
+	boldC := ansiBold
 	// Indicator colors — same as the rest of the TUI palette (success
 	// teal, error coral) so the ✓/× marks match the colors used
 	// elsewhere for success/error states.
-	greenC := "\033[38;2;78;205;196m" // successTeal
-	redC := "\033[38;2;255;107;107m"  // errorCoral
-	amberC := "\033[38;2;255;179;71m" // warnAmber
-	sepC := "\033[38;2;102;102;102m"  // textDisabled — chip separators
-	rst := "\033[0m"
+	greenC := ansiTeal
+	redC := ansiCoral
+	amberC := ansiAmber
+	sepC := ansiGrayDim
+	rst := ansiReset
 
 	// Status marks — green ✓ = present, dim ○ = none (not an error),
 	// red × = actual problem (e.g. Docker enabled but not running). Using a
 	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
-	markPresent := greenC + "+" + icons.CheckBold() + " " + rst
+	markPresent := greenC + icons.CheckBold() + " " + rst
 	markNone := sepC + "○" + rst
 
 	totalW := width
@@ -95,7 +126,6 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	if totalH <= 0 {
 		totalH = 24
 	}
-	compact := totalH <= 24 || totalW < 88
 	tight := totalH <= 20 || totalW < 72
 
 	center := func(visW int, styled string) string {
@@ -145,21 +175,21 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 
 	verLine := fmt.Sprintf("v%s", DisplayVersion())
 	b.WriteByte('\n')
-	b.WriteString(center(len(verLine), dimC+verLine+rst) + "\n")
+	b.WriteString(center(runewidth.StringWidth(verLine), dimC+verLine+rst) + "\n")
 
-	setup := hawkconfig.EvaluateSetupCached(context.Background())
+	setup := snapshot.setup
 	needsSetup := setup.NeedsSetup
 	modeGuidance := welcomeModeGuidance(dockerRunning, tight)
 	if needsSetup {
 		if hint := setup.Hint; hint != "" {
 			b.WriteByte('\n')
-			b.WriteString(center(len(hint), amberC+hint+rst) + "\n")
+			b.WriteString(center(runewidth.StringWidth(hint), amberC+hint+rst) + "\n")
 		}
 	}
 	if needsSetup {
 		quick := "Quick start: /config to connect a provider and pick a model · /help for commands"
 		b.WriteByte('\n')
-		b.WriteString(center(len(quick), boldC+quick+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(quick), boldC+quick+rst) + "\n")
 		example := "Then ask: explain this repo · fix the failing test · add tests for cmd/eval"
 		if tight {
 			example = "Then ask: explain this repo · fix the failing test"
@@ -170,28 +200,25 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 		}
 	}
 	if !needsSetup {
-		tip := "Ready: ask Hawk to inspect, edit, or run code · /config and /help stay available"
+		tip := "TIP: Use /new to start a fresh session with clean context"
 		if tight {
-			tip = "Ready: ask Hawk to work · /help · /config"
+			tip = "TIP: /new starts a clean session"
 		}
 		b.WriteByte('\n')
-		b.WriteString(center(len(tip), boldC+tip+rst) + "\n")
-		shortcutsPlain := "Try: explain this repo · fix the failing test · add tests for cmd/eval"
+		b.WriteString(center(runewidth.StringWidth(tip), boldC+tip+rst) + "\n")
+		shortcutsRow1 := "ctrl+N for new session · ctrl+L for autonomy"
+		shortcutsRow2 := "/help for commands · /config for setup · /autonomy for approvals"
 		if tight {
-			shortcutsPlain = "Try: explain this repo · fix the failing test"
+			shortcutsRow1 = "ctrl+N new session · ctrl+L autonomy"
+			shortcutsRow2 = "/help · /config · /autonomy"
 		}
-		b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
-		if !compact {
-			shortcutsPlain = "PgUp/Dn scroll chat · Up/Dn history · Tab scrollback · /home · /ctx · ctrl+N · ctrl+L"
-			b.WriteString(center(runewidth.StringWidth(shortcutsPlain), dimC+shortcutsPlain+rst) + "\n")
-		}
-		if modeGuidance != "" {
-			b.WriteString(center(runewidth.StringWidth(modeGuidance), dimC+modeGuidance+rst) + "\n")
-		}
+		b.WriteByte('\n')
+		b.WriteString(center(runewidth.StringWidth(shortcutsRow1), dimC+shortcutsRow1+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(shortcutsRow2), dimC+shortcutsRow2+rst) + "\n")
 	}
 
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
-	agentsOK := hawkconfig.LoadAgentsMD() != ""
+	agentsOK := snapshot.agentsOK
 
 	mark := func(present bool) string {
 		if present {
@@ -204,17 +231,15 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	hawkMark := mark(agentsOK)
 
 	indicators := fmt.Sprintf("Skills (%d) %s  MCPs (%d) %s  AGENTS.md %s", skillsCount, skillMark, mcpCount, mcpMark, hawkMark)
-	indVis := fmt.Sprintf("Skills (%d) x  MCPs (%d) x  AGENTS.md x", skillsCount, mcpCount)
 	if dockerSeg, _ := welcomeDockerSegment(dockerRunning, greenC, redC, rst); dockerSeg != "" {
 		indicators += dockerSeg
-		indVis += "  Docker x"
 	}
 	b.WriteByte('\n')
-	b.WriteString(center(len(indVis), indicators) + "\n")
+	b.WriteString(center(visibleWidth(indicators), indicators) + "\n")
 
 	if resume := actLine(saved, sessionID); resume != "" {
 		b.WriteString("\n")
-		b.WriteString(center(len(resume), dimC+resume+rst) + "\n")
+		b.WriteString(center(runewidth.StringWidth(resume), dimC+resume+rst) + "\n")
 	}
 
 	return b.String()
@@ -224,19 +249,19 @@ func welcomeModeGuidance(dockerRunning *bool, tight bool) string {
 	switch {
 	case dockerRunning == nil:
 		if tight {
-			return "Host mode runs commands locally · /permissions changes approvals"
+			return "Host mode runs commands locally · /autonomy changes approvals"
 		}
-		return "Host mode runs commands on your machine · /permissions changes approvals"
+		return "Host mode runs commands on your machine · /autonomy changes approvals"
 	case *dockerRunning:
 		if tight {
-			return "Container mode isolates tool execution · /permissions changes approvals"
+			return "Container mode isolates tool execution · /autonomy changes approvals"
 		}
-		return "Container mode isolates tool execution when available · /permissions changes approvals"
+		return "Container mode isolates tool execution when available · /autonomy changes approvals"
 	default:
 		if tight {
-			return "Docker unavailable, so commands run locally · /permissions changes approvals"
+			return "Docker unavailable, so commands run locally · /autonomy changes approvals"
 		}
-		return "Docker is unavailable, so Hawk runs commands on your machine · /permissions changes approvals"
+		return "Docker is unavailable, so Hawk runs commands on your machine · /autonomy changes approvals"
 	}
 }
 

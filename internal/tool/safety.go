@@ -325,6 +325,67 @@ func IsSensitivePath(path string) string {
 	return ""
 }
 
+// commandPathSeparators splits a shell command into path-like tokens.
+func commandPathSeparators(r rune) bool {
+	switch r {
+	case ' ', '\t', '\n', '\r', ';', '|', '&', '<', '>', '(', ')', '"', '\'', '`', '=':
+		return true
+	}
+	return false
+}
+
+// CommandReferencesSensitivePath returns a non-empty reason when a shell
+// command string references a credential file that the file tools already
+// block via IsSensitivePath (SSH keys, ~/.aws/credentials, .env, provider
+// configs, …). Without this, Bash is a trivial bypass of that protection
+// ("cat ~/.ssh/id_rsa"). Matching is string-based (suffix/basename) so it
+// stays cheap; it deliberately does not hit the filesystem.
+func CommandReferencesSensitivePath(command string) string {
+	if !strings.ContainsAny(command, "/.") {
+		return ""
+	}
+	homeDir := home.Dir()
+	for _, tok := range strings.FieldsFunc(command, commandPathSeparators) {
+		tok = strings.Trim(tok, ",:")
+		if tok == "" || !strings.ContainsAny(tok, "/.") {
+			continue
+		}
+		// Expand a leading tilde so ~/.ssh/id_rsa and $HOME-relative forms
+		// normalize to the same shape as absolute paths.
+		if homeDir != "" {
+			if strings.HasPrefix(tok, "~/") {
+				tok = homeDir + tok[1:]
+			} else if strings.HasPrefix(tok, "$HOME/") {
+				tok = homeDir + tok[len("$HOME"):]
+			}
+		}
+		for _, suffix := range blockedPathSuffixes {
+			if strings.HasSuffix(tok, suffix) || tok == suffix[1:] {
+				return fmt.Sprintf("command references %s, blocked for security", suffix)
+			}
+		}
+		if strings.Contains(tok, "/.ssh/") || strings.HasSuffix(tok, "/.ssh") {
+			return "command references ~/.ssh, blocked for security"
+		}
+		if strings.HasSuffix(tok, ".hawk/provider.json") {
+			return "command references provider.json, blocked for security (API credentials)"
+		}
+		base := tok
+		if i := strings.LastIndexByte(base, '/'); i >= 0 {
+			base = base[i+1:]
+		}
+		for _, b := range blockedBasenames {
+			if base == b {
+				return fmt.Sprintf("command references %s, blocked for security", b)
+			}
+		}
+		if strings.HasPrefix(base, ".env") && base != ".envrc" {
+			return fmt.Sprintf("command references %s, blocked for security", base)
+		}
+	}
+	return ""
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 6. Symlink resolution (used by IsSensitivePath and callers)
 // ──────────────────────────────────────────────────────────────────────────────

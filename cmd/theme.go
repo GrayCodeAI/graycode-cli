@@ -114,18 +114,24 @@ var cwdBlue = lipgloss.Color("#75B1E2")
 // 7. Text hierarchy (five levels of visual weight for prose)
 // ---------------------------------------------------------------------------
 
+// Neutral text/structure colors are adaptive: the Dark variant is the
+// original value (so dark terminals — the default — render identically),
+// and the Light variant is dark ink so prose and borders stay legible on
+// light terminals, where the old near-white values were invisible.
+// lipgloss selects the variant from the detected terminal background.
+
 // textPrimary — body text, primary prose.
-var textPrimary = lipgloss.Color("#F0F0F0")
+var textPrimary = lipgloss.AdaptiveColor{Light: "#1A1A1A", Dark: "#F0F0F0"}
 
 // textMuted — secondary/muted prose.
-var textMuted = lipgloss.Color("#9E9E9E")
+var textMuted = lipgloss.AdaptiveColor{Light: "#6B6B6B", Dark: "#9E9E9E"}
 
 // textPlaceholder — input field placeholder.
 var textPlaceholder = lipgloss.Color("#7A7A7A")
 
 // textDisabled — disabled, idle, slash menu (non-selected), blockquote,
 // markdown HR.
-var textDisabled = lipgloss.Color("#666666")
+var textDisabled = lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#666666"}
 
 // textWhite — bright text (permission body, code foreground).
 var textWhite = lipgloss.Color("#FFFFFF")
@@ -135,7 +141,7 @@ var textWhite = lipgloss.Color("#FFFFFF")
 // ---------------------------------------------------------------------------
 
 // borderDim — input/panel/divider border.
-var borderDim = lipgloss.Color("#555555")
+var borderDim = lipgloss.AdaptiveColor{Light: "#C6C6C6", Dark: "#555555"}
 
 // bgCode — code block background.
 var bgCode = lipgloss.Color("#2A2A3A")
@@ -159,18 +165,24 @@ var bgCode = lipgloss.Color("#2A2A3A")
 // ---------------------------------------------------------------------------
 
 const (
-	ansiOrange  = "\033[38;2;255;94;14m"
-	ansiGreen   = "\033[92m"
-	ansiYellow  = "\033[93m"
-	ansiBlue    = "\033[94m"
-	ansiMagenta = "\033[95m"
-	ansiCyan    = "\033[96m"
-	ansiWhite   = "\033[97m"
-	ansiTeal    = "\033[38;2;78;205;196m" // matches successTeal — spinner elapsed
-	ansiDim     = "\033[2m"
-	ansiItalic  = "\033[3m"
-	ansiBold    = "\033[1m"
-	ansiReset   = "\033[0m"
+	ansiOrange   = "\033[38;2;255;94;14m"
+	ansiGreen    = "\033[92m"
+	ansiYellow   = "\033[93m"
+	ansiBlue     = "\033[94m"
+	ansiMagenta  = "\033[95m"
+	ansiCyan     = "\033[96m"
+	ansiWhite    = "\033[97m"
+	ansiTeal     = "\033[38;2;78;205;196m"  // matches successTeal — spinner elapsed
+	ansiCoral    = "\033[38;2;255;107;107m" // matches errorCoral
+	ansiAmber    = "\033[38;2;255;179;71m"  // matches warnAmber
+	ansiGrayDim  = "\033[38;2;102;102;102m" // matches textDisabled
+	ansiDone     = "\033[38;2;76;175;80m"   // matches doneGreen — diff additions
+	ansiSky      = "\033[38;2;117;177;226m" // matches infoSky — diff hunk headers
+	ansiContBlue = "\033[38;2;59;170;218m"  // matches containerBlue — diff file headers
+	ansiDim      = "\033[2m"
+	ansiItalic   = "\033[3m"
+	ansiBold     = "\033[1m"
+	ansiReset    = "\033[0m"
 )
 
 // ---------------------------------------------------------------------------

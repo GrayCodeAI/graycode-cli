@@ -125,11 +125,12 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	// GitHub Actions integration: when running inside a runner, derive the
 	// prompt and mode (interactive vs automation) from the triggering event.
-	if gha := detectGitHubActions(os.Getenv, os.ReadFile); gha.Active {
-		if gha.Prompt != "" {
-			prompt = gha.Prompt
+	ghaCtx := detectGitHubActions(os.Getenv, os.ReadFile)
+	if ghaCtx.Active {
+		if ghaCtx.Prompt != "" {
+			prompt = ghaCtx.Prompt
 		}
-		if gha.Mode == GHAModeInteractive {
+		if ghaCtx.Mode == GHAModeInteractive {
 			prompt = "Respond conversationally to the following GitHub comment that mentioned you:\n\n" + prompt
 		}
 	}
@@ -218,6 +219,21 @@ func runExec(_ *cobra.Command, args []string) error {
 	// Apply autonomy level
 	if execAutoLevel != "" {
 		sess.PermSvc().SetAutonomy(engine.ParseAutonomyLevel(execAutoLevel))
+	}
+
+	// Prompt-injection guard: when the prompt originates from an untrusted
+	// GitHub Actions event (an outside contributor's issue/PR/comment body),
+	// clamp autonomy to read-only auto-approval so attacker-controlled text
+	// cannot drive writes or Bash. Maintainers can opt out with
+	// HAWK_GHA_TRUST_EVENT=1.
+	if ghaCtx.Active && !ghaCtx.Trusted {
+		const ceiling = engine.AutonomyBasic
+		if sess.PermSvc().Autonomy() > ceiling {
+			fmt.Fprintf(os.Stderr,
+				"hawk: untrusted GitHub event (author_association=%q); capping autonomy at %s\n",
+				ghaCtx.AuthorAssociation, ceiling)
+			sess.PermSvc().SetAutonomy(ceiling)
+		}
 	}
 
 	// In exec mode, auto-approve based on autonomy level (no TUI to ask)
@@ -399,14 +415,25 @@ const (
 // ghMention is the trigger token that promotes an event to interactive mode.
 const ghMention = "@hawk"
 
+// ghTrustedAssociations are the GitHub author_association values that identify
+// a repository insider. Everyone else (CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR,
+// NONE, …) is treated as untrusted external input.
+var ghTrustedAssociations = map[string]bool{
+	"OWNER":        true,
+	"MEMBER":       true,
+	"COLLABORATOR": true,
+}
+
 // GHAContext captures the relevant fields parsed from the GitHub Actions
 // environment and event payload.
 type GHAContext struct {
-	Active    bool    // GITHUB_ACTIONS == "true"
-	EventName string  // GITHUB_EVENT_NAME
-	Mode      GHAMode // resolved operating mode
-	Prompt    string  // event-derived prompt body
-	Mention   bool    // whether an @hawk mention was found in a comment
+	Active            bool    // GITHUB_ACTIONS == "true"
+	EventName         string  // GITHUB_EVENT_NAME
+	Mode              GHAMode // resolved operating mode
+	Prompt            string  // event-derived prompt body
+	Mention           bool    // whether an @hawk mention was found in a comment
+	AuthorAssociation string  // GitHub author_association of the triggering actor
+	Trusted           bool    // author is a repo insider (or explicitly trusted)
 }
 
 // detectGitHubActions inspects the GitHub Actions environment and the event
@@ -434,6 +461,14 @@ func detectGitHubActions(getenv func(string) string, readFile func(string) ([]by
 	commentBody := ghCommentBody(payload)
 	ctx.Mention = strings.Contains(strings.ToLower(commentBody), ghMention)
 
+	// Trust signal: GitHub reports the actor's relationship to the repo.
+	// Only insiders are trusted to drive high-autonomy tool use; content
+	// from outside contributors is untrusted (prompt-injection surface).
+	// HAWK_GHA_TRUST_EVENT=1 lets a maintainer opt into trusting all events.
+	ctx.AuthorAssociation = ghAuthorAssociation(payload)
+	ctx.Trusted = ghTrustedAssociations[strings.ToUpper(strings.TrimSpace(ctx.AuthorAssociation))] ||
+		ghTrustEventOverride(getenv)
+
 	switch ctx.EventName {
 	case "issue_comment", "pull_request_review_comment":
 		if ctx.Mention {
@@ -452,6 +487,33 @@ func detectGitHubActions(getenv func(string) string, readFile func(string) ([]by
 		ctx.Prompt = ghIssueBody(payload)
 		return ctx
 	}
+}
+
+// ghTrustEventOverride reports whether the maintainer has opted into
+// trusting GitHub Actions event content regardless of author association.
+func ghTrustEventOverride(getenv func(string) string) bool {
+	switch strings.ToLower(strings.TrimSpace(getenv("HAWK_GHA_TRUST_EVENT"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+// ghAuthorAssociation extracts the author_association from the triggering
+// object (comment, then issue, then pull_request).
+func ghAuthorAssociation(payload map[string]interface{}) string {
+	if payload == nil {
+		return ""
+	}
+	for _, key := range []string{"comment", "issue", "pull_request", "review"} {
+		if obj, ok := payload[key].(map[string]interface{}); ok {
+			if assoc, ok := obj["author_association"].(string); ok && assoc != "" {
+				return assoc
+			}
+		}
+	}
+	return ""
 }
 
 // ghCommentBody extracts the comment text from an issue_comment or

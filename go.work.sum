@@ -167,7 +167,6 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0/go.mod h1:ZPpqegjbE99EPKsu3iUWV22A04wzGPcAY/ziSIQEEgs=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/cloudmock v0.53.0/go.mod h1:jUZ5LYlw40WMd07qxcQJD5M40aUxrfwqQX1g7zxYnrQ=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0/go.mod h1:cSgYe11MCNYunTnRXrKiR/tHc0eoKjICUuWpNZoVCOo=
-github.com/GrayCodeAI/eyrie v0.1.0/go.mod h1:g/hyB7+YCSYSkw5zJfZrWxLJyCoy2psR8QOsXN4ZzsI=
 github.com/GrayCodeAI/hawk v0.1.0/go.mod h1:JIiKVFiFJL52OKNW/ndHRtjzVbVy6CX3HBydPpDHkwA=
 github.com/GrayCodeAI/inspect v0.1.0/go.mod h1:DDhIU8Ikg2kjIXsiBupbTbLhmf4Jn8Ut7SV70spF0Qs=
 github.com/GrayCodeAI/sight v0.1.0/go.mod h1:hcEdCWt07/igu5HeCxB052OkQ5WOQ/f/WkEO1z1fcOM=

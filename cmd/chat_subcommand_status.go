@@ -29,10 +29,10 @@ func buildStatusInfo(m *chatModel) string {
 	if m.registry != nil {
 		toolCount = len(m.registry.EyrieTools())
 	}
-	info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nPermission mode: %s\nMessages: %d\nTools: %d\n%s",
+	info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nSpec stage: %s\nMessages: %d\nTools: %d\n%s",
 		m.sessionID, m.session.Provider(), m.session.Model(),
 		m.modeManager.Current().String(),
-		permissionModeLabel(m.session), m.session.MessageCount(), toolCount, m.session.CostValue().Summary())
+		specStageLabel(m.session), m.session.MessageCount(), toolCount, m.session.CostValue().Summary())
 	if len(addDirs) > 0 {
 		info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
 	}

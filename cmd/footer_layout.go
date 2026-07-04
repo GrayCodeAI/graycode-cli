@@ -21,8 +21,7 @@ func (m chatModel) finishFooterLine(line string, totalW int) string {
 	return clipFooterLine(line, m.footerContentWidth(totalW))
 }
 
-// minFooterRightCols is reserved for ● tokens · $cost · duration on the stats row.
-const minFooterRightCols = 28 // ● Nk tokens · $cost · duration
+const minFooterRightCols = 40 // ● Nk tokens · $cost · duration · HH:MM
 
 // layoutFooterRow places left and right footer segments on one line without wrapping.
 // Right text is aligned with lipgloss (not a long run of spaces) so terminals do not

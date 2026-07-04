@@ -1,14 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // lintSubcommand implements the /lint slash command. It runs
@@ -27,12 +23,11 @@ func (l *lintSubcommand) Handle(m *chatModel, args []string, text string) (tea.M
 	if len(args) >= 1 {
 		cmdStr = strings.TrimSpace(strings.TrimPrefix(text, "/lint"))
 	}
-	if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
-		m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
+	result, isErr := runSlashShellCommand(m, cmdStr)
+	if isErr {
+		m.messages = append(m.messages, displayMsg{role: "error", content: result})
 		return m, nil
 	}
-	out, _ := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
-	result := strings.TrimSpace(string(out))
 	if result == "" {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "No lint issues."})
 	} else {

@@ -109,6 +109,12 @@ func ensureCredSnapshot(ctx context.Context) {
 	RefreshConfigCredSnapshot(ctx)
 }
 
+func CredentialSnapshotReady() bool {
+	uiCacheMu.RLock()
+	defer uiCacheMu.RUnlock()
+	return credValid
+}
+
 // ConfiguredCredentialProviders returns setup gateways with a stored API key (cached for TUI).
 func configuredCredentialProvidersCached(ctx context.Context) []string {
 	ensureCredSnapshot(ctx)

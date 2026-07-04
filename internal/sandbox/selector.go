@@ -96,7 +96,10 @@ func bwrapAvailable() bool {
 	return err == nil
 }
 
-const dockerAvailabilityTTL = 2 * time.Second
+const (
+	dockerAvailabilityTTL = 2 * time.Second
+	dockerProbeTimeout    = 1500 * time.Millisecond
+)
 
 var (
 	dockerAvailabilityMu      sync.Mutex
@@ -117,7 +120,12 @@ func dockerAvailable() bool {
 }
 
 func probeDockerAvailable() bool {
-	cmd := exec.CommandContext(context.Background(), "docker", "info")
+	if _, err := exec.LookPath("docker"); err != nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), dockerProbeTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "docker", "info")
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run() == nil

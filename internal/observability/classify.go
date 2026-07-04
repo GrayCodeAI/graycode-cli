@@ -38,7 +38,7 @@ func ClassifyTurn(toolNames []string, userMessage string) TurnCategory {
 			hasRead = true
 		case "Bash", "PowerShell":
 			// handled below via message content
-		case "EnterPlanMode", "ExitPlanMode", "TodoWrite", "TaskCreate":
+		case "Specify", "Plan", "Tasks", "ApproveImplementation", "TodoWrite", "TaskCreate":
 			hasPlan = true
 		}
 	}

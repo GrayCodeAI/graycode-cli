@@ -1,14 +1,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // runSubcommand implements the /run slash command. It runs an
@@ -28,17 +24,15 @@ func (r *runSubcommand) Handle(m *chatModel, args []string, text string) (tea.Mo
 		return m, nil
 	}
 	cmdStr := strings.TrimSpace(strings.TrimPrefix(text, "/run"))
-	if tool.IsDestructiveCommand(cmdStr) || tool.IsSuspicious(cmdStr) {
-		m.messages = append(m.messages, displayMsg{role: "error", content: "Blocked: command fails safety check"})
-		return m, nil
+	result, isErr := runSlashShellCommand(m, cmdStr)
+	role := "system"
+	if isErr {
+		role = "error"
 	}
-	out, err := exec.CommandContext(context.Background(), "sh", "-c", cmdStr).CombinedOutput()
-	result := strings.TrimSpace(string(out))
-	if err != nil {
-		result += "\n" + err.Error()
+	m.messages = append(m.messages, displayMsg{role: role, content: fmt.Sprintf("$ %s\n%s", cmdStr, result)})
+	if !isErr {
+		m.session.AddUser(fmt.Sprintf("[Command output: %s]\n```\n%s\n```", cmdStr, result))
 	}
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("$ %s\n%s", cmdStr, result)})
-	m.session.AddUser(fmt.Sprintf("[Command output: %s]\n```\n%s\n```", cmdStr, result))
 	return m, nil
 }
 

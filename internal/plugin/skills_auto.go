@@ -341,6 +341,29 @@ func FormatSkillsForPrompt(skills []SmartSkill) string {
 	return b.String()
 }
 
+// FormatSkillsCompact returns a compact listing of skill names and descriptions
+// suitable for system prompt injection. Unlike FormatSkillsForPrompt, it omits
+// full skill content to keep context lean. The LLM uses the Skill tool to load
+// full content on demand.
+func FormatSkillsCompact(skills []SmartSkill) string {
+	if len(skills) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("## Available Skills\n\n")
+	b.WriteString("The following skills match your current context. Use the Skill tool to load a skill's full instructions.\n\n")
+	for _, s := range skills {
+		b.WriteString("- **")
+		b.WriteString(s.Name)
+		b.WriteString("**: ")
+		if s.Description != "" {
+			b.WriteString(s.Description)
+		}
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
 // ParseSmartSkillPublic is the exported version of parseSmartSkill.
 func ParseSmartSkillPublic(content string) SmartSkill {
 	return parseSmartSkill(content)

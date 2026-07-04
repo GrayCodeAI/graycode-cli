@@ -72,12 +72,57 @@ func Check(currentVersion string) (*ReleaseInfo, error) {
 	return nil, nil // no update available
 }
 
-// isNewer checks if version a is newer than version b.
+// isNewer checks if version a is newer than version b using semver ordering
+// (numeric field comparison; a pre-release sorts before its release).
 func isNewer(a, b string) bool {
-	// Simple semver comparison
-	a = strings.TrimPrefix(a, "v")
-	b = strings.TrimPrefix(b, "v")
-	return a != b && a > b
+	na, pa, okA := parseVersion(a)
+	if !okA {
+		return false
+	}
+	nb, pb, okB := parseVersion(b)
+	if !okB {
+		return true
+	}
+	for i := range na {
+		if na[i] != nb[i] {
+			return na[i] > nb[i]
+		}
+	}
+	if pa == pb {
+		return false
+	}
+	if pa == "" {
+		return true // release is newer than its pre-release
+	}
+	if pb == "" {
+		return false
+	}
+	return pa > pb
+}
+
+// parseVersion parses "v1.2.3-rc1" into numeric fields and a pre-release tag.
+func parseVersion(v string) (nums [3]int, pre string, ok bool) {
+	v = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(v), "v"))
+	if v == "" {
+		return nums, "", false
+	}
+	v, _, _ = strings.Cut(v, "+") // drop build metadata
+	v, pre, _ = strings.Cut(v, "-")
+	parts := strings.Split(v, ".")
+	for i := 0; i < len(parts) && i < 3; i++ {
+		n := 0
+		if parts[i] == "" {
+			return nums, "", false
+		}
+		for _, c := range parts[i] {
+			if c < '0' || c > '9' {
+				return nums, "", false
+			}
+			n = n*10 + int(c-'0')
+		}
+		nums[i] = n
+	}
+	return nums, pre, true
 }
 
 // Summary returns a formatted update summary.

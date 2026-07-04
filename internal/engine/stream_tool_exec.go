@@ -148,6 +148,16 @@ func ExtractTargetsFromSchema(t tool.Tool, tc types.ToolCall) []string {
 	return targets
 }
 
+const (
+	maxConcurrentReadOnlyToolCalls        = 8
+	maxConcurrentNetworkReadOnlyToolCalls = 3
+)
+
+type indexedToolCall struct {
+	index int
+	tc    types.ToolCall
+}
+
 // executeToolCalls runs all tool calls and returns results.
 func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) []toolExecResult {
 	// Estimate blast radius before execution. Use the schema-aware target
@@ -155,10 +165,16 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 	// names like "target_path" or "destFile" are still picked up); fall back
 	// to the conventional extractor otherwise.
 	plannedCalls := make([]PlannedCall, len(toolCalls))
+	concurrentCalls := make([]indexedToolCall, 0, len(toolCalls))
+	sequentialCalls := make([]indexedToolCall, 0, len(toolCalls))
 	for i, tc := range toolCalls {
 		var targets []string
-		if t, ok := s.registry.Get(tc.Name); ok {
-			targets = ExtractTargetsFromSchema(t, tc)
+		if s.registry != nil {
+			if t, ok := s.registry.Get(tc.Name); ok {
+				targets = ExtractTargetsFromSchema(t, tc)
+			} else {
+				targets = extractTargets(tc)
+			}
 		} else {
 			targets = extractTargets(tc)
 		}
@@ -166,6 +182,12 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 			ToolName: tc.Name,
 			Args:     tc.Arguments,
 			Targets:  targets,
+		}
+		item := indexedToolCall{index: i, tc: tc}
+		if tool.IsReadOnly(tc.Name) {
+			concurrentCalls = append(concurrentCalls, item)
+		} else {
+			sequentialCalls = append(sequentialCalls, item)
 		}
 	}
 	blastReport := EstimateBlastRadius(plannedCalls)
@@ -177,34 +199,68 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 		}
 	}
 
-	concurrentCalls, sequentialCalls := classifyToolCalls(toolCalls)
-
-	var results []toolExecResult
-	var mu sync.Mutex
+	results := make([]toolExecResult, len(toolCalls))
+	readOnlySem := make(chan struct{}, maxConcurrentReadOnlyToolCalls)
+	networkSem := make(chan struct{}, maxConcurrentNetworkReadOnlyToolCalls)
 	var wg sync.WaitGroup
 
-	for _, tc := range concurrentCalls {
+	for _, item := range concurrentCalls {
 		wg.Add(1)
-		go func(tc types.ToolCall) {
+		go func(item indexedToolCall) {
 			defer wg.Done()
-			r := s.executeSingleTool(ctx, tc, ch, turnCount, intentText)
-			mu.Lock()
-			results = append(results, r)
-			mu.Unlock()
-		}(tc)
+			readOnlySem <- struct{}{}
+			defer func() { <-readOnlySem }()
+			if isNetworkReadOnlyTool(item.tc.Name) {
+				networkSem <- struct{}{}
+				defer func() { <-networkSem }()
+			}
+			results[item.index] = s.executeSingleTool(ctx, item.tc, ch, turnCount, intentText)
+		}(item)
 	}
 	wg.Wait()
 
-	for _, tc := range sequentialCalls {
-		r := s.executeSingleTool(ctx, tc, ch, turnCount, intentText)
-		results = append(results, r)
+	for _, item := range sequentialCalls {
+		results[item.index] = s.executeSingleTool(ctx, item.tc, ch, turnCount, intentText)
 	}
 
 	return results
 }
 
+func isNetworkReadOnlyTool(name string) bool {
+	switch strings.ToLower(name) {
+	case "websearch", "web_search", "webfetch", "web_fetch", "toolsearch", "tool_search":
+		return true
+	default:
+		return false
+	}
+}
+
+// RunUserShellCommand runs a user-initiated shell command through the same
+// permission, approval, sandbox/container, timeout, retry, truncation, hook,
+// and post-processing path used by model-initiated Bash tool calls.
+func (s *Session) RunUserShellCommand(ctx context.Context, command string, timeoutSeconds int) (string, bool) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	args := map[string]interface{}{"command": command}
+	if timeoutSeconds > 0 {
+		args["timeout"] = timeoutSeconds
+	}
+	ch := make(chan StreamEvent, 4)
+	result := s.executeSingleToolWithTool(ctx, types.ToolCall{
+		ID:        "slash-bash",
+		Name:      "Bash",
+		Arguments: args,
+	}, tool.BashTool{}, ch, 0, command)
+	return result.output, result.isErr
+}
+
 // executeSingleTool runs one tool call with permission checks, sandboxing, and all post-processing.
 func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) toolExecResult {
+	return s.executeSingleToolWithTool(ctx, tc, nil, ch, turnCount, intentText)
+}
+
+func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turnCount int, intentText string) toolExecResult {
 	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
 
 	if s.Tools().ContainerRequired() {
@@ -273,6 +329,8 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		AgentSpawnFn: s.AgentSpawnFn,
 		AskUserFn:    s.AskUserFn,
 		YaadBridge:   s.MemorySvc().Yaad(),
+		SpecSlugGet:  func() string { return s.Perm.SpecSlug },
+		SpecSlugSet:  func(slug string) { s.Perm.SpecSlug = slug },
 	})
 	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
@@ -297,7 +355,19 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 	// RetryPolicyProvider interface) — Read/Write/Edit etc. don't opt out and
 	// get the default policy of 2 retries (3 attempts total) with 200ms→2s
 	// exponential backoff.
-	t, _ := s.registry.Get(tc.Name)
+	t := override
+	if t == nil {
+		var ok bool
+		if s.registry != nil {
+			t, ok = s.registry.Get(tc.Name)
+		}
+		if !ok {
+			toolCancel()
+			output := fmt.Sprintf("Error: unknown tool: %s", tc.Name)
+			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
+			return toolExecResult{tc: tc, output: output, isErr: true}
+		}
+	}
 	var output string
 	var execErr error
 	if rpp, ok := t.(tool.RetryPolicyProvider); ok {
@@ -522,25 +592,18 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 		}
 	}
 
-	// Plan/build mode transitions driven by the model's plan tools. Reaching this
-	// point means the tool was granted by the permission engine — which, at
-	// interactive autonomy levels, already prompted the user to approve leaving
-	// plan mode (the approval gate). EnterPlanMode switches into read-only plan
-	// mode; ExitPlanMode hands off to build mode. This is the single source of
-	// truth for the mode (the legacy global flag in internal/tool/plan.go is kept
-	// only for backward compatibility).
+	// Spec-stage transitions driven by the model's spec workflow tools.
+	// Reaching this point means the tool was granted by the permission
+	// engine — for ApproveImplementation specifically, that always meant a
+	// real user prompt (see PermissionEngine.CheckTool's spec gate), so this
+	// is the approval handoff into Implementing.
 	if !isErr {
 		switch canonicalToolName(tc.Name) {
-		case "EnterPlanMode":
-			s.Perm.ApplyToolState(tc.Name)
-			s.Mode = s.Perm.Mode
-		case "ExitPlanMode":
-			wasPlan := s.Perm.Mode == PermissionModePlan
-			s.Perm.ApplyToolState(tc.Name) // -> default (build) mode
-			s.Mode = s.Perm.Mode
-			if wasPlan {
-				output = "Plan approved — switched to build mode. You may now implement the plan and make changes."
-			}
+		case "Specify", "Plan", "Tasks":
+			s.Perm.AdvanceSpecStage(tc.Name)
+		case "ApproveImplementation":
+			s.Perm.AdvanceSpecStage(tc.Name)
+			output = "Spec approved — switched to implementation. You may now make changes."
 		}
 	}
 

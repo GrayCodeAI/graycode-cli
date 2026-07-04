@@ -45,3 +45,22 @@ func TestOpenConfigPanel_FirstRunOpensGateways(t *testing.T) {
 		t.Fatalf("notice = %q", next.configNotice)
 	}
 }
+
+func TestOpenConfigAtTab_ModelsWithoutCredentialsFallsBackToGateways(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+
+	m := chatModel{}
+	next, _ := m.openConfigAtTab(configTabModels)
+	if !next.configOpen || next.configTab != configTabGateways {
+		t.Fatalf("expected Gateways fallback, got open=%v tab=%d", next.configOpen, next.configTab)
+	}
+	if !strings.Contains(next.configNotice, "Select a gateway") {
+		t.Fatalf("notice = %q", next.configNotice)
+	}
+}

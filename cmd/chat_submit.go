@@ -136,8 +136,9 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
 	m.turnInputTokens = 0
 	m.turnOutputTokens = 0
+	m.turnEstimatedOutputRunes = 0
 	m.startedAt = time.Time{}
 	m.partial.Reset()
 	m.startStream()
-	return m, nil
+	return m, tea.Batch(m.spinner.Tick, spinnerVerbTickCmd())
 }

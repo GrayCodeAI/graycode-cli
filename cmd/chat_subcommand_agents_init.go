@@ -28,6 +28,8 @@ func (a *agentsInitSubcommand) Handle(m *chatModel, args []string, text string) 
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to write AGENTS.md: " + err.Error()})
 		return m, nil
 	}
+	m.refreshWelcomeStatusSnapshot()
+	m.rebuildWelcomeCache(m.blinkClosed)
 	m.messages = append(m.messages, displayMsg{role: "system", content: "Wrote AGENTS.md (project type: " + pt + ")"})
 	return m, nil
 }
