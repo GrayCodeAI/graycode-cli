@@ -13,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -148,6 +149,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 	}
 
+	// Auto-skill: load smart skills once at session start for per-turn matching
+	s.smartSkills = plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+
 	recoveryCount := 0
 	turnCount := 0
 	toolTurns := 0 // turns that used tools (for skill distillation)
@@ -282,11 +286,35 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				opts.System += "\n\n## Agent Beliefs\n" + summary
 			}
 		}
-		// Plan mode: steer the model to research and propose a plan only, and to
-		// call ExitPlanMode for approval before any changes. Ephemeral (not
-		// persisted to s.Persistence().System()) so it disappears once build mode resumes.
-		if s.Perm != nil && s.Perm.Mode == PermissionModePlan {
-			opts.System += planModeSystemPrompt
+		// Auto-skill: match smart skills against the last user message and
+		// inject a compact listing. The LLM uses the Skill tool for full content.
+		if len(s.smartSkills) > 0 {
+			lastUserMsg := ""
+			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+				if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
+					lastUserMsg = s.Persistence().RawMessages()[i].Content
+					break
+				}
+			}
+			if lastUserMsg != "" {
+				if matched := plugin.MatchSkillsByContext(s.smartSkills, lastUserMsg); len(matched) > 0 {
+					if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
+						opts.System += "\n\n" + skillsPrompt
+					}
+				}
+			}
+		}
+		// Spec stage: steer the model through Specify -> Plan -> Tasks and an
+		// explicit approval handoff before any changes. Ephemeral (not
+		// persisted to s.Persistence().System()) so it disappears once the
+		// stage advances to Implementing.
+		if s.Perm != nil && s.Perm.Stage != SpecStageNone && s.Perm.Stage != SpecStageImplementing {
+			opts.System += specStageSystemPrompt
+			// Inject user's spec configuration (language, framework, etc.)
+			// as context so the model writes specs that match preferences.
+			if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
+				opts.System += cfgPrompt
+			}
 		}
 		if s.Tools() != nil && s.Tools().Registry() != nil {
 			opts.Tools = s.Tools().Registry().EyrieTools()
@@ -329,7 +357,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		inPrice, outPrice := ModelPricing(s.model)
 		estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 		if estCost > 0.50 {
-			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n"+icons.Alert()+" This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.\n", inputTokens+maxTok, estCost)}
+			ch <- StreamEvent{Type: "blast_radius", Content: fmt.Sprintf("%s This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.", icons.Alert(), inputTokens+maxTok, estCost)}
 		}
 
 		// Trace: start agent loop span for this turn
@@ -386,42 +414,46 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		for streamAttempt := 0; streamAttempt <= maxStreamRetries; streamAttempt++ {
 			streamErr = nil
 			sawThinking = false
-			for ev := range result.Events {
+		eventLoop:
+			for {
 				select {
 				case <-ctx.Done():
 					result.Close()
 					return
-				default:
-				}
-				switch ev.Type {
-				case "content":
-					textContent.WriteString(ev.Content)
-					ch <- StreamEvent{Type: "content", Content: ev.Content}
-				case "thinking":
-					if strings.TrimSpace(ev.Thinking) != "" {
-						sawThinking = true
+				case ev, ok := <-result.Events:
+					if !ok {
+						break eventLoop
 					}
-					ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
-				case "tool_call":
-					if ev.ToolCall != nil {
-						toolCalls = append(toolCalls, *ev.ToolCall)
-					}
-				case "usage":
-					if ev.Usage != nil {
-						lastUsage = ev.Usage
-						s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, activeModel, taskType, apiStart)
-					}
-				case "error":
-					streamErr = fmt.Errorf("%s", ev.Error)
-					if isRetryableStreamError(streamErr) {
-						break // break switch, will check in outer loop
-					}
-					ch <- StreamEvent{Type: "error", Content: ev.Error}
-					result.Close()
-					return
-				case "done":
-					if ev.StopReason != "" {
-						stopReason = ev.StopReason
+					switch ev.Type {
+					case "content":
+						textContent.WriteString(ev.Content)
+						ch <- StreamEvent{Type: "content", Content: ev.Content}
+					case "thinking":
+						if strings.TrimSpace(ev.Thinking) != "" {
+							sawThinking = true
+						}
+						ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
+					case "tool_call":
+						if ev.ToolCall != nil {
+							toolCalls = append(toolCalls, *ev.ToolCall)
+						}
+					case "usage":
+						if ev.Usage != nil {
+							lastUsage = ev.Usage
+							s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, activeModel, taskType, apiStart)
+						}
+					case "error":
+						streamErr = fmt.Errorf("%s", ev.Error)
+						if isRetryableStreamError(streamErr) {
+							break // break switch, will check in outer loop
+						}
+						ch <- StreamEvent{Type: "error", Content: ev.Error}
+						result.Close()
+						return
+					case "done":
+						if ev.StopReason != "" {
+							stopReason = ev.StopReason
+						}
 					}
 				}
 			}

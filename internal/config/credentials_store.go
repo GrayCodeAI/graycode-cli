@@ -199,7 +199,9 @@ func maskCredentialSecret(secret string) string {
 	if len(secret) <= 8 {
 		return strings.Repeat("•", len(secret))
 	}
-	return secret[:4] + strings.Repeat("•", len(secret)-6) + secret[len(secret)-2:]
+	// Show only the last 4 characters; a fixed bullet count hides both the
+	// provider-identifying prefix and the secret's true length.
+	return strings.Repeat("•", 8) + secret[len(secret)-4:]
 }
 
 // CredentialInferenceForProvider returns save metadata for a gateway chosen in /config.

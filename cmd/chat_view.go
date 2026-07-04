@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"golang.org/x/term"
 
@@ -17,6 +16,23 @@ import (
 
 func (m chatModel) showWelcomeBanner() bool {
 	return strings.TrimSpace(m.welcomeCache) != ""
+}
+
+// hasRealMessages counts messages that are actual chat content (not just the
+// welcome header, usage hints, or setup_complete banners).
+func (m chatModel) hasRealMessages() int {
+	n := 0
+	for _, msg := range m.messages {
+		switch msg.role {
+		case "welcome", "usage", "setup_complete":
+			// skip decoration-only messages
+		default:
+			if msg.role != "" {
+				n++
+			}
+		}
+	}
+	return n
 }
 
 func renderSetupCompleteMessage(model string) string {
@@ -248,20 +264,63 @@ func (m *chatModel) updateViewportContent() {
 	atBottom := m.viewport.AtBottom()
 	preserveScroll := !m.autoScroll && !atBottom
 	prevYOffset := m.viewport.YOffset
-	contentStr := m.assembleViewportContent(viewWidth)
-	m.contentLines = strings.Count(contentStr, "\n") + 1
-	if m.contentLines < 1 {
-		m.contentLines = 1
-	}
+	contentStr, contentWidth, contentLines := m.renderViewportContentForLayout(viewWidth)
+	m.contentLines = contentLines
 
+	welcomeOnly := m.hasRealMessages() == 0 && !m.waiting
+
+	m.viewport.Width = contentWidth
 	m.viewport.SetContent(contentStr)
-	m.viewport.Width = m.chatViewportWidth(viewWidth)
 	switch {
+	case welcomeOnly:
+		// Start at top so the user sees the welcome screen without needing
+		// to scroll up.
+		m.viewport.GotoTop()
 	case preserveScroll:
 		m.viewport.SetYOffset(prevYOffset)
 	case atBottom || (m.autoScroll && m.streamFollow):
 		m.viewport.GotoBottom()
 	}
+}
+
+func (m *chatModel) primeInitialViewportContent() {
+	m.viewDirty = true
+	m.updateViewportContent()
+}
+
+func (m *chatModel) renderViewportContentForLayout(viewWidth int) (string, int, int) {
+	contentWidth := viewWidth
+	if contentWidth < 20 {
+		contentWidth = 80
+	}
+
+	contentStr := m.assembleViewportContent(contentWidth)
+	contentLines := renderedLineCount(contentStr)
+
+	// Overflow changes the usable width once the scrollbar gutter is visible.
+	// Re-render once at the final width so wrapping, line counting, and
+	// scrollbar state all describe the same layout.
+	if m.viewport.Height > 0 && contentLines > m.viewport.Height && viewWidth >= 20 {
+		narrowWidth := viewWidth - scrollbarWidth
+		if narrowWidth < 1 {
+			narrowWidth = 1
+		}
+		if narrowWidth != contentWidth {
+			contentWidth = narrowWidth
+			contentStr = m.assembleViewportContent(contentWidth)
+			contentLines = renderedLineCount(contentStr)
+		}
+	}
+
+	return contentStr, contentWidth, contentLines
+}
+
+func renderedLineCount(s string) int {
+	lines := strings.Count(s, "\n") + 1
+	if lines < 1 {
+		return 1
+	}
+	return lines
 }
 
 func (m chatModel) View() string {
@@ -364,10 +423,6 @@ func (m chatModel) View() string {
 	}
 
 	var frame strings.Builder
-	if welcome := m.renderFixedWelcomePane(viewWidth); welcome != "" {
-		frame.WriteString(welcome)
-		frame.WriteByte('\n')
-	}
 	frame.WriteString(m.renderChatPane())
 
 	// Command palette overlay
@@ -375,6 +430,22 @@ func (m chatModel) View() string {
 		paletteView := m.commandPalette.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(paletteView)
+		return frame.String()
+	}
+
+	// Autonomy tier picker overlay
+	if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
+		pickerView := m.autonomyPicker.Render(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
+		return frame.String()
+	}
+
+	// Spec workflow picker overlay
+	if m.specPicker != nil && m.specPicker.IsOpen() {
+		pickerView := m.specPicker.Render(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
 		return frame.String()
 	}
 
@@ -391,27 +462,17 @@ func (m chatModel) View() string {
 	return frame.String()
 }
 
-// renderPermissionBox renders a visually distinct permission prompt box.
+// renderPermissionBox renders a compact inline permission prompt.
 func renderPermissionBox(summary string, width int) string {
-	boxW := width - 4
-	if boxW < 40 {
-		boxW = 40
-	}
-	// Permission dialog: amber border + amber title (warning palette,
-	// distinct from tool gold which is the gold for tool names). White
-	// body so the user can read the summary. Brand-orange options to
-	// match the prompt/cursor voice.
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(warnAmber).
-		Width(boxW).
-		Padding(0, 1)
-
-	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert() + " Permission Required")
+	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert())
 	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es  [n]o  [a]lways")
-
-	return border.Render(title + "\n" + body + "\n" + options)
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways")
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		lipgloss.NewStyle().Inline(true).Render(title+" "),
+		lipgloss.NewStyle().Inline(true).MaxWidth(width-30).Render(body),
+		lipgloss.NewStyle().Inline(true).Render("  "+options),
+	)
 }
 
 // renderDiffSummary renders a diff summary line with colored +/- indicators.
@@ -549,13 +610,13 @@ func (m *chatModel) tokenInputTarget() int {
 }
 
 // tokenOutputTarget is the target value the output-token display lerps
-// toward. Uses the engine's reported number when available, else a live
-// rune count of the streamed partial / 4.
+// toward. Uses the engine's reported number when available, else the
+// incremental rune count accumulated as streaming chunks arrive.
 func (m *chatModel) tokenOutputTarget() int {
 	if m.turnOutputTokens > 0 {
 		return m.turnOutputTokens
 	}
-	return utf8.RuneCountInString(m.partial.String()) / 4
+	return m.turnEstimatedOutputRunes / 4
 }
 
 // formatHawkTokenCount renders a token count in hawk's compact form:

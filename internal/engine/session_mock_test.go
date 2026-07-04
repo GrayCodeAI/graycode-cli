@@ -51,6 +51,26 @@ func TestSession_AddAssistant(t *testing.T) {
 	}
 }
 
+func TestSession_RawMessagesUsesPersistenceService(t *testing.T) {
+	t.Parallel()
+	mc := newMockClient()
+	s := newMockSession(mc)
+
+	s.AddUser("hello")
+	s.AddAssistant("hi")
+
+	msgs := s.RawMessages()
+	if len(msgs) != 2 {
+		t.Fatalf("RawMessages() length = %d, want 2", len(msgs))
+	}
+	if msgs[0].Role != "user" || msgs[0].Content != "hello" {
+		t.Fatalf("RawMessages()[0] = %#v, want user hello", msgs[0])
+	}
+	if msgs[1].Role != "assistant" || msgs[1].Content != "hi" {
+		t.Fatalf("RawMessages()[1] = %#v, want assistant hi", msgs[1])
+	}
+}
+
 func TestSession_LoadMessages(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
@@ -128,12 +148,13 @@ func TestSession_Chat_MockResponse(t *testing.T) {
 	}
 }
 
-func TestSession_SetPermissionMode(t *testing.T) {
+func TestSession_SetAutonomy(t *testing.T) {
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	if err := s.SetPermissionMode("bypassPermissions"); err != nil {
-		t.Errorf("SetPermissionMode error: %v", err)
+	s.PermSvc().SetAutonomy(AutonomyYOLO)
+	if s.PermSvc().Autonomy() != AutonomyYOLO {
+		t.Errorf("SetAutonomy did not take effect, got %v", s.PermSvc().Autonomy())
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,16 +15,42 @@ import (
 )
 
 func slashCommands() []string {
-	return allSlashCommands
+	seen := make(map[string]bool, len(allSlashCommands)+subcommandRegistry.Size())
+	out := make([]string, 0, len(allSlashCommands)+subcommandRegistry.Size())
+	add := func(name string) {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return
+		}
+		if !strings.HasPrefix(name, "/") {
+			name = "/" + name
+		}
+		if seen[name] {
+			return
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	for _, name := range allSlashCommands {
+		add(name)
+	}
+	for _, cmd := range subcommandRegistry.All() {
+		add(cmd.Name())
+		for _, alias := range cmd.Aliases() {
+			add(alias)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 var allSlashCommands = []string{
-	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches", "/bughunter", "/clean", "/clear",
+	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/autonomy", "/branch", "/branches", "/bughunter", "/clean", "/clear",
 	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 	"/copy", "/cost", "/cron", "/ctx", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 	"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/glm", "/help", "/history", "/home", "/hooks", "/init",
 	"/integrity", "/keybindings", "/learn", "/lint", "/loop", "/mcp", "/memory", "/metrics", "/model", "/new",
-	"/hunt", "/insights", "/mode", "/output-style", "/party", "/permissions", "/pin", "/plugin", "/plugins",
+	"/hunt", "/insights", "/mode", "/output-style", "/party", "/pin", "/plugin", "/plugins",
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
@@ -109,6 +136,7 @@ var slashDescriptions = map[string]string{
 	"/agents":          "List active agents",
 	"/agents-init":     "Generate AGENTS.md from project template",
 	"/audit":           "Show tool audit summary",
+	"/autonomy":        "Autonomy Center for trust tier, sandbox, and rules",
 	"/branch":          "Show git branch info",
 	"/btw":             "Side note without triggering a response",
 	"/bughunter":       "Hunt for bugs in the codebase",
@@ -156,7 +184,6 @@ var slashDescriptions = map[string]string{
 	"/metrics":         "Show session metrics",
 	"/model":           "Switch or view current model",
 	"/new":             "Start a fresh session",
-	"/permissions":     "Permission Center for tier, sandbox, mode, and rules",
 	"/pin":             "Pin last N messages to protect from compaction",
 	"/parallel":        "Run N agents in parallel on independent tasks",
 	"/plugins":         "List installed plugins",
@@ -218,7 +245,7 @@ var slashDescriptions = map[string]string{
 	"/voice":           "Toggle voice input",
 	"/ctx":             "Show conversation context visualization",
 	"/insights":        "Generate session patterns and improvements report",
-	"/spec":            "Generate specification from context",
+	"/spec":            "Start the spec-driven workflow (gates Write/Edit/Bash until approved)",
 	"/ultrareview":     "Deep adversarial code review",
 }
 

@@ -6,11 +6,14 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/spec"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -23,6 +26,17 @@ import (
 // applyPromptArrowKey handles Up/Down in the prompt: slash menu navigation or input history.
 // Returns true when the key was consumed so callers skip textarea/updateInput handling.
 func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
+	if m.arrowBurstActive {
+		// Only swallow further Up/Down here — they were already routed by
+		// the burst-coalescing logic in Update(). Any other key (typing,
+		// Escape, etc.) must still reach the input; arrowBurstActive is a
+		// short-lived timing flag, not a general input lock.
+		switch msg.Type {
+		case tea.KeyUp, tea.KeyDown:
+			return true
+		}
+		return false
+	}
 	if m.uiFocus != focusPrompt || m.configOpen {
 		return false
 	}
@@ -73,12 +87,60 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 	return false
 }
 
+func shouldReturnToPromptOnType(msg tea.KeyMsg) bool {
+	if msg.Type != tea.KeyRunes || len(msg.Runes) == 0 {
+		return false
+	}
+	if isMouseSequenceLeak(msg) {
+		return false
+	}
+	return true
+}
+
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	if _, isMouse := msg.(tea.MouseMsg); !isMouse {
+		if m.refreshStatusBarLeft(false) {
+			m.viewDirty = true
+		}
+	}
 
 	switch msg := msg.(type) {
+	case tea.FocusMsg:
+		m.viewDirty = true
+		m.updateViewportContent()
+		if focus := m.ensurePromptInputFocus(); focus != nil {
+			return m, focus
+		}
+		return m, nil
+
+	case tea.BlurMsg:
+		if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
+			m.input.Blur()
+		}
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
+	case promptKeepAliveMsg:
+		if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
+			if !m.input.Focused() {
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, tea.Batch(promptKeepAliveCmd(), m.input.Focus())
+			}
+		}
+		return m, promptKeepAliveCmd()
+
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
+			if m.configOpen {
+				if next, handled := m.handleConfigMouse(msg); handled {
+					next.viewDirty = true
+					next.updateViewportContent()
+					return next, nil
+				}
+			}
 			if tea.MouseEvent(msg).IsWheel() {
 				m.trackMousePosition(msg)
 				cmds = append(cmds, m.applyMouseScroll(msg))
@@ -97,7 +159,84 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case processArrowTickMsg:
+		// A matching seq means no newer arrow keypress has arrived since this
+		// tick was armed, so the burst is over — clear the flag unconditionally.
+		// Without this, a burst's final keypress (which arms no tick of its
+		// own) would leave arrowBurstActive stuck true forever, silently
+		// swallowing every subsequent keystroke (see applyPromptArrowKey).
+		if m.arrowSeq == msg.seq {
+			m.arrowBurstActive = false
+		}
+		if m.pendingArrow != nil && m.arrowSeq == msg.seq {
+			msgToProcess := *m.pendingArrow
+			m.pendingArrow = nil
+			m.arrowBurstActive = false
+			m.processingGenuineArrow = true
+			next, cmd := m.Update(msgToProcess)
+			if nextModel, ok := next.(chatModel); ok {
+				nextModel.processingGenuineArrow = false
+				return nextModel, cmd
+			}
+			return next, cmd
+		}
+		return m, nil
+
 	case tea.KeyMsg:
+		s := msg.String()
+		if (s == "up" || s == "down") && !m.processingGenuineArrow {
+			now := time.Now()
+			dt := now.Sub(m.lastArrowTime)
+			m.lastArrowTime = now
+			m.arrowSeq++
+			seq := m.arrowSeq
+
+			if dt < 30*time.Millisecond {
+				m.arrowBurstActive = true
+				if m.pendingArrow != nil {
+					pMsg := *m.pendingArrow
+					m.pendingArrow = nil
+					m.processingGenuineArrow = true
+					next, cmd := m.Update(pMsg)
+					if nextModel, ok := next.(chatModel); ok {
+						m = nextModel
+					}
+					m.processingGenuineArrow = false
+					if cmd != nil {
+						cmds = append(cmds, cmd)
+					}
+				}
+				// Proceed to process `msg` immediately (fall through with m.arrowBurstActive = true).
+				// Arm a trailing tick so that if this is the last keypress of
+				// the burst, arrowBurstActive still gets cleared once things
+				// go quiet — otherwise it would stay stuck true forever.
+				cmds = append(cmds, tea.Tick(30*time.Millisecond, func(t time.Time) tea.Msg {
+					return processArrowTickMsg{seq: seq}
+				}))
+			} else {
+				m.arrowBurstActive = false
+				m.pendingArrow = &msg
+				return m, tea.Tick(30*time.Millisecond, func(t time.Time) tea.Msg {
+					return processArrowTickMsg{seq: seq}
+				})
+			}
+		} else {
+			if m.pendingArrow != nil && !m.processingGenuineArrow {
+				pMsg := *m.pendingArrow
+				m.pendingArrow = nil
+				m.arrowBurstActive = false
+				m.processingGenuineArrow = true
+				next, cmd := m.Update(pMsg)
+				if nextModel, ok := next.(chatModel); ok {
+					m = nextModel
+				}
+				m.processingGenuineArrow = false
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			}
+		}
+
 		// Ctrl+\ enters native terminal selection mode. Available in every UI
 		// state (welcome gate, permissions, prompt, scrollback) so users always
 		// have a way to copy text out of the chat — the alt-screen +
@@ -109,6 +248,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleCopyShortcut()
 		}
 		if isMouseSequenceLeak(msg) {
+			if m.configOpen {
+				if next, handled := m.handleConfigMouseLeak(msg); handled {
+					next.viewDirty = true
+					next.updateViewportContent()
+					return next, nil
+				}
+			}
 			if handled, cmd := m.tryScrollFromMouseLeak(msg); handled {
 				m.sanitizeInputIfNeeded()
 				if focus := m.ensurePromptInputFocus(); focus != nil {
@@ -140,6 +286,57 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Autonomy tier picker (/autonomy) — intercept all input when open
+		if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
+			chosen, handled := m.autonomyPicker.Update(msg)
+			if handled {
+				if chosen != nil && m.session != nil {
+					m.session.PermSvc().SetAutonomy(chosen.Level)
+					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", chosen.Name, chosen.Description)})
+				}
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
+		}
+
+		// Spec workflow picker (/spec) — intercept all input when open
+		if m.specPicker != nil && m.specPicker.IsOpen() {
+			chosen, handled := m.specPicker.Update(msg)
+			if handled {
+				if chosen != nil && m.session != nil {
+					switch chosen.Action {
+					case specActionStart:
+						m.session.PermSvc().SetSpecStage(engine.SpecStageSpecify)
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated until spec.md, plan.md, and tasks.md are written and ApproveImplementation is approved."})
+					case specActionStatus:
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Spec stage: %s", specStageLabel(m.session))})
+					case specActionEdit:
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Use the SpecEdit tool to modify spec artifacts (spec.md, plan.md, tasks.md). You can apply deltas or replace content entirely."})
+					case specActionResume:
+						stage := currentSpecStage(m.session)
+						stageName := specStageDisplayName(stage)
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resuming from %s — continue working through the spec workflow.", stageName)})
+					case specActionArchive:
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Archive a completed spec. The agent will use the ArchiveSpec tool to archive the spec when implementation is complete."})
+					case specActionConfigure:
+						cfg := spec.LoadSpecConfig()
+						msg := "Spec configuration:\n" + cfg.Format()
+						msg += "\n\nUse `/spec config set <field> <value>` to change settings."
+						msg += "\nThe agent can also use `SpecConfig` tool to read/update."
+						m.messages = append(m.messages, displayMsg{role: "system", content: msg})
+					case specActionReset:
+						m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the trust tier again."})
+					}
+				}
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
+		}
+
 		if m.manualCompacting {
 			if isCompactCancelKey(msg) {
 				return m.cancelManualCompact("Compaction cancelled.")
@@ -159,6 +356,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewDirty = true
 				return m, m.input.Focus()
 			}
+			if shouldReturnToPromptOnType(msg) {
+				m.uiFocus = focusPrompt
+				m.viewDirty = true
+				cmds = append(cmds, m.input.Focus())
+				cmds = append(cmds, m.updateInput(msg))
+				m.updateViewportContent()
+				return m, tea.Batch(cmds...)
+			}
 			if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
 				return m, cmd
 			}
@@ -176,7 +381,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if scrolled, cmd := m.applyViewportScroll(msg); scrolled {
-			return m, cmd
+			return m, tea.Batch(append(cmds, cmd)...)
 		}
 
 		// Permission prompt active — handle y/n
@@ -272,7 +477,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			if m.applyPromptArrowKey(msg) {
-				return m, nil
+				return m, tea.Batch(cmds...)
 			}
 			return m, m.updateInput(msg)
 		}
@@ -326,7 +531,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				for i, md := range models {
 					if md == current {
 						idx = (i + 1) % len(models)
-						break
 					}
 				}
 				m.session.SetModel(models[idx])
@@ -366,6 +570,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			m.updateViewportContent()
 			return m, nil
+		case tea.KeyShiftTab:
+			// Shift+Tab opens the spec picker overlay
+			if m.specPicker == nil {
+				m.specPicker = NewSpecPicker(m.width)
+			}
+			m.specPicker.Open(currentSpecStage(m.session))
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
 		case tea.KeyTab:
 			// Accept ghost text suggestion if active and input is empty
 			if m.ghostText.Active() && strings.TrimSpace(m.input.Value()) == "" {
@@ -386,7 +599,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.cycleUIFocus()
 		case tea.KeyUp, tea.KeyDown:
 			if m.applyPromptArrowKey(msg) {
-				return m, nil
+				return m, tea.Batch(cmds...)
 			}
 		case tea.KeyEsc:
 			if len(m.slashSuggestionsFor(m.input.Value())) > 0 {
@@ -396,6 +609,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return m.submitUserMessage()
 		}
+
+	case platformContextIndexMsg:
+		updatePlatformContextCache(msg)
+		m.invalidateConnStatus()
+		m.viewDirty = true
+		return m, nil
 
 	case modelsFetchedMsg:
 		m.configSaving = false
@@ -439,6 +658,44 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case pluginRuntimeReadyMsg:
+		if msg.runtime != nil {
+			m.pluginRuntime = msg.runtime
+			m.rebuildWelcomeCache(m.blinkClosed)
+			m.viewDirty = true
+			m.updateViewportContent()
+		}
+		return m, nil
+
+	case startupWarmMsg:
+		if strings.TrimSpace(msg.statusLeftVal) != "" {
+			m.statusLeftKey = msg.statusLeftKey
+			m.statusLeftVal = msg.statusLeftVal
+			m.statusLeftBranch = msg.statusLeftBranch
+			m.statusLeftAt = time.Now()
+		}
+		if msg.connStatusKey != "" || msg.connStatusVal != "" {
+			m.connStatusKey = msg.connStatusKey
+			m.connStatusVal = msg.connStatusVal
+		}
+		m.welcomeSetupState = msg.welcomeSetup
+		m.welcomeAgentsOK = msg.welcomeAgentsOK
+		m.rebuildWelcomeCache(m.blinkClosed)
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
+	case systemPromptContextReadyMsg:
+		if contextBlock := strings.TrimSpace(msg.context); contextBlock != "" {
+			m.deferredSystemContext = contextBlock
+			m.deferredSystemContextReady = true
+			if m.session != nil && !m.deferredSystemContextApplied {
+				m.session.AppendSystemContext(contextBlock)
+				m.deferredSystemContextApplied = true
+			}
+		}
+		return m, nil
+
 	case configApplyCredentialsMsg:
 		next, cmd := m.handleConfigApplyCredentialsMsg(msg)
 		if m.configOpen {
@@ -478,9 +735,25 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 		}
 		m.turnHadAssistantOutput = true
-		m.partial.WriteString(string(msg))
-		m.markPartialDirty()
+		chunk := string(msg)
+		m.partial.WriteString(chunk)
+		if m.turnOutputTokens == 0 {
+			m.turnEstimatedOutputRunes += utf8.RuneCountInString(chunk)
+		}
+		if cmd := m.markPartialDirty(); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 		if m.viewDirty {
+			m.updateViewportContent()
+		}
+		return m, tea.Batch(cmds...)
+
+	case streamRenderTickMsg:
+		m.partialRenderPending = false
+		if m.partialDirty {
+			m.viewDirty = true
+			m.partialDirty = false
+			m.lastPartialRender = time.Now()
 			m.updateViewportContent()
 		}
 		return m, nil
@@ -491,13 +764,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamRetryMsg:
 		m.partial.Reset()
+		m.turnEstimatedOutputRunes = 0
 		m.messages = stripCurrentTurnThinking(m.messages)
 		m.turnSawThinking = false
 		m.turnHadAssistantOutput = false
 		m.turnHadToolActivity = false
 		m.messages = append(m.messages, displayMsg{role: "system", content: "↻ " + msg.content})
 		m.viewDirty = true
-		return m, nil
 
 	case toolUseMsg:
 		m.turnHadToolActivity = true
@@ -508,18 +781,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "tool_use", content: msg.name})
 		m.toolStartTime = time.Now()
 		m.viewDirty = true
-		return m, nil
 
 	case toolResultMsg:
 		m.turnHadToolActivity = true
-		m.messages = append(m.messages, displayMsg{role: "tool_result", content: fmt.Sprintf("[%s] %s", msg.name, msg.content)})
+		// No "[ToolName] " prefix here — the preceding tool_use message
+		// already renders the tool's name as this block's header.
+		m.messages = append(m.messages, displayMsg{role: "tool_result", content: msg.content})
 		m.viewDirty = true
-		return m, nil
 
 	case blastRadiusMsg:
-		m.messages = append(m.messages, displayMsg{role: "system", content: msg.message})
+		m.messages = append(m.messages, displayMsg{role: "warning", content: msg.message})
 		m.viewDirty = true
-		return m, nil
 
 	case selectionResumedMsg:
 		// Returned from enterSelectionMode. The terminal has been
@@ -527,20 +799,42 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// state that was visible before selection.
 		m.viewDirty = true
 		m.updateViewportContent()
-		return m, nil
 
 	case permissionAskMsg:
 		m.permReq = &msg.req
+		m.permReqSeq++
 		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
 		m.viewDirty = true
+		m.updateViewportContent()
+		return m, permissionPromptTimeoutCmd(m.permReqSeq)
+
+	case permissionPromptTimeoutMsg:
+		if m.permReq != nil && m.permReqSeq == msg.seq {
+			m.permReq = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Permission prompt timed out."})
+			m.viewDirty = true
+			m.updateViewportContent()
+		}
 		return m, nil
 
 	case askUserMsg:
 		m.askReq = &msg
+		m.askReqSeq++
 		m.messages = append(m.messages, displayMsg{role: "question", content: icons.HelpCircle() + " " + msg.question})
 		m.viewDirty = true
 		m.input.Focus()
 		m.input.SetValue("")
+		m.updateViewportContent()
+		return m, askUserPromptTimeoutCmd(m.askReqSeq)
+
+	case askUserPromptTimeoutMsg:
+		if m.askReq != nil && m.askReqSeq == msg.seq {
+			m.askReq = nil
+			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Question timed out."})
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, m.input.Focus()
+		}
 		return m, nil
 
 	case usageUpdateMsg:
@@ -550,7 +844,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.invalidateConnStatus()
 			m.viewDirty = true
 		}
-		return m, nil
 
 	case compactTickMsg:
 		if m.manualCompacting {
@@ -565,7 +858,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(localCmds...)
 		}
-		return m, nil
 
 	case compactDoneMsg:
 		return m.finishManualCompact(msg)
@@ -576,7 +868,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.brailleSpinner.SetLabel("Compacting context")
 			m.viewDirty = true
 		}
-		return m, nil
 
 	case compactMsg:
 		m.compacting = false
@@ -590,7 +881,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: line})
 		m.invalidateConnStatus()
 		m.viewDirty = true
-		return m, nil
 
 	case streamDoneMsg:
 		if m.streamCancelled {
@@ -599,7 +889,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 			m.toolStartTime = time.Time{}
 			m.viewDirty = true
-			return m, nil
 		}
 		if m.compacting {
 			m.compacting = false
@@ -627,6 +916,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.turnSawThinking = false
 		m.turnHadAssistantOutput = false
 		m.turnHadToolActivity = false
+		m.permReq = nil
+		m.askReq = nil
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
@@ -650,38 +941,34 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.turnHadToolActivity = false
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
+			m.turnEstimatedOutputRunes = 0
 			m.startedAt = time.Time{}
 			m.partial.Reset()
 			m.startStream()
+			return m, tea.Batch(m.spinner.Tick, spinnerVerbTickCmd())
 		}
-
-		return m, nil
 
 	case streamErrMsg:
 		m.messages = append(m.messages, displayMsg{role: "error", content: friendlyError(msg.err)})
 		m.partial.Reset()
+		m.permReq = nil
+		m.askReq = nil
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
 		m.viewDirty = true
 		m.input.Focus()
-		return m, nil
-
-	case blinkTickMsg:
-		m.blinkClosed = !m.blinkClosed
-		m.rebuildWelcomeCache(m.blinkClosed)
-		m.viewDirty = true
-		cmds = append(cmds, blinkTickCmd())
-		return m, tea.Batch(cmds...)
 
 	case spinnerVerbTickMsg:
+		if !m.waiting {
+			return m, tea.Batch(cmds...)
+		}
 		cmds = append(cmds, spinnerVerbTickCmd())
-		if m.waiting && m.partial.Len() == 0 {
+		if strings.TrimSpace(m.partial.String()) == "" {
 			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
 		}
-		return m, tea.Batch(cmds...)
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -696,21 +983,26 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
-		if m.waiting && m.partial.Len() == 0 {
-			m.brailleSpinner.Tick()
-			// Lazy-init startedAt here (Update path) so the spinner
-			// line's elapsed timer has a reference point. Kept out of
-			// the View path so render stays a pure function.
-			if m.startedAt.IsZero() {
-				m.startedAt = time.Now()
+		if m.waiting {
+			if strings.TrimSpace(m.partial.String()) == "" {
+				m.brailleSpinner.Tick()
+				if m.startedAt.IsZero() {
+					m.startedAt = time.Now()
+				}
+				m.viewDirty = true
 			}
-			// Lerp the displayed token counters toward the engine's
-			// actual numbers — also done here, not in View.
 			m.displayInTok += (float64(m.tokenInputTarget()) - m.displayInTok) * 0.10
 			m.displayOutTok += (float64(m.tokenOutputTarget()) - m.displayOutTok) * 0.10
-			m.viewDirty = true
 		}
-		cmds = append(cmds, cmd)
+
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		} else if m.waiting {
+			cmds = append(cmds, m.spinner.Tick)
+		}
+		if !m.waiting {
+			return m, tea.Batch(cmds...)
+		}
 
 	case containerStatusMsg:
 		m.containerStatus = msg.status
@@ -726,7 +1018,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session.PermSvc().Autonomy() == 0 {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: formatSandboxReadyAutonomyMessage(m.session.PermSvc().Autonomy())})
 			m.invalidateConnStatus()
 		}
 		if msg.err != nil {
@@ -736,6 +1027,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.session != nil {
 				m.session.SetContainerRequired(false)
 				m.session.SetContainerExecutor(nil)
+				applyDefaultHostAutonomy(m.session)
 			}
 			m.messages = append(m.messages, displayMsg{
 				role:    "system",

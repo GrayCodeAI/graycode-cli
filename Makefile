@@ -265,8 +265,4 @@ size-check: build ## Report binary size and warn if over threshold (110MB, match
 	@SIZE=$$(stat -f%z bin/$(NAME) 2>/dev/null || stat -c%s bin/$(NAME) 2>/dev/null); \
 	MB=$$(echo "scale=1; $$SIZE / 1048576" | bc); \
 	echo "Binary size: $${MB} MB"; \
-	# Threshold matches CI (.github/workflows/ci.yml). CI emits a warning
-	# (::warning::) not an error so the build doesn't fail; we mirror that here
-	# so `make size-check` and CI agree on what's acceptable. Bump the threshold
-	# in both places if you intentionally grow the binary past 110MB.
 	if [ $$SIZE -gt 115343360 ]; then echo "::warning::Binary size $${MB} MB exceeds 110 MB threshold (CI gate)"; fi

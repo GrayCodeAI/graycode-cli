@@ -704,3 +704,54 @@ func TestSSRFSafeClient_RedirectLimit(t *testing.T) {
 		t.Errorf("expected timeout 5s, got %v", client.Timeout)
 	}
 }
+
+func TestCommandReferencesSensitivePath(t *testing.T) {
+	blocked := []string{
+		"cat ~/.ssh/id_rsa",
+		"cat $HOME/.ssh/id_ed25519",
+		"base64 /Users/someone/.ssh/id_ecdsa",
+		"cat ~/.aws/credentials",
+		"cat .env",
+		"head -n5 .env.production",
+		"cp config/.env /tmp/x",
+		"cat .npmrc",
+		"less ~/.netrc",
+		"tar czf out.tgz ~/.ssh",
+		"cat ~/.hawk/provider.json",
+		"grep key credentials.json",
+	}
+	for _, cmd := range blocked {
+		if reason := CommandReferencesSensitivePath(cmd); reason == "" {
+			t.Errorf("CommandReferencesSensitivePath(%q) = empty, want blocked", cmd)
+		}
+	}
+
+	allowed := []string{
+		"ls -la",
+		"cat README.md",
+		"cat .envrc",
+		"cat env.md",
+		"go test ./...",
+		"cat docs/environment.md",
+		"echo hello > out.txt",
+		"cat provider.json.md",
+		"git status",
+	}
+	for _, cmd := range allowed {
+		if reason := CommandReferencesSensitivePath(cmd); reason != "" {
+			t.Errorf("CommandReferencesSensitivePath(%q) = %q, want allowed", cmd, reason)
+		}
+	}
+}
+
+func TestBashSensitivePathIntegration(t *testing.T) {
+	if !IsSuspicious("cat ~/.ssh/id_rsa") {
+		t.Error("IsSuspicious should flag reads of SSH private keys")
+	}
+	if !isHardDeny("cat ~/.aws/credentials") {
+		t.Error("isHardDeny should block credential reads when prompts are bypassed")
+	}
+	if isHardDeny("go build ./...") {
+		t.Error("isHardDeny should not block ordinary commands")
+	}
+}

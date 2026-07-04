@@ -124,7 +124,7 @@ func CatalogEmptyHint(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if !HasConfiguredDeployment(ctx) {
+	if !HasConfiguredDeploymentCached(ctx) {
 		return "run /config to paste an API key or set up Ollama (local, no key)"
 	}
 	return "check network access, then hawk preflight or /config — hawk refreshes the catalog automatically"

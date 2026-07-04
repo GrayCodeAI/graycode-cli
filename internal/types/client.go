@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"sync"
 
 	"github.com/GrayCodeAI/eyrie/client"
 )
@@ -603,25 +604,36 @@ func FromClientStreamResult(stream *client.StreamResult) *StreamResult {
 	}
 	out := make(chan EyrieStreamEvent, 64)
 	ctx, cancel := context.WithCancel(context.Background())
+	var closeOnce sync.Once
+	closeFn := func() {
+		closeOnce.Do(func() {
+			cancel()
+			stream.Close()
+		})
+	}
 	go func() {
 		defer close(out)
-		defer cancel()
-		for ev := range stream.Events {
+		defer closeFn()
+		for {
 			select {
-			case out <- FromClientStreamEvent(ev):
 			case <-ctx.Done():
-				stream.Close()
 				return
+			case ev, ok := <-stream.Events:
+				if !ok {
+					return
+				}
+				select {
+				case out <- FromClientStreamEvent(ev):
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
 	}()
 	return &StreamResult{
 		Events:    out,
 		RequestID: stream.RequestID,
-		cancel: func() {
-			cancel()
-			stream.Close()
-		},
+		cancel:    closeFn,
 	}
 }
 

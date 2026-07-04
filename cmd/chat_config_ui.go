@@ -169,13 +169,13 @@ func (m chatModel) configHelpLine() string {
 		return renderMainHelp("enter continue · esc cancel")
 	}
 	if m.configTab == configTabGateways {
-		return renderMainHelp("←/→ tabs · ↑/↓ · enter · k view key · delete remove · esc close")
+		return renderMainHelp("wheel/PgUp/PgDn/Home/End · ←/→ tabs · enter · k view key · delete remove · esc close")
 	}
 	if m.configTab == configTabModels {
 		if m.configModelSearchActive {
-			return renderMainHelp("↑/↓ navigate · enter select · esc clear search")
+			return renderMainHelp("wheel/↑/↓/PgUp/PgDn/Home/End · enter select · esc clear search")
 		}
-		return renderMainHelp("↑/↓ navigate · enter select · / search · esc close")
+		return renderMainHelp("wheel/↑/↓/PgUp/PgDn/Home/End · enter select · / search · esc close")
 	}
 	return renderMainHelp("←/→ tabs · ↑/↓ · enter · esc close")
 }

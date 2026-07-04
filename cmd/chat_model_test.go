@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +12,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -22,25 +25,34 @@ func newTestChatModel() *chatModel {
 	sess.SetTestClient(engine.NewMockClientForTest())
 
 	m := &chatModel{
-		input:          textarea.New(),
-		viewport:       viewport.New(120, 12),
-		session:        sess,
-		registry:       tool.NewRegistry(),
-		partial:        &strings.Builder{},
-		sessionID:      "test-session",
-		width:          120,
-		height:         40,
-		ref:            &progRef{},
-		modeManager:    shellmode.NewModeManager(),
-		termCtx:        sessioncapture.NewTerminalContext(),
-		ghostText:      NewGhostText(),
-		inputIndicator: &InputIndicator{},
-		hintsLoader:    engine.NewHintsLoader(),
-		selfImprover:   engine.NewSelfImprover(),
-		codingSoul:     engine.LoadCodingSoul(),
-		brailleSpinner: NewBrailleSpinner(SpinnerHawk, "Thinking"),
+		input:             textarea.New(),
+		viewport:          viewport.New(120, 12),
+		session:           sess,
+		registry:          tool.NewRegistry(),
+		partial:           &strings.Builder{},
+		sessionID:         "test-session",
+		width:             120,
+		height:            40,
+		ref:               &progRef{},
+		modeManager:       shellmode.NewModeManager(),
+		termCtx:           sessioncapture.NewTerminalContext(),
+		ghostText:         NewGhostText(),
+		inputIndicator:    &InputIndicator{},
+		hintsLoader:       engine.NewHintsLoader(),
+		selfImprover:      engine.NewSelfImprover(),
+		codingSoul:        engine.LoadCodingSoul(),
+		brailleSpinner:    NewBrailleSpinner(SpinnerHawk, "Thinking"),
+		testStreamStarter: func() {},
 	}
 	return m
+}
+
+func TestNewTestChatModel_DisablesAsyncStreamLauncher(t *testing.T) {
+	m := newTestChatModel()
+	m.startStream()
+	if m.cancel != nil {
+		t.Fatal("test model should not start a background stream")
+	}
 }
 
 func isolateChatCommandSweepEnv(t *testing.T) {
@@ -180,7 +192,7 @@ func TestChatModel_ManyCommands(t *testing.T) {
 		"/compact", "/diff", "/branch", "/vim",
 		"/power", "/fast", "/effort",
 		"/memory", "/plugins", "/mcp",
-		"/sandbox", "/permissions",
+		"/sandbox", "/autonomy",
 		"/usage", "/metrics", "/integrity",
 		"/keybindings", "/cron", "/tasks",
 		"/files", "/branches", "/provider-status",
@@ -253,6 +265,61 @@ func TestChatModel_SlashExport(t *testing.T) {
 	result, _ := m.handleCommand("/export")
 	if result == nil {
 		t.Error("/export returned nil")
+	}
+}
+
+func TestChatModel_SaveSessionPersistsPersistenceMessages(t *testing.T) {
+	isolateChatCommandSweepEnv(t)
+	m := newTestChatModel()
+	m.session.AddUser("hello")
+	m.session.AddAssistant("hi")
+
+	m.saveSession()
+
+	saved, err := session.Load(m.sessionID)
+	if err != nil {
+		t.Fatalf("Load(%q) after saveSession() error = %v", m.sessionID, err)
+	}
+	if len(saved.Messages) != 2 {
+		t.Fatalf("saved messages = %d, want 2", len(saved.Messages))
+	}
+	if saved.Messages[0].Role != "user" || saved.Messages[0].Content != "hello" {
+		t.Fatalf("saved.Messages[0] = %#v, want user hello", saved.Messages[0])
+	}
+	if saved.Messages[1].Role != "assistant" || saved.Messages[1].Content != "hi" {
+		t.Fatalf("saved.Messages[1] = %#v, want assistant hi", saved.Messages[1])
+	}
+}
+
+func TestChatModel_SlashExportRedactsAndPrivatizesFile(t *testing.T) {
+	isolateChatCommandSweepEnv(t)
+	m := newTestChatModel()
+	secret := "sk-1234567890abcdefghijklmnop"
+	m.session.AddUser("my key is " + secret)
+
+	result, _ := m.handleCommand("/export")
+	cm := requireChatModel(t, result)
+	last := cm.messages[len(cm.messages)-1]
+	if !strings.Contains(last.content, "Exported to:") {
+		t.Fatalf("export message = %q", last.content)
+	}
+	exportPath := filepath.Join(storage.StateDir(), "exports", cm.sessionID+".md")
+	data, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatalf("read export: %v", err)
+	}
+	if strings.Contains(string(data), secret) {
+		t.Fatalf("export contains unredacted secret: %s", data)
+	}
+	if !strings.Contains(string(data), "[REDACTED]") {
+		t.Fatalf("export missing redaction marker: %s", data)
+	}
+	info, err := os.Stat(exportPath)
+	if err != nil {
+		t.Fatalf("stat export: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("export file mode = %v, want 0600", got)
 	}
 }
 

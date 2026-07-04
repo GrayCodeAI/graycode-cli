@@ -1,6 +1,9 @@
 package engine
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestPermissionMemoryAlwaysAllow(t *testing.T) {
 	pm := NewPermissionMemory()
@@ -64,16 +67,34 @@ func TestPermissionMemoryDenyOverridesAllow(t *testing.T) {
 	}
 }
 
-func TestPermissionModeParsing(t *testing.T) {
+func TestPermissionServiceAutonomyRoundTrip(t *testing.T) {
 	s := NewSession("", "", "", nil)
-	if err := s.SetPermissionMode("acceptEdits"); err != nil {
-		t.Fatal(err)
+	s.PermSvc().SetAutonomy(AutonomySemi)
+	if s.PermSvc().Autonomy() != AutonomySemi {
+		t.Fatalf("got %v", s.PermSvc().Autonomy())
 	}
-	if s.Mode != PermissionModeAcceptEdits {
-		t.Fatalf("got %q", s.Mode)
+}
+
+func TestPermissionEngine_SpecGateDeniesWithoutPrompt(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Autonomy = AutonomySupervised
+	pe.Stage = SpecStageSpecify
+	granted, deny := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "echo hello"}})
+	if granted {
+		t.Fatal("spec stage should deny Bash without requiring a prompt")
 	}
-	if err := s.SetPermissionMode("bad"); err == nil {
-		t.Fatal("expected invalid permission mode error")
+	if deny == "" {
+		t.Fatal("expected a spec-gate denial reason")
+	}
+
+	pe.Autonomy = AutonomyYOLO
+	pe.Stage = SpecStageNone
+	granted, deny = pe.CheckTool(context.Background(), ToolCallInfo{Name: "Bash", Args: map[string]interface{}{"command": "echo hello"}})
+	if !granted {
+		t.Fatal("AutonomyYOLO with no active spec stage should grant Bash")
+	}
+	if deny != "" {
+		t.Fatalf("deny = %q, want empty", deny)
 	}
 }
 

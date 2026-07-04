@@ -95,55 +95,51 @@ func permissionBehaviorSummary(level engine.AutonomyLevel) string {
 	}
 }
 
-func normalizePermissionMode(raw string) (engine.PermissionMode, string, bool) {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "default", "normal", "standard":
-		return engine.PermissionModeDefault, "Default", true
-	case "acceptedits", "edit", "edits":
-		return engine.PermissionModeAcceptEdits, "Accept Edits", true
-	case "bypasspermissions", "bypass", "full-auto", "fullauto":
-		return engine.PermissionModeBypassPermissions, "Bypass Permissions", true
-	case "dontask", "deny", "blocked":
-		return engine.PermissionModeDontAsk, "Don't Ask", true
-	case "plan":
-		return engine.PermissionModePlan, "Plan", true
-	default:
-		return "", "", false
+// specStageLabel returns the display label for the current spec workflow stage.
+func specStageLabel(sess *engine.Session) string {
+	return specStageDisplayName(currentSpecStage(sess))
+}
+
+// currentSpecStage returns the session's active spec stage, or
+// SpecStageNone if the session (or its permission engine) isn't set up yet.
+func currentSpecStage(sess *engine.Session) engine.SpecStage {
+	if sess == nil || sess.Perm == nil {
+		return engine.SpecStageNone
 	}
+	return sess.Perm.Stage
 }
 
-func permissionModeSummary(mode engine.PermissionMode) string {
-	switch mode {
-	case engine.PermissionModeAcceptEdits:
-		return "file edits auto-approve even when commands still ask"
-	case engine.PermissionModeBypassPermissions:
-		return "all permission prompts are bypassed"
-	case engine.PermissionModeDontAsk:
-		return "mutating and gated tools are blocked"
-	case engine.PermissionModePlan:
-		return "read-only planning workflow; write and mutating actions are denied"
-	default:
-		return "normal approval flow uses tier, sandbox, and rules"
+// currentDryRun returns whether the session's dry-run kill switch is
+// active, or false if the session (or its permission engine) isn't set up
+// yet — mirrors currentSpecStage's nil-safety, since PermSvc() can return
+// nil for sessions built via a raw struct literal (e.g. in tests) rather
+// than NewSession.
+func currentDryRun(sess *engine.Session) bool {
+	if sess == nil || sess.Perm == nil {
+		return false
 	}
+	return sess.Perm.DryRun
 }
 
-func permissionCommandHelp() string {
-	return "Permission Center\n" +
-		"  /permissions                          Show current tier, sandbox, and rules\n" +
-		"  /permissions tier <scout|builder|operator|autonomous>\n" +
-		"  /permissions sandbox <strict|workspace|off>\n" +
-		"  /permissions mode <default|edits|bypass|dontask|plan>\n" +
-		"  /permissions allow <rule>\n" +
-		"  /permissions deny <rule>\n" +
-		"  /permissions rules                    Show current allow/deny rules\n" +
-		"  /permissions rules clear              Clear current session rules\n" +
-		"  /permissions reset                    Reset tier, sandbox, mode, and rules\n" +
-		"  /permissions save [project|global]    Persist the current policy"
+func autonomyCommandHelp() string {
+	return "Autonomy Center\n" +
+		"  /autonomy                          Show current tier, sandbox, spec stage, and rules\n" +
+		"  /autonomy tier <scout|builder|operator|autonomous>\n" +
+		"  /autonomy sandbox <strict|workspace|off>\n" +
+		"  /autonomy dry-run <on|off>         Deny every tool call unconditionally (kill switch)\n" +
+		"  /autonomy allow <rule>\n" +
+		"  /autonomy deny <rule>\n" +
+		"  /autonomy rules                    Show current allow/deny rules\n" +
+		"  /autonomy rules clear              Clear current session rules\n" +
+		"  /autonomy reset                    Reset tier, sandbox, dry-run, and rules\n" +
+		"  /autonomy save [project|global]    Persist the current policy\n" +
+		"\n" +
+		"For the spec-driven workflow (gates Write/Edit/Bash until approved), see /spec."
 }
 
-func permissionCenterSummary(m *chatModel) string {
+func autonomyCenterSummary(m *chatModel) string {
 	if m == nil || m.session == nil {
-		return "Permission Center unavailable."
+		return "Autonomy Center unavailable."
 	}
 	level := effectivePermissionTier(m.session)
 	tier := autonomyTierName(level)
@@ -151,13 +147,15 @@ func permissionCenterSummary(m *chatModel) string {
 	allowRules := effectiveAllowRules(m.settings)
 	denyRules := effectiveDenyRules(m.settings)
 	var b strings.Builder
-	b.WriteString("Permission Center\n")
+	b.WriteString("Autonomy Center\n")
 	b.WriteString(fmt.Sprintf("  Tier: %s\n", tier))
 	b.WriteString(fmt.Sprintf("  Sandbox: %s\n", sandboxLabel))
-	b.WriteString(fmt.Sprintf("  Mode: %s\n", permissionModeLabel(m.session)))
+	b.WriteString(fmt.Sprintf("  Spec stage: %s\n", specStageLabel(m.session)))
+	if currentDryRun(m.session) {
+		b.WriteString("  Dry-run: ON — every tool call is being denied unconditionally\n")
+	}
 	b.WriteString(fmt.Sprintf("  Rules: %d allow, %d deny\n", len(allowRules), len(denyRules)))
 	b.WriteString(fmt.Sprintf("  Behavior: %s\n", permissionBehaviorSummary(level)))
-	b.WriteString(fmt.Sprintf("  Mode behavior: %s\n", permissionModeSummary(m.session.ModeValue())))
 	if len(allowRules) > 0 {
 		b.WriteString("  Allow: " + strings.Join(allowRules, ", ") + "\n")
 	}
@@ -165,7 +163,7 @@ func permissionCenterSummary(m *chatModel) string {
 		b.WriteString("  Deny: " + strings.Join(denyRules, ", ") + "\n")
 	}
 	b.WriteString("\n")
-	b.WriteString(permissionCommandHelp())
+	b.WriteString(autonomyCommandHelp())
 	return strings.TrimRight(b.String(), "\n")
 }
 
@@ -296,41 +294,30 @@ func resetPermissionCenter(m *chatModel) {
 	m.settings.AutoAllow = nil
 	m.settings.AllowedTools = nil
 	m.settings.DisallowedTools = nil
-	_ = m.session.SetPermissionMode(string(engine.PermissionModeDefault))
+	m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+	m.session.PermSvc().SetDryRun(false)
 	rebuildSessionPermissionRules(m.session, m.settings)
 }
 
-func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd) {
+func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 	if m.session == nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: "No active session."})
 		return *m, nil
 	}
 	if len(parts) == 1 {
-		m.messages = append(m.messages, displayMsg{role: "system", content: permissionCenterSummary(m)})
+		if m.autonomyPicker == nil {
+			m.autonomyPicker = NewAutonomyPicker(m.width)
+		}
+		m.autonomyPicker.Open(effectivePermissionTier(m.session))
 		return *m, nil
 	}
 
 	switch strings.ToLower(strings.TrimSpace(parts[1])) {
 	case "help", "status":
-		m.messages = append(m.messages, displayMsg{role: "system", content: permissionCenterSummary(m)})
-	case "mode":
-		if len(parts) < 3 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Current mode: %s\nBehavior: %s\nUsage: /permissions mode <default|edits|bypass|dontask|plan>", permissionModeLabel(m.session), permissionModeSummary(m.session.ModeValue()))})
-			return *m, nil
-		}
-		mode, label, ok := normalizePermissionMode(parts[2])
-		if !ok {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid modes: default, edits, bypass, dontask, plan"})
-			return *m, nil
-		}
-		if err := m.session.SetPermissionMode(string(mode)); err != nil {
-			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Mode change failed: %v", err)})
-			return *m, nil
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission mode → %s\nBehavior: %s", label, permissionModeSummary(mode))})
+		m.messages = append(m.messages, displayMsg{role: "system", content: autonomyCenterSummary(m)})
 	case "tier":
 		if len(parts) < 3 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /permissions tier <scout|builder|operator|autonomous>"})
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy tier <scout|builder|operator|autonomous>"})
 			return *m, nil
 		}
 		level, label, ok := normalizePermissionTier(parts[2])
@@ -340,11 +327,11 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 		}
 		m.session.PermSvc().SetAutonomy(level)
 		m.settings.Autonomy = permissionTierSettingValue(level)
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission tier → %s\nBehavior: %s", label, permissionBehaviorSummary(level))})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", label, permissionBehaviorSummary(level))})
 	case "sandbox":
 		if len(parts) < 3 {
 			_, label, _ := normalizePermissionSandbox(effectivePermissionSandbox(m.settings))
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Current sandbox: " + label + "\nUsage: /permissions sandbox <strict|workspace|off>"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Current sandbox: " + label + "\nUsage: /autonomy sandbox <strict|workspace|off>"})
 			return *m, nil
 		}
 		mode, label, ok := normalizePermissionSandbox(parts[2])
@@ -355,9 +342,28 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 		m.settings.Sandbox = mode
 		sandboxFlag = mode
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Sandbox preference → %s\nApplies to host Bash policy; container isolation is unchanged until restart.", label)})
+	case "dry-run":
+		if len(parts) < 3 {
+			state := "off"
+			if currentDryRun(m.session) {
+				state = "on"
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Dry-run: " + state + "\nUsage: /autonomy dry-run <on|off>"})
+			return *m, nil
+		}
+		switch strings.ToLower(strings.TrimSpace(parts[2])) {
+		case "on", "true", "1":
+			m.session.PermSvc().SetDryRun(true)
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Dry-run → on. Every tool call will be denied unconditionally, regardless of tier or spec stage."})
+		case "off", "false", "0":
+			m.session.PermSvc().SetDryRun(false)
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Dry-run → off. Normal tier/spec-gate rules apply again."})
+		default:
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy dry-run <on|off>"})
+		}
 	case "allow":
 		if len(parts) < 3 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /permissions allow <rule>  e.g. /permissions allow Bash(git:*)"})
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy allow <rule>  e.g. /autonomy allow Bash(git:*)"})
 			return *m, nil
 		}
 		specs := parseToolListFromCLI([]string{strings.Join(parts[2:], " ")})
@@ -370,7 +376,7 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Allow rules updated.\n" + permissionRulesSummary(m)})
 	case "deny":
 		if len(parts) < 3 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /permissions deny <rule>  e.g. /permissions deny Bash(rm -rf *)"})
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy deny <rule>  e.g. /autonomy deny Bash(rm -rf *)"})
 			return *m, nil
 		}
 		specs := parseToolListFromCLI([]string{strings.Join(parts[2:], " ")})
@@ -387,7 +393,7 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 			m.settings.AllowedTools = nil
 			m.settings.DisallowedTools = nil
 			rebuildSessionPermissionRules(m.session, m.settings)
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Permission rules cleared for the current session."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy rules cleared for the current session."})
 			return *m, nil
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: permissionRulesSummary(m)})
@@ -401,12 +407,12 @@ func (m *chatModel) handlePermissionsCommand(parts []string) (chatModel, tea.Cmd
 			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Save failed: %v", err)})
 			return *m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Permission policy saved to " + path})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy policy saved to " + path})
 	case "reset":
 		resetPermissionCenter(m)
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Permission Center reset to defaults.\n" + permissionCenterSummary(m)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy Center reset to defaults.\n" + autonomyCenterSummary(m)})
 	default:
-		m.messages = append(m.messages, displayMsg{role: "system", content: permissionCommandHelp()})
+		m.messages = append(m.messages, displayMsg{role: "system", content: autonomyCommandHelp()})
 	}
 	return *m, nil
 }

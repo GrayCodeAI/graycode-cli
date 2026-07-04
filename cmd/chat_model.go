@@ -35,6 +35,7 @@ var (
 	// attributes (bold, italic, border) on top.
 	dimStyle     = lipgloss.NewStyle().Foreground(textDisabled)
 	errorStyle   = lipgloss.NewStyle().Foreground(errorCoral)
+	warnStyle    = lipgloss.NewStyle().Foreground(warnAmber)
 	toolStyle    = lipgloss.NewStyle().Foreground(toolGold).Bold(true)
 	toolDimStyle = lipgloss.NewStyle().Foreground(textDisabled)
 
@@ -75,15 +76,16 @@ var spinnerVerbs = []string{
 }
 
 type (
-	streamChunkMsg     string
-	streamDoneMsg      struct{}
-	streamRetryMsg     struct{ content string }
-	streamErrMsg       struct{ err error }
-	blinkTickMsg       struct{}
-	spinnerVerbTickMsg struct{}
-	usageUpdateMsg     struct{ usage *engine.StreamUsage }
-	compactStartMsg    struct{}
-	compactMsg         struct {
+	streamChunkMsg      string
+	streamRenderTickMsg struct{}
+	streamDoneMsg       struct{}
+	streamRetryMsg      struct{ content string }
+	streamErrMsg        struct{ err error }
+	spinnerVerbTickMsg  struct{}
+	promptKeepAliveMsg  struct{}
+	usageUpdateMsg      struct{ usage *engine.StreamUsage }
+	compactStartMsg     struct{}
+	compactMsg          struct {
 		strategy                  string
 		tokensBefore, tokensAfter int
 	}
@@ -102,16 +104,36 @@ type (
 		provider string
 		err      error
 	}
-	loopTickMsg      struct{ command string }
-	toolUseMsg       struct{ name, id string }
-	toolResultMsg    struct{ name, content string }
-	permissionAskMsg struct{ req engine.PermissionRequest }
-	thinkingMsg      string
-	blastRadiusMsg   struct{ message string }
-	askUserMsg       struct {
+	pluginRuntimeReadyMsg struct {
+		runtime *plugin.Runtime
+	}
+	startupWarmMsg struct {
+		statusLeftKey    string
+		statusLeftVal    string
+		statusLeftBranch string
+		connStatusVal    string
+		connStatusKey    string
+		welcomeSetup     hawkconfig.SetupState
+		welcomeAgentsOK  bool
+	}
+	processArrowTickMsg struct {
+		seq int
+	}
+	systemPromptContextReadyMsg struct {
+		context string
+	}
+	loopTickMsg                struct{ command string }
+	toolUseMsg                 struct{ name, id string }
+	toolResultMsg              struct{ name, content string }
+	permissionAskMsg           struct{ req engine.PermissionRequest }
+	permissionPromptTimeoutMsg struct{ seq int }
+	thinkingMsg                string
+	blastRadiusMsg             struct{ message string }
+	askUserMsg                 struct {
 		question string
 		response chan string
 	}
+	askUserPromptTimeoutMsg struct{ seq int }
 )
 
 type displayMsg struct {
@@ -149,13 +171,20 @@ type chatModel struct {
 	messages                   []displayMsg
 	partial                    *strings.Builder
 	waiting                    bool
-	streamCancelled            bool                      // user cancelled; suppress late streamDone side effects
-	turnSawThinking            bool                      // current turn received hidden reasoning
+	streamCancelled            bool // user cancelled; suppress late streamDone side effects
+	turnSawThinking            bool // current turn received hidden reasoning
+	arrowSeq                   int
+	pendingArrow               *tea.KeyMsg
+	arrowBurstActive           bool
+	lastArrowTime              time.Time
+	processingGenuineArrow     bool
 	turnHadAssistantOutput     bool                      // current turn produced assistant text
 	turnHadToolActivity        bool                      // current turn produced tool activity
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
-	askReq                     *askUserMsg               // pending ask_user prompt
+	permReqSeq                 int
+	askReq                     *askUserMsg // pending ask_user prompt
+	askReqSeq                  int
 	width                      int
 	height                     int
 	quitting                   bool
@@ -188,49 +217,68 @@ type chatModel struct {
 	spinnerVerb                string
 	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).
 	// Reset each time the user submits a message; updated by usageUpdateMsg.
-	turnInputTokens  int
-	turnOutputTokens int
-	compacting       bool // stream auto-compact: spinner label = Compacting context
-	manualCompacting bool // user ran /compact: show progress panel above input
-	compactBarUsed   int  // context tokens snapshot at /compact start
-	compactBarWindow int  // context window snapshot at /compact start
-	compactCancel    context.CancelFunc
+	turnInputTokens          int
+	turnOutputTokens         int
+	turnEstimatedOutputRunes int
+	compacting               bool // stream auto-compact: spinner label = Compacting context
+	manualCompacting         bool // user ran /compact: show progress panel above input
+	compactBarUsed           int  // context tokens snapshot at /compact start
+	compactBarWindow         int  // context window snapshot at /compact start
+	compactCancel            context.CancelFunc
 	// Display values lerped toward the turn targets each render frame
 	// (factor 0.10). Smooths the counter animation.
-	displayInTok         float64
-	displayOutTok        float64
-	lastCtrlC            time.Time
-	history              []string
-	historyIdx           int
-	historyDraft         string // unsent text before navigating history
-	autoScroll           bool   // whether viewport is pinned to bottom
-	streamFollow         bool   // follow streaming output (Grok-style; toggle with /follow)
-	uiFocus              uiFocusArea
-	contentLines         int   // total lines in scrollback content (for footer position)
-	lastMouseY           int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
-	mouseOverride        *bool // runtime /mouse toggle; persisted via settings
-	vim                  *VimState
-	wal                  *session.WAL
-	startedAt            time.Time // per-turn timer (spinner + turn elapsed)
-	sessionStartedAt     time.Time // whole chat session (footer duration)
-	toolStartTime        time.Time
-	welcomeCache         string
-	viewDirty            bool
-	layoutKey            int    // input lines + slash menu height fingerprint
-	cachedBottomBarLines int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
-	slashSugInput        string // memoize slashSuggestions per keystroke
-	slashSugCache        []string
-	connStatusKey        string // gateway+model+creds fingerprint
-	connStatusVal        string
-	partialDirty         bool // stream text changed since last viewport paint
-	lastPartialRender    time.Time
+	displayInTok                 float64
+	displayOutTok                float64
+	lastCtrlC                    time.Time
+	history                      []string
+	historyIdx                   int
+	historyDraft                 string // unsent text before navigating history
+	autoScroll                   bool   // whether viewport is pinned to bottom
+	streamFollow                 bool   // follow streaming output (Grok-style; toggle with /follow)
+	uiFocus                      uiFocusArea
+	contentLines                 int   // total lines in scrollback content (for footer position)
+	lastMouseY                   int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
+	mouseOverride                *bool // runtime /mouse toggle; persisted via settings
+	vim                          *VimState
+	wal                          *session.WAL
+	startedAt                    time.Time // per-turn timer (spinner + turn elapsed)
+	sessionStartedAt             time.Time // whole chat session (footer duration)
+	sessionBootstrapDone         bool
+	toolStartTime                time.Time
+	welcomeCache                 string
+	welcomeSetupState            hawkconfig.SetupState
+	welcomeAgentsOK              bool
+	viewDirty                    bool
+	layoutKey                    int    // input lines + slash menu height fingerprint
+	cachedBottomBarLines         int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
+	slashSugInput                string // memoize slashSuggestions per keystroke
+	slashSugCache                []string
+	connStatusKey                string // gateway+model+creds fingerprint
+	connStatusVal                string
+	deferredSystemContext        string
+	deferredSystemContextReady   bool
+	deferredSystemContextApplied bool
+	partialDirty                 bool // stream text changed since last viewport paint
+	lastPartialRender            time.Time
+	partialRenderPending         bool
+	statusLeftKey                string
+	statusLeftVal                string
+	statusLeftBranch             string
+	statusLeftAt                 time.Time // last branch lookup; refreshed on a short TTL
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string
 	vpRenderedMsgs  int
 	vpRenderWidth   int
 	vpLastMsgLen    int
-	activeSkills    map[string]plugin.SmartSkill // per-session activated skills
+
+	// Streaming-partial render cache: rendered output of the completed
+	// markdown blocks of m.partial (see renderStreamTail).
+	streamMDPrefixRaw string
+	streamMDPrefixOut string
+	streamMDWidth     int
+
+	activeSkills map[string]plugin.SmartSkill // per-session activated skills
 
 	// Container mode (hermetic execution in sandbox)
 	containerEnabled bool
@@ -249,6 +297,9 @@ type chatModel struct {
 	ghostText      *GhostText
 	modeManager    *shellmode.ModeManager
 	brailleSpinner *BrailleSpinner
+	// testStreamStarter overrides the async stream launcher in tests that
+	// manually inject stream events and need deterministic cleanup.
+	testStreamStarter func()
 
 	// BMAD/Aeon-inspired features
 	hintsLoader  *engine.HintsLoader
@@ -264,17 +315,30 @@ type chatModel struct {
 
 	// Command palette (Ctrl+K)
 	commandPalette *CommandPalette
+
+	// Autonomy tier picker (/autonomy)
+	autonomyPicker *AutonomyPicker
+
+	// Spec workflow picker (/spec)
+	specPicker *SpecPicker
 }
 
 const streamRenderInterval = 50 * time.Millisecond
 
-func (m *chatModel) markPartialDirty() {
+func (m *chatModel) markPartialDirty() tea.Cmd {
 	m.partialDirty = true
 	if time.Since(m.lastPartialRender) >= streamRenderInterval {
 		m.viewDirty = true
 		m.lastPartialRender = time.Now()
 		m.partialDirty = false
+		m.partialRenderPending = false
+		return nil
 	}
+	if m.partialRenderPending {
+		return nil
+	}
+	m.partialRenderPending = true
+	return tea.Tick(streamRenderInterval, func(time.Time) tea.Msg { return streamRenderTickMsg{} })
 }
 
 func (m *chatModel) flushPartialDirty() {
@@ -282,12 +346,21 @@ func (m *chatModel) flushPartialDirty() {
 		m.viewDirty = true
 		m.partialDirty = false
 	}
-}
-
-func blinkTickCmd() tea.Cmd {
-	return tea.Tick(2200*time.Millisecond, func(time.Time) tea.Msg { return blinkTickMsg{} })
+	m.partialRenderPending = false
 }
 
 func spinnerVerbTickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(time.Time) tea.Msg { return spinnerVerbTickMsg{} })
+}
+
+func promptKeepAliveCmd() tea.Cmd {
+	return tea.Tick(15*time.Second, func(time.Time) tea.Msg { return promptKeepAliveMsg{} })
+}
+
+func permissionPromptTimeoutCmd(seq int) tea.Cmd {
+	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return permissionPromptTimeoutMsg{seq: seq} })
+}
+
+func askUserPromptTimeoutCmd(seq int) tea.Cmd {
+	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return askUserPromptTimeoutMsg{seq: seq} })
 }

@@ -74,12 +74,18 @@ func DefaultRetryPolicy() RetryPolicy {
 // RetryExecutor wraps a tool's Execute and retries on transient errors.
 // ctx cancellation aborts the wait between attempts (so cancel is observed).
 func RetryExecutor(ctx context.Context, t Tool, input []byte, policy RetryPolicy) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if policy.MaxRetries <= 0 {
 		return t.Execute(ctx, input)
 	}
 	var lastErr error
 	delay := policy.BaseDelay
 	for attempt := 0; attempt <= policy.MaxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		out, err := t.Execute(ctx, input)
 		if err == nil {
 			return out, nil

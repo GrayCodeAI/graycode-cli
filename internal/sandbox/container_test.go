@@ -3,6 +3,7 @@ package sandbox
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -56,6 +57,30 @@ func TestContainerSandbox_ContainerName(t *testing.T) {
 	}
 	if len(name) < 10 {
 		t.Fatalf("container name too short: %s", name)
+	}
+}
+
+func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
+	projectDir := t.TempDir()
+	cs := NewContainerSandbox(projectDir)
+	cs.SetImage("hawk:test")
+
+	args := cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache")
+	joined := strings.Join(args, " ")
+
+	for _, want := range []string{
+		"--network none",
+		"--cap-drop ALL",
+		"--security-opt no-new-privileges",
+		"--pids-limit 256",
+		"--read-only",
+		"--tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m",
+		"-w " + projectDir,
+		"hawk:test sleep infinity",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("docker run args missing %q:\n%s", want, joined)
+		}
 	}
 }
 

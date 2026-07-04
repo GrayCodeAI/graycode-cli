@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"strings"
+	"sync"
+	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -11,6 +13,16 @@ import (
 // This file holds the tool-registry construction used by the chat TUI:
 // the essential/optional tool sets and the registry builder that wires in
 // MCP servers and CLI tool filters. Split out of chat.go for clarity.
+
+const startupMCPToolLoadTimeout = 1500 * time.Millisecond
+
+var defaultRegistryLoadMCPTools = tool.LoadMCPTools
+
+type startupMCPServerSpec struct {
+	name    string
+	command string
+	args    []string
+}
 
 func essentialTools() []tool.Tool {
 	// Core tools needed for basic agent operation - always loaded at startup
@@ -40,8 +52,21 @@ func essentialTools() []tool.Tool {
 func optionalTools() []tool.Tool {
 	// Specialized tools that can be lazy-loaded on demand
 	return []tool.Tool{
-		tool.EnterPlanModeTool{},
-		tool.ExitPlanModeTool{},
+		tool.SpecifyTool{},
+		tool.PlanTool{},
+		tool.TasksTool{},
+		tool.ApproveImplementationTool{},
+		tool.SpecStatusTool{},
+		tool.SpecEditTool{},
+		tool.SpecListTool{},
+		tool.SpecResetTool{},
+		tool.SpecConfigTool{},
+		tool.ClarifyTool{},
+		tool.AnalyzeTool{},
+		tool.ChecklistTool{},
+		tool.ConstitutionTool{},
+		tool.ConvergeTool{},
+		tool.TasksToIssuesTool{},
 		tool.NotebookEditTool{},
 		tool.EnterWorktreeTool{},
 		tool.ExitWorktreeTool{},
@@ -77,34 +102,60 @@ func optionalTools() []tool.Tool {
 	}
 }
 
+func configuredStartupMCPServers(settings hawkconfig.Settings) []startupMCPServerSpec {
+	servers := make([]startupMCPServerSpec, 0, len(settings.MCPServers)+len(mcpServers))
+	for _, cfg := range settings.MCPServers {
+		if cfg.Name == "" || cfg.Command == "" {
+			continue
+		}
+		servers = append(servers, startupMCPServerSpec{
+			name:    cfg.Name,
+			command: cfg.Command,
+			args:    cfg.Args,
+		})
+	}
+	for _, cmd := range mcpServers {
+		parts := strings.Fields(cmd)
+		if len(parts) == 0 {
+			continue
+		}
+		servers = append(servers, startupMCPServerSpec{
+			name:    parts[0],
+			command: parts[0],
+			args:    parts[1:],
+		})
+	}
+	return servers
+}
+
+func loadStartupMCPToolSets(servers []startupMCPServerSpec) [][]tool.Tool {
+	results := make([][]tool.Tool, len(servers))
+	var wg sync.WaitGroup
+	wg.Add(len(servers))
+	for i, spec := range servers {
+		go func(i int, spec startupMCPServerSpec) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), startupMCPToolLoadTimeout)
+			defer cancel()
+
+			mcpTools, err := defaultRegistryLoadMCPTools(ctx, spec.name, spec.command, spec.args...)
+			if err != nil {
+				return
+			}
+			results[i] = mcpTools
+		}(i, spec)
+	}
+	wg.Wait()
+	return results
+}
+
 func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	// Load essential tools first for fast startup
 	tools := essentialTools()
 	if tool.IsPowerShellAvailable() {
 		tools = append(tools, tool.PowerShellTool{})
 	}
-	for _, cfg := range settings.MCPServers {
-		if cfg.Name == "" || cfg.Command == "" {
-			continue
-		}
-		mcpTools, err := tool.LoadMCPTools(context.Background(), cfg.Name, cfg.Command, cfg.Args...)
-		if err != nil {
-			continue
-		}
-		tools = append(tools, mcpTools...)
-	}
-	// Load MCP server tools
-	for _, cmd := range mcpServers {
-		parts := strings.Fields(cmd)
-		if len(parts) == 0 {
-			continue
-		}
-		name := parts[0]
-		mcpTools, err := tool.LoadMCPTools(context.Background(), name, parts[0], parts[1:]...)
-		if err != nil {
-			// MCP server failed to connect — skip silently, will show in /doctor
-			continue
-		}
+	for _, mcpTools := range loadStartupMCPToolSets(configuredStartupMCPServers(settings)) {
 		tools = append(tools, mcpTools...)
 	}
 

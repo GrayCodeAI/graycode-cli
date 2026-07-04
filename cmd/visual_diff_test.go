@@ -438,10 +438,10 @@ func TestDefaultDiffTheme(t *testing.T) {
 	if theme.Reset != "\033[0m" {
 		t.Errorf("unexpected Reset value: %q", theme.Reset)
 	}
-	if theme.Added != "\033[32m" {
+	if theme.Added != ansiDone {
 		t.Errorf("unexpected Added value: %q", theme.Added)
 	}
-	if theme.Removed != "\033[31m" {
+	if theme.Removed != ansiCoral {
 		t.Errorf("unexpected Removed value: %q", theme.Removed)
 	}
 }

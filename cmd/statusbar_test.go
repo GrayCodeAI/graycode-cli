@@ -21,8 +21,19 @@ func TestRenderStatusBarRight_IncludesTokensLabel(t *testing.T) {
 	if !strings.Contains(got, "tokens") {
 		t.Fatalf("expected tokens label in footer right, got %q", got)
 	}
-	if !strings.Contains(got, "●") {
+	if !strings.Contains(got, "[db]") {
 		t.Fatalf("expected bullet prefix, got %q", got)
+	}
+}
+
+func TestRenderStatusBarLeft_UsesCachedState(t *testing.T) {
+	m := &chatModel{statusLeftVal: "~/repo", statusLeftBranch: "main"}
+	got := renderStatusBarLeft(m)
+	if !strings.Contains(got, "~/repo:") {
+		t.Fatalf("status left = %q, want cached cwd", got)
+	}
+	if !strings.Contains(got, "main") {
+		t.Fatalf("status left = %q, want cached branch", got)
 	}
 }
 

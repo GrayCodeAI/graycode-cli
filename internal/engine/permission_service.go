@@ -32,8 +32,6 @@ type PermissionService struct {
 	autoMode   *permissions.AutoModeState
 	classifier *permissions.Classifier
 	bypassKill *permissions.BypassKillswitch
-	// mode is the active permission mode (e.g. plan, normal, auto).
-	mode PermissionMode
 	// maxTurns / maxBudgetUSD are the per-session cost/scope caps.
 	maxTurns     int
 	maxBudgetUSD float64
@@ -43,19 +41,12 @@ type PermissionService struct {
 	permissionFn func(PermissionRequest)
 	// approval is the human-in-the-loop gate for high-risk tool actions.
 	approval *ApprovalGate
-	// autonomy is the agent's autonomy level (0-3).
-	autonomy AutonomyLevel
 	// log is the session logger.
 	log *logger.Logger
 }
 
 // NewPermissionService constructs a PermissionService with a fresh
 // PermissionEngine. Tests can inject a custom engine via WithEngine.
-//
-// Note: mode is intentionally left at the zero value (PermissionMode(""))
-// so that IsZero() correctly reports true for a freshly constructed
-// service. Callers that want the default mode should call SetMode
-// (or set the field directly during tests). See M4 in the code review.
 func NewPermissionService(log *logger.Logger) *PermissionService {
 	if log == nil {
 		log = logger.Default()
@@ -125,17 +116,6 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 	return false, fmt.Sprintf("approval required for category %q", cat)
 }
 
-// SetMode validates the mode string and applies it. Returns an error
-// for unknown modes.
-func (s *PermissionService) SetMode(mode string) error {
-	switch mode {
-	case "default", "plan", "accept-edits", "auto", "bypass-permissions":
-		s.mode = PermissionMode(mode)
-		return nil
-	}
-	return fmt.Errorf("permissions: unknown mode %q", mode)
-}
-
 // SetMaxTurns caps the agent loop's turn count.
 func (s *PermissionService) SetMaxTurns(turns int) { s.maxTurns = turns }
 
@@ -145,8 +125,21 @@ func (s *PermissionService) SetMaxBudgetUSD(usd float64) { s.maxBudgetUSD = usd 
 // SetAllowedDirs sets the directories the agent may write to.
 func (s *PermissionService) SetAllowedDirs(dirs []string) { s.allowedDirs = dirs }
 
-// SetAutonomy sets the agent's autonomy level.
-func (s *PermissionService) SetAutonomy(level AutonomyLevel) { s.autonomy = level }
+// SetAutonomy sets the agent's autonomy level. Writes directly to the
+// underlying PermissionEngine — the same field CheckTool reads — rather
+// than a separate shadow field, so the change actually takes effect.
+func (s *PermissionService) SetAutonomy(level AutonomyLevel) { s.perm.Autonomy = level }
+
+// SetSpecStage sets the independent spec-workflow stage. Also writes
+// directly to the engine, same reasoning as SetAutonomy.
+func (s *PermissionService) SetSpecStage(stage SpecStage) { s.perm.Stage = stage }
+
+// SetDryRun toggles the global kill switch: when true, every tool call is
+// denied unconditionally, regardless of tier or spec stage.
+func (s *PermissionService) SetDryRun(dryRun bool) { s.perm.DryRun = dryRun }
+
+// DryRun reports whether the kill switch is active.
+func (s *PermissionService) DryRun() bool { return s.perm.DryRun }
 
 // SetApproval replaces the ApprovalGate.
 func (s *PermissionService) SetApproval(a *ApprovalGate) { s.approval = a }
@@ -156,9 +149,6 @@ func (s *PermissionService) SetPermissionFn(fn func(PermissionRequest)) {
 	s.permissionFn = fn
 	s.perm.PromptFn = fn
 }
-
-// Mode returns the active mode.
-func (s *PermissionService) Mode() PermissionMode { return s.mode }
 
 // MaxTurns returns the cap (0 = no cap).
 func (s *PermissionService) MaxTurns() int { return s.maxTurns }
@@ -170,7 +160,10 @@ func (s *PermissionService) MaxBudgetUSD() float64 { return s.maxBudgetUSD }
 func (s *PermissionService) AllowedDirs() []string { return s.allowedDirs }
 
 // Autonomy returns the autonomy level.
-func (s *PermissionService) Autonomy() AutonomyLevel { return s.autonomy }
+func (s *PermissionService) Autonomy() AutonomyLevel { return s.perm.Autonomy }
+
+// SpecStage returns the active spec-workflow stage.
+func (s *PermissionService) SpecStage() SpecStage { return s.perm.Stage }
 
 // Memory returns the legacy PermissionMemory shim. The shim is
 // kept in sync with the engine's classification state; callers
@@ -188,10 +181,8 @@ func (s *PermissionService) Classifier() *permissions.Classifier { return s.clas
 func (s *PermissionService) BypassKill() *permissions.BypassKillswitch { return s.bypassKill }
 
 // IsZero reports whether this service has been fully configured.
-// A zero PermissionService has no approval gate, no custom permission
-// fn, and an empty mode — that's the "freshly constructed" state
-// used by NewSessionWithClient (the constructor no longer pre-sets
-// mode = PermissionModeDefault, see M4 in the code review).
+// A zero PermissionService has no approval gate and no custom permission
+// fn — that's the "freshly constructed" state used by NewSessionWithClient.
 func (s *PermissionService) IsZero() bool {
-	return s == nil || (s.approval == nil && s.permissionFn == nil && s.mode == "")
+	return s == nil || (s.approval == nil && s.permissionFn == nil)
 }

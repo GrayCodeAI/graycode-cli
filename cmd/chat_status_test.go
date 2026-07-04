@@ -105,6 +105,7 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
 	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
 	sess := &engine.Session{}
 	sess.SetProvider("openrouter")
@@ -138,6 +139,7 @@ func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
@@ -160,14 +162,12 @@ func TestChatConnectionStatus_NoGatewayNoModel(t *testing.T) {
 	_ = store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
-	if !strings.Contains(got, "Anthropic · ") {
-		t.Fatalf("expected runtime-selected anthropic status, got %q", got)
-	}
-	if strings.Contains(got, "pick model") {
-		t.Fatalf("expected auto-selected model when only anthropic credentials exist, got %q", got)
+	if got != "pick model" {
+		t.Fatalf("expected pick model when no explicit selection is saved, got %q", got)
 	}
 }
 
@@ -178,6 +178,11 @@ func TestWelcomeDockerRunning_States(t *testing.T) {
 	}
 
 	m.containerEnabled = true
+	m.containerStatus = "checking docker…"
+	if m.welcomeDockerRunning() != nil {
+		t.Fatal("expected nil while container status is still checking")
+	}
+
 	m.containerReady = true
 	running := m.welcomeDockerRunning()
 	if running == nil || !*running {
@@ -189,6 +194,35 @@ func TestWelcomeDockerRunning_States(t *testing.T) {
 	stopped := m.welcomeDockerRunning()
 	if stopped == nil || *stopped {
 		t.Fatalf("expected running=false when container errored, got %v", stopped)
+	}
+}
+
+func TestStartupWarmMsg_RefreshesFooterCache(t *testing.T) {
+	m := chatModel{}
+	nextModel, _ := m.Update(startupWarmMsg{
+		statusLeftKey:    "/tmp/project",
+		statusLeftVal:    "~/project",
+		statusLeftBranch: "main",
+		connStatusVal:    "OpenRouter · gpt-4",
+		connStatusKey:    "cache-key",
+		welcomeSetup:     hawkconfig.SetupState{NeedsSetup: true},
+		welcomeAgentsOK:  true,
+	})
+	next := nextModel.(chatModel)
+	if next.statusLeftVal != "~/project" {
+		t.Fatalf("statusLeftVal = %q, want %q", next.statusLeftVal, "~/project")
+	}
+	if next.statusLeftBranch != "main" {
+		t.Fatalf("statusLeftBranch = %q, want %q", next.statusLeftBranch, "main")
+	}
+	if next.connStatusVal != "OpenRouter · gpt-4" {
+		t.Fatalf("connStatusVal = %q, want %q", next.connStatusVal, "OpenRouter · gpt-4")
+	}
+	if !next.welcomeSetupState.NeedsSetup {
+		t.Fatal("welcome setup snapshot should refresh from startup warm msg")
+	}
+	if !next.welcomeAgentsOK {
+		t.Fatal("welcome agents snapshot should refresh from startup warm msg")
 	}
 }
 
@@ -225,17 +259,6 @@ func TestNormalizeModelDisplayName_ShortensSlug(t *testing.T) {
 	got := normalizeModelDisplayName("openrouter/free", "openrouter/free")
 	if got != "free" {
 		t.Fatalf("expected free, got %q", got)
-	}
-}
-
-func TestWelcomeHeader_StaysFullAfterChat(t *testing.T) {
-	m := chatModel{
-		welcomeCache: "BIG LOGO",
-		messages:     []displayMsg{{role: "user", content: "Hi"}},
-	}
-	got := m.renderFixedWelcomePane(80)
-	if !strings.Contains(got, "BIG LOGO") {
-		t.Fatalf("expected full welcome in fixed pane, got %q", got)
 	}
 }
 

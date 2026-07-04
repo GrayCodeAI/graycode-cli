@@ -26,10 +26,26 @@ type configApplyCredentialsMsg struct {
 
 func firstRunModelProvider(m chatModel) string {
 	ctx := context.Background()
-	if p := hawkconfig.DefaultModelProviderFilter(ctx); p != "" {
+	if p := strings.TrimSpace(m.configModelProvider); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
 		return p
 	}
-	return strings.TrimSpace(m.session.Provider())
+	if m.session != nil {
+		if p := strings.TrimSpace(m.session.Provider()); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+			return p
+		}
+	}
+	if p := strings.TrimSpace(hawkconfig.ActiveGateway(ctx)); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+		return p
+	}
+	if p := hawkconfig.DefaultModelProviderFilter(ctx); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+		return p
+	}
+	for _, p := range hawkconfig.AllSetupGateways() {
+		if hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+			return p
+		}
+	}
+	return ""
 }
 
 func credentialOptionFromHawk(in hawkconfig.CredentialInference) runtime.CredentialProviderOption {
@@ -189,6 +205,8 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		modelCacheMu.Unlock()
 	}
 	next, cmd := m.rebuildSessionTransport()
+	next.refreshWelcomeStatusSnapshot()
+	next.rebuildWelcomeCache(next.blinkClosed)
 	next.invalidateConnStatus()
 	if post := strings.TrimSpace(m.configPostSaveKeysProvider); post != "" {
 		next.configPostSaveKeysProvider = ""

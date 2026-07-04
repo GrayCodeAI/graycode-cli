@@ -426,7 +426,6 @@ func (ac *Autocompleter) completeFlags(prefix string) []Suggestion {
 		{"--vibe", "Vibe coding mode"},
 		{"--power", "Power level 1-10"},
 		{"--timeout", "Time budget"},
-		{"--permission-mode", "Advanced permission mode"},
 		{"--session-id", "Session ID"},
 	}
 

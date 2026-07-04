@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -254,6 +255,10 @@ func (r *MarkdownRenderer) Render(markdown string) string {
 // renderInline applies inline formatting (bold, italic, code, links).
 func (r *MarkdownRenderer) renderInline(text string) string {
 	theme := r.Theme
+	protected, restore := protectRendererInlineCode(text, func(code string) string {
+		return theme.Code + code + theme.Reset
+	})
+	text = protected
 
 	// Links
 	text = reRendererLink.ReplaceAllStringFunc(text, func(m string) string {
@@ -262,15 +267,6 @@ func (r *MarkdownRenderer) renderInline(text string) string {
 			return m
 		}
 		return theme.Link + parts[1] + theme.Reset + " (" + parts[2] + ")"
-	})
-
-	// Inline code (before bold/italic)
-	text = reRendererCode.ReplaceAllStringFunc(text, func(m string) string {
-		parts := reRendererCode.FindStringSubmatch(m)
-		if len(parts) < 2 {
-			return m
-		}
-		return theme.Code + parts[1] + theme.Reset
 	})
 
 	// Bold
@@ -299,7 +295,27 @@ func (r *MarkdownRenderer) renderInline(text string) string {
 		return prefix + theme.Italic + parts[1] + theme.Reset + suffix
 	})
 
-	return text
+	return restore(text)
+}
+
+func protectRendererInlineCode(text string, render func(string) string) (string, func(string) string) {
+	var replacements []string
+	protected := reRendererCode.ReplaceAllStringFunc(text, func(m string) string {
+		parts := reRendererCode.FindStringSubmatch(m)
+		if len(parts) < 2 {
+			return m
+		}
+		placeholder := fmt.Sprintf("\x00HAWK_R_INLINE_CODE_%d\x00", len(replacements))
+		replacements = append(replacements, render(parts[1]))
+		return placeholder
+	})
+	restore := func(s string) string {
+		for i, repl := range replacements {
+			s = strings.ReplaceAll(s, fmt.Sprintf("\x00HAWK_R_INLINE_CODE_%d\x00", i), repl)
+		}
+		return s
+	}
+	return protected, restore
 }
 
 // parseListItem detects unordered list items with various bullet markers.

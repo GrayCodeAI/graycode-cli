@@ -16,7 +16,9 @@ import (
 )
 
 func gitOutput(args ...string) (string, error) {
-	out, err := exec.CommandContext(context.Background(), "git", args...).CombinedOutput()
+	// Output (not CombinedOutput): git writes warnings to stderr, which must
+	// not be folded into values like the branch name shown in the status bar.
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
 	return strings.TrimSpace(string(out)), err
 }
 

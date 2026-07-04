@@ -313,6 +313,11 @@ func IsSuspicious(command string) bool {
 	if commandSubstitutionRe.MatchString(command) && heredocRe.MatchString(command) {
 		return true
 	}
+	// Credential files the file tools block (SSH keys, .env, …) must also
+	// force scrutiny when referenced through the shell.
+	if CommandReferencesSensitivePath(command) != "" {
+		return true
+	}
 
 	// Check full command for patterns that span operators (e.g. "| bash")
 	lower := strings.ToLower(command)
@@ -423,7 +428,9 @@ func isHardDeny(command string) bool {
 			return true
 		}
 	}
-	return false
+	// Reading credential files must never run without a human in the loop;
+	// in prompt-bypassing contexts that means a hard block.
+	return CommandReferencesSensitivePath(command) != ""
 }
 
 // IsSafeGitCommit checks if a git commit command is safe.
@@ -588,7 +595,10 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	execArgs := []string{"-c", p.Command}
 	if sbMode := sandbox.ModeFromContext(ctx); sbMode != sandbox.ModeOff {
 		workDir, _ := os.Getwd()
-		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: true}
+		// Network follows the mode (strict denies; workspace allows) instead
+		// of being unconditionally on, so a sandboxed command can no longer
+		// exfiltrate data in strict mode. See sandbox.ModeAllowsNetwork.
+		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: sandbox.ModeAllowsNetwork(sbMode)}
 		// Map the legacy Mode to the corresponding Tier. ModeStrict
 		// → TierStrict (deny all), ModeWorkspace → TierWorkspace
 		// (allow workspace writes, deny process exec — the new safe

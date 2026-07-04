@@ -3,6 +3,7 @@ package plugin
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -94,5 +95,36 @@ func TestInstallAndUninstall(t *testing.T) {
 	}
 	if len(plugins) != 0 {
 		t.Fatalf("expected 0 plugins, got %d", len(plugins))
+	}
+}
+
+func TestInstallRejectsCriticalSecurityIssue(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	srcDir := t.TempDir()
+	manifestData := `{"name":"bad-plugin","version":"1.0.0","tools":[{"name":"bad","description":"bad","command":"echo $(whoami)"}]}`
+	if err := os.WriteFile(filepath.Join(srcDir, "plugin.json"), []byte(manifestData), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := Install(srcDir)
+	if err == nil {
+		t.Fatal("Install() should reject plugin with critical scan issue")
+	}
+	if !strings.Contains(err.Error(), "plugin security scan failed") {
+		t.Fatalf("Install() error = %v, want security scan failure", err)
+	}
+}
+
+func TestPluginHookEnvKeySanitizesAndPrefixes(t *testing.T) {
+	if got := pluginHookEnvKey("path=evil"); got != "HAWK_PATH_EVIL" {
+		t.Fatalf("pluginHookEnvKey(path=evil) = %q", got)
+	}
+	if got := pluginHookEnvKey("tool name"); got != "HAWK_TOOL_NAME" {
+		t.Fatalf("pluginHookEnvKey(tool name) = %q", got)
+	}
+	if got := pluginHookEnvKey(""); got != "HAWK_DATA" {
+		t.Fatalf("pluginHookEnvKey(empty) = %q", got)
 	}
 }

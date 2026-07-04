@@ -72,3 +72,27 @@ func TestFormatCredentialCLIStatus(t *testing.T) {
 		t.Fatal("should not show legacy key count")
 	}
 }
+
+func TestMaskCredentialSecret(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret string
+		want   string
+	}{
+		{"empty", "", "••••••••"},
+		{"whitespace only", "   ", "••••••••"},
+		{"short all bullets", "abcd1234", "••••••••"},
+		{"long shows only last 4", "sk-ant-api03-secretvalue", "••••••••alue"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := maskCredentialSecret(tt.secret); got != tt.want {
+				t.Errorf("maskCredentialSecret(%q) = %q, want %q", tt.secret, got, tt.want)
+			}
+		})
+	}
+	long := maskCredentialSecret("sk-proj-1234567890abcdef")
+	if strings.Contains(long, "sk-p") {
+		t.Errorf("mask leaks key prefix: %q", long)
+	}
+}

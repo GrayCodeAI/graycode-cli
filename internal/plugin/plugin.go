@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
@@ -112,6 +113,11 @@ func Install(srcDir string) error {
 	if err != nil {
 		return err
 	}
+	issues := criticalPluginIssues(ScanPlugin(srcDir))
+	issues = append(issues, criticalManifestIssues(m)...)
+	if len(issues) > 0 {
+		return fmt.Errorf("plugin security scan failed: %s", strings.Join(issues, "; "))
+	}
 	dstDir := filepath.Join(pluginsDir(), m.Name)
 	if err := os.MkdirAll(dstDir, 0o755); err != nil {
 		return err
@@ -122,6 +128,34 @@ func Install(srcDir string) error {
 		return err
 	}
 	return nil
+}
+
+func criticalPluginIssues(issues []SecurityIssue) []string {
+	var out []string
+	for _, issue := range issues {
+		if strings.EqualFold(issue.Severity, "critical") {
+			out = append(out, issue.Message)
+		}
+	}
+	return out
+}
+
+func criticalManifestIssues(m *Manifest) []string {
+	if m == nil {
+		return nil
+	}
+	var out []string
+	for _, cmd := range m.Commands {
+		if containsShellInjection(cmd.Script) {
+			out = append(out, fmt.Sprintf("command %q script contains potential shell injection pattern", cmd.Name))
+		}
+	}
+	for _, hook := range m.Hooks {
+		if containsShellInjection(hook.Command) {
+			out = append(out, fmt.Sprintf("hook %q command contains potential shell injection pattern", hook.Event))
+		}
+	}
+	return out
 }
 
 // Uninstall removes a plugin.

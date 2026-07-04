@@ -28,8 +28,16 @@ func TestIsNewer(t *testing.T) {
 		{"empty a", "", "1.0.0", false},
 		{"empty b", "1.0.0", "", true},
 		{"both empty", "", "", false},
-		{"pre-release longer string", "1.0.0-alpha", "1.0.0", true},
+		{"pre-release older than release", "1.0.0-alpha", "1.0.0", false},
+		{"release newer than its pre-release", "1.0.0", "1.0.0-alpha", true},
+		{"pre-release ordering", "1.0.0-beta", "1.0.0-alpha", true},
 		{"dev version", "0.4.0", "0.3.9", true},
+		{"double-digit minor", "0.10.0", "0.9.0", true},
+		{"double-digit minor reversed", "0.9.0", "0.10.0", false},
+		{"double-digit patch", "1.0.10", "1.0.9", true},
+		{"two-part version", "1.2", "1.1.9", true},
+		{"build metadata ignored", "1.0.0+build5", "1.0.0", false},
+		{"garbage a", "not-a-version", "1.0.0", false},
 	}
 
 	for _, tt := range tests {
