@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -49,6 +50,12 @@ type PermissionEngine struct {
 	// internal/tool, so concurrent sessions/sub-agents in the same process
 	// never share or clobber each other's spec directory.
 	SpecSlug string
+
+	// Phase gates sequential task completion within the Implementing stage.
+	// 0 means no phase gating (default); 1+ means the model should complete
+	// Phase N before progressing to N+1.
+	Phase    int
+	Phases   int                     // total number of phases detected from tasks.md
 	PromptFn func(PermissionRequest) // callback to ask user
 }
 
@@ -161,12 +168,32 @@ func (pe *PermissionEngine) promptUserWithSummary(ctx context.Context, tc ToolCa
 	}
 }
 
+// detectPhases counts numbered phase sections in tasks.md.
+func detectPhases(slug string) int {
+	if slug == "" {
+		return 0
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return 0
+	}
+	tasksPath := filepath.Join(cwd, ".hawk", "specs", slug, "tasks.md")
+	data, err := os.ReadFile(tasksPath)
+	if err != nil {
+		return 0
+	}
+	return len(rePhaseSection.FindAllString(string(data), -1))
+}
+
+var rePhaseSection = regexp.MustCompile(`(?m)^## \d+\.`)
+
 // specApprovalSummary reads spec.md/plan.md/tasks.md from the active spec's
 // directory and builds a short preview for the ApproveImplementation
 // prompt, so approving isn't a blind yes/no — the user sees what they're
 // actually signing off on. Falls back to a plain name if the slug is empty
 // or the files can't be read (e.g. deleted after being written).
 func specApprovalSummary(slug string) string {
+	phases := detectPhases(slug)
 	if slug == "" {
 		return "ApproveImplementation"
 	}
@@ -189,10 +216,29 @@ func specApprovalSummary(slug string) string {
 		}
 		fmt.Fprintf(&b, "## %s\n%s\n\n", f, preview)
 	}
+	if phases > 0 {
+		fmt.Fprintf(&b, "Phases: %d\n", phases)
+	}
 	if b.Len() == 0 {
 		return "ApproveImplementation"
 	}
 	return strings.TrimSpace(b.String())
+}
+
+// AdvancePhase increments the phase gate when the model completes the
+// current phase's tasks and calls AdvancePhase.
+func (pe *PermissionEngine) AdvancePhase() {
+	if pe.Phase < pe.Phases {
+		pe.Phase++
+	}
+}
+
+// PhaseProgress returns a summary of phase completion for display.
+func (pe *PermissionEngine) PhaseProgress() string {
+	if pe.Phases <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("Phase %d/%d", pe.Phase, pe.Phases)
 }
 
 // AdvanceSpecStage updates Stage based on which spec-workflow tool the
@@ -208,6 +254,8 @@ func (pe *PermissionEngine) AdvanceSpecStage(name string) {
 		pe.Stage = SpecStageTasks
 	case "ApproveImplementation":
 		pe.Stage = SpecStageImplementing
+		pe.Phase = 1
+		pe.Phases = detectPhases(pe.SpecSlug)
 	}
 }
 

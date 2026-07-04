@@ -7,12 +7,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestSpecPicker_HasThreeActions(t *testing.T) {
+func TestSpecPicker_HasSevenActions(t *testing.T) {
 	sp := NewSpecPicker(80)
-	if len(sp.entries) != 3 {
-		t.Fatalf("expected 3 actions, got %d", len(sp.entries))
+	if len(sp.entries) != 7 {
+		t.Fatalf("expected 7 actions, got %d", len(sp.entries))
 	}
-	wantOrder := []specPickerAction{specActionStart, specActionStatus, specActionReset}
+	wantOrder := []specPickerAction{specActionStart, specActionStatus, specActionEdit, specActionResume, specActionArchive, specActionConfigure, specActionReset}
 	for i, action := range wantOrder {
 		if sp.entries[i].Action != action {
 			t.Errorf("entry %d = %v, want %v", i, sp.entries[i].Action, action)
@@ -76,7 +76,7 @@ func TestSpecPicker_FilterByName(t *testing.T) {
 		sp.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 	}
 	if len(sp.filtered) != 1 || sp.filtered[0].Action != specActionReset {
-		t.Fatalf("expected filter 'reset' to match only Reset action, got %+v", sp.filtered)
+		t.Fatalf("expected filter 'reset' to match only Reset action, got %d entries: %+v", len(sp.filtered), sp.filtered)
 	}
 }
 

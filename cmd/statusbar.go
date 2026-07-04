@@ -20,11 +20,13 @@ var (
 	// (in case callers want to use these names directly).
 	statusCWDColor    = cwdBlue
 	statusBranchColor = branchYellow
+	statusSpecColor   = infoSky
 	statusTokenColor  = tokenSage
 	statusCostColor   = costViolet
 
 	statusCwdStyle    = lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
 	statusBranchStyle = lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
+	statusSpecStyle   = lipgloss.NewStyle().Foreground(statusSpecColor).Inline(true)
 	statusTokenStyle  = lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
 	statusCostStyle   = lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
 	statusClockStyle  = lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
@@ -77,12 +79,31 @@ func renderStatusBarLeft(m *chatModel) string {
 	if !ok {
 		return ""
 	}
+	parts := []string{statusCwdStyle.Render(cwd + ":")}
 	if branch := cachedStatusBranch(m); branch != "" {
-		cwdStyle := statusCwdStyle.Render(cwd + ":")
-		branchStyle := statusBranchStyle.Render(icons.Branch() + " " + branch)
-		return strings.Join([]string{cwdStyle, branchStyle}, " ")
+		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
 	}
-	return statusCwdStyle.Render(cwd + ":")
+	if stage := specStageForStatus(m); stage != "" {
+		parts = append(parts, statusSpecStyle.Render(stage))
+	}
+	return strings.Join(parts, statusDimStyle.Render(" "))
+}
+
+// specStageForStatus returns a short spec stage indicator for the status bar,
+// or empty string if no spec workflow is active.
+func specStageForStatus(m *chatModel) string {
+	if m == nil || m.session == nil || m.session.Perm == nil {
+		return ""
+	}
+	stage := m.session.Perm.Stage
+	if stage == engine.SpecStageNone {
+		return ""
+	}
+	label := specStageDisplayName(stage)
+	if stage == engine.SpecStageImplementing && m.session.Perm.Phases > 0 {
+		return fmt.Sprintf("%s %s %d/%d", icons.FileDocument(), label, m.session.Perm.Phase, m.session.Perm.Phases)
+	}
+	return fmt.Sprintf("%s %s", icons.FileDocument(), label)
 }
 
 func cachedStatusLeftCwd(m *chatModel) (string, bool) {

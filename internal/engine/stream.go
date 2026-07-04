@@ -13,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -148,6 +149,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 	}
 
+	// Auto-skill: load smart skills once at session start for per-turn matching
+	s.smartSkills = plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+
 	recoveryCount := 0
 	turnCount := 0
 	toolTurns := 0 // turns that used tools (for skill distillation)
@@ -282,12 +286,35 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				opts.System += "\n\n## Agent Beliefs\n" + summary
 			}
 		}
+		// Auto-skill: match smart skills against the last user message and
+		// inject a compact listing. The LLM uses the Skill tool for full content.
+		if len(s.smartSkills) > 0 {
+			lastUserMsg := ""
+			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+				if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
+					lastUserMsg = s.Persistence().RawMessages()[i].Content
+					break
+				}
+			}
+			if lastUserMsg != "" {
+				if matched := plugin.MatchSkillsByContext(s.smartSkills, lastUserMsg); len(matched) > 0 {
+					if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
+						opts.System += "\n\n" + skillsPrompt
+					}
+				}
+			}
+		}
 		// Spec stage: steer the model through Specify -> Plan -> Tasks and an
 		// explicit approval handoff before any changes. Ephemeral (not
 		// persisted to s.Persistence().System()) so it disappears once the
 		// stage advances to Implementing.
 		if s.Perm != nil && s.Perm.Stage != SpecStageNone && s.Perm.Stage != SpecStageImplementing {
 			opts.System += specStageSystemPrompt
+			// Inject user's spec configuration (language, framework, etc.)
+			// as context so the model writes specs that match preferences.
+			if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
+				opts.System += cfgPrompt
+			}
 		}
 		if s.Tools() != nil && s.Tools().Registry() != nil {
 			opts.Tools = s.Tools().Registry().EyrieTools()

@@ -18,6 +18,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
@@ -238,6 +239,9 @@ type Session struct {
 	// Approval, when non-nil and enabled, gates high-risk tool actions behind an
 	// explicit human confirmation. Nil keeps existing behavior unchanged.
 	Approval *ApprovalGate // approval_gate.go — human-in-the-loop gate
+
+	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
+	smartSkills []plugin.SmartSkill
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.

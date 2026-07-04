@@ -13,6 +13,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/spec"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -311,6 +312,20 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated until spec.md, plan.md, and tasks.md are written and ApproveImplementation is approved."})
 					case specActionStatus:
 						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Spec stage: %s", specStageLabel(m.session))})
+					case specActionEdit:
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Use the SpecEdit tool to modify spec artifacts (spec.md, plan.md, tasks.md). You can apply deltas or replace content entirely."})
+					case specActionResume:
+						stage := currentSpecStage(m.session)
+						stageName := specStageDisplayName(stage)
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Resuming from %s — continue working through the spec workflow.", stageName)})
+					case specActionArchive:
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Archive a completed spec. The agent will use the ArchiveSpec tool to archive the spec when implementation is complete."})
+					case specActionConfigure:
+						cfg := spec.LoadSpecConfig()
+						msg := "Spec configuration:\n" + cfg.Format()
+						msg += "\n\nUse `/spec config set <field> <value>` to change settings."
+						msg += "\nThe agent can also use `SpecConfig` tool to read/update."
+						m.messages = append(m.messages, displayMsg{role: "system", content: msg})
 					case specActionReset:
 						m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the trust tier again."})
@@ -552,6 +567,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.lastCtrlC = time.Now()
 			m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
+		case tea.KeyShiftTab:
+			// Shift+Tab opens the spec picker overlay
+			if m.specPicker == nil {
+				m.specPicker = NewSpecPicker(m.width)
+			}
+			m.specPicker.Open(currentSpecStage(m.session))
 			m.viewDirty = true
 			m.updateViewportContent()
 			return m, nil

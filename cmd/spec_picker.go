@@ -16,6 +16,10 @@ type specPickerAction int
 const (
 	specActionStart specPickerAction = iota
 	specActionStatus
+	specActionEdit
+	specActionResume
+	specActionArchive
+	specActionConfigure
 	specActionReset
 )
 
@@ -29,6 +33,10 @@ type specPickerEntry struct {
 var specPickerEntries = []specPickerEntry{
 	{specActionStart, "Start", "Begin the workflow — writes spec.md, then plan.md, then tasks.md"},
 	{specActionStatus, "Status", "Show the current stage"},
+	{specActionEdit, "Edit", "Edit the active spec's artifacts (spec.md, plan.md, tasks.md)"},
+	{specActionResume, "Resume", "Resume from the current stage — continue where you left off"},
+	{specActionArchive, "Archive", "Archive a completed spec when implementation is done"},
+	{specActionConfigure, "Configure", "Set language, framework, methodology, architecture preferences"},
 	{specActionReset, "Reset", "Drop back to None — Write/Edit/Bash follow the trust tier again"},
 }
 
