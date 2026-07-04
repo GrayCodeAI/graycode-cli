@@ -11,11 +11,13 @@ import (
 	"strings"
 	"time"
 
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	aiwatch "github.com/GrayCodeAI/hawk/internal/engine/io"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Print mode and session persistence functions extracted from chat.go
@@ -42,18 +44,9 @@ func runPrint(text string) error {
 		return cfgErr
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
-		_, _ = fmt.Fprintf(os.Stderr, "\nAllow %s: %s [y/N] ", req.ToolName, req.Summary)
-		answer, _ := reader.ReadString('\n')
-		answer = strings.TrimSpace(strings.ToLower(answer))
-		req.Response <- answer == "y" || answer == "yes"
-	})
-	sess.SetAskUserFn(func(question string) (string, error) {
-		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
-		answer, _ := reader.ReadString('\n')
-		return strings.TrimSpace(answer), nil
-	})
+	promptInput := openPromptInput()
+	defer promptInput.close()
+	configureInteractivePrompts(sess, promptInput)
 
 	sessionID, _, err := prepareSession(sess)
 	if err != nil {
@@ -240,18 +233,11 @@ func runRepl() error {
 		return cfgErr
 	}
 
+	promptInput := openPromptInput()
+	defer promptInput.close()
+	configureInteractivePrompts(sess, promptInput)
+
 	reader := bufio.NewReader(os.Stdin)
-	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
-		_, _ = fmt.Fprintf(os.Stderr, "\nAllow %s: %s [y/N] ", req.ToolName, req.Summary)
-		answer, _ := reader.ReadString('\n')
-		answer = strings.TrimSpace(strings.ToLower(answer))
-		req.Response <- answer == "y" || answer == "yes"
-	})
-	sess.SetAskUserFn(func(question string) (string, error) {
-		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n> ", question)
-		answer, _ := reader.ReadString('\n')
-		return strings.TrimSpace(answer), nil
-	})
 
 	sessionID, _, err := prepareSession(sess)
 	if err != nil {
@@ -292,6 +278,16 @@ func runRepl() error {
 			fmt.Fprintln(os.Stderr, "  /models     - List available models")
 			fmt.Fprintln(os.Stderr, "  /session    - Show session info")
 			fmt.Fprintln(os.Stderr, "")
+			continue
+		}
+		if output, handled, builtinErr := replBuiltinResponse(input, sess, settings, sessionID); handled {
+			if builtinErr != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", builtinErr)
+				continue
+			}
+			if output != "" {
+				_, _ = fmt.Fprintln(os.Stdout, output)
+			}
 			continue
 		}
 
@@ -355,6 +351,80 @@ func runRepl() error {
 			}
 		}
 	}
+}
+
+func replBuiltinResponse(input string, sess *engine.Session, settings hawkconfig.Settings, sessionID string) (string, bool, error) {
+	switch strings.TrimSpace(input) {
+	case "/tools":
+		return builtInToolsSummary(), true, nil
+	case "/session":
+		var b strings.Builder
+		b.WriteString("Session info:\n")
+		b.WriteString(fmt.Sprintf("  ID: %s\n", sessionID))
+		b.WriteString(fmt.Sprintf("  Provider: %s\n", sess.Provider()))
+		b.WriteString(fmt.Sprintf("  Model: %s\n", sess.Model()))
+		b.WriteString(fmt.Sprintf("  Messages: %d", len(sess.RawMessages())))
+		return b.String(), true, nil
+	case "/models":
+		return replModelsSummary(settings, sess.Provider())
+	default:
+		return "", false, nil
+	}
+}
+
+func replModelsSummary(settings hawkconfig.Settings, sessionProvider string) (string, bool, error) {
+	providerName := effectiveProviderForREPL(settings, sessionProvider)
+	if providerName == "" {
+		return "No active provider selected. Set one with `hawk config provider <name>` or start REPL with `--provider`.", true, nil
+	}
+	models, err := hawkconfig.FetchModelsForProvider(providerName)
+	if err != nil {
+		return "", true, err
+	}
+	if len(models) == 0 {
+		if providerName == "" {
+			return "No models available in the catalog cache.", true, nil
+		}
+		return fmt.Sprintf("No models available in the catalog cache for provider %q.", providerName), true, nil
+	}
+
+	rows := make([]modelTableRow, len(models))
+	for i, m := range models {
+		rows[i] = modelTableRowFromCatalogEntry(m)
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("%d models", len(models)))
+	if providerName != "" {
+		b.WriteString(fmt.Sprintf(" for provider %q", providerName))
+	}
+	b.WriteString("\n")
+	b.WriteString(formatModelTablePlain(rows))
+	return b.String(), true, nil
+}
+
+func effectiveProviderForREPL(settings hawkconfig.Settings, sessionProvider string) string {
+	if provider != "" {
+		return strings.TrimSpace(provider)
+	}
+	if settings.Provider != "" {
+		return strings.TrimSpace(settings.Provider)
+	}
+	return strings.TrimSpace(sessionProvider)
+}
+
+func formatModelTablePlain(rows []modelTableRow) string {
+	layout := computeModelTableLayout(100, rows)
+	header := lipgloss.NewStyle().Bold(true)
+	meta := lipgloss.NewStyle()
+
+	var b strings.Builder
+	b.WriteString(renderModelTableHeader(layout, header, meta))
+	for _, row := range rows {
+		b.WriteByte('\n')
+		b.WriteString(renderModelTableRow(row, false, false, layout, lipgloss.NewStyle(), lipgloss.NewStyle(), lipgloss.NewStyle(), meta, meta))
+	}
+	return b.String()
 }
 
 // watchIgnoreDirs are directory names skipped when scanning for AI directives.

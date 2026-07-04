@@ -119,6 +119,8 @@ var registry = []struct {
 	{"check", puaCheckBold, ASCIICheck},
 	{"close", puaCloseThick, ASCIICross},
 	{"pin", puaPin, "[pin]"},
+	{"database", puaDatabase, "[db]"},
+	{"ruby", puaRuby, "$"},
 }
 
 func lookup(name string) (string, string, bool) {
@@ -234,3 +236,5 @@ func Close() string         { return Glyph("close") }
 func RotateVariant() string { return Glyph("rotate_variant") }
 func Llama() string         { return Glyph("llama") }
 func Pin() string           { return Glyph("pin") }
+func Database() string      { return Glyph("database") }
+func Ruby() string          { return Glyph("ruby") }

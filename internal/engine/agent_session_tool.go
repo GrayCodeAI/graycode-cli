@@ -44,7 +44,10 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 	sub.SetAPIKeys(s.apiKeys)
 	sub.PermissionFn = s.PermissionFn
 	sub.Permissions = s.Permissions
-	sub.Mode = s.Mode
+	// A sub-agent spawned while the parent is mid-spec-and-unapproved
+	// inherits the same gate — an ungated sub-agent would be a permission
+	// escalation hole (it could Write/Bash while the parent still can't).
+	sub.PermSvc().SetSpecStage(s.PermSvc().SpecStage())
 	sub.MaxTurns = maxTurns
 	sub.MaxBudgetUSD = s.MaxBudgetUSD
 	sub.AddUser(prompt)

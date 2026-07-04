@@ -198,6 +198,42 @@ func TestDetectGitHubActions_CommentNoMentionIsAutomation(t *testing.T) {
 	}
 }
 
+func TestDetectGitHubActions_TrustFromAssociation(t *testing.T) {
+	env := map[string]string{
+		"GITHUB_ACTIONS":    "true",
+		"GITHUB_EVENT_NAME": "issues",
+		"GITHUB_EVENT_PATH": "/tmp/event.json",
+	}
+	// Insider association → trusted.
+	owner := `{"issue":{"title":"t","body":"b","author_association":"OWNER"}}`
+	if gha := detectGitHubActions(envFunc(env), fileFunc(owner)); !gha.Trusted {
+		t.Errorf("OWNER should be trusted, got association=%q trusted=%v", gha.AuthorAssociation, gha.Trusted)
+	}
+	// Outside contributor → untrusted.
+	outsider := `{"issue":{"title":"t","body":"b","author_association":"NONE"}}`
+	if gha := detectGitHubActions(envFunc(env), fileFunc(outsider)); gha.Trusted {
+		t.Error("NONE association should be untrusted")
+	}
+	// Missing association → untrusted (fail closed).
+	none := `{"issue":{"title":"t","body":"b"}}`
+	if gha := detectGitHubActions(envFunc(env), fileFunc(none)); gha.Trusted {
+		t.Error("missing association should be untrusted")
+	}
+}
+
+func TestDetectGitHubActions_TrustEnvOverride(t *testing.T) {
+	env := map[string]string{
+		"GITHUB_ACTIONS":       "true",
+		"GITHUB_EVENT_NAME":    "issues",
+		"GITHUB_EVENT_PATH":    "/tmp/event.json",
+		"HAWK_GHA_TRUST_EVENT": "1",
+	}
+	outsider := `{"issue":{"title":"t","body":"b","author_association":"NONE"}}`
+	if gha := detectGitHubActions(envFunc(env), fileFunc(outsider)); !gha.Trusted {
+		t.Error("HAWK_GHA_TRUST_EVENT=1 should trust even NONE association")
+	}
+}
+
 func TestResolveExecPrompt_Arg(t *testing.T) {
 	p, err := resolveExecPrompt([]string{"hello world"})
 	if err != nil {

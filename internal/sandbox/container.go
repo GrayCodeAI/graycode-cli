@@ -77,22 +77,7 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	_ = os.MkdirAll(attachDir, 0o755)
 	_ = os.MkdirAll(cacheDir, 0o755)
 
-	args := []string{
-		"run", "-d", "--rm",
-		"--name", name,
-		"--network", "none",
-		"-v", c.projectDir + ":" + c.projectDir, // mount at same path
-		"-v", attachDir + ":/attachments:ro",
-		"-v", cacheDir + ":/cache",
-		"-w", c.projectDir,
-	}
-	// Inject declarative startup env vars (additive; nil when none configured).
-	args = append(args, c.runtime.StartupEnvArgs()...)
-	args = append(
-		args,
-		c.image,
-		"sleep", "infinity",
-	)
+	args := c.dockerRunArgs(name, attachDir, cacheDir)
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	out, err := cmd.CombinedOutput()
@@ -102,6 +87,26 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	c.containerID = strings.TrimSpace(string(out))
 	c.running = true
 	return nil
+}
+
+func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []string {
+	args := []string{
+		"run", "-d", "--rm",
+		"--name", name,
+		"--network", "none",
+		"--cap-drop", "ALL",
+		"--security-opt", "no-new-privileges",
+		"--pids-limit", "256",
+		"--read-only",
+		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m",
+		"-v", c.projectDir + ":" + c.projectDir, // mount at same path
+		"-v", attachDir + ":/attachments:ro",
+		"-v", cacheDir + ":/cache",
+		"-w", c.projectDir,
+	}
+	args = append(args, c.runtime.StartupEnvArgs()...)
+	args = append(args, c.image, "sleep", "infinity")
+	return args
 }
 
 // Exec runs a command inside the container and returns its output.

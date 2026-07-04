@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -27,6 +29,13 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 // dispatchStreamEvent maps one engine event to TUI messages. Returns true when
 // the pump should stop (error or done).
 func dispatchStreamEvent(ref *progRef, ev engine.StreamEvent) bool {
+	return dispatchStreamEventWithFlush(ref, ev, nil)
+}
+
+func dispatchStreamEventWithFlush(ref *progRef, ev engine.StreamEvent, flush func()) bool {
+	if ev.Type != "content" && flush != nil {
+		flush()
+	}
 	switch ev.Type {
 	case "content":
 		ref.Send(streamChunkMsg(ev.Content))
@@ -62,17 +71,92 @@ func dispatchStreamEvent(ref *progRef, ev engine.StreamEvent) bool {
 	return false
 }
 
+const streamChunkCoalesceInterval = 16 * time.Millisecond
+
 // pumpStreamEvents drains the engine channel into Bubble Tea messages.
 func pumpStreamEvents(ref *progRef, ch <-chan engine.StreamEvent) {
-	for ev := range ch {
-		if dispatchStreamEvent(ref, ev) {
+	var buf strings.Builder
+	firstContent := true
+	flush := func() {
+		if buf.Len() == 0 {
 			return
 		}
+		ref.Send(streamChunkMsg(buf.String()))
+		buf.Reset()
 	}
-	ref.Send(streamDoneMsg{})
+	defer flush()
+
+	var timer *time.Timer
+	var timerC <-chan time.Time
+	stopTimer := func() {
+		if timer == nil {
+			return
+		}
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer = nil
+		timerC = nil
+	}
+	startTimer := func() {
+		if timer != nil {
+			return
+		}
+		timer = time.NewTimer(streamChunkCoalesceInterval)
+		timerC = timer.C
+	}
+	for {
+		select {
+		case <-timerC:
+			flush()
+			timer = nil
+			timerC = nil
+		case ev, ok := <-ch:
+			if !ok {
+				stopTimer()
+				flush()
+				ref.Send(streamDoneMsg{})
+				return
+			}
+			if ev.Type == "content" {
+				if firstContent {
+					firstContent = false
+					ref.Send(streamChunkMsg(ev.Content))
+					continue
+				}
+				buf.WriteString(ev.Content)
+				if shouldFlushStreamChunkBuffer(buf.String()) {
+					stopTimer()
+					flush()
+				} else {
+					startTimer()
+				}
+				continue
+			}
+			stopTimer()
+			if dispatchStreamEventWithFlush(ref, ev, flush) {
+				return
+			}
+		}
+	}
+}
+
+func shouldFlushStreamChunkBuffer(s string) bool {
+	if len(s) >= 512 {
+		return true
+	}
+	return strings.ContainsAny(s, "\n.!?;:")
 }
 
 func (m *chatModel) startStream() {
+	m.turnEstimatedOutputRunes = 0
+	if m.testStreamStarter != nil {
+		m.testStreamStarter()
+		return
+	}
 	m.streamCancelled = false
 	m.syncSessionSelection()
 	sess := m.session

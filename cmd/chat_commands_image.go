@@ -83,6 +83,7 @@ func (m *chatModel) handleImageCommand(parts []string, text string) (tea.Model, 
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
 	m.turnInputTokens = 0
 	m.turnOutputTokens = 0
+	m.turnEstimatedOutputRunes = 0
 	m.partial.Reset()
 	m.startStream()
 	return m, nil

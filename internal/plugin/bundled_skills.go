@@ -1,13 +1,19 @@
 package plugin
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
+
+//go:embed bundled_skills/*/SKILL.md
+//go:embed bundled_skills/references/*.md
+var bundledSkillsFS embed.FS
 
 // BundledSkill defines a skill that ships with hawk.
 type BundledSkill struct {
@@ -18,151 +24,113 @@ type BundledSkill struct {
 	Files       map[string]string // additional files beyond SKILL.md
 }
 
-// bundledSkills returns the set of skills that ship with hawk.
+// bundledSkills returns the set of skills that ship with hawk, loaded
+// from the embedded bundled_skills/ directory at compile time.
 func bundledSkills() []BundledSkill {
+	var skills []BundledSkill
+
+	// Walk the embedded filesystem to find all SKILL.md files
+	root := "bundled_skills"
+	err := fs.WalkDir(bundledSkillsFS, root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if filepath.Base(path) != "SKILL.md" {
+			return nil
+		}
+
+		data, err := bundledSkillsFS.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+
+		content := string(data)
+		name, desc, cat := parseSkillFrontmatter(content)
+
+		// Derive skill name from directory path
+		relPath := strings.TrimPrefix(path, root+"/")
+		parts := strings.Split(relPath, "/")
+		if len(parts) < 2 {
+			return nil
+		}
+		dirName := parts[0]
+		if name == "" {
+			name = dirName
+		}
+
+		skills = append(skills, BundledSkill{
+			Name:        name,
+			Description: desc,
+			Category:    cat,
+			Content:     content,
+		})
+		return nil
+	})
+	if err != nil {
+		return fallbackBundledSkills()
+	}
+
+	if len(skills) == 0 {
+		return fallbackBundledSkills()
+	}
+
+	return skills
+}
+
+// parseSkillFrontmatter extracts name, description, and category from
+// YAML frontmatter in a SKILL.md file.
+func parseSkillFrontmatter(content string) (name, desc, cat string) {
+	lines := strings.Split(content, "\n")
+	inFrontmatter := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			if inFrontmatter {
+				break
+			}
+			inFrontmatter = true
+			continue
+		}
+		if !inFrontmatter {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "name:") {
+			name = strings.TrimSpace(strings.TrimPrefix(trimmed, "name:"))
+		}
+		if strings.HasPrefix(trimmed, "description:") {
+			desc = strings.TrimSpace(strings.TrimPrefix(trimmed, "description:"))
+		}
+		if strings.HasPrefix(trimmed, "category:") {
+			cat = strings.TrimSpace(strings.TrimPrefix(trimmed, "category:"))
+		}
+	}
+	return
+}
+
+// fallbackBundledSkills returns a minimal set of skills if the embedded
+// filesystem is unavailable (should not happen in normal builds).
+func fallbackBundledSkills() []BundledSkill {
 	return []BundledSkill{
 		{
 			Name:        "git-workflow",
 			Description: "Best practices for git branching, commits, and PRs",
 			Category:    "general",
-			Content: `---
-name: git-workflow
-description: Best practices for git branching, commits, and PRs
-category: general
----
-
-# Git Workflow
-
-## Commit Messages
-- Use conventional commits: feat, fix, docs, style, refactor, test, chore
-- Keep subject line under 72 characters
-- Use imperative mood: "Add feature" not "Added feature"
-- Never add Co-authored-by trailers — commits list only the human author
-
-## Branching
-- Feature branches: feat/description
-- Bugfix branches: fix/description
-- Always rebase onto main before opening PR
-- Squash merge PRs to keep history clean
-
-## PRs
-- Small, focused PRs (< 400 lines)
-- Include test coverage for new features
-- Link related issues
-`,
+			Content:     "---\nname: git-workflow\ndescription: Best practices for git branching, commits, and PRs\ncategory: general\n---\n\n# Git Workflow\n\nUse conventional commits, keep subject lines under 72 chars, rebase before PR.",
 		},
 		{
 			Name:        "test-driven",
 			Description: "Test-first development workflow",
 			Category:    "general",
-			Content: `---
-name: test-driven
-description: Test-first development workflow
-category: general
----
-
-# Test-Driven Development
-
-## Workflow
-1. Write a failing test for the desired behavior
-2. Write the minimum code to make it pass
-3. Refactor while keeping tests green
-4. Repeat
-
-## Rules
-- Never write implementation before tests
-- Tests should be named descriptively (TestFunctionDoesX)
-- Each test should have a single assertion
-- Use table-driven tests for multiple cases
-- Run tests after every change
-`,
-		},
-		{
-			Name:        "security-checklist",
-			Description: "Security review checklist for code changes",
-			Category:    "security",
-			Content: `---
-name: security-checklist
-description: Security review checklist for code changes
-category: security
----
-
-# Security Checklist
-
-## Input Validation
-- [ ] All user input is validated and sanitized
-- [ ] SQL queries use parameterized statements
-- [ ] File paths are validated against traversal
-
-## Authentication & Authorization
-- [ ] Sensitive endpoints require authentication
-- [ ] Role-based access control is enforced
-- [ ] Session tokens are httpOnly and secure
-
-## Secrets
-- [ ] No hardcoded API keys or passwords
-- [ ] Environment variables used for secrets
-- [ ] .env files are in .gitignore
-
-## Error Handling
-- [ ] Errors don't expose internal details
-- [ ] Stack traces not sent to clients
-- [ ] Rate limiting on auth endpoints
-`,
+			Content:     "---\nname: test-driven\ndescription: Test-first development workflow\ncategory: general\n---\n\n# Test-Driven Development\n\nWrite failing test, implement, refactor, repeat.",
 		},
 		{
 			Name:        "code-review",
 			Description: "Systematic code review process",
 			Category:    "general",
-			Content: `---
-name: code-review
-description: Systematic code review process
-category: general
----
-
-# Code Review Process
-
-## Review Checklist
-1. **Correctness**: Does it do what it's supposed to?
-2. **Readability**: Can another developer understand it?
-3. **Performance**: Are there obvious inefficiencies?
-4. **Security**: Any vulnerabilities?
-5. **Testing**: Are edge cases covered?
-6. **Maintainability**: Will this be easy to change later?
-
-## Feedback Style
-- Be specific and actionable
-- Suggest alternatives, not just problems
-- Praise good patterns too
-- Focus on code, not the author
-`,
-		},
-		{
-			Name:        "debugging",
-			Description: "Systematic debugging methodology",
-			Category:    "general",
-			Content: `---
-name: debugging
-description: Systematic debugging methodology
-category: general
----
-
-# Debugging Methodology
-
-## Steps
-1. **Reproduce**: Can you trigger the bug consistently?
-2. **Isolate**: What's the minimal reproduction?
-3. **Hypothesize**: What could cause this?
-4. **Test**: Add logging/breakpoints to verify
-5. **Fix**: Make the smallest change that works
-6. **Verify**: Test the fix and check for regressions
-
-## Tips
-- Read the full error message and stack trace
-- Check recent changes (git log, git diff)
-- Use binary search to isolate the problem
-- Rubber duck explanation often reveals the issue
-`,
+			Content:     "---\nname: code-review\ndescription: Systematic code review process\ncategory: general\n---\n\n# Code Review Process\n\nCheck correctness, readability, performance, security, testing, maintainability.",
 		},
 	}
 }
@@ -208,6 +176,28 @@ func ExtractBundledSkills() (int, error) {
 		}
 
 		extracted++
+	}
+
+	// Also extract reference docs
+	refDir := filepath.Join(dir, "references")
+	if err := os.MkdirAll(refDir, 0o755); err == nil {
+		err := fs.WalkDir(bundledSkillsFS, "bundled_skills/references", func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			name := filepath.Base(path)
+			dest := filepath.Join(refDir, name)
+			if _, statErr := os.Stat(dest); statErr == nil {
+				return nil // skip if exists
+			}
+			data, err := bundledSkillsFS.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+			_ = os.WriteFile(dest, data, 0o644)
+			return nil
+		})
+		_ = err
 	}
 
 	return extracted, nil

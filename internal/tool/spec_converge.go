@@ -1,0 +1,264 @@
+package tool
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// ConvergeTool assesses the gap between the active spec and the current
+// codebase state. It checks for incomplete tasks, missing implementations,
+// and unresolved requirements, then optionally appends convergence tasks.
+type ConvergeTool struct{}
+
+func (ConvergeTool) Name() string      { return "Converge" }
+func (ConvergeTool) Aliases() []string { return []string{"converge", "spec_converge", "spec:converge"} }
+
+func (ConvergeTool) Description() string {
+	return "Assess the gap between the active spec and the codebase. Checks incomplete tasks, missing implementations, and unresolved requirements. Optionally appends convergence tasks to tasks.md to track remaining work."
+}
+
+func (ConvergeTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"append_tasks": map[string]interface{}{
+				"type":        "boolean",
+				"description": "If true, append convergence tasks to tasks.md for remaining work",
+			},
+		},
+	}
+}
+
+func (ConvergeTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+	var p struct {
+		AppendTasks bool `json:"append_tasks"`
+	}
+	if input != nil {
+		_ = json.Unmarshal(input, &p)
+	}
+
+	slug, err := specSlug(ctx)
+	if err != nil || slug == "" {
+		return "", fmt.Errorf("no active spec — call Specify first")
+	}
+
+	// Use the existing convergence assessment from spec engine
+	report := assessConvergence(slug)
+
+	var b strings.Builder
+	if report.Converged {
+		b.WriteString("+ Implementation is converged with the spec.\n\n")
+		b.WriteString(report.Summary)
+	} else {
+		fmt.Fprintf(&b, "Found %d gap(s) between spec and implementation:\n\n", len(report.Gaps))
+		for i, gap := range report.Gaps {
+			icon := "i"
+			switch gap.Severity {
+			case "critical":
+				icon = "x"
+			case "high":
+				icon = "!"
+			case "medium":
+				icon = "○"
+			}
+			fmt.Fprintf(&b, "%d. %s [%s] %s\n", i+1, icon, gap.Severity, gap.Description)
+			if gap.Source != "" {
+				fmt.Fprintf(&b, "   Source: %s\n", gap.Source)
+			}
+		}
+		b.WriteString("\n")
+		b.WriteString(report.Summary)
+
+		if p.AppendTasks {
+			tasksPath, err := appendConvergenceTasks(slug, report)
+			if err != nil {
+				b.WriteString(fmt.Sprintf("\n\nFailed to append tasks: %v", err))
+			} else {
+				b.WriteString(fmt.Sprintf("\n\nConvergence tasks appended to %s", tasksPath))
+			}
+		}
+	}
+
+	return strings.TrimSpace(b.String()), nil
+}
+
+type convergenceGap struct {
+	Description string
+	Category    string
+	Severity    string
+	Source      string
+}
+
+type convergenceResult struct {
+	Converged bool
+	Gaps      []convergenceGap
+	Summary   string
+}
+
+func assessConvergence(slug string) convergenceResult {
+	dir, err := specsDir()
+	if err != nil {
+		return convergenceResult{
+			Summary: fmt.Sprintf("cannot access specs: %v", err),
+		}
+	}
+	specDir := filepath.Join(dir, slug)
+
+	result := convergenceResult{Converged: true}
+
+	// Read spec
+	specContent := readArtifact(filepath.Join(specDir, "spec.md"))
+	if specContent == "" {
+		result.Gaps = append(result.Gaps, convergenceGap{
+			Description: "No spec.md found — cannot assess convergence",
+			Category:    "missing",
+			Severity:    "critical",
+			Source:      "spec.md",
+		})
+		result.Converged = false
+	}
+
+	// Read tasks
+	tasksContent := readArtifact(filepath.Join(specDir, "tasks.md"))
+	if tasksContent != "" {
+		incomplete := countUnchecked(tasksContent)
+		if incomplete > 0 {
+			result.Gaps = append(result.Gaps, convergenceGap{
+				Description: fmt.Sprintf("%d task(s) still incomplete in tasks.md", incomplete),
+				Category:    "partial",
+				Severity:    "high",
+				Source:      "tasks.md",
+			})
+			result.Converged = false
+		}
+	}
+
+	// Read plan
+	planContent := readArtifact(filepath.Join(specDir, "plan.md"))
+	if planContent == "" && specContent != "" {
+		result.Gaps = append(result.Gaps, convergenceGap{
+			Description: "No plan.md found — technical approach not documented",
+			Category:    "missing",
+			Severity:    "medium",
+			Source:      "plan.md",
+		})
+	}
+
+	// Check for unresolved clarification markers
+	if strings.Contains(specContent, "[NEEDS CLARIFICATION") {
+		result.Gaps = append(result.Gaps, convergenceGap{
+			Description: "Spec still contains [NEEDS CLARIFICATION] markers",
+			Category:    "partial",
+			Severity:    "high",
+			Source:      "spec.md",
+		})
+		result.Converged = false
+	}
+
+	// Check for SHALL/MUST in spec
+	if specContent != "" && !strings.Contains(specContent, "SHALL") && !strings.Contains(specContent, "MUST") {
+		result.Gaps = append(result.Gaps, convergenceGap{
+			Description: "No SHALL/MUST requirements found — requirements may not be explicit",
+			Category:    "partial",
+			Severity:    "medium",
+			Source:      "spec.md",
+		})
+	}
+
+	if result.Converged && len(result.Gaps) == 0 {
+		result.Summary = "All requirements addressed, all tasks complete."
+	} else {
+		result.Summary = fmt.Sprintf("Found %d gap(s) — implementation does not fully satisfy the spec.", len(result.Gaps))
+	}
+
+	return result
+}
+
+func appendConvergenceTasks(slug string, report convergenceResult) (string, error) {
+	if report.Converged {
+		return "", nil
+	}
+
+	dir, err := specsDir()
+	if err != nil {
+		return "", err
+	}
+	tasksPath := filepath.Join(dir, slug, "tasks.md")
+
+	existing := readArtifact(tasksPath)
+
+	var b strings.Builder
+	b.WriteString(existing)
+	if existing != "" && !strings.HasSuffix(existing, "\n") {
+		b.WriteString("\n")
+	}
+
+	phaseNum := countPhasesInContent(existing) + 1
+	b.WriteString(fmt.Sprintf("\n## %d. Convergence Tasks\n\n", phaseNum))
+	b.WriteString("**Purpose**: Address gaps identified in convergence assessment.\n\n")
+
+	taskNum := countTasksInContent(existing) + 1
+	for _, gap := range report.Gaps {
+		b.WriteString(fmt.Sprintf("- [ ] T%03d %s — %s\n", taskNum, gap.Description, gap.Severity))
+		taskNum++
+	}
+
+	content := b.String()
+	if err := os.WriteFile(tasksPath, []byte(content), 0o600); err != nil {
+		return "", fmt.Errorf("write convergence tasks: %w", err)
+	}
+
+	return tasksPath, nil
+}
+
+func readArtifact(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+func countUnchecked(content string) int {
+	count := 0
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- [ ]") {
+			count++
+		}
+	}
+	return count
+}
+
+func countPhasesInContent(content string) int {
+	count := 0
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if len(trimmed) > 3 && trimmed[:2] == "##" && trimmed[3] >= '0' && trimmed[3] <= '9' {
+			count++
+		}
+	}
+	return count
+}
+
+func countTasksInContent(content string) int {
+	return countUnchecked(content) + countChecked(content)
+}
+
+func countChecked(content string) int {
+	count := 0
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- [x]") || strings.HasPrefix(trimmed, "- [X]") {
+			count++
+		}
+	}
+	return count
+}

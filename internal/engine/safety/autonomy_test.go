@@ -55,7 +55,7 @@ func TestNeedsPermissionSupervised(t *testing.T) {
 func TestNeedsPermissionBasic(t *testing.T) {
 	cfg := PresetConfig(AutonomyBasic)
 	// Read-only tools should not need permission.
-	for _, tool := range []string{"Read", "Grep", "Glob", "LS", "WebSearch"} {
+	for _, tool := range []string{"Read", "Grep", "Glob", "LS", "WebSearch", "WebFetch", "ToolSearch"} {
 		if cfg.NeedsPermission(tool, false) {
 			t.Errorf("basic: read-only tool %s should NOT need permission", tool)
 		}
@@ -71,7 +71,7 @@ func TestNeedsPermissionBasic(t *testing.T) {
 func TestNeedsPermissionSemi(t *testing.T) {
 	cfg := PresetConfig(AutonomySemi)
 	// Read and write tools should not need permission.
-	for _, tool := range []string{"Read", "Grep", "Write", "Edit"} {
+	for _, tool := range []string{"Read", "Grep", "Write", "Edit", "WebFetch", "ToolSearch"} {
 		if cfg.NeedsPermission(tool, false) {
 			t.Errorf("semi: %s should NOT need permission", tool)
 		}

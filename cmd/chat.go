@@ -34,11 +34,11 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/startup"
 	hawkstorage "github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -70,7 +70,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 		err   error
 	)
 	if resumeID != "" {
-		saved, err = session.Load(resumeID)
+		saved, _, err = session.ResumeSession(resumeID)
 	} else {
 		cwd, _ := os.Getwd()
 		saved, err = session.LoadLatestForCWD(cwd)
@@ -89,6 +89,14 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 }
 
 func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Settings) (chatModel, error) {
+	registry, err := defaultRegistry(settings)
+	if err != nil {
+		return chatModel{}, err
+	}
+	return newChatModelWithRegistry(ref, systemPrompt, settings, registry)
+}
+
+func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkconfig.Settings, registry *tool.Registry) (chatModel, error) {
 	startup.MarkPhase("newChatModel:total")
 
 	startup.MarkPhase("newChatModel:ui-init")
@@ -123,25 +131,21 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	startup.EndPhase("newChatModel:ui-init")
 
 	startup.MarkPhase("newChatModel:effectiveModelAndProvider")
-	selection := resolveSelection(settings)
+	selection := startupSelection(settings)
 	effectiveModel, effectiveProvider := selection.Model, selection.Provider
 	startup.EndPhase("newChatModel:effectiveModelAndProvider")
 
 	startup.MarkPhase("newChatModel:defaultRegistry")
-	registry, err := defaultRegistry(settings)
-	if err != nil {
-		return chatModel{}, err
-	}
 	startup.EndPhase("newChatModel:defaultRegistry")
 
 	startup.MarkPhase("newChatModel:newHawkSession")
-	sess := newHawkSessionFromSelection(selection, systemPrompt, registry)
+	sess := newStartupHawkSession(selection, systemPrompt, registry)
 	startup.EndPhase("newChatModel:newHawkSession")
 
 	startup.MarkPhase("newChatModel:configureSession")
 	syncSessionFromPersistedSelection(sess)
 	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+	if cfgErr := configureSessionStartup(sess, settings); cfgErr != nil {
 		return chatModel{}, cfgErr
 	}
 	startup.EndPhase("newChatModel:configureSession")
@@ -179,10 +183,12 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	m.commandPalette = NewCommandPalette(initWidth)
 	startup.EndPhase("newChatModel:commandPalette")
 
-	// Pre-warm footer connection line so ctx (e.g. 0k/1.0m) shows on first paint.
-	if m.session != nil && m.session.ContextWindowCachedValue() > 0 {
-		m.connStatusVal = m.buildConnectionStatusPlain()
-		m.connStatusKey = m.connStatusFingerprint()
+	// Give the footer an immediate cwd value without paying for a git probe
+	// before first paint. The background warmup fills in branch/provider data.
+	if cwd, err := os.Getwd(); err == nil && cwd != "" {
+		m.statusLeftKey = cwd
+		m.statusLeftVal = shortenHomePath(cwd)
+		m.statusLeftAt = time.Now()
 	}
 	m.invalidateInputLayoutCache()
 	(&m).refreshInputLayoutIfNeeded()
@@ -191,12 +197,15 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	bindChatSession(sess, sid, m.containerEnabled)
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
-	} else if noContainer {
-		m.messages = append(m.messages, displayMsg{
-			role: "system",
-			content: "--no-container runs tools on the host without sandbox isolation. " +
-				"Use default container mode for safer agent execution.",
-		})
+	} else {
+		applyDefaultHostAutonomy(sess)
+		if noContainer {
+			m.messages = append(m.messages, displayMsg{
+				role: "system",
+				content: "--no-container runs tools on the host without sandbox isolation. " +
+					"Use default container mode for safer agent execution.",
+			})
+		}
 	}
 
 	// Initialize lacy-inspired features
@@ -238,22 +247,6 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 	}
 	startup.EndPhase("newChatModel:wal")
 
-	// Check for crash recovery
-	startup.MarkPhase("newChatModel:crash-recovery")
-	if recovered := session.CheckForRecovery(); len(recovered) > 0 {
-		walDir := hawkstorage.SessionsDir()
-		for _, rid := range recovered {
-			if rid == sid {
-				continue // current session WAL
-			}
-			if rs, err := session.RecoverFromWAL(rid); rs != nil && err == nil {
-				_ = session.Save(rs)
-				_ = os.Remove(filepath.Join(walDir, rid+".wal"))
-			}
-		}
-	}
-	startup.EndPhase("newChatModel:crash-recovery")
-
 	// Warm code index in background so first CodeSearch is fast
 	go func() {
 		if bridge := memory.NewYaadBridge(); bridge != nil && bridge.Ready() {
@@ -277,31 +270,21 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}()
 
-	startup.EndPhase("newChatModel:total")
-
-	// Warm credential + catalog caches so typing and status bar stay instant.
-	_ = hawkconfig.CompiledCatalogV1()
-	hawkconfig.RefreshConfigCredSnapshot(context.Background())
-
-	// Initialize plugin runtime
+	// Start with an empty plugin runtime so first paint stays fast.
+	startup.MarkPhase("newChatModel:plugin-runtime")
 	pr := plugin.NewRuntime()
-	_ = pr.LoadAll()
-	pr.RegisterHooks()
-
-	// Print startup profile if requested (after critical path is done)
-	if startupProfileFlag {
-		startup.PrintReport()
-	}
+	startup.EndPhase("newChatModel:plugin-runtime")
 	m.pluginRuntime = pr
 
-	// Welcome message inside TUI
-	var dockerRunning *bool
-	if m.containerEnabled {
-		ok := sandbox.DockerAvailable()
-		dockerRunning = &ok
-	}
-	m.welcomeCache = buildWelcomeMessage(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, dockerRunning)
+	// Welcome message inside TUI. Use a cheap initial snapshot and let the
+	// async warmup fill in setup/agents status after the first frame.
+	startup.MarkPhase("newChatModel:welcome")
+	quickSnapshot := welcomeStatusSnapshot{}
+	m.welcomeSetupState = quickSnapshot.setup
+	m.welcomeAgentsOK = quickSnapshot.agentsOK
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil, quickSnapshot)
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
+	startup.EndPhase("newChatModel:welcome")
 
 	// Wire permission system
 	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
@@ -335,10 +318,76 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 		}
 	}
 
+	startup.MarkPhase("newChatModel:history")
 	m.history = loadInputHistory()
 	m.historyIdx = len(m.history)
+	startup.EndPhase("newChatModel:history")
+
+	startup.MarkPhase("newChatModel:first-paint")
+	m.primeInitialViewportContent()
+	startup.EndPhase("newChatModel:first-paint")
+
+	// Recover interrupted sessions after first paint so cleanup never delays
+	// the initial UI.
+	go func(currentSessionID string) {
+		if recovered := session.CheckForRecovery(); len(recovered) > 0 {
+			walDir := hawkstorage.SessionsDir()
+			for _, rid := range recovered {
+				if rid == currentSessionID {
+					continue // current session WAL
+				}
+				if rs, err := session.RecoverFromWAL(rid); rs != nil && err == nil {
+					_ = session.Save(rs)
+					_ = os.Remove(filepath.Join(walDir, rid+".wal"))
+				}
+			}
+		}
+	}(sid)
+
+	// Warm footer data and the model catalog after the first frame.
+	go func(model chatModel) {
+		startup.MarkPhase("newChatModel:ui-cache-warm")
+		hawkconfig.RefreshConfigCredSnapshot(context.Background())
+		welcomeSnapshot := loadWelcomeStatusSnapshot()
+		model.refreshStatusBarLeft(true)
+		connStatusVal := ""
+		connStatusKey := ""
+		if model.session != nil {
+			connStatusVal = model.buildConnectionStatusPlain()
+			connStatusKey = model.connStatusFingerprint()
+		}
+		startup.EndPhase("newChatModel:ui-cache-warm")
+		if model.ref != nil {
+			model.ref.Send(startupWarmMsg{
+				statusLeftKey:    model.statusLeftKey,
+				statusLeftVal:    model.statusLeftVal,
+				statusLeftBranch: model.statusLeftBranch,
+				connStatusVal:    connStatusVal,
+				connStatusKey:    connStatusKey,
+				welcomeSetup:     welcomeSnapshot.setup,
+				welcomeAgentsOK:  welcomeSnapshot.agentsOK,
+			})
+		}
+	}(m)
+
+	go func() {
+		_ = hawkconfig.CompiledCatalogV1()
+	}()
+
+	// Load plugins/skills after startup and refresh welcome indicators when ready.
+	go func() {
+		runtime := plugin.NewRuntime()
+		if err := runtime.LoadAll(); err != nil {
+			return
+		}
+		runtime.RegisterHooks()
+		if ref != nil {
+			ref.Send(pluginRuntimeReadyMsg{runtime: runtime})
+		}
+	}()
 
 	// --watch: build initial symbol graph and start file watcher for incremental PageRank updates
+	startup.MarkPhase("newChatModel:watch")
 	if watchFlag {
 		cwd, err := os.Getwd()
 		if err == nil {
@@ -402,14 +451,25 @@ func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Setting
 			}
 		}
 	}
+	startup.EndPhase("newChatModel:watch")
+
+	startup.EndPhase("newChatModel:total")
+
+	// Print startup profile after the full synchronous chat init path completes.
+	if startupProfileFlag {
+		startup.PrintReport()
+	}
 
 	return m, nil
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), m.spinner.Tick, blinkTickCmd(), spinnerVerbTickCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), promptKeepAliveCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
+		if isXiaomiMimoProvider(gw) {
+			cmds = append(cmds, fetchPlatformContextIndexCmd())
+		}
 	}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"
@@ -418,6 +478,14 @@ func (m chatModel) Init() tea.Cmd {
 	}
 	cmds = append(cmds, m.input.Focus())
 	return tea.Batch(cmds...)
+}
+
+func chatProgramOptions(mouseEnabled bool) []tea.ProgramOption {
+	programOpts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithReportFocus()}
+	if mouseEnabled {
+		programOpts = append(programOpts, tea.WithMouseCellMotion())
+	}
+	return programOpts
 }
 
 // autoIndexCodegraph runs codegraph indexing in the background on startup.
@@ -459,20 +527,66 @@ func runChat() error {
 	maybeAutoInit(context.Background())
 
 	ref := &progRef{}
-	systemPrompt, err := buildSystemPrompt()
-	if err != nil {
-		return err
+	type startupPromptResult struct {
+		text string
+		err  error
 	}
-	settings, err := loadEffectiveSettings()
-	if err != nil {
-		return err
+	type startupSettingsResult struct {
+		settings hawkconfig.Settings
+		err      error
 	}
-	m, err := newChatModel(ref, systemPrompt, settings)
+	type startupRegistryResult struct {
+		registry *tool.Registry
+		err      error
+	}
+	promptCh := make(chan startupPromptResult, 1)
+	settingsCh := make(chan startupSettingsResult, 1)
+	registryCh := make(chan startupRegistryResult, 1)
+	go func() {
+		startup.MarkPhase("runChat:startup-prompt")
+		text, err := buildStartupSystemPrompt()
+		startup.EndPhase("runChat:startup-prompt")
+		promptCh <- startupPromptResult{text: text, err: err}
+	}()
+	go func() {
+		startup.MarkPhase("runChat:settings")
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			startup.EndPhase("runChat:settings")
+			settingsCh <- startupSettingsResult{err: err}
+			registryCh <- startupRegistryResult{err: err}
+			return
+		}
+		startup.EndPhase("runChat:settings")
+		settingsCh <- startupSettingsResult{settings: settings}
+		startup.MarkPhase("runChat:registry")
+		registry, regErr := defaultRegistry(settings)
+		startup.EndPhase("runChat:registry")
+		registryCh <- startupRegistryResult{registry: registry, err: regErr}
+	}()
+	promptRes := <-promptCh
+	settingsRes := <-settingsCh
+	registryRes := <-registryCh
+	if promptRes.err != nil {
+		return promptRes.err
+	}
+	if settingsRes.err != nil {
+		return settingsRes.err
+	}
+	if registryRes.err != nil {
+		return registryRes.err
+	}
+	systemPrompt := promptRes.text
+	settings := settingsRes.settings
+	m, err := newChatModelWithRegistry(ref, systemPrompt, settings, registryRes.registry)
 	if err != nil {
 		return err
 	}
 
 	if promptFlag != "" {
+		if e := (&m).ensureSessionReadyForChat(); e != nil {
+			return e
+		}
 		m.messages = append(m.messages, displayMsg{role: "user", content: promptFlag})
 		m.session.AddUser(promptFlag)
 		m.turnSawThinking = false
@@ -481,19 +595,21 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	programOpts := []tea.ProgramOption{tea.WithAltScreen()}
-	if m.mouseEnabled() {
-		programOpts = append(programOpts, tea.WithMouseCellMotion())
-	}
-	p := tea.NewProgram(m, programOpts...)
+	p := tea.NewProgram(m, chatProgramOptions(m.mouseEnabled())...)
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
 	ref.Set(p)
 
+	go func() {
+		if extra := strings.TrimSpace(buildDeferredWorkspacePromptContext()); extra != "" {
+			ref.Send(systemPromptContextReadyMsg{context: extra})
+		}
+	}()
+
 	if promptFlag != "" {
 		sess := m.session
 		ctx, cancel := context.WithCancel(context.Background())
-		_ = cancel // will be cancelled when program exits
+		m.cancel = cancel
 		go func() {
 			ch, streamErr := sess.Stream(ctx)
 			if streamErr != nil {
@@ -518,8 +634,8 @@ func runChat() error {
 		fmt.Print(formatQuitResumeMessage(fm.sessionID))
 		return nil
 	}
-	hawkC := "\033[38;2;255;94;14m"
-	rst := "\033[0m"
+	hawkC := ansiOrange
+	rst := ansiReset
 
 	fmt.Print(fm.welcomeCache)
 	fmt.Println()

@@ -18,6 +18,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
@@ -56,7 +57,7 @@ type SnapshotTracker interface {
 //
 // The legacy fields (client, provider, model, apiKeys, Router,
 // DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
-// Classifier, BypassKill, Mode, MaxTurns, MaxBudgetUSD, AllowedDirs,
+// Classifier, BypassKill, MaxTurns, MaxBudgetUSD, AllowedDirs,
 // PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
 // messages, system, Cascade, Lifecycle, Reflector, CostTracker,
 // Beliefs, Critic, Backtrack, Limits, Trajectory, Shadow, etc.) stay
@@ -112,12 +113,11 @@ type Session struct {
 	// Backward-compatible accessors below (will be removed after full migration)
 	//
 	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
-	//   Permissions, AutoMode, Classifier, BypassKill, Mode, PermissionFn.
+	//   Permissions, AutoMode, Classifier, BypassKill, PermissionFn.
 	Permissions *PermissionMemory             // use Perm.Memory
 	AutoMode    *permissions.AutoModeState    // use Perm.AutoMode
 	Classifier  *permissions.Classifier       // use Perm.Classifier
 	BypassKill  *permissions.BypassKillswitch // use Perm.BypassKill
-	Mode        PermissionMode                // use Perm.Mode
 	//
 	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
 	//   MaxTurns, MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
@@ -146,6 +146,9 @@ type Session struct {
 	persistID               string
 	lastPromptTokens        int
 	lastCompletionTokens    int
+	estTokensCache          int
+	estTokensMsgCount       int
+	estTokensLastLen        int
 	checkpointMgr           *session.CheckpointManager
 	OnCompaction            OnCompaction
 	Verbose                 bool // show tool calls, timing, token counts in output
@@ -236,6 +239,9 @@ type Session struct {
 	// Approval, when non-nil and enabled, gates high-risk tool actions behind an
 	// explicit human confirmation. Nil keeps existing behavior unchanged.
 	Approval *ApprovalGate // approval_gate.go — human-in-the-loop gate
+
+	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
+	smartSkills []plugin.SmartSkill
 }
 
 // NewSession creates a new conversation session with a legacy string-named provider.
@@ -580,18 +586,20 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Rebuild messages from the forked branch
+	// Rebuild messages from the forked branch.
 	history, err := dag.History(context.Background(), fork.ID)
 	if err != nil {
 		return "", err
 	}
-	s.mu.Lock()
-	s.messages = s.messages[:0]
+	msgs := make([]types.EyrieMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
+	p.SetRawMessages(msgs)
+	s.mu.Lock()
+	s.messages = append(s.messages[:0], msgs...)
 	s.mu.Unlock()
 	return fork.ID, nil
 }
@@ -613,13 +621,15 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	s.messages = s.messages[:0]
+	msgs := make([]types.EyrieMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			s.messages = append(s.messages, types.EyrieMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
+	p.SetRawMessages(msgs)
+	s.mu.Lock()
+	s.messages = append(s.messages[:0], msgs...)
 	s.mu.Unlock()
 	return nil
 }
@@ -660,12 +670,17 @@ func (s *Session) AppendSystemContext(content string) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if strings.TrimSpace(s.system) == "" {
 		s.system = content
-		return
+	} else {
+		s.system += "\n\n" + content
 	}
-	s.system += "\n\n" + content
+	updated := s.system
+	persist := s.persist
+	s.mu.Unlock()
+	if persist != nil {
+		persist.SetSystem(updated)
+	}
 }
 
 // ReplaceSystemContextSection replaces the content of a system prompt section identified by its header.
@@ -676,7 +691,6 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	idx := strings.Index(s.system, header)
 	if idx < 0 {
 		// AppendSystemContext is not called here to avoid double-locking;
@@ -686,6 +700,12 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 		} else {
 			s.system += "\n\n" + content
 		}
+		updated := s.system
+		persist := s.persist
+		s.mu.Unlock()
+		if persist != nil {
+			persist.SetSystem(updated)
+		}
 		return
 	}
 	rest := s.system[idx+len(header):]
@@ -694,6 +714,12 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 		s.system = s.system[:idx] + content
 	} else {
 		s.system = s.system[:idx] + content + rest[endIdx:]
+	}
+	updated := s.system
+	persist := s.persist
+	s.mu.Unlock()
+	if persist != nil {
+		persist.SetSystem(updated)
 	}
 }
 
@@ -787,26 +813,6 @@ func (s *Session) SetContextWindowCached(n int) {
 	}
 }
 
-// ModeValue returns the active permission mode, with the
-// PermissionService's mode taking precedence over the legacy
-// s.Mode field. Used by /permissions summary, /status, and the
-// chat footer to render the active permission mode.
-func (s *Session) ModeValue() PermissionMode {
-	if s.perms != nil {
-		return s.perms.Mode()
-	}
-	return s.Mode
-}
-
-// SetMode replaces the active permission mode. New code should
-// call this instead of writing to the legacy s.Mode field.
-func (s *Session) SetMode(mode PermissionMode) {
-	s.Mode = mode
-	if s.perms != nil {
-		_ = s.perms.SetMode(string(mode))
-	}
-}
-
 // ContextWindowCachedValue returns the cached context window size.
 // New code should call this instead of reading s.ContextWindowCached
 // directly. Falls back to the legacy field for back-compat with
@@ -836,7 +842,18 @@ func (s *Session) MessageCount() int {
 }
 
 // RawMessages returns the conversation messages for persistence.
+//
+// PersistenceService is the single source of truth for the live transcript:
+// AddUser/AddAssistant and the agent loop (stream.go) all write through it,
+// and compaction/governor paths read it. The legacy s.messages field is kept
+// only for Sessions constructed without a PersistenceService (some unit
+// tests). Delegating here means TUI/CLI consumers — notably saveSession,
+// which returned early when the legacy slice was empty — see the real,
+// populated transcript instead of a stale empty slice.
 func (s *Session) RawMessages() []types.EyrieMessage {
+	if p := s.Persistence(); p != nil {
+		return p.RawMessages()
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.messages

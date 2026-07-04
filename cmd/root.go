@@ -39,8 +39,8 @@ var (
 	toolsFlagSet               bool
 	allowedToolsFlag           []string
 	disallowedToolsFlag        []string
-	permissionMode             string
 	dangerouslySkipPermissions bool
+	dryRunFlag                 bool
 	maxTurns                   int
 	maxBudgetUSD               float64
 	systemPromptFlag           string
@@ -64,6 +64,11 @@ var (
 	noContainer                bool
 	recoverFlag                bool
 	startupProfileFlag         bool
+)
+
+var (
+	recoverEnsureCatalogBeforeAgent = ensureCatalogBeforeAgent
+	recoverRunChat                  = runChat
 )
 
 // SetVersion sets the version string from main.
@@ -90,11 +95,7 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if versionFlag {
-			if buildDate != "" && buildDate != "unknown" {
-				cmd.Println(fmt.Sprintf("%s (Hawk) built %s", version, buildDate))
-			} else {
-				cmd.Println(fmt.Sprintf("%s (Hawk)", version))
-			}
+			cmd.Println(versionLine())
 			return nil
 		}
 		if promptFlag == "" && len(args) > 0 {
@@ -112,6 +113,14 @@ var rootCmd = &cobra.Command{
 		// Defer credential migration until chat/print (keeps cold paths fast).
 		hawkconfig.PrepareCredentialDiscovery(context.Background())
 		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
+
+		if !replFlag {
+			if settings, err := loadEffectiveSettings(); err == nil {
+				if settings.ReplMode != nil && *settings.ReplMode {
+					replFlag = true
+				}
+			}
+		}
 
 		if printMode || promptFlag != "" || inputFormat == "stream-json" || replFlag || watchFlag {
 			if promptFlag == "" && !replFlag && !watchFlag {
@@ -188,15 +197,15 @@ func init() {
 	rootCmd.Flags().StringArrayVar(&toolsFlag, "tools", nil, `available tools: "" disables all tools, "default" enables all, or names like "Bash,Edit,Read"`)
 	rootCmd.Flags().StringArrayVar(&allowedToolsFlag, "allowed-tools", nil, `comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")`)
 	rootCmd.Flags().StringArrayVar(&disallowedToolsFlag, "disallowed-tools", nil, `comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")`)
-	rootCmd.Flags().StringVar(&permissionMode, "permission-mode", "", "advanced permission mode: default, edits, bypass, dontask, or plan (same as /permissions mode)")
 	rootCmd.Flags().BoolVar(&dangerouslySkipPermissions, "dangerously-skip-permissions", false, "bypass all permission checks")
+	rootCmd.Flags().BoolVar(&dryRunFlag, "dry-run", false, "deny every tool call unconditionally (preview only, nothing executes)")
 	rootCmd.Flags().IntVar(&maxTurns, "max-turns", 0, "maximum number of agentic turns in non-interactive mode")
 	rootCmd.Flags().Float64Var(&maxBudgetUSD, "max-budget-usd", 0, "maximum estimated API spend in USD")
 	rootCmd.Flags().StringVar(&systemPromptFlag, "system-prompt", "", "system prompt to use for the session")
 	rootCmd.Flags().StringVar(&systemPromptFile, "system-prompt-file", "", "read system prompt from a file")
 	rootCmd.Flags().StringVar(&appendSystemPromptFlag, "append-system-prompt", "", "append text to the default or custom system prompt")
 	rootCmd.Flags().StringVar(&appendSystemPromptFile, "append-system-prompt-file", "", "read text from a file and append it to the system prompt")
-	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "permission sandbox: strict, workspace, or off (same as /permissions sandbox; not Docker container mode)")
+	rootCmd.Flags().StringVar(&sandboxFlag, "sandbox", "", "permission sandbox: strict, workspace, or off (same as /autonomy sandbox; not Docker container mode)")
 	rootCmd.Flags().BoolVar(&autoCommitFlag, "auto-commit", false, "auto-commit file changes made by Write and Edit tools")
 	rootCmd.Flags().BoolVar(&watchFlag, "watch", false, "watch the working directory for file changes and re-run on changes")
 	rootCmd.Flags().BoolVar(&repoMapFlag, "repo-map", false, "inject an AST-ranked repository map (Aider-style) into the system prompt")
@@ -335,7 +344,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print hawk version",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Println("hawk", version)
+		cmd.Println(versionLine())
 	},
 }
 
@@ -385,7 +394,7 @@ var preflightCmd = &cobra.Command{
 }
 
 var configCmd = &cobra.Command{
-	Use:   "config [provider <name>|model <name>|get <key>|set <key> <value>]",
+	Use:   "config [get|set|provider|model|keys|routing-preview|migrate-deployments]",
 	Short: "Show or update settings",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
@@ -496,38 +505,11 @@ var toolsCmd = &cobra.Command{
 }
 
 var pluginCmd = &cobra.Command{
-	Use:   "plugin [list|install <dir>|uninstall <name>]",
+	Use:   "plugin",
 	Short: "Manage plugins",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			cmd.Println(plugin.Summary())
-			return nil
-		}
-		switch args[0] {
-		case "list":
-			cmd.Println(plugin.Summary())
-			return nil
-		case "install":
-			if len(args) < 2 {
-				return fmt.Errorf("usage: hawk plugin install <directory>")
-			}
-			if err := plugin.Install(args[1]); err != nil {
-				return err
-			}
-			cmd.Println("installed", args[1])
-			return nil
-		case "uninstall":
-			if len(args) < 2 {
-				return fmt.Errorf("usage: hawk plugin uninstall <name>")
-			}
-			if err := plugin.Uninstall(args[1]); err != nil {
-				return err
-			}
-			cmd.Println("uninstalled", args[1])
-			return nil
-		default:
-			return fmt.Errorf("unknown plugin action %q", args[0])
-		}
+		cmd.Println(plugin.Summary())
+		return nil
 	},
 }
 
@@ -614,15 +596,14 @@ Examples:
   hawk --recover            # Auto-resume most recent interrupted session`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
-			// Resume specific session
 			s, note, err := session.ResumeSession(args[0])
 			if err != nil {
 				return err
 			}
 			cmd.Println(note)
-			cmd.Printf("Session %s ready to resume (%d messages, %s/%s)\n",
+			cmd.Printf("Resuming session %s (%d messages, %s/%s)\n",
 				s.ID, len(s.Messages), s.Provider, s.Model)
-			return nil
+			return resumeRecoveredSession(context.Background(), s.ID)
 		}
 
 		// Scan and list
@@ -635,6 +616,15 @@ Examples:
 		}
 		return nil
 	},
+}
+
+func resumeRecoveredSession(ctx context.Context, sessionID string) error {
+	resumeID = sessionID
+	continueFlag = false
+	if err := recoverEnsureCatalogBeforeAgent(ctx, false); err != nil {
+		return err
+	}
+	return recoverRunChat()
 }
 
 // logMigrateProviderSecretsError surfaces a non-nil error from

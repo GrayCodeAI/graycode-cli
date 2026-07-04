@@ -2,6 +2,8 @@ package safety
 
 import (
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // AutonomyLevel controls how much the agent can do without asking the user.
@@ -27,20 +29,6 @@ type AutonomyConfig struct {
 	AutoApplyEdits  bool
 	AutoExecuteBash bool
 	AutoCommit      bool
-}
-
-// readOnlyTools are tools that only observe and never mutate.
-var readOnlyTools = map[string]bool{
-	"Read":       true,
-	"Grep":       true,
-	"Glob":       true,
-	"LS":         true,
-	"WebSearch":  true,
-	"file_read":  true,
-	"grep":       true,
-	"glob":       true,
-	"ls":         true,
-	"web_search": true,
 }
 
 // writeTools are tools that create or modify files.
@@ -103,12 +91,12 @@ func (c AutonomyConfig) NeedsPermission(toolName string, isSafe bool) bool {
 		}
 		return false
 	case AutonomySemi:
-		if readOnlyTools[toolName] || writeTools[toolName] {
+		if tool.IsReadOnly(toolName) || writeTools[toolName] {
 			return false
 		}
 		return true
 	case AutonomyBasic:
-		if readOnlyTools[toolName] {
+		if tool.IsReadOnly(toolName) {
 			return false
 		}
 		return true

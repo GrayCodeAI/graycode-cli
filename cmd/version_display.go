@@ -6,6 +6,16 @@ import (
 	"strings"
 )
 
+// versionLine is the single user-facing version format shared by
+// `hawk --version` and `hawk version`.
+func versionLine() string {
+	line := "hawk " + DisplayVersion()
+	if d := strings.TrimSpace(buildDate); d != "" && d != "unknown" {
+		line += " (built " + d + ")"
+	}
+	return line
+}
+
 // DisplayVersion returns the user-facing version string for banners and /version.
 // Release builds inject version via ldflags; local builds fall back to VERSION file.
 func DisplayVersion() string {

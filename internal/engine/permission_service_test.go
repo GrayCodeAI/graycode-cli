@@ -20,26 +20,13 @@ func TestPermissionService_CheckTool(t *testing.T) {
 	_ = granted
 }
 
-func TestPermissionService_SetMode(t *testing.T) {
+func TestPermissionService_SetSpecStage(t *testing.T) {
 	s := NewPermissionService(nil)
-	cases := []struct {
-		mode string
-		ok   bool
-	}{
-		{"default", true},
-		{"plan", true},
-		{"accept-edits", true},
-		{"auto", true},
-		{"bypass-permissions", true},
-		{"bogus", false},
-	}
-	for _, c := range cases {
-		err := s.SetMode(c.mode)
-		if c.ok && err != nil {
-			t.Errorf("SetMode(%q) returned unexpected error: %v", c.mode, err)
-		}
-		if !c.ok && err == nil {
-			t.Errorf("SetMode(%q) should have failed", c.mode)
+	stages := []SpecStage{SpecStageNone, SpecStageSpecify, SpecStagePlan, SpecStageTasks, SpecStageImplementing}
+	for _, stage := range stages {
+		s.SetSpecStage(stage)
+		if s.SpecStage() != stage {
+			t.Errorf("SetSpecStage(%v) then SpecStage() = %v", stage, s.SpecStage())
 		}
 	}
 }
@@ -81,9 +68,9 @@ func TestPermissionService_IsZero(t *testing.T) {
 	if !s.IsZero() {
 		t.Error("freshly-constructed PermissionService should be IsZero()")
 	}
-	s.SetMode("plan")
+	s.SetPermissionFn(func(req PermissionRequest) {})
 	if s.IsZero() {
-		t.Error("after SetMode, service should not be IsZero()")
+		t.Error("after SetPermissionFn, service should not be IsZero()")
 	}
 }
 

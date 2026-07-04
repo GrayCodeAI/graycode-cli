@@ -134,6 +134,12 @@ func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 	m.configTab = tab
 	if tab == configTabModels {
 		m.configModelProvider = firstRunModelProvider(m)
+		if strings.TrimSpace(m.configModelProvider) == "" {
+			m.configTab = configTabGateways
+			m = m.focusConfigActiveGateway()
+			m.configNotice = "Select a gateway · press enter · paste your API key"
+			return m, nil
+		}
 		m.configNotice = ""
 		return m.beginConfigModelsTab()
 	}

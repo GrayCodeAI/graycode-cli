@@ -119,7 +119,8 @@ Workflow:
   /diff              Show git diff
   /lint [cmd]        Run linter
   /check             Full pre-ship check (review + fix + verify)
-  /permissions       Permission center for tier, sandbox, mode, rules
+  /autonomy          Trust tier, sandbox, and rules
+  /spec              Spec-driven workflow (gates Write/Edit/Bash)
   /research <cmd>    Autonomous research loop
   /vibe              Enter vibe coding mode
   /think <topic>     Turn idea into approved plan
@@ -203,7 +204,7 @@ Diagnostics:
 System:
   /version           Show version
   /env               Show environment
-  /permissions       Permission center
+  /autonomy          Trust tier, sandbox, and rules
   /vim               Toggle vim mode
   /theme <t>         Set theme
   /voice             Toggle voice input

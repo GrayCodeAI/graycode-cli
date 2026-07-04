@@ -26,7 +26,27 @@ var containerAutonomyTierNames = []string{
 // DefaultContainerAutonomy is the tier applied when the sandbox becomes ready.
 const DefaultContainerAutonomy = engine.AutonomySemi
 
+// DefaultHostAutonomy is the tier applied when a session runs on the host
+// (no container sandbox) and the user hasn't set an explicit autonomy level.
+// Read-only tools (Glob/Read/Grep/LS/WebSearch/...) can't damage anything
+// whether or not there's a sandbox, so there's no reason to prompt for them
+// just because the container isn't available — only Write/Edit/Bash still ask.
+const DefaultHostAutonomy = engine.AutonomyBasic
+
+// applyDefaultHostAutonomy sets the host-mode default unless the user
+// already configured an explicit autonomy level (settings.json or a prior
+// SetAutonomy call). Mirrors the same Autonomy()==0 guard the container
+// path uses when the sandbox becomes ready.
+func applyDefaultHostAutonomy(sess *engine.Session) {
+	if sess != nil && sess.PermSvc().Autonomy() == 0 {
+		sess.PermSvc().SetAutonomy(DefaultHostAutonomy)
+	}
+}
+
 func autonomyTierName(level engine.AutonomyLevel) string {
+	if level == engine.AutonomySupervised {
+		return "Always Ask"
+	}
 	for i, l := range containerAutonomyTiers {
 		if l == level {
 			return containerAutonomyTierNames[i]
@@ -51,6 +71,8 @@ func nextAutonomyTier(level engine.AutonomyLevel) engine.AutonomyLevel {
 // autonomyTierDescription is short copy shown when the user changes tier (ctrl+L).
 func autonomyTierDescription(level engine.AutonomyLevel) string {
 	switch level {
+	case engine.AutonomySupervised:
+		return "Prompts for permission on every tool call"
 	case engine.AutonomyBasic:
 		return "Explore only — edits and commands ask first"
 	case engine.AutonomySemi:
@@ -66,6 +88,8 @@ func autonomyTierDescription(level engine.AutonomyLevel) string {
 
 func autonomyTierColor(level engine.AutonomyLevel) lipgloss.Color {
 	switch level {
+	case engine.AutonomySupervised:
+		return lipgloss.Color("#9E9E9E") // matches textMuted's dark value
 	case engine.AutonomyBasic:
 		return tierInspect
 	case engine.AutonomySemi:
@@ -89,11 +113,6 @@ func renderAutonomyTierLabel(level engine.AutonomyLevel) string {
 
 func formatAutonomyTierMessage(level engine.AutonomyLevel) string {
 	return fmt.Sprintf("Autonomy %s — %s", renderAutonomyTierLabel(level), autonomyTierDescription(level))
-}
-
-func formatSandboxReadyAutonomyMessage(level engine.AutonomyLevel) string {
-	return fmt.Sprintf("Sandbox ready · %s — %s · ctrl+L cycles tiers",
-		renderAutonomyTierLabel(level), autonomyTierDescription(level))
 }
 
 func autonomyLevelForTierName(name string) engine.AutonomyLevel {

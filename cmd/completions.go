@@ -76,19 +76,19 @@ func (g *CompletionGenerator) populateModels() {
 
 func (g *CompletionGenerator) populateSlashCommands() {
 	g.SlashCommands = []string{
-		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/branch", "/branches",
+		"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/autonomy", "/branch", "/branches",
 		"/bughunter", "/btw", "/check", "/clean", "/clear", "/color", "/commit", "/compact",
 		"/compress", "/config", "/context", "/copy", "/cost", "/council", "/cron",
 		"/design", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks",
 		"/hunt", "/init", "/integrity", "/keybindings", "/learn", "/lint", "/loop",
 		"/mcp", "/memory", "/metrics", "/model", "/new", "/output-style",
-		"/permissions", "/pin", "/plugin", "/plugins", "/power",
+		"/pin", "/plugin", "/plugins", "/power",
 		"/pr-comments", "/provider-status", "/quit", "/refresh-model-catalog",
 		"/release-notes", "/reload-plugins", "/remote-env", "/rename", "/render",
 		"/research", "/resume", "/retry", "/review", "/rewind", "/run",
 		"/search", "/security-review", "/select", "/mouse", "/session", "/share", "/skills",
-		"/snapshot", "/stats", "/status", "/statusline", "/summary", "/tag", "/tasks",
+		"/snapshot", "/spec", "/stats", "/status", "/statusline", "/summary", "/tag", "/tasks",
 		"/test", "/theme", "/think", "/think-back", "/thinkback", "/thinkback-play",
 		"/tokens", "/tools", "/undo", "/upgrade", "/usage", "/version", "/vibe",
 		"/vim", "/voice", "/welcome",
@@ -120,15 +120,6 @@ func (g *CompletionGenerator) GenerateBash() string {
 	// Build provider list
 	providers := strings.Join(g.Providers, " ")
 
-	// Build permission modes
-	var permModes string
-	for _, f := range g.Flags {
-		if f.Name == "permission-mode" && len(f.Choices) > 0 {
-			permModes = strings.Join(f.Choices, " ")
-			break
-		}
-	}
-
 	// Build slash commands list
 	slashCmds := strings.Join(g.SlashCommands, " ")
 
@@ -143,10 +134,6 @@ func (g *CompletionGenerator) GenerateBash() string {
 	b.WriteString("    case \"$prev\" in\n")
 	b.WriteString("        --provider)\n")
 	b.WriteString(fmt.Sprintf("            COMPREPLY=($(compgen -W \"%s\" -- \"$cur\"))\n", providers))
-	b.WriteString("            return 0\n")
-	b.WriteString("            ;;\n")
-	b.WriteString("        --permission-mode)\n")
-	b.WriteString(fmt.Sprintf("            COMPREPLY=($(compgen -W \"%s\" -- \"$cur\"))\n", permModes))
 	b.WriteString("            return 0\n")
 	b.WriteString("            ;;\n")
 	b.WriteString("        --model|-m)\n")
@@ -522,8 +509,6 @@ func normalizeFlagType(flagType string) string {
 
 func flagChoices(name string) []string {
 	switch name {
-	case "permission-mode":
-		return []string{"default", "edits", "bypass", "dontask", "plan"}
 	case "output-format":
 		return []string{"text", "json", "stream-json"}
 	case "input-format":

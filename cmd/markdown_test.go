@@ -59,6 +59,23 @@ func TestRenderMarkdownInlineCode(t *testing.T) {
 	}
 }
 
+func TestRenderMarkdownInlineCodePreservesLiteralMarkdown(t *testing.T) {
+	out := renderMarkdown("Keep `**literal** *stars*` untouched", 80)
+	plain := stripAnsi(out)
+	if !strings.Contains(plain, "**literal** *stars*") {
+		t.Fatalf("inline code markdown was parsed, got %q", plain)
+	}
+}
+
+func TestMarkdownRendererInlineCodePreservesLiteralMarkdown(t *testing.T) {
+	r := NewMarkdownRenderer(80)
+	out := r.Render("Keep `**literal** *stars*` untouched")
+	plain := stripAnsi(out)
+	if !strings.Contains(plain, "**literal** *stars*") {
+		t.Fatalf("inline code markdown was parsed, got %q", plain)
+	}
+}
+
 func TestRenderMarkdownCodeBlock(t *testing.T) {
 	input := "```go\nfunc main() {\n\tfmt.Println(\"hello\")\n}\n```"
 	out := renderMarkdown(input, 80)

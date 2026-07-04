@@ -9,6 +9,25 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
+func (m *chatModel) ensureDeferredSystemContext() {
+	if m == nil || m.session == nil || m.deferredSystemContextApplied {
+		return
+	}
+
+	contextBlock := strings.TrimSpace(m.deferredSystemContext)
+	if contextBlock == "" && !m.deferredSystemContextReady {
+		contextBlock = strings.TrimSpace(buildDeferredWorkspacePromptContext())
+		m.deferredSystemContext = contextBlock
+		m.deferredSystemContextReady = true
+	}
+	if contextBlock == "" {
+		return
+	}
+
+	m.session.AppendSystemContext(contextBlock)
+	m.deferredSystemContextApplied = true
+}
+
 func explicitSelection(ctx context.Context) (provider, model string) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -47,10 +66,32 @@ func (m *chatModel) syncSessionSelection() {
 	}
 }
 
-func (m *chatModel) ensureSessionReadyForChat() error {
-	m.syncSessionSelection()
-	if strings.TrimSpace(m.session.Model()) == "" {
+func (m *chatModel) bootstrapSessionForChat() error {
+	if m == nil || m.session == nil || m.sessionBootstrapDone {
+		return nil
+	}
+
+	selection := resolveSelection(m.settings)
+	if strings.TrimSpace(selection.Provider) == "" || strings.TrimSpace(selection.Model) == "" {
 		return fmt.Errorf("no model selected — open /config, go to Models, and pick one")
 	}
+
+	m.session.SetProvider(selection.Provider)
+	m.session.SetModel(selection.Model)
+	if err := engine.RebuildSessionTransport(context.Background(), m.session, selection, selection.Provider); err != nil {
+		return err
+	}
+	configureSessionHeavy(m.session)
+	applyLiveModelMetadata(m.session, selection.Provider, selection.Model)
+	m.sessionBootstrapDone = true
+	return nil
+}
+
+func (m *chatModel) ensureSessionReadyForChat() error {
+	m.syncSessionSelection()
+	if err := m.bootstrapSessionForChat(); err != nil {
+		return err
+	}
+	m.ensureDeferredSystemContext()
 	return nil
 }

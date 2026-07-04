@@ -1,7 +1,6 @@
 package safety
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -35,33 +34,6 @@ func (pm *PermissionMemory) Reset() {
 	pm.allowRules = nil
 	pm.denyRules = nil
 	pm.allowAll = make(map[string]bool)
-}
-
-// PermissionMode controls how permission prompts are handled.
-type PermissionMode string
-
-const (
-	PermissionModeDefault           PermissionMode = "default"
-	PermissionModeAcceptEdits       PermissionMode = "acceptEdits"
-	PermissionModeBypassPermissions PermissionMode = "bypassPermissions"
-	PermissionModeDontAsk           PermissionMode = "dontAsk"
-	PermissionModePlan              PermissionMode = "plan"
-)
-
-// setPermissionMode is the shared implementation used by both Session and PermissionEngine.
-func setPermissionMode(target *PermissionMode, mode string) error {
-	mode = strings.TrimSpace(mode)
-	if mode == "" {
-		*target = PermissionModeDefault
-		return nil
-	}
-	switch PermissionMode(mode) {
-	case PermissionModeDefault, PermissionModeAcceptEdits, PermissionModeBypassPermissions, PermissionModeDontAsk, PermissionModePlan:
-		*target = PermissionMode(mode)
-		return nil
-	default:
-		return fmt.Errorf("invalid permission mode %q (valid: default, acceptEdits, bypassPermissions, dontAsk, plan)", mode)
-	}
 }
 
 // AlwaysAllow marks a tool as always allowed.
@@ -231,10 +203,14 @@ func canonicalToolName(name string) string {
 		return "TodoWrite"
 	case "lsp":
 		return "LSP"
-	case "enter_plan_mode", "enterplanmode":
-		return "EnterPlanMode"
-	case "exit_plan_mode", "exitplanmode":
-		return "ExitPlanMode"
+	case "specify":
+		return "Specify"
+	case "plan":
+		return "Plan"
+	case "tasks":
+		return "Tasks"
+	case "approve_implementation", "approveimplementation":
+		return "ApproveImplementation"
 	case "notebook_edit", "notebookedit":
 		return "NotebookEdit"
 	case "config":
