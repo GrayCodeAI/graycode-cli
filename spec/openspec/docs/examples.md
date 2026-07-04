@@ -143,7 +143,7 @@ AI:  Created the change. The proposal states the goal (split the
 When you archive a change that doesn't touch specs, you can tell the terminal command to skip the spec step:
 
 ```bash
-$ openspec archive refactor-payment-module --skip-specs
+openspec archive refactor-payment-module --skip-specs
 ```
 
 The same flag is handy for tooling, CI, and docs-only changes. The principle: specs describe behavior, so if behavior didn't change, the spec shouldn't either. See [Concepts](concepts.md#what-a-spec-is-and-is-not).
@@ -155,8 +155,8 @@ The same flag is handy for tooling, CI, and docs-only changes. The principle: sp
 The core `/opsx:propose` drafts everything at once. When you'd rather go one step at a time, turn on the expanded commands:
 
 ```bash
-$ openspec config profile      # select the expanded workflows
-$ openspec update              # apply them to this project
+openspec config profile      # select the expanded workflows
+openspec update              # apply them to this project
 ```
 
 Now you can scaffold and build incrementally:
@@ -198,10 +198,10 @@ AI:  Welcome to OpenSpec! I'll walk you through a complete change
 Any time, from your terminal, you can inspect the state of things:
 
 ```bash
-$ openspec list                      # active changes
-$ openspec show add-dark-mode        # one change in detail
-$ openspec validate add-dark-mode    # check structure
-$ openspec view                      # interactive dashboard
+openspec list                      # active changes
+openspec show add-dark-mode        # one change in detail
+openspec validate add-dark-mode    # check structure
+openspec view                      # interactive dashboard
 ```
 
 These are read-and-inspect tools. The proposing and building still happen through slash commands in chat. Full details in the [CLI reference](cli.md).

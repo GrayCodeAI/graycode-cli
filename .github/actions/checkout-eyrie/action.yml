@@ -29,7 +29,17 @@ runs:
             # (e.g. by a squash-merge). A depth-1 clone can't check
             # out older commits and fails with "unable to read tree".
             git clone "https://github.com/GrayCodeAI/${repo}.git" "$dest"
-            (cd "$dest" && git checkout --quiet "$commit")
+            if ! (cd "$dest" && git checkout --quiet "$commit" 2>/dev/null); then
+              echo "Submodule commit $commit not reachable, falling back to ref"
+              ref="${{ inputs.ref }}"
+              if [ "$ref" = "main" ]; then
+                rm -rf "$dest"
+                git clone --depth=1 --branch main \
+                  "https://github.com/GrayCodeAI/${repo}.git" "$dest"
+              else
+                (cd "$dest" && git fetch --depth=1 "origin" "$ref" && git checkout --quiet "$ref")
+              fi
+            fi
           else
             ref="${{ inputs.ref }}"
             # Fall back to main if the branch doesn't exist on the dependency repo.

@@ -64,7 +64,7 @@ Each command automatically invokes the corresponding skill and guides the agent 
 
 ## Skills & Discovery
 
-Antigravity automatically discovers skills inside the plugin's `skills/` directory. 
+Antigravity automatically discovers skills inside the plugin's `skills/` directory.
 * Antigravity matches user tasks and intents to relevant skills on-demand.
 * If a task matches a skill, the agent will load the skill and prompt you for permission before executing.
 
@@ -85,15 +85,15 @@ agy plugin validate /path/to/agent-skills
 Antigravity CLI automatically discovers the `SKILL.md` files located in the `skills/` directory of the installed plugin. Using the trigger descriptions in each skill's frontmatter, the agent will dynamically activate the appropriate workflow when it detects matching developer intent.
 
 For example, when you ask the agent to:
-- **Design a new system** &rarr; It will suggest/activate `spec-driven-development`.
-- **Implement a feature** &rarr; It will activate `incremental-implementation` and `test-driven-development`.
-- **Fix a bug** &rarr; It will activate `debugging-and-error-recovery`.
+* **Design a new system** &rarr; It will suggest/activate `spec-driven-development`.
+* **Implement a feature** &rarr; It will activate `incremental-implementation` and `test-driven-development`.
+* **Fix a bug** &rarr; It will activate `debugging-and-error-recovery`.
 
 ### 2. Specialized Agent Personas
 The plugin registers reusable subagent definitions from the `agents/` directory:
-- `code-reviewer.md`
-- `security-auditor.md`
-- `test-engineer.md`
+\* `code-reviewer.md`
+\* `security-auditor.md`
+\* `test-engineer.md`
 
 You can invoke these personas directly within your session or when delegating tasks using subagents.
 

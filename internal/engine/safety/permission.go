@@ -161,10 +161,6 @@ func ToolSummary(name string, args map[string]interface{}) string {
 	return name
 }
 
-func boolPtr(v bool) *bool {
-	return &v
-}
-
 func pathArgument(args map[string]interface{}) (string, bool) {
 	if p, ok := args["path"].(string); ok && p != "" {
 		return p, true
