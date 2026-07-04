@@ -226,7 +226,7 @@ A proposal defines three things:
 
 The question is: which changed, and by how much?
 
-### Update the Existing Change When:
+### Update the Existing Change When
 
 **Same intent, refined execution**
 - You discover edge cases you didn't consider
@@ -242,7 +242,7 @@ The question is: which changed, and by how much?
 - A dependency doesn't work as expected
 - "Use CSS variables" → "Use Tailwind's dark: prefix instead"
 
-### Start a New Change When:
+### Start a New Change When
 
 **Intent fundamentally changed**
 - The problem itself is different now

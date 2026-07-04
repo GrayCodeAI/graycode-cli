@@ -9,9 +9,9 @@ Refines raw ideas into sharp, actionable concepts worth building through structu
 
 ## How It Works
 
-1.  **Understand & Expand (Divergent):** Restate the idea, ask sharpening questions, and generate variations.
-2.  **Evaluate & Converge:** Cluster ideas, stress-test them, and surface hidden assumptions.
-3.  **Sharpen & Ship:** Produce a concrete markdown one-pager moving work forward.
+1. **Understand & Expand (Divergent):** Restate the idea, ask sharpening questions, and generate variations.
+2. **Evaluate & Converge:** Cluster ideas, stress-test them, and surface hidden assumptions.
+3. **Sharpen & Ship:** Produce a concrete markdown one-pager moving work forward.
 
 ## Usage
 

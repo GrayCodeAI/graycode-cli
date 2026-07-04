@@ -26,12 +26,6 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 	return m, nil
 }
 
-// dispatchStreamEvent maps one engine event to TUI messages. Returns true when
-// the pump should stop (error or done).
-func dispatchStreamEvent(ref *progRef, ev engine.StreamEvent) bool {
-	return dispatchStreamEventWithFlush(ref, ev, nil)
-}
-
 func dispatchStreamEventWithFlush(ref *progRef, ev engine.StreamEvent, flush func()) bool {
 	if ev.Type != "content" && flush != nil {
 		flush()
