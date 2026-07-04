@@ -87,6 +87,7 @@ One thing I want to push back on: you said variation 1 feels "necessary but bori
 
 **Skill produces:**
 
+<!-- markdownlint-disable MD025 -->
 # ReOrder: Keep Your Regulars Ordering Direct
 
 ## Problem Statement

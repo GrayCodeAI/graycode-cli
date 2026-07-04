@@ -25,18 +25,6 @@ type toolExecResult struct {
 	isErr  bool
 }
 
-// classifyToolCalls splits tool calls into concurrent (read-only) and sequential (write) batches.
-func classifyToolCalls(calls []types.ToolCall) (concurrent, sequential []types.ToolCall) {
-	for _, tc := range calls {
-		if tool.IsReadOnly(tc.Name) {
-			concurrent = append(concurrent, tc)
-		} else {
-			sequential = append(sequential, tc)
-		}
-	}
-	return
-}
-
 // filePathArgKeys is the list of argument names that are conventionally
 // file paths. Tools with non-standard names silently fall through and
 // extractTargets returns an empty list. For a more robust extraction, see
@@ -203,6 +191,7 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 	readOnlySem := make(chan struct{}, maxConcurrentReadOnlyToolCalls)
 	networkSem := make(chan struct{}, maxConcurrentNetworkReadOnlyToolCalls)
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	for _, item := range concurrentCalls {
 		wg.Add(1)
@@ -214,13 +203,17 @@ func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCa
 				networkSem <- struct{}{}
 				defer func() { <-networkSem }()
 			}
+			mu.Lock()
 			results[item.index] = s.executeSingleTool(ctx, item.tc, ch, turnCount, intentText)
+			mu.Unlock()
 		}(item)
 	}
 	wg.Wait()
 
 	for _, item := range sequentialCalls {
+		mu.Lock()
 		results[item.index] = s.executeSingleTool(ctx, item.tc, ch, turnCount, intentText)
+		mu.Unlock()
 	}
 
 	return results
