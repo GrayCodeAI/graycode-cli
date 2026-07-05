@@ -25,9 +25,9 @@ middle: support engines
       v         v         v         v         v         v         v
     eyrie     yaad      tok       trace     sight    inspect   public APIs
 
-bottom: shared contracts
+bottom: shared foundations
 
-                         hawk-core-contracts
+              hawk-core-contracts      hawk-mcpkit
 ```
 
 ## Dependency direction
@@ -45,6 +45,7 @@ bottom: shared contracts
 ### Shared-contract layer
 
 - `engine -> hawk-core-contracts` only when a real cross-repo DTO is required
+- `engine -> hawk-mcpkit` for MCP server scaffolding (currently `sight`, `inspect`)
 
 ### Extension layer
 
@@ -58,7 +59,8 @@ bottom: shared contracts
 - `sdk -> engine`
 - `skills -> engine`
 - `engine -> hawk/internal/*`
-- `hawk runtime -> graycode-core`
+- `hawk runtime -> graycode-core` — at compile time; opt-in, fail-open HTTP
+  telemetry only, per `adr/ADR-0001-graycode-core-telemetry-edge.md`
 
 ## Repo-by-repo roles
 
@@ -72,6 +74,7 @@ bottom: shared contracts
 | `sight` | Support engine | review findings, code-quality/risk analysis | `hawk-core-contracts` | `eyrie`, `yaad`, `tok`, `trace`, `inspect` |
 | `inspect` | Support engine | verification findings, checks, pass/fail validation | `hawk-core-contracts` | `eyrie`, `yaad`, `tok`, `trace`, `sight` |
 | `hawk-core-contracts` | Foundation | shared DTOs and vocabulary | leaf module | product logic or engine implementation logic |
+| `hawk-mcpkit` | Foundation | shared MCP server scaffolding (wraps `mark3labs/mcp-go`) | upstream MCP library only | engines, hawk, graycode-core |
 | `hawk-sdk-go` | Consumer | Go integrations for Hawk public surfaces | Hawk public API/contracts | support engines directly |
 | `hawk-sdk-python` | Consumer | Python integrations for Hawk public surfaces | Hawk public API/contracts | support engines directly |
 | `hawk-community-skills` | Consumer | skills, recipes, extension packs | Hawk plugin/skill surfaces | support engines directly |

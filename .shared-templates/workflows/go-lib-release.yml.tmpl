@@ -1,0 +1,34 @@
+# Release workflow for Go LIBRARY repos (no binaries, no goreleaser).
+# Triggered by release-please when it pushes a v* tag.
+# Source of truth: .shared-templates/workflows/go-lib-release.yml.tmpl
+#
+# Consumers depend on the tag directly via
+# `go get github.com/GrayCodeAI/{{NAME}}@vX.Y.Z` — there is nothing to build
+# or upload here, just a GitHub Release with generated notes.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: auto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

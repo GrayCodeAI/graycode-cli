@@ -40,6 +40,7 @@ The local workspace currently contains these top-level repos:
 - `sight`
 - `inspect`
 - `hawk-core-contracts`
+- `hawk-mcpkit`
 - `hawk-sdk-go`
 - `hawk-sdk-python`
 - `hawk-community-skills`
@@ -71,6 +72,7 @@ hawk-eco/
 ├── sight
 ├── inspect
 ├── hawk-core-contracts
+├── hawk-mcpkit               # shared MCP server scaffolding (used by sight, inspect)
 ├── hawk-sdk-go
 ├── hawk-sdk-python
 ├── hawk-community-skills
@@ -301,8 +303,9 @@ six support engines
   -> sight
   -> inspect
 
-one shared foundation
+two shared foundations
   -> hawk-core-contracts
+  -> hawk-mcpkit
 
 three extension repos
   -> hawk-sdk-go
@@ -327,6 +330,7 @@ hawk -> inspect
 hawk -> hawk-core-contracts
 
 engine -> hawk-core-contracts   # only when a true cross-repo contract is needed
+engine -> hawk-mcpkit           # MCP server scaffolding (sight, inspect)
 sdk -> hawk public API/contracts
 skills -> hawk plugin/skill API
 ```
@@ -339,7 +343,8 @@ sdk -> engine
 skills -> engine
 engine -> hawk/internal/*
 engine -> graycode-core
-hawk runtime -> graycode-core
+hawk runtime -> graycode-core   # at compile time; opt-in, fail-open HTTP
+                                # telemetry only, per adr/ADR-0001
 ```
 
 ## Why this is the right shape

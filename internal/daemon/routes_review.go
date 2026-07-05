@@ -30,8 +30,8 @@ type ReviewResponse struct {
 // RegisterReviewRoutes adds review endpoints to the daemon.
 // Called from routes() if review support is enabled.
 func (s *Server) RegisterReviewRoutes() {
-	s.mux.HandleFunc("POST /v1/review", s.auth(s.handleReview))
-	s.mux.HandleFunc("GET /v1/review/status", s.auth(s.handleReviewStatus))
+	s.handle("POST /v1/review", s.auth(s.handleReview))
+	s.handle("GET /v1/review/status", s.auth(s.handleReviewStatus))
 }
 
 func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {

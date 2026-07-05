@@ -13,7 +13,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/engine/spec"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )

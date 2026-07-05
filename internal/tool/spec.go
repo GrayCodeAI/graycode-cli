@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/spec"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 var reSlugInvalid = regexp.MustCompile(`[^a-z0-9]+`)

@@ -1,0 +1,142 @@
+# Canonical GrayCodeAI goreleaser config for Go binary repos.
+# Source of truth: .shared-templates/.goreleaser.yml.tmpl
+#
+# Placeholders rendered per repo (ALL-CAPS, distinct from goreleaser's own
+# `{{.Version}}`-style Go template fields, which are left as-is below):
+#   {{NAME}}        — short repo name (e.g. hawk, yaad, trace)
+#   {{MAIN_PKG}}    — main package path (e.g. ./ or ./cmd/yaad)
+#   {{DESCRIPTION}} — short single-line description for brew/nfpms
+#   {{VERSION_PKG}} — Go package path holding Version vars
+#                     (e.g. main or github.com/GrayCodeAI/hawk/internal/version)
+#
+# Repos with PRO/special features (e.g. trace's macOS notarization, tok's
+# nfpms) extend this template with extra sections instead of replacing it.
+
+version: 2
+project_name: {{NAME}}
+
+# ---------------------------------------------------------------------------
+# Pre-build hooks — keep go.mod tidy and verified.
+# ---------------------------------------------------------------------------
+before:
+  hooks:
+    - go mod verify
+
+# ---------------------------------------------------------------------------
+# Builds — three OS × two arch (no Windows/arm64).
+# Reproducible: `mod_timestamp` ties the binary timestamp to the commit time
+# rather than the build host's clock.
+# ---------------------------------------------------------------------------
+builds:
+  - id: {{NAME}}
+    main: {{MAIN_PKG}}
+    binary: {{NAME}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X {{VERSION_PKG}}.Version={{.Version}}
+      - -X {{VERSION_PKG}}.Commit={{.ShortCommit}}
+      - -X {{VERSION_PKG}}.BuildDate={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+# ---------------------------------------------------------------------------
+# Archives — tar.gz on Unix, zip on Windows. Includes README + LICENSE.
+# ---------------------------------------------------------------------------
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+# ---------------------------------------------------------------------------
+# Source archive — published alongside binaries for downstream packagers.
+# ---------------------------------------------------------------------------
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_source"
+
+# ---------------------------------------------------------------------------
+# Checksums — SHA-256, single file per release.
+# ---------------------------------------------------------------------------
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# ---------------------------------------------------------------------------
+# Snapshot — unreleased dev builds get a clear synthetic version.
+# ---------------------------------------------------------------------------
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# ---------------------------------------------------------------------------
+# Changelog — Conventional-Commit grouped, hidden noise.
+# ---------------------------------------------------------------------------
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^chore:"
+      - "^ci:"
+      - "^test:"
+      - "^style:"
+      - "^build:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Performance"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "Refactoring"
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: "Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: "Other"
+      order: 999
+
+# ---------------------------------------------------------------------------
+# SBOM + release — auto-detect prereleases (rc/beta tags). Created on the
+# repo itself (not a separate release repo).
+# ---------------------------------------------------------------------------
+sboms:
+  - artifacts: archive
+    documents:
+      - "${artifact}.spdx.sbom.json"
+
+release:
+  draft: false
+  prerelease: auto
+  name_template: "v{{ .Version }}"
+  header: |
+    ## {{NAME}} v{{.Version}}
+
+    {{DESCRIPTION}}
+  footer: |
+
+    **Full changelog:** https://github.com/GrayCodeAI/{{NAME}}/compare/{{.PreviousTag}}...{{.Tag}}

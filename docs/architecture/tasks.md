@@ -1,5 +1,10 @@
 # Hawk Architecture - Implementation Tasks
 
+> **Historical.** This was the initial architecture implementation checklist.
+> It is superseded by `hawk-architecture-v1-definition-of-done.md`, which
+> reflects the current shipping bar. Kept for record; do not use as a
+> current TODO list.
+
 ## Phase 1: Documentation
 
 - [x] Create spec.md with all 12 requirements

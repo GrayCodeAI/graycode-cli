@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/spec"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // specConfigForPrompt loads the user's spec configuration and returns it

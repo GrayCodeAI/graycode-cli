@@ -34,8 +34,8 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench build ci clean contracts-guard ecosystem-guard eyrie-client-guard peer-guard cover cover-new fmt help install lint lint-fix \
-        release security setup smoke path test test-10x test-live test-new test-race tidy version vet
+.PHONY: all bench boundaries build ci clean contracts-guard ecosystem-guard eyrie-client-guard peer-guard cover cover-new fmt help install lint lint-fix \
+        release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
 # Default target.
@@ -111,6 +111,8 @@ eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk tran
 peer-guard: ## Fail if support engines import each other instead of depending only on Hawk contracts.
 	bash ./scripts/check-support-repo-coupling.sh
 
+boundaries: contracts-guard ecosystem-guard eyrie-client-guard peer-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
 	$(GOLANGCI) run ./... --timeout=5m
@@ -130,7 +132,7 @@ tidy: ## Sync workspace modules and verify checksums.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy fmt vet contracts-guard ecosystem-guard eyrie-client-guard peer-guard lint test-race security ## Run everything CI runs.
+ci: tidy fmt vet boundaries lint test-race security ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 smoke: ## Quick build + doctor + ecosystem verification.
@@ -242,6 +244,9 @@ sync-submodules: ## Fetch and checkout latest origin/main for all external/ subm
 	git submodule foreach 'git fetch origin && git checkout origin/main 2>/dev/null || git checkout origin/HEAD'
 	@echo "Submodule heads:"
 	@git submodule status
+
+sync-external: ## Read-only drift report: external/<repo> pin vs sibling ../<repo> HEAD.
+	@bash ./scripts/sync-external.sh
 
 sync-clone: ## Hard-reset hawk and submodules to origin/main (post history rewrite).
 	@chmod +x scripts/sync-clone.sh scripts/commit-clean.sh
