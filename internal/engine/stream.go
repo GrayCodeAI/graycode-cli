@@ -545,8 +545,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Budget enforcement
-		if s.MaxBudgetUSD > 0 && s.Cost.TotalUSD() >= s.MaxBudgetUSD {
-			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.Cost.TotalUSD(), s.MaxBudgetUSD)}
+		limits := s.LifecycleSvc().Limits()
+		if limits.MaxBudgetUSD() > 0 && s.Cost.TotalUSD() >= limits.MaxBudgetUSD() {
+			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.Cost.TotalUSD(), limits.MaxBudgetUSD())}
 			ch <- StreamEvent{Type: "done"}
 			return
 		}

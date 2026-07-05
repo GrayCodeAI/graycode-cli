@@ -13,6 +13,7 @@ type SafetyLimits struct {
 	MaxBashCommands int     // max bash executions (default: 100)
 	MaxCostUSD      float64 // max spend (default: from MaxBudgetUSD)
 	MaxTurns        int     // max LLM turns (default: from MaxTurns)
+	MaxBudgetUSD    float64 // max budget in USD (default: 0 = unlimited)
 	MaxOutputTokens int     // max total output tokens (default: 500K)
 }
 
@@ -125,13 +126,19 @@ func (lt *LimitTracker) Summary() string {
 }
 
 // DefaultLimits returns conservative safety limits for normal interactive use.
+func (lt *LimitTracker) MaxTurns() int                          { return lt.limits.MaxTurns }
+func (lt *LimitTracker) SetMaxTurns(n int)                        { lt.limits.MaxTurns = n }
+func (lt *LimitTracker) MaxBudgetUSD() float64                    { return lt.limits.MaxBudgetUSD }
+func (lt *LimitTracker) SetMaxBudgetUSD(f float64)               { lt.limits.MaxBudgetUSD = f }
+
 func DefaultLimits() SafetyLimits {
 	return SafetyLimits{
 		MaxToolCalls:    200,
 		MaxFileWrites:   50,
 		MaxBashCommands: 100,
-		MaxCostUSD:      0, // inherit from MaxBudgetUSD
+		MaxCostUSD:      10, // default budget
 		MaxTurns:        0, // inherit from MaxTurns
+		MaxBudgetUSD:    10, // default budget in USD
 		MaxOutputTokens: 500_000,
 	}
 }

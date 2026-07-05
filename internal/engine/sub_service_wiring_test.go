@@ -123,7 +123,7 @@ func TestSession_NewSessionWithClient_WiresAllSubServices(t *testing.T) {
 func TestSession_Stream_UsesChatService(t *testing.T) {
 	mc := newMockClient(mockTextResponse("hi from service"))
 	s := newMockSession(mc)
-	s.MaxTurns = 1
+	s.LifecycleSvc().Limits().SetMaxTurns(1)
 	s.AddUser("ping")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*testutilTimeout)

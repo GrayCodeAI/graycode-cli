@@ -356,8 +356,8 @@ func TestIntegration_MaxTurns(t *testing.T) {
 	if err := sess.SetMaxTurns(2); err != nil {
 		t.Fatal(err)
 	}
-	if sess.MaxTurns != 2 {
-		t.Fatalf("expected MaxTurns=2, got %d", sess.MaxTurns)
+	if sess.LifecycleSvc().Limits().MaxTurns() != 2 {
+		t.Fatalf("expected MaxTurns=2, got %d", sess.LifecycleSvc().Limits().MaxTurns())
 	}
 
 	// Zero is valid (unlimited).
@@ -374,8 +374,8 @@ func TestIntegration_MaxTurns(t *testing.T) {
 	if err := sess.SetMaxBudgetUSD(1.0); err != nil {
 		t.Fatal(err)
 	}
-	if sess.MaxBudgetUSD != 1.0 {
-		t.Fatalf("expected budget 1.0, got %f", sess.MaxBudgetUSD)
+	if sess.LifecycleSvc().Limits().MaxBudgetUSD() != 1.0 {
+		t.Fatalf("expected budget 1.0, got %f", sess.LifecycleSvc().Limits().MaxBudgetUSD())
 	}
 
 	// Simulate cost accumulation to test budget checking.
@@ -387,7 +387,7 @@ func TestIntegration_MaxTurns(t *testing.T) {
 
 	// Under-budget should not trigger.
 	sess2 := newTestSession()
-	sess2.MaxBudgetUSD = 100.0
+	sess2.SetMaxBudgetUSD(100.0)
 	sess2.Cost = Cost{Model: "gpt-4o"}
 	sess2.Cost.Add(100, 50)
 	if sess2.exceededBudget() {
@@ -449,3 +449,4 @@ func TestIntegration_TrustTiersAndSpecStage(t *testing.T) {
 		t.Fatal("Specify should always be allowed during spec stage")
 	}
 }
+

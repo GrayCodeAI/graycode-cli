@@ -120,12 +120,10 @@ type Session struct {
 	BypassKill  *permissions.BypassKillswitch // use Perm.BypassKill
 	//
 	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
-	//   MaxTurns, MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
+	//   MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
 	//   EnhancedMemory, Cascade, Lifecycle, Reflector, CostTracker,
 	//   ConvoDAG, Sleeptime, Activity, SkillDistiller, AutoCompactor,
 	//   FewShotStore, AdaptivePrompt.
-	MaxTurns     int
-	MaxBudgetUSD float64
 	AllowedDirs  []string
 	PermissionFn func(PermissionRequest) // use Perm.PromptFn
 	//
@@ -169,8 +167,8 @@ type Session struct {
 	//
 	// Deprecated: most of these have been folded into sub-services;
 	// a few remain as legacy fields without a sub-service accessor
-	// (Trajectory, LintLoop, TestLoop, FileMentions, Files, Snapshots,
-	// Tracer). For those, keep reading the legacy field — they're
+	// (Trajectory, LintLoop, TestLoop, FileMentions, Files, Snapshots).
+	// For those, keep reading the legacy field — they're
 	// populated at session construction and don't have a setter.
 	//   Autonomy       -> s.PermSvc().Autonomy()
 	//   Sandbox        -> s.Tools().Sandbox()

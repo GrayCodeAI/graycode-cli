@@ -13,7 +13,7 @@ func TestEngine_FullLoop_TextOnly(t *testing.T) {
 		mockTextResponse("I'll help you with that."),
 	)
 	s := newMockSession(mc)
-	s.MaxTurns = 1
+	s.LifecycleSvc().Limits().SetMaxTurns(1)
 	s.AddUser("explain how goroutines work")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -46,7 +46,7 @@ func TestEngine_FullLoop_MultiTurn(t *testing.T) {
 		mockTextResponse("And here's the follow-up."),
 	)
 	s := newMockSession(mc)
-	s.MaxTurns = 3
+	s.LifecycleSvc().Limits().SetMaxTurns(3)
 	s.AddUser("first question")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -81,7 +81,7 @@ func TestEngine_FullLoop_ToolUse(t *testing.T) {
 		mockTextResponse("I read the file and here's what I found."),
 	)
 	s := newMockSession(mc)
-	s.MaxTurns = 2
+	s.LifecycleSvc().Limits().SetMaxTurns(2)
 	s.AddUser("read main.go")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -104,7 +104,7 @@ func TestEngine_FullLoop_ToolUse(t *testing.T) {
 func TestEngine_CostTracking(t *testing.T) {
 	mc := newMockClient(mockTextResponse("response"))
 	s := newMockSession(mc)
-	s.MaxTurns = 1
+	s.LifecycleSvc().Limits().SetMaxTurns(1)
 	s.AddUser("hello")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -125,7 +125,7 @@ func TestEngine_MaxTurnsRespected(t *testing.T) {
 		mockTextResponse("turn 3"),
 	)
 	s := newMockSession(mc)
-	s.MaxTurns = 1
+	s.LifecycleSvc().Limits().SetMaxTurns(1)
 	s.AddUser("go")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

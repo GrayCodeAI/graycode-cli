@@ -49,7 +49,9 @@ func (s *Session) SetMaxTurns(turns int) error {
 	if turns < 0 {
 		return fmt.Errorf("max turns must be non-negative")
 	}
-	s.MaxTurns = turns
+	if s.LifecycleSvc() != nil {
+		s.LifecycleSvc().Limits().SetMaxTurns(turns)
+	}
 	return nil
 }
 
@@ -57,12 +59,14 @@ func (s *Session) SetMaxBudgetUSD(amount float64) error {
 	if amount < 0 {
 		return fmt.Errorf("max budget must be non-negative")
 	}
-	s.MaxBudgetUSD = amount
+	if s.LifecycleSvc() != nil {
+		s.LifecycleSvc().Limits().SetMaxBudgetUSD(amount)
+	}
 	return nil
 }
 
 func (s *Session) exceededBudget() bool {
-	return s.MaxBudgetUSD > 0 && s.Cost.Total() > s.MaxBudgetUSD
+	return s.LifecycleSvc().Limits().MaxBudgetUSD() > 0 && s.Cost.Total() > s.LifecycleSvc().Limits().MaxBudgetUSD()
 }
 
 func pathArgument(args map[string]interface{}) (string, bool) {

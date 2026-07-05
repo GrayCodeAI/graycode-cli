@@ -1,5 +1,6 @@
 # Binaries
 hawk
+hawk_bin
 *.exe
 *.dll
 *.so
@@ -27,6 +28,7 @@ hawk
 
 # Test artifacts
 coverage.out
+coverage.html
 
 # Lefthook-generated git hook wrappers
 .githooks/

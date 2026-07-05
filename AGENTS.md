@@ -80,6 +80,10 @@ hawk/
 - **Shared contracts:** cross-repo types now live in `hawk-core-contracts`
   (`types`, `review`, `verify`, `tools`, `events`, `policy`). The old
   `hawk/shared/types` path has been removed.
+- **LimitTracker API:** The `LimitTracker` struct uses unexported `limits`
+  field. Access and modify budget/turns via exported methods:
+  `Limits().MaxBudgetUSD()`, `Limits().SetMaxBudgetUSD()`, `Limits().MaxTurns()`,
+  `Limits().SetMaxTurns()`.
 
 ## Development Guidelines
 

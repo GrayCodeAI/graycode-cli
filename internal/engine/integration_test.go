@@ -89,8 +89,8 @@ func TestBudgetAndTurns(t *testing.T) {
 	if err := sess.SetMaxTurns(10); err != nil {
 		t.Fatal(err)
 	}
-	if sess.MaxTurns != 10 {
-		t.Fatalf("expected max turns 10, got %d", sess.MaxTurns)
+	if sess.LifecycleSvc().Limits().MaxTurns() != 10 {
+		t.Fatalf("expected max turns 10, got %d", sess.LifecycleSvc().Limits().MaxTurns())
 	}
 
 	// Test negative turns
@@ -102,8 +102,8 @@ func TestBudgetAndTurns(t *testing.T) {
 	if err := sess.SetMaxBudgetUSD(5.0); err != nil {
 		t.Fatal(err)
 	}
-	if sess.MaxBudgetUSD != 5.0 {
-		t.Fatalf("expected budget 5.0, got %f", sess.MaxBudgetUSD)
+	if sess.LifecycleSvc().Limits().MaxBudgetUSD() != 5.0 {
+		t.Fatalf("expected budget 5.0, got %f", sess.LifecycleSvc().Limits().MaxBudgetUSD())
 	}
 
 	// Test negative budget
@@ -233,3 +233,4 @@ func TestStreamTimeout(t *testing.T) {
 		t.Fatal("stream did not close within timeout")
 	}
 }
+
