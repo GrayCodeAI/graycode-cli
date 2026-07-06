@@ -29,6 +29,8 @@ hawk_bin
 # Test artifacts
 coverage.out
 coverage.html
+CODE_REVIEW_REPORT.md
+review_report.md
 
 # Lefthook-generated git hook wrappers
 .githooks/
