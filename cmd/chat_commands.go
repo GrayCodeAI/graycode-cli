@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -17,8 +18,12 @@ import (
 // slashCmdCache caches the slash commands list to avoid rebuilding.
 var slashCmdCache []string
 var slashCmdCacheBuilt = false
+var slashCmdMutex sync.Mutex
 
+// slashCommands returns the list of all slash commands, built once and cached.
 func slashCommands() []string {
+	slashCmdMutex.Lock()
+	defer slashCmdMutex.Unlock()
 	if slashCmdCacheBuilt {
 		return slashCmdCache
 	}
@@ -52,6 +57,14 @@ func slashCommands() []string {
 	slashCmdCache = out
 	slashCmdCacheBuilt = true
 	return out
+}
+
+// ResetSlashCache resets the cached slash commands (useful for testing)
+func ResetSlashCache() {
+	slashCmdMutex.Lock()
+	defer slashCmdMutex.Unlock()
+	slashCmdCacheBuilt = false
+	slashCmdCache = nil
 }
 
 var allSlashCommands = []string{
