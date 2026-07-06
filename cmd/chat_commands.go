@@ -54,7 +54,7 @@ var allSlashCommands = []string{
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
-	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
+	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme", "/themes",
 	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
 }
@@ -236,7 +236,8 @@ var slashDescriptions = map[string]string{
 	"/statusline":      "Show status line info",
 	"/tag":             "Tag current session",
 	"/taste":           "Show learned taste preferences",
-	"/theme":           "Change visual theme",
+	"/theme":           "Change visual theme (opens picker)",
+	"/themes":          "List all available themes",
 	"/think-back":      "Review reasoning decisions",
 	"/thinkback":       "Review reasoning decisions",
 	"/thinkback-play":  "Replay reasoning path",
