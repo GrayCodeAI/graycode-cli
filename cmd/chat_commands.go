@@ -14,7 +14,14 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+// slashCmdCache caches the slash commands list to avoid rebuilding.
+var slashCmdCache []string
+var slashCmdCacheBuilt = false
+
 func slashCommands() []string {
+	if slashCmdCacheBuilt {
+		return slashCmdCache
+	}
 	seen := make(map[string]bool, len(allSlashCommands)+subcommandRegistry.Size())
 	out := make([]string, 0, len(allSlashCommands)+subcommandRegistry.Size())
 	add := func(name string) {
@@ -41,6 +48,8 @@ func slashCommands() []string {
 		}
 	}
 	sort.Strings(out)
+	slashCmdCache = out
+	slashCmdCacheBuilt = true
 	return out
 }
 
