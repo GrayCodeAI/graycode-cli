@@ -67,7 +67,6 @@ func doctorReport(settings hawkconfig.Settings) string {
 	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
 	}
-	_ = hawkconfig.MigrateProviderConfig()
 	b.WriteString("\n" + envSummaryWithSelection(provider, modelName, false) + "\n")
 	b.WriteString("\nGit:\n")
 	if branch := branchSummary(); branch != "" {

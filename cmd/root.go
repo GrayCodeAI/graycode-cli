@@ -455,12 +455,6 @@ var configCmd = &cobra.Command{
 				}
 				cmd.Println(out)
 				return nil
-			case "migrate-deployments":
-				if err := hawkconfig.MigrateProviderConfig(); err != nil {
-					return err
-				}
-				cmd.Println("provider.json upgraded to deployment config v2 (if legacy keys were present)")
-				return nil
 			default:
 				return fmt.Errorf("unknown config action %q", args[0])
 			}

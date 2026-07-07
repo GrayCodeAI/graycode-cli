@@ -2,10 +2,8 @@ package config
 
 import (
 	"context"
-	"os"
 	"strings"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
@@ -28,16 +26,4 @@ func RoutingPreviewJSON(ctx context.Context, model string) (string, error) {
 	return runtime.RoutingPreview(ctx, model)
 }
 
-// MigrateProviderConfig upgrades ~/.hawk/provider.json to deployment v2 in place.
-func MigrateProviderConfig() error {
-	path := eyriecfg.GetProviderConfigPath()
-	if _, err := os.Stat(path); err != nil {
-		return nil
-	}
-	cfg := eyriecfg.LoadProviderConfig("")
-	cfg = eyriecfg.EnsureDeploymentConfigV2(cfg)
-	if cfg == nil {
-		return nil
-	}
-	return eyriecfg.SaveProviderConfig(cfg, path)
-}
+
