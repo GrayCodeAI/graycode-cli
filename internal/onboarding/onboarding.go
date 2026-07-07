@@ -110,6 +110,7 @@ func RunSetup() error {
 		{"gemini", "GEMINI_API_KEY", "Gemini 2.5"},
 		{"openrouter", "OPENROUTER_API_KEY", "200+ models"},
 		{"groq", "GROQ_API_KEY", "Fast inference"},
+		{"poolside", "POOLSIDE_API_KEY", "Poolside models"},
 		{"ollama", "", "Local models (no API key needed)"},
 	}
 
