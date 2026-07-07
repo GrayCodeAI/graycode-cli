@@ -157,7 +157,7 @@ func (idx *SemanticIndex) Size() int {
 
 // Save encodes the index to a file using gob.
 func (idx *SemanticIndex) Save(path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path is caller-supplied index location, not external untrusted input
 	if err != nil {
 		return err
 	}

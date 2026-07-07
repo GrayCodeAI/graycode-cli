@@ -114,7 +114,8 @@ func (s *SecureStorage) setFile(account, token string) error {
 		return err
 	}
 	var tokens map[string]string
-	if data, err := os.ReadFile(path); err == nil { // #nosec G304 -- path is the fixed internal token store location, not external input
+	// #nosec G304 -- path is the fixed internal token store location, not external input
+	if data, err := os.ReadFile(path); err == nil {
 		_ = json.Unmarshal(data, &tokens)
 	}
 	if tokens == nil {

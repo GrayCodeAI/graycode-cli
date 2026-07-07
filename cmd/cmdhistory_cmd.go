@@ -162,7 +162,7 @@ func openCmdHistoryStore() (*cmdhistory.Store, error) {
 	dbPath := filepath.Join(storage.StateDir(), "cmd-history.db")
 
 	// Ensure the directory exists.
-	if mkErr := os.MkdirAll(filepath.Dir(dbPath), 0o755); mkErr != nil {
+	if mkErr := os.MkdirAll(filepath.Dir(dbPath), 0o750); mkErr != nil {
 		return nil, fmt.Errorf("cannot create history directory: %w", mkErr)
 	}
 

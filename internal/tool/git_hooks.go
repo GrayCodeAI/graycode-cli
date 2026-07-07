@@ -77,7 +77,8 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 		hook.Script = script
 	}
 
-	if err := os.WriteFile(hookPath, []byte(hook.Script), 0o755); err != nil { // #nosec G306 -- git hook must be executable by git
+	// #nosec G306 -- git hook must be executable by git
+	if err := os.WriteFile(hookPath, []byte(hook.Script), 0o755); err != nil {
 		return fmt.Errorf("write hook %s: %w", hook.Name, err)
 	}
 
@@ -265,7 +266,8 @@ func (g *GitHookInstaller) backupExisting(hookName string) error {
 		return fmt.Errorf("read hook %s: %w", hookName, err)
 	}
 
-	if err := os.WriteFile(backupPath, data, 0o755); err != nil { // #nosec G306 -- backup preserves executable hook script
+	// #nosec G306 -- backup preserves executable hook script
+	if err := os.WriteFile(backupPath, data, 0o755); err != nil {
 		return fmt.Errorf("write backup %s: %w", hookName, err)
 	}
 	return nil

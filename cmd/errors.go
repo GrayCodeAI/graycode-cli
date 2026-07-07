@@ -219,7 +219,7 @@ func panicRecovery(saveFn func()) {
 		// Log to crash file
 		crashDir := storage.StateDir()
 		if crashDir != "" {
-			_ = os.MkdirAll(crashDir, 0o755)
+			_ = os.MkdirAll(crashDir, 0o750)
 			crashLog := filepath.Join(crashDir, "crash.log")
 
 			entry := fmt.Sprintf(
@@ -229,7 +229,7 @@ func panicRecovery(saveFn func()) {
 				stack,
 			)
 
-			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)  // #nosec G304 -- crashLog is an internal, statically-derived log path
+			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) // #nosec G304 -- crashLog is an internal, statically-derived log path
 			if err == nil {
 				_, _ = f.WriteString(entry)
 				_ = f.Close()
@@ -302,7 +302,7 @@ func getErrorLogger() *errorLoggerT {
 		if dir == "" {
 			dir = os.TempDir()
 		}
-		_ = os.MkdirAll(dir, 0o755)
+		_ = os.MkdirAll(dir, 0o750)
 		errLogger = &errorLoggerT{
 			path: filepath.Join(dir, "error.log"),
 		}
@@ -406,7 +406,7 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 
 	// 3. Check sessions directory is writable
 	sessDir := storage.SessionsDir()
-	if err := os.MkdirAll(sessDir, 0o755); err != nil {
+	if err := os.MkdirAll(sessDir, 0o750); err != nil {
 		warnings = append(warnings, StartupWarning{
 			Check:   "sessions_dir",
 			Message: fmt.Sprintf("Cannot create sessions directory %s: %v", sessDir, err),
@@ -414,7 +414,7 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	} else {
 		// Try writing a temp file to verify writability
 		tmpPath := filepath.Join(sessDir, ".write_test")
-		if err := os.WriteFile(tmpPath, []byte("ok"), 0o644); err != nil {
+		if err := os.WriteFile(tmpPath, []byte("ok"), 0o600); err != nil {
 			warnings = append(warnings, StartupWarning{
 				Check:   "sessions_dir",
 				Message: fmt.Sprintf("Sessions directory %s is not writable: %v", sessDir, err),

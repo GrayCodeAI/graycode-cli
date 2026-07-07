@@ -54,7 +54,7 @@ func scanForAIComments(dir string, ignore []string) []AIDirective {
 		if !aiSupportedExts[ext] {
 			return nil
 		}
-		data, err := os.ReadFile(path)  // #nosec G304 -- path comes from filepath.Walk over the target directory
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.Walk over the target directory
 		if err != nil {
 			return nil
 		}
@@ -186,7 +186,7 @@ func formatDirectivesAsPrompt(directives []AIDirective) string {
 // removeAIComment removes the AI comment at the given line from the file.
 // Line numbers are 1-based.
 func removeAIComment(path string, line int) error {
-	data, err := os.ReadFile(path)  // #nosec G304 -- path comes from internal AI-comment scan results
+	data, err := os.ReadFile(path) // #nosec G304 -- path comes from internal AI-comment scan results
 	if err != nil {
 		return err
 	}
@@ -206,5 +206,6 @@ func removeAIComment(path string, line int) error {
 		lines[line-1] = strings.TrimRight(lines[line-1], " \t")
 	}
 
+	// #nosec G306 -- rewrites an existing project source file in place, matching typical source file permissions
 	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644)
 }

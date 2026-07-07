@@ -88,7 +88,8 @@ func LoadTemplate(name string) (string, error) {
 
 func loadTemplateSource(name string) (string, error) {
 	overridePath := filepath.Join(storage.ConfigDir(), "prompts", name)
-	if data, readErr := os.ReadFile(overridePath); readErr == nil { // #nosec G304 -- name is a fixed internal template identifier, not external input
+	// #nosec G304 -- name is a fixed internal template identifier, not external input
+	if data, readErr := os.ReadFile(overridePath); readErr == nil {
 		return string(data), nil
 	}
 
@@ -102,7 +103,8 @@ func loadTemplateSource(name string) (string, error) {
 
 func loadTemplateForRender(name string) (*template.Template, error) {
 	overridePath := filepath.Join(storage.ConfigDir(), "prompts", name)
-	if data, readErr := os.ReadFile(overridePath); readErr == nil { // #nosec G304 -- name is a fixed internal template identifier, not external input
+	// #nosec G304 -- name is a fixed internal template identifier, not external input
+	if data, readErr := os.ReadFile(overridePath); readErr == nil {
 		return template.New(name).Parse(string(data))
 	}
 	return cachedEmbeddedTemplate(name)

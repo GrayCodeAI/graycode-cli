@@ -24,6 +24,7 @@ func (a *agentsInitSubcommand) Handle(m *chatModel, args []string, text string) 
 	}
 	pt := detectAgentsProjectType()
 	content := GenerateAgentsTemplate(pt)
+	// #nosec G306 -- AGENTS.md is a project doc intended to be committed and normally readable
 	if err := os.WriteFile("AGENTS.md", []byte(content), 0o644); err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to write AGENTS.md: " + err.Error()})
 		return m, nil

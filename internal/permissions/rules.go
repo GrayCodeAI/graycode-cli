@@ -254,7 +254,7 @@ func (rs *RuleSet) SaveToFile(path string) error {
 		return fmt.Errorf("create directory: %w", err)
 	}
 
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path is caller-supplied .hawk/rules file location, not external untrusted input
 	if err != nil {
 		return fmt.Errorf("create rules file: %w", err)
 	}

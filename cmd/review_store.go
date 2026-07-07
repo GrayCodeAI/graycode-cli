@@ -67,7 +67,8 @@ type ReviewStore struct {
 // OpenReviewStore opens or creates the review database.
 func OpenReviewStore(projectDir string) (*ReviewStore, error) {
 	dbDir := storage.ProjectStateDir(projectDir)
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	// #nosec G301 -- project state dir holds private review data, owner/group only
+	if err := os.MkdirAll(dbDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create review db directory: %w", err)
 	}
 	dbPath := filepath.Join(dbDir, "reviews.db")

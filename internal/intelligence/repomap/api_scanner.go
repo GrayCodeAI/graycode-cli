@@ -452,7 +452,8 @@ func DetectFramework(dir string) string {
 
 	// First check go.mod if available
 	goModPath := filepath.Join(dir, "go.mod")
-	if data, err := os.ReadFile(goModPath); err == nil { // #nosec G304 -- goModPath is the go.mod of the project directory being analyzed by this dev CLI
+	// #nosec G304 -- goModPath is the go.mod of the project directory being analyzed by this dev CLI
+	if data, err := os.ReadFile(goModPath); err == nil {
 		modContent := string(data)
 		for importPath, name := range frameworks {
 			if strings.Contains(modContent, importPath) {

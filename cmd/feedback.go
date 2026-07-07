@@ -91,7 +91,7 @@ func runFeedback(_ *cobra.Command, args []string) error {
 
 func saveFeedbackLocal(report FeedbackReport) error {
 	dir := filepath.Join(storage.StateDir(), "feedback")
-	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+	if mkErr := os.MkdirAll(dir, 0o750); mkErr != nil {
 		return fmt.Errorf("create feedback directory: %w", mkErr)
 	}
 
@@ -103,7 +103,7 @@ func saveFeedbackLocal(report FeedbackReport) error {
 		return fmt.Errorf("marshal report: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write feedback: %w", err)
 	}
 

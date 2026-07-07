@@ -107,7 +107,7 @@ func (s *Sandbox) ProposeCreate(path string, content string) *Change {
 // ProposeModify stages a file modification. Reads the original content from disk.
 func (s *Sandbox) ProposeModify(path string, newContent string) (*Change, error) {
 	absPath := s.absPath(path)
-	data, err := os.ReadFile(absPath)
+	data, err := os.ReadFile(absPath) // #nosec G304 -- absPath is resolved within the sandbox's confined root directory
 	if err != nil {
 		return nil, fmt.Errorf("read original %s: %w", path, err)
 	}

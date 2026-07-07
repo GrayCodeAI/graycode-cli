@@ -195,7 +195,8 @@ func (pa *ProjectAnalyzer) AnalyzeModule(path string) *ModuleInfo {
 func (pa *ProjectAnalyzer) detectProjectName() string {
 	// Try go.mod first.
 	modPath := filepath.Join(pa.Dir, "go.mod")
-	if f, err := os.Open(modPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if f, err := os.Open(modPath); err == nil {
 		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {

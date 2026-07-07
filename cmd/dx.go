@@ -86,7 +86,8 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	} else {
 		writable := "writable"
 		testFile := filepath.Join(sessDir, ".dx_write_test")
-		if f, err := os.Create(testFile); err != nil {  // #nosec G304 -- testFile built from internal sessions directory path
+		// #nosec G304 -- testFile built from internal sessions directory path
+		if f, err := os.Create(testFile); err != nil {
 			writable = "not writable"
 		} else {
 			_ = f.Close()
@@ -300,7 +301,7 @@ func exportMarkdown(messages []displayMsg, sessionID string) (string, error) {
 	}
 
 	filename := fmt.Sprintf("hawk-session-%s.md", sessionID)
-	if err := os.WriteFile(filename, []byte(b.String()), 0o644); err != nil {
+	if err := os.WriteFile(filename, []byte(b.String()), 0o600); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", filename, err)
 	}
 	abs, _ := filepath.Abs(filename)
@@ -347,7 +348,7 @@ func exportJSON(messages []displayMsg, sessionID string) (string, error) {
 	}
 
 	filename := fmt.Sprintf("hawk-session-%s.json", sessionID)
-	if err := os.WriteFile(filename, data, 0o644); err != nil {
+	if err := os.WriteFile(filename, data, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", filename, err)
 	}
 	abs, _ := filepath.Abs(filename)

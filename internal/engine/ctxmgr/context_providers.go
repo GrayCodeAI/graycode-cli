@@ -421,7 +421,8 @@ func (d *DependencyContextProvider) Gather(ctx context.Context, query string) ([
 
 	// Try go.mod
 	goModPath := filepath.Join(d.ProjectDir, "go.mod")
-	if data, err := os.ReadFile(goModPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if data, err := os.ReadFile(goModPath); err == nil {
 		content := string(data)
 		items = append(items, ContextItem{
 			Source:     "dependencies",
@@ -434,7 +435,8 @@ func (d *DependencyContextProvider) Gather(ctx context.Context, query string) ([
 
 	// Try package.json
 	pkgPath := filepath.Join(d.ProjectDir, "package.json")
-	if data, err := os.ReadFile(pkgPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if data, err := os.ReadFile(pkgPath); err == nil {
 		content := string(data)
 		items = append(items, ContextItem{
 			Source:     "dependencies",
@@ -447,7 +449,8 @@ func (d *DependencyContextProvider) Gather(ctx context.Context, query string) ([
 
 	// Try requirements.txt
 	reqPath := filepath.Join(d.ProjectDir, "requirements.txt")
-	if data, err := os.ReadFile(reqPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if data, err := os.ReadFile(reqPath); err == nil {
 		content := string(data)
 		items = append(items, ContextItem{
 			Source:     "dependencies",

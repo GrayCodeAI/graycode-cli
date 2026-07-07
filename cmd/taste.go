@@ -125,7 +125,7 @@ func runTastePush(_ *cobra.Command, _ []string) error {
 	}
 
 	if tasteFile != "" {
-		if err := os.WriteFile(tasteFile, data, 0o644); err != nil {
+		if err := os.WriteFile(tasteFile, data, 0o600); err != nil {
 			return fmt.Errorf("write file: %w", err)
 		}
 		fmt.Printf("Taste profile exported to %s\n", tasteFile)

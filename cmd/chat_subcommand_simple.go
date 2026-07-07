@@ -571,7 +571,7 @@ func init() {
 			}
 			var added []string
 			for _, f := range args {
-				content, err := os.ReadFile(f)  // #nosec G304 -- f is a user-specified file path from the /add command, intentional read
+				content, err := os.ReadFile(f) // #nosec G304 -- f is a user-specified file path from the /add command, intentional read
 				if err != nil {
 					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Cannot read %s: %v", f, err)})
 					continue
@@ -669,12 +669,12 @@ func init() {
 				return m, nil
 			}
 			feedDir := filepath.Join(storage.StateDir(), "feedback")
-			_ = os.MkdirAll(feedDir, 0o755)
+			_ = os.MkdirAll(feedDir, 0o750)
 			report := fmt.Sprintf(`{"timestamp":%q,"version":%q,"model":%q,"provider":%q,"category":"session","body":%q,"session_id":%q}`,
 				time.Now().Format(time.RFC3339), version, m.session.Model(), m.session.Provider(), body, m.sessionID)
 			fname := fmt.Sprintf("feedback-%s.json", time.Now().Format("20060102-150405"))
 			fpath := filepath.Join(feedDir, fname)
-			if err := os.WriteFile(fpath, []byte(report), 0o644); err != nil {
+			if err := os.WriteFile(fpath, []byte(report), 0o600); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to save feedback: " + err.Error()})
 			} else {
 				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Feedback saved to %s", fpath)})

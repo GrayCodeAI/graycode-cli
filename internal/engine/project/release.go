@@ -82,7 +82,8 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 
 	// Try package.json
 	pkgJSON := filepath.Join(rm.ProjectDir, "package.json")
-	if data, err := os.ReadFile(pkgJSON); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if data, err := os.ReadFile(pkgJSON); err == nil {
 		var pkg map[string]interface{}
 		if err := json.Unmarshal(data, &pkg); err == nil {
 			if v, ok := pkg["version"].(string); ok && isValidSemver(v) {
@@ -94,7 +95,8 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 
 	// Try Cargo.toml
 	cargoToml := filepath.Join(rm.ProjectDir, "Cargo.toml")
-	if f, err := os.Open(cargoToml); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if f, err := os.Open(cargoToml); err == nil {
 		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
@@ -114,7 +116,8 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 
 	// Try go.mod (look for a version comment or module version)
 	goMod := filepath.Join(rm.ProjectDir, "go.mod")
-	if f, err := os.Open(goMod); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	if f, err := os.Open(goMod); err == nil {
 		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {

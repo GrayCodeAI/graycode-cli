@@ -59,7 +59,8 @@ func detectConventions(dir string, lang string) []Convention {
 func detectIndentationConvention(dir string) *Convention {
 	// Check .editorconfig first.
 	editorConfigPath := filepath.Join(dir, ".editorconfig")
-	if data, err := os.ReadFile(editorConfigPath); err == nil { // #nosec G304 -- editorConfigPath joins a fixed config filename with a project directory being scanned by this dev tool
+	// #nosec G304 -- editorConfigPath joins a fixed config filename with a project directory being scanned by this dev tool
+	if data, err := os.ReadFile(editorConfigPath); err == nil {
 		content := strings.ToLower(string(data))
 		if strings.Contains(content, "indent_style = tab") {
 			return &Convention{
@@ -115,7 +116,7 @@ func detectIndentationConvention(dir string) *Convention {
 			return nil
 		}
 
-		f, err := os.Open(path)
+		f, err := os.Open(path) // #nosec G304 -- path comes from filepath.WalkDir over the project directory being scanned by this dev tool
 		if err != nil {
 			return nil
 		}
