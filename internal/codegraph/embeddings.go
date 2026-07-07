@@ -141,7 +141,15 @@ func hashToDimension(s string, dim int) int {
 	h := sha256.Sum256([]byte(s))
 	// Use first 4 bytes as uint32, then mod by dimension
 	val := uint32(h[0])<<24 | uint32(h[1])<<16 | uint32(h[2])<<8 | uint32(h[3])
-	return int(val % uint32(dim))
+	if dim <= 0 {
+		return 0
+	}
+	if dim > math.MaxUint32 {
+		// Cannot happen in practice (dim is a small embedding dimension),
+		// but guard against silent overflow in the uint32 conversion below.
+		dim = math.MaxUint32
+	}
+	return int(val % uint32(dim)) // #nosec G115 -- dim bounds-checked above, cannot overflow uint32
 }
 
 // hashToSign returns +1 or -1 based on hash for bipolar hashing trick.

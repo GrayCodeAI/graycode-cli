@@ -65,14 +65,14 @@ func (em *EvolvingMemory) Save() error {
 	defer em.mu.Unlock()
 
 	dir := filepath.Dir(em.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create memory dir: %w", err)
 	}
 	data, err := json.MarshalIndent(em.guidelines, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal guidelines: %w", err)
 	}
-	return os.WriteFile(em.path, data, 0o644)
+	return os.WriteFile(em.path, data, 0o600)
 }
 
 // Learn adds a new guideline or strengthens an existing one if a similar pattern exists.

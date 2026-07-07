@@ -300,7 +300,7 @@ func ValidateTasks(content string) ValidationResult {
 
 // ValidateSpecFile validates a spec file on disk.
 func ValidateSpecFile(path string) ValidationResult {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a spec file under the hawk specs directory
 	if err != nil {
 		return ValidationResult{
 			Issues: []ValidationIssue{{
@@ -345,7 +345,7 @@ func ValidateDirectory(slug string) ValidationResult {
 		case "spec.md":
 			result = ValidateSpecFile(path)
 		case "plan.md":
-			data, _ := os.ReadFile(path)
+			data, _ := os.ReadFile(path) // #nosec G304 -- path built from SpecsRoot()+slug+known filename
 			result = ValidatePlan(string(data))
 			for i := range result.Issues {
 				if result.Issues[i].Path == "" {
@@ -353,7 +353,7 @@ func ValidateDirectory(slug string) ValidationResult {
 				}
 			}
 		case "tasks.md":
-			data, _ := os.ReadFile(path)
+			data, _ := os.ReadFile(path) // #nosec G304 -- path built from SpecsRoot()+slug+known filename
 			result = ValidateTasks(string(data))
 			for i := range result.Issues {
 				if result.Issues[i].Path == "" {

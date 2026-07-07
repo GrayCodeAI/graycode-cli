@@ -135,7 +135,7 @@ func gitDiffForFile(dir, path string) string {
 	if err != nil {
 		rel = path
 	}
-	cmd := exec.CommandContext(context.Background(), "git", "diff", "--", rel)
+	cmd := exec.CommandContext(context.Background(), "git", "diff", "--", rel)  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {

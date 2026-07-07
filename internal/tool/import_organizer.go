@@ -839,7 +839,7 @@ func (ImportOrganizerTool) Execute(ctx context.Context, input json.RawMessage) (
 	}
 
 	// Write back.
-	if err := os.WriteFile(p.Path, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(p.Path, []byte(result), 0o600); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 

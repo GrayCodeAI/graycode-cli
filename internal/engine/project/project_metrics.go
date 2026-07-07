@@ -19,7 +19,7 @@ import (
 
 func (pa *ProjectAnalyzer) countDependencies() int {
 	modPath := filepath.Join(pa.Dir, "go.mod")
-	data, err := os.ReadFile(modPath)
+	data, err := os.ReadFile(modPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return 0
 	}
@@ -169,7 +169,7 @@ func (pa *ProjectAnalyzer) hasPatternInFiles(pattern string) bool {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		data, readErr := os.ReadFile(path)
+		data, readErr := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			return nil
 		}
@@ -198,7 +198,7 @@ func (pa *ProjectAnalyzer) hasPatternInTestFiles(pattern string) bool {
 		if !strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		data, readErr := os.ReadFile(path)
+		data, readErr := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			return nil
 		}
@@ -251,7 +251,7 @@ func (pa *ProjectAnalyzer) countInterfaces() int {
 }
 
 func countFileLines(path string) int {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return 0
 	}

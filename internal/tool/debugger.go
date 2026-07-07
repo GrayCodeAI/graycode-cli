@@ -131,7 +131,7 @@ func debugBreakpoint(ctx context.Context, p debugParams) (string, error) {
 	switch lang {
 	case "go":
 		// Use dlv to set a breakpoint.
-		cmd := exec.CommandContext(ctx, "dlv", "debug", "--headless",
+		cmd := exec.CommandContext(ctx, "dlv", "debug", "--headless", // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 			"--accept-multiclient", "--api-version=2",
 			"--", fmt.Sprintf("break %s:%d", p.File, p.Line))
 		out, err := cmd.CombinedOutput()
@@ -156,7 +156,7 @@ func debugRun(ctx context.Context, p debugParams) (string, error) {
 	lang := detectDebugLanguage(file)
 	switch lang {
 	case "go":
-		cmd := exec.CommandContext(ctx, "dlv", "debug", "--headless", "--api-version=2", file)
+		cmd := exec.CommandContext(ctx, "dlv", "debug", "--headless", "--api-version=2", file) // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 		out, err := cmd.CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
@@ -164,7 +164,7 @@ func debugRun(ctx context.Context, p debugParams) (string, error) {
 		}
 		return fmt.Sprintf("dlv debug session:\n%s", result), nil
 	case "python":
-		cmd := exec.CommandContext(ctx, "python3", "-m", "pdb", file)
+		cmd := exec.CommandContext(ctx, "python3", "-m", "pdb", file) // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 		out, err := cmd.CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
@@ -172,7 +172,7 @@ func debugRun(ctx context.Context, p debugParams) (string, error) {
 		}
 		return fmt.Sprintf("pdb session:\n%s", result), nil
 	case "node":
-		cmd := exec.CommandContext(ctx, "node", "--inspect-brk", file)
+		cmd := exec.CommandContext(ctx, "node", "--inspect-brk", file) // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 		out, err := cmd.CombinedOutput()
 		result := strings.TrimSpace(string(out))
 		if err != nil {
@@ -186,7 +186,7 @@ func debugRun(ctx context.Context, p debugParams) (string, error) {
 
 func debugInspect(ctx context.Context, p debugParams) (string, error) {
 	// For Go, use dlv eval.
-	cmd := exec.CommandContext(ctx, "dlv", "eval", p.Expression)
+	cmd := exec.CommandContext(ctx, "dlv", "eval", p.Expression) // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 	out, err := cmd.CombinedOutput()
 	result := strings.TrimSpace(string(out))
 	if err != nil {

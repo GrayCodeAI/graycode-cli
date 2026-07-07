@@ -49,12 +49,12 @@ func (fs *FeedbackStore) load() ([]SkillRating, error) {
 }
 
 func (fs *FeedbackStore) save(ratings []SkillRating) error {
-	_ = os.MkdirAll(filepath.Dir(fs.path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(fs.path), 0o750)
 	data, err := json.MarshalIndent(ratings, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(fs.path, data, 0o644)
+	return os.WriteFile(fs.path, data, 0o600)
 }
 
 // Rate adds or updates a rating for a skill.

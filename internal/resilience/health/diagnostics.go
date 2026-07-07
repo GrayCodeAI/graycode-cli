@@ -514,7 +514,7 @@ func checkBinaryAvailable(name, binary string) DiagnosticResult {
 
 func checkDirWritable(name, dir string, start time.Time) DiagnosticResult {
 	// Ensure directory exists
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return DiagnosticResult{
 			Name:     name,
 			Status:   "fail",
@@ -526,7 +526,7 @@ func checkDirWritable(name, dir string, start time.Time) DiagnosticResult {
 
 	// Try writing a temp file in the directory
 	testFile := filepath.Join(dir, ".hawk-write-test")
-	if err := os.WriteFile(testFile, []byte("test"), 0o644); err != nil {
+	if err := os.WriteFile(testFile, []byte("test"), 0o600); err != nil {
 		return DiagnosticResult{
 			Name:     name,
 			Status:   "fail",

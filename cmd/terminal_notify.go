@@ -53,7 +53,7 @@ func sendTerminalNotification(title, body string) {
 	case "apple":
 		if runtime.GOOS == "darwin" {
 			script := fmt.Sprintf(`display notification "%s" with title "%s"`, body, title)
-			_ = exec.CommandContext(context.Background(), "osascript", "-e", script).Start()
+			_ = exec.CommandContext(context.Background(), "osascript", "-e", script).Start()  // #nosec G204 -- fixed command 'osascript'; script string is built from internal title/body, not shell-invoked
 		}
 	default:
 		// Generic: BEL character

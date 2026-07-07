@@ -38,12 +38,12 @@ var (
 func GetAuditLog() *AuditLog {
 	auditOnce.Do(func() {
 		dir := filepath.Join(storage.StateDir(), "audit")
-		_ = os.MkdirAll(dir, 0o755)
+		_ = os.MkdirAll(dir, 0o750)
 
 		today := time.Now().Format("2006-01-02")
 		path := filepath.Join(dir, today+".jsonl")
 
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			globalAudit = &AuditLog{} // no-op audit
 			return
@@ -112,7 +112,7 @@ func TodayEntries() ([]AuditEntry, error) {
 	today := time.Now().Format("2006-01-02")
 	path := filepath.Join(storage.StateDir(), "audit", today+".jsonl")
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, err
 	}

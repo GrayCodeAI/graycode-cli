@@ -200,7 +200,7 @@ func (g *GitContextProvider) Gather(ctx context.Context, query string) ([]Contex
 	}
 
 	// Current branch
-	branchCmd := exec.CommandContext(ctx, "git", "-C", g.RepoDir, "rev-parse", "--abbrev-ref", "HEAD")
+	branchCmd := exec.CommandContext(ctx, "git", "-C", g.RepoDir, "rev-parse", "--abbrev-ref", "HEAD") // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	branchOut, err := branchCmd.Output()
 	if err == nil {
 		branch := strings.TrimSpace(string(branchOut))
@@ -214,7 +214,7 @@ func (g *GitContextProvider) Gather(ctx context.Context, query string) ([]Contex
 	}
 
 	// Recent commits
-	logCmd := exec.CommandContext(
+	logCmd := exec.CommandContext( // #nosec G204 -- subprocess invocation with args derived from tool/task parameters, inherent to this dev CLI
 		ctx, "git", "-C", g.RepoDir, "log",
 		fmt.Sprintf("--max-count=%d", maxCommits),
 		"--oneline",
@@ -231,7 +231,7 @@ func (g *GitContextProvider) Gather(ctx context.Context, query string) ([]Contex
 	}
 
 	// Uncommitted changes
-	statusCmd := exec.CommandContext(ctx, "git", "-C", g.RepoDir, "status", "--short")
+	statusCmd := exec.CommandContext(ctx, "git", "-C", g.RepoDir, "status", "--short") // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	statusOut, err := statusCmd.Output()
 	if err == nil && len(strings.TrimSpace(string(statusOut))) > 0 {
 		items = append(items, ContextItem{
@@ -386,7 +386,7 @@ func (e *ErrorContextProvider) Gather(ctx context.Context, query string) ([]Cont
 	var items []ContextItem
 	for i := 0; i < maxLogs; i++ {
 		path := filepath.Join(e.LogDir, logs[i].name)
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}
@@ -421,7 +421,7 @@ func (d *DependencyContextProvider) Gather(ctx context.Context, query string) ([
 
 	// Try go.mod
 	goModPath := filepath.Join(d.ProjectDir, "go.mod")
-	if data, err := os.ReadFile(goModPath); err == nil {
+	if data, err := os.ReadFile(goModPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		content := string(data)
 		items = append(items, ContextItem{
 			Source:     "dependencies",
@@ -434,7 +434,7 @@ func (d *DependencyContextProvider) Gather(ctx context.Context, query string) ([
 
 	// Try package.json
 	pkgPath := filepath.Join(d.ProjectDir, "package.json")
-	if data, err := os.ReadFile(pkgPath); err == nil {
+	if data, err := os.ReadFile(pkgPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		content := string(data)
 		items = append(items, ContextItem{
 			Source:     "dependencies",
@@ -447,7 +447,7 @@ func (d *DependencyContextProvider) Gather(ctx context.Context, query string) ([
 
 	// Try requirements.txt
 	reqPath := filepath.Join(d.ProjectDir, "requirements.txt")
-	if data, err := os.ReadFile(reqPath); err == nil {
+	if data, err := os.ReadFile(reqPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		content := string(data)
 		items = append(items, ContextItem{
 			Source:     "dependencies",

@@ -35,7 +35,7 @@ func DisplayVersion() string {
 func readRepoVERSIONFile() string {
 	candidates := versionFileCandidates()
 	for _, path := range candidates {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path)  // #nosec G304 -- path from internal candidate list, not external input
 		if err != nil {
 			continue
 		}

@@ -13,7 +13,7 @@ type GitConfig map[string]map[string]string
 // ParseGitConfig reads and parses a git config file without spawning git.
 // It handles: [section], [section "subsection"], key = value, and comments.
 func ParseGitConfig(path string) (GitConfig, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, err
 	}

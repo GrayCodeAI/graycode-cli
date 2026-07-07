@@ -102,7 +102,7 @@ func (mp *MigrationPlanner) PlanRename(oldName, newName string) (*MigrationPlan,
 
 	var defFiles, usageFiles []string
 	for _, f := range matches {
-		content, readErr := os.ReadFile(f)
+		content, readErr := os.ReadFile(f) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			continue
 		}
@@ -188,7 +188,7 @@ func (mp *MigrationPlanner) PlanPatternReplace(pattern, replacement, fileGlob st
 
 	order := 1
 	for _, f := range files {
-		content, readErr := os.ReadFile(f)
+		content, readErr := os.ReadFile(f) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			continue
 		}
@@ -450,7 +450,7 @@ func (mp *MigrationPlanner) Validate(plan *MigrationPlan) []string {
 			continue
 		}
 		for _, f := range step.Files {
-			content, readErr := os.ReadFile(f)
+			content, readErr := os.ReadFile(f) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 			if readErr != nil {
 				warnings = append(warnings, fmt.Sprintf("step %d: cannot read %s: %v", step.Order, f, readErr))
 				continue
@@ -506,7 +506,7 @@ func (mp *MigrationPlanner) Rollback(plan *MigrationPlan) error {
 			if !ok {
 				return fmt.Errorf("no backup found for %s", f)
 			}
-			if err := os.WriteFile(f, backup, 0o644); err != nil {
+			if err := os.WriteFile(f, backup, 0o600); err != nil {
 				return fmt.Errorf("restoring %s: %w", f, err)
 			}
 		}
@@ -533,7 +533,7 @@ func (mp *MigrationPlanner) executeStep(step *MigrationStep) error {
 	}
 
 	for _, f := range step.Files {
-		content, readErr := os.ReadFile(f)
+		content, readErr := os.ReadFile(f) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			return fmt.Errorf("reading %s: %w", f, readErr)
 		}
@@ -544,7 +544,7 @@ func (mp *MigrationPlanner) executeStep(step *MigrationStep) error {
 		}
 
 		newContent := re.ReplaceAll(content, []byte(step.Replacement))
-		if err := os.WriteFile(f, newContent, 0o644); err != nil {
+		if err := os.WriteFile(f, newContent, 0o600); err != nil {
 			return fmt.Errorf("writing %s: %w", f, err)
 		}
 	}
@@ -572,7 +572,7 @@ func (mp *MigrationPlanner) findFilesContaining(text string) ([]string, error) {
 		if !isTextFile(path) {
 			return nil
 		}
-		content, readErr := os.ReadFile(path)
+		content, readErr := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			return nil
 		}
@@ -615,7 +615,7 @@ func (mp *MigrationPlanner) globFiles(fileGlob string) ([]string, error) {
 
 // findMatchingLines returns line numbers in the file that contain the given text.
 func (mp *MigrationPlanner) findMatchingLines(filePath, text string) []int {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil
 	}

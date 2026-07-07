@@ -159,7 +159,7 @@ func (s *Store) Search(query string, opts SearchOpts) ([]Entry, error) {
 		 JOIN entries_fts ON entries_fts.rowid = e.rowid
 		 WHERE %s
 		 ORDER BY e.created_at DESC
-		 LIMIT ?`, where,
+		 LIMIT ?`, where, // #nosec G201 -- WHERE clause built from fixed strings; values parameterized
 	)
 
 	rows, err := s.db.QueryContext(context.Background(), q, args...)

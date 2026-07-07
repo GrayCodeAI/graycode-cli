@@ -82,7 +82,7 @@ var DefaultSchema = Schema{
 
 // LoadSchema reads a schema YAML file from disk.
 func LoadSchema(path string) (*Schema, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- schema path supplied by trusted internal caller (built-in or config-referenced schema file)
 	if err != nil {
 		return nil, fmt.Errorf("read schema %s: %w", path, err)
 	}

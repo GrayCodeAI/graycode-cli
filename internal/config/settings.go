@@ -177,7 +177,7 @@ func readSettingsFileCached(path string) ([]byte, error) {
 		settingsCache.modTime.Equal(fi.ModTime()) && settingsCache.size == fi.Size() {
 		return settingsCache.data, nil
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the hawk global settings path from internal storage config, not external input
 	if err == nil && statErr == nil {
 		settingsCache.valid = true
 		settingsCache.path = path
@@ -230,7 +230,7 @@ func readSettingsOverride(source string, out *Settings) error {
 	if strings.HasPrefix(source, "{") {
 		return json.Unmarshal([]byte(source), out)
 	}
-	data, err := os.ReadFile(source)
+	data, err := os.ReadFile(source) // #nosec G304 -- source is a file path explicitly supplied by the invoking user via CLI/API override, same trust level as the user
 	if err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ func MergeSettings(base, override Settings) Settings {
 func SaveGlobal(s Settings) error {
 	s = stripHostModelSelection(s)
 	dir := filepath.Dir(globalSettingsPath())
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err

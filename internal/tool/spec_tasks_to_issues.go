@@ -66,7 +66,7 @@ func (TasksToIssuesTool) Execute(ctx context.Context, input json.RawMessage) (st
 	}
 
 	tasksPath := filepath.Join(dir, "tasks.md")
-	data, err := os.ReadFile(tasksPath)
+	data, err := os.ReadFile(tasksPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", fmt.Errorf("cannot read tasks.md: %w — write tasks first with Tasks tool", err)
 	}
@@ -109,7 +109,7 @@ func (TasksToIssuesTool) Execute(ctx context.Context, input json.RawMessage) (st
 			args = append(args, "--label", label)
 		}
 
-		cmd := exec.Command("gh", args...)
+		cmd := exec.Command("gh", args...)       // #nosec G204 -- gh CLI invocation with internally-derived args
 		cmd.Dir = filepath.Clean(dir + "/../..") // go to project root
 		output, err := cmd.CombinedOutput()
 		if err != nil {

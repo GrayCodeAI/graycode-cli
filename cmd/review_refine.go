@@ -138,7 +138,7 @@ func fixReviewRefine(store *ReviewStore, r *ReviewRecord) error {
 	}
 	execArgs = append(execArgs, prompt)
 
-	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...)
+	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...)  // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -162,7 +162,7 @@ func runReviewOnSHA(store *ReviewStore, sha string) error {
 		args = append(args, "--model", refineModel)
 	}
 
-	cmd := exec.CommandContext(context.Background(), hawkBin, args...)
+	cmd := exec.CommandContext(context.Background(), hawkBin, args...)  // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

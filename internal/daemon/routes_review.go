@@ -65,7 +65,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		if req.Concerns != "" {
 			args = append(args, "--concerns", req.Concerns)
 		}
-		_ = exec.CommandContext(context.Background(), "hawk", args...).Run()
+		_ = exec.CommandContext(context.Background(), "hawk", args...).Run() // #nosec G204 -- binary is fixed "hawk"; args are validated (SHA regex, no "--" prefix)
 	}()
 
 	resp := ReviewResponse{

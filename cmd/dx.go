@@ -86,7 +86,7 @@ func doctorOutput(settings hawkconfig.Settings) string {
 	} else {
 		writable := "writable"
 		testFile := filepath.Join(sessDir, ".dx_write_test")
-		if f, err := os.Create(testFile); err != nil {
+		if f, err := os.Create(testFile); err != nil {  // #nosec G304 -- testFile built from internal sessions directory path
 			writable = "not writable"
 		} else {
 			_ = f.Close()

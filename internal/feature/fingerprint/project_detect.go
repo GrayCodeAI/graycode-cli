@@ -83,7 +83,7 @@ func detectFramework(dir string, primaryLang string) string {
 // detectGoFramework reads go.mod for known Go web frameworks.
 func detectGoFramework(dir string) string {
 	goModPath := filepath.Join(dir, "go.mod")
-	data, err := os.ReadFile(goModPath)
+	data, err := os.ReadFile(goModPath) // #nosec G304 -- goModPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 	if err != nil {
 		return ""
 	}
@@ -137,7 +137,7 @@ func detectPythonFramework(dir string) string {
 	}
 
 	for _, f := range files {
-		data, err := os.ReadFile(f)
+		data, err := os.ReadFile(f) // #nosec G304 -- f is a fixed manifest filename joined with a project directory being scanned by this dev tool
 		if err != nil {
 			continue
 		}
@@ -155,7 +155,7 @@ func detectPythonFramework(dir string) string {
 // detectJSFramework reads package.json for known JS/TS frameworks.
 func detectJSFramework(dir string) string {
 	pkgPath := filepath.Join(dir, "package.json")
-	data, err := os.ReadFile(pkgPath)
+	data, err := os.ReadFile(pkgPath) // #nosec G304 -- pkgPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 	if err != nil {
 		return ""
 	}
@@ -207,7 +207,7 @@ func detectJSFramework(dir string) string {
 // detectRustFramework reads Cargo.toml for known Rust web frameworks.
 func detectRustFramework(dir string) string {
 	cargoPath := filepath.Join(dir, "Cargo.toml")
-	data, err := os.ReadFile(cargoPath)
+	data, err := os.ReadFile(cargoPath) // #nosec G304 -- cargoPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 	if err != nil {
 		return ""
 	}
@@ -324,7 +324,7 @@ func detectTestFramework(dir string, lang string) string {
 		// Go has a built-in test framework.
 		// Check for testify or other test libs in go.mod.
 		goModPath := filepath.Join(dir, "go.mod")
-		if data, err := os.ReadFile(goModPath); err == nil {
+		if data, err := os.ReadFile(goModPath); err == nil { // #nosec G304 -- goModPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 			content := string(data)
 			if strings.Contains(content, "github.com/stretchr/testify") {
 				return "go test + testify"
@@ -352,7 +352,7 @@ func detectTestFramework(dir string, lang string) string {
 
 	case "JavaScript", "TypeScript":
 		pkgPath := filepath.Join(dir, "package.json")
-		data, err := os.ReadFile(pkgPath)
+		data, err := os.ReadFile(pkgPath) // #nosec G304 -- pkgPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 		if err != nil {
 			return ""
 		}
@@ -403,7 +403,7 @@ func detectTestFramework(dir string, lang string) string {
 			filepath.Join(dir, "Pipfile"),
 		}
 		for _, f := range files {
-			data, err := os.ReadFile(f)
+			data, err := os.ReadFile(f) // #nosec G304 -- f is a fixed manifest filename joined with a project directory being scanned by this dev tool
 			if err != nil {
 				continue
 			}
@@ -449,7 +449,7 @@ func detectTestFramework(dir string, lang string) string {
 
 	case "Java":
 		pomPath := filepath.Join(dir, "pom.xml")
-		if data, err := os.ReadFile(pomPath); err == nil {
+		if data, err := os.ReadFile(pomPath); err == nil { // #nosec G304 -- pomPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 			content := string(data)
 			if strings.Contains(content, "junit") || strings.Contains(content, "JUnit") {
 				return "junit"
@@ -459,7 +459,7 @@ func detectTestFramework(dir string, lang string) string {
 			}
 		}
 		gradlePath := filepath.Join(dir, "build.gradle")
-		if data, err := os.ReadFile(gradlePath); err == nil {
+		if data, err := os.ReadFile(gradlePath); err == nil { // #nosec G304 -- gradlePath joins a fixed manifest filename with a project directory being scanned by this dev tool
 			content := string(data)
 			if strings.Contains(content, "junit") || strings.Contains(content, "JUnit") {
 				return "junit"
@@ -475,7 +475,7 @@ func detectTestFramework(dir string, lang string) string {
 			return "rspec"
 		}
 		gemPath := filepath.Join(dir, "Gemfile")
-		if data, err := os.ReadFile(gemPath); err == nil {
+		if data, err := os.ReadFile(gemPath); err == nil { // #nosec G304 -- gemPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 			content := string(data)
 			if strings.Contains(content, "rspec") {
 				return "rspec"
@@ -534,14 +534,14 @@ func detectLintTools(dir string) []string {
 		if _, err := os.Stat(path); err == nil {
 			// Special case: setup.cfg / pyproject.toml may or may not contain lint config.
 			if lc.file == "setup.cfg" {
-				if data, err := os.ReadFile(path); err == nil {
+				if data, err := os.ReadFile(path); err == nil { // #nosec G304 -- path joins a fixed config filename with a project directory being scanned by this dev tool
 					if !strings.Contains(string(data), "[flake8]") {
 						continue
 					}
 				}
 			}
 			if lc.file == "pyproject.toml" {
-				if data, err := os.ReadFile(path); err == nil {
+				if data, err := os.ReadFile(path); err == nil { // #nosec G304 -- path joins a fixed config filename with a project directory being scanned by this dev tool
 					if !strings.Contains(string(data), "[tool.ruff]") && !strings.Contains(string(data), "ruff") {
 						continue
 					}
@@ -556,7 +556,7 @@ func detectLintTools(dir string) []string {
 
 	// Check package.json for lint-related devDependencies.
 	pkgPath := filepath.Join(dir, "package.json")
-	if data, err := os.ReadFile(pkgPath); err == nil {
+	if data, err := os.ReadFile(pkgPath); err == nil { // #nosec G304 -- pkgPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 		var pkg struct {
 			DevDependencies map[string]interface{} `json:"devDependencies"`
 		}
@@ -691,7 +691,7 @@ func detectMonorepo(dir string) bool {
 
 	// Check package.json for workspaces field.
 	pkgPath := filepath.Join(dir, "package.json")
-	if data, err := os.ReadFile(pkgPath); err == nil {
+	if data, err := os.ReadFile(pkgPath); err == nil { // #nosec G304 -- pkgPath joins a fixed manifest filename with a project directory being scanned by this dev tool
 		var pkg map[string]interface{}
 		if err := json.Unmarshal(data, &pkg); err == nil {
 			if _, ok := pkg["workspaces"]; ok {

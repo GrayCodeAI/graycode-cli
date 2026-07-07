@@ -64,7 +64,7 @@ func (a *AgentsAccumulator) Flush() error {
 	}
 
 	dir := filepath.Dir(a.filePath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("creating agents accumulator directory: %w", err)
 	}
 
@@ -97,7 +97,7 @@ func (a *AgentsAccumulator) Flush() error {
 	}
 
 	// Write back
-	if err := os.WriteFile(a.filePath, []byte(sb.String()), 0o644); err != nil {
+	if err := os.WriteFile(a.filePath, []byte(sb.String()), 0o600); err != nil {
 		return fmt.Errorf("writing agents.md: %w", err)
 	}
 

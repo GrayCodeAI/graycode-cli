@@ -59,7 +59,7 @@ func detectConventions(dir string, lang string) []Convention {
 func detectIndentationConvention(dir string) *Convention {
 	// Check .editorconfig first.
 	editorConfigPath := filepath.Join(dir, ".editorconfig")
-	if data, err := os.ReadFile(editorConfigPath); err == nil {
+	if data, err := os.ReadFile(editorConfigPath); err == nil { // #nosec G304 -- editorConfigPath joins a fixed config filename with a project directory being scanned by this dev tool
 		content := strings.ToLower(string(data))
 		if strings.Contains(content, "indent_style = tab") {
 			return &Convention{
@@ -190,7 +190,7 @@ func detectNamingConvention(dir string, lang string) *Convention {
 				return nil
 			}
 
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
 			if err != nil {
 				return nil
 			}
@@ -242,7 +242,7 @@ func detectGoErrorHandling(dir string) *Convention {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
 		if err != nil {
 			return nil
 		}
@@ -293,7 +293,7 @@ func detectImportOrganization(dir string, lang string) *Convention {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
 		if err != nil {
 			return nil
 		}
@@ -375,7 +375,7 @@ func detectTestNaming(dir string, lang string) *Convention {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
 		if err != nil {
 			return nil
 		}

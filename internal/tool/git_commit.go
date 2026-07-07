@@ -89,7 +89,7 @@ func AutoCommit(ctx context.Context, path, toolName, description string) error {
 		}
 	}
 
-	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg)
+	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	if out, err := commit.CombinedOutput(); err != nil {
 		return fmt.Errorf("git commit: %s (%w)", strings.TrimSpace(string(out)), err)
 	}

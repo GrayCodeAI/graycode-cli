@@ -59,7 +59,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 
 	// Check for existing hook.
 	if _, err := os.Stat(hookPath); err == nil && !reviewInitForce {
-		existing, _ := os.ReadFile(hookPath)
+		existing, _ := os.ReadFile(hookPath)  // #nosec G304 -- hookPath built from internal hooksDir constant, not external input
 		if strings.Contains(string(existing), "hawk review") {
 			fmt.Println(icons.CheckBold() + " hawk review hook already installed")
 			return nil

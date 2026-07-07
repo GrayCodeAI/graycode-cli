@@ -34,7 +34,7 @@ func NewStore(baseDir string) (*Store, error) {
 		baseDir = storage.TasteDir()
 	}
 
-	if err := os.MkdirAll(baseDir, 0o755); err != nil {
+	if err := os.MkdirAll(baseDir, 0o750); err != nil {
 		return nil, fmt.Errorf("cannot create taste store directory: %w", err)
 	}
 
@@ -59,11 +59,11 @@ func (s *Store) Save(projectID string, profile *Profile) error {
 		return fmt.Errorf("marshal profile: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("create profile directory: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write profile: %w", err)
 	}
 
@@ -77,7 +77,7 @@ func (s *Store) Load(projectID string) (*Profile, error) {
 	}
 
 	path := s.profilePath(projectID)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is built from sanitizeProjectID, which strips path separators and other unsafe characters
 	if err != nil {
 		if os.IsNotExist(err) {
 			return NewProfile(projectID), nil

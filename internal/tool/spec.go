@@ -296,7 +296,7 @@ func (SpecStatusTool) Execute(ctx context.Context, input json.RawMessage) (strin
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			continue
 		}
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}
@@ -505,7 +505,7 @@ func (SpecEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		}
 
 		// Read existing content
-		existing, err := os.ReadFile(path)
+		existing, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			// File doesn't exist yet — just write the delta as-is
 			if writeErr := os.WriteFile(path, []byte(p.Delta), 0o600); writeErr != nil {

@@ -105,7 +105,7 @@ func LoadSpecConfig() SpecConfig {
 	if err != nil {
 		return SpecConfig{}
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path from SpecConfigPath(), derived from cwd + fixed ".hawk" dir
 	if err != nil {
 		return SpecConfig{}
 	}

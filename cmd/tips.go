@@ -107,6 +107,6 @@ func nextTip() string {
 		candidates = tips
 	}
 
-	chosen := candidates[rand.Intn(len(candidates))]
+	chosen := candidates[rand.Intn(len(candidates))] // #nosec G404 -- non-cryptographic use (random tip selection)
 	return chosen.Text
 }

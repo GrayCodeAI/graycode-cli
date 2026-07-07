@@ -66,7 +66,7 @@ func AnalyzeProject(dir string) []ProjectSignal {
 	}
 
 	// Detect frameworks from package.json.
-	if data, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil {
+	if data, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil { // #nosec G304 -- path is a fixed filename joined to the caller-specified project dir
 		content := string(data)
 		frameworks := map[string]string{
 			"react": "react", "next": "nextjs", "vue": "vue",

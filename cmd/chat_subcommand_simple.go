@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // init() registers a large batch of simple /slash commands via
@@ -78,17 +79,28 @@ func init() {
 	// /theme <t> — set theme (dark|light|auto)
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "theme",
-		description: "set theme (dark|light|auto)",
-		usage:       "/theme <dark|light|auto>",
+		description: "set theme (dark|light|auto or any registered palette)",
+		usage:       "/theme [name]",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			if len(args) < 1 {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /theme <dark|light|auto>"})
+				if m.themePicker == nil {
+					m.themePicker = NewThemePicker()
+				}
+				// Pre-select the current saved theme.
+				current := hawkconfig.LoadGlobalSettings().Theme
+				m.themePicker.OpenWithCurrent(current)
+				m.viewDirty = true
+				m.updateViewportContent()
 				return m, nil
 			}
-			if err := hawkconfig.SetGlobalSetting("theme", args[0]); err != nil {
+			// Inline: /theme <name>
+			themeName := args[0]
+			if err := hawkconfig.SetGlobalSetting("theme", themeName); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			} else {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Theme set to: %s (restart to apply)", args[0])})
+				// Apply immediately — full palette swap, no restart needed.
+				ApplyTheme(themeName)
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Theme set to: %s", icons.CheckBold(), themeName)})
 			}
 			return m, nil
 		},
@@ -559,7 +571,7 @@ func init() {
 			}
 			var added []string
 			for _, f := range args {
-				content, err := os.ReadFile(f)
+				content, err := os.ReadFile(f)  // #nosec G304 -- f is a user-specified file path from the /add command, intentional read
 				if err != nil {
 					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Cannot read %s: %v", f, err)})
 					continue

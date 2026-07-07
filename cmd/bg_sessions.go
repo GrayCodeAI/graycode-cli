@@ -48,7 +48,7 @@ func SaveBGSession(info *BGSessionInfo) error {
 
 // LoadBGSession reads a background session info.
 func LoadBGSession(id string) (*BGSessionInfo, error) {
-	data, err := os.ReadFile(filepath.Join(bgSessionsDir(), id+".json"))
+	data, err := os.ReadFile(filepath.Join(bgSessionsDir(), id+".json"))  // #nosec G304 -- path built from internal bg-sessions directory and session id
 	if err != nil {
 		return nil, err
 	}
@@ -126,10 +126,10 @@ func StartBGSession(prompt string, args []string) (*BGSessionInfo, error) {
 
 	// Build command: hawk --print <prompt> with all inherited flags
 	cmdArgs := append([]string{"--print", "--session-id", id, prompt}, args...)
-	cmd := exec.CommandContext(context.Background(), "hawk", cmdArgs...)
+	cmd := exec.CommandContext(context.Background(), "hawk", cmdArgs...)  // #nosec G204 -- fixed command 'hawk' relaunching self with internal flags
 	cmd.Dir = cwd
 
-	logF, err := os.Create(logFile)
+	logF, err := os.Create(logFile)  // #nosec G304 -- logFile built from internal bg-sessions directory and generated id
 	if err != nil {
 		return nil, fmt.Errorf("create log file: %w", err)
 	}
@@ -285,7 +285,7 @@ func init() {
 }
 
 func tailLog(cmd *cobra.Command, path string, lines int) error {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path)  // #nosec G304 -- path built from internal bg-sessions directory
 	if err != nil {
 		return fmt.Errorf("read log: %w", err)
 	}

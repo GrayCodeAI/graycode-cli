@@ -97,7 +97,7 @@ func (s *SecureStorage) setMacOS(account, token string) error {
 
 func (s *SecureStorage) getFile(account string) (string, error) {
 	path := filepath.Join(storage.ConfigDir(), ".tokens")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the fixed internal token store location, not external input
 	if err != nil {
 		return "", err
 	}
@@ -114,7 +114,7 @@ func (s *SecureStorage) setFile(account, token string) error {
 		return err
 	}
 	var tokens map[string]string
-	if data, err := os.ReadFile(path); err == nil {
+	if data, err := os.ReadFile(path); err == nil { // #nosec G304 -- path is the fixed internal token store location, not external input
 		_ = json.Unmarshal(data, &tokens)
 	}
 	if tokens == nil {

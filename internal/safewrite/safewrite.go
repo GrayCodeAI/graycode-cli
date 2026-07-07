@@ -159,7 +159,7 @@ func randSuffix() int64 {
 	randMu.Lock()
 	defer randMu.Unlock()
 	if randSrc == nil {
-		randSrc = rand.New(rand.NewSource(time.Now().UnixNano()))
+		randSrc = rand.New(rand.NewSource(time.Now().UnixNano())) // #nosec G404 -- non-cryptographic use (random temp-file suffix)
 	}
 	return randSrc.Int63()
 }

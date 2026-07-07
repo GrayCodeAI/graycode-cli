@@ -644,7 +644,7 @@ func createExecWorktree(repoDir, baseBranch, branch string) (string, error) {
 	}
 	wtPath := strings.TrimSpace(string(out))
 
-	gitCmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
+	gitCmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	gitCmd.Dir = repoDir
 	if errOut, err := gitCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(errOut)), err)

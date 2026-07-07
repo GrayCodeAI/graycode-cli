@@ -531,7 +531,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func (s *Server) writePIDFile() error {
 	dir := pidDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	data, err := json.Marshal(struct {

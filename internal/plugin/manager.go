@@ -253,7 +253,7 @@ func (pm *PluginManager) Execute(ctx context.Context, pluginName, toolName strin
 		return "", fmt.Errorf("tool %q has empty command", toolName)
 	}
 
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...) // #nosec G204 -- tool.Command comes from the plugin's own manifest, trusted like other plugin config
 	cmd.Dir = p.Path
 
 	// Pass input via stdin
@@ -331,7 +331,7 @@ func Validate(manifest *ToolManifest) []string {
 // ParseManifest reads and parses a plugin.json file from the given plugin directory.
 func ParseManifest(pluginDir string) (*ToolManifest, error) {
 	path := filepath.Join(pluginDir, "plugin.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Hawk-managed plugins root, not raw external input
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
@@ -411,7 +411,7 @@ func ScanPlugin(pluginDir string) []SecurityIssue {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over pluginDir, a locally installed plugin directory, not raw external input
 		if err != nil {
 			return nil
 		}
@@ -561,7 +561,7 @@ func isTextContent(data []byte) bool {
 // ParseWasmManifest reads and parses a plugin.json file for a WASM plugin.
 func ParseWasmManifest(pluginDir string) (*WasmManifest, error) {
 	path := filepath.Join(pluginDir, "plugin.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Hawk-managed plugins root, not raw external input
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 )
@@ -46,7 +47,7 @@ func NewLoopbackHTTPServer(t testing.TB, handler http.Handler) *httptest.Server 
 	t.Helper()
 	ts := &httptest.Server{
 		Listener: ListenLoopback(t),
-		Config:   &http.Server{Handler: handler},
+		Config:   &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second},
 	}
 	ts.Start()
 	return ts

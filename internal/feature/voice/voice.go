@@ -48,7 +48,7 @@ func (t *Transcriber) transcribeWhisper(path string, audioData []byte) (string, 
 	}
 
 	// Run whisper
-	cmd := exec.CommandContext(context.Background(), path, tmpFile.Name(), "-m", t.config.Model, "-l", t.config.Lang)
+	cmd := exec.CommandContext(context.Background(), path, tmpFile.Name(), "-m", t.config.Model, "-l", t.config.Lang) // #nosec G204 -- path resolved via exec.LookPath("whisper"); tmpFile is our own temp file; config values are local settings
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {

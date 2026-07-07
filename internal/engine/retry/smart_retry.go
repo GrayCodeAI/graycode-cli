@@ -264,7 +264,7 @@ func (sr *SmartRetry) calculateDelayInternal(strategy *RetryStrategy, attempt in
 	if strategy.JitterPct > 0 {
 		jitterFraction := strategy.JitterPct / 100.0
 		jitterRange := float64(delay) * jitterFraction
-		jitter := (rand.Float64()*2 - 1) * jitterRange // between -jitterRange and +jitterRange
+		jitter := (rand.Float64()*2 - 1) * jitterRange // #nosec G404 -- non-cryptographic use (retry backoff jitter)
 		delay = time.Duration(float64(delay) + jitter)
 		// Ensure delay doesn't go below 0
 		if delay < 0 {

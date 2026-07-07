@@ -40,7 +40,7 @@ func (m *chatModel) handleMentions(text string) string {
 			})
 			continue
 		}
-		content, err := os.ReadFile(path)
+		content, err := os.ReadFile(path)  // #nosec G304 -- path is user-mentioned file, already checked against sensitive-path list above
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{
 				role:    "error",

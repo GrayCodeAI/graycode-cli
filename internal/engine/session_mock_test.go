@@ -23,13 +23,6 @@ func setMaxTurns(s *Session, turns int) {
 	}
 }
 
-// setMaxBudgetUSD is a test helper that sets the max budget through the sub-service.
-func setMaxBudgetUSD(s *Session, amount float64) {
-	if s.LifecycleSvc() != nil {
-		s.LifecycleSvc().Limits().SetMaxBudgetUSD(amount)
-	}
-}
-
 func TestSession_AddUser(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()

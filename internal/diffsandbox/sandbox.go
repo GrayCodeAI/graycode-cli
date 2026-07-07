@@ -271,7 +271,7 @@ func (s *Sandbox) applyChange(c *Change) error {
 	switch c.Type {
 	case ChangeCreate, ChangeModify:
 		dir := filepath.Dir(absPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("create directory %s: %w", dir, err)
 		}
 		// Write to temp then rename for atomicity.
@@ -289,7 +289,7 @@ func (s *Sandbox) applyChange(c *Change) error {
 			_ = os.Remove(tmpName)
 			return fmt.Errorf("close temp file: %w", err)
 		}
-		if err := os.Chmod(tmpName, 0o644); err != nil {
+		if err := os.Chmod(tmpName, 0o600); err != nil {
 			_ = os.Remove(tmpName)
 			return fmt.Errorf("chmod temp file: %w", err)
 		}

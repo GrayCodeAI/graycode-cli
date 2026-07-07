@@ -490,7 +490,10 @@ func (TransactionTool) Execute(ctx context.Context, input json.RawMessage) (stri
 		}
 		mode := os.FileMode(0o644)
 		if op.Mode != 0 {
-			mode = os.FileMode(op.Mode)
+			if op.Mode < 0 || op.Mode > 0o777 {
+				return "", fmt.Errorf("invalid mode %d for %s: must be between 0 and 0777", op.Mode, op.Path)
+			}
+			mode = os.FileMode(op.Mode) // #nosec G115 -- op.Mode bounds-checked above (0-0777)
 		}
 
 		var err error
@@ -550,7 +553,7 @@ func applyOperation(op FileOperation) error {
 	switch op.Type {
 	case "create":
 		dir := filepath.Dir(op.Path)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("create directory %s: %w", dir, err)
 		}
 		return os.WriteFile(op.Path, op.Content, op.Mode)
@@ -560,7 +563,7 @@ func applyOperation(op FileOperation) error {
 		return os.Remove(op.Path)
 	case "rename":
 		dir := filepath.Dir(op.Path)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("create directory %s: %w", dir, err)
 		}
 		return os.Rename(op.OldPath, op.Path)
@@ -596,7 +599,7 @@ func reverseOperation(op FileOperation) error {
 	case "delete":
 		// Reverse of delete: re-create the file
 		dir := filepath.Dir(op.Path)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return err
 		}
 		return os.WriteFile(op.Path, op.OldContent, op.Mode)

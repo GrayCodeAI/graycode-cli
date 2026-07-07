@@ -12,10 +12,10 @@ func TestThemeRegistryNotEmpty(t *testing.T) {
 	}
 }
 
-// TestThemeRegistryCount ensures we have 12 themes (matching Zero).
+// TestThemeRegistryCount ensures we have 17 themes (12 original + 5 new).
 func TestThemeRegistryCount(t *testing.T) {
-	if len(themeRegistry) != 12 {
-		t.Errorf("themeRegistry has %d themes, want 12", len(themeRegistry))
+	if len(themeRegistry) != 17 {
+		t.Errorf("themeRegistry has %d themes, want 17", len(themeRegistry))
 	}
 }
 
@@ -94,15 +94,20 @@ func TestLookupThemeNotFound(t *testing.T) {
 // TestThemeNames ensures ThemeNames returns all theme names.
 func TestThemeNames(t *testing.T) {
 	names := ThemeNames()
-	if len(names) != 12 {
-		t.Errorf("ThemeNames returned %d names, want 12", len(names))
+	if len(names) != 17 {
+		t.Errorf("ThemeNames returned %d names, want 17", len(names))
 	}
 	// Check all expected themes are present
 	seen := make(map[string]bool)
 	for _, name := range names {
 		seen[name] = true
 	}
-	expected := []string{"dark", "dracula", "nord", "gruvbox", "tokyo-night", "catppuccin", "one-dark", "solarized-dark", "rose-pine", "everforest", "light", "solarized-light"}
+	expected := []string{
+		"dark", "dracula", "nord", "gruvbox", "tokyo-night",
+		"catppuccin", "one-dark", "solarized-dark", "rose-pine", "everforest",
+		"monokai", "kanagawa", "ayu", "palenight", "github-dark",
+		"light", "solarized-light",
+	}
 	for _, exp := range expected {
 		if !seen[exp] {
 			t.Errorf("expected theme %q not found in ThemeNames", exp)

@@ -13,8 +13,8 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/spec"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -294,6 +294,25 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.session.PermSvc().SetAutonomy(chosen.Level)
 					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", chosen.Name, chosen.Description)})
+				}
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
+		}
+
+		// Theme picker (/theme) — intercept all input when open
+		if m.themePicker != nil && m.themePicker.IsOpen() {
+			chosen, handled := m.themePicker.Update(msg)
+			if handled {
+				if chosen != nil {
+					if err := hawkconfig.SetGlobalSetting("theme", chosen.Name); err != nil {
+						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+					} else {
+						// Apply immediately — repaints with full palette on next frame.
+						ApplyTheme(chosen.Name)
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Theme set to: %s", icons.CheckBold(), chosen.Name)})
+					}
 				}
 				m.viewDirty = true
 				m.updateViewportContent()
@@ -934,7 +953,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.waiting = true
 			m.autoScroll = true
 			m.viewDirty = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.turnSawThinking = false
 			m.turnHadAssistantOutput = false
@@ -965,7 +984,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, spinnerVerbTickCmd())
 		if strings.TrimSpace(m.partial.String()) == "" {
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
 		}

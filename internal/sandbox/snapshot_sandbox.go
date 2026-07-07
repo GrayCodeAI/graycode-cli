@@ -325,7 +325,7 @@ func (m *SandboxManager) FormatStatus() string {
 
 // saveToDisk writes sandbox state to a JSON file on disk.
 func (m *SandboxManager) saveToDisk(sb *SandboxState) error {
-	if err := os.MkdirAll(m.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(m.Dir, 0o750); err != nil {
 		return err
 	}
 	data, err := json.Marshal(sb)
@@ -333,13 +333,13 @@ func (m *SandboxManager) saveToDisk(sb *SandboxState) error {
 		return err
 	}
 	path := filepath.Join(m.Dir, sb.ID+".json")
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // loadFromDisk reads sandbox state from a JSON file on disk.
 func (m *SandboxManager) loadFromDisk(id string) (*SandboxState, error) {
 	path := filepath.Join(m.Dir, id+".json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is rooted in m.Dir, our own sandbox state directory
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +392,7 @@ func captureFiles(dir string) (map[string][]byte, error) {
 		if err != nil {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over the sandbox's own working directory
 		if err != nil {
 			return nil
 		}
@@ -404,15 +404,15 @@ func captureFiles(dir string) (map[string][]byte, error) {
 
 // restoreFiles writes a file map back to a directory, creating directories as needed.
 func restoreFiles(dir string, files map[string][]byte) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	for rel, content := range files {
 		path := filepath.Join(dir, rel)
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path, content, 0o644); err != nil {
+		if err := os.WriteFile(path, content, 0o600); err != nil {
 			return err
 		}
 	}

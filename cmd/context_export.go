@@ -43,7 +43,7 @@ func ExportContext(dir string, focus string) (string, error) {
 	// Key files
 	b.WriteString("## Key Files\n\n")
 	for _, name := range keyFiles(dir) {
-		content, err := os.ReadFile(filepath.Join(dir, name))
+		content, err := os.ReadFile(filepath.Join(dir, name))  // #nosec G304 -- name comes from internal keyFiles() list
 		if err != nil {
 			continue
 		}
@@ -62,7 +62,7 @@ func ExportContext(dir string, focus string) (string, error) {
 
 	// AGENTS.md / project instructions
 	for _, instrFile := range []string{"AGENTS.md", "AGENTS.md", "CLAUDE.md", ".hawk.md"} {
-		data, err := os.ReadFile(filepath.Join(dir, instrFile))
+		data, err := os.ReadFile(filepath.Join(dir, instrFile))  // #nosec G304 -- instrFile is one of a fixed set of well-known project instruction filenames
 		if err == nil && len(data) > 0 {
 			b.WriteString(fmt.Sprintf("## Project Instructions (%s)\n\n%s\n\n", instrFile, strings.TrimSpace(string(data))))
 			break
@@ -74,7 +74,7 @@ func ExportContext(dir string, focus string) (string, error) {
 		b.WriteString(fmt.Sprintf("## Focus Area: %s\n\n", focus))
 		focusFiles := findFocusFiles(dir, focus)
 		for _, fp := range focusFiles {
-			content, err := os.ReadFile(fp)
+			content, err := os.ReadFile(fp)  // #nosec G304 -- fp comes from internal findFocusFiles enumeration
 			if err != nil {
 				continue
 			}
@@ -313,7 +313,7 @@ func renderCXML(dir string) (string, string, error) {
 			skipped++
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path)  // #nosec G304 -- path comes from filepath.WalkDir over the target directory
 		if err != nil {
 			skipped++
 			return nil

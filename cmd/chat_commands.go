@@ -27,7 +27,7 @@ func slashCommands() []string {
 	if slashCmdCacheBuilt {
 		return slashCmdCache
 	}
-	
+
 	seen := make(map[string]bool, len(allSlashCommands)+subcommandRegistry.Size())
 	out := make([]string, 0, len(allSlashCommands)+subcommandRegistry.Size())
 	add := func(name string) {
@@ -149,7 +149,9 @@ func (m *chatModel) syncInputLayout() bool {
 }
 
 func slashAliases() map[string]string {
-	return nil
+	return map[string]string{
+		"/themes": "/theme",
+	}
 }
 
 var slashDescriptions = map[string]string{
@@ -331,6 +333,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	// init(); we look up by the slash name minus the leading "/".
 	// If the registry has a handler, dispatch and return.
 	if strings.HasPrefix(cmd, "/") {
+		if aliasTarget, ok := slashAliases()[cmd]; ok {
+			cmd = aliasTarget
+		}
 		name := strings.TrimPrefix(cmd, "/")
 		if sub, ok := subcommandRegistry.Lookup(name); ok {
 			args := parts[1:]

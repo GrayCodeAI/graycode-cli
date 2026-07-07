@@ -108,10 +108,10 @@ func (ds *DiffSandbox) Apply(path string) error {
 	ds.mu.Unlock()
 
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create directory %s: %w", dir, err)
 	}
-	return os.WriteFile(path, []byte(newContent), 0o644)
+	return os.WriteFile(path, []byte(newContent), 0o600)
 }
 
 // ApplyAll writes all pending changes to disk and clears the sandbox.
@@ -128,10 +128,10 @@ func (ds *DiffSandbox) ApplyAll() (int, error) {
 	applied := 0
 	for path, change := range snapshot {
 		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return applied, fmt.Errorf("create directory %s: %w", dir, err)
 		}
-		if err := os.WriteFile(path, []byte(change.NewContent), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(change.NewContent), 0o600); err != nil {
 			return applied, fmt.Errorf("write %s: %w", path, err)
 		}
 		applied++

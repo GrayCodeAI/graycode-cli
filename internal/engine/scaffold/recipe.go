@@ -216,7 +216,7 @@ func (r *RecipeRegistry) Save() error {
 		return errors.New("registry directory not set")
 	}
 
-	if err := os.MkdirAll(r.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(r.Dir, 0o750); err != nil {
 		return fmt.Errorf("failed to create recipe directory: %w", err)
 	}
 
@@ -226,7 +226,7 @@ func (r *RecipeRegistry) Save() error {
 	}
 
 	path := filepath.Join(r.Dir, "recipes.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write recipes file: %w", err)
 	}
 
@@ -243,7 +243,7 @@ func (r *RecipeRegistry) Load() error {
 	}
 
 	path := filepath.Join(r.Dir, "recipes.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No recipes file yet is fine

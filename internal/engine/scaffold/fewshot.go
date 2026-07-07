@@ -160,7 +160,7 @@ func (fs *FewShotStore) load() {
 
 func (fs *FewShotStore) save() {
 	dir := filepath.Dir(fs.path)
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 	data, _ := json.Marshal(fs.examples)
-	_ = os.WriteFile(fs.path, data, 0o644)
+	_ = os.WriteFile(fs.path, data, 0o600)
 }

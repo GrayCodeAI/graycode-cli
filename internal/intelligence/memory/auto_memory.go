@@ -68,11 +68,11 @@ func (am *AutoMemory) ShouldRemember(content string) bool {
 
 // Write appends content to a topic-specific markdown file in the memory directory.
 func (am *AutoMemory) Write(topic, content string) error {
-	if err := os.MkdirAll(am.dir, 0o755); err != nil {
+	if err := os.MkdirAll(am.dir, 0o750); err != nil {
 		return err
 	}
 	path := filepath.Join(am.dir, topic+".md")
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- path is built from the tool's own memory directory and a topic name derived internally
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (am *AutoMemory) Write(topic, content string) error {
 // LoadStartup reads the first 200 lines (max 25KB) of MEMORY.md from the memory directory.
 func (am *AutoMemory) LoadStartup() string {
 	path := filepath.Join(am.dir, "MEMORY.md")
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is built from the tool's own memory directory and a fixed filename
 	if err != nil {
 		return ""
 	}

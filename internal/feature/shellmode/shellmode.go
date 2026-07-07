@@ -78,7 +78,7 @@ func ExecuteShellWithTimeout(ctx context.Context, cmdStr string, timeout time.Du
 	defer cancel()
 
 	shell, flag := shellAndFlag()
-	cmd := exec.CommandContext(ctx, shell, flag, cmdStr)
+	cmd := exec.CommandContext(ctx, shell, flag, cmdStr) // #nosec G204 -- cmdStr is user-typed shell input; this feature's purpose is to run it directly
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

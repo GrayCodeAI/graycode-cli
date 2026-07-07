@@ -195,7 +195,7 @@ func (pa *ProjectAnalyzer) AnalyzeModule(path string) *ModuleInfo {
 func (pa *ProjectAnalyzer) detectProjectName() string {
 	// Try go.mod first.
 	modPath := filepath.Join(pa.Dir, "go.mod")
-	if f, err := os.Open(modPath); err == nil {
+	if f, err := os.Open(modPath); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
@@ -270,7 +270,7 @@ func (pa *ProjectAnalyzer) detectLanguage() string {
 func (pa *ProjectAnalyzer) detectFramework() string {
 	// Check go.mod for known frameworks.
 	modPath := filepath.Join(pa.Dir, "go.mod")
-	data, err := os.ReadFile(modPath)
+	data, err := os.ReadFile(modPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}

@@ -688,7 +688,7 @@ func (fg *FileGrouper) fileExists(relPath string) bool {
 
 func (fg *FileGrouper) extractLocalImports(relPath string) []string {
 	absPath := filepath.Join(fg.ProjectDir, relPath)
-	f, err := os.Open(absPath)
+	f, err := os.Open(absPath) // #nosec G304 -- absPath is derived from a repo-relative path of a file within the project directory being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}

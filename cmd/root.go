@@ -114,11 +114,13 @@ var rootCmd = &cobra.Command{
 		hawkconfig.PrepareCredentialDiscovery(context.Background())
 		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 
-		if !replFlag {
-			if settings, err := loadEffectiveSettings(); err == nil {
-				if settings.ReplMode != nil && *settings.ReplMode {
-					replFlag = true
-				}
+		if settings, err := loadEffectiveSettings(); err == nil {
+			if !replFlag && settings.ReplMode != nil && *settings.ReplMode {
+				replFlag = true
+			}
+			// Apply saved theme — mutates all global color vars immediately.
+			if settings.Theme != "" {
+				ApplyTheme(settings.Theme)
 			}
 		}
 

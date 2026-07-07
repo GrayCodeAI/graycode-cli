@@ -38,7 +38,7 @@ Report each issue with:
 	}
 
 	for _, path := range filePaths {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path)  // #nosec G304 -- path comes from internal filePaths list built from git diff output
 		if err != nil {
 			b.WriteString(fmt.Sprintf("## %s\n\n(could not read: %v)\n\n", path, err))
 			continue

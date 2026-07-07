@@ -449,4 +449,3 @@ func TestIntegration_TrustTiersAndSpecStage(t *testing.T) {
 		t.Fatal("Specify should always be allowed during spec stage")
 	}
 }
-

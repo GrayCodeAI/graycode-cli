@@ -201,7 +201,7 @@ func (m *chatModel) handleSkillsCommand(parts []string, text string) (tea.Model,
 					return m, nil
 				}
 			}
-			data, _ := os.ReadFile(skillFile)
+			data, _ := os.ReadFile(skillFile)  // #nosec G304 -- skillFile comes from internal skill enumeration
 			skill := plugin.ParseSmartSkillPublic(string(data))
 			var issues []string
 			if skill.Name == "" {

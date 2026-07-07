@@ -156,7 +156,7 @@ func (tl *TestLoop) RunTests(ctx context.Context, projectDir string) (*TestResul
 		return nil, fmt.Errorf("test_loop: empty test command")
 	}
 
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...) // #nosec G204 -- command parsed from tool-configured command string (lint/test command)
 	cmd.Dir = projectDir
 
 	var stdout, stderr bytes.Buffer
@@ -328,7 +328,7 @@ func fileExists(path string) bool {
 }
 
 func readPackageJSONTestScript(path string) string {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}

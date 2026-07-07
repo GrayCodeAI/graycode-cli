@@ -77,7 +77,7 @@ func LoadStageMeta(slug string) *StageMeta {
 		return nil
 	}
 	path := filepath.Join(dir, slug, "spec.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from SpecsRoot()+slug, internal spec stage metadata
 	if err != nil {
 		return nil
 	}

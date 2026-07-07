@@ -72,7 +72,7 @@ func (ts *TreeSitter) FindNode(ctx context.Context, source, searchText string) (
 		return s, e, nil
 	}
 
-	grammar, err := os.ReadFile(wasmPath)
+	grammar, err := os.ReadFile(wasmPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		s, e := ts.fallbackFind(source, searchText)
 		return s, e, nil

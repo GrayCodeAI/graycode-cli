@@ -113,7 +113,7 @@ func GatherDeepSourceInfo(dir string) string {
 			break
 		}
 		path := filepath.Join(dir, name)
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path is built from a fixed list of well-known project filenames joined to the caller-specified project dir
 		if err != nil {
 			continue
 		}
@@ -135,7 +135,7 @@ func GatherDeepSourceInfo(dir string) string {
 			break
 		}
 		path := filepath.Join(dir, name)
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path is built from a fixed list of well-known entry point filenames joined to the caller-specified project dir
 		if err != nil {
 			continue
 		}

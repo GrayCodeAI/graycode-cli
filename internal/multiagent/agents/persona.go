@@ -131,13 +131,13 @@ func (r *PersonaRegistry) Create(persona *Persona) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if err := os.MkdirAll(r.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(r.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating persona directory: %w", err)
 	}
 
 	content := RenderPersonaFile(persona)
 	path := filepath.Join(r.Dir, persona.Name+".md")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return fmt.Errorf("writing persona file: %w", err)
 	}
 
@@ -353,7 +353,7 @@ func (r *PersonaRegistry) SelectPersona(task string) *Persona {
 
 // ParsePersonaFile reads a persona definition from a markdown file with YAML frontmatter.
 func ParsePersonaFile(path string) (*Persona, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is from LoadAll()'s enumeration of the registry's own persona dir, or an explicit caller-supplied persona file path
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +545,7 @@ func RenderPersonaFile(persona *Persona) string {
 
 // EnsureBuiltins creates the built-in personas in the directory if they do not exist.
 func (r *PersonaRegistry) EnsureBuiltins() error {
-	if err := os.MkdirAll(r.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(r.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating persona directory: %w", err)
 	}
 
@@ -556,7 +556,7 @@ func (r *PersonaRegistry) EnsureBuiltins() error {
 			continue
 		}
 		content := RenderPersonaFile(p)
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 			return fmt.Errorf("writing built-in persona %s: %w", p.Name, err)
 		}
 	}
@@ -571,7 +571,7 @@ func (r *PersonaRegistry) EnsureBuiltins() error {
 // Cavecrew personas are already part of BuiltinPersonas, so calling
 // this is a no-op after EnsureBuiltins has run.
 func (r *PersonaRegistry) EnsureCavecrew() error {
-	if err := os.MkdirAll(r.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(r.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating persona directory: %w", err)
 	}
 	for _, p := range CavecrewPersonas() {
@@ -580,7 +580,7 @@ func (r *PersonaRegistry) EnsureCavecrew() error {
 			continue
 		}
 		content := RenderPersonaFile(p)
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 			return fmt.Errorf("writing cavecrew persona %s: %w", p.Name, err)
 		}
 	}

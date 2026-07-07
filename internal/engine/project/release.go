@@ -82,7 +82,7 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 
 	// Try package.json
 	pkgJSON := filepath.Join(rm.ProjectDir, "package.json")
-	if data, err := os.ReadFile(pkgJSON); err == nil {
+	if data, err := os.ReadFile(pkgJSON); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		var pkg map[string]interface{}
 		if err := json.Unmarshal(data, &pkg); err == nil {
 			if v, ok := pkg["version"].(string); ok && isValidSemver(v) {
@@ -94,7 +94,7 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 
 	// Try Cargo.toml
 	cargoToml := filepath.Join(rm.ProjectDir, "Cargo.toml")
-	if f, err := os.Open(cargoToml); err == nil {
+	if f, err := os.Open(cargoToml); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
@@ -114,7 +114,7 @@ func (rm *ReleaseManager) DetectCurrentVersion() (string, error) {
 
 	// Try go.mod (look for a version comment or module version)
 	goMod := filepath.Join(rm.ProjectDir, "go.mod")
-	if f, err := os.Open(goMod); err == nil {
+	if f, err := os.Open(goMod); err == nil { // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		defer func() { _ = f.Close() }()
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
@@ -209,7 +209,7 @@ func (rm *ReleaseManager) GatherChanges(sinceTag string) ([]ChangeEntry, error) 
 	}
 
 	// Get commits with hash, author, and message
-	cmd := exec.CommandContext(context.Background(), "git", "log", logRange, "--pretty=format:%H|%an|%s%n%b%n---END---")
+	cmd := exec.CommandContext(context.Background(), "git", "log", logRange, "--pretty=format:%H|%an|%s%n%b%n---END---") // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	cmd.Dir = rm.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -469,7 +469,7 @@ func (rm *ReleaseManager) gatherStats(sinceTag string, commitCount, contributorC
 		diffRange = "HEAD"
 	}
 
-	cmd := exec.CommandContext(context.Background(), "git", "diff", "--stat", diffRange)
+	cmd := exec.CommandContext(context.Background(), "git", "diff", "--stat", diffRange) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	cmd.Dir = rm.ProjectDir
 	output, err := cmd.Output()
 	if err != nil {
@@ -604,7 +604,7 @@ func FormatReleaseNotes(release *Release) string {
 // UpdateVersionFile updates the version string in the given file.
 // Supports Go constant files, package.json, and Cargo.toml formats.
 func UpdateVersionFile(version, filePath string) error {
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
@@ -641,7 +641,7 @@ func UpdateVersionFile(version, filePath string) error {
 		return fmt.Errorf("no version pattern found in %s", filePath)
 	}
 
-	if err := os.WriteFile(filePath, []byte(updated), 0o644); err != nil {
+	if err := os.WriteFile(filePath, []byte(updated), 0o600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filePath, err)
 	}
 

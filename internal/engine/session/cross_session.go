@@ -361,7 +361,7 @@ func (c *CrossSessionLearner) Save() error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if err := os.MkdirAll(c.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(c.Dir, 0o750); err != nil {
 		return fmt.Errorf("create learner dir: %w", err)
 	}
 
@@ -371,7 +371,7 @@ func (c *CrossSessionLearner) Save() error {
 	}
 
 	path := filepath.Join(c.Dir, "cross_session.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write learner file: %w", err)
 	}
 
@@ -384,7 +384,7 @@ func (c *CrossSessionLearner) Load() error {
 	defer c.mu.Unlock()
 
 	path := filepath.Join(c.Dir, "cross_session.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil

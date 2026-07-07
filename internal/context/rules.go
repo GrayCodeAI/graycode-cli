@@ -176,7 +176,7 @@ func (rd *RuleDiscoverer) collectLocal(dir string) []Rule {
 func (rd *RuleDiscoverer) collectManaged() []Rule {
 	var rules []Rule
 	for _, path := range rd.managedPaths {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path comes from configured managed (org policy) rule locations, not external input
 		if err != nil {
 			continue
 		}
@@ -206,7 +206,7 @@ func (rd *RuleDiscoverer) collectGlobal() []Rule {
 				continue
 			}
 			path := filepath.Join(globalDir, entry.Name())
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(path) // #nosec G304 -- path is built from a trusted global rules directory listing (os.ReadDir entries), not external input
 			if err != nil {
 				continue
 			}
@@ -237,7 +237,7 @@ func (rd *RuleDiscoverer) scanDir(baseDir string, src RuleSource) []Rule {
 			continue
 		}
 		path := filepath.Join(rulesDir, entry.Name())
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path is built from a trusted rules directory listing (os.ReadDir entries), not external input
 		if err != nil {
 			continue
 		}
@@ -257,7 +257,7 @@ func (rd *RuleDiscoverer) scanDir(baseDir string, src RuleSource) []Rule {
 
 func (rd *RuleDiscoverer) checkFile(baseDir string, src RuleSource) *Rule {
 	path := filepath.Join(baseDir, src.Name)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is built from fixed configured rule source names, not external input
 	if err != nil {
 		return nil
 	}

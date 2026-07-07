@@ -130,7 +130,7 @@ then creates a pull request via the GitHub CLI.`,
 		ghArgs = append(ghArgs, "--base", base)
 
 		ctx := context.Background()
-		ghCmd := exec.CommandContext(ctx, "gh", ghArgs...)
+		ghCmd := exec.CommandContext(ctx, "gh", ghArgs...)  // #nosec G204 -- fixed command 'gh' with args, not user-controlled binary
 		ghCmd.Stderr = os.Stderr
 		out, err := ghCmd.Output()
 		if err != nil {
@@ -173,7 +173,7 @@ Use --update to write the description back to the PR.`,
 
 		if prUpdate {
 			ctx := context.Background()
-			ghCmd := exec.CommandContext(ctx, "gh", "pr", "edit", strconv.Itoa(prNumber), "--body", description)
+			ghCmd := exec.CommandContext(ctx, "gh", "pr", "edit", strconv.Itoa(prNumber), "--body", description)  // #nosec G204 -- fixed command 'gh' with args, not user-controlled binary
 			ghCmd.Stderr = os.Stderr
 			if err := ghCmd.Run(); err != nil {
 				return fmt.Errorf("failed to update PR description: %w", err)
@@ -220,7 +220,7 @@ func requireGH() error {
 // ghPRDiff fetches the diff for a given PR number using gh.
 func ghPRDiff(number int) (string, error) {
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, "gh", "pr", "diff", strconv.Itoa(number))
+	cmd := exec.CommandContext(ctx, "gh", "pr", "diff", strconv.Itoa(number))  // #nosec G204 -- fixed command 'gh' with args, not user-controlled binary
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -231,7 +231,7 @@ func ghPRDiff(number int) (string, error) {
 // ghPRComment posts a comment on a PR.
 func ghPRComment(number int, body string) error {
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, "gh", "pr", "comment", strconv.Itoa(number), "--body", body)
+	cmd := exec.CommandContext(ctx, "gh", "pr", "comment", strconv.Itoa(number), "--body", body)  // #nosec G204 -- fixed command 'gh' with args, not user-controlled binary
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
@@ -239,7 +239,7 @@ func ghPRComment(number int, body string) error {
 // gitDiffBase returns the diff between the base branch and HEAD.
 func gitDiffBase(base string) (string, error) {
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, "git", "diff", base+"...HEAD")
+	cmd := exec.CommandContext(ctx, "git", "diff", base+"...HEAD")  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	out, err := cmd.Output()
 	if err != nil {
 		// Fallback to two-dot diff
@@ -255,7 +255,7 @@ func gitDiffBase(base string) (string, error) {
 // gitLogOneline returns the oneline log between base and HEAD.
 func gitLogOneline(base string) (string, error) {
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, "git", "log", base+"...HEAD", "--oneline")
+	cmd := exec.CommandContext(ctx, "git", "log", base+"...HEAD", "--oneline")  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err

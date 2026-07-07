@@ -66,7 +66,7 @@ func ComputeStats(days int) (*SessionStats, error) {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(logDir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(logDir, e.Name())) // #nosec G304 -- path built from trusted event log directory listing (os.ReadDir entries), not external input
 		if err != nil {
 			continue
 		}

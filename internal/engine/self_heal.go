@@ -112,7 +112,7 @@ func (sh *SelfHealer) Heal(ctx context.Context, scriptPath string) (*HealResult,
 		}
 
 		// Build prompt and ask LLM for fix
-		scriptContent, readErr := os.ReadFile(scriptPath)
+		scriptContent, readErr := os.ReadFile(scriptPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			result.Attempts = append(result.Attempts, attempt)
 			result.TotalDuration = time.Since(start)
@@ -364,7 +364,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			content := string(data)
 			if strings.Contains(content, fix.OldContent) {
 				content = strings.Replace(content, fix.OldContent, fix.NewContent, 1)
-				return os.WriteFile(fix.File, []byte(content), 0o644)
+				return os.WriteFile(fix.File, []byte(content), 0o600)
 			}
 		}
 		// Fallback: replace by line number
@@ -383,7 +383,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			result = append(result, lines[:startIdx]...)
 			result = append(result, newLines...)
 			result = append(result, lines[endIdx:]...)
-			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o644)
+			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
 		}
 
 	case "insert":
@@ -399,14 +399,14 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 		result = append(result, lines[:insertIdx]...)
 		result = append(result, newLines...)
 		result = append(result, lines[insertIdx:]...)
-		return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o644)
+		return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
 
 	case "delete":
 		if fix.OldContent != "" {
 			content := string(data)
 			if strings.Contains(content, fix.OldContent) {
 				content = strings.Replace(content, fix.OldContent, "", 1)
-				return os.WriteFile(fix.File, []byte(content), 0o644)
+				return os.WriteFile(fix.File, []byte(content), 0o600)
 			}
 		}
 		// Fallback: delete by line number
@@ -414,7 +414,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			result := make([]string, 0, len(lines)-1)
 			result = append(result, lines[:fix.Line-1]...)
 			result = append(result, lines[fix.Line:]...)
-			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o644)
+			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
 		}
 	}
 

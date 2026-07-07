@@ -233,4 +233,3 @@ func TestStreamTimeout(t *testing.T) {
 		t.Fatal("stream did not close within timeout")
 	}
 }
-

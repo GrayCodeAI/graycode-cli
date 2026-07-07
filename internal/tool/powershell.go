@@ -73,7 +73,7 @@ func (PowerShellTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, shell, "-NoProfile", "-NonInteractive", "-Command", p.Command)
+	cmd := exec.CommandContext(ctx, shell, "-NoProfile", "-NonInteractive", "-Command", p.Command) // #nosec G204 -- shell invocation with user-supplied command, inherent to the shell/powershell tool
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

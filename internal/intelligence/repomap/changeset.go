@@ -185,7 +185,7 @@ func gitDiffFiles(root string, rangeSpec string) ([]string, error) {
 		args = []string{"diff", "--name-only", rangeSpec}
 	}
 
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- git binary and args are constructed internally from a fixed subcommand and an internally-derived range spec, not external input
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

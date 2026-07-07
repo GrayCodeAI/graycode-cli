@@ -17,7 +17,7 @@ import (
 func explainCode(path string, line int) (string, error) {
 	// Step 1: git blame to find the commit
 	args := []string{"blame", "-L", fmt.Sprintf("%d,%d", line, line), "--porcelain", path}
-	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output()  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	if err != nil {
 		return "", fmt.Errorf("git blame failed: %w", err)
 	}
@@ -31,13 +31,13 @@ func explainCode(path string, line int) (string, error) {
 	}
 
 	// Step 2: get commit info
-	info, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%h %s (%an, %ar)", commitHash).Output()
+	info, err := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=%h %s (%an, %ar)", commitHash).Output()  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	if err != nil {
 		return fmt.Sprintf("Commit: %s (details unavailable)", commitHash[:7]), nil
 	}
 
 	// Step 3: get the diff for context
-	diff, _ := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=", "-p", "--", path, commitHash).Output()
+	diff, _ := exec.CommandContext(context.Background(), "git", "log", "-1", "--format=", "-p", "--", path, commitHash).Output()  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	diffStr := string(diff)
 	if len(diffStr) > 2000 {
 		diffStr = diffStr[:2000] + "\n... (truncated)"

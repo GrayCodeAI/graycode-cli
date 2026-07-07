@@ -174,7 +174,7 @@ func (om *OwnershipMap) BuildFromGitHistory(projectDir string) error {
 //
 // Lines starting with # are comments. Blank lines are ignored.
 func (om *OwnershipMap) LoadCodeowners(path string) error {
-	out, err := os.ReadFile(path)
+	out, err := os.ReadFile(path) // #nosec G304 -- path is the repo's own CODEOWNERS file location, provided by the caller of this analysis tool
 	if err != nil {
 		return fmt.Errorf("ownership: read codeowners %q: %w", path, err)
 	}

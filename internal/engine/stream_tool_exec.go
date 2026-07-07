@@ -411,7 +411,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 					if preEditContent == "" {
 						revertErr = os.Remove(preEditPath)
 					} else {
-						revertErr = os.WriteFile(preEditPath, []byte(preEditContent), 0o644)
+						revertErr = os.WriteFile(preEditPath, []byte(preEditContent), 0o600)
 					}
 					if revertErr != nil {
 						s.log.Error("self-review revert failed; rejecting diff loudly", map[string]interface{}{

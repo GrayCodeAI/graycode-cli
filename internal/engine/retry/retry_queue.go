@@ -334,7 +334,7 @@ func (rq *RetryQueue) generateID(operation string, args map[string]interface{}) 
 	h.Write([]byte(operation))
 	h.Write([]byte(fmt.Sprintf("%v", args)))
 	h.Write([]byte(time.Now().String()))
-	h.Write([]byte(fmt.Sprintf("%d", mrand.Int64())))
+	h.Write([]byte(fmt.Sprintf("%d", mrand.Int64()))) // #nosec G404 -- non-cryptographic use (retry ID uniqueness salt, hashed with sha256)
 	return fmt.Sprintf("retry_%x", h.Sum(nil))[:16]
 }
 

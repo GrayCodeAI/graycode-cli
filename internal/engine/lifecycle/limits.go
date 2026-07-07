@@ -126,10 +126,10 @@ func (lt *LimitTracker) Summary() string {
 }
 
 // DefaultLimits returns conservative safety limits for normal interactive use.
-func (lt *LimitTracker) MaxTurns() int                          { return lt.limits.MaxTurns }
-func (lt *LimitTracker) SetMaxTurns(n int)                        { lt.limits.MaxTurns = n }
-func (lt *LimitTracker) MaxBudgetUSD() float64                    { return lt.limits.MaxBudgetUSD }
-func (lt *LimitTracker) SetMaxBudgetUSD(f float64)               { lt.limits.MaxBudgetUSD = f }
+func (lt *LimitTracker) MaxTurns() int             { return lt.limits.MaxTurns }
+func (lt *LimitTracker) SetMaxTurns(n int)         { lt.limits.MaxTurns = n }
+func (lt *LimitTracker) MaxBudgetUSD() float64     { return lt.limits.MaxBudgetUSD }
+func (lt *LimitTracker) SetMaxBudgetUSD(f float64) { lt.limits.MaxBudgetUSD = f }
 
 func DefaultLimits() SafetyLimits {
 	return SafetyLimits{
@@ -137,7 +137,7 @@ func DefaultLimits() SafetyLimits {
 		MaxFileWrites:   50,
 		MaxBashCommands: 100,
 		MaxCostUSD:      10, // default budget
-		MaxTurns:        0, // inherit from MaxTurns
+		MaxTurns:        0,  // inherit from MaxTurns
 		MaxBudgetUSD:    10, // default budget in USD
 		MaxOutputTokens: 500_000,
 	}

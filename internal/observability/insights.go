@@ -53,7 +53,7 @@ func GenerateInsights(days int, analysisFn func(content string) ([]InsightsFacet
 			continue
 		}
 
-		data, readErr := os.ReadFile(filepath.Join(sessDir, e.Name()))
+		data, readErr := os.ReadFile(filepath.Join(sessDir, e.Name())) // #nosec G304 -- path built from trusted sessions directory listing (os.ReadDir entries), not external input
 		if readErr != nil {
 			continue
 		}
@@ -140,7 +140,7 @@ h1 { color: #333; } h2 { color: #555; border-bottom: 1px solid #eee; }
 // SaveInsightsReport saves an HTML report to disk.
 func SaveInsightsReport(report *InsightsReport) (string, error) {
 	dir := filepath.Join(storage.StateDir(), "insights")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
 
@@ -148,7 +148,7 @@ func SaveInsightsReport(report *InsightsReport) (string, error) {
 	path := filepath.Join(dir, filename)
 
 	html := ExportInsightsHTML(report)
-	return path, os.WriteFile(path, []byte(html), 0o644)
+	return path, os.WriteFile(path, []byte(html), 0o600)
 }
 
 func extractPatterns(transcripts []string) []string {

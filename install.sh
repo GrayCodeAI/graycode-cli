@@ -12,14 +12,12 @@ case "$ARCH" in
 esac
 
 ARCHIVE_EXT="tar.gz"
-EXTRACT_CMD="tar xz -C \"$TMP\" -f \"$ARCHIVE\""
 BIN_NAME="$BINARY"
 
 case "$OS" in
   mingw*|msys*|cygwin*)
     OS="windows"
     ARCHIVE_EXT="zip"
-    EXTRACT_CMD="unzip -q \"$ARCHIVE\" -d \"$TMP\""
     BIN_NAME="${BINARY}.exe"
     ;;
 esac
@@ -74,7 +72,11 @@ if [ "$OS" = "windows" ] && ! command -v unzip >/dev/null 2>&1; then
   exit 1
 fi
 
-eval "$EXTRACT_CMD"
+if [ "$OS" = "windows" ]; then
+  unzip -q "$ARCHIVE" -d "$TMP"
+else
+  tar xz -C "$TMP" -f "$ARCHIVE"
+fi
 
 INSTALL_DIR="/usr/local/bin"
 if [ ! -w "$INSTALL_DIR" ]; then

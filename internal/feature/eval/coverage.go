@@ -73,7 +73,7 @@ func (ca *CoverageAnalyzer) RunCoverage() (*CoverageReport, error) {
 	coverFile := filepath.Join(ca.ProjectDir, "coverage.out")
 	defer func() { _ = os.Remove(coverFile) }()
 
-	cmd := exec.CommandContext(context.Background(), "go", "test", "-coverprofile="+coverFile, "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "test", "-coverprofile="+coverFile, "./...") // #nosec G204 -- fixed "go" tool invocation; coverFile is derived from ca.ProjectDir, a local project path set by the caller
 	cmd.Dir = ca.ProjectDir
 	cmd.Stdout = nil
 	cmd.Stderr = nil
@@ -84,7 +84,7 @@ func (ca *CoverageAnalyzer) RunCoverage() (*CoverageReport, error) {
 		}
 	}
 
-	data, err := os.ReadFile(coverFile)
+	data, err := os.ReadFile(coverFile) // #nosec G304 -- coverFile is derived from ca.ProjectDir, a local project path set by the caller
 	if err != nil {
 		return nil, fmt.Errorf("reading coverage profile: %w", err)
 	}

@@ -46,7 +46,7 @@ func NewIncrementalMap(cacheDir string) (*IncrementalMap, error) {
 		cache:     make(map[string]FileCache),
 	}
 
-	data, err := os.ReadFile(cacheFile)
+	data, err := os.ReadFile(cacheFile) // #nosec G304 -- cacheFile is the tool's own repomap cache file path, built from a caller-provided or default cache directory
 	if err != nil {
 		if os.IsNotExist(err) {
 			return im, nil
@@ -186,7 +186,7 @@ func (im *IncrementalMap) Save() error {
 	defer im.mu.Unlock()
 
 	dir := filepath.Dir(im.cacheFile)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 
@@ -195,12 +195,12 @@ func (im *IncrementalMap) Save() error {
 		return err
 	}
 
-	return os.WriteFile(im.cacheFile, data, 0o644)
+	return os.WriteFile(im.cacheFile, data, 0o600)
 }
 
 // computeContentHash returns the SHA-256 hex digest of a file's contents.
 func computeContentHash(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
 	if err != nil {
 		return "", err
 	}

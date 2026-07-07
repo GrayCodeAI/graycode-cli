@@ -37,14 +37,14 @@ func Archive(slug string) (string, error) {
 	// Run delta merge if there are delta specs or a specs.md file
 	specsPath := filepath.Join(specDir, "specs.md")
 	if _, err := os.Stat(specsPath); err == nil {
-		data, err := os.ReadFile(specsPath)
+		data, err := os.ReadFile(specsPath) // #nosec G304 -- path built from SpecsRoot()+slug, internal spec directory
 		if err == nil {
 			delta, parseErr := ParseDeltaSpec(string(data))
 			if parseErr == nil {
 				// Merge into the base spec if it exists
 				baseSpecPath := filepath.Join(specDir, "spec.md")
 				if _, statErr := os.Stat(baseSpecPath); statErr == nil {
-					baseData, readErr := os.ReadFile(baseSpecPath)
+					baseData, readErr := os.ReadFile(baseSpecPath) // #nosec G304 -- path built from SpecsRoot()+slug, internal spec directory
 					if readErr == nil {
 						merged, mergeErr := ApplyDelta(string(baseData), delta)
 						if mergeErr == nil {
@@ -219,7 +219,7 @@ func AppendConvergenceTasks(slug string, report ConvergenceReport) (string, erro
 
 // readFileOrEmpty reads a file and returns its content or empty string on error.
 func readFileOrEmpty(path string) string {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from SpecsRoot()+slug, internal spec directory
 	if err != nil {
 		return ""
 	}

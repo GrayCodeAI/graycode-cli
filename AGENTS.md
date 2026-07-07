@@ -166,3 +166,7 @@ hawk-eco verify --fix
 make lint
 hawk-eco verify
 ```
+
+### Architecture note: cross-repo contracts
+
+Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/hawk-core-contracts` (`hawk-core-contracts/types`) — extensions and support repos must import that module instead of Hawk internals.

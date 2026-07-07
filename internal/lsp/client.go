@@ -90,7 +90,7 @@ type LSPClient struct {
 // NewLSPClient starts a language server subprocess and initializes the LSP protocol.
 func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClient, error) {
 	args := cfg.Args
-	cmd := exec.CommandContext(ctx, cfg.Command, args...)
+	cmd := exec.CommandContext(ctx, cfg.Command, args...) // #nosec G204 -- cfg comes from trusted LSP server config (built-in defaults or user/project lsp.json), not external input
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("lsp: stdin pipe: %w", err)

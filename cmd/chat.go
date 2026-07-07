@@ -176,7 +176,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	vp := viewport.New(initWidth, minChatViewportLines)
 
 	now := time.Now()
-	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)}
+	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)}  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 	applyLiveModelMetadata(sess, effectiveProvider, effectiveModel)
 
 	startup.MarkPhase("newChatModel:commandPalette")

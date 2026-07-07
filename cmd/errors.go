@@ -229,7 +229,7 @@ func panicRecovery(saveFn func()) {
 				stack,
 			)
 
-			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+			f, err := os.OpenFile(crashLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)  // #nosec G304 -- crashLog is an internal, statically-derived log path
 			if err == nil {
 				_, _ = f.WriteString(entry)
 				_ = f.Close()

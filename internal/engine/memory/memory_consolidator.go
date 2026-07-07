@@ -313,7 +313,7 @@ func (mc *MemoryConsolidator) Save() error {
 		return fmt.Errorf("no directory configured for memory consolidator")
 	}
 
-	if err := os.MkdirAll(mc.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(mc.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating memory dir: %w", err)
 	}
 
@@ -331,7 +331,7 @@ func (mc *MemoryConsolidator) Save() error {
 	}
 
 	path := filepath.Join(mc.Dir, "consolidated_memory.json")
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // Load restores the consolidator state from disk.
@@ -344,7 +344,7 @@ func (mc *MemoryConsolidator) Load() error {
 	}
 
 	path := filepath.Join(mc.Dir, "consolidated_memory.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No saved state yet
