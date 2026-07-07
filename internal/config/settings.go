@@ -670,7 +670,7 @@ func RefreshModelCatalogV1(ctx context.Context) (string, error) {
 	return result.DiscoverReport(), nil
 }
 
-func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalogV1, error) {
+func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalog, error) {
 	if refreshRemote {
 		result, err := setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentials(ctx))
 		if err != nil {
@@ -678,7 +678,7 @@ func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.Compi
 		}
 		return result.Compiled, nil
 	}
-	return catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
+	return catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
 		CachePath:    catalog.DefaultCachePath(),
 		RequireCache: false,
 	})

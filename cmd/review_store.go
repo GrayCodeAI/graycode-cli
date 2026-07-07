@@ -237,7 +237,9 @@ func (s *ReviewStore) scanOne(row *sql.Row) (*ReviewRecord, error) {
 		return nil, err
 	}
 	r.Status = ReviewStatus(status)
-	_ = json.Unmarshal([]byte(findingsJSON), &r.Findings)
+	if err := json.Unmarshal([]byte(findingsJSON), &r.Findings); err != nil {
+		return nil, fmt.Errorf("decode findings for review %d: %w", r.ID, err)
+	}
 	return r, nil
 }
 
@@ -255,7 +257,9 @@ func (s *ReviewStore) query(q string) ([]*ReviewRecord, error) {
 			return nil, err
 		}
 		r.Status = ReviewStatus(status)
-		_ = json.Unmarshal([]byte(findingsJSON), &r.Findings)
+		if err := json.Unmarshal([]byte(findingsJSON), &r.Findings); err != nil {
+			return nil, fmt.Errorf("decode findings for review %d: %w", r.ID, err)
+		}
 		results = append(results, r)
 	}
 	return results, rows.Err()

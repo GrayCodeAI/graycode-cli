@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/mathutil"
 )
 
 // Insight represents a learned insight from a previous session.
@@ -592,11 +594,5 @@ func containsString(slice []string, s string) bool {
 }
 
 func clampConfidence(c float64) float64 {
-	if c > 1.0 {
-		return 1.0
-	}
-	if c < 0.0 {
-		return 0.0
-	}
-	return c
+	return mathutil.Clamp(c, 0.0, 1.0)
 }

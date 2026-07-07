@@ -160,11 +160,7 @@ func openBrowser(url string) error {
 }
 
 func truncateFeedback(s string, max int) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "..."
+	return truncateWithEllipsis(strings.ReplaceAll(s, "\n", " "), max)
 }
 
 func readFeedbackStdin() ([]byte, error) {

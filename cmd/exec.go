@@ -633,7 +633,9 @@ func persistExecSession(id, model, provider, userMsg, assistantMsg string) {
 			{Role: "assistant", Content: assistantMsg},
 		},
 	}
-	_ = session.Save(s)
+	if err := session.Save(s); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to persist exec session %s: %v\n", id, err)
+	}
 }
 
 func createExecWorktree(repoDir, baseBranch, branch string) (string, error) {
@@ -644,7 +646,7 @@ func createExecWorktree(repoDir, baseBranch, branch string) (string, error) {
 	}
 	wtPath := strings.TrimSpace(string(out))
 
-	gitCmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
+	gitCmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch) // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	gitCmd.Dir = repoDir
 	if errOut, err := gitCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(errOut)), err)

@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // BoundaryChecker enforces safety boundaries that prevent the agent from
@@ -80,7 +81,7 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 	// Check for path traversal attempts (../ in the original path)
 	if strings.Contains(path, "..") {
 		resolved, err := filepath.Abs(path)
-		if err != nil || !strings.HasPrefix(resolved, bc.ProjectRoot) {
+		if err != nil || !isPathWithin(bc.ProjectRoot, resolved) {
 			return &BoundaryViolation{
 				Type:        "path",
 				Description: "path traversal detected",
@@ -92,7 +93,7 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 	}
 
 	// Check if path is within project root
-	if !strings.HasPrefix(cleanPath, bc.ProjectRoot) {
+	if !isPathWithin(bc.ProjectRoot, cleanPath) {
 		return &BoundaryViolation{
 			Type:        "path",
 			Description: "path outside project root",
@@ -104,7 +105,7 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 
 	// Check blocked paths
 	for _, blocked := range bc.BlockedPaths {
-		expandedBlocked := expandHome(blocked)
+		expandedBlocked := home.Expand(blocked)
 		// Check if the clean path matches or is under a blocked path
 		if matchesBlockedPath(cleanPath, expandedBlocked) {
 			return &BoundaryViolation{
@@ -133,7 +134,7 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 	// Check symlinks - resolve and verify the target is within project.
 	// For non-existent files (e.g. write targets), resolve the parent directory symlinks.
 	if target, err := filepath.EvalSymlinks(cleanPath); err == nil {
-		if target != cleanPath && !strings.HasPrefix(target, bc.ProjectRoot) {
+		if target != cleanPath && !isPathWithin(bc.ProjectRoot, target) {
 			return &BoundaryViolation{
 				Type:        "path",
 				Description: "symlink resolves outside project",
@@ -148,7 +149,7 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 		parent := filepath.Dir(cleanPath)
 		if resolved, evalErr := filepath.EvalSymlinks(parent); evalErr == nil {
 			resolvedFull := filepath.Join(resolved, filepath.Base(cleanPath))
-			if !strings.HasPrefix(resolvedFull, bc.ProjectRoot) {
+			if !isPathWithin(bc.ProjectRoot, resolvedFull) {
 				return &BoundaryViolation{
 					Type:        "path",
 					Description: "parent symlink resolves outside project",
@@ -382,17 +383,23 @@ func (bc *BoundaryChecker) CheckNetwork(host string, port int) *BoundaryViolatio
 		}
 	}
 
-	// Parse the host as an IP
-	ip := net.ParseIP(host)
-	if ip == nil {
-		// Try resolving the hostname
+	// Parse the host as an IP; for hostnames, check ALL resolved addresses so
+	// a multi-record answer cannot hide a private address behind a public one.
+	var ips []net.IP
+	if ip := net.ParseIP(host); ip != nil {
+		ips = append(ips, ip)
+	} else {
 		addrs, err := net.DefaultResolver.LookupHost(context.Background(), host)
-		if err == nil && len(addrs) > 0 {
-			ip = net.ParseIP(addrs[0])
+		if err == nil {
+			for _, a := range addrs {
+				if ip := net.ParseIP(a); ip != nil {
+					ips = append(ips, ip)
+				}
+			}
 		}
 	}
 
-	if ip != nil {
+	for _, ip := range ips {
 		// Check private network ranges
 		privateRanges := []struct {
 			network string
@@ -445,10 +452,21 @@ func (bc *BoundaryChecker) IsWithinProject(path string) bool {
 	resolved, err := filepath.EvalSymlinks(cleanPath)
 	if err != nil {
 		// If the file doesn't exist yet, check the clean path
-		return strings.HasPrefix(cleanPath, bc.ProjectRoot)
+		return isPathWithin(bc.ProjectRoot, cleanPath)
 	}
 
-	return strings.HasPrefix(resolved, bc.ProjectRoot)
+	return isPathWithin(bc.ProjectRoot, resolved)
+}
+
+// isPathWithin reports whether path equals root or is contained inside it.
+// It uses filepath.Rel instead of a raw string-prefix comparison so that a
+// sibling like /home/u/proj-evil is not accepted for root /home/u/proj.
+func isPathWithin(root, path string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 // RecordModification tracks a file modification for MaxFiles enforcement.
@@ -548,25 +566,6 @@ func DefaultBlockedCommands() []string {
 		"init",
 		"telinit",
 	}
-}
-
-// expandHome expands ~ to the user's home directory.
-func expandHome(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return filepath.Join(home, path[2:])
-	}
-	if path == "~" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return home
-	}
-	return path
 }
 
 // matchesBlockedPath checks if a path matches or is under a blocked path.

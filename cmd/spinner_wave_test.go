@@ -1,11 +1,20 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
+
+// frameContainsSpinnerWave reports whether a rendered frame contains the
+// first spinner-wave gradient color. Test-only helper.
+func frameContainsSpinnerWave(s string) bool {
+	c := spinnerWaveColors[0]
+	needle := fmt.Sprintf("38;2;%d;%d;%d", c[0], c[1], c[2])
+	return strings.Contains(s, needle)
+}
 
 func TestSpinnerWave_AdvancesOnTick(t *testing.T) {
 	s := NewBrailleSpinner(SpinnerHawk, "Hi")

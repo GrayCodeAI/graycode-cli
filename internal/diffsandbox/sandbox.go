@@ -106,8 +106,11 @@ func (s *Sandbox) ProposeCreate(path string, content string) *Change {
 
 // ProposeModify stages a file modification. Reads the original content from disk.
 func (s *Sandbox) ProposeModify(path string, newContent string) (*Change, error) {
-	absPath := s.absPath(path)
-	data, err := os.ReadFile(absPath) // #nosec G304 -- absPath is resolved within the sandbox's confined root directory
+	absPath, err := s.absPath(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(absPath) // #nosec G304 -- absPath is resolved and contained within the sandbox root
 	if err != nil {
 		return nil, fmt.Errorf("read original %s: %w", path, err)
 	}
@@ -266,7 +269,10 @@ func (s *Sandbox) ApplyFile(path string) error {
 
 // applyChange writes a single change to disk atomically.
 func (s *Sandbox) applyChange(c *Change) error {
-	absPath := s.absPath(c.Path)
+	absPath, err := s.absPath(c.Path)
+	if err != nil {
+		return err
+	}
 
 	switch c.Type {
 	case ChangeCreate, ChangeModify:
@@ -408,12 +414,24 @@ func (s *Sandbox) statsLocked() SandboxStats {
 	return st
 }
 
-// absPath resolves a path relative to the sandbox root.
-func (s *Sandbox) absPath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
+// absPath resolves a path relative to the sandbox root and rejects any path
+// (absolute or relative, e.g. containing "..") that escapes the root.
+func (s *Sandbox) absPath(path string) (string, error) {
+	root, err := filepath.Abs(s.rootDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve sandbox root %s: %w", s.rootDir, err)
 	}
-	return filepath.Join(s.rootDir, path)
+	var abs string
+	if filepath.IsAbs(path) {
+		abs = filepath.Clean(path)
+	} else {
+		abs = filepath.Join(root, path)
+	}
+	rel, err := filepath.Rel(root, abs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path %q escapes sandbox root %q", path, root)
+	}
+	return abs, nil
 }
 
 // SortedPaths returns all pending paths in sorted order.

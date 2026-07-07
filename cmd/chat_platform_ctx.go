@@ -84,10 +84,3 @@ func invalidatePlatformContextCache() {
 	platformCtxCache.at = time.Time{}
 	platformCtxCache.mu.Unlock()
 }
-
-func seedPlatformContextCacheForTest(idx map[string]int) {
-	platformCtxCache.mu.Lock()
-	platformCtxCache.idx = idx
-	platformCtxCache.at = time.Now()
-	platformCtxCache.mu.Unlock()
-}

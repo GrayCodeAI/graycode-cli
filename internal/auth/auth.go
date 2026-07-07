@@ -90,9 +90,26 @@ func (s *SecureStorage) getMacOS(account string) (string, error) {
 }
 
 func (s *SecureStorage) setMacOS(account, token string) error {
-	// Use security command to add to keychain
-	_, err := execCommand("security", "add-generic-password", "-s", s.service, "-a", account, "-w", token, "-U")
-	return err
+	// Feed the command to `security -i` via stdin so the secret never appears
+	// in the process argument list (argv is visible to all local users via ps
+	// for the lifetime of the call).
+	if strings.ContainsAny(s.service+account+token, "\n\r") {
+		return fmt.Errorf("keychain values must not contain newlines")
+	}
+	cmd := exec.CommandContext(context.Background(), "security", "-i")
+	cmd.Stdin = strings.NewReader("add-generic-password -U -s " + securityQuote(s.service) +
+		" -a " + securityQuote(account) + " -w " + securityQuote(token) + "\n")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("security add-generic-password: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// securityQuote quotes an argument for the `security -i` interactive command
+// parser: wraps it in double quotes and escapes backslashes and double quotes.
+func securityQuote(v string) string {
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`)
+	return `"` + r.Replace(v) + `"`
 }
 
 func (s *SecureStorage) getFile(account string) (string, error) {

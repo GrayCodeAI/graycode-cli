@@ -291,25 +291,6 @@ type errorLoggerT struct {
 	path string
 }
 
-//lint:ignore U1000 Singleton used by logError below
-var errLogger *errorLoggerT
-var errLoggerOnce sync.Once
-
-//lint:ignore U1000 Infrastructure used by logError
-func getErrorLogger() *errorLoggerT {
-	errLoggerOnce.Do(func() {
-		dir := storage.StateDir()
-		if dir == "" {
-			dir = os.TempDir()
-		}
-		_ = os.MkdirAll(dir, 0o750)
-		errLogger = &errorLoggerT{
-			path: filepath.Join(dir, "error.log"),
-		}
-	})
-	return errLogger
-}
-
 // LogError writes a timestamped error entry to the Hawk error log.
 func (l *errorLoggerT) LogError(context string, err error) {
 	if l == nil || err == nil {

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/mathutil"
 )
 
 // RawMemory represents an unprocessed memory ingested from a session.
@@ -550,13 +552,7 @@ func memorySimilar(a, b string) bool {
 
 // clampConfidenceVal clamps a confidence value between 0.0 and 1.0.
 func clampConfidenceVal(c float64) float64 {
-	if c < 0 {
-		return 0
-	}
-	if c > 1.0 {
-		return 1.0
-	}
-	return c
+	return mathutil.Clamp(c, 0, 1.0)
 }
 
 // memSliceContains checks if a string slice contains a specific string.

@@ -25,5 +25,3 @@ func DeploymentStatusReport(ctx context.Context, activeModel string) (string, er
 func RoutingPreviewJSON(ctx context.Context, model string) (string, error) {
 	return runtime.RoutingPreview(ctx, model)
 }
-
-

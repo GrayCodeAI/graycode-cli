@@ -22,7 +22,7 @@ case "$OS" in
     ;;
 esac
 
-LATEST=$(curl -sL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+LATEST=$(curl -fsSL --proto '=https' --tlsv1.2 "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
 if [ -z "$LATEST" ]; then
   echo "Error: could not determine latest version"
   exit 1
@@ -34,11 +34,15 @@ echo "Downloading hawk v${LATEST} for ${OS}/${ARCH}..."
 
 TMP=$(mktemp -d)
 ARCHIVE="$TMP/${ARCHIVE_NAME}"
-curl -sL "$URL" -o "$ARCHIVE"
+curl -fsSL --proto '=https' --tlsv1.2 "$URL" -o "$ARCHIVE"
 
+# TODO(release-eng): checksums.txt ships in the same release as the artifact,
+# so it only protects against corruption — not a compromised release. Sign
+# checksums.txt in goreleaser (cosign keyless or minisign) and verify the
+# signature here when the verifier tool is available.
 CHECKSUMS_URL="https://github.com/$REPO/releases/download/v${LATEST}/checksums.txt"
 CHECKSUMS="$TMP/checksums.txt"
-curl -sL "$CHECKSUMS_URL" -o "$CHECKSUMS"
+curl -fsSL --proto '=https' --tlsv1.2 "$CHECKSUMS_URL" -o "$CHECKSUMS"
 
 if command -v sha256sum >/dev/null 2>&1; then
   ACTUAL=$(sha256sum "$ARCHIVE" | awk '{print $1}')
@@ -50,7 +54,9 @@ else
   exit 1
 fi
 
-EXPECTED=$(grep "${ARCHIVE_NAME}" "$CHECKSUMS" | awk '{print $1}')
+# Exact-field match (not a regex grep): avoids '.' wildcards in the archive
+# name matching other lines and producing a multi-line EXPECTED value.
+EXPECTED=$(awk -v f="$ARCHIVE_NAME" '$2 == f { print $1 }' "$CHECKSUMS")
 if [ -z "$EXPECTED" ]; then
   echo "Error: checksum not found for ${ARCHIVE_NAME} in checksums.txt"
   rm -rf "$TMP"

@@ -12,7 +12,7 @@ MAIN_PKG  := ./cmd/hawk
 # Versioning — sourced from VERSION file; falls back to git describe.
 # See https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md.
 # ---------------------------------------------------------------------------
-VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || git describe --tags --always --dirty 2>/dev/null || echo "dev")
+VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); if [ -n "$$v" ]; then echo "$$v"; else git describe --tags --always --dirty 2>/dev/null || echo "dev"; fi)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE    := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 
@@ -72,8 +72,7 @@ test-new: ## Run only the Round 2 ecosystem packages (fast iteration).
 
 test-live: ## Run opt-in live integration tests (requires real LLM credentials).
 	@echo "Running live integration tests — requires OPENCODEGO_API_KEY"
-	OPENCODEGO_API_KEY?=$$(grep -v '^#' .envrc 2>/dev/null | grep OPENCODEGO_API_KEY | head -1 | cut -d= -f2-)
-	go test -tags=live_test -count=1 -timeout=300s ./cmd/...
+	OPENCODEGO_API_KEY=$${OPENCODEGO_API_KEY:-$$(grep -v '^#' .envrc 2>/dev/null | grep OPENCODEGO_API_KEY | head -1 | cut -d= -f2-)} go test -tags=live_test -count=1 -timeout=300s ./cmd/...
 
 cover: ## Generate a coverage report (coverage.out + coverage.html).
 	go test ./... -race -coverprofile=coverage.out -covermode=atomic -timeout=180s

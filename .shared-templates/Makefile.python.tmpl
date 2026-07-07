@@ -11,7 +11,7 @@ NAME := {{NAME}}
 # Versioning — sourced from VERSION file at repo root (single source of
 # truth, also consumed by hatch + release-please).
 # ---------------------------------------------------------------------------
-VERSION ?= $(shell cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]' || echo "dev")
+VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); [ -n "$$v" ] && echo "$$v" || echo "dev")
 
 PYTHON  ?= python3
 PIP     ?= $(PYTHON) -m pip

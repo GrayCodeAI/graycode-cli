@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // TestLoop implements an auto-test loop similar to Aider's auto_test feature.
@@ -323,8 +325,7 @@ func FilterRelevantOutput(output string, maxChars int) string {
 // --- internal helpers ---
 
 func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
+	return fsutil.Exists(path)
 }
 
 func readPackageJSONTestScript(path string) string {

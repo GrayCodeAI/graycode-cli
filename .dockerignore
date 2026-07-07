@@ -11,3 +11,7 @@ coverage.out
 coverage.html
 go.work
 go.work.sum
+.env
+.envrc
+*.pem
+*.key

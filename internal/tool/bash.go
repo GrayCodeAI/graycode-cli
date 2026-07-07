@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	homepkg "github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
@@ -32,7 +33,7 @@ var dangerousSubstrings = []string{
 // normalizeCommand normalizes a command to prevent trivial bypass of
 // dangerous-command detection. It expands tilde and collapses repeated root globs.
 func normalizeCommand(cmd string) string {
-	home, _ := os.UserHomeDir()
+	home := homepkg.Dir()
 	// Expand ~/ and ~ to the user's home directory
 	if home != "" {
 		cmd = strings.ReplaceAll(cmd, "~/", home+"/")

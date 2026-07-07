@@ -2,8 +2,9 @@ package spec
 
 import (
 	"fmt"
-	"os"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // ArtifactState represents the current status of an artifact in the workflow.
@@ -264,6 +265,5 @@ func fileExists(path string) bool {
 	if path == "" {
 		return false
 	}
-	_, err := os.Stat(path)
-	return err == nil
+	return fsutil.Exists(path)
 }

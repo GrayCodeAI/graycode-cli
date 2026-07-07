@@ -12,6 +12,10 @@ runs:
   steps:
     - name: Clone ecosystem repos
       shell: bash
+      env:
+        # Passed via env (not ${{ }} interpolation into the script) so an
+        # attacker-controlled ref (e.g. a fork branch name) cannot inject shell.
+        INPUT_REF: ${{ inputs.ref }}
       run: |
         set -euo pipefail
         mkdir -p "${GITHUB_WORKSPACE}/external"
@@ -31,7 +35,7 @@ runs:
             git clone "https://github.com/GrayCodeAI/${repo}.git" "$dest"
             if ! (cd "$dest" && git checkout --quiet "$commit" 2>/dev/null); then
               echo "Submodule commit $commit not reachable, falling back to ref"
-              ref="${{ inputs.ref }}"
+              ref="$INPUT_REF"
               if [ "$ref" = "main" ]; then
                 rm -rf "$dest"
                 git clone --depth=1 --branch main \
@@ -41,7 +45,7 @@ runs:
               fi
             fi
           else
-            ref="${{ inputs.ref }}"
+            ref="$INPUT_REF"
             # Fall back to main if the branch doesn't exist on the dependency repo.
             if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then
               echo "Branch '$ref' not found on $repo, falling back to main"

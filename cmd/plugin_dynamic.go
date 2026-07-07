@@ -339,7 +339,7 @@ var pluginLogsCmd = &cobra.Command{
 		for _, ev := range collected {
 			errStr := ""
 			if ev.Error != "" {
-				errStr = truncatePluginStr(ev.Error, 50)
+				errStr = truncateWithEllipsis(ev.Error, 50)
 			}
 			_, _ = fmt.Fprintf(
 				w, "%s\t%s\t%s\t%s\n",
@@ -352,13 +352,6 @@ var pluginLogsCmd = &cobra.Command{
 		_ = w.Flush()
 		return nil
 	},
-}
-
-func truncatePluginStr(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }
 
 func init() {

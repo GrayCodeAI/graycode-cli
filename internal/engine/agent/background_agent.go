@@ -99,10 +99,14 @@ func (p *BackgroundAgentPool) WaitAll() []BackgroundResult {
 	timedOut := make(map[string]bool)
 	var all []BackgroundResult
 	for _, task := range pending {
+		timer := time.NewTimer(p.maxWait)
 		select {
 		case result := <-task.done:
+			if !timer.Stop() {
+				<-timer.C
+			}
 			all = append(all, result)
-		case <-time.After(p.maxWait):
+		case <-timer.C:
 			all = append(all, BackgroundResult{
 				ID:     task.id,
 				Prompt: task.prompt,

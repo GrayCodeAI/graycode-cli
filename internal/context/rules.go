@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	homepkg "github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -83,7 +84,7 @@ type RuleDiscoverer struct {
 
 // NewRuleDiscoverer creates a rule discoverer for the given project.
 func NewRuleDiscoverer(projectRoot string) *RuleDiscoverer {
-	home, _ := os.UserHomeDir()
+	home := homepkg.Dir()
 	var globalDirs []string
 	if home != "" {
 		globalDirs = []string{

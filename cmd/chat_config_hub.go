@@ -32,11 +32,14 @@ func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
 	if len(m.configModelOptions) == 0 {
 		m.configSaving = true
 		m.configNotice = "Loading models…"
+		return m, refreshGatewayAsync(m.configModelProvider)
 	} else if providerHasLiveFetcher(m.configModelProvider) && catalogPricesAreStale(m.configModelOptions) {
-		// Cached catalog has entries but prices are stale (all zero). Refresh
-		// in the background so live fetcher prices replace them.
+		// Cached catalog has entries but prices are all zero (pre-live-fetcher).
+		// Refresh the full catalog (offerings + pricing) via RefreshGatewayCatalog,
+		// then invalidate the model cache so the models tab reloads from the catalog.
 		m.configSaving = true
 		m.configNotice = "Refreshing prices…"
+		return m, refreshGatewayAsync(m.configModelProvider)
 	}
 	if m.configSaving {
 		var cmds []tea.Cmd
