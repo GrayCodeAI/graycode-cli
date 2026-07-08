@@ -165,7 +165,7 @@ func exprString(expr ast.Expr) string {
 }
 
 func extractInterfaceFallback(filePath string) (*InterfaceExtraction, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) // #nosec G304 -- filePath is a repo file being analyzed by this dev CLI
 	if err != nil {
 		return nil, err
 	}

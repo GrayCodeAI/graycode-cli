@@ -57,7 +57,7 @@ func DefaultResultStore() *ResultStore {
 
 // Save writes a SuiteResult to disk as JSON.
 func (s *ResultStore) Save(result *SuiteResult, model, provider string, hash *ResultHash) (string, error) {
-	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
 		return "", err
 	}
 
@@ -98,12 +98,12 @@ func (s *ResultStore) Save(result *SuiteResult, model, provider string, hash *Re
 	if err != nil {
 		return "", err
 	}
-	return path, os.WriteFile(path, data, 0o644)
+	return path, os.WriteFile(path, data, 0o600)
 }
 
 // Load reads a stored result from a JSON file.
 func (s *ResultStore) Load(path string) (*StoredResult, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path comes from List(), which enumerates files under the local result store directory
 	if err != nil {
 		return nil, err
 	}

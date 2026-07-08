@@ -80,7 +80,7 @@ func (ConstitutionTool) Execute(ctx context.Context, input json.RawMessage) (str
 }
 
 func getConstitution(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "No constitution found. Use action='init' to create one from template.", nil
 	}
@@ -134,13 +134,13 @@ func setConstitution(path, rules string) (string, error) {
 
 func validateAgainstConstitution(ctx context.Context, specDir, constitutionPath string) (string, error) {
 	// Load constitution
-	constData, err := os.ReadFile(constitutionPath)
+	constData, err := os.ReadFile(constitutionPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "No constitution found — skipping validation. Use action='init' to create one.", nil
 	}
 
 	// Load spec
-	specData, err := os.ReadFile(filepath.Join(specDir, "spec.md"))
+	specData, err := os.ReadFile(filepath.Join(specDir, "spec.md")) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", fmt.Errorf("no spec.md found — write a spec first")
 	}

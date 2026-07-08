@@ -23,7 +23,7 @@ func (dg *DepGraph) BuildFromGoMod(projectDir string) error {
 	defer dg.mu.Unlock()
 
 	goModPath := filepath.Join(projectDir, "go.mod")
-	modData, err := os.ReadFile(goModPath)
+	modData, err := os.ReadFile(goModPath) // #nosec G304 -- goModPath is the go.mod of the project directory being analyzed by this dev CLI
 	if err != nil {
 		return fmt.Errorf("depgraph: read go.mod: %w", err)
 	}
@@ -185,7 +185,7 @@ func (dg *DepGraph) BuildFromPackageJSON(projectDir string) error {
 	defer dg.mu.Unlock()
 
 	pkgJSONPath := filepath.Join(projectDir, "package.json")
-	data, err := os.ReadFile(pkgJSONPath)
+	data, err := os.ReadFile(pkgJSONPath) // #nosec G304 -- pkgJSONPath is the package.json of the project directory being analyzed by this dev CLI
 	if err != nil {
 		return fmt.Errorf("depgraph: read package.json: %w", err)
 	}
@@ -277,7 +277,7 @@ func (dg *DepGraph) BuildFromPackageJSON(projectDir string) error {
 		internalModules[modPath].LOC += countFileLOC(path)
 
 		// Read file and find imports.
-		content, readErr := os.ReadFile(path)
+		content, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
 		if readErr != nil {
 			return nil
 		}
@@ -444,7 +444,7 @@ func classifyImport(importPath, moduleName string, externalDeps []string) string
 
 // countFileLOC counts lines of code in a file (non-blank lines).
 func countFileLOC(path string) int {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
 	if err != nil {
 		return 0
 	}

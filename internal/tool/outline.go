@@ -104,7 +104,7 @@ func outlineOne(filePath string) (string, error) {
 		return outlineHeadTail(filePath)
 	}
 
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Sprintf("error: %v", err), nil
 	}
@@ -138,7 +138,7 @@ func outlineOne(filePath string) (string, error) {
 }
 
 func outlineHeadTail(filePath string) (string, error) {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Sprintf("error: %v", err), nil
 	}

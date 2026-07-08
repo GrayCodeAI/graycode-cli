@@ -87,7 +87,7 @@ func gitFileHistory(ctx context.Context, root, file string, limit int) (string, 
 		return "", fmt.Errorf("file is required for history action")
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "log", "--oneline", "--follow", fmt.Sprintf("-%d", limit), "--", file)
+	cmd := exec.CommandContext(ctx, "git", "log", "--oneline", "--follow", fmt.Sprintf("-%d", limit), "--", file) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
@@ -113,7 +113,7 @@ func gitCoChange(ctx context.Context, root, file string, limit int) (string, err
 	}
 
 	// Get commits that touched this file
-	cmd := exec.CommandContext(ctx, "git", "log", "--format=%H", "--follow", fmt.Sprintf("-%d", limit*5), "--", file)
+	cmd := exec.CommandContext(ctx, "git", "log", "--format=%H", "--follow", fmt.Sprintf("-%d", limit*5), "--", file) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
@@ -131,7 +131,7 @@ func gitCoChange(ctx context.Context, root, file string, limit int) (string, err
 		if commit == "" {
 			continue
 		}
-		cmd := exec.CommandContext(ctx, "git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit)
+		cmd := exec.CommandContext(ctx, "git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 		cmd.Dir = root
 		out, err := cmd.Output()
 		if err != nil {
@@ -183,7 +183,7 @@ func gitFileOwners(ctx context.Context, root, file string, limit int) (string, e
 		args = append(args, "--", file)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

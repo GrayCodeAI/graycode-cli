@@ -164,7 +164,7 @@ func ParseEnvFile(path string) (map[string]string, error) {
 }
 
 func (em *EnvManager) parseEnvFileInternal(path string) (map[string]string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a .env file location explicitly supplied by the caller, same trust level as the user
 	if err != nil {
 		return nil, err
 	}

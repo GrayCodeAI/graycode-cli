@@ -179,7 +179,6 @@ func magicTokens(session *Session, _ string) string {
 	cacheRead := session.Cost.CacheReadTokens
 	cacheWrite := session.Cost.CacheWriteTokens
 	total := input + output
-	budget := session.MaxBudgetUSD
 
 	var sb strings.Builder
 	sb.WriteString("Token Usage\n")
@@ -193,8 +192,9 @@ func magicTokens(session *Session, _ string) string {
 	fmt.Fprintf(&sb, "  Total:       %d\n", total)
 	fmt.Fprintf(&sb, "  Messages:    %d\n", len(session.messages))
 	fmt.Fprintf(&sb, "  Est. context: ~%d tokens\n", totalTokens)
-	if budget > 0 {
+	if session.LifecycleSvc() != nil && session.LifecycleSvc().Limits().MaxBudgetUSD() > 0 {
 		spent := session.Cost.TotalCostUSD
+		budget := session.LifecycleSvc().Limits().MaxBudgetUSD()
 		remaining := budget - spent
 		fmt.Fprintf(&sb, "  Budget:      $%.4f remaining of $%.4f\n", remaining, budget)
 	}
@@ -245,11 +245,11 @@ func magicCost(session *Session, _ string) string {
 	}
 	fmt.Fprintf(&sb, "  Total cost:    $%.4f\n", totalCost)
 
-	if session.MaxBudgetUSD > 0 {
-		remaining := session.MaxBudgetUSD - totalCost
-		pct := (totalCost / session.MaxBudgetUSD) * 100
+	if session.LifecycleSvc() != nil && session.LifecycleSvc().Limits().MaxBudgetUSD() > 0 {
+		remaining := session.LifecycleSvc().Limits().MaxBudgetUSD() - totalCost
+		pct := (totalCost / session.LifecycleSvc().Limits().MaxBudgetUSD()) * 100
 		fmt.Fprintf(&sb, "  Budget used:   %.1f%%\n", pct)
-		fmt.Fprintf(&sb, "  Remaining:     $%.4f of $%.4f\n", remaining, session.MaxBudgetUSD)
+		fmt.Fprintf(&sb, "  Remaining:     $%.4f of $%.4f\n", remaining, session.LifecycleSvc().Limits().MaxBudgetUSD())
 	}
 	return sb.String()
 }

@@ -99,7 +99,7 @@ func (MultiEditTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return fmt.Sprintf("No edits applied (%d failed — old_string not found in file).", failed), nil
 	}
 
-	if err := os.WriteFile(p.FilePath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(p.FilePath, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 	return fmt.Sprintf("Applied %d/%d edit(s) to %s.", applied, applied+failed, p.FilePath), nil

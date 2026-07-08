@@ -130,7 +130,7 @@ func (tc *TerminalContext) captureTerminalOutput() string {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "sh", "-c", tc.captureCmd).Output()
+	out, err := exec.CommandContext(ctx, "sh", "-c", tc.captureCmd).Output() // #nosec G204 -- captureCmd is one of a fixed set of internally-detected commands (tmux/screen/osascript), not external input
 	if err != nil {
 		return ""
 	}

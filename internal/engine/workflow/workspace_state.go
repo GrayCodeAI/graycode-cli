@@ -462,7 +462,7 @@ func (ws *WorkspaceState) toAbsPath(path string) string {
 
 // hashFile computes the SHA-256 hash of a file's contents.
 func hashFile(path string) (string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", err
 	}

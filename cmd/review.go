@@ -51,7 +51,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 	}
 
 	hooksDir := filepath.Join(gitDir, "hooks")
-	if err := os.MkdirAll(hooksDir, 0o755); err != nil {
+	if err := os.MkdirAll(hooksDir, 0o750); err != nil {
 		return fmt.Errorf("create hooks dir: %w", err)
 	}
 
@@ -59,7 +59,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 
 	// Check for existing hook.
 	if _, err := os.Stat(hookPath); err == nil && !reviewInitForce {
-		existing, _ := os.ReadFile(hookPath)
+		existing, _ := os.ReadFile(hookPath) // #nosec G304 -- hookPath built from internal hooksDir constant, not external input
 		if strings.Contains(string(existing), "hawk review") {
 			fmt.Println(icons.CheckBold() + " hawk review hook already installed")
 			return nil
@@ -67,6 +67,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("post-commit hook already exists at %s\nUse --force to overwrite, or manually add:\n  %s", hookPath, strings.TrimSpace(hookScript))
 	}
 
+	// #nosec G306 -- git hook script must be executable by git
 	if err := os.WriteFile(hookPath, []byte(hookScript), 0o755); err != nil {
 		return fmt.Errorf("write hook: %w", err)
 	}

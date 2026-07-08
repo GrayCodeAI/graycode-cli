@@ -431,7 +431,7 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 	if rows != nil {
 		for rows.Next() {
 			var id, filePath string
-			rows.Scan(&id, &filePath)
+			_ = rows.Scan(&id, &filePath)
 			currentNodes[id] = true
 			if !beforeNodes[id] {
 				diff.AddedNodes = append(diff.AddedNodes, id)
@@ -440,7 +440,7 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 				}
 			}
 		}
-		rows.Close()
+		_ = rows.Close()
 	}
 
 	for id := range beforeNodes {
@@ -456,7 +456,7 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 		for rows.Next() {
 			var edgeKey string
 			if err := rows.Scan(&edgeKey); err != nil {
-				rows.Close()
+				_ = rows.Close()
 				return diff
 			}
 			currentEdges[edgeKey] = true
@@ -464,7 +464,7 @@ func (cg *CodeGraph) DiffGraph(beforeNodes map[string]bool, beforeEdges map[stri
 				diff.AddedEdges++
 			}
 		}
-		rows.Close()
+		_ = rows.Close()
 	}
 
 	for edgeKey := range beforeEdges {
@@ -491,16 +491,16 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	for rows.Next() {
 		var id string
 		if scanErr := rows.Scan(&id); scanErr != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, nil, fmt.Errorf("scanning node row: %w", scanErr)
 		}
 		nodes[id] = true
 	}
 	if iterErr := rows.Err(); iterErr != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, nil, fmt.Errorf("iterating nodes: %w", iterErr)
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	rows, err = cg.db.QueryContext(context.Background(), "SELECT source || '->' || target || ':' || kind FROM edges")
 	if err != nil {
@@ -509,16 +509,16 @@ func (cg *CodeGraph) SnapshotGraph() (nodes map[string]bool, edges map[string]bo
 	for rows.Next() {
 		var edgeKey string
 		if err := rows.Scan(&edgeKey); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, nil, fmt.Errorf("scanning edge row: %w", err)
 		}
 		edges[edgeKey] = true
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, nil, fmt.Errorf("iterating edges: %w", err)
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	return nodes, edges, nil
 }
@@ -558,12 +558,12 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 		for edgeRows.Next() {
 			var target string
 			if err := edgeRows.Scan(&target); err != nil {
-				edgeRows.Close()
+				_ = edgeRows.Close()
 				return nil, fmt.Errorf("scanning referenced target: %w", err)
 			}
 			referenced[target] = true
 		}
-		edgeRows.Close()
+		_ = edgeRows.Close()
 	}
 
 	// Also mark source nodes as referenced (they're being used)
@@ -572,12 +572,12 @@ func (cg *CodeGraph) FindDeadCode() ([]DeadCodeEntry, error) {
 		for edgeRows.Next() {
 			var source string
 			if err := edgeRows.Scan(&source); err != nil {
-				edgeRows.Close()
+				_ = edgeRows.Close()
 				return nil, fmt.Errorf("scanning referenced source: %w", err)
 			}
 			referenced[source] = true
 		}
-		edgeRows.Close()
+		_ = edgeRows.Close()
 	}
 
 	var dead []DeadCodeEntry

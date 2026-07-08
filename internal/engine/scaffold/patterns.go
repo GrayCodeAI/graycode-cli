@@ -323,7 +323,7 @@ func (pl *PatternLibrary) LoadFromDir(dir string) error {
 // parsePatternFile reads a markdown file with YAML frontmatter and returns
 // a PromptPattern. The frontmatter is delimited by "---" lines.
 func parsePatternFile(path string) (*PromptPattern, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, err
 	}

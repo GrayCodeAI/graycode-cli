@@ -170,7 +170,7 @@ func (ap *AdaptivePrompt) load() {
 
 func (ap *AdaptivePrompt) save() {
 	dir := filepath.Dir(ap.path)
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 	data, _ := json.Marshal(ap.adjustments)
-	_ = os.WriteFile(ap.path, data, 0o644)
+	_ = os.WriteFile(ap.path, data, 0o600)
 }

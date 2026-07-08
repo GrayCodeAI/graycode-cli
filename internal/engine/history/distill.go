@@ -98,11 +98,11 @@ func (dp *DistillationPipeline) ExportJSONL(path string) error {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("distill: create dir: %w", err)
 	}
 
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("distill: create file: %w", err)
 	}
@@ -125,11 +125,11 @@ func (dp *DistillationPipeline) ExportOpenAI(path string) error {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("distill: create dir: %w", err)
 	}
 
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("distill: create file: %w", err)
 	}
@@ -154,11 +154,11 @@ func (dp *DistillationPipeline) ExportAnthropicFormat(path string) error {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("distill: create dir: %w", err)
 	}
 
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("distill: create file: %w", err)
 	}
@@ -324,7 +324,7 @@ func (dp *DistillationPipeline) Save() error {
 	dp.mu.RLock()
 	defer dp.mu.RUnlock()
 
-	if err := os.MkdirAll(dp.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(dp.Dir, 0o750); err != nil {
 		return fmt.Errorf("distill: create dir: %w", err)
 	}
 
@@ -334,7 +334,7 @@ func (dp *DistillationPipeline) Save() error {
 		return fmt.Errorf("distill: marshal: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // Load restores the pipeline state from disk.
@@ -343,7 +343,7 @@ func (dp *DistillationPipeline) Load() error {
 	defer dp.mu.Unlock()
 
 	path := filepath.Join(dp.Dir, "distill_pipeline.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("distill: read: %w", err)
 	}

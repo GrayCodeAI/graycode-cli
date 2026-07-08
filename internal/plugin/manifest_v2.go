@@ -41,7 +41,7 @@ type ManifestHook struct {
 // using the V2 manifest format. It is backward compatible with V1 manifests.
 func ParseManifestV2(pluginDir string) (*ManifestV2, error) {
 	path := filepath.Join(pluginDir, "plugin.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Hawk-managed plugins root, not raw external input
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
@@ -169,7 +169,7 @@ func (m *ManifestV2) ValidateV2() []string {
 
 // WriteManifestV2 writes a ManifestV2 to a plugin directory as plugin.json.
 func WriteManifestV2(pluginDir string, m *ManifestV2) error {
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
 		return fmt.Errorf("create plugin dir: %w", err)
 	}
 
@@ -179,7 +179,7 @@ func WriteManifestV2(pluginDir string, m *ManifestV2) error {
 	}
 
 	path := filepath.Join(pluginDir, "plugin.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 

@@ -89,7 +89,7 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	_ = tmpFile.Close()
 
 	// Build the sandbox-exec command.
-	cmd := exec.CommandContext(ctx, "sandbox-exec", "-f", tmpFile.Name(), "bash", "-c", command)
+	cmd := exec.CommandContext(ctx, "sandbox-exec", "-f", tmpFile.Name(), "bash", "-c", command) // #nosec G204 -- "sandbox-exec" binary fixed; tmpFile is our own generated profile and command is the sandboxed exec request
 
 	// Register the temp file for cleanup (same pattern as WrapCommand in sandbox.go).
 	seatbeltTmpFilesMu.Lock()

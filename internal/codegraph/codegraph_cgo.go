@@ -78,7 +78,7 @@ type LanguageExtractor struct {
 // Open opens or creates a CodeGraph database at the given path.
 func Open(root string) (*CodeGraph, error) {
 	dbPath := filepath.Join(root, ".codegraph", "codegraph.db")
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o750); err != nil {
 		return nil, err
 	}
 
@@ -280,7 +280,7 @@ func (cg *CodeGraph) IndexFile(filePath string) error {
 	lang := getLanguage(ext)
 	cg.parser.SetLanguage(lang)
 
-	source, err := os.ReadFile(filePath)
+	source, err := os.ReadFile(filePath) // #nosec G304 -- filePath is a source file path supplied by the CLI's own indexing walk, not untrusted external input
 	if err != nil {
 		return err
 	}
@@ -505,7 +505,7 @@ func (cg *CodeGraph) GetCallers(nodeID string, maxDepth int) ([]Node, error) {
 		}
 
 		nodes, _ := scanNodes(rows)
-		rows.Close()
+		_ = rows.Close()
 
 		for _, n := range nodes {
 			if !visited[n.ID] {
@@ -557,7 +557,7 @@ func (cg *CodeGraph) GetCallees(nodeID string, maxDepth int) ([]Node, error) {
 		}
 
 		nodes, _ := scanNodes(rows)
-		rows.Close()
+		_ = rows.Close()
 
 		for _, n := range nodes {
 			if !visited[n.ID] {
@@ -642,12 +642,12 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 			if childRows != nil {
 				for childRows.Next() {
 					var childID string
-					childRows.Scan(&childID)
+					_ = childRows.Scan(&childID)
 					if !visited[childID] {
 						queue = append(queue, step{nodeID: childID, depth: s.depth})
 					}
 				}
-				childRows.Close()
+				_ = childRows.Close()
 			}
 		}
 
@@ -659,12 +659,12 @@ func (cg *CodeGraph) GetImpactRadius(nodeID string, maxDepth int) ([]Node, error
 		if depRows != nil {
 			for depRows.Next() {
 				var depID string
-				depRows.Scan(&depID)
+				_ = depRows.Scan(&depID)
 				if !visited[depID] {
 					queue = append(queue, step{nodeID: depID, depth: s.depth + 1})
 				}
 			}
-			depRows.Close()
+			_ = depRows.Close()
 		}
 	}
 
@@ -762,7 +762,7 @@ func (cg *CodeGraph) ResolveRefs() error {
 	var refs []ref
 	for rows.Next() {
 		var r ref
-		rows.Scan(&r.id, &r.fromID, &r.name, &r.kind, &r.line, &r.filePath, &r.lang)
+		_ = rows.Scan(&r.id, &r.fromID, &r.name, &r.kind, &r.line, &r.filePath, &r.lang)
 		refs = append(refs, r)
 	}
 
@@ -804,9 +804,9 @@ func (cg *CodeGraph) Stats() (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
 	var nodeCount, edgeCount, fileCount int
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM nodes").Scan(&nodeCount)
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM edges").Scan(&edgeCount)
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&fileCount)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM nodes").Scan(&nodeCount)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM edges").Scan(&edgeCount)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&fileCount)
 
 	stats["nodes"] = nodeCount
 	stats["edges"] = edgeCount
@@ -819,10 +819,10 @@ func (cg *CodeGraph) Stats() (map[string]interface{}, error) {
 		for rows.Next() {
 			var kind string
 			var count int
-			rows.Scan(&kind, &count)
+			_ = rows.Scan(&kind, &count)
 			byKind[kind] = count
 		}
-		rows.Close()
+		_ = rows.Close()
 		stats["nodes_by_kind"] = byKind
 	}
 

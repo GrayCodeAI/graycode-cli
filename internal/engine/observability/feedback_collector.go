@@ -358,7 +358,7 @@ func (fc *FeedbackCollector) Save() error {
 		return fmt.Errorf("no directory configured for feedback persistence")
 	}
 
-	if err := os.MkdirAll(fc.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(fc.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating feedback dir: %w", err)
 	}
 
@@ -376,7 +376,7 @@ func (fc *FeedbackCollector) Save() error {
 	}
 
 	path := filepath.Join(fc.Dir, "feedback.json")
-	if err := os.WriteFile(path, raw, 0o644); err != nil {
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		return fmt.Errorf("writing feedback file: %w", err)
 	}
 	return nil
@@ -392,7 +392,7 @@ func (fc *FeedbackCollector) Load() error {
 	}
 
 	path := filepath.Join(fc.Dir, "feedback.json")
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No data yet is not an error

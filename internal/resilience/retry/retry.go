@@ -117,7 +117,7 @@ func DoWithResult[T any](ctx context.Context, cfg Config, fn func() (T, error)) 
 
 func backoff(attempt int, base, max time.Duration, multiplier float64) time.Duration {
 	d := float64(base) * math.Pow(multiplier, float64(attempt))
-	jitter := time.Duration(rand.Int63n(int64(base)))
+	jitter := time.Duration(rand.Int63n(int64(base))) // #nosec G404 -- non-cryptographic use (retry/backoff jitter)
 	delay := time.Duration(d) + jitter
 	if delay > max {
 		return max

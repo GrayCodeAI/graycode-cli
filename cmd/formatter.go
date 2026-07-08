@@ -284,13 +284,7 @@ func (f *OutputFormatter) asciiRow(cells []string, widths []int) string {
 }
 
 func (f *OutputFormatter) truncateCell(s string, maxWidth int) string {
-	if len(s) <= maxWidth {
-		return s
-	}
-	if maxWidth <= 3 {
-		return s[:maxWidth]
-	}
-	return s[:maxWidth-3] + "..."
+	return truncateWithEllipsis(s, maxWidth)
 }
 
 func (f *OutputFormatter) padRight(s string, width int) string {
@@ -510,16 +504,7 @@ func addCommas(n int) string {
 
 // Truncate truncates a string to maxWidth, appending "..." if it exceeds.
 func (f *OutputFormatter) Truncate(s string, maxWidth int) string {
-	if maxWidth <= 0 {
-		return ""
-	}
-	if len(s) <= maxWidth {
-		return s
-	}
-	if maxWidth <= 3 {
-		return s[:maxWidth]
-	}
-	return s[:maxWidth-3] + "..."
+	return truncateWithEllipsis(s, maxWidth)
 }
 
 // DetectTerminalWidth returns the terminal width or a default of 80.

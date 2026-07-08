@@ -463,7 +463,7 @@ func (m *Mission) Summary() string {
 
 func (m *Mission) createDir() (string, error) {
 	dir := filepath.Join(os.TempDir(), "hawk-missions", m.ID)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
 	return dir, nil
@@ -479,7 +479,7 @@ func (m *Mission) persistState() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(m.Dir, "mission.json"), data, 0o644)
+	return os.WriteFile(filepath.Join(m.Dir, "mission.json"), data, 0o600)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -647,12 +647,12 @@ func (w *Workflow) persist() error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	target := workflowStatePath(dir)
 	tmp := target + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return err
 	}
 	return os.Rename(tmp, target)

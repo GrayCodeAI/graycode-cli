@@ -486,7 +486,7 @@ func (sc *SmartCreator) generateYAMLBoilerplate(path string) string {
 // --- Helpers ---
 
 func extractCopyrightHeader(filePath string) string {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}
@@ -533,7 +533,7 @@ func extractCopyrightHeader(filePath string) string {
 }
 
 func extractImportStyle(filePath string, language string) string {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}
@@ -585,7 +585,7 @@ func extractImportStyle(filePath string, language string) string {
 }
 
 func extractGoExportedFunctions(filePath string) []string {
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil
 	}
@@ -686,7 +686,7 @@ func (t *SmartCreateTool) Execute(ctx context.Context, input json.RawMessage) (s
 
 	// Ensure parent directory exists.
 	dir := filepath.Dir(params.Path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
@@ -696,7 +696,7 @@ func (t *SmartCreateTool) Execute(ctx context.Context, input json.RawMessage) (s
 	}
 
 	// Write the file.
-	if err := os.WriteFile(params.Path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(params.Path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("failed to write file: %w", err)
 	}
 

@@ -101,7 +101,7 @@ func lspDefinition(root, filePath string, line int, symbol string) (string, erro
 			absPath = filePath
 		}
 
-		source, err := os.ReadFile(absPath)
+		source, err := os.ReadFile(absPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			return fmt.Sprintf("Cannot read file: %s", filePath), nil
 		}
@@ -147,7 +147,7 @@ func lspReferences(root, filePath string, line int, symbol string) (string, erro
 		if absErr != nil {
 			absPath = filePath
 		}
-		source, readErr := os.ReadFile(absPath)
+		source, readErr := os.ReadFile(absPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr == nil {
 			lines := strings.Split(string(source), "\n")
 			if line <= len(lines) {

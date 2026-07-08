@@ -116,7 +116,7 @@ func (s *Sandbox) setupChroot() error {
 	for _, bin := range binaries {
 		if _, err := os.Stat(bin); err == nil {
 			dest := filepath.Join(s.root, bin)
-			_ = os.MkdirAll(filepath.Dir(dest), 0o755)
+			_ = os.MkdirAll(filepath.Dir(dest), 0o750)
 			_ = copyFile(bin, dest)
 		}
 	}
@@ -174,7 +174,7 @@ func (s *Sandbox) runDocker(ctx context.Context, command string) (*exec.Cmd, err
 	}
 	// Pin to a specific stable version; update periodically for security patches.
 	args = append(args, "alpine:3.21.3", "sh", "-c", command)
-	return exec.CommandContext(ctx, "docker", args...), nil
+	return exec.CommandContext(ctx, "docker", args...), nil // #nosec G204 -- "docker" binary and args built from internal config/constants
 }
 
 // runNamespace runs a command in a Linux namespace.
@@ -193,7 +193,7 @@ func (s *Sandbox) runNamespace(ctx context.Context, command string) (*exec.Cmd, 
 
 // runChroot runs a command in a chroot.
 func (s *Sandbox) runChroot(ctx context.Context, command string) (*exec.Cmd, error) {
-	return exec.CommandContext(ctx, "chroot", s.root, "bash", "-c", command), nil
+	return exec.CommandContext(ctx, "chroot", s.root, "bash", "-c", command), nil // #nosec G204 -- "chroot" binary is fixed; s.root is a sandbox temp dir we created
 }
 
 // runSeatbelt runs a command in a macOS seatbelt sandbox using sandbox-exec.
@@ -293,9 +293,9 @@ func (s *Sandbox) Close() error {
 
 // copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
+	data, err := os.ReadFile(src) // #nosec G304 -- src is one of a fixed set of well-known binary paths (/bin/sh, /bin/bash, /usr/bin/env)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0o755)
+	return os.WriteFile(dst, data, 0o755) // #nosec G306 -- copied binary must remain executable inside the chroot
 }

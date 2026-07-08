@@ -61,8 +61,8 @@ func newBufferedWriter(cfg BufferedConfig) *bufferedWriter {
 	if cfg.FilePath == "" {
 		bw.direct = os.Stderr
 	} else {
-		_ = os.MkdirAll(filepath.Dir(cfg.FilePath), 0o755)
-		f, err := os.OpenFile(cfg.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		_ = os.MkdirAll(filepath.Dir(cfg.FilePath), 0o750)
+		f, err := os.OpenFile(cfg.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			// Fall back to stderr if file can't be opened
 			bw.direct = os.Stderr
@@ -177,7 +177,7 @@ func (bw *bufferedWriter) rotate() {
 	_ = os.Rename(bw.config.FilePath, backup)
 
 	// Open new file
-	f, err := os.OpenFile(bw.config.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, err := os.OpenFile(bw.config.FilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		bw.fileWriter = nil
 		bw.direct = os.Stderr

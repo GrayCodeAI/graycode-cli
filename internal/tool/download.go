@@ -82,8 +82,8 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("downloaded content contains potential credentials: %s — write blocked", warn)
 	}
 
-	_ = os.MkdirAll(filepath.Dir(p.Destination), 0o755)
-	if err := os.WriteFile(p.Destination, body, 0o644); err != nil {
+	_ = os.MkdirAll(filepath.Dir(p.Destination), 0o750)
+	if err := os.WriteFile(p.Destination, body, 0o600); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 

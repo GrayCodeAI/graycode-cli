@@ -69,7 +69,7 @@ func pluginsDir() string {
 // LoadManifest loads a plugin manifest from a directory.
 func LoadManifest(dir string) (*Manifest, error) {
 	path := filepath.Join(dir, "plugin.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- dir is a locally installed/staged plugin directory, not raw external input
 	if err != nil {
 		return nil, fmt.Errorf("read plugin.json: %w", err)
 	}
@@ -119,12 +119,12 @@ func Install(srcDir string) error {
 		return fmt.Errorf("plugin security scan failed: %s", strings.Join(issues, "; "))
 	}
 	dstDir := filepath.Join(pluginsDir(), m.Name)
-	if err := os.MkdirAll(dstDir, 0o755); err != nil {
+	if err := os.MkdirAll(dstDir, 0o750); err != nil {
 		return err
 	}
 	// Copy manifest
 	data, _ := json.MarshalIndent(m, "", "  ")
-	if err := os.WriteFile(filepath.Join(dstDir, "plugin.json"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dstDir, "plugin.json"), data, 0o600); err != nil {
 		return err
 	}
 	return nil

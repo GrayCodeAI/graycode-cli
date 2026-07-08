@@ -46,7 +46,10 @@ pre-commit:
           echo "lefthook: golangci-lint not installed — skipping (install: https://golangci-lint.run/usage/install/)"
           exit 0
         fi
-        golangci-lint run --new-from-rev=HEAD~1 --fix ./...
+        # Lint only the staged files (not the last commit's diff): the previous
+        # --new-from-rev=HEAD~1 linted the wrong changeset and failed on repos
+        # with a single commit (no HEAD~1).
+        golangci-lint run --fix {staged_files}
       stage_fixed: true
 
     ast-grep:
@@ -114,6 +117,12 @@ pre-push:
 
     boundary-ecosystem:
       run: bash scripts/check-ecosystem-boundaries.sh
+
+    external-drift:
+      run: |
+        # Informational only — warns if external/ submodule pins have fallen
+        # behind the sibling dev clones, but never blocks a push.
+        bash scripts/sync-external.sh || true
 
 # ---------------------------------------------------------------------------
 # commit-msg — validate Conventional Commits and strip AI co-author trailers.

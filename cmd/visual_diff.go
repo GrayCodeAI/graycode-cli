@@ -316,8 +316,6 @@ func (vd *VisualDiff) RenderSideBySide(diff string) string {
 			// Check for paired addition
 			if vd.WordLevel && isIsolatedReplacePair(parsed, i) {
 				oldRendered, newRendered := vd.RenderWordDiff(dl.text, parsed[i+1].text)
-				leftContent := vdTruncate(vdStripAnsi(dl.text), contentWidth)
-				_ = leftContent
 				left := fmt.Sprintf("%s%4d%s %s%s%s",
 					vd.Theme.LineNo, oldLine, vd.Theme.Reset,
 					vd.Theme.Removed, padOrTruncate(oldRendered, contentWidth), vd.Theme.Reset)
@@ -871,17 +869,6 @@ func padOrTruncate(s string, width int) string {
 		return truncateVisible(s, width)
 	}
 	return s + strings.Repeat(" ", width-visLen)
-}
-
-// vdTruncate truncates a plain string to width.
-func vdTruncate(s string, width int) string {
-	if len(s) <= width {
-		return s
-	}
-	if width <= 3 {
-		return s[:width]
-	}
-	return s[:width-3] + "..."
 }
 
 // vdStripAnsi removes ANSI escape codes from a string.

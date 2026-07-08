@@ -17,6 +17,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func newTestChatModel() *chatModel {
@@ -62,9 +63,36 @@ func isolateChatCommandSweepEnv(t *testing.T) {
 	isolateCredentialHome(t)
 	hawkconfig.InvalidateConfigUICache()
 	credentials.SetDefaultStore(&credentials.MapStore{})
+	restoreThemeGlobals(t)
 	t.Cleanup(func() {
 		credentials.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
+	})
+}
+
+// restoreThemeGlobals snapshots every package-level color var that
+// ApplyTheme mutates and restores it when the test finishes, so commands
+// like "/theme dark" cannot leak themed globals into unrelated tests
+// (e.g. TestAdaptiveNeutralsPreserveDarkAppearance).
+func restoreThemeGlobals(t *testing.T) {
+	t.Helper()
+	savedHawk, savedSuccess, savedWarn, savedErr, savedInfo := hawkColor, successTeal, warnAmber, errorCoral, infoSky
+	savedTool, savedAgent, savedDone, savedContainer := toolGold, agentGold, doneGreen, containerBlue
+	savedInspect, savedEdit, savedRun, savedTrust := tierInspect, tierEdit, tierRun, tierTrust
+	savedHudBorder, savedHudLabel := hudBorderPurple, hudLabelPink
+	savedCost, savedBranch, savedToken, savedCwd := costViolet, branchYellow, tokenSage, cwdBlue
+	savedPrimary, savedMuted, savedPlaceholder, savedDisabled := textPrimary, textMuted, textPlaceholder, textDisabled
+	savedBorderDim, savedBgCode := borderDim, bgCode
+	savedDarkBG := lipgloss.HasDarkBackground()
+	t.Cleanup(func() {
+		hawkColor, successTeal, warnAmber, errorCoral, infoSky = savedHawk, savedSuccess, savedWarn, savedErr, savedInfo
+		toolGold, agentGold, doneGreen, containerBlue = savedTool, savedAgent, savedDone, savedContainer
+		tierInspect, tierEdit, tierRun, tierTrust = savedInspect, savedEdit, savedRun, savedTrust
+		hudBorderPurple, hudLabelPink = savedHudBorder, savedHudLabel
+		costViolet, branchYellow, tokenSage, cwdBlue = savedCost, savedBranch, savedToken, savedCwd
+		textPrimary, textMuted, textPlaceholder, textDisabled = savedPrimary, savedMuted, savedPlaceholder, savedDisabled
+		borderDim, bgCode = savedBorderDim, savedBgCode
+		lipgloss.SetHasDarkBackground(savedDarkBG)
 	})
 }
 

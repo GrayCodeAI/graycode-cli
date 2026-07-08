@@ -35,8 +35,8 @@ func (a *EvolvingMemoryAdapter) Format() string {
 }
 
 // SkillDistillerAdapter bridges memory.SkillDistiller to SkillStoreInterface.
-// Skill distillation builds a prompt for LLM extraction — the actual distilled
-// skills are stored as files in hawk-skills/.
+// Skill distillation only builds a prompt for LLM extraction; calling the LLM
+// and persisting the distilled skill are not implemented yet.
 type SkillDistillerAdapter struct {
 	SD *memory.SkillDistiller
 }

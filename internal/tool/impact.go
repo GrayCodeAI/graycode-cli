@@ -428,7 +428,7 @@ func buildSimpleImportGraph(root string) (*simpleImportGraph, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			return nil
 		}
@@ -576,7 +576,7 @@ func resolveImport(imp, ext, dir, root string) string {
 }
 
 func buildCoChangeAnalysis(ctx context.Context, root string, commitLimit int) (*simpleCoChange, error) {
-	cmd := exec.CommandContext(ctx, "git", "log", "--name-only", "--pretty=format:", fmt.Sprintf("-%d", commitLimit))
+	cmd := exec.CommandContext(ctx, "git", "log", "--name-only", "--pretty=format:", fmt.Sprintf("-%d", commitLimit)) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

@@ -145,10 +145,10 @@ func MaybeRun(ctx context.Context, opts Options) (Decision, error) {
 
 func writeMarker(root string) error {
 	dir := storage.ProjectStateDir(root)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, markerName), []byte("auto-init attempted\n"), 0o644)
+	return os.WriteFile(filepath.Join(dir, markerName), []byte("auto-init attempted\n"), 0o600)
 }
 
 func fileExists(path string) bool {

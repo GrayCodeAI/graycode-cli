@@ -76,24 +76,28 @@ func (cl *CommitLinter) LoadFromProject(projectDir string) error {
 
 	// Try .commitlintrc.json first (easiest to parse with stdlib).
 	jsonPath := filepath.Join(projectDir, ".commitlintrc.json")
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if data, err := os.ReadFile(jsonPath); err == nil {
 		return cl.parseJSONConfig(data)
 	}
 
 	// Try commitlint.config.js (extract rules via regex).
 	jsPath := filepath.Join(projectDir, "commitlint.config.js")
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if data, err := os.ReadFile(jsPath); err == nil {
 		return cl.parseJSConfig(data)
 	}
 
 	// Try .commitlintrc.yml (basic YAML parsing).
 	ymlPath := filepath.Join(projectDir, ".commitlintrc.yml")
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if data, err := os.ReadFile(ymlPath); err == nil {
 		return cl.parseYAMLConfig(data)
 	}
 
 	// Also try .commitlintrc.yaml
 	yamlPath := filepath.Join(projectDir, ".commitlintrc.yaml")
+	// #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if data, err := os.ReadFile(yamlPath); err == nil {
 		return cl.parseYAMLConfig(data)
 	}

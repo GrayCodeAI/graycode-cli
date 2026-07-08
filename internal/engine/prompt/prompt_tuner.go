@@ -115,9 +115,9 @@ func (pt *PromptTuner) load() {
 
 func (pt *PromptTuner) save() {
 	dir := filepath.Dir(pt.path)
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 	data, _ := json.Marshal(pt.variants)
-	_ = os.WriteFile(pt.path, data, 0o644)
+	_ = os.WriteFile(pt.path, data, 0o600)
 }
 
 func formatFloat(f float64) string {

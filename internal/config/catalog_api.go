@@ -12,11 +12,11 @@ import (
 type GatewayStatus = runtime.GatewayStatus
 
 // CompiledCatalogV1 loads the eyrie catalog from cache or bootstrap wiring (no network).
-func CompiledCatalogV1() *catalog.CompiledCatalogV1 {
+func CompiledCatalogV1() *catalog.CompiledCatalog {
 	return compiledCatalogOrBootstrap()
 }
 
-func compiledCatalogOrBootstrap() *catalog.CompiledCatalogV1 {
+func compiledCatalogOrBootstrap() *catalog.CompiledCatalog {
 	if compiled, ok := cachedCompiledCatalog(); ok && compiled != nil {
 		return compiled
 	}
@@ -25,8 +25,8 @@ func compiledCatalogOrBootstrap() *catalog.CompiledCatalogV1 {
 		storeCompiledCatalog(compiled)
 		return compiled
 	}
-	bootstrap := catalog.BootstrapCatalogV1()
-	compiled, err = catalog.CompileCatalogV1(&bootstrap)
+	bootstrap := catalog.BootstrapCatalog()
+	compiled, err = catalog.CompileCatalog(&bootstrap)
 	if err != nil {
 		return nil
 	}

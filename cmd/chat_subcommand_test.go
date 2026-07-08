@@ -484,8 +484,9 @@ func TestSubcommandRegistry_Dispatch_DelegatesToSubcommand(t *testing.T) {
 	}
 	subcommandRegistry.Register(original)
 	t.Cleanup(func() {
-		// Deregister by creating a new registry? No, just leave
-		// the registration. It only affects this test in isolation.
+		subcommandRegistry.mu.Lock()
+		defer subcommandRegistry.mu.Unlock()
+		delete(subcommandRegistry.primary, sentinel)
 	})
 
 	// We can't easily call m.handleCommand (it's a method on

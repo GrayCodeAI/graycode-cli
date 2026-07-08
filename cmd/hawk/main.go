@@ -30,6 +30,12 @@ var (
 )
 
 func main() {
+	// Handle --version flag immediately
+	if len(os.Args) > 1 && os.Args[1] == "--version" {
+		fmt.Println("hawk " + Version)
+		return
+	}
+
 	// Propagate the canonical version to all sub-packages that surface it
 	// (CLI version flag, HTTP API version field, MCP clientInfo, sandbox
 	// container image tag). Each package keeps a private settable variable

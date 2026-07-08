@@ -54,7 +54,7 @@ func (SkillTool) Execute(_ context.Context, input json.RawMessage) (string, erro
 	if !ok {
 		return "", fmt.Errorf("skill %q not found", p.Skill)
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", err
 	}

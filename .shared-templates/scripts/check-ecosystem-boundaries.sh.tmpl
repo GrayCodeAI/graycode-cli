@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Canonical import-boundary guard for hawk-eco repos.
+# Source of truth: .shared-templates/scripts/check-ecosystem-boundaries.sh.tmpl
+#
+# This template has three real variants depending on the repo's role. Pick
+# the one that matches and delete the others; do not try to make one script
+# handle every role via flags — the failure message needs to name the exact
+# rule being enforced.
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+# =============================================================================
+# VARIANT 1 — Support engine (eyrie, yaad, tok, trace, sight, inspect).
+# Engines are peers: they may depend on hawk-core-contracts and hawk-mcpkit,
+# but never on hawk/internal/* or another engine.
+# =============================================================================
+FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
+FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(yaad|tok|trace|sight|inspect)(/|")'
+# ^ list every OTHER engine here — never include yourself.
+
+exit_code=0
+
+if command -v rg >/dev/null 2>&1; then
+  violations="$(rg -n "$FORBIDDEN_HAWK" --glob '*.go' . || true)"
+  engine_violations="$(rg -n "$FORBIDDEN_ENGINES" --glob '*.go' . || true)"
+else
+  violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_HAWK" . || true)"
+  engine_violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_ENGINES" . || true)"
+fi
+
+if [[ -n "${violations}" ]]; then
+  echo "forbidden Hawk imports found:"
+  echo "${violations}"
+  echo
+  echo "support repos must use hawk-core-contracts or local contracts, not hawk/internal or removed hawk/shared/types"
+  exit_code=1
+fi
+
+if [[ -n "${engine_violations}" ]]; then
+  echo "forbidden cross-engine imports found:"
+  echo "${engine_violations}"
+  echo
+  echo "support engines must not import other engines directly — they are peers, not dependencies"
+  exit_code=1
+fi
+
+if [[ $exit_code -ne 0 ]]; then
+  exit $exit_code
+fi
+
+echo "ecosystem boundary guard passed"
+
+# =============================================================================
+# VARIANT 2 — Foundation repo (hawk-core-contracts, hawk-mcpkit).
+# Foundation repos sit below everything: zero hawk-eco dependencies at all.
+# =============================================================================
+#
+# FORBIDDEN='github\.com/GrayCodeAI/(?!{{OWN_MODULE}}(/|"))'
+# SELF_MODULE='github.com/GrayCodeAI/{{OWN_MODULE}}'
+#
+# if command -v rg >/dev/null 2>&1; then
+#   violations="$(rg -n "$FORBIDDEN" --pcre2 --glob '*.go' . || true)"
+# else
+#   violations="$(grep -rn --include='*.go' -E 'github\.com/GrayCodeAI/[^"]*' . | grep -v "$SELF_MODULE" || true)"
+# fi
+#
+# if [[ -n "${violations}" ]]; then
+#   echo "forbidden hawk-eco imports found in {{OWN_MODULE}}:"
+#   echo "${violations}"
+#   echo
+#   echo "{{OWN_MODULE}} is a foundation repo — it must not depend on hawk, engines, or any other GrayCodeAI/* package"
+#   exit 1
+# fi
+#
+# echo "ecosystem boundary guard passed"
+
+# =============================================================================
+# VARIANT 3 — SDK / skills consumer (hawk-sdk-go, hawk-sdk-python,
+# hawk-community-skills). Consumers may depend on hawk's public surfaces
+# only — never on a support engine directly, and never on hawk/internal.
+# =============================================================================
+#
+# FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(eyrie|yaad|tok|trace|sight|inspect)(/|")'
+# FORBIDDEN_INTERNAL='github\.com/GrayCodeAI/hawk/internal'
+#
+# (same rg/grep + report pattern as Variant 1, naming "SDKs/skills must go
+# through hawk's public API, not engines directly" as the violation message)

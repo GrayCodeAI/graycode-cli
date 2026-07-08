@@ -69,7 +69,7 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 			// Check image is local
 			image := cs.Image()
 			imgCtx, imgCancel := context.WithTimeout(context.Background(), 10*time.Second)
-			checkCmd := exec.CommandContext(imgCtx, "docker", "image", "inspect", image)
+			checkCmd := exec.CommandContext(imgCtx, "docker", "image", "inspect", image) // #nosec G204 -- fixed command 'docker' with args, not user-controlled binary
 			imgErr := checkCmd.Run()
 			imgCancel()
 			if imgErr != nil {

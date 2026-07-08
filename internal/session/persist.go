@@ -14,7 +14,7 @@ import (
 // for callers that only need message-level save/restore.
 func SaveMessages(path string, messages []Message) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create session directory: %w", err)
 	}
 
@@ -50,7 +50,7 @@ func SaveMessages(path string, messages []Message) error {
 
 // LoadMessages deserializes conversation messages from a JSON file.
 func LoadMessages(path string) ([]Message, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built by SessionPath() from internal project state dir + session ID
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil // no file, empty conversation

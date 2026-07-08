@@ -223,7 +223,7 @@ func (rm *RetrievalMetrics) saveNoLock() {
 		return
 	}
 	dir := filepath.Dir(rm.savePath)
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 
 	// Keep only last 1000 entries
 	if len(rm.entries) > 1000 {
@@ -234,7 +234,7 @@ func (rm *RetrievalMetrics) saveNoLock() {
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(rm.savePath, data, 0o644)
+	_ = os.WriteFile(rm.savePath, data, 0o600)
 }
 
 func (rm *RetrievalMetrics) load() {

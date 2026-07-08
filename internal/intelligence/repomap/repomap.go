@@ -186,7 +186,7 @@ func parseFileSymbols(path string) []Symbol {
 
 	// Fallback to legacy regex parsers for unsupported languages
 	ext := filepath.Ext(path)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}

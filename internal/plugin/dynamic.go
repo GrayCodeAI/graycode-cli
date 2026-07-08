@@ -246,7 +246,7 @@ func (dm *DynamicPluginManager) Activate(name string) error {
 			hookEvent := h.Event
 
 			fn := func(ctx context.Context, data map[string]interface{}) error {
-				c := exec.CommandContext(ctx, "bash", "-c", hookCmd)
+				c := exec.CommandContext(ctx, "bash", "-c", hookCmd) // #nosec G204 -- hookCmd is defined in a locally installed plugin's own manifest, trusted like other plugin config
 				c.Dir = dp.Path
 				c.Env = os.Environ()
 				for k, v := range data {
@@ -387,7 +387,7 @@ func (dm *DynamicPluginManager) Get(name string) (*DynamicPlugin, bool) {
 // InstallFromGitHub clones a repo into the plugins directory.
 func (dm *DynamicPluginManager) InstallFromGitHub(repo string) error {
 	destDir := filepath.Join(storage.StateDir(), "plugins")
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
+	if err := os.MkdirAll(destDir, 0o750); err != nil {
 		return fmt.Errorf("create plugins dir: %w", err)
 	}
 
@@ -403,7 +403,7 @@ func (dm *DynamicPluginManager) InstallFromGitHub(repo string) error {
 
 	// "--" terminates option parsing so a url is never interpreted as a git
 	// flag (defense-in-depth; isFullURL already forces an http(s):// prefix).
-	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", "--", url, pluginDir)
+	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", "--", url, pluginDir) // #nosec G204 -- url is either a caller-supplied full https(s) URL (isFullURL-checked) or built from a repo slug prefixed with a fixed GitHub URL; "--" prevents flag injection
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %w\n%s", err, string(out))
@@ -520,7 +520,7 @@ func (dm *DynamicPluginManager) startDaemon(dp *DynamicPlugin) error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, cmdPath)
+	cmd := exec.CommandContext(ctx, cmdPath) // #nosec G204 -- cmdPath is the locally installed plugin's own entrypoint binary, resolved from its manifest/directory, not external input
 	cmd.Dir = dp.Path
 	cmd.Env = os.Environ()
 
@@ -626,7 +626,7 @@ func (dm *DynamicPluginManager) executeSubprocessTool(ctx context.Context, dp *D
 		return "", fmt.Errorf("tool %q has empty command", tool.Name)
 	}
 
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...) // #nosec G204 -- tool.Command comes from the plugin's own manifest, trusted like other plugin config
 	cmd.Dir = dp.Path
 
 	if input != nil {

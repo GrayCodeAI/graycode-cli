@@ -141,7 +141,7 @@ func (af *AutoFile) Save() error {
 	}
 
 	dir := filepath.Dir(af.MemoryPath())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 
@@ -184,7 +184,7 @@ func (af *AutoFile) Save() error {
 		}
 	}
 
-	return os.WriteFile(af.MemoryPath(), []byte(b.String()), 0o644)
+	return os.WriteFile(af.MemoryPath(), []byte(b.String()), 0o600)
 }
 
 func extractBuildCommand(content string) *AutoFileEntry {

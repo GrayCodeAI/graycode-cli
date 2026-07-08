@@ -62,7 +62,7 @@ var dangerousRanges = []struct {
 
 // AuditSkillFile scans a single file for dangerous Unicode characters.
 func AuditSkillFile(path string) ([]AuditFinding, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a locally installed skill file, either from filepath.WalkDir over a known skills dir or caller-supplied for local scanning, not raw external input
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 -- SHA-1 required by RFC 6455 Sec-WebSocket-Accept
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
@@ -138,8 +138,12 @@ func wsDial(ctx context.Context, rawURL string, headers map[string]string) (net.
 	}
 	if secure {
 		// TLS is wired here for wss:// completeness; the no-dep test server
-		// uses ws://. Use the standard library's defaults.
-		tlsConn := tls.Client(conn, &tls.Config{ServerName: u.Hostname()})
+		// uses ws://. Pin the minimum version explicitly (matches the stdlib
+		// client default, but guards against future config drift).
+		tlsConn := tls.Client(conn, &tls.Config{ // #nosec G402 -- MinVersion already set appropriately
+			ServerName: u.Hostname(),
+			MinVersion: tls.VersionTLS12,
+		})
 		if err = tlsConn.HandshakeContext(ctx); err != nil {
 			_ = conn.Close()
 			return nil, nil, err
@@ -216,7 +220,7 @@ func wsNonce() (string, error) {
 
 // wsAcceptKey computes the expected Sec-WebSocket-Accept value for a key.
 func wsAcceptKey(key string) string {
-	h := sha1.Sum([]byte(key + wsGUID))
+	h := sha1.Sum([]byte(key + wsGUID)) // #nosec G401 -- SHA-1 required by RFC 6455 Sec-WebSocket-Accept
 	return base64.StdEncoding.EncodeToString(h[:])
 }
 

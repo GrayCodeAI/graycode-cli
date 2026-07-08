@@ -53,7 +53,7 @@ func (EnterWorktreeTool) Execute(ctx context.Context, input json.RawMessage) (st
 		if branch == "" {
 			branch = filepath.Base(p.Path)
 		}
-		out, err := exec.CommandContext(ctx, "git", "worktree", "add", p.Path, "-b", branch).CombinedOutput()
+		out, err := exec.CommandContext(ctx, "git", "worktree", "add", p.Path, "-b", branch).CombinedOutput() // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 		if err != nil {
 			return "", fmt.Errorf("failed to create worktree: %s", string(out))
 		}
@@ -61,7 +61,7 @@ func (EnterWorktreeTool) Execute(ctx context.Context, input json.RawMessage) (st
 		_ = symlinkSharedDirs(p.Path)
 	} else {
 		// Validate it's a git worktree
-		out, err := exec.CommandContext(ctx, "git", "-C", p.Path, "rev-parse", "--git-dir").CombinedOutput()
+		out, err := exec.CommandContext(ctx, "git", "-C", p.Path, "rev-parse", "--git-dir").CombinedOutput() // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 		if err != nil {
 			return "", fmt.Errorf("not a valid git repository: %s", string(out))
 		}
@@ -77,7 +77,7 @@ func (EnterWorktreeTool) Execute(ctx context.Context, input json.RawMessage) (st
 	}
 
 	// Get branch name for display
-	branchOut, _ := exec.CommandContext(ctx, "git", "-C", p.Path, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput()
+	branchOut, _ := exec.CommandContext(ctx, "git", "-C", p.Path, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput() // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	branch := strings.TrimSpace(string(branchOut))
 
 	return fmt.Sprintf("Switched to worktree: %s (branch: %s)", p.Path, branch), nil
@@ -147,7 +147,7 @@ func (ExitWorktreeTool) Execute(ctx context.Context, input json.RawMessage) (str
 	// Optionally cleanup
 	var cleanupMsg string
 	if p.Cleanup {
-		out, err := exec.CommandContext(ctx, "git", "worktree", "remove", currentWorktree).CombinedOutput()
+		out, err := exec.CommandContext(ctx, "git", "worktree", "remove", currentWorktree).CombinedOutput() // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 		if err != nil {
 			cleanupMsg = fmt.Sprintf("\nWarning: failed to remove worktree: %s", string(out))
 		} else {

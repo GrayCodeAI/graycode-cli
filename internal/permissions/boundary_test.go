@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/home"
 )
 
 func TestNewBoundaryChecker(t *testing.T) {
@@ -572,7 +574,7 @@ func TestConcurrentAccess(t *testing.T) {
 }
 
 func TestExpandHome(t *testing.T) {
-	home, err := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		t.Skip("could not get home directory")
 	}
@@ -581,17 +583,17 @@ func TestExpandHome(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"~/.ssh/", filepath.Join(home, ".ssh/")},
-		{"~/.aws/", filepath.Join(home, ".aws/")},
+		{"~/.ssh/", filepath.Join(homeDir, ".ssh/")},
+		{"~/.aws/", filepath.Join(homeDir, ".aws/")},
 		{"/etc/passwd", "/etc/passwd"},
 		{".env", ".env"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := expandHome(tt.input)
+			result := home.Expand(tt.input)
 			if result != tt.expected {
-				t.Errorf("expandHome(%s) = %s, want %s", tt.input, result, tt.expected)
+				t.Errorf("home.Expand(%s) = %s, want %s", tt.input, result, tt.expected)
 			}
 		})
 	}

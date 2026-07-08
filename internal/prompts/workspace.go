@@ -143,11 +143,11 @@ func (w *WorkspaceContext) Format() string {
 // readGitBranch reads the current branch from .git/HEAD without spawning a subprocess.
 func readGitBranch(dir string) string {
 	headPath := filepath.Join(dir, ".git", "HEAD")
-	data, err := os.ReadFile(headPath)
+	data, err := os.ReadFile(headPath) // #nosec G304 -- path is derived from the workspace directory being inspected, not external input
 	if err != nil {
 		// .git might be a worktree file
 		gitFile := filepath.Join(dir, ".git")
-		gitData, fErr := os.ReadFile(gitFile)
+		gitData, fErr := os.ReadFile(gitFile) // #nosec G304 -- path is derived from the workspace directory being inspected, not external input
 		if fErr != nil {
 			return ""
 		}
@@ -158,7 +158,7 @@ func readGitBranch(dir string) string {
 				gitDir = filepath.Join(dir, gitDir)
 			}
 			headPath = filepath.Join(gitDir, "HEAD")
-			data, err = os.ReadFile(headPath)
+			data, err = os.ReadFile(headPath) // #nosec G304 -- path is derived from the workspace directory being inspected, not external input
 			if err != nil {
 				return ""
 			}

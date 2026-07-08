@@ -60,7 +60,7 @@ func (pb *PluginBridge) Run(ctx context.Context, args ...string) (string, error)
 	fullArgs = append(fullArgs, bridge.Args...)
 	fullArgs = append(fullArgs, args...)
 
-	cmd := exec.CommandContext(ctx, pb.bin, fullArgs...)
+	cmd := exec.CommandContext(ctx, pb.bin, fullArgs...) // #nosec G204 -- pb.bin was resolved via exec.LookPath at NewPluginBridge time; fullArgs come from the plugin's own manifest, trusted like other plugin config
 
 	// Merge extra environment variables onto the inherited environment.
 	if len(bridge.Env) > 0 {

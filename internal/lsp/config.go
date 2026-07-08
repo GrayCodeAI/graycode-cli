@@ -55,7 +55,7 @@ func ResetConfig() {
 }
 
 func loadConfigFile(path string, cfg *LSPConfig) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is an internal LSP config location, not external untrusted input
 	if err != nil {
 		return // file not found is fine
 	}

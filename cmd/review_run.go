@@ -44,7 +44,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 
 	// Resolve short SHA to full.
 	if len(sha) < 40 {
-		out, err := exec.CommandContext(context.Background(), "git", "rev-parse", sha).Output()
+		out, err := exec.CommandContext(context.Background(), "git", "rev-parse", sha).Output() // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 		if err == nil {
 			sha = strings.TrimSpace(string(out))
 		}
@@ -155,7 +155,7 @@ func getCommitDiff(sha string) (string, error) {
 	out, err := exec.CommandContext(context.Background(), "git", "diff-tree", "-p", sha).Output()
 	if err != nil {
 		// Fallback: diff against parent.
-		out, err = exec.CommandContext(context.Background(), "git", "diff", sha+"^", sha).Output()
+		out, err = exec.CommandContext(context.Background(), "git", "diff", sha+"^", sha).Output() // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 		if err != nil {
 			return "", fmt.Errorf("git diff for %s: %w", sha[:8], err)
 		}

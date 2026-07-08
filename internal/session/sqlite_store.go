@@ -464,7 +464,7 @@ func (s *SQLiteStore) UpdateSession(id string, updates map[string]interface{}) e
 	args = append(args, time.Now())
 	args = append(args, id)
 
-	query := fmt.Sprintf("UPDATE sessions SET %s WHERE id = ?", strings.Join(setClauses, ", "))
+	query := fmt.Sprintf("UPDATE sessions SET %s WHERE id = ?", strings.Join(setClauses, ", ")) // #nosec G201 -- column names from fixed allowlist; values parameterized
 	result, err := s.db.ExecContext(context.Background(), query, args...)
 	if err != nil {
 		return fmt.Errorf("update session: %w", err)
