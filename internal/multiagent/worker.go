@@ -197,6 +197,7 @@ func createWorktree(repoDir, baseBranch, branch string) (string, error) {
 	}
 	wtPath := strings.TrimSpace(string(dir))
 
+	// #nosec G204 -- binary is the fixed string "git"; branch/wtPath/baseBranch come from internal mission state, not raw external input
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -224,6 +225,7 @@ func getLastCommit(dir string) string {
 }
 
 func getChangedFiles(dir, baseBranch string) []string {
+	// #nosec G204 -- binary is the fixed string "git"; baseBranch comes from internal Config, not raw external input
 	cmd := exec.CommandContext(context.Background(), "git", "diff", "--name-only", baseBranch+"..HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()

@@ -116,7 +116,7 @@ func (s StructuredEditTool) Execute(ctx context.Context, input json.RawMessage) 
 	}
 
 	// Write the result.
-	if err := os.WriteFile(p.Path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(p.Path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("write %s: %w", p.Path, err)
 	}
 

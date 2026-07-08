@@ -42,7 +42,7 @@ type CodeSearchResult struct {
 
 // ComputeFileHash returns the SHA-256 hex digest of a file's contents.
 func ComputeFileHash(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file being analyzed by this dev CLI
 	if err != nil {
 		return "", err
 	}

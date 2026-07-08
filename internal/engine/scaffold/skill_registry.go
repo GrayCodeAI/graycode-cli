@@ -390,7 +390,7 @@ func (r *SkillRegistry) Save() error {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if err := os.MkdirAll(r.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(r.Dir, 0o750); err != nil {
 		return fmt.Errorf("create skill dir: %w", err)
 	}
 
@@ -400,7 +400,7 @@ func (r *SkillRegistry) Save() error {
 	}
 
 	path := filepath.Join(r.Dir, "skills.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write skills file: %w", err)
 	}
 	return nil
@@ -412,7 +412,7 @@ func (r *SkillRegistry) Load() error {
 	defer r.mu.Unlock()
 
 	path := filepath.Join(r.Dir, "skills.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No file yet, start empty.

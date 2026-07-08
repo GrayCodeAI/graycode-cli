@@ -242,7 +242,7 @@ func ScanTODOs(projectDir string) []*SuggestedTask {
 			return nil
 		}
 
-		f, err := os.Open(path)
+		f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			return nil
 		}
@@ -423,7 +423,7 @@ func scanDocsTasks(projectDir string) []*SuggestedTask {
 			return nil
 		}
 
-		f, err := os.Open(path)
+		f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			return nil
 		}
@@ -547,7 +547,7 @@ func scanSecurityTasks(projectDir string) []*SuggestedTask {
 
 		ext := filepath.Ext(path)
 
-		f, err := os.Open(path)
+		f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			return nil
 		}

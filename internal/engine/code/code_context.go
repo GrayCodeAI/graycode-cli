@@ -334,7 +334,7 @@ func (ce *ContextExtractor) resolvePath(file string) string {
 }
 
 func readFileLines(path string) ([]string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +412,7 @@ func (ce *ContextExtractor) grepForFiles(keywords []string) []string {
 
 	pattern := strings.Join(keywords, "|")
 
-	cmd := exec.CommandContext(context.Background(), "grep", "-rl", "--include=*.go", "-E", pattern, ce.ProjectDir)
+	cmd := exec.CommandContext(context.Background(), "grep", "-rl", "--include=*.go", "-E", pattern, ce.ProjectDir) // #nosec G204 -- invocation of standard unix utility with internally-derived path/pattern
 	out, err := cmd.Output()
 	if err != nil {
 		return nil

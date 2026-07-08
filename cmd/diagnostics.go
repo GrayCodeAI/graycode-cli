@@ -53,6 +53,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	b.WriteString("\nEcosystem versions:\n")
 	for _, repo := range []string{"eyrie", "yaad", "tok", "sight", "inspect", "trace"} {
 		versionFile := filepath.Join("external", repo, "VERSION")
+		// #nosec G304 -- versionFile built from a fixed internal repo-relative list
 		if data, err := os.ReadFile(versionFile); err == nil {
 			b.WriteString(fmt.Sprintf("  %s: %s\n", repo, strings.TrimSpace(string(data))))
 		} else {
@@ -66,7 +67,6 @@ func doctorReport(settings hawkconfig.Settings) string {
 	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
 	}
-	_ = hawkconfig.MigrateProviderConfig()
 	b.WriteString("\n" + envSummaryWithSelection(provider, modelName, false) + "\n")
 	b.WriteString("\nGit:\n")
 	if branch := branchSummary(); branch != "" {
@@ -153,6 +153,7 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 	registry.Register("config_syntax", func(ctx context.Context) health.Check {
 		start := time.Now()
 		globalPath := storage.SettingsPath()
+		// #nosec G304 -- globalPath is the internal settings path, not external input
 		if data, err := os.ReadFile(globalPath); err == nil {
 			var raw json.RawMessage
 			if err := json.Unmarshal(data, &raw); err != nil {

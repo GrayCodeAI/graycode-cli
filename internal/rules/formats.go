@@ -17,12 +17,12 @@ func readHawk(dir string) ([]Rule, error) {
 
 func writeHawk(dir string, rules []Rule) error {
 	rulesDir := filepath.Join(dir, ".agents", "rules")
-	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
+	if err := os.MkdirAll(rulesDir, 0o750); err != nil {
 		return err
 	}
 	for _, r := range rules {
 		name := sanitizeFilename(r.Name) + ".md"
-		if err := os.WriteFile(filepath.Join(rulesDir, name), []byte(r.Content+"\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(rulesDir, name), []byte(r.Content+"\n"), 0o600); err != nil {
 			return err
 		}
 	}
@@ -41,7 +41,7 @@ func readCursor(dir string) ([]Rule, error) {
 	}
 
 	// Fall back to single file.
-	data, err := os.ReadFile(filepath.Join(dir, ".cursorrules"))
+	data, err := os.ReadFile(filepath.Join(dir, ".cursorrules")) // #nosec G304 -- dir is the caller-supplied project root; filename is a fixed constant
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +51,14 @@ func readCursor(dir string) ([]Rule, error) {
 func writeCursor(dir string, rules []Rule) error {
 	// Write as multi-file .cursor/rules/*.mdc with frontmatter.
 	rulesDir := filepath.Join(dir, ".cursor", "rules")
-	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
+	if err := os.MkdirAll(rulesDir, 0o750); err != nil {
 		return err
 	}
 	for _, r := range rules {
 		name := sanitizeFilename(r.Name) + ".mdc"
 		// Wrap in minimal frontmatter that Cursor expects.
 		content := "---\ndescription: " + r.Name + "\n---\n" + r.Content + "\n"
-		if err := os.WriteFile(filepath.Join(rulesDir, name), []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(rulesDir, name), []byte(content), 0o600); err != nil {
 			return err
 		}
 	}
@@ -70,7 +70,7 @@ func writeCursor(dir string, rules []Rule) error {
 // ---------------------------------------------------------------------------
 
 func readClaudeCode(dir string) ([]Rule, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md")) // #nosec G304 -- dir is the caller-supplied project root; filename is a fixed constant
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func writeClaudeCode(dir string, rules []Rule) error {
 		b.WriteString("## " + r.Name + "\n\n")
 		b.WriteString(r.Content + "\n")
 	}
-	return os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte(b.String()), 0o644)
+	return os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte(b.String()), 0o600)
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ func writeClaudeCode(dir string, rules []Rule) error {
 // ---------------------------------------------------------------------------
 
 func readCopilot(dir string) ([]Rule, error) {
-	data, err := os.ReadFile(filepath.Join(dir, ".github", "copilot-instructions.md"))
+	data, err := os.ReadFile(filepath.Join(dir, ".github", "copilot-instructions.md")) // #nosec G304 -- dir is the caller-supplied project root; filename is a fixed constant
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func readCopilot(dir string) ([]Rule, error) {
 
 func writeCopilot(dir string, rules []Rule) error {
 	ghDir := filepath.Join(dir, ".github")
-	if err := os.MkdirAll(ghDir, 0o755); err != nil {
+	if err := os.MkdirAll(ghDir, 0o750); err != nil {
 		return err
 	}
 	var b strings.Builder
@@ -114,7 +114,7 @@ func writeCopilot(dir string, rules []Rule) error {
 		b.WriteString("## " + r.Name + "\n\n")
 		b.WriteString(r.Content + "\n")
 	}
-	return os.WriteFile(filepath.Join(ghDir, "copilot-instructions.md"), []byte(b.String()), 0o644)
+	return os.WriteFile(filepath.Join(ghDir, "copilot-instructions.md"), []byte(b.String()), 0o600)
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ func writeCopilot(dir string, rules []Rule) error {
 // ---------------------------------------------------------------------------
 
 func readGemini(dir string) ([]Rule, error) {
-	data, err := os.ReadFile(filepath.Join(dir, ".gemini", "style-guide.md"))
+	data, err := os.ReadFile(filepath.Join(dir, ".gemini", "style-guide.md")) // #nosec G304 -- dir is the caller-supplied project root; filename is a fixed constant
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func readGemini(dir string) ([]Rule, error) {
 
 func writeGemini(dir string, rules []Rule) error {
 	gemDir := filepath.Join(dir, ".gemini")
-	if err := os.MkdirAll(gemDir, 0o755); err != nil {
+	if err := os.MkdirAll(gemDir, 0o750); err != nil {
 		return err
 	}
 	var b strings.Builder
@@ -142,7 +142,7 @@ func writeGemini(dir string, rules []Rule) error {
 		b.WriteString("## " + r.Name + "\n\n")
 		b.WriteString(r.Content + "\n")
 	}
-	return os.WriteFile(filepath.Join(gemDir, "style-guide.md"), []byte(b.String()), 0o644)
+	return os.WriteFile(filepath.Join(gemDir, "style-guide.md"), []byte(b.String()), 0o600)
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +161,7 @@ func readMDDir(dir, ext string, source Format) ([]Rule, error) {
 		if e.IsDir() || filepath.Ext(e.Name()) != ext {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- filename comes from os.ReadDir of a trusted rules directory, not external input
 		if err != nil {
 			continue
 		}

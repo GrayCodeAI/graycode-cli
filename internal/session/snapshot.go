@@ -40,7 +40,7 @@ func NewSnapshotStore(sessionID string) *SnapshotStore {
 
 // Take saves a snapshot of the current session state.
 func (ss *SnapshotStore) Take(action string, sess *Session) error {
-	if err := os.MkdirAll(ss.dir, 0o755); err != nil {
+	if err := os.MkdirAll(ss.dir, 0o750); err != nil {
 		return fmt.Errorf("create snapshot dir: %w", err)
 	}
 
@@ -92,12 +92,12 @@ func (ss *SnapshotStore) Rewind(id int) (*Session, error) {
 
 // Load reads the snapshot index from disk.
 func (ss *SnapshotStore) Load() error {
-	if err := os.MkdirAll(ss.dir, 0o755); err != nil {
+	if err := os.MkdirAll(ss.dir, 0o750); err != nil {
 		return fmt.Errorf("create snapshot dir: %w", err)
 	}
 
 	indexPath := filepath.Join(ss.dir, "snapshots.json")
-	data, err := os.ReadFile(indexPath)
+	data, err := os.ReadFile(indexPath) // #nosec G304 -- path built from internal sessions dir + session ID, fixed filename
 	if err != nil {
 		if os.IsNotExist(err) {
 			ss.snapshots = nil
@@ -169,12 +169,12 @@ func (ss *SnapshotStore) saveIndex() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(indexPath, data, 0o644)
+	return os.WriteFile(indexPath, data, 0o600)
 }
 
 // writeSessionJSONL writes a session as JSONL to the given path.
 func writeSessionJSONL(path string, sess *Session) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path built from internal sessions dir + session ID + snapshot ID
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func writeSessionJSONL(path string, sess *Session) error {
 
 // loadSnapshotJSONL reads a session from a snapshot JSONL file.
 func loadSnapshotJSONL(path, sessionID string) (*Session, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from internal sessions dir + session ID + snapshot ID
 	if err != nil {
 		return nil, err
 	}

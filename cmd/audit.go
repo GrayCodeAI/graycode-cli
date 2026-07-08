@@ -113,7 +113,7 @@ func runAudit(cmd *cobra.Command, args []string) error {
 				c := counts[key]
 				c.Hits++
 				if len(c.Examples) < 3 {
-					c.Examples = append(c.Examples, truncateStr(hit.Example, 80))
+					c.Examples = append(c.Examples, truncateWithEllipsis(hit.Example, 80))
 				}
 				// Track timestamps
 				ts := event.Timestamp.Format(time.RFC3339)
@@ -208,7 +208,7 @@ func discoverSessions(days int, projectFilter string) ([]SessionInfo, error) {
 }
 
 func loadSessionEvents(path string) ([]audit.ToolEvent, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from internal session enumeration
 	if err != nil {
 		return nil, err
 	}
@@ -305,11 +305,4 @@ func printAuditText(cmd *cobra.Command, result AuditResult) {
 	}
 
 	_, _ = fmt.Fprintf(w, "\n")
-}
-
-func truncateStr(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }

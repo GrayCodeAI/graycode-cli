@@ -202,10 +202,10 @@ func (cg *CodeGraph) Sync() (*SyncResult, error) {
 	}
 	for rows.Next() {
 		var path, hash string
-		rows.Scan(&path, &hash)
+		_ = rows.Scan(&path, &hash)
 		trackedFiles[path] = hash
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	// Scan current files
 	currentFiles := make(map[string]bool)
@@ -227,7 +227,7 @@ func (cg *CodeGraph) Sync() (*SyncResult, error) {
 			result.FilesChecked++
 
 			// Check if file changed
-			source, err := os.ReadFile(path)
+			source, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over cg.root, the project being indexed
 			if err != nil {
 				return nil
 			}
@@ -261,9 +261,9 @@ func (cg *CodeGraph) Sync() (*SyncResult, error) {
 		if !currentFiles[trackedPath] {
 			absPath := filepath.Join(cg.root, trackedPath)
 			relForDelete := trackedPath
-			cg.db.ExecContext(context.Background(), "DELETE FROM nodes WHERE file_path = ?", absPath)
-			cg.db.ExecContext(context.Background(), "DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE file_path = ?)", absPath)
-			cg.db.ExecContext(context.Background(), "DELETE FROM files WHERE path = ?", relForDelete)
+			_, _ = cg.db.ExecContext(context.Background(), "DELETE FROM nodes WHERE file_path = ?", absPath)
+			_, _ = cg.db.ExecContext(context.Background(), "DELETE FROM edges WHERE source IN (SELECT id FROM nodes WHERE file_path = ?)", absPath)
+			_, _ = cg.db.ExecContext(context.Background(), "DELETE FROM files WHERE path = ?", relForDelete)
 			result.FilesRemoved++
 		}
 	}
@@ -344,7 +344,7 @@ func (cg *CodeGraph) Trace(fromName, toName string) ([]Node, error) {
 			if edgeRows != nil {
 				for edgeRows.Next() {
 					var nextID string
-					edgeRows.Scan(&nextID)
+					_ = edgeRows.Scan(&nextID)
 					if !visited[nextID] {
 						newPath := make([]string, len(current.path)+1)
 						copy(newPath, current.path)
@@ -352,7 +352,7 @@ func (cg *CodeGraph) Trace(fromName, toName string) ([]Node, error) {
 						queue = append(queue, step{nodeID: nextID, path: newPath})
 					}
 				}
-				edgeRows.Close()
+				_ = edgeRows.Close()
 			}
 		}
 	}
@@ -404,7 +404,7 @@ func (cg *CodeGraph) Explore(query string, maxFiles int) (*ExploreResult, error)
 		if !filepath.IsAbs(absPath) {
 			absPath = filepath.Join(cg.root, filePath)
 		}
-		source, err := os.ReadFile(absPath)
+		source, err := os.ReadFile(absPath) // #nosec G304 -- absPath is derived from indexed file paths under cg.root, the project being explored
 		if err != nil {
 			continue
 		}
@@ -463,7 +463,7 @@ func (cg *CodeGraph) Files(dirFilter string) ([]FileEntry, error) {
 	var files []FileEntry
 	for rows.Next() {
 		var f FileEntry
-		rows.Scan(&f.Path, &f.Language, &f.Size, &f.NodeCount, &f.IndexedAt)
+		_ = rows.Scan(&f.Path, &f.Language, &f.Size, &f.NodeCount, &f.IndexedAt)
 		files = append(files, f)
 	}
 	return files, nil
@@ -502,10 +502,10 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 	}
 
 	// Counts
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM nodes").Scan(&status.Nodes)
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM edges").Scan(&status.Edges)
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&status.Files)
-	cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM unresolved_refs").Scan(&status.Unresolved)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM nodes").Scan(&status.Nodes)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM edges").Scan(&status.Edges)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM files").Scan(&status.Files)
+	_ = cg.db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM unresolved_refs").Scan(&status.Unresolved)
 
 	// Nodes by kind
 	rows, _ := cg.db.QueryContext(context.Background(), "SELECT kind, COUNT(*) FROM nodes GROUP BY kind ORDER BY COUNT(*) DESC")
@@ -513,10 +513,10 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 		for rows.Next() {
 			var kind string
 			var count int
-			rows.Scan(&kind, &count)
+			_ = rows.Scan(&kind, &count)
 			status.NodesByKind[kind] = count
 		}
-		rows.Close()
+		_ = rows.Close()
 	}
 
 	// Files by language
@@ -525,14 +525,14 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 		for rows.Next() {
 			var lang string
 			var count int
-			rows.Scan(&lang, &count)
+			_ = rows.Scan(&lang, &count)
 			status.FilesByLang[lang] = count
 		}
-		rows.Close()
+		_ = rows.Close()
 	}
 
 	// Journal mode
-	cg.db.QueryRowContext(context.Background(), "PRAGMA journal_mode").Scan(&status.JournalMode)
+	_ = cg.db.QueryRowContext(context.Background(), "PRAGMA journal_mode").Scan(&status.JournalMode)
 
 	// Check if up to date (no pending changes)
 	status.UpToDate = true
@@ -540,9 +540,9 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 	if fileRows != nil {
 		for fileRows.Next() {
 			var path, hash string
-			fileRows.Scan(&path, &hash)
+			_ = fileRows.Scan(&path, &hash)
 			absPath := filepath.Join(cg.root, path)
-			source, err := os.ReadFile(absPath)
+			source, err := os.ReadFile(absPath) // #nosec G304 -- absPath is derived from tracked file paths under cg.root, the project being indexed
 			if err != nil {
 				status.UpToDate = false
 				break
@@ -552,7 +552,7 @@ func (cg *CodeGraph) Status() (*StatusResult, error) {
 				break
 			}
 		}
-		fileRows.Close()
+		_ = fileRows.Close()
 	}
 
 	return status, nil

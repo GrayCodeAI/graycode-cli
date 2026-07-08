@@ -29,7 +29,7 @@ type Agent struct {
 //	---
 //	You are a code reviewer...
 func Load(path string) (*Agent, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is from agentDirs()/ListAll enumeration of Hawk's own persona dir, or an explicit caller-supplied agent file path
 	if err != nil {
 		return nil, err
 	}

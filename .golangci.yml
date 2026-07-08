@@ -13,10 +13,39 @@ linters:
     - bodyclose
     - unconvert
     - whitespace
+    - gosec
   settings:
     errcheck:
       check-type-assertions: true
       check-blank: false
+    gosec:
+      # Scoped to high-signal rules (2026-07 baseline: 0 findings in
+      # production code with this set). Deliberately excluded floods:
+      #   G104 — unhandled errors, already covered by errcheck
+      #   G301/G306 — 0755/0644 perms are intentional for user-visible files
+      #   G304 — hawk reads user-supplied file paths by design (CLI agent)
+      includes:
+        - G101 # hardcoded credentials
+        - G102 # bind to all interfaces
+        - G106 # ssh InsecureIgnoreHostKey
+        - G107 # url from variable in http request
+        - G110 # decompression bomb
+        - G111 # http dir traversal
+        - G112 # slowloris (missing ReadHeaderTimeout)
+        - G201 # sql format string
+        - G202 # sql string concat
+        - G203 # unescaped template data
+        - G204 # subprocess with variable
+        - G401 # weak crypto (md5/sha1/des/rc4)
+        - G402 # bad TLS settings
+        - G403 # weak RSA key
+        - G404 # weak random for security use
+        - G501 # crypto/md5 import
+        - G502 # crypto/des import
+        - G503 # crypto/rc4 import
+        - G504 # net/http/cgi import
+        - G505 # crypto/sha1 import
+        - G601 # implicit memory aliasing in range
     govet:
       enable-all: true
       disable:
@@ -57,6 +86,7 @@ linters:
           - bodyclose
           - errcheck
           - unused
+          - gosec
       - path: cmd/
         linters:
           - noctx

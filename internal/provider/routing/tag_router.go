@@ -223,7 +223,7 @@ func (tr *TagRouter) Save(path string) error {
 	if err != nil {
 		return fmt.Errorf("marshal tag router: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write tag router config: %w", err)
 	}
 	return nil
@@ -234,7 +234,7 @@ func (tr *TagRouter) Load(path string) error {
 	tr.mu.Lock()
 	defer tr.mu.Unlock()
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the caller-supplied tag router config path, not external input
 	if err != nil {
 		return fmt.Errorf("read tag router config: %w", err)
 	}

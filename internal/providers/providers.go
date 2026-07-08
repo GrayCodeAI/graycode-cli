@@ -29,6 +29,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	homepkg "github.com/GrayCodeAI/hawk/internal/home"
 )
 
 // Mech describes how a provider is installed.
@@ -92,23 +94,10 @@ func ProbesParse(spec string) []Probe {
 		kind := ProbeKind(clause[:idx])
 		arg := strings.TrimSpace(clause[idx+1:])
 		// Expand $HOME and ~ in arg
-		arg = expandHome(arg)
+		arg = homepkg.Expand(arg)
 		out = append(out, Probe{Kind: kind, Arg: arg})
 	}
 	return out
-}
-
-// expandHome replaces a leading $HOME or ~ with the user's home dir.
-func expandHome(p string) string {
-	if strings.HasPrefix(p, "$HOME") {
-		home, _ := os.UserHomeDir()
-		return home + strings.TrimPrefix(p, "$HOME")
-	}
-	if strings.HasPrefix(p, "~") {
-		home, _ := os.UserHomeDir()
-		return home + strings.TrimPrefix(p, "~")
-	}
-	return p
 }
 
 // Catalog is the full PROVIDERS matrix.
@@ -317,7 +306,7 @@ func macAppPresent(name string) bool {
 	if runtime.GOOS != "darwin" {
 		return false
 	}
-	home, _ := os.UserHomeDir()
+	home := homepkg.Dir()
 	candidates := []string{
 		"/Applications",
 		filepath.Join(home, "Applications"),

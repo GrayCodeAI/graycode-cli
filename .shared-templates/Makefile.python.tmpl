@@ -1,0 +1,110 @@
+# Canonical hawk-eco Makefile for Python repos.
+# Source of truth: .shared-templates/Makefile.python.tmpl at the eco root.
+# Placeholders rendered per repo: {{NAME}}.
+
+# ---------------------------------------------------------------------------
+# Project metadata
+# ---------------------------------------------------------------------------
+NAME := {{NAME}}
+
+# ---------------------------------------------------------------------------
+# Versioning — sourced from VERSION file at repo root (single source of
+# truth, also consumed by hatch + release-please).
+# ---------------------------------------------------------------------------
+VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); [ -n "$$v" ] && echo "$$v" || echo "dev")
+
+PYTHON  ?= python3
+PIP     ?= $(PYTHON) -m pip
+
+# ---------------------------------------------------------------------------
+# Phony declarations (alphabetical).
+# ---------------------------------------------------------------------------
+.PHONY: all bench boundary-guard build ci clean cover fmt help hooks install lint lint-fix \
+        release security test test-race tidy version vet
+
+# ---------------------------------------------------------------------------
+# Default target.
+# ---------------------------------------------------------------------------
+all: lint test build ## Default — lint, test, build.
+
+# ---------------------------------------------------------------------------
+# Build / install / release.
+# ---------------------------------------------------------------------------
+build: ## Build wheel + sdist into dist/.
+	$(PYTHON) -m build
+
+install: ## Install in editable mode with dev extras.
+	$(PIP) install -e ".[dev]"
+
+release: build ## Upload to PyPI (expects $TWINE_USERNAME / $TWINE_PASSWORD).
+	$(PYTHON) -m twine upload dist/*
+
+# ---------------------------------------------------------------------------
+# Tests.
+# ---------------------------------------------------------------------------
+test: ## Run unit tests.
+	$(PYTHON) -m pytest
+
+test-race: test ## Alias for `test` (Python has no race detector).
+
+cover: ## Run tests with coverage report.
+	$(PYTHON) -m pytest --cov={{NAME}} --cov-report=term-missing --cov-report=html
+	@echo "Coverage report: htmlcov/index.html"
+
+bench: ## Run benchmarks (requires pytest-benchmark).
+	$(PYTHON) -m pytest --benchmark-only
+
+# ---------------------------------------------------------------------------
+# Quality gates.
+# ---------------------------------------------------------------------------
+fmt: ## Format with ruff.
+	$(PYTHON) -m ruff format .
+
+vet: ## Type-check with mypy.
+	$(PYTHON) -m mypy src/
+
+boundary-guard: ## Fail if the SDK references support engines or Hawk private packages.
+	bash ./scripts/check-consumer-boundaries.sh
+
+lint: ## Lint with ruff.
+	$(PYTHON) -m ruff check .
+
+lint-fix: ## Lint with ruff --fix.
+	$(PYTHON) -m ruff check --fix .
+
+security: ## Run pip-audit on this package's dependencies only (isolated venv).
+	@command -v pip-audit >/dev/null 2>&1 || (echo "install: pip install pip-audit" && exit 1)
+	@rm -rf .venv-audit
+	$(PYTHON) -m venv .venv-audit
+	.venv-audit/bin/pip install -q -U pip pip-audit setuptools wheel
+	.venv-audit/bin/pip install -q -e .
+	.venv-audit/bin/pip-audit --skip-editable
+	@rm -rf .venv-audit
+
+tidy: ## No-op for Python (lockfile management is via pyproject.toml).
+	@echo "tidy: nothing to do for Python repos."
+
+# ---------------------------------------------------------------------------
+# Composite gate used by CI and pre-push.
+# ---------------------------------------------------------------------------
+ci: fmt vet boundary-guard lint test security ## Run everything CI runs.
+	@echo "All CI checks passed."
+
+# ---------------------------------------------------------------------------
+# Misc.
+# ---------------------------------------------------------------------------
+version: ## Print the version that will be packaged.
+	@echo "Version: $(VERSION)"
+
+clean: ## Remove build artefacts and caches.
+	rm -rf dist/ build/ *.egg-info htmlcov/ .coverage
+	rm -rf .pytest_cache .mypy_cache .ruff_cache
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
+help: ## Show this help.
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+hooks: ## Install git hooks via lefthook (format, lint, conventional commits, co-author strip).
+	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
+	git config --unset core.hooksPath 2>/dev/null || true
+	lefthook install

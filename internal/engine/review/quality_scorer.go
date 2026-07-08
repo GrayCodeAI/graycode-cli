@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/mathutil"
 )
 
 // QualityScorer evaluates LLM response quality across multiple dimensions
@@ -616,11 +618,5 @@ func bracesBalanced(code string) bool {
 
 // clampFloat restricts a float64 value to the [min, max] range.
 func clampFloat(v, min, max float64) float64 {
-	if v < min {
-		return min
-	}
-	if v > max {
-		return max
-	}
-	return v
+	return mathutil.Clamp(v, min, max)
 }

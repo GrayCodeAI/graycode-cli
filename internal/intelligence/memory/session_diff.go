@@ -43,12 +43,12 @@ func (sd *SessionDiffAnalyzer) SnapshotStart() {
 	defer sd.mu.Unlock()
 
 	// Use git to capture current state
-	out, err := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "status", "--porcelain").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "status", "--porcelain").Output() // #nosec G204 -- git binary and args are hardcoded; sd.projectDir is the tool's own configured project directory, not external input
 	if err != nil {
 		return
 	}
 	// Store current HEAD for later comparison
-	head, err := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "rev-parse", "HEAD").Output()
+	head, err := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "rev-parse", "HEAD").Output() // #nosec G204 -- git binary and args are hardcoded; sd.projectDir is the tool's own configured project directory, not external input
 	if err != nil {
 		return
 	}
@@ -68,11 +68,11 @@ func (sd *SessionDiffAnalyzer) AnalyzeEnd() *DiffResult {
 	}
 
 	// Get diff since session start
-	diffCmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", "--name-status", startHead+"..HEAD")
+	diffCmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", "--name-status", startHead+"..HEAD") // #nosec G204 -- git binary and args are hardcoded; sd.projectDir is internal and startHead is a commit hash captured internally in SnapshotStart
 	out, err := diffCmd.Output()
 	if err != nil {
 		// Fall back to uncommitted changes
-		diffCmd = exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", "--name-status", startHead)
+		diffCmd = exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", "--name-status", startHead) // #nosec G204 -- git binary and args are hardcoded; sd.projectDir is internal and startHead is a commit hash captured internally in SnapshotStart
 		out, _ = diffCmd.Output()
 	}
 
@@ -99,7 +99,7 @@ func (sd *SessionDiffAnalyzer) AnalyzeEnd() *DiffResult {
 	}
 
 	// Get new commits since session start
-	logCmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "log", "--oneline", startHead+"..HEAD")
+	logCmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "log", "--oneline", startHead+"..HEAD") // #nosec G204 -- git binary and args are hardcoded; sd.projectDir is internal and startHead is a commit hash captured internally in SnapshotStart
 	logOut, err := logCmd.Output()
 	if err == nil {
 		for _, line := range strings.Split(string(logOut), "\n") {
@@ -170,7 +170,7 @@ func (sd *SessionDiffAnalyzer) detectNewDeps(modifiedFiles []string, startHead s
 		switch base {
 		case "package.json", "go.mod", "Cargo.toml", "pyproject.toml", "requirements.txt":
 			// Get the diff for this specific file
-			cmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", startHead, "--", f)
+			cmd := exec.CommandContext(context.Background(), "git", "-C", sd.projectDir, "diff", startHead, "--", f) // #nosec G204 -- git binary and args are hardcoded; sd.projectDir is internal, startHead is an internally captured commit hash, and f is a repo-relative path taken from git's own diff --name-status output
 			out, err := cmd.Output()
 			if err != nil {
 				continue

@@ -47,7 +47,7 @@ func (cr *ConflictResolver) ParseConflicts(path string) (*ConflictFile, error) {
 	cr.mu.Lock()
 	defer cr.mu.Unlock()
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file %s: %w", path, err)
 	}
@@ -433,7 +433,7 @@ func (cr *ConflictResolver) ApplyResolution(cf *ConflictFile) error {
 		return fmt.Errorf("no resolved content to write")
 	}
 
-	err := os.WriteFile(cf.Path, []byte(cf.FullContent), 0o644)
+	err := os.WriteFile(cf.Path, []byte(cf.FullContent), 0o600)
 	if err != nil {
 		return fmt.Errorf("write resolved file %s: %w", cf.Path, err)
 	}

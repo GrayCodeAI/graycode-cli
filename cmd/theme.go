@@ -20,7 +20,11 @@ package cmd
 //   9. Spinner-line ANSI escapes (raw, not lipgloss)
 //  10. Icons & glyphs
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+
+	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
+)
 
 // ---------------------------------------------------------------------------
 // 1. Brand & identity
@@ -204,3 +208,124 @@ const (
 // quitAgainMsg is a static user-facing string and lives here because it
 // is not a glyph. Kept in this file to avoid moving a one-line constant.
 const quitAgainMsg = "Press Ctrl+C again to quit."
+
+// ---------------------------------------------------------------------------
+// 11. Live theme switching
+// ---------------------------------------------------------------------------
+
+// ApplyTheme mutates all global color vars to match the named palette so
+// that every lipgloss.NewStyle() call issued after this returns correctly
+// themed styles. Call this at startup (from root.go) and whenever the user
+// selects a new theme from the picker.
+//
+// "auto" is a no-op: lipgloss already probes the terminal background on
+// its own; the caller should still call lipgloss.SetHasDarkBackground for
+// the AdaptiveColor vars but the fixed-hex vars remain at their defaults.
+func ApplyTheme(name string) {
+	if name == "" || name == "auto" {
+		return
+	}
+	entry, ok := internaltheme.LookupTheme(name)
+	if !ok {
+		return
+	}
+	p := entry.Palette
+
+	// 1. Brand — accent color from the palette.
+	hawkColor = lipgloss.Color(p.Accent)
+
+	// 2. Semantic feedback.
+	successTeal = lipgloss.Color(p.Green)
+	warnAmber = lipgloss.Color(p.Amber)
+	errorCoral = lipgloss.Color(p.Red)
+	infoSky = lipgloss.Color(p.Blue)
+
+	// 3. Tooling & agents — reuse semantic colors from palette.
+	toolGold = lipgloss.Color(p.Amber)
+	agentGold = lipgloss.Color(p.Accent)
+	doneGreen = lipgloss.Color(p.Green)
+	containerBlue = lipgloss.Color(p.Blue)
+
+	// 4. Autonomy tier colors.
+	tierInspect = lipgloss.Color(p.Blue)
+	tierEdit = lipgloss.Color(p.Green)
+	tierRun = lipgloss.Color(p.Amber)
+	tierTrust = lipgloss.Color(p.Red)
+
+	// 5. HUD overlay — use accent.
+	hudBorderPurple = lipgloss.Color(p.Accent)
+	hudLabelPink = lipgloss.Color(p.Accent)
+
+	// 6. Status bar.
+	costViolet = lipgloss.Color(p.Accent)
+	branchYellow = lipgloss.Color(p.Amber)
+	tokenSage = lipgloss.Color(p.Green)
+	cwdBlue = lipgloss.Color(p.Blue)
+
+	// 7. Text hierarchy.
+	textPrimary = lipgloss.AdaptiveColor{Light: "#1A1A1A", Dark: p.Ink}
+	textMuted = lipgloss.AdaptiveColor{Light: "#6B6B6B", Dark: p.Muted}
+	textPlaceholder = lipgloss.Color(p.Faint)
+	textDisabled = lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: p.Faintest}
+
+	// 8. Structure.
+	borderDim = lipgloss.AdaptiveColor{Light: "#C6C6C6", Dark: p.Line2}
+	bgCode = lipgloss.Color(p.Panel)
+
+	// 9. Update dark-background flag so AdaptiveColors resolve correctly.
+	lipgloss.SetHasDarkBackground(entry.IsDark)
+
+	// 10. Rebuild package-level styles that snapshotted the old colors at
+	// init time. Without this, markdown/chat/agent-grid styles keep the
+	// default palette after a live theme switch.
+	refreshThemeStyles()
+}
+
+// refreshThemeStyles rebuilds every package-level lipgloss.Style var that
+// captures a theme color at package-init time. ApplyTheme mutates the color
+// vars, but styles constructed from them hold copies — so each one must be
+// reconstructed after a palette swap.
+//
+// Like ApplyTheme itself, this must only run on the Bubble Tea Update
+// goroutine (or before the program starts); the style vars are read
+// unsynchronized from View.
+func refreshThemeStyles() {
+	// markdown.go
+	mdHeaderStyle = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
+	mdBoldStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	mdInlineCodeStyle = lipgloss.NewStyle().Background(bgCode).Foreground(textPrimary)
+	mdCodeBlockStyle = lipgloss.NewStyle().Background(bgCode)
+	mdCodeLabelStyle = lipgloss.NewStyle().Foreground(textDisabled).Background(bgCode)
+	mdLinkTextStyle = lipgloss.NewStyle().Foreground(successTeal)
+	mdLinkURLStyle = lipgloss.NewStyle().Foreground(textDisabled)
+	mdBlockquoteBar = lipgloss.NewStyle().Foreground(textDisabled)
+	mdBlockquoteText = lipgloss.NewStyle().Foreground(textDisabled)
+	mdHRStyle = lipgloss.NewStyle().Foreground(textDisabled)
+	mdBulletStyle = lipgloss.NewStyle().Foreground(successTeal)
+
+	// chat_model.go
+	dimStyle = lipgloss.NewStyle().Foreground(textDisabled)
+	errorStyle = lipgloss.NewStyle().Foreground(errorCoral)
+	warnStyle = lipgloss.NewStyle().Foreground(warnAmber)
+	toolStyle = lipgloss.NewStyle().Foreground(toolGold).Bold(true)
+	toolDimStyle = lipgloss.NewStyle().Foreground(textDisabled)
+	slashCmdStyle = lipgloss.NewStyle().Foreground(textDisabled)
+	slashDescStyle = lipgloss.NewStyle().Foreground(textDisabled)
+	slashSelCmdStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	slashSelDescStyle = lipgloss.NewStyle().Foreground(hawkColor)
+	inputBorderStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(borderDim)
+	containerErrStyle = lipgloss.NewStyle().Foreground(errorCoral)
+	containerLabelStyle = lipgloss.NewStyle().Foreground(containerBlue)
+	dimColor = textDisabled
+
+	// agent_grid.go
+	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(hawkColor).Padding(0, 1)
+	agentDoneStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(doneGreen).Padding(0, 1)
+	agentFailStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(errorCoral).Padding(0, 1)
+	agentIdleStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(textDisabled).Padding(0, 1)
+	agentTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(agentGold)
+	agentStatusStyle = lipgloss.NewStyle().Foreground(textMuted)
+
+	// chat_scrollbar.go
+	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
+}

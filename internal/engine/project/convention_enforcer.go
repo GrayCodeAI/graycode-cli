@@ -801,7 +801,7 @@ func conventionConfidence(matching, nonMatching int) float64 {
 
 // readConventionFileLines reads a file and returns its lines for convention analysis.
 func readConventionFileLines(path string) []string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil
 	}

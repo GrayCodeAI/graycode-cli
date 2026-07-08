@@ -73,7 +73,7 @@ func DecompressSession(id string) (*Session, error) {
 		return nil, fmt.Errorf("no compressed session found for %s", id)
 	}
 
-	f, err := os.Open(gzPath)
+	f, err := os.Open(gzPath) // #nosec G304 -- path built from sessionsDir()+session ID with fixed compressed extensions
 	if err != nil {
 		return nil, fmt.Errorf("open compressed session: %w", err)
 	}
@@ -95,13 +95,13 @@ func DecompressSession(id string) (*Session, error) {
 }
 
 func compressFile(src, dst string) error {
-	in, err := os.Open(src)
+	in, err := os.Open(src) // #nosec G304 -- src is an internal session file path built by the session store
 	if err != nil {
 		return err
 	}
 	defer func() { _ = in.Close() }()
 
-	out, err := os.Create(dst)
+	out, err := os.Create(dst) // #nosec G304 -- dst is an internal session file path built by the session store
 	if err != nil {
 		return err
 	}

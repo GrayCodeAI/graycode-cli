@@ -57,9 +57,9 @@ func saveInputHistory(history []string) {
 	}
 
 	path := historyFilePath()
-	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(path), 0o750)
 	content := strings.Join(deduped, "\n") + "\n"
-	_ = os.WriteFile(path, []byte(content), 0o644)
+	_ = os.WriteFile(path, []byte(content), 0o600)
 }
 
 // appendToHistory appends a single entry to the history file.

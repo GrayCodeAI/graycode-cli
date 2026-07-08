@@ -22,6 +22,7 @@ func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 	// already created it, so use a subdirectory.
 	wtPath := filepath.Join(dir, "work")
 
+	// #nosec G204 -- binary is the fixed string "git"; branchName/wtPath/baseBranch come from internal caller state, not raw external input
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branchName, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	out, err := cmd.CombinedOutput()
@@ -79,6 +80,7 @@ func mergeWorktree(repoDir, baseBranch, taskBranch string) error {
 	}
 
 	// Merge the task branch.
+	// #nosec G204 -- binary is the fixed string "git"; taskBranch comes from internal caller state, not raw external input
 	merge := exec.CommandContext(context.Background(), "git", "merge", "--no-ff", taskBranch, "-m",
 		fmt.Sprintf("Merge parallel task branch %s", taskBranch))
 	merge.Dir = repoDir

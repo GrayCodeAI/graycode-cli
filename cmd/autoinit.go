@@ -89,6 +89,7 @@ func autoInitRunner(ctx context.Context, root string) error {
 	}
 
 	content := autoInitContextContent(filepath.Base(root), summary)
+	// #nosec G306 -- starter context file is a project doc intended to be committed and normally readable
 	return os.WriteFile(out, []byte(content), 0o644)
 }
 

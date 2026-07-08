@@ -434,6 +434,12 @@ func (m chatModel) View() string {
 	}
 
 	// Autonomy tier picker overlay
+	if m.themePicker != nil && m.themePicker.IsOpen() {
+		pickerView := lipgloss.NewStyle().Width(viewWidth).Render(m.themePicker.View())
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
+		return frame.String()
+	}
 	if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
 		pickerView := m.autonomyPicker.Render(viewWidth)
 		frame.WriteByte('\n')

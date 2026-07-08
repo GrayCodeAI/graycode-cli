@@ -53,7 +53,7 @@ func (w *WasmPluginRuntime) ExecuteTool(ctx context.Context, toolName string, in
 	}
 
 	// Read the WASM binary.
-	wasmBytes, err := os.ReadFile(wasmPath)
+	wasmBytes, err := os.ReadFile(wasmPath) // #nosec G304 -- wasmPath is resolved from the plugin's own manifest directory, trusted like other plugin config
 	if err != nil {
 		return "", fmt.Errorf("wasm plugin %q: read %s: %w", w.manifest.Name, wasmPath, err)
 	}

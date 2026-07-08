@@ -59,13 +59,13 @@ func NewRegistryClient() *RegistryClient {
 
 // FetchIndex downloads the registry index, using a local cache when fresh.
 func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
-	_ = os.MkdirAll(rc.CacheDir, 0o755)
+	_ = os.MkdirAll(rc.CacheDir, 0o750)
 	cachePath := filepath.Join(rc.CacheDir, "skills-index.json")
 
 	// Use cache if less than 1 hour old.
 	if info, err := os.Stat(cachePath); err == nil {
 		if time.Since(info.ModTime()) < time.Hour {
-			data, err := os.ReadFile(cachePath)
+			data, err := os.ReadFile(cachePath) // #nosec G304 -- cachePath is derived from rc.CacheDir, a fixed internal cache location, not user input
 			if err == nil {
 				var idx SkillIndex
 				if json.Unmarshal(data, &idx) == nil {
@@ -95,7 +95,7 @@ func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
 	}
 
 	// Write cache.
-	_ = os.WriteFile(cachePath, data, 0o644)
+	_ = os.WriteFile(cachePath, data, 0o600)
 
 	var idx SkillIndex
 	if err := json.Unmarshal(data, &idx); err != nil {
@@ -105,7 +105,7 @@ func (rc *RegistryClient) FetchIndex() (*SkillIndex, error) {
 }
 
 func (rc *RegistryClient) loadCachedIndex(path string) (*SkillIndex, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is always cachePath, derived from the fixed internal cache directory, not user input
 	if err != nil {
 		return nil, fmt.Errorf("registry unavailable and no cache found")
 	}
@@ -200,7 +200,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	default: // "project"
 		destBase = filepath.Join(storage.ProjectStateDir("."), "skills")
 	}
-	_ = os.MkdirAll(destBase, 0o755)
+	_ = os.MkdirAll(destBase, 0o750)
 
 	// Clone into a temp dir, then copy the skill(s).
 	tmpDir, err := os.MkdirTemp("", "hawk-skill-*")
@@ -210,7 +210,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	url := "https://github.com/" + repo + ".git"
-	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, tmpDir)
+	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, tmpDir) // #nosec G204 -- url is built from a caller-supplied repo slug prefixed with a fixed GitHub URL, consistent with other install paths in this package
 	if out, cloneErr := cmd.CombinedOutput(); cloneErr != nil {
 		return "", fmt.Errorf("git clone failed: %s\n%s", cloneErr, string(out))
 	}
@@ -242,9 +242,9 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 		}
 
 		destDir := filepath.Join(destBase, name)
-		_ = os.MkdirAll(destDir, 0o755)
+		_ = os.MkdirAll(destDir, 0o750)
 
-		data, err := os.ReadFile(srcSkill)
+		data, err := os.ReadFile(srcSkill) // #nosec G304 -- srcSkill is derived from skillsRoot, a path inside the freshly cloned tmpDir, and the enumerated entry name, not raw external input
 		if err != nil {
 			continue
 		}
@@ -269,7 +269,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 			installed = append(installed, name)
 		}
 
-		if err := os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte(content), 0o600); err != nil {
 			continue
 		}
 	}
@@ -308,7 +308,7 @@ func InstalledSkillInfo(name string) (SmartSkill, string, bool) {
 	}
 	for _, dir := range dirs {
 		skillFile := filepath.Join(dir, name, "SKILL.md")
-		data, err := os.ReadFile(skillFile)
+		data, err := os.ReadFile(skillFile) // #nosec G304 -- skillFile is built from the fixed skills state dir and a locally known skill name, not raw external input
 		if err != nil {
 			continue
 		}

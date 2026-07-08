@@ -116,7 +116,7 @@ func (s *Scaffolder) Generate(templateName string, vars map[string]string, outpu
 
 		// Create directories
 		dir := filepath.Dir(fullPath)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("creating directory %s: %w", dir, err)
 		}
 
@@ -159,7 +159,7 @@ func (s *Scaffolder) RegisterTemplate(t *Template) {
 
 // LoadTemplate loads a template from a JSON file.
 func (s *Scaffolder) LoadTemplate(path string) (*Template, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("reading template file %s: %w", path, err)
 	}

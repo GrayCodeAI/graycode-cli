@@ -69,7 +69,7 @@ func (m *PolicyManager) loadPolicy() {
 }
 
 func loadPolicyFile(path string, cfg *PolicyConfig) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is either the project's .agents/sandbox.jsonc or the global state dir, both trusted internal locations
 	if err != nil {
 		return
 	}

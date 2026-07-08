@@ -95,9 +95,3 @@ func renderSpinnerWaveSlotGlyph(glyph string, colorIdx int, isHead, bold bool) s
 	b.WriteString(ansiReset)
 	return b.String()
 }
-
-func frameContainsSpinnerWave(s string) bool {
-	c := spinnerWaveColors[0]
-	needle := fmt.Sprintf("38;2;%d;%d;%d", c[0], c[1], c[2])
-	return strings.Contains(s, needle)
-}

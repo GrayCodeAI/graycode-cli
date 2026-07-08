@@ -216,7 +216,7 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 			filtered := ApplyFilters(llmResponse, filters...)
 			// Write solution to work directory
 			ext := ".go"
-			_ = os.WriteFile(filepath.Join(workDir, "solution"+ext), []byte(filtered), 0o644)
+			_ = os.WriteFile(filepath.Join(workDir, "solution"+ext), []byte(filtered), 0o600)
 		}
 
 		passed, msg := task.ValidateFn(workDir)

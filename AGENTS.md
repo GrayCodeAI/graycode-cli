@@ -1,259 +1,172 @@
-# AGENTS.md — Hawk Coding Agent
-
-This file describes the hawk project for AI agents working in this codebase.
-The TUI `/memory` command references this file.
-
+---
+description: Extending hawk-eco — how to write AGENTS.md files, custom specialists, skills, hooks, MCP servers, and plugins.
+globs: "*.go, *.js, *.md, *.json, *.toml, *.yaml, *.yml"
+alwaysApply: false
 ---
 
-## Project Overview
+# Extending hawk-eco
 
-hawk is an AI-powered coding agent for the terminal. It reads codebases, writes
-and edits files, runs tests, and manages git — all through natural language.
-Built in Go with zero CGO dependencies, it ships as a single static binary for
-linux/darwin/windows on amd64/arm64.
+hawk-eco is an open-source code intelligence platform. This document describes how to extend it with custom tools, skills, hooks, and integrations.
 
-**Tagline:** AI coding agent for your terminal — built for developers, not teams
-or enterprises.
+## 1. Drop a project `AGENTS.md`
 
-## Ecosystem
+When hawk-eco starts in a directory, it looks for project-level instructions and injects them into the system prompt. The lookup walks from your current working directory **up to the nearest git root** and reads the first matching file at each level — general rules at the repo root, more specific rules in sub-trees. Files are labeled with their directory in the prompt (e.g. `## Project guidelines (services/api/AGENTS.md)`).
 
-hawk is part of the hawk-eco mono-ecosystem:
+Accepted file names, in priority order at each level:
 
-| Component | Purpose |
-|-----------|---------|
-| **hawk**  | AI coding agent (this repo) |
-| **eyrie** | LLM provider runtime — routing, streaming, retries, caching |
-| **yaad**  | Graph-based persistent memory for coding agents |
-| **tok**   | Tokenizer, compression, secrets scanning, rate limiting |
-| **sight** | Diff-based code review and static analysis |
-| **inspect** | Security audit library (CVE, API security, CI output) |
-| **trace** | Session capture and replay CLI |
+| Path | Notes |
+| --- | --- |
+| `./AGENTS.md` | The classic spot — committed to your repo, shared with the team. |
+| `./ZERO.md` | Brand-specific alias. Same format, lower priority. |
+| `./.zero/AGENTS.md` | Project-local, hidden, gitignored. Personal notes that stay out of git. |
 
-Modules are pinned in `go.mod`. External checkouts live under `external/` with a
-`go.work` file for local development.
+Matching is **case-insensitive** on the basename, so `AGENTS.md`, `Agents.md`, and `agents.md` resolve to the same file on Windows and macOS. The git-tracked filename in this repo is `AGENTS.md` — keep that on case-sensitive filesystems (Linux, the WSL filesystem, or a CI runner) to match what the loader looks for.
 
-## Architecture
+Both files use the same format. YAML frontmatter is optional; the markdown body is loaded as instructions for the agent. hawk-eco reads the file once at session start, so changes take effect on the next launch — not mid-session.
 
-```
-hawk/
-├── cmd/                    # CLI entry point (Cobra + Bubble Tea TUI)
-├── internal/
-│   ├── engine/             # Agent loop, compaction, context management
-│   │   ├── ctxmgr/         # Context providers, packing, visualization
-│   │   ├── token/          # Budget allocation, prediction
-│   │   ├── streaming/      # Response cache, stream optimizer, thinking
-│   │   ├── session/        # Compression, cross-session learning
-│   │   ├── memory/         # Knowledge distillation
-│   │   ├── planning/       # Goals, task decomposition
-│   │   ├── workflow/        # JSON-defined automation pipelines
-│   │   ├── review/         # Code review bot, quality scorer
-│   │   ├── observability/  # Profiler, debug recorder
-│   │   ├── validation/     # Lint loop, test loop
-│   │   └── ...
-│   ├── tool/               # 40+ built-in tools (file edit, git, codegen, etc.)
-│   ├── config/             # Settings, env manager, migration
-│   ├── session/            # SQLite persistence, search, export, replay
-│   ├── permissions/        # Guardian, rules DSL, boundary checker
-│   ├── sandbox/            # Seatbelt, landlock, net proxy
-│   ├── intelligence/       # Repo map, AST analysis, dependency graphs
-│   ├── multiagent/         # Personas, inter-agent messaging, sub-agents
-│   ├── hooks/              # Event-driven plugin system
-│   ├── mcp/                # Model Context Protocol client/server
-│   ├── daemon/             # Background HTTP/SSE server
-│   ├── resilience/         # Circuit breaker, rate limiting, health checks
-│   └── feature/            # Eval, fingerprint, scaffolding
-├── docs/                   # Architecture docs, research notes
-└── testdata/               # Test fixtures
+```markdown
+# Project conventions for <your project>
+
+- Build with `make`, not `go build` directly.
+- Tests live next to the source file (`foo_test.go` next to `foo.go`).
+- Run `make lint` before opening a PR.
+- Never edit files under `third_party/` — those are vendored.
 ```
 
-## Key Design Decisions
+Tips:
 
-- **Zero CGO:** Pure Go, cross-compilable. Tree-sitter is optional.
-- **`internal/` is private:** Cross-repo contracts belong in `hawk-core-contracts`, not `internal/`.
-- **Tool safety layer:** Every tool call goes through permissions (guardian,
-  rules DSL, boundary checker) before execution.
-- **Engine-first:** The agent loop in `internal/engine/` orchestrates context
-  packing, tool dispatch, streaming, and session persistence.
-- **Ecosystem integration:** eyrie handles all LLM API communication. hawk
-  never talks to LLM APIs directly, and production code should go through
-  `internal/types` transport adapters instead of importing `eyrie/client`.
-- **Shared contracts:** cross-repo types now live in `hawk-core-contracts`
-  (`types`, `review`, `verify`, `tools`, `events`, `policy`). The old
-  `hawk/shared/types` path has been removed.
+- Keep each file under ~8 KiB. hawk-eco caps the **total** across all matched files at 32 KiB; everything past the cap is dropped.
+- Re-state rules in the imperative voice: "Run `make lint`", not "you should consider running the linter".
+- Don't put secrets, model IDs, or environment-specific paths in `AGENTS.md`. Use config files for those.
+- In a monorepo, drop a narrower `AGENTS.md` in each sub-tree (e.g. `services/api/AGENTS.md`). hawk-eco picks those up automatically when you launch from inside the sub-tree.
+- A YAML frontmatter block (`---\n...\n---`) at the top is preserved verbatim in the injected prompt but is not parsed for `globs:` or `alwaysApply:` scoping today — keep the body self-contained.
 
-## Development Guidelines
+### Personal guidelines, across every project
 
-### Build & Test
+For preferences that follow *you*, not a specific repo (tone, tooling habits, workflow), drop a `ZERO.md` in your user config directory: `~/.config/hawk-eco/ZERO.md` on Linux/macOS, `%AppData%\Roaming\hawk-eco\ZERO.md` on Windows — the same directory as config files and your personal specialists. Same format and 8 KiB cap as the project files above, and the same case-insensitive basename match.
+
+This file is injected as its own `## User guidelines` section, before the project's `AGENTS.md`/`ZERO.md`, and is labeled as personal preference in the prompt: project guidelines are the later, more specific instruction and take precedence over it when the two conflict.
+
+## 2. Custom specialists
+
+Specialists are hawk-eco's sub-agents. Three scopes, in priority order:
+
+| Scope | Path | Shared? |
+| --- | --- | --- |
+| Built-in | compiled into hawk-eco | yes |
+| User | `~/.config/hawk-eco/specialists/*.md` | no — your machine only |
+| Project | `./.zero/specialists/*.md` | yes — the repo team |
+
+Project overrides user overrides built-in when names collide.
+
+A specialist is a markdown manifest with frontmatter and a system prompt:
+
+```markdown
+---
+description: Reviews API changes for breaking-change risk and missing tests.
+tools: read-only,plan
+---
+
+You review API changes. For every changed hunk in `internal/api/` or any file
+that ends in `_api.go`:
+
+1. Confirm the public signature is backward-compatible, or note the breaking
+   change explicitly with the migration path.
+2. Confirm a corresponding test exists in `internal/api/*_test.go` and that
+   the new behaviour is exercised.
+3. Flag any new exported symbol without a doc comment.
+
+Reply with one JSON object per finding: `{"file", "line", "severity", "message", "fix"}`.
+```
+
+CLI management:
 
 ```bash
-go build ./cmd/hawk           # Build binary
-go test -race ./...           # Run all tests with race detector
-make ci                       # Full CI suite (lint, test, security)
-make cover                    # Coverage report
-make path                     # Developer path verification
-make smoke                    # Build + quick verification
+hawk-eco specialist list
+hawk-eco specialist show api-reviewer
+hawk-eco specialist create api-reviewer \
+    --project \
+    --description "Reviews API changes" \
+    --tools read-only,plan \
+    --prompt "$(cat api-reviewer.md)"
+hawk-eco specialist edit api-reviewer --project
+hawk-eco specialist delete api-reviewer --project
+hawk-eco specialist path                       # prints the resolved specialists directory
 ```
 
-### Go Conventions
+## 3. Skills
 
-- Standard Go project layout: `cmd/` for entry points, `internal/` for private
-- Tests live alongside source files (`foo.go` → `foo_test.go`)
-- Use table-driven tests where practical
-- Errors are values — wrap with `fmt.Errorf("context: %w", err)`
-- No global mutable state; prefer dependency injection
+Skills are markdown instruction files that extend agent capabilities. They can be:
+- Project-scoped: dropped in `./.zero/skills/` or `./skills/`
+- User-scoped: dropped in `~/.config/hawk-eco/skills/`
 
-### Commit Conventions
+A skill manifest:
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
+```markdown
+---
+description: How to review Go code for security issues
+globs: "*.go"
+alwaysApply: true
+---
+
+When reviewing Go code for security:
+
+1. Check for SQL injection patterns
+2. Verify error handling doesn't expose sensitive data
+3. Confirm secrets are not hardcoded
+4. Validate input sanitization
 ```
-feat: add new tool
-fix: handle edge case in file edit
-docs: update AGENTS.md
-refactor: extract context packing logic
-test: add coverage for guardian
+
+## 4. Hooks
+
+Hooks allow custom commands to run at specific lifecycle points:
+- `beforeReview` — runs before code review starts
+- `afterReview` — runs after code review completes
+- `sessionStart` — runs at session initialization
+- `sessionEnd` — runs at session teardown
+
+```bash
+hawk-eco hook add beforeReview --command "lint-check"
+hawk-eco hook remove beforeReview
+hawk-eco hook list
 ```
 
-### Commit Signing
+## 5. MCP integration
 
-- Signed commits are required in this repo.
-- Git is configured for SSH signing with `commit.gpgsign=true` and the user's
-  SSH signing key.
-- In sandboxed agent sessions, `git commit` may fail even when the key is
-  unlocked because the sandbox cannot access `SSH_AUTH_SOCK`.
-- When that happens, run `git commit` outside the sandbox or with an
-  unsandboxed/escalated execution path so git can talk to the host SSH agent.
+MCP (Model Context Protocol) servers can expose tools to hawk-eco:
 
-### Code Style
+```bash
+hawk-eco mcp add --name server --url http://localhost:8080
+hawk-eco mcp remove server
+hawk-eco mcp list
+```
 
-- `gofmt` and `go vet` are mandatory (enforced by CI)
-- Keep functions focused; extract helpers for clarity
-- Prefer explicit error handling over panics
-- Comments on exported types/functions only (per Go convention)
+## 6. Plugins
 
-### Adding a New Tool
+Plugins extend hawk-eco with custom tools and capabilities:
 
-1. Create `internal/tool/mytool.go`
-2. Implement the tool interface (name, description, parameters, execute)
-3. Register in the tool registry
-4. Add tests in `mytool_test.go`
-5. The tool automatically gets permission checking via the safety layer
+```bash
+hawk-eco plugin add --name my-plugin --path ./my-plugin
+hawk-eco plugin remove my-plugin
+hawk-eco plugin list
+```
 
-### Adding a New Feature
+## 7. Verification
 
-1. Place code in the appropriate `internal/` package
-2. Follow existing patterns (e.g., context providers are pluggable)
-3. Add tests and update documentation
+hawk-eco includes a self-verification system to validate local changes before contributing:
 
-## File Organization Notes
+```bash
+hawk-eco verify
+hawk-eco verify --fix
+```
 
-- `CONTRIBUTING.md` — PR process, commit conventions
-- `docs/` — Architecture details, security model, ecosystem message flow
-- `external/` — Pinned ecosystem submodules used by `go.work` for local and CI integration
-- `hawk-core-contracts/` — Shared cross-repo contracts; use this instead of any legacy Hawk-owned shared-type path
+## Development
 
-## Testing Philosophy
+```bash
+make lint
+hawk-eco verify
+```
 
-- Unit tests for all new code
-- Integration tests for tool execution and engine loop
-- Race detector enabled in CI (`-race`)
-- No test files committed with `t.Skip()` without a tracking issue
+### Architecture note: cross-repo contracts
 
-## Common Pitfalls
-
-- Do not import `internal/` from other ecosystem repos — use `hawk-core-contracts`
-- Do not put API keys in `.env` or shell env for hawk — use `/config` (OS keychain)
-- The `external/` directory is part of the committed integration layout
-- `go.work` and `go.work.sum` are committed — CI's `module hygiene` job
-  runs `go work sync` and asserts the result is in sync with the repo. Both
-  files point at `./external/*` submodules so Hawk can build against pinned
-  support-repo revisions.
-
-## Naming Conventions
-
-- **Tool types**: `FooTool` struct implementing the `Tool` interface (`Name()`, `Description()`, `Parameters()`, `Execute()`)
-- **Config types**: `Settings`, `MCPServerConfig`, `CustomProviderConfig` — no prefix, in `config` package
-- **Engine types**: `Session`, `CoreLoop`, `SafetyLayer`, `Intelligence`, `Optimizer` — in `engine` package
-- **Health checks**: `Checker` func type, `Check` struct with `Name`, `Status`, `Message`
-- **Resilience**: `Breaker` (circuit breaker), `Config` + `Do` (retry), `Limiter` (rate limit)
-- **Error types**: `ValidationError` with `Field`, `Message`, `Value`; `ValidationResult` with `Errors`, `Valid`
-- **Bridges**: `Ready() bool` method, `NewBridge()` constructor, graceful degradation when unavailable
-
-## API Patterns
-
-- **Tool registration**: `tool.NewRegistry(tools...)` → `registry.Get("ToolName")` → `tool.Execute(ctx, input)`
-- **Settings loading**: `config.LoadSettings()` merges global + project; `config.LoadGlobalSettings()` for global-only
-- **Session construction**: `engine.NewSessionWithClient(client, provider, model, systemPrompt, registry, deploymentRouting)`
-- **Service composition**: `engine.NewSessionServices(opts...)` with `WithProvider()`, `WithTools()`, `WithMemory()`, etc.
-- **Health checks**: `health.NewRegistry()` → `registry.Register("name", checker)` → `registry.Run(ctx)` → `registry.Status()`
-- **Circuit breaker**: `circuit.New(cfg)` → `breaker.Call(fn)` or `breaker.Allow()` → `breaker.State()`
-- **Retry**: `retry.Do(ctx, cfg, fn)` with exponential backoff + jitter; `retry.DoWithResult[T]` for typed returns
-- **Config validation**: `config.ValidateSettings(s)` returns `ValidationResult{Errors, Valid}`
-- **Ecosystem panel**: `config.FormatEcosystemPanel(ctx, provider, model)` for diagnostics
-
-## Testing Patterns
-
-- **Table-driven tests** with `t.Run(name, func(t *testing.T){...})` for all multi-case tests
-- **`t.Parallel()`** on all tests that don't share mutable state
-- **`t.TempDir()`** for filesystem isolation (auto-cleanup)
-- **`credentials.MapStore{}`** for credential isolation in tests:
-  ```go
-  store := &credentials.MapStore{}
-  credentials.SetDefaultStore(store)
-  t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-  ```
-- **`bytes.Buffer`** as `io.Writer` for logger output capture
-- **Fuzz tests** for input parsing robustness: `func FuzzFoo(f *testing.F) { ... }`
-- **No mocks framework** — use concrete types and test doubles
-- **Meta-audit tests** in `internal/testaudit/` enforce architectural invariants via go/ast
-  including transport-boundary and deprecated-compatibility-package checks.
-
-## Refactoring Guidelines
-
-- **Safe to refactor**: `internal/resilience/` (retry, circuit, ratelimit, health) — no public API
-- **Safe to refactor**: `internal/observability/logger/` — internal only, no external consumers
-- **Safe to refactor**: `internal/system/` (bus, shutdown, retention, cron, staleness)
-- **Caution**: `internal/engine/session.go` Session struct — widely referenced across 30+ sub-packages
-- **Caution**: `internal/config/settings.go` Settings struct — serialized to JSON, dual-format (snake_case + camelCase)
-- **Caution**: `internal/tool/` Tool interface — implemented by 40+ tools
-- **Migration-sensitive**: `hawk/shared/types` has been removed; use `hawk-core-contracts/types` instead.
-
-## Key File Locations
-
-| What | Where |
-|---|---|
-| CLI entry point | `cmd/root.go` |
-| Agent loop | `internal/engine/session.go` (`Stream()`, `agentLoop()`) |
-| Session services | `internal/engine/session_services.go` |
-| Tool interface | `internal/tool/tool.go` (`Tool`, `Registry`) |
-| Tool context | `internal/tool/tool.go` (`ToolContext`, `WithToolContext`) |
-| Settings | `internal/config/settings.go` (`Settings`, `LoadSettings()`) |
-| Config validation | `internal/config/validator.go` (`ValidateSettings()`) |
-| Config migration | `internal/config/migrate.go` (`MigrationRegistry`) |
-| Env manager | `internal/config/envmanager.go` (`EnvManager`) |
-| Health checks | `internal/resilience/health/health.go` (`Registry`, `Checker`) |
-| Circuit breaker | `internal/resilience/circuit.go` (`Breaker`, `Manager`) |
-| Retry | `internal/resilience/retry/retry.go` (`Do()`, `DoWithResult()`) |
-| Rate limiter | `internal/resilience/ratelimit/ratelimit.go` (`Limiter`) |
-| Logger | `internal/observability/logger/logger.go` (`Logger`) |
-| Metrics | `internal/observability/metrics/metrics.go` (`Counter`, `Gauge`, `Timer`) |
-| OTEL tracing | `internal/observability/oteltrace/trace.go` |
-| Multi-agent missions | `internal/multiagent/mission.go` (`Mission`) |
-| Message bus | `internal/multiagent/messaging.go` (`MessageBus`) |
-| Shared memory | `internal/multiagent/shared_memory.go` (`SharedMemory`) |
-| Session persistence | `internal/session/persist.go` |
-| MCP client | `internal/mcp/mcp.go` |
-| MCP server | `internal/mcp/server.go` |
-| Provider routing | `internal/provider/routing/router.go` |
-| Bridges | `internal/bridge/{inspect,sight,sessioncapture}/bridge.go` |
-| Doctor diagnostics | `cmd/diagnostics.go` |
-| Meta-audit tests | `internal/testaudit/audit_test.go` |
-
-## Anti-Patterns
-
-- **No `os.Getenv` in `internal/`** — use `env.Getenv` (in `internal/env/`) for simple reads, or `config.Getenv` if the package can import `internal/config` without cycles. `config.EnvManager` is for profile/secret management. Exceptions: `internal/observability/oteltrace/` for telemetry env vars; runtime environment probes (e.g. `TMUX`, `STY`, `TERM_PROGRAM`, `SHELL`, `GOPATH`) which are set by the OS/terminal and not by config.
-- **No `panic()` for error handling** — return `error` values. Exception: `init()` functions for package-level assertions.
-- **No `fmt.Print` for logging** — use `logger.Logger` with structured fields. Exception: `internal/onboarding/` and `internal/engine/scaffold/` for user-facing CLI output.
-- **No API keys in settings.json** — use OS secret store via `credentials` package and `/config` command.
-- **No importing `internal/` from other ecosystem repos** — use `hawk-core-contracts` for cross-repo types.
-- **No global mutable state** — prefer dependency injection via `deps` structs or `context.WithValue`.
-- **No `t.Skip()` without a tracking issue** — every skipped test needs a GitHub issue number.
+Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/hawk-core-contracts` (`hawk-core-contracts/types`) — extensions and support repos must import that module instead of Hawk internals.

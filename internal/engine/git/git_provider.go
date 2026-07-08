@@ -358,7 +358,7 @@ func DetectProvider(projectDir string) (string, string, string) {
 
 	// Fallback: parse .git/config
 	gitConfigPath := filepath.Join(projectDir, ".git", "config")
-	cmd = exec.CommandContext(context.Background(), "cat", gitConfigPath)
+	cmd = exec.CommandContext(context.Background(), "cat", gitConfigPath) // #nosec G204 -- invocation of standard unix utility with internally-derived path/pattern
 	out, err = cmd.Output()
 	if err != nil {
 		return "", "", ""
@@ -372,7 +372,7 @@ func (gp *GitProvider) runGH(args ...string) (string, error) {
 	repoFlag := fmt.Sprintf("%s/%s", gp.Owner, gp.Repo)
 	fullArgs := append(args, "--repo", repoFlag)
 
-	cmd := exec.CommandContext(context.Background(), "gh", fullArgs...)
+	cmd := exec.CommandContext(context.Background(), "gh", fullArgs...) // #nosec G204 -- gh CLI invocation with internally-derived args
 	if gp.Token != "" {
 		cmd.Env = append(cmd.Environ(), "GH_TOKEN="+gp.Token)
 	}

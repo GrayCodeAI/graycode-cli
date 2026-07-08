@@ -186,14 +186,14 @@ func Apply(patch *FilePatch) error {
 	if patch.IsNew {
 		// Ensure parent directory exists
 		dir := filepath.Dir(patch.Path)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 		var content []string
 		for _, h := range patch.Hunks {
 			content = append(content, h.NewLines...)
 		}
-		return os.WriteFile(patch.Path, []byte(strings.Join(content, "\n")+"\n"), 0o644)
+		return os.WriteFile(patch.Path, []byte(strings.Join(content, "\n")+"\n"), 0o600)
 	}
 
 	// Update existing file
@@ -239,7 +239,7 @@ func Apply(patch *FilePatch) error {
 	}
 
 	result := strings.Join(lines, "\n")
-	return os.WriteFile(patch.Path, []byte(result), 0o644)
+	return os.WriteFile(patch.Path, []byte(result), 0o600)
 }
 
 // ApplyAll applies all patches and returns the list of modified file paths.

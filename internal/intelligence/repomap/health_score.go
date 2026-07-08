@@ -384,7 +384,7 @@ func checkErrorPatterns(dir string) float64 {
 			return nil
 		}
 
-		data, readErr := os.ReadFile(path)
+		data, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if readErr != nil {
 			return nil
 		}

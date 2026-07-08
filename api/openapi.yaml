@@ -5,6 +5,9 @@ info:
     HTTP API served by the hawk daemon on port 4590.
     Used by hawk-sdk-go, hawk-sdk-python, and external integrations.
     The daemon must be running (`hawk daemon start`) before calling these endpoints.
+
+    This spec is kept in lockstep with the registered routes in
+    internal/daemon; the daemon test suite fails if they drift.
   version: "0.1.0"
   license:
     name: MIT
@@ -33,21 +36,29 @@ components:
   schemas:
     ChatRequest:
       type: object
-      required: [message]
+      required: [prompt]
       properties:
-        message:
+        prompt:
           type: string
-          description: The user message to send to the agent
+          description: The user prompt to send to the agent
+        session_id:
+          type: string
+          description: Reserved for session continuation (currently ignored; every chat creates a fresh engine session)
         model:
           type: string
           description: Optional model override
-        session_id:
+        max_turns:
+          type: integer
+          description: Cap on agent turns for this request
+        autonomy:
           type: string
-          description: Continue an existing session (omit to start a new one)
-        stream:
-          type: boolean
-          default: false
-          description: Use SSE streaming for the response
+          description: Autonomy preset controlling non-interactive permission approval
+        cwd:
+          type: string
+          description: Working directory for the agent session
+        agent:
+          type: string
+          description: Named agent persona to run
 
     ChatResponse:
       type: object
@@ -56,15 +67,36 @@ components:
           type: string
         response:
           type: string
-        model:
-          type: string
         tokens_in:
           type: integer
         tokens_out:
           type: integer
+        turns_taken:
+          type: integer
+        duration:
+          type: string
+          description: Wall-clock duration, e.g. "1.234s"
 
     Session:
       type: object
+      description: Lightweight in-memory record of a daemon chat session.
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_used:
+          type: string
+          format: date-time
+        turns:
+          type: integer
+        cwd:
+          type: string
+
+    SessionDetail:
+      type: object
+      description: Persisted session detail loaded from session storage.
       properties:
         id:
           type: string
@@ -74,40 +106,133 @@ components:
         updated_at:
           type: string
           format: date-time
-        message_count:
-          type: integer
         model:
           type: string
+        provider:
+          type: string
+        cwd:
+          type: string
+        name:
+          type: string
+        message_count:
+          type: integer
+        tool_calls:
+          type: integer
 
     Message:
       type: object
       properties:
-        id:
-          type: string
-        session_id:
-          type: string
         role:
           type: string
           enum: [user, assistant, tool]
         content:
           type: string
-        created_at:
+        tool_use: {}
+        tool_results: {}
+
+    PaginatedMessages:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+        has_more:
+          type: boolean
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
           type: string
-          format: date-time
+          example: ok
+        version:
+          type: string
+        uptime:
+          type: string
+        active_sessions:
+          type: integer
+        started_at:
+          type: string
+
+    ReadyResponse:
+      type: object
+      properties:
+        ready:
+          type: boolean
+        reason:
+          type: string
+          description: Why the daemon is not ready (omitted when ready)
+        uptime:
+          type: string
 
     Stats:
       type: object
       properties:
         total_sessions:
           type: integer
-        active_sessions:
-          type: integer
         total_messages:
           type: integer
-        tokens_in:
+        total_tool_calls:
           type: integer
-        tokens_out:
+        total_cost_usd:
+          type: number
+        active_days:
           type: integer
+        models:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelStat"
+
+    ModelStat:
+      type: object
+      properties:
+        model:
+          type: string
+        requests:
+          type: integer
+        cost_usd:
+          type: number
+
+    ReviewRequest:
+      type: object
+      required: [sha]
+      properties:
+        sha:
+          type: string
+          description: Hex git SHA (7-40 chars) to review
+        background:
+          type: boolean
+        model:
+          type: string
+        concerns:
+          type: string
+
+    ReviewResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        sha:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+
+    ReviewStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Output of `hawk review status`
 
     Error:
       type: object
@@ -116,10 +241,12 @@ components:
           type: string
         code:
           type: string
+        details:
+          type: string
 
 tags:
   - name: system
-    description: Health and version
+    description: Health and readiness
   - name: agent
     description: Agent chat
   - name: sessions
@@ -128,6 +255,8 @@ tags:
     description: Message history
   - name: stats
     description: Usage statistics
+  - name: review
+    description: Code review
 
 paths:
   /v1/health:
@@ -141,35 +270,39 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: ok
+                $ref: "#/components/schemas/HealthResponse"
 
-  /v1/version:
+  /v1/ready:
     get:
       tags: [system]
-      summary: Version information
+      summary: Readiness probe
+      description: |
+        Returns 200 when the daemon can serve chat (engine configured),
+        503 with a reason otherwise.
       security: []
       responses:
         "200":
-          description: Version details
+          description: Daemon is ready
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  version:
-                    type: string
+                $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          description: Daemon is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
 
   /v1/chat:
     post:
       tags: [agent]
-      summary: Send a message to the agent
+      summary: Send a prompt to the agent
       description: |
         Non-streaming: returns the full response in one JSON object.
-        Streaming: set `stream: true` to receive Server-Sent Events.
+        Streaming: send `Accept: text/event-stream` to receive Server-Sent Events.
+        Each request creates a new agent session; there is no standalone
+        session-creation endpoint.
       requestBody:
         required: true
         content:
@@ -186,8 +319,20 @@ paths:
             text/event-stream:
               schema:
                 type: string
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Engine not configured
           content:
             application/json:
               schema:
@@ -196,37 +341,27 @@ paths:
   /v1/sessions:
     get:
       tags: [sessions]
-      summary: List all sessions
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
+      summary: List active daemon sessions
       responses:
         "200":
-          description: Paginated session list
+          description: Array of session records (no pagination envelope)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  sessions:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Session"
-                  total:
-                    type: integer
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /v1/sessions/{id}:
     get:
       tags: [sessions]
-      summary: Get a specific session
+      summary: Get a persisted session
       parameters:
         - name: id
           in: path
@@ -235,16 +370,20 @@ paths:
             type: string
       responses:
         "200":
-          description: Session details
+          description: Session detail
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Session"
+                $ref: "#/components/schemas/SessionDetail"
         "404":
           description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     delete:
       tags: [sessions]
-      summary: Delete a session and all its messages
+      summary: Delete a session
       parameters:
         - name: id
           in: path
@@ -252,13 +391,25 @@ paths:
           schema:
             type: string
       responses:
-        "204":
-          description: Deleted
+        "200":
+          description: Session deleted
+        "400":
+          description: Invalid session id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /v1/sessions/{id}/messages:
     get:
       tags: [messages]
-      summary: Get messages for a session
+      summary: Get session messages with pagination
       parameters:
         - name: id
           in: path
@@ -269,26 +420,23 @@ paths:
           in: query
           schema:
             type: integer
-            default: 50
         - name: offset
           in: query
           schema:
             type: integer
-            default: 0
       responses:
         "200":
           description: Paginated message list
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  messages:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Message"
-                  total:
-                    type: integer
+                $ref: "#/components/schemas/PaginatedMessages"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /v1/stats:
     get:
@@ -301,3 +449,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Stats"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/review:
+    post:
+      tags: [review]
+      summary: Trigger an asynchronous code review of a commit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequest"
+      responses:
+        "200":
+          description: Review accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/review/status:
+    get:
+      tags: [review]
+      summary: Get current review status
+      responses:
+        "200":
+          description: Review status text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewStatusResponse"
+        "500":
+          description: Status command failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

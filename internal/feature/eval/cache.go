@@ -38,7 +38,7 @@ func (c *Cache) Key(model, prompt string) string {
 // Get retrieves a cached response. Returns nil if not found.
 func (c *Cache) Get(model, prompt string) *CacheEntry {
 	path := filepath.Join(c.Dir, c.Key(model, prompt)+".json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is built from a sha256 hash key joined with the local cache directory, not external input
 	if err != nil {
 		return nil
 	}
@@ -51,7 +51,7 @@ func (c *Cache) Get(model, prompt string) *CacheEntry {
 
 // Put stores a response in the cache.
 func (c *Cache) Put(model, prompt, response string, tokens int, cost float64) error {
-	if err := os.MkdirAll(c.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(c.Dir, 0o750); err != nil {
 		return err
 	}
 	entry := CacheEntry{
@@ -66,7 +66,7 @@ func (c *Cache) Put(model, prompt, response string, tokens int, cost float64) er
 		return err
 	}
 	path := filepath.Join(c.Dir, c.Key(model, prompt)+".json")
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // Clear removes all cached entries.

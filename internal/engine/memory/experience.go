@@ -286,7 +286,7 @@ func (es *ExperienceStore) Save() error {
 		return fmt.Errorf("experience store: no directory configured")
 	}
 
-	if err := os.MkdirAll(es.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(es.Dir, 0o750); err != nil {
 		return fmt.Errorf("experience store: create dir: %w", err)
 	}
 
@@ -296,7 +296,7 @@ func (es *ExperienceStore) Save() error {
 	}
 
 	path := filepath.Join(es.Dir, "experiences.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("experience store: write: %w", err)
 	}
 
@@ -313,7 +313,7 @@ func (es *ExperienceStore) Load() error {
 	}
 
 	path := filepath.Join(es.Dir, "experiences.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // no file yet is fine

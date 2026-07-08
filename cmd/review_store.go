@@ -67,7 +67,8 @@ type ReviewStore struct {
 // OpenReviewStore opens or creates the review database.
 func OpenReviewStore(projectDir string) (*ReviewStore, error) {
 	dbDir := storage.ProjectStateDir(projectDir)
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	// #nosec G301 -- project state dir holds private review data, owner/group only
+	if err := os.MkdirAll(dbDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create review db directory: %w", err)
 	}
 	dbPath := filepath.Join(dbDir, "reviews.db")
@@ -236,7 +237,9 @@ func (s *ReviewStore) scanOne(row *sql.Row) (*ReviewRecord, error) {
 		return nil, err
 	}
 	r.Status = ReviewStatus(status)
-	_ = json.Unmarshal([]byte(findingsJSON), &r.Findings)
+	if err := json.Unmarshal([]byte(findingsJSON), &r.Findings); err != nil {
+		return nil, fmt.Errorf("decode findings for review %d: %w", r.ID, err)
+	}
 	return r, nil
 }
 
@@ -254,7 +257,9 @@ func (s *ReviewStore) query(q string) ([]*ReviewRecord, error) {
 			return nil, err
 		}
 		r.Status = ReviewStatus(status)
-		_ = json.Unmarshal([]byte(findingsJSON), &r.Findings)
+		if err := json.Unmarshal([]byte(findingsJSON), &r.Findings); err != nil {
+			return nil, fmt.Errorf("decode findings for review %d: %w", r.ID, err)
+		}
 		results = append(results, r)
 	}
 	return results, rows.Err()

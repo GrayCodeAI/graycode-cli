@@ -90,6 +90,7 @@ func LoadYAMLConfig(dir string) (*YAMLConfig, error) {
 		Tasks:  map[string]YAMLTaskSpec{},
 	}
 
+	// #nosec G304 -- dir is caller-supplied project directory, fixed filename joined internally
 	if data, err := os.ReadFile(filepath.Join(dir, "agents.yaml")); err == nil {
 		agents, perr := ParseAgentsYAML(data)
 		if perr != nil {
@@ -100,6 +101,7 @@ func LoadYAMLConfig(dir string) (*YAMLConfig, error) {
 		return nil, fmt.Errorf("reading agents.yaml: %w", err)
 	}
 
+	// #nosec G304 -- dir is caller-supplied project directory, fixed filename joined internally
 	if data, err := os.ReadFile(filepath.Join(dir, "tasks.yaml")); err == nil {
 		tasks, perr := ParseTasksYAML(data)
 		if perr != nil {

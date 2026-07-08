@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/engine/spec"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // specSubcommand implements the /spec slash command: starts (or reports

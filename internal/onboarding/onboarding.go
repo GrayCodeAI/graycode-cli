@@ -110,6 +110,7 @@ func RunSetup() error {
 		{"gemini", "GEMINI_API_KEY", "Gemini 2.5"},
 		{"openrouter", "OPENROUTER_API_KEY", "200+ models"},
 		{"groq", "GROQ_API_KEY", "Fast inference"},
+		{"poolside", "POOLSIDE_API_KEY", "Poolside models"},
 		{"ollama", "", "Local models (no API key needed)"},
 	}
 
@@ -117,7 +118,7 @@ func RunSetup() error {
 		fmt.Printf("  %s%d%s) %s%-12s%s %s\n", teal, i+1, reset, bold, p.name, reset, dim+p.desc+reset)
 	}
 	fmt.Println()
-	fmt.Print("  Enter number (1-6): ")
+	fmt.Print("  Enter number (1-7): ")
 
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(input)
@@ -136,6 +137,8 @@ func RunSetup() error {
 		idx = 4
 	case "6":
 		idx = 5
+	case "7":
+		idx = 6
 	default:
 		idx = 0 // default to anthropic
 	}

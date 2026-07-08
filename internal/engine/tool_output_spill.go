@@ -26,7 +26,7 @@ func maybeSpillToolOutput(output, toolName, toolID string) string {
 		return truncateToolOutput(output, toolOutputSpillMinChars)
 	}
 	dir := filepath.Join(storage.ProjectCacheDir(cwd), "scratch")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return truncateToolOutput(output, toolOutputSpillMinChars)
 	}
 	safe := strings.Map(func(r rune) rune {
@@ -46,7 +46,7 @@ func maybeSpillToolOutput(output, toolName, toolID string) string {
 		id = id[:12]
 	}
 	path := filepath.Join(dir, fmt.Sprintf("%s-%s.txt", safe, id))
-	if err := os.WriteFile(path, []byte(output), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(output), 0o600); err != nil {
 		return truncateToolOutput(output, toolOutputSpillMinChars)
 	}
 	preview := output

@@ -48,7 +48,7 @@ func (sw *ShadowWorkspace) ValidateEdit(originalPath, newContent string) []Valid
 	base := filepath.Base(originalPath)
 	tmpFile := filepath.Join(sw.tempDir, base)
 
-	if err := os.WriteFile(tmpFile, []byte(newContent), 0o644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(newContent), 0o600); err != nil {
 		return []ValidationError{{File: originalPath, Message: fmt.Sprintf("shadow write: %v", err)}}
 	}
 	defer func() { _ = os.Remove(tmpFile) }()
@@ -102,7 +102,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 	// Ensure a go.mod exists so `go vet` can operate.
 	modPath := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(modPath); os.IsNotExist(err) {
-		_ = os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o644)
+		_ = os.WriteFile(modPath, []byte("module shadowcheck\n\ngo 1.21\n"), 0o600)
 		defer func() { _ = os.Remove(modPath) }()
 	}
 
@@ -126,7 +126,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 
 // shadowValidatePython runs `python3 -c "import py_compile; ..."` on the temp file.
 func shadowValidatePython(tmpPath, origPath string) []ValidationError {
-	cmd := exec.CommandContext(context.Background(), "python3", "-c",
+	cmd := exec.CommandContext(context.Background(), "python3", "-c", // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 		fmt.Sprintf("import py_compile; py_compile.compile('%s', doraise=True)", tmpPath))
 	output, err := cmd.CombinedOutput()
 	if err == nil {

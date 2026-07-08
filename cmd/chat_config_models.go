@@ -198,10 +198,10 @@ func ensureModelCacheLoaded(provider string) {
 	modelSyncMu.Unlock()
 
 	ctx := context.Background()
-	entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+	entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
 	if err != nil {
 		if _, derr := runtime.Discover(ctx); derr == nil {
-			entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+			entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
 		}
 	}
 	if err != nil || len(entries) == 0 {

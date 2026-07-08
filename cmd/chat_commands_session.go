@@ -249,7 +249,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			return m, nil
 		}
 		tagFile := filepath.Join(storage.SessionsDir(), m.sessionID+".tags")
-		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- tagFile built from internal sessions directory and session id
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {
@@ -333,7 +333,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.session.AddUser(last)
 			m.waiting = true
 			m.autoScroll = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.startStream()
 			return m, nil

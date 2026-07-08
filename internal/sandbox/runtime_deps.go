@@ -32,7 +32,7 @@ func (c RuntimeConfig) IsEmpty() bool {
 // purely additive).
 func LoadRuntimeConfig(projectDir string) RuntimeConfig {
 	path := filepath.Join(projectDir, ".agents", "runtime.jsonc")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is rooted in the project directory, a trusted internal config location
 	if err != nil {
 		return RuntimeConfig{}
 	}

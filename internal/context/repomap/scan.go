@@ -51,7 +51,7 @@ func (g *Graph) scan(root string) error {
 		if ierr != nil || info.Size() > maxFileBytes {
 			return nil
 		}
-		data, rerr := os.ReadFile(path)
+		data, rerr := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over the project root being scanned, not external input
 		if rerr != nil {
 			return nil
 		}

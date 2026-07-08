@@ -69,7 +69,7 @@ func NewWorkflowEngine(executeFn func(context.Context, string, string) (string, 
 
 // LoadWorkflow parses a JSON workflow file and validates the step dependencies form a DAG.
 func (we *WorkflowEngine) LoadWorkflow(path string) (*Workflow, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("failed to read workflow file: %w", err)
 	}

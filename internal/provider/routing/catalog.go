@@ -24,12 +24,12 @@ type ModelInfo struct {
 
 var (
 	catalogOnce   sync.Once
-	cachedCatalog *catalog.CompiledCatalogV1
+	cachedCatalog *catalog.CompiledCatalog
 )
 
-func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
+func eyrieCatalog() *catalog.CompiledCatalog {
 	catalogOnce.Do(func() {
-		compiled, err := catalog.LoadCatalogV1(context.Background(), catalog.LoadCatalogV1Options{
+		compiled, err := catalog.LoadCatalog(context.Background(), catalog.LoadCatalogOptions{
 			CachePath:    catalog.DefaultCachePath(),
 			RequireCache: false,
 		})
@@ -41,7 +41,7 @@ func eyrieCatalogV1() *catalog.CompiledCatalogV1 {
 	return cachedCatalog
 }
 
-func fromEyrieV1(model catalog.ModelV1, offering catalog.ModelOfferingV1) ModelInfo {
+func fromEyrie(model catalog.Model, offering catalog.ModelOffering) ModelInfo {
 	inPrice, outPrice := 0.0, 0.0
 	if offering.Pricing.RatesPer1M != nil {
 		inPrice = offering.Pricing.RatesPer1M["input_tokens"]
@@ -70,11 +70,11 @@ func fromEyrieEntry(entry catalog.ModelCatalogEntry, provider string) ModelInfo 
 
 // Find looks up a model by name via eyrie's JSON catalog.
 func Find(name string) (ModelInfo, bool) {
-	if compiled := eyrieCatalogV1(); compiled != nil {
+	if compiled := eyrieCatalog(); compiled != nil {
 		if canonical, ok := compiled.CanonicalModelForAliasOrID(name); ok {
 			model := compiled.ModelsByID[canonical]
 			offering := firstOffering(compiled, canonical, "")
-			return fromEyrieV1(model, offering), true
+			return fromEyrie(model, offering), true
 		}
 	}
 	return ModelInfo{}, false
@@ -83,7 +83,7 @@ func Find(name string) (ModelInfo, bool) {
 // ByProvider returns all models for a given provider from eyrie's catalog.
 func ByProvider(provider string) []ModelInfo {
 	provider = catalog.CanonicalProviderID(provider)
-	compiled := eyrieCatalogV1()
+	compiled := eyrieCatalog()
 	out := []ModelInfo{}
 	if compiled != nil {
 		entries := catalog.ModelEntriesForProvider(compiled, provider)
@@ -109,20 +109,20 @@ func Recommended(provider string) (ModelInfo, bool) {
 
 // DefaultModel returns the first catalog model for a provider via eyrie JSON.
 func DefaultModel(provider string) string {
-	return catalog.ProviderDefaultModelV1(eyrieCatalogV1(), provider, "")
+	return catalog.ProviderDefaultModel(eyrieCatalog(), provider, "")
 }
 
 // AllProviders returns all canonical model owner providers from eyrie's catalog.
 func AllProviders() []string {
-	out := catalog.AllModelProvidersV1(eyrieCatalogV1())
+	out := catalog.AllModelProviders(eyrieCatalog())
 	sort.Strings(out)
 	return out
 }
 
-func firstOffering(compiled *catalog.CompiledCatalogV1, canonicalModelID, deploymentID string) catalog.ModelOfferingV1 {
+func firstOffering(compiled *catalog.CompiledCatalog, canonicalModelID, deploymentID string) catalog.ModelOffering {
 	offerings := compiled.OfferingsByCanonicalModel[canonicalModelID]
 	if len(offerings) == 0 {
-		return catalog.ModelOfferingV1{}
+		return catalog.ModelOffering{}
 	}
 	if deploymentID != "" {
 		for _, offering := range offerings {

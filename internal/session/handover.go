@@ -369,7 +369,7 @@ func SaveHandover(handover *Handover, path string) error {
 	if err != nil {
 		return fmt.Errorf("marshal handover: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write handover: %w", err)
 	}
 	return nil
@@ -377,7 +377,7 @@ func SaveHandover(handover *Handover, path string) error {
 
 // LoadHandover reads a handover from disk.
 func LoadHandover(path string) (*Handover, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path supplied by trusted internal caller (handover file location)
 	if err != nil {
 		return nil, fmt.Errorf("read handover: %w", err)
 	}

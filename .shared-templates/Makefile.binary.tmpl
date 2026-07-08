@@ -1,0 +1,142 @@
+# Canonical GrayCodeAI Makefile for Go BINARY repos.
+# Source of truth: .shared-templates/Makefile.binary.tmpl at the eco root.
+# Placeholders rendered per repo: {{NAME}}, {{MAIN_PKG}}.
+#
+# hawk is currently the only Go binary repo in the ecosystem, and its real
+# Makefile extends this core with hawk-specific targets (workspace `setup`,
+# `compat-test`/`compat-check`, `sync-submodules`/`sync-external`,
+# `build-all`/`build-static`/`size-check`, and split `*-guard` boundary
+# checks instead of the single generic `boundaries` below). Treat this file
+# as the floor every Go binary repo starts from, not a literal copy of
+# hawk/Makefile.
+
+# ---------------------------------------------------------------------------
+# Project metadata
+# ---------------------------------------------------------------------------
+NAME      := {{NAME}}
+MAIN_PKG  := {{MAIN_PKG}}
+
+# ---------------------------------------------------------------------------
+# Versioning — sourced from VERSION file; falls back to git describe.
+# See https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md.
+# ---------------------------------------------------------------------------
+VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); if [ -n "$$v" ]; then echo "$$v"; else git describe --tags --always --dirty 2>/dev/null || echo "dev"; fi)
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+DATE    := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+LDFLAGS := -s -w \
+	-X main.Version=$(VERSION) \
+	-X main.Commit=$(COMMIT) \
+	-X main.BuildDate=$(DATE)
+
+# ---------------------------------------------------------------------------
+# Tooling — pinned, install if missing.
+# ---------------------------------------------------------------------------
+GOBIN_DIR   := $(shell go env GOPATH)/bin
+GOLANGCI    := $(GOBIN_DIR)/golangci-lint
+GOFUMPT     := $(GOBIN_DIR)/gofumpt
+GOIMPORTS   := $(GOBIN_DIR)/goimports
+GOVULNCHECK := $(GOBIN_DIR)/govulncheck
+
+# ---------------------------------------------------------------------------
+# Phony declarations (alphabetical).
+# ---------------------------------------------------------------------------
+.PHONY: all bench boundaries build ci clean cover fmt help hooks install lint lint-fix \
+        release security test test-race tidy version vet
+
+boundaries: ## Enforce ecosystem import boundaries.
+	bash ./scripts/check-ecosystem-boundaries.sh
+
+# ---------------------------------------------------------------------------
+# Default target.
+# ---------------------------------------------------------------------------
+all: lint test build ## Default — lint, test, build.
+
+# ---------------------------------------------------------------------------
+# Build / install / release.
+# ---------------------------------------------------------------------------
+build: ## Build the binary into bin/$(NAME).
+	go build -ldflags "$(LDFLAGS)" -o bin/$(NAME) $(MAIN_PKG)
+
+install: ## Install the binary to $GOBIN.
+	go install -ldflags "$(LDFLAGS)" $(MAIN_PKG)
+
+release: ## Cut a release via goreleaser (requires a clean tree + tag).
+	goreleaser release --clean
+
+# ---------------------------------------------------------------------------
+# Tests.
+# ---------------------------------------------------------------------------
+test: ## Run unit tests.
+	go test ./... -count=1 -timeout=120s
+
+test-race: ## Run unit tests with the race detector.
+	go test ./... -race -count=1 -timeout=180s
+
+cover: ## Generate a coverage report (coverage.out + coverage.html).
+	go test ./... -race -coverprofile=coverage.out -covermode=atomic -timeout=180s
+	@go tool cover -func=coverage.out | grep "^total:"
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
+
+bench: ## Run benchmarks.
+	go test ./... -bench=. -benchmem -count=3 -timeout=300s
+
+# ---------------------------------------------------------------------------
+# Quality gates.
+# ---------------------------------------------------------------------------
+fmt: ## Format source files (gofumpt + goimports).
+	@command -v $(GOFUMPT)   >/dev/null 2>&1 || (echo "install: go install mvdan.cc/gofumpt@latest"   && exit 1)
+	@command -v $(GOIMPORTS) >/dev/null 2>&1 || (echo "install: go install golang.org/x/tools/cmd/goimports@latest" && exit 1)
+	$(GOFUMPT) -w .
+	$(GOIMPORTS) -w .
+
+vet: ## Run go vet.
+	go vet ./...
+
+lint: ## Run golangci-lint.
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
+	$(GOLANGCI) run ./... --timeout=5m
+
+lint-fix: ## Run golangci-lint with --fix.
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
+	$(GOLANGCI) run ./... --fix --timeout=5m
+
+security: ## Run govulncheck.
+	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || (echo "install: go install golang.org/x/vuln/cmd/govulncheck@latest" && exit 1)
+	$(GOVULNCHECK) ./...
+
+tidy: ## Tidy go.mod / go.sum (or `go work sync` in a multi-module workspace).
+	go mod tidy
+	go mod verify
+
+# ---------------------------------------------------------------------------
+# Composite gate used by CI and pre-push.
+# ---------------------------------------------------------------------------
+ci: tidy fmt vet boundaries lint test-race security ## Run everything CI runs.
+	@echo "All CI checks passed."
+
+# ---------------------------------------------------------------------------
+# Misc.
+# ---------------------------------------------------------------------------
+version: ## Print the version that will be embedded.
+	@echo "Version: $(VERSION)"
+	@echo "Commit:  $(COMMIT)"
+	@echo "Date:    $(DATE)"
+
+clean: ## Remove build artefacts.
+	rm -rf bin/ dist/ coverage.out coverage.html
+	go clean -testcache
+
+help: ## Show this help.
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+hooks: ## Install git hooks via lefthook (formatting, linting, conventional commits).
+	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
+	lefthook install
+
+# ---------------------------------------------------------------------------
+# Repo-specific extensions go below this line — workspace setup, submodule
+# sync, cross-platform build matrices, compatibility-matrix checks, etc.
+# See hawk/Makefile for the real, extended reference implementation.
+# ---------------------------------------------------------------------------

@@ -16,6 +16,13 @@ func newMockSession(mc *mockClient) *Session {
 	return s
 }
 
+// setMaxTurns is a test helper that sets the max turns through the sub-service.
+func setMaxTurns(s *Session, turns int) {
+	if s.LifecycleSvc() != nil {
+		s.LifecycleSvc().Limits().SetMaxTurns(turns)
+	}
+}
+
 func TestSession_AddUser(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
@@ -123,10 +130,10 @@ func TestSession_MaxTurns(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
 	s := newMockSession(mc)
-	s.MaxTurns = 5
+	setMaxTurns(s, 5)
 
-	if s.MaxTurns != 5 {
-		t.Errorf("MaxTurns = %d, want 5", s.MaxTurns)
+	if s.LifecycleSvc().Limits().MaxTurns() != 5 {
+		t.Errorf("MaxTurns = %d, want 5", s.LifecycleSvc().Limits().MaxTurns())
 	}
 }
 
@@ -171,7 +178,7 @@ func TestSession_Metrics(t *testing.T) {
 func TestSession_Stream_MockEndTurn(t *testing.T) {
 	mc := newMockClient(mockTextResponse("Hello! I can help with that."))
 	s := newMockSession(mc)
-	s.MaxTurns = 1
+	s.LifecycleSvc().Limits().SetMaxTurns(1)
 	s.AddUser("hi there")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -202,7 +209,7 @@ func TestSession_Stream_MultiTurn(t *testing.T) {
 		mockTextResponse("Second response"),
 	)
 	s := newMockSession(mc)
-	s.MaxTurns = 2
+	s.LifecycleSvc().Limits().SetMaxTurns(2)
 	s.AddUser("hello")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

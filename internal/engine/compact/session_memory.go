@@ -84,7 +84,7 @@ func SessionMemoryPath(sessionID string) string {
 
 func ReadSessionMemory(sessionID string) (string, error) {
 	path := SessionMemoryPath(sessionID)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", err
 	}

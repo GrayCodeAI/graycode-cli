@@ -149,7 +149,7 @@ func walkDir(root string) (map[string]*langStat, int, error) {
 
 // countLines counts newline characters in a file. Fast, buffer-based.
 func countLines(path string) int {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
 	if err != nil {
 		return 0
 	}
@@ -226,7 +226,7 @@ func countDependencies(path, manager string) int {
 
 // countGoModDeps counts require directives in a go.mod file.
 func countGoModDeps(path string) int {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a manifest file located via detectPackageManager's fixed filename list joined with a scanned project directory
 	if err != nil {
 		return 0
 	}
@@ -259,7 +259,7 @@ func countGoModDeps(path string) int {
 
 // countNPMDeps counts dependencies + devDependencies in package.json.
 func countNPMDeps(path string) int {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a manifest file located via detectPackageManager's fixed filename list joined with a scanned project directory
 	if err != nil {
 		return 0
 	}
@@ -276,7 +276,7 @@ func countNPMDeps(path string) int {
 
 // countCargoDeps counts [dependencies] entries in Cargo.toml (simple heuristic).
 func countCargoDeps(path string) int {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a manifest file located via detectPackageManager's fixed filename list joined with a scanned project directory
 	if err != nil {
 		return 0
 	}
@@ -299,7 +299,7 @@ func countCargoDeps(path string) int {
 
 // countLineBasedDeps counts non-empty, non-comment lines (for requirements.txt, etc.).
 func countLineBasedDeps(path string) int {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a manifest file located via detectPackageManager's fixed filename list joined with a scanned project directory
 	if err != nil {
 		return 0
 	}
@@ -317,7 +317,7 @@ func countLineBasedDeps(path string) int {
 
 // countGemfileDeps counts gem lines in a Gemfile.
 func countGemfileDeps(path string) int {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a manifest file located via detectPackageManager's fixed filename list joined with a scanned project directory
 	if err != nil {
 		return 0
 	}
@@ -416,7 +416,7 @@ func detectLicense(dir string) string {
 
 	for _, name := range names {
 		path := filepath.Join(dir, name)
-		f, err := os.Open(path)
+		f, err := os.Open(path) // #nosec G304 -- path joins a fixed license filename with a project directory being scanned by this dev tool
 		if err != nil {
 			continue
 		}

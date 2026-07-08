@@ -52,7 +52,7 @@ type Extension struct {
 
 // LoadRecipe reads and parses a YAML recipe file.
 func LoadRecipe(path string) (*Recipe, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the caller-supplied recipe file path, not external input
 	if err != nil {
 		return nil, fmt.Errorf("read recipe: %w", err)
 	}

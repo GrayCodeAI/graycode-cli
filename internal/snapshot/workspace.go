@@ -139,7 +139,7 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 		}
 
 		// Read file content
-		content, readErr := os.ReadFile(path)
+		content, readErr := os.ReadFile(path) // #nosec G304 -- path from filepath.WalkDir over the project directory being snapshotted
 		if readErr != nil {
 			return nil // skip unreadable files
 		}
@@ -236,7 +236,7 @@ func (s *SnapshotStore) Restore(snapshotID string, projectDir string) error {
 		fullPath := filepath.Join(projectDir, rel)
 
 		// Ensure parent directory exists
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o750); err != nil {
 			return fmt.Errorf("creating directory for %s: %w", rel, err)
 		}
 
@@ -360,7 +360,7 @@ func (s *SnapshotStore) Diff(snapshotID string, projectDir string) (*SnapshotDif
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		content, readErr := os.ReadFile(path)
+		content, readErr := os.ReadFile(path) // #nosec G304 -- path from filepath.WalkDir over the project directory being diffed
 		if readErr != nil {
 			return nil
 		}
@@ -436,12 +436,12 @@ func (s *SnapshotStore) Save(snapshot *WorkspaceSnapshot) error {
 
 // save is the internal unlocked version of Save.
 func (s *SnapshotStore) save(snapshot *WorkspaceSnapshot) error {
-	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(s.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating snapshot dir: %w", err)
 	}
 
 	path := filepath.Join(s.Dir, snapshot.ID+".json.gz")
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path built from s.Dir (internal snapshot store dir) + snapshot.ID
 	if err != nil {
 		return fmt.Errorf("creating file: %w", err)
 	}
@@ -469,7 +469,7 @@ func (s *SnapshotStore) save(snapshot *WorkspaceSnapshot) error {
 // load reads a snapshot from disk.
 func (s *SnapshotStore) load(id string) (*WorkspaceSnapshot, error) {
 	path := filepath.Join(s.Dir, id+".json.gz")
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path built from s.Dir (internal snapshot store dir) + snapshot id
 	if err != nil {
 		return nil, fmt.Errorf("opening snapshot %s: %w", id, err)
 	}

@@ -68,7 +68,7 @@ func (sr *SmartReader) ReadFile(path string, query string) (*ReadResult, error) 
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("smart_reader: %w", err)
 	}
@@ -128,7 +128,7 @@ func (sr *SmartReader) ReadWithBudget(path string, budget int) (*ReadResult, err
 		budget = sr.MaxTokens
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("smart_reader: %w", err)
 	}
@@ -231,7 +231,7 @@ func (sr *SmartReader) ReadSymbolsOnly(path string) (*ReadResult, error) {
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("smart_reader: %w", err)
 	}
@@ -254,7 +254,7 @@ func (sr *SmartReader) ReadRelevant(path, query string, budget int) (*ReadResult
 		budget = sr.MaxTokens
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("smart_reader: %w", err)
 	}
@@ -291,7 +291,7 @@ func (sr *SmartReader) ReadRange(path string, startLine, endLine int) (*ReadResu
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("smart_reader: %w", err)
 	}

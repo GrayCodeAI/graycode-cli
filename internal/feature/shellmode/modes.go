@@ -67,8 +67,8 @@ func (mm *ModeManager) Toggle() Mode {
 
 func (mm *ModeManager) persist() {
 	dir := storage.StateDir()
-	_ = os.MkdirAll(dir, 0o755)
-	_ = os.WriteFile(filepath.Join(dir, "mode"), []byte(mm.current.String()), 0o644)
+	_ = os.MkdirAll(dir, 0o750)
+	_ = os.WriteFile(filepath.Join(dir, "mode"), []byte(mm.current.String()), 0o600)
 }
 
 // LoadPersistedMode restores mode from disk.

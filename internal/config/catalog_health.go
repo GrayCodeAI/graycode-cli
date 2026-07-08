@@ -76,7 +76,7 @@ func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
 		h.Error = "cache missing — hawk will discover automatically on start"
 		return h
 	}
-	compiled, err := catalog.LoadCatalogV1(ctx, catalog.LoadCatalogV1Options{
+	compiled, err := catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
 		CachePath:    path,
 		RequireCache: true,
 	})

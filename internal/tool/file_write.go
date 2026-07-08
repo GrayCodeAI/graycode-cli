@@ -90,7 +90,7 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if err := tmp.Close(); err != nil {
 		return "", fmt.Errorf("close temp: %w", err)
 	}
-	if err := os.Chmod(tmpPath, 0o644); err != nil {
+	if err := os.Chmod(tmpPath, 0o600); err != nil {
 		return "", fmt.Errorf("chmod temp: %w", err)
 	}
 	if err := os.Rename(tmpPath, path); err != nil {

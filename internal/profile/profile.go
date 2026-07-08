@@ -11,7 +11,7 @@ import (
 
 // CPUProfile starts CPU profiling to the given file.
 func CPUProfile(path string) (func(), error) {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path is an operator-supplied profiling output destination, not external input
 	if err != nil {
 		return nil, fmt.Errorf("create profile file: %w", err)
 	}
@@ -27,7 +27,7 @@ func CPUProfile(path string) (func(), error) {
 
 // MemoryProfile writes a heap profile to the given file.
 func MemoryProfile(path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path is an operator-supplied profiling output destination, not external input
 	if err != nil {
 		return fmt.Errorf("create profile file: %w", err)
 	}
@@ -42,7 +42,7 @@ func MemoryProfile(path string) error {
 
 // GoroutineProfile writes a goroutine profile to the given file.
 func GoroutineProfile(path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path is an operator-supplied profiling output destination, not external input
 	if err != nil {
 		return fmt.Errorf("create profile file: %w", err)
 	}
