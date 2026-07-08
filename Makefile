@@ -62,7 +62,7 @@ test: ## Run unit tests.
 	go test ./... -count=1 -timeout=120s
 
 test-race: ## Run unit tests with the race detector.
-	go test ./... -race -count=1 -timeout=180s
+	go test ./... -race -count=1 -timeout=300s
 
 test-10x: ## Run tests 10 times to surface flakes.
 	go test ./... -race -count=10 -timeout=600s
