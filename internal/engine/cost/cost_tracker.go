@@ -57,7 +57,7 @@ func (ct *CostTracker) Entries() []analytics.CostEntry {
 
 func LoadCostHistory() ([]analytics.CostEntry, error) {
 	path := filepath.Join(storage.StateDir(), "cost.jsonl")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -80,11 +80,11 @@ func LoadCostHistory() ([]analytics.CostEntry, error) {
 
 func (ct *CostTracker) appendToFile(entry analytics.CostEntry) error {
 	dir := filepath.Dir(ct.filePath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(ct.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(ct.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}

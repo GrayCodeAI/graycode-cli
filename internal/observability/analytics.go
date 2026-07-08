@@ -30,12 +30,12 @@ func LogEvent(name, sessionID string, properties map[string]interface{}) {
 		SessionID:  sessionID,
 		Properties: properties,
 	}
-	_ = os.MkdirAll(analyticsDir(), 0o755)
+	_ = os.MkdirAll(analyticsDir(), 0o750)
 	data, err := json.Marshal(event)
 	if err != nil {
 		return
 	}
-	f, err := os.OpenFile(filepath.Join(analyticsDir(), "events.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(filepath.Join(analyticsDir(), "events.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return
 	}
@@ -58,9 +58,9 @@ type SessionTrace struct {
 
 // SaveTrace saves a session trace.
 func SaveTrace(t *SessionTrace) error {
-	_ = os.MkdirAll(analyticsDir(), 0o755)
+	_ = os.MkdirAll(analyticsDir(), 0o750)
 	data, _ := json.Marshal(t)
-	f, err := os.OpenFile(filepath.Join(analyticsDir(), "traces.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(filepath.Join(analyticsDir(), "traces.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}

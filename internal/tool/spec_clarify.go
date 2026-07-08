@@ -50,7 +50,7 @@ func (ClarifyTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 	}
 
 	path := filepath.Join(dir, p.Artifact)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", fmt.Errorf("cannot read %s: %w (call Specify first)", p.Artifact, err)
 	}

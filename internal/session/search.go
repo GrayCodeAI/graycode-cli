@@ -482,7 +482,7 @@ type sessionMeta struct {
 
 // loadSessionMessages reads a session file and returns its messages.
 func (se *SearchEngine) loadSessionMessages(path string) ([]Message, sessionMeta, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path built from se.SessionDir + directory entry name from os.ReadDir
 	if err != nil {
 		return nil, sessionMeta{}, err
 	}

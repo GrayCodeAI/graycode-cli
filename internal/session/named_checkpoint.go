@@ -85,7 +85,7 @@ func SaveNamedCheckpoint(name string, s *Session) (*NamedCheckpoint, error) {
 	}
 
 	dir := namedCheckpointsDir()
-	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+	if mkErr := os.MkdirAll(dir, 0o750); mkErr != nil {
 		return nil, fmt.Errorf("create checkpoints directory: %w", mkErr)
 	}
 
@@ -96,7 +96,7 @@ func SaveNamedCheckpoint(name string, s *Session) (*NamedCheckpoint, error) {
 
 	target := namedCheckpointPath(name)
 	tmp := target + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return nil, fmt.Errorf("write checkpoint: %w", err)
 	}
 	if err := os.Rename(tmp, target); err != nil {
@@ -148,7 +148,7 @@ func ListNamedCheckpoints() ([]*NamedCheckpoint, error) {
 		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- path built from internal named-checkpoints dir + directory entry name from os.ReadDir
 		if err != nil {
 			continue
 		}

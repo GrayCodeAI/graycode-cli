@@ -75,7 +75,7 @@ func Save(s *Session) error {
 	s.UpdatedAt = time.Now()
 
 	dir := sessionsDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create sessions directory: %w", err)
 	}
 
@@ -83,7 +83,7 @@ func Save(s *Session) error {
 	target := jsonlPathFor(s.ID)
 	tmp := target + ".tmp"
 
-	f, err := os.Create(tmp)
+	f, err := os.Create(tmp) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
 		return fmt.Errorf("create temp session file: %w", err)
 	}
@@ -174,12 +174,12 @@ type WAL struct {
 // NewWAL creates or opens a write-ahead log for a session.
 func NewWAL(sessionID string) (*WAL, error) {
 	dir := sessionsDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
 
 	path := filepath.Join(dir, sessionID+".wal")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
 		return nil, fmt.Errorf("opening WAL: %w", err)
 	}
@@ -247,7 +247,7 @@ func (w *WAL) Remove() error {
 // Returns nil if no WAL exists.
 func RecoverFromWAL(sessionID string) (*Session, error) {
 	path := filepath.Join(sessionsDir(), sessionID+".wal")
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
 		return nil, nil // no WAL, nothing to recover
 	}
@@ -335,7 +335,7 @@ func loadJSONL(id string) (*Session, error) {
 }
 
 func loadJSONLFile(path, id string) (*Session, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +399,7 @@ func loadLegacyJSON(id string) (*Session, error) {
 }
 
 func loadLegacyJSONFile(path string) (*Session, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +458,7 @@ func List() ([]Entry, error) {
 
 // loadPreview reads only enough of a session file to extract the first user message.
 func loadPreview(path string) string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir() + directory entry name returned by os.ReadDir
 	if err != nil {
 		return ""
 	}

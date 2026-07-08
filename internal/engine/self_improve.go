@@ -84,9 +84,9 @@ func (si *SelfImprover) load() {
 }
 
 func (si *SelfImprover) save() {
-	_ = os.MkdirAll(filepath.Dir(si.Path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(si.Path), 0o750)
 	data, _ := json.MarshalIndent(si.Entries, "", "  ")
-	_ = os.WriteFile(si.Path, data, 0o644)
+	_ = os.WriteFile(si.Path, data, 0o600)
 }
 
 // LearnPrompt generates a prompt to extract lessons from a failed interaction.

@@ -57,7 +57,7 @@ func (r *Runtime) ExecuteCommand(name string, args []string) (string, error) {
 		return "", fmt.Errorf("command %s has no script", name)
 	}
 	ctx := context.Background()
-	c := exec.CommandContext(ctx, "bash", "-c", cmd.Script)
+	c := exec.CommandContext(ctx, "bash", "-c", cmd.Script) // #nosec G204 -- cmd.Script comes from a locally installed plugin's own manifest, trusted like other plugin config
 	c.Args = append(c.Args, args...)
 	c.Dir = filepath.Join(pluginsDir(), cmd.Name)
 	out, err := c.CombinedOutput()
@@ -92,7 +92,7 @@ func (r *Runtime) RegisterHooks() {
 				Name:  fmt.Sprintf("plugin:%s", event),
 				Event: hooks.EventType(event),
 				Fn: func(ctx context.Context, data map[string]interface{}) error {
-					c := exec.CommandContext(ctx, "bash", "-c", cmd)
+					c := exec.CommandContext(ctx, "bash", "-c", cmd) // #nosec G204 -- cmd comes from a locally installed plugin's own manifest, trusted like other plugin config
 					c.Env = os.Environ()
 					for k, v := range data {
 						c.Env = append(c.Env, fmt.Sprintf("%s=%v", pluginHookEnvKey(k), v))

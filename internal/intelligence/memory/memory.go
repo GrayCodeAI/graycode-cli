@@ -32,19 +32,19 @@ func Save(m *Memory) error {
 	if m.CreatedAt.IsZero() {
 		m.CreatedAt = time.Now()
 	}
-	if err := os.MkdirAll(memoryDir(), 0o755); err != nil {
+	if err := os.MkdirAll(memoryDir(), 0o750); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(memoryDir(), m.ID+".json"), data, 0o644)
+	return os.WriteFile(filepath.Join(memoryDir(), m.ID+".json"), data, 0o600)
 }
 
 // Load reads a memory by ID.
 func Load(id string) (*Memory, error) {
-	data, err := os.ReadFile(filepath.Join(memoryDir(), id+".json"))
+	data, err := os.ReadFile(filepath.Join(memoryDir(), id+".json")) // #nosec G304 -- path is built from the tool's own memory directory and an id passed by the caller
 	if err != nil {
 		return nil, err
 	}

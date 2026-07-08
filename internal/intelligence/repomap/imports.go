@@ -335,7 +335,7 @@ func (g *ImportGraph) resolveTSImport(fromFile, imp string) []string {
 
 // parseGoImports extracts import paths from a Go source file.
 func parseGoImports(path string) []string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}
@@ -374,7 +374,7 @@ func parseGoImports(path string) []string {
 
 // parsePythonImports extracts imported module names from a Python file.
 func parsePythonImports(path string) []string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}
@@ -395,7 +395,7 @@ func parsePythonImports(path string) []string {
 
 // parseTSImports extracts import paths from a TypeScript/JavaScript file.
 func parseTSImports(path string) []string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}
@@ -418,7 +418,7 @@ func parseTSImports(path string) []string {
 
 // detectModulePath reads the module path from go.mod in the given directory.
 func detectModulePath(root string) string {
-	data, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	data, err := os.ReadFile(filepath.Join(root, "go.mod")) // #nosec G304 -- path is the go.mod of the repo root being analyzed by this dev CLI
 	if err != nil {
 		return ""
 	}

@@ -3,6 +3,8 @@ package ctxmgr
 import (
 	"fmt"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/mathutil"
 )
 
 // ContextBudget allocates the model's context window across different content categories.
@@ -212,11 +214,5 @@ func (b *ContextBudget) adaptiveFileBudget(conversationTokens, adaptiveSpace int
 
 // clamp constrains v to [lo, hi].
 func clamp(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
+	return mathutil.Clamp(v, lo, hi)
 }

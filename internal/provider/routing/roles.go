@@ -28,19 +28,19 @@ type ModelRoles struct {
 // DefaultRoles returns a ModelRoles where every role uses primaryModel except
 // Commit, which defaults to the cheapest available model from the catalog.
 func DefaultRoles(primaryModel string) ModelRoles {
-	return fromEyrieRoles(eycatalog.DefaultModelRolesV1(eyrieCatalogV1(), primaryModel))
+	return fromEyrieRoles(eycatalog.DefaultModelRolesV1(eyrieCatalog(), primaryModel))
 }
 
 // ModelForRole returns the model name assigned to role, falling back to the
 // Coder model (primary) if the role-specific field is empty.
 func (r ModelRoles) ModelForRole(role Role) string {
-	return eycatalog.ModelForRoleV1(eyrieCatalogV1(), toEyrieRoles(r), eycatalog.ModelRole(role))
+	return eycatalog.ModelForRoleV1(eyrieCatalog(), toEyrieRoles(r), eycatalog.ModelRole(role))
 }
 
 // CheapestForProvider queries eyrie's catalog at runtime and returns the
 // cheapest model for the given provider. No hardcoded model names.
 func CheapestForProvider(provider, fallback string) string {
-	return eycatalog.CheapestModelForProviderV1(eyrieCatalogV1(), provider, fallback)
+	return eycatalog.CheapestModelForProvider(eyrieCatalog(), provider, fallback)
 }
 
 func toEyrieRoles(r ModelRoles) eycatalog.ModelRoleAssignments {

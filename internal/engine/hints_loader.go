@@ -32,7 +32,7 @@ func (h *HintsLoader) LoadHints(dir string) string {
 	var hints []string
 	for _, name := range HintsFilenames {
 		path := filepath.Join(dir, name)
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}

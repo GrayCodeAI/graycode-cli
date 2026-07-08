@@ -44,7 +44,7 @@ func (ac *AutoCommitter) CommitIfChanged(description string) error {
 	msg := ac.generateMessage(description)
 
 	// Commit
-	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg, "--no-verify")
+	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg, "--no-verify") // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	commit.Dir = ac.RepoDir
 	return commit.Run()
 }

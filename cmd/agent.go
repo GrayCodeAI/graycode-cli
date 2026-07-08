@@ -90,7 +90,7 @@ func runAgentList(_ *cobra.Command, _ []string) error {
 func runAgentCreate(_ *cobra.Command, args []string) error {
 	name := args[0]
 	dir := agents.DefaultDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 
@@ -123,6 +123,7 @@ You are a specialized agent. Complete tasks according to your expertise.
 - Report results clearly
 	`, name, desc, modelLine, cases.Title(language.English).String(name))
 
+	// #nosec G306 -- agent definition is a user-facing markdown doc, intended to be normally readable/editable
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return err
 	}

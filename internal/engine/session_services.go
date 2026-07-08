@@ -320,7 +320,7 @@ func (s *Session) Services() *SessionServices {
 			APIKeys:  s.apiKeys,
 			System:   s.Persistence().System(),
 			Log:      s.log,
-			MaxTurns: s.MaxTurns,
+			MaxTurns: s.LifecycleSvc().Limits().MaxTurns(),
 		},
 		Safety: &SafetyLayer{
 			Perm:     s.Perm,
@@ -342,7 +342,7 @@ func (s *Session) Services() *SessionServices {
 			CostTracker: s.CostTracker,
 			Cascade:     s.LifecycleSvc().Cascade(),
 			Router:      s.ChatLLM().Router(),
-			MaxBudget:   s.MaxBudgetUSD,
+			MaxBudget:   s.LifecycleSvc().Limits().MaxBudgetUSD(),
 		},
 		Observe: &Observability{
 			Tracer:  s.Tracer,

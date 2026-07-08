@@ -54,14 +54,14 @@ allowed-tools: Read Write Bash Grep
 // SaveNewSkill writes a SKILL.md to Hawk user state.
 func SaveNewSkill(name, content string) (string, error) {
 	dir := filepath.Join(storage.StateDir(), "skills", name)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", fmt.Errorf("create skill dir: %w", err)
 	}
 	path := filepath.Join(dir, "SKILL.md")
 	if _, err := os.Stat(path); err == nil {
 		return "", fmt.Errorf("skill %q already exists at %s", name, path)
 	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("write skill: %w", err)
 	}
 	return path, nil

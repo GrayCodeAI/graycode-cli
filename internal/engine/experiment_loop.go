@@ -106,7 +106,7 @@ func (el *ExperimentLoop) validate(ctx context.Context) (bool, string) {
 	ctx, cancel := context.WithTimeout(ctx, el.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", el.ValidateCmd)
+	cmd := exec.CommandContext(ctx, "sh", "-c", el.ValidateCmd) // #nosec G204 -- shell invocation with validate command from project/task config
 	cmd.Dir = el.WorkDir
 	out, err := cmd.CombinedOutput()
 	output := strings.TrimSpace(string(out))

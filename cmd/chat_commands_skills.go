@@ -201,7 +201,7 @@ func (m *chatModel) handleSkillsCommand(parts []string, text string) (tea.Model,
 					return m, nil
 				}
 			}
-			data, _ := os.ReadFile(skillFile)
+			data, _ := os.ReadFile(skillFile) // #nosec G304 -- skillFile comes from internal skill enumeration
 			skill := plugin.ParseSmartSkillPublic(string(data))
 			var issues []string
 			if skill.Name == "" {
@@ -223,7 +223,7 @@ func (m *chatModel) handleSkillsCommand(parts []string, text string) (tea.Model,
 			}
 			b.WriteString("\nTo publish:\n")
 			b.WriteString("  1. Push your skill to a GitHub repo with skills/<name>/SKILL.md\n")
-			b.WriteString("  2. Submit a PR to github.com/GrayCodeAI/hawk-skills to add your repo\n")
+			b.WriteString("  2. Submit a PR to github.com/GrayCodeAI/hawk-community-skills to add your repo\n")
 			b.WriteString("  3. Or install directly: /skills install <your-org>/<your-repo>\n")
 			m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
 			return m, nil

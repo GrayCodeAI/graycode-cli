@@ -109,7 +109,7 @@ func RunDream(ctx context.Context, cfg AutoDreamConfig, agentFn func(ctx context
 		if e.IsDir() || filepath.Ext(e.Name()) != ".md" {
 			continue
 		}
-		data, readErr := os.ReadFile(filepath.Join(memDir, e.Name()))
+		data, readErr := os.ReadFile(filepath.Join(memDir, e.Name())) // #nosec G304 -- path is built from the tool's own memory directory and a directory entry name it just listed
 		if readErr != nil {
 			continue
 		}
@@ -129,7 +129,7 @@ func RunDream(ctx context.Context, cfg AutoDreamConfig, agentFn func(ctx context
 
 	// Write consolidated memory
 	consolidatedPath := filepath.Join(memDir, "consolidated.md")
-	if err := os.WriteFile(consolidatedPath, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(consolidatedPath, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("writing consolidated memory: %w", err)
 	}
 

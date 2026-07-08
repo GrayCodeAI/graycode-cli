@@ -108,7 +108,7 @@ func validateGo(path string) *ValidationResult {
 
 // validatePython runs py_compile on a Python file.
 func validatePython(path string) *ValidationResult {
-	cmd := exec.CommandContext(context.Background(), "python3", "-c",
+	cmd := exec.CommandContext(context.Background(), "python3", "-c", // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 		fmt.Sprintf("import py_compile; py_compile.compile('%s', doraise=True)", path))
 
 	output, err := cmd.CombinedOutput()

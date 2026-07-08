@@ -129,7 +129,7 @@ func (d *WalkUpDiscoverer) Discover(filePath string) []ConventionFile {
 	for {
 		for _, name := range d.fileNames {
 			candidate := filepath.Join(dir, name)
-			data, err := os.ReadFile(candidate)
+			data, err := os.ReadFile(candidate) // #nosec G304 -- candidate is built from a fixed set of convention file names joined with the walked-up directory, not external input
 			if err != nil {
 				continue // file doesn't exist at this level
 			}

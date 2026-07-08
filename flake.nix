@@ -64,6 +64,11 @@
           # deps (charmbracelet, cobra, …) are fetched from the proxy. The
           # vendor FOD is skipped (null) because the proxy version mismatch
           # prevents `go mod vendor` from passing checksum verification.
+          # TODO(supply-chain): vendorHash = null + GONOSUMCHECK disables
+          # dependency integrity/reproducibility for this build. Restore a
+          # fixed-output vendorHash ("sha256-…", computed via `nix build`
+          # after setupReplace) so external deps are verified, and drop
+          # GONOSUMCHECK for non-GrayCodeAI modules.
           vendorHash = null;
 
           env = {

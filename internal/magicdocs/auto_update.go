@@ -64,7 +64,7 @@ func ScanForMagicDocs(dir string) []MagicDocFile {
 }
 
 func scanFileForMarker(path string, info os.FileInfo) *MagicDocFile {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path comes from filepath.WalkDir over the project directory being scanned, not external input
 	if err != nil {
 		return nil
 	}

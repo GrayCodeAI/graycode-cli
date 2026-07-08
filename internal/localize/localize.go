@@ -147,7 +147,7 @@ func extractCodeBlocks(rootDir string, symbols []SymbolMatch, contextLines int) 
 
 // readFileLines reads a file and returns its lines.
 func readFileLines(path string) ([]string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a source file within the project being localized, supplied by internal callers, not external input
 	if err != nil {
 		return nil, err
 	}

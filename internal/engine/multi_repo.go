@@ -30,7 +30,7 @@ type MultiRepoContext struct {
 func LoadMultiRepoConfig(projectDir string) *MultiRepoContext {
 	mrc := &MultiRepoContext{BaseDir: projectDir}
 	path := filepath.Join(projectDir, ".agents", "repos.yaml")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return mrc
 	}
@@ -86,7 +86,7 @@ func extractBoundary(repoPath, relation string) string {
 
 	var content []string
 	for _, f := range files {
-		data, err := os.ReadFile(f)
+		data, err := os.ReadFile(f) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}

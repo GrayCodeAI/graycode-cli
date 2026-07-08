@@ -100,7 +100,7 @@ func (ll *LintLoop) RunLint(path string) (*LintResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
+	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...) // #nosec G204 -- command parsed from tool-configured command string (lint/test command)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

@@ -258,7 +258,7 @@ func (e *Engine) computeNextRun(job *Job) {
 			job.Enabled = false
 		}
 	case ScheduleEvery:
-		jitter := time.Duration(rand.IntN(5)) * time.Second
+		jitter := time.Duration(rand.IntN(5)) * time.Second // #nosec G404 -- non-cryptographic use (jitter for cron schedule spacing)
 		next := now.Add(job.Schedule.Every + jitter)
 		job.NextRunAt = &next
 	}

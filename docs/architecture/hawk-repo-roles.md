@@ -68,6 +68,14 @@ Shared types, events, findings, policies, and engine request/response contracts.
 
 This repo should stay small, stable, and implementation-free.
 
+### `hawk-mcpkit`
+Shared MCP server scaffolding wrapping `mark3labs/mcp-go` — construction,
+transports, and handler helpers that MCP-serving engines (`sight`, `inspect`)
+would otherwise duplicate.
+
+Like `hawk-core-contracts`, it sits below the engines: it must not import
+engines, hawk, or graycode-core.
+
 ## Role rules
 
 - Users should feel they are using `hawk`, not six unrelated tools.

@@ -359,7 +359,7 @@ func dtsDetectLanguage(projectDir string) string {
 // detectModulePath reads the module path from go.mod.
 func detectModulePath(projectDir string) string {
 	modFile := filepath.Join(projectDir, "go.mod")
-	f, err := os.Open(modFile)
+	f, err := os.Open(modFile) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}
@@ -377,7 +377,7 @@ func detectModulePath(projectDir string) string {
 
 // parseGoImports extracts import paths from a Go source file.
 func parseGoImports(path string) []string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil
 	}
@@ -538,7 +538,7 @@ func findIntegrationTests(projectDir, file string) []string {
 
 	for _, ip := range integrationPaths {
 		absPath := filepath.Join(projectDir, ip)
-		content, err := os.ReadFile(absPath)
+		content, err := os.ReadFile(absPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}
@@ -667,7 +667,7 @@ func extractTestFuncNames(testFiles []string) []string {
 	funcRe := regexp.MustCompile(`^func (Test\w+)`)
 
 	for _, tf := range testFiles {
-		f, err := os.Open(tf)
+		f, err := os.Open(tf) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}

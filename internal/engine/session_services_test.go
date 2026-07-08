@@ -175,7 +175,7 @@ func TestNewSessionServices_MultipleOptions(t *testing.T) {
 func TestSession_Services_Bridge(t *testing.T) {
 	reg := tool.NewRegistry()
 	s := NewSession("anthropic", "claude-sonnet-4-20250514", "You are helpful.", reg)
-	s.MaxBudgetUSD = 3.50
+	s.LifecycleSvc().Limits().SetMaxBudgetUSD(3.50)
 	s.Autonomy = AutonomyFull
 	s.Tools().SetSandbox(&DiffSandbox{})
 	s.MemorySvc().SetMemory(&mockMemoryRecaller{})

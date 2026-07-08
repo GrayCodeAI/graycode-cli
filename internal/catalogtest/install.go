@@ -27,7 +27,7 @@ func InstallGlobal() (cleanup func()) {
 			panic("catalogtest: failed to create temp dir: " + err.Error())
 		}
 		globalPath = filepath.Join(dir, "model_catalog.json")
-		if err := os.WriteFile(globalPath, minimalCatalogJSON, 0o644); err != nil {
+		if err := os.WriteFile(globalPath, minimalCatalogJSON, 0o600); err != nil {
 			panic("catalogtest: failed to write catalog: " + err.Error())
 		}
 		_ = os.Setenv("EYRIE_MODEL_CATALOG_PATH", globalPath)
@@ -41,7 +41,7 @@ func InstallGlobal() (cleanup func()) {
 func Install(t testing.TB) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "model_catalog.json")
-	if err := os.WriteFile(path, minimalCatalogJSON, 0o644); err != nil {
+	if err := os.WriteFile(path, minimalCatalogJSON, 0o600); err != nil {
 		t.Fatalf("catalogtest: failed to write catalog: %v", err)
 	}
 	t.Setenv("EYRIE_MODEL_CATALOG_PATH", path)

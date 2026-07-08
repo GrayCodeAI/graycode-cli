@@ -139,7 +139,7 @@ func (tl *TransferLearning) load() {
 
 func (tl *TransferLearning) save() {
 	dir := filepath.Dir(tl.path)
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 	data, _ := json.Marshal(tl.patterns)
-	_ = os.WriteFile(tl.path, data, 0o644)
+	_ = os.WriteFile(tl.path, data, 0o600)
 }

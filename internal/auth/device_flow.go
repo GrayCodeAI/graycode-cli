@@ -93,11 +93,14 @@ func (df *DeviceFlow) PollForToken(ctx context.Context, deviceCode string) (*Tok
 		deadline = time.Now().Add(5 * time.Minute)
 	}
 
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+
 	for time.Now().Before(deadline) {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(interval):
+		case <-timer.C:
 		}
 
 		token, err := df.exchangeCode(ctx, deviceCode)
@@ -106,6 +109,7 @@ func (df *DeviceFlow) PollForToken(ctx context.Context, deviceCode string) (*Tok
 				if strings.Contains(err.Error(), "slow_down") {
 					interval += 5 * time.Second
 				}
+				timer.Reset(interval)
 				continue
 			}
 			return nil, err

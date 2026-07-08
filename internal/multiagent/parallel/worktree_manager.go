@@ -84,6 +84,7 @@ func (wm *WorktreeManager) Create(branch, baseBranch, taskDescription string) (*
 	id := generateID()
 	wtDir := filepath.Join(storage.ProjectStateDir(wm.BaseDir), "worktrees", id)
 
+	// #nosec G204 -- binary is the fixed string "git"; branch/wtDir/baseBranch come from internal caller state, not raw external input
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtDir, baseBranch)
 	cmd.Dir = wm.BaseDir
 	out, err := cmd.CombinedOutput()
@@ -114,6 +115,7 @@ func (wm *WorktreeManager) Remove(id string) error {
 		return fmt.Errorf("worktree %q not found", id)
 	}
 
+	// #nosec G204 -- binary is the fixed string "git"; wt.Path comes from the manager's own tracked Worktree state, not raw external input
 	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wt.Path)
 	cmd.Dir = wm.BaseDir
 	out, err := cmd.CombinedOutput()
@@ -165,6 +167,7 @@ func (wm *WorktreeManager) MergeBack(id string, strategy string) error {
 	wm.mu.RUnlock()
 
 	// Checkout the base branch.
+	// #nosec G204 -- binary is the fixed string "git"; baseBranch comes from the manager's own tracked Worktree state, not raw external input
 	checkout := exec.CommandContext(context.Background(), "git", "checkout", baseBranch)
 	checkout.Dir = wm.BaseDir
 	if out, err := checkout.CombinedOutput(); err != nil {
@@ -175,10 +178,13 @@ func (wm *WorktreeManager) MergeBack(id string, strategy string) error {
 	var mergeCmd *exec.Cmd
 	switch strategy {
 	case "fast-forward":
+		// #nosec G204 -- binary is the fixed string "git"; branch comes from the manager's own tracked Worktree state, not raw external input
 		mergeCmd = exec.CommandContext(context.Background(), "git", "merge", "--ff-only", branch)
 	case "squash":
+		// #nosec G204 -- binary is the fixed string "git"; branch comes from the manager's own tracked Worktree state, not raw external input
 		mergeCmd = exec.CommandContext(context.Background(), "git", "merge", "--squash", branch)
 	case "merge-commit":
+		// #nosec G204 -- binary is the fixed string "git"; branch/baseBranch come from the manager's own tracked Worktree state, not raw external input
 		mergeCmd = exec.CommandContext(context.Background(), "git", "merge", "--no-ff", branch, "-m",
 			fmt.Sprintf("Merge branch '%s' into %s", branch, baseBranch))
 	default:
@@ -192,6 +198,7 @@ func (wm *WorktreeManager) MergeBack(id string, strategy string) error {
 
 	// For squash merges, git does not auto-commit; we need to commit.
 	if strategy == "squash" {
+		// #nosec G204 -- binary is the fixed string "git"; branch/baseBranch come from the manager's own tracked Worktree state, not raw external input
 		commitCmd := exec.CommandContext(context.Background(), "git", "commit", "-m",
 			fmt.Sprintf("Squash merge branch '%s' into %s", branch, baseBranch))
 		commitCmd.Dir = wm.BaseDir
@@ -307,6 +314,7 @@ func (wm *WorktreeManager) GetDiff(id string) (string, error) {
 		return "", fmt.Errorf("worktree %q not found", id)
 	}
 
+	// #nosec G204 -- binary is the fixed string "git"; wt.BaseBranch/wt.Branch come from the manager's own tracked Worktree state, not raw external input
 	cmd := exec.CommandContext(context.Background(), "git", "diff", wt.BaseBranch+"..."+wt.Branch)
 	cmd.Dir = wm.BaseDir
 	out, err := cmd.CombinedOutput()
@@ -333,6 +341,7 @@ func (wm *WorktreeManager) FormatMergePreview(id string) string {
 	sb.WriteString("\n")
 
 	// Get commit log between base and branch.
+	// #nosec G204 -- binary is the fixed string "git"; wt.BaseBranch/wt.Branch come from the manager's own tracked Worktree state, not raw external input
 	logCmd := exec.CommandContext(context.Background(), "git", "log", "--oneline", wt.BaseBranch+".."+wt.Branch)
 	logCmd.Dir = wm.BaseDir
 	logOut, err := logCmd.CombinedOutput()
@@ -351,6 +360,7 @@ func (wm *WorktreeManager) FormatMergePreview(id string) string {
 	}
 
 	// Get diffstat.
+	// #nosec G204 -- binary is the fixed string "git"; wt.BaseBranch/wt.Branch come from the manager's own tracked Worktree state, not raw external input
 	statCmd := exec.CommandContext(context.Background(), "git", "diff", "--stat", wt.BaseBranch+"..."+wt.Branch)
 	statCmd.Dir = wm.BaseDir
 	statOut, err := statCmd.CombinedOutput()

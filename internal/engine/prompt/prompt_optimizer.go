@@ -245,7 +245,7 @@ func (po *PromptOptimizer) load() {
 }
 
 func (po *PromptOptimizer) save() {
-	_ = os.MkdirAll(filepath.Dir(po.Path), 0o755)
+	_ = os.MkdirAll(filepath.Dir(po.Path), 0o750)
 	data, _ := json.MarshalIndent(po.Parameters, "", "  ")
-	_ = os.WriteFile(po.Path, data, 0o644)
+	_ = os.WriteFile(po.Path, data, 0o600)
 }

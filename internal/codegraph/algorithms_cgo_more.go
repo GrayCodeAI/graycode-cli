@@ -130,14 +130,14 @@ func (cg *CodeGraph) ImpactAnalysis(nodeID string, maxDepth int) (*ImpactResult,
 			for rows.Next() {
 				var source string
 				if err := rows.Scan(&source); err != nil {
-					rows.Close()
+					_ = rows.Close()
 					return nil, fmt.Errorf("scanning dependency row for %s: %w", s.id, err)
 				}
 				if !visited[source] {
 					queue = append(queue, step{source, s.depth + 1})
 				}
 			}
-			rows.Close()
+			_ = rows.Close()
 		}
 	}
 
@@ -266,7 +266,7 @@ func CrossRepoQuery(repos []string, query string, limit int) (map[string][]Node,
 		}
 
 		nodes, err := cg.Search(query, limit)
-		cg.Close()
+		_ = cg.Close()
 		if err != nil || len(nodes) == 0 {
 			continue
 		}
@@ -291,7 +291,7 @@ func CrossRepoImpact(repos []string, symbol string, maxDepth int) (map[string]*I
 		// Search for the symbol
 		nodes, err := cg.Search(symbol, 5)
 		if err != nil || len(nodes) == 0 {
-			cg.Close()
+			_ = cg.Close()
 			continue
 		}
 
@@ -304,7 +304,7 @@ func CrossRepoImpact(repos []string, symbol string, maxDepth int) (map[string]*I
 			results[repoRoot+":"+n.Name] = impact
 		}
 
-		cg.Close()
+		_ = cg.Close()
 	}
 
 	return results, nil
@@ -333,19 +333,19 @@ func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
 		// Get all nodes
 		rows, err := cg.db.QueryContext(context.Background(), "SELECT id, kind, name, qualified_name, file_path, language, start_line, end_line, signature, docstring, visibility, is_exported FROM nodes")
 		if err != nil {
-			cg.Close()
+			_ = cg.Close()
 			continue
 		}
 
 		nodes, _ := scanNodes(rows)
-		rows.Close()
+		_ = rows.Close()
 
 		for _, n := range nodes {
 			allSymbols[n.Name] = append(allSymbols[n.Name], repoSymbol{repoRoot, n})
 			repoNodes[repoRoot][n.ID] = true
 		}
 
-		cg.Close()
+		_ = cg.Close()
 	}
 
 	// Find calls that reference symbols in other repos
@@ -360,14 +360,14 @@ func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
 		// Get unresolved refs (calls to symbols not in this repo)
 		rows, err := cg.db.QueryContext(context.Background(), "SELECT from_node_id, reference_name, file_path, line FROM unresolved_refs")
 		if err != nil {
-			cg.Close()
+			_ = cg.Close()
 			continue
 		}
 
 		for rows.Next() {
 			var fromID, refName, filePath string
 			var line int
-			rows.Scan(&fromID, &refName, &filePath, &line)
+			_ = rows.Scan(&fromID, &refName, &filePath, &line)
 
 			// Check if this reference exists in another repo
 			for _, target := range allSymbols[refName] {
@@ -384,8 +384,8 @@ func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
 			}
 		}
 
-		rows.Close()
-		cg.Close()
+		_ = rows.Close()
+		_ = cg.Close()
 	}
 
 	return crossCalls, nil

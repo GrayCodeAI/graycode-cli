@@ -141,7 +141,7 @@ func extractSymbols(filePath string, forceLang string) ([]rawSymbol, error) {
 		return nil, nil
 	}
 
-	f, err := os.Open(filePath)
+	f, err := os.Open(filePath) // #nosec G304 -- filePath is a source file within the project being localized, supplied by internal callers, not external input
 	if err != nil {
 		return nil, err
 	}

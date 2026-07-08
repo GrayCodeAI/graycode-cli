@@ -80,7 +80,7 @@ func (gr *GitignoreRules) ShouldIgnore(path string) bool {
 
 // parseGitignore reads a .gitignore file and returns rules.
 func parseGitignore(path, baseDir string) []ignoreRule {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a .gitignore file discovered while walking the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}

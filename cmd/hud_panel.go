@@ -173,9 +173,5 @@ func truncateHUD(s string, max int) string {
 	if max < 4 {
 		max = 4
 	}
-	s = strings.ReplaceAll(s, "\n", " ")
-	if len(s) <= max {
-		return s
-	}
-	return s[:max-3] + "..."
+	return truncateWithEllipsis(strings.ReplaceAll(s, "\n", " "), max)
 }

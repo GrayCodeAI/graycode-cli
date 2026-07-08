@@ -155,7 +155,7 @@ followed by the task ID: hawk plan done <name> <task-id>`,
 		if err != nil {
 			return fmt.Errorf("marshal plan: %w", err)
 		}
-		if err := os.WriteFile(planPath, data, 0o644); err != nil {
+		if err := os.WriteFile(planPath, data, 0o600); err != nil {
 			return fmt.Errorf("write plan: %w", err)
 		}
 

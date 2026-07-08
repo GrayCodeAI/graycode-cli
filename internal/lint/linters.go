@@ -108,7 +108,7 @@ func (c *customLinter) Lint(ctx context.Context, file string) Result {
 	} else {
 		command = command + " " + file
 	}
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command) // #nosec G204 -- command from user-supplied --lint config, not external/untrusted input
 	cmd.Dir = filepath.Dir(file)
 	out, err := runCmd(cmd)
 	if err == nil {

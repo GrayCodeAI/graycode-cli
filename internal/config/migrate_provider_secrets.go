@@ -19,7 +19,7 @@ func MigrateProviderSecrets() error {
 		_ = os.Remove(backup)
 		return nil
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is eyrie's fixed provider config path, not external input
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil

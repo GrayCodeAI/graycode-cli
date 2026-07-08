@@ -73,9 +73,9 @@ func loadTipHistory() tipHistory {
 }
 
 func saveTipHistory(h tipHistory) {
-	_ = os.MkdirAll(storage.StateDir(), 0o755)
+	_ = os.MkdirAll(storage.StateDir(), 0o750) // #nosec G301 -- state dir holds private user data, owner/group only
 	data, _ := json.MarshalIndent(h, "", "  ")
-	_ = os.WriteFile(tipHistoryPath(), data, 0o644)
+	_ = os.WriteFile(tipHistoryPath(), data, 0o600) // #nosec G306 -- tip history is private user state
 }
 
 // recordTipShown marks a tip as recently shown.
@@ -107,6 +107,6 @@ func nextTip() string {
 		candidates = tips
 	}
 
-	chosen := candidates[rand.Intn(len(candidates))]
+	chosen := candidates[rand.Intn(len(candidates))] // #nosec G404 -- non-cryptographic use (random tip selection)
 	return chosen.Text
 }

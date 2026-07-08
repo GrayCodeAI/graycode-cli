@@ -6,7 +6,7 @@ import (
 	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
-const ProviderXiaomiTokenPlan = "xiaomi_mimo_token_plan"
+const ProviderXiaomiTokenPlan = "xiaomi_mimo_token_plan" // #nosec G101 -- provider ID string, not a credential
 
 // NeedsXiaomiTokenPlanRegion reports whether the Token Plan gateway still needs a cluster pick.
 func NeedsXiaomiTokenPlanRegion(providerID string) bool {

@@ -24,19 +24,19 @@ func BackupFile(path string) (string, error) {
 		return "", nil // don't backup files >10MB
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", nil
 	}
 
 	absPath, _ := filepath.Abs(path)
 	backupDir := backupDirFor(path)
-	if err := os.MkdirAll(backupDir, 0o755); err != nil {
+	if err := os.MkdirAll(backupDir, 0o750); err != nil {
 		return "", err
 	}
 
 	// Write origin mapping so UndoLatest can find the original directory
-	_ = os.WriteFile(filepath.Join(backupDir, ".origin"), []byte(filepath.Dir(absPath)), 0o644)
+	_ = os.WriteFile(filepath.Join(backupDir, ".origin"), []byte(filepath.Dir(absPath)), 0o600)
 
 	ts := time.Now().Format("20060102-150405")
 	backupName := filepath.Base(path) + "." + ts + ".bak"
@@ -82,11 +82,11 @@ func RestoreFromBackup(path string) error {
 		return fmt.Errorf("no backups found for %s", path)
 	}
 
-	data, err := os.ReadFile(latest)
+	data, err := os.ReadFile(latest) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // ListBackups returns all backups for a file.
@@ -146,7 +146,7 @@ func UndoLatest() (string, error) {
 		return "", fmt.Errorf("no file changes to undo")
 	}
 	// Read origin to get the original directory
-	originData, err := os.ReadFile(filepath.Join(bestDir, ".origin"))
+	originData, err := os.ReadFile(filepath.Join(bestDir, ".origin")) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", fmt.Errorf("no file changes to undo")
 	}

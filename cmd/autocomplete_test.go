@@ -388,7 +388,7 @@ func TestRefreshFiles(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(tmpDir, ".git"), 0o755)
 	_ = os.WriteFile(filepath.Join(tmpDir, ".git", "config"), []byte(""), 0o644)
 
-	ac := NewAutocompleter(tmpDir)
+	ac := GetAutocompleter(tmpDir)
 
 	if len(ac.Files) < 2 {
 		t.Fatalf("expected at least 2 files, got %d: %v", len(ac.Files), ac.Files)
@@ -522,7 +522,7 @@ func TestExtractCurrentToken(t *testing.T) {
 
 func TestNewAutocompleterInitializesSlashCommands(t *testing.T) {
 	tmpDir := t.TempDir()
-	ac := NewAutocompleter(tmpDir)
+	ac := GetAutocompleter(tmpDir)
 
 	if len(ac.SlashCommands) == 0 {
 		t.Error("expected slash commands to be initialized")

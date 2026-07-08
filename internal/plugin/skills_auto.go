@@ -70,7 +70,7 @@ func LoadSmartSkills(dirs []string) []SmartSkill {
 				continue
 			}
 			skillFile := filepath.Join(dir, e.Name(), "SKILL.md")
-			data, err := os.ReadFile(skillFile)
+			data, err := os.ReadFile(skillFile) // #nosec G304 -- skillFile is built from a fixed skill directory and an enumerated entry name, not raw external input
 			if err != nil {
 				continue
 			}
@@ -198,7 +198,8 @@ func (s *SmartSkill) LoadRef(name string) (string, error) {
 	if s.RefDir == "" {
 		return "", os.ErrNotExist
 	}
-	data, err := os.ReadFile(filepath.Join(s.RefDir, name))
+	// Restrict to the base filename to prevent escaping the references/ dir.
+	data, err := os.ReadFile(filepath.Join(s.RefDir, filepath.Base(name))) // #nosec G304 -- name is constrained to its base filename, confined to s.RefDir
 	if err != nil {
 		return "", err
 	}

@@ -14,7 +14,7 @@ import (
 // Save serializes permission rules to a JSON file atomically.
 func Save(path string, rules []Rule) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create permissions directory: %w", err)
 	}
 
@@ -25,7 +25,7 @@ func Save(path string, rules []Rule) error {
 
 	// Atomic write: write to temp file then rename.
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return fmt.Errorf("write permissions temp file: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
@@ -37,7 +37,7 @@ func Save(path string, rules []Rule) error {
 
 // Load deserializes permission rules from a JSON file.
 func Load(path string) ([]Rule, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the caller-supplied permissions.json path (see DefaultPath), not external input
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil // no file, no rules

@@ -773,7 +773,7 @@ func (dg *DocGenerator) InferDescription(projectDir string) string {
 	readmeNames := []string{"README.md", "README", "README.txt", "readme.md"}
 	for _, name := range readmeNames {
 		readmePath := filepath.Join(projectDir, name)
-		data, err := os.ReadFile(readmePath)
+		data, err := os.ReadFile(readmePath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}
@@ -803,7 +803,7 @@ func (dg *DocGenerator) InferDescription(projectDir string) string {
 	}
 
 	goModPath := filepath.Join(projectDir, "go.mod")
-	data, err := os.ReadFile(goModPath)
+	data, err := os.ReadFile(goModPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err == nil {
 		lines := strings.Split(string(data), "\n")
 		for _, line := range lines {
