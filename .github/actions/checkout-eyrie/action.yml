@@ -41,7 +41,7 @@ runs:
                 git clone --depth=1 --branch main \
                   "https://github.com/GrayCodeAI/${repo}.git" "$dest"
               else
-                (cd "$dest" && git fetch --depth=1 "origin" "$ref" && git checkout --quiet "$ref")
+                (cd "$dest" && git fetch --depth=1 "origin" "$ref" 2>/dev/null && git checkout --quiet "$ref" 2>/dev/null) || (cd "$dest" && git fetch --depth=1 origin main 2>/dev/null && git checkout --quiet main 2>/dev/null)
               fi
             fi
           else

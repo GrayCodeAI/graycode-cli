@@ -2,7 +2,7 @@
 # TODO(supply-chain): pin base images by digest (tag@sha256:…) — tags are
 # mutable and an upstream re-push silently changes the build. Applies to the
 # alpine runtime stage below as well.
-FROM golang:1.26.4-alpine AS builder
+FROM golang:1.26.5-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
