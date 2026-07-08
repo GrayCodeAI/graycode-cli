@@ -208,12 +208,12 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 func getAnalysisContent(patterns []string) (string, error) {
 	// Use git ls-files to expand patterns, then read files.
 	args := append([]string{"ls-files", "--"}, patterns...)
-	out, err := exec.CommandContext(context.Background(), "git", args...).Output()  // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output() // #nosec G204 -- fixed command 'git' with args, not user-controlled binary
 	if err != nil {
 		// Fallback: treat patterns as literal file paths.
 		var b strings.Builder
 		for _, p := range patterns {
-			data, err := os.ReadFile(p)  // #nosec G304 -- p is from repo-relative pattern list, not external input
+			data, err := os.ReadFile(p) // #nosec G304 -- p is from repo-relative pattern list, not external input
 			if err != nil {
 				continue
 			}
@@ -229,7 +229,7 @@ func getAnalysisContent(patterns []string) (string, error) {
 		if i >= maxFiles || f == "" {
 			break
 		}
-		data, err := os.ReadFile(f)  // #nosec G304 -- f is from git ls-files output, repo-relative path
+		data, err := os.ReadFile(f) // #nosec G304 -- f is from git ls-files output, repo-relative path
 		if err != nil {
 			continue
 		}
@@ -254,7 +254,7 @@ func autoFixAnalysis(result *reviewcontracts.Result) error {
 		hawkBin = "hawk"
 	}
 
-	cmd := exec.CommandContext(context.Background(), hawkBin, "exec", "--auto", "full", b.String())  // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
+	cmd := exec.CommandContext(context.Background(), hawkBin, "exec", "--auto", "full", b.String()) // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

@@ -96,7 +96,7 @@ func fixReview(store *ReviewStore, r *ReviewRecord) error {
 		hawkBin = "hawk"
 	}
 
-	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...)  // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
+	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...) // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

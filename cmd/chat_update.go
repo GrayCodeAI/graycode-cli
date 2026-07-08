@@ -953,7 +953,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.waiting = true
 			m.autoScroll = true
 			m.viewDirty = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.turnSawThinking = false
 			m.turnHadAssistantOutput = false
@@ -984,7 +984,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, spinnerVerbTickCmd())
 		if strings.TrimSpace(m.partial.String()) == "" {
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
 		}

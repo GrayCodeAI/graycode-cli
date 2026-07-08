@@ -132,7 +132,7 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	m.waiting = true
 	m.autoScroll = true
 	m.viewDirty = true
-	m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+	m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
 	m.turnInputTokens = 0
 	m.turnOutputTokens = 0

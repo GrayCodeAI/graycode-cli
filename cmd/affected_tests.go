@@ -111,7 +111,7 @@ func findTestsForFile(sourceFile string) []string {
 
 // testReferencesPackage checks if a test file imports or references a package name.
 func testReferencesPackage(testPath, pkgName string) bool {
-	data, err := os.ReadFile(testPath)  // #nosec G304 -- testPath comes from internal repo file enumeration
+	data, err := os.ReadFile(testPath) // #nosec G304 -- testPath comes from internal repo file enumeration
 	if err != nil {
 		return false
 	}

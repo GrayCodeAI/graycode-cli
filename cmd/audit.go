@@ -208,7 +208,7 @@ func discoverSessions(days int, projectFilter string) ([]SessionInfo, error) {
 }
 
 func loadSessionEvents(path string) ([]audit.ToolEvent, error) {
-	data, err := os.ReadFile(path)  // #nosec G304 -- path built from internal session enumeration
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from internal session enumeration
 	if err != nil {
 		return nil, err
 	}

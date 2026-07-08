@@ -16,9 +16,11 @@ import (
 )
 
 // slashCmdCache caches the slash commands list to avoid rebuilding.
-var slashCmdCache []string
-var slashCmdCacheBuilt = false
-var slashCmdMutex sync.Mutex
+var (
+	slashCmdCache      []string
+	slashCmdCacheBuilt = false
+	slashCmdMutex      sync.Mutex
+)
 
 // slashCommands returns the list of all slash commands, built once and cached.
 func slashCommands() []string {

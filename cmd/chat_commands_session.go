@@ -333,7 +333,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.session.AddUser(last)
 			m.waiting = true
 			m.autoScroll = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))]  // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.startStream()
 			return m, nil

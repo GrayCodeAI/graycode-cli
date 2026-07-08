@@ -204,7 +204,7 @@ func generateDaemonAPIKey() (string, error) {
 func runDaemonStop(_ *cobra.Command, _ []string) error {
 	pidFile := filepath.Join(storage.DaemonRunDir(), "daemon.json")
 
-	data, err := os.ReadFile(pidFile)  // #nosec G304 -- pidFile built from internal daemon run directory
+	data, err := os.ReadFile(pidFile) // #nosec G304 -- pidFile built from internal daemon run directory
 	if err != nil {
 		return fmt.Errorf("no daemon running (PID file not found)")
 	}
@@ -234,7 +234,7 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 func runDaemonStatus(_ *cobra.Command, _ []string) error {
 	pidFile := filepath.Join(storage.DaemonRunDir(), "daemon.json")
 
-	data, err := os.ReadFile(pidFile)  // #nosec G304 -- pidFile built from internal daemon run directory
+	data, err := os.ReadFile(pidFile) // #nosec G304 -- pidFile built from internal daemon run directory
 	if err != nil {
 		fmt.Println("Status: not running")
 		return nil

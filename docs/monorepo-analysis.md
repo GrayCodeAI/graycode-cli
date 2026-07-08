@@ -79,13 +79,13 @@ go 1.26.4
 use .
 
 replace (
-	github.com/GrayCodeAI/eyrie => ./external/eyrie
-	github.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts
-	github.com/GrayCodeAI/inspect => ./external/inspect
-	github.com/GrayCodeAI/sight => ./external/sight
-	github.com/GrayCodeAI/tok => ./external/tok
-	github.com/GrayCodeAI/trace => ./external/trace
-	github.com/GrayCodeAI/yaad => ./external/yaad
+    github.com/GrayCodeAI/eyrie => ./external/eyrie
+    github.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts
+    github.com/GrayCodeAI/inspect => ./external/inspect
+    github.com/GrayCodeAI/sight => ./external/sight
+    github.com/GrayCodeAI/tok => ./external/tok
+    github.com/GrayCodeAI/trace => ./external/trace
+    github.com/GrayCodeAI/yaad => ./external/yaad
 )
 ```
 
@@ -97,52 +97,52 @@ module github.com/GrayCodeAI/hawk
 go 1.26.4
 
 require (
-	github.com/GrayCodeAI/eyrie v0.1.3
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.3
-	github.com/GrayCodeAI/inspect v0.1.3
-	github.com/GrayCodeAI/sight v0.1.2
-	github.com/GrayCodeAI/tok v0.1.2
-	github.com/GrayCodeAI/yaad v0.1.3
-	github.com/bwmarrin/discordgo v0.28.1
-	github.com/charmbracelet/bubbles v1.0.0
-	github.com/charmbracelet/bubbletea v1.3.10
-	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/charmbracelet/x/ansi v0.11.7
-	github.com/fsnotify/fsnotify v1.10.1
-	github.com/google/uuid v1.6.0
-	github.com/mattn/go-runewidth v0.0.24
-	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
-	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
-	github.com/tetratelabs/wazero v1.12.0
-	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
-	go.opentelemetry.io/otel/sdk v1.44.0
-	go.opentelemetry.io/otel/sdk/metric v1.44.0
-	go.opentelemetry.io/otel/trace v1.44.0
-	golang.org/x/sys v0.46.0
-	golang.org/x/term v0.44.0
-	golang.org/x/text v0.38.0
-	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.51.0
+    github.com/GrayCodeAI/eyrie v0.1.3
+    github.com/GrayCodeAI/hawk-core-contracts v0.1.3
+    github.com/GrayCodeAI/inspect v0.1.3
+    github.com/GrayCodeAI/sight v0.1.2
+    github.com/GrayCodeAI/tok v0.1.2
+    github.com/GrayCodeAI/yaad v0.1.3
+    github.com/bwmarrin/discordgo v0.28.1
+    github.com/charmbracelet/bubbles v1.0.0
+    github.com/charmbracelet/bubbletea v1.3.10
+    github.com/charmbracelet/lipgloss v1.1.0
+    github.com/charmbracelet/x/ansi v0.11.7
+    github.com/fsnotify/fsnotify v1.10.1
+    github.com/google/uuid v1.6.0
+    github.com/mattn/go-runewidth v0.0.24
+    github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
+    github.com/spf13/cobra v1.10.2
+    github.com/spf13/pflag v1.0.10
+    github.com/tetratelabs/wazero v1.12.0
+    go.opentelemetry.io/otel v1.44.0
+    go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
+    go.opentelemetry.io/otel/sdk v1.44.0
+    go.opentelemetry.io/otel/sdk/metric v1.44.0
+    go.opentelemetry.io/otel/trace v1.44.0
+    golang.org/x/sys v0.46.0
+    golang.org/x/term v0.44.0
+    golang.org/x/text v0.38.0
+    gopkg.in/yaml.v3 v3.0.1
+    modernc.org/sqlite v1.51.0
 )
 
 require (
-	cel.dev/expr v0.25.2 // indirect
-	charm.land/bubbles/v2 v2.1.0 // indirect
-	charm.land/bubbletea/v2 v2.0.7 // indirect
-	charm.land/glamour/v2 v2.0.0 // indirect
-	charm.land/huh/v2 v2.0.3 // indirect
-	charm.land/lipgloss/v2 v2.0.3 // indirect
-	dario.cat/mergo v1.0.2 // indirect
-	github.com/BobuSumisu/aho-corasick v1.0.3 // indirect
-	github.com/Masterminds/semver/v3 v3.5.0 // indirect
-	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
-	github.com/STARRY-S/zip v0.2.3 // indirect
-	github.com/alecthomas/chroma/v2 v2.26.1 // indirect
-	github.com/andybalholm/brotli v1.2.1 // indirect
-	// ... (10+ more indirect dependencies)
+    cel.dev/expr v0.25.2 // indirect
+    charm.land/bubbles/v2 v2.1.0 // indirect
+    charm.land/bubbletea/v2 v2.0.7 // indirect
+    charm.land/glamour/v2 v2.0.0 // indirect
+    charm.land/huh/v2 v2.0.3 // indirect
+    charm.land/lipgloss/v2 v2.0.3 // indirect
+    dario.cat/mergo v1.0.2 // indirect
+    github.com/BobuSumisu/aho-corasick v1.0.3 // indirect
+    github.com/Masterminds/semver/v3 v3.5.0 // indirect
+    github.com/Microsoft/go-winio v0.6.2 // indirect
+    github.com/ProtonMail/go-crypto v1.4.1 // indirect
+    github.com/STARRY-S/zip v0.2.3 // indirect
+    github.com/alecthomas/chroma/v2 v2.26.1 // indirect
+    github.com/andybalholm/brotli v1.2.1 // indirect
+    // ... (10+ more indirect dependencies)
 )
 ```
 
