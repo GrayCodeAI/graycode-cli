@@ -95,7 +95,7 @@ func (si *SemanticSearchIndex) IndexDirectory(dir string) error {
 	}
 
 	for _, f := range files {
-		data, readErr := os.ReadFile(f)
+		data, readErr := os.ReadFile(f) // #nosec G304 -- f is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if readErr != nil {
 			continue
 		}

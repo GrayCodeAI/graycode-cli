@@ -69,17 +69,17 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	name := c.containerName()
 
 	// Remove any stale container with the same name from a previous session (best-effort)
-	_, _ = exec.CommandContext(ctx, "docker", "rm", "-f", name).CombinedOutput()
+	_, _ = exec.CommandContext(ctx, "docker", "rm", "-f", name).CombinedOutput() // #nosec G204 -- "docker" binary fixed; name is derived from a hash of the project dir
 
 	// Create attachments and cache dirs outside the project workspace.
 	attachDir := filepath.Join(storage.ProjectStateDir(c.projectDir), "attachments")
 	cacheDir := filepath.Join(storage.ProjectCacheDir(c.projectDir), "container")
-	_ = os.MkdirAll(attachDir, 0o755)
-	_ = os.MkdirAll(cacheDir, 0o755)
+	_ = os.MkdirAll(attachDir, 0o750)
+	_ = os.MkdirAll(cacheDir, 0o750)
 
 	args := c.dockerRunArgs(name, attachDir, cacheDir)
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := exec.CommandContext(ctx, "docker", args...) // #nosec G204 -- "docker" binary fixed; args built from internal config (project dir, image, runtime env)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("container start failed: %s", strings.TrimSpace(string(out)))
@@ -125,7 +125,7 @@ func (c *ContainerSandbox) Exec(ctx context.Context, command string, timeout tim
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "docker", "exec", id, "sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "docker", "exec", id, "sh", "-c", command) // #nosec G204 -- "docker" binary fixed; id is our own container ID and command is the agent's sandboxed exec request
 	out, err := cmd.CombinedOutput()
 	if ctx.Err() == context.DeadlineExceeded {
 		return string(out), fmt.Errorf("command timed out after %s", timeout)
@@ -143,7 +143,7 @@ func (c *ContainerSandbox) Stop() error {
 	if !c.running {
 		return nil
 	}
-	cmd := exec.CommandContext(context.Background(), "docker", "stop", c.containerID)
+	cmd := exec.CommandContext(context.Background(), "docker", "stop", c.containerID) // #nosec G204 -- "docker" binary fixed; containerID is our own tracked container ID
 	_ = cmd.Run()
 	c.running = false
 	return nil
@@ -189,14 +189,14 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 	tag := fmt.Sprintf("hawk-sandbox:%x", hash[:6])
 
 	dfPath := filepath.Join(storage.ProjectStateDir(c.projectDir), "Dockerfile")
-	if err := os.MkdirAll(filepath.Dir(dfPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dfPath), 0o750); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(dfPath, []byte(dockerfile), 0o644); err != nil {
+	if err := os.WriteFile(dfPath, []byte(dockerfile), 0o600); err != nil {
 		return "", err
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dfPath, c.projectDir)
+	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dfPath, c.projectDir) // #nosec G204 -- "docker" binary fixed; tag/dfPath/projectDir derived from internal state
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("docker build failed: %s\n%s", err, out)
@@ -229,7 +229,7 @@ func defaultHawkImage() string {
 func resolveImage(projectDir string) string {
 	dfPath := filepath.Join(storage.ProjectStateDir(projectDir), "Dockerfile")
 	if _, err := os.Stat(dfPath); err == nil {
-		content, err := os.ReadFile(dfPath)
+		content, err := os.ReadFile(dfPath) // #nosec G304 -- dfPath is derived from the project's own state dir, not external input
 		if err == nil && len(content) > 0 {
 			hash := sha256.Sum256(content)
 			return fmt.Sprintf("hawk-sandbox:%x", hash[:6])

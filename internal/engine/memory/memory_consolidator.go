@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/mathutil"
 )
 
 // RawMemory represents an unprocessed memory ingested from a session.
@@ -313,7 +315,7 @@ func (mc *MemoryConsolidator) Save() error {
 		return fmt.Errorf("no directory configured for memory consolidator")
 	}
 
-	if err := os.MkdirAll(mc.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(mc.Dir, 0o750); err != nil {
 		return fmt.Errorf("creating memory dir: %w", err)
 	}
 
@@ -331,7 +333,7 @@ func (mc *MemoryConsolidator) Save() error {
 	}
 
 	path := filepath.Join(mc.Dir, "consolidated_memory.json")
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // Load restores the consolidator state from disk.
@@ -344,7 +346,7 @@ func (mc *MemoryConsolidator) Load() error {
 	}
 
 	path := filepath.Join(mc.Dir, "consolidated_memory.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No saved state yet
@@ -550,13 +552,7 @@ func memorySimilar(a, b string) bool {
 
 // clampConfidenceVal clamps a confidence value between 0.0 and 1.0.
 func clampConfidenceVal(c float64) float64 {
-	if c < 0 {
-		return 0
-	}
-	if c > 1.0 {
-		return 1.0
-	}
-	return c
+	return mathutil.Clamp(c, 0, 1.0)
 }
 
 // memSliceContains checks if a string slice contains a specific string.

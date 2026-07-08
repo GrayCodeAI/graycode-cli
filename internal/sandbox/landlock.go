@@ -18,6 +18,7 @@ package sandbox
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"runtime"
 	"syscall"
@@ -154,7 +155,7 @@ func LandlockAvailable() bool {
 	}
 	fd, _, errno := syscall.Syscall(
 		sysLandlockCreateRuleset,
-		uintptr(unsafe.Pointer(&attr)),
+		uintptr(unsafe.Pointer(&attr)), // #nosec G103 -- landlock_create_ruleset(2) requires a raw pointer to the attr struct per the kernel ABI; no cgo-free alternative exists
 		unsafe.Sizeof(attr),
 		0, // flags
 	)
@@ -185,7 +186,7 @@ func (l *LandlockSandbox) Apply() error {
 	}
 	rulesetFD, _, errno := syscall.Syscall(
 		sysLandlockCreateRuleset,
-		uintptr(unsafe.Pointer(&attr)),
+		uintptr(unsafe.Pointer(&attr)), // #nosec G103 -- landlock_create_ruleset(2) requires a raw pointer to the attr struct per the kernel ABI; no cgo-free alternative exists
 		unsafe.Sizeof(attr),
 		0,
 	)
@@ -265,15 +266,21 @@ func addPathRule(rulesetFD int, path string, access uint64) error {
 	}
 	defer syscall.Close(pathFD) //nolint:errcheck
 
+	// File descriptors are bounded by RLIMIT_NOFILE, always well within
+	// int32 range; this can never overflow.
+	if pathFD < 0 || pathFD > math.MaxInt32 {
+		return fmt.Errorf("landlock: file descriptor %d out of int32 range", pathFD)
+	}
+
 	rule := landlockPathBeneathAttr{
 		allowedAccess: access,
-		parentFD:      int32(pathFD),
+		parentFD:      int32(pathFD), // #nosec G115 -- bounds-checked above, cannot overflow
 	}
 	_, _, errno := syscall.Syscall6(
 		sysLandlockAddRule,
 		uintptr(rulesetFD),
 		uintptr(landlockRulePathBeneath),
-		uintptr(unsafe.Pointer(&rule)),
+		uintptr(unsafe.Pointer(&rule)), // #nosec G103 -- landlock_add_rule(2) requires a raw pointer to the rule struct per the kernel ABI; no cgo-free alternative exists
 		0, 0, 0,
 	)
 	if errno != 0 {
@@ -294,7 +301,7 @@ func bestHandledFS() uint64 {
 		attr := landlockRulesetAttr{handledAccessFS: m}
 		fd, _, errno := syscall.Syscall(
 			sysLandlockCreateRuleset,
-			uintptr(unsafe.Pointer(&attr)),
+			uintptr(unsafe.Pointer(&attr)), // #nosec G103 -- landlock_create_ruleset(2) requires a raw pointer to the attr struct per the kernel ABI; no cgo-free alternative exists
 			unsafe.Sizeof(attr),
 			0,
 		)

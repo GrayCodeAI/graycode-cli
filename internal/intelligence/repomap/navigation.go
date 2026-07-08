@@ -115,7 +115,7 @@ func (idx *NavIndex) BuildIndex(projectDir string) error {
 		}
 
 		// Read file lines for context extraction
-		content, readErr := os.ReadFile(path)
+		content, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if readErr != nil {
 			return nil
 		}

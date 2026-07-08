@@ -40,7 +40,7 @@ func NewGitHookInstaller(projectDir string) *GitHookInstaller {
 	// Probe existing hawk-managed hooks.
 	for _, name := range []string{"pre-commit", "post-commit", "prepare-commit-msg", "pre-push"} {
 		hookPath := filepath.Join(hooksDir, name)
-		data, err := os.ReadFile(hookPath)
+		data, err := os.ReadFile(hookPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err == nil && strings.Contains(string(data), "# hawk-managed") {
 			installer.Installed[name] = true
 		}
@@ -59,14 +59,14 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 		return nil
 	}
 
-	if err := os.MkdirAll(g.HooksDir, 0o755); err != nil {
+	if err := os.MkdirAll(g.HooksDir, 0o750); err != nil {
 		return fmt.Errorf("create hooks dir: %w", err)
 	}
 
 	hookPath := filepath.Join(g.HooksDir, hook.Name)
 
 	// Preserve existing hook if present and not hawk-managed.
-	existing, err := os.ReadFile(hookPath)
+	existing, err := os.ReadFile(hookPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err == nil && !strings.Contains(string(existing), "# hawk-managed") {
 		// Back up and chain existing hook.
 		if backupErr := g.backupExisting(hook.Name); backupErr != nil {
@@ -77,6 +77,7 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 		hook.Script = script
 	}
 
+	// #nosec G306 -- git hook must be executable by git
 	if err := os.WriteFile(hookPath, []byte(hook.Script), 0o755); err != nil {
 		return fmt.Errorf("write hook %s: %w", hook.Name, err)
 	}
@@ -257,7 +258,7 @@ func (g *GitHookInstaller) backupExisting(hookName string) error {
 	hookPath := filepath.Join(g.HooksDir, hookName)
 	backupPath := hookPath + ".bak"
 
-	data, err := os.ReadFile(hookPath)
+	data, err := os.ReadFile(hookPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // nothing to back up
@@ -265,6 +266,7 @@ func (g *GitHookInstaller) backupExisting(hookName string) error {
 		return fmt.Errorf("read hook %s: %w", hookName, err)
 	}
 
+	// #nosec G306 -- backup preserves executable hook script
 	if err := os.WriteFile(backupPath, data, 0o755); err != nil {
 		return fmt.Errorf("write backup %s: %w", hookName, err)
 	}

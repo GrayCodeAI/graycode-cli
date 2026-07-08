@@ -96,7 +96,7 @@ func summaryIsSupportedFile(path string) bool {
 }
 
 func summaryCountFileLines(path string) int {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return 0
 	}
@@ -111,7 +111,7 @@ func summaryCountFileLines(path string) int {
 }
 
 func summaryExtractSymbols(path string) []string {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}
@@ -165,7 +165,7 @@ func summaryIsPublicSymbol(name string, lang string) bool {
 }
 
 func summaryExtractImports(path string) []string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}
@@ -218,7 +218,7 @@ var (
 )
 
 func summaryHasGoMain(path string) bool {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return false
 	}
@@ -242,7 +242,7 @@ func summaryHasGoMain(path string) bool {
 var summaryPyMainRe = regexp.MustCompile(`^if\s+__name__\s*==\s*['"]__main__['"]`)
 
 func summaryHasPythonMain(path string) bool {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return false
 	}
@@ -258,7 +258,7 @@ func summaryHasPythonMain(path string) bool {
 }
 
 func summaryFindJSEntryPoints(packageJSONPath string, projectDir string) []string {
-	data, err := os.ReadFile(packageJSONPath)
+	data, err := os.ReadFile(packageJSONPath) // #nosec G304 -- packageJSONPath is a repo file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil
 	}

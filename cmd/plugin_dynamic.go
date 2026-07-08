@@ -164,7 +164,7 @@ var pluginCreateCmd = &cobra.Command{
 			return fmt.Errorf("directory %q already exists", dir)
 		}
 
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("create directory: %w", err)
 		}
 
@@ -236,6 +236,7 @@ func main() {
 }
 `, name)
 
+		// #nosec G306 -- scaffolded project source file, intended to be normally readable/editable like any repo file
 		if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(mainGo), 0o644); err != nil {
 			return fmt.Errorf("write main.go: %w", err)
 		}
@@ -270,6 +271,7 @@ echo '{"message": "world"}' | go run .
 See `+"`plugin.json`"+` for the full manifest configuration.
 `, name, name)
 
+		// #nosec G306 -- scaffolded project doc file, intended to be normally readable/editable like any repo file
 		if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644); err != nil {
 			return fmt.Errorf("write README.md: %w", err)
 		}
@@ -337,7 +339,7 @@ var pluginLogsCmd = &cobra.Command{
 		for _, ev := range collected {
 			errStr := ""
 			if ev.Error != "" {
-				errStr = truncatePluginStr(ev.Error, 50)
+				errStr = truncateWithEllipsis(ev.Error, 50)
 			}
 			_, _ = fmt.Fprintf(
 				w, "%s\t%s\t%s\t%s\n",
@@ -350,13 +352,6 @@ var pluginLogsCmd = &cobra.Command{
 		_ = w.Flush()
 		return nil
 	},
-}
-
-func truncatePluginStr(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }
 
 func init() {

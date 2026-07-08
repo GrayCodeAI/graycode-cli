@@ -52,7 +52,7 @@ func LoadProviderConfigs(dir string) ([]ProviderConfig, error) {
 		if ext != ".yaml" && ext != ".yml" {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- path is built from a trusted provider config directory listing (os.ReadDir entries), not external input
 		if err != nil {
 			continue
 		}

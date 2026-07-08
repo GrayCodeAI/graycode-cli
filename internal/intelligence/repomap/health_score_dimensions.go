@@ -275,7 +275,7 @@ func (hs *HealthScorer) ScoreDependencies(dir string) (float64, []HealthIssue) {
 
 	// Check for go.mod
 	goModPath := filepath.Join(dir, "go.mod")
-	data, err := os.ReadFile(goModPath)
+	data, err := os.ReadFile(goModPath) // #nosec G304 -- goModPath is the go.mod of the repo directory being analyzed by this dev CLI
 	if err != nil {
 		// No go.mod — might be a simple project or not Go
 		return 80.0, issues
@@ -372,7 +372,7 @@ func (hs *HealthScorer) ScoreCodeQuality(dir string) (float64, []HealthIssue) {
 		totalFiles++
 		hasIssue := false
 
-		data, readErr := os.ReadFile(path)
+		data, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if readErr != nil {
 			return nil
 		}
@@ -565,7 +565,7 @@ func (hs *HealthScorer) ScoreSecurity(dir string) (float64, []HealthIssue) {
 			return nil
 		}
 
-		data, readErr := os.ReadFile(path)
+		data, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if readErr != nil {
 			return nil
 		}

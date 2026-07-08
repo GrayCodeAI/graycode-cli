@@ -305,10 +305,13 @@ hawk is built in Go with a modular, layered architecture:
 
 ```
 hawk/
+├── bin/                    # Built binaries (hawk, hawk_bin)
 ├── cmd/                    # CLI entry point (Cobra + Bubble Tea TUI)
 ├── internal/
 │   ├── engine/             # Agent loop, compaction, self-improvement
+│   │   └── lifecycle/      # Self-improvement loop, limits tracking
 │   ├── tool/               # 40+ built-in tools with safety layer
+│   │   └── codegen_builtins.go  # Code generation templates
 │   ├── config/             # Settings, budget tracking, agent personas
 │   ├── session/            # Persistence (JSONL, WAL, checkpoints)
 │   ├── api/                # HTTP API server
@@ -327,6 +330,16 @@ hawk/
 │   └── system/             # Bus, cron, retention, shutdown
 ├── docs/                   # Architecture, security, integration docs
 └── testdata/               # Test fixtures
+
+External ecosystem modules (git submodules):
+├── external/
+│   ├── eyrie/              # LLM provider runtime
+│   ├── hawk-core-contracts/ # Shared cross-repo types
+│   ├── inspect/            # Security audit library
+│   ├── sight/              # Diff-based code review
+│   ├── tok/                # Tokenizer, compression, secrets scanning
+│   ├── trace/              # Session capture and replay
+│   └── yaad/               # Graph-based persistent memory
 ```
 
 ### Ecosystem

@@ -179,6 +179,14 @@ func ApplySeccomp() error {
 	prog := DefaultSeccompProfile()
 	nInsns := len(prog) / 8
 
+	// The kernel rejects BPF programs longer than BPF_MAXINSNS (4096
+	// instructions); bail out before the length narrows into the
+	// uint16 sock_fprog.len field below instead of silently truncating.
+	const bpfMaxInsns = 4096
+	if nInsns > bpfMaxInsns {
+		return fmt.Errorf("seccomp: filter has %d instructions, exceeds kernel limit of %d", nInsns, bpfMaxInsns)
+	}
+
 	// Ensure NO_NEW_PRIVS is set (idempotent if already set by Landlock).
 	if _, _, errno := syscall.Syscall6(
 		syscall.SYS_PRCTL,
@@ -190,8 +198,8 @@ func ApplySeccomp() error {
 
 	// Build sock_fprog.
 	fprog := sockFprog{
-		len:    uint16(nInsns),
-		filter: unsafe.Pointer(&prog[0]),
+		len:    uint16(nInsns),           // #nosec G115 -- bounds-checked against bpfMaxInsns above, cannot overflow uint16
+		filter: unsafe.Pointer(&prog[0]), // #nosec G103 -- sock_fprog.filter is a raw pointer per the kernel BPF ABI; no cgo-free alternative exists
 	}
 
 	// seccomp(SECCOMP_SET_MODE_FILTER, 0, &fprog)
@@ -199,14 +207,14 @@ func ApplySeccomp() error {
 		uintptr(sysSeccomp),
 		uintptr(seccompModeFilter),
 		0,
-		uintptr(unsafe.Pointer(&fprog)),
+		uintptr(unsafe.Pointer(&fprog)), // #nosec G103 -- seccomp(2) requires a raw pointer to the sock_fprog struct per the kernel ABI; no cgo-free alternative exists
 	); errno != 0 {
 		// Fallback: try prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &fprog)
 		if _, _, errno2 := syscall.Syscall(
 			syscall.SYS_PRCTL,
 			uintptr(prSetSeccomp),
 			uintptr(seccompModeFilter),
-			uintptr(unsafe.Pointer(&fprog)),
+			uintptr(unsafe.Pointer(&fprog)), // #nosec G103 -- prctl(2) PR_SET_SECCOMP requires a raw pointer to the sock_fprog struct per the kernel ABI; no cgo-free alternative exists
 		); errno2 != 0 {
 			return fmt.Errorf("seccomp: %w (prctl fallback: %w)", errno, errno2)
 		}

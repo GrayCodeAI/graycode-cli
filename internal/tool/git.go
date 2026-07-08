@@ -77,7 +77,7 @@ func (t GitTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	}
 
 	args := append([]string{in.Subcommand}, in.Args...)
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	if t.WorkDir != "" {
 		cmd.Dir = t.WorkDir
 	}

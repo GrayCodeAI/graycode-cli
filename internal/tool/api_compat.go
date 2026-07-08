@@ -606,7 +606,7 @@ func (c *CompatChecker) SaveSnapshot(snapshot *APISnapshot, path string) error {
 	if err != nil {
 		return fmt.Errorf("marshaling snapshot: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("writing snapshot to %s: %w", path, err)
 	}
 	return nil
@@ -614,7 +614,7 @@ func (c *CompatChecker) SaveSnapshot(snapshot *APISnapshot, path string) error {
 
 // LoadSnapshot deserializes an APISnapshot from a JSON file.
 func (c *CompatChecker) LoadSnapshot(path string) (*APISnapshot, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("reading snapshot from %s: %w", path, err)
 	}

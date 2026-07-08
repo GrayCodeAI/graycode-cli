@@ -83,7 +83,7 @@ func (um *UndoManager) BeforeModify(path string) error {
 		capture.wasNew = true
 		capture.mode = 0o644
 	} else {
-		content, readErr := os.ReadFile(absPath)
+		content, readErr := os.ReadFile(absPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			return fmt.Errorf("undo: read %q: %w", absPath, readErr)
 		}
@@ -132,7 +132,7 @@ func (um *UndoManager) RecordChange(description, toolName string, toolArgs map[s
 		}
 
 		// Read current (modified) content.
-		modContent, err := os.ReadFile(absPath)
+		modContent, err := os.ReadFile(absPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err == nil {
 			snapshot.ModifiedContent = modContent
 		}
@@ -381,7 +381,7 @@ func restoreEntry(entry *UndoEntry) error {
 
 		// Ensure parent directory exists.
 		dir := filepath.Dir(f.Path)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("undo: mkdir %q: %w", dir, err)
 		}
 

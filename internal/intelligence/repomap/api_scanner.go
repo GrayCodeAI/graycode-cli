@@ -89,7 +89,7 @@ func (s *APIScanner) ScanProject(dir string) (*APIMap, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if err != nil {
 			return nil
 		}
@@ -452,6 +452,7 @@ func DetectFramework(dir string) string {
 
 	// First check go.mod if available
 	goModPath := filepath.Join(dir, "go.mod")
+	// #nosec G304 -- goModPath is the go.mod of the project directory being analyzed by this dev CLI
 	if data, err := os.ReadFile(goModPath); err == nil {
 		modContent := string(data)
 		for importPath, name := range frameworks {
@@ -470,7 +471,7 @@ func DetectFramework(dir string) string {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
 		if err != nil {
 			return nil
 		}

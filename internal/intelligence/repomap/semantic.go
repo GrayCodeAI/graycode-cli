@@ -72,7 +72,7 @@ func BuildSemanticIndex(dir string, ignore []string, maxFiles int) (*SemanticInd
 	const chunkSize = 40
 
 	for _, f := range files {
-		data, err := os.ReadFile(f)
+		data, err := os.ReadFile(f) // #nosec G304 -- f is a repo file discovered while walking the repo being analyzed by this dev CLI
 		if err != nil {
 			continue
 		}
@@ -157,7 +157,7 @@ func (idx *SemanticIndex) Size() int {
 
 // Save encodes the index to a file using gob.
 func (idx *SemanticIndex) Save(path string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- path is caller-supplied index location, not external untrusted input
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (idx *SemanticIndex) Save(path string) error {
 
 // LoadSemanticIndex decodes a previously saved index from a gob file.
 func LoadSemanticIndex(path string) (*SemanticIndex, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is the tool's own semantic index cache file
 	if err != nil {
 		return nil, err
 	}

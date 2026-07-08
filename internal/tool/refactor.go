@@ -39,7 +39,7 @@ func (r *Refactorer) ExtractFunction(file string, startLine, endLine int, newNam
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -89,7 +89,7 @@ func (r *Refactorer) ExtractFunction(file string, startLine, endLine int, newNam
 	// Append the new function at end.
 	newContent := strings.Join(newLines, "\n") + newFunc
 
-	if err := os.WriteFile(file, []byte(newContent), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(newContent), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -148,7 +148,7 @@ func (r *Refactorer) RenameSymbol(file, oldName, newName string) (*RefactoringRe
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -163,7 +163,7 @@ func (r *Refactorer) RenameSymbol(file, oldName, newName string) (*RefactoringRe
 
 	result := pattern.ReplaceAllString(content, newName)
 
-	if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -183,7 +183,7 @@ func (r *Refactorer) InlineVariable(file string, line int) (*RefactoringResult, 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -227,7 +227,7 @@ func (r *Refactorer) InlineVariable(file string, line int) (*RefactoringResult, 
 	}
 
 	result := strings.Join(newLines, "\n")
-	if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -247,7 +247,7 @@ func (r *Refactorer) ExtractVariable(file string, line int, expr, varName string
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -287,7 +287,7 @@ func (r *Refactorer) ExtractVariable(file string, line int, expr, varName string
 	newLines = append(newLines, lines[line:]...)
 
 	result := strings.Join(newLines, "\n")
-	if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -307,7 +307,7 @@ func (r *Refactorer) AddErrorCheck(file string, line int) (*RefactoringResult, e
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -357,7 +357,7 @@ func (r *Refactorer) AddErrorCheck(file string, line int) (*RefactoringResult, e
 	newLines = append(newLines, lines[line:]...)
 
 	result := strings.Join(newLines, "\n")
-	if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -377,7 +377,7 @@ func (r *Refactorer) WrapWithContext(file string, line int, context string) (*Re
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -408,7 +408,7 @@ func (r *Refactorer) WrapWithContext(file string, line int, context string) (*Re
 		lines[line-1] = newLine
 
 		result := strings.Join(lines, "\n")
-		if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+		if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 			return nil, fmt.Errorf("write file: %w", err)
 		}
 
@@ -429,7 +429,7 @@ func (r *Refactorer) WrapWithContext(file string, line int, context string) (*Re
 	lines[line-1] = newLine
 
 	result := strings.Join(lines, "\n")
-	if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -448,7 +448,7 @@ func (r *Refactorer) ConvertToTableTest(file, testFunc string) (*RefactoringResu
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -495,7 +495,7 @@ func (r *Refactorer) ConvertToTableTest(file, testFunc string) (*RefactoringResu
 	after := b.String()
 	newContent := content[:loc[0]] + after + content[loc[1]:]
 
-	if err := os.WriteFile(file, []byte(newContent), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(newContent), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -514,7 +514,7 @@ func (r *Refactorer) SortImports(file string) (*RefactoringResult, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -537,7 +537,7 @@ func (r *Refactorer) SortImports(file string) (*RefactoringResult, error) {
 		}, nil
 	}
 
-	if err := os.WriteFile(file, []byte(result), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(result), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 
@@ -556,7 +556,7 @@ func (r *Refactorer) RemoveUnusedParams(file, funcName string) (*RefactoringResu
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
@@ -630,7 +630,7 @@ func (r *Refactorer) RemoveUnusedParams(file, funcName string) (*RefactoringResu
 	// Replace the parameter list in the content.
 	newContent := content[:loc[2]] + newParamStr + content[loc[3]:]
 
-	if err := os.WriteFile(file, []byte(newContent), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(newContent), 0o600); err != nil {
 		return nil, fmt.Errorf("write file: %w", err)
 	}
 

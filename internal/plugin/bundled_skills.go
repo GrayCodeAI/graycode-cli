@@ -144,7 +144,7 @@ func BundledSkillsDir() string {
 // Returns the number of skills extracted.
 func ExtractBundledSkills() (int, error) {
 	dir := BundledSkillsDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return 0, fmt.Errorf("create bundled skills directory: %w", err)
 	}
 
@@ -160,17 +160,17 @@ func ExtractBundledSkills() (int, error) {
 			continue
 		}
 
-		if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		if err := os.MkdirAll(skillDir, 0o750); err != nil {
 			continue
 		}
 
-		if err := os.WriteFile(skillFile, []byte(skill.Content), 0o644); err != nil {
+		if err := os.WriteFile(skillFile, []byte(skill.Content), 0o600); err != nil {
 			continue
 		}
 
 		// Write additional files
 		for name, content := range skill.Files {
-			if err := os.WriteFile(filepath.Join(skillDir, name), []byte(content), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(skillDir, name), []byte(content), 0o600); err != nil {
 				continue
 			}
 		}
@@ -180,7 +180,7 @@ func ExtractBundledSkills() (int, error) {
 
 	// Also extract reference docs
 	refDir := filepath.Join(dir, "references")
-	if err := os.MkdirAll(refDir, 0o755); err == nil {
+	if err := os.MkdirAll(refDir, 0o750); err == nil {
 		err := fs.WalkDir(bundledSkillsFS, "bundled_skills/references", func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return nil
@@ -194,7 +194,7 @@ func ExtractBundledSkills() (int, error) {
 			if err != nil {
 				return nil
 			}
-			_ = os.WriteFile(dest, data, 0o644)
+			_ = os.WriteFile(dest, data, 0o600)
 			return nil
 		})
 		_ = err

@@ -33,15 +33,25 @@ type Autocompleter struct {
 }
 
 // NewAutocompleter creates an Autocompleter initialized for the given project directory.
-func NewAutocompleter(projectDir string) *Autocompleter {
-	ac := &Autocompleter{
-		ProjectDir:    projectDir,
-		SlashCommands: slashCommands(),
-		usageCount:    make(map[string]int),
-		fileMTimes:    make(map[string]time.Time),
+// globalAutocompleter is a singleton autocompleter instance
+var globalAutocompleter *Autocompleter
+
+// globalProjectDir caches the project directory
+var globalProjectDir = ""
+
+// GetAutocompleter returns the singleton autocompleter
+func GetAutocompleter(projectDir string) *Autocompleter {
+	if globalAutocompleter == nil || globalProjectDir != projectDir {
+		globalAutocompleter = &Autocompleter{
+			ProjectDir:    projectDir,
+			SlashCommands: slashCommands(),
+			usageCount:    make(map[string]int),
+			fileMTimes:    make(map[string]time.Time),
+		}
+		globalProjectDir = projectDir
+		globalAutocompleter.RefreshFiles()
 	}
-	ac.RefreshFiles()
-	return ac
+	return globalAutocompleter
 }
 
 // Complete returns context-aware suggestions for the given input and cursor position.

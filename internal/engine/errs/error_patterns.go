@@ -107,7 +107,7 @@ func (db *ErrorPatternDB) load() {
 
 func (db *ErrorPatternDB) save() {
 	dir := filepath.Dir(db.path)
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o750)
 	data, _ := json.Marshal(db.patterns)
-	_ = os.WriteFile(db.path, data, 0o644)
+	_ = os.WriteFile(db.path, data, 0o600)
 }

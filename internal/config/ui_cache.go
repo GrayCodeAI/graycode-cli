@@ -14,7 +14,7 @@ import (
 var uiCacheMu sync.RWMutex
 
 var (
-	cachedCompiled *catalog.CompiledCatalogV1
+	cachedCompiled *catalog.CompiledCatalog
 	credConfigured map[string]bool
 	credHasAny     bool
 	credValid      bool
@@ -142,13 +142,13 @@ func hasConfiguredDeploymentCached(ctx context.Context) bool {
 	return credHasAny
 }
 
-func storeCompiledCatalog(compiled *catalog.CompiledCatalogV1) {
+func storeCompiledCatalog(compiled *catalog.CompiledCatalog) {
 	uiCacheMu.Lock()
 	cachedCompiled = compiled
 	uiCacheMu.Unlock()
 }
 
-func cachedCompiledCatalog() (*catalog.CompiledCatalogV1, bool) {
+func cachedCompiledCatalog() (*catalog.CompiledCatalog, bool) {
 	uiCacheMu.RLock()
 	defer uiCacheMu.RUnlock()
 	if cachedCompiled == nil {

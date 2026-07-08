@@ -53,7 +53,7 @@ func (t *Tracker) Init() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if err := os.MkdirAll(t.shadowDir, 0o755); err != nil {
+	if err := os.MkdirAll(t.shadowDir, 0o750); err != nil {
 		return err
 	}
 

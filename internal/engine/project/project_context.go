@@ -33,7 +33,7 @@ func (pc *ProjectContext) Load() string {
 	var sections []string
 	for _, relPath := range ProjectContextFiles {
 		fullPath := filepath.Join(pc.ProjectDir, relPath)
-		data, err := os.ReadFile(fullPath)
+		data, err := os.ReadFile(fullPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}

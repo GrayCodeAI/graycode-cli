@@ -507,7 +507,7 @@ func appendUnique(slice []string, s string) []string {
 // detectModulePath reads go.mod to find the module path.
 func detectModulePath(projectDir string) string {
 	modFile := filepath.Join(projectDir, "go.mod")
-	f, err := os.Open(modFile)
+	f, err := os.Open(modFile) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}

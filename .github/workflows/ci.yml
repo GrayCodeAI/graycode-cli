@@ -232,11 +232,13 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck ./...
-      - name: gosec (report only)
-        continue-on-error: true
+      - name: gosec
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
-          gosec -exclude=G104,G703,G704,G101,G107,G112,G114,G115,G201,G202,G203,G204,G301,G302,G304,G305,G306,G307,G401,G402,G403,G404,G501,G502,G503,G504,G505,G601,G602 -confidence=medium -severity=high ./...
+          # Full-strength scan: no rule exclusions. The repo reached a
+          # 0-findings baseline (2026-07 full-repo audit); keep it that way.
+          # Suppressions must be inline `#nosec <rule> -- <justification>`.
+          gosec -quiet ./...
 
   # -------------------------------------------------------------------------
   # 7. Secret scan — detect leaked API keys, tokens, credentials.

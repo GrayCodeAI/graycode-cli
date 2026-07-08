@@ -36,10 +36,10 @@ func GoTasks() *BenchmarkSuite {
 func helperWriteFile(workDir, relPath, content string) error {
 	fullPath := filepath.Join(workDir, relPath)
 	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
-	return os.WriteFile(fullPath, []byte(content), 0o644)
+	return os.WriteFile(fullPath, []byte(content), 0o600)
 }
 
 // helperInitModule initializes a Go module in the work directory.

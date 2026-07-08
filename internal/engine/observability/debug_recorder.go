@@ -396,7 +396,7 @@ func (dr *DebugRecorder) Save() error {
 		return fmt.Errorf("debug recorder: no directory configured")
 	}
 
-	if err := os.MkdirAll(dr.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(dr.Dir, 0o750); err != nil {
 		return fmt.Errorf("debug recorder: create dir: %w", err)
 	}
 
@@ -406,7 +406,7 @@ func (dr *DebugRecorder) Save() error {
 	}
 
 	path := filepath.Join(dr.Dir, "debug_sessions.json")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("debug recorder: write: %w", err)
 	}
 
@@ -423,7 +423,7 @@ func (dr *DebugRecorder) Load() error {
 	}
 
 	path := filepath.Join(dr.Dir, "debug_sessions.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No sessions file yet, not an error

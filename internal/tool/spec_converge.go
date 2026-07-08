@@ -216,7 +216,7 @@ func appendConvergenceTasks(slug string, report convergenceResult) (string, erro
 }
 
 func readArtifact(path string) string {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return ""
 	}

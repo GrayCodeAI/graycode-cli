@@ -68,8 +68,8 @@ func (d *DevEnvManager) SetRuntimeConfig(cfg RuntimeConfig) {
 // containing the Dockerfile.
 func defaultBuildFn(ctx context.Context, dockerfile, tag string) error {
 	contextDir := filepath.Dir(dockerfile)
-	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dockerfile, contextDir)
-	cmd.Stdout = os.Stderr // show build output on stderr
+	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dockerfile, contextDir) // #nosec G204 -- "docker" binary fixed; tag/dockerfile/contextDir derived from internal build state
+	cmd.Stdout = os.Stderr                                                                      // show build output on stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("docker build failed: %w", err)
@@ -196,13 +196,13 @@ func (d *DevEnvManager) RebuildAndForceSwap(ctx context.Context, dockerfilePath 
 // "Dockerfile.hawk-runtime" file. Returns the path to the augmented file. The
 // caller holds d.mu.
 func (d *DevEnvManager) augmentDockerfile(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the project's own Dockerfile path passed by the caller
 	if err != nil {
 		return "", err
 	}
 	augmented := d.runtime.AppendExtraDeps(string(data))
 	outPath := filepath.Join(filepath.Dir(path), "Dockerfile.hawk-runtime")
-	if err := os.WriteFile(outPath, []byte(augmented), 0o644); err != nil {
+	if err := os.WriteFile(outPath, []byte(augmented), 0o600); err != nil {
 		return "", err
 	}
 	return outPath, nil
@@ -210,7 +210,7 @@ func (d *DevEnvManager) augmentDockerfile(path string) (string, error) {
 
 // hashDockerfile computes a SHA-256 hash of the Dockerfile contents.
 func hashDockerfile(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the project's own Dockerfile path passed by the caller
 	if err != nil {
 		return "", err
 	}

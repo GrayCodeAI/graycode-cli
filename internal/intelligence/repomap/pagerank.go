@@ -77,7 +77,7 @@ func BuildSymbolGraph(dir string, opts Options, incremental ...*IncrementalMap) 
 	fileContents := make(map[string]string)
 	for _, fm := range rm.Files {
 		absPath := filepath.Join(dir, fm.Path)
-		data, err := os.ReadFile(absPath)
+		data, err := os.ReadFile(absPath) // #nosec G304 -- absPath is derived from a repo-relative path of a file already discovered while scanning the repo being analyzed by this dev CLI
 		if err != nil {
 			continue
 		}
@@ -189,7 +189,7 @@ func (sg *SymbolGraph) UpdateGraph(dir string, changedFiles []string) {
 
 	for _, p := range changedFiles {
 		absPath := filepath.Join(dir, p)
-		data, err := os.ReadFile(absPath)
+		data, err := os.ReadFile(absPath) // #nosec G304 -- absPath is derived from a repo-relative changed-file path already known to the caller for the repo being analyzed by this dev CLI
 		if err != nil {
 			continue
 		}
@@ -212,7 +212,7 @@ func (sg *SymbolGraph) UpdateGraph(dir string, changedFiles []string) {
 	for f := range unchangedContent {
 		if _, ok := fileContents[f]; !ok {
 			absPath := filepath.Join(dir, f)
-			data, err := os.ReadFile(absPath)
+			data, err := os.ReadFile(absPath) // #nosec G304 -- absPath is derived from a repo-relative path of a file already known to the caller for the repo being analyzed by this dev CLI
 			if err == nil {
 				fileContents[f] = string(data)
 			}

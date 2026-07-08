@@ -138,7 +138,7 @@ func (n *Notifier) DesktopNotify(title, message string) error {
 	case "darwin":
 		script := fmt.Sprintf(`display notification "%s" with title "%s"`,
 			escapeAppleScript(message), escapeAppleScript(title))
-		cmd := exec.CommandContext(context.Background(), "osascript", "-e", script)
+		cmd := exec.CommandContext(context.Background(), "osascript", "-e", script) // #nosec G204 -- fixed command 'osascript'; script built from escaped internal strings
 		return cmd.Run()
 	case "linux":
 		cmd := exec.CommandContext(context.Background(), "notify-send", title, message)
@@ -153,7 +153,7 @@ $textNodes.Item(1).AppendChild($template.CreateTextNode('%s')) | Out-Null
 $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('hawk').Show($toast)`,
 			escapePowerShell(title), escapePowerShell(message))
-		cmd := exec.CommandContext(context.Background(), "powershell", "-Command", script)
+		cmd := exec.CommandContext(context.Background(), "powershell", "-Command", script) // #nosec G204 -- fixed command 'powershell'; script built from escaped internal strings
 		return cmd.Run()
 	default:
 		return fmt.Errorf("desktop notifications not supported on %s", runtime.GOOS)

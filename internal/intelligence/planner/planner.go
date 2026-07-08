@@ -109,7 +109,7 @@ func ParsePlan(response string) (*Plan, error) {
 // Returns the path of the saved file.
 func Save(dir string, plan *Plan) (string, error) {
 	plansDir := storage.PlansDir(dir)
-	if err := os.MkdirAll(plansDir, 0o755); err != nil {
+	if err := os.MkdirAll(plansDir, 0o750); err != nil {
 		return "", fmt.Errorf("planner: cannot create plans directory: %w", err)
 	}
 
@@ -121,7 +121,7 @@ func Save(dir string, plan *Plan) (string, error) {
 		return "", fmt.Errorf("planner: failed to marshal plan: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return "", fmt.Errorf("planner: failed to write plan file: %w", err)
 	}
 
@@ -130,7 +130,7 @@ func Save(dir string, plan *Plan) (string, error) {
 
 // Load reads a plan from disk.
 func Load(path string) (*Plan, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is the tool's own plan file location under storage.PlansDir
 	if err != nil {
 		return nil, fmt.Errorf("planner: failed to read plan file: %w", err)
 	}

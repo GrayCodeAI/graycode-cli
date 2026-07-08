@@ -66,7 +66,7 @@ type BrailleSpinner struct {
 func NewBrailleSpinner(style SpinnerStyle, text string) *BrailleSpinner {
 	if style == SpinnerRandom {
 		styles := []SpinnerStyle{SpinnerHawk, SpinnerBraille, SpinnerBrailleWave, SpinnerDNA, SpinnerScan, SpinnerPulse, SpinnerSnake, SpinnerOrbit}
-		style = styles[rand.Intn(len(styles))]
+		style = styles[rand.Intn(len(styles))] // #nosec G404 -- non-cryptographic use (random spinner style selection)
 	}
 	frames := spinnerFrames[style]
 	if frames == nil {

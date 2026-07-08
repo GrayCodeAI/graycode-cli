@@ -18,7 +18,7 @@ const (
 
 // CostTierOf resolves a model's cost tier from eyrie catalog policy.
 func CostTierOf(modelName string) CostTier {
-	return eycatalog.ModelCostTierOf(eyrieCatalogV1(), modelName)
+	return eycatalog.ModelCostTierOf(eyrieCatalog(), modelName)
 }
 
 // TierModels returns eyrie-preferred model IDs for haiku, sonnet, and opus tiers.
@@ -53,10 +53,10 @@ func SuggestTierForTask(taskType string) eycatalog.ModelTier {
 
 // AllCatalogModelNames returns model IDs from the eyrie catalog cache.
 func AllCatalogModelNames() []string {
-	return catalogModelNames(eyrieCatalogV1())
+	return catalogModelNames(eyrieCatalog())
 }
 
-func catalogModelNames(compiled *eycatalog.CompiledCatalogV1) []string {
+func catalogModelNames(compiled *eycatalog.CompiledCatalog) []string {
 	if compiled == nil {
 		return nil
 	}
@@ -106,7 +106,7 @@ func DefaultHealthTiers(primaryProvider string) []ModelTier {
 func tierModelList(primaryProvider string, tier eycatalog.ModelTier) []string {
 	seen := map[string]bool{}
 	var out []string
-	for _, model := range eycatalog.PreferredModelsForTierV1(eyrieCatalogV1(), primaryProvider, tier, 3) {
+	for _, model := range eycatalog.PreferredModelsForTier(eyrieCatalog(), primaryProvider, tier, 3) {
 		model = strings.TrimSpace(model)
 		if model == "" || seen[model] {
 			continue
@@ -119,10 +119,10 @@ func tierModelList(primaryProvider string, tier eycatalog.ModelTier) []string {
 
 // PreferredModelForTier returns the eyrie-preferred model for a provider and tier.
 func PreferredModelForTier(provider string, tier eycatalog.ModelTier, fallback string) string {
-	return eycatalog.PreferredProviderModelV1(eyrieCatalogV1(), provider, tier, fallback)
+	return eycatalog.PreferredProviderModel(eyrieCatalog(), provider, tier, fallback)
 }
 
 // MostExpensiveForProvider picks the highest input-priced model for a provider.
 func MostExpensiveForProvider(provider, fallback string) string {
-	return eycatalog.MostExpensiveModelForProviderV1(eyrieCatalogV1(), provider, fallback)
+	return eycatalog.MostExpensiveModelForProvider(eyrieCatalog(), provider, fallback)
 }

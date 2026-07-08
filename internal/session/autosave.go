@@ -97,7 +97,7 @@ func AcquireLock(sessionID string) (*LockFile, error) {
 		}
 	}
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) // #nosec G304 -- path built from sessionsDir()+session ID, internal lock file
 	if err != nil {
 		return nil, &SessionLockedError{ID: sessionID}
 	}

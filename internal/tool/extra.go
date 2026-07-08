@@ -77,7 +77,7 @@ func (NotebookEditTool) Execute(ctx context.Context, input json.RawMessage) (str
 	if cred := DetectCredentials(p.NewSource); cred != "" {
 		return "", fmt.Errorf("content contains a credential (%s) — refusing to write", cred)
 	}
-	if err := os.WriteFile(p.Path, out, 0o644); err != nil {
+	if err := os.WriteFile(p.Path, out, 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Edited cell %d in %s", p.CellNumber, p.Path), nil

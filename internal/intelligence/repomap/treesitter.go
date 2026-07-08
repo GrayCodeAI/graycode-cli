@@ -40,7 +40,7 @@ func NewTreeSitterParser() *TreeSitterParser {
 // ParseFile dispatches to the appropriate language parser based on file extension.
 func (p *TreeSitterParser) ParseFile(path string) ([]Symbol, error) {
 	ext := filepath.Ext(path)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a source file discovered while scanning the repo being analyzed by this dev CLI
 	if err != nil {
 		return nil, fmt.Errorf("treesitter: read %s: %w", path, err)
 	}

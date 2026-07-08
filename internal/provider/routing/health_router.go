@@ -67,7 +67,7 @@ func (hr *HealthRouter) ComputeHealth(path string) CodeHealth {
 		}
 	}
 
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path is the source file being analyzed for routing, supplied by internal callers, not external input
 	if err != nil {
 		return h
 	}

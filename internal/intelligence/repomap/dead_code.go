@@ -85,7 +85,7 @@ func (d *DeadCodeDetector) Scan(projectDir string) ([]DeadCode, error) {
 		if !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		content, err := os.ReadFile(path)
+		content, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
 		if err != nil {
 			return nil
 		}
@@ -548,7 +548,7 @@ func estimateTypeLines(fset *token.FileSet, spec *ast.TypeSpec) int {
 
 func readModuleName(projectDir string) string {
 	modPath := filepath.Join(projectDir, "go.mod")
-	data, err := os.ReadFile(modPath)
+	data, err := os.ReadFile(modPath) // #nosec G304 -- modPath is the go.mod of the project directory being analyzed by this dev CLI
 	if err != nil {
 		return ""
 	}

@@ -60,7 +60,7 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 
 	switch p.Action {
 	case "read":
-		content, err := os.ReadFile(dfPath)
+		content, err := os.ReadFile(dfPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			if os.IsNotExist(err) {
 				return "No Hawk dev environment Dockerfile found. Use action='write' to create one in Hawk user state.", nil
@@ -77,7 +77,7 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 			return "", fmt.Errorf("dockerfile must contain a FROM instruction")
 		}
 
-		if err := os.MkdirAll(filepath.Dir(dfPath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(dfPath), 0o750); err != nil {
 			return "", err
 		}
 
@@ -86,13 +86,13 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 			_ = os.Rename(dfPath, dfPath+".old")
 		}
 
-		if err := os.WriteFile(dfPath, []byte(p.Dockerfile), 0o644); err != nil {
+		if err := os.WriteFile(dfPath, []byte(p.Dockerfile), 0o600); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Dockerfile written to %s. Use action='build' to rebuild the container.", dfPath), nil
 
 	case "build":
-		content, err := os.ReadFile(dfPath)
+		content, err := os.ReadFile(dfPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			return "", fmt.Errorf("no Dockerfile at %s — use action='write' first", dfPath)
 		}

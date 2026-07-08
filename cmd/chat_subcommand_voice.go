@@ -31,9 +31,9 @@ func (v *voiceSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 			tmpFile := filepath.Join(os.TempDir(), "hawk_voice_input.wav")
 			var recordCmd *exec.Cmd
 			if _, err := exec.LookPath("sox"); err == nil {
-				recordCmd = exec.Command("sox", "-d", tmpFile, "trim", "0", "10")
+				recordCmd = exec.Command("sox", "-d", tmpFile, "trim", "0", "10") // #nosec G204 -- fixed command 'sox' resolved via exec.LookPath
 			} else if _, err := exec.LookPath("ffmpeg"); err == nil {
-				recordCmd = exec.Command("ffmpeg", "-y", "-f", "avfoundation", "-i", ":0", "-t", "10", tmpFile)
+				recordCmd = exec.Command("ffmpeg", "-y", "-f", "avfoundation", "-i", ":0", "-t", "10", tmpFile) // #nosec G204 -- fixed command 'ffmpeg' resolved via exec.LookPath
 			} else {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "No audio recorder found. Install sox (brew install sox) or use: whisper --model base -f recording.wav"})
 				return
@@ -42,13 +42,13 @@ func (v *voiceSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Recording failed: %v", err)})
 				return
 			}
-			transcribeCmd := exec.Command("whisper", "--model", "base", "--output_format", "txt", "--output_dir", os.TempDir(), tmpFile)
+			transcribeCmd := exec.Command("whisper", "--model", "base", "--output_format", "txt", "--output_dir", os.TempDir(), tmpFile) // #nosec G204 -- fixed command 'whisper' with internal args
 			if err := transcribeCmd.Run(); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Transcription failed: %v", err)})
 				return
 			}
 			txtFile := strings.TrimSuffix(tmpFile, ".wav") + ".txt"
-			transcription, err := os.ReadFile(txtFile)
+			transcription, err := os.ReadFile(txtFile) // #nosec G304 -- txtFile derived from internally generated tmpFile path
 			if err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Could not read transcription"})
 				return

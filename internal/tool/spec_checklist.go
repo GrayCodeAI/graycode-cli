@@ -59,7 +59,7 @@ func (ChecklistTool) Execute(ctx context.Context, input json.RawMessage) (string
 	}
 
 	path := filepath.Join(dir, p.Artifact)
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", fmt.Errorf("cannot read %s: %w", p.Artifact, err)
 	}
@@ -85,8 +85,8 @@ func (ChecklistTool) Execute(ctx context.Context, input json.RawMessage) (string
 			b.WriteString("\n## Scenario Testing\n\n")
 			for _, sc := range scenarios {
 				b.WriteString(fmt.Sprintf("- [ ] Scenario: %s\n", sc))
-				b.WriteString(fmt.Sprintf("  - WHEN: verified\n"))
-				b.WriteString(fmt.Sprintf("  - THEN: verified\n"))
+				b.WriteString("  - WHEN: verified\n")
+				b.WriteString("  - THEN: verified\n")
 			}
 		}
 	} else {

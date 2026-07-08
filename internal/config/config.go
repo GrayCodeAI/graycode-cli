@@ -36,7 +36,7 @@ func LoadAgentsMDFrom(start string) string {
 	}
 	for {
 		for _, name := range agentFiles {
-			data, err := os.ReadFile(filepath.Join(dir, name))
+			data, err := os.ReadFile(filepath.Join(dir, name)) // #nosec G304 -- dir is the working directory or an ancestor of it; name is a fixed constant
 			if err == nil {
 				if len(data) > maxAgentsMDSize {
 					return string(data[:maxAgentsMDSize]) + "\n\n[WARNING: AGENTS.md truncated to 10KB]"
@@ -194,7 +194,7 @@ func loadCrossAgentInstructions(cwd string) []string {
 	}
 	var parts []string
 	for _, name := range crossAgentFiles {
-		data, err := os.ReadFile(filepath.Join(cwd, name))
+		data, err := os.ReadFile(filepath.Join(cwd, name)) // #nosec G304 -- cwd is the process working directory; name is drawn from a fixed constant list
 		if err != nil {
 			continue
 		}

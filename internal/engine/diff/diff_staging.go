@@ -81,10 +81,10 @@ func (sa *StagingArea) ApplyAll() ([]string, error) {
 		content := sa.buildApprovedContent(change)
 
 		dir := filepath.Dir(file)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return applied, fmt.Errorf("create directory %s: %w", dir, err)
 		}
-		if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(file, []byte(content), 0o600); err != nil {
 			return applied, fmt.Errorf("write %s: %w", file, err)
 		}
 		applied = append(applied, file)
@@ -117,10 +117,10 @@ func (sa *StagingArea) ApplyFile(file string) error {
 	content := sa.buildApprovedContent(change)
 
 	dir := filepath.Dir(file)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create directory %s: %w", dir, err)
 	}
-	if err := os.WriteFile(file, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(file, []byte(content), 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", file, err)
 	}
 

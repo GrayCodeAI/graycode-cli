@@ -32,7 +32,7 @@ func LoadSkillsFromDir(dir string) ([]Skill, error) {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- path is built from a caller-specified skills directory and an enumerated entry name, not raw external input
 		if err != nil {
 			continue
 		}

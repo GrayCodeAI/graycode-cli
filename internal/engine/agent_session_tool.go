@@ -48,8 +48,9 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 	// inherits the same gate — an ungated sub-agent would be a permission
 	// escalation hole (it could Write/Bash while the parent still can't).
 	sub.PermSvc().SetSpecStage(s.PermSvc().SpecStage())
-	sub.MaxTurns = maxTurns
-	sub.MaxBudgetUSD = s.MaxBudgetUSD
+	if s.LifecycleSvc() != nil {
+		s.LifecycleSvc().Limits().SetMaxTurns(maxTurns)
+	}
 	sub.AddUser(prompt)
 
 	ch, err := sub.Stream(ctx)

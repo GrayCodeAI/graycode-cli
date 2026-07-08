@@ -49,7 +49,7 @@ func LoadTasksFromYAML(dir string) ([]BenchmarkTask, error) {
 
 // LoadTaskFromYAML loads a single task from a YAML file.
 func loadYAMLTask(path string) (*BenchmarkTask, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a benchmark task file discovered from a local eval task directory
 	if err != nil {
 		return nil, err
 	}
@@ -100,16 +100,16 @@ func makeSetupFn(yt YAMLTask) func(string) error {
 		// Write files from the YAML definition
 		for name, content := range yt.Files {
 			path := filepath.Join(workDir, name)
-			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 				return err
 			}
-			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 				return err
 			}
 		}
 		// Run setup script if provided
 		if yt.Setup != "" {
-			cmd := exec.CommandContext(context.Background(), "sh", "-c", yt.Setup)
+			cmd := exec.CommandContext(context.Background(), "sh", "-c", yt.Setup) // #nosec G204 -- yt.Setup is a shell snippet authored in a local eval task YAML file, not external input
 			cmd.Dir = workDir
 			if out, err := cmd.CombinedOutput(); err != nil {
 				return fmt.Errorf("setup: %s: %w", string(out), err)
@@ -122,7 +122,7 @@ func makeSetupFn(yt YAMLTask) func(string) error {
 func makeValidateFn(yt YAMLTask) func(string) (bool, string) {
 	return func(workDir string) (bool, string) {
 		for _, v := range yt.Validate {
-			cmd := exec.CommandContext(context.Background(), "sh", "-c", v)
+			cmd := exec.CommandContext(context.Background(), "sh", "-c", v) // #nosec G204 -- v is a validation shell snippet authored in a local eval task YAML file, not external input
 			cmd.Dir = workDir
 			out, err := cmd.CombinedOutput()
 			if err != nil {

@@ -105,7 +105,7 @@ func NewAIWatcher(rootDir string, patterns []string) *AIWatcher {
 // ScanFile scans a single file for AI comments and returns all found.
 // The path should be an absolute or relative path to the file.
 func ScanFile(path string) []AIComment {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil
 	}
@@ -414,7 +414,7 @@ func (w *AIWatcher) Stop() {
 // RemoveComment removes the AI comment from the specified file at the given line.
 // It matches the marker string to ensure the correct line is removed.
 func RemoveComment(file string, line int, marker string) error {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("reading file %s: %w", file, err)
 	}
@@ -443,7 +443,7 @@ func RemoveComment(file string, line int, marker string) error {
 		lines[line-1] = strings.TrimRight(lines[line-1], " \t")
 	}
 
-	return os.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o644)
+	return os.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o600)
 }
 
 // commentHash produces a unique hash for a comment based on file, line, and text.

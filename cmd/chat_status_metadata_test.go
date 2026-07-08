@@ -2,10 +2,20 @@ package cmd
 
 import (
 	"testing"
+	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
+
+// seedPlatformContextCacheForTest primes the platform context cache so tests
+// avoid network lookups. Test-only helper.
+func seedPlatformContextCacheForTest(idx map[string]int) {
+	platformCtxCache.mu.Lock()
+	platformCtxCache.idx = idx
+	platformCtxCache.at = time.Now()
+	platformCtxCache.mu.Unlock()
+}
 
 func TestModelStatusMeta_UsesLiveModelCache(t *testing.T) {
 	provider := "xiaomi_mimo_token_plan"

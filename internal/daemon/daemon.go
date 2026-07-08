@@ -49,6 +49,10 @@ type Server struct {
 	// back to "session factory wired" (see Ready). Set via SetReadyFn.
 	readyMu sync.RWMutex
 	readyFn func() (bool, string)
+
+	// routePatterns records every "METHOD /path" pattern registered on the
+	// mux so tests can verify the HTTP surface matches api/openapi.yaml.
+	routePatterns []string
 }
 
 // ReadyResponse is the JSON response from GET /v1/ready.
@@ -274,15 +278,29 @@ func (s *Server) ready() (bool, string) {
 }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /v1/health", s.handleHealth)
-	s.mux.HandleFunc("GET /v1/ready", s.handleReady)
-	s.mux.HandleFunc("POST /v1/chat", s.auth(s.handleChat))
-	s.mux.HandleFunc("GET /v1/sessions", s.auth(s.handleListSessions))
-	s.mux.HandleFunc("GET /v1/sessions/{id}", s.auth(s.handleGetSession))
-	s.mux.HandleFunc("GET /v1/sessions/{id}/messages", s.auth(s.handleGetMessages))
-	s.mux.HandleFunc("DELETE /v1/sessions/{id}", s.auth(s.handleDeleteSession))
-	s.mux.HandleFunc("GET /v1/stats", s.auth(s.handleStats))
+	s.handle("GET /v1/health", s.handleHealth)
+	s.handle("GET /v1/ready", s.handleReady)
+	s.handle("POST /v1/chat", s.auth(s.handleChat))
+	s.handle("GET /v1/sessions", s.auth(s.handleListSessions))
+	s.handle("GET /v1/sessions/{id}", s.auth(s.handleGetSession))
+	s.handle("GET /v1/sessions/{id}/messages", s.auth(s.handleGetMessages))
+	s.handle("DELETE /v1/sessions/{id}", s.auth(s.handleDeleteSession))
+	s.handle("GET /v1/stats", s.auth(s.handleStats))
 	s.RegisterReviewRoutes()
+}
+
+// handle registers a handler on the mux and records the pattern for
+// spec-parity verification (see openapi_parity_test.go).
+func (s *Server) handle(pattern string, h http.HandlerFunc) {
+	s.routePatterns = append(s.routePatterns, pattern)
+	s.mux.HandleFunc(pattern, h)
+}
+
+// RoutePatterns returns a copy of every registered "METHOD /path" pattern.
+func (s *Server) RoutePatterns() []string {
+	out := make([]string, len(s.routePatterns))
+	copy(out, s.routePatterns)
+	return out
 }
 
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
@@ -513,7 +531,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func (s *Server) writePIDFile() error {
 	dir := pidDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	data, err := json.Marshal(struct {

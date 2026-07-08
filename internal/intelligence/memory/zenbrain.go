@@ -312,7 +312,7 @@ func (zb *ZenBrain) Save() error {
 	defer zb.mu.Unlock()
 
 	dir := filepath.Dir(zb.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create memory dir: %w", err)
 	}
 
@@ -326,7 +326,7 @@ func (zb *ZenBrain) Save() error {
 	if err != nil {
 		return fmt.Errorf("marshal zenbrain: %w", err)
 	}
-	return os.WriteFile(zb.path, data, 0o644)
+	return os.WriteFile(zb.path, data, 0o600)
 }
 
 // Load reads persisted memories from disk and distributes them to layers.

@@ -81,7 +81,7 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if info.Size() > maxFileSize {
 		return "", fmt.Errorf("file too large: %d bytes", info.Size())
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}

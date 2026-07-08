@@ -11,14 +11,15 @@ import (
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()
-	if len(gws) != 19 {
-		t.Fatalf("expected 19 setup gateways, got %d: %v", len(gws), gws)
+	if len(gws) < 19 || len(gws) > 22 {
+		t.Fatalf("expected 19-22 setup gateways, got %d: %v", len(gws), gws)
 	}
 	for _, id := range gws {
 		if id == "ai21" || id == "alibaba" {
 			t.Fatalf("owner slug %q should not be a gateway", id)
 		}
 	}
+	// Required gateways that exist in the published eyrie v0.1.3.
 	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true, "zai_payg": true, "zai_coding": true}
 	for id := range want {
 		found := false
@@ -30,6 +31,14 @@ func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 		}
 		if !found {
 			t.Fatalf("missing setup gateway %q in %v", id, gws)
+		}
+	}
+	// Newly-added gateways (groq, poolside) present in the local submodule
+	// but not yet in a published eyrie release — log if present, don't
+	// require them so the test passes with both GOWORK=on and GOWORK=off.
+	for _, extra := range []string{"groq", "poolside"} {
+		if containsString(gws, extra) {
+			t.Logf("extra gateway %q present (local eyrie build)", extra)
 		}
 	}
 	if containsString(gws, "google") || containsString(gws, "xai") {

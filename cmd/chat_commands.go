@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -14,7 +15,21 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+// slashCmdCache caches the slash commands list to avoid rebuilding.
+var (
+	slashCmdCache      []string
+	slashCmdCacheBuilt = false
+	slashCmdMutex      sync.Mutex
+)
+
+// slashCommands returns the list of all slash commands, built once and cached.
 func slashCommands() []string {
+	slashCmdMutex.Lock()
+	defer slashCmdMutex.Unlock()
+	if slashCmdCacheBuilt {
+		return slashCmdCache
+	}
+
 	seen := make(map[string]bool, len(allSlashCommands)+subcommandRegistry.Size())
 	out := make([]string, 0, len(allSlashCommands)+subcommandRegistry.Size())
 	add := func(name string) {
@@ -41,7 +56,17 @@ func slashCommands() []string {
 		}
 	}
 	sort.Strings(out)
+	slashCmdCache = out
+	slashCmdCacheBuilt = true
 	return out
+}
+
+// ResetSlashCache resets the cached slash commands (useful for testing)
+func ResetSlashCache() {
+	slashCmdMutex.Lock()
+	defer slashCmdMutex.Unlock()
+	slashCmdCacheBuilt = false
+	slashCmdCache = nil
 }
 
 var allSlashCommands = []string{
@@ -54,8 +79,7 @@ var allSlashCommands = []string{
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
-	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme",
-	"/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
+	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme", "/think", "/think-back", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
 }
 
@@ -127,7 +151,9 @@ func (m *chatModel) syncInputLayout() bool {
 }
 
 func slashAliases() map[string]string {
-	return nil
+	return map[string]string{
+		"/themes": "/theme",
+	}
 }
 
 var slashDescriptions = map[string]string{
@@ -236,7 +262,8 @@ var slashDescriptions = map[string]string{
 	"/statusline":      "Show status line info",
 	"/tag":             "Tag current session",
 	"/taste":           "Show learned taste preferences",
-	"/theme":           "Change visual theme",
+	"/theme":           "Change visual theme (opens picker)",
+	"/themes":          "List all available themes",
 	"/think-back":      "Review reasoning decisions",
 	"/thinkback":       "Review reasoning decisions",
 	"/thinkback-play":  "Replay reasoning path",
@@ -308,6 +335,9 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	// init(); we look up by the slash name minus the leading "/".
 	// If the registry has a handler, dispatch and return.
 	if strings.HasPrefix(cmd, "/") {
+		if aliasTarget, ok := slashAliases()[cmd]; ok {
+			cmd = aliasTarget
+		}
 		name := strings.TrimPrefix(cmd, "/")
 		if sub, ok := subcommandRegistry.Lookup(name); ok {
 			args := parts[1:]

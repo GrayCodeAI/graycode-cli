@@ -343,13 +343,13 @@ func (du *DependencyUpdater) ApplyUpdate(dep Dependency) error {
 	switch du.Language {
 	case "go":
 		pkg := dep.Name + "@" + dep.LatestVersion
-		cmd = exec.CommandContext(context.Background(), "go", "get", pkg)
+		cmd = exec.CommandContext(context.Background(), "go", "get", pkg) // #nosec G204 -- invocation of well-known dev tool with internally-derived args (file paths / package names from tool params)
 	case "javascript":
 		pkg := dep.Name + "@" + dep.LatestVersion
-		cmd = exec.CommandContext(context.Background(), "npm", "install", pkg)
+		cmd = exec.CommandContext(context.Background(), "npm", "install", pkg) // #nosec G204 -- invocation of well-known dev tool with internally-derived args (file paths / package names from tool params)
 	case "python":
 		pkg := dep.Name + "==" + dep.LatestVersion
-		cmd = exec.CommandContext(context.Background(), "pip", "install", pkg)
+		cmd = exec.CommandContext(context.Background(), "pip", "install", pkg) // #nosec G204 -- invocation of well-known dev tool with internally-derived args (file paths / package names from tool params)
 	case "rust":
 		return du.applyRustUpdate(dep)
 	default:
@@ -366,7 +366,7 @@ func (du *DependencyUpdater) ApplyUpdate(dep Dependency) error {
 
 func (du *DependencyUpdater) applyRustUpdate(dep Dependency) error {
 	cargoPath := filepath.Join(du.ProjectDir, "Cargo.toml")
-	data, err := os.ReadFile(cargoPath)
+	data, err := os.ReadFile(cargoPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return fmt.Errorf("failed to read Cargo.toml: %w", err)
 	}
@@ -384,7 +384,7 @@ func (du *DependencyUpdater) applyRustUpdate(dep Dependency) error {
 		content = strings.Replace(content, oldPattern, newPattern, 1)
 	}
 
-	if err := os.WriteFile(cargoPath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(cargoPath, []byte(content), 0o600); err != nil {
 		return fmt.Errorf("failed to write Cargo.toml: %w", err)
 	}
 	return nil

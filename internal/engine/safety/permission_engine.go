@@ -178,7 +178,7 @@ func detectPhases(slug string) int {
 		return 0
 	}
 	tasksPath := filepath.Join(cwd, ".hawk", "specs", slug, "tasks.md")
-	data, err := os.ReadFile(tasksPath)
+	data, err := os.ReadFile(tasksPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return 0
 	}
@@ -205,7 +205,7 @@ func specApprovalSummary(slug string) string {
 
 	var b strings.Builder
 	for _, f := range []string{"spec.md", "plan.md", "tasks.md"} {
-		content, err := os.ReadFile(filepath.Join(dir, f))
+		content, err := os.ReadFile(filepath.Join(dir, f)) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
 		}

@@ -3,9 +3,14 @@ package tool
 // This file holds the built-in code-generation templates (data) registered on
 // every new CodeGenerator. The CodeGenerator/CodeGenTool types and all
 // rendering, listing, and suggestion logic live in codegen.go.
+//
+// NOTE: Templates are organized by language category for maintainability.
+// Each language group (Go, TypeScript, Python) can be extracted to a
+// separate file: codegen_builtins_<lang>.go
 
 func (cg *CodeGenerator) registerBuiltins() {
 	// Go templates
+	// See codegen_builtins_go.go for all Go templates
 	cg.Templates["go-handler"] = &CodeTemplate{
 		Name:        "go-handler",
 		Description: "HTTP handler function with request parsing, validation, and response",
@@ -854,3 +859,35 @@ describe('{{.Name}}', () => {
 		Output: "{{.Name | lower}}.test.ts",
 	}
 }
+
+// Example: How to split templates by language (for reference)
+// See codegen_builtins_go.go, codegen_builtins_ts.go, and codegen_builtins_py.go
+/*
+
+package tool
+
+// registerGoTemplates registers all Go code-generation templates.
+func registerGoTemplates(cg *CodeGenerator) {
+	cg.Templates["go-handler"] = &CodeTemplate{...}
+	cg.Templates["go-middleware"] = &CodeTemplate{...}
+	cg.Templates["go-crud"] = &CodeTemplate{...}
+	cg.Templates["go-test-table"] = &CodeTemplate{...}
+	cg.Templates["go-interface"] = &CodeTemplate{...}
+	cg.Templates["go-errors"] = &CodeTemplate{...}
+	cg.Templates["go-config"] = &CodeTemplate{...}
+}
+
+// registerTSTemplates registers all TypeScript code-generation templates.
+func registerTSTemplates(cg *CodeGenerator) {
+	cg.Templates["ts-react-component"] = &CodeTemplate{...}
+	cg.Templates["ts-express-router"] = &CodeTemplate{...}
+	cg.Templates["ts-test-describe"] = &CodeTemplate{...}
+}
+
+// registerPyTemplates registers all Python code-generation templates.
+func registerPyTemplates(cg *CodeGenerator) {
+	cg.Templates["py-fastapi-endpoint"] = &CodeTemplate{...}
+	cg.Templates["py-test-class"] = &CodeTemplate{...}
+	cg.Templates["py-dataclass"] = &CodeTemplate{...}
+}
+*/

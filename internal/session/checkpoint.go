@@ -376,7 +376,7 @@ func (cm *CheckpointManager) Load() error {
 	defer cm.mu.Unlock()
 
 	indexPath := filepath.Join(cm.Dir, "checkpoints.json")
-	data, err := os.ReadFile(indexPath)
+	data, err := os.ReadFile(indexPath) // #nosec G304 -- path built from internal checkpoint manager dir, fixed filename
 	if err != nil {
 		if os.IsNotExist(err) {
 			cm.Checkpoints = make([]*SessionCheckpoint, 0)
@@ -396,7 +396,7 @@ func (cm *CheckpointManager) Load() error {
 // ─── internal helpers ────────────────────────────────────────────────────────
 
 func (cm *CheckpointManager) saveIndex() error {
-	if err := os.MkdirAll(cm.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(cm.Dir, 0o750); err != nil {
 		return err
 	}
 	indexPath := filepath.Join(cm.Dir, "checkpoints.json")
@@ -404,12 +404,12 @@ func (cm *CheckpointManager) saveIndex() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(indexPath, data, 0o644)
+	return os.WriteFile(indexPath, data, 0o600)
 }
 
 func (cm *CheckpointManager) saveMessages(id string, messages []Message) error {
 	cpDir := filepath.Join(cm.Dir, id)
-	if err := os.MkdirAll(cpDir, 0o755); err != nil {
+	if err := os.MkdirAll(cpDir, 0o750); err != nil {
 		return err
 	}
 	path := filepath.Join(cpDir, "messages.json")
@@ -417,12 +417,12 @@ func (cm *CheckpointManager) saveMessages(id string, messages []Message) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 func (cm *CheckpointManager) loadMessages(id string) ([]Message, error) {
 	path := filepath.Join(cm.Dir, id, "messages.json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path built from internal checkpoint manager dir + checkpoint ID
 	if err != nil {
 		return nil, err
 	}
@@ -435,12 +435,12 @@ func (cm *CheckpointManager) loadMessages(id string) ([]Message, error) {
 
 func (cm *CheckpointManager) saveFileContents(id string, files []string) error {
 	cpDir := filepath.Join(cm.Dir, id, "files")
-	if err := os.MkdirAll(cpDir, 0o755); err != nil {
+	if err := os.MkdirAll(cpDir, 0o750); err != nil {
 		return err
 	}
 
 	for _, file := range files {
-		content, err := os.ReadFile(file)
+		content, err := os.ReadFile(file) // #nosec G304 -- file paths come from internal tracked-files list for the current session, not raw external input
 		if err != nil {
 			continue // skip unreadable files
 		}
@@ -451,7 +451,7 @@ func (cm *CheckpointManager) saveFileContents(id string, files []string) error {
 			"content": string(content),
 		}
 		data, _ := json.Marshal(entry)
-		if err := os.WriteFile(filepath.Join(cpDir, safeName+".json"), data, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(cpDir, safeName+".json"), data, 0o600); err != nil {
 			return err
 		}
 	}
@@ -472,7 +472,7 @@ func (cm *CheckpointManager) restoreFileContents(id string, filesState map[strin
 		if e.IsDir() {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(cpDir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(cpDir, e.Name())) // #nosec G304 -- path built from internal checkpoint files dir + directory entry name from os.ReadDir
 		if err != nil {
 			continue
 		}
@@ -486,10 +486,10 @@ func (cm *CheckpointManager) restoreFileContents(id string, filesState map[strin
 			continue
 		}
 		// Ensure parent directory exists
-		if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(filePath), 0o750); err != nil {
 			continue
 		}
-		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 			return fmt.Errorf("restore file %s: %w", filePath, err)
 		}
 	}
@@ -508,7 +508,7 @@ func generateCheckpointID(name string, t time.Time) string {
 func hashFiles(files []string) map[string]string {
 	state := make(map[string]string)
 	for _, file := range files {
-		content, err := os.ReadFile(file)
+		content, err := os.ReadFile(file) // #nosec G304 -- file paths come from internal tracked-files list for the current session, not raw external input
 		if err != nil {
 			continue
 		}

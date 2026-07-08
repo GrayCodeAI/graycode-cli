@@ -15,6 +15,8 @@ Documents:
 - `hawk-trace-event-model.md` - trace and audit event model
 - `hawk-contract-migration-inventory.md` - current shared-type usage and migration order
 - `hawk-architecture-v1-definition-of-done.md` - realistic shipping bar for architecture v1
+- `tasks.md` - historical implementation checklist from the initial architecture pass (superseded by the definition-of-done doc; kept for record)
+- `adr/` - accepted architecture decision records, e.g. exceptions to the dependency rules above
 
 Core rule:
 
@@ -25,5 +27,5 @@ Final target shape:
 - `hawk` is the orchestrator and only primary product surface
 - six peer support engines sit below Hawk:
   `eyrie`, `yaad`, `tok`, `trace`, `sight`, `inspect`
-- `hawk-core-contracts` sits below those engines as the shared contract layer
+- `hawk-core-contracts` and `hawk-mcpkit` sit below those engines as shared foundations
 - SDKs and community skills sit above Hawk as consumers of Hawk public surfaces

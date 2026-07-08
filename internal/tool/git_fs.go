@@ -30,7 +30,7 @@ func ReadGitState(dir string) (*GitState, error) {
 	// If .git is a file, it's a worktree reference
 	worktree := false
 	if !info.IsDir() {
-		data, readErr := os.ReadFile(gitDir)
+		data, readErr := os.ReadFile(gitDir) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if readErr != nil {
 			return nil, readErr
 		}
@@ -46,7 +46,7 @@ func ReadGitState(dir string) (*GitState, error) {
 		}
 	}
 
-	headContent, err := os.ReadFile(filepath.Join(gitDir, "HEAD"))
+	headContent, err := os.ReadFile(filepath.Join(gitDir, "HEAD")) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, fmt.Errorf("cannot read HEAD: %w", err)
 	}
@@ -83,7 +83,7 @@ func ReadGitState(dir string) (*GitState, error) {
 func resolveRef(gitDir, ref string) (string, error) {
 	// Try loose ref first
 	refPath := filepath.Join(gitDir, ref)
-	data, err := os.ReadFile(refPath)
+	data, err := os.ReadFile(refPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err == nil {
 		resolved := strings.TrimSpace(string(data))
 		if strings.HasPrefix(resolved, "ref: ") {
@@ -108,7 +108,7 @@ func resolveRef(gitDir, ref string) (string, error) {
 // parsePackedRefs reads .git/packed-refs and returns a map of ref to commit hash.
 func parsePackedRefs(gitDir string) (map[string]string, error) {
 	packedPath := filepath.Join(gitDir, "packed-refs")
-	f, err := os.Open(packedPath)
+	f, err := os.Open(packedPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 	if err != nil {
 		return nil, err
 	}
