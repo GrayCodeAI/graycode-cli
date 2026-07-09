@@ -156,20 +156,25 @@ runs:
           version="latest"
         fi
         install_dir="${RUNNER_TEMP}/hawk-bin"
-        mkdir -p "${install_dir}"
-        # Download the Hawk release archive
+        src_dir="${RUNNER_TEMP}/hawk-src"
+        mkdir -p "${install_dir}" "${src_dir}"
+        # Download the Hawk source archive and extract it
         if [ "${version}" = "latest" ]; then
-          tag=$(curl -sL "https://api.github.com/repos/${HAWK_REPO}/releases/latest" \
-            | grep '"tag_name":' | sed 's/.*"v\([^"]*\)".*/\1/')
-          tarball_url="https://github.com/${HAWK_REPO}/archive/refs/tags/v${tag}.tar.gz"
+          tarball_url=$(curl -sL "https://api.github.com/repos/${HAWK_REPO}/releases/latest" \
+            | grep '"tarball_url":' | sed 's/.*"\([^"]*\)".*/\1/')
         else
           tarball_url="https://github.com/${HAWK_REPO}/archive/refs/tags/v${version}.tar.gz"
         fi
-        curl -sL "${tarball_url}" | tar -xz -C "${RUNNER_TEMP}" --strip-components=1 hawk-*/cmd/hawk
-        mv "${RUNNER_TEMP}/hawk" "${install_dir}/hawk"
+        curl -sL "${tarball_url}" | tar -xz -C "${src_dir}" --strip-components=1
+        # Build the Hawk binary from source (Go must be available on the runner)
+        if ! command -v go &>/dev/null; then
+          echo "::error::Go is required but not found on the runner PATH. Add actions/setup-go before this action, or install Go manually." >&2
+          exit 1
+        fi
+        go build -o "${install_dir}/hawk" "${src_dir}/cmd/hawk"
         chmod +x "${install_dir}/hawk"
         echo "${install_dir}" >> "${GITHUB_PATH}"
-        echo "Installed Hawk ${tag:-${version}} from ${HAWK_REPO}"
+        echo "Installed Hawk from ${HAWK_REPO}@${version}"
 
     - name: Run Hawk
       id: run
