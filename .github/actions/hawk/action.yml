@@ -1,0 +1,297 @@
+name: Hawk
+
+description: >-
+  Run the Hawk coding agent headlessly in a GitHub workflow. Hawk is
+  model- and provider-agnostic: you supply the provider and API key as inputs.
+
+author: GrayCodeAI
+
+branding:
+  icon: terminal
+  color: blue
+
+inputs:
+  prompt:
+    description: The instruction for Hawk to execute. Mutually exclusive with prompt-file.
+    required: false
+    default: ""
+  prompt-file:
+    description: Path (relative to working-directory) to a file whose contents are the prompt.
+    required: false
+    default: ""
+  provider:
+    description: >-
+      Provider id to activate (for example openai, anthropic, gemini, ollama, or
+      any configured OpenAI-/Anthropic-compatible endpoint). Optional when the
+      repository already carries a .zero/config.json with an active provider.
+    required: false
+    default: ""
+  api-key:
+    description: >-
+      The provider API key. Pass it from a repository or organization secret;
+      it is exported only for the Hawk step and never written to the log.
+    required: false
+    default: ""
+  api-key-env:
+    description: >-
+      Name of the environment variable the chosen provider reads its key from
+      (for example OPENAI_API_KEY or ANTHROPIC_API_KEY). When set together with
+      api-key, that variable is exported only for the Hawk step. Leave the action
+      provider-agnostic by passing the env name your provider expects rather than
+      hardcoding one here.
+    required: false
+    default: ""
+  model:
+    description: Model id to use for the run. Passed to `hawk exec --model`.
+    required: false
+    default: ""
+  auto:
+    description: >-
+      Autonomy ceiling: supervised, basic, semi, full, or yolo.
+      Defaults to `supervised` so an unattended CI run does not take
+      high-impact actions implicitly.
+    required: false
+    default: supervised
+  agent:
+    description: >-
+      Agent persona to use (from Hawk user state). Maps to `hawk exec --agent`.
+    required: false
+    default: ""
+  cwd:
+    description: >-
+      Working directory override. Maps to `hawk exec --cwd`.
+      Defaults to the action's working-directory input.
+    required: false
+    default: ""
+  ephemeral:
+    description: >-
+      When true, skip session persistence. Ideal for CI runs.
+      Maps to `hawk exec --ephemeral`.
+    required: false
+    default: "false"
+  worktree:
+    description: When true, run inside an isolated git worktree.
+    required: false
+    default: "false"
+  output-format:
+    description: >-
+      Output format: text or json. Defaults to text.
+    required: false
+    default: text
+  post-to:
+    description: >-
+      Optional destination for a run summary after Hawk finishes: `pr-comment`
+      posts to the triggering pull request, `slack` posts to slack-webhook-url,
+      or `none` (default) posts nowhere.
+    required: false
+    default: none
+  slack-webhook-url:
+    description: >-
+      Slack incoming-webhook URL used when post-to is slack.
+      Pass it from a secret; it is never written to the log.
+    required: false
+    default: ""
+  github-token:
+    description: >-
+      Token used to post a PR comment when post-to is pr-comment.
+      Defaults to ${{ github.token }}.
+    required: false
+    default: ${{ github.token }}
+  working-directory:
+    description: Directory to run Hawk in. Defaults to ${{ github.workspace }}.
+    required: false
+    default: ${{ github.workspace }}
+  hawk-version:
+    description: >-
+      Hawk release version/tag to install (e.g. v1.2.3 or latest).
+      Defaults to the ref this action was resolved at.
+    required: false
+    default: ""
+  hawk-repo:
+    description: Repository to install Hawk from (owner/repo).
+    required: false
+    default: GrayCodeAI/hawk
+
+outputs:
+  exit-code:
+    description: The exit code Hawk returned (0 success, 2 usage, 3 provider, non-zero otherwise).
+    value: ${{ steps.run.outputs.exit-code }}
+  output-file:
+    description: Path to the captured Hawk stdout (the raw output-format stream).
+    value: ${{ steps.run.outputs.output-file }}
+  summary:
+    description: A short human-readable summary line parsed from the run, when available.
+    value: ${{ steps.run.outputs.summary }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Hawk
+      id: install
+      shell: bash
+      env:
+        HAWK_REPO: ${{ inputs.hawk-repo }}
+        HAWK_VERSION_INPUT: ${{ inputs.hawk-version }}
+        ACTION_REF: ${{ github.action_ref }}
+        ACTION_PATH: ${{ github.action_path }}
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+        if [ "${RUNNER_OS}" = "Windows" ]; then
+          echo "::error::The Hawk action currently supports Linux and macOS runners only." >&2
+          exit 1
+        fi
+        # Resolve the version to install: explicit input wins; otherwise the ref
+        # this action was checked out at (a tag); otherwise the latest release.
+        version="${HAWK_VERSION_INPUT}"
+        if [ -z "${version}" ]; then
+          version="${ACTION_REF}"
+        fi
+        # A commit-SHA pin (github.action_ref is the 40-hex SHA) is not a release
+        # tag, so fall back to latest rather than fetching releases/download/v<sha>.
+        case "${version}" in
+          ""|refs/*|*/*) version="latest" ;;
+        esac
+        if printf '%s' "${version}" | grep -qiE '^[0-9a-f]{40}$'; then
+          version="latest"
+        fi
+        install_dir="${RUNNER_TEMP}/hawk-bin"
+        mkdir -p "${install_dir}"
+        # Download the Hawk release archive
+        if [ "${version}" = "latest" ]; then
+          tag=$(curl -sL "https://api.github.com/repos/${HAWK_REPO}/releases/latest" \
+            | grep '"tag_name":' | sed 's/.*"v\([^"]*\)".*/\1/')
+          tarball_url="https://github.com/${HAWK_REPO}/archive/refs/tags/v${tag}.tar.gz"
+        else
+          tarball_url="https://github.com/${HAWK_REPO}/archive/refs/tags/v${version}.tar.gz"
+        fi
+        curl -sL "${tarball_url}" | tar -xz -C "${RUNNER_TEMP}" --strip-components=1 hawk-*/cmd/hawk
+        mv "${RUNNER_TEMP}/hawk" "${install_dir}/hawk"
+        chmod +x "${install_dir}/hawk"
+        echo "${install_dir}" >> "${GITHUB_PATH}"
+        echo "Installed Hawk ${tag:-${version}} from ${HAWK_REPO}"
+
+    - name: Run Hawk
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        # Secrets are passed via the environment and never echoed. `set +x` and
+        # the absence of any `echo` of these values keep them out of the log.
+        HAWK_INPUT_API_KEY: ${{ inputs.api-key }}
+        HAWK_INPUT_API_KEY_ENV: ${{ inputs.api-key-env }}
+        HAWK_INPUT_PROVIDER: ${{ inputs.provider }}
+        HAWK_INPUT_PROMPT: ${{ inputs.prompt }}
+        HAWK_INPUT_PROMPT_FILE: ${{ inputs.prompt-file }}
+        HAWK_INPUT_MODEL: ${{ inputs.model }}
+        HAWK_INPUT_AUTO: ${{ inputs.auto }}
+        HAWK_INPUT_AGENT: ${{ inputs.agent }}
+        HAWK_INPUT_CWD: ${{ inputs.cwd }}
+        HAWK_INPUT_EPHEMERAL: ${{ inputs.ephemeral }}
+        HAWK_INPUT_WORKTREE: ${{ inputs.worktree }}
+        HAWK_INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
+        ACTION_PATH: ${{ github.action_path }}
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+
+        # Export the provider key under the env name the provider expects. This
+        # keeps the action provider-agnostic: no provider->env mapping is baked
+        # in. The value is never printed.
+        if [ -n "${HAWK_INPUT_API_KEY}" ] && [ -n "${HAWK_INPUT_API_KEY_ENV}" ]; then
+          if ! printf '%s' "${HAWK_INPUT_API_KEY_ENV}" | grep -qE '^[A-Za-z_][A-Za-z0-9_]*$'; then
+            echo "::error::api-key-env must be a valid environment variable name." >&2
+            exit 2
+          fi
+          export "${HAWK_INPUT_API_KEY_ENV}=${HAWK_INPUT_API_KEY}"
+        fi
+        if [ -n "${HAWK_INPUT_PROVIDER}" ]; then
+          export HAWK_PROVIDER="${HAWK_INPUT_PROVIDER}"
+        fi
+
+        args=(exec)
+
+        if [ -n "${HAWK_INPUT_PROMPT_FILE}" ] && [ -n "${HAWK_INPUT_PROMPT}" ]; then
+          echo "::error::The 'prompt' and 'prompt-file' inputs are mutually exclusive." >&2
+          exit 2
+        fi
+        if [ -n "${HAWK_INPUT_PROMPT_FILE}" ]; then
+          args+=(--file "${HAWK_INPUT_PROMPT_FILE}")
+        elif [ -n "${HAWK_INPUT_PROMPT}" ]; then
+          args+=("${HAWK_INPUT_PROMPT}")
+        else
+          echo "::error::Provide either the 'prompt' or 'prompt-file' input." >&2
+          exit 2
+        fi
+
+        [ -n "${HAWK_INPUT_MODEL}" ] && args+=(--model "${HAWK_INPUT_MODEL}")
+        [ -n "${HAWK_INPUT_AUTO}" ] && args+=(--auto "${HAWK_INPUT_AUTO}")
+        [ -n "${HAWK_INPUT_AGENT}" ] && args+=(--agent "${HAWK_INPUT_AGENT}")
+        [ -n "${HAWK_INPUT_CWD}" ] && args+=(--cwd "${HAWK_INPUT_CWD}")
+        if [ "${HAWK_INPUT_EPHEMERAL}" = "true" ]; then
+          args+=(--ephemeral)
+        fi
+        if [ "${HAWK_INPUT_WORKTREE}" = "true" ]; then
+          args+=(--worktree)
+        fi
+        [ -n "${HAWK_INPUT_OUTPUT_FORMAT}" ] && args+=(--output-format "${HAWK_INPUT_OUTPUT_FORMAT}")
+
+        output_file="${RUNNER_TEMP}/hawk-output.txt"
+
+        # Run Hawk. Capture stdout to a file AND echo it to the log. Surface the
+        # real exit code as the step's status.
+        set +e
+        hawk "${args[@]}" | tee "${output_file}"
+        code=${PIPESTATUS[0]}
+        set -e
+
+        echo "exit-code=${code}" >> "${GITHUB_OUTPUT}"
+        echo "output-file=${output_file}" >> "${GITHUB_OUTPUT}"
+
+        # Best-effort one-line summary
+        if [ "${code}" = "0" ]; then
+          summary="Hawk run succeeded"
+        else
+          summary="Hawk run failed (exit ${code})"
+        fi
+        {
+          echo "summary<<HAWK_EOF"
+          printf '%s\n' "${summary}"
+          echo "HAWK_EOF"
+        } >> "${GITHUB_OUTPUT}"
+
+        exit "${code}"
+
+    - name: Post run summary to pull request
+      if: ${{ always() && inputs.post-to == 'pr-comment' && github.event.pull_request.number != '' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        HAWK_EXIT: ${{ steps.run.outputs.exit-code }}
+        HAWK_SUMMARY: ${{ steps.run.outputs.summary }}
+      run: |
+        set -euo pipefail
+        status="succeeded"
+        [ "${HAWK_EXIT}" != "0" ] && status="failed (exit ${HAWK_EXIT})"
+        body="$(printf 'Hawk run %s.\n\n%s' "${status}" "${HAWK_SUMMARY}")"
+        gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+          -f body="${body}" >/dev/null
+
+    - name: Post run summary to Slack
+      if: ${{ always() && inputs.post-to == 'slack' && inputs.slack-webhook-url != '' }}
+      shell: bash
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+        HAWK_EXIT: ${{ steps.run.outputs.exit-code }}
+        HAWK_SUMMARY: ${{ steps.run.outputs.summary }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        status="succeeded"
+        [ "${HAWK_EXIT}" != "0" ] && status="failed (exit ${HAWK_EXIT})"
+        text="Hawk run ${status} for ${GITHUB_REPOSITORY}@${GITHUB_REF_NAME}. ${HAWK_SUMMARY} ${RUN_URL}"
+        payload="$(jq -n --arg text "${text}" '{text: $text}')"
+        curl --fail --silent --show-error -X POST -H 'Content-Type: application/json' \
+          -d "${payload}" "${SLACK_WEBHOOK_URL}" >/dev/null || \
+          echo "::warning::Slack webhook delivery failed (run not affected)."
