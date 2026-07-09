@@ -79,6 +79,8 @@ linters:
     paths:
       - .gomodcache
       - vendor
+      - .github/actions
+      - external
     rules:
       - path: _test\.go
         linters:
