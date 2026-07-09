@@ -73,7 +73,7 @@ benchmarks/data/** linguist-vendored
 *.whl    binary
 
 # --- Source archive hygiene (excluded from `git archive`) -----------------
-.github         export-ignore
+# Exclude specific top-level config files that are only used by tooling
 .shared-templates export-ignore
 .gitattributes  export-ignore
 .gitignore      export-ignore
