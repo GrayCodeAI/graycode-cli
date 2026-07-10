@@ -34,7 +34,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build ci clean contracts-guard ecosystem-guard eyrie-client-guard peer-guard cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench boundaries build ci clean contracts-guard ecosystem-guard eyrie-client-guard peer-guard internal-layers-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
         release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
@@ -110,7 +110,13 @@ eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk tran
 peer-guard: ## Fail if support engines import each other instead of depending only on Hawk contracts.
 	bash ./scripts/check-support-repo-coupling.sh
 
-boundaries: contracts-guard ecosystem-guard eyrie-client-guard peer-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+internal-layers-guard: ## Enforce one-way dependencies across stable Hawk internal layers.
+	bash ./scripts/check-internal-layer-imports.sh
+
+boundaries: contracts-guard ecosystem-guard eyrie-client-guard peer-guard internal-layers-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+
+submodule-release-parity: ## Verify every go.mod ecosystem version resolves to its pinned Gitlink.
+	bash ./scripts/check-submodule-release-parity.sh
 
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
@@ -185,7 +191,7 @@ setup: ## Set up local development environment (go.work + external repos).
 		fi; \
 	done
 	@echo "Generating go.work..."
-	@echo "go 1.26.4" > go.work
+	@echo "go 1.26.5" > go.work
 	@echo "" >> go.work
 	@echo "use ." >> go.work
 	@echo "" >> go.work
@@ -265,8 +271,8 @@ build-static: ## Build fully static binaries for Linux (musl-compatible)
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-amd64-static $(MAIN_PKG)
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/$(NAME)-linux-arm64-static $(MAIN_PKG)
 
-size-check: build ## Report binary size and warn if over threshold (110MB, matching CI).
+size-check: build ## Report binary size and warn if over threshold (80MB, matching CI).
 	@SIZE=$$(stat -f%z bin/$(NAME) 2>/dev/null || stat -c%s bin/$(NAME) 2>/dev/null); \
 	MB=$$(echo "scale=1; $$SIZE / 1048576" | bc); \
 	echo "Binary size: $${MB} MB"; \
-	if [ $$SIZE -gt 115343360 ]; then echo "::warning::Binary size $${MB} MB exceeds 110 MB threshold (CI gate)"; fi
+	if [ $$SIZE -gt 83886080 ]; then echo "::warning::Binary size $${MB} MB exceeds 80 MB threshold (CI gate)"; fi
