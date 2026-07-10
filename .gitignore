@@ -1,5 +1,6 @@
 # Binaries
 /hawk
+bin/
 hawk_bin
 *.exe
 *.dll
