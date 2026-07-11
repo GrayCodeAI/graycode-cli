@@ -9,8 +9,10 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-const tokenService = "hawk-cloud"
-const tokenAccount = "device-token"
+const (
+	tokenService = "hawk-cloud"
+	tokenAccount = "device-token"
+)
 
 type DeviceConfig struct {
 	Endpoint  string `json:"endpoint"`
