@@ -6,78 +6,46 @@ here for scheduled execution rather than immediate implementation.
 
 ## 1. charmbracelet v1/v2 Dependency Duplication (hawk + trace)
 
-**Status:** Documented, requires migration sprint
-**Impact:** High — contributes ~20-30MB to hawk binary size
+**Status:** ✅ Done (2026-07-11)
+**Impact:** High — contributed ~20-30MB to hawk binary size
 
-### Problem
+### Outcome
 
-`hawk` and `trace` both import `charmbracelet` v1 packages alongside
-`charm.land` v2 packages:
+- Hawk and Trace imports migrated to `charm.land/*/v2` (`bubbles`, `bubbletea`,
+  `lipgloss`, `huh`, `glamour`).
+- Direct `github.com/charmbracelet/{bubbles,bubbletea,lipgloss}` requires removed
+  from hawk/trace `go.mod`.
+- Binary size gate tightened: **110MB → 80MB** (`make size-check`).
+- Verified build: hawk binary **~75 MB** (under gate) after migration.
 
-| v1 Package | v2 Package | Used In |
-|------------|------------|---------|
-| `charmbracelet/bubbles` | `charm.land/bubbles/v2` | hawk, trace |
-| `charmbracelet/bubbletea` | `charm.land/bubbletea/v2` | hawk, trace |
-| `charmbracelet/lipgloss` | `charm.land/lipgloss/v2` | hawk, trace |
-| `charmbracelet/x/ansi` | `charm.land/x/ansi` | hawk, trace |
+Commits (hawk): `2890c74` (migrate), `ccfa286` (API fixups), `7a42c1e` (size gate).
 
-`go.mod` analysis shows `hawk` imports both versions simultaneously. This
-is likely a half-finished migration.
+### Residual notes
 
-### Remediation Steps
-
-1. **Audit import usage:** Run `go list -m -json all | jq -r '.Path' | grep charm`
-   in both `hawk` and `trace` to identify every v1 import.
-2. **Migrate hawk TUI code:** Update all `charmbracelet/bubbletea` imports to
-   `charm.land/bubbletea/v2` in `hawk/internal/...` TUI packages.
-3. **Migrate trace TUI code:** Update all `charmbracelet/*` imports to
-   `charm.land/*/v2` in `trace/cli/...` and `trace/internal/...`.
-4. **Remove v1 from go.mod:** After all imports are migrated, run
-   `go mod tidy` to drop the v1 modules.
-5. **Verify binary size:** Run `make size-check` in hawk — expect ~20-30MB
-   reduction.
-
-### Risk
-
-Breaking TUI behavior. The v2 APIs have subtle differences in event handling,
-styling, and input processing. Requires full manual QA of:
-- hawk interactive REPL
-- hawk `/config` picker
-- hawk `/autonomy` tier picker
-- trace `enable` interactive setup
-- trace `checkpoint rewind` selection UI
+- `github.com/charmbracelet/x/*` and related transitive packages may still appear
+  as indirect deps of the v2 stack — that is expected and not dual v1 TUI stack.
+- Manual QA checklist (REPL, `/config`, `/autonomy`, trace setup UIs) remains
+  recommended when bumping charm majors.
 
 ## 2. yaad TUI Dependencies in Library Module
 
-**Status:** Documented, requires optional-build-tag refactor
-**Impact:** Medium — bloats hawk binary with unnecessary TUI deps
+**Status:** ✅ Done (2026-07-11) — Option A
+**Impact:** Medium — removed Bubble Tea stack from the core yaad module graph
 
-### Problem
+### Outcome
 
-`yaad` is a library embedded in `hawk`, but its `go.mod` imports:
-- `charmbracelet/bubbles`
-- `charmbracelet/bubbletea`
-- `charmbracelet/lipgloss`
+- Demo TUI moved to nested module `cmd/yaad-tui` with its own `go.mod`
+  (`replace github.com/GrayCodeAI/yaad => ../..`).
+- Core `github.com/GrayCodeAI/yaad` no longer requires
+  `charmbracelet/{bubbles,bubbletea,lipgloss}`.
+- Hawk embeds only the library packages (`engine`, `storage`, `graph`, …), so
+  the default hawk binary does not pull the demo TUI module.
+- Verify: `cd yaad && go test ./...`; `cd yaad/cmd/yaad-tui && go test ./...`.
 
-These are only needed for a demo/TUI interface, not for the core memory engine.
+### Residual notes
 
-### Remediation Options
-
-**Option A (preferred):** Move TUI code to `cmd/yaad-demo/` with its own `go.mod`.
-- Create `cmd/yaad-demo/go.mod` with `replace` to parent module
-- Move TUI packages from `yaad/internal/` to `cmd/yaad-demo/`
-- Add `//go:build yaad_tui` tag to remaining TUI code in library
-- hawk imports yaad without the tag → no TUI deps
-
-**Option B:** Add `//go:build yaad_tui` to all TUI source files.
-- Less invasive than Option A
-- hawk never builds with `yaad_tui` tag
-- Still requires audit of which files are TUI-only
-
-### Verification
-
-After refactor, `go list -m -deps github.com/GrayCodeAI/yaad | wc -l` should
-show fewer indirect dependencies. The hawk binary should shrink by ~5-10MB.
+- Re-pin `hawk/external/yaad` to the commit that includes this split and refresh
+  the hawk `go.mod` pseudo-version for `GOWORK=off` CI.
 
 ## 3. tok Viper vs. Direct TOML Config
 

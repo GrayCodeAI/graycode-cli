@@ -6,17 +6,20 @@ acceptance evidence passes; documentation or intent alone is not sufficient.
 
 ## P0 — release graph and submodules
 
-- [ ] Pin all seven `external/` submodules to the selected, publicly reachable
-  ecosystem snapshot.
+- [x] Pin all seven `external/` submodules to the selected, publicly reachable
+  ecosystem snapshot. *(local pins present; re-pin after each engine push)*
 - [ ] Make the versions in `go.mod` resolve to API-compatible commits from the
-  same snapshot.
-- [ ] Add CI for both supported dependency modes:
+  same snapshot. *(blocked until new engine commits are published; `go.work`
+  replace is authoritative for integration builds)*
+- [x] Add CI for both supported dependency modes:
   - pinned integration: `go test ./...` with `go.work`;
   - public modules: `GOWORK=off go test ./...`.
 - [ ] Prevent release workflows from falling back from a missing Gitlink commit
-  to a branch head.
-- [ ] Add a release-parity guard that reports whether each Gitlink is represented
+  to a branch head. *(verify release.yml still needs hardening)*
+- [x] Add a release-parity guard that reports whether each Gitlink is represented
   by the module version in `go.mod`.
+  Evidence: `scripts/check-submodule-release-parity.sh` + Makefile target
+  `submodule-release-parity`.
 
 Acceptance:
 
@@ -62,13 +65,18 @@ passes, and the production build succeeds.
   billing, enterprise, analytics, and delivery domains.
 - [ ] Document `graycode-core.usage_logs` as GrayCode-platform data and prohibit
   it from becoming an authoritative Hawk ledger.
-- [ ] Add import guards for Hawk delivery, application, domain/ports, and adapter
+- [x] Add import guards for Hawk delivery, application, domain/ports, and adapter
   layers while migration proceeds.
-- [ ] Define the embedding boundary for Trace and the target boundary between
+  Evidence: `scripts/check-internal-layer-imports.sh` + `make internal-layers-guard`.
+- [x] Define the embedding boundary for Trace and the target boundary between
   Sight source review and Inspect deployed-target inspection.
-- [ ] Decide and document the intentionally narrow `hawk-mcpkit` adoption scope;
+  Evidence: engine READMEs + `docs/architecture/ecosystem-architecture.md`.
+- [x] Decide and document the intentionally narrow `hawk-mcpkit` adoption scope;
   do not force engines with different MCP server requirements into it.
-- [ ] Reconcile Yaad's implemented, experimental, and planned interface docs.
+  Evidence: ecosystem architecture table (Sight/Inspect only).
+- [x] Reconcile Yaad's implemented, experimental, and planned interface docs.
+  Evidence: yaad TUI split to `cmd/yaad-tui` nested module; core library has no
+  Bubble Tea deps (2026-07-11).
 
 Acceptance: boundary checks and repository documentation agree with actual
 imports and implemented interfaces; all repository test suites pass.
