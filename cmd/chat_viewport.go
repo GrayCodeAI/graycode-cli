@@ -5,8 +5,16 @@ import (
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
+
+// mouseMsg wraps a tea.Mouse to implement tea.MouseMsg interface for tests.
+type mouseMsg struct {
+	mouse tea.Mouse
+}
+
+func (m mouseMsg) String() string   { return m.mouse.String() }
+func (m mouseMsg) Mouse() tea.Mouse { return m.mouse }
 
 // mouseSGRLeakRE matches SGR mouse reports; "[" is optional (Cursor often drops it).
 var mouseSGRLeakRE = regexp.MustCompile(`(?:\x1b)?\[?<[0-9;.+^$*-]+[Mm]`)
@@ -43,10 +51,10 @@ func isMouseRuneLeak(s string) bool {
 
 // isMouseSequenceLeak reports terminal mouse CSI fragments that must not reach the input.
 func isMouseSequenceLeak(msg tea.KeyMsg) bool {
-	if msg.Type != tea.KeyRunes || len(msg.Runes) == 0 {
+	if len(msg.Key().Text) == 0 {
 		return false
 	}
-	return isMouseRuneLeak(string(msg.Runes))
+	return isMouseRuneLeak(msg.Key().Text)
 }
 
 // stripMouseLeaks removes accumulated SGR mouse garbage from an input value.
@@ -68,6 +76,12 @@ func inputMayContainMouseLeaks(s string) bool {
 		return false
 	}
 	return strings.Contains(s, "<") || strings.Contains(s, "\x1b")
+}
+
+// isMouseWheel returns true if the mouse message represents a scroll (wheel) event.
+func isMouseWheel(msg tea.MouseMsg) bool {
+	m := msg.Mouse()
+	return m.Button == tea.MouseWheelUp || m.Button == tea.MouseWheelDown
 }
 
 // shouldForwardToInput keeps mouse events and leaked CSI bytes out of the textarea.
@@ -92,10 +106,10 @@ func (m chatModel) routeKeyToViewport(msg tea.KeyMsg) bool {
 		// Only Up/Down are part of the burst this flag describes. Any other
 		// key (typing, Escape, ...) must fall through to the normal routing
 		// below rather than being swept into viewport-scroll handling.
-		switch msg.Type {
+		switch msg.Key().Code {
 		case tea.KeyUp, tea.KeyDown:
 			if m.lastMouseY >= 0 {
-				return m.mouseInChatPane(tea.MouseMsg{Y: m.lastMouseY})
+				return m.mouseInChatPane(mouseMsg{tea.Mouse{Y: m.lastMouseY}})
 			}
 			return true
 		}
@@ -146,7 +160,7 @@ func (m chatModel) chatPaneTopY() int {
 		return 0
 	}
 	m = m.withSyncedLayout()
-	top := m.footerTopY() - m.viewport.Height
+	top := m.footerTopY() - m.viewport.Height()
 	if top < 0 {
 		top = 0
 	}
@@ -174,7 +188,7 @@ func (m chatModel) mouseInFooterZone(mouse tea.MouseMsg) bool {
 		return false
 	}
 	m = m.withSyncedLayout()
-	return mouse.Y >= m.footerTopY()
+	return mouse.Mouse().Y >= m.footerTopY()
 }
 
 // mouseInChatPane reports whether a mouse event is over the chat viewport region.
@@ -182,38 +196,42 @@ func (m chatModel) mouseInChatPane(mouse tea.MouseMsg) bool {
 	if m.height <= 0 {
 		return true
 	}
+	m = m.withSyncedLayout()
+	mouseEv := mouse.Mouse()
 	top := m.chatPaneTopY()
 	footerTop := m.footerTopY()
 	if footerTop <= top {
-		return mouse.Y >= top
+		return mouseEv.Y >= top
 	}
-	return mouse.Y >= top && mouse.Y < footerTop
+	return mouseEv.Y >= top && mouseEv.Y < footerTop
 }
 
 // trackMousePosition remembers the last pointer row for wheel routing.
 func (m *chatModel) trackMousePosition(msg tea.MouseMsg) {
-	if msg.Y < 0 {
+	mouse := msg.Mouse()
+	if mouse.Y < 0 {
 		return
 	}
 	// Cursor wheel leaks often report the footer row; keep the last motion/chat row instead.
-	if tea.MouseEvent(msg).IsWheel() && !m.mouseInChatPane(msg) {
+	if (mouse.Button == tea.MouseWheelUp || mouse.Button == tea.MouseWheelDown) && !m.mouseInChatPane(msg) {
 		return
 	}
-	m.lastMouseY = msg.Y
+	m.lastMouseY = mouse.Y
 }
 
 // effectiveWheelY picks the row used to route wheel events. Cursor's integrated terminal
 // often reports wheel at the bottom row even when the pointer is over chat; prefer the
 // last known pointer row only for that stale bottom-row report.
 func (m chatModel) effectiveWheelY(msg tea.MouseMsg) int {
-	y := msg.Y
+	mouse := msg.Mouse()
+	y := mouse.Y
 	if m.lastMouseY < 0 || !m.mouseInFooterZone(msg) || m.height <= 0 {
 		return y
 	}
 	if y < m.height-1 {
 		return y
 	}
-	if m.mouseInChatPane(tea.MouseMsg{Y: m.lastMouseY}) {
+	if m.mouseInChatPane(mouseMsg{tea.Mouse{Y: m.lastMouseY}}) {
 		return m.lastMouseY
 	}
 	return y
@@ -237,7 +255,7 @@ func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
 	if !isMouse {
 		return true
 	}
-	if !tea.MouseEvent(mouse).IsWheel() {
+	if !isMouseWheel(mouse) {
 		return m.inScrollbackFocus()
 	}
 	if m.configOpen {
@@ -251,24 +269,24 @@ func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
 
 // wheelRoutesToChat reports whether a wheel event should scroll chat history.
 func (m chatModel) wheelRoutesToChat(mouse tea.MouseMsg) bool {
-	route := mouse
+	route := mouse.Mouse()
 	route.Y = m.effectiveWheelY(mouse)
-	return m.mouseInChatPane(route)
+	return m.mouseInChatPane(mouseMsg{route})
 }
 
 // applyMouseScroll routes a mouse event to the chat viewport and syncs follow mode.
 func (m *chatModel) applyMouseScroll(msg tea.MouseMsg) tea.Cmd {
-	if !tea.MouseEvent(msg).IsWheel() {
+	if !isMouseWheel(msg) {
 		if !m.shouldRouteMouseToViewport(msg) {
 			return nil
 		}
 	} else if !m.wheelRoutesToChat(msg) {
 		return nil
 	}
-	switch msg.Button {
-	case tea.MouseButtonWheelDown:
+	switch msg.Mouse().Button {
+	case tea.MouseWheelDown:
 		m.viewport.ScrollDown(m.viewport.MouseWheelDelta)
-	case tea.MouseButtonWheelUp:
+	case tea.MouseWheelUp:
 		m.viewport.ScrollUp(m.viewport.MouseWheelDelta)
 	default:
 		var vpCmd tea.Cmd
@@ -312,9 +330,9 @@ func (m *chatModel) applyViewportScroll(msg tea.KeyMsg) (bool, tea.Cmd) {
 func wheelButtonFromSGR(code int) (tea.MouseButton, bool) {
 	switch code {
 	case 64:
-		return tea.MouseButtonWheelUp, true
+		return tea.MouseWheelUp, true
 	case 65:
-		return tea.MouseButtonWheelDown, true
+		return tea.MouseWheelDown, true
 	default:
 		return 0, false
 	}
@@ -322,13 +340,13 @@ func wheelButtonFromSGR(code int) (tea.MouseButton, bool) {
 
 func mouseMsgFromSGRMatch(match []string) (tea.MouseMsg, bool) {
 	if len(match) < 5 {
-		return tea.MouseMsg{}, false
+		return tea.MouseClickMsg{}, false
 	}
 	btnCode, err1 := strconv.Atoi(match[1])
 	x, err2 := strconv.Atoi(match[2])
 	y, err3 := strconv.Atoi(match[3])
 	if err1 != nil || err2 != nil || err3 != nil {
-		return tea.MouseMsg{}, false
+		return tea.MouseClickMsg{}, false
 	}
 	// SGR coordinates are 1-based; bubbletea uses 0-based (see parseSGRMouseEvent).
 	if x > 0 {
@@ -339,13 +357,12 @@ func mouseMsgFromSGRMatch(match []string) (tea.MouseMsg, bool) {
 	}
 	btn, ok := wheelButtonFromSGR(btnCode)
 	if !ok {
-		return tea.MouseMsg{}, false
+		return tea.MouseClickMsg{}, false
 	}
-	return tea.MouseMsg{
+	return tea.MouseClickMsg{
 		X:      x,
 		Y:      y,
 		Button: btn,
-		Action: tea.MouseActionPress,
 	}, true
 }
 
@@ -356,7 +373,7 @@ func (m *chatModel) tryScrollFromMouseLeak(msg tea.KeyMsg) (bool, tea.Cmd) {
 	if !m.mouseEnabled() {
 		return false, nil
 	}
-	matches := mouseSGRReportRE.FindAllStringSubmatch(string(msg.Runes), -1)
+	matches := mouseSGRReportRE.FindAllStringSubmatch(msg.Key().Text, -1)
 	if len(matches) == 0 {
 		return false, nil
 	}

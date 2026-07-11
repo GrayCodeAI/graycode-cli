@@ -21,7 +21,8 @@ package cmd
 //  10. Icons & glyphs
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	lipgloss "charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 
 	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
 )
@@ -125,17 +126,17 @@ var cwdBlue = lipgloss.Color("#75B1E2")
 // lipgloss selects the variant from the detected terminal background.
 
 // textPrimary — body text, primary prose.
-var textPrimary = lipgloss.AdaptiveColor{Light: "#1A1A1A", Dark: "#F0F0F0"}
+var textPrimary = compat.AdaptiveColor{Light: lipgloss.Color("#1A1A1A"), Dark: lipgloss.Color("#F0F0F0")}
 
 // textMuted — secondary/muted prose.
-var textMuted = lipgloss.AdaptiveColor{Light: "#6B6B6B", Dark: "#9E9E9E"}
+var textMuted = compat.AdaptiveColor{Light: lipgloss.Color("#6B6B6B"), Dark: lipgloss.Color("#9E9E9E")}
 
-// textPlaceholder — input field placeholder.
+// textPlaceholder — input field placeholder (color only).
 var textPlaceholder = lipgloss.Color("#7A7A7A")
 
 // textDisabled — disabled, idle, slash menu (non-selected), blockquote,
 // markdown HR.
-var textDisabled = lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#666666"}
+var textDisabled = compat.AdaptiveColor{Light: lipgloss.Color("#A0A0A0"), Dark: lipgloss.Color("#666666")}
 
 // textWhite — bright text (permission body, code foreground).
 var textWhite = lipgloss.Color("#FFFFFF")
@@ -145,7 +146,7 @@ var textWhite = lipgloss.Color("#FFFFFF")
 // ---------------------------------------------------------------------------
 
 // borderDim — input/panel/divider border.
-var borderDim = lipgloss.AdaptiveColor{Light: "#C6C6C6", Dark: "#555555"}
+var borderDim = compat.AdaptiveColor{Light: lipgloss.Color("#C6C6C6"), Dark: lipgloss.Color("#555555")}
 
 // bgCode — code block background.
 var bgCode = lipgloss.Color("#2A2A3A")
@@ -263,17 +264,16 @@ func ApplyTheme(name string) {
 	cwdBlue = lipgloss.Color(p.Blue)
 
 	// 7. Text hierarchy.
-	textPrimary = lipgloss.AdaptiveColor{Light: "#1A1A1A", Dark: p.Ink}
-	textMuted = lipgloss.AdaptiveColor{Light: "#6B6B6B", Dark: p.Muted}
+	textPrimary = compat.AdaptiveColor{Light: lipgloss.Color("#1A1A1A"), Dark: lipgloss.Color(p.Ink)}
+	textMuted = compat.AdaptiveColor{Light: lipgloss.Color("#6B6B6B"), Dark: lipgloss.Color(p.Muted)}
 	textPlaceholder = lipgloss.Color(p.Faint)
-	textDisabled = lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: p.Faintest}
+	textDisabled = compat.AdaptiveColor{Light: lipgloss.Color("#A0A0A0"), Dark: lipgloss.Color(p.Faintest)}
 
 	// 8. Structure.
-	borderDim = lipgloss.AdaptiveColor{Light: "#C6C6C6", Dark: p.Line2}
+	borderDim = compat.AdaptiveColor{Light: lipgloss.Color("#C6C6C6"), Dark: lipgloss.Color(p.Line2)}
 	bgCode = lipgloss.Color(p.Panel)
 
-	// 9. Update dark-background flag so AdaptiveColors resolve correctly.
-	lipgloss.SetHasDarkBackground(entry.IsDark)
+	// 9. Dark-background flag is now handled via LightDark in v2; no setter needed.
 
 	// 10. Rebuild package-level styles that snapshotted the old colors at
 	// init time. Without this, markdown/chat/agent-grid styles keep the

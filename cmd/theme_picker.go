@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 
 	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
 )
@@ -102,10 +102,17 @@ func (tp *ThemePicker) Update(msg tea.KeyMsg) (*ThemeChoice, bool) {
 		return nil, false
 	}
 
-	switch msg.Type {
-	case tea.KeyEsc, tea.KeyCtrlC:
+	switch key := msg.Key(); key.Code {
+	case tea.KeyEsc:
 		tp.Close()
 		return nil, true
+	case 'c':
+		// Ctrl+C closes the picker; other C keys fall through to text input.
+		if key.Mod == tea.ModCtrl {
+			tp.Close()
+			return nil, true
+		}
+		return nil, false
 	case tea.KeyEnter:
 		sel := tp.Selected()
 		tp.Close()
@@ -132,9 +139,9 @@ func (tp *ThemePicker) Update(msg tea.KeyMsg) (*ThemeChoice, bool) {
 }
 
 // View renders the theme picker overlay.
-func (tp *ThemePicker) View() string {
+func (tp *ThemePicker) View() tea.View {
 	if !tp.open {
-		return ""
+		return tea.NewView("")
 	}
 
 	titleStyle := lipgloss.NewStyle().
@@ -162,5 +169,7 @@ func (tp *ThemePicker) View() string {
 		}
 	}
 
-	return b.String()
+	v := tea.View{Content: b.String()}
+	v.AltScreen = true
+	return v
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	cloud "github.com/GrayCodeAI/hawk/internal/platform/cloud"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/spf13/cobra"
@@ -330,13 +331,32 @@ func runExec(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// Persist session for resume/search (skip in ephemeral/CI mode)
 	exitCode := 0
 	if execErr != "" {
 		exitCode = 1
 	}
+	sessionID := fmt.Sprintf("exec-%d-%s", start.UnixMilli(), randomHex(4))
+
+	// Optional cloud accounting is best-effort and never affects local execution.
+	if client, cfg, loadErr := cloud.LoadClient(); loadErr == nil && client.Enabled() {
+		go client.RecordUsage(context.Background(), cloud.UsageEvent{
+			EventID:      fmt.Sprintf("exec-%d-%s", start.UnixMilli(), randomHex(8)),
+			DeviceID:     cfg.DeviceID,
+			ProjectID:    cfg.ProjectID,
+			SessionID:    sessionID,
+			Capability:   "hawk",
+			Model:        effectiveModel,
+			InputTokens:  totalIn,
+			OutputTokens: totalOut,
+			TokensUsed:   totalIn + totalOut,
+			DurationMS:   int(time.Since(start).Milliseconds()),
+			Status:       map[bool]string{true: "failed", false: "completed"}[exitCode != 0],
+			OccurredAt:   time.Now().UTC().Format(time.RFC3339),
+		})
+	}
+
+	// Persist session for resume/search (skip in ephemeral/CI mode)
 	if !execEphemeral {
-		sessionID := fmt.Sprintf("exec-%d-%s", start.UnixMilli(), randomHex(4))
 		persistExecSession(sessionID, effectiveModel, effectiveProvider, prompt, response.String())
 	}
 
@@ -352,7 +372,7 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	if execOutputFormat == "json" {
 		result := ExecResult{
-			SessionID:  fmt.Sprintf("exec-%d-%s", start.UnixMilli(), randomHex(4)),
+			SessionID:  sessionID,
 			Response:   response.String(),
 			ExitCode:   exitCode,
 			TokensIn:   totalIn,

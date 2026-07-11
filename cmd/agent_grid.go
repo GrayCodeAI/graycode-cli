@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 var (
@@ -70,7 +70,7 @@ type AgentPane struct {
 
 // NewAgentPane creates a new agent pane for the given task.
 func NewAgentPane(id, task string, width, height int) *AgentPane {
-	vp := viewport.New(width-2, height-3) // account for border + title
+	vp := viewport.New(viewport.WithWidth(width-2), viewport.WithHeight(height-3)) // account for border + title
 	return &AgentPane{
 		ID:       id,
 		Task:     task,
@@ -222,8 +222,8 @@ func (g *AgentGrid) Render() string {
 			pane := g.panes[idx]
 			pane.width = paneWidth
 			pane.height = paneHeight
-			pane.viewport.Width = paneWidth - 2
-			pane.viewport.Height = paneHeight - 3
+			pane.viewport.SetWidth(paneWidth - 2)
+			pane.viewport.SetHeight(paneHeight - 3)
 			colStrings = append(colStrings, pane.Render())
 		}
 		rowStrings = append(rowStrings, lipgloss.JoinHorizontal(lipgloss.Top, colStrings...))

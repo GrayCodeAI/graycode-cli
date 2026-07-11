@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -152,7 +152,7 @@ func (m chatModel) confirmConfigGatewayKeyRemove() (chatModel, tea.Cmd) {
 
 func (m chatModel) handleConfigKeyViewKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	trimmedProvider := strings.TrimSpace(m.configProvider)
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		m.configEntry = configEntryNone
 		m.configProvider = ""
@@ -174,12 +174,10 @@ func (m chatModel) handleConfigKeyViewKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		return m.startConfigKeyReplace(trimmedProvider)
-	case tea.KeyRunes:
-		if trimmedProvider == hawkconfig.ProviderXiaomiTokenPlan && strings.EqualFold(string(msg.Runes), "g") {
+	default:
+		if trimmedProvider == hawkconfig.ProviderXiaomiTokenPlan && strings.EqualFold(key.Text, "g") {
 			return m.startConfigXiaomiTokenPlanRegion(), nil
 		}
-	default:
 		return m, nil
 	}
-	return m, nil
 }

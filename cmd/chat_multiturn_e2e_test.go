@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func configureReadyChatState(t *testing.T) {
@@ -64,7 +64,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 	m.session.SetProvider("")
 
 	m.input.SetValue("first question")
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = requireChatModel(t, result)
 	if !m.waiting {
 		t.Fatal("first enter should start a waiting chat turn")
@@ -80,7 +80,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 	}
 
 	m.input.SetValue("second question")
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = requireChatModel(t, result)
 	if len(m.messageQueue) != 1 || m.messageQueue[0] != "second question" {
 		t.Fatalf("queued messages = %v, want [second question]", m.messageQueue)
@@ -128,7 +128,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 		t.Fatalf("queued second turn should reset per-turn tokens, got in=%d out=%d", m.turnInputTokens, m.turnOutputTokens)
 	}
 
-	result, cmd := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	if cmd != nil {
 		result, _ = result.(chatModel).Update(cmd())
 	}
@@ -136,7 +136,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 	if got := m.input.Value(); got != "second question" {
 		t.Fatalf("first history recall = %q, want second question", got)
 	}
-	result, cmd = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	if cmd != nil {
 		result, _ = result.(chatModel).Update(cmd())
 	}
@@ -144,7 +144,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 	if got := m.input.Value(); got != "first question" {
 		t.Fatalf("second history recall = %q, want first question", got)
 	}
-	result, cmd = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	result, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	if cmd != nil {
 		result, _ = result.(chatModel).Update(cmd())
 	}
@@ -152,7 +152,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 	if got := m.input.Value(); got != "second question" {
 		t.Fatalf("history down = %q, want second question", got)
 	}
-	result, cmd = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	result, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	if cmd != nil {
 		result, _ = result.(chatModel).Update(cmd())
 	}
@@ -163,7 +163,7 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 
 	m.viewDirty = true
 	m.updateViewportContent()
-	rendered := m.View()
+	rendered := m.View().Content
 	if !strings.Contains(rendered, "first question") || !strings.Contains(rendered, "Tests passed after the fix.") {
 		t.Fatalf("rendered chat missing final transcript:\n%s", rendered)
 	}

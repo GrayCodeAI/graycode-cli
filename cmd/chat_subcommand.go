@@ -4,7 +4,7 @@ import (
 	"sort"
 	"sync"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ChatSubcommand is a single slash-command handler. Implementations

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestScrollableLettersReachPromptWhenFocused reproduces a reported bug:
@@ -19,14 +19,14 @@ func TestScrollableLettersReachPromptWhenFocused(t *testing.T) {
 	m.input.Focus()
 
 	// Make the viewport genuinely scrollable: more content lines than height.
-	m.viewport.Height = 3
+	m.viewport.SetHeight(3)
 	m.viewport.SetContent(strings.Repeat("line\n", 20))
 	if !m.viewportScrollable() {
 		t.Fatal("test setup failed: viewport should be scrollable")
 	}
 
 	for _, ch := range []string{"d", "b", "f", "u"} {
-		next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(ch)})
+		next, _ := m.Update(tea.KeyPressMsg{Code: []rune(ch)[0], Text: ch})
 		*m = next.(chatModel)
 	}
 

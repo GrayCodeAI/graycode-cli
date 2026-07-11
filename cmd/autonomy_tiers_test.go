@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func TestAutonomyTierNames(t *testing.T) {
@@ -64,9 +64,9 @@ func TestAutonomyTierColorsDistinct(t *testing.T) {
 		engine.AutonomyFull,
 		engine.AutonomyYOLO,
 	}
-	seen := make(map[lipgloss.Color]bool)
+	seen := make(map[string]bool)
 	for _, l := range levels {
-		c := autonomyTierColor(l)
+		c := fmt.Sprint(autonomyTierColor(l))
 		if seen[c] {
 			t.Fatalf("duplicate color for tier %v", l)
 		}
