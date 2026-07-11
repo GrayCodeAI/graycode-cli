@@ -11,12 +11,12 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/GrayCodeAI/eyrie v0.1.4-0.20260710020656-7f26f4d5c6ed
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.4-0.20260708174040-91a0c57b0f31
-	github.com/GrayCodeAI/inspect v0.1.4-0.20260710024113-7138db2984f9
-	github.com/GrayCodeAI/sight v0.1.3-0.20260710024120-e6cab9f0c51c
-	github.com/GrayCodeAI/tok v0.1.3-0.20260708174250-2a1703c8d3ce
-	github.com/GrayCodeAI/yaad v0.1.4-0.20260711022625-b7ee28121b82
+	github.com/GrayCodeAI/eyrie v0.0.0-20260711021822-3ff931ed7e98
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.2
+	github.com/GrayCodeAI/inspect v0.1.3
+	github.com/GrayCodeAI/sight v0.1.2
+	github.com/GrayCodeAI/tok v0.0.0-20260710220846-36cfccd8ef19
+	github.com/GrayCodeAI/yaad v0.0.0-20260711023203-ad495c8fcc91
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/fsnotify/fsnotify v1.10.1
@@ -128,7 +128,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/GrayCodeAI/trace v0.1.4-0.20260710024128-821f84eaf60b
+	github.com/GrayCodeAI/trace v0.0.0-20260710220846-8727079a075e
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
