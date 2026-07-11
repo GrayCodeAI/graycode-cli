@@ -3,13 +3,14 @@ package cmd
 import (
 	"context"
 	"errors"
+	"image/color"
 	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestRenderChatConnectionStatus_ColorParts(t *testing.T) {
@@ -40,7 +41,7 @@ func TestParseContextWindowLabel(t *testing.T) {
 
 func TestFormatConnectionContextLabel(t *testing.T) {
 	m := chatModel{session: &engine.Session{}}
-	got := formatConnectionContextLabel(m, "131k")
+	got := ansi.Strip(formatConnectionContextLabel(m, "131k"))
 	// The label is per-part colored with ANSI escapes. In a TTY test the
 	// escapes are present; in a non-TTY test lipgloss strips them. We
 	// just assert the plain-text segments are present either way.
@@ -53,7 +54,7 @@ func TestFormatConnectionContextLabel(t *testing.T) {
 	sess := &engine.Session{}
 	sess.AddUser(strings.Repeat("a", 4000))
 	m.session = sess
-	got = formatConnectionContextLabel(m, "131k")
+	got = ansi.Strip(formatConnectionContextLabel(m, "131k"))
 	if !strings.Contains(got, "/131k ctx") || !strings.Contains(got, "%") {
 		t.Fatalf("expected used/total ctx label, got %q", got)
 	}
@@ -64,7 +65,7 @@ func TestContextPercentColor(t *testing.T) {
 	// "0k/262k ctx (0%)" traffic-light coloring. Assert each threshold.
 	cases := []struct {
 		pct  int
-		want lipgloss.Color
+		want color.Color
 	}{
 		{0, doneGreen},
 		{50, doneGreen},

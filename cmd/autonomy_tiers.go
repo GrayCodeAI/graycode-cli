@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // Four container autonomy tiers (Scout → Builder → Operator → Autonomous).
@@ -86,7 +87,7 @@ func autonomyTierDescription(level engine.AutonomyLevel) string {
 	}
 }
 
-func autonomyTierColor(level engine.AutonomyLevel) lipgloss.Color {
+func autonomyTierColor(level engine.AutonomyLevel) color.Color {
 	switch level {
 	case engine.AutonomySupervised:
 		return lipgloss.Color("#9E9E9E") // matches textMuted's dark value

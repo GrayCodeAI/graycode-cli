@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // huntSubcommand implements the /hunt slash command. It asks the

@@ -16,13 +16,9 @@ var lastAutoCommitHash string
 // model's raw response. It is reused as the ChatFn of the existing
 // CommitMessageGenerator (see smart_commit.go).
 //
-// Hawk's tools do not yet hold a direct handle to the eyrie model client, so
-// the default value is nil and GenerateCommitMessage falls back to the
-// deterministic rule-based generator. Assign this at startup once the session
-// model client is threaded through the tool layer to enable real LLM output.
-//
-// TODO(commit-llm): wire an eyrie-backed function into CommitMessageChatFn when
-// the session model client is available to tools.
+// Session execution supplies this through ToolContext. The package-level seam
+// remains available for embedders and tests; when neither is set,
+// GenerateCommitMessage falls back to the deterministic generator.
 var CommitMessageChatFn func(ctx context.Context, prompt string) (string, error)
 
 // errNoCommitModel signals that no real model is wired up. Retained for callers

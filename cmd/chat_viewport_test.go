@@ -4,21 +4,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestRouteKeyToViewport_ArrowsInPromptFocus(t *testing.T) {
-	vp := viewport.New(80, 10)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(10))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	vp.SetYOffset(5)
 
 	ta := textarea.New()
 	m := chatModel{viewport: vp, input: ta, uiFocus: focusPrompt}
-	up := tea.KeyMsg{Type: tea.KeyUp}
+	up := tea.KeyPressMsg{Code: tea.KeyUp}
 	if m.routeKeyToViewport(up) {
 		t.Fatal("up in prompt focus should use input history, not scroll chat")
 	}
@@ -29,7 +29,7 @@ func TestRouteKeyToViewport_ArrowsInPromptFocus(t *testing.T) {
 }
 
 func TestMouseInChatPane_Zones(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	m := chatModel{
 		viewport: vp,
 		input:    textarea.New(),
@@ -45,18 +45,18 @@ func TestMouseInChatPane_Zones(t *testing.T) {
 		t.Fatalf("invalid zones top=%d bottom=%d", top, bottom)
 	}
 
-	overChat := tea.MouseMsg{Y: top, Button: tea.MouseButtonWheelDown}
+	overChat := tea.MouseWheelMsg{Y: top, Button: tea.MouseWheelDown}
 	if !m.mouseInChatPane(overChat) {
 		t.Fatal("expected wheel row on chat pane")
 	}
-	overInput := tea.MouseMsg{Y: bottom, Button: tea.MouseButtonWheelDown}
+	overInput := tea.MouseWheelMsg{Y: bottom, Button: tea.MouseWheelDown}
 	if m.mouseInChatPane(overInput) {
 		t.Fatal("expected wheel row on input footer to be outside chat pane")
 	}
 }
 
 func TestShouldRouteMouseToViewport_SplitPaneUX(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	m := chatModel{
 		viewport: vp,
@@ -67,8 +67,8 @@ func TestShouldRouteMouseToViewport_SplitPaneUX(t *testing.T) {
 	}
 	m = m.withSyncedLayout()
 
-	wheelChat := tea.MouseMsg{Y: m.chatPaneTopY(), Button: tea.MouseButtonWheelDown}
-	wheelInput := tea.MouseMsg{Y: m.bottomBarTopY(), Button: tea.MouseButtonWheelDown}
+	wheelChat := tea.MouseWheelMsg{Y: m.chatPaneTopY(), Button: tea.MouseWheelDown}
+	wheelInput := tea.MouseWheelMsg{Y: m.bottomBarTopY(), Button: tea.MouseWheelDown}
 
 	if !m.shouldRouteMouseToViewport(wheelChat) {
 		t.Fatal("wheel over chat should scroll history in prompt focus")
@@ -85,7 +85,7 @@ func TestShouldRouteMouseToViewport_SplitPaneUX(t *testing.T) {
 
 func TestSyncViewportMouseWheel_ManualRouting(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "")
-	vp := viewport.New(80, 10)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(10))
 	m := chatModel{viewport: vp, uiFocus: focusPrompt}
 	m = m.syncViewportMouseWheel()
 	if m.viewport.MouseWheelEnabled {
@@ -95,7 +95,7 @@ func TestSyncViewportMouseWheel_ManualRouting(t *testing.T) {
 
 func TestSyncViewportMouseWheel_DisabledWithOptOut(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "0")
-	vp := viewport.New(80, 10)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(10))
 	disabled := false
 	m := chatModel{viewport: vp, uiFocus: focusPrompt, settings: hawkconfig.Settings{TuiMouse: &disabled}}
 	m = m.syncViewportMouseWheel()
@@ -105,7 +105,7 @@ func TestSyncViewportMouseWheel_DisabledWithOptOut(t *testing.T) {
 }
 
 func TestTryScrollFromMouseLeak_SplitPaneByY(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	m := chatModel{
 		viewport: vp,
@@ -115,31 +115,31 @@ func TestTryScrollFromMouseLeak_SplitPaneByY(t *testing.T) {
 		uiFocus:  focusPrompt,
 	}
 	m = m.withSyncedLayout()
-	before := m.viewport.YOffset
+	before := m.viewport.YOffset()
 
-	chatLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;6M")} // SGR Y is 1-based → row 5
+	chatLeak := tea.KeyPressMsg{Code: '[', Text: "[<65;99;6M"} // SGR Y is 1-based → row 5
 	handled, _ := m.tryScrollFromMouseLeak(chatLeak)
 	if !handled {
 		t.Fatal("expected chat leak to be consumed")
 	}
-	if m.viewport.YOffset == before {
+	if m.viewport.YOffset() == before {
 		t.Fatal("wheel leak over chat should scroll viewport")
 	}
 
 	m.viewport.SetYOffset(before)
-	inputLeak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;99;23M")} // 1-based footer row
+	inputLeak := tea.KeyPressMsg{Code: '[', Text: "[<65;99;23M"} // 1-based footer row
 	handled, _ = m.tryScrollFromMouseLeak(inputLeak)
 	if !handled {
 		t.Fatal("expected input leak to be consumed")
 	}
-	if m.viewport.YOffset != before {
+	if m.viewport.YOffset() != before {
 		t.Fatal("wheel leak over input should not scroll viewport")
 	}
 }
 
 func TestLetterMNotTreatedAsMouseLeak(t *testing.T) {
 	for _, s := range []string{"m", "M", "hello", "lam", "vim", "make"} {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+		msg := tea.KeyPressMsg{Code: '[', Text: s}
 		if isMouseSequenceLeak(msg) {
 			t.Fatalf("%q must not be filtered as mouse leak", s)
 		}
@@ -153,7 +153,7 @@ func TestLetterMNotTreatedAsMouseLeak(t *testing.T) {
 }
 
 func TestMouseSequenceLeak_Filtered(t *testing.T) {
-	leak := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;49;18M")}
+	leak := tea.KeyPressMsg{Code: '[', Text: "[<65;49;18M"}
 	if !isMouseSequenceLeak(leak) {
 		t.Fatal("expected SGR mouse leak detection")
 	}
@@ -169,7 +169,7 @@ func TestMouseSequenceLeak_Filtered(t *testing.T) {
 func TestMouseSequenceLeak_PartialFragments(t *testing.T) {
 	partials := []string{"[", "[<", "[<65", "65;99;16M"}
 	for _, s := range partials {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+		msg := tea.KeyPressMsg{Code: '[', Text: s}
 		if !isMouseSequenceLeak(msg) {
 			t.Fatalf("expected partial leak %q to be filtered", s)
 		}
@@ -185,7 +185,7 @@ func TestMouseSequenceLeak_PartialFragments(t *testing.T) {
 func TestMouseSequenceLeak_CursorConcatenated(t *testing.T) {
 	// Cursor integrated terminal often drops "[" on repeated wheel events.
 	leak := "[<65;84;24M[<64;84;24M<64;84;24M<64;84;24M<65;84;24M"
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(leak)}
+	msg := tea.KeyPressMsg{Code: '[', Text: leak}
 	if !isMouseSequenceLeak(msg) {
 		t.Fatal("expected concatenated Cursor leak detection")
 	}
@@ -198,7 +198,7 @@ func TestMouseSequenceLeak_CursorConcatenated(t *testing.T) {
 }
 
 func TestEffectiveWheelY_CursorStaleFooterRow(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	m := chatModel{
 		viewport:   vp,
@@ -210,7 +210,7 @@ func TestEffectiveWheelY_CursorStaleFooterRow(t *testing.T) {
 	}
 	m = m.withSyncedLayout()
 
-	staleFooter := tea.MouseMsg{Y: m.height - 1, Button: tea.MouseButtonWheelDown}
+	staleFooter := tea.MouseWheelMsg{Y: m.height - 1, Button: tea.MouseWheelDown}
 	if !m.wheelRoutesToChat(staleFooter) {
 		t.Fatal("stale bottom-row wheel Y should route to chat when pointer was over chat")
 	}
@@ -220,14 +220,14 @@ func TestEffectiveWheelY_CursorStaleFooterRow(t *testing.T) {
 		t.Fatal("stale bottom-row wheel Y must not scroll when pointer was over input")
 	}
 
-	explicitFooter := tea.MouseMsg{Y: m.footerTopY(), Button: tea.MouseButtonWheelDown}
+	explicitFooter := tea.MouseWheelMsg{Y: m.footerTopY(), Button: tea.MouseWheelDown}
 	if m.wheelRoutesToChat(explicitFooter) {
 		t.Fatal("explicit footer wheel row must not scroll chat")
 	}
 }
 
 func TestApplyMouseScroll_ClearsStreamFollow(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	vp.GotoBottom()
 	m := chatModel{
@@ -241,9 +241,9 @@ func TestApplyMouseScroll_ClearsStreamFollow(t *testing.T) {
 		contentLines: 40,
 	}
 	m = m.withSyncedLayout()
-	m.applyMouseScroll(tea.MouseMsg{
+	m.applyMouseScroll(tea.MouseWheelMsg{
 		Y:      m.chatPaneTopY(),
-		Button: tea.MouseButtonWheelUp,
+		Button: tea.MouseWheelUp,
 	})
 	if m.streamFollow {
 		t.Fatal("manual wheel scroll must disable stream follow")

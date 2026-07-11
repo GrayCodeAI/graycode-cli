@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // designSubcommand implements the /design slash command. It

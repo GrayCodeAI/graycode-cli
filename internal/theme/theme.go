@@ -9,85 +9,88 @@
 
 package theme
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	lipgloss "charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
+)
 
 // Theme holds all resolved theme colors and styles for the TUI.
 type Theme struct {
 	// Brand identity
-	BrandColor lipgloss.Color
+	BrandColor lipgloss.Style
 
 	// UI state
-	PanelBg    lipgloss.Color
-	PromptBg   lipgloss.Color
-	LineColor  lipgloss.Color
-	LineColor2 lipgloss.Color
+	PanelBg    lipgloss.Style
+	PromptBg   lipgloss.Style
+	LineColor  lipgloss.Style
+	LineColor2 lipgloss.Style
 
 	// Semantic feedback
-	SuccessColor lipgloss.Color
-	WarnColor    lipgloss.Color
-	ErrorColor   lipgloss.Color
-	InfoColor    lipgloss.Color
+	SuccessColor lipgloss.Style
+	WarnColor    lipgloss.Style
+	ErrorColor   lipgloss.Style
+	InfoColor    lipgloss.Style
 
 	// Tooling & agents
-	ToolColor      lipgloss.Color
-	AgentColor     lipgloss.Color
-	DoneColor      lipgloss.Color
-	ContainerColor lipgloss.Color
+	ToolColor      lipgloss.Style
+	AgentColor     lipgloss.Style
+	DoneColor      lipgloss.Style
+	ContainerColor lipgloss.Style
 
 	// Autonomy tiers
-	TierInspect lipgloss.Color
-	TierEdit    lipgloss.Color
-	TierRun     lipgloss.Color
-	TierTrust   lipgloss.Color
+	TierInspect lipgloss.Style
+	TierEdit    lipgloss.Style
+	TierRun     lipgloss.Style
+	TierTrust   lipgloss.Style
 
 	// HUD overlay
-	HudBorderColor lipgloss.Color
-	HudLabelColor  lipgloss.Color
+	HudBorderColor lipgloss.Style
+	HudLabelColor  lipgloss.Style
 
 	// Status bar
-	CostColor   lipgloss.Color
-	BranchColor lipgloss.Color
-	TokenColor  lipgloss.Color
-	CwdColor    lipgloss.Color
+	CostColor   lipgloss.Style
+	BranchColor lipgloss.Style
+	TokenColor  lipgloss.Style
+	CwdColor    lipgloss.Style
 
 	// Text hierarchy (AdaptiveColor for dark/light variant)
-	TextPrimary     lipgloss.AdaptiveColor
-	TextMuted       lipgloss.AdaptiveColor
-	TextPlaceholder lipgloss.Color
-	TextDisabled    lipgloss.AdaptiveColor
-	TextWhite       lipgloss.Color
+	TextPrimary     compat.AdaptiveColor
+	TextMuted       compat.AdaptiveColor
+	TextPlaceholder lipgloss.Style
+	TextDisabled    compat.AdaptiveColor
+	TextWhite       lipgloss.Style
 
 	// Structure
-	BorderColor lipgloss.AdaptiveColor
-	BgCode      lipgloss.Color
+	BorderColor compat.AdaptiveColor
+	BgCode      lipgloss.Style
 
 	// Diff colors
-	DiffAddBg     lipgloss.Color
-	DiffDelBg     lipgloss.Color
-	DiffAddBgWord lipgloss.Color
-	DiffDelBgWord lipgloss.Color
+	DiffAddBg     lipgloss.Style
+	DiffDelBg     lipgloss.Style
+	DiffAddBgWord lipgloss.Style
+	DiffDelBgWord lipgloss.Style
 
 	// Permission
-	PermBg     lipgloss.Color
-	PermBgWord lipgloss.Color
-	SelBg      lipgloss.Color
+	PermBg     lipgloss.Style
+	PermBgWord lipgloss.Style
+	SelBg      lipgloss.Style
 
 	// On-accent for text on brand backgrounds
-	OnBrandColor  lipgloss.Color
-	OnAccentColor lipgloss.Color
+	OnBrandColor  lipgloss.Style
+	OnAccentColor lipgloss.Style
 
 	// Card colors for specialist cards
-	CardRun  lipgloss.Color
-	CardErr  lipgloss.Color
-	CardPerm lipgloss.Color
+	CardRun  lipgloss.Style
+	CardErr  lipgloss.Style
+	CardPerm lipgloss.Style
 
 	// Git colors
-	GitAdd       lipgloss.Color
-	GitDel       lipgloss.Color
-	GitAddBg     lipgloss.Color
-	GitDelBg     lipgloss.Color
-	GitAddBgWord lipgloss.Color
-	GitDelBgWord lipgloss.Color
+	GitAdd       lipgloss.Style
+	GitDel       lipgloss.Style
+	GitAddBg     lipgloss.Style
+	GitDelBg     lipgloss.Style
+	GitAddBgWord lipgloss.Style
+	GitDelBgWord lipgloss.Style
 
 	// Status line colors (raw ANSI for hot path)
 	AnsiBrand   string

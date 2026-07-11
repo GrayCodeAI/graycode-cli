@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestView_LineCountMatchesHeight(t *testing.T) {
@@ -16,11 +16,11 @@ func TestView_LineCountMatchesHeight(t *testing.T) {
 		width:        80,
 		welcomeCache: "HAWK LOGO\nv0.1.0",
 		input:        textarea.New(),
-		viewport:     viewport.New(80, 8),
+		viewport:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(8)),
 		ghostText:    NewGhostText(),
 	}
 	m = m.withSyncedLayout()
-	got := m.View()
+	got := m.View().Content
 	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
 	if len(lines) > m.height {
 		t.Fatalf("view lines = %d, must not exceed height %d", len(lines), m.height)
@@ -48,7 +48,7 @@ func TestView_LineCountMatchesHeight(t *testing.T) {
 }
 
 func TestMouseWheelDelta_SGRUsesZeroBasedY(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	m := chatModel{
 		viewport: vp,
@@ -58,24 +58,24 @@ func TestMouseWheelDelta_SGRUsesZeroBasedY(t *testing.T) {
 		uiFocus:  focusPrompt,
 	}
 	m = m.withSyncedLayout()
-	before := m.viewport.YOffset
+	before := m.viewport.YOffset()
 	footerRow1Based := m.footerTopY() + 1
 	chatRow1Based := m.chatPaneTopY() + 2
 
-	leakChat := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;40;" + strconv.Itoa(chatRow1Based) + "M")}
+	leakChat := tea.KeyPressMsg{Code: '[', Text: "[<65;40;" + strconv.Itoa(chatRow1Based) + "M"}
 	if handled, _ := m.tryScrollFromMouseLeak(leakChat); !handled {
 		t.Fatal("expected chat wheel leak to be consumed")
 	}
-	if m.viewport.YOffset == before {
+	if m.viewport.YOffset() == before {
 		t.Fatal("SGR chat wheel should scroll viewport")
 	}
 
 	m.viewport.SetYOffset(before)
-	leakInput := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("[<65;40;" + strconv.Itoa(footerRow1Based) + "M")}
+	leakInput := tea.KeyPressMsg{Code: '[', Text: "[<65;40;" + strconv.Itoa(footerRow1Based) + "M"}
 	if handled, _ := m.tryScrollFromMouseLeak(leakInput); !handled {
 		t.Fatal("expected footer wheel leak to be consumed")
 	}
-	if m.viewport.YOffset != before {
+	if m.viewport.YOffset() != before {
 		t.Fatal("SGR footer wheel must not scroll chat")
 	}
 }

@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 )
 
 // CommandPaletteEntry represents a single command in the palette.
@@ -44,8 +44,7 @@ func NewCommandPalette(width int) *CommandPalette {
 	ti := textinput.New()
 	ti.Placeholder = "Type to search commands..."
 	ti.Focus()
-	ti.CharLimit = 100
-	ti.Width = 40
+	ti.SetWidth(40)
 
 	cp := &CommandPalette{
 		input: ti,
@@ -145,7 +144,7 @@ func (cp *CommandPalette) Update(msg tea.KeyMsg) (string, bool) {
 		return "", false
 	}
 
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		cp.Close()
 		return "", true
@@ -225,7 +224,7 @@ func (cp *CommandPalette) Render(viewWidth int) string {
 	b.WriteString("\n\n")
 
 	// Input
-	cp.input.Width = boxWidth - 4
+	cp.input.SetWidth(boxWidth - 4)
 	b.WriteString(paletteInputStyle.Width(boxWidth - 2).Render(cp.input.View()))
 	b.WriteString("\n\n")
 

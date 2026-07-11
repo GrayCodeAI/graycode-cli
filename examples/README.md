@@ -43,6 +43,13 @@ hawk analyze --depth full
 hawk fix --auto
 ```
 
+### Report CI delivery context
+
+Copy [hawk-delivery-context.yml](github/hawk-delivery-context.yml) to your
+repository to report GitHub Actions runs to Hawk Cloud. Create a dedicated,
+revocable device token for CI and keep its endpoint, device ID, project ID, and
+token in GitHub Actions secrets.
+
 ## MCP Integration
 
 Hawk can use MCP servers for extended capabilities:

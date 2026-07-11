@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
+	lipgloss "charm.land/lipgloss/v2"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	aiwatch "github.com/GrayCodeAI/hawk/internal/engine/io"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // Print mode and session persistence functions extracted from chat.go
