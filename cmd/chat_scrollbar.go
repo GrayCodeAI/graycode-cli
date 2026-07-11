@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 )
 
 // scrollbarWidth is the number of terminal columns reserved for the scrollbar column.

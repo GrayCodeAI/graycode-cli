@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
-			tea "charm.land/bubbletea/v2"
-		lipgloss "charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 

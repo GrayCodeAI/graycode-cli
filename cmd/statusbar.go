@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 

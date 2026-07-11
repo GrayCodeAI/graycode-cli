@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -14,7 +14,7 @@ import (
 
 func chatModelForConfigPasteTest() chatModel {
 	ti := textinput.New()
-	ti.Width = 40
+	ti.SetWidth(40)
 	ti, _ = ti.Update(tea.WindowSizeMsg{Width: 40, Height: 1})
 	return chatModel{configInput: ti, input: textarea.New()}
 }

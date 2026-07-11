@@ -9,7 +9,7 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -27,7 +27,7 @@ func newTestChatModel() *chatModel {
 
 	m := &chatModel{
 		input:             textarea.New(),
-		viewport:          viewport.New(120, 12),
+		viewport:          viewport.New(viewport.WithWidth(120), viewport.WithHeight(12)),
 		session:           sess,
 		registry:          tool.NewRegistry(),
 		partial:           &strings.Builder{},

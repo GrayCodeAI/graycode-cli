@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
-			tea "charm.land/bubbletea/v2"
-		lipgloss "charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -70,7 +70,7 @@ type AgentPane struct {
 
 // NewAgentPane creates a new agent pane for the given task.
 func NewAgentPane(id, task string, width, height int) *AgentPane {
-	vp := viewport.New(viewport.WithWidth(width - 2), viewport.WithHeight(height - 3)) // account for border + title
+	vp := viewport.New(viewport.WithWidth(width-2), viewport.WithHeight(height-3)) // account for border + title
 	return &AgentPane{
 		ID:       id,
 		Task:     task,

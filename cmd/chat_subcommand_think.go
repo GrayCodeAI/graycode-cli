@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // thinkSubcommand implements the /think slash command. It prompts

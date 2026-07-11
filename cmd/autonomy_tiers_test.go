@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"testing"
 
-		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
@@ -64,9 +64,9 @@ func TestAutonomyTierColorsDistinct(t *testing.T) {
 		engine.AutonomyFull,
 		engine.AutonomyYOLO,
 	}
-	seen := make(map[lipgloss.Style]bool)
+	seen := make(map[string]bool)
 	for _, l := range levels {
-		c := autonomyTierColor(l)
+		c := fmt.Sprint(autonomyTierColor(l))
 		if seen[c] {
 			t.Fatalf("duplicate color for tier %v", l)
 		}

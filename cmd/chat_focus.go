@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/storage"

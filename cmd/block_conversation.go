@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 )
 
 // BlockSection represents a collapsible section in the conversation.

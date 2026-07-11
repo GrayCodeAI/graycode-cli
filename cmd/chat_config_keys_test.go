@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
@@ -47,7 +47,7 @@ func TestConfigGatewaysKeyView_OpenWithK(t *testing.T) {
 		}
 	}
 	m := chatModel{configTab: configTabGateways, configSel: sel}
-	next, _ := m.handleConfigKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	next, _ := m.handleConfigKey(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	if next.configEntry != configEntryKeyView {
 		t.Fatalf("expected key view, got entry=%q", next.configEntry)
 	}

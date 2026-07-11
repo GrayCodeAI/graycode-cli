@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/tool"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 )
 
 // ContextVisualization renders token usage as a visual bar in the TUI.

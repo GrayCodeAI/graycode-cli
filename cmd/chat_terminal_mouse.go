@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ANSI sequences to turn off xterm SGR/cell mouse tracking. Cursor's integrated

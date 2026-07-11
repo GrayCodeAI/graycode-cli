@@ -1,6 +1,10 @@
 package lifecycle
 
-import "github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+import (
+	"fmt"
+
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+)
 
 // EvolvingMemoryAdapter bridges memory.EvolvingMemory to the EvolvingMemoryInterface.
 type EvolvingMemoryAdapter struct {
@@ -35,22 +39,51 @@ func (a *EvolvingMemoryAdapter) Format() string {
 }
 
 // SkillDistillerAdapter bridges memory.SkillDistiller to SkillStoreInterface.
-// Skill distillation only builds a prompt for LLM extraction; calling the LLM
-// and persisting the distilled skill are not implemented yet.
 type SkillDistillerAdapter struct {
-	SD *memory.SkillDistiller
+	SD     *memory.SkillDistiller
+	Chat   func(prompt string) (string, error)
+	Store  func(skill *memory.DistilledSkill) error
+	Search func(query string) ([]*memory.DistilledSkill, error)
 }
 
 func (a *SkillDistillerAdapter) Distill(goal string, steps []string, outcome string) error {
 	if a.SD == nil {
 		return nil
 	}
-	// Build the prompt that would be sent to an LLM for skill extraction.
-	// In a full implementation, this would call the LLM and persist the result.
-	_ = a.SD.BuildSkillPrompt(goal, steps, nil, outcome)
+	if a.Chat == nil {
+		return fmt.Errorf("skill distiller: chat function is not configured")
+	}
+	if a.Store == nil {
+		return fmt.Errorf("skill distiller: store function is not configured")
+	}
+	response, err := a.Chat(a.SD.BuildSkillPrompt(goal, steps, nil, outcome))
+	if err != nil {
+		return fmt.Errorf("skill distiller: extract skill: %w", err)
+	}
+	skill, err := a.SD.ParseSkill(response)
+	if err != nil {
+		return fmt.Errorf("skill distiller: parse skill: %w", err)
+	}
+	if err := a.Store(skill); err != nil {
+		return fmt.Errorf("skill distiller: persist skill: %w", err)
+	}
 	return nil
 }
 
-func (a *SkillDistillerAdapter) Retrieve(_ string) []string {
-	return nil
+func (a *SkillDistillerAdapter) Retrieve(query string) []string {
+	if a == nil || a.Search == nil {
+		return nil
+	}
+	skills, err := a.Search(query)
+	if err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(skills))
+	for _, skill := range skills {
+		if skill == nil {
+			continue
+		}
+		out = append(out, skill.Name+": "+skill.Description)
+	}
+	return out
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/recipe"
 )

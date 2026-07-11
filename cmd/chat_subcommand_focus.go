@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // focusSubcommand implements the /focus slash command. It sets a

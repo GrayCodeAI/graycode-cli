@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // helpSubcommand implements the /help and /commands slash commands.

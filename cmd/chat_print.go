@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	aiwatch "github.com/GrayCodeAI/hawk/internal/engine/io"

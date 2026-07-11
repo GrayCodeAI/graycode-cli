@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // statusSubcommand implements the /status slash command. It prints

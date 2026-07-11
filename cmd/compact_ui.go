@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-			tea "charm.land/bubbletea/v2"
-		lipgloss "charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"

@@ -115,7 +115,7 @@ func (c *Client) startDeviceLogin(ctx context.Context, label, platform, hawkVers
 	if err != nil {
 		return result, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return result, fmt.Errorf("hawk cloud device login start: %s", resp.Status)
 	}
@@ -137,7 +137,7 @@ func (c *Client) pollDeviceLogin(ctx context.Context, deviceCode string) (Device
 	if err != nil {
 		return result, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return result, fmt.Errorf("hawk cloud device login poll: %s", resp.Status)
 	}

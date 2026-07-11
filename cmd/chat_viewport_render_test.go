@@ -109,7 +109,7 @@ func TestUpdateViewportContent_RewrapsAfterScrollbarGutterAppears(t *testing.T) 
 
 	m := &chatModel{
 		messages: []displayMsg{{role: "system", content: content}},
-		viewport: viewport.New(fullWidth, viewportHeight),
+		viewport: viewport.New(viewport.WithWidth(fullWidth), viewport.WithHeight(viewportHeight)),
 		width:    fullWidth,
 	}
 	m.viewDirty = true
@@ -123,14 +123,14 @@ func TestUpdateViewportContent_RewrapsAfterScrollbarGutterAppears(t *testing.T) 
 			fullWidthLines,
 			narrowWidthLines,
 			m.contentLines,
-			m.viewport.Width,
+			m.viewport.Width(),
 		)
 	}
 	if !m.chatScrollbarVisible() {
 		t.Fatal("expected scrollbar to become visible after re-wrap")
 	}
-	if m.viewport.Width != narrowWidth {
-		t.Fatalf("expected viewport width %d with scrollbar gutter, got %d", narrowWidth, m.viewport.Width)
+	if m.viewport.Width() != narrowWidth {
+		t.Fatalf("expected viewport width %d with scrollbar gutter, got %d", narrowWidth, m.viewport.Width())
 	}
 	if m.contentLines != narrowWidthLines {
 		t.Fatalf("expected contentLines %d after narrow re-wrap, got %d", narrowWidthLines, m.contentLines)

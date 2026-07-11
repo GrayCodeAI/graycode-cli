@@ -1,9 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+	"image/color"
 	"testing"
 
-		lipgloss "charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
 )
 
@@ -23,14 +24,20 @@ func TestAdaptiveNeutralsPreserveDarkAppearance(t *testing.T) {
 		{"borderDim", borderDim, "#555555"},
 	}
 	for _, c := range cases {
-		if c.color.Dark != c.wantDark {
+		want := colorHex(c.color.Dark)
+		if want != c.wantDark {
 			t.Errorf("%s: Dark = %q, want %q (dark-mode appearance must not change)", c.name, c.color.Dark, c.wantDark)
 		}
-		if c.color.Light == "" {
+		if c.color.Light == nil {
 			t.Errorf("%s: Light variant is empty; light terminals need a legible ink", c.name)
 		}
-		if c.color.Light == c.color.Dark {
+		if fmt.Sprint(c.color.Light) == fmt.Sprint(c.color.Dark) {
 			t.Errorf("%s: Light == Dark (%q); adaptive conversion had no effect", c.name, c.color.Light)
 		}
 	}
+}
+
+func colorHex(c color.Color) string {
+	r, g, b, _ := c.RGBA()
+	return fmt.Sprintf("#%02X%02X%02X", r>>8, g>>8, b>>8)
 }

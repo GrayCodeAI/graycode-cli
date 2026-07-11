@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // lintSubcommand implements the /lint slash command. It runs

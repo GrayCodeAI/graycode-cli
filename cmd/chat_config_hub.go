@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"

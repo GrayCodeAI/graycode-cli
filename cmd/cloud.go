@@ -42,7 +42,7 @@ var cloudLoginCmd = &cobra.Command{
 			endpoint = os.Getenv("HAWK_CLOUD_URL")
 		}
 		if endpoint == "" {
-			return fmt.Errorf("Hawk Cloud endpoint is required (use --endpoint or HAWK_CLOUD_URL)")
+			return fmt.Errorf("hawk cloud endpoint is required (use --endpoint or HAWK_CLOUD_URL)")
 		}
 		if label == "" {
 			label, _ = os.Hostname()
@@ -76,7 +76,7 @@ var cloudLoginCmd = &cobra.Command{
 				}
 			case "approved":
 				if poll.Token == "" || poll.DeviceID == "" || poll.ProjectID == "" {
-					return fmt.Errorf("Hawk Cloud returned an incomplete device authorization")
+					return fmt.Errorf("hawk cloud returned an incomplete device authorization")
 				}
 				if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: poll.DeviceID, ProjectID: poll.ProjectID}, poll.Token); err != nil {
 					return err
@@ -84,9 +84,9 @@ var cloudLoginCmd = &cobra.Command{
 				cmd.Printf("Hawk Cloud connected for project %s.\n", poll.ProjectID)
 				return nil
 			case "expired":
-				return fmt.Errorf("Hawk Cloud device authorization expired")
+				return fmt.Errorf("hawk cloud device authorization expired")
 			default:
-				return fmt.Errorf("Hawk Cloud returned unknown device authorization status %q", poll.Status)
+				return fmt.Errorf("hawk cloud returned unknown device authorization status %q", poll.Status)
 			}
 		}
 	},
@@ -111,7 +111,7 @@ var cloudContextCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		client, cfg, err := cloud.LoadClient()
 		if err != nil || !client.Enabled() {
-			return fmt.Errorf("Hawk Cloud is not connected")
+			return fmt.Errorf("hawk cloud is not connected")
 		}
 		detected, detectErr := detectGitContext(cmd.Context())
 		repository, _ := cmd.Flags().GetString("repository")
@@ -121,7 +121,7 @@ var cloudContextCmd = &cobra.Command{
 		if repository == "" {
 			return detectErr
 		}
-		provider, _ := cmd.Flags().GetString("provider")
+		contextProvider, _ := cmd.Flags().GetString("provider")
 		externalID, _ := cmd.Flags().GetString("external-id")
 		branch, _ := cmd.Flags().GetString("branch")
 		commit, _ := cmd.Flags().GetString("commit")
@@ -131,11 +131,11 @@ var cloudContextCmd = &cobra.Command{
 		deploymentID, _ := cmd.Flags().GetString("deployment")
 		deploymentStatus, _ := cmd.Flags().GetString("deployment-status")
 		deploymentEnvironment, _ := cmd.Flags().GetString("deployment-environment")
-		if provider == "" {
-			provider = detected.Provider
+		if contextProvider == "" {
+			contextProvider = detected.Provider
 		}
-		if provider == "" {
-			provider = "git"
+		if contextProvider == "" {
+			contextProvider = "git"
 		}
 		if branch == "" {
 			branch = detected.Branch
@@ -147,7 +147,7 @@ var cloudContextCmd = &cobra.Command{
 			externalID = repository
 		}
 		event := cloud.DeliveryContext{ProjectID: cfg.ProjectID, Branch: branch, CommitSHA: commit}
-		event.Repository.Provider, event.Repository.ExternalID, event.Repository.Name = provider, externalID, repository
+		event.Repository.Provider, event.Repository.ExternalID, event.Repository.Name = contextProvider, externalID, repository
 		if ciRunID == "" {
 			ciRunID, ciWorkflow = os.Getenv("GITHUB_RUN_ID"), firstValue(ciWorkflow, os.Getenv("GITHUB_WORKFLOW"))
 		}
@@ -155,7 +155,7 @@ var cloudContextCmd = &cobra.Command{
 			if ciStatus == "" {
 				ciStatus = "running"
 			}
-			ciProvider := provider
+			ciProvider := contextProvider
 			if os.Getenv("GITHUB_RUN_ID") != "" && ciProvider == "git" {
 				ciProvider = "github"
 			}
@@ -168,7 +168,7 @@ var cloudContextCmd = &cobra.Command{
 			if deploymentEnvironment == "" {
 				return fmt.Errorf("deployment-environment is required with --deployment")
 			}
-			event.Deployment = &cloud.DeploymentContext{Provider: provider, ExternalID: deploymentID, Environment: deploymentEnvironment, Status: deploymentStatus}
+			event.Deployment = &cloud.DeploymentContext{Provider: contextProvider, ExternalID: deploymentID, Environment: deploymentEnvironment, Status: deploymentStatus}
 		}
 		client.RecordDeliveryContext(cmd.Context(), event)
 		cmd.Println("Repository context queued for Hawk Cloud.")

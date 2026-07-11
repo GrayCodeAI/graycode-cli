@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // runSubcommand implements the /run slash command. It runs an

@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // commitSubcommand implements the /commit slash command. It shows

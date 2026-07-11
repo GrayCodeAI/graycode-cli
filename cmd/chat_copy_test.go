@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/textarea"
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
@@ -71,10 +71,10 @@ func TestCopyContent_Modes(t *testing.T) {
 func TestIsCopyToClipboardKey(t *testing.T) {
 	t.Parallel()
 
-	if !isCopyToClipboardKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}, Alt: true}) {
+	if !isCopyToClipboardKey(tea.KeyPressMsg{Code: 'c', Mod: tea.ModAlt}) {
 		t.Fatal("expected alt+c")
 	}
-	if isCopyToClipboardKey(tea.KeyMsg{Type: tea.KeyCtrlC}) {
+	if isCopyToClipboardKey(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}) {
 		t.Fatal("ctrl+c should not trigger clipboard copy")
 	}
 }

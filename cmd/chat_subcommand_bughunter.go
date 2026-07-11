@@ -1,7 +1,7 @@
 package cmd
 
 import (
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // bughunterSubcommand implements the /bughunter slash command. It

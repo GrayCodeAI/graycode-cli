@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // testSubcommand implements the /test slash command. It runs

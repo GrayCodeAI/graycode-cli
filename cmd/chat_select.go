@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"golang.org/x/term"
 )
 

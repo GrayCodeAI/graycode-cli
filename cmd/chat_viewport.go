@@ -13,7 +13,7 @@ type mouseMsg struct {
 	mouse tea.Mouse
 }
 
-func (m mouseMsg) String() string { return m.mouse.String() }
+func (m mouseMsg) String() string   { return m.mouse.String() }
 func (m mouseMsg) Mouse() tea.Mouse { return m.mouse }
 
 // mouseSGRLeakRE matches SGR mouse reports; "[" is optional (Cursor often drops it).
@@ -271,7 +271,7 @@ func (m chatModel) shouldRouteMouseToViewport(msg tea.Msg) bool {
 func (m chatModel) wheelRoutesToChat(mouse tea.MouseMsg) bool {
 	route := mouse.Mouse()
 	route.Y = m.effectiveWheelY(mouse)
-	return m.mouseInChatPane(mouse)
+	return m.mouseInChatPane(mouseMsg{route})
 }
 
 // applyMouseScroll routes a mouse event to the chat viewport and syncs follow mode.

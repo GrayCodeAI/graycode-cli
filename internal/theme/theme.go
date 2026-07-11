@@ -41,7 +41,7 @@ type Theme struct {
 	TierInspect lipgloss.Style
 	TierEdit    lipgloss.Style
 	TierRun     lipgloss.Style
-	ierTrust   lipgloss.Style
+	TierTrust   lipgloss.Style
 
 	// HUD overlay
 	HudBorderColor lipgloss.Style

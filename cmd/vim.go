@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // VimMode represents the current vim mode.
@@ -120,7 +120,7 @@ func (v *VimState) HandleKey(msg tea.KeyMsg, text string, cursor int) (string, i
 }
 
 func (v *VimState) handleInsertMode(msg tea.KeyMsg, text string, cursor int) (string, int, bool) {
-	if msg.String() == "escape" {
+	if msg.String() == "escape" || msg.String() == "esc" {
 		v.Mode = VimNormal
 		if cursor > 0 {
 			cursor--

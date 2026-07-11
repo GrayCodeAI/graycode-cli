@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // versionSubcommand implements the /version slash command. It prints

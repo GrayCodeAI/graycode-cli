@@ -6,13 +6,13 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 	t.Helper()
 
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	vp.SetYOffset(5)
 
@@ -26,37 +26,35 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 		uiFocus:  focusPrompt,
 	}
 	m = m.syncViewportMouseWheel().withSyncedLayout()
-	before := m.viewport.YOffset
+	before := m.viewport.YOffset()
 
-	wheelChat := tea.MouseMsg{
+	wheelChat := tea.MouseWheelMsg{
 		X:      40,
 		Y:      m.chatPaneTopY(),
-		Button: tea.MouseButtonWheelDown,
-		Action: tea.MouseActionPress,
+		Button: tea.MouseWheelDown,
 	}
 	next, _ := m.Update(wheelChat)
 	m = next.(chatModel)
-	if m.viewport.YOffset <= before {
-		t.Fatalf("pass %d: wheel over chat should scroll viewport (before=%d after=%d)", pass, before, m.viewport.YOffset)
+	if m.viewport.YOffset() <= before {
+		t.Fatalf("pass %d: wheel over chat should scroll viewport (before=%d after=%d)", pass, before, m.viewport.YOffset())
 	}
 
 	m.viewport.SetYOffset(before)
-	wheelInput := tea.MouseMsg{
+	wheelInput := tea.MouseWheelMsg{
 		X:      40,
 		Y:      m.bottomBarTopY(),
-		Button: tea.MouseButtonWheelDown,
-		Action: tea.MouseActionPress,
+		Button: tea.MouseWheelDown,
 	}
 	next, _ = m.Update(wheelInput)
 	m = next.(chatModel)
-	if m.viewport.YOffset != before {
-		t.Fatalf("pass %d: wheel over input must not scroll chat (before=%d after=%d)", pass, before, m.viewport.YOffset)
+	if m.viewport.YOffset() != before {
+		t.Fatalf("pass %d: wheel over input must not scroll chat (before=%d after=%d)", pass, before, m.viewport.YOffset())
 	}
 	if !m.input.Focused() {
 		t.Fatalf("pass %d: input must stay focused after mouse wheel so typing still works", pass)
 	}
 
-	up := tea.KeyMsg{Type: tea.KeyUp}
+	up := tea.KeyPressMsg{Code: tea.KeyUp}
 	m.history = []string{"first", "second"}
 	m.historyIdx = len(m.history)
 	m.input.SetValue("")
@@ -71,13 +69,13 @@ func runMouseScrollSplitPanePass(t *testing.T, pass int) {
 	if m.input.Value() != "second" {
 		t.Fatalf("pass %d: up should navigate input history, got %q", pass, m.input.Value())
 	}
-	if m.viewport.YOffset != before {
+	if m.viewport.YOffset() != before {
 		t.Fatalf("pass %d: up in prompt focus must not scroll chat", pass)
 	}
 }
 
 func TestUpdate_MouseMotionDoesNotReflowLayout(t *testing.T) {
-	vp := viewport.New(80, 14)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(14))
 	vp.SetContent(strings.Repeat("line\n", 40))
 	m := chatModel{
 		viewport:             vp,
@@ -88,12 +86,12 @@ func TestUpdate_MouseMotionDoesNotReflowLayout(t *testing.T) {
 		cachedBottomBarLines: 10,
 		layoutKey:            65536,
 	}
-	before := m.viewport.Height
+	before := m.viewport.Height()
 
-	motion := tea.MouseMsg{Y: 8, X: 10, Action: tea.MouseActionMotion}
+	motion := tea.MouseMotionMsg{Y: 8, X: 10}
 	next, _ := m.Update(motion)
 	m = next.(chatModel)
-	if m.viewport.Height != before {
+	if m.viewport.Height() != before {
 		t.Fatal("mouse motion should not trigger layout reflow")
 	}
 	if m.lastMouseY != 8 {
@@ -108,7 +106,7 @@ func TestUpdate_MouseWheelSplitPane(t *testing.T) {
 
 func TestUpdate_InputHistoryWhileWaiting(t *testing.T) {
 	m := chatModel{
-		viewport: viewport.New(80, 14),
+		viewport: viewport.New(viewport.WithWidth(80), viewport.WithHeight(14)),
 		input:    textarea.New(),
 		height:   24,
 		width:    80,
@@ -119,7 +117,7 @@ func TestUpdate_InputHistoryWhileWaiting(t *testing.T) {
 	m.historyIdx = len(m.history)
 	m = m.withSyncedLayout()
 
-	up := tea.KeyMsg{Type: tea.KeyUp}
+	up := tea.KeyPressMsg{Code: tea.KeyUp}
 	next, cmd := m.Update(up)
 	if cmd != nil {
 		next, _ = next.Update(cmd())
@@ -129,7 +127,7 @@ func TestUpdate_InputHistoryWhileWaiting(t *testing.T) {
 		t.Fatalf("up while waiting should navigate history, got %q", m.input.Value())
 	}
 
-	down := tea.KeyMsg{Type: tea.KeyDown}
+	down := tea.KeyPressMsg{Code: tea.KeyDown}
 	next, cmd = m.Update(down)
 	if cmd != nil {
 		next, _ = next.Update(cmd())

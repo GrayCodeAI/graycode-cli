@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )

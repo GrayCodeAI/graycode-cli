@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestFormatToolResultDisplay_TruncatesLarge(t *testing.T) {
@@ -21,7 +21,7 @@ func TestFormatToolResultDisplay_TruncatesLarge(t *testing.T) {
 }
 
 func TestScrollPositionLabel(t *testing.T) {
-	vp := viewport.New(80, 10)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(10))
 	vp.SetContent(strings.Repeat("line\n", 50))
 	vp.SetYOffset(10)
 	m := chatModel{viewport: vp, contentLines: 51}
@@ -32,10 +32,10 @@ func TestScrollPositionLabel(t *testing.T) {
 }
 
 func TestRouteKeyToViewport_ScrollbackFocus(t *testing.T) {
-	vp := viewport.New(80, 10)
+	vp := viewport.New(viewport.WithWidth(80), viewport.WithHeight(10))
 	vp.SetContent(strings.Repeat("line\n", 30))
 	m := chatModel{viewport: vp, uiFocus: focusScrollback}
-	if m.routeKeyToViewport(tea.KeyMsg{Type: tea.KeyUp}) {
+	if m.routeKeyToViewport(tea.KeyPressMsg{Code: tea.KeyUp}) {
 		t.Fatal("up should NOT scroll in scrollback focus")
 	}
 }
@@ -52,9 +52,9 @@ func TestUpdate_TypingInScrollbackReturnsToPrompt(t *testing.T) {
 	m := chatModel{
 		uiFocus:  focusScrollback,
 		input:    textarea.New(),
-		viewport: viewport.New(80, 10),
+		viewport: viewport.New(viewport.WithWidth(80), viewport.WithHeight(10)),
 	}
-	nextModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	nextModel, _ := m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	next := nextModel.(chatModel)
 	if next.uiFocus != focusPrompt {
 		t.Fatalf("uiFocus = %v, want prompt", next.uiFocus)
@@ -68,7 +68,7 @@ func TestUpdate_BlurMsg_BlursPromptInput(t *testing.T) {
 	m := chatModel{
 		uiFocus:  focusPrompt,
 		input:    textarea.New(),
-		viewport: viewport.New(80, 10),
+		viewport: viewport.New(viewport.WithWidth(80), viewport.WithHeight(10)),
 	}
 	m.input.Focus()
 
@@ -83,7 +83,7 @@ func TestUpdate_FocusMsg_RefocusesPromptInput(t *testing.T) {
 	m := chatModel{
 		uiFocus:  focusPrompt,
 		input:    textarea.New(),
-		viewport: viewport.New(80, 10),
+		viewport: viewport.New(viewport.WithWidth(80), viewport.WithHeight(10)),
 	}
 	m.input.Blur()
 
@@ -101,7 +101,7 @@ func TestUpdate_PromptKeepAlive_RefocusesBlurredPrompt(t *testing.T) {
 	m := chatModel{
 		uiFocus:  focusPrompt,
 		input:    textarea.New(),
-		viewport: viewport.New(80, 10),
+		viewport: viewport.New(viewport.WithWidth(80), viewport.WithHeight(10)),
 	}
 	m.input.Blur()
 
@@ -122,10 +122,10 @@ func TestChatProgramOptions_IncludeFocusReporting(t *testing.T) {
 	if withMouse == nil || withoutMouse == nil {
 		t.Fatal("expected program construction to succeed")
 	}
-	if len(chatProgramOptions(true)) != 3 {
-		t.Fatalf("mouse-enabled startup should include alt-screen, focus reporting, and mouse motion; got %d options", len(chatProgramOptions(true)))
+	if len(chatProgramOptions(true)) != 0 {
+		t.Fatalf("Bubble Tea v2 should configure mouse and focus reporting through View, got %d legacy options", len(chatProgramOptions(true)))
 	}
-	if len(chatProgramOptions(false)) != 2 {
-		t.Fatalf("mouse-disabled startup should include alt-screen and focus reporting; got %d options", len(chatProgramOptions(false)))
+	if len(chatProgramOptions(false)) != 0 {
+		t.Fatalf("Bubble Tea v2 should configure terminal modes through View, got %d legacy options", len(chatProgramOptions(false)))
 	}
 }

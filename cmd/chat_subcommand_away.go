@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // awaySubcommand implements the /away slash command. It asks the

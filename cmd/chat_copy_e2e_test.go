@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
@@ -17,7 +17,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 
 	m := newTestChatModel()
 	m.input = textarea.New()
-	m.viewport = viewport.New(80, 10)
+	m.viewport = viewport.New(viewport.WithWidth(80), viewport.WithHeight(10))
 	m.uiFocus = focusPrompt
 
 	// --- Pass A: error-only turn (no assistant reply) ---
@@ -84,7 +84,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	}
 	m = cm
 
-	if !isCopyToClipboardKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}, Alt: true}) {
+	if !isCopyToClipboardKey(tea.KeyPressMsg{Code: 'c', Mod: tea.ModAlt}) {
 		t.Fatalf("pass %d: alt+c should be copy shortcut", pass)
 	}
 

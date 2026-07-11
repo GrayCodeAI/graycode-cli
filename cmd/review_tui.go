@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
-		lipgloss "charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"

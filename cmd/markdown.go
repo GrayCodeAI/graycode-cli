@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-		lipgloss "charm.land/lipgloss/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 )
 

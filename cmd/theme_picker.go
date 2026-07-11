@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
-		lipgloss "charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 
 	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
 )

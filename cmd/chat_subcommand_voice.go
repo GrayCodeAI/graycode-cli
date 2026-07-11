@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 // voiceSubcommand implements the /voice slash command. It

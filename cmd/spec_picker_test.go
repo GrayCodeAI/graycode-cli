@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-			tea "charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
@@ -35,7 +35,7 @@ func TestSpecPicker_EnterSelectsAndCloses(t *testing.T) {
 	sp := NewSpecPicker(80)
 	sp.Open(engine.SpecStageNone)
 
-	chosen, handled := sp.Update(tea.KeyMsg{Type: tea.KeyDown})
+	chosen, handled := sp.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	if !handled || chosen != nil {
 		t.Fatalf("KeyDown should navigate, not select: chosen=%v handled=%v", chosen, handled)
 	}
@@ -43,7 +43,7 @@ func TestSpecPicker_EnterSelectsAndCloses(t *testing.T) {
 		t.Fatalf("expected selection to move to Status, got %v", sp.Selected().Action)
 	}
 
-	chosen, handled = sp.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	chosen, handled = sp.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if !handled {
 		t.Fatal("expected Enter to be handled")
 	}
@@ -59,7 +59,7 @@ func TestSpecPicker_EscClosesWithoutSelecting(t *testing.T) {
 	sp := NewSpecPicker(80)
 	sp.Open(engine.SpecStageNone)
 
-	chosen, handled := sp.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	chosen, handled := sp.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if !handled || chosen != nil {
 		t.Fatalf("expected Esc to close without a selection, got chosen=%v", chosen)
 	}
@@ -73,7 +73,7 @@ func TestSpecPicker_FilterByName(t *testing.T) {
 	sp.Open(engine.SpecStageNone)
 
 	for _, r := range "reset" {
-		sp.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		sp.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 	}
 	if len(sp.filtered) != 1 || sp.filtered[0].Action != specActionReset {
 		t.Fatalf("expected filter 'reset' to match only Reset action, got %d entries: %+v", len(sp.filtered), sp.filtered)

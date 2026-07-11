@@ -55,7 +55,8 @@ func TestRenderScrollbar_TopAndBottom(t *testing.T) {
 		viewport:     viewportWithSize(80, 10),
 		contentLines: 100,
 	}
-	m.viewport.YOffset = 0
+	m.viewport.SetContent(strings.Repeat("line\n", 100))
+	m.viewport.SetYOffset(0)
 	sb := m.renderScrollbar()
 	lines := strings.Split(sb, "\n")
 	if len(lines) != 10 {
@@ -65,7 +66,7 @@ func TestRenderScrollbar_TopAndBottom(t *testing.T) {
 		t.Fatalf("expected thumb at top row when YOffset=0, got %q", lines[0])
 	}
 
-	m.viewport.YOffset = 90 // max offset
+	m.viewport.SetYOffset(90) // max offset
 	sb = m.renderScrollbar()
 	lines = strings.Split(sb, "\n")
 	if !strings.Contains(lines[9], scrollbarThumbGlyph) {
@@ -113,5 +114,5 @@ func TestRenderChatPane_PaddedWidth(t *testing.T) {
 }
 
 func viewportWithSize(width, height int) viewport.Model {
-	return viewport.New(width, height)
+	return viewport.New(viewport.WithWidth(width), viewport.WithHeight(height))
 }
