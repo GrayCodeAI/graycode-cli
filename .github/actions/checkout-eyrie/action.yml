@@ -3,9 +3,16 @@ description: Clone Hawk ecosystem repos into hawk/external for hawk go.work
 
 inputs:
   ref:
-    description: Git ref to checkout (branch or tag)
+    description: Git ref to checkout only when allow_branch_fallback is true
     required: false
     default: main
+  allow_branch_fallback:
+    description: >
+      When true, clone a branch head if the Gitlink is missing (dev-only escape hatch).
+      Default false — missing or unreachable pins fail the job so releases never
+      silently track main.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -16,6 +23,7 @@ runs:
         # Passed via env (not ${{ }} interpolation into the script) so an
         # attacker-controlled ref (e.g. a fork branch name) cannot inject shell.
         INPUT_REF: ${{ inputs.ref }}
+        ALLOW_BRANCH_FALLBACK: ${{ inputs.allow_branch_fallback }}
       run: |
         set -euo pipefail
         mkdir -p "${GITHUB_WORKSPACE}/external"
@@ -39,12 +47,21 @@ runs:
               exit 1
             fi
           else
+            if [ "${ALLOW_BRANCH_FALLBACK}" != "true" ]; then
+              echo "::error::Missing Gitlink for external/${repo} at HEAD"
+              echo "Hawk requires a pinned submodule commit for every engine."
+              echo "Record the pin with: git submodule update --init external/${repo}"
+              echo "and commit the Gitlink. Branch-head fallback is disabled by default"
+              echo "(set allow_branch_fallback=true only for local experiments)."
+              exit 1
+            fi
             ref="$INPUT_REF"
-            # Fall back to main if the branch doesn't exist on the dependency repo.
+            # Optional escape hatch: fall back to main if the branch doesn't exist.
             if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then
               echo "Branch '$ref' not found on $repo, falling back to main"
               ref="main"
             fi
+            echo "::warning::Cloning $repo at branch head '$ref' (no Gitlink; allow_branch_fallback=true)"
             git clone --depth=1 --branch "$ref" \
               "https://github.com/GrayCodeAI/${repo}.git" "$dest"
           fi
