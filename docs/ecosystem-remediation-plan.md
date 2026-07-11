@@ -44,8 +44,9 @@ Commits (hawk): `2890c74` (migrate), `ccfa286` (API fixups), `7a42c1e` (size gat
 
 ### Residual notes
 
-- Re-pin `hawk/external/yaad` to the commit that includes this split and refresh
-  the hawk `go.mod` pseudo-version for `GOWORK=off` CI.
+- `hawk/external/yaad` + `go.mod` pseudo-version updated to `b7ee281` (local).
+  **Push `yaad` to origin before** relying on `GOWORK=off` / submodule-release
+  parity (proxy must see the commit for sumdb download).
 
 ## 3. tok Viper vs. Direct TOML Config
 
