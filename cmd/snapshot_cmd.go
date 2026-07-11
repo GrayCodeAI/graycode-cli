@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 

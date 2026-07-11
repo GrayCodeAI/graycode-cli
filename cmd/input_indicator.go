@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	lipgloss "charm.land/lipgloss/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"

@@ -321,9 +321,26 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
 		AgentSpawnFn: s.AgentSpawnFn,
 		AskUserFn:    s.AskUserFn,
-		YaadBridge:   s.MemorySvc().Yaad(),
-		SpecSlugGet:  func() string { return s.Perm.SpecSlug },
-		SpecSlugSet:  func(slug string) { s.Perm.SpecSlug = slug },
+		CommitMessageChatFn: func(chatCtx context.Context, prompt string) (string, error) {
+			if s.ChatLLM() == nil {
+				return "", fmt.Errorf("commit message model is unavailable")
+			}
+			resp, err := s.ChatLLM().Chat(chatCtx, []types.EyrieMessage{{Role: "user", Content: prompt}}, types.ChatOptions{
+				Provider:  s.provider,
+				Model:     s.model,
+				MaxTokens: 256,
+			})
+			if err != nil {
+				return "", err
+			}
+			if resp == nil {
+				return "", fmt.Errorf("commit message model returned no response")
+			}
+			return resp.Content, nil
+		},
+		YaadBridge:  s.MemorySvc().Yaad(),
+		SpecSlugGet: func() string { return s.Perm.SpecSlug },
+		SpecSlugSet: func(slug string) { s.Perm.SpecSlug = slug },
 	})
 	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())

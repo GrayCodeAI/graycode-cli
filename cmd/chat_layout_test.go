@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/viewport"
 )
 
 func TestView_PinsWelcomeAboveViewport(t *testing.T) {
@@ -14,13 +14,13 @@ func TestView_PinsWelcomeAboveViewport(t *testing.T) {
 		width:        80,
 		welcomeCache: "HAWK LOGO\nv0.1.0",
 		input:        textarea.New(),
-		viewport:     viewport.New(80, 8),
+		viewport:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(8)),
 		ghostText:    NewGhostText(),
 	}
 	m = m.withSyncedLayout()
 	m.viewDirty = true
 	m.updateViewportContent()
-	got := m.View()
+	got := m.View().Content
 	if !strings.Contains(got, "HAWK LOGO") {
 		t.Fatalf("welcome should be pinned at top, got prefix: %q", got[:min(40, len(got))])
 	}
@@ -35,7 +35,7 @@ func TestPrimeInitialViewportContent_RendersWelcomeBeforeFirstFrame(t *testing.T
 		width:        80,
 		welcomeCache: "HAWK LOGO\nv0.1.0",
 		input:        textarea.New(),
-		viewport:     viewport.New(80, 8),
+		viewport:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(8)),
 		ghostText:    NewGhostText(),
 	}
 	m = m.withSyncedLayout()

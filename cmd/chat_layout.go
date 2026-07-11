@@ -25,16 +25,16 @@ func (m chatModel) withSyncedLayout() chatModel {
 	if vpH < minChatViewportLines {
 		vpH = minChatViewportLines
 	}
-	if m.viewport.Height != vpH {
-		m.viewport.Height = vpH
+	if m.viewport.Height() != vpH {
+		m.viewport.SetHeight(vpH)
 	}
 	w := m.width
 	if w <= 0 {
 		w = 80
 	}
 	vpW := m.chatViewportWidth(w)
-	if m.viewport.Width != vpW {
-		m.viewport.Width = vpW
+	if m.viewport.Width() != vpW {
+		m.viewport.SetWidth(vpW)
 	}
 	return m
 }

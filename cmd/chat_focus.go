@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	lipgloss "charm.land/lipgloss/v2"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -71,15 +71,15 @@ func (m chatModel) scrollPositionLabel() string {
 	if m.contentLines <= 0 {
 		return ""
 	}
-	visH := m.viewport.Height
+	visH := m.viewport.Height()
 	if visH <= 0 {
 		visH = 1
 	}
 	if m.contentLines <= visH {
 		return fmt.Sprintf("1-%d/%d", m.contentLines, m.contentLines)
 	}
-	top := m.viewport.YOffset + 1
-	bottom := m.viewport.YOffset + visH
+	top := m.viewport.YOffset() + 1
+	bottom := m.viewport.YOffset() + visH
 	if bottom > m.contentLines {
 		bottom = m.contentLines
 	}

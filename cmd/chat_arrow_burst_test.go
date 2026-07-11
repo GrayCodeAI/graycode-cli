@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestArrowBurstDoesNotPermanentlyFreezeInput reproduces a reported bug: after
@@ -21,7 +21,7 @@ func TestArrowBurstDoesNotPermanentlyFreezeInput(t *testing.T) {
 
 	// First Up: treated as an isolated press (dt since zero-value lastArrowTime
 	// is huge), so it arms a pendingArrow + tick and returns immediately.
-	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	next, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	cm := requireChatModel(t, next)
 	if cmd == nil {
 		t.Fatal("expected a scheduled tick command after the first arrow press")
@@ -31,7 +31,7 @@ func TestArrowBurstDoesNotPermanentlyFreezeInput(t *testing.T) {
 	// pending arrow and, critically, must arm its own trailing tick so the
 	// flag can be cleared once the burst goes quiet.
 	cm.lastArrowTime = time.Now().Add(-1 * time.Millisecond)
-	next, cmd = cm.Update(tea.KeyMsg{Type: tea.KeyUp})
+	next, cmd = cm.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	cm = requireChatModel(t, next)
 	if !cm.arrowBurstActive {
 		t.Fatal("expected arrowBurstActive to be true immediately after a burst keypress")
@@ -50,7 +50,7 @@ func TestArrowBurstDoesNotPermanentlyFreezeInput(t *testing.T) {
 
 	// Regression check: a normal character keystroke must reach the input,
 	// not be silently swallowed.
-	next, _ = cm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	next, _ = cm.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	cm = requireChatModel(t, next)
 	if cm.input.Value() != "x" {
 		t.Fatalf("expected keystroke to reach the input after burst settled, got %q", cm.input.Value())
@@ -65,13 +65,13 @@ func TestArrowBurstActiveOnlySwallowsArrowKeys(t *testing.T) {
 	m.uiFocus = focusPrompt
 	m.arrowBurstActive = true
 
-	if !m.applyPromptArrowKey(tea.KeyMsg{Type: tea.KeyUp}) {
+	if !m.applyPromptArrowKey(tea.KeyPressMsg{Code: tea.KeyUp}) {
 		t.Fatal("expected Up to be consumed while a burst is active")
 	}
-	if m.applyPromptArrowKey(tea.KeyMsg{Type: tea.KeyEsc}) {
+	if m.applyPromptArrowKey(tea.KeyPressMsg{Code: tea.KeyEsc}) {
 		t.Fatal("Escape must not be swallowed just because an arrow burst is active")
 	}
-	if m.applyPromptArrowKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")}) {
+	if m.applyPromptArrowKey(tea.KeyPressMsg{Code: 'a', Text: "a"}) {
 		t.Fatal("typed characters must not be swallowed just because an arrow burst is active")
 	}
 }

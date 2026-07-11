@@ -3,9 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	lipgloss "charm.land/lipgloss/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -334,7 +335,7 @@ func formatConnectionContextLabel(m chatModel, windowLabel string) string {
 // context-window usage percentage. Exposed so the footer test in
 // chat_status_test.go can assert the threshold logic without
 // depending on the full format function.
-func contextPercentColor(pct int) lipgloss.Color {
+func contextPercentColor(pct int) color.Color {
 	switch {
 	case pct >= 95:
 		return errorCoral

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 
 	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/runtime"
@@ -159,9 +159,19 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 	m.configInput.Prompt = " url " + icons.ChevronRight() + " "
 	m.configInput.Placeholder = defaultURL
 	m.configInput.EchoMode = textinput.EchoNormal
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(textPrimary)
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
+	m.configInput.SetStyles(textinput.Styles{
+		Focused: textinput.StyleState{
+			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Text:   lipgloss.NewStyle().Foreground(textPrimary),
+		},
+		Blurred: textinput.StyleState{
+			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Text:   lipgloss.NewStyle().Foreground(textPrimary),
+		},
+		Cursor: textinput.CursorStyle{
+			Color: hawkColor,
+		},
+	})
 	m.configInput.Focus()
 	return m, textinput.Blink
 }

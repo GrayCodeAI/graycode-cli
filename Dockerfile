@@ -36,7 +36,7 @@ COPY . .
 # this is the only correct source — `git describe` would always return empty
 # because `.dockerignore` excludes `.git/` from the build context.
 RUN rm -f go.work go.work.sum && \
-    { echo "go 1.26.4"; echo; echo "use ."; echo; echo "replace ("; \
+    { echo "go 1.26.5"; echo; echo "use ."; echo; echo "replace ("; \
       for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
         echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
       done; echo ")"; } > go.work && \

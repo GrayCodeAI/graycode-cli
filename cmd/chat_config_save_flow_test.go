@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestFinishConfigEntry_APIKeyPaste_SavesBeforeProbe(t *testing.T) {
@@ -156,7 +156,7 @@ func TestHandleConfigKey_EnterOnPasteSubmits(t *testing.T) {
 	m.configTab = configTabGateways
 	next, _ := m.startConfigKeyForProvider("openrouter")
 	next.configInput.SetValue("sk-or-test-key-12345678901234567890")
-	next, cmd := next.handleConfigKey(tea.KeyMsg{Type: tea.KeyEnter})
+	next, cmd := next.handleConfigKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected save cmd on enter")
 	}

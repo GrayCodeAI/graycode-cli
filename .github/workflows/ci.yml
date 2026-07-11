@@ -62,6 +62,8 @@ jobs:
         run: bash ./scripts/check-shared-types-imports.sh
       - name: ecosystem boundary guard
         run: bash ./scripts/check-ecosystem-boundaries.sh
+      - name: internal layer boundary guard
+        run: bash ./scripts/check-internal-layer-imports.sh
       - name: eyrie client boundary guard
         run: bash ./scripts/check-eyrie-client-imports.sh
 
@@ -102,6 +104,35 @@ jobs:
               exit 1
             fi
           done
+
+  public-modules:
+    name: public module graph
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Verify public dependency graph
+        env:
+          GOWORK: "off"
+        run: |
+          go mod download
+          go mod verify
+          go build -mod=readonly ./cmd/hawk
+          go test ./... -count=1 -timeout=300s
+
+  submodule-release-parity:
+    name: submodule and module parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - run: bash ./scripts/check-submodule-release-parity.sh
 
   # -------------------------------------------------------------------------
   # 3. Vet + static analysis — compiler-level correctness.
@@ -330,18 +361,16 @@ jobs:
       - name: Binary size check (linux/amd64 only)
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
-          size=$(go build -trimpath -o /tmp/hawk-bin ./cmd/hawk && wc -c < /tmp/hawk-bin)
+          # Use -ldflags="-s -w" to match release build size (Makefile LDFLAGS).
+          # This catches binary bloat regressions against the actual shipped artifact size.
+          size=$(go build -trimpath -ldflags="-s -w" -o /tmp/hawk-bin ./cmd/hawk && wc -c < /tmp/hawk-bin)
           size_mb=$((size / 1024 / 1024))
           echo "Binary size: ${size_mb}MB"
-          # Threshold bumped from 100MB → 110MB. The current dev binary
-          # with full instrumentation is ~103MB; the release build (with
-          # -ldflags="-s -w") sits at ~76MB. This job builds the dev binary
-          # (no -ldflags), so the 100MB threshold was firing on every CI run
-          # as a warning. Bump to 110MB to give ourselves headroom while we
-          # decide whether to add more size-reduction work. BOTH this and
-          # Makefile size-check must move together.
-          if [ "$size_mb" -gt 110 ]; then
-            echo "::warning::Binary size ${size_mb}MB exceeds 110MB threshold"
+          # Threshold lowered from 110MB → 80MB. With -ldflags="-s -w" the
+          # release binary is ~76MB. A 80MB threshold gives 4MB headroom for
+          # regression detection while still being realistic.
+          if [ "$size_mb" -gt 80 ]; then
+            echo "::warning::Binary size ${size_mb}MB exceeds 80MB threshold"
           fi
           rm -f /tmp/hawk-bin
 

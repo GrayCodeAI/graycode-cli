@@ -3,22 +3,22 @@ package cmd
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func key(s string) tea.KeyMsg {
 	if len(s) == 1 {
-		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+		return tea.KeyPressMsg{Code: rune(s[0]), Text: s}
 	}
 	switch s {
 	case "esc":
-		return tea.KeyMsg{Type: tea.KeyEscape}
+		return tea.KeyPressMsg{Code: tea.KeyEsc}
 	case "left":
-		return tea.KeyMsg{Type: tea.KeyLeft}
+		return tea.KeyPressMsg{Code: tea.KeyLeft}
 	case "right":
-		return tea.KeyMsg{Type: tea.KeyRight}
+		return tea.KeyPressMsg{Code: tea.KeyRight}
 	}
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+	return tea.KeyPressMsg{Code: []rune(s)[0], Text: s}
 }
 
 func TestVimState_InsertToNormal(t *testing.T) {

@@ -22,12 +22,38 @@ jobs:
         with:
           fetch-depth: 0   # goreleaser needs full history for changelog
 
+      # Releases must use Gitlink pins only — never a branch head fallback.
       - uses: ./.github/actions/checkout-eyrie
+        with:
+          allow_branch_fallback: "false"
+
+      - name: Verify Gitlink pins present
+        run: |
+          set -euo pipefail
+          missing=0
+          for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do
+            commit=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}' || true)
+            if [ -z "$commit" ]; then
+              echo "::error::Release requires Gitlink for external/${repo}"
+              missing=1
+            else
+              head=$(git -C "external/${repo}" rev-parse HEAD)
+              if [ "$head" != "$commit" ]; then
+                echo "::error::external/${repo} checked out $head, Gitlink wants $commit"
+                missing=1
+              else
+                echo "OK external/${repo} @ ${commit:0:12}"
+              fi
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.26.4"
+          go-version: "1.26.5"
           cache: true
 
       - name: Run GoReleaser
