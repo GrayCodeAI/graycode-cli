@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+			tea "charm.land/bubbletea/v2"
+		lipgloss "charm.land/lipgloss/v2"
 
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -181,9 +181,19 @@ func (m chatModel) startConfigModelSearch() (chatModel, tea.Cmd) {
 	m.configInput.Placeholder = "filter by name, owner, id"
 	m.configInput.EchoMode = textinput.EchoNormal
 	m.configInput.EchoCharacter = 0
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(textPrimary)
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
+	m.configInput.SetStyles(textinput.Styles{
+		Focused: textinput.StyleState{
+			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Text:   lipgloss.NewStyle().Foreground(textPrimary),
+		},
+		Blurred: textinput.StyleState{
+			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Text:   lipgloss.NewStyle().Foreground(textPrimary),
+		},
+		Cursor: textinput.CursorStyle{
+			Color: hawkColor,
+		},
+	})
 	m.configInput.Focus()
 	m.configSel = 0
 	m.configScroll = 0
@@ -208,7 +218,7 @@ func (m chatModel) stopConfigModelSearch(clearQuery bool) chatModel {
 }
 
 func (m chatModel) handleConfigModelSearchKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		return m.stopConfigModelSearch(true), nil
 	case tea.KeyEnter:
@@ -438,9 +448,19 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 	m.configInput.Placeholder = "paste API key"
 	m.configInput.EchoMode = textinput.EchoPassword
 	m.configInput.EchoCharacter = '*'
-	m.configInput.PromptStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	m.configInput.TextStyle = lipgloss.NewStyle().Foreground(textPrimary)
-	m.configInput.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
+	m.configInput.SetStyles(textinput.Styles{
+		Focused: textinput.StyleState{
+			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Text:   lipgloss.NewStyle().Foreground(textPrimary),
+		},
+		Blurred: textinput.StyleState{
+			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Text:   lipgloss.NewStyle().Foreground(textPrimary),
+		},
+		Cursor: textinput.CursorStyle{
+			Color: hawkColor,
+		},
+	})
 	m.configInput.Focus()
 	return m, textinput.Blink
 }
@@ -526,7 +546,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 }
 
 func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		switch m.configEntry {
 		case configEntryOllamaURL:
@@ -564,18 +584,6 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		return m.finishConfigEntry()
-	case tea.KeyCtrlV:
-		if pasted, err := pasteFromClipboard(); err == nil {
-			pasted = strings.TrimSpace(pasted)
-			if pasted != "" {
-				m.configInput.SetValue(pasted)
-			} else {
-				m.configNotice = "Clipboard is empty"
-			}
-		} else {
-			m.configNotice = "Clipboard paste failed — use terminal paste (Cmd+V)"
-		}
-		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.configInput, cmd = m.configInput.Update(msg)
@@ -620,7 +628,7 @@ func (m chatModel) configMoveSelection(delta int) chatModel {
 }
 
 func (m chatModel) handleConfigMouse(msg tea.MouseMsg) (chatModel, bool) {
-	if !tea.MouseEvent(msg).IsWheel() || m.configSaving {
+	if m.configSaving {
 		return m, false
 	}
 	switch m.configEntry {
@@ -632,10 +640,10 @@ func (m chatModel) handleConfigMouse(msg tea.MouseMsg) (chatModel, bool) {
 	if m.configEntry == configEntryKeyView {
 		step = 1
 	}
-	switch msg.Button {
-	case tea.MouseButtonWheelUp:
+	switch msg.Mouse().Button {
+	case tea.MouseWheelUp:
 		return m.configMoveSelection(-step), true
-	case tea.MouseButtonWheelDown:
+	case tea.MouseWheelDown:
 		return m.configMoveSelection(step), true
 	default:
 		return m, false
@@ -643,7 +651,7 @@ func (m chatModel) handleConfigMouse(msg tea.MouseMsg) (chatModel, bool) {
 }
 
 func (m chatModel) handleConfigMouseLeak(msg tea.KeyMsg) (chatModel, bool) {
-	matches := mouseSGRReportRE.FindAllStringSubmatch(string(msg.Runes), -1)
+	matches := mouseSGRReportRE.FindAllStringSubmatch(msg.Key().Text, -1)
 	if len(matches) == 0 {
 		return m, false
 	}
@@ -663,7 +671,8 @@ func (m chatModel) handleConfigMouseLeak(msg tea.KeyMsg) (chatModel, bool) {
 }
 
 func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	if m.configSaving && msg.Type == tea.KeyEsc {
+	key := msg.Key()
+	if m.configSaving && key.Code == tea.KeyEsc {
 		if m.configTab == configTabGateways {
 			return m.handleConfigGatewaysEsc(), nil
 		}
@@ -699,11 +708,11 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 	if m.configTab == configTabModels && m.configModelSearchActive {
 		return m.handleConfigModelSearchKey(msg)
 	}
-	if m.configTab == configTabModels && msg.Type == tea.KeyRunes && string(msg.Runes) == "/" {
+	if m.configTab == configTabModels && key.Text == "/" {
 		return m.startConfigModelSearch()
 	}
-	if m.configTab == configTabGateways && msg.Type == tea.KeyRunes {
-		switch string(msg.Runes) {
+	if m.configTab == configTabGateways {
+		switch key.Text {
 		case "r", "R":
 			return m.refreshConfigGateway()
 		case "k", "K":
@@ -723,7 +732,7 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		m.configSel = 0
 	}
 
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		if m.configTab == configTabModels && strings.TrimSpace(m.configModelSearch) != "" {
 			return m.stopConfigModelSearch(true), nil

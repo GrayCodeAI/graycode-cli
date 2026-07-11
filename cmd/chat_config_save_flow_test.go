@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+			tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestFinishConfigEntry_APIKeyPaste_SavesBeforeProbe(t *testing.T) {

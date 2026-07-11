@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 )
 
 // mcpSubcommand implements the /mcp slash command. It prints the

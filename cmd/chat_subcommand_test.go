@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 )
 
 // mockSubcommand is a test fixture for ChatSubcommand. It records

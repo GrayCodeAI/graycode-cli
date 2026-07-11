@@ -33,16 +33,10 @@ runs:
             # (e.g. by a squash-merge). A depth-1 clone can't check
             # out older commits and fails with "unable to read tree".
             git clone "https://github.com/GrayCodeAI/${repo}.git" "$dest"
-            if ! (cd "$dest" && git checkout --quiet "$commit" 2>/dev/null); then
-              echo "Submodule commit $commit not reachable, falling back to ref"
-              ref="$INPUT_REF"
-              if [ "$ref" = "main" ]; then
-                rm -rf "$dest"
-                git clone --depth=1 --branch main \
-                  "https://github.com/GrayCodeAI/${repo}.git" "$dest"
-              else
-                (cd "$dest" && git fetch --depth=1 "origin" "$ref" 2>/dev/null && git checkout --quiet "$ref" 2>/dev/null) || (cd "$dest" && git fetch --depth=1 origin main 2>/dev/null && git checkout --quiet main 2>/dev/null)
-              fi
+            if ! (cd "$dest" && git checkout --quiet "$commit"); then
+              echo "::error::Pinned submodule commit $commit is not reachable in $repo"
+              echo "Refusing to test an unpinned branch head for a pinned Hawk commit."
+              exit 1
             fi
           else
             ref="$INPUT_REF"

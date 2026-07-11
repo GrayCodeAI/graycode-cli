@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+		lipgloss "charm.land/lipgloss/v2"
 )
 
 func TestClipRenderedBlock_TrimsWideBorder(t *testing.T) {

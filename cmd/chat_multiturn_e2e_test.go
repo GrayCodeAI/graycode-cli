@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
+			tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func configureReadyChatState(t *testing.T) {

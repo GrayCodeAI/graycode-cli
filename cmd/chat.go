@@ -15,12 +15,12 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+			tea "charm.land/bubbletea/v2"
+		lipgloss "charm.land/lipgloss/v2"
 
 	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/storage"
@@ -111,12 +111,22 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 		taWidth = w
 	}
 	ta.SetWidth(taWidth - 4)
-	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
-	ta.FocusedStyle.Base = lipgloss.NewStyle().Foreground(textPrimary)
-	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(textPlaceholder)
-	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	ta.BlurredStyle = ta.FocusedStyle
-	ta.Cursor.Style = lipgloss.NewStyle().Foreground(hawkColor)
+	ta.SetStyles(textarea.Styles{
+		Focused: textarea.StyleState{
+			CursorLine:  lipgloss.NewStyle(),
+			Base:        lipgloss.NewStyle().Foreground(textPrimary),
+			Placeholder: lipgloss.NewStyle().Foreground(textPlaceholder),
+			Prompt:      lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+		},
+		Blurred: textarea.StyleState{
+			Base:        lipgloss.NewStyle().Foreground(textPlaceholder),
+			Placeholder: lipgloss.NewStyle().Foreground(textPlaceholder),
+			Prompt:      lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+		},
+		Cursor: textarea.CursorStyle{
+			Color: hawkColor,
+		},
+	})
 	ta.Prompt = icons.ChevronRight() + " "
 	// Enter submits; Shift+Enter inserts newline
 	ta.KeyMap.InsertNewline.SetKeys("shift+enter")
@@ -173,7 +183,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 			initHeight = h
 		}
 	}
-	vp := viewport.New(initWidth, minChatViewportLines)
+	vp := viewport.New(viewport.WithWidth(initWidth), viewport.WithHeight(minChatViewportLines))
 
 	now := time.Now()
 	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)} // #nosec G404 -- non-cryptographic use (random spinner verb selection)
@@ -481,11 +491,9 @@ func (m chatModel) Init() tea.Cmd {
 }
 
 func chatProgramOptions(mouseEnabled bool) []tea.ProgramOption {
-	programOpts := []tea.ProgramOption{tea.WithAltScreen(), tea.WithReportFocus()}
-	if mouseEnabled {
-		programOpts = append(programOpts, tea.WithMouseCellMotion())
-	}
-	return programOpts
+	// In Bubble Tea v2, AltScreen, ReportFocus, and MouseMode are handled
+	// declaratively in the View() method, so no program options are needed.
+	return nil
 }
 
 // autoIndexCodegraph runs codegraph indexing in the background on startup.

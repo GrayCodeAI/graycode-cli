@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
@@ -72,7 +72,7 @@ func (m chatModel) configZAIRegionView() string {
 }
 
 func (m chatModel) handleConfigZAIRegionKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		prov := m.configProvider
 		m.configEntry = configEntryNone

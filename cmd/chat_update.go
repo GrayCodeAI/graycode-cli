@@ -3,13 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -31,7 +31,7 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 		// the burst-coalescing logic in Update(). Any other key (typing,
 		// Escape, etc.) must still reach the input; arrowBurstActive is a
 		// short-lived timing flag, not a general input lock.
-		switch msg.Type {
+		switch msg.Key().Code {
 		case tea.KeyUp, tea.KeyDown:
 			return true
 		}
@@ -40,14 +40,14 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 	if m.uiFocus != focusPrompt || m.configOpen {
 		return false
 	}
-	switch msg.Type {
+	switch msg.Key().Code {
 	case tea.KeyUp, tea.KeyDown:
 	default:
 		return false
 	}
 	sugs := m.slashSuggestionsFor(m.input.Value())
 	if len(sugs) > 0 {
-		switch msg.Type {
+		switch msg.Key().Code {
 		case tea.KeyUp:
 			if m.slashSel <= 0 {
 				m.slashSel = len(sugs) - 1
@@ -59,7 +59,7 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 		}
 		return true
 	}
-	switch msg.Type {
+	switch msg.Key().Code {
 	case tea.KeyUp:
 		if len(m.history) > 0 {
 			if m.historyIdx == len(m.history) {
@@ -88,7 +88,7 @@ func (m *chatModel) applyPromptArrowKey(msg tea.KeyMsg) bool {
 }
 
 func shouldReturnToPromptOnType(msg tea.KeyMsg) bool {
-	if msg.Type != tea.KeyRunes || len(msg.Runes) == 0 {
+	if len(msg.Key().Text) == 0 {
 		return false
 	}
 	if isMouseSequenceLeak(msg) {
@@ -141,7 +141,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return next, nil
 				}
 			}
-			if tea.MouseEvent(msg).IsWheel() {
+			if msg.Mouse().Button == tea.MouseWheelUp || msg.Mouse().Button == tea.MouseWheelDown {
 				m.trackMousePosition(msg)
 				cmds = append(cmds, m.applyMouseScroll(msg))
 				m.sanitizeInputIfNeeded()
@@ -241,7 +241,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// state (welcome gate, permissions, prompt, scrollback) so users always
 		// have a way to copy text out of the chat — the alt-screen +
 		// mouse-tracking combination otherwise breaks native text selection.
-		if msg.Type == tea.KeyCtrlBackslash {
+		if msg.String() == "ctrl+k" {
 			return m, enterSelectionMode(m.ref, m.copyableTranscript(), m.mouseEnabled())
 		}
 		if isCopyToClipboardKey(msg) {
@@ -360,14 +360,14 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if isCompactCancelKey(msg) {
 				return m.cancelManualCompact("Compaction cancelled.")
 			}
-			if msg.Type == tea.KeyEnter {
+			if msg.String() == "enter" {
 				return m, nil
 			}
 			// Allow typing in the input while compaction runs (Esc cancels).
 		}
 
 		if m.inScrollbackFocus() {
-			switch msg.Type {
+			switch msg.Key().Code {
 			case tea.KeyTab:
 				return m.cycleUIFocus()
 			case tea.KeyEsc:
@@ -426,7 +426,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// AskUser prompt active — Enter submits answer
 		if m.askReq != nil {
-			if msg.Type == tea.KeyEnter {
+			if msg.String() == "enter" {
 				answer := strings.TrimSpace(m.input.Value())
 				m.input.Reset()
 				m.messages = append(m.messages, displayMsg{role: "user", content: answer})
@@ -439,7 +439,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.updateInput(msg)
 		}
 		if m.waiting {
-			if msg.Type == tea.KeyCtrlC {
+			if msg.String() == "ctrl+c" {
 				// First Ctrl+C cancels stream, second quits
 				if m.cancel != nil {
 					m.cancel()
@@ -463,7 +463,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.quitting = true
 				return m, tea.Quit
 			}
-			if msg.Type == tea.KeyEsc {
+			if msg.String() == "escape" {
 				if m.cancel != nil {
 					m.cancel()
 					m.cancel = nil
@@ -481,7 +481,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// Queue message on Enter while agent is working
-			if msg.Type == tea.KeyEnter {
+			if msg.String() == "enter" {
 				text := strings.TrimSpace(m.input.Value())
 				if text != "" {
 					m.history = append(m.history, text)
@@ -501,8 +501,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.updateInput(msg)
 		}
 		if m.configOpen {
-			switch msg.Type {
-			case tea.KeyCtrlC:
+			switch msg.String() {
+			case "ctrl+c":
 				if time.Since(m.lastCtrlC) < 1*time.Second {
 					m.saveSession()
 					if m.watcherStop != nil {
@@ -523,81 +523,92 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return next, cmd
 			}
 		}
-		switch msg.Type {
-		case tea.KeyCtrlA:
-			// Toggle the Agent Status HUD overlay.
-			m.hudOpen = !m.hudOpen
-			if m.hudOpen {
-				m.hudData = m.collectHUDData()
-			}
-			m.viewDirty = true
-			m.updateViewportContent()
-			return m, nil
-		case tea.KeyCtrlK:
-			// Open command palette
-			if m.commandPalette == nil {
-				m.commandPalette = NewCommandPalette(m.width)
-			}
-			m.commandPalette.Open()
-			m.viewDirty = true
-			m.updateViewportContent()
-			return m, nil
-		case tea.KeyCtrlN:
-			models := configModelChoices(m.configModelOptions, false)
-			if len(models) > 1 {
-				current := m.session.Model()
-				idx := 0
-				for i, md := range models {
-					if md == current {
-						idx = (i + 1) % len(models)
+
+		// Handle modifier key combos (ctrl+a, ctrl+k, etc.) via string matching.
+		switch msg.Key().Mod {
+		case 0: // no modifier
+		default:
+			// modifier combos: check the keystroke string
+			k := msg.Key()
+			if k.Text != "" {
+				switch k.Text {
+				case "ctrl+a":
+					m.hudOpen = !m.hudOpen
+					if m.hudOpen {
+						m.hudData = m.collectHUDData()
 					}
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
+				case "ctrl+k":
+					if m.commandPalette == nil {
+						m.commandPalette = NewCommandPalette(m.width)
+					}
+					m.commandPalette.Open()
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
+				case "ctrl+n":
+					models := configModelChoices(m.configModelOptions, false)
+					if len(models) > 1 {
+						current := m.session.Model()
+						idx := 0
+						for i, md := range models {
+							if md == current {
+								idx = (i + 1) % len(models)
+							}
+						}
+						m.session.SetModel(models[idx])
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model → %s", models[idx])})
+					}
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
+				case "ctrl+l":
+					if m.containerEnabled && !m.containerReady {
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for sandbox — tiers unlock when container is ready."})
+						m.viewDirty = true
+						m.updateViewportContent()
+						return m, nil
+					}
+					nextTier := nextAutonomyTier(m.session.PermSvc().Autonomy())
+					if m.session.PermSvc().Autonomy() == 0 || autonomyTierIndex(m.session.PermSvc().Autonomy()) < 0 {
+						nextTier = DefaultContainerAutonomy
+					}
+					m.session.PermSvc().SetAutonomy(nextTier)
+					m.invalidateConnStatus()
+					m.messages = append(m.messages, displayMsg{role: "system", content: formatAutonomyTierMessage(nextTier)})
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
+				case "ctrl+c":
+					if time.Since(m.lastCtrlC) < 1*time.Second {
+						m.saveSession()
+						if m.watcherStop != nil {
+							m.watcherStop()
+						}
+						m.quitting = true
+						return m, tea.Quit
+					}
+					m.lastCtrlC = time.Now()
+					m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
+				case "shift+tab":
+					if m.specPicker == nil {
+						m.specPicker = NewSpecPicker(m.width)
+					}
+					m.specPicker.Open(currentSpecStage(m.session))
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
 				}
-				m.session.SetModel(models[idx])
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model → %s", models[idx])})
 			}
-			m.viewDirty = true
-			m.updateViewportContent()
-			return m, nil
-		case tea.KeyCtrlL:
-			if m.containerEnabled && !m.containerReady {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for sandbox — tiers unlock when container is ready."})
-				m.viewDirty = true
-				m.updateViewportContent()
-				return m, nil
-			}
-			next := nextAutonomyTier(m.session.PermSvc().Autonomy())
-			if m.session.PermSvc().Autonomy() == 0 || autonomyTierIndex(m.session.PermSvc().Autonomy()) < 0 {
-				next = DefaultContainerAutonomy
-			}
-			m.session.PermSvc().SetAutonomy(next)
-			m.invalidateConnStatus()
-			m.messages = append(m.messages, displayMsg{role: "system", content: formatAutonomyTierMessage(next)})
-			m.viewDirty = true
-			m.updateViewportContent()
-			return m, nil
-		case tea.KeyCtrlC:
-			if time.Since(m.lastCtrlC) < 1*time.Second {
-				m.saveSession()
-				if m.watcherStop != nil {
-					m.watcherStop()
-				}
-				m.quitting = true
-				return m, tea.Quit
-			}
-			m.lastCtrlC = time.Now()
-			m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
-			m.viewDirty = true
-			m.updateViewportContent()
-			return m, nil
-		case tea.KeyShiftTab:
-			// Shift+Tab opens the spec picker overlay
-			if m.specPicker == nil {
-				m.specPicker = NewSpecPicker(m.width)
-			}
-			m.specPicker.Open(currentSpecStage(m.session))
-			m.viewDirty = true
-			m.updateViewportContent()
-			return m, nil
+		}
+
+		// Main key dispatch (special keys via code, runes via text)
+		switch msg.Key().Code {
 		case tea.KeyTab:
 			// Accept ghost text suggestion if active and input is empty
 			if m.ghostText.Active() && strings.TrimSpace(m.input.Value()) == "" {
@@ -953,7 +964,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.waiting = true
 			m.autoScroll = true
 			m.viewDirty = true
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+			m.spinnerVerb = spinnerVerbs[rand.IntN(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.turnSawThinking = false
 			m.turnHadAssistantOutput = false
@@ -984,7 +995,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, spinnerVerbTickCmd())
 		if strings.TrimSpace(m.partial.String()) == "" {
-			m.spinnerVerb = spinnerVerbs[rand.Intn(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+			m.spinnerVerb = spinnerVerbs[rand.IntN(len(spinnerVerbs))] // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 			m.brailleSpinner.SetLabel(m.spinnerVerb)
 			m.viewDirty = true
 		}
@@ -1075,7 +1086,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if newText != text {
 						m.input.SetValue(newText)
 					}
-					m.input.SetCursor(newCursor)
+					m.input.SetCursorColumn(newCursor)
 				}
 				if consumed && m.vim.Mode == VimNormal {
 					return m, tea.Batch(cmds...)

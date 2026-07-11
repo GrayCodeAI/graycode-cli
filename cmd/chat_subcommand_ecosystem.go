@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )

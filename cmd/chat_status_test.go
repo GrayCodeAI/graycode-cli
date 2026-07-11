@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func TestRenderChatConnectionStatus_ColorParts(t *testing.T) {
@@ -64,7 +64,7 @@ func TestContextPercentColor(t *testing.T) {
 	// "0k/262k ctx (0%)" traffic-light coloring. Assert each threshold.
 	cases := []struct {
 		pct  int
-		want lipgloss.Color
+		want lipgloss.Style
 	}{
 		{0, doneGreen},
 		{50, doneGreen},

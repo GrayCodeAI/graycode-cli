@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/textinput"
+			tea "charm.land/bubbletea/v2"
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // specPickerAction identifies what a SpecPicker entry does when selected.
@@ -60,8 +60,7 @@ func NewSpecPicker(width int) *SpecPicker {
 	ti := textinput.New()
 	ti.Placeholder = "Type to filter…"
 	ti.Focus()
-	ti.CharLimit = 40
-	ti.Width = 40
+	ti.SetWidth(40)
 
 	return &SpecPicker{
 		input:    ti,
@@ -108,7 +107,7 @@ func (sp *SpecPicker) Update(msg tea.KeyMsg) (*specPickerEntry, bool) {
 		return nil, false
 	}
 
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		sp.Close()
 		return nil, true
@@ -175,7 +174,7 @@ func (sp *SpecPicker) Render(viewWidth int) string {
 	b.WriteString(paletteDimStyle.Render(fmt.Sprintf("  Current stage: %s", specStageDisplayName(sp.stage))))
 	b.WriteString("\n\n")
 
-	sp.input.Width = boxWidth - 4
+	sp.input.SetWidth(boxWidth - 4)
 	b.WriteString(paletteInputStyle.Width(boxWidth - 2).Render(sp.input.View()))
 	b.WriteString("\n\n")
 

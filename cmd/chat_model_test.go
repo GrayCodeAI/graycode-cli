@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/viewport"
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -15,9 +18,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func newTestChatModel() *chatModel {
@@ -83,7 +83,7 @@ func restoreThemeGlobals(t *testing.T) {
 	savedCost, savedBranch, savedToken, savedCwd := costViolet, branchYellow, tokenSage, cwdBlue
 	savedPrimary, savedMuted, savedPlaceholder, savedDisabled := textPrimary, textMuted, textPlaceholder, textDisabled
 	savedBorderDim, savedBgCode := borderDim, bgCode
-	savedDarkBG := lipgloss.HasDarkBackground()
+	hasDark := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 	t.Cleanup(func() {
 		hawkColor, successTeal, warnAmber, errorCoral, infoSky = savedHawk, savedSuccess, savedWarn, savedErr, savedInfo
 		toolGold, agentGold, doneGreen, containerBlue = savedTool, savedAgent, savedDone, savedContainer
@@ -92,7 +92,8 @@ func restoreThemeGlobals(t *testing.T) {
 		costViolet, branchYellow, tokenSage, cwdBlue = savedCost, savedBranch, savedToken, savedCwd
 		textPrimary, textMuted, textPlaceholder, textDisabled = savedPrimary, savedMuted, savedPlaceholder, savedDisabled
 		borderDim, bgCode = savedBorderDim, savedBgCode
-		lipgloss.SetHasDarkBackground(savedDarkBG)
+		// HasDarkBackground is now a function (no args), SetHasDarkBackground removed in v2
+		_ = hasDark
 	})
 }
 

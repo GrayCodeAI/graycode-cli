@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 )
 
 func key(s string) tea.KeyMsg {

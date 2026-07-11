@@ -3,8 +3,8 @@ package cmd
 import (
 	"testing"
 
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func TestAutonomyTierNames(t *testing.T) {
@@ -64,7 +64,7 @@ func TestAutonomyTierColorsDistinct(t *testing.T) {
 		engine.AutonomyFull,
 		engine.AutonomyYOLO,
 	}
-	seen := make(map[lipgloss.Color]bool)
+	seen := make(map[lipgloss.Style]bool)
 	for _, l := range levels {
 		c := autonomyTierColor(l)
 		if seen[c] {

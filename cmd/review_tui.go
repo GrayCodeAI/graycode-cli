@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+			tea "charm.land/bubbletea/v2"
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -43,7 +43,7 @@ func runReviewTUI(_ *cobra.Command, _ []string) error {
 	}
 
 	m := reviewTUIModel{store: store}
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m)
 	_, err = p.Run()
 	_ = store.Close()
 	return err
@@ -117,9 +117,9 @@ func (m reviewTUIModel) reload() tea.Cmd {
 	}
 }
 
-func (m reviewTUIModel) View() string {
+func (m reviewTUIModel) View() tea.View {
 	if m.quitting {
-		return ""
+		return tea.View{}
 	}
 
 	header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
@@ -132,7 +132,9 @@ func (m reviewTUIModel) View() string {
 
 	if len(m.reviews) == 0 {
 		b.WriteString("\n  No reviews yet. Run 'hawk review init' to get started.\n")
-		return b.String()
+		v := tea.View{Content: b.String()}
+		v.AltScreen = true
+		return v
 	}
 
 	// Calculate visible area.
@@ -181,7 +183,9 @@ func (m reviewTUIModel) View() string {
 		}
 	}
 
-	return b.String()
+	v := tea.View{Content: b.String()}
+	v.AltScreen = true
+	return v
 }
 
 func reviewMin(a, b int) int {

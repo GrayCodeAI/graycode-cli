@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )

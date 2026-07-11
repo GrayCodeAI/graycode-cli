@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	tea "github.com/charmbracelet/bubbletea"
+			tea "charm.land/bubbletea/v2"
 )
 
 // VimMode represents the current vim mode.
@@ -120,7 +120,7 @@ func (v *VimState) HandleKey(msg tea.KeyMsg, text string, cursor int) (string, i
 }
 
 func (v *VimState) handleInsertMode(msg tea.KeyMsg, text string, cursor int) (string, int, bool) {
-	if msg.Type == tea.KeyEscape {
+	if msg.String() == "escape" {
 		v.Mode = VimNormal
 		if cursor > 0 {
 			cursor--
@@ -352,8 +352,8 @@ func (v *VimState) handleNormalMode(msg tea.KeyMsg, text string, cursor int) (st
 		if v.Persistent.LastFind != 0 {
 			v.Command.FindType = v.Persistent.LastFindType
 			v.Command.Type = CmdFind
-			fakeKey := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{rune(v.Persistent.LastFind)}}
-			return v.handleFindChar(fakeKey, text, cursor)
+			fakeKey := tea.KeyPressMsg{Text: string(rune(v.Persistent.LastFind))}
+			return v.handleFindChar(tea.KeyMsg(fakeKey), text, cursor)
 		}
 		return text, cursor, true
 
@@ -373,8 +373,8 @@ func (v *VimState) handleNormalMode(msg tea.KeyMsg, text string, cursor int) (st
 			}
 			v.Command.FindType = opposite
 			v.Command.Type = CmdFind
-			fakeKey := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{rune(v.Persistent.LastFind)}}
-			return v.handleFindChar(fakeKey, text, cursor)
+			fakeKey := tea.KeyPressMsg{Text: string(rune(v.Persistent.LastFind))}
+			return v.handleFindChar(tea.KeyMsg(fakeKey), text, cursor)
 		}
 		return text, cursor, true
 

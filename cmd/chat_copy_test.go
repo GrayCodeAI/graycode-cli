@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textarea"
+			tea "charm.land/bubbletea/v2"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )

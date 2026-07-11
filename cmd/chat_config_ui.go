@@ -3,8 +3,8 @@ package cmd
 import (
 	"strings"
 
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func configMutedStyle() lipgloss.Style {

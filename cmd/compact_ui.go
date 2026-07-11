@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+			tea "charm.land/bubbletea/v2"
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -139,9 +139,6 @@ func (m *chatModel) clearCompactCancel() {
 }
 
 func isCompactCancelKey(msg tea.KeyMsg) bool {
-	if msg.Type == tea.KeyEsc {
-		return true
-	}
 	switch msg.String() {
 	case "esc", "ctrl+c", "ctrl+[", "ctrl+\\":
 		return true

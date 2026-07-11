@@ -278,15 +278,15 @@ func (pa *ProjectAnalyzer) detectFramework() string {
 	content := string(data)
 
 	frameworks := map[string]string{
-		"github.com/gin-gonic/gin":           "Gin",
-		"github.com/labstack/echo":           "Echo",
-		"github.com/gorilla/mux":             "Gorilla",
-		"github.com/go-chi/chi":              "Chi",
-		"github.com/gofiber/fiber":           "Fiber",
-		"github.com/spf13/cobra":             "Cobra CLI",
-		"github.com/urfave/cli":              "urfave/cli",
-		"google.golang.org/grpc":             "gRPC",
-		"github.com/charmbracelet/bubbletea": "Bubbletea TUI",
+		"github.com/gin-gonic/gin": "Gin",
+		"github.com/labstack/echo": "Echo",
+		"github.com/gorilla/mux":   "Gorilla",
+		"github.com/go-chi/chi":    "Chi",
+		"github.com/gofiber/fiber": "Fiber",
+		"github.com/spf13/cobra":   "Cobra CLI",
+		"github.com/urfave/cli":    "urfave/cli",
+		"google.golang.org/grpc":   "gRPC",
+		"charm.land/bubbletea/v2":  "Bubbletea TUI",
 	}
 
 	var detected []string

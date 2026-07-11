@@ -1,18 +1,23 @@
 module github.com/GrayCodeAI/hawk
 
-go 1.26.4
+go 1.26.5
+
+// The charmbracelet v2 modules (bubbles, bubbletea, lipgloss, glamour, huh) have
+// moved their module paths from github.com/charmbracelet/... to charm.land/...
+// but their Go import paths still use the old github.com/charmbracelet/... paths.
+// The import paths in the Go source have been migrated to charm.land/... to match.
 
 require (
-	github.com/GrayCodeAI/eyrie v0.1.3
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.3
-	github.com/GrayCodeAI/inspect v0.1.3
-	github.com/GrayCodeAI/sight v0.1.2
-	github.com/GrayCodeAI/tok v0.1.2
-	github.com/GrayCodeAI/yaad v0.1.3
+	charm.land/bubbles/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.0.7
+	charm.land/lipgloss/v2 v2.0.3
+	github.com/GrayCodeAI/eyrie v0.1.4-0.20260710020656-7f26f4d5c6ed
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.4-0.20260708174040-91a0c57b0f31
+	github.com/GrayCodeAI/inspect v0.1.4-0.20260710024113-7138db2984f9
+	github.com/GrayCodeAI/sight v0.1.3-0.20260710024120-e6cab9f0c51c
+	github.com/GrayCodeAI/tok v0.1.3-0.20260708174250-2a1703c8d3ce
+	github.com/GrayCodeAI/yaad v0.1.4-0.20260710024138-2f88734cc01b
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/charmbracelet/bubbles v1.0.0
-	github.com/charmbracelet/bubbletea v1.3.10
-	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/google/uuid v1.6.0
@@ -35,11 +40,8 @@ require (
 
 require (
 	cel.dev/expr v0.25.2 // indirect
-	charm.land/bubbles/v2 v2.1.0 // indirect
-	charm.land/bubbletea/v2 v2.0.7 // indirect
 	charm.land/glamour/v2 v2.0.0 // indirect
 	charm.land/huh/v2 v2.0.3 // indirect
-	charm.land/lipgloss/v2 v2.0.3 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/BobuSumisu/aho-corasick v1.0.3 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
@@ -126,19 +128,17 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/GrayCodeAI/trace v0.1.3
+	github.com/GrayCodeAI/trace v0.1.4-0.20260710024128-821f84eaf60b
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
@@ -146,8 +146,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect

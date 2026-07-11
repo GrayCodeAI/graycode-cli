@@ -3,7 +3,8 @@ package cmd
 import (
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+		lipgloss "charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 // TestAdaptiveNeutralsPreserveDarkAppearance locks the Dark variant of each
@@ -13,7 +14,7 @@ import (
 func TestAdaptiveNeutralsPreserveDarkAppearance(t *testing.T) {
 	cases := []struct {
 		name     string
-		color    lipgloss.AdaptiveColor
+		color    compat.AdaptiveColor
 		wantDark string
 	}{
 		{"textPrimary", textPrimary, "#F0F0F0"},

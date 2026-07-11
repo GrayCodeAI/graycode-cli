@@ -3,10 +3,10 @@ package cmd
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/textinput"
+			tea "charm.land/bubbletea/v2"
+		lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // autonomyPickerEntry is one selectable row in the picker.
@@ -47,7 +47,7 @@ func NewAutonomyPicker(width int) *AutonomyPicker {
 	ti.Placeholder = "Type to filter…"
 	ti.Focus()
 	ti.CharLimit = 40
-	ti.Width = 40
+	ti.SetWidth(40)
 
 	entries := make([]autonomyPickerEntry, 0, len(allAutonomyTiers))
 	for _, level := range allAutonomyTiers {
@@ -108,7 +108,7 @@ func (ap *AutonomyPicker) Update(msg tea.KeyMsg) (*autonomyPickerEntry, bool) {
 		return nil, false
 	}
 
-	switch msg.Type {
+	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		ap.Close()
 		return nil, true
@@ -173,7 +173,7 @@ func (ap *AutonomyPicker) Render(viewWidth int) string {
 	b.WriteString(paletteDimStyle.Render("  (↑↓ navigate · Enter select · Esc dismiss)"))
 	b.WriteString("\n\n")
 
-	ap.input.Width = boxWidth - 4
+	ap.input.SetWidth(boxWidth - 4)
 	b.WriteString(paletteInputStyle.Width(boxWidth - 2).Render(ap.input.View()))
 	b.WriteString("\n\n")
 

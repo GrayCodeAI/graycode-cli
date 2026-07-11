@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+		lipgloss "charm.land/lipgloss/v2"
 )
 
 // scrollbarWidth is the number of terminal columns reserved for the scrollbar column.
@@ -22,7 +22,7 @@ var scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
 
 // chatHasOverflow reports whether chat content exceeds the viewport height.
 func (m chatModel) chatHasOverflow() bool {
-	h := m.viewport.Height
+	h := m.viewport.Height()
 	if h <= 0 {
 		return false
 	}
@@ -64,7 +64,7 @@ func (m chatModel) renderScrollbar() string {
 		return ""
 	}
 
-	vpH := m.viewport.Height
+	vpH := m.viewport.Height()
 	totalLines := m.contentLines
 	if vpH <= 0 || totalLines <= 0 {
 		return ""
@@ -89,7 +89,7 @@ func (m chatModel) renderScrollbar() string {
 	if maxOffset <= 0 {
 		maxOffset = 1
 	}
-	yOffset := m.viewport.YOffset
+	yOffset := m.viewport.YOffset()
 	if yOffset < 0 {
 		yOffset = 0
 	}
@@ -137,7 +137,7 @@ func padToHeight(s string, height int) string {
 // side-by-side layout, returning the full-width chat area string.
 func (m chatModel) renderChatPane() string {
 	chatView := m.viewport.View()
-	vpH := m.viewport.Height
+	vpH := m.viewport.Height()
 	if !m.chatScrollbarVisible() {
 		return padToHeight(chatView, vpH)
 	}
@@ -147,7 +147,7 @@ func (m chatModel) renderChatPane() string {
 		return padToHeight(chatView, vpH)
 	}
 
-	targetW := m.viewport.Width
+	targetW := m.viewport.Width()
 	if targetW <= 0 {
 		targetW = 80
 	}

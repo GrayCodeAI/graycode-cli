@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+		lipgloss "charm.land/lipgloss/v2"
 )
 
 func TestLayoutFooterRow_NarrowRightBlockStillShowsBullet(t *testing.T) {

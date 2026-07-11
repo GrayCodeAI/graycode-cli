@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+			tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 var platformCtxCache struct {

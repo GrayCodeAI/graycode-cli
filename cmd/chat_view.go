@@ -9,8 +9,9 @@ import (
 
 	"golang.org/x/term"
 
+	tea "charm.land/bubbletea/v2"
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -263,13 +264,13 @@ func (m *chatModel) updateViewportContent() {
 
 	atBottom := m.viewport.AtBottom()
 	preserveScroll := !m.autoScroll && !atBottom
-	prevYOffset := m.viewport.YOffset
+	prevYOffset := m.viewport.YOffset()
 	contentStr, contentWidth, contentLines := m.renderViewportContentForLayout(viewWidth)
 	m.contentLines = contentLines
 
 	welcomeOnly := m.hasRealMessages() == 0 && !m.waiting
 
-	m.viewport.Width = contentWidth
+	m.viewport.SetWidth(contentWidth)
 	m.viewport.SetContent(contentStr)
 	switch {
 	case welcomeOnly:
@@ -300,7 +301,7 @@ func (m *chatModel) renderViewportContentForLayout(viewWidth int) (string, int, 
 	// Overflow changes the usable width once the scrollbar gutter is visible.
 	// Re-render once at the final width so wrapping, line counting, and
 	// scrollbar state all describe the same layout.
-	if m.viewport.Height > 0 && contentLines > m.viewport.Height && viewWidth >= 20 {
+	if m.viewport.Height() > 0 && contentLines > m.viewport.Height() && viewWidth >= 20 {
 		narrowWidth := viewWidth - scrollbarWidth
 		if narrowWidth < 1 {
 			narrowWidth = 1
@@ -323,9 +324,9 @@ func renderedLineCount(s string) int {
 	return lines
 }
 
-func (m chatModel) View() string {
+func (m chatModel) View() tea.View {
 	if m.quitting {
-		return ""
+		return tea.NewView("")
 	}
 	m = m.withSyncedLayout()
 
@@ -430,21 +431,21 @@ func (m chatModel) View() string {
 		paletteView := m.commandPalette.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(paletteView)
-		return frame.String()
+		return tea.NewView(frame.String())
 	}
 
 	// Autonomy tier picker overlay
 	if m.themePicker != nil && m.themePicker.IsOpen() {
-		pickerView := lipgloss.NewStyle().Width(viewWidth).Render(m.themePicker.View())
+		pickerView := lipgloss.NewStyle().Width(viewWidth).Render(m.themePicker.View().Content)
 		frame.WriteByte('\n')
 		frame.WriteString(pickerView)
-		return frame.String()
+		return tea.NewView(frame.String())
 	}
 	if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
 		pickerView := m.autonomyPicker.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(pickerView)
-		return frame.String()
+		return tea.NewView(frame.String())
 	}
 
 	// Spec workflow picker overlay
@@ -452,7 +453,7 @@ func (m chatModel) View() string {
 		pickerView := m.specPicker.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(pickerView)
-		return frame.String()
+		return tea.NewView(frame.String())
 	}
 
 	// Agent Status HUD overlay
@@ -460,12 +461,12 @@ func (m chatModel) View() string {
 		hudView := renderAgentStatusPanel(m.hudData, viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(hudView)
-		return frame.String()
+		return tea.NewView(frame.String())
 	}
 
 	frame.WriteByte('\n')
 	frame.WriteString(bottomBar.String())
-	return frame.String()
+	return tea.NewView(frame.String())
 }
 
 // renderPermissionBox renders a compact inline permission prompt.
