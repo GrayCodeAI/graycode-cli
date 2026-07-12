@@ -16,16 +16,28 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/storage"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/setup"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func fetchModelsViaRuntime(ctx context.Context, provider string) ([]catalog.ModelCatalogEntry, error) {
-	return runtime.ModelsForProvider(ctx, provider)
+	models, err := ListEngineModels(ctx, provider, false)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]catalog.ModelCatalogEntry, 0, len(models))
+	for _, model := range models {
+		out = append(out, catalog.ModelCatalogEntry{
+			ID: model.ID, DisplayName: model.DisplayName, Owner: model.Owner,
+			ContextWindow: model.ContextWindow, MaxOutput: model.MaxOutputTokens,
+			InputPricePer1M: model.InputPricePer1M, OutputPricePer1M: model.OutputPricePer1M,
+			ServerTools: append([]string(nil), model.Capabilities...),
+		})
+	}
+	return out, nil
 }
 
 // Settings holds hawk configuration.
@@ -652,10 +664,12 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog (check API keys; hawk will refresh automatically on next start)", provider)
 }
 
-func refreshModelCatalog(ctx context.Context, force bool) (*catalog.RefreshResult, error) {
-	return setup.DiscoverModelCatalogWithOptions(ctx, eyriecfg.DiscoveryCredentials(ctx), setup.DiscoverModelCatalogOptions{
-		ForceRefresh: force,
-	})
+func refreshModelCatalog(ctx context.Context, _ bool) (eyrieengine.CatalogSnapshot, error) {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return eyrieengine.CatalogSnapshot{}, err
+	}
+	return engine.RefreshCatalog(ctx, "")
 }
 
 // RefreshModelCatalogV1 asks eyrie to refresh the remote catalog and provider APIs using env API keys.
@@ -667,16 +681,14 @@ func RefreshModelCatalogV1(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return result.DiscoverReport(), nil
+	return formatCatalogSnapshot(result), nil
 }
 
 func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalog, error) {
 	if refreshRemote {
-		result, err := setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentials(ctx))
-		if err != nil {
+		if _, err := refreshModelCatalog(ctx, true); err != nil {
 			return nil, err
 		}
-		return result.Compiled, nil
 	}
 	return catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
 		CachePath:    catalog.DefaultCachePath(),

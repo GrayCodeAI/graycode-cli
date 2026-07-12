@@ -162,18 +162,19 @@ func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error 
 	if err != nil {
 		return err
 	}
-	if result.Compiled != nil {
-		storeCompiledCatalog(result.Compiled)
+	compiled, loadErr := loadEyrieCatalogV1(refreshCtx, false)
+	if loadErr == nil && compiled != nil {
+		storeCompiledCatalog(compiled)
 	}
 	InvalidateConfigUICache()
 	if out != nil {
 		if verbose {
-			_, _ = fmt.Fprintln(out, strings.TrimSpace(result.DiscoverReport()))
-		} else if result.Compiled != nil {
+			_, _ = fmt.Fprintln(out, strings.TrimSpace(formatCatalogSnapshot(result)))
+		} else if compiled != nil {
 			_, _ = fmt.Fprintf(
 				out, "Catalog ready: %d models, %d deployments → %s\n",
-				len(result.Compiled.ModelsByID),
-				len(result.Compiled.DeploymentsByID),
+				len(compiled.ModelsByID),
+				len(compiled.DeploymentsByID),
 				result.CachePath,
 			)
 		}
