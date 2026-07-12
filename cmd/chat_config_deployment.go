@@ -103,11 +103,6 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 		opts := configModelOptionsFromEyrie(entries)
-		if len(opts) == 0 && result.Setup != nil {
-			fallback := hawkconfig.OptionsFromSetupUI(result.Setup, inference.ProviderID)
-			opts = toConfigModelOptionsFromHawk(fallback)
-		}
-
 		return configApplyCredentialsMsg{
 			summary:      hawkconfig.FormatApplyCredentialsSummary(result),
 			providerID:   inference.ProviderID,
