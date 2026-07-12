@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
-
-	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // ArchitectConfig configures the two-model architect/editor pipeline.
@@ -88,7 +86,7 @@ func (a *Architect) Plan(ctx context.Context, goal string, repoContext string) (
 		if info, ok := routing.Find(a.Config.EditorModel); ok && info.Provider != "" {
 			provider = info.Provider
 		}
-		model = routing.PreferredModelForTier(provider, eycatalog.TierHaiku, "")
+		model = routing.PreferredModelForTier(provider, routing.TierHaiku, "")
 	}
 
 	response, err := a.ChatFn(ctx, model, messages)

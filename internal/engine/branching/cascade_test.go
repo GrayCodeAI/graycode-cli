@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
-
-	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
 )
 
 const testProvider = "anthropic"
@@ -13,9 +11,9 @@ const testProvider = "anthropic"
 // testTierModels loads haiku/sonnet/opus model IDs from eyrie's catalog (not hardcoded).
 func testTierModels(t *testing.T, provider string) (haiku, sonnet, opus string) {
 	t.Helper()
-	haiku = routing.PreferredModelForTier(provider, eycatalog.TierHaiku, "")
-	sonnet = routing.PreferredModelForTier(provider, eycatalog.TierSonnet, "")
-	opus = routing.PreferredModelForTier(provider, eycatalog.TierOpus, "")
+	haiku = routing.PreferredModelForTier(provider, routing.TierHaiku, "")
+	sonnet = routing.PreferredModelForTier(provider, routing.TierSonnet, "")
+	opus = routing.PreferredModelForTier(provider, routing.TierOpus, "")
 	if haiku == "" || sonnet == "" || opus == "" {
 		t.Skipf("no tier models for %q without live catalog (fully dynamic)", provider)
 	}

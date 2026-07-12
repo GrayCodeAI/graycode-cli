@@ -30,12 +30,7 @@ internal/config/ui_cache.go
 internal/config/validator.go
 internal/config/xiaomi_setup.go
 internal/config/zai_setup.go
-internal/engine/architect.go
-internal/engine/branching/cascade.go
 internal/engine/engine_stage2_test_helpers.go
 internal/onboarding/onboarding.go
-internal/provider/routing/catalog.go
-internal/provider/routing/roles.go
-internal/provider/routing/tiers.go
 internal/resilience/health/diagnostics.go
 internal/types/client.go

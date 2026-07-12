@@ -50,6 +50,10 @@ Eyrie module version; `go.work` pins the submodule for local integration.
 - The model picker consumes display labels, ownership, serving gateway,
   context, capabilities, pricing and price certainty from `engine.Model`; it
   no longer reads or formats Eyrie's compiled catalog directly.
+- Hawk retains task classification, workflow roles, cascade decisions and
+  health thresholds. Model lookup, aliases, provider ownership, defaults,
+  relative cost classes and preferred candidates now come from Eyrie's
+  host-neutral model-policy facade.
 - The facade preserves advanced generation options and owns continuation;
   Hawk's compatibility retry/rate-limit wrapper is bypassed for facade clients
   so resilience is applied exactly once.
