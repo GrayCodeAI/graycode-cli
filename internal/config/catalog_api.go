@@ -100,15 +100,11 @@ func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []
 	configured := credConfigured
 	uiCacheMu.RUnlock()
 
-	compiled := compiledCatalogOrBootstrap()
 	gateways := runtime.SetupGateways()
 	statuses := make([]GatewayStatus, 0, len(gateways))
 
 	for _, providerID := range gateways {
-		count := 0
-		if compiled != nil {
-			count = len(catalog.ModelEntriesForProvider(compiled, providerID))
-		}
+		count := runtime.CachedModelCountForProvider(ctx, providerID)
 
 		hasKey := false
 		if configured != nil {

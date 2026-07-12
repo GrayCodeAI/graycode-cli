@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
@@ -97,60 +98,32 @@ func RunSetup() error {
 	fmt.Println(dim + "  Keys are stored in " + credentials.PlatformSecretStoreName() + ", not .env or shell env." + reset)
 	fmt.Println()
 
-	// Provider selection
 	fmt.Println("  Choose your LLM provider:")
 	fmt.Println()
-	providers := []struct {
-		name   string
-		envKey string
-		desc   string
-	}{
-		{"anthropic", "ANTHROPIC_API_KEY", "Claude (recommended)"},
-		{"openai", "OPENAI_API_KEY", "GPT-4o, o1, o3"},
-		{"gemini", "GEMINI_API_KEY", "Gemini 2.5"},
-		{"openrouter", "OPENROUTER_API_KEY", "200+ models"},
-		{"groq", "GROQ_API_KEY", "Fast inference"},
-		{"poolside", "POOLSIDE_API_KEY", "Poolside models"},
-		{"ollama", "", "Local models (no API key needed)"},
+	providers := setupProviderOptions()
+	if len(providers) == 0 {
+		return fmt.Errorf("eyrie returned no setup providers")
 	}
-
-	for i, p := range providers {
-		fmt.Printf("  %s%d%s) %s%-12s%s %s\n", teal, i+1, reset, bold, p.name, reset, dim+p.desc+reset)
+	for i, provider := range providers {
+		fmt.Printf("  %s%d%s) %s%s%s\n", teal, i+1, reset, bold, hawkconfig.GatewayDisplayName(provider), reset)
 	}
 	fmt.Println()
-	fmt.Print("  Enter number (1-7): ")
+	fmt.Printf("  Enter number (1-%d): ", len(providers))
 
 	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	idx := 0
-	switch input {
-	case "1":
-		idx = 0
-	case "2":
-		idx = 1
-	case "3":
-		idx = 2
-	case "4":
-		idx = 3
-	case "5":
-		idx = 4
-	case "6":
-		idx = 5
-	case "7":
-		idx = 6
-	default:
-		idx = 0 // default to anthropic
+	selected, err := selectProvider(providers, input)
+	if err != nil {
+		return err
 	}
 
-	selected := providers[idx]
 	fmt.Println()
-	fmt.Printf("  Selected: %s%s%s\n", teal, selected.name, reset)
+	fmt.Printf("  Selected: %s%s%s\n", teal, hawkconfig.GatewayDisplayName(selected), reset)
 
-	// API key input
-	if selected.envKey != "" && !credentials.HasSecret(context.Background(), selected.envKey) {
+	ctx := context.Background()
+	envKey := hawkconfig.SetupGatewayCredentialEnv(selected)
+	if envKey != "" && !hawkconfig.HasStoredCredentialForProvider(ctx, selected) {
 		fmt.Println()
-		fmt.Printf("  Enter your %s API key:\n", selected.name)
+		fmt.Printf("  Enter your %s API key:\n", hawkconfig.GatewayDisplayName(selected))
 		fmt.Printf("  %s(Get one at the provider's website)%s\n", dim, reset)
 		fmt.Print("  > ")
 
@@ -162,33 +135,23 @@ func RunSetup() error {
 			return fmt.Errorf("no API key")
 		}
 
-		// Validate key format before saving
-		if warning, valid := validateAPIKey(selected.name, apiKey); !valid {
-			fmt.Printf("  %s"+icons.Alert()+" %s%s\n", red, warning, reset)
-			fmt.Println(red + "  API key not saved. Please check your key and try again." + reset)
-			return fmt.Errorf("invalid API key")
-		} else if warning != "" {
-			fmt.Printf("  %s"+icons.Alert()+" %s (saving anyway)%s\n", dim, warning, reset)
-		}
-
-		ctx := context.Background()
-		if err := hawkconfig.PersistAPIKey(ctx, selected.envKey, apiKey); err != nil {
-			fmt.Printf("  %sWarning: couldn't save API key: %s%s\n", dim, err, reset)
+		inference, err := hawkconfig.CredentialInferenceForProvider(selected)
+		if err != nil {
 			return err
 		}
-
-		if err := hawkconfig.SetActiveProvider(context.Background(), selected.name); err != nil {
-			fmt.Printf("  %sWarning: couldn't save provider: %s%s\n", dim, err, reset)
+		if err := hawkconfig.SaveCredential(ctx, inference, apiKey); err != nil {
+			fmt.Printf("  %s"+icons.Alert()+" %s%s\n", red, hawkconfig.FormatConfigProviderError(selected, err), reset)
+			return err
 		}
-
 		fmt.Println()
 		fmt.Printf("  %s"+icons.CheckBold()+" API key saved to %s%s\n", teal, credentials.PlatformSecretStoreName(), reset)
-	} else if selected.name == "ollama" {
-		_ = hawkconfig.SetActiveProvider(context.Background(), "ollama")
-		fmt.Printf("  %s"+icons.CheckBold()+" Ollama selected (make sure ollama is running)%s\n", teal, reset)
+	} else if envKey == "" {
+		fmt.Printf("  %s"+icons.CheckBold()+" %s selected; no API key required%s\n", teal, hawkconfig.GatewayDisplayName(selected), reset)
 	} else {
-		_ = hawkconfig.SetActiveProvider(context.Background(), selected.name)
-		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, selected.name, credentials.PlatformSecretStoreName(), reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, hawkconfig.GatewayDisplayName(selected), credentials.PlatformSecretStoreName(), reset)
+	}
+	if err := hawkconfig.SetActiveProvider(ctx, selected); err != nil {
+		return fmt.Errorf("save active provider: %w", err)
 	}
 
 	// Security notes
@@ -210,22 +173,15 @@ func RunSetup() error {
 	return nil
 }
 
-// validateAPIKey checks the key format for known providers.
-// Returns (warning, isValid). A warning with isValid=true means the key is
-// acceptable but may have an unusual format.
-func validateAPIKey(provider, key string) (string, bool) {
-	if len(key) <= 10 {
-		return "API key seems too short", false
+func setupProviderOptions() []string {
+	providers := hawkconfig.AllSetupGateways()
+	return append([]string(nil), providers...)
+}
+
+func selectProvider(providers []string, input string) (string, error) {
+	selection, err := strconv.Atoi(strings.TrimSpace(input))
+	if err != nil || selection < 1 || selection > len(providers) {
+		return "", fmt.Errorf("provider selection must be between 1 and %d", len(providers))
 	}
-	switch strings.ToLower(provider) {
-	case "anthropic":
-		if !strings.HasPrefix(key, "sk-ant-") {
-			return "Anthropic keys typically start with 'sk-ant-'", false
-		}
-	case "openai":
-		if !strings.HasPrefix(key, "sk-") {
-			return "OpenAI keys typically start with 'sk-'", false
-		}
-	}
-	return "", true
+	return providers[selection-1], nil
 }

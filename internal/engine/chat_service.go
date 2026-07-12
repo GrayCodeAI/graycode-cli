@@ -51,6 +51,11 @@ type ChatService struct {
 	// glmThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing
 	// requests. nil leaves the model default.
 	glmThinkingEnabled *bool
+	// onContextOverflow, when set, is invoked after the provider rejects a
+	// request as too large. It must shrink the conversation (e.g. via the
+	// Session's smart compaction) and return the replacement history;
+	// ok=false means nothing was compacted and the retry is skipped.
+	onContextOverflow func(ctx context.Context) (msgs []types.EyrieMessage, ok bool)
 }
 
 // ChatServiceConfig bundles the optional fields the constructor doesn't
@@ -68,6 +73,10 @@ type ChatServiceConfig struct {
 	ContinuationConfig types.ContinuationConfig
 	OutputSchema       string
 	GLMThinkingEnabled *bool
+	// OnContextOverflow compacts the conversation after a "context too
+	// long" provider error and returns the replacement message history.
+	// Optional; when nil, overflow errors are returned to the caller.
+	OnContextOverflow func(ctx context.Context) ([]types.EyrieMessage, bool)
 }
 
 // NewChatService constructs a ChatService with sensible defaults for any
@@ -100,7 +109,15 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 		contCfg:            cfg.ContinuationConfig,
 		outputSchema:       cfg.OutputSchema,
 		glmThinkingEnabled: cfg.GLMThinkingEnabled,
+		onContextOverflow:  cfg.OnContextOverflow,
 	}
+}
+
+// SetOnContextOverflow installs the emergency-compaction hook. Used by
+// NewSessionWithClient, which constructs the ChatService before the
+// persistence service the hook reads from.
+func (c *ChatService) SetOnContextOverflow(fn func(ctx context.Context) ([]types.EyrieMessage, bool)) {
+	c.onContextOverflow = fn
 }
 
 // Client returns the underlying eyrie client. Exposed for callers (e.g.
@@ -155,23 +172,14 @@ func (c *ChatService) Reattach(client ChatClient, provider string) {
 // max tokens, tools, structured output, etc.).
 func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens int, tools []types.EyrieTool) types.ChatOptions {
 	opts := types.ChatOptions{
-		Provider:      c.provider,
-		Model:         activeModel,
-		MaxTokens:     maxTokens,
-		System:        systemPrompt,
-		EnableCaching: c.provider == "anthropic",
-		Tools:         tools,
-	}
-	// GLM/Z.ai extended reasoning toggle: only meaningful for Z.AI
-	// providers, where eyrie emits thinking={type:enabled|disabled}.
-	if isZAIProvider(c.provider) && c.glmThinkingEnabled != nil {
-		opts.GLMThinkingEnabled = c.glmThinkingEnabled
+		Provider: c.provider, Model: activeModel, MaxTokens: maxTokens,
+		System: systemPrompt, Tools: tools, GLMThinkingEnabled: c.glmThinkingEnabled,
 	}
 	// Structured output: request a JSON-schema-constrained response when set.
 	if c.outputSchema != "" {
 		opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: c.outputSchema}
 	}
-	return opts
+	return types.ApplyProviderChatDefaults(c.provider, opts)
 }
 
 // Stream issues a streaming LLM call with retry, rate-limit, and
@@ -199,12 +207,18 @@ func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage,
 	c.metrics.Counter("api.requests").Inc()
 
 	var result *types.StreamResult
+	compacted := false
 	err := retry.Do(ctx, c.retryCfg, func() error {
 		var callErr error
 		result, callErr = c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
-		if callErr != nil {
-			// On context overflow, do an emergency compact and retry once.
-			if isContextOverflow(callErr) {
+		if callErr != nil && types.IsContextOverflow(callErr) && !compacted && c.onContextOverflow != nil {
+			// Emergency compact: shrink the conversation once, then retry
+			// with the replacement history. Without a hook (or when the
+			// compact makes no progress) the overflow surfaces to the caller
+			// — retrying the identical oversized request cannot succeed.
+			if replacement, ok := c.onContextOverflow(ctx); ok {
+				compacted = true
+				messages = replacement
 				result, callErr = c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
 			}
 		}
@@ -223,40 +237,6 @@ func (c *ChatService) Chat(ctx context.Context, messages []types.EyrieMessage, o
 	return c.client.Chat(ctx, messages, opts)
 }
 
-// isContextOverflow reports whether err looks like a "context too long"
-// error from the upstream provider. Used by Stream() to trigger an
-// emergency context-compact + retry.
-func isContextOverflow(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return contains(msg, "too long") || contains(msg, "too many tokens")
-}
-
-func contains(s, sub string) bool {
-	return len(sub) > 0 && len(s) >= len(sub) && (s == sub || (len(s) > 0 && indexOf(s, sub) >= 0))
-}
-
-// isZAIProvider reports whether the provider is a Z.AI gateway (payg or coding).
-func isZAIProvider(provider string) bool {
-	switch provider {
-	case "zai_payg", "zai_coding":
-		return true
-	default:
-		return false
-	}
-}
-
 // Router returns the legacy single-provider circuit breaker. New
 // code should access this through s.ChatLLM().Router().
 func (c *ChatService) Router() *modelPkg.Router { return c.router }
-
-func indexOf(s, sub string) int {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return i
-		}
-	}
-	return -1
-}

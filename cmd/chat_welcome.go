@@ -15,7 +15,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -364,7 +363,7 @@ func indentedAPIKeyLines() string {
 }
 
 func apiKeyStatusLines() []string {
-	providers := types.NewClient(nil).GetProviders()
+	providers := hawkconfig.AllSetupGateways()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {

@@ -1,10 +1,6 @@
 package config
 
-import (
-	"context"
-
-	"github.com/GrayCodeAI/eyrie/runtime"
-)
+import "github.com/GrayCodeAI/eyrie/runtime"
 
 const ProviderXiaomiTokenPlan = "xiaomi_mimo_token_plan" // #nosec G101 -- provider ID string, not a credential
 
@@ -21,9 +17,4 @@ func SetXiaomiTokenPlanRegion(region string) error {
 // XiaomiTokenPlanRegionLabel returns the saved cluster id for UI (cn, sgp, ams) or "" if unset.
 func XiaomiTokenPlanRegionLabel() string {
 	return runtime.GatewayRegionLabel(ProviderXiaomiTokenPlan)
-}
-
-// ApplyXiaomiTokenPlanRegionEnv sets process env from provider.json before credential probe.
-func ApplyXiaomiTokenPlanRegionEnv(ctx context.Context) {
-	runtime.ApplyGatewayEnv(ctx, ProviderXiaomiTokenPlan)
 }

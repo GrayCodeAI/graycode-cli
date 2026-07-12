@@ -1,18 +1,18 @@
 package engine
 
-import "testing"
+import (
+	"testing"
 
-func TestAnthropicCompactionModel(t *testing.T) {
-	cases := map[string]bool{
-		"claude-sonnet-4-6":     true,
-		"claude-opus-4-8":       true,
-		"claude-mythos-preview": true,
-		"gpt-4o":                false,
-		"":                      false,
+	"github.com/GrayCodeAI/hawk/internal/types"
+)
+
+func TestProviderNativeCompactionTrigger(t *testing.T) {
+	strategy := &ProviderNativeCompactStrategy{}
+	messages := make([]types.EyrieMessage, 8)
+	if !strategy.ShouldTrigger(messages, 80_000, 80_000) {
+		t.Fatal("expected provider-native compaction at threshold")
 	}
-	for model, want := range cases {
-		if got := anthropicCompactionModel(model); got != want {
-			t.Errorf("anthropicCompactionModel(%q) = %v, want %v", model, got, want)
-		}
+	if strategy.ShouldTrigger(messages[:7], 80_000, 80_000) {
+		t.Fatal("expected short conversations to skip provider-native compaction")
 	}
 }

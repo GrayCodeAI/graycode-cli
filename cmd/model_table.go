@@ -7,6 +7,7 @@ import (
 
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/eyrie/catalog"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/mattn/go-runewidth"
 )
@@ -303,12 +304,12 @@ func modelTableFooter(total, scroll, end, allTotal int, muted lipgloss.Style) st
 	return muted.Render(fmt.Sprintf("%s%s · enter to select", prefix, label))
 }
 
-func modelTableRowFromCatalogEntry(m catalog.ModelCatalogEntry) modelTableRow {
+func modelTableRowFromRuntimeEntry(m runtime.ModelEntry) modelTableRow {
 	name := strings.TrimSpace(m.DisplayName)
 	if name == "" {
 		name = m.ID
 	}
-	owner := catalog.ModelOwner(m)
+	owner := strings.TrimSpace(m.Owner)
 	if owner == "" {
 		owner = "—"
 	}

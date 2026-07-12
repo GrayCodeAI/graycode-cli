@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -42,12 +42,7 @@ func (m chatModel) beginConfigModelsTab() (chatModel, tea.Cmd) {
 		return m, refreshGatewayAsync(m.configModelProvider)
 	}
 	if m.configSaving {
-		var cmds []tea.Cmd
-		cmds = append(cmds, fetchModelsAsync(m.configModelProvider))
-		if isXiaomiMimoProvider(m.configModelProvider) {
-			cmds = append(cmds, fetchPlatformContextIndexCmd())
-		}
-		return m, tea.Batch(cmds...)
+		return m, fetchModelsAsync(m.configModelProvider)
 	}
 	m = m.focusConfigActiveModelSelection()
 	return m, nil
@@ -70,12 +65,7 @@ func catalogPricesAreStale(opts []configModelOption) bool {
 }
 
 func providerHasLiveFetcher(providerID string) bool {
-	for _, key := range registry.LiveFetcherKeys() {
-		if key == providerID {
-			return true
-		}
-	}
-	return false
+	return runtime.ProviderSupportsLiveModels(providerID)
 }
 
 func (m chatModel) returnToOllamaURLAfterError(err error) (chatModel, tea.Cmd) {

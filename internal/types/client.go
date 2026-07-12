@@ -197,6 +197,19 @@ func DefaultContinuationConfig() ContinuationConfig {
 	}
 }
 
+// ApplyProviderChatDefaults delegates provider-specific request policy to Eyrie.
+func ApplyProviderChatDefaults(provider string, opts ChatOptions) ChatOptions {
+	normalized := client.ApplyProviderChatDefaults(provider, ToClientChatOptions(opts))
+	opts.EnableCaching = normalized.EnableCaching
+	opts.GLMThinkingEnabled = normalized.GLMThinkingEnabled
+	return opts
+}
+
+// IsContextOverflow delegates provider error classification to Eyrie.
+func IsContextOverflow(err error) bool {
+	return client.IsContextOverflow(err)
+}
+
 func DetectProvider() string {
 	return client.DetectProvider()
 }

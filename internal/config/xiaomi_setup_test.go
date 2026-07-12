@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"testing"
 
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
@@ -30,7 +29,6 @@ func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 	// if loaded.XiaomiMimoTokenPlanBaseURL != want {
 	// 	t.Fatalf("base = %q, want %s", loaded.XiaomiMimoTokenPlanBaseURL, want)
 	// }
-	ApplyXiaomiTokenPlanRegionEnv(context.Background())
 }
 
 func TestNeedsXiaomiTokenPlanRegion_InvalidAndMissing(t *testing.T) {

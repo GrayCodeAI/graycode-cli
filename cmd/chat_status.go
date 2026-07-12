@@ -156,15 +156,6 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 				contextLabel = formatModelTableContext(w)
 			}
 		}
-		if (contextLabel == "" || contextLabel == "—") && isXiaomiMimoProvider(gw) {
-			if w := platformContextForNativeModel(modelID); w > 0 {
-				contextLabel = formatModelTableContext(w)
-				if m.session != nil {
-					m.session.SetContextWindowCached(w)
-					m.session.EnsureAutoCompactor()
-				}
-			}
-		}
 		// Omit ctx segment until a real window is known — never show the 128k default.
 	}
 	return gateway, model, contextLabel

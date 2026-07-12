@@ -477,9 +477,6 @@ func (m chatModel) Init() tea.Cmd {
 	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), promptKeepAliveCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
-		if isXiaomiMimoProvider(gw) {
-			cmds = append(cmds, fetchPlatformContextIndexCmd())
-		}
 	}
 	if m.containerEnabled {
 		m.containerStatus = "checking docker…"

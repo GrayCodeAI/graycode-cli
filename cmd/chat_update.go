@@ -640,12 +640,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.submitUserMessage()
 		}
 
-	case platformContextIndexMsg:
-		updatePlatformContextCache(msg)
-		m.invalidateConnStatus()
-		m.viewDirty = true
-		return m, nil
-
 	case modelsFetchedMsg:
 		m.configSaving = false
 		if msg.err != nil {

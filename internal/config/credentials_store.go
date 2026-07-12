@@ -38,8 +38,43 @@ func PrepareCredentialDiscovery(ctx context.Context) {
 
 // ModelOption is one hawk /config model row.
 type ModelOption struct {
-	ID          string
-	DisplayName string
+	ID               string
+	DisplayName      string
+	Owner            string
+	ContextWindow    int
+	InputPricePer1M  float64
+	OutputPricePer1M float64
+}
+
+// ConfigureProviderResult is the Hawk-facing view of Eyrie's provider setup transaction.
+type ConfigureProviderResult struct {
+	ProviderID   string
+	DeploymentID string
+	Summary      string
+	Models       []ModelOption
+}
+
+// ConfigureProvider delegates the complete save/probe/catalog/model flow to Eyrie.
+func ConfigureProvider(ctx context.Context, providerID, secret string) (*ConfigureProviderResult, error) {
+	result, err := runtime.ConfigureProvider(ctx, runtime.ConfigureProviderOpts{ProviderID: providerID, Secret: secret})
+	if err != nil {
+		return nil, err
+	}
+	models := make([]ModelOption, len(result.Models))
+	for i, model := range result.Models {
+		models[i] = ModelOption{
+			ID: model.ID, DisplayName: model.DisplayName, Owner: model.Owner,
+			ContextWindow:   model.ContextWindow,
+			InputPricePer1M: model.InputPricePer1M, OutputPricePer1M: model.OutputPricePer1M,
+		}
+	}
+	InvalidateConfigUICache()
+	RefreshConfigCredSnapshot(ctx)
+	_ = SaveProjectOrGlobalDeploymentRouting(true)
+	return &ConfigureProviderResult{
+		ProviderID: result.ProviderID, DeploymentID: result.DeploymentID,
+		Summary: result.Summary, Models: models,
+	}, nil
 }
 
 // CredentialInference is one eyrie provider match for a pasted API key.

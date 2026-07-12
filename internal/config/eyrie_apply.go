@@ -9,18 +9,6 @@ import (
 	"github.com/GrayCodeAI/eyrie/setup"
 )
 
-// ApplyEyrieCredentialsForProvider refreshes live models for one provider after /config saves a key.
-func ApplyEyrieCredentialsForProvider(ctx context.Context, providerID string) (*setup.ApplyCredentialsResult, error) {
-	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
-	defer cancel()
-	result, err := runtime.ApplyCredentialsForProvider(ctx, providerID)
-	if err != nil {
-		return nil, err
-	}
-	_ = SaveProjectOrGlobalDeploymentRouting(true)
-	return result, nil
-}
-
 // ApplyEyrieCredentials discovers the catalog and writes provider.json (routing only on disk).
 func ApplyEyrieCredentials(ctx context.Context) (*setup.ApplyCredentialsResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)

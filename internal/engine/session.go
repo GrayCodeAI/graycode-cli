@@ -318,6 +318,23 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry)
 
+	// Emergency compact: when a provider rejects a request as too large,
+	// ChatService.Stream calls this to shrink the conversation in place and
+	// retries with the compacted history. Installed after s.persist exists
+	// because the hook reads and rewrites the persisted messages.
+	s.llm.SetOnContextOverflow(func(ctx context.Context) ([]types.EyrieMessage, bool) {
+		before := len(s.Persistence().RawMessages())
+		s.smartCompact()
+		after := s.Persistence().RawMessages()
+		if len(after) >= before {
+			return nil, false
+		}
+		s.log.Info("emergency compact after context overflow", map[string]interface{}{
+			"messages_before": before, "messages_after": len(after),
+		})
+		return after, true
+	})
+
 	// Alias legacy fields at the service instances so legacy readers see
 	// the same state as new code that goes through the sub-service getters.
 	// After this point, mutations to the sub-service internal state

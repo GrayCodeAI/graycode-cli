@@ -10,29 +10,43 @@ func TestNeedsSetup_AlwaysFalseForTUI(t *testing.T) {
 	}
 }
 
-func TestValidateAPIKey(t *testing.T) {
+func TestSelectProvider(t *testing.T) {
+	providers := []string{"anthropic", "openai", "ollama"}
 	tests := []struct {
-		name     string
-		provider string
-		key      string
-		valid    bool
+		name    string
+		input   string
+		want    string
+		wantErr bool
 	}{
-		{"valid anthropic", "anthropic", "sk-ant-api01-abcdefghijklmnopqrstuvwxyz", true},
-		{"valid openai", "openai", "sk-abcdefghijklmnopqrstuvwxyz123456", true},
-		{"too short", "anthropic", "sk-ant", false},
-		{"wrong prefix anthropic", "anthropic", "wrong-prefix-long-enough-key", false},
-		{"wrong prefix openai", "openai", "not-sk-prefix-long-enough-key", false},
-		{"unknown provider accepts any", "gemini", "any-key-long-enough-to-be-valid", true},
-		{"empty key", "anthropic", "", false},
+		{name: "first", input: "1\n", want: "anthropic"},
+		{name: "last", input: "3", want: "ollama"},
+		{name: "not a number", input: "openai", wantErr: true},
+		{name: "zero", input: "0", wantErr: true},
+		{name: "too large", input: "4", wantErr: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, valid := validateAPIKey(tt.provider, tt.key)
-			if valid != tt.valid {
-				t.Errorf("validateAPIKey(%q, %q) valid = %v, want %v", tt.provider, tt.key, valid, tt.valid)
+			got, err := selectProvider(providers, tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("selectProvider() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Fatalf("selectProvider() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSetupProviderOptionsComeFromEyrie(t *testing.T) {
+	providers := setupProviderOptions()
+	if len(providers) == 0 {
+		t.Fatal("expected Eyrie setup providers")
+	}
+	for _, provider := range providers {
+		if provider == "" {
+			t.Fatal("provider ID must not be empty")
+		}
 	}
 }
 

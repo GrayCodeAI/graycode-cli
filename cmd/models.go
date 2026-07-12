@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -92,13 +91,16 @@ var modelsListCmd = &cobra.Command{
 			providerName = args[0]
 		}
 		ctx := context.Background()
-		var models []catalog.ModelCatalogEntry
+		var models []runtime.ModelEntry
 		var err error
 		if modelsListLive {
 			if providerName == "" {
 				return fmt.Errorf("provider required with --live (e.g. hawk models list canopywave --live --json)")
 			}
-			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.ActiveProviderID(providerName))
+			models, err = runtime.ListModels(ctx, runtime.ListModelsOpts{
+				ProviderID: hawkconfig.ActiveProviderID(providerName),
+				Source:     runtime.ListSourceLive,
+			})
 		} else {
 			models, err = hawkconfig.FetchModelsForProvider(providerName)
 		}
@@ -143,7 +145,7 @@ var modelsListCmd = &cobra.Command{
 		cmd.Println()
 		rows := make([]modelTableRow, len(models))
 		for i, m := range models {
-			rows[i] = modelTableRowFromCatalogEntry(m)
+			rows[i] = modelTableRowFromRuntimeEntry(m)
 		}
 		printModelTablePlain(rows)
 		return nil

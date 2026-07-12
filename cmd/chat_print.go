@@ -390,7 +390,7 @@ func replModelsSummary(settings hawkconfig.Settings, sessionProvider string) (st
 
 	rows := make([]modelTableRow, len(models))
 	for i, m := range models {
-		rows[i] = modelTableRowFromCatalogEntry(m)
+		rows[i] = modelTableRowFromRuntimeEntry(m)
 	}
 
 	var b strings.Builder

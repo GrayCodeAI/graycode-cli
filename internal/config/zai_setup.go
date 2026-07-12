@@ -1,10 +1,6 @@
 package config
 
-import (
-	"context"
-
-	"github.com/GrayCodeAI/eyrie/runtime"
-)
+import "github.com/GrayCodeAI/eyrie/runtime"
 
 const (
 	ProviderZAIPayg   = "zai_payg"
@@ -24,10 +20,4 @@ func SetZAIRegion(providerID, region string) error {
 // ZAIRegionLabel returns the saved region label or "".
 func ZAIRegionLabel(providerID string) string {
 	return runtime.GatewayRegionLabel(providerID)
-}
-
-// ApplyZAIRegionEnv sets process envs from provider.json before probe/fetch/chat.
-func ApplyZAIRegionEnv(ctx context.Context) {
-	runtime.ApplyGatewayEnv(ctx, ProviderZAIPayg)
-	runtime.ApplyGatewayEnv(ctx, ProviderZAICoding)
 }

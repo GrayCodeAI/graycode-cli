@@ -24,8 +24,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-func fetchModelsViaRuntime(ctx context.Context, provider string) ([]catalog.ModelCatalogEntry, error) {
-	return runtime.ModelsForProvider(ctx, provider)
+func fetchModelsViaRuntime(ctx context.Context, provider string) ([]runtime.ModelEntry, error) {
+	return runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
 }
 
 // Settings holds hawk configuration.
@@ -621,7 +621,7 @@ func providerCredentialEnvAliases(provider string) []string {
 
 // FetchModelsForProvider returns models from the eyrie catalog (dynamic; no hawk hardcoded lists).
 // RefreshModelCatalogV1 is the explicit network refresh boundary.
-func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error) {
+func FetchModelsForProvider(provider string) ([]runtime.ModelEntry, error) {
 	provider = runtime.CatalogProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
@@ -643,9 +643,8 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 			continue
 		}
 		if id := strings.TrimSpace(cp.Model); id != "" {
-			return []catalog.ModelCatalogEntry{{
-				ID:          id,
-				DisplayName: id,
+			return []runtime.ModelEntry{{
+				ID: id, DisplayName: id, ProviderID: provider, Source: "custom",
 			}}, nil
 		}
 	}

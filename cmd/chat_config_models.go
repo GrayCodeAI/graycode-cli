@@ -7,7 +7,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -39,7 +38,6 @@ func InvalidateModelCache() {
 	modelSyncMu.Lock()
 	modelSyncAttempted = make(map[string]bool)
 	modelSyncMu.Unlock()
-	invalidatePlatformContextCache()
 	hawkconfig.InvalidateConfigUICache()
 }
 
@@ -87,24 +85,8 @@ func configModelOptionsFromEyrie(entries []runtime.ModelEntry) []configModelOpti
 	for i, e := range entries {
 		opts[i] = configModelOption{
 			ID:               e.ID,
-			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
-			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID),
-			ContextWindow:    e.ContextWindow,
-			InputPricePer1M:  e.InputPricePer1M,
-			OutputPricePer1M: e.OutputPricePer1M,
-			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
-		}
-	}
-	return opts
-}
-
-func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []configModelOption {
-	opts := make([]configModelOption, len(entries))
-	for i, e := range entries {
-		opts[i] = configModelOption{
-			ID:               e.ID,
-			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
-			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID, e.LiveMetadata),
+			DisplayName:      e.DisplayName,
+			Owner:            e.Owner,
 			ContextWindow:    e.ContextWindow,
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
@@ -259,14 +241,6 @@ func applyLiveModelMetadata(sess *engine.Session, provider, modelID string) {
 			return
 		}
 	}
-	if isXiaomiMimoProvider(provider) {
-		if w := platformContextForNativeModel(modelID); w > 0 {
-			applyModelOptionToSession(sess, configModelOption{
-				ID:            modelID,
-				ContextWindow: w,
-			})
-		}
-	}
 }
 
 func loadConfigModelOptions(provider string) []configModelOption {
@@ -280,15 +254,13 @@ func loadConfigModelOptions(provider string) []configModelOption {
 		return cached
 	}
 	modelCacheMu.RUnlock()
-	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
-		entries := catalog.ModelEntriesForProvider(compiled, provider)
-		if len(entries) > 0 {
-			opts := configModelOptionsFromCatalog(entries)
-			modelCacheMu.Lock()
-			modelCache[provider] = opts
-			modelCacheMu.Unlock()
-			return opts
-		}
+	entries, err := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
+	if err == nil && len(entries) > 0 {
+		opts := configModelOptionsFromEyrie(entries)
+		modelCacheMu.Lock()
+		modelCache[provider] = opts
+		modelCacheMu.Unlock()
+		return opts
 	}
 	return nil
 }

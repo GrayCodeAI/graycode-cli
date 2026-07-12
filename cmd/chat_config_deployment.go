@@ -9,7 +9,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -48,82 +47,28 @@ func firstRunModelProvider(m chatModel) string {
 	return ""
 }
 
-func credentialOptionFromHawk(in hawkconfig.CredentialInference) runtime.CredentialProviderOption {
-	return runtime.CredentialProviderOption{
-		ProviderID:   in.ProviderID,
-		DeploymentID: in.DeploymentID,
-		EnvVar:       in.EnvVar,
-		DisplayName:  in.DisplayName,
-	}
-}
-
 func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
-	return saveCredentialAsync(inference, secret)
+	return saveCredentialAsync(inference.ProviderID, secret)
 }
 
 func saveOllamaAsync(baseURL string) tea.Cmd {
-	return func() tea.Msg {
-		inference, err := runtime.LocalCredentialInference(configProviderOllama)
-		if err != nil {
-			return configApplyCredentialsMsg{err: err}
-		}
-		inf := hawkconfig.CredentialInference{
-			ProviderID:   inference.ProviderID,
-			DeploymentID: inference.DeploymentID,
-			EnvVar:       inference.EnvVar,
-			DisplayName:  inference.DisplayName,
-		}
-		return saveCredentialAsync(inf, baseURL)()
-	}
+	return saveCredentialAsync(configProviderOllama, baseURL)
 }
 
-func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
+func saveCredentialAsync(providerID, secret string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		if inference.ProviderID == hawkconfig.ProviderXiaomiTokenPlan {
-			hawkconfig.ApplyXiaomiTokenPlanRegionEnv(ctx)
-		}
-		if inference.ProviderID == hawkconfig.ProviderZAICoding {
-			hawkconfig.ApplyZAIRegionEnv(ctx)
-		}
-		rtInf := config.InferenceFromOption(credentialOptionFromHawk(inference))
-		if err := runtime.SaveCredential(ctx, rtInf, secret); err != nil {
-			return configApplyCredentialsMsg{
-				err:          err,
-				providerID:   inference.ProviderID,
-				deploymentID: inference.DeploymentID,
-			}
-		}
-		hawkconfig.InvalidateConfigUICache()
-		hawkconfig.RefreshConfigCredSnapshot(ctx)
-		result, err := hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+		result, err := hawkconfig.ConfigureProvider(ctx, providerID, secret)
 		if err != nil {
 			return configApplyCredentialsMsg{
-				err:          err,
-				providerID:   inference.ProviderID,
-				deploymentID: inference.DeploymentID,
+				err:        err,
+				providerID: providerID,
 			}
-		}
-
-		entries, listErr := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: inference.ProviderID, Source: runtime.ListSourceAuto})
-		if listErr != nil {
-			return configApplyCredentialsMsg{
-				err:          listErr,
-				providerID:   inference.ProviderID,
-				deploymentID: inference.DeploymentID,
-			}
-		}
-		opts := configModelOptionsFromEyrie(entries)
-		if len(opts) == 0 && result.Setup != nil {
-			fallback := hawkconfig.OptionsFromSetupUI(result.Setup, inference.ProviderID)
-			opts = toConfigModelOptionsFromHawk(fallback)
 		}
 
 		return configApplyCredentialsMsg{
-			summary:      hawkconfig.FormatApplyCredentialsSummary(result),
-			providerID:   inference.ProviderID,
-			deploymentID: inference.DeploymentID,
-			modelOptions: opts,
+			summary: result.Summary, providerID: result.ProviderID,
+			deploymentID: result.DeploymentID, modelOptions: toConfigModelOptionsFromHawk(result.Models),
 		}
 	}
 }
@@ -132,8 +77,10 @@ func toConfigModelOptionsFromHawk(in []hawkconfig.ModelOption) []configModelOpti
 	out := make([]configModelOption, len(in))
 	for i, o := range in {
 		out[i] = configModelOption{
-			ID:          o.ID,
-			DisplayName: o.DisplayName,
+			ID: o.ID, DisplayName: o.DisplayName, Owner: o.Owner,
+			ContextWindow:   o.ContextWindow,
+			InputPricePer1M: o.InputPricePer1M, OutputPricePer1M: o.OutputPricePer1M,
+			PriceKnown: modelOptionPriceKnown(o.ID, o.DisplayName, o.InputPricePer1M, o.OutputPricePer1M, o.ContextWindow),
 		}
 	}
 	return out
