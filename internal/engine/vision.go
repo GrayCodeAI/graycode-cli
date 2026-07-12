@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"context"
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -98,12 +97,12 @@ func (s *Session) AddUserWithAttachment(content, imageBase64, mediaType string) 
 	}))
 	s.mu.Unlock()
 
-	if s.Persistence().DAG() != nil {
+	if s.Persistence().Graph() != nil {
 		parentID := ""
-		if head, err := s.Persistence().DAG().Head(context.Background()); err == nil && head != nil {
+		if head, err := s.Persistence().Graph().Head(); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.Persistence().DAG().Append(context.Background(), parentID, "user", content+" [image attached]")
+		_, _ = s.Persistence().Graph().Append(parentID, "user", content+" [image attached]")
 	}
 	return true
 }

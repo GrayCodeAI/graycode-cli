@@ -5,40 +5,38 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/storage"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-// TestSession_SetConvoDAG_DualWrite is a regression guard for the
-// H3 fix: SetConvoDAG must propagate the DAG to the persistence
-// service, not just the legacy field. Otherwise new code reading
-// s.Persistence().DAG() would see nil even after the field was set.
-func TestSession_SetConvoDAG_DualWrite(t *testing.T) {
+// TestSession_SetConversationGraph_DualWrite guards the product-owned graph
+// wiring between Session and PersistenceService.
+func TestSession_SetConversationGraph_DualWrite(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	if s.Persistence().DAG() != nil {
-		t.Fatal("DAG should be nil before SetConvoDAG")
+	if s.Persistence().Graph() != nil {
+		t.Fatal("graph should be nil before SetConversationGraph")
 	}
 
-	// Build a real DAG backed by a temp SQLite store and attach it.
+	// Build a real Hawk graph backed by a temporary JSON store and attach it.
 	dir := t.TempDir()
-	dag, err := storage.NewDAG(filepath.Join(dir, "convo.db"), "test-session")
+	graph, err := session.OpenConversationGraph(filepath.Join(dir, "conversation.json"), "test-session")
 	if err != nil {
-		t.Fatalf("storage.NewDAG: %v", err)
+		t.Fatalf("OpenConversationGraph: %v", err)
 	}
-	t.Cleanup(func() { _ = dag.Close() })
-	s.SetConvoDAG(dag)
+	t.Cleanup(func() { _ = graph.Close() })
+	s.SetConversationGraph(graph)
 
-	if s.ConvoDAG == nil {
-		t.Error("s.ConvoDAG is nil after SetConvoDAG")
+	if s.ConversationGraph == nil {
+		t.Error("s.ConversationGraph is nil after SetConversationGraph")
 	}
-	if s.Persistence().DAG() == nil {
-		t.Error("s.Persistence().DAG() is nil after SetConvoDAG — H3 regression: SetConvoDAG must dual-write to the persistence service")
+	if s.Persistence().Graph() == nil {
+		t.Error("s.Persistence().Graph() is nil after SetConversationGraph")
 	}
-	if s.Persistence().DAG() != s.ConvoDAG {
-		t.Error("s.Persistence().DAG() != s.ConvoDAG — both views should be the same instance")
+	if s.Persistence().Graph() != s.ConversationGraph {
+		t.Error("persistence graph and session graph should be the same instance")
 	}
 }
 
@@ -58,8 +56,8 @@ func TestSession_NewSessionWithClient_AliasesMemoryFields(t *testing.T) {
 	if s.persist == nil {
 		t.Fatal("s.persist is nil; NewSessionWithClient must wire the persistence service")
 	}
-	if got := s.persist.DAG(); got != s.ConvoDAG {
-		t.Errorf("s.persist.DAG() = %v, want same as s.ConvoDAG = %v", got, s.ConvoDAG)
+	if got := s.persist.Graph(); got != s.ConversationGraph {
+		t.Errorf("s.persist.Graph() = %v, want same as s.ConversationGraph = %v", got, s.ConversationGraph)
 	}
 	if got := s.persist.Steering(); got != s.Steering {
 		t.Errorf("s.persist.Steering() = %v, want same as s.Steering = %v", got, s.Steering)

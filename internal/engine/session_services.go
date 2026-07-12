@@ -13,13 +13,13 @@ package engine
 import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -136,17 +136,17 @@ type SessionServices struct {
 	Observe *Observability
 
 	// Advanced features (optional, nil when unused)
-	Lifecycle  *SessionLifecycle
-	Reflector  *Reflector
-	Critic     *Critic
-	Backtrack  *BacktrackEngine
-	Shadow     *branching.ShadowWorkspace
-	ConvoDAG   *storage.DAG
-	Plan       *PlanState
-	Teach      TeachConfig
-	Trajectory *TrajectoryDistiller
-	Snapshots  SnapshotTracker
-	LintLoop   *LintLoop
+	Lifecycle         *SessionLifecycle
+	Reflector         *Reflector
+	Critic            *Critic
+	Backtrack         *BacktrackEngine
+	Shadow            *branching.ShadowWorkspace
+	ConversationGraph *session.ConversationGraph
+	Plan              *PlanState
+	Teach             TeachConfig
+	Trajectory        *TrajectoryDistiller
+	Snapshots         SnapshotTracker
+	LintLoop          *LintLoop
 }
 
 // lintLoopPlaceholder is kept for documentation; see lint_loop.go
@@ -344,15 +344,15 @@ func (s *Session) Services() *SessionServices {
 			Metrics: s.metrics,
 			Log:     s.log,
 		},
-		Lifecycle:  s.LifecycleSvc().Lifecycle(),
-		Reflector:  s.LifecycleSvc().Reflector(),
-		Critic:     s.LifecycleSvc().Critic(),
-		Backtrack:  s.LifecycleSvc().Backtrack(),
-		Shadow:     s.LifecycleSvc().Shadow(),
-		ConvoDAG:   s.Persistence().DAG(),
-		Plan:       s.Plan,
-		Teach:      s.Teach,
-		Trajectory: s.Trajectory,
-		Snapshots:  s.Snapshots,
+		Lifecycle:         s.LifecycleSvc().Lifecycle(),
+		Reflector:         s.LifecycleSvc().Reflector(),
+		Critic:            s.LifecycleSvc().Critic(),
+		Backtrack:         s.LifecycleSvc().Backtrack(),
+		Shadow:            s.LifecycleSvc().Shadow(),
+		ConversationGraph: s.Persistence().Graph(),
+		Plan:              s.Plan,
+		Teach:             s.Teach,
+		Trajectory:        s.Trajectory,
+		Snapshots:         s.Snapshots,
 	}
 }

@@ -22,7 +22,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	"github.com/GrayCodeAI/hawk/internal/codegraph"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -168,9 +167,9 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 
 	// Initialize conversation DAG for branching support
 	startup.MarkPhase("newChatModel:dag")
-	dagPath := filepath.Join(hawkstorage.SessionsDir(), "convo.db")
-	if dag, err := storage.NewDAG(dagPath, sid); err == nil {
-		sess.SetConvoDAG(dag)
+	graphPath := filepath.Join(hawkstorage.SessionsDir(), "conversations", sid+".json")
+	if graph, err := session.OpenConversationGraph(graphPath, sid); err == nil {
+		sess.SetConversationGraph(graph)
 	}
 	startup.EndPhase("newChatModel:dag")
 

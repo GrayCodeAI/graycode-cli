@@ -14,7 +14,7 @@ func (b *branchesSubcommand) Aliases() []string   { return nil }
 func (b *branchesSubcommand) Description() string { return "list conversation DAG branches" }
 func (b *branchesSubcommand) Usage() string       { return "" }
 func (b *branchesSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-	if m.session.Persistence().DAG() == nil {
+	if m.session.Persistence().Graph() == nil {
 		m.messages = append(m.messages, displayMsg{role: "system", content: "No conversation branches (DAG not active)."})
 		return m, nil
 	}

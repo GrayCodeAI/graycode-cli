@@ -259,8 +259,8 @@ func TestSession_Services_NilAdvancedFeatures(t *testing.T) {
 	if svc.Shadow != nil {
 		t.Error("Shadow should be nil when not set")
 	}
-	if svc.ConvoDAG != nil {
-		t.Error("ConvoDAG should be nil when not set")
+	if svc.ConversationGraph != nil {
+		t.Error("ConversationGraph should be nil when not set")
 	}
 	if svc.Plan != nil {
 		t.Error("Plan should be nil when not set")

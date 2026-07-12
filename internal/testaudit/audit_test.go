@@ -336,7 +336,7 @@ var legacySessionFields = []string{
 	"Memory", "YaadBridge", "EnhancedMemory",
 	"Cascade", "Lifecycle", "Reflector", "CostTracker",
 	"Autonomy", "Sandbox", "Plan", "Beliefs", "Critic", "Backtrack",
-	"Limits", "Trajectory", "Shadow", "Snapshots", "ConvoDAG",
+	"Limits", "Trajectory", "Shadow", "Snapshots", "ConversationGraph",
 	"Sleeptime", "Activity", "SkillDistiller", "Tracer",
 	"LintLoop", "TestLoop", "FileMentions", "ResponseCache",
 	"Pipeline", "Files", "Steering", "RateLimiter", "AgentsAccum",

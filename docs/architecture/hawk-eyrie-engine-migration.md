@@ -42,6 +42,9 @@ Eyrie module version; `go.work` pins the submodule for local integration.
   so resilience is applied exactly once.
 - Catalog administration and review-only bridges retain compatibility imports
   while their facade contracts are completed.
+- Hawk now owns its persistent conversation graph under `internal/session`;
+  production sessions no longer mix Eyrie's generic DAG with Hawk WAL/session
+  persistence.
 
 ## Removal gates
 
