@@ -334,14 +334,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Circuit breaker: select provider with failover (legacy single-provider clients only).
-		if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
-			if selectedProvider, err := s.ChatLLM().Router().SelectProvider(s.provider); err == nil && selectedProvider != s.provider {
-				s.log.Info("provider failover", map[string]interface{}{"from": s.provider, "to": selectedProvider})
-				opts.Provider = selectedProvider
-			}
-		}
-
 		// Count actual input tokens for precise budget tracking
 		inputTokens := 0
 		for _, msg := range s.Persistence().RawMessages() {
@@ -369,10 +361,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Issue the LLM call via the ChatService. The service handles
 		// rate limit, retry, and emergency compact internally; the
 		// api.requests counter is incremented inside ChatService.Stream.
-		// We keep the apiDuration timer + circuit-breaker recording here
-		// at the Session level so we can feed the real latency to
-		// Router.RecordSuccess (the service has no start-time argument
-		// and deliberately stays out of circuit-breaker accounting).
+		// Hawk records product-level latency; provider health and circuit
+		// breaking are owned by Eyrie's routed transport.
 		apiStart := time.Now()
 		result, err := s.ChatLLM().Stream(ctx, s.Persistence().RawMessages(), opts)
 		apiDuration := time.Since(apiStart)
@@ -384,20 +374,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if loopSpan != nil {
 				oteltrace.EndSpanWithError(loopSpan, err)
 			}
-			// Record failure for circuit breaker (legacy single-provider clients only)
-			if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
-				s.ChatLLM().Router().RecordFailure(s.provider, err)
-			}
 			s.log.Error("stream error", map[string]interface{}{
 				"error": err.Error(),
 			})
 			ch <- StreamEvent{Type: "error", Content: err.Error()}
 			return
-		}
-
-		// Record success for circuit breaker (legacy single-provider clients only)
-		if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
-			s.ChatLLM().Router().RecordSuccess(s.provider, apiDuration)
 		}
 
 		var textContent strings.Builder

@@ -78,7 +78,6 @@ type Session struct {
 	log      *logger.Logger
 	metrics  *metrics.Registry
 	Cost     Cost
-	Router   *modelPkg.Router
 	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
 	//
 	// Deprecated: use s.ChatLLM().DeploymentRouting() (Phase 1 sub-service).
@@ -281,7 +280,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		RateLimiter:       ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
-	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
 	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
 	s.refreshContextWindowCache()
 
@@ -306,7 +304,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		Provider:          provider,
 		Model:             model,
 		APIKeys:           s.apiKeys,
-		Router:            s.Router,
 		DeploymentRouting: deploymentRouting,
 		RateLimiter:       s.RateLimiter,
 		Metrics:           s.metrics,

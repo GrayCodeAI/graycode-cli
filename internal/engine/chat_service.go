@@ -8,14 +8,12 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/types"
-
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // ChatService is the Session's view of the LLM transport. It owns the
-// eyrie client, the provider/model identity, API keys, the circuit-breaker
-// router, the rate limiter, and the streaming-with-continuation retry
-// logic. It is constructed once in NewSessionWithClient and consulted by
+// Eyrie client, provider/model identity, and compatibility-only rate/retry
+// controls. Production facade clients own resilience inside Eyrie. The service
+// is constructed once in NewSessionWithClient and consulted by
 // agentLoop every turn.
 //
 // Extracted from Session in the god-object decomposition. Session now
@@ -30,10 +28,6 @@ type ChatService struct {
 	model    string
 	// apiKeys is provider→key, used for legacy single-provider clients.
 	apiKeys map[string]string
-	// router is the legacy single-provider circuit breaker. Bypassed
-	// when DeploymentRouting is true (the DeploymentRouter has its own
-	// per-deployment breakers).
-	router *modelPkg.Router
 	// deploymentRouting is true when the client is catalog-backed
 	// (e.g. DeploymentRouter from eyrie/runtime.ChatProvider).
 	deploymentRouting bool
@@ -60,7 +54,6 @@ type ChatServiceConfig struct {
 	Provider           string
 	Model              string
 	APIKeys            map[string]string
-	Router             *modelPkg.Router
 	DeploymentRouting  bool
 	RateLimiter        *ratelimit.Limiter
 	Metrics            *metrics.Registry
@@ -92,7 +85,6 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 		provider:           cfg.Provider,
 		model:              cfg.Model,
 		apiKeys:            cfg.APIKeys,
-		router:             cfg.Router,
 		deploymentRouting:  cfg.DeploymentRouting,
 		rateLimiter:        cfg.RateLimiter,
 		metrics:            cfg.Metrics,
@@ -251,10 +243,6 @@ func isZAIProvider(provider string) bool {
 		return false
 	}
 }
-
-// Router returns the legacy single-provider circuit breaker. New
-// code should access this through s.ChatLLM().Router().
-func (c *ChatService) Router() *modelPkg.Router { return c.router }
 
 func indexOf(s, sub string) int {
 	for i := 0; i+len(sub) <= len(s); i++ {

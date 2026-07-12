@@ -47,9 +47,6 @@ func TestNewSessionServices_Defaults(t *testing.T) {
 	if ss.Optim == nil {
 		t.Fatal("Optim should not be nil with defaults")
 	}
-	if ss.Optim.Router == nil {
-		t.Error("Optim.Router should be initialized")
-	}
 
 	if ss.Observe == nil {
 		t.Fatal("Observe should not be nil with defaults")
@@ -226,9 +223,6 @@ func TestSession_Services_Bridge(t *testing.T) {
 	// Optim mappings
 	if svc.Optim.MaxBudget != 3.50 {
 		t.Errorf("Optim.MaxBudget: expected 3.50, got %f", svc.Optim.MaxBudget)
-	}
-	if svc.Optim.Router != s.ChatLLM().Router() {
-		t.Error("Optim.Router should reference same Router")
 	}
 	if svc.Optim.Cascade != s.LifecycleSvc().Cascade() {
 		t.Error("Optim.Cascade should reference same CascadeRouter")

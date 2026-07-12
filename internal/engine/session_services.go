@@ -20,7 +20,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -95,7 +94,6 @@ type Optimizer struct {
 	Cost        Cost
 	CostTracker *CostTracker
 	Cascade     *branching.CascadeRouter
-	Router      *modelPkg.Router
 	MaxBudget   float64
 }
 
@@ -281,9 +279,7 @@ func NewSessionServices(opts ...ServiceOption) *SessionServices {
 		Intel: &Intelligence{
 			Beliefs: NewBeliefState(),
 		},
-		Optim: &Optimizer{
-			Router: modelPkg.NewRouter(modelPkg.StrategyBalanced),
-		},
+		Optim: &Optimizer{},
 		Observe: &Observability{
 			Tracer:  oteltrace.NewTracer(),
 			Metrics: metrics.NewRegistry(),
@@ -341,7 +337,6 @@ func (s *Session) Services() *SessionServices {
 			Cost:        Cost{Model: s.Cost.Model, PromptTokens: s.Cost.PromptTokens, CompletionTokens: s.Cost.CompletionTokens, TotalCostUSD: s.Cost.TotalCostUSD},
 			CostTracker: s.CostTracker,
 			Cascade:     s.LifecycleSvc().Cascade(),
-			Router:      s.ChatLLM().Router(),
 			MaxBudget:   s.LifecycleSvc().Limits().MaxBudgetUSD(),
 		},
 		Observe: &Observability{
