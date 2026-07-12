@@ -104,10 +104,11 @@ func InferenceFromOption(opt CredentialProviderOption) CredentialInference {
 
 // SaveCredential validates, probes, and stores via eyrie keychain.
 func SaveCredential(ctx context.Context, inference CredentialInference, secret string) error {
-	if err := runtime.SaveCredential(ctx, runtime.CredentialInference{
-		ProviderID: inference.ProviderID, DeploymentID: inference.DeploymentID,
-		EnvVar: inference.EnvVar, DisplayName: inference.DisplayName,
-	}, secret); err != nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return err
+	}
+	if _, err := engine.SaveCredential(ctx, inference.ProviderID, secret); err != nil {
 		return err
 	}
 	InvalidateConfigUICache()

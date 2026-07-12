@@ -157,7 +157,7 @@ Owns:
 
 - CLI and command surface
 - session and workflow orchestration
-- provider selection
+- task-semantic model intent and explicit user preferences
 - tool execution policy
 - approval model
 - coordination of memory, context, tracing, review, and verification
@@ -174,6 +174,9 @@ These exist to power Hawk and should remain replaceable, testable, and isolated.
 Purpose:
 
 - provider execution runtime
+- credentials and provider authentication
+- model discovery and capability catalog
+- provider/deployment selection and infrastructure routing
 - request/response normalization
 - streaming, retry, timeout, fallback mechanics
 

@@ -12,12 +12,15 @@ Provider-specific code lives behind runtime adapters, primarily in `eyrie`.
 
 Hawk decides:
 
-- which provider to use
-- whether fallback is allowed
 - what capability the task needs
+- the semantic intent (`fast`, `balanced`, `reasoning`, `economical`)
+- whether an exact user-selected model may fall back
 
 `eyrie` handles:
 
+- capability-to-model resolution
+- provider and deployment selection
+- health-aware infrastructure routing and fallback
 - request translation
 - streaming normalization
 - tool-call normalization
@@ -52,7 +55,9 @@ Example concerns:
 - no direct vendor SDK imports in unrelated Hawk packages
 - no provider-specific branches inside review/verify logic
 - no model-specific assumptions inside session persistence
-- keep fallback/routing policy inside Hawk orchestration, not inside engines unrelated to runtime
+- keep task-semantic policy inside Hawk orchestration
+- keep provider/deployment routing, health, retry, and fallback inside Eyrie
+- new Hawk integrations use `github.com/GrayCodeAI/eyrie/engine`; direct lower-level imports are migration-only
 
 ## Future extension
 
