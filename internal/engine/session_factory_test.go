@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
 func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
-	selection := runtime.SelectionState{
+	selection := eyrieengine.Selection{
 		Provider:          "openrouter",
 		Model:             "openrouter/auto",
 		DeploymentRouting: false,
@@ -24,7 +24,7 @@ func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
 }
 
 func TestNewHawkSession_FallsBackToCallerModelWhenSelectionEmpty(t *testing.T) {
-	selection := runtime.SelectionState{
+	selection := eyrieengine.Selection{
 		Provider:          "openrouter",
 		DeploymentRouting: false,
 	}

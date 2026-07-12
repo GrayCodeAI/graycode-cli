@@ -9,7 +9,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -53,7 +52,7 @@ func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret strin
 
 func saveOllamaAsync(baseURL string) tea.Cmd {
 	return func() tea.Msg {
-		inference, err := runtime.LocalCredentialInference(configProviderOllama)
+		inference, err := hawkconfig.LocalCredentialInference(configProviderOllama)
 		if err != nil {
 			return configApplyCredentialsMsg{err: err}
 		}
@@ -233,7 +232,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+	selection := hawkconfig.EffectiveSelection(context.Background(), hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(m.session.Provider(), m.settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(m.session.Model(), m.settings.Model),
 	})

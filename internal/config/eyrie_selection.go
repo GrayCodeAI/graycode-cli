@@ -7,6 +7,19 @@ import (
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
+type Selection = eyrieengine.Selection
+type SelectionOptions = eyrieengine.SelectionOptions
+
+// EffectiveSelection resolves persisted selection and optional host overrides
+// through Eyrie's host-neutral engine contract.
+func EffectiveSelection(ctx context.Context, opts SelectionOptions) Selection {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return Selection{}
+	}
+	return engine.EffectiveSelection(ctx, opts)
+}
+
 // ActiveModel returns the selected model from eyrie provider.json (not hawk settings).
 func ActiveModel(ctx context.Context) string {
 	if ctx == nil {

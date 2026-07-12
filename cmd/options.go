@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	ctxrepomap "github.com/GrayCodeAI/hawk/internal/context/repomap"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -199,24 +198,24 @@ func loadEffectiveSettings() (hawkconfig.Settings, error) {
 	return settings, nil
 }
 
-func resolveSelection(settings hawkconfig.Settings) runtime.SelectionState {
-	return runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+func resolveSelection(settings hawkconfig.Settings) hawkconfig.Selection {
+	return hawkconfig.EffectiveSelection(context.Background(), hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
 	})
 }
 
-func startupSelection(settings hawkconfig.Settings) runtime.SelectionState {
+func startupSelection(settings hawkconfig.Settings) hawkconfig.Selection {
 	providerOverride := firstNonEmptyTrimmed(provider, settings.Provider)
 	modelOverride := firstNonEmptyTrimmed(model, settings.Model)
 
 	explicitProvider, explicitModel := explicitSelection(context.Background())
 
-	providerID := runtime.NormalizeProviderID(firstNonEmptyTrimmed(providerOverride, explicitProvider))
+	providerID := hawkconfig.ActiveProviderID(firstNonEmptyTrimmed(providerOverride, explicitProvider))
 	modelID := strings.TrimSpace(firstNonEmptyTrimmed(modelOverride, explicitModel))
 
 	if providerID == "" && modelID != "" {
-		providerID = runtime.NormalizeProviderID(hawkconfig.ProviderOfModel(modelID))
+		providerID = hawkconfig.ActiveProviderID(hawkconfig.ProviderOfModel(modelID))
 	}
 	if modelID == "" && providerID != "" {
 		modelID = strings.TrimSpace(hawkconfig.DefaultModelForProvider(providerID))
@@ -225,7 +224,7 @@ func startupSelection(settings hawkconfig.Settings) runtime.SelectionState {
 		providerID = startupPlaceholderProvider
 	}
 
-	return runtime.SelectionState{
+	return hawkconfig.Selection{
 		Provider: providerID,
 		Model:    modelID,
 	}
@@ -239,11 +238,11 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	return selection.Model, selection.Provider
 }
 
-func newHawkSessionFromSelection(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
+func newHawkSessionFromSelection(selection hawkconfig.Selection, systemPrompt string, registry *tool.Registry) *engine.Session {
 	return engine.NewHawkSession(context.Background(), selection, selection.Provider, selection.Model, systemPrompt, registry)
 }
 
-func newStartupHawkSession(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
+func newStartupHawkSession(selection hawkconfig.Selection, systemPrompt string, registry *tool.Registry) *engine.Session {
 	providerID := strings.TrimSpace(selection.Provider)
 	if providerID == "" {
 		providerID = startupPlaceholderProvider

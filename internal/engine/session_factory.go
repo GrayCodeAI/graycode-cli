@@ -7,13 +7,12 @@ import (
 	"strings"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/eyrie/runtime"
 
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // BuildChatClient returns an LLM client and whether deployment routing is active.
-func BuildChatClient(ctx context.Context, selection runtime.SelectionState, legacyProvider string) (ChatClient, string, bool, error) {
+func BuildChatClient(ctx context.Context, selection eyrieengine.Selection, legacyProvider string) (ChatClient, string, bool, error) {
 	_ = ctx // request contexts are applied per generation by the facade adapter
 	provider := strings.TrimSpace(selection.Provider)
 	if provider == "" {
@@ -35,7 +34,7 @@ func BuildChatClient(ctx context.Context, selection runtime.SelectionState, lega
 }
 
 // NewHawkSession constructs a Session using an engine-resolved selection.
-func NewHawkSession(ctx context.Context, selection runtime.SelectionState, provider, model, systemPrompt string, registry *tool.Registry) *Session {
+func NewHawkSession(ctx context.Context, selection eyrieengine.Selection, provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	chat, label, deploy, err := BuildChatClient(ctx, selection, provider)
 	if err != nil {
 		chat = NewUnavailableChatClient(err)
@@ -48,7 +47,7 @@ func NewHawkSession(ctx context.Context, selection runtime.SelectionState, provi
 }
 
 // RebuildSessionTransport rebuilds the LLM client from the engine-resolved selection.
-func RebuildSessionTransport(ctx context.Context, s *Session, selection runtime.SelectionState, legacyProvider string) error {
+func RebuildSessionTransport(ctx context.Context, s *Session, selection eyrieengine.Selection, legacyProvider string) error {
 	if s == nil {
 		return errors.New("session is nil")
 	}
