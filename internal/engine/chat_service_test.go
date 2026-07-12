@@ -72,17 +72,10 @@ func TestChatService_BuildOptions_OutputSchema(t *testing.T) {
 	}
 }
 
-func TestChatService_Reattach_PreservesKeys(t *testing.T) {
+func TestChatService_Reattach(t *testing.T) {
 	oldClient := NewMockClientForTest()
 	newClient := NewMockClientForTest()
-	svc := NewChatService(oldClient, ChatServiceConfig{
-		Provider: "anthropic",
-		Model:    "claude-opus-4",
-		APIKeys:  map[string]string{"anthropic": "sk-test"},
-	})
-	if got := svc.APIKeys()["anthropic"]; got != "sk-test" {
-		t.Fatalf("expected key sk-test, got %q", got)
-	}
+	svc := NewChatService(oldClient, ChatServiceConfig{Provider: "anthropic", Model: "claude-opus-4"})
 	// Reattach with a nil client should be a no-op (preserve current).
 	svc.Reattach(nil, "")
 	if svc.Client() != oldClient {
@@ -92,9 +85,6 @@ func TestChatService_Reattach_PreservesKeys(t *testing.T) {
 	svc.Reattach(newClient, "openai")
 	if svc.Provider() != "openai" {
 		t.Errorf("expected provider=openai, got %q", svc.Provider())
-	}
-	if got := svc.APIKeys()["anthropic"]; got != "sk-test" {
-		t.Errorf("Reattach should preserve API keys, got %q", got)
 	}
 }
 
@@ -109,9 +99,6 @@ func TestChatService_DefaultsApplied(t *testing.T) {
 	}
 	if svc.metrics == nil {
 		t.Error("expected default metrics registry")
-	}
-	if svc.apiKeys == nil {
-		t.Error("expected apiKeys to be initialized to empty map (so callers can SetAPIKey without nil check)")
 	}
 }
 
@@ -144,7 +131,6 @@ func (e *errClient) Chat(_ context.Context, _ []types.EyrieMessage, _ types.Chat
 func (e *errClient) StreamChatContinue(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
 	return nil, e.err
 }
-func (e *errClient) SetAPIKey(_ string, _ string) {}
 
 func TestChatService_ChatSurfacesError(t *testing.T) {
 	want := errors.New("upstream kaput")
@@ -167,8 +153,7 @@ func (c *resilienceOwningClient) StreamChatContinue(context.Context, []types.Eyr
 	c.calls++
 	return nil, c.err
 }
-func (c *resilienceOwningClient) SetAPIKey(string, string) {}
-func (c *resilienceOwningClient) OwnsResilience() bool     { return true }
+func (c *resilienceOwningClient) OwnsResilience() bool { return true }
 
 func TestChatService_DoesNotDuplicateEngineResilience(t *testing.T) {
 	client := &resilienceOwningClient{err: errors.New("routed transport failed")}

@@ -27,4 +27,10 @@ if [[ -s "$new_imports" ]]; then
   exit 1
 fi
 
+if rg -n '\b(apiKeys|SetAPIKey|SetAPIKeys)\b' internal/engine --glob '*.go' --glob '!*_test.go'; then
+  echo
+  echo "provider credentials must not enter Hawk's agent/session layer"
+  exit 1
+fi
+
 echo "eyrie engine boundary ratchet passed"

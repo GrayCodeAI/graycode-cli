@@ -63,11 +63,6 @@ func (c *eyrieEngineClient) StreamChatContinue(ctx context.Context, messages []t
 	return types.NewStreamResult(events, "", closeFn), nil
 }
 
-func (c *eyrieEngineClient) SetAPIKey(_, _ string) {
-	// Credentials are owned by Eyrie's injected secret store. The legacy
-	// session setter remains a compatibility no-op during migration.
-}
-
 // OwnsResilience tells Hawk's compatibility ChatService not to add a second
 // retry/rate-limit layer around Eyrie's routed transport.
 func (c *eyrieEngineClient) OwnsResilience() bool { return true }

@@ -34,7 +34,6 @@ type ChatProvider interface {
 type ChatClient interface {
 	Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error)
 	StreamChatContinue(ctx context.Context, messages []EyrieMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error)
-	SetAPIKey(provider, apiKey string)
 }
 
 // ResponseFormat specifies the desired output format for a Hawk runtime request.
@@ -268,10 +267,6 @@ func (c *EyrieClient) StreamChatContinue(ctx context.Context, messages []EyrieMe
 	return FromClientStreamResult(stream), nil
 }
 
-func (c *EyrieClient) SetAPIKey(provider, apiKey string) {
-	c.inner.SetAPIKey(provider, apiKey)
-}
-
 func (c *EyrieClient) StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error) {
 	stream, err := c.inner.StreamChat(ctx, ToClientMessages(messages), ToClientChatOptions(opts))
 	if err != nil {
@@ -314,12 +309,6 @@ func (p *providerAdapter) Ping(ctx context.Context) error {
 
 func (p *providerAdapter) Name() string {
 	return p.inner.Name()
-}
-
-func (p *providerAdapter) SetAPIKey(provider, apiKey string) {
-	if setter, ok := p.inner.(interface{ SetAPIKey(string, string) }); ok {
-		setter.SetAPIKey(provider, apiKey)
-	}
 }
 
 // ToClientConfig converts Hawk-owned transport config into the provider-runtime shape.

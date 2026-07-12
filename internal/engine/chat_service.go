@@ -26,8 +26,6 @@ type ChatService struct {
 	// provider / model are the active LLM identity.
 	provider string
 	model    string
-	// apiKeys is provider→key, used for legacy single-provider clients.
-	apiKeys map[string]string
 	// deploymentRouting is true when the client is catalog-backed
 	// (e.g. DeploymentRouter from eyrie/runtime.ChatProvider).
 	deploymentRouting bool
@@ -53,7 +51,6 @@ type ChatService struct {
 type ChatServiceConfig struct {
 	Provider           string
 	Model              string
-	APIKeys            map[string]string
 	DeploymentRouting  bool
 	RateLimiter        *ratelimit.Limiter
 	Metrics            *metrics.Registry
@@ -66,9 +63,6 @@ type ChatServiceConfig struct {
 // NewChatService constructs a ChatService with sensible defaults for any
 // zero-valued field in cfg. The client must be non-nil.
 func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
-	if cfg.APIKeys == nil {
-		cfg.APIKeys = map[string]string{}
-	}
 	if cfg.RetryConfig.MaxRetries == 0 {
 		cfg.RetryConfig = retry.DefaultConfig()
 		cfg.RetryConfig.MaxRetries = 2
@@ -84,7 +78,6 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 		client:             client,
 		provider:           cfg.Provider,
 		model:              cfg.Model,
-		apiKeys:            cfg.APIKeys,
 		deploymentRouting:  cfg.DeploymentRouting,
 		rateLimiter:        cfg.RateLimiter,
 		metrics:            cfg.Metrics,
@@ -106,18 +99,9 @@ func (c *ChatService) Provider() string { return c.provider }
 // Model returns the active model identifier.
 func (c *ChatService) Model() string { return c.model }
 
-// APIKeys returns the provider→key map. Used by Session.SubSession to
-// clone credentials for sub-agents.
-func (c *ChatService) APIKeys() map[string]string { return c.apiKeys }
-
 // DeploymentRouting reports whether the underlying client is catalog-backed
 // (true) or a single-provider transport (false).
 func (c *ChatService) DeploymentRouting() bool { return c.deploymentRouting }
-
-// SetAPIKey stores a provider→key mapping.
-func (c *ChatService) SetAPIKey(provider, key string) {
-	c.apiKeys[provider] = key
-}
 
 // SetModel updates the active model. The next StreamChat will use the new
 // model.
@@ -131,7 +115,7 @@ func (c *ChatService) SetProvider(provider string) {
 }
 
 // Reattach swaps the underlying client (e.g. after deployment routing
-// changes). Preserves the APIKeys and other config.
+// changes).
 func (c *ChatService) Reattach(client ChatClient, provider string) {
 	if client == nil {
 		return

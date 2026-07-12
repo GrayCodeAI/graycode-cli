@@ -346,7 +346,7 @@ var legacySessionFields = []string{
 	"AutoCompactThresholdPct", "ContextWindowCached",
 	"AutoCompactor", "persistID", "lastPromptTokens",
 	"lastCompletionTokens", "checkpointMgr", "OnCompaction",
-	"Router", "apiKeys", "provider", "model", "system",
+	"Router", "provider", "model", "system",
 	"Cost", "ContainerExecutor", "ContainerRequired",
 	"DeploymentRouting",
 }

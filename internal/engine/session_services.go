@@ -35,7 +35,6 @@ type CoreLoop struct {
 	Messages []types.EyrieMessage
 	Provider string
 	Model    string
-	APIKeys  map[string]string
 	System   string
 	Log      *logger.Logger
 	MaxTurns int
@@ -269,8 +268,7 @@ func WithMaxBudget(budget float64) ServiceOption {
 func NewSessionServices(opts ...ServiceOption) *SessionServices {
 	ss := &SessionServices{
 		Core: &CoreLoop{
-			APIKeys: make(map[string]string),
-			Log:     logger.Default(),
+			Log: logger.Default(),
 		},
 		Safety: &SafetyLayer{
 			Perm:   NewPermissionEngine(),
@@ -313,7 +311,6 @@ func (s *Session) Services() *SessionServices {
 			Messages: s.Persistence().RawMessages(),
 			Provider: s.provider,
 			Model:    s.model,
-			APIKeys:  s.apiKeys,
 			System:   s.Persistence().System(),
 			Log:      s.log,
 			MaxTurns: s.LifecycleSvc().Limits().MaxTurns(),

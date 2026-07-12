@@ -54,7 +54,7 @@ type SnapshotTracker interface {
 //	persist        *PersistenceService (Phase 5: conversation store)
 //	tools          *ToolService        (Phase 6: tool execution)
 //
-// The legacy fields (client, provider, model, apiKeys, Router,
+// The legacy fields (client, provider, model, Router,
 // DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
 // Classifier, BypassKill, MaxTurns, MaxBudgetUSD, AllowedDirs,
 // PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
@@ -72,7 +72,6 @@ type Session struct {
 	messages []types.EyrieMessage
 	provider string
 	model    string
-	apiKeys  map[string]string
 	system   string
 	log      *logger.Logger
 	metrics  *metrics.Registry
@@ -93,7 +92,7 @@ type Session struct {
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
 	// code should go through s.llm.* rather than touching the legacy
-	// client/provider/model/apiKeys/Router/DeploymentRouting fields.
+	// client/provider/model/Router/DeploymentRouting fields.
 	// Named lowercase (unexported) to avoid colliding with the public
 	// Session.Chat() method used by Reflector and SelfReview.
 	llm *ChatService
@@ -257,7 +256,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		registry:          registry,
 		provider:          provider,
 		model:             model,
-		apiKeys:           map[string]string{},
 		system:            systemPrompt,
 		log:               log,
 		metrics:           metrics.NewRegistry(),
@@ -302,7 +300,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.llm = NewChatService(chat, ChatServiceConfig{
 		Provider:          provider,
 		Model:             model,
-		APIKeys:           s.apiKeys,
 		DeploymentRouting: deploymentRouting,
 		RateLimiter:       s.RateLimiter,
 		Metrics:           s.metrics,
@@ -352,11 +349,6 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	if s.llm != nil {
 		s.llm.Reattach(chat, s.provider)
 	}
-	for name, key := range s.apiKeys {
-		if strings.TrimSpace(key) != "" {
-			s.client.SetAPIKey(name, key)
-		}
-	}
 }
 
 // SubSession clones transport and routing mode for explore/general sub-agents.
@@ -365,9 +357,6 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 		registry = s.registry
 	}
 	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting)
-	for provider, key := range s.apiKeys {
-		sub.SetAPIKey(provider, key)
-	}
 	return sub
 }
 
@@ -377,7 +366,7 @@ func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
 // ChatLLM returns the extracted ChatService (Phase 1 of the god-object
 // decomposition). New code should prefer this over the legacy Client /
-// Provider / Model / APIKeys / Router fields. Returns nil only if the
+// Provider / Model / Router fields. Returns nil only if the
 // session was constructed without going through NewSessionWithClient,
 // which should not happen in production.
 func (s *Session) ChatLLM() *ChatService { return s.llm }
@@ -468,39 +457,6 @@ func (s *Session) SetProvider(provider string) {
 		return
 	}
 	s.client = types.NewClient(&types.ClientConfig{Provider: p})
-	// Copy keys to avoid map iteration race with concurrent SetAPIKey calls.
-	keys := make(map[string]string, len(s.apiKeys))
-	for k, v := range s.apiKeys {
-		keys[k] = v
-	}
-	for provider, apiKey := range keys {
-		if strings.TrimSpace(apiKey) != "" {
-			s.client.SetAPIKey(provider, apiKey)
-		}
-	}
-}
-
-// SetAPIKey updates a provider API key for subsequent requests.
-func (s *Session) SetAPIKey(provider, apiKey string) {
-	provider = strings.ToLower(strings.TrimSpace(provider))
-	apiKey = strings.TrimSpace(apiKey)
-	if provider == "" || apiKey == "" {
-		return
-	}
-	if s.apiKeys == nil {
-		s.apiKeys = map[string]string{}
-	}
-	s.apiKeys[provider] = apiKey
-	if s.client != nil {
-		s.client.SetAPIKey(provider, apiKey)
-	}
-}
-
-// SetAPIKeys updates all known provider API keys for subsequent requests.
-func (s *Session) SetAPIKeys(apiKeys map[string]string) {
-	for provider, apiKey := range apiKeys {
-		s.SetAPIKey(provider, apiKey)
-	}
 }
 
 func (s *Session) AddUser(content string) {

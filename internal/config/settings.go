@@ -547,20 +547,19 @@ func ProviderAPIKeyEnv(provider string) string {
 
 // EnvKeyStatus returns set, empty, or local from the OS credential store.
 func EnvKeyStatus(provider string) string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return "empty"
 	}
-	provider = runtime.CatalogProviderID(provider)
-	envs := catalog.APIKeyEnvsForProvider(compiled, provider)
-	if len(envs) == 0 {
-		return "local"
+	status, err := engine.CredentialStatus(context.Background(), provider)
+	if err != nil {
+		return "empty"
 	}
-	ctx := context.Background()
-	for _, env := range envs {
-		if credentials.HasSecret(ctx, env) {
-			return "set"
-		}
+	if status.Configured {
+		return "set"
+	}
+	if strings.TrimSpace(status.EnvVar) == "" {
+		return "local"
 	}
 	return "empty"
 }
@@ -578,38 +577,6 @@ func AllEnvKeyStatus() string {
 	}
 	sort.Strings(parts)
 	return strings.Join(parts, ", ")
-}
-
-// LoadAPIKeysFromStore reads API keys for all eyrie catalog providers from the OS secret store.
-func LoadAPIKeysFromStore() map[string]string {
-	keys := make(map[string]string)
-	for _, p := range AllCatalogProviders() {
-		if v := APIKeyForProvider(p); v != "" {
-			keys[p] = v
-		}
-	}
-	return keys
-}
-
-// APIKeyForProvider reads the API key for a provider from the OS secret store.
-func APIKeyForProvider(provider string) string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
-		return ""
-	}
-	provider = runtime.CatalogProviderID(provider)
-	ctx := context.Background()
-	for _, env := range catalog.APIKeyEnvsForProvider(compiled, provider) {
-		if v := credentials.LookupSecret(ctx, env); v != "" {
-			return v
-		}
-	}
-	for _, env := range runtime.CredentialEnvKeys(provider) {
-		if v := credentials.LookupSecret(ctx, env); v != "" {
-			return v
-		}
-	}
-	return ""
 }
 
 func providerCredentialEnvAliases(provider string) []string {

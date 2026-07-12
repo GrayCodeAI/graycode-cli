@@ -383,12 +383,6 @@ func configureSessionHeavy(sess *engine.Session) {
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
 
-	// Direct-provider sessions still accept explicit API key injection.
-	if providerName := strings.TrimSpace(sess.Provider()); providerName != "" {
-		if key := hawkconfig.APIKeyForProvider(providerName); key != "" {
-			sess.SetAPIKey(providerName, key)
-		}
-	}
 }
 
 // bindChatSession wires TUI-only session metadata (persist id, compaction callbacks).

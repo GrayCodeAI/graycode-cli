@@ -11,7 +11,6 @@ import (
 type ChatClient interface {
 	Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error)
 	StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error)
-	SetAPIKey(provider, apiKey string)
 }
 
 // SetTestClient replaces the session's LLM client. For testing only.
@@ -46,5 +45,3 @@ func (m *exportedMockClient) StreamChatContinue(ctx context.Context, messages []
 	close(ch)
 	return &types.StreamResult{Events: ch}, nil
 }
-
-func (m *exportedMockClient) SetAPIKey(provider, apiKey string) {}

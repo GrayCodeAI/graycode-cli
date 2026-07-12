@@ -27,5 +27,3 @@ func (c *unavailableChatClient) Chat(context.Context, []types.EyrieMessage, type
 func (c *unavailableChatClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
 	return nil, c.err
 }
-
-func (c *unavailableChatClient) SetAPIKey(_, _ string) {}

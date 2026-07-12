@@ -37,6 +37,10 @@ Eyrie module version; `go.work` pins the submodule for local integration.
   deployment construction.
 - Hawk's credential-save and production agent-chat paths now enter through
   `eyrie/engine` via a Hawk-owned `ChatClient` adapter.
+- Provider secrets are absent from Hawk's `Session`, `ChatService`, sub-session,
+  reattachment, and client-port surfaces. Native provider compaction uses
+  Eyrie's injected credential store and engine facade; Hawk receives only the
+  normalized summary and remains responsible for conversation mutation.
 - The facade preserves advanced generation options and owns continuation;
   Hawk's compatibility retry/rate-limit wrapper is bypassed for facade clients
   so resilience is applied exactly once.
@@ -48,7 +52,8 @@ Eyrie module version; `go.work` pins the submodule for local integration.
 
 ## Removal gates
 
-Hawk's mirrored transport types, provider circuit breaker, legacy API-key map,
-and mixed Eyrie DAG usage may be removed only after equivalent facade contract
-and end-to-end tests pass. Session file readers remain backward-compatible for
-at least one release cycle.
+Hawk's mirrored transport types and remaining catalog/setup compatibility
+imports may be removed only after equivalent facade contracts and end-to-end
+tests pass. The provider circuit breaker, session API-key map, and mixed Eyrie
+DAG product path have already been removed. Session file readers remain
+backward-compatible for at least one release cycle.

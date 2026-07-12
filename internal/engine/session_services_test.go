@@ -20,9 +20,6 @@ func TestNewSessionServices_Defaults(t *testing.T) {
 	if ss.Core == nil {
 		t.Fatal("Core should not be nil with defaults")
 	}
-	if ss.Core.APIKeys == nil {
-		t.Error("Core.APIKeys should be initialized")
-	}
 	if ss.Core.Log == nil {
 		t.Error("Core.Log should default to logger.Default()")
 	}
