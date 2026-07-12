@@ -7,7 +7,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
@@ -86,52 +85,15 @@ func configModelOptionsFromEyrie(entries []hawkconfig.EngineModel) []configModel
 	for i, e := range entries {
 		opts[i] = configModelOption{
 			ID:               e.ID,
-			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
-			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID),
+			DisplayName:      e.DisplayName,
+			Owner:            e.Owner,
 			ContextWindow:    e.ContextWindow,
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
-			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
+			PriceKnown:       e.PriceKnown,
 		}
 	}
 	return opts
-}
-
-func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []configModelOption {
-	opts := make([]configModelOption, len(entries))
-	for i, e := range entries {
-		opts[i] = configModelOption{
-			ID:               e.ID,
-			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
-			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID, e.LiveMetadata),
-			ContextWindow:    e.ContextWindow,
-			InputPricePer1M:  e.InputPricePer1M,
-			OutputPricePer1M: e.OutputPricePer1M,
-			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
-		}
-	}
-	return opts
-}
-
-func modelOptionPriceKnown(id, displayName string, input, output float64, contextWindow int) bool {
-	if input > 0 || output > 0 {
-		return true
-	}
-	if modelOptionLooksExplicitlyFree(id, displayName) {
-		return true
-	}
-	// OpenAI-compatible /models endpoints often omit pricing fields. If the
-	// catalog also carries context, a zero price is intentional catalog metadata;
-	// when both price and context are absent, keep price unknown.
-	return contextWindow > 0
-}
-
-func modelOptionLooksExplicitlyFree(id, displayName string) bool {
-	text := strings.ToLower(strings.TrimSpace(id) + " " + strings.TrimSpace(displayName))
-	return strings.Contains(text, ":free") ||
-		strings.Contains(text, "/free") ||
-		strings.HasSuffix(text, "-free") ||
-		strings.Contains(text, " free")
 }
 
 func filterConfigModelOptions(opts []configModelOption, query string) []configModelOption {
@@ -279,15 +241,13 @@ func loadConfigModelOptions(provider string) []configModelOption {
 		return cached
 	}
 	modelCacheMu.RUnlock()
-	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
-		entries := catalog.ModelEntriesForProvider(compiled, provider)
-		if len(entries) > 0 {
-			opts := configModelOptionsFromCatalog(entries)
-			modelCacheMu.Lock()
-			modelCache[provider] = opts
-			modelCacheMu.Unlock()
-			return opts
-		}
+	entries, err := hawkconfig.ListEngineModels(context.Background(), provider, false)
+	if err == nil && len(entries) > 0 {
+		opts := configModelOptionsFromEyrie(entries)
+		modelCacheMu.Lock()
+		modelCache[provider] = opts
+		modelCacheMu.Unlock()
+		return opts
 	}
 	return nil
 }

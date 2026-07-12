@@ -1,6 +1,5 @@
 cmd/chat_config_hub.go
 cmd/chat_config_keys.go
-cmd/chat_config_models.go
 cmd/chat_config_panel.go
 cmd/chat_platform_ctx.go
 cmd/chat_welcome.go

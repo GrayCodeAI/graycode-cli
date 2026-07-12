@@ -47,6 +47,9 @@ Eyrie module version; `go.work` pins the submodule for local integration.
 - Effective provider/model selection is an `eyrie/engine.Selection` contract;
   Hawk's session factory, startup, live transport rebuild, and multi-agent
   workers no longer depend on Eyrie's lower-level runtime selection DTOs.
+- The model picker consumes display labels, ownership, serving gateway,
+  context, capabilities, pricing and price certainty from `engine.Model`; it
+  no longer reads or formats Eyrie's compiled catalog directly.
 - The facade preserves advanced generation options and owns continuation;
   Hawk's compatibility retry/rate-limit wrapper is bypassed for facade clients
   so resilience is applied exactly once.
