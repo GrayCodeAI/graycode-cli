@@ -35,10 +35,13 @@ Eyrie module version; `go.work` pins the submodule for local integration.
   capability selection, normalized pull streaming, credential service, catalog
   snapshots, injected credential/state paths, and explicit catalog-backed
   deployment construction.
-- Hawk's credential-save path now enters through `eyrie/engine`.
-- Catalog application and chat transport retain their compatibility paths until
-  the facade reaches complete feature parity for continuation and advanced
-  provider options.
+- Hawk's credential-save and production agent-chat paths now enter through
+  `eyrie/engine` via a Hawk-owned `ChatClient` adapter.
+- The facade preserves advanced generation options and owns continuation;
+  Hawk's compatibility retry/rate-limit wrapper is bypassed for facade clients
+  so resilience is applied exactly once.
+- Catalog administration and review-only bridges retain compatibility imports
+  while their facade contracts are completed.
 
 ## Removal gates
 

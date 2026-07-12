@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"strings"
 
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/eyrie/runtime"
 
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // BuildChatClient returns an LLM client and whether deployment routing is active.
 func BuildChatClient(ctx context.Context, selection runtime.SelectionState, legacyProvider string) (ChatClient, string, bool, error) {
+	_ = ctx // request contexts are applied per generation by the facade adapter
 	provider := strings.TrimSpace(selection.Provider)
 	if provider == "" {
 		provider = legacyProvider
@@ -22,18 +23,15 @@ func BuildChatClient(ctx context.Context, selection runtime.SelectionState, lega
 	if strings.TrimSpace(resolvedSelection.Provider) == "" {
 		resolvedSelection.Provider = provider
 	}
-	transport, err := runtime.ResolveChatTransportFromSelection(ctx, resolvedSelection)
-	if err == nil && transport.Provider != nil {
-		label := strings.TrimSpace(transport.Selection.Provider)
-		if label == "" {
-			label = provider
-		}
-		return NewProviderChatClient(types.WrapClientProvider(transport.Provider)), label, transport.Selection.DeploymentRouting, nil
-	}
+	modelRuntime, err := eyrieengine.New(eyrieengine.Options{})
 	if err != nil {
 		return nil, provider, false, fmt.Errorf("eyrie transport: %w", err)
 	}
-	return nil, provider, false, fmt.Errorf("eyrie transport: no provider resolved for %q", provider)
+	label := strings.TrimSpace(resolvedSelection.Provider)
+	if label == "" {
+		label = provider
+	}
+	return newEyrieEngineClient(modelRuntime), label, true, nil
 }
 
 // NewHawkSession constructs a Session using an engine-resolved selection.

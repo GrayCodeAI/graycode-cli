@@ -154,3 +154,30 @@ func TestChatService_ChatSurfacesError(t *testing.T) {
 		t.Errorf("expected err %v, got %v", want, err)
 	}
 }
+
+type resilienceOwningClient struct {
+	err   error
+	calls int
+}
+
+func (c *resilienceOwningClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+	return nil, c.err
+}
+func (c *resilienceOwningClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
+	c.calls++
+	return nil, c.err
+}
+func (c *resilienceOwningClient) SetAPIKey(string, string) {}
+func (c *resilienceOwningClient) OwnsResilience() bool     { return true }
+
+func TestChatService_DoesNotDuplicateEngineResilience(t *testing.T) {
+	client := &resilienceOwningClient{err: errors.New("routed transport failed")}
+	svc := NewChatService(client, ChatServiceConfig{})
+	_, err := svc.Stream(context.Background(), []types.EyrieMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{})
+	if err == nil {
+		t.Fatal("expected stream error")
+	}
+	if client.calls != 1 {
+		t.Fatalf("engine-owning client called %d times, want exactly once", client.calls)
+	}
+}

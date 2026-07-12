@@ -190,6 +190,10 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 // that responsibility here would either duplicate the call or force the
 // service to invent a "started at" argument that doesn't otherwise exist.
 func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
+	if owner, ok := c.client.(interface{ OwnsResilience() bool }); ok && owner.OwnsResilience() {
+		c.metrics.Counter("api.requests").Inc()
+		return c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
+	}
 	// Rate limit: wait for a token before making the LLM call
 	if c.rateLimiter != nil {
 		if waitErr := c.rateLimiter.Wait(ctx); waitErr != nil {

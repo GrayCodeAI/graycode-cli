@@ -160,6 +160,12 @@ type StreamResult struct {
 	cancel    context.CancelFunc
 }
 
+// NewStreamResult constructs a Hawk-owned stream result around an engine
+// event channel. The cancel function is optional and must be idempotent.
+func NewStreamResult(events <-chan EyrieStreamEvent, requestID string, cancel context.CancelFunc) *StreamResult {
+	return &StreamResult{Events: events, RequestID: requestID, cancel: cancel}
+}
+
 // Close stops the stream and releases resources.
 func (sr *StreamResult) Close() {
 	if sr != nil && sr.cancel != nil {
