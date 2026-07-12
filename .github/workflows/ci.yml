@@ -66,6 +66,8 @@ jobs:
         run: bash ./scripts/check-internal-layer-imports.sh
       - name: eyrie client boundary guard
         run: bash ./scripts/check-eyrie-client-imports.sh
+      - name: eyrie engine facade boundary guard
+        run: bash ./scripts/check-eyrie-engine-boundary.sh
 
   # -------------------------------------------------------------------------
   # 2. Module hygiene — tidy, verify (hawk + external ecosystem repos via go.work).
