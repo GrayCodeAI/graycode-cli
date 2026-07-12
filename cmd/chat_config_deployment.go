@@ -9,7 +9,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -48,15 +47,6 @@ func firstRunModelProvider(m chatModel) string {
 	return ""
 }
 
-func credentialOptionFromHawk(in hawkconfig.CredentialInference) runtime.CredentialProviderOption {
-	return runtime.CredentialProviderOption{
-		ProviderID:   in.ProviderID,
-		DeploymentID: in.DeploymentID,
-		EnvVar:       in.EnvVar,
-		DisplayName:  in.DisplayName,
-	}
-}
-
 func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
 	return saveCredentialAsync(inference, secret)
 }
@@ -86,8 +76,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 		if inference.ProviderID == hawkconfig.ProviderZAICoding {
 			hawkconfig.ApplyZAIRegionEnv(ctx)
 		}
-		rtInf := config.InferenceFromOption(credentialOptionFromHawk(inference))
-		if err := runtime.SaveCredential(ctx, rtInf, secret); err != nil {
+		if err := hawkconfig.SaveCredential(ctx, inference, secret); err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
 				providerID:   inference.ProviderID,
@@ -105,7 +94,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 
-		entries, listErr := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: inference.ProviderID, Source: runtime.ListSourceAuto})
+		entries, listErr := hawkconfig.ListEngineModels(ctx, inference.ProviderID, false)
 		if listErr != nil {
 			return configApplyCredentialsMsg{
 				err:          listErr,

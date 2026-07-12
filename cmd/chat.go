@@ -22,7 +22,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	"github.com/GrayCodeAI/hawk/internal/codegraph"
@@ -268,7 +267,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	// Prefetch live models for the active provider so footer ctx/pricing stay current.
 	go func() {
 		providerName := effectiveProvider
-		entries, _ := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: providerName, Source: runtime.ListSourceAuto})
+		entries, _ := hawkconfig.ListEngineModels(context.Background(), providerName, false)
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()

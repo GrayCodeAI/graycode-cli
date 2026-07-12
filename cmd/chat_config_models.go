@@ -8,7 +8,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
@@ -62,11 +61,11 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		if provider == "" {
 			provider = hawkconfig.DefaultModelProviderFilter(ctx)
 		}
-		entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+		entries, err := hawkconfig.ListEngineModels(ctx, provider, false)
 		if err != nil {
-			if _, derr := runtime.Discover(ctx); derr == nil {
+			if _, derr := hawkconfig.ListEngineModels(ctx, provider, true); derr == nil {
 				InvalidateModelCacheProvider(provider)
-				entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+				entries, err = hawkconfig.ListEngineModels(ctx, provider, false)
 			}
 		}
 		if err != nil {
@@ -82,7 +81,7 @@ func fetchModelsAsync(provider string) tea.Cmd {
 	}
 }
 
-func configModelOptionsFromEyrie(entries []runtime.ModelEntry) []configModelOption {
+func configModelOptionsFromEyrie(entries []hawkconfig.EngineModel) []configModelOption {
 	opts := make([]configModelOption, len(entries))
 	for i, e := range entries {
 		opts[i] = configModelOption{
@@ -198,10 +197,10 @@ func ensureModelCacheLoaded(provider string) {
 	modelSyncMu.Unlock()
 
 	ctx := context.Background()
-	entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
+	entries, err := hawkconfig.ListEngineModels(ctx, provider, false)
 	if err != nil {
-		if _, derr := runtime.Discover(ctx); derr == nil {
-			entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
+		if _, derr := hawkconfig.ListEngineModels(ctx, provider, true); derr == nil {
+			entries, err = hawkconfig.ListEngineModels(ctx, provider, false)
 		}
 	}
 	if err != nil || len(entries) == 0 {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
 // ActiveModel returns the selected model from eyrie provider.json (not hawk settings).
@@ -12,7 +12,11 @@ func ActiveModel(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.ActiveModel(ctx)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return ""
+	}
+	return engine.ActiveSelection(ctx).Model
 }
 
 // ActiveProvider returns the selected provider from eyrie provider.json.
@@ -20,12 +24,16 @@ func ActiveProvider(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.ActiveProviderID(runtime.ActiveProvider(ctx))
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return ""
+	}
+	return engine.ActiveSelection(ctx).Provider
 }
 
 // ActiveProviderID canonicalizes a host-facing provider/gateway id through Eyrie runtime.
 func ActiveProviderID(provider string) string {
-	return runtime.ActiveProviderID(provider)
+	return eyrieengine.NormalizeProviderID(provider)
 }
 
 // SetActiveModel persists model selection to eyrie provider.json.
@@ -33,7 +41,11 @@ func SetActiveModel(ctx context.Context, modelID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.SetActiveModel(ctx, modelID)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return err
+	}
+	return engine.SetActiveModel(ctx, modelID)
 }
 
 // SetActiveProvider persists provider selection to eyrie provider.json.
@@ -41,7 +53,11 @@ func SetActiveProvider(ctx context.Context, provider string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.SetActiveProvider(ctx, runtime.ActiveProviderID(provider))
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return err
+	}
+	return engine.SetActiveProvider(ctx, provider)
 }
 
 // migrateLegacyModelProvider moves model/provider from ~/.hawk/settings.json into eyrie once.
