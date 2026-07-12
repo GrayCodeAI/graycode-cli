@@ -6,10 +6,22 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
-type GatewayStatus = runtime.GatewayStatus
+// GatewayStatus is Hawk's presentation row. Provider/deployment and
+// credential state comes from Eyrie's host-neutral control plane.
+type GatewayStatus struct {
+	ID                      string
+	DisplayName             string
+	HasStoredCredential     bool
+	HasConfiguredDeployment bool
+	ModelCount              int
+	Active                  bool
+	RegionLabel             string
+	RegionRequired          bool
+}
 
 // CompiledCatalogV1 loads the eyrie catalog from cache or bootstrap wiring (no network).
 func CompiledCatalogV1() *catalog.CompiledCatalog {
@@ -86,44 +98,26 @@ func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ensureCredSnapshot(ctx)
-
-	active := activeProvider
-	if active == "" && activeModel != "" {
-		active = GatewayForModel(activeModel)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return nil
 	}
-	if active == "" {
-		active = ActiveGateway(ctx)
-	}
-
-	uiCacheMu.RLock()
-	configured := credConfigured
-	uiCacheMu.RUnlock()
-
-	compiled := compiledCatalogOrBootstrap()
-	gateways := runtime.SetupGateways()
+	gateways := engine.Gateways(ctx)
 	statuses := make([]GatewayStatus, 0, len(gateways))
-
-	for _, providerID := range gateways {
-		count := 0
-		if compiled != nil {
-			count = len(catalog.ModelEntriesForProvider(compiled, providerID))
+	for _, gateway := range gateways {
+		active := gateway.Active
+		if activeProvider != "" {
+			active = eyrieengine.NormalizeProviderID(activeProvider) == eyrieengine.NormalizeProviderID(gateway.ID)
+		} else if activeModel != "" {
+			active = GatewayForModel(activeModel) == gateway.ID
 		}
-
-		hasKey := false
-		if configured != nil {
-			hasKey = configured[providerID]
-		}
-
 		statuses = append(statuses, GatewayStatus{
-			ID:                      providerID,
-			DisplayName:             runtime.GatewayDisplayName(providerID),
-			HasStoredCredential:     hasKey,
-			HasConfiguredDeployment: hasKey,
-			ModelCount:              count,
-			Active:                  providerID == active,
-			RegionLabel:             runtime.GatewayRegionLabel(providerID),
-			RegionRequired:          runtime.GatewayNeedsRegion(providerID),
+			ID: gateway.ID, DisplayName: gateway.DisplayName,
+			HasStoredCredential:     gateway.CredentialConfigured,
+			HasConfiguredDeployment: gateway.DeploymentConfigured,
+			ModelCount:              gateway.ModelCount, Active: active,
+			RegionLabel:    runtime.GatewayRegionLabel(gateway.ID),
+			RegionRequired: runtime.GatewayNeedsRegion(gateway.ID),
 		})
 	}
 

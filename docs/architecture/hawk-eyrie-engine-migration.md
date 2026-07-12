@@ -41,6 +41,9 @@ Eyrie module version; `go.work` pins the submodule for local integration.
   reattachment, and client-port surfaces. Native provider compaction uses
   Eyrie's injected credential store and engine facade; Hawk receives only the
   normalized summary and remains responsible for conversation mutation.
+- Eyrie's control-plane facade now supplies credential resolution, safe masked
+  status, provider choices, and gateway configuration rows using its injected
+  credential store and state paths. Hawk owns their TUI/CLI presentation.
 - The facade preserves advanced generation options and owns continuation;
   Hawk's compatibility retry/rate-limit wrapper is bypassed for facade clients
   so resilience is applied exactly once.
