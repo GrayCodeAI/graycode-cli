@@ -9,8 +9,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -48,22 +46,13 @@ func firstRunModelProvider(m chatModel) string {
 	return ""
 }
 
-func credentialOptionFromHawk(in hawkconfig.CredentialInference) runtime.CredentialProviderOption {
-	return runtime.CredentialProviderOption{
-		ProviderID:   in.ProviderID,
-		DeploymentID: in.DeploymentID,
-		EnvVar:       in.EnvVar,
-		DisplayName:  in.DisplayName,
-	}
-}
-
 func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
 	return saveCredentialAsync(inference, secret)
 }
 
 func saveOllamaAsync(baseURL string) tea.Cmd {
 	return func() tea.Msg {
-		inference, err := runtime.LocalCredentialInference(configProviderOllama)
+		inference, err := hawkconfig.LocalCredentialInference(configProviderOllama)
 		if err != nil {
 			return configApplyCredentialsMsg{err: err}
 		}
@@ -80,14 +69,7 @@ func saveOllamaAsync(baseURL string) tea.Cmd {
 func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		if inference.ProviderID == hawkconfig.ProviderXiaomiTokenPlan {
-			hawkconfig.ApplyXiaomiTokenPlanRegionEnv(ctx)
-		}
-		if inference.ProviderID == hawkconfig.ProviderZAICoding {
-			hawkconfig.ApplyZAIRegionEnv(ctx)
-		}
-		rtInf := config.InferenceFromOption(credentialOptionFromHawk(inference))
-		if err := runtime.SaveCredential(ctx, rtInf, secret); err != nil {
+		if err := hawkconfig.SaveCredential(ctx, inference, secret); err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
 				providerID:   inference.ProviderID,
@@ -105,7 +87,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 
-		entries, listErr := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: inference.ProviderID, Source: runtime.ListSourceAuto})
+		entries, listErr := hawkconfig.ListEngineModels(ctx, inference.ProviderID, false)
 		if listErr != nil {
 			return configApplyCredentialsMsg{
 				err:          listErr,
@@ -114,11 +96,6 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 		opts := configModelOptionsFromEyrie(entries)
-		if len(opts) == 0 && result.Setup != nil {
-			fallback := hawkconfig.OptionsFromSetupUI(result.Setup, inference.ProviderID)
-			opts = toConfigModelOptionsFromHawk(fallback)
-		}
-
 		return configApplyCredentialsMsg{
 			summary:      hawkconfig.FormatApplyCredentialsSummary(result),
 			providerID:   inference.ProviderID,
@@ -126,17 +103,6 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			modelOptions: opts,
 		}
 	}
-}
-
-func toConfigModelOptionsFromHawk(in []hawkconfig.ModelOption) []configModelOption {
-	out := make([]configModelOption, len(in))
-	for i, o := range in {
-		out[i] = configModelOption{
-			ID:          o.ID,
-			DisplayName: o.DisplayName,
-		}
-	}
-	return out
 }
 
 func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
@@ -249,11 +215,11 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	selection := runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+	selection := hawkconfig.EffectiveSelectionWithSettings(context.Background(), m.settings, hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(m.session.Provider(), m.settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(m.session.Model(), m.settings.Model),
 	})
-	if err := engine.RebuildSessionTransport(context.Background(), m.session, selection, m.session.Provider()); err != nil {
+	if err := engine.RebuildSessionTransportForSettings(context.Background(), m.settings, m.session, selection, m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
 	syncSessionFromPersistedSelection(m.session)

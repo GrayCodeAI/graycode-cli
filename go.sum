@@ -16,8 +16,8 @@ github.com/BobuSumisu/aho-corasick v1.0.3 h1:uuf+JHwU9CHP2Vx+wAy6jcksJThhJS9ehR8
 github.com/BobuSumisu/aho-corasick v1.0.3/go.mod h1:hm4jLcvZKI2vRF2WDU1N4p/jpWtpOzp3nLmi9AzX/XE=
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/GrayCodeAI/eyrie v0.1.4 h1:Y1sEPcfvnmaSKbi4h0tVcV/CE7Bf+IMDwJ0PVQ9f5ik=
-github.com/GrayCodeAI/eyrie v0.1.4/go.mod h1:8zw4jj5pvD9/tUqDhRaT4nnvl3Q8Zl2x4mJyEve7Obc=
+github.com/GrayCodeAI/eyrie v0.2.1 h1:MtUkQV7hjFy7mobbjojjmgmN96Bo137pXfp2pcgJPug=
+github.com/GrayCodeAI/eyrie v0.2.1/go.mod h1:8zw4jj5pvD9/tUqDhRaT4nnvl3Q8Zl2x4mJyEve7Obc=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.4 h1:HRcuxvl5RMgqmF0Lt1YwHY84nGcUwXculXtnrE/8nLI=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.4/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
 github.com/GrayCodeAI/inspect v0.1.4 h1:tQAcD9UuHkrqA20CZqdTcBgWKU/lhxxHBh8hlXY3FVw=

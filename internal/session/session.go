@@ -3,6 +3,7 @@ package session
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,12 +38,17 @@ type Session struct {
 	ID        string    `json:"id"`
 	Model     string    `json:"model"`
 	Provider  string    `json:"provider"`
+	Agent     string    `json:"agent,omitempty"`
 	CWD       string    `json:"cwd,omitempty"`
 	Name      string    `json:"name,omitempty"`
 	Messages  []Message `json:"messages"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// ErrNotFound identifies a missing durable session without conflating it with
+// corruption or I/O failures in one of the supported on-disk formats.
+var ErrNotFound = errors.New("session not found")
 
 func sessionsDir() string {
 	return storage.SessionsDir()
@@ -96,6 +102,7 @@ func Save(s *Session) error {
 		"id":         s.ID,
 		"model":      s.Model,
 		"provider":   s.Provider,
+		"agent":      s.Agent,
 		"cwd":        s.CWD,
 		"name":       s.Name,
 		"created_at": s.CreatedAt.Format(time.RFC3339),
@@ -274,6 +281,9 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 				if v, ok := raw["provider"].(string); ok {
 					s.Provider = v
 				}
+				if v, ok := raw["agent"].(string); ok {
+					s.Agent = v
+				}
 				if v, ok := raw["cwd"].(string); ok {
 					s.CWD = v
 				}
@@ -321,13 +331,18 @@ func CheckForRecovery() []string {
 // Load reads a session from disk, supporting both JSONL and legacy JSON formats.
 func Load(id string) (*Session, error) {
 	// Try JSONL first
-	if s, err := loadJSONL(id); err == nil {
+	s, jsonlErr := loadJSONL(id)
+	if jsonlErr == nil {
 		return s, nil
 	}
-	if s, err := loadLegacyJSON(id); err == nil {
+	s, legacyErr := loadLegacyJSON(id)
+	if legacyErr == nil {
 		return s, nil
 	}
-	return nil, fmt.Errorf("session %s not found", id)
+	if errors.Is(jsonlErr, os.ErrNotExist) && errors.Is(legacyErr, os.ErrNotExist) {
+		return nil, fmt.Errorf("session %s: %w", id, ErrNotFound)
+	}
+	return nil, fmt.Errorf("load session %s: %w", id, errors.Join(jsonlErr, legacyErr))
 }
 
 func loadJSONL(id string) (*Session, error) {
@@ -364,6 +379,9 @@ func loadJSONLFile(path, id string) (*Session, error) {
 			}
 			if v, ok := meta["provider"].(string); ok {
 				s.Provider = v
+			}
+			if v, ok := meta["agent"].(string); ok {
+				s.Agent = v
 			}
 			if v, ok := meta["cwd"].(string); ok {
 				s.CWD = v

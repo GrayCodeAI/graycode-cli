@@ -10,7 +10,7 @@ must not be treated as interchangeable.
 | Repository | Visibility target | Responsibility | Dependency rule |
 | --- | --- | --- | --- |
 | `hawk` | Public | CLI, local daemon, orchestration, policy and engine composition | Integration root; pins the seven engine repositories as submodules and published Go modules |
-| `eyrie` | Public | Model/provider catalog, routing and client runtime | Library consumed by Hawk; no Hawk import |
+| `eyrie` | Public | Provider engine: credentials, catalog, routing, transport and normalized streaming | Hawk consumes only its `eyrie/engine` host facade; no Hawk import |
 | `hawk-core-contracts` | Public | Shared Go domain contracts | Leaf contract module; must not import product implementations |
 | `tok` | Public | Token analysis and optimization engine | Independently releasable library and MCP server |
 | `trace` | Public | Trace and observability engine | Embeds only Hawk's supported CLI root boundary when built with Hawk |
@@ -50,7 +50,7 @@ community skills ────────────────> Hawk extensio
 hawk-sdk-go ───────┐
 hawk-sdk-python ───┴─ HTTP ─────> Hawk local daemon
                                       │
-hawk (integration root) ──────────────┼─ eyrie
+hawk (integration root) ──────────────┼─ eyrie/engine
   external/ Gitlinks + Go modules ────┼─ core-contracts
                                       ├─ tok
                                       ├─ trace
@@ -97,3 +97,6 @@ contracts repository merely to move files across a repository boundary.
 5. Every submodule commit used by Hawk is publicly reachable and matches the corresponding module version.
 6. Production Cloudflare bindings are explicit, typed and verified with a dry-run bundle.
 7. Cross-repository contract drift and forbidden imports fail CI.
+8. Hawk production code reaches provider credentials, catalogs and transport
+   only through `eyrie/engine`; Hawk-owned conversation and CLI schemas remain
+   separate.

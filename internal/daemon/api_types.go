@@ -25,6 +25,7 @@ type SessionDetailResponse struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 	Model        string    `json:"model"`
 	Provider     string    `json:"provider"`
+	Agent        string    `json:"agent,omitempty"`
 	CWD          string    `json:"cwd"`
 	Name         string    `json:"name"`
 	MessageCount int       `json:"message_count"`

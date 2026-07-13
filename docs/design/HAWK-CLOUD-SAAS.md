@@ -68,8 +68,8 @@ once and shows how both consume it.
    `sync.Map` (`daemon.go:35`). Net-new: a routing layer that maps tenant → session
    → execution worker.
 4. **Billing / credit system.** Meter token spend and sandbox-minutes per tenant,
-   enforce hard limits, and bill. Reuse eyrie's existing per-key budget machinery
-   (`eyrie/client/budget_provider.go`).
+   price normalized usage with Hawk Cloud's versioned server catalog, enforce
+   hard limits, and bill from the authoritative cloud ledger.
 5. **Team workspaces & conversation sharing.** Shared, permissioned session state;
    read-only and continue-able shares.
 6. **Org RBAC** with Member / Admin / Owner tiers, invitations, and org-scoped
@@ -87,8 +87,10 @@ once and shows how both consume it.
   privacy-first posture (`TOP20_COMPARISON.md:20`) is preserved — cloud is opt-in.
 - **Not** building our own microVM hypervisor. We integrate E2B/Daytona (build-vs-buy
   in §6), not write Firecracker orchestration from scratch.
-- **Not** an LLM gateway rewrite. eyrie remains the model runtime; the plane calls
-  eyrie. The plane does not re-implement routing, caching, or provider adapters.
+- **Not** an LLM gateway rewrite. Eyrie remains the provider engine behind
+  Hawk's `eyrie/engine` integration; the plane calls a Hawk agent worker, which
+  composes Eyrie. The plane does not re-implement routing, caching, or provider
+  adapters.
 - **Not** SSO/SAML in P0 (deferred to P2; OIDC social login + API keys first).
 - **Not** on-prem/self-hosted enterprise distribution in P0 (P2).
 - **Not** mobile-native apps (the browser UI is responsive; that suffices initially).
@@ -141,9 +143,9 @@ middleware (`daemon.go:185`) and `routes()` table (`daemon.go:174-183`).
 **Identity service** — orgs, users, memberships, roles, API keys, OAuth tokens.
 Net-new. Wraps/extends `internal/auth` (see §4).
 
-**Billing service** — credit ledger, metering ingestion, hard-limit enforcement,
-invoicing. Built on eyrie's `BudgetStore` / `BudgetProvider`
-(`eyrie/client/budget_provider.go`).
+**Billing service** — credit ledger, metering ingestion, server-side pricing,
+hard-limit enforcement, and invoicing. Hawk Cloud owns this authority; Eyrie
+supplies normalized model and token usage through Hawk's Engine boundary.
 
 **Workspace service** — workspace membership, shared session state, share links,
 permission checks for view/continue.
@@ -192,13 +194,14 @@ credit_ledger(id, org_id, ts, delta_credits, reason, ref_session_id, ref_meter_i
         -- append-only; balance = SUM(delta_credits)
 
 meter_events(id, org_id, workspace_id, session_id, ts, kind,
-             tokens_in, tokens_out, model, sandbox_ms, cost_usd, credits)
-        -- kind ∈ {llm, sandbox}; cost_usd via eyrie ActualCostUSD()
+             tokens_in, tokens_out, model, sandbox_ms, cost_usd, credits,
+             pricing_catalog_version)
+        -- kind ∈ {llm, sandbox}; cost_usd is priced by Hawk Cloud
 ```
 
-`meter_events.cost_usd` is computed with eyrie's existing
-`ActualCostUSD(model, usage)` (`eyrie/client/budget_provider.go:127`), so the
-dollar→credit conversion lives in one place.
+`meter_events.cost_usd` is computed from normalized model/token dimensions by
+Hawk Cloud's versioned pricing catalog. Client-side estimates may be displayed
+or audited, but never affect credits or invoices.
 
 ### 3.3 API Surface
 
@@ -308,7 +311,7 @@ This is the crux: **what is reusable today vs. net-new.**
 | Autonomy / permission gating | `daemon.go:286-298` (`PresetConfig`, `NeedsPermission`) | Server-side auto-approval policy already exists for non-interactive runs; cloud reuses it per-workspace policy. |
 | Auth primitives | `internal/auth/auth.go` (`TokenStore`, `SecureStorage`), `device_flow.go` (full RFC 8628) | Device-grant **client** is done. `SecureStorage` (macOS keychain + file fallback, `auth.go:54-121`) stays for local credential caching of cloud tokens. `GenerateNonce` (`auth.go:124`) for OAuth state/PKCE. |
 | Constant-time key compare | `daemon.go:207-224` | API-key verification logic carries over (but keys move to hashed storage; see net-new). |
-| eyrie budget/metering | `eyrie/client/budget_provider.go` (`BudgetProvider`, `BudgetStore`, `WithVirtualKey`/`VirtualKeyFromContext`, `ActualCostUSD`, `MemoryBudgetStore`); `eyrie/client/usage_limit.go`; `eyrie/storage/budgets.go` | This **is** the billing engine's enforcement layer. Map `virtual key = org credit pool`; implement a Postgres-backed `BudgetStore` (interface already abstracted to "primitive types so both in-memory and DB stores work", `budget_provider.go:36-53`). Credit checks ride the existing `CheckBudget`/`RecordUsage` path. |
+| Eyrie normalized usage | `eyrie/engine` response and stream usage DTOs through Hawk's adapter | Reuse model/token dimensions as metering input. Do not import lower Eyrie packages or trust client-computed prices for billing. |
 | Sandbox executor interface | `internal/sandbox/container.go:18-21` (`containerExecutor`: `Exec`, `Running`) | `CloudSandbox` implements the same interface → drop-in. Callers don't know if they're on local Docker or a cloud microVM. |
 | Sandbox lifecycle manager | `internal/sandbox/snapshot_sandbox.go:52-228` (`Create/Pause/Resume/Snapshot/Restore/List/Cleanup`) | Existing pause/resume/snapshot semantics map cleanly onto E2B/Daytona pause+snapshot APIs; the manager abstraction guides the `CloudSandbox` API shape. |
 | Messaging gateways | `internal/daemon/gateway.go`, `telegram.go`, `discord.go`, `slack.go` | Already forward to `/v1/chat` via `forwardToHawk` (`gateway.go:17`) with bearer auth. In cloud they forward to the tenant-scoped chat endpoint with the org's key — minimal change. |
@@ -358,7 +361,9 @@ This is the crux: **what is reusable today vs. net-new.**
 - **M0.4** Session Router + durable session store replacing the in-memory `sync.Map`; tenant-scoped `POST /v1/workspaces/{ws}/chat` (SSE reused verbatim).
 - **M0.5** Single-region Agent Worker pool (1 session/worker, worktree isolation).
 - **M0.6** `CloudSandbox` (E2B *or* Daytona — pick one) implementing `containerExecutor` (`container.go:18`).
-- **M0.7** Metering: emit `meter_event`s using eyrie `ActualCostUSD`; Postgres `BudgetStore` behind eyrie `BudgetProvider`; hard credit floor returns HTTP 402.
+- **M0.7** Metering: ingest normalized model/token dimensions, price them with
+  the versioned Hawk Cloud catalog, persist the Postgres credit ledger, and
+  return HTTP 402 at the hard credit floor.
 - **M0.8** Minimal web UI (single `go:embed` page) for chat + diff view.
 
 **Exit criteria:** a paying single team can log in via OAuth, run hawk against a
@@ -394,7 +399,7 @@ credits hit zero.
 | Identity / OAuth server | **Buy** (Ory Hydra/Kratos, Auth0, or WorkOS) for P0; revisit P2 | Writing a compliant OAuth2/OIDC AS is risky. Ory is Apache-2.0 (self-hostable, privacy-aligned). WorkOS/Auth0 are SaaS — faster but introduce a third party in the auth path (weigh against privacy posture). Prefer **Ory self-hosted** to keep the privacy-first promise. |
 | Billing / payments | **Buy** Stripe for payment + invoicing; **build** the credit ledger | Never build a card processor. The ledger and metering are ours (and partly exist in eyrie). Stripe SDK is permissive. |
 | Database | **Buy** managed Postgres | Standard. |
-| Metering enforcement | **Build on existing** eyrie `BudgetProvider`/`BudgetStore` | Already in-repo (`eyrie/client/budget_provider.go`); only the Postgres `BudgetStore` impl is new. |
+| Metering enforcement | **Build in Hawk Cloud** on normalized Engine usage | Billing authority must be server-owned and versioned; lower Eyrie packages remain engine implementation details. |
 | Web UI framework | **Build** small React SPA, `go:embed` served (Aider/OpenHands pattern) | Keeps deployment a single binary; matches `TOP20_COMPARISON.md:31`. |
 | IDE protocol | **Adopt** ACP (Agent Client Protocol) | Industry trajectory (Gemini CLI, Zed, JetBrains), `TOP20_COMPARISON.md:32,36`. Avoid bespoke per-IDE protocols. |
 
@@ -452,7 +457,7 @@ erode that.
    Daytona = richer dev-environment model. Which maps better onto hawk's
    pause/resume/snapshot (`snapshot_sandbox.go`)?
 3. **Credit unit:** bill in $-equivalent credits (1 credit = $0.01?) covering both
-   LLM cost (`ActualCostUSD`) and sandbox-minutes — what's the blended margin?
+   server-priced LLM usage and sandbox-minutes — what's the blended margin?
 4. **BYO keys vs. managed keys:** if an org brings its own provider keys, do their
    LLM tokens still consume credits (we only charge sandbox/orchestration), or run
    free? Affects eyrie provider-config plumbing (`TOP20_COMPARISON.md:96`).

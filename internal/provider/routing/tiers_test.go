@@ -1,11 +1,6 @@
 package routing
 
-import (
-	"sync"
-	"testing"
-
-	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
-)
+import "testing"
 
 func TestCostTierOf_CatalogModels(t *testing.T) {
 	tests := []struct {
@@ -29,14 +24,14 @@ func TestCostTierOf_CatalogModels(t *testing.T) {
 }
 
 func TestPreferredModelForTier_NilCatalog(t *testing.T) {
-	got := PreferredModelForTier("unknown-provider-xyz", eycatalog.TierHaiku, "")
+	got := PreferredModelForTier("unknown-provider-xyz", TierHaiku, "")
 	if got != "" {
 		t.Fatalf("expected empty haiku model for unknown provider, got %q", got)
 	}
 }
 
 func TestPreferredModelForTier_WithFallback(t *testing.T) {
-	got := PreferredModelForTier("unknown-provider-xyz", eycatalog.TierHaiku, "fallback-model")
+	got := PreferredModelForTier("unknown-provider-xyz", TierHaiku, "fallback-model")
 	if got != "fallback-model" {
 		t.Fatalf("expected fallback model, got %q", got)
 	}
@@ -49,15 +44,7 @@ func TestRolesForProvider_NilCatalog(t *testing.T) {
 	}
 }
 
-func TestCostTierOf_FallsBackWithoutLoadedCatalog(t *testing.T) {
-	catalogOnce = sync.Once{}
-	catalogOnce.Do(func() {})
-	cachedCatalog = nil
-	t.Cleanup(func() {
-		catalogOnce = sync.Once{}
-		cachedCatalog = nil
-	})
-
+func TestCostTierOf_FallsBackWithoutCatalogMatch(t *testing.T) {
 	if got := CostTierOf("gpt-4o-mini"); got != CostTierCheap {
 		t.Fatalf("CostTierOf fallback = %v, want %v", got, CostTierCheap)
 	}

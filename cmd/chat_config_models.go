@@ -7,8 +7,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
@@ -16,6 +14,9 @@ import (
 // configModelOption is one row in the /config model picker (display from eyrie, id for settings).
 type configModelOption struct {
 	ID               string
+	CanonicalID      string
+	ProviderID       string
+	GatewayID        string
 	DisplayName      string
 	Owner            string
 	ContextWindow    int
@@ -62,11 +63,11 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		if provider == "" {
 			provider = hawkconfig.DefaultModelProviderFilter(ctx)
 		}
-		entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+		entries, err := hawkconfig.ListEngineModels(ctx, provider, false)
 		if err != nil {
-			if _, derr := runtime.Discover(ctx); derr == nil {
+			if _, derr := hawkconfig.ListEngineModels(ctx, provider, true); derr == nil {
 				InvalidateModelCacheProvider(provider)
-				entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceAuto})
+				entries, err = hawkconfig.ListEngineModels(ctx, provider, false)
 			}
 		}
 		if err != nil {
@@ -82,57 +83,23 @@ func fetchModelsAsync(provider string) tea.Cmd {
 	}
 }
 
-func configModelOptionsFromEyrie(entries []runtime.ModelEntry) []configModelOption {
+func configModelOptionsFromEyrie(entries []hawkconfig.EngineModel) []configModelOption {
 	opts := make([]configModelOption, len(entries))
 	for i, e := range entries {
 		opts[i] = configModelOption{
 			ID:               e.ID,
-			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
-			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID),
+			CanonicalID:      e.CanonicalID,
+			ProviderID:       e.ProviderID,
+			GatewayID:        e.GatewayID,
+			DisplayName:      e.DisplayName,
+			Owner:            e.Owner,
 			ContextWindow:    e.ContextWindow,
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
-			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
+			PriceKnown:       e.PriceKnown,
 		}
 	}
 	return opts
-}
-
-func configModelOptionsFromCatalog(entries []catalog.ModelCatalogEntry) []configModelOption {
-	opts := make([]configModelOption, len(entries))
-	for i, e := range entries {
-		opts[i] = configModelOption{
-			ID:               e.ID,
-			DisplayName:      catalog.DisplayModelLabel(e.ID, e.DisplayName),
-			Owner:            catalog.DisplayModelOwner(e.Owner, e.ID, e.LiveMetadata),
-			ContextWindow:    e.ContextWindow,
-			InputPricePer1M:  e.InputPricePer1M,
-			OutputPricePer1M: e.OutputPricePer1M,
-			PriceKnown:       modelOptionPriceKnown(e.ID, e.DisplayName, e.InputPricePer1M, e.OutputPricePer1M, e.ContextWindow),
-		}
-	}
-	return opts
-}
-
-func modelOptionPriceKnown(id, displayName string, input, output float64, contextWindow int) bool {
-	if input > 0 || output > 0 {
-		return true
-	}
-	if modelOptionLooksExplicitlyFree(id, displayName) {
-		return true
-	}
-	// OpenAI-compatible /models endpoints often omit pricing fields. If the
-	// catalog also carries context, a zero price is intentional catalog metadata;
-	// when both price and context are absent, keep price unknown.
-	return contextWindow > 0
-}
-
-func modelOptionLooksExplicitlyFree(id, displayName string) bool {
-	text := strings.ToLower(strings.TrimSpace(id) + " " + strings.TrimSpace(displayName))
-	return strings.Contains(text, ":free") ||
-		strings.Contains(text, "/free") ||
-		strings.HasSuffix(text, "-free") ||
-		strings.Contains(text, " free")
 }
 
 func filterConfigModelOptions(opts []configModelOption, query string) []configModelOption {
@@ -198,10 +165,10 @@ func ensureModelCacheLoaded(provider string) {
 	modelSyncMu.Unlock()
 
 	ctx := context.Background()
-	entries, err := runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
+	entries, err := hawkconfig.ListEngineModels(ctx, provider, false)
 	if err != nil {
-		if _, derr := runtime.Discover(ctx); derr == nil {
-			entries, err = runtime.ListModels(ctx, runtime.ListModelsOpts{ProviderID: provider, Source: runtime.ListSourceCache})
+		if _, derr := hawkconfig.ListEngineModels(ctx, provider, true); derr == nil {
+			entries, err = hawkconfig.ListEngineModels(ctx, provider, false)
 		}
 	}
 	if err != nil || len(entries) == 0 {
@@ -280,15 +247,13 @@ func loadConfigModelOptions(provider string) []configModelOption {
 		return cached
 	}
 	modelCacheMu.RUnlock()
-	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
-		entries := catalog.ModelEntriesForProvider(compiled, provider)
-		if len(entries) > 0 {
-			opts := configModelOptionsFromCatalog(entries)
-			modelCacheMu.Lock()
-			modelCache[provider] = opts
-			modelCacheMu.Unlock()
-			return opts
-		}
+	entries, err := hawkconfig.ListEngineModels(context.Background(), provider, false)
+	if err == nil && len(entries) > 0 {
+		opts := configModelOptionsFromEyrie(entries)
+		modelCacheMu.Lock()
+		modelCache[provider] = opts
+		modelCacheMu.Unlock()
+		return opts
 	}
 	return nil
 }

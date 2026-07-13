@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -63,11 +63,7 @@ func (g *CompletionGenerator) populateFlags() {
 }
 
 func (g *CompletionGenerator) populateProviders() {
-	providers := registry.All()
-	g.Providers = make([]string, 0, len(providers))
-	for _, provider := range providers {
-		g.Providers = append(g.Providers, provider.ProviderID)
-	}
+	g.Providers = hawkconfig.AllSetupGateways()
 }
 
 func (g *CompletionGenerator) populateModels() {

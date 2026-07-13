@@ -24,13 +24,13 @@ func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) 
 	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
-	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
+	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
 
 	sess := engine.NewSession("", "", "test", nil)
 	syncSessionFromPersistedSelection(sess)
 
-	if got := sess.Model(); got != "moonshotai/kimi-k2.6" {
-		t.Fatalf("model = %q, want moonshotai/kimi-k2.6", got)
+	if got := sess.Model(); got != "openai/gpt-4o" {
+		t.Fatalf("model = %q, want openai/gpt-4o", got)
 	}
 	if got := sess.Provider(); got != "openrouter" {
 		t.Fatalf("provider = %q, want openrouter", got)
@@ -51,7 +51,7 @@ func TestEnsureSessionReadyForChat_UsesPersistedModel(t *testing.T) {
 	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
-	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
+	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
 
 	m := &chatModel{session: engine.NewSession("", "", "test", nil)}
 	if err := m.ensureSessionReadyForChat(); err != nil {
@@ -96,7 +96,7 @@ func TestEnsureSessionReadyForChat_AppliesDeferredSystemContextOnce(t *testing.T
 	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
-	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
+	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
 
 	m := &chatModel{
 		session:                    engine.NewSession("", "", "base", nil),

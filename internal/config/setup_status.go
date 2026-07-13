@@ -3,8 +3,6 @@ package config
 import (
 	"context"
 	"strings"
-
-	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
 // SetupState is a single evaluation of first-run /config requirements.
@@ -20,8 +18,7 @@ func EvaluateSetup(ctx context.Context) SetupState {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	PrepareCredentialDiscovery(ctx)
-	return evaluateSetupFrom(runtime.HasConfiguredDeployment(ctx), HasSelectedModel())
+	return evaluateSetupFrom(HasConfiguredDeployment(ctx), HasSelectedModel())
 }
 
 // EvaluateSetupCached uses the in-memory credential snapshot (fast; for TUI hot paths).
@@ -53,7 +50,8 @@ func HasConfiguredDeployment(ctx context.Context) bool {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return runtime.HasConfiguredDeployment(ctx)
+	engine, err := newEyrieEngine()
+	return err == nil && engine.EffectiveSelection(ctx, SelectionOptions{}).HasConfiguredDeployment
 }
 
 // HasSelectedModel reports whether eyrie provider.json has a selected model.

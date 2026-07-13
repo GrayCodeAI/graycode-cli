@@ -77,8 +77,6 @@ func (m *mockClient) StreamChatContinue(ctx context.Context, messages []types.Ey
 	return &types.StreamResult{Events: ch}, nil
 }
 
-func (m *mockClient) SetAPIKey(provider, apiKey string) {}
-
 func (m *mockClient) callCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()

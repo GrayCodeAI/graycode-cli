@@ -35,7 +35,7 @@ Status note:
 - [x] no support repo imports `hawk/internal/*`
 - [x] no support repo imports removed `hawk/shared/types`
 - [x] no SDK/skills repo references support engines as primary dependencies
-- [x] Hawk production code imports `eyrie/client` only at the transport adapter edge
+- [x] Hawk production code imports Eyrie only through `eyrie/engine`
 
 ### `hawk-core-contracts` (implemented packages only)
 
@@ -56,9 +56,9 @@ Adoption bar:
 
 ### Hawk integration seams
 
-- [x] session persistence uses `hawk-core-contracts/tools`, not `eyrie/client` tool types
+- [x] session persistence uses `hawk-core-contracts/tools`, not lower-level provider tool types
 - [x] review persistence and inspect/review bridge paths use neutral `review` / `verify` contracts
-- [x] Hawk owns runtime transport DTOs in `internal/types` and adapts to `eyrie/client` at the edge
+- [x] Hawk owns runtime DTOs in `internal/types` and translates them to `eyrie/engine` in `internal/engine`
 - [x] `hawk trace ...` remains a Hawk-mounted subcommand, not a competing product surface
 
 ### Enforcement
@@ -106,7 +106,7 @@ Remove compatibility shims only when:
 From `hawk`:
 
 ```bash
-make ecosystem-guard contracts-guard eyrie-client-guard peer-guard
+make ecosystem-guard contracts-guard eyrie-client-guard eyrie-engine-guard peer-guard
 go test ./internal/testaudit/... -count=1
 go test ./... -count=1
 ```

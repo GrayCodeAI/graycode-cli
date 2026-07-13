@@ -30,7 +30,7 @@ func configureReadyChatState(t *testing.T) {
 	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := hawkconfig.SetActiveModel(ctx, "openrouter/auto"); err != nil {
+	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 	hawkconfig.InvalidateConfigUICache()
@@ -72,8 +72,8 @@ func TestChatModel_MultiTurnQueuedConversationE2E(t *testing.T) {
 	if got := m.session.Provider(); got != "openrouter" {
 		t.Fatalf("session provider = %q, want openrouter", got)
 	}
-	if got := m.session.Model(); got != "openrouter/auto" {
-		t.Fatalf("session model = %q, want openrouter/auto", got)
+	if got := m.session.Model(); got != "openai/gpt-4o" {
+		t.Fatalf("session model = %q, want openai/gpt-4o", got)
 	}
 	if count := countMessagesByRole(m.messages, "user"); count != 1 {
 		t.Fatalf("user message count after first enter = %d, want 1", count)

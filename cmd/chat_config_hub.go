@@ -5,7 +5,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/eyrie/catalog/registry"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -70,12 +69,7 @@ func catalogPricesAreStale(opts []configModelOption) bool {
 }
 
 func providerHasLiveFetcher(providerID string) bool {
-	for _, key := range registry.LiveFetcherKeys() {
-		if key == providerID {
-			return true
-		}
-	}
-	return false
+	return hawkconfig.GatewaySupportsLiveDiscovery(providerID)
 }
 
 func (m chatModel) returnToOllamaURLAfterError(err error) (chatModel, tea.Cmd) {

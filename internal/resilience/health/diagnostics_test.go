@@ -357,8 +357,8 @@ func TestCheckAPIKeySet(t *testing.T) {
 	if result.Status != "pass" {
 		t.Errorf("Expected pass when key is in store, got %q: %s", result.Status, result.Message)
 	}
-	if !strings.Contains(result.Message, "ANTHROPIC_API_KEY") {
-		t.Errorf("Expected message to mention ANTHROPIC_API_KEY, got %q", result.Message)
+	if !strings.Contains(result.Message, "anthropic") {
+		t.Errorf("Expected message to mention the configured gateway, got %q", result.Message)
 	}
 }
 

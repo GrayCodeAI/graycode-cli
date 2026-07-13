@@ -9,7 +9,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -25,7 +24,7 @@ func configModelChoices(opts []configModelOption, showProvider bool) []string {
 			label = shortModelID(opt.ID)
 		}
 		if showProvider {
-			if prov := hawkconfig.ProviderOfModel(opt.ID); prov != "" {
+			if prov := strings.TrimSpace(opt.ProviderID); prov != "" {
 				label = fmt.Sprintf("%-28s %s", label, prov)
 			}
 		}
@@ -275,6 +274,10 @@ func (m chatModel) configActiveModelID() string {
 }
 
 func modelOptionIsActive(opt configModelOption, activeModelID string) bool {
+	return modelOptionIsActiveResolved(opt, activeModelID, hawkconfig.CanonicalModelID(context.Background(), activeModelID))
+}
+
+func modelOptionIsActiveResolved(opt configModelOption, activeModelID, activeCanonicalID string) bool {
 	activeModelID = strings.TrimSpace(activeModelID)
 	if activeModelID == "" {
 		return false
@@ -282,12 +285,10 @@ func modelOptionIsActive(opt configModelOption, activeModelID string) bool {
 	if strings.EqualFold(strings.TrimSpace(opt.ID), activeModelID) {
 		return true
 	}
-	if compiled := hawkconfig.CompiledCatalogV1(); compiled != nil {
-		optCanon, optOK := compiled.CanonicalModelForAliasOrID(opt.ID)
-		activeCanon, activeOK := compiled.CanonicalModelForAliasOrID(activeModelID)
-		if optOK && activeOK && optCanon == activeCanon {
-			return true
-		}
+	optCanonical := strings.TrimSpace(opt.CanonicalID)
+	activeCanonicalID = strings.TrimSpace(activeCanonicalID)
+	if optCanonical != "" && optCanonical == activeCanonicalID {
+		return true
 	}
 	return false
 }
@@ -300,8 +301,9 @@ func (m chatModel) focusConfigActiveModelSelection() chatModel {
 		return m
 	}
 	activeID := m.configActiveModelID()
+	activeCanonicalID := hawkconfig.CanonicalModelID(context.Background(), activeID)
 	for i, opt := range opts {
-		if modelOptionIsActive(opt, activeID) {
+		if modelOptionIsActiveResolved(opt, activeID, activeCanonicalID) {
 			m.configSel = i
 			if m.configSel < configWindowSize {
 				m.configScroll = 0
@@ -339,6 +341,7 @@ func (m chatModel) configModelsBody() string {
 	total := len(opts)
 	allTotal := len(m.configModelOptions)
 	activeModelID := m.configActiveModelID()
+	activeCanonicalID := hawkconfig.CanonicalModelID(context.Background(), activeModelID)
 
 	if m.configSel < m.configScroll {
 		m.configScroll = m.configSel
@@ -355,7 +358,7 @@ func (m chatModel) configModelsBody() string {
 	visible := make([]modelTableRow, 0, end-m.configScroll)
 	for i := m.configScroll; i < end; i++ {
 		row := modelTableRowFromOption(opts[i])
-		row.Active = modelOptionIsActive(opts[i], activeModelID)
+		row.Active = modelOptionIsActiveResolved(opts[i], activeModelID, activeCanonicalID)
 		visible = append(visible, row)
 	}
 	layout := computeModelTableLayout(m.configPanelViewWidth(), visible)
@@ -391,7 +394,7 @@ func (m chatModel) configModelsBody() string {
 
 	for i := m.configScroll; i < end; i++ {
 		row := modelTableRowFromOption(opts[i])
-		row.Active = modelOptionIsActive(opts[i], activeModelID)
+		row.Active = modelOptionIsActiveResolved(opts[i], activeModelID, activeCanonicalID)
 		cursor := i == m.configSel
 		b.WriteString(renderModelTableRow(row, cursor, row.Active, layout, rowStyle, cursorStyle, activeStyle, metaStyle, freeStyle) + "\n")
 	}
@@ -531,9 +534,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		m.configPostSaveKeysProvider = providerName
 		m.configSaving = true
 		notice := fmt.Sprintf("Validating key for %s…", inference.DisplayName)
-		if hint := xiaomi.KeyMismatchHint(xiaomi.BillingTokenPlan, value); providerName == hawkconfig.ProviderXiaomiTokenPlan && hint != "" {
-			notice = hint + " · " + notice
-		} else if hint := xiaomi.KeyMismatchHint(xiaomi.BillingPayAsYouGo, value); providerName == xiaomi.ProviderPayAsYouGo && hint != "" {
+		if hint := hawkconfig.CredentialGuidance(providerName, value); hint != "" {
 			notice = hint + " · " + notice
 		}
 		m.configNotice = notice
@@ -805,7 +806,8 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	if m.configSel < 0 || m.configSel >= len(opts) {
 		return m, nil
 	}
-	modelID := opts[m.configSel].ID
+	selected := opts[m.configSel]
+	modelID := selected.ID
 	if err := hawkconfig.SetGlobalSetting("model", modelID); err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m.closeConfigPanel(), nil
@@ -813,7 +815,9 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	m.session.SetModel(modelID)
 	if gw := strings.TrimSpace(m.configModelProvider); gw != "" {
 		_ = hawkconfig.SetGlobalSetting("provider", gw)
-	} else if prov := hawkconfig.ProviderOfModel(modelID); prov != "" {
+	} else if gw := strings.TrimSpace(selected.GatewayID); gw != "" {
+		_ = hawkconfig.SetGlobalSetting("provider", gw)
+	} else if prov := strings.TrimSpace(selected.ProviderID); prov != "" {
 		_ = hawkconfig.SetGlobalSetting("provider", prov)
 	}
 	m.syncSessionSelection()

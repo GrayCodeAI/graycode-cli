@@ -3,6 +3,8 @@ package cmd
 import (
 	"strings"
 	"testing"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestFormatModelTablePrice(t *testing.T) {
@@ -69,6 +71,17 @@ func TestModelTableRowFromOptionUnknownPrice(t *testing.T) {
 	})
 	if row.Price != "—" || row.Free {
 		t.Fatalf("row = %+v", row)
+	}
+}
+
+func TestModelTableOwnerFallback(t *testing.T) {
+	option := modelTableRowFromOption(configModelOption{ProviderID: "deployment", GatewayID: "gateway"})
+	if option.Provider != "deployment" {
+		t.Fatalf("option provider = %q, want deployment", option.Provider)
+	}
+	entry := modelTableRowFromCatalogEntry(hawkconfig.EngineModel{GatewayID: "gateway"})
+	if entry.Provider != "gateway" {
+		t.Fatalf("entry provider = %q, want gateway", entry.Provider)
 	}
 }
 

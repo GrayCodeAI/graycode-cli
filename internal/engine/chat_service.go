@@ -8,14 +8,12 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/types"
-
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // ChatService is the Session's view of the LLM transport. It owns the
-// eyrie client, the provider/model identity, API keys, the circuit-breaker
-// router, the rate limiter, and the streaming-with-continuation retry
-// logic. It is constructed once in NewSessionWithClient and consulted by
+// Eyrie client, provider/model identity, and compatibility-only rate/retry
+// controls. Production facade clients own resilience inside Eyrie. The service
+// is constructed once in NewSessionWithClient and consulted by
 // agentLoop every turn.
 //
 // Extracted from Session in the god-object decomposition. Session now
@@ -28,12 +26,6 @@ type ChatService struct {
 	// provider / model are the active LLM identity.
 	provider string
 	model    string
-	// apiKeys is provider→key, used for legacy single-provider clients.
-	apiKeys map[string]string
-	// router is the legacy single-provider circuit breaker. Bypassed
-	// when DeploymentRouting is true (the DeploymentRouter has its own
-	// per-deployment breakers).
-	router *modelPkg.Router
 	// deploymentRouting is true when the client is catalog-backed
 	// (e.g. DeploymentRouter from eyrie/runtime.ChatProvider).
 	deploymentRouting bool
@@ -59,8 +51,6 @@ type ChatService struct {
 type ChatServiceConfig struct {
 	Provider           string
 	Model              string
-	APIKeys            map[string]string
-	Router             *modelPkg.Router
 	DeploymentRouting  bool
 	RateLimiter        *ratelimit.Limiter
 	Metrics            *metrics.Registry
@@ -73,9 +63,6 @@ type ChatServiceConfig struct {
 // NewChatService constructs a ChatService with sensible defaults for any
 // zero-valued field in cfg. The client must be non-nil.
 func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
-	if cfg.APIKeys == nil {
-		cfg.APIKeys = map[string]string{}
-	}
 	if cfg.RetryConfig.MaxRetries == 0 {
 		cfg.RetryConfig = retry.DefaultConfig()
 		cfg.RetryConfig.MaxRetries = 2
@@ -91,8 +78,6 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 		client:             client,
 		provider:           cfg.Provider,
 		model:              cfg.Model,
-		apiKeys:            cfg.APIKeys,
-		router:             cfg.Router,
 		deploymentRouting:  cfg.DeploymentRouting,
 		rateLimiter:        cfg.RateLimiter,
 		metrics:            cfg.Metrics,
@@ -114,18 +99,9 @@ func (c *ChatService) Provider() string { return c.provider }
 // Model returns the active model identifier.
 func (c *ChatService) Model() string { return c.model }
 
-// APIKeys returns the provider→key map. Used by Session.SubSession to
-// clone credentials for sub-agents.
-func (c *ChatService) APIKeys() map[string]string { return c.apiKeys }
-
 // DeploymentRouting reports whether the underlying client is catalog-backed
 // (true) or a single-provider transport (false).
 func (c *ChatService) DeploymentRouting() bool { return c.deploymentRouting }
-
-// SetAPIKey stores a provider→key mapping.
-func (c *ChatService) SetAPIKey(provider, key string) {
-	c.apiKeys[provider] = key
-}
 
 // SetModel updates the active model. The next StreamChat will use the new
 // model.
@@ -139,7 +115,7 @@ func (c *ChatService) SetProvider(provider string) {
 }
 
 // Reattach swaps the underlying client (e.g. after deployment routing
-// changes). Preserves the APIKeys and other config.
+// changes).
 func (c *ChatService) Reattach(client ChatClient, provider string) {
 	if client == nil {
 		return
@@ -183,13 +159,14 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 // with whatever partial state the upstream had emitted (caller should
 // check ctx.Err()).
 //
-// Note: the ChatService intentionally does NOT touch the legacy circuit-
-// breaker router on success/failure. The Session-level agent loop
-// (stream.go) is responsible for that recording, because it has the full
-// apiStart timestamp it wants to feed to Router.RecordSuccess. Putting
-// that responsibility here would either duplicate the call or force the
-// service to invent a "started at" argument that doesn't otherwise exist.
+// Eyrie facade clients advertise that they manage provider resilience. For
+// those clients this service records the product metric and delegates exactly
+// once; injected legacy clients retain Hawk's compatibility retry/rate layer.
 func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
+	if clientManagesResilience(c.client) {
+		c.metrics.Counter("api.requests").Inc()
+		return c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
+	}
 	// Rate limit: wait for a token before making the LLM call
 	if c.rateLimiter != nil {
 		if waitErr := c.rateLimiter.Wait(ctx); waitErr != nil {
@@ -247,10 +224,6 @@ func isZAIProvider(provider string) bool {
 		return false
 	}
 }
-
-// Router returns the legacy single-provider circuit breaker. New
-// code should access this through s.ChatLLM().Router().
-func (c *ChatService) Router() *modelPkg.Router { return c.router }
 
 func indexOf(s, sub string) int {
 	for i := 0; i+len(sub) <= len(s); i++ {

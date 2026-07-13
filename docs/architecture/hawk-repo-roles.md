@@ -14,6 +14,7 @@ Owns:
 - tool execution flow
 - policy and permissions
 - engine coordination
+- user-facing model/configuration presentation and stable CLI schemas
 
 Hawk is the only primary product surface. Users interact with Hawk, not with six
 separate end-user products.
@@ -21,7 +22,10 @@ separate end-user products.
 ## Support engines
 
 ### `eyrie`
-Hawk runtime and provider execution engine.
+Hawk provider engine. Its public host boundary is `eyrie/engine`, which owns
+credentials, provider state, catalog discovery, model/deployment selection,
+transport, resilience, and normalized generation/streaming. Hawk production
+code has zero imports of Eyrie's lower-level packages.
 
 ### `yaad`
 Hawk memory engine.

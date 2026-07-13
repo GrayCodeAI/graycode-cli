@@ -15,17 +15,13 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/setup"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-func fetchModelsViaRuntime(ctx context.Context, provider string) ([]catalog.ModelCatalogEntry, error) {
-	return runtime.ModelsForProvider(ctx, provider)
+func fetchModelsViaRuntime(ctx context.Context, provider string) ([]EngineModel, error) {
+	return ListEngineModels(ctx, provider, false)
 }
 
 // Settings holds hawk configuration.
@@ -402,10 +398,10 @@ func SetGlobalSetting(key, value string) error {
 	normalized := normalizeSettingKey(key)
 	// Hawk: reject API key persistence to disk
 	if _, ok := apiKeyProviderFromSettingKey(normalized); ok {
-		return fmt.Errorf("API keys are not stored in settings.json. Save via /config (%s)", credentials.PlatformSecretStoreName())
+		return fmt.Errorf("API keys are not stored in settings.json. Save via /config (%s)", CredentialStoreName())
 	}
 	if normalized == "apikey" {
-		return fmt.Errorf("API keys are not stored in settings.json. Save via /config (%s)", credentials.PlatformSecretStoreName())
+		return fmt.Errorf("API keys are not stored in settings.json. Save via /config (%s)", CredentialStoreName())
 	}
 	switch normalized {
 	case "model":
@@ -526,29 +522,24 @@ func ProviderAPIKeyEnv(provider string) string {
 	if env := SetupGatewayCredentialEnv(provider); env != "" {
 		return env
 	}
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
-		return ""
-	}
-	return catalog.PrimaryAPIKeyEnvForProvider(compiled, runtime.CatalogProviderID(provider))
+	return ""
 }
 
 // EnvKeyStatus returns set, empty, or local from the OS credential store.
 func EnvKeyStatus(provider string) string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return "empty"
 	}
-	provider = runtime.CatalogProviderID(provider)
-	envs := catalog.APIKeyEnvsForProvider(compiled, provider)
-	if len(envs) == 0 {
-		return "local"
+	status, err := engine.CredentialStatus(context.Background(), provider)
+	if err != nil {
+		return "empty"
 	}
-	ctx := context.Background()
-	for _, env := range envs {
-		if credentials.HasSecret(ctx, env) {
-			return "set"
-		}
+	if status.Configured {
+		return "set"
+	}
+	if strings.TrimSpace(status.EnvVar) == "" {
+		return "local"
 	}
 	return "empty"
 }
@@ -568,43 +559,16 @@ func AllEnvKeyStatus() string {
 	return strings.Join(parts, ", ")
 }
 
-// LoadAPIKeysFromStore reads API keys for all eyrie catalog providers from the OS secret store.
-func LoadAPIKeysFromStore() map[string]string {
-	keys := make(map[string]string)
-	for _, p := range AllCatalogProviders() {
-		if v := APIKeyForProvider(p); v != "" {
-			keys[p] = v
-		}
-	}
-	return keys
-}
-
-// APIKeyForProvider reads the API key for a provider from the OS secret store.
-func APIKeyForProvider(provider string) string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
-		return ""
-	}
-	provider = runtime.CatalogProviderID(provider)
-	ctx := context.Background()
-	for _, env := range catalog.APIKeyEnvsForProvider(compiled, provider) {
-		if v := credentials.LookupSecret(ctx, env); v != "" {
-			return v
-		}
-	}
-	for _, env := range runtime.CredentialEnvKeys(provider) {
-		if v := credentials.LookupSecret(ctx, env); v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
 func providerCredentialEnvAliases(provider string) []string {
 	primary := strings.TrimSpace(ProviderAPIKeyEnv(provider))
 	seen := map[string]bool{}
 	var out []string
-	for _, env := range runtime.CredentialEnvKeys(provider) {
+	engine, _ := newEyrieEngine()
+	var aliases []string
+	if engine != nil {
+		aliases = engine.CredentialEnvKeys(provider)
+	}
+	for _, env := range aliases {
 		env = strings.TrimSpace(env)
 		if env == "" || env == primary || seen[env] {
 			continue
@@ -621,8 +585,8 @@ func providerCredentialEnvAliases(provider string) []string {
 
 // FetchModelsForProvider returns models from the eyrie catalog (dynamic; no hawk hardcoded lists).
 // RefreshModelCatalogV1 is the explicit network refresh boundary.
-func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error) {
-	provider = runtime.CatalogProviderID(provider)
+func FetchModelsForProvider(provider string) ([]EngineModel, error) {
+	provider = eyrieengine.NormalizeProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
@@ -639,11 +603,11 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 	}
 	// Custom OpenAI-compatible providers: single model from settings, not hawk catalog data.
 	for _, cp := range LoadSettings().CustomProviders {
-		if runtime.ActiveProviderID(cp.Name) != provider {
+		if eyrieengine.NormalizeProviderID(cp.Name) != provider {
 			continue
 		}
 		if id := strings.TrimSpace(cp.Model); id != "" {
-			return []catalog.ModelCatalogEntry{{
+			return []EngineModel{{
 				ID:          id,
 				DisplayName: id,
 			}}, nil
@@ -652,10 +616,36 @@ func FetchModelsForProvider(provider string) ([]catalog.ModelCatalogEntry, error
 	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog (check API keys; hawk will refresh automatically on next start)", provider)
 }
 
-func refreshModelCatalog(ctx context.Context, force bool) (*catalog.RefreshResult, error) {
-	return setup.DiscoverModelCatalogWithOptions(ctx, eyriecfg.DiscoveryCredentials(ctx), setup.DiscoverModelCatalogOptions{
-		ForceRefresh: force,
-	})
+// FetchModelsForProviderWithSettings resolves cached models using one
+// invocation's effective settings, including its custom gateways.
+func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, provider string) ([]EngineModel, error) {
+	provider = eyrieengine.NormalizeProviderID(provider)
+	if provider == "" {
+		return nil, fmt.Errorf("no provider specified")
+	}
+	engine, engineErr := NewEyrieEngineForSettings(settings)
+	if engineErr != nil {
+		return nil, engineErr
+	}
+	models, err := engine.ListModels(ctx, provider, false)
+	if err == nil && len(models) > 0 {
+		return models, nil
+	}
+	if refreshed, refreshErr := engine.ListModels(ctx, provider, true); refreshErr == nil && len(refreshed) > 0 {
+		return refreshed, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog", provider)
+}
+
+func refreshModelCatalog(ctx context.Context, _ bool) (eyrieengine.CatalogSnapshot, error) {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return eyrieengine.CatalogSnapshot{}, err
+	}
+	return engine.RefreshCatalog(ctx, "")
 }
 
 // RefreshModelCatalogV1 asks eyrie to refresh the remote catalog and provider APIs using env API keys.
@@ -667,19 +657,21 @@ func RefreshModelCatalogV1(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return result.DiscoverReport(), nil
+	return formatCatalogSnapshot(result), nil
 }
 
-func loadEyrieCatalogV1(ctx context.Context, refreshRemote bool) (*catalog.CompiledCatalog, error) {
-	if refreshRemote {
-		result, err := setup.DiscoverModelCatalog(ctx, eyriecfg.DiscoveryCredentials(ctx))
-		if err != nil {
-			return nil, err
-		}
-		return result.Compiled, nil
+// RefreshModelCatalogV1WithSettings refreshes through an invocation-scoped
+// engine, so --settings custom gateways participate without global state.
+func RefreshModelCatalogV1WithSettings(ctx context.Context, settings Settings) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	engine, err := NewEyrieEngineForSettings(settings)
+	if err != nil {
+		return "", err
 	}
-	return catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
-		CachePath:    catalog.DefaultCachePath(),
-		RequireCache: false,
-	})
+	result, err := engine.RefreshCatalog(ctx, "")
+	if err != nil {
+		return "", err
+	}
+	return formatCatalogSnapshot(result), nil
 }

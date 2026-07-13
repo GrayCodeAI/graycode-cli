@@ -4,11 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
-	selection := runtime.SelectionState{
+	selection := eyrieengine.Selection{
 		Provider:          "openrouter",
 		Model:             "openrouter/auto",
 		DeploymentRouting: false,
@@ -23,8 +25,23 @@ func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
 	}
 }
 
+func TestBuildChatClientForSettingsComposesCustomGateway(t *testing.T) {
+	settings := hawkconfig.Settings{CustomProviders: []hawkconfig.CustomProviderConfig{{
+		Name: "private-gateway", BaseURL: "https://private.example.test/v1",
+		APIKeyEnv: "PRIVATE_GATEWAY_API_KEY", Model: "private/model-v1",
+	}}}
+	selection := eyrieengine.Selection{Provider: "private-gateway", Model: "private/model-v1"}
+	client, label, deployment, err := BuildChatClientForSettings(context.Background(), settings, selection, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil || label != "private-gateway" || !deployment {
+		t.Fatalf("client=%T label=%q deployment=%v", client, label, deployment)
+	}
+}
+
 func TestNewHawkSession_FallsBackToCallerModelWhenSelectionEmpty(t *testing.T) {
-	selection := runtime.SelectionState{
+	selection := eyrieengine.Selection{
 		Provider:          "openrouter",
 		DeploymentRouting: false,
 	}

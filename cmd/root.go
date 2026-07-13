@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
@@ -64,6 +63,7 @@ var (
 	noContainer                bool
 	recoverFlag                bool
 	startupProfileFlag         bool
+	preflightLiveFlag          bool
 )
 
 var (
@@ -111,7 +111,6 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		// Defer credential migration until chat/print (keeps cold paths fast).
-		hawkconfig.PrepareCredentialDiscovery(context.Background())
 		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 
 		if settings, err := loadEffectiveSettings(); err == nil {
@@ -227,6 +226,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
+	preflightCmd.Flags().BoolVar(&preflightLiveFlag, "live", false, "verify selected provider connectivity and authentication")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(initCmd)
@@ -384,11 +384,31 @@ var doctorCmd = &cobra.Command{
 
 var preflightCmd = &cobra.Command{
 	Use:   "preflight",
-	Short: "Check hawk is ready to chat (catalog, credentials, model)",
+	Short: "Check local readiness; use --live to verify the selected provider",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r := runtime.Preflight(context.Background())
-		cmd.Println(runtime.FormatPreflightReport(r))
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			return err
+		}
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if preflightLiveFlag {
+			limit := timeout
+			if limit <= 0 {
+				limit = 15 * time.Second
+			}
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, limit)
+			defer cancel()
+		}
+		r := hawkconfig.EnginePreflightReportWithSettings(ctx, settings, hawkconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
+		cmd.Println(hawkconfig.FormatEnginePreflight(r))
 		if !r.Ready {
+			if preflightLiveFlag {
+				return fmt.Errorf("live preflight failed — check the selected provider credential and network access")
+			}
 			return fmt.Errorf("preflight failed — run hawk and complete /config")
 		}
 		return nil
@@ -449,7 +469,11 @@ var configCmd = &cobra.Command{
 				if len(args) < 2 {
 					return fmt.Errorf("usage: hawk config routing-preview <model>")
 				}
-				out, err := hawkconfig.RoutingPreviewJSON(context.Background(), strings.Join(args[1:], " "))
+				settings, err := loadEffectiveSettings()
+				if err != nil {
+					return err
+				}
+				out, err := hawkconfig.RoutingPreviewJSONWithSettings(cmd.Context(), settings, strings.Join(args[1:], " "))
 				if err != nil {
 					return err
 				}
