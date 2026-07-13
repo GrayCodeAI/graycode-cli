@@ -8,8 +8,6 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine/cost"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
-
-	eycatalog "github.com/GrayCodeAI/eyrie/catalog"
 )
 
 // CascadeRouter selects the optimal model for each request based on task complexity.
@@ -218,12 +216,12 @@ func (cr *CascadeRouter) modelForTask(taskType string, frugal bool) string {
 	tier := routing.SuggestTierForTask(taskType)
 
 	switch tier {
-	case eycatalog.TierHaiku:
+	case routing.TierHaiku:
 		if m := cr.Roles.Commit; m != "" {
 			return m
 		}
 		return cr.defaultFor(TierCheap)
-	case eycatalog.TierSonnet:
+	case routing.TierSonnet:
 		if frugal {
 			if taskType == "chat" || taskType == "review" {
 				if m := cr.Roles.Commit; m != "" {
@@ -236,7 +234,7 @@ func (cr *CascadeRouter) modelForTask(taskType string, frugal bool) string {
 			return m
 		}
 		return cr.defaultFor(TierMid)
-	case eycatalog.TierOpus:
+	case routing.TierOpus:
 		if frugal {
 			if m := cr.Roles.Coder; m != "" {
 				return m
@@ -264,7 +262,7 @@ func (cr *CascadeRouter) defaultFor(tier ModelTier) string {
 	case TierExpensive:
 		return routing.MostExpensiveForProvider(provider, cr.pick(""))
 	default:
-		return routing.PreferredModelForTier(provider, eycatalog.TierSonnet, cr.pick(""))
+		return routing.PreferredModelForTier(provider, routing.TierSonnet, cr.pick(""))
 	}
 }
 

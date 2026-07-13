@@ -59,15 +59,6 @@ var getEnvExemptions = map[string]bool{
 	"tool/web_search_searxng.go": true, // SEARXNG_URL
 }
 
-// Direct eyrie/client imports are only allowed at the Hawk transport adapter edge
-// and in a small number of tests that explicitly exercise provider mocks.
-var eyrieClientImportExemptions = map[string]bool{
-	"internal/types/client.go":                true,
-	"internal/types/client_test.go":           true,
-	"internal/bridge/sight/bridge.go":         true,
-	"internal/engine/subagent_synthesis_test": true,
-}
-
 // TestNoRawPanicInInternal verifies that no non-test .go file in internal/
 // calls panic() outside of init() functions.
 func TestNoRawPanicInInternal(t *testing.T) {
@@ -193,9 +184,9 @@ func TestNoDirectOsGetenvInInternal(t *testing.T) {
 	t.Logf("Total os.Getenv violations in internal/: %d (logged as tech debt)", violationCount)
 }
 
-// TestNoDirectEyrieClientImportsOutsideAdapters verifies Hawk does not bypass
-// its own transport seam by importing eyrie/client directly in production code.
-func TestNoDirectEyrieClientImportsOutsideAdapters(t *testing.T) {
+// TestNoDirectLowerEyrieImports verifies production Hawk code uses only
+// Eyrie's stable engine facade. Tests may import lower packages for fixtures.
+func TestNoDirectLowerEyrieImports(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
 		filepath.Join(root, "internal"),
@@ -206,16 +197,18 @@ func TestNoDirectEyrieClientImportsOutsideAdapters(t *testing.T) {
 		files := parseGoFiles(t, dir)
 		for _, pf := range files {
 			rel := relPath(root, pf.Path)
-			if isExemptPackage(rel, eyrieClientImportExemptions) {
+			if strings.HasSuffix(rel, "_test.go") {
 				continue
 			}
 			for _, imp := range pf.File.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if path != "github.com/GrayCodeAI/eyrie/client" {
+				if !strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/") ||
+					path == "github.com/GrayCodeAI/eyrie/engine" ||
+					strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/engine/") {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct eyrie/client import at %s:%d; go through internal/types transport adapters instead", rel, pos.Line)
+				t.Fatalf("forbidden lower-level Eyrie import %q at %s:%d; use github.com/GrayCodeAI/eyrie/engine", path, rel, pos.Line)
 			}
 		}
 	}
@@ -247,7 +240,7 @@ func TestNoLazyProviderConstructionInHawk(t *testing.T) {
 					return true
 				}
 				pos := pf.FSet.Position(call.Pos())
-				t.Fatalf("forbidden eyrie lazy provider construction at %s:%d; use runtime.ResolveChatTransport", rel, pos.Line)
+				t.Fatalf("forbidden eyrie lazy provider construction at %s:%d; use the eyrie/engine facade", rel, pos.Line)
 				return true
 			})
 		}
@@ -336,7 +329,7 @@ var legacySessionFields = []string{
 	"Memory", "YaadBridge", "EnhancedMemory",
 	"Cascade", "Lifecycle", "Reflector", "CostTracker",
 	"Autonomy", "Sandbox", "Plan", "Beliefs", "Critic", "Backtrack",
-	"Limits", "Trajectory", "Shadow", "Snapshots", "ConvoDAG",
+	"Limits", "Trajectory", "Shadow", "Snapshots", "ConversationGraph",
 	"Sleeptime", "Activity", "SkillDistiller", "Tracer",
 	"LintLoop", "TestLoop", "FileMentions", "ResponseCache",
 	"Pipeline", "Files", "Steering", "RateLimiter", "AgentsAccum",
@@ -346,7 +339,7 @@ var legacySessionFields = []string{
 	"AutoCompactThresholdPct", "ContextWindowCached",
 	"AutoCompactor", "persistID", "lastPromptTokens",
 	"lastCompletionTokens", "checkpointMgr", "OnCompaction",
-	"Router", "apiKeys", "provider", "model", "system",
+	"Router", "provider", "model", "system",
 	"Cost", "ContainerExecutor", "ContainerRequired",
 	"DeploymentRouting",
 }

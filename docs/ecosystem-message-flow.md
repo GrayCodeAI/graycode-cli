@@ -26,9 +26,10 @@ User prompt (TUI or hawk exec)
           │
           ▼
 ┌───────────────────┐     ┌─────────────┐
-│  eyrie ChatClient  │────►│ LLM API     │  catalog, keychain, routing
-│  (stream loop)     │     │ (provider)  │
-└─────────┬─────────┘     └─────────────┘
+│  Hawk ChatClient   │────►│ eyrie/engine│  catalog, credentials, routing
+│  port + adapter    │     │ generate/   │────► provider API
+└─────────┬─────────┘     │ stream      │
+                          └─────────────┘
           │
           ▼
     Tool calls (Read, Edit, Bash, CoreMemory*, …)
@@ -49,7 +50,10 @@ User prompt (TUI or hawk exec)
 
 ### 1. Session start (`hawk` or `hawk exec`)
 
-- **eyrie**: Loads `~/.hawk/provider.json`, keychain credentials, and `~/.eyrie/model_catalog.json`. Builds `ChatClient` via `engine.BuildChatClient`.
+- **eyrie**: The Hawk composition root creates an `eyrie/engine.Engine` with
+  Eyrie-owned state paths, an injected secret store, and per-engine custom
+  gateway metadata. The engine loads provider state and the model catalog, then
+  builds transport behind Hawk's `ChatClient` port.
 - **yaad**: `configureSession` creates `YaadBridge` → opens `~/.yaad/data/yaad.db`. If missing, hawk runs without persistent memory.
 - **tok**: No startup step — linked at compile time.
 
@@ -64,7 +68,8 @@ User prompt (TUI or hawk exec)
 Each turn:
 
 1. **yaad** — recall memories matching the latest user message (token budget ~2000).
-2. **eyrie** — `client.Chat` / streaming with tool definitions from `tool.EyrieTools`.
+2. **eyrie** — Hawk's adapter calls engine generate/stream with Hawk-owned tool
+   definitions; Eyrie normalizes provider events and tool requests.
 3. Tools run with `YaadBridge` in context for `CoreMemory*` tools.
 4. **yaad** — sleeptime consolidation, skill distillation, auto-remember after turns.
 
@@ -97,3 +102,8 @@ hawk yaad                # inspect memory graph
 
 Pinned support-repo submodules live under `external/{eyrie,yaad,tok}` and are
 wired via root `go.work`.
+
+Production Hawk code imports Eyrie only through `eyrie/engine`. Conversation
+history, WAL/resume, permissions, and tool execution remain in Hawk; provider
+credentials, discovery, selection, transport, resilience, and normalized
+streaming remain in Eyrie.

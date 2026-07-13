@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +19,6 @@ var credentialsStatusCmd = &cobra.Command{
 	Short: "Show where API keys are stored",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		hawkconfig.PrepareCredentialDiscovery(ctx)
 		cmd.Println(hawkconfig.FormatCredentialCLIStatus(ctx))
 		return nil
 	},
@@ -36,7 +34,7 @@ var credentialsRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Removed %d key(s) from %s: %s\n", len(removed), credentials.PlatformSecretStoreName(), strings.Join(removed, ", "))
+		cmd.Printf("Removed %d key(s) from %s: %s\n", len(removed), hawkconfig.CredentialStoreName(), strings.Join(removed, ", "))
 		return nil
 	},
 }
@@ -46,18 +44,18 @@ var credentialsMigrateCmd = &cobra.Command{
 	Short: "Import legacy plaintext credential files into the OS secret store",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		ok, detail := credentials.KeychainWriteAvailable(ctx)
-		if !ok {
-			return fmt.Errorf("cannot migrate: %s", detail)
+		storage := hawkconfig.CredentialStorageStatus(ctx)
+		if !storage.Writable {
+			return fmt.Errorf("cannot migrate: %s", storage.Detail)
 		}
-		n, err := credentials.MigrateLegacyEnvFile(ctx)
+		n, err := hawkconfig.MigrateLegacyCredentials(ctx)
 		if err != nil {
 			return err
 		}
 		if n == 0 {
 			cmd.Println("No legacy credential files found (already using secure storage).")
 		} else {
-			cmd.Printf("Migrated %d key(s) to %s and removed legacy credential files.\n", n, credentials.PlatformSecretStoreName())
+			cmd.Printf("Migrated %d key(s) to %s and removed legacy credential files.\n", n, hawkconfig.CredentialStoreName())
 		}
 		return nil
 	},

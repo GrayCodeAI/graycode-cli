@@ -11,10 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	eyrieruntime "github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
@@ -25,7 +21,12 @@ import (
 )
 
 func doctorReport(settings hawkconfig.Settings) string {
-	modelName, providerName := effectiveModelAndProvider(settings)
+	// Diagnostics must report the requested/effective selection even when its
+	// credential is missing; readiness and health sections explain why it is
+	// not yet usable. Hiding it as auto/default makes misconfiguration harder
+	// to diagnose.
+	selection := resolveSelection(settings)
+	modelName, providerName := selection.Model, selection.Provider
 	if providerName == "" {
 		providerName = "auto"
 	}
@@ -60,14 +61,15 @@ func doctorReport(settings hawkconfig.Settings) string {
 			b.WriteString(fmt.Sprintf("  %s: not checked out\n", repo))
 		}
 	}
-	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), provider, modelName) + "\n")
+	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName) + "\n")
 	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
-	b.WriteString("\n" + eyrieruntime.FormatPreflightReport(eyrieruntime.Preflight(context.Background())) + "\n")
-	b.WriteString("\n" + credentials.FormatStorageReport(credentials.StorageReportFor(context.Background())) + "\n")
-	if deployReport, err := hawkconfig.DeploymentStatusReport(context.Background(), modelName); err == nil {
+	preflight := hawkconfig.EnginePreflightReportWithSettings(context.Background(), settings, hawkconfig.EnginePreflightOptions{})
+	b.WriteString("\n" + hawkconfig.FormatEnginePreflight(preflight) + "\n")
+	b.WriteString("\n" + hawkconfig.CredentialStorageStatus(context.Background()).Formatted + "\n")
+	if deployReport, err := hawkconfig.DeploymentStatusReportWithSettings(context.Background(), settings, modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
 	}
-	b.WriteString("\n" + envSummaryWithSelection(provider, modelName, false) + "\n")
+	b.WriteString("\n" + envSummaryWithSelection(providerName, modelName, false) + "\n")
 	b.WriteString("\nGit:\n")
 	if branch := branchSummary(); branch != "" {
 		for _, line := range strings.Split(branch, "\n") {
@@ -102,17 +104,14 @@ func doctorReport(settings hawkconfig.Settings) string {
 		b.WriteString("\nInterrupted sessions: none\n")
 	}
 
-	b.WriteString("\n" + healthCheckReport(settings, provider) + "\n")
+	b.WriteString("\n" + healthCheckReport(settings, providerName) + "\n")
 	return strings.TrimRight(b.String(), "\n")
 }
 
 func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 	registry := health.NewRegistry()
 
-	ctx := context.Background()
-	apiKeyEnv := primaryAPIKeyEnvForProvider(ctx, provider)
-	apiKey := credentials.LookupSecret(ctx, apiKeyEnv)
-	registry.Register("api_key", health.APIKeyChecker(provider, apiKey))
+	registry.Register("api_key", providerCredentialHealthChecker(provider))
 
 	// Settings validation
 	registry.Register("config", func(ctx context.Context) health.Check {
@@ -178,19 +177,43 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func primaryAPIKeyEnvForProvider(ctx context.Context, provider string) string {
+func providerCredentialHealthChecker(provider string) health.Checker {
+	return func(ctx context.Context) health.Check {
+		start := time.Now()
+		providerID := diagnosticsProvider(ctx, provider)
+		name := "api_key"
+		label := "Provider"
+		if providerID != "" {
+			name = providerID + "_api_key"
+			label = providerID
+		}
+
+		status := health.Unhealthy
+		message := label + " credential not configured"
+		if providerID != "" && hawkconfig.HasStoredCredentialForProvider(ctx, providerID) {
+			status = health.Healthy
+			message = label + " credential configured"
+		}
+		checkedAt := time.Now()
+		return health.Check{
+			Name:        name,
+			Status:      status,
+			Message:     message,
+			LastChecked: checkedAt,
+			Duration:    checkedAt.Sub(start),
+		}
+	}
+}
+
+func diagnosticsProvider(ctx context.Context, provider string) string {
 	provider = strings.TrimSpace(provider)
-	if provider == "" || provider == "auto" {
-		provider = strings.TrimSpace(hawkconfig.ActiveProvider(ctx))
+	if provider == "" || strings.EqualFold(provider, "auto") {
+		provider = strings.TrimSpace(hawkconfig.ActiveGateway(ctx))
+		if provider == "" || strings.EqualFold(provider, "auto") {
+			provider = strings.TrimSpace(hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{}).Provider)
+		}
 	}
-	if provider == "" {
-		return ""
-	}
-	compiled, err := setup.LoadCompiledCatalog(ctx)
-	if err != nil || compiled == nil {
-		return ""
-	}
-	return catalog.PrimaryAPIKeyEnvForProvider(compiled, provider)
+	return hawkconfig.ActiveProviderID(provider)
 }
 
 func settingsSummary(settings hawkconfig.Settings) string {

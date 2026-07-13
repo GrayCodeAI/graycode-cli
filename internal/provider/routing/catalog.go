@@ -1,6 +1,6 @@
-// Package routing provides model routing and health checking.
-// Model discovery, pricing, and catalog data are delegated to eyrie.
-// Hawk does NOT carry a hardcoded model catalog.
+// Package routing provides Hawk-owned task routing and health policy. Model
+// discovery, pricing, provider ownership, and catalog policy are delegated to
+// Eyrie's host-neutral engine facade.
 package routing
 
 import (
@@ -8,10 +8,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
-// ModelInfo describes a known LLM model (view over eyrie catalog entries).
+// ModelInfo is Hawk's product-facing view of Eyrie model metadata.
 type ModelInfo struct {
 	Name        string  `json:"name"`
 	Provider    string  `json:"provider"`
@@ -23,78 +23,57 @@ type ModelInfo struct {
 }
 
 var (
-	catalogOnce   sync.Once
-	cachedCatalog *catalog.CompiledCatalog
+	modelEngineOnce sync.Once
+	modelEngine     *eyrieengine.Engine
 )
 
-func eyrieCatalog() *catalog.CompiledCatalog {
-	catalogOnce.Do(func() {
-		compiled, err := catalog.LoadCatalog(context.Background(), catalog.LoadCatalogOptions{
-			CachePath:    catalog.DefaultCachePath(),
-			RequireCache: false,
-		})
-		if err != nil {
-			return
-		}
-		cachedCatalog = compiled
+func eyrieModelEngine() *eyrieengine.Engine {
+	modelEngineOnce.Do(func() {
+		modelEngine, _ = eyrieengine.New(eyrieengine.Options{})
 	})
-	return cachedCatalog
+	return modelEngine
 }
 
-func fromEyrie(model catalog.Model, offering catalog.ModelOffering) ModelInfo {
-	inPrice, outPrice := 0.0, 0.0
-	if offering.Pricing.RatesPer1M != nil {
-		inPrice = offering.Pricing.RatesPer1M["input_tokens"]
-		outPrice = offering.Pricing.RatesPer1M["output_tokens"]
-	}
+func fromEngineModel(model eyrieengine.Model) ModelInfo {
 	return ModelInfo{
-		Name:        model.ID,
-		Provider:    model.ProviderID,
+		Name: model.ID, Provider: model.ProviderID,
 		ContextSize: model.ContextWindow,
-		InputPrice:  inPrice,
-		OutputPrice: outPrice,
-		Description: model.Name,
+		InputPrice:  model.InputPricePer1M, OutputPrice: model.OutputPricePer1M,
+		Description: model.Description,
 	}
 }
 
-func fromEyrieEntry(entry catalog.ModelCatalogEntry, provider string) ModelInfo {
-	return ModelInfo{
-		Name:        entry.ID,
-		Provider:    provider,
-		ContextSize: entry.ContextWindow,
-		InputPrice:  entry.InputPricePer1M,
-		OutputPrice: entry.OutputPricePer1M,
-		Description: entry.DisplayName,
-	}
-}
-
-// Find looks up a model by name via eyrie's JSON catalog.
+// Find looks up a model by id or alias through Eyrie.
 func Find(name string) (ModelInfo, bool) {
-	if compiled := eyrieCatalog(); compiled != nil {
-		if canonical, ok := compiled.CanonicalModelForAliasOrID(name); ok {
-			model := compiled.ModelsByID[canonical]
-			offering := firstOffering(compiled, canonical, "")
-			return fromEyrie(model, offering), true
-		}
+	engine := eyrieModelEngine()
+	if engine == nil {
+		return ModelInfo{}, false
 	}
-	return ModelInfo{}, false
+	model, ok, err := engine.ModelInfo(context.Background(), name)
+	if err != nil || !ok {
+		return ModelInfo{}, false
+	}
+	return fromEngineModel(model), true
 }
 
-// ByProvider returns all models for a given provider from eyrie's catalog.
+// ByProvider returns all models served by a provider/gateway.
 func ByProvider(provider string) []ModelInfo {
-	provider = catalog.CanonicalProviderID(provider)
-	compiled := eyrieCatalog()
-	out := []ModelInfo{}
-	if compiled != nil {
-		entries := catalog.ModelEntriesForProvider(compiled, provider)
-		for _, entry := range entries {
-			out = append(out, fromEyrieEntry(entry, provider))
-		}
+	engine := eyrieModelEngine()
+	if engine == nil {
+		return nil
+	}
+	models, err := engine.ListModels(context.Background(), provider, false)
+	if err != nil {
+		return nil
+	}
+	out := make([]ModelInfo, 0, len(models))
+	for _, model := range models {
+		out = append(out, fromEngineModel(model))
 	}
 	return out
 }
 
-// Recommended returns the first catalog model for a provider.
+// Recommended returns the default catalog model for a provider.
 func Recommended(provider string) (ModelInfo, bool) {
 	name := DefaultModel(provider)
 	if name == "" {
@@ -107,36 +86,26 @@ func Recommended(provider string) (ModelInfo, bool) {
 	return info, ok
 }
 
-// DefaultModel returns the first catalog model for a provider via eyrie JSON.
 func DefaultModel(provider string) string {
-	return catalog.ProviderDefaultModel(eyrieCatalog(), provider, "")
+	if engine := eyrieModelEngine(); engine != nil {
+		return engine.DefaultModel(context.Background(), provider, "")
+	}
+	return ""
 }
 
-// AllProviders returns all canonical model owner providers from eyrie's catalog.
 func AllProviders() []string {
-	out := catalog.AllModelProviders(eyrieCatalog())
-	sort.Strings(out)
-	return out
-}
-
-func firstOffering(compiled *catalog.CompiledCatalog, canonicalModelID, deploymentID string) catalog.ModelOffering {
-	offerings := compiled.OfferingsByCanonicalModel[canonicalModelID]
-	if len(offerings) == 0 {
-		return catalog.ModelOffering{}
+	engine := eyrieModelEngine()
+	if engine == nil {
+		return nil
 	}
-	if deploymentID != "" {
-		for _, offering := range offerings {
-			if offering.DeploymentID == deploymentID {
-				return offering
-			}
-		}
+	providers, err := engine.ModelProviders(context.Background())
+	if err != nil {
+		return nil
 	}
-	sort.SliceStable(offerings, func(i, j int) bool {
-		return offerings[i].DeploymentID < offerings[j].DeploymentID
-	})
-	return offerings[0]
+	sort.Strings(providers)
+	return providers
 }
 
 func canonicalProvider(provider string) string {
-	return catalog.CanonicalProviderID(provider)
+	return eyrieengine.NormalizeProviderID(provider)
 }

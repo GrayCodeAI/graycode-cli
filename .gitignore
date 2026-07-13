@@ -22,6 +22,7 @@ hawk_bin
 .gocache-*/
 .gomodcache/
 .gomodcache-*/
+.golangci-cache/
 .gopath/
 .tmp/
 *.codegraph.db

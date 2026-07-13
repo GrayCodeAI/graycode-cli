@@ -4,13 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
@@ -88,10 +93,10 @@ func TestDaemon_Ready(t *testing.T) {
 			wantReady:  false,
 		},
 		{
-			name:       "engine wired is ready",
+			name:       "engine wired without Eyrie probe is not ready",
 			factory:    factory,
-			wantStatus: http.StatusOK,
-			wantReady:  true,
+			wantStatus: http.StatusServiceUnavailable,
+			wantReady:  false,
 		},
 		{
 			name:       "custom probe forces not ready",
@@ -232,6 +237,7 @@ func TestDaemon_RejectsUnknownFields(t *testing.T) {
 }
 
 func TestDaemon_Chat_WithEngine(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	factory := func(req ChatRequest) (*engine.Session, error) {
 		sess := engine.NewSession("", "test-model", "you are helpful", nil)
 		if err := sess.SetMaxTurns(1); err != nil {
@@ -252,6 +258,243 @@ func TestDaemon_Chat_WithEngine(t *testing.T) {
 
 	if resp.StatusCode != 200 {
 		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func daemonTestSessionFactory(seen chan<- ChatRequest) SessionFactory {
+	return func(req ChatRequest) (*engine.Session, error) {
+		if seen != nil {
+			seen <- req
+		}
+		model := req.Model
+		if model == "" {
+			model = "test-model"
+		}
+		sess := engine.NewSessionWithClient(
+			engine.NewMockClientForTest(),
+			"test-provider",
+			model,
+			"test system prompt",
+			nil,
+			false,
+		)
+		if err := sess.SetMaxTurns(1); err != nil {
+			return nil, err
+		}
+		return sess, nil
+	}
+}
+
+func postDaemonChat(t *testing.T, addr string, request ChatRequest, accept string) (*http.Response, ChatResponse) {
+	t.Helper()
+	body, err := json.Marshal(request)
+	if err != nil {
+		t.Fatalf("marshal chat request: %v", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://"+addr+"/v1/chat", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("new chat request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if accept != "" {
+		req.Header.Set("Accept", accept)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST /v1/chat: %v", err)
+	}
+	var decoded ChatResponse
+	if accept == "" && resp.StatusCode == http.StatusOK {
+		if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
+			resp.Body.Close()
+			t.Fatalf("decode chat response: %v", err)
+		}
+	}
+	return resp, decoded
+}
+
+func TestDaemon_ChatPersistsRetrievableSessionAndRequestMetadata(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	requestedCWD := t.TempDir()
+	canonicalCWD, err := canonicalSessionCWD(requestedCWD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := make(chan ChatRequest, 1)
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(seen))
+	addr := startTestDaemon(t, srv)
+	defer srv.Stop(context.Background())
+
+	resp, chat := postDaemonChat(t, addr, ChatRequest{
+		Prompt: "persist me",
+		Model:  "test-model-override",
+		CWD:    requestedCWD,
+		Agent:  "reviewer",
+	}, "")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /v1/chat status = %d, want 200", resp.StatusCode)
+	}
+	if chat.SessionID == "" || resp.Header.Get("X-Hawk-Session-ID") != chat.SessionID {
+		t.Fatalf("session ID response/header mismatch: body=%q header=%q", chat.SessionID, resp.Header.Get("X-Hawk-Session-ID"))
+	}
+
+	factoryReq := <-seen
+	if factoryReq.SessionID != chat.SessionID || factoryReq.CWD != canonicalCWD || factoryReq.Agent != "reviewer" {
+		t.Fatalf("factory request = %+v, want durable ID, canonical cwd, and agent", factoryReq)
+	}
+
+	saved, err := session.Load(chat.SessionID)
+	if err != nil {
+		t.Fatalf("returned session ID is not retrievable: %v", err)
+	}
+	if saved.CWD != canonicalCWD || saved.Agent != "reviewer" || saved.Model != "test-model-override" {
+		t.Fatalf("persisted metadata = %+v", saved)
+	}
+	if len(saved.Messages) != 2 || saved.Messages[0].Content != "persist me" || saved.Messages[1].Role != "assistant" {
+		t.Fatalf("persisted transcript = %+v, want user and assistant turns", saved.Messages)
+	}
+
+	detailResp, err := http.Get("http://" + addr + "/v1/sessions/" + chat.SessionID)
+	if err != nil {
+		t.Fatalf("GET persisted session: %v", err)
+	}
+	defer detailResp.Body.Close()
+	var detail SessionDetailResponse
+	if err := json.NewDecoder(detailResp.Body).Decode(&detail); err != nil {
+		t.Fatalf("decode session detail: %v", err)
+	}
+	if detailResp.StatusCode != http.StatusOK || detail.ID != chat.SessionID || detail.MessageCount != 2 || detail.Agent != "reviewer" {
+		t.Fatalf("session detail status=%d body=%+v", detailResp.StatusCode, detail)
+	}
+}
+
+func TestDaemon_ChatContinuationReusesDurableSession(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	requestedCWD := t.TempDir()
+	seen := make(chan ChatRequest, 2)
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(seen))
+	addr := startTestDaemon(t, srv)
+	defer srv.Stop(context.Background())
+
+	firstResp, first := postDaemonChat(t, addr, ChatRequest{
+		Prompt: "first turn",
+		Model:  "continuation-model",
+		CWD:    requestedCWD,
+		Agent:  "reviewer",
+	}, "")
+	firstResp.Body.Close()
+	if firstResp.StatusCode != http.StatusOK {
+		t.Fatalf("first chat status = %d", firstResp.StatusCode)
+	}
+
+	secondResp, second := postDaemonChat(t, addr, ChatRequest{
+		Prompt:    "second turn",
+		SessionID: first.SessionID,
+	}, "")
+	defer secondResp.Body.Close()
+	if secondResp.StatusCode != http.StatusOK {
+		t.Fatalf("continuation status = %d", secondResp.StatusCode)
+	}
+	if second.SessionID != first.SessionID {
+		t.Fatalf("continuation returned ID %q, want %q", second.SessionID, first.SessionID)
+	}
+
+	<-seen // first request
+	continuedReq := <-seen
+	if continuedReq.Model != "continuation-model" || continuedReq.Agent != "reviewer" || continuedReq.CWD == "" {
+		t.Fatalf("continuation did not inherit persisted metadata: %+v", continuedReq)
+	}
+	saved, err := session.Load(first.SessionID)
+	if err != nil {
+		t.Fatalf("load continued session: %v", err)
+	}
+	if len(saved.Messages) != 4 {
+		t.Fatalf("continued transcript has %d messages, want 4: %+v", len(saved.Messages), saved.Messages)
+	}
+	if saved.Messages[2].Role != "user" || saved.Messages[2].Content != "second turn" {
+		t.Fatalf("continued user turn = %+v", saved.Messages[2])
+	}
+}
+
+func TestDaemon_ChatRejectsMissingContinuation(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
+	addr := startTestDaemon(t, srv)
+	defer srv.Stop(context.Background())
+
+	resp, _ := postDaemonChat(t, addr, ChatRequest{Prompt: "continue", SessionID: "does-not-exist"}, "")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing continuation status = %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestDaemon_ChatDoesNotMisreportCorruptContinuationAsMissing(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	if err := os.MkdirAll(storage.SessionsDir(), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	const id = "corrupt-session"
+	if err := os.WriteFile(filepath.Join(storage.SessionsDir(), id+".jsonl"), []byte("{not-json}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
+	addr := startTestDaemon(t, srv)
+	defer srv.Stop(context.Background())
+
+	resp, _ := postDaemonChat(t, addr, ChatRequest{Prompt: "continue", SessionID: id}, "")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("corrupt continuation status = %d, want 500", resp.StatusCode)
+	}
+	var body ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != "session_load_failed" {
+		t.Fatalf("corrupt continuation code = %q, want session_load_failed", body.Code)
+	}
+}
+
+func TestDaemon_ChatRejectsUnsafeSessionIDAndInvalidCWD(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
+	addr := startTestDaemon(t, srv)
+	defer srv.Stop(context.Background())
+
+	tests := []ChatRequest{
+		{Prompt: "continue", SessionID: "../escape"},
+		{Prompt: "start", CWD: t.TempDir() + "/missing"},
+	}
+	for _, request := range tests {
+		resp, _ := postDaemonChat(t, addr, request, "")
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("request %+v status = %d, want 400", request, resp.StatusCode)
+		}
+	}
+}
+
+func TestDaemon_ChatSSEExposesRetrievableSessionID(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
+	addr := startTestDaemon(t, srv)
+	defer srv.Stop(context.Background())
+
+	resp, _ := postDaemonChat(t, addr, ChatRequest{Prompt: "stream me"}, "text/event-stream")
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read SSE response: %v", err)
+	}
+	id := resp.Header.Get("X-Hawk-Session-ID")
+	if resp.StatusCode != http.StatusOK || id == "" || !strings.Contains(string(body), `"session_id":"`+id+`"`) {
+		t.Fatalf("SSE status=%d id=%q body=%q", resp.StatusCode, id, body)
+	}
+	if _, err := session.Load(id); err != nil {
+		t.Fatalf("SSE session ID is not retrievable: %v", err)
 	}
 }
 

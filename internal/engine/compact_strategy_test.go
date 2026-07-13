@@ -60,7 +60,7 @@ func TestTruncateStrategy(t *testing.T) {
 		messages: makeMessages(100),
 		log:      newTestLogger(),
 		metrics:  newTestMetrics(),
-		client:   types.NewClient(&types.ClientConfig{Provider: "test"}),
+		client:   NewMockClientForTest(),
 	}
 
 	s := &TruncateStrategy{}

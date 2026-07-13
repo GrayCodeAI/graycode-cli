@@ -22,8 +22,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	"github.com/GrayCodeAI/hawk/internal/codegraph"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -169,9 +167,9 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 
 	// Initialize conversation DAG for branching support
 	startup.MarkPhase("newChatModel:dag")
-	dagPath := filepath.Join(hawkstorage.SessionsDir(), "convo.db")
-	if dag, err := storage.NewDAG(dagPath, sid); err == nil {
-		sess.SetConvoDAG(dag)
+	graphPath := filepath.Join(hawkstorage.SessionsDir(), "conversations", sid+".json")
+	if graph, err := session.OpenConversationGraph(graphPath, sid); err == nil {
+		sess.SetConversationGraph(graph)
 	}
 	startup.EndPhase("newChatModel:dag")
 
@@ -268,7 +266,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	// Prefetch live models for the active provider so footer ctx/pricing stay current.
 	go func() {
 		providerName := effectiveProvider
-		entries, _ := runtime.ListModels(context.Background(), runtime.ListModelsOpts{ProviderID: providerName, Source: runtime.ListSourceAuto})
+		entries, _ := hawkconfig.ListEngineModels(context.Background(), providerName, false)
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
@@ -379,10 +377,6 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 			})
 		}
 	}(m)
-
-	go func() {
-		_ = hawkconfig.CompiledCatalogV1()
-	}()
 
 	// Load plugins/skills after startup and refresh welcome indicators when ready.
 	go func() {

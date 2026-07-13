@@ -34,7 +34,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build ci clean contracts-guard ecosystem-guard eyrie-client-guard peer-guard internal-layers-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench boundaries build ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
         release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet
 
 # ---------------------------------------------------------------------------
@@ -104,8 +104,11 @@ contracts-guard: ## Fail on any legacy imports of removed hawk/shared/types.
 ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or removed hawk/shared/types.
 	bash ./scripts/check-ecosystem-boundaries.sh
 
-eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk transport adapters.
+eyrie-client-guard: ## Fail on any production eyrie/client import.
 	bash ./scripts/check-eyrie-client-imports.sh
+
+eyrie-engine-guard: ## Require all production Eyrie imports to use the stable engine facade.
+	bash ./scripts/check-eyrie-engine-boundary.sh
 
 peer-guard: ## Fail if support engines import each other instead of depending only on Hawk contracts.
 	bash ./scripts/check-support-repo-coupling.sh
@@ -113,7 +116,7 @@ peer-guard: ## Fail if support engines import each other instead of depending on
 internal-layers-guard: ## Enforce one-way dependencies across stable Hawk internal layers.
 	bash ./scripts/check-internal-layer-imports.sh
 
-boundaries: contracts-guard ecosystem-guard eyrie-client-guard peer-guard internal-layers-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+boundaries: contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
 
 submodule-release-parity: ## Verify every go.mod ecosystem version resolves to its pinned Gitlink.
 	bash ./scripts/check-submodule-release-parity.sh

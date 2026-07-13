@@ -99,7 +99,7 @@ func TestSyncSelectionWithCredentials_ClearsStaleModel(t *testing.T) {
 	if err := SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetActiveModel(ctx, "moonshotai/kimi-k2.6"); err != nil {
+	if err := SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 	SyncSelectionWithCredentials(ctx)
@@ -127,12 +127,12 @@ func TestSyncSelectionWithCredentials_KeepsWhenGatewayHasKey(t *testing.T) {
 	if err := SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetActiveModel(ctx, "openrouter/auto"); err != nil {
+	if err := SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 
 	SyncSelectionWithCredentials(ctx)
-	if ActiveModel(ctx) != "openrouter/auto" {
+	if ActiveModel(ctx) != "openai/gpt-4o" {
 		t.Fatalf("model = %q", ActiveModel(ctx))
 	}
 }

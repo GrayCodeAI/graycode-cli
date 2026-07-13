@@ -1,7 +1,11 @@
 package engine
 
 import (
+	"context"
 	"testing"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
 func TestContextUsedTokens_PrefersAPI(t *testing.T) {
@@ -16,17 +20,21 @@ func TestContextUsedTokens_PrefersAPI(t *testing.T) {
 	}
 }
 
-func TestSupportsAnthropicNativeCompaction_Model(t *testing.T) {
-	s := NewSession("", "claude-sonnet-4-6", "sys", nil)
-	s.mu.Lock()
-	s.apiKeys["anthropic"] = "sk-test"
-	s.provider = "anthropic"
-	s.mu.Unlock()
-	if !s.supportsAnthropicNativeCompaction() {
-		t.Fatal("expected anthropic native compaction support")
+func TestNativeCompactionSupportUsesEyrieCredentialStore(t *testing.T) {
+	ctx := context.Background()
+	store := &credentials.MapStore{}
+	runtime, err := eyrieengine.New(eyrieengine.Options{SecretStore: store})
+	if err != nil {
+		t.Fatal(err)
 	}
-	s.SetModel("gpt-4o")
+	s := NewSessionWithClient(newEyrieEngineClient(runtime), "anthropic", "claude-sonnet-4-6", "sys", nil, true)
 	if s.supportsAnthropicNativeCompaction() {
-		t.Fatal("expected no support for non-claude model")
+		t.Fatal("expected no support before Eyrie has a credential")
+	}
+	if err := store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-test"); err != nil {
+		t.Fatal(err)
+	}
+	if !s.supportsAnthropicNativeCompaction() {
+		t.Fatal("expected support from Eyrie's injected credential store")
 	}
 }

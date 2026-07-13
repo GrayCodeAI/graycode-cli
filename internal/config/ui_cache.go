@@ -3,32 +3,31 @@ package config
 import (
 	"context"
 	"sort"
-	"strings"
 	"sync"
 	"time"
-
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 var uiCacheMu sync.RWMutex
 
 var (
-	cachedCompiled *catalog.CompiledCatalog
 	credConfigured map[string]bool
 	credHasAny     bool
 	credValid      bool
 	credSnapMu     sync.Mutex
 	credSnapAt     time.Time
-	credSnapStore  map[string]string
+	credSnapStore  map[string]gatewayCredentialState
 )
 
 const gatewayCredSnapshotTTL = 5 * time.Second
 
+type gatewayCredentialState struct {
+	credential bool
+	deployment bool
+}
+
 // InvalidateConfigUICache drops in-memory catalog and credential snapshots (call after refresh/key changes).
 func InvalidateConfigUICache() {
 	uiCacheMu.Lock()
-	cachedCompiled = nil
 	credValid = false
 	credConfigured = nil
 	uiCacheMu.Unlock()
@@ -44,14 +43,16 @@ func RefreshConfigCredSnapshot(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	PrepareCredentialDiscovery(ctx)
 	stored := gatewayCredentialSnapshot(ctx)
 	gateways := AllSetupGateways()
 	configured := make(map[string]bool, len(gateways))
 	hasAny := false
 	for _, p := range gateways {
-		if gatewayConfiguredFromStored(p, stored) {
+		state := stored[p]
+		if state.credential {
 			configured[p] = true
+		}
+		if state.deployment {
 			hasAny = true
 		}
 	}
@@ -63,7 +64,7 @@ func RefreshConfigCredSnapshot(ctx context.Context) {
 }
 
 // gatewayCredentialSnapshot loads only setup-gateway env keys (not the full discovery list).
-func gatewayCredentialSnapshot(ctx context.Context) map[string]string {
+func gatewayCredentialSnapshot(ctx context.Context) map[string]gatewayCredentialState {
 	credSnapMu.Lock()
 	if credSnapStore != nil && time.Since(credSnapAt) < gatewayCredSnapshotTTL {
 		out := credSnapStore
@@ -72,14 +73,13 @@ func gatewayCredentialSnapshot(ctx context.Context) map[string]string {
 	}
 	credSnapMu.Unlock()
 
-	out := make(map[string]string)
-	for _, gw := range AllSetupGateways() {
-		for _, env := range credentialEnvKeysForTarget(gw) {
-			if _, ok := out[env]; ok {
-				continue
-			}
-			if secret := credentials.LookupSecret(ctx, env); secret != "" {
-				out[env] = secret
+	out := make(map[string]gatewayCredentialState)
+	engine, err := newEyrieEngine()
+	if err == nil {
+		for _, gateway := range engine.Gateways(ctx) {
+			out[gateway.ID] = gatewayCredentialState{
+				credential: gateway.CredentialConfigured,
+				deployment: gateway.DeploymentConfigured,
 			}
 		}
 	}
@@ -88,15 +88,6 @@ func gatewayCredentialSnapshot(ctx context.Context) map[string]string {
 	credSnapAt = time.Now()
 	credSnapMu.Unlock()
 	return out
-}
-
-func gatewayConfiguredFromStored(providerID string, stored map[string]string) bool {
-	for _, env := range credentialEnvKeysForTarget(providerID) {
-		if strings.TrimSpace(stored[env]) != "" {
-			return true
-		}
-	}
-	return false
 }
 
 func ensureCredSnapshot(ctx context.Context) {
@@ -140,19 +131,4 @@ func hasConfiguredDeploymentCached(ctx context.Context) bool {
 	uiCacheMu.RLock()
 	defer uiCacheMu.RUnlock()
 	return credHasAny
-}
-
-func storeCompiledCatalog(compiled *catalog.CompiledCatalog) {
-	uiCacheMu.Lock()
-	cachedCompiled = compiled
-	uiCacheMu.Unlock()
-}
-
-func cachedCompiledCatalog() (*catalog.CompiledCatalog, bool) {
-	uiCacheMu.RLock()
-	defer uiCacheMu.RUnlock()
-	if cachedCompiled == nil {
-		return nil, false
-	}
-	return cachedCompiled, true
 }

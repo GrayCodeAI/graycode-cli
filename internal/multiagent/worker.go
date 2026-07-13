@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -37,7 +37,7 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
-		selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
+		selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 			ProviderOverride: provider,
 			ModelOverride:    model,
 		})
@@ -149,7 +149,7 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		)
 
 		registry := tool.NewRegistry(readOnlyWorkerTools()...)
-		selection := runtime.EffectiveSelection(ctx, runtime.SelectionOpts{
+		selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 			ProviderOverride: provider,
 			ModelOverride:    model,
 		})

@@ -13,14 +13,13 @@ package engine
 import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -36,7 +35,6 @@ type CoreLoop struct {
 	Messages []types.EyrieMessage
 	Provider string
 	Model    string
-	APIKeys  map[string]string
 	System   string
 	Log      *logger.Logger
 	MaxTurns int
@@ -95,7 +93,6 @@ type Optimizer struct {
 	Cost        Cost
 	CostTracker *CostTracker
 	Cascade     *branching.CascadeRouter
-	Router      *modelPkg.Router
 	MaxBudget   float64
 }
 
@@ -138,17 +135,17 @@ type SessionServices struct {
 	Observe *Observability
 
 	// Advanced features (optional, nil when unused)
-	Lifecycle  *SessionLifecycle
-	Reflector  *Reflector
-	Critic     *Critic
-	Backtrack  *BacktrackEngine
-	Shadow     *branching.ShadowWorkspace
-	ConvoDAG   *storage.DAG
-	Plan       *PlanState
-	Teach      TeachConfig
-	Trajectory *TrajectoryDistiller
-	Snapshots  SnapshotTracker
-	LintLoop   *LintLoop
+	Lifecycle         *SessionLifecycle
+	Reflector         *Reflector
+	Critic            *Critic
+	Backtrack         *BacktrackEngine
+	Shadow            *branching.ShadowWorkspace
+	ConversationGraph *session.ConversationGraph
+	Plan              *PlanState
+	Teach             TeachConfig
+	Trajectory        *TrajectoryDistiller
+	Snapshots         SnapshotTracker
+	LintLoop          *LintLoop
 }
 
 // lintLoopPlaceholder is kept for documentation; see lint_loop.go
@@ -271,8 +268,7 @@ func WithMaxBudget(budget float64) ServiceOption {
 func NewSessionServices(opts ...ServiceOption) *SessionServices {
 	ss := &SessionServices{
 		Core: &CoreLoop{
-			APIKeys: make(map[string]string),
-			Log:     logger.Default(),
+			Log: logger.Default(),
 		},
 		Safety: &SafetyLayer{
 			Perm:   NewPermissionEngine(),
@@ -281,9 +277,7 @@ func NewSessionServices(opts ...ServiceOption) *SessionServices {
 		Intel: &Intelligence{
 			Beliefs: NewBeliefState(),
 		},
-		Optim: &Optimizer{
-			Router: modelPkg.NewRouter(modelPkg.StrategyBalanced),
-		},
+		Optim: &Optimizer{},
 		Observe: &Observability{
 			Tracer:  oteltrace.NewTracer(),
 			Metrics: metrics.NewRegistry(),
@@ -317,7 +311,6 @@ func (s *Session) Services() *SessionServices {
 			Messages: s.Persistence().RawMessages(),
 			Provider: s.provider,
 			Model:    s.model,
-			APIKeys:  s.apiKeys,
 			System:   s.Persistence().System(),
 			Log:      s.log,
 			MaxTurns: s.LifecycleSvc().Limits().MaxTurns(),
@@ -341,7 +334,6 @@ func (s *Session) Services() *SessionServices {
 			Cost:        Cost{Model: s.Cost.Model, PromptTokens: s.Cost.PromptTokens, CompletionTokens: s.Cost.CompletionTokens, TotalCostUSD: s.Cost.TotalCostUSD},
 			CostTracker: s.CostTracker,
 			Cascade:     s.LifecycleSvc().Cascade(),
-			Router:      s.ChatLLM().Router(),
 			MaxBudget:   s.LifecycleSvc().Limits().MaxBudgetUSD(),
 		},
 		Observe: &Observability{
@@ -349,15 +341,15 @@ func (s *Session) Services() *SessionServices {
 			Metrics: s.metrics,
 			Log:     s.log,
 		},
-		Lifecycle:  s.LifecycleSvc().Lifecycle(),
-		Reflector:  s.LifecycleSvc().Reflector(),
-		Critic:     s.LifecycleSvc().Critic(),
-		Backtrack:  s.LifecycleSvc().Backtrack(),
-		Shadow:     s.LifecycleSvc().Shadow(),
-		ConvoDAG:   s.Persistence().DAG(),
-		Plan:       s.Plan,
-		Teach:      s.Teach,
-		Trajectory: s.Trajectory,
-		Snapshots:  s.Snapshots,
+		Lifecycle:         s.LifecycleSvc().Lifecycle(),
+		Reflector:         s.LifecycleSvc().Reflector(),
+		Critic:            s.LifecycleSvc().Critic(),
+		Backtrack:         s.LifecycleSvc().Backtrack(),
+		Shadow:            s.LifecycleSvc().Shadow(),
+		ConversationGraph: s.Persistence().Graph(),
+		Plan:              s.Plan,
+		Teach:             s.Teach,
+		Trajectory:        s.Trajectory,
+		Snapshots:         s.Snapshots,
 	}
 }

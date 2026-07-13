@@ -78,7 +78,7 @@ func (m *chatModel) bootstrapSessionForChat() error {
 
 	m.session.SetProvider(selection.Provider)
 	m.session.SetModel(selection.Model)
-	if err := engine.RebuildSessionTransport(context.Background(), m.session, selection, selection.Provider); err != nil {
+	if err := engine.RebuildSessionTransportForSettings(context.Background(), m.settings, m.session, selection, selection.Provider); err != nil {
 		return err
 	}
 	configureSessionHeavy(m.session)

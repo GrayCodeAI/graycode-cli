@@ -20,9 +20,6 @@ func TestNewSessionServices_Defaults(t *testing.T) {
 	if ss.Core == nil {
 		t.Fatal("Core should not be nil with defaults")
 	}
-	if ss.Core.APIKeys == nil {
-		t.Error("Core.APIKeys should be initialized")
-	}
 	if ss.Core.Log == nil {
 		t.Error("Core.Log should default to logger.Default()")
 	}
@@ -46,9 +43,6 @@ func TestNewSessionServices_Defaults(t *testing.T) {
 
 	if ss.Optim == nil {
 		t.Fatal("Optim should not be nil with defaults")
-	}
-	if ss.Optim.Router == nil {
-		t.Error("Optim.Router should be initialized")
 	}
 
 	if ss.Observe == nil {
@@ -227,9 +221,6 @@ func TestSession_Services_Bridge(t *testing.T) {
 	if svc.Optim.MaxBudget != 3.50 {
 		t.Errorf("Optim.MaxBudget: expected 3.50, got %f", svc.Optim.MaxBudget)
 	}
-	if svc.Optim.Router != s.ChatLLM().Router() {
-		t.Error("Optim.Router should reference same Router")
-	}
 	if svc.Optim.Cascade != s.LifecycleSvc().Cascade() {
 		t.Error("Optim.Cascade should reference same CascadeRouter")
 	}
@@ -265,8 +256,8 @@ func TestSession_Services_NilAdvancedFeatures(t *testing.T) {
 	if svc.Shadow != nil {
 		t.Error("Shadow should be nil when not set")
 	}
-	if svc.ConvoDAG != nil {
-		t.Error("ConvoDAG should be nil when not set")
+	if svc.ConversationGraph != nil {
+		t.Error("ConversationGraph should be nil when not set")
 	}
 	if svc.Plan != nil {
 		t.Error("Plan should be nil when not set")

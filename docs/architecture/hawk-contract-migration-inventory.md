@@ -57,17 +57,16 @@ Files:
 Assessment:
 
 - `internal/types/severity.go` now re-exports `hawk-core-contracts/types`
-- `internal/types/client.go` is Hawk runtime/provider-facing and should remain Hawk-internal for now
+- `internal/types/client.go` contains Hawk-owned conversation/runtime DTOs and
+  the small provider port needed by product integrations; it has no Eyrie imports
 - `internal/types/settings.go` is Hawk config-specific and should remain Hawk-internal
 
 ## Tool contract migration
 
-### Source shape today
+### Historical source shape
 
-Current runtime source:
-
-- `eyrie/client.ToolCall`
-- `eyrie/client.ToolResult`
+Before the engine-boundary migration, runtime source types included
+lower-level provider tool-call and tool-result DTOs.
 
 ### New neutral contract
 
@@ -78,16 +77,17 @@ Added:
 
 ### First migration boundary
 
-Hawk session persistence now uses the neutral tool contracts instead of persisting `eyrie/client` tool types directly.
+Hawk session persistence now uses neutral tool contracts instead of persisting
+lower-level provider types directly.
 
 ### Remaining migration
 
 - Hawk runtime now owns `internal/types.EyrieMessage`
 - Hawk runtime now owns tool call/result, response, usage, and stream DTOs in `internal/types`
 - Hawk runtime now owns chat options, response format, continuation config, tool choice, and tool definition DTOs in `internal/types`
-- Hawk runtime now owns transport config via `internal/types.ClientConfig`
 - Hawk runtime now owns the provider seam via `internal/types.ChatProvider`
-- `eyrie/client` is now adapted at the `internal/types` edge instead of leaking as Hawk runtime type aliases
+- Hawk's `ChatClient` port is implemented by `internal/engine` using only
+  `eyrie/engine`; no production package imports a lower Eyrie package
 - future work should move trace/event/policy layers to consume neutral tool contracts where appropriate
 
 ## Review and verification contract migration

@@ -43,7 +43,7 @@ The `internal/` directory SHALL contain the following packages:
 | `tool/` | 40+ built-in tools (file edit, git, codegen, spec tools, etc.) |
 | `permissions/` | Guardian, rules DSL, boundary checker |
 | `plugin/` | Skills loader, registry, auto-skill, bundled skills |
-| `config/` | Settings, env manager, migration |
+| `config/` | Product settings, Eyrie composition, state migration |
 | `session/` | SQLite persistence, search, export, replay |
 | `hooks/` | Event-driven plugin system |
 | `mcp/` | Model Context Protocol client/server |
@@ -57,7 +57,7 @@ The `internal/` directory SHALL contain the following packages:
 | `bridge/` | Integrations (inspect, sight, trace, sessioncapture) |
 | `prompt/` | Identity preamble |
 | `prompts/` | Modular template system (role, execution, tools, etc.) |
-| `provider/` | Provider routing, model selection |
+| `provider/` | Task-semantic roles, cascade intent, and product policy |
 | `rules/` | Rules DSL engine |
 | `system/` | Bus, shutdown, retention, cron, staleness |
 | `storage/` | State directory management |
@@ -72,7 +72,7 @@ The `internal/engine/` package SHALL contain the following sub-systems:
 |------------|---------|
 | `stream.go` | The agent loop (agentLoop) - main orchestration |
 | `session.go` | Session struct and sub-services |
-| `chat_service.go` | LLM transport, rate limit, retry, compact |
+| `chat_service.go` | Hawk ChatClient port, engine adapter coordination, compact |
 | `safety/` | Permission engine, trust tiers, spec gate |
 | `compact/` | Context compaction (collapse, micro, smart, truncate) |
 | `ctxmgr/` | Context providers, packing, visualization |
@@ -88,6 +88,22 @@ The `internal/engine/` package SHALL contain the following sub-systems:
 | `observability/` | Profiler, debug recorder |
 | `validation/` | Lint loop, test loop |
 | `scaffold/` | Skill registry, few-shot, learned skills |
+
+Provider boundary invariant:
+
+```text
+Hawk CLI/TUI + conversation + tools
+                  |
+        Hawk-owned ports/DTOs
+                  |
+                  v
+            eyrie/engine
+ credentials -> catalog -> routing -> generate/stream
+```
+
+No production Hawk package may import a lower Eyrie package. Custom gateways
+are supplied per Engine instance, and Eyrie DTOs are not Hawk persistence or
+CLI output schemas.
 
 ### REQ-4: Agent Loop Lifecycle
 
@@ -111,7 +127,7 @@ The agent loop in `stream.go` SHALL execute the following phases:
 6. Refresh Yaad memories
 7. Build LLM ChatOptions (system prompt, tools, model)
 8. Inject ephemeral context (beliefs, matched skills, spec stage)
-9. Execute LLM call via ChatService.Stream()
+9. Execute the LLM call via `ChatService.Stream()` and the `eyrie/engine` adapter
 10. Process response (tool calls, messages, cost tracking)
 11. Check termination conditions
 

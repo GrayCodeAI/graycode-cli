@@ -9,7 +9,7 @@ For Hawk, the developer path is the minimum local setup required to chat, edit c
 - A provider credential stored in the OS secret store
 - A model selected in Hawk settings
 - A local model catalog available through eyrie
-- No plaintext API keys left in `provider.json` or legacy env files
+- No plaintext API keys left in Eyrie's configured `provider.json` or legacy env files
 - Safe defaults for Bash execution and filesystem access
 - Optional but healthy ecosystem integrations like yaad memory
 
@@ -49,6 +49,10 @@ hawk credentials status
 hawk preflight
 ```
 
+`hawk preflight` is a local-ready check; it does not contact a provider. To
+live-verify the selected provider credential and connectivity, use `/config`
+validation or `hawk models list <provider> --live`.
+
 ### 3. Select a model
 
 Pick a model in `/config`. Hawk stores the selected model in settings and uses eyrie for provider routing and catalog resolution.
@@ -63,9 +67,13 @@ hawk models refresh
 
 `hawk path` treats these as important security conditions:
 
-- `provider.json` must not contain secret fields
+- Eyrie's resolved `provider.json` must not contain secret fields
 - legacy `~/.hawk/env` or `~/.hawk/.env` files should be migrated away
 - sensitive files like provider config and SSH paths should be blocked from agent reads
+
+Eyrie resolves provider state from `EYRIE_CONFIG_DIR` first, then
+`HAWK_CONFIG_DIR` for compatibility, then the platform user-config directory.
+Hawk protects that resolved path even when it is customized or symlinked.
 
 If Hawk detects old plaintext secrets, run Hawk once and complete `/config`, or remove the secret fields manually after backing up the file.
 
@@ -85,7 +93,7 @@ hawk path --strict
 
 `hawk path` also verifies the core support layer behind Hawk:
 
-- `eyrie` for provider routing and preflight readiness
+- `eyrie` for provider routing and local preflight readiness
 - `tok` for token estimation and compression
 - `yaad` for optional persistent memory
 

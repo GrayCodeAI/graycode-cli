@@ -4,22 +4,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-violations="$(
-  git grep -n 'github\.com/GrayCodeAI/eyrie/client' -- '*.go' \
-    ':(exclude)external/**' \
-    ':(exclude)internal/types/client.go' \
-    ':(exclude)internal/types/client_test.go' \
-    ':(exclude)internal/bridge/sight/bridge.go' \
-    ':(exclude)internal/engine/subagent_synthesis_test.go' \
-    ':(exclude)internal/testaudit/audit_test.go' || true
-)"
+if command -v rg >/dev/null 2>&1; then
+  violations="$(
+    rg -n '"github\.com/GrayCodeAI/eyrie/client(?:/[^\"]*)?"' \
+      --glob '*.go' --glob '!*_test.go' --glob '!external/**' . || true
+  )"
+else
+  violations="$(
+    grep -RInE --include='*.go' --exclude='*_test.go' --exclude-dir=external \
+      '"github\.com/GrayCodeAI/eyrie/client(/[^\"]*)?"' . || true
+  )"
+fi
 
 if [[ -n "${violations}" ]]; then
   echo "forbidden direct imports of github.com/GrayCodeAI/eyrie/client found:"
   echo "${violations}"
   echo
-  echo "hawk production code must go through internal/types transport adapters instead of importing eyrie/client directly"
+  echo "Hawk production code must go through github.com/GrayCodeAI/eyrie/engine"
   exit 1
 fi
 
-echo "eyrie/client boundary guard passed"
+echo "eyrie/client boundary guard passed (zero production imports)"

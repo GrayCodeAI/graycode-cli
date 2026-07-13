@@ -2,115 +2,82 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/client"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSynthesizeSubAgent(t *testing.T) {
 	t.Run("tools disabled and prompt appended", func(t *testing.T) {
-		mock := client.NewMockProvider(client.MockModeFixed)
-		mock.Response = "Here is my summary of findings."
-
-		mockClient := &mockLLMForSynthesis{provider: mock}
-
+		mock := &synthesisMockClient{response: "Here is my summary of findings."}
 		conversation := []types.EyrieMessage{
 			{Role: "user", Content: "Find all Go files with errors"},
 			{Role: "assistant", Content: "I'll search for Go files."},
 		}
 
-		result, err := SynthesizeSubAgent(context.Background(), mockClient, "test-model", conversation)
+		result, err := SynthesizeSubAgent(context.Background(), mock, "test-model", conversation)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-
-		if result != "Here is my summary of findings." {
+		if result != mock.response {
 			t.Errorf("expected summary text, got: %q", result)
 		}
-
-		// Verify the mock was called exactly once.
-		if mock.CallCount() != 1 {
-			t.Fatalf("expected 1 call, got %d", mock.CallCount())
+		if mock.calls != 1 {
+			t.Fatalf("expected 1 call, got %d", mock.calls)
 		}
-
-		call := mock.LastCall()
-
-		// Verify tools are nil (disabled).
-		if call.Options.Tools != nil {
-			t.Errorf("expected Tools to be nil, got: %v", call.Options.Tools)
+		if mock.options.Tools != nil {
+			t.Errorf("expected Tools to be nil, got: %v", mock.options.Tools)
 		}
-
-		// Verify synthesis prompt was appended as last user message.
-		lastMsg := call.Messages[len(call.Messages)-1]
-		if lastMsg.Role != "user" {
-			t.Errorf("expected last message role 'user', got: %q", lastMsg.Role)
+		if len(mock.messages) != 3 {
+			t.Fatalf("expected 3 messages, got %d", len(mock.messages))
 		}
-		if lastMsg.Content != SynthesisPrompt {
-			t.Errorf("expected SynthesisPrompt in last message, got: %q", lastMsg.Content)
+		last := mock.messages[len(mock.messages)-1]
+		if last.Role != "user" || last.Content != SynthesisPrompt {
+			t.Fatalf("last message = %#v, want synthesis prompt", last)
 		}
-
-		// Verify conversation messages are preserved before the synthesis prompt.
-		if len(call.Messages) != 3 {
-			t.Fatalf("expected 3 messages (2 conversation + 1 prompt), got %d", len(call.Messages))
-		}
-		if call.Messages[0].Content != "Find all Go files with errors" {
-			t.Errorf("first message not preserved: %q", call.Messages[0].Content)
-		}
-		if call.Messages[1].Content != "I'll search for Go files." {
-			t.Errorf("second message not preserved: %q", call.Messages[1].Content)
+		if mock.messages[0].Content != conversation[0].Content || mock.messages[1].Content != conversation[1].Content {
+			t.Fatalf("conversation was not preserved: %#v", mock.messages)
 		}
 	})
 
 	t.Run("nil client returns error", func(t *testing.T) {
-		conversation := []types.EyrieMessage{
-			{Role: "user", Content: "test"},
-		}
-		_, err := SynthesizeSubAgent(context.Background(), nil, "model", conversation)
+		_, err := SynthesizeSubAgent(context.Background(), nil, "model", []types.EyrieMessage{{Role: "user", Content: "test"}})
 		if err == nil {
 			t.Fatal("expected error for nil client")
 		}
 	})
 
 	t.Run("provider error propagated", func(t *testing.T) {
-		mock := client.NewMockProvider(client.MockModeError)
-		mockClient := &mockLLMForSynthesis{provider: mock}
-
-		conversation := []types.EyrieMessage{
-			{Role: "user", Content: "test"},
-		}
-
-		_, err := SynthesizeSubAgent(context.Background(), mockClient, "model", conversation)
+		mock := &synthesisMockClient{err: errors.New("provider unavailable")}
+		_, err := SynthesizeSubAgent(context.Background(), mock, "model", []types.EyrieMessage{{Role: "user", Content: "test"}})
 		if err == nil {
 			t.Fatal("expected error from provider")
 		}
 	})
 
 	t.Run("empty response returns error", func(t *testing.T) {
-		mock := client.NewMockProvider(client.MockModeFixed)
-		mock.Response = ""
-		mockClient := &mockLLMForSynthesis{provider: mock}
-
-		conversation := []types.EyrieMessage{
-			{Role: "user", Content: "test"},
-		}
-
-		_, err := SynthesizeSubAgent(context.Background(), mockClient, "model", conversation)
+		_, err := SynthesizeSubAgent(context.Background(), &synthesisMockClient{}, "model", []types.EyrieMessage{{Role: "user", Content: "test"}})
 		if err == nil {
 			t.Fatal("expected error for empty response")
 		}
 	})
 }
 
-// mockLLMForSynthesis wraps a MockProvider to satisfy the LLMClient interface.
-type mockLLMForSynthesis struct {
-	provider *client.MockProvider
+type synthesisMockClient struct {
+	response string
+	err      error
+	calls    int
+	messages []types.EyrieMessage
+	options  types.ChatOptions
 }
 
-func (m *mockLLMForSynthesis) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	resp, err := m.provider.Chat(ctx, types.ToClientMessages(msgs), types.ToClientChatOptions(opts))
-	if err != nil {
-		return nil, err
+func (m *synthesisMockClient) Chat(_ context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+	m.calls++
+	m.messages = append([]types.EyrieMessage(nil), messages...)
+	m.options = opts
+	if m.err != nil {
+		return nil, m.err
 	}
-	return types.FromClientResponse(resp), nil
+	return &types.EyrieResponse{Content: m.response, FinishReason: "end_turn"}, nil
 }

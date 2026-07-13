@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/eyrie/catalog"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/mattn/go-runewidth"
 )
@@ -75,11 +75,17 @@ func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayo
 }
 
 func modelTableRowFromOption(o configModelOption) modelTableRow {
-	name := catalog.DisplayModelLabel(o.ID, o.DisplayName)
+	name := strings.TrimSpace(o.DisplayName)
 	if name == "" {
 		name = shortModelID(o.ID)
 	}
-	owner := catalog.DisplayModelOwner(o.Owner, o.ID)
+	owner := strings.TrimSpace(o.Owner)
+	if owner == "" {
+		owner = strings.TrimSpace(o.ProviderID)
+	}
+	if owner == "" {
+		owner = strings.TrimSpace(o.GatewayID)
+	}
 	if owner == "" {
 		owner = "—"
 	}
@@ -303,17 +309,26 @@ func modelTableFooter(total, scroll, end, allTotal int, muted lipgloss.Style) st
 	return muted.Render(fmt.Sprintf("%s%s · enter to select", prefix, label))
 }
 
-func modelTableRowFromCatalogEntry(m catalog.ModelCatalogEntry) modelTableRow {
+func modelTableRowFromCatalogEntry(m hawkconfig.EngineModel) modelTableRow {
 	name := strings.TrimSpace(m.DisplayName)
 	if name == "" {
 		name = m.ID
 	}
-	owner := catalog.ModelOwner(m)
+	owner := strings.TrimSpace(m.Owner)
+	if owner == "" {
+		owner = strings.TrimSpace(m.ProviderID)
+	}
+	if owner == "" {
+		owner = strings.TrimSpace(m.GatewayID)
+	}
 	if owner == "" {
 		owner = "—"
 	}
-	free := m.InputPricePer1M <= 0 && m.OutputPricePer1M <= 0
-	price := formatModelTablePriceCompact(m.InputPricePer1M, m.OutputPricePer1M)
+	free := m.PriceKnown && m.InputPricePer1M <= 0 && m.OutputPricePer1M <= 0
+	price := "—"
+	if m.PriceKnown {
+		price = formatModelTablePriceCompact(m.InputPricePer1M, m.OutputPricePer1M)
+	}
 	if free && price == "—" {
 		price = "free"
 	}

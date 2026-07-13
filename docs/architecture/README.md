@@ -11,6 +11,8 @@ Documents:
 - `hawk-dependency-rules.md` - import and ownership boundaries
 - `hawk-core-contracts-spec.md` - shared contracts layer and current status
 - `hawk-provider-abstraction.md` - provider/runtime abstraction design
+- `hawk-eyrie-engine-migration.md` - implemented Hawk-face/Eyrie-engine boundary and submodule upgrade order
+- `verification-status-2026-07-13.md` - dated verification evidence, current hardening, and release blockers
 - `hawk-review-verify-lifecycle.md` - review and verification lifecycle
 - `hawk-trace-event-model.md` - trace and audit event model
 - `hawk-contract-migration-inventory.md` - current shared-type usage and migration order

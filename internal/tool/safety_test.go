@@ -1,6 +1,8 @@
 package tool
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -264,6 +266,60 @@ func TestIsSensitivePath_HawkConfigDir(t *testing.T) {
 	prov := filepath.Join(cfgDir, "provider.json")
 	if reason := IsSensitivePath(prov); reason == "" {
 		t.Fatalf("expected custom HAWK_CONFIG_DIR provider.json blocked, got empty")
+	}
+}
+
+func TestIsSensitivePath_EyrieConfigDirTakesPrecedence(t *testing.T) {
+	hawkDir := filepath.Join(t.TempDir(), "hawk")
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+
+	if reason := IsSensitivePath(filepath.Join(eyrieDir, "provider.json")); reason == "" {
+		t.Fatal("expected EYRIE_CONFIG_DIR/provider.json to be blocked")
+	}
+	if reason := IsSensitivePath(filepath.Join(hawkDir, "settings.json")); reason != "" {
+		t.Fatalf("expected Hawk settings path to remain allowed, got %q", reason)
+	}
+}
+
+func TestFileToolsBlockEyrieProviderConfig(t *testing.T) {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+	providerPath := filepath.Join(eyrieDir, "provider.json")
+
+	readInput, _ := json.Marshal(map[string]string{"path": providerPath})
+	editInput, _ := json.Marshal(map[string]string{
+		"path": providerPath, "old_str": "old", "new_str": "new",
+	})
+	writeInput, _ := json.Marshal(map[string]string{
+		"path": providerPath, "content": "safe routing metadata",
+	})
+	tests := []struct {
+		name string
+		run  func() error
+	}{
+		{name: "Read", run: func() error {
+			_, err := (FileReadTool{}).Execute(context.Background(), readInput)
+			return err
+		}},
+		{name: "Edit", run: func() error {
+			_, err := (FileEditTool{}).Execute(context.Background(), editInput)
+			return err
+		}},
+		{name: "Write", run: func() error {
+			_, err := (FileWriteTool{}).Execute(context.Background(), writeInput)
+			return err
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.run()
+			if err == nil || !strings.Contains(err.Error(), "blocked") {
+				t.Fatalf("%s error = %v, want sensitive-path block", tt.name, err)
+			}
+		})
 	}
 }
 
@@ -740,6 +796,31 @@ func TestCommandReferencesSensitivePath(t *testing.T) {
 	for _, cmd := range allowed {
 		if reason := CommandReferencesSensitivePath(cmd); reason != "" {
 			t.Errorf("CommandReferencesSensitivePath(%q) = %q, want allowed", cmd, reason)
+		}
+	}
+}
+
+func TestCommandReferencesSensitivePath_EyrieConfigDir(t *testing.T) {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie config with spaces")
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+
+	commands := []string{
+		`cat "` + filepath.Join(eyrieDir, "provider.json") + `"`,
+		`cat "$EYRIE_CONFIG_DIR/provider.json"`,
+		`cat "${EYRIE_CONFIG_DIR}/provider.json"`,
+		`cat "${EYRIE_CONFIG_DIR%/}/provider.json"`,
+		`printf '%s\n' "$EYRIE_CONFIG_DIR"`,
+		"cat " + strings.ReplaceAll(filepath.Join(eyrieDir, "provider.json"), " ", `\ `),
+	}
+	for _, command := range commands {
+		if reason := CommandReferencesSensitivePath(command); reason == "" {
+			t.Fatalf("CommandReferencesSensitivePath(%q) = empty, want blocked", command)
+		}
+		if !IsSuspicious(command) {
+			t.Fatalf("IsSuspicious(%q) = false, want Bash prompt", command)
+		}
+		if !isHardDeny(command) {
+			t.Fatalf("isHardDeny(%q) = false, want Bash block", command)
 		}
 	}
 }

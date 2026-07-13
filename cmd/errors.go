@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
@@ -56,7 +55,7 @@ func friendlyError(err error) string {
 	for _, pk := range providerKeys {
 		for _, pat := range pk.patterns {
 			if strings.Contains(low, pat) {
-				return fmt.Sprintf("%s API key is missing or invalid. Run /config to save it in %s.", pk.provider, credentials.PlatformSecretStoreName())
+				return fmt.Sprintf("%s API key is missing or invalid. Run /config to save it in %s.", pk.provider, hawkconfig.CredentialStoreName())
 			}
 		}
 	}

@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/setup"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
 // PersistAPIKey saves a provider API key via eyrie (OS secret store).
@@ -18,28 +15,15 @@ func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	if secret == "" || envKey == "" {
 		return nil
 	}
-	if err := eyriecfg.ValidateCredentialSecret(envKey, secret); err != nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return err
 	}
-	if err := runtime.SetCredential(ctx, envKey, secret); err != nil {
+	if err := engine.SaveCredentialEnv(ctx, envKey, secret); err != nil {
 		return err
 	}
 	InvalidateConfigUICache()
 	return nil
-}
-
-// PrepareCredentialDiscovery prepares runtime credential discovery without reading legacy files.
-func PrepareCredentialDiscovery(ctx context.Context) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	runtime.PrepareCredentialDiscovery(ctx)
-}
-
-// ModelOption is one hawk /config model row.
-type ModelOption struct {
-	ID          string
-	DisplayName string
 }
 
 // CredentialInference is one eyrie provider match for a pasted API key.
@@ -71,7 +55,11 @@ type CredentialResolveResult struct {
 
 // ResolveCredential validates format and lists all providers from eyrie registry.
 func ResolveCredential(ctx context.Context, secret string) CredentialResolveResult {
-	res := runtime.ResolveCredential(ctx, secret)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return CredentialResolveResult{FormatError: err.Error()}
+	}
+	res := engine.ResolveCredential(ctx, secret)
 	out := CredentialResolveResult{
 		FormatOK:                res.FormatOK,
 		FormatError:             res.FormatError,
@@ -84,7 +72,7 @@ func ResolveCredential(ctx context.Context, secret string) CredentialResolveResu
 			DeploymentID: p.DeploymentID,
 			EnvVar:       p.EnvVar,
 			DisplayName:  p.DisplayName,
-			Inferred:     p.Inferred,
+			Inferred:     false,
 			RequiresKey:  p.RequiresKey,
 			Rank:         p.Rank,
 		}
@@ -104,10 +92,11 @@ func InferenceFromOption(opt CredentialProviderOption) CredentialInference {
 
 // SaveCredential validates, probes, and stores via eyrie keychain.
 func SaveCredential(ctx context.Context, inference CredentialInference, secret string) error {
-	if err := runtime.SaveCredential(ctx, runtime.CredentialInference{
-		ProviderID: inference.ProviderID, DeploymentID: inference.DeploymentID,
-		EnvVar: inference.EnvVar, DisplayName: inference.DisplayName,
-	}, secret); err != nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return err
+	}
+	if _, err := engine.SaveCredential(ctx, inference.ProviderID, secret); err != nil {
 		return err
 	}
 	InvalidateConfigUICache()
@@ -116,7 +105,12 @@ func SaveCredential(ctx context.Context, inference CredentialInference, secret s
 
 // HasStoredCredentialForProvider reports whether the OS secret store has a key for this gateway.
 func HasStoredCredentialForProvider(ctx context.Context, providerID string) bool {
-	return runtime.HasStoredCredential(ctx, providerID)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return false
+	}
+	status, err := engine.CredentialStatus(ctx, providerID)
+	return err == nil && status.Configured
 }
 
 // ConfiguredCredentialProviders returns setup gateways with a stored API key.
@@ -129,13 +123,13 @@ func FormatCredentialCLIStatus(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	report := credentials.StorageReportFor(ctx)
+	report := CredentialStorageStatus(ctx)
 	var b strings.Builder
 	fmt.Fprintf(&b, "Credential storage: %s only\n", report.PlatformStore)
-	if report.KeychainWritable {
+	if report.Writable {
 		b.WriteString("  Keychain: writable\n")
 	} else {
-		fmt.Fprintf(&b, "  Keychain: %s\n", report.KeychainDetail)
+		fmt.Fprintf(&b, "  Keychain: %s\n", report.Detail)
 	}
 	providers := ConfiguredCredentialProviders()
 	if len(providers) == 0 {
@@ -152,28 +146,23 @@ func RemoveStoredCredential(ctx context.Context, target string) ([]string, error
 	if target == "" {
 		return nil, fmt.Errorf("provider or env var name required")
 	}
-	envKeys := credentialEnvKeysForTarget(target)
-	if len(envKeys) == 0 {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return nil, err
+	}
+	provider, ok := engineCredentialProvider(engine.CredentialProviders(ctx), target)
+	if !ok {
 		return nil, fmt.Errorf("unknown provider %q", target)
 	}
-	var removed []string
-	for _, envKey := range envKeys {
-		if !credentials.HasSecret(ctx, envKey) {
-			continue
-		}
-		if err := credentials.DeleteSecret(ctx, envKey); err != nil {
-			if len(removed) > 0 {
-				InvalidateConfigUICache()
-			}
-			return removed, err
-		}
-		removed = append(removed, envKey)
-	}
-	if len(removed) == 0 {
+	status, err := engine.CredentialStatus(ctx, provider.ProviderID)
+	if err != nil || !status.Configured {
 		return nil, fmt.Errorf("no stored credential for %q", target)
 	}
+	if err := engine.RemoveCredential(ctx, provider.ProviderID); err != nil {
+		return nil, err
+	}
 	InvalidateConfigUICache()
-	return removed, nil
+	return []string{provider.EnvVar}, nil
 }
 
 // MaskCredentialForProvider returns a partially masked API key for UI display.
@@ -181,12 +170,12 @@ func MaskCredentialForProvider(ctx context.Context, provider string) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	for _, envKey := range credentialEnvKeysForTarget(provider) {
-		secret := credentials.LookupSecret(ctx, envKey)
-		if secret == "" {
-			continue
+	engine, err := newEyrieEngine()
+	if err == nil {
+		status, statusErr := engine.CredentialStatus(ctx, provider)
+		if statusErr == nil && status.Masked != "" {
+			return status.Masked
 		}
-		return maskCredentialSecret(secret)
 	}
 	return "••••••••"
 }
@@ -206,10 +195,13 @@ func maskCredentialSecret(secret string) string {
 
 // CredentialInferenceForProvider returns save metadata for a gateway chosen in /config.
 func CredentialInferenceForProvider(providerID string) (CredentialInference, error) {
-	providerID = runtime.SetupGatewayID(providerID)
-	inf, err := runtime.InferenceForProvider(providerID)
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return CredentialInference{}, err
+	}
+	inf, ok := engineCredentialProvider(engine.CredentialProviders(context.Background()), providerID)
+	if !ok {
+		return CredentialInference{}, fmt.Errorf("unknown provider %q", providerID)
 	}
 	return CredentialInference{
 		ProviderID:   inf.ProviderID,
@@ -217,27 +209,11 @@ func CredentialInferenceForProvider(providerID string) (CredentialInference, err
 		EnvVar:       inf.EnvVar,
 		DisplayName:  inf.DisplayName,
 	}, nil
-}
-
-func credentialEnvKeysForTarget(target string) []string {
-	if strings.Contains(target, "_") && strings.ToUpper(target) == target {
-		return []string{strings.TrimSpace(target)}
-	}
-	return runtime.CredentialEnvKeys(target)
 }
 
 // LocalCredentialInference returns setup metadata for no-key providers (e.g. Ollama).
 func LocalCredentialInference(providerID string) (CredentialInference, error) {
-	inf, err := runtime.LocalCredentialInference(providerID)
-	if err != nil {
-		return CredentialInference{}, err
-	}
-	return CredentialInference{
-		ProviderID:   inf.ProviderID,
-		DeploymentID: inf.DeploymentID,
-		EnvVar:       inf.EnvVar,
-		DisplayName:  inf.DisplayName,
-	}, nil
+	return CredentialInferenceForProvider(providerID)
 }
 
 // FormatConfigProviderError maps eyrie setup errors to user-facing /config hints.
@@ -245,15 +221,12 @@ func FormatConfigProviderError(providerID string, err error) string {
 	if err == nil {
 		return ""
 	}
-	if formatted := runtime.FormatSetupError(providerID, err); formatted != nil {
-		return formatted.Error()
-	}
-	return err.Error()
+	return eyrieengine.FormatSetupError(providerID, err)
 }
 
 // InferCredentialsFromAPIKey is deprecated; select gateway first, then paste the key.
 func InferCredentialsFromAPIKey(ctx context.Context, secret string) []CredentialInference {
-	in := runtime.InferCredentialsFromAPIKey(ctx, secret)
+	in := ResolveCredential(ctx, secret).Providers
 	out := make([]CredentialInference, len(in))
 	for i, c := range in {
 		out[i] = CredentialInference{
@@ -266,23 +239,12 @@ func InferCredentialsFromAPIKey(ctx context.Context, secret string) []Credential
 	return out
 }
 
-// OptionsFromSetupUI builds picker rows; providerFilter limits to one provider.
-func OptionsFromSetupUI(ui *setup.SetupUI, providerFilter string) []ModelOption {
-	if ui == nil {
-		return nil
-	}
-	providerFilter = strings.TrimSpace(providerFilter)
-	var out []ModelOption
-	for _, p := range ui.Providers {
-		if providerFilter != "" && p.ID != providerFilter {
-			continue
-		}
-		for _, m := range p.Models {
-			out = append(out, ModelOption{
-				ID:          m.CanonicalID,
-				DisplayName: m.DisplayName,
-			})
+func engineCredentialProvider(providers []eyrieengine.CredentialProvider, target string) (eyrieengine.CredentialProvider, bool) {
+	target = strings.TrimSpace(target)
+	for _, provider := range providers {
+		if strings.EqualFold(provider.ProviderID, target) || strings.EqualFold(provider.EnvVar, target) {
+			return provider, true
 		}
 	}
-	return out
+	return eyrieengine.CredentialProvider{}, false
 }

@@ -175,7 +175,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 
 	case "/fork":
 		// If convodag is active, fork from the current head node
-		if m.session.Persistence().DAG() != nil {
+		if m.session.Persistence().Graph() != nil {
 			headID := m.session.ConvoHead()
 			if headID == "" {
 				m.messages = append(m.messages, displayMsg{role: "error", content: "No conversation to fork from."})

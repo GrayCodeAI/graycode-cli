@@ -67,7 +67,7 @@ bottom: shared foundations
 | Repo | Layer | Role | Depends on | Must not depend on |
 |---|---|---|---|---|
 | `hawk` | Product | CLI, orchestration, policy, execution control, public APIs | support engines, `hawk-core-contracts` | sibling company/platform repos in runtime paths |
-| `eyrie` | Support engine | provider runtime, model execution, streaming, retries | `hawk-core-contracts` only if needed | `yaad`, `tok`, `trace`, `sight`, `inspect` |
+| `eyrie` | Support engine | credentials, catalog, routing, model transport, normalized streaming | `hawk-core-contracts` only if needed | `yaad`, `tok`, `trace`, `sight`, `inspect` |
 | `yaad` | Support engine | memory, retrieval, persistence of long-lived context | `hawk-core-contracts` only if needed | `eyrie`, `tok`, `trace`, `sight`, `inspect` |
 | `tok` | Support engine | token budgeting, packing, truncation, context shaping | `hawk-core-contracts` only if needed | `eyrie`, `yaad`, `trace`, `sight`, `inspect` |
 | `trace` | Support engine | trace capture, replay, provenance, audit trail | `hawk-core-contracts` only if needed | `eyrie`, `yaad`, `tok`, `sight`, `inspect` |
@@ -89,7 +89,7 @@ Owns:
 - session lifecycle
 - approval and permission policy
 - tool routing
-- provider selection
+- user model preference and task-semantic model intent
 - engine coordination
 - user-visible product APIs
 
@@ -97,10 +97,16 @@ Owns:
 
 Owns:
 
+- the sole provider-facing host facade (`eyrie/engine`)
+- credential and provider-state lifecycle
+- catalog discovery and concrete model/deployment selection
 - provider adapters
 - request/response normalization
 - streaming transport
 - retry and timeout logic
+
+Hawk is Eyrie's composition root and user-facing presentation layer. Hawk
+production packages do not import Eyrie below `eyrie/engine`.
 
 ### `yaad`
 

@@ -2,15 +2,12 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/runtime"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -53,8 +50,6 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	PrepareCredentialDiscovery(ctx)
-
 	var checks []PathCheck
 
 	setup := EvaluateSetup(ctx)
@@ -108,16 +103,17 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	if ok, detail := credentials.KeychainWriteAvailable(ctx); ok {
+	storageStatus := CredentialStorageStatus(ctx)
+	if storageStatus.Writable {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "keychain", Status: PathPass,
-			Detail:   credentials.PlatformSecretStoreName() + " writable",
+			Detail:   CredentialStoreName() + " writable",
 			Blocking: true,
 		})
 	} else {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "keychain", Status: PathWarn,
-			Detail:   detail,
+			Detail:   storageStatus.Detail,
 			FixHint:  "Unlock keychain or enable secret service (Linux)",
 			Blocking: true,
 		})
@@ -153,7 +149,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	}
 
 	hawkDir := home.Dir()
-	provPath := eyriecfg.GetProviderConfigPath()
+	provPath := ProviderStateSecurityStatus().Path
 	if provPath == "" {
 		provPath = filepath.Join(hawkDir, ".hawk", "provider.json")
 	}
@@ -184,7 +180,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	pre := runtime.Preflight(ctx)
+	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
 		checks = append(checks, PathCheck{
 			Section: "Ecosystem", Name: "eyrie", Status: PathPass,
@@ -194,7 +190,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	} else {
 		status := PathWarn
 		for _, c := range pre.Checks {
-			if c.Status == runtime.PreflightFail {
+			if c.Status == eyrieengine.CheckFail {
 				status = PathFail
 				break
 			}
@@ -312,30 +308,11 @@ func pathStatusGlyph(s PathCheckStatus) string {
 }
 
 func providerJSONHasSecretsOnDisk() (bool, string) {
-	path := eyriecfg.GetProviderConfigPath()
-	data, err := os.ReadFile(path) // #nosec G304 -- path is eyrie's fixed provider config path, not external input
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, ""
-		}
-		return false, ""
+	status := ProviderStateSecurityStatus()
+	if status.Error != "" {
+		return true, status.Error
 	}
-	text := string(data)
-	for _, needle := range []string{`"api_key"`, `"secret_access_key"`, `"session_token"`} {
-		if strings.Contains(text, needle+`": "`) && !strings.Contains(text, needle+`": ""`) {
-			return true, "provider.json contains " + needle + " field with value"
-		}
-	}
-	var cfg eyriecfg.ProviderConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return false, ""
-	}
-	for id, dep := range cfg.Deployments {
-		if deploymentHasSecrets(dep) {
-			return true, "deployment " + id + " has secret fields on disk"
-		}
-	}
-	return false, ""
+	return status.HasSecrets, status.Detail
 }
 
 func legacyCredentialFilesPresent() (bool, []string) {

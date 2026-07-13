@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
@@ -349,7 +348,7 @@ func (em *EnvManager) Validate() []string {
 	ctx := context.Background()
 	for _, key := range recommended {
 		if _, ok := em.Vars[key]; !ok {
-			if !credentials.HasSecret(ctx, key) {
+			if !HasCredentialEnv(ctx, key) {
 				warnings = append(warnings, fmt.Sprintf("WARNING: recommended credential %q is not configured — run /config", key))
 			}
 		}
