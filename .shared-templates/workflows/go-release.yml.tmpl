@@ -36,7 +36,9 @@ jobs:
         uses: goreleaser/goreleaser-action@1a80836c5c9d9e5755a25cb59ec6f45a3b5f41a8 # v7.2.1
         with:
           distribution: goreleaser
-          version: "v6.3.0"
+          # Must match a real goreleaser release — verify at
+          # https://github.com/goreleaser/goreleaser/releases before bumping.
+          version: "v2.17.0"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
