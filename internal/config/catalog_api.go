@@ -5,13 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
-// GatewayStatus is Hawk's presentation row. Provider/deployment and
-// credential state comes from Eyrie's host-neutral control plane.
 type GatewayStatus struct {
 	ID                      string
 	DisplayName             string
@@ -23,251 +19,279 @@ type GatewayStatus struct {
 	RegionRequired          bool
 }
 
-// CompiledCatalogV1 loads the eyrie catalog from cache or bootstrap wiring (no network).
-func CompiledCatalogV1() *catalog.CompiledCatalog {
-	return compiledCatalogOrBootstrap()
-}
-
-func compiledCatalogOrBootstrap() *catalog.CompiledCatalog {
-	if compiled, ok := cachedCompiledCatalog(); ok && compiled != nil {
-		return compiled
-	}
-	compiled, err := loadEyrieCatalogV1(context.Background(), false)
-	if err == nil && compiled != nil {
-		storeCompiledCatalog(compiled)
-		return compiled
-	}
-	bootstrap := catalog.BootstrapCatalog()
-	compiled, err = catalog.CompileCatalog(&bootstrap)
+func AllCatalogProviders() []string {
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return nil
 	}
-	storeCompiledCatalog(compiled)
-	return compiled
+	providers, _ := engine.ModelProviders(context.Background())
+	seen := map[string]bool{}
+	for _, provider := range providers {
+		if provider = eyrieengine.NormalizeProviderID(provider); provider != "" {
+			seen[provider] = true
+		}
+	}
+	for _, gateway := range engine.GatewayDefinitions() {
+		seen[gateway.ID] = true
+	}
+	providers = providers[:0]
+	for provider := range seen {
+		providers = append(providers, provider)
+	}
+	sort.Strings(providers)
+	return providers
 }
 
-// AllCatalogProviders returns provider IDs from eyrie (providers + deployments, not hawk constants).
-func AllCatalogProviders() []string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
+func AllSetupGateways() []string {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return nil
 	}
-	seen := map[string]bool{}
-	var out []string
-	for _, id := range catalog.ProviderIDsFromCompiled(compiled) {
-		p := runtime.CatalogProviderID(id)
-		if p == "" || seen[p] {
-			continue
-		}
-		seen[p] = true
-		out = append(out, p)
+	gateways := engine.GatewayDefinitions()
+	out := make([]string, 0, len(gateways))
+	for _, gateway := range gateways {
+		out = append(out, gateway.ID)
 	}
-	sort.Strings(out)
 	return out
 }
 
-// AllSetupGateways returns gateway IDs where users paste API keys (eyrie registry only).
-// Aggregator owner slugs from OpenRouter/CanopyWave catalogs (ai21, alibaba, …) are excluded.
-func AllSetupGateways() []string {
-	return runtime.SetupGateways()
-}
-
-// SetupGatewayCredentialEnv returns the registry env var for a setup gateway (e.g. XIAOMI_MIMO_PAYG_API_KEY).
 func SetupGatewayCredentialEnv(providerID string) string {
-	return runtime.SetupGatewayCredentialEnv(providerID)
-}
-
-// IsSetupGateway reports whether id is a registered setup gateway.
-func IsSetupGateway(providerID string) bool {
-	return runtime.IsSetupGateway(providerID)
-}
-
-func GatewayDisplayName(gatewayID string) string {
-	return runtime.GatewayDisplayName(gatewayID)
-}
-
-// ActiveGateway returns the user's setup gateway (never an aggregator owner slug like moonshotai).
-func ActiveGateway(ctx context.Context) string {
-	if ctx == nil {
-		ctx = context.Background()
+	if gateway, ok := engineGateway(providerID); ok {
+		return gateway.CredentialEnv
 	}
-	return runtime.ActiveGateway(ctx)
+	return ""
+}
+
+func IsSetupGateway(providerID string) bool {
+	_, ok := engineGateway(providerID)
+	return ok
+}
+
+func GatewayDisplayName(providerID string) string {
+	if gateway, ok := engineGateway(providerID); ok {
+		return gateway.DisplayName
+	}
+	return providerID
+}
+
+func GatewaySupportsLiveDiscovery(providerID string) bool {
+	if gateway, ok := engineGateway(providerID); ok {
+		return gateway.SupportsLiveDiscovery
+	}
+	return false
+}
+
+func ActiveGateway(ctx context.Context) string {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return ""
+	}
+	selection := engine.ActiveSelection(ctx)
+	providerID := eyrieengine.NormalizeProviderID(selection.Provider)
+	for _, gateway := range engine.GatewayDefinitions() {
+		if eyrieengine.NormalizeProviderID(gateway.ID) == providerID {
+			return gateway.ID
+		}
+	}
+	return engine.GatewayForModel(ctx, selection.Model)
 }
 
 func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []GatewayStatus {
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	engine, err := newEyrieEngine()
 	if err != nil {
 		return nil
 	}
 	gateways := engine.Gateways(ctx)
-	statuses := make([]GatewayStatus, 0, len(gateways))
+	out := make([]GatewayStatus, 0, len(gateways))
 	for _, gateway := range gateways {
 		active := gateway.Active
 		if activeProvider != "" {
 			active = eyrieengine.NormalizeProviderID(activeProvider) == eyrieengine.NormalizeProviderID(gateway.ID)
 		} else if activeModel != "" {
-			active = GatewayForModel(activeModel) == gateway.ID
+			active = engine.GatewayForModel(ctx, activeModel) == gateway.ID
 		}
-		statuses = append(statuses, GatewayStatus{
+		out = append(out, GatewayStatus{
 			ID: gateway.ID, DisplayName: gateway.DisplayName,
 			HasStoredCredential:     gateway.CredentialConfigured,
 			HasConfiguredDeployment: gateway.DeploymentConfigured,
 			ModelCount:              gateway.ModelCount, Active: active,
-			RegionLabel:    runtime.GatewayRegionLabel(gateway.ID),
-			RegionRequired: runtime.GatewayNeedsRegion(gateway.ID),
+			RegionLabel: gateway.RegionLabel, RegionRequired: gateway.RegionRequired,
 		})
 	}
-
-	return statuses
+	return out
 }
 
-// GatewayForModel resolves the setup gateway for a model id.
 func GatewayForModel(modelID string) string {
-	return catalog.GatewayForModel(CompiledCatalogV1(), modelID)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return ""
+	}
+	return engine.GatewayForModel(context.Background(), modelID)
 }
 
-// ShouldClearSelectionAfterCredentialRemove reports whether provider/model should reset.
 func ShouldClearSelectionAfterCredentialRemove(ctx context.Context, removedProvider string) bool {
-	return runtime.ShouldClearSelectionAfterCredentialRemove(ctx, removedProvider)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return true
+	}
+	selection := engine.ActiveSelection(ctx)
+	removedProvider = eyrieengine.NormalizeProviderID(removedProvider)
+	return !engine.EffectiveSelection(ctx, eyrieengine.SelectionOptions{}).HasConfiguredDeployment ||
+		eyrieengine.NormalizeProviderID(selection.Provider) == removedProvider ||
+		eyrieengine.NormalizeProviderID(engine.GatewayForModel(ctx, selection.Model)) == removedProvider
 }
 
-// ClearActiveSelection removes persisted provider/model from provider.json.
 func ClearActiveSelection(ctx context.Context) error {
-	if ctx == nil {
-		ctx = context.Background()
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return err
 	}
-	return runtime.ClearActiveSelection(ctx)
+	return engine.ClearSelection(ctx)
 }
 
-// SyncSelectionWithCredentials clears stale provider/model when keys are missing.
 func SyncSelectionWithCredentials(ctx context.Context) {
-	if ctx == nil {
-		ctx = context.Background()
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return
 	}
-	runtime.SyncSelectionWithCredentials(ctx)
+	active := engine.ActiveSelection(ctx)
+	ready := map[string]bool{}
+	hasAny := false
+	for _, gateway := range engine.Gateways(ctx) {
+		providerID := eyrieengine.NormalizeProviderID(gateway.ID)
+		ready[providerID] = gateway.DeploymentConfigured
+		hasAny = hasAny || gateway.DeploymentConfigured
+	}
+	activeGateway := eyrieengine.NormalizeProviderID(active.Provider)
+	if activeGateway == "" && active.Model != "" {
+		activeGateway = eyrieengine.NormalizeProviderID(engine.GatewayForModel(ctx, active.Model))
+	}
+	if !hasAny || (activeGateway != "" && !ready[activeGateway]) {
+		_ = engine.ClearSelection(ctx)
+	}
 }
 
 func DefaultModelForProvider(provider string) string {
-	return runtime.DefaultModelForProvider(context.Background(), provider)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return ""
+	}
+	return engine.DefaultModel(context.Background(), provider, "")
 }
 
-// CachedModelCountForProvider returns model count from the on-disk catalog only (no network).
+func DefaultModelForProviderWithSettings(settings Settings, provider string) string {
+	engine, err := NewEyrieEngineForSettings(settings)
+	if err != nil {
+		return ""
+	}
+	return engine.DefaultModel(context.Background(), provider, "")
+}
+
 func CachedModelCountForProvider(provider string) int {
-	return runtime.CachedModelCountForProvider(context.Background(), provider)
+	models, _ := ListEngineModels(context.Background(), provider, false)
+	return len(models)
 }
 
 func ModelIDsForProvider(provider string) ([]string, error) {
-	entries, err := FetchModelsForProvider(provider)
+	models, err := ListEngineModels(context.Background(), provider, false)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.ID != "" {
-			out = append(out, e.ID)
+	out := make([]string, 0, len(models))
+	for _, model := range models {
+		if model.ID != "" {
+			out = append(out, model.ID)
 		}
 	}
 	return out, nil
 }
 
-// CheapestModelForProvider picks the lowest input-priced model from eyrie's catalog.
 func CheapestModelForProvider(provider, fallback string) string {
-	entries, err := FetchModelsForProvider(provider)
-	if err != nil || len(entries) == 0 {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return fallback
 	}
-	cheapest := entries[0]
-	for _, e := range entries[1:] {
-		if e.InputPricePer1M > 0 && (cheapest.InputPricePer1M == 0 || e.InputPricePer1M < cheapest.InputPricePer1M) {
-			cheapest = e
-		}
-	}
-	if cheapest.ID != "" {
-		return cheapest.ID
-	}
-	return fallback
+	return engine.PreferredModel(context.Background(), provider, eyrieengine.ModelClassEconomical, fallback)
 }
 
-// ProviderOfModel resolves catalog provider for a canonical model ID or alias.
 func ProviderOfModel(modelName string) string {
-	compiled := CompiledCatalogV1()
-	if compiled == nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return ""
 	}
-	if canonical, ok := compiled.CanonicalModelForAliasOrID(modelName); ok {
-		if model := compiled.ModelsByID[canonical]; model.ID != "" {
-			return runtime.CatalogProviderID(model.ProviderID)
-		}
-	}
-	return ""
+	return eyrieengine.NormalizeProviderID(engine.ProviderForModel(context.Background(), modelName))
 }
 
-// ExampleModelHints returns short example model aliases for user-facing error messages.
-func ExampleModelHints() (anthropic, openai string) {
-	compiled := CompiledCatalogV1()
-	if compiled == nil {
-		return "claude-sonnet-4-6", "gpt-4o"
+func ProviderOfModelWithSettings(settings Settings, modelName string) string {
+	engine, err := NewEyrieEngineForSettings(settings)
+	if err != nil {
+		return ""
 	}
-	if _, ok := compiled.CanonicalModelForAliasOrID("claude-sonnet-4-6"); ok {
-		anthropic = "claude-sonnet-4-6"
-	}
-	if _, ok := compiled.CanonicalModelForAliasOrID("gpt-4o"); ok {
-		openai = "gpt-4o"
-	}
-	if anthropic == "" || openai == "" {
-		for _, id := range []string{"anthropic/claude-sonnet-4-6", "openai/gpt-4o"} {
-			if _, ok := compiled.ModelsByID[id]; !ok {
-				continue
-			}
-			if strings.HasPrefix(id, "anthropic/") && anthropic == "" {
-				anthropic = strings.TrimPrefix(id, "anthropic/")
-			}
-			if strings.HasPrefix(id, "openai/") && openai == "" {
-				openai = strings.TrimPrefix(id, "openai/")
-			}
-		}
-	}
-	if anthropic == "" || openai == "" {
-		return "claude-sonnet-4-6", "gpt-4o"
-	}
-	return anthropic, openai
+	return eyrieengine.NormalizeProviderID(engine.ProviderForModel(context.Background(), modelName))
 }
 
-// AllCanonicalModelIDs returns sorted canonical model IDs from the eyrie catalog.
+func ExampleModelHints() (string, string) {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return "an Anthropic model", "an OpenAI model"
+	}
+	return engine.DefaultModel(context.Background(), "anthropic", "an Anthropic model"),
+		engine.DefaultModel(context.Background(), "openai", "an OpenAI model")
+}
+
 func AllCanonicalModelIDs() []string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return nil
 	}
-	out := make([]string, 0, len(compiled.ModelsByID))
-	for id := range compiled.ModelsByID {
-		out = append(out, id)
+	snapshot, err := engine.Catalog(context.Background())
+	if err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(snapshot.Models))
+	for _, model := range snapshot.Models {
+		out = append(out, model.ID)
 	}
 	sort.Strings(out)
 	return out
 }
 
-// ProviderIDForDeployment returns the catalog provider id for a deployment (e.g. anthropic-direct → anthropic).
 func ProviderIDForDeployment(deploymentID string) string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return ""
 	}
-	dep, ok := compiled.DeploymentsByID[deploymentID]
-	if !ok {
-		return ""
+	for _, gateway := range engine.GatewayDefinitions() {
+		if gateway.DeploymentID == strings.TrimSpace(deploymentID) {
+			return gateway.ID
+		}
 	}
-	return runtime.CatalogProviderID(dep.ProviderID)
+	return ""
 }
 
-// PrimaryAPIKeyEnvForDeployment returns the env var name for a deployment's API key.
 func PrimaryAPIKeyEnvForDeployment(deploymentID string) string {
-	compiled := compiledCatalogOrBootstrap()
-	if compiled == nil {
+	engine, err := newEyrieEngine()
+	if err != nil {
 		return ""
 	}
-	return catalog.PrimaryAPIKeyEnvForDeployment(compiled, deploymentID)
+	for _, gateway := range engine.GatewayDefinitions() {
+		if gateway.DeploymentID == strings.TrimSpace(deploymentID) {
+			return gateway.CredentialEnv
+		}
+	}
+	return ""
+}
+
+func engineGateway(providerID string) (eyrieengine.Gateway, bool) {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return eyrieengine.Gateway{}, false
+	}
+	providerID = eyrieengine.NormalizeProviderID(providerID)
+	for _, gateway := range engine.GatewayDefinitions() {
+		if eyrieengine.NormalizeProviderID(gateway.ID) == providerID {
+			return gateway, true
+		}
+	}
+	return eyrieengine.Gateway{}, false
 }

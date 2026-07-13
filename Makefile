@@ -104,10 +104,10 @@ contracts-guard: ## Fail on any legacy imports of removed hawk/shared/types.
 ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or removed hawk/shared/types.
 	bash ./scripts/check-ecosystem-boundaries.sh
 
-eyrie-client-guard: ## Fail on new direct eyrie/client imports outside Hawk transport adapters.
+eyrie-client-guard: ## Fail on any production eyrie/client import.
 	bash ./scripts/check-eyrie-client-imports.sh
 
-eyrie-engine-guard: ## Ratchet production imports toward the stable eyrie/engine facade.
+eyrie-engine-guard: ## Require all production Eyrie imports to use the stable engine facade.
 	bash ./scripts/check-eyrie-engine-boundary.sh
 
 peer-guard: ## Fail if support engines import each other instead of depending only on Hawk contracts.

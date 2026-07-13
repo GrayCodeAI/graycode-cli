@@ -141,7 +141,8 @@ func TestFriendlyErrorInvalidModel(t *testing.T) {
 			if !strings.Contains(got, "/model") {
 				t.Errorf("friendlyError(%q) = %q, should suggest /model", tt.errMsg, got)
 			}
-			if !strings.Contains(got, "claude-sonnet") || !strings.Contains(got, "gpt-4o") {
+			example1, example2 := hawkconfig.ExampleModelHints()
+			if !strings.Contains(got, example1) || !strings.Contains(got, example2) {
 				t.Errorf("friendlyError(%q) = %q, should suggest valid model names", tt.errMsg, got)
 			}
 		})

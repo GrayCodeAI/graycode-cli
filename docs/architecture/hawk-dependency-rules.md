@@ -85,8 +85,17 @@ Anything used across repos must move to `hawk-core-contracts`.
 ### 4. Public integrations go through Hawk
 SDKs and skills must use Hawk public APIs, contracts, or plugin surfaces.
 
-### 5. Provider logic stays behind runtime boundaries
+### 5. Provider logic stays behind the Eyrie engine boundary
 Provider-specific code should not leak into memory, review, verify, or trace engines.
+Hawk production code imports Eyrie only through `github.com/GrayCodeAI/eyrie/engine`.
+
+### 6. Hawk schemas stay Hawk-owned
+Hawk's conversation persistence and CLI/JSON output are explicit projections,
+not aliases or direct serialization of Eyrie engine DTOs.
+
+### 7. Engine configuration is instance-scoped
+Hawk supplies effective custom gateways while constructing an Engine. Do not
+mutate Eyrie process-global gateway state from product code.
 
 ## Current cleanup targets
 
@@ -105,11 +114,9 @@ These were previously "ideas"; they are now implemented:
   ("Ecosystem Boundaries" section)
 - CI runs `scripts/check-ecosystem-boundaries.sh` in every support repo, and
   Hawk additionally runs `check-shared-types-imports.sh`,
-  `check-eyrie-client-imports.sh`, and `check-support-repo-coupling.sh`
+  `check-eyrie-client-imports.sh`, `check-eyrie-engine-boundary.sh`, and
+  `check-support-repo-coupling.sh`
 - `hawk-core-contracts` is kept minimal (leaf module, no external dependencies)
 
-Still open:
-
-- the boundary guard scripts depend on `rg`; when `rg` is absent they pass
-  vacuously, so CI images must provide ripgrep (or the scripts should fall back
-  to `git grep`)
+The Hawk boundary guards use ripgrep when available and fall back to recursive
+grep, so a minimal CI image cannot turn a missing scanner into a vacuous pass.

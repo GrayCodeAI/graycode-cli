@@ -159,14 +159,11 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 // with whatever partial state the upstream had emitted (caller should
 // check ctx.Err()).
 //
-// Note: the ChatService intentionally does NOT touch the legacy circuit-
-// breaker router on success/failure. The Session-level agent loop
-// (stream.go) is responsible for that recording, because it has the full
-// apiStart timestamp it wants to feed to Router.RecordSuccess. Putting
-// that responsibility here would either duplicate the call or force the
-// service to invent a "started at" argument that doesn't otherwise exist.
+// Eyrie facade clients advertise that they manage provider resilience. For
+// those clients this service records the product metric and delegates exactly
+// once; injected legacy clients retain Hawk's compatibility retry/rate layer.
 func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
-	if owner, ok := c.client.(interface{ OwnsResilience() bool }); ok && owner.OwnsResilience() {
+	if clientManagesResilience(c.client) {
 		c.metrics.Counter("api.requests").Inc()
 		return c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
 	}

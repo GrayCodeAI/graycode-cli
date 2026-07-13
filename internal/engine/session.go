@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -239,9 +240,12 @@ type Session struct {
 	smartSkills []plugin.SmartSkill
 }
 
-// NewSession creates a new conversation session with a legacy string-named provider.
+// NewSession creates a conversation session through Eyrie's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewSessionWithClient(types.NewClient(&types.ClientConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
+	return NewHawkSession(context.Background(), eyrieengine.Selection{
+		Provider: provider,
+		Model:    model,
+	}, provider, model, systemPrompt, registry)
 }
 
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
@@ -453,10 +457,9 @@ func (s *Session) syncCascadeDefaultModel() {
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
 	s.provider = p
-	if s.DeploymentRouting {
-		return
+	if s.llm != nil {
+		s.llm.SetProvider(p)
 	}
-	s.client = types.NewClient(&types.ClientConfig{Provider: p})
 }
 
 func (s *Session) AddUser(content string) {
@@ -861,8 +864,10 @@ type StreamEvent struct {
 
 // StreamUsage tracks token usage for a single stream event.
 type StreamUsage struct {
-	PromptTokens     int `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
-	CacheReadTokens  int `json:"cache_read_tokens,omitempty"`
-	CacheWriteTokens int `json:"cache_write_tokens,omitempty"`
+	PromptTokens     int    `json:"prompt_tokens"`
+	CompletionTokens int    `json:"completion_tokens"`
+	CacheReadTokens  int    `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens int    `json:"cache_write_tokens,omitempty"`
+	Provider         string `json:"provider,omitempty"`
+	Model            string `json:"model,omitempty"`
 }

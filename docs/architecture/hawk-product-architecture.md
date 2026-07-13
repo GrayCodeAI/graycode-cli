@@ -6,6 +6,11 @@ Hawk is a model-agnostic AI coding agent CLI from GrayCodeAI.
 
 Hawk is the only primary product surface in the Hawk ecosystem. The support repos exist to power Hawk, not to compete with it as standalone products.
 
+For model execution specifically: **Hawk is the face and composition layer;
+Eyrie is the engine.** Hawk owns the conversation and product experience while
+the `eyrie/engine` facade owns the complete provider path from credential and
+catalog state through model selection and normalized generation/streaming.
+
 ## Goals
 
 - Keep Hawk model agnostic.
@@ -106,7 +111,7 @@ Hawk owns:
 - workflow control
 - tool routing
 - permission and policy enforcement
-- provider selection
+- user model preference and task-semantic model intent
 - engine coordination
 - public integration surfaces
 
@@ -119,11 +124,15 @@ Hawk does not own:
 ## Engine responsibilities
 
 ### `eyrie`
+- stable host control and generation facade (`eyrie/engine`)
+- credential storage and safe credential status
+- catalog discovery and model metadata
+- concrete provider/deployment selection
 - provider adapters
 - request/response normalization
 - streaming
 - retries/timeouts/fallbacks
-- low-level provider registry and compatibility logic behind Hawk-owned transport adapters
+- low-level provider registry and compatibility logic behind the engine facade
 
 ### `yaad`
 - session and long-term memory
@@ -157,7 +166,8 @@ Hawk does not own:
 ## Primary runtime flow
 
 1. User invokes `hawk`.
-2. Hawk loads config, policy, provider settings, and workspace state.
+2. Hawk loads product settings, policy, and workspace state, then creates an
+   Eyrie Engine with effective per-instance custom gateway settings.
 3. Hawk creates or resumes a session.
 4. Hawk asks `tok` for context assembly.
 5. Hawk asks `yaad` for relevant memory.
@@ -166,6 +176,12 @@ Hawk does not own:
 8. Hawk invokes `sight` when review should run.
 9. Hawk invokes `inspect` when verification should run.
 10. Hawk persists results and returns output to the user.
+
+At step 6, Hawk passes intent and Hawk-owned conversation DTOs through its
+adapter. Eyrie loads provider/catalog/credential state, resolves the gateway,
+and returns normalized events. No production Hawk package imports a lower
+Eyrie package, and no Eyrie engine DTO is used as Hawk's persistent or CLI
+schema.
 
 ## Implementation phases
 
@@ -195,9 +211,10 @@ Status:
 - formalize provider, trace, review, and verify integration points
 
 Status:
-- substantially completed
-- Hawk now owns runtime DTOs, transport config/provider seams, and review/verify product-boundary contracts
-- direct `eyrie/client` usage is restricted to adapter edges and enforced by shell guards plus meta-audit tests
+- completed for the local runtime boundary
+- Hawk owns runtime DTOs and review/verify product-boundary contracts
+- Hawk's `ChatClient` anti-corruption port translates only to `eyrie/engine`
+- all lower-level Eyrie production imports are forbidden by shell guards and meta-audit tests
 
 ### Phase 5
 - align SDKs and skills to Hawk public interfaces only

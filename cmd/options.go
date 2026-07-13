@@ -22,7 +22,6 @@ import (
 	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func buildSystemPrompt() (string, error) {
@@ -184,22 +183,11 @@ func injectRepoMap(base string) string {
 }
 
 func loadEffectiveSettings() (hawkconfig.Settings, error) {
-	settings, err := hawkconfig.LoadSettingsWithOverride(settingsFlag)
-	if err != nil {
-		return settings, err
-	}
-	// Register custom providers with eyrie only; models come from settings + catalog fetch.
-	for _, cp := range settings.CustomProviders {
-		if cp.Name == "" || cp.BaseURL == "" {
-			continue
-		}
-		_ = types.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
-	}
-	return settings, nil
+	return hawkconfig.LoadSettingsWithOverride(settingsFlag)
 }
 
 func resolveSelection(settings hawkconfig.Settings) hawkconfig.Selection {
-	return hawkconfig.EffectiveSelection(context.Background(), hawkconfig.SelectionOptions{
+	return hawkconfig.EffectiveSelectionWithSettings(context.Background(), settings, hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
 	})
@@ -215,10 +203,10 @@ func startupSelection(settings hawkconfig.Settings) hawkconfig.Selection {
 	modelID := strings.TrimSpace(firstNonEmptyTrimmed(modelOverride, explicitModel))
 
 	if providerID == "" && modelID != "" {
-		providerID = hawkconfig.ActiveProviderID(hawkconfig.ProviderOfModel(modelID))
+		providerID = hawkconfig.ActiveProviderID(hawkconfig.ProviderOfModelWithSettings(settings, modelID))
 	}
 	if modelID == "" && providerID != "" {
-		modelID = strings.TrimSpace(hawkconfig.DefaultModelForProvider(providerID))
+		modelID = strings.TrimSpace(hawkconfig.DefaultModelForProviderWithSettings(settings, providerID))
 	}
 	if providerID == "" {
 		providerID = startupPlaceholderProvider
@@ -238,10 +226,6 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	return selection.Model, selection.Provider
 }
 
-func newHawkSessionFromSelection(selection hawkconfig.Selection, systemPrompt string, registry *tool.Registry) *engine.Session {
-	return engine.NewHawkSession(context.Background(), selection, selection.Provider, selection.Model, systemPrompt, registry)
-}
-
 func newStartupHawkSession(selection hawkconfig.Selection, systemPrompt string, registry *tool.Registry) *engine.Session {
 	providerID := strings.TrimSpace(selection.Provider)
 	if providerID == "" {
@@ -258,7 +242,7 @@ func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveMo
 	if strings.TrimSpace(selection.Model) == "" {
 		selection.Model = effectiveModel
 	}
-	return newHawkSessionFromSelection(selection, systemPrompt, registry)
+	return engine.NewHawkSessionForSettings(context.Background(), settings, selection, selection.Provider, selection.Model, systemPrompt, registry)
 }
 
 func firstNonEmptyTrimmed(values ...string) string {
@@ -381,7 +365,6 @@ func configureSessionHeavy(sess *engine.Session) {
 		sess.MemorySvc().SetEnhanced(enhancedMem)
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
-
 }
 
 // bindChatSession wires TUI-only session metadata (persist id, compaction callbacks).

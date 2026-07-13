@@ -14,6 +14,8 @@ type eyrieEngineClient struct {
 	engine *eyrieengine.Engine
 }
 
+var _ resilienceManagingChatClient = (*eyrieEngineClient)(nil)
+
 func newEyrieEngineClient(runtime *eyrieengine.Engine) ChatClient {
 	return &eyrieEngineClient{engine: runtime}
 }
@@ -37,7 +39,7 @@ func (c *eyrieEngineClient) StreamChatContinue(ctx context.Context, messages []t
 	streamCtx, cancel := context.WithCancel(ctx)
 	go func() {
 		defer close(events)
-		defer stream.Close()
+		defer func() { _ = stream.Close() }()
 		for stream.Next() {
 			event, emit := fromEngineEvent(stream.Event())
 			if !emit {
@@ -63,11 +65,12 @@ func (c *eyrieEngineClient) StreamChatContinue(ctx context.Context, messages []t
 	return types.NewStreamResult(events, "", closeFn), nil
 }
 
-// OwnsResilience tells Hawk's compatibility ChatService not to add a second
-// retry/rate-limit layer around Eyrie's routed transport.
-func (c *eyrieEngineClient) OwnsResilience() bool { return true }
+// ManagesResilience tells Hawk not to add provider retry, continuation, or
+// protocol-recovery layers around Eyrie's routed transport.
+func (c *eyrieEngineClient) ManagesResilience() bool { return true }
 
 func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, continuation types.ContinuationConfig) eyrieengine.GenerateRequest {
+	glmReasoningEnabled := opts.GLMThinkingEnabled != nil && *opts.GLMThinkingEnabled
 	request := eyrieengine.GenerateRequest{
 		Messages:     toEngineMessages(messages),
 		SystemPrompt: opts.System,
@@ -77,7 +80,7 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 			Tools:          len(opts.Tools) > 0,
 			Vision:         messagesContainVision(messages),
 			StructuredJSON: opts.ResponseFormat != nil || opts.OutputSchema != "",
-			Reasoning:      opts.ReasoningEffort != "" || opts.ThinkingBudgetTokens > 0 || opts.ThinkingMode != "" || opts.GLMThinkingEnabled != nil,
+			Reasoning:      opts.ReasoningEffort != "" || opts.ThinkingBudgetTokens > 0 || opts.ThinkingMode != "" || glmReasoningEnabled,
 		},
 		Preference: eyrieengine.Preference{
 			PreferredProvider: opts.Provider,
@@ -88,6 +91,7 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 			MaxContinuations:     continuation.MaxContinuations,
 			MaxTotalOutputTokens: continuation.MaxTotalTokens,
 		},
+		Metadata:     eyrieengine.Metadata{UserID: opts.MetadataUserID},
 		Temperature:  opts.Temperature,
 		OutputSchema: firstNonEmpty(opts.OutputSchema, responseSchema(opts.ResponseFormat)),
 		Options: eyrieengine.GenerationOptions{
@@ -166,6 +170,7 @@ func fromEngineResponse(response *eyrieengine.GenerateResponse) *types.EyrieResp
 	return &types.EyrieResponse{
 		Content: response.Content, Thinking: response.Thinking, ToolCalls: calls,
 		FinishReason: response.FinishReason, RequestID: response.RequestID, Usage: fromEngineUsage(response.Usage),
+		Route: fromEngineRoute(response.Route),
 	}
 }
 
@@ -176,7 +181,9 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	}
 	switch event.Type {
 	case eyrieengine.EventRouteSelected:
-		return types.EyrieStreamEvent{}, false
+		out.Type = "route_selected"
+	case eyrieengine.EventRouteChanged:
+		out.Type = "route_changed"
 	case eyrieengine.EventContentDelta:
 		out.Type = "content"
 	case eyrieengine.EventThinkingDelta:
@@ -202,7 +209,21 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	if event.ToolCall != nil {
 		out.ToolCall = &types.ToolCall{ID: event.ToolCall.ID, Name: event.ToolCall.Name, Arguments: event.ToolCall.Arguments}
 	}
+	if event.Route != nil {
+		out.Route = fromEngineRoute(*event.Route)
+	}
 	return out, true
+}
+
+func fromEngineRoute(route eyrieengine.Route) *types.ResolvedRoute {
+	if route.Provider == "" && route.Model == "" && !route.DeploymentRouting {
+		return nil
+	}
+	return &types.ResolvedRoute{
+		Provider:          route.Provider,
+		Model:             route.Model,
+		DeploymentRouting: route.DeploymentRouting,
+	}
 }
 
 func fromEngineUsage(usage *eyrieengine.Usage) *types.EyrieUsage {

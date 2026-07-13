@@ -26,8 +26,8 @@ func TestConversationGraphPersistsBranches(t *testing.T) {
 	if fork.Metadata["forked_from"] != answer.ID {
 		t.Fatalf("fork metadata = %+v", fork.Metadata)
 	}
-	if err := graph.Close(); err != nil {
-		t.Fatal(err)
+	if closeErr := graph.Close(); closeErr != nil {
+		t.Fatal(closeErr)
 	}
 
 	reopened, err := OpenConversationGraph(path, "session-1")

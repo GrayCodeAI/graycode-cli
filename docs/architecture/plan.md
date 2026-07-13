@@ -143,7 +143,7 @@ Session
 
 ## Dependencies
 
-- **eyrie:** LLM provider runtime (external submodule)
+- **eyrie:** LLM provider engine behind `eyrie/engine` (external submodule)
 - **yaad:** Graph-based persistent memory (external submodule)
 - **tok:** Tokenizer, compression (external submodule)
 - **hawk-core-contracts:** Shared types (external submodule)

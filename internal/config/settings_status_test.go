@@ -15,7 +15,7 @@ func TestEnvKeyStatusUsesEyrieCredentialStatus(t *testing.T) {
 	if got := EnvKeyStatus("openai"); got != "empty" {
 		t.Fatalf("EnvKeyStatus without credential = %q, want empty", got)
 	}
-	if err := store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-test-key"); err != nil {
+	if err := store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-live-status-test-1234567890"); err != nil {
 		t.Fatal(err)
 	}
 	if got := EnvKeyStatus("openai"); got != "set" {

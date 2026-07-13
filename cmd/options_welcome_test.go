@@ -18,6 +18,7 @@ func isolateCredentialHome(t *testing.T) {
 	_ = os.MkdirAll(hawkDir, 0o700)
 	t.Setenv("HOME", home)
 	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
+	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
 }
 
 func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {
@@ -34,7 +35,7 @@ func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {
 	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6"); err != nil {
+	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -60,7 +61,7 @@ func TestEffectiveModelAndProvider_KeepsWithCredentials(t *testing.T) {
 	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := hawkconfig.SetActiveModel(ctx, "openrouter/auto"); err != nil {
+	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 

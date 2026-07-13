@@ -43,7 +43,9 @@ components:
           description: The user prompt to send to the agent
         session_id:
           type: string
-          description: Reserved for session continuation (currently ignored; every chat creates a fresh engine session)
+          maxLength: 128
+          pattern: '^[A-Za-z0-9._-]+$'
+          description: Durable session ID to continue. The session must already exist; successful continuation returns the same ID.
         model:
           type: string
           description: Optional model override
@@ -55,10 +57,10 @@ components:
           description: Autonomy preset controlling non-interactive permission approval
         cwd:
           type: string
-          description: Working directory for the agent session
+          description: Existing directory associated with session metadata. The daemon executes tools from its startup working directory; it never performs a process-wide chdir per request.
         agent:
           type: string
-          description: Named agent persona to run
+          description: Named Hawk agent persona to apply. Continuations inherit the persisted persona when omitted.
 
     ChatResponse:
       type: object
@@ -79,7 +81,7 @@ components:
 
     Session:
       type: object
-      description: Lightweight in-memory record of a daemon chat session.
+      description: Lightweight active record for a durably persisted daemon chat session.
       properties:
         id:
           type: string
@@ -92,6 +94,8 @@ components:
         turns:
           type: integer
         cwd:
+          type: string
+        agent:
           type: string
 
     SessionDetail:
@@ -109,6 +113,8 @@ components:
         model:
           type: string
         provider:
+          type: string
+        agent:
           type: string
         cwd:
           type: string
@@ -277,8 +283,9 @@ paths:
       tags: [system]
       summary: Readiness probe
       description: |
-        Returns 200 when the daemon can serve chat (engine configured),
-        503 with a reason otherwise.
+        Returns 200 only when a session factory is configured and Eyrie's local
+        preflight confirms provider state, catalog, credentials, and model
+        selection are ready. Returns 503 with the failed dependency otherwise.
       security: []
       responses:
         "200":
@@ -301,8 +308,10 @@ paths:
       description: |
         Non-streaming: returns the full response in one JSON object.
         Streaming: send `Accept: text/event-stream` to receive Server-Sent Events.
-        Each request creates a new agent session; there is no standalone
-        session-creation endpoint.
+        Omit `session_id` to create and durably persist a new session. Supply a
+        previously returned `session_id` to load its transcript, append a turn,
+        and update that same durable session. The returned JSON field and the
+        `X-Hawk-Session-ID` header identify a retrievable `/v1/sessions/{id}`.
       requestBody:
         required: true
         content:
@@ -312,6 +321,11 @@ paths:
       responses:
         "200":
           description: Agent response (or SSE stream)
+          headers:
+            X-Hawk-Session-ID:
+              description: Durable session ID created or continued by this request.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -327,6 +341,12 @@ paths:
                 $ref: "#/components/schemas/Error"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Requested continuation session does not exist
           content:
             application/json:
               schema:

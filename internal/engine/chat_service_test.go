@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -141,22 +143,23 @@ func TestChatService_ChatSurfacesError(t *testing.T) {
 	}
 }
 
-type resilienceOwningClient struct {
+type resilienceManagingTestClient struct {
 	err   error
 	calls int
 }
 
-func (c *resilienceOwningClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+func (c *resilienceManagingTestClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
 	return nil, c.err
 }
-func (c *resilienceOwningClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
+
+func (c *resilienceManagingTestClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
 	c.calls++
 	return nil, c.err
 }
-func (c *resilienceOwningClient) OwnsResilience() bool { return true }
+func (c *resilienceManagingTestClient) ManagesResilience() bool { return true }
 
 func TestChatService_DoesNotDuplicateEngineResilience(t *testing.T) {
-	client := &resilienceOwningClient{err: errors.New("routed transport failed")}
+	client := &resilienceManagingTestClient{err: errors.New("routed transport failed")}
 	svc := NewChatService(client, ChatServiceConfig{})
 	_, err := svc.Stream(context.Background(), []types.EyrieMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{})
 	if err == nil {
@@ -164,5 +167,47 @@ func TestChatService_DoesNotDuplicateEngineResilience(t *testing.T) {
 	}
 	if client.calls != 1 {
 		t.Fatalf("engine-owning client called %d times, want exactly once", client.calls)
+	}
+}
+
+type flakyLegacyStartClient struct {
+	calls int
+}
+
+func (*flakyLegacyStartClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+	return nil, nil
+}
+
+func (c *flakyLegacyStartClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
+	c.calls++
+	if c.calls == 1 {
+		return nil, errors.New("temporary transport failure")
+	}
+	events := make(chan types.EyrieStreamEvent)
+	close(events)
+	return types.NewStreamResult(events, "", nil), nil
+}
+
+func TestChatService_LegacyClientRetainsStartRetry(t *testing.T) {
+	client := &flakyLegacyStartClient{}
+	svc := NewChatService(client, ChatServiceConfig{RetryConfig: retryConfigForBoundaryTest()})
+	result, err := svc.Stream(context.Background(), nil, types.ChatOptions{})
+	if err != nil {
+		t.Fatalf("Stream() error = %v", err)
+	}
+	if result == nil {
+		t.Fatal("Stream() returned nil result after compatibility retry")
+	}
+	if client.calls != 2 {
+		t.Fatalf("legacy client calls = %d, want initial attempt plus one retry", client.calls)
+	}
+}
+
+func retryConfigForBoundaryTest() retry.Config {
+	return retry.Config{
+		MaxRetries: 1,
+		BaseDelay:  time.Nanosecond,
+		MaxDelay:   time.Nanosecond,
+		Multiplier: 1,
 	}
 }

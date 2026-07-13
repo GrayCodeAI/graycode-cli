@@ -14,6 +14,9 @@ import (
 // configModelOption is one row in the /config model picker (display from eyrie, id for settings).
 type configModelOption struct {
 	ID               string
+	CanonicalID      string
+	ProviderID       string
+	GatewayID        string
 	DisplayName      string
 	Owner            string
 	ContextWindow    int
@@ -85,6 +88,9 @@ func configModelOptionsFromEyrie(entries []hawkconfig.EngineModel) []configModel
 	for i, e := range entries {
 		opts[i] = configModelOption{
 			ID:               e.ID,
+			CanonicalID:      e.CanonicalID,
+			ProviderID:       e.ProviderID,
+			GatewayID:        e.GatewayID,
 			DisplayName:      e.DisplayName,
 			Owner:            e.Owner,
 			ContextWindow:    e.ContextWindow,

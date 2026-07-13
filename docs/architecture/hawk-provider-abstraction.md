@@ -8,7 +8,8 @@ That means Hawk should support multiple providers without leaking provider-speci
 
 ## Design principle
 
-Provider-specific code lives behind runtime adapters, primarily in `eyrie`.
+Provider-specific code lives behind Eyrie's stable `eyrie/engine` host facade.
+Hawk is the face and composition root; Eyrie is the engine.
 
 Hawk decides:
 
@@ -26,6 +27,8 @@ Hawk decides:
 - tool-call normalization
 - retries and backoff
 - provider capability differences
+- credential storage, import, and sanitized provider state
+- catalog/cache ownership and provider-scoped live discovery
 
 ## Required capabilities
 
@@ -39,7 +42,8 @@ Hawk decides:
 
 ## Hawk-facing abstraction
 
-Hawk should depend on a capability-based interface, not a vendor-specific client.
+Hawk depends on its small `ChatClient` product port and adapts it only to
+`eyrie/engine`, never to a vendor-specific or lower-level Eyrie client.
 
 Example concerns:
 
@@ -57,7 +61,13 @@ Example concerns:
 - no model-specific assumptions inside session persistence
 - keep task-semantic policy inside Hawk orchestration
 - keep provider/deployment routing, health, retry, and fallback inside Eyrie
-- new Hawk integrations use `github.com/GrayCodeAI/eyrie/engine`; direct lower-level imports are migration-only
+- Hawk production integrations use `github.com/GrayCodeAI/eyrie/engine`
+- direct imports of lower Eyrie packages are forbidden and CI-enforced
+- custom gateway settings enter as `engine.Options.CustomGateways` and are
+  isolated per Engine instance
+- Hawk-owned JSON, session, and conversation schemas are explicit projections;
+  they never become aliases of engine DTOs
+- local preflight readiness and remote live verification are distinct states
 
 ## Future extension
 

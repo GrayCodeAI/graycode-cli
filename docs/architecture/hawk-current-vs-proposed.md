@@ -173,12 +173,17 @@ These exist to power Hawk and should remain replaceable, testable, and isolated.
 
 Purpose:
 
-- provider execution runtime
+- stable provider-engine host facade (`eyrie/engine`)
 - credentials and provider authentication
 - model discovery and capability catalog
 - provider/deployment selection and infrastructure routing
 - request/response normalization
 - streaming, retry, timeout, fallback mechanics
+
+Hawk composes this engine and owns every user-facing workflow around it. The
+implemented boundary allows zero production imports of Eyrie's lower-level
+packages; custom gateways are passed per Engine instance rather than installed
+in global state.
 
 #### `yaad`
 

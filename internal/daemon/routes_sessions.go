@@ -1,6 +1,8 @@
 package daemon
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,14 +22,17 @@ func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if !validSessionID(id) {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid session id",
+			Code:  "invalid_id",
+		})
+		return
+	}
 
 	sess, err := session.Load(id)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, ErrorResponse{
-			Error:   "session not found",
-			Code:    "not_found",
-			Details: err.Error(),
-		})
+		writeSessionLoadError(w, id, err)
 		return
 	}
 
@@ -43,6 +48,7 @@ func (s *Server) handleGetSession(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:    sess.UpdatedAt,
 		Model:        sess.Model,
 		Provider:     sess.Provider,
+		Agent:        sess.Agent,
 		CWD:          sess.CWD,
 		Name:         sess.Name,
 		MessageCount: len(sess.Messages),
@@ -57,6 +63,13 @@ func (s *Server) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{
 			Error: "session id is required",
 			Code:  "missing_id",
+		})
+		return
+	}
+	if !validSessionID(id) {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid session id",
+			Code:  "invalid_id",
 		})
 		return
 	}
@@ -81,11 +94,7 @@ func (s *Server) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := session.Load(id)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, ErrorResponse{
-			Error:   "session not found",
-			Code:    "not_found",
-			Details: err.Error(),
-		})
+		writeSessionLoadError(w, id, err)
 		return
 	}
 
@@ -125,6 +134,21 @@ func (s *Server) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func writeSessionLoadError(w http.ResponseWriter, id string, err error) {
+	if errors.Is(err, session.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, ErrorResponse{
+			Error: "session not found",
+			Code:  "not_found",
+		})
+		return
+	}
+	slog.Error("load persisted session failed", "err", err, "session_id", id)
+	writeJSON(w, http.StatusInternalServerError, ErrorResponse{
+		Error: "session load failed",
+		Code:  "session_load_failed",
+	})
+}
+
 // handleDeleteSession handles DELETE /v1/sessions/{id} — delete a session.
 func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -136,16 +160,17 @@ func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate session ID contains only safe characters (alphanumeric, dash, underscore, dot).
-	for _, c := range id {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.') {
-			writeJSON(w, http.StatusBadRequest, ErrorResponse{
-				Error: "invalid session id: only alphanumeric, dash, underscore, and dot are allowed",
-				Code:  "invalid_id",
-			})
-			return
-		}
+	if !validSessionID(id) {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid session id: use 1-128 alphanumeric, dash, underscore, or dot characters",
+			Code:  "invalid_id",
+		})
+		return
 	}
+
+	lock := s.sessionLock(id)
+	lock.Lock()
+	defer lock.Unlock()
 
 	sessionsDir := storage.SessionsDir()
 	jsonlPath := filepath.Join(sessionsDir, id+".jsonl")
@@ -155,9 +180,17 @@ func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 	removedAny := false
 	if err := os.Remove(jsonlPath); err == nil {
 		removedAny = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		slog.Error("delete persisted session failed", "err", err, "session_id", id, "format", "jsonl")
+		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session deletion failed", Code: "session_delete_failed"})
+		return
 	}
 	if err := os.Remove(jsonPath); err == nil {
 		removedAny = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		slog.Error("delete persisted session failed", "err", err, "session_id", id, "format", "json")
+		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session deletion failed", Code: "session_delete_failed"})
+		return
 	}
 
 	if !removedAny {

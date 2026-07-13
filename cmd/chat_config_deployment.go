@@ -69,12 +69,6 @@ func saveOllamaAsync(baseURL string) tea.Cmd {
 func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		if inference.ProviderID == hawkconfig.ProviderXiaomiTokenPlan {
-			hawkconfig.ApplyXiaomiTokenPlanRegionEnv(ctx)
-		}
-		if inference.ProviderID == hawkconfig.ProviderZAICoding {
-			hawkconfig.ApplyZAIRegionEnv(ctx)
-		}
 		if err := hawkconfig.SaveCredential(ctx, inference, secret); err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
@@ -109,17 +103,6 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			modelOptions: opts,
 		}
 	}
-}
-
-func toConfigModelOptionsFromHawk(in []hawkconfig.ModelOption) []configModelOption {
-	out := make([]configModelOption, len(in))
-	for i, o := range in {
-		out[i] = configModelOption{
-			ID:          o.ID,
-			DisplayName: o.DisplayName,
-		}
-	}
-	return out
 }
 
 func (m chatModel) startConfigOllamaURL() (chatModel, tea.Cmd) {
@@ -232,11 +215,11 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	selection := hawkconfig.EffectiveSelection(context.Background(), hawkconfig.SelectionOptions{
+	selection := hawkconfig.EffectiveSelectionWithSettings(context.Background(), m.settings, hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(m.session.Provider(), m.settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(m.session.Model(), m.settings.Model),
 	})
-	if err := engine.RebuildSessionTransport(context.Background(), m.session, selection, m.session.Provider()); err != nil {
+	if err := engine.RebuildSessionTransportForSettings(context.Background(), m.settings, m.session, selection, m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
 	syncSessionFromPersistedSelection(m.session)

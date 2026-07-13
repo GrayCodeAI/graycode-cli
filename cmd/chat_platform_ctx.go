@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/GrayCodeAI/eyrie/catalog/xiaomi"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 var platformCtxCache struct {
@@ -29,7 +30,7 @@ func isXiaomiMimoProvider(provider string) bool {
 
 // platformContextForNativeModel reads the public MiMo platform catalog (no API key) from cache.
 func platformContextForNativeModel(modelID string) int {
-	modelID = xiaomi.NativeModelID(strings.TrimSpace(modelID))
+	modelID = nativeModelID(modelID)
 	if modelID == "" {
 		return 0
 	}
@@ -50,18 +51,29 @@ type platformContextIndexMsg struct {
 
 func fetchPlatformContextIndexCmd() tea.Cmd {
 	return func() tea.Msg {
-		idx, err := xiaomi.FetchPlatformModelsIndex(context.Background(), "")
+		models, err := hawkconfig.ListPublicEngineModels(context.Background(), "xiaomi_mimo_payg")
 		if err != nil {
 			return platformContextIndexMsg{err: err}
 		}
-		m := make(map[string]int, len(idx))
-		for k, pm := range idx {
-			if pm.ContextLength > 0 {
-				m[xiaomi.NativeModelID(k)] = pm.ContextLength
+		m := make(map[string]int, len(models))
+		for _, model := range models {
+			if model.ContextWindow > 0 {
+				m[nativeModelID(model.ID)] = model.ContextWindow
 			}
+		}
+		if len(m) == 0 {
+			return platformContextIndexMsg{err: fmt.Errorf("no Xiaomi model metadata available")}
 		}
 		return platformContextIndexMsg{idx: m}
 	}
+}
+
+func nativeModelID(id string) string {
+	id = strings.TrimSpace(id)
+	if index := strings.LastIndex(id, "/"); index >= 0 {
+		return id[index+1:]
+	}
+	return id
 }
 
 func updatePlatformContextCache(msg platformContextIndexMsg) {

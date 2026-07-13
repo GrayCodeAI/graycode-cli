@@ -6,9 +6,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 var (
@@ -36,7 +33,7 @@ type CatalogHealth struct {
 
 // CatalogHealthReport inspects ~/.eyrie/model_catalog.json (or EYRIE_MODEL_CATALOG_PATH).
 func CatalogHealthReport(ctx context.Context) CatalogHealth {
-	path := catalog.DefaultCachePath()
+	path := CatalogCachePathForDisplay()
 	catalogHealthMu.Lock()
 	if !catalogHealthAt.IsZero() && time.Since(catalogHealthAt) < catalogHealthCacheTTL && catalogHealthCache.CachePath == path {
 		h := catalogHealthCache
@@ -62,37 +59,19 @@ func InvalidateCatalogHealthCache() {
 }
 
 func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
-	path := catalog.DefaultCachePath()
-	h := CatalogHealth{CachePath: path}
-	exists, mod, size, err := catalog.CacheInfo(path)
+	engine, err := newEyrieEngine()
 	if err != nil {
-		h.Error = err.Error()
-		return h
+		return CatalogHealth{Error: err.Error()}
 	}
-	h.Exists = exists
-	h.Modified = mod
-	h.SizeBytes = size
-	if !exists {
+	status := engine.CatalogHealth(ctx)
+	h := CatalogHealth{
+		CachePath: status.Path, Exists: status.Exists, Modified: status.ModifiedAt,
+		SizeBytes: status.Size, Models: status.Models, Deployments: status.Deployments,
+		Offerings: status.Offerings, Stale: status.Stale, StaleAfter: status.StaleAfter,
+		Source: status.Source, Error: status.Error,
+	}
+	if !h.Exists && h.Error == "" {
 		h.Error = "cache missing — hawk will discover automatically on start"
-		return h
-	}
-	compiled, err := catalog.LoadCatalog(ctx, catalog.LoadCatalogOptions{
-		CachePath:    path,
-		RequireCache: true,
-	})
-	if err != nil {
-		h.Error = err.Error()
-		return h
-	}
-	h.Models = len(compiled.ModelsByID)
-	h.Deployments = len(compiled.DeploymentsByID)
-	h.Offerings = len(compiled.OfferingsByID)
-	if compiled.Catalog != nil && compiled.Catalog.Provenance != nil {
-		h.Source = compiled.Catalog.Provenance.Source
-	}
-	if compiled.Catalog != nil && !compiled.Catalog.StaleAfter.IsZero() {
-		h.StaleAfter = compiled.Catalog.StaleAfter
-		h.Stale = time.Now().UTC().After(compiled.Catalog.StaleAfter)
 	}
 	return h
 }
@@ -147,8 +126,9 @@ func EnsureCatalogAvailable(ctx context.Context) error {
 
 // CatalogCachePathForDisplay returns the path users should care about.
 func CatalogCachePathForDisplay() string {
-	if p := strings.TrimSpace(env.Getenv("EYRIE_MODEL_CATALOG_PATH")); p != "" {
-		return p
+	engine, err := newEyrieEngine()
+	if err == nil {
+		return engine.StatePaths().Catalog
 	}
-	return catalog.DefaultCachePath()
+	return ""
 }

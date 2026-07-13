@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
@@ -162,19 +161,14 @@ func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error 
 	if err != nil {
 		return err
 	}
-	compiled, loadErr := loadEyrieCatalogV1(refreshCtx, false)
-	if loadErr == nil && compiled != nil {
-		storeCompiledCatalog(compiled)
-	}
 	InvalidateConfigUICache()
 	if out != nil {
 		if verbose {
 			_, _ = fmt.Fprintln(out, strings.TrimSpace(formatCatalogSnapshot(result)))
-		} else if compiled != nil {
+		} else {
 			_, _ = fmt.Fprintf(
-				out, "Catalog ready: %d models, %d deployments → %s\n",
-				len(compiled.ModelsByID),
-				len(compiled.DeploymentsByID),
+				out, "Catalog ready: %d models → %s\n",
+				len(result.Models),
 				result.CachePath,
 			)
 		}
@@ -229,9 +223,9 @@ func DiscoverCatalogAfterSetup(ctx context.Context, out io.Writer) {
 
 func catalogRefreshFailureHint(ctx context.Context) string {
 	if !HasConfiguredDeployment(ctx) {
-		return "No API keys in " + credentials.PlatformSecretStoreName() + ". Run /config to paste a key or set up Ollama."
+		return "No API keys in " + CredentialStoreName() + ". Run /config to paste a key or set up Ollama."
 	}
-	return "Check network access and stored keys (" + credentials.PlatformSecretStoreName() + "). Run hawk preflight or /config."
+	return "Check network access and stored keys (" + CredentialStoreName() + "). Run hawk preflight or /config."
 }
 
 func autoRefreshCatalogEnabled() bool {

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
-	"github.com/GrayCodeAI/eyrie/setup"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/tok"
 )
@@ -24,16 +22,16 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	} else {
 		eyrieLine += "catalog missing (run hawk models refresh)"
 	}
-	pre := runtime.Preflight(ctx)
+	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
-		eyrieLine += " · ready to chat"
+		eyrieLine += " · locally ready"
 	} else {
 		eyrieLine += " · setup incomplete"
 	}
 	if strings.TrimSpace(provider) != "" && provider != "auto" {
 		eyrieLine += fmt.Sprintf(" · provider %s", provider)
 	}
-	if dep, err := setup.DeploymentStatus(ctx, model); err == nil {
+	if dep, err := EngineDeploymentSummary(ctx, model); err == nil {
 		if dep.RoutingStages > 0 {
 			eyrieLine += fmt.Sprintf(" · routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages)
 		} else {

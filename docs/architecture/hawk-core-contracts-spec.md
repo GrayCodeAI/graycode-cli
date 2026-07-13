@@ -98,7 +98,8 @@ list in sync with the code (it is the inventory the dependency rules assume).
 - policy contracts now exist in `hawk-core-contracts/policy`
 - Hawk session persistence has started migrating to provider-neutral tool contracts
 - Hawk review storage and inspect/review bridge paths now consume neutral review/verify contracts
-- Hawk transport config/provider seams are now Hawk-owned and adapted to `eyrie/client` at the edge
+- Hawk runtime conversation DTOs and the `ChatClient` port are Hawk-owned and
+  translated to the stable `eyrie/engine` contract at the integration edge
 
 ## Versioning rule
 

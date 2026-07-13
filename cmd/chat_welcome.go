@@ -8,14 +8,10 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/setup"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -297,24 +293,18 @@ func envSummary(provider, model string) string {
 }
 
 func envSummaryWithSelection(provider, model string, includeSelection bool) string {
-	compiled, _ := setup.LoadCompiledCatalog(context.Background())
-	var envKeys []string
-	if compiled != nil {
-		envKeys = catalog.DiscoveryEnvKeysFromCatalog(compiled)
+	var providers []string
+	for _, gateway := range hawkconfig.GatewayStatuses(context.Background(), provider, model) {
+		providers = append(providers, gateway.ID)
 	}
-	sort.Strings(envKeys)
+	sort.Strings(providers)
 	var b strings.Builder
 	if includeSelection {
 		b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\n", provider, model))
 	}
-	b.WriteString(fmt.Sprintf("Credentials (%s):\n", credentials.PlatformSecretStoreName()))
-	ctx := context.Background()
-	for _, key := range envKeys {
-		status := "missing"
-		if credentials.HasSecret(ctx, key) {
-			status = "set"
-		}
-		b.WriteString(fmt.Sprintf("  %s: %s\n", key, status))
+	b.WriteString(fmt.Sprintf("Credentials (%s):\n", hawkconfig.CredentialStoreName()))
+	for _, providerID := range providers {
+		b.WriteString(fmt.Sprintf("  %s: %s\n", providerID, hawkconfig.EnvKeyStatus(providerID)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -338,7 +328,7 @@ Model catalog and routing live in eyrie — hawk is the UI only.`, providerName,
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (" + credentials.PlatformSecretStoreName() + ")\n" + indentedAPIKeyLines()
+	return "API keys (" + hawkconfig.CredentialStoreName() + ")\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {
@@ -364,7 +354,7 @@ func indentedAPIKeyLines() string {
 }
 
 func apiKeyStatusLines() []string {
-	providers := types.NewClient(nil).GetProviders()
+	providers := hawkconfig.AllSetupGateways()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {

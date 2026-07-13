@@ -378,10 +378,6 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 		}
 	}(m)
 
-	go func() {
-		_ = hawkconfig.CompiledCatalogV1()
-	}()
-
 	// Load plugins/skills after startup and refresh welcome indicators when ready.
 	go func() {
 		runtime := plugin.NewRuntime()

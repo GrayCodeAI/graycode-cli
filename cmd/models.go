@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -33,9 +32,13 @@ var modelsRefreshCmd = &cobra.Command{
 	Aliases: []string{"update"},
 	Short:   "Discover model catalog (eyrie remote + live provider APIs) into ~/.eyrie/model_catalog.json",
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 		defer cancel()
-		summary, err := hawkconfig.RefreshModelCatalogV1(ctx)
+		summary, err := hawkconfig.RefreshModelCatalogV1WithSettings(ctx, settings)
 		if err != nil {
 			return err
 		}
@@ -48,18 +51,18 @@ var modelsStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show cached catalog metadata and deployment routing status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
-		cmd.Println(hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(ctx)))
-		cmd.Println()
+		ctx := cmd.Context()
 		settings, err := loadEffectiveSettings()
 		if err != nil {
 			return err
 		}
+		cmd.Println(hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(ctx)))
+		cmd.Println()
 		modelName, _ := effectiveModelAndProvider(settings)
 		if len(args) > 0 {
 			modelName = args[0]
 		}
-		report, err := hawkconfig.DeploymentStatusReport(ctx, modelName)
+		report, err := hawkconfig.DeploymentStatusReportWithSettings(ctx, settings, modelName)
 		if err != nil {
 			return err
 		}
@@ -73,8 +76,12 @@ var modelsRoutingPreviewCmd = &cobra.Command{
 	Short: "Print effective deployment routing JSON for a model",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			return err
+		}
 		modelName := args[0]
-		out, err := hawkconfig.RoutingPreviewJSON(context.Background(), modelName)
+		out, err := hawkconfig.RoutingPreviewJSONWithSettings(cmd.Context(), settings, modelName)
 		if err != nil {
 			return err
 		}
@@ -87,49 +94,29 @@ var modelsListCmd = &cobra.Command{
 	Use:   "list [provider]",
 	Short: "List models from the eyrie catalog cache (or live provider API)",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		settings, err := loadEffectiveSettings()
+		if err != nil {
+			return err
+		}
 		providerName := ""
 		if len(args) > 0 {
 			providerName = args[0]
 		}
-		ctx := context.Background()
-		var models []catalog.ModelCatalogEntry
-		var err error
+		ctx := cmd.Context()
+		var models []hawkconfig.EngineModel
 		if modelsListLive {
 			if providerName == "" {
 				return fmt.Errorf("provider required with --live (e.g. hawk models list canopywave --live --json)")
 			}
-			models, err = catalog.FetchLiveModelEntriesForProvider(eyriecfg.DiscoveryEnvMap(ctx), hawkconfig.ActiveProviderID(providerName))
+			models, err = hawkconfig.ListLiveEngineModelsWithSettings(ctx, settings, hawkconfig.ActiveProviderID(providerName))
 		} else {
-			models, err = hawkconfig.FetchModelsForProvider(providerName)
+			models, err = hawkconfig.FetchModelsForProviderWithSettings(ctx, settings, providerName)
 		}
 		if err != nil {
 			return err
 		}
 		if modelsListJSON || modelsListRaw {
-			if modelsListRaw {
-				raw := make([]json.RawMessage, 0, len(models))
-				for _, m := range models {
-					if len(m.LiveMetadata) > 0 {
-						raw = append(raw, m.LiveMetadata)
-					}
-				}
-				if len(raw) == 0 && modelsListLive {
-					for _, m := range models {
-						b, merr := json.Marshal(m)
-						if merr != nil {
-							return merr
-						}
-						raw = append(raw, b)
-					}
-				}
-				out, merr := json.MarshalIndent(raw, "", "  ")
-				if merr != nil {
-					return merr
-				}
-				cmd.Println(string(out))
-				return nil
-			}
-			out, merr := json.MarshalIndent(models, "", "  ")
+			out, merr := marshalModelListJSON(models, modelsListRaw, modelsListLive)
 			if merr != nil {
 				return merr
 			}
@@ -150,10 +137,89 @@ var modelsListCmd = &cobra.Command{
 	},
 }
 
+// modelListJSONEntry is Hawk's versioned command-output contract. Keep this
+// separate from Eyrie's host-facing Model DTO so engine-only fields can evolve
+// without breaking users that consume `hawk models list --json`.
+type modelListJSONEntry struct {
+	ID               string          `json:"id"`
+	InputPricePer1M  float64         `json:"input_price_per_1m"`
+	OutputPricePer1M float64         `json:"output_price_per_1m"`
+	ContextWindow    int             `json:"context_window"`
+	MaxOutput        int             `json:"max_output"`
+	ServerTools      []string        `json:"server_tools,omitempty"`
+	DisplayName      string          `json:"display_name,omitempty"`
+	Description      string          `json:"description,omitempty"`
+	Owner            string          `json:"owner,omitempty"`
+	LiveMetadata     json.RawMessage `json:"live_metadata,omitempty"`
+}
+
+func modelListJSONEntryFromEngine(m hawkconfig.EngineModel) modelListJSONEntry {
+	return modelListJSONEntry{
+		ID:               m.ID,
+		InputPricePer1M:  m.InputPricePer1M,
+		OutputPricePer1M: m.OutputPricePer1M,
+		ContextWindow:    m.ContextWindow,
+		MaxOutput:        m.MaxOutputTokens,
+		ServerTools:      append([]string(nil), m.Capabilities...),
+		DisplayName:      m.DisplayName,
+		Description:      m.Description,
+		Owner:            m.Owner,
+		LiveMetadata:     validModelLiveMetadata(m.LiveMetadata),
+	}
+}
+
+func validModelLiveMetadata(raw json.RawMessage) json.RawMessage {
+	metadata := json.RawMessage(strings.TrimSpace(string(raw)))
+	if len(metadata) == 0 || !json.Valid(metadata) || string(metadata) == "null" {
+		return nil
+	}
+	return append(json.RawMessage(nil), metadata...)
+}
+
+func marshalModelListJSON(models []hawkconfig.EngineModel, rawOnly, live bool) ([]byte, error) {
+	entries := make([]modelListJSONEntry, len(models))
+	for i, model := range models {
+		entries[i] = modelListJSONEntryFromEngine(model)
+	}
+	return marshalModelListEntriesJSON(entries, rawOnly, live)
+}
+
+func marshalModelListEntriesJSON(entries []modelListJSONEntry, rawOnly, live bool) ([]byte, error) {
+	if !rawOnly {
+		return json.MarshalIndent(entries, "", "  ")
+	}
+
+	raw := make([]json.RawMessage, 0, len(entries))
+	for _, entry := range entries {
+		metadata := json.RawMessage(strings.TrimSpace(string(entry.LiveMetadata)))
+		if len(metadata) > 0 && json.Valid(metadata) && metadata[0] == '{' {
+			raw = append(raw, append(json.RawMessage(nil), metadata...))
+		}
+	}
+	// Preserve the original --raw contract: cached output contains only native
+	// metadata, and mixed live output also omits rows without native metadata.
+	if len(raw) > 0 || !live {
+		return json.MarshalIndent(raw, "", "  ")
+	}
+
+	// Some provider APIs do not expose native model objects. Only in that live,
+	// all-metadata-absent case, return stable compatibility rows instead of an
+	// unhelpful empty result.
+	for _, entry := range entries {
+		entry.LiveMetadata = nil
+		fallback, err := json.Marshal(entry)
+		if err != nil {
+			return nil, err
+		}
+		raw = append(raw, fallback)
+	}
+	return json.MarshalIndent(raw, "", "  ")
+}
+
 func init() {
 	modelsListCmd.Flags().BoolVar(&modelsListJSON, "json", false, "Print full catalog entries as JSON (includes live_metadata when cached)")
 	modelsListCmd.Flags().BoolVar(&modelsListLive, "live", false, "Fetch directly from provider API instead of cache")
-	modelsListCmd.Flags().BoolVar(&modelsListRaw, "raw", false, "With --json, print only provider live_metadata objects (same shape as /v1/models data[] items)")
+	modelsListCmd.Flags().BoolVar(&modelsListRaw, "raw", false, "Print provider-native model objects (live fetch falls back to stable rows when none are available)")
 	modelsCmd.AddCommand(modelsRefreshCmd)
 	modelsCmd.AddCommand(modelsListCmd)
 	modelsCmd.AddCommand(modelsStatusCmd)

@@ -45,8 +45,8 @@ func OpenConversationGraph(path, sessionID string) (*ConversationGraph, error) {
 	g := &ConversationGraph{path: path, state: conversationGraphState{Version: 1, SessionID: sessionID, Nodes: make(map[string]*ConversationNode)}}
 	data, err := os.ReadFile(path) // #nosec G304 -- path is supplied by Hawk's session storage composition root
 	if err == nil {
-		if err := json.Unmarshal(data, &g.state); err != nil {
-			return nil, fmt.Errorf("conversation graph: decode: %w", err)
+		if decodeErr := json.Unmarshal(data, &g.state); decodeErr != nil {
+			return nil, fmt.Errorf("conversation graph: decode: %w", decodeErr)
 		}
 		if g.state.SessionID != sessionID {
 			return nil, fmt.Errorf("conversation graph: session mismatch")

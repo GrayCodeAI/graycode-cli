@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
@@ -124,18 +124,15 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build sight bridge from the runtime-owned transport resolution.
-	transport, err := runtime.ResolveChatTransport(context.Background(), runtime.ChatTransportOpts{
-		Selection: runtime.SelectionOpts{
-			ProviderOverride: strings.TrimSpace(provider),
-			ModelOverride:    analyzeModel,
-		},
+	// Build the Sight bridge through Hawk's Eyrie engine boundary.
+	ctx := context.Background()
+	selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
+		ProviderOverride: strings.TrimSpace(provider),
+		ModelOverride:    strings.TrimSpace(analyzeModel),
 	})
+	chatProvider, providerID, err := engine.BuildChatProvider(ctx, selection, strings.TrimSpace(provider))
 	if err != nil {
-		return fmt.Errorf("resolve runtime transport: %w", err)
-	}
-	if transport.Provider == nil {
-		return fmt.Errorf("runtime transport unavailable for provider %q", transport.Selection.Provider)
+		return fmt.Errorf("resolve engine transport: %w", err)
 	}
 
 	var opts []sightLib.Option
@@ -144,12 +141,11 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	}
 	opts = append(opts, sightLib.WithConcerns(analysisType))
 
-	bridge := hawkSight.NewBridge(types.WrapClientProvider(transport.Provider), transport.Selection.Provider, opts...)
+	bridge := hawkSight.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
 		return fmt.Errorf("sight bridge not ready (check API key)")
 	}
 
-	ctx := context.Background()
 	if analyzeTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, analyzeTimeout)

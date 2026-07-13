@@ -20,6 +20,7 @@ func chatModelForConfigPasteTest() chatModel {
 }
 
 func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
+	isolateCredentialHome(t)
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)

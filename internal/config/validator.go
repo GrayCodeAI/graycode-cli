@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
-	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
 // ValidationError represents a config validation error.
@@ -70,7 +68,7 @@ func ValidateSettings(s Settings) ValidationResult {
 		if envKey != "" && EnvKeyStatus(activeProvider) != "set" {
 			errors = append(errors, ValidationError{
 				Field:   "apiKey",
-				Message: fmt.Sprintf("save your %s API key with /config (%s)", activeProvider, credentials.PlatformSecretStoreName()),
+				Message: fmt.Sprintf("save your %s API key with /config (%s)", activeProvider, CredentialStoreName()),
 			})
 		}
 	}

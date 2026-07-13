@@ -237,17 +237,23 @@ var blockedBasenames = []string{
 	"credentials.xml",
 }
 
+func matchesResolvedPath(cleanPath, candidate string) bool {
+	resolved := candidate
+	if canonical, err := ResolvePath(candidate); err == nil {
+		resolved = canonical
+	}
+	return cleanPath == filepath.Clean(resolved)
+}
+
 // IsSensitivePath returns a non-empty reason when path points to a file
 // that should be blocked for security.  The path is cleaned and, when
 // possible, resolved through symlinks before checking.
 func IsSensitivePath(path string) string {
-	// Resolve to absolute + follow symlinks when possible.
+	// Resolve to absolute + follow symlinks when possible, including a
+	// symlinked parent for a file that does not exist yet (the Write case).
 	resolved := path
-	if abs, err := filepath.Abs(path); err == nil {
-		resolved = abs
-	}
-	if evaled, err := filepath.EvalSymlinks(resolved); err == nil {
-		resolved = evaled
+	if canonical, err := ResolvePath(path); err == nil {
+		resolved = canonical
 	}
 	clean := filepath.Clean(resolved)
 
@@ -268,22 +274,21 @@ func IsSensitivePath(path string) string {
 		}
 	}
 
-	providerPath := filepath.Clean(storage.ProviderConfigPath())
-	if clean == providerPath {
+	if matchesResolvedPath(clean, storage.ProviderConfigPath()) {
 		return "access to provider.json is blocked for security (API credentials)"
 	}
 
 	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
-		customProv := filepath.Clean(filepath.Join(cfgDir, "provider.json"))
-		if clean == customProv {
+		customProv := filepath.Join(cfgDir, "provider.json")
+		if matchesResolvedPath(clean, customProv) {
 			return "access to provider.json is blocked for security (API credentials)"
 		}
-		customEnv := filepath.Clean(filepath.Join(cfgDir, "env"))
-		if clean == customEnv {
+		customEnv := filepath.Join(cfgDir, "env")
+		if matchesResolvedPath(clean, customEnv) {
 			return "access to hawk env file is blocked for security (API keys)"
 		}
-		customDotEnv := filepath.Clean(filepath.Join(cfgDir, ".env"))
-		if clean == customDotEnv {
+		customDotEnv := filepath.Join(cfgDir, ".env")
+		if matchesResolvedPath(clean, customDotEnv) {
 			return "access to hawk .env is blocked for security (API keys)"
 		}
 	}
@@ -334,15 +339,52 @@ func commandPathSeparators(r rune) bool {
 	return false
 }
 
+func expandCommandPathVariables(command string) string {
+	command = strings.ReplaceAll(command, `\ `, " ")
+	for _, item := range []struct {
+		name  string
+		value string
+	}{
+		{name: "HOME", value: home.Dir()},
+		{name: "HAWK_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR"))},
+		{name: "EYRIE_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("EYRIE_CONFIG_DIR"))},
+	} {
+		if item.value == "" {
+			continue
+		}
+		command = strings.ReplaceAll(command, "${"+item.name+"}", item.value)
+		command = strings.ReplaceAll(command, "$"+item.name, item.value)
+	}
+	return strings.NewReplacer(`"`, "", `'`, "").Replace(command)
+}
+
 // CommandReferencesSensitivePath returns a non-empty reason when a shell
 // command string references a credential file that the file tools already
 // block via IsSensitivePath (SSH keys, ~/.aws/credentials, .env, provider
 // configs, …). Without this, Bash is a trivial bypass of that protection
-// ("cat ~/.ssh/id_rsa"). Matching is string-based (suffix/basename) so it
-// stays cheap; it deliberately does not hit the filesystem.
+// ("cat ~/.ssh/id_rsa"). Suffix/basename checks cover common forms, while
+// IsSensitivePath keeps configured and symlinked provider paths aligned with
+// the file tools.
 func CommandReferencesSensitivePath(command string) string {
+	// Do not try to emulate every shell parameter-expansion form here. An
+	// EYRIE_CONFIG_DIR reference is itself sensitive because the variable
+	// identifies the credential-bearing provider-state directory. This also
+	// closes modifier forms such as ${EYRIE_CONFIG_DIR%/}/provider.json.
+	if strings.Contains(command, "EYRIE_CONFIG_DIR") {
+		return "command references EYRIE_CONFIG_DIR, blocked for security"
+	}
 	if !strings.ContainsAny(command, "/.") {
 		return ""
+	}
+	command = expandCommandPathVariables(command)
+	configuredPaths := []string{storage.ProviderConfigPath()}
+	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
+		configuredPaths = append(configuredPaths, filepath.Join(cfgDir, "provider.json"), filepath.Join(cfgDir, "env"), filepath.Join(cfgDir, ".env"))
+	}
+	for _, candidate := range configuredPaths {
+		if candidate != "" && strings.Contains(command, candidate) {
+			return "command references a configured credential path, blocked for security"
+		}
 	}
 	homeDir := home.Dir()
 	for _, tok := range strings.FieldsFunc(command, commandPathSeparators) {
@@ -358,6 +400,12 @@ func CommandReferencesSensitivePath(command string) string {
 			} else if strings.HasPrefix(tok, "$HOME/") {
 				tok = homeDir + tok[len("$HOME"):]
 			}
+		}
+		// Keep Bash aligned with the Read/Edit/Write path policy, including a
+		// provider.json rooted at EYRIE_CONFIG_DIR. ResolvePath also handles
+		// relative custom config directories and symlinked parents.
+		if reason := IsSensitivePath(tok); reason != "" {
+			return "command references a sensitive path: " + reason
 		}
 		for _, suffix := range blockedPathSuffixes {
 			if strings.HasSuffix(tok, suffix) || tok == suffix[1:] {

@@ -36,9 +36,11 @@ These items are already completed in the current workspace.
 - added runtime/session conversion helpers
 - added `hawk-core-contracts/tools/tool_test.go`
 - centralized message slice conversion in `hawk/internal/session`
-- removed direct `eyrie/client` message reconstruction from Hawk cmd/session restore paths
-- replaced the `internal/types.EyrieMessage` alias with a Hawk-owned runtime DTO
-- added explicit `internal/types` adapters between Hawk runtime messages and `eyrie/client`
+- removed direct lower-level provider message reconstruction from Hawk
+  cmd/session restore paths
+- replaced the provider-owned message alias with a Hawk-owned runtime DTO
+- added explicit Hawk-owned runtime DTOs; the final boundary translates them
+  through `eyrie/engine`
 
 ### Event contract migration
 - added `hawk-core-contracts/events`
@@ -57,7 +59,7 @@ These items are already completed in the current workspace.
 - added `check-ecosystem-boundaries.sh`
 - added `check-eyrie-client-imports.sh`
 - wired both guards into `Makefile` and CI
-- wired the `eyrie/client` boundary guard into `Makefile` and CI
+- wired the Eyrie engine-boundary guards into `Makefile` and CI
 - added a legacy import guard so the removed `shared/types` path cannot return
 - extended the ecosystem boundary guard to scan sibling engine repos when present locally
 - updated docs across Hawk, sight, inspect, and external workspace copies
@@ -95,23 +97,23 @@ Local state:
 Still external:
 - confirm released module versions used by Hawk match the merged contract changes
 
-### 3. Decide whether Hawk session/API message DTOs should fully stop using `eyrie/client` types
+### 3. Remove Hawk production dependency on lower Eyrie packages
 Current state:
 - session persistence uses neutral tool contracts
 - Hawk now owns the runtime message DTO in `internal/types.EyrieMessage`
 - Hawk now owns runtime tool call/result DTOs in `internal/types`
 - Hawk now owns runtime response/usage/stream DTOs in `internal/types`
 - Hawk now owns runtime chat options, response format, tool choice, continuation config, and tool definition DTOs in `internal/types`
-- Hawk now owns transport client construction config in `internal/types.ClientConfig`
 - Hawk now owns the transport-provider seam in `internal/types.ChatProvider`
-- `eyrie/client` is now adapted only at the `internal/types` edge and a few provider-registry helper paths
+- Hawk session, review, setup, catalog, diagnostics, and custom-provider paths
+  now enter through `eyrie/engine`
+- production imports of every lower Eyrie package are zero
 - cmd/session restore paths now go through centralized `session.ToRuntimeMessages` and `session.FromRuntimeMessages`
 
 Decision:
-- completed: Hawk now owns the transport config/provider seam
-- keep direct `eyrie/client` usage limited to adapter implementations and provider-registry integration only
-
-This should be a deliberate decision, not drift.
+- completed: Hawk owns the product DTO/port seam and Eyrie owns the engine,
+  provider, credential, catalog, routing, resilience, and normalization layers
+- keep the zero-exception boundary enforced; lower packages are test-fixture-only
 
 ## Later
 
@@ -177,7 +179,8 @@ Do not do these without a separate decision:
 - completed: moved provider/config interfaces behind Hawk-owned transport adapters
 
 ### PR 3
-- continue reducing any remaining non-adapter direct `eyrie/client` imports in Hawk where it improves clarity
+- completed: removed all lower-level Eyrie imports from Hawk production code and
+  replaced the compatibility allowlist with a zero-exception guard
 
 ### PR 4
 - completed: added neutral review/verification result contracts and wired Hawk bridge/persistence edges

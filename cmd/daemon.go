@@ -10,13 +10,14 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -81,6 +82,11 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return nil, err
 		}
+		var agentModel string
+		systemPrompt, agentModel, err = daemonAgentConfig(req.Agent, systemPrompt)
+		if err != nil {
+			return nil, err
+		}
 		registry, err := defaultRegistry(settings)
 		if err != nil {
 			return nil, err
@@ -88,6 +94,8 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
 		if req.Model != "" {
 			effectiveModel = req.Model
+		} else if agentModel != "" {
+			effectiveModel = agentModel
 		}
 		sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 		sess.SetLogger(logger.New(io.Discard, logger.Error))
@@ -100,13 +108,9 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	daemon.SetVersion(version)
 	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
 
-	// Wire a lightweight provider-connectivity readiness probe. The default
-	// probe only checks "session factory wired"; this upgrades GET /v1/ready to
-	// also confirm the provider/catalog/credentials are usable via a cheap,
-	// short-timeout preflight (catalog presence + model selection). It is
-	// conservative: if preflight cannot positively confirm readiness it still
-	// reports ready as long as a session factory is wired and config loaded, so
-	// an uncertain/expensive check never makes a working daemon look broken.
+	// Wire Eyrie's authoritative local preflight into GET /v1/ready. A session
+	// factory only proves Hawk can attempt construction; readiness additionally
+	// requires Eyrie's provider state, catalog, credentials, and model selection.
 	srv.SetReadyFn(daemonReadyProbe(factory))
 	addr, err := srv.Start()
 	if err != nil {
@@ -161,36 +165,66 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 }
 
 // daemonReadyProbe builds the readiness function installed via SetReadyFn. It
-// performs a cheap provider-connectivity check (eyrie preflight: catalog +
-// credentials + model selection) under a short timeout. The check is
-// conservative by design:
+// performs Eyrie's local preflight (provider state, catalog, credentials, and
+// model selection) under a short timeout:
 //
 //   - No session factory wired      -> not ready ("engine not configured").
 //   - Preflight reports ready        -> ready.
-//   - Preflight cannot confirm (no
-//     credentials yet, catalog cold,
-//     check times out, etc.)         -> still ready, because a non-nil factory
-//     plus loadable config means the daemon can construct sessions; an
-//     uncertain probe must not flap a working daemon to 503.
+//   - Preflight reports incomplete   -> not ready with the failed Eyrie check.
 //
-// This never performs a paid/live model call — runtime.Preflight only inspects
+// This never performs a paid/live model call — Eyrie preflight only inspects
 // local catalog/credential/model state — so it is safe to call on every probe.
 func daemonReadyProbe(factory daemon.SessionFactory) func() (bool, string) {
+	return daemonReadyProbeWithPreflight(factory, hawkconfig.EnginePreflightReport)
+}
+
+func daemonReadyProbeWithPreflight(factory daemon.SessionFactory, preflight func(context.Context) hawkconfig.EnginePreflight) func() (bool, string) {
 	return func() (bool, string) {
 		if factory == nil {
 			return false, "engine not configured"
 		}
+		if preflight == nil {
+			return false, "Eyrie readiness probe not configured"
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		report := runtime.Preflight(ctx)
+		report := preflight(ctx)
 		if report.Ready {
 			return true, ""
 		}
-		// Conservative fallback: factory is wired, so sessions can be built.
-		// Report ready rather than letting an uncertain preflight (e.g. cold
-		// catalog) mark a usable daemon unavailable.
-		return true, ""
+		for _, check := range report.Checks {
+			if string(check.Status) == "fail" {
+				detail := strings.TrimSpace(check.Detail)
+				if detail == "" {
+					detail = "failed"
+				}
+				return false, fmt.Sprintf("Eyrie %s: %s", check.Name, detail)
+			}
+		}
+		if ctx.Err() != nil {
+			return false, "Eyrie preflight timed out"
+		}
+		return false, "Eyrie preflight is not ready"
 	}
+}
+
+func daemonAgentConfig(name, basePrompt string) (string, string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return basePrompt, "", nil
+	}
+	agentDef, err := agents.Get(name)
+	if err != nil {
+		return "", "", &daemon.InvalidChatRequestError{
+			Message: fmt.Sprintf("agent %q is not available", name),
+			Err:     err,
+		}
+	}
+	prompt := strings.TrimSpace(agentDef.Prompt)
+	if prompt != "" {
+		basePrompt = prompt + "\n\n" + basePrompt
+	}
+	return basePrompt, strings.TrimSpace(agentDef.Model), nil
 }
 
 func generateDaemonAPIKey() (string, error) {
