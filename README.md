@@ -59,7 +59,7 @@ See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential 
 Optional for contributors:
 
 ```bash
-go install github.com/GrayCodeAI/hawk@latest   # only after Hawk and support repo tags are published
+go install github.com/GrayCodeAI/hawk/cmd/hawk@latest
 ```
 
 ## Features
