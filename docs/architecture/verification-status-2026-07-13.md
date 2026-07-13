@@ -2,10 +2,10 @@
 
 ## Verdict
 
-The audited revision set now has a release-aligned Hawk-face/Eyrie-engine
-boundary. Local gates and Eyrie's hosted release gates are green; the final
-Hawk revision still requires successful hosted CI before the ecosystem can be
-declared production-ready.
+The audited revision set has a release-aligned Hawk-face/Eyrie-engine boundary.
+Local gates, Eyrie's release gates, and Hawk's final hosted pull-request gates
+are green. The remaining publication step is the signed Hawk release tag and
+its generated artifacts.
 
 The architecture and focused hardening tests support this responsibility split:
 
@@ -25,9 +25,9 @@ Eyrie engine facade
 model providers
 ```
 
-The prior Eyrie release-parity mismatch is resolved by v0.2.1. Final Hawk
-hosted CI on the reviewable commit remains the publication gate for a
-whole-ecosystem production-readiness claim.
+The prior Eyrie release-parity mismatch is resolved by v0.2.1. Hawk PR #92 and
+its follow-up documentation sync in PR #93 passed their hosted checks and were
+merged to `main`.
 
 ## Verified responsibility boundary
 
@@ -186,7 +186,7 @@ replace final remote CI.
 | Python SDK | 288 tests, Ruff check/format and strict mypy | Passed |
 | Hawk Cloud queue | focused and full tests, type-check, format, Wrangler checks, direct SQLite check | Passed |
 | Hawk full integration | isolated full tests, full race tests, vet and all architecture guards against the completed workspace | Passed |
-| Published release graph | Eyrie v0.2.1 gitlink/module parity; two full Hawk passes in workspace and `GOWORK=off` modes | Passed locally; final Hawk hosted CI pending |
+| Published release graph | Eyrie v0.2.1 gitlink/module parity; two full Hawk passes in workspace and `GOWORK=off` modes | Passed locally and in Hawk hosted CI |
 | Community skills | 303 tests; 12,167 skills passed; zero failures and zero warnings; Ruff, boundary and registry gates | Passed locally with a zero-warning budget |
 | Adjacent GrayCode Core | forced 266-test run, lint, type-check, production build, Hawk Cloud contract comparison and package audit | Passed; not a runtime dependency |
 
@@ -227,12 +227,12 @@ workspace race-and-coverage run passed at 69.0% total statement coverage. Vet,
 lint, formatting, all architecture guards, module verification and both
 workspace/module vulnerability scans passed.
 
-### Final Hawk hosted CI remains
+### Hawk hosted CI passed
 
-The completed local change set must still be committed and exercised by Hawk's
-hosted pull-request CI. A production-ready claim depends on those hosted test,
-race, coverage, boundary, security, public-module and submodule-parity jobs
-passing on the exact reviewable Hawk revision.
+The completed architecture change set passed Hawk's hosted test, race,
+coverage, boundary, security, public-module, compatibility-matrix, Docker, and
+submodule-parity gates on the exact reviewable revision before merge. Release
+publication still independently verifies the tagged revision and artifacts.
 
 ## Production-readiness exit criteria
 
