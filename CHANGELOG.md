@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-13
+
 ### Changed
+- **Hawk/Eyrie production boundary completed**: Hawk owns the product face,
+  sessions, tools, permissions, and public schemas while Eyrie v0.2.1 owns
+  credentials, catalog resolution, provider transport, resilience, and usage
+  telemetry behind the stable `eyrie/engine` facade.
+- **Provider routing and usage attribution hardened**: resolved route changes,
+  continuation segments, and terminal usage are propagated without duplicate
+  accounting, and production Eyrie calls use exactly one resilience layer.
+- **Daemon conversations are durable**: JSON and SSE chat requests create or
+  resume persisted sessions, expose stable session IDs, preserve metadata, and
+  distinguish invalid, missing, and corrupt state.
+- **Release and supply-chain gates strengthened**: exact ecosystem Gitlinks,
+  module/tag parity, Trivy enforcement, public-module builds, SBOM generation,
+  and cross-platform artifacts are part of the release path.
 - **Fixed `/mode auto` misclassifying plain English as shell commands**: `shellmode.ClassifyInput` trusted `exec.LookPath(firstWord)` alone, so any sentence starting with a word that's also a real Unix binary (`make sure this works`, `find the bug in this file`, `kill the old branch`, `sort out the imports`...) was silently executed as a shell command instead of being sent to the model — confirmed 18 of 20 sampled sentences misclassified before the fix. Now a curated allowlist of unambiguous dev-tool names (`git`, `npm`, `docker`, `ls`, `cat`, ...) is trusted immediately, while every other PATH match requires real shell-syntax evidence (a flag, a path, a file extension, or an operator like `|`/`>`/`&&`) before being trusted as a shell command — matching the same ambiguity Warp's own terminal autodetect documents and resolves with a user-configurable denylist.
 - **Permission system unified into two independent axes**: the old `PermissionMode` (`default`/`acceptEdits`/`bypassPermissions`/`dontAsk`/`plan`) is removed. `/autonomy` now controls the 5-tier trust ladder (`Always Ask`/`Scout`/`Builder`/`Operator`/`Autonomous`, bare `/autonomy` opens a picker), and `/spec` controls an independent, orthogonal spec-driven workflow gate (`Specify → Plan → Tasks → ApproveImplementation`, bare `/spec` opens a picker) that blocks Write/Edit/Bash regardless of trust tier — including at Autonomous. Fixes a real bug where the old Plan Mode's write-block could be silently bypassed at high autonomy tiers, since tier and mode were checked independently with no ordering guarantee.
 - **Fixed `PermissionService.SetAutonomy`/`Autonomy()`**: previously wrote to/read from a shadow field the permission engine's `CheckTool` never consulted, meaning autonomy tier changes may not have reliably taken effect. Now both read/write the same `PermissionEngine.Autonomy` field the check logic uses.

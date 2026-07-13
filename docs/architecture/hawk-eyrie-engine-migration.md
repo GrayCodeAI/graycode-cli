@@ -124,9 +124,7 @@ readers remain backward-compatible for at least one release cycle.
 
 ## Verification and release status
 
-See `verification-status-2026-07-13.md` for the current evidence ledger and
-remaining blockers. In particular, the audited workspace's committed Eyrie
-Gitlink, checked-out submodule and `go.mod` module revision do not match. The
-source boundary is implemented locally, but that mismatch must be resolved and
-verified in both workspace and `GOWORK=off` builds before the migration can be
-called release-complete.
+See `verification-status-2026-07-13.md` for the evidence ledger. The committed
+Eyrie Gitlink, checked-out submodule, and `go.mod` revision now converge on the
+published Eyrie v0.2.1 commit. Hawk passed both workspace and `GOWORK=off`
+verification, and the final migration revision passed hosted CI before merge.
