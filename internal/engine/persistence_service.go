@@ -4,9 +4,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/storage"
-
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -33,8 +32,8 @@ type PersistenceService struct {
 	autoCompactThresholdPct int
 	// contextWindowCached is the catalog context window; 0 → governor default.
 	contextWindowCached int
-	// dag is the conversation DAG (for branching).
-	dag *storage.DAG
+	// graph is Hawk's product-owned conversation graph (for branching).
+	graph *session.ConversationGraph
 	// steering is the per-iteration user-guidance queue.
 	steering *SteeringQueue
 	// logger.
@@ -90,12 +89,11 @@ func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	return s.messages
 }
 
-// DAG returns the conversation DAG. New code should access this
-// through s.Persistence().DAG().
-func (s *PersistenceService) DAG() *storage.DAG { return s.dag }
+// Graph returns Hawk's product-owned conversation graph.
+func (s *PersistenceService) Graph() *session.ConversationGraph { return s.graph }
 
-// SetDAG attaches the conversation DAG.
-func (s *PersistenceService) SetDAG(dag *storage.DAG) { s.dag = dag }
+// SetGraph attaches the conversation graph.
+func (s *PersistenceService) SetGraph(graph *session.ConversationGraph) { s.graph = graph }
 
 // Steering returns the per-iteration user-guidance queue. New
 // code should access this through s.Persistence().Steering().

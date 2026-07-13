@@ -2,8 +2,6 @@ package config
 
 import (
 	"context"
-
-	"github.com/GrayCodeAI/eyrie/runtime"
 )
 
 // DefaultModelProviderFilter picks which eyrie provider to list models for when the UI
@@ -12,5 +10,9 @@ func DefaultModelProviderFilter(ctx context.Context) string {
 	if p := ActiveGateway(ctx); p != "" {
 		return p
 	}
-	return runtime.DefaultModelProviderFilter(ctx)
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return ""
+	}
+	return engine.DefaultProviderFilter(ctx)
 }

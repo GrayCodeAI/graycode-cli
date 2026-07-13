@@ -2,6 +2,7 @@ package cost
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -18,6 +19,22 @@ type Cost struct {
 func (c *Cost) Add(prompt, completion int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.addLocked(prompt, completion)
+}
+
+// AddForModel records usage against the concrete model selected by the provider
+// engine. The model update and price lookup are atomic with the token/cost
+// update, so a routed fallback cannot be billed using the requested model.
+func (c *Cost) AddForModel(model string, prompt, completion int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if model = strings.TrimSpace(model); model != "" {
+		c.Model = model
+	}
+	c.addLocked(prompt, completion)
+}
+
+func (c *Cost) addLocked(prompt, completion int) {
 	c.PromptTokens += prompt
 	c.CompletionTokens += completion
 	inPrice, outPrice := ModelPricing(c.Model)

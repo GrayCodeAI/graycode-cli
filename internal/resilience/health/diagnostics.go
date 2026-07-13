@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 
@@ -339,12 +338,17 @@ func checkConfigFileValid() DiagnosticResult {
 
 func checkAPIKeySet() DiagnosticResult {
 	start := time.Now()
-	stored := credentials.StoredEnvKeys(context.Background())
-	if len(stored) == 0 {
+	configured := make([]string, 0)
+	for _, gateway := range config.GatewayStatuses(context.Background(), "", "") {
+		if gateway.HasStoredCredential {
+			configured = append(configured, gateway.ID)
+		}
+	}
+	if len(configured) == 0 {
 		return DiagnosticResult{
 			Name:     "api_key_set",
 			Status:   "fail",
-			Message:  "No API keys stored in the OS secret store",
+			Message:  "No API credentials stored in the OS secret store",
 			Fix:      "Run /config to save a key, or hawk credentials status to verify storage",
 			Duration: time.Since(start),
 		}
@@ -353,7 +357,7 @@ func checkAPIKeySet() DiagnosticResult {
 	return DiagnosticResult{
 		Name:     "api_key_set",
 		Status:   "pass",
-		Message:  fmt.Sprintf("API keys stored: %s", strings.Join(stored, ", ")),
+		Message:  fmt.Sprintf("API credentials stored for gateways: %s", strings.Join(configured, ", ")),
 		Duration: time.Since(start),
 	}
 }

@@ -173,15 +173,16 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 	t.Setenv("HOME", home)
 	configDir := filepath.Join(home, "config")
 	t.Setenv("HAWK_CONFIG_DIR", configDir)
+	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{"model":"global","allowedTools":["Read"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{"model":"gpt-4o","allowedTools":["Read"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	settings := LoadSettings()
-	if got := ActiveModel(context.TODO()); got != "global" {
+	if got := ActiveModel(context.TODO()); got != "openai/gpt-4o" {
 		t.Fatalf("expected global model in eyrie, got %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {
@@ -199,8 +200,8 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 }
 
 func TestSetGlobalSettingAndSettingValue(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	if err := SetGlobalSetting("model", "test-model"); err != nil {
+	testutil.IsolateStorage(t)
+	if err := SetGlobalSetting("model", "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 	if err := SetGlobalSetting("allowedTools", "Read, Write"); err != nil {
@@ -215,13 +216,13 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	}
 
 	settings := LoadGlobalSettings()
-	if got := ActiveModel(context.TODO()); got != "test-model" {
+	if got := ActiveModel(context.TODO()); got != "openai/gpt-4o" {
 		t.Fatalf("unexpected active model: %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {
 		t.Fatalf("model must not be stored in settings.json, got %q", settings.Model)
 	}
-	if got, ok := SettingValue(settings, "model"); !ok || got != "test-model" {
+	if got, ok := SettingValue(settings, "model"); !ok || got != "openai/gpt-4o" {
 		t.Fatalf("unexpected model setting value: %q ok=%v", got, ok)
 	}
 	if got, ok := SettingValue(settings, "allowed_tools"); !ok || got != "Read, Write" {
@@ -234,9 +235,39 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-	_ = store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-test")
+	_ = store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-live-config-test-1234567890")
 	if got, ok := SettingValue(settings, "apiKey.openai"); !ok || got != "set" {
 		t.Fatalf("unexpected provider API key status: %q ok=%v", got, ok)
+	}
+}
+
+func TestLoadSettingsPreservesRejectedLegacySelection(t *testing.T) {
+	home := t.TempDir()
+	configDir := filepath.Join(home, "config")
+	t.Setenv("HOME", home)
+	t.Setenv("HAWK_CONFIG_DIR", configDir)
+	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(configDir, "settings.json")
+	if err := os.WriteFile(path, []byte(`{"model":"not-in-the-catalog","provider":"openai","allowedTools":["Read"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	settings := LoadSettings()
+	if settings.Model != "not-in-the-catalog" || settings.Provider != "openai" {
+		t.Fatalf("rejected legacy selection was erased: %#v", settings)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "not-in-the-catalog") {
+		t.Fatalf("rejected legacy selection was removed from disk: %s", data)
+	}
+	if got := ActiveModel(context.Background()); got != "" {
+		t.Fatalf("rejected legacy model reached Eyrie state: %q", got)
 	}
 }
 

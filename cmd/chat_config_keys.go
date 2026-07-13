@@ -7,12 +7,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func credentialsStoreLabel() string {
-	return credentials.PlatformSecretStoreName()
+	return hawkconfig.CredentialStoreName()
 }
 
 func configGatewayRemovePrompt(step int, gatewayName string) string {

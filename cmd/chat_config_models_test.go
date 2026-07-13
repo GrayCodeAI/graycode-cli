@@ -1,6 +1,10 @@
 package cmd
 
-import "testing"
+import (
+	"testing"
+
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+)
 
 func TestFilterConfigModelOptions(t *testing.T) {
 	opts := []configModelOption{
@@ -37,5 +41,19 @@ func TestModelOptionIsActive(t *testing.T) {
 	}
 	if modelOptionIsActive(opt, "other/model") {
 		t.Fatal("expected no match")
+	}
+}
+
+func TestConfigModelOptionsCarryResolvedEngineIdentity(t *testing.T) {
+	opts := configModelOptionsFromEyrie([]hawkconfig.EngineModel{{
+		ID: "models/gemini-pro", CanonicalID: "google/gemini-pro",
+		ProviderID: "google", GatewayID: "gemini",
+	}})
+	if len(opts) != 1 || opts[0].CanonicalID != "google/gemini-pro" ||
+		opts[0].ProviderID != "google" || opts[0].GatewayID != "gemini" {
+		t.Fatalf("resolved engine identity was lost: %+v", opts)
+	}
+	if !modelOptionIsActiveResolved(opts[0], "google/gemini-pro", "google/gemini-pro") {
+		t.Fatal("canonical identity did not match without catalog lookup")
 	}
 }

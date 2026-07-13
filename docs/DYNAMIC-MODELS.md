@@ -1,119 +1,119 @@
 # Dynamic Model Discovery — Hawk Developer Guide
 
-## Overview
+## Ownership and flow
 
-Hawk uses **eyrie** for all model discovery, provider routing, and credential management. Hawk never calls an LLM API directly or hardcodes provider logic.
+Hawk is the product face; Eyrie is the provider engine. Hawk owns the CLI/TUI,
+model-picker presentation, user intent, and output compatibility. The
+`eyrie/engine` facade alone owns provider registry details, credentials,
+discovery, catalog/cache policy, model aliases, deployment routing, and chat
+transport.
 
-The model pipeline has three layers:
-
+```text
+provider APIs / remote catalog / local cache
+                     |
+                     v
+            eyrie/engine.Engine
+          catalog + credentials + routing
+                     |
+          stable host DTOs and methods
+                     v
+       Hawk composition and presentation
+          /config | models | conversation
 ```
-Remote catalog (langdag.com/.../catalog.json)
-    ↓ fetch
-Local cache (~/.eyrie/model_catalog.json)
-    ↓ merge with live API data
-Compiled catalog (in-memory CompiledCatalogV1)
-    ↓ query
-Model picker (eyrieclient.ListModels)
-```
 
-## Provider registry
+Production Hawk packages must not import Eyrie packages below
+`github.com/GrayCodeAI/eyrie/engine`. Shell and AST guards enforce a
+zero-exception boundary.
 
-Single source of truth: `eyrie/catalog/registry/providers.go`
+## Hawk composition boundary
 
-12 setup gateways registered (see `providerSpecs()` in eyrie):
-
-| Provider | ID | Credential |
-|----------|----|------------|
-| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` |
-| OpenAI | `openai` | `OPENAI_API_KEY` |
-| Google Gemini | `gemini` | `GEMINI_API_KEY` |
-| OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
-| xAI (Grok) | `grok` | `XAI_API_KEY` |
-| Z.AI | `z-ai` | `ZAI_API_KEY` |
-| CanopyWave | `canopywave` | `CANOPYWAVE_API_KEY` |
-| OpenCode Go | `opencodego` | `OPENCODEGO_API_KEY` |
-| Kimi (Moonshot) | `kimi` | `MOONSHOT_API_KEY` |
-| Xiaomi (MiMo) Pay-as-you-go | `xiaomi_mimo_payg` | `XIAOMI_MIMO_PAYG_API_KEY` |
-| Xiaomi (MiMo) Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` |
-| Ollama (local) | `ollama` | `OLLAMA_BASE_URL` |
-
-### Xiaomi MiMo
-
-Two `/config` gateway rows (not one). Each product uses a **single key** for both OpenAI-compat (`/v1/chat/completions`) and Anthropic-compat (`/v1/messages`) on the matching host. Token Plan requires region `cn`, `sgp`, or `ams` before paste. Legacy `XIAOMI_MIMO_API_KEY` maps to pay-as-you-go. Details: `eyrie/docs/guides/CREDENTIAL-SETUP-FLOW.md` (MiMo section).
-
-### Model discovery (all gateways)
-
-Every setup gateway lists models from the provider’s live API (or Ollama tags) only. Without credentials (or Ollama URL), zero models. After paste/save, `/config` probes and `ListModels` hits the live fetcher only. There is no remote-catalog bootstrap for picker models.
-
-## Hawk API (via `internal/eyrieclient`)
-
-Hawk production code must use `internal/eyrieclient/` — never import eyrie packages directly.
-
-### Catalog functions
+`internal/config` is Hawk's control-plane composition root. It creates an
+Eyrie engine and projects engine models into Hawk UI and command contracts:
 
 ```go
-// Load the compiled catalog from cache
-compiled, err := eyrieclient.LoadCompiledCatalogV1(ctx, opts)
-
-// Query models
-models := eyrieclient.ModelEntriesForProvider(compiled, "anthropic")
-modelID := eyrieclient.FirstModelForProvider(compiled, "anthropic")
-gateway := eyrieclient.GatewayForModel(compiled, "claude-sonnet-4-6")
-providers := eyrieclient.ProviderIDsFromCompiled(compiled)
-liveOnly := eyrieclient.IsLiveOnlyProvider("ollama")
-
-// Display
-label := eyrieclient.DisplayModelLabel(id, displayName)
-owner := eyrieclient.DisplayModelOwner(owner, id)
+models, err := config.ListEngineModels(ctx, "anthropic", false)
+live, err := config.ListEngineModels(ctx, "anthropic", true)
+public, err := config.ListPublicEngineModels(ctx, "xiaomi_mimo_payg")
 ```
 
-### Credential functions
+Conversation construction goes through Hawk's `internal/engine` adapter. The
+adapter translates Hawk-owned message, tool, usage, and stream DTOs to the
+Eyrie engine facade; conversation history, WAL, resume, approvals, and tool
+execution remain Hawk-owned.
 
-```go
-name := eyrieclient.PlatformSecretStoreName()
-hasKey := eyrieclient.HasSecret(ctx, "OPENAI_API_KEY")
-secret := eyrieclient.LookupSecret(ctx, "OPENAI_API_KEY")
-report := eyrieclient.StorageReportFor(ctx)
-```
+## Catalog and live discovery
 
-### Model listing
+The Eyrie engine combines its provider registry, provider-scoped live
+discovery, and the cache at `~/.eyrie/model_catalog.json` by default. Override
+the cache with `EYRIE_MODEL_CATALOG_PATH`. Credential and state dependencies
+are injected into each Engine instance, so discovery does not need hidden
+process-global credentials.
 
-```go
-// Unified model listing — live API for setup providers
-models, err := eyrieclient.ListModels(ctx, eyrieclient.ListModelsOpts{
-    ProviderID: "anthropic",
-    Source:     eyrieclient.ListSourceAuto, // live for registry providers
-})
-
-// Shortcut for single provider
-models, err := eyrieclient.ListModelsForProvider(ctx, "anthropic")
-```
-
-### Session construction
-
-```go
-// Build a chat client with deployment routing support
-sess := eyrieclient.NewHawkSession(ctx, useDeploymentRouting, provider, model, systemPrompt, registry)
-```
-
-## Adding a new provider
-
-1. Add one `ProviderSpec` row in `eyrie/catalog/registry/providers.go`
-2. Add `CredentialsEnvFallbacks` if the API key has known alternative env var names
-3. If live list API exists: implement fetcher in `catalog/live/fetchers.go` and register in `Registry` map
-4. Add live fetcher key to the provider spec (`LiveFetcherKey`)
-5. Add probe base URL for credential validation
-7. No hawk code changes needed
-
-## Testing model discovery
+Use the normal cache-backed path for repeatable UI and automation:
 
 ```bash
-# Refresh catalog and list models for a provider
-EYRIE_MODEL_CATALOG_REFRESH=1 hawk config model list --provider anthropic
+hawk models list anthropic
+hawk models list anthropic --json
+```
 
-# Preflight diagnostics
+Use a provider-scoped live request when current connectivity and credentials
+must be checked:
+
+```bash
+hawk models list anthropic --live
+hawk models list anthropic --live --json
+hawk models list anthropic --live --raw
+```
+
+`hawk preflight` reports **local readiness**: usable local state, a selected
+model, and presence of the required stored credential. It is intentionally
+cheap and does not prove that a remote provider accepts that credential.
+Treat a successful provider-scoped `--live` request (or `/config` live
+validation) as **live verified**.
+
+## Stable command output
+
+`hawk models list --json` is a Hawk-owned compatibility contract, not a direct
+serialization of Eyrie's evolving `engine.Model` DTO. Its stable fields are:
+
+```text
+id, input_price_per_1m, output_price_per_1m, context_window, max_output,
+server_tools, display_name, description, owner, live_metadata
+```
+
+New fields must be additive. `--raw` returns provider-native
+`live_metadata` objects when available; for cache/public rows without native
+metadata, it returns the stable Hawk compatibility row instead of `null`.
+
+## Custom gateways
+
+Hawk converts effective `custom_providers` settings into
+`engine.Options.CustomGateways` at its composition root. Custom gateway
+metadata is snapshotted per Engine instance. Do not register custom gateways
+in Eyrie process-global state: tests, parallel sessions, and future multi-tenant
+hosts must be isolated from one another.
+
+## Adding or changing a provider
+
+1. Implement registry, discovery, credentials, aliases, and transport behavior
+   behind Eyrie's engine facade.
+2. Add Eyrie tests for cache and live discovery, credential status, selection,
+   and generation/streaming.
+3. Commit and verify standalone Eyrie.
+4. Advance Hawk's `external/eyrie` submodule to that exact commit, then update
+   Hawk's module version when the Eyrie revision is published.
+5. Verify both the clean submodule (`go.work`) and published-module
+   (`GOWORK=off`) build modes.
+
+Hawk changes are needed only for a new product behavior or an additive
+Hawk-owned presentation field—not for provider-specific mechanics.
+
+## Checks
+
+```bash
+hawk models refresh
+hawk models status
 hawk preflight
-
-# Doctor check
-hawk doctor
+make eyrie-engine-guard
+go test ./cmd ./internal/config ./internal/engine -count=1
 ```

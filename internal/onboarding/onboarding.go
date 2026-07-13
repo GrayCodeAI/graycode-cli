@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
@@ -88,13 +87,11 @@ func NeedsSetup() bool {
 
 // RunSetup runs the interactive first-run setup.
 func RunSetup() error {
-	hawkconfig.PrepareCredentialDiscovery(context.Background())
-
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println(teal + bold + "  Developer setup" + reset)
 	fmt.Println()
-	fmt.Println(dim + "  Keys are stored in " + credentials.PlatformSecretStoreName() + ", not .env or shell env." + reset)
+	fmt.Println(dim + "  Keys are stored in " + hawkconfig.CredentialStoreName() + ", not .env or shell env." + reset)
 	fmt.Println()
 
 	// Provider selection
@@ -148,7 +145,7 @@ func RunSetup() error {
 	fmt.Printf("  Selected: %s%s%s\n", teal, selected.name, reset)
 
 	// API key input
-	if selected.envKey != "" && !credentials.HasSecret(context.Background(), selected.envKey) {
+	if selected.envKey != "" && !hawkconfig.HasStoredCredentialForProvider(context.Background(), selected.name) {
 		fmt.Println()
 		fmt.Printf("  Enter your %s API key:\n", selected.name)
 		fmt.Printf("  %s(Get one at the provider's website)%s\n", dim, reset)
@@ -182,13 +179,13 @@ func RunSetup() error {
 		}
 
 		fmt.Println()
-		fmt.Printf("  %s"+icons.CheckBold()+" API key saved to %s%s\n", teal, credentials.PlatformSecretStoreName(), reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" API key saved to %s%s\n", teal, hawkconfig.CredentialStoreName(), reset)
 	} else if selected.name == "ollama" {
 		_ = hawkconfig.SetActiveProvider(context.Background(), "ollama")
 		fmt.Printf("  %s"+icons.CheckBold()+" Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
 		_ = hawkconfig.SetActiveProvider(context.Background(), selected.name)
-		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, selected.name, credentials.PlatformSecretStoreName(), reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, selected.name, hawkconfig.CredentialStoreName(), reset)
 	}
 
 	// Security notes

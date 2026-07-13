@@ -2,8 +2,11 @@ package daemon
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,6 +20,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
+	hawksession "github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -26,6 +30,23 @@ const maxRequestBodyBytes = 1 << 20
 // The caller (cmd package) provides this, wiring system prompts, tools, keys.
 type SessionFactory func(req ChatRequest) (*engine.Session, error)
 
+// InvalidChatRequestError lets a SessionFactory reject a request without
+// exposing internal construction errors as part of the public API. Factories
+// should use it for user-controlled values such as an unknown agent persona.
+type InvalidChatRequestError struct {
+	Message string
+	Err     error
+}
+
+func (e *InvalidChatRequestError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return e.Message
+}
+
+func (e *InvalidChatRequestError) Unwrap() error { return e.Err }
+
 // version is set via SetVersion from main.go at startup.
 var version = "0.0.0"
 
@@ -34,19 +55,23 @@ func SetVersion(v string) { version = v }
 
 // Server is the hawk daemon HTTP server for programmatic/CI access.
 type Server struct {
-	addr       string
-	mux        *http.ServeMux
-	server     *http.Server
-	startedAt  time.Time
-	sessions   sync.Map // sessionID -> *Session
-	newSession SessionFactory
-	apiKey     string
-	gateways   *gatewayManager
+	addr      string
+	mux       *http.ServeMux
+	server    *http.Server
+	startedAt time.Time
+	sessions  sync.Map // sessionID -> *Session
+	// A fixed stripe set serializes continuation and deletion for the same
+	// durable ID without allowing arbitrary client-supplied IDs to grow a lock
+	// map for the lifetime of the daemon.
+	sessionLocks [64]sync.Mutex
+	newSession   SessionFactory
+	apiKey       string
+	gateways     *gatewayManager
 
-	// readyFn reports whether the daemon's dependencies (session store and
-	// provider connectivity) are initialized and the server can serve real
-	// traffic. It is consulted by GET /v1/ready. When nil, readiness falls
-	// back to "session factory wired" (see Ready). Set via SetReadyFn.
+	// readyFn reports whether Eyrie's preflight/readiness dependencies are
+	// initialized and the server can serve real traffic. It is consulted by
+	// GET /v1/ready. A nil probe fails closed: a session factory alone does not
+	// prove that Eyrie's catalog, credentials, and model selection are ready.
 	readyMu sync.RWMutex
 	readyFn func() (bool, string)
 
@@ -112,6 +137,7 @@ type Session struct {
 	LastUsed  time.Time `json:"last_used"`
 	Turns     int       `json:"turns"`
 	CWD       string    `json:"cwd"`
+	Agent     string    `json:"agent,omitempty"`
 }
 
 // HealthResponse is the JSON response from GET /v1/health.
@@ -259,8 +285,9 @@ func (s *Server) SetReadyFn(fn func() (bool, string)) {
 	s.readyMu.Unlock()
 }
 
-// ready evaluates readiness using the installed probe, falling back to the
-// default check (session factory wired) when none is set.
+// ready evaluates readiness using the installed Eyrie probe. It fails closed
+// when the engine is absent or the composition root did not install a probe;
+// merely having a factory does not prove provider readiness.
 func (s *Server) ready() (bool, string) {
 	s.readyMu.RLock()
 	fn := s.readyFn
@@ -268,13 +295,10 @@ func (s *Server) ready() (bool, string) {
 	if fn != nil {
 		return fn()
 	}
-	// Default readiness: the session store map is always initialized once New
-	// runs, so the remaining dependency is provider connectivity, which the
-	// cmd layer wires as the session factory. No factory => cannot serve chat.
 	if s.newSession == nil {
 		return false, "engine not configured"
 	}
-	return true, ""
+	return false, "Eyrie readiness probe not configured"
 }
 
 func (s *Server) routes() {
@@ -405,12 +429,108 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	start := time.Now()
+	requestedID := strings.TrimSpace(req.SessionID)
+	if requestedID != "" && !validSessionID(requestedID) {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid session id: use 1-128 alphanumeric, dash, underscore, or dot characters",
+			Code:  "invalid_session_id",
+		})
+		return
+	}
+
+	sessionID := requestedID
+	if sessionID == "" {
+		var idErr error
+		sessionID, idErr = newSessionID()
+		if idErr != nil {
+			slog.Error("session id generation failed", "err", idErr)
+			writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session creation failed"})
+			return
+		}
+	}
+
+	lock := s.sessionLock(sessionID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	var saved *hawksession.Session
+	if requestedID != "" {
+		var loadErr error
+		saved, loadErr = hawksession.Load(sessionID)
+		if loadErr != nil {
+			if !errors.Is(loadErr, hawksession.ErrNotFound) {
+				slog.Error("load continuation session failed", "err", loadErr, "session_id", sessionID)
+				writeJSON(w, http.StatusInternalServerError, ErrorResponse{
+					Error: "session load failed",
+					Code:  "session_load_failed",
+				})
+				return
+			}
+			writeJSON(w, http.StatusNotFound, ErrorResponse{
+				Error: "session not found",
+				Code:  "session_not_found",
+			})
+			return
+		}
+		if strings.TrimSpace(req.Model) == "" {
+			req.Model = saved.Model
+		}
+		if strings.TrimSpace(req.Agent) == "" {
+			req.Agent = saved.Agent
+		}
+	}
+
+	requestedCWD := strings.TrimSpace(req.CWD)
+	switch {
+	case requestedCWD != "":
+		canonicalCWD, cwdErr := canonicalSessionCWD(requestedCWD)
+		if cwdErr != nil {
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "invalid cwd",
+				Code:    "invalid_cwd",
+				Details: cwdErr.Error(),
+			})
+			return
+		}
+		req.CWD = canonicalCWD
+	case saved != nil && saved.CWD != "":
+		// CWD is durable session metadata. Inherit it on continuation even
+		// if that directory has since been removed.
+		req.CWD = saved.CWD
+	default:
+		canonicalCWD, cwdErr := canonicalSessionCWD("")
+		if cwdErr != nil {
+			slog.Error("resolve daemon cwd failed", "err", cwdErr)
+			writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session creation failed"})
+			return
+		}
+		req.CWD = canonicalCWD
+	}
+
+	req.SessionID = sessionID
+	req.Agent = strings.TrimSpace(req.Agent)
 
 	sess, err := s.newSession(req)
 	if err != nil {
+		var requestErr *InvalidChatRequestError
+		if errors.As(err, &requestErr) {
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{
+				Error: requestErr.Message,
+				Code:  "invalid_chat_request",
+			})
+			return
+		}
 		slog.Error("session create failed", "err", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session creation failed"})
 		return
+	}
+	if sess == nil {
+		slog.Error("session factory returned nil session")
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session creation failed"})
+		return
+	}
+	if saved != nil {
+		sess.LoadMessages(hawksession.ToRuntimeMessages(saved.Messages))
 	}
 
 	// Set autonomy
@@ -436,6 +556,17 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sess.AddUser(req.Prompt)
+	isSSE := wantsSSE(r)
+	if isSSE {
+		// Publish the user turn before exposing the session ID in streaming
+		// response headers. Even if the client disconnects mid-stream, the ID
+		// it received remains retrievable and resumable.
+		if saveErr := persistDaemonSession(sessionID, req, sess, saved, start); saveErr != nil {
+			slog.Error("persist streaming session start failed", "err", saveErr, "session_id", sessionID)
+			writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session persistence failed"})
+			return
+		}
+	}
 
 	ctx := r.Context()
 	events, err := sess.Stream(ctx)
@@ -446,13 +577,15 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SSE streaming mode
-	if wantsSSE(r) {
+	if isSSE {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Hawk-Session-ID", sessionID)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		flusher, _ := w.(http.Flusher)
+		var totalIn, totalOut, turns int
 
 		for ev := range events {
 			switch ev.Type {
@@ -463,12 +596,35 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 					_, _ = fmt.Fprintf(w, "data: %s\n", line)
 				}
 				_, _ = fmt.Fprint(w, "\n")
-			case "done":
-				_, _ = fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+			case "usage":
+				if ev.Usage != nil {
+					totalIn += ev.Usage.PromptTokens
+					totalOut += ev.Usage.CompletionTokens
+					turns++
+				}
 			}
 			if flusher != nil {
 				flusher.Flush()
 			}
+		}
+		if saveErr := persistDaemonSession(sessionID, req, sess, saved, start); saveErr != nil {
+			slog.Error("persist streaming session failed", "err", saveErr, "session_id", sessionID)
+			_, _ = fmt.Fprint(w, "event: error\ndata: session persistence failed\n\n")
+			if flusher != nil {
+				flusher.Flush()
+			}
+			return
+		}
+		s.trackSession(sessionID, req, saved, start, turns)
+		doneData, _ := json.Marshal(map[string]interface{}{
+			"session_id":  sessionID,
+			"tokens_in":   totalIn,
+			"tokens_out":  totalOut,
+			"turns_taken": turns,
+		})
+		_, _ = fmt.Fprintf(w, "event: done\ndata: %s\n\n", doneData)
+		if flusher != nil {
+			flusher.Flush()
 		}
 		return
 	}
@@ -490,14 +646,13 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sessionID := fmt.Sprintf("daemon-%d", start.UnixMilli())
-	s.sessions.Store(sessionID, &Session{
-		ID:        sessionID,
-		CreatedAt: start,
-		LastUsed:  time.Now(),
-		Turns:     turns,
-		CWD:       req.CWD,
-	})
+	if saveErr := persistDaemonSession(sessionID, req, sess, saved, start); saveErr != nil {
+		slog.Error("persist session failed", "err", saveErr, "session_id", sessionID)
+		writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session persistence failed"})
+		return
+	}
+	s.trackSession(sessionID, req, saved, start, turns)
+	w.Header().Set("X-Hawk-Session-ID", sessionID)
 
 	writeJSON(w, http.StatusOK, ChatResponse{
 		SessionID:  sessionID,
@@ -506,6 +661,105 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		TokensOut:  totalOut,
 		TurnsTaken: turns,
 		Duration:   time.Since(start).Round(time.Millisecond).String(),
+	})
+}
+
+func validSessionID(id string) bool {
+	if len(id) == 0 || len(id) > 128 {
+		return false
+	}
+	for _, c := range id {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.') {
+			return false
+		}
+	}
+	return true
+}
+
+func newSessionID() (string, error) {
+	var entropy [16]byte
+	if _, err := rand.Read(entropy[:]); err != nil {
+		return "", err
+	}
+	return "daemon-" + hex.EncodeToString(entropy[:]), nil
+}
+
+func canonicalSessionCWD(cwd string) (string, error) {
+	if cwd == "" {
+		var err error
+		cwd, err = os.Getwd()
+		if err != nil {
+			return "", err
+		}
+	}
+	abs, err := filepath.Abs(cwd)
+	if err != nil {
+		return "", err
+	}
+	canonical, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(canonical)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%s is not a directory", canonical)
+	}
+	return canonical, nil
+}
+
+func (s *Server) sessionLock(id string) *sync.Mutex {
+	// FNV-1a is sufficient here: the hash only selects a synchronization
+	// stripe; session IDs remain validated and are never trusted as paths.
+	const offset64 = uint64(14695981039346656037)
+	const prime64 = uint64(1099511628211)
+	hash := offset64
+	for i := 0; i < len(id); i++ {
+		hash ^= uint64(id[i])
+		hash *= prime64
+	}
+	return &s.sessionLocks[hash%uint64(len(s.sessionLocks))]
+}
+
+func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, previous *hawksession.Session, startedAt time.Time) error {
+	createdAt := startedAt
+	name := ""
+	if previous != nil {
+		createdAt = previous.CreatedAt
+		name = previous.Name
+	}
+	return hawksession.Save(&hawksession.Session{
+		ID:        id,
+		Model:     sess.Model(),
+		Provider:  sess.Provider(),
+		Agent:     req.Agent,
+		CWD:       req.CWD,
+		Name:      name,
+		Messages:  hawksession.FromRuntimeMessages(sess.RawMessages()),
+		CreatedAt: createdAt,
+	})
+}
+
+func (s *Server) trackSession(id string, req ChatRequest, previous *hawksession.Session, startedAt time.Time, turns int) {
+	createdAt := startedAt
+	if previous != nil && !previous.CreatedAt.IsZero() {
+		createdAt = previous.CreatedAt
+	}
+	if current, ok := s.sessions.Load(id); ok {
+		if active, activeOK := current.(*Session); activeOK {
+			turns += active.Turns
+		}
+	}
+	s.sessions.Store(id, &Session{
+		ID:        id,
+		CreatedAt: createdAt,
+		LastUsed:  time.Now(),
+		Turns:     turns,
+		CWD:       req.CWD,
+		Agent:     req.Agent,
 	})
 }
 

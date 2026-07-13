@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	ctxrepomap "github.com/GrayCodeAI/hawk/internal/context/repomap"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -23,7 +22,6 @@ import (
 	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func buildSystemPrompt() (string, error) {
@@ -185,47 +183,36 @@ func injectRepoMap(base string) string {
 }
 
 func loadEffectiveSettings() (hawkconfig.Settings, error) {
-	settings, err := hawkconfig.LoadSettingsWithOverride(settingsFlag)
-	if err != nil {
-		return settings, err
-	}
-	// Register custom providers with eyrie only; models come from settings + catalog fetch.
-	for _, cp := range settings.CustomProviders {
-		if cp.Name == "" || cp.BaseURL == "" {
-			continue
-		}
-		_ = types.RegisterDynamicProvider(cp.Name, cp.BaseURL, cp.APIKeyEnv)
-	}
-	return settings, nil
+	return hawkconfig.LoadSettingsWithOverride(settingsFlag)
 }
 
-func resolveSelection(settings hawkconfig.Settings) runtime.SelectionState {
-	return runtime.EffectiveSelection(context.Background(), runtime.SelectionOpts{
+func resolveSelection(settings hawkconfig.Settings) hawkconfig.Selection {
+	return hawkconfig.EffectiveSelectionWithSettings(context.Background(), settings, hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(provider, settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(model, settings.Model),
 	})
 }
 
-func startupSelection(settings hawkconfig.Settings) runtime.SelectionState {
+func startupSelection(settings hawkconfig.Settings) hawkconfig.Selection {
 	providerOverride := firstNonEmptyTrimmed(provider, settings.Provider)
 	modelOverride := firstNonEmptyTrimmed(model, settings.Model)
 
 	explicitProvider, explicitModel := explicitSelection(context.Background())
 
-	providerID := runtime.NormalizeProviderID(firstNonEmptyTrimmed(providerOverride, explicitProvider))
+	providerID := hawkconfig.ActiveProviderID(firstNonEmptyTrimmed(providerOverride, explicitProvider))
 	modelID := strings.TrimSpace(firstNonEmptyTrimmed(modelOverride, explicitModel))
 
 	if providerID == "" && modelID != "" {
-		providerID = runtime.NormalizeProviderID(hawkconfig.ProviderOfModel(modelID))
+		providerID = hawkconfig.ActiveProviderID(hawkconfig.ProviderOfModelWithSettings(settings, modelID))
 	}
 	if modelID == "" && providerID != "" {
-		modelID = strings.TrimSpace(hawkconfig.DefaultModelForProvider(providerID))
+		modelID = strings.TrimSpace(hawkconfig.DefaultModelForProviderWithSettings(settings, providerID))
 	}
 	if providerID == "" {
 		providerID = startupPlaceholderProvider
 	}
 
-	return runtime.SelectionState{
+	return hawkconfig.Selection{
 		Provider: providerID,
 		Model:    modelID,
 	}
@@ -239,11 +226,7 @@ func effectiveModelAndProvider(settings hawkconfig.Settings) (string, string) {
 	return selection.Model, selection.Provider
 }
 
-func newHawkSessionFromSelection(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
-	return engine.NewHawkSession(context.Background(), selection, selection.Provider, selection.Model, systemPrompt, registry)
-}
-
-func newStartupHawkSession(selection runtime.SelectionState, systemPrompt string, registry *tool.Registry) *engine.Session {
+func newStartupHawkSession(selection hawkconfig.Selection, systemPrompt string, registry *tool.Registry) *engine.Session {
 	providerID := strings.TrimSpace(selection.Provider)
 	if providerID == "" {
 		providerID = startupPlaceholderProvider
@@ -259,7 +242,7 @@ func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveMo
 	if strings.TrimSpace(selection.Model) == "" {
 		selection.Model = effectiveModel
 	}
-	return newHawkSessionFromSelection(selection, systemPrompt, registry)
+	return engine.NewHawkSessionForSettings(context.Background(), settings, selection, selection.Provider, selection.Model, systemPrompt, registry)
 }
 
 func firstNonEmptyTrimmed(values ...string) string {
@@ -381,13 +364,6 @@ func configureSessionHeavy(sess *engine.Session) {
 		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
 		sess.MemorySvc().SetEnhanced(enhancedMem)
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
-	}
-
-	// Direct-provider sessions still accept explicit API key injection.
-	if providerName := strings.TrimSpace(sess.Provider()); providerName != "" {
-		if key := hawkconfig.APIKeyForProvider(providerName); key != "" {
-			sess.SetAPIKey(providerName, key)
-		}
 	}
 }
 

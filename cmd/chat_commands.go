@@ -10,7 +10,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -410,9 +409,9 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 			}
 			taskIdx++
 
-			// Create a new session for this agent with same provider/model
-			agentSession := engine.NewSession(
-				m.session.Provider(),
+			// Clone the engine-backed transport so parallel agents cannot bypass
+			// the parent session's resolved gateway policy.
+			agentSession := m.session.SubSession(
 				m.session.Model(),
 				"You are a coding agent working in an isolated git worktree. Complete the assigned task.",
 				m.registry,

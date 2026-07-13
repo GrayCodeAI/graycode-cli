@@ -17,17 +17,15 @@ concerns that the GenAI spec does not yet standardize.
 
 - Upstream spec: <https://opentelemetry.io/docs/specs/semconv/gen-ai/>
 
-## Reference implementation
+## Reference ownership
 
-**eyrie already ships the reference OTel implementation.** Other repos should
-mirror it rather than invent their own tracing layer.
+Eyrie owns provider-call instrumentation behind its `eyrie/engine` facade.
+Its lower provider layer contains the reference OTel decorator for chat and
+stream calls: it starts a client span, records provider/model/usage attributes,
+sets status from the result, and ends a streamed span on completion. That
+decorator is an Eyrie implementation detail; Hawk must not import or compose it
+directly.
 
-- `eyrie/client/tracing.go` defines `TracingProvider`, a `Provider` decorator
-  that wraps any LLM provider with real OpenTelemetry spans
-  (`go.opentelemetry.io/otel`) for `Chat` and `StreamChat`. It starts a client
-  span, records provider/model/usage attributes, sets span status from the
-  result, and ends the span when a streamed response completes.
-- `eyrie/cmd/eyrie/main.go` wires it up via `client.NewTracingProvider(...)`.
 - `eyrie/internal/observability/observability.go` provides a stdlib-only,
   zero-dependency telemetry/metrics layer (spans, latency histograms,
   Prometheus + JSON export) for environments that cannot pull in the OTel SDK.
@@ -36,9 +34,10 @@ mirror it rather than invent their own tracing layer.
   of hard-coding strings. A pinning test
   (`genai_semconv_test.go`) guards the exact key values.
 
-When adding tracing to hawk, yaad, tok, or trace, prefer wrapping the
-provider/operation the same way `TracingProvider` does, and use the attribute
-keys in this document verbatim.
+When adding tracing to Hawk, propagate trace context through the Engine call and
+use the attribute keys in this document. Eyrie wraps provider operations;
+Hawk wraps product turns and tools. Yaad, Tok, and Trace instrument only their
+own operations.
 
 ## Span kinds and names
 
@@ -112,8 +111,8 @@ Mapping:
 
 ## Per-repo guidance
 
-- **eyrie** — reference impl. Already emits provider/model/usage via
-  `TracingProvider`; align attribute keys to `gen_ai.*` over time.
+- **eyrie** — owns provider/model/usage spans behind `eyrie/engine`; align
+  attribute keys to `gen_ai.*` over time.
 - **hawk** — daemon/orchestrator. Already has OTel hooks
   (`HAWK_CODE_ENABLE_TELEMETRY`, `HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS`). Emit
   `agent.id` and `session.id` on agent-turn spans; propagate them downstream to

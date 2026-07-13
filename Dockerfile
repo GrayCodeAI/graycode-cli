@@ -48,7 +48,7 @@ RUN rm -f go.work go.work.sum && \
     -o hawk ./cmd/hawk
 
 # Runtime stage — Alpine (hawk requires git + bash for workspace operations; distroless excluded)
-FROM alpine:3.21
+FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates git bash tini && \
     adduser -D -u 1000 -h /home/hawk hawk

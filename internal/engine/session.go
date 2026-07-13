@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/eyrie/storage"
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -55,7 +55,7 @@ type SnapshotTracker interface {
 //	persist        *PersistenceService (Phase 5: conversation store)
 //	tools          *ToolService        (Phase 6: tool execution)
 //
-// The legacy fields (client, provider, model, apiKeys, Router,
+// The legacy fields (client, provider, model, Router,
 // DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
 // Classifier, BypassKill, MaxTurns, MaxBudgetUSD, AllowedDirs,
 // PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
@@ -73,12 +73,10 @@ type Session struct {
 	messages []types.EyrieMessage
 	provider string
 	model    string
-	apiKeys  map[string]string
 	system   string
 	log      *logger.Logger
 	metrics  *metrics.Registry
 	Cost     Cost
-	Router   *modelPkg.Router
 	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
 	//
 	// Deprecated: use s.ChatLLM().DeploymentRouting() (Phase 1 sub-service).
@@ -95,7 +93,7 @@ type Session struct {
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
 	// code should go through s.llm.* rather than touching the legacy
-	// client/provider/model/apiKeys/Router/DeploymentRouting fields.
+	// client/provider/model/Router/DeploymentRouting fields.
 	// Named lowercase (unexported) to avoid colliding with the public
 	// Session.Chat() method used by Reflector and SelfReview.
 	llm *ChatService
@@ -122,7 +120,7 @@ type Session struct {
 	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
 	//   MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
 	//   EnhancedMemory, Cascade, Lifecycle, Reflector, CostTracker,
-	//   ConvoDAG, Sleeptime, Activity, SkillDistiller, AutoCompactor,
+	//   ConversationGraph, Sleeptime, Activity, SkillDistiller, AutoCompactor,
 	//   FewShotStore, AdaptivePrompt.
 	AllowedDirs  []string
 	PermissionFn func(PermissionRequest) // use Perm.PromptFn
@@ -179,7 +177,7 @@ type Session struct {
 	//   Limits         -> s.LifecycleSvc().Limits()
 	//   Trajectory     -> legacy field; not yet on a sub-service
 	//   Shadow         -> s.LifecycleSvc().Shadow()
-	//   ConvoDAG       -> s.Persistence().DAG()
+	//   ConversationGraph -> s.Persistence().Graph()
 	//   Sleeptime      -> s.MemorySvc().Sleeptime()
 	//   Activity       -> s.MemorySvc().Activity()
 	//   SkillDistiller -> s.MemorySvc().SkillDistiller()
@@ -196,31 +194,31 @@ type Session struct {
 	//   Steering       -> s.Persistence().Steering()
 	//   Snapshots      -> legacy field; not yet on Persistence
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
-	Autonomy       AutonomyLevel              // autonomy.go — permission level
-	Sandbox        *DiffSandbox               // diffsandbox.go — staged file changes
-	Plan           *PlanState                 // subtask.go — user-activated plan
-	Beliefs        *BeliefState               // belief.go — discovered knowledge
-	Critic         *Critic                    // critic.go — patch pre-screening
-	Backtrack      *BacktrackEngine           // backtrack.go — decision recording
-	Limits         *LimitTracker              // limits.go — safety limits
-	Teach          TeachConfig                // teach.go — explanation depth
-	Trajectory     *TrajectoryDistiller       // trajectory.go — multi-run distillation
-	Shadow         *branching.ShadowWorkspace // shadow.go — edit pre-validation
-	Snapshots      SnapshotTracker            // snapshot integration for auto-tracking
-	ConvoDAG       *storage.DAG               // conversation DAG for branching/forking
-	Sleeptime      *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
-	Activity       *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
-	SkillDistiller *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
-	Tracer         *oteltrace.Tracer          // oteltrace.go — distributed tracing spans
-	LintLoop       *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
-	TestLoop       *TestLoop                  // test_loop.go — auto test-fix loop
-	FileMentions   *FileMentionDetector       // file_mentions.go — detect referenced files
-	ResponseCache  *ResponseCache             // response_cache.go — cache similar prompts
-	Pipeline       *IntegrationPipeline       // integration.go — unified feature orchestration
-	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
-	Steering       *SteeringQueue             // steering.go — user guidance injection between tool batches
-	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
-	AgentsAccum    *prompts.AgentsAccumulator // agents_accumulator.go — auto-capture learnings
+	Autonomy          AutonomyLevel              // autonomy.go — permission level
+	Sandbox           *DiffSandbox               // diffsandbox.go — staged file changes
+	Plan              *PlanState                 // subtask.go — user-activated plan
+	Beliefs           *BeliefState               // belief.go — discovered knowledge
+	Critic            *Critic                    // critic.go — patch pre-screening
+	Backtrack         *BacktrackEngine           // backtrack.go — decision recording
+	Limits            *LimitTracker              // limits.go — safety limits
+	Teach             TeachConfig                // teach.go — explanation depth
+	Trajectory        *TrajectoryDistiller       // trajectory.go — multi-run distillation
+	Shadow            *branching.ShadowWorkspace // shadow.go — edit pre-validation
+	Snapshots         SnapshotTracker            // snapshot integration for auto-tracking
+	ConversationGraph *session.ConversationGraph // Hawk-owned conversation branching/forking
+	Sleeptime         *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
+	Activity          *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
+	SkillDistiller    *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
+	Tracer            *oteltrace.Tracer          // oteltrace.go — distributed tracing spans
+	LintLoop          *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
+	TestLoop          *TestLoop                  // test_loop.go — auto test-fix loop
+	FileMentions      *FileMentionDetector       // file_mentions.go — detect referenced files
+	ResponseCache     *ResponseCache             // response_cache.go — cache similar prompts
+	Pipeline          *IntegrationPipeline       // integration.go — unified feature orchestration
+	Files             *FileTracker               // compact_files.go — cumulative file tracking across compactions
+	Steering          *SteeringQueue             // steering.go — user guidance injection between tool batches
+	RateLimiter       *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
+	AgentsAccum       *prompts.AgentsAccumulator // agents_accumulator.go — auto-capture learnings
 
 	// Few-shot learning and prompt optimization
 	//
@@ -242,9 +240,12 @@ type Session struct {
 	smartSkills []plugin.SmartSkill
 }
 
-// NewSession creates a new conversation session with a legacy string-named provider.
+// NewSession creates a conversation session through Eyrie's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewSessionWithClient(types.NewClient(&types.ClientConfig{Provider: provider}), provider, model, systemPrompt, registry, false)
+	return NewHawkSession(context.Background(), eyrieengine.Selection{
+		Provider: provider,
+		Model:    model,
+	}, provider, model, systemPrompt, registry)
 }
 
 // NewSessionWithClient constructs a session with an explicit LLM client (e.g. deployment router).
@@ -259,7 +260,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		registry:          registry,
 		provider:          provider,
 		model:             model,
-		apiKeys:           map[string]string{},
 		system:            systemPrompt,
 		log:               log,
 		metrics:           metrics.NewRegistry(),
@@ -281,7 +281,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		RateLimiter:       ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
-	s.Router = modelPkg.NewRouter(modelPkg.StrategyBalanced)
 	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
 	s.refreshContextWindowCache()
 
@@ -305,8 +304,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.llm = NewChatService(chat, ChatServiceConfig{
 		Provider:          provider,
 		Model:             model,
-		APIKeys:           s.apiKeys,
-		Router:            s.Router,
 		DeploymentRouting: deploymentRouting,
 		RateLimiter:       s.RateLimiter,
 		Metrics:           s.metrics,
@@ -322,7 +319,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	// the same state as new code that goes through the sub-service getters.
 	// After this point, mutations to the sub-service internal state
 	// (e.g., s.memory.SetMemory(...)) need a corresponding write to the
-	// legacy field — see the various Set* helpers (SetConvoDAG,
+	// legacy field — see the various Set* helpers (SetConversationGraph,
 	// SetSnapshots, etc.) which perform the dual write.
 	s.Limits = s.life.Limits()
 	s.Beliefs = s.life.Beliefs()
@@ -335,7 +332,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.Memory = s.memory.Memory()
 	s.YaadBridge = s.memory.Yaad()
 	s.EnhancedMemory = s.memory.Enhanced()
-	s.ConvoDAG = s.persist.DAG()
+	s.ConversationGraph = s.persist.Graph()
 	s.Steering = s.persist.Steering()
 
 	return s
@@ -356,11 +353,6 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	if s.llm != nil {
 		s.llm.Reattach(chat, s.provider)
 	}
-	for name, key := range s.apiKeys {
-		if strings.TrimSpace(key) != "" {
-			s.client.SetAPIKey(name, key)
-		}
-	}
 }
 
 // SubSession clones transport and routing mode for explore/general sub-agents.
@@ -369,9 +361,6 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 		registry = s.registry
 	}
 	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting)
-	for provider, key := range s.apiKeys {
-		sub.SetAPIKey(provider, key)
-	}
 	return sub
 }
 
@@ -381,7 +370,7 @@ func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
 // ChatLLM returns the extracted ChatService (Phase 1 of the god-object
 // decomposition). New code should prefer this over the legacy Client /
-// Provider / Model / APIKeys / Router fields. Returns nil only if the
+// Provider / Model / Router fields. Returns nil only if the
 // session was constructed without going through NewSessionWithClient,
 // which should not happen in production.
 func (s *Session) ChatLLM() *ChatService { return s.llm }
@@ -468,54 +457,20 @@ func (s *Session) syncCascadeDefaultModel() {
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
 	s.provider = p
-	if s.DeploymentRouting {
-		return
-	}
-	s.client = types.NewClient(&types.ClientConfig{Provider: p})
-	// Copy keys to avoid map iteration race with concurrent SetAPIKey calls.
-	keys := make(map[string]string, len(s.apiKeys))
-	for k, v := range s.apiKeys {
-		keys[k] = v
-	}
-	for provider, apiKey := range keys {
-		if strings.TrimSpace(apiKey) != "" {
-			s.client.SetAPIKey(provider, apiKey)
-		}
-	}
-}
-
-// SetAPIKey updates a provider API key for subsequent requests.
-func (s *Session) SetAPIKey(provider, apiKey string) {
-	provider = strings.ToLower(strings.TrimSpace(provider))
-	apiKey = strings.TrimSpace(apiKey)
-	if provider == "" || apiKey == "" {
-		return
-	}
-	if s.apiKeys == nil {
-		s.apiKeys = map[string]string{}
-	}
-	s.apiKeys[provider] = apiKey
-	if s.client != nil {
-		s.client.SetAPIKey(provider, apiKey)
-	}
-}
-
-// SetAPIKeys updates all known provider API keys for subsequent requests.
-func (s *Session) SetAPIKeys(apiKeys map[string]string) {
-	for provider, apiKey := range apiKeys {
-		s.SetAPIKey(provider, apiKey)
+	if s.llm != nil {
+		s.llm.SetProvider(p)
 	}
 }
 
 func (s *Session) AddUser(content string) {
 	if p := s.Persistence(); p != nil {
 		p.AddUser(content)
-		if dag := p.DAG(); dag != nil {
+		if graph := p.Graph(); graph != nil {
 			parentID := ""
-			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+			if head, err := graph.Head(); err == nil && head != nil {
 				parentID = head.ID
 			}
-			_, _ = dag.Append(context.Background(), parentID, "user", content)
+			_, _ = graph.Append(parentID, "user", content)
 		}
 	}
 	if memSvc := s.MemorySvc(); memSvc != nil {
@@ -538,12 +493,12 @@ func (s *Session) AddUser(content string) {
 func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType string) {
 	if p := s.Persistence(); p != nil {
 		p.AddUser(content + " [image attached]")
-		if dag := p.DAG(); dag != nil {
+		if graph := p.Graph(); graph != nil {
 			parentID := ""
-			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+			if head, err := graph.Head(); err == nil && head != nil {
 				parentID = head.ID
 			}
-			_, _ = dag.Append(context.Background(), parentID, "user", content+" [image attached]")
+			_, _ = graph.Append(parentID, "user", content+" [image attached]")
 		}
 	}
 	s.mu.Lock()
@@ -559,12 +514,12 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 func (s *Session) AddAssistant(content string) {
 	if p := s.Persistence(); p != nil {
 		p.AddAssistant(content)
-		if dag := p.DAG(); dag != nil {
+		if graph := p.Graph(); graph != nil {
 			parentID := ""
-			if head, err := dag.Head(context.Background()); err == nil && head != nil {
+			if head, err := graph.Head(); err == nil && head != nil {
 				parentID = head.ID
 			}
-			_, _ = dag.Append(context.Background(), parentID, "assistant", content)
+			_, _ = graph.Append(parentID, "assistant", content)
 		}
 	}
 }
@@ -576,16 +531,16 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	if p == nil {
 		return "", nil
 	}
-	dag := p.DAG()
-	if dag == nil {
+	graph := p.Graph()
+	if graph == nil {
 		return "", nil
 	}
-	fork, err := dag.Fork(context.Background(), nodeID)
+	fork, err := graph.Fork(nodeID)
 	if err != nil {
 		return "", err
 	}
 	// Rebuild messages from the forked branch.
-	history, err := dag.History(context.Background(), fork.ID)
+	history, err := graph.History(fork.ID)
 	if err != nil {
 		return "", err
 	}
@@ -608,14 +563,14 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	if p == nil {
 		return nil
 	}
-	dag := p.DAG()
-	if dag == nil {
+	graph := p.Graph()
+	if graph == nil {
 		return nil
 	}
-	if err := dag.SetHead(context.Background(), nodeID); err != nil {
+	if err := graph.SetHead(nodeID); err != nil {
 		return err
 	}
-	history, err := dag.History(context.Background(), nodeID)
+	history, err := graph.History(nodeID)
 	if err != nil {
 		return err
 	}
@@ -633,16 +588,16 @@ func (s *Session) SwitchBranch(nodeID string) error {
 }
 
 // ListBranches returns child nodes (alternative branches) from a given node.
-func (s *Session) ListBranches(nodeID string) ([]*storage.DAGNode, error) {
+func (s *Session) ListBranches(nodeID string) ([]*session.ConversationNode, error) {
 	p := s.Persistence()
 	if p == nil {
 		return nil, nil
 	}
-	dag := p.DAG()
-	if dag == nil {
+	graph := p.Graph()
+	if graph == nil {
 		return nil, nil
 	}
-	return dag.Branches(context.Background(), nodeID)
+	return graph.Branches(nodeID)
 }
 
 // ConvoHead returns the current conversation head node ID.
@@ -651,11 +606,11 @@ func (s *Session) ConvoHead() string {
 	if p == nil {
 		return ""
 	}
-	dag := p.DAG()
-	if dag == nil {
+	graph := p.Graph()
+	if graph == nil {
 		return ""
 	}
-	if head, err := dag.Head(context.Background()); err == nil && head != nil {
+	if head, err := graph.Head(); err == nil && head != nil {
 		return head.ID
 	}
 	return ""
@@ -790,14 +745,25 @@ func (s *Session) SetApproval(a *ApprovalGate) {
 	s.Approval = a
 }
 
-// SetConvoDAG attaches the conversation DAG. New code should
-// call this instead of writing to the legacy s.ConvoDAG field.
-// The DAG is also propagated to the persistence service so
-// s.Persistence().DAG() and the legacy field stay in sync.
-func (s *Session) SetConvoDAG(dag *storage.DAG) {
-	s.ConvoDAG = dag
+// SetConversationGraph attaches Hawk's product-owned conversation graph and
+// seeds it from an already-resumed linear transcript when the graph is new.
+func (s *Session) SetConversationGraph(graph *session.ConversationGraph) {
+	s.ConversationGraph = graph
 	if s.persist != nil {
-		s.persist.SetDAG(dag)
+		s.persist.SetGraph(graph)
+		if graph != nil && graph.Empty() {
+			parentID := ""
+			for _, message := range s.persist.RawMessages() {
+				if message.Role != "user" && message.Role != "assistant" {
+					continue
+				}
+				node, err := graph.Append(parentID, message.Role, message.Content)
+				if err != nil {
+					break
+				}
+				parentID = node.ID
+			}
+		}
 	}
 }
 
@@ -898,8 +864,10 @@ type StreamEvent struct {
 
 // StreamUsage tracks token usage for a single stream event.
 type StreamUsage struct {
-	PromptTokens     int `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
-	CacheReadTokens  int `json:"cache_read_tokens,omitempty"`
-	CacheWriteTokens int `json:"cache_write_tokens,omitempty"`
+	PromptTokens     int    `json:"prompt_tokens"`
+	CompletionTokens int    `json:"completion_tokens"`
+	CacheReadTokens  int    `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens int    `json:"cache_write_tokens,omitempty"`
+	Provider         string `json:"provider,omitempty"`
+	Model            string `json:"model,omitempty"`
 }

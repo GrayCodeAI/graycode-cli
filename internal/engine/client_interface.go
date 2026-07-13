@@ -7,11 +7,23 @@ import (
 )
 
 // ChatClient abstracts the LLM client methods used by Session.
-// The production implementation is *types.EyrieClient; tests can inject a mock.
+// The production implementation is the Eyrie engine adapter; tests can inject a mock.
 type ChatClient interface {
 	Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error)
 	StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error)
-	SetAPIKey(provider, apiKey string)
+}
+
+// resilienceManagingChatClient is an optional capability implemented by
+// facade clients that already own provider retries, rate limiting,
+// continuation, and protocol normalization. Keeping it separate from
+// ChatClient preserves compatibility with injected and legacy clients.
+type resilienceManagingChatClient interface {
+	ManagesResilience() bool
+}
+
+func clientManagesResilience(client ChatClient) bool {
+	manager, ok := client.(resilienceManagingChatClient)
+	return ok && manager.ManagesResilience()
 }
 
 // SetTestClient replaces the session's LLM client. For testing only.
@@ -46,5 +58,3 @@ func (m *exportedMockClient) StreamChatContinue(ctx context.Context, messages []
 	close(ch)
 	return &types.StreamResult{Events: ch}, nil
 }
-
-func (m *exportedMockClient) SetAPIKey(provider, apiKey string) {}

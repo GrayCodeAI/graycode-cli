@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	appName          = "hawk"
-	envConfigDir     = "HAWK_CONFIG_DIR"
-	envStateDir      = "HAWK_STATE_DIR"
-	envCacheDir      = "HAWK_CACHE_DIR"
-	projectIDHashLen = 12
+	appName           = "hawk"
+	envConfigDir      = "HAWK_CONFIG_DIR"
+	envEyrieConfigDir = "EYRIE_CONFIG_DIR"
+	envStateDir       = "HAWK_STATE_DIR"
+	envCacheDir       = "HAWK_CACHE_DIR"
+	projectIDHashLen  = 12
 )
 
 // ConfigDir returns the per-user configuration directory for Hawk.
@@ -48,6 +49,12 @@ func SettingsPath() string {
 }
 
 func ProviderConfigPath() string {
+	// Eyrie owns provider routing state. Keep HAWK_CONFIG_DIR as the
+	// compatibility fallback, but let Eyrie's host-neutral override win when
+	// both variables are configured.
+	if dir := cleanEnvDir(envEyrieConfigDir); dir != "" {
+		return filepath.Join(dir, "provider.json")
+	}
 	return filepath.Join(ConfigDir(), "provider.json")
 }
 

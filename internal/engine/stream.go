@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -334,14 +335,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Circuit breaker: select provider with failover (legacy single-provider clients only).
-		if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
-			if selectedProvider, err := s.ChatLLM().Router().SelectProvider(s.provider); err == nil && selectedProvider != s.provider {
-				s.log.Info("provider failover", map[string]interface{}{"from": s.provider, "to": selectedProvider})
-				opts.Provider = selectedProvider
-			}
-		}
-
 		// Count actual input tokens for precise budget tracking
 		inputTokens := 0
 		for _, msg := range s.Persistence().RawMessages() {
@@ -369,11 +362,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Issue the LLM call via the ChatService. The service handles
 		// rate limit, retry, and emergency compact internally; the
 		// api.requests counter is incremented inside ChatService.Stream.
-		// We keep the apiDuration timer + circuit-breaker recording here
-		// at the Session level so we can feed the real latency to
-		// Router.RecordSuccess (the service has no start-time argument
-		// and deliberately stays out of circuit-breaker accounting).
+		// Hawk records product-level latency; provider health and circuit
+		// breaking are owned by Eyrie's routed transport.
 		apiStart := time.Now()
+		managesResilience := clientManagesResilience(s.ChatLLM().Client())
 		result, err := s.ChatLLM().Stream(ctx, s.Persistence().RawMessages(), opts)
 		apiDuration := time.Since(apiStart)
 		s.metrics.Timer("api.latency").Record(apiDuration)
@@ -384,10 +376,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if loopSpan != nil {
 				oteltrace.EndSpanWithError(loopSpan, err)
 			}
-			// Record failure for circuit breaker (legacy single-provider clients only)
-			if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
-				s.ChatLLM().Router().RecordFailure(s.provider, err)
-			}
 			s.log.Error("stream error", map[string]interface{}{
 				"error": err.Error(),
 			})
@@ -395,19 +383,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 
-		// Record success for circuit breaker (legacy single-provider clients only)
-		if s.ChatLLM().Router() != nil && !s.ChatLLM().DeploymentRouting() {
-			s.ChatLLM().Router().RecordSuccess(s.provider, apiDuration)
-		}
-
 		var textContent strings.Builder
 		var toolCalls []types.ToolCall
 		var stopReason string
 		var lastUsage *types.EyrieUsage
+		var usageLedger streamUsageLedger
+		resolvedProvider := strings.TrimSpace(s.provider)
+		resolvedModel := strings.TrimSpace(activeModel)
 
-		// Streaming with retry for transient stream errors. Reasoning-only
-		// responses recover via non-streaming Chat (OpenCode Go / MiniMax) instead
-		// of repeating the same broken stream.
+		// Compatibility clients retain Hawk's historical stream retry and
+		// reasoning-only recovery. Eyrie facade clients already normalize and
+		// recover provider streams, so Hawk must consume their result exactly once.
 		const maxStreamRetries = 2
 		var streamErr error
 		var sawThinking bool
@@ -425,6 +411,19 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						break eventLoop
 					}
 					switch ev.Type {
+					case "route_selected", "route_changed":
+						var changed bool
+						resolvedProvider, resolvedModel, changed = updateResolvedRoute(resolvedProvider, resolvedModel, ev.Route)
+						if changed {
+							s.log.Info("engine route selected", map[string]interface{}{
+								"provider": resolvedProvider,
+								"model":    resolvedModel,
+							})
+						}
+						if loopSpan != nil {
+							loopSpan.SetTag("provider", resolvedProvider)
+							loopSpan.SetTag("model", resolvedModel)
+						}
 					case "content":
 						textContent.WriteString(ev.Content)
 						ch <- StreamEvent{Type: "content", Content: ev.Content}
@@ -440,7 +439,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					case "usage":
 						if ev.Usage != nil {
 							lastUsage = ev.Usage
-							s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, activeModel, taskType, apiStart)
+							if usageLedger.shouldRecord(ev.Usage, false) {
+								s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, resolvedProvider, resolvedModel, taskType, apiStart)
+							}
 						}
 					case "error":
 						streamErr = fmt.Errorf("%s", ev.Error)
@@ -454,14 +455,21 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						if ev.StopReason != "" {
 							stopReason = ev.StopReason
 						}
+						if ev.Usage != nil {
+							lastUsage = ev.Usage
+							if usageLedger.shouldRecord(ev.Usage, true) {
+								s.recordStreamUsage(ch, ev.Usage.PromptTokens, ev.Usage.CompletionTokens, resolvedProvider, resolvedModel, taskType, apiStart)
+							}
+						}
 					}
 				}
 			}
 			result.Close()
 
 			thinkingOnly := streamErr == nil && textContent.Len() == 0 && len(toolCalls) == 0 && sawThinking
-			if thinkingOnly {
+			if thinkingOnly && !managesResilience {
 				if resp, chatErr := s.ChatLLM().Chat(ctx, s.Persistence().RawMessages(), opts); chatErr == nil && resp != nil && strings.TrimSpace(resp.Content) != "" {
+					resolvedProvider, resolvedModel, _ = updateResolvedRoute(resolvedProvider, resolvedModel, resp.Route)
 					content := resp.Content
 					textContent.WriteString(content)
 					ch <- StreamEvent{Type: "content", Content: content}
@@ -471,6 +479,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if resp.FinishReason != "" {
 						stopReason = resp.FinishReason
 					}
+					if resp.Usage != nil {
+						lastUsage = resp.Usage
+						s.recordStreamUsage(ch, resp.Usage.PromptTokens, resp.Usage.CompletionTokens, resolvedProvider, resolvedModel, taskType, apiStart)
+					}
 					streamErr = nil
 					break
 				}
@@ -479,7 +491,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				return
 			}
 
-			shouldRetry := streamErr != nil && isRetryableStreamError(streamErr)
+			shouldRetry := !managesResilience && streamErr != nil && isRetryableStreamError(streamErr)
 			if !shouldRetry {
 				break
 			}
@@ -520,14 +532,19 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			toolCalls = nil
 			stopReason = ""
 			lastUsage = nil
+			usageLedger.reset()
 			streamErr = nil
+		}
+		if streamErr != nil {
+			ch <- StreamEvent{Type: "error", Content: streamErr.Error()}
+			return
 		}
 
 		// Providers like OpenCode Go often omit stream usage; estimate so billing footer updates.
 		if lastUsage == nil && (textContent.Len() > 0 || len(toolCalls) > 0) {
 			completionEst := estimateStreamCompletionTokens(textContent.String(), toolCalls)
 			if inputTokens > 0 || completionEst > 0 {
-				s.recordStreamUsage(ch, inputTokens, completionEst, activeModel, taskType, apiStart)
+				s.recordStreamUsage(ch, inputTokens, completionEst, resolvedProvider, resolvedModel, taskType, apiStart)
 				lastUsage = &types.EyrieUsage{
 					PromptTokens:     inputTokens,
 					CompletionTokens: completionEst,
@@ -556,7 +573,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// text): Moonshot/kimi <|tool_calls_section_begin|> or Hermes/Nous
 		// <tool_call> (Qwen and most OpenAI-compatible local models).
 		if len(toolCalls) == 0 && (strings.Contains(textContent.String(), "<|tool_calls_section_begin|>") || strings.Contains(textContent.String(), "<tool_call>")) {
-			cleanText, inlineCalls := types.ParseInlineToolCalls(textContent.String())
+			cleanText, engineCalls := eyrieengine.ParseInlineToolCalls(textContent.String())
+			inlineCalls := make([]types.ToolCall, 0, len(engineCalls))
+			for _, call := range engineCalls {
+				inlineCalls = append(inlineCalls, types.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
+			}
 			if len(inlineCalls) > 0 {
 				textContent.Reset()
 				textContent.WriteString(cleanText)
@@ -576,8 +597,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Post-query hook
 		hooks.ExecuteAsync(ctx, hooks.EventPostQuery, map[string]interface{}{
-			"provider": s.provider,
-			"model":    s.model,
+			"provider": resolvedProvider,
+			"model":    resolvedModel,
 			"content":  textContent.String(),
 			"tools":    len(toolCalls),
 		})
@@ -595,25 +616,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Handle max_tokens recovery.
-		//
-		// Two strategies coexist:
-		//   1. Engine-level (this block): when no tool calls, append the
-		//      partial assistant text and a 'Continue from where you left
-		//      off.' user turn, then loop. Cheap (single retry) but
-		//      pollutes the conversation with a synthetic user message.
-		//   2. Client-level (eyrie/client.StreamChatWithContinuation,
-		//      deprecated in eyrie v0.3.0): handles max_tokens even with
-		//      tool calls by recursing StreamChat internally. Cleaner
-		//      conversation but appends a synthetic 'Continue.' user
-		//      turn too.
-		//
-		// Both still produce a synthetic user message; the eyrie
-		// conversation engine (OutputGroupID-based continuation) avoids
-		// this but is not what hawk's agent loop uses today. A future
-		// refactor could port hawk to eyrie/conversation.Engine.Prompt
-		// and drop the synthetic user message entirely.
-		if stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
+		// Compatibility-only max_tokens recovery. Eyrie's engine facade owns
+		// continuation and exposes one normalized stream to Hawk. Legacy clients
+		// retain the historical synthetic turn so injected integrations do not
+		// change behavior while they migrate to the facade.
+		if !managesResilience && stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
 			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
 			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "user", Content: "Continue from where you left off."}))

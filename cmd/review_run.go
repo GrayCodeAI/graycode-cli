@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/runtime"
 	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
 	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	sightLib "github.com/GrayCodeAI/sight"
 	"github.com/spf13/cobra"
@@ -86,20 +86,16 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build sight bridge from the runtime-owned transport resolution.
-	transport, err := runtime.ResolveChatTransport(context.Background(), runtime.ChatTransportOpts{
-		Selection: runtime.SelectionOpts{
-			ProviderOverride: strings.TrimSpace(provider),
-			ModelOverride:    reviewRunModel,
-		},
+	// Build the Sight bridge through Hawk's Eyrie engine boundary.
+	ctx := context.Background()
+	selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
+		ProviderOverride: strings.TrimSpace(provider),
+		ModelOverride:    strings.TrimSpace(reviewRunModel),
 	})
+	chatProvider, providerID, err := engine.BuildChatProvider(ctx, selection, strings.TrimSpace(provider))
 	if err != nil {
 		_ = store.SetStatus(id, ReviewStatusFailed)
-		return silentErr(fmt.Errorf("resolve runtime transport: %w", err), "init bridge")
-	}
-	if transport.Provider == nil {
-		_ = store.SetStatus(id, ReviewStatusFailed)
-		return silentErr(fmt.Errorf("runtime transport unavailable for provider %q", transport.Selection.Provider), "init bridge")
+		return silentErr(fmt.Errorf("resolve engine transport: %w", err), "init bridge")
 	}
 
 	var opts []sightLib.Option
@@ -114,13 +110,12 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		opts = append(opts, sightLib.WithConcerns(concerns...))
 	}
 
-	bridge := hawkSight.NewBridge(types.WrapClientProvider(transport.Provider), transport.Selection.Provider, opts...)
+	bridge := hawkSight.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
 		_ = store.SetStatus(id, ReviewStatusFailed)
 		return silentErr(fmt.Errorf("sight bridge not ready"), "init bridge")
 	}
 
-	ctx := context.Background()
 	if reviewRunTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, reviewRunTimeout)
