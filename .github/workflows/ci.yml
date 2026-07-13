@@ -319,7 +319,15 @@ jobs:
           output=$(mktemp)
           trap 'rm -f "$output"' EXIT
           deadcode ./... >"$output"
-          head -50 "$output"
+          count=$(wc -l <"$output" | tr -d ' ')
+          echo "deadcode inventory: ${count} unreachable functions"
+          {
+            echo "### Deadcode inventory (${count} findings; first 50 shown)"
+            echo
+            echo '```text'
+            head -50 "$output"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
 
   # -------------------------------------------------------------------------
   # Duplication detection — jscpd.
