@@ -79,6 +79,9 @@ func (s StructuredEditTool) Execute(ctx context.Context, input json.RawMessage) 
 	if len(p.Blocks) == 0 {
 		return "", fmt.Errorf("at least one SEARCH/REPLACE block is required")
 	}
+	if err := validatePathAllowed(ctx, p.Path); err != nil {
+		return "", err
+	}
 
 	// Read the file.
 	data, err := os.ReadFile(p.Path)
