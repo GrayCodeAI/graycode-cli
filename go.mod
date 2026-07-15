@@ -11,12 +11,12 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/GrayCodeAI/eyrie v0.2.2-0.20260715120546-f6abb1ef38b9
+	github.com/GrayCodeAI/eyrie v0.2.2-0.20260715190227-1ba692935ce5
 	github.com/GrayCodeAI/hawk-core-contracts v0.1.4
 	github.com/GrayCodeAI/inspect v0.1.4
 	github.com/GrayCodeAI/sight v0.1.4
 	github.com/GrayCodeAI/tok v0.1.4
-	github.com/GrayCodeAI/yaad v0.2.1-0.20260715183757-c6c5b041589b
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260715205802-7d52bde38e49
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/fsnotify/fsnotify v1.10.1
