@@ -444,8 +444,8 @@ func (PatchTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	// applying — otherwise an LLM-authored patch could write/delete files
 	// outside the sandbox (validated below per-entry).
 	for _, fp := range parser.Patches() {
-		if err := validatePathAllowed(ctx, fp.Path); err != nil {
-			return "", err
+		if vErr := validatePathAllowed(ctx, fp.Path); vErr != nil {
+			return "", vErr
 		}
 	}
 

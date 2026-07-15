@@ -213,8 +213,11 @@ func StartLoopbackCallback(ctx context.Context, timeout time.Duration) (redirect
 	if err != nil {
 		return "", nil, nil, err
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	redirectURI = "http://127.0.0.1:" + strconv.Itoa(port) + "/callback"
+	addr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		return "", nil, nil, fmt.Errorf("loopback listener has unexpected address type %T", listener.Addr())
+	}
+	redirectURI = "http://127.0.0.1:" + strconv.Itoa(addr.Port) + "/callback"
 
 	results := make(chan CallbackResult, 1)
 	var once sync.Once
@@ -242,7 +245,10 @@ func StartLoopbackCallback(ctx context.Context, timeout time.Duration) (redirect
 			}
 		})
 	})
-	httpServer := &http.Server{Handler: mux}
+	// Loopback-only, context-bounded OAuth callback server: it serves a single
+	// localhost redirect and tears itself down via ctx/timeout, so the Slowloris
+	// window does not apply.
+	httpServer := &http.Server{Handler: mux} // #nosec G112 -- loopback, self-terminating
 
 	go func() { _ = httpServer.Serve(listener) }()
 

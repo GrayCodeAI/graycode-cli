@@ -10,7 +10,8 @@ import (
 
 // oauthTokenService is the keychain/keyring service name tokens are stored
 // under, keyed per-server by the account parameter.
-const oauthTokenService = "hawk-mcp-oauth"
+// Keychain service name — a fixed OAuth storage label, not a secret value.
+const oauthTokenService = "hawk-mcp-oauth" // #nosec G101 -- fixed storage label, not a credential
 
 // StoredToken is what gets persisted per MCP server. auth.SecureStorage
 // only stores a single string value per account, so this is JSON-marshaled

@@ -98,8 +98,8 @@ func TestMcpAuthTool_FullFlow_DynamicClientRegistration(t *testing.T) {
 		Status  string `json:"status"`
 		AuthURL string `json:"authUrl"`
 	}
-	if err := json.Unmarshal([]byte(out), &resp); err != nil {
-		t.Fatalf("could not parse Execute output: %v (%s)", err, out)
+	if uErr := json.Unmarshal([]byte(out), &resp); uErr != nil {
+		t.Fatalf("could not parse Execute output: %v (%s)", uErr, out)
 	}
 	if resp.Status != "pending" {
 		t.Fatalf("expected status=pending, got %q (%s)", resp.Status, out)
