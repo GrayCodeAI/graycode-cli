@@ -17,12 +17,23 @@ import (
 const startupMCPToolLoadTimeout = 1500 * time.Millisecond
 
 var defaultRegistryLoadMCPTools = tool.LoadMCPTools
+var defaultRegistryLoadRemoteMCPTools = tool.LoadRemoteMCPTools
 
 type startupMCPServerSpec struct {
 	name    string
 	command string
 	args    []string
+
+	// Set only for non-stdio (remote) servers: serverType is "http", "sse",
+	// or "websocket", url is the server's endpoint, and headers carries any
+	// static headers from config plus an auto-injected OAuth bearer token
+	// if one is stored for this server (see internal/mcp/oauth.go).
+	serverType string
+	url        string
+	headers    map[string]string
 }
+
+func (s startupMCPServerSpec) isRemote() bool { return s.serverType != "" }
 
 func essentialTools() []tool.Tool {
 	// Core tools needed for basic agent operation - always loaded at startup
@@ -105,14 +116,32 @@ func optionalTools() []tool.Tool {
 func configuredStartupMCPServers(settings hawkconfig.Settings) []startupMCPServerSpec {
 	servers := make([]startupMCPServerSpec, 0, len(settings.MCPServers)+len(mcpServers))
 	for _, cfg := range settings.MCPServers {
-		if cfg.Name == "" || cfg.Command == "" {
+		if cfg.Name == "" {
 			continue
 		}
-		servers = append(servers, startupMCPServerSpec{
-			name:    cfg.Name,
-			command: cfg.Command,
-			args:    cfg.Args,
-		})
+		switch cfg.Type {
+		case "", "stdio":
+			if cfg.Command == "" {
+				continue
+			}
+			servers = append(servers, startupMCPServerSpec{
+				name:    cfg.Name,
+				command: cfg.Command,
+				args:    cfg.Args,
+			})
+		case "http", "sse", "websocket":
+			if cfg.URL == "" {
+				continue
+			}
+			servers = append(servers, startupMCPServerSpec{
+				name:       cfg.Name,
+				serverType: cfg.Type,
+				url:        cfg.URL,
+				headers:    mergedMCPHeaders(cfg),
+			})
+		default:
+			continue
+		}
 	}
 	for _, cmd := range mcpServers {
 		parts := strings.Fields(cmd)
@@ -128,6 +157,24 @@ func configuredStartupMCPServers(settings hawkconfig.Settings) []startupMCPServe
 	return servers
 }
 
+// mergedMCPHeaders combines a remote MCP server's static configured headers
+// with an auto-injected "Authorization: Bearer <token>" if a valid,
+// non-expired OAuth token is stored for this server (see
+// internal/tool/mcp_auth.go). A configured static Authorization header, if
+// any, takes precedence over the auto-injected one.
+func mergedMCPHeaders(cfg hawkconfig.MCPServerConfig) map[string]string {
+	headers := make(map[string]string, len(cfg.Headers)+1)
+	for k, v := range cfg.Headers {
+		headers[k] = v
+	}
+	if _, hasAuth := headers["Authorization"]; !hasAuth {
+		if bearer, ok := tool.AuthHeaderForMCPServer(cfg.Name); ok {
+			headers["Authorization"] = bearer
+		}
+	}
+	return headers
+}
+
 func loadStartupMCPToolSets(servers []startupMCPServerSpec) [][]tool.Tool {
 	results := make([][]tool.Tool, len(servers))
 	var wg sync.WaitGroup
@@ -138,7 +185,15 @@ func loadStartupMCPToolSets(servers []startupMCPServerSpec) [][]tool.Tool {
 			ctx, cancel := context.WithTimeout(context.Background(), startupMCPToolLoadTimeout)
 			defer cancel()
 
-			mcpTools, err := defaultRegistryLoadMCPTools(ctx, spec.name, spec.command, spec.args...)
+			var (
+				mcpTools []tool.Tool
+				err      error
+			)
+			if spec.isRemote() {
+				mcpTools, err = defaultRegistryLoadRemoteMCPTools(ctx, spec.name, spec.serverType, spec.url, spec.headers)
+			} else {
+				mcpTools, err = defaultRegistryLoadMCPTools(ctx, spec.name, spec.command, spec.args...)
+			}
 			if err != nil {
 				return
 			}

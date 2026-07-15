@@ -52,15 +52,22 @@ func (ListMcpResourcesTool) Execute(_ context.Context, input json.RawMessage) (s
 		if !ok {
 			return "", fmt.Errorf("MCP server %q not found", p.Server)
 		}
-		servers = []*mcp.Server{server}
+		servers = map[string]mcpClient{p.Server: server}
 	}
-	for _, server := range servers {
-		resources, err := server.ListResources()
+	for name, server := range servers {
+		// Resource listing is currently stdio-only: mcp.HTTPServer/WSServer
+		// don't implement it. Remote-transport servers are silently skipped
+		// here rather than erroring, same as if they'd exposed zero resources.
+		stdioServer, ok := server.(*mcp.Server)
+		if !ok {
+			continue
+		}
+		resources, err := stdioServer.ListResources()
 		if err != nil {
 			continue
 		}
 		for _, r := range resources {
-			out = append(out, resourceOut{URI: r.URI, Name: r.Name, MimeType: r.MimeType, Description: r.Description, Server: server.Name})
+			out = append(out, resourceOut{URI: r.URI, Name: r.Name, MimeType: r.MimeType, Description: r.Description, Server: name})
 		}
 	}
 	if len(out) == 0 {
@@ -107,5 +114,9 @@ func (ReadMcpResourceTool) Execute(_ context.Context, input json.RawMessage) (st
 	if !ok {
 		return "", fmt.Errorf("MCP server %q not found", p.Server)
 	}
-	return server.ReadResource(p.URI)
+	stdioServer, ok := server.(*mcp.Server)
+	if !ok {
+		return "", fmt.Errorf("MCP server %q does not support resource reads (remote transports don't implement this yet)", p.Server)
+	}
+	return stdioServer.ReadResource(p.URI)
 }
