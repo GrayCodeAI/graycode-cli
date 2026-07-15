@@ -30,6 +30,8 @@ github.com/GrayCodeAI/trace v0.1.5-0.20260715120456-164d86be64a8 h1:aZc9iLs+Tmv+
 github.com/GrayCodeAI/trace v0.1.5-0.20260715120456-164d86be64a8/go.mod h1:G9EPYZQKiTl1OHwhXLdpsgLZaS8zesQcd1YfLFIOeH8=
 github.com/GrayCodeAI/yaad v0.2.1-0.20260715121635-7a796a0aee63 h1:Uw8o6Wui7tIUlABx1RclQKH2mkdR+MbHPRLyo2+qcqI=
 github.com/GrayCodeAI/yaad v0.2.1-0.20260715121635-7a796a0aee63/go.mod h1:Vjnqw75+4Lh66r9+D5XpV1bZpq/buQf22IfoRc0Rk7A=
+github.com/GrayCodeAI/yaad v0.2.1-0.20260715183757-c6c5b041589b h1:r/8D0YNZdBIoajcurEEB/8VJfeuzbphIYhGCGLhyYeE=
+github.com/GrayCodeAI/yaad v0.2.1-0.20260715183757-c6c5b041589b/go.mod h1:ZPCv0JEZi2x8w1ksOTErI1Lg3A924UQvaUQJcwHdgn4=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=

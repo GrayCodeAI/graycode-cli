@@ -16,7 +16,7 @@ require (
 	github.com/GrayCodeAI/inspect v0.1.4
 	github.com/GrayCodeAI/sight v0.1.4
 	github.com/GrayCodeAI/tok v0.1.4
-	github.com/GrayCodeAI/yaad v0.2.1-0.20260715121635-7a796a0aee63
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260715183757-c6c5b041589b
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/fsnotify/fsnotify v1.10.1
