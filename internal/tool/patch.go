@@ -440,6 +440,15 @@ func (PatchTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		return "", fmt.Errorf("failed to parse patch: %w", err)
 	}
 
+	// Reject any patch whose target path escapes the workspace before
+	// applying — otherwise an LLM-authored patch could write/delete files
+	// outside the sandbox (validated below per-entry).
+	for _, fp := range parser.Patches() {
+		if err := validatePathAllowed(ctx, fp.Path); err != nil {
+			return "", err
+		}
+	}
+
 	modified, err := parser.ApplyAll()
 	if err != nil {
 		return "", err
