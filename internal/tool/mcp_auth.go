@@ -122,7 +122,8 @@ func (McpAuthTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 			shutdown()
 			return authStatusJSON(failState(p.ServerName, fmt.Errorf(
 				"no client_id was provided and the server doesn't advertise a registration_endpoint "+
-					"for dynamic client registration — pass client_id explicitly"))), nil
+					"for dynamic client registration — pass client_id explicitly",
+			))), nil
 		}
 		clientID, err = mcp.RegisterClient(ctx, meta.RegistrationEndpoint, redirectURI)
 		if err != nil {

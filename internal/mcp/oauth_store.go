@@ -54,7 +54,8 @@ var newTokenStorage = func() tokenBackend { return auth.NewSecureStorage(oauthTo
 func SetTokenBackendForTesting(backend interface {
 	Get(account string) (string, error)
 	Set(account, value string) error
-}) func() {
+},
+) func() {
 	orig := newTokenStorage
 	newTokenStorage = func() tokenBackend { return backend }
 	return func() { newTokenStorage = orig }

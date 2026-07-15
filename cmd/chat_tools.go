@@ -16,8 +16,10 @@ import (
 
 const startupMCPToolLoadTimeout = 1500 * time.Millisecond
 
-var defaultRegistryLoadMCPTools = tool.LoadMCPTools
-var defaultRegistryLoadRemoteMCPTools = tool.LoadRemoteMCPTools
+var (
+	defaultRegistryLoadMCPTools       = tool.LoadMCPTools
+	defaultRegistryLoadRemoteMCPTools = tool.LoadRemoteMCPTools
+)
 
 type startupMCPServerSpec struct {
 	name    string
