@@ -473,7 +473,7 @@ func TestApplyAll(t *testing.T) {
 		t.Fatalf("parse error: %v", err)
 	}
 
-	modified, err := parser.ApplyAll()
+	modified, err := parser.ApplyAll(context.Background())
 	if err != nil {
 		t.Fatalf("ApplyAll error: %v", err)
 	}
@@ -564,6 +564,34 @@ func main() {
 	data, _ := os.ReadFile(filePath)
 	if !strings.Contains(string(data), "patched") {
 		t.Errorf("file not patched: %s", string(data))
+	}
+}
+
+func TestPatchTool_Execute_BlocksPathOutsideAllowedDirectories(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	outsidePath := filepath.Join(outside, "escape.go")
+
+	orig, _ := os.Getwd()
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(orig) }()
+
+	patchContent := "*** Begin Patch\n" +
+		"*** Create File: " + outsidePath + "\n" +
+		"+ package main\n" +
+		"*** End Patch"
+
+	input, _ := json.Marshal(map[string]string{"patch": patchContent})
+
+	guarded := WithToolContext(context.Background(), &ToolContext{})
+	tool := PatchTool{}
+	if _, err := tool.Execute(guarded, input); err == nil {
+		t.Fatal("expected error for path outside allowed directories")
+	}
+	if _, statErr := os.Stat(outsidePath); !os.IsNotExist(statErr) {
+		t.Fatal("expected file outside allowed directories to not be created")
 	}
 }
 

@@ -17,6 +17,11 @@
 //	go run ./cmd/compat-test -matrix=stable -strict
 //	                                         # exit non-zero if any
 //	                                         # component lacks a version
+//	go run ./cmd/compat-test -check-external # advisory: compare hawk's own
+//	                                         # go.mod pins for shared leaf
+//	                                         # deps against what each
+//	                                         # external/ submodule declares.
+//	                                         # Always exits 0; see drift.go.
 package main
 
 import (
@@ -47,10 +52,20 @@ func main() {
 	matrixName := flag.String("matrix", "next", "matrix entry to inspect (next, stable, ...)")
 	strict := flag.Bool("strict", false, "exit non-zero if any component lacks a pinned version")
 	path := flag.String("file", findMatrixFile(), "path to compatibility-matrix.json")
+	checkExternal := flag.Bool("check-external", false, "advisory: report pin drift against external/ submodules and exit (see drift.go)")
 	flag.Parse()
 
 	if *path == "" {
 		die("compatibility-matrix.json not found in current dir or repo root")
+	}
+
+	if *checkExternal {
+		repoRoot := filepath.Dir(filepath.Dir(*path)) // testdata/compatibility-matrix.json -> repo root
+		if err := checkDrift(repoRoot); err != nil {
+			// Advisory tool: report the problem but still exit 0.
+			fmt.Fprintf(os.Stderr, "compat-test: check-external: %v\n", err)
+		}
+		return
 	}
 
 	raw, err := os.ReadFile(*path)
