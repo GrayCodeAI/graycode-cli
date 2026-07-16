@@ -71,6 +71,124 @@ func TestLoadStartupMCPToolSets_UsesTimeoutAndPreservesOrder(t *testing.T) {
 	}
 }
 
+func TestConfiguredStartupMCPServers_DispatchesByType(t *testing.T) {
+	settings := hawkconfig.Settings{
+		MCPServers: []hawkconfig.MCPServerConfig{
+			{Name: "stdio-default", Command: "stdio-mcp"},
+			{Name: "stdio-explicit", Type: "stdio", Command: "stdio-mcp-2"},
+			{Name: "http-server", Type: "http", URL: "https://example.com/mcp"},
+			{Name: "sse-server", Type: "sse", URL: "https://example.com/sse", Headers: map[string]string{"X-Custom": "1"}},
+			{Name: "ws-server", Type: "websocket", URL: "wss://example.com/ws"},
+			// Invalid/incomplete entries must be skipped, not error.
+			{Name: "", Command: "no-name"},
+			{Name: "no-command"},                // stdio with no Command
+			{Name: "http-no-url", Type: "http"}, // http with no URL
+			{Name: "unknown-type", Type: "carrier-pigeon", URL: "x"},
+		},
+	}
+
+	specs := configuredStartupMCPServers(settings)
+
+	byName := make(map[string]startupMCPServerSpec, len(specs))
+	for _, s := range specs {
+		byName[s.name] = s
+	}
+	if len(specs) != 5 {
+		t.Fatalf("expected 5 valid specs, got %d: %+v", len(specs), specs)
+	}
+
+	stdioDefault, ok := byName["stdio-default"]
+	if !ok || stdioDefault.isRemote() || stdioDefault.command != "stdio-mcp" {
+		t.Fatalf("stdio-default spec wrong: %+v (ok=%v)", stdioDefault, ok)
+	}
+
+	httpServer, ok := byName["http-server"]
+	if !ok || !httpServer.isRemote() || httpServer.serverType != "http" || httpServer.url != "https://example.com/mcp" {
+		t.Fatalf("http-server spec wrong: %+v (ok=%v)", httpServer, ok)
+	}
+
+	sseServer, ok := byName["sse-server"]
+	if !ok || sseServer.serverType != "sse" || sseServer.headers["X-Custom"] != "1" {
+		t.Fatalf("sse-server spec wrong: %+v (ok=%v)", sseServer, ok)
+	}
+
+	wsServer, ok := byName["ws-server"]
+	if !ok || wsServer.serverType != "websocket" {
+		t.Fatalf("ws-server spec wrong: %+v (ok=%v)", wsServer, ok)
+	}
+
+	for _, missing := range []string{"", "no-command", "http-no-url", "unknown-type"} {
+		if _, found := byName[missing]; found {
+			t.Fatalf("expected %q to be skipped, but it was included", missing)
+		}
+	}
+}
+
+func TestLoadStartupMCPToolSets_DispatchesRemoteSpecsToRemoteLoader(t *testing.T) {
+	origStdio := defaultRegistryLoadMCPTools
+	origRemote := defaultRegistryLoadRemoteMCPTools
+	t.Cleanup(func() {
+		defaultRegistryLoadMCPTools = origStdio
+		defaultRegistryLoadRemoteMCPTools = origRemote
+	})
+
+	var stdioCalled, remoteCalled bool
+	var gotServerType, gotURL string
+	var gotHeaders map[string]string
+
+	defaultRegistryLoadMCPTools = func(ctx context.Context, name, command string, args ...string) ([]tool.Tool, error) {
+		stdioCalled = true
+		return []tool.Tool{registryTestTool{name: name}}, nil
+	}
+	defaultRegistryLoadRemoteMCPTools = func(ctx context.Context, name, serverType, url string, headers map[string]string) ([]tool.Tool, error) {
+		remoteCalled = true
+		gotServerType = serverType
+		gotURL = url
+		gotHeaders = headers
+		return []tool.Tool{registryTestTool{name: name}}, nil
+	}
+
+	sets := loadStartupMCPToolSets([]startupMCPServerSpec{
+		{name: "stdio-one", command: "cmd"},
+		{
+			name:       "remote-one",
+			serverType: "http",
+			url:        "https://example.com/mcp",
+			headers:    map[string]string{"Authorization": "Bearer xyz"},
+		},
+	})
+
+	if !stdioCalled {
+		t.Error("expected the stdio loader to be called for the stdio spec")
+	}
+	if !remoteCalled {
+		t.Fatal("expected the remote loader to be called for the remote spec")
+	}
+	if gotServerType != "http" || gotURL != "https://example.com/mcp" {
+		t.Errorf("remote loader got serverType=%q url=%q", gotServerType, gotURL)
+	}
+	if gotHeaders["Authorization"] != "Bearer xyz" {
+		t.Errorf("remote loader did not receive configured headers: %+v", gotHeaders)
+	}
+	if len(sets) != 2 || len(sets[0]) != 1 || len(sets[1]) != 1 {
+		t.Fatalf("expected both specs to produce one tool each, got %+v", sets)
+	}
+}
+
+func TestMergedMCPHeaders_ConfiguredAuthorizationTakesPrecedence(t *testing.T) {
+	cfg := hawkconfig.MCPServerConfig{
+		Name:    "svc",
+		Headers: map[string]string{"Authorization": "Bearer static-token", "X-Other": "1"},
+	}
+	headers := mergedMCPHeaders(cfg)
+	if headers["Authorization"] != "Bearer static-token" {
+		t.Errorf("expected static Authorization header to win, got %q", headers["Authorization"])
+	}
+	if headers["X-Other"] != "1" {
+		t.Errorf("expected other static headers to be preserved, got %+v", headers)
+	}
+}
+
 func TestDefaultRegistry_SkipsFailedStartupMCPServers(t *testing.T) {
 	orig := defaultRegistryLoadMCPTools
 	t.Cleanup(func() { defaultRegistryLoadMCPTools = orig })

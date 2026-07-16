@@ -11,12 +11,12 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/GrayCodeAI/eyrie v0.2.1
+	github.com/GrayCodeAI/eyrie v0.2.2-0.20260715190227-1ba692935ce5
 	github.com/GrayCodeAI/hawk-core-contracts v0.1.4
 	github.com/GrayCodeAI/inspect v0.1.4
 	github.com/GrayCodeAI/sight v0.1.4
 	github.com/GrayCodeAI/tok v0.1.4
-	github.com/GrayCodeAI/yaad v0.1.4
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260715205802-7d52bde38e49
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/fsnotify/fsnotify v1.10.1
@@ -128,7 +128,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/GrayCodeAI/trace v0.1.4
+	github.com/GrayCodeAI/trace v0.1.5-0.20260715120456-164d86be64a8
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -169,7 +169,7 @@ require (
 	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/grpc v1.82.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	modernc.org/libc v1.72.5 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
