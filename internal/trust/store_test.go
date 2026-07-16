@@ -16,14 +16,14 @@ func TestTrustRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	proj := filepath.Join(dir, "proj")
-	if err := os.MkdirAll(proj, 0o755); err != nil {
-		t.Fatal(err)
+	if mkErr := os.MkdirAll(proj, 0o755); mkErr != nil {
+		t.Fatal(mkErr)
 	}
 	if s.IsTrusted(proj) {
 		t.Fatal("expected untrusted")
 	}
-	if err := s.Trust(proj, "test"); err != nil {
-		t.Fatal(err)
+	if trErr := s.Trust(proj, "test"); trErr != nil {
+		t.Fatal(trErr)
 	}
 	s2, err := Open(storePath)
 	if err != nil {

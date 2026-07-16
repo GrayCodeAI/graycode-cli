@@ -29,7 +29,7 @@ func installRuntimeCrashOutput() {
 	}
 	// SetCrashOutput duplicates f's fd; closing our copy here is safe and lets
 	// us prune by name later. The runtime keeps its own reference.
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := debug.SetCrashOutput(f, debug.CrashOptions{}); err != nil {
 		return
 	}

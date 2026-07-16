@@ -153,7 +153,7 @@ func (mc *MarketplaceClient) fetchOne(src MarketplaceSource) (*MarketplaceIndex,
 	if err != nil {
 		return loadCachedMarketplace(cachePath)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return loadCachedMarketplace(cachePath)
 	}

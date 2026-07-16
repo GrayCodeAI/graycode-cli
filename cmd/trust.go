@@ -92,9 +92,9 @@ var trustListCmd = &cobra.Command{
 			return nil
 		}
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "PATH\tTRUSTED_AT\tREASON")
+		_, _ = fmt.Fprintln(w, "PATH\tTRUSTED_AT\tREASON")
 		for _, e := range entries {
-			fmt.Fprintf(w, "%s\t%s\t%s\n", e.Path, e.TrustedAt.Format("2006-01-02 15:04"), e.Reason)
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", e.Path, e.TrustedAt.Format("2006-01-02 15:04"), e.Reason)
 		}
 		_ = w.Flush()
 		return nil

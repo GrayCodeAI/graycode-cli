@@ -84,8 +84,16 @@ func RunTestFirstWorkflow(cfg TestFirstConfig, chatFn ReviewChatFn) TestFirstRes
 }
 
 // runTests executes the test command and returns output + pass status.
+// The command string is split on whitespace and executed directly (no shell
+// indirection), avoiding unnecessary sh -c wrapping. Commands that require
+// shell features (pipes, redirects) are not supported — test commands should
+// be simple invocations like "go test ./...".
 func runTests(testCmd string) (string, bool) {
-	cmd := exec.CommandContext(context.Background(), "sh", "-c", testCmd)
+	parts := strings.Fields(testCmd)
+	if len(parts) == 0 {
+		return "", false
+	}
+	cmd := exec.CommandContext(context.Background(), parts[0], parts[1:]...) // #nosec G204 — test command comes from user's own config, not untrusted input
 	cmd.Dir, _ = os.Getwd()
 	out, err := cmd.CombinedOutput()
 	output := strings.TrimSpace(string(out))

@@ -39,17 +39,15 @@ func installDumpHandler(sig syscall.Signal, reRaise bool) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, sig)
 	go func() {
-		for range ch {
-			dumpSignal(sig, "received")
-			writeSignalReport(sig)
-			signal.Reset(sig)
-			if reRaise {
-				// Restore default disposition and re-raise.
-				if err := raiseSignal(sig); err != nil {
-					fmt.Fprintf(os.Stderr, "crash: failed to re-raise %s: %v\n", sig, err)
-				}
+		<-ch
+		dumpSignal(sig, "received")
+		writeSignalReport(sig)
+		signal.Reset(sig)
+		if reRaise {
+			// Restore default disposition and re-raise.
+			if err := raiseSignal(sig); err != nil {
+				fmt.Fprintf(os.Stderr, "crash: failed to re-raise %s: %v\n", sig, err)
 			}
-			return
 		}
 	}()
 }

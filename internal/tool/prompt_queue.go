@@ -30,10 +30,8 @@ type PromptQueueState struct {
 }
 
 var (
-	queueOnce  sync.Once
 	queueState *PromptQueueState
 	queueMu    sync.RWMutex
-	queueDirty bool
 )
 
 // queueStatePath returns the path to the prompt queue state file.
@@ -83,7 +81,6 @@ func EnqueuePrompt(prompt, subject string) error {
 
 	item := NewPromptQueueItem(prompt, subject)
 	state.Items = append(state.Items, item)
-	queueDirty = true
 
 	return SavePromptQueue(state)
 }
@@ -121,7 +118,6 @@ func DequeuePrompt() (*PromptQueueItem, error) {
 
 	item := state.Items[0]
 	state.Items = state.Items[1:]
-	queueDirty = true
 
 	_ = SavePromptQueue(state) // Ignore save error for dequeue
 	return &item, nil
@@ -133,7 +129,6 @@ func ClearPromptQueue() error {
 	defer queueMu.Unlock()
 
 	state := &PromptQueueState{Items: nil}
-	queueDirty = false
 
 	return SavePromptQueue(state)
 }
@@ -161,7 +156,6 @@ func RemovePromptFromQueue(index int) error {
 	}
 
 	state.Items = append(state.Items[:index], state.Items[index+1:]...)
-	queueDirty = true
 
 	return SavePromptQueue(state)
 }

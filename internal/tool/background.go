@@ -3,7 +3,6 @@ package tool
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
@@ -16,8 +15,6 @@ import (
 // turn completes. It is a thin facade over taskruntime.Registry (PACK-02).
 type BackgroundAgentManager struct {
 	reg *taskruntime.Registry
-	// keep legacy lock for tests that may race FormatResults
-	mu sync.Mutex
 }
 
 // BackgroundAgent represents a running background sub-agent.
