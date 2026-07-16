@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -170,7 +171,5 @@ func TestExtractEditedFilePath(t *testing.T) {
 }
 
 func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(s) > 0 && containsStr(s, sub))
+	return strings.Contains(s, sub)
 }
-
-// containsStr is intentionally not redeclared — use the one in events_test.go
