@@ -142,9 +142,13 @@ type MCPServerConfig struct {
 	Name    string            `json:"name"`
 	Command string            `json:"command,omitempty"`
 	Args    []string          `json:"args,omitempty"`
-	Type    string            `json:"type,omitempty"`    // "stdio" (default), "sse", "http"
-	URL     string            `json:"url,omitempty"`     // for sse/http transports
-	Headers map[string]string `json:"headers,omitempty"` // custom headers for sse/http
+	Type    string            `json:"type,omitempty"`    // "stdio" (default), "sse", "http", "websocket"
+	URL     string            `json:"url,omitempty"`     // for sse/http/websocket transports
+	Headers map[string]string `json:"headers,omitempty"` // custom headers for sse/http/websocket
+	// ClientID is an OAuth client_id pre-registered with the server's
+	// authorization server. When empty, dynamic client registration (RFC
+	// 7591) is attempted if the server advertises a registration_endpoint.
+	ClientID string `json:"client_id,omitempty"`
 }
 
 func globalSettingsPath() string {
