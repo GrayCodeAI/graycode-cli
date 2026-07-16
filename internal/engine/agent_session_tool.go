@@ -11,6 +11,7 @@ import (
 
 	engagent "github.com/GrayCodeAI/hawk/internal/engine/agent"
 	"github.com/GrayCodeAI/hawk/internal/gitworktree"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -46,6 +47,13 @@ func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.S
 	mode := mapContractsType(norm.SubagentType)
 	start := time.Now()
 
+	_ = hooks.Execute(ctx, hooks.EventSubagentStart, map[string]interface{}{
+		"subagent_type": string(norm.SubagentType),
+		"prompt":        norm.Prompt,
+		"isolation":     string(norm.Isolation),
+		"depth":         depth,
+	})
+
 	out, wtPath, err := s.spawnSubAgent(ctx, norm, mode, depth)
 	res := agentcontracts.SpawnResult{
 		SubagentType: string(norm.SubagentType),
@@ -57,9 +65,23 @@ func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.S
 	if err != nil {
 		res.Status = agentcontracts.StatusFailed
 		res.Error = err.Error()
+		_ = hooks.Execute(ctx, hooks.EventSubagentStop, map[string]interface{}{
+			"subagent_type": string(norm.SubagentType),
+			"status":        res.Status,
+			"error":         res.Error,
+		})
+		_ = hooks.Execute(ctx, hooks.EventFailure, map[string]interface{}{
+			"source": "subagent",
+			"error":  res.Error,
+		})
 		return res, err
 	}
 	res.Status = agentcontracts.StatusCompleted
+	_ = hooks.Execute(ctx, hooks.EventSubagentStop, map[string]interface{}{
+		"subagent_type": string(norm.SubagentType),
+		"status":        res.Status,
+		"duration_ms":   res.DurationMs,
+	})
 	return res, nil
 }
 

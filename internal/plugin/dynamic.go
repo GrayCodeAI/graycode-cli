@@ -233,6 +233,9 @@ func (dm *DynamicPluginManager) Activate(name string) error {
 		}
 	}
 
+	// Year 0 PACK-04: export plugin root/data for hook and tool processes.
+	_ = ensurePluginDataDir(dp.Path, name)
+
 	// Start daemon process if mode is "daemon"
 	if dp.ManifestV2 != nil && dp.ManifestV2.Mode == "daemon" {
 		if err := dm.startDaemon(dp); err != nil {
@@ -264,10 +267,7 @@ func (dm *DynamicPluginManager) Activate(name string) error {
 			fn := func(ctx context.Context, data map[string]interface{}) error {
 				c := exec.CommandContext(ctx, "bash", "-c", hookCmd) // #nosec G204 -- hookCmd is defined in a locally installed plugin's own manifest, trusted like other plugin config
 				c.Dir = dp.Path
-				c.Env = os.Environ()
-				for k, v := range data {
-					c.Env = append(c.Env, fmt.Sprintf("HAWK_%s=%v", k, v))
-				}
+				c.Env = pluginHookEnv(dp.Path, name, data)
 				if hookAsync {
 					go func() {
 						_ = c.Run()
@@ -538,7 +538,7 @@ func (dm *DynamicPluginManager) startDaemon(dp *DynamicPlugin) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, cmdPath) // #nosec G204 -- cmdPath is the locally installed plugin's own entrypoint binary, resolved from its manifest/directory, not external input
 	cmd.Dir = dp.Path
-	cmd.Env = os.Environ()
+	cmd.Env = pluginHookEnv(dp.Path, dp.Name, nil)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

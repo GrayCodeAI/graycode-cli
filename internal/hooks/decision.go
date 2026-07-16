@@ -30,11 +30,12 @@ type DecisionMatcher struct {
 }
 
 // Match returns true if the matcher applies to the given event and tool name.
+// Event names are compared after CanonicalEvent so PreToolUse matches pre_tool.
 func (m *DecisionMatcher) Match(event string, toolName string) bool {
 	if len(m.Events) > 0 {
 		found := false
 		for _, e := range m.Events {
-			if e == event {
+			if EventsMatch(e, event) {
 				found = true
 				break
 			}

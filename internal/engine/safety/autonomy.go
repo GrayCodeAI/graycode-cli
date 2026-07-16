@@ -106,18 +106,25 @@ func (c AutonomyConfig) NeedsPermission(toolName string, isSafe bool) bool {
 }
 
 // ParseAutonomyLevel converts a string name or number to an AutonomyLevel.
+// Product aliases (Grok/Claude-style):
+//
+//	acceptEdits → semi (auto-apply edits, ask for bash)
+//	dontAsk     → yolo (never prompt; still subject to PreToolUse/DryRun/spec)
 func ParseAutonomyLevel(s string) AutonomyLevel {
 	s = strings.TrimSpace(strings.ToLower(s))
+	// normalize separators
+	s = strings.ReplaceAll(s, "-", "")
+	s = strings.ReplaceAll(s, "_", "")
 	switch s {
 	case "0", "supervised":
 		return AutonomySupervised
 	case "1", "basic":
 		return AutonomyBasic
-	case "2", "semi":
+	case "2", "semi", "acceptedits":
 		return AutonomySemi
 	case "3", "full":
 		return AutonomyFull
-	case "4", "yolo":
+	case "4", "yolo", "dontask":
 		return AutonomyYOLO
 	default:
 		return AutonomySupervised

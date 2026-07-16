@@ -10,6 +10,7 @@ import (
 	"time"
 
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -72,6 +73,12 @@ func NewPermissionEngine() *PermissionEngine {
 // CheckTool determines if a tool call is allowed, denied, or needs user prompt.
 // Returns (granted bool, denyReason string).
 // If the user must be asked, it blocks on PromptFn with a 5-minute timeout.
+//
+// Order (Year 0 PACK-04):
+//  1. DryRun
+//  2. PreToolUse decision hooks (can deny before autonomy short-circuits)
+//  3. Spec-stage gate
+//  4. Autonomy / bypass / classifier / auto-mode / memory / user prompt
 func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (bool, string) {
 	if pe.DryRun {
 		return false, "dry-run: tool execution disabled"
@@ -79,10 +86,15 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 
 	toolName := canonicalToolName(tc.Name)
 
-	// Spec-stage gate — checked first, independent of trust tier, so no
-	// autonomy level can ever bypass it (the bug the old Mode/Autonomy
-	// split had: a high tier could short-circuit before Plan Mode's check
-	// ever ran). While a spec workflow is active and not yet approved for
+	// PreToolUse decision hooks — deny gate before autonomy. Hooks that
+	// return allow/nil do not grant permission by themselves; they only
+	// short-circuit when ActionDeny (or equivalent).
+	if denied, reason := pe.checkPreToolHooks(tc); denied {
+		return false, reason
+	}
+
+	// Spec-stage gate — independent of trust tier, so no autonomy level can
+	// bypass it. While a spec workflow is active and not yet approved for
 	// implementation, only the workflow's own tools and reads may proceed.
 	if pe.Stage != SpecStageNone && pe.Stage != SpecStageImplementing {
 		switch toolName {
@@ -131,6 +143,36 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 		return true, ""
 	}
 	return pe.promptUser(ctx, tc)
+}
+
+// checkPreToolHooks runs decision hooks for PreToolUse / pre_tool.
+// Returns (denied, reason).
+func (pe *PermissionEngine) checkPreToolHooks(tc ToolCallInfo) (bool, string) {
+	data := map[string]interface{}{
+		"tool":    tc.Name,
+		"tool_id": tc.ID,
+		"args":    tc.Args,
+	}
+	// Matchers accepting PreToolUse or pre_tool both match via CanonicalEvent.
+	d := hooks.ExecuteDecisionHooks(string(hooks.EventPreTool), data)
+	if d == nil {
+		return false, ""
+	}
+	switch d.Action {
+	case hooks.ActionDeny:
+		msg := d.Message
+		if msg == "" {
+			msg = d.Reason
+		}
+		if msg == "" {
+			msg = "Permission denied (PreToolUse hook)."
+		}
+		return true, msg
+	default:
+		// allow / modify / instruct: do not grant; continue pipeline.
+		// Modify of args is applied later by stream layer if needed.
+		return false, ""
+	}
 }
 
 // promptUser blocks on PromptFn, asking the user to approve tc, using the
