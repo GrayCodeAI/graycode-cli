@@ -23,17 +23,16 @@ set -e
 BUF_VERSION="${BUF_VERSION:-1.50.0}"
 
 # ---------------------------------------------------------------------------
-# SHA-256 checksums per triple.
-# THESE ARE PLACEHOLDERS. Compute the real ones from the buf release page
-# (https://github.com/bufbuild/buf/releases/tag/v1.50.0) BEFORE first use:
-#   sha256sum buf-<triple>.tar.gz
-# and replace the values below. Running a placeholder here will verify as a
-# mismatch and abort — explicit placeholders, not fake checksums, are correct.
+# SHA-256 checksums of the buf release tarballs, keyed by
+# <os>_<arch> (os lowercased, arch as Go sees it: amd64/arm64).
+# Verified against https://github.com/bufbuild/buf/releases/tag/v1.50.0
+#   sha256sum buf-Linux-x86_64.tar.gz  buf-Linux-aarch64.tar.gz
+#            buf-Darwin-x86_64.tar.gz  buf-Darwin-arm64.tar.gz
 # ---------------------------------------------------------------------------
-SHA256_darwin_arm64="SHA256_darwin_arm64"   # REPLACE WITH REAL CHECKSUM
-SHA256_darwin_amd64="SHA256_darwin_amd64"   # REPLACE WITH REAL CHECKSUM
-SHA256_linux_amd64="SHA256_linux_amd64"     # REPLACE WITH REAL CHECKSUM
-SHA256_linux_arm64="SHA256_linux_arm64"     # REPLACE WITH REAL CHECKSUM
+SHA256_darwin_arm64="c80f7f8a1d8ffd36c5db31a360c7e0b65c8cf671d60bd3c34e1558e54f84f4cc"
+SHA256_darwin_amd64="fc64b4a16964d7ec49fb2d245159d57dbfb3dac947e2a86413f9685cf8de2ac5"
+SHA256_linux_amd64="80c1211dfc4844499c6ddad341bb21206579883fd33cea0a2c40c82befd70602"
+SHA256_linux_arm64="4c920c5f96eb99ad13eb6f25cf740fdb42963401faa267bee03fbd3e163730b2"
 
 # Detect platform + arch the same way install.sh does.
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -56,6 +55,23 @@ case "$OS" in
         ;;
 esac
 
+# The GitHub release asset name uses a capitalized OS and the arch spelling
+# buf publishes (Darwin-arm64, Linux-aarch64), which differs from the
+# cache-key triple above. Build it explicitly to avoid 404s.
+# uname -m yields arm64 on macOS and aarch64 on Linux, so map each real
+# (os, arch) pair to the asset name buf publishes.
+case "$OS/$ARCH" in
+    darwin/x86_64) asset="Darwin-x86_64" ;;
+    darwin/arm64)  asset="Darwin-arm64" ;;
+    linux/x86_64)  asset="Linux-x86_64" ;;
+    linux/aarch64) asset="Linux-aarch64" ;;
+    *)             asset="" ;;
+esac
+if [ -z "$asset" ]; then
+    echo "bin/buf: unsupported platform $OS/$ARCH" >&2
+    exit 127
+fi
+
 # Resolve the pinned checksum for this triple.
 sha_var="SHA256_${triple}"
 sha="$(eval echo "\${$sha_var}")"
@@ -68,7 +84,7 @@ XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 CACHE_BASE="${HAWK_BIN_DIR:-$XDG_CACHE_HOME/hawk/bin}"
 CACHE_BIN="$CACHE_BASE/buf-${BUF_VERSION}-${triple}/bin/buf"
 
-URL="https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${triple}.tar.gz"
+URL="https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${asset}.tar.gz"
 
 fetch_bin() {
     tmp=$(mktemp -d)
