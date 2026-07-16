@@ -46,8 +46,8 @@ func TestMergeAdditiveOnly(t *testing.T) {
 
 func TestEffectiveFromAndDeny(t *testing.T) {
 	cfg := TOMLConfig{
-		Profile: ProfileReadOnly,
-		Profiles: builtinProfiles(),
+		Profile:   ProfileReadOnly,
+		Profiles:  builtinProfiles(),
 		DenyGlobs: []string{"**/.env", "secrets.txt"},
 	}
 	eff, err := EffectiveFrom(cfg)

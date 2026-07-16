@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/lint"

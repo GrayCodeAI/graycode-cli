@@ -18,9 +18,9 @@ import (
 
 // PromptQueueItem represents a queued prompt to be processed.
 type PromptQueueItem struct {
-	ID        string `json:"id,omitempty"`        // Unique identifier (timestamp-based)
-	Prompt    string `json:"prompt,omitempty"`    // The prompt text
-	Subject   string `json:"subject,omitempty"`  // Optional short subject line
+	ID        string `json:"id,omitempty"`         // Unique identifier (timestamp-based)
+	Prompt    string `json:"prompt,omitempty"`     // The prompt text
+	Subject   string `json:"subject,omitempty"`    // Optional short subject line
 	CreatedAt string `json:"created_at,omitempty"` // ISO timestamp
 }
 
@@ -30,10 +30,10 @@ type PromptQueueState struct {
 }
 
 var (
-	queueOnce   sync.Once
-	queueState  *PromptQueueState
-	queueMu     sync.RWMutex
-	queueDirty  bool
+	queueOnce  sync.Once
+	queueState *PromptQueueState
+	queueMu    sync.RWMutex
+	queueDirty bool
 )
 
 // queueStatePath returns the path to the prompt queue state file.

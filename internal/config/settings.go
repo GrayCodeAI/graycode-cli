@@ -48,21 +48,21 @@ type Settings struct {
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`
-	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`   // use catalog deployment router when true / unset + provider.json qualifies
-	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`         // restrict to core tools only for a focused experience
-	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"` // GLM/Z.ai extended reasoning toggle; nil = model default
-	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`            // TUI mouse capture; false preserves native click-drag copy
-	ReplMode                *bool                  `json:"repl_mode,omitempty"`            // Start in REPL mode instead of TUI
-	ScrollSpeed             int                    `json:"scroll_speed,omitempty"`            // scroll speed 1-100 (default 50)
-	ScrollMode              string                 `json:"scroll_mode,omitempty"`             // auto, wheel, trackpad
-	InvertScroll            bool                   `json:"invert_scroll,omitempty"`           // natural scrolling invert
-	CompactMode             bool                   `json:"compact_mode,omitempty"`            // reduce outer padding
-	AutoDarkTheme           string                 `json:"auto_dark_theme,omitempty"`         // override for auto dark theme
-	AutoLightTheme          string                 `json:"auto_light_theme,omitempty"`        // override for auto light theme
-	PaginatorLines          int                    `json:"paginator_lines,omitempty"`           // scrollback buffer lines (0 = unlimited)
-	PaginatorShowLineNums   *bool                  `json:"paginator_show_line_nums,omitempty"`   // show line numbers in scrollback
-	PaginatorMarginTop      int                    `json:"paginator_margin_top,omitempty"`       // top margin for pager
-	PaginatorMarginBottom   int                    `json:"paginator_margin_bottom,omitempty"`    // bottom margin for pager
+	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`       // use catalog deployment router when true / unset + provider.json qualifies
+	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`             // restrict to core tools only for a focused experience
+	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"`     // GLM/Z.ai extended reasoning toggle; nil = model default
+	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`                // TUI mouse capture; false preserves native click-drag copy
+	ReplMode                *bool                  `json:"repl_mode,omitempty"`                // Start in REPL mode instead of TUI
+	ScrollSpeed             int                    `json:"scroll_speed,omitempty"`             // scroll speed 1-100 (default 50)
+	ScrollMode              string                 `json:"scroll_mode,omitempty"`              // auto, wheel, trackpad
+	InvertScroll            bool                   `json:"invert_scroll,omitempty"`            // natural scrolling invert
+	CompactMode             bool                   `json:"compact_mode,omitempty"`             // reduce outer padding
+	AutoDarkTheme           string                 `json:"auto_dark_theme,omitempty"`          // override for auto dark theme
+	AutoLightTheme          string                 `json:"auto_light_theme,omitempty"`         // override for auto light theme
+	PaginatorLines          int                    `json:"paginator_lines,omitempty"`          // scrollback buffer lines (0 = unlimited)
+	PaginatorShowLineNums   *bool                  `json:"paginator_show_line_nums,omitempty"` // show line numbers in scrollback
+	PaginatorMarginTop      int                    `json:"paginator_margin_top,omitempty"`     // top margin for pager
+	PaginatorMarginBottom   int                    `json:"paginator_margin_bottom,omitempty"`  // bottom margin for pager
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.
@@ -538,8 +538,8 @@ func SetGlobalSetting(key, value string) error {
 			return fmt.Errorf("paginator_show_line_nums must be true or false")
 		}
 	default:
-			return fmt.Errorf("unsupported setting key %q", key)
-		}
+		return fmt.Errorf("unsupported setting key %q", key)
+	}
 	return SaveGlobal(s)
 }
 

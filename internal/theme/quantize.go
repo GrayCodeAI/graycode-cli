@@ -15,8 +15,8 @@ import (
 type ColorLevel int
 
 const (
-	ColorBasic   ColorLevel = 1  // 16-color ANSI
-	Color256     ColorLevel = 2  // 256-color
+	ColorBasic     ColorLevel = 1 // 16-color ANSI
+	Color256       ColorLevel = 2 // 256-color
 	ColorTruecolor ColorLevel = 3 // 24-bit RGB
 )
 
@@ -84,10 +84,22 @@ func RGBToANSI(r, g, b int) int {
 func ANSIToRGB(ansi int) (r, g, b int) {
 	// Standard 16 ANSI colors
 	standard := []struct{ r, g, b int }{
-		{0, 0, 0}, {128, 0, 0}, {0, 128, 0}, {128, 128, 0},
-		{0, 0, 128}, {128, 0, 128}, {0, 128, 128}, {192, 192, 192},
-		{128, 128, 128}, {255, 0, 0}, {0, 255, 0}, {255, 255, 0},
-		{0, 0, 255}, {255, 0, 255}, {0, 255, 255}, {255, 255, 255},
+		{0, 0, 0},
+		{128, 0, 0},
+		{0, 128, 0},
+		{128, 128, 0},
+		{0, 0, 128},
+		{128, 0, 128},
+		{0, 128, 128},
+		{192, 192, 192},
+		{128, 128, 128},
+		{255, 0, 0},
+		{0, 255, 0},
+		{255, 255, 0},
+		{0, 0, 255},
+		{255, 0, 255},
+		{0, 255, 255},
+		{255, 255, 255},
 	}
 	if ansi >= 0 && ansi < 16 {
 		return standard[ansi].r, standard[ansi].g, standard[ansi].b
@@ -223,7 +235,7 @@ func idxToRGB(idx int) (r, g, b int) {
 	}
 	if idx >= 232 && idx <= 255 {
 		// Grayscale ramp
-		v := (idx - 232) * 10 + 8
+		v := (idx-232)*10 + 8
 		return v, v, v
 	}
 	return 0, 0, 0

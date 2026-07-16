@@ -52,7 +52,7 @@ Run `/terminal-setup` for diagnostics.
 
 **Cause**: Terminal doesn't support OSC 52.
 
-**Fix**: 
+**Fix**:
 - iTerm2: Enable "Applications in terminal may access clipboard"
 - Ghostty: Add `clipboard-provider = "work-area"` to config
 - tmux: Add `set -g set-clipboard on`

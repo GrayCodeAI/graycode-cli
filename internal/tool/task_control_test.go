@@ -12,10 +12,10 @@ import (
 func TestWaitTasksAndKillMonitor(t *testing.T) {
 	// Start a short-lived monitor
 	input, _ := json.Marshal(map[string]any{
-		"command":          "echo mon-line; sleep 0.2; echo done",
-		"max_runtime_sec":  10,
+		"command":           "echo mon-line; sleep 0.2; echo done",
+		"max_runtime_sec":   10,
 		"max_lines_per_sec": 100,
-		"description":      "test mon",
+		"description":       "test mon",
 	})
 	out, err := (MonitorTool{}).Execute(context.Background(), input)
 	if err != nil {

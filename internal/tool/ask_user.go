@@ -20,20 +20,20 @@ func (AskUserQuestionTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"question": map[string]interface{}{"type": "string", "description": "The question to ask"},
 			"options": map[string]interface{}{
-				"type": "array",
-				"items": map[string]interface{}{"type": "string"},
+				"type":        "array",
+				"items":       map[string]interface{}{"type": "string"},
 				"description": "Optional list of choices (for single-select)",
 			},
 			"multi_select": map[string]interface{}{
-				"type": "boolean",
+				"type":        "boolean",
 				"description": "Allow multiple selections (default: false)",
 			},
 			"other": map[string]interface{}{
-				"type": "boolean",
+				"type":        "boolean",
 				"description": "Allow free-text 'other' option (default: true)",
 			},
 			"cancel_message": map[string]interface{}{
-				"type": "string",
+				"type":        "string",
 				"description": "Message to show on cancel",
 			},
 		},
@@ -43,11 +43,11 @@ func (AskUserQuestionTool) Parameters() map[string]interface{} {
 
 // AskUserInput represents structured input for ask_user tool
 type AskUserInput struct {
-	Question     string   `json:"question"`
-	Options      []string `json:"options,omitempty"`
-	MultiSelect  bool     `json:"multi_select,omitempty"`
-	Other        *bool    `json:"other,omitempty"`
-	CancelMessage string  `json:"cancel_message,omitempty"`
+	Question      string   `json:"question"`
+	Options       []string `json:"options,omitempty"`
+	MultiSelect   bool     `json:"multi_select,omitempty"`
+	Other         *bool    `json:"other,omitempty"`
+	CancelMessage string   `json:"cancel_message,omitempty"`
 }
 
 func (AskUserQuestionTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {

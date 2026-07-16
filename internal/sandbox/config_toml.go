@@ -13,12 +13,12 @@ import (
 
 // Named profiles from the Year 0 plan.
 const (
-	ProfileOff      = "off"
+	ProfileOff       = "off"
 	ProfileWorkspace = "workspace"
-	ProfileReadOnly = "read-only"
-	ProfileStrict   = "strict"
-	ProfileDevbox   = "devbox"
-	ProfileCustom   = "custom"
+	ProfileReadOnly  = "read-only"
+	ProfileStrict    = "strict"
+	ProfileDevbox    = "devbox"
+	ProfileCustom    = "custom"
 )
 
 // TOMLConfig is the on-disk sandbox.toml shape.
@@ -117,8 +117,8 @@ func builtinProfiles() map[string]ProfileConfig {
 // must not be weaker than user's mode.
 func MergeConfigs(user, project TOMLConfig) (TOMLConfig, error) {
 	out := TOMLConfig{
-		Profile:  user.Profile,
-		Profiles: map[string]ProfileConfig{},
+		Profile:   user.Profile,
+		Profiles:  map[string]ProfileConfig{},
 		DenyGlobs: append([]string{}, user.DenyGlobs...),
 	}
 	// Start with builtins then user overrides.
