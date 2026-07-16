@@ -2,47 +2,120 @@ package engine
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
+	"time"
 
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+
+	engagent "github.com/GrayCodeAI/hawk/internal/engine/agent"
+	"github.com/GrayCodeAI/hawk/internal/gitworktree"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
-// WireAgentTool sets up sub-agent spawning with two modes:
-//   - explore: fast/cheap model, read-only tools, higher turn budget
-//   - general: full model, all tools, standard budget
+// WireAgentTool sets up typed sub-agent spawning.
+// Modes: explore (read-only research), plan (read-only planning), general-purpose (full tools).
 func (s *Session) WireAgentTool() {
-	s.AgentSpawnFn = func(ctx context.Context, prompt string) (string, error) {
-		return s.spawnSubAgent(ctx, prompt, SubAgentExplore, 0)
+	_ = s.ensureBackgroundManager()
+	s.AgentSpawnFn = func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+		return s.spawnSubAgentRequest(ctx, req, 0)
 	}
 }
 
-// SpawnSubAgent creates a sub-agent with the given mode and depth tracking.
-func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgentMode, depth int) (string, error) {
+// ensureBackgroundManager lazily attaches a BackgroundAgentManager on ToolService.
+func (s *Session) ensureBackgroundManager() *tool.BackgroundAgentManager {
+	if s.Tools() == nil {
+		return nil
+	}
+	if bm := s.Tools().BackgroundManager(); bm != nil {
+		return bm
+	}
+	bm := tool.NewBackgroundAgentManager()
+	s.Tools().WithBackgroundManager(bm)
+	return bm
+}
+
+// spawnSubAgentRequest is the typed entrypoint used by the Agent tool.
+func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.SpawnRequest, depth int) (agentcontracts.SpawnResult, error) {
+	norm, err := req.Normalize()
+	if err != nil {
+		return agentcontracts.SpawnResult{Status: agentcontracts.StatusFailed, Error: err.Error()}, err
+	}
+	mode := mapContractsType(norm.SubagentType)
+	start := time.Now()
+
+	out, wtPath, err := s.spawnSubAgent(ctx, norm, mode, depth)
+	res := agentcontracts.SpawnResult{
+		SubagentType: string(norm.SubagentType),
+		DurationMs:   time.Since(start).Milliseconds(),
+		Output:       out,
+		Summary:      truncateSummary(out, 200),
+		WorktreePath: wtPath,
+	}
+	if err != nil {
+		res.Status = agentcontracts.StatusFailed
+		res.Error = err.Error()
+		return res, err
+	}
+	res.Status = agentcontracts.StatusCompleted
+	return res, nil
+}
+
+func mapContractsType(t agentcontracts.SubagentType) SubAgentMode {
+	switch t {
+	case agentcontracts.TypePlan:
+		return SubAgentPlan
+	case agentcontracts.TypeGeneralPurpose:
+		return SubAgentGeneral
+	default:
+		return SubAgentExplore
+	}
+}
+
+// spawnSubAgent creates a sub-agent with the given mode and depth tracking.
+// Returns (output, worktreePath, error).
+func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normalized, mode SubAgentMode, depth int) (string, string, error) {
 	if depth >= MaxAgentDepth {
-		return "", nil
+		return "", "", fmt.Errorf("max agent depth %d exceeded", MaxAgentDepth)
 	}
 
-	maxTurns := DefaultExploreTurns
-	if mode == SubAgentGeneral {
-		maxTurns = DefaultGeneralTurns
+	maxTurns := DefaultTurnsForMode(mode)
+	if mode == SubAgentExplore && norm.Thoroughness != "" {
+		maxTurns = engagent.ThoroughnessTurns(engagent.ExploreThoroughness(norm.Thoroughness))
 	}
 
 	model := s.resolveSubAgentModel(mode)
+	if norm.Model != "" {
+		model = norm.Model
+	}
 	registry := s.resolveSubAgentTools(mode)
+
+	// Capability mode can further restrict tools beyond profile defaults.
+	if norm.CapabilityMode == agentcontracts.CapReadOnly {
+		registry = registry.Filter(ExploreTools)
+	}
 
 	subPromptCtx := prompts.PromptContext{
 		MaxTurns: maxTurns,
-		Task:     prompt,
+		Task:     norm.Prompt,
 	}
 	subSystemPrompt, err := prompts.BuildSubAgentPrompt(subPromptCtx)
 	if err != nil {
 		subSystemPrompt = s.Persistence().System()
 	}
+	if mode == SubAgentPlan {
+		subSystemPrompt = planSystemPrefix + "\n\n" + subSystemPrompt
+	}
 
 	sub := s.SubSession(model, subSystemPrompt, registry)
 	sub.PermissionFn = s.PermissionFn
 	sub.Permissions = s.Permissions
+	// Explore/plan: hard read-only bash allowlist (in addition to tool filter).
+	if IsReadOnlyMode(mode) || norm.CapabilityMode == agentcontracts.CapReadOnly {
+		sub.readOnlyBash = true
+	}
 	// A sub-agent spawned while the parent is mid-spec-and-unapproved
 	// inherits the same gate — an ungated sub-agent would be a permission
 	// escalation hole (it could Write/Bash while the parent still can't).
@@ -50,11 +123,54 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxTurns(maxTurns)
 	}
+
+	var (
+		wtPath  string
+		cleanup func()
+	)
+	workDir := norm.CWD
+	if norm.Isolation == agentcontracts.IsoWorktree {
+		repo, err := os.Getwd()
+		if err != nil {
+			return "", "", fmt.Errorf("worktree isolation: resolve cwd: %w", err)
+		}
+		path, cu, err := gitworktree.Create(ctx, repo, "")
+		if err != nil {
+			return "", "", fmt.Errorf("worktree isolation: %w", err)
+		}
+		wtPath = path
+		cleanup = cu
+		workDir = path
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+	if workDir != "" {
+		sub.workingDir = workDir
+		sub.SetAllowedDirs([]string{workDir})
+	}
+
+	prompt := norm.Prompt
+	if workDir != "" {
+		prompt = fmt.Sprintf("Working directory: %s\n\n%s", workDir, prompt)
+	}
+	if norm.ResumeFrom != "" {
+		// True transcript resume lands with taskruntime persistence; surface the id.
+		prompt = fmt.Sprintf("Resume prior subagent %s.\n\n%s", norm.ResumeFrom, prompt)
+	}
 	sub.AddUser(prompt)
+
+	// Propagate parent agent spawn so nested agents work, and share bg manager.
+	sub.AgentSpawnFn = func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+		return s.spawnSubAgentRequest(ctx, req, depth+1)
+	}
+	if bm := s.ensureBackgroundManager(); bm != nil && sub.Tools() != nil {
+		sub.Tools().WithBackgroundManager(bm)
+	}
 
 	ch, err := sub.Stream(ctx)
 	if err != nil {
-		return "", err
+		return "", wtPath, err
 	}
 
 	var b strings.Builder
@@ -63,11 +179,14 @@ func (s *Session) spawnSubAgent(ctx context.Context, prompt string, mode SubAgen
 		case "content":
 			b.WriteString(ev.Content)
 		case "error":
-			return b.String(), nil
+			return b.String(), wtPath, nil
 		}
 	}
-	return b.String(), nil
+	return b.String(), wtPath, nil
 }
+
+const planSystemPrefix = "You are a planning sub-agent. Produce an ordered, actionable plan. " +
+	"Do not modify files. Prefer research tools (Read, Grep, Glob, LS) and only use Bash for read-only inspection."
 
 func (s *Session) resolveSubAgentModel(mode SubAgentMode) string {
 	if s.LifecycleSvc().Cascade() == nil {
@@ -75,6 +194,8 @@ func (s *Session) resolveSubAgentModel(mode SubAgentMode) string {
 	}
 	switch mode {
 	case SubAgentExplore:
+		return s.LifecycleSvc().Cascade().SelectModel("summarize", s.model, "")
+	case SubAgentPlan:
 		return s.LifecycleSvc().Cascade().SelectModel("summarize", s.model, "")
 	case SubAgentGeneral:
 		return s.LifecycleSvc().Cascade().SelectModel("implement", s.model, "")
@@ -84,8 +205,19 @@ func (s *Session) resolveSubAgentModel(mode SubAgentMode) string {
 }
 
 func (s *Session) resolveSubAgentTools(mode SubAgentMode) *tool.Registry {
-	if mode == SubAgentExplore {
+	switch mode {
+	case SubAgentExplore:
 		return s.registry.Filter(ExploreTools)
+	case SubAgentPlan:
+		return s.registry.Filter(PlanTools)
+	default:
+		return s.registry
 	}
-	return s.registry
+}
+
+func truncateSummary(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
 }

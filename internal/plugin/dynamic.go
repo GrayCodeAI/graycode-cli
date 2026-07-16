@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/trust"
 )
 
 // PluginState represents the lifecycle state of a dynamic plugin.
@@ -132,9 +133,7 @@ type DynamicPluginManager struct {
 // NewDynamicPluginManager creates a new DynamicPluginManager with the given directories and registries.
 func NewDynamicPluginManager(dirs []string, tools ToolRegistrar, hooks HookRegistrar) *DynamicPluginManager {
 	if len(dirs) == 0 {
-		dirs = []string{
-			filepath.Join(storage.StateDir(), "plugins"),
-		}
+		dirs = defaultPluginDirs()
 	}
 	return &DynamicPluginManager{
 		plugins:      make(map[string]*DynamicPlugin),
@@ -145,12 +144,29 @@ func NewDynamicPluginManager(dirs []string, tools ToolRegistrar, hooks HookRegis
 	}
 }
 
+// defaultPluginDirs returns user state plugins plus optional project .hawk/plugins.
+func defaultPluginDirs() []string {
+	dirs := []string{filepath.Join(storage.StateDir(), "plugins")}
+	if cwd, err := os.Getwd(); err == nil {
+		proj := filepath.Join(cwd, ".hawk", "plugins")
+		if st, err := os.Stat(proj); err == nil && st.IsDir() {
+			dirs = append(dirs, proj)
+		}
+	}
+	return dirs
+}
+
 // DiscoverAll scans all plugin directories and registers discovered plugins.
+// Project-scoped plugin directories require folder trust when HAWK_Y0_FOLDER_TRUST is on.
 func (dm *DynamicPluginManager) DiscoverAll() error {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
 	for _, dir := range dm.pluginDirs {
+		if err := trust.AllowLoadPath(dir); err != nil {
+			// Skip untrusted project plugin dirs (do not fail entire discovery).
+			continue
+		}
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			if os.IsNotExist(err) {
