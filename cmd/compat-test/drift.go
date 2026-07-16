@@ -63,7 +63,7 @@ func checkDrift(repoRoot string) error {
 }
 
 func readRequires(path string) (map[string]string, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- path is constructed by caller from known filesystem entries
 	if err != nil {
 		return nil, err
 	}
