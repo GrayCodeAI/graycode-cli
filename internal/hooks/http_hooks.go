@@ -64,7 +64,7 @@ func invokeHTTPHook(client *http.Client, url, event string, data map[string]inte
 	if err != nil {
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil
 	}

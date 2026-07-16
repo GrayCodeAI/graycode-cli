@@ -152,13 +152,13 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	)
 	workDir := norm.CWD
 	if norm.Isolation == agentcontracts.IsoWorktree {
-		repo, err := os.Getwd()
-		if err != nil {
-			return "", "", fmt.Errorf("worktree isolation: resolve cwd: %w", err)
+		repoDir, wdErr := os.Getwd()
+		if wdErr != nil {
+			return "", "", fmt.Errorf("worktree isolation: resolve cwd: %w", wdErr)
 		}
-		path, cu, err := gitworktree.Create(ctx, repo, "")
-		if err != nil {
-			return "", "", fmt.Errorf("worktree isolation: %w", err)
+		path, cu, createErr := gitworktree.Create(ctx, repoDir, "")
+		if createErr != nil {
+			return "", "", fmt.Errorf("worktree isolation: %w", createErr)
 		}
 		wtPath = path
 		cleanup = cu
