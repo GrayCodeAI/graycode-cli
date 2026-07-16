@@ -127,7 +127,7 @@ require (
 )
 
 require (
-	github.com/BurntSushi/toml v1.6.0 // indirect
+	github.com/BurntSushi/toml v1.6.0
 	github.com/GrayCodeAI/trace v0.1.5-0.20260715120456-164d86be64a8
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

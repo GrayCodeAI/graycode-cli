@@ -5,7 +5,7 @@ use .
 replace (
 	github.com/GrayCodeAI/eyrie => ./external/eyrie
 	github.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts
-	github.com/GrayCodeAI/hawk-mcpkit => ./hawk-mcpkit
+	github.com/GrayCodeAI/hawk-mcpkit => ../hawk-mcpkit
 	github.com/GrayCodeAI/inspect => ./external/inspect
 	github.com/GrayCodeAI/sight => ./external/sight
 	github.com/GrayCodeAI/tok => ./external/tok
