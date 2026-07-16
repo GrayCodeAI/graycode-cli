@@ -227,11 +227,15 @@ func (tg *TelegramGateway) forwardToHawk(ctx context.Context, prompt string) (st
 	defer func() { _ = resp.Body.Close() }()
 
 	// Limit response body to 1 MiB to prevent memory exhaustion.
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		slog.Warn("partial read in forwardToHawk response", "error", err)
+	}
 	var chatResp struct {
 		Response string `json:"response"`
 	}
 	if err := json.Unmarshal(body, &chatResp); err != nil {
+		// JSON unmarshal may fail with partial body; return raw body as fallback
 		return string(body), nil
 	}
 	return chatResp.Response, nil
@@ -255,7 +259,10 @@ func (tg *TelegramGateway) sendMessage(ctx context.Context, chatID int64, text s
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		slog.Warn("partial read in sendMessage response", "error", err)
+	}
 	var result struct {
 		OK          bool   `json:"ok"`
 		Description string `json:"description"`
