@@ -276,9 +276,28 @@ See `+"`plugin.json`"+` for the full manifest configuration.
 			return fmt.Errorf("write README.md: %w", err)
 		}
 
-		cmd.Printf("Created plugin scaffold at ./%s/\n", name)
+		// Multi-component package skeleton (PACK-05)
+		for _, sub := range []string{"skills", "hooks", "tools"} {
+			if err := os.MkdirAll(filepath.Join(dir, sub), 0o750); err != nil {
+				return fmt.Errorf("create %s: %w", sub, err)
+			}
+		}
+		skillExample := filepath.Join(dir, "skills", "example")
+		if err := os.MkdirAll(skillExample, 0o750); err != nil {
+			return err
+		}
+		// #nosec G306
+		_ = os.WriteFile(filepath.Join(skillExample, "SKILL.md"), []byte("---\nname: example\ndescription: Example skill from plugin\n---\n\n# Example skill\n"), 0o644)
+		// #nosec G306
+		_ = os.WriteFile(filepath.Join(dir, "mcp.json"), []byte("{\n  \"servers\": []\n}\n"), 0o644)
+
+		cmd.Printf("Created multi-component plugin scaffold at ./%s/\n", name)
 		cmd.Printf("  %s/plugin.json  - Plugin manifest\n", name)
 		cmd.Printf("  %s/main.go      - Plugin entrypoint\n", name)
+		cmd.Printf("  %s/skills/      - Bundled skills\n", name)
+		cmd.Printf("  %s/hooks/       - Hook scripts\n", name)
+		cmd.Printf("  %s/tools/       - Tool binaries\n", name)
+		cmd.Printf("  %s/mcp.json     - MCP server specs\n", name)
 		cmd.Printf("  %s/README.md    - Documentation\n", name)
 		cmd.Println()
 		cmd.Printf("Next steps:\n")
@@ -354,8 +373,128 @@ var pluginLogsCmd = &cobra.Command{
 	},
 }
 
+var pluginMarketplaceCmd = &cobra.Command{
+	Use:   "marketplace",
+	Short: "Browse and install plugins from marketplace sources",
+}
+
+var pluginMarketplaceListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List plugins available from marketplace sources",
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		mc := plugin.NewMarketplaceClient()
+		entries, err := mc.FetchAll()
+		if err != nil {
+			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with hawk plugin marketplace add)", err)
+		}
+		if len(entries) == 0 {
+			cmd.Println("No marketplace plugins found.")
+			cmd.Println("Add a source: hawk plugin marketplace add <name> <index-url>")
+			return nil
+		}
+		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+		_, _ = fmt.Fprintf(w, "NAME\tREPO\tVERSION\tDESCRIPTION\n")
+		for _, e := range entries {
+			desc := e.Description
+			if len(desc) > 48 {
+				desc = desc[:45] + "..."
+			}
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", e.Name, e.Repo, e.Version, desc)
+		}
+		return w.Flush()
+	},
+}
+
+var pluginMarketplaceInstallCmd = &cobra.Command{
+	Use:   "install <name>",
+	Short: "Install a plugin by marketplace name",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		mc := plugin.NewMarketplaceClient()
+		entry, err := mc.Find(args[0])
+		if err != nil {
+			return err
+		}
+		dir, err := mc.Install(*entry)
+		if err != nil {
+			return err
+		}
+		cmd.Printf("Installed %s to %s\n", entry.Name, dir)
+		// re-discover
+		_ = getDynamicManager().DiscoverAll()
+		return nil
+	},
+}
+
+var pluginMarketplaceAddCmd = &cobra.Command{
+	Use:   "add <name> <index-url>",
+	Short: "Add a marketplace source (JSON index URL)",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := plugin.AddSource(args[0], args[1]); err != nil {
+			return err
+		}
+		cmd.Printf("Added marketplace source %q → %s\n", args[0], args[1])
+		return nil
+	},
+}
+
+var pluginMarketplaceSourcesCmd = &cobra.Command{
+	Use:   "sources",
+	Short: "List configured marketplace sources",
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		mc := plugin.NewMarketplaceClient()
+		for _, s := range mc.Sources {
+			cmd.Printf("%s\t%s\n", s.Name, s.URL)
+		}
+		return nil
+	},
+}
+
+var pluginInspectCmd = &cobra.Command{
+	Use:   "inspect <dir-or-name>",
+	Short: "Show multi-component package contents (tools/hooks/skills/mcp)",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		dir := args[0]
+		if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+			fromState := filepath.Join(plugin.PluginsStateDir(), dir)
+			if st, err := os.Stat(fromState); err == nil && st.IsDir() {
+				dir = fromState
+			} else {
+				return fmt.Errorf("plugin directory not found: %s", args[0])
+			}
+		}
+		comp, err := plugin.DiscoverComponents(dir)
+		if err != nil {
+			return err
+		}
+		cmd.Printf("Root: %s\n", comp.Root)
+		cmd.Printf("Components: %s\n", comp.ComponentSummary())
+		cmd.Printf("Tools: %v\n", comp.HasTools)
+		cmd.Printf("Skills (%d):\n", len(comp.Skills))
+		for _, s := range comp.Skills {
+			cmd.Printf("  - %s\n", s)
+		}
+		cmd.Printf("Hooks (%d):\n", len(comp.HookFiles))
+		for _, h := range comp.HookFiles {
+			cmd.Printf("  - %s\n", h)
+		}
+		cmd.Printf("MCP servers (%d):\n", len(comp.MCPServers))
+		for _, m := range comp.MCPServers {
+			cmd.Printf("  - %s cmd=%s url=%s\n", m.Name, m.Command, m.URL)
+		}
+		return nil
+	},
+}
+
 func init() {
 	pluginStatusCmd.Flags().Bool("json", false, "output as JSON")
+
+	pluginMarketplaceCmd.AddCommand(pluginMarketplaceListCmd)
+	pluginMarketplaceCmd.AddCommand(pluginMarketplaceInstallCmd)
+	pluginMarketplaceCmd.AddCommand(pluginMarketplaceAddCmd)
+	pluginMarketplaceCmd.AddCommand(pluginMarketplaceSourcesCmd)
 
 	pluginCmd.AddCommand(pluginListCmd)
 	pluginCmd.AddCommand(pluginActivateCmd)
@@ -366,6 +505,8 @@ func init() {
 	pluginCmd.AddCommand(pluginInstallDynamicCmd)
 	pluginCmd.AddCommand(pluginUninstallCmd)
 	pluginCmd.AddCommand(pluginLogsCmd)
+	pluginCmd.AddCommand(pluginMarketplaceCmd)
+	pluginCmd.AddCommand(pluginInspectCmd)
 }
 
 // pluginInstallDynamicCmd overrides the default "install" subcommand behavior.

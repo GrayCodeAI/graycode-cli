@@ -62,6 +62,11 @@ func (m *Manifest) Validate() error {
 	return nil
 }
 
+// PluginsStateDir is the user-scope plugins install root.
+func PluginsStateDir() string {
+	return pluginsDir()
+}
+
 func pluginsDir() string {
 	return filepath.Join(storage.StateDir(), "plugins")
 }

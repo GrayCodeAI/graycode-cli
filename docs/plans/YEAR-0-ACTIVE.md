@@ -28,7 +28,7 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 | PACK-02 | Typed spawn + Agent tool + taskruntime unify | **Mostly done** — typed Agent tool, explore bash hard gate, taskruntime registry, worktree isolation; true transcript resume still stub |
 | PACK-03 | sandbox.toml + folder trust + safe-bash | **Partial** — folder trust + sandbox.toml + project plugin/hook gates; named acceptEdits modes / safe-bash product polish remain |
 | PACK-04 | Hooks complete + PreToolUse in PermissionEngine | **Done** — PreToolUse deny-before-autonomy, vendor aliases, HTTP hooks, discovery dirs, plugin env, acceptEdits/dontAsk aliases |
-| PACK-05 | Multi-component plugins + marketplace MVP | Pending |
+| PACK-05 | Multi-component plugins + marketplace MVP | **Done** — components layout, scopes, marketplace CLI, multi-harness skills trust gate |
 | PACK-06 | Monitor / Wait / Kill / `/loop` | Pending |
 | PACK-07 | Structured AskUser + plan/spec align | Pending |
 | PACK-08 | Crash, announcements, prompt queue, interjection | Pending |
@@ -42,7 +42,7 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 - [x] Folder trust gates project hooks / plugins (`.hawk/plugins`, `.hawk/hooks`; MCP/LSP follow same AllowLoadPath)
 - [x] `sandbox.toml` profiles + project additive merge; deny globs fail-closed
 - [x] PreToolUse hooks can deny inside `PermissionEngine` before autonomy
-- [ ] Multi-component plugins + marketplace MVP install path
+- [x] Multi-component plugins + marketplace MVP install path
 - [ ] Monitor + Wait/Kill + `/loop`; structured AskUser; plan/spec aligned
 - [ ] Crash handler, announcements, prompt queue, interjection
 - [ ] User-guide docs `01`–`12` under `hawk/docs/user-guide/`

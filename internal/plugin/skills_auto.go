@@ -7,6 +7,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/trust"
 )
 
 // SkillSource tracks where an installed skill came from.
@@ -373,20 +374,44 @@ func ParseSmartSkillPublic(content string) SmartSkill {
 // DefaultSkillDirs returns directories to scan for SKILL.md files.
 // Includes hawk's own paths plus cross-agent standard paths for interoperability.
 // Follows the agentskills.io spec and supports gh skill install placement.
+//
+// Year 0 PACK-05: project-level harness dirs (.claude/.codex/.agents skills)
+// are included only when folder trust allows the project path.
 func DefaultSkillDirs() []string {
-	home := home.Dir()
-	if home == "" {
-		return []string{".agents/skills"}
+	homeDir := home.Dir()
+	var dirs []string
+
+	// User-level directories (always).
+	dirs = append(dirs, filepath.Join(storage.StateDir(), "skills"))
+	if homeDir != "" {
+		dirs = append(dirs,
+			filepath.Join(homeDir, ".agents", "skills"),
+			filepath.Join(homeDir, ".claude", "skills"),
+			filepath.Join(homeDir, ".codex", "skills"),
+			filepath.Join(homeDir, ".cursor", "skills"),
+		)
 	}
-	return []string{
-		// Project-level directories.
-		".agents/skills", // agentskills.io shared dir (gh skill install default)
-		".claude/skills", // Claude Code project skills
-		".codex/skills",  // Codex project skills
-		// User-level directories.
-		filepath.Join(storage.StateDir(), "skills"), // hawk global skills
-		filepath.Join(home, ".agents", "skills"),    // agentskills.io global shared
-		filepath.Join(home, ".claude", "skills"),    // Claude Code global skills
-		filepath.Join(home, ".codex", "skills"),     // Codex global skills
+
+	// Project-level multi-harness dirs (trust-gated).
+	cwd, err := os.Getwd()
+	if err != nil {
+		if homeDir == "" {
+			return []string{".agents/skills"}
+		}
+		return dirs
 	}
+	projectHarness := []string{
+		filepath.Join(cwd, ".agents", "skills"),
+		filepath.Join(cwd, ".claude", "skills"),
+		filepath.Join(cwd, ".codex", "skills"),
+		filepath.Join(cwd, ".cursor", "skills"),
+		filepath.Join(cwd, ".hawk", "skills"),
+	}
+	for _, p := range projectHarness {
+		if err := trust.AllowLoadPath(p); err != nil {
+			continue // untrusted project harness
+		}
+		dirs = append(dirs, p)
+	}
+	return dirs
 }

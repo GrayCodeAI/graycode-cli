@@ -74,7 +74,7 @@ func FolderTrust() bool {
 }
 
 // Marketplace reports whether marketplace install paths are enabled.
-// Default false until PACK-05 + folder trust.
+// Default true after PACK-05. Set HAWK_Y0_MARKETPLACE=0 to disable remote installs.
 func Marketplace() bool {
-	return envEnabled(EnvMarketplace, false)
+	return envEnabled(EnvMarketplace, true)
 }
