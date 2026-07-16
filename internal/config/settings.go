@@ -53,6 +53,16 @@ type Settings struct {
 	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"` // GLM/Z.ai extended reasoning toggle; nil = model default
 	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`            // TUI mouse capture; false preserves native click-drag copy
 	ReplMode                *bool                  `json:"repl_mode,omitempty"`            // Start in REPL mode instead of TUI
+	ScrollSpeed             int                    `json:"scroll_speed,omitempty"`            // scroll speed 1-100 (default 50)
+	ScrollMode              string                 `json:"scroll_mode,omitempty"`             // auto, wheel, trackpad
+	InvertScroll            bool                   `json:"invert_scroll,omitempty"`           // natural scrolling invert
+	CompactMode             bool                   `json:"compact_mode,omitempty"`            // reduce outer padding
+	AutoDarkTheme           string                 `json:"auto_dark_theme,omitempty"`         // override for auto dark theme
+	AutoLightTheme          string                 `json:"auto_light_theme,omitempty"`        // override for auto light theme
+	PaginatorLines          int                    `json:"paginator_lines,omitempty"`           // scrollback buffer lines (0 = unlimited)
+	PaginatorShowLineNums   *bool                  `json:"paginator_show_line_nums,omitempty"`   // show line numbers in scrollback
+	PaginatorMarginTop      int                    `json:"paginator_margin_top,omitempty"`       // top margin for pager
+	PaginatorMarginBottom   int                    `json:"paginator_margin_bottom,omitempty"`    // bottom margin for pager
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.
@@ -474,9 +484,62 @@ func SetGlobalSetting(key, value string) error {
 		default:
 			return fmt.Errorf("tui_mouse must be true, false, or default")
 		}
+	case "scrollspeed":
+		speed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || speed < 1 || speed > 100 {
+			return fmt.Errorf("scroll_speed must be a number between 1 and 100")
+		}
+		s.ScrollSpeed = speed
+	case "scrollmode":
+		mode := strings.ToLower(strings.TrimSpace(value))
+		switch mode {
+		case "auto", "wheel", "trackpad":
+			s.ScrollMode = mode
+		default:
+			return fmt.Errorf("scroll_mode must be auto, wheel, or trackpad")
+		}
+	case "invertscroll", "invert_scroll":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			s.InvertScroll = true
+		case "0", "false", "no", "off":
+			s.InvertScroll = false
+		default:
+			return fmt.Errorf("invert_scroll must be true or false")
+		}
+	case "compactmode", "compact_mode":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			s.CompactMode = true
+		case "0", "false", "no", "off":
+			s.CompactMode = false
+		default:
+			return fmt.Errorf("compact_mode must be true or false")
+		}
+	case "autodarktheme", "auto_dark_theme":
+		s.AutoDarkTheme = strings.TrimSpace(value)
+	case "autolighttheme", "auto_light_theme":
+		s.AutoLightTheme = strings.TrimSpace(value)
+	case "paginatorlines", "paginator_lines":
+		lines, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || lines < 0 {
+			return fmt.Errorf("paginator_lines must be a non-negative number")
+		}
+		s.PaginatorLines = lines
+	case "paginatorshowlinenumbers", "paginator_show_line_nums":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "1", "true", "yes", "on":
+			enabled := true
+			s.PaginatorShowLineNums = &enabled
+		case "0", "false", "no", "off":
+			enabled := false
+			s.PaginatorShowLineNums = &enabled
+		default:
+			return fmt.Errorf("paginator_show_line_nums must be true or false")
+		}
 	default:
-		return fmt.Errorf("unsupported setting key %q", key)
-	}
+			return fmt.Errorf("unsupported setting key %q", key)
+		}
 	return SaveGlobal(s)
 }
 

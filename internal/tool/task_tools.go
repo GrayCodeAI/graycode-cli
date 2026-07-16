@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/taskruntime"
 )
 
 const (
@@ -81,8 +83,14 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	backgroundTasks.tasks[id] = task
 	backgroundTasks.Unlock()
 
+	// Bridge into unified taskruntime (PACK-06).
+	shellCtx, shellCancel := context.WithCancel(context.Background())
+	taskruntime.Default.RegisterExternal(id, taskruntime.KindShell, command, shellCancel)
+
 	if err := cmd.Start(); err != nil {
+		shellCancel()
 		removeBackgroundTask(id)
+		taskruntime.Default.FinishExternal(id, taskruntime.StatusFailed, "", err.Error())
 		return "", err
 	}
 
@@ -91,6 +99,11 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	go func() { task.capture(stdout); captureWg.Done() }()
 	go func() { task.capture(stderr); captureWg.Done() }()
 	go func() {
+		// Honor registry kill via shellCancel → kill process
+		go func() {
+			<-shellCtx.Done()
+			_ = task.stop()
+		}()
 		err := cmd.Wait()
 		captureWg.Wait()
 		task.mu.Lock()
@@ -99,8 +112,20 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 		} else {
 			task.exitText = "exit status 0"
 		}
+		status := taskruntime.StatusCompleted
+		errMsg := ""
+		if task.stopped {
+			status = taskruntime.StatusKilled
+			errMsg = "killed"
+		} else if err != nil {
+			status = taskruntime.StatusFailed
+			errMsg = err.Error()
+		}
+		out := task.output.String()
 		task.mu.Unlock()
 		close(task.done)
+		taskruntime.Default.FinishExternal(id, status, out, errMsg)
+		shellCancel()
 	}()
 
 	return id, nil
@@ -182,7 +207,7 @@ type TaskOutputTool struct{}
 func (TaskOutputTool) Name() string      { return "TaskOutput" }
 func (TaskOutputTool) Aliases() []string { return []string{"task_output"} }
 func (TaskOutputTool) Description() string {
-	return "Read output from a background Bash task started with run_in_background."
+	return "Read output from a background task (shell, agent, or monitor) by task_id."
 }
 
 func (TaskOutputTool) Parameters() map[string]interface{} {
@@ -195,19 +220,26 @@ func (TaskOutputTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (TaskOutputTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (TaskOutputTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		TaskID string `json:"task_id"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
-	task, ok := getBackgroundTask(p.TaskID)
-	if !ok {
-		return "", fmt.Errorf("background task %q not found", p.TaskID)
+	// Accept legacy taskId field
+	if p.TaskID == "" {
+		var legacy struct {
+			TaskID string `json:"taskId"`
+		}
+		_ = json.Unmarshal(input, &legacy)
+		p.TaskID = legacy.TaskID
 	}
-	status, output := task.snapshot()
-	return fmt.Sprintf("Task: %s\nCommand: %s\nStatus: %s\n\n%s", task.id, task.command, status, output), nil
+	st, kind, label, out, err := resolveTaskOutput(ctx, p.TaskID)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Task: %s\nKind: %s\nLabel: %s\nStatus: %s\n\n%s", p.TaskID, kind, label, st, out), nil
 }
 
 type TaskStopTool struct{}
@@ -215,7 +247,7 @@ type TaskStopTool struct{}
 func (TaskStopTool) Name() string      { return "TaskStop" }
 func (TaskStopTool) Aliases() []string { return []string{"task_stop"} }
 func (TaskStopTool) Description() string {
-	return "Stop a background Bash task."
+	return "Stop a background shell, agent, or monitor task."
 }
 
 func (TaskStopTool) Parameters() map[string]interface{} {
@@ -228,18 +260,21 @@ func (TaskStopTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (TaskStopTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (TaskStopTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		TaskID string `json:"task_id"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
-	task, ok := getBackgroundTask(p.TaskID)
-	if !ok {
-		return "", fmt.Errorf("background task %q not found", p.TaskID)
+	if p.TaskID == "" {
+		var legacy struct {
+			TaskID string `json:"taskId"`
+		}
+		_ = json.Unmarshal(input, &legacy)
+		p.TaskID = legacy.TaskID
 	}
-	if err := task.stop(); err != nil {
+	if err := killTask(ctx, p.TaskID); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Stopped background task %s", p.TaskID), nil

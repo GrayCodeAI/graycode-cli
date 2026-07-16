@@ -219,12 +219,15 @@ const quitAgainMsg = "Press Ctrl+C again to quit."
 // themed styles. Call this at startup (from root.go) and whenever the user
 // selects a new theme from the picker.
 //
-// "auto" is a no-op: lipgloss already probes the terminal background on
-// its own; the caller should still call lipgloss.SetHasDarkBackground for
-// the AdaptiveColor vars but the fixed-hex vars remain at their defaults.
+// "auto" resolves to the OS preference (dark/light) using internaltheme.ApplyThemePreference.
+// If detection fails, defaults to "dark".
 func ApplyTheme(name string) {
-	if name == "" || name == "auto" {
+	if name == "" {
 		return
+	}
+	// Handle "auto" theme - resolve to actual theme based on OS preference
+	if name == "auto" || name == "system" {
+		name = internaltheme.ApplyThemePreference(name)
 	}
 	entry, ok := internaltheme.LookupTheme(name)
 	if !ok {

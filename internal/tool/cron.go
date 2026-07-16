@@ -21,6 +21,10 @@ type CronJob struct {
 	LastRun   time.Time `json:"lastRun,omitempty"`
 	NextRun   time.Time `json:"nextRun"`
 	Runs      int       `json:"runs"`
+	// MaxRuns caps how many times a recurring job may fire (0 = unlimited).
+	MaxRuns int `json:"maxRuns,omitempty"`
+	// ExpiresAt auto-deletes the job after this time (zero = never).
+	ExpiresAt time.Time `json:"expiresAt,omitempty"`
 	cancel    context.CancelFunc
 }
 
@@ -41,6 +45,11 @@ var globalCronScheduler = &CronScheduler{jobs: make(map[string]*CronJob)}
 func GetCronScheduler() *CronScheduler { return globalCronScheduler }
 
 func (s *CronScheduler) Create(schedule, prompt string, recurring, durable bool) (*CronJob, error) {
+	return s.CreateWithLimits(schedule, prompt, recurring, durable, 0, time.Time{})
+}
+
+// CreateWithLimits creates a job with optional maxRuns and expiresAt (PACK-06 /loop).
+func (s *CronScheduler) CreateWithLimits(schedule, prompt string, recurring, durable bool, maxRuns int, expiresAt time.Time) (*CronJob, error) {
 	nextRun, err := nextCronTime(schedule)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cron schedule %q: %w", schedule, err)
@@ -65,10 +74,50 @@ func (s *CronScheduler) Create(schedule, prompt string, recurring, durable bool)
 		Durable:   durable,
 		CreatedAt: time.Now(),
 		NextRun:   nextRun,
+		MaxRuns:   maxRuns,
+		ExpiresAt: expiresAt,
 		cancel:    cancel,
 	}
 	s.jobs[id] = job
 	return job, nil
+}
+
+// TickRun records a successful fire; returns true if the job should be deleted
+// (max runs or expiry reached).
+func (s *CronScheduler) TickRun(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[id]
+	if !ok {
+		return true
+	}
+	job.Runs++
+	job.LastRun = time.Now()
+	if !job.ExpiresAt.IsZero() && time.Now().After(job.ExpiresAt) {
+		if job.cancel != nil {
+			job.cancel()
+		}
+		delete(s.jobs, id)
+		return true
+	}
+	if job.MaxRuns > 0 && job.Runs >= job.MaxRuns {
+		if job.cancel != nil {
+			job.cancel()
+		}
+		delete(s.jobs, id)
+		return true
+	}
+	if !job.Recurring {
+		if job.cancel != nil {
+			job.cancel()
+		}
+		delete(s.jobs, id)
+		return true
+	}
+	if next, err := nextCronTime(job.Schedule); err == nil {
+		job.NextRun = next
+	}
+	return false
 }
 
 func (s *CronScheduler) List() []*CronJob {
@@ -191,6 +240,14 @@ func (CronCreateTool) Parameters() map[string]interface{} {
 				"type":        "boolean",
 				"description": "If true, persists to disk and survives session restarts (default: false)",
 			},
+			"max_runs": map[string]interface{}{
+				"type":        "integer",
+				"description": "Stop after this many fires (0 = unlimited). Useful for /loop-style caps.",
+			},
+			"expires_in_sec": map[string]interface{}{
+				"type":        "integer",
+				"description": "Auto-delete job after this many seconds from creation (0 = never).",
+			},
 		},
 		"required": []string{"schedule", "prompt"},
 	}
@@ -198,10 +255,12 @@ func (CronCreateTool) Parameters() map[string]interface{} {
 
 func (CronCreateTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
 	var p struct {
-		Schedule  string `json:"schedule"`
-		Prompt    string `json:"prompt"`
-		Recurring *bool  `json:"recurring"`
-		Durable   *bool  `json:"durable"`
+		Schedule     string `json:"schedule"`
+		Prompt       string `json:"prompt"`
+		Recurring    *bool  `json:"recurring"`
+		Durable      *bool  `json:"durable"`
+		MaxRuns      int    `json:"max_runs"`
+		ExpiresInSec int    `json:"expires_in_sec"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
@@ -221,8 +280,15 @@ func (CronCreateTool) Execute(_ context.Context, input json.RawMessage) (string,
 	if p.Durable != nil {
 		durable = *p.Durable
 	}
+	var expires time.Time
+	if p.ExpiresInSec > 0 {
+		expires = time.Now().Add(time.Duration(p.ExpiresInSec) * time.Second)
+	}
+	if p.MaxRuns < 0 {
+		p.MaxRuns = 0
+	}
 
-	job, err := globalCronScheduler.Create(p.Schedule, p.Prompt, recurring, durable)
+	job, err := globalCronScheduler.CreateWithLimits(p.Schedule, p.Prompt, recurring, durable, p.MaxRuns, expires)
 	if err != nil {
 		return "", err
 	}
@@ -232,8 +298,17 @@ func (CronCreateTool) Execute(_ context.Context, input json.RawMessage) (string,
 		"schedule": job.Schedule,
 		"nextRun":  job.NextRun.Format(time.RFC3339),
 		"type":     map[bool]string{true: "recurring", false: "one-shot"}[recurring],
+		"maxRuns":  job.MaxRuns,
+		"expires":  formatOptionalTime(job.ExpiresAt),
 	})
 	return string(out), nil
+}
+
+func formatOptionalTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(time.RFC3339)
 }
 
 // CronDeleteTool removes a scheduled job.

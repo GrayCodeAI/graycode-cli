@@ -157,3 +157,12 @@ func tasteStoreForSession() (*taste.Store, error) {
 func stalenessFormatReport(rules []staleness.StaleRule) string {
 	return staleness.FormatReport(rules)
 }
+
+// truncatePromptPreview truncates a prompt to a preview string.
+func truncatePromptPreview(s string, max int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
+}
