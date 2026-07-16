@@ -6,7 +6,6 @@ package crash
 import (
 	"os"
 	"path/filepath"
-
 	"runtime/debug"
 )
 
