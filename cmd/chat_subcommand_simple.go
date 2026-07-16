@@ -15,6 +15,7 @@ import (
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/theme"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -345,6 +346,111 @@ func init() {
 		},
 	})
 
+	// /compact-mode — toggle compact mode
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "compact-mode",
+		aliases:     []string{"compact"},
+		description: "toggle compact mode (removes outer padding)",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			settings := hawkconfig.LoadGlobalSettings()
+			current := settings.CompactMode
+			newVal := !current
+			valStr := "false"
+			if newVal {
+				valStr = "true"
+			}
+			if err := hawkconfig.SetGlobalSetting("compact_mode", valStr); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				state := "disabled"
+				if newVal {
+					state = "enabled"
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Compact mode " + state})
+				m.viewDirty = true
+				m.updateViewportContent()
+			}
+			return m, nil
+		},
+	})
+
+	// /scroll-speed <n> — set scroll speed (1-100)
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "scroll-speed",
+		description: "set scroll speed (1-100)",
+		usage:       "/scroll-speed <1-100>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Usage: /scroll-speed <1-100>\nCurrent: %d", hawkconfig.LoadGlobalSettings().ScrollSpeed)})
+				return m, nil
+			}
+			speed, err := strconv.Atoi(args[0])
+			if err != nil || speed < 1 || speed > 100 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Scroll speed must be 1-100"})
+				return m, nil
+			}
+			if err := hawkconfig.SetGlobalSetting("scroll_speed", args[0]); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Scroll speed → " + args[0]})
+			}
+			return m, nil
+		},
+	})
+
+	// /scroll-invert — toggle scroll direction invert
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "scroll-invert",
+		description: "toggle natural scrolling (invert direction)",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			settings := hawkconfig.LoadGlobalSettings()
+			current := settings.InvertScroll
+			newVal := !current
+			valStr := "false"
+			if newVal {
+				valStr = "true"
+			}
+			enabled := "disabled"
+			if newVal {
+				enabled = "enabled"
+			}
+			if err := hawkconfig.SetGlobalSetting("invert_scroll", valStr); err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+			} else {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Natural scrolling " + enabled})
+			}
+			return m, nil
+		},
+	})
+
+	// /scroll-mode — set scroll mode (auto, wheel, trackpad)
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "scroll-mode",
+		description: "set scroll mode (auto, wheel, trackpad)",
+		usage:       "/scroll-mode <auto|wheel|trackpad>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Usage: /scroll-mode <auto|wheel|trackpad>\nCurrent: %s", hawkconfig.LoadGlobalSettings().ScrollMode)})
+				return m, nil
+			}
+			mode := strings.ToLower(args[0])
+			switch mode {
+			case "auto", "wheel", "trackpad":
+				if err := hawkconfig.SetGlobalSetting("scrollmode", mode); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				} else {
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Scroll mode → %s", mode)})
+				}
+				return m, nil
+			default:
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid modes: auto, wheel, trackpad"})
+				return m, nil
+			}
+		},
+	})
+
 	// /hooks — show configured hooks
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "hooks",
@@ -353,6 +459,82 @@ func init() {
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, displayMsg{role: "system", content: hooksSummary()})
 			return m, nil
+		},
+	})
+
+	// /terminal-setup — show terminal configuration recommendations
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "terminal-setup",
+		description: "show terminal configuration recommendations",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			caps := theme.DetectTerminalCapabilities()
+			level := "basic (16 colors)"
+			switch caps.ColorLevel {
+			case theme.ColorTruecolor:
+				level = "truecolor (24-bit RGB)"
+			case theme.Color256:
+				level = "256-color"
+			}
+
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Terminal Setup Recommendations:\n\nColor Support: %s\nScroll Mode: %s (use /scroll-mode to change)\nScroll Speed: %d (use /scroll-speed to change)\nCompact Mode: %v (use /compact-mode to toggle)\n\nTips:\n- Set COLORTERM=truecolor for best color experience\n- Use tmux with set -g default-terminal \"tmux-256color\" for 256-color support\n- Enable mouse reporting in your terminal for full TUI interaction", level, hawkconfig.LoadGlobalSettings().ScrollMode, hawkconfig.LoadGlobalSettings().ScrollSpeed)})
+			return m, nil
+		},
+	})
+
+	// /pager-config — configure scrollback pager
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "pager-config",
+		description: "configure scrollback pager (lines|linenumbers)",
+		usage:       "/pager-config <lines|linenumbers> <value>",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 2 {
+				s := hawkconfig.LoadGlobalSettings()
+				ln := false
+				messages := fmt.Sprintf("Pager Configuration:\n  lines: %d (0 = unlimited)\n  linenumbers: %v\n\nUsage: /pager-config <lines|linenumbers> <value>", s.PaginatorLines, ln)
+				if s.PaginatorShowLineNums != nil {
+					messages = fmt.Sprintf("Pager Configuration:\n  lines: %d (0 = unlimited)\n  linenumbers: %v\n\nUsage: /pager-config <lines|linenumbers> <value>", s.PaginatorLines, *s.PaginatorShowLineNums)
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: messages})
+				return m, nil
+			}
+			subcmd := strings.ToLower(args[0])
+			value := args[1]
+			switch subcmd {
+			case "lines":
+				lines, err := strconv.Atoi(value)
+				if err != nil || lines < 0 {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Lines must be a positive number (0 = unlimited)"})
+					return m, nil
+				}
+				if err := hawkconfig.SetGlobalSetting("paginatorlines", value); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+				} else {
+					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Pager lines → %d", lines)})
+				}
+				return m, nil
+			case "linenumbers", "linenums", "ln":
+				switch strings.ToLower(value) {
+				case "1", "true", "yes", "on":
+					if err := hawkconfig.SetGlobalSetting("paginatorshowlinenumbers", "true"); err != nil {
+						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+					} else {
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Pager line numbers → enabled"})
+					}
+				case "0", "false", "no", "off":
+					if err := hawkconfig.SetGlobalSetting("paginatorshowlinenumbers", "false"); err != nil {
+						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
+					} else {
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Pager line numbers → disabled"})
+					}
+				default:
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Valid values: true, false"})
+				}
+				return m, nil
+			default:
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown option %q. Use: lines, linenumbers", subcmd)})
+				return m, nil
+			}
 		},
 	})
 
@@ -385,6 +567,115 @@ func init() {
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
+		},
+	})
+
+	// /announcements — show system announcements
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "announcements",
+		description: "show system announcements (release notes, updates)",
+		usage:       "",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			state, err := tool.ReadAnnouncements()
+			if err != nil {
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Failed to read announcements: %v", err)})
+				return m, nil
+			}
+			visible := tool.VisibleAnnouncements(nil, state.HiddenIDs)
+			if len(visible) == 0 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No announcements."})
+			} else {
+				var b strings.Builder
+				b.WriteString("Announcements:\n")
+				for i, a := range visible {
+					if a.Title != "" {
+						b.WriteString(fmt.Sprintf("  [%d] %s\n", i+1, a.Title))
+					}
+					b.WriteString(fmt.Sprintf("    %s\n", a.Message))
+					if a.CTA != nil && a.CTA.URL != "" {
+						b.WriteString(fmt.Sprintf("    → %s (%s)\n", a.CTA.Label, a.CTA.URL))
+					}
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+			}
+			return m, nil
+		},
+	})
+
+	// /prompt-queue — manage queued prompts
+	subcommandRegistry.Register(&delegatingCommand{
+		name:        "prompt-queue",
+		aliases:     []string{"queue"},
+		description: "manage queued prompts (add|list|clear|remove)",
+		usage:       "/prompt-queue <add|list|clear|remove> [args]",
+		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
+			if len(args) < 1 {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /prompt-queue add <prompt>\n       /prompt-queue list\n       /prompt-queue clear\n       /prompt-queue remove <index>"})
+				return m, nil
+			}
+			subcmd := strings.ToLower(args[0])
+			switch subcmd {
+			case "add", "queue":
+				if len(args) < 2 {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /prompt-queue add <prompt>"})
+					return m, nil
+				}
+				prompt := strings.TrimSpace(strings.TrimPrefix(text, "/prompt-queue add"))
+				if prompt == "" {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Prompt cannot be empty"})
+					return m, nil
+				}
+				if err := tool.EnqueuePrompt(prompt, ""); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Failed to queue prompt: %v", err)})
+				} else {
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Prompt queued."})
+				}
+				return m, nil
+			case "list", "ls":
+				items := tool.GetPromptQueue()
+				if len(items) == 0 {
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Queue is empty."})
+					return m, nil
+				}
+				var b strings.Builder
+				b.WriteString(fmt.Sprintf("Prompt queue (%d items):\n", len(items)))
+				for i, item := range items {
+					if item.Subject != "" {
+						b.WriteString(fmt.Sprintf("  [%d] %s\n", i+1, item.Subject))
+					} else {
+						preview := truncatePromptPreview(item.Prompt, 50)
+						b.WriteString(fmt.Sprintf("  [%d] %s\n", i+1, preview))
+					}
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+				return m, nil
+			case "clear":
+				if err := tool.ClearPromptQueue(); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Failed to clear queue: %v", err)})
+				} else {
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Queue cleared."})
+				}
+				return m, nil
+			case "remove", "rm":
+				if len(args) < 2 {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /prompt-queue remove <index>"})
+					return m, nil
+				}
+				idx, err := strconv.Atoi(args[1])
+				if err != nil || idx < 1 {
+					m.messages = append(m.messages, displayMsg{role: "error", content: "Invalid index"})
+					return m, nil
+				}
+				if err := tool.RemovePromptFromQueue(idx - 1); err != nil {
+					m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Failed to remove: %v", err)})
+				} else {
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Removed from queue."})
+				}
+				return m, nil
+			default:
+				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown subcommand %q. Use: add, list, clear, remove", subcmd)})
+				return m, nil
+			}
 		},
 	})
 

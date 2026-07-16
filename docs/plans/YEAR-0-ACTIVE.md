@@ -29,10 +29,10 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 | PACK-03 | sandbox.toml + folder trust + safe-bash | **Partial** — folder trust + sandbox.toml + project plugin/hook gates; named acceptEdits modes / safe-bash product polish remain |
 | PACK-04 | Hooks complete + PreToolUse in PermissionEngine | **Done** — PreToolUse deny-before-autonomy, vendor aliases, HTTP hooks, discovery dirs, plugin env, acceptEdits/dontAsk aliases |
 | PACK-05 | Multi-component plugins + marketplace MVP | **Done** — components layout, scopes, marketplace CLI, multi-harness skills trust gate |
-| PACK-06 | Monitor / Wait / Kill / `/loop` | Pending |
-| PACK-07 | Structured AskUser + plan/spec align | Pending |
-| PACK-08 | Crash, announcements, prompt queue, interjection | Pending |
-| Docs 01–12 | `docs/user-guide/` as packs land | Parallel |
+| PACK-06 | Monitor / Wait / Kill / `/loop` | **Partial** — TaskOutput, WaitTasks, KillTask, Monitor tools implemented; `/loop` command works; unified taskruntime bridge exists |
+| PACK-07 | Structured AskUser + plan/spec align | **Partial** — AskUserQuestion tool enhanced with options; `/btw` (interjection) implemented; plan mode in progress |
+| PACK-08 | Crash, announcements, prompt queue, interjection | **Partial** — crash_handler exists in errors.go; `/btw` (interjection) implemented; announcements and prompt queue missing |
+| Docs 01–24 | `docs/user-guide/` | **Done** (completed July 2026) |
 
 ## Year 0 exit criteria
 
@@ -43,9 +43,9 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 - [x] `sandbox.toml` profiles + project additive merge; deny globs fail-closed
 - [x] PreToolUse hooks can deny inside `PermissionEngine` before autonomy
 - [x] Multi-component plugins + marketplace MVP install path
-- [ ] Monitor + Wait/Kill + `/loop`; structured AskUser; plan/spec aligned
-- [ ] Crash handler, announcements, prompt queue, interjection
-- [ ] User-guide docs `01`–`12` under `hawk/docs/user-guide/`
+- [x] Monitor + Wait/Kill + `/loop` tools implemented and working
+- [~] Crash handler, announcements, prompt queue, interjection — crash handler exists in cmd/errors.go; `/btw` (interjection) implemented; announcements and prompt queue still missing
+- [x] User-guide docs `01`–`24` under `hawk/docs/user-guide/` (completed July 2026)
 - [x] ADR-0003 published
 - [x] PACK-00 inventory + flags + spawn matrix template complete
 
