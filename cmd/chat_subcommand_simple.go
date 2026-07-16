@@ -477,7 +477,7 @@ func init() {
 				level = "256-color"
 			}
 
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Terminal Setup Recommendations:\n\nColor Support: %s\nScroll Mode: %s (use /scroll-mode to change)\nScroll Speed: %d (use /scroll-speed to change)\nCompact Mode: %v (use /compact-mode to toggle)\n\nTips:\n- Set COLORTERM=truecolor for best color experience\n- Use tmux with set -g default-terminal \"tmux-256color\" for 256-color support\n- Enable mouse reporting in your terminal for full TUI interaction", level, hawkconfig.LoadGlobalSettings().ScrollMode, hawkconfig.LoadGlobalSettings().ScrollSpeed)})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Terminal Setup Recommendations:\n\nColor Support: %s\nScroll Mode: %s (use /scroll-mode to change)\nScroll Speed: %d (use /scroll-speed to change)\nCompact Mode: %v (use /compact-mode to toggle)\n\nTips:\n- Set COLORTERM=truecolor for best color experience\n- Use tmux with set -g default-terminal \"tmux-256color\" for 256-color support\n- Enable mouse reporting in your terminal for full TUI interaction", level, hawkconfig.LoadGlobalSettings().ScrollMode, hawkconfig.LoadGlobalSettings().ScrollSpeed, hawkconfig.LoadGlobalSettings().CompactMode)})
 			return m, nil
 		},
 	})
