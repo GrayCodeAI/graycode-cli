@@ -4,7 +4,8 @@
 # alpine runtime stage below as well.
 FROM golang:1.26.5-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates tzdata
+RUN apk upgrade --no-cache && \
+    apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /build
 
@@ -50,7 +51,8 @@ RUN rm -f go.work go.work.sum && \
 # Runtime stage — Alpine (hawk requires git + bash for workspace operations; distroless excluded)
 FROM alpine:3.23
 
-RUN apk add --no-cache ca-certificates git bash tini && \
+RUN apk upgrade --no-cache && \
+    apk add --no-cache ca-certificates git bash tini && \
     adduser -D -u 1000 -h /home/hawk hawk
 
 COPY --from=builder /build/hawk /usr/local/bin/hawk
