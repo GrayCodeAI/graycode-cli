@@ -10,7 +10,13 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/trust"
 )
+
+// allowProjectHookDir gates project-scoped hook directories behind folder trust.
+func allowProjectHookDir(dir string) error {
+	return trust.AllowLoadPath(dir)
+}
 
 // EventType represents a hook event.
 type EventType string
@@ -174,7 +180,11 @@ func AdaptLegacyFn(fn func(ctx context.Context, data map[string]interface{}) err
 }
 
 // LoadHooksDir loads hooks from a directory.
+// Project-scoped directories require folder trust when HAWK_Y0_FOLDER_TRUST is on.
 func LoadHooksDir(dir string) error {
+	if err := allowProjectHookDir(dir); err != nil {
+		return err
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {

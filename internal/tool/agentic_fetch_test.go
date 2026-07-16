@@ -6,21 +6,23 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 )
 
 func TestAgenticFetch_BatchFanOut(t *testing.T) {
 	var calls int32
 	tc := &ToolContext{
-		AgentSpawnFn: func(_ context.Context, prompt string) (string, error) {
+		AgentSpawnFn: func(_ context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
 			atomic.AddInt32(&calls, 1)
 			// Echo back which URL this invocation was for so we can assert
 			// each URL produced its own labeled section.
 			for _, u := range []string{"https://a.example", "https://b.example", "https://c.example"} {
-				if strings.Contains(prompt, u) {
-					return "summary-of " + u, nil
+				if strings.Contains(req.Prompt, u) {
+					return agentcontracts.SpawnResult{Output: "summary-of " + u}, nil
 				}
 			}
-			return "summary", nil
+			return agentcontracts.SpawnResult{Output: "summary"}, nil
 		},
 	}
 	ctx := WithToolContext(context.Background(), tc)
@@ -49,9 +51,9 @@ func TestAgenticFetch_BatchFanOut(t *testing.T) {
 func TestAgenticFetch_SingleURLBackCompat(t *testing.T) {
 	var gotPrompt string
 	tc := &ToolContext{
-		AgentSpawnFn: func(_ context.Context, prompt string) (string, error) {
-			gotPrompt = prompt
-			return "ok", nil
+		AgentSpawnFn: func(_ context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+			gotPrompt = req.Prompt
+			return agentcontracts.SpawnResult{Output: "ok"}, nil
 		},
 	}
 	ctx := WithToolContext(context.Background(), tc)

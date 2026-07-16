@@ -5,144 +5,122 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+
+	"github.com/GrayCodeAI/hawk/internal/taskruntime"
 )
 
 // BackgroundAgentManager tracks background sub-agent goroutines so the
 // engine can wait for them and collect their results after the main LLM
-// turn completes.
+// turn completes. It is a thin facade over taskruntime.Registry (PACK-02).
 type BackgroundAgentManager struct {
-	mu      sync.Mutex
-	cond    *sync.Cond
-	agents  map[string]*BackgroundAgent
-	results map[string]*BackgroundResult
+	reg *taskruntime.Registry
+	// keep legacy lock for tests that may race FormatResults
+	mu sync.Mutex
 }
 
 // BackgroundAgent represents a running background sub-agent.
 type BackgroundAgent struct {
 	ID      string
 	Prompt  string
+	Request agentcontracts.SpawnRequest
 	Started time.Time
 }
 
 // BackgroundResult holds the outcome of a completed background sub-agent.
 type BackgroundResult struct {
-	ID     string
-	Prompt string
-	Output string
-	Err    error
-	Done   time.Time
+	ID      string
+	Prompt  string
+	Request agentcontracts.SpawnRequest
+	Output  string
+	Result  agentcontracts.SpawnResult
+	Err     error
+	Done    time.Time
 }
 
-// NewBackgroundAgentManager creates a new manager.
+// NewBackgroundAgentManager creates a new manager backed by taskruntime.
 func NewBackgroundAgentManager() *BackgroundAgentManager {
-	m := &BackgroundAgentManager{
-		agents:  make(map[string]*BackgroundAgent),
-		results: make(map[string]*BackgroundResult),
-	}
-	m.cond = sync.NewCond(&m.mu)
-	return m
+	return &BackgroundAgentManager{reg: taskruntime.New()}
 }
 
-// Spawn starts a background sub-agent goroutine. The agent runs the
-// spawnFn asynchronously and stores the result when complete.
-func (m *BackgroundAgentManager) Spawn(ctx context.Context, id, prompt string, spawnFn func(ctx context.Context, prompt string) (string, error)) {
-	m.mu.Lock()
-	m.agents[id] = &BackgroundAgent{
-		ID:      id,
-		Prompt:  prompt,
-		Started: time.Now(),
+// Registry exposes the underlying taskruntime registry (for Kill/Wait tools).
+func (m *BackgroundAgentManager) Registry() *taskruntime.Registry {
+	if m == nil {
+		return nil
 	}
-	m.mu.Unlock()
+	return m.reg
+}
 
-	go func() {
-		output, err := spawnFn(ctx, prompt)
-
-		m.mu.Lock()
-		delete(m.agents, id)
-		m.results[id] = &BackgroundResult{
-			ID:     id,
-			Prompt: prompt,
-			Output: output,
-			Err:    err,
-			Done:   time.Now(),
-		}
-		m.cond.Broadcast()
-		m.mu.Unlock()
-	}()
+// Spawn starts a background sub-agent goroutine with a typed spawn request.
+func (m *BackgroundAgentManager) Spawn(ctx context.Context, id string, req agentcontracts.SpawnRequest, spawnFn AgentSpawnFn) {
+	if m == nil || m.reg == nil || spawnFn == nil {
+		return
+	}
+	m.reg.SpawnAgent(ctx, id, req, taskruntime.SpawnFn(spawnFn))
 }
 
 // HasPending returns true if any background agents are still running.
 func (m *BackgroundAgentManager) HasPending() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return len(m.agents) > 0
+	if m == nil || m.reg == nil {
+		return false
+	}
+	return m.reg.HasPending()
 }
 
 // WaitForResults blocks until all pending agents complete or the timeout
 // is reached. Returns all collected results (including any that completed
 // before this call).
 func (m *BackgroundAgentManager) WaitForResults(timeout time.Duration) []*BackgroundResult {
-	deadline := time.Now().Add(timeout)
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for len(m.agents) > 0 {
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			break
-		}
-		// Use a timer to wake up on timeout even if no agent completes.
-		timer := time.AfterFunc(remaining, func() {
-			m.mu.Lock()
-			m.cond.Broadcast()
-			m.mu.Unlock()
-		})
-		m.cond.Wait()
-		timer.Stop()
+	if m == nil || m.reg == nil {
+		return nil
 	}
-
-	results := make([]*BackgroundResult, 0, len(m.results))
-	for _, r := range m.results {
-		results = append(results, r)
-	}
-	return results
+	tasks := m.reg.Wait(timeout)
+	return tasksToResults(tasks)
 }
 
 // CollectResults returns and clears all completed results.
 func (m *BackgroundAgentManager) CollectResults() []*BackgroundResult {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	results := make([]*BackgroundResult, 0, len(m.results))
-	for _, r := range m.results {
-		results = append(results, r)
+	if m == nil || m.reg == nil {
+		return nil
 	}
-	m.results = make(map[string]*BackgroundResult)
-	return results
+	return tasksToResults(m.reg.CollectCompleted())
 }
 
 // GetResult returns the result for a specific agent ID, if completed.
 func (m *BackgroundAgentManager) GetResult(id string) (*BackgroundResult, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	r, ok := m.results[id]
-	return r, ok
+	if m == nil || m.reg == nil {
+		return nil, false
+	}
+	t, ok := m.reg.Get(id)
+	if !ok || t.Status == taskruntime.StatusRunning {
+		return nil, false
+	}
+	return taskToResult(t), true
 }
 
 // IsRunning returns true if the agent with the given ID is still running.
 func (m *BackgroundAgentManager) IsRunning(id string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	_, ok := m.agents[id]
-	return ok
+	if m == nil || m.reg == nil {
+		return false
+	}
+	return m.reg.IsRunning(id)
 }
 
 // Elapsed returns the elapsed time for a running agent.
 func (m *BackgroundAgentManager) Elapsed(id string) time.Duration {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if a, ok := m.agents[id]; ok {
-		return time.Since(a.Started)
+	if m == nil || m.reg == nil {
+		return 0
 	}
-	return 0
+	return m.reg.Elapsed(id)
+}
+
+// Kill cancels a running background agent.
+func (m *BackgroundAgentManager) Kill(id string) error {
+	if m == nil || m.reg == nil {
+		return fmt.Errorf("background manager not configured")
+	}
+	return m.reg.Kill(id)
 }
 
 // FormatResults returns a human-readable summary of background results
@@ -164,4 +142,32 @@ func FormatResults(results []*BackgroundResult) string {
 		}
 	}
 	return out
+}
+
+func tasksToResults(tasks []*taskruntime.Task) []*BackgroundResult {
+	out := make([]*BackgroundResult, 0, len(tasks))
+	for _, t := range tasks {
+		out = append(out, taskToResult(t))
+	}
+	return out
+}
+
+func taskToResult(t *taskruntime.Task) *BackgroundResult {
+	br := &BackgroundResult{
+		ID:      t.ID,
+		Prompt:  t.Prompt,
+		Request: t.Request,
+		Output:  t.Output,
+		Done:    t.DoneAt,
+		Result: agentcontracts.SpawnResult{
+			SubagentID: t.ID,
+			Status:     string(t.Status),
+			Output:     t.Output,
+			Error:      t.Error,
+		},
+	}
+	if t.Error != "" {
+		br.Err = fmt.Errorf("%s", t.Error)
+	}
+	return br
 }

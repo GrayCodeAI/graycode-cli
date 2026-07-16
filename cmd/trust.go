@@ -1,0 +1,142 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"text/tabwriter"
+
+	"github.com/GrayCodeAI/hawk/internal/flags"
+	"github.com/GrayCodeAI/hawk/internal/trust"
+	"github.com/spf13/cobra"
+)
+
+var trustCmd = &cobra.Command{
+	Use:   "trust",
+	Short: "Manage folder trust for project automation",
+	Long: `Folder trust controls whether project-scoped hooks, MCP servers, LSP
+configs, and plugins may load from a repository.
+
+When HAWK_Y0_FOLDER_TRUST is enabled (default after Year 0 PACK-03),
+untrusted projects cannot run project automation (RCE mitigation).
+
+User-global plugins under the Hawk state directory always load.`,
+}
+
+var trustAddCmd = &cobra.Command{
+	Use:   "add [path]",
+	Short: "Trust a project directory (default: cwd)",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		path := ""
+		if len(args) > 0 {
+			path = args[0]
+		} else {
+			var err error
+			path, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+		}
+		s, err := trust.Open("")
+		if err != nil {
+			return err
+		}
+		reason, _ := cmd.Flags().GetString("reason")
+		if err := s.Trust(path, reason); err != nil {
+			return err
+		}
+		cmd.Printf("Trusted %s\n", path)
+		return nil
+	},
+}
+
+var trustRemoveCmd = &cobra.Command{
+	Use:   "remove [path]",
+	Short: "Remove trust for a project directory (default: cwd)",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		path := ""
+		if len(args) > 0 {
+			path = args[0]
+		} else {
+			var err error
+			path, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+		}
+		s, err := trust.Open("")
+		if err != nil {
+			return err
+		}
+		if err := s.Untrust(path); err != nil {
+			return err
+		}
+		cmd.Printf("Removed trust for %s\n", path)
+		return nil
+	},
+}
+
+var trustListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List trusted directories",
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		s, err := trust.Open("")
+		if err != nil {
+			return err
+		}
+		entries := s.List()
+		if len(entries) == 0 {
+			cmd.Println("No trusted directories.")
+			cmd.Printf("Folder trust enforcement: %v (HAWK_Y0_FOLDER_TRUST)\n", flags.FolderTrust())
+			return nil
+		}
+		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "PATH\tTRUSTED_AT\tREASON")
+		for _, e := range entries {
+			fmt.Fprintf(w, "%s\t%s\t%s\n", e.Path, e.TrustedAt.Format("2006-01-02 15:04"), e.Reason)
+		}
+		_ = w.Flush()
+		return nil
+	},
+}
+
+var trustCheckCmd = &cobra.Command{
+	Use:   "check [path]",
+	Short: "Check whether a path is trusted (default: cwd)",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		path := ""
+		if len(args) > 0 {
+			path = args[0]
+		} else {
+			var err error
+			path, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+		}
+		s, err := trust.Open("")
+		if err != nil {
+			return err
+		}
+		enforced := flags.FolderTrust()
+		trusted := s.IsTrusted(path)
+		cmd.Printf("path: %s\n", path)
+		cmd.Printf("trusted: %v\n", trusted)
+		cmd.Printf("enforcement: %v\n", enforced)
+		if enforced && !trusted {
+			return fmt.Errorf("not trusted")
+		}
+		return nil
+	},
+}
+
+func init() {
+	trustAddCmd.Flags().String("reason", "", "Optional reason recorded in the trust store")
+	trustCmd.AddCommand(trustAddCmd)
+	trustCmd.AddCommand(trustRemoveCmd)
+	trustCmd.AddCommand(trustListCmd)
+	trustCmd.AddCommand(trustCheckCmd)
+	rootCmd.AddCommand(trustCmd)
+}

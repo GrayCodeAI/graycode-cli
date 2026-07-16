@@ -6,7 +6,23 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 )
+
+func agentSpawnExplore(prompt string) agentcontracts.SpawnRequest {
+	return agentcontracts.SpawnRequest{
+		Prompt:       prompt,
+		SubagentType: string(agentcontracts.TypeExplore),
+	}
+}
+
+func spawnOutput(res agentcontracts.SpawnResult) string {
+	if res.Output != "" {
+		return res.Output
+	}
+	return res.Summary
+}
 
 // maxAgenticFetchConcurrency bounds how many pages are fetched and summarized
 // in parallel when a batch of URLs is supplied, matching the WebSearch cap so
@@ -71,7 +87,11 @@ func (t AgenticFetchTool) Execute(ctx context.Context, input json.RawMessage) (s
 	}
 
 	if len(urls) == 1 {
-		return tc.AgentSpawnFn(ctx, t.researchPrompt(urls[0], p.Query))
+		res, err := tc.AgentSpawnFn(ctx, agentSpawnExplore(t.researchPrompt(urls[0], p.Query)))
+		if err != nil {
+			return "", err
+		}
+		return spawnOutput(res), nil
 	}
 
 	// Batch: summarize each URL concurrently, bounded, with labeled sections.
@@ -84,12 +104,12 @@ func (t AgenticFetchTool) Execute(ctx context.Context, input json.RawMessage) (s
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			out, err := tc.AgentSpawnFn(ctx, t.researchPrompt(u, p.Query))
+			res, err := tc.AgentSpawnFn(ctx, agentSpawnExplore(t.researchPrompt(u, p.Query)))
 			if err != nil {
 				outputs[idx] = fmt.Sprintf("## %s\n\nError: %v", u, err)
 				return
 			}
-			outputs[idx] = fmt.Sprintf("## %s\n\n%s", u, out)
+			outputs[idx] = fmt.Sprintf("## %s\n\n%s", u, spawnOutput(res))
 		}(i, u)
 	}
 	wg.Wait()

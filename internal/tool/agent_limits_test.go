@@ -5,14 +5,16 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 )
 
 func TestAgentTool_PromptTooLarge(t *testing.T) {
 	t.Parallel()
 
 	ctx := WithToolContext(context.Background(), &ToolContext{
-		AgentSpawnFn: func(_ context.Context, prompt string) (string, error) {
-			return prompt, nil
+		AgentSpawnFn: func(_ context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+			return agentcontracts.SpawnResult{Output: req.Prompt}, nil
 		},
 	})
 	oversized := strings.Repeat("a", maxAgentPromptBytes+1)
@@ -27,8 +29,8 @@ func TestMultiAgentTool_TooManyTasks(t *testing.T) {
 	t.Parallel()
 
 	ctx := WithToolContext(context.Background(), &ToolContext{
-		AgentSpawnFn: func(_ context.Context, prompt string) (string, error) {
-			return prompt, nil
+		AgentSpawnFn: func(_ context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+			return agentcontracts.SpawnResult{Output: req.Prompt}, nil
 		},
 	})
 	tasks := make([]string, maxParallelAgentTasks+1)
@@ -46,8 +48,8 @@ func TestMultiAgentTool_TaskPromptTooLarge(t *testing.T) {
 	t.Parallel()
 
 	ctx := WithToolContext(context.Background(), &ToolContext{
-		AgentSpawnFn: func(_ context.Context, prompt string) (string, error) {
-			return prompt, nil
+		AgentSpawnFn: func(_ context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+			return agentcontracts.SpawnResult{Output: req.Prompt}, nil
 		},
 	})
 	oversized := strings.Repeat("a", maxAgentPromptBytes+1)

@@ -8,11 +8,17 @@ import (
 	"strings"
 	"sync"
 
+agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/lint"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
+
+// AgentSpawnFn is the typed subagent entrypoint (Year 0 PACK-02).
+// Implementations must honor SpawnRequest fields after Normalize.
+type AgentSpawnFn func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error)
 
 // Tool is the interface every hawk tool implements.
 type Tool interface {
@@ -59,7 +65,7 @@ type CodeSearchResult struct {
 
 // ToolContext carries session-level functions for tools that need them.
 type ToolContext struct {
-	AgentSpawnFn        func(ctx context.Context, prompt string) (string, error)
+	AgentSpawnFn        AgentSpawnFn
 	AskUserFn           func(question string) (string, error)
 	CodeSearchFn        func(ctx context.Context, query string, limit int) ([]CodeSearchResult, error)
 	RefreshCodeIndexFn  func(ctx context.Context) error
@@ -82,6 +88,12 @@ type ToolContext struct {
 	// BackgroundManager tracks background sub-agents. If nil, background
 	// mode is not available.
 	BackgroundManager *BackgroundAgentManager
+	// ReadOnlyBash, when true, enforces the explore/plan bash allowlist
+	// (ExploreBashAllowed) on every Bash invocation.
+	ReadOnlyBash bool
+	// WorkingDir, when set, is used as cmd.Dir for Bash and as the preferred
+	// workspace root for path tools (subagent worktree isolation).
+	WorkingDir string
 	// Lint configures the optional post-write auto-lint cycle. The zero value
 	// (Enabled=false) keeps linting off so users are not surprised.
 	Lint lint.Config
