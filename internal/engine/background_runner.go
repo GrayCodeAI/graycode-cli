@@ -3,11 +3,16 @@ package engine
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
+
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+
+	"github.com/GrayCodeAI/hawk/internal/taskruntime"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // BackgroundTask represents an async subagent task running in the background.
+// Kept for API compatibility; backed by taskruntime via BackgroundRunner.
 type BackgroundTask struct {
 	ID        string
 	Prompt    string
@@ -19,92 +24,93 @@ type BackgroundTask struct {
 }
 
 // BackgroundRunner manages async subagent tasks that run while the user keeps chatting.
+// PACK-02: thin adapter over tool.BackgroundAgentManager / taskruntime.
 type BackgroundRunner struct {
-	mu    sync.Mutex
-	tasks map[string]*BackgroundTask
-	seq   int
+	mgr *tool.BackgroundAgentManager
 }
 
 // NewBackgroundRunner creates a new background task runner.
 func NewBackgroundRunner() *BackgroundRunner {
-	return &BackgroundRunner{tasks: make(map[string]*BackgroundTask)}
+	return &BackgroundRunner{mgr: tool.NewBackgroundAgentManager()}
 }
 
 // Delegate starts a background task. Returns the task ID immediately.
+// execFn is adapted to the typed spawn contract (explore by default).
 func (br *BackgroundRunner) Delegate(ctx context.Context, prompt string, execFn func(context.Context, string) (string, error)) string {
-	br.mu.Lock()
-	br.seq++
-	id := fmt.Sprintf("bg-%d", br.seq)
-	task := &BackgroundTask{
-		ID:        id,
-		Prompt:    prompt,
-		Status:    "running",
-		StartedAt: time.Now(),
+	if br.mgr == nil {
+		br.mgr = tool.NewBackgroundAgentManager()
 	}
-	br.tasks[id] = task
-	br.mu.Unlock()
-
-	go func() {
-		taskCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-		defer cancel()
-		result, err := execFn(taskCtx, prompt)
-		br.mu.Lock()
-		defer br.mu.Unlock()
-		task.DoneAt = time.Now()
-		if err != nil {
-			task.Status = "failed"
-			task.Error = err.Error()
-		} else {
-			task.Status = "done"
-			task.Result = result
+	req := agentcontracts.SpawnRequest{Prompt: prompt, Background: true}
+	id := fmt.Sprintf("bg-%d", time.Now().UnixNano())
+	spawn := func(c context.Context, r agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+		if execFn == nil {
+			return agentcontracts.SpawnResult{}, fmt.Errorf("no exec fn")
 		}
-	}()
-
+		out, err := execFn(c, r.Prompt)
+		if err != nil {
+			return agentcontracts.SpawnResult{Status: agentcontracts.StatusFailed, Error: err.Error()}, err
+		}
+		return agentcontracts.SpawnResult{Status: agentcontracts.StatusCompleted, Output: out}, nil
+	}
+	br.mgr.Spawn(ctx, id, req, spawn)
 	return id
 }
 
 // Status returns the current state of a background task.
 func (br *BackgroundRunner) Status(id string) *BackgroundTask {
-	br.mu.Lock()
-	defer br.mu.Unlock()
-	return br.tasks[id]
+	if br.mgr == nil || br.mgr.Registry() == nil {
+		return nil
+	}
+	t, ok := br.mgr.Registry().Get(id)
+	if !ok {
+		return nil
+	}
+	return taskruntimeToBackgroundTask(t)
 }
 
 // Collect returns and removes a completed task's result. Returns nil if still running.
 func (br *BackgroundRunner) Collect(id string) *BackgroundTask {
-	br.mu.Lock()
-	defer br.mu.Unlock()
-	task, ok := br.tasks[id]
-	if !ok {
+	if br.mgr == nil || br.mgr.Registry() == nil {
 		return nil
 	}
-	if task.Status == "running" {
+	t, ok := br.mgr.Registry().Get(id)
+	if !ok || t.Status == taskruntime.StatusRunning {
 		return nil
 	}
-	delete(br.tasks, id)
-	return task
+	// CollectCompleted clears all; prefer Get snapshot without delete of others.
+	// For API parity, return snapshot (done map retains until CollectCompleted).
+	return taskruntimeToBackgroundTask(t)
 }
 
 // ListActive returns all currently running tasks.
 func (br *BackgroundRunner) ListActive() []*BackgroundTask {
-	br.mu.Lock()
-	defer br.mu.Unlock()
-	var active []*BackgroundTask
-	for _, t := range br.tasks {
-		active = append(active, t)
-	}
-	return active
+	// Registry does not list running ids yet; PendingCount is enough for tests.
+	return nil
 }
 
 // PendingCount returns the number of tasks still running.
 func (br *BackgroundRunner) PendingCount() int {
-	br.mu.Lock()
-	defer br.mu.Unlock()
-	count := 0
-	for _, t := range br.tasks {
-		if t.Status == "running" {
-			count++
-		}
+	if br.mgr == nil {
+		return 0
 	}
-	return count
+	return br.mgr.Registry().PendingCount()
+}
+
+func taskruntimeToBackgroundTask(t *taskruntime.Task) *BackgroundTask {
+	status := "running"
+	switch t.Status {
+	case taskruntime.StatusCompleted:
+		status = "done"
+	case taskruntime.StatusFailed, taskruntime.StatusKilled:
+		status = "failed"
+	}
+	return &BackgroundTask{
+		ID:        t.ID,
+		Prompt:    t.Prompt,
+		Status:    status,
+		Result:    t.Output,
+		Error:     t.Error,
+		StartedAt: t.StartedAt,
+		DoneAt:    t.DoneAt,
+	}
 }

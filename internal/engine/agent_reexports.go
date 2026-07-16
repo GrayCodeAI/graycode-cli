@@ -16,13 +16,16 @@ type (
 const (
 	SubAgentExplore     = agent.SubAgentExplore
 	SubAgentGeneral     = agent.SubAgentGeneral
+	SubAgentPlan        = agent.SubAgentPlan
 	DefaultExploreTurns = agent.DefaultExploreTurns
 	DefaultGeneralTurns = agent.DefaultGeneralTurns
+	DefaultPlanTurns    = agent.DefaultPlanTurns
 	MaxAgentDepth       = agent.MaxAgentDepth
 )
 
 var (
 	ExploreTools      = agent.ExploreTools
+	PlanTools         = agent.PlanTools
 	ModeToolAllowlist = agent.ModeToolAllowlist
 )
 
@@ -34,5 +37,7 @@ func NewSubAgentBudget(mode SubAgentMode, cfg SubAgentConfig) *SubAgentBudget {
 func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 	return agent.FilterToolsForMode(mode, available)
 }
+func DefaultTurnsForMode(mode SubAgentMode) int       { return agent.DefaultTurnsForMode(mode) }
+func IsReadOnlyMode(mode SubAgentMode) bool             { return agent.IsReadOnlyMode(mode) }
 func NewBackgroundAgentPool() *BackgroundAgentPool    { return agent.NewBackgroundAgentPool() }
 func FormatResults(results []BackgroundResult) string { return agent.FormatResults(results) }

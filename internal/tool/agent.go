@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 )
 
 const (
@@ -28,25 +30,67 @@ func (AgentTool) Name() string      { return "Agent" }
 func (AgentTool) RiskLevel() string { return "medium" }
 func (AgentTool) Aliases() []string { return []string{"agent", "Task"} }
 func (AgentTool) Description() string {
-	return "Spawn a sub-agent to handle a complex task independently. The sub-agent has access to all tools. Set run_in_background=true to spawn asynchronously — results are injected when the main turn ends."
+	return "Spawn a sub-agent to handle a complex task independently. " +
+		"Choose subagent_type: explore (read-only research), plan (read-only planning), " +
+		"or general-purpose (full tools). Optional capability_mode, isolation, thoroughness, " +
+		"cwd, model, description, and run_in_background control spawn behavior."
 }
 
 func (AgentTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"prompt": map[string]interface{}{"type": "string", "description": "Task description for the sub-agent"},
+			"prompt": map[string]interface{}{
+				"type":        "string",
+				"description": "Task description for the sub-agent",
+			},
+			"description": map[string]interface{}{
+				"type":        "string",
+				"description": "Short human-readable label for the spawn (3–5 words).",
+			},
+			"subagent_type": map[string]interface{}{
+				"type":        "string",
+				"description": "explore | plan | general-purpose (alias: general). Default: explore.",
+				"enum":        []string{"explore", "plan", "general-purpose", "general"},
+			},
+			"capability_mode": map[string]interface{}{
+				"type":        "string",
+				"description": "read-only | read-write | execute | all. Defaults from subagent_type when omitted.",
+				"enum":        []string{"read-only", "read-write", "execute", "all"},
+			},
+			"isolation": map[string]interface{}{
+				"type":        "string",
+				"description": "none | worktree. Mutually exclusive with cwd when worktree.",
+				"enum":        []string{"none", "worktree"},
+			},
+			"thoroughness": map[string]interface{}{
+				"type":        "string",
+				"description": "Explore only: quick | medium | very-thorough.",
+				"enum":        []string{"quick", "medium", "very-thorough"},
+			},
+			"cwd": map[string]interface{}{
+				"type":        "string",
+				"description": "Working directory for the sub-agent. Mutually exclusive with isolation=worktree.",
+			},
+			"model": map[string]interface{}{
+				"type":        "string",
+				"description": "Optional model override for the sub-agent.",
+			},
 			"run_in_background": map[string]interface{}{
 				"type":        "boolean",
-				"description": "If true, spawn the sub-agent in the background and continue. Results are collected when the main turn ends.",
+				"description": "If true, spawn asynchronously — results are collected when the main turn ends.",
 			},
 			"agent_id": map[string]interface{}{
 				"type":        "string",
-				"description": "ID of a previous sub-agent to resume. The sub-agent continues from where it left off with its full context preserved.",
+				"description": "ID of a previous sub-agent to query status/result (legacy resume lookup).",
+			},
+			"resume_from": map[string]interface{}{
+				"type":        "string",
+				"description": "Subagent ID to resume with full transcript (typed spawn).",
 			},
 			"retry_of": map[string]interface{}{
 				"type":        "string",
-				"description": "ID of a failed sub-agent to retry. Spawns a new agent with the same task.",
+				"description": "ID of a failed sub-agent to retry. Spawns a new agent with the same request.",
 			},
 		},
 		"required": []string{"prompt"},
@@ -56,8 +100,16 @@ func (AgentTool) Parameters() map[string]interface{} {
 func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Prompt          string `json:"prompt"`
+		Description     string `json:"description"`
+		SubagentType    string `json:"subagent_type"`
+		CapabilityMode  string `json:"capability_mode"`
+		Isolation       string `json:"isolation"`
+		Thoroughness    string `json:"thoroughness"`
+		CWD             string `json:"cwd"`
+		Model           string `json:"model"`
 		RunInBackground bool   `json:"run_in_background"`
 		AgentID         string `json:"agent_id"`
+		ResumeFrom      string `json:"resume_from"`
 		RetryOf         string `json:"retry_of"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
@@ -71,7 +123,7 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		return "", fmt.Errorf("agent spawning not configured")
 	}
 
-	// Resume a previous agent by ID.
+	// Resume/status lookup for a previous agent by ID.
 	if p.AgentID != "" {
 		if tc.BackgroundManager == nil {
 			return "", fmt.Errorf("background agent manager not configured")
@@ -87,7 +139,7 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		return "", fmt.Errorf("agent_id %q not found", p.AgentID)
 	}
 
-	// Retry a failed agent.
+	// Retry a failed agent with its original request.
 	if p.RetryOf != "" {
 		if tc.BackgroundManager == nil {
 			return "", fmt.Errorf("background agent manager not configured")
@@ -96,10 +148,30 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		if !ok {
 			return "", fmt.Errorf("retry_of %q not found or still running", p.RetryOf)
 		}
-		// Re-spawn with the original prompt.
+		req := result.Request
+		if req.Prompt == "" {
+			req.Prompt = result.Prompt
+		}
 		id := fmt.Sprintf("retry-%d", time.Now().UnixNano())
-		tc.BackgroundManager.Spawn(ctx, id, result.Prompt, tc.AgentSpawnFn)
+		req.Background = true
+		tc.BackgroundManager.Spawn(ctx, id, req, tc.AgentSpawnFn)
 		return fmt.Sprintf(`{"agent":"%s","retry_of":"%s","status":"running","message":"Retrying failed agent."}`, id, p.RetryOf), nil
+	}
+
+	req := agentcontracts.SpawnRequest{
+		Prompt:         p.Prompt,
+		Description:    p.Description,
+		SubagentType:   p.SubagentType,
+		CapabilityMode: p.CapabilityMode,
+		Isolation:      p.Isolation,
+		ResumeFrom:     p.ResumeFrom,
+		CWD:            p.CWD,
+		Model:          p.Model,
+		Background:     p.RunInBackground,
+		Thoroughness:   p.Thoroughness,
+	}
+	if _, err := req.Normalize(); err != nil {
+		return "", err
 	}
 
 	if p.RunInBackground {
@@ -107,15 +179,27 @@ func (AgentTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 			return "", fmt.Errorf("background agent manager not configured")
 		}
 		id := fmt.Sprintf("bg-%d", time.Now().UnixNano())
-		tc.BackgroundManager.Spawn(ctx, id, p.Prompt, tc.AgentSpawnFn)
+		tc.BackgroundManager.Spawn(ctx, id, req, tc.AgentSpawnFn)
 		return fmt.Sprintf(`{"agent":"%s","status":"running","message":"Sub-agent spawned in background. Results will be injected when the main turn ends."}`, id), nil
 	}
 
-	out, err := tc.AgentSpawnFn(ctx, p.Prompt)
+	res, err := tc.AgentSpawnFn(ctx, req)
 	if err != nil {
 		return "", err
 	}
-	return agentEnvelope("success", out), nil
+	out := res.Output
+	if out == "" {
+		out = res.Summary
+	}
+	id := res.SubagentID
+	if id == "" {
+		id = "sub-agent"
+	}
+	status := res.Status
+	if status == "" {
+		status = "success"
+	}
+	return agentEnvelopeWithID(id, status, out), nil
 }
 
 func agentEnvelope(status, output string) string {
@@ -150,7 +234,8 @@ type MultiAgentTool struct{}
 func (MultiAgentTool) Name() string      { return "MultiAgent" }
 func (MultiAgentTool) Aliases() []string { return []string{"multi_agent"} }
 func (MultiAgentTool) Description() string {
-	return "Spawn multiple sub-agents in parallel for independent tasks."
+	return "Spawn multiple sub-agents in parallel for independent tasks. " +
+		"Each task is a prompt string (explore by default) or an object with typed spawn fields."
 }
 
 func (MultiAgentTool) Parameters() map[string]interface{} {
@@ -158,8 +243,26 @@ func (MultiAgentTool) Parameters() map[string]interface{} {
 		"type": "object",
 		"properties": map[string]interface{}{
 			"tasks": map[string]interface{}{
-				"type":  "array",
-				"items": map[string]interface{}{"type": "string"},
+				"type": "array",
+				"items": map[string]interface{}{
+					"oneOf": []interface{}{
+						map[string]interface{}{"type": "string"},
+						map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"prompt":          map[string]interface{}{"type": "string"},
+								"subagent_type":   map[string]interface{}{"type": "string"},
+								"capability_mode": map[string]interface{}{"type": "string"},
+								"isolation":       map[string]interface{}{"type": "string"},
+								"thoroughness":    map[string]interface{}{"type": "string"},
+								"description":     map[string]interface{}{"type": "string"},
+								"model":           map[string]interface{}{"type": "string"},
+								"cwd":             map[string]interface{}{"type": "string"},
+							},
+							"required": []string{"prompt"},
+						},
+					},
+				},
 			},
 			"run_in_background": map[string]interface{}{
 				"type":        "boolean",
@@ -172,8 +275,8 @@ func (MultiAgentTool) Parameters() map[string]interface{} {
 
 func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
-		Tasks           []string `json:"tasks"`
-		RunInBackground bool     `json:"run_in_background"`
+		Tasks           []json.RawMessage `json:"tasks"`
+		RunInBackground bool              `json:"run_in_background"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
@@ -181,11 +284,22 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	if len(p.Tasks) > maxParallelAgentTasks {
 		return "", fmt.Errorf("too many tasks: %d (max %d)", len(p.Tasks), maxParallelAgentTasks)
 	}
-	for _, task := range p.Tasks {
-		if len(task) > maxAgentPromptBytes {
-			return "", fmt.Errorf("task prompt too large: %d bytes (max %d)", len(task), maxAgentPromptBytes)
+
+	reqs := make([]agentcontracts.SpawnRequest, 0, len(p.Tasks))
+	for _, raw := range p.Tasks {
+		req, err := parseMultiAgentTask(raw)
+		if err != nil {
+			return "", err
 		}
+		if len(req.Prompt) > maxAgentPromptBytes {
+			return "", fmt.Errorf("task prompt too large: %d bytes (max %d)", len(req.Prompt), maxAgentPromptBytes)
+		}
+		if _, err := req.Normalize(); err != nil {
+			return "", err
+		}
+		reqs = append(reqs, req)
 	}
+
 	tc := GetToolContext(ctx)
 	if tc == nil || tc.AgentSpawnFn == nil {
 		return "", fmt.Errorf("agent spawning not configured")
@@ -195,10 +309,11 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 		if tc.BackgroundManager == nil {
 			return "", fmt.Errorf("background agent manager not configured")
 		}
-		ids := make([]string, len(p.Tasks))
-		for i, task := range p.Tasks {
+		ids := make([]string, len(reqs))
+		for i, req := range reqs {
 			id := fmt.Sprintf("bg-%d-%d", time.Now().UnixNano(), i)
-			tc.BackgroundManager.Spawn(ctx, id, task, tc.AgentSpawnFn)
+			req.Background = true
+			tc.BackgroundManager.Spawn(ctx, id, req, tc.AgentSpawnFn)
 			ids[i] = id
 		}
 		b, _ := json.Marshal(ids)
@@ -210,18 +325,22 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 		output string
 		err    error
 	}
-	results := make([]result, len(p.Tasks))
+	results := make([]result, len(reqs))
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, maxConcurrentAgentTasks)
-	for i, task := range p.Tasks {
+	for i, req := range reqs {
 		wg.Add(1)
-		go func(idx int, prompt string) {
+		go func(idx int, r agentcontracts.SpawnRequest) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			out, err := tc.AgentSpawnFn(ctx, prompt)
+			res, err := tc.AgentSpawnFn(ctx, r)
+			out := res.Output
+			if out == "" {
+				out = res.Summary
+			}
 			results[idx] = result{idx: idx, output: out, err: err}
-		}(i, task)
+		}(i, req)
 	}
 	wg.Wait()
 	envelopes := make([]json.RawMessage, len(results))
@@ -238,4 +357,35 @@ func (MultiAgentTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	}
 	b, _ := json.Marshal(envelopes)
 	return string(b), nil
+}
+
+func parseMultiAgentTask(raw json.RawMessage) (agentcontracts.SpawnRequest, error) {
+	// String form: treat as explore prompt.
+	var asString string
+	if err := json.Unmarshal(raw, &asString); err == nil {
+		return agentcontracts.SpawnRequest{Prompt: asString}, nil
+	}
+	var obj struct {
+		Prompt         string `json:"prompt"`
+		Description    string `json:"description"`
+		SubagentType   string `json:"subagent_type"`
+		CapabilityMode string `json:"capability_mode"`
+		Isolation      string `json:"isolation"`
+		Thoroughness   string `json:"thoroughness"`
+		CWD            string `json:"cwd"`
+		Model          string `json:"model"`
+	}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return agentcontracts.SpawnRequest{}, fmt.Errorf("invalid multi-agent task: %w", err)
+	}
+	return agentcontracts.SpawnRequest{
+		Prompt:         obj.Prompt,
+		Description:    obj.Description,
+		SubagentType:   obj.SubagentType,
+		CapabilityMode: obj.CapabilityMode,
+		Isolation:      obj.Isolation,
+		Thoroughness:   obj.Thoroughness,
+		CWD:            obj.CWD,
+		Model:          obj.Model,
+	}, nil
 }

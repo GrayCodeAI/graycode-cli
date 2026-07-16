@@ -2,6 +2,8 @@
 
 **Status:** Master long-term plan  
 **Date:** 2026-07-16  
+**Active execution:** [YEAR-0-ACTIVE.md](./YEAR-0-ACTIVE.md) (Year 0 control-plane track)  
+**ADR:** [ADR-0003](../architecture/adr/ADR-0003-grok-behavioral-port-go-multirepo.md)  
 **Meaning of “port”:** Reimplement **every Grok Build capability** in idiomatic **Go** across hawk-eco repos.  
 **Not meaning:** Copy Rust crates, depend on Grok binaries, or collapse hawk into a Rust monorepo.
 

@@ -127,8 +127,12 @@ type Session struct {
 	//
 	// Deprecated: use s.MemorySvc() (Phase 4 sub-service) for:
 	//   Memory, YaadBridge, EnhancedMemory.
-	AgentSpawnFn   func(ctx context.Context, prompt string) (string, error)
-	AskUserFn      func(question string) (string, error)
+	AgentSpawnFn tool.AgentSpawnFn
+	AskUserFn    func(question string) (string, error)
+	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
+	readOnlyBash bool
+	// workingDir is the preferred cwd for tools (worktree isolation).
+	workingDir string
 	Memory         MemoryRecaller
 	YaadBridge     *memory.YaadBridge
 	EnhancedMemory *memory.EnhancedMemoryManager

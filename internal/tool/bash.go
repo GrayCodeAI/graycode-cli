@@ -461,6 +461,17 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		return "", fmt.Errorf("command is required")
 	}
 
+	// Explore/plan hard gate: segment-aware read-only allowlist (PACK-02).
+	if tc := GetToolContext(ctx); tc != nil && tc.ReadOnlyBash {
+		if err := ExploreBashAllowed(p.Command); err != nil {
+			return "", fmt.Errorf("blocked (explore/plan read-only bash): %w", err)
+		}
+		// Background bash can still mutate via long-running processes; deny.
+		if p.RunInBackground {
+			return "", fmt.Errorf("blocked (explore/plan read-only bash): run_in_background is not allowed")
+		}
+	}
+
 	// Safety layer: block destructive commands before any execution.
 	if IsDestructiveCommand(p.Command) {
 		return "", fmt.Errorf("blocked: destructive command pattern detected — %s", p.Command)
@@ -620,6 +631,9 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 
 	cmd := exec.CommandContext(ctx, execName, execArgs...) // #nosec G204 -- command parsed from tool-configured command string (lint/test command)
+	if tc := GetToolContext(ctx); tc != nil && tc.WorkingDir != "" {
+		cmd.Dir = tc.WorkingDir
+	}
 	// Use a limitedWriter to cap output at maxOutputBytes instead of
 	// CombinedOutput, which buffers the entire output in memory. A command
 	// like `yes` or `cat /dev/urandom` can produce GBs before the timeout

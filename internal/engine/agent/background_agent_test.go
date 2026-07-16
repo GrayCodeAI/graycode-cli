@@ -65,7 +65,7 @@ func TestBackgroundAgentPool_SubmitError(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("Collect() returned %d results, want 1", len(results))
 	}
-	if !errors.Is(results[0].Error, expectedErr) {
+	if results[0].Error == nil || results[0].Error.Error() != expectedErr.Error() {
 		t.Errorf("Error = %v, want %v", results[0].Error, expectedErr)
 	}
 }

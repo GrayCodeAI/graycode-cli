@@ -31,6 +31,13 @@ var ModeToolAllowlist = map[SubAgentMode][]string{
 		"LS",
 		"Bash", // read-only commands only (enforced by sandbox)
 	},
+	SubAgentPlan: {
+		"Read",
+		"Grep",
+		"Glob",
+		"LS",
+		"Bash", // read-only commands only (enforced by sandbox)
+	},
 	SubAgentGeneral: {
 		"Read",
 		"Grep",
@@ -53,9 +60,12 @@ type SubAgentBudget struct {
 
 // NewSubAgentBudget creates a budget tracker for the given mode and config.
 func NewSubAgentBudget(mode SubAgentMode, cfg SubAgentConfig) *SubAgentBudget {
-	max := cfg.GeneralMaxTurns
-	if mode == SubAgentExplore {
+	max := DefaultTurnsForMode(mode)
+	if mode == SubAgentExplore && cfg.ExploreMaxTurns > 0 {
 		max = cfg.ExploreMaxTurns
+	}
+	if mode == SubAgentGeneral && cfg.GeneralMaxTurns > 0 {
+		max = cfg.GeneralMaxTurns
 	}
 	return &SubAgentBudget{
 		Mode:     mode,

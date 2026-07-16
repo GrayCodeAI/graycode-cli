@@ -338,9 +338,12 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			}
 			return resp.Content, nil
 		},
-		YaadBridge:  s.MemorySvc().Yaad(),
-		SpecSlugGet: func() string { return s.Perm.SpecSlug },
-		SpecSlugSet: func(slug string) { s.Perm.SpecSlug = slug },
+		YaadBridge:        s.MemorySvc().Yaad(),
+		SpecSlugGet:       func() string { return s.Perm.SpecSlug },
+		SpecSlugSet:       func(slug string) { s.Perm.SpecSlug = slug },
+		BackgroundManager: s.ensureBackgroundManager(),
+		ReadOnlyBash:      s.readOnlyBash,
+		WorkingDir:        s.workingDir,
 	})
 	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
