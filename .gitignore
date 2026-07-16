@@ -1,6 +1,8 @@
 # Binaries
 /hawk
-bin/
+# Ignore build output in bin/, but track committed source scripts like bin/buf.
+bin/*
+!bin/buf
 hawk_bin
 *.exe
 *.dll

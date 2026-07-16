@@ -1,0 +1,22 @@
+{
+    "version": "0.0.0-development",
+    "license": "Apache-2.0",
+    "files": [
+        "bin/",
+        "THIRD_PARTY_NOTICES.md"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "name": "@graycodeai/hawk-win32-arm64",
+    "description": "win32-arm64 binary for @graycodeai/hawk. Do not install directly; install @graycodeai/hawk instead.",
+    "os": [
+        "win32"
+    ],
+    "cpu": [
+        "arm64"
+    ],
+    "bin": {
+        "hawk": "bin/hawk.exe"
+    }
+}

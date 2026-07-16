@@ -1,6 +1,15 @@
 #!/bin/sh
 set -e
 
+# Versioned install target.
+# By default the binary is installed under $HAWK_HOME/bin (default ~/.hawk/bin).
+# Override with HAWK_HOME env var, or pass --prefix <dir> as the first flag.
+HAWK_HOME="${HAWK_HOME:-$HOME/.hawk}"
+if [ "$1" = "--prefix" ]; then
+  HAWK_HOME="$2"
+  shift 2
+fi
+
 REPO="GrayCodeAI/hawk"
 BINARY="hawk"
 
@@ -84,13 +93,53 @@ else
   tar xz -C "$TMP" -f "$ARCHIVE"
 fi
 
-INSTALL_DIR="/usr/local/bin"
-if [ ! -w "$INSTALL_DIR" ]; then
-  echo "Installing to $INSTALL_DIR (requires sudo)..."
-  sudo mv "$TMP/$BIN_NAME" "$INSTALL_DIR/"
+# Strip a leading "v" if the release tag was returned with one, so the
+# versioned file name is the bare semver (e.g. 1.2.3).
+VERSION=$(printf '%s' "$LATEST" | sed 's/^v//')
+
+# --- Versioned install -------------------------------------------------------
+# Adopted from SpaceXAI grok's postinstall.js. We never overwrite a binary in
+# place. On macOS (and any codesigned platform) replacing a file that a running
+# process has mmap'd invalidates the kernel's code-signature cache; the kernel
+# then SIGKILLs that process. Installing into a per-version file and swapping
+# the symlink means a running process keeps its open fd on the old inode and
+# keeps running the previous version untouched — no SIGKILL, no disruption.
+#
+# The symlink is written to a temp name and then renamed into place so the
+# rename is atomic; a racing process either sees the old or new link, never a
+# half-written one.
+#
+# TODO(release-eng): checksums.txt ships in the same release as the artifact,
+# so it only protects against corruption — not a compromised release. Sign
+# checksums.txt in goreleaser (cosign keyless or minisign) and verify the
+# signature here when the verifier tool is available. Versioned install is a
+# prerequisite for safe in-place self-update tooling: once installs land at a
+# stable versioned path + symlink, a future updater can swap the link without
+# ever replacing a binary a running hawk has mmap'd (same SIGKILL rationale).
+#
+# Windows lacks reliable non-admin symlinks, so the launcher is a plain copy.
+
+BINDIR="$HAWK_HOME/bin"
+mkdir -p "$BINDIR"
+
+if [ "$OS" = "windows" ]; then
+  mv -f "$TMP/$BIN_NAME" "$BINDIR/hawk-$VERSION.exe"
+  cp -f "$BINDIR/hawk-$VERSION.exe" "$BINDIR/hawk.exe"
+  echo ""
+  echo "Installed hawk v$VERSION to $BINDIR/hawk-$VERSION.exe"
+  echo "Linked launcher: $BINDIR/hawk.exe"
 else
-  mv "$TMP/$BIN_NAME" "$INSTALL_DIR/"
+  mv -f "$TMP/$BIN_NAME" "$BINDIR/hawk-$VERSION"
+  ln -sf "hawk-$VERSION" "$BINDIR/hawk.tmp" \
+    && mv -f "$BINDIR/hawk.tmp" "$BINDIR/hawk"
+  echo ""
+  echo "Installed hawk v$VERSION to $BINDIR/hawk-$VERSION (linked: $BINDIR/hawk)"
 fi
 
 rm -rf "$TMP"
-echo "hawk v${LATEST} installed to $INSTALL_DIR/$BIN_NAME"
+echo ""
+echo "Add $BINDIR to your PATH if it is not already, e.g."
+echo "  export PATH=\"\$PATH:$BINDIR\""
+echo ""
+echo "Restart any running hawk sessions to pick up the new binary — the old"
+echo "process keeps running the previous version until it is restarted."
