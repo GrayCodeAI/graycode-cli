@@ -68,6 +68,31 @@ It runs on:
 - **Drift is visible.** A component that's never updated in `next` but is
   fine in `stable` shows up as a drift candidate in CI reports.
 
+## Pin freshness (advisory)
+
+Separate from the matrix above: `hawk`'s own `go.mod` directly pins a couple
+of shared leaf dependencies (currently `hawk-core-contracts`), and several
+`external/` submodule consumers (`inspect`, `sight`, ...) pin the *same*
+dependencies independently in their own `go.mod`. Go's minimal version
+selection means whatever `hawk` pins wins in `hawk`'s own build — but if a
+consumer's own pin is older, that consumer's CI has never actually tested the
+version that ships. This is exactly the kind of drift that let a real bug
+through in July 2026 (a stale goreleaser pin sat unnoticed until the first
+tag push exercised it).
+
+`make compat-drift` (wired into this workflow as an advisory, non-blocking
+step) reports any such mismatch by comparing `hawk/go.mod` against each
+`external/<repo>/go.mod`:
+
+```bash
+make compat-drift
+```
+
+This **never fails the build** — it's a signal for humans to notice and
+re-pin the consumer, not a gate. It depends on `external/` submodules being
+checked out (the workflow does this via `checkout-eyrie`); running it without
+that will just report nothing to check.
+
 ## Validating the file
 
 The file is validated against [`testdata/compatibility-matrix.schema.json`](./testdata/compatibility-matrix.schema.json)
