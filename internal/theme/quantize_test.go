@@ -14,9 +14,9 @@ func TestDetectColorLevel(t *testing.T) {
 
 func TestHexToRGB(t *testing.T) {
 	tests := []struct {
-		hex         string
-		r, g, b     int
-		wantErr     bool
+		hex     string
+		r, g, b int
+		wantErr bool
 	}{
 		{"#FF0000", 255, 0, 0, false},
 		{"#00FF00", 0, 255, 0, false},
@@ -51,9 +51,9 @@ func TestRGBTo256(t *testing.T) {
 		r, g, b int
 		idx     int // expected index range
 	}{
-		{255, 0, 0, 196},    // Red
-		{0, 255, 0, 22},     // Green
-		{0, 0, 255, 27},     // Blue
+		{255, 0, 0, 196},     // Red
+		{0, 255, 0, 22},      // Green
+		{0, 0, 255, 27},      // Blue
 		{255, 255, 255, 231}, // White (top of cube)
 	}
 
@@ -71,9 +71,9 @@ func TestRGBToANSI(t *testing.T) {
 	tests := []struct {
 		r, g, b int
 	}{
-		{255, 0, 0},    // Red - should map to ANSI red
-		{0, 255, 0},    // Green
-		{0, 0, 255},    // Blue
+		{255, 0, 0},     // Red - should map to ANSI red
+		{0, 255, 0},     // Green
+		{0, 0, 255},     // Blue
 		{255, 255, 255}, // White
 		{0, 0, 0},       // Black
 	}
@@ -93,10 +93,10 @@ func TestANSIToRGB(t *testing.T) {
 		ansi    int
 		r, g, b int
 	}{
-		{0, 0, 0, 0},              // Black
-		{7, 192, 192, 192},        // Bright gray
-		{15, 255, 255, 255},       // Bright white
-		{16, 0, 0, 0},             // Out of range
+		{0, 0, 0, 0},        // Black
+		{7, 192, 192, 192},  // Bright gray
+		{15, 255, 255, 255}, // Bright white
+		{16, 0, 0, 0},       // Out of range
 	}
 
 	for _, tt := range tests {
@@ -112,11 +112,11 @@ func TestANSIToRGB(t *testing.T) {
 func TestQuantizePalette(t *testing.T) {
 	// Test truecolor - no change
 	p := &Palette{
-		Panel:    "#0e0e10",
-		Accent:   "#FF5E0E",
-		Ink:      "#ececee",
-		Green:    "#5dd1a4",
-		Red:      "#ff7a7a",
+		Panel:  "#0e0e10",
+		Accent: "#FF5E0E",
+		Ink:    "#ececee",
+		Green:  "#5dd1a4",
+		Red:    "#ff7a7a",
 	}
 
 	result := QuantizePalette(p, ColorTruecolor)
@@ -139,14 +139,14 @@ func TestQuantizePalette(t *testing.T) {
 
 func TestIdxToRGB(t *testing.T) {
 	tests := []struct {
-		idx    int
+		idx     int
 		r, g, b int
 	}{
-		{16, 0, 0, 0},       // First color cube entry
+		{16, 0, 0, 0},        // First color cube entry
 		{231, 255, 255, 255}, // Last color cube entry (white)
-		{232, 8, 8, 8},      // First grayscale
+		{232, 8, 8, 8},       // First grayscale
 		{255, 238, 238, 238}, // Last grayscale
-		{0, 0, 0, 0},        // Out of range
+		{0, 0, 0, 0},         // Out of range
 	}
 
 	for _, tt := range tests {

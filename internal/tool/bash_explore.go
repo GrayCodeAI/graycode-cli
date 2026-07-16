@@ -89,7 +89,7 @@ func hasFileRedirect(s string) bool {
 		if runes[i] != '>' {
 			continue
 		}
-		// skip >> 
+		// skip >>
 		j := i + 1
 		if j < len(runes) && runes[j] == '>' {
 			j++

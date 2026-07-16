@@ -7,24 +7,24 @@ import (
 
 func TestAnnouncementHideKey(t *testing.T) {
 	tests := []struct {
-		name     string
+		name         string
 		announcement *Announcement
-		expected string
+		expected     string
 	}{
 		{
-			name: "id with whitespace",
+			name:         "id with whitespace",
 			announcement: &Announcement{ID: "  spaced-id  ", Title: "T", Message: "M"},
-			expected: "spaced-id",
+			expected:     "spaced-id",
 		},
 		{
-			name: "blank id uses content fallback",
+			name:         "blank id uses content fallback",
 			announcement: &Announcement{ID: "   ", Title: "Title", Message: "Message"},
-			expected: "content:Title\x1fMessage",
+			expected:     "content:Title\x1fMessage",
 		},
 		{
-			name: "no id uses content fallback",
+			name:         "no id uses content fallback",
 			announcement: &Announcement{Title: "", Message: ""},
-			expected: "content:\x1f",
+			expected:     "content:\x1f",
 		},
 	}
 
@@ -43,9 +43,9 @@ func TestIsAnnouncementExpired(t *testing.T) {
 	future := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 
 	tests := []struct {
-		name     string
+		name         string
 		announcement *Announcement
-		expired  bool
+		expired      bool
 	}{
 		{"no expiry", &Announcement{ExpiresAt: ""}, false},
 		{"past expiry", &Announcement{ExpiresAt: past}, true},
@@ -65,27 +65,27 @@ func TestIsAnnouncementExpired(t *testing.T) {
 
 func TestVisibleAnnouncements(t *testing.T) {
 	tests := []struct {
-		name        string
+		name          string
 		announcements []*Announcement
-		hiddenIDs   []string
+		hiddenIDs     []string
 		expectedCount int
 	}{
 		{
-			name: "empty input",
+			name:          "empty input",
 			announcements: nil,
-			hiddenIDs: nil,
+			hiddenIDs:     nil,
 			expectedCount: 0,
 		},
 		{
-			name: "single visible",
+			name:          "single visible",
 			announcements: []*Announcement{{Message: "Hello"}},
-			hiddenIDs: nil,
+			hiddenIDs:     nil,
 			expectedCount: 1,
 		},
 		{
-			name: "empty message filtered",
+			name:          "empty message filtered",
 			announcements: []*Announcement{{Message: "   "}},
-			hiddenIDs: nil,
+			hiddenIDs:     nil,
 			expectedCount: 0,
 		},
 	}

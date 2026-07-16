@@ -40,7 +40,7 @@ peer-engine advantages.
 5. **Typed spawn is the only subagent entrypoint** once Year 0 spawn work
    lands. `WireAgentTool` must not hardcode a single mode forever.
 6. **Order is non-negotiable:** contracts → spawn/taskruntime → folder trust
-   + sandbox profiles → hooks-first permissions → plugins/marketplace →
+   - sandbox profiles → hooks-first permissions → plugins/marketplace →
    monitor/wait/loop and UX batch. No project marketplace auto-load before
    folder trust.
 7. **Year 0 active track** (control plane, trust, hooks, plugins, tasks/UX,

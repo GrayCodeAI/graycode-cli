@@ -11,24 +11,24 @@ import (
 
 // TerminalCapabilities holds detected terminal features.
 type TerminalCapabilities struct {
-	ColorLevel    ColorLevel
-	HasDarkBG     bool
-	HasOSC12      bool // cursor color support
-	HasOSC112     bool // cursor reset support
-	HasAltScreen  bool
-	HasMouse      bool
+	ColorLevel        ColorLevel
+	HasDarkBG         bool
+	HasOSC12          bool // cursor color support
+	HasOSC112         bool // cursor reset support
+	HasAltScreen      bool
+	HasMouse          bool
 	HasBracketedPaste bool
 }
 
 // DetectTerminalCapabilities probes the terminal for supported features.
 func DetectTerminalCapabilities() TerminalCapabilities {
 	return TerminalCapabilities{
-		ColorLevel:     DetectColorLevel(),
-		HasDarkBG:      detectDarkBackground(),
-		HasOSC12:       detectOSC12(),
-		HasOSC112:      detectOSC112(),
-		HasAltScreen:   detectAltScreen(),
-		HasMouse:       detectMouseSupport(),
+		ColorLevel:        DetectColorLevel(),
+		HasDarkBG:         detectDarkBackground(),
+		HasOSC12:          detectOSC12(),
+		HasOSC112:         detectOSC112(),
+		HasAltScreen:      detectAltScreen(),
+		HasMouse:          detectMouseSupport(),
 		HasBracketedPaste: detectBracketedPaste(),
 	}
 }

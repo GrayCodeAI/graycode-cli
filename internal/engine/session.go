@@ -132,7 +132,7 @@ type Session struct {
 	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
 	readOnlyBash bool
 	// workingDir is the preferred cwd for tools (worktree isolation).
-	workingDir string
+	workingDir     string
 	Memory         MemoryRecaller
 	YaadBridge     *memory.YaadBridge
 	EnhancedMemory *memory.EnhancedMemoryManager

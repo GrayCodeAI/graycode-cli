@@ -384,7 +384,8 @@ func DefaultSkillDirs() []string {
 	// User-level directories (always).
 	dirs = append(dirs, filepath.Join(storage.StateDir(), "skills"))
 	if homeDir != "" {
-		dirs = append(dirs,
+		dirs = append(
+			dirs,
 			filepath.Join(homeDir, ".agents", "skills"),
 			filepath.Join(homeDir, ".claude", "skills"),
 			filepath.Join(homeDir, ".codex", "skills"),

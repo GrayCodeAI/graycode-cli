@@ -12,7 +12,8 @@ import (
 func DiscoverHookDirs(projectRoot string) []string {
 	var dirs []string
 	if projectRoot != "" {
-		dirs = append(dirs,
+		dirs = append(
+			dirs,
 			filepath.Join(projectRoot, ".hawk", "hooks"),
 			filepath.Join(projectRoot, ".agents", "hooks"),
 			filepath.Join(projectRoot, ".claude", "hooks"),

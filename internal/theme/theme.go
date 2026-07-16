@@ -136,11 +136,11 @@ type Palette struct {
 
 // ScrollConfig holds scroll behavior settings.
 type ScrollConfig struct {
-	Speed          int // 1-100 (default 50)
-	Mode           string // auto, wheel, trackpad
-	Invert         bool // natural scrolling
-	LinesPerTick   int // lines per scroll event (default 5)
-	ScrollbackLines int // max buffer lines (0 = unlimited)
+	Speed           int    // 1-100 (default 50)
+	Mode            string // auto, wheel, trackpad
+	Invert          bool   // natural scrolling
+	LinesPerTick    int    // lines per scroll event (default 5)
+	ScrollbackLines int    // max buffer lines (0 = unlimited)
 }
 
 // PagerConfig holds pager/scrollback settings.
@@ -169,12 +169,12 @@ type DisplayConfig struct {
 
 // UISettings holds user-configurable UI preferences (persisted in settings.json).
 type UISettings struct {
-	Theme       string `json:"theme,omitempty"`
-	ScrollSpeed int    `json:"scroll_speed,omitempty"`
-	ScrollMode  string `json:"scroll_mode,omitempty"`
-	InvertScroll bool  `json:"invert_scroll,omitempty"`
-	CompactMode bool   `json:"compact_mode,omitempty"`
-	VimMode     bool   `json:"vim_mode,omitempty"`
-	AutoDarkTheme string `json:"auto_dark_theme,omitempty"`
+	Theme          string `json:"theme,omitempty"`
+	ScrollSpeed    int    `json:"scroll_speed,omitempty"`
+	ScrollMode     string `json:"scroll_mode,omitempty"`
+	InvertScroll   bool   `json:"invert_scroll,omitempty"`
+	CompactMode    bool   `json:"compact_mode,omitempty"`
+	VimMode        bool   `json:"vim_mode,omitempty"`
+	AutoDarkTheme  string `json:"auto_dark_theme,omitempty"`
 	AutoLightTheme string `json:"auto_light_theme,omitempty"`
 }

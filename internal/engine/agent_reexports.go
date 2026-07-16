@@ -38,6 +38,6 @@ func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 	return agent.FilterToolsForMode(mode, available)
 }
 func DefaultTurnsForMode(mode SubAgentMode) int       { return agent.DefaultTurnsForMode(mode) }
-func IsReadOnlyMode(mode SubAgentMode) bool             { return agent.IsReadOnlyMode(mode) }
+func IsReadOnlyMode(mode SubAgentMode) bool           { return agent.IsReadOnlyMode(mode) }
 func NewBackgroundAgentPool() *BackgroundAgentPool    { return agent.NewBackgroundAgentPool() }
 func FormatResults(results []BackgroundResult) string { return agent.FormatResults(results) }

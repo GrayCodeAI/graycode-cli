@@ -30,7 +30,8 @@ func ensurePluginDataDir(pluginRoot, pluginName string) string {
 func pluginHookEnv(pluginRoot, pluginName string, data map[string]interface{}) []string {
 	env := os.Environ()
 	dataDir := ensurePluginDataDir(pluginRoot, pluginName)
-	env = append(env,
+	env = append(
+		env,
 		EnvPluginRoot+"="+pluginRoot,
 		EnvPluginData+"="+dataDir,
 		EnvPluginName+"="+pluginName,
