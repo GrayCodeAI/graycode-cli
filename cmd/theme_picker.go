@@ -7,8 +7,15 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
 )
+
+// detectAutoIsDark returns whether "auto" theme currently resolves to dark.
+func detectAutoIsDark() bool {
+	settings := hawkconfig.LoadGlobalSettings()
+	return settings.Theme == "auto" || settings.Theme == "system" || internaltheme.DetectOSTheme() != "light"
+}
 
 // ThemeChoice represents a visual theme option.
 type ThemeChoice struct {
@@ -38,8 +45,8 @@ func buildThemeChoices() []ThemeChoice {
 			IsDark: e.IsDark,
 		})
 	}
-	// Add "auto" at the end — lets lipgloss detect the terminal background.
-	out = append(out, ThemeChoice{Name: "auto", Desc: "Auto-detect terminal background", IsDark: true})
+	// Add "auto" at the end — follows OS appearance (system dark/light preference)
+	out = append(out, ThemeChoice{Name: "auto", Desc: "Follow system appearance (auto dark/light)", IsDark: detectAutoIsDark()})
 	return out
 }
 
@@ -169,7 +176,51 @@ func (tp *ThemePicker) View() tea.View {
 		}
 	}
 
+	// Add live preview for selected theme
+	b.WriteString("\n")
+	b.WriteString(hintStyle.Render("  Preview:") + "\n")
+	b.WriteString(renderThemePreview(tp.entries[tp.sel].Name) + "\n")
+
 	v := tea.View{Content: b.String()}
 	v.AltScreen = true
 	return v
+}
+
+// renderThemePreview renders a visual preview of the selected theme.
+func renderThemePreview(themeName string) string {
+	var preview strings.Builder
+
+	// Handle auto theme specially
+	if themeName == "auto" {
+		preview.WriteString(fmt.Sprintf("  Panel:   %s dark\n", lipgloss.NewStyle().Background(lipgloss.Color("#0e0e10")).Render("    ")))
+		preview.WriteString(fmt.Sprintf("  Accent:  %s orange\n", lipgloss.NewStyle().Background(lipgloss.Color("#FF5E0E")).Render("    ")))
+		return preview.String()
+	}
+
+	entry, ok := internaltheme.LookupTheme(themeName)
+	if !ok {
+		return "  Theme not found"
+	}
+	p := entry.Palette
+
+	if p.Panel != "" {
+		preview.WriteString(fmt.Sprintf("  Panel:   %s\n", lipgloss.NewStyle().Background(lipgloss.Color(p.Panel)).Render("    ")))
+	}
+	if p.PromptBg != "" {
+		preview.WriteString(fmt.Sprintf("  Prompt:  %s\n", lipgloss.NewStyle().Background(lipgloss.Color(p.PromptBg)).Render("    ")))
+	}
+	if p.Accent != "" {
+		preview.WriteString(fmt.Sprintf("  Accent:  %s\n", lipgloss.NewStyle().Background(lipgloss.Color(p.Accent)).Render("    ")))
+	}
+	if p.Ink != "" {
+		preview.WriteString(fmt.Sprintf("  Text:    %s\n", lipgloss.NewStyle().Background(lipgloss.Color(p.Ink)).Render("    ")))
+	}
+	if p.Green != "" {
+		preview.WriteString(fmt.Sprintf("  Green:   %s\n", lipgloss.NewStyle().Background(lipgloss.Color(p.Green)).Render("    ")))
+	}
+	if p.Red != "" {
+		preview.WriteString(fmt.Sprintf("  Red:     %s\n", lipgloss.NewStyle().Background(lipgloss.Color(p.Red)).Render("    ")))
+	}
+
+	return preview.String()
 }

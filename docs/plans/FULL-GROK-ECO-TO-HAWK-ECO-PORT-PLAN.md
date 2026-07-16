@@ -532,7 +532,7 @@ Only if product requires remote tool hosts:
 
 ### PACK-16: Docs full port (parallel)
 
-- [ ] `docs/user-guide/01` … `24`  
+- [x] `docs/user-guide/01` … `24` (completed July 2026)
 - [ ] Architecture notes stay separate  
 
 ### PACK-17: Continuous parity (forever)

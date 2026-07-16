@@ -133,3 +133,48 @@ type Palette struct {
 	CardErr   string `json:"card_err,omitempty"`
 	CardPerm  string `json:"card_perm,omitempty"`
 }
+
+// ScrollConfig holds scroll behavior settings.
+type ScrollConfig struct {
+	Speed          int // 1-100 (default 50)
+	Mode           string // auto, wheel, trackpad
+	Invert         bool // natural scrolling
+	LinesPerTick   int // lines per scroll event (default 5)
+	ScrollbackLines int // max buffer lines (0 = unlimited)
+}
+
+// PagerConfig holds pager/scrollback settings.
+type PagerConfig struct {
+	// Scrollback buffer settings
+	BufferLines int // 0 = use viewport default
+	// Layout settings
+	Margins         PageMargins
+	ShowLineNumbers bool
+	LineNumbers     string // ANSI color code for line numbers
+}
+
+// PageMargins controls layout spacing.
+type PageMargins struct {
+	Top    int // top margin/padding
+	Right  int // right margin
+	Bottom int // bottom margin
+	Left   int // left margin
+}
+
+// DisplayConfig holds display mode settings.
+type DisplayConfig struct {
+	CompactMode bool
+	VimMode     bool
+}
+
+// UISettings holds user-configurable UI preferences (persisted in settings.json).
+type UISettings struct {
+	Theme       string `json:"theme,omitempty"`
+	ScrollSpeed int    `json:"scroll_speed,omitempty"`
+	ScrollMode  string `json:"scroll_mode,omitempty"`
+	InvertScroll bool  `json:"invert_scroll,omitempty"`
+	CompactMode bool   `json:"compact_mode,omitempty"`
+	VimMode     bool   `json:"vim_mode,omitempty"`
+	AutoDarkTheme string `json:"auto_dark_theme,omitempty"`
+	AutoLightTheme string `json:"auto_light_theme,omitempty"`
+}

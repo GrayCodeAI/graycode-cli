@@ -57,6 +57,9 @@ func essentialTools() []tool.Tool {
 		tool.TodoWriteTool{},
 		tool.TaskOutputTool{},
 		tool.TaskStopTool{},
+		tool.WaitTasksTool{},
+		tool.KillTaskTool{},
+		tool.MonitorTool{},
 		tool.LSPTool{},
 		tool.MultiEditTool{},
 	}
