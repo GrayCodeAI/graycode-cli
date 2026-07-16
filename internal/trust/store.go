@@ -191,8 +191,14 @@ func RequiresFolderTrust(path string) bool {
 		sep + ".hawk" + sep + "plugins",
 		sep + ".hawk" + sep + "hooks",
 		sep + ".hawk" + sep + "mcp",
+		sep + ".hawk" + sep + "skills",
 		sep + ".agents" + sep + "hooks",
 		sep + ".agents" + sep + "plugins",
+		sep + ".agents" + sep + "skills",
+		sep + ".claude" + sep + "skills",
+		sep + ".claude" + sep + "hooks",
+		sep + ".codex" + sep + "skills",
+		sep + ".cursor" + sep + "skills",
 	}
 	for _, m := range markers {
 		if strings.Contains(abs, m) || strings.HasSuffix(abs, m) {

@@ -27,6 +27,35 @@ type ManifestV2 struct {
 	Repository   string                 `json:"repository,omitempty"`   // git repo URL
 	License      string                 `json:"license,omitempty"`
 	Entrypoint   string                 `json:"entrypoint,omitempty"` // main binary (for daemon mode)
+
+	// V3 multi-component package (Year 0 PACK-05)
+	// A plugin may ship tools + hooks + skills + MCP servers in one package.
+	Components *Components `json:"components,omitempty"`
+}
+
+// Components describes optional multi-component package layout (PACK-05).
+// Convention-over-config: when Components is nil, DiscoverComponents still
+// scans standard subdirectories (skills/, hooks/, mcp.json).
+type Components struct {
+	// SkillsDir is relative to the plugin root (default "skills").
+	SkillsDir string `json:"skills_dir,omitempty"`
+	// HooksDir is relative to the plugin root (default "hooks").
+	HooksDir string `json:"hooks_dir,omitempty"`
+	// MCPFile is path to mcp.json (default "mcp.json").
+	MCPFile string `json:"mcp_file,omitempty"`
+	// Skills lists explicit skill subdirectory names under SkillsDir.
+	Skills []string `json:"skills,omitempty"`
+	// MCP lists inline MCP server specs (merged with mcp.json if present).
+	MCP []MCPServerSpec `json:"mcp,omitempty"`
+}
+
+// MCPServerSpec describes an MCP server shipped with a plugin package.
+type MCPServerSpec struct {
+	Name    string            `json:"name"`
+	Command string            `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	URL     string            `json:"url,omitempty"` // remote streamable HTTP
+	Env     map[string]string `json:"env,omitempty"`
 }
 
 // ManifestHook defines an event hook provided by a plugin.

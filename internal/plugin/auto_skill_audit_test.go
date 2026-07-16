@@ -248,7 +248,9 @@ func TestDefaultSkillDirsCrossAgent(t *testing.T) {
 			t.Errorf("expected %s skills directory", agent)
 		}
 	}
-	if len(dirs) < 7 {
-		t.Errorf("expected at least 7 dirs, got %d", len(dirs))
+	// User-level harness dirs always present; project-level dirs are
+	// folder-trust gated (PACK-05) so total count can be < 7.
+	if len(dirs) < 4 {
+		t.Errorf("expected at least 4 dirs (user harnesses + hawk), got %d", len(dirs))
 	}
 }

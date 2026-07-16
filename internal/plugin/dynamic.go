@@ -133,7 +133,7 @@ type DynamicPluginManager struct {
 // NewDynamicPluginManager creates a new DynamicPluginManager with the given directories and registries.
 func NewDynamicPluginManager(dirs []string, tools ToolRegistrar, hooks HookRegistrar) *DynamicPluginManager {
 	if len(dirs) == 0 {
-		dirs = defaultPluginDirs()
+		dirs = ResolvePluginDirs("") // managed > user > project (trust-gated)
 	}
 	return &DynamicPluginManager{
 		plugins:      make(map[string]*DynamicPlugin),
@@ -142,18 +142,6 @@ func NewDynamicPluginManager(dirs []string, tools ToolRegistrar, hooks HookRegis
 		hookRegistry: hooks,
 		eventCh:      make(chan PluginEvent, 64),
 	}
-}
-
-// defaultPluginDirs returns user state plugins plus optional project .hawk/plugins.
-func defaultPluginDirs() []string {
-	dirs := []string{filepath.Join(storage.StateDir(), "plugins")}
-	if cwd, err := os.Getwd(); err == nil {
-		proj := filepath.Join(cwd, ".hawk", "plugins")
-		if st, err := os.Stat(proj); err == nil && st.IsDir() {
-			dirs = append(dirs, proj)
-		}
-	}
-	return dirs
 }
 
 // DiscoverAll scans all plugin directories and registers discovered plugins.
