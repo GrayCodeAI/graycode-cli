@@ -243,9 +243,12 @@ func Apply(patch *FilePatch) error {
 }
 
 // ApplyAll applies all patches and returns the list of modified file paths.
-func (p *PatchParser) ApplyAll() ([]string, error) {
+func (p *PatchParser) ApplyAll(ctx context.Context) ([]string, error) {
 	var modified []string
 	for i := range p.patches {
+		if err := validatePathAllowed(ctx, p.patches[i].Path); err != nil {
+			return modified, err
+		}
 		if err := Apply(&p.patches[i]); err != nil {
 			return modified, fmt.Errorf("failed to apply patch for %s: %w", p.patches[i].Path, err)
 		}
@@ -449,7 +452,7 @@ func (PatchTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		}
 	}
 
-	modified, err := parser.ApplyAll()
+	modified, err := parser.ApplyAll(ctx)
 	if err != nil {
 		return "", err
 	}

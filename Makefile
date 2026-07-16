@@ -235,13 +235,16 @@ help: ## Show this help.
 # Validates compatibility-matrix.json and reports the resolved versions for
 # a chosen matrix entry. Wired into the compatibility-test workflow.
 # ---------------------------------------------------------------------------
-.PHONY: compat-test compat-check
+.PHONY: compat-test compat-check compat-drift
 
 compat-test: ## Validate testdata/compatibility-matrix.json and report the 'next' matrix.
 	@go run ./cmd/compat-test -matrix=next -file=testdata/compatibility-matrix.json
 
 compat-check: ## Strict validation — non-zero exit if any component lacks a version.
 	@go run ./cmd/compat-test -matrix=next -strict -file=testdata/compatibility-matrix.json
+
+compat-drift: ## Advisory: report pin drift between hawk's go.mod and external/ submodules. Never fails.
+	@go run ./cmd/compat-test -check-external -file=testdata/compatibility-matrix.json
 
 .PHONY: hooks sync-submodules sync-clone
 hooks: ## Install git hooks via lefthook (formatting, linting, conventional commits).
