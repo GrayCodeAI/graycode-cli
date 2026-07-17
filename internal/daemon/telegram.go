@@ -246,7 +246,7 @@ func (tg *TelegramGateway) sendMessage(ctx context.Context, chatID int64, text s
 	data := url.Values{
 		"chat_id":    {fmt.Sprintf("%d", chatID)},
 		"text":       {text},
-		"parse_mode": {"Markdown"},
+		"parse_mode": {""},
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, strings.NewReader(data.Encode()))
 	if err != nil {
