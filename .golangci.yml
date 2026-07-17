@@ -92,24 +92,6 @@ linters:
       - path: cmd/
         linters:
           - noctx
-      - path: internal/intelligence/memory/
-        linters:
-          - errcheck
-      - path: internal/intelligence/repomap/
-        linters:
-          - errcheck
-      - path: internal/codegraph/
-        linters:
-          - errcheck
-      - path: internal/tool/codegraph.go
-        linters:
-          - errcheck
-      - path: internal/tool/lsp.go
-        linters:
-          - errcheck
-      - path: internal/magicdocs/
-        linters:
-          - errcheck
 
 issues:
   max-issues-per-linter: 0

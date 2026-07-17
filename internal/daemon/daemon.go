@@ -172,11 +172,12 @@ func New(cfg Config, factory SessionFactory) *Server {
 	// for poll-based gateways at Start time.
 	s.gateways = newGatewayManager(cfg.Gateways, "http://"+s.addr, cfg.APIKey, s)
 	s.server = &http.Server{
-		Addr:         s.addr,
-		Handler:      s.mux,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 300 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              s.addr,
+		Handler:           s.mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      300 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 	return s
 }
@@ -196,6 +197,11 @@ func (s *Server) Start() (string, error) {
 	s.addr = actualAddr
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("daemon server goroutine panicked", "recover", r)
+			}
+		}()
 		if err := s.server.Serve(ln); err != nil && err != http.ErrServerClosed {
 			slog.Error("daemon server error", "error", err)
 		}
