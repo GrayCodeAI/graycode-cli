@@ -155,8 +155,8 @@ func (g *DiscordGateway) handleMessage(ctx context.Context, senderID, channelID,
 	if err != nil {
 		resp = fmt.Sprintf("Error: %v", err)
 	}
-	if len(resp) > 1900 { // Discord 2000-char limit, leave headroom
-		resp = resp[:1900] + "\n\n... (truncated)"
+	if len([]rune(resp)) > 1900 { // Discord 2000-char limit, leave headroom
+		resp = string([]rune(resp)[:1900]) + "\n\n... (truncated)"
 	}
 	reply(resp)
 }

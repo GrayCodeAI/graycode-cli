@@ -13,14 +13,17 @@ import (
 
 // Pre-compiled patterns for exfiltration detection.
 var (
-	curlPostWithData  = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
-	curlDataWithPost  = regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`)
-	curlDataBinary    = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
-	pipeToNetwork     = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`)
-	base64PipeNetwork = regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`)
-	base64Network     = regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`)
-	envVarInURL       = regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`)
-	curlFileUpload    = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
+	cachedRegex = &sync.Map{} // string(pattern) -> *regexp.Regexp
+
+	// Pre-compiled patterns for exfiltration detection.
+	curlPostWithData = regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`)
+	curlDataWithPost = regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`)
+	curlDataBinary   = regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`)
+	pipeToNetwork    = regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`)
+	base64PipeNet    = regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`)
+	base64Net        = regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`)
+	envVarInURL      = regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`)
+	curlFileUpload   = regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`)
 )
 
 // EgressInspector detects and blocks data exfiltration attempts in shell commands
@@ -30,6 +33,7 @@ type EgressInspector struct {
 	BlockedDomains   []string
 	AllowedProtocols []string
 	mu               sync.RWMutex
+	compiledPatterns sync.Map // string pattern -> *regexp.Regexp
 }
 
 // EgressAttempt represents the result of inspecting a command for egress activity.
@@ -73,6 +77,26 @@ func NewEgressInspector() *EgressInspector {
 			"git",
 		},
 	}
+}
+
+// compilePattern pre-compiles a wildcard glob pattern to a compiled regexp and
+// caches it in the inspector's compiledPatterns map for reuse.
+func (e *EgressInspector) compilePattern(pattern string) *regexp.Regexp {
+	if cached, ok := e.compiledPatterns.Load(pattern); ok {
+		return cached.(*regexp.Regexp)
+	}
+
+	regexStr := "^" + regexp.QuoteMeta(pattern) + "$"
+	regexStr = strings.ReplaceAll(regexStr, `\*`, `[A-Za-z0-9._-]*`)
+	re, err := regexp.Compile(regexStr)
+	if err != nil {
+		return nil
+	}
+
+	if val, loaded := e.compiledPatterns.LoadOrStore(pattern, re); loaded {
+		return val.(*regexp.Regexp)
+	}
+	return re
 }
 
 // Inspect analyzes a command for network egress destinations and returns
@@ -236,8 +260,8 @@ func (e *EgressInspector) IsSuspicious(command string) bool {
 	}
 
 	// Base64 encoding combined with network send
-	if base64PipeNetwork.MatchString(command) ||
-		base64Network.MatchString(command) {
+	if base64PipeNet.MatchString(command) ||
+		base64Net.MatchString(command) {
 		return true
 	}
 
@@ -381,16 +405,16 @@ func matchDomain(pattern, host string) bool {
 		return true
 	}
 
-	// Wildcard matching
-	if strings.Contains(pattern, "*") {
-		// Convert glob pattern to regex
+// Wildcard matching
+if strings.Contains(pattern, "*") {
+		// Convert glob pattern to regex with caching
 		regexStr := "^" + regexp.QuoteMeta(pattern) + "$"
 		regexStr = strings.ReplaceAll(regexStr, `\*`, `[A-Za-z0-9._-]*`)
-		re, err := regexp.Compile(regexStr)
-		if err != nil {
-			return false
+		re, loaded := cachedRegex.LoadOrStore(regexStr, regexp.MustCompile(regexStr))
+		if loaded {
+			return re.(*regexp.Regexp).MatchString(host)
 		}
-		return re.MatchString(host)
+		return re.(*regexp.Regexp).MatchString(host)
 	}
 
 	// Subdomain match: pattern "example.com" matches "sub.example.com"
@@ -405,8 +429,8 @@ func matchDomain(pattern, host string) bool {
 func (e *EgressInspector) describeSuspicious(command string) []string {
 	var patterns []string
 
-	if regexp.MustCompile(`(?i)curl\s.*-[A-Za-z]*X\s*POST.*-d\s+@`).MatchString(command) ||
-		regexp.MustCompile(`(?i)curl\s.*-d\s+@.*-[A-Za-z]*X\s*POST`).MatchString(command) {
+	if curlPostWithData.MatchString(command) ||
+		curlDataWithPost.MatchString(command) {
 		// Try to extract the file name
 		fileRe := regexp.MustCompile(`-d\s+@([^\s"']+)`)
 		if m := fileRe.FindStringSubmatch(command); len(m) >= 2 {
@@ -416,24 +440,24 @@ func (e *EgressInspector) describeSuspicious(command string) []string {
 		}
 	}
 
-	if regexp.MustCompile(`(?i)curl\s.*--data-binary\s+@`).MatchString(command) {
+	if curlDataBinary.MatchString(command) {
 		patterns = append(patterns, "Binary file upload")
 	}
 
-	if regexp.MustCompile(`\|\s*(curl|wget|nc|netcat|ncat)\b`).MatchString(command) {
+	if pipeToNetwork.MatchString(command) {
 		patterns = append(patterns, "Pipe to network command")
 	}
 
-	if regexp.MustCompile(`base64.*\|\s*(curl|wget|nc|netcat)`).MatchString(command) ||
-		regexp.MustCompile(`\bbase64\b.*\b(curl|wget|nc|netcat)\b`).MatchString(command) {
+	if base64PipeNet.MatchString(command) ||
+		base64Net.MatchString(command) {
 		patterns = append(patterns, "Base64 encoding with network send")
 	}
 
-	if regexp.MustCompile(`(curl|wget)\s.*\$[A-Za-z_]`).MatchString(command) {
+	if envVarInURL.MatchString(command) {
 		patterns = append(patterns, "Environment variable in URL")
 	}
 
-	if regexp.MustCompile(`(?i)curl\s.*-F\s+["']?[^=]+=@`).MatchString(command) {
+	if curlFileUpload.MatchString(command) {
 		patterns = append(patterns, "File upload via form data")
 	}
 
