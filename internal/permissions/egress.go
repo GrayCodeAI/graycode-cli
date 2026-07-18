@@ -405,8 +405,8 @@ func matchDomain(pattern, host string) bool {
 		return true
 	}
 
-// Wildcard matching
-if strings.Contains(pattern, "*") {
+	// Wildcard matching
+	if strings.Contains(pattern, "*") {
 		// Convert glob pattern to regex with caching
 		regexStr := "^" + regexp.QuoteMeta(pattern) + "$"
 		regexStr = strings.ReplaceAll(regexStr, `\*`, `[A-Za-z0-9._-]*`)
