@@ -33,7 +33,6 @@ type EgressInspector struct {
 	BlockedDomains   []string
 	AllowedProtocols []string
 	mu               sync.RWMutex
-	compiledPatterns sync.Map // string pattern -> *regexp.Regexp
 }
 
 // EgressAttempt represents the result of inspecting a command for egress activity.
@@ -77,26 +76,6 @@ func NewEgressInspector() *EgressInspector {
 			"git",
 		},
 	}
-}
-
-// compilePattern pre-compiles a wildcard glob pattern to a compiled regexp and
-// caches it in the inspector's compiledPatterns map for reuse.
-func (e *EgressInspector) compilePattern(pattern string) *regexp.Regexp {
-	if cached, ok := e.compiledPatterns.Load(pattern); ok {
-		return cached.(*regexp.Regexp)
-	}
-
-	regexStr := "^" + regexp.QuoteMeta(pattern) + "$"
-	regexStr = strings.ReplaceAll(regexStr, `\*`, `[A-Za-z0-9._-]*`)
-	re, err := regexp.Compile(regexStr)
-	if err != nil {
-		return nil
-	}
-
-	if val, loaded := e.compiledPatterns.LoadOrStore(pattern, re); loaded {
-		return val.(*regexp.Regexp)
-	}
-	return re
 }
 
 // Inspect analyzes a command for network egress destinations and returns
@@ -405,16 +384,17 @@ func matchDomain(pattern, host string) bool {
 		return true
 	}
 
-// Wildcard matching
-if strings.Contains(pattern, "*") {
+	// Wildcard matching
+	if strings.Contains(pattern, "*") {
 		// Convert glob pattern to regex with caching
 		regexStr := "^" + regexp.QuoteMeta(pattern) + "$"
 		regexStr = strings.ReplaceAll(regexStr, `\*`, `[A-Za-z0-9._-]*`)
 		re, loaded := cachedRegex.LoadOrStore(regexStr, regexp.MustCompile(regexStr))
+		compiled, _ := re.(*regexp.Regexp)
 		if loaded {
-			return re.(*regexp.Regexp).MatchString(host)
+			return compiled.MatchString(host)
 		}
-		return re.(*regexp.Regexp).MatchString(host)
+		return compiled.MatchString(host)
 	}
 
 	// Subdomain match: pattern "example.com" matches "sub.example.com"

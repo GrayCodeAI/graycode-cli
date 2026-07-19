@@ -52,7 +52,7 @@ func cacheGet(path string) ([]Symbol, bool) {
 	}
 	// Promote to front (most recently used)
 	symbolCache.order.MoveToFront(elem)
-	lru := elem.Value.(*lruCacheEntry)
+	lru, _ := elem.Value.(*lruCacheEntry)
 	cacheMu.Unlock()
 
 	info, err := os.Stat(path)
@@ -79,7 +79,7 @@ func cachePut(path string, symbols []Symbol) {
 	// If entry already exists, update and promote
 	if elem, ok := symbolCache.entries[path]; ok {
 		symbolCache.order.MoveToFront(elem)
-		lru := elem.Value.(*lruCacheEntry)
+		lru, _ := elem.Value.(*lruCacheEntry)
 		lru.entry = cacheEntry{modTime: info.ModTime(), symbols: symbols}
 		return
 	}
@@ -100,7 +100,7 @@ func cachePut(path string, symbols []Symbol) {
 		oldest := symbolCache.order.Back()
 		if oldest != nil {
 			symbolCache.order.Remove(oldest)
-			evicted := oldest.Value.(*lruCacheEntry)
+			evicted, _ := oldest.Value.(*lruCacheEntry)
 			delete(symbolCache.entries, evicted.key)
 		}
 	}

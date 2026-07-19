@@ -110,7 +110,7 @@ func (CodeGraphTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if err != nil {
 		return "", fmt.Errorf("codegraph: %w", err)
 	}
-	defer cg.Close()
+	defer func() { _ = cg.Close() }()
 
 	switch p.Action {
 	case "index":

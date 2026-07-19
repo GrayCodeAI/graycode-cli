@@ -73,7 +73,7 @@ func lspDefinition(root, filePath string, line int, symbol string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("codegraph not available: %w", err)
 	}
-	defer cg.Close()
+	defer func() { _ = cg.Close() }()
 
 	// If symbol is provided directly, search for it
 	if symbol != "" {
@@ -138,7 +138,7 @@ func lspReferences(root, filePath string, line int, symbol string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("codegraph not available: %w", err)
 	}
-	defer cg.Close()
+	defer func() { _ = cg.Close() }()
 
 	// Get symbol name
 	sym := symbol
@@ -205,7 +205,7 @@ func lspImplementations(root, symbol string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("codegraph not available: %w", err)
 	}
-	defer cg.Close()
+	defer func() { _ = cg.Close() }()
 
 	// Search for the interface
 	nodes, err := cg.Search(symbol, 5)
