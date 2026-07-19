@@ -57,7 +57,7 @@ func Extract(dir string) ([]DocEntry, error) {
 			case *ast.GenDecl:
 				if d.Tok == token.TYPE {
 					for _, spec := range d.Specs {
-						ts := spec.(*ast.TypeSpec)
+						ts, _ := spec.(*ast.TypeSpec)
 						doc := ""
 						if d.Doc != nil {
 							doc = d.Doc.Text()
