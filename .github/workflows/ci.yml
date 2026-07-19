@@ -301,7 +301,7 @@ jobs:
           # gosec policy: G301 (0755 dir perms) and G304 (user-supplied
           # file paths) are intentional for this CLI agent. All other
           # rules are enforced; see .gosec.json for the exclusion set.
-          gosec -quiet -conf .gosec.json ./...
+          gosec -quiet -exclude-dir external ./...
 
   # -------------------------------------------------------------------------
   # 7. Secret scan — detect leaked API keys, tokens, credentials.
