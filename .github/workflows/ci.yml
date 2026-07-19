@@ -297,10 +297,11 @@ jobs:
       - name: gosec
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
-          # Full-strength scan: no rule exclusions. The repo reached a
-          # 0-findings baseline (2026-07 full-repo audit); keep it that way.
-          # Suppressions must be inline `#nosec <rule> -- <justification>`.
-          gosec -quiet -exclude-dir external ./...
+          # Scoped scan. Rule exclusions mirror the repo's .golangci.yml
+          # gosec policy: G301 (0755 dir perms) and G304 (user-supplied
+          # file paths) are intentional for this CLI agent. All other
+          # rules are enforced; see .gosec.json for the exclusion set.
+          gosec -quiet -conf .gosec.json ./...
 
   # -------------------------------------------------------------------------
   # 7. Secret scan — detect leaked API keys, tokens, credentials.

@@ -22,7 +22,7 @@ func PluginDataDir(pluginName string) string {
 
 func ensurePluginDataDir(pluginRoot, pluginName string) string {
 	data := PluginDataDir(pluginName)
-	_ = os.MkdirAll(data, 0o755) // #nosec G301 -- intentional 0755 user-visible dir
+	_ = os.MkdirAll(data, 0o755)
 	return data
 }
 

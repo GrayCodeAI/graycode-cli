@@ -84,7 +84,7 @@ func loadUserMarketplaceSources() []MarketplaceSource {
 // SaveUserSources writes extra marketplace sources to config.
 func SaveUserSources(srcs []MarketplaceSource) error {
 	path := filepath.Join(storage.ConfigDir(), "marketplace-sources.json")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- intentional 0755 user-visible dir
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(srcs, "", "  ")

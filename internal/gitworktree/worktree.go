@@ -24,7 +24,7 @@ func Create(ctx context.Context, repoDir, branch string) (path string, cleanup f
 		return "", nil, fmt.Errorf("not a git repository: %s", strings.TrimSpace(string(out)))
 	}
 	base := filepath.Join(repoDir, ".hawk", "worktrees")
-	if err := os.MkdirAll(base, 0o755); err != nil { // #nosec G301 -- intentional 0755 user-visible dir
+	if err := os.MkdirAll(base, 0o755); err != nil {
 		return "", nil, err
 	}
 	if branch == "" {
