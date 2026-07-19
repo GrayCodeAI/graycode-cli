@@ -268,11 +268,11 @@ jobs:
           # non-empty call trace). Transitive advisories that our code does not
           # call are surfaced but do not block CI — they cannot be remediated
           # without an upstream fix and are not in our attack surface.
-          govulncheck -json ./... > "${RUNNER_TEMP:-/tmp}/vuln.json" || true
+          govulncheck -json ./... > /tmp/vuln.json || true
           reachable=$(python3 - <<'PY'
           import json, sys
           n = 0
-          for line in open("${RUNNER_TEMP:-/tmp}/vuln.json"):
+          for line in open("/tmp/vuln.json"):
               line = line.strip()
               if not line:
                   continue
