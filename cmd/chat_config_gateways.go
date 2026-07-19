@@ -15,10 +15,13 @@ type configGatewayRow struct {
 	ID             string
 	DisplayName    string
 	HasKey         bool
+	Configured     bool
 	ModelCount     int
 	Active         bool
 	RegionLabel    string
 	RegionRequired bool
+	CredentialEnv  string
+	KeyConflict    bool
 }
 
 type configGatewayRefreshMsg struct {
@@ -28,6 +31,13 @@ type configGatewayRefreshMsg struct {
 }
 
 func (m chatModel) configGatewayRows() []configGatewayRow {
+	if !m.configGatewayRowsDirty && m.configGatewayRowsCache != nil {
+		return m.configGatewayRowsCache
+	}
+	return m.loadConfigGatewayRows()
+}
+
+func (m chatModel) loadConfigGatewayRows() []configGatewayRow {
 	ctx := context.Background()
 	active := strings.TrimSpace(m.configModelProvider)
 	activeModel := ""
@@ -52,6 +62,10 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 			modelCacheMu.RUnlock()
 		}
 		hasKey := status.HasStoredCredential
+		credentialEnv, keyConflict := "", false
+		if hasKey {
+			credentialEnv, keyConflict = hawkconfig.CredentialEnvironmentConflict(ctx, status.ID)
+		}
 		display := status.DisplayName
 		if status.ID == hawkconfig.ProviderXiaomiTokenPlan {
 			if reg := status.RegionLabel; reg != "" {
@@ -71,13 +85,63 @@ func (m chatModel) configGatewayRows() []configGatewayRow {
 			ID:             status.ID,
 			DisplayName:    display,
 			HasKey:         hasKey,
+			Configured:     status.HasConfiguredDeployment || hasKey,
 			ModelCount:     count,
 			Active:         status.Active || hawkconfig.ActiveProviderID(status.ID) == hawkconfig.ActiveProviderID(active),
 			RegionLabel:    status.RegionLabel,
 			RegionRequired: status.RegionRequired,
+			CredentialEnv:  credentialEnv,
+			KeyConflict:    keyConflict,
 		})
 	}
-	return rows
+	return prioritizeConfigGatewayRows(rows)
+}
+
+func prioritizeConfigGatewayRows(rows []configGatewayRow) []configGatewayRow {
+	ordered := make([]configGatewayRow, 0, len(rows))
+	for _, row := range rows {
+		if row.Active {
+			ordered = append(ordered, row)
+		}
+	}
+	for _, row := range rows {
+		if !row.Active && row.Configured {
+			ordered = append(ordered, row)
+		}
+	}
+	for _, row := range rows {
+		if !row.Active && !row.Configured {
+			ordered = append(ordered, row)
+		}
+	}
+	return ordered
+}
+
+func (m chatModel) refreshConfigGatewayRows() chatModel {
+	selectedID := ""
+	focusID := ""
+	if m.configSel >= 0 && m.configSel < len(m.configGatewayRowsCache) {
+		selectedID = m.configGatewayRowsCache[m.configSel].ID
+	}
+	if m.configGatewayFocus >= 0 && m.configGatewayFocus < len(m.configGatewayRowsCache) {
+		focusID = m.configGatewayRowsCache[m.configGatewayFocus].ID
+	}
+	m.configGatewayRowsCache = m.loadConfigGatewayRows()
+	m.configGatewayRowsDirty = false
+	for i, row := range m.configGatewayRowsCache {
+		if row.ID == selectedID {
+			m.configSel = i
+		}
+		if row.ID == focusID {
+			m.configGatewayFocus = i
+		}
+	}
+	return m
+}
+
+func (m chatModel) invalidateConfigGatewayRows() chatModel {
+	m.configGatewayRowsDirty = true
+	return m
 }
 
 func (m chatModel) configGatewayRowIndex(provider string) int {
@@ -152,13 +216,18 @@ func (m chatModel) configGatewaysView() string {
 
 	rows := m.configGatewayRows()
 	refreshSel := len(rows)
+	windowSize := m.configVisibleRows()
+	maxScroll := maxInt(0, len(rows)-windowSize)
+	if m.configScroll > maxScroll {
+		m.configScroll = maxScroll
+	}
 
 	if m.configSel < len(rows) {
 		if m.configSel < m.configScroll {
 			m.configScroll = m.configSel
 		}
-		if m.configSel >= m.configScroll+configWindowSize {
-			m.configScroll = m.configSel - configWindowSize + 1
+		if m.configSel >= m.configScroll+windowSize {
+			m.configScroll = m.configSel - windowSize + 1
 		}
 	}
 
@@ -169,6 +238,9 @@ func (m chatModel) configGatewaysView() string {
 		key := "—"
 		if row.HasKey {
 			key = "+" + icons.CheckBold() + " "
+			if row.KeyConflict {
+				key = "+" + icons.CheckBold() + " !"
+			}
 		}
 		models := "key required"
 		if row.HasKey && row.ModelCount > 0 {
@@ -190,7 +262,7 @@ func (m chatModel) configGatewaysView() string {
 	if m.configScroll > 0 {
 		b.WriteString(configTableScrollHint(m.configScroll, 0, mutedStyle) + "\n")
 	}
-	end := m.configScroll + configWindowSize
+	end := m.configScroll + windowSize
 	if end > len(rows) {
 		end = len(rows)
 	}
@@ -215,6 +287,10 @@ func (m chatModel) configGatewaysView() string {
 	b.WriteString("\n")
 	targetIdx := m.configGatewayRefreshTargetIndex(rows)
 	b.WriteString(renderConfigRefreshActionRow(rows[targetIdx].DisplayName, m.configSel == refreshSel) + "\n")
+	if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].KeyConflict {
+		warning := fmt.Sprintf("warning: %s differs from the stored keychain credential", rows[targetIdx].CredentialEnv)
+		b.WriteString("\n" + configWarningStyle().Render(strings.Repeat(" ", configTableIndent)+warning))
+	}
 
 	ctx := context.Background()
 	indent := strings.Repeat(" ", configTableIndent)
@@ -322,6 +398,7 @@ func refreshGatewayAsync(providerID string) tea.Cmd {
 func (m chatModel) handleConfigGatewayRefreshMsg(msg configGatewayRefreshMsg) chatModel {
 	m.configSaving = false
 	InvalidateModelCacheProvider(msg.providerID)
+	m = m.refreshConfigGatewayRows()
 	if msg.err != nil {
 		m.configNotice = sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.providerID, msg.err))
 		return m
@@ -335,14 +412,15 @@ func (m chatModel) handleConfigGatewayRefreshMsg(msg configGatewayRefreshMsg) ch
 
 func (m chatModel) focusConfigActiveGateway() chatModel {
 	rows := m.configGatewayRows()
+	windowSize := m.configVisibleRows()
 	if i := m.activeGatewayRowIndex(rows); i >= 0 {
 		m.configGatewayFocus = i
 		m.configSel = i
 		if m.configSel < m.configScroll {
 			m.configScroll = m.configSel
 		}
-		if m.configSel >= m.configScroll+configWindowSize {
-			m.configScroll = m.configSel - configWindowSize + 1
+		if m.configSel >= m.configScroll+windowSize {
+			m.configScroll = m.configSel - windowSize + 1
 		}
 	}
 	return m
@@ -352,15 +430,7 @@ func (m chatModel) trackConfigGatewayFocus() chatModel {
 	if m.configTab != configTabGateways {
 		return m
 	}
-	active := strings.TrimSpace(m.configModelProvider)
-	activeModel := ""
-	if m.session != nil {
-		if active == "" {
-			active = strings.TrimSpace(m.session.Provider())
-		}
-		activeModel = strings.TrimSpace(m.session.Model())
-	}
-	rows := len(hawkconfig.GatewayStatuses(context.Background(), active, activeModel))
+	rows := len(m.configGatewayRows())
 	if m.configSel >= 0 && m.configSel < rows {
 		m.configGatewayFocus = m.configSel
 	}

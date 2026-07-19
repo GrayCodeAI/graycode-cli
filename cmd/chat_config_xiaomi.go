@@ -99,6 +99,7 @@ func (m chatModel) handleConfigXiaomiRegionKey(msg tea.KeyMsg) (chatModel, tea.C
 			return m, nil
 		}
 		InvalidateModelCacheProvider(hawkconfig.ProviderXiaomiTokenPlan)
+		m = m.refreshConfigGatewayRows()
 		m.configEntry = configEntryNone
 		ctx := context.Background()
 		if post := strings.TrimSpace(m.configPostSaveKeysProvider); post == hawkconfig.ProviderXiaomiTokenPlan {

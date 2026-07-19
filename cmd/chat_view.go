@@ -258,7 +258,13 @@ func (m *chatModel) updateViewportContent() {
 	if m.configOpen {
 		var content strings.Builder
 		content.WriteString(m.configPanelView())
-		m.viewport.SetContent(content.String())
+		contentString := content.String()
+		m.contentLines = renderedLineCount(contentString)
+		m.viewport.SetWidth(m.chatViewportWidth(viewWidth))
+		m.viewport.SetContent(contentString)
+		// The config lists paginate internally. Never retain the chat
+		// transcript's outer Y offset, or the table header/help can disappear.
+		m.viewport.GotoTop()
 		return
 	}
 
@@ -326,7 +332,7 @@ func renderedLineCount(s string) int {
 
 func (m chatModel) View() tea.View {
 	if m.quitting {
-		return tea.NewView("")
+		return m.terminalView("")
 	}
 	m = m.withSyncedLayout()
 
@@ -431,7 +437,7 @@ func (m chatModel) View() tea.View {
 		paletteView := m.commandPalette.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(paletteView)
-		return tea.NewView(frame.String())
+		return m.terminalView(frame.String())
 	}
 
 	// Autonomy tier picker overlay
@@ -439,13 +445,13 @@ func (m chatModel) View() tea.View {
 		pickerView := lipgloss.NewStyle().Width(viewWidth).Render(m.themePicker.View().Content)
 		frame.WriteByte('\n')
 		frame.WriteString(pickerView)
-		return tea.NewView(frame.String())
+		return m.terminalView(frame.String())
 	}
 	if m.autonomyPicker != nil && m.autonomyPicker.IsOpen() {
 		pickerView := m.autonomyPicker.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(pickerView)
-		return tea.NewView(frame.String())
+		return m.terminalView(frame.String())
 	}
 
 	// Spec workflow picker overlay
@@ -453,7 +459,7 @@ func (m chatModel) View() tea.View {
 		pickerView := m.specPicker.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(pickerView)
-		return tea.NewView(frame.String())
+		return m.terminalView(frame.String())
 	}
 
 	// Agent Status HUD overlay
@@ -461,12 +467,24 @@ func (m chatModel) View() tea.View {
 		hudView := renderAgentStatusPanel(m.hudData, viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(hudView)
-		return tea.NewView(frame.String())
+		return m.terminalView(frame.String())
 	}
 
-	frame.WriteByte('\n')
-	frame.WriteString(bottomBar.String())
-	return tea.NewView(frame.String())
+	if bottomBar.Len() > 0 {
+		frame.WriteByte('\n')
+		frame.WriteString(bottomBar.String())
+	}
+	return m.terminalView(frame.String())
+}
+
+func (m chatModel) terminalView(content string) tea.View {
+	view := tea.NewView(content)
+	view.AltScreen = true
+	view.ReportFocus = true
+	if m.mouseEnabled() {
+		view.MouseMode = tea.MouseModeCellMotion
+	}
+	return view
 }
 
 // renderPermissionBox renders a compact inline permission prompt.

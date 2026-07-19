@@ -19,6 +19,12 @@ type GatewayStatus struct {
 	RegionRequired          bool
 }
 
+// IsCatalogCacheRequired reports whether an Eyrie operation failed because
+// the local model catalog has not been created yet.
+func IsCatalogCacheRequired(err error) bool {
+	return eyrieengine.IsCatalogCacheRequired(err)
+}
+
 func AllCatalogProviders() []string {
 	engine, err := newEyrieEngine()
 	if err != nil {

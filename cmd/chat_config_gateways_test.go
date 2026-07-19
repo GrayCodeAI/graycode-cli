@@ -19,6 +19,39 @@ func chatModelForConfigPasteTest() chatModel {
 	return chatModel{configInput: ti, input: textarea.New()}
 }
 
+func TestConfigGatewayRows_UsesPanelCacheUntilInvalidated(t *testing.T) {
+	cached := []configGatewayRow{{ID: "cached", DisplayName: "Cached Gateway"}}
+	m := chatModel{configGatewayRowsCache: cached}
+
+	if rows := m.configGatewayRows(); len(rows) != 1 || rows[0].ID != "cached" {
+		t.Fatalf("cached rows = %+v, want cached gateway", rows)
+	}
+
+	m = m.invalidateConfigGatewayRows()
+	for _, row := range m.configGatewayRows() {
+		if row.ID == "cached" {
+			t.Fatal("invalidated gateway rows reused stale panel cache")
+		}
+	}
+}
+
+func TestPrioritizeConfigGatewayRowsActiveThenConfigured(t *testing.T) {
+	rows := []configGatewayRow{
+		{ID: "plain-1"},
+		{ID: "configured-1", Configured: true},
+		{ID: "active", Active: true, Configured: true},
+		{ID: "plain-2"},
+		{ID: "configured-2", Configured: true},
+	}
+	got := prioritizeConfigGatewayRows(rows)
+	want := []string{"active", "configured-1", "configured-2", "plain-1", "plain-2"}
+	for i, id := range want {
+		if got[i].ID != id {
+			t.Fatalf("row %d = %q, want %q; rows=%+v", i, got[i].ID, id, got)
+		}
+	}
+}
+
 func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	isolateCredentialHome(t)
 	hawkconfig.InvalidateConfigUICache()
@@ -140,7 +173,7 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 	if next.configSel != active {
 		t.Fatalf("configSel = %d, want active row %d", next.configSel, active)
 	}
-	if next.configScroll > next.configSel || next.configSel >= next.configScroll+configWindowSize {
+	if next.configScroll > next.configSel || next.configSel >= next.configScroll+next.configVisibleRows() {
 		t.Fatalf("active row not visible: sel=%d scroll=%d", next.configSel, next.configScroll)
 	}
 }

@@ -108,6 +108,7 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 		return m.beginConfigModelsTab()
 	}
 	if tab == configTabGateways {
+		m = m.refreshConfigGatewayRows()
 		m = m.focusConfigActiveGateway()
 	}
 	return m, nil
@@ -122,6 +123,7 @@ func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 	m.configScroll = 0
 	m.viewDirty = true
 	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	m = m.refreshConfigGatewayRows()
 	setup := hawkconfig.EvaluateSetupCached(ctx)
 
 	if tab < 0 {

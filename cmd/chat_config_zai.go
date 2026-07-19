@@ -103,6 +103,7 @@ func (m chatModel) handleConfigZAIRegionKey(msg tea.KeyMsg) (chatModel, tea.Cmd)
 			return m, nil
 		}
 		InvalidateModelCacheProvider(prov)
+		m = m.refreshConfigGatewayRows()
 		m.configEntry = configEntryNone
 		ctx := context.Background()
 		if post := strings.TrimSpace(m.configPostSaveKeysProvider); post == prov {

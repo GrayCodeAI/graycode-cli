@@ -1,12 +1,17 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 
 	lipgloss "charm.land/lipgloss/v2"
+	"github.com/alecthomas/chroma/v2"
+	"github.com/alecthomas/chroma/v2/formatters"
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -20,7 +25,11 @@ import (
 
 // Markdown rendering styles using the project's purpose-named palette.
 var (
-	mdHeaderStyle     = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
+	mdH1Style         = lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Underline(true)
+	mdH2Style         = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
+	mdH3Style         = lipgloss.NewStyle().Foreground(infoSky).Bold(true)
+	mdH4Style         = lipgloss.NewStyle().Foreground(costViolet).Bold(true)
+	mdHeaderStyle     = lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
 	mdBoldStyle       = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	mdItalicStyle     = lipgloss.NewStyle().Italic(true)
 	mdInlineCodeStyle = lipgloss.NewStyle().Background(bgCode).Foreground(textPrimary)
@@ -79,7 +88,7 @@ func renderMarkdown(content string, width int) string {
 		// Headers
 		if level, text := parseHeader(line); level > 0 {
 			rendered := renderInlineFormatting(text, width)
-			result.WriteString(mdHeaderStyle.Render(rendered))
+			result.WriteString(renderMarkdownHeading(level, rendered))
 			result.WriteByte('\n')
 			i++
 			continue
@@ -125,13 +134,15 @@ func renderMarkdown(content string, width int) string {
 		// Unordered list
 		if bullet, text := parseUnorderedList(line); bullet != "" {
 			rendered := renderInlineFormatting(text, width)
-			prefix := "  " + mdBulletStyle.Render(bullet) + " "
-			wrapped := mdWordWrap(rendered, width-5)
+			indent := markdownListIndent(line)
+			prefix := indent + mdBulletStyle.Render(bullet) + " "
+			prefixW := visibleWidth(prefix)
+			wrapped := mdWordWrap(rendered, width-prefixW)
 			wrapLines := strings.Split(wrapped, "\n")
 			result.WriteString(prefix + wrapLines[0])
 			result.WriteByte('\n')
 			for _, wl := range wrapLines[1:] {
-				result.WriteString("    " + wl)
+				result.WriteString(strings.Repeat(" ", prefixW) + wl)
 				result.WriteByte('\n')
 			}
 			i++
@@ -141,8 +152,8 @@ func renderMarkdown(content string, width int) string {
 		// Ordered list
 		if num, text := parseOrderedList(line); num != "" {
 			rendered := renderInlineFormatting(text, width)
-			prefix := "  " + num + " "
-			prefixW := 2 + runewidth.StringWidth(num) + 1
+			prefix := markdownListIndent(line) + mdBulletStyle.Render(num) + " "
+			prefixW := visibleWidth(prefix)
 			wrapped := mdWordWrap(rendered, width-prefixW)
 			wrapLines := strings.Split(wrapped, "\n")
 			result.WriteString(prefix + wrapLines[0])
@@ -169,6 +180,42 @@ func renderMarkdown(content string, width int) string {
 	}
 
 	return strings.TrimRight(result.String(), "\n")
+}
+
+func renderMarkdownHeading(level int, rendered string) string {
+	switch level {
+	case 1:
+		return mdH1Style.Render(rendered)
+	case 2:
+		return mdH2Style.Render(rendered)
+	case 3:
+		return mdH3Style.Render(rendered)
+	case 4:
+		return mdH4Style.Render(rendered)
+	default:
+		return mdHeaderStyle.Render(rendered)
+	}
+}
+
+// markdownListIndent preserves nested Markdown hierarchy while coloring each
+// indentation level. Two leading spaces (or one tab) represent one level.
+func markdownListIndent(line string) string {
+	spaces := 0
+	for _, r := range line {
+		switch r {
+		case ' ':
+			spaces++
+		case '\t':
+			spaces += 2
+		default:
+			levels := spaces / 2
+			if levels < 1 {
+				return "  "
+			}
+			return "  " + mdBlockquoteBar.Render(strings.Repeat("| ", levels))
+		}
+	}
+	return "  "
 }
 
 // codeBlock holds a parsed fenced code block.
@@ -210,27 +257,92 @@ func renderCodeBlock(lang, code string, width int) string {
 	indent := "  "
 	innerWidth := width - 4
 	if innerWidth < 10 {
-		innerWidth = width
+		innerWidth = 10
 	}
 
 	if lang != "" {
-		label := mdCodeLabelStyle.Render(" " + lang + " ")
+		label := mdCodeLabelStyle.Bold(true).Render(" " + strings.ToLower(lang) + " ")
 		b.WriteString(indent + label)
 		b.WriteByte('\n')
 	}
 
-	for _, line := range strings.Split(code, "\n") {
+	// Literal tabs align to terminal-global tab stops, so their apparent width
+	// changes when the code panel itself is indented. Expand them before both
+	// highlighting and width measurement to keep nesting stable in every pane.
+	displayCode := expandCodeTabs(code, 4)
+	highlighted := highlightCodeWithChroma(displayCode, lang)
+	codeBG := markdownCodeBackgroundANSI()
+	for _, line := range strings.Split(highlighted, "\n") {
 		// Pad line to inner width for consistent background
-		visW := runewidth.StringWidth(line)
+		visW := visibleWidth(line)
 		pad := ""
 		if visW < innerWidth {
 			pad = strings.Repeat(" ", innerWidth-visW)
 		}
-		styled := mdCodeBlockStyle.Render(" " + line + pad + " ")
-		b.WriteString(indent + styled)
+		b.WriteString(indent)
+		// Chroma resets attributes between tokens. Reapply the code background
+		// after every reset so indentation and padding remain one visual block.
+		line = strings.ReplaceAll(line, ansiReset, ansiReset+codeBG)
+		b.WriteString(codeBG + " " + line + pad + " " + ansiReset)
 		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func expandCodeTabs(code string, tabWidth int) string {
+	if tabWidth <= 0 || !strings.ContainsRune(code, '\t') {
+		return code
+	}
+	var out strings.Builder
+	out.Grow(len(code))
+	column := 0
+	for _, r := range code {
+		switch r {
+		case '\n', '\r':
+			out.WriteRune(r)
+			column = 0
+		case '\t':
+			spaces := tabWidth - column%tabWidth
+			out.WriteString(strings.Repeat(" ", spaces))
+			column += spaces
+		default:
+			out.WriteRune(r)
+			column += runewidth.RuneWidth(r)
+		}
+	}
+	return out.String()
+}
+
+func markdownCodeBackgroundANSI() string {
+	styled := mdCodeBlockStyle.Render(" ")
+	if i := strings.IndexByte(styled, ' '); i > 0 {
+		return styled[:i]
+	}
+	return ""
+}
+
+// highlightCodeWithChroma uses a real lexer when the fenced language is known.
+// Unknown and unlabelled fences remain untouched instead of guessing and
+// potentially coloring ordinary terminal output incorrectly.
+func highlightCodeWithChroma(code, language string) string {
+	language = strings.TrimSpace(strings.ToLower(language))
+	if code == "" || language == "" {
+		return code
+	}
+	lexer := lexers.Get(language)
+	if lexer == nil {
+		return code
+	}
+	lexer = chroma.Coalesce(lexer)
+	iterator, err := lexer.Tokenise(nil, code)
+	if err != nil {
+		return code
+	}
+	var out bytes.Buffer
+	if err := formatters.TTY256.Format(&out, styles.Get("catppuccin-mocha"), iterator); err != nil {
+		return code
+	}
+	return strings.TrimSuffix(out.String(), "\n")
 }
 
 // isHorizontalRule detects ---, ***, ___ (3 or more of same char, optional spaces).

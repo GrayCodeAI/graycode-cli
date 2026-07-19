@@ -113,6 +113,24 @@ func HasStoredCredentialForProvider(ctx context.Context, providerID string) bool
 	return err == nil && status.Configured
 }
 
+// CredentialEnvironmentConflict reports a safe environment-vs-keychain
+// mismatch for a provider. It returns identifiers only, never secret values.
+func CredentialEnvironmentConflict(ctx context.Context, providerID string) (envVar string, conflict bool) {
+	engine, err := newEyrieEngine()
+	if err != nil {
+		return "", false
+	}
+	status, err := engine.CredentialStatus(ctx, providerID)
+	if err != nil {
+		return "", false
+	}
+	envVar = status.EnvironmentVariable
+	if envVar == "" {
+		envVar = status.EnvVar
+	}
+	return envVar, status.EnvironmentConflict
+}
+
 // ConfiguredCredentialProviders returns setup gateways with a stored API key.
 func ConfiguredCredentialProviders() []string {
 	return configuredCredentialProvidersCached(context.Background())
