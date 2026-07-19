@@ -1,0 +1,525 @@
+﻿2026-07-19T02:35:48.9093950Z Current runner version: '2.335.1'
+2026-07-19T02:35:48.9119919Z ##[group]Runner Image Provisioner
+2026-07-19T02:35:48.9121162Z Hosted Compute Agent
+2026-07-19T02:35:48.9121775Z Version: 20260707.563
+2026-07-19T02:35:48.9122469Z Commit: 02667638d2b423fbc733a8e32a88b44996a3ba6e
+2026-07-19T02:35:48.9123251Z Build Date: 2026-07-07T19:33:50Z
+2026-07-19T02:35:48.9123989Z Worker ID: {96259e5a-0542-4cf7-a9ad-759ff16b2d62}
+2026-07-19T02:35:48.9124789Z Azure Region: eastus2
+2026-07-19T02:35:48.9125397Z ##[endgroup]
+2026-07-19T02:35:48.9127103Z ##[group]Operating System
+2026-07-19T02:35:48.9128258Z Ubuntu
+2026-07-19T02:35:48.9128859Z 24.04.4
+2026-07-19T02:35:48.9129436Z LTS
+2026-07-19T02:35:48.9129990Z ##[endgroup]
+2026-07-19T02:35:48.9130850Z ##[group]Runner Image
+2026-07-19T02:35:48.9131566Z Image: ubuntu-24.04
+2026-07-19T02:35:48.9132198Z Version: 20260714.240.1
+2026-07-19T02:35:48.9133582Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260714.240/images/ubuntu/Ubuntu2404-Readme.md
+2026-07-19T02:35:48.9135132Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260714.240
+2026-07-19T02:35:48.9136186Z ##[endgroup]
+2026-07-19T02:35:48.9137559Z ##[group]GITHUB_TOKEN Permissions
+2026-07-19T02:35:48.9140142Z Contents: read
+2026-07-19T02:35:48.9140947Z Metadata: read
+2026-07-19T02:35:48.9141560Z PullRequests: read
+2026-07-19T02:35:48.9142250Z SecurityEvents: write
+2026-07-19T02:35:48.9142909Z ##[endgroup]
+2026-07-19T02:35:48.9145459Z Secret source: Actions
+2026-07-19T02:35:48.9146621Z Prepare workflow directory
+2026-07-19T02:35:48.9531141Z Prepare all required actions
+2026-07-19T02:35:48.9568886Z Getting action download info
+2026-07-19T02:35:49.1649083Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+2026-07-19T02:35:49.3014121Z Download action repository 'actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c' (SHA:4a3601121dd01d1626a1e23e37211e3254c1c06c)
+2026-07-19T02:35:49.6392497Z Complete job name: security
+2026-07-19T02:35:49.7112062Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+2026-07-19T02:35:49.7113063Z with:
+2026-07-19T02:35:49.7113513Z   repository: GrayCodeAI/hawk
+2026-07-19T02:35:49.7117194Z   token: ***
+2026-07-19T02:35:49.7117640Z   ssh-strict: true
+2026-07-19T02:35:49.7118088Z   ssh-user: git
+2026-07-19T02:35:49.7118537Z   persist-credentials: true
+2026-07-19T02:35:49.7119038Z   clean: true
+2026-07-19T02:35:49.7119484Z   sparse-checkout-cone-mode: true
+2026-07-19T02:35:49.7120002Z   fetch-depth: 1
+2026-07-19T02:35:49.7120677Z   fetch-tags: false
+2026-07-19T02:35:49.7121128Z   show-progress: true
+2026-07-19T02:35:49.7121588Z   lfs: false
+2026-07-19T02:35:49.7122006Z   submodules: false
+2026-07-19T02:35:49.7122462Z   set-safe-directory: true
+2026-07-19T02:35:49.7123132Z env:
+2026-07-19T02:35:49.7123539Z   GO_VERSION: 1.26.5
+2026-07-19T02:35:49.7124016Z   GOPRIVATE: github.com/GrayCodeAI/*
+2026-07-19T02:35:49.7124570Z   GONOSUMDB: github.com/GrayCodeAI/*
+2026-07-19T02:35:49.7125157Z   GONOSUMCHECK: 1
+2026-07-19T02:35:49.7125586Z ##[endgroup]
+2026-07-19T02:35:49.8240116Z Syncing repository: GrayCodeAI/hawk
+2026-07-19T02:35:49.8242753Z ##[group]Getting Git version info
+2026-07-19T02:35:49.8243738Z Working directory is '/home/runner/work/hawk/hawk'
+2026-07-19T02:35:49.8245278Z [command]/usr/bin/git version
+2026-07-19T02:35:49.8902629Z git version 2.54.0
+2026-07-19T02:35:49.9002973Z ##[endgroup]
+2026-07-19T02:35:49.9065635Z Temporarily overriding HOME='/home/runner/work/_temp/7ed75685-fae0-4787-b398-1b3e00a2eda8' before making global git config changes
+2026-07-19T02:35:49.9067965Z Adding repository directory to the temporary git global config as a safe directory
+2026-07-19T02:35:49.9069668Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/hawk/hawk
+2026-07-19T02:35:50.0479574Z Deleting the contents of '/home/runner/work/hawk/hawk'
+2026-07-19T02:35:50.0485307Z ##[group]Initializing the repository
+2026-07-19T02:35:50.0491166Z [command]/usr/bin/git init /home/runner/work/hawk/hawk
+2026-07-19T02:35:50.1484097Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-07-19T02:35:50.1487226Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-07-19T02:35:50.1488696Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-07-19T02:35:50.1489843Z hint: call:
+2026-07-19T02:35:50.1491099Z hint:
+2026-07-19T02:35:50.1492044Z hint: 	git config --global init.defaultBranch <name>
+2026-07-19T02:35:50.1493153Z hint:
+2026-07-19T02:35:50.1494233Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-07-19T02:35:50.1495910Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-07-19T02:35:50.1497181Z hint:
+2026-07-19T02:35:50.1497937Z hint: 	git branch -m <name>
+2026-07-19T02:35:50.1498783Z hint:
+2026-07-19T02:35:50.1500663Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-07-19T02:35:50.1502022Z Initialized empty Git repository in /home/runner/work/hawk/hawk/.git/
+2026-07-19T02:35:50.1504885Z [command]/usr/bin/git remote add origin https://github.com/GrayCodeAI/hawk
+2026-07-19T02:35:50.1563331Z ##[endgroup]
+2026-07-19T02:35:50.1567403Z ##[group]Disabling automatic garbage collection
+2026-07-19T02:35:50.1568321Z [command]/usr/bin/git config --local gc.auto 0
+2026-07-19T02:35:50.1600706Z ##[endgroup]
+2026-07-19T02:35:50.1601498Z ##[group]Setting up auth
+2026-07-19T02:35:50.1602346Z Removing SSH command configuration
+2026-07-19T02:35:50.1608366Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-07-19T02:35:50.1648085Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-07-19T02:35:50.1997027Z Removing HTTP extra header
+2026-07-19T02:35:50.2003763Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-07-19T02:35:50.2041748Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-07-19T02:35:50.2276092Z Removing includeIf entries pointing to credentials config files
+2026-07-19T02:35:50.2282419Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:35:50.2322733Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-07-19T02:35:50.2602060Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-07-19T02:35:50.2622915Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/hawk/hawk/.git.path /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:35:50.2659900Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/hawk/hawk/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:35:50.2700430Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:35:50.2739329Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:35:50.2780465Z ##[endgroup]
+2026-07-19T02:35:50.2781656Z ##[group]Fetching the repository
+2026-07-19T02:35:50.2789622Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +4f48a556c4203e71034bda17a26a07987281126e:refs/remotes/pull/105/merge
+2026-07-19T02:35:51.0983833Z From https://github.com/GrayCodeAI/hawk
+2026-07-19T02:35:51.0988396Z  * [new ref]         4f48a556c4203e71034bda17a26a07987281126e -> pull/105/merge
+2026-07-19T02:35:51.1020779Z ##[endgroup]
+2026-07-19T02:35:51.1022320Z ##[group]Determining the checkout info
+2026-07-19T02:35:51.1023607Z ##[endgroup]
+2026-07-19T02:35:51.1027384Z [command]/usr/bin/git sparse-checkout disable
+2026-07-19T02:35:51.1079124Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-07-19T02:35:51.1114571Z ##[group]Checking out the ref
+2026-07-19T02:35:51.1117716Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/105/merge
+2026-07-19T02:35:51.2591460Z Note: switching to 'refs/remotes/pull/105/merge'.
+2026-07-19T02:35:51.2592288Z 
+2026-07-19T02:35:51.2592811Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-07-19T02:35:51.2593979Z changes and commit them, and you can discard any commits you make in this
+2026-07-19T02:35:51.2595552Z state without impacting any branches by switching back to a branch.
+2026-07-19T02:35:51.2596682Z 
+2026-07-19T02:35:51.2597409Z If you want to create a new branch to retain commits you create, you may
+2026-07-19T02:35:51.2599135Z do so (now or later) by using -c with the switch command. Example:
+2026-07-19T02:35:51.2599940Z 
+2026-07-19T02:35:51.2600772Z   git switch -c <new-branch-name>
+2026-07-19T02:35:51.2601444Z 
+2026-07-19T02:35:51.2602143Z Or undo this operation with:
+2026-07-19T02:35:51.2602982Z 
+2026-07-19T02:35:51.2603847Z   git switch -
+2026-07-19T02:35:51.2604762Z 
+2026-07-19T02:35:51.2605712Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-07-19T02:35:51.2606887Z 
+2026-07-19T02:35:51.2608162Z HEAD is now at 4f48a55 Merge aa1d7d67200bedf7fecc4926b41e0f1ca0fa9aa7 into ffbd4c52e0d6717902e2dc611853ab980f5a9137
+2026-07-19T02:35:51.2613427Z ##[endgroup]
+2026-07-19T02:35:51.2655576Z [command]/usr/bin/git log -1 --format=%H
+2026-07-19T02:35:51.2685680Z 4f48a556c4203e71034bda17a26a07987281126e
+2026-07-19T02:35:51.3001179Z Prepare all required actions
+2026-07-19T02:35:51.3113937Z ##[group]Run ./.github/actions/checkout-eyrie
+2026-07-19T02:35:51.3115093Z with:
+2026-07-19T02:35:51.3116067Z   ref: fix/lint-security
+2026-07-19T02:35:51.3117186Z   allow_branch_fallback: false
+2026-07-19T02:35:51.3118202Z env:
+2026-07-19T02:35:51.3119102Z   GO_VERSION: 1.26.5
+2026-07-19T02:35:51.3120146Z   GOPRIVATE: github.com/GrayCodeAI/*
+2026-07-19T02:35:51.3121395Z   GONOSUMDB: github.com/GrayCodeAI/*
+2026-07-19T02:35:51.3122536Z   GONOSUMCHECK: 1
+2026-07-19T02:35:51.3123453Z ##[endgroup]
+2026-07-19T02:35:51.3319062Z ##[group]Run set -euo pipefail
+2026-07-19T02:35:51.3320103Z [36;1mset -euo pipefail[0m
+2026-07-19T02:35:51.3321403Z [36;1mmkdir -p "${GITHUB_WORKSPACE}/external"[0m
+2026-07-19T02:35:51.3322537Z [36;1mfor repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do[0m
+2026-07-19T02:35:51.3323650Z [36;1m  dest="${GITHUB_WORKSPACE}/external/${repo}"[0m
+2026-07-19T02:35:51.3324649Z [36;1m  if [ -d "$dest/.git" ]; then[0m
+2026-07-19T02:35:51.3325575Z [36;1m    echo "$repo already present at $dest"[0m
+2026-07-19T02:35:51.3326473Z [36;1m    continue[0m
+2026-07-19T02:35:51.3327235Z [36;1m  fi[0m
+2026-07-19T02:35:51.3328178Z [36;1m  commit=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}' || true)[0m
+2026-07-19T02:35:51.3329221Z [36;1m  if [ -n "$commit" ]; then[0m
+2026-07-19T02:35:51.3330175Z [36;1m    echo "Cloning $repo at submodule commit $commit"[0m
+2026-07-19T02:35:51.3331375Z [36;1m    # Full clone so the pinned commit is reachable even after[0m
+2026-07-19T02:35:51.3332469Z [36;1m    # the dependency repo's main has been rewritten past it[0m
+2026-07-19T02:35:51.3333552Z [36;1m    # (e.g. by a squash-merge). A depth-1 clone can't check[0m
+2026-07-19T02:35:51.3334649Z [36;1m    # out older commits and fails with "unable to read tree".[0m
+2026-07-19T02:35:51.3335811Z [36;1m    git clone "https://github.com/GrayCodeAI/${repo}.git" "$dest"[0m
+2026-07-19T02:35:51.3336936Z [36;1m    if ! (cd "$dest" && git checkout --quiet "$commit"); then[0m
+2026-07-19T02:35:51.3338336Z [36;1m      echo "::error::Pinned submodule commit $commit is not reachable in $repo"[0m
+2026-07-19T02:35:51.3339568Z [36;1m      echo "Refusing to test an unpinned branch head for a pinned Hawk commit."[0m
+2026-07-19T02:35:51.3340827Z [36;1m      exit 1[0m
+2026-07-19T02:35:51.3341612Z [36;1m    fi[0m
+2026-07-19T02:35:51.3342361Z [36;1m  else[0m
+2026-07-19T02:35:51.3343199Z [36;1m    if [ "${ALLOW_BRANCH_FALLBACK}" != "true" ]; then[0m
+2026-07-19T02:35:51.3344247Z [36;1m      echo "::error::Missing Gitlink for external/${repo} at HEAD"[0m
+2026-07-19T02:35:51.3345390Z [36;1m      echo "Hawk requires a pinned submodule commit for every engine."[0m
+2026-07-19T02:35:51.3346571Z [36;1m      echo "Record the pin with: git submodule update --init external/${repo}"[0m
+2026-07-19T02:35:51.3347793Z [36;1m      echo "and commit the Gitlink. Branch-head fallback is disabled by default"[0m
+2026-07-19T02:35:51.3349021Z [36;1m      echo "(set allow_branch_fallback=true only for local experiments)."[0m
+2026-07-19T02:35:51.3350059Z [36;1m      exit 1[0m
+2026-07-19T02:35:51.3351086Z [36;1m    fi[0m
+2026-07-19T02:35:51.3351850Z [36;1m    ref="$INPUT_REF"[0m
+2026-07-19T02:35:51.3352843Z [36;1m    # Optional escape hatch: fall back to main if the branch doesn't exist.[0m
+2026-07-19T02:35:51.3354159Z [36;1m    if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then[0m
+2026-07-19T02:35:51.3355415Z [36;1m      echo "Branch '$ref' not found on $repo, falling back to main"[0m
+2026-07-19T02:35:51.3356445Z [36;1m      ref="main"[0m
+2026-07-19T02:35:51.3357234Z [36;1m    fi[0m
+2026-07-19T02:35:51.3358257Z [36;1m    echo "::warning::Cloning $repo at branch head '$ref' (no Gitlink; allow_branch_fallback=true)"[0m
+2026-07-19T02:35:51.3359419Z [36;1m    git clone --depth=1 --branch "$ref" \[0m
+2026-07-19T02:35:51.3360889Z [36;1m      "https://github.com/GrayCodeAI/${repo}.git" "$dest"[0m
+2026-07-19T02:35:51.3361946Z [36;1m  fi[0m
+2026-07-19T02:35:51.3362697Z [36;1mdone[0m
+2026-07-19T02:35:51.3453366Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-07-19T02:35:51.3454345Z env:
+2026-07-19T02:35:51.3455083Z   GO_VERSION: 1.26.5
+2026-07-19T02:35:51.3455887Z   GOPRIVATE: github.com/GrayCodeAI/*
+2026-07-19T02:35:51.3456754Z   GONOSUMDB: github.com/GrayCodeAI/*
+2026-07-19T02:35:51.3457602Z   GONOSUMCHECK: 1
+2026-07-19T02:35:51.3458463Z   INPUT_REF: fix/lint-security
+2026-07-19T02:35:51.3459308Z   ALLOW_BRANCH_FALLBACK: false
+2026-07-19T02:35:51.3460119Z ##[endgroup]
+2026-07-19T02:35:51.3618402Z Cloning hawk-core-contracts at submodule commit 1bb303825112b19615f8e9c18c4fc9a3adca1114
+2026-07-19T02:35:51.3630479Z Cloning into '/home/runner/work/hawk/hawk/external/hawk-core-contracts'...
+2026-07-19T02:35:51.5179374Z Cloning eyrie at submodule commit 1ba692935ce5f74a664d4dfc3775a552853b99fb
+2026-07-19T02:35:51.5195607Z Cloning into '/home/runner/work/hawk/hawk/external/eyrie'...
+2026-07-19T02:35:51.8667001Z Cloning inspect at submodule commit 16cbc2e0b057ad2a72b04f80a67bb0a3ed4b93c9
+2026-07-19T02:35:51.8678351Z Cloning into '/home/runner/work/hawk/hawk/external/inspect'...
+2026-07-19T02:35:52.0657207Z Cloning sight at submodule commit fdb7524c42799297aceb63ea8b642191232caa9a
+2026-07-19T02:35:52.0670924Z Cloning into '/home/runner/work/hawk/hawk/external/sight'...
+2026-07-19T02:35:52.2607063Z Cloning tok at submodule commit 70c1bd0513233d440623076b2ac358cd425ffc7d
+2026-07-19T02:35:52.2620649Z Cloning into '/home/runner/work/hawk/hawk/external/tok'...
+2026-07-19T02:36:02.4071107Z Cloning trace at submodule commit 164d86be64a8386938ac2f63a87ec0b47fd8acf0
+2026-07-19T02:36:02.4083165Z Cloning into '/home/runner/work/hawk/hawk/external/trace'...
+2026-07-19T02:36:03.5856352Z Cloning yaad at submodule commit 15ffb18c0c4b76868cc5ce89741d787878ddd81a
+2026-07-19T02:36:03.5869801Z Cloning into '/home/runner/work/hawk/hawk/external/yaad'...
+2026-07-19T02:36:04.1071433Z ##[group]Run actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+2026-07-19T02:36:04.1072093Z with:
+2026-07-19T02:36:04.1072299Z   go-version: 1.26.5
+2026-07-19T02:36:04.1072522Z   cache: true
+2026-07-19T02:36:04.1072746Z   check-latest: false
+2026-07-19T02:36:04.1075132Z   token: ***
+2026-07-19T02:36:04.1075338Z env:
+2026-07-19T02:36:04.1075538Z   GO_VERSION: 1.26.5
+2026-07-19T02:36:04.1075779Z   GOPRIVATE: github.com/GrayCodeAI/*
+2026-07-19T02:36:04.1076068Z   GONOSUMDB: github.com/GrayCodeAI/*
+2026-07-19T02:36:04.1076327Z   GONOSUMCHECK: 1
+2026-07-19T02:36:04.1076536Z ##[endgroup]
+2026-07-19T02:36:04.2521103Z Setup go version spec 1.26.5
+2026-07-19T02:36:04.2621475Z Found in cache @ /opt/hostedtoolcache/go/1.26.5/x64
+2026-07-19T02:36:04.2623796Z Added go to the path
+2026-07-19T02:36:04.2627112Z Successfully set up Go version 1.26.5
+2026-07-19T02:36:04.9449022Z [command]/opt/hostedtoolcache/go/1.26.5/x64/bin/go env GOMODCACHE
+2026-07-19T02:36:04.9485908Z [command]/opt/hostedtoolcache/go/1.26.5/x64/bin/go env GOCACHE
+2026-07-19T02:36:04.9516538Z /home/runner/go/pkg/mod
+2026-07-19T02:36:04.9539241Z /home/runner/.cache/go-build
+2026-07-19T02:36:05.0348404Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.26.5-7d37b558499022f609a033c13404c40f8ab86199ea1f3129b2ad0af2f617e800
+2026-07-19T02:36:05.4207612Z Received 32960645 of 32960645 (100.0%), 100.1 MBs/sec
+2026-07-19T02:36:05.4208179Z Cache Size: ~31 MB (32960645 B)
+2026-07-19T02:36:05.4240797Z [command]/usr/bin/tar -xf /home/runner/work/_temp/92ec9bd2-eb80-4bd1-a57b-73e4a1cd064a/cache.tzst -P -C /home/runner/work/hawk/hawk --use-compress-program unzstd
+2026-07-19T02:36:05.6148649Z Cache restored successfully
+2026-07-19T02:36:05.6174257Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.26.5-7d37b558499022f609a033c13404c40f8ab86199ea1f3129b2ad0af2f617e800
+2026-07-19T02:36:05.6202664Z go version go1.26.5 linux/amd64
+2026-07-19T02:36:05.6203124Z 
+2026-07-19T02:36:05.6203719Z ##[group]go env
+2026-07-19T02:36:06.0151345Z AR='ar'
+2026-07-19T02:36:06.0151734Z CC='gcc'
+2026-07-19T02:36:06.0152071Z CGO_CFLAGS='-O2 -g'
+2026-07-19T02:36:06.0152422Z CGO_CPPFLAGS=''
+2026-07-19T02:36:06.0152654Z CGO_CXXFLAGS='-O2 -g'
+2026-07-19T02:36:06.0152889Z CGO_ENABLED='1'
+2026-07-19T02:36:06.0153095Z CGO_FFLAGS='-O2 -g'
+2026-07-19T02:36:06.0153312Z CGO_LDFLAGS='-O2 -g'
+2026-07-19T02:36:06.0153542Z CXX='g++'
+2026-07-19T02:36:06.0153750Z GCCGO='gccgo'
+2026-07-19T02:36:06.0153950Z GO111MODULE=''
+2026-07-19T02:36:06.0154146Z GOAMD64='v1'
+2026-07-19T02:36:06.0154342Z GOARCH='amd64'
+2026-07-19T02:36:06.0154537Z GOAUTH='netrc'
+2026-07-19T02:36:06.0154725Z GOBIN=''
+2026-07-19T02:36:06.0154958Z GOCACHE='/home/runner/.cache/go-build'
+2026-07-19T02:36:06.0155244Z GOCACHEPROG=''
+2026-07-19T02:36:06.0155456Z GODEBUG=''
+2026-07-19T02:36:06.0155677Z GOENV='/home/runner/.config/go/env'
+2026-07-19T02:36:06.0155941Z GOEXE=''
+2026-07-19T02:36:06.0156141Z GOEXPERIMENT=''
+2026-07-19T02:36:06.0156383Z GOFIPS140='off'
+2026-07-19T02:36:06.0156595Z GOFLAGS=''
+2026-07-19T02:36:06.0157256Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build288248816=/tmp/go-build -gno-record-gcc-switches'
+2026-07-19T02:36:06.0157900Z GOHOSTARCH='amd64'
+2026-07-19T02:36:06.0158117Z GOHOSTOS='linux'
+2026-07-19T02:36:06.0158325Z GOINSECURE=''
+2026-07-19T02:36:06.0158608Z GOMOD='/home/runner/work/hawk/hawk/go.mod'
+2026-07-19T02:36:06.0158918Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-07-19T02:36:06.0159211Z GONOPROXY='github.com/GrayCodeAI/*'
+2026-07-19T02:36:06.0159493Z GONOSUMDB='github.com/GrayCodeAI/*'
+2026-07-19T02:36:06.0159749Z GOOS='linux'
+2026-07-19T02:36:06.0159962Z GOPATH='/home/runner/go'
+2026-07-19T02:36:06.0160421Z GOPRIVATE='github.com/GrayCodeAI/*'
+2026-07-19T02:36:06.0161077Z GOPROXY='https://proxy.golang.org,direct'
+2026-07-19T02:36:06.0161417Z GOROOT='/opt/hostedtoolcache/go/1.26.5/x64'
+2026-07-19T02:36:06.0161727Z GOSUMDB='sum.golang.org'
+2026-07-19T02:36:06.0161969Z GOTELEMETRY='local'
+2026-07-19T02:36:06.0162545Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-07-19T02:36:06.0162863Z GOTMPDIR=''
+2026-07-19T02:36:06.0163221Z GOTOOLCHAIN='local'
+2026-07-19T02:36:06.0163542Z GOTOOLDIR='/opt/hostedtoolcache/go/1.26.5/x64/pkg/tool/linux_amd64'
+2026-07-19T02:36:06.0163894Z GOVCS=''
+2026-07-19T02:36:06.0164101Z GOVERSION='go1.26.5'
+2026-07-19T02:36:06.0164358Z GOWORK='/home/runner/work/hawk/hawk/go.work'
+2026-07-19T02:36:06.0164665Z PKG_CONFIG='pkg-config'
+2026-07-19T02:36:06.0164804Z 
+2026-07-19T02:36:06.0165194Z ##[endgroup]
+2026-07-19T02:36:06.0370140Z ##[group]Run go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+2026-07-19T02:36:06.0370956Z [36;1mgo install golang.org/x/vuln/cmd/govulncheck@v1.1.4[0m
+2026-07-19T02:36:06.0371440Z [36;1m# Fail only on vulnerabilities reachable from our code (findings with a[0m
+2026-07-19T02:36:06.0371957Z [36;1m# non-empty call trace). Transitive advisories that our code does not[0m
+2026-07-19T02:36:06.0372442Z [36;1m# call are surfaced but do not block CI — they cannot be remediated[0m
+2026-07-19T02:36:06.0372915Z [36;1m# without an upstream fix and are not in our attack surface.[0m
+2026-07-19T02:36:06.0373345Z [36;1mgovulncheck -json ./... > /tmp/vuln.json || true[0m
+2026-07-19T02:36:06.0373687Z [36;1mreachable=$(python3 - <<'PY'[0m
+2026-07-19T02:36:06.0373969Z [36;1mimport json, sys[0m
+2026-07-19T02:36:06.0374200Z [36;1mn = 0[0m
+2026-07-19T02:36:06.0374449Z [36;1mfor line in open("/tmp/vuln.json"):[0m
+2026-07-19T02:36:06.0374745Z [36;1m    line = line.strip()[0m
+2026-07-19T02:36:06.0375047Z [36;1m    if not line:[0m
+2026-07-19T02:36:06.0375284Z [36;1m        continue[0m
+2026-07-19T02:36:06.0375503Z [36;1m    try:[0m
+2026-07-19T02:36:06.0375717Z [36;1m        o = json.loads(line)[0m
+2026-07-19T02:36:06.0376001Z [36;1m    except json.JSONDecodeError:[0m
+2026-07-19T02:36:06.0376282Z [36;1m        continue[0m
+2026-07-19T02:36:06.0376522Z [36;1m    if not isinstance(o, dict):[0m
+2026-07-19T02:36:06.0376794Z [36;1m        continue[0m
+2026-07-19T02:36:06.0377098Z [36;1m    if o.get("module") == "finding" and o.get("trace"):[0m
+2026-07-19T02:36:06.0377429Z [36;1m        n += 1[0m
+2026-07-19T02:36:06.0378051Z [36;1m        print(f"REACHABLE: {o.get('osv', {}).get('id')} in {o.get('package', {}).get('path')}", file=sys.stderr)[0m
+2026-07-19T02:36:06.0378643Z [36;1mprint(n)[0m
+2026-07-19T02:36:06.0378858Z [36;1mPY[0m
+2026-07-19T02:36:06.0379055Z [36;1m)[0m
+2026-07-19T02:36:06.0379311Z [36;1mecho "Reachable vulnerabilities: $reachable"[0m
+2026-07-19T02:36:06.0379649Z [36;1mif [ "$reachable" -gt 0 ]; then[0m
+2026-07-19T02:36:06.0380081Z [36;1m  echo "::error::govulncheck found $reachable reachable vulnerability(ies) in our code"[0m
+2026-07-19T02:36:06.0381077Z [36;1m  exit 1[0m
+2026-07-19T02:36:06.0381316Z [36;1mfi[0m
+2026-07-19T02:36:06.0381578Z [36;1mecho "No reachable vulnerabilities in our code."[0m
+2026-07-19T02:36:06.0451453Z shell: /usr/bin/bash -e {0}
+2026-07-19T02:36:06.0451722Z env:
+2026-07-19T02:36:06.0451925Z   GO_VERSION: 1.26.5
+2026-07-19T02:36:06.0452164Z   GOPRIVATE: github.com/GrayCodeAI/*
+2026-07-19T02:36:06.0452464Z   GONOSUMDB: github.com/GrayCodeAI/*
+2026-07-19T02:36:06.0452719Z   GONOSUMCHECK: 1
+2026-07-19T02:36:06.0452935Z   GOTOOLCHAIN: local
+2026-07-19T02:36:06.0453155Z ##[endgroup]
+2026-07-19T02:36:06.2821869Z go: downloading golang.org/x/vuln v1.1.4
+2026-07-19T02:36:06.5419163Z go: downloading golang.org/x/telemetry v0.0.0-20240522233618-39ace7a40ae7
+2026-07-19T02:36:07.0622539Z go: downloading golang.org/x/sync v0.10.0
+2026-07-19T02:36:07.6099616Z go: downloading golang.org/x/mod v0.22.0
+2026-07-19T02:36:07.6515998Z go: downloading golang.org/x/tools v0.29.0
+2026-07-19T02:36:47.7271782Z Reachable vulnerabilities: 0
+2026-07-19T02:36:47.7272289Z No reachable vulnerabilities in our code.
+2026-07-19T02:36:47.7303508Z ##[group]Run go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
+2026-07-19T02:36:47.7304037Z [36;1mgo install github.com/securego/gosec/v2/cmd/gosec@v2.22.4[0m
+2026-07-19T02:36:47.7304502Z [36;1m# Full-strength scan: no rule exclusions. The repo reached a[0m
+2026-07-19T02:36:47.7305151Z [36;1m# 0-findings baseline (2026-07 full-repo audit); keep it that way.[0m
+2026-07-19T02:36:47.7305641Z [36;1m# Suppressions must be inline `#nosec <rule> -- <justification>`.[0m
+2026-07-19T02:36:47.7306060Z [36;1mgosec -quiet -exclude-dir external ./...[0m
+2026-07-19T02:36:47.7369584Z shell: /usr/bin/bash -e {0}
+2026-07-19T02:36:47.7369853Z env:
+2026-07-19T02:36:47.7370067Z   GO_VERSION: 1.26.5
+2026-07-19T02:36:47.7370488Z   GOPRIVATE: github.com/GrayCodeAI/*
+2026-07-19T02:36:47.7370780Z   GONOSUMDB: github.com/GrayCodeAI/*
+2026-07-19T02:36:47.7371038Z   GONOSUMCHECK: 1
+2026-07-19T02:36:47.7371256Z   GOTOOLCHAIN: local
+2026-07-19T02:36:47.7371482Z ##[endgroup]
+2026-07-19T02:36:47.7831076Z go: downloading github.com/securego/gosec/v2 v2.22.4
+2026-07-19T02:36:48.2245605Z go: downloading golang.org/x/tools v0.33.0
+2026-07-19T02:36:48.6246362Z go: downloading github.com/google/generative-ai-go v0.20.1
+2026-07-19T02:36:48.6251081Z go: downloading google.golang.org/api v0.231.0
+2026-07-19T02:36:48.6251692Z go: downloading github.com/ccojocar/zxcvbn-go v1.0.4
+2026-07-19T02:36:48.6360983Z go: downloading golang.org/x/sync v0.14.0
+2026-07-19T02:36:48.7066468Z go: downloading github.com/gookit/color v1.5.4
+2026-07-19T02:36:48.7524912Z go: downloading golang.org/x/mod v0.24.0
+2026-07-19T02:36:48.8344622Z go: downloading github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
+2026-07-19T02:36:48.8547095Z go: downloading cloud.google.com/go/ai v0.8.0
+2026-07-19T02:36:48.8945652Z go: downloading github.com/googleapis/gax-go/v2 v2.14.1
+2026-07-19T02:36:48.9360438Z go: downloading cloud.google.com/go v0.116.0
+2026-07-19T02:36:51.1958030Z go: downloading google.golang.org/genproto/googleapis/rpc v0.0.0-20250425173222-7b384671a197
+2026-07-19T02:36:51.1959085Z go: downloading google.golang.org/grpc v1.72.0
+2026-07-19T02:36:51.1960068Z go: downloading google.golang.org/protobuf v1.36.6
+2026-07-19T02:36:51.4625293Z go: downloading cloud.google.com/go/longrunning v0.5.7
+2026-07-19T02:36:51.4631125Z go: downloading google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a
+2026-07-19T02:36:51.5233124Z go: downloading cloud.google.com/go/auth v0.16.1
+2026-07-19T02:36:51.5234057Z go: downloading golang.org/x/oauth2 v0.29.0
+2026-07-19T02:36:51.5813947Z go: downloading cloud.google.com/go/auth/oauth2adapt v0.2.8
+2026-07-19T02:36:51.6345231Z go: downloading go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0
+2026-07-19T02:36:51.6346433Z go: downloading golang.org/x/net v0.40.0
+2026-07-19T02:36:51.6356607Z go: downloading cloud.google.com/go/compute/metadata v0.6.0
+2026-07-19T02:36:51.6357847Z go: downloading go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
+2026-07-19T02:36:51.6797732Z go: downloading golang.org/x/time v0.11.0
+2026-07-19T02:36:51.7073726Z go: downloading github.com/google/s2a-go v0.1.9
+2026-07-19T02:36:51.7949885Z go: downloading github.com/googleapis/enterprise-certificate-proxy v0.3.6
+2026-07-19T02:36:51.7956549Z go: downloading golang.org/x/sys v0.33.0
+2026-07-19T02:36:51.8582820Z go: downloading go.opentelemetry.io/otel v1.35.0
+2026-07-19T02:36:52.0083059Z go: downloading go.opentelemetry.io/otel/metric v1.35.0
+2026-07-19T02:36:52.0084237Z go: downloading go.opentelemetry.io/otel/trace v1.35.0
+2026-07-19T02:36:52.0085149Z go: downloading github.com/felixge/httpsnoop v1.0.4
+2026-07-19T02:36:52.0483722Z go: downloading github.com/go-logr/logr v1.4.2
+2026-07-19T02:36:52.0525530Z go: downloading golang.org/x/text v0.25.0
+2026-07-19T02:36:52.1085992Z go: downloading go.opentelemetry.io/auto/sdk v1.1.0
+2026-07-19T02:36:52.1427505Z go: downloading golang.org/x/crypto v0.38.0
+2026-07-19T02:40:10.5578972Z Results:
+2026-07-19T02:40:10.5581244Z 
+2026-07-19T02:40:10.5581259Z 
+2026-07-19T02:40:10.5582515Z [/home/runner/work/hawk/hawk/internal/trust/store.go:46] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5583812Z     45: 	s := &Store{path: path, Entries: make(map[string]Entry)}
+2026-07-19T02:40:10.5584661Z   > 46: 	data, err := os.ReadFile(path)
+2026-07-19T02:40:10.5585118Z     47: 	if err != nil {
+2026-07-19T02:40:10.5585355Z 
+2026-07-19T02:40:10.5585452Z Autofix: 
+2026-07-19T02:40:10.5585568Z 
+2026-07-19T02:40:10.5586095Z [/home/runner/work/hawk/hawk/internal/sandbox/config_toml.go:65] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5586785Z     64: 	var cfg TOMLConfig
+2026-07-19T02:40:10.5587081Z   > 65: 	data, err := os.ReadFile(path)
+2026-07-19T02:40:10.5587387Z     66: 	if err != nil {
+2026-07-19T02:40:10.5587534Z 
+2026-07-19T02:40:10.5587620Z Autofix: 
+2026-07-19T02:40:10.5587734Z 
+2026-07-19T02:40:10.5588260Z [/home/runner/work/hawk/hawk/internal/plugin/marketplace.go:140] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5589172Z     139: 	if info, err := os.Stat(cachePath); err == nil && time.Since(info.ModTime()) < time.Hour {
+2026-07-19T02:40:10.5589706Z   > 140: 		if data, err := os.ReadFile(cachePath); err == nil {
+2026-07-19T02:40:10.5590088Z     141: 			var idx MarketplaceIndex
+2026-07-19T02:40:10.5590504Z 
+2026-07-19T02:40:10.5590634Z Autofix: 
+2026-07-19T02:40:10.5590750Z 
+2026-07-19T02:40:10.5591263Z [/home/runner/work/hawk/hawk/internal/plugin/components.go:99] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5591995Z     98: 	mcpPath := filepath.Join(pluginDir, mcpFile)
+2026-07-19T02:40:10.5592395Z   > 99: 	if data, err := os.ReadFile(mcpPath); err == nil {
+2026-07-19T02:40:10.5592738Z     100: 		var file struct {
+2026-07-19T02:40:10.5592889Z 
+2026-07-19T02:40:10.5592986Z Autofix: 
+2026-07-19T02:40:10.5593100Z 
+2026-07-19T02:40:10.5593583Z [/home/runner/work/hawk/hawk/internal/crash/crash_runtime.go:26] - G304 (CWE-22): Potential file inclusion via variable (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5594306Z     25: 	path := filepath.Join(dir, "runtime-crash.log")
+2026-07-19T02:40:10.5594791Z   > 26: 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+2026-07-19T02:40:10.5595186Z     27: 	if err != nil {
+2026-07-19T02:40:10.5595329Z 
+2026-07-19T02:40:10.5595420Z Autofix: 
+2026-07-19T02:40:10.5595535Z 
+2026-07-19T02:40:10.5596031Z [/home/runner/work/hawk/hawk/internal/trust/store.go:70] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5596688Z     69: 	defer s.mu.Unlock()
+2026-07-19T02:40:10.5597054Z   > 70: 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+2026-07-19T02:40:10.5597420Z     71: 		return err
+2026-07-19T02:40:10.5597545Z 
+2026-07-19T02:40:10.5597657Z Autofix: 
+2026-07-19T02:40:10.5597766Z 
+2026-07-19T02:40:10.5598324Z [/home/runner/work/hawk/hawk/internal/plugin/marketplace.go:87] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5599182Z     86: 	path := filepath.Join(storage.ConfigDir(), "marketplace-sources.json")
+2026-07-19T02:40:10.5599702Z   > 87: 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+2026-07-19T02:40:10.5600063Z     88: 		return err
+2026-07-19T02:40:10.5600436Z 
+2026-07-19T02:40:10.5600567Z Autofix: 
+2026-07-19T02:40:10.5600719Z 
+2026-07-19T02:40:10.5601275Z [/home/runner/work/hawk/hawk/internal/plugin/env.go:25] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5601971Z     24: 	data := PluginDataDir(pluginName)
+2026-07-19T02:40:10.5602291Z   > 25: 	_ = os.MkdirAll(data, 0o755)
+2026-07-19T02:40:10.5602591Z     26: 	return data
+2026-07-19T02:40:10.5602716Z 
+2026-07-19T02:40:10.5603013Z Autofix: 
+2026-07-19T02:40:10.5603126Z 
+2026-07-19T02:40:10.5603662Z [/home/runner/work/hawk/hawk/internal/gitworktree/worktree.go:27] - G301 (CWE-276): Expect directory permissions to be 0750 or less (Confidence: HIGH, Severity: MEDIUM)
+2026-07-19T02:40:10.5604458Z     26: 	base := filepath.Join(repoDir, ".hawk", "worktrees")
+2026-07-19T02:40:10.5604983Z   > 27: 	if err := os.MkdirAll(base, 0o755); err != nil {
+2026-07-19T02:40:10.5605316Z     28: 		return "", nil, err
+2026-07-19T02:40:10.5605461Z 
+2026-07-19T02:40:10.5605549Z Autofix: 
+2026-07-19T02:40:10.5605659Z 
+2026-07-19T02:40:10.5605743Z Summary:
+2026-07-19T02:40:10.5605947Z   Gosec  : dev
+2026-07-19T02:40:10.5606158Z   Files  : 980
+2026-07-19T02:40:10.5606367Z   Lines  : 241503
+2026-07-19T02:40:10.5606574Z   Nosec  : 525
+2026-07-19T02:40:10.5606775Z   Issues : 9
+2026-07-19T02:40:10.5606886Z 
+2026-07-19T02:40:10.5661693Z ##[error]Process completed with exit code 1.
+2026-07-19T02:40:10.5779123Z Post job cleanup.
+2026-07-19T02:40:10.6678145Z [command]/usr/bin/git version
+2026-07-19T02:40:10.6724443Z git version 2.54.0
+2026-07-19T02:40:10.6766674Z Temporarily overriding HOME='/home/runner/work/_temp/f97ec3d8-229e-4bd8-8a71-3e706a7ef9f2' before making global git config changes
+2026-07-19T02:40:10.6768407Z Adding repository directory to the temporary git global config as a safe directory
+2026-07-19T02:40:10.6772589Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/hawk/hawk
+2026-07-19T02:40:10.6807678Z Removing SSH command configuration
+2026-07-19T02:40:10.6815531Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-07-19T02:40:10.6856133Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-07-19T02:40:10.7107989Z Entering 'external/eyrie'
+2026-07-19T02:40:10.7155776Z Entering 'external/hawk-core-contracts'
+2026-07-19T02:40:10.7209423Z Entering 'external/inspect'
+2026-07-19T02:40:10.7268544Z Entering 'external/sight'
+2026-07-19T02:40:10.7317313Z Entering 'external/tok'
+2026-07-19T02:40:10.7367689Z Entering 'external/trace'
+2026-07-19T02:40:10.7415867Z Entering 'external/yaad'
+2026-07-19T02:40:10.7485027Z Removing HTTP extra header
+2026-07-19T02:40:10.7485885Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-07-19T02:40:10.7532445Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-07-19T02:40:10.7786293Z Entering 'external/eyrie'
+2026-07-19T02:40:10.7832425Z Entering 'external/hawk-core-contracts'
+2026-07-19T02:40:10.7877157Z Entering 'external/inspect'
+2026-07-19T02:40:10.7921846Z Entering 'external/sight'
+2026-07-19T02:40:10.7967372Z Entering 'external/tok'
+2026-07-19T02:40:10.8013386Z Entering 'external/trace'
+2026-07-19T02:40:10.8059334Z Entering 'external/yaad'
+2026-07-19T02:40:10.8127591Z Removing includeIf entries pointing to credentials config files
+2026-07-19T02:40:10.8140876Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.8164839Z includeif.gitdir:/home/runner/work/hawk/hawk/.git.path
+2026-07-19T02:40:10.8177775Z includeif.gitdir:/home/runner/work/hawk/hawk/.git/worktrees/*.path
+2026-07-19T02:40:10.8178256Z includeif.gitdir:/github/workspace/.git.path
+2026-07-19T02:40:10.8178660Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-07-19T02:40:10.8179609Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/hawk/hawk/.git.path
+2026-07-19T02:40:10.8207563Z /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8252815Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/hawk/hawk/.git.path /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8301666Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/hawk/hawk/.git/worktrees/*.path
+2026-07-19T02:40:10.8331541Z /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8342045Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/hawk/hawk/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8381042Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-07-19T02:40:10.8408099Z /github/runner_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8417894Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8455668Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-07-19T02:40:10.8482138Z /github/runner_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8489926Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config
+2026-07-19T02:40:10.8528244Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-07-19T02:40:10.8759472Z Entering 'external/eyrie'
+2026-07-19T02:40:10.8778580Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.8798623Z Entering 'external/hawk-core-contracts'
+2026-07-19T02:40:10.8818323Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.8837746Z Entering 'external/inspect'
+2026-07-19T02:40:10.8857291Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.8876634Z Entering 'external/sight'
+2026-07-19T02:40:10.8896147Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.8915144Z Entering 'external/tok'
+2026-07-19T02:40:10.8934663Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.8954400Z Entering 'external/trace'
+2026-07-19T02:40:10.8973938Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.8994224Z Entering 'external/yaad'
+2026-07-19T02:40:10.9013360Z file:.git/config	remote.origin.url
+2026-07-19T02:40:10.9045584Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9084204Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9118546Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9152320Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9186584Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9221403Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9258087Z [command]/usr/bin/git config --file .git/config --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-19T02:40:10.9288166Z Removing credentials config '/home/runner/work/_temp/git-credentials-ac0a426f-8475-49fd-8060-59cf1419d229.config'
+2026-07-19T02:40:10.9443858Z Cleaning up orphan processes

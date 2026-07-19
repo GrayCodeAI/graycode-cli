@@ -67,7 +67,7 @@ func Open(path string) (*Store, error) {
 func (s *Store) Save() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil { // #nosec G301 -- intentional 0755 user-visible dir
 		return err
 	}
 	data, err := json.MarshalIndent(s, "", "  ")
