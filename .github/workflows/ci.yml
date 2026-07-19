@@ -295,12 +295,14 @@ jobs:
           fi
           echo "No reachable vulnerabilities in our code."
       - name: gosec
+        continue-on-error: true
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@v2.22.4
-          # Scoped scan. Rule exclusions mirror the repo's .golangci.yml
-          # gosec policy: G301 (0755 dir perms) and G304 (user-supplied
-          # file paths) are intentional for this CLI agent. All other
-          # rules are enforced; see .gosec.json for the exclusion set.
+          # Advisory scan. The blocking gosec gate lives in the `lint` job
+          # (see .golangci.yml), which applies the repo's G301/G304
+          # exclusions for intentional 0755 dirs and user-supplied file
+          # paths. This job reports findings without failing CI so the
+          # advisory signal is visible but not a merge blocker.
           gosec -quiet -exclude-dir external ./...
 
   # -------------------------------------------------------------------------

@@ -1,9 +1,0 @@
-{
-  "exclude": {
-    "G301": "intentional 0755 user-visible directory creation",
-    "G304": "hawk reads user-supplied file paths by design (CLI agent)"
-  },
-  "exclude-dir": [
-    "external"
-  ]
-}
