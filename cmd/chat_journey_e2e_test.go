@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -25,15 +25,15 @@ func requireChatModel(t *testing.T, model any) *chatModel {
 func TestChatJourney_ConfigPermissionsAndCoreCommands(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	if err := store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatal(err)
 	}
 	hawkconfig.InvalidateConfigUICache()

@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
@@ -19,13 +19,46 @@ func chatModelForConfigPasteTest() chatModel {
 	return chatModel{configInput: ti, input: textarea.New()}
 }
 
+func TestConfigGatewayRows_UsesPanelCacheUntilInvalidated(t *testing.T) {
+	cached := []configGatewayRow{{ID: "cached", DisplayName: "Cached Gateway"}}
+	m := chatModel{configGatewayRowsCache: cached}
+
+	if rows := m.configGatewayRows(); len(rows) != 1 || rows[0].ID != "cached" {
+		t.Fatalf("cached rows = %+v, want cached gateway", rows)
+	}
+
+	m = m.invalidateConfigGatewayRows()
+	for _, row := range m.configGatewayRows() {
+		if row.ID == "cached" {
+			t.Fatal("invalidated gateway rows reused stale panel cache")
+		}
+	}
+}
+
+func TestPrioritizeConfigGatewayRowsActiveThenConfigured(t *testing.T) {
+	rows := []configGatewayRow{
+		{ID: "plain-1"},
+		{ID: "configured-1", Configured: true},
+		{ID: "active", Active: true, Configured: true},
+		{ID: "plain-2"},
+		{ID: "configured-2", Configured: true},
+	}
+	got := prioritizeConfigGatewayRows(rows)
+	want := []string{"active", "configured-1", "configured-2", "plain-1", "plain-2"}
+	for i, id := range want {
+		if got[i].ID != id {
+			t.Fatalf("row %d = %q, want %q; rows=%+v", i, got[i].ID, id, got)
+		}
+	}
+}
+
 func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	isolateCredentialHome(t)
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -44,10 +77,10 @@ func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 
 func TestConfigGatewaysView_ShowsSaveOrProbeNotice(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -66,13 +99,13 @@ func TestConfigGatewaysView_ShowsSaveOrProbeNotice(t *testing.T) {
 
 func TestConfigGatewayRefreshTargetIndex_UsesSelectedRow(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
 	sess := &engine.Session{}
@@ -93,13 +126,13 @@ func TestConfigGatewayRefreshTargetIndex_UsesSelectedRow(t *testing.T) {
 
 func TestConfigGatewayRefreshTargetIndex_UsesFocusOnRefreshRow(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
 	rows := []configGatewayRow{
@@ -115,13 +148,13 @@ func TestConfigGatewayRefreshTargetIndex_UsesFocusOnRefreshRow(t *testing.T) {
 
 func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-	_ = store.Set(t.Context(), credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
 	sess := &engine.Session{}
@@ -140,17 +173,17 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 	if next.configSel != active {
 		t.Fatalf("configSel = %d, want active row %d", next.configSel, active)
 	}
-	if next.configScroll > next.configSel || next.configSel >= next.configScroll+configWindowSize {
+	if next.configScroll > next.configSel || next.configSel >= next.configScroll+next.configVisibleRows() {
 		t.Fatalf("active row not visible: sel=%d scroll=%d", next.configSel, next.configScroll)
 	}
 }
 
 func TestHandleConfigGatewaysSelect_TokenPlanNoKeyShowsRegion(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -178,10 +211,10 @@ func TestHandleConfigGatewaysSelect_TokenPlanNoKeyShowsRegion(t *testing.T) {
 
 func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 

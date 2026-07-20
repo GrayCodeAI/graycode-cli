@@ -1,7 +1,6 @@
 package icons
 
 import (
-	"strings"
 	"testing"
 	"unicode/utf8"
 )
@@ -85,15 +84,16 @@ func TestNerdGlyphs_AllInPrivateUseArea(t *testing.T) {
 	}
 }
 
-func TestGlyph_UnknownPanics(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Glyph(\"nope\") did not panic")
-		} else if !strings.Contains(r.(string), "unknown glyph") {
-			t.Errorf("panic message = %v, want it to mention 'unknown glyph'", r)
-		}
-	}()
-	Glyph("nope")
+func TestGlyph_UnknownReturnsEmpty(t *testing.T) {
+	if got := Glyph("nope"); got != "" {
+		t.Errorf("Glyph(\"nope\") = %q, want empty string", got)
+	}
+	if got := ASCII("nope"); got != "" {
+		t.Errorf("ASCII(\"nope\") = %q, want empty string", got)
+	}
+	if got := Nerd("nope"); got != "" {
+		t.Errorf("Nerd(\"nope\") = %q, want empty string", got)
+	}
 }
 
 func TestTypedAccessors_AllReturnNonEmpty(t *testing.T) {

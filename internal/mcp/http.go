@@ -160,22 +160,10 @@ func (s *HTTPServer) CallTool(ctx context.Context, name string, args map[string]
 	if err != nil {
 		return "", err
 	}
-	var resp struct {
-		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		} `json:"content"`
-	}
-	if err := json.Unmarshal(result, &resp); err != nil {
-		return string(result), nil
-	}
-	var texts []string
-	for _, c := range resp.Content {
-		if c.Text != "" {
-			texts = append(texts, c.Text)
-		}
-	}
-	return strings.Join(texts, "\n"), nil
+	// Reuse the shared decoder so the HTTP/SSE transport honors the spec's
+	// isError flag identically to the stdio transport: a remote tool failure
+	// must surface as a Go error, not a successful result.
+	return parseToolCallResult(result)
 }
 
 // Close is a no-op for HTTP/SSE servers (no persistent connection).

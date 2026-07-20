@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 type (
-	Selection        = eyrieengine.Selection
-	SelectionOptions = eyrieengine.SelectionOptions
+	Selection        = gateway.Selection
+	SelectionOptions = gateway.SelectionOptions
 )
 
 // EffectiveSelection resolves persisted selection and optional host overrides
@@ -56,7 +56,7 @@ func ActiveProvider(ctx context.Context) string {
 
 // ActiveProviderID canonicalizes a host-facing provider/gateway id through Eyrie runtime.
 func ActiveProviderID(provider string) string {
-	return eyrieengine.NormalizeProviderID(provider)
+	return gateway.NormalizeProviderID(provider)
 }
 
 // SetActiveModel persists model selection to eyrie provider.json.

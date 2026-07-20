@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestNewEyrieEngineForSettingsIsInvocationScoped(t *testing.T) {
-	previousStore := credentials.DefaultStore()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(previousStore) })
+	previousStore := gateway.DefaultStore()
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(previousStore) })
 
 	settings := Settings{CustomProviders: []CustomProviderConfig{{
 		Name: "private-gateway", BaseURL: "https://private.example.test/v1",
@@ -36,7 +36,7 @@ func TestNewEyrieEngineForSettingsIsInvocationScoped(t *testing.T) {
 	if err != nil || len(models) != 1 || models[0].ID != "private/model-v1" || models[0].GatewayID != "private_gateway" {
 		t.Fatalf("custom model surface = %+v, err=%v", models, err)
 	}
-	if setErr := store.Set(ctx, credentials.AccountForEnv("PRIVATE_GATEWAY_API_KEY"), "private-live-secret-1234567890"); setErr != nil {
+	if setErr := store.Set(ctx, gateway.AccountForEnv("PRIVATE_GATEWAY_API_KEY"), "private-live-secret-1234567890"); setErr != nil {
 		t.Fatal(setErr)
 	}
 	status, err := engine.CredentialStatus(ctx, "private-gateway")

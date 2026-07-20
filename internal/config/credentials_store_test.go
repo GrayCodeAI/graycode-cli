@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestRemoveStoredCredential_ByProvider(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 
 	removed, err := RemoveStoredCredential(ctx, "openrouter")
 	if err != nil {
@@ -23,18 +23,18 @@ func TestRemoveStoredCredential_ByProvider(t *testing.T) {
 	if len(removed) != 1 || removed[0] != "OPENROUTER_API_KEY" {
 		t.Fatalf("removed = %v", removed)
 	}
-	if credentials.HasSecret(ctx, "OPENROUTER_API_KEY") {
+	if gateway.HasSecret(ctx, "OPENROUTER_API_KEY") {
 		t.Fatal("key should be deleted")
 	}
 }
 
 func TestRemoveStoredCredential_ByEnvVar(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-1234567890")
 
 	removed, err := RemoveStoredCredential(ctx, "ANTHROPIC_API_KEY")
 	if err != nil {
@@ -46,9 +46,9 @@ func TestRemoveStoredCredential_ByEnvVar(t *testing.T) {
 }
 
 func TestRemoveStoredCredential_NotFound(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	_, err := RemoveStoredCredential(context.Background(), "openrouter")
 	if err == nil || !strings.Contains(err.Error(), "no stored credential") {
@@ -57,12 +57,12 @@ func TestRemoveStoredCredential_NotFound(t *testing.T) {
 }
 
 func TestFormatCredentialCLIStatus(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 
 	out := FormatCredentialCLIStatus(ctx)
 	if !strings.Contains(out, "Configured:") {

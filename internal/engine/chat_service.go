@@ -103,6 +103,13 @@ func (c *ChatService) Model() string { return c.model }
 // (true) or a single-provider transport (false).
 func (c *ChatService) DeploymentRouting() bool { return c.deploymentRouting }
 
+// SetGLMThinkingEnabled sets the GLM/Z.ai extended-reasoning toggle. The
+// next StreamChat/Chat request applies it. Mirrors the legacy Session
+// field setter.
+func (c *ChatService) SetGLMThinkingEnabled(v *bool) {
+	c.glmThinkingEnabled = v
+}
+
 // SetModel updates the active model. The next StreamChat will use the new
 // model.
 func (c *ChatService) SetModel(model string) {

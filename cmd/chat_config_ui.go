@@ -93,6 +93,10 @@ func configHeaderStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
 }
 
+func configWarningStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(warnAmber).Bold(true)
+}
+
 func configNoticeStyle(notice string) lipgloss.Style {
 	n := strings.ToLower(notice)
 	switch {

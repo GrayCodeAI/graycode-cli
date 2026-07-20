@@ -79,6 +79,13 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 		hawkconfig.InvalidateConfigUICache()
 		hawkconfig.RefreshConfigCredSnapshot(ctx)
 		result, err := hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+		if err != nil && hawkconfig.IsCatalogCacheRequired(err) {
+			if refreshErr := hawkconfig.RefreshCatalogAfterCredentials(ctx, nil); refreshErr == nil {
+				result, err = hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+			} else {
+				err = fmt.Errorf("%w; automatic catalog refresh failed: %v", err, refreshErr)
+			}
+		}
 		if err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
@@ -146,6 +153,7 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	m.configSaving = false
 	ctx := context.Background()
 	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	m = m.refreshConfigGatewayRows()
 	if msg.err != nil {
 		m.invalidateConnStatus()
 		if msg.providerID == configProviderOllama {
@@ -155,8 +163,13 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		saved := hawkconfig.HasStoredCredentialForProvider(ctx, msg.providerID) ||
 			strings.Contains(strings.ToLower(msg.err.Error()), "key saved in keychain")
 		if saved {
-			notice = "Key saved in " + credentialsStoreLabel() + " — provider rejected this key: " + notice
-			if !strings.Contains(strings.ToLower(notice), "refresh") {
+			if hawkconfig.IsCatalogCacheRequired(msg.err) {
+				notice = "Key saved in " + credentialsStoreLabel() + " — model catalog unavailable: " + notice
+				notice += " · run hawk models refresh"
+			} else {
+				notice = "Key saved in " + credentialsStoreLabel() + " — provider rejected this key: " + notice
+			}
+			if !hawkconfig.IsCatalogCacheRequired(msg.err) && !strings.Contains(strings.ToLower(notice), "refresh") {
 				notice += " · press r on " + hawkconfig.GatewayDisplayName(msg.providerID) + " to retry"
 			}
 		} else {

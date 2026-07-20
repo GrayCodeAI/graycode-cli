@@ -562,8 +562,15 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sess.AddUser(req.Prompt)
-	isSSE := wantsSSE(r)
-	if isSSE {
+
+	events, err := sess.Stream(r.Context())
+	if err != nil {
+		slog.Error("stream failed", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "stream failed"})
+		return
+	}
+
+	if wantsSSE(r) {
 		// Publish the user turn before exposing the session ID in streaming
 		// response headers. Even if the client disconnects mid-stream, the ID
 		// it received remains retrievable and resumable.
@@ -572,32 +579,56 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "session persistence failed"})
 			return
 		}
-	}
-
-	ctx := r.Context()
-	events, err := sess.Stream(ctx)
-	if err != nil {
-		slog.Error("stream failed", "err", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "stream failed"})
+		streamSSE(s, w, r, events, sessionID, req, sess, saved, start)
 		return
 	}
 
-	// SSE streaming mode
-	if isSSE {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("X-Hawk-Session-ID", sessionID)
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		flusher, _ := w.(http.Flusher)
-		var totalIn, totalOut, turns int
+	writeJSONResponse(s, w, events, sessionID, req, sess, saved, start)
+}
 
-		for ev := range events {
+// streamSSE writes a streaming response as SSE events, observing client
+// disconnect via r.Context().Done() so the handler does not keep pushing
+// events to a dead connection.
+func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan engine.StreamEvent, sessionID string, req ChatRequest, sess *engine.Session, saved *hawksession.Session, start time.Time) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Hawk-Session-ID", sessionID)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	flusher, _ := w.(http.Flusher)
+	var totalIn, totalOut, turns int
+
+	for {
+		select {
+		case <-r.Context().Done():
+			slog.Info("SSE client disconnected", "session_id", sessionID)
+			return
+		case ev, ok := <-events:
+			if !ok {
+				if saveErr := persistDaemonSession(sessionID, req, sess, saved, start); saveErr != nil {
+					slog.Error("persist streaming session failed", "err", saveErr, "session_id", sessionID)
+					_, _ = fmt.Fprint(w, "event: error\ndata: session persistence failed\n\n")
+					if flusher != nil {
+						flusher.Flush()
+					}
+					return
+				}
+				s.trackSession(sessionID, req, saved, start, turns)
+				doneData, _ := json.Marshal(map[string]interface{}{
+					"session_id":  sessionID,
+					"tokens_in":   totalIn,
+					"tokens_out":  totalOut,
+					"turns_taken": turns,
+				})
+				_, _ = fmt.Fprintf(w, "event: done\ndata: %s\n\n", doneData)
+				if flusher != nil {
+					flusher.Flush()
+				}
+				return
+			}
 			switch ev.Type {
 			case "content":
-				// Per SSE spec, each line of a data field must be prefixed with "data:".
-				// This prevents injection of fake events via newlines in LLM output.
 				for _, line := range strings.Split(ev.Content, "\n") {
 					_, _ = fmt.Fprintf(w, "data: %s\n", line)
 				}
@@ -613,29 +644,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 				flusher.Flush()
 			}
 		}
-		if saveErr := persistDaemonSession(sessionID, req, sess, saved, start); saveErr != nil {
-			slog.Error("persist streaming session failed", "err", saveErr, "session_id", sessionID)
-			_, _ = fmt.Fprint(w, "event: error\ndata: session persistence failed\n\n")
-			if flusher != nil {
-				flusher.Flush()
-			}
-			return
-		}
-		s.trackSession(sessionID, req, saved, start, turns)
-		doneData, _ := json.Marshal(map[string]interface{}{
-			"session_id":  sessionID,
-			"tokens_in":   totalIn,
-			"tokens_out":  totalOut,
-			"turns_taken": turns,
-		})
-		_, _ = fmt.Fprintf(w, "event: done\ndata: %s\n\n", doneData)
-		if flusher != nil {
-			flusher.Flush()
-		}
-		return
 	}
+}
 
-	// Standard JSON response
+// writeJSONResponse accumulates events and writes a single JSON response.
+func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.StreamEvent, sessionID string, req ChatRequest, sess *engine.Session, saved *hawksession.Session, start time.Time) {
 	var response strings.Builder
 	var totalIn, totalOut, turns int
 

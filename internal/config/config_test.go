@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
@@ -154,9 +154,6 @@ func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
 	if len(settings.AutoAllow) != 1 || settings.AutoAllow[0] != "Read" {
 		t.Fatalf("unexpected autoAllow: %v", settings.AutoAllow)
 	}
-	if settings.CustomHeaders["x-test"] != "yes" {
-		t.Fatalf("unexpected customHeaders: %v", settings.CustomHeaders)
-	}
 	if len(settings.MCPServers) != 1 || settings.MCPServers[0].Name != "demo" {
 		t.Fatalf("unexpected mcpServers: %v", settings.MCPServers)
 	}
@@ -232,10 +229,10 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 		t.Fatalf("unexpected max budget value: %q ok=%v", got, ok)
 	}
 	// API key status from OS secret store
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-	_ = store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-live-config-test-1234567890")
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), gateway.AccountForEnv("OPENAI_API_KEY"), "sk-live-config-test-1234567890")
 	if got, ok := SettingValue(settings, "apiKey.openai"); !ok || got != "set" {
 		t.Fatalf("unexpected provider API key status: %q ok=%v", got, ok)
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -24,10 +24,10 @@ func isolateCredentialHome(t *testing.T) {
 func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -48,15 +48,15 @@ func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {
 func TestEffectiveModelAndProvider_KeepsWithCredentials(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)

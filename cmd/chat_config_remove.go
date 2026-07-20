@@ -35,6 +35,7 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 	delete(modelCache, msg.provider)
 	ctx := context.Background()
 	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	m = m.refreshConfigGatewayRows()
 	if hawkconfig.ShouldClearSelectionAfterCredentialRemove(ctx, msg.provider) {
 		_ = hawkconfig.ClearActiveSelection(ctx)
 		m.configModelProvider = ""

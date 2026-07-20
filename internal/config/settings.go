@@ -12,10 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/storage"
-
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -36,7 +35,6 @@ type Settings struct {
 	AllowedTools            []string               `json:"allowedTools,omitempty"`    // archive-compatible allow rules
 	DisallowedTools         []string               `json:"disallowedTools,omitempty"` // archive-compatible deny rules
 	MaxBudgetUSD            float64                `json:"max_budget_usd,omitempty"`  // cost cap per session
-	CustomHeaders           map[string]string      `json:"custom_headers,omitempty"`
 	MCPServers              []MCPServerConfig      `json:"mcp_servers,omitempty"`
 	CustomProviders         []CustomProviderConfig `json:"custom_providers,omitempty"`
 	RepoMap                 *bool                  `json:"repo_map,omitempty"`
@@ -49,7 +47,6 @@ type Settings struct {
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`
 	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`       // use catalog deployment router when true / unset + provider.json qualifies
-	MinimalMode             *bool                  `json:"minimal_mode,omitempty"`             // restrict to core tools only for a focused experience
 	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"`     // GLM/Z.ai extended reasoning toggle; nil = model default
 	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`                // TUI mouse capture; false preserves native click-drag copy
 	ReplMode                *bool                  `json:"repl_mode,omitempty"`                // Start in REPL mode instead of TUI
@@ -57,12 +54,8 @@ type Settings struct {
 	ScrollMode              string                 `json:"scroll_mode,omitempty"`              // auto, wheel, trackpad
 	InvertScroll            bool                   `json:"invert_scroll,omitempty"`            // natural scrolling invert
 	CompactMode             bool                   `json:"compact_mode,omitempty"`             // reduce outer padding
-	AutoDarkTheme           string                 `json:"auto_dark_theme,omitempty"`          // override for auto dark theme
-	AutoLightTheme          string                 `json:"auto_light_theme,omitempty"`         // override for auto light theme
 	PaginatorLines          int                    `json:"paginator_lines,omitempty"`          // scrollback buffer lines (0 = unlimited)
 	PaginatorShowLineNums   *bool                  `json:"paginator_show_line_nums,omitempty"` // show line numbers in scrollback
-	PaginatorMarginTop      int                    `json:"paginator_margin_top,omitempty"`     // top margin for pager
-	PaginatorMarginBottom   int                    `json:"paginator_margin_bottom,omitempty"`  // bottom margin for pager
 }
 
 // ToolPreset maps a named preset to a list of allowed tools.
@@ -85,11 +78,6 @@ var builtinToolPresets = map[string]ToolPreset{
 		Name:  "full",
 		Tools: nil, // nil means all tools allowed
 	},
-}
-
-// IsMinimalMode reports whether minimal mode is enabled in the settings.
-func IsMinimalMode(s Settings) bool {
-	return s.MinimalMode != nil && *s.MinimalMode
 }
 
 // ToolPresetByName returns a built-in tool preset by name.
@@ -116,7 +104,6 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 		*alias
 		AutoAllowCamel       []string          `json:"autoAllow,omitempty"`
 		MaxBudgetUSDCamel    float64           `json:"maxBudgetUSD,omitempty"`
-		CustomHeadersCamel   map[string]string `json:"customHeaders,omitempty"`
 		MCPServersCamel      []MCPServerConfig `json:"mcpServers,omitempty"`
 		AllowedToolsSnake    []string          `json:"allowed_tools,omitempty"`
 		DisallowedToolsSnake []string          `json:"disallowed_tools,omitempty"`
@@ -131,9 +118,6 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 	}
 	if s.MaxBudgetUSD == 0 {
 		s.MaxBudgetUSD = aux.MaxBudgetUSDCamel
-	}
-	if len(s.CustomHeaders) == 0 {
-		s.CustomHeaders = aux.CustomHeadersCamel
 	}
 	if len(s.MCPServers) == 0 {
 		s.MCPServers = aux.MCPServersCamel
@@ -297,9 +281,6 @@ func MergeSettings(base, override Settings) Settings {
 	if override.DeploymentRouting != nil {
 		base.DeploymentRouting = override.DeploymentRouting
 	}
-	if override.MinimalMode != nil {
-		base.MinimalMode = override.MinimalMode
-	}
 	if override.ModelRoles != nil {
 		if base.ModelRoles == nil {
 			base.ModelRoles = override.ModelRoles
@@ -316,14 +297,6 @@ func MergeSettings(base, override Settings) Settings {
 			if override.ModelRoles.Commit != "" {
 				base.ModelRoles.Commit = override.ModelRoles.Commit
 			}
-		}
-	}
-	if len(override.CustomHeaders) > 0 {
-		if base.CustomHeaders == nil {
-			base.CustomHeaders = make(map[string]string, len(override.CustomHeaders))
-		}
-		for k, v := range override.CustomHeaders {
-			base.CustomHeaders[k] = v
 		}
 	}
 	return base
@@ -371,19 +344,11 @@ func SettingValue(s Settings, key string) (string, bool) {
 			return "", true
 		}
 		return strconv.FormatFloat(s.MaxBudgetUSD, 'f', -1, 64), true
-	case "customheaders":
-		data, _ := json.Marshal(s.CustomHeaders)
-		return string(data), true
 	case "mcpservers":
 		data, _ := json.Marshal(s.MCPServers)
 		return string(data), true
 	case "deploymentrouting":
 		return DeploymentRoutingLabel(s), true
-	case "minimalmode":
-		if IsMinimalMode(s) {
-			return "true", true
-		}
-		return "false", true
 	case "glmthinking", "glmthinkingenabled":
 		if s.GLMThinkingEnabled == nil {
 			return "default", true
@@ -447,17 +412,6 @@ func SetGlobalSetting(key, value string) error {
 		default:
 			return fmt.Errorf("deployment_routing must be true or false")
 		}
-	case "minimalmode":
-		switch strings.ToLower(strings.TrimSpace(value)) {
-		case "1", "true", "yes", "on":
-			enabled := true
-			s.MinimalMode = &enabled
-		case "0", "false", "no", "off":
-			enabled := false
-			s.MinimalMode = &enabled
-		default:
-			return fmt.Errorf("minimal_mode must be true or false")
-		}
 	case "glmthinking", "glmthinkingenabled":
 		switch strings.ToLower(strings.TrimSpace(value)) {
 		case "1", "true", "yes", "on":
@@ -516,10 +470,6 @@ func SetGlobalSetting(key, value string) error {
 		default:
 			return fmt.Errorf("compact_mode must be true or false")
 		}
-	case "autodarktheme", "auto_dark_theme":
-		s.AutoDarkTheme = strings.TrimSpace(value)
-	case "autolighttheme", "auto_light_theme":
-		s.AutoLightTheme = strings.TrimSpace(value)
 	case "paginatorlines", "paginator_lines":
 		lines, err := strconv.Atoi(strings.TrimSpace(value))
 		if err != nil || lines < 0 {
@@ -653,7 +603,7 @@ func providerCredentialEnvAliases(provider string) []string {
 // FetchModelsForProvider returns models from the eyrie catalog (dynamic; no hawk hardcoded lists).
 // RefreshModelCatalogV1 is the explicit network refresh boundary.
 func FetchModelsForProvider(provider string) ([]EngineModel, error) {
-	provider = eyrieengine.NormalizeProviderID(provider)
+	provider = gateway.NormalizeProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
@@ -670,7 +620,7 @@ func FetchModelsForProvider(provider string) ([]EngineModel, error) {
 	}
 	// Custom OpenAI-compatible providers: single model from settings, not hawk catalog data.
 	for _, cp := range LoadSettings().CustomProviders {
-		if eyrieengine.NormalizeProviderID(cp.Name) != provider {
+		if gateway.NormalizeProviderID(cp.Name) != provider {
 			continue
 		}
 		if id := strings.TrimSpace(cp.Model); id != "" {
@@ -686,7 +636,7 @@ func FetchModelsForProvider(provider string) ([]EngineModel, error) {
 // FetchModelsForProviderWithSettings resolves cached models using one
 // invocation's effective settings, including its custom gateways.
 func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, provider string) ([]EngineModel, error) {
-	provider = eyrieengine.NormalizeProviderID(provider)
+	provider = gateway.NormalizeProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
@@ -707,10 +657,10 @@ func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, 
 	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog", provider)
 }
 
-func refreshModelCatalog(ctx context.Context, _ bool) (eyrieengine.CatalogSnapshot, error) {
+func refreshModelCatalog(ctx context.Context, _ bool) (gateway.CatalogSnapshot, error) {
 	engine, err := newEyrieEngine()
 	if err != nil {
-		return eyrieengine.CatalogSnapshot{}, err
+		return gateway.CatalogSnapshot{}, err
 	}
 	return engine.RefreshCatalog(ctx, "")
 }

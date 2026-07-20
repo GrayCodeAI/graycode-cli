@@ -432,6 +432,10 @@ func parseTableRow(line string) []string {
 // HighlightCode performs regex-based syntax highlighting for 20+ languages.
 // Supports Go, Python, JavaScript, TypeScript, Rust, YAML, JSON, XML, TOML, SQL, C/C++, Java, C#, and more.
 func HighlightCode(code string, language string) string {
+	if highlighted := highlightCodeWithChroma(code, language); highlighted != code {
+		return highlighted
+	}
+
 	lang := strings.ToLower(language)
 
 	// Language-specific keyword maps for syntax highlighting

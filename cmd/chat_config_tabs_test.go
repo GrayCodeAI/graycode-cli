@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -29,10 +29,10 @@ func TestRenderConfigTabBar_DotIndicators(t *testing.T) {
 
 func TestOpenConfigPanel_FirstRunOpensGateways(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -48,10 +48,10 @@ func TestOpenConfigPanel_FirstRunOpensGateways(t *testing.T) {
 
 func TestOpenConfigAtTab_ModelsWithoutCredentialsFallsBackToGateways(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 

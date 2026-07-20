@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -24,6 +25,21 @@ type resilienceManagingChatClient interface {
 func clientManagesResilience(client ChatClient) bool {
 	manager, ok := client.(resilienceManagingChatClient)
 	return ok && manager.ManagesResilience()
+}
+
+// nativeCompactionCapable is an optional capability implemented by facade
+// clients bound to an engine that supports provider-native compaction — so
+// Session never needs to unwrap the raw engine.
+type nativeCompactionCapable interface {
+	NativeCompaction(ctx context.Context, provider, model string) bool
+	CompactNative(ctx context.Context, req gateway.NativeCompactionRequest) (string, error)
+}
+
+func clientNativeCompaction(client ChatClient, ctx context.Context, provider, model string) bool {
+	if c, ok := client.(nativeCompactionCapable); ok {
+		return c.NativeCompaction(ctx, provider, model)
+	}
+	return false
 }
 
 // SetTestClient replaces the session's LLM client. For testing only.

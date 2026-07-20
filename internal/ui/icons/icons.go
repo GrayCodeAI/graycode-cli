@@ -132,12 +132,12 @@ func lookup(name string) (string, string, bool) {
 	return "", "", false
 }
 
-// Glyph returns the active-mode glyph for the given name. Panics on
-// unknown names — that is a programmer error, not a runtime condition.
+// Glyph returns the active-mode glyph for the given name. Returns "" for
+// unknown names (a programmer error, but not worth crashing the TUI).
 func Glyph(name string) string {
 	nerd, ascii, ok := lookup(name)
 	if !ok {
-		panic("icons: unknown glyph " + name)
+		return ""
 	}
 	if Mode() == ModeNerd {
 		return nerd
@@ -153,7 +153,7 @@ func Glyph(name string) string {
 func ASCII(name string) string {
 	_, ascii, ok := lookup(name)
 	if !ok {
-		panic("icons: unknown glyph " + name)
+		return ""
 	}
 	return ascii
 }
@@ -163,7 +163,7 @@ func ASCII(name string) string {
 func Nerd(name string) string {
 	nerd, _, ok := lookup(name)
 	if !ok {
-		panic("icons: unknown glyph " + name)
+		return ""
 	}
 	return nerd
 }

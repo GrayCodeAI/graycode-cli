@@ -294,7 +294,11 @@ func ApplyTheme(name string) {
 // unsynchronized from View.
 func refreshThemeStyles() {
 	// markdown.go
-	mdHeaderStyle = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
+	mdH1Style = lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Underline(true)
+	mdH2Style = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
+	mdH3Style = lipgloss.NewStyle().Foreground(infoSky).Bold(true)
+	mdH4Style = lipgloss.NewStyle().Foreground(costViolet).Bold(true)
+	mdHeaderStyle = lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
 	mdBoldStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	mdInlineCodeStyle = lipgloss.NewStyle().Background(bgCode).Foreground(textPrimary)
 	mdCodeBlockStyle = lipgloss.NewStyle().Background(bgCode)

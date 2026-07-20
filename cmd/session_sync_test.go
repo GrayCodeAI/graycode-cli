@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
@@ -13,15 +13,15 @@ import (
 func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
 	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
@@ -40,15 +40,15 @@ func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) 
 func TestEnsureSessionReadyForChat_UsesPersistedModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
 	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
@@ -65,10 +65,10 @@ func TestEnsureSessionReadyForChat_UsesPersistedModel(t *testing.T) {
 func TestEnsureSessionReadyForChat_NoModel(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -85,15 +85,15 @@ func TestEnsureSessionReadyForChat_NoModel(t *testing.T) {
 func TestEnsureSessionReadyForChat_AppliesDeferredSystemContextOnce(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
 	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")

@@ -50,9 +50,19 @@ func TestComputeModelTableLayoutFitsModelNames(t *testing.T) {
 func TestComputeModelTableLayoutLeftPacked(t *testing.T) {
 	rows := []modelTableRow{{Model: "qwen/qwen3.7-max", Provider: "qwen", Price: "$2.5/$7.5", Context: "1m"}}
 	layout := computeModelTableLayout(120, rows)
-	total := layout.Model + layout.Owner + layout.Price + layout.Context + modelTableColGap*3
-	if total > 92 {
+	total := layout.Model + layout.Owner + layout.Caps + layout.Price + layout.Context + modelTableColGap*4
+	if total > 108 {
 		t.Fatalf("expected compact left-aligned table, got %+v total=%d", layout, total)
+	}
+}
+
+func TestFormatModelCapabilities(t *testing.T) {
+	got := formatModelCapabilities([]string{"reasoning", "tools", "structured_json", "vision"})
+	if got != "T V R J" {
+		t.Fatalf("capabilities = %q, want compact stable badges", got)
+	}
+	if got := formatModelCapabilities(nil); got != "—" {
+		t.Fatalf("unknown capabilities = %q, want em dash", got)
 	}
 }
 
