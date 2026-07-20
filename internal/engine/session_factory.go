@@ -26,7 +26,7 @@ func buildChatClientWithRuntime(ctx context.Context, modelRuntime *gateway.Gatew
 	_ = ctx // request contexts are applied per generation by the facade adapter
 	provider := strings.TrimSpace(selection.Provider)
 	if provider == "" {
-	provider = legacyProvider
+		provider = legacyProvider
 	}
 	resolvedSelection := selection
 	if strings.TrimSpace(resolvedSelection.Provider) == "" {
@@ -45,7 +45,7 @@ func buildChatClientWithRuntime(ctx context.Context, modelRuntime *gateway.Gatew
 // BuildChatClientForSettings composes the model runtime from one effective
 // settings snapshot. It is the command-facing path for --settings isolation.
 func BuildChatClientForSettings(ctx context.Context, settings hawkconfig.Settings, selection gateway.Selection, legacyProvider string) (ChatClient, string, bool, error) {
-	modelRuntime, err := gateway.New(ctx, convertCustomProviders(settings.CustomProviders))
+	modelRuntime, err := gateway.New(ctx, gatewayCustomGateways(settings.CustomProviders))
 	if err != nil {
 		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("eyrie transport: %w", err)
 	}
@@ -54,6 +54,8 @@ func BuildChatClientForSettings(ctx context.Context, settings hawkconfig.Setting
 
 // convertCustomProviders maps config.CustomProviderConfig → gateway.CustomProviderConfig
 // at the composition root (the gateway package cannot import config).
+// Delegates the final step to gateway.BuildCustomGateways so a new
+// CustomProviderConfig field only needs wiring once.
 func convertCustomProviders(in []hawkconfig.CustomProviderConfig) []gateway.CustomProviderConfig {
 	out := make([]gateway.CustomProviderConfig, 0, len(in))
 	for _, p := range in {
@@ -65,6 +67,12 @@ func convertCustomProviders(in []hawkconfig.CustomProviderConfig) []gateway.Cust
 		})
 	}
 	return out
+}
+
+// gatewayCustomGateways converts config providers to gateway specs, reusing
+// the shared conversion loop.
+func gatewayCustomGateways(in []hawkconfig.CustomProviderConfig) []gateway.CustomProviderConfig {
+	return convertCustomProviders(in)
 }
 
 func requestedProvider(selection gateway.Selection, legacyProvider string) string {

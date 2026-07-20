@@ -49,12 +49,17 @@ var declareHawkIdentity = sync.OnceFunc(func() {
 // as a Provider. It is the single composition root — every eyrieengine.New call
 // in Hawk flows through here.
 func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error) {
+	// Declare hawk's identity to the credential store FIRST, before
+	// constructing the engine, so no credential read ever happens under
+	// Eyrie's host-neutral default service name. The OnceFunc makes this
+	// safe to call from every construction path.
+	declareHawkIdentity()
+
 	gateways := customGatewaysFromSettings(providers)
 	eng, err := eyrieengine.New(eyrieengine.Options{CustomGateways: gateways})
 	if err != nil {
 		return nil, err
 	}
-	declareHawkIdentity()
 	p := newEngineProvider(eng)
 	return &Gateway{
 		Generator:          p,
@@ -67,9 +72,11 @@ func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error
 	}, nil
 }
 
-// customGatewaysFromSettings maps Hawk's OpenAI-compatible provider config onto
-// Eyrie's CustomGateway spec.
-func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
+// BuildCustomGateways maps Hawk's OpenAI-compatible provider config onto
+// Eyrie's CustomGateway spec. Shared by gateway.New, config.eyrie_engine, and
+// engine.session_factory so a new CustomProviderConfig field only needs wiring
+// in one place.
+func BuildCustomGateways(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
 	gateways := make([]eyrieengine.CustomGateway, 0, len(providers))
 	for _, provider := range providers {
 		if provider.Name == "" && provider.BaseURL == "" {
@@ -81,6 +88,11 @@ func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.
 		})
 	}
 	return gateways
+}
+
+// customGatewaysFromSettings is the internal alias kept for backward compat.
+func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
+	return BuildCustomGateways(providers)
 }
 
 // CustomProviderConfig is Hawk's spec for a user-defined OpenAI-compatible
