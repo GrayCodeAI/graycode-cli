@@ -122,7 +122,7 @@ func (s *stubProvider) CompactNative(context.Context, eyrieengine.NativeCompacti
 
 func TestStubProviderDrivesChatClient(t *testing.T) {
 	stub := &stubProvider{resp: &eyrieengine.GenerateResponse{Content: "from stub", FinishReason: "end_turn"}}
-	gw := &Gateway{Provider: stub}
+	gw := &Gateway{Generator: stub}
 	client := gw.ChatClient()
 
 	got, err := client.Chat(context.Background(), []types.EyrieMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{})

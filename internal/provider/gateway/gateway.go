@@ -21,8 +21,19 @@ import (
 //
 // Construction is centralized here: New is the only call to eyrieengine.New and
 // the place Hawk declares its identity to the credential store.
+// Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds the
+// Provider roles so every engine method is forwarded, and it is the only type
+// that constructs one (via New). All other Hawk packages hold a *Gateway or speak
+// the Provider interface — never an *eyrieengine.Engine. *Gateway satisfies the
+// composite Provider interface.
 type Gateway struct {
-	Provider
+	Generator
+	NativeCompactor
+	ModelCatalog
+	CredentialManager
+	SelectionManager
+	GatewayInspector
+	CatalogMaintenance
 }
 
 // New composes the Eyrie engine for one effective settings snapshot and wraps it
@@ -37,7 +48,16 @@ func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error
 		return nil, err
 	}
 	credentials.SetServiceName("hawk")
-	return &Gateway{Provider: newEngineProvider(eng)}, nil
+	p := newEngineProvider(eng)
+	return &Gateway{
+		Generator:          p,
+		NativeCompactor:    p,
+		ModelCatalog:       p,
+		CredentialManager:  p,
+		SelectionManager:   p,
+		GatewayInspector:   p,
+		CatalogMaintenance: p,
+	}, nil
 }
 
 // customGatewaysFromSettings maps Hawk's OpenAI-compatible provider config onto
@@ -88,7 +108,7 @@ func fromEngineModel(model eyrieengine.Model) ModelInfo {
 
 // ChatClient returns a hawk ChatClient bound to this gateway's Provider.
 func (g *Gateway) ChatClient() *translateProvider {
-	return newChatClientProvider(g.Provider)
+	return newChatClientProvider(g)
 }
 
 // MustSelectProvider returns the Provider, or nil if the gateway is unset.
@@ -96,7 +116,7 @@ func (g *Gateway) MustSelectProvider() Provider {
 	if g == nil {
 		return nil
 	}
-	return g.Provider
+	return g
 }
 
 // NewFromEngine wraps an existing *eyrieengine.Engine as a Gateway. Tests that
@@ -106,7 +126,16 @@ func NewFromEngine(eng *eyrieengine.Engine) *Gateway {
 	if eng == nil {
 		return nil
 	}
-	return &Gateway{Provider: newEngineProvider(eng)}
+	p := newEngineProvider(eng)
+	return &Gateway{
+		Generator:          p,
+		NativeCompactor:    p,
+		ModelCatalog:       p,
+		CredentialManager:  p,
+		SelectionManager:   p,
+		GatewayInspector:   p,
+		CatalogMaintenance: p,
+	}
 }
 
 // --- Stateless package-level lookups -------------------------------------

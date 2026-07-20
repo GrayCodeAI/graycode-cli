@@ -14,14 +14,36 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-// Provider is Hawk's hawk-owned view of the Eyrie engine. It wraps the concrete
-// *eyrieengine.Engine (whose fields are unexported and therefore not directly
-// mockable) so Hawk tests can inject a stub. The method set is exactly the
-// surface Hawk actually uses — nothing more.
+// Provider is Hawk's hawk-owned view of the Eyrie engine: a composition of the
+// role interfaces below. It wraps the concrete *eyrieengine.Engine (whose fields
+// are unexported and therefore not directly mockable) so Hawk tests can inject a
+// stub. Splitting into roles lets callers and stubs depend only on the facet they
+// use (e.g. the ChatClient path needs only Generator); Provider stays the full
+// surface so nothing that depends on it breaks.
 type Provider interface {
-	Resolve(ctx context.Context, req eyrieengine.SelectionRequest) (eyrieengine.Route, error)
+	Generator
+	NativeCompactor
+	ModelCatalog
+	CredentialManager
+	SelectionManager
+	GatewayInspector
+	CatalogMaintenance
+}
+
+// Generator is the chat transport facet: the only part the ChatClient path uses.
+type Generator interface {
 	Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error)
 	Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error)
+}
+
+// NativeCompactor is the provider-native-compaction facet.
+type NativeCompactor interface {
+	SupportsNativeCompaction(ctx context.Context, provider, model string) bool
+	CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error)
+}
+
+// ModelCatalog is the model-discovery facet (used by routing + config).
+type ModelCatalog interface {
 	ListModels(ctx context.Context, providerID string, refresh bool) ([]eyrieengine.Model, error)
 	ListLiveModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error)
 	ListPublicModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error)
@@ -34,11 +56,11 @@ type Provider interface {
 	ProviderForModel(ctx context.Context, modelID string) string
 	PrimaryModel(ctx context.Context) string
 	ModelNames(ctx context.Context) []string
-	StatePaths() eyrieengine.StatePaths
-	DefaultProviderFilter(ctx context.Context) string
 	Catalog(ctx context.Context) (eyrieengine.CatalogSnapshot, error)
-	RefreshCatalog(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error)
-	ApplyCredentials(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error)
+}
+
+// CredentialManager is the key/credential facet (config only).
+type CredentialManager interface {
 	SaveCredential(ctx context.Context, providerID, secret string) (eyrieengine.CredentialStatus, error)
 	RemoveCredential(ctx context.Context, providerID string) error
 	CredentialStatus(ctx context.Context, providerID string) (eyrieengine.CredentialStatus, error)
@@ -47,31 +69,42 @@ type Provider interface {
 	CredentialEnvKeys(providerID string) []string
 	ResolveCredential(ctx context.Context, secret string) eyrieengine.CredentialResolution
 	CredentialProviders(context.Context) []eyrieengine.CredentialProvider
-	GatewayDefinitions() []eyrieengine.Gateway
-	Gateways(ctx context.Context) []eyrieengine.Gateway
-	GatewayRegion(providerID string) (label string, required bool)
-	SetGatewayRegion(ctx context.Context, providerID, value string) error
-	GatewayForModel(ctx context.Context, modelID string) string
-	CanonicalModel(ctx context.Context, modelID string) string
-	ApplyGatewayEnvironment(_ context.Context, providerID string)
-	DeploymentRoutingEnabled(override *bool) bool
-	DeploymentStatus(ctx context.Context, activeModel string) (string, error)
-	DeploymentSummary(ctx context.Context, activeModel string) (eyrieengine.DeploymentSummary, error)
-	RoutingPreview(ctx context.Context, modelID string) (string, error)
-	CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth
-	Preflight(ctx context.Context) eyrieengine.PreflightReport
-	PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport
+	ApplyCredentials(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error)
+}
+
+// SelectionManager is the get/set selection facet (config only).
+type SelectionManager interface {
 	ActiveSelection(ctx context.Context) eyrieengine.Route
 	EffectiveSelection(ctx context.Context, opts eyrieengine.SelectionOptions) eyrieengine.Selection
 	SetActiveProvider(ctx context.Context, provider string) error
 	SetActiveModel(ctx context.Context, modelID string) error
 	SetSelection(ctx context.Context, provider, modelID string) error
 	ClearSelection(ctx context.Context) error
+}
+
+// GatewayInspector is the gateway/deployment/catalog-state facet (config only).
+type GatewayInspector interface {
+	GatewayDefinitions() []eyrieengine.Gateway
+	Gateways(ctx context.Context) []eyrieengine.Gateway
+	GatewayRegion(providerID string) (label string, required bool)
+	SetGatewayRegion(ctx context.Context, providerID, value string) error
+	GatewayForModel(ctx context.Context, modelID string) string
+	CanonicalModel(ctx context.Context, modelID string) string
+	DeploymentRoutingEnabled(override *bool) bool
+	DeploymentStatus(ctx context.Context, activeModel string) (string, error)
+	DeploymentSummary(ctx context.Context, activeModel string) (eyrieengine.DeploymentSummary, error)
+	RoutingPreview(ctx context.Context, modelID string) (string, error)
+}
+
+// CatalogMaintenance is the refresh/preflight/security facet (config only).
+type CatalogMaintenance interface {
+	RefreshCatalog(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error)
+	CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth
+	StatePaths() eyrieengine.StatePaths
+	DefaultProviderFilter(ctx context.Context) string
+	PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport
 	ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity
 	MigrateProviderSecrets() error
-	MigrateProviderSecretsContext(ctx context.Context) error
-	SupportsNativeCompaction(ctx context.Context, provider, model string) bool
-	CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error)
 }
 
 // engineProvider is the production Provider: a thin wrapper over Eyrie's
@@ -84,9 +117,6 @@ func newEngineProvider(eng *eyrieengine.Engine) *engineProvider {
 	return &engineProvider{eng: eng}
 }
 
-func (p *engineProvider) Resolve(ctx context.Context, req eyrieengine.SelectionRequest) (eyrieengine.Route, error) {
-	return p.eng.Resolve(ctx, req)
-}
 func (p *engineProvider) Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error) {
 	return p.eng.Generate(ctx, req)
 }
@@ -186,9 +216,6 @@ func (p *engineProvider) GatewayForModel(ctx context.Context, modelID string) st
 func (p *engineProvider) CanonicalModel(ctx context.Context, modelID string) string {
 	return p.eng.CanonicalModel(ctx, modelID)
 }
-func (p *engineProvider) ApplyGatewayEnvironment(ctx context.Context, providerID string) {
-	p.eng.ApplyGatewayEnvironment(ctx, providerID)
-}
 func (p *engineProvider) DeploymentRoutingEnabled(override *bool) bool {
 	return p.eng.DeploymentRoutingEnabled(override)
 }
@@ -203,9 +230,6 @@ func (p *engineProvider) RoutingPreview(ctx context.Context, modelID string) (st
 }
 func (p *engineProvider) CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth {
 	return p.eng.CatalogHealth(ctx)
-}
-func (p *engineProvider) Preflight(ctx context.Context) eyrieengine.PreflightReport {
-	return p.eng.Preflight(ctx)
 }
 func (p *engineProvider) PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport {
 	return p.eng.PreflightWithOptions(ctx, opts)
@@ -233,9 +257,6 @@ func (p *engineProvider) ProviderStateSecurityStatus() eyrieengine.ProviderState
 }
 func (p *engineProvider) MigrateProviderSecrets() error {
 	return p.eng.MigrateProviderSecrets()
-}
-func (p *engineProvider) MigrateProviderSecretsContext(ctx context.Context) error {
-	return p.eng.MigrateProviderSecretsContext(ctx)
 }
 func (p *engineProvider) SupportsNativeCompaction(ctx context.Context, provider, model string) bool {
 	return p.eng.SupportsNativeCompaction(ctx, provider, model)
