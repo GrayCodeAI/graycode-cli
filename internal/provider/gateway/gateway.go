@@ -36,18 +36,25 @@ type Gateway struct {
 	CatalogMaintenance
 }
 
+// declareHawkIdentity sets Eyrie's OS keychain service name to "hawk" so existing
+// credentials (filed under "hawk") stay readable under Eyrie's now host-neutral
+// default. It is idempotent and runs exactly once. Called from New so the
+// identity is always declared before any credential read, no matter which New
+// path runs first.
+var declareHawkIdentity = sync.OnceFunc(func() {
+	credentials.SetServiceName("hawk")
+})
+
 // New composes the Eyrie engine for one effective settings snapshot and wraps it
 // as a Provider. It is the single composition root — every eyrieengine.New call
-// in Hawk flows through here. Hawk declares its OS keychain service name so
-// existing credentials (filed under "hawk") stay readable under Eyrie's now
-// host-neutral default.
+// in Hawk flows through here.
 func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error) {
 	gateways := customGatewaysFromSettings(providers)
 	eng, err := eyrieengine.New(eyrieengine.Options{CustomGateways: gateways})
 	if err != nil {
 		return nil, err
 	}
-	credentials.SetServiceName("hawk")
+	declareHawkIdentity()
 	p := newEngineProvider(eng)
 	return &Gateway{
 		Generator:          p,

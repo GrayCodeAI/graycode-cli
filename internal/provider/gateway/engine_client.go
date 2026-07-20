@@ -265,19 +265,21 @@ func (p *engineProvider) CompactNative(ctx context.Context, req eyrieengine.Nati
 	return p.eng.CompactNative(ctx, req)
 }
 
-// translateProvider bridges the hawk-owned ChatClient port to a Provider. The
-// type conversions here (internal/types <-> eyrieengine.*) are the single,
-// centralized translation point — Hawk's conversation DTOs never leak past it.
+// translateProvider bridges the hawk-owned ChatClient port to the Generator and
+// NativeCompactor roles. It needs no other Provider facet. The type conversions
+// here (internal/types <-> eyrieengine.*) are the single, centralized
+// translation point — Hawk's conversation DTOs never leak past it.
 type translateProvider struct {
-	provider Provider
+	generator Generator
+	compactor NativeCompactor
 }
 
 func newChatClientProvider(provider Provider) *translateProvider {
-	return &translateProvider{provider: provider}
+	return &translateProvider{generator: provider, compactor: provider}
 }
 
 func (c *translateProvider) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	response, err := c.provider.Generate(ctx, toEngineRequest(messages, opts, types.ContinuationConfig{}))
+	response, err := c.generator.Generate(ctx, toEngineRequest(messages, opts, types.ContinuationConfig{}))
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +289,7 @@ func (c *translateProvider) Chat(ctx context.Context, messages []types.EyrieMess
 func (c *translateProvider) StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, continuation types.ContinuationConfig) (*types.StreamResult, error) {
 	request := toEngineRequest(messages, opts, continuation)
 	request.Requirements.Streaming = true
-	stream, err := c.provider.Stream(ctx, request)
+	stream, err := c.generator.Stream(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -325,21 +327,21 @@ func (c *translateProvider) StreamChatContinue(ctx context.Context, messages []t
 // protocol-recovery layers around Eyrie's routed transport.
 func (c *translateProvider) ManagesResilience() bool { return true }
 
-// NativeCompaction reports whether the bound Provider supports provider-native
+// NativeCompaction reports whether the bound compactor supports provider-native
 // compaction for a provider/model pair.
 func (c *translateProvider) NativeCompaction(ctx context.Context, provider, model string) bool {
-	if c.provider == nil {
+	if c.compactor == nil {
 		return false
 	}
-	return c.provider.SupportsNativeCompaction(ctx, provider, model)
+	return c.compactor.SupportsNativeCompaction(ctx, provider, model)
 }
 
-// CompactNative performs provider-native compaction through the bound Provider.
+// CompactNative performs provider-native compaction through the bound compactor.
 func (c *translateProvider) CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error) {
-	if c.provider == nil {
+	if c.compactor == nil {
 		return "", fmt.Errorf("gateway: no provider")
 	}
-	return c.provider.CompactNative(ctx, req)
+	return c.compactor.CompactNative(ctx, req)
 }
 
 func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, continuation types.ContinuationConfig) eyrieengine.GenerateRequest {
