@@ -35,7 +35,10 @@ func TestVerify_ProviderJSONOnDiskHasNoSecrets(t *testing.T) {
 	}
 	env := map[string]string{"ANTHROPIC_API_KEY": "sk-ant-verify-test-key-1234567890"}
 	cfg := eyriecfg.SyncProviderConfigFromCatalog(compiled, env)
-	path := eyriecfg.GetProviderConfigPath()
+	path, err := eyriecfg.GetProviderConfigPath()
+	if err != nil {
+		t.Fatalf("GetProviderConfigPath: %v", err)
+	}
 	if err := eyriecfg.SaveProviderConfig(cfg, path); err != nil {
 		t.Fatal(err)
 	}
