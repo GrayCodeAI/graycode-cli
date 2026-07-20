@@ -219,3 +219,14 @@ This project is indexed by GitNexus as **hawk** (81516 symbols, 253124 relations
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+### Submodule workflow (external/ repos)
+
+hawk depends on ecosystem repos (`eyrie`, `hawk-core-contracts`, etc.) via git submodules under `external/`. Hawk's `go.work` points to `./external/<repo>`, so changes in the submodule are automatically picked up by hawk.
+
+1. Edit + test in `hawk/external/<repo>` — run its tests, run `make test` in hawk
+2. Push from the submodule: `git push origin <branch>`
+3. Sync to the independent repo: `cd ../<repo> && git fetch origin <branch> && git checkout <branch>`
+4. PR → merge from the independent repo
+5. Pull main in the submodule: `cd ../hawk/external/<repo> && git checkout main && git pull origin main`
+6. Commit the pointer in hawk: `cd .. && git add external/<repo> && git commit -m "chore: update <repo>"`
