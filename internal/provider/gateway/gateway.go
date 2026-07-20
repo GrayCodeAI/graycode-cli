@@ -8,6 +8,7 @@ package gateway
 
 import (
 	"context"
+	"sync"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
@@ -109,14 +110,27 @@ func NewFromEngine(eng *eyrieengine.Engine) *Gateway {
 }
 
 // --- Stateless package-level lookups -------------------------------------
-// These build a default-gateway instance per call and are the thin seam that
-// lets hawk-owned policy packages (routing, config) delegate Eyrie reads
-// without importing Eyrie themselves. They mirror the pre-existing per-call
-// engine construction; a cached default gateway can be added later.
+// These delegate Eyrie reads to one shared default gateway so hawk-owned
+// policy packages (routing, config) never import Eyrie themselves. eyrie's
+// Engine reloads its catalog and provider config from disk on every method
+// call, so a single long-lived gateway returns identical freshness to
+// constructing one per call — this just avoids redundant construction. It
+// mirrors the sync.Once singleton the old routing code used.
+//
+// The ctx parameter is retained (though unused here) to keep this helper's
+// signature stable across its 11 call sites; ctx still flows through to every
+// data call via the helpers below.
+
+var (
+	defaultGatewayOnce sync.Once
+	defaultGatewayVal  *Gateway
+)
 
 func defaultGateway(ctx context.Context) *Gateway {
-	g, _ := New(ctx, nil)
-	return g
+	defaultGatewayOnce.Do(func() {
+		defaultGatewayVal, _ = New(context.Background(), nil)
+	})
+	return defaultGatewayVal
 }
 
 // ModelInfoLookup returns a model by id or alias, or false if unknown.
