@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
-	selection := eyrieengine.Selection{
+	selection := gateway.Selection{
 		Provider:          "openrouter",
 		Model:             "openrouter/auto",
 		DeploymentRouting: false,
@@ -30,7 +30,7 @@ func TestBuildChatClientForSettingsComposesCustomGateway(t *testing.T) {
 		Name: "private-gateway", BaseURL: "https://private.example.test/v1",
 		APIKeyEnv: "PRIVATE_GATEWAY_API_KEY", Model: "private/model-v1",
 	}}}
-	selection := eyrieengine.Selection{Provider: "private-gateway", Model: "private/model-v1"}
+	selection := gateway.Selection{Provider: "private-gateway", Model: "private/model-v1"}
 	client, label, deployment, err := BuildChatClientForSettings(context.Background(), settings, selection, "")
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestBuildChatClientForSettingsComposesCustomGateway(t *testing.T) {
 }
 
 func TestNewHawkSession_FallsBackToCallerModelWhenSelectionEmpty(t *testing.T) {
-	selection := eyrieengine.Selection{
+	selection := gateway.Selection{
 		Provider:          "openrouter",
 		DeploymentRouting: false,
 	}

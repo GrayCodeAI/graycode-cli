@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestEvaluateDeveloperPath_FreshInstall(t *testing.T) {
 	isolateMilestoneTest(t)
-	credentials.SetDefaultStore(emptyCredentialStore{})
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	gateway.SetDefaultStore(emptyCredentialStore{})
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	r := EvaluateDeveloperPath(context.Background())
 	if r.Ready {
@@ -33,8 +33,8 @@ func TestEvaluateDeveloperPath_FreshInstall(t *testing.T) {
 
 func TestFormatDeveloperPathReport_ContainsSections(t *testing.T) {
 	isolateMilestoneTest(t)
-	credentials.SetDefaultStore(emptyCredentialStore{})
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	gateway.SetDefaultStore(emptyCredentialStore{})
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 	out := FormatDeveloperPathReport(context.Background())
 	for _, want := range []string{
 		"Developer path",

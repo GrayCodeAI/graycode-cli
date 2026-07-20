@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestCatalogEmptyHint_NoCredentials(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	hint := CatalogEmptyHint(context.Background())
 	if !strings.Contains(hint, "/config") {
@@ -21,15 +21,15 @@ func TestCatalogEmptyHint_NoCredentials(t *testing.T) {
 
 func TestCatalogEmptyHint_WithCredentials(t *testing.T) {
 	InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	InvalidateConfigUICache()
 
 	hint := CatalogEmptyHint(ctx)

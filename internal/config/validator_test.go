@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestValidateSettingsValid(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-	_ = store.Set(context.Background(), credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test123456789")
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), gateway.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test123456789")
 
 	s := Settings{
 		Provider:     "anthropic",
@@ -26,9 +26,9 @@ func TestValidateSettingsValid(t *testing.T) {
 }
 
 func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	s := Settings{Provider: "anthropic"}
 	result := ValidateSettings(s)

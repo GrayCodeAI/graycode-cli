@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -27,10 +27,10 @@ func TestStartConfigXiaomiTokenPlanRegion_WithSavedRegion(t *testing.T) {
 
 func TestHandleConfigGatewaysSelect_TokenPlanNoKeyShowsRegionPicker(t *testing.T) {
 	hawkconfig.InvalidateConfigUICache()
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 

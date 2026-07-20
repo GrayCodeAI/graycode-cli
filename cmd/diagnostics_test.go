@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 )
@@ -14,7 +14,7 @@ import (
 type diagnosticsContextKey struct{}
 
 type contextRecordingCredentialStore struct {
-	credentials.MapStore
+	gateway.MapStore
 	contextValue any
 }
 
@@ -57,9 +57,9 @@ func TestDoctorReportProviderModelOrder(t *testing.T) {
 func TestDoctorReportUsesResolvedProviderForChecks(t *testing.T) {
 	isolateCredentialHome(t)
 	hawkconfig.InvalidateConfigUICache()
-	credentials.SetDefaultStore(&credentials.MapStore{})
+	gateway.SetDefaultStore(&gateway.MapStore{})
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
@@ -77,14 +77,14 @@ func TestProviderCredentialHealthCheckerResolvesAuto(t *testing.T) {
 	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
 	hawkconfig.InvalidateConfigUICache()
 	store := &contextRecordingCredentialStore{}
-	credentials.SetDefaultStore(store)
+	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.WithValue(context.Background(), diagnosticsContextKey{}, "checker-context")
-	if err := store.Set(ctx, credentials.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatal(err)
 	}
 	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
@@ -119,9 +119,9 @@ func TestProviderCredentialHealthCheckerMissingIsUnhealthy(t *testing.T) {
 	isolateCredentialHome(t)
 	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
 	hawkconfig.InvalidateConfigUICache()
-	credentials.SetDefaultStore(&credentials.MapStore{})
+	gateway.SetDefaultStore(&gateway.MapStore{})
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 

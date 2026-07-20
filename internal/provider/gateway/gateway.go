@@ -368,3 +368,26 @@ func FormatSetupError(providerID string, err error) string {
 func ParseInlineToolCalls(content string) (string, []eyrieengine.ToolCall) {
 	return eyrieengine.ParseInlineToolCalls(content)
 }
+
+// --- Test fixtures -----------------------------------------------------
+// Re-exported so hawk tests inject credential fixtures through the single
+// gateway boundary instead of importing eyrie/credentials directly. These are
+// thin aliases only; gateway still owns the eyrie relationship.
+//
+// Keep this block last and the symbols minimal — it exists purely to keep test
+// code behind the boundary.
+
+// SetDefaultStore replaces the process-wide credential store (for tests).
+var SetDefaultStore = credentials.SetDefaultStore
+
+// DefaultStore returns the process-wide credential store (for tests).
+var DefaultStore = credentials.DefaultStore
+
+// MapStore is the in-memory credential store for tests (alias).
+type MapStore = credentials.MapStore
+
+// AccountForEnv returns the keychain account name for an env var.
+func AccountForEnv(envVar string) string { return credentials.AccountForEnv(envVar) }
+
+// HasSecret reports whether a secret exists for an env var (for tests).
+func HasSecret(ctx context.Context, envKey string) bool { return credentials.HasSecret(ctx, envKey) }

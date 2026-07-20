@@ -10,7 +10,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -62,10 +62,10 @@ func isolateChatCommandSweepEnv(t *testing.T) {
 	storage.SetTestDirs(t, root)
 	isolateCredentialHome(t)
 	hawkconfig.InvalidateConfigUICache()
-	credentials.SetDefaultStore(&credentials.MapStore{})
+	gateway.SetDefaultStore(&gateway.MapStore{})
 	restoreThemeGlobals(t)
 	t.Cleanup(func() {
-		credentials.SetDefaultStore(nil)
+		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
@@ -232,10 +232,10 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 		t.Fatalf("unexpected max budget value: %q ok=%v", got, ok)
 	}
 	// API key status from OS secret store
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-	_ = store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-live-config-test-1234567890")
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
+	_ = store.Set(context.Background(), gateway.AccountForEnv("OPENAI_API_KEY"), "sk-live-config-test-1234567890")
 	if got, ok := SettingValue(settings, "apiKey.openai"); !ok || got != "set" {
 		t.Fatalf("unexpected provider API key status: %q ok=%v", got, ok)
 	}
