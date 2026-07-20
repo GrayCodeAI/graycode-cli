@@ -2,20 +2,6 @@ package config
 
 import "testing"
 
-func TestIsMinimalMode(t *testing.T) {
-	if IsMinimalMode(Settings{}) {
-		t.Error("nil MinimalMode should be false")
-	}
-	on := true
-	if !IsMinimalMode(Settings{MinimalMode: &on}) {
-		t.Error("MinimalMode=true should be true")
-	}
-	off := false
-	if IsMinimalMode(Settings{MinimalMode: &off}) {
-		t.Error("MinimalMode=false should be false")
-	}
-}
-
 func TestToolPresetByName(t *testing.T) {
 	minimal, ok := ToolPresetByName("minimal")
 	if !ok {
@@ -43,28 +29,16 @@ func TestToolPresetByName(t *testing.T) {
 	}
 }
 
-func TestMergeSettings_MinimalMode(t *testing.T) {
+func TestMergeSettings_DeploymentRouting(t *testing.T) {
 	on := true
-	merged := MergeSettings(Settings{}, Settings{MinimalMode: &on})
-	if !IsMinimalMode(merged) {
-		t.Error("override MinimalMode should propagate to base")
+	merged := MergeSettings(Settings{}, Settings{DeploymentRouting: &on})
+	if merged.DeploymentRouting == nil || !*merged.DeploymentRouting {
+		t.Error("override DeploymentRouting should propagate to base")
 	}
 
 	// Nil override should not clobber base.
-	base := MergeSettings(Settings{MinimalMode: &on}, Settings{})
-	if !IsMinimalMode(base) {
-		t.Error("nil override should preserve base MinimalMode")
-	}
-}
-
-func TestSettingValue_MinimalMode(t *testing.T) {
-	on := true
-	v, ok := SettingValue(Settings{MinimalMode: &on}, "minimal_mode")
-	if !ok || v != "true" {
-		t.Errorf("expected 'true', got %q (ok=%v)", v, ok)
-	}
-	v, ok = SettingValue(Settings{}, "minimalmode")
-	if !ok || v != "false" {
-		t.Errorf("expected 'false', got %q (ok=%v)", v, ok)
+	base := MergeSettings(Settings{DeploymentRouting: &on}, Settings{})
+	if base.DeploymentRouting == nil || !*base.DeploymentRouting {
+		t.Error("nil override should preserve base DeploymentRouting")
 	}
 }

@@ -88,19 +88,6 @@ func TestMergeSettings_MCPServersOverride(t *testing.T) {
 	}
 }
 
-func TestMergeSettings_CustomHeadersMerge(t *testing.T) {
-	t.Parallel()
-	base := Settings{CustomHeaders: map[string]string{"X-Base": "value1"}}
-	override := Settings{CustomHeaders: map[string]string{"X-Override": "value2"}}
-	merged := MergeSettings(base, override)
-	if merged.CustomHeaders["X-Base"] != "value1" {
-		t.Error("base header should be preserved")
-	}
-	if merged.CustomHeaders["X-Override"] != "value2" {
-		t.Error("override header should be added")
-	}
-}
-
 func TestMergeSettings_RepoMapOverride(t *testing.T) {
 	t.Parallel()
 	base := Settings{}
@@ -256,9 +243,6 @@ func TestSettings_UnmarshalJSON_CamelCase(t *testing.T) {
 	}
 	if s.MaxBudgetUSD != 25.0 {
 		t.Errorf("expected budget 25.0, got %f", s.MaxBudgetUSD)
-	}
-	if s.CustomHeaders["X-Test"] != "val" {
-		t.Error("expected custom header")
 	}
 }
 

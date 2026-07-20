@@ -154,9 +154,6 @@ func TestLoadSettingsAcceptsArchiveCamelCase(t *testing.T) {
 	if len(settings.AutoAllow) != 1 || settings.AutoAllow[0] != "Read" {
 		t.Fatalf("unexpected autoAllow: %v", settings.AutoAllow)
 	}
-	if settings.CustomHeaders["x-test"] != "yes" {
-		t.Fatalf("unexpected customHeaders: %v", settings.CustomHeaders)
-	}
 	if len(settings.MCPServers) != 1 || settings.MCPServers[0].Name != "demo" {
 		t.Fatalf("unexpected mcpServers: %v", settings.MCPServers)
 	}
