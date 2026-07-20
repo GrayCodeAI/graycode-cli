@@ -46,7 +46,7 @@ func (s *stubProvider) PreferredModels(context.Context, string, eyrieengine.Mode
 	return nil
 }
 func (s *stubProvider) ModelClassOf(context.Context, string) eyrieengine.ModelClass {
-	return eyrieengine.ModelClassEconomical
+	return ModelClassEconomical
 }
 func (s *stubProvider) ProviderForModel(context.Context, string) string { return "" }
 func (s *stubProvider) PrimaryModel(context.Context) string             { return "" }

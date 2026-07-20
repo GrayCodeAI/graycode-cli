@@ -387,80 +387,34 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 	return request
 }
 
-// ToEngineMessages converts hawk conversation messages to the engine's wire
-// format. Exposed for the session layer (e.g. native compaction), which must
-// translate without reaching into the raw engine.
+// ToEngineMessages returns the messages unchanged: hawk, the engine, and the
+// client all speak the canonical contract message type, so no per-field
+// conversion is needed. It is exposed for the session layer (e.g. native
+// compaction), which translates without reaching into the raw engine.
 func ToEngineMessages(messages []types.EyrieMessage) []eyrieengine.Message {
-	return toEngineMessages(messages)
+	return messages
 }
 
 func toEngineMessages(messages []types.EyrieMessage) []eyrieengine.Message {
-	out := make([]eyrieengine.Message, 0, len(messages))
-	for _, message := range messages {
-		parts := make([]eyrieengine.ContentPart, 0, len(message.ContentParts)+len(message.Images))
-		for _, part := range message.ContentParts {
-			converted := eyrieengine.ContentPart{Type: part.Type, Text: part.Text}
-			if part.ImageURL != nil {
-				converted.URL, converted.Detail = part.ImageURL.URL, part.ImageURL.Detail
-			}
-			if part.InputAudio != nil {
-				converted.AudioData, converted.AudioFormat = part.InputAudio.Data, part.InputAudio.Format
-			}
-			parts = append(parts, converted)
-		}
-		for _, image := range message.Images {
-			parts = append(parts, eyrieengine.ContentPart{Type: "image_url", URL: image})
-		}
-		calls := make([]eyrieengine.ToolCall, 0, len(message.ToolUse))
-		for _, call := range message.ToolUse {
-			calls = append(calls, eyrieengine.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
-		}
-		results := make([]eyrieengine.ToolResult, 0, len(message.ToolResults))
-		for _, result := range message.ToolResults {
-			results = append(results, eyrieengine.ToolResult{ToolUseID: result.ToolUseID, Content: result.Content, IsError: result.IsError})
-		}
-		out = append(out, eyrieengine.Message{
-			Role: message.Role, Content: message.Content, Thinking: message.Thinking,
-			ContentParts: parts, ToolCalls: calls, ToolResults: results,
-		})
-	}
-	return out
+	return messages
 }
 
 func toEngineTools(tools []types.EyrieTool) []eyrieengine.Tool {
-	out := make([]eyrieengine.Tool, 0, len(tools))
-	for _, tool := range tools {
-		out = append(out, eyrieengine.Tool{Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters})
-	}
-	return out
+	return tools
 }
 
 func toEngineToolChoice(choice *types.ToolChoiceOption) *eyrieengine.ToolChoice {
-	if choice == nil {
-		return nil
-	}
-	return &eyrieengine.ToolChoice{Type: choice.Type, Name: choice.Name, DisableParallelToolUse: choice.DisableParallelToolUse}
+	return choice
 }
 
 func fromEngineResponse(response *eyrieengine.GenerateResponse) *types.EyrieResponse {
-	if response == nil {
-		return &types.EyrieResponse{}
-	}
-	calls := make([]types.ToolCall, 0, len(response.ToolCalls))
-	for _, call := range response.ToolCalls {
-		calls = append(calls, types.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
-	}
-	return &types.EyrieResponse{
-		Content: response.Content, Thinking: response.Thinking, ToolCalls: calls,
-		FinishReason: response.FinishReason, RequestID: response.RequestID, Usage: fromEngineUsage(response.Usage),
-		Route: fromEngineRoute(response.Route),
-	}
+	return response
 }
 
 func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	out := types.EyrieStreamEvent{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
-		Usage: fromEngineUsage(event.Usage), StopReason: event.StopReason, TTFTms: event.TTFTMillis,
+		Usage: event.Usage, StopReason: event.StopReason, TTFTms: event.TTFTms,
 	}
 	switch event.Type {
 	case eyrieengine.EventRouteSelected:
@@ -479,7 +433,7 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 		out.Type = "usage"
 	case eyrieengine.EventTTFT:
 		out.Type = "ttft"
-		out.TTFT = event.TTFTMillis
+		out.TTFT = event.TTFTms
 	case eyrieengine.EventDone:
 		out.Type = "done"
 	case eyrieengine.EventContinuation:
@@ -487,13 +441,13 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	case eyrieengine.EventWarning:
 		out.Type, out.Content = "warning", event.Warning
 	default:
-		out.Type = string(event.Type)
+		out.Type = event.Type
 	}
 	if event.ToolCall != nil {
-		out.ToolCall = &types.ToolCall{ID: event.ToolCall.ID, Name: event.ToolCall.Name, Arguments: event.ToolCall.Arguments}
+		out.ToolCall = event.ToolCall
 	}
 	if event.Route != nil {
-		out.Route = fromEngineRoute(*event.Route)
+		out.Route = event.Route
 	}
 	return out, true
 }
@@ -502,21 +456,11 @@ func fromEngineRoute(route eyrieengine.Route) *types.ResolvedRoute {
 	if route.Provider == "" && route.Model == "" && !route.DeploymentRouting {
 		return nil
 	}
-	return &types.ResolvedRoute{
-		Provider:          route.Provider,
-		Model:             route.Model,
-		DeploymentRouting: route.DeploymentRouting,
-	}
+	return &route
 }
 
 func fromEngineUsage(usage *eyrieengine.Usage) *types.EyrieUsage {
-	if usage == nil {
-		return nil
-	}
-	return &types.EyrieUsage{
-		PromptTokens: usage.InputTokens, CompletionTokens: usage.OutputTokens, TotalTokens: usage.TotalTokens,
-		CacheCreationTokens: usage.CacheCreationTokens, CacheReadTokens: usage.CacheReadTokens, ThinkingTokens: usage.ThinkingTokens,
-	}
+	return usage
 }
 
 func responseSchema(format *types.ResponseFormat) string {

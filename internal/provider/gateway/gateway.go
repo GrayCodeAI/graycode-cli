@@ -12,6 +12,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 // Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds
@@ -307,9 +308,9 @@ func ModelNames(ctx context.Context) []string {
 type ModelClass = eyrieengine.ModelClass
 
 const (
-	ModelClassEconomical = eyrieengine.ModelClassEconomical
-	ModelClassBalanced   = eyrieengine.ModelClassBalanced
-	ModelClassPremium    = eyrieengine.ModelClassPremium
+	ModelClassEconomical = llm.ModelClassEconomical
+	ModelClassBalanced   = llm.ModelClassBalanced
+	ModelClassPremium    = llm.ModelClassPremium
 	CheckFail            = eyrieengine.CheckFail
 )
 
