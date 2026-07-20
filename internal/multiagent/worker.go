@@ -21,11 +21,11 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		}
 
 		// Create worktree for isolation
-		wtPath, err := createWorktree(cfg.RepoDir, cfg.BaseBranch, feature.Branch)
+		wtPath, err := createWorktree(ctx, cfg.RepoDir, cfg.BaseBranch, feature.Branch)
 		if err != nil {
 			return nil, fmt.Errorf("worktree: %w", err)
 		}
-		defer removeWorktree(cfg.RepoDir, wtPath)
+		defer removeWorktree(ctx, cfg.RepoDir, wtPath)
 
 		// Build the worker prompt
 		workerPrompt := fmt.Sprintf(
@@ -76,9 +76,9 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		}
 
 		// Check for commit
-		commitID := getLastCommit(wtPath)
-		filesChanged := getChangedFiles(wtPath, cfg.BaseBranch)
-		testsPassed := runTests(wtPath)
+		commitID := getLastCommit(ctx, wtPath)
+		filesChanged := getChangedFiles(ctx, wtPath, cfg.BaseBranch)
+		testsPassed := runTests(ctx, wtPath)
 
 		return &Handoff{
 			CommitID:     commitID,
@@ -132,11 +132,11 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 			model = cfg.WorkerModel
 		}
 
-		wtPath, err := createWorktree(cfg.RepoDir, cfg.BaseBranch, feature.Branch)
+		wtPath, err := createWorktree(ctx, cfg.RepoDir, cfg.BaseBranch, feature.Branch)
 		if err != nil {
 			return nil, fmt.Errorf("worktree: %w", err)
 		}
-		defer removeWorktree(cfg.RepoDir, wtPath)
+		defer removeWorktree(ctx, cfg.RepoDir, wtPath)
 
 		validationPrompt := fmt.Sprintf(
 			"You are validating the implementation of feature: %s\n\nDescription: %s\n\n"+
@@ -190,15 +190,15 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 	}
 }
 
-func createWorktree(repoDir, baseBranch, branch string) (string, error) {
-	dir, err := exec.CommandContext(context.Background(), "mktemp", "-d").Output()
+func createWorktree(ctx context.Context, repoDir, baseBranch, branch string) (string, error) {
+	dir, err := exec.CommandContext(ctx, "mktemp", "-d").Output()
 	if err != nil {
 		return "", err
 	}
 	wtPath := strings.TrimSpace(string(dir))
 
 	// #nosec G204 -- binary is the fixed string "git"; branch/wtPath/baseBranch come from internal mission state, not raw external input
-	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
+	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(out)), err)
@@ -206,16 +206,16 @@ func createWorktree(repoDir, baseBranch, branch string) (string, error) {
 	return wtPath, nil
 }
 
-func removeWorktree(repoDir, wtPath string) {
-	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath)
+func removeWorktree(ctx context.Context, repoDir, wtPath string) {
+	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtPath)
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to remove worktree %s: %v\n", wtPath, err)
 	}
 }
 
-func getLastCommit(dir string) string {
-	cmd := exec.CommandContext(context.Background(), "git", "rev-parse", "HEAD")
+func getLastCommit(ctx context.Context, dir string) string {
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -224,9 +224,9 @@ func getLastCommit(dir string) string {
 	return strings.TrimSpace(string(out))
 }
 
-func getChangedFiles(dir, baseBranch string) []string {
+func getChangedFiles(ctx context.Context, dir, baseBranch string) []string {
 	// #nosec G204 -- binary is the fixed string "git"; baseBranch comes from internal Config, not raw external input
-	cmd := exec.CommandContext(context.Background(), "git", "diff", "--name-only", baseBranch+"..HEAD")
+	cmd := exec.CommandContext(ctx, "git", "diff", "--name-only", baseBranch+"..HEAD")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -239,8 +239,8 @@ func getChangedFiles(dir, baseBranch string) []string {
 	return lines
 }
 
-func runTests(dir string) bool {
-	cmd := exec.CommandContext(context.Background(), "go", "test", "./...", "-timeout", "60s")
+func runTests(ctx context.Context, dir string) bool {
+	cmd := exec.CommandContext(ctx, "go", "test", "./...", "-timeout", "60s")
 	cmd.Dir = dir
 	return cmd.Run() == nil
 }
