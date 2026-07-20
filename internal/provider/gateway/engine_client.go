@@ -9,10 +9,11 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // Provider is Hawk's hawk-owned view of the Eyrie engine: a composition of the
@@ -441,6 +442,10 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	case eyrieengine.EventWarning:
 		out.Type, out.Content = "warning", event.Warning
 	default:
+		// An unrecognized engine event type means eyrie emits something this
+		// adapter has not been taught to translate. Forward it verbatim so no
+		// data is silently dropped, but log it so the mapping gap is visible.
+		slog.Warn("gateway: forwarding unrecognized engine event type", "type", event.Type)
 		out.Type = event.Type
 	}
 	if event.ToolCall != nil {

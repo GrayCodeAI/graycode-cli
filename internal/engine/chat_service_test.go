@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 // TestChatService_BuildOptions checks that BuildOptions correctly

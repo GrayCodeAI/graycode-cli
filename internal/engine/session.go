@@ -76,7 +76,7 @@ type Session struct {
 	system   string
 	log      *logger.Logger
 	metrics  *metrics.Registry
-	Cost Cost
+	Cost     Cost
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
 	// code should go through s.llm.* rather than touching the legacy
@@ -247,28 +247,28 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	pe := NewPermissionEngine()
 	log := logger.Default()
 	s := &Session{
-		client:            chat,
-		registry:          registry,
-		provider:          provider,
-		model:             model,
-		system:            systemPrompt,
-		log:               log,
-		metrics:           metrics.NewRegistry(),
-		Perm:              pe,
-		Permissions:       pe.Memory,
-		AutoMode:          pe.AutoMode,
-		Classifier:        pe.Classifier,
-		BypassKill:        pe.BypassKill,
-		Beliefs:           NewBeliefState(),
-		Backtrack:         NewBacktrackEngine(),
-		Limits:            NewLimitTracker(DefaultLimits()),
-		Tracer:            oteltrace.NewTracer(),
-		LintLoop:          NewLintLoop(),
-		TestLoop:          NewTestLoop(),
-		FileMentions:      NewFileMentionDetector("."),
-		ResponseCache:     NewResponseCache(1000, 24*time.Hour),
-		Pipeline:    NewIntegrationPipeline(),
-		RateLimiter: ratelimit.PerSecond(10),
+		client:        chat,
+		registry:      registry,
+		provider:      provider,
+		model:         model,
+		system:        systemPrompt,
+		log:           log,
+		metrics:       metrics.NewRegistry(),
+		Perm:          pe,
+		Permissions:   pe.Memory,
+		AutoMode:      pe.AutoMode,
+		Classifier:    pe.Classifier,
+		BypassKill:    pe.BypassKill,
+		Beliefs:       NewBeliefState(),
+		Backtrack:     NewBacktrackEngine(),
+		Limits:        NewLimitTracker(DefaultLimits()),
+		Tracer:        oteltrace.NewTracer(),
+		LintLoop:      NewLintLoop(),
+		TestLoop:      NewTestLoop(),
+		FileMentions:  NewFileMentionDetector("."),
+		ResponseCache: NewResponseCache(1000, 24*time.Hour),
+		Pipeline:      NewIntegrationPipeline(),
+		RateLimiter:   ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
 	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
@@ -335,12 +335,16 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	if chat == nil {
 		return
 	}
+	s.mu.Lock()
 	s.client = chat
 	if strings.TrimSpace(provider) != "" {
 		s.provider = strings.TrimSpace(provider)
 	}
-	if s.llm != nil {
-		s.llm.Reattach(chat, s.provider)
+	prov := s.provider
+	llm := s.llm
+	s.mu.Unlock()
+	if llm != nil {
+		llm.Reattach(chat, prov)
 	}
 	// deploymentRouting is now read through ChatService; the ChatService
 	// constructed at session creation already holds the value. If a
@@ -358,8 +362,16 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 	return sub
 }
 
-func (s *Session) Model() string              { return s.model }
-func (s *Session) Provider() string           { return s.provider }
+func (s *Session) Model() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.model
+}
+func (s *Session) Provider() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.provider
+}
 func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
 // ChatLLM returns the extracted ChatService (Phase 1 of the god-object
@@ -459,8 +471,11 @@ func (s *Session) SubServices() SubServices {
 
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
-	s.model = strings.TrimSpace(model)
-	s.Cost.Model = s.model
+	m := strings.TrimSpace(model)
+	s.mu.Lock()
+	s.model = m
+	s.Cost.Model = m
+	s.mu.Unlock()
 	s.syncCascadeDefaultModel()
 	s.refreshContextWindowCache()
 }
@@ -479,9 +494,12 @@ func (s *Session) syncCascadeDefaultModel() {
 // SetProvider updates the active provider for subsequent requests.
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
+	s.mu.Lock()
 	s.provider = p
-	if s.llm != nil {
-		s.llm.SetProvider(p)
+	llm := s.llm
+	s.mu.Unlock()
+	if llm != nil {
+		llm.SetProvider(p)
 	}
 }
 

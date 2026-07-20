@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type resilienceBoundaryClient struct {
