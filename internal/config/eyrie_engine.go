@@ -60,10 +60,14 @@ func MigrateLegacyCredentials(ctx context.Context) (int, error) {
 	return gateway.MigrateLegacyCredentials(ctx)
 }
 
+// EnginePreflightReport runs preflight against the default gateway.
 func EnginePreflightReport(ctx context.Context) EnginePreflight {
 	return gateway.PreflightWithProviders(ctx, nil, EnginePreflightOptions{})
 }
 
+// EnginePreflightReportWithOptions runs preflight against the default
+// gateway with explicit options. Kept for callers that need VerifyLive
+// or other non-default preflight checks.
 func EnginePreflightReportWithOptions(ctx context.Context, opts EnginePreflightOptions) EnginePreflight {
 	return gateway.PreflightWithProviders(ctx, nil, opts)
 }
@@ -149,14 +153,6 @@ func ListEngineModels(ctx context.Context, providerID string, refresh bool) ([]E
 		return nil, err
 	}
 	return gw.ListModels(ctx, providerID, refresh)
-}
-
-func ListLiveEngineModels(ctx context.Context, providerID string) ([]EngineModel, error) {
-	gw, err := newEyrieEngine()
-	if err != nil {
-		return nil, err
-	}
-	return gw.ListLiveModels(ctx, providerID)
 }
 
 func ListEngineModelsWithSettings(ctx context.Context, settings Settings, providerID string, refresh bool) ([]EngineModel, error) {
