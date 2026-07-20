@@ -126,7 +126,67 @@ func (m chatModel) configOllamaURLView() string {
 	return b.String()
 }
 
-const configWindowSize = 10
+const (
+	configDefaultVisibleRows = 10
+	configMinVisibleRows     = 4
+)
+
+// configVisibleRows uses the full-height config viewport after accounting for
+// every non-list line rendered by the active tab. Scroll hints are included
+// only when the current offset needs them, so a tall panel can use every row.
+func (m chatModel) configVisibleRows() int {
+	if m.height <= 0 {
+		return configDefaultVisibleRows
+	}
+	reserved := m.configFixedChromeRows()
+	total := len(m.configGatewayRows())
+	if m.configTab == configTabModels {
+		total = len(m.configFilteredModelOptions())
+	}
+	rows := maxInt(configMinVisibleRows, m.height-reserved)
+	// Hint visibility depends on capacity, and capacity depends on hints. Two
+	// iterations are sufficient because there are at most two one-line hints.
+	for range 2 {
+		hints := 0
+		if m.configScroll > 0 {
+			hints++
+		}
+		if m.configScroll+rows < total {
+			hints++
+		}
+		rows = maxInt(configMinVisibleRows, m.height-reserved-hints)
+	}
+	return rows
+}
+
+func (m chatModel) configFixedChromeRows() int {
+	// title, status, blank, tabs, divider, blank, and final help line
+	rows := 7
+	if notice := sanitizeConfigNotice(m.configNoticeForView()); notice != "" {
+		rows += strings.Count(notice, "\n") + 2
+	}
+	if m.configTab == configTabModels {
+		gw := strings.TrimSpace(m.configModelProvider)
+		if gw == "" && m.session != nil {
+			gw = strings.TrimSpace(m.session.Provider())
+		}
+		if gw != "" {
+			rows += 2
+		}
+		if len(m.configModelOptions) > 0 || m.configModelSearchActive {
+			rows += 2
+		}
+		rows += 5 // two-line header + blank + footer + capability legend
+		return rows
+	}
+	rows += 6 // two-line header + blank + refresh + blank + selection footer
+	gateways := m.configGatewayRows()
+	target := m.configGatewayRefreshTargetIndex(gateways)
+	if target >= 0 && target < len(gateways) && gateways[target].KeyConflict {
+		rows++
+	}
+	return rows
+}
 
 func (m chatModel) configModelsTabView() string {
 	var body strings.Builder
@@ -302,13 +362,14 @@ func (m chatModel) focusConfigActiveModelSelection() chatModel {
 	}
 	activeID := m.configActiveModelID()
 	activeCanonicalID := hawkconfig.CanonicalModelID(context.Background(), activeID)
+	windowSize := m.configVisibleRows()
 	for i, opt := range opts {
 		if modelOptionIsActiveResolved(opt, activeID, activeCanonicalID) {
 			m.configSel = i
-			if m.configSel < configWindowSize {
+			if m.configSel < windowSize {
 				m.configScroll = 0
 			} else {
-				m.configScroll = m.configSel - configWindowSize + 1
+				m.configScroll = m.configSel - windowSize + 1
 			}
 			return m
 		}
@@ -322,8 +383,8 @@ func (m chatModel) focusConfigActiveModelSelection() chatModel {
 	if m.configSel < m.configScroll {
 		m.configScroll = m.configSel
 	}
-	if m.configSel >= m.configScroll+configWindowSize {
-		m.configScroll = m.configSel - configWindowSize + 1
+	if m.configSel >= m.configScroll+windowSize {
+		m.configScroll = m.configSel - windowSize + 1
 	}
 	return m
 }
@@ -342,15 +403,20 @@ func (m chatModel) configModelsBody() string {
 	allTotal := len(m.configModelOptions)
 	activeModelID := m.configActiveModelID()
 	activeCanonicalID := hawkconfig.CanonicalModelID(context.Background(), activeModelID)
+	windowSize := m.configVisibleRows()
+	maxScroll := maxInt(0, total-windowSize)
+	if m.configScroll > maxScroll {
+		m.configScroll = maxScroll
+	}
 
 	if m.configSel < m.configScroll {
 		m.configScroll = m.configSel
 	}
-	if m.configSel >= m.configScroll+configWindowSize {
-		m.configScroll = m.configSel - configWindowSize + 1
+	if m.configSel >= m.configScroll+windowSize {
+		m.configScroll = m.configSel - windowSize + 1
 	}
 
-	end := m.configScroll + configWindowSize
+	end := m.configScroll + windowSize
 	if end > total {
 		end = total
 	}
@@ -404,6 +470,7 @@ func (m chatModel) configModelsBody() string {
 	}
 
 	b.WriteString("\n" + modelTableFooter(total, m.configScroll, end, allTotal, mutedStyle))
+	b.WriteString("\n" + mutedStyle.Render(strings.Repeat(" ", modelTableIndent)+"Caps: T tools · V vision · R reasoning · J JSON"))
 	return b.String()
 }
 
@@ -448,7 +515,7 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 	m.useConfigInput = true
 	m.configInput.Reset()
 	m.configInput.Prompt = " key " + icons.ChevronRight() + " "
-	m.configInput.Placeholder = "paste API key"
+	m.configInput.Placeholder = ""
 	m.configInput.EchoMode = textinput.EchoPassword
 	m.configInput.EchoCharacter = '*'
 	m.configInput.SetStyles(textinput.Styles{
@@ -594,11 +661,12 @@ func (m chatModel) handleConfigEntryKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 
 const configWheelStep = 5
 
-func configPageStep() int {
-	if configWindowSize <= 2 {
+func (m chatModel) configPageStep() int {
+	windowSize := m.configVisibleRows()
+	if windowSize <= 2 {
 		return 1
 	}
-	return configWindowSize - 1
+	return windowSize - 1
 }
 
 func (m chatModel) configMoveSelection(delta int) chatModel {
@@ -646,9 +714,78 @@ func (m chatModel) handleConfigMouse(msg tea.MouseMsg) (chatModel, bool) {
 		return m.configMoveSelection(-step), true
 	case tea.MouseWheelDown:
 		return m.configMoveSelection(step), true
+	case tea.MouseLeft:
+		if _, ok := msg.(tea.MouseClickMsg); !ok || m.configEntry != configEntryNone {
+			return m, false
+		}
+		return m.configSelectClickedRow(msg.Mouse().Y)
 	default:
 		return m, false
 	}
+}
+
+// configSelectClickedRow maps a terminal click to an internally paginated
+// gateway/model row. The outer config viewport stays pinned to the top, but
+// account for its offset so this remains correct if that invariant changes.
+func (m chatModel) configSelectClickedRow(terminalY int) (chatModel, bool) {
+	contentY := terminalY - m.chatPaneTopY() + m.viewport.YOffset()
+	firstRowY := m.configFirstVisibleRowY()
+	if contentY < firstRowY {
+		return m, false
+	}
+
+	total := m.configTabItemCount()
+	if m.configTab == configTabGateways {
+		total-- // the refresh action is positioned separately below the table
+	}
+	end := minInt(total, m.configScroll+m.configVisibleRows())
+	visible := maxInt(0, end-m.configScroll)
+	rowOffset := contentY - firstRowY
+	if rowOffset >= 0 && rowOffset < visible {
+		m.configSel = m.configScroll + rowOffset
+		if m.configTab == configTabGateways {
+			m = m.trackConfigGatewayFocus()
+		}
+		return m, true
+	}
+
+	if m.configTab == configTabGateways {
+		refreshY := firstRowY + visible
+		if end < total {
+			refreshY++ // hidden-row hint below the visible table
+		}
+		refreshY++ // blank line before Refresh
+		if contentY == refreshY {
+			m.configSel = total
+			return m, true
+		}
+	}
+	return m, false
+}
+
+func (m chatModel) configFirstVisibleRowY() int {
+	// Setup title, status, blank, tabs, divider, blank.
+	y := 6
+	if notice := sanitizeConfigNotice(m.configNoticeForView()); notice != "" {
+		y += strings.Count(notice, "\n") + 2
+	}
+	if m.configTab == configTabModels {
+		gateway := strings.TrimSpace(m.configModelProvider)
+		if gateway == "" && m.session != nil {
+			gateway = strings.TrimSpace(m.session.Provider())
+		}
+		if gateway != "" {
+			y += 2
+		}
+		if len(m.configModelOptions) > 0 || m.configModelSearchActive {
+			y += 2
+		}
+	}
+	y += 2 // table header and rule
+	if m.configScroll > 0 {
+		y++
+	}
+	return y
 }
 
 func (m chatModel) handleConfigMouseLeak(msg tea.KeyMsg) (chatModel, bool) {
@@ -771,9 +908,9 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		m.configSel = (m.configSel + 1) % n
 		return m.trackConfigGatewayFocus(), nil
 	case tea.KeyPgUp:
-		return m.configMoveSelection(-configPageStep()), nil
+		return m.configMoveSelection(-m.configPageStep()), nil
 	case tea.KeyPgDown:
-		return m.configMoveSelection(configPageStep()), nil
+		return m.configMoveSelection(m.configPageStep()), nil
 	case tea.KeyHome:
 		m.configSel = 0
 		return m.trackConfigGatewayFocus(), nil

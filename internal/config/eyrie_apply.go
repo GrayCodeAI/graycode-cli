@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 // ApplyCredentialsResult is Hawk's UI-safe view of an Eyrie catalog/routing
 // application. It intentionally excludes Eyrie setup/config implementation
 // types from the product boundary.
 type ApplyCredentialsResult struct {
-	Catalog eyrieengine.CatalogSnapshot
+	Catalog gateway.CatalogSnapshot
 }
 
 // ApplyEyrieCredentialsForProvider refreshes live models and writes sanitized
@@ -71,7 +71,7 @@ func FormatApplyCredentialsSummary(result *ApplyCredentialsResult) string {
 	return formatCatalogSnapshot(result.Catalog)
 }
 
-func formatCatalogSnapshot(snapshot eyrieengine.CatalogSnapshot) string {
+func formatCatalogSnapshot(snapshot gateway.CatalogSnapshot) string {
 	if snapshot.CachePath == "" {
 		return fmt.Sprintf("Catalog ready: %d models", len(snapshot.Models))
 	}

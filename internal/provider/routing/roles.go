@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 // Role identifies the purpose of a model within a Hawk multi-model workflow.
@@ -28,11 +28,10 @@ type ModelRoles struct {
 // economical same-provider model used for commit/summarization work.
 func DefaultRoles(primaryModel string) ModelRoles {
 	primaryModel = strings.TrimSpace(primaryModel)
+	ctx := context.Background()
 	commit := primaryModel
-	if engine := eyrieModelEngine(); engine != nil {
-		if provider := engine.ProviderForModel(context.Background(), primaryModel); provider != "" {
-			commit = engine.PreferredModel(context.Background(), provider, eyrieengine.ModelClassEconomical, primaryModel)
-		}
+	if provider := gateway.ProviderForModel(ctx, primaryModel); provider != "" {
+		commit = gateway.PreferredModel(ctx, provider, gateway.ModelClassEconomical, primaryModel)
 	}
 	return ModelRoles{Planner: primaryModel, Coder: primaryModel, Reviewer: primaryModel, Commit: commit}
 }
@@ -55,15 +54,9 @@ func (r ModelRoles) ModelForRole(role Role) string {
 	if coder := strings.TrimSpace(r.Coder); coder != "" {
 		return coder
 	}
-	if engine := eyrieModelEngine(); engine != nil {
-		return engine.PrimaryModel(context.Background())
-	}
-	return ""
+	return gateway.PrimaryModel(context.Background())
 }
 
 func CheapestForProvider(provider, fallback string) string {
-	if engine := eyrieModelEngine(); engine != nil {
-		return engine.PreferredModel(context.Background(), provider, eyrieengine.ModelClassEconomical, fallback)
-	}
-	return fallback
+	return gateway.PreferredModel(context.Background(), provider, gateway.ModelClassEconomical, fallback)
 }

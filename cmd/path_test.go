@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
@@ -26,6 +26,6 @@ func TestPathCmdPrintsReport(t *testing.T) {
 
 func useInMemoryCredentials(t *testing.T) {
 	t.Helper()
-	credentials.SetDefaultStore(&credentials.MapStore{})
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	gateway.SetDefaultStore(&gateway.MapStore{})
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 }

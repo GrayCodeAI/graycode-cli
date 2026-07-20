@@ -182,6 +182,23 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case tea.PasteMsg:
+		if m.configOpen {
+			var cmd tea.Cmd
+			m.configInput, cmd = m.configInput.Update(msg)
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, cmd
+		}
+		if m.uiFocus == focusPrompt {
+			var cmd tea.Cmd
+			m.input, cmd = m.input.Update(msg)
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, cmd
+		}
+		return m, nil
+
 	case tea.KeyMsg:
 		s := msg.String()
 		if (s == "up" || s == "down") && !m.processingGenuineArrow {
@@ -1004,6 +1021,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.input.SetWidth(msg.Width - 4)
+		m.configInput.SetWidth(msg.Width - 4)
 		m.invalidateInputLayoutCache()
 		m.rebuildWelcomeCache(false)
 		m.viewDirty = true

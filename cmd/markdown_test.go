@@ -112,6 +112,48 @@ func TestRenderMarkdownCodeBlockPreservesNewlines(t *testing.T) {
 	}
 }
 
+func TestRenderMarkdownCodeBlockSyntaxHighlightsAndPreservesIndentation(t *testing.T) {
+	input := "```go\nfunc main() {\n\tif true {\n\t\treturn\n\t}\n}\n```"
+	out := renderMarkdown(input, 80)
+	if !strings.Contains(out, "\x1b[38;5;") {
+		t.Fatalf("expected Chroma terminal colors, got %q", out)
+	}
+	plain := stripAnsi(out)
+	if strings.ContainsRune(plain, '\t') {
+		t.Fatalf("displayed code should use deterministic spaces, got %q", plain)
+	}
+	if !strings.Contains(plain, "        return") {
+		t.Fatalf("code indentation was not preserved, got %q", plain)
+	}
+}
+
+func TestExpandCodeTabsUsesColumnAlignedStops(t *testing.T) {
+	input := "\tfirst\nxx\tsecond\n1234\tthird"
+	want := "    first\nxx  second\n1234    third"
+	if got := expandCodeTabs(input, 4); got != want {
+		t.Fatalf("expandCodeTabs() = %q, want %q", got, want)
+	}
+}
+
+func TestRenderMarkdownNestedListsShowIndentGuides(t *testing.T) {
+	out := stripAnsi(renderMarkdown("- parent\n  - child\n    - grandchild", 80))
+	if !strings.Contains(out, "| - child") || !strings.Contains(out, "| | - grandchild") {
+		t.Fatalf("expected visible nested indentation guides, got %q", out)
+	}
+}
+
+func TestRenderMarkdownHeadingLevelsHaveDistinctStyles(t *testing.T) {
+	h1 := renderMarkdown("# Primary", 80)
+	h2 := renderMarkdown("## Secondary", 80)
+	h3 := renderMarkdown("### Tertiary", 80)
+	if h1 == h2 || h2 == h3 || h1 == h3 {
+		t.Fatalf("heading levels should use distinct visual styles")
+	}
+	if !strings.Contains(h1, ";4") {
+		t.Fatalf("top-level heading should be underlined, got %q", h1)
+	}
+}
+
 func TestRenderMarkdownUnorderedList(t *testing.T) {
 	input := "- first item\n- second item\n* third item"
 	out := renderMarkdown(input, 80)
@@ -702,7 +744,7 @@ func TestHighlightCodePython(t *testing.T) {
 
 func TestHighlightCodeUnsupportedLanguage(t *testing.T) {
 	code := "some code here"
-	out := HighlightCode(code, "brainfuck")
+	out := HighlightCode(code, "not-a-real-language")
 	if out != code {
 		t.Errorf("unsupported language should return code unchanged, got %q", out)
 	}

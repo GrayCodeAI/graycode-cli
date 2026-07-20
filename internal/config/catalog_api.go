@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	gw "github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 type GatewayStatus struct {
@@ -19,6 +19,12 @@ type GatewayStatus struct {
 	RegionRequired          bool
 }
 
+// IsCatalogCacheRequired reports whether an Eyrie operation failed because
+// the local model catalog has not been created yet.
+func IsCatalogCacheRequired(err error) bool {
+	return gw.IsCatalogCacheRequired(err)
+}
+
 func AllCatalogProviders() []string {
 	engine, err := newEyrieEngine()
 	if err != nil {
@@ -27,7 +33,7 @@ func AllCatalogProviders() []string {
 	providers, _ := engine.ModelProviders(context.Background())
 	seen := map[string]bool{}
 	for _, provider := range providers {
-		if provider = eyrieengine.NormalizeProviderID(provider); provider != "" {
+		if provider = gw.NormalizeProviderID(provider); provider != "" {
 			seen[provider] = true
 		}
 	}
@@ -87,9 +93,9 @@ func ActiveGateway(ctx context.Context) string {
 		return ""
 	}
 	selection := engine.ActiveSelection(ctx)
-	providerID := eyrieengine.NormalizeProviderID(selection.Provider)
+	providerID := gw.NormalizeProviderID(selection.Provider)
 	for _, gateway := range engine.GatewayDefinitions() {
-		if eyrieengine.NormalizeProviderID(gateway.ID) == providerID {
+		if gw.NormalizeProviderID(gateway.ID) == providerID {
 			return gateway.ID
 		}
 	}
@@ -106,7 +112,7 @@ func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []
 	for _, gateway := range gateways {
 		active := gateway.Active
 		if activeProvider != "" {
-			active = eyrieengine.NormalizeProviderID(activeProvider) == eyrieengine.NormalizeProviderID(gateway.ID)
+			active = gw.NormalizeProviderID(activeProvider) == gw.NormalizeProviderID(gateway.ID)
 		} else if activeModel != "" {
 			active = engine.GatewayForModel(ctx, activeModel) == gateway.ID
 		}
@@ -135,10 +141,10 @@ func ShouldClearSelectionAfterCredentialRemove(ctx context.Context, removedProvi
 		return true
 	}
 	selection := engine.ActiveSelection(ctx)
-	removedProvider = eyrieengine.NormalizeProviderID(removedProvider)
-	return !engine.EffectiveSelection(ctx, eyrieengine.SelectionOptions{}).HasConfiguredDeployment ||
-		eyrieengine.NormalizeProviderID(selection.Provider) == removedProvider ||
-		eyrieengine.NormalizeProviderID(engine.GatewayForModel(ctx, selection.Model)) == removedProvider
+	removedProvider = gw.NormalizeProviderID(removedProvider)
+	return !engine.EffectiveSelection(ctx, gw.SelectionOptions{}).HasConfiguredDeployment ||
+		gw.NormalizeProviderID(selection.Provider) == removedProvider ||
+		gw.NormalizeProviderID(engine.GatewayForModel(ctx, selection.Model)) == removedProvider
 }
 
 func ClearActiveSelection(ctx context.Context) error {
@@ -158,13 +164,13 @@ func SyncSelectionWithCredentials(ctx context.Context) {
 	ready := map[string]bool{}
 	hasAny := false
 	for _, gateway := range engine.Gateways(ctx) {
-		providerID := eyrieengine.NormalizeProviderID(gateway.ID)
+		providerID := gw.NormalizeProviderID(gateway.ID)
 		ready[providerID] = gateway.DeploymentConfigured
 		hasAny = hasAny || gateway.DeploymentConfigured
 	}
-	activeGateway := eyrieengine.NormalizeProviderID(active.Provider)
+	activeGateway := gw.NormalizeProviderID(active.Provider)
 	if activeGateway == "" && active.Model != "" {
-		activeGateway = eyrieengine.NormalizeProviderID(engine.GatewayForModel(ctx, active.Model))
+		activeGateway = gw.NormalizeProviderID(engine.GatewayForModel(ctx, active.Model))
 	}
 	if !hasAny || (activeGateway != "" && !ready[activeGateway]) {
 		_ = engine.ClearSelection(ctx)
@@ -211,7 +217,7 @@ func CheapestModelForProvider(provider, fallback string) string {
 	if err != nil {
 		return fallback
 	}
-	return engine.PreferredModel(context.Background(), provider, eyrieengine.ModelClassEconomical, fallback)
+	return engine.PreferredModel(context.Background(), provider, gw.ModelClassEconomical, fallback)
 }
 
 func ProviderOfModel(modelName string) string {
@@ -219,7 +225,7 @@ func ProviderOfModel(modelName string) string {
 	if err != nil {
 		return ""
 	}
-	return eyrieengine.NormalizeProviderID(engine.ProviderForModel(context.Background(), modelName))
+	return gw.NormalizeProviderID(engine.ProviderForModel(context.Background(), modelName))
 }
 
 func ProviderOfModelWithSettings(settings Settings, modelName string) string {
@@ -227,7 +233,7 @@ func ProviderOfModelWithSettings(settings Settings, modelName string) string {
 	if err != nil {
 		return ""
 	}
-	return eyrieengine.NormalizeProviderID(engine.ProviderForModel(context.Background(), modelName))
+	return gw.NormalizeProviderID(engine.ProviderForModel(context.Background(), modelName))
 }
 
 func ExampleModelHints() (string, string) {
@@ -282,16 +288,16 @@ func PrimaryAPIKeyEnvForDeployment(deploymentID string) string {
 	return ""
 }
 
-func engineGateway(providerID string) (eyrieengine.Gateway, bool) {
+func engineGateway(providerID string) (gw.GatewayDefs, bool) {
 	engine, err := newEyrieEngine()
 	if err != nil {
-		return eyrieengine.Gateway{}, false
+		return gw.GatewayDefs{}, false
 	}
-	providerID = eyrieengine.NormalizeProviderID(providerID)
+	providerID = gw.NormalizeProviderID(providerID)
 	for _, gateway := range engine.GatewayDefinitions() {
-		if eyrieengine.NormalizeProviderID(gateway.ID) == providerID {
+		if gw.NormalizeProviderID(gateway.ID) == providerID {
 			return gateway, true
 		}
 	}
-	return eyrieengine.Gateway{}, false
+	return gw.GatewayDefs{}, false
 }

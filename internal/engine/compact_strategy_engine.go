@@ -32,7 +32,7 @@ func NewStrategyRegistry(config CompactConfig) *StrategyRegistry {
 func (r *StrategyRegistry) SelectStrategy(sess *Session, msgs []types.EyrieMessage, tokenCount int) CompactStrategy {
 	threshold := r.config.ContextWindowSize - r.config.AutoCompactBuffer - r.config.MaxOutputTokens
 	for _, s := range r.strategies {
-		if _, ok := s.(*ProviderNativeCompactStrategy); ok && (sess == nil || !sess.supportsAnthropicNativeCompaction()) {
+		if _, ok := s.(*ProviderNativeCompactStrategy); ok && (sess == nil || !sess.supportsNativeCompaction()) {
 			continue
 		}
 		if s.ShouldTrigger(msgs, tokenCount, threshold) {

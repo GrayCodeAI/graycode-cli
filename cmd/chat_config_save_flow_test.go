@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
@@ -162,5 +164,61 @@ func TestHandleConfigKey_EnterOnPasteSubmits(t *testing.T) {
 	}
 	if next.configEntry != configEntryNone {
 		t.Fatalf("entry should close on submit, got %q", next.configEntry)
+	}
+}
+
+func TestUpdate_PasteMsgRoutesEntireKeyToConfigInput(t *testing.T) {
+	const secret = "sk-or-pasted-key-12345678901234567890"
+
+	m := chatModelForConfigPasteTest()
+	m.configOpen = true
+	next, _ := m.startConfigKeyForProvider("openrouter")
+
+	updated, _ := next.Update(tea.PasteMsg{Content: secret})
+	got, ok := updated.(chatModel)
+	if !ok {
+		t.Fatalf("updated model type = %T, want chatModel", updated)
+	}
+	if value := got.configInput.Value(); value != secret {
+		t.Fatalf("config input value = %q, want the complete pasted key", value)
+	}
+}
+
+func TestStartConfigEntry_APIKeyPasteHasNoPlaceholder(t *testing.T) {
+	m := chatModelForConfigPasteTest()
+	next, _ := m.startConfigKeyForProvider("openrouter")
+
+	if next.configInput.Placeholder != "" {
+		t.Fatalf("API key placeholder = %q, want empty", next.configInput.Placeholder)
+	}
+	if strings.Contains(next.configProviderKeyView(), "paste API key") {
+		t.Fatal("API key input view contains placeholder text")
+	}
+}
+
+func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	if err := store.Set(t.Context(), credentials.AccountForEnv("POOLSIDE_API_KEY"), "poolside-test-key"); err != nil {
+		t.Fatalf("store key: %v", err)
+	}
+
+	m := chatModelForConfigPasteTest()
+	next, _ := m.handleConfigApplyCredentialsMsg(configApplyCredentialsMsg{
+		providerID: "poolside",
+		err:        fmt.Errorf("apply credentials: %w", catalog.ErrCatalogCacheRequired),
+	})
+
+	if strings.Contains(next.configNotice, "provider rejected") {
+		t.Fatalf("catalog failure blamed provider key: %q", next.configNotice)
+	}
+	if !strings.Contains(next.configNotice, "model catalog unavailable") ||
+		!strings.Contains(next.configNotice, "hawk models refresh") {
+		t.Fatalf("catalog recovery guidance missing: %q", next.configNotice)
 	}
 }

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // BuildChatProvider adapts Hawk's engine-backed session client to the smaller
 // provider contract used by host integrations such as Sight. Model resolution,
 // credentials, routing, and transport remain owned by Eyrie's engine facade.
-func BuildChatProvider(ctx context.Context, selection eyrieengine.Selection, legacyProvider string) (types.ChatProvider, string, error) {
+func BuildChatProvider(ctx context.Context, selection gateway.Selection, legacyProvider string) (types.ChatProvider, string, error) {
 	client, provider, _, err := BuildChatClient(ctx, selection, legacyProvider)
 	if err != nil {
 		return nil, provider, err

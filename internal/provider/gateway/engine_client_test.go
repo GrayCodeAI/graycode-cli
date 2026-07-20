@@ -1,4 +1,4 @@
-package engine
+package gateway
 
 import (
 	"testing"
@@ -11,7 +11,11 @@ func TestEngineAdapterPreservesHawkRequestOptions(t *testing.T) {
 	topP := 0.75
 	thinking := true
 	request := toEngineRequest(
-		[]types.EyrieMessage{{Role: "user", Content: "inspect", Images: []string{"data:image/png;base64,abc"}}},
+		[]types.EyrieMessage{{
+			Role:         "user",
+			Content:      "inspect",
+			ContentParts: []types.ContentPart{{Type: "image_url", ImageURL: &types.ImageURLPart{URL: "data:image/png;base64,abc"}}},
+		}},
 		types.ChatOptions{
 			Provider: "openrouter", Model: "openrouter/auto", MaxTokens: 2048,
 			Tools:  []types.EyrieTool{{Name: "read_file", Description: "read", Parameters: map[string]interface{}{"type": "object"}}},
@@ -37,7 +41,7 @@ func TestEngineAdapterPreservesHawkRequestOptions(t *testing.T) {
 	if request.Metadata.UserID != "hawk-user-1" {
 		t.Fatalf("metadata user ID lost: %+v", request.Metadata)
 	}
-	if len(request.Messages) != 1 || len(request.Messages[0].ContentParts) != 1 || request.Messages[0].ContentParts[0].URL == "" {
+	if len(request.Messages) != 1 || len(request.Messages[0].ContentParts) != 1 || request.Messages[0].ContentParts[0].ImageURL == nil || request.Messages[0].ContentParts[0].ImageURL.URL == "" {
 		t.Fatalf("multimodal message lost: %+v", request.Messages)
 	}
 }
@@ -78,7 +82,7 @@ func TestEngineAdapterNormalizesEventsForHawkLoop(t *testing.T) {
 		{in: eyrieengine.Event{Type: eyrieengine.EventThinkingDelta}, wantType: "thinking", emit: true},
 		{in: eyrieengine.Event{Type: eyrieengine.EventToolCallDone, ToolCall: &eyrieengine.ToolCall{Name: "read"}}, wantType: "tool_call", emit: true},
 		{in: eyrieengine.Event{Type: eyrieengine.EventUsage, Usage: &eyrieengine.Usage{TotalTokens: 8}}, wantType: "usage", emit: true},
-		{in: eyrieengine.Event{Type: eyrieengine.EventDone, StopReason: "end_turn", Usage: &eyrieengine.Usage{InputTokens: 5, OutputTokens: 3, TotalTokens: 8}}, wantType: "done", emit: true},
+		{in: eyrieengine.Event{Type: eyrieengine.EventDone, StopReason: "end_turn", Usage: &eyrieengine.Usage{PromptTokens: 5, CompletionTokens: 3, TotalTokens: 8}}, wantType: "done", emit: true},
 	}
 	for _, tt := range tests {
 		got, emit := fromEngineEvent(tt.in)
@@ -97,7 +101,7 @@ func TestEngineAdapterNormalizesEventsForHawkLoop(t *testing.T) {
 func TestEngineAdapterPreservesResolvedRouteInBlockingResponse(t *testing.T) {
 	got := fromEngineResponse(&eyrieengine.GenerateResponse{
 		Content: "ok",
-		Route: eyrieengine.Route{
+		Route: &eyrieengine.Route{
 			Provider: "openai", Model: "openai/gpt-5", DeploymentRouting: true,
 		},
 	})

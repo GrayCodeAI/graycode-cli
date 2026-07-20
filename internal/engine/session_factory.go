@@ -6,22 +6,23 @@ import (
 	"fmt"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // BuildChatClient returns an LLM client and whether deployment routing is active.
-func BuildChatClient(ctx context.Context, selection eyrieengine.Selection, legacyProvider string) (ChatClient, string, bool, error) {
-	modelRuntime, err := hawkconfig.NewEyrieEngine()
+// It is the single composition root: it builds one gateway.Gateway and adapts it
+// to the hawk ChatClient port via the gateway's anti-corruption adapter.
+func BuildChatClient(ctx context.Context, selection gateway.Selection, legacyProvider string) (ChatClient, string, bool, error) {
+	modelRuntime, err := gateway.New(ctx, nil)
 	if err != nil {
 		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("eyrie transport: %w", err)
 	}
 	return buildChatClientWithRuntime(ctx, modelRuntime, selection, legacyProvider)
 }
 
-func buildChatClientWithRuntime(ctx context.Context, modelRuntime *eyrieengine.Engine, selection eyrieengine.Selection, legacyProvider string) (ChatClient, string, bool, error) {
+func buildChatClientWithRuntime(ctx context.Context, modelRuntime *gateway.Gateway, selection gateway.Selection, legacyProvider string) (ChatClient, string, bool, error) {
 	_ = ctx // request contexts are applied per generation by the facade adapter
 	provider := strings.TrimSpace(selection.Provider)
 	if provider == "" {
@@ -38,20 +39,43 @@ func buildChatClientWithRuntime(ctx context.Context, modelRuntime *eyrieengine.E
 	if label == "" {
 		label = provider
 	}
-	return newEyrieEngineClient(modelRuntime), label, true, nil
+	return modelRuntime.ChatClient(), label, true, nil
 }
 
 // BuildChatClientForSettings composes the model runtime from one effective
 // settings snapshot. It is the command-facing path for --settings isolation.
-func BuildChatClientForSettings(ctx context.Context, settings hawkconfig.Settings, selection eyrieengine.Selection, legacyProvider string) (ChatClient, string, bool, error) {
-	modelRuntime, err := hawkconfig.NewEyrieEngineForSettings(settings)
+func BuildChatClientForSettings(ctx context.Context, settings hawkconfig.Settings, selection gateway.Selection, legacyProvider string) (ChatClient, string, bool, error) {
+	modelRuntime, err := gateway.New(ctx, gatewayCustomGateways(settings.CustomProviders))
 	if err != nil {
 		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("eyrie transport: %w", err)
 	}
 	return buildChatClientWithRuntime(ctx, modelRuntime, selection, legacyProvider)
 }
 
-func requestedProvider(selection eyrieengine.Selection, legacyProvider string) string {
+// convertCustomProviders maps config.CustomProviderConfig → gateway.CustomProviderConfig
+// at the composition root (the gateway package cannot import config).
+// Delegates the final step to gateway.BuildCustomGateways so a new
+// CustomProviderConfig field only needs wiring once.
+func convertCustomProviders(in []hawkconfig.CustomProviderConfig) []gateway.CustomProviderConfig {
+	out := make([]gateway.CustomProviderConfig, 0, len(in))
+	for _, p := range in {
+		if p.Name == "" && p.BaseURL == "" {
+			continue
+		}
+		out = append(out, gateway.CustomProviderConfig{
+			Name: p.Name, BaseURL: p.BaseURL, APIKeyEnv: p.APIKeyEnv, Model: p.Model,
+		})
+	}
+	return out
+}
+
+// gatewayCustomGateways converts config providers to gateway specs, reusing
+// the shared conversion loop.
+func gatewayCustomGateways(in []hawkconfig.CustomProviderConfig) []gateway.CustomProviderConfig {
+	return convertCustomProviders(in)
+}
+
+func requestedProvider(selection gateway.Selection, legacyProvider string) string {
 	if provider := strings.TrimSpace(selection.Provider); provider != "" {
 		return provider
 	}
@@ -59,7 +83,7 @@ func requestedProvider(selection eyrieengine.Selection, legacyProvider string) s
 }
 
 // NewHawkSession constructs a Session using an engine-resolved selection.
-func NewHawkSession(ctx context.Context, selection eyrieengine.Selection, provider, model, systemPrompt string, registry *tool.Registry) *Session {
+func NewHawkSession(ctx context.Context, selection gateway.Selection, provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	chat, label, deploy, err := BuildChatClient(ctx, selection, provider)
 	if err != nil {
 		chat = NewUnavailableChatClient(err)
@@ -73,7 +97,7 @@ func NewHawkSession(ctx context.Context, selection eyrieengine.Selection, provid
 
 // NewHawkSessionForSettings constructs a session with an invocation-scoped
 // Eyrie engine, including custom gateways from an explicit settings file.
-func NewHawkSessionForSettings(ctx context.Context, settings hawkconfig.Settings, selection eyrieengine.Selection, provider, model, systemPrompt string, registry *tool.Registry) *Session {
+func NewHawkSessionForSettings(ctx context.Context, settings hawkconfig.Settings, selection gateway.Selection, provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	chat, label, deploy, err := BuildChatClientForSettings(ctx, settings, selection, provider)
 	if err != nil {
 		chat = NewUnavailableChatClient(err)
@@ -86,7 +110,7 @@ func NewHawkSessionForSettings(ctx context.Context, settings hawkconfig.Settings
 }
 
 // RebuildSessionTransport rebuilds the LLM client from the engine-resolved selection.
-func RebuildSessionTransport(ctx context.Context, s *Session, selection eyrieengine.Selection, legacyProvider string) error {
+func RebuildSessionTransport(ctx context.Context, s *Session, selection gateway.Selection, legacyProvider string) error {
 	if s == nil {
 		return errors.New("session is nil")
 	}
@@ -98,7 +122,7 @@ func RebuildSessionTransport(ctx context.Context, s *Session, selection eyrieeng
 	return nil
 }
 
-func RebuildSessionTransportForSettings(ctx context.Context, settings hawkconfig.Settings, s *Session, selection eyrieengine.Selection, legacyProvider string) error {
+func RebuildSessionTransportForSettings(ctx context.Context, settings hawkconfig.Settings, s *Session, selection gateway.Selection, legacyProvider string) error {
 	if s == nil {
 		return errors.New("session is nil")
 	}

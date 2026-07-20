@@ -129,3 +129,20 @@ func TestChatProgramOptions_IncludeFocusReporting(t *testing.T) {
 		t.Fatalf("Bubble Tea v2 should configure terminal modes through View, got %d legacy options", len(chatProgramOptions(false)))
 	}
 }
+
+func TestTerminalViewDeclaresBubbleTeaV2Modes(t *testing.T) {
+	enabled := true
+	view := (chatModel{mouseOverride: &enabled}).terminalView("chat")
+	if !view.AltScreen || !view.ReportFocus {
+		t.Fatalf("expected alt screen and focus reporting: %+v", view)
+	}
+	if view.MouseMode != tea.MouseModeCellMotion {
+		t.Fatalf("mouse mode = %v, want cell motion", view.MouseMode)
+	}
+
+	disabled := false
+	view = (chatModel{mouseOverride: &disabled}).terminalView("chat")
+	if view.MouseMode != tea.MouseModeNone {
+		t.Fatalf("disabled mouse mode = %v, want none", view.MouseMode)
+	}
+}

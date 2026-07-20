@@ -11,7 +11,7 @@ const (
 
 // NeedsZAIRegion reports whether the Z.AI gateway still needs a region pick for the chosen plan.
 func NeedsZAIRegion(providerID string) bool {
-	_, required := EngineGatewayRegion(providerID)
+	_, required := EngineGatewayRegion(context.Background(), providerID)
 	return required
 }
 
@@ -23,6 +23,6 @@ func SetZAIRegion(providerID, region string) error {
 
 // ZAIRegionLabel returns the saved region label or "".
 func ZAIRegionLabel(providerID string) string {
-	label, _ := EngineGatewayRegion(providerID)
+	label, _ := EngineGatewayRegion(context.Background(), providerID)
 	return label
 }

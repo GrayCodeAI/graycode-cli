@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestEnvKeyStatusUsesEyrieCredentialStatus(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	if got := EnvKeyStatus("openai"); got != "empty" {
 		t.Fatalf("EnvKeyStatus without credential = %q, want empty", got)
 	}
-	if err := store.Set(context.Background(), credentials.AccountForEnv("OPENAI_API_KEY"), "sk-live-status-test-1234567890"); err != nil {
+	if err := store.Set(context.Background(), gateway.AccountForEnv("OPENAI_API_KEY"), "sk-live-status-test-1234567890"); err != nil {
 		t.Fatal(err)
 	}
 	if got := EnvKeyStatus("openai"); got != "set" {

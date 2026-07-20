@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestNewDiagnostics(t *testing.T) {
@@ -342,9 +342,9 @@ func TestCheckTempDirWritable(t *testing.T) {
 }
 
 func TestCheckAPIKeySet(t *testing.T) {
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
 
 	result := checkAPIKeySet()
 	if result.Status != "fail" {
@@ -352,7 +352,7 @@ func TestCheckAPIKeySet(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_ = store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-1234567890")
+	_ = store.Set(ctx, gateway.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-1234567890")
 	result = checkAPIKeySet()
 	if result.Status != "pass" {
 		t.Errorf("Expected pass when key is in store, got %q: %s", result.Status, result.Message)

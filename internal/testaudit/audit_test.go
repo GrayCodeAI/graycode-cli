@@ -207,6 +207,14 @@ func TestNoDirectLowerEyrieImports(t *testing.T) {
 					strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/engine/") {
 					continue
 				}
+				// The gateway package is Hawk's single Eyrie boundary; it may
+				// import eyrie/credentials to declare Hawk's OS keychain service
+				// name (the host-neutral default would otherwise orphan existing
+				// secrets). All other production code must use eyrie/engine only.
+				if strings.HasPrefix(rel, "internal/provider/gateway/") &&
+					path == "github.com/GrayCodeAI/eyrie/credentials" {
+					continue
+				}
 				pos := pf.FSet.Position(imp.Pos())
 				t.Fatalf("forbidden lower-level Eyrie import %q at %s:%d; use github.com/GrayCodeAI/eyrie/engine", path, rel, pos.Line)
 			}

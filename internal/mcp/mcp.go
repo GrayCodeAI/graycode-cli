@@ -37,6 +37,8 @@ type Server struct {
 	pending    map[int]chan json.RawMessage // response channels keyed by request ID
 	pendErrors map[int]string               // error details keyed by request ID
 	pendMu     sync.Mutex
+	closeOnce  sync.Once
+	closeErr   error
 }
 
 // Tool is a tool exposed by an MCP server.
@@ -286,17 +288,26 @@ func parseToolCallResult(result json.RawMessage) (string, error) {
 
 // Close shuts down the MCP server, killing the child process if it doesn't exit
 // within 5 seconds of stdin being closed.
+//
+// It is idempotent and safe to call concurrently: Connect's initialize-failure
+// path and a manager's later cleanup may both reach Close, and closing stdin or
+// calling cmd.Wait twice races. The sync.Once ensures the shutdown runs exactly
+// once and every caller observes the same result. Killing the child causes
+// stdout to EOF, which unblocks and terminates the readLoop goroutine.
 func (s *Server) Close() error {
-	_ = s.stdin.Close()
-	done := make(chan error, 1)
-	go func() { done <- s.cmd.Wait() }()
-	select {
-	case err := <-done:
-		return err
-	case <-time.After(5 * time.Second):
-		_ = s.cmd.Process.Kill()
-		return <-done
-	}
+	s.closeOnce.Do(func() {
+		_ = s.stdin.Close()
+		done := make(chan error, 1)
+		go func() { done <- s.cmd.Wait() }()
+		select {
+		case err := <-done:
+			s.closeErr = err
+		case <-time.After(5 * time.Second):
+			_ = s.cmd.Process.Kill()
+			s.closeErr = <-done
+		}
+	})
+	return s.closeErr
 }
 
 func (s *Server) call(method string, params interface{}) (json.RawMessage, error) {

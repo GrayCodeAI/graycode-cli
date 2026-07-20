@@ -47,7 +47,7 @@ func TestModelOptionIsActive(t *testing.T) {
 func TestConfigModelOptionsCarryResolvedEngineIdentity(t *testing.T) {
 	opts := configModelOptionsFromEyrie([]hawkconfig.EngineModel{{
 		ID: "models/gemini-pro", CanonicalID: "google/gemini-pro",
-		ProviderID: "google", GatewayID: "gemini",
+		ProviderID: "google", GatewayID: "gemini", Capabilities: []string{"tools", "vision"},
 	}})
 	if len(opts) != 1 || opts[0].CanonicalID != "google/gemini-pro" ||
 		opts[0].ProviderID != "google" || opts[0].GatewayID != "gemini" {
@@ -55,5 +55,8 @@ func TestConfigModelOptionsCarryResolvedEngineIdentity(t *testing.T) {
 	}
 	if !modelOptionIsActiveResolved(opts[0], "google/gemini-pro", "google/gemini-pro") {
 		t.Fatal("canonical identity did not match without catalog lookup")
+	}
+	if len(opts[0].Capabilities) != 2 || opts[0].Capabilities[1] != "vision" {
+		t.Fatalf("capabilities were lost: %+v", opts[0].Capabilities)
 	}
 }

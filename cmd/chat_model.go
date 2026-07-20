@@ -205,11 +205,13 @@ type chatModel struct {
 	configModelSearchActive    bool                // typing into model search input
 	configGuideAfterKey        bool                // open model picker when discover finishes
 	configGatewayFocus         int                 // last highlighted gateway row (for refresh action)
-	configKeysPendingRemove    string              // provider awaiting delete confirmation
-	configKeysRemoveStep       int                 // 1 = first prompt, 2 = final confirm
-	configReplaceProvider      string              // replace-key flow target gateway
-	configPostSaveKeysProvider string              // return to Gateways tab after replace save
-	configSaving               bool                // blocks hub/list input while async credential work runs
+	configGatewayRowsCache     []configGatewayRow
+	configGatewayRowsDirty     bool
+	configKeysPendingRemove    string // provider awaiting delete confirmation
+	configKeysRemoveStep       int    // 1 = first prompt, 2 = final confirm
+	configReplaceProvider      string // replace-key flow target gateway
+	configPostSaveKeysProvider string // return to Gateways tab after replace save
+	configSaving               bool   // blocks hub/list input while async credential work runs
 	configPendingOllamaURL     string
 	configXiaomiRegionSel      int // Token Plan region picker index
 	configZAIRegionSel         int // Z.AI (general or coding) region picker index

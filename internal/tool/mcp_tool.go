@@ -56,12 +56,42 @@ func (m *MCPTool) Aliases() []string                  { return m.aliases }
 func (m *MCPTool) Description() string                { return m.description }
 func (m *MCPTool) Parameters() map[string]interface{} { return m.schema }
 
+// RiskLevel reports MCP tools as high risk. A remote MCP server is untrusted
+// third-party code whose declared schema does not reveal whether the tool
+// writes files, executes commands, or performs network calls, so it must not
+// default to the "medium" bucket that skips the strongest permission prompts.
+func (m *MCPTool) RiskLevel() string { return "high" }
+
 func (m *MCPTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var args map[string]interface{}
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
+	if err := m.validateRequired(args); err != nil {
+		return "", err
+	}
 	return m.server.CallTool(ctx, m.remoteName, args)
+}
+
+// validateRequired enforces the tool's declared JSON-Schema "required" list
+// before forwarding LLM-supplied arguments to the remote server, so a
+// malformed or partial tool call is rejected locally instead of producing an
+// opaque remote failure.
+func (m *MCPTool) validateRequired(args map[string]interface{}) error {
+	required, ok := m.schema["required"].([]interface{})
+	if !ok {
+		return nil
+	}
+	for _, r := range required {
+		name, ok := r.(string)
+		if !ok {
+			continue
+		}
+		if _, present := args[name]; !present {
+			return fmt.Errorf("mcp tool %s: missing required argument %q", m.toolName, name)
+		}
+	}
+	return nil
 }
 
 func normalizeNameForMCP(name string) string {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/credentials"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestContextUsedTokens_PrefersAPI(t *testing.T) {
@@ -27,14 +28,14 @@ func TestNativeCompactionSupportUsesEyrieCredentialStore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := NewSessionWithClient(newEyrieEngineClient(runtime), "anthropic", "claude-sonnet-4-6", "sys", nil, true)
-	if s.supportsAnthropicNativeCompaction() {
+	s := NewSessionWithClient(gateway.NewFromEngine(runtime).ChatClient(), "anthropic", "claude-sonnet-4-6", "sys", nil, true)
+	if s.supportsNativeCompaction() {
 		t.Fatal("expected no support before Eyrie has a credential")
 	}
 	if err := store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-test"); err != nil {
 		t.Fatal(err)
 	}
-	if !s.supportsAnthropicNativeCompaction() {
+	if !s.supportsNativeCompaction() {
 		t.Fatal("expected support from Eyrie's injected credential store")
 	}
 }

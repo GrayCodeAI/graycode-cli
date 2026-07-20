@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -23,16 +23,19 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 	if sess == nil {
 		return nil, fmt.Errorf("no session")
 	}
-	client, ok := sess.engineFacadeClient()
-	if !ok || !client.engine.SupportsNativeCompaction(ctx, sess.provider, sess.model) {
+	if sess == nil || sess.ChatLLM() == nil {
+		return nil, fmt.Errorf("no session client")
+	}
+	compactor, ok := sess.ChatLLM().Client().(nativeCompactionCapable)
+	if !ok || !compactor.NativeCompaction(ctx, sess.provider, sess.model) {
 		return nil, fmt.Errorf("provider native compaction not available")
 	}
 
 	tokensBefore := EstimateTokens(sess.messages)
-	summary, err := client.engine.CompactNative(ctx, eyrieengine.NativeCompactionRequest{
+	summary, err := compactor.CompactNative(ctx, gateway.NativeCompactionRequest{
 		Provider:        sess.provider,
 		Model:           sess.model,
-		Messages:        toEngineMessages(sess.messages),
+		Messages:        gateway.ToEngineMessages(sess.messages),
 		ContextWindow:   sess.ContextWindowSize(),
 		ThresholdPct:    sess.compactThresholdPct(),
 		MaxOutputTokens: 8192,
@@ -57,15 +60,9 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 	return compact, nil
 }
 
-func (s *Session) engineFacadeClient() (*eyrieEngineClient, bool) {
+func (s *Session) supportsNativeCompaction() bool {
 	if s == nil || s.ChatLLM() == nil {
-		return nil, false
+		return false
 	}
-	client, ok := s.ChatLLM().Client().(*eyrieEngineClient)
-	return client, ok && client != nil && client.engine != nil
-}
-
-func (s *Session) supportsAnthropicNativeCompaction() bool {
-	client, ok := s.engineFacadeClient()
-	return ok && client.engine.SupportsNativeCompaction(context.Background(), s.provider, s.model)
+	return clientNativeCompaction(s.ChatLLM().Client(), context.Background(), s.provider, s.model)
 }

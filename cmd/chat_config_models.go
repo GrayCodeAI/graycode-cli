@@ -23,6 +23,7 @@ type configModelOption struct {
 	InputPricePer1M  float64
 	OutputPricePer1M float64
 	PriceKnown       bool
+	Capabilities     []string
 }
 
 var (
@@ -97,6 +98,7 @@ func configModelOptionsFromEyrie(entries []hawkconfig.EngineModel) []configModel
 			InputPricePer1M:  e.InputPricePer1M,
 			OutputPricePer1M: e.OutputPricePer1M,
 			PriceKnown:       e.PriceKnown,
+			Capabilities:     append([]string(nil), e.Capabilities...),
 		}
 	}
 	return opts
@@ -122,6 +124,7 @@ func modelOptionMatchesQuery(opt configModelOption, query string) bool {
 		strings.ToLower(strings.TrimSpace(opt.DisplayName)),
 		strings.ToLower(strings.TrimSpace(opt.Owner)),
 		strings.ToLower(shortModelID(opt.ID)),
+		strings.ToLower(strings.Join(opt.Capabilities, " ")),
 	}
 	for _, candidate := range candidates {
 		if candidate != "" && strings.Contains(candidate, query) {

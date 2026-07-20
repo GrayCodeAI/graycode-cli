@@ -2,12 +2,23 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/hawk/internal/catalogtest"
 )
+
+func TestIsCatalogCacheRequired(t *testing.T) {
+	err := fmt.Errorf("apply credentials: %w", catalog.ErrCatalogCacheRequired)
+	if !IsCatalogCacheRequired(err) {
+		t.Fatal("wrapped catalog-cache error was not recognized")
+	}
+	if IsCatalogCacheRequired(fmt.Errorf("authentication failed")) {
+		t.Fatal("unrelated error was classified as a catalog-cache error")
+	}
+}
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()

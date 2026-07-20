@@ -8,7 +8,7 @@ const ProviderXiaomiTokenPlan = "xiaomi_mimo_token_plan" // #nosec G101 -- provi
 
 // NeedsXiaomiTokenPlanRegion reports whether the Token Plan gateway still needs a cluster pick.
 func NeedsXiaomiTokenPlanRegion(providerID string) bool {
-	_, required := EngineGatewayRegion(providerID)
+	_, required := EngineGatewayRegion(context.Background(), providerID)
 	return required
 }
 
@@ -20,6 +20,6 @@ func SetXiaomiTokenPlanRegion(region string) error {
 
 // XiaomiTokenPlanRegionLabel returns the saved cluster id for UI (cn, sgp, ams) or "" if unset.
 func XiaomiTokenPlanRegionLabel() string {
-	label, _ := EngineGatewayRegion(ProviderXiaomiTokenPlan)
+	label, _ := EngineGatewayRegion(context.Background(), ProviderXiaomiTokenPlan)
 	return label
 }

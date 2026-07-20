@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -77,19 +77,6 @@ type Session struct {
 	log      *logger.Logger
 	metrics  *metrics.Registry
 	Cost     Cost
-	// DeploymentRouting is true when the chat client is catalog-backed (e.g. DeploymentRouter).
-	//
-	// Deprecated: use s.ChatLLM().DeploymentRouting() (Phase 1 sub-service).
-	DeploymentRouting bool
-
-	// ContainerExecutor runs Bash in an isolated container when set (no API keys in container env).
-	//
-	// Deprecated: use s.Tools().ContainerExecutor() (Phase 6 sub-service).
-	ContainerExecutor tool.ContainerExecutor
-	// ContainerRequired blocks tools until ContainerExecutor is running (container-first mode).
-	//
-	// Deprecated: use s.Tools().ContainerRequired() (Phase 6 sub-service).
-	ContainerRequired bool
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
 	// code should go through s.llm.* rather than touching the legacy
@@ -246,7 +233,7 @@ type Session struct {
 
 // NewSession creates a conversation session through Eyrie's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewHawkSession(context.Background(), eyrieengine.Selection{
+	return NewHawkSession(context.Background(), gateway.Selection{
 		Provider: provider,
 		Model:    model,
 	}, provider, model, systemPrompt, registry)
@@ -260,29 +247,28 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	pe := NewPermissionEngine()
 	log := logger.Default()
 	s := &Session{
-		client:            chat,
-		registry:          registry,
-		provider:          provider,
-		model:             model,
-		system:            systemPrompt,
-		log:               log,
-		metrics:           metrics.NewRegistry(),
-		Perm:              pe,
-		Permissions:       pe.Memory,
-		AutoMode:          pe.AutoMode,
-		Classifier:        pe.Classifier,
-		BypassKill:        pe.BypassKill,
-		Beliefs:           NewBeliefState(),
-		Backtrack:         NewBacktrackEngine(),
-		Limits:            NewLimitTracker(DefaultLimits()),
-		Tracer:            oteltrace.NewTracer(),
-		LintLoop:          NewLintLoop(),
-		TestLoop:          NewTestLoop(),
-		FileMentions:      NewFileMentionDetector("."),
-		ResponseCache:     NewResponseCache(1000, 24*time.Hour),
-		Pipeline:          NewIntegrationPipeline(),
-		DeploymentRouting: deploymentRouting,
-		RateLimiter:       ratelimit.PerSecond(10),
+		client:        chat,
+		registry:      registry,
+		provider:      provider,
+		model:         model,
+		system:        systemPrompt,
+		log:           log,
+		metrics:       metrics.NewRegistry(),
+		Perm:          pe,
+		Permissions:   pe.Memory,
+		AutoMode:      pe.AutoMode,
+		Classifier:    pe.Classifier,
+		BypassKill:    pe.BypassKill,
+		Beliefs:       NewBeliefState(),
+		Backtrack:     NewBacktrackEngine(),
+		Limits:        NewLimitTracker(DefaultLimits()),
+		Tracer:        oteltrace.NewTracer(),
+		LintLoop:      NewLintLoop(),
+		TestLoop:      NewTestLoop(),
+		FileMentions:  NewFileMentionDetector("."),
+		ResponseCache: NewResponseCache(1000, 24*time.Hour),
+		Pipeline:      NewIntegrationPipeline(),
+		RateLimiter:   ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
 	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
@@ -349,14 +335,22 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	if chat == nil {
 		return
 	}
+	s.mu.Lock()
 	s.client = chat
 	if strings.TrimSpace(provider) != "" {
 		s.provider = strings.TrimSpace(provider)
 	}
-	s.DeploymentRouting = deploymentRouting
-	if s.llm != nil {
-		s.llm.Reattach(chat, s.provider)
+	prov := s.provider
+	llm := s.llm
+	s.mu.Unlock()
+	if llm != nil {
+		llm.Reattach(chat, prov)
 	}
+	// deploymentRouting is now read through ChatService; the ChatService
+	// constructed at session creation already holds the value. If a
+	// future path needs to toggle it post-construction, extend
+	// ChatService with a setter.
+	_ = deploymentRouting
 }
 
 // SubSession clones transport and routing mode for explore/general sub-agents.
@@ -364,12 +358,20 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 	if registry == nil {
 		registry = s.registry
 	}
-	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting)
+	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting())
 	return sub
 }
 
-func (s *Session) Model() string              { return s.model }
-func (s *Session) Provider() string           { return s.provider }
+func (s *Session) Model() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.model
+}
+func (s *Session) Provider() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.provider
+}
 func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
 // ChatLLM returns the extracted ChatService (Phase 1 of the god-object
@@ -397,6 +399,35 @@ func (s *Session) Persistence() *PersistenceService { return s.persist }
 
 // Tools returns the extracted ToolService (Phase 6).
 func (s *Session) Tools() *ToolService { return s.tools }
+
+// DeploymentRouting reports whether the chat client is catalog-backed
+// (e.g. DeploymentRouter). Read through to the ChatService so there is
+// no separate stored field to drift out of sync on ReattachTransport.
+func (s *Session) DeploymentRouting() bool {
+	if s.llm != nil {
+		return s.llm.DeploymentRouting()
+	}
+	return false
+}
+
+// ContainerExecutor returns the executor that runs Bash in an isolated
+// container, or nil. Read through to the ToolService.
+func (s *Session) ContainerExecutor() tool.ContainerExecutor {
+	if s.tools != nil {
+		return s.tools.ContainerExecutor()
+	}
+	return nil
+}
+
+// ContainerRequired reports whether tools are blocked until the
+// container executor is running (container-first mode). Read through to
+// the ToolService.
+func (s *Session) ContainerRequired() bool {
+	if s.tools != nil {
+		return s.tools.ContainerRequired()
+	}
+	return false
+}
 
 // SubServices is the composed view of the 6 sub-services extracted
 // in Phases 1-6 of the god-object decomposition. New code should
@@ -440,8 +471,11 @@ func (s *Session) SubServices() SubServices {
 
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
-	s.model = strings.TrimSpace(model)
-	s.Cost.Model = s.model
+	m := strings.TrimSpace(model)
+	s.mu.Lock()
+	s.model = m
+	s.Cost.Model = m
+	s.mu.Unlock()
 	s.syncCascadeDefaultModel()
 	s.refreshContextWindowCache()
 }
@@ -460,9 +494,12 @@ func (s *Session) syncCascadeDefaultModel() {
 // SetProvider updates the active provider for subsequent requests.
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
+	s.mu.Lock()
 	s.provider = p
-	if s.llm != nil {
-		s.llm.SetProvider(p)
+	llm := s.llm
+	s.mu.Unlock()
+	if llm != nil {
+		llm.SetProvider(p)
 	}
 }
 
@@ -707,11 +744,14 @@ func (s *Session) SetPinnedMessages(n int) {
 	}
 }
 
-// SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle.
-// New code should call this instead of writing to the legacy
-// s.GLMThinkingEnabled field directly.
+// SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle on
+// the ChatService (the source of truth). The legacy s.GLMThinkingEnabled
+// field is kept for backward compat but is no longer the read path.
 func (s *Session) SetGLMThinkingEnabled(v *bool) {
 	s.GLMThinkingEnabled = v
+	if s.llm != nil {
+		s.llm.SetGLMThinkingEnabled(v)
+	}
 }
 
 // SetSnapshots attaches the snapshot tracker. New code should call
@@ -720,20 +760,19 @@ func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
 	s.Snapshots = snap
 }
 
-// SetContainerRequired sets the container-first mode flag.
-// New code should call this instead of writing to the legacy
-// s.ContainerRequired field directly.
+// SetContainerRequired sets the container-first mode flag on the
+// ToolService (the source of truth).
 func (s *Session) SetContainerRequired(v bool) {
-	s.ContainerRequired = v
+	if s.tools != nil {
+		s.tools.WithContainerExecutor(s.tools.ContainerExecutor(), v)
+	}
 }
 
-// SetContainerExecutor sets the container executor and updates
-// the ToolService so the legacy s.ContainerExecutor field and
-// s.Tools().ContainerExecutor() stay in sync.
+// SetContainerExecutor sets the container executor on the ToolService
+// (the source of truth), preserving the current required flag.
 func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
-	s.ContainerExecutor = ce
 	if s.tools != nil {
-		s.tools.WithContainerExecutor(ce, s.ContainerRequired)
+		s.tools.WithContainerExecutor(ce, s.ContainerRequired())
 	}
 }
 
