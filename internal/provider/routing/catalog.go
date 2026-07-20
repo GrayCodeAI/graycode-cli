@@ -1,104 +1,46 @@
 // Package routing provides Hawk-owned task routing and health policy. Model
 // discovery, pricing, provider ownership, and catalog policy are delegated to
-// Eyrie's host-neutral engine facade.
+// Eyrie's engine facade through the gateway package (the single Eyrie boundary).
 package routing
 
 import (
 	"context"
 	"sort"
-	"sync"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
-// ModelInfo is Hawk's product-facing view of Eyrie model metadata.
-type ModelInfo struct {
-	Name        string  `json:"name"`
-	Provider    string  `json:"provider"`
-	ContextSize int     `json:"context_size"`
-	InputPrice  float64 `json:"input_price_per_million"`
-	OutputPrice float64 `json:"output_price_per_million"`
-	Description string  `json:"description,omitempty"`
-	Recommended bool    `json:"recommended,omitempty"`
-}
-
-var (
-	modelEngineOnce sync.Once
-	modelEngine     *eyrieengine.Engine
-)
-
-func eyrieModelEngine() *eyrieengine.Engine {
-	modelEngineOnce.Do(func() {
-		modelEngine, _ = eyrieengine.New(eyrieengine.Options{})
-	})
-	return modelEngine
-}
-
-func fromEngineModel(model eyrieengine.Model) ModelInfo {
-	return ModelInfo{
-		Name: model.ID, Provider: model.ProviderID,
-		ContextSize: model.ContextWindow,
-		InputPrice:  model.InputPricePer1M, OutputPrice: model.OutputPricePer1M,
-		Description: model.Description,
-	}
-}
+// ModelInfo is Hawk's product-facing view of Eyrie model metadata (the gateway
+// layer owns the Eyrie conversation that produces it).
+type ModelInfo = gateway.ModelInfo
 
 // Find looks up a model by id or alias through Eyrie.
 func Find(name string) (ModelInfo, bool) {
-	engine := eyrieModelEngine()
-	if engine == nil {
-		return ModelInfo{}, false
-	}
-	model, ok, err := engine.ModelInfo(context.Background(), name)
-	if err != nil || !ok {
-		return ModelInfo{}, false
-	}
-	return fromEngineModel(model), true
+	return gateway.ModelInfoLookup(context.Background(), name)
 }
 
 // ByProvider returns all models served by a provider/gateway.
 func ByProvider(provider string) []ModelInfo {
-	engine := eyrieModelEngine()
-	if engine == nil {
-		return nil
-	}
-	models, err := engine.ListModels(context.Background(), provider, false)
+	infos, err := gateway.ModelsByProvider(context.Background(), provider)
 	if err != nil {
 		return nil
 	}
-	out := make([]ModelInfo, 0, len(models))
-	for _, model := range models {
-		out = append(out, fromEngineModel(model))
-	}
-	return out
+	return infos
 }
 
 // Recommended returns the default catalog model for a provider.
 func Recommended(provider string) (ModelInfo, bool) {
-	name := DefaultModel(provider)
-	if name == "" {
-		return ModelInfo{}, false
-	}
-	info, ok := Find(name)
-	if ok {
-		info.Recommended = true
-	}
-	return info, ok
+	return gateway.RecommendedModel(context.Background(), provider)
 }
 
+// DefaultModel returns the catalog default model name for a provider.
 func DefaultModel(provider string) string {
-	if engine := eyrieModelEngine(); engine != nil {
-		return engine.DefaultModel(context.Background(), provider, "")
-	}
-	return ""
+	return gateway.DefaultModel(context.Background(), provider)
 }
 
+// AllProviders returns the distinct set of providers/gateways in the catalog.
 func AllProviders() []string {
-	engine := eyrieModelEngine()
-	if engine == nil {
-		return nil
-	}
-	providers, err := engine.ModelProviders(context.Background())
+	providers, err := gateway.AllProviders(context.Background())
 	if err != nil {
 		return nil
 	}
@@ -106,6 +48,11 @@ func AllProviders() []string {
 	return providers
 }
 
+// ProviderOfModel resolves which provider owns a model name.
+func ProviderOfModel(modelName string) string {
+	return gateway.ProviderForModel(context.Background(), modelName)
+}
+
 func canonicalProvider(provider string) string {
-	return eyrieengine.NormalizeProviderID(provider)
+	return gateway.NormalizeProviderID(provider)
 }

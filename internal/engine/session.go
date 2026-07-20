@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -246,7 +246,7 @@ type Session struct {
 
 // NewSession creates a conversation session through Eyrie's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewHawkSession(context.Background(), eyrieengine.Selection{
+	return NewHawkSession(context.Background(), gateway.Selection{
 		Provider: provider,
 		Model:    model,
 	}, provider, model, systemPrompt, registry)

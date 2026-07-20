@@ -1,0 +1,327 @@
+// Package gateway is Hawk's single boundary to Eyrie's provider runtime. It is
+// the only package that imports Eyrie; everything else speaks the hawk-owned
+// Provider interface and the internal/types DTOs.
+//
+// hawk = product face (UX/agent/sessions) · eyrie = provider engine
+// One-way dependency only: eyrie never imports hawk. See README ecosystems.
+package gateway
+
+import (
+	"context"
+
+	"github.com/GrayCodeAI/eyrie/credentials"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+)
+
+// Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds
+// Provider so every engine method is forwarded, and it is the only type that
+// constructs one (via New). All other Hawk packages hold a *Gateway or speak
+// the Provider interface — never an *eyrieengine.Engine.
+//
+// Construction is centralized here: New is the only call to eyrieengine.New and
+// the place Hawk declares its identity to the credential store.
+type Gateway struct {
+	Provider
+}
+
+// New composes the Eyrie engine for one effective settings snapshot and wraps it
+// as a Provider. It is the single composition root — every eyrieengine.New call
+// in Hawk flows through here. Hawk declares its OS keychain service name so
+// existing credentials (filed under "hawk") stay readable under Eyrie's now
+// host-neutral default.
+func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error) {
+	gateways := customGatewaysFromSettings(providers)
+	eng, err := eyrieengine.New(eyrieengine.Options{CustomGateways: gateways})
+	if err != nil {
+		return nil, err
+	}
+	credentials.SetServiceName("hawk")
+	return &Gateway{Provider: newEngineProvider(eng)}, nil
+}
+
+// customGatewaysFromSettings maps Hawk's OpenAI-compatible provider config onto
+// Eyrie's CustomGateway spec.
+func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
+	gateways := make([]eyrieengine.CustomGateway, 0, len(providers))
+	for _, provider := range providers {
+		if provider.Name == "" && provider.BaseURL == "" {
+			continue
+		}
+		gateways = append(gateways, eyrieengine.CustomGateway{
+			ID: provider.Name, BaseURL: provider.BaseURL,
+			CredentialEnv: provider.APIKeyEnv, DefaultModel: provider.Model,
+		})
+	}
+	return gateways
+}
+
+// CustomProviderConfig is Hawk's spec for a user-defined OpenAI-compatible
+// provider. Kept here (rather than reusing config.CustomProviderConfig) so the
+// gateway package does not import config and create an import cycle.
+type CustomProviderConfig struct {
+	Name      string
+	BaseURL   string
+	APIKeyEnv string
+	Model     string
+}
+
+// ModelInfo is Hawk's product-facing view of Eyrie model metadata.
+type ModelInfo struct {
+	Name        string  `json:"name"`
+	Provider    string  `json:"provider"`
+	ContextSize int     `json:"context_size"`
+	InputPrice  float64 `json:"input_price_per_million"`
+	OutputPrice float64 `json:"output_price_per_million"`
+	Description string  `json:"description,omitempty"`
+	Recommended bool    `json:"recommended,omitempty"`
+}
+
+func fromEngineModel(model eyrieengine.Model) ModelInfo {
+	return ModelInfo{
+		Name: model.ID, Provider: model.ProviderID,
+		ContextSize: model.ContextWindow,
+		InputPrice:  model.InputPricePer1M, OutputPrice: model.OutputPricePer1M,
+		Description: model.Description,
+	}
+}
+
+// ChatClient returns a hawk ChatClient bound to this gateway's Provider.
+func (g *Gateway) ChatClient() *translateProvider {
+	return newChatClientProvider(g.Provider)
+}
+
+// MustSelectProvider returns the Provider, or nil if the gateway is unset.
+func (g *Gateway) MustSelectProvider() Provider {
+	if g == nil {
+		return nil
+	}
+	return g.Provider
+}
+
+// NewFromEngine wraps an existing *eyrieengine.Engine as a Gateway. Tests that
+// inject an Eyrie SecretStore (e.g. compaction-support detection) use it so the
+// rest of Hawk still speaks the Gateway boundary.
+func NewFromEngine(eng *eyrieengine.Engine) *Gateway {
+	if eng == nil {
+		return nil
+	}
+	return &Gateway{Provider: newEngineProvider(eng)}
+}
+
+// --- Stateless package-level lookups -------------------------------------
+// These build a default-gateway instance per call and are the thin seam that
+// lets hawk-owned policy packages (routing, config) delegate Eyrie reads
+// without importing Eyrie themselves. They mirror the pre-existing per-call
+// engine construction; a cached default gateway can be added later.
+
+func defaultGateway(ctx context.Context) *Gateway {
+	g, _ := New(ctx, nil)
+	return g
+}
+
+// ModelInfoLookup returns a model by id or alias, or false if unknown.
+func ModelInfoLookup(ctx context.Context, name string) (ModelInfo, bool) {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return ModelInfo{}, false
+	}
+	model, ok, err := g.ModelInfo(ctx, name)
+	if err != nil || !ok {
+		return ModelInfo{}, false
+	}
+	return fromEngineModel(model), true
+}
+
+// ModelsByProvider returns every model served by a provider/gateway.
+func ModelsByProvider(ctx context.Context, provider string) ([]ModelInfo, error) {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return nil, nil
+	}
+	models, err := g.ListModels(ctx, provider, false)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ModelInfo, 0, len(models))
+	for _, model := range models {
+		out = append(out, fromEngineModel(model))
+	}
+	return out, nil
+}
+
+// RecommendedModel returns the catalog default for a provider, flagged as
+// recommended.
+func RecommendedModel(ctx context.Context, provider string) (ModelInfo, bool) {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return ModelInfo{}, false
+	}
+	name := g.DefaultModel(ctx, provider, "")
+	if name == "" {
+		return ModelInfo{}, false
+	}
+	info, ok := ModelInfoLookup(ctx, name)
+	if ok {
+		info.Recommended = true
+	}
+	return info, ok
+}
+
+// DefaultModel returns the catalog default model name for a provider.
+func DefaultModel(ctx context.Context, provider string) string {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return ""
+	}
+	return g.DefaultModel(ctx, provider, "")
+}
+
+// AllProviders returns the distinct set of providers/gateways in the catalog.
+func AllProviders(ctx context.Context) ([]string, error) {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return nil, nil
+	}
+	return g.ModelProviders(ctx)
+}
+
+// ProviderForModel resolves which provider owns a model name.
+func ProviderForModel(ctx context.Context, modelName string) string {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return ""
+	}
+	return g.ProviderForModel(ctx, modelName)
+}
+
+// PreferredModel returns Eyrie's tier-preferred model for a provider.
+func PreferredModel(ctx context.Context, provider string, class ModelClass, fallback string) string {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return fallback
+	}
+	return g.PreferredModel(ctx, provider, class, fallback)
+}
+
+// PreferredModels returns up to limit tier-preferred models for a provider.
+func PreferredModels(ctx context.Context, primaryProvider string, class ModelClass, limit int) []string {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return nil
+	}
+	return g.PreferredModels(ctx, primaryProvider, class, limit)
+}
+
+// ModelClassOf returns the cost tier of a model.
+func ModelClassOf(ctx context.Context, modelID string) ModelClass {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return ModelClassBalanced
+	}
+	return g.ModelClassOf(ctx, modelID)
+}
+
+// PrimaryModel returns the catalog-wide primary model.
+func PrimaryModel(ctx context.Context) string {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return ""
+	}
+	return g.PrimaryModel(ctx)
+}
+
+// ModelNames returns all model names known to the catalog.
+func ModelNames(ctx context.Context) []string {
+	g := defaultGateway(ctx)
+	if g == nil {
+		return nil
+	}
+	return g.ModelNames(ctx)
+}
+
+// --- hawk-owned mirror of Eyrie's ModelClass tier enum -------------------
+// Kept here (rather than importing neutral constants) so the boundary stays
+// one-way; values match eyrieengine.ModelClass.
+type ModelClass = eyrieengine.ModelClass
+
+const (
+	ModelClassEconomical = eyrieengine.ModelClassEconomical
+	ModelClassBalanced   = eyrieengine.ModelClassBalanced
+	ModelClassPremium    = eyrieengine.ModelClassPremium
+	CheckFail            = eyrieengine.CheckFail
+)
+
+// NormalizeProviderID canonicalizes a host-facing provider/gateway id.
+func NormalizeProviderID(id string) string {
+	return eyrieengine.NormalizeProviderID(id)
+}
+
+// --- Eyrie report/type re-exports config internals consume ----------------
+// These alias Eyrie types that a few config-only report paths return. They
+// live in gateway (the single Eyrie importer) rather than config.
+
+type (
+	PreflightReport         = eyrieengine.PreflightReport
+	PreflightOptions        = eyrieengine.PreflightOptions
+	ProviderStateSecurity   = eyrieengine.ProviderStateSecurity
+	DeploymentSummary       = eyrieengine.DeploymentSummary
+	CredentialStorageReport = eyrieengine.CredentialStorageReport
+	CredentialStatus        = eyrieengine.CredentialStatus
+	CredentialResolution    = eyrieengine.CredentialResolution
+	CredentialProvider      = eyrieengine.CredentialProvider
+	GatewayDefs             = eyrieengine.Gateway
+	CatalogSnapshot         = eyrieengine.CatalogSnapshot
+	Model                   = eyrieengine.Model
+	StatePaths              = eyrieengine.StatePaths
+	SelectionOptions        = eyrieengine.SelectionOptions
+	Selection               = eyrieengine.Selection
+	NativeCompactionRequest = eyrieengine.NativeCompactionRequest
+)
+
+// Package-level Eyrie helpers that config delegates to (gateway stays the only importer).
+
+func PreflightReportWithOptions(ctx context.Context, opts PreflightOptions) PreflightReport {
+	return PreflightWithProviders(ctx, nil, opts)
+}
+
+// PreflightWithProviders runs preflight against a gateway built from an
+// explicit provider list (a settings snapshot's custom gateways), so concurrent
+// commands can isolate custom-provider state.
+func PreflightWithProviders(ctx context.Context, providers []CustomProviderConfig, opts PreflightOptions) PreflightReport {
+	g, err := New(ctx, providers)
+	if err != nil {
+		return PreflightReport{}
+	}
+	return g.PreflightWithOptions(ctx, opts)
+}
+
+func FormatPreflight(report PreflightReport) string {
+	return eyrieengine.FormatPreflight(report)
+}
+
+func IsCatalogCacheRequired(err error) bool {
+	return eyrieengine.IsCatalogCacheRequired(err)
+}
+
+func SecretStoreName() string { return eyrieengine.SecretStoreName() }
+
+func CredentialStorage(ctx context.Context) CredentialStorageReport {
+	return eyrieengine.CredentialStorage(ctx)
+}
+
+func MigrateLegacyCredentials(ctx context.Context) (int, error) {
+	return eyrieengine.MigrateLegacyCredentials(ctx)
+}
+
+func CredentialGuidance(providerID, secret string) string {
+	return eyrieengine.CredentialGuidance(providerID, secret)
+}
+
+func FormatSetupError(providerID string, err error) string {
+	return eyrieengine.FormatSetupError(providerID, err)
+}
+
+// ParseInlineToolCalls extracts inline tool-call markup from model output.
+func ParseInlineToolCalls(content string) (string, []eyrieengine.ToolCall) {
+	return eyrieengine.ParseInlineToolCalls(content)
+}

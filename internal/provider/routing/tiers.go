@@ -3,7 +3,7 @@ package routing
 import (
 	"context"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 type CostTier int
@@ -14,22 +14,20 @@ const (
 	CostTierExpensive
 )
 
-type PreferenceTier = eyrieengine.ModelClass
+type PreferenceTier = gateway.ModelClass
 
 const (
-	TierHaiku  PreferenceTier = eyrieengine.ModelClassEconomical
-	TierSonnet PreferenceTier = eyrieengine.ModelClassBalanced
-	TierOpus   PreferenceTier = eyrieengine.ModelClassPremium
+	TierHaiku  PreferenceTier = gateway.ModelClassEconomical
+	TierSonnet PreferenceTier = gateway.ModelClassBalanced
+	TierOpus   PreferenceTier = gateway.ModelClassPremium
 )
 
 func CostTierOf(modelName string) CostTier {
-	if engine := eyrieModelEngine(); engine != nil {
-		switch engine.ModelClassOf(context.Background(), modelName) {
-		case eyrieengine.ModelClassEconomical:
-			return CostTierCheap
-		case eyrieengine.ModelClassPremium:
-			return CostTierExpensive
-		}
+	switch gateway.ModelClassOf(context.Background(), modelName) {
+	case gateway.ModelClassEconomical:
+		return CostTierCheap
+	case gateway.ModelClassPremium:
+		return CostTierExpensive
 	}
 	return CostTierMid
 }
@@ -57,10 +55,7 @@ func SuggestTierForTask(taskType string) PreferenceTier {
 }
 
 func AllCatalogModelNames() []string {
-	if engine := eyrieModelEngine(); engine != nil {
-		return engine.ModelNames(context.Background())
-	}
-	return nil
+	return gateway.ModelNames(context.Background())
 }
 
 func DefaultHealthTiers(primaryProvider string) []ModelTier {
@@ -73,19 +68,11 @@ func DefaultHealthTiers(primaryProvider string) []ModelTier {
 }
 
 func tierModelList(primaryProvider string, tier PreferenceTier) []string {
-	engine := eyrieModelEngine()
-	if engine == nil {
-		return nil
-	}
-	models := engine.PreferredModels(context.Background(), primaryProvider, tier, 3)
-	return models
+	return gateway.PreferredModels(context.Background(), primaryProvider, tier, 3)
 }
 
 func PreferredModelForTier(provider string, tier PreferenceTier, fallback string) string {
-	if engine := eyrieModelEngine(); engine != nil {
-		return engine.PreferredModel(context.Background(), provider, tier, fallback)
-	}
-	return fallback
+	return gateway.PreferredModel(context.Background(), provider, tier, fallback)
 }
 
 func MostExpensiveForProvider(provider, fallback string) string {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 // PersistAPIKey saves a provider API key via eyrie (OS secret store).
@@ -239,7 +239,7 @@ func FormatConfigProviderError(providerID string, err error) string {
 	if err == nil {
 		return ""
 	}
-	return eyrieengine.FormatSetupError(providerID, err)
+	return gateway.FormatSetupError(providerID, err)
 }
 
 // InferCredentialsFromAPIKey is deprecated; select gateway first, then paste the key.
@@ -257,12 +257,12 @@ func InferCredentialsFromAPIKey(ctx context.Context, secret string) []Credential
 	return out
 }
 
-func engineCredentialProvider(providers []eyrieengine.CredentialProvider, target string) (eyrieengine.CredentialProvider, bool) {
+func engineCredentialProvider(providers []gateway.CredentialProvider, target string) (gateway.CredentialProvider, bool) {
 	target = strings.TrimSpace(target)
 	for _, provider := range providers {
 		if strings.EqualFold(provider.ProviderID, target) || strings.EqualFold(provider.EnvVar, target) {
 			return provider, true
 		}
 	}
-	return eyrieengine.CredentialProvider{}, false
+	return gateway.CredentialProvider{}, false
 }

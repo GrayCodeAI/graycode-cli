@@ -12,10 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/storage"
-
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -653,7 +652,7 @@ func providerCredentialEnvAliases(provider string) []string {
 // FetchModelsForProvider returns models from the eyrie catalog (dynamic; no hawk hardcoded lists).
 // RefreshModelCatalogV1 is the explicit network refresh boundary.
 func FetchModelsForProvider(provider string) ([]EngineModel, error) {
-	provider = eyrieengine.NormalizeProviderID(provider)
+	provider = gateway.NormalizeProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
@@ -670,7 +669,7 @@ func FetchModelsForProvider(provider string) ([]EngineModel, error) {
 	}
 	// Custom OpenAI-compatible providers: single model from settings, not hawk catalog data.
 	for _, cp := range LoadSettings().CustomProviders {
-		if eyrieengine.NormalizeProviderID(cp.Name) != provider {
+		if gateway.NormalizeProviderID(cp.Name) != provider {
 			continue
 		}
 		if id := strings.TrimSpace(cp.Model); id != "" {
@@ -686,7 +685,7 @@ func FetchModelsForProvider(provider string) ([]EngineModel, error) {
 // FetchModelsForProviderWithSettings resolves cached models using one
 // invocation's effective settings, including its custom gateways.
 func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, provider string) ([]EngineModel, error) {
-	provider = eyrieengine.NormalizeProviderID(provider)
+	provider = gateway.NormalizeProviderID(provider)
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
@@ -707,10 +706,10 @@ func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, 
 	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog", provider)
 }
 
-func refreshModelCatalog(ctx context.Context, _ bool) (eyrieengine.CatalogSnapshot, error) {
+func refreshModelCatalog(ctx context.Context, _ bool) (gateway.CatalogSnapshot, error) {
 	engine, err := newEyrieEngine()
 	if err != nil {
-		return eyrieengine.CatalogSnapshot{}, err
+		return gateway.CatalogSnapshot{}, err
 	}
 	return engine.RefreshCatalog(ctx, "")
 }

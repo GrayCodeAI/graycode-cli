@@ -1,0 +1,537 @@
+// Package gateway is Hawk's single boundary to Eyrie's provider runtime. It is
+// the only package that imports Eyrie; everything else speaks the hawk-owned
+// Provider interface and the internal/types DTOs.
+//
+// hawk = product face (UX/agent/sessions) · eyrie = provider engine
+// One-way dependency only: eyrie never imports hawk. See README ecosystems.
+package gateway
+
+import (
+	"context"
+	"fmt"
+
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/types"
+)
+
+// Provider is Hawk's hawk-owned view of the Eyrie engine. It wraps the concrete
+// *eyrieengine.Engine (whose fields are unexported and therefore not directly
+// mockable) so Hawk tests can inject a stub. The method set is exactly the
+// surface Hawk actually uses — nothing more.
+type Provider interface {
+	Resolve(ctx context.Context, req eyrieengine.SelectionRequest) (eyrieengine.Route, error)
+	Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error)
+	Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error)
+	ListModels(ctx context.Context, providerID string, refresh bool) ([]eyrieengine.Model, error)
+	ListLiveModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error)
+	ListPublicModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error)
+	ModelInfo(ctx context.Context, modelID string) (eyrieengine.Model, bool, error)
+	ModelProviders(ctx context.Context) ([]string, error)
+	DefaultModel(ctx context.Context, provider, fallback string) string
+	PreferredModel(ctx context.Context, provider string, class eyrieengine.ModelClass, fallback string) string
+	PreferredModels(ctx context.Context, primaryProvider string, class eyrieengine.ModelClass, limit int) []string
+	ModelClassOf(ctx context.Context, modelID string) eyrieengine.ModelClass
+	ProviderForModel(ctx context.Context, modelID string) string
+	PrimaryModel(ctx context.Context) string
+	ModelNames(ctx context.Context) []string
+	StatePaths() eyrieengine.StatePaths
+	DefaultProviderFilter(ctx context.Context) string
+	Catalog(ctx context.Context) (eyrieengine.CatalogSnapshot, error)
+	RefreshCatalog(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error)
+	ApplyCredentials(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error)
+	SaveCredential(ctx context.Context, providerID, secret string) (eyrieengine.CredentialStatus, error)
+	RemoveCredential(ctx context.Context, providerID string) error
+	CredentialStatus(ctx context.Context, providerID string) (eyrieengine.CredentialStatus, error)
+	SaveCredentialEnv(ctx context.Context, envVar, secret string) error
+	HasCredentialEnv(ctx context.Context, envVar string) bool
+	CredentialEnvKeys(providerID string) []string
+	ResolveCredential(ctx context.Context, secret string) eyrieengine.CredentialResolution
+	CredentialProviders(context.Context) []eyrieengine.CredentialProvider
+	GatewayDefinitions() []eyrieengine.Gateway
+	Gateways(ctx context.Context) []eyrieengine.Gateway
+	GatewayRegion(providerID string) (label string, required bool)
+	SetGatewayRegion(ctx context.Context, providerID, value string) error
+	GatewayForModel(ctx context.Context, modelID string) string
+	CanonicalModel(ctx context.Context, modelID string) string
+	ApplyGatewayEnvironment(_ context.Context, providerID string)
+	DeploymentRoutingEnabled(override *bool) bool
+	DeploymentStatus(ctx context.Context, activeModel string) (string, error)
+	DeploymentSummary(ctx context.Context, activeModel string) (eyrieengine.DeploymentSummary, error)
+	RoutingPreview(ctx context.Context, modelID string) (string, error)
+	CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth
+	Preflight(ctx context.Context) eyrieengine.PreflightReport
+	PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport
+	ActiveSelection(ctx context.Context) eyrieengine.Route
+	EffectiveSelection(ctx context.Context, opts eyrieengine.SelectionOptions) eyrieengine.Selection
+	SetActiveProvider(ctx context.Context, provider string) error
+	SetActiveModel(ctx context.Context, modelID string) error
+	SetSelection(ctx context.Context, provider, modelID string) error
+	ClearSelection(ctx context.Context) error
+	ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity
+	MigrateProviderSecrets() error
+	MigrateProviderSecretsContext(ctx context.Context) error
+	SupportsNativeCompaction(ctx context.Context, provider, model string) bool
+	CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error)
+}
+
+// engineProvider is the production Provider: a thin wrapper over Eyrie's
+// concrete engine facade.
+type engineProvider struct {
+	eng *eyrieengine.Engine
+}
+
+func newEngineProvider(eng *eyrieengine.Engine) *engineProvider {
+	return &engineProvider{eng: eng}
+}
+
+func (p *engineProvider) Resolve(ctx context.Context, req eyrieengine.SelectionRequest) (eyrieengine.Route, error) {
+	return p.eng.Resolve(ctx, req)
+}
+func (p *engineProvider) Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error) {
+	return p.eng.Generate(ctx, req)
+}
+func (p *engineProvider) Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error) {
+	return p.eng.Stream(ctx, req)
+}
+func (p *engineProvider) ListModels(ctx context.Context, providerID string, refresh bool) ([]eyrieengine.Model, error) {
+	return p.eng.ListModels(ctx, providerID, refresh)
+}
+func (p *engineProvider) ListLiveModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error) {
+	return p.eng.ListLiveModels(ctx, providerID)
+}
+func (p *engineProvider) ListPublicModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error) {
+	return p.eng.ListPublicModels(ctx, providerID)
+}
+func (p *engineProvider) ModelInfo(ctx context.Context, modelID string) (eyrieengine.Model, bool, error) {
+	return p.eng.ModelInfo(ctx, modelID)
+}
+func (p *engineProvider) ModelProviders(ctx context.Context) ([]string, error) {
+	return p.eng.ModelProviders(ctx)
+}
+func (p *engineProvider) DefaultModel(ctx context.Context, provider, fallback string) string {
+	return p.eng.DefaultModel(ctx, provider, fallback)
+}
+func (p *engineProvider) PreferredModel(ctx context.Context, provider string, class eyrieengine.ModelClass, fallback string) string {
+	return p.eng.PreferredModel(ctx, provider, class, fallback)
+}
+func (p *engineProvider) PreferredModels(ctx context.Context, primaryProvider string, class eyrieengine.ModelClass, limit int) []string {
+	return p.eng.PreferredModels(ctx, primaryProvider, class, limit)
+}
+func (p *engineProvider) ModelClassOf(ctx context.Context, modelID string) eyrieengine.ModelClass {
+	return p.eng.ModelClassOf(ctx, modelID)
+}
+func (p *engineProvider) ProviderForModel(ctx context.Context, modelID string) string {
+	return p.eng.ProviderForModel(ctx, modelID)
+}
+func (p *engineProvider) PrimaryModel(ctx context.Context) string {
+	return p.eng.PrimaryModel(ctx)
+}
+func (p *engineProvider) ModelNames(ctx context.Context) []string {
+	return p.eng.ModelNames(ctx)
+}
+func (p *engineProvider) StatePaths() eyrieengine.StatePaths {
+	return p.eng.StatePaths()
+}
+func (p *engineProvider) DefaultProviderFilter(ctx context.Context) string {
+	return p.eng.DefaultProviderFilter(ctx)
+}
+func (p *engineProvider) Catalog(ctx context.Context) (eyrieengine.CatalogSnapshot, error) {
+	return p.eng.Catalog(ctx)
+}
+func (p *engineProvider) RefreshCatalog(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error) {
+	return p.eng.RefreshCatalog(ctx, providerID)
+}
+func (p *engineProvider) ApplyCredentials(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error) {
+	return p.eng.ApplyCredentials(ctx, providerID)
+}
+func (p *engineProvider) SaveCredential(ctx context.Context, providerID, secret string) (eyrieengine.CredentialStatus, error) {
+	return p.eng.SaveCredential(ctx, providerID, secret)
+}
+func (p *engineProvider) RemoveCredential(ctx context.Context, providerID string) error {
+	return p.eng.RemoveCredential(ctx, providerID)
+}
+func (p *engineProvider) CredentialStatus(ctx context.Context, providerID string) (eyrieengine.CredentialStatus, error) {
+	return p.eng.CredentialStatus(ctx, providerID)
+}
+func (p *engineProvider) SaveCredentialEnv(ctx context.Context, envVar, secret string) error {
+	return p.eng.SaveCredentialEnv(ctx, envVar, secret)
+}
+func (p *engineProvider) HasCredentialEnv(ctx context.Context, envVar string) bool {
+	return p.eng.HasCredentialEnv(ctx, envVar)
+}
+func (p *engineProvider) CredentialEnvKeys(providerID string) []string {
+	return p.eng.CredentialEnvKeys(providerID)
+}
+func (p *engineProvider) ResolveCredential(ctx context.Context, secret string) eyrieengine.CredentialResolution {
+	return p.eng.ResolveCredential(ctx, secret)
+}
+func (p *engineProvider) CredentialProviders(ctx context.Context) []eyrieengine.CredentialProvider {
+	return p.eng.CredentialProviders(ctx)
+}
+func (p *engineProvider) GatewayDefinitions() []eyrieengine.Gateway {
+	return p.eng.GatewayDefinitions()
+}
+func (p *engineProvider) Gateways(ctx context.Context) []eyrieengine.Gateway {
+	return p.eng.Gateways(ctx)
+}
+func (p *engineProvider) GatewayRegion(providerID string) (string, bool) {
+	return p.eng.GatewayRegion(providerID)
+}
+func (p *engineProvider) SetGatewayRegion(ctx context.Context, providerID, value string) error {
+	return p.eng.SetGatewayRegion(ctx, providerID, value)
+}
+func (p *engineProvider) GatewayForModel(ctx context.Context, modelID string) string {
+	return p.eng.GatewayForModel(ctx, modelID)
+}
+func (p *engineProvider) CanonicalModel(ctx context.Context, modelID string) string {
+	return p.eng.CanonicalModel(ctx, modelID)
+}
+func (p *engineProvider) ApplyGatewayEnvironment(ctx context.Context, providerID string) {
+	p.eng.ApplyGatewayEnvironment(ctx, providerID)
+}
+func (p *engineProvider) DeploymentRoutingEnabled(override *bool) bool {
+	return p.eng.DeploymentRoutingEnabled(override)
+}
+func (p *engineProvider) DeploymentStatus(ctx context.Context, activeModel string) (string, error) {
+	return p.eng.DeploymentStatus(ctx, activeModel)
+}
+func (p *engineProvider) DeploymentSummary(ctx context.Context, activeModel string) (eyrieengine.DeploymentSummary, error) {
+	return p.eng.DeploymentSummary(ctx, activeModel)
+}
+func (p *engineProvider) RoutingPreview(ctx context.Context, modelID string) (string, error) {
+	return p.eng.RoutingPreview(ctx, modelID)
+}
+func (p *engineProvider) CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth {
+	return p.eng.CatalogHealth(ctx)
+}
+func (p *engineProvider) Preflight(ctx context.Context) eyrieengine.PreflightReport {
+	return p.eng.Preflight(ctx)
+}
+func (p *engineProvider) PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport {
+	return p.eng.PreflightWithOptions(ctx, opts)
+}
+func (p *engineProvider) ActiveSelection(ctx context.Context) eyrieengine.Route {
+	return p.eng.ActiveSelection(ctx)
+}
+func (p *engineProvider) EffectiveSelection(ctx context.Context, opts eyrieengine.SelectionOptions) eyrieengine.Selection {
+	return p.eng.EffectiveSelection(ctx, opts)
+}
+func (p *engineProvider) SetActiveProvider(ctx context.Context, provider string) error {
+	return p.eng.SetActiveProvider(ctx, provider)
+}
+func (p *engineProvider) SetActiveModel(ctx context.Context, modelID string) error {
+	return p.eng.SetActiveModel(ctx, modelID)
+}
+func (p *engineProvider) SetSelection(ctx context.Context, provider, modelID string) error {
+	return p.eng.SetSelection(ctx, provider, modelID)
+}
+func (p *engineProvider) ClearSelection(ctx context.Context) error {
+	return p.eng.ClearSelection(ctx)
+}
+func (p *engineProvider) ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity {
+	return p.eng.ProviderStateSecurityStatus()
+}
+func (p *engineProvider) MigrateProviderSecrets() error {
+	return p.eng.MigrateProviderSecrets()
+}
+func (p *engineProvider) MigrateProviderSecretsContext(ctx context.Context) error {
+	return p.eng.MigrateProviderSecretsContext(ctx)
+}
+func (p *engineProvider) SupportsNativeCompaction(ctx context.Context, provider, model string) bool {
+	return p.eng.SupportsNativeCompaction(ctx, provider, model)
+}
+func (p *engineProvider) CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error) {
+	return p.eng.CompactNative(ctx, req)
+}
+
+// translateProvider bridges the hawk-owned ChatClient port to a Provider. The
+// type conversions here (internal/types <-> eyrieengine.*) are the single,
+// centralized translation point — Hawk's conversation DTOs never leak past it.
+type translateProvider struct {
+	provider Provider
+}
+
+func newChatClientProvider(provider Provider) *translateProvider {
+	return &translateProvider{provider: provider}
+}
+
+func (c *translateProvider) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+	response, err := c.provider.Generate(ctx, toEngineRequest(messages, opts, types.ContinuationConfig{}))
+	if err != nil {
+		return nil, err
+	}
+	return fromEngineResponse(response), nil
+}
+
+func (c *translateProvider) StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, continuation types.ContinuationConfig) (*types.StreamResult, error) {
+	request := toEngineRequest(messages, opts, continuation)
+	request.Requirements.Streaming = true
+	stream, err := c.provider.Stream(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	events := make(chan types.EyrieStreamEvent, 64)
+	streamCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		defer close(events)
+		defer func() { _ = stream.Close() }()
+		for stream.Next() {
+			event, emit := fromEngineEvent(stream.Event())
+			if !emit {
+				continue
+			}
+			select {
+			case events <- event:
+			case <-streamCtx.Done():
+				return
+			}
+		}
+		if err := stream.Err(); err != nil {
+			select {
+			case events <- types.EyrieStreamEvent{Type: "error", Error: err.Error()}:
+			case <-streamCtx.Done():
+			}
+		}
+	}()
+	closeFn := func() {
+		cancel()
+		_ = stream.Close()
+	}
+	return types.NewStreamResult(events, "", closeFn), nil
+}
+
+// ManagesResilience tells Hawk not to add provider retry, continuation, or
+// protocol-recovery layers around Eyrie's routed transport.
+func (c *translateProvider) ManagesResilience() bool { return true }
+
+// NativeCompaction reports whether the bound Provider supports provider-native
+// compaction for a provider/model pair.
+func (c *translateProvider) NativeCompaction(ctx context.Context, provider, model string) bool {
+	if c.provider == nil {
+		return false
+	}
+	return c.provider.SupportsNativeCompaction(ctx, provider, model)
+}
+
+// CompactNative performs provider-native compaction through the bound Provider.
+func (c *translateProvider) CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error) {
+	if c.provider == nil {
+		return "", fmt.Errorf("gateway: no provider")
+	}
+	return c.provider.CompactNative(ctx, req)
+}
+
+func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, continuation types.ContinuationConfig) eyrieengine.GenerateRequest {
+	glmReasoningEnabled := opts.GLMThinkingEnabled != nil && *opts.GLMThinkingEnabled
+	request := eyrieengine.GenerateRequest{
+		Messages:     toEngineMessages(messages),
+		SystemPrompt: opts.System,
+		Tools:        toEngineTools(opts.Tools),
+		Requirements: eyrieengine.Requirements{
+			Streaming:      opts.Stream,
+			Tools:          len(opts.Tools) > 0,
+			Vision:         messagesContainVision(messages),
+			StructuredJSON: opts.ResponseFormat != nil || opts.OutputSchema != "",
+			Reasoning:      opts.ReasoningEffort != "" || opts.ThinkingBudgetTokens > 0 || opts.ThinkingMode != "" || glmReasoningEnabled,
+		},
+		Preference: eyrieengine.Preference{
+			PreferredProvider: opts.Provider,
+			PreferredModelID:  opts.Model,
+		},
+		Limits: eyrieengine.Limits{
+			MaxOutputTokens:      opts.MaxTokens,
+			MaxContinuations:     continuation.MaxContinuations,
+			MaxTotalOutputTokens: continuation.MaxTotalTokens,
+		},
+		Metadata:     eyrieengine.Metadata{UserID: opts.MetadataUserID},
+		Temperature:  opts.Temperature,
+		OutputSchema: firstNonEmpty(opts.OutputSchema, responseSchema(opts.ResponseFormat)),
+		Options: eyrieengine.GenerationOptions{
+			EnableCaching: opts.EnableCaching, ReasoningEffort: opts.ReasoningEffort,
+			ThinkingBudgetTokens: opts.ThinkingBudgetTokens, ThinkingMode: opts.ThinkingMode,
+			ThinkingDisplay: opts.ThinkingDisplay, GLMThinkingEnabled: opts.GLMThinkingEnabled,
+			VirtualKeyID: opts.VirtualKeyID, KimiContextCacheID: opts.KimiContextCacheID,
+			KimiCacheResetTTL: opts.KimiCacheResetTTL, TopP: opts.TopP, TopK: opts.TopK,
+			StopSequences: append([]string(nil), opts.StopSequences...), ToolChoice: toEngineToolChoice(opts.ToolChoice),
+			ServiceTier: opts.ServiceTier, OutputEffort: opts.OutputEffort,
+			PresencePenalty: opts.PresencePenalty, FrequencyPenalty: opts.FrequencyPenalty,
+			N: opts.N, LogProbs: opts.LogProbs, TopLogProbs: opts.TopLogProbs, Seed: opts.Seed,
+			Store: opts.Store, Metadata: cloneMetadata(opts.Metadata), Modalities: append([]string(nil), opts.Modalities...),
+			AudioConfig: opts.AudioConfig, Prediction: opts.Prediction, WebSearchOptions: opts.WebSearchOptions,
+		},
+	}
+	return request
+}
+
+// ToEngineMessages converts hawk conversation messages to the engine's wire
+// format. Exposed for the session layer (e.g. native compaction), which must
+// translate without reaching into the raw engine.
+func ToEngineMessages(messages []types.EyrieMessage) []eyrieengine.Message {
+	return toEngineMessages(messages)
+}
+
+func toEngineMessages(messages []types.EyrieMessage) []eyrieengine.Message {
+	out := make([]eyrieengine.Message, 0, len(messages))
+	for _, message := range messages {
+		parts := make([]eyrieengine.ContentPart, 0, len(message.ContentParts)+len(message.Images))
+		for _, part := range message.ContentParts {
+			converted := eyrieengine.ContentPart{Type: part.Type, Text: part.Text}
+			if part.ImageURL != nil {
+				converted.URL, converted.Detail = part.ImageURL.URL, part.ImageURL.Detail
+			}
+			if part.InputAudio != nil {
+				converted.AudioData, converted.AudioFormat = part.InputAudio.Data, part.InputAudio.Format
+			}
+			parts = append(parts, converted)
+		}
+		for _, image := range message.Images {
+			parts = append(parts, eyrieengine.ContentPart{Type: "image_url", URL: image})
+		}
+		calls := make([]eyrieengine.ToolCall, 0, len(message.ToolUse))
+		for _, call := range message.ToolUse {
+			calls = append(calls, eyrieengine.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
+		}
+		results := make([]eyrieengine.ToolResult, 0, len(message.ToolResults))
+		for _, result := range message.ToolResults {
+			results = append(results, eyrieengine.ToolResult{ToolUseID: result.ToolUseID, Content: result.Content, IsError: result.IsError})
+		}
+		out = append(out, eyrieengine.Message{
+			Role: message.Role, Content: message.Content, Thinking: message.Thinking,
+			ContentParts: parts, ToolCalls: calls, ToolResults: results,
+		})
+	}
+	return out
+}
+
+func toEngineTools(tools []types.EyrieTool) []eyrieengine.Tool {
+	out := make([]eyrieengine.Tool, 0, len(tools))
+	for _, tool := range tools {
+		out = append(out, eyrieengine.Tool{Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters})
+	}
+	return out
+}
+
+func toEngineToolChoice(choice *types.ToolChoiceOption) *eyrieengine.ToolChoice {
+	if choice == nil {
+		return nil
+	}
+	return &eyrieengine.ToolChoice{Type: choice.Type, Name: choice.Name, DisableParallelToolUse: choice.DisableParallelToolUse}
+}
+
+func fromEngineResponse(response *eyrieengine.GenerateResponse) *types.EyrieResponse {
+	if response == nil {
+		return &types.EyrieResponse{}
+	}
+	calls := make([]types.ToolCall, 0, len(response.ToolCalls))
+	for _, call := range response.ToolCalls {
+		calls = append(calls, types.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
+	}
+	return &types.EyrieResponse{
+		Content: response.Content, Thinking: response.Thinking, ToolCalls: calls,
+		FinishReason: response.FinishReason, RequestID: response.RequestID, Usage: fromEngineUsage(response.Usage),
+		Route: fromEngineRoute(response.Route),
+	}
+}
+
+func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
+	out := types.EyrieStreamEvent{
+		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
+		Usage: fromEngineUsage(event.Usage), StopReason: event.StopReason, TTFTms: event.TTFTMillis,
+	}
+	switch event.Type {
+	case eyrieengine.EventRouteSelected:
+		out.Type = "route_selected"
+	case eyrieengine.EventRouteChanged:
+		out.Type = "route_changed"
+	case eyrieengine.EventContentDelta:
+		out.Type = "content"
+	case eyrieengine.EventThinkingDelta:
+		out.Type = "thinking"
+	case eyrieengine.EventToolCallStart, eyrieengine.EventToolCallDone:
+		out.Type = "tool_call"
+	case eyrieengine.EventToolCallDelta:
+		out.Type = "tool_input_delta"
+	case eyrieengine.EventUsage:
+		out.Type = "usage"
+	case eyrieengine.EventTTFT:
+		out.Type = "ttft"
+		out.TTFT = event.TTFTMillis
+	case eyrieengine.EventDone:
+		out.Type = "done"
+	case eyrieengine.EventContinuation:
+		out.Type = "continuation"
+	case eyrieengine.EventWarning:
+		out.Type, out.Content = "warning", event.Warning
+	default:
+		out.Type = string(event.Type)
+	}
+	if event.ToolCall != nil {
+		out.ToolCall = &types.ToolCall{ID: event.ToolCall.ID, Name: event.ToolCall.Name, Arguments: event.ToolCall.Arguments}
+	}
+	if event.Route != nil {
+		out.Route = fromEngineRoute(*event.Route)
+	}
+	return out, true
+}
+
+func fromEngineRoute(route eyrieengine.Route) *types.ResolvedRoute {
+	if route.Provider == "" && route.Model == "" && !route.DeploymentRouting {
+		return nil
+	}
+	return &types.ResolvedRoute{
+		Provider:          route.Provider,
+		Model:             route.Model,
+		DeploymentRouting: route.DeploymentRouting,
+	}
+}
+
+func fromEngineUsage(usage *eyrieengine.Usage) *types.EyrieUsage {
+	if usage == nil {
+		return nil
+	}
+	return &types.EyrieUsage{
+		PromptTokens: usage.InputTokens, CompletionTokens: usage.OutputTokens, TotalTokens: usage.TotalTokens,
+		CacheCreationTokens: usage.CacheCreationTokens, CacheReadTokens: usage.CacheReadTokens, ThinkingTokens: usage.ThinkingTokens,
+	}
+}
+
+func responseSchema(format *types.ResponseFormat) string {
+	if format == nil {
+		return ""
+	}
+	return format.Schema
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func cloneMetadata(in map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func messagesContainVision(messages []types.EyrieMessage) bool {
+	for _, message := range messages {
+		if len(message.Images) > 0 {
+			return true
+		}
+		for _, part := range message.ContentParts {
+			if part.ImageURL != nil || part.Type == "image_url" {
+				return true
+			}
+		}
+	}
+	return false
+}

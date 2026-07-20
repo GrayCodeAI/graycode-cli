@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -190,7 +190,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	} else {
 		status := PathWarn
 		for _, c := range pre.Checks {
-			if c.Status == eyrieengine.CheckFail {
+			if c.Status == gateway.CheckFail {
 				status = PathFail
 				break
 			}
