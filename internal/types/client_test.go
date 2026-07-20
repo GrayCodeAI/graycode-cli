@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 func TestContentPartJSONContract(t *testing.T) {
@@ -44,7 +46,7 @@ func TestDefaultContinuationConfig(t *testing.T) {
 
 func TestStreamResultCloseIsOptionalAndIdempotentCompatible(t *testing.T) {
 	closed := 0
-	result := NewStreamResult(nil, "request-1", func() { closed++ })
+	result := llm.NewStreamResult(nil, "request-1", func() { closed++ })
 	if result.RequestID != "request-1" {
 		t.Fatalf("RequestID = %q", result.RequestID)
 	}
@@ -53,5 +55,5 @@ func TestStreamResultCloseIsOptionalAndIdempotentCompatible(t *testing.T) {
 		t.Fatalf("close calls = %d, want 1", closed)
 	}
 	(*StreamResult)(nil).Close()
-	NewStreamResult(nil, "", context.CancelFunc(nil)).Close()
+	llm.NewStreamResult(nil, "", context.CancelFunc(nil)).Close()
 }

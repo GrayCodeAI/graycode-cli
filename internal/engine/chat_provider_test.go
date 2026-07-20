@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 type recordingChatClient struct {
@@ -21,7 +22,7 @@ func (c *recordingChatClient) StreamChatContinue(_ context.Context, _ []types.Ey
 	c.streamOptions = opts
 	events := make(chan types.EyrieStreamEvent)
 	close(events)
-	return types.NewStreamResult(events, "", nil), nil
+	return llm.NewStreamResult(events, "", nil), nil
 }
 
 func TestEngineChatProviderAppliesResolvedSelection(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 // Provider is Hawk's hawk-owned view of the Eyrie engine: a composition of the
@@ -320,7 +321,7 @@ func (c *translateProvider) StreamChatContinue(ctx context.Context, messages []t
 		cancel()
 		_ = stream.Close()
 	}
-	return types.NewStreamResult(events, "", closeFn), nil
+	return llm.NewStreamResult(events, "", closeFn), nil
 }
 
 // ManagesResilience tells Hawk not to add provider retry, continuation, or

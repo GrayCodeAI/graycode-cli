@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 type resilienceBoundaryClient struct {
@@ -53,7 +54,7 @@ func (c *resilienceBoundaryClient) StreamChatContinue(_ context.Context, message
 		ch <- event
 	}
 	close(ch)
-	return types.NewStreamResult(ch, "", nil), nil
+	return llm.NewStreamResult(ch, "", nil), nil
 }
 
 func (c *resilienceBoundaryClient) counts() (stream, chat int) {
