@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/taskruntime"
@@ -80,7 +79,7 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	// (including grandchildren spawned by the shell) via kill(-pgid). Without
 	// this, e.g. `bash -c 'sleep 60 &'` leaves an orphan when the parent is
 	// killed.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setCmdProcessGroup(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err
@@ -216,7 +215,7 @@ func (t *backgroundTask) stop() error {
 	}
 	// Kill the whole process group (grandchildren spawned by the shell too),
 	// since the child was started with Setpgid: true.
-	return syscall.Kill(-t.cmd.Process.Pid, syscall.SIGKILL)
+	return killProcessGroup(t.cmd.Process)
 }
 
 type TaskOutputTool struct{}

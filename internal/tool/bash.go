@@ -10,7 +10,6 @@ import (
 	"os/user"
 	"regexp"
 	"strings"
-	"syscall"
 	"time"
 
 	homepkg "github.com/GrayCodeAI/hawk/internal/home"
@@ -654,7 +653,7 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	cmd := exec.CommandContext(ctx, execName, execArgs...) // #nosec G204 -- command parsed from tool-configured command string (lint/test command)
 	// Put the child in its own process group so we can kill the whole tree
 	// (including grandchildren spawned by the shell) via kill(-pgid).
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setCmdProcessGroup(cmd)
 	if tc := GetToolContext(ctx); tc != nil && tc.WorkingDir != "" {
 		cmd.Dir = tc.WorkingDir
 	}
