@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
