@@ -10,7 +10,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
@@ -43,7 +42,7 @@ type Gateway struct {
 // identity is always declared before any credential read, no matter which New
 // path runs first.
 var declareHawkIdentity = sync.OnceFunc(func() {
-	credentials.SetServiceName("hawk")
+	eyrieengine.SetSecretStoreServiceName("hawk")
 })
 
 // New composes the Eyrie engine for one effective settings snapshot and wraps it
@@ -390,24 +389,20 @@ func ParseInlineToolCalls(content string) (string, []eyrieengine.ToolCall) {
 }
 
 // --- Test fixtures -----------------------------------------------------
-// Re-exported so hawk tests inject credential fixtures through the single
-// gateway boundary instead of importing eyrie/credentials directly. These are
-// thin aliases only; gateway still owns the eyrie relationship.
-//
-// Keep this block last and the symbols minimal — it exists purely to keep test
-// code behind the boundary.
+// Re-exported from engine so hawk tests inject credential fixtures through the
+// single gateway+engine boundary. These are thin aliases only.
 
 // SetDefaultStore replaces the process-wide credential store (for tests).
-var SetDefaultStore = credentials.SetDefaultStore
+var SetDefaultStore = eyrieengine.SetDefaultStore
 
 // DefaultStore returns the process-wide credential store (for tests).
-var DefaultStore = credentials.DefaultStore
+var DefaultStore = eyrieengine.DefaultStore
 
 // MapStore is the in-memory credential store for tests (alias).
-type MapStore = credentials.MapStore
+type MapStore = eyrieengine.MapStore
 
 // AccountForEnv returns the keychain account name for an env var.
-func AccountForEnv(envVar string) string { return credentials.AccountForEnv(envVar) }
+func AccountForEnv(envVar string) string { return eyrieengine.AccountForEnv(envVar) }
 
 // HasSecret reports whether a secret exists for an env var (for tests).
-func HasSecret(ctx context.Context, envKey string) bool { return credentials.HasSecret(ctx, envKey) }
+func HasSecret(ctx context.Context, envKey string) bool { return eyrieengine.HasSecret(ctx, envKey) }

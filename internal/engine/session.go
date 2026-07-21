@@ -367,6 +367,7 @@ func (s *Session) Model() string {
 	defer s.mu.RUnlock()
 	return s.model
 }
+
 func (s *Session) Provider() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

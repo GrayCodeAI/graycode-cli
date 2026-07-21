@@ -122,147 +122,195 @@ func newEngineProvider(eng *eyrieengine.Engine) *engineProvider {
 func (p *engineProvider) Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error) {
 	return p.eng.Generate(ctx, req)
 }
+
 func (p *engineProvider) Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error) {
 	return p.eng.Stream(ctx, req)
 }
+
 func (p *engineProvider) ListModels(ctx context.Context, providerID string, refresh bool) ([]eyrieengine.Model, error) {
 	return p.eng.ListModels(ctx, providerID, refresh)
 }
+
 func (p *engineProvider) ListLiveModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error) {
 	return p.eng.ListLiveModels(ctx, providerID)
 }
+
 func (p *engineProvider) ListPublicModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error) {
 	return p.eng.ListPublicModels(ctx, providerID)
 }
+
 func (p *engineProvider) ModelInfo(ctx context.Context, modelID string) (eyrieengine.Model, bool, error) {
 	return p.eng.ModelInfo(ctx, modelID)
 }
+
 func (p *engineProvider) ModelProviders(ctx context.Context) ([]string, error) {
 	return p.eng.ModelProviders(ctx)
 }
+
 func (p *engineProvider) DefaultModel(ctx context.Context, provider, fallback string) string {
 	return p.eng.DefaultModel(ctx, provider, fallback)
 }
+
 func (p *engineProvider) PreferredModel(ctx context.Context, provider string, class eyrieengine.ModelClass, fallback string) string {
 	return p.eng.PreferredModel(ctx, provider, class, fallback)
 }
+
 func (p *engineProvider) PreferredModels(ctx context.Context, primaryProvider string, class eyrieengine.ModelClass, limit int) []string {
 	return p.eng.PreferredModels(ctx, primaryProvider, class, limit)
 }
+
 func (p *engineProvider) ModelClassOf(ctx context.Context, modelID string) eyrieengine.ModelClass {
 	return p.eng.ModelClassOf(ctx, modelID)
 }
+
 func (p *engineProvider) ProviderForModel(ctx context.Context, modelID string) string {
 	return p.eng.ProviderForModel(ctx, modelID)
 }
+
 func (p *engineProvider) PrimaryModel(ctx context.Context) string {
 	return p.eng.PrimaryModel(ctx)
 }
+
 func (p *engineProvider) ModelNames(ctx context.Context) []string {
 	return p.eng.ModelNames(ctx)
 }
+
 func (p *engineProvider) StatePaths() eyrieengine.StatePaths {
 	return p.eng.StatePaths()
 }
+
 func (p *engineProvider) DefaultProviderFilter(ctx context.Context) string {
 	return p.eng.DefaultProviderFilter(ctx)
 }
+
 func (p *engineProvider) Catalog(ctx context.Context) (eyrieengine.CatalogSnapshot, error) {
 	return p.eng.Catalog(ctx)
 }
+
 func (p *engineProvider) RefreshCatalog(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error) {
 	return p.eng.RefreshCatalog(ctx, providerID)
 }
+
 func (p *engineProvider) ApplyCredentials(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error) {
 	return p.eng.ApplyCredentials(ctx, providerID)
 }
+
 func (p *engineProvider) SaveCredential(ctx context.Context, providerID, secret string) (eyrieengine.CredentialStatus, error) {
 	return p.eng.SaveCredential(ctx, providerID, secret)
 }
+
 func (p *engineProvider) RemoveCredential(ctx context.Context, providerID string) error {
 	return p.eng.RemoveCredential(ctx, providerID)
 }
+
 func (p *engineProvider) CredentialStatus(ctx context.Context, providerID string) (eyrieengine.CredentialStatus, error) {
 	return p.eng.CredentialStatus(ctx, providerID)
 }
+
 func (p *engineProvider) SaveCredentialEnv(ctx context.Context, envVar, secret string) error {
 	return p.eng.SaveCredentialEnv(ctx, envVar, secret)
 }
+
 func (p *engineProvider) HasCredentialEnv(ctx context.Context, envVar string) bool {
 	return p.eng.HasCredentialEnv(ctx, envVar)
 }
+
 func (p *engineProvider) CredentialEnvKeys(providerID string) []string {
 	return p.eng.CredentialEnvKeys(providerID)
 }
+
 func (p *engineProvider) ResolveCredential(ctx context.Context, secret string) eyrieengine.CredentialResolution {
 	return p.eng.ResolveCredential(ctx, secret)
 }
+
 func (p *engineProvider) CredentialProviders(ctx context.Context) []eyrieengine.CredentialProvider {
 	return p.eng.CredentialProviders(ctx)
 }
+
 func (p *engineProvider) GatewayDefinitions() []eyrieengine.Gateway {
 	return p.eng.GatewayDefinitions()
 }
+
 func (p *engineProvider) Gateways(ctx context.Context) []eyrieengine.Gateway {
 	return p.eng.Gateways(ctx)
 }
+
 func (p *engineProvider) GatewayRegion(providerID string) (string, bool) {
 	return p.eng.GatewayRegion(providerID)
 }
+
 func (p *engineProvider) SetGatewayRegion(ctx context.Context, providerID, value string) error {
 	return p.eng.SetGatewayRegion(ctx, providerID, value)
 }
+
 func (p *engineProvider) GatewayForModel(ctx context.Context, modelID string) string {
 	return p.eng.GatewayForModel(ctx, modelID)
 }
+
 func (p *engineProvider) CanonicalModel(ctx context.Context, modelID string) string {
 	return p.eng.CanonicalModel(ctx, modelID)
 }
+
 func (p *engineProvider) DeploymentRoutingEnabled(override *bool) bool {
 	return p.eng.DeploymentRoutingEnabled(override)
 }
+
 func (p *engineProvider) DeploymentStatus(ctx context.Context, activeModel string) (string, error) {
 	return p.eng.DeploymentStatus(ctx, activeModel)
 }
+
 func (p *engineProvider) DeploymentSummary(ctx context.Context, activeModel string) (eyrieengine.DeploymentSummary, error) {
 	return p.eng.DeploymentSummary(ctx, activeModel)
 }
+
 func (p *engineProvider) RoutingPreview(ctx context.Context, modelID string) (string, error) {
 	return p.eng.RoutingPreview(ctx, modelID)
 }
+
 func (p *engineProvider) CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth {
 	return p.eng.CatalogHealth(ctx)
 }
+
 func (p *engineProvider) PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport {
 	return p.eng.PreflightWithOptions(ctx, opts)
 }
+
 func (p *engineProvider) ActiveSelection(ctx context.Context) eyrieengine.Route {
 	return p.eng.ActiveSelection(ctx)
 }
+
 func (p *engineProvider) EffectiveSelection(ctx context.Context, opts eyrieengine.SelectionOptions) eyrieengine.Selection {
 	return p.eng.EffectiveSelection(ctx, opts)
 }
+
 func (p *engineProvider) SetActiveProvider(ctx context.Context, provider string) error {
 	return p.eng.SetActiveProvider(ctx, provider)
 }
+
 func (p *engineProvider) SetActiveModel(ctx context.Context, modelID string) error {
 	return p.eng.SetActiveModel(ctx, modelID)
 }
+
 func (p *engineProvider) SetSelection(ctx context.Context, provider, modelID string) error {
 	return p.eng.SetSelection(ctx, provider, modelID)
 }
+
 func (p *engineProvider) ClearSelection(ctx context.Context) error {
 	return p.eng.ClearSelection(ctx)
 }
+
 func (p *engineProvider) ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity {
 	return p.eng.ProviderStateSecurityStatus()
 }
+
 func (p *engineProvider) MigrateProviderSecrets() error {
 	return p.eng.MigrateProviderSecrets()
 }
+
 func (p *engineProvider) SupportsNativeCompaction(ctx context.Context, provider, model string) bool {
 	return p.eng.SupportsNativeCompaction(ctx, provider, model)
 }
+
 func (p *engineProvider) CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error) {
 	return p.eng.CompactNative(ctx, req)
 }
