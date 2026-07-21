@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) {
