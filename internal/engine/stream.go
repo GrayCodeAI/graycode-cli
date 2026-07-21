@@ -574,10 +574,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// <tool_call> (Qwen and most OpenAI-compatible local models).
 		if len(toolCalls) == 0 && (strings.Contains(textContent.String(), "<|tool_calls_section_begin|>") || strings.Contains(textContent.String(), "<tool_call>")) {
 			cleanText, engineCalls := gateway.ParseInlineToolCalls(textContent.String())
-			inlineCalls := make([]types.ToolCall, 0, len(engineCalls))
-			for _, call := range engineCalls {
-				inlineCalls = append(inlineCalls, types.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
-			}
+			inlineCalls := engineCalls
 			if len(inlineCalls) > 0 {
 				textContent.Reset()
 				textContent.WriteString(cleanText)

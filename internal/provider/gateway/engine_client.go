@@ -505,17 +505,6 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	return out, true
 }
 
-func fromEngineRoute(route eyrieengine.Route) *types.ResolvedRoute {
-	if route.Provider == "" && route.Model == "" && !route.DeploymentRouting {
-		return nil
-	}
-	return &route
-}
-
-func fromEngineUsage(usage *eyrieengine.Usage) *types.EyrieUsage {
-	return usage
-}
-
 func responseSchema(format *types.ResponseFormat) string {
 	if format == nil {
 		return ""
