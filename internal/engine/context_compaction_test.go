@@ -39,4 +39,3 @@ func TestNativeCompactionSupportUsesEyrieCredentialStore(t *testing.T) {
 		t.Fatal("expected support from Eyrie's injected credential store")
 	}
 }
-
