@@ -68,7 +68,18 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	id := fmt.Sprintf("task_%d", backgroundTasks.next)
 	backgroundTasks.Unlock()
 
-	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	// Background tasks must outlive the request, so use an independent
+	// context. The request ctx would kill the task when the HTTP/Tool-call
+	// request times out.
+	bgCtx, bgCancel := context.WithCancel(context.Background())
+	defer bgCancel()
+
+	cmd := exec.CommandContext(bgCtx, "bash", "-c", command)
+	// Put the child in its own process group so we can kill the whole tree
+	// (including grandchildren spawned by the shell) via kill(-pgid). Without
+	// this, e.g. `bash -c 'sleep 60 &'` leaves an orphan when the parent is
+	// killed.
+	setCmdProcessGroup(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err
@@ -84,7 +95,7 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	backgroundTasks.Unlock()
 
 	// Bridge into unified taskruntime (PACK-06).
-	shellCtx, shellCancel := context.WithCancel(context.Background())
+	shellCtx, shellCancel := context.WithCancel(bgCtx)
 	taskruntime.Default.RegisterExternal(id, taskruntime.KindShell, command, shellCancel)
 
 	if err := cmd.Start(); err != nil {
@@ -98,28 +109,31 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	captureWg.Add(2)
 	go func() { task.capture(stdout); captureWg.Done() }()
 	go func() { task.capture(stderr); captureWg.Done() }()
+
+	// Single outer goroutine: flatten the nested-goroutine pattern. Honor
+	// registry kill via shellCancel → kill process group, then wait.
 	go func() {
-		// Honor registry kill via shellCancel → kill process
+		// Watch shellCancel (registry kill) in parallel with cmd.Wait.
+		waitCh := make(chan struct{})
 		go func() {
-			<-shellCtx.Done()
-			_ = task.stop()
+			_ = cmd.Wait()
+			close(waitCh)
 		}()
-		err := cmd.Wait()
+		select {
+		case <-shellCtx.Done():
+			_ = task.stop()
+		case <-waitCh:
+		}
 		captureWg.Wait()
 		task.mu.Lock()
-		if err != nil {
-			task.exitText = err.Error()
-		} else {
-			task.exitText = "exit status 0"
-		}
 		status := taskruntime.StatusCompleted
 		errMsg := ""
 		if task.stopped {
 			status = taskruntime.StatusKilled
 			errMsg = "killed"
-		} else if err != nil {
+		} else if waitErr := cmd.ProcessState; waitErr != nil && !waitErr.Success() {
 			status = taskruntime.StatusFailed
-			errMsg = err.Error()
+			errMsg = waitErr.String()
 		}
 		out := task.output.String()
 		task.mu.Unlock()
@@ -199,7 +213,9 @@ func (t *backgroundTask) stop() error {
 	if t.cmd.Process == nil {
 		return nil
 	}
-	return t.cmd.Process.Kill()
+	// Kill the whole process group (grandchildren spawned by the shell too),
+	// since the child was started with Setpgid: true.
+	return killProcessGroup(t.cmd.Process)
 }
 
 type TaskOutputTool struct{}

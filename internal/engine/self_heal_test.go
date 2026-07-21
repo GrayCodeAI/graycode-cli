@@ -617,3 +617,31 @@ func TestConcurrentHealAttempts(t *testing.T) {
 		t.Errorf("expected 200 history entries, got %d", count)
 	}
 }
+
+func TestRunCommand_RejectsSensitivePath(t *testing.T) {
+	chatFn := func(ctx context.Context, prompt string) (string, error) { return "", nil }
+	sh := NewSelfHealer(chatFn)
+
+	// A command that reads a sensitive path should be rejected outright.
+	_, _, _, err := sh.runCommand(context.Background(), "cat ~/.hawk/provider.json")
+	if err == nil {
+		t.Fatal("expected error for command referencing sensitive path, got nil")
+	}
+	if !strings.Contains(err.Error(), "sensitive path") {
+		t.Fatalf("expected 'sensitive path' in error, got: %v", err)
+	}
+}
+
+func TestRunCommand_RejectsDestructive(t *testing.T) {
+	chatFn := func(ctx context.Context, prompt string) (string, error) { return "", nil }
+	sh := NewSelfHealer(chatFn)
+
+	// A command flagged as destructive should be rejected.
+	_, _, _, err := sh.runCommand(context.Background(), "rm -rf /")
+	if err == nil {
+		t.Fatal("expected error for destructive command, got nil")
+	}
+	if !strings.Contains(err.Error(), "destructive") {
+		t.Fatalf("expected 'destructive' in error, got: %v", err)
+	}
+}

@@ -23,7 +23,7 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 	if sess == nil {
 		return nil, fmt.Errorf("no session")
 	}
-	if sess == nil || sess.ChatLLM() == nil {
+	if sess.ChatLLM() == nil {
 		return nil, fmt.Errorf("no session client")
 	}
 	compactor, ok := sess.ChatLLM().Client().(nativeCompactionCapable)

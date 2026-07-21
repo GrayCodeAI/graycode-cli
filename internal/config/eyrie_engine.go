@@ -22,11 +22,11 @@ func NewEyrieEngine() (*gateway.Gateway, error) { return newEyrieEngine() }
 // Hawk settings snapshot. It performs no package-global registration and does
 // not mutate provider environment variables.
 func NewEyrieEngineForSettings(settings Settings) (*gateway.Gateway, error) {
-	return gateway.New(context.Background(), customGatewayProviders(settings.CustomProviders))
+	return gateway.New(context.Background(), gatewayCustomGateways(settings.CustomProviders))
 }
 
 func globalCustomProviders() []gateway.CustomProviderConfig {
-	return customGatewayProviders(LoadGlobalSettings().CustomProviders)
+	return gatewayCustomGateways(LoadGlobalSettings().CustomProviders)
 }
 
 func customGatewayProviders(providers []CustomProviderConfig) []gateway.CustomProviderConfig {
@@ -43,6 +43,13 @@ func customGatewayProviders(providers []CustomProviderConfig) []gateway.CustomPr
 	return out
 }
 
+// gatewayCustomGateways converts config providers to gateway specs, reusing
+// the shared conversion loop. A new CustomProviderConfig field only needs
+// wiring in customGatewayProviders.
+func gatewayCustomGateways(providers []CustomProviderConfig) []gateway.CustomProviderConfig {
+	return customGatewayProviders(providers)
+}
+
 func CredentialStoreName() string { return gateway.SecretStoreName() }
 
 func CredentialStorageStatus(ctx context.Context) gateway.CredentialStorageReport {
@@ -53,10 +60,14 @@ func MigrateLegacyCredentials(ctx context.Context) (int, error) {
 	return gateway.MigrateLegacyCredentials(ctx)
 }
 
+// EnginePreflightReport runs preflight against the default gateway.
 func EnginePreflightReport(ctx context.Context) EnginePreflight {
 	return gateway.PreflightWithProviders(ctx, nil, EnginePreflightOptions{})
 }
 
+// EnginePreflightReportWithOptions runs preflight against the default
+// gateway with explicit options. Kept for callers that need VerifyLive
+// or other non-default preflight checks.
 func EnginePreflightReportWithOptions(ctx context.Context, opts EnginePreflightOptions) EnginePreflight {
 	return gateway.PreflightWithProviders(ctx, nil, opts)
 }
@@ -65,7 +76,7 @@ func EnginePreflightReportWithOptions(ctx context.Context, opts EnginePreflightO
 // effective settings (including its custom gateways). The settings' provider
 // list is converted to the gateway spec at this boundary.
 func EnginePreflightReportWithSettings(ctx context.Context, settings Settings, opts EnginePreflightOptions) EnginePreflight {
-	return gateway.PreflightWithProviders(ctx, customGatewayProviders(settings.CustomProviders), opts)
+	return gateway.PreflightWithProviders(ctx, gatewayCustomGateways(settings.CustomProviders), opts)
 }
 
 func FormatEnginePreflight(report EnginePreflight) string {
@@ -142,14 +153,6 @@ func ListEngineModels(ctx context.Context, providerID string, refresh bool) ([]E
 		return nil, err
 	}
 	return gw.ListModels(ctx, providerID, refresh)
-}
-
-func ListLiveEngineModels(ctx context.Context, providerID string) ([]EngineModel, error) {
-	gw, err := newEyrieEngine()
-	if err != nil {
-		return nil, err
-	}
-	return gw.ListLiveModels(ctx, providerID)
 }
 
 func ListEngineModelsWithSettings(ctx context.Context, settings Settings, providerID string, refresh bool) ([]EngineModel, error) {

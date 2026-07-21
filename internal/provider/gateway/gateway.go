@@ -10,8 +10,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 )
 
 // Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds
@@ -42,19 +42,24 @@ type Gateway struct {
 // identity is always declared before any credential read, no matter which New
 // path runs first.
 var declareHawkIdentity = sync.OnceFunc(func() {
-	credentials.SetServiceName("hawk")
+	eyrieengine.SetSecretStoreServiceName("hawk")
 })
 
 // New composes the Eyrie engine for one effective settings snapshot and wraps it
 // as a Provider. It is the single composition root — every eyrieengine.New call
 // in Hawk flows through here.
 func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error) {
+	// Declare hawk's identity to the credential store FIRST, before
+	// constructing the engine, so no credential read ever happens under
+	// Eyrie's host-neutral default service name. The OnceFunc makes this
+	// safe to call from every construction path.
+	declareHawkIdentity()
+
 	gateways := customGatewaysFromSettings(providers)
 	eng, err := eyrieengine.New(eyrieengine.Options{CustomGateways: gateways})
 	if err != nil {
 		return nil, err
 	}
-	declareHawkIdentity()
 	p := newEngineProvider(eng)
 	return &Gateway{
 		Generator:          p,
@@ -67,9 +72,11 @@ func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error
 	}, nil
 }
 
-// customGatewaysFromSettings maps Hawk's OpenAI-compatible provider config onto
-// Eyrie's CustomGateway spec.
-func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
+// BuildCustomGateways maps Hawk's OpenAI-compatible provider config onto
+// Eyrie's CustomGateway spec. Shared by gateway.New, config.eyrie_engine, and
+// engine.session_factory so a new CustomProviderConfig field only needs wiring
+// in one place.
+func BuildCustomGateways(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
 	gateways := make([]eyrieengine.CustomGateway, 0, len(providers))
 	for _, provider := range providers {
 		if provider.Name == "" && provider.BaseURL == "" {
@@ -81,6 +88,11 @@ func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.
 		})
 	}
 	return gateways
+}
+
+// customGatewaysFromSettings is the internal alias kept for backward compat.
+func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
+	return BuildCustomGateways(providers)
 }
 
 // CustomProviderConfig is Hawk's spec for a user-defined OpenAI-compatible
@@ -295,9 +307,9 @@ func ModelNames(ctx context.Context) []string {
 type ModelClass = eyrieengine.ModelClass
 
 const (
-	ModelClassEconomical = eyrieengine.ModelClassEconomical
-	ModelClassBalanced   = eyrieengine.ModelClassBalanced
-	ModelClassPremium    = eyrieengine.ModelClassPremium
+	ModelClassEconomical = llm.ModelClassEconomical
+	ModelClassBalanced   = llm.ModelClassBalanced
+	ModelClassPremium    = llm.ModelClassPremium
 	CheckFail            = eyrieengine.CheckFail
 )
 
@@ -377,24 +389,20 @@ func ParseInlineToolCalls(content string) (string, []eyrieengine.ToolCall) {
 }
 
 // --- Test fixtures -----------------------------------------------------
-// Re-exported so hawk tests inject credential fixtures through the single
-// gateway boundary instead of importing eyrie/credentials directly. These are
-// thin aliases only; gateway still owns the eyrie relationship.
-//
-// Keep this block last and the symbols minimal — it exists purely to keep test
-// code behind the boundary.
+// Re-exported from engine so hawk tests inject credential fixtures through the
+// single gateway+engine boundary. These are thin aliases only.
 
 // SetDefaultStore replaces the process-wide credential store (for tests).
-var SetDefaultStore = credentials.SetDefaultStore
+var SetDefaultStore = eyrieengine.SetDefaultStore
 
 // DefaultStore returns the process-wide credential store (for tests).
-var DefaultStore = credentials.DefaultStore
+var DefaultStore = eyrieengine.DefaultStore
 
 // MapStore is the in-memory credential store for tests (alias).
-type MapStore = credentials.MapStore
+type MapStore = eyrieengine.MapStore
 
 // AccountForEnv returns the keychain account name for an env var.
-func AccountForEnv(envVar string) string { return credentials.AccountForEnv(envVar) }
+func AccountForEnv(envVar string) string { return eyrieengine.AccountForEnv(envVar) }
 
 // HasSecret reports whether a secret exists for an env var (for tests).
-func HasSecret(ctx context.Context, envKey string) bool { return credentials.HasSecret(ctx, envKey) }
+func HasSecret(ctx context.Context, envKey string) bool { return eyrieengine.HasSecret(ctx, envKey) }

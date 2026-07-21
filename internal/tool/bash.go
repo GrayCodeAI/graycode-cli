@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
 	"strings"
 	"time"
@@ -30,6 +31,11 @@ var dangerousSubstrings = []string{
 	"> /dev/sd", "> /dev/nv",
 }
 
+// tildeUserRe matches a ~username reference (e.g. ~root/, ~alice ) so it can be
+// expanded to that user's home directory. The current-user forms (~ and ~/)
+// are handled separately above.
+var tildeUserRe = regexp.MustCompile(`~([a-zA-Z_][a-zA-Z0-9_-]*)(/|\s|$)`)
+
 // normalizeCommand normalizes a command to prevent trivial bypass of
 // dangerous-command detection. It expands tilde and collapses repeated root globs.
 func normalizeCommand(cmd string) string {
@@ -41,6 +47,20 @@ func normalizeCommand(cmd string) string {
 			cmd = home + cmd[1:]
 		}
 	}
+	// Expand ~username/ references to the real home directory so a command
+	// targeting another user's home (e.g. "rm -rf ~root") is normalized to its
+	// concrete path before dangerous-command detection runs, instead of being
+	// left as an unexpanded tilde the checks would miss.
+	cmd = tildeUserRe.ReplaceAllStringFunc(cmd, func(m string) string {
+		sub := tildeUserRe.FindStringSubmatch(m)
+		if sub == nil {
+			return m
+		}
+		if u, err := user.Lookup(sub[1]); err == nil && u.HomeDir != "" {
+			return u.HomeDir + sub[2]
+		}
+		return m
+	})
 	// Collapse repeated /* sequences: rm -rf /* -> rm -rf /
 	for strings.Contains(cmd, "/*") {
 		cmd = strings.ReplaceAll(cmd, "/*", "/")
@@ -631,6 +651,9 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 
 	cmd := exec.CommandContext(ctx, execName, execArgs...) // #nosec G204 -- command parsed from tool-configured command string (lint/test command)
+	// Put the child in its own process group so we can kill the whole tree
+	// (including grandchildren spawned by the shell) via kill(-pgid).
+	setCmdProcessGroup(cmd)
 	if tc := GetToolContext(ctx); tc != nil && tc.WorkingDir != "" {
 		cmd.Dir = tc.WorkingDir
 	}

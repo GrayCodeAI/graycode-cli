@@ -19,21 +19,27 @@ type stubProvider struct {
 func (s *stubProvider) Resolve(context.Context, eyrieengine.SelectionRequest) (eyrieengine.Route, error) {
 	return eyrieengine.Route{}, nil
 }
+
 func (s *stubProvider) Generate(context.Context, eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error) {
 	return s.resp, s.err
 }
+
 func (s *stubProvider) Stream(context.Context, eyrieengine.GenerateRequest) (*eyrieengine.Stream, error) {
 	return nil, nil
 }
+
 func (s *stubProvider) ListModels(context.Context, string, bool) ([]eyrieengine.Model, error) {
 	return nil, nil
 }
+
 func (s *stubProvider) ListLiveModels(context.Context, string) ([]eyrieengine.Model, error) {
 	return nil, nil
 }
+
 func (s *stubProvider) ListPublicModels(context.Context, string) ([]eyrieengine.Model, error) {
 	return nil, nil
 }
+
 func (s *stubProvider) ModelInfo(context.Context, string) (eyrieengine.Model, bool, error) {
 	return eyrieengine.Model{}, false, nil
 }
@@ -42,11 +48,13 @@ func (s *stubProvider) DefaultModel(context.Context, string, string) string { re
 func (s *stubProvider) PreferredModel(context.Context, string, eyrieengine.ModelClass, string) string {
 	return ""
 }
+
 func (s *stubProvider) PreferredModels(context.Context, string, eyrieengine.ModelClass, int) []string {
 	return nil
 }
+
 func (s *stubProvider) ModelClassOf(context.Context, string) eyrieengine.ModelClass {
-	return eyrieengine.ModelClassEconomical
+	return ModelClassEconomical
 }
 func (s *stubProvider) ProviderForModel(context.Context, string) string { return "" }
 func (s *stubProvider) PrimaryModel(context.Context) string             { return "" }
@@ -56,12 +64,15 @@ func (s *stubProvider) DefaultProviderFilter(context.Context) string    { return
 func (s *stubProvider) Catalog(context.Context) (eyrieengine.CatalogSnapshot, error) {
 	return eyrieengine.CatalogSnapshot{}, nil
 }
+
 func (s *stubProvider) RefreshCatalog(context.Context, string) (eyrieengine.CatalogSnapshot, error) {
 	return eyrieengine.CatalogSnapshot{}, nil
 }
+
 func (s *stubProvider) ApplyCredentials(context.Context, string) (eyrieengine.CatalogSnapshot, error) {
 	return eyrieengine.CatalogSnapshot{}, nil
 }
+
 func (s *stubProvider) SaveCredential(context.Context, string, string) (eyrieengine.CredentialStatus, error) {
 	return eyrieengine.CredentialStatus{}, nil
 }
@@ -75,6 +86,7 @@ func (s *stubProvider) CredentialEnvKeys(string) []string                       
 func (s *stubProvider) ResolveCredential(context.Context, string) eyrieengine.CredentialResolution {
 	return eyrieengine.CredentialResolution{}
 }
+
 func (s *stubProvider) CredentialProviders(context.Context) []eyrieengine.CredentialProvider {
 	return nil
 }
@@ -89,6 +101,7 @@ func (s *stubProvider) DeploymentRoutingEnabled(*bool) bool                    {
 func (s *stubProvider) DeploymentStatus(context.Context, string) (string, error) {
 	return "", nil
 }
+
 func (s *stubProvider) DeploymentSummary(context.Context, string) (eyrieengine.DeploymentSummary, error) {
 	return eyrieengine.DeploymentSummary{}, nil
 }
@@ -96,13 +109,17 @@ func (s *stubProvider) RoutingPreview(context.Context, string) (string, error) {
 func (s *stubProvider) CatalogHealth(context.Context) eyrieengine.CatalogHealth {
 	return eyrieengine.CatalogHealth{}
 }
+
 func (s *stubProvider) Preflight(context.Context) eyrieengine.PreflightReport {
 	return eyrieengine.PreflightReport{}
 }
+
 func (s *stubProvider) PreflightWithOptions(context.Context, eyrieengine.PreflightOptions) eyrieengine.PreflightReport {
 	return eyrieengine.PreflightReport{}
 }
+
 func (s *stubProvider) ActiveSelection(context.Context) eyrieengine.Route { return eyrieengine.Route{} }
+
 func (s *stubProvider) EffectiveSelection(context.Context, eyrieengine.SelectionOptions) eyrieengine.Selection {
 	return eyrieengine.Selection{}
 }
@@ -116,6 +133,7 @@ func (s *stubProvider) ProviderStateSecurityStatus() eyrieengine.ProviderStateSe
 func (s *stubProvider) MigrateProviderSecrets() error                                 { return nil }
 func (s *stubProvider) MigrateProviderSecretsContext(context.Context) error           { return nil }
 func (s *stubProvider) SupportsNativeCompaction(context.Context, string, string) bool { return false }
+
 func (s *stubProvider) CompactNative(context.Context, eyrieengine.NativeCompactionRequest) (string, error) {
 	return "", nil
 }

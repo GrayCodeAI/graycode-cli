@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -448,6 +449,16 @@ func (sh *SelfHealer) RunScript(ctx context.Context, path string) (stdout, stder
 
 // runCommand executes an arbitrary shell command.
 func (sh *SelfHealer) runCommand(ctx context.Context, command string) (stdout, stderr string, exitCode int, err error) {
+	// Route model-generated shell through the same safety stack the Bash
+	// tool enforces. Without this, a jailbroken model could read
+	// ~/.hawk/provider.json, fork-bomb, or rm -rf from a "fix" attempt.
+	if reason := tool.CommandReferencesSensitivePath(command); reason != "" {
+		return "", "", -1, fmt.Errorf("self-heal: command references sensitive path (%s): %s", reason, command)
+	}
+	if tool.IsDestructiveCommand(command) {
+		return "", "", -1, fmt.Errorf("self-heal: command flagged as destructive: %s", command)
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, sh.Timeout)
 	defer cancel()
 

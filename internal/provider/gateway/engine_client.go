@@ -9,8 +9,10 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -120,147 +122,195 @@ func newEngineProvider(eng *eyrieengine.Engine) *engineProvider {
 func (p *engineProvider) Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error) {
 	return p.eng.Generate(ctx, req)
 }
+
 func (p *engineProvider) Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error) {
 	return p.eng.Stream(ctx, req)
 }
+
 func (p *engineProvider) ListModels(ctx context.Context, providerID string, refresh bool) ([]eyrieengine.Model, error) {
 	return p.eng.ListModels(ctx, providerID, refresh)
 }
+
 func (p *engineProvider) ListLiveModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error) {
 	return p.eng.ListLiveModels(ctx, providerID)
 }
+
 func (p *engineProvider) ListPublicModels(ctx context.Context, providerID string) ([]eyrieengine.Model, error) {
 	return p.eng.ListPublicModels(ctx, providerID)
 }
+
 func (p *engineProvider) ModelInfo(ctx context.Context, modelID string) (eyrieengine.Model, bool, error) {
 	return p.eng.ModelInfo(ctx, modelID)
 }
+
 func (p *engineProvider) ModelProviders(ctx context.Context) ([]string, error) {
 	return p.eng.ModelProviders(ctx)
 }
+
 func (p *engineProvider) DefaultModel(ctx context.Context, provider, fallback string) string {
 	return p.eng.DefaultModel(ctx, provider, fallback)
 }
+
 func (p *engineProvider) PreferredModel(ctx context.Context, provider string, class eyrieengine.ModelClass, fallback string) string {
 	return p.eng.PreferredModel(ctx, provider, class, fallback)
 }
+
 func (p *engineProvider) PreferredModels(ctx context.Context, primaryProvider string, class eyrieengine.ModelClass, limit int) []string {
 	return p.eng.PreferredModels(ctx, primaryProvider, class, limit)
 }
+
 func (p *engineProvider) ModelClassOf(ctx context.Context, modelID string) eyrieengine.ModelClass {
 	return p.eng.ModelClassOf(ctx, modelID)
 }
+
 func (p *engineProvider) ProviderForModel(ctx context.Context, modelID string) string {
 	return p.eng.ProviderForModel(ctx, modelID)
 }
+
 func (p *engineProvider) PrimaryModel(ctx context.Context) string {
 	return p.eng.PrimaryModel(ctx)
 }
+
 func (p *engineProvider) ModelNames(ctx context.Context) []string {
 	return p.eng.ModelNames(ctx)
 }
+
 func (p *engineProvider) StatePaths() eyrieengine.StatePaths {
 	return p.eng.StatePaths()
 }
+
 func (p *engineProvider) DefaultProviderFilter(ctx context.Context) string {
 	return p.eng.DefaultProviderFilter(ctx)
 }
+
 func (p *engineProvider) Catalog(ctx context.Context) (eyrieengine.CatalogSnapshot, error) {
 	return p.eng.Catalog(ctx)
 }
+
 func (p *engineProvider) RefreshCatalog(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error) {
 	return p.eng.RefreshCatalog(ctx, providerID)
 }
+
 func (p *engineProvider) ApplyCredentials(ctx context.Context, providerID string) (eyrieengine.CatalogSnapshot, error) {
 	return p.eng.ApplyCredentials(ctx, providerID)
 }
+
 func (p *engineProvider) SaveCredential(ctx context.Context, providerID, secret string) (eyrieengine.CredentialStatus, error) {
 	return p.eng.SaveCredential(ctx, providerID, secret)
 }
+
 func (p *engineProvider) RemoveCredential(ctx context.Context, providerID string) error {
 	return p.eng.RemoveCredential(ctx, providerID)
 }
+
 func (p *engineProvider) CredentialStatus(ctx context.Context, providerID string) (eyrieengine.CredentialStatus, error) {
 	return p.eng.CredentialStatus(ctx, providerID)
 }
+
 func (p *engineProvider) SaveCredentialEnv(ctx context.Context, envVar, secret string) error {
 	return p.eng.SaveCredentialEnv(ctx, envVar, secret)
 }
+
 func (p *engineProvider) HasCredentialEnv(ctx context.Context, envVar string) bool {
 	return p.eng.HasCredentialEnv(ctx, envVar)
 }
+
 func (p *engineProvider) CredentialEnvKeys(providerID string) []string {
 	return p.eng.CredentialEnvKeys(providerID)
 }
+
 func (p *engineProvider) ResolveCredential(ctx context.Context, secret string) eyrieengine.CredentialResolution {
 	return p.eng.ResolveCredential(ctx, secret)
 }
+
 func (p *engineProvider) CredentialProviders(ctx context.Context) []eyrieengine.CredentialProvider {
 	return p.eng.CredentialProviders(ctx)
 }
+
 func (p *engineProvider) GatewayDefinitions() []eyrieengine.Gateway {
 	return p.eng.GatewayDefinitions()
 }
+
 func (p *engineProvider) Gateways(ctx context.Context) []eyrieengine.Gateway {
 	return p.eng.Gateways(ctx)
 }
+
 func (p *engineProvider) GatewayRegion(providerID string) (string, bool) {
 	return p.eng.GatewayRegion(providerID)
 }
+
 func (p *engineProvider) SetGatewayRegion(ctx context.Context, providerID, value string) error {
 	return p.eng.SetGatewayRegion(ctx, providerID, value)
 }
+
 func (p *engineProvider) GatewayForModel(ctx context.Context, modelID string) string {
 	return p.eng.GatewayForModel(ctx, modelID)
 }
+
 func (p *engineProvider) CanonicalModel(ctx context.Context, modelID string) string {
 	return p.eng.CanonicalModel(ctx, modelID)
 }
+
 func (p *engineProvider) DeploymentRoutingEnabled(override *bool) bool {
 	return p.eng.DeploymentRoutingEnabled(override)
 }
+
 func (p *engineProvider) DeploymentStatus(ctx context.Context, activeModel string) (string, error) {
 	return p.eng.DeploymentStatus(ctx, activeModel)
 }
+
 func (p *engineProvider) DeploymentSummary(ctx context.Context, activeModel string) (eyrieengine.DeploymentSummary, error) {
 	return p.eng.DeploymentSummary(ctx, activeModel)
 }
+
 func (p *engineProvider) RoutingPreview(ctx context.Context, modelID string) (string, error) {
 	return p.eng.RoutingPreview(ctx, modelID)
 }
+
 func (p *engineProvider) CatalogHealth(ctx context.Context) eyrieengine.CatalogHealth {
 	return p.eng.CatalogHealth(ctx)
 }
+
 func (p *engineProvider) PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport {
 	return p.eng.PreflightWithOptions(ctx, opts)
 }
+
 func (p *engineProvider) ActiveSelection(ctx context.Context) eyrieengine.Route {
 	return p.eng.ActiveSelection(ctx)
 }
+
 func (p *engineProvider) EffectiveSelection(ctx context.Context, opts eyrieengine.SelectionOptions) eyrieengine.Selection {
 	return p.eng.EffectiveSelection(ctx, opts)
 }
+
 func (p *engineProvider) SetActiveProvider(ctx context.Context, provider string) error {
 	return p.eng.SetActiveProvider(ctx, provider)
 }
+
 func (p *engineProvider) SetActiveModel(ctx context.Context, modelID string) error {
 	return p.eng.SetActiveModel(ctx, modelID)
 }
+
 func (p *engineProvider) SetSelection(ctx context.Context, provider, modelID string) error {
 	return p.eng.SetSelection(ctx, provider, modelID)
 }
+
 func (p *engineProvider) ClearSelection(ctx context.Context) error {
 	return p.eng.ClearSelection(ctx)
 }
+
 func (p *engineProvider) ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity {
 	return p.eng.ProviderStateSecurityStatus()
 }
+
 func (p *engineProvider) MigrateProviderSecrets() error {
 	return p.eng.MigrateProviderSecrets()
 }
+
 func (p *engineProvider) SupportsNativeCompaction(ctx context.Context, provider, model string) bool {
 	return p.eng.SupportsNativeCompaction(ctx, provider, model)
 }
+
 func (p *engineProvider) CompactNative(ctx context.Context, req eyrieengine.NativeCompactionRequest) (string, error) {
 	return p.eng.CompactNative(ctx, req)
 }
@@ -320,7 +370,7 @@ func (c *translateProvider) StreamChatContinue(ctx context.Context, messages []t
 		cancel()
 		_ = stream.Close()
 	}
-	return types.NewStreamResult(events, "", closeFn), nil
+	return llm.NewStreamResult(events, "", closeFn), nil
 }
 
 // ManagesResilience tells Hawk not to add provider retry, continuation, or
@@ -386,80 +436,34 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 	return request
 }
 
-// ToEngineMessages converts hawk conversation messages to the engine's wire
-// format. Exposed for the session layer (e.g. native compaction), which must
-// translate without reaching into the raw engine.
+// ToEngineMessages returns the messages unchanged: hawk, the engine, and the
+// client all speak the canonical contract message type, so no per-field
+// conversion is needed. It is exposed for the session layer (e.g. native
+// compaction), which translates without reaching into the raw engine.
 func ToEngineMessages(messages []types.EyrieMessage) []eyrieengine.Message {
-	return toEngineMessages(messages)
+	return messages
 }
 
 func toEngineMessages(messages []types.EyrieMessage) []eyrieengine.Message {
-	out := make([]eyrieengine.Message, 0, len(messages))
-	for _, message := range messages {
-		parts := make([]eyrieengine.ContentPart, 0, len(message.ContentParts)+len(message.Images))
-		for _, part := range message.ContentParts {
-			converted := eyrieengine.ContentPart{Type: part.Type, Text: part.Text}
-			if part.ImageURL != nil {
-				converted.URL, converted.Detail = part.ImageURL.URL, part.ImageURL.Detail
-			}
-			if part.InputAudio != nil {
-				converted.AudioData, converted.AudioFormat = part.InputAudio.Data, part.InputAudio.Format
-			}
-			parts = append(parts, converted)
-		}
-		for _, image := range message.Images {
-			parts = append(parts, eyrieengine.ContentPart{Type: "image_url", URL: image})
-		}
-		calls := make([]eyrieengine.ToolCall, 0, len(message.ToolUse))
-		for _, call := range message.ToolUse {
-			calls = append(calls, eyrieengine.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
-		}
-		results := make([]eyrieengine.ToolResult, 0, len(message.ToolResults))
-		for _, result := range message.ToolResults {
-			results = append(results, eyrieengine.ToolResult{ToolUseID: result.ToolUseID, Content: result.Content, IsError: result.IsError})
-		}
-		out = append(out, eyrieengine.Message{
-			Role: message.Role, Content: message.Content, Thinking: message.Thinking,
-			ContentParts: parts, ToolCalls: calls, ToolResults: results,
-		})
-	}
-	return out
+	return messages
 }
 
 func toEngineTools(tools []types.EyrieTool) []eyrieengine.Tool {
-	out := make([]eyrieengine.Tool, 0, len(tools))
-	for _, tool := range tools {
-		out = append(out, eyrieengine.Tool{Name: tool.Name, Description: tool.Description, Parameters: tool.Parameters})
-	}
-	return out
+	return tools
 }
 
 func toEngineToolChoice(choice *types.ToolChoiceOption) *eyrieengine.ToolChoice {
-	if choice == nil {
-		return nil
-	}
-	return &eyrieengine.ToolChoice{Type: choice.Type, Name: choice.Name, DisableParallelToolUse: choice.DisableParallelToolUse}
+	return choice
 }
 
 func fromEngineResponse(response *eyrieengine.GenerateResponse) *types.EyrieResponse {
-	if response == nil {
-		return &types.EyrieResponse{}
-	}
-	calls := make([]types.ToolCall, 0, len(response.ToolCalls))
-	for _, call := range response.ToolCalls {
-		calls = append(calls, types.ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments})
-	}
-	return &types.EyrieResponse{
-		Content: response.Content, Thinking: response.Thinking, ToolCalls: calls,
-		FinishReason: response.FinishReason, RequestID: response.RequestID, Usage: fromEngineUsage(response.Usage),
-		Route: fromEngineRoute(response.Route),
-	}
+	return response
 }
 
 func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	out := types.EyrieStreamEvent{
 		Content: event.Content, Thinking: event.Thinking, RequestID: event.RequestID,
-		Usage: fromEngineUsage(event.Usage), StopReason: event.StopReason, TTFTms: event.TTFTMillis,
+		Usage: event.Usage, StopReason: event.StopReason, TTFTms: event.TTFTms,
 	}
 	switch event.Type {
 	case eyrieengine.EventRouteSelected:
@@ -478,7 +482,7 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 		out.Type = "usage"
 	case eyrieengine.EventTTFT:
 		out.Type = "ttft"
-		out.TTFT = event.TTFTMillis
+		out.TTFT = event.TTFTms
 	case eyrieengine.EventDone:
 		out.Type = "done"
 	case eyrieengine.EventContinuation:
@@ -486,36 +490,19 @@ func fromEngineEvent(event eyrieengine.Event) (types.EyrieStreamEvent, bool) {
 	case eyrieengine.EventWarning:
 		out.Type, out.Content = "warning", event.Warning
 	default:
-		out.Type = string(event.Type)
+		// An unrecognized engine event type means eyrie emits something this
+		// adapter has not been taught to translate. Forward it verbatim so no
+		// data is silently dropped, but log it so the mapping gap is visible.
+		slog.Warn("gateway: forwarding unrecognized engine event type", "type", event.Type)
+		out.Type = event.Type
 	}
 	if event.ToolCall != nil {
-		out.ToolCall = &types.ToolCall{ID: event.ToolCall.ID, Name: event.ToolCall.Name, Arguments: event.ToolCall.Arguments}
+		out.ToolCall = event.ToolCall
 	}
 	if event.Route != nil {
-		out.Route = fromEngineRoute(*event.Route)
+		out.Route = event.Route
 	}
 	return out, true
-}
-
-func fromEngineRoute(route eyrieengine.Route) *types.ResolvedRoute {
-	if route.Provider == "" && route.Model == "" && !route.DeploymentRouting {
-		return nil
-	}
-	return &types.ResolvedRoute{
-		Provider:          route.Provider,
-		Model:             route.Model,
-		DeploymentRouting: route.DeploymentRouting,
-	}
-}
-
-func fromEngineUsage(usage *eyrieengine.Usage) *types.EyrieUsage {
-	if usage == nil {
-		return nil
-	}
-	return &types.EyrieUsage{
-		PromptTokens: usage.InputTokens, CompletionTokens: usage.OutputTokens, TotalTokens: usage.TotalTokens,
-		CacheCreationTokens: usage.CacheCreationTokens, CacheReadTokens: usage.CacheReadTokens, ThinkingTokens: usage.ThinkingTokens,
-	}
 }
 
 func responseSchema(format *types.ResponseFormat) string {

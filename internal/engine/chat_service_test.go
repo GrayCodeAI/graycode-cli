@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -185,7 +186,7 @@ func (c *flakyLegacyStartClient) StreamChatContinue(context.Context, []types.Eyr
 	}
 	events := make(chan types.EyrieStreamEvent)
 	close(events)
-	return types.NewStreamResult(events, "", nil), nil
+	return llm.NewStreamResult(events, "", nil), nil
 }
 
 func TestChatService_LegacyClientRetainsStartRetry(t *testing.T) {
