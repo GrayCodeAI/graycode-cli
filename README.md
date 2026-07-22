@@ -39,7 +39,7 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 
 **Hawk is in active development.** Contributor source builds are the primary path today while we keep hardening the product in the open. Tagged releases and install assets may exist for validation, but they are not the recommended first path yet.
 
-Follow [GrayCode](https://github.com/GrayCodeAI) for progress. When Hawk is ready to try, we will announce it on [graycodeai.gateandtech.in](https://graycodeai.gateandtech.in/changelog).
+Follow [GrayCode](https://github.com/GrayCodeAI) for progress. When Hawk is ready to try, we will announce it on [graycodeai.com](https://graycodeai.com/changelog).
 
 ## Quick Start (contributors — from source)
 
