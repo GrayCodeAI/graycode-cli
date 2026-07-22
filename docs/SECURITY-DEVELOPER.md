@@ -115,3 +115,4 @@ Non-secret overrides only (hawk does not load provider API keys from env):
 - Hawk: `internal/config/eyrie_engine.go`, `internal/tool/safety.go`,
   `internal/storage/paths.go`, `cmd/credentials.go`
 - Eyrie public host boundary: `engine/`
+- Daemon HTTP surface: [`docs/DAEMON-PORT-THREAT-MODEL.md`](DAEMON-PORT-THREAT-MODEL.md)

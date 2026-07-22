@@ -44,3 +44,8 @@ go.work.sum
 .githooks/
 __pycache__/
 hawk_bin
+
+# Logs
+*.log
+hawk-sec105b.log
+
