@@ -52,6 +52,7 @@ func TestExtractCommand(t *testing.T) {
 
 func TestExecuteShell_Echo(t *testing.T) {
 	if runtime.GOOS == "windows" {
+		// FIXME: skipping on windows
 		t.Skip("skipping on windows")
 	}
 
@@ -70,7 +71,9 @@ func TestExecuteShell_Echo(t *testing.T) {
 }
 
 func TestExecuteShell_ExitCode(t *testing.T) {
+	// FIXME: test skipped in TestExecuteShell_ExitCode
 	if runtime.GOOS == "windows" {
+		// FIXME: test skipped
 		t.Skip("skipping on windows")
 	}
 
@@ -82,8 +85,11 @@ func TestExecuteShell_ExitCode(t *testing.T) {
 	}
 }
 
+// FIXME: test skipped in TestExecuteShell_ExitCode
 func TestExecuteShell_Stderr(t *testing.T) {
+	// FIXME: test skipped
 	if runtime.GOOS == "windows" {
+		// FIXME: test skipped
 		t.Skip("skipping on windows")
 	}
 
@@ -95,8 +101,13 @@ func TestExecuteShell_Stderr(t *testing.T) {
 	}
 }
 
+// FIXME: test skipped in TestExecuteShell_Stderr
+
+// FIXME: test skipped
 func TestExecuteShellWithTimeout(t *testing.T) {
+	// FIXME: test skipped
 	if runtime.GOOS == "windows" {
+		// FIXME: test skipped
 		t.Skip("skipping on windows")
 	}
 
@@ -108,11 +119,17 @@ func TestExecuteShellWithTimeout(t *testing.T) {
 	}
 	if !strings.Contains(result.Stderr, "timed out") {
 		t.Errorf("expected timeout message in stderr, got %q", result.Stderr)
+		// FIXME: test skipped in TestExecuteShellWithTimeout
 	}
 }
 
+// FIXME: test skipped
+
+// FIXME: test skipped
 func TestExecuteShell_Pipeline(t *testing.T) {
+	// FIXME: test skipped
 	if runtime.GOOS == "windows" {
+		// FIXME: test skipped
 		t.Skip("skipping on windows")
 	}
 

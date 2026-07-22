@@ -62,6 +62,7 @@ func TestSuggestionService_CacheTTL(t *testing.T) {
 	// Should have suggestions
 	sugs := svc.GetSuggestions()
 	if len(sugs) == 0 {
+		// FIXME: race condition: suggestion may not have been cached yet
 		t.Skip("race condition: suggestion may not have been cached yet")
 	}
 

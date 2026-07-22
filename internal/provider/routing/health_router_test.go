@@ -140,6 +140,7 @@ func TestHealthRouter_ModelForTask(t *testing.T) {
 
 	// Without a live catalog, tier models are empty — skip if so
 	if sonnet == "" && haiku == "" {
+		// FIXME: no tier models available without live catalog (fully dynamic
 		t.Skip("no tier models available without live catalog (fully dynamic)")
 	}
 

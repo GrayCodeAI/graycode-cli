@@ -214,6 +214,7 @@ func TestTierOf(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.model, func(t *testing.T) {
 			if tt.model == "" {
+				// FIXME: no catalog model for this provider tier in test fixture
 				t.Skip("no catalog model for this provider tier in test fixture")
 			}
 			got := routing.CostTierOf(tt.model)

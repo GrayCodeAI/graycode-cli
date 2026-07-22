@@ -325,6 +325,8 @@ func TestCountOpenFDs(t *testing.T) {
 	count := countOpenFDs()
 	// On darwin and linux, we should have at least stdin/stdout/stderr
 	if count < 0 {
+		// FIXME: test skipped in TestCountOpenFDs
+		// FIXME: countOpenFDs uses /proc which is not available on all platforms
 		t.Skip("countOpenFDs not available on this platform")
 	}
 	if count < 3 {

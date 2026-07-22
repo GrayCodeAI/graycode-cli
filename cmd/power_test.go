@@ -14,6 +14,8 @@ func TestPowerPresetRange(t *testing.T) {
 		}
 		// Without a live catalog, model is empty (fully dynamic)
 		if config.Model == "" {
+			// FIXME: test skipped in TestPowerPresetRange
+			// FIXME: power preset tier models require a live catalog connection
 			t.Skip("no tier models without live catalog (fully dynamic)")
 		}
 		if config.MaxTokens <= 0 {
@@ -69,8 +71,10 @@ func TestDescribePower(t *testing.T) {
 		t.Errorf("description should mention power level, got %q", desc)
 	}
 	// Without a live catalog, model name is empty
+	// FIXME: test skipped in TestDescribePower
 	if !strings.Contains(desc, "sonnet") {
 		if strings.Contains(desc, "Power 5: ,") {
+			// FIXME: power preset tier models require a live catalog connection
 			t.Skip("no tier models without live catalog (fully dynamic)")
 		}
 		t.Errorf("level 5 description should mention sonnet model, got %q", desc)
@@ -87,10 +91,12 @@ func TestDescribePowerHighLevel(t *testing.T) {
 	desc := DescribePower(10)
 	if !strings.Contains(desc, "Power 10") {
 		t.Errorf("description should mention power level, got %q", desc)
+		// FIXME: test skipped in TestDescribePowerHighLevel
 	}
 	// Without a live catalog, model name is empty
 	if !strings.Contains(desc, "opus") {
 		if strings.Contains(desc, "Power 10: ,") {
+			// FIXME: power preset tier models require a live catalog connection
 			t.Skip("no tier models without live catalog (fully dynamic)")
 		}
 		t.Errorf("level 10 description should mention opus model, got %q", desc)
@@ -98,12 +104,14 @@ func TestDescribePowerHighLevel(t *testing.T) {
 	if !strings.Contains(desc, "thorough") {
 		t.Errorf("level 10 description should mention thorough review, got %q", desc)
 	}
+	// FIXME: test skipped in TestDescribePowerHighLevel
 }
 
 func TestPowerDefaultIsFive(t *testing.T) {
 	config := PowerPreset(5)
 	// Without a live catalog, model is empty (fully dynamic)
 	if config.Model == "" {
+		// FIXME: power preset tier models require a live catalog connection
 		t.Skip("no tier models without live catalog (fully dynamic)")
 	}
 	if config.ReviewDepth != "quick" {

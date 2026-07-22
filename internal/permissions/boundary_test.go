@@ -115,6 +115,7 @@ func TestCheckPath_Symlink(t *testing.T) {
 
 	symlinkPath := filepath.Join(dir, "link_to_outside")
 	if err := os.Symlink(outsideFile, symlinkPath); err != nil {
+		// FIXME: symlinks not supported on this platform
 		t.Skip("symlinks not supported on this platform")
 	}
 
@@ -575,7 +576,9 @@ func TestConcurrentAccess(t *testing.T) {
 
 func TestExpandHome(t *testing.T) {
 	homeDir, err := os.UserHomeDir()
+	// FIXME: test skipped in TestExpandHome
 	if err != nil {
+		// FIXME: test skipped
 		t.Skip("could not get home directory")
 	}
 
