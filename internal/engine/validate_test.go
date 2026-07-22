@@ -52,6 +52,7 @@ func TestValidateFile_InvalidGo(t *testing.T) {
 func TestValidateFile_ValidPython(t *testing.T) {
 	// Check if python3 is available
 	if _, err := os.Stat("/usr/bin/python3"); os.IsNotExist(err) {
+		// FIXME: python3 not available
 		t.Skip("python3 not available")
 	}
 
@@ -67,7 +68,9 @@ func TestValidateFile_ValidPython(t *testing.T) {
 
 func TestValidateFile_InvalidPython(t *testing.T) {
 	// Check if python3 is available
+	// FIXME: test skipped in TestValidateFile_InvalidPython
 	if _, err := os.Stat("/usr/bin/python3"); os.IsNotExist(err) {
+		// FIXME: test skipped
 		t.Skip("python3 not available")
 	}
 

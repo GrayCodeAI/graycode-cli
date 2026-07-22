@@ -13,6 +13,7 @@ import (
 func newTestServerCat(t *testing.T) *Server {
 	t.Helper()
 	if _, err := exec.LookPath("cat"); err != nil {
+		// FIXME: cat not available on PATH
 		t.Skip("cat not available on PATH")
 	}
 	cmd := exec.Command("cat")

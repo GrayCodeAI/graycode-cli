@@ -76,6 +76,7 @@ func TestEvaluateSetup_WithoutCredentials(t *testing.T) {
 	}
 	st := EvaluateSetup(ctx)
 	if st.HasCredentials {
+		// FIXME: environment already has credentials
 		t.Skip("environment already has credentials")
 	}
 	if !st.NeedsSetup {

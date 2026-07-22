@@ -109,6 +109,8 @@ func TestCleanupIdempotent(t *testing.T) {
 }
 
 func TestParallelExecution(t *testing.T) {
+	// FIXME: test skipped in TestParallelExecution
+	// FIXME: git worktree operations race under shallow clones and constrained I/O in CI
 	t.Skip("flaky: git worktree operations race in CI")
 	if os.Getenv("CI") != "" {
 		// Reduce concurrency in CI: git worktree operations race under

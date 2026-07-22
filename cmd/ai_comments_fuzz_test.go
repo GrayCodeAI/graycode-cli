@@ -36,6 +36,8 @@ func FuzzScanForAIComments(f *testing.F) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "fuzz.go")
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			// FIXME: test skipped in FuzzScanForAIComments
+			// FIXME: fuzz test requires writing to temp dir, skip if filesystem is read-only
 			t.Skip()
 		}
 

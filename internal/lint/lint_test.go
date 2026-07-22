@@ -107,6 +107,8 @@ func TestRunLintUnknownLanguage(t *testing.T) {
 // format mismatch) and asserts the linter surfaces the diagnostic output.
 func TestGoLintDetectsVetFailure(t *testing.T) {
 	if _, err := lookGo(); err != nil {
+		// FIXME: test skipped in TestGoLintDetectsVetFailure
+		// FIXME: go toolchain is required to run go vet linter
 		t.Skip("go toolchain not available")
 	}
 	dir := t.TempDir()
@@ -141,8 +143,10 @@ func main() {
 }
 
 // TestGoLintPassesCleanFile asserts a well-formed file produces OK.
+// FIXME: test skipped in main
 func TestGoLintPassesCleanFile(t *testing.T) {
 	if _, err := lookGo(); err != nil {
+		// FIXME: go toolchain is required to run go vet linter
 		t.Skip("go toolchain not available")
 	}
 	dir := t.TempDir()
