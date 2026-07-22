@@ -23,17 +23,14 @@ func FromRuntimeMessages(in []types.EyrieMessage) []Message {
 }
 
 // FromRuntimeToolCalls converts Hawk runtime tool calls into persisted contracts.
+// types.ToolCall and session.ToolCall are the same underlying type (llm/tools alias).
 func FromRuntimeToolCalls(in []types.ToolCall) []ToolCall {
 	if len(in) == 0 {
 		return nil
 	}
 	out := make([]ToolCall, len(in))
 	for i, tc := range in {
-		out[i] = ToolCall{
-			ID:        tc.ID,
-			Name:      tc.Name,
-			Arguments: tc.Arguments,
-		}
+		out[i] = ToolCall(tc)
 	}
 	return out
 }
@@ -45,11 +42,7 @@ func FromRuntimeToolResults(in []types.ToolResult) []ToolResult {
 	}
 	out := make([]ToolResult, len(in))
 	for i, tr := range in {
-		out[i] = ToolResult{
-			ToolUseID: tr.ToolUseID,
-			Content:   tr.Content,
-			IsError:   tr.IsError,
-		}
+		out[i] = ToolResult(tr)
 	}
 	return out
 }
@@ -81,11 +74,7 @@ func ToRuntimeToolCalls(in []ToolCall) []types.ToolCall {
 	}
 	out := make([]types.ToolCall, len(in))
 	for i, tc := range in {
-		out[i] = types.ToolCall{
-			ID:        tc.ID,
-			Name:      tc.Name,
-			Arguments: tc.Arguments,
-		}
+		out[i] = types.ToolCall(tc)
 	}
 	return out
 }
@@ -97,11 +86,7 @@ func ToRuntimeToolResults(in []ToolResult) []types.ToolResult {
 	}
 	out := make([]types.ToolResult, len(in))
 	for i, tr := range in {
-		out[i] = types.ToolResult{
-			ToolUseID: tr.ToolUseID,
-			Content:   tr.Content,
-			IsError:   tr.IsError,
-		}
+		out[i] = types.ToolResult(tr)
 	}
 	return out
 }
