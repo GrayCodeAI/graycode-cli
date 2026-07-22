@@ -34,12 +34,12 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
         release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet
 
-# ---------------------------------------------------------------------------
-# Default target.
-# ---------------------------------------------------------------------------
+check-replace: ## Fail if go.mod has local replace directives (run before tagging)
+	@bash scripts/check-no-replace-directives.sh
+
 all: lint test build ## Default — lint, test, build.
 
 # ---------------------------------------------------------------------------
