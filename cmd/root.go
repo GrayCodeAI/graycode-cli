@@ -64,6 +64,7 @@ var (
 	recoverFlag                bool
 	startupProfileFlag         bool
 	preflightLiveFlag          bool
+	quietFlag                  bool
 )
 
 var (
@@ -226,6 +227,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
+	rootCmd.Flags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (spinners, progress, decoration); machine-parseable output only")
 	preflightCmd.Flags().BoolVar(&preflightLiveFlag, "live", false, "verify selected provider connectivity and authentication")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
@@ -281,12 +283,9 @@ func confirmDangerousSkipPermissions() error {
 }
 
 // isStdinTerminal reports whether stdin is connected to a terminal.
+// Delegates to the shared stdinIsTerminal so tests can override uniformly.
 func isStdinTerminal() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
+	return stdinIsTerminal()
 }
 
 var completionCmd = &cobra.Command{
