@@ -649,6 +649,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(cmds...)
 			}
 		case tea.KeyEsc:
+			// Mid-turn: Esc is a no-op to prevent accidental cancellation of
+			// long-running operations. The user must press Ctrl+C to cancel.
+			if m.waiting {
+				return m, nil
+			}
 			if len(m.slashSuggestionsFor(m.input.Value())) > 0 {
 				m.slashSel = 0
 				return m, nil
