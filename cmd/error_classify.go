@@ -45,3 +45,7 @@ func friendlyErrorMessage(err error) string {
 
 	return msg
 }
+	}
+
+	return msg
+}
