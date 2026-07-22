@@ -24,7 +24,7 @@ func (s *stubProvider) Generate(context.Context, eyrieengine.GenerateRequest) (*
 	return s.resp, s.err
 }
 
-func (s *stubProvider) Stream(context.Context, eyrieengine.GenerateRequest) (*eyrieengine.Stream, error) {
+func (s *stubProvider) Stream(context.Context, eyrieengine.GenerateRequest) (eyrieengine.EventStreamer, error) {
 	return nil, nil
 }
 
