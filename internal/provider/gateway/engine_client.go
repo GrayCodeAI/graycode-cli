@@ -35,7 +35,7 @@ type Provider interface {
 // Generator is the chat transport facet: the only part the ChatClient path uses.
 type Generator interface {
 	Generate(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.GenerateResponse, error)
-	Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error)
+	Stream(ctx context.Context, req eyrieengine.GenerateRequest) (eyrieengine.EventStreamer, error)
 }
 
 // NativeCompactor is the provider-native-compaction facet.
@@ -123,7 +123,7 @@ func (p *engineProvider) Generate(ctx context.Context, req eyrieengine.GenerateR
 	return p.eng.Generate(ctx, req)
 }
 
-func (p *engineProvider) Stream(ctx context.Context, req eyrieengine.GenerateRequest) (*eyrieengine.Stream, error) {
+func (p *engineProvider) Stream(ctx context.Context, req eyrieengine.GenerateRequest) (eyrieengine.EventStreamer, error) {
 	return p.eng.Stream(ctx, req)
 }
 
