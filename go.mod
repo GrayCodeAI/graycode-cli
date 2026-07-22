@@ -75,7 +75,7 @@ require (
 	github.com/gitleaks/go-gitdiff v0.9.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/go-git/go-billy/v6 v6.0.0-alpha.1.0.20260519112248-0095b064a6c6 // indirect
-	github.com/go-git/go-git/v6 v6.0.0-alpha.4 // indirect
+	github.com/go-git/go-git/v6 v6.0.0-alpha.4 // indirect — TODO: alpha, API-unstable; upgrade when v6 reaches stable or pin back to go-git/v5
 	github.com/go-git/x/plugin/objectsigner/auto v0.1.0 // indirect
 	github.com/go-git/x/plugin/objectsigner/gpg v0.1.0 // indirect
 	github.com/go-git/x/plugin/objectsigner/program v0.0.0-20260509055934-990a63433b45 // indirect
