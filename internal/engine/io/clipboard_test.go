@@ -306,16 +306,22 @@ func TestReadWriteClipboard(t *testing.T) {
 	switch runtime.GOOS {
 	case "darwin":
 		if _, err := exec.LookPath("pbcopy"); err != nil {
+			// FIXME: pbcopy not available
 			t.Skip("pbcopy not available")
 		}
 	case "linux":
 		if _, err := exec.LookPath("xclip"); err != nil {
+			// FIXME: test skipped in TestReadWriteClipboard
 			if _, err := exec.LookPath("xsel"); err != nil {
+				// FIXME: test skipped
 				t.Skip("no clipboard tool available (xclip or xsel)")
 			}
 		}
+	// FIXME: test skipped in TestReadWriteClipboard
 	case "windows":
+		// FIXME: test skipped
 		if _, err := exec.LookPath("powershell"); err != nil {
+			// FIXME: test skipped
 			t.Skip("powershell not available")
 		}
 	default:

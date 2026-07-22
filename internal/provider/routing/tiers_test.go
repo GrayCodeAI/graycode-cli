@@ -13,6 +13,7 @@ func TestCostTierOf_CatalogModels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.model, func(t *testing.T) {
 			if tt.model == "" {
+				// FIXME: catalog has no model for this tier/provider in test fixture
 				t.Skip("catalog has no model for this tier/provider in test fixture")
 			}
 			got := CostTierOf(tt.model)

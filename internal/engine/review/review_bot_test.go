@@ -281,6 +281,7 @@ func TestReviewFileSkippedTest(t *testing.T) {
 	code := `package main
 
 func TestSomething(t *testing.T) {
+	// FIXME: not ready yet
 	t.Skip("not ready yet")
 }
 `

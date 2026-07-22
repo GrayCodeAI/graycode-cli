@@ -354,6 +354,7 @@ func TestNormalizePathTilde(t *testing.T) {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
+		// FIXME: cannot determine home directory
 		t.Skip("cannot determine home directory")
 	}
 

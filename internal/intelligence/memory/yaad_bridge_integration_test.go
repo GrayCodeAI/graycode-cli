@@ -21,13 +21,17 @@ func newTestBridge(t *testing.T) *YaadBridge {
 func TestYaadBridge_Init(t *testing.T) {
 	b := newTestBridge(t)
 	if !b.ready {
+		// FIXME: test skipped in TestYaadBridge_Init
+		// FIXME: yaad bridge requires the yaad dependency to be available at runtime
 		t.Skip("yaad bridge could not initialize (missing yaad dependency)")
 	}
 }
 
 func TestYaadBridge_Remember(t *testing.T) {
+	// FIXME: test skipped in TestYaadBridge_Remember
 	b := newTestBridge(t)
 	if !b.ready {
+		// FIXME: yaad dependency must be available to test remember functionality
 		t.Skip("yaad not available")
 	}
 	err := b.Remember("test content to remember", "explicit")
@@ -36,9 +40,12 @@ func TestYaadBridge_Remember(t *testing.T) {
 	}
 }
 
+// FIXME: test skipped in TestYaadBridge_Remember
+
 func TestYaadBridge_Recall(t *testing.T) {
 	b := newTestBridge(t)
 	if !b.ready {
+		// FIXME: yaad dependency must be available to test recall functionality
 		t.Skip("yaad not available")
 	}
 	_ = b.Remember("golang error handling patterns", "convention")
@@ -46,6 +53,7 @@ func TestYaadBridge_Recall(t *testing.T) {
 	result, err := b.Recall("error handling", 500)
 	if err != nil {
 		t.Fatalf("Recall: %v", err)
+		// FIXME: test skipped in TestYaadBridge_Recall
 	}
 	_ = result
 }
@@ -53,6 +61,7 @@ func TestYaadBridge_Recall(t *testing.T) {
 func TestYaadBridge_Close(t *testing.T) {
 	b := newTestBridge(t)
 	if !b.ready {
+		// FIXME: yaad not available
 		t.Skip("yaad not available")
 	}
 	_ = b.store.Close()
@@ -61,9 +70,11 @@ func TestYaadBridge_Close(t *testing.T) {
 func TestConfidenceTracker_WithBridge(t *testing.T) {
 	b := newTestBridge(t)
 	if !b.ready {
+		// FIXME: test skipped
 		t.Skip("yaad not available")
 	}
 
+	// FIXME: test skipped in TestConfidenceTracker_WithBridge
 	ct := NewConfidenceTracker(b)
 	ct.RecordAccess("node-1", "node-2")
 	ct.OnSessionSuccess()
@@ -72,13 +83,17 @@ func TestConfidenceTracker_WithBridge(t *testing.T) {
 
 func TestProactiveContext_WithBridge(t *testing.T) {
 	b := newTestBridge(t)
+	// FIXME: test skipped
 	if !b.ready {
+		// FIXME: test skipped
 		t.Skip("yaad not available")
 	}
 
 	pc := NewProactiveContext(b)
 	pc.TrackFile("main.go")
 	pc.TrackFiles([]string{"config.go", "handler.go"})
+
+	// FIXME: test skipped in TestProactiveContext_WithBridge
 
 	ctx := pc.ContextForFile("main.go")
 	_ = ctx
@@ -87,8 +102,11 @@ func TestProactiveContext_WithBridge(t *testing.T) {
 }
 
 func TestGraphAwareBudget_WithBridge(t *testing.T) {
+	// FIXME: test skipped
 	b := newTestBridge(t)
+	// FIXME: test skipped
 	if !b.ready {
+		// FIXME: test skipped
 		t.Skip("yaad not available")
 	}
 

@@ -303,6 +303,7 @@ func TestRunLintFailingFile(t *testing.T) {
 	}
 	// go vet should report errors for this file
 	if result == nil {
+		// FIXME: go vet might not be available or might not catch this; skipping
 		t.Skip("go vet might not be available or might not catch this; skipping")
 	}
 	if result.ExitCode == 0 {

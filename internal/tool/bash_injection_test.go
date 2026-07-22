@@ -231,5 +231,6 @@ func mustJSON(t *testing.T, v any) []byte {
 // stream_tool_exec.go and will be updated separately.
 func TestExtractTargetsSchemaAware(t *testing.T) {
 	_ = filepath.Join // keep the filepath import in scope for future use
+	// FIXME: extractTargets enhancement tracked in fix/hawk-safety-and-tool-hardening
 	t.Skip("extractTargets enhancement tracked in fix/hawk-safety-and-tool-hardening")
 }

@@ -65,6 +65,7 @@ func TestAddReadWritePath(t *testing.T) {
 
 func TestApplyNonLinux(t *testing.T) {
 	if runtime.GOOS == "linux" {
+		// FIXME: this test only runs on non-Linux
 		t.Skip("this test only runs on non-Linux")
 	}
 	s := NewLandlockSandbox("/project")
@@ -100,7 +101,9 @@ func TestDefaultSeccompProfile(t *testing.T) {
 }
 
 func TestApplySeccompNonLinux(t *testing.T) {
+	// FIXME: test skipped in TestApplySeccompNonLinux
 	if runtime.GOOS == "linux" {
+		// FIXME: test skipped
 		t.Skip("this test only runs on non-Linux")
 	}
 	err := ApplySeccomp()

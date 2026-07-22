@@ -19,6 +19,7 @@ func TestFindRelevant(t *testing.T) {
 	ed := NewExternalDocs()
 	results := ed.FindRelevant("use chi router for routing", "go", 3)
 	if len(results) == 0 {
+		// FIXME: no results; may depend on default source content
 		t.Skip("no results; may depend on default source content")
 	}
 }
@@ -26,7 +27,9 @@ func TestFindRelevant(t *testing.T) {
 func TestExtractPackageRefs(t *testing.T) {
 	ed := NewExternalDocs()
 	refs := ed.ExtractPackageRefs("use chi for routing and cobra for CLI")
+	// FIXME: test skipped in TestExtractPackageRefs
 	if len(refs) == 0 {
+		// FIXME: test skipped
 		t.Skip("no refs found")
 	}
 }
