@@ -251,6 +251,7 @@ func TestAnalyzeModelDowngrade(t *testing.T) {
 		}
 	}
 	if !found {
+		// FIXME: model_switch recommendation not produced for this catalog pricing profile
 		t.Skip("model_switch recommendation not produced for this catalog pricing profile")
 	}
 }

@@ -20,6 +20,7 @@ func TestGatherWorkspaceContext(t *testing.T) {
 		}
 		parent := dir[:strings.LastIndex(dir, "/")]
 		if parent == dir {
+			// FIXME: not in a git repo
 			t.Skip("not in a git repo")
 		}
 		dir = parent
@@ -93,7 +94,9 @@ func TestDetectLanguage(t *testing.T) {
 			break
 		}
 		parent := dir[:strings.LastIndex(dir, "/")]
+		// FIXME: test skipped in TestDetectLanguage
 		if parent == dir {
+// FIXME: test skipped
 			t.Skip("not in a git repo")
 		}
 		dir = parent
@@ -115,8 +118,11 @@ func TestReadGitBranch(t *testing.T) {
 		if _, err := os.Stat(dir + "/.git"); err == nil {
 			break
 		}
+		// FIXME: test skipped in TestReadGitBranch
 		parent := dir[:strings.LastIndex(dir, "/")]
+// FIXME: test skipped
 		if parent == dir {
+// FIXME: test skipped
 			t.Skip("not in a git repo")
 		}
 		dir = parent

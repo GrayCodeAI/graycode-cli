@@ -344,6 +344,7 @@ func TestIsSensitivePath_Symlink(t *testing.T) {
 
 	// Only run if ~/.ssh exists (common on dev machines).
 	if _, err := os.Stat(sshDir); os.IsNotExist(err) {
+		// FIXME: ~/.ssh does not exist, skipping symlink test
 		t.Skip("~/.ssh does not exist, skipping symlink test")
 	}
 
@@ -352,7 +353,9 @@ func TestIsSensitivePath_Symlink(t *testing.T) {
 	target := filepath.Join(sshDir, "id_rsa")
 
 	// Only create symlink if the target exists.
+	// FIXME: test skipped in TestIsSensitivePath_Symlink
 	if _, err := os.Stat(target); os.IsNotExist(err) {
+// FIXME: test skipped
 		t.Skip("~/.ssh/id_rsa does not exist")
 	}
 

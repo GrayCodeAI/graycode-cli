@@ -84,6 +84,8 @@ func TestRunDream_NoMemories(t *testing.T) {
 	})
 	// Will fail because directory doesn't exist or is empty
 	if err == nil {
+		// FIXME: test skipped in TestRunDream_NoMemories
+		// FIXME: RunDream requires an empty or missing memory directory to exercise this path
 		t.Skip("test requires empty/missing memory dir")
 	}
 }

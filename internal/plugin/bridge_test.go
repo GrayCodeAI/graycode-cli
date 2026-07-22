@@ -36,6 +36,7 @@ func TestPluginBridge_Run(t *testing.T) {
 	}
 	pb := NewPluginBridge(m)
 	if !pb.Ready() {
+		// FIXME: echo not available in PATH
 		t.Skip("echo not available in PATH")
 	}
 	out, err := pb.Run(context.Background(), "world")

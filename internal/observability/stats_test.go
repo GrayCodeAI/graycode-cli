@@ -109,6 +109,7 @@ func TestComputeStats_NoLogs(t *testing.T) {
 	// Will fail gracefully if no event log directory exists
 	_, err := ComputeStats(7)
 	if err == nil {
+		// FIXME: test requires missing event log dir
 		t.Skip("test requires missing event log dir")
 	}
 }

@@ -419,6 +419,7 @@ func TestContextDecayConcurrentAccess(t *testing.T) {
 }
 
 func TestDecayOverTime(t *testing.T) {
+	// FIXME: flaky: timing-sensitive test fails in CI
 	t.Skip("flaky: timing-sensitive test fails in CI")
 	cd := NewContextDecay(10 * time.Millisecond)
 
