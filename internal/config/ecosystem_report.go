@@ -9,6 +9,65 @@ import (
 	"github.com/GrayCodeAI/tok"
 )
 
+// EcosystemReport is the structured view of the ecosystem panel.
+type EcosystemReport struct {
+	Eyre  EcosystemEyrie `json:"eyrie"`
+	Yaad  EcosystemYaad  `json:"yaad"`
+	Tok   EcosystemTok   `json:"tok"`
+}
+
+type EcosystemEyrie struct {
+	CatalogExists bool   `json:"catalog_exists"`
+	ModelCount    int    `json:"model_count,omitempty"`
+	Ready         bool   `json:"ready"`
+	Provider      string `json:"provider,omitempty"`
+	RoutingSource string `json:"routing_source,omitempty"`
+	RoutingStages int    `json:"routing_stages,omitempty"`
+}
+
+type EcosystemYaad struct {
+	Ready     bool   `json:"ready"`
+	Status    string `json:"status,omitempty"`
+}
+
+type EcosystemTok struct {
+	Embedded bool `json:"embedded"`
+	SampleTokens int `json:"sample_tokens"`
+}
+
+// BuildEcosystemReport returns a structured ecosystem report.
+func BuildEcosystemReport(ctx context.Context, provider, model string) EcosystemReport {
+	var r EcosystemReport
+
+	// eyrie
+	cat := CatalogHealthReport(ctx)
+	r.Eyre.CatalogExists = cat.Exists
+	r.Eyre.ModelCount = cat.Models
+	pre := EnginePreflightReport(ctx)
+	r.Eyre.Ready = pre.Ready
+	if strings.TrimSpace(provider) != "" && provider != "auto" {
+		r.Eyre.Provider = provider
+	}
+	if dep, err := EngineDeploymentSummary(ctx, model); err == nil {
+		r.Eyre.RoutingSource = dep.RoutingSource
+		r.Eyre.RoutingStages = dep.RoutingStages
+	}
+
+	// yaad
+	bridge := memory.NewYaadBridge()
+	r.Yaad.Ready = bridge.Ready()
+	if r.Yaad.Ready {
+		first := strings.Split(memory.YaadStatus(), "\n")[0]
+		r.Yaad.Status = first
+	}
+
+	// tok
+	r.Tok.Embedded = true
+	r.Tok.SampleTokens = tok.EstimateTokens("hawk context compression pipeline")
+
+	return r
+}
+
 // FormatEcosystemPanel summarizes eyrie, yaad, and tok integration for doctor and status output.
 func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	var b strings.Builder
