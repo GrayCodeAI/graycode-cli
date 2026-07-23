@@ -127,11 +127,25 @@ var pluginInstallDynamicCmd = &cobra.Command{
 	},
 }
 
+var pluginListJSON bool
+
 var pluginListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List installed plugins",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if pluginListJSON {
+			plugins, err := plugin.List()
+			if err != nil {
+				return err
+			}
+			data, err := json.MarshalIndent(plugins, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling plugins: %w", err)
+			}
+			fmt.Println(string(data))
+			return nil
+		}
 		cmd.Println(plugin.Summary())
 		return nil
 	},
@@ -493,6 +507,7 @@ var pluginInspectCmd = &cobra.Command{
 
 func init() {
 	pluginStatusCmd.Flags().Bool("json", false, "output as JSON")
+	pluginListCmd.Flags().BoolVar(&pluginListJSON, "json", false, "output plugins as JSON")
 
 	pluginMarketplaceCmd.AddCommand(pluginMarketplaceListCmd)
 	pluginMarketplaceCmd.AddCommand(pluginMarketplaceInstallCmd)
