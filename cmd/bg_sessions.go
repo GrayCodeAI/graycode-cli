@@ -174,8 +174,8 @@ func FormatBGSessions(sessions []*BGSessionInfo) string {
 			shortID = shortID[:8]
 		}
 		preview := s.Prompt
-		if len(preview) > 50 {
-			preview = preview[:50] + "..."
+		if runes := []rune(preview); len(runes) > 50 {
+			preview = string(runes[:50]) + "..."
 		}
 		age := time.Since(s.StartedAt).Round(time.Minute)
 		b.WriteString(fmt.Sprintf("  [%s] %s — %s\n", shortID, s.Status, preview))

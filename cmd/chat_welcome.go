@@ -221,19 +221,23 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		if recents := recentSessionsList(); len(recents) > 0 {
 			b.WriteByte('\n')
 			b.WriteString(center(runewidth.StringWidth("Recent sessions:"), dimC+"Recent sessions:"+rst) + "\n")
-		shown := 0
+			shown := 0
 			for _, e := range recents {
 				if shown >= 3 {
 					break
 				}
 				preview := e.Preview
-				if len(preview) > 50 {
-					preview = preview[:47] + "…"
+				if runes := []rune(preview); len(runes) > 50 {
+					preview = string(runes[:47]) + "…"
 				}
 				if preview == "" {
 					preview = "(no messages)"
 				}
-				row := fmt.Sprintf("  /resume %-10s  %s", e.ID[:8], preview)
+				shortID := e.ID
+				if len(shortID) > 8 {
+					shortID = shortID[:8]
+				}
+				row := fmt.Sprintf("  /resume %-10s  %s", shortID, preview)
 				b.WriteString(center(runewidth.StringWidth(row), dimC+row+rst) + "\n")
 				shown++
 			}
@@ -296,7 +300,7 @@ func welcomeModeGuidance(dockerRunning *bool, tight bool) string {
 
 // welcomeModeBadge returns a prominent, colored badge indicating the
 // current execution mode. Uses inverse video (colored background, dark
-	// text) so it stands out from the dim guidance text.
+// text) so it stands out from the dim guidance text.
 func welcomeModeBadge(dockerRunning *bool) string {
 	rst := ansiReset
 	switch {
@@ -345,8 +349,8 @@ func toolListSummary(registry *tool.Registry) string {
 	b.WriteString(fmt.Sprintf("Enabled tools (%d):\n", len(tools)))
 	for _, t := range tools {
 		desc := t.Description
-		if len(desc) > 96 {
-			desc = desc[:96] + "..."
+		if runes := []rune(desc); len(runes) > 96 {
+			desc = string(runes[:96]) + "..."
 		}
 		b.WriteString(fmt.Sprintf("  %s — %s\n", t.Name, desc))
 	}
