@@ -550,6 +550,7 @@ func renderPermissionBox(summary string, width int, timeoutAt time.Time) string 
 // renderCountdownBar renders a horizontal progress bar showing time remaining
 // until a deadline. Fills from left to right as time passes, shifting from
 // teal → amber → coral as the deadline approaches.
+// Includes text label for accessibility (screen readers).
 func renderCountdownBar(timeoutAt time.Time, width int) string {
 	const totalDuration = 5 * time.Minute
 	if width < 10 {
@@ -557,7 +558,7 @@ func renderCountdownBar(timeoutAt time.Time, width int) string {
 	}
 	remaining := time.Until(timeoutAt)
 	if remaining <= 0 {
-		return lipgloss.NewStyle().Foreground(errorCoral).Render("  timeout")
+		return lipgloss.NewStyle().Foreground(errorCoral).Render("  [TIMEOUT] expired")
 	}
 	if remaining > totalDuration {
 		remaining = totalDuration
@@ -572,16 +573,21 @@ func renderCountdownBar(timeoutAt time.Time, width int) string {
 	}
 	empty := width - filled
 	// Color shifts: teal (>60%), amber (30-60%), coral (<30%).
+	// Text label indicates urgency level for accessibility.
 	color := successTeal
+	urgency := "OK"
 	if fraction < 0.3 {
 		color = errorCoral
+		urgency = "URGENT"
 	} else if fraction < 0.6 {
 		color = warnAmber
+		urgency = "SOON"
 	}
 	bar := lipgloss.NewStyle().Foreground(color).Render(strings.Repeat("█", filled) + strings.Repeat("░", empty))
 	mins := int(remaining.Minutes())
 	secs := int(remaining.Seconds()) % 60
-	return fmt.Sprintf("  %s %d:%02d", bar, mins, secs)
+	// Include text label for screen readers: [URGENT] 0:45
+	return fmt.Sprintf("  [%s] %s %d:%02d", urgency, bar, mins, secs)
 }
 
 // renderDiffSummary renders a diff summary line with colored +/- indicators.

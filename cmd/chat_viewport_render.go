@@ -298,15 +298,16 @@ func (m *chatModel) toolResultIndexAtViewportCenter(viewWidth int) int {
 	}
 	centerY := m.viewport.YOffset() + m.viewport.Height()/2
 	cumulative := 0
+	expanded := m.fullExpandedMap(len(m.messages))
 	for i, msg := range m.messages {
 		if msg.role != "tool_result" {
 			// Still need to count lines for non-tool messages to track offset.
-			rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, fullExpandedMap(len(m.messages)))
+			rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, expanded)
 			cumulative += strings.Count(rendered, "\n")
 			continue
 		}
 		// Render fully (expanded) to get true line count.
-		rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, fullExpandedMap(len(m.messages)))
+		rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, expanded)
 		lineCount := strings.Count(rendered, "\n")
 		if centerY >= cumulative && centerY < cumulative+lineCount {
 			return i
@@ -318,6 +319,23 @@ func (m *chatModel) toolResultIndexAtViewportCenter(viewWidth int) int {
 
 // fullExpandedMap returns a map where every index is expanded — used to compute
 // true (uncollapsed) line heights for viewport position math.
+// Uses a cached map to avoid repeated allocations.
+func (m *chatModel) fullExpandedMap(n int) map[int]bool {
+	if m.cachedExpandedMap != nil && m.cachedExpandedLen == n {
+		return m.cachedExpandedMap
+	}
+	expanded := make(map[int]bool, n)
+	for i := 0; i < n; i++ {
+		expanded[i] = true
+	}
+	m.cachedExpandedMap = expanded
+	m.cachedExpandedLen = n
+	return expanded
+}
+
+// fullExpandedMap returns a map where every index is expanded — used to compute
+// true (uncollapsed) line heights for viewport position math.
+// Standalone version for use outside chatModel methods.
 func fullExpandedMap(n int) map[int]bool {
 	m := make(map[int]bool, n)
 	for i := 0; i < n; i++ {
@@ -329,6 +347,9 @@ func fullExpandedMap(n int) map[int]bool {
 // codeBlockAtViewportCenter finds the fenced code block in an assistant message
 // whose rendered content contains the viewport's center line. Returns the raw
 // code content (without fences) and true if found.
+//
+// Performance: Uses the cached viewport content (m.vpStableContent) to avoid
+// re-rendering all messages. Falls back to full render only when cache is stale.
 func (m *chatModel) codeBlockAtViewportCenter() (string, bool) {
 	if m.viewport.Height() <= 0 {
 		return "", false
@@ -339,27 +360,176 @@ func (m *chatModel) codeBlockAtViewportCenter() (string, bool) {
 		viewWidth = 80
 	}
 
+	// Fast path: use cached viewport content if available and valid.
+	// The viewport content is already rendered, so we can parse it directly.
+	if m.vpStableContent != "" && m.vpRenderedMsgs == len(m.messages) {
+		return m.codeBlockFromCachedViewport(centerY, viewWidth)
+	}
+
+	// Slow path: render messages incrementally, stopping early when we pass center.
 	cumulative := 0
+	expanded := m.fullExpandedMap(len(m.messages))
 	for i, msg := range m.messages {
-		if msg.role != "assistant" {
-			// Still need to count lines for non-assistant messages.
-			rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, fullExpandedMap(len(m.messages)))
-			cumulative += strings.Count(rendered, "\n")
+		rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, expanded)
+		lineCount := strings.Count(rendered, "\n")
+
+		// Skip messages before the viewport center.
+		if centerY >= cumulative+lineCount {
+			cumulative += lineCount
 			continue
 		}
-		// Render the full message to get true line positions.
-		rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, fullExpandedMap(len(m.messages)))
-		lineCount := strings.Count(rendered, "\n")
-		if centerY >= cumulative && centerY < cumulative+lineCount {
-			// Find which code block is closest to center.
+
+		// This message contains the center line.
+		if msg.role == "assistant" {
 			bestBlock := findClosestCodeBlock(msg.content, centerY-cumulative, viewWidth)
 			if bestBlock != "" {
 				return bestBlock, true
 			}
 		}
+		// If not an assistant message or no code block found, continue searching.
 		cumulative += lineCount
 	}
 	return "", false
+}
+
+// codeBlockFromCachedViewport extracts a code block from the cached viewport content.
+// This is the fast path that avoids re-rendering all messages.
+func (m *chatModel) codeBlockFromCachedViewport(centerY int, viewWidth int) (string, bool) {
+	// Get the visible viewport content.
+	content := m.viewport.View()
+	if content == "" {
+		return "", false
+	}
+
+	lines := strings.Split(content, "\n")
+	if centerY >= len(lines) {
+		centerY = len(lines) - 1
+	}
+	if centerY < 0 {
+		centerY = 0
+	}
+
+	// Find the assistant message containing the center line by looking for
+	// the robot icon marker in the rendered output.
+	// The robot icon marks the start of assistant messages.
+	robotMarker := icons.Robot()
+
+	// Search backwards from center to find the start of the assistant message.
+	msgStart := centerY
+	for i := centerY; i >= 0; i-- {
+		if strings.Contains(lines[i], robotMarker) {
+			msgStart = i
+			break
+		}
+	}
+
+	// Search forwards to find the end of the assistant message.
+	msgEnd := centerY
+	for i := centerY; i < len(lines); i++ {
+		// Assistant messages end at the next user message (█ marker) or end of content.
+		if i > msgStart && strings.Contains(lines[i], "█") {
+			msgEnd = i - 1
+			break
+		}
+		msgEnd = i
+	}
+
+	// Extract the assistant message content from the rendered lines.
+	// This is approximate but good enough for code block extraction.
+	var msgContent strings.Builder
+	for i := msgStart; i <= msgEnd && i < len(lines); i++ {
+		msgContent.WriteString(lines[i])
+		msgContent.WriteByte('\n')
+	}
+
+	// Try to find code blocks in the extracted content.
+	// Since this is rendered output (with ANSI codes), we need to strip them first.
+	plainContent := stripAnsi(msgContent.String())
+	blocks := extractCodeBlocksFromRendered(plainContent)
+	if len(blocks) > 0 {
+		// Return the code block closest to the center line within this message.
+		relativeCenter := centerY - msgStart
+		return blocks[relativeCenter%len(blocks)], true
+	}
+
+	return "", false
+}
+
+// extractCodeBlocksFromRendered extracts code blocks from rendered (plain text) output.
+// Code blocks in rendered output are indented and have a language label above them.
+func extractCodeBlocksFromRendered(content string) []string {
+	var blocks []string
+	lines := strings.Split(content, "\n")
+
+	inCodeBlock := false
+	var currentBlock strings.Builder
+
+	for _, line := range lines {
+		// Code blocks in rendered output start with indentation and have
+		// a consistent background. We detect them by looking for lines
+		// that start with spaces followed by code-like content.
+		trimmed := strings.TrimSpace(line)
+
+		// Skip empty lines and language labels.
+		if trimmed == "" {
+			if inCodeBlock && currentBlock.Len() > 0 {
+				// Empty line might end the code block.
+				blocks = append(blocks, strings.TrimRight(currentBlock.String(), "\n"))
+				currentBlock.Reset()
+				inCodeBlock = false
+			}
+			continue
+		}
+
+		// Detect code block start: indented line with code-like content.
+		if !inCodeBlock && strings.HasPrefix(line, "  ") && len(trimmed) > 0 {
+			// Check if this looks like code (has typical code characters).
+			if looksLikeCode(trimmed) {
+				inCodeBlock = true
+				currentBlock.WriteString(trimmed)
+				currentBlock.WriteByte('\n')
+			}
+		} else if inCodeBlock {
+			if strings.HasPrefix(line, "  ") || trimmed == "" {
+				currentBlock.WriteString(trimmed)
+				currentBlock.WriteByte('\n')
+			} else {
+				// End of code block.
+				if currentBlock.Len() > 0 {
+					blocks = append(blocks, strings.TrimRight(currentBlock.String(), "\n"))
+					currentBlock.Reset()
+				}
+				inCodeBlock = false
+			}
+		}
+	}
+
+	// Flush any remaining code block.
+	if currentBlock.Len() > 0 {
+		blocks = append(blocks, strings.TrimRight(currentBlock.String(), "\n"))
+	}
+
+	return blocks
+}
+
+// looksLikeCode returns true if the line looks like code (has typical code characters).
+func looksLikeCode(s string) bool {
+	// Code typically has: braces, parentheses, semicolons, operators, etc.
+	codeIndicators := []string{"{", "}", "(", ")", ";", "=", "+", "-", "*", "/", "<", ">", "[", "]", ":", "."}
+	for _, indicator := range codeIndicators {
+		if strings.Contains(s, indicator) {
+			return true
+		}
+	}
+	// Also check for common keywords.
+	keywords := []string{"func", "def", "class", "import", "from", "return", "if", "for", "while", "var", "let", "const"}
+	lower := strings.ToLower(s)
+	for _, kw := range keywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
 }
 
 // findClosestCodeBlock finds the code block in the content whose position is

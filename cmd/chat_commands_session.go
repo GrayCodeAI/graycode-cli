@@ -58,6 +58,10 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		if m.watcherStop != nil {
 			m.watcherStop()
 		}
+		// Cancel background goroutines.
+		if m.bgCancel != nil {
+			m.bgCancel()
+		}
 		ClearTabProgress()
 		m.quitting = true
 		return m, tea.Quit

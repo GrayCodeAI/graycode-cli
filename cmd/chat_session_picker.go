@@ -170,11 +170,12 @@ func (m *chatModel) renderSessionPickerOverlay(viewWidth int) string {
 }
 
 // formatSessionEntry formats a single session entry for display.
+// Shows: ID, preview, CWD (shortened), and time-ago.
 func formatSessionEntry(e session.Entry, query string, maxWidth int) string {
-	// Format: "  ID  preview  time-ago"
+	// Format: "  ID  preview  [cwd]  time-ago"
 	idStr := e.ID
-	if len(idStr) > 12 {
-		idStr = idStr[:12]
+	if len(idStr) > 8 {
+		idStr = idStr[:8]
 	}
 
 	preview := e.Preview
@@ -182,12 +183,22 @@ func formatSessionEntry(e session.Entry, query string, maxWidth int) string {
 		preview = "(no messages)"
 	}
 
+	// Shorten CWD for display.
+	cwdStr := ""
+	if e.CWD != "" {
+		cwdStr = shortenHomePath(e.CWD)
+		if len(cwdStr) > 20 {
+			cwdStr = "..." + cwdStr[len(cwdStr)-17:]
+		}
+		cwdStr = "[" + cwdStr + "]"
+	}
+
 	// Time ago.
 	timeAgo := formatTimeAgo(e.UpdatedAt)
 
-	// Build the line with ID and time-ago on the sides, preview in the middle.
-	leftPart := "  " + idStr
-	rightPart := timeAgo + " "
+	// Build the line: ID + preview + cwd + time-ago
+	leftPart := "  " + idStr + "  "
+	rightPart := "  " + cwdStr + "  " + timeAgo + " "
 
 	// Calculate available width for preview.
 	leftW := runewidth.StringWidth(leftPart)

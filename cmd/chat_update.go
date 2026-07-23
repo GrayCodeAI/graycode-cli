@@ -553,12 +553,33 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// 'c' copies the code block nearest to viewport center.
 			if msg.String() == "c" {
-				if content, ok := m.codeBlockAtViewportCenter(); ok {
-					result := copyToClipboard(content)
-					m.appendCopyResult(content, "code block", nil, result)
+				content, ok := m.codeBlockAtViewportCenter()
+				if !ok {
+					m.messages = append(m.messages, displayMsg{
+						role:    "system",
+						content: "No code block found at viewport center. Scroll to a code block and press 'c' again.",
+					})
 					m.viewDirty = true
 					m.updateViewportContent()
+					return m, nil
 				}
+				result := copyToClipboard(content)
+				lineCount := strings.Count(content, "\n") + 1
+				if result.FallbackPath != "" {
+					// Clipboard unavailable — saved to file.
+					m.messages = append(m.messages, displayMsg{
+						role:    "system",
+						content: fmt.Sprintf("Clipboard unavailable — saved code block (%d lines) to %s", lineCount, result.FallbackPath),
+					})
+				} else {
+					// Show a brief highlight message with line count.
+					m.messages = append(m.messages, displayMsg{
+						role:    "system",
+						content: fmt.Sprintf("%s Copied code block (%d lines) to clipboard.", icons.CheckBold(), lineCount),
+					})
+				}
+				m.viewDirty = true
+				m.updateViewportContent()
 				return m, nil
 			}
 			if shouldReturnToPromptOnType(msg) {
@@ -678,6 +699,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.saveSession()
 				if m.watcherStop != nil {
 					m.watcherStop()
+				}
+				if m.bgCancel != nil {
+					m.bgCancel()
 				}
 				m.quitting = true
 				return m, tea.Quit
@@ -1222,6 +1246,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		m.input.Focus()
 		m.saveSession()
+
+		// Trim old messages to prevent unbounded memory growth in long sessions.
+		m.trimOldMessages()
 
 		// Re-enable system sleep now that the turn is complete.
 		if m.sleepCancel != nil {

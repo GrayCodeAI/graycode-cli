@@ -193,7 +193,9 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	vp := viewport.New(viewport.WithWidth(initWidth), viewport.WithHeight(minChatViewportLines))
 
 	now := time.Now()
-	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill), toolResultExpanded: make(map[int]bool)} // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+	// Create a cancel function for background goroutines that gets called on quit.
+	_, bgCancel := context.WithCancel(context.Background())
+	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill), toolResultExpanded: make(map[int]bool), bgCancel: bgCancel} // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 	applyLiveModelMetadata(sess, effectiveProvider, effectiveModel)
 
 	startup.MarkPhase("newChatModel:commandPalette")

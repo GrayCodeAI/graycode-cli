@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -284,6 +285,10 @@ type chatModel struct {
 	vpRenderWidth   int
 	vpLastMsgLen    int
 
+	// Cached expanded map for viewport position math (avoids repeated allocations).
+	cachedExpandedMap map[int]bool
+	cachedExpandedLen int
+
 	// Streaming-partial render cache: rendered output of the completed
 	// markdown blocks of m.partial (see renderStreamTail).
 	streamMDPrefixRaw string
@@ -330,6 +335,9 @@ type chatModel struct {
 	// Loop cancellation
 	loopCancel context.CancelFunc // cancels the current /loop goroutine
 
+	// Background goroutine cancellation
+	bgCancel context.CancelFunc // cancels all background goroutines on quit
+
 	// PageRank file watcher
 	watcherStop func() // stops the incremental symbol graph file watcher
 
@@ -357,6 +365,46 @@ type chatModel struct {
 }
 
 const streamRenderInterval = 50 * time.Millisecond
+
+// maxDisplayMessages bounds the number of messages kept in memory for display.
+// Older messages are trimmed to prevent unbounded memory growth in long sessions.
+// The session file still contains the full history for /resume.
+const maxDisplayMessages = 500
+
+// messageTrimThreshold is the point at which we start trimming old messages.
+// We trim in batches to avoid frequent reallocations.
+const messageTrimThreshold = 450
+
+// trimOldMessages removes old messages when the count exceeds the threshold.
+// Keeps the most recent messages and shows a hint about trimmed history.
+func (m *chatModel) trimOldMessages() {
+	if len(m.messages) <= messageTrimThreshold {
+		return
+	}
+	// Keep the most recent maxDisplayMessages messages.
+	// Trim from the front, but keep the welcome message if present.
+	trimCount := len(m.messages) - maxDisplayMessages
+	if trimCount <= 0 {
+		return
+	}
+
+	// Check if first message is welcome — preserve it.
+	startIdx := 0
+	if len(m.messages) > 0 && m.messages[0].role == "welcome" {
+		startIdx = 1
+		trimCount-- // Don't count welcome in trim
+	}
+
+	if trimCount > 0 && startIdx+trimCount < len(m.messages) {
+		// Add a hint about trimmed messages.
+		trimmedHint := displayMsg{
+			role:    "system",
+			content: fmt.Sprintf("... %d earlier messages trimmed (use /export to save full history)", trimCount),
+		}
+		m.messages = append([]displayMsg{trimmedHint}, m.messages[startIdx+trimCount:]...)
+		m.invalidateViewportCache()
+	}
+}
 
 func (m *chatModel) markPartialDirty() tea.Cmd {
 	m.partialDirty = true

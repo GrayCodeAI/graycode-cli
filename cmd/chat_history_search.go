@@ -153,11 +153,13 @@ func (m *chatModel) renderHistorySearchOverlay(viewWidth int) string {
 		for i := start; i < end; i++ {
 			entry := m.historySearchFiltered[i]
 			// Highlight the matching portion.
-			displayEntry := highlightMatch(entry, m.historySearchInput, boxWidth-4)
+			displayEntry := highlightMatch(entry, m.historySearchInput, boxWidth-6)
 			if i == m.historySearchSel {
-				b.WriteString(histSearchSelStyle.Width(boxWidth).Render(displayEntry))
+				// Selected item: add a marker and use distinct style.
+				marker := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Render("> ")
+				b.WriteString(histSearchSelStyle.Width(boxWidth).Render(marker + displayEntry))
 			} else {
-				b.WriteString(histSearchItemStyle.Width(boxWidth).Render(displayEntry))
+				b.WriteString(histSearchItemStyle.Width(boxWidth).Render("  " + displayEntry))
 			}
 			b.WriteString("\n")
 		}
