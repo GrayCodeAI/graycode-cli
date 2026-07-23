@@ -84,13 +84,13 @@ type RuleDiscoverer struct {
 
 // NewRuleDiscoverer creates a rule discoverer for the given project.
 func NewRuleDiscoverer(projectRoot string) *RuleDiscoverer {
-	home := homepkg.Dir()
+	homeDir := homepkg.MustDir()
 	var globalDirs []string
-	if home != "" {
+	if homeDir != "" {
 		globalDirs = []string{
 			filepath.Join(storage.StateDir(), "rules"),
-			filepath.Join(home, ".omo", "rules"),
-			filepath.Join(home, ".claude", "rules"),
+			filepath.Join(homeDir, ".omo", "rules"),
+			filepath.Join(homeDir, ".claude", "rules"),
 		}
 	}
 	return &RuleDiscoverer{

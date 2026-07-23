@@ -257,18 +257,18 @@ func IsSensitivePath(path string) string {
 	}
 	clean := filepath.Clean(resolved)
 
-	home := home.Dir()
+	homeDir := home.MustDir()
 
-	if home != "" {
-		hawkProv := filepath.Join(home, ".hawk", "provider.json")
+	if homeDir != "" {
+		hawkProv := filepath.Join(homeDir, ".hawk", "provider.json")
 		if clean == hawkProv {
 			return "access to ~/.hawk/provider.json is blocked for security (API credentials)"
 		}
-		hawkEnv := filepath.Join(home, ".hawk", "env")
+		hawkEnv := filepath.Join(homeDir, ".hawk", "env")
 		if clean == hawkEnv {
 			return "access to ~/.hawk/env is blocked for security (API keys)"
 		}
-		hawkDotEnv := filepath.Join(home, ".hawk", ".env")
+		hawkDotEnv := filepath.Join(homeDir, ".hawk", ".env")
 		if clean == hawkDotEnv {
 			return "access to ~/.hawk/.env is blocked for security (API keys)"
 		}
@@ -295,22 +295,22 @@ func IsSensitivePath(path string) string {
 
 	// Check suffix-based blocks (e.g. ~/.ssh/*)
 	for _, suffix := range blockedPathSuffixes {
-		blocked := filepath.Join(home, suffix[1:]) // strip leading /
+		blocked := filepath.Join(homeDir, suffix[1:]) // strip leading /
 		if clean == blocked {
 			return fmt.Sprintf("access to %s is blocked for security", suffix)
 		}
 	}
 
 	// ~/.ssh/* catch-all — block everything inside ~/.ssh
-	if home != "" {
-		sshDir := filepath.Join(home, ".ssh")
+	if homeDir != "" {
+		sshDir := filepath.Join(homeDir, ".ssh")
 		if strings.HasPrefix(clean, sshDir+string(filepath.Separator)) || clean == sshDir {
 			return "access to ~/.ssh is blocked for security"
 		}
 	}
 
 	// ~/.env
-	if home != "" && clean == filepath.Join(home, ".env") {
+	if homeDir != "" && clean == filepath.Join(homeDir, ".env") {
 		return "access to ~/.env is blocked for security"
 	}
 
@@ -345,7 +345,7 @@ func expandCommandPathVariables(command string) string {
 		name  string
 		value string
 	}{
-		{name: "HOME", value: home.Dir()},
+		{name: "HOME", value: home.MustDir()},
 		{name: "HAWK_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR"))},
 		{name: "EYRIE_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("EYRIE_CONFIG_DIR"))},
 	} {
@@ -386,7 +386,7 @@ func CommandReferencesSensitivePath(command string) string {
 			return "command references a configured credential path, blocked for security"
 		}
 	}
-	homeDir := home.Dir()
+	homeDir := home.MustDir()
 	for _, tok := range strings.FieldsFunc(command, commandPathSeparators) {
 		tok = strings.Trim(tok, ",:")
 		if tok == "" || !strings.ContainsAny(tok, "/.") {

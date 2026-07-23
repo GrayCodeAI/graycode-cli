@@ -148,7 +148,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	hawkDir := home.Dir()
+	hawkDir := home.MustDir()
 	provPath := ProviderStateSecurityStatus().Path
 	if provPath == "" {
 		provPath = filepath.Join(hawkDir, ".hawk", "provider.json")
@@ -316,7 +316,7 @@ func providerJSONHasSecretsOnDisk() (bool, string) {
 }
 
 func legacyCredentialFilesPresent() (bool, []string) {
-	hawkDir := filepath.Join(home.Dir(), ".hawk")
+	hawkDir := filepath.Join(home.MustDir(), ".hawk")
 	var paths []string
 	for _, name := range []string{"env", ".env"} {
 		p := filepath.Join(hawkDir, name)

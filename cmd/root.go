@@ -13,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/update"
 	"github.com/spf13/cobra"
 )
 
@@ -259,6 +260,9 @@ func init() {
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(recoverCmd)
+	rootCmd.AddCommand(manpageCmd)
+	rootCmd.AddCommand(updateCmd)
+	completionCmd.AddCommand(completionInstallCmd)
 }
 
 // confirmDangerousSkipPermissions enforces a safety guard when --dangerously-skip-permissions is set.
@@ -345,6 +349,74 @@ JSON:
 			_, _ = cmd.OutOrStdout().Write([]byte(jsonStr))
 			_, _ = cmd.OutOrStdout().Write([]byte("\n"))
 		}
+	},
+}
+
+var completionInstallCmd = &cobra.Command{
+	Use:   "install [bash|zsh|fish]",
+	Short: "Install shell completion script to the default location",
+	Long: `Install the shell completion script to the standard location for your OS.
+
+Bash:
+  hawk completion install bash
+  # Installs to ~/.local/share/bash-completion/completions/hawk (Linux)
+  # or /opt/homebrew/etc/bash_completion.d/hawk (macOS Homebrew)
+
+Zsh:
+  hawk completion install zsh
+  # Installs to the first directory in $fpath (e.g. /usr/local/share/zsh/site-functions/_hawk)
+
+Fish:
+  hawk completion install fish
+  # Installs to ~/.config/fish/completions/hawk.fish`,
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish"},
+	Args:                  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		shell := args[0]
+		path, err := InstallCompletion(shell)
+		if err != nil {
+			return err
+		}
+
+		// Generate the completion script.
+		var script strings.Builder
+		switch shell {
+		case "bash":
+			_ = cmd.Root().GenBashCompletion(&script)
+		case "zsh":
+			_ = cmd.Root().GenZshCompletion(&script)
+		case "fish":
+			_ = cmd.Root().GenFishCompletion(&script, true)
+		}
+
+		// Ensure parent directory exists.
+		dir := path[:strings.LastIndex(path, "/")]
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("cannot create directory %s: %w", dir, err)
+		}
+
+		if err := os.WriteFile(path, []byte(script.String()), 0o644); err != nil {
+			return fmt.Errorf("cannot write completion script: %w", err)
+		}
+
+		fmt.Fprintf(cmd.OutOrStdout(), "Installed %s completion to %s\n", shell, path)
+		return nil
+	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Check for hawk updates",
+	Long:  "Check GitHub for a newer hawk release and print upgrade instructions.",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ver := version
+		if ver == "" {
+			ver = "dev"
+		}
+		cmd.Println(update.Summary(ver))
+		return nil
 	},
 }
 
