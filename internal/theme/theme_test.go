@@ -19,14 +19,6 @@ func TestThemeRegistryCount(t *testing.T) {
 	}
 }
 
-// TestThemeRegistryAllDarkOrLight ensures every theme is either dark or light.
-func TestThemeRegistryAllDarkOrLight(t *testing.T) {
-	for _, entry := range themeRegistry {
-		_ = entry
-		// Every theme should have IsDark set (true or false)
-	}
-}
-
 // TestDarkPaletteDefault ensures the dark palette is the default.
 func TestDarkPaletteDefault(t *testing.T) {
 	entry := themeRegistry[0]
@@ -106,7 +98,7 @@ func TestThemeNames(t *testing.T) {
 		"dark", "dracula", "nord", "gruvbox", "tokyo-night",
 		"catppuccin", "one-dark", "solarized-dark", "rose-pine", "everforest",
 		"monokai", "kanagawa", "ayu", "palenight", "github-dark",
-		"light", "solarized-light",
+		"light", "solarized-light", "minimal",
 	}
 	for _, exp := range expected {
 		if !seen[exp] {

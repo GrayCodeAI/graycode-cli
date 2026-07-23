@@ -596,7 +596,8 @@ var themeRegistry = []themeEntry{
 	{Name: "minimal", Label: "Minimal", Palette: minimalPalette, IsDark: true},
 }
 
-// themeByName indexes the registry by lowercased name for O(1) lookup.
+// themeByName indexes the registry by registered name for O(1) lookup.
+// Theme names are already lowercase in the registry; lookups are case-sensitive.
 var themeByName = func() map[string]themeEntry {
 	byName := make(map[string]themeEntry, len(themeRegistry))
 	for _, entry := range themeRegistry {
