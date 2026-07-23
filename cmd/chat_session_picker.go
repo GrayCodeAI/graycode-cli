@@ -225,14 +225,13 @@ func formatSessionEntry(e session.Entry, query string, maxWidth int) string {
 		previewDisplay = truncateString(previewDisplay, previewMaxW)
 	}
 
-	// Highlight match in preview.
+	// Highlight match in preview. indexFold returns a byte span in the original
+	// string, so the slice never splits a multi-byte rune even when case-folding
+	// changes a rune's encoded length.
 	if query != "" {
-		lower := strings.ToLower(previewDisplay)
-		q := strings.ToLower(query)
-		idx := strings.Index(lower, q)
-		if idx >= 0 {
-			matched := previewDisplay[idx : idx+len(query)]
-			previewDisplay = previewDisplay[:idx] + sessPickMatchStyle.Render(matched) + previewDisplay[idx+len(query):]
+		if idx, matchLen := indexFold(previewDisplay, query); idx >= 0 {
+			matched := previewDisplay[idx : idx+matchLen]
+			previewDisplay = previewDisplay[:idx] + sessPickMatchStyle.Render(matched) + previewDisplay[idx+matchLen:]
 		}
 	}
 
