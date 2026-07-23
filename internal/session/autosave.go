@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // AutoSaver periodically saves sessions and tracks session metadata.
@@ -346,6 +347,17 @@ func extractContext(content, query string, maxLen int) string {
 	end := idx + len(query) + 50
 	if end > len(content) {
 		end = len(content)
+	}
+
+	// Snap the window edges onto UTF-8 rune boundaries. idx itself is always a
+	// boundary (toLower is byte-preserving and UTF-8 is self-synchronizing),
+	// but the ±30/±50 padding arithmetic can land mid-rune on multibyte text
+	// (CJK, emoji, accented), which would make content[start:end] invalid UTF-8.
+	for start < len(content) && !utf8.RuneStart(content[start]) {
+		start++
+	}
+	for end < len(content) && !utf8.RuneStart(content[end]) {
+		end++
 	}
 
 	result := content[start:end]

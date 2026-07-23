@@ -3,8 +3,10 @@ package session
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestAcquireLock(t *testing.T) {
@@ -147,6 +149,52 @@ func TestExtractContext(t *testing.T) {
 	ctx := extractContext(content, "match", 1)
 	if ctx == "" {
 		t.Error("extractContext should return surrounding lines")
+	}
+}
+
+func TestExtractContextMultibyteSafe(t *testing.T) {
+	t.Parallel()
+	// "日" is a 3-byte rune. The prefix places the ASCII query at byte 32 so
+	// that idx-30 (=2) and idx+len(query)+50 (=87) both land mid-rune; a naive
+	// byte cut would yield invalid UTF-8.
+	content := strings.Repeat("日", 10) + "ab" + "match" + strings.Repeat("日", 20)
+	ctx := extractContext(content, "match", 100)
+	if !utf8.ValidString(ctx) {
+		t.Errorf("extractContext returned invalid UTF-8: %q", ctx)
+	}
+	if !strings.Contains(ctx, "match") {
+		t.Errorf("extractContext should still contain the query, got %q", ctx)
+	}
+	if !strings.HasPrefix(ctx, "...") || !strings.HasSuffix(ctx, "...") {
+		t.Errorf("window strictly inside content should get both ellipses, got %q", ctx)
+	}
+}
+
+func TestExtractContextMultibyteAtStart(t *testing.T) {
+	t.Parallel()
+	// Match at the very start; the trailing window edge (byte 55) lands mid-rune.
+	content := "match" + strings.Repeat("日", 30)
+	ctx := extractContext(content, "match", 100)
+	if !utf8.ValidString(ctx) {
+		t.Errorf("extractContext returned invalid UTF-8: %q", ctx)
+	}
+	if !strings.Contains(ctx, "match") {
+		t.Errorf("extractContext should contain the query, got %q", ctx)
+	}
+	if strings.HasPrefix(ctx, "...") {
+		t.Errorf("match at start should not get a leading ellipsis, got %q", ctx)
+	}
+}
+
+func TestExtractContextASCIIUnchanged(t *testing.T) {
+	t.Parallel()
+	content := "line1\nline2\nline3 match here\nline4\nline5"
+	ctx := extractContext(content, "match", 100)
+	if !utf8.ValidString(ctx) {
+		t.Errorf("invalid UTF-8: %q", ctx)
+	}
+	if !strings.Contains(ctx, "match") {
+		t.Errorf("should contain query, got %q", ctx)
 	}
 }
 
