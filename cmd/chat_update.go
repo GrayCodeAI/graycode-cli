@@ -700,6 +700,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.watcherStop != nil {
 					m.watcherStop()
 				}
+				if m.parallelCancel != nil {
+					m.parallelCancel()
+				}
 				if m.bgCancel != nil {
 					m.bgCancel()
 				}

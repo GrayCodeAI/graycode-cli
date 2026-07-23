@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -507,23 +508,33 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 	grid := NewAgentGrid(taskDescs, m.width, m.height-10)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Spawning %d parallel agents for %d tasks...", icons.Bolt(), workers, len(taskDescs))})
 
+	// Create a cancellable context for the parallel agents.
+	// This ensures agents are cancelled when the user quits.
+	ctx, cancel := context.WithCancel(context.Background())
+	m.parallelCancel = cancel
+
 	// Run parallel agents in background
 	go func() {
+		defer cancel() // Ensure cleanup when goroutine exits
+
 		pool := parallel.NewPool(cwd, "main", workers)
 		for _, desc := range taskDescs {
 			pool.AddTask(desc)
 		}
 
+		// Use atomic counter for task index to avoid race condition.
+		var taskIdx int32
+
 		// Update grid as agents run
-		taskIdx := 0
-		err := pool.Run(context.Background(), func(ctx context.Context, worktreePath string, task *parallel.Task) (string, error) {
-			pane := grid.GetPane(fmt.Sprintf("%d", taskIdx+1))
+		err := pool.Run(ctx, func(ctx context.Context, worktreePath string, task *parallel.Task) (string, error) {
+			idx := int(atomic.AddInt32(&taskIdx, 1) - 1)
+
+			pane := grid.GetPane(fmt.Sprintf("%d", idx+1))
 			if pane != nil {
 				pane.SetState(AgentRunning)
 				pane.Append(fmt.Sprintf("Starting in worktree: %s", worktreePath))
 				m.ref.Send(streamChunkMsg(grid.Render()))
 			}
-			taskIdx++
 
 			// Clone the engine-backed transport so parallel agents cannot bypass
 			// the parent session's resolved gateway policy.
@@ -546,6 +557,11 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 
 			var result strings.Builder
 			for ev := range ch {
+				select {
+				case <-ctx.Done():
+					return result.String(), ctx.Err()
+				default:
+				}
 				switch ev.Type {
 				case "content":
 					result.WriteString(ev.Content)

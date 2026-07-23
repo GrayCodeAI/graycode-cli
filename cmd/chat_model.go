@@ -335,6 +335,9 @@ type chatModel struct {
 	// Loop cancellation
 	loopCancel context.CancelFunc // cancels the current /loop goroutine
 
+	// Parallel agents cancellation
+	parallelCancel context.CancelFunc // cancels running /parallel agents
+
 	// Background goroutine cancellation
 	bgCancel context.CancelFunc // cancels all background goroutines on quit
 

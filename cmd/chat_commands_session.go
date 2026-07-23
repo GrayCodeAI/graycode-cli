@@ -49,6 +49,11 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.loopCancel()
 			m.loopCancel = nil
 		}
+		// Cancel any running /parallel agents.
+		if m.parallelCancel != nil {
+			m.parallelCancel()
+			m.parallelCancel = nil
+		}
 		// Re-enable system sleep if it was prevented.
 		if m.sleepCancel != nil {
 			m.sleepCancel()
@@ -75,6 +80,11 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.loopCancel()
 			m.loopCancel = nil
 		}
+		// Cancel any running /parallel agents.
+		if m.parallelCancel != nil {
+			m.parallelCancel()
+			m.parallelCancel = nil
+		}
 		m.messages = []displayMsg{{role: "system", content: "Conversation cleared."}}
 		m.invalidateViewportCache()
 		m.viewDirty = true
@@ -94,11 +104,22 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m.startManualCompact()
 
 	case "/diff":
-		stat, _ := gitOutput("diff", "--stat")
-		diff, _ := gitOutput("diff")
+		stat, statErr := gitOutput("diff", "--stat")
+		diff, diffErr := gitOutput("diff")
 		if strings.TrimSpace(diff) == "" {
-			stat, _ = gitOutput("diff", "--cached", "--stat")
-			diff, _ = gitOutput("diff", "--cached")
+			stat, statErr = gitOutput("diff", "--cached", "--stat")
+			diff, diffErr = gitOutput("diff", "--cached")
+		}
+		// Report git errors instead of silently showing "No changes detected".
+		if statErr != nil || diffErr != nil {
+			errMsg := "git diff failed"
+			if statErr != nil {
+				errMsg = statErr.Error()
+			} else if diffErr != nil {
+				errMsg = diffErr.Error()
+			}
+			m.messages = append(m.messages, displayMsg{role: "error", content: errMsg})
+			return m, nil
 		}
 		if strings.TrimSpace(diff) == "" {
 			m.messages = append(m.messages, displayMsg{role: "system", content: "No changes detected."})
@@ -377,6 +398,11 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.loopCancel()
 			m.loopCancel = nil
 		}
+		// Cancel any running /parallel agents.
+		if m.parallelCancel != nil {
+			m.parallelCancel()
+			m.parallelCancel = nil
+		}
 		// Re-enable system sleep if it was prevented.
 		if m.sleepCancel != nil {
 			m.sleepCancel()
@@ -436,6 +462,11 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		if m.loopCancel != nil {
 			m.loopCancel()
 			m.loopCancel = nil
+		}
+		// Cancel any running /parallel agents.
+		if m.parallelCancel != nil {
+			m.parallelCancel()
+			m.parallelCancel = nil
 		}
 		// Re-enable system sleep if it was prevented.
 		if m.sleepCancel != nil {

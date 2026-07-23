@@ -153,9 +153,11 @@ func (m *chatModel) renderSessionPickerOverlay(viewWidth int) string {
 			entry := m.sessionPickerFiltered[i]
 			line := formatSessionEntry(entry, m.sessionPickerInput, boxWidth-4)
 			if i == m.sessionPickerSel {
-				b.WriteString(sessPickSelStyle.Width(boxWidth).Render(line))
+				// Selected item: add a marker and use distinct style (consistent with history search).
+				marker := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Render("> ")
+				b.WriteString(sessPickSelStyle.Width(boxWidth).Render(marker + line))
 			} else {
-				b.WriteString(sessPickItemStyle.Width(boxWidth).Render(line))
+				b.WriteString(sessPickItemStyle.Width(boxWidth).Render("  " + line))
 			}
 			b.WriteString("\n")
 		}
@@ -172,6 +174,11 @@ func (m *chatModel) renderSessionPickerOverlay(viewWidth int) string {
 // formatSessionEntry formats a single session entry for display.
 // Shows: ID, preview, CWD (shortened), and time-ago.
 func formatSessionEntry(e session.Entry, query string, maxWidth int) string {
+	// Ensure minimum width to avoid negative calculations.
+	if maxWidth < 20 {
+		maxWidth = 20
+	}
+
 	// Format: "  ID  preview  [cwd]  time-ago"
 	idStr := e.ID
 	if len(idStr) > 8 {
