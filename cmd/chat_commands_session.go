@@ -226,7 +226,15 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				return m, nil
 			}
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked at %s → new branch %s\nYou can now take a different approach. Use /branches to see all branches.", headID[:8], forkID[:8])})
+			shortHead := headID
+			if len(shortHead) > 8 {
+				shortHead = shortHead[:8]
+			}
+			shortFork := forkID
+			if len(shortFork) > 8 {
+				shortFork = shortFork[:8]
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Forked at %s → new branch %s\nYou can now take a different approach. Use /branches to see all branches.", shortHead, shortFork)})
 			return m, nil
 		}
 		// Fallback: legacy session fork

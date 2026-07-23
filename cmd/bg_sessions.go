@@ -206,7 +206,11 @@ Examples:
 
 		cmd.Printf("Background session started: %s (PID %d)\n", info.ID, info.PID)
 		cmd.Printf("View logs: tail -f %s\n", info.LogFile)
-		cmd.Printf("Attach: hawk attach %s\n", info.ID[:8])
+		attachID := info.ID
+		if len(attachID) > 8 {
+			attachID = attachID[:8]
+		}
+		cmd.Printf("Attach: hawk attach %s\n", attachID)
 		return nil
 	},
 }

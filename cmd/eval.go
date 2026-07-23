@@ -206,10 +206,7 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 	fmt.Println("|----|-------------|------|")
 	for _, t := range tasks {
 		tags := strings.Join(t.Tags, ", ")
-		desc := t.Description
-		if len(desc) > 50 {
-			desc = desc[:50] + "..."
-		}
+		desc := truncateWithEllipsis(t.Description, 53)
 		fmt.Printf("| %s | %s | %s |\n", t.ID, desc, tags)
 	}
 	return nil

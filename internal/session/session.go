@@ -496,8 +496,8 @@ func loadPreview(path string) string {
 		var msg Message
 		if json.Unmarshal(line, &msg) == nil && msg.Role == "user" && msg.Content != "" {
 			preview := msg.Content
-			if len(preview) > 80 {
-				preview = preview[:80] + "..."
+			if runes := []rune(preview); len(runes) > 80 {
+				preview = string(runes[:80]) + "..."
 			}
 			return preview
 		}
