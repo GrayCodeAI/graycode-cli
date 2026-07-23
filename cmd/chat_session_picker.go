@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
@@ -15,14 +16,14 @@ import (
 
 // sessionPickerStyles holds the lipgloss styles for the session picker overlay.
 var (
-	sessPickBoxStyle    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(0, 1)
-	sessPickTitleStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
-	sessPickDimStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	sessPickItemStyle   = lipgloss.NewStyle().Padding(0, 1)
-	sessPickSelStyle    = lipgloss.NewStyle().Padding(0, 1).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("230"))
-	sessPickMatchStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
-	sessPickMetaStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	sessPickEmptyStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Italic(true)
+	sessPickBoxStyle   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(0, 1)
+	sessPickTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
+	sessPickDimStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	sessPickItemStyle  = lipgloss.NewStyle().Padding(0, 1)
+	sessPickSelStyle   = lipgloss.NewStyle().Padding(0, 1).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("230"))
+	sessPickMatchStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	sessPickMetaStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	sessPickEmptyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Italic(true)
 )
 
 // applySessionPickerFilter filters the session entries based on the current search query.
@@ -124,7 +125,7 @@ func (m *chatModel) renderSessionPickerOverlay(viewWidth int) string {
 		queryDisplay = "type to filter sessions..."
 	}
 	b.WriteString("  ")
-	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("62")).Render(icons.Magnify()+" "))
+	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("62")).Render(icons.Magnify() + " "))
 	if m.sessionPickerInput == "" {
 		b.WriteString(sessPickDimStyle.Italic(true).Render(queryDisplay))
 	} else {
@@ -195,7 +196,11 @@ func formatSessionEntry(e session.Entry, query string, maxWidth int) string {
 	if e.CWD != "" {
 		cwdStr = shortenHomePath(e.CWD)
 		if len(cwdStr) > 20 {
-			cwdStr = "..." + cwdStr[len(cwdStr)-17:]
+			tail := cwdStr[len(cwdStr)-17:]
+			for len(tail) > 0 && !utf8.ValidString(tail) {
+				tail = tail[1:]
+			}
+			cwdStr = "..." + tail
 		}
 		cwdStr = "[" + cwdStr + "]"
 	}
