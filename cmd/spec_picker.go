@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/mattn/go-runewidth"
 )
 
 // specPickerAction identifies what a SpecPicker entry does when selected.
@@ -183,8 +184,8 @@ func (sp *SpecPicker) Render(viewWidth int) string {
 	} else {
 		nameWidth := 0
 		for _, e := range sp.filtered {
-			if len(e.Name) > nameWidth {
-				nameWidth = len(e.Name)
+			if w := runewidth.StringWidth(e.Name); w > nameWidth {
+				nameWidth = w
 			}
 		}
 		for i, e := range sp.filtered {
