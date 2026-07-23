@@ -101,7 +101,9 @@ func compressFile(src, dst string) (err error) {
 	}
 	defer func() { _ = in.Close() }()
 
-	out, err := os.Create(dst) // #nosec G304 -- dst is an internal session file path built by the session store
+	// 0600: the compressed file holds the same private session history as the
+	// source JSONL; os.Create would leave it group/world-readable.
+	out, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- dst is an internal session file path built by the session store
 	if err != nil {
 		return err
 	}

@@ -441,7 +441,10 @@ func (s *SnapshotStore) save(snapshot *WorkspaceSnapshot) error {
 	}
 
 	path := filepath.Join(s.Dir, snapshot.ID+".json.gz")
-	f, err := os.Create(path) // #nosec G304 -- path built from s.Dir (internal snapshot store dir) + snapshot.ID
+	// 0600: the snapshot archive embeds full file contents (private user
+	// state, matching the 0750 store dir); os.Create would leave it
+	// group/world-readable.
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- path built from s.Dir (internal snapshot store dir) + snapshot.ID
 	if err != nil {
 		return fmt.Errorf("creating file: %w", err)
 	}

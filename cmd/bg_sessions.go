@@ -129,7 +129,9 @@ func StartBGSession(prompt string, args []string) (*BGSessionInfo, error) {
 	cmd := exec.CommandContext(context.Background(), "hawk", cmdArgs...) // #nosec G204 -- fixed command 'hawk' relaunching self with internal flags
 	cmd.Dir = cwd
 
-	logF, err := os.Create(logFile) // #nosec G304 -- logFile built from internal bg-sessions directory and generated id
+	// 0600: the log captures full session output (private user state, matching
+	// the 0600 bg-session info JSON); os.Create would leave it group/world-readable.
+	logF, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- logFile built from internal bg-sessions directory and generated id
 	if err != nil {
 		return nil, fmt.Errorf("create log file: %w", err)
 	}

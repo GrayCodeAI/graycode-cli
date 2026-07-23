@@ -174,7 +174,9 @@ func (ss *SnapshotStore) saveIndex() error {
 
 // writeSessionJSONL writes a session as JSONL to the given path.
 func writeSessionJSONL(path string, sess *Session) error {
-	f, err := os.Create(path) // #nosec G304 -- path built from internal sessions dir + session ID + snapshot ID
+	// 0600: the snapshot JSONL holds full session history (private user state,
+	// matching the 0600 snapshot index); os.Create would leave it group/world-readable.
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- path built from internal sessions dir + session ID + snapshot ID
 	if err != nil {
 		return err
 	}
