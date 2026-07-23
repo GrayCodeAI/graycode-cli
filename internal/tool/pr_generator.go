@@ -128,7 +128,10 @@ func GenerateTitle(commits []CommitSummary) string {
 	if len(commits) == 1 {
 		title := commits[0].Message
 		if len(title) > 72 {
-			title = title[:69] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(title); len(runes) > 72 {
+				title = string(runes[:69]) + "..."
+			}
 		}
 		return title
 	}
@@ -162,7 +165,10 @@ func GenerateTitle(commits []CommitSummary) string {
 			title = fmt.Sprintf("%s: %s", firstType, summary)
 		}
 		if len(title) > 72 {
-			title = title[:69] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(title); len(runes) > 72 {
+				title = string(runes[:69]) + "..."
+			}
 		}
 		return title
 	}
@@ -183,7 +189,10 @@ func GenerateTitle(commits []CommitSummary) string {
 
 	title := "Multiple changes: " + strings.Join(typeList, ", ")
 	if len(title) > 72 {
-		title = title[:69] + "..."
+		// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+		if runes := []rune(title); len(runes) > 72 {
+			title = string(runes[:69]) + "..."
+		}
 	}
 	return title
 }
@@ -744,7 +753,10 @@ func summarizeCommits(commits []CommitSummary) string {
 		for _, c := range commits {
 			subject := stripConventionalPrefix(c.Message)
 			if len(subject) > 30 {
-				subject = subject[:27] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(subject); len(runes) > 30 {
+					subject = string(runes[:27]) + "..."
+				}
 			}
 			subjects = append(subjects, subject)
 		}

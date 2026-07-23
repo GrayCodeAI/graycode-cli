@@ -253,7 +253,10 @@ func GenerateSubject(commitType string, files []string, diff string) string {
 
 	subject := generateSubjectContent(commitType, files, diff)
 	if len(subject) > available {
-		subject = subject[:available-3] + "..."
+		// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+		if runes := []rune(subject); len(runes) > available {
+			subject = string(runes[:available-3]) + "..."
+		}
 	}
 	return subject
 }

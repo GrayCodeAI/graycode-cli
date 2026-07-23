@@ -331,7 +331,10 @@ func extractContext(content, query string, maxLen int) string {
 	idx := indexOf(toLower(content), toLower(query))
 	if idx < 0 {
 		if len(content) > maxLen {
-			return content[:maxLen] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(content); len(runes) > maxLen {
+				return string(runes[:maxLen]) + "..."
+			}
 		}
 		return content
 	}

@@ -642,7 +642,10 @@ func shortPattern(pattern string) string {
 		s = s[:idx]
 	}
 	if len(s) > 50 {
-		s = s[:50] + "..."
+		// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+		if runes := []rune(s); len(runes) > 50 {
+			s = string(runes[:50]) + "..."
+		}
 	}
 	return s
 }
