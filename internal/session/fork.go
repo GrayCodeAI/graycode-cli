@@ -39,7 +39,11 @@ func ForkThread(store ForkableStore, opts ForkOptions) (*ThreadFork, error) {
 
 	name := opts.NewThreadName
 	if name == "" {
-		name = fmt.Sprintf("fork-%s-%d", opts.SourceThreadID[:8], time.Now().Unix())
+		short := opts.SourceThreadID
+		if len(short) > 8 {
+			short = short[:8]
+		}
+		name = fmt.Sprintf("fork-%s-%d", short, time.Now().Unix())
 	}
 
 	newThreadID, err := store.CreateThread(name)
