@@ -64,15 +64,25 @@ func (b *BatchedWAL) flushLocked() error {
 	b.wal.mu.Lock()
 	defer b.wal.mu.Unlock()
 
+	// Track how many buffered messages have been handed off so that, on a write
+	// error, only the not-yet-written suffix is retried. Otherwise the already
+	// written prefix would be rewritten on the next flush, duplicating entries.
+	written := 0
 	for _, msg := range b.buf {
 		data, err := json.Marshal(msg)
 		if err != nil {
+			// Unmarshalable message: drop it (it could never be written).
+			written++
 			continue
 		}
 		data = append(data, '\n')
 		if _, err := b.wal.f.Write(data); err != nil {
+			remaining := make([]Message, len(b.buf)-written)
+			copy(remaining, b.buf[written:])
+			b.buf = remaining
 			return err
 		}
+		written++
 	}
 	err := b.wal.f.Sync()
 	b.buf = b.buf[:0]

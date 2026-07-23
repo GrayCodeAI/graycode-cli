@@ -47,6 +47,34 @@ func TestRenderMarkdownItalic(t *testing.T) {
 	}
 }
 
+// TestRenderMarkdownItalicMultibyteBoundary guards against truncating a
+// multi-byte rune adjacent to the '*' markers (previously the boundary char was
+// read as a single byte, corrupting e.g. "café*…*" into "cafÃ…").
+func TestRenderMarkdownItalicMultibyteBoundary(t *testing.T) {
+	cases := []struct {
+		in       string
+		contains []string
+	}{
+		{"café*italic*end", []string{"café", "italic", "end"}},
+		{"日本語*text*more", []string{"日本語", "text", "more"}},
+		{"hello *italic*é", []string{"hello", "italic", "é"}},
+	}
+	renderers := map[string]func(string) string{
+		"legacy": func(s string) string { return stripAnsi(renderMarkdown(s, 80)) },
+		"struct": func(s string) string { return stripAnsi(NewMarkdownRenderer(80).Render(s)) },
+	}
+	for name, render := range renderers {
+		for _, tc := range cases {
+			plain := render(tc.in)
+			for _, want := range tc.contains {
+				if !strings.Contains(plain, want) {
+					t.Errorf("%s renderer: input %q lost %q -> %q", name, tc.in, want, plain)
+				}
+			}
+		}
+	}
+}
+
 func TestRenderMarkdownInlineCode(t *testing.T) {
 	out := renderMarkdown("Use `go build` here", 80)
 	plain := stripAnsi(out)
