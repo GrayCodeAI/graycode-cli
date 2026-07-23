@@ -129,8 +129,9 @@ func (m chatModel) renderScrollbackFocusBar(width int) string {
 		return ""
 	}
 	hint := "wheel/Up/Dn scroll · Enter: expand tool result · Tab → prompt"
-	if width < len(hint)+4 {
-		width = len(hint) + 4
+	hintW := lipgloss.Width(hint)
+	if width < hintW+4 {
+		width = hintW + 4
 	}
 	style := lipgloss.NewStyle().Foreground(infoSky).Bold(true).Inline(true).Width(width)
 	return style.Render("  " + hint)
