@@ -80,7 +80,10 @@ func runAgentList(_ *cobra.Command, _ []string) error {
 		}
 		desc := a.Description
 		if len(desc) > 50 {
-			desc = desc[:50] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(desc); len(runes) > 50 {
+				desc = string(runes[:50]) + "..."
+			}
 		}
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", a.Name, model, desc)
 	}
