@@ -184,13 +184,16 @@ var winCredScriptPrefix = []string{
 	"        Marshal.Copy(bytes, 0, c.credentialBlob, bytes.Length);",
 	"        c.credentialBlobSize = bytes.Length;",
 	"        c.persist = CRED_PERSIST_LOCAL_MACHINE;",
-"        CredWrite(ref c, 0);",
-	"        Marshal.ZeroFreeCoTaskMemUnicode(c.targetName);",
-	"        Marshal.ZeroFreeCoTaskMemUnicode(c.userName);",
-	"        byte[] zeros = new byte[bytes.Length];",
-	"        Marshal.Copy(zeros, 0, c.credentialBlob, bytes.Length);",
-	"        for (int i = 0; i < bytes.Length; i++) bytes[i] = 0;",
-	"        Marshal.FreeCoTaskMem(c.credentialBlob);",
+	"        try {",
+	"            CredWrite(ref c, 0);",
+	"        } finally {",
+	"            Marshal.ZeroFreeCoTaskMemUnicode(c.targetName);",
+	"            Marshal.ZeroFreeCoTaskMemUnicode(c.userName);",
+	"            byte[] zeros = new byte[bytes.Length];",
+	"            Marshal.Copy(zeros, 0, c.credentialBlob, bytes.Length);",
+	"            for (int i = 0; i < bytes.Length; i++) bytes[i] = 0;",
+	"            Marshal.FreeCoTaskMem(c.credentialBlob);",
+	"        }",
 	"    }",
 	"}",
 	"\"@",
@@ -204,11 +207,15 @@ func buildWinCredScript(tail string) string {
 func (s *SecureStorage) getWindows(account string) (string, error) {
 	target := s.service + "::" + account
 	script := buildWinCredScript(fmt.Sprintf("[WinCred]::Get('%s')", powershellQuote(target)))
-	data, err := execCommand("powershell.exe", "-NoProfile", "-Command", script)
+	// Pipe the script via stdin so the credential target is not exposed
+	// in process argv (visible to all local users via ps/Process Explorer).
+	cmd := exec.CommandContext(context.Background(), "powershell.exe", "-NoProfile", "-Command")
+	cmd.Stdin = strings.NewReader(script)
+	data, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	return data, nil
+	return string(data), nil
 }
 
 func (s *SecureStorage) setWindows(account, token string) error {

@@ -58,24 +58,29 @@ CERT_FILE="$TMP/checksums.txt.cert"
 SIG_FILE="$TMP/checksums.txt.sig"
 if command -v cosign >/dev/null 2>&1; then
   echo "Verifying release signature with cosign..."
-  curl -fsSL --proto '=https' --tlsv1.2 "$CERT_URL" -o "$CERT_FILE" || true
-  curl -fsSL --proto '=https' --tlsv1.2 "$SIG_URL" -o "$SIG_FILE" || true
-  if [ -f "$CERT_FILE" ] && [ -f "$SIG_FILE" ]; then
-    IDENTITY="https://github.com/${REPO}/.github/workflows/release.yml@refs/tags/v${LATEST}"
-    if ! cosign verify-blob \
-      --certificate "$CERT_FILE" \
-      --signature "$SIG_FILE" \
-      --certificate-identity-regexp "$IDENTITY" \
-      --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-      "$CHECKSUMS"; then
-      echo "Error: signature verification failed — release may be compromised"
-      rm -rf "$TMP"
-      exit 1
-    fi
-    echo "Signature verified."
-  else
-    echo "Warning: cosign installed but signature files not found — skipping signature verification"
+  if ! curl -fsSL --proto '=https' --tlsv1.2 --max-time 30 "$CERT_URL" -o "$CERT_FILE"; then
+    echo "Error: could not download signature certificate — refusing to install unverified release"
+    rm -rf "$TMP"
+    exit 1
   fi
+  if ! curl -fsSL --proto '=https' --tlsv1.2 --max-time 30 "$SIG_URL" -o "$SIG_FILE"; then
+    echo "Error: could not download signature file — refusing to install unverified release"
+    rm -rf "$TMP"
+    exit 1
+  fi
+  # Anchor and escape the identity regex so '.' matches literal dots only.
+  IDENTITY="https://github\.com/${REPO}/\.github/workflows/release\.yml@refs/tags/v${LATEST}"
+  if ! cosign verify-blob \
+    --certificate "$CERT_FILE" \
+    --signature "$SIG_FILE" \
+    --certificate-identity-regexp "$IDENTITY" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    "$CHECKSUMS"; then
+    echo "Error: signature verification failed — release may be compromised"
+    rm -rf "$TMP"
+    exit 1
+  fi
+  echo "Signature verified."
 else
   echo "Note: cosign not installed — install from https://docs.sigstore.dev to verify release signatures"
 fi

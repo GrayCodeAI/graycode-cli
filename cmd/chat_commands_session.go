@@ -341,6 +341,22 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/drop":
+		if m.waiting {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Wait for the current response to finish, then run /drop."})
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
+		}
+		// Cancel any running /loop goroutine.
+		if m.loopCancel != nil {
+			m.loopCancel()
+			m.loopCancel = nil
+		}
+		// Re-enable system sleep if it was prevented.
+		if m.sleepCancel != nil {
+			m.sleepCancel()
+			m.sleepCancel = nil
+		}
 		// Drop the last N exchanges (user+assistant pairs) from context.
 		n := 1
 		if len(parts) >= 2 {
@@ -400,6 +416,11 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		if m.sleepCancel != nil {
 			m.sleepCancel()
 			m.sleepCancel = nil
+		}
+		// Stop file watcher if active.
+		if m.watcherStop != nil {
+			m.watcherStop()
+			m.watcherStop = nil
 		}
 		m.invalidateViewportCache()
 		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}

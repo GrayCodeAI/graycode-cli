@@ -259,13 +259,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Ctrl+K enters native terminal selection mode. Available in every UI
-		// state (welcome gate, permissions, prompt, scrollback) so users always
-		// have a way to copy text out of the chat — the alt-screen +
-		// mouse-tracking combination otherwise breaks native text selection.
-		if msg.String() == "ctrl+k" {
-			return m, enterSelectionMode(m.ref, m.copyableTranscript(), m.mouseEnabled())
-		}
 		if isCopyToClipboardKey(msg) {
 			return m.handleCopyShortcut()
 		}
@@ -290,7 +283,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		// Command palette (Ctrl+K) — intercept all input when open
+		// Command palette (Ctrl+K) — intercept all input when open.
+		// Must come before the Ctrl+K selection-mode handler so the
+		// palette can receive Ctrl+K for navigation/close.
 		if m.commandPalette != nil && m.commandPalette.IsOpen() {
 			action, handled := m.commandPalette.Update(msg)
 			if handled {
@@ -306,6 +301,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			}
+		}
+
+		// Ctrl+K enters native terminal selection mode. Available in every UI
+		// state (welcome gate, permissions, prompt, scrollback) so users always
+		// have a way to copy text out of the chat — the alt-screen +
+		// mouse-tracking combination otherwise breaks native text selection.
+		// Placed AFTER the command palette check so an open palette receives
+		// Ctrl+K for navigation/close instead of entering selection mode.
+		if msg.String() == "ctrl+k" {
+			return m, enterSelectionMode(m.ref, m.copyableTranscript(), m.mouseEnabled())
 		}
 
 		// Autonomy tier picker (/autonomy) — intercept all input when open
@@ -991,8 +996,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Clear the terminal tab progress bar now that the turn is done.
 		ClearTabProgress()
 
-		// Send terminal notification if terminal was not focused during the turn.
-		if m.backgrounded && !m.streamCancelled && m.partial.Len() == 0 {
+		// Send terminal notification if terminal was not focused during the
+		// turn and the agent produced output (not just tool activity).
+		if m.backgrounded && !m.streamCancelled && m.turnHadAssistantOutput {
 			sendTerminalNotification("hawk", "Agent turn complete")
 		}
 		m.backgrounded = false

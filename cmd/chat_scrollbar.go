@@ -145,10 +145,11 @@ func (m chatModel) renderChatPane() string {
 	sticky := m.renderStickyHeader(m.viewport.Width())
 	if sticky != "" {
 		chatView = sticky + "\n" + chatView
-		// Reduce viewport height by the header line so the overall pane
-		// height stays consistent with the layout.
+		// Reduce viewport height by the sticky header height (header text
+		// + separator line = 2 rows) so the overall pane height stays
+		// consistent with the layout.
 		if vpH > stickyHeaderHeight {
-			vpH -= 1 // header occupies one visual row
+			vpH -= stickyHeaderHeight
 		}
 	}
 

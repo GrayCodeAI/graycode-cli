@@ -280,6 +280,17 @@ var slashDescriptions = map[string]string{
 	"/terminal-setup":  "Configure terminal capabilities",
 	"/pager-config":    "Configure pager for long output",
 	"/prompt-queue":    "Manage queued prompts",
+	"/brainstorm":      "Brainstorm ideas with multi-model council",
+	"/checkpoint":      "Create a named checkpoint of current state",
+	"/dream":           "Enter dream/imagining mode for creative tasks",
+	"/away":            "Set away status with auto-reply message",
+	"/investigate":     "Deep-dive investigation of an issue",
+	"/refresh-model-catalog": "Refresh the model catalog from providers",
+	"/image":           "Generate or process images",
+	"/recipe":          "Run a saved recipe (command template)",
+	"/soul":            "Show or update hawk's personality/soul",
+	"/mode":            "Switch interaction mode",
+	"/party":           "Start a multi-agent party session",
 }
 
 func slashSuggestions(input string) []string {

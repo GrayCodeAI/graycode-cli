@@ -39,7 +39,12 @@ func (m chatModel) renderStickyHeader(viewWidth int) string {
 
 	// Truncate and format the prompt for single-line display.
 	display := strings.ReplaceAll(prompt, "\n", " ")
-	if len(display) > viewWidth-10 {
+	if viewWidth < 13 {
+		// Narrow terminal: just trim to viewWidth, no room for padding/ellipsis.
+		if len(display) > viewWidth {
+			display = display[:viewWidth]
+		}
+	} else if len(display) > viewWidth-10 {
 		display = display[:viewWidth-13] + "..."
 	}
 
