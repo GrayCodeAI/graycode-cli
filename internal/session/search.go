@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/GrayCodeAI/hawk/internal/textutil"
 )
 
 // SearchEngine provides full-text search across hawk sessions/conversations.
@@ -348,25 +350,27 @@ func BuildBM25Score(queryTerms []string, doc string, docLen int, avgDocLen float
 }
 
 // HighlightMatches finds positions of query terms in content for highlighting.
+// The returned Start/End are byte offsets into the original content and always
+// fall on rune boundaries (see textutil.IndexFold), so callers can splice the
+// content at those offsets without splitting a multi-byte character.
 func HighlightMatches(content string, query string) []Highlight {
 	var highlights []Highlight
 
-	contentLower := strings.ToLower(content)
 	terms := tokenize(query)
 
 	for _, term := range terms {
 		start := 0
 		for {
-			idx := strings.Index(contentLower[start:], term)
+			idx, matchLen := textutil.IndexFold(content[start:], term)
 			if idx == -1 {
 				break
 			}
 			absStart := start + idx
 			highlights = append(highlights, Highlight{
 				Start: absStart,
-				End:   absStart + len(term),
+				End:   absStart + matchLen,
 			})
-			start = absStart + len(term)
+			start = absStart + matchLen
 		}
 	}
 

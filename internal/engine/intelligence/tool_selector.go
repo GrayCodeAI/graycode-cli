@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/textutil"
 )
 
 // ToolInfo describes a single tool available to the LLM.
@@ -300,10 +302,12 @@ func (ts *ToolSelector) Adapt(feedback string) {
 
 	lower := strings.ToLower(feedback)
 
-	// Parse "needed <tool>" pattern.
+	// Parse "needed <tool>" pattern. IndexFold returns a byte offset into the
+	// original feedback, so slicing it never splits a multi-byte rune that
+	// precedes the keyword.
 	var neededTool string
-	if idx := strings.Index(lower, "needed "); idx >= 0 {
-		rest := feedback[idx+len("needed "):]
+	if idx, matchLen := textutil.IndexFold(feedback, "needed "); idx >= 0 {
+		rest := feedback[idx+matchLen:]
 		// Take the next word as the tool name.
 		fields := strings.Fields(rest)
 		if len(fields) > 0 {
