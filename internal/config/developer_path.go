@@ -28,21 +28,21 @@ const (
 
 // PathCheck is one row in the developer path readiness report.
 type PathCheck struct {
-	Section  string
-	Name     string
-	Status   PathCheckStatus
-	Detail   string
-	FixHint  string
-	Blocking bool
+	Section  string          `json:"section"`
+	Name     string          `json:"name"`
+	Status   PathCheckStatus `json:"status"`
+	Detail   string          `json:"detail,omitempty"`
+	FixHint  string          `json:"fix_hint,omitempty"`
+	Blocking bool            `json:"blocking"`
 }
 
 // DeveloperPathReport summarizes developer readiness (setup, security, sandbox, ecosystem).
 type DeveloperPathReport struct {
-	Checks      []PathCheck
-	ChatReady   bool
-	SecureReady bool
-	Ready       bool
-	NextStep    string
+	Checks      []PathCheck `json:"checks"`
+	ChatReady   bool        `json:"chat_ready"`
+	SecureReady bool        `json:"secure_ready"`
+	Ready       bool        `json:"ready"`
+	NextStep    string      `json:"next_step,omitempty"`
 }
 
 // EvaluateDeveloperPath builds the developer path readiness report.
