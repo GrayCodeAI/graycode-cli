@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mattn/go-runewidth"
 )
 
 // Suggestion represents a single autocompletion suggestion.
@@ -376,18 +378,18 @@ func FormatSuggestions(suggestions []Suggestion, maxDisplay int) string {
 		suggestions = suggestions[:maxDisplay]
 	}
 
-	// Find max text width for alignment
+	// Find max text width for alignment (display width, so multi-byte text aligns)
 	maxWidth := 0
 	for _, s := range suggestions {
-		if len(s.Text) > maxWidth {
-			maxWidth = len(s.Text)
+		if w := runewidth.StringWidth(s.Text); w > maxWidth {
+			maxWidth = w
 		}
 	}
 
 	var b strings.Builder
 	for _, s := range suggestions {
 		if s.Description != "" {
-			padding := strings.Repeat(" ", maxWidth-len(s.Text)+4)
+			padding := strings.Repeat(" ", maxWidth-runewidth.StringWidth(s.Text)+4)
 			b.WriteString(fmt.Sprintf("%s%s%s\n", s.Text, padding, s.Description))
 		} else {
 			b.WriteString(s.Text + "\n")
