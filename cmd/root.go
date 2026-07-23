@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -642,12 +643,32 @@ var sessionsCmd = &cobra.Command{
 	},
 }
 
+var toolsJSON bool
+
 var toolsCmd = &cobra.Command{
 	Use:   "tools",
 	Short: "List built-in tools",
 	Run: func(cmd *cobra.Command, args []string) {
+		if toolsJSON {
+			tools := allTools()
+			type toolEntry struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+			}
+			entries := make([]toolEntry, len(tools))
+			for i, t := range tools {
+				entries[i] = toolEntry{Name: t.Name(), Description: t.Description()}
+			}
+			data, _ := json.MarshalIndent(entries, "", "  ")
+			cmd.Println(string(data))
+			return
+		}
 		cmd.Println(builtInToolsSummary())
 	},
+}
+
+func init() {
+	toolsCmd.Flags().BoolVar(&toolsJSON, "json", false, "output tools as JSON")
 }
 
 var pluginCmd = &cobra.Command{
