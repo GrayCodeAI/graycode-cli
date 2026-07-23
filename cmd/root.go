@@ -248,6 +248,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
 	rootCmd.Flags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (spinners, progress, decoration); machine-parseable output only")
 	preflightCmd.Flags().BoolVar(&preflightLiveFlag, "live", false, "verify selected provider connectivity and authentication")
+	doctorCmd.Flags().BoolVar(&doctorJSONFlag, "json", false, "output diagnostics as JSON")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(initCmd)
@@ -488,6 +489,8 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var doctorJSONFlag bool
+
 var doctorCmd = &cobra.Command{
 	Use:   "doctor",
 	Short: "Run local diagnostics",
@@ -496,7 +499,11 @@ var doctorCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Println(doctorReport(settings))
+		if doctorJSONFlag {
+			cmd.Println(doctorOutput(settings))
+		} else {
+			cmd.Println(doctorReport(settings))
+		}
 		return nil
 	},
 }
