@@ -47,13 +47,15 @@ func copyToClipboardNative(text string) error {
 	case "darwin":
 		cmd = exec.CommandContext(ctx, "pbcopy")
 	case "linux":
-		// Try xclip first, fall back to xsel
-		if _, err := exec.LookPath("xclip"); err == nil {
+		// Try wl-copy (Wayland), then xclip, then xsel.
+		if _, err := exec.LookPath("wl-copy"); err == nil {
+			cmd = exec.CommandContext(ctx, "wl-copy")
+		} else if _, err := exec.LookPath("xclip"); err == nil {
 			cmd = exec.CommandContext(ctx, "xclip", "-selection", "clipboard")
 		} else if _, err := exec.LookPath("xsel"); err == nil {
 			cmd = exec.CommandContext(ctx, "xsel", "--clipboard", "--input")
 		} else {
-			return fmt.Errorf("clipboard not available: install xclip or xsel")
+			return fmt.Errorf("clipboard not available: install wl-copy, xclip, or xsel")
 		}
 	case "windows":
 		cmd = exec.CommandContext(ctx, "clip.exe")
@@ -94,12 +96,15 @@ func pasteFromClipboard() (string, error) {
 	case "darwin":
 		cmd = exec.CommandContext(ctx, "pbpaste")
 	case "linux":
-		if _, err := exec.LookPath("xclip"); err == nil {
+		// Try wl-paste (Wayland), then xclip, then xsel.
+		if _, err := exec.LookPath("wl-paste"); err == nil {
+			cmd = exec.CommandContext(ctx, "wl-paste", "--no-newline")
+		} else if _, err := exec.LookPath("xclip"); err == nil {
 			cmd = exec.CommandContext(ctx, "xclip", "-selection", "clipboard", "-o")
 		} else if _, err := exec.LookPath("xsel"); err == nil {
 			cmd = exec.CommandContext(ctx, "xsel", "--clipboard", "--output")
 		} else {
-			return "", fmt.Errorf("clipboard not available: install xclip or xsel")
+			return "", fmt.Errorf("clipboard not available: install wl-paste, xclip, or xsel")
 		}
 	case "windows":
 		cmd = exec.CommandContext(ctx, "powershell.exe", "-command", "Get-Clipboard")

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	lipgloss "charm.land/lipgloss/v2"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -87,8 +88,9 @@ func runPrint(text string) error {
 			}
 		case "tool_result":
 			content := ev.Content
-			if len(content) > 500 {
-				content = content[:500] + "..."
+			// Rune-based truncation to avoid splitting multi-byte UTF-8.
+			if utf8.RuneCountInString(content) > 500 {
+				content = string([]rune(content)[:500]) + "..."
 			}
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
@@ -349,8 +351,9 @@ func runRepl() error {
 				}
 			case "tool_result":
 				content := ev.Content
-				if len(content) > 500 {
-					content = content[:500] + "..."
+				// Rune-based truncation to avoid splitting multi-byte UTF-8.
+				if utf8.RuneCountInString(content) > 500 {
+					content = string([]rune(content)[:500]) + "..."
 				}
 				if outputFormat == "stream-json" {
 					writePrintEvent(sessionID, "tool_result", content, ev.ToolName)

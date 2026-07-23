@@ -38,14 +38,16 @@ func (m chatModel) renderStickyHeader(viewWidth int) string {
 	}
 
 	// Truncate and format the prompt for single-line display.
+	// Use rune-based slicing to avoid splitting multi-byte UTF-8 characters.
 	display := strings.ReplaceAll(prompt, "\n", " ")
+	runes := []rune(display)
 	if viewWidth < 13 {
 		// Narrow terminal: just trim to viewWidth, no room for padding/ellipsis.
-		if len(display) > viewWidth {
-			display = display[:viewWidth]
+		if len(runes) > viewWidth {
+			display = string(runes[:viewWidth])
 		}
-	} else if len(display) > viewWidth-10 {
-		display = display[:viewWidth-13] + "..."
+	} else if len(runes) > viewWidth-10 {
+		display = string(runes[:viewWidth-13]) + "..."
 	}
 
 	// Build a compact header line with a subtle visual separator.

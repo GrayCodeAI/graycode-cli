@@ -977,6 +977,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.turnSawThinking = false
+		// Save flags before reset so the notification check below sees
+		// the values from the turn that just completed.
+		hadOutput := m.turnHadAssistantOutput
+		wasCancelled := m.streamCancelled
 		m.turnHadAssistantOutput = false
 		m.turnHadToolActivity = false
 		m.permReq = nil
@@ -998,7 +1002,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Send terminal notification if terminal was not focused during the
 		// turn and the agent produced output (not just tool activity).
-		if m.backgrounded && !m.streamCancelled && m.turnHadAssistantOutput {
+		if m.backgrounded && !wasCancelled && hadOutput {
 			sendTerminalNotification("hawk", "Agent turn complete")
 		}
 		m.backgrounded = false
