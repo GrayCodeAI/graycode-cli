@@ -3,6 +3,7 @@ package cmd
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestNewVisualDiff(t *testing.T) {
@@ -385,6 +386,32 @@ func TestTruncateVisible(t *testing.T) {
 	stripped := stripAnsi(result)
 	if stripped != "hello" {
 		t.Errorf("truncateVisible visible content = %q, want %q", stripped, "hello")
+	}
+}
+
+// TestTruncateVisible_Multibyte verifies that truncating at a display-width
+// boundary never splits a multi-byte rune (which would emit invalid UTF-8) and
+// never exceeds the target visible width. CJK runes occupy 2 display cells.
+func TestTruncateVisible_Multibyte(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		width int
+	}{
+		{"cjk", "你好世界", 5}, // 4 CJK = 8 cells; width 5 fits 2 full runes (4 cells)
+		{"mixed", "a你b好c", 4},
+		{"colored cjk", "\033[31m你好世界\033[0m", 5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := truncateVisible(tt.input, tt.width)
+			if !utf8.ValidString(result) {
+				t.Errorf("truncateVisible(%q, %d) produced invalid UTF-8: %q", tt.input, tt.width, result)
+			}
+			if w := visibleLength(result); w > tt.width {
+				t.Errorf("truncateVisible(%q, %d) visible width = %d, exceeds %d", tt.input, tt.width, w, tt.width)
+			}
+		})
 	}
 }
 
