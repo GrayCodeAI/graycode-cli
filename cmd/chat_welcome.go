@@ -196,9 +196,12 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		}
 	}
 	if !needsSetup {
-		tip := "TIP: Use /new to start a fresh session with clean context"
-		if tight {
-			tip = "TIP: /new starts a clean session"
+		tip := nextTip()
+		if tip == "" {
+			tip = "TIP: Use /new to start a fresh session with clean context"
+		}
+		if !tight {
+			tip = "TIP: " + tip
 		}
 		b.WriteByte('\n')
 		b.WriteString(center(runewidth.StringWidth(tip), boldC+tip+rst) + "\n")

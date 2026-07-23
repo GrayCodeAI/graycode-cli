@@ -25,6 +25,7 @@ var (
 	printMode                  bool
 	versionFlag                bool
 	outputFormat               string
+	outputFields               string
 	inputFormat                string
 	noSessionPersistence       bool
 	resumeID                   string
@@ -186,6 +187,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&printMode, "print", "p", false, "print response and exit")
 	rootCmd.Flags().StringVar(&promptFlag, "prompt", "", "send a single prompt and exit (legacy alias for --print)")
 	rootCmd.Flags().StringVar(&outputFormat, "output-format", "text", `output format for --print: "text", "json", or "stream-json"`)
+	rootCmd.Flags().StringVar(&outputFields, "output-fields", "", `comma-separated field whitelist for --output-format json (e.g. "result,session_id")`)
 	rootCmd.Flags().StringVar(&inputFormat, "input-format", "text", `input format for --print: "text" or "stream-json"`)
 	rootCmd.Flags().BoolVar(&noSessionPersistence, "no-session-persistence", false, "disable session persistence in print mode")
 	rootCmd.Flags().StringVar(&provider, "provider", "", "LLM provider (anthropic, openai, gemini, etc.)")

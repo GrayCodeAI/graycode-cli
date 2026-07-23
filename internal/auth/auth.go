@@ -75,7 +75,10 @@ func (s *SecureStorage) Get(account string) (string, error) {
 	if runtime.GOOS == "darwin" {
 		return s.getMacOS(account)
 	}
-	// Fallback to file-based storage
+	if runtime.GOOS == "windows" {
+		return s.getWindows(account)
+	}
+	// Fallback to file-based storage for Linux (keyring handled by eyrie layer)
 	return s.getFile(account)
 }
 
@@ -83,6 +86,9 @@ func (s *SecureStorage) Get(account string) (string, error) {
 func (s *SecureStorage) Set(account, token string) error {
 	if runtime.GOOS == "darwin" {
 		return s.setMacOS(account, token)
+	}
+	if runtime.GOOS == "windows" {
+		return s.setWindows(account, token)
 	}
 	return s.setFile(account, token)
 }
@@ -115,8 +121,107 @@ func (s *SecureStorage) setMacOS(account, token string) error {
 // securityQuote quotes an argument for the `security -i` interactive command
 // parser: wraps it in double quotes and escapes backslashes and double quotes.
 func securityQuote(v string) string {
-	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`)
-	return `"` + r.Replace(v) + `"`
+	r := strings.NewReplacer("\\", "\\\\", "\"", "\\\"")
+	return "\"" + r.Replace(v) + "\""
+}
+
+// powershellQuote escapes a string for single-quoted PowerShell string literal
+// context by doubling any embedded single quotes.
+func powershellQuote(v string) string {
+	return strings.ReplaceAll(v, "'", "''")
+}
+
+// winCredScriptPrefix defines C# P/Invoke signatures for the Windows
+// Credential Manager API (advapi32.dll) and exposes [WinCred]::Get and
+// [WinCred]::Set static methods. Works on all Windows 7+ installations
+// without requiring extra PowerShell modules.
+var winCredScriptPrefix = []string{
+	"$code = @\"",
+	"using System;",
+	"using System.Runtime.InteropServices;",
+	"using System.Text;",
+	"public static class WinCred {",
+	"    [DllImport(\"advapi32.dll\", SetLastError = true, CharSet = CharSet.Unicode)]",
+	"    static extern bool CredRead(string target, int type, int reservedFlag, out IntPtr credentialPtr);",
+	"    [DllImport(\"advapi32.dll\", SetLastError = true, CharSet = CharSet.Unicode)]",
+	"    static extern bool CredWrite(ref CREDENTIAL credential, uint flags);",
+	"    [DllImport(\"advapi32.dll\", SetLastError = true)]",
+	"    static extern void CredFree(IntPtr buffer);",
+	"    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]",
+	"    struct CREDENTIAL {",
+	"        public int flags;",
+	"        public int type;",
+	"        public IntPtr targetName;",
+	"        public IntPtr comment;",
+	"        public long lastWritten;",
+	"        public int credentialBlobSize;",
+	"        public IntPtr credentialBlob;",
+	"        public int persist;",
+	"        public int attributeCount;",
+	"        public IntPtr attributes;",
+	"        public IntPtr targetAlias;",
+	"        public IntPtr userName;",
+	"    }",
+	"    const int CRED_TYPE_GENERIC = 1;",
+	"    const int CRED_PERSIST_LOCAL_MACHINE = 2;",
+	"    public static string Get(string target) {",
+	"        IntPtr ptr;",
+	"        if (!CredRead(target, CRED_TYPE_GENERIC, 0, out ptr)) return null;",
+	"        var c = (CREDENTIAL)Marshal.PtrToStructure(ptr, typeof(CREDENTIAL));",
+	"        string pass = c.credentialBlob != IntPtr.Zero",
+	"            ? Marshal.PtrToStringUni(c.credentialBlob, c.credentialBlobSize / 2)",
+	"            : null;",
+	"        CredFree(ptr);",
+	"        return pass;",
+	"    }",
+	"    public static void Set(string target, string user, string password) {",
+	"        var c = new CREDENTIAL();",
+	"        c.type = CRED_TYPE_GENERIC;",
+	"        c.targetName = Marshal.StringToCoTaskMemUni(target);",
+	"        c.userName = Marshal.StringToCoTaskMemUni(user);",
+	"        byte[] bytes = Encoding.Unicode.GetBytes(password);",
+	"        c.credentialBlob = Marshal.AllocCoTaskMem(bytes.Length);",
+	"        Marshal.Copy(bytes, 0, c.credentialBlob, bytes.Length);",
+	"        c.credentialBlobSize = bytes.Length;",
+	"        c.persist = CRED_PERSIST_LOCAL_MACHINE;",
+"        CredWrite(ref c, 0);",
+	"        Marshal.ZeroFreeCoTaskMemUnicode(c.targetName);",
+	"        Marshal.ZeroFreeCoTaskMemUnicode(c.userName);",
+	"        byte[] zeros = new byte[bytes.Length];",
+	"        Marshal.Copy(zeros, 0, c.credentialBlob, bytes.Length);",
+	"        for (int i = 0; i < bytes.Length; i++) bytes[i] = 0;",
+	"        Marshal.FreeCoTaskMem(c.credentialBlob);",
+	"    }",
+	"}",
+	"\"@",
+	"Add-Type -TypeDefinition $code -Language CSharp",
+}
+
+func buildWinCredScript(tail string) string {
+	return strings.Join(winCredScriptPrefix, "\n") + "\n" + tail
+}
+
+func (s *SecureStorage) getWindows(account string) (string, error) {
+	target := s.service + "::" + account
+	script := buildWinCredScript(fmt.Sprintf("[WinCred]::Get('%s')", powershellQuote(target)))
+	data, err := execCommand("powershell.exe", "-NoProfile", "-Command", script)
+	if err != nil {
+		return "", err
+	}
+	return data, nil
+}
+
+func (s *SecureStorage) setWindows(account, token string) error {
+	target := s.service + "::" + account
+	script := buildWinCredScript(fmt.Sprintf(
+		"[WinCred]::Set('%s', '%s', '%s')",
+		powershellQuote(target), powershellQuote(account), powershellQuote(token)))
+	cmd := exec.CommandContext(context.Background(), "powershell.exe", "-NoProfile", "-Command")
+	cmd.Stdin = strings.NewReader(script)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("windows credential store: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 func (s *SecureStorage) getFile(account string) (string, error) {

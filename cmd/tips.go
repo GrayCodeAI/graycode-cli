@@ -85,8 +85,9 @@ func recordTipShown(id string) {
 	saveTipHistory(h)
 }
 
-// nextTip returns a tip that hasn't been shown recently (within the last 24h).
-// If all tips have been shown recently, one is picked at random.
+// nextTip returns a tip that hasn't been shown recently (within the last 24h),
+// records it as shown, and returns the display text. If all tips have been
+// shown recently, one is picked at random.
 func nextTip() string {
 	tips := allTips()
 	if len(tips) == 0 {
@@ -108,5 +109,6 @@ func nextTip() string {
 	}
 
 	chosen := candidates[rand.Intn(len(candidates))] // #nosec G404 -- non-cryptographic use (random tip selection)
+	recordTipShown(chosen.ID)
 	return chosen.Text
 }

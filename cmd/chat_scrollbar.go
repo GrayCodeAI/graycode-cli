@@ -135,9 +135,23 @@ func padToHeight(s string, height int) string {
 
 // renderChatPane renders the chat viewport plus the scrollbar slider as a
 // side-by-side layout, returning the full-width chat area string.
+// When the user has scrolled up past a user message, a sticky header is
+// prepended showing the most recent out-of-view prompt.
 func (m chatModel) renderChatPane() string {
 	chatView := m.viewport.View()
 	vpH := m.viewport.Height()
+
+	// Prepend sticky header when scrolled up.
+	sticky := m.renderStickyHeader(m.viewport.Width())
+	if sticky != "" {
+		chatView = sticky + "\n" + chatView
+		// Reduce viewport height by the header line so the overall pane
+		// height stays consistent with the layout.
+		if vpH > stickyHeaderHeight {
+			vpH -= 1 // header occupies one visual row
+		}
+	}
+
 	if !m.chatScrollbarVisible() {
 		return padToHeight(chatView, vpH)
 	}

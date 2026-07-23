@@ -118,6 +118,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
 			m.input.Blur()
 		}
+		// Track that the terminal lost focus during a turn so we can notify
+		// the user when the agent completes.
+		if m.waiting {
+			m.backgrounded = true
+		}
 		m.viewDirty = true
 		m.updateViewportContent()
 		return m, nil
@@ -254,7 +259,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Ctrl+\ enters native terminal selection mode. Available in every UI
+		// Ctrl+K enters native terminal selection mode. Available in every UI
 		// state (welcome gate, permissions, prompt, scrollback) so users always
 		// have a way to copy text out of the chat — the alt-screen +
 		// mouse-tracking combination otherwise breaks native text selection.
@@ -557,7 +562,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewDirty = true
 					m.updateViewportContent()
 					return m, nil
-				case "ctrl+k":
+				case "ctrl+k", "ctrl+p":
 					if m.commandPalette == nil {
 						m.commandPalette = NewCommandPalette(m.width)
 					}
@@ -601,6 +606,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "ctrl+c":
 					if time.Since(m.lastCtrlC) < 1*time.Second {
 						m.saveSession()
+						saveInputHistory(m.history)
 						if m.watcherStop != nil {
 							m.watcherStop()
 						}
@@ -976,6 +982,21 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		m.input.Focus()
 		m.saveSession()
+
+		// Re-enable system sleep now that the turn is complete.
+		if m.sleepCancel != nil {
+			m.sleepCancel()
+			m.sleepCancel = nil
+		}
+		// Clear the terminal tab progress bar now that the turn is done.
+		ClearTabProgress()
+
+		// Send terminal notification if terminal was not focused during the turn.
+		if m.backgrounded && !m.streamCancelled && m.partial.Len() == 0 {
+			sendTerminalNotification("hawk", "Agent turn complete")
+		}
+		m.backgrounded = false
+		m.notifiedComplete = false
 
 		// Process queued messages
 		if len(m.messageQueue) > 0 {

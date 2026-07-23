@@ -80,6 +80,7 @@ var allSlashCommands = []string{
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme", "/think", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
+	"/scroll-speed", "/scroll-invert", "/scroll-mode", "/terminal-setup", "/pager-config", "/prompt-queue",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
@@ -222,7 +223,7 @@ var slashDescriptions = map[string]string{
 	"/rewind":          "Undo last exchange",
 	"/run":             "Run command, add output to context",
 	"/search":          "Search across sessions",
-	"/select":          "Pause TUI for native text selection (Ctrl+\\)",
+	"/select":          "Pause TUI for native text selection",
 	"/mouse":           "Toggle TUI mouse capture for native click-drag copy",
 	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
 	"/stale":           "Show stale rules that may need updating or removal",
@@ -273,6 +274,12 @@ var slashDescriptions = map[string]string{
 	"/insights":        "Generate session patterns and improvements report",
 	"/spec":            "Start the spec-driven workflow (gates Write/Edit/Bash until approved)",
 	"/ultrareview":     "Deep adversarial code review",
+	"/scroll-speed":    "Set scroll speed (1-100)",
+	"/scroll-invert":   "Toggle scroll direction inversion",
+	"/scroll-mode":     "Switch scroll behavior mode",
+	"/terminal-setup":  "Configure terminal capabilities",
+	"/pager-config":    "Configure pager for long output",
+	"/prompt-queue":    "Manage queued prompts",
 }
 
 func slashSuggestions(input string) []string {

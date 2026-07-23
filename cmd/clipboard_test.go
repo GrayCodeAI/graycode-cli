@@ -6,7 +6,7 @@ import (
 )
 
 func TestCopyToClipboard_SignatureExists(t *testing.T) {
-	var _ func(string) error = copyToClipboard
+	var _ func(string) copyResult = copyToClipboard
 }
 
 func TestPasteFromClipboard_SignatureExists(t *testing.T) {
@@ -31,9 +31,7 @@ func TestClipboardRoundTrip(t *testing.T) {
 	}
 
 	text := "hawk clipboard test"
-	if err := copyToClipboard(text); err != nil {
-		t.Skipf("clipboard not available: %v", err)
-	}
+	_ = copyToClipboard(text) // best-effort; fallback file may be used
 
 	got, err := pasteFromClipboard()
 	if err != nil {

@@ -600,6 +600,8 @@ func runChat() error {
 	p := tea.NewProgram(m, chatProgramOptions(m.mouseEnabled())...)
 	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
 	log.SetOutput(io.Discard)
+	// Enable terminal tab progress bar (OSC 9;4) for long-running operations.
+	EnableTabProgress()
 	ref.Set(p)
 
 	go func() {

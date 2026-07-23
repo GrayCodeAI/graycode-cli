@@ -44,6 +44,21 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 	switch cmd {
 	case "/quit", "/exit":
 		m.saveSession()
+		// Cancel any running /loop goroutine.
+		if m.loopCancel != nil {
+			m.loopCancel()
+			m.loopCancel = nil
+		}
+		// Re-enable system sleep if it was prevented.
+		if m.sleepCancel != nil {
+			m.sleepCancel()
+			m.sleepCancel = nil
+		}
+		// Stop file watcher if active.
+		if m.watcherStop != nil {
+			m.watcherStop()
+		}
+		ClearTabProgress()
 		m.quitting = true
 		return m, tea.Quit
 
@@ -231,9 +246,14 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /rename <new-session-name>"})
 			return m, nil
 		}
-		newName := parts[1]
+		// Sanitize: strip directory components to prevent path traversal.
+		newName := filepath.Base(parts[1])
+		if newName == "" || newName == "." || newName == "/" {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Invalid session name."})
+			return m, nil
+		}
 		sessDir := storage.SessionsDir()
-		oldPath := filepath.Join(sessDir, m.sessionID+".jsonl")
+		oldPath := filepath.Join(sessDir, filepath.Base(m.sessionID)+".jsonl")
 		newPath := filepath.Join(sessDir, newName+".jsonl")
 		if err := os.Rename(oldPath, newPath); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
@@ -248,7 +268,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /tag <label>"})
 			return m, nil
 		}
-		tagFile := filepath.Join(storage.SessionsDir(), m.sessionID+".tags")
+		tagFile := filepath.Join(storage.SessionsDir(), filepath.Base(m.sessionID)+".tags")
 		f, err := os.OpenFile(tagFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- tagFile built from internal sessions directory and session id
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
@@ -320,6 +340,34 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		}
 		return m, nil
 
+	case "/drop":
+		// Drop the last N exchanges (user+assistant pairs) from context.
+		n := 1
+		if len(parts) >= 2 {
+			parsed, err := strconv.Atoi(parts[1])
+			if err != nil || parsed <= 0 {
+				m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /drop [N] (N must be a positive integer)"})
+				return m, nil
+			}
+			n = parsed
+		}
+		if m.session.MessageCount() <= 2 {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Nothing to drop."})
+			return m, nil
+		}
+		dropped := 0
+		for i := 0; i < n && m.session.MessageCount() > 2; i++ {
+			m.session.RemoveLastExchange()
+			if len(m.messages) >= 2 {
+				m.messages = m.messages[:len(m.messages)-2]
+			}
+			dropped++
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Dropped %d exchange(s).", dropped)})
+		m.invalidateViewportCache()
+		m.viewDirty = true
+		return m, nil
+
 	case "/retry":
 		if len(m.history) > 0 {
 			last := m.history[len(m.history)-1]
@@ -343,6 +391,16 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 
 	case "/new":
 		m.saveSession()
+		// Cancel any running /loop goroutine.
+		if m.loopCancel != nil {
+			m.loopCancel()
+			m.loopCancel = nil
+		}
+		// Re-enable system sleep if it was prevented.
+		if m.sleepCancel != nil {
+			m.sleepCancel()
+			m.sleepCancel = nil
+		}
 		m.invalidateViewportCache()
 		m.messages = []displayMsg{{role: "welcome", content: m.welcomeCache}}
 		m.session.LoadMessages(nil)

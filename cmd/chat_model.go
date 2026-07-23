@@ -237,6 +237,9 @@ type chatModel struct {
 	historyDraft                 string // unsent text before navigating history
 	autoScroll                   bool   // whether viewport is pinned to bottom
 	streamFollow                 bool   // follow streaming output (Grok-style; toggle with /follow)
+	sleepCancel                  func() // cancel function to re-enable sleep (nil if not prevented)
+	backgrounded                 bool   // terminal lost focus during current turn (for completion notification)
+	notifiedComplete             bool   // completion notification was sent this turn (prevent duplicates)
 	uiFocus                      uiFocusArea
 	contentLines                 int   // total lines in scrollback content (for footer position)
 	lastMouseY                   int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
