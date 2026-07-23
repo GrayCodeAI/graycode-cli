@@ -256,6 +256,8 @@ var attachCmd = &cobra.Command{
 	},
 }
 
+var sessionsJSONFlag bool
+
 var sessionsLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "List background sessions",
@@ -263,6 +265,14 @@ var sessionsLsCmd = &cobra.Command{
 		sessions, err := ListBGSessions()
 		if err != nil {
 			return err
+		}
+		if sessionsJSONFlag {
+			out, err := json.MarshalIndent(sessions, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling sessions: %w", err)
+			}
+			cmd.Println(string(out))
+			return nil
 		}
 		cmd.Println(FormatBGSessions(sessions))
 		return nil
@@ -286,6 +296,7 @@ var sessionsKillCmd = &cobra.Command{
 
 func init() {
 	sessionsCmd.AddCommand(sessionsLsCmd, sessionsKillCmd)
+	sessionsLsCmd.Flags().BoolVar(&sessionsJSONFlag, "json", false, "output sessions as JSON")
 	rootCmd.AddCommand(bgCmd)
 	rootCmd.AddCommand(attachCmd)
 }
