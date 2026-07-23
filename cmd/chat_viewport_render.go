@@ -333,17 +333,6 @@ func (m *chatModel) fullExpandedMap(n int) map[int]bool {
 	return expanded
 }
 
-// fullExpandedMap returns a map where every index is expanded — used to compute
-// true (uncollapsed) line heights for viewport position math.
-// Standalone version for use outside chatModel methods.
-func fullExpandedMap(n int) map[int]bool {
-	m := make(map[int]bool, n)
-	for i := 0; i < n; i++ {
-		m[i] = true
-	}
-	return m
-}
-
 // codeBlockAtViewportCenter finds the fenced code block in an assistant message
 // whose rendered content contains the viewport's center line. Returns the raw
 // code content (without fences) and true if found.
