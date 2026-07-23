@@ -18,17 +18,17 @@ const catalogHealthCacheTTL = 15 * time.Second
 
 // CatalogHealth summarizes the on-disk eyrie model catalog for doctor / status output.
 type CatalogHealth struct {
-	CachePath   string
-	Exists      bool
-	Modified    time.Time
-	SizeBytes   int64
-	Models      int
-	Deployments int
-	Offerings   int
-	Stale       bool
-	StaleAfter  time.Time
-	Source      string
-	Error       string
+	CachePath   string    `json:"cache_path"`
+	Exists      bool      `json:"exists"`
+	Modified    time.Time `json:"modified,omitempty"`
+	SizeBytes   int64     `json:"size_bytes,omitempty"`
+	Models      int       `json:"models,omitempty"`
+	Deployments int       `json:"deployments,omitempty"`
+	Offerings   int       `json:"offerings,omitempty"`
+	Stale       bool      `json:"stale,omitempty"`
+	StaleAfter  time.Time `json:"stale_after,omitempty"`
+	Source      string    `json:"source,omitempty"`
+	Error       string    `json:"error,omitempty"`
 }
 
 // CatalogHealthReport inspects ~/.eyrie/model_catalog.json (or EYRIE_MODEL_CATALOG_PATH).
