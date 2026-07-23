@@ -1078,6 +1078,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.turnSawThinking = true
 		return m, nil
 
+	case voiceResultMsg:
+		// The /voice subcommand records and transcribes on a background
+		// goroutine and reports back here, so all model mutation stays on the
+		// Bubble Tea goroutine (no data race on m.messages / m.input).
+		switch {
+		case msg.err != "":
+			m.messages = append(m.messages, displayMsg{role: "error", content: msg.err})
+		case msg.info != "":
+			m.messages = append(m.messages, displayMsg{role: "system", content: msg.info})
+		case msg.transcript != "":
+			m.input.SetValue(msg.transcript)
+			m.input.CursorEnd()
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Voice input: %s", msg.transcript)})
+		}
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, nil
+
 	case streamRetryMsg:
 		m.partial.Reset()
 		m.turnEstimatedOutputRunes = 0
