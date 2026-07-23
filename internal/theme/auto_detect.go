@@ -5,6 +5,7 @@
 package theme
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"runtime"
@@ -85,14 +86,23 @@ func readPortalSetting() string {
 	return ""
 }
 
-// WatchOSTheme monitors for appearance changes (optional).
-func WatchOSTheme(cb func(theme string)) {
+// WatchOSTheme monitors for OS appearance changes and invokes cb with the
+// detected theme ("dark"/"light") on each poll tick. It runs until ctx is
+// cancelled; the ticker is stopped and the goroutine exits on cancellation,
+// so callers can start and stop the watcher without leaking the ticker.
+func WatchOSTheme(ctx context.Context, cb func(theme string)) {
 	ticker := time.NewTicker(5 * time.Second)
 	go func() {
-		for range ticker.C {
-			current := DetectOSTheme()
-			if current != "" && cb != nil {
-				cb(current)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				current := DetectOSTheme()
+				if current != "" && cb != nil {
+					cb(current)
+				}
 			}
 		}
 	}()
