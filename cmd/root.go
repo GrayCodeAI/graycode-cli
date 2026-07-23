@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -87,7 +88,22 @@ func SetBuildDate(d string) {
 var rootCmd = &cobra.Command{
 	Use:   "hawk [prompt]",
 	Short: "AI coding agent powered by eyrie",
-	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
+	Long: `hawk is an AI coding agent that reads, writes, and runs code in your terminal.
+
+It connects to 75+ LLM providers through eyrie, executes tools (file I/O, shell,
+git, web search), and manages sessions — all from a keyboard-driven TUI or
+headless mode for scripts and CI.
+
+Quick orientation:
+  hawk                     Start interactive TUI
+  hawk -p "prompt"         One-shot: send prompt, print response, exit
+  hawk exec "task"         Autonomous multi-turn execution
+  hawk path                Check environment readiness
+  hawk doctor              Run diagnostics
+  hawk config              Manage settings and credentials
+
+API keys are stored in the OS keychain (macOS Keychain / Linux keyring).
+Run hawk and use /config to set up your first provider.`,
 	Example: `  hawk
   hawk -p "explain this repo"
   hawk exec "fix failing tests"
@@ -262,6 +278,7 @@ func init() {
 	rootCmd.AddCommand(recoverCmd)
 	rootCmd.AddCommand(manpageCmd)
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(bugReportCmd)
 	completionCmd.AddCommand(completionInstallCmd)
 }
 
@@ -416,6 +433,30 @@ var updateCmd = &cobra.Command{
 			ver = "dev"
 		}
 		cmd.Println(update.Summary(ver))
+		return nil
+	},
+}
+
+var bugReportCmd = &cobra.Command{
+	Use:   "bug-report",
+	Short: "Print a redacted diagnostic report for bug reports",
+	Long: `Print a redacted environment report suitable for pasting into a GitHub issue.
+
+Includes: version, platform, Go version, provider status, and doctor output.
+API keys and secrets are never included.`,
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var b strings.Builder
+		b.WriteString("## hawk bug report\n\n")
+		b.WriteString(fmt.Sprintf("- **Version:** %s\n", versionLine()))
+		b.WriteString(fmt.Sprintf("- **Platform:** %s\n", update.Platform()))
+		b.WriteString(fmt.Sprintf("- **Go:** %s\n", runtime.Version()))
+		b.WriteString(fmt.Sprintf("- **OS/Arch:** %s/%s\n", runtime.GOOS, runtime.GOARCH))
+		b.WriteString("\n## Doctor output\n\n```\n")
+		settings := hawkconfig.LoadSettings()
+		b.WriteString(doctorReport(settings))
+		b.WriteString("\n```\n")
+		cmd.Print(b.String())
 		return nil
 	},
 }
