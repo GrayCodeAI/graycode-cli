@@ -835,8 +835,7 @@ func init() {
 				_ = m.pluginRuntime.LoadAll()
 			}
 			// Invalidate slash suggestion cache: plugins may register new slash commands
-			m.slashSugInput = ""
-			m.slashSugCache = nil
+			m.invalidateSlashSugCache()
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
 			return m, nil
 		},

@@ -34,6 +34,10 @@ func panicRecovery(saveFn func()) {
 	if r := recover(); r != nil {
 		stack := string(debug.Stack())
 
+		// Generate a short, unique error ID for support reference.
+		// Format: hawk-YYMMDD-<6 hex chars from stack hash>
+		errorID := generateErrorID(stack)
+
 		// Attempt to save session
 		if saveFn != nil {
 			func() {
@@ -49,8 +53,9 @@ func panicRecovery(saveFn func()) {
 			crashLog := filepath.Join(crashDir, "crash.log")
 
 			entry := fmt.Sprintf(
-				"─── CRASH %s ───\npanic: %v\n\n%s\n\n",
+				"─── CRASH %s [%s] ───\npanic: %v\n\n%s\n\n",
 				time.Now().Format(time.RFC3339),
+				errorID,
 				r,
 				stack,
 			)
@@ -66,10 +71,23 @@ func panicRecovery(saveFn func()) {
 		_, _ = fmt.Fprintf(os.Stderr, "\nhawk encountered an unexpected error and needs to exit.\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Details logged to %s\n", filepath.Join(storage.StateDir(), "crash.log"))
-		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Include this error ID: %s\n\n", errorID)
 		_, _ = fmt.Fprintf(os.Stderr, "panic: %v\n", r)
 		os.Exit(1) // os.Exit intentional: panic recovery, defer already unwound
 	}
+}
+
+// generateErrorID creates a short, unique error ID from the stack trace.
+// Format: hawk-YYMMDD-<6 hex chars> — enough to correlate with crash.log
+// entries without requiring a random source.
+func generateErrorID(stack string) string {
+	// Simple hash of the stack trace for uniqueness.
+	var hash uint32 = 5381
+	for i := 0; i < len(stack) && i < 2000; i++ {
+		hash = ((hash << 5) + hash) ^ uint32(stack[i])
+	}
+	return fmt.Sprintf("hawk-%s-%06x", time.Now().Format("060102"), hash&0xFFFFFF)
 }
 
 // ─── signalHandler ────────────────────────────────────────────────────────────

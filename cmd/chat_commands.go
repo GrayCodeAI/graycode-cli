@@ -84,12 +84,20 @@ var allSlashCommands = []string{
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
-	if input == m.slashSugInput {
+	if input == m.slashSugInput && m.slashSugGen == m.slashSugCachedGen {
 		return m.slashSugCache
 	}
 	m.slashSugInput = input
+	m.slashSugCachedGen = m.slashSugGen
 	m.slashSugCache = slashSuggestions(input)
 	return m.slashSugCache
+}
+
+// invalidateSlashSugCache bumps the generation counter so the next
+// slashSuggestionsFor call recomputes suggestions. Call this when the
+// command set may have changed (e.g. new messages, plugin reload).
+func (m *chatModel) invalidateSlashSugCache() {
+	m.slashSugGen++
 }
 
 // slashMenuOpen is true while the / command picker is visible (Cursor hides the footer then).
@@ -342,6 +350,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(text)
 	cmd := parts[0]
 
+	// Track the last command for context-aware tips and recent-command history.
+	if strings.HasPrefix(cmd, "/") {
+		m.lastCommand = cmd
+		recordCommandUsed(cmd)
+	}
+
 	// Namespaced skill invocation: /vendor:skill-name [args...]
 	if strings.Contains(cmd, ":") && strings.HasPrefix(cmd, "/") {
 		return m.handleNamespacedSkill(cmd, text)
@@ -372,8 +386,92 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+	// "Did you mean?" — fuzzy-match against known slash commands so a typo
+	// like /commmit suggests /commit instead of just saying "unknown".
+	suggestion := suggestCommand(cmd)
+	if suggestion != "" {
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s — did you mean %s?\nType /help for all commands.", cmd, suggestion)})
+	} else {
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+	}
 	return m, nil
+}
+
+// suggestCommand finds the closest known slash command to a mistyped one
+// using edit distance (Levenshtein). Returns the best match if it is within
+// a plausible typo threshold, or "" if nothing is close enough to recommend.
+func suggestCommand(typo string) string {
+	if len(typo) < 2 {
+		return ""
+	}
+	clean := strings.ToLower(strings.TrimPrefix(typo, "/"))
+	if clean == "" {
+		return ""
+	}
+	best := ""
+	bestDist := 999
+	for _, cmd := range slashCommands() {
+		target := strings.ToLower(strings.TrimPrefix(cmd, "/"))
+		d := levenshtein(clean, target)
+		if d < bestDist {
+			bestDist = d
+			best = cmd
+		}
+	}
+	if best == "" {
+		return ""
+	}
+	// Threshold: distance must be small relative to the command length.
+	// Allows 1 edit for short commands (<=5 chars), 2 for longer ones.
+	target := strings.ToLower(strings.TrimPrefix(best, "/"))
+	maxDist := 1
+	if len(target) > 5 {
+		maxDist = 2
+	}
+	// Never suggest when the input is longer than the target by more than
+	// maxDist — that's not a typo, it's a different word.
+	if len(clean) > len(target)+maxDist {
+		return ""
+	}
+	if bestDist <= maxDist && bestDist > 0 {
+		return best
+	}
+	return ""
+}
+
+// levenshtein computes the edit distance between two strings using the
+// classic Wagner–Fischer algorithm with O(min(m,n)) space.
+func levenshtein(a, b string) int {
+	if a == b {
+		return 0
+	}
+	if len(a) == 0 {
+		return len(b)
+	}
+	if len(b) == 0 {
+		return len(a)
+	}
+	// Ensure b is the shorter string for O(min(m,n)) space.
+	if len(b) > len(a) {
+		a, b = b, a
+	}
+	prev := make([]int, len(b)+1)
+	curr := make([]int, len(b)+1)
+	for j := 0; j <= len(b); j++ {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		curr[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			curr[j] = min(prev[j]+1, min(curr[j-1]+1, prev[j-1]+cost))
+		}
+		prev, curr = curr, prev
+	}
+	return prev[len(b)]
 }
 
 // handleParallelCommand spawns multiple agents in parallel on independent tasks.

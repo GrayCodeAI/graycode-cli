@@ -128,7 +128,7 @@ func (m chatModel) renderScrollbackFocusBar(width int) string {
 	if !m.inScrollbackFocus() {
 		return ""
 	}
-	hint := "wheel/Up/Dn scroll chat · Tab → prompt (Up/Dn history)"
+	hint := "wheel/Up/Dn scroll · Enter: expand tool result · Tab → prompt"
 	if width < len(hint)+4 {
 		width = len(hint) + 4
 	}

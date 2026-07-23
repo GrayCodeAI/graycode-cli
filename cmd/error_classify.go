@@ -10,27 +10,37 @@ import (
 
 // friendlyErrorMessage returns the user-friendly message for an error.
 // Delegates to the shared hawkerr.ClassifyErrorMessage for the base message,
-// then enriches specific cases (like model-not-found) with dynamic hints
-// that require the config package.
+// then enriches specific cases with dynamic hints that require the config
+// package (hawkerr can't import internal/config without a cycle).
 func friendlyErrorMessage(err error) string {
 	msg := hawkerr.ClassifyErrorMessage(err)
 
-	// Enrich model-not-found errors with concrete examples from the catalog.
-	// The base message from hawkerr lacks these because hawkerr can't import
-	// internal/config (would create an import cycle).
-	if err != nil {
-		ec := hawkerr.ClassifyError(err)
-		if ec.ExitCode == hawkerr.ExitNotFound {
-			low := strings.ToLower(err.Error())
-			if strings.Contains(low, "model") || strings.Contains(low, "unknown") ||
-				strings.Contains(low, "does not exist") {
-				ex1, ex2 := hawkconfig.ExampleModelHints()
-				msg = fmt.Sprintf(
-					"Model not found. Check your model name with /model.\n  Examples from the eyrie catalog: %s, %s\n  Use /models to list all models, or /config to change provider.",
-					ex1, ex2,
-				)
-			}
+	if err == nil {
+		return msg
+	}
+
+	ec := hawkerr.ClassifyError(err)
+	low := strings.ToLower(err.Error())
+
+	switch ec.ExitCode {
+	case hawkerr.ExitNotFound:
+		// Enrich model-not-found errors with concrete examples from the catalog.
+		if strings.Contains(low, "model") || strings.Contains(low, "unknown") ||
+			strings.Contains(low, "does not exist") {
+			ex1, ex2 := hawkconfig.ExampleModelHints()
+			msg = fmt.Sprintf(
+				"Model not found. Check your model name with /model.\n  Examples from the eyrie catalog: %s, %s\n  Use /models to list all models, or /config to change provider.",
+				ex1, ex2,
+			)
 		}
+	case hawkerr.ExitRateLimit:
+		msg += "\n  Wait a moment and try again. If this persists, use /model to switch providers or check your quota."
+	case hawkerr.ExitAuth:
+		msg += "\n  Check your API key with /config. Keys can expire or be revoked."
+	case hawkerr.ExitNetwork:
+		msg += "\n  Check your internet connection. If you're behind a proxy, configure it with /config."
+	case hawkerr.ExitTimeout:
+		msg += "\n  The request took too long. Try again, or use /model to switch to a faster provider."
 	}
 
 	return msg

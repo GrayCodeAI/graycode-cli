@@ -224,7 +224,28 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		return m, nil
 
 	case "/export":
-		exportPath, err := writeRedactedChatMarkdownExport(m)
+		format := "md"
+		if len(parts) >= 2 {
+			switch strings.ToLower(parts[1]) {
+			case "md", "markdown":
+				format = "md"
+			case "json":
+				format = "json"
+			case "txt", "text":
+				format = "txt"
+			default:
+				m.messages = append(m.messages, displayMsg{
+					role: "system",
+					content: "Usage: /export [format]\n" +
+						"  /export        — export as Markdown (default)\n" +
+						"  /export md     — export as Markdown\n" +
+						"  /export json   — export as structured JSON\n" +
+						"  /export txt    — export as plain text",
+				})
+				return m, nil
+			}
+		}
+		exportPath, err := exportSession(m, format)
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		} else {

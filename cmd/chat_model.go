@@ -137,8 +137,9 @@ type (
 )
 
 type displayMsg struct {
-	role    string
-	content string
+	role      string
+	content   string
+	timeoutAt time.Time // deadline for permission prompts (zero = none)
 }
 
 type progRef struct {
@@ -183,6 +184,7 @@ type chatModel struct {
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	permReqSeq                 int
+	permTimeoutAt              time.Time // deadline for the active permission prompt (zero = none)
 	askReq                     *askUserMsg // pending ask_user prompt
 	askReqSeq                  int
 	width                      int
@@ -235,6 +237,7 @@ type chatModel struct {
 	history                      []string
 	historyIdx                   int
 	historyDraft                 string // unsent text before navigating history
+	lastCommand                  string // most recent slash command (for context-aware tips)
 	autoScroll                   bool   // whether viewport is pinned to bottom
 	streamFollow                 bool   // follow streaming output (Grok-style; toggle with /follow)
 	sleepCancel                  func() // cancel function to re-enable sleep (nil if not prevented)
@@ -258,6 +261,10 @@ type chatModel struct {
 	cachedBottomBarLines         int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
 	slashSugInput                string // memoize slashSuggestions per keystroke
 	slashSugCache                []string
+	slashSugGen                  int    // generation counter; bumped to invalidate slashSugCache
+	slashSugCachedGen            int    // generation at the time slashSugCache was computed
+	contextualHelp               *ContextualHelp    // rich help entries for /help <topic>
+	toolResultExpanded           map[int]bool      // per-message index: expanded state for long tool results
 	connStatusKey                string // gateway+model+creds fingerprint
 	connStatusVal                string
 	deferredSystemContext        string
@@ -285,12 +292,20 @@ type chatModel struct {
 
 	activeSkills map[string]plugin.SmartSkill // per-session activated skills
 
-	// Container mode (hermetic execution in sandbox)
+	// Container mode (hermetic execution in Docker container)
 	containerEnabled bool
 	containerStatus  string // "checking docker…", "pulling image…", "starting…", "<id>", "docker not running"
 	containerReady   bool
 	containerErr     error
 	containerSandbox *sandbox.ContainerSandbox
+	// pendingSubmit holds user input entered while the container is still
+	// booting. It is auto-submitted when the container becomes ready so the
+	// user's message is never silently discarded.
+	pendingSubmit string
+	// containerRetryable is true after a container boot failure. It enables
+	// the [r]etry/[h]ost-mode keybindings so the user can recover without
+	// restarting the TUI.
+	containerRetryable bool
 
 	// Taste & staleness tracking
 	tasteHooks        *taste.Hooks
@@ -323,6 +338,22 @@ type chatModel struct {
 	autonomyPicker *AutonomyPicker
 	specPicker     *SpecPicker
 	themePicker    *ThemePicker
+
+	// Input history search (Ctrl+R) — overlay for searching through
+	// previous inputs, similar to bash reverse-i-search.
+	historySearchOpen    bool
+	historySearchInput   string
+	historySearchQuery   string
+	historySearchFiltered []string
+	historySearchSel     int
+
+	// Session picker (Ctrl+S) — fuzzy search through saved sessions
+	// with context preview for quick session switching.
+	sessionPickerOpen    bool
+	sessionPickerInput   string
+	sessionPickerEntries []session.Entry
+	sessionPickerFiltered []session.Entry
+	sessionPickerSel     int
 }
 
 const streamRenderInterval = 50 * time.Millisecond

@@ -234,7 +234,11 @@ func (m chatModel) computeChatBottomBarLines() int {
 		}
 	}
 	lines += m.visibleSlashSuggestionLines()
-	lines++ // session stats row (always shown — tokens · cost · duration)
+	lines++ // primary session stats row (tokens · cost · duration)
+	if footerW >= 120 {
+		// Wide terminal: second stats row (autonomy, container, session ID, hints)
+		lines++
+	}
 	if m.manualCompacting {
 		lines += 2 // "Compacting conversation..." + progress bar
 	}
@@ -384,6 +388,12 @@ func (m chatModel) View() tea.View {
 		}())
 		inputBox = clipRenderedBlock(inputBox, footerW)
 		bottomBar.WriteString(inputBox + "\n")
+		// Multiline indicator — shows line count when input has newlines.
+		if val := m.input.Value(); strings.Count(val, "\n") > 0 {
+			lines := strings.Count(val, "\n") + 1
+			mlHint := statusDimStyle.Render(fmt.Sprintf("  ¶ %d lines  (Shift+Enter for newline)", lines))
+			bottomBar.WriteString(m.finishFooterLine(mlHint, totalW) + "\n")
+		}
 		if m.ghostText != nil {
 			if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
 				ghostLine := ghostHintStyle.Render("  → " + ghost + " (Tab to accept)")
@@ -429,7 +439,9 @@ func (m chatModel) View() tea.View {
 			}
 		}
 		stats := renderStatusBar(&m, footerW)
-		bottomBar.WriteString(m.finishFooterLine(stats, totalW) + "\n")
+		for _, line := range stats {
+			bottomBar.WriteString(m.finishFooterLine(line, totalW) + "\n")
+		}
 	}
 
 	var frame strings.Builder
@@ -440,6 +452,22 @@ func (m chatModel) View() tea.View {
 		paletteView := m.commandPalette.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(paletteView)
+		return m.terminalView(frame.String())
+	}
+
+	// Input history search overlay (Ctrl+R)
+	if m.historySearchOpen {
+		searchView := m.renderHistorySearchOverlay(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(searchView)
+		return m.terminalView(frame.String())
+	}
+
+	// Session picker overlay (Ctrl+S)
+	if m.sessionPickerOpen {
+		pickerView := m.renderSessionPickerOverlay(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
 		return m.terminalView(frame.String())
 	}
 
@@ -490,17 +518,70 @@ func (m chatModel) terminalView(content string) tea.View {
 	return view
 }
 
-// renderPermissionBox renders a compact inline permission prompt.
-func renderPermissionBox(summary string, width int) string {
-	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert())
+// renderPermissionBox renders a prominent inline permission prompt. When
+// timeoutAt is non-zero, a visual countdown bar is shown above the options
+// so the user can see how long they have to decide before the prompt auto-dismisses.
+func renderPermissionBox(summary string, width int, timeoutAt time.Time) string {
+	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert() + " Permission required")
 	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways")
-	return lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		lipgloss.NewStyle().Inline(true).Render(title+" "),
-		lipgloss.NewStyle().Inline(true).MaxWidth(width-30).Render(body),
-		lipgloss.NewStyle().Inline(true).Render("  "+options),
-	)
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways [d]eny always")
+
+	rows := []string{
+		lipgloss.JoinHorizontal(lipgloss.Top, title, "  ", body),
+	}
+	// Countdown bar — only when a deadline is active.
+	if !timeoutAt.IsZero() {
+		bar := renderCountdownBar(timeoutAt, width-10)
+		rows = append(rows, "", bar)
+	}
+	rows = append(rows, "", options)
+
+	inner := lipgloss.JoinVertical(lipgloss.Left, rows...)
+	// Bordered box with amber highlight so the prompt stands out in scrollback.
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(warnAmber).
+		Background(lipgloss.Color("#3A2A00")).
+		Padding(0, 1).
+		Render(inner)
+	return lipgloss.NewStyle().MaxWidth(width - 4).Render(box)
+}
+
+// renderCountdownBar renders a horizontal progress bar showing time remaining
+// until a deadline. Fills from left to right as time passes, shifting from
+// teal → amber → coral as the deadline approaches.
+func renderCountdownBar(timeoutAt time.Time, width int) string {
+	const totalDuration = 5 * time.Minute
+	if width < 10 {
+		width = 20
+	}
+	remaining := time.Until(timeoutAt)
+	if remaining <= 0 {
+		return lipgloss.NewStyle().Foreground(errorCoral).Render("  timeout")
+	}
+	if remaining > totalDuration {
+		remaining = totalDuration
+	}
+	fraction := float64(remaining) / float64(totalDuration)
+	filled := int(fraction * float64(width))
+	if filled < 0 {
+		filled = 0
+	}
+	if filled > width {
+		filled = width
+	}
+	empty := width - filled
+	// Color shifts: teal (>60%), amber (30-60%), coral (<30%).
+	color := successTeal
+	if fraction < 0.3 {
+		color = errorCoral
+	} else if fraction < 0.6 {
+		color = warnAmber
+	}
+	bar := lipgloss.NewStyle().Foreground(color).Render(strings.Repeat("█", filled) + strings.Repeat("░", empty))
+	mins := int(remaining.Minutes())
+	secs := int(remaining.Seconds()) % 60
+	return fmt.Sprintf("  %s %d:%02d", bar, mins, secs)
 }
 
 // renderDiffSummary renders a diff summary line with colored +/- indicators.
@@ -588,7 +669,7 @@ func (m chatModel) renderWaitingSpinnerLine() string {
 // renderTokenCounters formats the live per-turn token counters that ride
 // next to the spinner. Uses ↑ for input (prompt) and ↓ for output
 // (completion) tokens. The displayed numbers are lerped each render
-// frame toward the engine's actual values (factor 0.10) so the counter
+// frame toward the engine's actual values (factor 0.25) so the counter
 // slides smoothly instead of jumping when a usage event arrives
 // mid-stream.
 //

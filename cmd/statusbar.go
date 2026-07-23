@@ -32,17 +32,136 @@ var (
 	statusClockStyle  = lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
 	statusFocusStyle  = lipgloss.NewStyle().Foreground(infoSky).Inline(true)
 	statusDimStyle    = lipgloss.NewStyle().Foreground(dimColor).Inline(true)
+	dryRunStyle           = lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Inline(true)
+	containerModeStyle    = lipgloss.NewStyle().Foreground(successTeal).Bold(true).Inline(true)
+	containerModeErrStyle = lipgloss.NewStyle().Foreground(errorCoral).Bold(true).Inline(true)
+	containerModeMutedStyle = lipgloss.NewStyle().Foreground(dimColor).Bold(true).Inline(true)
 )
 
 // renderStatusBar renders the session stats footer below the input area.
-// Left: cwd + git branch. Right: tokens · cost · session duration.
-func renderStatusBar(m *chatModel, width int) string {
+// Returns 1 line normally, or 2 lines when the terminal is wide enough
+// (width >= 120) to show secondary info (autonomy, container mode, session ID)
+// on its own row so the primary row stays readable.
+func renderStatusBar(m *chatModel, width int) []string {
 	if width < 20 {
 		width = 80
 	}
 	left := renderStatusBarLeft(m)
 	right := renderStatusBarRight(m)
-	return layoutFooterRow(left, right, width)
+	if width >= 120 {
+		// Two-line layout: primary row keeps cwd/branch/model + tokens/cost.
+		// Secondary row gets autonomy tier, container mode, session ID, hints.
+		primary := layoutFooterRow(renderStatusBarPrimaryLeft(m), renderStatusBarPrimaryRight(m), width)
+		secondary := layoutFooterRow(renderStatusBarSecondaryLeft(m), renderStatusBarSecondaryRight(m), width)
+		if secondary == "" || secondary == strings.Repeat(" ", len(secondary)) {
+			return []string{primary}
+		}
+		return []string{primary, secondary}
+	}
+	return []string{layoutFooterRow(left, right, width)}
+}
+
+// renderStatusBarPrimaryLeft — cwd, branch, model, spec stage.
+func renderStatusBarPrimaryLeft(m *chatModel) string {
+	cwd, ok := cachedStatusLeftCwd(m)
+	if !ok {
+		return ""
+	}
+	parts := []string{statusCwdStyle.Render(cwd + ":")}
+	if branch := cachedStatusBranch(m); branch != "" {
+		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
+	}
+	if model := statusModelName(m); model != "" {
+		parts = append(parts, statusSpecStyle.Render(icons.Robot()+" "+model))
+	}
+	if stage := specStageForStatus(m); stage != "" {
+		parts = append(parts, statusSpecStyle.Render(stage))
+	}
+	return strings.Join(parts, statusDimStyle.Render(" "))
+}
+
+// renderStatusBarPrimaryRight — tokens, cost, ctx%, duration.
+func renderStatusBarPrimaryRight(m *chatModel) string {
+	if m == nil || m.session == nil {
+		return ""
+	}
+	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
+	tokenText := icons.Database() + " " + formatTokenCountCompact(tokens) + " tokens"
+	costText := fmt.Sprintf("%s %.2f", icons.Ruby(), m.session.CostValue().Total())
+	parts := []string{
+		statusTokenStyle.Render(tokenText),
+		statusCostStyle.Render(costText),
+	}
+	if m.session != nil {
+		if used := sessionContextUsedTokens(m.session); used > 0 {
+			if window := m.session.ContextWindowSize(); window > 0 {
+				pct := int(float64(used) / float64(window) * 100)
+				if pct > 999 {
+					pct = 999
+				}
+				parts = append(parts, statusDimStyle.Render(fmt.Sprintf("ctx %d%%", pct)))
+			}
+		}
+	}
+	sessionDur := time.Duration(0)
+	if !m.sessionStartedAt.IsZero() {
+		sessionDur = time.Since(m.sessionStartedAt)
+	}
+	parts = append(parts, statusClockStyle.Render(icons.ClockOutline()+" "+formatSessionDuration(sessionDur)))
+	if m.waiting || m.manualCompacting {
+		parts = append(parts, statusClockStyle.Render(formatSessionDuration(requestDuration(m))))
+	}
+	return strings.Join(parts, statusDimStyle.Render(" · "))
+}
+
+// renderStatusBarSecondaryLeft — session ID, ctrl+K hint.
+func renderStatusBarSecondaryLeft(m *chatModel) string {
+	var parts []string
+	if m.sessionID != "" {
+		shortID := m.sessionID
+		if len(shortID) > 8 {
+			shortID = shortID[:8]
+		}
+		parts = append(parts, statusDimStyle.Render("#"+shortID))
+	}
+	parts = append(parts, statusDimStyle.Render("ctrl+K"))
+	return strings.Join(parts, statusDimStyle.Render(" "))
+}
+
+// renderStatusBarSecondaryRight — autonomy tier, container mode, dry-run, vim, focus/pause.
+func renderStatusBarSecondaryRight(m *chatModel) string {
+	if m == nil || m.session == nil {
+		return ""
+	}
+	var parts []string
+	if m.inScrollbackFocus() {
+		parts = append(parts, statusFocusStyle.Render("⧉"))
+	}
+	if m.waiting && !m.streamFollow {
+		parts = append(parts, statusDimStyle.Render(icons.Pause()))
+	}
+	if m.session != nil && m.session.PermSvc() != nil {
+		level := effectivePermissionTier(m.session)
+		parts = append(parts, autonomyTierStyle(level).Render("◈ "+autonomyTierName(level)))
+	}
+	if m.containerEnabled {
+		if m.containerReady {
+			parts = append(parts, containerModeStyle.Render("▣ container"))
+		} else if m.containerErr != nil {
+			parts = append(parts, containerModeErrStyle.Render("▣ container error"))
+		} else {
+			parts = append(parts, containerModeMutedStyle.Render("▣ container…"))
+		}
+	} else {
+		parts = append(parts, containerModeStyle.Render("▢ host"))
+	}
+	if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().DryRun() {
+		parts = append(parts, dryRunStyle.Render(icons.Pause()+" DRY-RUN"))
+	}
+	if m.vim != nil && m.vim.IsEnabled() {
+		parts = append(parts, statusDimStyle.Render(m.vim.ModeString()))
+	}
+	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
 // statusBranchTTL bounds how long the cwd+branch segment is cached, so a
@@ -83,10 +202,44 @@ func renderStatusBarLeft(m *chatModel) string {
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
 	}
+	// Model name — which LLM is answering. Shortened to the last path segment
+	// so "anthropic/claude-sonnet-4-20250514" reads as "claude-sonnet-4-20250514".
+	if model := statusModelName(m); model != "" {
+		parts = append(parts, statusSpecStyle.Render(icons.Robot()+" "+model))
+	}
 	if stage := specStageForStatus(m); stage != "" {
 		parts = append(parts, statusSpecStyle.Render(stage))
 	}
+	// Session ID — short, dim, for support reference and session switching.
+	if m.sessionID != "" {
+		shortID := m.sessionID
+		if len(shortID) > 8 {
+			shortID = shortID[:8]
+		}
+		parts = append(parts, statusDimStyle.Render("#"+shortID))
+	}
+	// Command palette hint — persistent discoverability.
+	parts = append(parts, statusDimStyle.Render("ctrl+K"))
 	return strings.Join(parts, statusDimStyle.Render(" "))
+}
+
+// statusModelName returns a short display name for the active model, or "" if
+// unknown. Takes the last "/" segment so fully-qualified model IDs read cleanly.
+func statusModelName(m *chatModel) string {
+	if m == nil || m.session == nil {
+		return ""
+	}
+	modelID := strings.TrimSpace(m.session.Model())
+	if modelID == "" {
+		return ""
+	}
+	if idx := strings.LastIndex(modelID, "/"); idx >= 0 && idx < len(modelID)-1 {
+		modelID = modelID[idx+1:]
+	}
+	if len(modelID) > 20 {
+		modelID = modelID[:18] + "…"
+	}
+	return modelID
 }
 
 // specStageForStatus returns a short spec stage indicator for the status bar,
@@ -156,6 +309,20 @@ func renderStatusBarRight(m *chatModel) string {
 		statusCostStyle.Render(costText),
 	)
 
+	// Context window usage — compact bar showing how full the context is.
+	if m.session != nil {
+		if used := sessionContextUsedTokens(m.session); used > 0 {
+			if window := m.session.ContextWindowSize(); window > 0 {
+				pct := int(float64(used) / float64(window) * 100)
+				if pct > 999 {
+					pct = 999
+				}
+				ctxText := fmt.Sprintf("ctx %d%%", pct)
+				parts = append(parts, statusDimStyle.Render(ctxText))
+			}
+		}
+	}
+
 	sessionDur := time.Duration(0)
 	if !m.sessionStartedAt.IsZero() {
 		sessionDur = time.Since(m.sessionStartedAt)
@@ -168,9 +335,33 @@ func renderStatusBarRight(m *chatModel) string {
 		parts = append(parts, statusClockStyle.Render(timerText))
 	}
 
+	// Prominent dry-run indicator — safety-critical awareness.
+	if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().DryRun() {
+		parts = append(parts, dryRunStyle.Render(icons.Pause()+" DRY-RUN"))
+	}
+
 	if m.vim != nil && m.vim.IsEnabled() {
 		parts = append(parts, statusDimStyle.Render(m.vim.ModeString()))
 	}
+	// Persistent autonomy tier indicator — always visible for safety awareness.
+	if m.session != nil && m.session.PermSvc() != nil {
+		level := effectivePermissionTier(m.session)
+		parts = append(parts, autonomyTierStyle(level).Render("◈ "+autonomyTierName(level)))
+	}
+
+	// Persistent container/host mode indicator — safety-critical awareness.
+	if m.containerEnabled {
+		if m.containerReady {
+			parts = append(parts, containerModeStyle.Render("▣ container"))
+		} else if m.containerErr != nil {
+			parts = append(parts, containerModeErrStyle.Render("▣ container error"))
+		} else {
+			parts = append(parts, containerModeMutedStyle.Render("▣ container…"))
+		}
+	} else {
+		parts = append(parts, containerModeStyle.Render("▢ host"))
+	}
+
 	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
@@ -284,7 +475,15 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 		return bold, fmt.Sprintf(" %s · %s", status, tier)
 	}
 	if strings.TrimSpace(m.containerStatus) != "" {
-		return bold, " " + strings.TrimSpace(m.containerStatus)
+		status := strings.TrimSpace(m.containerStatus)
+		if !m.containerReady && m.containerErr == nil {
+			// Show activity indicator during active boot so the user sees progress.
+			return bold, fmt.Sprintf(" ◐ %s", status)
+		}
+		return bold, " " + status
+	}
+	if !m.containerReady && m.containerErr == nil {
+		return bold, " ◐ starting…"
 	}
 	return bold, " starting…"
 }

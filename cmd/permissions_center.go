@@ -126,6 +126,8 @@ func autonomyCommandHelp() string {
 		"  /autonomy                          Show current tier, sandbox, spec stage, and rules\n" +
 		"  /autonomy tier <scout|builder|operator|autonomous>\n" +
 		"  /autonomy sandbox <strict|workspace|off>\n" +
+		"                                      Permission sandbox: how host Bash is gated\n" +
+		"                                      (strict=always ask, workspace=allow project files, off=allow all)\n" +
 		"  /autonomy dry-run <on|off>         Deny every tool call unconditionally (kill switch)\n" +
 		"  /autonomy allow <rule>\n" +
 		"  /autonomy deny <rule>\n" +
@@ -133,6 +135,9 @@ func autonomyCommandHelp() string {
 		"  /autonomy rules clear              Clear current session rules\n" +
 		"  /autonomy reset                    Reset tier, sandbox, dry-run, and rules\n" +
 		"  /autonomy save [project|global]    Persist the current policy\n" +
+		"\n" +
+		"Note: 'sandbox' here controls permission policy on the host.\n" +
+		"      For Docker container isolation, use /container or restart with --container.\n" +
 		"\n" +
 		"For the spec-driven workflow (gates Write/Edit/Bash until approved), see /spec."
 }
@@ -149,7 +154,7 @@ func autonomyCenterSummary(m *chatModel) string {
 	var b strings.Builder
 	b.WriteString("Autonomy Center\n")
 	b.WriteString(fmt.Sprintf("  Tier: %s\n", tier))
-	b.WriteString(fmt.Sprintf("  Sandbox: %s\n", sandboxLabel))
+	b.WriteString(fmt.Sprintf("  Permission sandbox: %s\n", sandboxLabel))
 	b.WriteString(fmt.Sprintf("  Spec stage: %s\n", specStageLabel(m.session)))
 	if currentDryRun(m.session) {
 		b.WriteString("  Dry-run: ON — every tool call is being denied unconditionally\n")
@@ -331,17 +336,17 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 	case "sandbox":
 		if len(parts) < 3 {
 			_, label, _ := normalizePermissionSandbox(effectivePermissionSandbox(m.settings))
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Current sandbox: " + label + "\nUsage: /autonomy sandbox <strict|workspace|off>"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Permission sandbox: " + label + "\nUsage: /autonomy sandbox <strict|workspace|off>"})
 			return *m, nil
 		}
 		mode, label, ok := normalizePermissionSandbox(parts[2])
 		if !ok {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid sandbox modes: strict, workspace, off"})
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid permission sandbox modes: strict, workspace, off"})
 			return *m, nil
 		}
 		m.settings.Sandbox = mode
 		sandboxFlag = mode
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Sandbox preference → %s\nApplies to host Bash policy; container isolation is unchanged until restart.", label)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission sandbox → %s\nControls how host Bash is gated. Docker container isolation is separate (restart with --container).", label)})
 	case "dry-run":
 		if len(parts) < 3 {
 			state := "off"

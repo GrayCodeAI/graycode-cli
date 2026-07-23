@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -283,6 +284,145 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		// Input history search (Ctrl+R) — intercept all input when open.
+		if m.historySearchOpen {
+			switch msg.String() {
+			case "ctrl+c", "ctrl+g", "escape":
+				m.historySearchOpen = false
+				m.historySearchInput = ""
+				m.historySearchQuery = ""
+				m.historySearchFiltered = nil
+				m.historySearchSel = 0
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			case "enter":
+				if len(m.historySearchFiltered) > 0 && m.historySearchSel < len(m.historySearchFiltered) {
+					m.input.SetValue(m.historySearchFiltered[m.historySearchSel])
+					m.input.CursorEnd()
+				}
+				m.historySearchOpen = false
+				m.historySearchInput = ""
+				m.historySearchQuery = ""
+				m.historySearchFiltered = nil
+				m.historySearchSel = 0
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			case "up":
+				if len(m.historySearchFiltered) > 0 {
+					m.historySearchSel--
+					if m.historySearchSel < 0 {
+						m.historySearchSel = len(m.historySearchFiltered) - 1
+					}
+					m.viewDirty = true
+				}
+				return m, nil
+			case "down":
+				if len(m.historySearchFiltered) > 0 {
+					m.historySearchSel = (m.historySearchSel + 1) % len(m.historySearchFiltered)
+					m.viewDirty = true
+				}
+				return m, nil
+			default:
+				// Forward printable characters to the search query.
+				if msg.Key().Text != "" && len(msg.Key().Text) > 0 {
+					// Only accept single rune input, not modifier combos.
+					if msg.Key().Mod == 0 && msg.Key().Code == 0 {
+						m.historySearchInput += msg.Key().Text
+						m.applyHistorySearchFilter()
+						m.viewDirty = true
+						return m, nil
+					}
+				}
+				// Backspace handling.
+				if msg.Key().Code == tea.KeyBackspace || msg.String() == "backspace" {
+					if len(m.historySearchInput) > 0 {
+						runes := []rune(m.historySearchInput)
+						m.historySearchInput = string(runes[:len(runes)-1])
+						m.applyHistorySearchFilter()
+						m.viewDirty = true
+					}
+					return m, nil
+				}
+				return m, nil
+			}
+		}
+
+		// Session picker (Ctrl+S) — intercept all input when open.
+		if m.sessionPickerOpen {
+			switch msg.String() {
+			case "ctrl+c", "ctrl+g", "escape":
+				m.sessionPickerOpen = false
+				m.sessionPickerInput = ""
+				m.sessionPickerEntries = nil
+				m.sessionPickerFiltered = nil
+				m.sessionPickerSel = 0
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			case "ctrl+s":
+				// Press Ctrl+S again to close.
+				m.sessionPickerOpen = false
+				m.sessionPickerInput = ""
+				m.sessionPickerEntries = nil
+				m.sessionPickerFiltered = nil
+				m.sessionPickerSel = 0
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			case "enter":
+				if len(m.sessionPickerFiltered) > 0 && m.sessionPickerSel < len(m.sessionPickerFiltered) {
+					selected := m.sessionPickerFiltered[m.sessionPickerSel]
+					// Close picker first.
+					m.sessionPickerOpen = false
+					m.sessionPickerInput = ""
+					m.sessionPickerEntries = nil
+					m.sessionPickerFiltered = nil
+					m.sessionPickerSel = 0
+					// Load the selected session.
+					return m.resumeSessionByID(selected.ID)
+				}
+				return m, nil
+			case "up":
+				if len(m.sessionPickerFiltered) > 0 {
+					m.sessionPickerSel--
+					if m.sessionPickerSel < 0 {
+						m.sessionPickerSel = len(m.sessionPickerFiltered) - 1
+					}
+					m.viewDirty = true
+				}
+				return m, nil
+			case "down":
+				if len(m.sessionPickerFiltered) > 0 {
+					m.sessionPickerSel = (m.sessionPickerSel + 1) % len(m.sessionPickerFiltered)
+					m.viewDirty = true
+				}
+				return m, nil
+			default:
+				// Forward printable characters to the search query.
+				if msg.Key().Text != "" && len(msg.Key().Text) > 0 {
+					if msg.Key().Mod == 0 && msg.Key().Code == 0 {
+						m.sessionPickerInput += msg.Key().Text
+						m.applySessionPickerFilter()
+						m.viewDirty = true
+						return m, nil
+					}
+				}
+				// Backspace handling.
+				if msg.Key().Code == tea.KeyBackspace || msg.String() == "backspace" {
+					if len(m.sessionPickerInput) > 0 {
+						runes := []rune(m.sessionPickerInput)
+						m.sessionPickerInput = string(runes[:len(runes)-1])
+						m.applySessionPickerFilter()
+						m.viewDirty = true
+					}
+					return m, nil
+				}
+				return m, nil
+			}
+		}
+
 		// Command palette (Ctrl+K) — intercept all input when open.
 		// Must come before the Ctrl+K selection-mode handler so the
 		// palette can receive Ctrl+K for navigation/close.
@@ -401,6 +541,25 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.uiFocus = focusPrompt
 				m.viewDirty = true
 				return m, m.input.Focus()
+			case tea.KeyEnter:
+				// Toggle expansion of the tool result nearest the viewport center.
+				if idx := m.toolResultIndexAtViewportCenter(m.width); idx >= 0 {
+					m.toolResultExpanded[idx] = !m.toolResultExpanded[idx]
+					m.invalidateViewportCache()
+					m.viewDirty = true
+					m.updateViewportContent()
+				}
+				return m, nil
+			}
+			// 'c' copies the code block nearest to viewport center.
+			if msg.String() == "c" {
+				if content, ok := m.codeBlockAtViewportCenter(); ok {
+					result := copyToClipboard(content)
+					m.appendCopyResult(content, "code block", nil, result)
+					m.viewDirty = true
+					m.updateViewportContent()
+				}
+				return m, nil
 			}
 			if shouldReturnToPromptOnType(msg) {
 				m.uiFocus = focusPrompt
@@ -435,21 +594,54 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y", "Y":
 				m.permReq.Response <- true
-				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Allowed"})
 				m.permReq = nil
+				m.permTimeoutAt = time.Time{}
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Allowed"})
 			case "n", "N":
 				m.permReq.Response <- false
-				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Denied"})
 				m.permReq = nil
+				m.permTimeoutAt = time.Time{}
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Denied"})
 			case "a", "A":
 				m.permReq.Response <- true
-				m.session.Perm.Memory.AlwaysAllow(m.permReq.ToolName)
-				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + m.permReq.ToolName})
 				m.permReq = nil
+				m.permTimeoutAt = time.Time{}
+				m.session.Perm.Memory.AlwaysAllowPattern(m.permReq.ToolName + ":*")
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + m.permReq.ToolName + " (all)"})
+			case "d", "D":
+				m.permReq.Response <- false
+				m.permReq = nil
+				m.permTimeoutAt = time.Time{}
+				m.session.Perm.Memory.AlwaysDeny(m.permReq.ToolName)
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Always denied: " + m.permReq.ToolName})
 			}
 			m.viewDirty = true
 			m.updateViewportContent()
 			return m, nil
+		}
+		// Container failed and is retryable — handle r/h keys.
+		if m.containerRetryable {
+			switch msg.String() {
+			case "r", "R":
+				m.containerRetryable = false
+				m.containerEnabled = true
+				m.containerErr = nil
+				m.containerStatus = "checking docker…"
+				if m.session != nil {
+					m.session.SetContainerRequired(true)
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Retrying container…"})
+				m.viewDirty = true
+				m.updateViewportContent()
+				cwd, _ := os.Getwd()
+				return m, bootContainerCmd(cwd)
+			case "h", "H":
+				m.containerRetryable = false
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Switched to host mode."})
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m, nil
+			}
 		}
 		// AskUser prompt active — Enter submits answer
 		if m.askReq != nil {
@@ -575,6 +767,37 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewDirty = true
 					m.updateViewportContent()
 					return m, nil
+				case "ctrl+r":
+					// Reverse-i-search: only when input is empty and not waiting.
+					if strings.TrimSpace(m.input.Value()) == "" && !m.waiting {
+						m.historySearchOpen = true
+						m.historySearchInput = ""
+						m.historySearchQuery = ""
+						m.historySearchFiltered = nil
+						m.historySearchSel = 0
+						m.applyHistorySearchFilter()
+						m.viewDirty = true
+						m.updateViewportContent()
+					}
+					return m, nil
+				case "ctrl+s":
+					// Session picker: fuzzy search through saved sessions.
+					if !m.waiting {
+						m.sessionPickerOpen = true
+						m.sessionPickerInput = ""
+						m.sessionPickerEntries, _ = session.List()
+						m.sessionPickerFiltered = m.sessionPickerEntries
+						m.sessionPickerSel = 0
+						m.viewDirty = true
+						m.updateViewportContent()
+					}
+					return m, nil
+				case "?":
+					// Quick help — show contextual help summary in chat.
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Quick help:\n  /help            — list all commands\n  /help <topic>    — detailed help (e.g., /help /commit)\n  ctrl+K           — command palette\n  ctrl+L           — cycle autonomy tiers\n  ctrl+N           — switch model\n  ctrl+R           — search input history\n  ?                — show this help\n  Type / to see slash commands, or ask a question to get started."})
+					m.viewDirty = true
+					m.updateViewportContent()
+					return m, nil
 				case "ctrl+n":
 					models := configModelChoices(m.configModelOptions, false)
 					if len(models) > 1 {
@@ -593,7 +816,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				case "ctrl+l":
 					if m.containerEnabled && !m.containerReady {
-						m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for sandbox — tiers unlock when container is ready."})
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Waiting for container — higher tiers unlock when the Docker container is ready."})
 						m.viewDirty = true
 						m.updateViewportContent()
 						return m, nil
@@ -604,7 +827,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.session.PermSvc().SetAutonomy(nextTier)
 					m.invalidateConnStatus()
-					m.messages = append(m.messages, displayMsg{role: "system", content: formatAutonomyTierMessage(nextTier)})
+					m.messages = append(m.messages, displayMsg{
+						role:    "warning",
+						content: formatAutonomyTierMessage(nextTier) + "  ·  Ctrl+L to change",
+					})
 					m.viewDirty = true
 					m.updateViewportContent()
 					return m, nil
@@ -866,7 +1092,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case permissionAskMsg:
 		m.permReq = &msg.req
 		m.permReqSeq++
-		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary})
+		m.permTimeoutAt = time.Now().Add(5 * time.Minute)
+		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary, timeoutAt: m.permTimeoutAt})
 		m.viewDirty = true
 		m.updateViewportContent()
 		return m, permissionPromptTimeoutCmd(m.permReqSeq)
@@ -874,6 +1101,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case permissionPromptTimeoutMsg:
 		if m.permReq != nil && m.permReqSeq == msg.seq {
 			m.permReq = nil
+			m.permTimeoutAt = time.Time{}
 			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Permission prompt timed out."})
 			m.viewDirty = true
 			m.updateViewportContent()
@@ -977,6 +1205,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.turnSawThinking = false
+		// Invalidate slash suggestion cache — new messages may have changed
+		// the available command set (e.g. plugin-registered commands).
+		m.invalidateSlashSugCache()
 		// Save flags before reset so the notification check below sees
 		// the values from the turn that just completed.
 		hadOutput := m.turnHadAssistantOutput
@@ -1075,8 +1306,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.viewDirty = true
 			}
-			m.displayInTok += (float64(m.tokenInputTarget()) - m.displayInTok) * 0.10
-			m.displayOutTok += (float64(m.tokenOutputTarget()) - m.displayOutTok) * 0.10
+			m.displayInTok += (float64(m.tokenInputTarget()) - m.displayInTok) * 0.25
+			m.displayOutTok += (float64(m.tokenOutputTarget()) - m.displayOutTok) * 0.25
 		}
 
 		if cmd != nil {
@@ -1103,21 +1334,41 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
 			m.invalidateConnStatus()
+			m.containerRetryable = false
+			// Auto-submit any input that was queued while the container was booting.
+			if m.pendingSubmit != "" {
+				m.input.SetValue(m.pendingSubmit)
+				m.pendingSubmit = ""
+				m.rebuildWelcomeCache(m.blinkClosed)
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m.submitUserMessage()
+			}
 		}
 		if msg.err != nil {
 			// Fall back to host mode so chat still works (container is optional).
 			m.containerEnabled = false
 			m.containerReady = false
+			m.containerRetryable = true
 			if m.session != nil {
 				m.session.SetContainerRequired(false)
 				m.session.SetContainerExecutor(nil)
 				applyDefaultHostAutonomy(m.session)
 			}
 			m.messages = append(m.messages, displayMsg{
-				role:    "system",
-				content: "Container unavailable — running on host. " + msg.err.Error(),
+				role:    "warning",
+				content: "Container unavailable — running on host. " + msg.err.Error() + "  ·  [r]etry container  [h]ost mode",
 			})
 			m.input.Focus()
+			// Auto-submit any queued input now that host mode is active.
+			if m.pendingSubmit != "" {
+				m.input.SetValue(m.pendingSubmit)
+				m.pendingSubmit = ""
+				m.rebuildWelcomeCache(m.blinkClosed)
+				m.viewDirty = true
+				m.updateViewportContent()
+				return m.submitUserMessage()
+			}
 		}
 		m.rebuildWelcomeCache(m.blinkClosed)
 		m.viewDirty = true

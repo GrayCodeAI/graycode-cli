@@ -46,7 +46,7 @@ import (
 // Tool-registry construction (essential/optional tools) is in chat_tools.go
 // The Bubble Tea event loop (Update, applyPromptArrowKey) is in chat_update.go
 
-const workInputPlaceholder = `Ask Hawk to inspect, edit, or run something... (Shift+Enter for newline)`
+const workInputPlaceholder = `Ask Hawk to inspect, edit, or run something... (Shift+Enter for newline, ? for help)`
 
 func genID() string {
 	b := make([]byte, 8)
@@ -193,7 +193,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	vp := viewport.New(viewport.WithWidth(initWidth), viewport.WithHeight(minChatViewportLines))
 
 	now := time.Now()
-	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill)} // #nosec G404 -- non-cryptographic use (random spinner verb selection)
+	m := chatModel{input: ta, configInput: ci, spinner: sp, viewport: vp, session: sess, registry: registry, settings: settings, ref: ref, sessionID: sid, partial: &strings.Builder{}, spinnerVerb: spinnerVerbs[rand.Intn(len(spinnerVerbs))], width: initWidth, height: initHeight, historyIdx: 0, autoScroll: true, streamFollow: true, uiFocus: focusPrompt, startedAt: now, sessionStartedAt: now, activeSkills: make(map[string]plugin.SmartSkill), toolResultExpanded: make(map[int]bool)} // #nosec G404 -- non-cryptographic use (random spinner verb selection)
 	applyLiveModelMetadata(sess, effectiveProvider, effectiveModel)
 
 	startup.MarkPhase("newChatModel:commandPalette")
@@ -219,17 +219,32 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 		if noContainer {
 			m.messages = append(m.messages, displayMsg{
 				role: "system",
-				content: "--no-container runs tools on the host without sandbox isolation. " +
-					"Use default container mode for safer agent execution.",
+				content: "--no-container runs tools on the host without Docker container isolation. " +
+					"Use container mode for safer agent execution.",
 			})
 		}
 	}
+
+	// Surface startup warnings (missing API key, network, sessions dir).
+	// validateStartup is fully implemented but was previously never called.
+	if warnings := validateStartup(settings); len(warnings) > 0 {
+		var warnText strings.Builder
+		warnText.WriteString("Startup check:\n")
+		for _, w := range warnings {
+			warnText.WriteString("  ! " + w.Message + "\n")
+		}
+		m.messages = append(m.messages, displayMsg{role: "warning", content: warnText.String()})
+	}
+
+	// Set initial input placeholder based on mode.
+	m.refreshInputPlaceholder()
 
 	// Initialize lacy-inspired features
 	startup.MarkPhase("newChatModel:lacy-features")
 	m.termCtx = sessioncapture.NewTerminalContext()
 	m.inputIndicator = &InputIndicator{}
 	m.ghostText = NewGhostText()
+	m.contextualHelp = NewContextualHelp()
 	m.modeManager = shellmode.NewModeManager()
 	m.modeManager.LoadPersistedMode()
 	m.brailleSpinner = NewBrailleSpinner(SpinnerHawk, "")
@@ -299,7 +314,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	quickSnapshot := welcomeStatusSnapshot{}
 	m.welcomeSetupState = quickSnapshot.setup
 	m.welcomeAgentsOK = quickSnapshot.agentsOK
-	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil, quickSnapshot)
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil, quickSnapshot, false, "")
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 	startup.EndPhase("newChatModel:welcome")
 
@@ -476,6 +491,18 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	}
 
 	return m, nil
+}
+
+// refreshInputPlaceholder updates the input placeholder based on the current
+// execution mode (container vs host). Call this after state changes that
+// affect the placeholder.
+func (m *chatModel) refreshInputPlaceholder() {
+	base := "Ask Hawk to inspect, edit, or run something..."
+	if m.containerEnabled {
+		m.input.Placeholder = base + " (container mode, Shift+Enter for newline, ? for help)"
+	} else {
+		m.input.Placeholder = base + " (host mode, Shift+Enter for newline, ? for help)"
+	}
 }
 
 func (m chatModel) Init() tea.Cmd {

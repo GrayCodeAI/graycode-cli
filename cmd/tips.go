@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -35,6 +36,7 @@ func allTips() []Tip {
 		{ID: "model-switch", Text: "Use /model <name> to switch LLM models on the fly.", Category: "config"},
 		{ID: "provider-switch", Text: "Use /config provider <name> to change providers.", Category: "config"},
 		{ID: "permissions", Text: "Use /autonomy allow <rule> to pre-approve tool patterns.", Category: "safety"},
+		{ID: "autonomy-cycle", Text: "Press Ctrl+L to cycle autonomy tiers (Scout → Builder → Operator → Autonomous).", Category: "safety"},
 		{ID: "session-resume", Text: "Use /resume <id> to pick up where you left off.", Category: "session"},
 		{ID: "session-search", Text: "Use /search <query> to find across saved sessions.", Category: "session"},
 		{ID: "slash-stats", Text: "Use /stats to view analytics for the past 30 days.", Category: "analytics"},
@@ -88,7 +90,19 @@ func recordTipShown(id string) {
 // nextTip returns a tip that hasn't been shown recently (within the last 24h),
 // records it as shown, and returns the display text. If all tips have been
 // shown recently, one is picked at random.
-func nextTip() string {
+//
+// The containerMode and lastCommand arguments drive context-aware filtering:
+// tips relevant to the current mode or the user's most recent slash command
+// are prioritized over generic ones. Pass false / "" for callers that don't
+// have model state (e.g. tests).
+func nextTip(containerMode bool, lastCommand string) string {
+	return contextualTip(containerMode, lastCommand)
+}
+
+// contextualTip returns a tip relevant to the current context.
+// containerMode tips are prioritized when in container mode; lastCommand
+// matches tips whose Category aligns with the command's purpose.
+func contextualTip(containerMode bool, lastCommand string) string {
 	tips := allTips()
 	if len(tips) == 0 {
 		return ""
@@ -97,13 +111,47 @@ func nextTip() string {
 	h := loadTipHistory()
 	cooldown := 24 * time.Hour
 
+	// Determine relevant categories based on context.
+	relevantCategories := map[string]bool{}
+	switch {
+	case containerMode:
+		relevantCategories["safety"] = true
+		relevantCategories["shortcuts"] = true
+	case strings.HasPrefix(lastCommand, "/commit"), strings.HasPrefix(lastCommand, "/diff"):
+		relevantCategories["git"] = true
+		relevantCategories["workflow"] = true
+	case strings.HasPrefix(lastCommand, "/config"), strings.HasPrefix(lastCommand, "/model"):
+		relevantCategories["config"] = true
+		relevantCategories["basics"] = true
+	case strings.HasPrefix(lastCommand, "/fork"), strings.HasPrefix(lastCommand, "/resume"):
+		relevantCategories["session"] = true
+		relevantCategories["context"] = true
+	default:
+		// No specific context — allow all categories.
+		relevantCategories[""] = true
+	}
+
 	var candidates []Tip
 	for _, tip := range tips {
-		if last, ok := h.Shown[tip.ID]; !ok || time.Since(last) > cooldown {
+		if last, ok := h.Shown[tip.ID]; ok && time.Since(last) <= cooldown {
+			continue
+		}
+		// If we have a relevant category, prioritize matching tips.
+		if !relevantCategories[""] && relevantCategories[tip.Category] {
 			candidates = append(candidates, tip)
 		}
 	}
 
+	// If no context-relevant candidates, fall back to all non-cooldown tips.
+	if len(candidates) == 0 {
+		for _, tip := range tips {
+			if last, ok := h.Shown[tip.ID]; !ok || time.Since(last) > cooldown {
+				candidates = append(candidates, tip)
+			}
+		}
+	}
+
+	// If still nothing, allow any tip.
 	if len(candidates) == 0 {
 		candidates = tips
 	}
