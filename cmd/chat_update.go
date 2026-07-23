@@ -1127,9 +1127,11 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case permissionPromptTimeoutMsg:
 		if m.permReq != nil && m.permReqSeq == msg.seq {
+			// Send denial response to unblock the waiting goroutine.
+			m.permReq.Response <- false
 			m.permReq = nil
 			m.permTimeoutAt = time.Time{}
-			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Permission prompt timed out."})
+			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Permission prompt timed out — denied."})
 			m.viewDirty = true
 			m.updateViewportContent()
 		}
@@ -1147,6 +1149,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case askUserPromptTimeoutMsg:
 		if m.askReq != nil && m.askReqSeq == msg.seq {
+			// Send empty response to unblock the waiting goroutine.
+			m.askReq.response <- ""
 			m.askReq = nil
 			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Question timed out."})
 			m.viewDirty = true
@@ -1241,8 +1245,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		wasCancelled := m.streamCancelled
 		m.turnHadAssistantOutput = false
 		m.turnHadToolActivity = false
-		m.permReq = nil
-		m.askReq = nil
+		// Resolve any pending permission/askUser prompts to unblock waiting goroutines.
+		if m.permReq != nil {
+			m.permReq.Response <- false
+			m.permReq = nil
+		}
+		if m.askReq != nil {
+			m.askReq.response <- ""
+			m.askReq = nil
+		}
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
@@ -1295,8 +1306,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case streamErrMsg:
 		m.messages = append(m.messages, displayMsg{role: "error", content: friendlyError(msg.err)})
 		m.partial.Reset()
-		m.permReq = nil
-		m.askReq = nil
+		// Resolve any pending permission/askUser prompts to unblock waiting goroutines.
+		if m.permReq != nil {
+			m.permReq.Response <- false
+			m.permReq = nil
+		}
+		if m.askReq != nil {
+			m.askReq.response <- ""
+			m.askReq = nil
+		}
 		m.waiting = false
 		m.cancel = nil
 		m.toolStartTime = time.Time{}
