@@ -362,8 +362,12 @@ func (m *chatModel) codeBlockAtViewportCenter() (string, bool) {
 
 	// Fast path: use cached viewport content if available and valid.
 	// The viewport content is already rendered, so we can parse it directly.
+	// It answers confidently only for single-block messages; otherwise it
+	// returns ok=false and we fall through to the exact slow path below.
 	if m.vpStableContent != "" && m.vpRenderedMsgs == len(m.messages) {
-		return m.codeBlockFromCachedViewport(centerY, viewWidth)
+		if content, ok := m.codeBlockFromCachedViewport(centerY, viewWidth); ok {
+			return content, true
+		}
 	}
 
 	// Slow path: render messages incrementally, stopping early when we pass center.
@@ -402,11 +406,16 @@ func (m *chatModel) codeBlockFromCachedViewport(centerY int, viewWidth int) (str
 	}
 
 	lines := strings.Split(content, "\n")
-	if centerY >= len(lines) {
-		centerY = len(lines) - 1
+	// centerY is an absolute scrollback coordinate (YOffset + Height/2), but
+	// View() returns only the visible rows (indexed 0..Height-1). Convert to a
+	// viewport-relative line index so the search targets the true center even
+	// when scrolled down.
+	relCenter := centerY - m.viewport.YOffset()
+	if relCenter >= len(lines) {
+		relCenter = len(lines) - 1
 	}
-	if centerY < 0 {
-		centerY = 0
+	if relCenter < 0 {
+		relCenter = 0
 	}
 
 	// Find the assistant message containing the center line by looking for
@@ -415,8 +424,8 @@ func (m *chatModel) codeBlockFromCachedViewport(centerY int, viewWidth int) (str
 	robotMarker := icons.Robot()
 
 	// Search backwards from center to find the start of the assistant message.
-	msgStart := centerY
-	for i := centerY; i >= 0; i-- {
+	msgStart := relCenter
+	for i := relCenter; i >= 0; i-- {
 		if strings.Contains(lines[i], robotMarker) {
 			msgStart = i
 			break
@@ -424,8 +433,8 @@ func (m *chatModel) codeBlockFromCachedViewport(centerY int, viewWidth int) (str
 	}
 
 	// Search forwards to find the end of the assistant message.
-	msgEnd := centerY
-	for i := centerY; i < len(lines); i++ {
+	msgEnd := relCenter
+	for i := relCenter; i < len(lines); i++ {
 		// Assistant messages end at the next user message (█ marker) or end of content.
 		if i > msgStart && strings.Contains(lines[i], "█") {
 			msgEnd = i - 1
@@ -446,10 +455,13 @@ func (m *chatModel) codeBlockFromCachedViewport(centerY int, viewWidth int) (str
 	// Since this is rendered output (with ANSI codes), we need to strip them first.
 	plainContent := stripAnsi(msgContent.String())
 	blocks := extractCodeBlocksFromRendered(plainContent)
-	if len(blocks) > 0 {
-		// Return the code block closest to the center line within this message.
-		relativeCenter := centerY - msgStart
-		return blocks[relativeCenter%len(blocks)], true
+	// Only answer confidently when the message has exactly one code block —
+	// that is unambiguously the block to copy. With zero or multiple blocks the
+	// rendered-output heuristics cannot reliably pick the one under the cursor,
+	// so return false and let the caller fall back to the exact slow path
+	// (findClosestCodeBlock operates on raw content with true line positions).
+	if len(blocks) == 1 {
+		return blocks[0], true
 	}
 
 	return "", false

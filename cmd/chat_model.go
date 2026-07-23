@@ -391,22 +391,29 @@ func (m *chatModel) trimOldMessages() {
 		return
 	}
 
-	// Check if first message is welcome — preserve it.
+	// Preserve a leading welcome message (index 0) if present — it is
+	// re-emitted ahead of the trim hint so the header survives long sessions.
 	startIdx := 0
-	if len(m.messages) > 0 && m.messages[0].role == "welcome" {
+	if m.messages[0].role == "welcome" {
 		startIdx = 1
-		trimCount-- // Don't count welcome in trim
 	}
 
-	if trimCount > 0 && startIdx+trimCount < len(m.messages) {
-		// Add a hint about trimmed messages.
-		trimmedHint := displayMsg{
-			role:    "system",
-			content: fmt.Sprintf("... %d earlier messages trimmed (use /export to save full history)", trimCount),
-		}
-		m.messages = append([]displayMsg{trimmedHint}, m.messages[startIdx+trimCount:]...)
-		m.invalidateViewportCache()
+	// Never trim past the end of the slice.
+	if startIdx+trimCount >= len(m.messages) {
+		return
 	}
+
+	trimmedHint := displayMsg{
+		role:    "system",
+		content: fmt.Sprintf("... %d earlier messages trimmed (use /export to save full history)", trimCount),
+	}
+	// Rebuild: preserved prefix (welcome) + hint + recent messages.
+	kept := make([]displayMsg, 0, len(m.messages)-trimCount+1)
+	kept = append(kept, m.messages[:startIdx]...)
+	kept = append(kept, trimmedHint)
+	kept = append(kept, m.messages[startIdx+trimCount:]...)
+	m.messages = kept
+	m.invalidateViewportCache()
 }
 
 func (m *chatModel) markPartialDirty() tea.Cmd {

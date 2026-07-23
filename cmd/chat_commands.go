@@ -510,6 +510,12 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 
 	// Create a cancellable context for the parallel agents.
 	// This ensures agents are cancelled when the user quits.
+	// Cancel any prior parallel run first — only one runs at a time
+	// (concurrent runs would also clobber each other's grid display),
+	// and this prevents orphaning the previous run's agents on quit.
+	if m.parallelCancel != nil {
+		m.parallelCancel()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	m.parallelCancel = cancel
 
