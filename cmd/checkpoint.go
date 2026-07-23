@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -54,6 +55,8 @@ var checkpointSaveCmd = &cobra.Command{
 	},
 }
 
+var checkpointListJSON bool
+
 var checkpointListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all named checkpoints",
@@ -62,6 +65,14 @@ var checkpointListCmd = &cobra.Command{
 		cps, err := session.ListNamedCheckpoints()
 		if err != nil {
 			return err
+		}
+		if checkpointListJSON {
+			out, err := json.MarshalIndent(cps, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling checkpoints: %w", err)
+			}
+			cmd.Println(string(out))
+			return nil
 		}
 		if len(cps) == 0 {
 			cmd.Println("No named checkpoints.")
@@ -139,6 +150,7 @@ func restoreNamedCheckpoint(cmd *cobra.Command, name string) error {
 
 func init() {
 	checkpointSaveCmd.Flags().StringVar(&checkpointSessionID, "session-id", "", "checkpoint a specific session ID instead of the latest")
+	checkpointListCmd.Flags().BoolVar(&checkpointListJSON, "json", false, "output checkpoints as JSON")
 	checkpointCmd.AddCommand(checkpointSaveCmd)
 	checkpointCmd.AddCommand(checkpointListCmd)
 	checkpointCmd.AddCommand(checkpointRestoreCmd)
