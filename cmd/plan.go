@@ -13,6 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	planJSON bool
+)
+
 var planCmd = &cobra.Command{
 	Use:   "plan",
 	Short: "Create and manage structured development plans",
@@ -55,39 +59,53 @@ var planListCmd = &cobra.Command{
 		entries, err := os.ReadDir(plansDir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				cmd.Println("No plans found. Create one with: hawk plan create <description>")
+				if planJSON {
+					fmt.Println("[]")
+				} else {
+					cmd.Println("No plans found. Create one with: hawk plan create <description>")
+				}
 				return nil
 			}
 			return fmt.Errorf("read plans directory: %w", err)
 		}
 
-		found := false
+		var plans []planner.Plan
 		for _, e := range entries {
 			if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
 				continue
 			}
-			found = true
-
 			path := filepath.Join(plansDir, e.Name())
 			plan, err := planner.Load(path)
 			if err != nil {
-				cmd.Println(fmt.Sprintf("  [error] %s: %v", e.Name(), err))
 				continue
 			}
+			plans = append(plans, *plan)
+		}
 
-			pending := len(planner.PendingTasks(plan))
+		if planJSON {
+			out, err := json.MarshalIndent(plans, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling plans: %w", err)
+			}
+			fmt.Println(string(out))
+			return nil
+		}
+
+		if len(plans) == 0 {
+			cmd.Println("No plans found. Create one with: hawk plan create <description>")
+			return nil
+		}
+
+		for _, plan := range plans {
+			pending := len(planner.PendingTasks(&plan))
 			total := len(plan.Tasks)
 			done := total - pending
 			cmd.Println(fmt.Sprintf(
 				"  %s  [%d/%d done]  %s",
-				strings.TrimSuffix(e.Name(), ".json"),
+				plan.Title,
 				done, total,
 				plan.Title,
 			))
-		}
-
-		if !found {
-			cmd.Println("No plans found. Create one with: hawk plan create <description>")
 		}
 
 		return nil
@@ -105,6 +123,15 @@ var planShowCmd = &cobra.Command{
 		plan, err := planner.Load(path)
 		if err != nil {
 			return fmt.Errorf("load plan %q: %w", name, err)
+		}
+
+		if planJSON {
+			out, err := json.MarshalIndent(plan, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling plan: %w", err)
+			}
+			fmt.Println(string(out))
+			return nil
 		}
 
 		fmt.Print(planner.FormatMarkdown(plan))
@@ -169,6 +196,8 @@ func init() {
 	planCmd.AddCommand(planListCmd)
 	planCmd.AddCommand(planShowCmd)
 	planCmd.AddCommand(planDoneCmd)
+	planListCmd.Flags().BoolVar(&planJSON, "json", false, "output plans as JSON")
+	planShowCmd.Flags().BoolVar(&planJSON, "json", false, "output plan as JSON")
 }
 
 // resolvePlanPath converts a plan name to a file path in Hawk's user state dir.
