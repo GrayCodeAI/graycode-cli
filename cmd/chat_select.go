@@ -61,11 +61,15 @@ func enterSelectionMode(ref *progRef, transcript string, restoreMouse bool) tea.
 		// Block on stdin in raw mode so any single keypress resumes the
 		// TUI. The TUI's input reader has been cancelled by
 		// ReleaseTerminal so this read will not race with it.
-		restore, _ := makeStdinRaw()
-		buf := make([]byte, 1)
-		_, _ = os.Stdin.Read(buf)
-		if restore != nil {
-			restore()
+		// Only block if stdin is a real terminal; on non-terminal stdin
+		// (CI, piped input, /dev/null) Read would block forever.
+		if term.IsTerminal(int(os.Stdin.Fd())) {
+			restore, _ := makeStdinRaw()
+			buf := make([]byte, 1)
+			_, _ = os.Stdin.Read(buf)
+			if restore != nil {
+				restore()
+			}
 		}
 		_ = p.RestoreTerminal()
 		syncTerminalMouse(restoreMouse)

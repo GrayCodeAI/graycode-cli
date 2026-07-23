@@ -394,7 +394,7 @@ func (g *CompletionGenerator) GenerateFish() string {
 }
 
 // GenerateJSON returns a machine-readable JSON completion spec for IDE integration.
-func (g *CompletionGenerator) GenerateJSON() string {
+func (g *CompletionGenerator) GenerateJSON() (string, error) {
 	v := strings.TrimSpace(version)
 	if v == "" {
 		v = "dev"
@@ -419,9 +419,9 @@ func (g *CompletionGenerator) GenerateJSON() string {
 
 	data, err := json.MarshalIndent(spec, "", "  ")
 	if err != nil {
-		return "{}"
+		return "", fmt.Errorf("failed to marshal completion JSON: %w", err)
 	}
-	return string(data)
+	return string(data), nil
 }
 
 func commandInfosFromCobra(cmds []*cobra.Command) []CommandInfo {
@@ -546,10 +546,15 @@ func bashInstallPath() string {
 	if info, err := os.Stat(localDir); err == nil && info.IsDir() {
 		return filepath.Join(localDir, "hawk")
 	}
-	// On macOS, use homebrew path if available
+	// On macOS, use homebrew path if available.
+	// ARM Macs (M1+) install Homebrew to /opt/homebrew; Intel Macs use /usr/local.
 	if runtime.GOOS == "darwin" {
-		brewPath := "/usr/local/etc/bash_completion.d/hawk"
-		return brewPath
+		for _, prefix := range []string{"/opt/homebrew", "/usr/local"} {
+			brewDir := filepath.Join(prefix, "etc", "bash_completion.d")
+			if info, err := os.Stat(brewDir); err == nil && info.IsDir() {
+				return filepath.Join(brewDir, "hawk")
+			}
+		}
 	}
 	// Fallback: try system-wide
 	sysDir := "/etc/bash_completion.d"

@@ -337,7 +337,12 @@ JSON:
 		case "powershell":
 			_ = cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
 		case "json":
-			_, _ = cmd.OutOrStdout().Write([]byte(NewCompletionGenerator().GenerateJSON()))
+			jsonStr, err := NewCompletionGenerator().GenerateJSON()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				return
+			}
+			_, _ = cmd.OutOrStdout().Write([]byte(jsonStr))
 			_, _ = cmd.OutOrStdout().Write([]byte("\n"))
 		}
 	},

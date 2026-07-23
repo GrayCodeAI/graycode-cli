@@ -1025,7 +1025,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.turnInputTokens = 0
 			m.turnOutputTokens = 0
 			m.turnEstimatedOutputRunes = 0
-			m.startedAt = time.Time{}
+			m.startedAt = time.Now()
 			m.partial.Reset()
 			m.startStream()
 			return m, tea.Batch(m.spinner.Tick, spinnerVerbTickCmd())

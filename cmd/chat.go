@@ -50,7 +50,10 @@ const workInputPlaceholder = `Ask Hawk to inspect, edit, or run something... (Sh
 
 func genID() string {
 	b := make([]byte, 8)
-	_, _ = cryptorand.Read(b)
+	if _, err := cryptorand.Read(b); err != nil {
+		// CSPRNG failed — fall back to timestamp-based ID to avoid all-zeros.
+		return fmt.Sprintf("%016x", time.Now().UnixNano())
+	}
 	return fmt.Sprintf("%x", b)
 }
 
@@ -58,6 +61,10 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	id := genID()
 	if sessionIDFlag != "" && resumeID == "" && !continueFlag {
 		id = sessionIDFlag
+	}
+	if sessionIDFlag != "" && (resumeID != "" || continueFlag) {
+		// --session-id is ignored when --resume or --continue is also given.
+		fmt.Fprintf(os.Stderr, "hawk: --session-id ignored during resume/continue\n")
 	}
 	if resumeID == "" && !continueFlag {
 		return id, nil, nil
@@ -69,6 +76,8 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	)
 	if resumeID != "" {
 		saved, _, err = session.ResumeSession(resumeID)
+		// Second return value (recovery note) is intentionally unused:
+		// /recover command handles listing; here we just need the session.
 	} else {
 		cwd, _ := os.Getwd()
 		saved, err = session.LoadLatestForCWD(cwd)
@@ -382,6 +391,8 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	go func() {
 		runtime := plugin.NewRuntime()
 		if err := runtime.LoadAll(); err != nil {
+			// Surface plugin load failure so users know plugins are missing.
+			fmt.Fprintf(os.Stderr, "Warning: failed to load plugins: %v\n", err)
 			return
 		}
 		runtime.RegisterHooks()
@@ -597,9 +608,12 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	p := tea.NewProgram(m, chatProgramOptions(m.mouseEnabled())...)
-	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
-	log.SetOutput(io.Discard)
+// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
+// Must be set BEFORE tea.NewProgram so no initialization logs leak through.
+log.SetOutput(io.Discard)
+
+	p := tea.NewProgram(m)
+
 	// Enable terminal tab progress bar (OSC 9;4) for long-running operations.
 	EnableTabProgress()
 	ref.Set(p)

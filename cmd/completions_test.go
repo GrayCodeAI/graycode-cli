@@ -223,7 +223,10 @@ func TestGenerateFishContainsSlashCommands(t *testing.T) {
 
 func TestGenerateJSONIsValidJSON(t *testing.T) {
 	g := NewCompletionGenerator()
-	jsonStr := g.GenerateJSON()
+	jsonStr, err := g.GenerateJSON()
+	if err != nil {
+		t.Fatalf("GenerateJSON returned error: %v", err)
+	}
 
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
@@ -241,7 +244,10 @@ func TestGenerateJSONIsValidJSON(t *testing.T) {
 
 func TestGenerateJSONContainsCommands(t *testing.T) {
 	g := NewCompletionGenerator()
-	jsonStr := g.GenerateJSON()
+	jsonStr, err := g.GenerateJSON()
+	if err != nil {
+		t.Fatalf("GenerateJSON returned error: %v", err)
+	}
 
 	var result struct {
 		Commands []struct {
@@ -267,7 +273,10 @@ func TestGenerateJSONContainsCommands(t *testing.T) {
 
 func TestGenerateJSONContainsProviders(t *testing.T) {
 	g := NewCompletionGenerator()
-	jsonStr := g.GenerateJSON()
+	jsonStr, err := g.GenerateJSON()
+	if err != nil {
+		t.Fatalf("GenerateJSON returned error: %v", err)
+	}
 
 	var result struct {
 		Providers []string `json:"providers"`
@@ -289,7 +298,10 @@ func TestGenerateJSONContainsProviders(t *testing.T) {
 
 func TestGenerateJSONContainsSlashCommands(t *testing.T) {
 	g := NewCompletionGenerator()
-	jsonStr := g.GenerateJSON()
+	jsonStr, err := g.GenerateJSON()
+	if err != nil {
+		t.Fatalf("GenerateJSON returned error: %v", err)
+	}
 
 	var result struct {
 		SlashCommands []string `json:"slash_commands"`

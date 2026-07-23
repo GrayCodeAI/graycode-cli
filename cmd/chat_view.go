@@ -54,12 +54,14 @@ func renderSetupCompleteMessage(model string) string {
 	)
 }
 
-// sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 var (
+	// reModelName matches self-introductions like "I'm ChatGPT" or "My name is Claude".
 	reModelName = regexp.MustCompile(`(?i)\b(I['` + "\u2018\u2019" + `]m|I am|my name is)\s+\*{0,2}(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)\*{0,2}`)
-	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(?:a\s+company\s+called\s+|a\s+team\s+(?:at|called)\s+|the\s+team\s+at\s+)?\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
+	// reCreator matches origin claims like "made by OpenAI" or "built by a team at Anthropic".
+	reCreator = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(?:a\s+company\s+called\s+|a\s+team\s+(?:at|called)\s+|the\s+team\s+at\s+)?\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
 )
 
+// sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 func sanitizeIdentity(s string) string {
 	s = reModelName.ReplaceAllStringFunc(s, func(m string) string {
 		parts := reModelName.FindStringSubmatch(m)
@@ -69,22 +71,23 @@ func sanitizeIdentity(s string) string {
 	return s
 }
 
-// wrapText wraps text to fit within width columns total (including indent).
-// The first line has no indent (caller provides the prefix).
-// Continuation lines get indent prepended.
 // wrapText wraps text to fit within the given width.
-// prefixWidth is the visual width of the prefix already printed before the first line
-// (e.g. icons.Robot() + " " = 2 columns). Continuation lines are indented to align with the first
-// line's text start position.
-// width is the total terminal width available.
+// The first line has no indent (caller provides the prefix); prefixWidth is the visual width
+// of the prefix already printed (e.g. icons.Robot() + " " = 2 columns). Continuation lines are
+// indented to align with the first line's text start position. width is the total terminal
+// width available.
 func wrapText(text string, width int, prefixWidth int) string {
 	if width < 20 {
 		width = 80
 	}
 	// First line has less room because the prefix is already printed.
 	firstLineWidth := width - prefixWidth
-	if firstLineWidth < 10 {
-		firstLineWidth = width
+	if firstLineWidth < 1 {
+		// Narrow terminal: use full width minus 1 to avoid overflow.
+		firstLineWidth = width - 1
+		if firstLineWidth < 1 {
+			firstLineWidth = 1
+		}
 	}
 	// Continuation indent: spaces to align under the first line's text.
 	indent := strings.Repeat(" ", prefixWidth)
@@ -617,9 +620,6 @@ func (m *chatModel) renderTokenCounters() string {
 func (m *chatModel) spinnerElapsed() time.Duration {
 	if !m.toolStartTime.IsZero() {
 		return time.Since(m.toolStartTime)
-	}
-	if m.startedAt.IsZero() {
-		m.startedAt = time.Now()
 	}
 	return time.Since(m.startedAt)
 }
