@@ -637,9 +637,9 @@ func runChat() error {
 		m.waiting = true
 	}
 
-// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
-// Must be set BEFORE tea.NewProgram so no initialization logs leak through.
-log.SetOutput(io.Discard)
+	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
+	// Must be set BEFORE tea.NewProgram so no initialization logs leak through.
+	log.SetOutput(io.Discard)
 
 	p := tea.NewProgram(m)
 

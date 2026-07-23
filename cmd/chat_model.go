@@ -185,7 +185,7 @@ type chatModel struct {
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	permReqSeq                 int
-	permTimeoutAt              time.Time // deadline for the active permission prompt (zero = none)
+	permTimeoutAt              time.Time   // deadline for the active permission prompt (zero = none)
 	askReq                     *askUserMsg // pending ask_user prompt
 	askReqSeq                  int
 	width                      int
@@ -262,11 +262,11 @@ type chatModel struct {
 	cachedBottomBarLines         int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
 	slashSugInput                string // memoize slashSuggestions per keystroke
 	slashSugCache                []string
-	slashSugGen                  int    // generation counter; bumped to invalidate slashSugCache
-	slashSugCachedGen            int    // generation at the time slashSugCache was computed
-	contextualHelp               *ContextualHelp    // rich help entries for /help <topic>
-	toolResultExpanded           map[int]bool      // per-message index: expanded state for long tool results
-	connStatusKey                string // gateway+model+creds fingerprint
+	slashSugGen                  int             // generation counter; bumped to invalidate slashSugCache
+	slashSugCachedGen            int             // generation at the time slashSugCache was computed
+	contextualHelp               *ContextualHelp // rich help entries for /help <topic>
+	toolResultExpanded           map[int]bool    // per-message index: expanded state for long tool results
+	connStatusKey                string          // gateway+model+creds fingerprint
 	connStatusVal                string
 	deferredSystemContext        string
 	deferredSystemContextReady   bool
@@ -352,19 +352,19 @@ type chatModel struct {
 
 	// Input history search (Ctrl+R) — overlay for searching through
 	// previous inputs, similar to bash reverse-i-search.
-	historySearchOpen    bool
-	historySearchInput   string
-	historySearchQuery   string
+	historySearchOpen     bool
+	historySearchInput    string
+	historySearchQuery    string
 	historySearchFiltered []string
-	historySearchSel     int
+	historySearchSel      int
 
 	// Session picker (Ctrl+S) — fuzzy search through saved sessions
 	// with context preview for quick session switching.
-	sessionPickerOpen    bool
-	sessionPickerInput   string
-	sessionPickerEntries []session.Entry
+	sessionPickerOpen     bool
+	sessionPickerInput    string
+	sessionPickerEntries  []session.Entry
 	sessionPickerFiltered []session.Entry
-	sessionPickerSel     int
+	sessionPickerSel      int
 }
 
 const streamRenderInterval = 50 * time.Millisecond

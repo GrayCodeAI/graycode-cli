@@ -17,9 +17,9 @@ const maxRecentCommands = 12
 
 // commandHistoryEntry is one recorded command use.
 type commandHistoryEntry struct {
-	Command   string    `json:"command"`
-	UsedAt    time.Time `json:"used_at"`
-	UseCount  int       `json:"use_count"`
+	Command  string    `json:"command"`
+	UsedAt   time.Time `json:"used_at"`
+	UseCount int       `json:"use_count"`
 }
 
 // commandHistory is the on-disk shape.

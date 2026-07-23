@@ -113,12 +113,12 @@ func exportSessionJSON(m *chatModel) (string, error) {
 		Content string `json:"content"`
 	}
 	type exportedSession struct {
-		SessionID  string            `json:"session_id"`
-		Model      string            `json:"model,omitempty"`
-		Provider   string            `json:"provider,omitempty"`
-		ExportedAt string            `json:"exported_at"`
-		MessageCount int           `json:"message_count"`
-		Messages   []exportedMessage `json:"messages"`
+		SessionID    string            `json:"session_id"`
+		Model        string            `json:"model,omitempty"`
+		Provider     string            `json:"provider,omitempty"`
+		ExportedAt   string            `json:"exported_at"`
+		MessageCount int               `json:"message_count"`
+		Messages     []exportedMessage `json:"messages"`
 	}
 	var msgs []exportedMessage
 	for _, msg := range m.messages {

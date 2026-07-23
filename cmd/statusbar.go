@@ -24,17 +24,17 @@ var (
 	statusTokenColor  = tokenSage
 	statusCostColor   = costViolet
 
-	statusCwdStyle    = lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
-	statusBranchStyle = lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
-	statusSpecStyle   = lipgloss.NewStyle().Foreground(statusSpecColor).Inline(true)
-	statusTokenStyle  = lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
-	statusCostStyle   = lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
-	statusClockStyle  = lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
-	statusFocusStyle  = lipgloss.NewStyle().Foreground(infoSky).Inline(true)
-	statusDimStyle    = lipgloss.NewStyle().Foreground(dimColor).Inline(true)
-	dryRunStyle           = lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Inline(true)
-	containerModeStyle    = lipgloss.NewStyle().Foreground(successTeal).Bold(true).Inline(true)
-	containerModeErrStyle = lipgloss.NewStyle().Foreground(errorCoral).Bold(true).Inline(true)
+	statusCwdStyle          = lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
+	statusBranchStyle       = lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
+	statusSpecStyle         = lipgloss.NewStyle().Foreground(statusSpecColor).Inline(true)
+	statusTokenStyle        = lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
+	statusCostStyle         = lipgloss.NewStyle().Foreground(statusCostColor).Inline(true)
+	statusClockStyle        = lipgloss.NewStyle().Foreground(hudLabelPink).Inline(true)
+	statusFocusStyle        = lipgloss.NewStyle().Foreground(infoSky).Inline(true)
+	statusDimStyle          = lipgloss.NewStyle().Foreground(dimColor).Inline(true)
+	dryRunStyle             = lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Inline(true)
+	containerModeStyle      = lipgloss.NewStyle().Foreground(successTeal).Bold(true).Inline(true)
+	containerModeErrStyle   = lipgloss.NewStyle().Foreground(errorCoral).Bold(true).Inline(true)
 	containerModeMutedStyle = lipgloss.NewStyle().Foreground(dimColor).Bold(true).Inline(true)
 )
 
