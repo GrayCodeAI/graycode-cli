@@ -463,12 +463,37 @@ API keys and secrets are never included.`,
 	},
 }
 
+// versionInfo is the machine-readable version output.
+type versionInfo struct {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date,omitempty"`
+}
+
+var versionJSON bool
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print hawk version",
 	Run: func(cmd *cobra.Command, args []string) {
+		if versionJSON {
+			info := versionInfo{Version: DisplayVersion()}
+			if d := strings.TrimSpace(buildDate); d != "" && d != "unknown" {
+				info.BuildDate = d
+			}
+			out, err := json.MarshalIndent(info, "", "  ")
+			if err != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "marshaling version: %v\n", err)
+				return
+			}
+			cmd.Println(string(out))
+			return
+		}
 		cmd.Println(versionLine())
 	},
+}
+
+func init() {
+	versionCmd.Flags().BoolVar(&versionJSON, "json", false, "output version as JSON")
 }
 
 var setupCmd = &cobra.Command{
