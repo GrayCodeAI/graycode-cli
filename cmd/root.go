@@ -249,6 +249,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
 	rootCmd.Flags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (spinners, progress, decoration); machine-parseable output only")
 	preflightCmd.Flags().BoolVar(&preflightLiveFlag, "live", false, "verify selected provider connectivity and authentication")
+	preflightCmd.Flags().BoolVar(&preflightJSON, "json", false, "output preflight report as JSON")
 	doctorCmd.Flags().BoolVar(&doctorJSONFlag, "json", false, "output diagnostics as JSON")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
@@ -534,6 +535,8 @@ var doctorCmd = &cobra.Command{
 	},
 }
 
+var preflightJSON bool
+
 var preflightCmd = &cobra.Command{
 	Use:   "preflight",
 	Short: "Check local readiness; use --live to verify the selected provider",
@@ -556,7 +559,15 @@ var preflightCmd = &cobra.Command{
 			defer cancel()
 		}
 		r := hawkconfig.EnginePreflightReportWithSettings(ctx, settings, hawkconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
-		cmd.Println(hawkconfig.FormatEnginePreflight(r))
+		if preflightJSON {
+			out, err := json.MarshalIndent(r, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling preflight: %w", err)
+			}
+			cmd.Println(string(out))
+		} else {
+			cmd.Println(hawkconfig.FormatEnginePreflight(r))
+		}
 		if !r.Ready {
 			if preflightLiveFlag {
 				return fmt.Errorf("live preflight failed — check the selected provider credential and network access")
