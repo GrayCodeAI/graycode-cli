@@ -97,6 +97,16 @@ and finding contracts now live in `hawk-core-contracts/types`.
 | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/scissors.svg" width="16" height="16" alt="scissors" /> **tok** | Token optimization | Library — compression, secrets |
 | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/camera.svg" width="16" height="16" alt="camera" /> **trace** | Session capture | CLI hook — git-native capture |
 
+### Client SDKs
+
+| SDK | Language | Key Features |
+|-----|----------|--------------|
+| **hawk-sdk-go** | Go | Cobra-style client, context-aware retries, SSE streaming |
+| **hawk-sdk-python** | Python | Pydantic models, httpx async, pytest suite |
+| **hawk-sdk-typescript** | TypeScript | Zero dependencies (global fetch), Agent + tools |
+
+All three SDKs share types from **hawk-core-contracts** and consume the daemon REST API (:4590).
+
 > <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> **hawk never talks to LLM APIs directly** — all calls go through eyrie.
 
 ---
