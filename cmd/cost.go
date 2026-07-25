@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
@@ -22,15 +23,34 @@ Subcommands:
   summary   Show a quick spend summary`,
 }
 
+var costAnalyzeJSON bool
+var costSummaryJSON bool
+
+func init() {
+	costAnalyzeCmd.Flags().BoolVar(&costAnalyzeJSON, "json", false, "output the report as JSON")
+	costSummaryCmd.Flags().BoolVar(&costSummaryJSON, "json", false, "output the summary as JSON")
+	costCmd.AddCommand(costAnalyzeCmd)
+	costCmd.AddCommand(costSummaryCmd)
+}
+
 var costAnalyzeCmd = &cobra.Command{
 	Use:   "analyze",
 	Short: "Run a full cost optimization analysis",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
-		cmd.Println()
-
 		entries := []analytics.CostEntry{}
 		report := analytics.Analyze(entries)
+
+		if costAnalyzeJSON {
+			out, err := json.MarshalIndent(report, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling report: %w", err)
+			}
+			cmd.Println(string(out))
+			return nil
+		}
+
+		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
+		cmd.Println()
 
 		if report.TotalSpend == 0 {
 			cmd.Println("No cost data collected in this session.")
@@ -55,11 +75,20 @@ var costSummaryCmd = &cobra.Command{
 	Use:   "summary",
 	Short: "Show a quick spend summary",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
-		cmd.Println()
-
 		entries := []analytics.CostEntry{}
 		report := analytics.Analyze(entries)
+
+		if costSummaryJSON {
+			out, err := json.MarshalIndent(report, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling report: %w", err)
+			}
+			cmd.Println(string(out))
+			return nil
+		}
+
+		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
+		cmd.Println()
 
 		if report.TotalSpend == 0 {
 			cmd.Println("No cost data collected in this session.")
@@ -80,9 +109,4 @@ var costSummaryCmd = &cobra.Command{
 		}
 		return nil
 	},
-}
-
-func init() {
-	costCmd.AddCommand(costAnalyzeCmd)
-	costCmd.AddCommand(costSummaryCmd)
 }

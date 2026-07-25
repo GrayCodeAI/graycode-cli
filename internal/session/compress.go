@@ -94,28 +94,38 @@ func DecompressSession(id string) (*Session, error) {
 	return parseLegacyJSONFromReader(id, gz)
 }
 
-func compressFile(src, dst string) error {
+func compressFile(src, dst string) (err error) {
 	in, err := os.Open(src) // #nosec G304 -- src is an internal session file path built by the session store
 	if err != nil {
 		return err
 	}
 	defer func() { _ = in.Close() }()
 
-	out, err := os.Create(dst) // #nosec G304 -- dst is an internal session file path built by the session store
+	// 0600: the compressed file holds the same private session history as the
+	// source JSONL; os.Create would leave it group/world-readable.
+	out, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- dst is an internal session file path built by the session store
 	if err != nil {
 		return err
 	}
-	defer func() { _ = out.Close() }()
+	// Capture the close error: the caller deletes the original once this returns
+	// nil, so a failed final flush must surface as an error (and discard the
+	// truncated .gz) rather than silently replacing the source with a bad copy.
+	defer func() {
+		if cerr := out.Close(); cerr != nil && err == nil {
+			err = cerr
+			_ = os.Remove(dst)
+		}
+	}()
 
 	gw := gzip.NewWriter(out)
-	if _, err := io.Copy(gw, in); err != nil {
+	if _, copyErr := io.Copy(gw, in); copyErr != nil {
 		_ = gw.Close()
 		_ = os.Remove(dst)
-		return err
+		return copyErr
 	}
-	if err := gw.Close(); err != nil {
+	if closeErr := gw.Close(); closeErr != nil {
 		_ = os.Remove(dst)
-		return err
+		return closeErr
 	}
 	return nil
 }

@@ -75,6 +75,12 @@ type Server struct {
 	readyMu sync.RWMutex
 	readyFn func() (bool, string)
 
+	// graphFactory projects a persisted Hawk session into the portable,
+	// privacy-safe execution graph. The composition root supplies the builder;
+	// the daemon owns only HTTP validation, authentication, and encoding.
+	graphMu      sync.RWMutex
+	graphFactory GraphFactory
+
 	// routePatterns records every "METHOD /path" pattern registered on the
 	// mux so tests can verify the HTTP surface matches api/openapi.yaml.
 	routePatterns []string
@@ -291,6 +297,14 @@ func (s *Server) SetReadyFn(fn func() (bool, string)) {
 	s.readyMu.Unlock()
 }
 
+// SetGraphFactory installs the read-only execution-graph projection used by
+// GET /v1/sessions/{id}/graph. Passing nil makes the endpoint unavailable.
+func (s *Server) SetGraphFactory(factory GraphFactory) {
+	s.graphMu.Lock()
+	s.graphFactory = factory
+	s.graphMu.Unlock()
+}
+
 // ready evaluates readiness using the installed Eyrie probe. It fails closed
 // when the engine is absent or the composition root did not install a probe;
 // merely having a factory does not prove provider readiness.
@@ -314,6 +328,7 @@ func (s *Server) routes() {
 	s.handle("GET /v1/sessions", s.auth(s.handleListSessions))
 	s.handle("GET /v1/sessions/{id}", s.auth(s.handleGetSession))
 	s.handle("GET /v1/sessions/{id}/messages", s.auth(s.handleGetMessages))
+	s.handle("GET /v1/sessions/{id}/graph", s.auth(s.handleGetSessionGraph))
 	s.handle("DELETE /v1/sessions/{id}", s.auth(s.handleDeleteSession))
 	s.handle("GET /v1/stats", s.auth(s.handleStats))
 	s.RegisterReviewRoutes()

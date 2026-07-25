@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,8 @@ var agentCmd = &cobra.Command{
 	Short: "Manage custom agent personas",
 	Long:  "Create, list, and manage custom agent personas stored in Hawk user state.",
 }
+
+var agentListJSON bool
 
 var agentListCmd = &cobra.Command{
 	Use:   "list",
@@ -54,16 +57,28 @@ func init() {
 	agentCreateCmd.Flags().StringVarP(&agentCreateDesc, "description", "d", "", "Agent description")
 	agentCreateCmd.Flags().StringVarP(&agentCreateModel, "model", "m", "", "Model to use (empty = inherit)")
 
+	agentListCmd.Flags().BoolVar(&agentListJSON, "json", false, "output agents as JSON")
 	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentCreateCmd)
 	agentCmd.AddCommand(agentShowCmd)
 	agentCmd.AddCommand(agentRemoveCmd)
 }
 
-func runAgentList(_ *cobra.Command, _ []string) error {
+func runAgentList(cmd *cobra.Command, _ []string) error {
 	all, err := agents.ListAll()
 	if err != nil {
 		return err
+	}
+	if agentListJSON {
+		if all == nil {
+			all = []*agents.Agent{}
+		}
+		out, err := json.MarshalIndent(all, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshaling agents: %w", err)
+		}
+		cmd.Println(string(out))
+		return nil
 	}
 	if len(all) == 0 {
 		fmt.Printf("No agents found. Create one with: hawk agent create <name>\n")
@@ -80,7 +95,10 @@ func runAgentList(_ *cobra.Command, _ []string) error {
 		}
 		desc := a.Description
 		if len(desc) > 50 {
-			desc = desc[:50] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(desc); len(runes) > 50 {
+				desc = string(runes[:50]) + "..."
+			}
 		}
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", a.Name, model, desc)
 	}

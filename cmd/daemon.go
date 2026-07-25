@@ -17,6 +17,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -28,6 +29,7 @@ var (
 	daemonPort   int
 	daemonHost   string
 	daemonAPIKey string
+	daemonJSON   bool
 )
 
 var daemonCmd = &cobra.Command{
@@ -61,6 +63,7 @@ func init() {
 	daemonCmd.AddCommand(daemonStartCmd)
 	daemonCmd.AddCommand(daemonStopCmd)
 	daemonCmd.AddCommand(daemonStatusCmd)
+	daemonStatusCmd.Flags().BoolVar(&daemonJSON, "json", false, "output status as JSON")
 }
 
 func runDaemonStart(_ *cobra.Command, _ []string) error {
@@ -107,6 +110,17 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 
 	daemon.SetVersion(version)
 	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
+	srv.SetGraphFactory(func(ctx context.Context, req daemon.GraphRequest) (executiongraph.Export, error) {
+		if err := ctx.Err(); err != nil {
+			return executiongraph.Export{}, err
+		}
+		return buildExecutionGraphExport(
+			[]string{req.SessionID},
+			req.RepositoryID,
+			req.TraceCheckpointIDs,
+			req.GeneratedAt,
+		)
+	})
 
 	// Wire Eyrie's authoritative local preflight into GET /v1/ready. A session
 	// factory only proves Hawk can attempt construction; readiness additionally
@@ -270,7 +284,11 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 
 	data, err := os.ReadFile(pidFile) // #nosec G304 -- pidFile built from internal daemon run directory
 	if err != nil {
-		fmt.Println("Status: not running")
+		if daemonJSON {
+			fmt.Println(`{"status":"not running"}`)
+		} else {
+			fmt.Println("Status: not running")
+		}
 		return nil
 	}
 
@@ -280,20 +298,43 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		StartedAt string `json:"started_at"`
 	}
 	if unmarshalErr := json.Unmarshal(data, &info); unmarshalErr != nil {
-		fmt.Println("Status: unknown (invalid PID file)")
+		if daemonJSON {
+			fmt.Println(`{"status":"unknown","error":"invalid PID file"}`)
+		} else {
+			fmt.Println("Status: unknown (invalid PID file)")
+		}
 		return nil
 	}
 
 	// Check if process is alive
 	proc, err := os.FindProcess(info.PID)
 	if err != nil {
-		fmt.Println("Status: not running (stale PID file)")
+		if daemonJSON {
+			fmt.Println(`{"status":"not running","error":"stale PID file"}`)
+		} else {
+			fmt.Println("Status: not running (stale PID file)")
+		}
 		_ = os.Remove(pidFile)
 		return nil
 	}
 	if err := proc.Signal(syscall.Signal(0)); err != nil {
-		fmt.Println("Status: not running (stale PID file)")
+		if daemonJSON {
+			fmt.Println(`{"status":"not running","error":"stale PID file"}`)
+		} else {
+			fmt.Println("Status: not running (stale PID file)")
+		}
 		_ = os.Remove(pidFile)
+		return nil
+	}
+
+	if daemonJSON {
+		out, _ := json.MarshalIndent(map[string]any{
+			"status":     "running",
+			"pid":        info.PID,
+			"address":    "http://" + info.Addr,
+			"started_at": info.StartedAt,
+		}, "", "  ")
+		fmt.Println(string(out))
 		return nil
 	}
 

@@ -363,6 +363,7 @@ func configureSessionHeavy(sess *engine.Session) {
 		sess.MemorySvc().SetMemory(enhancedMem)
 		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
 		sess.MemorySvc().SetEnhanced(enhancedMem)
+		sess.ConfigureContextGraphObservation(cwd)
 		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
 	}
 }

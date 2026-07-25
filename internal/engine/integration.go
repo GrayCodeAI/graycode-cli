@@ -163,6 +163,8 @@ type PostResponseResult struct {
 	QualityScore      float64
 	MentionedFiles    []string
 	TokensUsed        int
+	SecretMatches     int
+	SecretTypes       map[string]int
 }
 
 // PostToolResult holds the aggregated results of the post-tool-execution pipeline.
@@ -360,7 +362,16 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []types.Eyr
 
 	// 4. Redact secrets from output (hawk's patterns + tok's 27 patterns)
 	result.FormattedResponse = p.OutputRedactor.Redact(result.FormattedResponse)
-	result.FormattedResponse = tok.DefaultSecretDetector().RedactSecrets(result.FormattedResponse)
+	secretDetector := tok.DefaultSecretDetector()
+	secretMatches := secretDetector.DetectSecrets(result.FormattedResponse)
+	if len(secretMatches) > 0 {
+		result.SecretMatches = len(secretMatches)
+		result.SecretTypes = make(map[string]int)
+		for _, match := range secretMatches {
+			result.SecretTypes[match.Type]++
+		}
+	}
+	result.FormattedResponse = secretDetector.RedactSecrets(result.FormattedResponse)
 
 	// 5. Update timeline
 	p.Timeline.AddEvent("response", "", map[string]string{

@@ -19,6 +19,7 @@ import (
 var (
 	feedbackLocal    bool
 	feedbackCategory string
+	feedbackJSON     bool
 )
 
 // FeedbackReport is the structured report written to file or used in issue URL.
@@ -54,6 +55,7 @@ Examples:
 func init() {
 	feedbackCmd.Flags().BoolVar(&feedbackLocal, "local", false, "save feedback locally instead of opening browser")
 	feedbackCmd.Flags().StringVar(&feedbackCategory, "category", "other", "feedback category: bug, feature, ux, performance, other")
+	feedbackCmd.Flags().BoolVar(&feedbackJSON, "json", false, "output the feedback report as JSON instead of opening browser")
 	rootCmd.AddCommand(feedbackCmd)
 }
 
@@ -81,6 +83,15 @@ func runFeedback(_ *cobra.Command, args []string) error {
 		Arch:      runtime.GOARCH,
 		Category:  feedbackCategory,
 		Body:      body,
+	}
+
+	if feedbackJSON {
+		data, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshal report: %w", err)
+		}
+		fmt.Println(string(data))
+		return nil
 	}
 
 	if feedbackLocal {

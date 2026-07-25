@@ -37,7 +37,7 @@ func TestNextTip_ReturnsNonEmpty(t *testing.T) {
 	os.MkdirAll(filepath.Join(tmp, ".hawk"), 0o755)
 	defer os.Setenv("HOME", orig)
 
-	tip := nextTip()
+	tip := nextTip(false, "")
 	if tip == "" {
 		t.Fatal("nextTip returned empty string")
 	}

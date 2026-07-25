@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -77,6 +78,8 @@ var trustRemoveCmd = &cobra.Command{
 	},
 }
 
+var trustListJSON bool
+
 var trustListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List trusted directories",
@@ -87,8 +90,20 @@ var trustListCmd = &cobra.Command{
 		}
 		entries := s.List()
 		if len(entries) == 0 {
-			cmd.Println("No trusted directories.")
-			cmd.Printf("Folder trust enforcement: %v (HAWK_Y0_FOLDER_TRUST)\n", flags.FolderTrust())
+			if trustListJSON {
+				fmt.Println("[]")
+			} else {
+				cmd.Println("No trusted directories.")
+				cmd.Printf("Folder trust enforcement: %v (HAWK_Y0_FOLDER_TRUST)\n", flags.FolderTrust())
+			}
+			return nil
+		}
+		if trustListJSON {
+			out, err := json.MarshalIndent(entries, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling trust entries: %w", err)
+			}
+			fmt.Println(string(out))
 			return nil
 		}
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
@@ -134,6 +149,7 @@ var trustCheckCmd = &cobra.Command{
 
 func init() {
 	trustAddCmd.Flags().String("reason", "", "Optional reason recorded in the trust store")
+	trustListCmd.Flags().BoolVar(&trustListJSON, "json", false, "output trusted directories as JSON")
 	trustCmd.AddCommand(trustAddCmd)
 	trustCmd.AddCommand(trustRemoveCmd)
 	trustCmd.AddCommand(trustListCmd)

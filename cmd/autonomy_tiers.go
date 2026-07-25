@@ -24,20 +24,20 @@ var containerAutonomyTierNames = []string{
 	"Autonomous",
 }
 
-// DefaultContainerAutonomy is the tier applied when the sandbox becomes ready.
+// DefaultContainerAutonomy is the tier applied when the Docker container becomes ready.
 const DefaultContainerAutonomy = engine.AutonomySemi
 
 // DefaultHostAutonomy is the tier applied when a session runs on the host
-// (no container sandbox) and the user hasn't set an explicit autonomy level.
+// (no Docker container) and the user hasn't set an explicit autonomy level.
 // Read-only tools (Glob/Read/Grep/LS/WebSearch/...) can't damage anything
-// whether or not there's a sandbox, so there's no reason to prompt for them
+// whether or not there's a container, so there's no reason to prompt for them
 // just because the container isn't available — only Write/Edit/Bash still ask.
 const DefaultHostAutonomy = engine.AutonomyBasic
 
 // applyDefaultHostAutonomy sets the host-mode default unless the user
 // already configured an explicit autonomy level (settings.json or a prior
 // SetAutonomy call). Mirrors the same Autonomy()==0 guard the container
-// path uses when the sandbox becomes ready.
+// path uses when the container becomes ready.
 func applyDefaultHostAutonomy(sess *engine.Session) {
 	if sess != nil && sess.PermSvc().Autonomy() == 0 {
 		sess.PermSvc().SetAutonomy(DefaultHostAutonomy)

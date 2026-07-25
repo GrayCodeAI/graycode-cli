@@ -457,9 +457,9 @@ func (ch *ContextualHelp) registerAllEntries() {
 		},
 		{
 			Topic:    "tool: sandbox",
-			Summary:  "Safe execution sandbox",
-			Detail:   "Provides an isolated environment for running code and commands safely without affecting your project.",
-			Examples: []string{"/test                — runs in sandbox", "/fix                 — validates fixes in sandbox"},
+			Summary:  "Safe execution via Docker container",
+			Detail:   "Runs code and commands in an isolated Docker container so they don't affect your host machine. Start hawk with --container to enable.",
+			Examples: []string{"/test                — runs in container", "/fix                 — validates fixes in container"},
 			Related:  []string{"/test", "/fix", "tool: snapshot"},
 			Category: "tools",
 		},

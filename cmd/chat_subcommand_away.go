@@ -30,7 +30,10 @@ func (a *awaySubcommand) Handle(m *chatModel, args []string, text string) (tea.M
 	for _, msg := range msgs[start:] {
 		preview := msg.Content
 		if len(preview) > 200 {
-			preview = preview[:200] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(preview); len(runes) > 200 {
+				preview = string(runes[:200]) + "..."
+			}
 		}
 		if msg.Role == "user" && preview != "" {
 			summary.WriteString(fmt.Sprintf("User: %s\n", preview))

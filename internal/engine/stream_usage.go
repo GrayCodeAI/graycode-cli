@@ -75,20 +75,26 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 	provider = strings.TrimSpace(provider)
 	model = strings.TrimSpace(model)
 	s.RecordAPIUsage(prompt, completion)
+	costBefore := s.Cost.Total()
 	s.Cost.AddForModel(model, prompt, completion)
+	requestCost := s.Cost.Total() - costBefore
 	if s.CostTracker != nil && model != "" {
-		inPrice, outPrice := ModelPricing(model)
-		cost := float64(prompt)*inPrice/1_000_000 + float64(completion)*outPrice/1_000_000
 		_ = s.CostTracker.Record(analytics.CostEntry{
 			Model:        model,
 			TaskType:     taskType,
 			InputTokens:  prompt,
 			OutputTokens: completion,
-			CostUSD:      cost,
+			CostUSD:      requestCost,
 			Duration:     time.Since(apiStart),
 			Kept:         true,
 		})
 	}
+	s.recordTokUsageBudgetObservation(
+		prompt+completion,
+		requestCost,
+		provider,
+		model,
+	)
 	if ch != nil {
 		ch <- StreamEvent{
 			Type: "usage",

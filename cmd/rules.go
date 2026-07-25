@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/GrayCodeAI/hawk/internal/rules"
@@ -10,6 +11,7 @@ import (
 var (
 	rulesImportFrom string
 	rulesExportTo   string
+	rulesDetectJSON bool
 )
 
 var rulesCmd = &cobra.Command{
@@ -29,6 +31,15 @@ var rulesDetectCmd = &cobra.Command{
 	Short: "Show which AI tool rule files exist in the current directory",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		found := rules.Detect(".")
+
+		if rulesDetectJSON {
+			out, err := json.MarshalIndent(found, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling detection results: %w", err)
+			}
+			fmt.Println(string(out))
+			return nil
+		}
 
 		if len(found) == 0 {
 			cmd.Println("No AI tool rule files detected.")
@@ -110,6 +121,7 @@ var rulesExportCmd = &cobra.Command{
 func init() {
 	rulesImportCmd.Flags().StringVar(&rulesImportFrom, "from", "", "source format to import from (cursor, claudecode, copilot, gemini)")
 	rulesExportCmd.Flags().StringVar(&rulesExportTo, "to", "", "target format to export to (cursor, claudecode, copilot, gemini)")
+	rulesDetectCmd.Flags().BoolVar(&rulesDetectJSON, "json", false, "output detected rule files as JSON")
 
 	rulesCmd.AddCommand(rulesDetectCmd)
 	rulesCmd.AddCommand(rulesImportCmd)

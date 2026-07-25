@@ -2,6 +2,7 @@ package session
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -30,6 +31,47 @@ func TestRedactSessionMessages(t *testing.T) {
 	redacted := redactSessionMessages(sess)
 	if redacted == nil {
 		t.Fatal("redacted should not be nil")
+	}
+}
+
+// TestRedactToolArguments_Nested guards against leaking secrets buried inside
+// nested maps/slices of tool arguments (previously only top-level strings were
+// redacted).
+func TestRedactToolArguments_Nested(t *testing.T) {
+	const secret = "sk-ant-api01-secret123456"
+	args := map[string]interface{}{
+		"top":    "key=" + secret,
+		"env":    map[string]interface{}{"API_TOKEN": secret, "safe": "value"},
+		"list":   []interface{}{secret, "plain", map[string]interface{}{"deep": secret}},
+		"number": 42,
+	}
+	out := redactToolArguments(args)
+
+	var found bool
+	var walk func(v interface{})
+	walk = func(v interface{}) {
+		switch val := v.(type) {
+		case string:
+			if strings.Contains(val, secret) {
+				found = true
+			}
+		case map[string]interface{}:
+			for _, item := range val {
+				walk(item)
+			}
+		case []interface{}:
+			for _, item := range val {
+				walk(item)
+			}
+		}
+	}
+	walk(out)
+	if found {
+		t.Fatalf("secret leaked in redacted tool arguments: %#v", out)
+	}
+	// Non-secret scalars are preserved.
+	if out["number"] != 42 {
+		t.Errorf("non-string scalar should be preserved, got %#v", out["number"])
 	}
 }
 

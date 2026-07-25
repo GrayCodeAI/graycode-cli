@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mattn/go-runewidth"
 )
 
 func TestCompleteSlashCommand(t *testing.T) {
@@ -454,6 +456,26 @@ func TestFormatSuggestions(t *testing.T) {
 	// Check that descriptions are present
 	if !strings.Contains(output, "Auto-commit with AI message") {
 		t.Error("expected description in output")
+	}
+}
+
+// TestFormatSuggestions_MultibyteAlignment verifies that descriptions align to
+// the same display column even when suggestion text contains multi-byte runes
+// (byte length != display width for CJK/accented text).
+func TestFormatSuggestions_MultibyteAlignment(t *testing.T) {
+	suggestions := []Suggestion{
+		{Text: "你好", Description: "greeting"}, // 2 CJK runes = 4 display cells
+		{Text: "ab", Description: "letters"},  // 2 display cells
+	}
+	output := FormatSuggestions(suggestions, 10)
+	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(lines))
+	}
+	col0 := runewidth.StringWidth(lines[0][:strings.Index(lines[0], "greeting")])
+	col1 := runewidth.StringWidth(lines[1][:strings.Index(lines[1], "letters")])
+	if col0 != col1 {
+		t.Errorf("descriptions misaligned: column %d vs %d\n%s", col0, col1, output)
 	}
 }
 

@@ -466,7 +466,9 @@ func generatePRTitle(commits string) string {
 		if len(parts) == 2 {
 			title := parts[1]
 			if len(title) > 72 {
-				title = title[:69] + "..."
+				if runes := []rune(title); len(runes) > 72 {
+					title = string(runes[:69]) + "..."
+				}
 			}
 			return title
 		}
@@ -508,7 +510,9 @@ func generatePRTitle(commits string) string {
 		}
 		title := fmt.Sprintf("Multiple changes (%s)", strings.Join(typeNames, ", "))
 		if len(title) > 72 {
-			title = title[:69] + "..."
+			if runes := []rune(title); len(runes) > 72 {
+				title = string(runes[:69]) + "..."
+			}
 		}
 		return title
 	}
@@ -518,7 +522,9 @@ func generatePRTitle(commits string) string {
 	if len(parts) == 2 {
 		title := parts[1]
 		if len(title) > 72 {
-			title = title[:69] + "..."
+			if runes := []rune(title); len(runes) > 72 {
+				title = string(runes[:69]) + "..."
+			}
 		}
 		return title
 	}

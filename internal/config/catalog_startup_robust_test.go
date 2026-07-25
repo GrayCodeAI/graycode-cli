@@ -14,10 +14,6 @@ func TestPrepareCatalogForSession_StaleCacheRefreshFailureContinues(t *testing.T
 	catalogtest.Install(t)
 	// Force stale so refresh is attempted; remote may fail offline — should not block if cache has models.
 	h := hawkconfig.CatalogHealthReport(context.Background())
-	if h.Models == 0 {
-		// FIXME: fixture has no models
-		t.Skip("fixture has no models")
-	}
 	var buf bytes.Buffer
 	err := hawkconfig.PrepareCatalogForSession(context.Background(), &buf, hawkconfig.CatalogStartupOptions{
 		ForceRefresh: true,

@@ -403,7 +403,10 @@ func firstOutputLine(output string) string {
 		}
 		// Trim to a reasonable length.
 		if len(line) > 80 {
-			return line[:77] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(line); len(runes) > 80 {
+				return string(runes[:77]) + "..."
+			}
 		}
 		return line
 	}

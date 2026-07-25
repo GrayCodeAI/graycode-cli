@@ -1,7 +1,5 @@
 package hawkerr
 
-import "strings"
-
 // Exit-code taxonomy.
 //
 // hawk historically collapsed every failure to exit code 1, which gives an
@@ -32,91 +30,11 @@ const (
 
 // ClassifyExitCode maps an error to a stable exit code from the taxonomy above.
 //
-// It deliberately mirrors the textual classification already performed by the
-// CLI's friendlyError (cmd/errors.go): the same provider/network/auth signals
-// that produce a friendly message here produce a stable exit code, so the two
-// never disagree about what kind of failure occurred. Order matters — the most
-// specific and most actionable classes are checked first.
+// The actual pattern matching lives in classify() so the human-readable
+// message (ClassifyErrorMessage) and the exit code never disagree about what
+// kind of failure occurred.
 //
 // A nil error yields ExitOK; an unrecognized error yields ExitGeneral.
 func ClassifyExitCode(err error) int {
-	if err == nil {
-		return ExitOK
-	}
-	low := strings.ToLower(err.Error())
-
-	contains := func(subs ...string) bool {
-		for _, s := range subs {
-			if strings.Contains(low, s) {
-				return true
-			}
-		}
-		return false
-	}
-
-	switch {
-	// Rate limiting / quota / credits — checked before generic auth because a
-	// 429 is retriable whereas a 401 is not.
-	case contains("429", "rate limit", "rate_limit", "too many requests",
-		"insufficient credits", "insufficient balance", "out of credits",
-		"requires more credits", "can only afford", "quota exceeded"):
-		return ExitRateLimit
-
-	// Authentication / authorization — bad or missing key, 401/403.
-	case contains("401", "unauthorized", "invalid api key", "invalid_api_key",
-		"authentication", "api key is missing", "403", "forbidden",
-		"access denied", "payment required"):
-		return ExitAuth
-
-	// Context window overflow — distinct from a generic 400 so callers can
-	// react by compacting rather than aborting.
-	case contains("context length", "context_length", "context window",
-		"token limit", "too many tokens", "maximum context",
-		"max_tokens exceeded", "max tokens exceeded", "prompt is too long"):
-		return ExitContextLimit
-
-	// Policy / permission / guardrail denial.
-	case contains("permission denied", "guardrail", "policy", "blocked by",
-		"approval denied", "not permitted", "operation not allowed"):
-		return ExitPolicyBlock
-
-	// Tool execution failures and tool timeouts.
-	case contains("tool timeout", "tool_timeout", "tool execution",
-		"tool failed", "tool error"):
-		return ExitToolFailure
-
-	// Disk space / quota.
-	case contains("no space left", "disk full", "not enough space", "disk quota"):
-		return ExitDiskFull
-
-	// Malformed configuration.
-	case contains("invalid json in config") ||
-		(contains("settings", "config") && contains("unmarshal", "syntax error", "invalid character")):
-		return ExitConfig
-
-	// Not found — model/endpoint/resource (404).
-	case contains("model not found", "model_not_found", "unknown model",
-		"invalid model", "404", "no such host"):
-		// "no such host" is a DNS failure, not a 404 — route it to network.
-		if contains("no such host") {
-			return ExitNetwork
-		}
-		return ExitNotFound
-
-	// Network errors — DNS, refused/reset connections, provider 5xx, TLS.
-	case contains("network is unreachable", "network unreachable",
-		"connection refused", "connection reset", "broken pipe",
-		"dns", "lookup", "500", "502", "503", "504",
-		"internal server error", "bad gateway", "service unavailable",
-		"gateway timeout", "certificate", "tls", "x509"):
-		return ExitNetwork
-
-	// Timeouts / cancellation — checked after the 5xx gateway-timeout cases so
-	// "504 gateway timeout" stays a network error.
-	case contains("timeout", "timed out", "deadline exceeded", "context canceled"):
-		return ExitTimeout
-
-	default:
-		return ExitGeneral
-	}
+	return classify(err).exitCode
 }

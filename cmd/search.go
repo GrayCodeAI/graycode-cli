@@ -66,7 +66,10 @@ func runSearch(_ *cobra.Command, args []string) error {
 	for _, r := range results {
 		preview := r.Preview
 		if len(preview) > 80 {
-			preview = preview[:80] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(preview); len(runes) > 80 {
+				preview = string(runes[:80]) + "..."
+			}
 		}
 		preview = strings.ReplaceAll(preview, "\n", " ")
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", r.SessionID[:8], r.Role, preview)

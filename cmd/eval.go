@@ -19,6 +19,8 @@ var (
 	evalNoCache bool
 	evalOutput  string
 	evalTaskDir string
+	evalListJSON bool
+	evalResultsJSON bool
 )
 
 var evalCmd = &cobra.Command{
@@ -64,6 +66,8 @@ func init() {
 	evalRunCmd.Flags().BoolVar(&evalNoCache, "no-cache", false, "Disable result caching")
 	evalRunCmd.Flags().StringVarP(&evalOutput, "output", "o", "markdown", "Output format: markdown, json")
 	evalRunCmd.Flags().StringVar(&evalTaskDir, "task-dir", "", "Directory with YAML task definitions")
+	evalListCmd.Flags().BoolVar(&evalListJSON, "json", false, "output tasks as JSON")
+	evalResultsCmd.Flags().BoolVar(&evalResultsJSON, "json", false, "output results as JSON")
 
 	evalCmd.AddCommand(evalRunCmd)
 	evalCmd.AddCommand(evalListCmd)
@@ -201,15 +205,21 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 		tasks = append(tasks, yamlTasks...)
 	}
 
+	if evalListJSON {
+		out, err := json.MarshalIndent(tasks, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshaling tasks: %w", err)
+		}
+		fmt.Println(string(out))
+		return nil
+	}
+
 	fmt.Printf("Available tasks (%d):\n\n", len(tasks))
 	fmt.Println("| ID | Description | Tags |")
 	fmt.Println("|----|-------------|------|")
 	for _, t := range tasks {
 		tags := strings.Join(t.Tags, ", ")
-		desc := t.Description
-		if len(desc) > 50 {
-			desc = desc[:50] + "..."
-		}
+		desc := truncateWithEllipsis(t.Description, 53)
 		fmt.Printf("| %s | %s | %s |\n", t.ID, desc, tags)
 	}
 	return nil
@@ -225,6 +235,24 @@ func runEvalResults(_ *cobra.Command, _ []string) error {
 		fmt.Println("No saved results found.")
 		return nil
 	}
+
+	if evalResultsJSON {
+		var allResults []eval.StoredResult
+		for _, f := range files {
+			r, err := store.Load(f)
+			if err != nil {
+				continue
+			}
+			allResults = append(allResults, *r)
+		}
+		out, err := json.MarshalIndent(allResults, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshaling results: %w", err)
+		}
+		fmt.Println(string(out))
+		return nil
+	}
+
 	fmt.Printf("Saved results (%d):\n\n", len(files))
 	for _, f := range files {
 		r, err := store.Load(f)

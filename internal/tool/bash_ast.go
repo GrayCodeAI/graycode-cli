@@ -607,7 +607,11 @@ func truncateSnippet(s string) string {
 	if len(s) <= 80 {
 		return s
 	}
-	return s[:77] + "..."
+	// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+	if runes := []rune(s); len(runes) > 80 {
+		return string(runes[:77]) + "..."
+	}
+	return s
 }
 
 // isHeredocBodyDangerous returns true if the heredoc body contains a
@@ -635,7 +639,10 @@ func isHeredocBodyDangerous(body string) bool {
 func (a *bashASTAnalyzer) flag(t bashTok, category string) {
 	snippet := t.text
 	if len(snippet) > 80 {
-		snippet = snippet[:77] + "..."
+		// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+		if runes := []rune(snippet); len(runes) > 80 {
+			snippet = string(runes[:77]) + "..."
+		}
 	}
 	a.findings = append(a.findings, astFinding{
 		category: category,

@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // ---------------------------------------------------------------------------
@@ -286,11 +287,15 @@ func (r *MarkdownRenderer) renderInline(text string) string {
 		}
 		prefix := ""
 		suffix := ""
-		if len(m) > 0 && m[0] != '*' {
-			prefix = string(m[0])
+		// Decode full runes (not raw bytes) so multi-byte characters adjacent to
+		// the '*' markers are not truncated/corrupted.
+		if !strings.HasPrefix(m, "*") {
+			r, _ := utf8.DecodeRuneInString(m)
+			prefix = string(r)
 		}
-		if len(m) > 0 && m[len(m)-1] != '*' {
-			suffix = string(m[len(m)-1])
+		if !strings.HasSuffix(m, "*") {
+			r, _ := utf8.DecodeLastRuneInString(m)
+			suffix = string(r)
 		}
 		return prefix + theme.Italic + parts[1] + theme.Reset + suffix
 	})

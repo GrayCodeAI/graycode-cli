@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -137,8 +138,9 @@ type (
 )
 
 type displayMsg struct {
-	role    string
-	content string
+	role      string
+	content   string
+	timeoutAt time.Time // deadline for permission prompts (zero = none)
 }
 
 type progRef struct {
@@ -183,6 +185,7 @@ type chatModel struct {
 	messageQueue               []string                  // queued messages while agent is working
 	permReq                    *engine.PermissionRequest // pending permission prompt
 	permReqSeq                 int
+	permTimeoutAt              time.Time   // deadline for the active permission prompt (zero = none)
 	askReq                     *askUserMsg // pending ask_user prompt
 	askReqSeq                  int
 	width                      int
@@ -235,8 +238,12 @@ type chatModel struct {
 	history                      []string
 	historyIdx                   int
 	historyDraft                 string // unsent text before navigating history
+	lastCommand                  string // most recent slash command (for context-aware tips)
 	autoScroll                   bool   // whether viewport is pinned to bottom
 	streamFollow                 bool   // follow streaming output (Grok-style; toggle with /follow)
+	sleepCancel                  func() // cancel function to re-enable sleep (nil if not prevented)
+	backgrounded                 bool   // terminal lost focus during current turn (for completion notification)
+	notifiedComplete             bool   // completion notification was sent this turn (prevent duplicates)
 	uiFocus                      uiFocusArea
 	contentLines                 int   // total lines in scrollback content (for footer position)
 	lastMouseY                   int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
@@ -255,7 +262,11 @@ type chatModel struct {
 	cachedBottomBarLines         int    // memoized chatBottomBarLines; refresh via refreshInputLayoutIfNeeded
 	slashSugInput                string // memoize slashSuggestions per keystroke
 	slashSugCache                []string
-	connStatusKey                string // gateway+model+creds fingerprint
+	slashSugGen                  int             // generation counter; bumped to invalidate slashSugCache
+	slashSugCachedGen            int             // generation at the time slashSugCache was computed
+	contextualHelp               *ContextualHelp // rich help entries for /help <topic>
+	toolResultExpanded           map[int]bool    // per-message index: expanded state for long tool results
+	connStatusKey                string          // gateway+model+creds fingerprint
 	connStatusVal                string
 	deferredSystemContext        string
 	deferredSystemContextReady   bool
@@ -274,6 +285,10 @@ type chatModel struct {
 	vpRenderWidth   int
 	vpLastMsgLen    int
 
+	// Cached expanded map for viewport position math (avoids repeated allocations).
+	cachedExpandedMap map[int]bool
+	cachedExpandedLen int
+
 	// Streaming-partial render cache: rendered output of the completed
 	// markdown blocks of m.partial (see renderStreamTail).
 	streamMDPrefixRaw string
@@ -282,12 +297,20 @@ type chatModel struct {
 
 	activeSkills map[string]plugin.SmartSkill // per-session activated skills
 
-	// Container mode (hermetic execution in sandbox)
+	// Container mode (hermetic execution in Docker container)
 	containerEnabled bool
 	containerStatus  string // "checking docker…", "pulling image…", "starting…", "<id>", "docker not running"
 	containerReady   bool
 	containerErr     error
 	containerSandbox *sandbox.ContainerSandbox
+	// pendingSubmit holds user input entered while the container is still
+	// booting. It is auto-submitted when the container becomes ready so the
+	// user's message is never silently discarded.
+	pendingSubmit string
+	// containerRetryable is true after a container boot failure. It enables
+	// the [r]etry/[h]ost-mode keybindings so the user can recover without
+	// restarting the TUI.
+	containerRetryable bool
 
 	// Taste & staleness tracking
 	tasteHooks        *taste.Hooks
@@ -312,6 +335,12 @@ type chatModel struct {
 	// Loop cancellation
 	loopCancel context.CancelFunc // cancels the current /loop goroutine
 
+	// Parallel agents cancellation
+	parallelCancel context.CancelFunc // cancels running /parallel agents
+
+	// Background goroutine cancellation
+	bgCancel context.CancelFunc // cancels all background goroutines on quit
+
 	// PageRank file watcher
 	watcherStop func() // stops the incremental symbol graph file watcher
 
@@ -320,9 +349,72 @@ type chatModel struct {
 	autonomyPicker *AutonomyPicker
 	specPicker     *SpecPicker
 	themePicker    *ThemePicker
+
+	// Input history search (Ctrl+R) — overlay for searching through
+	// previous inputs, similar to bash reverse-i-search.
+	historySearchOpen     bool
+	historySearchInput    string
+	historySearchQuery    string
+	historySearchFiltered []string
+	historySearchSel      int
+
+	// Session picker (Ctrl+S) — fuzzy search through saved sessions
+	// with context preview for quick session switching.
+	sessionPickerOpen     bool
+	sessionPickerInput    string
+	sessionPickerEntries  []session.Entry
+	sessionPickerFiltered []session.Entry
+	sessionPickerSel      int
 }
 
 const streamRenderInterval = 50 * time.Millisecond
+
+// maxDisplayMessages bounds the number of messages kept in memory for display.
+// Older messages are trimmed to prevent unbounded memory growth in long sessions.
+// The session file still contains the full history for /resume.
+const maxDisplayMessages = 500
+
+// messageTrimThreshold is the point at which we start trimming old messages.
+// We trim in batches to avoid frequent reallocations.
+const messageTrimThreshold = 450
+
+// trimOldMessages removes old messages when the count exceeds the threshold.
+// Keeps the most recent messages and shows a hint about trimmed history.
+func (m *chatModel) trimOldMessages() {
+	if len(m.messages) <= messageTrimThreshold {
+		return
+	}
+	// Keep the most recent maxDisplayMessages messages.
+	// Trim from the front, but keep the welcome message if present.
+	trimCount := len(m.messages) - maxDisplayMessages
+	if trimCount <= 0 {
+		return
+	}
+
+	// Preserve a leading welcome message (index 0) if present — it is
+	// re-emitted ahead of the trim hint so the header survives long sessions.
+	startIdx := 0
+	if m.messages[0].role == "welcome" {
+		startIdx = 1
+	}
+
+	// Never trim past the end of the slice.
+	if startIdx+trimCount >= len(m.messages) {
+		return
+	}
+
+	trimmedHint := displayMsg{
+		role:    "system",
+		content: fmt.Sprintf("... %d earlier messages trimmed (use /export to save full history)", trimCount),
+	}
+	// Rebuild: preserved prefix (welcome) + hint + recent messages.
+	kept := make([]displayMsg, 0, len(m.messages)-trimCount+1)
+	kept = append(kept, m.messages[:startIdx]...)
+	kept = append(kept, trimmedHint)
+	kept = append(kept, m.messages[startIdx+trimCount:]...)
+	m.messages = kept
+	m.invalidateViewportCache()
+}
 
 func (m *chatModel) markPartialDirty() tea.Cmd {
 	m.partialDirty = true

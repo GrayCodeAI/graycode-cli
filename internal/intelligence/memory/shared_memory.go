@@ -105,7 +105,7 @@ func (sm *SharedMemory) Recall(query string, budget int) (string, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	result, err := sm.bridge.engine.Recall(context.Background(), yaadEngine.RecallOpts{
+	result, err := sm.bridge.recallResultWithContext(context.Background(), yaadEngine.RecallOpts{
 		Query:   query,
 		Budget:  budget,
 		Limit:   10,

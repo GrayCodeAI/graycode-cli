@@ -3,7 +3,45 @@ package sight
 import (
 	"context"
 	"testing"
+	"time"
+
+	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 )
+
+func TestReviewContractsObservedRecordsQualityGraph(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	bridge := &Bridge{}
+	at := time.Date(2026, time.July, 25, 13, 0, 0, 0, time.UTC)
+	result, err := bridge.ReviewContractsObserved(
+		context.Background(),
+		"private source diff",
+		GraphObservation{
+			SessionID:  "session-1",
+			Scope:      graphcontracts.Scope{RepositoryID: "repo-1"},
+			ObservedAt: at,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ReviewContractsObserved() error = %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected review result")
+	}
+	entries, err := graphjournal.Load("session-1")
+	if err != nil {
+		t.Fatalf("graphjournal.Load() error = %v", err)
+	}
+	if len(entries) != 2 || entries[0].Quality == nil || entries[1].Verification == nil {
+		t.Fatalf("entries = %#v, want quality and verification", entries)
+	}
+	if len(entries[0].Quality.Nodes) != 1 {
+		t.Fatalf("quality nodes = %d, want review node", len(entries[0].Quality.Nodes))
+	}
+	if entries[1].Verification.TargetSHA256 == "" {
+		t.Fatal("verification target digest is empty")
+	}
+}
 
 func TestNewBridge_NilClient(t *testing.T) {
 	b := NewBridge(nil, "anthropic")

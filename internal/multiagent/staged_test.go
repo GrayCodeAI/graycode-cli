@@ -161,3 +161,32 @@ func TestRunStaged_BackwardCompat(t *testing.T) {
 		t.Errorf("expected completed, got %q", m.Status)
 	}
 }
+
+func TestRunStaged_UsesExecutionWavesWhenConfigured(t *testing.T) {
+	m := New("prompt", Config{MaxWorkers: 2})
+	m.Features = testFeatures()
+	worker := func(ctx context.Context, f *Feature, dir string, cfg Config) (*Handoff, error) {
+		return &Handoff{Summary: "done " + f.ID, TestsPassed: true}, nil
+	}
+	waves := [][]string{{"feat-1"}, {"feat-2"}}
+	if err := m.RunStaged(context.Background(), worker, WithExecutionWaves(waves)); err != nil {
+		t.Fatalf("RunStaged: %v", err)
+	}
+	if len(m.WaveJoins) != 2 {
+		t.Fatalf("wave joins = %d, want 2", len(m.WaveJoins))
+	}
+	if m.WaveJoins[0].FeatureIDs[0] != "feat-1" || m.WaveJoins[1].FeatureIDs[0] != "feat-2" {
+		t.Fatalf("unexpected wave joins: %#v", m.WaveJoins)
+	}
+}
+
+func TestRunStaged_RejectsEmptyExecutionWaves(t *testing.T) {
+	m := New("prompt", Config{})
+	m.Features = testFeatures()
+	worker := func(ctx context.Context, f *Feature, dir string, cfg Config) (*Handoff, error) {
+		return &Handoff{Summary: "done"}, nil
+	}
+	if err := m.RunStaged(context.Background(), worker, WithExecutionWaves(nil)); err == nil {
+		t.Fatal("RunStaged() error = nil for empty execution waves")
+	}
+}

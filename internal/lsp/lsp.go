@@ -178,6 +178,11 @@ func (c *Client) Request(method string, params interface{}) (*Response, error) {
 		if contentLength == 0 {
 			return nil, fmt.Errorf("no content length")
 		}
+		if contentLength < 0 {
+			// A malformed header must not reach make([]byte, n) with a negative
+			// length, which panics rather than returning an error.
+			return nil, fmt.Errorf("invalid Content-Length %d", contentLength)
+		}
 
 		respData := make([]byte, contentLength)
 		if _, err := io.ReadFull(c.reader, respData); err != nil {

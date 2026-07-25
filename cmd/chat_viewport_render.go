@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -20,7 +21,15 @@ func (m *chatModel) invalidateViewportCache() {
 	m.streamMDWidth = 0
 }
 
-func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidth int) string {
+// Tool result collapse thresholds. Tool results longer than
+// toolResultCollapseLines are collapsed to toolResultPreviewLines with a
+// toggle indicator; the user presses Enter in scrollback focus to expand.
+const (
+	toolResultCollapseLines = 15 // collapse rendered output longer than this
+	toolResultPreviewLines  = 8  // preview lines shown when collapsed
+)
+
+func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidth int, expanded map[int]bool) string {
 	hawkC := ansiOrange
 	rst := ansiReset
 	bgDark := "\033[48;2;30;30;40m"
@@ -60,9 +69,10 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 	case "tool_use":
 		b.WriteString(toolStyle.Render(icons.CircleFilled() + " " + msg.content))
 	case "tool_result":
+		var inner strings.Builder
 		if looksLikeGitDiff(msg.content) {
 			rendered := renderGitDiffOutput(msg.content, viewWidth-6)
-			b.WriteString("    " + strings.ReplaceAll(rendered, "\n", "\n    "))
+			inner.WriteString("    " + strings.ReplaceAll(rendered, "\n", "\n    "))
 		} else if strings.Contains(msg.content, "diff ") && strings.Contains(msg.content, " lines") {
 			parts := strings.SplitN(msg.content, "\ndiff ", 2)
 			mainContent := parts[0]
@@ -71,14 +81,14 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 				diffPart = "diff " + parts[1]
 			}
 			toolWrapped := wrapText(mainContent, viewWidth-6, 0)
-			b.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+			inner.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
 			if diffPart != "" {
-				b.WriteString("\n")
+				inner.WriteString("\n")
 				diffStyled := renderDiffSummary(diffPart, viewWidth-6)
-				b.WriteString("    " + diffStyled)
+				inner.WriteString("    " + diffStyled)
 			}
 		} else if strings.Contains(msg.content, "Self-review found issues") {
-			b.WriteString(errorStyle.Render("    " + icons.CloseThick() + " " + msg.content))
+			inner.WriteString(errorStyle.Render("    " + icons.CloseThick() + " " + msg.content))
 		} else if strings.Contains(msg.content, "## Self-Reflection") {
 			parts := strings.SplitN(msg.content, "## Self-Reflection", 2)
 			mainContent := parts[0]
@@ -87,17 +97,18 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 				reflectionPart = "## Self-Reflection" + parts[1]
 			}
 			toolWrapped := wrapText(mainContent, viewWidth-6, 0)
-			b.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+			inner.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
 			if reflectionPart != "" {
-				b.WriteString("\n")
+				inner.WriteString("\n")
 				reflStyled := renderReflectionBox(reflectionPart, viewWidth-6)
-				b.WriteString("    " + reflStyled)
+				inner.WriteString("    " + reflStyled)
 			}
 		} else {
 			display := formatToolResultDisplay(msg.content)
 			toolWrapped := wrapText(display, viewWidth-6, 0)
-			b.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
+			inner.WriteString(toolDimStyle.Render("    " + strings.ReplaceAll(toolWrapped, "\n", "\n    ")))
 		}
+		b.WriteString(collapseToolResult(inner.String(), i, expanded))
 	case "thinking":
 		thinkWrapped := wrapText(msg.content, viewWidth-4, 3)
 		b.WriteString(dimStyle.Render(icons.Brain() + " " + thinkWrapped))
@@ -109,7 +120,7 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 	case "setup_complete":
 		b.WriteString(renderSetupCompleteMessage(msg.content))
 	case "permission":
-		b.WriteString(renderPermissionBox(msg.content, viewWidth))
+		b.WriteString(renderPermissionBox(msg.content, viewWidth, msg.timeoutAt))
 	case "question":
 		qWrapped := wrapText(msg.content, viewWidth-2, 2)
 		b.WriteString(toolStyle.Render(qWrapped))
@@ -157,10 +168,30 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 	return b.String()
 }
 
-func renderMessagesRange(messages []displayMsg, start, end int, viewWidth int) string {
+// collapseToolResult truncates long tool result output to a preview with a
+// [+N lines] toggle indicator when the result is not expanded. Short results
+// (≤ toolResultCollapseLines) pass through unchanged. The expanded map is keyed
+// by message index.
+func collapseToolResult(rendered string, msgIdx int, expanded map[int]bool) string {
+	if expanded[msgIdx] {
+		return rendered
+	}
+	// Count visible lines. ANSI styling codes don't contain '\n', so a simple
+	// split accurately reflects the rendered line count.
+	lines := strings.Split(rendered, "\n")
+	if len(lines) <= toolResultCollapseLines {
+		return rendered
+	}
+	preview := strings.Join(lines[:toolResultPreviewLines], "\n")
+	hidden := len(lines) - toolResultPreviewLines
+	toggle := fmt.Sprintf("[+%d lines — Enter to expand]", hidden)
+	return preview + "\n" + toolDimStyle.Render("    "+toggle)
+}
+
+func renderMessagesRange(messages []displayMsg, start, end int, viewWidth int, expanded map[int]bool) string {
 	var b strings.Builder
 	for i := start; i < end && i < len(messages); i++ {
-		b.WriteString(renderDisplayMessage(messages[i], i, messages, viewWidth))
+		b.WriteString(renderDisplayMessage(messages[i], i, messages, viewWidth, expanded))
 	}
 	return b.String()
 }
@@ -257,6 +288,324 @@ func trailingNewlines(s string) string {
 	return strings.Repeat("\n", n)
 }
 
+// toolResultIndexAtViewportCenter returns the index of the tool_result message
+// whose rendered content contains the viewport's center line, or -1 if none.
+// It fully renders each tool_result (ignoring collapse state) to compute true
+// line heights, then finds which message spans the center Y offset.
+func (m *chatModel) toolResultIndexAtViewportCenter(viewWidth int) int {
+	if m.viewport.Height() <= 0 {
+		return -1
+	}
+	centerY := m.viewport.YOffset() + m.viewport.Height()/2
+	cumulative := 0
+	expanded := m.fullExpandedMap(len(m.messages))
+	for i, msg := range m.messages {
+		if msg.role != "tool_result" {
+			// Still need to count lines for non-tool messages to track offset.
+			rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, expanded)
+			cumulative += strings.Count(rendered, "\n")
+			continue
+		}
+		// Render fully (expanded) to get true line count.
+		rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, expanded)
+		lineCount := strings.Count(rendered, "\n")
+		if centerY >= cumulative && centerY < cumulative+lineCount {
+			return i
+		}
+		cumulative += lineCount
+	}
+	return -1
+}
+
+// fullExpandedMap returns a map where every index is expanded — used to compute
+// true (uncollapsed) line heights for viewport position math.
+// Uses a cached map to avoid repeated allocations.
+func (m *chatModel) fullExpandedMap(n int) map[int]bool {
+	if m.cachedExpandedMap != nil && m.cachedExpandedLen == n {
+		return m.cachedExpandedMap
+	}
+	expanded := make(map[int]bool, n)
+	for i := 0; i < n; i++ {
+		expanded[i] = true
+	}
+	m.cachedExpandedMap = expanded
+	m.cachedExpandedLen = n
+	return expanded
+}
+
+// codeBlockAtViewportCenter finds the fenced code block in an assistant message
+// whose rendered content contains the viewport's center line. Returns the raw
+// code content (without fences) and true if found.
+//
+// Performance: Uses the cached viewport content (m.vpStableContent) to avoid
+// re-rendering all messages. Falls back to full render only when cache is stale.
+func (m *chatModel) codeBlockAtViewportCenter() (string, bool) {
+	if m.viewport.Height() <= 0 {
+		return "", false
+	}
+	centerY := m.viewport.YOffset() + m.viewport.Height()/2
+	viewWidth := m.width
+	if viewWidth <= 0 {
+		viewWidth = 80
+	}
+
+	// Fast path: use cached viewport content if available and valid.
+	// The viewport content is already rendered, so we can parse it directly.
+	// It answers confidently only for single-block messages; otherwise it
+	// returns ok=false and we fall through to the exact slow path below.
+	if m.vpStableContent != "" && m.vpRenderedMsgs == len(m.messages) {
+		if content, ok := m.codeBlockFromCachedViewport(centerY, viewWidth); ok {
+			return content, true
+		}
+	}
+
+	// Slow path: render messages incrementally, stopping early when we pass center.
+	cumulative := 0
+	expanded := m.fullExpandedMap(len(m.messages))
+	for i, msg := range m.messages {
+		rendered := renderDisplayMessage(msg, i, m.messages, viewWidth, expanded)
+		lineCount := strings.Count(rendered, "\n")
+
+		// Skip messages before the viewport center.
+		if centerY >= cumulative+lineCount {
+			cumulative += lineCount
+			continue
+		}
+
+		// This message contains the center line.
+		if msg.role == "assistant" {
+			bestBlock := findClosestCodeBlock(msg.content, centerY-cumulative, viewWidth)
+			if bestBlock != "" {
+				return bestBlock, true
+			}
+		}
+		// If not an assistant message or no code block found, continue searching.
+		cumulative += lineCount
+	}
+	return "", false
+}
+
+// codeBlockFromCachedViewport extracts a code block from the cached viewport content.
+// This is the fast path that avoids re-rendering all messages.
+func (m *chatModel) codeBlockFromCachedViewport(centerY int, viewWidth int) (string, bool) {
+	// Get the visible viewport content.
+	content := m.viewport.View()
+	if content == "" {
+		return "", false
+	}
+
+	lines := strings.Split(content, "\n")
+	// centerY is an absolute scrollback coordinate (YOffset + Height/2), but
+	// View() returns only the visible rows (indexed 0..Height-1). Convert to a
+	// viewport-relative line index so the search targets the true center even
+	// when scrolled down.
+	relCenter := centerY - m.viewport.YOffset()
+	if relCenter >= len(lines) {
+		relCenter = len(lines) - 1
+	}
+	if relCenter < 0 {
+		relCenter = 0
+	}
+
+	// Find the assistant message containing the center line by looking for
+	// the robot icon marker in the rendered output.
+	// The robot icon marks the start of assistant messages.
+	robotMarker := icons.Robot()
+
+	// Search backwards from center to find the start of the assistant message.
+	msgStart := relCenter
+	for i := relCenter; i >= 0; i-- {
+		if strings.Contains(lines[i], robotMarker) {
+			msgStart = i
+			break
+		}
+	}
+
+	// Search forwards to find the end of the assistant message.
+	msgEnd := relCenter
+	for i := relCenter; i < len(lines); i++ {
+		// Assistant messages end at the next user message (█ marker) or end of content.
+		if i > msgStart && strings.Contains(lines[i], "█") {
+			msgEnd = i - 1
+			break
+		}
+		msgEnd = i
+	}
+
+	// Extract the assistant message content from the rendered lines.
+	// This is approximate but good enough for code block extraction.
+	var msgContent strings.Builder
+	for i := msgStart; i <= msgEnd && i < len(lines); i++ {
+		msgContent.WriteString(lines[i])
+		msgContent.WriteByte('\n')
+	}
+
+	// Try to find code blocks in the extracted content.
+	// Since this is rendered output (with ANSI codes), we need to strip them first.
+	plainContent := stripAnsi(msgContent.String())
+	blocks := extractCodeBlocksFromRendered(plainContent)
+	// Only answer confidently when the message has exactly one code block —
+	// that is unambiguously the block to copy. With zero or multiple blocks the
+	// rendered-output heuristics cannot reliably pick the one under the cursor,
+	// so return false and let the caller fall back to the exact slow path
+	// (findClosestCodeBlock operates on raw content with true line positions).
+	if len(blocks) == 1 {
+		return blocks[0], true
+	}
+
+	return "", false
+}
+
+// extractCodeBlocksFromRendered extracts code blocks from rendered (plain text) output.
+// Code blocks in rendered output are indented and have a language label above them.
+func extractCodeBlocksFromRendered(content string) []string {
+	var blocks []string
+	lines := strings.Split(content, "\n")
+
+	inCodeBlock := false
+	var currentBlock strings.Builder
+
+	for _, line := range lines {
+		// Code blocks in rendered output start with indentation and have
+		// a consistent background. We detect them by looking for lines
+		// that start with spaces followed by code-like content.
+		trimmed := strings.TrimSpace(line)
+
+		// Skip empty lines and language labels.
+		if trimmed == "" {
+			if inCodeBlock && currentBlock.Len() > 0 {
+				// Empty line might end the code block.
+				blocks = append(blocks, strings.TrimRight(currentBlock.String(), "\n"))
+				currentBlock.Reset()
+				inCodeBlock = false
+			}
+			continue
+		}
+
+		// Detect code block start: indented line with code-like content.
+		if !inCodeBlock && strings.HasPrefix(line, "  ") && len(trimmed) > 0 {
+			// Check if this looks like code (has typical code characters).
+			if looksLikeCode(trimmed) {
+				inCodeBlock = true
+				currentBlock.WriteString(trimmed)
+				currentBlock.WriteByte('\n')
+			}
+		} else if inCodeBlock {
+			if strings.HasPrefix(line, "  ") || trimmed == "" {
+				currentBlock.WriteString(trimmed)
+				currentBlock.WriteByte('\n')
+			} else {
+				// End of code block.
+				if currentBlock.Len() > 0 {
+					blocks = append(blocks, strings.TrimRight(currentBlock.String(), "\n"))
+					currentBlock.Reset()
+				}
+				inCodeBlock = false
+			}
+		}
+	}
+
+	// Flush any remaining code block.
+	if currentBlock.Len() > 0 {
+		blocks = append(blocks, strings.TrimRight(currentBlock.String(), "\n"))
+	}
+
+	return blocks
+}
+
+// looksLikeCode returns true if the line looks like code (has typical code characters).
+func looksLikeCode(s string) bool {
+	// Code typically has: braces, parentheses, semicolons, operators, etc.
+	codeIndicators := []string{"{", "}", "(", ")", ";", "=", "+", "-", "*", "/", "<", ">", "[", "]", ":", "."}
+	for _, indicator := range codeIndicators {
+		if strings.Contains(s, indicator) {
+			return true
+		}
+	}
+	// Also check for common keywords.
+	keywords := []string{"func", "def", "class", "import", "from", "return", "if", "for", "while", "var", "let", "const"}
+	lower := strings.ToLower(s)
+	for _, kw := range keywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// findClosestCodeBlock finds the code block in the content whose position is
+// closest to the target line offset within the rendered message. It extracts
+// code blocks with their raw positions, maps the target rendered line back to
+// an approximate content line, and returns the nearest block.
+func findClosestCodeBlock(content string, targetLine int, viewWidth int) string {
+	// Extract code blocks with their line positions in the raw content.
+	type rawBlock struct {
+		lineIdx int // line index where opening ``` appears
+		code    string
+	}
+	var rawBlocks []rawBlock
+
+	lines := strings.Split(content, "\n")
+	inFence := false
+	fenceStart := -1
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") {
+			if !inFence {
+				inFence = true
+				fenceStart = i
+			} else {
+				inFence = false
+				// Extract code between fences.
+				var code strings.Builder
+				for j := fenceStart + 1; j < i; j++ {
+					if code.Len() > 0 {
+						code.WriteByte('\n')
+					}
+					code.WriteString(lines[j])
+				}
+				if code.Len() > 0 {
+					rawBlocks = append(rawBlocks, rawBlock{lineIdx: fenceStart, code: code.String()})
+				}
+			}
+		}
+	}
+
+	if len(rawBlocks) == 0 {
+		return ""
+	}
+
+	// Map the target rendered line to an approximate content line.
+	// Code blocks render with roughly: 1 label line + N code lines + padding.
+	// A simple proportional mapping works well enough for "closest" selection.
+	totalContentLines := len(lines)
+	rendered := renderMarkdown(content, viewWidth-3)
+	totalRenderedLines := strings.Count(rendered, "\n") + 1
+	if totalRenderedLines == 0 {
+		return rawBlocks[0].code
+	}
+	contentTarget := targetLine * totalContentLines / totalRenderedLines
+
+	// Find the raw block closest to the mapped target.
+	bestDist := int(^uint(0) >> 1)
+	bestCode := rawBlocks[0].code
+	for _, b := range rawBlocks {
+		dist := abs(b.lineIdx - contentTarget)
+		if dist < bestDist {
+			bestDist = dist
+			bestCode = b.code
+		}
+	}
+	return bestCode
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
 // assembleViewportContent builds scrollback using the render cache. Returns the
 // full viewport string ready for SetContent.
 func (m *chatModel) assembleViewportContent(viewWidth int) string {
@@ -268,21 +617,21 @@ func (m *chatModel) assembleViewportContent(viewWidth int) string {
 		var b strings.Builder
 		b.WriteString(m.vpStableContent)
 		for i := m.vpRenderedMsgs; i < len(m.messages); i++ {
-			b.WriteString(renderDisplayMessage(m.messages[i], i, m.messages, viewWidth))
+			b.WriteString(renderDisplayMessage(m.messages[i], i, m.messages, viewWidth, m.toolResultExpanded))
 		}
 		m.vpStableContent = b.String()
 		m.vpRenderedMsgs = len(m.messages)
 	} else if !fullRebuild && m.vpRenderedMsgs == len(m.messages) && m.vpRenderedMsgs > 0 {
 		last := m.messages[m.vpRenderedMsgs-1]
 		if len(last.content) != m.vpLastMsgLen {
-			prefix := renderMessagesRange(m.messages, 0, m.vpRenderedMsgs-1, viewWidth)
-			tail := renderDisplayMessage(last, m.vpRenderedMsgs-1, m.messages, viewWidth)
+			prefix := renderMessagesRange(m.messages, 0, m.vpRenderedMsgs-1, viewWidth, m.toolResultExpanded)
+			tail := renderDisplayMessage(last, m.vpRenderedMsgs-1, m.messages, viewWidth, m.toolResultExpanded)
 			m.vpStableContent = prefix + tail
 		}
 	}
 
 	if fullRebuild {
-		m.vpStableContent = renderMessagesRange(m.messages, 0, len(m.messages), viewWidth)
+		m.vpStableContent = renderMessagesRange(m.messages, 0, len(m.messages), viewWidth, m.toolResultExpanded)
 		m.vpRenderedMsgs = len(m.messages)
 		m.vpRenderWidth = viewWidth
 	}

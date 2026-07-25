@@ -246,7 +246,10 @@ func (cl *CommitLinter) FixMessage(message string) string {
 		}
 	}
 	if len(parsed.Subject) > maxSubject {
-		parsed.Subject = parsed.Subject[:maxSubject-3] + "..."
+		// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+		if runes := []rune(parsed.Subject); len(runes) > maxSubject {
+			parsed.Subject = string(runes[:maxSubject-3]) + "..."
+		}
 	}
 
 	// Fix 3: Missing type -> infer from body/subject.
@@ -273,7 +276,10 @@ func (cl *CommitLinter) FixMessage(message string) string {
 		}
 	}
 	if len(header) > maxHeader {
-		header = header[:maxHeader-3] + "..."
+		// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+		if runes := []rune(header); len(runes) > maxHeader {
+			header = string(runes[:maxHeader-3]) + "..."
+		}
 	}
 
 	// Rebuild message.

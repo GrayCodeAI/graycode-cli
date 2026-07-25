@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestNewSearchEngine(t *testing.T) {
@@ -610,6 +611,28 @@ func TestIndexSessionPreviewTruncation(t *testing.T) {
 
 	if len(idx.Messages[0].Preview) != 100 {
 		t.Errorf("expected preview length 100, got %d", len(idx.Messages[0].Preview))
+	}
+}
+
+// TestIndexSessionPreviewTruncation_Multibyte ensures truncating a preview never
+// splits a multi-byte rune (which would produce invalid UTF-8).
+func TestIndexSessionPreviewTruncation_Multibyte(t *testing.T) {
+	se := NewSearchEngine("/tmp/sessions")
+
+	// 80 CJK runes = 240 bytes; a naive [:100] would cut a 3-byte rune in half.
+	longContent := strings.Repeat("語", 80)
+	se.IndexSession("preview-utf8", []Message{{Role: "user", Content: longContent}})
+
+	se.mu.RLock()
+	idx := se.Index["preview-utf8"]
+	se.mu.RUnlock()
+
+	preview := idx.Messages[0].Preview
+	if !utf8.ValidString(preview) {
+		t.Fatalf("preview is not valid UTF-8: %q", preview)
+	}
+	if len(preview) > 100 {
+		t.Errorf("preview should be at most 100 bytes, got %d", len(preview))
 	}
 }
 

@@ -80,6 +80,35 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) for a smooth
 | **Code** | `LSP` diagnostics, `CodeSearch`, `NotebookEdit`, `SQL` (read-only DB exploration) |
 | **MCP** | `ListMcpResources`, `ReadMcpResource` |
 
+### Portable Execution Graph
+
+Export the latest or a selected Hawk session as validated graph nodes, edges,
+and lifecycle events:
+
+```bash
+hawk graph export
+hawk graph export <session-id>
+hawk graph export <session-id> --trace-checkpoint abc123def456
+hawk graph export --mission-dir /path/to/mission
+
+# Explicitly privacy-normalize and sync the graph for a connected cloud project
+hawk cloud graph sync <session-id>
+hawk cloud graph sync --mission-dir /path/to/mission
+```
+
+The export contains metadata and hashes, not prompts, tool arguments/results,
+policy reasons, verification evidence, or runtime output. Trace remains
+available separately as `hawk trace graph export`. Persisted chat sessions
+automatically append privacy-safe permission, enabled approval-gate, and
+`VerifyPlanExecution` summaries for subsequent graph exports. Yaad memory
+subgraphs and Hawk code-index chunks actually selected for inference are also
+journaled as metadata-only knowledge nodes and linked to the session. Inspect's
+observed bridge path similarly journals bounded, metadata-only report/finding
+quality subgraphs. Sight exposes the same observed bridge boundary for
+metadata-only code-review quality subgraphs. Mission runs also persist a
+portable `mission-graph.json`; the mission form is validated and synchronized
+explicitly with the `--mission-dir` variants above.
+
 ### Multi-Agent Mission Mode (optional)
 
 For larger tasks, decompose work into parallel feature branches (power-user / future team workflows):
@@ -271,6 +300,7 @@ Endpoints: `GET /v1/health`, `GET /v1/ready` (dependency-aware readiness), `POST
 hawk mission "Add auth, rate limiting, and logging"
 hawk mission --workers 6 "Refactor into microservices"
 hawk mission --dry-run "What would this decompose into?"
+hawk mission --from-tasks                 # Execute validated dependency waves
 ```
 
 ## Providers
@@ -375,12 +405,15 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 | **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
 | **sight** | [GrayCodeAI/sight](https://github.com/GrayCodeAI/sight) | Diff-based code review (`hawk sight`) |
 | **inspect** | [GrayCodeAI/inspect](https://github.com/GrayCodeAI/inspect) | Site audit library |
-| **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Tokenizer & compression |
+| **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Compression, redaction, token/cost budgets, and privacy-safe runtime graph facts |
 | **yaad** | [GrayCodeAI/yaad](https://github.com/GrayCodeAI/yaad) | Graph-based memory |
 | **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture and replay engine mounted as `hawk trace ...` |
 | **hawk-core-contracts** | [GrayCodeAI/hawk-core-contracts](https://github.com/GrayCodeAI/hawk-core-contracts) | Shared contracts and neutral cross-repo vocabulary |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/hawk-current-vs-proposed.md](docs/architecture/hawk-current-vs-proposed.md).
+For execution-graph ownership, automatic capture seams, export/sync commands,
+and the Trace correlation contract, see
+[docs/architecture/execution-graph.md](docs/architecture/execution-graph.md).
 
 ## Development
 

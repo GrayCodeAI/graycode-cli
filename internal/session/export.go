@@ -531,7 +531,7 @@ var secretPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(api[_-]?key|apikey)\s*[:=]\s*["']?([A-Za-z0-9_\-]{16,})["']?`),
 	regexp.MustCompile(`(?i)(secret|token|password|passwd|pwd)\s*[:=]\s*["']?([^\s"']{8,})["']?`),
 	regexp.MustCompile(`(?i)(bearer)\s+([A-Za-z0-9_\-\.]{20,})`),
-	regexp.MustCompile(`sk-[A-Za-z0-9]{20,}`),
+	regexp.MustCompile(`sk-[A-Za-z0-9_\-]{20,}`),
 	regexp.MustCompile(`ghp_[A-Za-z0-9]{36,}`),
 	regexp.MustCompile(`gho_[A-Za-z0-9]{36,}`),
 	regexp.MustCompile(`github_pat_[A-Za-z0-9_]{22,}`),
@@ -694,13 +694,34 @@ func redactToolArguments(args map[string]interface{}) map[string]interface{} {
 	}
 	out := make(map[string]interface{}, len(args))
 	for k, v := range args {
-		if s, ok := v.(string); ok {
-			out[k] = redactString(s)
-		} else {
-			out[k] = v
-		}
+		out[k] = redactValue(v)
 	}
 	return out
+}
+
+// redactValue recursively redacts secrets in string values, descending into
+// nested maps and slices. Tool arguments are JSON-decoded, so a secret can be
+// buried inside a structured value (e.g. {"env": {"API_TOKEN": "…"}} or
+// {"keys": ["sk-…"]}); redacting only top-level strings would leak those.
+func redactValue(v interface{}) interface{} {
+	switch val := v.(type) {
+	case string:
+		return redactString(val)
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(val))
+		for k, item := range val {
+			out[k] = redactValue(item)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(val))
+		for i, item := range val {
+			out[i] = redactValue(item)
+		}
+		return out
+	default:
+		return v
+	}
 }
 
 func exportSessionJSON(s *Session) ([]byte, error) {

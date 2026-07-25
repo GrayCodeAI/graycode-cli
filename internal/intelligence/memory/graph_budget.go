@@ -142,6 +142,7 @@ func (gb *GraphAwareBudget) getPinnedMemories() string {
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
+	gb.bridge.recordSelectedContext("pinned-context", nodes)
 
 	var sb strings.Builder
 	sb.WriteString("### Pinned\n")
@@ -160,6 +161,7 @@ func (gb *GraphAwareBudget) getHighConfidenceConventions() string {
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
+	gb.bridge.recordSelectedContext("convention-context", nodes)
 
 	var sb strings.Builder
 	sb.WriteString("### Conventions\n")
@@ -170,7 +172,7 @@ func (gb *GraphAwareBudget) getHighConfidenceConventions() string {
 }
 
 func (gb *GraphAwareBudget) getQueryRelevant(query string, budget int) string {
-	result, err := gb.bridge.engine.Recall(context.Background(), yaadEngine.RecallOpts{
+	result, err := gb.bridge.recallResultWithContext(context.Background(), yaadEngine.RecallOpts{
 		Query:  query,
 		Budget: budget,
 		Limit:  5,
@@ -196,6 +198,7 @@ func (gb *GraphAwareBudget) getActiveTasks() string {
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
+	gb.bridge.recordSelectedContext("active-task-context", nodes)
 
 	var sb strings.Builder
 	sb.WriteString("### Active Tasks\n")

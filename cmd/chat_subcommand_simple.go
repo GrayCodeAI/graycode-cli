@@ -349,7 +349,7 @@ func init() {
 	// /compact-mode — toggle compact mode
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "compact-mode",
-		aliases:     []string{"compact"},
+		aliases:     nil, // no aliases: "compact" is taken by /compact (session compaction)
 		description: "toggle compact mode (removes outer padding)",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
@@ -685,7 +685,7 @@ func init() {
 		description: "show keybindings",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter           — Submit\n  Ctrl+C          — Cancel/Exit\n  Ctrl+Shift+C    — Copy (input draft or chat)\n  Ctrl+\\          — Native text selection\n  Ctrl+L          — Clear\n  Up/Down         — History\n  Tab             — Complete\n  /mouse off      — Enable click-drag copy"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Keybindings:\n  Enter           — Submit\n  Ctrl+C          — Cancel/Exit\n  Ctrl+Shift+C    — Copy (input draft or chat)\n  Ctrl+K          — Native text selection\n  Ctrl+L          — Cycle autonomy tier\n  Up/Down         — History\n  Tab             — Complete\n  /mouse off      — Enable click-drag copy"})
 			return m, nil
 		},
 	})
@@ -748,7 +748,7 @@ func init() {
 		{"export", "export session to JSON (delegates to handleSessionCommand)"},
 		{"rename", "rename the current session (delegates to handleSessionCommand)"},
 		{"tag", "tag the current session (delegates to handleSessionCommand)"},
-		{"session", "list saved sessions (delegates to handleSessionCommand)"},
+		{"session", "show current session info (delegates to handleSessionCommand)"},
 		{"share", "share session (delegates to handleSessionCommand)"},
 		{"search", "search across sessions (delegates to handleSessionCommand)"},
 		{"clean", "clean up old sessions (delegates to handleSessionCommand)"},
@@ -834,6 +834,8 @@ func init() {
 			if m.pluginRuntime != nil {
 				_ = m.pluginRuntime.LoadAll()
 			}
+			// Invalidate slash suggestion cache: plugins may register new slash commands
+			m.invalidateSlashSugCache()
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Plugins reloaded."})
 			return m, nil
 		},

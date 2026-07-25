@@ -144,6 +144,13 @@ func (cp *CommandPalette) Update(msg tea.KeyMsg) (string, bool) {
 		return "", false
 	}
 
+	// Ctrl+K toggles the palette — press again to close (editor muscle memory).
+	// Must check string form; there's no tea.KeyCtrlK constant in this Bubble Tea version.
+	if msg.String() == "ctrl+k" || msg.String() == "ctrl+p" {
+		cp.Close()
+		return "", true
+	}
+
 	switch key := msg.Key(); key.Code {
 	case tea.KeyEsc:
 		cp.Close()
@@ -187,10 +194,36 @@ func (cp *CommandPalette) Update(msg tea.KeyMsg) (string, bool) {
 
 // filter applies fuzzy search to the entries, using scored ranking for
 // relevance. Entries are sorted by score so the best match is first.
+// When the query is empty, recently-used commands are promoted to the top
+// under a "Recent" category.
 func (cp *CommandPalette) filter(query string) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		cp.filtered = cp.entries
+		recent := recentCommands()
+		if len(recent) == 0 {
+			cp.filtered = cp.entries
+			return
+		}
+		// Build a "Recent" section from history, followed by all commands.
+		recentSet := make(map[string]bool, len(recent))
+		entries := make([]CommandPaletteEntry, 0, len(recent)+len(cp.entries))
+		for _, name := range recent {
+			entries = append(entries, CommandPaletteEntry{
+				Name:        name,
+				Description: slashCommandDescription(name),
+				Category:    "Recent",
+				Action:      name,
+			})
+			recentSet[name] = true
+		}
+		// Append the full list, skipping duplicates already in Recent.
+		for _, e := range cp.entries {
+			if recentSet[e.Name] {
+				continue
+			}
+			entries = append(entries, e)
+		}
+		cp.filtered = entries
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/GrayCodeAI/hawk/internal/mention"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -52,7 +53,12 @@ func (m *chatModel) handleMentions(text string) string {
 		// Truncate very large files.
 		fileContent := string(content)
 		if len(fileContent) > 50000 {
-			fileContent = fileContent[:50000] + "\n... (truncated, file too large)"
+			trunc := fileContent[:50000]
+			// Back off to a valid UTF-8 boundary so a multi-byte rune is not split.
+			for len(trunc) > 0 && !utf8.ValidString(trunc) {
+				trunc = trunc[:len(trunc)-1]
+			}
+			fileContent = trunc + "\n... (truncated, file too large)"
 		}
 
 		contextParts = append(contextParts, fmt.Sprintf("--- File: %s ---\n%s\n--- End of %s ---", path, fileContent, path))

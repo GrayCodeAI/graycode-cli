@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -106,17 +107,22 @@ func FormatCheckpointList(checkpoints []Checkpoint) string {
 }
 
 func truncatePreview(s string, maxLen int) string {
-	// Remove newlines
-	clean := ""
-	for _, r := range s {
+	// Replace newlines with spaces.
+	clean := strings.Map(func(r rune) rune {
 		if r == '\n' || r == '\r' {
-			clean += " "
-		} else {
-			clean += string(r)
+			return ' '
 		}
+		return r
+	}, s)
+	runes := []rune(clean)
+	if len(runes) <= maxLen {
+		return clean
 	}
-	if len(clean) > maxLen {
-		return clean[:maxLen-3] + "..."
+	// Truncate on a rune boundary so a multi-byte character is never split,
+	// reserving room for the ellipsis.
+	keep := maxLen - 3
+	if keep < 0 {
+		keep = 0
 	}
-	return clean
+	return string(runes[:keep]) + "..."
 }

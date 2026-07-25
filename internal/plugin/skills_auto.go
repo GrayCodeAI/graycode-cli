@@ -378,7 +378,7 @@ func ParseSmartSkillPublic(content string) SmartSkill {
 // Year 0 PACK-05: project-level harness dirs (.claude/.codex/.agents skills)
 // are included only when folder trust allows the project path.
 func DefaultSkillDirs() []string {
-	homeDir := home.Dir()
+	homeDir := home.MustDir()
 	var dirs []string
 
 	// User-level directories (always).

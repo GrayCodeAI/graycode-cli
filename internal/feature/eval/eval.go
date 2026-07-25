@@ -168,66 +168,76 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 
 		result.Attempts = attempt
 
-		// Create isolated work directory for this attempt.
-		workDir, err := os.MkdirTemp("", fmt.Sprintf("hawk-eval-%s-*", task.ID))
-		if err != nil {
-			lastErr = fmt.Errorf("failed to create temp dir: %w", err)
-			continue
-		}
-		defer func() { _ = os.RemoveAll(workDir) }()
-
-		// Run setup to create the initial buggy/incomplete code.
-		startTime := time.Now()
-		if err := task.SetupFn(workDir); err != nil {
-			lastErr = fmt.Errorf("setup failed: %w", err)
-			continue
-		}
-
-		// Invoke LLM to fix/complete the code
-		if r.LLM != nil {
-			var llmResponse string
-			if !r.NoCache && r.Cache != nil {
-				if entry := r.Cache.Get(r.Model, task.Prompt); entry != nil {
-					llmResponse = entry.Response
-					result.TokensUsed += entry.Tokens
-					result.CostUSD += entry.CostUSD
-					goto applyResponse
-				}
+		// Run each attempt in a closure so its work directory is removed when
+		// the attempt finishes. Deferring os.RemoveAll directly in the retry
+		// loop would accumulate every attempt's directory until RunTask returns.
+		passed, attemptErr := func() (bool, error) {
+			// Create isolated work directory for this attempt.
+			workDir, err := os.MkdirTemp("", fmt.Sprintf("hawk-eval-%s-*", task.ID))
+			if err != nil {
+				return false, fmt.Errorf("failed to create temp dir: %w", err)
 			}
-			{
-				resp, tokens, cost, err := r.LLM.Complete(ctx, r.Model, task.Prompt)
-				if err != nil {
-					lastErr = fmt.Errorf("LLM call failed: %w", err)
-					continue
-				}
-				llmResponse = resp
-				result.TokensUsed += tokens
-				result.CostUSD += cost
+			defer func() { _ = os.RemoveAll(workDir) }()
+
+			// Run setup to create the initial buggy/incomplete code.
+			startTime := time.Now()
+			if err := task.SetupFn(workDir); err != nil {
+				return false, fmt.Errorf("setup failed: %w", err)
+			}
+
+			// Invoke LLM to fix/complete the code
+			if r.LLM != nil {
+				var llmResponse string
 				if !r.NoCache && r.Cache != nil {
-					_ = r.Cache.Put(r.Model, task.Prompt, resp, tokens, cost)
+					if entry := r.Cache.Get(r.Model, task.Prompt); entry != nil {
+						llmResponse = entry.Response
+						result.TokensUsed += entry.Tokens
+						result.CostUSD += entry.CostUSD
+						goto applyResponse
+					}
 				}
+				{
+					resp, tokens, cost, err := r.LLM.Complete(ctx, r.Model, task.Prompt)
+					if err != nil {
+						return false, fmt.Errorf("LLM call failed: %w", err)
+					}
+					llmResponse = resp
+					result.TokensUsed += tokens
+					result.CostUSD += cost
+					if !r.NoCache && r.Cache != nil {
+						_ = r.Cache.Put(r.Model, task.Prompt, resp, tokens, cost)
+					}
+				}
+			applyResponse:
+				// Apply filters to extract code from response
+				filters := r.Filters
+				if len(filters) == 0 {
+					filters = task.Filters
+				}
+				filtered := ApplyFilters(llmResponse, filters...)
+				// Write solution to work directory
+				ext := ".go"
+				_ = os.WriteFile(filepath.Join(workDir, "solution"+ext), []byte(filtered), 0o600)
 			}
-		applyResponse:
-			// Apply filters to extract code from response
-			filters := r.Filters
-			if len(filters) == 0 {
-				filters = task.Filters
+
+			passed, msg := task.ValidateFn(workDir)
+			result.Duration = time.Since(startTime)
+
+			if passed {
+				result.Passed = true
+				return true, nil
 			}
-			filtered := ApplyFilters(llmResponse, filters...)
-			// Write solution to work directory
-			ext := ".go"
-			_ = os.WriteFile(filepath.Join(workDir, "solution"+ext), []byte(filtered), 0o600)
+
+			return false, fmt.Errorf("validation failed: %s", msg)
+		}()
+
+		if attemptErr != nil {
+			lastErr = attemptErr
+			continue
 		}
-
-		passed, msg := task.ValidateFn(workDir)
-		result.Duration = time.Since(startTime)
-
 		if passed {
-			result.Passed = true
 			return result, nil
 		}
-
-		lastErr = fmt.Errorf("validation failed: %s", msg)
 	}
 
 	if lastErr != nil {

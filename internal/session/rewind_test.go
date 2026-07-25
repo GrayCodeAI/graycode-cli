@@ -1,8 +1,10 @@
 package session
 
 import (
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestListCheckpoints(t *testing.T) {
@@ -135,5 +137,23 @@ func TestTruncatePreview(t *testing.T) {
 	short := "short"
 	if truncatePreview(short, 30) != short {
 		t.Error("short strings should not be modified")
+	}
+}
+
+// TestTruncatePreview_Multibyte guards against splitting a multi-byte rune at
+// the truncation boundary (previously the cut was done on a byte offset).
+func TestTruncatePreview_Multibyte(t *testing.T) {
+	// 20 CJK runes (3 bytes each); truncate to 10 "chars".
+	in := "日本語日本語日本語日本語日本語日本語"
+	out := truncatePreview(in, 10)
+	if !utf8.ValidString(out) {
+		t.Fatalf("truncatePreview produced invalid UTF-8: %q", out)
+	}
+	if !strings.HasSuffix(out, "...") {
+		t.Errorf("expected ellipsis suffix, got %q", out)
+	}
+	// 7 runes + "..." = 10 runes total.
+	if got := utf8.RuneCountInString(out); got != 10 {
+		t.Errorf("expected 10 runes, got %d (%q)", got, out)
 	}
 }

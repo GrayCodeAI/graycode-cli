@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 )
@@ -119,12 +120,39 @@ func RankFuzzyResults(query string, entries []CommandPaletteEntry) []RankedEntry
 		}
 	}
 
-	// Sort by score descending (simple insertion sort for small lists)
-	for i := 1; i < len(ranked); i++ {
-		for j := i; j > 0 && ranked[j].Score > ranked[j-1].Score; j-- {
-			ranked[j], ranked[j-1] = ranked[j-1], ranked[j]
+	// Group by category, preserving category ordering from the original list.
+	// Categories are ordered by their best-scoring member (most relevant first).
+	catOrder := []string{}
+	catBestScore := map[string]int{}
+	catMembers := map[string][]RankedEntry{}
+	for _, r := range ranked {
+		cat := r.Entry.Category
+		if _, ok := catMembers[cat]; !ok {
+			catOrder = append(catOrder, cat)
+			catBestScore[cat] = r.Score
+			catMembers[cat] = []RankedEntry{r}
+		} else {
+			catMembers[cat] = append(catMembers[cat], r)
+			if r.Score > catBestScore[cat] {
+				catBestScore[cat] = r.Score
+			}
 		}
 	}
 
-	return ranked
+	// Sort categories by their best member's score (descending)
+	sort.SliceStable(catOrder, func(i, j int) bool {
+		return catBestScore[catOrder[i]] > catBestScore[catOrder[j]]
+	})
+
+	// Within each category, sort members by score descending
+	result := make([]RankedEntry, 0, len(ranked))
+	for _, cat := range catOrder {
+		members := catMembers[cat]
+		sort.SliceStable(members, func(i, j int) bool {
+			return members[i].Score > members[j].Score
+		})
+		result = append(result, members...)
+	}
+
+	return result
 }

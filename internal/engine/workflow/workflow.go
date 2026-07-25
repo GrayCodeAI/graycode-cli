@@ -221,18 +221,22 @@ func (we *WorkflowEngine) executeStep(ctx context.Context, step WorkflowStep, va
 
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		// Apply step-level timeout
+		// Apply step-level timeout. cancel is called at the end of each
+		// iteration rather than deferred, so a retry loop does not accumulate
+		// un-cancelled contexts (each holding a timer) until executeStep returns.
 		execCtx := ctx
+		var cancel context.CancelFunc
 		if step.Timeout > 0 {
-			var cancel context.CancelFunc
 			execCtx, cancel = context.WithTimeout(ctx, step.Timeout)
-			defer cancel()
 		}
 
 		// Substitute variables in input
 		input := SubstituteVars(step.Input, vars)
 
 		output, err := we.ExecuteFn(execCtx, step.Action, input)
+		if cancel != nil {
+			cancel()
+		}
 		if err == nil {
 			return StepResult{
 				StepName: step.Name,

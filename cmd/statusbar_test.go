@@ -10,7 +10,28 @@ import (
 )
 
 func TestRenderStatusBar_SignatureExists(t *testing.T) {
-	var _ func(*chatModel, int) string = renderStatusBar
+	var _ func(*chatModel, int) []string = renderStatusBar
+}
+
+func TestRenderStatusBar_TwoLineAtWidth120(t *testing.T) {
+	m := &chatModel{session: &engine.Session{}}
+	m.session.CostValue().PromptTokens = 1000
+	m.session.CostValue().CompletionTokens = 500
+	m.sessionStartedAt = time.Now().Add(-5 * time.Minute)
+	lines := renderStatusBar(m, 120)
+	if len(lines) < 2 {
+		t.Fatalf("expected 2 lines at width 120, got %d", len(lines))
+	}
+}
+
+func TestRenderStatusBar_SingleLineAtWidth80(t *testing.T) {
+	m := &chatModel{session: &engine.Session{}}
+	m.session.CostValue().PromptTokens = 1000
+	m.session.CostValue().CompletionTokens = 500
+	lines := renderStatusBar(m, 80)
+	if len(lines) != 1 {
+		t.Fatalf("expected 1 line at width 80, got %d", len(lines))
+	}
 }
 
 func TestRenderStatusBarRight_IncludesTokensLabel(t *testing.T) {
