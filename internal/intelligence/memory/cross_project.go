@@ -52,7 +52,7 @@ func (cp *CrossProjectMemory) RecallGlobal(query string, budget int) (string, er
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	result, err := cp.bridge.engine.Recall(context.Background(), yaadEngine.RecallOpts{
+	result, err := cp.bridge.recallResultWithContext(context.Background(), yaadEngine.RecallOpts{
 		Query:   query,
 		Budget:  budget,
 		Limit:   10,
@@ -142,6 +142,7 @@ func (cp *CrossProjectMemory) InjectGlobalContext(budget int) string {
 	var sb strings.Builder
 	sb.WriteString("## User Preferences (Global)\n")
 	tokenEstimate := 0
+	selected := make([]*storage.Node, 0, len(nodes))
 	for _, n := range nodes {
 		line := "- [" + n.Type + "] " + n.Content + "\n"
 		lineTokens := len(line) / 4
@@ -149,8 +150,10 @@ func (cp *CrossProjectMemory) InjectGlobalContext(budget int) string {
 			break
 		}
 		sb.WriteString(line)
+		selected = append(selected, n)
 		tokenEstimate += lineTokens
 	}
+	cp.bridge.recordSelectedContext("global-context", selected)
 
 	return sb.String()
 }

@@ -143,29 +143,15 @@ func (s *TaskStore) Reset() {
 
 // GetReadyWork returns pending tasks with no open blocking dependencies.
 func (s *TaskStore) GetReadyWork() []*Task {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	var ready []*Task
-	for _, t := range s.tasks {
-		if t.Status != TaskStatusPending {
-			continue
-		}
-		blocked := false
-		for _, dep := range t.Dependencies {
-			if dep.Type != "blocks" {
-				continue
-			}
-			if blocker, ok := s.tasks[dep.TargetID]; ok && blocker.Status != TaskStatusCompleted {
-				blocked = true
-				break
-			}
-		}
-		if !blocked {
-			ready = append(ready, t)
-		}
+	schedule, err := s.Schedule()
+	if err != nil {
+		return []*Task{}
 	}
-	return ready
+	return schedule.Ready
 }
+
+// GetSchedule returns the validated topological scheduling view.
+func (s *TaskStore) GetSchedule() (TaskSchedule, error) { return s.Schedule() }
 
 // CompactCompleted removes completed tasks and returns a summary.
 func (s *TaskStore) CompactCompleted() string {
@@ -302,7 +288,11 @@ func (TaskListTool) Execute(_ context.Context, input json.RawMessage) (string, e
 
 	switch p.Action {
 	case "ready":
-		tasks := globalTaskStore.GetReadyWork()
+		schedule, err := globalTaskStore.GetSchedule()
+		if err != nil {
+			return "", fmt.Errorf("validate task schedule: %w", err)
+		}
+		tasks := schedule.Ready
 		summaries := make([]map[string]any, 0, len(tasks))
 		for _, t := range tasks {
 			summaries = append(summaries, map[string]any{
@@ -313,7 +303,7 @@ func (TaskListTool) Execute(_ context.Context, input json.RawMessage) (string, e
 				"dependencies": t.Dependencies,
 			})
 		}
-		out, _ := json.Marshal(map[string]any{"tasks": summaries})
+		out, _ := json.Marshal(map[string]any{"tasks": summaries, "waves": schedule.Waves})
 		return string(out), nil
 	case "compact":
 		summary := globalTaskStore.CompactCompleted()

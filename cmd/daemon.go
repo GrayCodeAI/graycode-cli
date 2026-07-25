@@ -17,6 +17,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -109,6 +110,17 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 
 	daemon.SetVersion(version)
 	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
+	srv.SetGraphFactory(func(ctx context.Context, req daemon.GraphRequest) (executiongraph.Export, error) {
+		if err := ctx.Err(); err != nil {
+			return executiongraph.Export{}, err
+		}
+		return buildExecutionGraphExport(
+			[]string{req.SessionID},
+			req.RepositoryID,
+			req.TraceCheckpointIDs,
+			req.GeneratedAt,
+		)
+	})
 
 	// Wire Eyrie's authoritative local preflight into GET /v1/ready. A session
 	// factory only proves Hawk can attempt construction; readiness additionally

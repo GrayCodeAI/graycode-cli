@@ -29,6 +29,7 @@ func (s *Session) SetPersistID(id string) {
 	s.persistID = id
 	s.checkpointMgr = nil
 	s.mu.Unlock()
+	s.ConfigureContextGraphObservation("")
 }
 
 // RecordAPIUsage stores the latest provider prompt/completion token counts.

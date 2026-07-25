@@ -13,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	mission "github.com/GrayCodeAI/hawk/internal/multiagent"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +27,7 @@ var (
 )
 
 var missionCmd = &cobra.Command{
-	Use:   "mission <prompt>",
+	Use:   "mission [prompt]",
 	Short: "Run a multi-agent mission (parallel feature execution)",
 	Long: `Decompose a task into features and execute them in parallel git worktrees.
 
@@ -36,8 +37,9 @@ Results are committed on separate branches for review/merge.
 Examples:
   hawk mission "Add auth, rate limiting, and logging to the API"
   hawk mission --workers 6 "Refactor the database layer into 3 services"
-  hawk mission --model claude-sonnet-4-6 "Add tests for all untested packages"`,
-	Args: cobra.ExactArgs(1),
+  hawk mission --model claude-sonnet-4-6 "Add tests for all untested packages"
+  hawk mission --from-tasks`,
+	Args: cobra.ArbitraryArgs,
 	RunE: runMission,
 }
 
@@ -50,7 +52,10 @@ func init() {
 }
 
 func runMission(_ *cobra.Command, args []string) error {
-	prompt := args[0]
+	prompt, err := missionPrompt(args)
+	if err != nil {
+		return err
+	}
 
 	cwd, _ := os.Getwd()
 	baseBranch := getCurrentBranch(cwd)
@@ -73,18 +78,26 @@ func runMission(_ *cobra.Command, args []string) error {
 
 	m := mission.New(prompt, cfg)
 
-	fmt.Printf("Mission %s: planning...\n", m.ID)
-
-	// Plan: decompose into features using LLM
-	planFn := func(ctx context.Context, p string) ([]mission.Feature, error) {
-		return planWithLLM(ctx, p, effectiveProvider, effectiveModel, settings)
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), missionTimeout)
 	defer cancel()
 
-	if err := m.Plan(ctx, planFn); err != nil {
-		return fmt.Errorf("planning: %w", err)
+	var waves [][]string
+	if missionFromTasks {
+		fmt.Printf("Mission %s: loading validated task graph...\n", m.ID)
+		features, taskWaves, err := missionFeaturesFromTasks(tool.GetTaskStore(), m.ID)
+		if err != nil {
+			return fmt.Errorf("task graph: %w", err)
+		}
+		m.Features = features
+		waves = taskWaves
+	} else {
+		fmt.Printf("Mission %s: planning...\n", m.ID)
+		planFn := func(ctx context.Context, p string) ([]mission.Feature, error) {
+			return planWithLLM(ctx, p, effectiveProvider, effectiveModel, settings)
+		}
+		if err := m.Plan(ctx, planFn); err != nil {
+			return fmt.Errorf("planning: %w", err)
+		}
 	}
 
 	fmt.Printf("Mission %s: %d features planned\n", m.ID, len(m.Features))
@@ -103,10 +116,19 @@ func runMission(_ *cobra.Command, args []string) error {
 
 	// Run features in parallel
 	workerFn := mission.EngineWorker(effectiveProvider, effectiveModel, systemPrompt)
+	if missionFromTasks {
+		workerFn = graphTrackingWorker(tool.GetTaskStore(), workerFn)
+	}
 
 	fmt.Printf("Executing with %d parallel workers...\n\n", cfg.MaxWorkers)
-	if err := m.Run(ctx, workerFn); err != nil {
-		return err
+	var runErr error
+	if missionFromTasks {
+		runErr = m.RunStaged(ctx, workerFn, mission.WithExecutionWaves(waves))
+	} else {
+		runErr = m.Run(ctx, workerFn)
+	}
+	if runErr != nil {
+		return runErr
 	}
 
 	// Print results
@@ -123,6 +145,13 @@ func runMission(_ *cobra.Command, args []string) error {
 			branch += " (" + f.Handoff.CommitID[:7] + ")"
 		}
 		fmt.Printf("  %s %s — %s\n", status, f.Description, branch)
+	}
+	if missionFromTasks && len(m.WaveJoins) > 0 {
+		fmt.Println()
+		fmt.Println("Wave joins:")
+		for _, join := range m.WaveJoins {
+			fmt.Printf("  %d. %s\n", join.Wave, join.Summary)
+		}
 	}
 
 	return nil

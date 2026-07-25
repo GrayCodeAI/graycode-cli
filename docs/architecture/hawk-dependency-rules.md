@@ -54,12 +54,13 @@ sight   -> hawk-core-contracts   # severity/finding vocabulary
 inspect -> hawk-core-contracts   # severity/finding vocabulary
 eyrie   -> (none)   # provider/transport types are eyrie-local
 yaad    -> (none)   # memory event types are yaad-local
-trace   -> (none)   # trace/redaction event types are trace-local
+trace   -> hawk-core-contracts   # portable graph export vocabulary
 ```
 
-If `eyrie`, `yaad`, or `trace` later needs to emit or accept a shared
-finding/event, the type moves into `hawk-core-contracts` first and the engine
-adds the contract edge then — not before.
+If `eyrie` or `yaad` later needs to emit or accept a shared finding/event, the
+type moves into `hawk-core-contracts` first and the engine adds the contract
+edge then — not before. Trace has this edge because it emits the shared graph
+contract; its storage and redaction types remain local.
 
 ## Forbidden graph
 

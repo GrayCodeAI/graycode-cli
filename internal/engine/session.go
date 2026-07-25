@@ -25,6 +25,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/tok"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -136,6 +137,7 @@ type Session struct {
 	estTokensCache          int
 	estTokensMsgCount       int
 	estTokensLastLen        int
+	tokUsage                *tok.UsageTracker
 	checkpointMgr           *session.CheckpointManager
 	OnCompaction            OnCompaction
 	Verbose                 bool // show tool calls, timing, token counts in output

@@ -15,14 +15,15 @@ import (
 
 // Mission represents a multi-agent orchestration run.
 type Mission struct {
-	ID          string    `json:"id"`
-	Prompt      string    `json:"prompt"`
-	Dir         string    `json:"dir"`
-	Features    []Feature `json:"features"`
-	Status      Status    `json:"status"`
-	StartedAt   time.Time `json:"started_at"`
-	CompletedAt time.Time `json:"completed_at,omitempty"`
-	Config      Config    `json:"config"`
+	ID          string     `json:"id"`
+	Prompt      string     `json:"prompt"`
+	Dir         string     `json:"dir"`
+	Features    []Feature  `json:"features"`
+	WaveJoins   []WaveJoin `json:"wave_joins,omitempty"`
+	Status      Status     `json:"status"`
+	StartedAt   time.Time  `json:"started_at"`
+	CompletedAt time.Time  `json:"completed_at,omitempty"`
+	Config      Config     `json:"config"`
 
 	// ApprovalGate is an optional typed human-in-the-loop gate that intercepts
 	// tool calls matching a flagged risk category before they execute.
@@ -103,6 +104,18 @@ type Handoff struct {
 	TestsPassed  bool     `json:"tests_passed"`
 }
 
+// WaveJoin is the deterministic join record for one scheduling wave.
+type WaveJoin struct {
+	Wave         int       `json:"wave"`
+	FeatureIDs   []string  `json:"feature_ids"`
+	CompletedIDs []string  `json:"completed_ids,omitempty"`
+	FailedIDs    []string  `json:"failed_ids,omitempty"`
+	BlockedIDs   []string  `json:"blocked_ids,omitempty"`
+	StartedAt    time.Time `json:"started_at"`
+	CompletedAt  time.Time `json:"completed_at"`
+	Summary      string    `json:"summary"`
+}
+
 // WorkerFunc is the function type that the orchestrator calls for each feature.
 // It receives the feature and mission dir, and returns a handoff or error.
 type WorkerFunc func(ctx context.Context, feature *Feature, missionDir string, cfg Config) (*Handoff, error)
@@ -154,23 +167,51 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 	m.Status = StatusRunning
 	m.mu.Unlock()
 
-	missionDir, err := m.createDir()
+	missionDir, err := m.ensureRunDir()
 	if err != nil {
 		return err
 	}
-	m.Dir = missionDir
-
+	if err := m.runFeatureSet(ctx, workerFn, missionDir, m.featurePointers()); err != nil {
+		return err
+	}
+	m.recomputeStatus()
 	if err := m.persistState(); err != nil {
 		return err
 	}
+	return m.persistPortableGraph()
+}
 
+func (m *Mission) ensureRunDir() (string, error) {
+	if m.Dir != "" {
+		return m.Dir, m.persistState()
+	}
+	missionDir, err := m.createDir()
+	if err != nil {
+		return "", err
+	}
+	m.Dir = missionDir
+	return missionDir, m.persistState()
+}
+
+func (m *Mission) featurePointers() []*Feature {
+	features := make([]*Feature, 0, len(m.Features))
+	for i := range m.Features {
+		features = append(features, &m.Features[i])
+	}
+	return features
+}
+
+func (m *Mission) runFeatureSet(ctx context.Context, workerFn WorkerFunc, missionDir string, features []*Feature) error {
 	sem := make(chan struct{}, m.Config.MaxWorkers)
 	var wg sync.WaitGroup
 
-	for i := range m.Features {
+	for _, feat := range features {
 		wg.Add(1)
 		go func(feat *Feature) {
 			defer wg.Done()
+			if feat.Status == FeatureCompleted {
+				return
+			}
 
 			select {
 			case sem <- struct{}{}:
@@ -230,34 +271,11 @@ func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 			if persistErr := m.persistState(); persistErr != nil {
 				fmt.Fprintf(os.Stderr, "warning: failed to persist mission state: %v\n", persistErr)
 			}
-		}(&m.Features[i])
+		}(feat)
 	}
 
 	wg.Wait()
-
-	completed := 0
-	failed := 0
-	for _, f := range m.Features {
-		switch f.Status {
-		case FeatureCompleted:
-			completed++
-		case FeatureFailed:
-			failed++
-		}
-	}
-
-	m.mu.Lock()
-	if failed == 0 {
-		m.Status = StatusCompleted
-	} else if completed == 0 {
-		m.Status = StatusFailed
-	} else {
-		m.Status = StatusPartial
-	}
-	m.CompletedAt = time.Now()
-	m.mu.Unlock()
-
-	return m.persistState()
+	return nil
 }
 
 // PRDFunc generates a product requirements document for a feature.
@@ -356,9 +374,11 @@ func (m *Mission) Fix(ctx context.Context, fixFn FixFunc) error {
 type StagedOption func(*stagedConfig)
 
 type stagedConfig struct {
-	prdFn    PRDFunc
-	verifyFn VerifyFunc
-	fixFn    FixFunc
+	prdFn           PRDFunc
+	verifyFn        VerifyFunc
+	fixFn           FixFunc
+	executionWaves  [][]string
+	useExecutionDAG bool
 }
 
 // WithPRD supplies the PRD generation function for the staged pipeline.
@@ -369,6 +389,16 @@ func WithVerify(fn VerifyFunc) StagedOption { return func(c *stagedConfig) { c.v
 
 // WithFix supplies the fix function for the staged pipeline.
 func WithFix(fn FixFunc) StagedOption { return func(c *stagedConfig) { c.fixFn = fn } }
+
+// WithExecutionWaves selects the validated dependency waves for the staged
+// execution phase. The slices are copied so callers may safely reuse or
+// mutate their scheduling data after configuring the mission.
+func WithExecutionWaves(waves [][]string) StagedOption {
+	return func(c *stagedConfig) {
+		c.executionWaves = cloneExecutionWaves(waves)
+		c.useExecutionDAG = true
+	}
+}
 
 // RunStaged orchestrates the full team pipeline:
 //
@@ -389,9 +419,20 @@ func (m *Mission) RunStaged(ctx context.Context, workerFn WorkerFunc, opts ...St
 		}
 	}
 
-	// Phase: team-exec (existing parallel execution)
-	if err := m.Run(ctx, workerFn); err != nil {
-		return err
+	// Phase: team-exec. Callers that provide validated dependency waves get
+	// deterministic graph joins; legacy callers retain the existing parallel
+	// execution semantics.
+	var execErr error
+	if sc.useExecutionDAG {
+		if len(sc.executionWaves) == 0 {
+			return fmt.Errorf("staged execution waves are empty")
+		}
+		execErr = m.RunWaves(ctx, sc.executionWaves, workerFn)
+	} else {
+		execErr = m.Run(ctx, workerFn)
+	}
+	if execErr != nil {
+		return execErr
 	}
 
 	// Phase: team-verify + team-fix
@@ -415,16 +456,19 @@ func (m *Mission) RunStaged(ctx context.Context, workerFn WorkerFunc, opts ...St
 func (m *Mission) recomputeStatus() {
 	completed := 0
 	failed := 0
+	pending := 0
 	for _, f := range m.Features {
 		switch f.Status {
 		case FeatureCompleted:
 			completed++
 		case FeatureFailed:
 			failed++
+		default:
+			pending++
 		}
 	}
 	m.mu.Lock()
-	if failed == 0 {
+	if failed == 0 && pending == 0 {
 		m.Status = StatusCompleted
 	} else if completed == 0 {
 		m.Status = StatusFailed
@@ -439,12 +483,15 @@ func (m *Mission) recomputeStatus() {
 func (m *Mission) Summary() string {
 	completed := 0
 	failed := 0
+	pending := 0
 	for _, f := range m.Features {
 		switch f.Status {
 		case FeatureCompleted:
 			completed++
 		case FeatureFailed:
 			failed++
+		default:
+			pending++
 		}
 	}
 	duration := m.CompletedAt.Sub(m.StartedAt).Round(time.Second)
@@ -452,10 +499,14 @@ func (m *Mission) Summary() string {
 		duration = time.Since(m.StartedAt).Round(time.Second)
 	}
 	status := "completed"
-	if failed > 0 && completed > 0 {
+	if pending > 0 || (failed > 0 && completed > 0) {
 		status = "partial"
 	} else if failed > 0 {
 		status = "failed"
+	}
+	if pending > 0 {
+		return fmt.Sprintf("Mission %s [%s]: %d/%d features completed, %d failed, %d pending (%s)",
+			m.ID, status, completed, len(m.Features), failed, pending, duration)
 	}
 	return fmt.Sprintf("Mission %s [%s]: %d/%d features completed, %d failed (%s)",
 		m.ID, status, completed, len(m.Features), failed, duration)

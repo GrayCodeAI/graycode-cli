@@ -62,6 +62,11 @@ func (s *Session) SetMaxBudgetUSD(amount float64) error {
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxBudgetUSD(amount)
 	}
+	if tracker := s.currentTokUsageTracker(); tracker != nil {
+		limits := tracker.GetLimits()
+		limits.CostUSD = amount
+		tracker.SetLimits(limits)
+	}
 	return nil
 }
 

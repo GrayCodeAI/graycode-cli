@@ -292,6 +292,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		ID:   tc.ID,
 		Args: tc.Arguments,
 	})
+	s.recordPolicyObservation(tc, "permission", granted, denyMsg)
 	if !granted {
 		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
 		if toolSpan != nil {
@@ -303,7 +304,11 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 
 	// Human-in-the-loop approval gate for high-risk actions (additive; no-op
 	// unless s.Approval is configured and enabled). See approval_gate.go.
-	if approved, approvalDeny := s.CheckApproval(ctx, tc.Name, tc.Arguments); !approved {
+	approved, approvalDeny := s.CheckApproval(ctx, tc.Name, tc.Arguments)
+	if s.Approval != nil && s.Approval.Enabled {
+		s.recordPolicyObservation(tc, "approval", approved, approvalDeny)
+	}
+	if !approved {
 		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: approvalDeny}
 		if toolSpan != nil {
 			toolSpan.SetTag("approval_denied", "true")
@@ -635,6 +640,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		"is_err": isErr,
 	})
 
+	s.recordVerificationObservation(tc, output, isErr)
 	ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
 	if toolSpan != nil {
 		if isErr {

@@ -39,6 +39,7 @@ hawk-core-contracts/
 ├── events/   # trace/tool event schemas
 ├── policy/   # permission/guardian decision contracts
 ├── tools/    # provider-neutral tool call/result
+├── graph/    # portable nodes, edges, lifecycle events, scope, provenance
 └── README.md
 ```
 
@@ -75,6 +76,11 @@ list in sync with the code (it is the inventory the dependency rules assume).
 ### `tools/`
 - `ToolCall`, `ToolResult`
 
+### `graph/`
+- `Node`, `Edge`, `Event`, `Ref`
+- `NodeKind`, `EdgeKind`, `EventType`
+- `Scope`, `Provenance`, `ArtifactRef`
+
 ### Planned (not yet in the module)
 - engines: `EngineRequest`, `EngineResponse`, engine-specific envelopes
 - sessions: `SessionID`, `SessionState`, `SessionSummary`
@@ -96,6 +102,7 @@ list in sync with the code (it is the inventory the dependency rules assume).
 - tool contracts now exist in `hawk-core-contracts/tools`
 - event contracts now exist in `hawk-core-contracts/events`
 - policy contracts now exist in `hawk-core-contracts/policy`
+- portable graph contracts now exist in `hawk-core-contracts/graph`
 - Hawk session persistence has started migrating to provider-neutral tool contracts
 - Hawk review storage and inspect/review bridge paths now consume neutral review/verify contracts
 - Hawk runtime conversation DTOs and the `ChatClient` port are Hawk-owned and
