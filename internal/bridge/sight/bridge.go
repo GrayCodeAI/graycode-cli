@@ -3,10 +3,14 @@ package sight
 import (
 	"context"
 	"sync"
+	"time"
 
+	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
 	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/types"
 	sightLib "github.com/GrayCodeAI/sight"
+	"github.com/GrayCodeAI/sight/qualitygraph"
 )
 
 // EyrieAdapter implements sight's Provider interface using hawk's eyrie client.
@@ -74,6 +78,15 @@ type Bridge struct {
 	ready    bool
 }
 
+type GraphObservation struct {
+	SessionID   string
+	ToolCallID  string
+	Stage       string
+	Scope       graphcontracts.Scope
+	ObservedAt  time.Time
+	MaxFindings int
+}
+
 // NewBridge creates a bridge to the sight library using the given Hawk
 // transport client and provider name. Additional sight options (model,
 // concerns, etc.) are applied to all operations.
@@ -118,6 +131,63 @@ func (b *Bridge) ReviewContracts(ctx context.Context, diff string) (*reviewcontr
 		return nil, err
 	}
 	return sightLib.ToContractResult(result), nil
+}
+
+// ReviewContractsObserved reviews a diff, journals Sight's portable quality
+// graph, and returns the existing neutral review contract.
+func (b *Bridge) ReviewContractsObserved(
+	ctx context.Context,
+	diff string,
+	observation GraphObservation,
+) (*reviewcontracts.Result, error) {
+	result, err := b.Review(ctx, diff)
+	if err != nil {
+		return nil, err
+	}
+	observedAt := observation.ObservedAt.UTC()
+	if observedAt.IsZero() {
+		observedAt = time.Now().UTC()
+	}
+	export, err := qualitygraph.Build(result, qualitygraph.Options{
+		ObservedAt:    observedAt,
+		Scope:         observation.Scope,
+		CorrelationID: observation.SessionID,
+		Source:        diff,
+		MaxFindings:   observation.MaxFindings,
+	})
+	if err != nil {
+		return nil, err
+	}
+	stage := observation.Stage
+	if stage == "" {
+		stage = "sight-review"
+	}
+	if err := graphjournal.AppendQualityGraph(
+		observation.SessionID,
+		observation.ToolCallID,
+		stage,
+		"sight",
+		export.Nodes,
+		export.Edges,
+		export.Events,
+		observedAt,
+	); err != nil {
+		return nil, err
+	}
+	contractResult := sightLib.ToContractResult(result)
+	if err := graphjournal.AppendVerification(
+		observation.SessionID,
+		observation.ToolCallID,
+		stage,
+		contractResult.Failed(),
+		len(contractResult.Findings),
+		contractResult.MaxSeverity().String(),
+		diff,
+		observedAt,
+	); err != nil {
+		return nil, err
+	}
+	return contractResult, nil
 }
 
 // Describe generates a PR description from a unified diff string.

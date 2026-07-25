@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/textutil"
 )
 
 // AdaptivePrompt adjusts system prompt sections based on user corrections.
@@ -42,16 +43,13 @@ func NewAdaptivePrompt() *AdaptivePrompt {
 
 // LearnFromFeedback extracts prompt adjustments from user corrections.
 func (ap *AdaptivePrompt) LearnFromFeedback(userMessage string) {
-	lower := strings.ToLower(userMessage)
-
 	var rule, polarity string
 
 	// Detect "don't" patterns
 	dontPrefixes := []string{"don't ", "dont ", "do not ", "never ", "stop ", "avoid "}
 	for _, prefix := range dontPrefixes {
-		if strings.Contains(lower, prefix) {
-			idx := strings.Index(lower, prefix)
-			rest := strings.TrimSpace(userMessage[idx+len(prefix):])
+		if idx, matchLen := textutil.IndexFold(userMessage, prefix); idx >= 0 {
+			rest := strings.TrimSpace(userMessage[idx+matchLen:])
 			if end := strings.IndexAny(rest, ".!?\n"); end > 0 {
 				rest = rest[:end]
 			}
@@ -67,9 +65,8 @@ func (ap *AdaptivePrompt) LearnFromFeedback(userMessage string) {
 	if rule == "" {
 		doPrefixes := []string{"always ", "make sure to ", "remember to ", "from now on "}
 		for _, prefix := range doPrefixes {
-			if strings.Contains(lower, prefix) {
-				idx := strings.Index(lower, prefix)
-				rest := strings.TrimSpace(userMessage[idx+len(prefix):])
+			if idx, matchLen := textutil.IndexFold(userMessage, prefix); idx >= 0 {
+				rest := strings.TrimSpace(userMessage[idx+matchLen:])
 				if end := strings.IndexAny(rest, ".!?\n"); end > 0 {
 					rest = rest[:end]
 				}

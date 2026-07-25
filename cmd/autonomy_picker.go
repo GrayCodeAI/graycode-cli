@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/mattn/go-runewidth"
 )
 
 // autonomyPickerEntry is one selectable row in the picker.
@@ -182,8 +183,8 @@ func (ap *AutonomyPicker) Render(viewWidth int) string {
 	} else {
 		nameWidth := 0
 		for _, e := range ap.filtered {
-			if len(e.Name) > nameWidth {
-				nameWidth = len(e.Name)
+			if w := runewidth.StringWidth(e.Name); w > nameWidth {
+				nameWidth = w
 			}
 		}
 		for i, e := range ap.filtered {
@@ -202,8 +203,9 @@ func (ap *AutonomyPicker) Render(viewWidth int) string {
 }
 
 func padRight(s string, width int) string {
-	if len(s) >= width {
+	w := runewidth.StringWidth(s)
+	if w >= width {
 		return s
 	}
-	return s + strings.Repeat(" ", width-len(s))
+	return s + strings.Repeat(" ", width-w)
 }

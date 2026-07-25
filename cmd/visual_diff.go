@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
+
+	"github.com/mattn/go-runewidth"
 )
 
 // WordChange represents a single word-level change between two strings.
@@ -894,7 +897,7 @@ func vdStripAnsi(s string) string {
 
 // visibleLength returns the visible length of a string (excluding ANSI codes).
 func visibleLength(s string) int {
-	return len(vdStripAnsi(s))
+	return runewidth.StringWidth(vdStripAnsi(s))
 }
 
 // truncateVisible truncates a string with ANSI codes to a visible width.
@@ -914,9 +917,14 @@ func truncateVisible(s string, width int) string {
 				i++
 			}
 		} else {
-			out.WriteByte(s[i])
-			visible++
-			i++
+			r, size := utf8.DecodeRuneInString(s[i:])
+			rw := runewidth.RuneWidth(r)
+			if visible+rw > width {
+				break
+			}
+			out.WriteString(s[i : i+size])
+			visible += rw
+			i += size
 		}
 	}
 	return out.String()

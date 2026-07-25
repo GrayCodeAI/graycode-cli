@@ -347,5 +347,9 @@ func truncateLabel(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return s[:n] + "..."
+	// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+	if runes := []rune(s); len(runes) > n {
+		return string(runes[:n]) + "..."
+	}
+	return s
 }

@@ -83,15 +83,15 @@ func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	if m.pluginRuntime != nil {
 		skillsCount = len(m.pluginRuntime.SmartSkills)
 	}
-	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot())
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, blinkClosed, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot(), m.containerEnabled, m.lastCommand)
 }
 
 // buildWelcomeMessage renders the branded inline HAWK welcome block.
 func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
-	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, blinkClosed, width, height, dockerRunning, loadWelcomeStatusSnapshot())
+	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, blinkClosed, width, height, dockerRunning, loadWelcomeStatusSnapshot(), false, "")
 }
 
-func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot) string {
+func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot, containerMode bool, lastCommand string) string {
 	// Brand orange — used for both the HAWK wordmark and the mascot so
 	// the welcome screen stays on theme. All escapes come from the theme
 	// palette (theme.go) so a rebrand stays a one-file change.
@@ -173,6 +173,12 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	b.WriteByte('\n')
 	b.WriteString(center(runewidth.StringWidth(verLine), dimC+verLine+rst) + "\n")
 
+	// Prominent mode badge — safety-critical awareness right in the welcome header.
+	modeBadge := welcomeModeBadge(dockerRunning)
+	if modeBadge != "" {
+		b.WriteString(center(runewidth.StringWidth(modeBadge), modeBadge) + "\n")
+	}
+
 	setup := snapshot.setup
 	needsSetup := setup.NeedsSetup
 	modeGuidance := welcomeModeGuidance(dockerRunning, tight)
@@ -196,9 +202,12 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		}
 	}
 	if !needsSetup {
-		tip := "TIP: Use /new to start a fresh session with clean context"
-		if tight {
-			tip = "TIP: /new starts a clean session"
+		tip := nextTip(containerMode, lastCommand)
+		if tip == "" {
+			tip = "TIP: Use /new to start a fresh session with clean context"
+		}
+		if !tight {
+			tip = "TIP: " + tip
 		}
 		b.WriteByte('\n')
 		b.WriteString(center(runewidth.StringWidth(tip), boldC+tip+rst) + "\n")
@@ -208,9 +217,37 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 			shortcutsRow1 = "ctrl+N new session · ctrl+L autonomy"
 			shortcutsRow2 = "/help · /config · /autonomy"
 		}
+		// Recent sessions — quick resume for returning users.
+		if recents := recentSessionsList(); len(recents) > 0 {
+			b.WriteByte('\n')
+			b.WriteString(center(runewidth.StringWidth("Recent sessions:"), dimC+"Recent sessions:"+rst) + "\n")
+			shown := 0
+			for _, e := range recents {
+				if shown >= 3 {
+					break
+				}
+				preview := e.Preview
+				if runes := []rune(preview); len(runes) > 50 {
+					preview = string(runes[:47]) + "…"
+				}
+				if preview == "" {
+					preview = "(no messages)"
+				}
+				shortID := e.ID
+				if len(shortID) > 8 {
+					shortID = shortID[:8]
+				}
+				row := fmt.Sprintf("  /resume %-10s  %s", shortID, preview)
+				b.WriteString(center(runewidth.StringWidth(row), dimC+row+rst) + "\n")
+				shown++
+			}
+		}
 		b.WriteByte('\n')
 		b.WriteString(center(runewidth.StringWidth(shortcutsRow1), dimC+shortcutsRow1+rst) + "\n")
 		b.WriteString(center(runewidth.StringWidth(shortcutsRow2), dimC+shortcutsRow2+rst) + "\n")
+		// Dismiss hint — dim so it doesn't compete with the main shortcuts.
+		dismissHint := "Esc to dismiss"
+		b.WriteString(center(runewidth.StringWidth(dismissHint), sepC+dismissHint+rst) + "\n")
 	}
 
 	mcpCount := len(settings.MCPServers) + len(mcpServers)
@@ -261,11 +298,43 @@ func welcomeModeGuidance(dockerRunning *bool, tight bool) string {
 	}
 }
 
+// welcomeModeBadge returns a prominent, colored badge indicating the
+// current execution mode. Uses inverse video (colored background, dark
+// text) so it stands out from the dim guidance text.
+func welcomeModeBadge(dockerRunning *bool) string {
+	rst := ansiReset
+	switch {
+	case dockerRunning == nil:
+		// Host mode — amber background, dark text.
+		return "\033[48;2;255;191;0m\033[30m HOST MODE \033[0m" + rst
+	case *dockerRunning:
+		// Container mode — teal background, dark text.
+		return "\033[48;2;78;205;196m\033[30m CONTAINER MODE \033[0m" + rst
+	default:
+		// Docker unavailable — coral background, dark text.
+		return "\033[48;2;255;107;107m\033[30m DOCKER UNAVAILABLE \033[0m" + rst
+	}
+}
+
 func actLine(saved *session.Session, sessionID string) string {
 	if saved != nil && len(sessionID) >= 8 {
 		return "Resumed session " + sessionID[:8]
 	}
 	return ""
+}
+
+// recentSessionsList returns up to 5 saved sessions (newest first) for the
+// welcome screen's quick-resume section. Returns nil if no sessions exist or
+// if listing fails — the caller should handle either gracefully.
+func recentSessionsList() []session.Entry {
+	entries, err := session.List()
+	if err != nil || len(entries) == 0 {
+		return nil
+	}
+	if len(entries) > 5 {
+		entries = entries[:5]
+	}
+	return entries
 }
 
 func toolListSummary(registry *tool.Registry) string {
@@ -280,8 +349,8 @@ func toolListSummary(registry *tool.Registry) string {
 	b.WriteString(fmt.Sprintf("Enabled tools (%d):\n", len(tools)))
 	for _, t := range tools {
 		desc := t.Description
-		if len(desc) > 96 {
-			desc = desc[:96] + "..."
+		if runes := []rune(desc); len(runes) > 96 {
+			desc = string(runes[:96]) + "..."
 		}
 		b.WriteString(fmt.Sprintf("  %s — %s\n", t.Name, desc))
 	}

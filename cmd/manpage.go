@@ -4,9 +4,25 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
+var manpageCmd = &cobra.Command{
+	Use:   "manpage",
+	Short: "Generate man page in roff format",
+	Long:  "Generate a man page for hawk in roff format and print it to stdout.\nRedirect to a file in your man path, e.g.: hawk manpage > /usr/local/share/man/man1/hawk.1",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Fprint(cmd.OutOrStdout(), GenerateManPage())
+		return nil
+	},
+}
+
 // GenerateManPage produces a man page in roff format for hawk.
+// The OPTIONS section is generated from the live Cobra flag set so it
+// never drifts from the actual CLI surface.
 func GenerateManPage() string {
 	date := time.Now().Format("January 2006")
 	ver := version
@@ -30,33 +46,40 @@ func GenerateManPage() string {
 	// Description
 	b.WriteString(".SH DESCRIPTION\n")
 	b.WriteString("hawk is an AI coding agent that reads, writes, and runs code in your terminal.\n")
-	b.WriteString("It supports multiple LLM providers and features a TUI with slash commands,\n")
-	b.WriteString("tool execution, session management, and plugin support.\n")
+	b.WriteString("It connects to 75+ LLM providers through eyrie, executes tools (file I/O,\n")
+	b.WriteString("shell, git, web search), and manages sessions from a keyboard-driven TUI\n")
+	b.WriteString("or headless mode for scripts and CI.\n")
 
-	// Options
+	// Options — generated from the live Cobra flag set
 	b.WriteString(".SH OPTIONS\n")
-	options := []struct{ flag, desc string }{
-		{"-m, --model MODEL", "Model to use (e.g. claude-sonnet-4-20250514)"},
-		{"-p, --print", "Print mode: send prompt and exit"},
-		{"--prompt PROMPT", "Send a single prompt and exit"},
-		{"--provider PROVIDER", "LLM provider (anthropic, openai, gemini, etc.)"},
-		{"-r, --resume ID", "Resume a saved session by ID"},
-		{"-c, --continue", "Continue the most recent conversation"},
-		{"--output-format FORMAT", "Output format: text, json, or stream-json"},
-		{"--input-format FORMAT", "Input format: text or stream-json"},
-		{"--system-prompt TEXT", "Custom system prompt"},
-		{"--system-prompt-file FILE", "Read system prompt from file"},
-		{"--append-system-prompt TEXT", "Append text to system prompt"},
-		{"--sandbox MODE", "Permission sandbox: strict, workspace, or off"},
-		{"--max-turns N", "Maximum agentic turns in non-interactive mode"},
-		{"--max-budget-usd AMOUNT", "Maximum estimated API spend in USD"},
-		{"--tools TOOLS", "Comma-separated tool list"},
-		{"--add-dir DIR", "Additional directory to include in context"},
-		{"--mcp CMD", "MCP server command"},
-		{"-v, --version", "Show version"},
-	}
-	for _, opt := range options {
-		b.WriteString(fmt.Sprintf(".TP\n\\fB%s\\fR\n%s\n", opt.flag, opt.desc))
+	rootCmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if f.Hidden {
+			return
+		}
+		var flagStr string
+		if f.Shorthand != "" {
+			flagStr = fmt.Sprintf("\\fB-%s\\fR, \\fB--%s\\fR", f.Shorthand, f.Name)
+		} else {
+			flagStr = fmt.Sprintf("\\fB--%s\\fR", f.Name)
+		}
+		// Add value placeholder for non-bool flags
+		if f.Value.Type() != "bool" {
+			flagStr += " \\fI" + strings.ToUpper(f.Name) + "\\fR"
+		}
+		usage := f.Usage
+		if f.DefValue != "" && f.DefValue != "false" && f.DefValue != "[]" {
+			usage += fmt.Sprintf(" (default: %s)", f.DefValue)
+		}
+		b.WriteString(fmt.Sprintf(".TP\n%s\n%s\n", flagStr, usage))
+	})
+
+	// Subcommands
+	b.WriteString(".SH COMMANDS\n")
+	for _, sub := range rootCmd.Commands() {
+		if sub.Hidden {
+			continue
+		}
+		b.WriteString(fmt.Sprintf(".TP\n\\fBhawk %s\\fR\n%s\n", sub.Use, sub.Short))
 	}
 
 	// Slash Commands
@@ -86,16 +109,15 @@ func GenerateManPage() string {
 	b.WriteString(".TP\n\\fBAGENTS.md\\fR\nProject instructions file\n")
 	b.WriteString(".TP\n\\fBHawk user state directory\\fR\nSaved session data, plans, skills, and runtime state\n")
 
-	// Credentials (stored in OS secret service — use /config, not .env)
+	// Credentials
 	b.WriteString(".SH CREDENTIALS\n")
 	b.WriteString("API keys are stored in the OS secret service (macOS Keychain or Linux GNOME Keyring / KWallet).\n")
 	b.WriteString("Use \\fBhawk\\fR and \\fB/config\\fR to save keys; hawk does not read API keys from .env files.\n")
 	b.WriteString(".TP\n\\fBhawk credentials status\\fR\nShow secure storage status\n")
 	b.WriteString(".TP\n\\fBhawk credentials remove <provider|env-var>\\fR\nRemove a stored API key from the OS secret store\n")
-	b.WriteString(".TP\n\\fB/config key remove\\fR\nRemove a stored API key via interactive picker\n")
 	b.WriteString(".TP\n\\fBhawk credentials migrate\\fR\nImport legacy plaintext credential files into the OS store\n")
 
-	// Environment (non-secret overrides only)
+	// Environment
 	b.WriteString(".SH ENVIRONMENT\n")
 	b.WriteString("Non-secret overrides (optional):\n")
 	envVars := []struct{ env, desc string }{

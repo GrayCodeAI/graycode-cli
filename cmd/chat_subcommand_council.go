@@ -42,19 +42,13 @@ func (co *councilSubcommand) Handle(m *chatModel, args []string, text string) (t
 	}
 
 	for _, r := range result.Responses {
-		preview := r.Response
-		if len(preview) > 200 {
-			preview = preview[:200] + "..."
-		}
+		preview := truncateWithEllipsis(r.Response, 203)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("  [%s] %s", r.Model, preview)})
 	}
 
 	m.messages = append(m.messages, displayMsg{role: "system", content: "Stage 2: Ranking responses..."})
 	for _, r := range result.Rankings {
-		preview := r.Ranking
-		if len(preview) > 200 {
-			preview = preview[:200] + "..."
-		}
+		preview := truncateWithEllipsis(r.Ranking, 203)
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("  [%s] %s", r.Model, preview)})
 	}
 

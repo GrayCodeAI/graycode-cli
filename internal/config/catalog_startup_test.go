@@ -73,10 +73,6 @@ func expectGatewayCountsInLine(t *testing.T, line string, rows []gatewayModelCou
 func TestFormatCatalogGatewayStatus(t *testing.T) {
 	catalogtest.Install(t)
 	rows := catalogGatewayModelCounts()
-	if len(rows) < 2 {
-		// FIXME: need at least 2 gateways with models in test catalog
-		t.Skip("need at least 2 gateways with models in test catalog")
-	}
 	h := CatalogHealthReport(context.Background())
 	line := formatCatalogGatewayStatus("Catalog: ", rows, h.Models)
 	expectGatewayCountsInLine(t, line, rows)
@@ -91,11 +87,6 @@ func TestFormatCatalogGatewayStatus(t *testing.T) {
 func TestCatalogStatusLine_GatewayBreakdown(t *testing.T) {
 	catalogtest.Install(t)
 	rows := catalogGatewayModelCounts()
-	// FIXME: test skipped in TestCatalogStatusLine_GatewayBreakdown
-	if len(rows) == 0 {
-		// FIXME: test skipped
-		t.Skip("no gateway counts in test catalog")
-	}
 	line := CatalogStatusLine(context.Background())
 	if strings.Contains(line, "ready (") && strings.Contains(line, "models)") {
 		t.Fatalf("expected gateway breakdown, got %q", line)
@@ -115,13 +106,7 @@ func TestCatalogStatusLine_GatewayBreakdown(t *testing.T) {
 
 func TestFormatCatalogGatewayStatus_FallbackTotal(t *testing.T) {
 	catalogtest.Install(t)
-	// FIXME: test skipped in TestFormatCatalogGatewayStatus_FallbackTotal
 	h := CatalogHealthReport(context.Background())
-	// FIXME: test skipped
-	if h.Models == 0 {
-		// FIXME: test skipped
-		t.Skip("no models in test catalog")
-	}
 	line := formatCatalogGatewayStatus("Catalog: ", nil, h.Models)
 	want := fmt.Sprintf("Catalog: ready (%d models)", h.Models)
 	if line != want {
@@ -130,15 +115,8 @@ func TestFormatCatalogGatewayStatus_FallbackTotal(t *testing.T) {
 }
 
 func TestFormatCatalogGatewayStatus_UpdatingPrefix(t *testing.T) {
-	// FIXME: test skipped in TestFormatCatalogGatewayStatus_UpdatingPrefix
 	catalogtest.Install(t)
-	// FIXME: test skipped
 	rows := catalogGatewayModelCounts()
-	// FIXME: test skipped
-	if len(rows) == 0 {
-		// FIXME: test skipped
-		t.Skip("no gateway counts in test catalog")
-	}
 	h := CatalogHealthReport(context.Background())
 	line := formatCatalogGatewayStatus("Catalog: updating… ", rows, h.Models)
 	wantPrefix := fmt.Sprintf("Catalog: updating… %s %d", rows[0].Display, rows[0].Count)
@@ -148,17 +126,9 @@ func TestFormatCatalogGatewayStatus_UpdatingPrefix(t *testing.T) {
 	expectGatewayCountsInLine(t, line, rows)
 }
 
-// FIXME: test skipped in TestFormatCatalogGatewayStatus_UpdatingPrefix
 func TestCatalogGatewayModelCounts_SortedDescending(t *testing.T) {
-	// FIXME: test skipped
 	catalogtest.Install(t)
-	// FIXME: test skipped
 	rows := catalogGatewayModelCounts()
-	// FIXME: test skipped
-	if len(rows) < 2 {
-		// FIXME: test skipped
-		t.Skip("need multiple gateways with models")
-	}
 	if rows[0].Count < rows[1].Count {
 		t.Fatalf("expected descending sort, got %+v", rows)
 	}

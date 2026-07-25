@@ -69,3 +69,27 @@ jobs:
           # Optional secrets used by some repos' goreleaser configs:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+
+      # Sign release artifacts with cosign keyless signing. The
+      # id-token: write permission above enables OIDC federation with
+      # Fulcio's root CA — no long-lived signing keys to manage.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@d8a3f51ef971a853e51de6231a89f4483c5a7a0e # v3.4.0
+
+      - name: Sign release checksums with cosign
+        run: |
+          set -euo pipefail
+          # Download the checksums artifact produced by goreleaser.
+          gh release download "${GITHUB_REF_NAME}" --pattern "checksums.txt" -D dist/
+          # Sign with keyless OIDC — output is dist/checksums.txt.sig (bundle).
+          cosign sign-blob \
+            --yes \
+            --output-signature dist/checksums.txt.sig \
+            --output-certificate dist/checksums.txt.cert \
+            dist/checksums.txt
+          # Upload the signature and certificate back to the release.
+          gh release upload "${GITHUB_REF_NAME}" \
+            dist/checksums.txt.sig \
+            dist/checksums.txt.cert
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

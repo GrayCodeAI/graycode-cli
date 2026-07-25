@@ -559,6 +559,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				progress = 1.0
 			}
 			snowball.RecordTurn(lastUsage.PromptTokens+lastUsage.CompletionTokens, progress)
+			s.recordEyrieOperationObservation(
+				resolvedProvider,
+				resolvedModel,
+				stopReason,
+				textContent.String(),
+				len(toolCalls),
+				lastUsage,
+			)
 		}
 
 		// Budget enforcement
@@ -629,6 +637,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// Integration pipeline: post-response (format, score, redact, cache, learn)
 			if s.LifecycleSvc().Pipeline() != nil && textContent.Len() > 0 {
 				postResult := s.LifecycleSvc().Pipeline().PostResponse(textContent.String(), s.Persistence().RawMessages())
+				s.recordTokRedactionObservation(textContent.String(), postResult.SecretMatches, postResult.SecretTypes)
 				if postResult != nil && postResult.FormattedResponse != "" {
 					textContent.Reset()
 					textContent.WriteString(postResult.FormattedResponse)

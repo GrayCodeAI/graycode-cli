@@ -105,7 +105,7 @@ func (bc *BoundaryChecker) CheckPath(path string) *BoundaryViolation {
 
 	// Check blocked paths
 	for _, blocked := range bc.BlockedPaths {
-		expandedBlocked := home.Expand(blocked)
+		expandedBlocked := home.MustExpand(blocked)
 		// Check if the clean path matches or is under a blocked path
 		if matchesBlockedPath(cleanPath, expandedBlocked) {
 			return &BoundaryViolation{

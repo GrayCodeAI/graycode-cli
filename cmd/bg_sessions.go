@@ -129,7 +129,9 @@ func StartBGSession(prompt string, args []string) (*BGSessionInfo, error) {
 	cmd := exec.CommandContext(context.Background(), "hawk", cmdArgs...) // #nosec G204 -- fixed command 'hawk' relaunching self with internal flags
 	cmd.Dir = cwd
 
-	logF, err := os.Create(logFile) // #nosec G304 -- logFile built from internal bg-sessions directory and generated id
+	// 0600: the log captures full session output (private user state, matching
+	// the 0600 bg-session info JSON); os.Create would leave it group/world-readable.
+	logF, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- logFile built from internal bg-sessions directory and generated id
 	if err != nil {
 		return nil, fmt.Errorf("create log file: %w", err)
 	}
@@ -174,8 +176,8 @@ func FormatBGSessions(sessions []*BGSessionInfo) string {
 			shortID = shortID[:8]
 		}
 		preview := s.Prompt
-		if len(preview) > 50 {
-			preview = preview[:50] + "..."
+		if runes := []rune(preview); len(runes) > 50 {
+			preview = string(runes[:50]) + "..."
 		}
 		age := time.Since(s.StartedAt).Round(time.Minute)
 		b.WriteString(fmt.Sprintf("  [%s] %s — %s\n", shortID, s.Status, preview))
@@ -206,7 +208,11 @@ Examples:
 
 		cmd.Printf("Background session started: %s (PID %d)\n", info.ID, info.PID)
 		cmd.Printf("View logs: tail -f %s\n", info.LogFile)
-		cmd.Printf("Attach: hawk attach %s\n", info.ID[:8])
+		attachID := info.ID
+		if len(attachID) > 8 {
+			attachID = attachID[:8]
+		}
+		cmd.Printf("Attach: hawk attach %s\n", attachID)
 		return nil
 	},
 }
@@ -250,6 +256,8 @@ var attachCmd = &cobra.Command{
 	},
 }
 
+var sessionsJSONFlag bool
+
 var sessionsLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "List background sessions",
@@ -257,6 +265,14 @@ var sessionsLsCmd = &cobra.Command{
 		sessions, err := ListBGSessions()
 		if err != nil {
 			return err
+		}
+		if sessionsJSONFlag {
+			out, err := json.MarshalIndent(sessions, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling sessions: %w", err)
+			}
+			cmd.Println(string(out))
+			return nil
 		}
 		cmd.Println(FormatBGSessions(sessions))
 		return nil
@@ -280,6 +296,7 @@ var sessionsKillCmd = &cobra.Command{
 
 func init() {
 	sessionsCmd.AddCommand(sessionsLsCmd, sessionsKillCmd)
+	sessionsLsCmd.Flags().BoolVar(&sessionsJSONFlag, "json", false, "output sessions as JSON")
 	rootCmd.AddCommand(bgCmd)
 	rootCmd.AddCommand(attachCmd)
 }

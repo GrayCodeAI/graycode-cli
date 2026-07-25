@@ -2,16 +2,24 @@ package memory
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
+	yaad "github.com/GrayCodeAI/yaad"
 	yaadEngine "github.com/GrayCodeAI/yaad/engine"
-	"github.com/GrayCodeAI/yaad/graph"
+	yaadGraph "github.com/GrayCodeAI/yaad/graph"
+	"github.com/GrayCodeAI/yaad/portablegraph"
 	"github.com/GrayCodeAI/yaad/storage"
 )
 
@@ -24,6 +32,9 @@ type YaadBridge struct {
 	mu       sync.Mutex
 	ready    bool
 	warnOnce sync.Once
+
+	graphSessionID string
+	graphScope     graphcontracts.Scope
 }
 
 // NewYaadBridge initializes a bridge to yaad's SQLite store at ~/.yaad/data/yaad.db.
@@ -50,7 +61,7 @@ func (b *YaadBridge) init() {
 		return
 	}
 
-	g := graph.New(store, store.DB())
+	g := yaadGraph.New(store, store.DB())
 	eng := yaadEngine.New(store, g)
 
 	b.store = store
@@ -67,6 +78,18 @@ func (b *YaadBridge) Ready() bool {
 // that need to check bridge status before batching operations.
 func (b *YaadBridge) IsReady() bool {
 	return b.ready
+}
+
+// ConfigureGraphObservation binds future successful recalls to a persisted
+// Hawk session. Empty session IDs disable capture.
+func (b *YaadBridge) ConfigureGraphObservation(sessionID string, scope graphcontracts.Scope) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	b.graphSessionID = strings.TrimSpace(sessionID)
+	b.graphScope = scope
+	b.mu.Unlock()
 }
 
 // notReadyError logs a warning once and returns a structured BridgeError.
@@ -120,10 +143,8 @@ func (b *YaadBridge) RecallWithContext(ctx context.Context, query string, tokenB
 	if !b.ready {
 		return "", b.notReadyError("Recall")
 	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
 
-	result, err := b.engine.Recall(ctx, yaadEngine.RecallOpts{
+	result, err := b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
 		Query:  query,
 		Budget: tokenBudget,
 		Limit:  10,
@@ -144,6 +165,76 @@ func (b *YaadBridge) RecallWithContext(ctx context.Context, query string, tokenB
 		sb.WriteString(fmt.Sprintf("[%s] %s", node.Type, node.Content))
 	}
 	return sb.String(), nil
+}
+
+func (b *YaadBridge) recallResultWithContext(
+	ctx context.Context,
+	opts yaadEngine.RecallOpts,
+) (*yaadEngine.RecallResult, error) {
+	if !b.ready {
+		return nil, b.notReadyError("Recall")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	result, err := b.engine.Recall(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	if result != nil && len(result.Nodes) > 0 {
+		b.recordContextGraph(opts.Query, result)
+	}
+	return result, nil
+}
+
+func (b *YaadBridge) recordContextGraph(query string, result *yaadEngine.RecallResult) {
+	if b.graphSessionID == "" || result == nil || len(result.Nodes) == 0 {
+		return
+	}
+	projection, err := portablegraph.Build(portablegraph.Input{
+		Nodes:           result.Nodes,
+		Edges:           result.Edges,
+		Query:           query,
+		GeneratedAt:     time.Now(),
+		Scope:           b.graphScope,
+		ProducerVersion: yaad.Version,
+	})
+	if err != nil {
+		log.Printf("[hawk/memory] yaad context graph projection failed: %v", err)
+		return
+	}
+	if err := graphjournal.AppendContextGraph(
+		b.graphSessionID,
+		"yaad",
+		projection.QuerySHA256,
+		projection.Nodes,
+		projection.Edges,
+		projection.Events,
+		projection.GeneratedAt,
+	); err != nil {
+		log.Printf("[hawk/memory] yaad context graph observation failed: %v", err)
+	}
+}
+
+func (b *YaadBridge) recordSelectedContext(label string, nodes []*storage.Node) {
+	if b == nil || b.graphSessionID == "" || len(nodes) == 0 {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	ids := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		if node != nil && strings.TrimSpace(node.ID) != "" {
+			ids = append(ids, node.ID)
+		}
+	}
+	edges, err := b.store.GetEdgesBetween(context.Background(), ids)
+	if err != nil {
+		log.Printf("[hawk/memory] yaad selected context edge lookup failed: %v", err)
+		edges = nil
+	}
+	b.recordContextGraph(label, &yaadEngine.RecallResult{Nodes: nodes, Edges: edges})
 }
 
 // InitCodeIndex creates the code index tables in yaad's store.
@@ -199,6 +290,7 @@ func (b *YaadBridge) SearchCode(query string, limit int) ([]CodeSearchResult, er
 	if err != nil {
 		return nil, err
 	}
+	b.recordCodeContext(query, records)
 
 	results := make([]CodeSearchResult, len(records))
 	for i, r := range records {
@@ -211,6 +303,71 @@ func (b *YaadBridge) SearchCode(query string, limit int) ([]CodeSearchResult, er
 		}
 	}
 	return results, nil
+}
+
+func (b *YaadBridge) recordCodeContext(query string, records []*storage.CodeChunkRecord) {
+	if b.graphSessionID == "" || len(records) == 0 {
+		return
+	}
+	occurredAt := time.Now().UTC()
+	nodes := make([]graphcontracts.Node, 0, len(records))
+	events := make([]graphcontracts.Event, 0, len(records))
+	querySHA256 := bridgeDigest(query)
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		sourceID := bridgeDigest(record.ID)
+		ref := graphcontracts.Ref{
+			Kind: graphcontracts.NodeKnowledge,
+			ID:   "hawk/code-chunk/" + sourceID,
+		}
+		node := graphcontracts.Node{
+			ID:        ref.ID,
+			Kind:      ref.Kind,
+			Scope:     b.graphScope,
+			CreatedAt: occurredAt,
+			Provenance: graphcontracts.Provenance{
+				Producer: "hawk",
+				SourceID: sourceID,
+				Evidence: []graphcontracts.ArtifactRef{{URI: "hawk://code-index/" + sourceID}},
+			},
+			Attributes: map[string]string{
+				"entity_type":         "code_chunk",
+				"data_classification": "metadata_only",
+				"path_sha256":         bridgeDigest(record.Path),
+				"content_sha256":      bridgeDigest(record.Content),
+				"symbol_sha256":       bridgeDigest(record.Symbol),
+				"language":            strings.TrimSpace(record.Language),
+				"start_line":          strconv.Itoa(record.StartLine),
+				"end_line":            strconv.Itoa(record.EndLine),
+				"tokens":              strconv.Itoa(record.Tokens),
+				"temporal_precision":  "projection_time",
+			},
+		}
+		nodes = append(nodes, node)
+		events = append(events, graphcontracts.Event{
+			ID:             "hawk/event/code-chunk/" + sourceID + "/observed/" + querySHA256,
+			Type:           graphcontracts.EventObserved,
+			Subject:        ref,
+			Scope:          b.graphScope,
+			OccurredAt:     occurredAt,
+			CorrelationID:  querySHA256,
+			IdempotencyKey: "hawk/code-chunk/" + sourceID + "/observed/" + querySHA256,
+			Provenance:     node.Provenance,
+		})
+	}
+	if err := graphjournal.AppendContextGraph(
+		b.graphSessionID,
+		"hawk-code-index",
+		querySHA256,
+		nodes,
+		nil,
+		events,
+		occurredAt,
+	); err != nil {
+		log.Printf("[hawk/memory] code context graph observation failed: %v", err)
+	}
 }
 
 // GetFileHash returns the stored hash for a file path, or empty string if not indexed.
@@ -360,6 +517,14 @@ func (b *YaadBridge) Close() {
 		_ = b.store.Close()
 	}
 	b.ready = false
+}
+
+func bridgeDigest(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
 }
 
 // LoadYaadContext queries yaad for project-relevant memories and returns

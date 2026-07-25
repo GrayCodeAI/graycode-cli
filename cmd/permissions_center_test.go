@@ -58,7 +58,7 @@ func TestAutonomyCenterSummary(t *testing.T) {
 		},
 	}
 	out := autonomyCenterSummary(model)
-	for _, fragment := range []string{"Autonomy Center", "Tier: Builder", "Sandbox: Workspace", "Spec stage: Specify", "Rules: 1 allow, 1 deny"} {
+	for _, fragment := range []string{"Autonomy Center", "Tier: Builder", "Permission sandbox: Workspace", "Spec stage: Specify", "Rules: 1 allow, 1 deny"} {
 		if !strings.Contains(out, fragment) {
 			t.Fatalf("summary %q missing %q", out, fragment)
 		}

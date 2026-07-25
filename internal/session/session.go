@@ -89,7 +89,10 @@ func Save(s *Session) error {
 	target := jsonlPathFor(s.ID)
 	tmp := target + ".tmp"
 
-	f, err := os.Create(tmp) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
+	// 0600: the session JSONL holds full conversation history (private user
+	// state, matching the WAL and 0750 session dir). os.Create would leave it
+	// group/world-readable (0666 &^ umask).
+	f, err := os.OpenFile(tmp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
 		return fmt.Errorf("create temp session file: %w", err)
 	}
@@ -496,8 +499,8 @@ func loadPreview(path string) string {
 		var msg Message
 		if json.Unmarshal(line, &msg) == nil && msg.Role == "user" && msg.Content != "" {
 			preview := msg.Content
-			if len(preview) > 80 {
-				preview = preview[:80] + "..."
+			if runes := []rune(preview); len(runes) > 80 {
+				preview = string(runes[:80]) + "..."
 			}
 			return preview
 		}

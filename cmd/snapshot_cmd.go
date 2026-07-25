@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/spf13/cobra"
 )
+
+var snapshotJSON bool
 
 func (m chatModel) handleSnapshot(text string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(text)
@@ -137,7 +140,19 @@ var snapshotListCmd = &cobra.Command{
 			return err
 		}
 		if len(history) == 0 {
-			fmt.Println("No snapshots yet.")
+			if snapshotJSON {
+				fmt.Println("[]")
+			} else {
+				fmt.Println("No snapshots yet.")
+			}
+			return nil
+		}
+		if snapshotJSON {
+			out, err := json.MarshalIndent(history, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling snapshots: %w", err)
+			}
+			fmt.Println(string(out))
 			return nil
 		}
 		for _, p := range history {
@@ -177,7 +192,11 @@ var snapshotDiffCmd = &cobra.Command{
 		}
 		history, _ := t.History(1)
 		if len(history) == 0 {
-			fmt.Println("No snapshots to diff against.")
+			if snapshotJSON {
+				fmt.Println("[]")
+			} else {
+				fmt.Println("No snapshots to diff against.")
+			}
 			return nil
 		}
 		diffs, err := t.Diff(args[0], history[0].Hash)
@@ -185,7 +204,19 @@ var snapshotDiffCmd = &cobra.Command{
 			return err
 		}
 		if len(diffs) == 0 {
-			fmt.Println("No changes.")
+			if snapshotJSON {
+				fmt.Println("[]")
+			} else {
+				fmt.Println("No changes.")
+			}
+			return nil
+		}
+		if snapshotJSON {
+			out, err := json.MarshalIndent(diffs, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling diffs: %w", err)
+			}
+			fmt.Println(string(out))
 			return nil
 		}
 		for _, d := range diffs {
@@ -199,4 +230,6 @@ func init() {
 	snapshotCmd.AddCommand(snapshotListCmd)
 	snapshotCmd.AddCommand(snapshotRestoreCmd)
 	snapshotCmd.AddCommand(snapshotDiffCmd)
+	snapshotListCmd.Flags().BoolVar(&snapshotJSON, "json", false, "output as JSON")
+	snapshotDiffCmd.Flags().BoolVar(&snapshotJSON, "json", false, "output as JSON")
 }

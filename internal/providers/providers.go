@@ -94,7 +94,7 @@ func ProbesParse(spec string) []Probe {
 		kind := ProbeKind(clause[:idx])
 		arg := strings.TrimSpace(clause[idx+1:])
 		// Expand $HOME and ~ in arg
-		arg = homepkg.Expand(arg)
+		arg = homepkg.MustExpand(arg)
 		out = append(out, Probe{Kind: kind, Arg: arg})
 	}
 	return out
@@ -306,10 +306,10 @@ func macAppPresent(name string) bool {
 	if runtime.GOOS != "darwin" {
 		return false
 	}
-	home := homepkg.Dir()
+	homeDir := homepkg.MustDir()
 	candidates := []string{
 		"/Applications",
-		filepath.Join(home, "Applications"),
+		filepath.Join(homeDir, "Applications"),
 	}
 	for _, dir := range candidates {
 		entries, err := os.ReadDir(dir)

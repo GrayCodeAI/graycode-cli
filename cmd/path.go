@@ -2,13 +2,17 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
 
-var pathStrict bool
+var (
+	pathStrict bool
+	pathJSON   bool
+)
 
 var pathCmd = &cobra.Command{
 	Use:   "path",
@@ -23,6 +27,13 @@ See docs/DEVELOPER-PATH.md and docs/SECURITY-DEVELOPER.md.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		report := hawkconfig.EvaluateDeveloperPath(ctx)
+
+		if pathJSON {
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(report)
+		}
+
 		cmd.Println(hawkconfig.FormatDeveloperPathReport(ctx))
 
 		if pathStrict {
@@ -41,5 +52,6 @@ See docs/DEVELOPER-PATH.md and docs/SECURITY-DEVELOPER.md.`,
 
 func init() {
 	pathCmd.Flags().BoolVar(&pathStrict, "strict", false, "Also require Docker for Bash isolation")
+	pathCmd.Flags().BoolVar(&pathJSON, "json", false, "output readiness report as JSON")
 	rootCmd.AddCommand(pathCmd)
 }

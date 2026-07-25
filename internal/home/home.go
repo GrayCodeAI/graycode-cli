@@ -1,36 +1,59 @@
 package home
 
 import (
-	"log/slog"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// Dir returns the user's home directory. It calls os.Exit(1) if the
-// home directory cannot be determined. Use this for critical paths where an
-// empty home would cause data to be written to the wrong location.
-func Dir() string {
+// Dir returns the user's home directory.
+func Dir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		slog.Error("cannot determine home directory", "error", err)
-		os.Exit(1)
+		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	return home, nil
+}
+
+// MustDir returns the user's home directory, panicking if it cannot be
+// determined. Use only in init-time code where recovery is impossible.
+func MustDir() string {
+	home, err := Dir()
+	if err != nil {
+		panic(err)
 	}
 	return home
 }
 
 // Expand expands a leading "~", "~/" or "$HOME" in path to the user's
 // home directory. Paths without such a prefix are returned unchanged.
-// Like Dir, it exits if the home directory cannot be determined.
-func Expand(path string) string {
+func Expand(path string) (string, error) {
 	if path == "~" || path == "$HOME" {
 		return Dir()
 	}
 	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~"+string(filepath.Separator)) {
-		return filepath.Join(Dir(), path[2:])
+		home, err := Dir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, path[2:]), nil
 	}
 	if strings.HasPrefix(path, "$HOME") {
-		return Dir() + strings.TrimPrefix(path, "$HOME")
+		home, err := Dir()
+		if err != nil {
+			return "", err
+		}
+		return home + strings.TrimPrefix(path, "$HOME"), nil
 	}
-	return path
+	return path, nil
+}
+
+// MustExpand is like Expand but panics on error. Use only in init-time code.
+func MustExpand(path string) string {
+	expanded, err := Expand(path)
+	if err != nil {
+		panic(err)
+	}
+	return expanded
 }

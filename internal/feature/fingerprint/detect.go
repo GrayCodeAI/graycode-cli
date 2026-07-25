@@ -420,7 +420,6 @@ func detectLicense(dir string) string {
 		if err != nil {
 			continue
 		}
-		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		// Read up to the first 5 lines to identify the license.
@@ -428,6 +427,9 @@ func detectLicense(dir string) string {
 		for i := 0; i < 5 && scanner.Scan(); i++ {
 			lines = append(lines, scanner.Text())
 		}
+		// Close eagerly rather than deferring: deferring inside the loop would
+		// hold every candidate file open until detectLicense returns.
+		_ = f.Close()
 		text := strings.Join(lines, " ")
 		upper := strings.ToUpper(text)
 

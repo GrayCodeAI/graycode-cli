@@ -12,6 +12,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
+
+	"github.com/GrayCodeAI/hawk/internal/textutil"
 )
 
 // SearchEngine provides full-text search across hawk sessions/conversations.
@@ -88,7 +91,7 @@ func (se *SearchEngine) IndexSession(sessionID string, messages []Message) error
 	for i, msg := range messages {
 		preview := msg.Content
 		if len(preview) > 100 {
-			preview = preview[:100]
+			preview = truncateUTF8(preview, 100)
 		}
 
 		idx.Messages = append(idx.Messages, IndexedMessage{
@@ -347,25 +350,27 @@ func BuildBM25Score(queryTerms []string, doc string, docLen int, avgDocLen float
 }
 
 // HighlightMatches finds positions of query terms in content for highlighting.
+// The returned Start/End are byte offsets into the original content and always
+// fall on rune boundaries (see textutil.IndexFold), so callers can splice the
+// content at those offsets without splitting a multi-byte character.
 func HighlightMatches(content string, query string) []Highlight {
 	var highlights []Highlight
 
-	contentLower := strings.ToLower(content)
 	terms := tokenize(query)
 
 	for _, term := range terms {
 		start := 0
 		for {
-			idx := strings.Index(contentLower[start:], term)
+			idx, matchLen := textutil.IndexFold(content[start:], term)
 			if idx == -1 {
 				break
 			}
 			absStart := start + idx
 			highlights = append(highlights, Highlight{
 				Start: absStart,
-				End:   absStart + len(term),
+				End:   absStart + matchLen,
 			})
-			start = absStart + len(term)
+			start = absStart + matchLen
 		}
 	}
 
@@ -400,7 +405,7 @@ func FormatResults(results []FTSResult, showContext int) string {
 		// Content with highlights marked by **
 		content := r.Preview
 		if showContext > 0 && len(content) > showContext {
-			content = content[:showContext]
+			content = truncateUTF8(content, showContext)
 		}
 
 		highlighted := applyHighlights(content, r.Highlights)
@@ -576,4 +581,18 @@ func tokenize(text string) []string {
 	}
 
 	return terms
+}
+
+// truncateUTF8 shortens s to at most n bytes without splitting a multi-byte
+// rune, so the result is always valid UTF-8 (a naive s[:n] can cut a character
+// in half and produce a garbled trailing byte).
+func truncateUTF8(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	s = s[:n]
+	for len(s) > 0 && !utf8.ValidString(s) {
+		s = s[:len(s)-1]
+	}
+	return s
 }

@@ -5,7 +5,39 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/mattn/go-runewidth"
 )
+
+// TestPadRight_MultibyteDisplayWidth verifies that padRight pads to a target
+// DISPLAY width (via runewidth), not byte length — so multi-byte names align
+// correctly in the picker columns.
+func TestPadRight_MultibyteDisplayWidth(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		width int
+	}{
+		{"ascii", "hello", 10},
+		{"cjk", "你好", 10}, // 2 CJK chars = 4 display cells
+		{"mixed", "a你b", 12},
+		{"exact", "hello", 5},
+		{"overflow", "hello world", 5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := padRight(tt.input, tt.width)
+			if runewidth.StringWidth(tt.input) >= tt.width {
+				if got != tt.input {
+					t.Errorf("padRight(%q, %d) = %q, want unchanged", tt.input, tt.width, got)
+				}
+				return
+			}
+			if gotW := runewidth.StringWidth(got); gotW != tt.width {
+				t.Errorf("padRight(%q, %d) display width = %d, want %d", tt.input, tt.width, gotW, tt.width)
+			}
+		})
+	}
+}
 
 func TestAutonomyPicker_HasAllFiveTiers(t *testing.T) {
 	ap := NewAutonomyPicker(80)

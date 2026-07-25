@@ -373,5 +373,9 @@ func truncateForLog(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}
-	return s[:max] + "..."
+	// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+	if runes := []rune(s); len(runes) > max {
+		return string(runes[:max]) + "..."
+	}
+	return s
 }

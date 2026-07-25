@@ -37,7 +37,12 @@ func awaySummary(messages []displayMsg, lastActivity time.Time) string {
 		switch msg.role {
 		case "user":
 			if len(msg.content) > 80 {
-				userTopics = append(userTopics, msg.content[:80]+"...")
+				topic := msg.content
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(topic); len(runes) > 80 {
+					topic = string(runes[:80]) + "..."
+				}
+				userTopics = append(userTopics, topic)
 			} else {
 				userTopics = append(userTopics, msg.content)
 			}

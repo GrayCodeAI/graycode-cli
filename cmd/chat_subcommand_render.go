@@ -30,11 +30,12 @@ func (r *renderSubcommand) Handle(m *chatModel, args []string, text string) (tea
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m, nil
 	}
-	if err := copyToClipboard(cxml); err != nil {
-		m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to copy: " + err.Error()})
-		return m, nil
+	result := copyToClipboard(cxml)
+	if result.FallbackPath == "" {
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s CXML copied to clipboard.\n%s", icons.FileDocument(), stats)})
+	} else {
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Clipboard unavailable — saved CXML to %s\n%s", result.FallbackPath, stats)})
 	}
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s CXML copied to clipboard.\n%s", icons.FileDocument(), stats)})
 	return m, nil
 }
 

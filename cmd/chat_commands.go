@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -80,15 +81,24 @@ var allSlashCommands = []string{
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
 	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme", "/think", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
+	"/scroll-speed", "/scroll-invert", "/scroll-mode", "/terminal-setup", "/pager-config", "/prompt-queue",
 }
 
 func (m *chatModel) slashSuggestionsFor(input string) []string {
-	if input == m.slashSugInput {
+	if input == m.slashSugInput && m.slashSugGen == m.slashSugCachedGen {
 		return m.slashSugCache
 	}
 	m.slashSugInput = input
+	m.slashSugCachedGen = m.slashSugGen
 	m.slashSugCache = slashSuggestions(input)
 	return m.slashSugCache
+}
+
+// invalidateSlashSugCache bumps the generation counter so the next
+// slashSuggestionsFor call recomputes suggestions. Call this when the
+// command set may have changed (e.g. new messages, plugin reload).
+func (m *chatModel) invalidateSlashSugCache() {
+	m.slashSugGen++
 }
 
 // slashMenuOpen is true while the / command picker is visible (Cursor hides the footer then).
@@ -156,123 +166,140 @@ func slashAliases() map[string]string {
 }
 
 var slashDescriptions = map[string]string{
-	"/add":             "Add files to conversation context",
-	"/add-dir":         "Add a directory to context",
-	"/agents":          "List active agents",
-	"/agents-init":     "Generate AGENTS.md from project template",
-	"/audit":           "Show tool audit summary",
-	"/autonomy":        "Autonomy Center for trust tier, sandbox, and rules",
-	"/branch":          "Show git branch info",
-	"/btw":             "Side note without triggering a response",
-	"/bughunter":       "Hunt for bugs in the codebase",
-	"/check":           "Review diff, find issues, auto-fix safe ones, verify before ship",
-	"/design":          "Build or improve UI — use /design screenshot|system|component|regress for advanced modes",
-	"/hunt":            "Diagnose root cause of errors before fixing (Waza method)",
-	"/think":           "Turn rough idea into approved plan before coding (Waza method)",
-	"/clean":           "Delete old sessions",
-	"/clear":           "Clear conversation",
-	"/color":           "Change agent color",
-	"/commit":          "Auto-commit changes with AI message",
-	"/compact":         "Compress conversation to save tokens",
-	"/compress":        "Compress old sessions",
-	"/config":          "Open settings panel",
-	"/context":         "Show current context",
-	"/copy":            "Copy chat or input to clipboard (/copy all|input|last|assistant)",
-	"/cost":            "Show token usage and cost",
-	"/council":         "Run LLM Council (multi-model consensus)",
-	"/diff":            "Show git diff (preview changes)",
-	"/doctor":          "Run diagnostics (build, test, lint)",
-	"/drop":            "Remove file from context",
-	"/effort":          "Set reasoning effort level",
-	"/glm":             "Toggle GLM/Z.ai extended reasoning (on|off|default)",
-	"/env":             "Show environment info",
-	"/exit":            "Save and exit",
-	"/explain":         "Trace code back to the commit that created it",
-	"/export":          "Export session",
-	"/follow":          "Toggle stream follow (auto-scroll)",
-	"/home":            "Jump to top of chat and welcome header",
-	"/feedback":        "Submit feedback about hawk",
-	"/fast":            "Toggle fast mode",
-	"/files":           "Show modified files",
-	"/focus":           "Narrow agent attention to specific files/dirs",
-	"/fork":            "Fork conversation to try a different approach",
-	"/branches":        "List or switch conversation branches",
-	"/help":            "Show all commands",
-	"/history":         "List saved sessions",
-	"/hooks":           "Show configured hooks",
-	"/init":            "Analyze project structure",
-	"/integrity":       "Validate session integrity",
-	"/lint":            "Run linter, add issues to context",
-	"/loop":            "Schedule recurring command",
-	"/mcp":             "Show MCP server status",
-	"/memory":          "Show AGENTS.md project instructions",
-	"/metrics":         "Show session metrics",
-	"/model":           "Switch or view current model",
-	"/new":             "Start a fresh session",
-	"/pin":             "Pin last N messages to protect from compaction",
-	"/parallel":        "Run N agents in parallel on independent tasks",
-	"/plugins":         "List installed plugins",
-	"/power":           "Set power level (1-10)",
-	"/quit":            "Save and exit",
-	"/recover":         "Scan for interrupted sessions and resume",
-	"/refactor":        "Agent-driven refactoring: dedup, dead code, lint fixes",
-	"/resume":          "Resume a saved session",
-	"/retry":           "Redo last message",
-	"/review":          "Code review for bugs and issues",
-	"/rewind":          "Undo last exchange",
-	"/run":             "Run command, add output to context",
-	"/search":          "Search across sessions",
-	"/select":          "Pause TUI for native text selection (Ctrl+\\)",
-	"/mouse":           "Toggle TUI mouse capture for native click-drag copy",
-	"/snapshot":        "Manage file snapshots: list, restore <hash>, diff <hash>",
-	"/stale":           "Show stale rules that may need updating or removal",
-	"/security-review": "Security audit",
-	"/skills":          "List skills or manage: search, install, trending, info, remove, update, feedback, publish, audit",
-	"/learn":           "LLM-powered skill advisor (/learn deep for source analysis)",
-	"/stats":           "Show analytics stats",
-	"/status":          "Show session info",
-	"/summary":         "Summarize the session",
-	"/tasks":           "Show task list",
-	"/test":            "Run tests, add failures to context",
-	"/tokens":          "Show token estimate",
-	"/tools":           "List enabled tools",
-	"/undo":            "Undo the most recent file change",
-	"/usage":           "Show cost summary",
-	"/version":         "Show hawk version",
-	"/vim":             "Toggle vim mode",
-	"/welcome":         "Re-print the welcome header",
-	"/ecosystem":       "Show eyrie, yaad, and tok integration status",
-	"/path":            "Developer path readiness (setup, security, sandbox)",
-	"/yaad":            "Show yaad memory (use /yaad search <query> to search)",
-	"/cron":            "Show scheduled jobs",
-	"/keybindings":     "Show keyboard shortcuts",
-	"/output-style":    "Change output style",
-	"/plugin":          "Manage plugins",
-	"/pr-comments":     "Address PR comments",
-	"/provider-status": "Show provider info",
-	"/release-notes":   "Draft release notes",
-	"/reload-plugins":  "Reload all plugins",
-	"/remote-env":      "Show remote environment",
-	"/rename":          "Rename current session",
-	"/render":          "Export repo as CXML to clipboard",
-	"/research":        "Start autonomous research loop",
-	"/session":         "Show session info",
-	"/share":           "Share session",
-	"/statusline":      "Show status line info",
-	"/tag":             "Tag current session",
-	"/taste":           "Show learned taste preferences",
-	"/theme":           "Change visual theme (opens picker)",
-	"/themes":          "List all available themes",
-	"/think-back":      "Review reasoning decisions",
-	"/thinkback":       "Review reasoning decisions",
-	"/thinkback-play":  "Replay reasoning path",
-	"/upgrade":         "Check for updates",
-	"/vibe":            "Start vibe coding loop",
-	"/voice":           "Toggle voice input",
-	"/ctx":             "Show conversation context visualization",
-	"/insights":        "Generate session patterns and improvements report",
-	"/spec":            "Start the spec-driven workflow (gates Write/Edit/Bash until approved)",
-	"/ultrareview":     "Deep adversarial code review",
+	"/add":                   "Add files to conversation context",
+	"/add-dir":               "Add a directory to context",
+	"/agents":                "List active agents",
+	"/agents-init":           "Generate AGENTS.md from project template",
+	"/audit":                 "Show tool audit summary",
+	"/autonomy":              "Autonomy Center for trust tier, sandbox, and rules",
+	"/branch":                "Show git branch info",
+	"/btw":                   "Side note without triggering a response",
+	"/bughunter":             "Hunt for bugs in the codebase",
+	"/check":                 "Review diff, find issues, auto-fix safe ones, verify before ship",
+	"/design":                "Build or improve UI — use /design screenshot|system|component|regress for advanced modes",
+	"/hunt":                  "Diagnose root cause of errors before fixing (Waza method)",
+	"/think":                 "Turn rough idea into approved plan before coding (Waza method)",
+	"/clean":                 "Delete old sessions",
+	"/clear":                 "Clear conversation",
+	"/color":                 "Change agent color",
+	"/commit":                "Auto-commit changes with AI message",
+	"/compact":               "Compress conversation to save tokens",
+	"/compress":              "Compress old sessions",
+	"/config":                "Open settings panel",
+	"/context":               "Show current context",
+	"/copy":                  "Copy chat or input to clipboard (/copy all|input|last|assistant)",
+	"/cost":                  "Show token usage and cost",
+	"/council":               "Run LLM Council (multi-model consensus)",
+	"/diff":                  "Show git diff (preview changes)",
+	"/doctor":                "Run diagnostics (build, test, lint)",
+	"/drop":                  "Remove file from context",
+	"/effort":                "Set reasoning effort level",
+	"/glm":                   "Toggle GLM/Z.ai extended reasoning (on|off|default)",
+	"/env":                   "Show environment info",
+	"/exit":                  "Save and exit",
+	"/explain":               "Trace code back to the commit that created it",
+	"/export":                "Export session",
+	"/follow":                "Toggle stream follow (auto-scroll)",
+	"/home":                  "Jump to top of chat and welcome header",
+	"/feedback":              "Submit feedback about hawk",
+	"/fast":                  "Toggle fast mode",
+	"/files":                 "Show modified files",
+	"/focus":                 "Narrow agent attention to specific files/dirs",
+	"/fork":                  "Fork conversation to try a different approach",
+	"/branches":              "List or switch conversation branches",
+	"/help":                  "Show all commands",
+	"/history":               "List saved sessions",
+	"/hooks":                 "Show configured hooks",
+	"/init":                  "Analyze project structure",
+	"/integrity":             "Validate session integrity",
+	"/lint":                  "Run linter, add issues to context",
+	"/loop":                  "Schedule recurring command",
+	"/mcp":                   "Show MCP server status",
+	"/memory":                "Show AGENTS.md project instructions",
+	"/metrics":               "Show session metrics",
+	"/model":                 "Switch or view current model",
+	"/new":                   "Start a fresh session",
+	"/pin":                   "Pin last N messages to protect from compaction",
+	"/parallel":              "Run N agents in parallel on independent tasks",
+	"/plugins":               "List installed plugins",
+	"/power":                 "Set power level (1-10)",
+	"/quit":                  "Save and exit",
+	"/recover":               "Scan for interrupted sessions and resume",
+	"/refactor":              "Agent-driven refactoring: dedup, dead code, lint fixes",
+	"/resume":                "Resume a saved session",
+	"/retry":                 "Redo last message",
+	"/review":                "Code review for bugs and issues",
+	"/rewind":                "Undo last exchange",
+	"/run":                   "Run command, add output to context",
+	"/search":                "Search across sessions",
+	"/select":                "Pause TUI for native text selection",
+	"/mouse":                 "Toggle TUI mouse capture for native click-drag copy",
+	"/snapshot":              "Manage file snapshots: list, restore <hash>, diff <hash>",
+	"/stale":                 "Show stale rules that may need updating or removal",
+	"/security-review":       "Security audit",
+	"/skills":                "List skills or manage: search, install, trending, info, remove, update, feedback, publish, audit",
+	"/learn":                 "LLM-powered skill advisor (/learn deep for source analysis)",
+	"/stats":                 "Show analytics stats",
+	"/status":                "Show session info",
+	"/summary":               "Summarize the session",
+	"/tasks":                 "Show task list",
+	"/test":                  "Run tests, add failures to context",
+	"/tokens":                "Show token estimate",
+	"/tools":                 "List enabled tools",
+	"/undo":                  "Undo the most recent file change",
+	"/usage":                 "Show cost summary",
+	"/version":               "Show hawk version",
+	"/vim":                   "Toggle vim mode",
+	"/welcome":               "Re-print the welcome header",
+	"/ecosystem":             "Show eyrie, yaad, and tok integration status",
+	"/path":                  "Developer path readiness (setup, security, sandbox)",
+	"/yaad":                  "Show yaad memory (use /yaad search <query> to search)",
+	"/cron":                  "Show scheduled jobs",
+	"/keybindings":           "Show keyboard shortcuts",
+	"/output-style":          "Change output style",
+	"/plugin":                "Manage plugins",
+	"/pr-comments":           "Address PR comments",
+	"/provider-status":       "Show provider info",
+	"/release-notes":         "Draft release notes",
+	"/reload-plugins":        "Reload all plugins",
+	"/remote-env":            "Show remote environment",
+	"/rename":                "Rename current session",
+	"/render":                "Export repo as CXML to clipboard",
+	"/research":              "Start autonomous research loop",
+	"/session":               "Show session info",
+	"/share":                 "Share session",
+	"/statusline":            "Show status line info",
+	"/tag":                   "Tag current session",
+	"/taste":                 "Show learned taste preferences",
+	"/theme":                 "Change visual theme (opens picker)",
+	"/themes":                "List all available themes",
+	"/think-back":            "Review reasoning decisions",
+	"/thinkback":             "Review reasoning decisions",
+	"/thinkback-play":        "Replay reasoning path",
+	"/upgrade":               "Check for updates",
+	"/vibe":                  "Start vibe coding loop",
+	"/voice":                 "Toggle voice input",
+	"/ctx":                   "Show conversation context visualization",
+	"/insights":              "Generate session patterns and improvements report",
+	"/spec":                  "Start the spec-driven workflow (gates Write/Edit/Bash until approved)",
+	"/ultrareview":           "Deep adversarial code review",
+	"/scroll-speed":          "Set scroll speed (1-100)",
+	"/scroll-invert":         "Toggle scroll direction inversion",
+	"/scroll-mode":           "Switch scroll behavior mode",
+	"/terminal-setup":        "Configure terminal capabilities",
+	"/pager-config":          "Configure pager for long output",
+	"/prompt-queue":          "Manage queued prompts",
+	"/brainstorm":            "Brainstorm ideas with multi-model council",
+	"/checkpoint":            "Create a named checkpoint of current state",
+	"/dream":                 "Enter dream/imagining mode for creative tasks",
+	"/away":                  "Set away status with auto-reply message",
+	"/investigate":           "Deep-dive investigation of an issue",
+	"/refresh-model-catalog": "Refresh the model catalog from providers",
+	"/image":                 "Generate or process images",
+	"/recipe":                "Run a saved recipe (command template)",
+	"/soul":                  "Show or update hawk's personality/soul",
+	"/mode":                  "Switch interaction mode",
+	"/party":                 "Start a multi-agent party session",
 }
 
 func slashSuggestions(input string) []string {
@@ -324,6 +351,12 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(text)
 	cmd := parts[0]
 
+	// Track the last command for context-aware tips and recent-command history.
+	if strings.HasPrefix(cmd, "/") {
+		m.lastCommand = cmd
+		recordCommandUsed(cmd)
+	}
+
 	// Namespaced skill invocation: /vendor:skill-name [args...]
 	if strings.Contains(cmd, ":") && strings.HasPrefix(cmd, "/") {
 		return m.handleNamespacedSkill(cmd, text)
@@ -354,8 +387,92 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+	// "Did you mean?" — fuzzy-match against known slash commands so a typo
+	// like /commmit suggests /commit instead of just saying "unknown".
+	suggestion := suggestCommand(cmd)
+	if suggestion != "" {
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s — did you mean %s?\nType /help for all commands.", cmd, suggestion)})
+	} else {
+		m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown command: %s (type /help)", cmd)})
+	}
 	return m, nil
+}
+
+// suggestCommand finds the closest known slash command to a mistyped one
+// using edit distance (Levenshtein). Returns the best match if it is within
+// a plausible typo threshold, or "" if nothing is close enough to recommend.
+func suggestCommand(typo string) string {
+	if len(typo) < 2 {
+		return ""
+	}
+	clean := strings.ToLower(strings.TrimPrefix(typo, "/"))
+	if clean == "" {
+		return ""
+	}
+	best := ""
+	bestDist := 999
+	for _, cmd := range slashCommands() {
+		target := strings.ToLower(strings.TrimPrefix(cmd, "/"))
+		d := levenshtein(clean, target)
+		if d < bestDist {
+			bestDist = d
+			best = cmd
+		}
+	}
+	if best == "" {
+		return ""
+	}
+	// Threshold: distance must be small relative to the command length.
+	// Allows 1 edit for short commands (<=5 chars), 2 for longer ones.
+	target := strings.ToLower(strings.TrimPrefix(best, "/"))
+	maxDist := 1
+	if len(target) > 5 {
+		maxDist = 2
+	}
+	// Never suggest when the input is longer than the target by more than
+	// maxDist — that's not a typo, it's a different word.
+	if len(clean) > len(target)+maxDist {
+		return ""
+	}
+	if bestDist <= maxDist && bestDist > 0 {
+		return best
+	}
+	return ""
+}
+
+// levenshtein computes the edit distance between two strings using the
+// classic Wagner–Fischer algorithm with O(min(m,n)) space.
+func levenshtein(a, b string) int {
+	if a == b {
+		return 0
+	}
+	if len(a) == 0 {
+		return len(b)
+	}
+	if len(b) == 0 {
+		return len(a)
+	}
+	// Ensure b is the shorter string for O(min(m,n)) space.
+	if len(b) > len(a) {
+		a, b = b, a
+	}
+	prev := make([]int, len(b)+1)
+	curr := make([]int, len(b)+1)
+	for j := 0; j <= len(b); j++ {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		curr[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			curr[j] = min(prev[j]+1, min(curr[j-1]+1, prev[j-1]+cost))
+		}
+		prev, curr = curr, prev
+	}
+	return prev[len(b)]
 }
 
 // handleParallelCommand spawns multiple agents in parallel on independent tasks.
@@ -391,23 +508,39 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 	grid := NewAgentGrid(taskDescs, m.width, m.height-10)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Spawning %d parallel agents for %d tasks...", icons.Bolt(), workers, len(taskDescs))})
 
+	// Create a cancellable context for the parallel agents.
+	// This ensures agents are cancelled when the user quits.
+	// Cancel any prior parallel run first — only one runs at a time
+	// (concurrent runs would also clobber each other's grid display),
+	// and this prevents orphaning the previous run's agents on quit.
+	if m.parallelCancel != nil {
+		m.parallelCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	m.parallelCancel = cancel
+
 	// Run parallel agents in background
 	go func() {
+		defer cancel() // Ensure cleanup when goroutine exits
+
 		pool := parallel.NewPool(cwd, "main", workers)
 		for _, desc := range taskDescs {
 			pool.AddTask(desc)
 		}
 
+		// Use atomic counter for task index to avoid race condition.
+		var taskIdx int32
+
 		// Update grid as agents run
-		taskIdx := 0
-		err := pool.Run(context.Background(), func(ctx context.Context, worktreePath string, task *parallel.Task) (string, error) {
-			pane := grid.GetPane(fmt.Sprintf("%d", taskIdx+1))
+		err := pool.Run(ctx, func(ctx context.Context, worktreePath string, task *parallel.Task) (string, error) {
+			idx := int(atomic.AddInt32(&taskIdx, 1) - 1)
+
+			pane := grid.GetPane(fmt.Sprintf("%d", idx+1))
 			if pane != nil {
 				pane.SetState(AgentRunning)
 				pane.Append(fmt.Sprintf("Starting in worktree: %s", worktreePath))
 				m.ref.Send(streamChunkMsg(grid.Render()))
 			}
-			taskIdx++
 
 			// Clone the engine-backed transport so parallel agents cannot bypass
 			// the parent session's resolved gateway policy.
@@ -430,6 +563,11 @@ func (m *chatModel) handleParallelCommand(parts []string, text string) (tea.Mode
 
 			var result strings.Builder
 			for ev := range ch {
+				select {
+				case <-ctx.Done():
+					return result.String(), ctx.Err()
+				default:
+				}
 				switch ev.Type {
 				case "content":
 					result.WriteString(ev.Content)

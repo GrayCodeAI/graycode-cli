@@ -39,12 +39,12 @@ var tildeUserRe = regexp.MustCompile(`~([a-zA-Z_][a-zA-Z0-9_-]*)(/|\s|$)`)
 // normalizeCommand normalizes a command to prevent trivial bypass of
 // dangerous-command detection. It expands tilde and collapses repeated root globs.
 func normalizeCommand(cmd string) string {
-	home := homepkg.Dir()
+	homeDir := homepkg.MustDir()
 	// Expand ~/ and ~ to the user's home directory
-	if home != "" {
-		cmd = strings.ReplaceAll(cmd, "~/", home+"/")
+	if homeDir != "" {
+		cmd = strings.ReplaceAll(cmd, "~/", homeDir+"/")
 		if strings.HasPrefix(cmd, "~") && (len(cmd) == 1 || cmd[1] == ' ' || cmd[1] == '\t') {
-			cmd = home + cmd[1:]
+			cmd = homeDir + cmd[1:]
 		}
 	}
 	// Expand ~username/ references to the real home directory so a command

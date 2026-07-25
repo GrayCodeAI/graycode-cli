@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
 	verifycontracts "github.com/GrayCodeAI/hawk-core-contracts/verify"
 	hawkInspect "github.com/GrayCodeAI/hawk/internal/bridge/inspect"
@@ -18,6 +19,10 @@ type InspectPipelineConfig struct {
 	Checks      []string // which checks to run
 	FailOn      string   // severity threshold
 	Concurrency int
+	// GraphSessionID enables portable quality-graph journaling for this scan.
+	GraphSessionID  string
+	GraphToolCallID string
+	RepositoryID    string
 }
 
 // DefaultInspectPipelineConfig returns sensible defaults.
@@ -91,7 +96,22 @@ func RunInspectPipeline(ctx context.Context, cfg InspectPipelineConfig) ([]Revie
 		return nil, "", fmt.Errorf("inspect bridge failed to initialize")
 	}
 
-	report, err := bridge.RunContracts(ctx, cfg.Target)
+	var (
+		report *verifycontracts.Report
+		err    error
+	)
+	if strings.TrimSpace(cfg.GraphSessionID) == "" {
+		report, err = bridge.RunContracts(ctx, cfg.Target)
+	} else {
+		report, err = bridge.RunContractsObserved(ctx, cfg.Target, hawkInspect.GraphObservation{
+			SessionID:  cfg.GraphSessionID,
+			ToolCallID: cfg.GraphToolCallID,
+			Stage:      "inspect-pipeline",
+			Scope: graphcontracts.Scope{
+				RepositoryID: strings.TrimSpace(cfg.RepositoryID),
+			},
+		})
+	}
 	if err != nil {
 		return nil, "", fmt.Errorf("inspect scan failed: %w", err)
 	}

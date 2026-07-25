@@ -196,11 +196,42 @@ func LoadGlobalSettings() Settings {
 	return s
 }
 
-// LoadSettings loads settings from user config.
+// LoadSettings loads settings from user config, overlaid with any
+// project-scoped settings discovered by walking up from the current working
+// directory looking for .hawk/settings.json.
 func LoadSettings() Settings {
 	s := LoadGlobalSettings()
+	if project := findProjectSettings(); project != nil {
+		s = MergeSettings(s, *project)
+	}
 	migrateLegacyModelProvider(&s)
 	return s
+}
+
+// findProjectSettings walks up from the current working directory looking for
+// a .hawk/settings.json file. Returns nil if none is found. The nearest
+// ancestor wins (no recursive merge — a project settings file fully shadows
+// global settings for its fields).
+func findProjectSettings() *Settings {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	dir := cwd
+	for {
+		candidate := filepath.Join(dir, ".hawk", "settings.json")
+		if data, err := os.ReadFile(candidate); err == nil { // #nosec G304 -- path derived from cwd walk-up
+			var s Settings
+			if err := json.Unmarshal(data, &s); err == nil {
+				return &s
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return nil // reached filesystem root
+		}
+		dir = parent
+	}
 }
 
 // LoadSettingsWithOverride loads normal settings plus a JSON object or JSON file override.

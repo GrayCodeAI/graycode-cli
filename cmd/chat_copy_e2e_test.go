@@ -46,8 +46,8 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	}
 	copyInputMsg := lastSystemMessage(cm.messages)
 	if strings.Contains(copyInputMsg, "Failed to copy") {
-		if err := copyToClipboard("probe"); err != nil {
-			t.Skipf("pass %d: clipboard not available on runner: %v", pass, err)
+		if result := copyToClipboard("probe"); result.FallbackPath == "" {
+			t.Skipf("pass %d: clipboard not available on runner (no fallback path either)", pass)
 		}
 		t.Fatalf("pass %d: /copy input: %s", pass, copyInputMsg)
 	}

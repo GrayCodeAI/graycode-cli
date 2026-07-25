@@ -54,12 +54,14 @@ func renderSetupCompleteMessage(model string) string {
 	)
 }
 
-// sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 var (
+	// reModelName matches self-introductions like "I'm ChatGPT" or "My name is Claude".
 	reModelName = regexp.MustCompile(`(?i)\b(I['` + "\u2018\u2019" + `]m|I am|my name is)\s+\*{0,2}(ChatGPT|GPT-?\d*[o]?|Claude|Gemini|Gemma|Kimi|DeepSeek|Llama|Qwen|Mistral|Mixtral|Grok|Copilot|Bard|Command R|Yi|Phi|Nova|Titan|BLOOM|Falcon|PaLM|LaMDA|Chinchilla|Vicuna|Alpaca|WizardLM|Orca|Nemotron|Granite|DBRX|OLMo|Pixtral|Ernie|PanGu|Sarvam|MiMo|GLM|Codex|Jurassic|Cohere|Jais|Step|Velvet|Alice|Apertus|Param|YandexGPT|MiniMax)\*{0,2}`)
-	reCreator   = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(?:a\s+company\s+called\s+|a\s+team\s+(?:at|called)\s+|the\s+team\s+at\s+)?\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
+	// reCreator matches origin claims like "made by OpenAI" or "built by a team at Anthropic".
+	reCreator = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(?:a\s+company\s+called\s+|a\s+team\s+(?:at|called)\s+|the\s+team\s+at\s+)?\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
 )
 
+// sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
 func sanitizeIdentity(s string) string {
 	s = reModelName.ReplaceAllStringFunc(s, func(m string) string {
 		parts := reModelName.FindStringSubmatch(m)
@@ -69,22 +71,23 @@ func sanitizeIdentity(s string) string {
 	return s
 }
 
-// wrapText wraps text to fit within width columns total (including indent).
-// The first line has no indent (caller provides the prefix).
-// Continuation lines get indent prepended.
 // wrapText wraps text to fit within the given width.
-// prefixWidth is the visual width of the prefix already printed before the first line
-// (e.g. icons.Robot() + " " = 2 columns). Continuation lines are indented to align with the first
-// line's text start position.
-// width is the total terminal width available.
+// The first line has no indent (caller provides the prefix); prefixWidth is the visual width
+// of the prefix already printed (e.g. icons.Robot() + " " = 2 columns). Continuation lines are
+// indented to align with the first line's text start position. width is the total terminal
+// width available.
 func wrapText(text string, width int, prefixWidth int) string {
 	if width < 20 {
 		width = 80
 	}
 	// First line has less room because the prefix is already printed.
 	firstLineWidth := width - prefixWidth
-	if firstLineWidth < 10 {
-		firstLineWidth = width
+	if firstLineWidth < 1 {
+		// Narrow terminal: use full width minus 1 to avoid overflow.
+		firstLineWidth = width - 1
+		if firstLineWidth < 1 {
+			firstLineWidth = 1
+		}
 	}
 	// Continuation indent: spaces to align under the first line's text.
 	indent := strings.Repeat(" ", prefixWidth)
@@ -231,7 +234,11 @@ func (m chatModel) computeChatBottomBarLines() int {
 		}
 	}
 	lines += m.visibleSlashSuggestionLines()
-	lines++ // session stats row (always shown — tokens · cost · duration)
+	lines++ // primary session stats row (tokens · cost · duration)
+	if footerW >= 120 {
+		// Wide terminal: second stats row (autonomy, container, session ID, hints)
+		lines++
+	}
 	if m.manualCompacting {
 		lines += 2 // "Compacting conversation..." + progress bar
 	}
@@ -381,6 +388,12 @@ func (m chatModel) View() tea.View {
 		}())
 		inputBox = clipRenderedBlock(inputBox, footerW)
 		bottomBar.WriteString(inputBox + "\n")
+		// Multiline indicator — shows line count when input has newlines.
+		if val := m.input.Value(); strings.Count(val, "\n") > 0 {
+			lines := strings.Count(val, "\n") + 1
+			mlHint := statusDimStyle.Render(fmt.Sprintf("  ¶ %d lines  (Shift+Enter for newline)", lines))
+			bottomBar.WriteString(m.finishFooterLine(mlHint, totalW) + "\n")
+		}
 		if m.ghostText != nil {
 			if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
 				ghostLine := ghostHintStyle.Render("  → " + ghost + " (Tab to accept)")
@@ -426,7 +439,9 @@ func (m chatModel) View() tea.View {
 			}
 		}
 		stats := renderStatusBar(&m, footerW)
-		bottomBar.WriteString(m.finishFooterLine(stats, totalW) + "\n")
+		for _, line := range stats {
+			bottomBar.WriteString(m.finishFooterLine(line, totalW) + "\n")
+		}
 	}
 
 	var frame strings.Builder
@@ -437,6 +452,22 @@ func (m chatModel) View() tea.View {
 		paletteView := m.commandPalette.Render(viewWidth)
 		frame.WriteByte('\n')
 		frame.WriteString(paletteView)
+		return m.terminalView(frame.String())
+	}
+
+	// Input history search overlay (Ctrl+R)
+	if m.historySearchOpen {
+		searchView := m.renderHistorySearchOverlay(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(searchView)
+		return m.terminalView(frame.String())
+	}
+
+	// Session picker overlay (Ctrl+S)
+	if m.sessionPickerOpen {
+		pickerView := m.renderSessionPickerOverlay(viewWidth)
+		frame.WriteByte('\n')
+		frame.WriteString(pickerView)
 		return m.terminalView(frame.String())
 	}
 
@@ -487,17 +518,76 @@ func (m chatModel) terminalView(content string) tea.View {
 	return view
 }
 
-// renderPermissionBox renders a compact inline permission prompt.
-func renderPermissionBox(summary string, width int) string {
-	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert())
+// renderPermissionBox renders a prominent inline permission prompt. When
+// timeoutAt is non-zero, a visual countdown bar is shown above the options
+// so the user can see how long they have to decide before the prompt auto-dismisses.
+func renderPermissionBox(summary string, width int, timeoutAt time.Time) string {
+	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert() + " Permission required")
 	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways")
-	return lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		lipgloss.NewStyle().Inline(true).Render(title+" "),
-		lipgloss.NewStyle().Inline(true).MaxWidth(width-30).Render(body),
-		lipgloss.NewStyle().Inline(true).Render("  "+options),
-	)
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways [d]eny always")
+
+	rows := []string{
+		lipgloss.JoinHorizontal(lipgloss.Top, title, "  ", body),
+	}
+	// Countdown bar — only when a deadline is active.
+	if !timeoutAt.IsZero() {
+		bar := renderCountdownBar(timeoutAt, width-10)
+		rows = append(rows, "", bar)
+	}
+	rows = append(rows, "", options)
+
+	inner := lipgloss.JoinVertical(lipgloss.Left, rows...)
+	// Bordered box with amber highlight so the prompt stands out in scrollback.
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(warnAmber).
+		Background(lipgloss.Color("#3A2A00")).
+		Padding(0, 1).
+		Render(inner)
+	return lipgloss.NewStyle().MaxWidth(width - 4).Render(box)
+}
+
+// renderCountdownBar renders a horizontal progress bar showing time remaining
+// until a deadline. Fills from left to right as time passes, shifting from
+// teal → amber → coral as the deadline approaches.
+// Includes text label for accessibility (screen readers).
+func renderCountdownBar(timeoutAt time.Time, width int) string {
+	const totalDuration = 5 * time.Minute
+	if width < 10 {
+		width = 20
+	}
+	remaining := time.Until(timeoutAt)
+	if remaining <= 0 {
+		return lipgloss.NewStyle().Foreground(errorCoral).Render("  [TIMEOUT] expired")
+	}
+	if remaining > totalDuration {
+		remaining = totalDuration
+	}
+	fraction := float64(remaining) / float64(totalDuration)
+	filled := int(fraction * float64(width))
+	if filled < 0 {
+		filled = 0
+	}
+	if filled > width {
+		filled = width
+	}
+	empty := width - filled
+	// Color shifts: teal (>60%), amber (30-60%), coral (<30%).
+	// Text label indicates urgency level for accessibility.
+	color := successTeal
+	urgency := "OK"
+	if fraction < 0.3 {
+		color = errorCoral
+		urgency = "URGENT"
+	} else if fraction < 0.6 {
+		color = warnAmber
+		urgency = "SOON"
+	}
+	bar := lipgloss.NewStyle().Foreground(color).Render(strings.Repeat("█", filled) + strings.Repeat("░", empty))
+	mins := int(remaining.Minutes())
+	secs := int(remaining.Seconds()) % 60
+	// Include text label for screen readers: [URGENT] 0:45
+	return fmt.Sprintf("  [%s] %s %d:%02d", urgency, bar, mins, secs)
 }
 
 // renderDiffSummary renders a diff summary line with colored +/- indicators.
@@ -585,7 +675,7 @@ func (m chatModel) renderWaitingSpinnerLine() string {
 // renderTokenCounters formats the live per-turn token counters that ride
 // next to the spinner. Uses ↑ for input (prompt) and ↓ for output
 // (completion) tokens. The displayed numbers are lerped each render
-// frame toward the engine's actual values (factor 0.10) so the counter
+// frame toward the engine's actual values (factor 0.25) so the counter
 // slides smoothly instead of jumping when a usage event arrives
 // mid-stream.
 //
@@ -617,9 +707,6 @@ func (m *chatModel) renderTokenCounters() string {
 func (m *chatModel) spinnerElapsed() time.Duration {
 	if !m.toolStartTime.IsZero() {
 		return time.Since(m.toolStartTime)
-	}
-	if m.startedAt.IsZero() {
-		m.startedAt = time.Now()
 	}
 	return time.Since(m.startedAt)
 }

@@ -594,7 +594,10 @@ func TestExpandHome(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := home.Expand(tt.input)
+			result, err := home.Expand(tt.input)
+			if err != nil {
+				t.Fatalf("home.Expand(%s) error: %v", tt.input, err)
+			}
 			if result != tt.expected {
 				t.Errorf("home.Expand(%s) = %s, want %s", tt.input, result, tt.expected)
 			}

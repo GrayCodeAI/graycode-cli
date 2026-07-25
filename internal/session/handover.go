@@ -156,7 +156,7 @@ func ExtractGoal(messages []Message) string {
 				if idx := strings.LastIndex(goal[:200], ". "); idx > 0 {
 					goal = goal[:idx+1]
 				} else {
-					goal = goal[:200]
+					goal = truncateUTF8(goal, 200)
 				}
 			}
 			return strings.TrimSpace(goal)
@@ -197,9 +197,7 @@ func ExtractDecisions(messages []Message) []string {
 					// Clean up the decision text
 					decision := strings.TrimPrefix(line, "- ")
 					decision = strings.TrimPrefix(decision, "* ")
-					if len(decision) > 150 {
-						decision = decision[:150]
-					}
+					decision = truncateUTF8(decision, 150)
 					decisions = append(decisions, decision)
 					break
 				}
@@ -252,9 +250,7 @@ func ExtractPendingTasks(messages []Message) []string {
 				if strings.Contains(lower, strings.ToLower(marker)) {
 					task := strings.TrimPrefix(line, "- ")
 					task = strings.TrimPrefix(task, "* ")
-					if len(task) > 150 {
-						task = task[:150]
-					}
+					task = truncateUTF8(task, 150)
 					pending = append(pending, task)
 					break
 				}
@@ -309,9 +305,7 @@ func extractProgress(messages []Message) string {
 				if strings.Contains(lower, marker) {
 					item := strings.TrimPrefix(line, "- ")
 					item = strings.TrimPrefix(item, "* ")
-					if len(item) > 150 {
-						item = item[:150]
-					}
+					item = truncateUTF8(item, 150)
 					items = append(items, fmt.Sprintf("- %s", item))
 					break
 				}

@@ -811,7 +811,10 @@ func (ca *ComplexityAnalyzer) FormatReport(report *ComplexityReport) string {
 
 		name := fn.Name
 		if len(name) > 25 {
-			name = name[:22] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(name); len(runes) > 25 {
+				name = string(runes[:22]) + "..."
+			}
 		}
 		sb.WriteString(fmt.Sprintf("%-25s %4d %4d %4d %4d    %s\n",
 			name, fn.Cyclomatic, fn.Cognitive, fn.LOC, fn.Nesting, status))

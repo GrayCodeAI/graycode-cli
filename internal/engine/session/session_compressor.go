@@ -807,7 +807,10 @@ func extractDecisionFact(content string) string {
 			strings.Contains(lower, "will use") {
 			trimmed := strings.TrimSpace(line)
 			if len(trimmed) > 100 {
-				trimmed = trimmed[:100] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(trimmed); len(runes) > 100 {
+					trimmed = string(runes[:100]) + "..."
+				}
 			}
 			return "Decision: " + trimmed
 		}
@@ -822,7 +825,10 @@ func extractErrorFact(content string) string {
 		if strings.Contains(lower, "error") || strings.Contains(lower, "failed") {
 			trimmed := strings.TrimSpace(line)
 			if len(trimmed) > 100 {
-				trimmed = trimmed[:100] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(trimmed); len(runes) > 100 {
+					trimmed = string(runes[:100]) + "..."
+				}
 			}
 			return "Error: " + trimmed
 		}
@@ -839,7 +845,10 @@ func extractConventionFact(content string) string {
 			strings.Contains(lower, "standard is") {
 			trimmed := strings.TrimSpace(line)
 			if len(trimmed) > 100 {
-				trimmed = trimmed[:100] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(trimmed); len(runes) > 100 {
+					trimmed = string(runes[:100]) + "..."
+				}
 			}
 			return "Convention: " + trimmed
 		}

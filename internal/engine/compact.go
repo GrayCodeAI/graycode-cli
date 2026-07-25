@@ -116,6 +116,7 @@ func (s *Session) generateSummary() string {
 	conversationText := summaryMsgs[0].Content
 	targetBudget := 1000 // Keep summary under 1K tokens
 	compressed, stats := tok.Compress(conversationText, tok.WithBudget(targetBudget))
+	s.recordTokCompressionObservation(conversationText, "context-compaction", stats)
 	reductionRatio := float64(stats.FinalTokens) / float64(stats.OriginalTokens)
 	if reductionRatio < 0.5 && stats.OriginalTokens > targetBudget*2 {
 		// tok achieved >50% reduction, use compressed output directly

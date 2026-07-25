@@ -539,7 +539,11 @@ func healTruncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+	if runes := []rune(s); len(runes) > maxLen {
+		return string(runes[:maxLen-3]) + "..."
+	}
+	return s
 }
 
 // extractErrorSummary pulls the first meaningful error line from stderr.
@@ -552,7 +556,10 @@ func extractErrorSummary(stderr string) string {
 		trimmed := strings.TrimSpace(line)
 		if trimmed != "" && !strings.HasPrefix(trimmed, "Traceback") {
 			if len(trimmed) > 60 {
-				return trimmed[:57] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(trimmed); len(runes) > 60 {
+					return string(runes[:57]) + "..."
+				}
 			}
 			return trimmed
 		}
@@ -560,7 +567,10 @@ func extractErrorSummary(stderr string) string {
 	if len(lines) > 0 {
 		last := strings.TrimSpace(lines[len(lines)-1])
 		if len(last) > 60 {
-			return last[:57] + "..."
+			// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+			if runes := []rune(last); len(runes) > 60 {
+				return string(runes[:57]) + "..."
+			}
 		}
 		return last
 	}
@@ -591,7 +601,10 @@ func extractFixSummary(fix string) string {
 		trimmed := strings.TrimSpace(line)
 		if trimmed != "" && !strings.HasPrefix(trimmed, "@@") {
 			if len(trimmed) > 50 {
-				return trimmed[:47] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(trimmed); len(runes) > 50 {
+					return string(runes[:47]) + "..."
+				}
 			}
 			return trimmed
 		}

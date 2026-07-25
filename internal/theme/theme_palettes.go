@@ -532,6 +532,39 @@ var githubDarkPalette = Palette{
 	CardPerm:  "#5a4a10",
 }
 
+// minimalPalette is a low-visual-noise palette for users who prefer a near-
+// unstyled terminal experience. Colors stay close to terminal defaults with
+// minimal contrast, reducing visual clutter while remaining readable.
+var minimalPalette = Palette{
+	Panel:     "#1a1a1a",
+	PromptBg:  "#1a1a1a",
+	Line:      "#2a2a2a",
+	Line2:     "#333333",
+	Ink:       "#cccccc",
+	Muted:     "#999999",
+	Faint:     "#777777",
+	Faintest:  "#555555",
+	Accent:    "#cccccc",
+	Green:     "#99cc99",
+	Red:       "#cc9999",
+	Amber:     "#cccc99",
+	Blue:      "#9999cc",
+	GitAdd:    "#99cc99",
+	GitDel:    "#cc9999",
+	AddBg:     "#1a2a1a",
+	DelBg:     "#2a1a1a",
+	AddBgWord: "#2a3a2a",
+	DelBgWord: "#3a2a2a",
+	PermBg:    "#2a2a1a",
+	SelBg:     "#2a2a2a",
+	AddInk:    "#99cc99",
+	DelInk:    "#cc9999",
+	OnAccent:  "#1a1a1a",
+	CardRun:   "#2a2a3a",
+	CardErr:   "#3a2a2a",
+	CardPerm:  "#3a3a2a",
+}
+
 // themeEntry is one registered theme for the theme picker.
 type themeEntry struct {
 	Name    string
@@ -560,9 +593,11 @@ var themeRegistry = []themeEntry{
 	{Name: "github-dark", Label: "GitHub Dark", Palette: githubDarkPalette, IsDark: true},
 	{Name: "light", Label: "Light", Palette: lightPalette, IsDark: false},
 	{Name: "solarized-light", Label: "Solarized Light", Palette: solarizedLightPalette, IsDark: false},
+	{Name: "minimal", Label: "Minimal", Palette: minimalPalette, IsDark: true},
 }
 
-// themeByName indexes the registry by lowercased name for O(1) lookup.
+// themeByName indexes the registry by registered name for O(1) lookup.
+// Theme names are already lowercase in the registry; lookups are case-sensitive.
 var themeByName = func() map[string]themeEntry {
 	byName := make(map[string]themeEntry, len(themeRegistry))
 	for _, entry := range themeRegistry {

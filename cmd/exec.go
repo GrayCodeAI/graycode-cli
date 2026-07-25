@@ -573,9 +573,10 @@ func ghIssueBody(payload map[string]interface{}) string {
 // remaining text becomes the prompt.
 func ghStripMention(body string) string {
 	out := body
-	lower := strings.ToLower(out)
-	if idx := strings.Index(lower, ghMention); idx >= 0 {
-		out = out[:idx] + out[idx+len(ghMention):]
+	// indexFold returns a byte span in the original string, so removing the
+	// mention never splits a multi-byte rune that precedes it in the body.
+	if idx, matchLen := indexFold(out, ghMention); idx >= 0 {
+		out = out[:idx] + out[idx+matchLen:]
 	}
 	return strings.TrimSpace(out)
 }

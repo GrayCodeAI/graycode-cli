@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -514,7 +515,11 @@ func FormatReport(report *CoverageReport) string {
 		for _, fc := range report.Files {
 			path := fc.Path
 			if len(path) > 40 {
-				path = "..." + path[len(path)-37:]
+				tail := path[len(path)-37:]
+				for len(tail) > 0 && !utf8.ValidString(tail) {
+					tail = tail[1:]
+				}
+				path = "..." + tail
 			}
 
 			bar := renderBar(fc.Percentage, 20)

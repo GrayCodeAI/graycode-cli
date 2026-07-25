@@ -111,7 +111,7 @@ func (m chatModel) copyContent(mode copyMode) (content, label string, ok bool) {
 	return "", "", false
 }
 
-func (m *chatModel) appendCopyResult(content, label string, err error) {
+func (m *chatModel) appendCopyResult(content, label string, err error, result copyResult) {
 	if err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Failed to copy: " + err.Error()})
 		return
@@ -119,7 +119,11 @@ func (m *chatModel) appendCopyResult(content, label string, err error) {
 	if label == "" {
 		label = "content"
 	}
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Copied %s to clipboard.", label)})
+	msg := fmt.Sprintf("Copied %s to clipboard.", label)
+	if result.FallbackPath != "" {
+		msg = fmt.Sprintf("Clipboard unavailable — saved %s to %s", label, result.FallbackPath)
+	}
+	m.messages = append(m.messages, displayMsg{role: "system", content: msg})
 	m.viewDirty = true
 }
 
@@ -153,7 +157,8 @@ func (m *chatModel) handleCopyCommand(parts []string) (tea.Model, tea.Cmd) {
 		m.messages = append(m.messages, displayMsg{role: "error", content: "Nothing to copy."})
 		return m, nil
 	}
-	m.appendCopyResult(content, label, copyToClipboard(content))
+	result := copyToClipboard(content)
+	m.appendCopyResult(content, label, nil, result)
 	return m, nil
 }
 
@@ -164,6 +169,7 @@ func (m *chatModel) handleCopyShortcut() (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		return m, nil
 	}
-	m.appendCopyResult(content, label, copyToClipboard(content))
+	result := copyToClipboard(content)
+	m.appendCopyResult(content, label, nil, result)
 	return m, nil
 }

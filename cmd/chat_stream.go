@@ -22,6 +22,10 @@ func (m *chatModel) startPromptCommand(display, prompt string) (tea.Model, tea.C
 	m.waiting = true
 	m.viewDirty = true
 	m.partial.Reset()
+	// Prevent system sleep during long-running agent turns.
+	m.sleepCancel = preventSleep()
+	// Show indeterminate progress in the terminal tab until the turn completes.
+	SetTabProgress(-1)
 	m.startStream()
 	return m, nil
 }

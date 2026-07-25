@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
+
+var ecosystemJSON bool
 
 var ecosystemCmd = &cobra.Command{
 	Use:   "ecosystem",
@@ -20,11 +23,18 @@ var ecosystemCmd = &cobra.Command{
 		if providerName == "" {
 			providerName = "auto"
 		}
+		if ecosystemJSON {
+			report := hawkconfig.BuildEcosystemReport(context.Background(), providerName, modelName)
+			enc := json.NewEncoder(cmd.OutOrStdout())
+			enc.SetIndent("", "  ")
+			return enc.Encode(report)
+		}
 		cmd.Println(hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName))
 		return nil
 	},
 }
 
 func init() {
+	ecosystemCmd.Flags().BoolVar(&ecosystemJSON, "json", false, "output ecosystem report as JSON")
 	rootCmd.AddCommand(ecosystemCmd)
 }

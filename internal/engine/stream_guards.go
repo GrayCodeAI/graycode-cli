@@ -46,6 +46,11 @@ func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEven
 			return false
 		}
 	}
+	if allowed, reason := s.tokUsageCanProceed(); !allowed {
+		ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
+		ch <- StreamEvent{Type: "done"}
+		return false
+	}
 
 	if s.LifecycleSvc() != nil && s.LifecycleSvc().Limits().MaxTurns() > 0 && turnCount >= s.LifecycleSvc().Limits().MaxTurns() {
 		ch <- StreamEvent{Type: "content", Content: "Turn limit reached — stopping."}

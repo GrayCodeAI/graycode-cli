@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	lipgloss "charm.land/lipgloss/v2"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -87,8 +88,9 @@ func runPrint(text string) error {
 			}
 		case "tool_result":
 			content := ev.Content
-			if len(content) > 500 {
-				content = content[:500] + "..."
+			// Rune-based truncation to avoid splitting multi-byte UTF-8.
+			if utf8.RuneCountInString(content) > 500 {
+				content = string([]rune(content)[:500]) + "..."
 			}
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
@@ -172,8 +174,40 @@ func writePrintResult(result, sessionID string, sess *engine.Session, isError bo
 		event["subtype"] = "error_during_execution"
 		event["errors"] = errors
 	}
+	if outputFields != "" {
+		event = filterFields(event, parseFieldList(outputFields))
+	}
 	data, _ := json.Marshal(event)
 	fmt.Println(string(data))
+}
+
+// parseFieldList splits a comma-separated field list into a set.
+func parseFieldList(fields string) map[string]bool {
+	set := make(map[string]bool)
+	for _, f := range strings.Split(fields, ",") {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			set[f] = true
+		}
+	}
+	return set
+}
+
+// filterFields returns a new map containing only the whitelisted fields.
+// The "type" field is always included since it identifies the event kind.
+func filterFields(event map[string]interface{}, fields map[string]bool) map[string]interface{} {
+	if len(fields) == 0 {
+		return event
+	}
+	filtered := make(map[string]interface{}, len(fields)+1)
+	// Always preserve "type" so the event kind is identifiable.
+	fields["type"] = true
+	for k, v := range event {
+		if fields[k] {
+			filtered[k] = v
+		}
+	}
+	return filtered
 }
 
 func writePrintEvent(sessionID, eventType, content, toolName string) {
@@ -317,8 +351,9 @@ func runRepl() error {
 				}
 			case "tool_result":
 				content := ev.Content
-				if len(content) > 500 {
-					content = content[:500] + "..."
+				// Rune-based truncation to avoid splitting multi-byte UTF-8.
+				if utf8.RuneCountInString(content) > 500 {
+					content = string([]rune(content)[:500]) + "..."
 				}
 				if outputFormat == "stream-json" {
 					writePrintEvent(sessionID, "tool_result", content, ev.ToolName)

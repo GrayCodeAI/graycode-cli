@@ -98,6 +98,58 @@ func TestRunSingleFailingTask(t *testing.T) {
 	}
 }
 
+// recordingLLM notes whether Complete was invoked.
+type recordingLLM struct {
+	called   bool
+	response string
+}
+
+func (s *recordingLLM) Complete(ctx context.Context, model, prompt string) (string, int, float64, error) {
+	s.called = true
+	return s.response, 7, 0.01, nil
+}
+
+// TestRunSingleCacheHitSkipsLLM exercises the cache-hit branch (the
+// goto applyResponse path) to guard the per-attempt closure refactor: a cached
+// response must be applied without calling the LLM, and the task must still run
+// and pass in its isolated work directory.
+func TestRunSingleCacheHitSkipsLLM(t *testing.T) {
+	cache := &Cache{Dir: t.TempDir()}
+	const prompt = "Fix the bug"
+	if err := cache.Put("test-model", prompt, "cached solution", 42, 0.5); err != nil {
+		t.Fatalf("cache.Put: %v", err)
+	}
+
+	llm := &recordingLLM{response: "fresh solution"}
+	r := NewRunner("test-model", "test")
+	r.LLM = llm
+	r.Cache = cache
+	r.MaxAttempts = 1
+
+	task := BenchmarkTask{
+		ID:          "test-cache-hit",
+		Description: "A task served from cache",
+		SetupFn:     func(workDir string) error { return nil },
+		ValidateFn:  func(workDir string) (bool, string) { return true, "ok" },
+		Prompt:      prompt,
+		TimeLimit:   10 * time.Second,
+	}
+
+	result, err := r.RunSingle(context.Background(), &task)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Passed {
+		t.Error("expected task to pass")
+	}
+	if llm.called {
+		t.Error("cache hit should skip the LLM call (goto applyResponse path)")
+	}
+	if result.TokensUsed != 42 {
+		t.Errorf("TokensUsed = %d, want cached 42", result.TokensUsed)
+	}
+}
+
 func TestRunSingleContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately.

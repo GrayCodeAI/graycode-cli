@@ -3,8 +3,10 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/update"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +28,7 @@ var (
 	printMode                  bool
 	versionFlag                bool
 	outputFormat               string
+	outputFields               string
 	inputFormat                string
 	noSessionPersistence       bool
 	resumeID                   string
@@ -64,6 +68,7 @@ var (
 	recoverFlag                bool
 	startupProfileFlag         bool
 	preflightLiveFlag          bool
+	quietFlag                  bool
 )
 
 var (
@@ -84,7 +89,22 @@ func SetBuildDate(d string) {
 var rootCmd = &cobra.Command{
 	Use:   "hawk [prompt]",
 	Short: "AI coding agent powered by eyrie",
-	Long:  "hawk is an AI coding agent that reads, writes, and runs code in your terminal.",
+	Long: `hawk is an AI coding agent that reads, writes, and runs code in your terminal.
+
+It connects to 75+ LLM providers through eyrie, executes tools (file I/O, shell,
+git, web search), and manages sessions — all from a keyboard-driven TUI or
+headless mode for scripts and CI.
+
+Quick orientation:
+  hawk                     Start interactive TUI
+  hawk -p "prompt"         One-shot: send prompt, print response, exit
+  hawk exec "task"         Autonomous multi-turn execution
+  hawk path                Check environment readiness
+  hawk doctor              Run diagnostics
+  hawk config              Manage settings and credentials
+
+API keys are stored in the OS keychain (macOS Keychain / Linux keyring).
+Run hawk and use /config to set up your first provider.`,
 	Example: `  hawk
   hawk -p "explain this repo"
   hawk exec "fix failing tests"
@@ -185,6 +205,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&printMode, "print", "p", false, "print response and exit")
 	rootCmd.Flags().StringVar(&promptFlag, "prompt", "", "send a single prompt and exit (legacy alias for --print)")
 	rootCmd.Flags().StringVar(&outputFormat, "output-format", "text", `output format for --print: "text", "json", or "stream-json"`)
+	rootCmd.Flags().StringVar(&outputFields, "output-fields", "", `comma-separated field whitelist for --output-format json (e.g. "result,session_id")`)
 	rootCmd.Flags().StringVar(&inputFormat, "input-format", "text", `input format for --print: "text" or "stream-json"`)
 	rootCmd.Flags().BoolVar(&noSessionPersistence, "no-session-persistence", false, "disable session persistence in print mode")
 	rootCmd.Flags().StringVar(&provider, "provider", "", "LLM provider (anthropic, openai, gemini, etc.)")
@@ -226,7 +247,10 @@ func init() {
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
+	rootCmd.Flags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (spinners, progress, decoration); machine-parseable output only")
 	preflightCmd.Flags().BoolVar(&preflightLiveFlag, "live", false, "verify selected provider connectivity and authentication")
+	preflightCmd.Flags().BoolVar(&preflightJSON, "json", false, "output preflight report as JSON")
+	doctorCmd.Flags().BoolVar(&doctorJSONFlag, "json", false, "output diagnostics as JSON")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(initCmd)
@@ -255,6 +279,10 @@ func init() {
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(recoverCmd)
+	rootCmd.AddCommand(manpageCmd)
+	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(bugReportCmd)
+	completionCmd.AddCommand(completionInstallCmd)
 }
 
 // confirmDangerousSkipPermissions enforces a safety guard when --dangerously-skip-permissions is set.
@@ -281,12 +309,9 @@ func confirmDangerousSkipPermissions() error {
 }
 
 // isStdinTerminal reports whether stdin is connected to a terminal.
+// Delegates to the shared stdinIsTerminal so tests can override uniformly.
 func isStdinTerminal() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
+	return stdinIsTerminal()
 }
 
 var completionCmd = &cobra.Command{
@@ -336,18 +361,140 @@ JSON:
 		case "powershell":
 			_ = cmd.Root().GenPowerShellCompletionWithDesc(cmd.OutOrStdout())
 		case "json":
-			_, _ = cmd.OutOrStdout().Write([]byte(NewCompletionGenerator().GenerateJSON()))
+			jsonStr, err := NewCompletionGenerator().GenerateJSON()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				return
+			}
+			_, _ = cmd.OutOrStdout().Write([]byte(jsonStr))
 			_, _ = cmd.OutOrStdout().Write([]byte("\n"))
 		}
 	},
 }
 
+var completionInstallCmd = &cobra.Command{
+	Use:   "install [bash|zsh|fish]",
+	Short: "Install shell completion script to the default location",
+	Long: `Install the shell completion script to the standard location for your OS.
+
+Bash:
+  hawk completion install bash
+  # Installs to ~/.local/share/bash-completion/completions/hawk (Linux)
+  # or /opt/homebrew/etc/bash_completion.d/hawk (macOS Homebrew)
+
+Zsh:
+  hawk completion install zsh
+  # Installs to the first directory in $fpath (e.g. /usr/local/share/zsh/site-functions/_hawk)
+
+Fish:
+  hawk completion install fish
+  # Installs to ~/.config/fish/completions/hawk.fish`,
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish"},
+	Args:                  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		shell := args[0]
+		path, err := InstallCompletion(shell)
+		if err != nil {
+			return err
+		}
+
+		// Generate the completion script.
+		var script strings.Builder
+		switch shell {
+		case "bash":
+			_ = cmd.Root().GenBashCompletion(&script)
+		case "zsh":
+			_ = cmd.Root().GenZshCompletion(&script)
+		case "fish":
+			_ = cmd.Root().GenFishCompletion(&script, true)
+		}
+
+		// Ensure parent directory exists.
+		dir := path[:strings.LastIndex(path, "/")]
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("cannot create directory %s: %w", dir, err)
+		}
+
+		if err := os.WriteFile(path, []byte(script.String()), 0o644); err != nil {
+			return fmt.Errorf("cannot write completion script: %w", err)
+		}
+
+		fmt.Fprintf(cmd.OutOrStdout(), "Installed %s completion to %s\n", shell, path)
+		return nil
+	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Check for hawk updates",
+	Long:  "Check GitHub for a newer hawk release and print upgrade instructions.",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ver := version
+		if ver == "" {
+			ver = "dev"
+		}
+		cmd.Println(update.Summary(ver))
+		return nil
+	},
+}
+
+var bugReportCmd = &cobra.Command{
+	Use:   "bug-report",
+	Short: "Print a redacted diagnostic report for bug reports",
+	Long: `Print a redacted environment report suitable for pasting into a GitHub issue.
+
+Includes: version, platform, Go version, provider status, and doctor output.
+API keys and secrets are never included.`,
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var b strings.Builder
+		b.WriteString("## hawk bug report\n\n")
+		b.WriteString(fmt.Sprintf("- **Version:** %s\n", versionLine()))
+		b.WriteString(fmt.Sprintf("- **Platform:** %s\n", update.Platform()))
+		b.WriteString(fmt.Sprintf("- **Go:** %s\n", runtime.Version()))
+		b.WriteString(fmt.Sprintf("- **OS/Arch:** %s/%s\n", runtime.GOOS, runtime.GOARCH))
+		b.WriteString("\n## Doctor output\n\n```\n")
+		settings := hawkconfig.LoadSettings()
+		b.WriteString(doctorReport(settings))
+		b.WriteString("\n```\n")
+		cmd.Print(b.String())
+		return nil
+	},
+}
+
+// versionInfo is the machine-readable version output.
+type versionInfo struct {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date,omitempty"`
+}
+
+var versionJSON bool
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print hawk version",
 	Run: func(cmd *cobra.Command, args []string) {
+		if versionJSON {
+			info := versionInfo{Version: DisplayVersion()}
+			if d := strings.TrimSpace(buildDate); d != "" && d != "unknown" {
+				info.BuildDate = d
+			}
+			out, err := json.MarshalIndent(info, "", "  ")
+			if err != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "marshaling version: %v\n", err)
+				return
+			}
+			cmd.Println(string(out))
+			return
+		}
 		cmd.Println(versionLine())
 	},
+}
+
+func init() {
+	versionCmd.Flags().BoolVar(&versionJSON, "json", false, "output version as JSON")
 }
 
 var setupCmd = &cobra.Command{
@@ -369,6 +516,8 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var doctorJSONFlag bool
+
 var doctorCmd = &cobra.Command{
 	Use:   "doctor",
 	Short: "Run local diagnostics",
@@ -377,10 +526,16 @@ var doctorCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Println(doctorReport(settings))
+		if doctorJSONFlag {
+			cmd.Println(doctorOutput(settings))
+		} else {
+			cmd.Println(doctorReport(settings))
+		}
 		return nil
 	},
 }
+
+var preflightJSON bool
 
 var preflightCmd = &cobra.Command{
 	Use:   "preflight",
@@ -404,7 +559,15 @@ var preflightCmd = &cobra.Command{
 			defer cancel()
 		}
 		r := hawkconfig.EnginePreflightReportWithSettings(ctx, settings, hawkconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
-		cmd.Println(hawkconfig.FormatEnginePreflight(r))
+		if preflightJSON {
+			out, err := json.MarshalIndent(r, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling preflight: %w", err)
+			}
+			cmd.Println(string(out))
+		} else {
+			cmd.Println(hawkconfig.FormatEnginePreflight(r))
+		}
 		if !r.Ready {
 			if preflightLiveFlag {
 				return fmt.Errorf("live preflight failed — check the selected provider credential and network access")
@@ -516,12 +679,32 @@ var sessionsCmd = &cobra.Command{
 	},
 }
 
+var toolsJSON bool
+
 var toolsCmd = &cobra.Command{
 	Use:   "tools",
 	Short: "List built-in tools",
 	Run: func(cmd *cobra.Command, args []string) {
+		if toolsJSON {
+			tools := allTools()
+			type toolEntry struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+			}
+			entries := make([]toolEntry, len(tools))
+			for i, t := range tools {
+				entries[i] = toolEntry{Name: t.Name(), Description: t.Description()}
+			}
+			data, _ := json.MarshalIndent(entries, "", "  ")
+			cmd.Println(string(data))
+			return
+		}
 		cmd.Println(builtInToolsSummary())
 	},
+}
+
+func init() {
+	toolsCmd.Flags().BoolVar(&toolsJSON, "json", false, "output tools as JSON")
 }
 
 var pluginCmd = &cobra.Command{

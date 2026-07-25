@@ -100,7 +100,10 @@ func analyzeForClarifications(content, artifact string) []clarification {
 		if clarifyReAmbiguous.MatchString(line) {
 			trimmed := strings.TrimSpace(line)
 			if len(trimmed) > 80 {
-				trimmed = trimmed[:80] + "..."
+				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+				if runes := []rune(trimmed); len(runes) > 80 {
+					trimmed = string(runes[:80]) + "..."
+				}
 			}
 			questions = append(questions, clarification{
 				Category: "Ambiguity",

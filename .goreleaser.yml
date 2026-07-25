@@ -128,6 +128,12 @@ sboms:
     documents:
       - "${artifact}.spdx.sbom.json"
 
+# ---------------------------------------------------------------------------
+# Signing — cosign keyless signing of checksums is performed in the
+# release workflow (post-goreleaser) so the OIDC token from GitHub Actions
+# is available. The checksums.txt artifact is signed there.
+# ---------------------------------------------------------------------------
+
 release:
   draft: false
   prerelease: auto

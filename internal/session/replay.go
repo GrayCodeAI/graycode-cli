@@ -531,5 +531,9 @@ func truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen] + "..."
+	// Rune-safe truncation: never split a multibyte UTF-8 sequence.
+	if runes := []rune(s); len(runes) > maxLen {
+		return string(runes[:maxLen]) + "..."
+	}
+	return s
 }

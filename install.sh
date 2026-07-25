@@ -45,13 +45,45 @@ TMP=$(mktemp -d)
 ARCHIVE="$TMP/${ARCHIVE_NAME}"
 curl -fsSL --proto '=https' --tlsv1.2 "$URL" -o "$ARCHIVE"
 
-# TODO(release-eng): checksums.txt ships in the same release as the artifact,
-# so it only protects against corruption — not a compromised release. Sign
-# checksums.txt in goreleaser (cosign keyless or minisign) and verify the
-# signature here when the verifier tool is available.
 CHECKSUMS_URL="https://github.com/$REPO/releases/download/v${LATEST}/checksums.txt"
 CHECKSUMS="$TMP/checksums.txt"
 curl -fsSL --proto '=https' --tlsv1.2 "$CHECKSUMS_URL" -o "$CHECKSUMS"
+
+# Verify the checksums.txt signature with cosign if available. This protects
+# against a compromised release (not just transport corruption). When cosign
+# is not installed, we fall back to checksum-only verification.
+CERT_URL="https://github.com/$REPO/releases/download/v${LATEST}/checksums.txt.cert"
+SIG_URL="https://github.com/$REPO/releases/download/v${LATEST}/checksums.txt.sig"
+CERT_FILE="$TMP/checksums.txt.cert"
+SIG_FILE="$TMP/checksums.txt.sig"
+if command -v cosign >/dev/null 2>&1; then
+  echo "Verifying release signature with cosign..."
+  if ! curl -fsSL --proto '=https' --tlsv1.2 --max-time 30 "$CERT_URL" -o "$CERT_FILE"; then
+    echo "Error: could not download signature certificate — refusing to install unverified release"
+    rm -rf "$TMP"
+    exit 1
+  fi
+  if ! curl -fsSL --proto '=https' --tlsv1.2 --max-time 30 "$SIG_URL" -o "$SIG_FILE"; then
+    echo "Error: could not download signature file — refusing to install unverified release"
+    rm -rf "$TMP"
+    exit 1
+  fi
+  # Anchor and escape the identity regex so '.' matches literal dots only.
+  IDENTITY="https://github\.com/${REPO}/\.github/workflows/release\.yml@refs/tags/v${LATEST}"
+  if ! cosign verify-blob \
+    --certificate "$CERT_FILE" \
+    --signature "$SIG_FILE" \
+    --certificate-identity-regexp "$IDENTITY" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+    "$CHECKSUMS"; then
+    echo "Error: signature verification failed — release may be compromised"
+    rm -rf "$TMP"
+    exit 1
+  fi
+  echo "Signature verified."
+else
+  echo "Note: cosign not installed — install from https://docs.sigstore.dev to verify release signatures"
+fi
 
 if command -v sha256sum >/dev/null 2>&1; then
   ACTUAL=$(sha256sum "$ARCHIVE" | awk '{print $1}')
@@ -109,10 +141,9 @@ VERSION=$(printf '%s' "$LATEST" | sed 's/^v//')
 # rename is atomic; a racing process either sees the old or new link, never a
 # half-written one.
 #
-# TODO(release-eng): checksums.txt ships in the same release as the artifact,
-# so it only protects against corruption — not a compromised release. Sign
-# checksums.txt in goreleaser (cosign keyless or minisign) and verify the
-# signature here when the verifier tool is available. Versioned install is a
+# Release checksums are signed with cosign keyless (OIDC) in the release
+# workflow. install.sh verifies the signature when cosign is available,
+# falling back to checksum-only verification otherwise. Versioned install is a
 # prerequisite for safe in-place self-update tooling: once installs land at a
 # stable versioned path + symlink, a future updater can swap the link without
 # ever replacing a binary a running hawk has mmap'd (same SIGKILL rationale).

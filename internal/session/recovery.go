@@ -201,6 +201,7 @@ func classifyInterruption(messages []Message) (InterruptionType, string, string)
 // ResumeSession loads a session for resumption, cleaning up any orphaned state.
 // Returns the session, a summary of what was recovered, and any errors.
 func ResumeSession(sessionID string) (*Session, string, error) {
+	recoveredFromWAL := false
 	s, err := Load(sessionID)
 	if err != nil {
 		// Try WAL recovery
@@ -208,6 +209,7 @@ func ResumeSession(sessionID string) (*Session, string, error) {
 		if err != nil || s == nil {
 			return nil, "", fmt.Errorf("cannot load session %s: %w", sessionID, err)
 		}
+		recoveredFromWAL = true
 	}
 
 	if len(s.Messages) == 0 {
@@ -237,11 +239,26 @@ func ResumeSession(sessionID string) (*Session, string, error) {
 		}
 	}
 
-	// Clean up WAL if it exists (session file has everything)
+	// Clean up the WAL if it exists. When the session was rebuilt from the WAL,
+	// the JSONL file does not yet contain these messages, so persist them first:
+	// removing the WAL before a durable save would lose the only on-disk copy if
+	// the process crashes before the next autosave.
 	walPath := filepath.Join(sessionsDir(), sessionID+".wal")
-	if _, err := os.Stat(walPath); err == nil {
-		_ = os.Remove(walPath)
-		recoveryNotes = append(recoveryNotes, "Cleaned up stale WAL file")
+	if _, statErr := os.Stat(walPath); statErr == nil {
+		if recoveredFromWAL {
+			if saveErr := Save(s); saveErr != nil {
+				// Keep the WAL — it is still the only durable copy.
+				recoveryNotes = append(recoveryNotes,
+					fmt.Sprintf("kept WAL (could not persist recovered session: %v)", saveErr))
+			} else {
+				_ = os.Remove(walPath)
+				recoveryNotes = append(recoveryNotes, "Recovered from WAL and removed stale WAL file")
+			}
+		} else {
+			// Loaded from the session file, which has everything — WAL is redundant.
+			_ = os.Remove(walPath)
+			recoveryNotes = append(recoveryNotes, "Cleaned up stale WAL file")
+		}
 	}
 
 	note := "Session recovered"
