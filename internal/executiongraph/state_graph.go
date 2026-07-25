@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
 )
 
 // StateGraph represents a LangGraph-style state graph for agent orchestration.
@@ -24,7 +23,7 @@ type StateGraph struct {
 // GraphNode represents a node in the orchestration graph.
 type GraphNode struct {
 	ID          string
-	Type        graphcontracts.NodeType
+	Type        string
 	Name        string
 	Handler     NodeHandler
 	Metadata    map[string]interface{}
