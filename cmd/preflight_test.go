@@ -11,7 +11,7 @@ import (
 // EnginePreflightReportWithSettings. We assert against a local shape to
 // avoid coupling the test to the exact gateway/eyrie import path.
 type preflightReportShape struct {
-	Ready  bool                `json:"ready"`
+	Ready  bool                  `json:"ready"`
 	Checks []preflightCheckShape `json:"checks"`
 }
 

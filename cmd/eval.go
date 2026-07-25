@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	evalTasks   string
-	evalModel   string
-	evalTags    string
-	evalNoCache bool
-	evalOutput  string
-	evalTaskDir string
-	evalListJSON bool
+	evalTasks       string
+	evalModel       string
+	evalTags        string
+	evalNoCache     bool
+	evalOutput      string
+	evalTaskDir     string
+	evalListJSON    bool
 	evalResultsJSON bool
 )
 
