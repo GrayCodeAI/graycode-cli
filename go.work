@@ -11,4 +11,5 @@ replace (
 	github.com/GrayCodeAI/tok => ./external/tok
 	github.com/GrayCodeAI/trace => ./external/trace
 	github.com/GrayCodeAI/yaad => ./external/yaad
+	github.com/GrayCodeAI/yaad/portablegraph => ../yaad/portablegraph
 )
