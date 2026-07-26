@@ -372,9 +372,11 @@ jobs:
         run: |
           if [ -d "hawk-mcpkit/.git" ]; then
             echo "hawk-mcpkit already present"
-            exit 0
+          else
+            echo "Cloning hawk-mcpkit..."
+            git clone https://github.com/GrayCodeAI/hawk-mcpkit.git hawk-mcpkit || { echo "Failed to clone hawk-mcpkit"; ls -la; exit 1; }
+            echo "hawk-mcpkit cloned successfully"
           fi
-          git clone https://github.com/GrayCodeAI/hawk-mcpkit.git hawk-mcpkit
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
         with:
           go-version: "${{ env.GO_VERSION }}"
