@@ -55,6 +55,9 @@ func StartPager() io.Writer {
 		args = append([]string{"-FRX"}, args...)
 	}
 
+	// nolint:gosec // G204 is acceptable here; the pager command comes from
+	// resolvePager() which validates input, and this is the standard pattern
+	// used by gh CLI and similar tools.
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -125,25 +128,4 @@ func IsPagerActive() bool {
 	return activePager != nil
 }
 
-// ShouldPage reports whether the given line count would benefit from paging.
-// Used as a heuristic: if output exceeds the terminal height, paging helps.
-func shouldPage(lineCount int) bool {
-	if !stdoutIsTerminal() || quietFlag {
-		return false
-	}
-	_, height, err := safeTermSize()
-	if err != nil || height == 0 {
-		return false
-	}
-	return lineCount > height
-}
 
-// safeTermSize returns the terminal width and height without panicking.
-func safeTermSize() (width, height int, err error) {
-	fd := int(os.Stdout.Fd())
-	if !term.IsTerminal(fd) {
-		err = fmt.Errorf("not a terminal")
-		return
-	}
-	return term.GetSize(fd)
-}
