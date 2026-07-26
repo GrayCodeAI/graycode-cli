@@ -23,8 +23,10 @@ Subcommands:
   summary   Show a quick spend summary`,
 }
 
-var costAnalyzeJSON bool
-var costSummaryJSON bool
+var (
+	costAnalyzeJSON bool
+	costSummaryJSON bool
+)
 
 func init() {
 	costAnalyzeCmd.Flags().BoolVar(&costAnalyzeJSON, "json", false, "output the report as JSON")

@@ -13,9 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	planJSON bool
-)
+var planJSON bool
 
 var planCmd = &cobra.Command{
 	Use:   "plan",

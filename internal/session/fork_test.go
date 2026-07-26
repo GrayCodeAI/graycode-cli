@@ -15,6 +15,7 @@ func (m *mockForkStore) CreateThread(name string) (string, error) {
 	m.createdName = name
 	return "new-thread-id", nil
 }
+
 func (m *mockForkStore) CopyCheckpoints(from, to, upTo string) error {
 	m.copiedFrom, m.copiedTo, m.copiedUpTo = from, to, upTo
 	return nil

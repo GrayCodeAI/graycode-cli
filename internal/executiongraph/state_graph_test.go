@@ -14,7 +14,7 @@ func TestStateGraph_BasicExecution(t *testing.T) {
 		Handler: func(ctx context.Context, state *GraphState) (*NodeResult, error) {
 			return &NodeResult{
 				NextNode: "end", // Explicitly go to end
-				State: map[string]interface{}{"visited_start": true},
+				State:    map[string]interface{}{"visited_start": true},
 			}, nil
 		},
 	})
@@ -24,9 +24,9 @@ func TestStateGraph_BasicExecution(t *testing.T) {
 		Type: "end",
 		Handler: func(ctx context.Context, state *GraphState) (*NodeResult, error) {
 			return &NodeResult{
-                NextNode: "end", // This breaks the loop internally in our mock, but we'll manually check. Wait. 
-                // Ah, the loop condition is 'currentNode != "end"'. 
-                // It NEVER executes the "end" node. 
+				NextNode: "end", // This breaks the loop internally in our mock, but we'll manually check. Wait.
+				// Ah, the loop condition is 'currentNode != "end"'.
+				// It NEVER executes the "end" node.
 				State: map[string]interface{}{"visited_end": true},
 			}, nil
 		},
@@ -40,5 +40,5 @@ func TestStateGraph_BasicExecution(t *testing.T) {
 	if state.Data["visited_start"] != true {
 		t.Error("Expected visited_start to be true")
 	}
-    // Since "end" node is skipped by the loop condition 'currentNode != "end"', we only check "start"
+	// Since "end" node is skipped by the loop condition 'currentNode != "end"', we only check "start"
 }

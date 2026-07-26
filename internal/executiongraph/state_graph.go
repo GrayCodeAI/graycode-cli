@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
 )
 
 // StateGraph represents a LangGraph-style state graph for agent orchestration.
@@ -22,11 +21,11 @@ type StateGraph struct {
 
 // GraphNode represents a node in the orchestration graph.
 type GraphNode struct {
-	ID          string
-	Type        string
-	Name        string
-	Handler     NodeHandler
-	Metadata    map[string]interface{}
+	ID       string
+	Type     string
+	Name     string
+	Handler  NodeHandler
+	Metadata map[string]interface{}
 }
 
 // GraphEdge represents a connection between nodes with optional conditions.
@@ -44,10 +43,10 @@ type NodeHandler func(ctx context.Context, state *GraphState) (*NodeResult, erro
 
 // NodeResult contains the result of a node execution.
 type NodeResult struct {
-	NextNode  string
-	State     map[string]interface{}
-	Messages  []Message
-	Error     error
+	NextNode string
+	State    map[string]interface{}
+	Messages []Message
+	Error    error
 }
 
 // GraphState holds the shared state across the graph execution.
