@@ -222,7 +222,8 @@ func (s *SecureStorage) setWindows(account, token string) error {
 	target := s.service + "::" + account
 	script := buildWinCredScript(fmt.Sprintf(
 		"[WinCred]::Set('%s', '%s', '%s')",
-		powershellQuote(target), powershellQuote(account), powershellQuote(token)))
+		powershellQuote(target), powershellQuote(account), powershellQuote(token),
+	))
 	cmd := exec.CommandContext(context.Background(), "powershell.exe", "-NoProfile", "-Command")
 	cmd.Stdin = strings.NewReader(script)
 	if out, err := cmd.CombinedOutput(); err != nil {

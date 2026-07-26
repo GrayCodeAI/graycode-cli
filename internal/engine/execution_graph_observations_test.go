@@ -19,6 +19,7 @@ func (graphVerifyTool) Description() string { return "test verification tool" }
 func (graphVerifyTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{"type": "object"}
 }
+
 func (graphVerifyTool) Execute(context.Context, json.RawMessage) (string, error) {
 	return `{"allVerified":false,"totalSteps":3,"verified":2}`, nil
 }

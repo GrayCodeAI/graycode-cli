@@ -11,9 +11,9 @@ import (
 
 // EcosystemReport is the structured view of the ecosystem panel.
 type EcosystemReport struct {
-	Eyre  EcosystemEyrie `json:"eyrie"`
-	Yaad  EcosystemYaad  `json:"yaad"`
-	Tok   EcosystemTok   `json:"tok"`
+	Eyre EcosystemEyrie `json:"eyrie"`
+	Yaad EcosystemYaad  `json:"yaad"`
+	Tok  EcosystemTok   `json:"tok"`
 }
 
 type EcosystemEyrie struct {
@@ -26,13 +26,13 @@ type EcosystemEyrie struct {
 }
 
 type EcosystemYaad struct {
-	Ready     bool   `json:"ready"`
-	Status    string `json:"status,omitempty"`
+	Ready  bool   `json:"ready"`
+	Status string `json:"status,omitempty"`
 }
 
 type EcosystemTok struct {
-	Embedded bool `json:"embedded"`
-	SampleTokens int `json:"sample_tokens"`
+	Embedded     bool `json:"embedded"`
+	SampleTokens int  `json:"sample_tokens"`
 }
 
 // BuildEcosystemReport returns a structured ecosystem report.
