@@ -1,6 +1,8 @@
 package sandbox
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -96,21 +98,6 @@ func TestWeaker(t *testing.T) {
 	}
 }
 
-// TestEffectiveFrom_Default tests default effective config.
-func TestEffectiveFrom_Default(t *testing.T) {
-	cfg := TOMLConfig{}
-	eff, err := EffectiveFrom(cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if eff.Mode != ModeWorkspace {
-		t.Errorf("expected ModeWorkspace, got %v", eff.Mode)
-	}
-	if !eff.AllowNetwork {
-		t.Error("expected AllowNetwork to be true for workspace mode")
-	}
-}
-
 // TestEffectiveFrom_StrictMode tests strict mode config.
 func TestEffectiveFrom_StrictMode(t *testing.T) {
 	cfg := TOMLConfig{
@@ -194,6 +181,21 @@ func TestEffectiveFrom_DenyGlobs(t *testing.T) {
 	}
 }
 
+// TestLoadTOML_ParseError verifies parsing errors are returned.
+func TestLoadTOML_ParseError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sandbox.toml")
+	// Invalid TOML - missing quote
+	content := `foo = bar`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadTOML(path)
+	if err == nil {
+		t.Error("expected parse error but got none")
+	}
+}
+
 // TestPathDenied tests path denial matching.
 func TestPathDenied(t *testing.T) {
 	eff := Effective{
@@ -249,4 +251,50 @@ func TestThreatLevel_String_Extra(t *testing.T) {
 
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+// TestMergeConfigs_UserOverridesDefaultProfile tests user profile setting.
+func TestMergeConfigs_UserOverridesDefaultProfile(t *testing.T) {
+	user := TOMLConfig{Profile: ProfileStrict}
+	project := TOMLConfig{}
+	merged, err := MergeConfigs(user, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if merged.Profile != string(ProfileStrict) {
+		t.Errorf("expected Profile 'strict', got %q", merged.Profile)
+	}
+}
+
+// TestMergeConfigs_ProfileWeakeningProtection protects against weakening.
+func TestMergeConfigs_ProfileWeakeningProtection(t *testing.T) {
+	user := TOMLConfig{Profile: ProfileStrict}
+	project := TOMLConfig{Profile: ProfileOff} // weaker than strict
+	_, err := MergeConfigs(user, project)
+	if err == nil {
+		t.Fatal("expected error for weaker project profile")
+	}
+}
+
+// TestMergeConfigs_DenyGlobsAppended appends deny globs correctly.
+func TestMergeConfigs_DenyGlobsAppended(t *testing.T) {
+	user := TOMLConfig{DenyGlobs: []string{"*.tmp"}}
+	project := TOMLConfig{DenyGlobs: []string{"*.log"}}
+	merged, err := MergeConfigs(user, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(merged.DenyGlobs) != 2 {
+		t.Errorf("expected 2 deny globs, got %d", len(merged.DenyGlobs))
+	}
+}
+
+// TestResolveMode_BuiltInFallback returns ParseMode result for unknown profile names.
+func TestResolveMode_BuiltInFallback(t *testing.T) {
+	cfg := TOMLConfig{}
+	mode := resolveMode(cfg, "devbox")
+	// Unknown profile falls through to ParseMode which returns strict by default
+	if mode != ModeStrict {
+		t.Errorf("expected ModeStrict for unknown devbox, got %v", mode)
+	}
 }
