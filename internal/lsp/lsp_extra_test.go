@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -549,7 +550,7 @@ func TestManagedClient_RefCount_Concurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mc.refCount++
+			atomic.AddInt32(&mc.refCount, 1)
 			mc.release()
 		}()
 	}
