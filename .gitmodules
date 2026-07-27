@@ -19,3 +19,6 @@
 [submodule "external/hawk-core-contracts"]
 	path = external/hawk-core-contracts
 	url = https://github.com/GrayCodeAI/hawk-core-contracts.git
+[submodule "hawk-mcpkit"]
+	path = hawk-mcpkit
+	url = https://github.com/GrayCodeAI/hawk-mcpkit.git

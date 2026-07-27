@@ -6,13 +6,18 @@ set -euo pipefail
 # works without `git submodule update` / checkout-eyrie having populated
 # external/* working trees.
 
-repos=(hawk-core-contracts eyrie inspect sight tok trace yaad)
+repos=(hawk-core-contracts eyrie inspect sight tok trace yaad hawk-mcpkit)
 failed=0
 
 printf '%-24s %-14s %-14s %s\n' MODULE GITLINK MODULE_COMMIT STATUS
 for repo in "${repos[@]}"; do
   module="github.com/GrayCodeAI/${repo}"
-  gitlink=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}')
+  # hawk-mcpkit lives at the repo root; all others live under external/
+  if [[ "$repo" == "hawk-mcpkit" ]]; then
+    gitlink=$(git ls-tree HEAD "hawk-mcpkit" | awk '{print $3}')
+  else
+    gitlink=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}')
+  fi
   if [[ -z "$gitlink" ]]; then
     printf '%-24s %-14s %-14s %s\n' "$repo" missing - MISSING_GITLINK
     failed=1
