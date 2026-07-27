@@ -316,14 +316,14 @@ func TestSnapshotStore_Restore(t *testing.T) {
 	}
 
 	// Restore the snapshot
-	if err := store.Restore(snap.ID, projectDir); err != nil {
-		t.Fatalf("Restore failed: %v", err)
+	if restoreErr := store.Restore(snap.ID, projectDir); restoreErr != nil {
+		t.Fatalf("Restore failed: %v", restoreErr)
 	}
 
 	// Verify file1.txt is restored
-	content, err := os.ReadFile(filepath.Join(projectDir, "file1.txt"))
-	if err != nil {
-		t.Fatalf("ReadFile failed: %v", err)
+	content, restoreErr := os.ReadFile(filepath.Join(projectDir, "file1.txt"))
+	if restoreErr != nil {
+		t.Fatalf("ReadFile failed: %v", restoreErr)
 	}
 	if string(content) != "content1" {
 		t.Errorf("expected 'content1', got %q", string(content))
