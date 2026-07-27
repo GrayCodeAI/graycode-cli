@@ -104,11 +104,11 @@ func TestWriteReport_CreatesDirectory(t *testing.T) {
 
 func TestFormatReport_FullFields(t *testing.T) {
 	r := CrashReport{
-		Timestamp:   mustParseTime(t, "2024-01-15T10:30:00Z"),
-		Version:     "1.2.3",
-		PanicValue:  "runtime error: nil pointer",
-		Signal:      "SIGSEGV",
-		Stack:       "goroutine 1 [running]:\nmain.main()",
+		Timestamp:  mustParseTime(t, "2024-01-15T10:30:00Z"),
+		Version:    "1.2.3",
+		PanicValue: "runtime error: nil pointer",
+		Signal:     "SIGSEGV",
+		Stack:      "goroutine 1 [running]:\nmain.main()",
 	}
 
 	result := formatReport(r)
