@@ -65,8 +65,8 @@ func TestLoadMissionGraphExportValidatesTopology(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal graph: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "mission-graph.json"), data, 0o600); err != nil {
-		t.Fatalf("write graph: %v", err)
+	if writeErr := os.WriteFile(filepath.Join(dir, "mission-graph.json"), data, 0o600); writeErr != nil {
+		t.Fatalf("write graph: %v", writeErr)
 	}
 	loaded, err := loadMissionGraphExport(dir)
 	if err != nil {

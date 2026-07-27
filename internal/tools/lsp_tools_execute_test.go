@@ -526,7 +526,7 @@ func TestLSPGotoDefinitionTool_Parameters(t *testing.T) {
 		t.Fatal("expected properties to be a map")
 	}
 	for _, field := range []string{"path", "line", "character"} {
-		if _, ok := props[field]; !ok {
+		if _, exists := props[field]; !exists {
 			t.Errorf("expected %q in properties", field)
 		}
 	}
@@ -551,7 +551,7 @@ func TestLSPRenameTool_Parameters(t *testing.T) {
 		t.Fatal("expected properties to be a map")
 	}
 	for _, field := range []string{"path", "line", "character", "new_name"} {
-		if _, ok := props[field]; !ok {
+		if _, exists := props[field]; !exists {
 			t.Errorf("expected %q in properties", field)
 		}
 	}

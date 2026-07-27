@@ -420,7 +420,9 @@ Fish:
 			return fmt.Errorf("cannot write completion script: %w", err)
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), "Installed %s completion to %s\n", shell, path)
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Installed %s completion to %s\n", shell, path); err != nil {
+			return fmt.Errorf("cannot write completion message: %w", err)
+		}
 		return nil
 	},
 }
@@ -483,7 +485,9 @@ var versionCmd = &cobra.Command{
 			}
 			out, err := json.MarshalIndent(info, "", "  ")
 			if err != nil {
-				fmt.Fprintf(cmd.ErrOrStderr(), "marshaling version: %v\n", err)
+				if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "marshaling version: %v\n", err); err != nil {
+					// Best effort, ignore error
+				}
 				return
 			}
 			cmd.Println(string(out))
