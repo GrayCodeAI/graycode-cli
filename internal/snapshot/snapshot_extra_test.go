@@ -13,7 +13,7 @@ func TestTracker_Cleanup(t *testing.T) {
 	projectDir := t.TempDir()
 
 	// Create a file in the project
-	if err := os.WriteFile(filepath.Join(projectDir, "test.txt"), []byte("hello"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "test.txt"), []byte("hello"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,10 +110,10 @@ func TestSnapshotStore_Delete(t *testing.T) {
 	store := NewSnapshotStore(dir)
 
 	snap := &WorkspaceSnapshot{
-		ID:          "test-id-123456",
-		Name:        "test-snapshot",
-		Files:       make(map[string]FileState),
-		CreatedAt:   time.Now(),
+		ID:        "test-id-123456",
+		Name:      "test-snapshot",
+		Files:     make(map[string]FileState),
+		CreatedAt: time.Now(),
 	}
 
 	if err := store.Save(snap); err != nil {
@@ -230,10 +230,10 @@ func TestSnapshotStore_Diff(t *testing.T) {
 
 	// Create a project dir
 	projectDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("content1"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("content1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "file2.txt"), []byte("content2"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file2.txt"), []byte("content2"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -244,12 +244,12 @@ func TestSnapshotStore_Diff(t *testing.T) {
 	}
 
 	// Modify a file
-	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("modified"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("modified"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Add a new file
-	if err := os.WriteFile(filepath.Join(projectDir, "file3.txt"), []byte("content3"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file3.txt"), []byte("content3"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -295,7 +295,7 @@ func TestSnapshotStore_Restore(t *testing.T) {
 
 	// Create a project dir
 	projectDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("content1"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("content1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -306,12 +306,12 @@ func TestSnapshotStore_Restore(t *testing.T) {
 	}
 
 	// Modify the file
-	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("modified"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("modified"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Add a new file
-	if err := os.WriteFile(filepath.Join(projectDir, "file2.txt"), []byte("content2"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "file2.txt"), []byte("content2"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -445,7 +445,7 @@ func TestRemoveEmptyParents(t *testing.T) {
 	// Create a nested empty directory structure
 	base := t.TempDir()
 	nested := filepath.Join(base, "a", "b", "c")
-	if err := os.MkdirAll(nested, 0755); err != nil {
+	if err := os.MkdirAll(nested, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -462,12 +462,12 @@ func TestRemoveEmptyParents(t *testing.T) {
 func TestRemoveEmptyParents_NonEmpty(t *testing.T) {
 	base := t.TempDir()
 	nested := filepath.Join(base, "a", "b", "c")
-	if err := os.MkdirAll(nested, 0755); err != nil {
+	if err := os.MkdirAll(nested, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a file in the nested dir
-	if err := os.WriteFile(filepath.Join(nested, "file.txt"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(nested, "file.txt"), []byte("test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -503,23 +503,23 @@ func TestSnapshotStore_Capture_WithIgnoredDirs(t *testing.T) {
 	projectDir := t.TempDir()
 
 	// Create regular file
-	if err := os.WriteFile(filepath.Join(projectDir, "main.go"), []byte("package main"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "main.go"), []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create ignored directory with a file
-	if err := os.MkdirAll(filepath.Join(projectDir, "node_modules"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(projectDir, "node_modules"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "node_modules", "pkg.js"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "node_modules", "pkg.js"), []byte("test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create .git directory with a file
-	if err := os.MkdirAll(filepath.Join(projectDir, ".git"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(projectDir, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, ".git", "config"), []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, ".git", "config"), []byte("test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -564,7 +564,7 @@ func TestSnapshotStore_Capture_OverwritesAndPrunes(t *testing.T) {
 
 	// Capture 3 snapshots
 	for i := 0; i < 3; i++ {
-		if err := os.WriteFile(filepath.Join(projectDir, "file.txt"), []byte("content"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(projectDir, "file.txt"), []byte("content"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		_, err := store.Capture(projectDir, "snap"+string(rune('a'+i)), "test")
@@ -589,7 +589,7 @@ func TestSnapshotStore_Get_WithContent(t *testing.T) {
 	store := NewSnapshotStore(dir)
 
 	projectDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectDir, "test.txt"), []byte("file content"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "test.txt"), []byte("file content"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
