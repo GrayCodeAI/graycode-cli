@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-
-	"golang.org/x/term"
 )
 
 // pager manages an external pager process (less, more, etc.) for long output.
@@ -55,6 +52,9 @@ func StartPager() io.Writer {
 		args = append([]string{"-FRX"}, args...)
 	}
 
+	// G204: name is derived from environment or LookPath, which is the standard
+	// pattern for pager invocation. Users control their own PAGER env var.
+	//nolint:gosec // G204
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -123,27 +123,4 @@ func resolvePager() string {
 // IsPagerActive reports whether a pager is currently running.
 func IsPagerActive() bool {
 	return activePager != nil
-}
-
-// ShouldPage reports whether the given line count would benefit from paging.
-// Used as a heuristic: if output exceeds the terminal height, paging helps.
-func shouldPage(lineCount int) bool {
-	if !stdoutIsTerminal() || quietFlag {
-		return false
-	}
-	_, height, err := safeTermSize()
-	if err != nil || height == 0 {
-		return false
-	}
-	return lineCount > height
-}
-
-// safeTermSize returns the terminal width and height without panicking.
-func safeTermSize() (width, height int, err error) {
-	fd := int(os.Stdout.Fd())
-	if !term.IsTerminal(fd) {
-		err = fmt.Errorf("not a terminal")
-		return
-	}
-	return term.GetSize(fd)
 }

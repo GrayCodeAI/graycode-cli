@@ -11,12 +11,12 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/GrayCodeAI/eyrie v0.2.2-0.20260722174513-9debb70adde3
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.9
-	github.com/GrayCodeAI/inspect v0.1.4
-	github.com/GrayCodeAI/sight v0.1.4
-	github.com/GrayCodeAI/tok v0.1.4
-	github.com/GrayCodeAI/yaad v0.0.0-20260715205802-15ffb18c0c4b
+	github.com/GrayCodeAI/eyrie v0.2.2-0.20260725102530-50e37d919d2e
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.10-0.20260726085712-aa07bc3de018
+	github.com/GrayCodeAI/inspect v0.1.5-0.20260726085717-891558820618
+	github.com/GrayCodeAI/sight v0.1.5-0.20260726085706-af6686e60d28
+	github.com/GrayCodeAI/tok v0.1.5-0.20260726085514-23b7cdf243ff
+	github.com/GrayCodeAI/yaad v0.0.0-20260725101452-6f033e0c550a
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
@@ -39,8 +39,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.51.0
 )
-
-require github.com/GrayCodeAI/hawk-mcpkit v0.1.4 // indirect
 
 require (
 	cel.dev/expr v0.25.2 // indirect
@@ -130,7 +128,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/GrayCodeAI/trace v0.1.5-0.20260715120456-164d86be64a8
+	github.com/GrayCodeAI/trace v0.1.5-0.20260726090743-9f9b4d7d118f
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

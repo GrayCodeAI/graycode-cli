@@ -28,13 +28,6 @@ var stdinIsTerminal = func() bool {
 	return term.IsTerminal(int(os.Stdin.Fd()))
 }
 
-// stderrIsTerminal reports whether stderr is connected to a terminal (TTY).
-// Used to gate decorative output on the error stream independently. It is a
-// var so tests can override it.
-var stderrIsTerminal = func() bool {
-	return term.IsTerminal(int(os.Stderr.Fd()))
-}
-
 // TreeNode represents a node in a tree structure for FormatTree.
 type TreeNode struct {
 	Name     string

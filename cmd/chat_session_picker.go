@@ -22,7 +22,6 @@ var (
 	sessPickItemStyle  = lipgloss.NewStyle().Padding(0, 1)
 	sessPickSelStyle   = lipgloss.NewStyle().Padding(0, 1).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("230"))
 	sessPickMatchStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
-	sessPickMetaStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	sessPickEmptyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Italic(true)
 )
 
