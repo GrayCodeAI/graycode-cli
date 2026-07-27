@@ -51,8 +51,8 @@ func TestResolveMode_Aliases(t *testing.T) {
 func TestResolveMode_Extends(t *testing.T) {
 	cfg := TOMLConfig{
 		Profiles: map[string]ProfileConfig{
-			"base":   {Mode: "strict"},
-			"child":  {Extends: "base"},
+			"base":  {Mode: "strict"},
+			"child": {Extends: "base"},
 		},
 	}
 	mode := resolveMode(cfg, "child")

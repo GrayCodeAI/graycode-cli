@@ -109,14 +109,14 @@ func TestLoadConfig_Extra(t *testing.T) {
 	// Create a temp directory with a custom config
 	dir := t.TempDir()
 	agentsDir := filepath.Join(dir, ".agents")
-	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("failed to create .agents dir: %v", err)
 	}
 
 	// Write a custom config
 	customConfig := `{"lsp": {"custom-lang": {"command": "custom-lsp", "extensions": [".custom"]}}}`
 	configPath := filepath.Join(agentsDir, "lsp.json")
-	if err := os.WriteFile(configPath, []byte(customConfig), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(customConfig), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -144,13 +144,13 @@ func TestLoadConfig_InvalidJSON_Extra(t *testing.T) {
 
 	dir := t.TempDir()
 	agentsDir := filepath.Join(dir, ".agents")
-	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("failed to create .agents dir: %v", err)
 	}
 
 	// Write invalid JSON
 	configPath := filepath.Join(agentsDir, "lsp.json")
-	if err := os.WriteFile(configPath, []byte("{invalid json}"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("{invalid json}"), 0o644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 

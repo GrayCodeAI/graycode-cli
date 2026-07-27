@@ -21,11 +21,11 @@ func TestSanitizeName_ValidName(t *testing.T) {
 		{"with spaces", "with-spaces"},
 		{"with@special#chars", "with-special-chars"},
 		{"123numbers", "123numbers"},
-		{"", "project"},     // empty becomes "project"
-		{"...", "project"},  // only dots becomes "project"
-		{"---", "project"},  // only dashes becomes "project"
-		{"   ", "project"},  // only spaces becomes "project"
-		{".-.", "project"},  // mixed dots and dashes becomes "project"
+		{"", "project"},    // empty becomes "project"
+		{"...", "project"}, // only dots becomes "project"
+		{"---", "project"}, // only dashes becomes "project"
+		{"   ", "project"}, // only spaces becomes "project"
+		{".-.", "project"}, // mixed dots and dashes becomes "project"
 		{"valid.name-123", "valid.name-123"},
 		{"UPPER", "UPPER"},
 		{"a", "a"},

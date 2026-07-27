@@ -21,7 +21,7 @@ func TestEslintLinter_NoTool(t *testing.T) {
 
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.js")
-	if err := os.WriteFile(file, []byte("const x = 1;"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("const x = 1;"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -48,7 +48,7 @@ func TestRuffLinter_NoTool(t *testing.T) {
 
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.py")
-	if err := os.WriteFile(file, []byte("x = 1\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("x = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,7 +75,7 @@ func TestGoLinter_NoTool(t *testing.T) {
 
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.go")
-	if err := os.WriteFile(file, []byte("package main\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("package main\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,7 +90,7 @@ func TestGoLinter_NoTool(t *testing.T) {
 func TestCustomLinter_Success(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "x.go")
-	if err := os.WriteFile(file, []byte("package x\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("package x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,7 +108,7 @@ func TestCustomLinter_Success(t *testing.T) {
 func TestCustomLinter_EmptyOutput(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "x.go")
-	if err := os.WriteFile(file, []byte("package x\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("package x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -127,7 +127,7 @@ func TestCustomLinter_EmptyOutput(t *testing.T) {
 func TestRunLint_WithTimeout(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "x.go")
-	if err := os.WriteFile(file, []byte("package x\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("package x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -166,7 +166,7 @@ func TestLanguageForFile(t *testing.T) {
 func TestRunLint_LanguageSet(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "x.py")
-	if err := os.WriteFile(file, []byte("x = 1\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("x = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -195,7 +195,7 @@ func TestEslintLinter_WithMockNpx(t *testing.T) {
 	// Create a mock npx that exits 0 with no output
 	mockDir := t.TempDir()
 	mockNpx := filepath.Join(mockDir, "npx")
-	if err := os.WriteFile(mockNpx, []byte("#!/bin/sh\nexit 0\n"), 0755); err != nil {
+	if err := os.WriteFile(mockNpx, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -206,7 +206,7 @@ func TestEslintLinter_WithMockNpx(t *testing.T) {
 	linter := eslintLinter{}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.js")
-	if err := os.WriteFile(file, []byte("const x = 1;"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("const x = 1;"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -220,7 +220,7 @@ func TestEslintLinter_WithMockNpx(t *testing.T) {
 func TestEslintLinter_WithMockNpx_Failure(t *testing.T) {
 	mockDir := t.TempDir()
 	mockNpx := filepath.Join(mockDir, "npx")
-	if err := os.WriteFile(mockNpx, []byte("#!/bin/sh\necho 'error: semicolon missing'\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(mockNpx, []byte("#!/bin/sh\necho 'error: semicolon missing'\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -231,7 +231,7 @@ func TestEslintLinter_WithMockNpx_Failure(t *testing.T) {
 	linter := eslintLinter{}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.js")
-	if err := os.WriteFile(file, []byte("const x = 1"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("const x = 1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -249,7 +249,7 @@ func TestEslintLinter_WithMockNpx_EmptyOutput(t *testing.T) {
 	mockDir := t.TempDir()
 	mockNpx := filepath.Join(mockDir, "npx")
 	// npx --no-install miss: exits non-zero with no output
-	if err := os.WriteFile(mockNpx, []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(mockNpx, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -260,7 +260,7 @@ func TestEslintLinter_WithMockNpx_EmptyOutput(t *testing.T) {
 	linter := eslintLinter{}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.js")
-	if err := os.WriteFile(file, []byte("const x = 1;"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("const x = 1;"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -275,7 +275,7 @@ func TestEslintLinter_WithMockNpx_EmptyOutput(t *testing.T) {
 func TestEslintLinter_WithMockEslint(t *testing.T) {
 	mockDir := t.TempDir()
 	mockEslint := filepath.Join(mockDir, "eslint")
-	if err := os.WriteFile(mockEslint, []byte("#!/bin/sh\nexit 0\n"), 0755); err != nil {
+	if err := os.WriteFile(mockEslint, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,7 +286,7 @@ func TestEslintLinter_WithMockEslint(t *testing.T) {
 	linter := eslintLinter{}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.js")
-	if err := os.WriteFile(file, []byte("const x = 1;"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("const x = 1;"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -300,7 +300,7 @@ func TestEslintLinter_WithMockEslint(t *testing.T) {
 func TestRuffLinter_WithMockRuff(t *testing.T) {
 	mockDir := t.TempDir()
 	mockRuff := filepath.Join(mockDir, "ruff")
-	if err := os.WriteFile(mockRuff, []byte("#!/bin/sh\nexit 0\n"), 0755); err != nil {
+	if err := os.WriteFile(mockRuff, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -311,7 +311,7 @@ func TestRuffLinter_WithMockRuff(t *testing.T) {
 	linter := ruffLinter{}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.py")
-	if err := os.WriteFile(file, []byte("x = 1\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("x = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -325,7 +325,7 @@ func TestRuffLinter_WithMockRuff(t *testing.T) {
 func TestRuffLinter_WithMockRuff_Failure(t *testing.T) {
 	mockDir := t.TempDir()
 	mockRuff := filepath.Join(mockDir, "ruff")
-	if err := os.WriteFile(mockRuff, []byte("#!/bin/sh\necho 'E501 line too long'\nexit 1\n"), 0755); err != nil {
+	if err := os.WriteFile(mockRuff, []byte("#!/bin/sh\necho 'E501 line too long'\nexit 1\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -336,7 +336,7 @@ func TestRuffLinter_WithMockRuff_Failure(t *testing.T) {
 	linter := ruffLinter{}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "test.py")
-	if err := os.WriteFile(file, []byte("x = 1\n"), 0644); err != nil {
+	if err := os.WriteFile(file, []byte("x = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
