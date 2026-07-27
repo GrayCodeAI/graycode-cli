@@ -40,3 +40,59 @@ func TestDetectProvider_NonExistent(t *testing.T) {
 		t.Errorf("expected empty results for non-existent dir, got provider=%q owner=%q repo=%q", provider, owner, repo)
 	}
 }
+
+func TestParseGitConfig_Github(t *testing.T) {
+	content := `[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = git@github.com:GrayCodeAI/hawk.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main`
+	provider, owner, repo := parseGitConfig(content)
+	if owner != "GrayCodeAI" {
+		t.Errorf("owner = %q, want %q", owner, "GrayCodeAI")
+	}
+	if repo != "hawk" {
+		t.Errorf("repo = %q, want %q", repo, "hawk")
+	}
+	if provider != "github" {
+		t.Errorf("provider = %q, want %q", provider, "github")
+	}
+}
+
+func TestParseGitConfig_Gitlab(t *testing.T) {
+	content := `[remote "origin"]
+	url = https://gitlab.com/gitlab-user/gitlab-repo.git`
+	provider, owner, repo := parseGitConfig(content)
+	if owner != "gitlab-user" {
+		t.Errorf("owner = %q, want %q", owner, "gitlab-user")
+	}
+	if repo != "gitlab-repo" {
+		t.Errorf("repo = %q, want %q", repo, "gitlab-repo")
+	}
+	if provider != "gitlab" {
+		t.Errorf("provider = %q, want %q", provider, "gitlab")
+	}
+}
+
+func TestParseGitConfig_Bitbucket(t *testing.T) {
+	content := `[remote "origin"]
+	url = https://bitbucket.org/bb-user/bb-repo.git`
+	provider, owner, repo := parseGitConfig(content)
+	if owner != "bb-user" {
+		t.Errorf("owner = %q, want %q", owner, "bb-user")
+	}
+	if repo != "bb-repo" {
+		t.Errorf("repo = %q, want %q", repo, "bb-repo")
+	}
+	if provider != "bitbucket" {
+		t.Errorf("provider = %q, want %q", provider, "bitbucket")
+	}
+}
