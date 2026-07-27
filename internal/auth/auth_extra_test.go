@@ -99,8 +99,11 @@ func TestNewSecureStorage(t *testing.T) {
 }
 
 func TestSecureStorage_GetFile_NonExistent(t *testing.T) {
+	// Override the config directory to a temp dir so .tokens definitely doesn't exist
+	t.Setenv("HAWK_CONFIG_DIR", t.TempDir())
+
 	ss := &SecureStorage{service: "test"}
-	// getFile will fail because the file doesn't exist
+	// getFile will fail because the file doesn't exist in the temp dir
 	_, err := ss.getFile("test-account")
 	if err == nil {
 		t.Error("expected error for non-existent token file")
