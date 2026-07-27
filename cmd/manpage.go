@@ -15,7 +15,9 @@ var manpageCmd = &cobra.Command{
 	Long:  "Generate a man page for hawk in roff format and print it to stdout.\nRedirect to a file in your man path, e.g.: hawk manpage > /usr/local/share/man/man1/hawk.1",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Fprint(cmd.OutOrStdout(), GenerateManPage())
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), GenerateManPage()); err != nil {
+			return err
+		}
 		return nil
 	},
 }

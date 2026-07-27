@@ -266,7 +266,11 @@ func detectLanguage(dir string) string {
 	}
 
 	sort.Slice(langs, func(i, j int) bool {
-		return langs[i].count > langs[j].count
+		if langs[i].count != langs[j].count {
+			return langs[i].count > langs[j].count
+		}
+		// Stable tie-breaker: alphabetical order
+		return langs[i].lang < langs[j].lang
 	})
 
 	return langs[0].lang
