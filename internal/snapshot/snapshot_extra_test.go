@@ -230,38 +230,38 @@ func TestSnapshotStore_Diff(t *testing.T) {
 
 	// Create a project dir
 	projectDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("content1"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("content1"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "file2.txt"), []byte("content2"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(projectDir, "file2.txt"), []byte("content2"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	// Capture a snapshot
-	snap, err := store.Capture(projectDir, "test", "test diff")
-	if err != nil {
-		t.Fatalf("Capture failed: %v", err)
+	snap, captureErr := store.Capture(projectDir, "test", "test diff")
+	if captureErr != nil {
+		t.Fatalf("Capture failed: %v", captureErr)
 	}
 
 	// Modify a file
-	if err := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("modified"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(projectDir, "file1.txt"), []byte("modified"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	// Add a new file
-	if err := os.WriteFile(filepath.Join(projectDir, "file3.txt"), []byte("content3"), 0o644); err != nil {
-		t.Fatal(err)
+	if writeErr := os.WriteFile(filepath.Join(projectDir, "file3.txt"), []byte("content3"), 0o644); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	// Delete a file
-	if err := os.Remove(filepath.Join(projectDir, "file2.txt")); err != nil {
-		t.Fatal(err)
+	if removeErr := os.Remove(filepath.Join(projectDir, "file2.txt")); removeErr != nil {
+		t.Fatal(removeErr)
 	}
 
 	// Diff should show changes
-	diff, err := store.Diff(snap.ID, projectDir)
-	if err != nil {
-		t.Fatalf("Diff failed: %v", err)
+	diff, diffErr := store.Diff(snap.ID, projectDir)
+	if diffErr != nil {
+		t.Fatalf("Diff failed: %v", diffErr)
 	}
 	if len(diff.Added) != 1 {
 		t.Errorf("expected 1 added file, got %d", len(diff.Added))
