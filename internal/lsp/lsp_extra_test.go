@@ -20,7 +20,7 @@ func TestLoadConfig_WithProjectConfig(t *testing.T) {
 	// Create a temp project dir with lsp.json
 	tmpDir := t.TempDir()
 	agentsDir := filepath.Join(tmpDir, ".agents")
-	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	configContent := `{
@@ -28,7 +28,7 @@ func TestLoadConfig_WithProjectConfig(t *testing.T) {
 			"go": {"command": "custom-gopls", "extensions": [".go"]}
 		}
 	}`
-	if err := os.WriteFile(filepath.Join(agentsDir, "lsp.json"), []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(agentsDir, "lsp.json"), []byte(configContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -82,7 +82,7 @@ func TestLoadConfigFile_ValidFile(t *testing.T) {
 			"go": {"command": "gopls", "extensions": [".go"]}
 		}
 	}`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,7 +106,7 @@ func TestLoadConfigFile_NonExistent(t *testing.T) {
 func TestLoadConfigFile_InvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "lsp.json")
-	if err := os.WriteFile(configPath, []byte(`{invalid`), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(`{invalid`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -179,10 +179,10 @@ func TestLanguageForExtension(t *testing.T) {
 		{".tsx", "typescript"},
 		{".js", "typescript"},
 		{".py", ""},
-		{"go", "go"},       // without dot
-		{"GO", "go"},       // case insensitive
-		{"", ""},           // empty
-		{".unknown", ""},   // unknown
+		{"go", "go"},     // without dot
+		{"GO", "go"},     // case insensitive
+		{"", ""},         // empty
+		{".unknown", ""}, // unknown
 	}
 
 	for _, tt := range tests {
@@ -367,10 +367,10 @@ func TestReapIdle_StuckInitClient(t *testing.T) {
 
 	// Add a client that is stuck initializing
 	mc := &ManagedClient{
-		config:     cfg.Servers["go"],
-		language:   "go",
+		config:       cfg.Servers["go"],
+		language:     "go",
 		initializing: true,
-		initStart:  time.Now().Add(-defaultInitTimeout - time.Minute),
+		initStart:    time.Now().Add(-defaultInitTimeout - time.Minute),
 	}
 	m.mu.Lock()
 	m.clients["go"] = mc

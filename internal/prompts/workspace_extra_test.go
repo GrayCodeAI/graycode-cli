@@ -12,11 +12,11 @@ import (
 func TestReadGitBranch_NormalRepo(t *testing.T) {
 	tmpDir := t.TempDir()
 	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	headContent := "ref: refs/heads/main\n"
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -29,11 +29,11 @@ func TestReadGitBranch_NormalRepo(t *testing.T) {
 func TestReadGitBranch_DetachedHEAD(t *testing.T) {
 	tmpDir := t.TempDir()
 	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	headContent := "abc1234567890abcdef\n"
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -46,11 +46,11 @@ func TestReadGitBranch_DetachedHEAD(t *testing.T) {
 func TestReadGitBranch_ShortHash(t *testing.T) {
 	tmpDir := t.TempDir()
 	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	headContent := "abc123\n"
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -72,7 +72,7 @@ func TestReadGitBranch_WorktreeFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create .git file (worktree) pointing to gitdir
 	gitFileContent := "gitdir: /tmp/fake-git-dir\n"
-	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -86,17 +86,17 @@ func TestReadGitBranch_WorktreeFile_AbsolutePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create a real git dir with HEAD
 	gitDir := filepath.Join(tmpDir, "custom-git-dir")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	headContent := "ref: refs/heads/develop\n"
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create .git file pointing to the git dir
 	gitFileContent := "gitdir: " + gitDir + "\n"
-	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,17 +110,17 @@ func TestReadGitBranch_WorktreeFile_RelativePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create a real git dir with HEAD
 	gitDir := filepath.Join(tmpDir, "custom-git-dir")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	headContent := "ref: refs/heads/feature\n"
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create .git file pointing to the git dir (relative path)
 	gitFileContent := "gitdir: custom-git-dir\n"
-	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +134,7 @@ func TestReadGitBranch_WorktreeFile_NonRefContent(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create .git file with non-ref content
 	gitFileContent := "some other content\n"
-	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, ".git"), []byte(gitFileContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -326,18 +326,18 @@ func TestRenderTemplate(t *testing.T) {
 
 func TestBuildSubAgentPrompt_WithAllFields(t *testing.T) {
 	ctx := PromptContext{
-		Date:    "Monday, 2024-01-01",
-		WorkDir: "/test",
-		OS:      "linux",
-		Shell:   "/bin/bash",
-		Model:   "gpt-4",
-		Provider: "openai",
-		GitBranch: "main",
-		GitStatus: "clean",
+		Date:          "Monday, 2024-01-01",
+		WorkDir:       "/test",
+		OS:            "linux",
+		Shell:         "/bin/bash",
+		Model:         "gpt-4",
+		Provider:      "openai",
+		GitBranch:     "main",
+		GitStatus:     "clean",
 		RecentCommits: "fix bug",
-		TopFiles: "main.go",
-		MaxTurns: 10,
-		Task: "test task",
+		TopFiles:      "main.go",
+		MaxTurns:      10,
+		Task:          "test task",
 	}
 
 	result, err := BuildSubAgentPrompt(ctx)
@@ -374,19 +374,19 @@ func TestGatherWorkspaceContext_WithGitRepo(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create a fake git repo structure
 	gitDir := filepath.Join(tmpDir, ".git")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	headContent := "ref: refs/heads/main\n"
-	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create some files
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "utils.py"), []byte("# utils"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "utils.py"), []byte("# utils"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -421,7 +421,7 @@ func TestDetectLanguage_NonExistentDir(t *testing.T) {
 
 func TestDetectLanguage_Python(t *testing.T) {
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.py"), []byte("print('hello')"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.py"), []byte("print('hello')"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	lang := detectLanguage(tmpDir)
@@ -432,7 +432,7 @@ func TestDetectLanguage_Python(t *testing.T) {
 
 func TestDetectLanguage_Typescript(t *testing.T) {
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "app.ts"), []byte("// typescript"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "app.ts"), []byte("// typescript"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	lang := detectLanguage(tmpDir)
@@ -445,10 +445,10 @@ func TestDetectLanguage_WithSubdirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create a subdirectory with Go files
 	subDir := filepath.Join(tmpDir, "pkg")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(subDir, "main.go"), []byte("package main"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(subDir, "main.go"), []byte("package main"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	lang := detectLanguage(tmpDir)
@@ -461,14 +461,14 @@ func TestDetectLanguage_SkipsNodeModules(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Create node_modules with JS files (should be skipped)
 	nodeModules := filepath.Join(tmpDir, "node_modules")
-	if err := os.MkdirAll(nodeModules, 0755); err != nil {
+	if err := os.MkdirAll(nodeModules, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(nodeModules, "lib.js"), []byte("// js"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(nodeModules, "lib.js"), []byte("// js"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Create a Python file in the root
-	if err := os.WriteFile(filepath.Join(tmpDir, "main.py"), []byte("# python"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.py"), []byte("# python"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	lang := detectLanguage(tmpDir)
@@ -479,7 +479,7 @@ func TestDetectLanguage_SkipsNodeModules(t *testing.T) {
 
 func TestDetectLanguage_UnknownExtension(t *testing.T) {
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "file.xyz"), []byte("data"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "file.xyz"), []byte("data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	lang := detectLanguage(tmpDir)

@@ -243,8 +243,8 @@ func TestNewDeviceFlow_DefaultPollInterval(t *testing.T) {
 
 func TestNewDeviceFlow_CustomPollInterval(t *testing.T) {
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		PollInterval:  10 * time.Second,
+		ClientID:     "test-client",
+		PollInterval: 10 * time.Second,
 	})
 	if df.Config.PollInterval != 10*time.Second {
 		t.Errorf("PollInterval = %v, want %v", df.Config.PollInterval, 10*time.Second)
@@ -341,10 +341,10 @@ func TestDeviceFlow_PollForToken_Success(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	token, err := df.PollForToken(context.Background(), "device-code")
@@ -378,10 +378,10 @@ func TestDeviceFlow_PollForToken_AuthorizationPending(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	token, err := df.PollForToken(context.Background(), "device-code")
@@ -410,10 +410,10 @@ func TestDeviceFlow_PollForToken_SlowDown(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	token, err := df.PollForToken(context.Background(), "device-code")
@@ -433,10 +433,10 @@ func TestDeviceFlow_PollForToken_Timeout(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     50 * time.Millisecond, // Very short timeout
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    50 * time.Millisecond, // Very short timeout
 	})
 
 	_, err := df.PollForToken(context.Background(), "device-code")
@@ -456,10 +456,10 @@ func TestDeviceFlow_PollForToken_ContextCanceled(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -479,10 +479,10 @@ func TestDeviceFlow_PollForToken_OtherError(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	_, err := df.PollForToken(context.Background(), "device-code")
@@ -501,10 +501,10 @@ func TestDeviceFlow_PollForToken_HTTPError(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	_, err := df.PollForToken(context.Background(), "device-code")
@@ -521,10 +521,10 @@ func TestDeviceFlow_PollForToken_InvalidJSON(t *testing.T) {
 	defer server.Close()
 
 	df := NewDeviceFlow(DeviceFlowConfig{
-		ClientID:      "test-client",
-		TokenURL:      server.URL,
-		PollInterval:  10 * time.Millisecond,
-		ExpiresIn:     5 * time.Second,
+		ClientID:     "test-client",
+		TokenURL:     server.URL,
+		PollInterval: 10 * time.Millisecond,
+		ExpiresIn:    5 * time.Second,
 	})
 
 	_, err := df.PollForToken(context.Background(), "device-code")

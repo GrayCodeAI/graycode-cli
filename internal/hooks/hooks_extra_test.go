@@ -13,8 +13,8 @@ func TestRegistry_ExecuteAsync(t *testing.T) {
 	var mu sync.Mutex
 
 	r.Register(Hook{
-		Name:     "test-async",
-		Event:    "test_event",
+		Name:  "test-async",
+		Event: "test_event",
 		Fn: func(ctx context.Context, data map[string]interface{}) error {
 			mu.Lock()
 			called = true
@@ -56,8 +56,8 @@ func TestRegistry_ExecuteAsyncEnvelope(t *testing.T) {
 	var mu sync.Mutex
 
 	r.Register(Hook{
-		Name:     "test-async-envelope",
-		Event:    "test_envelope",
+		Name:  "test-async-envelope",
+		Event: "test_envelope",
 		FnV2: func(ctx context.Context, env EventEnvelope) error {
 			mu.Lock()
 			called = true
@@ -104,8 +104,8 @@ func TestRegistry_ExecuteEnvelope(t *testing.T) {
 	var called bool
 
 	r.Register(Hook{
-		Name:     "test-envelope",
-		Event:    "test_event",
+		Name:  "test-envelope",
+		Event: "test_event",
 		FnV2: func(ctx context.Context, env EventEnvelope) error {
 			called = true
 			return nil
@@ -139,8 +139,8 @@ func TestRegistry_ExecuteEnvelope_HookError(t *testing.T) {
 	r := NewRegistry()
 
 	r.Register(Hook{
-		Name:     "error-hook",
-		Event:    "test_event",
+		Name:  "error-hook",
+		Event: "test_event",
 		FnV2: func(ctx context.Context, env EventEnvelope) error {
 			return context.DeadlineExceeded
 		},
@@ -160,8 +160,8 @@ func TestRegistry_ExecuteEnvelope_FnV1Fallback(t *testing.T) {
 	var called bool
 
 	r.Register(Hook{
-		Name:     "test-v1",
-		Event:    "test_event",
+		Name:  "test-v1",
+		Event: "test_event",
 		Fn: func(ctx context.Context, data map[string]interface{}) error {
 			called = true
 			return nil
@@ -206,8 +206,8 @@ func TestSortHooks_Empty(t *testing.T) {
 func TestGlobalRegister(t *testing.T) {
 	// Test global registry
 	Register(Hook{
-		Name:     "global-test",
-		Event:    "global_test",
+		Name:  "global-test",
+		Event: "global_test",
 		Fn: func(ctx context.Context, data map[string]interface{}) error {
 			return nil
 		},
@@ -229,8 +229,8 @@ func TestPackageLevel_ExecuteAsync(t *testing.T) {
 	var mu sync.Mutex
 
 	Register(Hook{
-		Name:     "pkg-async",
-		Event:    "pkg_async_test",
+		Name:  "pkg-async",
+		Event: "pkg_async_test",
 		Fn: func(ctx context.Context, data map[string]interface{}) error {
 			mu.Lock()
 			called = true
@@ -266,8 +266,8 @@ func TestPackageLevel_ExecuteEnvelope(t *testing.T) {
 
 	var called bool
 	Register(Hook{
-		Name:     "pkg-envelope",
-		Event:    "pkg_envelope_test",
+		Name:  "pkg-envelope",
+		Event: "pkg_envelope_test",
 		FnV2: func(ctx context.Context, env EventEnvelope) error {
 			called = true
 			return nil
@@ -294,8 +294,8 @@ func TestPackageLevel_ExecuteAsyncEnvelope(t *testing.T) {
 	var mu sync.Mutex
 
 	Register(Hook{
-		Name:     "pkg-async-envelope",
-		Event:    "pkg_async_env_test",
+		Name:  "pkg-async-envelope",
+		Event: "pkg_async_env_test",
 		FnV2: func(ctx context.Context, env EventEnvelope) error {
 			mu.Lock()
 			called = true

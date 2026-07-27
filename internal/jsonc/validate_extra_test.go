@@ -125,8 +125,8 @@ func TestValidateHookEntry_CommandValid(t *testing.T) {
 func TestValidateHookEntry_PromptInvalid(t *testing.T) {
 	r := &ValidationResult{}
 	validateHookEntry("path", map[string]interface{}{
-		"type":    "prompt",
-		"prompt":  123,
+		"type":   "prompt",
+		"prompt": 123,
 	}, r)
 	if r.Valid() {
 		t.Error("expected validation error for non-string prompt")
