@@ -52,6 +52,9 @@ func StartPager() io.Writer {
 		args = append([]string{"-FRX"}, args...)
 	}
 
+	// G204: name is derived from environment or LookPath, which is the standard
+	// pattern for pager invocation. Users control their own PAGER env var.
+	//nolint:gosec // G204
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

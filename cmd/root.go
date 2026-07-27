@@ -485,7 +485,7 @@ var versionCmd = &cobra.Command{
 			}
 			out, err := json.MarshalIndent(info, "", "  ")
 			if err != nil {
-				if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "marshaling version: %v\n", err); err != nil {
+				if _, ferr := fmt.Fprintf(cmd.ErrOrStderr(), "marshaling version: %v\n", err); ferr != nil {
 					// Best effort, ignore error
 				}
 				return
