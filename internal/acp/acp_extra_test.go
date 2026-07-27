@@ -1,12 +1,14 @@
 package acp
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -374,28 +376,57 @@ func TestACP_FullSessionLifecycle(t *testing.T) {
 }
 
 func TestACP_MultipleSessions(t *testing.T) {
-	lines := []string{
-		`{"jsonrpc":"2.0","id":1,"method":"initialize"}`,
-		`{"jsonrpc":"2.0","id":2,"method":"session/new"}`,
-		`{"jsonrpc":"2.0","id":3,"method":"session/new"}`,
-		`{"jsonrpc":"2.0","id":4,"method":"session/prompt","params":{"sessionId":"sess_1","prompt":[{"type":"text","text":"hello"}]}}`,
-		`{"jsonrpc":"2.0","id":5,"method":"session/prompt","params":{"sessionId":"sess_2","prompt":[{"type":"text","text":"world"}]}}`,
-	}
-	msgs := runServer(t, testFactory, lines)
+	// Create a single server for both sessions
+	srv := NewServer(testFactory)
+	var buf bytes.Buffer
+	srv.w = &buf
 
-	sessionCount := 0
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	in := strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize"}
+{"jsonrpc":"2.0","id":2,"method":"session/new"}
+{"jsonrpc":"2.0","id":3,"method":"session/new"}
+`)
+	pr, pw := io.Pipe()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = srv.Serve(ctx, in, pw)
+		_ = pw.Close()
+	}()
+
+	var msgs []rpcMessage
+	scanner := bufio.NewScanner(pr)
+	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var m rpcMessage
+		if err := json.Unmarshal(line, &m); err == nil {
+			msgs = append(msgs, m)
+		}
+	}
+	wg.Wait()
+
+	sessionIDs := make(map[string]bool)
 	for _, m := range msgs {
 		if hasID(m, 2) || hasID(m, 3) {
 			var r struct {
 				SessionID string `json:"sessionId"`
 			}
 			if err := json.Unmarshal(m.Result, &r); err == nil && r.SessionID != "" {
-				sessionCount++
+				sessionIDs[r.SessionID] = true
 			}
 		}
 	}
-	if sessionCount != 2 {
-		t.Errorf("expected 2 sessions created, got %d", sessionCount)
+
+	if len(sessionIDs) != 2 {
+		t.Errorf("expected 2 unique session IDs, got %d", len(sessionIDs))
 	}
 }
 
