@@ -11,10 +11,12 @@ import (
 
 type harnessSubcommand struct{}
 
-func (h *harnessSubcommand) Name() string        { return "harness" }
-func (h *harnessSubcommand) Aliases() []string   { return []string{"harness-review"} }
-func (h *harnessSubcommand) Description() string { return "review workspace AI agent harness and generate evaluation report" }
-func (h *harnessSubcommand) Usage() string       { return "[review]" }
+func (h *harnessSubcommand) Name() string      { return "harness" }
+func (h *harnessSubcommand) Aliases() []string { return []string{"harness-review"} }
+func (h *harnessSubcommand) Description() string {
+	return "review workspace AI agent harness and generate evaluation report"
+}
+func (h *harnessSubcommand) Usage() string { return "[review]" }
 func (h *harnessSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	wd, err := os.Getwd()
 	if err != nil {

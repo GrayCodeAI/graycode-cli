@@ -63,21 +63,21 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			outDir = filepath.Join(targetDir, ".hawk", "harness")
 		}
 
-		if err := os.MkdirAll(outDir, 0755); err != nil {
+		if err := os.MkdirAll(outDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create harness output directory: %w", err)
 		}
 
 		// Write Markdown report
 		mdPath := filepath.Join(outDir, "report.md")
 		mdContent := harness.RenderMarkdown(report)
-		if err := os.WriteFile(mdPath, []byte(mdContent), 0644); err != nil {
+		if err := os.WriteFile(mdPath, []byte(mdContent), 0o644); err != nil {
 			return fmt.Errorf("failed to write report.md: %w", err)
 		}
 
 		// Write HTML report
 		htmlPath := filepath.Join(outDir, "report.html")
 		htmlContent := harness.RenderHTML(report)
-		if err := os.WriteFile(htmlPath, []byte(htmlContent), 0644); err != nil {
+		if err := os.WriteFile(htmlPath, []byte(htmlContent), 0o644); err != nil {
 			return fmt.Errorf("failed to write report.html: %w", err)
 		}
 
@@ -87,7 +87,7 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		if err != nil {
 			return fmt.Errorf("failed to serialize findings.json: %w", err)
 		}
-		if err := os.WriteFile(jsonPath, jsonContent, 0644); err != nil {
+		if err := os.WriteFile(jsonPath, jsonContent, 0o644); err != nil {
 			return fmt.Errorf("failed to write findings.json: %w", err)
 		}
 

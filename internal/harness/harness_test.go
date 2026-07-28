@@ -39,7 +39,7 @@ func TestEvaluateWorkspace(t *testing.T) {
 - Build with make
 - Run tests before opening PR
 `
-	if err := os.WriteFile(agentsPath, []byte(agentsContent), 0644); err != nil {
+	if err := os.WriteFile(agentsPath, []byte(agentsContent), 0o644); err != nil {
 		t.Fatalf("Failed to write AGENTS.md: %v", err)
 	}
 
@@ -48,11 +48,11 @@ func TestEvaluateWorkspace(t *testing.T) {
 lint:
 	golangci-lint run
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Makefile"), []byte(makefileContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "Makefile"), []byte(makefileContent), 0o644); err != nil {
 		t.Fatalf("Failed to write Makefile: %v", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(tmpDir, ".golangci.yml"), []byte("linters:\n  enable:\n    - errcheck\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, ".golangci.yml"), []byte("linters:\n  enable:\n    - errcheck\n"), 0o644); err != nil {
 		t.Fatalf("Failed to write .golangci.yml: %v", err)
 	}
 

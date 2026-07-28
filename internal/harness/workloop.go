@@ -56,11 +56,11 @@ type Finding struct {
 
 // DimensionScore holds aggregated scoring and state for a single Agent Work Loop dimension.
 type DimensionScore struct {
-	Dimension   Dimension     `json:"dimension"`
-	Score       int           `json:"score"` // 0 to 100
-	State       EvidenceState `json:"state"`
-	Summary     string        `json:"summary"`
-	FindingsCount int         `json:"findings_count"`
+	Dimension     Dimension     `json:"dimension"`
+	Score         int           `json:"score"` // 0 to 100
+	State         EvidenceState `json:"state"`
+	Summary       string        `json:"summary"`
+	FindingsCount int           `json:"findings_count"`
 }
 
 // AssetsDetected lists the project harness assets found during evaluation.
@@ -82,14 +82,14 @@ type AssetsDetected struct {
 
 // HarnessReport represents the complete self-contained evaluation report for a workspace.
 type HarnessReport struct {
-	TargetPath     string                   `json:"target_path"`
-	GeneratedAt    time.Time                `json:"generated_at"`
-	OverallScore   int                      `json:"overall_score"` // 0 to 100
-	OverallStatus  string                   `json:"overall_status"`
-	Dimensions     map[Dimension]DimensionScore `json:"dimensions"`
-	Findings       []Finding                `json:"findings"`
-	Assets         AssetsDetected           `json:"assets"`
-	Summary        string                   `json:"summary"`
+	TargetPath    string                       `json:"target_path"`
+	GeneratedAt   time.Time                    `json:"generated_at"`
+	OverallScore  int                          `json:"overall_score"` // 0 to 100
+	OverallStatus string                       `json:"overall_status"`
+	Dimensions    map[Dimension]DimensionScore `json:"dimensions"`
+	Findings      []Finding                    `json:"findings"`
+	Assets        AssetsDetected               `json:"assets"`
+	Summary       string                       `json:"summary"`
 }
 
 // EvaluateOptions defines options for workspace evaluation.

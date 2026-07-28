@@ -35,7 +35,7 @@ func FixWorkspaceHarness(ctx context.Context, targetPath string, report *Harness
 	if !report.Assets.AgentsMD {
 		agentsPath := filepath.Join(root, "AGENTS.md")
 		template := buildAgentsMDTemplate(report.Assets)
-		if err := os.WriteFile(agentsPath, []byte(template), 0644); err == nil {
+		if err := os.WriteFile(agentsPath, []byte(template), 0o644); err == nil {
 			result.RepairsPerformed = append(result.RepairsPerformed, "Created baseline AGENTS.md with build, lint, and test conventions")
 			result.FilesCreated = append(result.FilesCreated, agentsPath)
 		}
@@ -44,9 +44,9 @@ func FixWorkspaceHarness(ctx context.Context, targetPath string, report *Harness
 	// 2. Repair missing .zero/skills/ directory & starter skill
 	skillsDir := filepath.Join(root, ".zero", "skills")
 	if !dirExists(skillsDir) {
-		if err := os.MkdirAll(skillsDir, 0755); err == nil {
+		if err := os.MkdirAll(skillsDir, 0o755); err == nil {
 			starterSkillDir := filepath.Join(skillsDir, "code-review")
-			_ = os.MkdirAll(starterSkillDir, 0755)
+			_ = os.MkdirAll(starterSkillDir, 0o755)
 			starterSkillFile := filepath.Join(starterSkillDir, "SKILL.md")
 			skillContent := `---
 description: Standard Go and Project Code Review Conventions
@@ -60,7 +60,7 @@ alwaysApply: true
 2. Check for unhandled error returns.
 3. Confirm tests exist alongside modified source files (*_test.go).
 `
-			if err := os.WriteFile(starterSkillFile, []byte(skillContent), 0644); err == nil {
+			if err := os.WriteFile(starterSkillFile, []byte(skillContent), 0o644); err == nil {
 				result.RepairsPerformed = append(result.RepairsPerformed, "Created .zero/skills/ directory and starter code-review skill")
 				result.FilesCreated = append(result.FilesCreated, starterSkillFile)
 			}
@@ -70,7 +70,7 @@ alwaysApply: true
 	// 3. Repair missing .hawk/specs/ directory
 	specsDir := filepath.Join(root, ".hawk", "specs")
 	if !dirExists(specsDir) {
-		if err := os.MkdirAll(specsDir, 0755); err == nil {
+		if err := os.MkdirAll(specsDir, 0o755); err == nil {
 			result.RepairsPerformed = append(result.RepairsPerformed, "Created .hawk/specs/ directory for task specification management")
 		}
 	}
