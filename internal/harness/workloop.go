@@ -2,6 +2,9 @@ package harness
 
 import (
 	"time"
+
+	harnesscontracts "github.com/GrayCodeAI/hawk-core-contracts/harness"
+	typescontracts "github.com/GrayCodeAI/hawk-core-contracts/types"
 )
 
 // Dimension represents one of the five core dimensions of the Agent Work Loop.
@@ -95,4 +98,78 @@ type EvaluateOptions struct {
 	IncludeSessions bool
 	Formats         []string // "html", "markdown", "json"
 	OutputDir       string
+}
+
+// ToContractReport converts the native Hawk HarnessReport to the neutral hawk-core-contracts Report.
+func (r *HarnessReport) ToContractReport() *harnesscontracts.Report {
+	if r == nil {
+		return nil
+	}
+
+	dims := make(map[harnesscontracts.Dimension]harnesscontracts.DimensionScore, len(r.Dimensions))
+	for k, v := range r.Dimensions {
+		dims[harnesscontracts.Dimension(k)] = harnesscontracts.DimensionScore{
+			Dimension:     harnesscontracts.Dimension(v.Dimension),
+			Score:         v.Score,
+			State:         harnesscontracts.EvidenceState(v.State),
+			Summary:       v.Summary,
+			FindingsCount: v.FindingsCount,
+		}
+	}
+
+	findings := make([]harnesscontracts.Finding, len(r.Findings))
+	for i, f := range r.Findings {
+		var sev typescontracts.Severity
+		switch f.Severity {
+		case SeverityCritical:
+			sev = typescontracts.SeverityCritical
+		case SeverityHigh:
+			sev = typescontracts.SeverityHigh
+		case SeverityMedium:
+			sev = typescontracts.SeverityMedium
+		case SeverityLow:
+			sev = typescontracts.SeverityLow
+		default:
+			sev = typescontracts.SeverityInfo
+		}
+
+		findings[i] = harnesscontracts.Finding{
+			ID:              f.ID,
+			Dimension:       harnesscontracts.Dimension(f.Dimension),
+			Severity:        sev,
+			Title:           f.Title,
+			Description:     f.Description,
+			Impact:          f.Impact,
+			EvidenceSource:  f.EvidenceSource,
+			EvidenceState:   harnesscontracts.EvidenceState(f.EvidenceState),
+			ExpectedOutcome: f.ExpectedOutcome,
+			ScopedRepair:    f.ScopedRepair,
+			ValidationRoute: f.ValidationRoute,
+		}
+	}
+
+	return &harnesscontracts.Report{
+		TargetPath:    r.TargetPath,
+		GeneratedAt:   r.GeneratedAt,
+		OverallScore:  r.OverallScore,
+		OverallStatus: r.OverallStatus,
+		Dimensions:    dims,
+		Findings:      findings,
+		Assets: harnesscontracts.AssetsDetected{
+			AgentsMD:      r.Assets.AgentsMD,
+			AgentsMDPath:  r.Assets.AgentsMDPath,
+			ZeroMD:        r.Assets.ZeroMD,
+			ZeroMDPath:    r.Assets.ZeroMDPath,
+			Skills:        r.Assets.Skills,
+			SpecsCount:    r.Assets.SpecsCount,
+			Linters:       r.Assets.Linters,
+			TestRunners:   r.Assets.TestRunners,
+			Hooks:         r.Assets.Hooks,
+			SandboxPolicy: r.Assets.SandboxPolicy,
+			AutonomyTier:  r.Assets.AutonomyTier,
+			InspectBridge: r.Assets.InspectBridge,
+			SightBridge:   r.Assets.SightBridge,
+		},
+		Summary: r.Summary,
+	}
 }

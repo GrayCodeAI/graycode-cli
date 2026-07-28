@@ -89,4 +89,13 @@ lint:
 	if err != nil || len(jsonBytes) == 0 {
 		t.Errorf("RenderJSON failed: %v", err)
 	}
+
+	// Test ToContractReport conversion
+	contractRep := report2.ToContractReport()
+	if contractRep == nil {
+		t.Fatal("ToContractReport returned nil")
+	}
+	if contractRep.OverallScore != report2.OverallScore {
+		t.Errorf("Expected contract overall score %d, got %d", report2.OverallScore, contractRep.OverallScore)
+	}
 }
