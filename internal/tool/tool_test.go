@@ -282,7 +282,7 @@ func TestBashSimple(t *testing.T) {
 }
 
 func TestBashBackgroundTaskOutput(t *testing.T) {
-	input, _ := json.Marshal(map[string]interface{}{"command": "echo background", "run_in_background": true})
+	input, _ := json.Marshal(map[string]interface{}{"command": "sleep 0.1; echo background", "run_in_background": true})
 	out, err := BashTool{}.Execute(context.Background(), input)
 	if err != nil {
 		t.Fatal(err)

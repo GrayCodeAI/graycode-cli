@@ -60,6 +60,9 @@ func genID() string {
 func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	id := genID()
 	if sessionIDFlag != "" && resumeID == "" && !continueFlag {
+		if err := session.ValidateID(sessionIDFlag); err != nil {
+			return "", nil, fmt.Errorf("invalid --session-id: %w", err)
+		}
 		id = sessionIDFlag
 	}
 	if sessionIDFlag != "" && (resumeID != "" || continueFlag) {
@@ -88,6 +91,9 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	sess.LoadMessages(session.ToRuntimeMessages(saved.Messages))
 	if forkSessionFlag {
 		if sessionIDFlag != "" {
+			if err := session.ValidateID(sessionIDFlag); err != nil {
+				return "", nil, fmt.Errorf("invalid --session-id: %w", err)
+			}
 			id = sessionIDFlag
 		}
 		return id, saved, nil

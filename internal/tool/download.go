@@ -71,8 +71,12 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
+	if resp.ContentLength > maxDownloadSize {
+		return "", fmt.Errorf("download exceeds %d byte limit", maxDownloadSize)
+	}
+
 	// Read content into memory first so we can scan for credentials before writing.
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxDownloadSize))
+	body, err := readDownloadBody(resp.Body, maxDownloadSize)
 	if err != nil {
 		return "", fmt.Errorf("read response: %w", err)
 	}
@@ -89,4 +93,15 @@ func (DownloadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 
 	ct := resp.Header.Get("Content-Type")
 	return fmt.Sprintf("Downloaded %d bytes to %s (type: %s)", len(body), p.Destination, ct), nil
+}
+
+func readDownloadBody(r io.Reader, limit int64) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > limit {
+		return nil, fmt.Errorf("download exceeds %d byte limit", limit)
+	}
+	return body, nil
 }

@@ -453,7 +453,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	requestedID := strings.TrimSpace(req.SessionID)
 	if requestedID != "" && !validSessionID(requestedID) {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{
-			Error: "invalid session id: use 1-128 alphanumeric, dash, underscore, or dot characters",
+			Error: "invalid session id: must be 1-128 characters using letters, digits, dash, underscore, or dot (reserved: . and ..)",
 			Code:  "invalid_session_id",
 		})
 		return
@@ -699,16 +699,7 @@ func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.St
 }
 
 func validSessionID(id string) bool {
-	if len(id) == 0 || len(id) > 128 {
-		return false
-	}
-	for _, c := range id {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-			(c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.') {
-			return false
-		}
-	}
-	return true
+	return hawksession.ValidID(id)
 }
 
 func newSessionID() (string, error) {

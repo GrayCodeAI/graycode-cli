@@ -66,6 +66,9 @@ func ScanForRecovery() []RecoveryCandidate {
 		}
 
 		id := e.Name()[:len(e.Name())-len(ext)]
+		if !ValidID(id) {
+			continue
+		}
 		// Skip if we already processed this ID
 		alreadySeen := false
 		for _, c := range candidates {

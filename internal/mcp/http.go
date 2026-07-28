@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+const (
+	maxMCPResponseSize = 8 << 20
+	maxMCPErrorBody    = 64 << 10
+)
+
 // HTTPServer represents an MCP server connected via HTTP or SSE transport.
 type HTTPServer struct {
 	Name    string
@@ -94,7 +99,7 @@ func (s *HTTPServer) Call(ctx context.Context, method string, params interface{}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		data, _ := io.ReadAll(resp.Body)
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, maxMCPErrorBody))
 		return nil, fmt.Errorf("mcp %s: HTTP %d: %s", s.Type, resp.StatusCode, string(data))
 	}
 
@@ -103,9 +108,16 @@ func (s *HTTPServer) Call(ctx context.Context, method string, params interface{}
 		return s.parseSSEResponse(resp.Body, id)
 	}
 
-	// HTTP: parse JSON-RPC response directly
+	// HTTP: parse JSON-RPC response directly with an explicit memory bound.
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxMCPResponseSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("mcp %s read response: %w", s.Type, err)
+	}
+	if len(data) > maxMCPResponseSize {
+		return nil, fmt.Errorf("mcp %s response exceeds %d byte limit", s.Type, maxMCPResponseSize)
+	}
 	var rpcResp jsonrpcResponse
-	if err := json.NewDecoder(resp.Body).Decode(&rpcResp); err != nil {
+	if err := json.Unmarshal(data, &rpcResp); err != nil {
 		return nil, fmt.Errorf("mcp %s decode: %w", s.Type, err)
 	}
 	if rpcResp.Error != nil {
@@ -115,7 +127,9 @@ func (s *HTTPServer) Call(ctx context.Context, method string, params interface{}
 }
 
 func (s *HTTPServer) parseSSEResponse(body io.Reader, id int) (json.RawMessage, error) {
-	scanner := bufio.NewScanner(body)
+	limited := &io.LimitedReader{R: body, N: maxMCPResponseSize + 1}
+	scanner := bufio.NewScanner(limited)
+	scanner.Buffer(make([]byte, 64<<10), maxMCPResponseSize)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.HasPrefix(line, "data: ") {
@@ -132,6 +146,12 @@ func (s *HTTPServer) parseSSEResponse(body io.Reader, id int) (json.RawMessage, 
 			}
 			return rpcResp.Result, nil
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("mcp sse scan response: %w", err)
+	}
+	if limited.N == 0 {
+		return nil, fmt.Errorf("mcp sse response exceeds %d byte limit", maxMCPResponseSize)
 	}
 	return nil, fmt.Errorf("mcp sse: no response for request %d", id)
 }

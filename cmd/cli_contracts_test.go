@@ -126,6 +126,29 @@ func TestPrepareSession_ResumeUsesRecoveryPath(t *testing.T) {
 	}
 }
 
+func TestPrepareSessionRejectsInvalidSessionID(t *testing.T) {
+	oldResumeID := resumeID
+	oldContinueFlag := continueFlag
+	oldSessionIDFlag := sessionIDFlag
+	oldForkSessionFlag := forkSessionFlag
+	t.Cleanup(func() {
+		resumeID = oldResumeID
+		continueFlag = oldContinueFlag
+		sessionIDFlag = oldSessionIDFlag
+		forkSessionFlag = oldForkSessionFlag
+	})
+
+	resumeID = ""
+	continueFlag = false
+	sessionIDFlag = "../../escape"
+	forkSessionFlag = false
+
+	sess := engine.NewSession("test-provider", "test-model", "system", nil)
+	if _, _, err := prepareSession(sess); err == nil {
+		t.Fatal("prepareSession accepted an unsafe --session-id")
+	}
+}
+
 func TestReplBuiltinResponse_ToolsAndSession(t *testing.T) {
 	sess := engine.NewSession("demo-provider", "demo-model", "system", nil)
 	sess.AddUser("hello")

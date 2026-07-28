@@ -11,12 +11,12 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/GrayCodeAI/eyrie v0.2.2-0.20260727034005-d497d7a7149e
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.10-0.20260726091805-a7676a069834
-	github.com/GrayCodeAI/inspect v0.1.5-0.20260726091806-6502880884c1
-	github.com/GrayCodeAI/sight v0.1.5-0.20260726091804-ec30e5722378
+	github.com/GrayCodeAI/eyrie v0.1.4-0.20260727034005-5b332a4d6be5
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.9
+	github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738
+	github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589
 	github.com/GrayCodeAI/tok v0.1.5-0.20260727034347-2afc7f549e35
-	github.com/GrayCodeAI/yaad v0.0.0-20260727033731-a2d566e8f61f
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260727172552-f0aa1699d6b0
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
@@ -95,7 +95,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hiddeco/sshsig v0.2.0 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
@@ -130,7 +130,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/GrayCodeAI/trace v0.1.5-0.20260726090743-9f9b4d7d118f
+	github.com/GrayCodeAI/trace v0.1.4-0.20260726090743-c8165a1cc5f6
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

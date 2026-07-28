@@ -58,6 +58,9 @@ func CompressOldSessions(maxAge time.Duration) (int, error) {
 
 // DecompressSession decompresses a .jsonl.gz file for loading.
 func DecompressSession(id string) (*Session, error) {
+	if err := ValidateID(id); err != nil {
+		return nil, err
+	}
 	dir := sessionsDir()
 
 	// Try .jsonl.gz first, then .json.gz

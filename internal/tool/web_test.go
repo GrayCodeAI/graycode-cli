@@ -35,6 +35,26 @@ func TestWebSearchTool_EmptyQuery(t *testing.T) {
 	}
 }
 
+func TestWebSearchTool_RejectsTooManyQueries(t *testing.T) {
+	queries := make([]string, maxWebSearchQueries+1)
+	for i := range queries {
+		queries[i] = "query"
+	}
+	input, _ := json.Marshal(map[string]any{"queries": queries})
+	_, err := (WebSearchTool{}).Execute(context.Background(), input)
+	if err == nil || !strings.Contains(err.Error(), "at most") {
+		t.Fatalf("expected query limit error, got %v", err)
+	}
+}
+
+func TestWebSearchTool_RejectsLongQuery(t *testing.T) {
+	input, _ := json.Marshal(map[string]string{"query": strings.Repeat("x", maxWebSearchQueryLength+1)})
+	_, err := (WebSearchTool{}).Execute(context.Background(), input)
+	if err == nil || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("expected query length error, got %v", err)
+	}
+}
+
 func TestWebFetchTool_Name(t *testing.T) {
 	var wf WebFetchTool
 	if wf.Name() != "WebFetch" {
