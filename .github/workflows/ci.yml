@@ -175,6 +175,8 @@ jobs:
           cache: true
       - name: go vet
         run: go vet ./...
+      - name: hawk harness evaluation audit
+        run: go run ./cmd/hawk harness --out-dir .hawk/harness
       - name: support repo coupling guard
         run: bash ./scripts/check-support-repo-coupling.sh
 

@@ -98,4 +98,14 @@ lint:
 	if contractRep.OverallScore != report2.OverallScore {
 		t.Errorf("Expected contract overall score %d, got %d", report2.OverallScore, contractRep.OverallScore)
 	}
+
+	// Test FixWorkspaceHarness on empty directory
+	emptyDir := t.TempDir()
+	fixRes, err := FixWorkspaceHarness(context.Background(), emptyDir, nil)
+	if err != nil {
+		t.Fatalf("FixWorkspaceHarness failed: %v", err)
+	}
+	if len(fixRes.RepairsPerformed) == 0 {
+		t.Error("Expected repairs to be performed on empty directory")
+	}
 }

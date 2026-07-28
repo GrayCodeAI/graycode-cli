@@ -9,7 +9,7 @@ func TestHarnessCommandRegistered(t *testing.T) {
 		t.Fatal("Expected harnessCmd to be initialized")
 	}
 
-	if harnessCmd.Use != "harness [review]" {
+	if harnessCmd.Use != "harness [review|fix]" {
 		t.Errorf("Unexpected use string: %s", harnessCmd.Use)
 	}
 
