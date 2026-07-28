@@ -278,6 +278,7 @@ func init() {
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(evalCmd)
+	rootCmd.AddCommand(harnessCmd)
 	rootCmd.AddCommand(recoverCmd)
 	rootCmd.AddCommand(manpageCmd)
 	rootCmd.AddCommand(updateCmd)
