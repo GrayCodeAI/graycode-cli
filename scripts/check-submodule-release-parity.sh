@@ -12,12 +12,7 @@ failed=0
 printf '%-24s %-14s %-14s %s\n' MODULE GITLINK MODULE_COMMIT STATUS
 for repo in "${repos[@]}"; do
   module="github.com/GrayCodeAI/${repo}"
-  # hawk-mcpkit lives at the repo root; all others live under external/
-  if [[ "$repo" == "hawk-mcpkit" ]]; then
-    gitlink=$(git ls-tree HEAD "hawk-mcpkit" | awk '{print $3}')
-  else
-    gitlink=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}')
-  fi
+  gitlink=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}')
   if [[ -z "$gitlink" ]]; then
     printf '%-24s %-14s %-14s %s\n' "$repo" missing - MISSING_GITLINK
     failed=1
