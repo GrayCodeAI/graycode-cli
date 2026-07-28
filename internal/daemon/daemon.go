@@ -453,7 +453,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	requestedID := strings.TrimSpace(req.SessionID)
 	if requestedID != "" && !validSessionID(requestedID) {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{
-			Error: "invalid session id: use 1-128 alphanumeric, dash, underscore, or dot characters",
+			Error: "invalid session id: must be 1-128 characters using letters, digits, dash, underscore, or dot (reserved: . and ..)",
 			Code:  "invalid_session_id",
 		})
 		return
