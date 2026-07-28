@@ -40,8 +40,7 @@ var (
 
 // renderStatusBar renders the session stats footer below the input area.
 // Returns 1 line normally, or 2 lines when the terminal is wide enough
-// (width >= 120) to show secondary info (autonomy, container mode, session ID)
-// on its own row so the primary row stays readable.
+// (width >= 120) and secondary operational state is present.
 func renderStatusBar(m *chatModel, width int) []string {
 	if width < 20 {
 		width = 80
@@ -61,7 +60,7 @@ func renderStatusBar(m *chatModel, width int) []string {
 	return []string{layoutFooterRow(left, right, width)}
 }
 
-// renderStatusBarPrimaryLeft — cwd, branch, model, spec stage.
+// renderStatusBarPrimaryLeft — cwd, branch, spec stage.
 func renderStatusBarPrimaryLeft(m *chatModel) string {
 	cwd, ok := cachedStatusLeftCwd(m)
 	if !ok {
@@ -70,9 +69,6 @@ func renderStatusBarPrimaryLeft(m *chatModel) string {
 	parts := []string{statusCwdStyle.Render(cwd + ":")}
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
-	}
-	if model := statusModelName(m); model != "" {
-		parts = append(parts, statusSpecStyle.Render(icons.Robot()+" "+model))
 	}
 	if stage := specStageForStatus(m); stage != "" {
 		parts = append(parts, statusSpecStyle.Render(stage))
@@ -114,21 +110,11 @@ func renderStatusBarPrimaryRight(m *chatModel) string {
 	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
-// renderStatusBarSecondaryLeft — session ID, ctrl+K hint.
 func renderStatusBarSecondaryLeft(m *chatModel) string {
-	var parts []string
-	if m.sessionID != "" {
-		shortID := m.sessionID
-		if len(shortID) > 8 {
-			shortID = shortID[:8]
-		}
-		parts = append(parts, statusDimStyle.Render("#"+shortID))
-	}
-	parts = append(parts, statusDimStyle.Render("ctrl+K"))
-	return strings.Join(parts, statusDimStyle.Render(" "))
+	return ""
 }
 
-// renderStatusBarSecondaryRight — autonomy tier, container mode, dry-run, vim, focus/pause.
+// renderStatusBarSecondaryRight — errors, dry-run, vim, focus/pause.
 func renderStatusBarSecondaryRight(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return ""
@@ -140,20 +126,10 @@ func renderStatusBarSecondaryRight(m *chatModel) string {
 	if m.waiting && !m.streamFollow {
 		parts = append(parts, statusDimStyle.Render(icons.Pause()))
 	}
-	if m.session != nil && m.session.PermSvc() != nil {
-		level := effectivePermissionTier(m.session)
-		parts = append(parts, autonomyTierStyle(level).Render("◈ "+autonomyTierName(level)))
-	}
-	if m.containerEnabled {
-		if m.containerReady {
-			parts = append(parts, containerModeStyle.Render("▣ container"))
-		} else if m.containerErr != nil {
-			parts = append(parts, containerModeErrStyle.Render("▣ container error"))
-		} else {
-			parts = append(parts, containerModeMutedStyle.Render("▣ container…"))
-		}
-	} else {
-		parts = append(parts, containerModeStyle.Render("▢ host"))
+	// Container mode is already shown in the top footer row (containerFooterLeft),
+	// so we only surface it here when there's an error to report.
+	if m.containerEnabled && m.containerErr != nil {
+		parts = append(parts, containerModeErrStyle.Render("▣ container error"))
 	}
 	if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().DryRun() {
 		parts = append(parts, dryRunStyle.Render(icons.Pause()+" DRY-RUN"))
@@ -202,44 +178,10 @@ func renderStatusBarLeft(m *chatModel) string {
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
 	}
-	// Model name — which LLM is answering. Shortened to the last path segment
-	// so "anthropic/claude-sonnet-4-20250514" reads as "claude-sonnet-4-20250514".
-	if model := statusModelName(m); model != "" {
-		parts = append(parts, statusSpecStyle.Render(icons.Robot()+" "+model))
-	}
 	if stage := specStageForStatus(m); stage != "" {
 		parts = append(parts, statusSpecStyle.Render(stage))
 	}
-	// Session ID — short, dim, for support reference and session switching.
-	if m.sessionID != "" {
-		shortID := m.sessionID
-		if len(shortID) > 8 {
-			shortID = shortID[:8]
-		}
-		parts = append(parts, statusDimStyle.Render("#"+shortID))
-	}
-	// Command palette hint — persistent discoverability.
-	parts = append(parts, statusDimStyle.Render("ctrl+K"))
 	return strings.Join(parts, statusDimStyle.Render(" "))
-}
-
-// statusModelName returns a short display name for the active model, or "" if
-// unknown. Takes the last "/" segment so fully-qualified model IDs read cleanly.
-func statusModelName(m *chatModel) string {
-	if m == nil || m.session == nil {
-		return ""
-	}
-	modelID := strings.TrimSpace(m.session.Model())
-	if modelID == "" {
-		return ""
-	}
-	if idx := strings.LastIndex(modelID, "/"); idx >= 0 && idx < len(modelID)-1 {
-		modelID = modelID[idx+1:]
-	}
-	if len(modelID) > 20 {
-		modelID = modelID[:18] + "…"
-	}
-	return modelID
 }
 
 // specStageForStatus returns a short spec stage indicator for the status bar,
@@ -490,12 +432,13 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 
 func hostModeHint(sess *engine.Session) string {
 	if sess == nil || sess.Perm == nil {
-		return " commands run on your machine · ask before tools"
+		return " local · ask before tools"
 	}
 	if sess.Perm.Stage != engine.SpecStageNone && sess.Perm.Stage != engine.SpecStageImplementing {
-		return " commands run on your machine · spec stage active — writes/commands gated"
+		return " local · spec stage active"
 	}
-	return " commands run on your machine · " + autonomyTierDescription(sess.PermSvc().Autonomy())
+	// Show short tier name instead of full description to keep footer compact.
+	return " local · " + autonomyTierName(sess.PermSvc().Autonomy())
 }
 
 func statusLineSummary(m *chatModel) string {

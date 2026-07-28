@@ -152,21 +152,27 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	var b strings.Builder
 
 	// Top breathing room so the wordmark isn't flush against the terminal edge.
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
-	for i := 0; i < len(art); i++ {
-		line := art[i]
-		mLine := ""
-		if showMascot && i < len(mascot) {
-			mLine = mascot[i]
+	if tight {
+		// Compact single-line wordmark for small terminals.
+		compactArt := logoC + "HAWK" + rst
+		b.WriteString(center(runewidth.StringWidth("HAWK"), compactArt) + "\n")
+	} else {
+		for i := 0; i < len(art); i++ {
+			line := art[i]
+			mLine := ""
+			if showMascot && i < len(mascot) {
+				mLine = mascot[i]
+			}
+			combined := logoC + line + rst
+			visW := runewidth.StringWidth(line)
+			if mLine != "" {
+				combined += "    " + mascotC + mLine + rst
+				visW += 4 + runewidth.StringWidth(mLine)
+			}
+			b.WriteString(center(visW, combined) + "\n")
 		}
-		combined := logoC + line + rst
-		visW := runewidth.StringWidth(line)
-		if mLine != "" {
-			combined += "    " + mascotC + mLine + rst
-			visW += 4 + runewidth.StringWidth(mLine)
-		}
-		b.WriteString(center(visW, combined) + "\n")
 	}
 
 	verLine := fmt.Sprintf("v%s", DisplayVersion())
@@ -216,31 +222,6 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		if tight {
 			shortcutsRow1 = "ctrl+N new session · ctrl+L autonomy"
 			shortcutsRow2 = "/help · /config · /autonomy"
-		}
-		// Recent sessions — quick resume for returning users.
-		if recents := recentSessionsList(); len(recents) > 0 {
-			b.WriteByte('\n')
-			b.WriteString(center(runewidth.StringWidth("Recent sessions:"), dimC+"Recent sessions:"+rst) + "\n")
-			shown := 0
-			for _, e := range recents {
-				if shown >= 3 {
-					break
-				}
-				preview := e.Preview
-				if runes := []rune(preview); len(runes) > 50 {
-					preview = string(runes[:47]) + "…"
-				}
-				if preview == "" {
-					preview = "(no messages)"
-				}
-				shortID := e.ID
-				if len(shortID) > 8 {
-					shortID = shortID[:8]
-				}
-				row := fmt.Sprintf("  /resume %-10s  %s", shortID, preview)
-				b.WriteString(center(runewidth.StringWidth(row), dimC+row+rst) + "\n")
-				shown++
-			}
 		}
 		b.WriteByte('\n')
 		b.WriteString(center(runewidth.StringWidth(shortcutsRow1), dimC+shortcutsRow1+rst) + "\n")
@@ -321,20 +302,6 @@ func actLine(saved *session.Session, sessionID string) string {
 		return "Resumed session " + sessionID[:8]
 	}
 	return ""
-}
-
-// recentSessionsList returns up to 5 saved sessions (newest first) for the
-// welcome screen's quick-resume section. Returns nil if no sessions exist or
-// if listing fails — the caller should handle either gracefully.
-func recentSessionsList() []session.Entry {
-	entries, err := session.List()
-	if err != nil || len(entries) == 0 {
-		return nil
-	}
-	if len(entries) > 5 {
-		entries = entries[:5]
-	}
-	return entries
 }
 
 func toolListSummary(registry *tool.Registry) string {

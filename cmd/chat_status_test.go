@@ -248,8 +248,8 @@ func TestContainerFooterLeft_HostModeCopy(t *testing.T) {
 	if bold != "Host mode:" {
 		t.Fatalf("bold = %q, want Host mode:", bold)
 	}
-	if !strings.Contains(dim, "commands run on your machine") {
-		t.Fatalf("dim = %q, want host execution hint", dim)
+	if !strings.Contains(dim, "local") {
+		t.Fatalf("dim = %q, want local execution hint", dim)
 	}
 	if !strings.Contains(dim, "ask before tools") {
 		t.Fatalf("dim = %q, want approval hint", dim)

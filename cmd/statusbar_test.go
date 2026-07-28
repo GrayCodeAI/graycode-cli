@@ -14,7 +14,8 @@ func TestRenderStatusBar_SignatureExists(t *testing.T) {
 }
 
 func TestRenderStatusBar_TwoLineAtWidth120(t *testing.T) {
-	m := &chatModel{session: &engine.Session{}}
+	m := &chatModel{session: engine.NewSession("", "test-model", "system", nil)}
+	m.session.PermSvc().SetDryRun(true)
 	m.session.CostValue().PromptTokens = 1000
 	m.session.CostValue().CompletionTokens = 500
 	m.sessionStartedAt = time.Now().Add(-5 * time.Minute)
@@ -31,6 +32,33 @@ func TestRenderStatusBar_SingleLineAtWidth80(t *testing.T) {
 	lines := renderStatusBar(m, 80)
 	if len(lines) != 1 {
 		t.Fatalf("expected 1 line at width 80, got %d", len(lines))
+	}
+}
+
+func TestRenderStatusBarSecondaryRight_OmitsDuplicatedAutonomy(t *testing.T) {
+	sess := engine.NewSession("", "test-model", "system", nil)
+	sess.PermSvc().SetAutonomy(engine.AutonomyBasic)
+
+	if got := renderStatusBarSecondaryRight(&chatModel{session: sess}); strings.Contains(got, "Scout") {
+		t.Fatalf("secondary status = %q, want autonomy shown only in top footer", got)
+	}
+}
+
+func TestRenderStatusBar_HidesModelSessionAndShortcut(t *testing.T) {
+	m := &chatModel{
+		session:          engine.NewSession("", "test-model", "system", nil),
+		sessionID:        "cc6f7764abcdef",
+		statusLeftVal:    "~/repo",
+		statusLeftBranch: "main",
+	}
+
+	for _, width := range []int{80, 120} {
+		got := strings.Join(renderStatusBar(m, width), "\n")
+		for _, hidden := range []string{"test-model", "#cc6f7764", "ctrl+K"} {
+			if strings.Contains(got, hidden) {
+				t.Errorf("width %d status = %q, want %q hidden", width, got, hidden)
+			}
+		}
 	}
 }
 
