@@ -15,6 +15,7 @@ hawk_bin
 .hawk/
 .yaad/
 .openclaude/
+.pi/
 .grok/
 .hermes/
 .qoder/
