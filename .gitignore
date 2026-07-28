@@ -18,6 +18,7 @@ hawk_bin
 .grok/
 .hermes/
 .qoder/
+.pi/
 
 # Cache / local data
 .gocache/
@@ -48,4 +49,3 @@ hawk_bin
 # Logs
 *.log
 hawk-sec105b.log
-

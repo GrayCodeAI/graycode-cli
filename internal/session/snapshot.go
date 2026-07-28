@@ -26,10 +26,14 @@ type SnapshotStore struct {
 	snapshots []Snapshot
 	dir       string
 	maxSnaps  int
+	err       error
 }
 
 // NewSnapshotStore creates a new snapshot store for the given session.
 func NewSnapshotStore(sessionID string) *SnapshotStore {
+	if err := ValidateID(sessionID); err != nil {
+		return &SnapshotStore{sessionID: sessionID, maxSnaps: 50, err: err}
+	}
 	dir := filepath.Join(storage.SessionsDir(), sessionID, "snapshots")
 	return &SnapshotStore{
 		sessionID: sessionID,
@@ -40,6 +44,9 @@ func NewSnapshotStore(sessionID string) *SnapshotStore {
 
 // Take saves a snapshot of the current session state.
 func (ss *SnapshotStore) Take(action string, sess *Session) error {
+	if ss.err != nil {
+		return ss.err
+	}
 	if err := os.MkdirAll(ss.dir, 0o750); err != nil {
 		return fmt.Errorf("create snapshot dir: %w", err)
 	}
@@ -82,6 +89,9 @@ func (ss *SnapshotStore) List() []Snapshot {
 
 // Rewind restores the session to the state at the given snapshot ID.
 func (ss *SnapshotStore) Rewind(id int) (*Session, error) {
+	if ss.err != nil {
+		return nil, ss.err
+	}
 	snapPath := filepath.Join(ss.dir, fmt.Sprintf("%d.jsonl", id))
 	if _, err := os.Stat(snapPath); err != nil {
 		return nil, fmt.Errorf("snapshot %d not found", id)
@@ -92,6 +102,9 @@ func (ss *SnapshotStore) Rewind(id int) (*Session, error) {
 
 // Load reads the snapshot index from disk.
 func (ss *SnapshotStore) Load() error {
+	if ss.err != nil {
+		return ss.err
+	}
 	if err := os.MkdirAll(ss.dir, 0o750); err != nil {
 		return fmt.Errorf("create snapshot dir: %w", err)
 	}
@@ -140,6 +153,9 @@ func (ss *SnapshotStore) Format() string {
 
 // Cleanup removes old snapshots, keeping only the most recent maxSnaps.
 func (ss *SnapshotStore) Cleanup() {
+	if ss.err != nil {
+		return
+	}
 	if len(ss.snapshots) <= ss.maxSnaps {
 		return
 	}

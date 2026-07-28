@@ -71,8 +71,7 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	// Background tasks must outlive the request, so use an independent
 	// context. The request ctx would kill the task when the HTTP/Tool-call
 	// request times out.
-	bgCtx, bgCancel := context.WithCancel(context.Background())
-	defer bgCancel()
+	bgCtx := context.Background()
 
 	cmd := exec.CommandContext(bgCtx, "bash", "-c", command)
 	// Put the child in its own process group so we can kill the whole tree

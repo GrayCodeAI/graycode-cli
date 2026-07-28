@@ -699,16 +699,7 @@ func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.St
 }
 
 func validSessionID(id string) bool {
-	if len(id) == 0 || len(id) > 128 {
-		return false
-	}
-	for _, c := range id {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-			(c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.') {
-			return false
-		}
-	}
-	return true
+	return hawksession.ValidID(id)
 }
 
 func newSessionID() (string, error) {

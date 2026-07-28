@@ -66,6 +66,12 @@ func jsonlPathFor(id string) string {
 // Writes to a temp file first, then renames — a crash at any point
 // leaves either the old valid file or the new valid file, never a partial write.
 func Save(s *Session) error {
+	if s == nil {
+		return fmt.Errorf("session is required")
+	}
+	if err := ValidateID(s.ID); err != nil {
+		return err
+	}
 	if s.CWD == "" {
 		if cwd, err := os.Getwd(); err == nil {
 			if abs, err := filepath.Abs(cwd); err == nil {
@@ -183,6 +189,9 @@ type WAL struct {
 
 // NewWAL creates or opens a write-ahead log for a session.
 func NewWAL(sessionID string) (*WAL, error) {
+	if err := ValidateID(sessionID); err != nil {
+		return nil, err
+	}
 	dir := sessionsDir()
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
@@ -256,6 +265,9 @@ func (w *WAL) Remove() error {
 // RecoverFromWAL rebuilds a session from a WAL file if one exists.
 // Returns nil if no WAL exists.
 func RecoverFromWAL(sessionID string) (*Session, error) {
+	if err := ValidateID(sessionID); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(sessionsDir(), sessionID+".wal")
 	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
@@ -325,7 +337,9 @@ func CheckForRecovery() []string {
 	for _, e := range entries {
 		if filepath.Ext(e.Name()) == ".wal" {
 			id := e.Name()[:len(e.Name())-4]
-			ids = append(ids, id)
+			if ValidID(id) {
+				ids = append(ids, id)
+			}
 		}
 	}
 	return ids
@@ -333,6 +347,9 @@ func CheckForRecovery() []string {
 
 // Load reads a session from disk, supporting both JSONL and legacy JSON formats.
 func Load(id string) (*Session, error) {
+	if err := ValidateID(id); err != nil {
+		return nil, err
+	}
 	// Try JSONL first
 	s, jsonlErr := loadJSONL(id)
 	if jsonlErr == nil {

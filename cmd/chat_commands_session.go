@@ -300,10 +300,9 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /rename <new-session-name>"})
 			return m, nil
 		}
-		// Sanitize: strip directory components to prevent path traversal.
-		newName := filepath.Base(parts[1])
-		if newName == "" || newName == "." || newName == "/" {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Invalid session name."})
+		newName := parts[1]
+		if err := session.ValidateID(newName); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Invalid session name: %v", err)})
 			return m, nil
 		}
 		sessDir := storage.SessionsDir()

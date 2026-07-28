@@ -66,7 +66,11 @@ func LoadMessages(path string) ([]Message, error) {
 }
 
 // SessionPath returns the file path for a session within a project directory.
-// Sessions are stored under the user state directory, partitioned by project.
+// It returns an empty path for an invalid session ID. Sessions are stored under
+// the user state directory, partitioned by project.
 func SessionPath(projectDir, sessionID string) string {
+	if !ValidID(sessionID) {
+		return ""
+	}
 	return filepath.Join(storage.ProjectStateDir(projectDir), "sessions", sessionID+".json")
 }

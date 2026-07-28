@@ -86,6 +86,9 @@ type LockFile struct {
 
 // AcquireLock creates a lock file for the session. Returns error if already locked.
 func AcquireLock(sessionID string) (*LockFile, error) {
+	if err := ValidateID(sessionID); err != nil {
+		return nil, err
+	}
 	dir := sessionsDir()
 	path := filepath.Join(dir, sessionID+".lock")
 

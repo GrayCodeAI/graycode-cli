@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -230,5 +231,22 @@ func TestDownloadTool_Execute_BlockedScheme(t *testing.T) {
 	_, err := dt.Execute(ctx2, input)
 	if err == nil {
 		t.Error("expected error for ftp:// URL without SSRF skip")
+	}
+}
+
+func TestReadDownloadBodyRejectsOverflow(t *testing.T) {
+	body, err := readDownloadBody(strings.NewReader("123456"), 5)
+	if err == nil {
+		t.Fatalf("readDownloadBody returned %q without an overflow error", body)
+	}
+}
+
+func TestReadDownloadBodyAllowsExactLimit(t *testing.T) {
+	body, err := readDownloadBody(strings.NewReader("12345"), 5)
+	if err != nil {
+		t.Fatalf("readDownloadBody returned error: %v", err)
+	}
+	if string(body) != "12345" {
+		t.Fatalf("readDownloadBody = %q, want %q", body, "12345")
 	}
 }

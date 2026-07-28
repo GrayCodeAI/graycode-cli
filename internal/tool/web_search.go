@@ -15,7 +15,11 @@ import (
 // maxWebSearchConcurrency bounds the number of search backends contacted in
 // parallel when a batch of queries is issued, so a large queries[] array does
 // not open a burst of outbound connections (and trip provider rate limits).
-const maxWebSearchConcurrency = 4
+const (
+	maxWebSearchConcurrency = 4
+	maxWebSearchQueries     = 20
+	maxWebSearchQueryLength = 2000
+)
 
 // searchResult is the shared result type for all search backends.
 type searchResult struct {
@@ -40,10 +44,12 @@ func (WebSearchTool) Parameters() map[string]interface{} {
 			"query": map[string]interface{}{
 				"type":        "string",
 				"description": "Search query. Provide this OR queries (not both).",
+				"maxLength":   maxWebSearchQueryLength,
 			},
 			"queries": map[string]interface{}{
 				"type":        "array",
-				"items":       map[string]interface{}{"type": "string"},
+				"items":       map[string]interface{}{"type": "string", "maxLength": maxWebSearchQueryLength},
+				"maxItems":    maxWebSearchQueries,
 				"description": "Multiple search queries to run concurrently in a single call. Use this to research several things at once instead of issuing one WebSearch per query.",
 			},
 			"numResults": map[string]interface{}{
@@ -84,6 +90,17 @@ func (t WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (stri
 	if len(queries) == 0 {
 		return "", fmt.Errorf("query or queries is required")
 	}
+	if len(queries) > maxWebSearchQueries {
+		return "", fmt.Errorf("at most %d search queries are allowed", maxWebSearchQueries)
+	}
+	for _, query := range queries {
+		if strings.TrimSpace(query) == "" {
+			return "", fmt.Errorf("search queries must not be empty")
+		}
+		if len(query) > maxWebSearchQueryLength {
+			return "", fmt.Errorf("search query exceeds %d characters", maxWebSearchQueryLength)
+		}
+	}
 
 	if p.NumResults <= 0 {
 		p.NumResults = 5
@@ -108,21 +125,27 @@ func (t WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (stri
 	// the agent can attribute results to their query in one tool call.
 	outputs := make([]string, len(queries))
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, maxWebSearchConcurrency)
-	for i, q := range queries {
+	jobs := make(chan int)
+	workerCount := min(maxWebSearchConcurrency, len(queries))
+	for range workerCount {
 		wg.Add(1)
-		go func(idx int, query string) {
+		go func() {
 			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			out, err := t.searchOne(ctx, query, p.NumResults)
-			if err != nil {
-				outputs[idx] = fmt.Sprintf("Search results for: %s\n\nError: %v", query, err)
-				return
+			for idx := range jobs {
+				query := queries[idx]
+				out, err := t.searchOne(ctx, query, p.NumResults)
+				if err != nil {
+					outputs[idx] = fmt.Sprintf("Search results for: %s\n\nError: %v", query, err)
+					continue
+				}
+				outputs[idx] = out
 			}
-			outputs[idx] = out
-		}(i, q)
+		}()
 	}
+	for i := range queries {
+		jobs <- i
+	}
+	close(jobs)
 	wg.Wait()
 
 	var sb strings.Builder
