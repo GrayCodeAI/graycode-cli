@@ -651,14 +651,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.session != nil {
 					m.session.SetContainerRequired(true)
 				}
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Retrying container…"})
+				// Silent retry — no chat message spam. The welcome badge
+				// already reflects container state, and a failure below
+				// will surface only if the banner is no longer visible.
 				m.viewDirty = true
 				m.updateViewportContent()
 				cwd, _ := os.Getwd()
 				return m, bootContainerCmd(cwd)
 			case "h", "H":
 				m.containerRetryable = false
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Switched to host mode."})
+				// Silent switch — welcome badge already shows HOST MODE.
 				m.viewDirty = true
 				m.updateViewportContent()
 				return m, nil
@@ -1421,10 +1423,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.session.SetContainerExecutor(nil)
 				applyDefaultHostAutonomy(m.session)
 			}
-			m.messages = append(m.messages, displayMsg{
-				role:    "warning",
-				content: "Container unavailable — running on host. " + msg.err.Error() + "  ·  [r]etry container  [h]ost mode",
-			})
+			// Only surface the error in chat if the welcome banner is
+			// no longer the sole visible content. Otherwise the badge
+			// already shows "HOST MODE" and a duplicate message is noise.
+			welcomeOnly := len(m.messages) == 1 && m.messages[0].role == "welcome"
+			if !welcomeOnly {
+				m.messages = append(m.messages, displayMsg{
+					role:    "warning",
+					content: "Container unavailable — running on host. " + msg.err.Error() + "  ·  [r]etry container  [h]ost mode",
+				})
+			}
 			m.input.Focus()
 			// Auto-submit any queued input now that host mode is active.
 			if m.pendingSubmit != "" {
