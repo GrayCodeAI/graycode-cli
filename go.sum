@@ -18,8 +18,6 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/GrayCodeAI/eyrie v0.1.4-0.20260727034005-5b332a4d6be5 h1:EpZ2JmtzR6gD8perOTr0tCLqK0Rxc50DIQZEC+zdej0=
 github.com/GrayCodeAI/eyrie v0.1.4-0.20260727034005-5b332a4d6be5/go.mod h1:rnouStzgv5q8hSvLdsVQazBkLBuYbm+WGCwRcAc5zXE=
-github.com/GrayCodeAI/hawk-core-contracts v0.1.9 h1:uXX/gtNM+3kxSEzu+rZkHykzcEaAbASn1lmPyOGMXvc=
-github.com/GrayCodeAI/hawk-core-contracts v0.1.9/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.10 h1:mvp6d2clwjHiBZpde8G9y8o/5jf/Qx69xXytTdPtVks=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.10/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
 github.com/GrayCodeAI/hawk-mcpkit v0.1.5-0.20260725110526-3e80e92bf6cd h1:ACnGttHskvqwhL3nWbIi1ALpkpqQyZsyI3GhB3ZmKwg=
