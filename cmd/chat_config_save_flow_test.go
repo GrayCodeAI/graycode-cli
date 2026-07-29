@@ -222,3 +222,52 @@ func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *t
 		t.Fatalf("catalog recovery guidance missing: %q", next.configNotice)
 	}
 }
+
+func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	if err := store.Set(t.Context(), credentials.AccountForEnv("CONCENTRATE_API_KEY"), "concentrate-test-key"); err != nil {
+		t.Fatalf("store key: %v", err)
+	}
+
+	m := chatModelForConfigPasteTest()
+	next, _ := m.handleConfigApplyCredentialsMsg(configApplyCredentialsMsg{
+		providerID: "concentrate",
+		err:        fmt.Errorf(`catalog validation failed: model "claude-fable-5" is not an owner-qualified canonical model id`),
+	})
+
+	if strings.Contains(next.configNotice, "provider rejected") {
+		t.Fatalf("catalog validation failure blamed provider key: %q", next.configNotice)
+	}
+	if !strings.Contains(next.configNotice, "catalog refresh failed") {
+		t.Fatalf("catalog refresh failure label missing: %q", next.configNotice)
+	}
+}
+
+func TestHandleConfigApplyCredentialsMsg_AuthenticationFailureBlamesKey(t *testing.T) {
+	hawkconfig.InvalidateConfigUICache()
+	store := &credentials.MapStore{}
+	credentials.SetDefaultStore(store)
+	t.Cleanup(func() {
+		credentials.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+	if err := store.Set(t.Context(), credentials.AccountForEnv("CONCENTRATE_API_KEY"), "concentrate-test-key"); err != nil {
+		t.Fatalf("store key: %v", err)
+	}
+
+	m := chatModelForConfigPasteTest()
+	next, _ := m.handleConfigApplyCredentialsMsg(configApplyCredentialsMsg{
+		providerID: "concentrate",
+		err:        fmt.Errorf("concentrate model fetch failed (401)"),
+	})
+
+	if !strings.Contains(next.configNotice, "provider rejected this key") {
+		t.Fatalf("authentication failure did not identify rejected key: %q", next.configNotice)
+	}
+}

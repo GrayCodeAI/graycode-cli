@@ -84,12 +84,16 @@ func SetBuildDate(d string) {
 	buildDate = d
 }
 
+func registeredProviderCount() int {
+	return hawkconfig.RegisteredProviderCount()
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "hawk [prompt]",
 	Short: "AI coding agent powered by eyrie",
-	Long: `hawk is an AI coding agent that reads, writes, and runs code in your terminal.
+	Long: fmt.Sprintf(`hawk is an AI coding agent that reads, writes, and runs code in your terminal.
 
-It connects to 75+ LLM providers through eyrie, executes tools (file I/O, shell,
+It connects to %d first-class LLM providers through eyrie, executes tools (file I/O, shell,
 git, web search), and manages sessions — all from a keyboard-driven TUI or
 headless mode for scripts and CI.
 
@@ -102,7 +106,7 @@ Quick orientation:
   hawk config              Manage settings and credentials
 
 API keys are stored in the OS keychain (macOS Keychain / Linux keyring).
-Run hawk and use /config to set up your first provider.`,
+Run hawk and use /config to set up your first provider.`, registeredProviderCount()),
 	Example: `  hawk
   hawk -p "explain this repo"
   hawk exec "fix failing tests"

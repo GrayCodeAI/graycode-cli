@@ -1,9 +1,25 @@
 package cmd
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
+
+func TestProviderCountCopyMatchesRegistry(t *testing.T) {
+	const documentedProviderCount = 23
+	if got := registeredProviderCount(); got != documentedProviderCount {
+		t.Fatalf("registered providers = %d, update documented count %d and this assertion", got, documentedProviderCount)
+	}
+
+	want := fmt.Sprintf("%d first-class LLM providers", documentedProviderCount)
+	if !strings.Contains(rootCmd.Long, want) {
+		t.Fatalf("CLI help does not contain registry-backed provider count %q", want)
+	}
+	if page := GenerateManPage(); !strings.Contains(page, want) {
+		t.Fatalf("manpage does not contain registry-backed provider count %q", want)
+	}
+}
 
 func TestGenerateManPage(t *testing.T) {
 	preserveCLICompilerVersionState(t)

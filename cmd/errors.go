@@ -201,14 +201,21 @@ func (w StartupWarning) String() string {
 func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	var warnings []StartupWarning
 
-	// 1. Check API key for configured provider
+	// 1. Check API key for configured provider.
+	// Hawk reads credentials from the OS secret store (macOS Keychain /
+	// Linux Keyring), not just env vars — so we must check there too.
 	providerName := strings.TrimSpace(settings.Provider)
 	if providerName == "" {
 		providerName = strings.TrimSpace(hawkconfig.ActiveProvider(context.Background()))
 	}
 	if providerName != "" && providerName != "ollama" {
-		envKey := hawkconfig.ProviderAPIKeyEnv(providerName)
-		if envKey != "" && os.Getenv(envKey) == "" {
+		hasEnv := false
+		if envKey := hawkconfig.ProviderAPIKeyEnv(providerName); envKey != "" {
+			hasEnv = os.Getenv(envKey) != ""
+		}
+		hasStored := hawkconfig.HasStoredCredentialForProvider(context.Background(), providerName)
+		if !hasEnv && !hasStored {
+			envKey := hawkconfig.ProviderAPIKeyEnv(providerName)
 			warnings = append(warnings, StartupWarning{
 				Check:   "api_key",
 				Message: fmt.Sprintf("No API key found for %s. Set %s in your environment or run /config.", providerName, envKey),

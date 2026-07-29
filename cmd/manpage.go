@@ -48,7 +48,7 @@ func GenerateManPage() string {
 	// Description
 	b.WriteString(".SH DESCRIPTION\n")
 	b.WriteString("hawk is an AI coding agent that reads, writes, and runs code in your terminal.\n")
-	b.WriteString("It connects to 75+ LLM providers through eyrie, executes tools (file I/O,\n")
+	fmt.Fprintf(&b, "It connects to %d first-class LLM providers through eyrie, executes tools (file I/O,\n", registeredProviderCount())
 	b.WriteString("shell, git, web search), and manages sessions from a keyboard-driven TUI\n")
 	b.WriteString("or headless mode for scripts and CI.\n")
 

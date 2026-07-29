@@ -365,6 +365,12 @@ func IsCatalogCacheRequired(err error) bool {
 	return eyrieengine.IsCatalogCacheRequired(err)
 }
 
+// RegisteredProviderCount exposes Eyrie's first-class provider count through
+// Hawk's single provider-runtime boundary.
+func RegisteredProviderCount() int {
+	return eyrieengine.RegisteredProviderCount()
+}
+
 func SecretStoreName() string { return eyrieengine.SecretStoreName() }
 
 func CredentialStorage(ctx context.Context) CredentialStorageReport {
