@@ -51,11 +51,12 @@ This is the main configuration file. Hawk writes to it when you save changes via
 - `operator` — full tool access for trusted operations
 - `autonomous` — no permission prompts
 
-**Sandbox profiles:**
-- `off` — no sandbox restrictions
+**Sandbox profiles** control permissions inside Hawk's mandatory Docker
+execution boundary:
+- `off` — no additional policy restrictions
 - `workspace` — filesystem access limited to project directory
 - `strict` — minimal access, cwd only
-- `devbox` — containerized execution (when available)
+- `devbox` — container-oriented development policy
 
 ### Agent Configuration
 
@@ -154,7 +155,7 @@ network = "deny"
 - `off` — no restrictions
 - `workspace` — project directory access
 - `strict` — minimal access
-- `devbox` — containerized
+- `devbox` — container-oriented development policy
 
 ---
 

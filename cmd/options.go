@@ -242,7 +242,11 @@ func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveMo
 	if strings.TrimSpace(selection.Model) == "" {
 		selection.Model = effectiveModel
 	}
-	return engine.NewHawkSessionForSettings(context.Background(), settings, selection, selection.Provider, selection.Model, systemPrompt, registry)
+	sess := engine.NewHawkSessionForSettings(context.Background(), settings, selection, selection.Provider, selection.Model, systemPrompt, registry)
+	// Hawk requires Docker. Any entry point that has not attached a running
+	// container remains fail-closed at the engine tool boundary.
+	sess.SetContainerRequired(true)
+	return sess
 }
 
 func firstNonEmptyTrimmed(values ...string) string {

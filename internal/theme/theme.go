@@ -14,6 +14,13 @@ import (
 	"charm.land/lipgloss/v2/compat"
 )
 
+// BrandPrimary is Hawk's fixed Talon Gold identity color. Theme accents may
+// vary, but brand-bearing elements use this value across every theme.
+const BrandPrimary = "#FFD700"
+
+// BrandANSI is BrandPrimary encoded for hot paths that render raw ANSI.
+const BrandANSI = "\033[38;2;255;215;0m"
+
 // Theme holds all resolved theme colors and styles for the TUI.
 type Theme struct {
 	// Brand identity
@@ -103,7 +110,7 @@ type Theme struct {
 }
 
 // Palette holds raw hex color values for a theme.
-// All palettes must be hex strings (e.g., "#FF5E0E").
+// All palettes must be hex strings (e.g., "#FFD700").
 type Palette struct {
 	Panel     string `json:"panel,omitempty"`
 	PromptBg  string `json:"prompt_bg,omitempty"`

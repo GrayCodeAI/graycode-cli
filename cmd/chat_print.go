@@ -44,6 +44,15 @@ func runPrint(text string) error {
 	if cfgErr := configureSession(sess, settings); cfgErr != nil {
 		return cfgErr
 	}
+	projectDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("resolve project directory: %w", err)
+	}
+	container, err := attachRequiredContainer(sess, projectDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = container.Stop() }()
 
 	promptInput := openPromptInput()
 	defer promptInput.close()
@@ -266,6 +275,15 @@ func runRepl() error {
 	if cfgErr := configureSession(sess, settings); cfgErr != nil {
 		return cfgErr
 	}
+	projectDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("resolve project directory: %w", err)
+	}
+	container, err := attachRequiredContainer(sess, projectDir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = container.Stop() }()
 
 	promptInput := openPromptInput()
 	defer promptInput.close()

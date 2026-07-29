@@ -620,9 +620,9 @@ func renderReflectionBox(reflection string, width int) string {
 		boxW = 40
 	}
 
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true) // orange
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)  // blue
-	contentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))          // light gray
+	titleStyle := lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true) // blue
+	contentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))         // light gray
 
 	var b strings.Builder
 	lines := strings.Split(reflection, "\n")
@@ -650,7 +650,7 @@ func renderReflectionBox(reflection string, width int) string {
 
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("214")).
+		BorderForeground(hawkColor).
 		Width(boxW).
 		Padding(0, 1)
 

@@ -33,6 +33,8 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 - **Model-agnostic** — works with Claude, GPT-4, Gemini, DeepSeek, Ollama, and 75+ models through [eyrie](https://github.com/GrayCodeAI/eyrie)
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
+- **Docker-only execution** — agent commands run in an isolated container and
+  fail closed when Docker is unavailable
 - **Extensible** — 40+ built-in tools, MCP server support, community skill registry
 
 ## Status
@@ -53,6 +55,12 @@ go build -o hawk ./cmd/hawk
 # Verify readiness
 ./hawk path
 ```
+
+Docker is required for agent command execution. Start the Docker daemon before
+launching Hawk; there is no host-execution fallback. Hawk automatically uses
+the versioned public `graycodeai/hawk-sandbox` image. When the image is not
+local, Hawk pulls it anonymously; if the registry is unavailable, Hawk builds
+the bundled sandbox image locally through Docker.
 
 See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential model. Do not put API keys in shell env or `.env` for hawk.
 

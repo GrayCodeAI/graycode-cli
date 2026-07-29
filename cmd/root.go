@@ -63,8 +63,6 @@ var (
 	teachMode                  bool
 	teachDepth                 int
 	autoSkillFlag              bool
-	containerMode              bool
-	noContainer                bool
 	recoverFlag                bool
 	startupProfileFlag         bool
 	preflightLiveFlag          bool
@@ -240,8 +238,6 @@ func init() {
 	rootCmd.Flags().BoolVar(&teachMode, "teach", false, "explain reasoning as the agent works")
 	rootCmd.Flags().IntVar(&teachDepth, "teach-depth", 2, "explanation depth: 1=what, 2=why, 3=how")
 	rootCmd.Flags().BoolVar(&autoSkillFlag, "auto-skill", false, "auto-detect project and install matching skills")
-	rootCmd.Flags().BoolVar(&noContainer, "no-container", false, "disable container mode (run on host with permission prompts)")
-	rootCmd.Flags().BoolVar(&containerMode, "container", false, "force container mode even if auto-detection would skip it")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
 	rootCmd.Flags().BoolVar(&refreshCatalogFlag, "refresh-catalog", false, "refresh the eyrie model catalog before starting")
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")

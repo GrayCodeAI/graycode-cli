@@ -19,7 +19,7 @@ var pathCmd = &cobra.Command{
 	Short: "Developer path readiness (setup, security, sandbox, ecosystem)",
 	Long: `Check whether hawk is configured on the developer path:
 API keys in OS secret store, model selected, no secrets on disk,
-Docker isolation when available, and eyrie/yaad/tok integration.
+mandatory Docker isolation, and eyrie/yaad/tok integration.
 
 Built for individual developers first — teams and enterprise later.
 
@@ -51,7 +51,7 @@ See docs/DEVELOPER-PATH.md and docs/SECURITY-DEVELOPER.md.`,
 }
 
 func init() {
-	pathCmd.Flags().BoolVar(&pathStrict, "strict", false, "Also require Docker for Bash isolation")
+	pathCmd.Flags().BoolVar(&pathStrict, "strict", false, "compatibility flag; Docker isolation is always required")
 	pathCmd.Flags().BoolVar(&pathJSON, "json", false, "output readiness report as JSON")
 	rootCmd.AddCommand(pathCmd)
 }

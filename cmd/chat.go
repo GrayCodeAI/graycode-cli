@@ -219,19 +219,8 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	(&m).refreshInputLayoutIfNeeded()
 	m = m.syncViewportMouseWheel().withSyncedLayout()
 	m.containerEnabled = shouldUseContainer()
-	bindChatSession(sess, sid, m.containerEnabled)
-	if m.containerEnabled {
-		m.containerStatus = "checking docker…"
-	} else {
-		applyDefaultHostAutonomy(sess)
-		if noContainer {
-			m.messages = append(m.messages, displayMsg{
-				role: "system",
-				content: "--no-container runs tools on the host without Docker container isolation. " +
-					"Use container mode for safer agent execution.",
-			})
-		}
-	}
+	bindChatSession(sess, sid, true)
+	m.containerStatus = "checking Docker…"
 
 	// Surface startup warnings (missing API key, network, sessions dir).
 	// validateStartup is fully implemented but was previously never called.
@@ -322,7 +311,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	quickSnapshot := welcomeStatusSnapshot{}
 	m.welcomeSetupState = quickSnapshot.setup
 	m.welcomeAgentsOK = quickSnapshot.agentsOK
-	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, len(pr.SmartSkills), false, initWidth, initHeight, nil, quickSnapshot, false, "")
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, 0, connectedMCPCount(registry), false, initWidth, initHeight, nil, quickSnapshot, false, "")
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 	startup.EndPhase("newChatModel:welcome")
 
@@ -502,15 +491,23 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 }
 
 // refreshInputPlaceholder updates the input placeholder based on the current
-// execution mode (container vs host). Call this after state changes that
-// affect the placeholder.
+// container lifecycle. Hawk never executes agent tools directly on the host.
 func (m *chatModel) refreshInputPlaceholder() {
 	base := "Ask Hawk to inspect, edit, or run something..."
-	if m.containerEnabled {
-		m.input.Placeholder = base + " (container mode, Shift+Enter for newline, ? for help)"
-	} else {
-		m.input.Placeholder = base + " (host mode, Shift+Enter for newline, ? for help)"
+	m.input.Placeholder = base + "  ·  Docker isolated  ·  ? for help"
+}
+
+// stopContainer releases the session's Docker sandbox on every CLI exit path.
+func (m *chatModel) stopContainer() {
+	if m == nil || m.containerSandbox == nil {
+		return
 	}
+	_ = m.containerSandbox.Stop()
+	m.containerSandbox = nil
+	if m.session != nil {
+		m.session.SetContainerExecutor(nil)
+	}
+	m.containerReady = false
 }
 
 func (m chatModel) Init() tea.Cmd {
@@ -521,11 +518,9 @@ func (m chatModel) Init() tea.Cmd {
 			cmds = append(cmds, fetchPlatformContextIndexCmd())
 		}
 	}
-	if m.containerEnabled {
-		m.containerStatus = "checking docker…"
-		cwd, _ := os.Getwd()
-		cmds = append(cmds, bootContainerCmd(cwd))
-	}
+	m.containerStatus = "checking Docker…"
+	cwd, _ := os.Getwd()
+	cmds = append(cmds, bootContainerCmd(cwd))
 	cmds = append(cmds, m.input.Focus())
 	return tea.Batch(cmds...)
 }

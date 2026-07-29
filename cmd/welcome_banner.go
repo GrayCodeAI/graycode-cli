@@ -6,7 +6,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-// hawkBlockGlyphs — fixed 8-column ██ font (H/A/W/K match hawkLogoArtLines).
+// hawkBlockGlyphs — fixed 8-column ██ font used by the welcome gate banners.
 var hawkBlockGlyphs = map[rune][5]string{
 	'H': {"██   ██ ", "██   ██ ", "███████ ", "██   ██ ", "██   ██ "},
 	'A': {"  ███   ", " █████  ", "███████ ", "██   ██ ", "██   ██ "},
@@ -20,13 +20,23 @@ var hawkBlockGlyphs = map[rune][5]string{
 	'T': {"████████", "   ██   ", "   ██   ", "   ██   ", "   ██   "},
 }
 
-// hawkLogoArtLines is the canonical HAWK wordmark.
+// hawkLogoArtLines is the canonical HAWK wordmark, with the hawk forming the W.
 var hawkLogoArtLines = []string{
-	"██   ██   ███    ██     ██ ██   ██",
-	"██   ██  █████   ██     ██ ██  ██ ",
-	"███████ ███████  ██  █  ██ █████  ",
-	"██   ██ ██   ██  ██ ███ ██ ██  ██ ",
-	"██   ██ ██   ██   ███ ███  ██   ██",
+	"                                     .  .",
+	"                                  .  .  .  .",
+	"                                  .  |  |  .",
+	"                               .  |        |  .",
+	"                               .              .",
+	" ___     ___    _________    . |  (\\.|\\/|./)  | .   ___   ____",
+	"|   |   |   |  /    _    \\   .   (\\ |||||| /)   .  |   | /   /",
+	"|   |___|   | |    /_\\    |  |  (\\  |/  \\|  /)  |  |   |/   /",
+	"|           | |           |    (\\            /)    |       /",
+	"|    ___    | |    ___    |   (\\              /)   |       \\",
+	"|   |   |   | |   |   |   |    \\      \\/      /    |   |\\   \\",
+	"|___|   |___| |___|   |___|     \\____/\\/\\____/     |___| \\___\\",
+	"                                    |0\\/0|",
+	"                                     \\/\\/",
+	"                                      \\/",
 }
 
 const (

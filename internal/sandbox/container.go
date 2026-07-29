@@ -103,9 +103,10 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 		"-v", attachDir + ":/attachments:ro",
 		"-v", cacheDir + ":/cache",
 		"-w", c.projectDir,
+		"--entrypoint", "sleep",
 	}
 	args = append(args, c.runtime.StartupEnvArgs()...)
-	args = append(args, c.image, "sleep", "infinity")
+	args = append(args, c.image, "infinity")
 	return args
 }
 
@@ -217,13 +218,6 @@ func (c *ContainerSandbox) HotSwap(ctx context.Context) error {
 func (c *ContainerSandbox) containerName() string {
 	hash := sha256.Sum256([]byte(c.projectDir))
 	return fmt.Sprintf("hawk-%x", hash[:4])
-}
-
-// ContainerImageTag is set at build time via ldflags. Falls back to "latest".
-var ContainerImageTag = "latest"
-
-func defaultHawkImage() string {
-	return "graycode/hawk:" + ContainerImageTag
 }
 
 func resolveImage(projectDir string) string {
