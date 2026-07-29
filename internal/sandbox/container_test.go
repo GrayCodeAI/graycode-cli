@@ -62,6 +62,34 @@ func TestContainerSandbox_ContainerName(t *testing.T) {
 	}
 }
 
+func TestContainerSandbox_StopForceRemovesContainer(t *testing.T) {
+	original := forceRemoveContainer
+	t.Cleanup(func() { forceRemoveContainer = original })
+
+	var gotID string
+	forceRemoveContainer = func(_ context.Context, containerID string) error {
+		gotID = containerID
+		return nil
+	}
+
+	cs := NewContainerSandbox(t.TempDir())
+	cs.running = true
+	cs.containerID = "hawk-test-container"
+
+	if err := cs.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	if cs.Running() {
+		t.Fatal("container should be marked stopped")
+	}
+	if cs.ContainerID() != "" {
+		t.Fatal("stopped container ID should be cleared")
+	}
+	if gotID != "hawk-test-container" {
+		t.Fatalf("removed container = %q, want %q", gotID, "hawk-test-container")
+	}
+}
+
 func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 	projectDir := t.TempDir()
 	cs := NewContainerSandbox(projectDir)

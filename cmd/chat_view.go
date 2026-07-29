@@ -47,7 +47,7 @@ func renderSetupCompleteMessage(model string) string {
 	return lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		success.Render("Setup complete"),
-		muted.Render(" · ready to chat with "),
+		muted.Render(" · model selected: "),
 		active.Render(model),
 		muted.Render(" "),
 		success.Render(icons.CheckBold()+" "),

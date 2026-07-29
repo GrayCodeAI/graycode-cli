@@ -148,6 +148,7 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 	}
 
 	model, contextLabel = modelStatusMeta(gw, modelID)
+	model = trimRepeatedGatewayPrefix(gateway, model)
 	if contextLabel == "" || contextLabel == "—" || contextLabel == "0k" {
 		if m.session != nil {
 			if w := m.session.ContextWindowCachedValue(); w > 0 {
@@ -168,6 +169,27 @@ func (m chatModel) connectionStatusParts() (gateway, model, contextLabel string)
 		// Omit ctx segment until a real window is known — never show the 128k default.
 	}
 	return gateway, model, contextLabel
+}
+
+func trimRepeatedGatewayPrefix(gateway, model string) string {
+	gateway = strings.TrimSpace(gateway)
+	model = strings.TrimSpace(model)
+	if gateway == "" || model == "" {
+		return model
+	}
+	if !strings.HasPrefix(strings.ToLower(model), strings.ToLower(gateway)) {
+		return model
+	}
+	remainder := strings.TrimSpace(model[len(gateway):])
+	for _, separator := range []string{":", "·", "—", "-"} {
+		if !strings.HasPrefix(remainder, separator) {
+			continue
+		}
+		if trimmed := strings.TrimSpace(remainder[len(separator):]); trimmed != "" {
+			return trimmed
+		}
+	}
+	return model
 }
 
 // renderConnectionStatusSplit returns gateway/model and context usage as separate

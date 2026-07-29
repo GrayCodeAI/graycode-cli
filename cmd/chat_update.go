@@ -679,6 +679,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "ctrl+c" {
 				// First Ctrl+C cancels stream, second quits
 				if m.cancel != nil {
+					m.lastCtrlC = time.Now()
 					m.cancel()
 					m.cancel = nil
 					m.streamCancelled = true

@@ -260,6 +260,27 @@ func TestNormalizeModelDisplayName_ShortensSlug(t *testing.T) {
 	}
 }
 
+func TestTrimRepeatedGatewayPrefix(t *testing.T) {
+	tests := []struct {
+		name    string
+		gateway string
+		model   string
+		want    string
+	}{
+		{name: "colon", gateway: "Poolside", model: "Poolside: Laguna XS-2.1", want: "Laguna XS-2.1"},
+		{name: "case insensitive", gateway: "Poolside", model: "poolside · Laguna S-2.1", want: "Laguna S-2.1"},
+		{name: "em dash", gateway: "OpenRouter", model: "OpenRouter — Claude", want: "Claude"},
+		{name: "unrelated", gateway: "Poolside", model: "Laguna XS-2.1", want: "Laguna XS-2.1"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := trimRepeatedGatewayPrefix(tc.gateway, tc.model); got != tc.want {
+				t.Fatalf("trimRepeatedGatewayPrefix(%q, %q) = %q, want %q", tc.gateway, tc.model, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestShowWelcomeBanner_WithMessages(t *testing.T) {
 	m := chatModel{
 		welcomeCache: "welcome",

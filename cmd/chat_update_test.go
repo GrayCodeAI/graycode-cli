@@ -75,6 +75,37 @@ func TestCtrlCTwiceExitsAndReleasesContainer(t *testing.T) {
 	}
 }
 
+func TestCtrlCTwiceWhileStreamingCancelsThenExits(t *testing.T) {
+	m := newTestChatModel()
+	m.waiting = true
+	cancelled := false
+	m.cancel = func() { cancelled = true }
+
+	first, firstCmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+	cm := requireChatModel(t, first)
+	if !cancelled {
+		t.Fatal("first Ctrl+C should cancel the active stream")
+	}
+	if firstCmd != nil {
+		t.Fatal("first Ctrl+C should cancel without quitting")
+	}
+	if cm.waiting {
+		t.Fatal("first Ctrl+C should leave the model idle")
+	}
+
+	second, secondCmd := cm.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+	exited := requireChatModel(t, second)
+	if !exited.quitting {
+		t.Fatal("second Ctrl+C should exit after cancelling the stream")
+	}
+	if secondCmd == nil {
+		t.Fatal("second Ctrl+C should return tea.Quit")
+	}
+	if _, ok := secondCmd().(tea.QuitMsg); !ok {
+		t.Fatalf("second Ctrl+C command = %T, want tea.QuitMsg", secondCmd())
+	}
+}
+
 func TestExitAndQuitCommandsExitAndReleaseContainer(t *testing.T) {
 	for _, command := range []string{"/exit", "/quit"} {
 		t.Run(command, func(t *testing.T) {

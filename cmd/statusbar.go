@@ -76,7 +76,7 @@ func renderStatusBarPrimaryLeft(m *chatModel) string {
 	return strings.Join(parts, statusDimStyle.Render(" "))
 }
 
-// renderStatusBarPrimaryRight — tokens, cost, ctx%, duration.
+// renderStatusBarPrimaryRight — tokens, cost, duration.
 func renderStatusBarPrimaryRight(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return ""
@@ -87,17 +87,6 @@ func renderStatusBarPrimaryRight(m *chatModel) string {
 	parts := []string{
 		statusTokenStyle.Render(tokenText),
 		statusCostStyle.Render(costText),
-	}
-	if m.session != nil {
-		if used := sessionContextUsedTokens(m.session); used > 0 {
-			if window := m.session.ContextWindowSize(); window > 0 {
-				pct := int(float64(used) / float64(window) * 100)
-				if pct > 999 {
-					pct = 999
-				}
-				parts = append(parts, statusDimStyle.Render(fmt.Sprintf("ctx %d%%", pct)))
-			}
-		}
 	}
 	sessionDur := time.Duration(0)
 	if !m.sessionStartedAt.IsZero() {

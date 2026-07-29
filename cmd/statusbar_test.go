@@ -75,6 +75,17 @@ func TestRenderStatusBarRight_IncludesTokensLabel(t *testing.T) {
 	}
 }
 
+func TestRenderStatusBarRight_OmitsDuplicatedContext(t *testing.T) {
+	session := engine.NewSession("", "test-model", "system", nil)
+	session.RecordAPIUsage(36_000, 100)
+	session.SetContextWindowCached(262_000)
+
+	got := renderStatusBarPrimaryRight(&chatModel{session: session})
+	if strings.Contains(got, "ctx") {
+		t.Fatalf("status footer = %q, want context shown only in the connection row", got)
+	}
+}
+
 func TestRenderStatusBarLeft_UsesCachedState(t *testing.T) {
 	m := &chatModel{statusLeftVal: "~/repo", statusLeftBranch: "main"}
 	got := renderStatusBarLeft(m)
