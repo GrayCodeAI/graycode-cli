@@ -23,20 +23,20 @@ import (
 type ToolScope string
 
 const (
-	ScopeReadOnly  ToolScope = "read"
-	ScopeWrite     ToolScope = "write"
-	ScopeAction    ToolScope = "action"
+	ScopeReadOnly ToolScope = "read"
+	ScopeWrite    ToolScope = "write"
+	ScopeAction   ToolScope = "action"
 )
 
 // ComposioTool represents a tool available from the composio platform.
 type ComposioTool struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Scope       ToolScope              `json:"scope"`
-	AuthRequired bool                  `json:"auth_required"`
-	Params      map[string]interface{} `json:"params"`
-	Tags        []string               `json:"tags"`
-	Category    string                 `json:"category"`
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description"`
+	Scope        ToolScope              `json:"scope"`
+	AuthRequired bool                   `json:"auth_required"`
+	Params       map[string]interface{} `json:"params"`
+	Tags         []string               `json:"tags"`
+	Category     string                 `json:"category"`
 }
 
 // ComposioToolResult is the result of executing a composio tool.

@@ -305,12 +305,12 @@ func TestMCPBridgeSearchHandler(t *testing.T) {
 			tools := make([]map[string]interface{}, 0, len(results))
 			for _, t := range results {
 				tools = append(tools, map[string]interface{}{
-					"name":         t.Name,
-					"description":  t.Description,
-					"scope":        string(t.Scope),
+					"name":          t.Name,
+					"description":   t.Description,
+					"scope":         string(t.Scope),
 					"auth_required": t.AuthRequired,
-					"tags":         t.Tags,
-					"category":     t.Category,
+					"tags":          t.Tags,
+					"category":      t.Category,
 				})
 			}
 
@@ -389,11 +389,11 @@ func TestMCPBridgeCredentialHandler(t *testing.T) {
 			items := make([]map[string]interface{}, 0, len(creds))
 			for _, c := range creds {
 				items = append(items, map[string]interface{}{
-					"id":            c.ID,
-					"service_name":  c.ServiceName,
-					"type":          c.Type,
-					"scope":         c.Scope,
-					"expired":       c.IsExpired(),
+					"id":           c.ID,
+					"service_name": c.ServiceName,
+					"type":         c.Type,
+					"scope":        c.Scope,
+					"expired":      c.IsExpired(),
 				})
 			}
 

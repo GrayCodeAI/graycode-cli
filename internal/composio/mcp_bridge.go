@@ -69,12 +69,12 @@ func (b *MCPBridge) RegisterSearchTool() {
 			tools := make([]map[string]interface{}, 0, len(results))
 			for _, t := range results {
 				tools = append(tools, map[string]interface{}{
-					"name":         t.Name,
-					"description":  t.Description,
-					"scope":        string(t.Scope),
+					"name":          t.Name,
+					"description":   t.Description,
+					"scope":         string(t.Scope),
 					"auth_required": t.AuthRequired,
-					"tags":         t.Tags,
-					"category":     t.Category,
+					"tags":          t.Tags,
+					"category":      t.Category,
 				})
 			}
 
@@ -99,7 +99,7 @@ func (b *MCPBridge) RegisterCredentialTool() {
 		Name:        "composio_credentials",
 		Description: "List composio credentials for connected services",
 		InputSchema: map[string]interface{}{
-			"type": "object",
+			"type":       "object",
 			"properties": map[string]interface{}{},
 		},
 		Handler: func(ctx context.Context, params json.RawMessage) (string, error) {
@@ -107,12 +107,12 @@ func (b *MCPBridge) RegisterCredentialTool() {
 			items := make([]map[string]interface{}, 0, len(creds))
 			for _, c := range creds {
 				items = append(items, map[string]interface{}{
-					"id":            c.ID,
-					"service_name":  c.ServiceName,
-					"type":          c.Type,
-					"scope":         c.Scope,
-					"expires_at":    c.ExpiresAt.Format("2006-01-02T15:04:05Z"),
-					"expired":       c.IsExpired(),
+					"id":           c.ID,
+					"service_name": c.ServiceName,
+					"type":         c.Type,
+					"scope":        c.Scope,
+					"expires_at":   c.ExpiresAt.Format("2006-01-02T15:04:05Z"),
+					"expired":      c.IsExpired(),
 				})
 			}
 
