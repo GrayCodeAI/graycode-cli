@@ -16,7 +16,7 @@ func RenderJSON(report *HarnessReport) ([]byte, error) {
 func RenderMarkdown(report *HarnessReport) string {
 	var sb strings.Builder
 
-	sb.WriteString("# 🦅 Hawk Agent Harness Review Report\n\n")
+	sb.WriteString("# Hawk Agent Harness Review Report\n\n")
 	sb.WriteString(fmt.Sprintf("**Target Workspace:** `%s`  \n", report.TargetPath))
 	sb.WriteString(fmt.Sprintf("**Generated At:** %s  \n", report.GeneratedAt.Format(time.RFC1123)))
 	sb.WriteString(fmt.Sprintf("**Overall Harness Health Score:** **%d / 100** (%s)\n\n", report.OverallScore, report.OverallStatus))
@@ -24,7 +24,7 @@ func RenderMarkdown(report *HarnessReport) string {
 	sb.WriteString("## Executive Summary\n\n")
 	sb.WriteString(report.Summary + "\n\n")
 
-	sb.WriteString("## 📊 Agent Work Loop Dimensions\n\n")
+	sb.WriteString("## Agent Work Loop Dimensions\n\n")
 	sb.WriteString("| Dimension | Score | Status | Summary |\n")
 	sb.WriteString("| :--- | :---: | :---: | :--- |\n")
 
@@ -43,7 +43,7 @@ func RenderMarkdown(report *HarnessReport) string {
 	}
 	sb.WriteString("\n")
 
-	sb.WriteString("## 🔍 Detected Harness Assets\n\n")
+	sb.WriteString("## Detected Harness Assets\n\n")
 	sb.WriteString(fmt.Sprintf("- **AGENTS.md**: %v\n", report.Assets.AgentsMD))
 	if report.Assets.AgentsMDPath != "" {
 		sb.WriteString(fmt.Sprintf("  - *Path*: `%s`\n", report.Assets.AgentsMDPath))
@@ -55,9 +55,9 @@ func RenderMarkdown(report *HarnessReport) string {
 	sb.WriteString(fmt.Sprintf("- **Hooks**: %s\n", strings.Join(report.Assets.Hooks, ", ")))
 	sb.WriteString(fmt.Sprintf("- **Autonomy Policy**: `%s` tier (Sandbox: `%s`)\n\n", report.Assets.AutonomyTier, report.Assets.SandboxPolicy))
 
-	sb.WriteString("## ⚠️ Prioritized Findings & Repair Recommendations\n\n")
+	sb.WriteString("## Prioritized Findings & Repair Recommendations\n\n")
 	if len(report.Findings) == 0 {
-		sb.WriteString("✨ **No critical harness findings detected!** Your project is well-configured for AI agent workflows.\n")
+		sb.WriteString("**No critical harness findings detected!** Your project is well-configured for AI agent workflows.\n")
 	} else {
 		for i, f := range report.Findings {
 			sb.WriteString(fmt.Sprintf("### %d. [%s] %s (%s)\n\n", i+1, f.Severity, f.Title, f.Dimension))
@@ -208,7 +208,7 @@ func RenderHTML(report *HarnessReport) string {
 <div class="container">
     <div class="header">
         <div class="title-area">
-            <h1>🦅 Hawk Agent Harness Review</h1>
+            <h1>Hawk Agent Harness Review</h1>
             <div class="meta-info">Workspace: <code>` + report.TargetPath + `</code> | Generated: ` + report.GeneratedAt.Format(time.RFC1123) + `</div>
         </div>
         <div class="score-badge">
@@ -264,7 +264,7 @@ func RenderHTML(report *HarnessReport) string {
         <h2>Prioritized Findings & Repair Plans</h2>`)
 
 	if len(report.Findings) == 0 {
-		sb.WriteString(`<p>✨ <strong>No critical findings!</strong> Workspace harness is well-configured.</p>`)
+		sb.WriteString(`<p><strong>No critical findings!</strong> Workspace harness is well-configured.</p>`)
 	} else {
 		for _, f := range report.Findings {
 			sb.WriteString(fmt.Sprintf(`
