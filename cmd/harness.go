@@ -46,13 +46,13 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		}
 
 		if harnessFix || (len(args) > 0 && args[0] == "fix") {
-			fixResult, err := harness.FixWorkspaceHarness(ctx, targetDir, report)
-			if err != nil {
-				return fmt.Errorf("harness auto-fix failed: %w", err)
+			fixResult, fixErr := harness.FixWorkspaceHarness(ctx, targetDir, report)
+			if fixErr != nil {
+				return fmt.Errorf("harness auto-fix failed: %w", fixErr)
 			}
-			fmt.Printf("🔧 Hawk Harness Auto-Repair Results:\n")
+			fmt.Printf("[FIX] Hawk Harness Auto-Repair Results:\n")
 			for _, repair := range fixResult.RepairsPerformed {
-				fmt.Printf("   ✓ %s\n", repair)
+				fmt.Printf("   + %s\n", repair)
 			}
 			// Re-evaluate workspace after fix
 			report, _ = harness.EvaluateWorkspace(ctx, targetDir, opts)
@@ -63,38 +63,38 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			outDir = filepath.Join(targetDir, ".hawk", "harness")
 		}
 
-		if err := os.MkdirAll(outDir, 0o755); err != nil {
-			return fmt.Errorf("failed to create harness output directory: %w", err)
+		if mkdirErr := os.MkdirAll(outDir, 0o755); mkdirErr != nil {
+			return fmt.Errorf("failed to create harness output directory: %w", mkdirErr)
 		}
 
 		// Write Markdown report
 		mdPath := filepath.Join(outDir, "report.md")
 		mdContent := harness.RenderMarkdown(report)
-		if err := os.WriteFile(mdPath, []byte(mdContent), 0o644); err != nil {
-			return fmt.Errorf("failed to write report.md: %w", err)
+		if writeErr := os.WriteFile(mdPath, []byte(mdContent), 0o644); writeErr != nil {
+			return fmt.Errorf("failed to write report.md: %w", writeErr)
 		}
 
 		// Write HTML report
 		htmlPath := filepath.Join(outDir, "report.html")
 		htmlContent := harness.RenderHTML(report)
-		if err := os.WriteFile(htmlPath, []byte(htmlContent), 0o644); err != nil {
-			return fmt.Errorf("failed to write report.html: %w", err)
+		if writeErr := os.WriteFile(htmlPath, []byte(htmlContent), 0o644); writeErr != nil {
+			return fmt.Errorf("failed to write report.html: %w", writeErr)
 		}
 
 		// Write JSON report
 		jsonPath := filepath.Join(outDir, "findings.json")
-		jsonContent, err := harness.RenderJSON(report)
-		if err != nil {
-			return fmt.Errorf("failed to serialize findings.json: %w", err)
+		jsonContent, renderErr := harness.RenderJSON(report)
+		if renderErr != nil {
+			return fmt.Errorf("failed to serialize findings.json: %w", renderErr)
 		}
-		if err := os.WriteFile(jsonPath, jsonContent, 0o644); err != nil {
-			return fmt.Errorf("failed to write findings.json: %w", err)
+		if writeErr := os.WriteFile(jsonPath, jsonContent, 0o644); writeErr != nil {
+			return fmt.Errorf("failed to write findings.json: %w", writeErr)
 		}
 
 		// Journal quality observation to Hawk execution graph
 		_ = harness.JournalHarnessReport(report, "")
 
-		fmt.Printf("🦅 Hawk Harness Evaluation Complete\n")
+		fmt.Printf("[HAWK] Hawk Harness Evaluation Complete\n")
 		fmt.Printf("   Overall Score : %d/100 (%s)\n", report.OverallScore, report.OverallStatus)
 		fmt.Printf("   Findings      : %d prioritized issues\n", len(report.Findings))
 		fmt.Printf("   HTML Report   : %s\n", htmlPath)

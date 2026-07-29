@@ -39,8 +39,8 @@ func TestEvaluateWorkspace(t *testing.T) {
 - Build with make
 - Run tests before opening PR
 `
-	if err := os.WriteFile(agentsPath, []byte(agentsContent), 0o644); err != nil {
-		t.Fatalf("Failed to write AGENTS.md: %v", err)
+	if writeErr := os.WriteFile(agentsPath, []byte(agentsContent), 0o644); writeErr != nil {
+		t.Fatalf("Failed to write AGENTS.md: %v", writeErr)
 	}
 
 	makefileContent := `test:
@@ -48,12 +48,12 @@ func TestEvaluateWorkspace(t *testing.T) {
 lint:
 	golangci-lint run
 `
-	if err := os.WriteFile(filepath.Join(tmpDir, "Makefile"), []byte(makefileContent), 0o644); err != nil {
-		t.Fatalf("Failed to write Makefile: %v", err)
+	if writeErr := os.WriteFile(filepath.Join(tmpDir, "Makefile"), []byte(makefileContent), 0o644); writeErr != nil {
+		t.Fatalf("Failed to write Makefile: %v", writeErr)
 	}
 
-	if err := os.WriteFile(filepath.Join(tmpDir, ".golangci.yml"), []byte("linters:\n  enable:\n    - errcheck\n"), 0o644); err != nil {
-		t.Fatalf("Failed to write .golangci.yml: %v", err)
+	if writeErr := os.WriteFile(filepath.Join(tmpDir, ".golangci.yml"), []byte("linters:\n  enable:\n    - errcheck\n"), 0o644); writeErr != nil {
+		t.Fatalf("Failed to write .golangci.yml: %v", writeErr)
 	}
 
 	// 3. Re-evaluate with assets present
