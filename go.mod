@@ -12,7 +12,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/GrayCodeAI/eyrie v0.1.4-0.20260727034005-5b332a4d6be5
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.10
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.11
 	github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738
 	github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589
 	github.com/GrayCodeAI/tok v0.1.5-0.20260727034347-2afc7f549e35
@@ -40,7 +40,7 @@ require (
 	modernc.org/sqlite v1.51.0
 )
 
-require github.com/GrayCodeAI/hawk-mcpkit v0.1.5-0.20260725110526-3e80e92bf6cd // indirect
+require github.com/GrayCodeAI/hawk-mcpkit v0.1.5 // indirect
 
 require (
 	cel.dev/expr v0.25.2 // indirect
