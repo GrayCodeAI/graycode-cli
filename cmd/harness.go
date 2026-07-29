@@ -77,8 +77,8 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		// Write HTML report
 		htmlPath := filepath.Join(outDir, "report.html")
 		htmlContent := harness.RenderHTML(report)
-		if err := os.WriteFile(htmlPath, []byte(htmlContent), 0o644); err != nil {
-			return fmt.Errorf("failed to write report.html: %w", err)
+		if writeErr := os.WriteFile(htmlPath, []byte(htmlContent), 0o644); writeErr != nil {
+			return fmt.Errorf("failed to write report.html: %w", writeErr)
 		}
 
 		// Write JSON report
