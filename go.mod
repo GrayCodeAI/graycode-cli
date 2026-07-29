@@ -40,7 +40,7 @@ require (
 	modernc.org/sqlite v1.51.0
 )
 
-require github.com/GrayCodeAI/hawk-mcpkit v0.1.5
+require github.com/GrayCodeAI/hawk-mcpkit v0.1.5 // indirect
 
 require (
 	cel.dev/expr v0.25.2 // indirect
