@@ -990,13 +990,6 @@ func (m chatModel) toggleConfigModelThinking() (chatModel, tea.Cmd) {
 	}
 	settings := hawkconfig.LoadSettings()
 	pref := hawkconfig.ThinkingPrefForModel(settings, selected.ID)
-	provider := strings.TrimSpace(m.configModelProvider)
-	if provider == "" {
-		provider = strings.TrimSpace(selected.GatewayID)
-	}
-	if provider == "" {
-		provider = strings.TrimSpace(selected.ProviderID)
-	}
 	// Current effective display: unset → off. Toggle flips that.
 	currentlyOn := false
 	if pref != nil {

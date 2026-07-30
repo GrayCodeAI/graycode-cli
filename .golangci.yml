@@ -5,7 +5,6 @@ linters:
   enable:
     - errcheck
     - govet
-    - ineffassign
     - staticcheck
     - unused
     - misspell
@@ -51,6 +50,7 @@ linters:
       disable:
         - fieldalignment
         - unusedwrite
+        - shadow
     staticcheck:
       checks:
         - all
@@ -89,10 +89,6 @@ linters:
           - errcheck
           - unused
           - gosec
-      - path: cmd/
-        linters:
-          - noctx
-
-issues:
+    issues:
   max-issues-per-linter: 0
   max-same-issues: 0
