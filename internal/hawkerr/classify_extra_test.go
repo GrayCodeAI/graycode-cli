@@ -95,6 +95,47 @@ func TestClassifyError_InsufficientCredits(t *testing.T) {
 	}
 }
 
+// Agnes AI returns HTTP 403 with an insufficient_user_quota code (and a
+// Chinese "预扣费" pre-deduction message) when the account balance cannot
+// cover the maximum-token pre-authorization hold. That must surface as a
+// quota problem, NOT as "check your API key".
+func TestClassifyError_AgnesPreDeductionQuota(t *testing.T) {
+	err := errors.New("eyrie: agnes chat failed (HTTP 403) [request_id=202607300111184425982109LnnftLG]: " +
+		"billing/quota problem — check the provider account's balance and limits — " +
+		"AgnesAI_error: 预扣费额度失败, 用户剩余额度: $0.000740, 需要预扣费额度: $0.002068")
+	result := ClassifyError(err)
+	if result.ExitCode != ExitRateLimit {
+		t.Errorf("ExitCode = %d, want %d (ExitRateLimit)", result.ExitCode, ExitRateLimit)
+	}
+	if result.Message == "" {
+		t.Error("expected non-empty message")
+	}
+	// Must not mislead the user into checking their API key.
+	if contains(result.Message, "API key") || contains(result.Message, "Access denied") {
+		t.Errorf("message should not blame the API key, got %q", result.Message)
+	}
+}
+
+// The eyrie layer tags quota holds as "billing/quota problem"; a bare hint
+// (without the full Agnes body) must still be classified as a quota problem.
+func TestClassifyError_QuotaHintOnly(t *testing.T) {
+	err := errors.New("billing/quota problem — check the provider account's balance and limits")
+	result := ClassifyError(err)
+	if result.ExitCode != ExitRateLimit {
+		t.Errorf("ExitCode = %d, want %d (ExitRateLimit)", result.ExitCode, ExitRateLimit)
+	}
+}
+
+// A generic 403 with no quota signal must still fall through to the auth
+// branch — the new quota branch must not swallow real access denials.
+func TestClassifyError_403Forbidden_StillAuth(t *testing.T) {
+	err := errors.New("403 forbidden")
+	result := ClassifyError(err)
+	if result.ExitCode != ExitAuth {
+		t.Errorf("ExitCode = %d, want %d (ExitAuth)", result.ExitCode, ExitAuth)
+	}
+}
+
 func TestClassifyError_401Unauthorized(t *testing.T) {
 	err := errors.New("401 unauthorized")
 	result := ClassifyError(err)

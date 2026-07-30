@@ -128,6 +128,23 @@ func classify(err error) errorClass {
 		}
 	}
 
+	// ── Provider quota / pre-deduction hold failures ──────────────────────
+	// Some providers (e.g. Agnes AI) pre-authorize the *maximum* possible token
+	// cost before fulfilling a request. When the account balance can't cover
+	// that hold they return 403 with an insufficient_user_quota code rather
+	// than a 401 — so this must be checked before the generic 403 branch below,
+	// otherwise the user is misled into "check your API key". eyrie already
+	// tags these as "billing/quota problem"; the Agnes body also carries the
+	// Chinese pre-deduction phrasing (预扣费) and an insufficient_user_quota code.
+	if strings.Contains(low, "insufficient_user_quota") || strings.Contains(low, "insufficient_quota") ||
+		strings.Contains(low, "billing/quota problem") || strings.Contains(low, "预扣费") ||
+		strings.Contains(low, "pre-deduct") || strings.Contains(low, "pre-deduction") {
+		return errorClass{
+			exitCode: ExitRateLimit,
+			message:  "Request blocked by the provider's pre-deduction check: your account balance is too low to cover the maximum token cost of this request.\n  Top up your provider account, switch to a cheaper model with /model, or try a shorter prompt.",
+		}
+	}
+
 	// ── Authentication / authorization ────────────────────────────────────
 	if strings.Contains(low, "401") || strings.Contains(low, "unauthorized") || strings.Contains(low, "invalid api key") || strings.Contains(low, "invalid_api_key") || strings.Contains(low, "authentication") {
 		return errorClass{
