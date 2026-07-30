@@ -367,6 +367,7 @@ func IsCatalogCacheRequired(err error) bool {
 
 // RegisteredProviderCount exposes Eyrie's first-class provider count through
 // Hawk's single provider-runtime boundary.
+// TODO: Re-enable when eyrie PR #92 is merged and released.
 func RegisteredProviderCount() int {
 	return 0
 }
