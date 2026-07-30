@@ -470,7 +470,7 @@ func (m chatModel) configModelsBody() string {
 	}
 
 	b.WriteString("\n" + modelTableFooter(total, m.configScroll, end, allTotal, mutedStyle))
-	b.WriteString("\n" + mutedStyle.Render(strings.Repeat(" ", modelTableIndent)+"Caps: T tools · V vision · R reasoning · J JSON"))
+	b.WriteString("\n" + mutedStyle.Render(strings.Repeat(" ", modelTableIndent)+"Caps: T tools · V vision · R reasoning · J JSON · Think: t toggles on/off"))
 	return b.String()
 }
 
@@ -863,6 +863,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			}
 		}
 	}
+	if m.configTab == configTabModels {
+		switch key.Text {
+		case "t", "T":
+			return m.toggleConfigModelThinking()
+		}
+	}
 	n := m.configTabItemCount()
 	if n == 0 {
 		m.configSel = 0
@@ -957,6 +963,7 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	} else if prov := strings.TrimSpace(selected.ProviderID); prov != "" {
 		_ = hawkconfig.SetGlobalSetting("provider", prov)
 	}
+	m.applyModelThinkingPref(selected)
 	m.syncSessionSelection()
 	next, cmd := m.rebuildSessionTransport()
 	next.invalidateConnStatus()
@@ -969,4 +976,64 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 		})
 	}
 	return next, cmd
+}
+
+func (m chatModel) toggleConfigModelThinking() (chatModel, tea.Cmd) {
+	opts := m.configFilteredModelOptions()
+	if m.configSel < 0 || m.configSel >= len(opts) {
+		return m, nil
+	}
+	selected := opts[m.configSel]
+	if !hawkconfig.ModelCapabilitySupportsThinking(selected.Capabilities) {
+		m.configNotice = "Thinking not supported for this model"
+		return m, nil
+	}
+	settings := hawkconfig.LoadSettings()
+	pref := hawkconfig.ThinkingPrefForModel(settings, selected.ID)
+	provider := strings.TrimSpace(m.configModelProvider)
+	if provider == "" {
+		provider = strings.TrimSpace(selected.GatewayID)
+	}
+	if provider == "" {
+		provider = strings.TrimSpace(selected.ProviderID)
+	}
+	// Current effective display: unset → off. Toggle flips that.
+	currentlyOn := false
+	if pref != nil {
+		currentlyOn = *pref
+	}
+	next := !currentlyOn
+	if err := hawkconfig.SetModelThinking(selected.ID, next); err != nil {
+		m.configNotice = err.Error()
+		return m, nil
+	}
+	label := strings.TrimSpace(selected.DisplayName)
+	if label == "" {
+		label = selected.ID
+	}
+	if next {
+		m.configNotice = label + " thinking → on"
+	} else {
+		m.configNotice = label + " thinking → off"
+	}
+	// If this is the active model, apply immediately.
+	if m.session != nil && modelOptionIsActiveResolved(selected, m.configActiveModelID(), hawkconfig.CanonicalModelID(context.Background(), m.configActiveModelID())) {
+		m.session.SetThinkingEnabled(&next)
+	}
+	return m, nil
+}
+
+func (m chatModel) applyModelThinkingPref(selected configModelOption) {
+	if m.session == nil {
+		return
+	}
+	settings := hawkconfig.LoadSettings()
+	provider := strings.TrimSpace(m.configModelProvider)
+	if provider == "" {
+		provider = strings.TrimSpace(selected.GatewayID)
+	}
+	if provider == "" {
+		provider = strings.TrimSpace(selected.ProviderID)
+	}
+	m.session.SetThinkingEnabled(hawkconfig.ResolveThinkingForModel(settings, selected.ID, provider))
 }

@@ -346,8 +346,11 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 		sess.PermSvc().SetAutonomy(lvl)
 	}
 
-	// GLM/Z.AI extended reasoning toggle (applied in the stream loop for zai_coding/zai_payg).
-	sess.SetGLMThinkingEnabled(settings.GLMThinkingEnabled)
+	// Per-model thinking preference (Setup → Models Think column), with
+	// provider-specific defaults (e.g. LongCat off).
+	modelID := strings.TrimSpace(sess.Model())
+	providerID := strings.TrimSpace(sess.Provider())
+	sess.SetThinkingEnabled(hawkconfig.ResolveThinkingForModel(settings, modelID, providerID))
 
 	return nil
 }

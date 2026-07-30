@@ -47,7 +47,8 @@ type Settings struct {
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`
 	DeploymentRouting       *bool                  `json:"deployment_routing,omitempty"`       // use catalog deployment router when true / unset + provider.json qualifies
-	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"`     // GLM/Z.ai extended reasoning toggle; nil = model default
+	GLMThinkingEnabled      *bool                  `json:"glm_thinking_enabled,omitempty"`     // global thinking fallback (Z.AI-era name); prefer ModelThinking / ThinkingEnabled
+	ModelThinking           map[string]bool        `json:"model_thinking,omitempty"`           // per-model thinking; missing = provider default
 	TuiMouse                *bool                  `json:"tui_mouse,omitempty"`                // TUI mouse capture; false preserves native click-drag copy
 	ReplMode                *bool                  `json:"repl_mode,omitempty"`                // Start in REPL mode instead of TUI
 	ScrollSpeed             int                    `json:"scroll_speed,omitempty"`             // scroll speed 1-100 (default 50)
@@ -311,6 +312,17 @@ func MergeSettings(base, override Settings) Settings {
 	}
 	if override.DeploymentRouting != nil {
 		base.DeploymentRouting = override.DeploymentRouting
+	}
+	if override.GLMThinkingEnabled != nil {
+		base.GLMThinkingEnabled = override.GLMThinkingEnabled
+	}
+	if len(override.ModelThinking) > 0 {
+		if base.ModelThinking == nil {
+			base.ModelThinking = make(map[string]bool, len(override.ModelThinking))
+		}
+		for modelID, enabled := range override.ModelThinking {
+			base.ModelThinking[modelID] = enabled
+		}
 	}
 	if override.ModelRoles != nil {
 		if base.ModelRoles == nil {

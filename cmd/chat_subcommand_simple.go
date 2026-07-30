@@ -294,39 +294,6 @@ func init() {
 		},
 	})
 
-	// /glm <on|off|default> — toggle GLM/Z.ai extended reasoning
-	subcommandRegistry.Register(&delegatingCommand{
-		name:        "glm",
-		description: "toggle GLM/Z.ai extended reasoning",
-		usage:       "/glm <on|off|default>",
-		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			if len(args) < 1 {
-				cur, _ := hawkconfig.SettingValue(hawkconfig.LoadSettings(), "glmthinking")
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /glm <on|off|default> — toggle GLM/Z.ai extended reasoning\nCurrent: " + cur})
-				return m, nil
-			}
-			switch strings.ToLower(args[0]) {
-			case "on":
-				_ = hawkconfig.SetGlobalSetting("glmthinking", "true")
-				enabled := true
-				m.session.SetGLMThinkingEnabled(&enabled)
-				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → enabled"})
-			case "off":
-				_ = hawkconfig.SetGlobalSetting("glmthinking", "false")
-				disabled := false
-				m.session.SetGLMThinkingEnabled(&disabled)
-				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → disabled"})
-			case "default":
-				_ = hawkconfig.SetGlobalSetting("glmthinking", "default")
-				m.session.SetGLMThinkingEnabled(nil)
-				m.messages = append(m.messages, displayMsg{role: "system", content: "GLM thinking → default (model decides)"})
-			default:
-				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid options: on, off, default"})
-			}
-			return m, nil
-		},
-	})
-
 	// /vim — toggle vim mode
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "vim",

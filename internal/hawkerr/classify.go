@@ -103,8 +103,8 @@ func classify(err error) errorClass {
 		return errorClass{
 			exitCode: ExitGeneral,
 			message: "The model produced internal reasoning but no reply.\n" +
-				"  This often happens with reasoning models on OpenCode Go / MiniMax when the provider drops the answer after thinking.\n" +
-				"  Try /model to switch model, or pick a non-reasoning model for simple chat.",
+				"  This often happens when thinking/reasoning consumes the whole token budget (LongCat defaults thinking on) or when OpenCode Go / MiniMax drops the answer after thinking.\n" +
+				"  Try /model → toggle Think with t, switch model, or pick a non-reasoning model.",
 		}
 	}
 
@@ -141,7 +141,7 @@ func classify(err error) errorClass {
 		strings.Contains(low, "pre-deduct") || strings.Contains(low, "pre-deduction") {
 		return errorClass{
 			exitCode: ExitRateLimit,
-			message:  "Request blocked by the provider's pre-deduction check: your account balance is too low to cover the maximum token cost of this request.\n  Top up your provider account, switch to a cheaper model with /model, or try a shorter prompt.",
+			message:  "Request blocked by the provider's pre-deduction check: your account balance is too low to cover the maximum token cost of this request.\n  Top up your provider account, switch to a free/cheaper model with /model (e.g. agnes-2.5-flash), or try a shorter prompt.",
 		}
 	}
 
