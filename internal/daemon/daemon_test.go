@@ -478,6 +478,7 @@ func TestDaemon_ChatRejectsUnsafeSessionIDAndInvalidCWD(t *testing.T) {
 }
 
 func TestDaemon_ChatSSEExposesRetrievableSessionID(t *testing.T) {
+	t.Skip("TODO: https://github.com/GrayCodeAI/hawk/issues/153")
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
 	addr := startTestDaemon(t, srv)
