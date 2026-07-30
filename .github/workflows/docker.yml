@@ -122,12 +122,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build sandbox image for scan
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -137,14 +138,14 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: graycodeai/hawk-sandbox:scan
+          tags: ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:scan
           cache-from: type=gha,scope=hawk-sandbox
           cache-to: type=gha,mode=max,scope=hawk-sandbox
 
       - name: Scan sandbox image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: graycodeai/hawk-sandbox:scan
+          image-ref: ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:scan
           format: sarif
           output: trivy-sandbox-image.sarif
           severity: CRITICAL
@@ -159,8 +160,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            graycodeai/hawk-sandbox:${{ steps.sandbox-version.outputs.tag }}
-            graycodeai/hawk-sandbox:latest
+            ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:${{ steps.sandbox-version.outputs.tag }}
+            ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:latest
           cache-from: type=gha,scope=hawk-sandbox
           cache-to: type=gha,mode=max,scope=hawk-sandbox
 
