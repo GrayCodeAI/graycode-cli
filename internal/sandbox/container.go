@@ -22,6 +22,11 @@ type containerExecutor interface {
 	Running() bool
 }
 
+var forceRemoveContainer = func(ctx context.Context, containerID string) error {
+	cmd := exec.CommandContext(ctx, "docker", "rm", "-f", containerID) // #nosec G204 -- "docker" binary fixed; containerID is our own tracked container ID
+	return cmd.Run()
+}
+
 // ContainerSandbox executes commands inside a Docker container, providing
 // full isolation. It supports dynamic Dockerfile generation for on-the-fly
 // environment setup.
@@ -103,9 +108,10 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 		"-v", attachDir + ":/attachments:ro",
 		"-v", cacheDir + ":/cache",
 		"-w", c.projectDir,
+		"--entrypoint", "sleep",
 	}
 	args = append(args, c.runtime.StartupEnvArgs()...)
-	args = append(args, c.image, "sleep", "infinity")
+	args = append(args, c.image, "infinity")
 	return args
 }
 
@@ -143,9 +149,14 @@ func (c *ContainerSandbox) Stop() error {
 	if !c.running {
 		return nil
 	}
-	cmd := exec.CommandContext(context.Background(), "docker", "stop", c.containerID) // #nosec G204 -- "docker" binary fixed; containerID is our own tracked container ID
-	_ = cmd.Run()
+	// Force-remove our ephemeral --rm container instead of waiting through
+	// Docker's default stop grace period. Bound cleanup as well so exiting the
+	// CLI can never hang indefinitely on an unresponsive daemon.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_ = forceRemoveContainer(ctx, c.containerID)
 	c.running = false
+	c.containerID = ""
 	return nil
 }
 
@@ -217,13 +228,6 @@ func (c *ContainerSandbox) HotSwap(ctx context.Context) error {
 func (c *ContainerSandbox) containerName() string {
 	hash := sha256.Sum256([]byte(c.projectDir))
 	return fmt.Sprintf("hawk-%x", hash[:4])
-}
-
-// ContainerImageTag is set at build time via ldflags. Falls back to "latest".
-var ContainerImageTag = "latest"
-
-func defaultHawkImage() string {
-	return "graycode/hawk:" + ContainerImageTag
 }
 
 func resolveImage(projectDir string) string {

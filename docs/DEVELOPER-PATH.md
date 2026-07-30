@@ -81,9 +81,13 @@ Read the full credential and isolation model in [SECURITY-DEVELOPER.md](./SECURI
 
 ## Sandbox checks
 
-When Docker is available, Hawk prefers containerized Bash execution for stronger isolation. If Docker is unavailable, `hawk path` warns but does not block normal local development.
+Docker is mandatory for agent command execution. If Docker is unavailable,
+`hawk path` reports a blocking failure and agent tools remain locked. Hawk does
+not offer a host-execution fallback.
 
-Use strict mode if you want Docker to be required:
+The versioned `graycodeai/hawk-sandbox` image is pulled automatically when it
+is not already local. If the public registry is unavailable, Hawk builds its
+bundled sandbox Dockerfile locally through Docker.
 
 ```bash
 hawk path --strict

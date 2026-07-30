@@ -25,6 +25,11 @@ func IsCatalogCacheRequired(err error) bool {
 	return gw.IsCatalogCacheRequired(err)
 }
 
+// RegisteredProviderCount returns Eyrie's canonical first-class provider count.
+func RegisteredProviderCount() int {
+	return gw.RegisteredProviderCount()
+}
+
 func AllCatalogProviders() []string {
 	engine, err := newEyrieEngine()
 	if err != nil {

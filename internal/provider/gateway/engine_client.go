@@ -395,7 +395,11 @@ func (c *translateProvider) CompactNative(ctx context.Context, req eyrieengine.N
 }
 
 func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, continuation types.ContinuationConfig) eyrieengine.GenerateRequest {
-	glmReasoningEnabled := opts.GLMThinkingEnabled != nil && *opts.GLMThinkingEnabled
+	thinkingEnabled := opts.ThinkingEnabled
+	if thinkingEnabled == nil {
+		thinkingEnabled = opts.GLMThinkingEnabled
+	}
+	reasoningEnabled := thinkingEnabled != nil && *thinkingEnabled
 	request := eyrieengine.GenerateRequest{
 		Messages:     toEngineMessages(messages),
 		SystemPrompt: opts.System,
@@ -405,7 +409,7 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 			Tools:          len(opts.Tools) > 0,
 			Vision:         messagesContainVision(messages),
 			StructuredJSON: opts.ResponseFormat != nil || opts.OutputSchema != "",
-			Reasoning:      opts.ReasoningEffort != "" || opts.ThinkingBudgetTokens > 0 || opts.ThinkingMode != "" || glmReasoningEnabled,
+			Reasoning:      opts.ReasoningEffort != "" || opts.ThinkingBudgetTokens > 0 || opts.ThinkingMode != "" || reasoningEnabled,
 		},
 		Preference: eyrieengine.Preference{
 			PreferredProvider: opts.Provider,
@@ -422,7 +426,7 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 		Options: eyrieengine.GenerationOptions{
 			EnableCaching: opts.EnableCaching, ReasoningEffort: opts.ReasoningEffort,
 			ThinkingBudgetTokens: opts.ThinkingBudgetTokens, ThinkingMode: opts.ThinkingMode,
-			ThinkingDisplay: opts.ThinkingDisplay, GLMThinkingEnabled: opts.GLMThinkingEnabled,
+			ThinkingDisplay: opts.ThinkingDisplay, ThinkingEnabled: thinkingEnabled, GLMThinkingEnabled: thinkingEnabled,
 			VirtualKeyID: opts.VirtualKeyID, KimiContextCacheID: opts.KimiContextCacheID,
 			KimiCacheResetTTL: opts.KimiCacheResetTTL, TopP: opts.TopP, TopK: opts.TopK,
 			StopSequences: append([]string(nil), opts.StopSequences...), ToolChoice: toEngineToolChoice(opts.ToolChoice),

@@ -17,7 +17,7 @@ const (
 	scrollbarBottomGlyph = "╵" // cap at the very bottom of the track
 )
 
-// scrollbarThumbStyle — brand orange thumb so it pops.
+// scrollbarThumbStyle — Talon Gold thumb so it reads as a brand control.
 var scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
 
 // chatHasOverflow reports whether chat content exceeds the viewport height.
@@ -54,7 +54,7 @@ func (m chatModel) chatViewportWidth(totalWidth int) int {
 //
 // Design:
 //   - Track character: │  (dim grey — structural, not distracting)
-//   - Thumb character: ▊  (brand orange — three-quarters block, thick & solid CLI style)
+//   - Thumb character: ▊  (Talon Gold — three-quarters block, thick & solid CLI style)
 //   - Thumb size: proportional and compact (min 1 row, reduced by 25%)
 //   - Thumb position: tracks YOffset relative to max scrollable range
 //

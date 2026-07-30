@@ -131,7 +131,7 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 		b.WriteString(warnStyle.Render(warnWrapped))
 	case "error":
 		errWrapped := wrapText(msg.content, viewWidth-8, 7)
-		b.WriteString(errorStyle.Render("error: " + errWrapped))
+		b.WriteString(errorStyle.Render("Error: " + errWrapped))
 	}
 
 	switch msg.role {

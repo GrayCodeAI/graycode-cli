@@ -308,8 +308,7 @@ type chatModel struct {
 	// user's message is never silently discarded.
 	pendingSubmit string
 	// containerRetryable is true after a container boot failure. It enables
-	// the [r]etry/[h]ost-mode keybindings so the user can recover without
-	// restarting the TUI.
+	// the [r]etry keybinding so the user can recover without restarting the TUI.
 	containerRetryable bool
 
 	// Taste & staleness tracking

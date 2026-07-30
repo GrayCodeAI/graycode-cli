@@ -15,3 +15,8 @@ go.work.sum
 .envrc
 *.pem
 *.key
+# Go build/test caches — huge and never needed in the image.
+.gocache
+.gocache-public
+.golangci-cache
+.golangci-cache-public

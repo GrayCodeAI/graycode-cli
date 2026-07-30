@@ -113,7 +113,7 @@ func TestQuantizePalette(t *testing.T) {
 	// Test truecolor - no change
 	p := &Palette{
 		Panel:  "#0e0e10",
-		Accent: "#FF5E0E",
+		Accent: BrandPrimary,
 		Ink:    "#ececee",
 		Green:  "#5dd1a4",
 		Red:    "#ff7a7a",

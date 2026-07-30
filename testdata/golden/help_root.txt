@@ -66,7 +66,6 @@ Flags:
       --append-system-prompt-file string   read text from a file and append it to the system prompt
       --auto-commit                        auto-commit file changes made by Write and Edit tools
       --auto-skill                         auto-detect project and install matching skills
-      --container                          force container mode even if auto-detection would skip it
   -c, --continue                           continue the most recent conversation in the current directory
       --council                            consult multiple models and synthesize best answer
       --dangerously-skip-permissions       bypass all permission checks
@@ -81,7 +80,6 @@ Flags:
       --mcp stringArray                    MCP server command
   -m, --model string                       model to use (from eyrie catalog; see /models)
       --no-auto-catalog-refresh            disable automatic catalog refresh when cache is missing, empty, or stale
-      --no-container                       disable container mode (run on host with permission prompts)
       --no-session-persistence             disable session persistence in print mode
       --output-format string               output format for --print: "text", "json", or "stream-json" (default "text")
       --power int                          power level 1-10 (auto-configures model, context, review depth) (default 5)

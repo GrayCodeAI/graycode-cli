@@ -81,6 +81,10 @@ func TestIsCopyToClipboardKey(t *testing.T) {
 
 func TestMouseEnabled_SettingsAndEnv(t *testing.T) {
 	t.Setenv("HAWK_MOUSE", "")
+	if !(chatModel{}).mouseEnabled() {
+		t.Fatal("expected mouse capture to default on")
+	}
+
 	disabled := false
 	m := chatModel{settings: hawkconfig.Settings{TuiMouse: &disabled}}
 	if m.mouseEnabled() {

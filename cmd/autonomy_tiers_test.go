@@ -40,23 +40,6 @@ func TestAutonomyFromSettings(t *testing.T) {
 	}
 }
 
-func TestApplyDefaultHostAutonomy_SetsBasicWhenUnset(t *testing.T) {
-	sess := engine.NewSession("", "test-model", "you are helpful", nil)
-	applyDefaultHostAutonomy(sess)
-	if got := sess.PermSvc().Autonomy(); got != DefaultHostAutonomy {
-		t.Fatalf("got %v, want %v", got, DefaultHostAutonomy)
-	}
-}
-
-func TestApplyDefaultHostAutonomy_DoesNotClobberExplicitSetting(t *testing.T) {
-	sess := engine.NewSession("", "test-model", "you are helpful", nil)
-	sess.PermSvc().SetAutonomy(engine.AutonomyFull)
-	applyDefaultHostAutonomy(sess)
-	if got := sess.PermSvc().Autonomy(); got != engine.AutonomyFull {
-		t.Fatalf("got %v, want AutonomyFull preserved", got)
-	}
-}
-
 func TestAutonomyTierColorsDistinct(t *testing.T) {
 	levels := []engine.AutonomyLevel{
 		engine.AutonomyBasic,

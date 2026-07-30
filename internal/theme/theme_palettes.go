@@ -5,7 +5,7 @@
 
 package theme
 
-// darkPalette is the original dark theme with a warm orange accent.
+// darkPalette is the default dark theme with Hawk's Talon Gold accent.
 var darkPalette = Palette{
 	Panel:     "#0e0e10",
 	PromptBg:  "#262626",
@@ -15,7 +15,7 @@ var darkPalette = Palette{
 	Muted:     "#9a9aa2",
 	Faint:     "#8a8a92",
 	Faintest:  "#7c7c82",
-	Accent:    "#FF5E0E",
+	Accent:    BrandPrimary,
 	Green:     "#5dd1a4",
 	Red:       "#ff7a7a",
 	Amber:     "#ffc25c",

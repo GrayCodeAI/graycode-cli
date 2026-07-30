@@ -242,7 +242,11 @@ func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveMo
 	if strings.TrimSpace(selection.Model) == "" {
 		selection.Model = effectiveModel
 	}
-	return engine.NewHawkSessionForSettings(context.Background(), settings, selection, selection.Provider, selection.Model, systemPrompt, registry)
+	sess := engine.NewHawkSessionForSettings(context.Background(), settings, selection, selection.Provider, selection.Model, systemPrompt, registry)
+	// Hawk requires Docker. Any entry point that has not attached a running
+	// container remains fail-closed at the engine tool boundary.
+	sess.SetContainerRequired(true)
+	return sess
 }
 
 func firstNonEmptyTrimmed(values ...string) string {
@@ -342,8 +346,11 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 		sess.PermSvc().SetAutonomy(lvl)
 	}
 
-	// GLM/Z.AI extended reasoning toggle (applied in the stream loop for zai_coding/zai_payg).
-	sess.SetGLMThinkingEnabled(settings.GLMThinkingEnabled)
+	// Per-model thinking preference (Setup → Models Think column), with
+	// provider-specific defaults (e.g. LongCat off).
+	modelID := strings.TrimSpace(sess.Model())
+	providerID := strings.TrimSpace(sess.Provider())
+	sess.SetThinkingEnabled(hawkconfig.ResolveThinkingForModel(settings, modelID, providerID))
 
 	return nil
 }

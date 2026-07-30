@@ -3,13 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
@@ -21,29 +19,55 @@ type containerStatusMsg struct {
 	sandbox *sandbox.ContainerSandbox
 }
 
-// shouldUseContainer determines if hawk should run in container mode.
-// Default: container-first when Docker is available. Opt out with --no-container
-// or HAWK_NO_CONTAINER=1 (useful on low-memory hosts where docker pull/build
-// can trigger jetsam kills).
+var dockerAvailable = sandbox.DockerAvailable
+
+// shouldUseContainer is intentionally unconditional: Hawk agent command
+// execution is Docker-only and never falls back to the host.
 func shouldUseContainer() bool {
-	if noContainer {
-		return false
-	}
-	if containerMode {
-		return true
-	}
-	if v := strings.TrimSpace(os.Getenv("HAWK_NO_CONTAINER")); v == "1" || strings.EqualFold(v, "true") {
-		return false
-	}
-	// Default to container-first and let bootContainerCmd probe Docker asynchronously
-	// after the TUI is already visible.
 	return true
+}
+
+// startRequiredContainer starts Hawk's mandatory Docker sandbox. It fails
+// closed with an actionable error; there is deliberately no host fallback.
+func startRequiredContainer(projectDir string) (*sandbox.ContainerSandbox, error) {
+	cs := sandbox.NewContainerSandbox(projectDir)
+	if !dockerAvailable() {
+		return nil, fmt.Errorf("docker is required but is not running — start Docker and retry")
+	}
+
+	imageCtx, imageCancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer imageCancel()
+	if _, err := cs.EnsureImage(imageCtx); err != nil {
+		return nil, fmt.Errorf("sandbox image unavailable: %w", err)
+	}
+
+	startCtx, startCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer startCancel()
+	if err := cs.Start(startCtx); err != nil {
+		return nil, fmt.Errorf("container start failed: %w", err)
+	}
+	return cs, nil
+}
+
+// attachRequiredContainer starts and binds the mandatory Docker sandbox to a
+// headless or REPL session. Callers own the returned sandbox and must stop it.
+func attachRequiredContainer(sess *engine.Session, projectDir string) (*sandbox.ContainerSandbox, error) {
+	if sess == nil {
+		return nil, fmt.Errorf("docker container required: session is unavailable")
+	}
+	sess.SetContainerRequired(true)
+	cs, err := startRequiredContainer(projectDir)
+	if err != nil {
+		return nil, fmt.Errorf("docker container required: %w", err)
+	}
+	sess.SetContainerExecutor(cs)
+	return cs, nil
 }
 
 // bootContainerCmd starts the container in the background and sends status
 // updates to the TUI (async boot with progress feedback).
 // Retries up to 3 times with exponential backoff (0s, 2s, 4s) before
-// falling back to host mode.
+// stopping in a retryable error state.
 func bootContainerCmd(projectDir string) tea.Cmd {
 	const maxAttempts = 3
 	backoff := []time.Duration{0, 2 * time.Second, 4 * time.Second}
@@ -54,50 +78,13 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 				time.Sleep(backoff[attempt])
 			}
 
-			cs := sandbox.NewContainerSandbox(projectDir)
-
-			if !sandbox.DockerAvailable() {
+			cs, err := startRequiredContainer(projectDir)
+			if err != nil {
 				if attempt < maxAttempts-1 {
 					continue
 				}
-				return containerStatusMsg{
-					status: "docker not running",
-					err:    fmt.Errorf("docker is not running: start Docker and try again"),
-				}
+				return containerStatusMsg{status: "container required", err: err}
 			}
-
-			// Check image is local
-			image := cs.Image()
-			imgCtx, imgCancel := context.WithTimeout(context.Background(), 10*time.Second)
-			checkCmd := exec.CommandContext(imgCtx, "docker", "image", "inspect", image) // #nosec G204 -- fixed command 'docker' with args, not user-controlled binary
-			imgErr := checkCmd.Run()
-			imgCancel()
-			if imgErr != nil {
-				if attempt < maxAttempts-1 {
-					continue
-				}
-				return containerStatusMsg{
-					status: "image missing",
-					err: fmt.Errorf(
-						"container image %s is not local — run: docker pull %s\nOr restart with --no-container for host mode",
-						image, image,
-					),
-				}
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-			if err := cs.Start(ctx); err != nil {
-				cancel()
-				if attempt < maxAttempts-1 {
-					continue
-				}
-				cancel()
-				return containerStatusMsg{
-					status: "start failed",
-					err:    fmt.Errorf("container start failed: %w", err),
-				}
-			}
-			cancel()
 
 			cid := cs.ContainerID()
 			shortID := cid
@@ -114,7 +101,7 @@ func bootContainerCmd(projectDir string) tea.Cmd {
 
 		return containerStatusMsg{
 			status: "retry exhausted",
-			err:    fmt.Errorf("container failed after %d attempts — restart with --no-container for host mode", maxAttempts),
+			err:    fmt.Errorf("docker container failed after %d attempts — press r to retry", maxAttempts),
 		}
 	}
 }

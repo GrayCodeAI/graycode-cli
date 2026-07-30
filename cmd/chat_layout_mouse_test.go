@@ -31,10 +31,10 @@ func TestView_LineCountMatchesHeight(t *testing.T) {
 	if m.footerTopY() <= m.chatPaneTopY() {
 		t.Fatalf("footerTopY %d must be below chat top %d", m.footerTopY(), m.chatPaneTopY())
 	}
-	// Footer must start on the same row View() renders the host/container line.
+	// Footer must start on the same row View() renders the Docker line.
 	footerIdx := -1
 	for i, line := range lines {
-		if strings.Contains(line, "Host mode:") || strings.Contains(line, "Container:") {
+		if strings.Contains(line, "Docker:") {
 			footerIdx = i
 			break
 		}

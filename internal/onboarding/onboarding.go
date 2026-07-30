@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 
@@ -24,8 +25,7 @@ const (
 
 // Welcome prints the hawk welcome banner.
 func Welcome(version string) {
-	// Vivid Orange #FF5E0E
-	hawkC := "\033[38;2;255;94;14m"
+	hawkC := internaltheme.BrandANSI
 
 	totalW := 80
 	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 40 {

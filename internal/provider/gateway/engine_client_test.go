@@ -35,7 +35,7 @@ func TestEngineAdapterPreservesHawkRequestOptions(t *testing.T) {
 	if request.Limits.MaxContinuations != 2 || request.Limits.MaxTotalOutputTokens != 9000 {
 		t.Fatalf("continuation lost: %+v", request.Limits)
 	}
-	if !request.Options.EnableCaching || request.Options.ReasoningEffort != "high" || request.Options.GLMThinkingEnabled == nil || request.Options.TopP == nil || request.Options.ServiceTier != "priority" {
+	if !request.Options.EnableCaching || request.Options.ReasoningEffort != "high" || request.Options.ThinkingEnabled == nil || request.Options.GLMThinkingEnabled == nil || request.Options.TopP == nil || request.Options.ServiceTier != "priority" {
 		t.Fatalf("advanced options lost: %+v", request.Options)
 	}
 	if request.Metadata.UserID != "hawk-user-1" {
@@ -50,11 +50,14 @@ func TestEngineAdapterOnlyRequiresGLMReasoningWhenEnabled(t *testing.T) {
 	disabled := false
 	enabled := true
 
-	if request := toEngineRequest(nil, types.ChatOptions{GLMThinkingEnabled: &disabled}, types.ContinuationConfig{}); request.Requirements.Reasoning {
-		t.Fatalf("GLMThinkingEnabled=false unexpectedly requires reasoning: %+v", request.Requirements)
+	if request := toEngineRequest(nil, types.ChatOptions{ThinkingEnabled: &disabled}, types.ContinuationConfig{}); request.Requirements.Reasoning {
+		t.Fatalf("ThinkingEnabled=false unexpectedly requires reasoning: %+v", request.Requirements)
+	}
+	if request := toEngineRequest(nil, types.ChatOptions{ThinkingEnabled: &enabled}, types.ContinuationConfig{}); !request.Requirements.Reasoning {
+		t.Fatalf("ThinkingEnabled=true did not require reasoning: %+v", request.Requirements)
 	}
 	if request := toEngineRequest(nil, types.ChatOptions{GLMThinkingEnabled: &enabled}, types.ContinuationConfig{}); !request.Requirements.Reasoning {
-		t.Fatalf("GLMThinkingEnabled=true did not require reasoning: %+v", request.Requirements)
+		t.Fatalf("deprecated GLMThinkingEnabled=true did not require reasoning: %+v", request.Requirements)
 	}
 }
 

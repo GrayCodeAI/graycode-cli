@@ -76,7 +76,7 @@ func (g *CompletionGenerator) populateSlashCommands() {
 		"/bughunter", "/btw", "/check", "/clean", "/clear", "/color", "/commit", "/compact",
 		"/compress", "/config", "/context", "/copy", "/cost", "/council", "/cron",
 		"/design", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
-		"/export", "/fast", "/files", "/focus", "/fork", "/help", "/history", "/hooks",
+		"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/help", "/history", "/hooks",
 		"/hunt", "/init", "/integrity", "/keybindings", "/learn", "/lint", "/loop",
 		"/mcp", "/memory", "/metrics", "/model", "/new", "/output-style",
 		"/pin", "/plugin", "/plugins", "/power",
