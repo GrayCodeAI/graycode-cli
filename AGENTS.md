@@ -175,10 +175,19 @@ hawk-eco verify
 
 Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/hawk-core-contracts` (`hawk-core-contracts/types`) — extensions and support repos must import that module instead of Hawk internals.
 
+### Architecture note: provider ownership
+
+Implement provider protocols, adapters, catalog metadata, credential mappings, and
+provider contract tests in `external/eyrie` first. Hawk consumes providers only
+through Eyrie's stable engine facade; Hawk changes should be limited to host UX
+and facade integration. Concentrate AI is a pay-as-you-go gateway implemented
+with its native Responses API (`/v1/responses`) under the
+`concentrate-payg` deployment.
+
 <!-- gitnexus:start -->
 ## GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **hawk** (81516 symbols, 253124 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **hawk** (86489 symbols, 267606 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 

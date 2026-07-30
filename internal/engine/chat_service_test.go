@@ -44,22 +44,43 @@ func TestChatService_BuildOptions_NonAnthropicCaching(t *testing.T) {
 	}
 }
 
-func TestChatService_BuildOptions_GLMThinking(t *testing.T) {
+func TestChatService_BuildOptions_ThinkingEnabled(t *testing.T) {
 	enabled := true
 	svc := NewChatService(NewMockClientForTest(), ChatServiceConfig{
-		Provider:           "zai_payg",
-		Model:              "glm-4",
-		GLMThinkingEnabled: &enabled,
+		Provider:        "zai_payg",
+		Model:           "glm-4",
+		ThinkingEnabled: &enabled,
 	})
 	opts := svc.BuildOptions("sys", "glm-4", 1024, nil)
-	if opts.GLMThinkingEnabled == nil || !*opts.GLMThinkingEnabled {
-		t.Error("expected GLMThinkingEnabled=true for zai_payg")
+	if opts.ThinkingEnabled == nil || !*opts.ThinkingEnabled {
+		t.Error("expected ThinkingEnabled=true for zai_payg")
 	}
-	// Sanity: setting GLMThinkingEnabled on a non-zai provider is ignored.
-	svc2 := NewChatService(NewMockClientForTest(), ChatServiceConfig{Provider: "openai", GLMThinkingEnabled: &enabled})
+	if opts.GLMThinkingEnabled == nil || !*opts.GLMThinkingEnabled {
+		t.Error("expected GLMThinkingEnabled alias=true for zai_payg")
+	}
+	// Sanity: setting ThinkingEnabled on a non-thinking provider is ignored.
+	svc2 := NewChatService(NewMockClientForTest(), ChatServiceConfig{Provider: "openai", ThinkingEnabled: &enabled})
 	opts2 := svc2.BuildOptions("sys", "gpt-4o", 1024, nil)
-	if opts2.GLMThinkingEnabled != nil {
-		t.Error("GLMThinkingEnabled should be nil for non-zai provider")
+	if opts2.ThinkingEnabled != nil || opts2.GLMThinkingEnabled != nil {
+		t.Error("ThinkingEnabled should be nil for non-thinking provider")
+	}
+	// LongCat / Agnes honor the generic toggle.
+	svc3 := NewChatService(NewMockClientForTest(), ChatServiceConfig{Provider: "longcat", ThinkingEnabled: &enabled})
+	opts3 := svc3.BuildOptions("sys", "LongCat-2.0", 1024, nil)
+	if opts3.ThinkingEnabled == nil || !*opts3.ThinkingEnabled {
+		t.Error("expected ThinkingEnabled=true for longcat")
+	}
+	svc4 := NewChatService(NewMockClientForTest(), ChatServiceConfig{Provider: "agnes", GLMThinkingEnabled: &enabled})
+	opts4 := svc4.BuildOptions("sys", "agnes-2.0-flash", 1024, nil)
+	if opts4.ThinkingEnabled == nil || !*opts4.ThinkingEnabled {
+		t.Error("expected ThinkingEnabled=true for agnes via deprecated alias")
+	}
+	for _, provider := range []string{"kimi", "deepseek", "openrouter", "anthropic", "xiaomi_mimo_payg"} {
+		svc := NewChatService(NewMockClientForTest(), ChatServiceConfig{Provider: provider, ThinkingEnabled: &enabled})
+		opts := svc.BuildOptions("sys", "m", 1024, nil)
+		if opts.ThinkingEnabled == nil || !*opts.ThinkingEnabled {
+			t.Errorf("expected ThinkingEnabled=true for %s", provider)
+		}
 	}
 }
 

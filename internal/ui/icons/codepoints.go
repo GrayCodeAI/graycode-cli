@@ -124,6 +124,9 @@ const (
 	puaClockOutline   = "\uf017" // nf-fa-clock_o         (61463)
 	puaPause          = "\uead1" // nf-cod-debug-pause    (60113)
 	puaExpandAll      = "\uebc1" // nf-cod-expand-all     (60309)
+	puaContainer      = "\ueb90" // nf-cod-server         (60240)
+	puaShield         = "\ueb93" // nf-cod-shield         (60243)
+	puaTerminal       = "\ueab5" // nf-cod-terminal       (60037)
 	puaCaretRight     = "\ueb06" // nf-cod-chevron_right  (60086)
 	puaCaretDown      = "\ueb04" // nf-cod-chevron_down   (60084)
 	puaTriangleSmall  = "\uebb1" // nf-cod-triangle-up    (60273) — collapsed
@@ -146,5 +149,6 @@ const (
 	puaPin = "\ueb6b"
 
 	puaDatabase = "\ueb1e" // nf-cod-database
+	puaNetwork  = "\ueb41" // nf-cod-globe
 	puaRuby     = "\ueb34" // nf-cod-ruby
 )

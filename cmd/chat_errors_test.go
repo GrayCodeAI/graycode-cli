@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -29,6 +30,16 @@ func TestFriendlyError(t *testing.T) {
 				t.Errorf("friendlyError(%q) = %q, want it to contain %q", tt.err, got, tt.contains)
 			}
 		})
+	}
+}
+
+func TestRenderSetupCompleteMessage_DoesNotPromiseProviderAvailability(t *testing.T) {
+	got := renderSetupCompleteMessage("poolside/laguna-xs-2.1")
+	if !strings.Contains(got, "Setup complete") || !strings.Contains(got, "model selected:") {
+		t.Fatalf("setup confirmation missing selected-model context: %q", got)
+	}
+	if strings.Contains(got, "ready to chat") {
+		t.Fatalf("setup confirmation must not claim live provider readiness: %q", got)
 	}
 }
 

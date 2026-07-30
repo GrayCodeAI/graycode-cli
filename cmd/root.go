@@ -63,8 +63,6 @@ var (
 	teachMode                  bool
 	teachDepth                 int
 	autoSkillFlag              bool
-	containerMode              bool
-	noContainer                bool
 	recoverFlag                bool
 	startupProfileFlag         bool
 	preflightLiveFlag          bool
@@ -86,12 +84,16 @@ func SetBuildDate(d string) {
 	buildDate = d
 }
 
+func registeredProviderCount() int {
+	return hawkconfig.RegisteredProviderCount()
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "hawk [prompt]",
 	Short: "AI coding agent powered by eyrie",
-	Long: `hawk is an AI coding agent that reads, writes, and runs code in your terminal.
+	Long: fmt.Sprintf(`hawk is an AI coding agent that reads, writes, and runs code in your terminal.
 
-It connects to 75+ LLM providers through eyrie, executes tools (file I/O, shell,
+It connects to %d first-class LLM providers through eyrie, executes tools (file I/O, shell,
 git, web search), and manages sessions — all from a keyboard-driven TUI or
 headless mode for scripts and CI.
 
@@ -104,7 +106,7 @@ Quick orientation:
   hawk config              Manage settings and credentials
 
 API keys are stored in the OS keychain (macOS Keychain / Linux keyring).
-Run hawk and use /config to set up your first provider.`,
+Run hawk and use /config to set up your first provider.`, registeredProviderCount()),
 	Example: `  hawk
   hawk -p "explain this repo"
   hawk exec "fix failing tests"
@@ -240,8 +242,6 @@ func init() {
 	rootCmd.Flags().BoolVar(&teachMode, "teach", false, "explain reasoning as the agent works")
 	rootCmd.Flags().IntVar(&teachDepth, "teach-depth", 2, "explanation depth: 1=what, 2=why, 3=how")
 	rootCmd.Flags().BoolVar(&autoSkillFlag, "auto-skill", false, "auto-detect project and install matching skills")
-	rootCmd.Flags().BoolVar(&noContainer, "no-container", false, "disable container mode (run on host with permission prompts)")
-	rootCmd.Flags().BoolVar(&containerMode, "container", false, "force container mode even if auto-detection would skip it")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "output the version number")
 	rootCmd.Flags().BoolVar(&refreshCatalogFlag, "refresh-catalog", false, "refresh the eyrie model catalog before starting")
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")

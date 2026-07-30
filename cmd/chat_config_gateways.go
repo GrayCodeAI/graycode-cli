@@ -94,27 +94,7 @@ func (m chatModel) loadConfigGatewayRows() []configGatewayRow {
 			KeyConflict:    keyConflict,
 		})
 	}
-	return prioritizeConfigGatewayRows(rows)
-}
-
-func prioritizeConfigGatewayRows(rows []configGatewayRow) []configGatewayRow {
-	ordered := make([]configGatewayRow, 0, len(rows))
-	for _, row := range rows {
-		if row.Active {
-			ordered = append(ordered, row)
-		}
-	}
-	for _, row := range rows {
-		if !row.Active && row.Configured {
-			ordered = append(ordered, row)
-		}
-	}
-	for _, row := range rows {
-		if !row.Active && !row.Configured {
-			ordered = append(ordered, row)
-		}
-	}
-	return ordered
+	return rows
 }
 
 func (m chatModel) refreshConfigGatewayRows() chatModel {

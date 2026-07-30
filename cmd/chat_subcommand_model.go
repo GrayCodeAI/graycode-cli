@@ -16,7 +16,7 @@ type modelSubcommand struct{}
 func (mo *modelSubcommand) Name() string      { return "model" }
 func (mo *modelSubcommand) Aliases() []string { return nil }
 func (mo *modelSubcommand) Description() string {
-	return "show the model picker or set the active model"
+	return "browse models (t toggles Think) or set the active model"
 }
 func (mo *modelSubcommand) Usage() string { return "/model [model-name|set <model-name>]" }
 func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
@@ -28,15 +28,18 @@ func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea
 	arg := strings.TrimSpace(strings.TrimPrefix(text, "/model"))
 	arg = strings.TrimSpace(strings.TrimPrefix(arg, "set"))
 	if arg == "" {
-		m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /model <model-name> or /model set <model-name>"})
+		m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /model <model-name> or /model set <model-name>\nOpen /model with no args to browse; press t to toggle Think."})
 		return m, nil
 	}
+	var selected *configModelOption
 	known := configModelChoices(m.configModelOptions, false)
 	if len(known) > 0 {
 		found := false
 		for i, k := range known {
 			if strings.EqualFold(k, arg) || strings.EqualFold(m.configModelOptions[i].ID, arg) {
 				arg = m.configModelOptions[i].ID
+				opt := m.configModelOptions[i]
+				selected = &opt
 				found = true
 				break
 			}
@@ -71,9 +74,23 @@ func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea
 	}
 	msgCount := len(m.session.RawMessages())
 	m.session.SetModel(arg)
+	if selected != nil {
+		m.applyModelThinkingPref(*selected)
+	} else {
+		provider := ""
+		if m.session != nil {
+			provider = m.session.Provider()
+		}
+		m.session.SetThinkingEnabled(hawkconfig.ResolveThinkingForModel(hawkconfig.LoadSettings(), arg, provider))
+	}
+	thinkLabel := hawkconfig.FormatModelThinkingLabel(
+		selected != nil && hawkconfig.ModelCapabilitySupportsThinking(selected.Capabilities),
+		hawkconfig.ThinkingPrefForModel(hawkconfig.LoadSettings(), arg),
+		m.session.Provider(),
+	)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-		"Model switched: %s → %s\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json).",
-		prevModel, m.session.Model(), msgCount,
+		"Model switched: %s → %s (Think: %s)\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json). Use /model and press t to toggle Think.",
+		prevModel, m.session.Model(), thinkLabel, msgCount,
 	)})
 	return m, nil
 }

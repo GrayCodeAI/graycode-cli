@@ -76,7 +76,7 @@ func renderStatusBarPrimaryLeft(m *chatModel) string {
 	return strings.Join(parts, statusDimStyle.Render(" "))
 }
 
-// renderStatusBarPrimaryRight — tokens, cost, ctx%, duration.
+// renderStatusBarPrimaryRight — tokens, cost, duration.
 func renderStatusBarPrimaryRight(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return ""
@@ -87,17 +87,6 @@ func renderStatusBarPrimaryRight(m *chatModel) string {
 	parts := []string{
 		statusTokenStyle.Render(tokenText),
 		statusCostStyle.Render(costText),
-	}
-	if m.session != nil {
-		if used := sessionContextUsedTokens(m.session); used > 0 {
-			if window := m.session.ContextWindowSize(); window > 0 {
-				pct := int(float64(used) / float64(window) * 100)
-				if pct > 999 {
-					pct = 999
-				}
-				parts = append(parts, statusDimStyle.Render(fmt.Sprintf("ctx %d%%", pct)))
-			}
-		}
 	}
 	sessionDur := time.Duration(0)
 	if !m.sessionStartedAt.IsZero() {
@@ -291,17 +280,13 @@ func renderStatusBarRight(m *chatModel) string {
 		parts = append(parts, autonomyTierStyle(level).Render("◈ "+autonomyTierName(level)))
 	}
 
-	// Persistent container/host mode indicator — safety-critical awareness.
-	if m.containerEnabled {
-		if m.containerReady {
-			parts = append(parts, containerModeStyle.Render("▣ container"))
-		} else if m.containerErr != nil {
-			parts = append(parts, containerModeErrStyle.Render("▣ container error"))
-		} else {
-			parts = append(parts, containerModeMutedStyle.Render("▣ container…"))
-		}
+	// Persistent Docker isolation indicator — safety-critical awareness.
+	if m.containerReady {
+		parts = append(parts, containerModeStyle.Render(icons.Shield()+" isolated"))
+	} else if m.containerErr != nil || !m.containerEnabled {
+		parts = append(parts, containerModeErrStyle.Render(icons.Alert()+" Docker required"))
 	} else {
-		parts = append(parts, containerModeStyle.Render("▢ host"))
+		parts = append(parts, containerModeMutedStyle.Render(icons.Container()+" starting"))
 	}
 
 	return strings.Join(parts, statusDimStyle.Render(" · "))
@@ -366,15 +351,10 @@ func formatTokenCountWithCommas(tokens int) string {
 func renderContainerFooterLeft(m chatModel) string {
 	bold, dim := containerFooterLeft(m)
 
-	if m.containerEnabled && m.containerErr != nil {
+	if m.containerErr != nil || !m.containerEnabled {
 		return containerErrStyle.Bold(true).Render(bold) + containerErrStyle.Render(dim)
 	}
-	if m.containerEnabled {
-		return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim, m.session)
-	}
-
-	labelStyle := lipgloss.NewStyle().Foreground(warnAmber).Bold(true)
-	return labelStyle.Render(bold) + dimStyle.Render(dim)
+	return containerLabelStyle.Render(bold) + renderContainerFooterDetail(dim, m.session)
 }
 
 func renderContainerFooterDetail(detail string, sess *engine.Session) string {
@@ -398,12 +378,12 @@ func renderContainerFooterDetail(detail string, sess *engine.Session) string {
 
 // containerFooterLeft is the bold + dim text on the top footer row (left side).
 func containerFooterLeft(m chatModel) (bold, dim string) {
+	bold = icons.Container() + " Docker:"
 	if !m.containerEnabled {
-		return "Host mode:", hostModeHint(m.session)
+		return bold, " required · agent tools locked"
 	}
-	bold = "Container:"
 	if m.containerErr != nil {
-		return bold, " Docker is not running. Start Docker and try again."
+		return bold, " unavailable · press r to retry"
 	}
 	if m.containerReady && strings.TrimSpace(m.containerStatus) != "" {
 		tier := "Builder"
@@ -428,17 +408,6 @@ func containerFooterLeft(m chatModel) (bold, dim string) {
 		return bold, " ◐ starting…"
 	}
 	return bold, " starting…"
-}
-
-func hostModeHint(sess *engine.Session) string {
-	if sess == nil || sess.Perm == nil {
-		return " local · ask before tools"
-	}
-	if sess.Perm.Stage != engine.SpecStageNone && sess.Perm.Stage != engine.SpecStageImplementing {
-		return " local · spec stage active"
-	}
-	// Show short tier name instead of full description to keep footer compact.
-	return " local · " + autonomyTierName(sess.PermSvc().Autonomy())
 }
 
 func statusLineSummary(m *chatModel) string {

@@ -7,6 +7,22 @@ import (
 	"charm.land/bubbles/v2/viewport"
 )
 
+func TestRenderDisplayMessage_ErrorLabelIsCapitalized(t *testing.T) {
+	got := renderDisplayMessage(
+		displayMsg{role: "error", content: "Rate limited by the API provider."},
+		0,
+		nil,
+		80,
+		nil,
+	)
+	if !strings.Contains(got, "Error: Rate limited by the API provider.") {
+		t.Fatalf("renderDisplayMessage() = %q, want capitalized Error label", got)
+	}
+	if strings.Contains(got, "error: Rate limited by the API provider.") {
+		t.Fatalf("renderDisplayMessage() = %q, contains lowercase error label", got)
+	}
+}
+
 func TestAssembleViewportContent_IncrementalMatchesFullRebuild(t *testing.T) {
 	msgs := []displayMsg{
 		{role: "user", content: "hello"},

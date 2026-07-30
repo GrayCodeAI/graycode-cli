@@ -35,19 +35,30 @@ func TestConfigGatewayRows_UsesPanelCacheUntilInvalidated(t *testing.T) {
 	}
 }
 
-func TestPrioritizeConfigGatewayRowsActiveThenConfigured(t *testing.T) {
-	rows := []configGatewayRow{
-		{ID: "plain-1"},
-		{ID: "configured-1", Configured: true},
-		{ID: "active", Active: true, Configured: true},
-		{ID: "plain-2"},
-		{ID: "configured-2", Configured: true},
+func TestConfigGatewayRowsKeepRegistryOrderAfterKeySaved(t *testing.T) {
+	isolateCredentialHome(t)
+	hawkconfig.InvalidateConfigUICache()
+	store := &gateway.MapStore{}
+	gateway.SetDefaultStore(store)
+	t.Cleanup(func() {
+		gateway.SetDefaultStore(nil)
+		hawkconfig.InvalidateConfigUICache()
+	})
+
+	m := chatModel{}
+	before := m.loadConfigGatewayRows()
+	if err := store.Set(t.Context(), gateway.AccountForEnv("CONCENTRATE_API_KEY"), "test-key-1234567890"); err != nil {
+		t.Fatal(err)
 	}
-	got := prioritizeConfigGatewayRows(rows)
-	want := []string{"active", "configured-1", "configured-2", "plain-1", "plain-2"}
-	for i, id := range want {
-		if got[i].ID != id {
-			t.Fatalf("row %d = %q, want %q; rows=%+v", i, got[i].ID, id, got)
+	hawkconfig.InvalidateConfigUICache()
+	after := m.loadConfigGatewayRows()
+
+	if len(after) != len(before) {
+		t.Fatalf("gateway count changed after key save: %d → %d", len(before), len(after))
+	}
+	for i := range before {
+		if after[i].ID != before[i].ID {
+			t.Fatalf("gateway order changed at row %d after key save: %q → %q", i, before[i].ID, after[i].ID)
 		}
 	}
 }

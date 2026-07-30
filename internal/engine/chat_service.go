@@ -40,9 +40,9 @@ type ChatService struct {
 	// outputSchema, when non-empty, requests a JSON-schema-constrained
 	// response. Plumbed into eyrie's ChatOptions.ResponseFormat.
 	outputSchema string
-	// glmThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing
-	// requests. nil leaves the model default.
-	glmThinkingEnabled *bool
+	// thinkingEnabled is the generic host preference for provider thinking /
+	// reasoning toggles (Z.AI, LongCat, Agnes, …). nil leaves provider default.
+	thinkingEnabled *bool
 }
 
 // ChatServiceConfig bundles the optional fields the constructor doesn't
@@ -57,6 +57,8 @@ type ChatServiceConfig struct {
 	RetryConfig        retry.Config
 	ContinuationConfig types.ContinuationConfig
 	OutputSchema       string
+	ThinkingEnabled    *bool
+	// GLMThinkingEnabled is accepted as a deprecated alias of ThinkingEnabled.
 	GLMThinkingEnabled *bool
 }
 
@@ -74,17 +76,21 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 	if cfg.Metrics == nil {
 		cfg.Metrics = metrics.NewRegistry()
 	}
+	thinking := cfg.ThinkingEnabled
+	if thinking == nil {
+		thinking = cfg.GLMThinkingEnabled
+	}
 	return &ChatService{
-		client:             client,
-		provider:           cfg.Provider,
-		model:              cfg.Model,
-		deploymentRouting:  cfg.DeploymentRouting,
-		rateLimiter:        cfg.RateLimiter,
-		metrics:            cfg.Metrics,
-		retryCfg:           cfg.RetryConfig,
-		contCfg:            cfg.ContinuationConfig,
-		outputSchema:       cfg.OutputSchema,
-		glmThinkingEnabled: cfg.GLMThinkingEnabled,
+		client:            client,
+		provider:          cfg.Provider,
+		model:             cfg.Model,
+		deploymentRouting: cfg.DeploymentRouting,
+		rateLimiter:       cfg.RateLimiter,
+		metrics:           cfg.Metrics,
+		retryCfg:          cfg.RetryConfig,
+		contCfg:           cfg.ContinuationConfig,
+		outputSchema:      cfg.OutputSchema,
+		thinkingEnabled:   thinking,
 	}
 }
 
@@ -103,11 +109,15 @@ func (c *ChatService) Model() string { return c.model }
 // (true) or a single-provider transport (false).
 func (c *ChatService) DeploymentRouting() bool { return c.deploymentRouting }
 
-// SetGLMThinkingEnabled sets the GLM/Z.ai extended-reasoning toggle. The
-// next StreamChat/Chat request applies it. Mirrors the legacy Session
-// field setter.
+// SetThinkingEnabled sets the generic host thinking/reasoning toggle for
+// providers that support it (Z.AI, LongCat, Agnes, …).
+func (c *ChatService) SetThinkingEnabled(v *bool) {
+	c.thinkingEnabled = v
+}
+
+// SetGLMThinkingEnabled is a deprecated alias of SetThinkingEnabled.
 func (c *ChatService) SetGLMThinkingEnabled(v *bool) {
-	c.glmThinkingEnabled = v
+	c.SetThinkingEnabled(v)
 }
 
 // SetModel updates the active model. The next StreamChat will use the new
@@ -145,10 +155,9 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 		EnableCaching: c.provider == "anthropic",
 		Tools:         tools,
 	}
-	// GLM/Z.ai extended reasoning toggle: only meaningful for Z.AI
-	// providers, where eyrie emits thinking={type:enabled|disabled}.
-	if isZAIProvider(c.provider) && c.glmThinkingEnabled != nil {
-		opts.GLMThinkingEnabled = c.glmThinkingEnabled
+	if supportsThinkingToggle(c.provider) && c.thinkingEnabled != nil {
+		opts.ThinkingEnabled = c.thinkingEnabled
+		opts.GLMThinkingEnabled = c.thinkingEnabled // alias for older adapters
 	}
 	// Structured output: request a JSON-schema-constrained response when set.
 	if c.outputSchema != "" {
@@ -222,10 +231,15 @@ func contains(s, sub string) bool {
 	return len(sub) > 0 && len(s) >= len(sub) && (s == sub || (len(s) > 0 && indexOf(s, sub) >= 0))
 }
 
-// isZAIProvider reports whether the provider is a Z.AI gateway (payg or coding).
-func isZAIProvider(provider string) bool {
+// supportsThinkingToggle reports providers that honor ThinkingEnabled on the
+// OpenAI-compat wire (each with its own ThinkingFormat).
+func supportsThinkingToggle(provider string) bool {
 	switch provider {
-	case "zai_payg", "zai_coding":
+	case "zai_payg", "zai_coding", "longcat", "agnes",
+		"kimi", "deepseek",
+		"xiaomi_mimo", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan",
+		"minimax_payg", "minimax_token_plan",
+		"openrouter", "opencodego", "anthropic":
 		return true
 	default:
 		return false

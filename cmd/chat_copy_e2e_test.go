@@ -29,7 +29,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	m.input.SetValue("draft in prompt")
 
 	transcript := m.copyableTranscript()
-	for _, want := range []string{"You: Hi", "error: The model produced internal reasoning", "Draft: draft in prompt"} {
+	for _, want := range []string{"You: Hi", "Error: The model produced internal reasoning", "Draft: draft in prompt"} {
 		if !strings.Contains(transcript, want) {
 			t.Fatalf("pass %d: transcript missing %q:\n%s", pass, want, transcript)
 		}

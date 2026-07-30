@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - "Dockerfile"
+      - "internal/sandbox/container_version"
+      - "internal/sandbox/sandbox.Dockerfile"
       - "**.go"
       - "go.mod"
       - "go.sum"
@@ -103,3 +105,67 @@ jobs:
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           sarif_file: trivy-image.sarif
+
+  sandbox-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Read sandbox image version
+        id: sandbox-version
+        shell: bash
+        run: echo "tag=$(tr -d '[:space:]' < internal/sandbox/container_version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build sandbox image for scan
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: internal/sandbox
+          file: internal/sandbox/sandbox.Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: graycodeai/hawk-sandbox:scan
+          cache-from: type=gha,scope=hawk-sandbox
+          cache-to: type=gha,mode=max,scope=hawk-sandbox
+
+      - name: Scan sandbox image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: graycodeai/hawk-sandbox:scan
+          format: sarif
+          output: trivy-sandbox-image.sarif
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Build and publish public sandbox image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: internal/sandbox
+          file: internal/sandbox/sandbox.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            graycodeai/hawk-sandbox:${{ steps.sandbox-version.outputs.tag }}
+            graycodeai/hawk-sandbox:latest
+          cache-from: type=gha,scope=hawk-sandbox
+          cache-to: type=gha,mode=max,scope=hawk-sandbox
+
+      - name: Upload sandbox image scan results
+        if: github.event_name != 'pull_request' && always()
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
+        with:
+          sarif_file: trivy-sandbox-image.sarif

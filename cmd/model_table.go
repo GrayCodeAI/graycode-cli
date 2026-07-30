@@ -21,6 +21,7 @@ type modelTableLayout struct {
 	Model   int
 	Owner   int
 	Caps    int
+	Think   int
 	Price   int
 	Context int
 }
@@ -29,6 +30,7 @@ type modelTableRow struct {
 	Model    string
 	Provider string
 	Caps     string
+	Think    string
 	Price    string
 	Context  string
 	Free     bool
@@ -47,12 +49,14 @@ func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayo
 	modelW := runewidth.StringWidth("Model")
 	ownerW := runewidth.StringWidth("Owner")
 	capsW := runewidth.StringWidth("Caps")
+	thinkW := runewidth.StringWidth("Think")
 	priceW := runewidth.StringWidth("Price")
 	ctxW := runewidth.StringWidth("Ctx")
 	for _, row := range rows {
 		modelW = maxInt(modelW, runewidth.StringWidth(row.Model))
 		ownerW = maxInt(ownerW, runewidth.StringWidth(row.Provider))
 		capsW = maxInt(capsW, runewidth.StringWidth(row.Caps))
+		thinkW = maxInt(thinkW, runewidth.StringWidth(row.Think))
 		priceW = maxInt(priceW, runewidth.StringWidth(row.Price))
 		ctxText := row.Context
 		if row.Active {
@@ -63,12 +67,13 @@ func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayo
 
 	ownerW += 2
 	capsW += 2
+	thinkW += 2
 	priceW += 2
 	ctxW += 1
 
-	gaps := modelTableColGap * 4
+	gaps := modelTableColGap * 5
 	modelW += modelTableModelPad
-	maxModel := usable - ownerW - capsW - priceW - ctxW - gaps
+	maxModel := usable - ownerW - capsW - thinkW - priceW - ctxW - gaps
 	if maxModel < 20 {
 		maxModel = 20
 	}
@@ -76,7 +81,7 @@ func computeModelTableLayout(viewWidth int, rows []modelTableRow) modelTableLayo
 		modelW = maxModel
 	}
 
-	return modelTableLayout{Model: modelW, Owner: ownerW, Caps: capsW, Price: priceW, Context: ctxW}
+	return modelTableLayout{Model: modelW, Owner: ownerW, Caps: capsW, Think: thinkW, Price: priceW, Context: ctxW}
 }
 
 func modelTableRowFromOption(o configModelOption) modelTableRow {
@@ -106,10 +111,25 @@ func modelTableRowFromOption(o configModelOption) modelTableRow {
 		Model:    name,
 		Provider: owner,
 		Caps:     formatModelCapabilities(o.Capabilities),
+		Think:    formatModelThinkingCell(o),
 		Price:    price,
 		Context:  formatModelTableContext(o.ContextWindow),
 		Free:     free,
 	}
+}
+
+func formatModelThinkingCell(o configModelOption) string {
+	supports := hawkconfig.ModelCapabilitySupportsThinking(o.Capabilities)
+	settings := hawkconfig.LoadSettings()
+	pref := hawkconfig.ThinkingPrefForModel(settings, o.ID)
+	if pref == nil && o.CanonicalID != "" && o.CanonicalID != o.ID {
+		pref = hawkconfig.ThinkingPrefForModel(settings, o.CanonicalID)
+	}
+	provider := strings.TrimSpace(o.GatewayID)
+	if provider == "" {
+		provider = strings.TrimSpace(o.ProviderID)
+	}
+	return hawkconfig.FormatModelThinkingLabel(supports, pref, provider)
 }
 
 func formatModelCapabilities(capabilities []string) string {
@@ -225,11 +245,11 @@ func parseContextWindowLabel(label string) int {
 
 func renderModelTableHeader(layout modelTableLayout, headerStyle, metaStyle lipgloss.Style) string {
 	line := renderModelTableLine(
-		[]string{"Model", "Owner", "Caps", "Price", "Ctx"},
+		[]string{"Model", "Owner", "Caps", "Think", "Price", "Ctx"},
 		layout,
-		[]lipgloss.Style{headerStyle, headerStyle, headerStyle, headerStyle, headerStyle},
+		[]lipgloss.Style{headerStyle, headerStyle, headerStyle, headerStyle, headerStyle, headerStyle},
 	)
-	ruleLen := layout.Model + layout.Owner + layout.Caps + layout.Price + layout.Context + modelTableColGap*4
+	ruleLen := layout.Model + layout.Owner + layout.Caps + layout.Think + layout.Price + layout.Context + modelTableColGap*5
 	indent := strings.Repeat(" ", modelTableIndent)
 	return indent + line + "\n" + indent + metaStyle.Render(strings.Repeat("─", ruleLen))
 }
@@ -263,17 +283,18 @@ func renderModelTableRow(row modelTableRow, cursor, active bool, layout modelTab
 			truncateRunes(row.Model, layout.Model),
 			truncateRunes(row.Provider, layout.Owner),
 			truncateRunes(row.Caps, layout.Caps),
+			truncateRunes(row.Think, layout.Think),
 			truncateRunes(row.Price, layout.Price),
 			ctx,
 		},
 		layout,
-		[]lipgloss.Style{meta, meta, meta, priceStyle, meta},
+		[]lipgloss.Style{meta, meta, meta, meta, priceStyle, meta},
 	)
 	return prefix + line
 }
 
 func renderModelTableLine(values []string, layout modelTableLayout, styles []lipgloss.Style) string {
-	widths := []int{layout.Model, layout.Owner, layout.Caps, layout.Price, layout.Context}
+	widths := []int{layout.Model, layout.Owner, layout.Caps, layout.Think, layout.Price, layout.Context}
 	parts := make([]string, len(values))
 	for i, v := range values {
 		parts[i] = styles[i].Render(padCellLeft(v, widths[i]))
@@ -346,7 +367,7 @@ func modelTableFooter(total, scroll, end, allTotal int, muted lipgloss.Style) st
 	if allTotal > 0 && total < allTotal {
 		label += fmt.Sprintf(" (%d total)", allTotal)
 	}
-	return muted.Render(fmt.Sprintf("%s%s · enter to select", prefix, label))
+	return muted.Render(fmt.Sprintf("%s%s · t toggle thinking · enter to select", prefix, label))
 }
 
 func modelTableRowFromCatalogEntry(m hawkconfig.EngineModel) modelTableRow {
@@ -372,10 +393,15 @@ func modelTableRowFromCatalogEntry(m hawkconfig.EngineModel) modelTableRow {
 	if free && price == "—" {
 		price = "free"
 	}
+	provider := strings.TrimSpace(m.GatewayID)
+	if provider == "" {
+		provider = strings.TrimSpace(m.ProviderID)
+	}
 	return modelTableRow{
 		Model:    name,
 		Provider: owner,
 		Caps:     formatModelCapabilities(m.Capabilities),
+		Think:    hawkconfig.FormatModelThinkingLabel(hawkconfig.ModelCapabilitySupportsThinking(m.Capabilities), hawkconfig.ThinkingPrefForModel(hawkconfig.LoadSettings(), m.ID), provider),
 		Price:    price,
 		Context:  formatModelTableContext(m.ContextWindow),
 		Free:     free,

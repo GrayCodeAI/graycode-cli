@@ -447,10 +447,7 @@ func (SpecEditTool) Parameters() map[string]interface{} {
 				"description": "Full replacement content for the artifact (replaces the entire file). Use this instead of delta for wholesale changes.",
 			},
 		},
-		"oneOf": []interface{}{
-			map[string]interface{}{"required": []string{"artifact", "delta"}},
-			map[string]interface{}{"required": []string{"artifact", "content"}},
-		},
+		"required": []string{"artifact"},
 	}
 }
 
@@ -462,6 +459,10 @@ func (SpecEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
+	}
+
+	if p.Delta == "" && p.Content == "" {
+		return "", fmt.Errorf("spec edit requires either 'delta' or 'content'")
 	}
 
 	slug, err := specSlug(ctx)

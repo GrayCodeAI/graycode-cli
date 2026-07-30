@@ -46,6 +46,10 @@ const (
 	ASCIIClockOutline  = "[t]"
 	ASCIIPause         = "[||]"
 	ASCIIExpandAll     = "[+]"
+	ASCIIContainer     = "[ctr]"
+	ASCIINetwork       = "[net]"
+	ASCIIShield        = "[safe]"
+	ASCIITerminal      = ">_"
 	ASCIICaretRight    = ">"
 	ASCIICaretDown     = "v"
 	ASCIITriangleSmall = ">"
@@ -107,6 +111,10 @@ var registry = []struct {
 	{"clock_outline", puaClockOutline, ASCIIClockOutline},
 	{"pause", puaPause, ASCIIPause},
 	{"expand_all", puaExpandAll, ASCIIExpandAll},
+	{"container", puaContainer, ASCIIContainer},
+	{"network", puaNetwork, ASCIINetwork},
+	{"shield", puaShield, ASCIIShield},
+	{"terminal", puaTerminal, ASCIITerminal},
 	{"caret_right", puaCaretRight, ASCIICaretRight},
 	{"caret_down", puaCaretDown, ASCIICaretDown},
 	{"triangle_small", puaTriangleSmall, ASCIITriangleSmall},
@@ -224,6 +232,10 @@ func Branch() string        { return Glyph("branch") }
 func ClockOutline() string  { return Glyph("clock_outline") }
 func Pause() string         { return Glyph("pause") }
 func ExpandAll() string     { return Glyph("expand_all") }
+func Container() string     { return Glyph("container") }
+func Network() string       { return Glyph("network") }
+func Shield() string        { return Glyph("shield") }
+func Terminal() string      { return Glyph("terminal") }
 func CaretRight() string    { return Glyph("caret_right") }
 func CaretDown() string     { return Glyph("caret_down") }
 func TriangleSmall() string { return Glyph("triangle_small") }

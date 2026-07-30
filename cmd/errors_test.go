@@ -65,6 +65,16 @@ func TestFriendlyErrorRateLimiting(t *testing.T) {
 	}
 }
 
+func TestFriendlyErrorRateLimiting_DoesNotDuplicateGuidance(t *testing.T) {
+	got := friendlyError(errors.New("HTTP 429 Too Many Requests"))
+	if count := strings.Count(got, "Wait a moment and try again"); count != 1 {
+		t.Fatalf("rate-limit guidance repeated %d times in %q", count, got)
+	}
+	if strings.Count(got, "switch provider") != 1 {
+		t.Fatalf("provider-switch guidance should appear once in %q", got)
+	}
+}
+
 func TestFriendlyErrorAuth(t *testing.T) {
 	tests := []struct {
 		name    string

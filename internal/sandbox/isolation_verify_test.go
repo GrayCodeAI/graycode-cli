@@ -23,19 +23,6 @@ func dockerAvailableQuick(t *testing.T) bool {
 	return true
 }
 
-func dockerImageAvailable(t *testing.T, image string) bool {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "docker", "image", "inspect", image)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	if err := cmd.Run(); err != nil {
-		t.Skipf("docker image %q not available locally: %v", image, err)
-	}
-	return true
-}
-
 // TestVerify_ContainerDoesNotExposeHostHawkHome checks Docker isolation when available.
 // The project dir is mounted; ~/.hawk on the host must not be readable inside the container.
 func TestVerify_ContainerDoesNotExposeHostHawkHome(t *testing.T) {
@@ -58,11 +45,11 @@ func TestVerify_ContainerDoesNotExposeHostHawkHome(t *testing.T) {
 
 	projectDir := t.TempDir()
 	cs := NewContainerSandbox(projectDir)
-	if !dockerImageAvailable(t, cs.image) {
-		return
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
+	if _, imageErr := cs.EnsureImage(ctx); imageErr != nil {
+		t.Fatalf("sandbox image: %v", imageErr)
+	}
 	if startErr := cs.Start(ctx); startErr != nil {
 		t.Fatalf("container start: %v", startErr)
 	}

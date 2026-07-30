@@ -129,7 +129,7 @@ func plainTranscriptLine(msg displayMsg) (string, bool) {
 	case "assistant":
 		return "hawk: " + content, true
 	case "error":
-		return "error: " + content, true
+		return "Error: " + content, true
 	case "system":
 		return content, true
 	case "thinking":

@@ -747,14 +747,18 @@ func (s *Session) SetPinnedMessages(n int) {
 	}
 }
 
-// SetGLMThinkingEnabled sets the GLM/Z.AI extended-reasoning toggle on
-// the ChatService (the source of truth). The legacy s.GLMThinkingEnabled
-// field is kept for backward compat but is no longer the read path.
-func (s *Session) SetGLMThinkingEnabled(v *bool) {
-	s.GLMThinkingEnabled = v
+// SetThinkingEnabled sets the generic host thinking/reasoning toggle on
+// the ChatService (the source of truth).
+func (s *Session) SetThinkingEnabled(v *bool) {
+	s.GLMThinkingEnabled = v // keep legacy field in sync
 	if s.llm != nil {
-		s.llm.SetGLMThinkingEnabled(v)
+		s.llm.SetThinkingEnabled(v)
 	}
+}
+
+// SetGLMThinkingEnabled is a deprecated alias of SetThinkingEnabled.
+func (s *Session) SetGLMThinkingEnabled(v *bool) {
+	s.SetThinkingEnabled(v)
 }
 
 // SetSnapshots attaches the snapshot tracker. New code should call

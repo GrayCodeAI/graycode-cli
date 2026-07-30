@@ -22,8 +22,8 @@ func TestIsCatalogCacheRequired(t *testing.T) {
 
 func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 	gws := AllSetupGateways()
-	if len(gws) < 19 || len(gws) > 22 {
-		t.Fatalf("expected 19-22 setup gateways, got %d: %v", len(gws), gws)
+	if got, want := len(gws), RegisteredProviderCount(); got != want {
+		t.Fatalf("setup gateways = %d, registered providers = %d: %v", got, want, gws)
 	}
 	for _, id := range gws {
 		if id == "ai21" || id == "alibaba" {
