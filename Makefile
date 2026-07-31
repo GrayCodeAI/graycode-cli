@@ -246,7 +246,7 @@ compat-check: ## Strict validation — non-zero exit if any component lacks a ve
 compat-drift: ## Advisory: report pin drift between hawk's go.mod and external/ submodules. Never fails.
 	@go run ./cmd/compat-test -check-external -file=testdata/compatibility-matrix.json
 
-.PHONY: hooks sync-submodules sync-clone
+.PHONY: hooks sync-submodules sync-submodule-versions sync-clone
 hooks: ## Install git hooks via lefthook (formatting, linting, conventional commits).
 	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
 	lefthook install
@@ -255,6 +255,10 @@ sync-submodules: ## Fetch and checkout latest origin/main for all external/ subm
 	git submodule foreach 'git fetch origin && git checkout origin/main 2>/dev/null || git checkout origin/HEAD'
 	@echo "Submodule heads:"
 	@git submodule status
+
+sync-submodule-versions: ## After advancing submodules, bump go.mod requires to match each gitlink.
+	@chmod +x scripts/sync-submodule-versions.sh
+	@./scripts/sync-submodule-versions.sh
 
 sync-external: ## Read-only drift report: external/<repo> pin vs sibling ../<repo> HEAD.
 	@bash ./scripts/sync-external.sh
