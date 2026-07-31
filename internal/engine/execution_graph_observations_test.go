@@ -176,6 +176,45 @@ func TestTokUsageBudgetStopsAtConfiguredLimit(t *testing.T) {
 	}
 }
 
+func TestApplyTokUsageSettingsOverridesAndDisables(t *testing.T) {
+	sess := NewSession("test", "test", "system", tool.NewRegistry())
+	// Defaults: token ceilings off (provider rate limits own throughput).
+	defaults := sess.ensureTokUsageTracker().GetLimits()
+	if defaults.HourlyTokens != 0 || defaults.DailyTokens != 0 || defaults.SessionTokens != 0 {
+		t.Fatalf("expected disabled token ceilings by default, got %#v", defaults)
+	}
+
+	sess.ApplyTokUsageSettings(250_000, -1, 0)
+	limits := sess.ensureTokUsageTracker().GetLimits()
+	if limits.HourlyTokens != 250_000 {
+		t.Fatalf("HourlyTokens = %d, want 250000", limits.HourlyTokens)
+	}
+	if limits.DailyTokens != 0 {
+		t.Fatalf("DailyTokens = %d, want 0 (disabled)", limits.DailyTokens)
+	}
+	if limits.SessionTokens != 0 {
+		t.Fatalf("SessionTokens = %d, want 0 (still disabled)", limits.SessionTokens)
+	}
+}
+
+func TestDrainAlertsSurfacesHourlyWarning(t *testing.T) {
+	tracker := tok.NewUsageTracker()
+	tracker.SetLimits(tok.UsageLimits{
+		HourlyTokens:  100,
+		DailyTokens:   10_000,
+		SessionTokens: 10_000,
+		CostUSD:       10,
+	})
+	tracker.Record(55, 0, "provider", "model")
+	alerts := tracker.DrainAlerts()
+	if len(alerts) == 0 {
+		t.Fatal("expected threshold alert after crossing 50%")
+	}
+	if len(tracker.DrainAlerts()) != 0 {
+		t.Fatal("expected DrainAlerts to clear pending alerts")
+	}
+}
+
 func TestEyrieOperationObservationIsPrivacySafe(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())

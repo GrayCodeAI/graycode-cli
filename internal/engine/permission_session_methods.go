@@ -70,6 +70,36 @@ func (s *Session) SetMaxBudgetUSD(amount float64) error {
 	return nil
 }
 
+// ApplyTokUsageSettings optionally enables tok.UsageTracker token ceilings.
+// Values: 0 or -1 leave/disable the ceiling (provider owns rate limits);
+// >0 opts into a local cap.
+func (s *Session) ApplyTokUsageSettings(hourly, daily, session int) {
+	if s == nil {
+		return
+	}
+	if hourly == 0 && daily == 0 && session == 0 {
+		return
+	}
+	tracker := s.ensureTokUsageTracker()
+	limits := tracker.GetLimits()
+	if hourly == -1 {
+		limits.HourlyTokens = 0
+	} else if hourly > 0 {
+		limits.HourlyTokens = hourly
+	}
+	if daily == -1 {
+		limits.DailyTokens = 0
+	} else if daily > 0 {
+		limits.DailyTokens = daily
+	}
+	if session == -1 {
+		limits.SessionTokens = 0
+	} else if session > 0 {
+		limits.SessionTokens = session
+	}
+	tracker.SetLimits(limits)
+}
+
 func (s *Session) exceededBudget() bool {
 	return s.LifecycleSvc().Limits().MaxBudgetUSD() > 0 && s.Cost.Total() > s.LifecycleSvc().Limits().MaxBudgetUSD()
 }

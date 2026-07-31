@@ -81,6 +81,22 @@ func ValidateSettings(s Settings) ValidationResult {
 			Value:   fmt.Sprintf("%f", s.MaxBudgetUSD),
 		})
 	}
+	for _, lim := range []struct {
+		field string
+		value int
+	}{
+		{"hourlyTokenLimit", s.HourlyTokenLimit},
+		{"dailyTokenLimit", s.DailyTokenLimit},
+		{"sessionTokenLimit", s.SessionTokenLimit},
+	} {
+		if lim.value < -1 {
+			errors = append(errors, ValidationError{
+				Field:   lim.field,
+				Message: "must be -1 (unlimited), 0 (default), or a positive token count",
+				Value:   fmt.Sprintf("%d", lim.value),
+			})
+		}
+	}
 
 	return ValidationResult{
 		Errors: errors,

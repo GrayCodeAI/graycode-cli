@@ -225,9 +225,20 @@ func (c *Canonicalizer) ExtractSubcommand(command string) string {
 
 	baseName := normalizePath(tokens[startIdx])
 
-	// Find the first non-flag argument after the command
+	// Find the first non-flag argument after the command. For git, skip global
+	// options that take a path/value argument so `git -C /repo status` yields
+	// "git status" rather than "git /repo".
 	for i := startIdx + 1; i < len(tokens); i++ {
 		tok := stripQuotes(tokens[i])
+		if baseName == "git" {
+			switch {
+			case tok == "-C" || tok == "-c" || tok == "--git-dir" || tok == "--work-tree":
+				i++ // consume the following argument
+				continue
+			case strings.HasPrefix(tok, "--git-dir=") || strings.HasPrefix(tok, "--work-tree="):
+				continue
+			}
+		}
 		if !strings.HasPrefix(tok, "-") && !envPrefixRe.MatchString(tok) {
 			return baseName + " " + tok
 		}

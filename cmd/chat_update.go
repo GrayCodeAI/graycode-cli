@@ -610,31 +610,55 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(append(cmds, cmd)...)
 		}
 
-		// Permission prompt active — handle y/n
+		// Permission prompt active — handle y/n/a/d
 		if m.permReq != nil {
 			switch msg.String() {
 			case "y", "Y":
-				m.permReq.Response <- true
+				req := m.permReq
+				req.Response <- true
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
+				if m.session != nil && m.session.Perm != nil && m.session.Perm.AutoMode != nil {
+					m.session.Perm.AutoMode.Record(req.ToolName, req.Summary, true)
+				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Allowed"})
 			case "n", "N":
-				m.permReq.Response <- false
+				req := m.permReq
+				req.Response <- false
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
+				if m.session != nil && m.session.Perm != nil && m.session.Perm.AutoMode != nil {
+					m.session.Perm.AutoMode.Record(req.ToolName, req.Summary, false)
+				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Denied"})
 			case "a", "A":
-				m.permReq.Response <- true
+				req := m.permReq
+				toolName := req.ToolName
+				summary := req.Summary
+				req.Response <- true
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				m.session.Perm.Memory.AlwaysAllowPattern(m.permReq.ToolName + ":*")
-				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + m.permReq.ToolName + " (all)"})
+				if m.session != nil && m.session.Perm != nil {
+					m.session.Perm.Memory.AlwaysAllowPattern(toolName + ":*")
+					if m.session.Perm.AutoMode != nil {
+						m.session.Perm.AutoMode.Record(toolName, summary, true)
+					}
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + toolName + " (all)"})
 			case "d", "D":
-				m.permReq.Response <- false
+				req := m.permReq
+				toolName := req.ToolName
+				summary := req.Summary
+				req.Response <- false
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				m.session.Perm.Memory.AlwaysDeny(m.permReq.ToolName)
-				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Always denied: " + m.permReq.ToolName})
+				if m.session != nil && m.session.Perm != nil {
+					m.session.Perm.Memory.AlwaysDeny(toolName)
+					if m.session.Perm.AutoMode != nil {
+						m.session.Perm.AutoMode.Record(toolName, summary, false)
+					}
+				}
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Always denied: " + toolName})
 			}
 			m.viewDirty = true
 			m.updateViewportContent()
