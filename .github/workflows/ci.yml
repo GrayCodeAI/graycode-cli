@@ -211,7 +211,13 @@ jobs:
   test:
     name: test (race + coverage)
     runs-on: ubuntu-latest
-    needs: [format, vet]
+    # NOTE: depends only on `format`, deliberately NOT on `vet`.
+    # A `vet` (or upstream) failure must never skip the test job — that
+    # historically masked real test regressions (see hawk PR #155, where
+    # DrainAlerts code shipped with failing tests because `test` was skipped
+    # when `vet` failed on the trailer-strip force-push). Tests must always
+    # run so regressions surface instead of being hidden.
+    needs: [format]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
