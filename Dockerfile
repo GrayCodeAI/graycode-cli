@@ -36,7 +36,14 @@ COPY . .
 # main.Version / main.Commit / main.BuildDate are baked in from the ARGs above;
 # this is the only correct source — `git describe` would always return empty
 # because `.dockerignore` excludes `.git/` from the build context.
-RUN rm -f go.work go.work.sum && \
+#
+# The cache mounts persist the Go module and compile caches between CI runs
+# (exported via cache-to: type=gha,mode=max), so the per-commit ldflags change
+# only re-links the binary instead of cold-compiling the whole dependency tree.
+# Requires BuildKit (default for Docker Desktop 23+ and every CI builder).
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    rm -f go.work go.work.sum && \
     { echo "go 1.26.5"; echo; echo "use ."; echo; echo "replace ("; \
       for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
         echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
