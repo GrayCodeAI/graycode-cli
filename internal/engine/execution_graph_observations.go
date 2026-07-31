@@ -257,18 +257,12 @@ func (s *Session) ensureTokUsageTracker() *tok.UsageTracker {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.tokUsage == nil {
-		s.tokUsage = tok.NewUsageTracker()
 		// Default: token ceilings off (provider rate limits own throughput).
-		// Only the optional lifecycle budget cap is honored.
-		limits := s.tokUsage.GetLimits()
-		limits.HourlyTokens = 0
-		limits.DailyTokens = 0
-		limits.SessionTokens = 0
-		limits.CostUSD = 0
-		if s.LifecycleSvc() != nil && s.LifecycleSvc().Limits() != nil {
-			limits.CostUSD = s.LifecycleSvc().Limits().MaxBudgetUSD()
-		}
-		s.tokUsage.SetLimits(limits)
+		// tok.NewUsageTracker ships non-zero defaults; explicitly disable them
+		// so a fresh session doesn't fire usage-alerts. Budget caps are opt-in
+		// via SetMaxBudgetUSD, which writes CostUSD into this tracker.
+		s.tokUsage = tok.NewUsageTracker()
+		s.tokUsage.SetLimits(tok.UsageLimits{})
 	}
 	return s.tokUsage
 }

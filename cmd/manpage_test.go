@@ -7,7 +7,7 @@ import (
 )
 
 func TestProviderCountCopyMatchesRegistry(t *testing.T) {
-	const documentedProviderCount = 22
+	const documentedProviderCount = 26
 	if got := registeredProviderCount(); got != documentedProviderCount {
 		t.Fatalf("registered providers = %d, update documented count %d and this assertion", got, documentedProviderCount)
 	}
