@@ -97,42 +97,42 @@ func SetActiveSelection(ctx context.Context, provider, modelID string) error {
 	return engine.SetSelection(ctx, provider, modelID)
 }
 
-// migrateLegacyModelProvider moves model/provider from ~/.hawk/settings.json into eyrie once.
-func migrateLegacyModelProvider(s *Settings) {
+// migrateStoredModelProvider moves model/provider from ~/.hawk/settings.json into eyrie once.
+func migrateStoredModelProvider(s *Settings) {
 	if s == nil {
 		return
 	}
 	ctx := context.Background()
-	legacyModel := strings.TrimSpace(s.Model)
-	legacyProvider := strings.TrimSpace(s.Provider)
+	oldModel := strings.TrimSpace(s.Model)
+	oldProvider := strings.TrimSpace(s.Provider)
 	activeModel := strings.TrimSpace(ActiveModel(ctx))
 	activeProvider := strings.TrimSpace(ActiveProvider(ctx))
 	changed := false
 
-	// Existing Eyrie state is authoritative. Otherwise migrate a legacy pair
+	// Existing Eyrie state is authoritative. Otherwise migrate a stored pair
 	// in one validated write so a rejected model cannot strand only the
 	// provider in the destination or silently erase the user's source value.
 	if activeModel != "" {
-		if legacyModel != "" {
+		if oldModel != "" {
 			s.Model = ""
 			changed = true
 		}
-		if legacyProvider != "" {
+		if oldProvider != "" {
 			s.Provider = ""
 			changed = true
 		}
-	} else if legacyModel != "" {
+	} else if oldModel != "" {
 		provider := activeProvider
 		if provider == "" {
-			provider = legacyProvider
+			provider = oldProvider
 		}
-		if err := SetActiveSelection(ctx, provider, legacyModel); err == nil {
+		if err := SetActiveSelection(ctx, provider, oldModel); err == nil {
 			s.Model = ""
 			s.Provider = ""
 			changed = true
 		}
-	} else if legacyProvider != "" {
-		if activeProvider != "" || SetActiveProvider(ctx, legacyProvider) == nil {
+	} else if oldProvider != "" {
+		if activeProvider != "" || SetActiveProvider(ctx, oldProvider) == nil {
 			s.Provider = ""
 			changed = true
 		}

@@ -67,6 +67,9 @@ func TestFormatModelCapabilities(t *testing.T) {
 }
 
 func TestFormatModelThinkingCell(t *testing.T) {
+	// Isolate from the developer's real hawk settings (per-model thinking
+	// preferences would otherwise change the asserted defaults).
+	t.Setenv("HOME", t.TempDir())
 	row := modelTableRowFromOption(configModelOption{
 		ID: "demo/no-think", DisplayName: "no-think", Owner: "demo",
 		Capabilities: []string{"tools"},

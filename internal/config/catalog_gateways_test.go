@@ -31,7 +31,7 @@ func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 		}
 	}
 	// Required gateways that exist in the published eyrie v0.1.3.
-	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true, "zai_payg": true, "zai_coding": true}
+	want := map[string]bool{"azure": true, "bedrock": true, "gemini": true, "grok": true, "openrouter": true, "kimi": true, "vertex": true, "xiaomi_mimo_payg": true, "xiaomi_mimo_token_plan": true, "deepseek": true, "minimax_token_plan": true, "minimax_payg": true, "zai_payg": true, "zai_coding": true, "agnes": true}
 	for id := range want {
 		found := false
 		for _, gw := range gws {

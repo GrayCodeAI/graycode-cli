@@ -134,15 +134,15 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	if legacy, paths := legacyCredentialFilesPresent(); legacy {
+	if present, paths := plaintextCredentialFilesPresent(); present {
 		checks = append(checks, PathCheck{
-			Section: "Security", Name: "legacy env", Status: PathWarn,
+			Section: "Security", Name: "plaintext env", Status: PathWarn,
 			Detail:  "Plaintext credential files: " + strings.Join(paths, ", "),
 			FixHint: "Run hawk credentials migrate",
 		})
 	} else {
 		checks = append(checks, PathCheck{
-			Section: "Security", Name: "legacy env", Status: PathPass,
+			Section: "Security", Name: "plaintext env", Status: PathPass,
 			Detail:   "No ~/.hawk/env or ~/.hawk/.env files",
 			Blocking: true,
 		})
@@ -316,7 +316,7 @@ func providerJSONHasSecretsOnDisk() (bool, string) {
 	return status.HasSecrets, status.Detail
 }
 
-func legacyCredentialFilesPresent() (bool, []string) {
+func plaintextCredentialFilesPresent() (bool, []string) {
 	hawkDir := filepath.Join(home.MustDir(), ".hawk")
 	var paths []string
 	for _, name := range []string{"env", ".env"} {
