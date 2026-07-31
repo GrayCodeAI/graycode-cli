@@ -14,7 +14,7 @@ import (
 
 var (
 	// Agent grid borders — each state has its own hue so the eye
-	// can read agent state at a glance. Active matches brand (orange),
+	// can read agent state at a glance. Active matches Talon Gold,
 	// done matches the success palette, fail matches error, idle
 	// matches disabled.
 	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(hawkColor).Padding(0, 1)

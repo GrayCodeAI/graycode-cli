@@ -103,8 +103,8 @@ func classify(err error) errorClass {
 		return errorClass{
 			exitCode: ExitGeneral,
 			message: "The model produced internal reasoning but no reply.\n" +
-				"  This often happens with reasoning models on OpenCode Go / MiniMax when the provider drops the answer after thinking.\n" +
-				"  Try /model to switch model, or pick a non-reasoning model for simple chat.",
+				"  This often happens when thinking/reasoning consumes the whole token budget (LongCat defaults thinking on) or when OpenCode Go / MiniMax drops the answer after thinking.\n" +
+				"  Try /model → toggle Think with t, switch model, or pick a non-reasoning model.",
 		}
 	}
 
@@ -125,6 +125,23 @@ func classify(err error) errorClass {
 		return errorClass{
 			exitCode: ExitRateLimit,
 			message:  "Insufficient provider credits for this request.\n  Add credits at your provider dashboard, switch to a cheaper model with /model, or try again with a shorter prompt.",
+		}
+	}
+
+	// ── Provider quota / pre-deduction hold failures ──────────────────────
+	// Some providers (e.g. Agnes AI) pre-authorize the *maximum* possible token
+	// cost before fulfilling a request. When the account balance can't cover
+	// that hold they return 403 with an insufficient_user_quota code rather
+	// than a 401 — so this must be checked before the generic 403 branch below,
+	// otherwise the user is misled into "check your API key". eyrie already
+	// tags these as "billing/quota problem"; the Agnes body also carries the
+	// Chinese pre-deduction phrasing (预扣费) and an insufficient_user_quota code.
+	if strings.Contains(low, "insufficient_user_quota") || strings.Contains(low, "insufficient_quota") ||
+		strings.Contains(low, "billing/quota problem") || strings.Contains(low, "预扣费") ||
+		strings.Contains(low, "pre-deduct") || strings.Contains(low, "pre-deduction") {
+		return errorClass{
+			exitCode: ExitRateLimit,
+			message:  "Request blocked by the provider's pre-deduction check: your account balance is too low to cover the maximum token cost of this request.\n  Top up your provider account, switch to a free/cheaper model with /model (e.g. agnes-2.5-flash), or try a shorter prompt.",
 		}
 	}
 

@@ -12,12 +12,12 @@ func configMutedStyle() lipgloss.Style {
 }
 
 func configTitleStyle() lipgloss.Style {
-	// Brand orange — title is the voice of the config panel.
+	// Talon Gold — title is the voice of the config panel.
 	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 }
 
 func configSelectedStyle() lipgloss.Style {
-	// Brand orange (bold) marks the focused row. Keep it distinct from
+	// Talon Gold (bold) marks the focused row. Keep it distinct from
 	// the active/current value, which uses configActiveStyle.
 	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 }
@@ -81,7 +81,7 @@ func renderConfigStatusLine(m chatModel) string {
 
 func configActiveStyle() lipgloss.Style {
 	// Current gateway/model value. Teal keeps "active/current" separate
-	// from the orange cursor selection.
+	// from the brand cursor selection.
 	return lipgloss.NewStyle().Foreground(successTeal).Bold(true)
 }
 

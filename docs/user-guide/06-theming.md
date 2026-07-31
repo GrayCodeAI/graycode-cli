@@ -10,7 +10,7 @@ Hawk includes 17 built-in themes, plus an `auto` option that follows your system
 
 | Theme | Description |
 |-------|-------------|
-| **dark** | Neutral dark base with warm orange accent. Default theme. |
+| **dark** | Neutral dark base with Hawk's Talon Gold accent. Default theme. |
 | **dracula** | The Dracula color scheme with muted violet surfaces. |
 | **nord** | Arctic cold blue palette. |
 | **gruvbox** | Warm retro browns with olive-green accent. |

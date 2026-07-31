@@ -640,7 +640,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateViewportContent()
 			return m, nil
 		}
-		// Container failed and is retryable — handle r/h keys.
+		// Container failed and is retryable. Hawk is fail-closed: the only
+		// recovery path is to restore Docker isolation.
 		if m.containerRetryable {
 			switch msg.String() {
 			case "r", "R":
@@ -658,12 +659,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateViewportContent()
 				cwd, _ := os.Getwd()
 				return m, bootContainerCmd(cwd)
-			case "h", "H":
-				m.containerRetryable = false
-				// Silent switch — welcome badge already shows HOST MODE.
-				m.viewDirty = true
-				m.updateViewportContent()
-				return m, nil
 			}
 		}
 		// AskUser prompt active — Enter submits answer
@@ -684,6 +679,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "ctrl+c" {
 				// First Ctrl+C cancels stream, second quits
 				if m.cancel != nil {
+					m.lastCtrlC = time.Now()
 					m.cancel()
 					m.cancel = nil
 					m.streamCancelled = true
@@ -708,6 +704,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.bgCancel != nil {
 					m.bgCancel()
 				}
+				m.stopContainer()
 				m.quitting = true
 				return m, tea.Quit
 			}
@@ -756,6 +753,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if m.watcherStop != nil {
 						m.watcherStop()
 					}
+					m.stopContainer()
 					m.quitting = true
 					return m, tea.Quit
 				}
@@ -777,9 +775,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case 0: // no modifier
 		default:
 			// modifier combos: check the keystroke string
-			k := msg.Key()
-			if k.Text != "" {
-				switch k.Text {
+			keyText := msg.String()
+			if keyText != "" {
+				switch keyText {
 				case "ctrl+a":
 					m.hudOpen = !m.hudOpen
 					if m.hudOpen {
@@ -870,6 +868,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						if m.watcherStop != nil {
 							m.watcherStop()
 						}
+						m.stopContainer()
 						m.quitting = true
 						return m, tea.Quit
 					}
@@ -1414,35 +1413,22 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if msg.err != nil {
-			// Fall back to host mode so chat still works (container is optional).
-			m.containerEnabled = false
+			// Docker-only execution fails closed. Keep the session container
+			// requirement enabled and disable every tool until retry succeeds.
+			m.containerEnabled = true
 			m.containerReady = false
 			m.containerRetryable = true
 			if m.session != nil {
-				m.session.SetContainerRequired(false)
+				m.session.SetContainerRequired(true)
 				m.session.SetContainerExecutor(nil)
-				applyDefaultHostAutonomy(m.session)
 			}
-			// Only surface the error in chat if the welcome banner is
-			// no longer the sole visible content. Otherwise the badge
-			// already shows "HOST MODE" and a duplicate message is noise.
-			welcomeOnly := len(m.messages) == 1 && m.messages[0].role == "welcome"
-			if !welcomeOnly {
-				m.messages = append(m.messages, displayMsg{
-					role:    "warning",
-					content: "Container unavailable — running on host. " + msg.err.Error() + "  ·  [r]etry container  [h]ost mode",
-				})
-			}
+			m.messages = append(m.messages, displayMsg{
+				role: "warning",
+				content: icons.Alert() + " Docker isolation required\n" +
+					msg.err.Error() + "\n" +
+					icons.Refresh() + " Press r to retry  ·  Ctrl+C to quit",
+			})
 			m.input.Focus()
-			// Auto-submit any queued input now that host mode is active.
-			if m.pendingSubmit != "" {
-				m.input.SetValue(m.pendingSubmit)
-				m.pendingSubmit = ""
-				m.rebuildWelcomeCache(m.blinkClosed)
-				m.viewDirty = true
-				m.updateViewportContent()
-				return m.submitUserMessage()
-			}
 		}
 		m.rebuildWelcomeCache(m.blinkClosed)
 		m.viewDirty = true

@@ -67,6 +67,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 		if m.bgCancel != nil {
 			m.bgCancel()
 		}
+		m.stopContainer()
 		ClearTabProgress()
 		m.quitting = true
 		return m, tea.Quit

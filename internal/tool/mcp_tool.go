@@ -55,6 +55,7 @@ func (m *MCPTool) Name() string                       { return m.toolName }
 func (m *MCPTool) Aliases() []string                  { return m.aliases }
 func (m *MCPTool) Description() string                { return m.description }
 func (m *MCPTool) Parameters() map[string]interface{} { return m.schema }
+func (m *MCPTool) MCPServerName() string              { return m.serverName }
 
 // RiskLevel reports MCP tools as high risk. A remote MCP server is untrusted
 // third-party code whose declared schema does not reveal whether the tool

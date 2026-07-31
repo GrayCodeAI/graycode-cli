@@ -230,29 +230,26 @@ func TestStartupWarmMsg_RefreshesFooterCache(t *testing.T) {
 func TestBuildWelcomeMessage_IncludesDockerWhenEnabled(t *testing.T) {
 	running := true
 	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, &running)
-	if !strings.Contains(msg, "Docker") {
-		t.Fatalf("expected Docker indicator in welcome, got snippet without it")
+	if !strings.Contains(msg, "CONTAINER · DOCKER · ISOLATED") {
+		t.Fatalf("expected container execution badge in welcome, got:\n%s", msg)
 	}
 }
 
 func TestBuildWelcomeMessage_OmitsDockerWhenDisabled(t *testing.T) {
 	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, nil)
-	if strings.Contains(msg, "Docker") {
-		t.Fatal("expected no Docker indicator when container mode disabled")
+	if !strings.Contains(msg, "CONTAINER · STARTING") || strings.Contains(msg, "HOST") {
+		t.Fatalf("expected mandatory container startup badge, got:\n%s", msg)
 	}
 }
 
 func TestContainerFooterLeft_HostModeCopy(t *testing.T) {
 	sess := &engine.Session{}
 	bold, dim := containerFooterLeft(chatModel{session: sess, containerEnabled: false})
-	if bold != "Host mode:" {
-		t.Fatalf("bold = %q, want Host mode:", bold)
+	if !strings.Contains(bold, "Docker:") {
+		t.Fatalf("bold = %q, want Docker label", bold)
 	}
-	if !strings.Contains(dim, "local") {
-		t.Fatalf("dim = %q, want local execution hint", dim)
-	}
-	if !strings.Contains(dim, "ask before tools") {
-		t.Fatalf("dim = %q, want approval hint", dim)
+	if !strings.Contains(dim, "required") || !strings.Contains(dim, "locked") {
+		t.Fatalf("dim = %q, want fail-closed Docker hint", dim)
 	}
 }
 
@@ -260,6 +257,27 @@ func TestNormalizeModelDisplayName_ShortensSlug(t *testing.T) {
 	got := normalizeModelDisplayName("openrouter/free", "openrouter/free")
 	if got != "free" {
 		t.Fatalf("expected free, got %q", got)
+	}
+}
+
+func TestTrimRepeatedGatewayPrefix(t *testing.T) {
+	tests := []struct {
+		name    string
+		gateway string
+		model   string
+		want    string
+	}{
+		{name: "colon", gateway: "Poolside", model: "Poolside: Laguna XS-2.1", want: "Laguna XS-2.1"},
+		{name: "case insensitive", gateway: "Poolside", model: "poolside · Laguna S-2.1", want: "Laguna S-2.1"},
+		{name: "em dash", gateway: "OpenRouter", model: "OpenRouter — Claude", want: "Claude"},
+		{name: "unrelated", gateway: "Poolside", model: "Laguna XS-2.1", want: "Laguna XS-2.1"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := trimRepeatedGatewayPrefix(tc.gateway, tc.model); got != tc.want {
+				t.Fatalf("trimRepeatedGatewayPrefix(%q, %q) = %q, want %q", tc.gateway, tc.model, got, tc.want)
+			}
+		})
 	}
 }
 

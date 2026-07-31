@@ -8,7 +8,8 @@ This document describes how hawk and eyrie handle API keys and agent isolation f
 - Hawk does not read API keys from `.env`, shell env, or plaintext files.
 - Eyrie's `provider.json` holds routing and deployment metadata only — never secrets on disk.
 - Hawk talks to eyrie without putting keys in JSON or chat messages.
-- Agents run Bash inside Docker when possible; file tools cannot read credential paths.
+- Agent commands run inside mandatory Docker isolation; file tools cannot read
+  credential paths.
 
 ## Credential storage
 
@@ -59,7 +60,7 @@ Remove a stored key: `/config key remove` (interactive picker).
 ```
 +------------------+     +------------------+
 |  Hawk TUI/host   |     |  Docker sandbox  |
-|  Keychain access |     |  Bash only       |
+|  Keychain access |     |  Commands only   |
 |  /config paste   |     |  project mount   |
 +------------------+     +------------------+
          |                          |
@@ -67,15 +68,21 @@ Remove a stored key: `/config key remove` (interactive picker).
          +--------------------------+
 ```
 
-When the container is ready, `session.ContainerExecutor` runs Bash in the container.
+When the container is ready, `session.ContainerExecutor` runs agent commands in
+Docker. Hawk fails closed when Docker is unavailable; it never falls back to
+host command execution.
 
-### Blocked for agents (host or container policy)
+The sandbox image has an independent compatibility version embedded in Hawk.
+Startup first checks the local Docker image cache, then anonymously pulls the
+public `graycodeai/hawk-sandbox` image. If the registry cannot be reached, Hawk
+builds the same bundled sandbox Dockerfile locally. Registry login is not
+required for users, and neither provisioning path enables host execution.
+
+### Blocked for agents
 
 - **Read** tool: legacy Hawk env files, Eyrie's configured `provider.json`,
   `~/.ssh/*`, etc.
 - **Bash**: `printenv`, `env`, reading hawk env paths, echoing `*_API_KEY` variables.
-
-Use `--no-container` only for debugging; secure mode warns because host Bash can access more of the filesystem.
 
 ## Migration
 

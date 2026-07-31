@@ -50,8 +50,8 @@ func TestComputeModelTableLayoutFitsModelNames(t *testing.T) {
 func TestComputeModelTableLayoutLeftPacked(t *testing.T) {
 	rows := []modelTableRow{{Model: "qwen/qwen3.7-max", Provider: "qwen", Price: "$2.5/$7.5", Context: "1m"}}
 	layout := computeModelTableLayout(120, rows)
-	total := layout.Model + layout.Owner + layout.Caps + layout.Price + layout.Context + modelTableColGap*4
-	if total > 108 {
+	total := layout.Model + layout.Owner + layout.Caps + layout.Think + layout.Price + layout.Context + modelTableColGap*5
+	if total > 120 {
 		t.Fatalf("expected compact left-aligned table, got %+v total=%d", layout, total)
 	}
 }
@@ -63,6 +63,23 @@ func TestFormatModelCapabilities(t *testing.T) {
 	}
 	if got := formatModelCapabilities(nil); got != "—" {
 		t.Fatalf("unknown capabilities = %q, want em dash", got)
+	}
+}
+
+func TestFormatModelThinkingCell(t *testing.T) {
+	row := modelTableRowFromOption(configModelOption{
+		ID: "demo/no-think", DisplayName: "no-think", Owner: "demo",
+		Capabilities: []string{"tools"},
+	})
+	if row.Think != "—" {
+		t.Fatalf("Think = %q, want em dash", row.Think)
+	}
+	row = modelTableRowFromOption(configModelOption{
+		ID: "longcat/LongCat-2.0", DisplayName: "LongCat-2.0", Owner: "LongCat",
+		GatewayID: "longcat", Capabilities: []string{"tools", "reasoning"},
+	})
+	if row.Think != "off" {
+		t.Fatalf("LongCat Think default = %q, want off", row.Think)
 	}
 }
 

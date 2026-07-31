@@ -18,7 +18,7 @@ func TestPlainTranscript(t *testing.T) {
 	want := strings.Join([]string{
 		"You: Hi",
 		"↻ retrying",
-		"error: model produced reasoning but no answer",
+		"Error: model produced reasoning but no answer",
 	}, "\n\n")
 	if got != want {
 		t.Fatalf("plainTranscript() = %q, want %q", got, want)
@@ -54,7 +54,7 @@ func TestLastCopyableContent_FallsBackToTranscript(t *testing.T) {
 	if !ok {
 		t.Fatal("expected copyable content")
 	}
-	if !strings.Contains(got, "You: Hi") || !strings.Contains(got, "error: boom") {
+	if !strings.Contains(got, "You: Hi") || !strings.Contains(got, "Error: boom") {
 		t.Fatalf("lastCopyableContent() = %q, want transcript fallback", got)
 	}
 }

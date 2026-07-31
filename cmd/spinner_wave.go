@@ -10,7 +10,7 @@ import (
 
 // spinnerWaveColors — 20 distinct hues; the wave flows glyph → verb → ▪▫▫.
 var spinnerWaveColors = [20][3]int{
-	{255, 94, 14},
+	{255, 215, 0}, // Talon Gold — anchor the wave in Hawk's brand color.
 	{255, 60, 60},
 	{255, 100, 80},
 	{255, 150, 60},

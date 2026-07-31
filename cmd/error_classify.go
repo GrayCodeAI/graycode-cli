@@ -33,8 +33,6 @@ func friendlyErrorMessage(err error) string {
 				ex1, ex2,
 			)
 		}
-	case hawkerr.ExitRateLimit:
-		msg += "\n  Wait a moment and try again. If this persists, use /model to switch providers or check your quota."
 	case hawkerr.ExitAuth:
 		msg += "\n  Check your API key with /config. Keys can expire or be revoked."
 	case hawkerr.ExitNetwork:

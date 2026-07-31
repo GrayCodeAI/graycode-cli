@@ -31,16 +31,16 @@ import (
 // 1. Brand & identity
 // ---------------------------------------------------------------------------
 
-// hawkColor is the brand orange (#FF5E0E). Used for the HAWK wordmark,
-// mascot, ⛬ assistant prefix, prompt arrow, cursor, exit prompt, and
+// hawkColor is Talon Gold (#FFD700). Used for the HAWK wordmark, hawk,
+// ⛬ assistant prefix, prompt arrow, cursor, exit prompt, and
 // any place that should "speak" as the brand.
-var hawkColor = lipgloss.Color("#FF5E0E")
+var hawkColor = lipgloss.Color(internaltheme.BrandPrimary)
 
 // ---------------------------------------------------------------------------
 // 2. UI state
 // ---------------------------------------------------------------------------
 
-// The selected/focused item uses brand orange. Active/current values use
+// The selected/focused item uses Talon Gold. Active/current values use
 // configActiveStyle so they remain visually distinct from the cursor.
 
 // ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ var bgCode = lipgloss.Color("#2A2A3A")
 // ---------------------------------------------------------------------------
 
 const (
-	ansiOrange   = "\033[38;2;255;94;14m"
+	ansiOrange   = internaltheme.BrandANSI // legacy name; renders Talon Gold
 	ansiGreen    = "\033[92m"
 	ansiYellow   = "\033[93m"
 	ansiBlue     = "\033[94m"
@@ -235,8 +235,8 @@ func ApplyTheme(name string) {
 	}
 	p := entry.Palette
 
-	// 1. Brand — accent color from the palette.
-	hawkColor = lipgloss.Color(p.Accent)
+	// 1. Brand — fixed across themes; palette accents remain theme-specific.
+	hawkColor = lipgloss.Color(internaltheme.BrandPrimary)
 
 	// 2. Semantic feedback.
 	successTeal = lipgloss.Color(p.Green)

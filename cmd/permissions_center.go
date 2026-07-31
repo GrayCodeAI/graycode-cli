@@ -126,7 +126,7 @@ func autonomyCommandHelp() string {
 		"  /autonomy                          Show current tier, sandbox, spec stage, and rules\n" +
 		"  /autonomy tier <scout|builder|operator|autonomous>\n" +
 		"  /autonomy sandbox <strict|workspace|off>\n" +
-		"                                      Permission sandbox: how host Bash is gated\n" +
+		"                                      Permission policy inside the Docker sandbox\n" +
 		"                                      (strict=always ask, workspace=allow project files, off=allow all)\n" +
 		"  /autonomy dry-run <on|off>         Deny every tool call unconditionally (kill switch)\n" +
 		"  /autonomy allow <rule>\n" +
@@ -136,8 +136,8 @@ func autonomyCommandHelp() string {
 		"  /autonomy reset                    Reset tier, sandbox, dry-run, and rules\n" +
 		"  /autonomy save [project|global]    Persist the current policy\n" +
 		"\n" +
-		"Note: 'sandbox' here controls permission policy on the host.\n" +
-		"      For Docker container isolation, use /container or restart with --container.\n" +
+		"Note: Docker isolation is always required; this setting controls the\n" +
+		"      approval policy applied inside the container.\n" +
 		"\n" +
 		"For the spec-driven workflow (gates Write/Edit/Bash until approved), see /spec."
 }
@@ -346,7 +346,7 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 		}
 		m.settings.Sandbox = mode
 		sandboxFlag = mode
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission sandbox → %s\nControls how host Bash is gated. Docker container isolation is separate (restart with --container).", label)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission sandbox → %s\nControls approval policy inside the mandatory Docker container.", label)})
 	case "dry-run":
 		if len(parts) < 3 {
 			state := "off"

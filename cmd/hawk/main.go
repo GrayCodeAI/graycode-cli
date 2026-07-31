@@ -8,7 +8,6 @@ import (
 	"github.com/GrayCodeAI/hawk/cmd"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // Version, Commit, and BuildDate are set at build time via ldflags.
@@ -37,13 +36,11 @@ func main() {
 	}
 
 	// Propagate the canonical version to all sub-packages that surface it
-	// (CLI version flag, HTTP API version field, MCP clientInfo, sandbox
-	// container image tag). Each package keeps a private settable variable
-	// to avoid an import cycle with main.
+	// (CLI version flag, HTTP API version field, and MCP clientInfo).
+	// The sandbox image has an independent compatibility version.
 	cmd.SetVersion(Version)
 	cmd.SetBuildDate(BuildDate)
 	mcp.SetClientVersion(Version)
-	sandbox.ContainerImageTag = Version
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

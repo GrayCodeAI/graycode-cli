@@ -1,6 +1,8 @@
 package sandbox
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,6 +62,34 @@ func TestContainerSandbox_ContainerName(t *testing.T) {
 	}
 }
 
+func TestContainerSandbox_StopForceRemovesContainer(t *testing.T) {
+	original := forceRemoveContainer
+	t.Cleanup(func() { forceRemoveContainer = original })
+
+	var gotID string
+	forceRemoveContainer = func(_ context.Context, containerID string) error {
+		gotID = containerID
+		return nil
+	}
+
+	cs := NewContainerSandbox(t.TempDir())
+	cs.running = true
+	cs.containerID = "hawk-test-container"
+
+	if err := cs.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	if cs.Running() {
+		t.Fatal("container should be marked stopped")
+	}
+	if cs.ContainerID() != "" {
+		t.Fatal("stopped container ID should be cleared")
+	}
+	if gotID != "hawk-test-container" {
+		t.Fatalf("removed container = %q, want %q", gotID, "hawk-test-container")
+	}
+}
+
 func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 	projectDir := t.TempDir()
 	cs := NewContainerSandbox(projectDir)
@@ -76,7 +106,8 @@ func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 		"--read-only",
 		"--tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m",
 		"-w " + projectDir,
-		"hawk:test sleep infinity",
+		"--entrypoint sleep",
+		"hawk:test infinity",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("docker run args missing %q:\n%s", want, joined)
@@ -86,9 +117,101 @@ func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 
 func TestResolveImage_Default(t *testing.T) {
 	img := resolveImage(t.TempDir())
-	expected := defaultHawkImage()
+	expected := "graycodeai/hawk-sandbox:" + sandboxImageTag
 	if img != expected {
 		t.Fatalf("expected default image %s, got %s", expected, img)
+	}
+}
+
+func TestEnsureImageAlreadyLocal(t *testing.T) {
+	original := dockerImageCommand
+	t.Cleanup(func() { dockerImageCommand = original })
+
+	var calls int
+	dockerImageCommand = func(_ context.Context, args ...string) ([]byte, error) {
+		calls++
+		if strings.Join(args, " ") != "image inspect "+defaultHawkImage() {
+			t.Fatalf("unexpected Docker command: %v", args)
+		}
+		return nil, nil
+	}
+
+	cs := NewContainerSandbox(t.TempDir())
+	result, err := cs.EnsureImage(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != ImageAlreadyLocal {
+		t.Fatalf("result = %q, want %q", result, ImageAlreadyLocal)
+	}
+	if calls != 1 {
+		t.Fatalf("Docker calls = %d, want 1", calls)
+	}
+}
+
+func TestEnsureImagePullsPublicImage(t *testing.T) {
+	original := dockerImageCommand
+	t.Cleanup(func() { dockerImageCommand = original })
+
+	var calls []string
+	dockerImageCommand = func(_ context.Context, args ...string) ([]byte, error) {
+		command := strings.Join(args, " ")
+		calls = append(calls, command)
+		if strings.HasPrefix(command, "image inspect ") {
+			return nil, errors.New("missing")
+		}
+		if command == "pull "+defaultHawkImage() {
+			return []byte("pulled"), nil
+		}
+		return nil, errors.New("unexpected command")
+	}
+
+	cs := NewContainerSandbox(t.TempDir())
+	result, err := cs.EnsureImage(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != ImagePulled {
+		t.Fatalf("result = %q, want %q", result, ImagePulled)
+	}
+	if len(calls) != 3 {
+		t.Fatalf("Docker calls = %v, want public inspect + local inspect + pull", calls)
+	}
+}
+
+func TestEnsureImageBuildsBundledFallback(t *testing.T) {
+	original := dockerImageCommand
+	t.Cleanup(func() { dockerImageCommand = original })
+
+	var calls []string
+	dockerImageCommand = func(_ context.Context, args ...string) ([]byte, error) {
+		command := strings.Join(args, " ")
+		calls = append(calls, command)
+		switch {
+		case strings.HasPrefix(command, "image inspect "):
+			return nil, errors.New("missing")
+		case strings.HasPrefix(command, "pull "):
+			return []byte("registry unavailable"), errors.New("pull failed")
+		case strings.HasPrefix(command, "build -t "+localHawkImage()+" "):
+			return []byte("built"), nil
+		default:
+			return nil, errors.New("unexpected command")
+		}
+	}
+
+	cs := NewContainerSandbox(t.TempDir())
+	result, err := cs.EnsureImage(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != ImageBuilt {
+		t.Fatalf("result = %q, want %q", result, ImageBuilt)
+	}
+	if cs.Image() != localHawkImage() {
+		t.Fatalf("image = %q, want %q", cs.Image(), localHawkImage())
+	}
+	if len(calls) != 4 {
+		t.Fatalf("Docker calls = %v, want public inspect + local inspect + pull + build", calls)
 	}
 }
 

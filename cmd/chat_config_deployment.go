@@ -166,8 +166,10 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 			if hawkconfig.IsCatalogCacheRequired(msg.err) {
 				notice = "Key saved in " + credentialsStoreLabel() + " — model catalog unavailable: " + notice
 				notice += " · run hawk models refresh"
-			} else {
+			} else if configCredentialRejected(msg.err) {
 				notice = "Key saved in " + credentialsStoreLabel() + " — provider rejected this key: " + notice
+			} else {
+				notice = "Key saved in " + credentialsStoreLabel() + " — catalog refresh failed: " + notice
 			}
 			if !hawkconfig.IsCatalogCacheRequired(msg.err) && !strings.Contains(strings.ToLower(notice), "refresh") {
 				notice += " · press r on " + hawkconfig.GatewayDisplayName(msg.providerID) + " to retry"
@@ -225,6 +227,29 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 	next.configScroll = 0
 	next.configModelOptions = msg.modelOptions
 	return next, cmd
+}
+
+func configCredentialRejected(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	for _, marker := range []string{
+		"invalid api key",
+		"unauthorized",
+		"forbidden",
+		"http 401",
+		"http 403",
+		"(401)",
+		"(403)",
+		"authentication failed",
+		"authentication_failed",
+	} {
+		if strings.Contains(message, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {

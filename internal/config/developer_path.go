@@ -174,9 +174,10 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	} else {
 		checks = append(checks, PathCheck{
-			Section: "Sandbox", Name: "docker", Status: PathWarn,
-			Detail:  "Docker not available — Bash runs on host",
-			FixHint: "Start Docker for isolated Bash, or use --no-container knowingly",
+			Section: "Sandbox", Name: "docker", Status: PathFail,
+			Detail:   "Docker not available — agent tools are locked",
+			FixHint:  "Start Docker Desktop or another compatible Docker daemon",
+			Blocking: true,
 		})
 	}
 
