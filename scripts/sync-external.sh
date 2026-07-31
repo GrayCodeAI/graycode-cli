@@ -62,7 +62,8 @@ done < <(git config -f .gitmodules --get-regexp path | awk '{print $2}')
 
 if [[ $exit_code -ne 0 ]]; then
   echo
-  echo "drift detected — run 'make sync-submodules' in hawk after confirming the sibling repos are what you expect, then commit the updated external/ pins"
+  echo "drift detected — run 'make sync-submodules' then 'make sync-submodule-versions'" 
+  echo "(advances the submodule working trees, then bumps hawk's go.mod requires to match the gitlinks), then commit the updated external/ pins"
 fi
 
 exit $exit_code
