@@ -26,7 +26,7 @@ func fetchModelsViaRuntime(ctx context.Context, provider string) ([]EngineModel,
 // Settings holds hawk configuration.
 // Hawk: no API keys stored here. Secrets come from the OS secret store via eyrie.
 type Settings struct {
-	// Model and Provider are legacy fields read only for one-time migration into eyrie provider.json.
+	// Model and Provider are retained only for one-time migration into eyrie provider.json.
 	// Hawk does not persist model/provider here; use SetActiveModel / SetActiveProvider.
 	Model           string   `json:"model,omitempty"`
 	Provider        string   `json:"provider,omitempty"`
@@ -210,7 +210,7 @@ func LoadSettings() Settings {
 	if project := findProjectSettings(); project != nil {
 		s = MergeSettings(s, *project)
 	}
-	migrateLegacyModelProvider(&s)
+	migrateStoredModelProvider(&s)
 	return s
 }
 

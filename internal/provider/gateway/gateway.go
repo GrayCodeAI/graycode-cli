@@ -366,9 +366,10 @@ func IsCatalogCacheRequired(err error) bool {
 }
 
 // RegisteredProviderCount exposes Eyrie's first-class provider count through
-// Hawk's single provider-runtime boundary.
+// Hawk's single provider-runtime boundary. The count derives from Eyrie's
+// provider registry, so adding a provider in Eyrie never requires a Hawk edit.
 func RegisteredProviderCount() int {
-	return 27
+	return eyrieengine.RegisteredGatewayCount()
 }
 
 func SecretStoreName() string { return eyrieengine.SecretStoreName() }
@@ -377,8 +378,8 @@ func CredentialStorage(ctx context.Context) CredentialStorageReport {
 	return eyrieengine.CredentialStorage(ctx)
 }
 
-func MigrateLegacyCredentials(ctx context.Context) (int, error) {
-	return eyrieengine.MigrateLegacyCredentials(ctx)
+func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
+	return eyrieengine.MigrateEnvFileCredentials(ctx)
 }
 
 func CredentialGuidance(providerID, secret string) string {

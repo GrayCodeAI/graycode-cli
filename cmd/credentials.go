@@ -41,21 +41,21 @@ var credentialsRemoveCmd = &cobra.Command{
 
 var credentialsMigrateCmd = &cobra.Command{
 	Use:   "migrate",
-	Short: "Import legacy plaintext credential files into the OS secret store",
+	Short: "Import plaintext credential files into the OS secret store",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		storage := hawkconfig.CredentialStorageStatus(ctx)
 		if !storage.Writable {
 			return fmt.Errorf("cannot migrate: %s", storage.Detail)
 		}
-		n, err := hawkconfig.MigrateLegacyCredentials(ctx)
+		n, err := hawkconfig.MigrateEnvFileCredentials(ctx)
 		if err != nil {
 			return err
 		}
 		if n == 0 {
-			cmd.Println("No legacy credential files found (already using secure storage).")
+			cmd.Println("No plaintext credential files found (already using secure storage).")
 		} else {
-			cmd.Printf("Migrated %d key(s) to %s and removed legacy credential files.\n", n, hawkconfig.CredentialStoreName())
+			cmd.Printf("Migrated %d key(s) to %s and removed plaintext credential files.\n", n, hawkconfig.CredentialStoreName())
 		}
 		return nil
 	},

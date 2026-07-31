@@ -56,8 +56,8 @@ func CredentialStorageStatus(ctx context.Context) gateway.CredentialStorageRepor
 	return gateway.CredentialStorage(ctx)
 }
 
-func MigrateLegacyCredentials(ctx context.Context) (int, error) {
-	return gateway.MigrateLegacyCredentials(ctx)
+func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
+	return gateway.MigrateEnvFileCredentials(ctx)
 }
 
 // EnginePreflightReport runs preflight against the default gateway.

@@ -7,12 +7,12 @@ import (
 )
 
 func TestProviderCountCopyMatchesRegistry(t *testing.T) {
-	const documentedProviderCount = 27
-	if got := registeredProviderCount(); got != documentedProviderCount {
-		t.Fatalf("registered providers = %d, update documented count %d and this assertion", got, documentedProviderCount)
+	count := registeredProviderCount()
+	if count < 20 {
+		t.Fatalf("registered providers = %d, expected a first-class provider registry", count)
 	}
 
-	want := fmt.Sprintf("%d first-class LLM providers", documentedProviderCount)
+	want := fmt.Sprintf("%d first-class LLM providers", count)
 	if !strings.Contains(rootCmd.Long, want) {
 		t.Fatalf("CLI help does not contain registry-backed provider count %q", want)
 	}

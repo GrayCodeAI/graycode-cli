@@ -58,11 +58,11 @@ func TestProviderJSONHasSecretsOnDisk_None(t *testing.T) {
 	}
 }
 
-func TestLegacyCredentialFilesPresent_None(t *testing.T) {
+func TestPlaintextCredentialFilesPresent_None(t *testing.T) {
 	isolateMilestoneTest(t)
-	found, paths := legacyCredentialFilesPresent()
+	found, paths := plaintextCredentialFilesPresent()
 	if found || len(paths) > 0 {
-		t.Fatalf("expected no legacy files, got %v", paths)
+		t.Fatalf("expected no plaintext files, got %v", paths)
 	}
 }
 
