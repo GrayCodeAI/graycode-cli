@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
@@ -234,16 +235,7 @@ func contains(s, sub string) bool {
 // supportsThinkingToggle reports providers that honor ThinkingEnabled on the
 // OpenAI-compat wire (each with its own ThinkingFormat).
 func supportsThinkingToggle(provider string) bool {
-	switch provider {
-	case "zai_payg", "zai_coding", "longcat", "agnes",
-		"kimi", "deepseek",
-		"xiaomi_mimo", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan",
-		"minimax_payg", "minimax_token_plan",
-		"openrouter", "opencodego", "anthropic":
-		return true
-	default:
-		return false
-	}
+	return engine.ThinkingToggleSupported(provider)
 }
 
 func indexOf(s, sub string) int {

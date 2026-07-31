@@ -61,6 +61,9 @@ func (m chatModel) configPanelView() string {
 	if m.configEntry == configEntryOllamaURL {
 		return m.configOllamaURLView()
 	}
+	if m.configEntry == configEntryGatewayRegion {
+		return m.configGatewayRegionView()
+	}
 	if m.configEntry == configEntryXiaomiRegion {
 		return m.configXiaomiRegionView()
 	}
@@ -821,6 +824,12 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			return m, nil
 		}
 		return m.handleConfigKeyViewKey(msg)
+	}
+	if m.configEntry == configEntryGatewayRegion {
+		if m.configSaving {
+			return m, nil
+		}
+		return m.handleConfigGatewayRegionKey(msg)
 	}
 	if m.configEntry == configEntryXiaomiRegion {
 		if m.configSaving {

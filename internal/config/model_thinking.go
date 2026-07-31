@@ -95,10 +95,7 @@ func ResolveThinkingForModel(s Settings, modelID, providerID string) *bool {
 	if pref := ThinkingPrefForModel(s, modelID); pref != nil {
 		return pref
 	}
-	switch strings.ToLower(strings.TrimSpace(providerID)) {
-	case "longcat", "kimi", "deepseek",
-		"xiaomi_mimo", "xiaomi_mimo_payg", "xiaomi_mimo_token_plan",
-		"minimax_payg", "minimax_token_plan":
+	if DefaultThinkingDisabled(providerID) {
 		disabled := false
 		return &disabled
 	}

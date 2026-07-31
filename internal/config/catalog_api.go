@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	llm "github.com/GrayCodeAI/hawk-core-contracts/llm"
 	gw "github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
@@ -17,6 +18,8 @@ type GatewayStatus struct {
 	Active                  bool
 	RegionLabel             string
 	RegionRequired          bool
+	RegionOptions           []llm.GatewayRegionOption
+	DNSHost                 string
 }
 
 // IsCatalogCacheRequired reports whether an Eyrie operation failed because
@@ -85,6 +88,32 @@ func GatewayDisplayName(providerID string) string {
 	return providerID
 }
 
+func DefaultThinkingDisabled(providerID string) bool {
+	return gw.DefaultThinkingDisabled(providerID)
+}
+
+func ThinkingToggleSupported(providerID string) bool {
+	return gw.ThinkingToggleSupported(providerID)
+}
+
+func GatewayDNSHost(providerID string) string {
+	if gateway, ok := engineGateway(providerID); ok {
+		return gateway.DNSHost
+	}
+	return ""
+}
+
+func GatewayRegionOptions(providerID string) []llm.GatewayRegionOption {
+	if gateway, ok := engineGateway(providerID); ok {
+		return gateway.RegionOptions
+	}
+	return nil
+}
+
+func HasRegionOptions(providerID string) bool {
+	return len(GatewayRegionOptions(providerID)) > 0
+}
+
 func GatewaySupportsLiveDiscovery(providerID string) bool {
 	if gateway, ok := engineGateway(providerID); ok {
 		return gateway.SupportsLiveDiscovery
@@ -127,6 +156,7 @@ func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []
 			HasConfiguredDeployment: gateway.DeploymentConfigured,
 			ModelCount:              gateway.ModelCount, Active: active,
 			RegionLabel: gateway.RegionLabel, RegionRequired: gateway.RegionRequired,
+			RegionOptions: gateway.RegionOptions, DNSHost: gateway.DNSHost,
 		})
 	}
 	return out

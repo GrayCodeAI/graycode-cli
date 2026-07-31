@@ -45,8 +45,7 @@ func (m chatModel) configKeyDetailView() string {
 	b.WriteString(mutedStyle.Render("  Gateway: ") + accentStyle.Render(displayName) + "\n")
 	b.WriteString(mutedStyle.Render("  Key: ") + activeStyle.Render(masked) + "\n")
 	b.WriteString(mutedStyle.Render("  Stored in: "+credentialsStoreLabel()) + "\n")
-	if providerName == hawkconfig.ProviderXiaomiTokenPlan {
-		reg := hawkconfig.XiaomiTokenPlanRegionLabel()
+	if reg := hawkconfig.GatewayRegionLabel(providerName); reg != "" || hawkconfig.NeedsGatewayRegion(providerName) || hawkconfig.HasRegionOptions(providerName) {
 		if reg == "" {
 			reg = "(not set — press g)"
 		}
@@ -69,14 +68,9 @@ func (m chatModel) startConfigKeyForProvider(provider string) (chatModel, tea.Cm
 	if provider == "" {
 		return m, nil
 	}
-	if provider == hawkconfig.ProviderXiaomiTokenPlan {
-		if hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
-			return m.startConfigXiaomiTokenPlanRegion(), nil
-		}
-	}
-	if provider == hawkconfig.ProviderZAICoding && hawkconfig.NeedsZAIRegion(provider) {
+	if hawkconfig.NeedsGatewayRegion(provider) {
 		m.configPostSaveKeysProvider = provider
-		return m.startConfigZAIRegion(provider), nil
+		return m.startConfigGatewayRegion(provider), nil
 	}
 
 	name := hawkconfig.GatewayDisplayName(provider)
@@ -85,13 +79,9 @@ func (m chatModel) startConfigKeyForProvider(provider string) (chatModel, tea.Cm
 }
 
 func (m chatModel) startConfigKeyReplace(provider string) (chatModel, tea.Cmd) {
-	if provider == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(provider) {
+	if hawkconfig.NeedsGatewayRegion(provider) {
 		m.configPostSaveKeysProvider = provider
-		return m.startConfigXiaomiTokenPlanRegion(), nil
-	}
-	if provider == hawkconfig.ProviderZAICoding && hawkconfig.NeedsZAIRegion(provider) {
-		m.configPostSaveKeysProvider = provider
-		return m.startConfigZAIRegion(provider), nil
+		return m.startConfigGatewayRegion(provider), nil
 	}
 
 	m.configReplaceProvider = provider
@@ -174,8 +164,8 @@ func (m chatModel) handleConfigKeyViewKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 		return m.startConfigKeyReplace(trimmedProvider)
 	default:
-		if trimmedProvider == hawkconfig.ProviderXiaomiTokenPlan && strings.EqualFold(key.Text, "g") {
-			return m.startConfigXiaomiTokenPlanRegion(), nil
+		if (hawkconfig.HasRegionOptions(trimmedProvider) || hawkconfig.GatewayRegionLabel(trimmedProvider) != "") && strings.EqualFold(key.Text, "g") {
+			return m.startConfigGatewayRegion(trimmedProvider), nil
 		}
 		return m, nil
 	}
