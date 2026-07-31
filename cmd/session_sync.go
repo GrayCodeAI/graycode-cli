@@ -45,16 +45,12 @@ func syncSessionFromPersistedSelection(sess *engine.Session) {
 	}
 	provider, model := explicitSelection(context.Background())
 
-	if strings.TrimSpace(sess.Model()) == "" {
-		if model != "" {
-			sess.SetModel(model)
-		}
+	if model != "" {
+		sess.SetModel(model)
 	}
 
-	if strings.TrimSpace(sess.Provider()) == "" {
-		if provider != "" {
-			sess.SetProvider(provider)
-		}
+	if provider != "" {
+		sess.SetProvider(provider)
 	}
 }
 
