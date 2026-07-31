@@ -20,4 +20,3 @@ func SetZAIRegion(providerID, region string) error {
 func ZAIRegionLabel(providerID string) string {
 	return GatewayRegionLabel(providerID)
 }
-

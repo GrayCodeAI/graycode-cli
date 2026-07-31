@@ -17,4 +17,3 @@ func SetXiaomiTokenPlanRegion(region string) error {
 func XiaomiTokenPlanRegionLabel() string {
 	return GatewayRegionLabel(ProviderXiaomiTokenPlan)
 }
-
