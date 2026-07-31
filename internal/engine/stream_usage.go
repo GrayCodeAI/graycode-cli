@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
@@ -110,7 +111,7 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 			for _, alert := range tracker.DrainAlerts() {
 				ch <- StreamEvent{
 					Type:    "content",
-					Content: fmt.Sprintf("\n⚠ Usage %s: %s\n", alert.Level, alert.Message),
+					Content: fmt.Sprintf("\n%s Usage %s: %s\n", icons.Alert(), alert.Level, alert.Message),
 				}
 			}
 		}
