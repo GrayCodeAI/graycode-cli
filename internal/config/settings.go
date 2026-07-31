@@ -28,13 +28,18 @@ func fetchModelsViaRuntime(ctx context.Context, provider string) ([]EngineModel,
 type Settings struct {
 	// Model and Provider are legacy fields read only for one-time migration into eyrie provider.json.
 	// Hawk does not persist model/provider here; use SetActiveModel / SetActiveProvider.
-	Model                   string                 `json:"model,omitempty"`
-	Provider                string                 `json:"provider,omitempty"`
-	Theme                   string                 `json:"theme,omitempty"`
-	AutoAllow               []string               `json:"auto_allow,omitempty"`      // tools to always allow
-	AllowedTools            []string               `json:"allowedTools,omitempty"`    // archive-compatible allow rules
-	DisallowedTools         []string               `json:"disallowedTools,omitempty"` // archive-compatible deny rules
-	MaxBudgetUSD            float64                `json:"max_budget_usd,omitempty"`  // cost cap per session
+	Model           string   `json:"model,omitempty"`
+	Provider        string   `json:"provider,omitempty"`
+	Theme           string   `json:"theme,omitempty"`
+	AutoAllow       []string `json:"auto_allow,omitempty"`      // tools to always allow
+	AllowedTools    []string `json:"allowedTools,omitempty"`    // archive-compatible allow rules
+	DisallowedTools []string `json:"disallowedTools,omitempty"` // archive-compatible deny rules
+	MaxBudgetUSD    float64  `json:"max_budget_usd,omitempty"`  // cost cap per session
+	// Optional local token ceilings. Disabled by default (provider rate limits
+	// own throughput). Set a positive value to opt in; -1 also means disabled.
+	HourlyTokenLimit        int                    `json:"hourly_token_limit,omitempty"`
+	DailyTokenLimit         int                    `json:"daily_token_limit,omitempty"`
+	SessionTokenLimit       int                    `json:"session_token_limit,omitempty"`
 	MCPServers              []MCPServerConfig      `json:"mcp_servers,omitempty"`
 	CustomProviders         []CustomProviderConfig `json:"custom_providers,omitempty"`
 	RepoMap                 *bool                  `json:"repo_map,omitempty"`
@@ -277,6 +282,15 @@ func MergeSettings(base, override Settings) Settings {
 	if override.MaxBudgetUSD > 0 {
 		base.MaxBudgetUSD = override.MaxBudgetUSD
 	}
+	if override.HourlyTokenLimit != 0 {
+		base.HourlyTokenLimit = override.HourlyTokenLimit
+	}
+	if override.DailyTokenLimit != 0 {
+		base.DailyTokenLimit = override.DailyTokenLimit
+	}
+	if override.SessionTokenLimit != 0 {
+		base.SessionTokenLimit = override.SessionTokenLimit
+	}
 	if len(override.AutoAllow) > 0 {
 		base.AutoAllow = override.AutoAllow
 	}
@@ -387,6 +401,21 @@ func SettingValue(s Settings, key string) (string, bool) {
 			return "", true
 		}
 		return strconv.FormatFloat(s.MaxBudgetUSD, 'f', -1, 64), true
+	case "hourlytokenlimit":
+		if s.HourlyTokenLimit == 0 {
+			return "", true
+		}
+		return strconv.Itoa(s.HourlyTokenLimit), true
+	case "dailytokenlimit":
+		if s.DailyTokenLimit == 0 {
+			return "", true
+		}
+		return strconv.Itoa(s.DailyTokenLimit), true
+	case "sessiontokenlimit":
+		if s.SessionTokenLimit == 0 {
+			return "", true
+		}
+		return strconv.Itoa(s.SessionTokenLimit), true
 	case "mcpservers":
 		data, _ := json.Marshal(s.MCPServers)
 		return string(data), true
@@ -444,6 +473,24 @@ func SetGlobalSetting(key, value string) error {
 			return fmt.Errorf("invalid max budget: %w", err)
 		}
 		s.MaxBudgetUSD = amount
+	case "hourlytokenlimit":
+		n, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid hourly_token_limit: %w", err)
+		}
+		s.HourlyTokenLimit = n
+	case "dailytokenlimit":
+		n, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid daily_token_limit: %w", err)
+		}
+		s.DailyTokenLimit = n
+	case "sessiontokenlimit":
+		n, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid session_token_limit: %w", err)
+		}
+		s.SessionTokenLimit = n
 	case "deploymentrouting":
 		switch strings.ToLower(strings.TrimSpace(value)) {
 		case "1", "true", "yes", "on":

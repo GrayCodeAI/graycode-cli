@@ -250,6 +250,7 @@ func TestExtractSubcommand(t *testing.T) {
 		{"docker compose up", "docker compose"},
 		{"go test -race ./...", "go test"},
 		{"git status", "git status"},
+		{"git -C /Users/me/proj status", "git status"},
 		{"ls", "ls"},
 		{"ENV=prod npm install lodash", "npm install"},
 		{"/usr/bin/git commit -m hello", "git commit"},

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -104,6 +105,14 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 				Provider:         provider,
 				Model:            model,
 			},
+		}
+		if tracker := s.currentTokUsageTracker(); tracker != nil {
+			for _, alert := range tracker.DrainAlerts() {
+				ch <- StreamEvent{
+					Type:    "content",
+					Content: fmt.Sprintf("\n⚠ Usage %s: %s\n", alert.Level, alert.Message),
+				}
+			}
 		}
 	}
 }
