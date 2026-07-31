@@ -45,7 +45,6 @@ func (m chatModel) startConfigGatewayRegion(providerID string) chatModel {
 		idx = gatewayRegionOptionIndex(providerID, hawkconfig.GatewayRegionLabel(providerID))
 	}
 	m.configGatewayRegionSel = idx
-	m.configXiaomiRegionSel = idx
 	m.configZAIRegionSel = idx
 	name := hawkconfig.GatewayDisplayName(providerID)
 	notice := fmt.Sprintf("Select %s region (↑↓ · enter · esc cancel)", name)
@@ -94,14 +93,12 @@ func (m chatModel) handleConfigGatewayRegionKey(msg tea.KeyMsg) (chatModel, tea.
 	case "up", "k":
 		if m.configGatewayRegionSel > 0 {
 			m.configGatewayRegionSel--
-			m.configXiaomiRegionSel = m.configGatewayRegionSel
 			m.configZAIRegionSel = m.configGatewayRegionSel
 		}
 		return m, nil
 	case "down", "j":
 		if m.configGatewayRegionSel < count-1 {
 			m.configGatewayRegionSel++
-			m.configXiaomiRegionSel = m.configGatewayRegionSel
 			m.configZAIRegionSel = m.configGatewayRegionSel
 		}
 		return m, nil
