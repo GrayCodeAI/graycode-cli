@@ -216,8 +216,8 @@ type chatModel struct {
 	configPostSaveKeysProvider string // return to Gateways tab after replace save
 	configSaving               bool   // blocks hub/list input while async credential work runs
 	configPendingOllamaURL     string
-	configXiaomiRegionSel      int // Token Plan region picker index
 	configZAIRegionSel         int // Z.AI (general or coding) region picker index
+	configGatewayRegionSel     int // Generic gateway region picker index
 	pluginRuntime              *plugin.Runtime
 	spinnerVerb                string
 	// Per-turn token counters shown next to the spinner (↑ input, ↓ output).

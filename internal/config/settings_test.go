@@ -298,7 +298,7 @@ func TestProviderCredentialEnvAliases(t *testing.T) {
 		{"google", true},
 		{"grok", false},
 		{"xai", false},
-		{"xiaomi_mimo_payg", true},
+		{"xiaomi_mimo_payg", false},
 		{"openai", false},
 	}
 

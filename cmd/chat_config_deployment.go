@@ -253,6 +253,8 @@ func configCredentialRejected(err error) bool {
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
+	m.settings = hawkconfig.LoadSettings()
+	m.syncSessionSelection()
 	selection := hawkconfig.EffectiveSelectionWithSettings(context.Background(), m.settings, hawkconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(m.session.Provider(), m.settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(m.session.Model(), m.settings.Model),
@@ -260,7 +262,6 @@ func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
 	if err := engine.RebuildSessionTransportForSettings(context.Background(), m.settings, m.session, selection, m.session.Provider()); err != nil {
 		m.configNotice = sanitizeConfigNotice(err.Error())
 	}
-	syncSessionFromPersistedSelection(m.session)
 	m.invalidateConnStatus()
 	return m, nil
 }

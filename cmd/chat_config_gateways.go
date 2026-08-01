@@ -67,16 +67,11 @@ func (m chatModel) loadConfigGatewayRows() []configGatewayRow {
 			credentialEnv, keyConflict = hawkconfig.CredentialEnvironmentConflict(ctx, status.ID)
 		}
 		display := status.DisplayName
-		if status.ID == hawkconfig.ProviderXiaomiTokenPlan {
+		if status.RegionRequired || status.RegionLabel != "" || hawkconfig.HasRegionOptions(status.ID) {
 			if reg := status.RegionLabel; reg != "" {
 				display += " · " + reg
-			} else {
+			} else if status.RegionRequired {
 				display += " · region required"
-			}
-		}
-		if status.ID == hawkconfig.ProviderZAICoding {
-			if reg := status.RegionLabel; reg != "" {
-				display += " · " + reg
 			} else {
 				display += " · region"
 			}
@@ -168,13 +163,9 @@ func (m chatModel) refreshConfigGateway() (chatModel, tea.Cmd) {
 	}
 	idx := m.configGatewayRefreshTargetIndex(rows)
 	row := rows[idx]
-	if row.ID == hawkconfig.ProviderXiaomiTokenPlan && row.RegionRequired {
-		m.configNotice = "Pick Token Plan region (cn / sgp / ams) before refresh"
-		return m.startConfigXiaomiTokenPlanRegion(), nil
-	}
-	if row.ID == hawkconfig.ProviderZAICoding && row.RegionRequired {
-		m.configNotice = "Pick Coding Plan region (international / cn) before refresh"
-		return m.startConfigZAIRegion(row.ID), nil
+	if row.RegionRequired {
+		m.configNotice = fmt.Sprintf("Pick region for %s before refresh", row.DisplayName)
+		return m.startConfigGatewayRegion(row.ID), nil
 	}
 
 	if !row.HasKey {
@@ -279,20 +270,14 @@ func (m chatModel) configGatewaysView() string {
 		b.WriteString("\n" + mutedStyle.Render(indent+configGatewayRemovePrompt(m.configKeysRemoveStep, name)))
 	} else if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		hint := "Select a gateway · enter · paste API key · then Models tab"
-		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
-			hint = "Token Plan: enter pick region (cn/sgp/ams) then key · g change region"
-		}
-		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderZAICoding {
-			hint = "Coding Plan: enter pick region (international/cn) then key · g change region"
+		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].RegionRequired || rows[targetIdx].RegionLabel != "" || hawkconfig.HasRegionOptions(rows[targetIdx].ID)) {
+			hint = rows[targetIdx].DisplayName + ": enter pick region then key · g change region"
 		}
 
 		b.WriteString("\n" + mutedStyle.Render(indent+hint))
 	} else {
 		hints := "enter use gateway · k view key · delete remove · r refresh"
-		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderXiaomiTokenPlan {
-			hints = "enter · g region · k key · delete · r refresh"
-		}
-		if targetIdx >= 0 && targetIdx < len(rows) && rows[targetIdx].ID == hawkconfig.ProviderZAICoding {
+		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].RegionRequired || rows[targetIdx].RegionLabel != "" || hawkconfig.HasRegionOptions(rows[targetIdx].ID)) {
 			hints = "enter · g region · k key · delete · r refresh"
 		}
 
@@ -336,15 +321,9 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 		return m, nil
 	}
 	row := rows[m.configSel]
-	if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
-		if !row.HasKey || row.RegionRequired {
-			m.configGatewayFocus = m.configSel
-			return m.startConfigXiaomiTokenPlanRegion(), nil
-		}
-	}
-	if row.ID == hawkconfig.ProviderZAICoding && (!row.HasKey || row.RegionRequired) {
+	if (row.RegionRequired || hawkconfig.HasRegionOptions(row.ID)) && (!row.HasKey || row.RegionRequired) {
 		m.configGatewayFocus = m.configSel
-		return m.startConfigZAIRegion(row.ID), nil
+		return m.startConfigGatewayRegion(row.ID), nil
 	}
 
 	if !row.HasKey {

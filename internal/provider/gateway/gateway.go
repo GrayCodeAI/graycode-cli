@@ -395,6 +395,22 @@ func ParseInlineToolCalls(content string) (string, []eyrieengine.ToolCall) {
 	return eyrieengine.ParseInlineToolCalls(content)
 }
 
+func DefaultThinkingDisabled(providerID string) bool {
+	return eyrieengine.DefaultThinkingDisabled(providerID)
+}
+
+func ThinkingToggleSupported(providerID string) bool {
+	return eyrieengine.ThinkingToggleSupported(providerID)
+}
+
+func (g *Gateway) DefaultThinkingDisabled(providerID string) bool {
+	return eyrieengine.DefaultThinkingDisabled(providerID)
+}
+
+func (g *Gateway) ThinkingToggleSupported(providerID string) bool {
+	return eyrieengine.ThinkingToggleSupported(providerID)
+}
+
 // --- Test fixtures -----------------------------------------------------
 // Re-exported from engine so hawk tests inject credential fixtures through the
 // single gateway+engine boundary. These are thin aliases only.

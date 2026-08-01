@@ -261,28 +261,5 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 
 // providerDNSHost returns a hostname to check DNS resolution for a provider.
 func providerDNSHost(provider string) string {
-	switch strings.ToLower(provider) {
-	case "anthropic":
-		return "api.anthropic.com"
-	case "openai":
-		return "api.openai.com"
-	case "gemini", "google":
-		return "generativelanguage.googleapis.com"
-	case "openrouter":
-		return "openrouter.ai"
-	case "grok", "xai":
-		return "api.x.ai"
-	case "canopywave":
-		return "inference.canopywave.io"
-	case "zai_payg", "zai_coding":
-		return "api.z.ai"
-	case "kimi", "moonshotai":
-		return "api.moonshot.ai"
-	case "xiaomi_mimo", "xiaomi_mimo_payg":
-		return "api.xiaomimimo.com"
-	case "xiaomi_mimo_token_plan":
-		return "token-plan-*.xiaomimimo.com"
-	default:
-		return ""
-	}
+	return hawkconfig.GatewayDNSHost(provider)
 }

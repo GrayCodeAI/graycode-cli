@@ -61,8 +61,11 @@ func (m chatModel) configPanelView() string {
 	if m.configEntry == configEntryOllamaURL {
 		return m.configOllamaURLView()
 	}
+	if m.configEntry == configEntryGatewayRegion {
+		return m.configGatewayRegionView()
+	}
 	if m.configEntry == configEntryXiaomiRegion {
-		return m.configXiaomiRegionView()
+		return m.configGatewayRegionView()
 	}
 	if m.configEntry == configEntryZAIRegion {
 		return m.configZAIRegionView()
@@ -583,7 +586,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 			m.restoreChatInput()
 			m.configPostSaveKeysProvider = providerName
 			m.configNotice = "Pick Token Plan region before pasting key"
-			return m.startConfigXiaomiTokenPlanRegion(), nil
+			return m.startConfigGatewayRegion(providerName), nil
 		}
 		m.configEntry = configEntryNone
 		m.configProvider = ""
@@ -822,11 +825,17 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 		}
 		return m.handleConfigKeyViewKey(msg)
 	}
+	if m.configEntry == configEntryGatewayRegion {
+		if m.configSaving {
+			return m, nil
+		}
+		return m.handleConfigGatewayRegionKey(msg)
+	}
 	if m.configEntry == configEntryXiaomiRegion {
 		if m.configSaving {
 			return m, nil
 		}
-		return m.handleConfigXiaomiRegionKey(msg)
+		return m.handleConfigGatewayRegionKey(msg)
 	}
 	if m.configEntry == configEntryZAIRegion {
 		if m.configSaving {
@@ -859,7 +868,7 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 			}
 		case "g", "G":
 			if row, ok := m.selectedConfigGateway(); ok && row.ID == hawkconfig.ProviderXiaomiTokenPlan {
-				return m.startConfigXiaomiTokenPlanRegion(), nil
+				return m.startConfigGatewayRegion(row.ID), nil
 			}
 		}
 	}

@@ -44,7 +44,14 @@ pre-commit:
           echo "lefthook: golangci-lint not installed — skipping (install: https://golangci-lint.run/usage/install/)"
           exit 0
         fi
-        golangci-lint run --new-from-rev=HEAD~1 --fix {staged_files}
+        # Lint the directories holding staged files. Running golangci-lint on
+        # named files fails with "named files must all be in one directory"
+        # when staged .go files span multiple packages. The dirs are fed via
+        # xargs so they arrive as separate arguments regardless of shell.
+        STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$' || true)
+        if [ -n "$STAGED" ]; then
+          echo "$STAGED" | xargs -n1 dirname | sort -u | xargs golangci-lint run --fix
+        fi
       stage_fixed: true
 
     yaml-lint:
@@ -57,10 +64,12 @@ pre-commit:
 
     forbidden-strings:
       run: |
-        # Catch obvious credential-shaped strings in staged additions.
+        # Catch obvious credential-shaped literals in staged additions.
+        # Only does so for quoted value literals — not bare `==` comparison
+        # guards like `if apiKey == ""`.
         bad=$(git diff --cached --diff-filter=AM -U0 -- {staged_files} \
           | grep -E '^\+' \
-          | grep -Ei '(aws_secret|password\s*=|api[_-]?key\s*=|BEGIN [A-Z]+ PRIVATE KEY)' \
+          | grep -Ei "(aws_secret|password|api[_-]?key)\s*:?=\s*[\"']|BEGIN [A-Z]+ PRIVATE KEY" \
           | grep -v 'example\|placeholder\|TODO\|x-release-please' || true)
         if [ -n "$bad" ]; then
           echo "lefthook: possible secret in staged changes:"
