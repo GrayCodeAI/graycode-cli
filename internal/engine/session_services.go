@@ -277,9 +277,15 @@ func WithMaxBudget(budget float64) ServiceOption {
 // NewSessionServices creates a SessionServices with defaults and applies
 // the given functional options.
 func NewSessionServices(opts ...ServiceOption) *SessionServices {
+	log := logger.Default()
 	ss := &SessionServices{
+		Permissions:      NewPermissionService(log),
+		LifecycleService: NewLifecycleService(log),
+		MemoryService:    NewMemoryService(log),
+		Persist:          NewPersistenceService(log),
+		ToolService:      NewToolService(nil),
 		Core: &CoreLoop{
-			Log: logger.Default(),
+			Log: log,
 		},
 		Safety: &SafetyLayer{
 			Perm:   NewPermissionEngine(),
@@ -292,7 +298,7 @@ func NewSessionServices(opts ...ServiceOption) *SessionServices {
 		Observe: &Observability{
 			Tracer:  oteltrace.NewTracer(),
 			Metrics: metrics.NewRegistry(),
-			Log:     logger.Default(),
+			Log:     log,
 		},
 		Backtrack: NewBacktrackEngine(),
 	}
