@@ -44,6 +44,34 @@ func TestRegistry_ExecuteAsync(t *testing.T) {
 	mu.Unlock()
 }
 
+func TestRegistry_ExecuteAsync_PreservesValuesAndCanDrain(t *testing.T) {
+	type contextKey string
+	const key contextKey = "trace"
+	r := NewRegistry()
+	seen := make(chan string, 1)
+	r.Register(Hook{
+		Name:  "drainable",
+		Event: "drainable_event",
+		Fn: func(ctx context.Context, _ map[string]interface{}) error {
+			value, _ := ctx.Value(key).(string)
+			seen <- value
+			return nil
+		},
+	})
+
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), key, "trace-123"))
+	cancel()
+	r.ExecuteAsync(ctx, "drainable_event", nil)
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), time.Second)
+	defer waitCancel()
+	if err := r.WaitAsync(waitCtx); err != nil {
+		t.Fatalf("WaitAsync: %v", err)
+	}
+	if got := <-seen; got != "trace-123" {
+		t.Fatalf("hook context value = %q, want trace-123", got)
+	}
+}
+
 func TestRegistry_ExecuteAsync_NoHooks(t *testing.T) {
 	r := NewRegistry()
 	// Should not panic
