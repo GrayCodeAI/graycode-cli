@@ -129,7 +129,6 @@ type Session struct {
 	//   Sleeptime      -> s.MemorySvc().Sleeptime()
 	//   Activity       -> s.MemorySvc().Activity()
 	//   SkillDistiller -> s.MemorySvc().SkillDistiller()
-	//   RateLimiter    -> s.RateLimiter (legacy field; not yet on ChatLLM)
 	//   AgentsAccum    -> s.LifecycleSvc().AgentsAccum()
 	//   FewShotStore   -> s.LifecycleSvc().FewShotStore()
 	//   AdaptivePrompt -> s.LifecycleSvc().AdaptivePrompt()
@@ -158,7 +157,6 @@ type Session struct {
 	TestLoop       *TestLoop                  // test_loop.go — auto test-fix loop
 	FileMentions   *FileMentionDetector       // file_mentions.go — detect referenced files
 	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
-	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
 
 	// Few-shot learning and prompt optimization
 	//
@@ -202,8 +200,8 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		LintLoop:     NewLintLoop(),
 		TestLoop:     NewTestLoop(),
 		FileMentions: NewFileMentionDetector("."),
-		RateLimiter:  ratelimit.PerSecond(10),
 	}
+	rateLimiter := ratelimit.PerSecond(10)
 	s.Cost.Model = model
 	s.refreshContextWindowCache()
 
@@ -220,7 +218,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		Provider:          provider,
 		Model:             model,
 		DeploymentRouting: deploymentRouting,
-		RateLimiter:       s.RateLimiter,
+		RateLimiter:       rateLimiter,
 		Metrics:           s.metrics,
 	})
 	s.perms = NewPermissionService(log)
