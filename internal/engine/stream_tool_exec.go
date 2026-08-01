@@ -626,6 +626,9 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		switch canonicalToolName(tc.Name) {
 		case "Specify", "Plan", "Tasks":
 			s.Perm.AdvanceSpecStage(tc.Name)
+		case "SpecReset":
+			s.Perm.SpecSlug = ""
+			s.Perm.Stage = SpecStageNone
 		case "ApproveImplementation":
 			s.Perm.AdvanceSpecStage(tc.Name)
 			output = "Spec approved — switched to implementation. You may now make changes."

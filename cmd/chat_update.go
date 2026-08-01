@@ -514,6 +514,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.messages = append(m.messages, displayMsg{role: "system", content: msg})
 					case specActionReset:
 						m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+						m.session.Perm.SpecSlug = ""
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the trust tier again."})
 					}
 				}

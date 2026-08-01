@@ -141,6 +141,7 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	// A sub-agent spawned while the parent is mid-spec-and-unapproved
 	// inherits the same gate — an ungated sub-agent would be a permission
 	// escalation hole (it could Write/Bash while the parent still can't).
+	sub.PermSvc().SetAutonomy(s.PermSvc().Autonomy())
 	sub.PermSvc().SetSpecStage(s.PermSvc().SpecStage())
 	sub.PermSvc().SetSandboxMode(s.PermSvc().SandboxMode())
 	if s.LifecycleSvc() != nil {

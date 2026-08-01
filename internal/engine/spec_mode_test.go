@@ -23,6 +23,7 @@ func newSpecModeSession(approveImplement bool) (*Session, *int) {
 		tool.PlanTool{},
 		tool.TasksTool{},
 		tool.ApproveImplementationTool{},
+		tool.SpecResetTool{},
 	)
 	s := NewSession("", "", "test", registry)
 	prompts := 0
@@ -219,5 +220,28 @@ func TestSpecMode_ImplementingLiftsGate(t *testing.T) {
 	})
 	if res.isErr {
 		t.Errorf("expected Write to be permitted once Implementing, got error: %q", res.output)
+	}
+}
+
+func TestSpecMode_ResetClearsStageAndSlug(t *testing.T) {
+	dir := t.TempDir()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+
+	s, _ := newSpecModeSession(true)
+	s.PermSvc().SetSpecStage(SpecStageSpecify)
+	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "reset-test", "spec": "content"})
+	if s.Perm.SpecSlug == "" {
+		t.Fatal("Specify should set an active slug")
+	}
+	runSpecTool(t, s, "SpecReset", map[string]interface{}{})
+	if s.PermSvc().SpecStage() != SpecStageNone || s.Perm.SpecSlug != "" {
+		t.Fatalf("reset left stage=%v slug=%q", s.PermSvc().SpecStage(), s.Perm.SpecSlug)
 	}
 }

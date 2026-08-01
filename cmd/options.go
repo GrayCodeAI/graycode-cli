@@ -288,9 +288,6 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 		sess.PermSvc().Memory().DenySpec(spec)
 	}
 
-	if dangerouslySkipPermissions {
-		sess.PermSvc().SetAutonomy(engine.AutonomyYOLO)
-	}
 	if dryRunFlag {
 		sess.PermSvc().SetDryRun(true)
 	}
@@ -348,6 +345,11 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 	if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
 		sess.PermSvc().SetAutonomy(lvl)
 	}
+	// CLI safety overrides saved settings: the explicit dangerous-skip flag
+	// must not be silently downgraded by a persisted autonomy tier.
+	if dangerouslySkipPermissions {
+		sess.PermSvc().SetAutonomy(engine.AutonomyYOLO)
+	}
 
 	// Per-model thinking preference (Setup → Models Think column), with
 	// provider-specific defaults (e.g. LongCat off).
@@ -390,6 +392,11 @@ func bindChatSession(sess *engine.Session, sessionID string, containerRequired b
 }
 
 func validateRootFlags() error {
+	if strings.TrimSpace(sandboxFlag) != "" {
+		if _, _, ok := normalizePermissionSandbox(sandboxFlag); !ok {
+			return fmt.Errorf("--sandbox must be one of: strict, workspace, off")
+		}
+	}
 	if outputFormat != "text" && outputFormat != "json" && outputFormat != "stream-json" {
 		return fmt.Errorf("--output-format must be one of: text, json, stream-json")
 	}

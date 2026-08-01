@@ -6,6 +6,15 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
+func TestValidateRootFlagsRejectsInvalidSandbox(t *testing.T) {
+	old := sandboxFlag
+	t.Cleanup(func() { sandboxFlag = old })
+	sandboxFlag = "invalid-mode"
+	if err := validateRootFlags(); err == nil {
+		t.Fatal("expected invalid --sandbox mode to be rejected")
+	}
+}
+
 func TestParseToolListFromCLI(t *testing.T) {
 	got := parseToolListFromCLI([]string{"Bash(git diff:*) Edit,Read", "mcp__server__tool"})
 	want := []string{"Bash(git diff:*)", "Edit", "Read", "mcp__server__tool"}
