@@ -109,6 +109,10 @@ func TestEffectivePermissionTier_ReadsThroughRealSession(t *testing.T) {
 	if got := effectivePermissionTier(sess); got != engine.AutonomyFull {
 		t.Fatalf("explicit Full: got %v, want %v", got, engine.AutonomyFull)
 	}
+	sess.PermSvc().SetAutonomy(engine.AutonomySupervised)
+	if got := effectivePermissionTier(sess); got != engine.AutonomySupervised {
+		t.Fatalf("explicit Supervised: got %v, want %v", got, engine.AutonomySupervised)
+	}
 }
 
 func TestPermissionBehaviorSummary(t *testing.T) {

@@ -47,6 +47,7 @@ type Settings struct {
 	Sandbox                 string                 `json:"sandbox,omitempty"`                    // sandbox mode: strict, workspace, off
 	AutoCommit              *bool                  `json:"auto_commit,omitempty"`                // auto-commit file changes
 	Autonomy                int                    `json:"autonomy,omitempty"`                   // autonomy level 0-4
+	AutonomyExplicit        bool                   `json:"autonomy_explicit,omitempty"`          // distinguishes persisted Supervised (0) from unset
 	ModelRoles              *routing.ModelRoles    `json:"model_roles,omitempty"`                // per-role model overrides
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
@@ -318,8 +319,9 @@ func MergeSettings(base, override Settings) Settings {
 	if override.AutoCommit != nil {
 		base.AutoCommit = override.AutoCommit
 	}
-	if override.Autonomy != 0 {
+	if override.AutonomyExplicit || override.Autonomy != 0 {
 		base.Autonomy = override.Autonomy
+		base.AutonomyExplicit = true
 	}
 	if override.AutoCompactThresholdPct > 0 {
 		base.AutoCompactThresholdPct = override.AutoCompactThresholdPct

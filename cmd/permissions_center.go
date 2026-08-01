@@ -52,7 +52,7 @@ func effectivePermissionTier(sess *engine.Session) engine.AutonomyLevel {
 	if perms == nil {
 		return DefaultContainerAutonomy
 	}
-	if perms.Autonomy() == 0 {
+	if perms.Autonomy() == 0 && !perms.AutonomyExplicit() {
 		return DefaultContainerAutonomy
 	}
 	return perms.Autonomy()
@@ -270,6 +270,7 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 		scope = "global"
 	}
 	settings.Autonomy = permissionTierSettingValue(level)
+	settings.AutonomyExplicit = true
 	settings.Sandbox = effectivePermissionSandbox(settings)
 	settings.AllowedTools = dedupeStrings(settings.AllowedTools)
 	settings.DisallowedTools = dedupeStrings(settings.DisallowedTools)
@@ -283,6 +284,7 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 		target.AllowedTools = append([]string{}, settings.AllowedTools...)
 		target.DisallowedTools = append([]string{}, settings.DisallowedTools...)
 		target.Autonomy = settings.Autonomy
+		target.AutonomyExplicit = true
 		target.Sandbox = settings.Sandbox
 		if err := hawkconfig.SaveGlobal(target); err != nil {
 			return "", err
@@ -300,6 +302,7 @@ func resetPermissionCenter(m *chatModel) {
 	m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 	m.session.PermSvc().SetSandboxMode(sandbox.ParseMode(defaultPermissionSandbox))
 	m.settings.Autonomy = permissionTierSettingValue(DefaultContainerAutonomy)
+	m.settings.AutonomyExplicit = true
 	m.settings.Sandbox = defaultPermissionSandbox
 	sandboxFlag = defaultPermissionSandbox
 	m.settings.AutoAllow = nil
@@ -338,6 +341,7 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 		}
 		m.session.PermSvc().SetAutonomy(level)
 		m.settings.Autonomy = permissionTierSettingValue(level)
+		m.settings.AutonomyExplicit = true
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", label, permissionBehaviorSummary(level))})
 	case "sandbox":
 		if len(parts) < 3 {

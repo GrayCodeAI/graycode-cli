@@ -129,7 +129,10 @@ func (s *PermissionService) SetAllowedDirs(dirs []string) { s.allowedDirs = dirs
 // SetAutonomy sets the agent's autonomy level. Writes directly to the
 // underlying PermissionEngine — the same field CheckTool reads — rather
 // than a separate shadow field, so the change actually takes effect.
-func (s *PermissionService) SetAutonomy(level AutonomyLevel) { s.perm.Autonomy = level }
+func (s *PermissionService) SetAutonomy(level AutonomyLevel) {
+	s.perm.Autonomy = level
+	s.perm.AutonomyExplicit = true
+}
 
 // SetSpecStage sets the independent spec-workflow stage. Also writes
 // directly to the engine, same reasoning as SetAutonomy.
@@ -168,6 +171,10 @@ func (s *PermissionService) AllowedDirs() []string { return s.allowedDirs }
 
 // Autonomy returns the autonomy level.
 func (s *PermissionService) Autonomy() AutonomyLevel { return s.perm.Autonomy }
+
+// AutonomyExplicit reports whether the session selected or loaded a tier,
+// including Supervised (which numerically shares the zero value).
+func (s *PermissionService) AutonomyExplicit() bool { return s.perm.AutonomyExplicit }
 
 // SpecStage returns the active spec-workflow stage.
 func (s *PermissionService) SpecStage() SpecStage { return s.perm.Stage }

@@ -33,11 +33,12 @@ const (
 // PermissionEngine encapsulates all permission-checking logic.
 // Extracted from Session to keep the god object lean.
 type PermissionEngine struct {
-	Memory     *PermissionMemory
-	AutoMode   *permissions.AutoModeState
-	Classifier *permissions.Classifier
-	BypassKill *permissions.BypassKillswitch
-	Autonomy   AutonomyLevel
+	Memory           *PermissionMemory
+	AutoMode         *permissions.AutoModeState
+	Classifier       *permissions.Classifier
+	BypassKill       *permissions.BypassKillswitch
+	Autonomy         AutonomyLevel
+	AutonomyExplicit bool
 	// SandboxMode controls filesystem/process policy for tool execution. It is
 	// deliberately separate from Autonomy: autonomy decides whether a user
 	// prompt is needed, while the sandbox decides what the tool may actually do.

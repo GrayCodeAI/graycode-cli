@@ -48,9 +48,10 @@ var schemaCmd = &cobra.Command{
 						},
 					},
 				},
-				"sandbox":     map[string]interface{}{"type": "string", "enum": []string{"strict", "workspace", "off"}},
-				"auto_commit": map[string]interface{}{"type": "boolean"},
-				"autonomy":    map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 4},
+				"sandbox":           map[string]interface{}{"type": "string", "enum": []string{"strict", "workspace", "off"}},
+				"auto_commit":       map[string]interface{}{"type": "boolean"},
+				"autonomy":          map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 4},
+				"autonomy_explicit": map[string]interface{}{"type": "boolean"},
 				"attribution": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{

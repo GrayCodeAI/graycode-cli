@@ -108,6 +108,14 @@ func TestMergeSettings_SandboxOverride(t *testing.T) {
 	}
 }
 
+func TestMergeSettings_PersistsExplicitSupervised(t *testing.T) {
+	base := Settings{Autonomy: 2, AutonomyExplicit: true}
+	merged := MergeSettings(base, Settings{AutonomyExplicit: true, Autonomy: 0})
+	if merged.Autonomy != 0 || !merged.AutonomyExplicit {
+		t.Fatalf("merged autonomy = %d explicit=%v, want 0/true", merged.Autonomy, merged.AutonomyExplicit)
+	}
+}
+
 func TestMergeSettings_ModelRolesOverride(t *testing.T) {
 	t.Parallel()
 	base := Settings{}

@@ -342,7 +342,9 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 	}
 	sess.EnsureAutoCompactor()
 
-	if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
+	if settings.AutonomyExplicit {
+		sess.PermSvc().SetAutonomy(engine.AutonomySupervised)
+	} else if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
 		sess.PermSvc().SetAutonomy(lvl)
 	}
 	// CLI safety overrides saved settings: the explicit dangerous-skip flag
