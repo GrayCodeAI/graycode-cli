@@ -55,38 +55,31 @@ func NewPersistenceService(log *logger.Logger) *PersistenceService {
 func (s *PersistenceService) Messages() []types.EyrieMessage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	// Read s.messages directly; the lock is already held. Calling
-	// RawMessages() here would recursively RLock and can deadlock if a
-	// writer arrives between the two read locks (Go's RWMutex forbids
-	// recursive read-locking).
-	raw := s.messages
-	out := make([]types.EyrieMessage, len(raw))
-	copy(out, raw)
-	return out
+	return cloneMessages(s.messages)
 }
 
 // SetRawMessages replaces the message slice. Used by code paths
-// that previously wrote to s.messages directly. Pass-by-reference
-// to keep the slice header mutable. Safe on a nil receiver.
+// that previously wrote to s.messages directly. The input is copied so
+// callers cannot mutate the persisted transcript after publication.
 func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
 	if s == nil {
 		return
 	}
 	s.mu.Lock()
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 
-// RawMessages returns the live slice (no copy). Callers MUST NOT mutate.
-// Used by the agent loop's hot path where copy overhead matters.
-// Safe to call on a nil receiver (returns nil).
+// RawMessages returns a snapshot copy of the transcript. Returning the live
+// slice was race-prone because background work could retain it after the lock
+// was released. Safe to call on a nil receiver (returns nil).
 func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	if s == nil {
 		return nil
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.messages
+	return cloneMessages(s.messages)
 }
 
 // Graph returns Hawk's product-owned conversation graph.
@@ -112,7 +105,7 @@ func (s *PersistenceService) AddAssistant(content string) {
 // SetMessages replaces the transcript.
 func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 
@@ -216,10 +209,43 @@ func (s *PersistenceService) RemoveLastExchange() {
 // LoadMessages replaces the transcript with a fresh slice.
 func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	// Assign directly; the lock is held, so SetRawMessages() (which locks
-	// again) would deadlock on a recursive write lock.
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
+}
+
+// cloneMessages copies the message slice and its mutable nested slices/maps.
+// ContentParts are interface values and are copied at the slice boundary; the
+// concrete content blocks remain owned by their callers.
+func cloneMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
+	if msgs == nil {
+		return nil
+	}
+	out := make([]types.EyrieMessage, len(msgs))
+	for i, msg := range msgs {
+		out[i] = msg
+		out[i].Images = append([]string(nil), msg.Images...)
+		out[i].ContentParts = append([]types.ContentPart(nil), msg.ContentParts...)
+		out[i].ToolUse = cloneToolCalls(msg.ToolUse)
+		out[i].ToolResults = append([]types.ToolResult(nil), msg.ToolResults...)
+	}
+	return out
+}
+
+func cloneToolCalls(calls []types.ToolCall) []types.ToolCall {
+	if calls == nil {
+		return nil
+	}
+	out := make([]types.ToolCall, len(calls))
+	for i, call := range calls {
+		out[i] = call
+		if call.Arguments != nil {
+			out[i].Arguments = make(map[string]interface{}, len(call.Arguments))
+			for key, value := range call.Arguments {
+				out[i].Arguments[key] = value
+			}
+		}
+	}
+	return out
 }
 
 // PinnedMessages returns the count of pinned messages.

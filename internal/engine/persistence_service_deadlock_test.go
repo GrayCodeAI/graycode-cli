@@ -38,3 +38,27 @@ func TestPersistenceServiceNoRecursiveLock(t *testing.T) {
 		t.Fatal("PersistenceService deadlocked (recursive lock acquisition)")
 	}
 }
+
+func TestPersistenceService_MessageSnapshotsDoNotAlias(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	input := []types.EyrieMessage{{
+		Role:    "assistant",
+		Images:  []string{"before.png"},
+		ToolUse: []types.ToolCall{{Name: "Read", Arguments: map[string]interface{}{"path": "before.txt"}}},
+	}}
+	ps.SetRawMessages(input)
+	input[0].Images[0] = "input-mutated.png"
+	input[0].ToolUse[0].Arguments["path"] = "input-mutated.txt"
+
+	snapshot := ps.RawMessages()
+	snapshot[0].Images[0] = "snapshot-mutated.png"
+	snapshot[0].ToolUse[0].Arguments["path"] = "snapshot-mutated.txt"
+
+	got := ps.Messages()
+	if got[0].Images[0] != "before.png" {
+		t.Fatalf("persisted image aliased caller snapshot: %q", got[0].Images[0])
+	}
+	if got[0].ToolUse[0].Arguments["path"] != "before.txt" {
+		t.Fatalf("persisted tool arguments aliased caller snapshot: %v", got[0].ToolUse[0].Arguments)
+	}
+}
