@@ -50,6 +50,16 @@ func TestChatViewportWidth_NoScrollbar(t *testing.T) {
 	}
 }
 
+func TestChatViewportWidth_NarrowTerminalClampsWithoutJump(t *testing.T) {
+	m := chatModel{viewport: viewportWithSize(8, 4), contentLines: 100}
+	if got := m.chatViewportWidth(8); got != 7 {
+		t.Fatalf("narrow overflowing viewport width = %d, want 7", got)
+	}
+	if got := m.chatViewportWidth(1); got != 1 {
+		t.Fatalf("single-column viewport width = %d, want 1", got)
+	}
+}
+
 func TestRenderScrollbar_TopAndBottom(t *testing.T) {
 	m := chatModel{
 		viewport:     viewportWithSize(80, 10),
@@ -89,6 +99,14 @@ func TestRenderScrollbar_SlightOverflowUsesLargeThumb(t *testing.T) {
 	}
 	if thumbRows < 8 {
 		t.Fatalf("expected large thumb for slight overflow, got %d thumb rows", thumbRows)
+	}
+}
+
+func TestRenderScrollbar_UsesTrackOutsideThumb(t *testing.T) {
+	m := chatModel{viewport: viewportWithSize(80, 10), contentLines: 100}
+	lines := strings.Split(m.renderScrollbar(), "\n")
+	if !strings.Contains(lines[5], scrollbarTrackGlyph) {
+		t.Fatalf("expected track glyph outside thumb, got %q", lines[5])
 	}
 }
 

@@ -109,6 +109,29 @@ func TestApplySlashSuggestion(t *testing.T) {
 	}
 }
 
+func TestSlashSuggestionsIncludeRegisteredCommandsAndAreDeterministic(t *testing.T) {
+	first := strings.Join(slashSuggestions("/"), "\n")
+	second := strings.Join(slashSuggestions("/"), "\n")
+	if first != second {
+		t.Fatal("slash suggestions changed between identical calls")
+	}
+	for _, sub := range subcommandRegistry.All() {
+		if sub.Name() == "" {
+			continue
+		}
+		found := false
+		for _, suggestion := range slashSuggestions("/") {
+			if strings.HasPrefix(suggestion, "/"+sub.Name()+" ") || suggestion == "/"+sub.Name() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("missing suggestion for registered command /%s", sub.Name())
+		}
+	}
+}
+
 func TestStalenessFormatReport(t *testing.T) {
 	t.Parallel()
 	report := stalenessFormatReport(nil)
