@@ -239,6 +239,8 @@ func (s *PermissionService) SetMaxBudgetUSD(usd float64) {
 // SetAllowedDirs sets the directories the agent may write to.
 func (s *PermissionService) SetAllowedDirs(dirs []string) {
 	if s != nil {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		s.allowedDirs = append([]string(nil), dirs...)
 	}
 }
