@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func TestPermissionService_CheckTool(t *testing.T) {
@@ -52,6 +54,14 @@ func TestPermissionService_AutonomyAndAllowedDirs(t *testing.T) {
 	}
 	if len(s.AllowedDirs()) != 2 {
 		t.Errorf("AllowedDirs len = %d, want 2", len(s.AllowedDirs()))
+	}
+}
+
+func TestPermissionService_SandboxModeRoundTrip(t *testing.T) {
+	s := NewPermissionService(nil)
+	s.SetSandboxMode(sandbox.ModeStrict)
+	if got := s.SandboxMode(); got != sandbox.ModeStrict {
+		t.Fatalf("SandboxMode = %q, want strict", got)
 	}
 }
 

@@ -3,6 +3,8 @@ package safety
 import (
 	"context"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // TestCheckTool_SpecStageBlocksEvenYOLO verifies the core guarantee documented
@@ -38,11 +40,21 @@ func TestCheckTool_SpecStageAllowsWorkflowAndReadTools(t *testing.T) {
 	pe.Stage = SpecStageSpecify
 	pe.Autonomy = AutonomySupervised
 
-	for _, name := range []string{"Specify", "Plan", "Tasks"} {
+	for _, name := range []string{"Specify"} {
 		allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: name})
 		if !allowed {
 			t.Errorf("tool %q: expected allowed during spec stage, got denied: %q", name, reason)
 		}
+	}
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); allowed || reason == "" {
+		t.Fatalf("Plan should wait for Specify, allowed=%v reason=%q", allowed, reason)
+	}
+	pe.SpecSlug = "test-spec"
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); !allowed || reason != "" {
+		t.Fatalf("Plan should be allowed after Specify, allowed=%v reason=%q", allowed, reason)
+	}
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Tasks"}); allowed || reason == "" {
+		t.Fatalf("Tasks should wait for Plan, allowed=%v reason=%q", allowed, reason)
 	}
 
 	allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Read"})
@@ -145,5 +157,53 @@ func TestCheckTool_DryRunOverridesEverything(t *testing.T) {
 	}
 	if reason == "" {
 		t.Error("expected a deny reason")
+	}
+}
+
+func TestCheckTool_ExplicitDenyOverridesAutonomy(t *testing.T) {
+	for _, tier := range []AutonomyLevel{AutonomyBasic, AutonomySemi, AutonomyFull, AutonomyYOLO} {
+		pe := NewPermissionEngine()
+		pe.Autonomy = tier
+		pe.Memory.AlwaysDeny("Write")
+		allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Write", Args: map[string]interface{}{"file_path": "x.txt"}})
+		if allowed || reason != "Permission denied (rule)." {
+			t.Fatalf("tier %v: allowed=%v reason=%q", tier, allowed, reason)
+		}
+	}
+	pe := NewPermissionEngine()
+	pe.Autonomy = AutonomyYOLO
+	pe.AutoMode.Record("Write", "x.txt", true)
+	pe.Memory.AlwaysDenyPattern("Write:x.txt")
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Write", Args: map[string]interface{}{"file_path": "x.txt"}}); allowed || reason != "Permission denied (rule)." {
+		t.Fatalf("explicit deny did not beat auto-allow: allowed=%v reason=%q", allowed, reason)
+	}
+}
+
+func TestCheckTool_SpecWorkflowRequiresOrderButAllowsSupportTools(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Stage = SpecStageSpecify
+	for _, name := range []string{"AskUserQuestion", "SpecStatus", "SpecEdit", "SpecList", "SpecConfig", "Clarify"} {
+		allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: name})
+		if !allowed {
+			t.Errorf("support tool %q denied during spec stage: %q", name, reason)
+		}
+	}
+	if allowed, _ := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Tasks"}); allowed {
+		t.Fatal("Tasks must not skip the Plan stage")
+	}
+	if allowed, _ := pe.CheckTool(context.Background(), ToolCallInfo{Name: "ApproveImplementation"}); allowed {
+		t.Fatal("ApproveImplementation must not skip the Tasks stage")
+	}
+}
+
+func TestCheckTool_StrictSandboxIsIndependentOfAutonomy(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Autonomy = AutonomyYOLO
+	pe.SandboxMode = sandbox.ModeStrict
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Write"}); allowed || reason == "" {
+		t.Fatalf("strict sandbox allowed Write: reason=%q", reason)
+	}
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "AskUserQuestion"}); !allowed || reason != "" {
+		t.Fatalf("strict sandbox blocked user clarification: allowed=%v reason=%q", allowed, reason)
 	}
 }

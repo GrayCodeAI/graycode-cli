@@ -193,7 +193,7 @@ func canonicalToolName(name string) string {
 		return "WebSearch"
 	case "agent", "task":
 		return "Agent"
-	case "ask_user", "askuserquestion":
+	case "ask_user", "askuser", "askuserquestion":
 		return "AskUserQuestion"
 	case "todo", "todowrite":
 		return "TodoWrite"
@@ -207,6 +207,26 @@ func canonicalToolName(name string) string {
 		return "Tasks"
 	case "approve_implementation", "approveimplementation":
 		return "ApproveImplementation"
+	case "spec_status", "specstatus":
+		return "SpecStatus"
+	case "spec_edit", "specedit":
+		return "SpecEdit"
+	case "spec_list", "speclist":
+		return "SpecList"
+	case "spec_reset", "specreset":
+		return "SpecReset"
+	case "spec_config", "specconfig":
+		return "SpecConfig"
+	case "clarify":
+		return "Clarify"
+	case "analyze":
+		return "Analyze"
+	case "checklist":
+		return "Checklist"
+	case "constitution":
+		return "Constitution"
+	case "converge":
+		return "Converge"
 	case "notebook_edit", "notebookedit":
 		return "NotebookEdit"
 	case "config":

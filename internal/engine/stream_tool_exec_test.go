@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -110,3 +111,35 @@ var (
 	_ tool.Tool = orderedReadTool{}
 	_ tool.Tool = (*countedReadTool)(nil)
 )
+
+type contextCaptureTool struct{ ctx *tool.ToolContext }
+
+func (t *contextCaptureTool) Name() string        { return "Read" }
+func (t *contextCaptureTool) Description() string { return "capture context" }
+func (t *contextCaptureTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{"type": "object", "properties": map[string]interface{}{}}
+}
+
+func (t *contextCaptureTool) Execute(ctx context.Context, _ json.RawMessage) (string, error) {
+	t.ctx = tool.GetToolContext(ctx)
+	return "ok", nil
+}
+
+func TestExecuteSingleTool_PropagatesPermissionContext(t *testing.T) {
+	capture := &contextCaptureTool{}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(capture))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.PermSvc().SetSandboxMode(sandbox.ModeOff)
+	sess.SetAllowedDirs([]string{"/tmp/extra"})
+	ch := make(chan StreamEvent, 4)
+	res := sess.executeSingleTool(context.Background(), types.ToolCall{Name: "Read", ID: "ctx"}, ch, 0, "")
+	if res.isErr || capture.ctx == nil {
+		t.Fatalf("tool failed or context missing: %#v", res)
+	}
+	if capture.ctx.SandboxMode != sandbox.ModeOff {
+		t.Fatalf("SandboxMode = %q, want off", capture.ctx.SandboxMode)
+	}
+	if len(capture.ctx.AllowedDirectories) != 1 || capture.ctx.AllowedDirectories[0] != "/tmp/extra" {
+		t.Fatalf("AllowedDirectories = %#v", capture.ctx.AllowedDirectories)
+	}
+}

@@ -16,6 +16,7 @@ import (
 	hooks "github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // toolExecResult holds the output of a single tool execution.
@@ -323,6 +324,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	})
 
 	inputJSON, _ := json.Marshal(tc.Arguments)
+	sandboxMode := s.PermSvc().SandboxMode()
 	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
 		AgentSpawnFn: s.AgentSpawnFn,
 		AskUserFn:    s.AskUserFn,
@@ -343,13 +345,18 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			}
 			return resp.Content, nil
 		},
-		YaadBridge:        s.MemorySvc().Yaad(),
-		SpecSlugGet:       func() string { return s.Perm.SpecSlug },
-		SpecSlugSet:       func(slug string) { s.Perm.SpecSlug = slug },
-		BackgroundManager: s.ensureBackgroundManager(),
-		ReadOnlyBash:      s.readOnlyBash,
-		WorkingDir:        s.workingDir,
+		YaadBridge:         s.MemorySvc().Yaad(),
+		SpecSlugGet:        func() string { return s.Perm.SpecSlug },
+		SpecSlugSet:        func(slug string) { s.Perm.SpecSlug = slug },
+		BackgroundManager:  s.ensureBackgroundManager(),
+		ReadOnlyBash:       s.readOnlyBash,
+		WorkingDir:         s.workingDir,
+		AllowedDirectories: append([]string(nil), s.AllowedDirs...),
+		SandboxMode:        sandboxMode,
 	})
+	if sandboxMode != "" {
+		toolCtx = sandbox.ContextWithMode(toolCtx, sandboxMode)
+	}
 	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
 	}

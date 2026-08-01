@@ -6,6 +6,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // PermissionService is the Session's view of the safety/approval layer.
@@ -137,6 +138,12 @@ func (s *PermissionService) SetSpecStage(stage SpecStage) { s.perm.Stage = stage
 // SetDryRun toggles the global kill switch: when true, every tool call is
 // denied unconditionally, regardless of tier or spec stage.
 func (s *PermissionService) SetDryRun(dryRun bool) { s.perm.DryRun = dryRun }
+
+// SetSandboxMode sets the OS/tool sandbox policy used for subsequent calls.
+func (s *PermissionService) SetSandboxMode(mode sandbox.Mode) { s.perm.SandboxMode = mode }
+
+// SandboxMode reports the active OS/tool sandbox policy.
+func (s *PermissionService) SandboxMode() sandbox.Mode { return s.perm.SandboxMode }
 
 // DryRun reports whether the kill switch is active.
 func (s *PermissionService) DryRun() bool { return s.perm.DryRun }

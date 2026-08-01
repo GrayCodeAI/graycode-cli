@@ -8,11 +8,12 @@ Hawk can read files, edit code, and run shell commands. The permission system co
 
 When the model requests a tool:
 
-1. **PreToolUse hooks** — Can deny before other checks
-2. **Permission rules** — `deny` > `ask` > `allow`
-3. **Remembered grants** — Per-project approvals
-4. **Auto-approvals** — Read-only tools
-5. **Prompt policy** — Based on autonomy tier
+1. **Dry-run** — Denies every tool call
+2. **PreToolUse hooks** — Can deny before other checks
+3. **Spec-stage gate** — Restricts tools until implementation is approved
+4. **Explicit remembered rules** — Deny/allow decisions are checked before autonomy
+5. **Autonomy policy** — Determines whether an otherwise-unruled call prompts
+6. **High-risk approval gate** — Optional second confirmation for network/destructive actions
 
 ---
 
@@ -24,7 +25,7 @@ When the model requests a tool:
 | `scout` | Classify and approve safe tools |
 | `builder` | Broader tool access |
 | `operator` | Full tool access (trusted) |
-| `autonomous` | No prompts, hooks and rules still apply |
+| `autonomous` | No normal prompts; hooks, explicit rules, spec gates, sandbox, and high-risk approval still apply |
 
 Set with:
 
@@ -73,9 +74,15 @@ Permissions control what the model can request. The sandbox controls what actual
 | Sandbox | OS-level enforcement |
 
 Recommended combination:
-- `restrictive` rules
+- restrictive rules
 - PreToolUse hooks
 - `--sandbox strict`
+
+Sandbox modes are enforced independently of autonomy:
+
+- `strict` is read-only for tool execution.
+- `workspace` permits work inside the workspace and configured `--add-dir` paths.
+- `off` disables the tool path guard.
 
 ---
 

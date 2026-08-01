@@ -9,7 +9,11 @@ import (
 )
 
 func TestNormalizePermissionTier(t *testing.T) {
-	level, label, ok := normalizePermissionTier("operator")
+	level, label, ok := normalizePermissionTier("always_ask")
+	if !ok || level != engine.AutonomySupervised || label != "Always Ask" {
+		t.Fatalf("always_ask = (%v, %q, %v)", level, label, ok)
+	}
+	level, label, ok = normalizePermissionTier("operator")
 	if !ok || level != engine.AutonomyFull || label != "Operator" {
 		t.Fatalf("operator = (%v, %q, %v)", level, label, ok)
 	}

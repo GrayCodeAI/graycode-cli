@@ -142,6 +142,7 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	// inherits the same gate — an ungated sub-agent would be a permission
 	// escalation hole (it could Write/Bash while the parent still can't).
 	sub.PermSvc().SetSpecStage(s.PermSvc().SpecStage())
+	sub.PermSvc().SetSandboxMode(s.PermSvc().SandboxMode())
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxTurns(maxTurns)
 	}

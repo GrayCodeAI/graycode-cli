@@ -12,6 +12,7 @@ import (
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -37,7 +38,11 @@ type PermissionEngine struct {
 	Classifier *permissions.Classifier
 	BypassKill *permissions.BypassKillswitch
 	Autonomy   AutonomyLevel
-	Stage      SpecStage
+	// SandboxMode controls filesystem/process policy for tool execution. It is
+	// deliberately separate from Autonomy: autonomy decides whether a user
+	// prompt is needed, while the sandbox decides what the tool may actually do.
+	SandboxMode sandbox.Mode
+	Stage       SpecStage
 	// DryRun is a global kill switch: when true, every tool call is denied
 	// unconditionally, regardless of tier or spec stage. Replaces the old
 	// PermissionModeDontAsk's hard-lockout role — that mode was otherwise
@@ -92,15 +97,27 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 	if denied, reason := pe.checkPreToolHooks(tc); denied {
 		return false, reason
 	}
+	// Strict sandbox mode is read-only. This check is independent of autonomy
+	// and the spec workflow so neither can turn a read-only sandbox into a
+	// write or process-execution path.
+	if pe.SandboxMode == sandbox.ModeStrict && !pe.strictToolAllowed(tc) {
+		return false, "Sandbox strict mode: tool execution is read-only."
+	}
 
 	// Spec-stage gate — independent of trust tier, so no autonomy level can
 	// bypass it. While a spec workflow is active and not yet approved for
 	// implementation, only the workflow's own tools and reads may proceed.
 	if pe.Stage != SpecStageNone && pe.Stage != SpecStageImplementing {
 		switch toolName {
-		case "Specify", "Plan", "Tasks":
+		case "Specify", "Plan", "Tasks", "AskUserQuestion", "SpecStatus", "SpecEdit", "SpecList", "SpecReset", "SpecConfig", "Clarify", "Analyze", "Checklist", "Constitution", "Converge":
+			if !pe.specToolAllowed(toolName) {
+				return false, pe.specStageReason(toolName)
+			}
 			return true, ""
 		case "ApproveImplementation":
+			if pe.Stage != SpecStageTasks {
+				return false, "Spec stage active: ApproveImplementation is available only after Tasks completes."
+			}
 			// Always a real human decision — never auto-allowed by tier,
 			// bypass-kill, or auto-mode, unlike everything below. Show the
 			// actual spec/plan/tasks content in the prompt rather than a
@@ -114,6 +131,32 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 		}
 	}
 
+	summary := ToolSummary(tc.Name, tc.Args)
+	// Explicit remembered decisions are policy rules. They must be consulted
+	// before autonomy can short-circuit the request, especially for deny rules.
+	var memoryDecision *bool
+	if pe.Memory != nil {
+		memoryDecision = pe.Memory.Check(tc.Name, summary)
+	}
+	var autoDecision *bool
+	if pe.AutoMode != nil {
+		if allowed, ok := pe.AutoMode.ShouldAutoAllow(tc.Name, summary); ok {
+			autoDecision = &allowed
+		}
+	}
+	if memoryDecision != nil && !*memoryDecision {
+		return false, "Permission denied (rule)."
+	}
+	if autoDecision != nil && !*autoDecision {
+		return false, "Permission denied (auto-mode)."
+	}
+	if memoryDecision != nil && *memoryDecision {
+		return true, ""
+	}
+	if autoDecision != nil && *autoDecision {
+		return true, ""
+	}
+
 	isSafe := !ToolNeedsPermission(tc.Name, tc.Args)
 	autoCfg := PresetConfig(pe.Autonomy)
 	if !autoCfg.NeedsPermission(tc.Name, isSafe) {
@@ -122,27 +165,54 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 	if pe.BypassKill.IsEnabled() {
 		return true, ""
 	}
-	summary := ToolSummary(tc.Name, tc.Args)
 	if pe.Classifier != nil && tc.Name == "Bash" {
 		if pe.Classifier.Classify(summary) == "safe" {
 			return true, ""
 		}
 	}
-	if pe.AutoMode != nil {
-		if allowed, ok := pe.AutoMode.ShouldAutoAllow(tc.Name, summary); ok {
-			if allowed {
-				return true, ""
-			}
-			return false, "Permission denied (auto-mode)."
-		}
-	}
-	if decision := pe.Memory.Check(tc.Name, summary); decision != nil {
-		if !*decision {
-			return false, "Permission denied (rule)."
-		}
-		return true, ""
-	}
 	return pe.promptUser(ctx, tc)
+}
+
+func (pe *PermissionEngine) specToolAllowed(toolName string) bool {
+	switch toolName {
+	case "Specify":
+		return pe.Stage == SpecStageSpecify
+	case "Plan":
+		return pe.Stage == SpecStageSpecify && pe.SpecSlug != ""
+	case "Tasks":
+		return pe.Stage == SpecStagePlan
+	default:
+		return true
+	}
+}
+
+func (pe *PermissionEngine) specStageReason(toolName string) string {
+	switch toolName {
+	case "Plan":
+		return "Spec stage active: Plan is available only after Specify completes."
+	case "Tasks":
+		return "Spec stage active: Tasks is available only after Plan completes."
+	case "Specify":
+		return "Spec stage active: Specify is not available at the current stage."
+	default:
+		return "Spec stage active: tool is not available at the current stage."
+	}
+}
+
+func (pe *PermissionEngine) strictToolAllowed(tc ToolCallInfo) bool {
+	name := canonicalToolName(tc.Name)
+	if tool.IsReadOnly(tc.Name) || name == "ApproveImplementation" {
+		return true
+	}
+	switch name {
+	case "AskUserQuestion", "SpecStatus", "SpecList", "Clarify", "Analyze", "Checklist", "Constitution", "Converge":
+		return true
+	case "SpecConfig":
+		action, _ := tc.Args["action"].(string)
+		return strings.ToLower(strings.TrimSpace(action)) != "set"
+	default:
+		return false
+	}
 }
 
 // checkPreToolHooks runs decision hooks for PreToolUse / pre_tool.

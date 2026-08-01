@@ -6,11 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func validatePathAllowed(ctx context.Context, path string) error {
 	tc := GetToolContext(ctx)
 	if tc == nil {
+		return nil
+	}
+	// Explicitly selecting the off sandbox disables the workspace path guard.
+	// An unset mode is intentionally not treated as off so direct tool callers
+	// retain the safe historical default.
+	if tc.SandboxMode == sandbox.ModeOff {
 		return nil
 	}
 	path = strings.TrimSpace(path)

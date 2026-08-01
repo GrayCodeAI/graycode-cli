@@ -20,6 +20,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/prompt"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -269,6 +270,7 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
+	sess.PermSvc().SetSandboxMode(sandbox.ParseMode(effectivePermissionSandbox(settings)))
 
 	for _, spec := range settings.AutoAllow {
 		sess.PermSvc().Memory().AllowSpec(spec)
