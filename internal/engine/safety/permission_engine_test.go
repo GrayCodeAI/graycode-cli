@@ -120,6 +120,29 @@ func TestCheckTool_SpecStageImplementingUsesAutonomy(t *testing.T) {
 	}
 }
 
+func TestPermissionEngine_StructuredDecisionIncludesStableReason(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.DryRun = true
+	d := pe.CheckToolDecision(context.Background(), ToolCallInfo{Name: "Read"})
+	if d.Outcome != DecisionDeny || d.Reason != ReasonDryRun {
+		t.Fatalf("decision = %#v, want deny/dry_run", d)
+	}
+	if d.Message == "" {
+		t.Fatal("structured decision should retain human-readable message")
+	}
+}
+
+func TestPermissionEngine_SnapshotIsStableAfterLivePolicyChange(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Autonomy = AutonomyYOLO
+	snapshot := pe.Snapshot()
+	pe.DryRun = true
+	d := pe.CheckToolSnapshot(context.Background(), ToolCallInfo{Name: "Read"}, snapshot)
+	if d.Outcome != DecisionAllow {
+		t.Fatalf("snapshot decision = %#v, want allow from captured policy", d)
+	}
+}
+
 // TestCheckTool_SpecStageNoneIgnoresGate verifies that outside of any spec
 // workflow (Stage == SpecStageNone), the spec gate does not apply at all and
 // autonomy-tier logic governs directly.

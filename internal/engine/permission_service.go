@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/safety"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -82,13 +83,29 @@ func (s *PermissionService) Engine() *PermissionEngine { return s.perm }
 // The caller (engine/stream_tool_exec.go) handles the tool_result
 // event emission and the post-call side effects.
 func (s *PermissionService) CheckTool(ctx context.Context, info ToolCallInfo) (bool, string) {
-	granted, denyMsg := s.perm.CheckTool(ctx, info)
-	if !granted {
+	d := s.CheckToolDecision(ctx, info)
+	if d.Outcome != safety.DecisionAllow {
 		s.log.Warn("permission denied", map[string]interface{}{
-			"tool": info.Name,
+			"tool":   info.Name,
+			"reason": string(d.Reason),
 		})
 	}
-	return granted, denyMsg
+	return d.Outcome == safety.DecisionAllow, d.Message
+}
+
+// CheckToolDecision evaluates a request and exposes stable decision metadata.
+func (s *PermissionService) CheckToolDecision(ctx context.Context, info ToolCallInfo) safety.Decision {
+	return s.perm.CheckToolDecision(ctx, info)
+}
+
+// PolicySnapshot returns the scalar policy used for a single request.
+func (s *PermissionService) PolicySnapshot() safety.PolicySnapshot {
+	return s.perm.Snapshot()
+}
+
+// CheckToolSnapshot evaluates a request against a previously captured policy.
+func (s *PermissionService) CheckToolSnapshot(ctx context.Context, info ToolCallInfo, snapshot safety.PolicySnapshot) safety.Decision {
+	return s.perm.CheckToolSnapshot(ctx, info, snapshot)
 }
 
 // CheckApproval runs the human-in-the-loop gate on high-risk actions.
