@@ -485,7 +485,7 @@ func (s *Session) ContainerRequired() bool {
 
 // SubServices is the composed view of the 6 sub-services extracted
 // in Phases 1-6 of the god-object decomposition. New code should
-// prefer the SubServices() accessor over the legacy Session fields.
+// prefer the SubServices() accessor over direct Session state.
 // Existing code (cmd/, daemon/, multiagent/, …) continues to use
 // the legacy fields until they're migrated.
 //
@@ -493,12 +493,6 @@ func (s *Session) ContainerRequired() bool {
 // sub-services are concrete types; this keeps the API discoverable
 // via godoc and avoids the indirection cost of interface dispatch
 // on the agent-loop hot path.
-//
-// Note: this is distinct from the older *SessionServices returned
-// by Services(), which is a bridge view over the LEGACY fields
-// (CoreLoop, SafetyLayer, Intelligence, etc.). SubServices is the
-// new canonical view; SessionServices will be removed once legacy
-// migration is complete.
 type SubServices struct {
 	LLM         *ChatService
 	Perms       *PermissionService
