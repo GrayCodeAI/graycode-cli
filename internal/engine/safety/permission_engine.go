@@ -39,6 +39,9 @@ type PermissionEngine struct {
 	BypassKill       *permissions.BypassKillswitch
 	Autonomy         AutonomyLevel
 	AutonomyExplicit bool
+	// Revision increments when policy configuration is replaced. It is
+	// attached to decisions so audit consumers can correlate evaluations.
+	Revision uint64
 	// SandboxMode controls filesystem/process policy for tool execution. It is
 	// deliberately separate from Autonomy: autonomy decides whether a user
 	// prompt is needed, while the sandbox decides what the tool may actually do.
@@ -98,9 +101,13 @@ const (
 
 // Decision is the structured result of a permission evaluation.
 type Decision struct {
-	Outcome DecisionOutcome
-	Reason  DecisionReason
-	Message string
+	Outcome      DecisionOutcome
+	Reason       DecisionReason
+	Message      string
+	MatchedRule  string
+	Capabilities []Capability
+	Risk         RiskLevel
+	Revision     uint64
 }
 
 // PolicySnapshot captures the scalar policy state for one tool evaluation.
@@ -115,13 +122,14 @@ type PolicySnapshot struct {
 	SpecSlug         string
 	Phase            int
 	Phases           int
+	Revision         uint64
 }
 
 // Snapshot returns a copy of the engine's request-relevant scalar policy.
 func (pe *PermissionEngine) Snapshot() PolicySnapshot {
 	return PolicySnapshot{Autonomy: pe.Autonomy, AutonomyExplicit: pe.AutonomyExplicit,
 		SandboxMode: pe.SandboxMode, Stage: pe.Stage, DryRun: pe.DryRun,
-		SpecSlug: pe.SpecSlug, Phase: pe.Phase, Phases: pe.Phases}
+		SpecSlug: pe.SpecSlug, Phase: pe.Phase, Phases: pe.Phases, Revision: pe.Revision}
 }
 
 // NewPermissionEngine creates a PermissionEngine with sensible defaults.
@@ -161,12 +169,22 @@ func (pe *PermissionEngine) CheckToolSnapshot(ctx context.Context, tc ToolCallIn
 	clone.SpecSlug = snapshot.SpecSlug
 	clone.Phase = snapshot.Phase
 	clone.Phases = snapshot.Phases
+	clone.Revision = snapshot.Revision
 	return clone.CheckToolDecision(ctx, tc)
 }
 
 // CheckToolDecision returns structured policy metadata while preserving the
 // existing permission behavior and human-readable messages.
 func (pe *PermissionEngine) CheckToolDecision(ctx context.Context, tc ToolCallInfo) Decision {
+	d := pe.evaluateToolDecision(ctx, tc)
+	policy := ToolPolicyFor(tc.Name)
+	d.Capabilities = policy.Capabilities
+	d.Risk = policy.DefaultRisk
+	d.Revision = pe.Revision
+	return d
+}
+
+func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCallInfo) Decision {
 	if pe.DryRun {
 		return Decision{Outcome: DecisionDeny, Reason: ReasonDryRun, Message: "dry-run: tool execution disabled"}
 	}

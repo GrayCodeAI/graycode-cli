@@ -149,18 +149,22 @@ func (s *PermissionService) SetAllowedDirs(dirs []string) { s.allowedDirs = dirs
 func (s *PermissionService) SetAutonomy(level AutonomyLevel) {
 	s.perm.Autonomy = level
 	s.perm.AutonomyExplicit = true
+	s.perm.Revision++
 }
 
 // SetSpecStage sets the independent spec-workflow stage. Also writes
 // directly to the engine, same reasoning as SetAutonomy.
-func (s *PermissionService) SetSpecStage(stage SpecStage) { s.perm.Stage = stage }
+func (s *PermissionService) SetSpecStage(stage SpecStage) { s.perm.Stage = stage; s.perm.Revision++ }
 
 // SetDryRun toggles the global kill switch: when true, every tool call is
 // denied unconditionally, regardless of tier or spec stage.
-func (s *PermissionService) SetDryRun(dryRun bool) { s.perm.DryRun = dryRun }
+func (s *PermissionService) SetDryRun(dryRun bool) { s.perm.DryRun = dryRun; s.perm.Revision++ }
 
 // SetSandboxMode sets the OS/tool sandbox policy used for subsequent calls.
-func (s *PermissionService) SetSandboxMode(mode sandbox.Mode) { s.perm.SandboxMode = mode }
+func (s *PermissionService) SetSandboxMode(mode sandbox.Mode) {
+	s.perm.SandboxMode = mode
+	s.perm.Revision++
+}
 
 // SandboxMode reports the active OS/tool sandbox policy.
 func (s *PermissionService) SandboxMode() sandbox.Mode { return s.perm.SandboxMode }
