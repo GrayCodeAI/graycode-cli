@@ -24,7 +24,6 @@ import (
 // god-object decomposition (see docs/session-decomposition.md).
 type ToolService struct {
 	registry          *tool.Registry
-	host              toolExecutionHost
 	containerExecutor tool.ContainerExecutor
 	containerRequired bool
 	tracer            *oteltrace.Tracer
@@ -56,26 +55,9 @@ type toolExecutionDeps struct {
 	appendSystem       func(string)
 }
 
-// toolExecutionHost is the narrow compatibility seam used while the
-// historical post-tool pipeline is moved out of Session. It deliberately
-// exposes only batch execution; policy, persistence, and lifecycle state are
-// still obtained from their dedicated services by the host implementation.
-// Keeping this seam small lets callers migrate to ToolService without
-// reintroducing direct Session field access.
-type toolExecutionHost interface {
-	executeSingleTool(context.Context, types.ToolCall, chan<- StreamEvent, int, string) toolExecResult
-}
-
 // NewToolService constructs a ToolService with the given registry.
 func NewToolService(registry *tool.Registry) *ToolService {
 	return &ToolService{registry: registry}
-}
-
-// WithExecutionHost attaches the session-independent execution seam. It is
-// set once during session construction and is safe to replace in tests.
-func (s *ToolService) WithExecutionHost(host toolExecutionHost) *ToolService {
-	s.host = host
-	return s
 }
 
 // WithExecutionDeps binds the extracted service graph used by ExecuteOne.
@@ -88,10 +70,6 @@ func (s *ToolService) WithExecutionDeps(deps toolExecutionDeps) *ToolService {
 func (s *ToolService) WithMetrics(registry *metrics.Registry) *ToolService {
 	s.metrics = registry
 	return s
-}
-
-func (s *ToolService) executionDepsReady() bool {
-	return s != nil && s.deps.permissions != nil
 }
 
 // WithContainerExecutor configures container isolation.
@@ -155,13 +133,13 @@ func (s *ToolService) Classify(calls []types.ToolCall) (concurrent, sequential [
 
 // ExecuteAll runs the complete tool batch pipeline. The service owns the
 // public operation and callers no longer need to reach into Session's
-// unexported execution method. A missing host produces deterministic error
-// results instead of panicking, which keeps isolated service tests useful.
+// unexported execution method. An unconfigured service produces deterministic
+// errors instead of panicking.
 func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch chan<- StreamEvent, turn int, intent string) []toolExecResult {
-	if s == nil || s.host == nil {
+	if s == nil || s.deps.permissions == nil {
 		results := make([]toolExecResult, len(calls))
 		for i, call := range calls {
-			msg := "tool execution host is unavailable"
+			msg := "tool execution service is unavailable"
 			results[i] = toolExecResult{tc: call, output: msg, isErr: true}
 			if ch != nil {
 				ch <- StreamEvent{Type: "tool_result", ToolName: call.Name, Content: msg}
@@ -200,20 +178,20 @@ func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch
 				networkSem <- struct{}{}
 				defer func() { <-networkSem }()
 			}
-			results[item.index] = s.host.executeSingleTool(ctx, item.tc, ch, turn, intent)
+			results[item.index] = s.ExecuteOne(ctx, item.tc, nil, ch, turn, intent)
 		}(item)
 	}
 	wg.Wait()
 	for _, item := range sequentialCalls {
-		results[item.index] = s.host.executeSingleTool(ctx, item.tc, ch, turn, intent)
+		results[item.index] = s.ExecuteOne(ctx, item.tc, nil, ch, turn, intent)
 	}
 	return results
 }
 
-// ExecuteOne performs the service-owned half of one tool invocation: event
+// ExecuteOne performs the service-owned tool invocation: event
 // emission, container readiness, permission/approval, tracing, tool context,
-// lookup, timeout, retry, and raw execution. Session remains responsible for
-// compatibility post-processing of the returned result.
+// lookup, timeout, retry, and raw execution. PostProcess and CompleteResult
+// own the remaining result lifecycle.
 func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turn int, intent string) toolExecResult {
 	result := toolExecResult{tc: tc}
 	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
