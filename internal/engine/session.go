@@ -20,7 +20,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
@@ -110,14 +109,8 @@ type Session struct {
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 	GLMThinkingEnabled *bool
 
-	// Cost optimization
-	//
-	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
-	//   Cascade, Lifecycle, Reflector, CostTracker.
-	Cascade     *branching.CascadeRouter // cascade.go — model tier routing
-	Lifecycle   *SessionLifecycle        // lifecycle.go — self-improvement loop
-	Reflector   *Reflector               // reflect.go — verbal self-reflection
-	CostTracker *CostTracker             // cost_tracker.go — per-request cost persistence
+	// Cost tracking remains a session-level accounting value.
+	CostTracker *CostTracker // cost_tracker.go — per-request cost persistence
 
 	// Advanced features
 	//
@@ -446,12 +439,12 @@ func (s *Session) SetModel(model string) {
 
 // syncCascadeDefaultModel keeps the cascade router aligned after /config model picks.
 func (s *Session) syncCascadeDefaultModel() {
-	if s == nil || s.Cascade == nil {
+	if s == nil || s.LifecycleSvc() == nil || s.LifecycleSvc().Cascade() == nil {
 		return
 	}
 	if m := strings.TrimSpace(s.model); m != "" {
-		s.Cascade.DefaultModel = m
-		s.Cascade.Roles = modelPkg.DefaultRoles(m)
+		cascade := s.LifecycleSvc().Cascade()
+		cascade.DefaultModel = m
 	}
 }
 
