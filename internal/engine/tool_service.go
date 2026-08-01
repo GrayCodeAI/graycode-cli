@@ -84,6 +84,14 @@ func (s *ToolService) WithTracer(t *oteltrace.Tracer) *ToolService {
 	return s
 }
 
+// Tracer returns the tool/runtime tracer shared by session loop spans.
+func (s *ToolService) Tracer() *oteltrace.Tracer {
+	if s == nil {
+		return nil
+	}
+	return s.tracer
+}
+
 // WithSnapshots configures the snapshot tracker.
 func (s *ToolService) WithSnapshots(snap SnapshotTracker) *ToolService {
 	s.snapshots = snap

@@ -152,7 +152,6 @@ type Session struct {
 	Sleeptime      *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
 	Activity       *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
 	SkillDistiller *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
-	Tracer         *oteltrace.Tracer          // oteltrace.go — distributed tracing spans
 	LintLoop       *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
 	TestLoop       *TestLoop                  // test_loop.go — auto test-fix loop
 	FileMentions   *FileMentionDetector       // file_mentions.go — detect referenced files
@@ -164,11 +163,6 @@ type Session struct {
 	//   FewShotStore, AdaptivePrompt.
 	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
 	AdaptivePrompt *AdaptivePrompt // adaptive_prompt.go — user preference learning
-
-	// OutputSchema, when non-empty, requests a JSON-schema-constrained response.
-	// It is plumbed into eyrie's ChatOptions.ResponseFormat (json_schema) and the
-	// model output is validated against it. See structured_output.go.
-	OutputSchema string // structured_output.go — JSON schema for constrained output
 
 	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
 	smartSkills []plugin.SmartSkill
@@ -196,7 +190,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		system:       systemPrompt,
 		log:          log,
 		metrics:      metrics.NewRegistry(),
-		Tracer:       oteltrace.NewTracer(),
 		LintLoop:     NewLintLoop(),
 		TestLoop:     NewTestLoop(),
 		FileMentions: NewFileMentionDetector("."),
@@ -227,7 +220,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.persist = NewPersistenceService(log)
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
-	s.tools = NewToolService(registry).WithMetrics(s.metrics)
+	s.tools = NewToolService(registry).WithMetrics(s.metrics).WithTracer(oteltrace.NewTracer())
 	s.tools.WithExecutionDeps(toolExecutionDeps{
 		permissions: s.perms,
 		chat:        s.llm,
@@ -310,7 +303,12 @@ func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 func (s *Session) Logger() *logger.Logger { return s.log }
 
 // TracerValue returns the session tracer through the observability boundary.
-func (s *Session) TracerValue() *oteltrace.Tracer { return s.Tracer }
+func (s *Session) TracerValue() *oteltrace.Tracer {
+	if s == nil || s.tools == nil {
+		return nil
+	}
+	return s.tools.Tracer()
+}
 
 // ChatLLM returns the extracted ChatService (Phase 1 of the god-object
 // decomposition). New code should prefer this over the legacy Client /
@@ -651,7 +649,6 @@ func (s *Session) SetPinnedMessages(n int) {
 // SetThinkingEnabled sets the generic host thinking/reasoning toggle on
 // the ChatService (the source of truth).
 func (s *Session) SetThinkingEnabled(v *bool) {
-	s.GLMThinkingEnabled = v // keep legacy field in sync
 	if s.llm != nil {
 		s.llm.SetThinkingEnabled(v)
 	}
