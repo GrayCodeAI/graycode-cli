@@ -231,6 +231,15 @@ func (s *PermissionService) Autonomy() AutonomyLevel { return s.perm.Autonomy }
 // SpecStage returns the active spec-workflow stage.
 func (s *PermissionService) SpecStage() SpecStage { return s.perm.Stage }
 
+// AdvanceSpecStage records the next spec workflow transition through the
+// permission service instead of exposing the underlying engine to callers.
+func (s *PermissionService) AdvanceSpecStage(toolName string) {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.perm.AdvanceSpecStage(toolName)
+}
+
 // Memory returns the legacy PermissionMemory shim. The shim is
 // kept in sync with the engine's classification state; callers
 // that historically used `sess.Permissions.AllowSpec(...)` should
