@@ -11,14 +11,17 @@ const scrollbarWidth = 1
 
 // Scrollbar glyph palette — tuned to look premium in dark terminals.
 const (
-	scrollbarTrackGlyph  = " " // blank track — the gutter itself provides the visual rhythm
+	scrollbarTrackGlyph  = "│" // dim track keeps the scroll position legible at a glance
 	scrollbarThumbGlyph  = "┃" // heavy vertical line for the thumb (visible without reading as a solid block)
 	scrollbarTopGlyph    = "╷" // cap at the very top of the track
 	scrollbarBottomGlyph = "╵" // cap at the very bottom of the track
 )
 
 // scrollbarThumbStyle — Talon Gold thumb so it reads as a brand control.
-var scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
+var (
+	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
+	scrollbarTrackStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+)
 
 // chatHasOverflow reports whether chat content exceeds the viewport height.
 func (m chatModel) chatHasOverflow() bool {
@@ -41,10 +44,10 @@ func (m chatModel) chatScrollbarVisible() bool {
 // When chat content exceeds the viewport height, one column is reserved for the scrollbar slider
 // so text wrapping remains completely stable and smooth as the user scrolls up and down.
 func (m chatModel) chatViewportWidth(totalWidth int) int {
-	if totalWidth < 20 {
-		return 80
+	if totalWidth <= 0 {
+		return 0
 	}
-	if m.chatHasOverflow() {
+	if m.chatHasOverflow() && totalWidth > scrollbarWidth {
 		return totalWidth - scrollbarWidth
 	}
 	return totalWidth
@@ -60,11 +63,14 @@ func (m chatModel) chatViewportWidth(totalWidth int) int {
 //
 // Returns an empty string when there is no overflow.
 func (m chatModel) renderScrollbar() string {
+	return m.renderScrollbarHeight(m.viewport.Height())
+}
+
+func (m chatModel) renderScrollbarHeight(vpH int) string {
 	if !m.chatHasOverflow() {
 		return ""
 	}
 
-	vpH := m.viewport.Height()
 	totalLines := m.contentLines
 	if vpH <= 0 || totalLines <= 0 {
 		return ""
@@ -108,8 +114,12 @@ func (m chatModel) renderScrollbar() string {
 	for row := 0; row < vpH; row++ {
 		if row >= thumbTop && row <= thumbBottom {
 			sb.WriteString(scrollbarThumbStyle.Render(scrollbarThumbGlyph))
+		} else if row == 0 {
+			sb.WriteString(scrollbarTrackStyle.Render(scrollbarTopGlyph))
+		} else if row == vpH-1 {
+			sb.WriteString(scrollbarTrackStyle.Render(scrollbarBottomGlyph))
 		} else {
-			sb.WriteString(" ")
+			sb.WriteString(scrollbarTrackStyle.Render(scrollbarTrackGlyph))
 		}
 		if row < vpH-1 {
 			sb.WriteByte('\n')
@@ -157,7 +167,7 @@ func (m chatModel) renderChatPane() string {
 		return padToHeight(chatView, vpH)
 	}
 
-	scrollbar := m.renderScrollbar()
+	scrollbar := m.renderScrollbarHeight(vpH)
 	if scrollbar == "" {
 		return padToHeight(chatView, vpH)
 	}

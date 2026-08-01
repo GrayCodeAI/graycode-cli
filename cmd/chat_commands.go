@@ -306,9 +306,11 @@ func slashSuggestions(input string) []string {
 	if !strings.HasPrefix(v, "/") || strings.Contains(v, " ") {
 		return nil
 	}
+	v = strings.ToLower(v)
 	var out []string
 	seen := map[string]bool{}
-	for _, c := range allSlashCommands {
+	for _, c := range slashCommands() {
+		c = strings.ToLower(c)
 		if strings.HasPrefix(c, v) {
 			seen[c] = true
 			desc := slashDescriptions[c]
@@ -319,7 +321,15 @@ func slashSuggestions(input string) []string {
 			}
 		}
 	}
-	for alias, target := range slashAliases() {
+	aliases := slashAliases()
+	aliasNames := make([]string, 0, len(aliases))
+	for alias := range aliases {
+		aliasNames = append(aliasNames, alias)
+	}
+	sort.Strings(aliasNames)
+	for _, alias := range aliasNames {
+		target := aliases[alias]
+		alias = strings.ToLower(alias)
 		if strings.HasPrefix(alias, v) && !seen[target] {
 			seen[alias] = true
 			out = append(out, alias+" → "+target)
@@ -348,7 +358,14 @@ func applySlashSuggestion(input string) string {
 
 func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(text)
-	cmd := parts[0]
+	if len(parts) == 0 {
+		return m, nil
+	}
+	rawCmd := parts[0]
+	cmd := rawCmd
+	if strings.HasPrefix(cmd, "/") {
+		cmd = strings.ToLower(cmd)
+	}
 
 	// Track the last command for context-aware tips and recent-command history.
 	if strings.HasPrefix(cmd, "/") {
@@ -377,7 +394,7 @@ func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
 	}
 
 	// Fallback: plugin commands and unknown-command error.
-	if m.pluginRuntime != nil && m.pluginRuntime.IsCommand(cmd[1:]) {
+	if strings.HasPrefix(cmd, "/") && m.pluginRuntime != nil && m.pluginRuntime.IsCommand(cmd[1:]) {
 		out, err := m.pluginRuntime.ExecuteCommand(cmd[1:], parts[1:])
 		if err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
