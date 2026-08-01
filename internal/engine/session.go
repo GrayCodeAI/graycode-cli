@@ -412,7 +412,24 @@ func (s *Session) MemorySvc() *MemoryService { return s.memory }
 // Persistence returns the extracted PersistenceService (Phase 5).
 // Provides the messages slice and system prompt (read/write) with
 // the underlying RWMutex.
-func (s *Session) Persistence() *PersistenceService { return s.persist }
+func (s *Session) Persistence() *PersistenceService {
+	if s == nil {
+		return nil
+	}
+	if s.persist != nil {
+		return s.persist
+	}
+	// A handful of focused tests and compatibility integrations still build a
+	// Session literal. Lazily materialize the persistence service and import
+	// their legacy transcript once, so the service boundary remains total.
+	s.persist = NewPersistenceService(s.log)
+	s.persist.SetSystem(s.system)
+	s.persist.SetRawMessages(s.messages)
+	s.persist.SetPinnedMessages(s.PinnedMessages)
+	s.persist.SetAutoCompactThresholdPct(s.AutoCompactThresholdPct)
+	s.persist.SetContextWindowCached(s.ContextWindowCached)
+	return s.persist
+}
 
 // Tools returns the extracted ToolService (Phase 6).
 func (s *Session) Tools() *ToolService { return s.tools }
@@ -695,6 +712,9 @@ func (s *Session) ConvoHead() string {
 func (s *Session) AppendSystemContext(content string) {
 	if p := s.Persistence(); p != nil {
 		p.AppendSystemContext(content)
+		s.mu.Lock()
+		s.system = p.System()
+		s.mu.Unlock()
 	}
 }
 
@@ -703,6 +723,9 @@ func (s *Session) AppendSystemContext(content string) {
 func (s *Session) ReplaceSystemContextSection(header, content string) {
 	if p := s.Persistence(); p != nil {
 		p.ReplaceSystemContextSection(header, content)
+		s.mu.Lock()
+		s.system = p.System()
+		s.mu.Unlock()
 	}
 }
 
@@ -782,6 +805,9 @@ func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
 // call this instead of writing to the legacy s.AskUserFn field.
 func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
 	s.AskUserFn = fn
+	if s.perms != nil {
+		s.perms.SetAskUserFn(fn)
+	}
 }
 
 // SetApproval sets the high-risk action gate. New code should
@@ -807,6 +833,9 @@ func (s *Session) syncPermissionCompatibility() {
 	}
 	if s.Approval != nil {
 		s.perms.SetApproval(s.Approval)
+	}
+	if s.AskUserFn != nil {
+		s.perms.SetAskUserFn(s.AskUserFn)
 	}
 }
 

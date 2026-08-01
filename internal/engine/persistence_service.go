@@ -22,6 +22,8 @@ import (
 type PersistenceService struct {
 	// mu protects messages and system for concurrent access.
 	mu sync.RWMutex
+	// stateMu protects compaction, token, and checkpoint metadata.
+	stateMu sync.RWMutex
 	// messages is the full transcript (system + user + assistant + tool_use + tool_result).
 	messages []types.EyrieMessage
 	// system is the system prompt (mutable, agents append learned guidelines).
@@ -303,34 +305,98 @@ func cloneJSONValue(value interface{}) interface{} {
 }
 
 // PinnedMessages returns the count of pinned messages.
-func (s *PersistenceService) PinnedMessages() int { return s.pinnedMessages }
+func (s *PersistenceService) PinnedMessages() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.pinnedMessages
+}
 
 // SetPinnedMessages replaces the pinned count.
-func (s *PersistenceService) SetPinnedMessages(n int) { s.pinnedMessages = n }
+func (s *PersistenceService) SetPinnedMessages(n int) {
+	s.stateMu.Lock()
+	s.pinnedMessages = n
+	s.stateMu.Unlock()
+}
 
 // AutoCompactThresholdPct returns the auto-compact threshold %.
-func (s *PersistenceService) AutoCompactThresholdPct() int { return s.autoCompactThresholdPct }
+func (s *PersistenceService) AutoCompactThresholdPct() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.autoCompactThresholdPct
+}
 
 // SetAutoCompactThresholdPct replaces the auto-compact threshold %.
 func (s *PersistenceService) SetAutoCompactThresholdPct(pct int) {
+	s.stateMu.Lock()
 	s.autoCompactThresholdPct = pct
+	s.stateMu.Unlock()
 }
 
 // ContextWindowCached returns the catalog context window.
-func (s *PersistenceService) ContextWindowCached() int { return s.contextWindowCached }
+func (s *PersistenceService) ContextWindowCached() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.contextWindowCached
+}
 
 // SetContextWindowCached replaces the catalog context window.
-func (s *PersistenceService) SetContextWindowCached(n int) { s.contextWindowCached = n }
+func (s *PersistenceService) SetContextWindowCached(n int) {
+	s.stateMu.Lock()
+	s.contextWindowCached = n
+	s.stateMu.Unlock()
+}
 
-func (s *PersistenceService) AutoCompactor() *AutoCompactor      { return s.autoCompactor }
-func (s *PersistenceService) SetAutoCompactor(ac *AutoCompactor) { s.autoCompactor = ac }
-func (s *PersistenceService) Files() *FileTracker                { return s.files }
-func (s *PersistenceService) SetFiles(files *FileTracker)        { s.files = files }
-func (s *PersistenceService) PersistID() string                  { return s.persistID }
-func (s *PersistenceService) SetPersistID(id string)             { s.persistID = id }
-func (s *PersistenceService) LastPromptTokens() int              { return s.lastPromptTokens }
-func (s *PersistenceService) LastCompletionTokens() int          { return s.lastCompletionTokens }
+func (s *PersistenceService) AutoCompactor() *AutoCompactor {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.autoCompactor
+}
+
+func (s *PersistenceService) SetAutoCompactor(ac *AutoCompactor) {
+	s.stateMu.Lock()
+	s.autoCompactor = ac
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) Files() *FileTracker {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.files
+}
+
+func (s *PersistenceService) SetFiles(files *FileTracker) {
+	s.stateMu.Lock()
+	s.files = files
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) PersistID() string {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.persistID
+}
+
+func (s *PersistenceService) SetPersistID(id string) {
+	s.stateMu.Lock()
+	s.persistID = id
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) LastPromptTokens() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.lastPromptTokens
+}
+
+func (s *PersistenceService) LastCompletionTokens() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.lastCompletionTokens
+}
+
 func (s *PersistenceService) SetTokenUsage(prompt, completion int) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	if prompt > 0 {
 		s.lastPromptTokens = prompt
 	}
@@ -340,17 +406,37 @@ func (s *PersistenceService) SetTokenUsage(prompt, completion int) {
 }
 
 func (s *PersistenceService) TokenEstimateCache() (tokens, count, lastLen int) {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
 	return s.estTokensCache, s.estTokensMsgCount, s.estTokensLastLen
 }
 
 func (s *PersistenceService) SetTokenEstimateCache(tokens, count, lastLen int) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	s.estTokensCache, s.estTokensMsgCount, s.estTokensLastLen = tokens, count, lastLen
 }
 
-func (s *PersistenceService) CheckpointManager() *session.CheckpointManager { return s.checkpointMgr }
+func (s *PersistenceService) CheckpointManager() *session.CheckpointManager {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.checkpointMgr
+}
 
 func (s *PersistenceService) SetCheckpointManager(cm *session.CheckpointManager) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	s.checkpointMgr = cm
 }
-func (s *PersistenceService) OnCompaction() OnCompaction      { return s.onCompaction }
-func (s *PersistenceService) SetOnCompaction(fn OnCompaction) { s.onCompaction = fn }
+
+func (s *PersistenceService) OnCompaction() OnCompaction {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.onCompaction
+}
+
+func (s *PersistenceService) SetOnCompaction(fn OnCompaction) {
+	s.stateMu.Lock()
+	s.onCompaction = fn
+	s.stateMu.Unlock()
+}

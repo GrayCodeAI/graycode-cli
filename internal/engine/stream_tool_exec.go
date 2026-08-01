@@ -148,6 +148,12 @@ type indexedToolCall struct {
 
 // executeToolCalls runs all tool calls and returns results.
 func (s *Session) executeToolCalls(ctx context.Context, toolCalls []types.ToolCall, ch chan<- StreamEvent, turnCount int, intentText string) []toolExecResult {
+	// Compatibility wrapper: ToolService owns batching, ordering, and
+	// concurrency. Keep this method for older in-package callers while they
+	// migrate to s.Tools().ExecuteAll.
+	if s.Tools() != nil && s.Tools().host != nil {
+		return s.Tools().ExecuteAll(ctx, toolCalls, ch, turnCount, intentText)
+	}
 	// Estimate blast radius before execution. Use the schema-aware target
 	// extractor when the tool is registered (so non-conventional argument
 	// names like "target_path" or "destFile" are still picked up); fall back

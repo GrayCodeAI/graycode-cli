@@ -1,6 +1,8 @@
-# Session God-Object Decomposition — Design Sketch
+# Session God-Object Decomposition — Design and Migration Status
 
-> Status: **DRAFT / NOT YET IMPLEMENTED**
+> Status: **IN PROGRESS** — the canonical service graph and first runtime
+> migrations are implemented; compatibility shims remain while the remaining
+> Session call sites are moved.
 > Author: opencode session
 > Date: 2026-06-12
 > Scope: `hawk/internal/engine/session.go` (the 35-collaborator `Session` struct)
@@ -24,6 +26,30 @@ Break `Session` into ~6 cohesive sub-services, each with:
 - a clear lifecycle (created once in `NewSessionWithClient`, passed to `agentLoop`)
 
 The `agentLoop` should consume these sub-services as named dependencies — no implicit `s.Beliefs.Size()` reach-throughs.
+
+## Implemented Migration Slice (2026-08)
+
+The refactor branch now enforces these boundaries:
+
+- `SessionServices` is the canonical composition root for the six extracted
+  services; `SubServices()` and `Services()` reference the same instances.
+- `PersistenceService` owns immutable transcript snapshots, system-context
+  mutations, compaction metadata, token accounting, and checkpoint identity.
+  Returned messages are deep copies, including nested tool arguments.
+- `LifecycleService` owns session-start/end bookkeeping, few-shot learning,
+  adaptive feedback, model cascade access, and quality-loop handles.
+- `MemoryService` owns recall fallback, Yaad/enhanced-memory finalization, and
+  session summaries.
+- `PermissionService` owns the approval gate and fallback ask-user callback;
+  `Session.CheckApproval` is now only a compatibility facade.
+- `ToolService.ExecuteAll` owns batching, ordering, blast-radius reporting,
+  and read-only concurrency limits. The old Session method is a compatibility
+  wrapper for in-package callers.
+- The agent loop uses these service APIs for transport, persistence, memory,
+  lifecycle, permission-stage, and tool-batch operations.
+
+Legacy fields remain until all external and in-package callers migrate. They
+are compatibility aliases, not a second authoritative state store.
 
 ## Proposed Decomposition
 
@@ -253,4 +279,7 @@ These tests don't need to construct a `Session` anymore; they can construct just
 
 ## Status
 
-**NOT YET IMPLEMENTED.** The above is a design proposal pending review. The 4 concrete fixes (time.Sleep, ReadOnlyTools, AGENTS.md, self-review revert) are merged independently of this refactor.
+**IN PROGRESS.** The implemented migration slice above is live and tested.
+The remaining work is to move the internals of the tool execution pipeline,
+finish compaction ownership, migrate all production call sites, and then
+remove the compatibility fields in a separately reviewed cleanup commit.

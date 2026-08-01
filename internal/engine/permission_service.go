@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
@@ -41,6 +42,8 @@ type PermissionService struct {
 	permissionFn func(PermissionRequest)
 	// approval is the human-in-the-loop gate for high-risk tool actions.
 	approval *ApprovalGate
+	// askUserFn is the fallback interactive approval callback.
+	askUserFn func(question string) (string, error)
 	// log is the session logger.
 	log *logger.Logger
 }
@@ -99,21 +102,54 @@ func (s *PermissionService) CheckTool(ctx context.Context, info ToolCallInfo) (b
 // service's own CheckApproval is a no-op when s.approval is nil so
 // callers can use it as the canonical entry point.
 func (s *PermissionService) CheckApproval(_ context.Context, toolName string, args map[string]interface{}) (bool, string) {
-	if s.approval == nil || !s.approval.Enabled {
+	g := s.approval
+	if g == nil || !g.Enabled {
 		return true, ""
 	}
-	// Delegate to the ApprovalGate classifier. The full session-aware
-	// CheckApproval (which honors sessionApprovals cache) lives on Session
-	// because it needs Session-scoped state. The classifier-only check
-	// here is sufficient for the safety/dry-run code paths.
-	cat, triggered := s.approval.classifyAction(toolName, args)
-	if !triggered {
+	cat, risky := g.classifyAction(toolName, args)
+	if !risky || !g.categoryEnabled(cat) {
 		return true, ""
 	}
-	if s.approval.MaxAutoApprove > 0 && s.perm.Autonomy <= s.approval.MaxAutoApprove {
+	if s.perm.Autonomy <= g.MaxAutoApprove {
 		return true, ""
 	}
-	return false, fmt.Sprintf("approval required for category %q", cat)
+	if g.isSessionApproved(cat) {
+		return true, ""
+	}
+	req := ApprovalRequest{
+		ToolName: canonicalToolName(toolName),
+		Category: cat,
+		Summary:  approvalSummary(toolName, args),
+		Args:     args,
+	}
+	if g.ConfirmFn != nil {
+		switch g.ConfirmFn(req) {
+		case ApprovalApproveForSession:
+			g.sessionApprove(cat)
+			return true, ""
+		case ApprovalApprove:
+			return true, ""
+		default:
+			return false, "Action denied by human approval gate (" + string(cat) + ")."
+		}
+	}
+	if s.askUserFn != nil {
+		ans, err := s.askUserFn("Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no/session)")
+		if err != nil {
+			return false, "Action denied by human approval gate (" + string(cat) + ")."
+		}
+		switch strings.ToLower(strings.TrimSpace(ans)) {
+		case "session", "s", "approve-session", "yes-session":
+			g.sessionApprove(cat)
+			return true, ""
+		default:
+			if isAffirmative(ans) {
+				return true, ""
+			}
+			return false, "Action denied by human approval gate (" + string(cat) + ")."
+		}
+	}
+	return false, fmt.Sprintf("High-risk action requires approval but no confirmation handler is configured (%q).", cat)
 }
 
 // SetMaxTurns caps the agent loop's turn count.
@@ -144,6 +180,9 @@ func (s *PermissionService) DryRun() bool { return s.perm.DryRun }
 // SetApproval replaces the ApprovalGate.
 func (s *PermissionService) SetApproval(a *ApprovalGate) { s.approval = a }
 
+// SetAskUserFn sets the fallback interactive approval callback.
+func (s *PermissionService) SetAskUserFn(fn func(question string) (string, error)) { s.askUserFn = fn }
+
 // Approval returns the configured human-in-the-loop gate.
 func (s *PermissionService) Approval() *ApprovalGate { return s.approval }
 
@@ -166,6 +205,15 @@ func (s *PermissionService) SetSpecSlug(slug string) {
 func (s *PermissionService) SetPermissionFn(fn func(PermissionRequest)) {
 	s.permissionFn = fn
 	s.perm.PromptFn = fn
+}
+
+// PermissionFn returns the configured approval callback for sub-agent
+// construction and legacy integrations.
+func (s *PermissionService) PermissionFn() func(PermissionRequest) {
+	if s == nil {
+		return nil
+	}
+	return s.permissionFn
 }
 
 // MaxTurns returns the cap (0 = no cap).

@@ -77,9 +77,9 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 	provider = strings.TrimSpace(provider)
 	model = strings.TrimSpace(model)
 	s.RecordAPIUsage(prompt, completion)
-	costBefore := s.Cost.Total()
-	s.Cost.AddForModel(model, prompt, completion)
-	requestCost := s.Cost.Total() - costBefore
+	costBefore := s.CostValue().Total()
+	s.CostValue().AddForModel(model, prompt, completion)
+	requestCost := s.CostValue().Total() - costBefore
 	if s.CostTracker != nil && model != "" {
 		_ = s.CostTracker.Record(analytics.CostEntry{
 			Model:        model,

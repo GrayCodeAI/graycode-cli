@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/diff"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
@@ -33,7 +34,7 @@ type ToolService struct {
 // Keeping this seam small lets callers migrate to ToolService without
 // reintroducing direct Session field access.
 type toolExecutionHost interface {
-	executeToolCalls(context.Context, []types.ToolCall, chan<- StreamEvent, int, string) []toolExecResult
+	executeSingleTool(context.Context, types.ToolCall, chan<- StreamEvent, int, string) toolExecResult
 }
 
 // NewToolService constructs a ToolService with the given registry.
@@ -105,11 +106,52 @@ func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch
 		}
 		return results
 	}
-	return s.host.executeToolCalls(ctx, calls, ch, turn, intent)
+	plannedCalls := make([]PlannedCall, len(calls))
+	concurrentCalls := make([]indexedToolCall, 0, len(calls))
+	sequentialCalls := make([]indexedToolCall, 0, len(calls))
+	for i, call := range calls {
+		targets := s.ExtractTargets(call)
+		plannedCalls[i] = PlannedCall{ToolName: call.Name, Args: call.Arguments, Targets: targets}
+		item := indexedToolCall{index: i, tc: call}
+		if tool.IsReadOnly(call.Name) {
+			concurrentCalls = append(concurrentCalls, item)
+		} else {
+			sequentialCalls = append(sequentialCalls, item)
+		}
+	}
+	if report := EstimateBlastRadius(plannedCalls); report.Radius.NeedsConfirmation() && ch != nil {
+		ch <- StreamEvent{Type: "blast_radius", Content: report.Message}
+	}
+
+	results := make([]toolExecResult, len(calls))
+	readOnlySem := make(chan struct{}, maxConcurrentReadOnlyToolCalls)
+	networkSem := make(chan struct{}, maxConcurrentNetworkReadOnlyToolCalls)
+	var wg sync.WaitGroup
+	for _, item := range concurrentCalls {
+		wg.Add(1)
+		go func(item indexedToolCall) {
+			defer wg.Done()
+			readOnlySem <- struct{}{}
+			defer func() { <-readOnlySem }()
+			if isNetworkReadOnlyTool(item.tc.Name) {
+				networkSem <- struct{}{}
+				defer func() { <-networkSem }()
+			}
+			results[item.index] = s.host.executeSingleTool(ctx, item.tc, ch, turn, intent)
+		}(item)
+	}
+	wg.Wait()
+	for _, item := range sequentialCalls {
+		results[item.index] = s.host.executeSingleTool(ctx, item.tc, ch, turn, intent)
+	}
+	return results
 }
 
 // ExtractTargets returns the file targets for a tool call.
 func (s *ToolService) ExtractTargets(tc types.ToolCall) []string {
+	if s == nil || s.registry == nil {
+		return extractTargets(tc)
+	}
 	if t, ok := s.registry.Get(tc.Name); ok {
 		return ExtractTargetsFromSchema(t, tc)
 	}
