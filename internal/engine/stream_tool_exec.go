@@ -473,130 +473,137 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	}
 
-	if s.LifecycleSvc().Limits() != nil {
-		s.LifecycleSvc().Limits().RecordToolCall(tc.Name)
-	}
-
-	canonical := canonicalToolName(tc.Name)
-	if s.LifecycleSvc().Beliefs() != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
-		subject := tc.Name
-		if p, ok := pathArgument(tc.Arguments); ok {
-			subject = p
+	if !s.Tools().executionDepsReady() {
+		if s.LifecycleSvc().Limits() != nil {
+			s.LifecycleSvc().Limits().RecordToolCall(tc.Name)
 		}
-		contentSummary := output
-		if len(contentSummary) > 200 {
-			contentSummary = contentSummary[:200]
-		}
-		s.LifecycleSvc().Beliefs().Record("file_purpose", subject, contentSummary, turnCount)
-	}
 
-	if s.MemorySvc().Enhanced() != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
-		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
-			if proactiveCtx := s.MemorySvc().Enhanced().ProactiveContextForFile(p); proactiveCtx != "" {
-				s.AppendSystemContext(proactiveCtx)
+		canonical := canonicalToolName(tc.Name)
+		if s.LifecycleSvc().Beliefs() != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
+			subject := tc.Name
+			if p, ok := pathArgument(tc.Arguments); ok {
+				subject = p
 			}
-		}
-	}
-
-	if s.LifecycleSvc().Beliefs() != nil && (canonical == "Write" || canonical == "Edit") {
-		if p, ok := pathArgument(tc.Arguments); ok {
-			s.LifecycleSvc().Beliefs().Invalidate(p)
-		}
-	}
-
-	// Auto-accumulate learnings into Hawk user state.
-	if s.LifecycleSvc().AgentsAccum() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
-		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
-			pattern := prompts.ExtractPattern(tc.Name, p, output)
-			s.LifecycleSvc().AgentsAccum().Record(intentText, pattern, []string{p})
-			// Flush periodically (every 5 learnings)
-			if err := s.LifecycleSvc().AgentsAccum().Flush(); err != nil {
-				slog.Warn("failed to flush agents accumulator", "error", err)
+			contentSummary := output
+			if len(contentSummary) > 200 {
+				contentSummary = contentSummary[:200]
 			}
+			s.LifecycleSvc().Beliefs().Record("file_purpose", subject, contentSummary, turnCount)
 		}
-	}
 
-	if s.LifecycleSvc().Critic() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
-		if p, ok := pathArgument(tc.Arguments); ok {
-			origContent := ""
-			if data, readErr := readFileContent(p); readErr == nil {
-				origContent = data
-			}
-			verdict := s.LifecycleSvc().Critic().PreScreenPatch(origContent, output, intentText)
-			if s.LifecycleSvc().Critic().ShouldBlock(verdict) {
-				issueStr := strings.Join(verdict.Issues, "; ")
-				output = fmt.Sprintf("Patch rejected by validator: %s. Try again.", issueStr)
-				isErr = true
-			}
-		}
-	}
-
-	if s.LifecycleSvc().Shadow() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
-		if p, ok := pathArgument(tc.Arguments); ok {
-			validationErrs := s.LifecycleSvc().Shadow().ValidateEdit(p, output)
-			if len(validationErrs) > 0 {
-				var warnings []string
-				for _, ve := range validationErrs {
-					warnings = append(warnings, ve.Message)
+		if s.MemorySvc().Enhanced() != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
+			if p, ok := pathArgument(tc.Arguments); ok && p != "" {
+				if proactiveCtx := s.MemorySvc().Enhanced().ProactiveContextForFile(p); proactiveCtx != "" {
+					s.AppendSystemContext(proactiveCtx)
 				}
-				output += fmt.Sprintf("\n\nValidation warnings: %s", strings.Join(warnings, "; "))
 			}
 		}
-	}
 
-	sandboxIntercepted := false
-	if s.Tools().Sandbox() != nil && s.Tools().Sandbox().IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
-		if p, ok := pathArgument(tc.Arguments); ok {
-			origContent := ""
-			if data, readErr := readFileContent(p); readErr == nil {
-				origContent = data
+		if s.LifecycleSvc().Beliefs() != nil && (canonical == "Write" || canonical == "Edit") {
+			if p, ok := pathArgument(tc.Arguments); ok {
+				s.LifecycleSvc().Beliefs().Invalidate(p)
 			}
-			action := "overwrite"
-			if canonical == "Edit" {
-				action = "edit"
-			}
-			s.Tools().Sandbox().Stage(p, action, origContent, output)
-			output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
-			sandboxIntercepted = true
 		}
-	}
 
-	if s.LifecycleSvc().LintLoop() != nil && s.LifecycleSvc().LintLoop().Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
-		if p, ok := pathArgument(tc.Arguments); ok {
-			count := s.LifecycleSvc().LintLoop().ReflectionCount(p)
-			if s.LifecycleSvc().LintLoop().ShouldRetry(count) {
-				if lintResult, lintErr := s.LifecycleSvc().LintLoop().RunLint(p); lintErr == nil && lintResult != nil {
-					reflected := s.LifecycleSvc().LintLoop().BuildReflectedMessage(lintResult)
-					if reflected != "" {
-						s.LifecycleSvc().LintLoop().RecordReflection(p)
-						output += "\n\n" + reflected
+		// Auto-accumulate learnings into Hawk user state.
+		if s.LifecycleSvc().AgentsAccum() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+			if p, ok := pathArgument(tc.Arguments); ok && p != "" {
+				pattern := prompts.ExtractPattern(tc.Name, p, output)
+				s.LifecycleSvc().AgentsAccum().Record(intentText, pattern, []string{p})
+				// Flush periodically (every 5 learnings)
+				if err := s.LifecycleSvc().AgentsAccum().Flush(); err != nil {
+					slog.Warn("failed to flush agents accumulator", "error", err)
+				}
+			}
+		}
+
+		if s.LifecycleSvc().Critic() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+			if p, ok := pathArgument(tc.Arguments); ok {
+				origContent := ""
+				if data, readErr := readFileContent(p); readErr == nil {
+					origContent = data
+				}
+				verdict := s.LifecycleSvc().Critic().PreScreenPatch(origContent, output, intentText)
+				if s.LifecycleSvc().Critic().ShouldBlock(verdict) {
+					issueStr := strings.Join(verdict.Issues, "; ")
+					output = fmt.Sprintf("Patch rejected by validator: %s. Try again.", issueStr)
+					isErr = true
+				}
+			}
+		}
+
+		if s.LifecycleSvc().Shadow() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+			if p, ok := pathArgument(tc.Arguments); ok {
+				validationErrs := s.LifecycleSvc().Shadow().ValidateEdit(p, output)
+				if len(validationErrs) > 0 {
+					var warnings []string
+					for _, ve := range validationErrs {
+						warnings = append(warnings, ve.Message)
+					}
+					output += fmt.Sprintf("\n\nValidation warnings: %s", strings.Join(warnings, "; "))
+				}
+			}
+		}
+
+		sandboxIntercepted := false
+		if s.Tools().Sandbox() != nil && s.Tools().Sandbox().IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
+			if p, ok := pathArgument(tc.Arguments); ok {
+				origContent := ""
+				if data, readErr := readFileContent(p); readErr == nil {
+					origContent = data
+				}
+				action := "overwrite"
+				if canonical == "Edit" {
+					action = "edit"
+				}
+				s.Tools().Sandbox().Stage(p, action, origContent, output)
+				output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
+				sandboxIntercepted = true
+			}
+		}
+
+		if s.LifecycleSvc().LintLoop() != nil && s.LifecycleSvc().LintLoop().Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
+			if p, ok := pathArgument(tc.Arguments); ok {
+				count := s.LifecycleSvc().LintLoop().ReflectionCount(p)
+				if s.LifecycleSvc().LintLoop().ShouldRetry(count) {
+					if lintResult, lintErr := s.LifecycleSvc().LintLoop().RunLint(p); lintErr == nil && lintResult != nil {
+						reflected := s.LifecycleSvc().LintLoop().BuildReflectedMessage(lintResult)
+						if reflected != "" {
+							s.LifecycleSvc().LintLoop().RecordReflection(p)
+							output += "\n\n" + reflected
+						}
 					}
 				}
 			}
 		}
-	}
 
-	output = s.Tools().NormalizeOutput(output, canonical, tc.ID, s.ContextWindowSize())
+		output = s.Tools().NormalizeOutput(output, canonical, tc.ID, s.ContextWindowSize())
 
-	if s.LifecycleSvc().Pipeline() != nil {
-		var execErr error
-		if isErr {
-			execErr = fmt.Errorf("%s", output)
+		if s.LifecycleSvc().Pipeline() != nil {
+			var execErr error
+			if isErr {
+				execErr = fmt.Errorf("%s", output)
+			}
+			toolResult := s.LifecycleSvc().Pipeline().PostToolExecution(tc.Name, tc.Arguments, output, execErr)
+			if toolResult != nil {
+				if toolResult.StallWarning != "" {
+					output += "\n\n" + toolResult.StallWarning
+				}
+				if toolResult.LintErrors != "" {
+					output += "\n\nLint: " + toolResult.LintErrors
+				}
+				if toolResult.RecoveryAction != "" && toolResult.ShouldRetry {
+					output += "\n\nRecovery suggestion: " + toolResult.RecoveryAction
+				}
+			}
 		}
-		toolResult := s.LifecycleSvc().Pipeline().PostToolExecution(tc.Name, tc.Arguments, output, execErr)
-		if toolResult != nil {
-			if toolResult.StallWarning != "" {
-				output += "\n\n" + toolResult.StallWarning
-			}
-			if toolResult.LintErrors != "" {
-				output += "\n\nLint: " + toolResult.LintErrors
-			}
-			if toolResult.RecoveryAction != "" && toolResult.ShouldRetry {
-				output += "\n\nRecovery suggestion: " + toolResult.RecoveryAction
-			}
-		}
 	}
-
+	if s.Tools().executionDepsReady() {
+		processed := s.Tools().PostProcess(ctx, toolExecResult{
+			tc: tc, output: output, isErr: isErr, err: execErr, span: toolSpan,
+		}, turnCount, intentText, s.ContextWindowSize())
+		return s.Tools().CompleteResult(ctx, processed, ch)
+	}
 	return s.Tools().CompleteResult(ctx, toolExecResult{
 		tc: tc, output: output, isErr: isErr, err: execErr, span: toolSpan,
 	}, ch)

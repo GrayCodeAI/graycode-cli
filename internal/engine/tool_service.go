@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/diff"
@@ -11,6 +13,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -49,6 +52,8 @@ type toolExecutionDeps struct {
 	checkApproval      func(context.Context, string, map[string]interface{}) (bool, string)
 	recordPolicy       func(types.ToolCall, string, bool, string)
 	recordVerification func(types.ToolCall, string, bool)
+	lifecycle          *LifecycleService
+	appendSystem       func(string)
 }
 
 // toolExecutionHost is the narrow compatibility seam used while the
@@ -342,6 +347,125 @@ func (s *ToolService) NormalizeOutput(output, canonicalTool, toolID string, cont
 		output = output[:maxChars] + "\n... (truncated)"
 	}
 	return maybeSpillToolOutput(output, canonicalTool, toolID)
+}
+
+// PostProcess applies the domain mutation/validation hooks that follow a raw
+// tool invocation. It is intentionally separate from CompleteResult so the
+// final event contract remains uniform even when a hook changes the output or
+// converts a successful mutation into an error.
+func (s *ToolService) PostProcess(ctx context.Context, result toolExecResult, turn int, intent string, contextWindow int) toolExecResult {
+	output, isErr := result.output, result.isErr
+	canonical := canonicalToolName(result.tc.Name)
+	life := s.deps.lifecycle
+	if life != nil && life.Limits() != nil {
+		life.Limits().RecordToolCall(result.tc.Name)
+	}
+	if life != nil && life.Beliefs() != nil && (canonical == "Read" || canonical == "Grep" || canonical == "Glob" || canonical == "LS") {
+		subject := result.tc.Name
+		if p, ok := pathArgument(result.tc.Arguments); ok {
+			subject = p
+		}
+		contentSummary := output
+		if len(contentSummary) > 200 {
+			contentSummary = contentSummary[:200]
+		}
+		life.Beliefs().Record("file_purpose", subject, contentSummary, turn)
+	}
+	if s.deps.memory != nil && s.deps.memory.Enhanced() != nil && (canonical == "Read" || canonical == "Edit" || canonical == "Write") {
+		if p, ok := pathArgument(result.tc.Arguments); ok && p != "" {
+			if proactiveCtx := s.deps.memory.Enhanced().ProactiveContextForFile(p); proactiveCtx != "" && s.deps.appendSystem != nil {
+				s.deps.appendSystem(proactiveCtx)
+			}
+		}
+	}
+	if life != nil && life.Beliefs() != nil && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(result.tc.Arguments); ok {
+			life.Beliefs().Invalidate(p)
+		}
+	}
+	if life != nil && life.AgentsAccum() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(result.tc.Arguments); ok && p != "" {
+			pattern := prompts.ExtractPattern(result.tc.Name, p, output)
+			life.AgentsAccum().Record(intent, pattern, []string{p})
+			if err := life.AgentsAccum().Flush(); err != nil {
+				slog.Warn("failed to flush agents accumulator", "error", err)
+			}
+		}
+	}
+	if life != nil && life.Critic() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(result.tc.Arguments); ok {
+			origContent := ""
+			if data, readErr := readFileContent(p); readErr == nil {
+				origContent = data
+			}
+			verdict := life.Critic().PreScreenPatch(origContent, output, intent)
+			if life.Critic().ShouldBlock(verdict) {
+				output = fmt.Sprintf("Patch rejected by validator: %s. Try again.", strings.Join(verdict.Issues, "; "))
+				isErr = true
+			}
+		}
+	}
+	if life != nil && life.Shadow() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(result.tc.Arguments); ok {
+			validationErrs := life.Shadow().ValidateEdit(p, output)
+			if len(validationErrs) > 0 {
+				warnings := make([]string, 0, len(validationErrs))
+				for _, ve := range validationErrs {
+					warnings = append(warnings, ve.Message)
+				}
+				output += fmt.Sprintf("\n\nValidation warnings: %s", strings.Join(warnings, "; "))
+			}
+		}
+	}
+	sandboxIntercepted := false
+	if s.sandbox != nil && s.sandbox.IsEnabled() && !isErr && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(result.tc.Arguments); ok {
+			origContent := ""
+			if data, readErr := readFileContent(p); readErr == nil {
+				origContent = data
+			}
+			action := "overwrite"
+			if canonical == "Edit" {
+				action = "edit"
+			}
+			s.sandbox.Stage(p, action, origContent, output)
+			output = fmt.Sprintf("Change staged for review (%s: %s)", action, p)
+			sandboxIntercepted = true
+		}
+	}
+	if life != nil && life.LintLoop() != nil && life.LintLoop().Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
+		if p, ok := pathArgument(result.tc.Arguments); ok {
+			count := life.LintLoop().ReflectionCount(p)
+			if life.LintLoop().ShouldRetry(count) {
+				if lintResult, lintErr := life.LintLoop().RunLint(p); lintErr == nil && lintResult != nil {
+					if reflected := life.LintLoop().BuildReflectedMessage(lintResult); reflected != "" {
+						life.LintLoop().RecordReflection(p)
+						output += "\n\n" + reflected
+					}
+				}
+			}
+		}
+	}
+	output = s.NormalizeOutput(output, canonical, result.tc.ID, contextWindow)
+	if life != nil && life.Pipeline() != nil {
+		var execErr error
+		if isErr {
+			execErr = fmt.Errorf("%s", output)
+		}
+		if toolResult := life.Pipeline().PostToolExecution(result.tc.Name, result.tc.Arguments, output, execErr); toolResult != nil {
+			if toolResult.StallWarning != "" {
+				output += "\n\n" + toolResult.StallWarning
+			}
+			if toolResult.LintErrors != "" {
+				output += "\n\nLint: " + toolResult.LintErrors
+			}
+			if toolResult.RecoveryAction != "" && toolResult.ShouldRetry {
+				output += "\n\nRecovery suggestion: " + toolResult.RecoveryAction
+			}
+		}
+	}
+	result.output, result.isErr = output, isErr
+	return result
 }
 
 // CompleteResult owns the service-level completion contract after Session's

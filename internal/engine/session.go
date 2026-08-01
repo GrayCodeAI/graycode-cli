@@ -333,6 +333,8 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		checkApproval:      s.CheckApproval,
 		recordPolicy:       s.recordPolicyObservation,
 		recordVerification: s.recordVerificationObservation,
+		lifecycle:          s.life,
+		appendSystem:       s.AppendSystemContext,
 	})
 	s.refreshContextWindowCache()
 	s.life.SetAgentsAccumulator(s.AgentsAccum)
