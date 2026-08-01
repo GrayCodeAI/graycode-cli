@@ -3,9 +3,16 @@ package plugin
 import (
 	"os"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
+	cleanupStorage, err := testutil.InstallHermeticStorage()
+	if err != nil {
+		os.Exit(1)
+	}
+	defer cleanupStorage()
 	if _, err := os.UserHomeDir(); err != nil {
 		dir, mkErr := os.MkdirTemp("", "hawk-plugin-home-*")
 		if mkErr != nil {

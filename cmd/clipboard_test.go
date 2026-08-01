@@ -31,7 +31,9 @@ func TestClipboardRoundTrip(t *testing.T) {
 	}
 
 	text := "hawk clipboard test"
-	_ = copyToClipboard(text) // best-effort; fallback file may be used
+	if err := copyToClipboardNative(text); err != nil {
+		t.Skipf("native clipboard unavailable: %v", err)
+	}
 
 	got, err := pasteFromClipboard()
 	if err != nil {
