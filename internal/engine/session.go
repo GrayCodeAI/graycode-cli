@@ -314,6 +314,14 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.life.SetAgentsAccumulator(s.AgentsAccum)
 	s.life.SetLintLoop(s.LintLoop)
 	s.life.SetTestLoop(s.TestLoop)
+	s.services = &SessionServices{
+		Chat:             s.llm,
+		Permissions:      s.perms,
+		LifecycleService: s.life,
+		MemoryService:    s.memory,
+		Persist:          s.persist,
+		ToolService:      s.tools,
+	}
 
 	// Alias legacy fields at the service instances so legacy readers see
 	// the same state as new code that goes through the sub-service getters.
@@ -807,6 +815,15 @@ func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
 	s.AskUserFn = fn
 	if s.perms != nil {
 		s.perms.SetAskUserFn(fn)
+	}
+}
+
+// SetPermissionFn configures the authoritative permission callback while
+// keeping the deprecated Session field synchronized for older integrations.
+func (s *Session) SetPermissionFn(fn func(PermissionRequest)) {
+	s.PermissionFn = fn
+	if s.perms != nil {
+		s.perms.SetPermissionFn(fn)
 	}
 }
 

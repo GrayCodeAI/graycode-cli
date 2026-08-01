@@ -30,12 +30,7 @@ func (s *Session) ensureBackgroundManager() *tool.BackgroundAgentManager {
 	if s.Tools() == nil {
 		return nil
 	}
-	if bm := s.Tools().BackgroundManager(); bm != nil {
-		return bm
-	}
-	bm := tool.NewBackgroundAgentManager()
-	s.Tools().WithBackgroundManager(bm)
-	return bm
+	return s.Tools().EnsureBackgroundManager()
 }
 
 // spawnSubAgentRequest is the typed entrypoint used by the Agent tool.

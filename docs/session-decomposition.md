@@ -71,7 +71,7 @@ are compatibility aliases, not a second authoritative state store.
 **Owns:** `Memory MemoryRecaller`, `YaadBridge *memory.YaadBridge`, `EnhancedMemory *memory.EnhancedMemoryManager`, `SkillDistiller *memory.SkillDistiller`, `Sleeptime *memory.SleeptimeAgent`, `Activity *memory.ActivityTracker`, `AgentsAccum *prompts.AgentsAccum`, `FewShotStore *FewShotStore`, `AdaptivePrompt *AdaptivePrompt`.
 
 **Methods:**
-- `RecallContext(ctx, lastUserMsg string, budget int) (string, error)` — unifies yaad + few-shot + agents-accum
+- `RecallContext(ctx, lastUserMsg string, budget int) string` — unifies backend recall behind one nil-safe call
 - `Remember(ctx, content, category string)` — wraps memory.Remember
 - `RunSleeptimeConsolidation(ctx, provider ChatService, messages []types.EyrieMessage)` — background
 - `RunSkillDistillation(ctx, provider ChatService, ...)` — background

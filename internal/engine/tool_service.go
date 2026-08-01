@@ -23,6 +23,7 @@ type ToolService struct {
 	containerRequired bool
 	tracer            *oteltrace.Tracer
 	snapshots         SnapshotTracker
+	bgMu              sync.Mutex
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 }
@@ -70,8 +71,26 @@ func (s *ToolService) WithSnapshots(snap SnapshotTracker) *ToolService {
 
 // WithBackgroundManager configures the background sub-agent manager.
 func (s *ToolService) WithBackgroundManager(bm *tool.BackgroundAgentManager) *ToolService {
+	s.bgMu.Lock()
+	defer s.bgMu.Unlock()
 	s.bgManager = bm
 	return s
+}
+
+// EnsureBackgroundManager returns the configured background manager, creating
+// one exactly once when the session has not supplied one. Tool execution may
+// initialize this lazily from concurrent read-only calls, so the operation
+// must be atomic at the service boundary.
+func (s *ToolService) EnsureBackgroundManager() *tool.BackgroundAgentManager {
+	if s == nil {
+		return nil
+	}
+	s.bgMu.Lock()
+	defer s.bgMu.Unlock()
+	if s.bgManager == nil {
+		s.bgManager = tool.NewBackgroundAgentManager()
+	}
+	return s.bgManager
 }
 
 // Registry returns the tool registry.
@@ -196,7 +215,14 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, ch chan
 
 // BackgroundManager returns the background sub-agent manager, or nil
 // if background mode is not available.
-func (s *ToolService) BackgroundManager() *tool.BackgroundAgentManager { return s.bgManager }
+func (s *ToolService) BackgroundManager() *tool.BackgroundAgentManager {
+	if s == nil {
+		return nil
+	}
+	s.bgMu.Lock()
+	defer s.bgMu.Unlock()
+	return s.bgManager
+}
 
 // ContainerRequired reports whether container-first mode is on.
 func (s *ToolService) ContainerRequired() bool { return s.containerRequired }

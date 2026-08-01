@@ -560,13 +560,13 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Auto-approve permissions based on autonomy (non-interactive)
-	sess.PermissionFn = func(pr engine.PermissionRequest) {
+	sess.SetPermissionFn(func(pr engine.PermissionRequest) {
 		cfg := engine.PresetConfig(sess.PermSvc().Autonomy())
 		allowed := !cfg.NeedsPermission(pr.ToolName, false)
 		if pr.Response != nil {
 			pr.Response <- allowed
 		}
-	}
+	})
 
 	if req.MaxTurns > 0 {
 		if setErr := sess.SetMaxTurns(req.MaxTurns); setErr != nil {
