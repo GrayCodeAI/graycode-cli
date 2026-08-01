@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/trust"
 )
@@ -52,7 +53,7 @@ func DiscoverScopeDirs(projectRoot string) []ScopeDir {
 			if p == "" {
 				continue
 			}
-			if st, err := os.Stat(p); err == nil && st.IsDir() {
+			if fsutil.Exists(p) {
 				out = append(out, ScopeDir{Scope: ScopeManaged, Path: p})
 			}
 		}

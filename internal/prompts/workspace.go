@@ -280,7 +280,7 @@ func detectLanguage(dir string) string {
 
 // gitCmd runs a git command in the given directory and returns its output.
 func gitCmd(dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	return strings.TrimSpace(string(out)), err

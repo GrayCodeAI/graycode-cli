@@ -20,11 +20,11 @@ func Create(ctx context.Context, repoDir, branch string) (path string, cleanup f
 		return "", nil, err
 	}
 	// Ensure we are in a git repo.
-	if out, e := exec.CommandContext(ctx, "git", "-C", repoDir, "rev-parse", "--is-inside-work-tree").CombinedOutput(); e != nil {
+	if out, e := exec.CommandContext(ctx, "git", "-C", repoDir, "rev-parse", "--is-inside-work-tree").CombinedOutput(); e != nil { // #nosec G204 -- fixed git executable
 		return "", nil, fmt.Errorf("not a git repository: %s", strings.TrimSpace(string(out)))
 	}
 	base := filepath.Join(repoDir, ".hawk", "worktrees")
-	if err := os.MkdirAll(base, 0o755); err != nil {
+	if err := os.MkdirAll(base, 0o700); err != nil {
 		return "", nil, err
 	}
 	if branch == "" {
@@ -35,17 +35,17 @@ func Create(ctx context.Context, repoDir, branch string) (path string, cleanup f
 	_ = os.RemoveAll(path)
 
 	// #nosec G204 -- fixed git binary; path/branch derived internally
-	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "worktree", "add", "-b", branch, path, "HEAD")
+	cmd := exec.CommandContext(ctx, "git", "-C", repoDir, "worktree", "add", "-b", branch, path, "HEAD") // #nosec G204 -- fixed git executable
 	if out, e := cmd.CombinedOutput(); e != nil {
 		return "", nil, fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), e)
 	}
 	cleanup = func() {
 		cctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		_ = exec.CommandContext(cctx, "git", "-C", repoDir, "worktree", "remove", "--force", path).Run()
+		_ = exec.CommandContext(cctx, "git", "-C", repoDir, "worktree", "remove", "--force", path).Run() // #nosec G204 -- fixed git executable
 		_ = os.RemoveAll(path)
 		// Best-effort branch delete (ignore if checked out elsewhere).
-		_ = exec.CommandContext(cctx, "git", "-C", repoDir, "branch", "-D", branch).Run()
+		_ = exec.CommandContext(cctx, "git", "-C", repoDir, "branch", "-D", branch).Run() // #nosec G204 -- fixed git executable
 	}
 	return path, cleanup, nil
 }

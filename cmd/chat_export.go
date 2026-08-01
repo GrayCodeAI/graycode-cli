@@ -95,7 +95,7 @@ func exportSessionMarkdown(m *chatModel) (string, error) {
 	if err := os.MkdirAll(exportDir, 0o700); err != nil {
 		return "", err
 	}
-	_ = os.Chmod(exportDir, 0o700)
+	_ = os.Chmod(exportDir, 0o700) // #nosec G302 -- exports are private session data
 	exportPath := filepath.Join(exportDir, m.sessionID+".md")
 	if err := os.WriteFile(exportPath, data, 0o600); err != nil {
 		return "", err
@@ -146,7 +146,7 @@ func exportSessionJSON(m *chatModel) (string, error) {
 	if err := os.MkdirAll(exportDir, 0o700); err != nil {
 		return "", err
 	}
-	_ = os.Chmod(exportDir, 0o700)
+	_ = os.Chmod(exportDir, 0o700) // #nosec G302 -- exports are private session data
 	exportPath := filepath.Join(exportDir, m.sessionID+".json")
 	if err := os.WriteFile(exportPath, data, 0o600); err != nil {
 		return "", err
@@ -190,7 +190,7 @@ func exportSessionTxt(m *chatModel) (string, error) {
 	if err := os.MkdirAll(exportDir, 0o700); err != nil {
 		return "", err
 	}
-	_ = os.Chmod(exportDir, 0o700)
+	_ = os.Chmod(exportDir, 0o700) // #nosec G302 -- exports are private session data
 	exportPath := filepath.Join(exportDir, m.sessionID+".txt")
 	if err := os.WriteFile(exportPath, []byte(b.String()), 0o600); err != nil {
 		return "", err

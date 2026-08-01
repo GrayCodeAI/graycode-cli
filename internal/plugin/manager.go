@@ -434,7 +434,7 @@ func ScanPlugin(pluginDir string) []SecurityIssue {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over pluginDir, a locally installed plugin directory, not raw external input
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only scan of a locally installed plugin
 		if err != nil {
 			return nil
 		}

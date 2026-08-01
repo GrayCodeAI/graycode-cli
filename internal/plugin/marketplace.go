@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/flags"
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -84,7 +85,7 @@ func loadUserMarketplaceSources() []MarketplaceSource {
 // SaveUserSources writes extra marketplace sources to config.
 func SaveUserSources(srcs []MarketplaceSource) error {
 	path := filepath.Join(storage.ConfigDir(), "marketplace-sources.json")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(srcs, "", "  ")
@@ -137,7 +138,7 @@ func (mc *MarketplaceClient) fetchOne(src MarketplaceSource) (*MarketplaceIndex,
 	cachePath := filepath.Join(mc.CacheDir, sanitizeName(src.Name)+".json")
 
 	if info, err := os.Stat(cachePath); err == nil && time.Since(info.ModTime()) < time.Hour {
-		if data, err := os.ReadFile(cachePath); err == nil {
+		if data, err := fsutil.ReadPinnedFile(cachePath); err == nil {
 			var idx MarketplaceIndex
 			if json.Unmarshal(data, &idx) == nil {
 				return &idx, nil

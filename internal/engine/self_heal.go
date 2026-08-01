@@ -427,7 +427,7 @@ func (sh *SelfHealer) RunScript(ctx context.Context, path string) (stdout, stder
 	ctx, cancel := context.WithTimeout(ctx, sh.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", path)
+	cmd := exec.CommandContext(ctx, "sh", "-c", path) // #nosec G204 -- intentional self-heal script execution boundary
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
@@ -462,7 +462,7 @@ func (sh *SelfHealer) runCommand(ctx context.Context, command string) (stdout, s
 	ctx, cancel := context.WithTimeout(ctx, sh.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command) // #nosec G204 -- intentional self-heal command boundary
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf

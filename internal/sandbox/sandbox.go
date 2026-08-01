@@ -132,7 +132,7 @@ func (s *Sandbox) setupNamespace() error {
 // Run executes a command in the sandbox.
 func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 	if !s.config.Enabled {
-		return exec.CommandContext(ctx, "bash", "-c", command), nil
+		return exec.CommandContext(ctx, "bash", "-c", command), nil // #nosec G204 -- intentional sandbox command boundary
 	}
 
 	// Auto-select the best available sandbox backend.
@@ -188,7 +188,7 @@ func (s *Sandbox) runNamespace(ctx context.Context, command string) (*exec.Cmd, 
 		args = append(args, "--net")
 	}
 	args = append(args, "sh", "-c", command)
-	return exec.CommandContext(ctx, "unshare", args...), nil
+	return exec.CommandContext(ctx, "unshare", args...), nil // #nosec G204 -- fixed sandbox executable
 }
 
 // runChroot runs a command in a chroot.

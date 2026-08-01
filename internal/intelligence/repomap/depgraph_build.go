@@ -277,7 +277,7 @@ func (dg *DepGraph) BuildFromPackageJSON(projectDir string) error {
 		internalModules[modPath].LOC += countFileLOC(path)
 
 		// Read file and find imports.
-		content, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
+		content, readErr := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if readErr != nil {
 			return nil
 		}

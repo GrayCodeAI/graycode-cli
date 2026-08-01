@@ -191,7 +191,7 @@ func (r *ParallelRunner) RunSinglePackage(ctx context.Context, pkg string) *Pack
 		Package: pkg,
 	}
 
-	cmd := exec.CommandContext(ctx, "go", "test", "-v", "-json", pkg)
+	cmd := exec.CommandContext(ctx, "go", "test", "-v", "-json", pkg) // #nosec G204 -- fixed Go executable
 	out, err := cmd.CombinedOutput()
 	result.Duration = time.Since(start)
 	result.Output = string(out)

@@ -372,7 +372,7 @@ func (hs *HealthScorer) ScoreCodeQuality(dir string) (float64, []HealthIssue) {
 		totalFiles++
 		hasIssue := false
 
-		data, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
+		data, readErr := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if readErr != nil {
 			return nil
 		}
@@ -565,7 +565,7 @@ func (hs *HealthScorer) ScoreSecurity(dir string) (float64, []HealthIssue) {
 			return nil
 		}
 
-		data, readErr := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
+		data, readErr := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if readErr != nil {
 			return nil
 		}

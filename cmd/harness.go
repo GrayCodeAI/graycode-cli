@@ -63,21 +63,21 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			outDir = filepath.Join(targetDir, ".hawk", "harness")
 		}
 
-		if mkdirErr := os.MkdirAll(outDir, 0o755); mkdirErr != nil {
+		if mkdirErr := os.MkdirAll(outDir, 0o750); mkdirErr != nil {
 			return fmt.Errorf("failed to create harness output directory: %w", mkdirErr)
 		}
 
 		// Write Markdown report
 		mdPath := filepath.Join(outDir, "report.md")
 		mdContent := harness.RenderMarkdown(report)
-		if writeErr := os.WriteFile(mdPath, []byte(mdContent), 0o644); writeErr != nil {
+		if writeErr := os.WriteFile(mdPath, []byte(mdContent), 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write report.md: %w", writeErr)
 		}
 
 		// Write HTML report
 		htmlPath := filepath.Join(outDir, "report.html")
 		htmlContent := harness.RenderHTML(report)
-		if writeErr := os.WriteFile(htmlPath, []byte(htmlContent), 0o644); writeErr != nil {
+		if writeErr := os.WriteFile(htmlPath, []byte(htmlContent), 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write report.html: %w", writeErr)
 		}
 
@@ -87,7 +87,7 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		if renderErr != nil {
 			return fmt.Errorf("failed to serialize findings.json: %w", renderErr)
 		}
-		if writeErr := os.WriteFile(jsonPath, jsonContent, 0o644); writeErr != nil {
+		if writeErr := os.WriteFile(jsonPath, jsonContent, 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write findings.json: %w", writeErr)
 		}
 

@@ -20,6 +20,12 @@ func Exists(path string) bool {
 func ReadPinnedFile(path string) ([]byte, error) {
 	root, name, err := openPinnedParent(path)
 	if err != nil {
+		if os.IsNotExist(err) || func() bool {
+			_, statErr := os.Stat(filepath.Dir(path))
+			return os.IsNotExist(statErr)
+		}() {
+			return nil, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
+		}
 		return nil, err
 	}
 	defer func() { _ = root.Close() }()

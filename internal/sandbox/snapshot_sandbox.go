@@ -398,7 +398,7 @@ func captureFiles(dir string) (map[string][]byte, error) {
 		if err != nil {
 			return nil
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over the sandbox's own working directory
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only sandbox capture traversal
 		if err != nil {
 			return nil
 		}

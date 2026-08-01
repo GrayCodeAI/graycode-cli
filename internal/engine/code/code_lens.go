@@ -376,7 +376,7 @@ type blameEntry struct {
 }
 
 func getGitBlame(file string) []blameEntry {
-	cmd := exec.CommandContext(context.Background(), "git", "blame", "--porcelain", file)
+	cmd := exec.CommandContext(context.Background(), "git", "blame", "--porcelain", file) // #nosec G204 -- fixed git executable
 	out, err := cmd.Output()
 	if err != nil {
 		return nil

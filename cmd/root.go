@@ -416,11 +416,11 @@ Fish:
 
 		// Ensure parent directory exists.
 		dir := path[:strings.LastIndex(path, "/")]
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- shell completion directory must be traversable
 			return fmt.Errorf("cannot create directory %s: %w", dir, err)
 		}
 
-		if err := os.WriteFile(path, []byte(script.String()), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(script.String()), 0o644); err != nil { // #nosec G306 -- completion scripts are intentionally user-readable
 			return fmt.Errorf("cannot write completion script: %w", err)
 		}
 

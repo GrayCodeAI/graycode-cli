@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // EvaluateWorkspace performs a comprehensive harness evaluation of the specified workspace directory.
@@ -133,7 +135,7 @@ func detectAssets(root string) AssetsDetected {
 
 	// Check test runners
 	if fileExists(filepath.Join(root, "Makefile")) {
-		content, _ := os.ReadFile(filepath.Join(root, "Makefile"))
+		content, _ := fsutil.ReadPinnedFile(filepath.Join(root, "Makefile"))
 		str := string(content)
 		if strings.Contains(str, "test:") || strings.Contains(str, "go test") {
 			assets.TestRunners = append(assets.TestRunners, "make test")
@@ -148,7 +150,7 @@ func detectAssets(root string) AssetsDetected {
 		assets.TestRunners = append(assets.TestRunners, "go test")
 	}
 	if fileExists(filepath.Join(root, "package.json")) {
-		content, _ := os.ReadFile(filepath.Join(root, "package.json"))
+		content, _ := fsutil.ReadPinnedFile(filepath.Join(root, "package.json"))
 		if strings.Contains(string(content), `"test"`) {
 			assets.TestRunners = append(assets.TestRunners, "npm test")
 		}

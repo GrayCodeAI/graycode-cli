@@ -243,7 +243,7 @@ func gitDiffBase(base string) (string, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		// Fallback to two-dot diff
-		cmd = exec.CommandContext(ctx, "git", "diff", base, "HEAD")
+		cmd = exec.CommandContext(ctx, "git", "diff", base, "HEAD") // #nosec G204 -- fixed git executable
 		out, err = cmd.Output()
 		if err != nil {
 			return "", err

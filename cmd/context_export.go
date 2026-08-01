@@ -216,7 +216,7 @@ func gitContextInfo(dir string) string {
 
 // runGit executes a git command in the given directory.
 func runGit(dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {

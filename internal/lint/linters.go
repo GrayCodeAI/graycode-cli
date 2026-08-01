@@ -21,7 +21,7 @@ func (goLinter) Lint(ctx context.Context, file string) Result {
 
 	// gofmt -l prints the filename when it is NOT properly formatted.
 	if toolAvailable("gofmt") {
-		fmtOut, _ := runCmd(exec.CommandContext(ctx, "gofmt", "-l", file))
+		fmtOut, _ := runCmd(exec.CommandContext(ctx, "gofmt", "-l", file)) // #nosec G204 -- fixed formatter executable
 		if fmtOut != "" {
 			findings = append(findings, "gofmt: needs formatting:\n"+fmtOut)
 		}
@@ -29,7 +29,7 @@ func (goLinter) Lint(ctx context.Context, file string) Result {
 
 	// go vet runs against the package directory containing the file.
 	if toolAvailable("go") {
-		cmd := exec.CommandContext(ctx, "go", "vet", file)
+		cmd := exec.CommandContext(ctx, "go", "vet", file) // #nosec G204 -- fixed Go executable
 		cmd.Dir = filepath.Dir(file)
 		vetOut, err := runCmd(cmd)
 		if err != nil || vetOut != "" {
@@ -58,9 +58,9 @@ func (eslintLinter) Lint(ctx context.Context, file string) Result {
 	}
 	var cmd *exec.Cmd
 	if toolAvailable("eslint") {
-		cmd = exec.CommandContext(ctx, "eslint", "--format", "compact", file)
+		cmd = exec.CommandContext(ctx, "eslint", "--format", "compact", file) // #nosec G204 -- fixed linter executable
 	} else {
-		cmd = exec.CommandContext(ctx, "npx", "--no-install", "eslint", "--format", "compact", file)
+		cmd = exec.CommandContext(ctx, "npx", "--no-install", "eslint", "--format", "compact", file) // #nosec G204 -- fixed linter executable
 	}
 	cmd.Dir = filepath.Dir(file)
 	out, err := runCmd(cmd)
@@ -83,7 +83,7 @@ func (ruffLinter) Lint(ctx context.Context, file string) Result {
 	if !toolAvailable("ruff") {
 		return Result{Linter: "ruff", OK: true}
 	}
-	cmd := exec.CommandContext(ctx, "ruff", "check", file)
+	cmd := exec.CommandContext(ctx, "ruff", "check", file) // #nosec G204 -- fixed linter executable
 	cmd.Dir = filepath.Dir(file)
 	out, err := runCmd(cmd)
 	if err == nil && out == "" {

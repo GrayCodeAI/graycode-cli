@@ -116,7 +116,7 @@ func detectIndentationConvention(dir string) *Convention {
 			return nil
 		}
 
-		f, err := os.Open(path) // #nosec G304 -- path comes from filepath.WalkDir over the project directory being scanned by this dev tool
+		f, err := os.Open(path) // #nosec G304,G122 -- read-only convention scan
 		if err != nil {
 			return nil
 		}
@@ -191,7 +191,7 @@ func detectNamingConvention(dir string, lang string) *Convention {
 				return nil
 			}
 
-			data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
+			data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only convention scan
 			if err != nil {
 				return nil
 			}
@@ -243,7 +243,7 @@ func detectGoErrorHandling(dir string) *Convention {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only convention scan
 		if err != nil {
 			return nil
 		}
@@ -294,7 +294,7 @@ func detectImportOrganization(dir string, lang string) *Convention {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only convention scan
 		if err != nil {
 			return nil
 		}
@@ -376,7 +376,7 @@ func detectTestNaming(dir string, lang string) *Convention {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over a project directory being scanned by this dev tool
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only convention scan
 		if err != nil {
 			return nil
 		}

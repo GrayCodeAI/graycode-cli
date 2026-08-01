@@ -271,7 +271,7 @@ func GenerateNonce() string {
 }
 
 func execCommand(name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...) // #nosec G204 -- executable is selected by the platform credential backend
 	out, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
