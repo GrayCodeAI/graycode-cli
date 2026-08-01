@@ -576,27 +576,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	}
 
-	maxChars := 50000
-	if window := s.ContextWindowSize(); window > 0 {
-		dynamic := window * 20 / 100 * 4
-		if dynamic < 5000 {
-			dynamic = 5000
-		}
-		if dynamic < maxChars {
-			maxChars = dynamic
-		}
-	}
-	compressBudget := maxChars / 2
-	if len(output) > compressBudget {
-		compressed, tokens := CompressForContext(output, compressBudget/4)
-		if tokens > 0 && tokens < CountTokensFast(output) {
-			output = compressed
-		}
-	}
-	if len(output) > maxChars {
-		output = output[:maxChars] + "\n... (truncated)"
-	}
-	output = maybeSpillToolOutput(output, canonical, tc.ID)
+	output = s.Tools().NormalizeOutput(output, canonical, tc.ID, s.ContextWindowSize())
 
 	if s.LifecycleSvc().Pipeline() != nil {
 		var execErr error

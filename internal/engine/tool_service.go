@@ -307,6 +307,34 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	return result
 }
 
+// NormalizeOutput applies the deterministic context-safety policy to a tool
+// result before it is persisted or sent to the model. Keeping this in the
+// tool service makes output limits consistent for agent-loop and slash-command
+// execution paths.
+func (s *ToolService) NormalizeOutput(output, canonicalTool, toolID string, contextWindow int) string {
+	maxChars := 50000
+	if contextWindow > 0 {
+		dynamic := contextWindow * 20 / 100 * 4
+		if dynamic < 5000 {
+			dynamic = 5000
+		}
+		if dynamic < maxChars {
+			maxChars = dynamic
+		}
+	}
+	compressBudget := maxChars / 2
+	if len(output) > compressBudget {
+		compressed, tokens := CompressForContext(output, compressBudget/4)
+		if tokens > 0 && tokens < CountTokensFast(output) {
+			output = compressed
+		}
+	}
+	if len(output) > maxChars {
+		output = output[:maxChars] + "\n... (truncated)"
+	}
+	return maybeSpillToolOutput(output, canonicalTool, toolID)
+}
+
 // ExtractTargets returns the file targets for a tool call.
 func (s *ToolService) ExtractTargets(tc types.ToolCall) []string {
 	if s == nil || s.registry == nil {
