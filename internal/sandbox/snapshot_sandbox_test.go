@@ -26,6 +26,49 @@ func TestNewSandboxManager(t *testing.T) {
 	}
 }
 
+func TestRestoreRejectsTraversalPath(t *testing.T) {
+	workDir := t.TempDir()
+	outside := filepath.Join(filepath.Dir(workDir), "escape.txt")
+	mgr := NewSandboxManager(t.TempDir())
+	data, err := json.Marshal(SandboxState{
+		ID:      "sb-restore",
+		WorkDir: workDir,
+		Files:   map[string][]byte{"../escape.txt": []byte("owned")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mgr.Restore(data); err == nil {
+		t.Fatal("expected traversal path to be rejected")
+	}
+	if _, err := os.Stat(outside); !os.IsNotExist(err) {
+		t.Fatalf("outside file exists after rejected restore: %v", err)
+	}
+}
+
+func TestRestoreRejectsSymlinkPath(t *testing.T) {
+	workDir := t.TempDir()
+	target := t.TempDir()
+	if err := os.Symlink(target, filepath.Join(workDir, "linked")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	mgr := NewSandboxManager(t.TempDir())
+	data, err := json.Marshal(SandboxState{
+		ID:      "sb-restore",
+		WorkDir: workDir,
+		Files:   map[string][]byte{"linked/escape.txt": []byte("owned")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := mgr.Restore(data); err == nil {
+		t.Fatal("expected symlink path to be rejected")
+	}
+	if _, err := os.Stat(filepath.Join(target, "escape.txt")); !os.IsNotExist(err) {
+		t.Fatalf("symlink target was modified after rejected restore: %v", err)
+	}
+}
+
 func TestCreateSandbox(t *testing.T) {
 	dir := t.TempDir()
 	workDir := t.TempDir()
