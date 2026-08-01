@@ -618,8 +618,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- true
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil && m.session.Perm.AutoMode != nil {
-					m.session.Perm.AutoMode.Record(req.ToolName, req.Summary, true)
+				if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().AutoMode() != nil {
+					m.session.PermSvc().AutoMode().Record(req.ToolName, req.Summary, true)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Allowed"})
 			case "n", "N":
@@ -627,8 +627,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- false
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil && m.session.Perm.AutoMode != nil {
-					m.session.Perm.AutoMode.Record(req.ToolName, req.Summary, false)
+				if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().AutoMode() != nil {
+					m.session.PermSvc().AutoMode().Record(req.ToolName, req.Summary, false)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Denied"})
 			case "a", "A":
@@ -638,10 +638,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- true
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil {
-					m.session.Perm.Memory.AlwaysAllowPattern(toolName + ":*")
-					if m.session.Perm.AutoMode != nil {
-						m.session.Perm.AutoMode.Record(toolName, summary, true)
+				if m.session != nil && m.session.PermSvc() != nil {
+					if mem := m.session.PermSvc().Memory(); mem != nil {
+						mem.AlwaysAllowPattern(toolName + ":*")
+					}
+					if m.session.PermSvc().AutoMode() != nil {
+						m.session.PermSvc().AutoMode().Record(toolName, summary, true)
 					}
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + toolName + " (all)"})
@@ -652,10 +654,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- false
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil {
-					m.session.Perm.Memory.AlwaysDeny(toolName)
-					if m.session.Perm.AutoMode != nil {
-						m.session.Perm.AutoMode.Record(toolName, summary, false)
+				if m.session != nil && m.session.PermSvc() != nil {
+					if mem := m.session.PermSvc().Memory(); mem != nil {
+						mem.AlwaysDeny(toolName)
+					}
+					if m.session.PermSvc().AutoMode() != nil {
+						m.session.PermSvc().AutoMode().Record(toolName, summary, false)
 					}
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Always denied: " + toolName})

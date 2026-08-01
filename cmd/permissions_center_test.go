@@ -46,11 +46,11 @@ func TestEffectivePermissionRules(t *testing.T) {
 }
 
 func TestAutonomyCenterSummary(t *testing.T) {
-	perm := engine.NewPermissionEngine()
-	perm.Autonomy = engine.AutonomySemi
-	perm.Stage = engine.SpecStageSpecify
+	sess := engine.NewSession("test", "test-model", "system", nil)
+	sess.PermSvc().SetAutonomy(engine.AutonomySemi)
+	sess.PermSvc().SetSpecStage(engine.SpecStageSpecify)
 	model := &chatModel{
-		session: &engine.Session{Autonomy: engine.AutonomySemi, Perm: perm},
+		session: sess,
 		settings: hawkconfig.Settings{
 			Sandbox:         "workspace",
 			AllowedTools:    []string{"Bash(git:*)"},

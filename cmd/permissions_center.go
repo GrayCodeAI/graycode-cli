@@ -103,10 +103,10 @@ func specStageLabel(sess *engine.Session) string {
 // currentSpecStage returns the session's active spec stage, or
 // SpecStageNone if the session (or its permission engine) isn't set up yet.
 func currentSpecStage(sess *engine.Session) engine.SpecStage {
-	if sess == nil || sess.Perm == nil {
+	if sess == nil || sess.PermSvc() == nil {
 		return engine.SpecStageNone
 	}
-	return sess.Perm.Stage
+	return sess.PermSvc().SpecStage()
 }
 
 // currentDryRun returns whether the session's dry-run kill switch is
@@ -115,10 +115,10 @@ func currentSpecStage(sess *engine.Session) engine.SpecStage {
 // nil for sessions built via a raw struct literal (e.g. in tests) rather
 // than NewSession.
 func currentDryRun(sess *engine.Session) bool {
-	if sess == nil || sess.Perm == nil {
+	if sess == nil || sess.PermSvc() == nil {
 		return false
 	}
-	return sess.Perm.DryRun
+	return sess.PermSvc().DryRun()
 }
 
 func autonomyCommandHelp() string {
@@ -234,14 +234,9 @@ func rebuildSessionPermissionRules(sess *engine.Session, settings hawkconfig.Set
 	mem := sess.PermSvc().Memory()
 	if mem == nil {
 		mem = engine.NewPermissionMemory()
-		if sess.Perm != nil {
-			sess.Perm.Memory = mem
-		}
+		sess.PermSvc().SetMemory(mem)
 	}
 	mem.Reset()
-	if sess.Perm != nil && sess.Perm.Memory == nil {
-		sess.Perm.Memory = mem
-	}
 	for _, spec := range settings.AutoAllow {
 		mem.AllowSpec(spec)
 	}

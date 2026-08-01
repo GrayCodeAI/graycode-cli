@@ -185,7 +185,7 @@ func (s *Server) handleSessionNew(msg rpcMessage) {
 	s.mu.Unlock()
 
 	// Route tool-permission prompts to the client for this session.
-	sess.PermissionFn = s.permissionFnFor(id)
+	sess.SetPermissionFn(s.permissionFnFor(id))
 
 	s.reply(msg.ID, map[string]any{"sessionId": id})
 }

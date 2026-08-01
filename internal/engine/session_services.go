@@ -324,11 +324,7 @@ func (s *Session) Services() *SessionServices {
 	if s == nil {
 		return nil
 	}
-	ss := s.services
-	if ss == nil {
-		ss = &SessionServices{}
-		s.services = ss
-	}
+	ss := &SessionServices{}
 	// Refresh the compatibility views on every call. The canonical service
 	// pointers are stable, but legacy callers may configure their fields
 	// after construction (for example /config wiring memory or lifecycle).

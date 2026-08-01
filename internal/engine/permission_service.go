@@ -231,6 +231,14 @@ func (s *PermissionService) Autonomy() AutonomyLevel { return s.perm.Autonomy }
 // SpecStage returns the active spec-workflow stage.
 func (s *PermissionService) SpecStage() SpecStage { return s.perm.Stage }
 
+// SpecPhaseProgress returns the current and total implementation phases.
+func (s *PermissionService) SpecPhaseProgress() (current, total int) {
+	if s == nil || s.perm == nil {
+		return 0, 0
+	}
+	return s.perm.Phase, s.perm.Phases
+}
+
 // AdvanceSpecStage records the next spec workflow transition through the
 // permission service instead of exposing the underlying engine to callers.
 func (s *PermissionService) AdvanceSpecStage(toolName string) {
@@ -245,6 +253,15 @@ func (s *PermissionService) AdvanceSpecStage(toolName string) {
 // that historically used `sess.Permissions.AllowSpec(...)` should
 // migrate to `sess.PermSvc().Memory().AllowSpec(...)`.
 func (s *PermissionService) Memory() *PermissionMemory { return s.memory }
+
+// SetMemory replaces the session's permission-memory policy store.
+func (s *PermissionService) SetMemory(m *PermissionMemory) {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.memory = m
+	s.perm.Memory = m
+}
 
 // AutoMode returns the legacy AutoModeState shim.
 func (s *PermissionService) AutoMode() *permissions.AutoModeState { return s.autoMode }

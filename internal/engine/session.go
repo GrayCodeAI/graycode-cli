@@ -95,12 +95,7 @@ type Session struct {
 	memory  *MemoryService
 	persist *PersistenceService
 	tools   *ToolService
-	// services is the canonical composition root for the extracted runtime
-	// collaborators. Legacy fields remain on Session only as compatibility
-	// shims while callers migrate to Services()/SubServices().
-	services *SessionServices
-
-	Perm *PermissionEngine // extracted permission subsystem
+	Perm    *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
 	//
 	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
@@ -340,15 +335,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.life.SetAgentsAccumulator(s.AgentsAccum)
 	s.life.SetLintLoop(s.LintLoop)
 	s.life.SetTestLoop(s.TestLoop)
-	s.services = &SessionServices{
-		Chat:             s.llm,
-		Permissions:      s.perms,
-		LifecycleService: s.life,
-		MemoryService:    s.memory,
-		Persist:          s.persist,
-		ToolService:      s.tools,
-	}
-
 	// Alias legacy fields at the service instances so legacy readers see
 	// the same state as new code that goes through the sub-service getters.
 	// After this point, mutations to the sub-service internal state
@@ -529,17 +515,6 @@ type SubServices struct {
 func (s *Session) SubServices() SubServices {
 	if s == nil {
 		return SubServices{}
-	}
-	services := s.Services()
-	if services != nil {
-		return SubServices{
-			LLM:         services.Chat,
-			Perms:       services.Permissions,
-			Life:        services.LifecycleService,
-			Memory:      services.MemoryService,
-			Persistence: services.Persist,
-			Tools:       services.ToolService,
-		}
 	}
 	return SubServices{
 		LLM:         s.llm,
