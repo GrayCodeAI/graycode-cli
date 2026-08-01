@@ -68,6 +68,12 @@ func NewPermissionService(log *logger.Logger) *PermissionService {
 // WithEngine replaces the underlying PermissionEngine. Used by tests
 // and by callers that want a pre-configured engine.
 func (s *PermissionService) WithEngine(pe *PermissionEngine) *PermissionService {
+	if s == nil {
+		return s
+	}
+	if pe == nil {
+		pe = NewPermissionEngine()
+	}
 	s.perm = pe
 	s.memory = pe.Memory
 	s.autoMode = pe.AutoMode
@@ -84,6 +90,9 @@ func (s *PermissionService) Engine() *PermissionEngine { return s.perm }
 // The caller (engine/stream_tool_exec.go) handles the tool_result
 // event emission and the post-call side effects.
 func (s *PermissionService) CheckTool(ctx context.Context, info ToolCallInfo) (bool, string) {
+	if s == nil || s.perm == nil {
+		return false, "permission service is unavailable"
+	}
 	granted, denyMsg := s.perm.CheckTool(ctx, info)
 	if !granted {
 		s.log.Warn("permission denied", map[string]interface{}{
@@ -153,38 +162,75 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 }
 
 // SetMaxTurns caps the agent loop's turn count.
-func (s *PermissionService) SetMaxTurns(turns int) { s.maxTurns = turns }
+func (s *PermissionService) SetMaxTurns(turns int) {
+	if s != nil {
+		s.maxTurns = turns
+	}
+}
 
 // SetMaxBudgetUSD caps the agent loop's spend in USD.
-func (s *PermissionService) SetMaxBudgetUSD(usd float64) { s.maxBudgetUSD = usd }
+func (s *PermissionService) SetMaxBudgetUSD(usd float64) {
+	if s != nil {
+		s.maxBudgetUSD = usd
+	}
+}
 
 // SetAllowedDirs sets the directories the agent may write to.
-func (s *PermissionService) SetAllowedDirs(dirs []string) { s.allowedDirs = dirs }
+func (s *PermissionService) SetAllowedDirs(dirs []string) {
+	if s != nil {
+		s.allowedDirs = append([]string(nil), dirs...)
+	}
+}
 
 // SetAutonomy sets the agent's autonomy level. Writes directly to the
 // underlying PermissionEngine — the same field CheckTool reads — rather
 // than a separate shadow field, so the change actually takes effect.
-func (s *PermissionService) SetAutonomy(level AutonomyLevel) { s.perm.Autonomy = level }
+func (s *PermissionService) SetAutonomy(level AutonomyLevel) {
+	if s != nil && s.perm != nil {
+		s.perm.Autonomy = level
+	}
+}
 
 // SetSpecStage sets the independent spec-workflow stage. Also writes
 // directly to the engine, same reasoning as SetAutonomy.
-func (s *PermissionService) SetSpecStage(stage SpecStage) { s.perm.Stage = stage }
+func (s *PermissionService) SetSpecStage(stage SpecStage) {
+	if s != nil && s.perm != nil {
+		s.perm.Stage = stage
+	}
+}
 
 // SetDryRun toggles the global kill switch: when true, every tool call is
 // denied unconditionally, regardless of tier or spec stage.
-func (s *PermissionService) SetDryRun(dryRun bool) { s.perm.DryRun = dryRun }
+func (s *PermissionService) SetDryRun(dryRun bool) {
+	if s != nil && s.perm != nil {
+		s.perm.DryRun = dryRun
+	}
+}
 
 // DryRun reports whether the kill switch is active.
-func (s *PermissionService) DryRun() bool { return s.perm.DryRun }
+func (s *PermissionService) DryRun() bool { return s != nil && s.perm != nil && s.perm.DryRun }
 
 // SetApproval replaces the ApprovalGate.
-func (s *PermissionService) SetApproval(a *ApprovalGate) { s.approval = a }
+func (s *PermissionService) SetApproval(a *ApprovalGate) {
+	if s != nil {
+		s.approval = a
+	}
+}
 
 // SetAskUserFn sets the fallback interactive approval callback.
-func (s *PermissionService) SetAskUserFn(fn func(question string) (string, error)) { s.askUserFn = fn }
+func (s *PermissionService) SetAskUserFn(fn func(question string) (string, error)) {
+	if s != nil {
+		s.askUserFn = fn
+	}
+}
 
 // Approval returns the configured human-in-the-loop gate.
-func (s *PermissionService) Approval() *ApprovalGate { return s.approval }
+func (s *PermissionService) Approval() *ApprovalGate {
+	if s == nil {
+		return nil
+	}
+	return s.approval
+}
 
 // SpecSlug returns the active specification identifier.
 func (s *PermissionService) SpecSlug() string {
@@ -203,6 +249,9 @@ func (s *PermissionService) SetSpecSlug(slug string) {
 
 // SetPermissionFn replaces the user-callback.
 func (s *PermissionService) SetPermissionFn(fn func(PermissionRequest)) {
+	if s == nil || s.perm == nil {
+		return
+	}
 	s.permissionFn = fn
 	s.perm.PromptFn = fn
 }
@@ -217,19 +266,44 @@ func (s *PermissionService) PermissionFn() func(PermissionRequest) {
 }
 
 // MaxTurns returns the cap (0 = no cap).
-func (s *PermissionService) MaxTurns() int { return s.maxTurns }
+func (s *PermissionService) MaxTurns() int {
+	if s == nil {
+		return 0
+	}
+	return s.maxTurns
+}
 
 // MaxBudgetUSD returns the cap.
-func (s *PermissionService) MaxBudgetUSD() float64 { return s.maxBudgetUSD }
+func (s *PermissionService) MaxBudgetUSD() float64 {
+	if s == nil {
+		return 0
+	}
+	return s.maxBudgetUSD
+}
 
 // AllowedDirs returns the write-allowlist.
-func (s *PermissionService) AllowedDirs() []string { return s.allowedDirs }
+func (s *PermissionService) AllowedDirs() []string {
+	if s == nil {
+		return nil
+	}
+	return append([]string(nil), s.allowedDirs...)
+}
 
 // Autonomy returns the autonomy level.
-func (s *PermissionService) Autonomy() AutonomyLevel { return s.perm.Autonomy }
+func (s *PermissionService) Autonomy() AutonomyLevel {
+	if s == nil || s.perm == nil {
+		return 0
+	}
+	return s.perm.Autonomy
+}
 
 // SpecStage returns the active spec-workflow stage.
-func (s *PermissionService) SpecStage() SpecStage { return s.perm.Stage }
+func (s *PermissionService) SpecStage() SpecStage {
+	if s == nil || s.perm == nil {
+		return SpecStageNone
+	}
+	return s.perm.Stage
+}
 
 // SpecPhaseProgress returns the current and total implementation phases.
 func (s *PermissionService) SpecPhaseProgress() (current, total int) {
@@ -252,7 +326,12 @@ func (s *PermissionService) AdvanceSpecStage(toolName string) {
 // kept in sync with the engine's classification state; callers
 // that historically used `sess.Permissions.AllowSpec(...)` should
 // migrate to `sess.PermSvc().Memory().AllowSpec(...)`.
-func (s *PermissionService) Memory() *PermissionMemory { return s.memory }
+func (s *PermissionService) Memory() *PermissionMemory {
+	if s == nil {
+		return nil
+	}
+	return s.memory
+}
 
 // SetMemory replaces the session's permission-memory policy store.
 func (s *PermissionService) SetMemory(m *PermissionMemory) {
@@ -264,13 +343,28 @@ func (s *PermissionService) SetMemory(m *PermissionMemory) {
 }
 
 // AutoMode returns the legacy AutoModeState shim.
-func (s *PermissionService) AutoMode() *permissions.AutoModeState { return s.autoMode }
+func (s *PermissionService) AutoMode() *permissions.AutoModeState {
+	if s == nil {
+		return nil
+	}
+	return s.autoMode
+}
 
 // Classifier returns the legacy Classifier shim.
-func (s *PermissionService) Classifier() *permissions.Classifier { return s.classifier }
+func (s *PermissionService) Classifier() *permissions.Classifier {
+	if s == nil {
+		return nil
+	}
+	return s.classifier
+}
 
 // BypassKill returns the legacy BypassKillswitch shim.
-func (s *PermissionService) BypassKill() *permissions.BypassKillswitch { return s.bypassKill }
+func (s *PermissionService) BypassKill() *permissions.BypassKillswitch {
+	if s == nil {
+		return nil
+	}
+	return s.bypassKill
+}
 
 // IsZero reports whether this service has been fully configured.
 // A zero PermissionService has no approval gate and no custom permission
