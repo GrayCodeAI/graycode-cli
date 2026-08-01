@@ -77,14 +77,15 @@ func (s *PersistenceService) Messages() []types.EyrieMessage {
 }
 
 // SetRawMessages replaces the message slice. Used by code paths
-// that previously wrote to s.messages directly. Pass-by-reference
-// to keep the slice header mutable. Safe on a nil receiver.
+// that previously wrote to s.messages directly. The input is deep-copied so
+// callers cannot mutate the live transcript after handing it to persistence.
+// Safe on a nil receiver.
 func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
 	if s == nil {
 		return
 	}
 	s.mu.Lock()
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 

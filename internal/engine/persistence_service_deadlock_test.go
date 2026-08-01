@@ -70,3 +70,20 @@ func TestPersistenceServiceSnapshotsAreDeepCopies(t *testing.T) {
 		t.Fatal("nested tool argument mutation leaked into persistence")
 	}
 }
+
+func TestPersistenceServiceSetRawMessagesCopiesInput(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	input := []types.EyrieMessage{{
+		Role: "assistant",
+		ToolUse: []types.ToolCall{{
+			Arguments: map[string]interface{}{"nested": map[string]interface{}{"value": "safe"}},
+		}},
+	}}
+	ps.SetRawMessages(input)
+	input[0].ToolUse[0].Arguments["nested"].(map[string]interface{})["value"] = "mutated"
+
+	got := ps.RawMessages()[0].ToolUse[0].Arguments["nested"].(map[string]interface{})["value"]
+	if got != "safe" {
+		t.Fatalf("SetRawMessages retained caller alias: got %v", got)
+	}
+}

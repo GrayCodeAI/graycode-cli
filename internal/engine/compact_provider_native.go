@@ -27,15 +27,16 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 		return nil, fmt.Errorf("no session client")
 	}
 	compactor, ok := sess.ChatLLM().Client().(nativeCompactionCapable)
-	if !ok || !compactor.NativeCompaction(ctx, sess.provider, sess.model) {
+	if !ok || !compactor.NativeCompaction(ctx, sess.ChatLLM().Provider(), sess.ChatLLM().Model()) {
 		return nil, fmt.Errorf("provider native compaction not available")
 	}
 
-	tokensBefore := EstimateTokens(sess.messages)
+	messagesBefore := sess.Persistence().RawMessages()
+	tokensBefore := EstimateTokens(messagesBefore)
 	summary, err := compactor.CompactNative(ctx, gateway.NativeCompactionRequest{
-		Provider:        sess.provider,
-		Model:           sess.model,
-		Messages:        gateway.ToEngineMessages(sess.messages),
+		Provider:        sess.ChatLLM().Provider(),
+		Model:           sess.ChatLLM().Model(),
+		Messages:        gateway.ToEngineMessages(messagesBefore),
 		ContextWindow:   sess.ContextWindowSize(),
 		ThresholdPct:    sess.compactThresholdPct(),
 		MaxOutputTokens: 8192,
@@ -45,10 +46,10 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 	}
 
 	keepEnd := 6
-	if keepEnd > len(sess.messages) {
-		keepEnd = len(sess.messages)
+	if keepEnd > len(messagesBefore) {
+		keepEnd = len(messagesBefore)
 	}
-	tail := append([]types.EyrieMessage(nil), sess.messages[len(sess.messages)-keepEnd:]...)
+	tail := append([]types.EyrieMessage(nil), messagesBefore[len(messagesBefore)-keepEnd:]...)
 	messages := append([]types.EyrieMessage{{Role: "user", Content: FormatCompactSummary(summary)}}, tail...)
 	compact := &CompactResult{
 		Messages:     messages,
@@ -56,7 +57,7 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 		TokensAfter:  EstimateTokens(messages),
 		Strategy:     "provider_native",
 	}
-	sess.messages = compact.Messages
+	sess.Persistence().SetMessages(compact.Messages)
 	return compact, nil
 }
 

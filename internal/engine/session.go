@@ -592,7 +592,7 @@ func (s *Session) AddUser(content string) {
 // The imageType should be "image/png", "image/jpeg", etc.
 func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType string) {
 	if p := s.Persistence(); p != nil {
-		p.AddUser(content + " [image attached]")
+		p.AddUserWithImage(content, imageBase64, imageType)
 		if graph := p.Graph(); graph != nil {
 			parentID := ""
 			if head, err := graph.Head(); err == nil && head != nil {
@@ -601,14 +601,6 @@ func (s *Session) AddUserWithImage(content string, imageBase64 string, imageType
 			_, _ = graph.Append(parentID, "user", content+" [image attached]")
 		}
 	}
-	s.mu.Lock()
-	msg := types.EyrieMessage{
-		Role:    "user",
-		Content: content,
-		Images:  []string{"data:" + imageType + ";base64," + imageBase64},
-	}
-	s.messages = append(s.messages, msg)
-	s.mu.Unlock()
 }
 
 func (s *Session) AddAssistant(content string) {
