@@ -13,8 +13,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/branching"
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
@@ -86,14 +84,10 @@ type Session struct {
 	persist *PersistenceService
 	tools   *ToolService
 	// Permission and approval state is owned exclusively by PermissionService.
-	AgentSpawnFn tool.AgentSpawnFn
-	AskUserFn    func(question string) (string, error)
 	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
 	readOnlyBash bool
 	// workingDir is the preferred cwd for tools (worktree isolation).
-	workingDir  string
-	SettingsGet func(key string) (string, bool)
-	SettingsSet func(key, value string) error
+	workingDir string
 
 	persistID            string
 	lastPromptTokens     int
@@ -103,11 +97,8 @@ type Session struct {
 	estTokensLastLen     int
 	tokUsage             *tok.UsageTracker
 	checkpointMgr        *session.CheckpointManager
-	OnCompaction         OnCompaction
-	Verbose              bool // show tool calls, timing, token counts in output
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
-	GLMThinkingEnabled *bool
 
 	// Advanced features
 	//
@@ -141,28 +132,7 @@ type Session struct {
 	//   Steering       -> s.Persistence().Steering()
 	//   Snapshots      -> legacy field; not yet on Persistence
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
-	Sandbox *DiffSandbox // diffsandbox.go — staged file changes
-	Plan    *PlanState   // subtask.go — user-activated plan
-	Critic  *Critic      // critic.go — patch pre-screening
 	// Backtrack and limits are owned by LifecycleService.
-	Teach          TeachConfig                // teach.go — explanation depth
-	Trajectory     *TrajectoryDistiller       // trajectory.go — multi-run distillation
-	Shadow         *branching.ShadowWorkspace // shadow.go — edit pre-validation
-	Snapshots      SnapshotTracker            // snapshot integration for auto-tracking
-	Sleeptime      *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
-	Activity       *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
-	SkillDistiller *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
-	LintLoop       *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
-	TestLoop       *TestLoop                  // test_loop.go — auto test-fix loop
-	FileMentions   *FileMentionDetector       // file_mentions.go — detect referenced files
-	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
-
-	// Few-shot learning and prompt optimization
-	//
-	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
-	//   FewShotStore, AdaptivePrompt.
-	FewShotStore   *FewShotStore   // scaffold/fewshot.go — successful pattern collection
-	AdaptivePrompt *AdaptivePrompt // adaptive_prompt.go — user preference learning
 
 	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
 	smartSkills []plugin.SmartSkill
@@ -183,16 +153,13 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	}
 	log := logger.Default()
 	s := &Session{
-		client:       chat,
-		registry:     registry,
-		provider:     provider,
-		model:        model,
-		system:       systemPrompt,
-		log:          log,
-		metrics:      metrics.NewRegistry(),
-		LintLoop:     NewLintLoop(),
-		TestLoop:     NewTestLoop(),
-		FileMentions: NewFileMentionDetector("."),
+		client:   chat,
+		registry: registry,
+		provider: provider,
+		model:    model,
+		system:   systemPrompt,
+		log:      log,
+		metrics:  metrics.NewRegistry(),
 	}
 	rateLimiter := ratelimit.PerSecond(10)
 	s.Cost.Model = model
@@ -226,16 +193,16 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		chat:        s.llm,
 		memory:      s.memory,
 		agentSpawn: func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
-			if s.AgentSpawnFn == nil {
+			if s.tools.AgentSpawnFn() == nil {
 				return agentcontracts.SpawnResult{Status: agentcontracts.StatusFailed, Error: "agent spawning is unavailable"}, fmt.Errorf("agent spawning is unavailable")
 			}
-			return s.AgentSpawnFn(ctx, req)
+			return s.tools.AgentSpawnFn()(ctx, req)
 		},
 		askUser: func(question string) (string, error) {
-			if s.AskUserFn == nil {
+			if s.perms.AskUserFn() == nil {
 				return "", fmt.Errorf("ask-user callback is unavailable")
 			}
-			return s.AskUserFn(question)
+			return s.perms.AskUserFn()(question)
 		},
 		readOnlyBash:       s.readOnlyBash,
 		workingDir:         s.workingDir,
@@ -247,8 +214,8 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	})
 	s.refreshContextWindowCache()
 	s.life.SetAgentsAccumulator(agentsAccum)
-	s.life.SetLintLoop(s.LintLoop)
-	s.life.SetTestLoop(s.TestLoop)
+	s.life.SetLintLoop(NewLintLoop())
+	s.life.SetTestLoop(NewTestLoop())
 	return s
 }
 
@@ -662,7 +629,6 @@ func (s *Session) SetGLMThinkingEnabled(v *bool) {
 // SetSnapshots attaches the snapshot tracker. New code should call
 // this instead of writing to the legacy s.Snapshots field directly.
 func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
-	s.Snapshots = snap
 	if s.tools != nil {
 		s.tools.WithSnapshots(snap)
 	}
@@ -687,7 +653,6 @@ func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
 // SetAskUserFn sets the user-prompt callback. New code should
 // call this instead of writing to the legacy s.AskUserFn field.
 func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
-	s.AskUserFn = fn
 	if s.perms != nil {
 		s.perms.SetAskUserFn(fn)
 	}

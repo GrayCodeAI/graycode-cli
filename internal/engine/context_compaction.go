@@ -106,8 +106,6 @@ func (s *Session) notifyCompaction(ev CompactionEvent) {
 	}
 	if fn := s.Persistence().OnCompaction(); fn != nil {
 		fn(ev)
-	} else if s.OnCompaction != nil {
-		s.OnCompaction(ev)
 	}
 	s.saveCompactionCheckpoint()
 }

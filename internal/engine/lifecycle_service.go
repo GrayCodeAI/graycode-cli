@@ -62,6 +62,9 @@ type LifecycleService struct {
 	// session-level lifecycle hook.
 	lifecycle   *SessionLifecycle
 	costTracker *CostTracker
+	teach       TeachConfig
+	trajectory  *TrajectoryDistiller
+	verbose     bool
 	// log is the session logger.
 	log *logger.Logger
 }
@@ -247,11 +250,23 @@ func (s *LifecycleService) AgentsAccum() *prompts.AgentsAccumulator { return s.a
 // SetAgentsAccumulator attaches the project-learning accumulator.
 func (s *LifecycleService) SetAgentsAccumulator(a *prompts.AgentsAccumulator) { s.agentsAccum = a }
 
-func (s *LifecycleService) ResponseCache() *ResponseCache  { return s.responseCache }
-func (s *LifecycleService) Pipeline() *IntegrationPipeline { return s.pipeline }
-func (s *LifecycleService) Steering() *SteeringQueue       { return s.steering }
-func (s *LifecycleService) Lifecycle() *SessionLifecycle   { return s.lifecycle }
-func (s *LifecycleService) CostTracker() *CostTracker      { return s.costTracker }
-func (s *LifecycleService) SetCostTracker(c *CostTracker)  { s.costTracker = c }
-func (s *LifecycleService) LintLoop() *LintLoop            { return s.lintLoop }
-func (s *LifecycleService) TestLoop() *TestLoop            { return s.testLoop }
+func (s *LifecycleService) ResponseCache() *ResponseCache        { return s.responseCache }
+func (s *LifecycleService) Pipeline() *IntegrationPipeline       { return s.pipeline }
+func (s *LifecycleService) Steering() *SteeringQueue             { return s.steering }
+func (s *LifecycleService) Lifecycle() *SessionLifecycle         { return s.lifecycle }
+func (s *LifecycleService) CostTracker() *CostTracker            { return s.costTracker }
+func (s *LifecycleService) SetCostTracker(c *CostTracker)        { s.costTracker = c }
+func (s *LifecycleService) Teach() TeachConfig                   { return s.teach }
+func (s *LifecycleService) SetTeach(t TeachConfig)               { s.teach = t }
+func (s *LifecycleService) Trajectory() *TrajectoryDistiller     { return s.trajectory }
+func (s *LifecycleService) SetTrajectory(t *TrajectoryDistiller) { s.trajectory = t }
+func (s *LifecycleService) ToggleVerbose() bool {
+	if s == nil {
+		return false
+	}
+	s.verbose = !s.verbose
+	return s.verbose
+}
+func (s *LifecycleService) Verbose() bool       { return s != nil && s.verbose }
+func (s *LifecycleService) LintLoop() *LintLoop { return s.lintLoop }
+func (s *LifecycleService) TestLoop() *TestLoop { return s.testLoop }

@@ -27,12 +27,26 @@ type ToolService struct {
 	containerExecutor tool.ContainerExecutor
 	containerRequired bool
 	tracer            *oteltrace.Tracer
+	agentSpawn        tool.AgentSpawnFn
 	snapshots         SnapshotTracker
 	bgMu              sync.Mutex
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
 	metrics           *metrics.Registry
+}
+
+func (s *ToolService) SetAgentSpawnFn(fn tool.AgentSpawnFn) {
+	if s != nil {
+		s.agentSpawn = fn
+	}
+}
+
+func (s *ToolService) AgentSpawnFn() tool.AgentSpawnFn {
+	if s == nil {
+		return nil
+	}
+	return s.agentSpawn
 }
 
 // toolExecutionDeps contains the service-owned collaborators needed for one

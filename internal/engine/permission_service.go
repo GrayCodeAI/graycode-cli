@@ -224,6 +224,13 @@ func (s *PermissionService) SetAskUserFn(fn func(question string) (string, error
 	}
 }
 
+func (s *PermissionService) AskUserFn() func(string) (string, error) {
+	if s == nil {
+		return nil
+	}
+	return s.askUserFn
+}
+
 // Approval returns the configured human-in-the-loop gate.
 func (s *PermissionService) Approval() *ApprovalGate {
 	if s == nil {

@@ -20,9 +20,9 @@ import (
 // Modes: explore (read-only research), plan (read-only planning), general-purpose (full tools).
 func (s *Session) WireAgentTool() {
 	_ = s.ensureBackgroundManager()
-	s.AgentSpawnFn = func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+	s.Tools().SetAgentSpawnFn(func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
 		return s.spawnSubAgentRequest(ctx, req, 0)
-	}
+	})
 }
 
 // ensureBackgroundManager lazily attaches a BackgroundAgentManager on ToolService.
@@ -177,9 +177,9 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	sub.AddUser(prompt)
 
 	// Propagate parent agent spawn so nested agents work, and share bg manager.
-	sub.AgentSpawnFn = func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+	sub.Tools().SetAgentSpawnFn(func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
 		return s.spawnSubAgentRequest(ctx, req, depth+1)
-	}
+	})
 	if bm := s.ensureBackgroundManager(); bm != nil && sub.Tools() != nil {
 		sub.Tools().WithBackgroundManager(bm)
 	}
