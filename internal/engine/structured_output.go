@@ -37,11 +37,15 @@ func (e *SchemaError) Error() string { return "schema validation failed: " + e.R
 // schema must be a JSON Schema document (as a string). A blank schema disables
 // validation and behaves like an ordinary Chat call.
 func (s *Session) ChatStructured(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions, schema string) (*types.EyrieResponse, error) {
+	chat := s.ChatLLM()
+	if chat == nil {
+		return nil, fmt.Errorf("session: no chat service configured")
+	}
 	if schema != "" {
 		opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: schema}
 	}
 
-	resp, err := s.client.Chat(ctx, msgs, opts)
+	resp, err := chat.Chat(ctx, msgs, opts)
 	if err != nil {
 		return resp, err
 	}
@@ -63,7 +67,7 @@ func (s *Session) ChatStructured(ctx context.Context, msgs []types.EyrieMessage,
 				vErr.Error(), schema,
 			)},
 		)
-		retryResp, retryErr := s.client.Chat(ctx, retryMsgs, opts)
+		retryResp, retryErr := chat.Chat(ctx, retryMsgs, opts)
 		if retryErr != nil {
 			return resp, retryErr
 		}
