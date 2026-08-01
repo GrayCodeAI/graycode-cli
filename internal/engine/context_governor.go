@@ -34,7 +34,11 @@ func (s *Session) ContextWindowSize() int {
 	if w := s.ContextWindowCachedValue(); w > 0 {
 		return w
 	}
-	return ResolveModelContextWindow(s.model, 0)
+	model := ""
+	if s.ChatLLM() != nil {
+		model = s.ChatLLM().Model()
+	}
+	return ResolveModelContextWindow(model, 0)
 }
 
 // EnsureAutoCompactor initializes the compaction orchestrator from session settings.
@@ -42,15 +46,21 @@ func (s *Session) EnsureAutoCompactor() {
 	if s == nil {
 		return
 	}
-	if s.AutoCompactor != nil {
-		s.AutoCompactor.Configure(s.compactConfig())
+	p := s.Persistence()
+	if p == nil {
 		return
 	}
-	s.AutoCompactor = NewAutoCompactor(s.compactConfig())
+	if p.AutoCompactor() != nil {
+		p.AutoCompactor().Configure(s.compactConfig())
+		s.AutoCompactor = p.AutoCompactor()
+		return
+	}
+	p.SetAutoCompactor(NewAutoCompactor(s.compactConfig()))
+	s.AutoCompactor = p.AutoCompactor()
 }
 
 func (s *Session) compactThresholdPct() int {
-	pct := s.AutoCompactThresholdPct
+	pct := s.Persistence().AutoCompactThresholdPct()
 	if pct <= 0 {
 		pct = DefaultAutoCompactThresholdPct
 	}
@@ -83,9 +93,21 @@ func (s *Session) refreshContextWindowCache() {
 	if s == nil {
 		return
 	}
-	s.ContextWindowCached = 0
-	if info, ok := modelPkg.Find(s.model); ok && info.ContextSize > 0 {
-		s.ContextWindowCached = info.ContextSize
+	if s.Persistence() == nil {
+		s.ContextWindowCached = 0
+	} else {
+		s.SetContextWindowCached(0)
+	}
+	model := ""
+	if s.ChatLLM() != nil {
+		model = s.ChatLLM().Model()
+	}
+	if info, ok := modelPkg.Find(model); ok && info.ContextSize > 0 {
+		if s.Persistence() == nil {
+			s.ContextWindowCached = info.ContextSize
+		} else {
+			s.SetContextWindowCached(info.ContextSize)
+		}
 	}
 	s.EnsureAutoCompactor()
 }
@@ -96,7 +118,7 @@ func (s *Session) WillCompactBeforeTurn() bool {
 		return false
 	}
 	s.EnsureAutoCompactor()
-	if s.AutoCompactor.ShouldAutoCompact(s) {
+	if s.Persistence().AutoCompactor().ShouldAutoCompact(s) {
 		return true
 	}
 	if len(s.Persistence().RawMessages()) > maxContextMessages {
@@ -116,7 +138,7 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 
 	s.EnsureAutoCompactor()
-	if compactStrategy, ok := s.AutoCompactor.AutoCompactIfNeeded(ctx, s); ok {
+	if compactStrategy, ok := s.Persistence().AutoCompactor().AutoCompactIfNeeded(ctx, s); ok {
 		return compactStrategy, true // recordCompaction emitted inside AutoCompactIfNeeded
 	}
 
@@ -148,7 +170,7 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 	s.EnsureAutoCompactor()
 	tokensBefore = EstimateTokens(s.Persistence().RawMessages())
-	strategy, err = s.AutoCompactor.RunCompaction(ctx, s)
+	strategy, err = s.Persistence().AutoCompactor().RunCompaction(ctx, s)
 	if err != nil {
 		s.smartCompact()
 		strategy = "smart_fallback"

@@ -38,6 +38,18 @@ type PersistenceService struct {
 	steering *SteeringQueue
 	// logger.
 	log *logger.Logger
+	// Compaction and checkpoint state belongs to persistence. Session keeps
+	// deprecated aliases only for source compatibility with older callers.
+	autoCompactor        *AutoCompactor
+	files                *FileTracker
+	persistID            string
+	lastPromptTokens     int
+	lastCompletionTokens int
+	estTokensCache       int
+	estTokensMsgCount    int
+	estTokensLastLen     int
+	checkpointMgr        *session.CheckpointManager
+	onCompaction         OnCompaction
 }
 
 // NewPersistenceService constructs an empty PersistenceService.
@@ -59,10 +71,7 @@ func (s *PersistenceService) Messages() []types.EyrieMessage {
 	// RawMessages() here would recursively RLock and can deadlock if a
 	// writer arrives between the two read locks (Go's RWMutex forbids
 	// recursive read-locking).
-	raw := s.messages
-	out := make([]types.EyrieMessage, len(raw))
-	copy(out, raw)
-	return out
+	return cloneMessages(s.messages)
 }
 
 // SetRawMessages replaces the message slice. Used by code paths
@@ -77,8 +86,9 @@ func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
 	s.mu.Unlock()
 }
 
-// RawMessages returns the live slice (no copy). Callers MUST NOT mutate.
-// Used by the agent loop's hot path where copy overhead matters.
+// RawMessages returns an immutable snapshot of the transcript. Nested tool
+// arguments and multimodal slices are cloned as well, so callers cannot
+// mutate live session state by retaining or editing the returned value.
 // Safe to call on a nil receiver (returns nil).
 func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	if s == nil {
@@ -86,7 +96,7 @@ func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.messages
+	return cloneMessages(s.messages)
 }
 
 // Graph returns Hawk's product-owned conversation graph.
@@ -112,7 +122,7 @@ func (s *PersistenceService) AddAssistant(content string) {
 // SetMessages replaces the transcript.
 func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 
@@ -150,8 +160,16 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 	if s == nil {
 		return
 	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return
+	}
 	s.mu.Lock()
-	s.system += content
+	if strings.TrimSpace(s.system) == "" {
+		s.system = content
+	} else {
+		s.system += "\n\n" + content
+	}
 	s.mu.Unlock()
 }
 
@@ -159,17 +177,31 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 // identified by a header string. Used by yaad recall (which refreshes
 // the "## Relevant Memories" block on every turn).
 func (s *PersistenceService) ReplaceSystemContextSection(header, content string) {
+	if s == nil {
+		return
+	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	idx := strings.Index(s.system, header)
 	if idx < 0 {
-		s.system += content
+		if strings.TrimSpace(s.system) == "" {
+			s.system = content
+		} else {
+			s.system += "\n\n" + content
+		}
 		return
 	}
-	end := idx + len(header)
-	if nl := strings.Index(s.system[end:], "\n\n"); nl >= 0 {
-		end += nl + 2
+	rest := s.system[idx+len(header):]
+	var end int
+	if next := strings.Index(rest, "\n\n## "); next >= 0 {
+		end = idx + len(header) + next
 	} else {
+		// Replace the entire existing section, retaining the next section
+		// separator when one exists.
 		end = len(s.system)
 	}
 	s.system = s.system[:idx] + content + s.system[end:]
@@ -216,10 +248,58 @@ func (s *PersistenceService) RemoveLastExchange() {
 // LoadMessages replaces the transcript with a fresh slice.
 func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	// Assign directly; the lock is held, so SetRawMessages() (which locks
-	// again) would deadlock on a recursive write lock.
-	s.messages = msgs
+	// Clone while holding the lock; callers retain no mutable alias to the
+	// live transcript.
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
+}
+
+// cloneMessages performs a deep copy of the provider-neutral transcript.
+// Tool arguments are arbitrary JSON-shaped values, so cloneJSONValue walks
+// maps and slices recursively instead of relying on a shallow slice copy.
+func cloneMessages(in []types.EyrieMessage) []types.EyrieMessage {
+	if in == nil {
+		return nil
+	}
+	out := make([]types.EyrieMessage, len(in))
+	for i, msg := range in {
+		out[i] = msg
+		out[i].Images = append([]string(nil), msg.Images...)
+		out[i].ContentParts = append([]types.ContentPart(nil), msg.ContentParts...)
+		if msg.ToolUse != nil {
+			out[i].ToolUse = make([]types.ToolCall, len(msg.ToolUse))
+			for j, call := range msg.ToolUse {
+				out[i].ToolUse[j] = call
+				if call.Arguments != nil {
+					out[i].ToolUse[j].Arguments = make(map[string]interface{}, len(call.Arguments))
+					for key, value := range call.Arguments {
+						out[i].ToolUse[j].Arguments[key] = cloneJSONValue(value)
+					}
+				}
+			}
+		}
+		out[i].ToolResults = append([]types.ToolResult(nil), msg.ToolResults...)
+	}
+	return out
+}
+
+func cloneJSONValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(v))
+		for key, nested := range v {
+			out[key] = cloneJSONValue(nested)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(v))
+		for i, nested := range v {
+			out[i] = cloneJSONValue(nested)
+		}
+		return out
+	default:
+		return value
+	}
 }
 
 // PinnedMessages returns the count of pinned messages.
@@ -241,3 +321,36 @@ func (s *PersistenceService) ContextWindowCached() int { return s.contextWindowC
 
 // SetContextWindowCached replaces the catalog context window.
 func (s *PersistenceService) SetContextWindowCached(n int) { s.contextWindowCached = n }
+
+func (s *PersistenceService) AutoCompactor() *AutoCompactor      { return s.autoCompactor }
+func (s *PersistenceService) SetAutoCompactor(ac *AutoCompactor) { s.autoCompactor = ac }
+func (s *PersistenceService) Files() *FileTracker                { return s.files }
+func (s *PersistenceService) SetFiles(files *FileTracker)        { s.files = files }
+func (s *PersistenceService) PersistID() string                  { return s.persistID }
+func (s *PersistenceService) SetPersistID(id string)             { s.persistID = id }
+func (s *PersistenceService) LastPromptTokens() int              { return s.lastPromptTokens }
+func (s *PersistenceService) LastCompletionTokens() int          { return s.lastCompletionTokens }
+func (s *PersistenceService) SetTokenUsage(prompt, completion int) {
+	if prompt > 0 {
+		s.lastPromptTokens = prompt
+	}
+	if completion > 0 {
+		s.lastCompletionTokens = completion
+	}
+}
+
+func (s *PersistenceService) TokenEstimateCache() (tokens, count, lastLen int) {
+	return s.estTokensCache, s.estTokensMsgCount, s.estTokensLastLen
+}
+
+func (s *PersistenceService) SetTokenEstimateCache(tokens, count, lastLen int) {
+	s.estTokensCache, s.estTokensMsgCount, s.estTokensLastLen = tokens, count, lastLen
+}
+
+func (s *PersistenceService) CheckpointManager() *session.CheckpointManager { return s.checkpointMgr }
+
+func (s *PersistenceService) SetCheckpointManager(cm *session.CheckpointManager) {
+	s.checkpointMgr = cm
+}
+func (s *PersistenceService) OnCompaction() OnCompaction      { return s.onCompaction }
+func (s *PersistenceService) SetOnCompaction(fn OnCompaction) { s.onCompaction = fn }

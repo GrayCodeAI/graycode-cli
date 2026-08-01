@@ -8,6 +8,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // LifecycleService is the Session's view of the self-improvement and
@@ -54,6 +55,10 @@ type LifecycleService struct {
 	pipeline *IntegrationPipeline
 	// steering queue.
 	steering *SteeringQueue
+	// local quality loops run after write tools and belong to lifecycle
+	// feedback rather than transport or persistence.
+	lintLoop *LintLoop
+	testLoop *TestLoop
 	// session-level lifecycle hook.
 	lifecycle *SessionLifecycle
 	// log is the session logger.
@@ -119,6 +124,51 @@ func (s *LifecycleService) OnSessionEnd(ctx context.Context, s2 *Session, succes
 	}
 }
 
+// StartContext prepares session-start context without requiring a Session
+// object. This is the service boundary used by the agent loop.
+func (s *LifecycleService) StartContext(ctx context.Context, lastUserMsg string) string {
+	if s == nil || s.lifecycle == nil {
+		return ""
+	}
+	return s.lifecycle.OnSessionStart(ctx, lastUserMsg)
+}
+
+// Finalize performs lifecycle bookkeeping from immutable session snapshots.
+// It intentionally accepts data rather than *Session so the lifecycle layer
+// cannot reach through the god object for unrelated state.
+func (s *LifecycleService) Finalize(ctx context.Context, messages []types.EyrieMessage, success bool, duration time.Duration, totalCost float64) {
+	if s == nil {
+		return
+	}
+	outcome := SessionOutcome{Success: success, Duration: duration, TotalCost: totalCost}
+	for _, message := range messages {
+		if message.Role == "user" && len(message.ToolResults) == 0 && outcome.TaskGoal == "" {
+			outcome.TaskGoal = message.Content
+		}
+	}
+	if s.lifecycle != nil {
+		_ = s.lifecycle.OnSessionEnd(ctx, struct{}{}, outcome)
+	}
+	if s.fewShotStore != nil && success && len(messages) >= 2 {
+		response := ""
+		for _, message := range messages {
+			if message.Role == "assistant" && message.Content != "" {
+				response = message.Content
+			}
+		}
+		if outcome.TaskGoal != "" && response != "" {
+			s.fewShotStore.Record(outcome.TaskGoal, response, "general")
+		}
+	}
+	if s.adaptivePrompt != nil {
+		for _, message := range messages {
+			if message.Role == "user" && len(message.ToolResults) == 0 {
+				s.adaptivePrompt.LearnFromFeedback(message.Content)
+			}
+		}
+	}
+}
+
 // SelectModel picks the optimal model for a turn. Returns the current
 // model unchanged if cascade is nil.
 func (s *LifecycleService) SelectModel(currentModel, lastUserMsg, hint string) string {
@@ -177,6 +227,8 @@ func (s *LifecycleService) SetAdaptivePrompt(a *AdaptivePrompt)         { s.adap
 func (s *LifecycleService) SetActivity(act *memory.ActivityTracker)     { s.activity = act }
 func (s *LifecycleService) SetAgentsAccum(a *prompts.AgentsAccumulator) { s.agentsAccum = a }
 func (s *LifecycleService) SetSteering(st *SteeringQueue)               { s.steering = st }
+func (s *LifecycleService) SetLintLoop(loop *LintLoop)                  { s.lintLoop = loop }
+func (s *LifecycleService) SetTestLoop(loop *TestLoop)                  { s.testLoop = loop }
 
 // Accessors used by stream.go and the agent loop. nil-safe.
 func (s *LifecycleService) Beliefs() *BeliefState                   { return s.beliefs }
@@ -190,7 +242,13 @@ func (s *LifecycleService) FewShotStore() *FewShotStore             { return s.f
 func (s *LifecycleService) AdaptivePrompt() *AdaptivePrompt         { return s.adaptivePrompt }
 func (s *LifecycleService) Activity() *memory.ActivityTracker       { return s.activity }
 func (s *LifecycleService) AgentsAccum() *prompts.AgentsAccumulator { return s.agentsAccum }
-func (s *LifecycleService) ResponseCache() *ResponseCache           { return s.responseCache }
-func (s *LifecycleService) Pipeline() *IntegrationPipeline          { return s.pipeline }
-func (s *LifecycleService) Steering() *SteeringQueue                { return s.steering }
-func (s *LifecycleService) Lifecycle() *SessionLifecycle            { return s.lifecycle }
+
+// SetAgentsAccumulator attaches the project-learning accumulator.
+func (s *LifecycleService) SetAgentsAccumulator(a *prompts.AgentsAccumulator) { s.agentsAccum = a }
+
+func (s *LifecycleService) ResponseCache() *ResponseCache  { return s.responseCache }
+func (s *LifecycleService) Pipeline() *IntegrationPipeline { return s.pipeline }
+func (s *LifecycleService) Steering() *SteeringQueue       { return s.steering }
+func (s *LifecycleService) Lifecycle() *SessionLifecycle   { return s.lifecycle }
+func (s *LifecycleService) LintLoop() *LintLoop            { return s.lintLoop }
+func (s *LifecycleService) TestLoop() *TestLoop            { return s.testLoop }

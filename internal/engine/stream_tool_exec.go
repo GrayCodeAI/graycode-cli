@@ -265,8 +265,8 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	}
 
 	var toolSpan *oteltrace.Span
-	if s.Tracer != nil {
-		_, toolSpan = oteltrace.StartToolSpan(ctx, s.Tracer, tc.Name, tc.ID)
+	if s.TracerValue() != nil {
+		_, toolSpan = oteltrace.StartToolSpan(ctx, s.TracerValue(), tc.Name, tc.ID)
 	}
 
 	// Delegate to the extracted PermissionService (Phase 7 migration).
@@ -281,12 +281,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	// only consults the values it holds. The sync is cheap (two
 	// pointer assignments) and removes a class of "settings lost"
 	// bugs when callers mutate the session after construction.
-	if s.PermissionFn != nil {
-		s.PermSvc().SetPermissionFn(s.PermissionFn)
-	}
-	if s.Autonomy != 0 {
-		s.PermSvc().SetAutonomy(s.Autonomy)
-	}
+	s.syncPermissionCompatibility()
 	granted, denyMsg := s.PermSvc().CheckTool(ctx, ToolCallInfo{
 		Name: tc.Name,
 		ID:   tc.ID,
@@ -305,7 +300,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	// Human-in-the-loop approval gate for high-risk actions (additive; no-op
 	// unless s.Approval is configured and enabled). See approval_gate.go.
 	approved, approvalDeny := s.CheckApproval(ctx, tc.Name, tc.Arguments)
-	if s.Approval != nil && s.Approval.Enabled {
+	if approval := s.PermSvc().Approval(); approval != nil && approval.Enabled {
 		s.recordPolicyObservation(tc, "approval", approved, approvalDeny)
 	}
 	if !approved {
@@ -331,8 +326,8 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 				return "", fmt.Errorf("commit message model is unavailable")
 			}
 			resp, err := s.ChatLLM().Chat(chatCtx, []types.EyrieMessage{{Role: "user", Content: prompt}}, types.ChatOptions{
-				Provider:  s.provider,
-				Model:     s.model,
+				Provider:  s.ChatLLM().Provider(),
+				Model:     s.ChatLLM().Model(),
 				MaxTokens: 256,
 			})
 			if err != nil {
@@ -344,8 +339,8 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			return resp.Content, nil
 		},
 		YaadBridge:        s.MemorySvc().Yaad(),
-		SpecSlugGet:       func() string { return s.Perm.SpecSlug },
-		SpecSlugSet:       func(slug string) { s.Perm.SpecSlug = slug },
+		SpecSlugGet:       func() string { return s.PermSvc().SpecSlug() },
+		SpecSlugSet:       func(slug string) { s.PermSvc().SetSpecSlug(slug) },
 		BackgroundManager: s.ensureBackgroundManager(),
 		ReadOnlyBash:      s.readOnlyBash,
 		WorkingDir:        s.workingDir,
@@ -426,7 +421,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		// Self-Review Before Apply: for Write/Edit, ask LLM to review changes
 		if preEditPath != "" && s.client != nil && shouldSelfReview(tc.Name) {
 			if newContent, readErr := readFileContent(preEditPath); readErr == nil && newContent != preEditContent {
-				reviewResult, reviewErr := ReviewBeforeWrite(ctx, s.client, s.model, intentText, preEditPath, preEditContent, newContent)
+				reviewResult, reviewErr := ReviewBeforeWrite(ctx, s.ChatLLM().Client(), s.ChatLLM().Model(), intentText, preEditPath, preEditContent, newContent)
 				if reviewErr == nil && reviewResult != nil && !reviewResult.Approved {
 					// Revert the file to its original state. If revert fails we
 					// MUST surface that as a hard tool error: silently leaving
@@ -498,12 +493,12 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	}
 
 	// Auto-accumulate learnings into Hawk user state.
-	if s.AgentsAccum != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
+	if s.LifecycleSvc().AgentsAccum() != nil && !isErr && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
 			pattern := prompts.ExtractPattern(tc.Name, p, output)
-			s.AgentsAccum.Record(intentText, pattern, []string{p})
+			s.LifecycleSvc().AgentsAccum().Record(intentText, pattern, []string{p})
 			// Flush periodically (every 5 learnings)
-			if err := s.AgentsAccum.Flush(); err != nil {
+			if err := s.LifecycleSvc().AgentsAccum().Flush(); err != nil {
 				slog.Warn("failed to flush agents accumulator", "error", err)
 			}
 		}
@@ -554,14 +549,14 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	}
 
-	if s.LintLoop != nil && s.LintLoop.Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
+	if s.LifecycleSvc().LintLoop() != nil && s.LifecycleSvc().LintLoop().Enabled && !isErr && !sandboxIntercepted && (canonical == "Write" || canonical == "Edit") {
 		if p, ok := pathArgument(tc.Arguments); ok {
-			count := s.LintLoop.ReflectionCount(p)
-			if s.LintLoop.ShouldRetry(count) {
-				if lintResult, lintErr := s.LintLoop.RunLint(p); lintErr == nil && lintResult != nil {
-					reflected := s.LintLoop.BuildReflectedMessage(lintResult)
+			count := s.LifecycleSvc().LintLoop().ReflectionCount(p)
+			if s.LifecycleSvc().LintLoop().ShouldRetry(count) {
+				if lintResult, lintErr := s.LifecycleSvc().LintLoop().RunLint(p); lintErr == nil && lintResult != nil {
+					reflected := s.LifecycleSvc().LintLoop().BuildReflectedMessage(lintResult)
 					if reflected != "" {
-						s.LintLoop.RecordReflection(p)
+						s.LifecycleSvc().LintLoop().RecordReflection(p)
 						output += "\n\n" + reflected
 					}
 				}

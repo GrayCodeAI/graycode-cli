@@ -33,98 +33,39 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 	// Start session-level trace span
 	var sessionSpan *oteltrace.Span
-	if s.Tracer != nil {
-		ctx, sessionSpan = oteltrace.StartSessionSpan(ctx, s.Tracer, fmt.Sprintf("%d", sessionStart.UnixNano()))
+	if s.TracerValue() != nil {
+		ctx, sessionSpan = oteltrace.StartSessionSpan(ctx, s.TracerValue(), fmt.Sprintf("%d", sessionStart.UnixNano()))
 		defer oteltrace.EndSpanWithError(sessionSpan, nil)
 	}
 
-	// Self-improvement: run OnSessionEnd when the loop exits (regardless of how)
+	// Lifecycle and memory bookkeeping consume immutable service snapshots,
+	// keeping the agent loop independent of backend-specific state.
 	defer func() {
 		success := ctx.Err() == nil
-		if s.LifecycleSvc().Lifecycle() != nil {
-			outcome := SessionOutcome{
-				Success:  success,
-				Duration: time.Since(sessionStart),
-			}
-			if len(s.Persistence().RawMessages()) > 0 {
-				for _, m := range s.Persistence().RawMessages() {
-					if m.Role == "user" && len(m.ToolResults) == 0 && outcome.TaskGoal == "" {
-						outcome.TaskGoal = m.Content
-					}
-				}
-			}
-			_ = s.LifecycleSvc().Lifecycle().OnSessionEnd(ctx, s, outcome)
-		}
-		// Enhanced memory: session-end processing (confidence, diff, continuity)
-		if s.MemorySvc().Enhanced() != nil {
-			s.MemorySvc().Enhanced().EndSession(success)
-		}
-		// Yaad: save session summary
-		if s.MemorySvc().Memory() != nil {
-			taskGoal := ""
-			if len(s.Persistence().RawMessages()) > 0 {
-				for _, m := range s.Persistence().RawMessages() {
-					if m.Role == "user" && len(m.ToolResults) == 0 && taskGoal == "" {
-						taskGoal = m.Content
-					}
-				}
-			}
-			if taskGoal != "" {
-				summary := fmt.Sprintf("Session goal: %s", taskGoal)
-				if !success {
-					summary += " (interrupted)"
-				}
-				_ = s.MemorySvc().Memory().Remember(summary, "session")
-			}
-		}
-
-		// Few-shot learning: record successful session patterns
-		if success && s.LifecycleSvc().FewShotStore() != nil && len(s.Persistence().RawMessages()) >= 2 {
-			taskGoal := ""
-			response := ""
-			for _, m := range s.Persistence().RawMessages() {
-				if m.Role == "user" && len(m.ToolResults) == 0 && taskGoal == "" {
-					taskGoal = m.Content
-				}
-				if m.Role == "assistant" && m.Content != "" {
-					response = m.Content
-				}
-			}
-			if taskGoal != "" && response != "" {
-				s.LifecycleSvc().FewShotStore().Record(taskGoal, response, "general")
-			}
-		}
-
-		// Adaptive prompt: learn from user corrections in this session
-		if s.LifecycleSvc().AdaptivePrompt() != nil {
-			for _, m := range s.Persistence().RawMessages() {
-				if m.Role == "user" && len(m.ToolResults) == 0 {
-					s.LifecycleSvc().AdaptivePrompt().LearnFromFeedback(m.Content)
-				}
-			}
-		}
+		messages := s.Persistence().Messages()
+		s.LifecycleSvc().Finalize(ctx, messages, success, time.Since(sessionStart), s.CostValue().TotalUSD())
+		s.MemorySvc().Finalize(messages, success)
 	}()
 
 	// Session start hook
 	hooks.ExecuteAsync(ctx, hooks.EventSessionStart, map[string]interface{}{
-		"provider": s.provider,
-		"model":    s.model,
+		"provider": s.ChatLLM().Provider(),
+		"model":    s.ChatLLM().Model(),
 	})
 
 	// Self-improvement: inject learned guidelines and skills from prior sessions
 	if s.LifecycleSvc().Lifecycle() != nil && len(s.Persistence().RawMessages()) > 0 {
 		lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
-		if learnedCtx := s.LifecycleSvc().Lifecycle().OnSessionStart(ctx, lastMsg); learnedCtx != "" {
+		if learnedCtx := s.LifecycleSvc().StartContext(ctx, lastMsg); learnedCtx != "" {
 			s.AppendSystemContext(learnedCtx)
 		}
 	}
 
-	// Inject remembered context from yaad into system prompt
-	if s.MemorySvc().Memory() != nil && len(s.Persistence().RawMessages()) > 0 {
+	// Inject remembered context through the memory service boundary.
+	if len(s.Persistence().RawMessages()) > 0 {
 		lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
-		remembered, err := s.MemorySvc().Memory().Recall(lastMsg, 2000)
-		if err == nil && remembered != "" {
-			s.AppendSystemContext("## Relevant Memories\n" + remembered)
+		if remembered := s.MemorySvc().RecallContext(ctx, lastMsg, 2000); remembered != "" {
+			s.AppendSystemContext(remembered)
 		}
 	}
 
@@ -144,8 +85,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	}
 
 	// Agents accumulator: inject learnings from previous sessions
-	if s.AgentsAccum != nil {
-		if learnings := s.AgentsAccum.ForPrompt(5); learnings != "" {
+	if s.LifecycleSvc().AgentsAccum() != nil {
+		if learnings := s.LifecycleSvc().AgentsAccum().ForPrompt(5); learnings != "" {
 			s.AppendSystemContext(learnings)
 		}
 	}
@@ -230,14 +171,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Pre-query hook
 		_ = hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
-			"provider": s.provider,
-			"model":    s.model,
+			"provider": s.ChatLLM().Provider(),
+			"model":    s.ChatLLM().Model(),
 			"messages": len(s.Persistence().RawMessages()),
 		})
 
-		s.log.Info("stream query", map[string]interface{}{
-			"provider": s.provider,
-			"model":    s.model,
+		s.Logger().Info("stream query", map[string]interface{}{
+			"provider": s.ChatLLM().Provider(),
+			"model":    s.ChatLLM().Model(),
 			"messages": len(s.Persistence().RawMessages()),
 		})
 
@@ -247,9 +188,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		maxTok := DynamicMaxTokens(s.Persistence().RawMessages(), contextSize, taskType)
 
 		// Model cascade: select optimal model for this request
-		activeModel := strings.TrimSpace(s.model)
+		activeModel := strings.TrimSpace(s.ChatLLM().Model())
 		if activeModel == "" {
-			activeModel = strings.TrimSpace(s.Cost.Model)
+			activeModel = strings.TrimSpace(s.ChatLLM().Model())
 		}
 		if s.LifecycleSvc().Cascade() != nil && s.LifecycleSvc().Cascade().Enabled {
 			lastUserMsg := ""
@@ -266,12 +207,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 
-		// Yaad: recall and refresh memories before every LLM call
-		if s.MemorySvc().Memory() != nil && len(s.Persistence().RawMessages()) > 0 {
+		// Recall and refresh memories before every LLM call through the
+		// memory service boundary.
+		if len(s.Persistence().RawMessages()) > 0 {
 			lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
-			remembered, err := s.MemorySvc().Memory().Recall(lastMsg, 3000)
-			if err == nil && remembered != "" {
-				s.ReplaceSystemContextSection("## Relevant Memories\n", "## Relevant Memories\n"+remembered)
+			if remembered := s.MemorySvc().RecallContext(ctx, lastMsg, 3000); remembered != "" {
+				s.ReplaceSystemContextSection("## Relevant Memories\n", remembered)
 			}
 		}
 
@@ -309,7 +250,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// explicit approval handoff before any changes. Ephemeral (not
 		// persisted to s.Persistence().System()) so it disappears once the
 		// stage advances to Implementing.
-		if s.Perm != nil && s.Perm.Stage != SpecStageNone && s.Perm.Stage != SpecStageImplementing {
+		if stage := s.PermSvc().SpecStage(); stage != SpecStageNone && stage != SpecStageImplementing {
 			opts.System += specStageSystemPrompt
 			// Inject user's spec configuration (language, framework, etc.)
 			// as context so the model writes specs that match preferences.
@@ -344,10 +285,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 		inputTokens += CountTokensFast(s.Persistence().System())
-		s.log.Info("token count", map[string]interface{}{"input_tokens": inputTokens, "model": s.model})
+		s.Logger().Info("token count", map[string]interface{}{"input_tokens": inputTokens, "model": s.ChatLLM().Model()})
 
 		// Cost warning for expensive calls
-		inPrice, outPrice := ModelPricing(s.model)
+		inPrice, outPrice := ModelPricing(s.ChatLLM().Model())
 		estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 		if estCost > 0.50 {
 			ch <- StreamEvent{Type: "blast_radius", Content: fmt.Sprintf("%s This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.", icons.Alert(), inputTokens+maxTok, estCost)}
@@ -355,8 +296,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Trace: start agent loop span for this turn
 		var loopSpan *oteltrace.Span
-		if s.Tracer != nil {
-			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.Tracer, s.provider, activeModel, len(s.Persistence().RawMessages()))
+		if s.TracerValue() != nil {
+			ctx, loopSpan = oteltrace.StartAgentLoopSpan(ctx, s.TracerValue(), s.ChatLLM().Provider(), activeModel, len(s.Persistence().RawMessages()))
 		}
 
 		// Issue the LLM call via the ChatService. The service handles
@@ -388,7 +329,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		var stopReason string
 		var lastUsage *types.EyrieUsage
 		var usageLedger streamUsageLedger
-		resolvedProvider := strings.TrimSpace(s.provider)
+		resolvedProvider := strings.TrimSpace(s.ChatLLM().Provider())
 		resolvedModel := strings.TrimSpace(activeModel)
 
 		// Compatibility clients retain Hawk's historical stream retry and
@@ -571,8 +512,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Budget enforcement
 		limits := s.LifecycleSvc().Limits()
-		if limits.MaxBudgetUSD() > 0 && s.Cost.TotalUSD() >= limits.MaxBudgetUSD() {
-			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.Cost.TotalUSD(), limits.MaxBudgetUSD())}
+		if limits.MaxBudgetUSD() > 0 && s.CostValue().TotalUSD() >= limits.MaxBudgetUSD() {
+			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())}
 			ch <- StreamEvent{Type: "done"}
 			return
 		}
@@ -676,7 +617,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					defer sCancel()
 					resp, err := s.ChatLLM().Chat(sCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
-					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
+					}, types.ChatOptions{Provider: s.ChatLLM().Provider(), Model: s.ChatLLM().Model(), MaxTokens: 2048})
 					if err != nil || resp == nil {
 						return
 					}
@@ -708,7 +649,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					defer dCancel()
 					resp, err := s.ChatLLM().Chat(dCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
-					}, types.ChatOptions{Provider: s.provider, Model: s.model, MaxTokens: 2048})
+					}, types.ChatOptions{Provider: s.ChatLLM().Provider(), Model: s.ChatLLM().Model(), MaxTokens: 2048})
 					if err != nil || resp == nil {
 						return
 					}
@@ -734,8 +675,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			// Session end hook
 			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
-				"provider": s.provider,
-				"model":    s.model,
+				"provider": s.ChatLLM().Provider(),
+				"model":    s.ChatLLM().Model(),
 				"messages": len(s.Persistence().RawMessages()),
 			})
 			return
@@ -767,10 +708,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.LifecycleSvc().Backtrack().RecordDecision(turnCount, strings.Join(toolNames, ", "), nil, s.Persistence().RawMessages())
 		}
 
-		results := s.executeToolCalls(ctx, toolCalls, ch, turnCount, textContent.String())
+		results := s.Tools().ExecuteAll(ctx, toolCalls, ch, turnCount, textContent.String())
 
 		// Auto-snapshot after write operations for granular undo
-		if s.Snapshots != nil && len(toolCalls) > 0 {
+		if s.Tools().Snapshots() != nil && len(toolCalls) > 0 {
 			var writeNames []string
 			for _, tc := range toolCalls {
 				if !tool.IsReadOnly(tc.Name) {
@@ -783,7 +724,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					// leak a goroutine after the session ends.
 					snapCtx, snapCancel := context.WithTimeout(context.Background(), 30*time.Second)
 					defer snapCancel()
-					_, _ = s.Snapshots.TrackCtx(snapCtx, strings.Join(writeNames, ", "))
+					_, _ = s.Tools().Snapshots().TrackCtx(snapCtx, strings.Join(writeNames, ", "))
 				}()
 			}
 		}

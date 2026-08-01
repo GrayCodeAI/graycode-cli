@@ -56,8 +56,8 @@ func (s *Session) SplitTurnNeeded(keepCount int) bool {
 // Result: merged summary + tail of oversized turn + any messages after
 func (s *Session) splitTurnCompact() {
 	keepEnd := 10
-	if s.PinnedMessages > keepEnd {
-		keepEnd = s.PinnedMessages
+	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
+		keepEnd = pinned
 	}
 	if len(s.Persistence().RawMessages()) <= keepEnd {
 		return
@@ -94,10 +94,11 @@ func (s *Session) splitTurnCompact() {
 	splitPoint := tailStart + oversizedIdx
 
 	// Extract file tracking before compaction
-	if s.Files == nil {
-		s.Files = NewFileTracker()
+	if s.Persistence().Files() == nil {
+		s.Persistence().SetFiles(NewFileTracker())
 	}
-	s.Files.ExtractFromMessages(s.Persistence().RawMessages()[:splitPoint])
+	files := s.Persistence().Files()
+	files.ExtractFromMessages(s.Persistence().RawMessages()[:splitPoint])
 
 	// Phase 1: Summarize everything before the oversized turn
 	phase1Summary := s.generatePartialSummary(s.Persistence().RawMessages()[:splitPoint])
@@ -118,7 +119,7 @@ func (s *Session) splitTurnCompact() {
 	}
 
 	// Append file tracking
-	fileBlock := s.Files.FormatForSummary()
+	fileBlock := files.FormatForSummary()
 	if fileBlock != "" {
 		combined.WriteString("\n\n")
 		combined.WriteString(fileBlock)
@@ -174,8 +175,8 @@ func (s *Session) generatePartialSummary(messages []types.EyrieMessage) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := s.client.Chat(ctx, summaryMsgs, types.ChatOptions{
-		Provider:  s.provider,
+	resp, err := s.ChatLLM().Chat(ctx, summaryMsgs, types.ChatOptions{
+		Provider:  s.ChatLLM().Provider(),
 		Model:     s.compactModel(),
 		MaxTokens: 1000,
 	})
@@ -215,8 +216,8 @@ func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := s.client.Chat(ctx, summaryMsgs, types.ChatOptions{
-		Provider:  s.provider,
+	resp, err := s.ChatLLM().Chat(ctx, summaryMsgs, types.ChatOptions{
+		Provider:  s.ChatLLM().Provider(),
 		Model:     s.compactModel(),
 		MaxTokens: 500,
 	})
@@ -234,17 +235,18 @@ func (s *Session) smartCompactFallback() {
 	}
 
 	keepEnd := 10
-	if s.PinnedMessages > keepEnd {
-		keepEnd = s.PinnedMessages
+	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
+		keepEnd = pinned
 	}
 
-	if s.Files == nil {
-		s.Files = NewFileTracker()
+	if s.Persistence().Files() == nil {
+		s.Persistence().SetFiles(NewFileTracker())
 	}
+	files := s.Persistence().Files()
 	compactedMsgs := s.Persistence().RawMessages()[:len(s.Persistence().RawMessages())-keepEnd]
-	s.Files.ExtractFromMessages(compactedMsgs)
+	files.ExtractFromMessages(compactedMsgs)
 	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
-		s.Files.ParseFromSummary(compactedMsgs[0].Content)
+		files.ParseFromSummary(compactedMsgs[0].Content)
 	}
 
 	summary := s.generateSummary()
@@ -253,7 +255,7 @@ func (s *Session) smartCompactFallback() {
 		return
 	}
 
-	fileBlock := s.Files.FormatForSummary()
+	fileBlock := files.FormatForSummary()
 	if fileBlock != "" {
 		summary += "\n\n" + fileBlock
 	}

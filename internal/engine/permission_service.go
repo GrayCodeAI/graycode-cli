@@ -144,6 +144,24 @@ func (s *PermissionService) DryRun() bool { return s.perm.DryRun }
 // SetApproval replaces the ApprovalGate.
 func (s *PermissionService) SetApproval(a *ApprovalGate) { s.approval = a }
 
+// Approval returns the configured human-in-the-loop gate.
+func (s *PermissionService) Approval() *ApprovalGate { return s.approval }
+
+// SpecSlug returns the active specification identifier.
+func (s *PermissionService) SpecSlug() string {
+	if s == nil || s.perm == nil {
+		return ""
+	}
+	return s.perm.SpecSlug
+}
+
+// SetSpecSlug updates the active specification identifier.
+func (s *PermissionService) SetSpecSlug(slug string) {
+	if s != nil && s.perm != nil {
+		s.perm.SpecSlug = slug
+	}
+}
+
 // SetPermissionFn replaces the user-callback.
 func (s *PermissionService) SetPermissionFn(fn func(PermissionRequest)) {
 	s.permissionFn = fn

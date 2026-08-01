@@ -64,5 +64,5 @@ func (s *Session) supportsNativeCompaction() bool {
 	if s == nil || s.ChatLLM() == nil {
 		return false
 	}
-	return clientNativeCompaction(s.ChatLLM().Client(), context.Background(), s.provider, s.model)
+	return clientNativeCompaction(s.ChatLLM().Client(), context.Background(), s.ChatLLM().Provider(), s.ChatLLM().Model())
 }

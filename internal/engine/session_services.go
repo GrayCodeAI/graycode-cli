@@ -128,6 +128,17 @@ type Observability struct {
 // fields into coherent sub-services. Use Session.Services() to obtain this
 // view from existing code.
 type SessionServices struct {
+	// Canonical extracted services. These are the authoritative runtime
+	// collaborators for sessions created by NewSessionWithClient. The
+	// grouped views below remain during the compatibility migration so older
+	// callers can move incrementally without creating a second object graph.
+	Chat             *ChatService
+	Permissions      *PermissionService
+	LifecycleService *LifecycleService
+	MemoryService    *MemoryService
+	Persist          *PersistenceService
+	ToolService      *ToolService
+
 	Core    *CoreLoop
 	Safety  *SafetyLayer
 	Intel   *Intelligence
@@ -304,52 +315,68 @@ func NewSessionServices(opts ...ServiceOption) *SessionServices {
 // The returned *SessionServices references the same underlying objects as
 // Session, so mutations are visible in both directions.
 func (s *Session) Services() *SessionServices {
-	return &SessionServices{
-		Core: &CoreLoop{
-			Client:   s.client,
-			Registry: s.registry,
-			Messages: s.Persistence().RawMessages(),
-			Provider: s.provider,
-			Model:    s.model,
-			System:   s.Persistence().System(),
-			Log:      s.log,
-			MaxTurns: s.LifecycleSvc().Limits().MaxTurns(),
-		},
-		Safety: &SafetyLayer{
-			Perm:     s.Perm,
-			Sandbox:  s.Tools().Sandbox(),
-			Limits:   s.LifecycleSvc().Limits(),
-			Autonomy: s.Autonomy,
-		},
-		Intel: &Intelligence{
-			Beliefs:      s.LifecycleSvc().Beliefs(),
-			Memory:       s.MemorySvc().Memory(),
-			YaadBridge:   s.MemorySvc().Yaad(),
-			Enhanced:     s.MemorySvc().Enhanced(),
-			Sleeptime:    s.MemorySvc().Sleeptime(),
-			Activity:     s.MemorySvc().Activity(),
-			SkillDistill: s.MemorySvc().SkillDistiller(),
-		},
-		Optim: &Optimizer{
-			Cost:        Cost{Model: s.Cost.Model, PromptTokens: s.Cost.PromptTokens, CompletionTokens: s.Cost.CompletionTokens, TotalCostUSD: s.Cost.TotalCostUSD},
-			CostTracker: s.CostTracker,
-			Cascade:     s.LifecycleSvc().Cascade(),
-			MaxBudget:   s.LifecycleSvc().Limits().MaxBudgetUSD(),
-		},
-		Observe: &Observability{
-			Tracer:  s.Tracer,
-			Metrics: s.metrics,
-			Log:     s.log,
-		},
-		Lifecycle:         s.LifecycleSvc().Lifecycle(),
-		Reflector:         s.LifecycleSvc().Reflector(),
-		Critic:            s.LifecycleSvc().Critic(),
-		Backtrack:         s.LifecycleSvc().Backtrack(),
-		Shadow:            s.LifecycleSvc().Shadow(),
-		ConversationGraph: s.Persistence().Graph(),
-		Plan:              s.Plan,
-		Teach:             s.Teach,
-		Trajectory:        s.Trajectory,
-		Snapshots:         s.Snapshots,
+	if s == nil {
+		return nil
 	}
+	ss := s.services
+	if ss == nil {
+		ss = &SessionServices{}
+		s.services = ss
+	}
+	// Refresh the compatibility views on every call. The canonical service
+	// pointers are stable, but legacy callers may configure their fields
+	// after construction (for example /config wiring memory or lifecycle).
+	ss.Chat = s.llm
+	ss.Permissions = s.perms
+	ss.LifecycleService = s.life
+	ss.MemoryService = s.memory
+	ss.Persist = s.persist
+	ss.ToolService = s.tools
+	ss.Core = &CoreLoop{
+		Client:   s.client,
+		Registry: s.registry,
+		Messages: s.Persistence().RawMessages(),
+		Provider: s.provider,
+		Model:    s.model,
+		System:   s.Persistence().System(),
+		Log:      s.log,
+		MaxTurns: s.LifecycleSvc().Limits().MaxTurns(),
+	}
+	ss.Safety = &SafetyLayer{
+		Perm:     s.Perm,
+		Sandbox:  s.Tools().Sandbox(),
+		Limits:   s.LifecycleSvc().Limits(),
+		Autonomy: s.Autonomy,
+	}
+	ss.Intel = &Intelligence{
+		Beliefs:      s.LifecycleSvc().Beliefs(),
+		Memory:       s.MemorySvc().Memory(),
+		YaadBridge:   s.MemorySvc().Yaad(),
+		Enhanced:     s.MemorySvc().Enhanced(),
+		Sleeptime:    s.MemorySvc().Sleeptime(),
+		Activity:     s.MemorySvc().Activity(),
+		SkillDistill: s.MemorySvc().SkillDistiller(),
+	}
+	ss.Optim = &Optimizer{
+		Cost:        Cost{Model: s.Cost.Model, PromptTokens: s.Cost.PromptTokens, CompletionTokens: s.Cost.CompletionTokens, TotalCostUSD: s.Cost.TotalCostUSD},
+		CostTracker: s.CostTracker,
+		Cascade:     s.LifecycleSvc().Cascade(),
+		MaxBudget:   s.LifecycleSvc().Limits().MaxBudgetUSD(),
+	}
+	ss.Observe = &Observability{
+		Tracer:  s.Tracer,
+		Metrics: s.metrics,
+		Log:     s.log,
+	}
+	ss.Lifecycle = s.LifecycleSvc().Lifecycle()
+	ss.Reflector = s.LifecycleSvc().Reflector()
+	ss.Critic = s.LifecycleSvc().Critic()
+	ss.Backtrack = s.LifecycleSvc().Backtrack()
+	ss.Shadow = s.LifecycleSvc().Shadow()
+	ss.ConversationGraph = s.Persistence().Graph()
+	ss.Plan = s.Plan
+	ss.Teach = s.Teach
+	ss.Trajectory = s.Trajectory
+	ss.Snapshots = s.Snapshots
+	return ss
 }

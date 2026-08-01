@@ -2,9 +2,11 @@ package engine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // MemoryService is the Session's view of the memory layer: yaad bridge,
@@ -66,11 +68,21 @@ func (s *MemoryService) WithEnhanced(e *memory.EnhancedMemoryManager) *MemorySer
 // no memory is wired. Combines yaad recall + few-shot examples +
 // user-preference learning into one shot.
 func (s *MemoryService) RecallContext(_ context.Context, lastUserMsg string, budget int) string {
-	if s.yaad == nil {
+	if s == nil {
 		return ""
 	}
-	out, err := s.yaad.Recall(lastUserMsg, budget)
-	if err != nil || out == "" {
+	var out string
+	if s.yaad != nil {
+		out, _ = s.yaad.Recall(lastUserMsg, budget)
+	}
+	// The simple recaller is the compatibility path used by tests and
+	// lightweight integrations that do not install Yaad. Memory ownership
+	// stays in this service instead of leaking a backend decision into the
+	// agent loop.
+	if out == "" && s.memory != nil {
+		out, _ = s.memory.Recall(lastUserMsg, budget)
+	}
+	if out == "" {
 		return ""
 	}
 	return "## Relevant Memories\n" + out
@@ -94,6 +106,34 @@ func (s *MemoryService) Remember(ctx context.Context, content, category string) 
 func (s *MemoryService) OnSessionEnd(success bool) {
 	if s.enhanced != nil {
 		s.enhanced.EndSession(success)
+	}
+}
+
+// Finalize performs memory-side session bookkeeping from a transcript
+// snapshot. The agent loop does not need to know which backend is installed.
+func (s *MemoryService) Finalize(messages []types.EyrieMessage, success bool) {
+	if s == nil {
+		return
+	}
+	if s.enhanced != nil {
+		s.enhanced.EndSession(success)
+	}
+	if s.memory == nil {
+		return
+	}
+	goal := ""
+	for _, message := range messages {
+		if message.Role == "user" && len(message.ToolResults) == 0 {
+			goal = message.Content
+			break
+		}
+	}
+	if goal != "" {
+		summary := fmt.Sprintf("Session goal: %s", goal)
+		if !success {
+			summary += " (interrupted)"
+		}
+		_ = s.memory.Remember(summary, "session")
 	}
 }
 

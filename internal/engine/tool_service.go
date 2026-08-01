@@ -17,6 +17,7 @@ import (
 // god-object decomposition (see docs/session-decomposition.md).
 type ToolService struct {
 	registry          *tool.Registry
+	host              toolExecutionHost
 	containerExecutor tool.ContainerExecutor
 	containerRequired bool
 	tracer            *oteltrace.Tracer
@@ -25,9 +26,26 @@ type ToolService struct {
 	sandbox           *diff.DiffSandbox
 }
 
+// toolExecutionHost is the narrow compatibility seam used while the
+// historical post-tool pipeline is moved out of Session. It deliberately
+// exposes only batch execution; policy, persistence, and lifecycle state are
+// still obtained from their dedicated services by the host implementation.
+// Keeping this seam small lets callers migrate to ToolService without
+// reintroducing direct Session field access.
+type toolExecutionHost interface {
+	executeToolCalls(context.Context, []types.ToolCall, chan<- StreamEvent, int, string) []toolExecResult
+}
+
 // NewToolService constructs a ToolService with the given registry.
 func NewToolService(registry *tool.Registry) *ToolService {
 	return &ToolService{registry: registry}
+}
+
+// WithExecutionHost attaches the session-independent execution seam. It is
+// set once during session construction and is safe to replace in tests.
+func (s *ToolService) WithExecutionHost(host toolExecutionHost) *ToolService {
+	s.host = host
+	return s
 }
 
 // WithContainerExecutor configures container isolation.
@@ -69,6 +87,25 @@ func (s *ToolService) Classify(calls []types.ToolCall) (concurrent, sequential [
 		}
 	}
 	return
+}
+
+// ExecuteAll runs the complete tool batch pipeline. The service owns the
+// public operation and callers no longer need to reach into Session's
+// unexported execution method. A missing host produces deterministic error
+// results instead of panicking, which keeps isolated service tests useful.
+func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch chan<- StreamEvent, turn int, intent string) []toolExecResult {
+	if s == nil || s.host == nil {
+		results := make([]toolExecResult, len(calls))
+		for i, call := range calls {
+			msg := "tool execution host is unavailable"
+			results[i] = toolExecResult{tc: call, output: msg, isErr: true}
+			if ch != nil {
+				ch <- StreamEvent{Type: "tool_result", ToolName: call.Name, Content: msg}
+			}
+		}
+		return results
+	}
+	return s.host.executeToolCalls(ctx, calls, ch, turn, intent)
 }
 
 // ExtractTargets returns the file targets for a tool call.
@@ -124,6 +161,9 @@ func (s *ToolService) ContainerRequired() bool { return s.containerRequired }
 
 // ContainerExecutor returns the configured container executor, or nil.
 func (s *ToolService) ContainerExecutor() tool.ContainerExecutor { return s.containerExecutor }
+
+// Snapshots returns the configured automatic snapshot tracker.
+func (s *ToolService) Snapshots() SnapshotTracker { return s.snapshots }
 
 // Sandbox returns the diff sandbox (staged file changes for
 // review before apply). New code should access this through

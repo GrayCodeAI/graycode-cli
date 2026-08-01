@@ -94,6 +94,10 @@ type Session struct {
 	memory  *MemoryService
 	persist *PersistenceService
 	tools   *ToolService
+	// services is the canonical composition root for the extracted runtime
+	// collaborators. Legacy fields remain on Session only as compatibility
+	// shims while callers migrate to Services()/SubServices().
+	services *SessionServices
 
 	Perm *PermissionEngine // extracted permission subsystem
 	// Backward-compatible accessors below (will be removed after full migration)
@@ -305,7 +309,11 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
 	s.persist.SetSystem(systemPrompt)
-	s.tools = NewToolService(registry)
+	s.tools = NewToolService(registry).WithExecutionHost(s)
+	s.refreshContextWindowCache()
+	s.life.SetAgentsAccumulator(s.AgentsAccum)
+	s.life.SetLintLoop(s.LintLoop)
+	s.life.SetTestLoop(s.TestLoop)
 
 	// Alias legacy fields at the service instances so legacy readers see
 	// the same state as new code that goes through the sub-service getters.
@@ -376,6 +384,12 @@ func (s *Session) Provider() string {
 	return s.provider
 }
 func (s *Session) Metrics() *metrics.Registry { return s.metrics }
+
+// Logger returns the session logger through the observability boundary.
+func (s *Session) Logger() *logger.Logger { return s.log }
+
+// TracerValue returns the session tracer through the observability boundary.
+func (s *Session) TracerValue() *oteltrace.Tracer { return s.Tracer }
 
 // ChatLLM returns the extracted ChatService (Phase 1 of the god-object
 // decomposition). New code should prefer this over the legacy Client /
@@ -462,6 +476,20 @@ type SubServices struct {
 // only production constructor); the nil cases are reachable only
 // via direct struct literal construction in tests.
 func (s *Session) SubServices() SubServices {
+	if s == nil {
+		return SubServices{}
+	}
+	services := s.Services()
+	if services != nil {
+		return SubServices{
+			LLM:         services.Chat,
+			Perms:       services.Permissions,
+			Life:        services.LifecycleService,
+			Memory:      services.MemoryService,
+			Persistence: services.Persist,
+			Tools:       services.ToolService,
+		}
+	}
 	return SubServices{
 		LLM:         s.llm,
 		Perms:       s.perms,
@@ -479,6 +507,9 @@ func (s *Session) SetModel(model string) {
 	s.model = m
 	s.Cost.Model = m
 	s.mu.Unlock()
+	if s.llm != nil {
+		s.llm.SetModel(m)
+	}
 	s.syncCascadeDefaultModel()
 	s.refreshContextWindowCache()
 }
@@ -662,61 +693,16 @@ func (s *Session) ConvoHead() string {
 
 // AppendSystemContext adds runtime context, such as /add-dir, to future model calls.
 func (s *Session) AppendSystemContext(content string) {
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return
-	}
-	s.mu.Lock()
-	if strings.TrimSpace(s.system) == "" {
-		s.system = content
-	} else {
-		s.system += "\n\n" + content
-	}
-	updated := s.system
-	persist := s.persist
-	s.mu.Unlock()
-	if persist != nil {
-		persist.SetSystem(updated)
+	if p := s.Persistence(); p != nil {
+		p.AppendSystemContext(content)
 	}
 }
 
 // ReplaceSystemContextSection replaces the content of a system prompt section identified by its header.
 // If the header is not found, appends the content as a new section.
 func (s *Session) ReplaceSystemContextSection(header, content string) {
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return
-	}
-	s.mu.Lock()
-	idx := strings.Index(s.system, header)
-	if idx < 0 {
-		// AppendSystemContext is not called here to avoid double-locking;
-		// replicate its logic inline.
-		if strings.TrimSpace(s.system) == "" {
-			s.system = content
-		} else {
-			s.system += "\n\n" + content
-		}
-		updated := s.system
-		persist := s.persist
-		s.mu.Unlock()
-		if persist != nil {
-			persist.SetSystem(updated)
-		}
-		return
-	}
-	rest := s.system[idx+len(header):]
-	endIdx := strings.Index(rest, "\n\n## ")
-	if endIdx < 0 {
-		s.system = s.system[:idx] + content
-	} else {
-		s.system = s.system[:idx] + content + rest[endIdx:]
-	}
-	updated := s.system
-	persist := s.persist
-	s.mu.Unlock()
-	if persist != nil {
-		persist.SetSystem(updated)
+	if p := s.Persistence(); p != nil {
+		p.ReplaceSystemContextSection(header, content)
 	}
 }
 
@@ -728,6 +714,9 @@ func (s *Session) SetLogger(l *logger.Logger) {
 // SetAllowedDirs sets directories that file tools are allowed to access.
 func (s *Session) SetAllowedDirs(dirs []string) {
 	s.AllowedDirs = append([]string(nil), dirs...)
+	if s.perms != nil {
+		s.perms.SetAllowedDirs(append([]string(nil), dirs...))
+	}
 }
 
 // SetAutoCompactThresholdPct sets the auto-compact threshold.
@@ -735,6 +724,9 @@ func (s *Session) SetAllowedDirs(dirs []string) {
 // s.AutoCompactThresholdPct field directly.
 func (s *Session) SetAutoCompactThresholdPct(pct int) {
 	s.AutoCompactThresholdPct = pct
+	if s.persist != nil {
+		s.persist.SetAutoCompactThresholdPct(pct)
+	}
 }
 
 // SetPinnedMessages sets the number of recent messages that are
@@ -765,6 +757,9 @@ func (s *Session) SetGLMThinkingEnabled(v *bool) {
 // this instead of writing to the legacy s.Snapshots field directly.
 func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
 	s.Snapshots = snap
+	if s.tools != nil {
+		s.tools.WithSnapshots(snap)
+	}
 }
 
 // SetContainerRequired sets the container-first mode flag on the
@@ -793,6 +788,26 @@ func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
 // call this instead of writing to the legacy s.Approval field.
 func (s *Session) SetApproval(a *ApprovalGate) {
 	s.Approval = a
+	if s.perms != nil {
+		s.perms.SetApproval(a)
+	}
+}
+
+// syncPermissionCompatibility copies legacy callback fields into the
+// authoritative permission service for callers that have not migrated yet.
+func (s *Session) syncPermissionCompatibility() {
+	if s == nil || s.perms == nil {
+		return
+	}
+	if s.PermissionFn != nil {
+		s.perms.SetPermissionFn(s.PermissionFn)
+	}
+	if s.Autonomy != 0 {
+		s.perms.SetAutonomy(s.Autonomy)
+	}
+	if s.Approval != nil {
+		s.perms.SetApproval(s.Approval)
+	}
 }
 
 // SetConversationGraph attaches Hawk's product-owned conversation graph and

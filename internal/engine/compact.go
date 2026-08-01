@@ -44,8 +44,8 @@ func (s *Session) smartCompact() {
 
 	// Keep last N messages + summary, respecting pinned count
 	keepEnd := 10
-	if s.PinnedMessages > keepEnd {
-		keepEnd = s.PinnedMessages
+	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
+		keepEnd = pinned
 	}
 
 	// Check for split-turn condition first
@@ -55,14 +55,15 @@ func (s *Session) smartCompact() {
 	}
 
 	// Extract file tracking from messages being compacted
-	if s.Files == nil {
-		s.Files = NewFileTracker()
+	if s.Persistence().Files() == nil {
+		s.Persistence().SetFiles(NewFileTracker())
 	}
+	files := s.Persistence().Files()
 	compactedMsgs := s.Persistence().RawMessages()[:len(s.Persistence().RawMessages())-keepEnd]
-	s.Files.ExtractFromMessages(compactedMsgs)
+	files.ExtractFromMessages(compactedMsgs)
 	// Also parse any previous tracked-files from existing summary
 	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
-		s.Files.ParseFromSummary(compactedMsgs[0].Content)
+		files.ParseFromSummary(compactedMsgs[0].Content)
 	}
 
 	// Try LLM-based summary first, fall back to truncation
@@ -73,7 +74,7 @@ func (s *Session) smartCompact() {
 	}
 
 	// Append file tracking to summary
-	fileBlock := s.Files.FormatForSummary()
+	fileBlock := files.FormatForSummary()
 	if fileBlock != "" {
 		summary += "\n\n" + fileBlock
 	}
@@ -128,8 +129,8 @@ func (s *Session) generateSummary() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := s.client.Chat(ctx, summaryMsgs, types.ChatOptions{
-		Provider:  s.provider,
+	resp, err := s.ChatLLM().Chat(ctx, summaryMsgs, types.ChatOptions{
+		Provider:  s.ChatLLM().Provider(),
 		Model:     s.compactModel(),
 		MaxTokens: 1000,
 	})
@@ -179,10 +180,10 @@ func CompressMessageContent(content string, maxTokens int) string {
 // Queries eyrie's catalog at runtime — no hardcoded model names.
 // Summarization doesn't need frontier reasoning, so the cheapest model suffices.
 func (s *Session) compactModel() string {
-	provider := strings.ToLower(s.provider)
+	provider := strings.ToLower(s.ChatLLM().Provider())
 	models := modelPkg.ByProvider(provider)
 	if len(models) == 0 {
-		return s.model
+		return s.ChatLLM().Model()
 	}
 
 	// Find the cheapest model by input price
@@ -194,9 +195,9 @@ func (s *Session) compactModel() string {
 	}
 
 	// Only use a cheaper model if it actually costs less than the session model
-	if info, ok := modelPkg.Find(s.model); ok {
+	if info, ok := modelPkg.Find(s.ChatLLM().Model()); ok {
 		if cheapest.InputPrice >= info.InputPrice {
-			return s.model
+			return s.ChatLLM().Model()
 		}
 	}
 
