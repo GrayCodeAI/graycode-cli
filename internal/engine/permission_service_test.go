@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -79,6 +80,29 @@ func TestPermissionService_ResetSpecIncrementsRevision(t *testing.T) {
 	if s.Engine().Revision <= before {
 		t.Fatalf("ResetSpec revision = %d, want > %d", s.Engine().Revision, before)
 	}
+}
+
+func TestPermissionService_ConcurrentPolicyUpdates(t *testing.T) {
+	s := NewPermissionService(nil)
+	ctx := context.Background()
+	modes := []sandbox.Mode{sandbox.ModeStrict, sandbox.ModeWorkspace, sandbox.ModeOff}
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			s.SetAutonomy(AutonomyLevel(i % int(AutonomyYOLO+1)))
+			s.SetSandboxMode(modes[i%len(modes)])
+			s.SetAllowedDirs([]string{"/workspace", "/tmp"})
+		}(i)
+		go func() {
+			defer wg.Done()
+			_ = s.EvaluateTool(ctx, ToolCallInfo{Name: "Read"})
+			_ = s.PolicySnapshot()
+			_, _, _ = s.SpecProgress()
+		}()
+	}
+	wg.Wait()
 }
 
 func TestPermissionService_SandboxModeRoundTrip(t *testing.T) {

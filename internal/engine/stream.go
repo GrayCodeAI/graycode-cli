@@ -309,12 +309,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// explicit approval handoff before any changes. Ephemeral (not
 		// persisted to s.Persistence().System()) so it disappears once the
 		// stage advances to Implementing.
-		if s.Perm != nil && s.Perm.Stage != SpecStageNone && s.Perm.Stage != SpecStageImplementing {
-			opts.System += specStageSystemPrompt
-			// Inject user's spec configuration (language, framework, etc.)
-			// as context so the model writes specs that match preferences.
-			if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
-				opts.System += cfgPrompt
+		if perms := s.PermSvc(); perms != nil {
+			stage := perms.SpecStage()
+			if stage != SpecStageNone && stage != SpecStageImplementing {
+				opts.System += specStageSystemPrompt
+				// Inject user's spec configuration (language, framework, etc.)
+				// as context so the model writes specs that match preferences.
+				if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
+					opts.System += cfgPrompt
+				}
 			}
 		}
 		if s.Tools() != nil && s.Tools().Registry() != nil {

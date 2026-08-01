@@ -176,16 +176,24 @@ func renderStatusBarLeft(m *chatModel) string {
 // specStageForStatus returns a short spec stage indicator for the status bar,
 // or empty string if no spec workflow is active.
 func specStageForStatus(m *chatModel) string {
-	if m == nil || m.session == nil || m.session.Perm == nil {
+	if m == nil || m.session == nil {
 		return ""
 	}
-	stage := m.session.Perm.Stage
+	var stage engine.SpecStage
+	var phase, phases int
+	if m.session.PermSvc() != nil {
+		stage, phase, phases = m.session.PermSvc().SpecProgress()
+	} else if m.session.Perm != nil {
+		stage, phase, phases = m.session.Perm.Stage, m.session.Perm.Phase, m.session.Perm.Phases
+	} else {
+		return ""
+	}
 	if stage == engine.SpecStageNone {
 		return ""
 	}
 	label := specStageDisplayName(stage)
-	if stage == engine.SpecStageImplementing && m.session.Perm.Phases > 0 {
-		return fmt.Sprintf("%s %s %d/%d", icons.FileDocument(), label, m.session.Perm.Phase, m.session.Perm.Phases)
+	if stage == engine.SpecStageImplementing && phases > 0 {
+		return fmt.Sprintf("%s %s %d/%d", icons.FileDocument(), label, phase, phases)
 	}
 	return fmt.Sprintf("%s %s", icons.FileDocument(), label)
 }
