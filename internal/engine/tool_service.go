@@ -9,6 +9,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/diff"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -29,6 +30,7 @@ type ToolService struct {
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
+	metrics           *metrics.Registry
 }
 
 // toolExecutionDeps contains the service-owned collaborators needed for one
@@ -36,16 +38,17 @@ type ToolService struct {
 // permission, approval, tracing, timeout, and retry boundary from Session;
 // post-call product hooks remain in Session until the next migration slice.
 type toolExecutionDeps struct {
-	permissions     *PermissionService
-	chat            *ChatService
-	memory          *MemoryService
-	agentSpawn      tool.AgentSpawnFn
-	askUser         func(string) (string, error)
-	readOnlyBash    bool
-	workingDir      string
-	syncPermissions func()
-	checkApproval   func(context.Context, string, map[string]interface{}) (bool, string)
-	recordPolicy    func(types.ToolCall, string, bool, string)
+	permissions        *PermissionService
+	chat               *ChatService
+	memory             *MemoryService
+	agentSpawn         tool.AgentSpawnFn
+	askUser            func(string) (string, error)
+	readOnlyBash       bool
+	workingDir         string
+	syncPermissions    func()
+	checkApproval      func(context.Context, string, map[string]interface{}) (bool, string)
+	recordPolicy       func(types.ToolCall, string, bool, string)
+	recordVerification func(types.ToolCall, string, bool)
 }
 
 // toolExecutionHost is the narrow compatibility seam used while the
@@ -73,6 +76,12 @@ func (s *ToolService) WithExecutionHost(host toolExecutionHost) *ToolService {
 // WithExecutionDeps binds the extracted service graph used by ExecuteOne.
 func (s *ToolService) WithExecutionDeps(deps toolExecutionDeps) *ToolService {
 	s.deps = deps
+	return s
+}
+
+// WithMetrics attaches the registry used for tool execution counters.
+func (s *ToolService) WithMetrics(registry *metrics.Registry) *ToolService {
+	s.metrics = registry
 	return s
 }
 
@@ -333,6 +342,45 @@ func (s *ToolService) NormalizeOutput(output, canonicalTool, toolID string, cont
 		output = output[:maxChars] + "\n... (truncated)"
 	}
 	return maybeSpillToolOutput(output, canonicalTool, toolID)
+}
+
+// CompleteResult owns the service-level completion contract after Session's
+// domain-specific post-processing has finished.
+func (s *ToolService) CompleteResult(ctx context.Context, result toolExecResult, ch chan<- StreamEvent) toolExecResult {
+	output, isErr := result.output, result.isErr
+	if !isErr && s.deps.permissions != nil {
+		switch canonicalToolName(result.tc.Name) {
+		case "Specify", "Plan", "Tasks":
+			s.deps.permissions.AdvanceSpecStage(result.tc.Name)
+		case "ApproveImplementation":
+			s.deps.permissions.AdvanceSpecStage(result.tc.Name)
+			output = "Spec approved — switched to implementation. You may now make changes."
+		}
+	}
+	if s.metrics != nil {
+		s.metrics.Counter("tools.executed").Inc()
+		if isErr {
+			s.metrics.Counter("tools.errors").Inc()
+		}
+	}
+	if s.deps.memory != nil && s.deps.memory.Enhanced() != nil {
+		s.deps.memory.Enhanced().OnToolResult(result.tc.Name, result.tc.Arguments, output, isErr)
+	}
+	hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{
+		"tool": result.tc.Name, "output": output, "is_err": isErr,
+	})
+	if s.deps.recordVerification != nil {
+		s.deps.recordVerification(result.tc, output, isErr)
+	}
+	ch <- StreamEvent{Type: "tool_result", ToolName: result.tc.Name, Content: output}
+	if result.span != nil {
+		if isErr {
+			result.span.SetTag("error", "true")
+		}
+		result.span.Finish()
+	}
+	result.output = output
+	return result
 }
 
 // ExtractTargets returns the file targets for a tool call.

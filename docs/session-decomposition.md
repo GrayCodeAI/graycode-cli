@@ -46,7 +46,9 @@ The refactor branch now enforces these boundaries:
   and read-only concurrency limits. `ToolService.ExecuteOne` now owns raw
   invocation boundaries: permission/approval, tracing, isolation, context
   injection, lookup, timeout, and retry. Session retains only compatibility
-  post-processing hooks for the returned result.
+  mutation/learning hooks for the returned result; `CompleteResult` owns
+  spec transitions, counters, enhanced-memory notification, post-tool hooks,
+  verification observation, span closure, and result emission.
 - The agent loop uses these service APIs for transport, persistence, memory,
   lifecycle, permission-stage, and tool-batch operations.
 

@@ -597,45 +597,9 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	}
 
-	// Spec-stage transitions driven by the model's spec workflow tools.
-	// Reaching this point means the tool was granted by the permission
-	// engine — for ApproveImplementation specifically, that always meant a
-	// real user prompt (see PermissionEngine.CheckTool's spec gate), so this
-	// is the approval handoff into Implementing.
-	if !isErr {
-		switch canonicalToolName(tc.Name) {
-		case "Specify", "Plan", "Tasks":
-			s.PermSvc().AdvanceSpecStage(tc.Name)
-		case "ApproveImplementation":
-			s.PermSvc().AdvanceSpecStage(tc.Name)
-			output = "Spec approved — switched to implementation. You may now make changes."
-		}
-	}
-
-	s.Metrics().Counter("tools.executed").Inc()
-	if isErr {
-		s.Metrics().Counter("tools.errors").Inc()
-	}
-
-	if s.MemorySvc().Enhanced() != nil {
-		s.MemorySvc().Enhanced().OnToolResult(tc.Name, tc.Arguments, output, isErr)
-	}
-
-	hooks.ExecuteAsync(ctx, hooks.EventPostTool, map[string]interface{}{
-		"tool":   tc.Name,
-		"output": output,
-		"is_err": isErr,
-	})
-
-	s.recordVerificationObservation(tc, output, isErr)
-	ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
-	if toolSpan != nil {
-		if isErr {
-			toolSpan.SetTag("error", "true")
-		}
-		toolSpan.Finish()
-	}
-	return toolExecResult{tc: tc, output: output, isErr: isErr}
+	return s.Tools().CompleteResult(ctx, toolExecResult{
+		tc: tc, output: output, isErr: isErr, err: execErr, span: toolSpan,
+	}, ch)
 }
 
 // shouldReflect determines if the Reflector should analyze a tool failure.

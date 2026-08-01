@@ -310,7 +310,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
 	s.persist.SetSystem(systemPrompt)
-	s.tools = NewToolService(registry).WithExecutionHost(s)
+	s.tools = NewToolService(registry).WithExecutionHost(s).WithMetrics(s.metrics)
 	s.tools.WithExecutionDeps(toolExecutionDeps{
 		permissions: s.perms,
 		chat:        s.llm,
@@ -327,11 +327,12 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 			}
 			return s.AskUserFn(question)
 		},
-		readOnlyBash:    s.readOnlyBash,
-		workingDir:      s.workingDir,
-		syncPermissions: s.syncPermissionCompatibility,
-		checkApproval:   s.CheckApproval,
-		recordPolicy:    s.recordPolicyObservation,
+		readOnlyBash:       s.readOnlyBash,
+		workingDir:         s.workingDir,
+		syncPermissions:    s.syncPermissionCompatibility,
+		checkApproval:      s.CheckApproval,
+		recordPolicy:       s.recordPolicyObservation,
+		recordVerification: s.recordVerificationObservation,
 	})
 	s.refreshContextWindowCache()
 	s.life.SetAgentsAccumulator(s.AgentsAccum)
