@@ -15,21 +15,21 @@ func (w *SpecWorkflow) Transition(toolName, slug string) error {
 	switch canonicalToolName(toolName) {
 	case "Specify":
 		if w.Stage != SpecStageNone && w.Stage != SpecStageSpecify {
-			return fmt.Errorf("Specify is unavailable at spec stage %d", w.Stage)
+			return fmt.Errorf("specify is unavailable at spec stage %d", w.Stage)
 		}
 		if slug == "" {
-			return fmt.Errorf("Specify requires a non-empty spec slug")
+			return fmt.Errorf("specify requires a non-empty spec slug")
 		}
 		w.Slug = slug
 		w.Stage = SpecStageSpecify
 	case "Plan":
 		if w.Stage != SpecStageSpecify || w.Slug == "" {
-			return fmt.Errorf("Plan requires a completed Specify stage")
+			return fmt.Errorf("plan requires a completed specify stage")
 		}
 		w.Stage = SpecStagePlan
 	case "Tasks":
 		if w.Stage != SpecStagePlan {
-			return fmt.Errorf("Tasks requires a completed Plan stage")
+			return fmt.Errorf("tasks requires a completed plan stage")
 		}
 		w.Stage = SpecStageTasks
 	case "ApproveImplementation":

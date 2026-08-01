@@ -133,10 +133,12 @@ func (pe *PermissionEngine) Snapshot() PolicySnapshot {
 	if pe.Memory != nil {
 		rules = pe.Memory.Snapshot()
 	}
-	return PolicySnapshot{Autonomy: pe.Autonomy, AutonomyExplicit: pe.AutonomyExplicit,
+	return PolicySnapshot{
+		Autonomy: pe.Autonomy, AutonomyExplicit: pe.AutonomyExplicit,
 		SandboxMode: pe.SandboxMode, Stage: pe.Stage, DryRun: pe.DryRun,
 		SpecSlug: pe.SpecSlug, Phase: pe.Phase, Phases: pe.Phases, Revision: pe.Revision,
-		Rules: rules}
+		Rules: rules,
+	}
 }
 
 // NewPermissionEngine creates a PermissionEngine with sensible defaults.
@@ -366,21 +368,6 @@ func (pe *PermissionEngine) checkPreToolHooks(tc ToolCallInfo) (bool, string) {
 		// Modify of args is applied later by stream layer if needed.
 		return false, ""
 	}
-}
-
-// promptUser blocks on PromptFn, asking the user to approve tc, using the
-// generic tool summary.
-func (pe *PermissionEngine) promptUser(ctx context.Context, tc ToolCallInfo) (bool, string) {
-	d := pe.promptDecision(ctx, tc)
-	return d.Outcome == DecisionAllow, d.Message
-}
-
-// promptUserWithSummary is promptUser with a caller-supplied summary,
-// letting ApproveImplementation show spec/plan/tasks content instead of
-// the generic (and, since it takes no args, empty) tool summary.
-func (pe *PermissionEngine) promptUserWithSummary(ctx context.Context, tc ToolCallInfo, summary string) (bool, string) {
-	d := pe.promptDecisionWithSummary(ctx, tc, summary)
-	return d.Outcome == DecisionAllow, d.Message
 }
 
 func (pe *PermissionEngine) promptDecision(ctx context.Context, tc ToolCallInfo) Decision {

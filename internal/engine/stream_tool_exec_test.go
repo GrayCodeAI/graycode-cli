@@ -142,4 +142,7 @@ func TestExecuteSingleTool_PropagatesPermissionContext(t *testing.T) {
 	if len(capture.ctx.AllowedDirectories) != 1 || capture.ctx.AllowedDirectories[0] != "/tmp/extra" {
 		t.Fatalf("AllowedDirectories = %#v", capture.ctx.AllowedDirectories)
 	}
+	if got := sess.PermSvc().AllowedDirs(); len(got) != 1 || got[0] != "/tmp/extra" {
+		t.Fatalf("service AllowedDirs = %#v", got)
+	}
 }

@@ -346,12 +346,12 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			return resp.Content, nil
 		},
 		YaadBridge:         s.MemorySvc().Yaad(),
-		SpecSlugGet:        func() string { return s.Perm.SpecSlug },
-		SpecSlugSet:        func(slug string) { s.Perm.SpecSlug = slug },
+		SpecSlugGet:        func() string { return s.PermSvc().SpecSlug() },
+		SpecSlugSet:        func(slug string) { s.PermSvc().SetSpecSlug(slug) },
 		BackgroundManager:  s.ensureBackgroundManager(),
 		ReadOnlyBash:       s.readOnlyBash,
 		WorkingDir:         s.workingDir,
-		AllowedDirectories: append([]string(nil), s.AllowedDirs...),
+		AllowedDirectories: s.PermSvc().AllowedDirs(),
 		SandboxMode:        sandboxMode,
 	})
 	if sandboxMode != "" {
@@ -625,12 +625,11 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	if !isErr {
 		switch canonicalToolName(tc.Name) {
 		case "Specify", "Plan", "Tasks":
-			s.Perm.AdvanceSpecStage(tc.Name)
+			s.PermSvc().AdvanceSpecStage(tc.Name)
 		case "SpecReset":
-			s.Perm.SpecSlug = ""
-			s.Perm.Stage = SpecStageNone
+			s.PermSvc().ResetSpec()
 		case "ApproveImplementation":
-			s.Perm.AdvanceSpecStage(tc.Name)
+			s.PermSvc().AdvanceSpecStage(tc.Name)
 			output = "Spec approved — switched to implementation. You may now make changes."
 		}
 	}

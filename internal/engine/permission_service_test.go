@@ -48,12 +48,36 @@ func TestPermissionService_BudgetAndTurnCaps(t *testing.T) {
 func TestPermissionService_AutonomyAndAllowedDirs(t *testing.T) {
 	s := NewPermissionService(nil)
 	s.SetAutonomy(AutonomySupervised)
-	s.SetAllowedDirs([]string{"/tmp", "/var/folders"})
+	dirs := []string{"/tmp", "/var/folders"}
+	s.SetAllowedDirs(dirs)
+	dirs[0] = "/changed"
 	if s.Autonomy() != AutonomySupervised {
 		t.Errorf("Autonomy = %v, want AutonomySupervised", s.Autonomy())
 	}
 	if len(s.AllowedDirs()) != 2 {
 		t.Errorf("AllowedDirs len = %d, want 2", len(s.AllowedDirs()))
+	}
+	got := s.AllowedDirs()
+	got[0] = "/changed-again"
+	if s.AllowedDirs()[0] != "/tmp" {
+		t.Fatalf("AllowedDirs returned an aliased slice: %v", s.AllowedDirs())
+	}
+}
+
+func TestPermissionService_ResetSpecIncrementsRevision(t *testing.T) {
+	s := NewPermissionService(nil)
+	s.SetSpecSlug("demo")
+	s.SetSpecStage(SpecStageImplementing)
+	before := s.Engine().Revision
+	s.ResetSpec()
+	if got := s.SpecSlug(); got != "" {
+		t.Fatalf("SpecSlug after reset = %q, want empty", got)
+	}
+	if got := s.SpecStage(); got != SpecStageNone {
+		t.Fatalf("SpecStage after reset = %v, want none", got)
+	}
+	if s.Engine().Revision <= before {
+		t.Fatalf("ResetSpec revision = %d, want > %d", s.Engine().Revision, before)
 	}
 }
 

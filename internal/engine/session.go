@@ -727,7 +727,14 @@ func (s *Session) SetLogger(l *logger.Logger) {
 
 // SetAllowedDirs sets directories that file tools are allowed to access.
 func (s *Session) SetAllowedDirs(dirs []string) {
-	s.AllowedDirs = append([]string(nil), dirs...)
+	copyDirs := append([]string(nil), dirs...)
+	s.mu.Lock()
+	s.AllowedDirs = append([]string(nil), copyDirs...)
+	perms := s.perms
+	s.mu.Unlock()
+	if perms != nil {
+		perms.SetAllowedDirs(copyDirs)
+	}
 }
 
 // SetAutoCompactThresholdPct sets the auto-compact threshold.

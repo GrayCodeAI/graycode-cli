@@ -178,7 +178,10 @@ func (s *PermissionService) SetMaxTurns(turns int) { s.maxTurns = turns }
 func (s *PermissionService) SetMaxBudgetUSD(usd float64) { s.maxBudgetUSD = usd }
 
 // SetAllowedDirs sets the directories the agent may write to.
-func (s *PermissionService) SetAllowedDirs(dirs []string) { s.allowedDirs = dirs }
+// The service owns its copy so callers cannot mutate policy after publication.
+func (s *PermissionService) SetAllowedDirs(dirs []string) {
+	s.allowedDirs = append([]string(nil), dirs...)
+}
 
 // SetAutonomy sets the agent's autonomy level. Writes directly to the
 // underlying PermissionEngine — the same field CheckTool reads — rather
@@ -224,8 +227,30 @@ func (s *PermissionService) MaxTurns() int { return s.maxTurns }
 // MaxBudgetUSD returns the cap.
 func (s *PermissionService) MaxBudgetUSD() float64 { return s.maxBudgetUSD }
 
-// AllowedDirs returns the write-allowlist.
-func (s *PermissionService) AllowedDirs() []string { return s.allowedDirs }
+// AllowedDirs returns a copy of the write-allowlist.
+func (s *PermissionService) AllowedDirs() []string {
+	return append([]string(nil), s.allowedDirs...)
+}
+
+// SpecSlug returns the active spec slug.
+func (s *PermissionService) SpecSlug() string { return s.perm.SpecSlug }
+
+// SetSpecSlug updates the active spec slug through the permission service.
+// Workflow stage transitions remain explicit via AdvanceSpecStage or ResetSpec.
+func (s *PermissionService) SetSpecSlug(slug string) { s.perm.SpecSlug = slug }
+
+// AdvanceSpecStage applies a validated workflow transition.
+func (s *PermissionService) AdvanceSpecStage(name string) {
+	s.perm.AdvanceSpecStage(name)
+}
+
+// ResetSpec clears the active workflow and records a new policy revision.
+func (s *PermissionService) ResetSpec() {
+	w := safety.SpecWorkflow{Stage: s.perm.Stage, Slug: s.perm.SpecSlug}
+	w.Reset()
+	s.perm.Stage, s.perm.SpecSlug = w.Stage, w.Slug
+	s.perm.Revision++
+}
 
 // Autonomy returns the autonomy level.
 func (s *PermissionService) Autonomy() AutonomyLevel { return s.perm.Autonomy }
