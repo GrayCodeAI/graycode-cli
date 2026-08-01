@@ -176,7 +176,17 @@ func (s *Session) CheckApproval(_ context.Context, toolName string, args map[str
 	}
 
 	// Within the auto-approve threshold the operator has opted into automation.
-	if s.Autonomy <= g.MaxAutoApprove {
+	autonomy := s.Autonomy
+	if s.PermSvc() != nil {
+		autonomy = s.PermSvc().Autonomy()
+		// Preserve legacy callers that still assign a non-default tier directly
+		// to Session.Autonomy. Supervised is the zero value, so the service is
+		// authoritative when the legacy field is still at its default.
+		if s.Autonomy != AutonomySupervised {
+			autonomy = s.Autonomy
+		}
+	}
+	if autonomy <= g.MaxAutoApprove {
 		return true, ""
 	}
 

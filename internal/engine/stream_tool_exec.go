@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/safety"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
@@ -288,11 +289,13 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	if s.Autonomy != 0 {
 		s.PermSvc().SetAutonomy(s.Autonomy)
 	}
-	granted, denyMsg := s.PermSvc().CheckTool(ctx, ToolCallInfo{
+	policySnapshot := s.PermSvc().PolicySnapshot()
+	decision := s.PermSvc().CheckToolSnapshot(ctx, ToolCallInfo{
 		Name: tc.Name,
 		ID:   tc.ID,
 		Args: tc.Arguments,
-	})
+	}, policySnapshot)
+	granted, denyMsg := decision.Outcome == safety.DecisionAllow, decision.Message
 	s.recordPolicyObservation(tc, "permission", granted, denyMsg)
 	if !granted {
 		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
@@ -324,7 +327,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	})
 
 	inputJSON, _ := json.Marshal(tc.Arguments)
-	sandboxMode := s.PermSvc().SandboxMode()
+	sandboxMode := policySnapshot.SandboxMode
 	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
 		AgentSpawnFn: s.AgentSpawnFn,
 		AskUserFn:    s.AskUserFn,
@@ -351,7 +354,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		BackgroundManager:  s.ensureBackgroundManager(),
 		ReadOnlyBash:       s.readOnlyBash,
 		WorkingDir:         s.workingDir,
-		AllowedDirectories: s.PermSvc().AllowedDirs(),
+		AllowedDirectories: append([]string(nil), policySnapshot.AllowedDirs...),
 		SandboxMode:        sandboxMode,
 	})
 	if sandboxMode != "" {
