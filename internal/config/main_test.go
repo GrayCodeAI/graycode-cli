@@ -13,8 +13,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		os.Exit(1)
 	}
-	defer cleanupStorage()
 	cleanup := catalogtest.InstallGlobal()
-	defer cleanup()
-	os.Exit(m.Run())
+	code := m.Run()
+	cleanup()
+	cleanupStorage()
+	os.Exit(code)
 }
