@@ -52,11 +52,9 @@ func (s *Session) EnsureAutoCompactor() {
 	}
 	if p.AutoCompactor() != nil {
 		p.AutoCompactor().Configure(s.compactConfig())
-		s.AutoCompactor = p.AutoCompactor()
 		return
 	}
 	p.SetAutoCompactor(NewAutoCompactor(s.compactConfig()))
-	s.AutoCompactor = p.AutoCompactor()
 }
 
 func (s *Session) compactThresholdPct() int {
@@ -94,7 +92,6 @@ func (s *Session) refreshContextWindowCache() {
 		return
 	}
 	if s.Persistence() == nil {
-		s.ContextWindowCached = 0
 	} else {
 		s.SetContextWindowCached(0)
 	}
@@ -104,7 +101,6 @@ func (s *Session) refreshContextWindowCache() {
 	}
 	if info, ok := modelPkg.Find(model); ok && info.ContextSize > 0 {
 		if s.Persistence() == nil {
-			s.ContextWindowCached = info.ContextSize
 		} else {
 			s.SetContextWindowCached(info.ContextSize)
 		}

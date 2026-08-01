@@ -96,20 +96,16 @@ type Session struct {
 	SettingsGet func(key string) (string, bool)
 	SettingsSet func(key, value string) error
 
-	PinnedMessages          int // messages to protect from compaction (from /pin)
-	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
-	ContextWindowCached     int // catalog context window; 0 → governor default
-	AutoCompactor           *AutoCompactor
-	persistID               string
-	lastPromptTokens        int
-	lastCompletionTokens    int
-	estTokensCache          int
-	estTokensMsgCount       int
-	estTokensLastLen        int
-	tokUsage                *tok.UsageTracker
-	checkpointMgr           *session.CheckpointManager
-	OnCompaction            OnCompaction
-	Verbose                 bool // show tool calls, timing, token counts in output
+	persistID            string
+	lastPromptTokens     int
+	lastCompletionTokens int
+	estTokensCache       int
+	estTokensMsgCount    int
+	estTokensLastLen     int
+	tokUsage             *tok.UsageTracker
+	checkpointMgr        *session.CheckpointManager
+	OnCompaction         OnCompaction
+	Verbose              bool // show tool calls, timing, token counts in output
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 	GLMThinkingEnabled *bool
@@ -219,7 +215,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		RateLimiter:  ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
-	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
 	s.refreshContextWindowCache()
 
 	// Initialize agents accumulator for project learnings.
@@ -242,6 +237,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.life = NewLifecycleService(log)
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
+	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry).WithMetrics(s.metrics)
 	s.tools.WithExecutionDeps(toolExecutionDeps{
@@ -362,9 +358,6 @@ func (s *Session) Persistence() *PersistenceService {
 	s.persist = NewPersistenceService(s.log)
 	s.persist.SetSystem(s.system)
 	s.persist.SetRawMessages(s.messages)
-	s.persist.SetPinnedMessages(s.PinnedMessages)
-	s.persist.SetAutoCompactThresholdPct(s.AutoCompactThresholdPct)
-	s.persist.SetContextWindowCached(s.ContextWindowCached)
 	return s.persist
 }
 
@@ -654,20 +647,14 @@ func (s *Session) SetAllowedDirs(dirs []string) {
 }
 
 // SetAutoCompactThresholdPct sets the auto-compact threshold.
-// New code should call this instead of writing to the legacy
-// s.AutoCompactThresholdPct field directly.
 func (s *Session) SetAutoCompactThresholdPct(pct int) {
-	s.AutoCompactThresholdPct = pct
 	if s.persist != nil {
 		s.persist.SetAutoCompactThresholdPct(pct)
 	}
 }
 
-// SetPinnedMessages sets the number of recent messages that are
-// protected from compaction. New code should call this instead of
-// writing to the legacy s.PinnedMessages field directly.
+// SetPinnedMessages sets the number of recent messages protected from compaction.
 func (s *Session) SetPinnedMessages(n int) {
-	s.PinnedMessages = n
 	if s.persist != nil {
 		s.persist.SetPinnedMessages(n)
 	}
@@ -756,27 +743,19 @@ func (s *Session) SetConversationGraph(graph *session.ConversationGraph) {
 	}
 }
 
-// SetContextWindowCached sets the catalog context window. New code
-// should call this instead of writing to the legacy
-// s.ContextWindowCached field directly.
+// SetContextWindowCached sets the catalog context window.
 func (s *Session) SetContextWindowCached(n int) {
-	s.ContextWindowCached = n
 	if s.persist != nil {
 		s.persist.SetContextWindowCached(n)
 	}
 }
 
 // ContextWindowCachedValue returns the cached context window size.
-// New code should call this instead of reading s.ContextWindowCached
-// directly. Falls back to the legacy field for back-compat with
-// code paths that still write to s.ContextWindowCached.
 func (s *Session) ContextWindowCachedValue() int {
 	if s.persist != nil {
-		if w := s.persist.ContextWindowCached(); w > 0 {
-			return w
-		}
+		return s.persist.ContextWindowCached()
 	}
-	return s.ContextWindowCached
+	return 0
 }
 
 // CostValue returns the session's cost accumulator (a pointer
