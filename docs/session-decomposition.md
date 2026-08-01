@@ -1,6 +1,7 @@
 # Session God-Object Decomposition — Design Sketch
 
-> Status: **DRAFT / NOT YET IMPLEMENTED**
+> Status: **IN PROGRESS** — the safety and persistence portions are implemented;
+> the remaining service extraction is still a design target.
 > Author: opencode session
 > Date: 2026-06-12
 > Scope: `hawk/internal/engine/session.go` (the 35-collaborator `Session` struct)
@@ -24,6 +25,29 @@ Break `Session` into ~6 cohesive sub-services, each with:
 - a clear lifecycle (created once in `NewSessionWithClient`, passed to `agentLoop`)
 
 The `agentLoop` should consume these sub-services as named dependencies — no implicit `s.Beliefs.Size()` reach-throughs.
+
+## Implemented Safety Invariants (2026-08)
+
+The first extraction slice is now live and should be treated as a contract for
+future work:
+
+- `PermissionService` is the authoritative source for autonomy, sandbox mode,
+  allowed directories, spec stage/slug, and policy rules. Legacy `Session`
+  fields remain only as compatibility shims for older callers.
+- Each tool call captures one immutable `PolicySnapshot` before approval and
+  execution. The same snapshot supplies the approval decision and the
+  `ToolContext`, so a mid-call policy update cannot create a mixed-policy turn.
+- Permission service state is guarded by an internal RW mutex; user approval
+  callbacks execute outside the lock.
+- `PersistenceService` returns and stores deep-copied message snapshots. A
+  caller cannot mutate the live transcript by retaining a returned slice or
+  nested tool payload.
+- Asynchronous hooks preserve context values after parent cancellation and can
+  be drained through `hooks.WaitAsync` during shutdown.
+
+The remaining decomposition work must preserve these invariants. In
+particular, new tool or session services must consume `PolicySnapshot` rather
+than reintroducing direct reads of legacy permission fields.
 
 ## Proposed Decomposition
 
