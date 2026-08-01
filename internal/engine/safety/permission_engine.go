@@ -477,6 +477,14 @@ func (pe *PermissionEngine) PhaseProgress() string {
 // model just executed successfully. Called by stream_tool_exec.go — plays
 // the same role ApplyToolState played for the old Plan Mode.
 func (pe *PermissionEngine) AdvanceSpecStage(name string) {
+	if canonicalToolName(name) == "SpecReset" {
+		pe.Stage = SpecStageNone
+		pe.SpecSlug = ""
+		pe.Phase = 0
+		pe.Phases = 0
+		pe.Revision++
+		return
+	}
 	w := SpecWorkflow{Stage: pe.Stage, Slug: pe.SpecSlug}
 	if err := w.Transition(name, pe.SpecSlug); err != nil {
 		return

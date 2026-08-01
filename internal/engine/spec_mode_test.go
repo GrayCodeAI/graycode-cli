@@ -237,11 +237,11 @@ func TestSpecMode_ResetClearsStageAndSlug(t *testing.T) {
 	s, _ := newSpecModeSession(true)
 	s.PermSvc().SetSpecStage(SpecStageSpecify)
 	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "reset-test", "spec": "content"})
-	if s.Perm.SpecSlug == "" {
+	if s.PermSvc().SpecSlug() == "" {
 		t.Fatal("Specify should set an active slug")
 	}
 	runSpecTool(t, s, "SpecReset", map[string]interface{}{})
-	if s.PermSvc().SpecStage() != SpecStageNone || s.Perm.SpecSlug != "" {
-		t.Fatalf("reset left stage=%v slug=%q", s.PermSvc().SpecStage(), s.Perm.SpecSlug)
+	if s.PermSvc().SpecStage() != SpecStageNone || s.PermSvc().SpecSlug() != "" {
+		t.Fatalf("reset left stage=%v slug=%q", s.PermSvc().SpecStage(), s.PermSvc().SpecSlug())
 	}
 }

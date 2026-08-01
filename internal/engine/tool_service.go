@@ -281,6 +281,8 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		YaadBridge:          yaad,
 		SpecSlugGet:         func() string { return s.deps.permissions.SpecSlug() },
 		SpecSlugSet:         func(slug string) { s.deps.permissions.SetSpecSlug(slug) },
+		AllowedDirectories:  s.deps.permissions.AllowedDirs(),
+		SandboxMode:         s.deps.permissions.SandboxMode(),
 		BackgroundManager:   s.EnsureBackgroundManager(),
 		ReadOnlyBash:        s.deps.readOnlyBash,
 		WorkingDir:          s.deps.workingDir,
@@ -470,7 +472,7 @@ func (s *ToolService) CompleteResult(ctx context.Context, result toolExecResult,
 	output, isErr := result.output, result.isErr
 	if !isErr && s.deps.permissions != nil {
 		switch canonicalToolName(result.tc.Name) {
-		case "Specify", "Plan", "Tasks":
+		case "Specify", "Plan", "Tasks", "SpecReset":
 			s.deps.permissions.AdvanceSpecStage(result.tc.Name)
 		case "ApproveImplementation":
 			s.deps.permissions.AdvanceSpecStage(result.tc.Name)

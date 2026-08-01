@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/safety"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -100,10 +101,10 @@ func (s *PermissionService) CheckTool(ctx context.Context, info ToolCallInfo) (b
 	if !granted {
 		s.log.Warn("permission denied", map[string]interface{}{
 			"tool":   info.Name,
-			"reason": string(d.Reason),
+			"reason": denyMsg,
 		})
 	}
-	return d.Outcome == safety.DecisionAllow, d.Message
+	return granted, denyMsg
 }
 
 // CheckToolDecision evaluates a request and exposes stable decision metadata.
@@ -246,9 +247,14 @@ func (s *PermissionService) SetAllowedDirs(dirs []string) {
 // underlying PermissionEngine — the same field CheckTool reads — rather
 // than a separate shadow field, so the change actually takes effect.
 func (s *PermissionService) SetAutonomy(level AutonomyLevel) {
-	if s != nil && s.perm != nil {
-		s.perm.Autonomy = level
+	if s == nil || s.perm == nil {
+		return
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.perm.Autonomy = level
+	s.perm.AutonomyExplicit = true
+	s.perm.Revision++
 }
 
 // SetSpecStage sets the independent spec-workflow stage. Also writes
@@ -265,6 +271,27 @@ func (s *PermissionService) SetDryRun(dryRun bool) {
 	if s != nil && s.perm != nil {
 		s.perm.DryRun = dryRun
 	}
+}
+
+// SetSandboxMode updates the sandbox policy used for subsequent tool calls.
+func (s *PermissionService) SetSandboxMode(mode sandbox.Mode) {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.perm.SandboxMode = mode
+	s.perm.Revision++
+}
+
+// SandboxMode returns the active sandbox policy.
+func (s *PermissionService) SandboxMode() sandbox.Mode {
+	if s == nil || s.perm == nil {
+		return sandbox.Mode("")
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.perm.SandboxMode
 }
 
 // DryRun reports whether the kill switch is active.
@@ -387,6 +414,39 @@ func (s *PermissionService) AdvanceSpecStage(toolName string) {
 		return
 	}
 	s.perm.AdvanceSpecStage(toolName)
+}
+
+// ResetSpec clears the active spec workflow.
+func (s *PermissionService) ResetSpec() {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	w := safety.SpecWorkflow{Stage: s.perm.Stage, Slug: s.perm.SpecSlug}
+	w.Reset()
+	s.perm.Stage, s.perm.SpecSlug = w.Stage, w.Slug
+	s.perm.Revision++
+}
+
+// AutonomyExplicit reports whether the autonomy tier was explicitly chosen.
+func (s *PermissionService) AutonomyExplicit() bool {
+	if s == nil || s.perm == nil {
+		return false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.perm.AutonomyExplicit
+}
+
+// SpecProgress returns the workflow stage and phase counters atomically.
+func (s *PermissionService) SpecProgress() (SpecStage, int, int) {
+	if s == nil || s.perm == nil {
+		return SpecStageNone, 0, 0
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.perm.Stage, s.perm.Phase, s.perm.Phases
 }
 
 // Memory returns the legacy PermissionMemory shim. The shim is

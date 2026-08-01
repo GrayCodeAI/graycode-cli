@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/safety"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
