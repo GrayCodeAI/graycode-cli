@@ -123,13 +123,20 @@ type PolicySnapshot struct {
 	Phase            int
 	Phases           int
 	Revision         uint64
+	Rules            RuleSnapshot
+	AllowedDirs      []string
 }
 
 // Snapshot returns a copy of the engine's request-relevant scalar policy.
 func (pe *PermissionEngine) Snapshot() PolicySnapshot {
+	var rules RuleSnapshot
+	if pe.Memory != nil {
+		rules = pe.Memory.Snapshot()
+	}
 	return PolicySnapshot{Autonomy: pe.Autonomy, AutonomyExplicit: pe.AutonomyExplicit,
 		SandboxMode: pe.SandboxMode, Stage: pe.Stage, DryRun: pe.DryRun,
-		SpecSlug: pe.SpecSlug, Phase: pe.Phase, Phases: pe.Phases, Revision: pe.Revision}
+		SpecSlug: pe.SpecSlug, Phase: pe.Phase, Phases: pe.Phases, Revision: pe.Revision,
+		Rules: rules}
 }
 
 // NewPermissionEngine creates a PermissionEngine with sensible defaults.
@@ -170,6 +177,7 @@ func (pe *PermissionEngine) CheckToolSnapshot(ctx context.Context, tc ToolCallIn
 	clone.Phase = snapshot.Phase
 	clone.Phases = snapshot.Phases
 	clone.Revision = snapshot.Revision
+	clone.Memory = permissionMemoryFromSnapshot(snapshot.Rules)
 	return clone.CheckToolDecision(ctx, tc)
 }
 

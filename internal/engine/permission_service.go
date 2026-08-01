@@ -100,7 +100,9 @@ func (s *PermissionService) CheckToolDecision(ctx context.Context, info ToolCall
 
 // PolicySnapshot returns the scalar policy used for a single request.
 func (s *PermissionService) PolicySnapshot() safety.PolicySnapshot {
-	return s.perm.Snapshot()
+	snapshot := s.perm.Snapshot()
+	snapshot.AllowedDirs = append([]string(nil), s.allowedDirs...)
+	return snapshot
 }
 
 // CheckToolSnapshot evaluates a request against a previously captured policy.

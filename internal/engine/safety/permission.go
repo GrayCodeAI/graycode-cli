@@ -23,8 +23,33 @@ type PermissionMemory struct {
 	allowAll   map[string]bool // tool names that are always allowed
 }
 
+// RuleSnapshot is an immutable copy of remembered permission rules.
+type RuleSnapshot struct {
+	AllowRules []string
+	DenyRules  []string
+	AllowAll   map[string]bool
+}
+
 func NewPermissionMemory() *PermissionMemory {
 	return &PermissionMemory{allowAll: make(map[string]bool)}
+}
+
+// Snapshot returns a deep copy that can safely be used by one evaluation.
+func (pm *PermissionMemory) Snapshot() RuleSnapshot {
+	if pm == nil {
+		return RuleSnapshot{AllowAll: map[string]bool{}}
+	}
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	allowAll := make(map[string]bool, len(pm.allowAll))
+	for name, allowed := range pm.allowAll {
+		allowAll[name] = allowed
+	}
+	return RuleSnapshot{AllowRules: append([]string(nil), pm.allowRules...), DenyRules: append([]string(nil), pm.denyRules...), AllowAll: allowAll}
+}
+
+func permissionMemoryFromSnapshot(snapshot RuleSnapshot) *PermissionMemory {
+	return &PermissionMemory{allowRules: append([]string(nil), snapshot.AllowRules...), denyRules: append([]string(nil), snapshot.DenyRules...), allowAll: snapshot.AllowAll}
 }
 
 // Reset clears all allow/deny memory so the active rule set can be rebuilt.

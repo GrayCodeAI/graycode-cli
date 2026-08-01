@@ -143,6 +143,17 @@ func TestPermissionEngine_SnapshotIsStableAfterLivePolicyChange(t *testing.T) {
 	}
 }
 
+func TestPermissionEngine_SnapshotCapturesRememberedRules(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Memory.AlwaysDeny("Write")
+	snapshot := pe.Snapshot()
+	pe.Memory.Reset()
+	d := pe.CheckToolSnapshot(context.Background(), ToolCallInfo{Name: "Write"}, snapshot)
+	if d.Outcome != DecisionDeny || d.Reason != ReasonRuleDenied {
+		t.Fatalf("snapshot decision = %#v, want remembered deny", d)
+	}
+}
+
 // TestCheckTool_SpecStageNoneIgnoresGate verifies that outside of any spec
 // workflow (Stage == SpecStageNone), the spec gate does not apply at all and
 // autonomy-tier logic governs directly.
