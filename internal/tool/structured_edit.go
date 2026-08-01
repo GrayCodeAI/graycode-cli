@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -87,7 +86,7 @@ func (s StructuredEditTool) Execute(ctx context.Context, input json.RawMessage) 
 	}
 
 	// Read the file.
-	data, err := os.ReadFile(p.Path)
+	data, err := readGuardedFile(ctx, p.Path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", p.Path, err)
 	}
@@ -122,7 +121,7 @@ func (s StructuredEditTool) Execute(ctx context.Context, input json.RawMessage) 
 	}
 
 	// Write the result.
-	if err := os.WriteFile(p.Path, []byte(content), 0o600); err != nil {
+	if err := writeGuardedFile(ctx, p.Path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("write %s: %w", p.Path, err)
 	}
 

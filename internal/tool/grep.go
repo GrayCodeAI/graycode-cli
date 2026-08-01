@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -48,8 +49,18 @@ func (GrepTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	if err := validatePathAllowed(ctx, root); err != nil {
 		return "", err
 	}
+	rootAbs, err := guardedAbs(root)
+	if err != nil {
+		return "", err
+	}
+	rootHandle, err := os.OpenRoot(rootAbs)
+	if err != nil {
+		return "", fmt.Errorf("open search root: %w", err)
+	}
+	defer func() { _ = rootHandle.Close() }()
+
 	var results []string
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	_ = fs.WalkDir(rootHandle.FS(), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			if d != nil && d.IsDir() && (d.Name() == ".git" || d.Name() == "node_modules") {
 				return filepath.SkipDir
@@ -61,14 +72,14 @@ func (GrepTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 				return nil
 			}
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		data, err := fs.ReadFile(rootHandle.FS(), path)
 		if err != nil {
 			return nil
 		}
 		lines := strings.Split(string(data), "\n")
 		for i, line := range lines {
 			if re.MatchString(line) {
-				results = append(results, fmt.Sprintf("%s:%d: %s", path, i+1, line))
+				results = append(results, fmt.Sprintf("%s:%d: %s", filepath.Join(rootAbs, filepath.FromSlash(path)), i+1, line))
 				if len(results) >= 200 {
 					return fmt.Errorf("limit")
 				}

@@ -654,7 +654,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
 						// Use timeout context so goroutine doesn't hang if backend is slow.
-						rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+						rCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 						defer cancel()
 						_ = s.MemorySvc().Memory().Remember(content, "assistant_learning")
 						_ = rCtx // timeout context available if Remember is extended to accept it
@@ -677,7 +677,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					}
 					prompt := s.MemorySvc().Sleeptime().BuildConsolidationPrompt(transcript, memState)
 					// Use timeout context to prevent goroutine leak if LLM hangs
-					sCtx, sCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					sCtx, sCancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
 					defer sCancel()
 					resp, err := s.ChatLLM().Chat(sCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
@@ -709,7 +709,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					sd := s.MemorySvc().SkillDistiller()
 					prompt := sd.BuildSkillPrompt(taskDesc, tools, files, textContent.String())
 					// Use timeout context to prevent goroutine leak if LLM hangs
-					dCtx, dCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					dCtx, dCancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
 					defer dCancel()
 					resp, err := s.ChatLLM().Chat(dCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
@@ -786,7 +786,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				go func() {
 					// Bound the snapshot so a slow filesystem doesn't
 					// leak a goroutine after the session ends.
-					snapCtx, snapCancel := context.WithTimeout(context.Background(), 30*time.Second)
+					snapCtx, snapCancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 					defer snapCancel()
 					_, _ = s.Snapshots.TrackCtx(snapCtx, strings.Join(writeNames, ", "))
 				}()

@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // AIDirective represents a found AI comment directive in a source file.
@@ -54,7 +56,7 @@ func scanForAIComments(dir string, ignore []string) []AIDirective {
 		if !aiSupportedExts[ext] {
 			return nil
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.Walk over the target directory
+		data, err := fsutil.ReadPinnedFile(path)
 		if err != nil {
 			return nil
 		}
@@ -207,5 +209,5 @@ func removeAIComment(path string, line int) error {
 	}
 
 	// #nosec G306 -- rewrites an existing project source file in place, matching typical source file permissions
-	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644)
+	return fsutil.WritePinnedFile(path, []byte(strings.Join(lines, "\n")), 0o644)
 }

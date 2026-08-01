@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestDownloadTool_Name(t *testing.T) {
@@ -119,7 +120,7 @@ func TestDownloadTool_Execute_BothEmpty(t *testing.T) {
 
 func TestDownloadTool_Execute_Success(t *testing.T) {
 	// Set up a test HTTP server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("hello world"))
@@ -145,7 +146,7 @@ func TestDownloadTool_Execute_Success(t *testing.T) {
 }
 
 func TestDownloadTool_Execute_HTTPError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("not found"))
 	}))
@@ -168,7 +169,7 @@ func TestDownloadTool_Execute_HTTPError(t *testing.T) {
 
 func TestDownloadTool_Execute_CredentialContent(t *testing.T) {
 	// Server returns content that looks like credentials
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("password=sk-abc0123456789012345wxyz secret key"))
@@ -191,7 +192,7 @@ func TestDownloadTool_Execute_CredentialContent(t *testing.T) {
 }
 
 func TestDownloadTool_Execute_EmptyBody(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
 		// Empty body

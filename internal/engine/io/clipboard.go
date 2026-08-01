@@ -156,7 +156,7 @@ func WriteClipboard(content string) error {
 			return fmt.Errorf("clipboard: no clipboard tool found (install xclip or xsel)")
 		}
 	case "windows":
-		cmd = exec.CommandContext(context.Background(), "powershell", "-command", "Set-Clipboard", "-Value", content)
+		cmd = exec.CommandContext(context.Background(), "powershell", "-command", "Set-Clipboard", "-Value", content) // #nosec G204 -- fixed PowerShell command; clipboard content is one isolated argument
 		return cmd.Run()
 	default:
 		return fmt.Errorf("clipboard: unsupported platform %s", runtime.GOOS)

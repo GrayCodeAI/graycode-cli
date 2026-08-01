@@ -21,7 +21,10 @@ func Archive(slug string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	specDir := filepath.Join(dir, slug)
+	specDir, err := specDir(dir, slug)
+	if err != nil {
+		return "", err
+	}
 
 	// Verify the spec directory exists
 	if _, err := os.Stat(specDir); os.IsNotExist(err) {
@@ -48,7 +51,7 @@ func Archive(slug string) (string, error) {
 					if readErr == nil {
 						merged, mergeErr := ApplyDelta(string(baseData), delta)
 						if mergeErr == nil {
-							_ = os.WriteFile(baseSpecPath, []byte(merged), 0o600)
+							_ = os.WriteFile(baseSpecPath, []byte(merged), 0o600) // #nosec G703 -- baseSpecPath is confined beneath a validated spec slug
 						}
 					}
 				}
@@ -101,7 +104,10 @@ func AssessConvergence(slug string) ConvergenceReport {
 			Summary: fmt.Sprintf("cannot access specs: %v", err),
 		}
 	}
-	specDir := filepath.Join(dir, slug)
+	specDir, err := specDir(dir, slug)
+	if err != nil {
+		return ConvergenceReport{Summary: err.Error()}
+	}
 
 	report := ConvergenceReport{Converged: true}
 
@@ -190,7 +196,11 @@ func AppendConvergenceTasks(slug string, report ConvergenceReport) (string, erro
 	if err != nil {
 		return "", err
 	}
-	tasksPath := filepath.Join(dir, slug, "tasks.md")
+	specPath, err := specDir(dir, slug)
+	if err != nil {
+		return "", err
+	}
+	tasksPath := filepath.Join(specPath, "tasks.md")
 
 	existing := readFileOrEmpty(tasksPath)
 

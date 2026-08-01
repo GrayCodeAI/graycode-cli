@@ -297,5 +297,5 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0o755) // #nosec G306 -- copied binary must remain executable inside the chroot
+	return os.WriteFile(dst, data, 0o755) // #nosec G703,G306 -- dst is constructed beneath the private sandbox root; binary must remain executable
 }

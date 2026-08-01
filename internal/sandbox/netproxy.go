@@ -298,7 +298,7 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Forward the request.
-	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body)
+	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body) // #nosec G704 -- IsAllowed validates the host and dialTarget revalidates resolved addresses
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to create request: %v", err), http.StatusInternalServerError)
 		return
@@ -328,7 +328,7 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	resp, err := client.Do(outReq)
+	resp, err := client.Do(outReq) // #nosec G704 -- transport is policy-bound with Proxy disabled and dialTarget enforcement
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to forward request: %v", err), http.StatusBadGateway)
 		return

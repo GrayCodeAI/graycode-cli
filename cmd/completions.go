@@ -572,7 +572,7 @@ func zshInstallPath() string {
 		parts := strings.Split(fpath, ":")
 		for _, p := range parts {
 			if p != "" {
-				if info, err := os.Stat(p); err == nil && info.IsDir() {
+				if info, err := os.Stat(p); err == nil && info.IsDir() { // #nosec G703 -- shell completion only probes the user-selected directory
 					return filepath.Join(p, "_hawk")
 				}
 			}

@@ -13,7 +13,10 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
-var reSlugInvalid = regexp.MustCompile(`[^a-z0-9]+`)
+var (
+	reSlugInvalid = regexp.MustCompile(`[^a-z0-9]+`)
+	reSpecSlug    = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
+)
 
 func slugify(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
@@ -57,6 +60,9 @@ func specDir(ctx context.Context) (string, error) {
 	if slug == "" {
 		return "", fmt.Errorf("no active spec — call Specify first")
 	}
+	if !reSpecSlug.MatchString(slug) {
+		return "", fmt.Errorf("invalid active spec slug")
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -73,7 +79,7 @@ func writeSpecArtifact(ctx context.Context, filename, content string) (string, e
 }
 
 func writeSpecArtifactForSlug(ctx context.Context, slug, filename, content string) (string, error) {
-	if strings.TrimSpace(slug) == "" {
+	if !reSpecSlug.MatchString(slug) {
 		return "", fmt.Errorf("spec slug is required")
 	}
 	cwd, err := os.Getwd()
@@ -491,21 +497,23 @@ func (SpecEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return "", fmt.Errorf("no active spec — call Specify first")
 	}
 
-	dir, err := specsDir()
+	dir, err := specDir(ctx)
 	if err != nil {
 		return "", err
 	}
-	specDir := filepath.Join(dir, slug)
-	path := filepath.Join(specDir, p.Artifact)
+	if p.Artifact != "spec.md" && p.Artifact != "plan.md" && p.Artifact != "tasks.md" && p.Artifact != "specs.md" {
+		return "", fmt.Errorf("invalid spec artifact %q", p.Artifact)
+	}
+	path := filepath.Join(dir, p.Artifact)
 
 	// Ensure directory exists
-	if err := os.MkdirAll(specDir, 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 
 	if p.Content != "" {
 		// Full replacement
-		if err := os.WriteFile(path, []byte(p.Content), 0o600); err != nil {
+		if err := writeGuardedFile(ctx, path, []byte(p.Content), 0o600); err != nil {
 			return "", fmt.Errorf("write %s: %w", p.Artifact, err)
 		}
 		// Update stage meta
@@ -527,10 +535,10 @@ func (SpecEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		}
 
 		// Read existing content
-		existing, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		existing, err := readGuardedFile(ctx, path)
 		if err != nil {
 			// File doesn't exist yet — just write the delta as-is
-			if writeErr := os.WriteFile(path, []byte(p.Delta), 0o600); writeErr != nil {
+			if writeErr := writeGuardedFile(ctx, path, []byte(p.Delta), 0o600); writeErr != nil {
 				return "", fmt.Errorf("write %s: %w", p.Artifact, writeErr)
 			}
 			return fmt.Sprintf("Created %s with delta content (%d requirements)", path, len(delta.Requirements)), nil
@@ -542,7 +550,7 @@ func (SpecEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 			return "", fmt.Errorf("apply delta: %w", err)
 		}
 
-		if err := os.WriteFile(path, []byte(merged), 0o600); err != nil {
+		if err := writeGuardedFile(ctx, path, []byte(merged), 0o600); err != nil {
 			return "", fmt.Errorf("write merged %s: %w", p.Artifact, err)
 		}
 

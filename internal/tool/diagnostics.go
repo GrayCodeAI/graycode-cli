@@ -92,7 +92,7 @@ func runGoDiagnostics(ctx context.Context, path, scope string) (string, error) {
 		buildCmd = exec.CommandContext(ctx, "go", "build", "./...")
 		buildCmd.Dir = path
 	} else {
-		buildCmd = exec.CommandContext(ctx, "go", "build", path)
+		buildCmd = exec.CommandContext(ctx, "go", "build", path) // #nosec G204 -- fixed compiler and separate package path argument
 		buildCmd.Dir = filepath.Dir(path)
 	}
 	buildOutput, buildErr := buildCmd.CombinedOutput()
@@ -116,7 +116,7 @@ func runGoDiagnostics(ctx context.Context, path, scope string) (string, error) {
 }
 
 func runPythonDiagnostics(ctx context.Context, path string) (string, error) {
-	cmd := exec.CommandContext(ctx, "python3", "-m", "py_compile", path)
+	cmd := exec.CommandContext(ctx, "python3", "-m", "py_compile", path) // #nosec G204 -- fixed interpreter and separate path argument
 	output, err := cmd.CombinedOutput()
 	result := strings.TrimSpace(string(output))
 	if err != nil && result == "" {
@@ -130,13 +130,13 @@ func runPythonDiagnostics(ctx context.Context, path string) (string, error) {
 
 func runJSTSDiagnostics(ctx context.Context, path, ext string) (string, error) {
 	// Try eslint first
-	cmd := exec.CommandContext(ctx, "npx", "eslint", path, "--format", "compact")
+	cmd := exec.CommandContext(ctx, "npx", "eslint", path, "--format", "compact") // #nosec G204 -- fixed executable and separate path argument
 	output, _ := cmd.CombinedOutput()
 	result := strings.TrimSpace(string(output))
 
 	// For TypeScript, also try tsc
 	if ext == ".ts" || ext == ".tsx" {
-		tscCmd := exec.CommandContext(ctx, "npx", "tsc", "--noEmit", path)
+		tscCmd := exec.CommandContext(ctx, "npx", "tsc", "--noEmit", path) // #nosec G204 -- fixed executable and separate path argument
 		tscOutput, _ := tscCmd.CombinedOutput()
 		tscResult := strings.TrimSpace(string(tscOutput))
 		if tscResult != "" {

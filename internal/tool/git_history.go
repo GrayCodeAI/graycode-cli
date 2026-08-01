@@ -241,7 +241,7 @@ func gitBlame(ctx context.Context, root, file string) (string, error) {
 		return "", fmt.Errorf("file is required for blame action")
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "blame", "--line-porcelain", file)
+	cmd := exec.CommandContext(ctx, "git", "blame", "--line-porcelain", file) // #nosec G204 -- fixed git subcommand and separate file argument
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {

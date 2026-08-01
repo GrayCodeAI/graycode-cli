@@ -61,6 +61,63 @@ func guardedAbs(path string) (string, error) {
 	return abs, nil
 }
 
+// guardedRootPath opens the canonical parent directory of a path and returns
+// the basename to use with os.Root. The permission check happens before the
+// root is opened; os.Root then pins the directory handle and closes the
+// symlink/rename race between validation and the actual file operation.
+func guardedRootPath(ctx context.Context, path string) (*os.Root, string, error) {
+	if err := validatePathAllowed(ctx, path); err != nil {
+		return nil, "", err
+	}
+	absPath, err := guardedAbs(path)
+	if err != nil {
+		return nil, "", err
+	}
+	root, err := os.OpenRoot(filepath.Dir(absPath))
+	if err != nil {
+		return nil, "", fmt.Errorf("open guarded parent: %w", err)
+	}
+	return root, filepath.Base(absPath), nil
+}
+
+func readGuardedFile(ctx context.Context, path string) ([]byte, error) {
+	root, name, err := guardedRootPath(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+	return root.ReadFile(name)
+}
+
+func writeGuardedFile(ctx context.Context, path string, data []byte, perm os.FileMode) error {
+	root, name, err := guardedRootPath(ctx, path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+	return root.WriteFile(name, data, perm)
+}
+
+// readPinnedFile and writePinnedFile are for lower-level tool APIs that do not
+// carry a context. They still pin the canonical parent directory with os.Root,
+// preventing a symlink swap between path resolution and the file operation.
+func readPinnedFile(path string) ([]byte, error) {
+	return readGuardedFile(context.Background(), path)
+}
+
+func writePinnedFile(path string, data []byte, perm os.FileMode) error {
+	return writeGuardedFile(context.Background(), path, data, perm)
+}
+
+// ReadPinnedFile exposes the same root-pinned read for engine components that
+// already depend on the tool package but do not carry a ToolContext.
+func ReadPinnedFile(path string) ([]byte, error) { return readPinnedFile(path) }
+
+// WritePinnedFile exposes the same root-pinned write for engine components.
+func WritePinnedFile(path string, data []byte, perm os.FileMode) error {
+	return writePinnedFile(path, data, perm)
+}
+
 func sameOrWithin(path, root string) bool {
 	path = filepath.Clean(path)
 	root = filepath.Clean(root)

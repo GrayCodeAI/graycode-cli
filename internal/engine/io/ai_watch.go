@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -443,7 +444,7 @@ func RemoveComment(file string, line int, marker string) error {
 		lines[line-1] = strings.TrimRight(lines[line-1], " \t")
 	}
 
-	return os.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o600)
+	return fsutil.WritePinnedFile(file, []byte(strings.Join(lines, "\n")), 0o600)
 }
 
 // commentHash produces a unique hash for a comment based on file, line, and text.

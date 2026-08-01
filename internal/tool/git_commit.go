@@ -63,7 +63,7 @@ func AutoCommit(ctx context.Context, path, toolName, description string) error {
 		return fmt.Errorf("not a git repository")
 	}
 
-	add := exec.CommandContext(context.Background(), "git", "add", "--", path)
+	add := exec.CommandContext(context.Background(), "git", "add", "--", path) // #nosec G204 -- fixed git subcommand and path after argument separator
 	if out, err := add.CombinedOutput(); err != nil {
 		return fmt.Errorf("git add: %s (%w)", strings.TrimSpace(string(out)), err)
 	}
@@ -207,7 +207,7 @@ func CommitStaged(ctx context.Context, message string, modes *AttributionModes) 
 	}
 	message = applyAttributionModes(message, modes)
 
-	commit := exec.CommandContext(ctx, "git", "commit", "-m", message)
+	commit := exec.CommandContext(ctx, "git", "commit", "-m", message) // #nosec G204 -- fixed git subcommand and message passed as one argument
 	commit.Env = commitEnv(os.Environ(), modes)
 	if out, err := commit.CombinedOutput(); err != nil {
 		return fmt.Errorf("git commit: %s (%w)", strings.TrimSpace(string(out)), err)

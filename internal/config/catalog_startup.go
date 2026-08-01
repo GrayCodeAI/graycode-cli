@@ -98,7 +98,7 @@ func PrepareCatalogForSession(ctx context.Context, out io.Writer, opts CatalogSt
 		// the background instead of blocking startup on the network (print
 		// mode would otherwise stall up to 90s before the first token).
 		go func() {
-			bgCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+			bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 			defer cancel()
 			_ = AutoRefreshCatalog(bgCtx, nil, false)
 		}()
@@ -203,7 +203,7 @@ func StartupCatalogPrefetch(ctx context.Context) {
 		return
 	}
 	go func() {
-		bgCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 		defer cancel()
 		_ = AutoRefreshCatalog(bgCtx, nil, false)
 	}()
