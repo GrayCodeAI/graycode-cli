@@ -60,7 +60,8 @@ type LifecycleService struct {
 	lintLoop *LintLoop
 	testLoop *TestLoop
 	// session-level lifecycle hook.
-	lifecycle *SessionLifecycle
+	lifecycle   *SessionLifecycle
+	costTracker *CostTracker
 	// log is the session logger.
 	log *logger.Logger
 }
@@ -250,5 +251,7 @@ func (s *LifecycleService) ResponseCache() *ResponseCache  { return s.responseCa
 func (s *LifecycleService) Pipeline() *IntegrationPipeline { return s.pipeline }
 func (s *LifecycleService) Steering() *SteeringQueue       { return s.steering }
 func (s *LifecycleService) Lifecycle() *SessionLifecycle   { return s.lifecycle }
+func (s *LifecycleService) CostTracker() *CostTracker      { return s.costTracker }
+func (s *LifecycleService) SetCostTracker(c *CostTracker)  { s.costTracker = c }
 func (s *LifecycleService) LintLoop() *LintLoop            { return s.lintLoop }
 func (s *LifecycleService) TestLoop() *TestLoop            { return s.testLoop }

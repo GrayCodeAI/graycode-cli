@@ -109,9 +109,6 @@ type Session struct {
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 	GLMThinkingEnabled *bool
 
-	// Cost tracking remains a session-level accounting value.
-	CostTracker *CostTracker // cost_tracker.go — per-request cost persistence
-
 	// Advanced features
 	//
 	// Deprecated: most of these have been folded into sub-services;

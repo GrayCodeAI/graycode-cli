@@ -80,8 +80,8 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 	costBefore := s.CostValue().Total()
 	s.CostValue().AddForModel(model, prompt, completion)
 	requestCost := s.CostValue().Total() - costBefore
-	if s.CostTracker != nil && model != "" {
-		_ = s.CostTracker.Record(analytics.CostEntry{
+	if tracker := s.LifecycleSvc().CostTracker(); tracker != nil && model != "" {
+		_ = tracker.Record(analytics.CostEntry{
 			Model:        model,
 			TaskType:     taskType,
 			InputTokens:  prompt,
