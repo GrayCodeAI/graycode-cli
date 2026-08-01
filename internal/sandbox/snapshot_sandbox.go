@@ -325,6 +325,9 @@ func (m *SandboxManager) FormatStatus() string {
 
 // saveToDisk writes sandbox state to a JSON file on disk.
 func (m *SandboxManager) saveToDisk(sb *SandboxState) error {
+	if err := validateSandboxID(sb.ID); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(m.Dir, 0o750); err != nil {
 		return err
 	}
@@ -338,6 +341,9 @@ func (m *SandboxManager) saveToDisk(sb *SandboxState) error {
 
 // loadFromDisk reads sandbox state from a JSON file on disk.
 func (m *SandboxManager) loadFromDisk(id string) (*SandboxState, error) {
+	if err := validateSandboxID(id); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(m.Dir, id+".json")
 	data, err := os.ReadFile(path) // #nosec G304 -- path is rooted in m.Dir, our own sandbox state directory
 	if err != nil {
@@ -392,7 +398,7 @@ func captureFiles(dir string) (map[string][]byte, error) {
 		if err != nil {
 			return nil
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over the sandbox's own working directory
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only sandbox capture traversal
 		if err != nil {
 			return nil
 		}
@@ -407,9 +413,16 @@ func restoreFiles(dir string, files map[string][]byte) error {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
+	// Validate every path before writing anything so a malformed snapshot cannot
+	// partially restore and then fail on a later entry.
+	for rel := range files {
+		if err := validateRestorePath(rel); err != nil {
+			return err
+		}
+	}
 	for rel, content := range files {
-		path := filepath.Join(dir, rel)
-		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		path, err := prepareRestorePath(dir, rel)
+		if err != nil {
 			return err
 		}
 		if err := os.WriteFile(path, content, 0o600); err != nil {
@@ -417,6 +430,60 @@ func restoreFiles(dir string, files map[string][]byte) error {
 		}
 	}
 	return nil
+}
+
+func validateSandboxID(id string) error {
+	if id == "" || filepath.Base(id) != id || filepath.IsAbs(id) || filepath.VolumeName(id) != "" {
+		return fmt.Errorf("invalid sandbox id %q", id)
+	}
+	return nil
+}
+
+func validateRestorePath(rel string) error {
+	if rel == "" || filepath.IsAbs(rel) || filepath.VolumeName(rel) != "" {
+		return fmt.Errorf("invalid snapshot path %q", rel)
+	}
+	clean := filepath.Clean(rel)
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("snapshot path escapes working directory: %q", rel)
+	}
+	return nil
+}
+
+// prepareRestorePath creates missing directories while rejecting pre-existing
+// symlinks, which prevents a snapshot from redirecting writes outside dir.
+func prepareRestorePath(dir, rel string) (string, error) {
+	if err := validateRestorePath(rel); err != nil {
+		return "", err
+	}
+	root, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	current := root
+	parts := strings.Split(rel, string(filepath.Separator))
+	for i, part := range parts {
+		current = filepath.Join(current, part)
+		info, statErr := os.Lstat(current)
+		if os.IsNotExist(statErr) {
+			if i < len(parts)-1 {
+				if err := os.Mkdir(current, 0o750); err != nil {
+					return "", err
+				}
+			}
+			continue
+		}
+		if statErr != nil {
+			return "", statErr
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return "", fmt.Errorf("snapshot path traverses symlink: %q", rel)
+		}
+		if i < len(parts)-1 && !info.IsDir() {
+			return "", fmt.Errorf("snapshot path traverses non-directory: %q", rel)
+		}
+	}
+	return current, nil
 }
 
 // copyFileMap creates a deep copy of a file map.

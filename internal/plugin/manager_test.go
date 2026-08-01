@@ -202,6 +202,25 @@ func TestToolExecutionEcho(t *testing.T) {
 	}
 }
 
+func TestCappedBufferRejectsExcessOutput(t *testing.T) {
+	t.Parallel()
+
+	var b cappedBuffer
+	b.maxBytes = 4
+	if _, err := b.Write([]byte("abc")); err != nil {
+		t.Fatalf("first write error: %v", err)
+	}
+	if n, err := b.Write([]byte("def")); err == nil || n != 1 {
+		t.Fatalf("second write = (%d, %v), want one byte and a limit error", n, err)
+	}
+	if got := b.String(); got != "abcd" {
+		t.Fatalf("buffer = %q, want %q", got, "abcd")
+	}
+	if n, err := b.Write([]byte("z")); err == nil || n != 0 {
+		t.Fatalf("write after limit = (%d, %v), want zero bytes and an error", n, err)
+	}
+}
+
 func TestToolExecutionWithStdinInput(t *testing.T) {
 	// FIXME: test skipped in TestToolExecutionWithStdinInput
 	if runtime.GOOS == "windows" {

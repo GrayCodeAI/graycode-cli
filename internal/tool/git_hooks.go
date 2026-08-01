@@ -27,6 +27,15 @@ type HookConfig struct {
 	Priority int
 }
 
+func validHookName(name string) bool {
+	switch name {
+	case "pre-commit", "prepare-commit-msg", "post-commit", "pre-push":
+		return true
+	default:
+		return false
+	}
+}
+
 // NewGitHookInstaller creates a new installer rooted at the given project directory.
 // It resolves .git/hooks relative to projectDir and probes which hooks are already
 // installed.
@@ -40,7 +49,7 @@ func NewGitHookInstaller(projectDir string) *GitHookInstaller {
 	// Probe existing hawk-managed hooks.
 	for _, name := range []string{"pre-commit", "post-commit", "prepare-commit-msg", "pre-push"} {
 		hookPath := filepath.Join(hooksDir, name)
-		data, err := os.ReadFile(hookPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		data, err := readPinnedFile(hookPath)
 		if err == nil && strings.Contains(string(data), "# hawk-managed") {
 			installer.Installed[name] = true
 		}
@@ -58,6 +67,9 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 	if !hook.Enabled {
 		return nil
 	}
+	if !validHookName(hook.Name) {
+		return fmt.Errorf("unsupported git hook name %q", hook.Name)
+	}
 
 	if err := os.MkdirAll(g.HooksDir, 0o750); err != nil {
 		return fmt.Errorf("create hooks dir: %w", err)
@@ -66,7 +78,7 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 	hookPath := filepath.Join(g.HooksDir, hook.Name)
 
 	// Preserve existing hook if present and not hawk-managed.
-	existing, err := os.ReadFile(hookPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	existing, err := readPinnedFile(hookPath)
 	if err == nil && !strings.Contains(string(existing), "# hawk-managed") {
 		// Back up and chain existing hook.
 		if backupErr := g.backupExisting(hook.Name); backupErr != nil {
@@ -78,7 +90,7 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 	}
 
 	// #nosec G306 -- git hook must be executable by git
-	if err := os.WriteFile(hookPath, []byte(hook.Script), 0o755); err != nil {
+	if err := writePinnedFile(hookPath, []byte(hook.Script), 0o755); err != nil {
 		return fmt.Errorf("write hook %s: %w", hook.Name, err)
 	}
 
@@ -91,6 +103,9 @@ func (g *GitHookInstaller) Uninstall(hookName string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
+	if !validHookName(hookName) {
+		return fmt.Errorf("unsupported git hook name %q", hookName)
+	}
 	hookPath := filepath.Join(g.HooksDir, hookName)
 	backupPath := hookPath + ".bak"
 
@@ -255,10 +270,13 @@ func (g *GitHookInstaller) BackupExisting(hookName string) error {
 
 // backupExisting is the internal (unlocked) implementation.
 func (g *GitHookInstaller) backupExisting(hookName string) error {
+	if !validHookName(hookName) {
+		return fmt.Errorf("unsupported git hook name %q", hookName)
+	}
 	hookPath := filepath.Join(g.HooksDir, hookName)
 	backupPath := hookPath + ".bak"
 
-	data, err := os.ReadFile(hookPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	data, err := readPinnedFile(hookPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // nothing to back up
@@ -267,7 +285,7 @@ func (g *GitHookInstaller) backupExisting(hookName string) error {
 	}
 
 	// #nosec G306 -- backup preserves executable hook script
-	if err := os.WriteFile(backupPath, data, 0o755); err != nil {
+	if err := writePinnedFile(backupPath, data, 0o755); err != nil {
 		return fmt.Errorf("write backup %s: %w", hookName, err)
 	}
 	return nil

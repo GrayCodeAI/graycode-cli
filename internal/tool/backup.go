@@ -24,7 +24,7 @@ func BackupFile(path string) (string, error) {
 		return "", nil // don't backup files >10MB
 	}
 
-	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	data, err := readPinnedFile(path)
 	if err != nil {
 		return "", nil
 	}
@@ -82,11 +82,11 @@ func RestoreFromBackup(path string) error {
 		return fmt.Errorf("no backups found for %s", path)
 	}
 
-	data, err := os.ReadFile(latest) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	data, err := readPinnedFile(latest)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o600)
+	return writePinnedFile(path, data, 0o600)
 }
 
 // ListBackups returns all backups for a file.
@@ -179,7 +179,7 @@ func backupDirFor(path string) string {
 
 func simpleHash(s string) string {
 	h := uint32(0)
-	for _, c := range s {
+	for _, c := range []byte(s) {
 		h = h*31 + uint32(c)
 	}
 	return fmt.Sprintf("%08x", h)

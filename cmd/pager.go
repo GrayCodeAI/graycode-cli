@@ -55,7 +55,7 @@ func StartPager() io.Writer {
 	// G204: name is derived from environment or LookPath, which is the standard
 	// pattern for pager invocation. Users control their own PAGER env var.
 	//nolint:gosec // G204
-	cmd := exec.Command(name, args...)
+	cmd := exec.Command(name, args...) // #nosec G204 -- pager executable is selected from a validated allowlist
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

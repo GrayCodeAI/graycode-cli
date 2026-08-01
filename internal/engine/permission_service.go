@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/safety"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // PermissionService is the Session's view of the safety/approval layer.
@@ -23,6 +25,7 @@ import (
 // are all thin forwarders to the new service. They will be removed in
 // Phase 7.
 type PermissionService struct {
+	mu sync.RWMutex
 	// perm is the underlying PermissionEngine. Always non-nil after
 	// construction.
 	perm *PermissionEngine
@@ -96,10 +99,67 @@ func (s *PermissionService) CheckTool(ctx context.Context, info ToolCallInfo) (b
 	granted, denyMsg := s.perm.CheckTool(ctx, info)
 	if !granted {
 		s.log.Warn("permission denied", map[string]interface{}{
-			"tool": info.Name,
+			"tool":   info.Name,
+			"reason": string(d.Reason),
 		})
 	}
-	return granted, denyMsg
+	return d.Outcome == safety.DecisionAllow, d.Message
+}
+
+// CheckToolDecision evaluates a request and exposes stable decision metadata.
+func (s *PermissionService) CheckToolDecision(ctx context.Context, info ToolCallInfo) safety.Decision {
+	perm := s.engineCopy()
+	return perm.CheckToolDecision(ctx, info)
+}
+
+// EvaluateTool returns allow, ask, or deny without blocking on the UI.
+func (s *PermissionService) EvaluateTool(ctx context.Context, info ToolCallInfo) safety.Decision {
+	perm := s.engineCopy()
+	return perm.EvaluateTool(ctx, info)
+}
+
+// PolicySnapshot returns the scalar policy used for a single request.
+func (s *PermissionService) PolicySnapshot() safety.PolicySnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	snapshot := s.perm.Snapshot()
+	snapshot.AllowedDirs = append([]string(nil), s.allowedDirs...)
+	return snapshot
+}
+
+// CheckToolSnapshot evaluates a request against a previously captured policy.
+func (s *PermissionService) CheckToolSnapshot(ctx context.Context, info ToolCallInfo, snapshot safety.PolicySnapshot) safety.Decision {
+	perm := s.engineCopy()
+	return perm.CheckToolSnapshot(ctx, info, snapshot)
+}
+
+// engineCopy captures scalar policy state while holding the service lock, then
+// lets evaluation run without blocking policy updates or user prompts.
+func (s *PermissionService) engineCopy() *PermissionEngine {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	copy := *s.perm
+	return &copy
+}
+
+// ApplyPolicySnapshot installs a bounded parent policy into a child service.
+// The rule store is deep-copied so later parent changes cannot widen or alter
+// an in-flight child policy.
+func (s *PermissionService) ApplyPolicySnapshot(snapshot safety.PolicySnapshot) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.perm.Autonomy = snapshot.Autonomy
+	s.perm.AutonomyExplicit = snapshot.AutonomyExplicit
+	s.perm.SandboxMode = snapshot.SandboxMode
+	s.perm.Stage = snapshot.Stage
+	s.perm.DryRun = snapshot.DryRun
+	s.perm.SpecSlug = snapshot.SpecSlug
+	s.perm.Phase = snapshot.Phase
+	s.perm.Phases = snapshot.Phases
+	s.perm.Revision = snapshot.Revision
+	s.perm.Memory = safety.NewPermissionMemoryFromSnapshot(snapshot.Rules)
+	s.memory = s.perm.Memory
+	s.allowedDirs = append([]string(nil), snapshot.AllowedDirs...)
 }
 
 // CheckApproval runs the human-in-the-loop gate on high-risk actions.
@@ -377,5 +437,10 @@ func (s *PermissionService) BypassKill() *permissions.BypassKillswitch {
 // A zero PermissionService has no approval gate and no custom permission
 // fn — that's the "freshly constructed" state used by NewSessionWithClient.
 func (s *PermissionService) IsZero() bool {
-	return s == nil || (s.approval == nil && s.permissionFn == nil)
+	if s == nil {
+		return true
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.approval == nil && s.permissionFn == nil
 }

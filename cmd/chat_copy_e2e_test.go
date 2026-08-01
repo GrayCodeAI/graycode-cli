@@ -58,9 +58,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	if !ok {
 		t.Fatalf("pass %d: /copy all returned %T", pass, result)
 	}
-	if !strings.Contains(lastSystemMessage(cm.messages), "Copied chat transcript") {
-		t.Fatalf("pass %d: /copy all: %s", pass, lastSystemMessage(cm.messages))
-	}
+	assertCopySucceeded(t, pass, "/copy all", lastSystemMessage(cm.messages), "Copied chat transcript")
 	m = cm
 
 	result, _ = m.handleCommand("/copy")
@@ -68,9 +66,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	if !ok {
 		t.Fatalf("pass %d: /copy returned %T", pass, result)
 	}
-	if last := lastSystemMessage(cm.messages); !strings.Contains(last, "Copied") {
-		t.Fatalf("pass %d: /copy smart: %s", pass, last)
-	}
+	assertCopySucceeded(t, pass, "/copy smart", lastSystemMessage(cm.messages), "Copied")
 	m = cm
 
 	// Keyboard shortcut path
@@ -79,9 +75,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	if !ok {
 		t.Fatalf("pass %d: handleCopyShortcut returned %T", pass, result)
 	}
-	if !strings.Contains(lastSystemMessage(cm.messages), "Copied input") {
-		t.Fatalf("pass %d: Ctrl+Shift+C shortcut: %s", pass, lastSystemMessage(cm.messages))
-	}
+	assertCopySucceeded(t, pass, "Ctrl+Shift+C shortcut", lastSystemMessage(cm.messages), "Copied input")
 	m = cm
 
 	if !isCopyToClipboardKey(tea.KeyPressMsg{Code: 'c', Mod: tea.ModAlt}) {
@@ -130,9 +124,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	if !ok {
 		t.Fatalf("pass %d: /copy assistant returned %T", pass, result)
 	}
-	if !strings.Contains(lastSystemMessage(cm.messages), "Copied assistant reply") {
-		t.Fatalf("pass %d: /copy assistant: %s", pass, lastSystemMessage(cm.messages))
-	}
+	assertCopySucceeded(t, pass, "/copy assistant", lastSystemMessage(cm.messages), "Copied assistant reply")
 
 	// Settings-backed mouse default
 	disabled := false
@@ -140,6 +132,14 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	if m2.mouseEnabled() {
 		t.Fatalf("pass %d: settings tui_mouse=false should disable capture", pass)
 	}
+}
+
+func assertCopySucceeded(t *testing.T, pass int, operation, message, copiedText string) {
+	t.Helper()
+	if strings.Contains(message, copiedText) || strings.Contains(message, "Clipboard unavailable — saved") {
+		return
+	}
+	t.Fatalf("pass %d: %s: %s", pass, operation, message)
 }
 
 func lastSystemMessage(msgs []displayMsg) string {

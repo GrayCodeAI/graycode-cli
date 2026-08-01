@@ -147,7 +147,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 
 func getCommitDiff(sha string) (string, error) {
 	// For the first commit, diff against empty tree.
-	out, err := exec.CommandContext(context.Background(), "git", "diff-tree", "-p", sha).Output()
+	out, err := exec.CommandContext(context.Background(), "git", "diff-tree", "-p", sha).Output() // #nosec G204 -- fixed git executable
 	if err != nil {
 		// Fallback: diff against parent.
 		out, err = exec.CommandContext(context.Background(), "git", "diff", sha+"^", sha).Output() // #nosec G204 -- fixed command 'git' with args, not user-controlled binary

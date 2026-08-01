@@ -352,15 +352,18 @@ func (s *WSServer) readFrame() (fin bool, opcode int, payload []byte, err error)
 func (s *WSServer) writeFrame(opcode int, payload []byte) error {
 	s.writeM.Lock()
 	defer s.writeM.Unlock()
+	if opcode < 0 || opcode > 0x0f {
+		return fmt.Errorf("invalid websocket opcode %d", opcode)
+	}
 
 	var hdr []byte
-	b0 := byte(0x80 | opcode) // FIN + opcode
+	b0 := 0x80 | byte(opcode) // FIN + opcode
 	hdr = append(hdr, b0)
 
 	n := len(payload)
 	switch {
 	case n <= 125:
-		hdr = append(hdr, byte(0x80|n)) // mask bit + length
+		hdr = append(hdr, 0x80|byte(n)) // mask bit + length
 	case n <= 0xFFFF:
 		hdr = append(hdr, 0x80|126)
 		var ext [2]byte

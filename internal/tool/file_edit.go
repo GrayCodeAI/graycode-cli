@@ -81,7 +81,7 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if info.Size() > maxFileSize {
 		return "", fmt.Errorf("file too large: %d bytes", info.Size())
 	}
-	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	data, err := readGuardedFile(ctx, path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}
@@ -123,7 +123,7 @@ func (FileEditTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		result = strings.ReplaceAll(result, "\n", "\r\n")
 	}
 
-	if err := os.WriteFile(path, []byte(result), info.Mode()); err != nil {
+	if err := writeGuardedFile(ctx, path, []byte(result), info.Mode()); err != nil {
 		return "", fmt.Errorf("write: %w", err)
 	}
 	if autoCommitEnabled(ctx) {

@@ -165,6 +165,7 @@ func slashAliases() map[string]string {
 	}
 }
 
+// #nosec G101 -- command descriptions are static UI strings, not credentials.
 var slashDescriptions = map[string]string{
 	"/add":                   "Add files to conversation context",
 	"/add-dir":               "Add a directory to context",

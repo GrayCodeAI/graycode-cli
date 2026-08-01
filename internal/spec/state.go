@@ -5,8 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 )
+
+var validSlug = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
+
+func specDir(root, slug string) (string, error) {
+	if !validSlug.MatchString(slug) || slug == "." || slug == ".." {
+		return "", fmt.Errorf("invalid spec slug %q", slug)
+	}
+	return filepath.Join(root, slug), nil
+}
 
 // StageMeta is persisted to .hawk/specs/<slug>/spec.json to enable
 // cross-session spec workflow recovery.
@@ -60,7 +70,11 @@ func WriteStageMeta(slug, stage, schema, title string) error {
 	if err != nil {
 		return fmt.Errorf("marshal meta: %w", err)
 	}
-	path := filepath.Join(dir, slug, "spec.json")
+	specPath, err := specDir(dir, slug)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(specPath, "spec.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("mkdir meta: %w", err)
 	}
@@ -76,8 +90,12 @@ func LoadStageMeta(slug string) *StageMeta {
 	if err != nil {
 		return nil
 	}
-	path := filepath.Join(dir, slug, "spec.json")
-	data, err := os.ReadFile(path) // #nosec G304 -- path built from SpecsRoot()+slug, internal spec stage metadata
+	specPath, err := specDir(dir, slug)
+	if err != nil {
+		return nil
+	}
+	path := filepath.Join(specPath, "spec.json")
+	data, err := os.ReadFile(path) // #nosec G304 -- path is confined by specDir's validated slug
 	if err != nil {
 		return nil
 	}
@@ -122,11 +140,14 @@ func StageFromFiles(slug string) string {
 	if err != nil {
 		return ""
 	}
-	specDir := filepath.Join(dir, slug)
+	specPath, err := specDir(dir, slug)
+	if err != nil {
+		return ""
+	}
 
-	hasSpec := fileExists(filepath.Join(specDir, "spec.md"))
-	hasPlan := fileExists(filepath.Join(specDir, "plan.md"))
-	hasTasks := fileExists(filepath.Join(specDir, "tasks.md"))
+	hasSpec := fileExists(filepath.Join(specPath, "spec.md"))
+	hasPlan := fileExists(filepath.Join(specPath, "plan.md"))
+	hasTasks := fileExists(filepath.Join(specPath, "tasks.md"))
 
 	switch {
 	case hasTasks:
@@ -196,9 +217,12 @@ func DeleteSpec(slug string) error {
 	if err != nil {
 		return err
 	}
-	specDir := filepath.Join(dir, slug)
-	if _, err := os.Stat(specDir); os.IsNotExist(err) {
+	specPath, err := specDir(dir, slug)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(specPath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.RemoveAll(specDir)
+	return os.RemoveAll(specPath)
 }

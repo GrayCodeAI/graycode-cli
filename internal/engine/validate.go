@@ -133,7 +133,7 @@ func validatePython(path string) *ValidationResult {
 
 // validateJS runs node --check on a JavaScript file.
 func validateJS(path string) *ValidationResult {
-	cmd := exec.CommandContext(context.Background(), "node", "--check", path)
+	cmd := exec.CommandContext(context.Background(), "node", "--check", path) // #nosec G204 -- fixed Node executable
 
 	output, err := cmd.CombinedOutput()
 	if err == nil {
@@ -159,7 +159,7 @@ func validateJS(path string) *ValidationResult {
 // Uses npx tsc --noEmit if available, otherwise falls back to node --check.
 func validateTS(path string) *ValidationResult {
 	// Try tsc first
-	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", path)
+	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", path) // #nosec G204 -- fixed TypeScript compiler executable
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return &ValidationResult{Valid: true}

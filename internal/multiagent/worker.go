@@ -207,7 +207,7 @@ func createWorktree(ctx context.Context, repoDir, baseBranch, branch string) (st
 }
 
 func removeWorktree(ctx context.Context, repoDir, wtPath string) {
-	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtPath)
+	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtPath) // #nosec G204 -- fixed git executable
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to remove worktree %s: %v\n", wtPath, err)

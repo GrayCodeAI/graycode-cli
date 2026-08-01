@@ -58,7 +58,7 @@ func NewGitContext(repoDir string) *GitContext {
 
 // runGit executes a git command in the repo directory and returns its output.
 func (gc *GitContext) runGit(args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = gc.RepoDir
 	out, err := cmd.Output()
 	if err != nil {

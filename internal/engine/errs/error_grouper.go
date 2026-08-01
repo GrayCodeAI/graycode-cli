@@ -71,7 +71,7 @@ func NormalizeError(msg string) string {
 
 func groupID(normalized string) string {
 	var h uint32
-	for _, c := range normalized {
+	for _, c := range []byte(normalized) {
 		h = h*31 + uint32(c)
 	}
 	return fmt.Sprintf("eg_%08x", h)

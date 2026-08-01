@@ -106,7 +106,7 @@ func shadowValidateGo(tmpPath, origPath string) []ValidationError {
 		defer func() { _ = os.Remove(modPath) }()
 	}
 
-	cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
+	cmd := exec.CommandContext(context.Background(), "go", "vet", "./...") // #nosec G204 -- fixed Go executable
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	if err == nil {
@@ -142,7 +142,7 @@ func shadowValidatePython(tmpPath, origPath string) []ValidationError {
 
 // shadowValidateTS runs `npx tsc --noEmit` on the temp file.
 func shadowValidateTS(tmpPath, origPath string) []ValidationError {
-	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", tmpPath)
+	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", tmpPath) // #nosec G204 -- fixed TypeScript compiler executable
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil

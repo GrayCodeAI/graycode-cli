@@ -359,7 +359,7 @@ func isHorizontalRule(trimmed string) bool {
 		return false
 	}
 	for _, c := range cleaned {
-		if byte(c) != ch {
+		if c != rune(ch) {
 			return false
 		}
 	}

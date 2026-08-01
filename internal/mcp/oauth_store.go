@@ -18,7 +18,7 @@ const oauthTokenService = "hawk-mcp-oauth" // #nosec G101 -- fixed storage label
 // into that string — not auth.TokenStore, which (as of this writing) has
 // no-op Load/Save and doesn't actually persist anything.
 type StoredToken struct {
-	AccessToken   string    `json:"access_token"`
+	AccessToken   string    `json:"access_token"` // #nosec G117 -- token is intentionally serialized into OS keychain storage
 	RefreshToken  string    `json:"refresh_token,omitempty"`
 	ExpiresAt     time.Time `json:"expires_at,omitempty"`
 	ClientID      string    `json:"client_id"`
@@ -64,7 +64,7 @@ func SetTokenBackendForTesting(backend interface {
 
 // SaveToken persists tok for serverName.
 func SaveToken(serverName string, tok *StoredToken) error {
-	data, err := json.Marshal(tok)
+	data, err := json.Marshal(tok) // #nosec G117 -- token serialization is required before OS keychain storage
 	if err != nil {
 		return err
 	}

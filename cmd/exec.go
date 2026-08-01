@@ -688,7 +688,7 @@ func cleanupExecWorktree(repoDir, wtPath string) {
 	if wtPath == "" {
 		return
 	}
-	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", wtPath) // #nosec G204 -- fixed git executable
 	cmd.Dir = repoDir
 	_ = cmd.Run()
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -62,7 +63,7 @@ func ProjectSandboxTOMLPath(projectRoot string) string {
 // LoadTOML reads a sandbox.toml file. Missing file returns empty config.
 func LoadTOML(path string) (TOMLConfig, error) {
 	var cfg TOMLConfig
-	data, err := os.ReadFile(path)
+	data, err := fsutil.ReadPinnedFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return cfg, nil

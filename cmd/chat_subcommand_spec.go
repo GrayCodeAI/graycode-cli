@@ -47,7 +47,7 @@ func (s *specSubcommand) Handle(m *chatModel, args []string, text string) (tea.M
 		return m, nil
 
 	case strings.EqualFold(arg, "reset"):
-		m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+		m.session.PermSvc().ResetSpec()
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the normal autonomy tier again."})
 		return m, nil
 

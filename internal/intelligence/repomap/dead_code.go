@@ -85,7 +85,7 @@ func (d *DeadCodeDetector) Scan(projectDir string) ([]DeadCode, error) {
 		if !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		content, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
+		content, err := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if err != nil {
 			return nil
 		}

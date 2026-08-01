@@ -7,7 +7,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -808,8 +807,13 @@ func (ImportOrganizerTool) Execute(ctx context.Context, input json.RawMessage) (
 		return "", fmt.Errorf("path is required")
 	}
 
-	// Read the file.
-	data, err := os.ReadFile(p.Path)
+	if err := validatePathAllowed(ctx, p.Path); err != nil {
+		return "", err
+	}
+
+	// Read the file through a directory-pinned root so a symlink swap cannot
+	// redirect the operation after the policy check.
+	data, err := readGuardedFile(ctx, p.Path)
 	if err != nil {
 		return "", fmt.Errorf("read file: %w", err)
 	}
@@ -839,7 +843,7 @@ func (ImportOrganizerTool) Execute(ctx context.Context, input json.RawMessage) (
 	}
 
 	// Write back.
-	if err := os.WriteFile(p.Path, []byte(result), 0o600); err != nil {
+	if err := writeGuardedFile(ctx, p.Path, []byte(result), 0o600); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 

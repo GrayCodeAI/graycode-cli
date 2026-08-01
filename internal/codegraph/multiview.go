@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strconv"
 	"strings"
 )
 
@@ -360,5 +361,5 @@ func findEnclosingFunc(node *ast.File, pos token.Pos, fset *token.FileSet) strin
 }
 
 func itoa(i int) string {
-	return strings.TrimLeft(strings.Replace(string(rune(i/10+'0'))+string(rune(i%10+'0')), "", "", -1), "")
+	return strconv.Itoa(i)
 }

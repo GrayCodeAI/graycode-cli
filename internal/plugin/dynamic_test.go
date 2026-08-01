@@ -228,6 +228,9 @@ func TestSplitCommand(t *testing.T) {
 		{
 			"python -c print(1)", []string{"python", "-c", "print(1)"},
 		},
+		{"echo 'hello world'", []string{"echo", "hello world"}},
+		{"python -c \"print('x y')\"", []string{"python", "-c", "print('x y')"}},
+		{"echo hello\\ world", []string{"echo", "hello world"}},
 		{"single", []string{"single"}},
 		{"", nil},
 		{"  spaced  out  ", []string{"spaced", "out"}},

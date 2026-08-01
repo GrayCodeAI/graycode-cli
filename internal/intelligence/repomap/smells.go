@@ -638,7 +638,7 @@ func (sd *SmellDetector) ScanDirectory(dir string) []CodeSmell {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if err != nil {
 			return nil
 		}

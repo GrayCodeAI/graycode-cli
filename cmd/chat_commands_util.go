@@ -18,7 +18,7 @@ import (
 func gitOutput(args ...string) (string, error) {
 	// Output (not CombinedOutput): git writes warnings to stderr, which must
 	// not be folded into values like the branch name shown in the status bar.
-	out, err := exec.CommandContext(context.Background(), "git", args...).Output()
+	out, err := exec.CommandContext(context.Background(), "git", args...).Output() // #nosec G204 -- fixed git executable
 	return strings.TrimSpace(string(out)), err
 }
 

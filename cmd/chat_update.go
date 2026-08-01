@@ -460,6 +460,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if chosen != nil && m.session != nil {
 					m.session.PermSvc().SetAutonomy(chosen.Level)
 					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
+					m.settings.AutonomyExplicit = true
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", chosen.Name, chosen.Description)})
 				}
 				m.viewDirty = true
@@ -513,7 +514,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						msg += "\nThe agent can also use `SpecConfig` tool to read/update."
 						m.messages = append(m.messages, displayMsg{role: "system", content: msg})
 					case specActionReset:
-						m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+						m.session.PermSvc().ResetSpec()
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the trust tier again."})
 					}
 				}
@@ -881,6 +882,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						nextTier = DefaultContainerAutonomy
 					}
 					m.session.PermSvc().SetAutonomy(nextTier)
+					m.settings.AutonomyExplicit = true
 					m.invalidateConnStatus()
 					m.messages = append(m.messages, displayMsg{
 						role:    "warning",
@@ -1425,7 +1427,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if msg.ready && m.session != nil {
-			if m.session.PermSvc().Autonomy() == 0 {
+			if m.session.PermSvc().Autonomy() == 0 && !m.session.PermSvc().AutonomyExplicit() {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
 			m.invalidateConnStatus()

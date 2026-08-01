@@ -147,7 +147,7 @@ func (McpAuthTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 	state := &MCPAuthState{ServerName: p.ServerName, AuthURL: authURL, Status: "pending"}
 	globalMCPAuthManager.setState(p.ServerName, state)
 
-	go completeMCPAuth(p.ServerName, meta, clientID, verifier, reqState, redirectURI, resultCh, shutdown)
+	go completeMCPAuth(context.WithoutCancel(ctx), p.ServerName, meta, clientID, verifier, reqState, redirectURI, resultCh, shutdown)
 
 	return authStatusJSON(state), nil
 }
@@ -163,6 +163,7 @@ func failState(serverName string, err error) *MCPAuthState {
 // that started it, since the user completing authorization in their
 // browser is an open-ended, asynchronous step from hawk's perspective.
 func completeMCPAuth(
+	parentCtx context.Context,
 	serverName string,
 	meta *mcp.AuthServerMetadata,
 	clientID, verifier, wantState, redirectURI string,
@@ -170,7 +171,13 @@ func completeMCPAuth(
 	shutdown func(),
 ) {
 	defer shutdown()
-	result := <-resultCh
+	var result mcp.CallbackResult
+	select {
+	case result = <-resultCh:
+	case <-parentCtx.Done():
+		failState(serverName, parentCtx.Err())
+		return
+	}
 	if result.Err != nil {
 		failState(serverName, result.Err)
 		return
@@ -180,7 +187,7 @@ func completeMCPAuth(
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 	defer cancel()
 	tokens, err := mcp.ExchangeCode(ctx, meta, clientID, result.Code, verifier, redirectURI)
 	if err != nil {

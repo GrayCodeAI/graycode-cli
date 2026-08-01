@@ -108,6 +108,14 @@ func TestMergeSettings_SandboxOverride(t *testing.T) {
 	}
 }
 
+func TestMergeSettings_PersistsExplicitSupervised(t *testing.T) {
+	base := Settings{Autonomy: 2, AutonomyExplicit: true}
+	merged := MergeSettings(base, Settings{AutonomyExplicit: true, Autonomy: 0})
+	if merged.Autonomy != 0 || !merged.AutonomyExplicit {
+		t.Fatalf("merged autonomy = %d explicit=%v, want 0/true", merged.Autonomy, merged.AutonomyExplicit)
+	}
+}
+
 func TestMergeSettings_ModelRolesOverride(t *testing.T) {
 	t.Parallel()
 	base := Settings{}
@@ -403,5 +411,19 @@ func TestValidationResult_Error(t *testing.T) {
 	errStr := r2.Error()
 	if !strings.Contains(errStr, "model") || !strings.Contains(errStr, "budget") {
 		t.Error("error should contain all field names")
+	}
+}
+
+func TestPolicySchemaVersionMigratesLegacySettings(t *testing.T) {
+	var s Settings
+	if err := json.Unmarshal([]byte(`{"autonomy":0,"sandbox":"workspace"}`), &s); err != nil {
+		t.Fatal(err)
+	}
+	if s.PolicySchemaVersion != 0 {
+		t.Fatalf("raw unmarshal should preserve legacy zero, got %d", s.PolicySchemaVersion)
+	}
+	merged := MergeSettings(Settings{}, s)
+	if merged.PolicySchemaVersion != CurrentPolicySchemaVersion {
+		t.Fatalf("migrated schema version = %d, want %d", merged.PolicySchemaVersion, CurrentPolicySchemaVersion)
 	}
 }

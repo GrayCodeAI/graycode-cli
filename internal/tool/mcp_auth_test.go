@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/mcp"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 // fakeTokenBackend is an in-memory stand-in for the OS keychain — tests in
@@ -73,7 +74,7 @@ func newTestOAuthServer(t *testing.T) *httptest.Server {
 			"expires_in":    3600,
 		})
 	})
-	srv = httptest.NewServer(mux)
+	srv = testutil.NewLoopbackHTTPServer(t, mux)
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -182,7 +183,7 @@ func TestMcpAuthTool_ExplicitClientID_SkipsRegistration(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(map[string]string{"client_id": "should-not-be-used"})
 	})
-	srv = httptest.NewServer(mux)
+	srv = testutil.NewLoopbackHTTPServer(t, mux)
 	defer srv.Close()
 
 	input, _ := json.Marshal(map[string]string{
@@ -225,7 +226,7 @@ func TestMcpAuthTool_NoRegistrationEndpointAndNoClientID_Errors(t *testing.T) {
 			// No RegistrationEndpoint.
 		})
 	})
-	srv = httptest.NewServer(mux)
+	srv = testutil.NewLoopbackHTTPServer(t, mux)
 	defer srv.Close()
 
 	input, _ := json.Marshal(map[string]string{
@@ -313,7 +314,7 @@ func TestAuthHeaderForMCPServer_RefreshesExpiringToken(t *testing.T) {
 	defer restore()
 
 	refreshServerCalled := false
-	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tokenServer := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		refreshServerCalled = true
 		_ = r.ParseForm()
 		if r.FormValue("grant_type") != "refresh_token" || r.FormValue("refresh_token") != "old-refresh" {

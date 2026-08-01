@@ -160,11 +160,11 @@ func openFeedbackIssue(report FeedbackReport) error {
 func openBrowser(url string) error {
 	switch runtime.GOOS {
 	case "darwin":
-		return exec.CommandContext(context.Background(), "open", url).Start()
+		return exec.CommandContext(context.Background(), "open", url).Start() // #nosec G204 -- fixed platform URL opener
 	case "linux":
-		return exec.CommandContext(context.Background(), "xdg-open", url).Start()
+		return exec.CommandContext(context.Background(), "xdg-open", url).Start() // #nosec G204 -- fixed platform URL opener
 	case "windows":
-		return exec.CommandContext(context.Background(), "rundll32", "url.dll,FileProtocolHandler", url).Start()
+		return exec.CommandContext(context.Background(), "rundll32", "url.dll,FileProtocolHandler", url).Start() // #nosec G204 -- fixed platform URL opener
 	default:
 		return fmt.Errorf("unsupported platform")
 	}

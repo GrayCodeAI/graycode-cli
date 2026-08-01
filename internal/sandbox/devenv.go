@@ -202,7 +202,7 @@ func (d *DevEnvManager) augmentDockerfile(path string) (string, error) {
 	}
 	augmented := d.runtime.AppendExtraDeps(string(data))
 	outPath := filepath.Join(filepath.Dir(path), "Dockerfile.hawk-runtime")
-	if err := os.WriteFile(outPath, []byte(augmented), 0o600); err != nil {
+	if err := os.WriteFile(outPath, []byte(augmented), 0o600); err != nil { // #nosec G703 -- sibling output is derived from the caller's project Dockerfile
 		return "", err
 	}
 	return outPath, nil

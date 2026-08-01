@@ -3,10 +3,10 @@ package plugin
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/flags"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestMarketplaceFind(t *testing.T) {
@@ -20,10 +20,9 @@ func TestMarketplaceFind(t *testing.T) {
 			{Name: "cool-plugin", Repo: "org/cool-plugin", Description: "cool", Version: "1.0.0"},
 		},
 	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(idx)
 	}))
-	t.Cleanup(srv.Close)
 
 	mc := &MarketplaceClient{
 		Sources:  []MarketplaceSource{{Name: "test", URL: srv.URL}},

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/flags"
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -43,7 +44,7 @@ func Open(path string) (*Store, error) {
 		path = DefaultPath()
 	}
 	s := &Store{path: path, Entries: make(map[string]Entry)}
-	data, err := os.ReadFile(path)
+	data, err := fsutil.ReadPinnedFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return s, nil
@@ -67,7 +68,7 @@ func Open(path string) (*Store, error) {
 func (s *Store) Save() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(s, "", "  ")

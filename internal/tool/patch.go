@@ -239,7 +239,7 @@ func Apply(patch *FilePatch) error {
 	}
 
 	result := strings.Join(lines, "\n")
-	return os.WriteFile(patch.Path, []byte(result), 0o600)
+	return writePinnedFile(patch.Path, []byte(result), 0o600)
 }
 
 // ApplyAll applies all patches and returns the list of modified file paths.

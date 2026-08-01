@@ -332,7 +332,14 @@ func ValidateDirectory(slug string) ValidationResult {
 			}},
 		}
 	}
-	specDir := filepath.Join(dir, slug)
+	specDir, err := specDir(dir, slug)
+	if err != nil {
+		return ValidationResult{Issues: []ValidationIssue{{
+			Level:   ValidationError,
+			Code:    "INVALID_SLUG",
+			Message: err.Error(),
+		}}}
+	}
 
 	var allIssues []ValidationResult
 	for _, f := range []string{"spec.md", "plan.md", "tasks.md"} {

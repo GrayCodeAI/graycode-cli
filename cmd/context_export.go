@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -215,7 +216,7 @@ func gitContextInfo(dir string) string {
 
 // runGit executes a git command in the given directory.
 func runGit(dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -313,7 +314,7 @@ func renderCXML(dir string) (string, string, error) {
 			skipped++
 			return nil
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over the target directory
+		data, err := fsutil.ReadPinnedFile(path)
 		if err != nil {
 			skipped++
 			return nil

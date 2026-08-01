@@ -231,7 +231,7 @@ func (cg *CodeGraph) Sync() (*SyncResult, error) {
 			result.FilesChecked++
 
 			// Check if file changed
-			source, err := os.ReadFile(path) // #nosec G304 -- path comes from filepath.WalkDir over cg.root, the project being indexed
+			source, err := os.ReadFile(path) // #nosec G304,G122 -- read-only codegraph indexing scan
 			if err != nil {
 				return nil
 			}

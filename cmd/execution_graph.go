@@ -13,6 +13,7 @@ import (
 	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
 	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/executiongraph"
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/taskruntime"
@@ -238,7 +239,7 @@ func loadMissionGraphExport(dir string) (executiongraph.Export, error) {
 	if info.Size() > 1<<20 {
 		return executiongraph.Export{}, fmt.Errorf("mission graph is %d bytes; maximum is 1 MiB", info.Size())
 	}
-	data, err := os.ReadFile(path)
+	data, err := fsutil.ReadPinnedFile(path)
 	if err != nil {
 		return executiongraph.Export{}, fmt.Errorf("read mission graph %q: %w", path, err)
 	}
