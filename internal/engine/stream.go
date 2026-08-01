@@ -123,7 +123,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		if compactStrategy, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
 			tokensAfter := EstimateTokens(s.Persistence().RawMessages())
-			s.log.Info("context compacted", map[string]interface{}{
+			s.Logger().Info("context compacted", map[string]interface{}{
 				"strategy": compactStrategy,
 				"messages": len(s.Persistence().RawMessages()),
 			})
@@ -158,7 +158,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						ch <- StreamEvent{Type: "error", Content: "High-risk prompt injection detected. Message blocked."}
 						return
 					}
-					s.log.Warn("injection risk detected", map[string]interface{}{
+					s.Logger().Warn("injection risk detected", map[string]interface{}{
 						"level": preResult.InjectionRisk.RiskLevel,
 					})
 				}
@@ -309,15 +309,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		managesResilience := clientManagesResilience(s.ChatLLM().Client())
 		result, err := s.ChatLLM().Stream(ctx, s.Persistence().RawMessages(), opts)
 		apiDuration := time.Since(apiStart)
-		s.metrics.Timer("api.latency").Record(apiDuration)
-		s.metrics.Timer("api.last_latency").Record(apiDuration)
+		s.Metrics().Timer("api.latency").Record(apiDuration)
+		s.Metrics().Timer("api.last_latency").Record(apiDuration)
 
 		if err != nil {
 			// End trace span with error
 			if loopSpan != nil {
 				oteltrace.EndSpanWithError(loopSpan, err)
 			}
-			s.log.Error("stream error", map[string]interface{}{
+			s.Logger().Error("stream error", map[string]interface{}{
 				"error": err.Error(),
 			})
 			ch <- StreamEvent{Type: "error", Content: err.Error()}
@@ -356,7 +356,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						var changed bool
 						resolvedProvider, resolvedModel, changed = updateResolvedRoute(resolvedProvider, resolvedModel, ev.Route)
 						if changed {
-							s.log.Info("engine route selected", map[string]interface{}{
+							s.Logger().Info("engine route selected", map[string]interface{}{
 								"provider": resolvedProvider,
 								"model":    resolvedModel,
 							})
@@ -440,7 +440,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				break
 			}
 			retryReason := "transient stream error"
-			s.log.Warn("stream retry", map[string]interface{}{
+			s.Logger().Warn("stream retry", map[string]interface{}{
 				"attempt": streamAttempt + 1,
 				"reason":  retryReason,
 				"error":   streamErr.Error(),

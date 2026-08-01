@@ -73,7 +73,7 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 		ac.mu.Lock()
 		ac.consecutiveFailures++
 		ac.mu.Unlock()
-		sess.log.Warn("auto-compact failed", map[string]interface{}{
+		sess.Logger().Warn("auto-compact failed", map[string]interface{}{
 			"error":    err.Error(),
 			"failures": ac.consecutiveFailures,
 		})
@@ -97,7 +97,7 @@ func (ac *AutoCompactor) RunCompaction(ctx context.Context, sess *Session) (stri
 	tokenCount := EstimateTokens(messages)
 	strategy := ac.registry.SelectStrategy(sess, messages, tokenCount)
 
-	sess.log.Info("running compaction", map[string]interface{}{
+	sess.Logger().Info("running compaction", map[string]interface{}{
 		"strategy": strategy.Name(),
 		"tokens":   tokenCount,
 	})
@@ -112,7 +112,7 @@ func (ac *AutoCompactor) RunCompaction(ctx context.Context, sess *Session) (stri
 	ac.lastStrategy = result.Strategy
 	ac.mu.Unlock()
 
-	sess.log.Info("compaction complete", map[string]interface{}{
+	sess.Logger().Info("compaction complete", map[string]interface{}{
 		"strategy":      result.Strategy,
 		"tokens_before": result.TokensBefore,
 		"tokens_after":  result.TokensAfter,

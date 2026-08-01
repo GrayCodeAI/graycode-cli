@@ -29,7 +29,7 @@ func (s *Session) recordPolicyObservation(tc types.ToolCall, stage string, allow
 		verdict.Source = "hawk." + strings.TrimSpace(stage)
 	}
 	if err := graphjournal.AppendPolicy(sessionID, tc.ID, stage, verdict, time.Now()); err != nil {
-		s.log.Warn("graph observation append failed", map[string]interface{}{
+		s.Logger().Warn("graph observation append failed", map[string]interface{}{
 			"kind":  graphjournal.KindPolicy,
 			"stage": stage,
 		})
@@ -81,7 +81,7 @@ func (s *Session) recordVerificationObservation(tc types.ToolCall, output string
 		"plan-execution",
 		time.Now(),
 	); err != nil {
-		s.log.Warn("graph observation append failed", map[string]interface{}{
+		s.Logger().Warn("graph observation append failed", map[string]interface{}{
 			"kind":  graphjournal.KindVerify,
 			"stage": "verify-plan-execution",
 		})
@@ -146,7 +146,7 @@ func (s *Session) recordTokCompressionObservation(source, stage string, stats to
 		)
 	}
 	if err != nil {
-		s.log.Warn("graph observation append failed", map[string]interface{}{
+		s.Logger().Warn("graph observation append failed", map[string]interface{}{
 			"kind":  graphjournal.KindRuntime,
 			"stage": stage,
 		})
@@ -186,7 +186,7 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 		)
 	}
 	if err != nil {
-		s.log.Warn("graph observation append failed", map[string]interface{}{
+		s.Logger().Warn("graph observation append failed", map[string]interface{}{
 			"kind":  graphjournal.KindRuntime,
 			"stage": "response-redaction",
 		})
@@ -246,7 +246,7 @@ func (s *Session) recordTokUsageBudgetObservation(
 		)
 	}
 	if err != nil {
-		s.log.Warn("graph observation append failed", map[string]interface{}{
+		s.Logger().Warn("graph observation append failed", map[string]interface{}{
 			"kind":  graphjournal.KindRuntime,
 			"stage": "usage-budget",
 		})
@@ -322,7 +322,7 @@ func (s *Session) recordEyrieOperationObservation(
 		)
 	}
 	if err != nil {
-		s.log.Warn("graph observation append failed", map[string]interface{}{
+		s.Logger().Warn("graph observation append failed", map[string]interface{}{
 			"kind":  graphjournal.KindRuntime,
 			"stage": "model-generation",
 		})

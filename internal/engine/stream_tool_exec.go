@@ -397,7 +397,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	toolCancel()
 	isErr := execErr != nil
 	if isErr {
-		s.log.Warn("tool execution error", map[string]interface{}{
+		s.Logger().Warn("tool execution error", map[string]interface{}{
 			"tool":  tc.Name,
 			"error": execErr.Error(),
 		})
@@ -419,7 +419,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			}
 		}
 	} else {
-		s.log.Info("tool executed", map[string]interface{}{
+		s.Logger().Info("tool executed", map[string]interface{}{
 			"tool":   tc.Name,
 			"output": len(output),
 		})
@@ -440,7 +440,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 						revertErr = os.WriteFile(preEditPath, []byte(preEditContent), 0o600)
 					}
 					if revertErr != nil {
-						s.log.Error("self-review revert failed; rejecting diff loudly", map[string]interface{}{
+						s.Logger().Error("self-review revert failed; rejecting diff loudly", map[string]interface{}{
 							"path":  preEditPath,
 							"error": revertErr.Error(),
 						})
@@ -626,9 +626,9 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	}
 
-	s.metrics.Counter("tools.executed").Inc()
+	s.Metrics().Counter("tools.executed").Inc()
 	if isErr {
-		s.metrics.Counter("tools.errors").Inc()
+		s.Metrics().Counter("tools.errors").Inc()
 	}
 
 	if s.MemorySvc().Enhanced() != nil {
