@@ -7,14 +7,14 @@ import (
 
 func TestApprovalGate_Disabled_NoOp(t *testing.T) {
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyYOLO
+	s.PermSvc().SetAutonomy(AutonomyYOLO)
 	// No gate configured: high-risk action proceeds (default behavior unchanged).
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf /tmp/x"})
 	if !ok {
 		t.Fatal("nil gate should be a no-op (allow)")
 	}
 
-	s.Approval = &ApprovalGate{Enabled: false}
+	s.SetApproval(&ApprovalGate{Enabled: false})
 	ok, _ = s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf /tmp/x"})
 	if !ok {
 		t.Fatal("disabled gate should be a no-op (allow)")
@@ -24,8 +24,8 @@ func TestApprovalGate_Disabled_NoOp(t *testing.T) {
 func TestApprovalGate_FlaggedDestructiveRequiresApproval(t *testing.T) {
 	approvedCalls := 0
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyFull // above MaxAutoApprove default (supervised)
-	s.Approval = &ApprovalGate{
+	s.PermSvc().SetAutonomy(AutonomyFull) // above MaxAutoApprove default (supervised)
+	s.SetApproval(&ApprovalGate{
 		Enabled: true,
 		ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
 			approvedCalls++
@@ -34,7 +34,7 @@ func TestApprovalGate_FlaggedDestructiveRequiresApproval(t *testing.T) {
 			}
 			return ApprovalReject // human denies
 		},
-	}
+	})
 
 	ok, msg := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf build/"})
 	if ok {
@@ -50,11 +50,11 @@ func TestApprovalGate_FlaggedDestructiveRequiresApproval(t *testing.T) {
 
 func TestApprovalGate_HumanApproves(t *testing.T) {
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyFull
-	s.Approval = &ApprovalGate{
+	s.PermSvc().SetAutonomy(AutonomyFull)
+	s.SetApproval(&ApprovalGate{
 		Enabled:   true,
 		ConfirmFn: func(req ApprovalRequest) ApprovalResponse { return ApprovalApprove },
-	}
+	})
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "curl http://example.com"})
 	if !ok {
 		t.Fatal("action should proceed when human approves")
@@ -64,12 +64,12 @@ func TestApprovalGate_HumanApproves(t *testing.T) {
 func TestApprovalGate_AutoApproveThreshold(t *testing.T) {
 	called := false
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyBasic // <= MaxAutoApprove
-	s.Approval = &ApprovalGate{
+	s.PermSvc().SetAutonomy(AutonomyBasic) // <= MaxAutoApprove
+	s.SetApproval(&ApprovalGate{
 		Enabled:        true,
 		MaxAutoApprove: AutonomySemi,
 		ConfirmFn:      func(req ApprovalRequest) ApprovalResponse { called = true; return ApprovalReject },
-	}
+	})
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
 	if !ok {
 		t.Fatal("within auto-approve threshold the action should proceed without prompting")
@@ -82,11 +82,11 @@ func TestApprovalGate_AutoApproveThreshold(t *testing.T) {
 func TestApprovalGate_NonRiskyActionNotGated(t *testing.T) {
 	called := false
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyYOLO
-	s.Approval = &ApprovalGate{
+	s.PermSvc().SetAutonomy(AutonomyYOLO)
+	s.SetApproval(&ApprovalGate{
 		Enabled:   true,
 		ConfirmFn: func(req ApprovalRequest) ApprovalResponse { called = true; return ApprovalReject },
-	}
+	})
 	// A plain read-style command is not high-risk.
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "ls -la"})
 	if !ok {
@@ -100,12 +100,12 @@ func TestApprovalGate_NonRiskyActionNotGated(t *testing.T) {
 func TestApprovalGate_CategoryFilter(t *testing.T) {
 	called := false
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyFull
-	s.Approval = &ApprovalGate{
+	s.PermSvc().SetAutonomy(AutonomyFull)
+	s.SetApproval(&ApprovalGate{
 		Enabled:    true,
 		Categories: map[ApprovalCategory]bool{ApprovalNetwork: true}, // only network gated
 		ConfirmFn:  func(req ApprovalRequest) ApprovalResponse { called = true; return ApprovalReject },
-	}
+	})
 	// File deletion is not in the enabled category set => allowed.
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
 	if !ok {
@@ -127,13 +127,13 @@ func TestApprovalGate_CategoryFilter(t *testing.T) {
 
 func TestApprovalGate_FlaggedTool(t *testing.T) {
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyFull
+	s.PermSvc().SetAutonomy(AutonomyFull)
 	denied := false
-	s.Approval = &ApprovalGate{
+	s.SetApproval(&ApprovalGate{
 		Enabled:      true,
 		FlaggedTools: map[string]ApprovalCategory{"Write": ApprovalExternalAPI},
 		ConfirmFn:    func(req ApprovalRequest) ApprovalResponse { denied = true; return ApprovalReject },
-	}
+	})
 	ok, _ := s.CheckApproval(context.Background(), "Write", map[string]interface{}{"file_path": "/x"})
 	if ok {
 		t.Fatal("flagged tool should require approval")
@@ -145,9 +145,9 @@ func TestApprovalGate_FlaggedTool(t *testing.T) {
 
 func TestApprovalGate_FailClosedNoHandler(t *testing.T) {
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyFull
-	s.AskUserFn = nil
-	s.Approval = &ApprovalGate{Enabled: true} // no ConfirmFn, no AskUserFn
+	s.PermSvc().SetAutonomy(AutonomyFull)
+	s.SetAskUserFn(nil)
+	s.SetApproval(&ApprovalGate{Enabled: true}) // no ConfirmFn, no AskUserFn
 	ok, msg := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
 	if ok {
 		t.Fatal("with no confirmation handler the gate must fail closed (deny)")
@@ -159,9 +159,9 @@ func TestApprovalGate_FailClosedNoHandler(t *testing.T) {
 
 func TestApprovalGate_FallbackAskUserFn(t *testing.T) {
 	s := NewSession("test", "m", "", nil)
-	s.Autonomy = AutonomyFull
-	s.AskUserFn = func(q string) (string, error) { return "yes", nil }
-	s.Approval = &ApprovalGate{Enabled: true}
+	s.PermSvc().SetAutonomy(AutonomyFull)
+	s.SetAskUserFn(func(q string) (string, error) { return "yes", nil })
+	s.SetApproval(&ApprovalGate{Enabled: true})
 	ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
 	if !ok {
 		t.Fatal("AskUserFn returning yes should approve")

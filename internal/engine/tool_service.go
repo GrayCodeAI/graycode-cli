@@ -47,7 +47,6 @@ type toolExecutionDeps struct {
 	askUser            func(string) (string, error)
 	readOnlyBash       bool
 	workingDir         string
-	syncPermissions    func()
 	checkApproval      func(context.Context, string, map[string]interface{}) (bool, string)
 	recordPolicy       func(types.ToolCall, string, bool, string)
 	recordVerification func(types.ToolCall, string, bool)
@@ -213,9 +212,6 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		}
 		result.output, result.isErr, result.err, result.span = msg, true, fmt.Errorf("%s", msg), nil
 		return result
-	}
-	if s.deps.syncPermissions != nil {
-		s.deps.syncPermissions()
 	}
 	if s.deps.permissions == nil {
 		return finishDenied("denied", "permission service is unavailable")

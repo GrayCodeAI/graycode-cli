@@ -19,8 +19,8 @@ func TestResolveModelContextWindow_Fallback(t *testing.T) {
 
 func TestSession_compactConfig_ThresholdPct(t *testing.T) {
 	s := NewSession("", "test-model", "sys", nil)
-	s.AutoCompactThresholdPct = 85
-	s.ContextWindowCached = 100_000
+	s.Persistence().SetAutoCompactThresholdPct(85)
+	s.Persistence().SetContextWindowCached(100_000)
 	cfg := s.compactConfig()
 	// Compaction triggers at 85% of a 100k window → 85k tokens.
 	want := 85_000

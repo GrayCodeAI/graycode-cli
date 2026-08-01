@@ -54,8 +54,8 @@ func TestSessionLifecycle(t *testing.T) {
 
 	// Test allowed dirs
 	sess.SetAllowedDirs([]string{"/tmp", "/home"})
-	if len(sess.AllowedDirs) != 2 {
-		t.Fatalf("expected 2 allowed dirs, got %d", len(sess.AllowedDirs))
+	if len(sess.PermSvc().AllowedDirs()) != 2 {
+		t.Fatalf("expected 2 allowed dirs, got %d", len(sess.PermSvc().AllowedDirs()))
 	}
 }
 

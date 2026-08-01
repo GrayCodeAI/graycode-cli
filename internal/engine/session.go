@@ -18,7 +18,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
@@ -57,17 +56,9 @@ type SnapshotTracker interface {
 //	persist        *PersistenceService (Phase 5: conversation store)
 //	tools          *ToolService        (Phase 6: tool execution)
 //
-// The legacy fields (client, provider, model, Router,
-// DeploymentRouting, RateLimiter, Perm, Permissions, AutoMode,
-// Classifier, BypassKill, MaxTurns, MaxBudgetUSD, AllowedDirs,
-// PermissionFn, Autonomy, Approval, Memory, YaadBridge, EnhancedMemory,
-// messages, system, Cascade, Lifecycle, Reflector, CostTracker,
-// Beliefs, Critic, Backtrack, Limits, Trajectory, Shadow, etc.) stay
-// on Session for backward compat with code that reads them directly.
-// They are all thin forwarders to the new sub-services. The agent
-// loop (stream.go) is being migrated to use the sub-services one
-// call site at a time. Once every call site is migrated, the
-// legacy fields will be removed.
+// Session retains only orchestration state and integrations that do not yet
+// have a dedicated service. Permission, tool execution, transcript, memory,
+// and lifecycle state are owned by the corresponding services below.
 type Session struct {
 	mu       sync.RWMutex
 	client   ChatClient
@@ -95,37 +86,15 @@ type Session struct {
 	memory  *MemoryService
 	persist *PersistenceService
 	tools   *ToolService
-	Perm    *PermissionEngine // extracted permission subsystem
-	// Backward-compatible accessors below (will be removed after full migration)
-	//
-	// Deprecated: use s.PermSvc() (Phase 2 sub-service) for all of:
-	//   Permissions, AutoMode, Classifier, BypassKill, PermissionFn.
-	Permissions *PermissionMemory             // use Perm.Memory
-	AutoMode    *permissions.AutoModeState    // use Perm.AutoMode
-	Classifier  *permissions.Classifier       // use Perm.Classifier
-	BypassKill  *permissions.BypassKillswitch // use Perm.BypassKill
-	//
-	// Deprecated: use s.LifecycleSvc() (Phase 3 sub-service) for:
-	//   MaxBudgetUSD, AllowedDirs, Memory, YaadBridge,
-	//   EnhancedMemory, Cascade, Lifecycle, Reflector, CostTracker,
-	//   ConversationGraph, Sleeptime, Activity, SkillDistiller, AutoCompactor,
-	//   FewShotStore, AdaptivePrompt.
-	AllowedDirs  []string
-	PermissionFn func(PermissionRequest) // use Perm.PromptFn
-	//
-	// Deprecated: use s.MemorySvc() (Phase 4 sub-service) for:
-	//   Memory, YaadBridge, EnhancedMemory.
+	// Permission and approval state is owned exclusively by PermissionService.
 	AgentSpawnFn tool.AgentSpawnFn
 	AskUserFn    func(question string) (string, error)
 	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
 	readOnlyBash bool
 	// workingDir is the preferred cwd for tools (worktree isolation).
-	workingDir     string
-	Memory         MemoryRecaller
-	YaadBridge     *memory.YaadBridge
-	EnhancedMemory *memory.EnhancedMemoryManager
-	SettingsGet    func(key string) (string, bool)
-	SettingsSet    func(key, value string) error
+	workingDir  string
+	SettingsGet func(key string) (string, bool)
+	SettingsSet func(key, value string) error
 
 	PinnedMessages          int // messages to protect from compaction (from /pin)
 	AutoCompactThresholdPct int // token % to trigger auto-compact (default 85)
@@ -187,31 +156,23 @@ type Session struct {
 	//   Steering       -> s.Persistence().Steering()
 	//   Snapshots      -> legacy field; not yet on Persistence
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
-	Autonomy          AutonomyLevel              // autonomy.go — permission level
-	Sandbox           *DiffSandbox               // diffsandbox.go — staged file changes
-	Plan              *PlanState                 // subtask.go — user-activated plan
-	Beliefs           *BeliefState               // belief.go — discovered knowledge
-	Critic            *Critic                    // critic.go — patch pre-screening
-	Backtrack         *BacktrackEngine           // backtrack.go — decision recording
-	Limits            *LimitTracker              // limits.go — safety limits
-	Teach             TeachConfig                // teach.go — explanation depth
-	Trajectory        *TrajectoryDistiller       // trajectory.go — multi-run distillation
-	Shadow            *branching.ShadowWorkspace // shadow.go — edit pre-validation
-	Snapshots         SnapshotTracker            // snapshot integration for auto-tracking
-	ConversationGraph *session.ConversationGraph // Hawk-owned conversation branching/forking
-	Sleeptime         *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
-	Activity          *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
-	SkillDistiller    *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
-	Tracer            *oteltrace.Tracer          // oteltrace.go — distributed tracing spans
-	LintLoop          *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
-	TestLoop          *TestLoop                  // test_loop.go — auto test-fix loop
-	FileMentions      *FileMentionDetector       // file_mentions.go — detect referenced files
-	ResponseCache     *ResponseCache             // response_cache.go — cache similar prompts
-	Pipeline          *IntegrationPipeline       // integration.go — unified feature orchestration
-	Files             *FileTracker               // compact_files.go — cumulative file tracking across compactions
-	Steering          *SteeringQueue             // steering.go — user guidance injection between tool batches
-	RateLimiter       *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
-	AgentsAccum       *prompts.AgentsAccumulator // agents_accumulator.go — auto-capture learnings
+	Sandbox *DiffSandbox // diffsandbox.go — staged file changes
+	Plan    *PlanState   // subtask.go — user-activated plan
+	Critic  *Critic      // critic.go — patch pre-screening
+	// Backtrack and limits are owned by LifecycleService.
+	Teach          TeachConfig                // teach.go — explanation depth
+	Trajectory     *TrajectoryDistiller       // trajectory.go — multi-run distillation
+	Shadow         *branching.ShadowWorkspace // shadow.go — edit pre-validation
+	Snapshots      SnapshotTracker            // snapshot integration for auto-tracking
+	Sleeptime      *memory.SleeptimeAgent     // sleeptime.go — background memory consolidation
+	Activity       *memory.ActivityTracker    // activity.go — memory save nudging (Engram pattern)
+	SkillDistiller *memory.SkillDistiller     // skill_distill.go — auto-skill extraction
+	Tracer         *oteltrace.Tracer          // oteltrace.go — distributed tracing spans
+	LintLoop       *LintLoop                  // lint_loop.go — auto lint-fix reflected messages
+	TestLoop       *TestLoop                  // test_loop.go — auto test-fix loop
+	FileMentions   *FileMentionDetector       // file_mentions.go — detect referenced files
+	Files          *FileTracker               // compact_files.go — cumulative file tracking across compactions
+	RateLimiter    *ratelimit.Limiter         // ratelimit — token bucket for LLM API calls
 
 	// Few-shot learning and prompt optimization
 	//
@@ -224,10 +185,6 @@ type Session struct {
 	// It is plumbed into eyrie's ChatOptions.ResponseFormat (json_schema) and the
 	// model output is validated against it. See structured_output.go.
 	OutputSchema string // structured_output.go — JSON schema for constrained output
-
-	// Approval, when non-nil and enabled, gates high-risk tool actions behind an
-	// explicit human confirmation. Nil keeps existing behavior unchanged.
-	Approval *ApprovalGate // approval_gate.go — human-in-the-loop gate
 
 	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
 	smartSkills []plugin.SmartSkill
@@ -246,31 +203,20 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	if provider == "" || model == "" {
 		slog.Debug("NewSessionWithClient called with empty provider or model", "provider", provider, "model", model)
 	}
-	pe := NewPermissionEngine()
 	log := logger.Default()
 	s := &Session{
-		client:        chat,
-		registry:      registry,
-		provider:      provider,
-		model:         model,
-		system:        systemPrompt,
-		log:           log,
-		metrics:       metrics.NewRegistry(),
-		Perm:          pe,
-		Permissions:   pe.Memory,
-		AutoMode:      pe.AutoMode,
-		Classifier:    pe.Classifier,
-		BypassKill:    pe.BypassKill,
-		Beliefs:       NewBeliefState(),
-		Backtrack:     NewBacktrackEngine(),
-		Limits:        NewLimitTracker(DefaultLimits()),
-		Tracer:        oteltrace.NewTracer(),
-		LintLoop:      NewLintLoop(),
-		TestLoop:      NewTestLoop(),
-		FileMentions:  NewFileMentionDetector("."),
-		ResponseCache: NewResponseCache(1000, 24*time.Hour),
-		Pipeline:      NewIntegrationPipeline(),
-		RateLimiter:   ratelimit.PerSecond(10),
+		client:       chat,
+		registry:     registry,
+		provider:     provider,
+		model:        model,
+		system:       systemPrompt,
+		log:          log,
+		metrics:      metrics.NewRegistry(),
+		Tracer:       oteltrace.NewTracer(),
+		LintLoop:     NewLintLoop(),
+		TestLoop:     NewTestLoop(),
+		FileMentions: NewFileMentionDetector("."),
+		RateLimiter:  ratelimit.PerSecond(10),
 	}
 	s.Cost.Model = model
 	s.AutoCompactThresholdPct = DefaultAutoCompactThresholdPct
@@ -278,20 +224,12 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 
 	// Initialize agents accumulator for project learnings.
 	cwd, _ := os.Getwd()
-	s.AgentsAccum = prompts.NewAgentsAccumulator(cwd)
+	agentsAccum := prompts.NewAgentsAccumulator(cwd)
 
 	// -----------------------------------------------------------------------
 	// Wire the 6 sub-services extracted in Phases 1-6 of the god-object
 	// decomposition (see docs/session-decomposition.md). New code should
-	// prefer the sub-service getters (s.ChatLLM(), s.PermSvc(), etc.) over
-	// the legacy fields. The legacy fields stay on Session for backward
-	// compat with external code (cmd/, daemon/, multiagent/, etc.) that
-	// reads them directly. They will be removed in a follow-up cleanup PR
-	// once all call sites are migrated.
-	//
-	// For each service whose state is also held as a Session field, we
-	// point the Session field at the service's instance so reads stay
-	// in sync (the two are aliases, not duplicates).
+	// prefer the sub-service getters (s.ChatLLM(), s.PermSvc(), etc.).
 	// -----------------------------------------------------------------------
 	s.llm = NewChatService(chat, ChatServiceConfig{
 		Provider:          provider,
@@ -300,7 +238,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		RateLimiter:       s.RateLimiter,
 		Metrics:           s.metrics,
 	})
-	s.perms = NewPermissionService(log).WithEngine(pe)
+	s.perms = NewPermissionService(log)
 	s.life = NewLifecycleService(log)
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
@@ -324,7 +262,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		},
 		readOnlyBash:       s.readOnlyBash,
 		workingDir:         s.workingDir,
-		syncPermissions:    s.syncPermissionCompatibility,
 		checkApproval:      s.CheckApproval,
 		recordPolicy:       s.recordPolicyObservation,
 		recordVerification: s.recordVerificationObservation,
@@ -332,29 +269,9 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		appendSystem:       s.AppendSystemContext,
 	})
 	s.refreshContextWindowCache()
-	s.life.SetAgentsAccumulator(s.AgentsAccum)
+	s.life.SetAgentsAccumulator(agentsAccum)
 	s.life.SetLintLoop(s.LintLoop)
 	s.life.SetTestLoop(s.TestLoop)
-	// Alias legacy fields at the service instances so legacy readers see
-	// the same state as new code that goes through the sub-service getters.
-	// After this point, mutations to the sub-service internal state
-	// (e.g., s.memory.SetMemory(...)) need a corresponding write to the
-	// legacy field — see the various Set* helpers (SetConversationGraph,
-	// SetSnapshots, etc.) which perform the dual write.
-	s.Limits = s.life.Limits()
-	s.Beliefs = s.life.Beliefs()
-	s.Backtrack = s.life.Backtrack()
-	s.ResponseCache = s.life.ResponseCache()
-	s.Pipeline = s.life.Pipeline()
-	// Fields read by AddUser/AddAssistant/AddUserWithImage/ForkConversation/
-	// SwitchBranch: alias them so legacy direct-field reads return
-	// the sub-service state.
-	s.Memory = s.memory.Memory()
-	s.YaadBridge = s.memory.Yaad()
-	s.EnhancedMemory = s.memory.Enhanced()
-	s.ConversationGraph = s.persist.Graph()
-	s.Steering = s.persist.Steering()
-
 	return s
 }
 
@@ -731,9 +648,8 @@ func (s *Session) SetLogger(l *logger.Logger) {
 
 // SetAllowedDirs sets directories that file tools are allowed to access.
 func (s *Session) SetAllowedDirs(dirs []string) {
-	s.AllowedDirs = append([]string(nil), dirs...)
 	if s.perms != nil {
-		s.perms.SetAllowedDirs(append([]string(nil), dirs...))
+		s.perms.SetAllowedDirs(dirs)
 	}
 }
 
@@ -805,48 +721,23 @@ func (s *Session) SetAskUserFn(fn func(question string) (string, error)) {
 	}
 }
 
-// SetPermissionFn configures the authoritative permission callback while
-// keeping the deprecated Session field synchronized for older integrations.
+// SetPermissionFn configures the permission callback on PermissionService.
 func (s *Session) SetPermissionFn(fn func(PermissionRequest)) {
-	s.PermissionFn = fn
 	if s.perms != nil {
 		s.perms.SetPermissionFn(fn)
 	}
 }
 
-// SetApproval sets the high-risk action gate. New code should
-// call this instead of writing to the legacy s.Approval field.
+// SetApproval sets the high-risk action gate on PermissionService.
 func (s *Session) SetApproval(a *ApprovalGate) {
-	s.Approval = a
 	if s.perms != nil {
 		s.perms.SetApproval(a)
-	}
-}
-
-// syncPermissionCompatibility copies legacy callback fields into the
-// authoritative permission service for callers that have not migrated yet.
-func (s *Session) syncPermissionCompatibility() {
-	if s == nil || s.perms == nil {
-		return
-	}
-	if s.PermissionFn != nil {
-		s.perms.SetPermissionFn(s.PermissionFn)
-	}
-	if s.Autonomy != 0 {
-		s.perms.SetAutonomy(s.Autonomy)
-	}
-	if s.Approval != nil {
-		s.perms.SetApproval(s.Approval)
-	}
-	if s.AskUserFn != nil {
-		s.perms.SetAskUserFn(s.AskUserFn)
 	}
 }
 
 // SetConversationGraph attaches Hawk's product-owned conversation graph and
 // seeds it from an already-resumed linear transcript when the graph is new.
 func (s *Session) SetConversationGraph(graph *session.ConversationGraph) {
-	s.ConversationGraph = graph
 	if s.persist != nil {
 		s.persist.SetGraph(graph)
 		if graph != nil && graph.Empty() {

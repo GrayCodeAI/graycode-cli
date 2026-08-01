@@ -44,34 +44,19 @@ func TestSession_NewSessionWithClient_WiresAllSubServices(t *testing.T) {
 	if s.PermSvc().Engine() == nil {
 		t.Error("PermSvc().Engine() should not be nil")
 	}
-	// The service's engine must be the same instance as the legacy
-	// s.Perm field — that's the Phase 7 aliasing contract.
-	if s.PermSvc().Engine() != s.Perm {
-		t.Error("PermSvc().Engine() should be the same instance as s.Perm")
+	if s.PermSvc().Engine() == nil {
+		t.Error("PermSvc().Engine() should be initialized")
 	}
 
-	// LifecycleService: limits, beliefs, backtrack, response cache, pipeline.
+	// LifecycleService owns limits, beliefs, backtrack, response cache, pipeline.
 	if s.LifecycleSvc() == nil {
 		t.Fatal("LifecycleSvc() should not be nil after NewSessionWithClient")
 	}
 	if s.LifecycleSvc().Limits() == nil {
 		t.Error("LifecycleSvc().Limits() should not be nil")
 	}
-	// The legacy fields must point at the service's instances.
-	if s.Limits != s.LifecycleSvc().Limits() {
-		t.Error("s.Limits should be the same instance as LifecycleSvc().Limits()")
-	}
-	if s.Beliefs != s.LifecycleSvc().Beliefs() {
-		t.Error("s.Beliefs should be the same instance as LifecycleSvc().Beliefs()")
-	}
-	if s.Backtrack != s.LifecycleSvc().Backtrack() {
-		t.Error("s.Backtrack should be the same instance as LifecycleSvc().Backtrack()")
-	}
-	if s.ResponseCache != s.LifecycleSvc().ResponseCache() {
-		t.Error("s.ResponseCache should be the same instance as LifecycleSvc().ResponseCache()")
-	}
-	if s.Pipeline != s.LifecycleSvc().Pipeline() {
-		t.Error("s.Pipeline should be the same instance as LifecycleSvc().Pipeline()")
+	if s.LifecycleSvc().Beliefs() == nil || s.LifecycleSvc().Backtrack() == nil || s.LifecycleSvc().ResponseCache() == nil || s.LifecycleSvc().Pipeline() == nil {
+		t.Error("LifecycleService collaborators should be initialized")
 	}
 
 	// MemoryService: empty by default (no memory wired).

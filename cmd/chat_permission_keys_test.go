@@ -42,7 +42,7 @@ func TestPermissionAlwaysAllowDoesNotNilDeref(t *testing.T) {
 	if got := lastSystemMessage(cm.messages); !strings.Contains(got, "Always allowed: Bash") {
 		t.Fatalf("unexpected always-allow message: %q", got)
 	}
-	decision := cm.session.Perm.Memory.Check("Bash", "anything")
+	decision := cm.session.PermSvc().Memory().Check("Bash", "anything")
 	if decision == nil || !*decision {
 		t.Fatal("expected Bash:* always-allow rule to be recorded")
 	}

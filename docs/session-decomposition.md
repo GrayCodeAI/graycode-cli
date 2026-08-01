@@ -1,8 +1,9 @@
 # Session God-Object Decomposition — Design and Migration Status
 
-> Status: **IN PROGRESS** — the canonical service graph and first runtime
-> migrations are implemented; compatibility shims remain while the remaining
-> Session call sites are moved.
+> Status: **IN PROGRESS** — the canonical service graph is active and the
+> runtime execution path no longer uses legacy permission or tool fallbacks.
+> Remaining work is limited to moving the last non-authoritative Session fields
+> into their owning services.
 > Author: opencode session
 > Date: 2026-06-12
 > Scope: `hawk/internal/engine/session.go` (the 35-collaborator `Session` struct)
@@ -31,8 +32,8 @@ The `agentLoop` should consume these sub-services as named dependencies — no i
 
 The refactor branch now enforces these boundaries:
 
-- `SessionServices` is the canonical composition root for the six extracted
-  services; `SubServices()` and `Services()` reference the same instances.
+- `SubServices()` is the canonical composition root for the six extracted
+  services. The obsolete `SessionServices` bridge has been removed.
 - `PersistenceService` owns immutable transcript snapshots, system-context
   mutations, compaction metadata, token accounting, and checkpoint identity.
   Returned messages are deep copies, including nested tool arguments.
@@ -40,8 +41,8 @@ The refactor branch now enforces these boundaries:
   adaptive feedback, model cascade access, and quality-loop handles.
 - `MemoryService` owns recall fallback, Yaad/enhanced-memory finalization, and
   session summaries.
-- `PermissionService` owns the approval gate and fallback ask-user callback;
-  `Session.CheckApproval` is now only a compatibility facade.
+- `PermissionService` owns the approval gate and ask-user callback;
+  `Session.CheckApproval` is a thin orchestration facade with no state sync.
 - `ToolService.ExecuteAll` owns batching, ordering, blast-radius reporting,
   and read-only concurrency limits. `ToolService.ExecuteOne` now owns raw
   invocation boundaries: permission/approval, tracing, isolation, context
@@ -52,8 +53,11 @@ The refactor branch now enforces these boundaries:
 - The agent loop uses these service APIs for transport, persistence, memory,
   lifecycle, permission-stage, and tool-batch operations.
 
-Legacy fields remain until all external and in-package callers migrate. They
-are compatibility aliases, not a second authoritative state store.
+The permission aliases (`Perm`, `Permissions`, `AutoMode`, `Classifier`,
+`BypassKill`, `PermissionFn`, `Approval`, and `Autonomy`) have been removed from
+`Session`. Remaining lifecycle, memory, and persistence fields are being moved
+incrementally; service state is authoritative and no fallback execution path
+exists.
 
 ## Proposed Decomposition
 

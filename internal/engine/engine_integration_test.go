@@ -249,39 +249,39 @@ func TestIntegration_PermissionFlow(t *testing.T) {
 	}
 
 	// Test that the permission memory grants correctly.
-	sess.Permissions.AlwaysAllow("Write")
-	decision := sess.Permissions.Check("Write", "/tmp/test.txt")
+	sess.PermSvc().Memory().AlwaysAllow("Write")
+	decision := sess.PermSvc().Memory().Check("Write", "/tmp/test.txt")
 	if decision == nil || !*decision {
 		t.Fatal("Write should be allowed after AlwaysAllow")
 	}
 
 	// Test deny takes priority over allow.
-	sess.Permissions.DenySpec("Write(*.env)")
-	decision = sess.Permissions.Check("Write", "prod.env")
+	sess.PermSvc().Memory().DenySpec("Write(*.env)")
+	decision = sess.PermSvc().Memory().Check("Write", "prod.env")
 	if decision == nil || *decision {
 		t.Fatal("Write to .env should be denied even with broad allow")
 	}
 
 	// Test permission function callback.
 	permCalled := false
-	sess.PermissionFn = func(req PermissionRequest) {
+	sess.SetPermissionFn(func(req PermissionRequest) {
 		permCalled = true
 		req.Response <- true
-	}
+	})
 
 	// Create a fresh permission memory to test the callback flow.
-	sess.Permissions = NewPermissionMemory()
-	decision = sess.Permissions.Check("Write", "/tmp/new-file.txt")
+	sess.PermSvc().SetMemory(NewPermissionMemory())
+	decision = sess.PermSvc().Memory().Check("Write", "/tmp/new-file.txt")
 	if decision != nil {
 		t.Fatal("fresh permission memory should return nil (ask user)")
 	}
 	// The actual callback is invoked inside agentLoop; we test it's wired correctly.
-	if sess.PermissionFn == nil {
+	if sess.PermSvc().PermissionFn() == nil {
 		t.Fatal("PermissionFn should be set")
 	}
 	// Simulate calling the permission function.
 	resp := make(chan bool, 1)
-	sess.PermissionFn(PermissionRequest{
+	sess.PermSvc().PermissionFn()(PermissionRequest{
 		PermissionRequest: contracts.PermissionRequest{
 			ToolName: "Write",
 			ToolID:   "test-id",

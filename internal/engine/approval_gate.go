@@ -168,7 +168,6 @@ func (s *Session) CheckApproval(ctx context.Context, toolName string, args map[s
 	if s == nil || s.PermSvc() == nil {
 		return false, "permission service is unavailable"
 	}
-	s.syncPermissionCompatibility()
 	return s.PermSvc().CheckApproval(ctx, toolName, args)
 }
 
