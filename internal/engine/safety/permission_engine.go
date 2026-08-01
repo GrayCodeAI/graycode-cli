@@ -177,7 +177,7 @@ func (pe *PermissionEngine) CheckToolSnapshot(ctx context.Context, tc ToolCallIn
 	clone.Phase = snapshot.Phase
 	clone.Phases = snapshot.Phases
 	clone.Revision = snapshot.Revision
-	clone.Memory = permissionMemoryFromSnapshot(snapshot.Rules)
+	clone.Memory = NewPermissionMemoryFromSnapshot(snapshot.Rules)
 	return clone.CheckToolDecision(ctx, tc)
 }
 
@@ -189,6 +189,21 @@ func (pe *PermissionEngine) CheckToolDecision(ctx context.Context, tc ToolCallIn
 	d.Capabilities = policy.Capabilities
 	d.Risk = policy.DefaultRisk
 	d.Revision = pe.Revision
+	return d
+}
+
+// EvaluateTool performs policy evaluation without waiting for UI approval.
+// It returns DecisionAsk when the only remaining step is user approval.
+// CheckToolDecision remains the compatibility API that performs the prompt.
+func (pe *PermissionEngine) EvaluateTool(ctx context.Context, tc ToolCallInfo) Decision {
+	clone := *pe
+	clone.PromptFn = nil
+	d := clone.CheckToolDecision(ctx, tc)
+	if d.Reason == ReasonPromptUnavailable {
+		d.Outcome = DecisionAsk
+		d.Reason = ReasonUserPrompt
+		d.Message = "Permission approval required."
+	}
 	return d
 }
 

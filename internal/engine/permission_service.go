@@ -110,6 +110,11 @@ func (s *PermissionService) CheckToolDecision(ctx context.Context, info ToolCall
 	return s.perm.CheckToolDecision(ctx, info)
 }
 
+// EvaluateTool returns allow, ask, or deny without blocking on the UI.
+func (s *PermissionService) EvaluateTool(ctx context.Context, info ToolCallInfo) safety.Decision {
+	return s.perm.EvaluateTool(ctx, info)
+}
+
 // PolicySnapshot returns the scalar policy used for a single request.
 func (s *PermissionService) PolicySnapshot() safety.PolicySnapshot {
 	snapshot := s.perm.Snapshot()

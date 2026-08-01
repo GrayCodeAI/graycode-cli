@@ -154,6 +154,15 @@ func TestPermissionEngine_SnapshotCapturesRememberedRules(t *testing.T) {
 	}
 }
 
+func TestPermissionEngine_EvaluateToolReturnsAskWithoutBlocking(t *testing.T) {
+	pe := NewPermissionEngine()
+	pe.Autonomy = AutonomySupervised
+	d := pe.EvaluateTool(context.Background(), ToolCallInfo{Name: "Write"})
+	if d.Outcome != DecisionAsk || d.Reason != ReasonUserPrompt {
+		t.Fatalf("decision = %#v, want ask/user_prompt", d)
+	}
+}
+
 // TestCheckTool_SpecStageNoneIgnoresGate verifies that outside of any spec
 // workflow (Stage == SpecStageNone), the spec gate does not apply at all and
 // autonomy-tier logic governs directly.
