@@ -17,6 +17,25 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
+const maxPluginOutputBytes = 8 << 20
+
+type cappedBuffer struct {
+	bytes.Buffer
+	maxBytes int
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	remaining := b.maxBytes - b.Len()
+	if remaining <= 0 {
+		return 0, fmt.Errorf("plugin output exceeds %d bytes", b.maxBytes)
+	}
+	if len(p) > remaining {
+		_, _ = b.Buffer.Write(p[:remaining])
+		return remaining, fmt.Errorf("plugin output exceeds %d bytes", b.maxBytes)
+	}
+	return b.Buffer.Write(p)
+}
+
 // Plugin represents a loaded plugin with its tools and metadata.
 type Plugin struct {
 	Name         string
@@ -247,8 +266,9 @@ func (pm *PluginManager) Execute(ctx context.Context, pluginName, toolName strin
 		return p.WasmRuntime.ExecuteTool(ctx, toolName, input)
 	}
 
-	// Parse command and args (subprocess-based)
-	parts := strings.Fields(tool.Command)
+	// Parse command and args (subprocess-based). Quoted arguments are preserved;
+	// shell evaluation is intentionally not supported.
+	parts := splitCommand(tool.Command)
 	if len(parts) == 0 {
 		return "", fmt.Errorf("tool %q has empty command", toolName)
 	}
@@ -261,7 +281,10 @@ func (pm *PluginManager) Execute(ctx context.Context, pluginName, toolName strin
 		cmd.Stdin = bytes.NewReader(input)
 	}
 
-	var stdout, stderr bytes.Buffer
+	var stdout cappedBuffer
+	stdout.maxBytes = maxPluginOutputBytes
+	var stderr cappedBuffer
+	stderr.maxBytes = maxPluginOutputBytes
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
