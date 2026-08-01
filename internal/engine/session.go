@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
@@ -310,6 +311,28 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.persist = NewPersistenceService(log)
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry).WithExecutionHost(s)
+	s.tools.WithExecutionDeps(toolExecutionDeps{
+		permissions: s.perms,
+		chat:        s.llm,
+		memory:      s.memory,
+		agentSpawn: func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+			if s.AgentSpawnFn == nil {
+				return agentcontracts.SpawnResult{Status: agentcontracts.StatusFailed, Error: "agent spawning is unavailable"}, fmt.Errorf("agent spawning is unavailable")
+			}
+			return s.AgentSpawnFn(ctx, req)
+		},
+		askUser: func(question string) (string, error) {
+			if s.AskUserFn == nil {
+				return "", fmt.Errorf("ask-user callback is unavailable")
+			}
+			return s.AskUserFn(question)
+		},
+		readOnlyBash:    s.readOnlyBash,
+		workingDir:      s.workingDir,
+		syncPermissions: s.syncPermissionCompatibility,
+		checkApproval:   s.CheckApproval,
+		recordPolicy:    s.recordPolicyObservation,
+	})
 	s.refreshContextWindowCache()
 	s.life.SetAgentsAccumulator(s.AgentsAccum)
 	s.life.SetLintLoop(s.LintLoop)

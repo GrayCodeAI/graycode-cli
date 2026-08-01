@@ -23,6 +23,8 @@ type toolExecResult struct {
 	tc     types.ToolCall
 	output string
 	isErr  bool
+	err    error
+	span   *oteltrace.Span
 }
 
 // filePathArgKeys is the list of argument names that are conventionally
@@ -260,107 +262,14 @@ func (s *Session) executeSingleTool(ctx context.Context, tc types.ToolCall, ch c
 }
 
 func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turnCount int, intentText string) toolExecResult {
-	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
-
-	if s.Tools().ContainerRequired() {
-		if s.Tools().ContainerExecutor() == nil || !s.Tools().ContainerExecutor().Running() {
-			msg := "Container not ready — tools are disabled until the sandbox is running."
-			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
-			return toolExecResult{tc: tc, output: msg, isErr: true}
-		}
-	}
-
 	var toolSpan *oteltrace.Span
-	if s.TracerValue() != nil {
-		_, toolSpan = oteltrace.StartToolSpan(ctx, s.TracerValue(), tc.Name, tc.ID)
-	}
-
-	// Delegate to the extracted PermissionService (Phase 7 migration).
-	// s.PermSvc() is never nil because NewSessionWithClient always
-	// constructs it and aliases it to s.Perm via WithEngine(pe). The
-	// legacy s.Perm field is now a thin shim that reads the same
-	// engine.
-	//
-	// We still sync the legacy fields (PermissionFn, Autonomy) to the
-	// service before each call because external code (cmd/, daemon/,
-	// multiagent/) writes to those fields directly, and the engine
-	// only consults the values it holds. The sync is cheap (two
-	// pointer assignments) and removes a class of "settings lost"
-	// bugs when callers mutate the session after construction.
-	s.syncPermissionCompatibility()
-	granted, denyMsg := s.PermSvc().CheckTool(ctx, ToolCallInfo{
-		Name: tc.Name,
-		ID:   tc.ID,
-		Args: tc.Arguments,
-	})
-	s.recordPolicyObservation(tc, "permission", granted, denyMsg)
-	if !granted {
-		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
-		if toolSpan != nil {
-			toolSpan.SetTag("denied", "true")
-			toolSpan.Finish()
-		}
-		return toolExecResult{tc: tc, output: denyMsg, isErr: true}
-	}
-
-	// Human-in-the-loop approval gate for high-risk actions (additive; no-op
-	// unless s.Approval is configured and enabled). See approval_gate.go.
-	approved, approvalDeny := s.CheckApproval(ctx, tc.Name, tc.Arguments)
-	if approval := s.PermSvc().Approval(); approval != nil && approval.Enabled {
-		s.recordPolicyObservation(tc, "approval", approved, approvalDeny)
-	}
-	if !approved {
-		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: approvalDeny}
-		if toolSpan != nil {
-			toolSpan.SetTag("approval_denied", "true")
-			toolSpan.Finish()
-		}
-		return toolExecResult{tc: tc, output: approvalDeny, isErr: true}
-	}
-
-	hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{
-		"tool": tc.Name,
-		"args": tc.Arguments,
-	})
-
-	inputJSON, _ := json.Marshal(tc.Arguments)
-	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
-		AgentSpawnFn: s.AgentSpawnFn,
-		AskUserFn:    s.AskUserFn,
-		CommitMessageChatFn: func(chatCtx context.Context, prompt string) (string, error) {
-			if s.ChatLLM() == nil {
-				return "", fmt.Errorf("commit message model is unavailable")
-			}
-			resp, err := s.ChatLLM().Chat(chatCtx, []types.EyrieMessage{{Role: "user", Content: prompt}}, types.ChatOptions{
-				Provider:  s.ChatLLM().Provider(),
-				Model:     s.ChatLLM().Model(),
-				MaxTokens: 256,
-			})
-			if err != nil {
-				return "", err
-			}
-			if resp == nil {
-				return "", fmt.Errorf("commit message model returned no response")
-			}
-			return resp.Content, nil
-		},
-		YaadBridge:        s.MemorySvc().Yaad(),
-		SpecSlugGet:       func() string { return s.PermSvc().SpecSlug() },
-		SpecSlugSet:       func(slug string) { s.PermSvc().SetSpecSlug(slug) },
-		BackgroundManager: s.ensureBackgroundManager(),
-		ReadOnlyBash:      s.readOnlyBash,
-		WorkingDir:        s.workingDir,
-	})
-	if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
-		toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
-	}
-	toolCtx, toolCancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
-
-	// Self-Review Before Apply: capture file state before Write/Edit
+	var output string
+	var execErr error
+	var isErr bool
 	canonicalPre := canonicalToolName(tc.Name)
 	var preEditContent string
 	var preEditPath string
-	if (canonicalPre == "Write" || canonicalPre == "Edit" || canonicalPre == "MultiEdit") && s.client != nil {
+	if (canonicalPre == "Write" || canonicalPre == "Edit" || canonicalPre == "MultiEdit") && s.ChatLLM() != nil {
 		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
 			preEditPath = p
 			if data, readErr := readFileContent(p); readErr == nil {
@@ -368,34 +277,131 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			}
 		}
 	}
-
-	// Apply the per-tool retry policy for transient errors. Tools can opt out
-	// by setting a zero-value RetryPolicy on themselves (via the
-	// RetryPolicyProvider interface) — Read/Write/Edit etc. don't opt out and
-	// get the default policy of 2 retries (3 attempts total) with 200ms→2s
-	// exponential backoff.
-	t := override
-	if t == nil {
-		var ok bool
-		if s.registry != nil {
-			t, ok = s.registry.Get(tc.Name)
-		}
-		if !ok {
-			toolCancel()
-			output := fmt.Sprintf("Error: unknown tool: %s", tc.Name)
-			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
-			return toolExecResult{tc: tc, output: output, isErr: true}
-		}
-	}
-	var output string
-	var execErr error
-	if rpp, ok := t.(tool.RetryPolicyProvider); ok {
-		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, rpp.RetryPolicy())
+	if s.Tools() != nil && s.Tools().executionDepsReady() {
+		core := s.Tools().ExecuteOne(ctx, tc, override, ch, turnCount, intentText)
+		output, execErr, isErr, toolSpan = core.output, core.err, core.isErr, core.span
 	} else {
-		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, tool.DefaultRetryPolicy())
+		ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
+
+		if s.Tools().ContainerRequired() {
+			if s.Tools().ContainerExecutor() == nil || !s.Tools().ContainerExecutor().Running() {
+				msg := "Container not ready — tools are disabled until the sandbox is running."
+				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
+				return toolExecResult{tc: tc, output: msg, isErr: true}
+			}
+		}
+
+		if s.TracerValue() != nil {
+			_, toolSpan = oteltrace.StartToolSpan(ctx, s.TracerValue(), tc.Name, tc.ID)
+		}
+
+		// Delegate to the extracted PermissionService (Phase 7 migration).
+		// s.PermSvc() is never nil because NewSessionWithClient always
+		// constructs it and aliases it to s.Perm via WithEngine(pe). The
+		// legacy s.Perm field is now a thin shim that reads the same
+		// engine.
+		//
+		// We still sync the legacy fields (PermissionFn, Autonomy) to the
+		// service before each call because external code (cmd/, daemon/,
+		// multiagent/) writes to those fields directly, and the engine
+		// only consults the values it holds. The sync is cheap (two
+		// pointer assignments) and removes a class of "settings lost"
+		// bugs when callers mutate the session after construction.
+		s.syncPermissionCompatibility()
+		granted, denyMsg := s.PermSvc().CheckTool(ctx, ToolCallInfo{
+			Name: tc.Name,
+			ID:   tc.ID,
+			Args: tc.Arguments,
+		})
+		s.recordPolicyObservation(tc, "permission", granted, denyMsg)
+		if !granted {
+			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: denyMsg}
+			if toolSpan != nil {
+				toolSpan.SetTag("denied", "true")
+				toolSpan.Finish()
+			}
+			return toolExecResult{tc: tc, output: denyMsg, isErr: true}
+		}
+
+		// Human-in-the-loop approval gate for high-risk actions (additive; no-op
+		// unless s.Approval is configured and enabled). See approval_gate.go.
+		approved, approvalDeny := s.CheckApproval(ctx, tc.Name, tc.Arguments)
+		if approval := s.PermSvc().Approval(); approval != nil && approval.Enabled {
+			s.recordPolicyObservation(tc, "approval", approved, approvalDeny)
+		}
+		if !approved {
+			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: approvalDeny}
+			if toolSpan != nil {
+				toolSpan.SetTag("approval_denied", "true")
+				toolSpan.Finish()
+			}
+			return toolExecResult{tc: tc, output: approvalDeny, isErr: true}
+		}
+
+		hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{
+			"tool": tc.Name,
+			"args": tc.Arguments,
+		})
+
+		inputJSON, _ := json.Marshal(tc.Arguments)
+		toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
+			AgentSpawnFn: s.AgentSpawnFn,
+			AskUserFn:    s.AskUserFn,
+			CommitMessageChatFn: func(chatCtx context.Context, prompt string) (string, error) {
+				if s.ChatLLM() == nil {
+					return "", fmt.Errorf("commit message model is unavailable")
+				}
+				resp, err := s.ChatLLM().Chat(chatCtx, []types.EyrieMessage{{Role: "user", Content: prompt}}, types.ChatOptions{
+					Provider:  s.ChatLLM().Provider(),
+					Model:     s.ChatLLM().Model(),
+					MaxTokens: 256,
+				})
+				if err != nil {
+					return "", err
+				}
+				if resp == nil {
+					return "", fmt.Errorf("commit message model returned no response")
+				}
+				return resp.Content, nil
+			},
+			YaadBridge:        s.MemorySvc().Yaad(),
+			SpecSlugGet:       func() string { return s.PermSvc().SpecSlug() },
+			SpecSlugSet:       func(slug string) { s.PermSvc().SetSpecSlug(slug) },
+			BackgroundManager: s.ensureBackgroundManager(),
+			ReadOnlyBash:      s.readOnlyBash,
+			WorkingDir:        s.workingDir,
+		})
+		if s.Tools().ContainerExecutor() != nil && s.Tools().ContainerExecutor().Running() {
+			toolCtx = tool.WithContainerExecutor(toolCtx, s.Tools().ContainerExecutor())
+		}
+		toolCtx, toolCancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
+
+		// Apply the per-tool retry policy for transient errors. Tools can opt out
+		// by setting a zero-value RetryPolicy on themselves (via the
+		// RetryPolicyProvider interface) — Read/Write/Edit etc. don't opt out and
+		// get the default policy of 2 retries (3 attempts total) with 200ms→2s
+		// exponential backoff.
+		t := override
+		if t == nil {
+			var ok bool
+			if s.registry != nil {
+				t, ok = s.registry.Get(tc.Name)
+			}
+			if !ok {
+				toolCancel()
+				output := fmt.Sprintf("Error: unknown tool: %s", tc.Name)
+				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
+				return toolExecResult{tc: tc, output: output, isErr: true}
+			}
+		}
+		if rpp, ok := t.(tool.RetryPolicyProvider); ok {
+			output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, rpp.RetryPolicy())
+		} else {
+			output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, tool.DefaultRetryPolicy())
+		}
+		toolCancel()
+		isErr = execErr != nil
 	}
-	toolCancel()
-	isErr := execErr != nil
 	if isErr {
 		s.Logger().Warn("tool execution error", map[string]interface{}{
 			"tool":  tc.Name,

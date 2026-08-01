@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/diff"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -26,6 +28,24 @@ type ToolService struct {
 	bgMu              sync.Mutex
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
+	deps              toolExecutionDeps
+}
+
+// toolExecutionDeps contains the service-owned collaborators needed for one
+// raw tool invocation. Keeping these dependencies on ToolService removes the
+// permission, approval, tracing, timeout, and retry boundary from Session;
+// post-call product hooks remain in Session until the next migration slice.
+type toolExecutionDeps struct {
+	permissions     *PermissionService
+	chat            *ChatService
+	memory          *MemoryService
+	agentSpawn      tool.AgentSpawnFn
+	askUser         func(string) (string, error)
+	readOnlyBash    bool
+	workingDir      string
+	syncPermissions func()
+	checkApproval   func(context.Context, string, map[string]interface{}) (bool, string)
+	recordPolicy    func(types.ToolCall, string, bool, string)
 }
 
 // toolExecutionHost is the narrow compatibility seam used while the
@@ -48,6 +68,16 @@ func NewToolService(registry *tool.Registry) *ToolService {
 func (s *ToolService) WithExecutionHost(host toolExecutionHost) *ToolService {
 	s.host = host
 	return s
+}
+
+// WithExecutionDeps binds the extracted service graph used by ExecuteOne.
+func (s *ToolService) WithExecutionDeps(deps toolExecutionDeps) *ToolService {
+	s.deps = deps
+	return s
+}
+
+func (s *ToolService) executionDepsReady() bool {
+	return s != nil && s.deps.permissions != nil
 }
 
 // WithContainerExecutor configures container isolation.
@@ -166,6 +196,117 @@ func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch
 	return results
 }
 
+// ExecuteOne performs the service-owned half of one tool invocation: event
+// emission, container readiness, permission/approval, tracing, tool context,
+// lookup, timeout, retry, and raw execution. Session remains responsible for
+// compatibility post-processing of the returned result.
+func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turn int, intent string) toolExecResult {
+	result := toolExecResult{tc: tc}
+	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
+	if s.containerRequired && (s.containerExecutor == nil || !s.containerExecutor.Running()) {
+		msg := "Container not ready — tools are disabled until the sandbox is running."
+		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
+		result.output, result.isErr, result.err = msg, true, fmt.Errorf("%s", msg)
+		return result
+	}
+	var span *oteltrace.Span
+	if s.tracer != nil {
+		_, span = oteltrace.StartToolSpan(ctx, s.tracer, tc.Name, tc.ID)
+	}
+	finishDenied := func(tag string, msg string) toolExecResult {
+		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
+		if span != nil {
+			span.SetTag(tag, "true")
+			span.Finish()
+		}
+		result.output, result.isErr, result.err, result.span = msg, true, fmt.Errorf("%s", msg), nil
+		return result
+	}
+	if s.deps.syncPermissions != nil {
+		s.deps.syncPermissions()
+	}
+	if s.deps.permissions == nil {
+		return finishDenied("denied", "permission service is unavailable")
+	}
+	granted, denyMsg := s.deps.permissions.CheckTool(ctx, ToolCallInfo{Name: tc.Name, ID: tc.ID, Args: tc.Arguments})
+	if s.deps.recordPolicy != nil {
+		s.deps.recordPolicy(tc, "permission", granted, denyMsg)
+	}
+	if !granted {
+		return finishDenied("denied", denyMsg)
+	}
+	approved, approvalDeny := true, ""
+	if s.deps.checkApproval != nil {
+		approved, approvalDeny = s.deps.checkApproval(ctx, tc.Name, tc.Arguments)
+	}
+	if approval := s.deps.permissions.Approval(); approval != nil && approval.Enabled && s.deps.recordPolicy != nil {
+		s.deps.recordPolicy(tc, "approval", approved, approvalDeny)
+	}
+	if !approved {
+		return finishDenied("approval_denied", approvalDeny)
+	}
+	hooks.ExecuteAsync(ctx, hooks.EventPreTool, map[string]interface{}{"tool": tc.Name, "args": tc.Arguments})
+	inputJSON, _ := json.Marshal(tc.Arguments)
+	var commitChat func(context.Context, string) (string, error)
+	if s.deps.chat != nil {
+		commitChat = func(chatCtx context.Context, prompt string) (string, error) {
+			resp, err := s.deps.chat.Chat(chatCtx, []types.EyrieMessage{{Role: "user", Content: prompt}}, types.ChatOptions{Provider: s.deps.chat.Provider(), Model: s.deps.chat.Model(), MaxTokens: 256})
+			if err != nil {
+				return "", err
+			}
+			if resp == nil {
+				return "", fmt.Errorf("commit message model returned no response")
+			}
+			return resp.Content, nil
+		}
+	}
+	var yaad *memory.YaadBridge
+	if s.deps.memory != nil {
+		yaad = s.deps.memory.Yaad()
+	}
+	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
+		AgentSpawnFn:        s.deps.agentSpawn,
+		AskUserFn:           s.deps.askUser,
+		CommitMessageChatFn: commitChat,
+		YaadBridge:          yaad,
+		SpecSlugGet:         func() string { return s.deps.permissions.SpecSlug() },
+		SpecSlugSet:         func(slug string) { s.deps.permissions.SetSpecSlug(slug) },
+		BackgroundManager:   s.EnsureBackgroundManager(),
+		ReadOnlyBash:        s.deps.readOnlyBash,
+		WorkingDir:          s.deps.workingDir,
+	})
+	if s.containerExecutor != nil && s.containerExecutor.Running() {
+		toolCtx = tool.WithContainerExecutor(toolCtx, s.containerExecutor)
+	}
+	toolCtx, cancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
+	t := override
+	if t == nil && s.registry != nil {
+		var ok bool
+		t, ok = s.registry.Get(tc.Name)
+		if !ok {
+			cancel()
+			return finishDenied("error", fmt.Sprintf("Error: unknown tool: %s", tc.Name))
+		}
+	}
+	if t == nil {
+		cancel()
+		return finishDenied("error", "Error: tool is unavailable")
+	}
+	var output string
+	var execErr error
+	if rpp, ok := t.(tool.RetryPolicyProvider); ok {
+		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, rpp.RetryPolicy())
+	} else {
+		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, tool.DefaultRetryPolicy())
+	}
+	cancel()
+	result.output, result.err, result.isErr, result.span = output, execErr, execErr != nil, span
+	if result.isErr {
+		result.output = fmt.Sprintf("Error: %s", execErr.Error())
+	}
+	return result
+}
+
 // ExtractTargets returns the file targets for a tool call.
 func (s *ToolService) ExtractTargets(tc types.ToolCall) []string {
 	if s == nil || s.registry == nil {
@@ -183,10 +324,10 @@ func (s *ToolService) EstimateBlastRadius(planned []PlannedCall) *BlastRadiusRep
 	return EstimateBlastRadius(planned)
 }
 
-// ExecuteOne runs a single tool call with the configured isolation +
+// ExecuteRegistered runs a single registered tool call with the configured isolation +
 // retry policy. Returns the (output, isErr) pair. The tool_result
 // StreamEvent is emitted on ch.
-func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent) (string, bool) {
+func (s *ToolService) ExecuteRegistered(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent) (string, bool) {
 	if s.containerRequired {
 		if s.containerExecutor == nil || !s.containerExecutor.Running() {
 			msg := "Container not ready — tools are disabled until the sandbox is running."

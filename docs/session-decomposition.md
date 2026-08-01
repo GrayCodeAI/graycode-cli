@@ -43,8 +43,10 @@ The refactor branch now enforces these boundaries:
 - `PermissionService` owns the approval gate and fallback ask-user callback;
   `Session.CheckApproval` is now only a compatibility facade.
 - `ToolService.ExecuteAll` owns batching, ordering, blast-radius reporting,
-  and read-only concurrency limits. The old Session method is a compatibility
-  wrapper for in-package callers.
+  and read-only concurrency limits. `ToolService.ExecuteOne` now owns raw
+  invocation boundaries: permission/approval, tracing, isolation, context
+  injection, lookup, timeout, and retry. Session retains only compatibility
+  post-processing hooks for the returned result.
 - The agent loop uses these service APIs for transport, persistence, memory,
   lifecycle, permission-stage, and tool-batch operations.
 
