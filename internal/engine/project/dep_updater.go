@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
+
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -384,7 +386,7 @@ func (du *DependencyUpdater) applyRustUpdate(dep Dependency) error {
 		content = strings.Replace(content, oldPattern, newPattern, 1)
 	}
 
-	if err := os.WriteFile(cargoPath, []byte(content), 0o600); err != nil {
+	if err := fsutil.WritePinnedFile(cargoPath, []byte(content), 0o600); err != nil {
 		return fmt.Errorf("failed to write Cargo.toml: %w", err)
 	}
 	return nil

@@ -182,7 +182,7 @@ func buildChairmanPrompt(query string, responses []CouncilResponse, rankings []C
 
 // councilQuery queries a specific model using the session's client infrastructure.
 func councilQuery(ctx context.Context, sess *Session, modelName, prompt string) (string, error) {
-	sub := sess.SubSession(modelName, sess.system, sess.registry)
+	sub := sess.SubSession(modelName, sess.Persistence().System(), sess.Tools().Registry())
 	if sess.LifecycleSvc() != nil {
 		sess.LifecycleSvc().Limits().SetMaxTurns(1)
 	}

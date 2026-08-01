@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -416,7 +417,17 @@ func buildSimpleImportGraph(root string) (*simpleImportGraph, error) {
 		reverse: make(map[string][]string),
 	}
 
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	rootAbs, err := guardedAbs(root)
+	if err != nil {
+		return nil, err
+	}
+	rootHandle, err := os.OpenRoot(rootAbs)
+	if err != nil {
+		return nil, fmt.Errorf("open impact root: %w", err)
+	}
+	defer func() { _ = rootHandle.Close() }()
+
+	err = fs.WalkDir(rootHandle.FS(), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			if d != nil && d.IsDir() && (d.Name() == ".git" || d.Name() == "node_modules" || d.Name() == "vendor") {
 				return filepath.SkipDir
@@ -428,16 +439,16 @@ func buildSimpleImportGraph(root string) (*simpleImportGraph, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		data, err := fs.ReadFile(rootHandle.FS(), path)
 		if err != nil {
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(root, path)
+		relPath := filepath.FromSlash(path)
 		imports := parseImports(string(data), ext)
 		for _, imp := range imports {
 			// Try to resolve to local file
-			resolved := resolveImport(imp, ext, filepath.Dir(path), root)
+			resolved := resolveImport(imp, ext, filepath.Dir(filepath.Join(rootAbs, filepath.FromSlash(path))), rootAbs)
 			if resolved != "" {
 				g.edges[relPath] = append(g.edges[relPath], resolved)
 				g.reverse[resolved] = append(g.reverse[resolved], relPath)

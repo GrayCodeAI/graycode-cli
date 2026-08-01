@@ -29,6 +29,10 @@ func (s *Session) SetPersistID(id string) {
 	s.persistID = id
 	s.checkpointMgr = nil
 	s.mu.Unlock()
+	if p := s.Persistence(); p != nil {
+		p.SetPersistID(id)
+		p.SetCheckpointManager(nil)
+	}
 	s.ConfigureContextGraphObservation("")
 }
 
@@ -45,12 +49,18 @@ func (s *Session) RecordAPIUsage(prompt, completion int) {
 	if completion > 0 {
 		s.lastCompletionTokens = completion
 	}
+	if p := s.Persistence(); p != nil {
+		p.SetTokenUsage(prompt, completion)
+	}
 }
 
 // LastPromptTokens returns the most recent API prompt token count (0 if unknown).
 func (s *Session) LastPromptTokens() int {
 	if s == nil {
 		return 0
+	}
+	if p := s.Persistence(); p != nil {
+		return p.LastPromptTokens()
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -69,21 +79,23 @@ func (s *Session) ContextUsedTokens() int {
 		lastLen = len(msgs[count-1].Content)
 	}
 
-	s.mu.RLock()
-	if s.estTokensMsgCount == count && s.estTokensLastLen == lastLen && s.estTokensCache > 0 {
-		cache := s.estTokensCache
-		s.mu.RUnlock()
-		return cache
+	if p := s.Persistence(); p != nil {
+		if cache, cachedCount, cachedLen := p.TokenEstimateCache(); cachedCount == count && cachedLen == lastLen && cache > 0 {
+			return cache
+		}
 	}
-	s.mu.RUnlock()
 
 	est := EstimateTokens(msgs)
 
-	s.mu.Lock()
-	s.estTokensMsgCount = count
-	s.estTokensLastLen = lastLen
-	s.estTokensCache = est
-	s.mu.Unlock()
+	if p := s.Persistence(); p != nil {
+		p.SetTokenEstimateCache(est, count, lastLen)
+	} else {
+		s.mu.Lock()
+		s.estTokensMsgCount = count
+		s.estTokensLastLen = lastLen
+		s.estTokensCache = est
+		s.mu.Unlock()
+	}
 
 	return est
 }
@@ -92,8 +104,8 @@ func (s *Session) notifyCompaction(ev CompactionEvent) {
 	if s == nil {
 		return
 	}
-	if s.OnCompaction != nil {
-		s.OnCompaction(ev)
+	if fn := s.Persistence().OnCompaction(); fn != nil {
+		fn(ev)
 	}
 	s.saveCompactionCheckpoint()
 }
@@ -115,9 +127,7 @@ func (s *Session) checkpointDir() string {
 	if s == nil {
 		return ""
 	}
-	s.mu.RLock()
-	id := s.persistID
-	s.mu.RUnlock()
+	id := s.Persistence().PersistID()
 	if id == "" {
 		return ""
 	}
@@ -128,17 +138,17 @@ func (s *Session) checkpointManager() *session.CheckpointManager {
 	if s == nil {
 		return nil
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	dir := s.checkpointDir()
 	if dir == "" {
 		return nil
 	}
-	if s.checkpointMgr == nil {
-		s.checkpointMgr = session.NewCheckpointManager(dir)
-		_ = s.checkpointMgr.Load()
+	p := s.Persistence()
+	if p.CheckpointManager() == nil {
+		cm := session.NewCheckpointManager(dir)
+		_ = cm.Load()
+		p.SetCheckpointManager(cm)
 	}
-	return s.checkpointMgr
+	return p.CheckpointManager()
 }
 
 func rawToSessionMessages(raw []types.EyrieMessage) []session.Message {

@@ -164,68 +164,11 @@ func (g *ApprovalGate) isSessionApproved(cat ApprovalCategory) bool {
 //
 // This is invoked from the tool execution pipeline after the normal permission
 // check succeeds; it never loosens an existing denial.
-func (s *Session) CheckApproval(_ context.Context, toolName string, args map[string]interface{}) (bool, string) {
-	g := s.Approval
-	if g == nil || !g.Enabled {
-		return true, ""
+func (s *Session) CheckApproval(ctx context.Context, toolName string, args map[string]interface{}) (bool, string) {
+	if s == nil || s.PermSvc() == nil {
+		return false, "permission service is unavailable"
 	}
-
-	cat, risky := g.classifyAction(toolName, args)
-	if !risky || !g.categoryEnabled(cat) {
-		return true, ""
-	}
-
-	// Within the auto-approve threshold the operator has opted into automation.
-	if s.Autonomy <= g.MaxAutoApprove {
-		return true, ""
-	}
-
-	// Session-wide approval: human already chose "approve for session" earlier.
-	if g.isSessionApproved(cat) {
-		return true, ""
-	}
-
-	req := ApprovalRequest{
-		ToolName: canonicalToolName(toolName),
-		Category: cat,
-		Summary:  approvalSummary(toolName, args),
-		Args:     args,
-	}
-
-	if g.ConfirmFn != nil {
-		resp := g.ConfirmFn(req)
-		switch resp {
-		case ApprovalApproveForSession:
-			g.sessionApprove(cat)
-			return true, ""
-		case ApprovalApprove:
-			return true, ""
-		default:
-			return false, "Action denied by human approval gate (" + string(cat) + ")."
-		}
-	}
-
-	// Fall back to the session's generic ask-user callback.
-	if s.AskUserFn != nil {
-		q := "Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no/session)"
-		ans, err := s.AskUserFn(q)
-		if err != nil {
-			return false, "Action denied by human approval gate (" + string(cat) + ")."
-		}
-		switch strings.ToLower(strings.TrimSpace(ans)) {
-		case "session", "s", "approve-session", "yes-session":
-			g.sessionApprove(cat)
-			return true, ""
-		default:
-			if isAffirmative(ans) {
-				return true, ""
-			}
-			return false, "Action denied by human approval gate (" + string(cat) + ")."
-		}
-	}
-
-	// No way to ask: fail closed.
-	return false, "High-risk action requires approval but no confirmation handler is configured (" + string(cat) + ")."
+	return s.PermSvc().CheckApproval(ctx, toolName, args)
 }
 
 func approvalSummary(toolName string, args map[string]interface{}) string {

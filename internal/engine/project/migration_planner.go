@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // MigrationPlan represents a complete plan for a large-scale code migration.
@@ -506,7 +508,7 @@ func (mp *MigrationPlanner) Rollback(plan *MigrationPlan) error {
 			if !ok {
 				return fmt.Errorf("no backup found for %s", f)
 			}
-			if err := os.WriteFile(f, backup, 0o600); err != nil {
+			if err := fsutil.WritePinnedFile(f, backup, 0o600); err != nil {
 				return fmt.Errorf("restoring %s: %w", f, err)
 			}
 		}
@@ -544,7 +546,7 @@ func (mp *MigrationPlanner) executeStep(step *MigrationStep) error {
 		}
 
 		newContent := re.ReplaceAll(content, []byte(step.Replacement))
-		if err := os.WriteFile(f, newContent, 0o600); err != nil {
+		if err := fsutil.WritePinnedFile(f, newContent, 0o600); err != nil {
 			return fmt.Errorf("writing %s: %w", f, err)
 		}
 	}
@@ -572,7 +574,7 @@ func (mp *MigrationPlanner) findFilesContaining(text string) ([]string, error) {
 		if !isTextFile(path) {
 			return nil
 		}
-		content, readErr := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		content, readErr := fsutil.ReadPinnedFile(path)
 		if readErr != nil {
 			return nil
 		}

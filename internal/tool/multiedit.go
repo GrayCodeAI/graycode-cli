@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -69,7 +68,7 @@ func (MultiEditTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return "", fmt.Errorf("path %s is protected (read-only)", p.FilePath)
 	}
 
-	data, err := os.ReadFile(p.FilePath)
+	data, err := readGuardedFile(ctx, p.FilePath)
 	if err != nil {
 		return "", fmt.Errorf("read file: %w", err)
 	}
@@ -99,7 +98,7 @@ func (MultiEditTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return fmt.Sprintf("No edits applied (%d failed — old_string not found in file).", failed), nil
 	}
 
-	if err := os.WriteFile(p.FilePath, []byte(content), 0o600); err != nil {
+	if err := writeGuardedFile(ctx, p.FilePath, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
 	return fmt.Sprintf("Applied %d/%d edit(s) to %s.", applied, applied+failed, p.FilePath), nil

@@ -523,7 +523,7 @@ func collectGitInfo(dir string) *GitInfo {
 
 // gitCmd runs a git command in the given directory and returns its stdout.
 func gitCmd(dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

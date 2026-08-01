@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -736,18 +737,46 @@ func isFullURL(s string) bool {
 // splitCommand splits a command string into parts (simple split on spaces).
 func splitCommand(cmd string) []string {
 	var parts []string
-	current := ""
-	for _, c := range cmd {
-		if c == ' ' && current != "" {
-			parts = append(parts, current)
-			current = ""
-		} else if c != ' ' {
-			current += string(c)
+	var current strings.Builder
+	var quote rune
+	escaped := false
+	flush := func() {
+		if current.Len() > 0 {
+			parts = append(parts, current.String())
+			current.Reset()
 		}
 	}
-	if current != "" {
-		parts = append(parts, current)
+	for _, c := range cmd {
+		if escaped {
+			current.WriteRune(c)
+			escaped = false
+			continue
+		}
+		if c == '\\' && quote != '\'' {
+			escaped = true
+			continue
+		}
+		if quote != 0 {
+			if c == quote {
+				quote = 0
+			} else {
+				current.WriteRune(c)
+			}
+			continue
+		}
+		switch c {
+		case '\'', '"':
+			quote = c
+		case ' ', '\t', '\n', '\r':
+			flush()
+		default:
+			current.WriteRune(c)
+		}
 	}
+	if escaped {
+		current.WriteByte('\\')
+	}
+	flush()
 	return parts
 }
 

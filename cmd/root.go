@@ -221,7 +221,7 @@ func init() {
 	rootCmd.Flags().StringArrayVar(&toolsFlag, "tools", nil, `available tools: "" disables all tools, "default" enables all, or names like "Bash,Edit,Read"`)
 	rootCmd.Flags().StringArrayVar(&allowedToolsFlag, "allowed-tools", nil, `comma or space-separated tool permission rules to allow (e.g. "Bash(git:*) Edit")`)
 	rootCmd.Flags().StringArrayVar(&disallowedToolsFlag, "disallowed-tools", nil, `comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")`)
-	rootCmd.Flags().BoolVar(&dangerouslySkipPermissions, "dangerously-skip-permissions", false, "bypass all permission checks")
+	rootCmd.Flags().BoolVar(&dangerouslySkipPermissions, "dangerously-skip-permissions", false, "skip normal permission prompts (hooks, spec gates, sandbox, and dry-run still apply)")
 	rootCmd.Flags().BoolVar(&dryRunFlag, "dry-run", false, "deny every tool call unconditionally (preview only, nothing executes)")
 	rootCmd.Flags().IntVar(&maxTurns, "max-turns", 0, "maximum number of agentic turns in non-interactive mode")
 	rootCmd.Flags().Float64Var(&maxBudgetUSD, "max-budget-usd", 0, "maximum estimated API spend in USD")
@@ -286,12 +286,15 @@ func init() {
 	completionCmd.AddCommand(completionInstallCmd)
 }
 
-// confirmDangerousSkipPermissions enforces a safety guard when --dangerously-skip-permissions is set.
-// In a terminal, it prompts for interactive confirmation. In non-interactive mode (CI, scripts),
-// it requires the HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1 environment variable.
+// confirmDangerousSkipPermissions enforces a safety guard when
+// --dangerously-skip-permissions is set. It skips normal permission prompts,
+// but does not disable hooks, spec gates, sandbox enforcement, or dry-run.
+// In a terminal, it prompts for interactive confirmation. In non-interactive
+// mode (CI, scripts), it requires the HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1
+// environment variable.
 func confirmDangerousSkipPermissions() error {
 	if isStdinTerminal() {
-		fmt.Fprint(os.Stderr, "Are you sure? This disables all safety checks [y/N]: ")
+		fmt.Fprint(os.Stderr, "Are you sure? This skips normal permission prompts [y/N]: ")
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
 			return fmt.Errorf("--dangerously-skip-permissions requires confirmation")
@@ -413,11 +416,11 @@ Fish:
 
 		// Ensure parent directory exists.
 		dir := path[:strings.LastIndex(path, "/")]
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- shell completion directory must be traversable
 			return fmt.Errorf("cannot create directory %s: %w", dir, err)
 		}
 
-		if err := os.WriteFile(path, []byte(script.String()), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(script.String()), 0o644); err != nil { // #nosec G306 -- completion scripts are intentionally user-readable
 			return fmt.Errorf("cannot write completion script: %w", err)
 		}
 

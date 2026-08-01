@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func TestFileWriteAndRead(t *testing.T) {
@@ -206,6 +208,18 @@ func TestPathGuardBlocksOutsideCWDAndAllowsAddDir(t *testing.T) {
 	allowed := WithToolContext(context.Background(), &ToolContext{AllowedDirectories: []string{outside}})
 	if _, err := (FileReadTool{}).Execute(allowed, input); err != nil {
 		t.Fatalf("expected add-dir read to pass: %v", err)
+	}
+}
+
+func TestPathGuard_OffSandboxAllowsOutsidePath(t *testing.T) {
+	outside := filepath.Join(t.TempDir(), "outside.txt")
+	if err := os.WriteFile(outside, []byte("outside"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ctx := WithToolContext(context.Background(), &ToolContext{SandboxMode: sandbox.ModeOff})
+	input, _ := json.Marshal(map[string]string{"path": outside})
+	if _, err := (FileReadTool{}).Execute(ctx, input); err != nil {
+		t.Fatalf("off sandbox should allow outside path: %v", err)
 	}
 }
 

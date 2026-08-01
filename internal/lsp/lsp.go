@@ -66,7 +66,7 @@ func (m *ServerManager) Start(name, command string, args ...string) error {
 	}
 
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, command, args...)
+	cmd := exec.CommandContext(ctx, command, args...) // #nosec G204 -- command comes from the configured LSP definition
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err

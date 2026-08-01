@@ -139,7 +139,7 @@ func (s *SnapshotStore) Capture(projectDir, name, description string) (*Workspac
 		}
 
 		// Read file content
-		content, readErr := os.ReadFile(path) // #nosec G304 -- path from filepath.WalkDir over the project directory being snapshotted
+		content, readErr := os.ReadFile(path) // #nosec G304,G122 -- read-only snapshot traversal
 		if readErr != nil {
 			return nil // skip unreadable files
 		}
@@ -360,7 +360,7 @@ func (s *SnapshotStore) Diff(snapshotID string, projectDir string) (*SnapshotDif
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		content, readErr := os.ReadFile(path) // #nosec G304 -- path from filepath.WalkDir over the project directory being diffed
+		content, readErr := os.ReadFile(path) // #nosec G304,G122 -- read-only diff traversal
 		if readErr != nil {
 			return nil
 		}

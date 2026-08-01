@@ -54,11 +54,11 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		}
 
 		// Auto-approve everything in mission workers
-		sess.PermissionFn = func(req engine.PermissionRequest) {
+		sess.SetPermissionFn(func(req engine.PermissionRequest) {
 			if req.Response != nil {
 				req.Response <- true
 			}
-		}
+		})
 
 		sess.AddUser(workerPrompt)
 
@@ -163,11 +163,11 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		if setErr := sess.SetMaxTurns(30); setErr != nil {
 			return nil, fmt.Errorf("set max turns: %w", setErr)
 		}
-		sess.PermissionFn = func(req engine.PermissionRequest) {
+		sess.SetPermissionFn(func(req engine.PermissionRequest) {
 			if req.Response != nil {
 				req.Response <- true
 			}
-		}
+		})
 
 		sess.AddUser(validationPrompt)
 
@@ -207,7 +207,7 @@ func createWorktree(ctx context.Context, repoDir, baseBranch, branch string) (st
 }
 
 func removeWorktree(ctx context.Context, repoDir, wtPath string) {
-	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtPath)
+	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtPath) // #nosec G204 -- fixed git executable
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to remove worktree %s: %v\n", wtPath, err)

@@ -7,12 +7,15 @@ import (
 	tea "charm.land/bubbletea/v2"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 const defaultPermissionSandbox = "workspace"
 
 func normalizePermissionTier(raw string) (engine.AutonomyLevel, string, bool) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "always_ask", "always-ask", "supervised", "ask":
+		return engine.AutonomySupervised, "Always Ask", true
 	case "scout", "basic", "read":
 		return engine.AutonomyBasic, "Scout", true
 	case "builder", "semi", "edit":
@@ -49,7 +52,7 @@ func effectivePermissionTier(sess *engine.Session) engine.AutonomyLevel {
 	if perms == nil {
 		return DefaultContainerAutonomy
 	}
-	if perms.Autonomy() == 0 {
+	if perms.Autonomy() == 0 && !perms.AutonomyExplicit() {
 		return DefaultContainerAutonomy
 	}
 	return perms.Autonomy()
@@ -82,6 +85,8 @@ func effectivePermissionSandbox(settings hawkconfig.Settings) string {
 
 func permissionBehaviorSummary(level engine.AutonomyLevel) string {
 	switch level {
+	case engine.AutonomySupervised:
+		return "prompts for every tool call"
 	case engine.AutonomyBasic:
 		return "reads auto-approve; edits and commands ask first"
 	case engine.AutonomySemi:
@@ -91,7 +96,7 @@ func permissionBehaviorSummary(level engine.AutonomyLevel) string {
 	case engine.AutonomyYOLO:
 		return "minimal prompts; only highest-risk actions stop"
 	default:
-		return "reads and file changes auto-approve; commands ask first"
+		return "prompts for every tool call"
 	}
 }
 
@@ -103,10 +108,10 @@ func specStageLabel(sess *engine.Session) string {
 // currentSpecStage returns the session's active spec stage, or
 // SpecStageNone if the session (or its permission engine) isn't set up yet.
 func currentSpecStage(sess *engine.Session) engine.SpecStage {
-	if sess == nil || sess.Perm == nil {
+	if sess == nil || sess.PermSvc() == nil {
 		return engine.SpecStageNone
 	}
-	return sess.Perm.Stage
+	return sess.PermSvc().SpecStage()
 }
 
 // currentDryRun returns whether the session's dry-run kill switch is
@@ -115,10 +120,10 @@ func currentSpecStage(sess *engine.Session) engine.SpecStage {
 // nil for sessions built via a raw struct literal (e.g. in tests) rather
 // than NewSession.
 func currentDryRun(sess *engine.Session) bool {
-	if sess == nil || sess.Perm == nil {
+	if sess == nil || sess.PermSvc() == nil {
 		return false
 	}
-	return sess.Perm.DryRun
+	return sess.PermSvc().DryRun()
 }
 
 func autonomyCommandHelp() string {
@@ -231,17 +236,16 @@ func rebuildSessionPermissionRules(sess *engine.Session, settings hawkconfig.Set
 	if sess == nil {
 		return
 	}
-	mem := sess.PermSvc().Memory()
+	perm := sess.PermSvc()
+	if perm == nil {
+		return
+	}
+	mem := perm.Memory()
 	if mem == nil {
 		mem = engine.NewPermissionMemory()
-		if sess.Perm != nil {
-			sess.Perm.Memory = mem
-		}
+		sess.PermSvc().SetMemory(mem)
 	}
 	mem.Reset()
-	if sess.Perm != nil && sess.Perm.Memory == nil {
-		sess.Perm.Memory = mem
-	}
 	for _, spec := range settings.AutoAllow {
 		mem.AllowSpec(spec)
 	}
@@ -265,6 +269,7 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 		scope = "global"
 	}
 	settings.Autonomy = permissionTierSettingValue(level)
+	settings.AutonomyExplicit = true
 	settings.Sandbox = effectivePermissionSandbox(settings)
 	settings.AllowedTools = dedupeStrings(settings.AllowedTools)
 	settings.DisallowedTools = dedupeStrings(settings.DisallowedTools)
@@ -278,6 +283,7 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 		target.AllowedTools = append([]string{}, settings.AllowedTools...)
 		target.DisallowedTools = append([]string{}, settings.DisallowedTools...)
 		target.Autonomy = settings.Autonomy
+		target.AutonomyExplicit = true
 		target.Sandbox = settings.Sandbox
 		if err := hawkconfig.SaveGlobal(target); err != nil {
 			return "", err
@@ -293,7 +299,9 @@ func resetPermissionCenter(m *chatModel) {
 		return
 	}
 	m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
+	m.session.PermSvc().SetSandboxMode(sandbox.ParseMode(defaultPermissionSandbox))
 	m.settings.Autonomy = permissionTierSettingValue(DefaultContainerAutonomy)
+	m.settings.AutonomyExplicit = true
 	m.settings.Sandbox = defaultPermissionSandbox
 	sandboxFlag = defaultPermissionSandbox
 	m.settings.AutoAllow = nil
@@ -332,6 +340,7 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 		}
 		m.session.PermSvc().SetAutonomy(level)
 		m.settings.Autonomy = permissionTierSettingValue(level)
+		m.settings.AutonomyExplicit = true
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", label, permissionBehaviorSummary(level))})
 	case "sandbox":
 		if len(parts) < 3 {
@@ -346,7 +355,8 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 		}
 		m.settings.Sandbox = mode
 		sandboxFlag = mode
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission sandbox → %s\nControls approval policy inside the mandatory Docker container.", label)})
+		m.session.PermSvc().SetSandboxMode(sandbox.ParseMode(mode))
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Permission sandbox → %s\nControls tool filesystem/process policy independently of the autonomy tier.", label)})
 	case "dry-run":
 		if len(parts) < 3 {
 			state := "off"

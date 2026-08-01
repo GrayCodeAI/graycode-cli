@@ -473,7 +473,7 @@ func (md *MigrationDetector) Scan(projectDir string) ([]MigrationOpportunity, er
 			return nil
 		}
 
-		content, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
+		content, err := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if err != nil {
 			return nil
 		}

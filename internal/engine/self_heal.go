@@ -351,7 +351,7 @@ func (sh *SelfHealer) ApplyFixes(fixes []FileFix) error {
 }
 
 func (sh *SelfHealer) applyFix(fix FileFix) error {
-	data, err := os.ReadFile(fix.File)
+	data, err := tool.ReadPinnedFile(fix.File)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			content := string(data)
 			if strings.Contains(content, fix.OldContent) {
 				content = strings.Replace(content, fix.OldContent, fix.NewContent, 1)
-				return os.WriteFile(fix.File, []byte(content), 0o600)
+				return tool.WritePinnedFile(fix.File, []byte(content), 0o600)
 			}
 		}
 		// Fallback: replace by line number
@@ -384,7 +384,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			result = append(result, lines[:startIdx]...)
 			result = append(result, newLines...)
 			result = append(result, lines[endIdx:]...)
-			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
+			return tool.WritePinnedFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
 		}
 
 	case "insert":
@@ -400,14 +400,14 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 		result = append(result, lines[:insertIdx]...)
 		result = append(result, newLines...)
 		result = append(result, lines[insertIdx:]...)
-		return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
+		return tool.WritePinnedFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
 
 	case "delete":
 		if fix.OldContent != "" {
 			content := string(data)
 			if strings.Contains(content, fix.OldContent) {
 				content = strings.Replace(content, fix.OldContent, "", 1)
-				return os.WriteFile(fix.File, []byte(content), 0o600)
+				return tool.WritePinnedFile(fix.File, []byte(content), 0o600)
 			}
 		}
 		// Fallback: delete by line number
@@ -415,7 +415,7 @@ func (sh *SelfHealer) applyFix(fix FileFix) error {
 			result := make([]string, 0, len(lines)-1)
 			result = append(result, lines[:fix.Line-1]...)
 			result = append(result, lines[fix.Line:]...)
-			return os.WriteFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
+			return tool.WritePinnedFile(fix.File, []byte(strings.Join(result, "\n")), 0o600)
 		}
 	}
 
@@ -427,7 +427,7 @@ func (sh *SelfHealer) RunScript(ctx context.Context, path string) (stdout, stder
 	ctx, cancel := context.WithTimeout(ctx, sh.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", path)
+	cmd := exec.CommandContext(ctx, "sh", "-c", path) // #nosec G204 -- intentional self-heal script execution boundary
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
@@ -462,7 +462,7 @@ func (sh *SelfHealer) runCommand(ctx context.Context, command string) (stdout, s
 	ctx, cancel := context.WithTimeout(ctx, sh.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command) // #nosec G204 -- intentional self-heal command boundary
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf

@@ -26,6 +26,9 @@ func fetchModelsViaRuntime(ctx context.Context, provider string) ([]EngineModel,
 // Settings holds hawk configuration.
 // Hawk: no API keys stored here. Secrets come from the OS secret store via eyrie.
 type Settings struct {
+	// PolicySchemaVersion versions permission/autonomy/sandbox fields. Zero is
+	// the legacy format and is migrated to CurrentPolicySchemaVersion on load.
+	PolicySchemaVersion int `json:"policy_schema_version,omitempty"`
 	// Model and Provider are retained only for one-time migration into eyrie provider.json.
 	// Hawk does not persist model/provider here; use SetActiveModel / SetActiveProvider.
 	Model           string   `json:"model,omitempty"`
@@ -47,6 +50,7 @@ type Settings struct {
 	Sandbox                 string                 `json:"sandbox,omitempty"`                    // sandbox mode: strict, workspace, off
 	AutoCommit              *bool                  `json:"auto_commit,omitempty"`                // auto-commit file changes
 	Autonomy                int                    `json:"autonomy,omitempty"`                   // autonomy level 0-4
+	AutonomyExplicit        bool                   `json:"autonomy_explicit,omitempty"`          // distinguishes persisted Supervised (0) from unset
 	ModelRoles              *routing.ModelRoles    `json:"model_roles,omitempty"`                // per-role model overrides
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
@@ -63,6 +67,8 @@ type Settings struct {
 	PaginatorLines          int                    `json:"paginator_lines,omitempty"`          // scrollback buffer lines (0 = unlimited)
 	PaginatorShowLineNums   *bool                  `json:"paginator_show_line_nums,omitempty"` // show line numbers in scrollback
 }
+
+const CurrentPolicySchemaVersion = 1
 
 // ToolPreset maps a named preset to a list of allowed tools.
 type ToolPreset struct {
@@ -199,6 +205,9 @@ func LoadGlobalSettings() Settings {
 			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", path, err)
 		}
 	}
+	if s.PolicySchemaVersion == 0 {
+		s.PolicySchemaVersion = CurrentPolicySchemaVersion
+	}
 	return s
 }
 
@@ -211,6 +220,9 @@ func LoadSettings() Settings {
 		s = MergeSettings(s, *project)
 	}
 	migrateStoredModelProvider(&s)
+	if s.PolicySchemaVersion == 0 {
+		s.PolicySchemaVersion = CurrentPolicySchemaVersion
+	}
 	return s
 }
 
@@ -270,6 +282,12 @@ func readSettingsOverride(source string, out *Settings) error {
 
 // MergeSettings applies override fields on top of base using project-style precedence.
 func MergeSettings(base, override Settings) Settings {
+	if base.PolicySchemaVersion == 0 {
+		base.PolicySchemaVersion = CurrentPolicySchemaVersion
+	}
+	if override.PolicySchemaVersion > base.PolicySchemaVersion {
+		base.PolicySchemaVersion = override.PolicySchemaVersion
+	}
 	if override.Model != "" {
 		base.Model = override.Model
 	}
@@ -318,8 +336,9 @@ func MergeSettings(base, override Settings) Settings {
 	if override.AutoCommit != nil {
 		base.AutoCommit = override.AutoCommit
 	}
-	if override.Autonomy != 0 {
+	if override.AutonomyExplicit || override.Autonomy != 0 {
 		base.Autonomy = override.Autonomy
+		base.AutonomyExplicit = true
 	}
 	if override.AutoCompactThresholdPct > 0 {
 		base.AutoCompactThresholdPct = override.AutoCompactThresholdPct

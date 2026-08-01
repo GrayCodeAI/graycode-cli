@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -134,6 +135,6 @@ func SpanFromContext(ctx context.Context) (*Span, bool) {
 var idCounter int64
 
 func generateID() string {
-	idCounter++
-	return fmt.Sprintf("trace-%d-%d", time.Now().UnixNano(), idCounter)
+	id := atomic.AddInt64(&idCounter, 1)
+	return fmt.Sprintf("trace-%d-%d", time.Now().UnixNano(), id)
 }

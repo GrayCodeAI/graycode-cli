@@ -78,7 +78,7 @@ const defaultCallTimeout = 30 * time.Second
 
 // Connect starts an MCP server process via stdio transport.
 func Connect(ctx context.Context, name, command string, args ...string) (*Server, error) {
-	cmd := exec.CommandContext(ctx, command, args...)
+	cmd := exec.CommandContext(ctx, command, args...) // #nosec G204 -- command comes from the configured MCP server definition
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("mcp: stdin pipe: %w", err)

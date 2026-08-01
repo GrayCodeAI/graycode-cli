@@ -23,7 +23,7 @@ func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 	wtPath := filepath.Join(dir, "work")
 
 	// #nosec G204 -- binary is the fixed string "git"; branchName/wtPath/baseBranch come from internal caller state, not raw external input
-	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branchName, wtPath, baseBranch)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "add", "-b", branchName, wtPath, baseBranch) // #nosec G204 -- fixed git executable
 	cmd.Dir = repoDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -38,12 +38,12 @@ func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 // It is safe to call on a path that has already been removed.
 func removeWorktree(repoDir, worktreePath string) error {
 	// Remove the worktree reference from git.
-	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", worktreePath)
+	cmd := exec.CommandContext(context.Background(), "git", "worktree", "remove", "--force", worktreePath) // #nosec G204 -- fixed git executable
 	cmd.Dir = repoDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// If the directory is already gone, git may complain. Try pruning instead.
-		prune := exec.CommandContext(context.Background(), "git", "worktree", "prune")
+		prune := exec.CommandContext(context.Background(), "git", "worktree", "prune") // #nosec G204 -- fixed git executable
 		prune.Dir = repoDir
 		_ = prune.Run() // best-effort; ignore error
 
@@ -73,7 +73,7 @@ func removeWorktree(repoDir, worktreePath string) error {
 // The caller must ensure no uncommitted changes exist in the main repo.
 func mergeWorktree(repoDir, baseBranch, taskBranch string) error {
 	// Checkout the base branch.
-	checkout := exec.CommandContext(context.Background(), "git", "checkout", baseBranch)
+	checkout := exec.CommandContext(context.Background(), "git", "checkout", baseBranch) // #nosec G204 -- fixed git executable
 	checkout.Dir = repoDir
 	if out, err := checkout.CombinedOutput(); err != nil {
 		return fmt.Errorf("git checkout %s: %s: %w", baseBranch, strings.TrimSpace(string(out)), err)

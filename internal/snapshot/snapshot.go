@@ -225,7 +225,7 @@ func (t *Tracker) gitWork(args ...string) error {
 }
 
 func (t *Tracker) gitWorkCtx(ctx context.Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = t.shadowDir
 	cmd.Env = append(
 		os.Environ(),
@@ -244,7 +244,7 @@ func (t *Tracker) gitWorkOutput(args ...string) (string, error) {
 }
 
 func (t *Tracker) gitWorkOutputCtx(ctx context.Context, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = t.shadowDir
 	cmd.Env = append(
 		os.Environ(),

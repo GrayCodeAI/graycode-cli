@@ -51,6 +51,17 @@ func TestHandleCommandAddDir(t *testing.T) {
 	}
 }
 
+func TestHandleCommandEmptyInputIsNoOp(t *testing.T) {
+	m := &chatModel{}
+	model, cmd := m.handleCommand("  \n\t")
+	if cmd != nil {
+		t.Fatal("empty command should not schedule a tea command")
+	}
+	if model != m || len(m.messages) != 0 {
+		t.Fatal("empty command should leave the model unchanged")
+	}
+}
+
 func TestLocalSlashCommands(t *testing.T) {
 	preserveCLICompilerVersionState(t)
 	version = "test-version"

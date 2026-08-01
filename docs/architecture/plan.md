@@ -8,15 +8,16 @@ This plan defines the technical approach for implementing the hawk architecture 
 
 ### AD-1: God-Object Decomposition
 
-**Decision:** Decompose the Session god-object into 7 cohesive sub-services.
+**Decision:** Decompose the Session god-object into 7 cohesive sub-services,
+with the safety boundary extracted first.
 
 **Rationale:** The Session struct accumulated 35+ collaborators over time. The decomposition phases (1-7) extract these into focused sub-services while maintaining backward compatibility via legacy field accessors.
 
 **Trade-offs:**
 - Pro: Clear responsibility boundaries, easier testing
 - Pro: Sub-services can be nil-checked independently
-- Con: Legacy fields remain for backward compat
-- Con: Two access paths (sub-service vs legacy field) during migration
+- Con: Legacy fields remain for backward compatibility during migration
+- Con: The remaining services still need extraction and interface seams
 
 **Implementation:**
 ```
@@ -28,6 +29,13 @@ Session
   ├─ persist *PersistenceService (Phase 5: conversation store)
   └─ tools *ToolService       (Phase 6: tool execution)
 ```
+
+**Current implementation boundary:** `PermissionService` now owns the
+authoritative policy state and exposes an immutable per-tool `PolicySnapshot`.
+Tool approval and execution consume that same snapshot. `PersistenceService`
+also protects transcript ownership with deep-copy snapshots. The diagram above
+remains the target for the unextracted Chat, Memory, Lifecycle, and Tool
+services; it is not a claim that those fields have already moved.
 
 ### AD-2: Spec-Driven Development Gate
 

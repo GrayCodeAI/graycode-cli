@@ -9,7 +9,11 @@ import (
 )
 
 func TestNormalizePermissionTier(t *testing.T) {
-	level, label, ok := normalizePermissionTier("operator")
+	level, label, ok := normalizePermissionTier("always_ask")
+	if !ok || level != engine.AutonomySupervised || label != "Always Ask" {
+		t.Fatalf("always_ask = (%v, %q, %v)", level, label, ok)
+	}
+	level, label, ok = normalizePermissionTier("operator")
 	if !ok || level != engine.AutonomyFull || label != "Operator" {
 		t.Fatalf("operator = (%v, %q, %v)", level, label, ok)
 	}
@@ -46,11 +50,11 @@ func TestEffectivePermissionRules(t *testing.T) {
 }
 
 func TestAutonomyCenterSummary(t *testing.T) {
-	perm := engine.NewPermissionEngine()
-	perm.Autonomy = engine.AutonomySemi
-	perm.Stage = engine.SpecStageSpecify
+	sess := engine.NewSession("test", "test-model", "system", nil)
+	sess.PermSvc().SetAutonomy(engine.AutonomySemi)
+	sess.PermSvc().SetSpecStage(engine.SpecStageSpecify)
 	model := &chatModel{
-		session: &engine.Session{Autonomy: engine.AutonomySemi, Perm: perm},
+		session: sess,
 		settings: hawkconfig.Settings{
 			Sandbox:         "workspace",
 			AllowedTools:    []string{"Bash(git:*)"},
@@ -104,6 +108,10 @@ func TestEffectivePermissionTier_ReadsThroughRealSession(t *testing.T) {
 	sess.PermSvc().SetAutonomy(engine.AutonomyFull)
 	if got := effectivePermissionTier(sess); got != engine.AutonomyFull {
 		t.Fatalf("explicit Full: got %v, want %v", got, engine.AutonomyFull)
+	}
+	sess.PermSvc().SetAutonomy(engine.AutonomySupervised)
+	if got := effectivePermissionTier(sess); got != engine.AutonomySupervised {
+		t.Fatalf("explicit Supervised: got %v, want %v", got, engine.AutonomySupervised)
 	}
 }
 

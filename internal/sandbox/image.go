@@ -25,7 +25,7 @@ var sandboxImageTag = strings.TrimSpace(rawSandboxImageTag)
 
 // dockerImageCommand is replaceable in tests.
 var dockerImageCommand = func(ctx context.Context, args ...string) ([]byte, error) {
-	return exec.CommandContext(ctx, "docker", args...).CombinedOutput()
+	return exec.CommandContext(ctx, "docker", args...).CombinedOutput() // #nosec G204 -- fixed Docker executable
 }
 
 // ImageProvisionResult describes how EnsureImage satisfied the image contract.

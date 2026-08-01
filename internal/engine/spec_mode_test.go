@@ -23,10 +23,11 @@ func newSpecModeSession(approveImplement bool) (*Session, *int) {
 		tool.PlanTool{},
 		tool.TasksTool{},
 		tool.ApproveImplementationTool{},
+		tool.SpecResetTool{},
 	)
 	s := NewSession("", "", "test", registry)
 	prompts := 0
-	s.PermissionFn = func(req PermissionRequest) {
+	s.SetPermissionFn(func(req PermissionRequest) {
 		prompts++
 		allow := true
 		if req.ToolName == "ApproveImplementation" {
@@ -35,7 +36,7 @@ func newSpecModeSession(approveImplement bool) (*Session, *int) {
 		if req.Response != nil {
 			req.Response <- allow
 		}
-	}
+	})
 	return s, &prompts
 }
 
@@ -52,8 +53,8 @@ func TestSpecMode_SpecifyAdvancesStage(t *testing.T) {
 	s, _ := newSpecModeSession(true)
 	s.PermSvc().SetSpecStage(SpecStageSpecify)
 	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "test", "spec": "problem statement"})
-	if s.Perm.Stage != SpecStageSpecify {
-		t.Errorf("expected stage Specify after Specify tool, got %v", s.Perm.Stage)
+	if s.PermSvc().SpecStage() != SpecStageSpecify {
+		t.Errorf("expected stage Specify after Specify tool, got %v", s.PermSvc().SpecStage())
 	}
 }
 
@@ -63,13 +64,13 @@ func TestSpecMode_PlanTasksAdvanceStage(t *testing.T) {
 	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "test", "spec": "problem statement"})
 
 	runSpecTool(t, s, "Plan", map[string]interface{}{"plan": "technical approach"})
-	if s.Perm.Stage != SpecStagePlan {
-		t.Errorf("expected stage Plan after Plan tool, got %v", s.Perm.Stage)
+	if s.PermSvc().SpecStage() != SpecStagePlan {
+		t.Errorf("expected stage Plan after Plan tool, got %v", s.PermSvc().SpecStage())
 	}
 
 	runSpecTool(t, s, "Tasks", map[string]interface{}{"tasks": "task breakdown"})
-	if s.Perm.Stage != SpecStageTasks {
-		t.Errorf("expected stage Tasks after Tasks tool, got %v", s.Perm.Stage)
+	if s.PermSvc().SpecStage() != SpecStageTasks {
+		t.Errorf("expected stage Tasks after Tasks tool, got %v", s.PermSvc().SpecStage())
 	}
 }
 
@@ -132,8 +133,8 @@ func TestSpecMode_ApproveImplementationAlwaysPrompts(t *testing.T) {
 	if *prompts == 0 {
 		t.Errorf("expected an approval prompt on ApproveImplementation even at AutonomyYOLO")
 	}
-	if s.Perm.Stage != SpecStageImplementing {
-		t.Errorf("expected stage Implementing after approval, got %v", s.Perm.Stage)
+	if s.PermSvc().SpecStage() != SpecStageImplementing {
+		t.Errorf("expected stage Implementing after approval, got %v", s.PermSvc().SpecStage())
 	}
 	if !strings.Contains(strings.ToLower(res.output), "implementation") {
 		t.Errorf("expected implementation confirmation, got %q", res.output)
@@ -148,8 +149,8 @@ func TestSpecMode_ApproveImplementationDeniedStaysGated(t *testing.T) {
 	if !res.isErr {
 		t.Errorf("denied ApproveImplementation should report an error result to keep the gate closed")
 	}
-	if s.Perm.Stage != SpecStageTasks {
-		t.Errorf("expected to stay at Tasks stage after denial, got %v", s.Perm.Stage)
+	if s.PermSvc().SpecStage() != SpecStageTasks {
+		t.Errorf("expected to stay at Tasks stage after denial, got %v", s.PermSvc().SpecStage())
 	}
 }
 
@@ -173,14 +174,14 @@ func TestSpecMode_ApprovalPromptShowsSpecContent(t *testing.T) {
 	s.PermSvc().SetSpecStage(SpecStageSpecify)
 
 	var lastSummary string
-	s.PermissionFn = func(req PermissionRequest) {
+	s.SetPermissionFn(func(req PermissionRequest) {
 		if req.ToolName == "ApproveImplementation" {
 			lastSummary = req.Summary
 		}
 		if req.Response != nil {
 			req.Response <- true
 		}
-	}
+	})
 
 	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "approval preview test", "spec": "unique spec marker xyz123"})
 	runSpecTool(t, s, "Plan", map[string]interface{}{"plan": "unique plan marker abc456"})
@@ -219,5 +220,28 @@ func TestSpecMode_ImplementingLiftsGate(t *testing.T) {
 	})
 	if res.isErr {
 		t.Errorf("expected Write to be permitted once Implementing, got error: %q", res.output)
+	}
+}
+
+func TestSpecMode_ResetClearsStageAndSlug(t *testing.T) {
+	dir := t.TempDir()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+
+	s, _ := newSpecModeSession(true)
+	s.PermSvc().SetSpecStage(SpecStageSpecify)
+	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "reset-test", "spec": "content"})
+	if s.PermSvc().SpecSlug() == "" {
+		t.Fatal("Specify should set an active slug")
+	}
+	runSpecTool(t, s, "SpecReset", map[string]interface{}{})
+	if s.PermSvc().SpecStage() != SpecStageNone || s.PermSvc().SpecSlug() != "" {
+		t.Fatalf("reset left stage=%v slug=%q", s.PermSvc().SpecStage(), s.PermSvc().SpecSlug())
 	}
 }

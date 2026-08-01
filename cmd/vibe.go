@@ -134,7 +134,7 @@ func runVibeCommand(ctx context.Context, command string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd := exec.CommandContext(ctx, "sh", "-c", command) // #nosec G204 -- intentional vibe command execution boundary
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }

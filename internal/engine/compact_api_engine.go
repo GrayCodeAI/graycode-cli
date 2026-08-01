@@ -20,8 +20,9 @@ func (s *APICompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount
 }
 
 func (s *APICompactStrategy) Compact(ctx context.Context, sess *Session) (*CompactResult, error) {
-	tokensBefore := EstimateTokens(sess.messages)
-	result := compact.APICompactMessages(sess.messages, DefaultAPICompactConfig())
+	messages := sess.Persistence().RawMessages()
+	tokensBefore := EstimateTokens(messages)
+	result := compact.APICompactMessages(messages, DefaultAPICompactConfig())
 	tokensAfter := EstimateTokens(result)
 
 	return &CompactResult{

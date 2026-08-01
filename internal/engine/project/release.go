@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // ReleaseManager handles release automation including changelog generation,
@@ -644,7 +646,7 @@ func UpdateVersionFile(version, filePath string) error {
 		return fmt.Errorf("no version pattern found in %s", filePath)
 	}
 
-	if err := os.WriteFile(filePath, []byte(updated), 0o600); err != nil {
+	if err := fsutil.WritePinnedFile(filePath, []byte(updated), 0o600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filePath, err)
 	}
 
@@ -714,11 +716,11 @@ func formatNumber(n int) string {
 
 	s := strconv.Itoa(n)
 	var result []byte
-	for i, digit := range s {
+	for i := range s {
 		if i > 0 && (len(s)-i)%3 == 0 {
 			result = append(result, ',')
 		}
-		result = append(result, byte(digit))
+		result = append(result, s[i])
 	}
 	return string(result)
 }

@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // This file holds the quantitative project metrics gathered by ProjectAnalyzer
@@ -169,7 +171,7 @@ func (pa *ProjectAnalyzer) hasPatternInFiles(pattern string) bool {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		data, readErr := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		data, readErr := fsutil.ReadPinnedFile(path)
 		if readErr != nil {
 			return nil
 		}
@@ -198,7 +200,7 @@ func (pa *ProjectAnalyzer) hasPatternInTestFiles(pattern string) bool {
 		if !strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		data, readErr := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+		data, readErr := fsutil.ReadPinnedFile(path)
 		if readErr != nil {
 			return nil
 		}

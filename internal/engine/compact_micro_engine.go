@@ -30,8 +30,9 @@ func (s *MicroCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCou
 }
 
 func (s *MicroCompactStrategy) Compact(ctx context.Context, sess *Session) (*CompactResult, error) {
-	tokensBefore := EstimateTokens(sess.messages)
-	result := compact.MicrocompactMessages(sess.messages, DefaultMicroCompactConfig())
+	messages := sess.Persistence().RawMessages()
+	tokensBefore := EstimateTokens(messages)
+	result := compact.MicrocompactMessages(messages, DefaultMicroCompactConfig())
 	tokensAfter := EstimateTokens(result)
 
 	return &CompactResult{

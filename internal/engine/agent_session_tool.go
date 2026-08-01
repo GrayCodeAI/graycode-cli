@@ -20,9 +20,9 @@ import (
 // Modes: explore (read-only research), plan (read-only planning), general-purpose (full tools).
 func (s *Session) WireAgentTool() {
 	_ = s.ensureBackgroundManager()
-	s.AgentSpawnFn = func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+	s.Tools().SetAgentSpawnFn(func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
 		return s.spawnSubAgentRequest(ctx, req, 0)
-	}
+	})
 }
 
 // ensureBackgroundManager lazily attaches a BackgroundAgentManager on ToolService.
@@ -30,12 +30,7 @@ func (s *Session) ensureBackgroundManager() *tool.BackgroundAgentManager {
 	if s.Tools() == nil {
 		return nil
 	}
-	if bm := s.Tools().BackgroundManager(); bm != nil {
-		return bm
-	}
-	bm := tool.NewBackgroundAgentManager()
-	s.Tools().WithBackgroundManager(bm)
-	return bm
+	return s.Tools().EnsureBackgroundManager()
 }
 
 // spawnSubAgentRequest is the typed entrypoint used by the Agent tool.
@@ -132,16 +127,15 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	}
 
 	sub := s.SubSession(model, subSystemPrompt, registry)
-	sub.PermissionFn = s.PermissionFn
-	sub.Permissions = s.Permissions
+	sub.PermSvc().SetPermissionFn(s.PermSvc().PermissionFn())
 	// Explore/plan: hard read-only bash allowlist (in addition to tool filter).
 	if IsReadOnlyMode(mode) || norm.CapabilityMode == agentcontracts.CapReadOnly {
 		sub.readOnlyBash = true
 	}
-	// A sub-agent spawned while the parent is mid-spec-and-unapproved
-	// inherits the same gate — an ungated sub-agent would be a permission
-	// escalation hole (it could Write/Bash while the parent still can't).
-	sub.PermSvc().SetSpecStage(s.PermSvc().SpecStage())
+	// A child receives an independent snapshot of the parent's policy. This
+	// prevents parent mutations from changing an in-flight child and prevents
+	// child defaults from silently widening the parent's permissions.
+	sub.PermSvc().ApplyPolicySnapshot(s.PermSvc().PolicySnapshot())
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxTurns(maxTurns)
 	}
@@ -183,9 +177,9 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	sub.AddUser(prompt)
 
 	// Propagate parent agent spawn so nested agents work, and share bg manager.
-	sub.AgentSpawnFn = func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
+	sub.Tools().SetAgentSpawnFn(func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
 		return s.spawnSubAgentRequest(ctx, req, depth+1)
-	}
+	})
 	if bm := s.ensureBackgroundManager(); bm != nil && sub.Tools() != nil {
 		sub.Tools().WithBackgroundManager(bm)
 	}
@@ -211,29 +205,31 @@ const planSystemPrefix = "You are a planning sub-agent. Produce an ordered, acti
 	"Do not modify files. Prefer research tools (Read, Grep, Glob, LS) and only use Bash for read-only inspection."
 
 func (s *Session) resolveSubAgentModel(mode SubAgentMode) string {
+	current := s.ChatLLM().Model()
 	if s.LifecycleSvc().Cascade() == nil {
-		return s.model
+		return current
 	}
 	switch mode {
 	case SubAgentExplore:
-		return s.LifecycleSvc().Cascade().SelectModel("summarize", s.model, "")
+		return s.LifecycleSvc().Cascade().SelectModel("summarize", current, "")
 	case SubAgentPlan:
-		return s.LifecycleSvc().Cascade().SelectModel("summarize", s.model, "")
+		return s.LifecycleSvc().Cascade().SelectModel("summarize", current, "")
 	case SubAgentGeneral:
-		return s.LifecycleSvc().Cascade().SelectModel("implement", s.model, "")
+		return s.LifecycleSvc().Cascade().SelectModel("implement", current, "")
 	default:
-		return s.model
+		return current
 	}
 }
 
 func (s *Session) resolveSubAgentTools(mode SubAgentMode) *tool.Registry {
+	registry := s.Tools().Registry()
 	switch mode {
 	case SubAgentExplore:
-		return s.registry.Filter(ExploreTools)
+		return registry.Filter(ExploreTools)
 	case SubAgentPlan:
-		return s.registry.Filter(PlanTools)
+		return registry.Filter(PlanTools)
 	default:
-		return s.registry
+		return registry
 	}
 }
 

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // WorkspaceContext gathers git and project info for prompt injection.
@@ -158,7 +160,7 @@ func readGitBranch(dir string) string {
 				gitDir = filepath.Join(dir, gitDir)
 			}
 			headPath = filepath.Join(gitDir, "HEAD")
-			data, err = os.ReadFile(headPath) // #nosec G304 -- path is derived from the workspace directory being inspected, not external input
+			data, err = fsutil.ReadPinnedFile(headPath)
 			if err != nil {
 				return ""
 			}
@@ -278,7 +280,7 @@ func detectLanguage(dir string) string {
 
 // gitCmd runs a git command in the given directory and returns its output.
 func gitCmd(dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) // #nosec G204 -- fixed git executable
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	return strings.TrimSpace(string(out)), err

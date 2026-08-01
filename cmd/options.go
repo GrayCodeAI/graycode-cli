@@ -20,6 +20,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/prompt"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
@@ -269,6 +270,7 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
+	sess.PermSvc().SetSandboxMode(sandbox.ParseMode(effectivePermissionSandbox(settings)))
 
 	for _, spec := range settings.AutoAllow {
 		sess.PermSvc().Memory().AllowSpec(spec)
@@ -286,9 +288,6 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 		sess.PermSvc().Memory().DenySpec(spec)
 	}
 
-	if dangerouslySkipPermissions {
-		sess.PermSvc().SetAutonomy(engine.AutonomyYOLO)
-	}
 	if dryRunFlag {
 		sess.PermSvc().SetDryRun(true)
 	}
@@ -343,8 +342,15 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 	}
 	sess.EnsureAutoCompactor()
 
-	if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
+	if settings.AutonomyExplicit {
+		sess.PermSvc().SetAutonomy(engine.AutonomySupervised)
+	} else if lvl := autonomyFromSettings(settings.Autonomy); lvl != 0 {
 		sess.PermSvc().SetAutonomy(lvl)
+	}
+	// CLI safety overrides saved settings: the explicit dangerous-skip flag
+	// must not be silently downgraded by a persisted autonomy tier.
+	if dangerouslySkipPermissions {
+		sess.PermSvc().SetAutonomy(engine.AutonomyYOLO)
 	}
 
 	// Per-model thinking preference (Setup → Models Think column), with
@@ -388,6 +394,11 @@ func bindChatSession(sess *engine.Session, sessionID string, containerRequired b
 }
 
 func validateRootFlags() error {
+	if strings.TrimSpace(sandboxFlag) != "" {
+		if _, _, ok := normalizePermissionSandbox(sandboxFlag); !ok {
+			return fmt.Errorf("--sandbox must be one of: strict, workspace, off")
+		}
+	}
 	if outputFormat != "text" && outputFormat != "json" && outputFormat != "stream-json" {
 		return fmt.Errorf("--output-format must be one of: text, json, stream-json")
 	}

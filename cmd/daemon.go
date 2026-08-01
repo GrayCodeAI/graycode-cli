@@ -18,6 +18,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/daemon"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/executiongraph"
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -150,7 +151,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	}
 	keyFile := filepath.Join(storage.DaemonRunDir(), "daemon.key")
 	_ = os.MkdirAll(filepath.Dir(keyFile), 0o700)
-	if err := os.WriteFile(keyFile, []byte(apiKey), 0o600); err == nil {
+	if err := fsutil.WritePinnedFile(keyFile, []byte(apiKey), 0o600); err == nil {
 		fmt.Printf("Full API key written to %s\n", keyFile)
 	}
 

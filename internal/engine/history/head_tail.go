@@ -348,11 +348,11 @@ func formatWindowTokens(n int) string {
 
 	s := fmt.Sprintf("%d", n)
 	result := []byte{}
-	for i, c := range s {
+	for i := range s {
 		if i > 0 && (len(s)-i)%3 == 0 {
 			result = append(result, ',')
 		}
-		result = append(result, byte(c))
+		result = append(result, s[i])
 	}
 	return string(result)
 }

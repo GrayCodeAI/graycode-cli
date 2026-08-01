@@ -12,6 +12,7 @@ import (
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -32,12 +33,20 @@ const (
 // PermissionEngine encapsulates all permission-checking logic.
 // Extracted from Session to keep the god object lean.
 type PermissionEngine struct {
-	Memory     *PermissionMemory
-	AutoMode   *permissions.AutoModeState
-	Classifier *permissions.Classifier
-	BypassKill *permissions.BypassKillswitch
-	Autonomy   AutonomyLevel
-	Stage      SpecStage
+	Memory           *PermissionMemory
+	AutoMode         *permissions.AutoModeState
+	Classifier       *permissions.Classifier
+	BypassKill       *permissions.BypassKillswitch
+	Autonomy         AutonomyLevel
+	AutonomyExplicit bool
+	// Revision increments when policy configuration is replaced. It is
+	// attached to decisions so audit consumers can correlate evaluations.
+	Revision uint64
+	// SandboxMode controls filesystem/process policy for tool execution. It is
+	// deliberately separate from Autonomy: autonomy decides whether a user
+	// prompt is needed, while the sandbox decides what the tool may actually do.
+	SandboxMode sandbox.Mode
+	Stage       SpecStage
 	// DryRun is a global kill switch: when true, every tool call is denied
 	// unconditionally, regardless of tier or spec stage. Replaces the old
 	// PermissionModeDontAsk's hard-lockout role — that mode was otherwise
@@ -60,6 +69,78 @@ type PermissionEngine struct {
 	PromptFn func(PermissionRequest) // callback to ask user
 }
 
+// DecisionOutcome is the result of evaluating a tool request.
+type DecisionOutcome string
+
+const (
+	DecisionAllow DecisionOutcome = "allow"
+	DecisionAsk   DecisionOutcome = "ask"
+	DecisionDeny  DecisionOutcome = "deny"
+)
+
+// DecisionReason is stable metadata for callers, telemetry, and tests. The
+// human-readable message remains available through Decision.Message.
+type DecisionReason string
+
+const (
+	ReasonNone              DecisionReason = ""
+	ReasonDryRun            DecisionReason = "dry_run"
+	ReasonHookDenied        DecisionReason = "hook_denied"
+	ReasonSandbox           DecisionReason = "sandbox"
+	ReasonSpecGate          DecisionReason = "spec_gate"
+	ReasonRuleDenied        DecisionReason = "rule_denied"
+	ReasonAutoModeDenied    DecisionReason = "auto_mode_denied"
+	ReasonRuleAllowed       DecisionReason = "rule_allowed"
+	ReasonAutoModeAllowed   DecisionReason = "auto_mode_allowed"
+	ReasonAutonomy          DecisionReason = "autonomy"
+	ReasonBypass            DecisionReason = "bypass"
+	ReasonClassifiedSafe    DecisionReason = "classified_safe"
+	ReasonUserPrompt        DecisionReason = "user_prompt"
+	ReasonPromptUnavailable DecisionReason = "prompt_unavailable"
+)
+
+// Decision is the structured result of a permission evaluation.
+type Decision struct {
+	Outcome      DecisionOutcome
+	Reason       DecisionReason
+	Message      string
+	MatchedRule  string
+	Capabilities []Capability
+	Risk         RiskLevel
+	Revision     uint64
+}
+
+// PolicySnapshot captures the scalar policy state for one tool evaluation.
+// Callers can use it to ensure a request is evaluated consistently even when
+// the live session settings change while the tool is running.
+type PolicySnapshot struct {
+	Autonomy         AutonomyLevel
+	AutonomyExplicit bool
+	SandboxMode      sandbox.Mode
+	Stage            SpecStage
+	DryRun           bool
+	SpecSlug         string
+	Phase            int
+	Phases           int
+	Revision         uint64
+	Rules            RuleSnapshot
+	AllowedDirs      []string
+}
+
+// Snapshot returns a copy of the engine's request-relevant scalar policy.
+func (pe *PermissionEngine) Snapshot() PolicySnapshot {
+	var rules RuleSnapshot
+	if pe.Memory != nil {
+		rules = pe.Memory.Snapshot()
+	}
+	return PolicySnapshot{
+		Autonomy: pe.Autonomy, AutonomyExplicit: pe.AutonomyExplicit,
+		SandboxMode: pe.SandboxMode, Stage: pe.Stage, DryRun: pe.DryRun,
+		SpecSlug: pe.SpecSlug, Phase: pe.Phase, Phases: pe.Phases, Revision: pe.Revision,
+		Rules: rules,
+	}
+}
+
 // NewPermissionEngine creates a PermissionEngine with sensible defaults.
 func NewPermissionEngine() *PermissionEngine {
 	return &PermissionEngine{
@@ -80,8 +161,57 @@ func NewPermissionEngine() *PermissionEngine {
 //  3. Spec-stage gate
 //  4. Autonomy / bypass / classifier / auto-mode / memory / user prompt
 func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (bool, string) {
+	d := pe.CheckToolDecision(ctx, tc)
+	return d.Outcome == DecisionAllow, d.Message
+}
+
+// CheckToolSnapshot evaluates a request using the supplied immutable scalar
+// policy snapshot. Mutable rule stores and the prompt callback remain owned by
+// the engine so remembered decisions and user approval keep their semantics.
+func (pe *PermissionEngine) CheckToolSnapshot(ctx context.Context, tc ToolCallInfo, snapshot PolicySnapshot) Decision {
+	clone := *pe
+	clone.Autonomy = snapshot.Autonomy
+	clone.AutonomyExplicit = snapshot.AutonomyExplicit
+	clone.SandboxMode = snapshot.SandboxMode
+	clone.Stage = snapshot.Stage
+	clone.DryRun = snapshot.DryRun
+	clone.SpecSlug = snapshot.SpecSlug
+	clone.Phase = snapshot.Phase
+	clone.Phases = snapshot.Phases
+	clone.Revision = snapshot.Revision
+	clone.Memory = NewPermissionMemoryFromSnapshot(snapshot.Rules)
+	return clone.CheckToolDecision(ctx, tc)
+}
+
+// CheckToolDecision returns structured policy metadata while preserving the
+// existing permission behavior and human-readable messages.
+func (pe *PermissionEngine) CheckToolDecision(ctx context.Context, tc ToolCallInfo) Decision {
+	d := pe.evaluateToolDecision(ctx, tc)
+	policy := ToolPolicyFor(tc.Name)
+	d.Capabilities = policy.Capabilities
+	d.Risk = policy.DefaultRisk
+	d.Revision = pe.Revision
+	return d
+}
+
+// EvaluateTool performs policy evaluation without waiting for UI approval.
+// It returns DecisionAsk when the only remaining step is user approval.
+// CheckToolDecision remains the compatibility API that performs the prompt.
+func (pe *PermissionEngine) EvaluateTool(ctx context.Context, tc ToolCallInfo) Decision {
+	clone := *pe
+	clone.PromptFn = nil
+	d := clone.CheckToolDecision(ctx, tc)
+	if d.Reason == ReasonPromptUnavailable {
+		d.Outcome = DecisionAsk
+		d.Reason = ReasonUserPrompt
+		d.Message = "Permission approval required."
+	}
+	return d
+}
+
+func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCallInfo) Decision {
 	if pe.DryRun {
-		return false, "dry-run: tool execution disabled"
+		return Decision{Outcome: DecisionDeny, Reason: ReasonDryRun, Message: "dry-run: tool execution disabled"}
 	}
 
 	toolName := canonicalToolName(tc.Name)
@@ -90,7 +220,13 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 	// return allow/nil do not grant permission by themselves; they only
 	// short-circuit when ActionDeny (or equivalent).
 	if denied, reason := pe.checkPreToolHooks(tc); denied {
-		return false, reason
+		return Decision{Outcome: DecisionDeny, Reason: ReasonHookDenied, Message: reason}
+	}
+	// Strict sandbox mode is read-only. This check is independent of autonomy
+	// and the spec workflow so neither can turn a read-only sandbox into a
+	// write or process-execution path.
+	if pe.SandboxMode == sandbox.ModeStrict && !pe.strictToolAllowed(tc) {
+		return Decision{Outcome: DecisionDeny, Reason: ReasonSandbox, Message: "Sandbox strict mode: tool execution is read-only."}
 	}
 
 	// Spec-stage gate — independent of trust tier, so no autonomy level can
@@ -98,51 +234,110 @@ func (pe *PermissionEngine) CheckTool(ctx context.Context, tc ToolCallInfo) (boo
 	// implementation, only the workflow's own tools and reads may proceed.
 	if pe.Stage != SpecStageNone && pe.Stage != SpecStageImplementing {
 		switch toolName {
-		case "Specify", "Plan", "Tasks":
-			return true, ""
+		case "Specify", "Plan", "Tasks", "AskUserQuestion", "SpecStatus", "SpecEdit", "SpecList", "SpecReset", "SpecConfig", "Clarify", "Analyze", "Checklist", "Constitution", "Converge":
+			if !pe.specToolAllowed(toolName) {
+				return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: pe.specStageReason(toolName)}
+			}
+			return Decision{Outcome: DecisionAllow, Reason: ReasonSpecGate}
 		case "ApproveImplementation":
+			if pe.Stage != SpecStageTasks {
+				return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: "Spec stage active: ApproveImplementation is available only after Tasks completes."}
+			}
 			// Always a real human decision — never auto-allowed by tier,
 			// bypass-kill, or auto-mode, unlike everything below. Show the
 			// actual spec/plan/tasks content in the prompt rather than a
 			// bare tool name, so approval isn't a blind yes/no.
-			return pe.promptUserWithSummary(ctx, tc, specApprovalSummary(pe.SpecSlug))
+			return pe.promptDecisionWithSummary(ctx, tc, specApprovalSummary(pe.SpecSlug))
 		default:
 			if tool.IsReadOnly(tc.Name) {
-				return true, ""
+				return Decision{Outcome: DecisionAllow, Reason: ReasonSpecGate}
 			}
-			return false, "Spec stage active: only Specify/Plan/Tasks (and reads) are allowed until ApproveImplementation."
+			return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: "Spec stage active: only Specify/Plan/Tasks (and reads) are allowed until ApproveImplementation."}
 		}
+	}
+
+	summary := ToolSummary(tc.Name, tc.Args)
+	// Explicit remembered decisions are policy rules. They must be consulted
+	// before autonomy can short-circuit the request, especially for deny rules.
+	var memoryDecision *bool
+	if pe.Memory != nil {
+		memoryDecision = pe.Memory.Check(tc.Name, summary)
+	}
+	var autoDecision *bool
+	if pe.AutoMode != nil {
+		if allowed, ok := pe.AutoMode.ShouldAutoAllow(tc.Name, summary); ok {
+			autoDecision = &allowed
+		}
+	}
+	if memoryDecision != nil && !*memoryDecision {
+		return Decision{Outcome: DecisionDeny, Reason: ReasonRuleDenied, Message: "Permission denied (rule)."}
+	}
+	if autoDecision != nil && !*autoDecision {
+		return Decision{Outcome: DecisionDeny, Reason: ReasonAutoModeDenied, Message: "Permission denied (auto-mode)."}
+	}
+	if memoryDecision != nil && *memoryDecision {
+		return Decision{Outcome: DecisionAllow, Reason: ReasonRuleAllowed}
+	}
+	if autoDecision != nil && *autoDecision {
+		return Decision{Outcome: DecisionAllow, Reason: ReasonAutoModeAllowed}
 	}
 
 	isSafe := !ToolNeedsPermission(tc.Name, tc.Args)
 	autoCfg := PresetConfig(pe.Autonomy)
 	if !autoCfg.NeedsPermission(tc.Name, isSafe) {
-		return true, ""
+		return Decision{Outcome: DecisionAllow, Reason: ReasonAutonomy}
 	}
 	if pe.BypassKill.IsEnabled() {
-		return true, ""
+		return Decision{Outcome: DecisionAllow, Reason: ReasonBypass}
 	}
-	summary := ToolSummary(tc.Name, tc.Args)
 	if pe.Classifier != nil && tc.Name == "Bash" {
 		if pe.Classifier.Classify(summary) == "safe" {
-			return true, ""
+			return Decision{Outcome: DecisionAllow, Reason: ReasonClassifiedSafe}
 		}
 	}
-	if pe.AutoMode != nil {
-		if allowed, ok := pe.AutoMode.ShouldAutoAllow(tc.Name, summary); ok {
-			if allowed {
-				return true, ""
-			}
-			return false, "Permission denied (auto-mode)."
-		}
+	return pe.promptDecision(ctx, tc)
+}
+
+func (pe *PermissionEngine) specToolAllowed(toolName string) bool {
+	switch toolName {
+	case "Specify":
+		return pe.Stage == SpecStageSpecify
+	case "Plan":
+		return pe.Stage == SpecStageSpecify && pe.SpecSlug != ""
+	case "Tasks":
+		return pe.Stage == SpecStagePlan
+	default:
+		return true
 	}
-	if decision := pe.Memory.Check(tc.Name, summary); decision != nil {
-		if !*decision {
-			return false, "Permission denied (rule)."
-		}
-		return true, ""
+}
+
+func (pe *PermissionEngine) specStageReason(toolName string) string {
+	switch toolName {
+	case "Plan":
+		return "Spec stage active: Plan is available only after Specify completes."
+	case "Tasks":
+		return "Spec stage active: Tasks is available only after Plan completes."
+	case "Specify":
+		return "Spec stage active: Specify is not available at the current stage."
+	default:
+		return "Spec stage active: tool is not available at the current stage."
 	}
-	return pe.promptUser(ctx, tc)
+}
+
+func (pe *PermissionEngine) strictToolAllowed(tc ToolCallInfo) bool {
+	name := canonicalToolName(tc.Name)
+	if tool.IsReadOnly(tc.Name) || name == "ApproveImplementation" {
+		return true
+	}
+	switch name {
+	case "AskUserQuestion", "SpecStatus", "SpecList", "Clarify", "Analyze", "Checklist", "Constitution", "Converge":
+		return true
+	case "SpecConfig":
+		action, _ := tc.Args["action"].(string)
+		return strings.ToLower(strings.TrimSpace(action)) != "set"
+	default:
+		return false
+	}
 }
 
 // checkPreToolHooks runs decision hooks for PreToolUse / pre_tool.
@@ -175,18 +370,13 @@ func (pe *PermissionEngine) checkPreToolHooks(tc ToolCallInfo) (bool, string) {
 	}
 }
 
-// promptUser blocks on PromptFn, asking the user to approve tc, using the
-// generic tool summary.
-func (pe *PermissionEngine) promptUser(ctx context.Context, tc ToolCallInfo) (bool, string) {
-	return pe.promptUserWithSummary(ctx, tc, ToolSummary(tc.Name, tc.Args))
+func (pe *PermissionEngine) promptDecision(ctx context.Context, tc ToolCallInfo) Decision {
+	return pe.promptDecisionWithSummary(ctx, tc, ToolSummary(tc.Name, tc.Args))
 }
 
-// promptUserWithSummary is promptUser with a caller-supplied summary,
-// letting ApproveImplementation show spec/plan/tasks content instead of
-// the generic (and, since it takes no args, empty) tool summary.
-func (pe *PermissionEngine) promptUserWithSummary(ctx context.Context, tc ToolCallInfo, summary string) (bool, string) {
+func (pe *PermissionEngine) promptDecisionWithSummary(ctx context.Context, tc ToolCallInfo, summary string) Decision {
 	if pe.PromptFn == nil {
-		return false, "Permission prompt unavailable."
+		return Decision{Outcome: DecisionDeny, Reason: ReasonPromptUnavailable, Message: "Permission prompt unavailable."}
 	}
 	resp := make(chan bool, 1)
 	pe.PromptFn(PermissionRequest{
@@ -200,13 +390,13 @@ func (pe *PermissionEngine) promptUserWithSummary(ctx context.Context, tc ToolCa
 	select {
 	case allowed := <-resp:
 		if !allowed {
-			return false, "Permission denied by user."
+			return Decision{Outcome: DecisionDeny, Reason: ReasonUserPrompt, Message: "Permission denied by user."}
 		}
-		return true, ""
+		return Decision{Outcome: DecisionAllow, Reason: ReasonUserPrompt}
 	case <-ctx.Done():
-		return false, "Permission prompt cancelled."
+		return Decision{Outcome: DecisionDeny, Reason: ReasonUserPrompt, Message: "Permission prompt cancelled."}
 	case <-time.After(5 * time.Minute):
-		return false, "Permission prompt timed out."
+		return Decision{Outcome: DecisionDeny, Reason: ReasonUserPrompt, Message: "Permission prompt timed out."}
 	}
 }
 
@@ -287,15 +477,21 @@ func (pe *PermissionEngine) PhaseProgress() string {
 // model just executed successfully. Called by stream_tool_exec.go — plays
 // the same role ApplyToolState played for the old Plan Mode.
 func (pe *PermissionEngine) AdvanceSpecStage(name string) {
-	switch canonicalToolName(name) {
-	case "Specify":
-		pe.Stage = SpecStageSpecify
-	case "Plan":
-		pe.Stage = SpecStagePlan
-	case "Tasks":
-		pe.Stage = SpecStageTasks
-	case "ApproveImplementation":
-		pe.Stage = SpecStageImplementing
+	if canonicalToolName(name) == "SpecReset" {
+		pe.Stage = SpecStageNone
+		pe.SpecSlug = ""
+		pe.Phase = 0
+		pe.Phases = 0
+		pe.Revision++
+		return
+	}
+	w := SpecWorkflow{Stage: pe.Stage, Slug: pe.SpecSlug}
+	if err := w.Transition(name, pe.SpecSlug); err != nil {
+		return
+	}
+	pe.Stage, pe.SpecSlug = w.Stage, w.Slug
+	pe.Revision++
+	if canonicalToolName(name) == "ApproveImplementation" {
 		pe.Phase = 1
 		pe.Phases = detectPhases(pe.SpecSlug)
 	}

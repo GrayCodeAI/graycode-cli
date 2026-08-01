@@ -1,6 +1,9 @@
-# Session God-Object Decomposition — Design Sketch
+# Session God-Object Decomposition — Design and Migration Status
 
-> Status: **DRAFT / NOT YET IMPLEMENTED**
+> Status: **IN PROGRESS** — the canonical service graph is active and the
+> runtime execution path no longer uses legacy permission or tool fallbacks.
+> Remaining work is limited to moving the last non-authoritative Session fields
+> into their owning services.
 > Author: opencode session
 > Date: 2026-06-12
 > Scope: `hawk/internal/engine/session.go` (the 35-collaborator `Session` struct)
@@ -25,6 +28,37 @@ Break `Session` into ~6 cohesive sub-services, each with:
 
 The `agentLoop` should consume these sub-services as named dependencies — no implicit `s.Beliefs.Size()` reach-throughs.
 
+## Implemented Migration Slice (2026-08)
+
+The refactor branch now enforces these boundaries:
+
+- `SubServices()` is the canonical composition root for the six extracted
+  services. The obsolete `SessionServices` bridge has been removed.
+- `PersistenceService` owns immutable transcript snapshots, system-context
+  mutations, compaction metadata, token accounting, and checkpoint identity.
+  Returned messages are deep copies, including nested tool arguments.
+- `LifecycleService` owns session-start/end bookkeeping, few-shot learning,
+  adaptive feedback, model cascade access, and quality-loop handles.
+- `MemoryService` owns recall fallback, Yaad/enhanced-memory finalization, and
+  session summaries.
+- `PermissionService` owns the approval gate and ask-user callback;
+  `Session.CheckApproval` is a thin orchestration facade with no state sync.
+- `ToolService.ExecuteAll` owns batching, ordering, blast-radius reporting,
+  and read-only concurrency limits. `ToolService.ExecuteOne` now owns raw
+  invocation boundaries: permission/approval, tracing, isolation, context
+  injection, lookup, timeout, and retry. `PostProcess` now owns
+  mutation, validation, sandbox, lint, and pipeline hooks. `CompleteResult` owns
+  spec transitions, counters, enhanced-memory notification, post-tool hooks,
+  verification observation, span closure, and result emission.
+- The agent loop uses these service APIs for transport, persistence, memory,
+  lifecycle, permission-stage, and tool-batch operations.
+
+The permission aliases (`Perm`, `Permissions`, `AutoMode`, `Classifier`,
+`BypassKill`, `PermissionFn`, `Approval`, and `Autonomy`) have been removed from
+`Session`. Remaining lifecycle, memory, and persistence fields are being moved
+incrementally; service state is authoritative and no fallback execution path
+exists.
+
 ## Proposed Decomposition
 
 ### 1. `ChatService` — owns the LLM transport
@@ -45,7 +79,7 @@ The `agentLoop` should consume these sub-services as named dependencies — no i
 **Owns:** `Memory MemoryRecaller`, `YaadBridge *memory.YaadBridge`, `EnhancedMemory *memory.EnhancedMemoryManager`, `SkillDistiller *memory.SkillDistiller`, `Sleeptime *memory.SleeptimeAgent`, `Activity *memory.ActivityTracker`, `AgentsAccum *prompts.AgentsAccum`, `FewShotStore *FewShotStore`, `AdaptivePrompt *AdaptivePrompt`.
 
 **Methods:**
-- `RecallContext(ctx, lastUserMsg string, budget int) (string, error)` — unifies yaad + few-shot + agents-accum
+- `RecallContext(ctx, lastUserMsg string, budget int) string` — unifies backend recall behind one nil-safe call
 - `Remember(ctx, content, category string)` — wraps memory.Remember
 - `RunSleeptimeConsolidation(ctx, provider ChatService, messages []types.EyrieMessage)` — background
 - `RunSkillDistillation(ctx, provider ChatService, ...)` — background
@@ -253,4 +287,7 @@ These tests don't need to construct a `Session` anymore; they can construct just
 
 ## Status
 
-**NOT YET IMPLEMENTED.** The above is a design proposal pending review. The 4 concrete fixes (time.Sleep, ReadOnlyTools, AGENTS.md, self-review revert) are merged independently of this refactor.
+**IN PROGRESS.** The implemented migration slice above is live and tested.
+The remaining work is to move the internals of the tool execution pipeline,
+finish compaction ownership, migrate all production call sites, and then
+remove the compatibility fields in a separately reviewed cleanup commit.

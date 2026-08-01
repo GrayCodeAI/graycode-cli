@@ -37,6 +37,10 @@ type ProxyConfig struct {
 	BlockedDomains []string
 	Mode           string // "allowlist", "blocklist", "open", "closed"
 	LogRequests    bool
+	// BlockPrivateNetworks rejects loopback, link-local, private, multicast,
+	// and unspecified destinations after DNS resolution. It is intentionally
+	// opt-in for compatibility; secure built-in configurations enable it.
+	BlockPrivateNetworks bool
 }
 
 // NetworkProxy provides domain-level network access control for commands
@@ -155,6 +159,9 @@ func (np *NetworkProxy) IsAllowed(host string) bool {
 	if np.BlockAll {
 		return false
 	}
+	if np.config.BlockPrivateNetworks && isPrivateHost(h) {
+		return false
+	}
 
 	// Check blocked domains first (deny wins).
 	for _, pattern := range np.BlockedDomains {
@@ -238,7 +245,7 @@ func (np *NetworkProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 	// Dial the target.
 	dialCtx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	targetConn, err := new(net.Dialer).DialContext(dialCtx, "tcp", host)
+	targetConn, err := np.dialTarget(dialCtx, "tcp", host)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to connect to %s: %v", host, err), http.StatusBadGateway)
 		return
@@ -291,7 +298,7 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Forward the request.
-	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body)
+	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body) // #nosec G704 -- IsAllowed validates the host and dialTarget revalidates resolved addresses
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to create request: %v", err), http.StatusInternalServerError)
 		return
@@ -304,15 +311,24 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	baseTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		http.Error(w, "proxy transport unavailable", http.StatusInternalServerError)
+		return
+	}
+	transport := baseTransport.Clone()
+	transport.Proxy = nil
+	transport.DialContext = np.dialTarget
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
+		Transport: transport,
 		// Don't follow redirects — let the caller handle them.
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
 
-	resp, err := client.Do(outReq)
+	resp, err := client.Do(outReq) // #nosec G704 -- transport is policy-bound with Proxy disabled and dialTarget enforcement
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to forward request: %v", err), http.StatusBadGateway)
 		return
@@ -329,6 +345,56 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	n, _ := io.Copy(w, resp.Body)
 	atomic.AddInt64(&np.Stats.TotalBytes, n)
+}
+
+// dialTarget resolves and dials a destination while enforcing the private
+// network policy at the point where an address is actually selected. Checking
+// only the hostname is insufficient because an allowed hostname can resolve
+// to a loopback or private address (including through DNS rebinding).
+func (np *NetworkProxy) dialTarget(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, fmt.Errorf("invalid target %q: %w", address, err)
+	}
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+	dialer := &net.Dialer{}
+	var lastErr error
+	for _, ip := range ips {
+		if np.config.BlockPrivateNetworks && isPrivateIP(ip) {
+			lastErr = fmt.Errorf("target %s resolves to a private address", host)
+			continue
+		}
+		conn, dialErr := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		if dialErr == nil {
+			return conn, nil
+		}
+		lastErr = dialErr
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no addresses resolved for %s", host)
+	}
+	return nil, lastErr
+}
+
+func isPrivateHost(host string) bool {
+	if strings.EqualFold(host, "localhost") || strings.HasSuffix(strings.ToLower(host), ".localhost") {
+		return true
+	}
+	ip := net.ParseIP(strings.Trim(host, "[]"))
+	return ip != nil && isPrivateIP(ip)
+}
+
+func isPrivateIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() || isCarrierGradeNAT(ip)
+}
+
+func isCarrierGradeNAT(ip net.IP) bool {
+	ip4 := ip.To4()
+	return ip4 != nil && ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127
 }
 
 // recordRequest updates stats and log for a request.
@@ -433,7 +499,8 @@ func DefaultDevelopmentConfig() ProxyConfig {
 			"10.*",
 			"192.168.*",
 		},
-		Mode:        "allowlist",
-		LogRequests: true,
+		Mode:                 "allowlist",
+		LogRequests:          true,
+		BlockPrivateNetworks: true,
 	}
 }

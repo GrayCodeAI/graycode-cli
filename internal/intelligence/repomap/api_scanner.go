@@ -89,7 +89,7 @@ func (s *APIScanner) ScanProject(dir string) (*APIMap, error) {
 			return nil
 		}
 
-		data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the repo being analyzed by this dev CLI
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if err != nil {
 			return nil
 		}
@@ -471,7 +471,7 @@ func DetectFramework(dir string) string {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- path is a repo file discovered while walking the project directory being analyzed by this dev CLI
+		data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only repository analysis
 		if err != nil {
 			return nil
 		}

@@ -3,7 +3,10 @@ package engine
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func TestPermissionService_CheckTool(t *testing.T) {
@@ -46,12 +49,84 @@ func TestPermissionService_BudgetAndTurnCaps(t *testing.T) {
 func TestPermissionService_AutonomyAndAllowedDirs(t *testing.T) {
 	s := NewPermissionService(nil)
 	s.SetAutonomy(AutonomySupervised)
-	s.SetAllowedDirs([]string{"/tmp", "/var/folders"})
+	dirs := []string{"/tmp", "/var/folders"}
+	s.SetAllowedDirs(dirs)
+	dirs[0] = "/changed"
 	if s.Autonomy() != AutonomySupervised {
 		t.Errorf("Autonomy = %v, want AutonomySupervised", s.Autonomy())
 	}
 	if len(s.AllowedDirs()) != 2 {
 		t.Errorf("AllowedDirs len = %d, want 2", len(s.AllowedDirs()))
+	}
+	got := s.AllowedDirs()
+	got[0] = "/changed-again"
+	if s.AllowedDirs()[0] != "/tmp" {
+		t.Fatalf("AllowedDirs returned an aliased slice: %v", s.AllowedDirs())
+	}
+}
+
+func TestPermissionService_ResetSpecIncrementsRevision(t *testing.T) {
+	s := NewPermissionService(nil)
+	s.SetSpecSlug("demo")
+	s.SetSpecStage(SpecStageImplementing)
+	before := s.Engine().Revision
+	s.ResetSpec()
+	if got := s.SpecSlug(); got != "" {
+		t.Fatalf("SpecSlug after reset = %q, want empty", got)
+	}
+	if got := s.SpecStage(); got != SpecStageNone {
+		t.Fatalf("SpecStage after reset = %v, want none", got)
+	}
+	if s.Engine().Revision <= before {
+		t.Fatalf("ResetSpec revision = %d, want > %d", s.Engine().Revision, before)
+	}
+}
+
+func TestPermissionService_ConcurrentPolicyUpdates(t *testing.T) {
+	s := NewPermissionService(nil)
+	ctx := context.Background()
+	modes := []sandbox.Mode{sandbox.ModeStrict, sandbox.ModeWorkspace, sandbox.ModeOff}
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			s.SetAutonomy(AutonomyLevel(i % int(AutonomyYOLO+1)))
+			s.SetSandboxMode(modes[i%len(modes)])
+			s.SetAllowedDirs([]string{"/workspace", "/tmp"})
+		}(i)
+		go func() {
+			defer wg.Done()
+			_ = s.EvaluateTool(ctx, ToolCallInfo{Name: "Read"})
+			_ = s.PolicySnapshot()
+			_, _, _ = s.SpecProgress()
+		}()
+	}
+	wg.Wait()
+}
+
+func TestPermissionService_SandboxModeRoundTrip(t *testing.T) {
+	s := NewPermissionService(nil)
+	s.SetSandboxMode(sandbox.ModeStrict)
+	if got := s.SandboxMode(); got != sandbox.ModeStrict {
+		t.Fatalf("SandboxMode = %q, want strict", got)
+	}
+}
+
+func TestPermissionService_ApplyPolicySnapshotCopiesRulesAndScopes(t *testing.T) {
+	parent := NewPermissionService(nil)
+	parent.Memory().AlwaysDeny("Write")
+	parent.SetAllowedDirs([]string{"/workspace"})
+	snapshot := parent.PolicySnapshot()
+	child := NewPermissionService(nil)
+	child.ApplyPolicySnapshot(snapshot)
+	snapshot.AllowedDirs[0] = "/changed"
+	if child.AllowedDirs()[0] != "/workspace" {
+		t.Fatalf("child allowed dirs changed through snapshot alias: %v", child.AllowedDirs())
+	}
+	allowed, reason := child.CheckTool(context.Background(), ToolCallInfo{Name: "Write"})
+	if allowed || reason != "Permission denied (rule)." {
+		t.Fatalf("child did not inherit deny rule: allowed=%v reason=%q", allowed, reason)
 	}
 }
 

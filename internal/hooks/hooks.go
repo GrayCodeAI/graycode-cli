@@ -63,6 +63,9 @@ type Hook struct {
 type Registry struct {
 	mu    sync.RWMutex
 	hooks map[EventType][]Hook
+	// asyncWG tracks fire-and-forget hooks so owners can drain them during
+	// shutdown or deterministic tests.
+	asyncWG sync.WaitGroup
 }
 
 // NewRegistry creates a new hook registry.
@@ -120,19 +123,51 @@ func (r *Registry) ExecuteEnvelope(ctx context.Context, env EventEnvelope) error
 	return firstErr
 }
 
-// ExecuteAsync runs hooks asynchronously (fire and forget).
-// Uses a fresh context to avoid passing a cancelled caller context.
-func (r *Registry) ExecuteAsync(_ context.Context, event EventType, data map[string]interface{}) {
+// ExecuteAsync runs hooks asynchronously and records them for WaitAsync.
+// The caller's values and trace span are preserved, but cancellation is
+// detached so a normal request teardown does not kill post-event observers.
+func (r *Registry) ExecuteAsync(ctx context.Context, event EventType, data map[string]interface{}) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx = context.WithoutCancel(ctx)
+	r.asyncWG.Add(1)
 	go func() {
-		_ = r.Execute(context.Background(), event, data)
+		defer r.asyncWG.Done()
+		_ = r.Execute(ctx, event, data)
 	}()
 }
 
 // ExecuteAsyncEnvelope runs hooks asynchronously using a typed EventEnvelope.
-func (r *Registry) ExecuteAsyncEnvelope(_ context.Context, env EventEnvelope) {
+func (r *Registry) ExecuteAsyncEnvelope(ctx context.Context, env EventEnvelope) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx = context.WithoutCancel(ctx)
+	r.asyncWG.Add(1)
 	go func() {
-		_ = r.ExecuteEnvelope(context.Background(), env)
+		defer r.asyncWG.Done()
+		_ = r.ExecuteEnvelope(ctx, env)
 	}()
+}
+
+// WaitAsync waits for currently queued asynchronous hooks to finish or for
+// ctx to expire. Callers must stop scheduling new async hooks before waiting.
+func (r *Registry) WaitAsync(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	done := make(chan struct{})
+	go func() {
+		r.asyncWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func sortHooks(hooks []Hook) {
@@ -170,6 +205,9 @@ func ExecuteEnvelope(ctx context.Context, env EventEnvelope) error {
 func ExecuteAsyncEnvelope(ctx context.Context, env EventEnvelope) {
 	global.ExecuteAsyncEnvelope(ctx, env)
 }
+
+// WaitAsync waits for currently queued package-level asynchronous hooks.
+func WaitAsync(ctx context.Context) error { return global.WaitAsync(ctx) }
 
 // AdaptLegacyFn wraps a legacy hook function into an EnvelopeFn.
 // The legacy function receives only the payload from the envelope.

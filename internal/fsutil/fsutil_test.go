@@ -19,3 +19,18 @@ func TestExists(t *testing.T) {
 		t.Error("Exists(missing) = true, want false")
 	}
 }
+
+func TestPinnedFileReadWrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "value.txt")
+	if err := WritePinnedFile(path, []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	data, err := ReadPinnedFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "hello" {
+		t.Fatalf("ReadPinnedFile() = %q, want hello", data)
+	}
+}

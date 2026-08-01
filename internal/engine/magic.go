@@ -203,8 +203,7 @@ func magicTokens(session *Session, _ string) string {
 
 func magicVerbose(session *Session, _ string) string {
 	session.mu.Lock()
-	session.Verbose = !session.Verbose
-	state := session.Verbose
+	state := session.LifecycleSvc().ToggleVerbose()
 	session.mu.Unlock()
 
 	if state {

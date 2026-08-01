@@ -20,8 +20,8 @@ func (s *Session) SmartCompact() { s.smartCompact() }
 // compact removes older messages while preserving tool_use/tool_result pairing.
 func (s *Session) compact() {
 	keepEnd := 16
-	if s.PinnedMessages > keepEnd {
-		keepEnd = s.PinnedMessages
+	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
+		keepEnd = pinned
 	}
 	if len(s.Persistence().RawMessages()) <= keepEnd+4 {
 		return

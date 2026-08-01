@@ -94,7 +94,7 @@ func GitContext() string {
 func gitCmd(args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "git", args...).Output()
+	out, err := exec.CommandContext(ctx, "git", args...).Output() // #nosec G204 -- fixed git executable
 	return strings.TrimSpace(string(out)), err
 }
 

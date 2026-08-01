@@ -141,7 +141,7 @@ func (n *Notifier) DesktopNotify(title, message string) error {
 		cmd := exec.CommandContext(context.Background(), "osascript", "-e", script) // #nosec G204 -- fixed command 'osascript'; script built from escaped internal strings
 		return cmd.Run()
 	case "linux":
-		cmd := exec.CommandContext(context.Background(), "notify-send", title, message)
+		cmd := exec.CommandContext(context.Background(), "notify-send", title, message) // #nosec G204 -- fixed notification executable
 		return cmd.Run()
 	case "windows":
 		script := fmt.Sprintf(`

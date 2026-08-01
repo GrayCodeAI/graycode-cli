@@ -460,6 +460,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if chosen != nil && m.session != nil {
 					m.session.PermSvc().SetAutonomy(chosen.Level)
 					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
+					m.settings.AutonomyExplicit = true
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s\nBehavior: %s", chosen.Name, chosen.Description)})
 				}
 				m.viewDirty = true
@@ -513,7 +514,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						msg += "\nThe agent can also use `SpecConfig` tool to read/update."
 						m.messages = append(m.messages, displayMsg{role: "system", content: msg})
 					case specActionReset:
-						m.session.PermSvc().SetSpecStage(engine.SpecStageNone)
+						m.session.PermSvc().ResetSpec()
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow reset — Write/Edit/Bash follow the trust tier again."})
 					}
 				}
@@ -618,8 +619,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- true
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil && m.session.Perm.AutoMode != nil {
-					m.session.Perm.AutoMode.Record(req.ToolName, req.Summary, true)
+				if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().AutoMode() != nil {
+					m.session.PermSvc().AutoMode().Record(req.ToolName, req.Summary, true)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Allowed"})
 			case "n", "N":
@@ -627,8 +628,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- false
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil && m.session.Perm.AutoMode != nil {
-					m.session.Perm.AutoMode.Record(req.ToolName, req.Summary, false)
+				if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().AutoMode() != nil {
+					m.session.PermSvc().AutoMode().Record(req.ToolName, req.Summary, false)
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Denied"})
 			case "a", "A":
@@ -638,10 +639,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- true
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil {
-					m.session.Perm.Memory.AlwaysAllowPattern(toolName + ":*")
-					if m.session.Perm.AutoMode != nil {
-						m.session.Perm.AutoMode.Record(toolName, summary, true)
+				if m.session != nil && m.session.PermSvc() != nil {
+					if mem := m.session.PermSvc().Memory(); mem != nil {
+						mem.AlwaysAllowPattern(toolName + ":*")
+					}
+					if m.session.PermSvc().AutoMode() != nil {
+						m.session.PermSvc().AutoMode().Record(toolName, summary, true)
 					}
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Always allowed: " + toolName + " (all)"})
@@ -652,10 +655,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				req.Response <- false
 				m.permReq = nil
 				m.permTimeoutAt = time.Time{}
-				if m.session != nil && m.session.Perm != nil {
-					m.session.Perm.Memory.AlwaysDeny(toolName)
-					if m.session.Perm.AutoMode != nil {
-						m.session.Perm.AutoMode.Record(toolName, summary, false)
+				if m.session != nil && m.session.PermSvc() != nil {
+					if mem := m.session.PermSvc().Memory(); mem != nil {
+						mem.AlwaysDeny(toolName)
+					}
+					if m.session.PermSvc().AutoMode() != nil {
+						m.session.PermSvc().AutoMode().Record(toolName, summary, false)
 					}
 				}
 				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Always denied: " + toolName})
@@ -877,6 +882,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						nextTier = DefaultContainerAutonomy
 					}
 					m.session.PermSvc().SetAutonomy(nextTier)
+					m.settings.AutonomyExplicit = true
 					m.invalidateConnStatus()
 					m.messages = append(m.messages, displayMsg{
 						role:    "warning",
@@ -1421,7 +1427,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if msg.ready && m.session != nil {
-			if m.session.PermSvc().Autonomy() == 0 {
+			if m.session.PermSvc().Autonomy() == 0 && !m.session.PermSvc().AutonomyExplicit() {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}
 			m.invalidateConnStatus()

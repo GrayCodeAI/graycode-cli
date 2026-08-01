@@ -9,8 +9,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-// TestSession_SetConversationGraph_DualWrite guards the product-owned graph
-// wiring between Session and PersistenceService.
+// TestSession_SetConversationGraph guards graph ownership by PersistenceService.
 func TestSession_SetConversationGraph_DualWrite(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
@@ -29,54 +28,25 @@ func TestSession_SetConversationGraph_DualWrite(t *testing.T) {
 	t.Cleanup(func() { _ = graph.Close() })
 	s.SetConversationGraph(graph)
 
-	if s.ConversationGraph == nil {
-		t.Error("s.ConversationGraph is nil after SetConversationGraph")
-	}
 	if s.Persistence().Graph() == nil {
 		t.Error("s.Persistence().Graph() is nil after SetConversationGraph")
 	}
-	if s.Persistence().Graph() != s.ConversationGraph {
-		t.Error("persistence graph and session graph should be the same instance")
-	}
 }
 
-// TestSession_NewSessionWithClient_AliasesMemoryFields is a
-// regression guard for the H3 fix: NewSessionWithClient should
-// alias the 5 fields read by AddUser/AddAssistant/AddUserWithImage/
-// ForkConversation/SwitchBranch from the sub-service getters, so
-// legacy direct-field reads return the sub-service state.
-func TestSession_NewSessionWithClient_AliasesMemoryFields(t *testing.T) {
+func TestSession_NewSessionWithClient_WiresMemoryAndPersistenceServices(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	// All five fields must be wired to the sub-service. The sub-
-	// services start empty, so we just assert the aliasing didn't
-	// return nil pointers.
+	// The services start empty; verify their canonical ownership directly.
 	if s.persist == nil {
 		t.Fatal("s.persist is nil; NewSessionWithClient must wire the persistence service")
-	}
-	if got := s.persist.Graph(); got != s.ConversationGraph {
-		t.Errorf("s.persist.Graph() = %v, want same as s.ConversationGraph = %v", got, s.ConversationGraph)
-	}
-	if got := s.persist.Steering(); got != s.Steering {
-		t.Errorf("s.persist.Steering() = %v, want same as s.Steering = %v", got, s.Steering)
 	}
 	if s.memory == nil {
 		t.Fatal("s.memory is nil; NewSessionWithClient must wire the memory service")
 	}
-	// Memory/Yaad/Enhanced default to nil (no backend installed);
-	// the aliasing is what we care about: when SetMemory is called,
-	// the legacy field should pick up the new value through the
-	// constructor's aliasing pass.
-	if got := s.memory.Memory(); got != s.Memory {
-		t.Errorf("s.memory.Memory() = %v, want same as s.Memory = %v", got, s.Memory)
-	}
-	if got := s.memory.Yaad(); got != s.YaadBridge {
-		t.Errorf("s.memory.Yaad() = %v, want same as s.YaadBridge = %v", got, s.YaadBridge)
-	}
-	if got := s.memory.Enhanced(); got != s.EnhancedMemory {
-		t.Errorf("s.memory.Enhanced() = %v, want same as s.EnhancedMemory = %v", got, s.EnhancedMemory)
+	if !s.memory.IsZero() {
+		t.Error("memory service should start unconfigured")
 	}
 }
 

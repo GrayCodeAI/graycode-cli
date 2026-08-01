@@ -3,9 +3,15 @@ package plugin
 import (
 	"os"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
+	cleanupStorage, err := testutil.InstallHermeticStorage()
+	if err != nil {
+		os.Exit(1)
+	}
 	if _, err := os.UserHomeDir(); err != nil {
 		dir, mkErr := os.MkdirTemp("", "hawk-plugin-home-*")
 		if mkErr != nil {
@@ -16,8 +22,11 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 		code := m.Run()
+		cleanupStorage()
 		_ = os.RemoveAll(dir)
 		os.Exit(code)
 	}
-	os.Exit(m.Run())
+	code := m.Run()
+	cleanupStorage()
+	os.Exit(code)
 }

@@ -198,7 +198,7 @@ func (du *DocUpdater) ScanProjectForStaleDocs(projectDir string) []DocUpdate {
 		}
 		if strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go") {
 			goFiles = append(goFiles, path)
-			data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+			data, err := os.ReadFile(path) // #nosec G304,G122 -- read-only documentation scan
 			if err != nil {
 				return nil
 			}

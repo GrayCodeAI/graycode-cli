@@ -364,6 +364,32 @@ func TestDefaultDevelopmentConfig_ModeIsAllowlist(t *testing.T) {
 	}
 }
 
+func TestDefaultDevelopmentConfig_BlocksPrivateDestinations(t *testing.T) {
+	proxy := NewNetworkProxy(DefaultDevelopmentConfig())
+	for _, host := range []string{"localhost", "127.0.0.1", "[::1]", "10.0.0.1", "100.64.0.1"} {
+		if proxy.IsAllowed(host) {
+			t.Errorf("DefaultDevelopmentConfig should block private destination %q", host)
+		}
+	}
+}
+
+func TestPrivateIPClassification(t *testing.T) {
+	for _, tc := range []struct {
+		ip      string
+		private bool
+	}{
+		{"127.0.0.1", true},
+		{"169.254.169.254", true},
+		{"10.0.0.1", true},
+		{"100.64.0.1", true},
+		{"8.8.8.8", false},
+	} {
+		if got := isPrivateIP(net.ParseIP(tc.ip)); got != tc.private {
+			t.Errorf("isPrivateIP(%q) = %v, want %v", tc.ip, got, tc.private)
+		}
+	}
+}
+
 func TestStart_AssignsPort(t *testing.T) {
 	proxy := NewNetworkProxy(ProxyConfig{
 		AllowedDomains: []string{"*"},

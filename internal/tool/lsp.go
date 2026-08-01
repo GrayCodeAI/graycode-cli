@@ -346,7 +346,7 @@ func lspDiagnostics(ctx context.Context, path string) (string, error) {
 	case ".ts", ".tsx", ".js", ".jsx":
 		cmd = exec.CommandContext(ctx, "npx", "tsc", "--noEmit", "--pretty")
 	case ".py":
-		cmd = exec.CommandContext(ctx, "python3", "-m", "py_compile", path)
+		cmd = exec.CommandContext(ctx, "python3", "-m", "py_compile", path) // #nosec G204 -- fixed interpreter and separate path argument
 	case ".rs":
 		cmd = exec.CommandContext(ctx, "cargo", "check", "--message-format=short")
 	default:

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // DiscoveredComponents is the result of scanning a multi-component plugin package.
@@ -96,7 +98,7 @@ func DiscoverComponents(pluginDir string) (DiscoveredComponents, error) {
 
 	// mcp.json
 	mcpPath := filepath.Join(pluginDir, mcpFile)
-	if data, err := os.ReadFile(mcpPath); err == nil {
+	if data, err := fsutil.ReadPinnedFile(mcpPath); err == nil {
 		var file struct {
 			Servers []MCPServerSpec `json:"servers"`
 			// also accept map form { "servers": { "name": {...} } }

@@ -38,3 +38,52 @@ func TestPersistenceServiceNoRecursiveLock(t *testing.T) {
 		t.Fatal("PersistenceService deadlocked (recursive lock acquisition)")
 	}
 }
+
+func TestPersistenceServiceSnapshotsAreDeepCopies(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	ps.LoadMessages([]types.EyrieMessage{{
+		Role:   "assistant",
+		Images: []string{"data:image/png;base64,abc"},
+		ToolUse: []types.ToolCall{{
+			ID:   "call-1",
+			Name: "Write",
+			Arguments: map[string]interface{}{
+				"path":   "file.txt",
+				"nested": map[string]interface{}{"ok": true},
+			},
+		}},
+	}})
+
+	snapshot := ps.RawMessages()
+	snapshot[0].Images[0] = "mutated"
+	snapshot[0].ToolUse[0].Arguments["path"] = "evil.txt"
+	snapshot[0].ToolUse[0].Arguments["nested"].(map[string]interface{})["ok"] = false
+
+	got := ps.RawMessages()[0]
+	if got.Images[0] != "data:image/png;base64,abc" {
+		t.Fatalf("image mutation leaked into persistence: %q", got.Images[0])
+	}
+	if got.ToolUse[0].Arguments["path"] != "file.txt" {
+		t.Fatalf("tool argument mutation leaked into persistence: %v", got.ToolUse[0].Arguments["path"])
+	}
+	if got.ToolUse[0].Arguments["nested"].(map[string]interface{})["ok"] != true {
+		t.Fatal("nested tool argument mutation leaked into persistence")
+	}
+}
+
+func TestPersistenceServiceSetRawMessagesCopiesInput(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	input := []types.EyrieMessage{{
+		Role: "assistant",
+		ToolUse: []types.ToolCall{{
+			Arguments: map[string]interface{}{"nested": map[string]interface{}{"value": "safe"}},
+		}},
+	}}
+	ps.SetRawMessages(input)
+	input[0].ToolUse[0].Arguments["nested"].(map[string]interface{})["value"] = "mutated"
+
+	got := ps.RawMessages()[0].ToolUse[0].Arguments["nested"].(map[string]interface{})["value"]
+	if got != "safe" {
+		t.Fatalf("SetRawMessages retained caller alias: got %v", got)
+	}
+}

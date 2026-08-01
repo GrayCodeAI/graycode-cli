@@ -22,6 +22,8 @@ import (
 type PersistenceService struct {
 	// mu protects messages and system for concurrent access.
 	mu sync.RWMutex
+	// stateMu protects compaction, token, and checkpoint metadata.
+	stateMu sync.RWMutex
 	// messages is the full transcript (system + user + assistant + tool_use + tool_result).
 	messages []types.EyrieMessage
 	// system is the system prompt (mutable, agents append learned guidelines).
@@ -38,6 +40,18 @@ type PersistenceService struct {
 	steering *SteeringQueue
 	// logger.
 	log *logger.Logger
+	// Compaction and checkpoint state belongs to persistence. Session keeps
+	// deprecated aliases only for source compatibility with older callers.
+	autoCompactor        *AutoCompactor
+	files                *FileTracker
+	persistID            string
+	lastPromptTokens     int
+	lastCompletionTokens int
+	estTokensCache       int
+	estTokensMsgCount    int
+	estTokensLastLen     int
+	checkpointMgr        *session.CheckpointManager
+	onCompaction         OnCompaction
 }
 
 // NewPersistenceService constructs an empty PersistenceService.
@@ -59,26 +73,25 @@ func (s *PersistenceService) Messages() []types.EyrieMessage {
 	// RawMessages() here would recursively RLock and can deadlock if a
 	// writer arrives between the two read locks (Go's RWMutex forbids
 	// recursive read-locking).
-	raw := s.messages
-	out := make([]types.EyrieMessage, len(raw))
-	copy(out, raw)
-	return out
+	return cloneMessages(s.messages)
 }
 
 // SetRawMessages replaces the message slice. Used by code paths
-// that previously wrote to s.messages directly. Pass-by-reference
-// to keep the slice header mutable. Safe on a nil receiver.
+// that previously wrote to s.messages directly. The input is deep-copied so
+// callers cannot mutate the live transcript after handing it to persistence.
+// Safe on a nil receiver.
 func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
 	if s == nil {
 		return
 	}
 	s.mu.Lock()
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 
-// RawMessages returns the live slice (no copy). Callers MUST NOT mutate.
-// Used by the agent loop's hot path where copy overhead matters.
+// RawMessages returns an immutable snapshot of the transcript. Nested tool
+// arguments and multimodal slices are cloned as well, so callers cannot
+// mutate live session state by retaining or editing the returned value.
 // Safe to call on a nil receiver (returns nil).
 func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	if s == nil {
@@ -86,7 +99,7 @@ func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.messages
+	return cloneMessages(s.messages)
 }
 
 // Graph returns Hawk's product-owned conversation graph.
@@ -112,7 +125,7 @@ func (s *PersistenceService) AddAssistant(content string) {
 // SetMessages replaces the transcript.
 func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	s.messages = msgs
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 
@@ -150,8 +163,16 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 	if s == nil {
 		return
 	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return
+	}
 	s.mu.Lock()
-	s.system += content
+	if strings.TrimSpace(s.system) == "" {
+		s.system = content
+	} else {
+		s.system += "\n\n" + content
+	}
 	s.mu.Unlock()
 }
 
@@ -159,17 +180,31 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 // identified by a header string. Used by yaad recall (which refreshes
 // the "## Relevant Memories" block on every turn).
 func (s *PersistenceService) ReplaceSystemContextSection(header, content string) {
+	if s == nil {
+		return
+	}
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	idx := strings.Index(s.system, header)
 	if idx < 0 {
-		s.system += content
+		if strings.TrimSpace(s.system) == "" {
+			s.system = content
+		} else {
+			s.system += "\n\n" + content
+		}
 		return
 	}
-	end := idx + len(header)
-	if nl := strings.Index(s.system[end:], "\n\n"); nl >= 0 {
-		end += nl + 2
+	rest := s.system[idx+len(header):]
+	var end int
+	if next := strings.Index(rest, "\n\n## "); next >= 0 {
+		end = idx + len(header) + next
 	} else {
+		// Replace the entire existing section, retaining the next section
+		// separator when one exists.
 		end = len(s.system)
 	}
 	s.system = s.system[:idx] + content + s.system[end:]
@@ -216,28 +251,193 @@ func (s *PersistenceService) RemoveLastExchange() {
 // LoadMessages replaces the transcript with a fresh slice.
 func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()
-	// Assign directly; the lock is held, so SetRawMessages() (which locks
-	// again) would deadlock on a recursive write lock.
-	s.messages = msgs
+	// Clone while holding the lock; callers retain no mutable alias to the
+	// live transcript.
+	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
 }
 
+// cloneMessages performs a deep copy of the provider-neutral transcript.
+// Tool arguments are arbitrary JSON-shaped values, so cloneJSONValue walks
+// maps and slices recursively instead of relying on a shallow slice copy.
+func cloneMessages(in []types.EyrieMessage) []types.EyrieMessage {
+	if in == nil {
+		return nil
+	}
+	out := make([]types.EyrieMessage, len(in))
+	for i, msg := range in {
+		out[i] = msg
+		out[i].Images = append([]string(nil), msg.Images...)
+		out[i].ContentParts = append([]types.ContentPart(nil), msg.ContentParts...)
+		if msg.ToolUse != nil {
+			out[i].ToolUse = make([]types.ToolCall, len(msg.ToolUse))
+			for j, call := range msg.ToolUse {
+				out[i].ToolUse[j] = call
+				if call.Arguments != nil {
+					out[i].ToolUse[j].Arguments = make(map[string]interface{}, len(call.Arguments))
+					for key, value := range call.Arguments {
+						out[i].ToolUse[j].Arguments[key] = cloneJSONValue(value)
+					}
+				}
+			}
+		}
+		out[i].ToolResults = append([]types.ToolResult(nil), msg.ToolResults...)
+	}
+	return out
+}
+
+func cloneJSONValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(v))
+		for key, nested := range v {
+			out[key] = cloneJSONValue(nested)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(v))
+		for i, nested := range v {
+			out[i] = cloneJSONValue(nested)
+		}
+		return out
+	default:
+		return value
+	}
+}
+
 // PinnedMessages returns the count of pinned messages.
-func (s *PersistenceService) PinnedMessages() int { return s.pinnedMessages }
+func (s *PersistenceService) PinnedMessages() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.pinnedMessages
+}
 
 // SetPinnedMessages replaces the pinned count.
-func (s *PersistenceService) SetPinnedMessages(n int) { s.pinnedMessages = n }
+func (s *PersistenceService) SetPinnedMessages(n int) {
+	s.stateMu.Lock()
+	s.pinnedMessages = n
+	s.stateMu.Unlock()
+}
 
 // AutoCompactThresholdPct returns the auto-compact threshold %.
-func (s *PersistenceService) AutoCompactThresholdPct() int { return s.autoCompactThresholdPct }
+func (s *PersistenceService) AutoCompactThresholdPct() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.autoCompactThresholdPct
+}
 
 // SetAutoCompactThresholdPct replaces the auto-compact threshold %.
 func (s *PersistenceService) SetAutoCompactThresholdPct(pct int) {
+	s.stateMu.Lock()
 	s.autoCompactThresholdPct = pct
+	s.stateMu.Unlock()
 }
 
 // ContextWindowCached returns the catalog context window.
-func (s *PersistenceService) ContextWindowCached() int { return s.contextWindowCached }
+func (s *PersistenceService) ContextWindowCached() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.contextWindowCached
+}
 
 // SetContextWindowCached replaces the catalog context window.
-func (s *PersistenceService) SetContextWindowCached(n int) { s.contextWindowCached = n }
+func (s *PersistenceService) SetContextWindowCached(n int) {
+	s.stateMu.Lock()
+	s.contextWindowCached = n
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) AutoCompactor() *AutoCompactor {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.autoCompactor
+}
+
+func (s *PersistenceService) SetAutoCompactor(ac *AutoCompactor) {
+	s.stateMu.Lock()
+	s.autoCompactor = ac
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) Files() *FileTracker {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.files
+}
+
+func (s *PersistenceService) SetFiles(files *FileTracker) {
+	s.stateMu.Lock()
+	s.files = files
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) PersistID() string {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.persistID
+}
+
+func (s *PersistenceService) SetPersistID(id string) {
+	s.stateMu.Lock()
+	s.persistID = id
+	s.stateMu.Unlock()
+}
+
+func (s *PersistenceService) LastPromptTokens() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.lastPromptTokens
+}
+
+func (s *PersistenceService) LastCompletionTokens() int {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.lastCompletionTokens
+}
+
+func (s *PersistenceService) SetTokenUsage(prompt, completion int) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	if prompt > 0 {
+		s.lastPromptTokens = prompt
+	}
+	if completion > 0 {
+		s.lastCompletionTokens = completion
+	}
+}
+
+func (s *PersistenceService) TokenEstimateCache() (tokens, count, lastLen int) {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.estTokensCache, s.estTokensMsgCount, s.estTokensLastLen
+}
+
+func (s *PersistenceService) SetTokenEstimateCache(tokens, count, lastLen int) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	s.estTokensCache, s.estTokensMsgCount, s.estTokensLastLen = tokens, count, lastLen
+}
+
+func (s *PersistenceService) CheckpointManager() *session.CheckpointManager {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.checkpointMgr
+}
+
+func (s *PersistenceService) SetCheckpointManager(cm *session.CheckpointManager) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	s.checkpointMgr = cm
+}
+
+func (s *PersistenceService) OnCompaction() OnCompaction {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.onCompaction
+}
+
+func (s *PersistenceService) SetOnCompaction(fn OnCompaction) {
+	s.stateMu.Lock()
+	s.onCompaction = fn
+	s.stateMu.Unlock()
+}

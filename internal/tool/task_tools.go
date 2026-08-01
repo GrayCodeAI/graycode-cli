@@ -73,7 +73,9 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 	// request times out.
 	bgCtx := context.Background()
 
-	cmd := exec.CommandContext(bgCtx, "bash", "-c", command)
+	// The Bash tool performs command policy/approval checks before starting a
+	// background task; this is the intentional shell execution boundary.
+	cmd := exec.CommandContext(bgCtx, "bash", "-c", command) // #nosec G204 -- intentional Bash tool execution after policy checks
 	// Put the child in its own process group so we can kill the whole tree
 	// (including grandchildren spawned by the shell) via kill(-pgid). Without
 	// this, e.g. `bash -c 'sleep 60 &'` leaves an orphan when the parent is

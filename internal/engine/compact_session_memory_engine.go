@@ -36,17 +36,18 @@ func (s *SessionMemoryStrategy) Compact(ctx context.Context, sess *Session) (*Co
 		return nil, fmt.Errorf("session memory is empty")
 	}
 
-	tokensBefore := EstimateTokens(sess.messages)
+	messages := sess.Persistence().RawMessages()
+	tokensBefore := EstimateTokens(messages)
 
 	cfg := DefaultSessionMemoryConfig()
-	keepIdx := compact.CalculateMessagesToKeepIndex(sess.messages, cfg)
-	keepIdx = compact.AdjustIndexToPreserveAPIInvariants(sess.messages, keepIdx)
+	keepIdx := compact.CalculateMessagesToKeepIndex(messages, cfg)
+	keepIdx = compact.AdjustIndexToPreserveAPIInvariants(messages, keepIdx)
 
-	if keepIdx >= len(sess.messages)-2 {
+	if keepIdx >= len(messages)-2 {
 		return nil, fmt.Errorf("not enough messages to compact")
 	}
 
-	kept := sess.messages[keepIdx:]
+	kept := messages[keepIdx:]
 	kept = compact.FilterCompactBoundaries(kept)
 
 	result := make([]types.EyrieMessage, 0, len(kept)+2)
