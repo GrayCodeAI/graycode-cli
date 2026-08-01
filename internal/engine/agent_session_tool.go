@@ -138,12 +138,10 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	if IsReadOnlyMode(mode) || norm.CapabilityMode == agentcontracts.CapReadOnly {
 		sub.readOnlyBash = true
 	}
-	// A sub-agent spawned while the parent is mid-spec-and-unapproved
-	// inherits the same gate — an ungated sub-agent would be a permission
-	// escalation hole (it could Write/Bash while the parent still can't).
-	sub.PermSvc().SetAutonomy(s.PermSvc().Autonomy())
-	sub.PermSvc().SetSpecStage(s.PermSvc().SpecStage())
-	sub.PermSvc().SetSandboxMode(s.PermSvc().SandboxMode())
+	// A child receives an independent snapshot of the parent's policy. This
+	// prevents parent mutations from changing an in-flight child and prevents
+	// child defaults from silently widening the parent's permissions.
+	sub.PermSvc().ApplyPolicySnapshot(s.PermSvc().PolicySnapshot())
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxTurns(maxTurns)
 	}

@@ -84,6 +84,18 @@ func (s *PermissionService) Engine() *PermissionEngine { return s.perm }
 // event emission and the post-call side effects.
 func (s *PermissionService) CheckTool(ctx context.Context, info ToolCallInfo) (bool, string) {
 	d := s.CheckToolDecision(ctx, info)
+	capabilities := make([]string, 0, len(d.Capabilities))
+	for _, capability := range d.Capabilities {
+		capabilities = append(capabilities, string(capability))
+	}
+	s.log.Info("permission decision", map[string]interface{}{
+		"tool":         info.Name,
+		"outcome":      string(d.Outcome),
+		"reason":       string(d.Reason),
+		"risk":         string(d.Risk),
+		"revision":     d.Revision,
+		"capabilities": capabilities,
+	})
 	if d.Outcome != safety.DecisionAllow {
 		s.log.Warn("permission denied", map[string]interface{}{
 			"tool":   info.Name,
@@ -108,6 +120,24 @@ func (s *PermissionService) PolicySnapshot() safety.PolicySnapshot {
 // CheckToolSnapshot evaluates a request against a previously captured policy.
 func (s *PermissionService) CheckToolSnapshot(ctx context.Context, info ToolCallInfo, snapshot safety.PolicySnapshot) safety.Decision {
 	return s.perm.CheckToolSnapshot(ctx, info, snapshot)
+}
+
+// ApplyPolicySnapshot installs a bounded parent policy into a child service.
+// The rule store is deep-copied so later parent changes cannot widen or alter
+// an in-flight child policy.
+func (s *PermissionService) ApplyPolicySnapshot(snapshot safety.PolicySnapshot) {
+	s.perm.Autonomy = snapshot.Autonomy
+	s.perm.AutonomyExplicit = snapshot.AutonomyExplicit
+	s.perm.SandboxMode = snapshot.SandboxMode
+	s.perm.Stage = snapshot.Stage
+	s.perm.DryRun = snapshot.DryRun
+	s.perm.SpecSlug = snapshot.SpecSlug
+	s.perm.Phase = snapshot.Phase
+	s.perm.Phases = snapshot.Phases
+	s.perm.Revision = snapshot.Revision
+	s.perm.Memory = safety.NewPermissionMemoryFromSnapshot(snapshot.Rules)
+	s.memory = s.perm.Memory
+	s.allowedDirs = append([]string(nil), snapshot.AllowedDirs...)
 }
 
 // CheckApproval runs the human-in-the-loop gate on high-risk actions.

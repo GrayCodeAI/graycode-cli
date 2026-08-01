@@ -413,3 +413,17 @@ func TestValidationResult_Error(t *testing.T) {
 		t.Error("error should contain all field names")
 	}
 }
+
+func TestPolicySchemaVersionMigratesLegacySettings(t *testing.T) {
+	var s Settings
+	if err := json.Unmarshal([]byte(`{"autonomy":0,"sandbox":"workspace"}`), &s); err != nil {
+		t.Fatal(err)
+	}
+	if s.PolicySchemaVersion != 0 {
+		t.Fatalf("raw unmarshal should preserve legacy zero, got %d", s.PolicySchemaVersion)
+	}
+	merged := MergeSettings(Settings{}, s)
+	if merged.PolicySchemaVersion != CurrentPolicySchemaVersion {
+		t.Fatalf("migrated schema version = %d, want %d", merged.PolicySchemaVersion, CurrentPolicySchemaVersion)
+	}
+}

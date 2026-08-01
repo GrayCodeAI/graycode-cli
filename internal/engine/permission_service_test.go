@@ -65,6 +65,23 @@ func TestPermissionService_SandboxModeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestPermissionService_ApplyPolicySnapshotCopiesRulesAndScopes(t *testing.T) {
+	parent := NewPermissionService(nil)
+	parent.Memory().AlwaysDeny("Write")
+	parent.SetAllowedDirs([]string{"/workspace"})
+	snapshot := parent.PolicySnapshot()
+	child := NewPermissionService(nil)
+	child.ApplyPolicySnapshot(snapshot)
+	snapshot.AllowedDirs[0] = "/changed"
+	if child.AllowedDirs()[0] != "/workspace" {
+		t.Fatalf("child allowed dirs changed through snapshot alias: %v", child.AllowedDirs())
+	}
+	allowed, reason := child.CheckTool(context.Background(), ToolCallInfo{Name: "Write"})
+	if allowed || reason != "Permission denied (rule)." {
+		t.Fatalf("child did not inherit deny rule: allowed=%v reason=%q", allowed, reason)
+	}
+}
+
 func TestPermissionService_CheckApproval_NoGate(t *testing.T) {
 	s := NewPermissionService(nil)
 	approved, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{})

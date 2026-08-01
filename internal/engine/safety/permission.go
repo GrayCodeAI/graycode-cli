@@ -48,8 +48,13 @@ func (pm *PermissionMemory) Snapshot() RuleSnapshot {
 	return RuleSnapshot{AllowRules: append([]string(nil), pm.allowRules...), DenyRules: append([]string(nil), pm.denyRules...), AllowAll: allowAll}
 }
 
-func permissionMemoryFromSnapshot(snapshot RuleSnapshot) *PermissionMemory {
-	return &PermissionMemory{allowRules: append([]string(nil), snapshot.AllowRules...), denyRules: append([]string(nil), snapshot.DenyRules...), allowAll: snapshot.AllowAll}
+// NewPermissionMemoryFromSnapshot creates an independent rule store.
+func NewPermissionMemoryFromSnapshot(snapshot RuleSnapshot) *PermissionMemory {
+	allowAll := make(map[string]bool, len(snapshot.AllowAll))
+	for name, allowed := range snapshot.AllowAll {
+		allowAll[name] = allowed
+	}
+	return &PermissionMemory{allowRules: append([]string(nil), snapshot.AllowRules...), denyRules: append([]string(nil), snapshot.DenyRules...), allowAll: allowAll}
 }
 
 // Reset clears all allow/deny memory so the active rule set can be rebuilt.
