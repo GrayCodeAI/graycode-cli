@@ -26,6 +26,7 @@ func (FileWriteTool) Parameters() map[string]interface{} {
 			"file_path": map[string]interface{}{"type": "string", "description": "Archive-compatible alias for path"},
 			"content":   map[string]interface{}{"type": "string", "description": "File content"},
 		},
+		"required": []string{"path", "content"},
 	}
 }
 
