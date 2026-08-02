@@ -4,6 +4,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
 
 // SelectiveRAG implements the Repoformer-style selective retrieval mechanism.
@@ -171,8 +173,9 @@ func (r *SelectiveRAG) Stats() map[string]interface{} {
 // Helper functions for query classification
 
 func estimateTokens(text string) int {
-	// Rough estimate: 1 token per 4 chars
-	return len(text) / 4
+	// BPE-based estimate via the tok tokenizer instead of the len/4 char
+	// heuristic, which systematically undercounts code-heavy text.
+	return token.CountTokensFast(text)
 }
 
 func isNavigationQuery(query string) bool {

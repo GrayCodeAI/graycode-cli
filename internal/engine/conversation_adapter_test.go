@@ -272,7 +272,7 @@ func TestExportMessagesFormat(t *testing.T) {
 func TestTokenEstimateRoughAccuracy(t *testing.T) {
 	cm := NewConversationManager(ConversationConfig{})
 
-	// estimateTokens uses len(text)/4
+	// estimateTokens uses the BPE-based tok tokenizer.
 	content := "this is a test string that should produce some tokens"
 	cm.AddMessage("user", content)
 
@@ -283,9 +283,13 @@ func TestTokenEstimateRoughAccuracy(t *testing.T) {
 		t.Errorf("expected token estimate %d, got %d", expected, got)
 	}
 
-	// Verify the formula: roughly 1 token per 4 characters.
-	if got != len(content)/4 {
-		t.Errorf("token estimate should be len/4 = %d, got %d", len(content)/4, got)
+	// The estimate must be non-zero and stay within a sane range for English
+	// text (BPE typically lands between ~3 and ~7 chars per token).
+	if got <= 0 {
+		t.Errorf("token estimate should be positive, got %d", got)
+	}
+	if cpt := float64(len(content)) / float64(got); cpt < 3 || cpt > 7 {
+		t.Errorf("chars-per-token %0.2f outside expected range (3-7) for %d chars and %d tokens", cpt, len(content), got)
 	}
 }
 
