@@ -31,8 +31,25 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 	b.WriteString("(version 1)\n")
 	b.WriteString("(deny default)\n")
 
-	// Always allow basic mach-lookup for system functionality.
-	b.WriteString("(allow mach-lookup)\n")
+	// mach-lookup grants access to macOS XPC services. The legacy TierOff
+	// behavior allows every service; all other tiers are restricted to the
+	// minimal set of services required for normal tooling to work. Network
+	// resolution services are only reachable when network is allowed.
+	switch policy.Tier {
+	case TierOff:
+		b.WriteString("(allow mach-lookup)\n")
+	default:
+		b.WriteString("(allow mach-lookup\n")
+		b.WriteString("  (global-name \"com.apple.system.opendirectoryd.api\")\n")
+		b.WriteString("  (global-name \"com.apple.system.notification_center\")\n")
+		b.WriteString("  (global-name \"com.apple.cfprefsd\")\n")
+		b.WriteString("  (global-name \"com.apple.system.logger\")\n")
+		if policy.AllowNetwork {
+			b.WriteString("  (global-name \"com.apple.mDNSResponder\")\n")
+			b.WriteString("  (global-name \"com.apple.system.systemconfigurationd\")\n")
+		}
+		b.WriteString(")\n")
+	}
 
 	// Sysctl read for basic system queries.
 	if policy.AllowSysctl {
