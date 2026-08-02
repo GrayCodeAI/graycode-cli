@@ -23,8 +23,17 @@ func TestCreateWorktreeCleansUpOnFailure(t *testing.T) {
 	defer os.RemoveAll(tmpRepo)
 
 	// Initialize a git repo.
-	if out, err := exec.CommandContext(context.Background(), "git", "init", tmpRepo).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(context.Background(), "git", "init", "--initial-branch", "main", tmpRepo).CombinedOutput(); err != nil {
 		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+	// CI runners have no global git identity; commits fail without one.
+	for _, args := range [][]string{
+		{"git", "-C", tmpRepo, "config", "user.email", "hawk-test@example.com"},
+		{"git", "-C", tmpRepo, "config", "user.name", "hawk test"},
+	} {
+		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
+			t.Fatalf("git config failed: %v\n%s", err, out)
+		}
 	}
 	// Make an initial commit so there's a HEAD.
 	if err := os.WriteFile(filepath.Join(tmpRepo, "README"), []byte("test"), 0o644); err != nil {
@@ -71,8 +80,17 @@ func TestRemoveWorktreeDetachedSurvivesCancellation(t *testing.T) {
 	defer os.RemoveAll(tmpRepo)
 
 	// Initialize a git repo with a commit.
-	if out, err := exec.CommandContext(context.Background(), "git", "init", tmpRepo).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(context.Background(), "git", "init", "--initial-branch", "main", tmpRepo).CombinedOutput(); err != nil {
 		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+	// CI runners have no global git identity; commits fail without one.
+	for _, args := range [][]string{
+		{"git", "-C", tmpRepo, "config", "user.email", "hawk-test@example.com"},
+		{"git", "-C", tmpRepo, "config", "user.name", "hawk test"},
+	} {
+		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
+			t.Fatalf("git config failed: %v\n%s", err, out)
+		}
 	}
 	if err := os.WriteFile(filepath.Join(tmpRepo, "README"), []byte("test"), 0o644); err != nil {
 		t.Fatal(err)
