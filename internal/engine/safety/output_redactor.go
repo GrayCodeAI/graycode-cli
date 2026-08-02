@@ -55,6 +55,9 @@ func NewOutputRedactor() *OutputRedactor {
 
 	// Generic API keys with sk- prefix (OpenAI, Stripe, etc.)
 	r.addBuiltin("sk_api_key", `sk-[A-Za-z0-9]{20,}`, "api_key")
+	// Anthropic API keys (sk-ant-apiNN-...); must precede the generic sk- rule
+	// to keep the hyphens matched.
+	r.addBuiltin("anthropic_sk", `sk-ant-api\d{2}-[A-Za-z0-9_-]{20,}`, "api_key")
 	// Generic API keys with key- prefix
 	r.addBuiltin("key_prefix_api_key", `key-[A-Za-z0-9]{20,}`, "api_key")
 

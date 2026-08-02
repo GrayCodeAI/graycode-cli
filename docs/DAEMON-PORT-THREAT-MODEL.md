@@ -58,8 +58,14 @@ A local attacker can flood the daemon with chat requests, consuming LLM API
 credits.
 
 **Mitigation:**
-- The daemon processes one generation at a time by default.
-- `/v1/cancel` allows killing an in-progress request.
+- A global concurrency cap bounds in-flight generations (default **4**, tuned
+  via `HAWK_DAEMON_MAX_CONCURRENT`). When the cap is hit, new `/v1/chat`
+  requests are refused with `503` instead of queuing unboundedly.
+- Per-IP token-bucket rate limiting: `/v1/chat` is limited to ~30 req/min
+  (burst 6) and other authenticated endpoints to ~10 req/min (burst 4).
+  Excess requests get `429`.
+- `/v1/cancel` (POST `{ "session_id": ... }`) aborts an in-progress
+  generation so a runaway response can be stopped early.
 - Consider running the daemon behind an OS-level firewall rule if operating
   in a shared-machine environment.
 

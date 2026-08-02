@@ -39,7 +39,7 @@ var backgroundTasks = struct {
 	tasks map[string]*backgroundTask
 }{tasks: make(map[string]*backgroundTask)}
 
-func startBackgroundBash(ctx context.Context, command string) (string, error) {
+func startBackgroundBash(ctx context.Context, command string, execName string, execArgs []string) (string, error) {
 	// Auto-cleanup completed tasks older than retention period.
 	backgroundTasks.Lock()
 	for id, t := range backgroundTasks.tasks {
@@ -75,7 +75,9 @@ func startBackgroundBash(ctx context.Context, command string) (string, error) {
 
 	// The Bash tool performs command policy/approval checks before starting a
 	// background task; this is the intentional shell execution boundary.
-	cmd := exec.CommandContext(bgCtx, "bash", "-c", command) // #nosec G204 -- intentional Bash tool execution after policy checks
+	// execName/execArgs are already sandbox-wrapped by the Bash tool (or
+	// default to "bash" "-c" when sandbox is off).
+	cmd := exec.CommandContext(bgCtx, execName, execArgs...) // #nosec G204 -- intentional Bash tool execution after policy checks and sandbox wrapping
 	// Put the child in its own process group so we can kill the whole tree
 	// (including grandchildren spawned by the shell) via kill(-pgid). Without
 	// this, e.g. `bash -c 'sleep 60 &'` leaves an orphan when the parent is

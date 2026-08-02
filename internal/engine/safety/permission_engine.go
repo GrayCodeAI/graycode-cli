@@ -3,6 +3,7 @@ package safety
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -257,6 +258,17 @@ func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCal
 	}
 
 	summary := ToolSummary(tc.Name, tc.Args)
+	// Destructive commands are hard-blocked regardless of autonomy, rule
+	// memory, or the bypass kill-switch (H6). The tool layer independently
+	// rejects them (IsDestructiveCommand in BashTool.Execute), but failing
+	// closed here too keeps the policy engine authoritative and prevents the
+	// bypass from even appearing to grant destructive commands. Placed before
+	// the rule/auto/autonomy allow paths so nothing can override it.
+	if toolName == "Bash" {
+		if cmd, ok := tc.Args["command"].(string); ok && tool.IsDestructiveCommand(cmd) {
+			return Decision{Outcome: DecisionDeny, Reason: ReasonRuleDenied, Message: "denied: destructive command is blocked even with bypass/autonomy enabled"}
+		}
+	}
 	// Explicit remembered decisions are policy rules. They must be consulted
 	// before autonomy can short-circuit the request, especially for deny rules.
 	var memoryDecision *bool
@@ -288,7 +300,11 @@ func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCal
 		return Decision{Outcome: DecisionAllow, Reason: ReasonAutonomy}
 	}
 	if pe.BypassKill.IsEnabled() {
-		return Decision{Outcome: DecisionAllow, Reason: ReasonBypass}
+		// Audit bypass usage so there is a record of every tool call the
+		// kill-switch approved (H6). Note the destructive-command hard-deny
+		// above still applies: bypass cannot grant destructive commands.
+		slog.Warn("permission bypass used", "tool", tc.Name, "summary", summary)
+		return Decision{Outcome: DecisionAllow, Reason: ReasonBypass, Message: "bypass: permission checks bypassed"}
 	}
 	if pe.Classifier != nil && tc.Name == "Bash" {
 		if pe.Classifier.Classify(summary) == "safe" {

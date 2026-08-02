@@ -5,10 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // PowerShellTool executes PowerShell commands (Windows/cross-platform pwsh).
@@ -73,7 +76,33 @@ func (PowerShellTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, shell, "-NoProfile", "-NonInteractive", "-Command", p.Command) // #nosec G204 -- shell invocation with user-supplied command, inherent to the shell/powershell tool
+	// Sandbox wrapping: same fail-closed behavior as the Bash tool. When a
+	// sandbox mode is configured, wrap the command with the platform sandbox.
+	// If no backend is available, fail closed with an error instead of
+	// running unsandboxed on the host (C3 fix).
+	execName := shell
+	execArgs := []string{"-NoProfile", "-NonInteractive", "-Command", p.Command}
+	if sbMode := sandbox.ModeFromContext(ctx); sbMode != sandbox.ModeOff {
+		workDir, _ := os.Getwd()
+		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: sandbox.ModeAllowsNetwork(sbMode)}
+		switch sbMode {
+		case sandbox.ModeStrict:
+			cfg.Tier = sandbox.TierStrict
+		case sandbox.ModeWorkspace:
+			cfg.Tier = sandbox.TierWorkspace
+		}
+		// WrapCommand wraps the command as "bash -c <full command>", so we
+		// pass the full pwsh invocation as the command string. The sandbox
+		// isolates the bash process, which in turn launches pwsh.
+		pwshInvocation := fmt.Sprintf("%s -NoProfile -NonInteractive -Command %s", shell, p.Command)
+		var wrapErr error
+		execName, execArgs, wrapErr = sandbox.WrapCommand(pwshInvocation, cfg)
+		if wrapErr != nil {
+			return "", fmt.Errorf("sandbox unavailable (mode=%s): %w", sbMode, wrapErr)
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, execName, execArgs...) // #nosec G204 -- shell invocation with user-supplied command, sandbox-wrapped when mode is set
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

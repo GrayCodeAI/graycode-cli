@@ -33,6 +33,20 @@ func TestDefaultTelemetryConfig_Disabled(t *testing.T) {
 	}
 }
 
+// TestDefaultTelemetryConfig_OTLPEndpointAloneDoesNotEnable verifies telemetry
+// stays opt-in: setting the standard OTEL_EXPORTER_OTLP_ENDPOINT must NOT
+// implicitly enable hawk telemetry (Phase 3 hardening).
+func TestDefaultTelemetryConfig_OTLPEndpointAloneDoesNotEnable(t *testing.T) {
+	os.Unsetenv("HAWK_CODE_ENABLE_TELEMETRY")
+	os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
+	defer os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
+	cfg := DefaultTelemetryConfig()
+	if cfg.Enabled {
+		t.Error("expected telemetry disabled when only OTEL_EXPORTER_OTLP_ENDPOINT is set")
+	}
+}
+
 func TestInitTelemetry(t *testing.T) {
 	cfg := TelemetryConfig{
 		Enabled:     true,

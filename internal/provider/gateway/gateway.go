@@ -8,6 +8,7 @@ package gateway
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
@@ -170,14 +171,31 @@ func NewFromEngine(eng *eyrieengine.Engine) *Gateway {
 // data call via the helpers below.
 
 var (
-	defaultGatewayOnce sync.Once
-	defaultGatewayVal  *Gateway
+	defaultGatewayMu  sync.Mutex
+	defaultGatewayVal *Gateway
+	// newGatewayFn is the constructor used by defaultGateway. Indirect so
+	// tests can inject failure and assert the retry behavior (H8).
+	newGatewayFn = func(ctx context.Context) (*Gateway, error) {
+		return New(ctx, nil)
+	}
 )
 
 func defaultGateway(ctx context.Context) *Gateway {
-	defaultGatewayOnce.Do(func() {
-		defaultGatewayVal, _ = New(context.Background(), nil)
-	})
+	// Fast path: already constructed.
+	defaultGatewayMu.Lock()
+	defer defaultGatewayMu.Unlock()
+	if defaultGatewayVal != nil {
+		return defaultGatewayVal
+	}
+	// Construct on first successful use. If New fails, log the error and
+	// return nil; a later call retries instead of being permanently nil
+	// (the sync.Once footgun that discarded the error, H8).
+	g, err := newGatewayFn(context.Background())
+	if err != nil {
+		slog.Error("gateway initialization failed", "error", err)
+		return nil
+	}
+	defaultGatewayVal = g
 	return defaultGatewayVal
 }
 

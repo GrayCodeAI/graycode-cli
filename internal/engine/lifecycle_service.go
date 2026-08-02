@@ -149,6 +149,24 @@ func (s *LifecycleService) Finalize(ctx context.Context, messages []types.EyrieM
 		if message.Role == "user" && len(message.ToolResults) == 0 && outcome.TaskGoal == "" {
 			outcome.TaskGoal = message.Content
 		}
+		// Collect tools used and files changed so post-session learning has
+		// real signal. Previously these were never populated, so
+		// isComplex() was always false and skill distillation never fired
+		// in production (H1).
+		for _, tc := range message.ToolUse {
+			if tc.Name == "" {
+				continue
+			}
+			if !containsStringVec(outcome.ToolsUsed, tc.Name) {
+				outcome.ToolsUsed = append(outcome.ToolsUsed, tc.Name)
+			}
+			cn := canonicalToolName(tc.Name)
+			if (cn == "Write" || cn == "Edit") && tc.Arguments != nil {
+				if p, ok := pathArgument(tc.Arguments); ok && p != "" && !containsStringVec(outcome.FilesChanged, p) {
+					outcome.FilesChanged = append(outcome.FilesChanged, p)
+				}
+			}
+		}
 	}
 	if s.lifecycle != nil {
 		_ = s.lifecycle.OnSessionEnd(ctx, struct{}{}, outcome)
@@ -270,3 +288,13 @@ func (s *LifecycleService) ToggleVerbose() bool {
 func (s *LifecycleService) Verbose() bool       { return s != nil && s.verbose }
 func (s *LifecycleService) LintLoop() *LintLoop { return s.lintLoop }
 func (s *LifecycleService) TestLoop() *TestLoop { return s.testLoop }
+
+// containsStringVec reports whether s is present in the slice.
+func containsStringVec(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

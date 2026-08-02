@@ -3,6 +3,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,11 +41,11 @@ func TestCreateAndGetSession(t *testing.T) {
 		Title:      "Test Session",
 	}
 
-	if err := store.CreateSession(sess); err != nil {
+	if err := store.CreateSession(context.Background(), sess); err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}
 
-	got, err := store.GetSession("sess-001")
+	got, err := store.GetSession(context.Background(), "sess-001")
 	if err != nil {
 		t.Fatalf("GetSession: %v", err)
 	}
@@ -75,7 +76,7 @@ func TestCreateAndGetSession(t *testing.T) {
 func TestGetSessionNotFound(t *testing.T) {
 	store := testStore(t)
 
-	_, err := store.GetSession("nonexistent")
+	_, err := store.GetSession(context.Background(), "nonexistent")
 	if err == nil {
 		t.Fatal("expected error for nonexistent session")
 	}
@@ -95,7 +96,7 @@ func TestListSessions(t *testing.T) {
 		if i >= 3 {
 			sess.ProjectDir = "/project/beta"
 		}
-		if err := store.CreateSession(sess); err != nil {
+		if err := store.CreateSession(context.Background(), sess); err != nil {
 			t.Fatalf("CreateSession %d: %v", i, err)
 		}
 		// Small delay so updated_at ordering is deterministic.
@@ -103,7 +104,7 @@ func TestListSessions(t *testing.T) {
 	}
 
 	// List all sessions.
-	all, err := store.ListSessions("", 0)
+	all, err := store.ListSessions(context.Background(), "", 0)
 	if err != nil {
 		t.Fatalf("ListSessions all: %v", err)
 	}
@@ -112,7 +113,7 @@ func TestListSessions(t *testing.T) {
 	}
 
 	// List with limit.
-	limited, err := store.ListSessions("", 2)
+	limited, err := store.ListSessions(context.Background(), "", 2)
 	if err != nil {
 		t.Fatalf("ListSessions limited: %v", err)
 	}
@@ -121,7 +122,7 @@ func TestListSessions(t *testing.T) {
 	}
 
 	// List by project.
-	alpha, err := store.ListSessions("/project/alpha", 0)
+	alpha, err := store.ListSessions(context.Background(), "/project/alpha", 0)
 	if err != nil {
 		t.Fatalf("ListSessions alpha: %v", err)
 	}
@@ -146,7 +147,7 @@ func TestAppendAndGetMessages(t *testing.T) {
 		Provider:   "anthropic",
 		Model:      "claude-4-opus",
 	}
-	if err := store.CreateSession(sess); err != nil {
+	if err := store.CreateSession(context.Background(), sess); err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}
 
@@ -159,13 +160,13 @@ func TestAppendAndGetMessages(t *testing.T) {
 	}
 
 	for _, msg := range messages {
-		if err := store.AppendMessage("sess-msg-001", msg); err != nil {
+		if err := store.AppendMessage(context.Background(), "sess-msg-001", msg); err != nil {
 			t.Fatalf("AppendMessage: %v", err)
 		}
 	}
 
 	// Retrieve messages.
-	got, err := store.GetMessages("sess-msg-001")
+	got, err := store.GetMessages(context.Background(), "sess-msg-001")
 	if err != nil {
 		t.Fatalf("GetMessages: %v", err)
 	}
@@ -186,7 +187,7 @@ func TestAppendAndGetMessages(t *testing.T) {
 	}
 
 	// Verify session token total was updated.
-	updated, err := store.GetSession("sess-msg-001")
+	updated, err := store.GetSession(context.Background(), "sess-msg-001")
 	if err != nil {
 		t.Fatalf("GetSession after messages: %v", err)
 	}
@@ -207,7 +208,7 @@ func TestForkSession(t *testing.T) {
 		Model:      "claude-4-opus",
 		Title:      "Original Session",
 	}
-	if err := store.CreateSession(sess); err != nil {
+	if err := store.CreateSession(context.Background(), sess); err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}
 
@@ -217,18 +218,18 @@ func TestForkSession(t *testing.T) {
 		{Role: "user", Content: "Second message", Tokens: 8},
 	}
 	for _, msg := range msgs {
-		if err := store.AppendMessage("original", msg); err != nil {
+		if err := store.AppendMessage(context.Background(), "original", msg); err != nil {
 			t.Fatalf("AppendMessage: %v", err)
 		}
 	}
 
 	// Fork.
-	if err := store.ForkSession("original", "forked"); err != nil {
+	if err := store.ForkSession(context.Background(), "original", "forked"); err != nil {
 		t.Fatalf("ForkSession: %v", err)
 	}
 
 	// Verify fork exists.
-	forked, err := store.GetSession("forked")
+	forked, err := store.GetSession(context.Background(), "forked")
 	if err != nil {
 		t.Fatalf("GetSession forked: %v", err)
 	}
@@ -240,7 +241,7 @@ func TestForkSession(t *testing.T) {
 	}
 
 	// Verify forked messages.
-	forkedMsgs, err := store.GetMessages("forked")
+	forkedMsgs, err := store.GetMessages(context.Background(), "forked")
 	if err != nil {
 		t.Fatalf("GetMessages forked: %v", err)
 	}
@@ -252,7 +253,7 @@ func TestForkSession(t *testing.T) {
 	}
 
 	// Verify original is unchanged.
-	origMsgs, err := store.GetMessages("original")
+	origMsgs, err := store.GetMessages(context.Background(), "original")
 	if err != nil {
 		t.Fatalf("GetMessages original: %v", err)
 	}
@@ -271,16 +272,16 @@ func TestSearchSessions(t *testing.T) {
 	sess2 := &SessionRecord{
 		ID: "search-2", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess1)
-	store.CreateSession(sess2)
+	store.CreateSession(context.Background(), sess1)
+	store.CreateSession(context.Background(), sess2)
 
-	store.AppendMessage("search-1", &MessageRecord{Role: "user", Content: "implement quicksort algorithm"})
-	store.AppendMessage("search-1", &MessageRecord{Role: "assistant", Content: "Here is a quicksort implementation in Go"})
-	store.AppendMessage("search-2", &MessageRecord{Role: "user", Content: "write a REST API handler"})
-	store.AppendMessage("search-2", &MessageRecord{Role: "assistant", Content: "Here is an HTTP handler for your API"})
+	store.AppendMessage(context.Background(), "search-1", &MessageRecord{Role: "user", Content: "implement quicksort algorithm"})
+	store.AppendMessage(context.Background(), "search-1", &MessageRecord{Role: "assistant", Content: "Here is a quicksort implementation in Go"})
+	store.AppendMessage(context.Background(), "search-2", &MessageRecord{Role: "user", Content: "write a REST API handler"})
+	store.AppendMessage(context.Background(), "search-2", &MessageRecord{Role: "assistant", Content: "Here is an HTTP handler for your API"})
 
 	// Search for quicksort.
-	results, err := store.SearchSessions("quicksort")
+	results, err := store.SearchSessions(context.Background(), "quicksort")
 	if err != nil {
 		t.Fatalf("SearchSessions: %v", err)
 	}
@@ -292,7 +293,7 @@ func TestSearchSessions(t *testing.T) {
 	}
 
 	// Search for API.
-	results, err = store.SearchSessions("API")
+	results, err = store.SearchSessions(context.Background(), "API")
 	if err != nil {
 		t.Fatalf("SearchSessions API: %v", err)
 	}
@@ -310,7 +311,7 @@ func TestCompact(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "compact-1", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
 	// Add 10 messages.
 	for i := 0; i < 10; i++ {
@@ -319,18 +320,18 @@ func TestCompact(t *testing.T) {
 			Content: fmt.Sprintf("Message %d", i),
 			Tokens:  100,
 		}
-		if err := store.AppendMessage("compact-1", msg); err != nil {
+		if err := store.AppendMessage(context.Background(), "compact-1", msg); err != nil {
 			t.Fatalf("AppendMessage %d: %v", i, err)
 		}
 	}
 
 	// Compact to keep last 3.
-	if err := store.Compact("compact-1", 3); err != nil {
+	if err := store.Compact(context.Background(), "compact-1", 3); err != nil {
 		t.Fatalf("Compact: %v", err)
 	}
 
 	// Verify only 3 messages remain.
-	msgs, err := store.GetMessages("compact-1")
+	msgs, err := store.GetMessages(context.Background(), "compact-1")
 	if err != nil {
 		t.Fatalf("GetMessages: %v", err)
 	}
@@ -347,7 +348,7 @@ func TestCompact(t *testing.T) {
 	}
 
 	// Verify token total was recalculated.
-	updated, err := store.GetSession("compact-1")
+	updated, err := store.GetSession(context.Background(), "compact-1")
 	if err != nil {
 		t.Fatalf("GetSession: %v", err)
 	}
@@ -362,12 +363,12 @@ func TestCompactInvalidKeepLast(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "compact-invalid", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
-	if err := store.Compact("compact-invalid", 0); err == nil {
+	if err := store.Compact(context.Background(), "compact-invalid", 0); err == nil {
 		t.Error("expected error for keepLast=0")
 	}
-	if err := store.Compact("compact-invalid", -1); err == nil {
+	if err := store.Compact(context.Background(), "compact-invalid", -1); err == nil {
 		t.Error("expected error for keepLast=-1")
 	}
 }
@@ -378,19 +379,19 @@ func TestDeleteSession(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "delete-me", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
-	store.AppendMessage("delete-me", &MessageRecord{Role: "user", Content: "hello"})
+	store.CreateSession(context.Background(), sess)
+	store.AppendMessage(context.Background(), "delete-me", &MessageRecord{Role: "user", Content: "hello"})
 
-	if err := store.DeleteSession("delete-me"); err != nil {
+	if err := store.DeleteSession(context.Background(), "delete-me"); err != nil {
 		t.Fatalf("DeleteSession: %v", err)
 	}
 
-	_, err := store.GetSession("delete-me")
+	_, err := store.GetSession(context.Background(), "delete-me")
 	if err == nil {
 		t.Error("expected error after delete")
 	}
 
-	msgs, err := store.GetMessages("delete-me")
+	msgs, err := store.GetMessages(context.Background(), "delete-me")
 	if err != nil {
 		t.Fatalf("GetMessages after delete: %v", err)
 	}
@@ -402,7 +403,7 @@ func TestDeleteSession(t *testing.T) {
 func TestDeleteSessionNotFound(t *testing.T) {
 	store := testStore(t)
 
-	err := store.DeleteSession("nonexistent")
+	err := store.DeleteSession(context.Background(), "nonexistent")
 	if err == nil {
 		t.Error("expected error for nonexistent session")
 	}
@@ -415,9 +416,9 @@ func TestUpdateSession(t *testing.T) {
 		ID: "update-me", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 		Status: "active",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
-	err := store.UpdateSession("update-me", map[string]interface{}{
+	err := store.UpdateSession(context.Background(), "update-me", map[string]interface{}{
 		"status": "completed",
 		"title":  "My Updated Session",
 	})
@@ -425,7 +426,7 @@ func TestUpdateSession(t *testing.T) {
 		t.Fatalf("UpdateSession: %v", err)
 	}
 
-	got, _ := store.GetSession("update-me")
+	got, _ := store.GetSession(context.Background(), "update-me")
 	if got.Status != "completed" {
 		t.Errorf("Status = %q, want %q", got.Status, "completed")
 	}
@@ -440,9 +441,9 @@ func TestUpdateSessionDisallowedField(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "update-bad", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
-	err := store.UpdateSession("update-bad", map[string]interface{}{
+	err := store.UpdateSession(context.Background(), "update-bad", map[string]interface{}{
 		"id": "hacked",
 	})
 	if err == nil {
@@ -460,7 +461,7 @@ func TestGetSessionStats(t *testing.T) {
 		Model:        "claude-4-opus",
 		TotalCostUSD: 0.05,
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
 	messages := []*MessageRecord{
 		{Role: "user", Content: "hello", Tokens: 5},
@@ -470,14 +471,14 @@ func TestGetSessionStats(t *testing.T) {
 		{Role: "assistant", Content: "also done", Tokens: 6},
 	}
 	for _, msg := range messages {
-		store.AppendMessage("stats-1", msg)
+		store.AppendMessage(context.Background(), "stats-1", msg)
 		time.Sleep(2 * time.Millisecond)
 	}
 
 	// Update cost manually.
-	store.UpdateSession("stats-1", map[string]interface{}{"total_cost_usd": 0.15})
+	store.UpdateSession(context.Background(), "stats-1", map[string]interface{}{"total_cost_usd": 0.15})
 
-	stats, err := store.GetSessionStats("stats-1")
+	stats, err := store.GetSessionStats(context.Background(), "stats-1")
 	if err != nil {
 		t.Fatalf("GetSessionStats: %v", err)
 	}
@@ -505,7 +506,7 @@ func TestConcurrentAccess(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "concurrent", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
 	// Run concurrent message appends.
 	var wg sync.WaitGroup
@@ -520,7 +521,7 @@ func TestConcurrentAccess(t *testing.T) {
 				Content: fmt.Sprintf("Concurrent message %d", idx),
 				Tokens:  10,
 			}
-			if err := store.AppendMessage("concurrent", msg); err != nil {
+			if err := store.AppendMessage(context.Background(), "concurrent", msg); err != nil {
 				errCh <- err
 			}
 		}(i)
@@ -534,7 +535,7 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 
 	// All messages should be present.
-	msgs, err := store.GetMessages("concurrent")
+	msgs, err := store.GetMessages(context.Background(), "concurrent")
 	if err != nil {
 		t.Fatalf("GetMessages: %v", err)
 	}
@@ -543,7 +544,7 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 
 	// Token total should be 200.
-	got, _ := store.GetSession("concurrent")
+	got, _ := store.GetSession(context.Background(), "concurrent")
 	if got.TotalTokens != 200 {
 		t.Errorf("TotalTokens = %d, want 200", got.TotalTokens)
 	}
@@ -555,11 +556,11 @@ func TestConcurrentReadsAndWrites(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "rw-concurrent", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
 	// Pre-populate some messages.
 	for i := 0; i < 5; i++ {
-		store.AppendMessage("rw-concurrent", &MessageRecord{
+		store.AppendMessage(context.Background(), "rw-concurrent", &MessageRecord{
 			Role: "user", Content: fmt.Sprintf("Seed %d", i), Tokens: 1,
 		})
 	}
@@ -575,7 +576,7 @@ func TestConcurrentReadsAndWrites(t *testing.T) {
 			msg := &MessageRecord{
 				Role: "assistant", Content: fmt.Sprintf("Reply %d", idx), Tokens: 2,
 			}
-			if err := store.AppendMessage("rw-concurrent", msg); err != nil {
+			if err := store.AppendMessage(context.Background(), "rw-concurrent", msg); err != nil {
 				errCh <- err
 			}
 		}(i)
@@ -586,7 +587,7 @@ func TestConcurrentReadsAndWrites(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := store.GetMessages("rw-concurrent"); err != nil {
+			if _, err := store.GetMessages(context.Background(), "rw-concurrent"); err != nil {
 				errCh <- err
 			}
 		}()
@@ -629,7 +630,7 @@ func TestDBCreatedOnFirstUse(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "first-use", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	if err := store.CreateSession(sess); err != nil {
+	if err := store.CreateSession(context.Background(), sess); err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}
 
@@ -642,7 +643,7 @@ func TestDBCreatedOnFirstUse(t *testing.T) {
 	}
 	defer store2.Close()
 
-	got, err := store2.GetSession("first-use")
+	got, err := store2.GetSession(context.Background(), "first-use")
 	if err != nil {
 		t.Fatalf("GetSession after reopen: %v", err)
 	}
@@ -673,16 +674,16 @@ func TestMessageIsErrorFlag(t *testing.T) {
 	sess := &SessionRecord{
 		ID: "error-test", ProjectDir: "/project", Provider: "anthropic", Model: "claude-4-opus",
 	}
-	store.CreateSession(sess)
+	store.CreateSession(context.Background(), sess)
 
-	store.AppendMessage("error-test", &MessageRecord{
+	store.AppendMessage(context.Background(), "error-test", &MessageRecord{
 		Role: "assistant", Content: "success response", IsError: false,
 	})
-	store.AppendMessage("error-test", &MessageRecord{
+	store.AppendMessage(context.Background(), "error-test", &MessageRecord{
 		Role: "assistant", Content: "error: file not found", IsError: true,
 	})
 
-	msgs, _ := store.GetMessages("error-test")
+	msgs, _ := store.GetMessages(context.Background(), "error-test")
 	if msgs[0].IsError {
 		t.Error("message 0 should not be error")
 	}

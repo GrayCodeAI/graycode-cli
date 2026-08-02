@@ -27,6 +27,42 @@ var forceRemoveContainer = func(ctx context.Context, containerID string) error {
 	return cmd.Run()
 }
 
+// usernsProbe reports whether the Docker daemon has user-namespace remapping
+// enabled (docker info --format '{{.SecurityOptions}}' contains "userns").
+// Injecting it lets tests exercise both branches without a real Docker daemon.
+var usernsProbe = func() (bool, error) {
+	cmd := exec.Command("docker", "info", "-f", "{{.SecurityOptions}}") // #nosec G204 -- fixed docker binary and probe args
+	out, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+	return strings.Contains(strings.ToLower(string(out)), "userns"), nil
+}
+
+var (
+	usernsOnce sync.Once
+	usernsOK   bool
+)
+
+// usernsRemapAvailable reports whether --userns-remap can be used (H16). The
+// result is cached for the process: the daemon's userns configuration is
+// static for the host. When unavailable, the fallback is the documented
+// host-kernel sharing (no flag added).
+func usernsRemapAvailable() bool {
+	usernsOnce.Do(func() {
+		if ok, err := usernsProbe(); err == nil {
+			usernsOK = ok
+		}
+	})
+	return usernsOK
+}
+
+// resetUsernsCache clears the cached userns probe result (tests only).
+func resetUsernsCache() {
+	usernsOnce = sync.Once{}
+	usernsOK = false
+}
+
 // ContainerSandbox executes commands inside a Docker container, providing
 // full isolation. It supports dynamic Dockerfile generation for on-the-fly
 // environment setup.
@@ -109,6 +145,11 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 		"-v", cacheDir + ":/cache",
 		"-w", c.projectDir,
 		"--entrypoint", "sleep",
+	}
+	// User-namespace remapping further isolates the container from the host
+	// kernel (H16); only added when the daemon supports it.
+	if usernsRemapAvailable() {
+		args = append(args, "--userns-remap", "default")
 	}
 	args = append(args, c.runtime.StartupEnvArgs()...)
 	args = append(args, c.image, "infinity")

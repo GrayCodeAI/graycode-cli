@@ -117,3 +117,25 @@ func TestParseRule(t *testing.T) {
 		}
 	}
 }
+
+// TestShouldAutoAllow_GitPatternNarrowed verifies that a broad Bash:git:*
+// auto-allow rule does NOT approve destructive git subcommands (Phase 3
+// hardening): only safe read-only subcommands pass.
+func TestShouldAutoAllow_GitPatternNarrowed(t *testing.T) {
+	a := NewAutoModeState()
+	a.allowList["Bash:git *"] = true
+
+	safe := []string{"git status", "git log --oneline", "git diff", "git -C /tmp/repo status"}
+	for _, cmd := range safe {
+		if allowed, ok := a.ShouldAutoAllow("Bash", cmd); !allowed || !ok {
+			t.Errorf("expected safe git command %q to be auto-allowed, got allowed=%v ok=%v", cmd, allowed, ok)
+		}
+	}
+
+	unsafe := []string{"git push --force", "git push origin main -f", "git reset --hard HEAD~1", "git clean -fd"}
+	for _, cmd := range unsafe {
+		if allowed, _ := a.ShouldAutoAllow("Bash", cmd); allowed {
+			t.Errorf("expected destructive git command %q to NOT be auto-allowed", cmd)
+		}
+	}
+}

@@ -508,6 +508,59 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/cancel:
+    post:
+      tags: [agent]
+      summary: Cancel an in-flight generation
+      description: |
+        Aborts the active generation for the given session, if one is running.
+        The per-session generation is otherwise serialized (one at a time);
+        this endpoint lets a caller stop a long-running response early.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id]
+              properties:
+                session_id:
+                  type: string
+      responses:
+        "200":
+          description: Generation cancelled (or completed before the request was processed)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cancelled:
+                    type: boolean
+        "400":
+          description: Invalid or missing session_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No active generation for the session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/sessions:
     get:
       tags: [sessions]

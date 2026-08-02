@@ -28,6 +28,7 @@ func (FileEditTool) Parameters() map[string]interface{} {
 			"new_str":    map[string]interface{}{"type": "string", "description": "Replacement string"},
 			"new_string": map[string]interface{}{"type": "string", "description": "Archive-compatible alias for new_str"},
 		},
+		"required": []string{"path", "old_str"},
 	}
 }
 

@@ -198,8 +198,12 @@ func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage,
 		result, callErr = c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
 		if callErr != nil {
 			// On context overflow, do an emergency compact and retry once.
+			// Previously this re-sent the unmodified messages — a no-op that
+			// wasted spend and always overflows again (H3). Now we actually
+			// shrink the transcript beneath the ceiling first.
 			if isContextOverflow(callErr) {
-				result, callErr = c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
+				compacted := emergencyCompact(messages)
+				result, callErr = c.client.StreamChatContinue(ctx, compacted, opts, c.contCfg)
 			}
 		}
 		return callErr
@@ -208,6 +212,37 @@ func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage,
 		return nil, err
 	}
 	return result, nil
+}
+
+// emergencyCompactMin / emergencyCompactWindow control the aggressive
+// trimming applied when a provider rejects the context as too long.
+const (
+	emergencyCompactMin    = 8  // never compact below this many messages
+	emergencyCompactWindow = 24 // keep this many trailing messages (+ system)
+)
+
+// emergencyCompact trims an overflowing transcript so a single retry fits
+// under the provider ceiling. It keeps the system prompt and the most recent
+// emergencyCompactWindow messages. This is a last-resort path (the normal
+// context governor in the agent loop does the real summarization); here we
+// only need the retry to succeed once.
+func emergencyCompact(messages []types.EyrieMessage) []types.EyrieMessage {
+	if len(messages) <= emergencyCompactMin {
+		return messages
+	}
+	out := make([]types.EyrieMessage, 0, emergencyCompactWindow+1)
+	for _, m := range messages {
+		if m.Role == "system" {
+			out = append(out, m)
+			break
+		}
+	}
+	start := len(messages) - emergencyCompactWindow
+	if start < len(out) {
+		start = len(out)
+	}
+	out = append(out, messages[start:]...)
+	return out
 }
 
 // Chat issues a non-streaming LLM call. Used by background goroutines

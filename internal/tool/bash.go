@@ -602,7 +602,27 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	defer cancel()
 
 	if p.RunInBackground {
-		id, err := startBackgroundBash(ctx, p.Command)
+		// Apply sandbox wrapping for background bash, same as the foreground
+		// path below. Background bash previously bypassed the sandbox entirely
+		// (C2) — it returned before the sandbox-wrapping block was reached.
+		bgExecName := "bash"
+		bgExecArgs := []string{"-c", p.Command}
+		if sbMode := sandbox.ModeFromContext(ctx); sbMode != sandbox.ModeOff {
+			workDir, _ := os.Getwd()
+			cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: sandbox.ModeAllowsNetwork(sbMode)}
+			switch sbMode {
+			case sandbox.ModeStrict:
+				cfg.Tier = sandbox.TierStrict
+			case sandbox.ModeWorkspace:
+				cfg.Tier = sandbox.TierWorkspace
+			}
+			var wrapErr error
+			bgExecName, bgExecArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)
+			if wrapErr != nil {
+				return "", fmt.Errorf("sandbox unavailable (mode=%s): %w", sbMode, wrapErr)
+			}
+		}
+		id, err := startBackgroundBash(ctx, p.Command, bgExecName, bgExecArgs)
 		if err != nil {
 			return "", err
 		}
@@ -622,7 +642,11 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 
 	// Sandbox wrapping: if a sandbox mode is configured, wrap the command
-	// with sandbox-exec (macOS Seatbelt) when available.
+	// with the platform sandbox (macOS Seatbelt, Linux unshare). We always
+	// call WrapCommand — it fails closed (returns an error) when no backend
+	// is available. The previous sandbox.Available() guard caused fail-open
+	// behavior: when no backend was present the command ran unsandboxed on
+	// the host, contradicting the documented "fail closed" promise.
 	execName := "bash"
 	execArgs := []string{"-c", p.Command}
 	if sbMode := sandbox.ModeFromContext(ctx); sbMode != sandbox.ModeOff {
@@ -641,12 +665,10 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		case sandbox.ModeWorkspace:
 			cfg.Tier = sandbox.TierWorkspace
 		}
-		if sandbox.Available() {
-			var wrapErr error
-			execName, execArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)
-			if wrapErr != nil {
-				return "", fmt.Errorf("sandbox error: %w", wrapErr)
-			}
+		var wrapErr error
+		execName, execArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)
+		if wrapErr != nil {
+			return "", fmt.Errorf("sandbox unavailable (mode=%s): %w", sbMode, wrapErr)
 		}
 	}
 

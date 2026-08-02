@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -280,6 +281,7 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 1MB line buffer
 
+	lineNum := 0
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
@@ -311,8 +313,13 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 
 		var msg Message
 		if err := json.Unmarshal(line, &msg); err != nil {
-			continue // skip corrupted lines
+			// Don't silently drop corrupt lines: log them so data loss is
+			// visible and diagnosable (Phase 3).
+			slog.Warn("corrupted session line skipped", "session_id", s.ID, "line", lineNum, "error", err)
+			lineNum++
+			continue
 		}
+		lineNum++
 		s.Messages = append(s.Messages, msg)
 	}
 

@@ -631,15 +631,20 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// Snapshot messages to avoid data race with main loop appending
 				msgs := make([]types.EyrieMessage, len(s.Persistence().RawMessages()))
 				copy(msgs, s.Persistence().RawMessages())
+				// Snapshot the tool/file sets too, so the goroutine never
+				// reads the live maps while the main loop writes them on a
+				// later tool turn.
+				toolsSnapshot := make([]string, 0, len(toolsUsedSet))
+				for t := range toolsUsedSet {
+					toolsSnapshot = append(toolsSnapshot, t)
+				}
+				filesSnapshot := make([]string, 0, len(filesModifiedSet))
+				for f := range filesModifiedSet {
+					filesSnapshot = append(filesSnapshot, f)
+				}
 				go func() {
-					var tools []string
-					for t := range toolsUsedSet {
-						tools = append(tools, t)
-					}
-					var files []string
-					for f := range filesModifiedSet {
-						files = append(files, f)
-					}
+					tools := toolsSnapshot
+					files := filesSnapshot
 					taskDesc := ""
 					if len(msgs) > 0 {
 						taskDesc = msgs[0].Content

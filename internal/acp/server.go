@@ -57,7 +57,10 @@ type Server struct {
 
 	mu       sync.Mutex
 	sessions map[string]*acpSession
-	seq      int
+	// order tracks session creation order for FIFO eviction when the session
+	// cap is exceeded (H11).
+	order []string
+	seq   int
 
 	writeMu sync.Mutex
 	w       io.Writer
@@ -68,6 +71,11 @@ type Server struct {
 	pending   map[int]chan rpcMessage
 	nextReqID int
 }
+
+// maxACPSessions bounds how many sessions are kept alive at once. ACP is a
+// long-lived stdio peer that can open many sessions; without a cap (and
+// teardown on disconnect) the map grows unboundedly (H11).
+const maxACPSessions = 64
 
 type acpSession struct {
 	sess   *engine.Session
@@ -94,6 +102,7 @@ func (s *Server) ServeStdio(ctx context.Context) error {
 // while a prompt is streaming.
 func (s *Server) Serve(ctx context.Context, r io.Reader, w io.Writer) error {
 	s.w = w
+	defer s.teardown() // release every session on disconnect (H11)
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 8*1024*1024)
 
@@ -179,15 +188,49 @@ func (s *Server) handleSessionNew(msg rpcMessage) {
 	}
 
 	s.mu.Lock()
+	if len(s.sessions) >= maxACPSessions {
+		s.evictOldestLocked()
+	}
 	s.seq++
 	id := fmt.Sprintf("sess_%d", s.seq)
 	s.sessions[id] = &acpSession{sess: sess}
+	s.order = append(s.order, id)
 	s.mu.Unlock()
 
 	// Route tool-permission prompts to the client for this session.
 	sess.SetPermissionFn(s.permissionFnFor(id))
 
 	s.reply(msg.ID, map[string]any{"sessionId": id})
+}
+
+// evictOldestLocked removes the oldest session to keep memory bounded; the
+// caller must hold s.mu. Any in-flight prompt is cancelled first.
+func (s *Server) evictOldestLocked() {
+	for len(s.order) > 0 {
+		oldest := s.order[0]
+		s.order = s.order[1:]
+		if as, ok := s.sessions[oldest]; ok {
+			delete(s.sessions, oldest)
+			if as != nil && as.cancel != nil {
+				as.cancel()
+			}
+			return
+		}
+	}
+}
+
+// teardown cancels and releases every session. It is called when Serve exits
+// (disconnect or context cancellation).
+func (s *Server) teardown() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, as := range s.sessions {
+		if as != nil && as.cancel != nil {
+			as.cancel()
+		}
+		delete(s.sessions, id)
+	}
+	s.order = nil
 }
 
 type promptParams struct {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -22,6 +23,7 @@ type Snapshot struct {
 
 // SnapshotStore manages snapshots for a session.
 type SnapshotStore struct {
+	mu        sync.Mutex // guards snapshots/err; Take/Cleanup/saveIndex are internally coherent
 	sessionID string
 	snapshots []Snapshot
 	dir       string
@@ -44,6 +46,8 @@ func NewSnapshotStore(sessionID string) *SnapshotStore {
 
 // Take saves a snapshot of the current session state.
 func (ss *SnapshotStore) Take(action string, sess *Session) error {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	if ss.err != nil {
 		return ss.err
 	}
@@ -72,16 +76,18 @@ func (ss *SnapshotStore) Take(action string, sess *Session) error {
 	ss.snapshots = append(ss.snapshots, snap)
 
 	// Persist the index
-	if err := ss.saveIndex(); err != nil {
+	if err := ss.saveIndexLocked(); err != nil {
 		return fmt.Errorf("save snapshot index: %w", err)
 	}
 
-	ss.Cleanup()
+	ss.cleanupLocked()
 	return nil
 }
 
 // List returns all snapshots, oldest first.
 func (ss *SnapshotStore) List() []Snapshot {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	out := make([]Snapshot, len(ss.snapshots))
 	copy(out, ss.snapshots)
 	return out
@@ -89,6 +95,8 @@ func (ss *SnapshotStore) List() []Snapshot {
 
 // Rewind restores the session to the state at the given snapshot ID.
 func (ss *SnapshotStore) Rewind(id int) (*Session, error) {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	if ss.err != nil {
 		return nil, ss.err
 	}
@@ -102,6 +110,8 @@ func (ss *SnapshotStore) Rewind(id int) (*Session, error) {
 
 // Load reads the snapshot index from disk.
 func (ss *SnapshotStore) Load() error {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	if ss.err != nil {
 		return ss.err
 	}
@@ -129,6 +139,8 @@ func (ss *SnapshotStore) Load() error {
 
 // Format returns a human-readable list of snapshots.
 func (ss *SnapshotStore) Format() string {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	if len(ss.snapshots) == 0 {
 		return "No snapshots."
 	}
@@ -153,6 +165,13 @@ func (ss *SnapshotStore) Format() string {
 
 // Cleanup removes old snapshots, keeping only the most recent maxSnaps.
 func (ss *SnapshotStore) Cleanup() {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	ss.cleanupLocked()
+}
+
+// cleanupLocked implements Cleanup; the caller must hold ss.mu.
+func (ss *SnapshotStore) cleanupLocked() {
 	if ss.err != nil {
 		return
 	}
@@ -175,11 +194,11 @@ func (ss *SnapshotStore) Cleanup() {
 	}
 
 	// Update index
-	_ = ss.saveIndex()
+	_ = ss.saveIndexLocked()
 }
 
-// saveIndex writes the snapshot index to disk.
-func (ss *SnapshotStore) saveIndex() error {
+// saveIndexLocked writes the snapshot index to disk; the caller must hold ss.mu.
+func (ss *SnapshotStore) saveIndexLocked() error {
 	indexPath := filepath.Join(ss.dir, "snapshots.json")
 	data, err := json.MarshalIndent(ss.snapshots, "", "  ")
 	if err != nil {

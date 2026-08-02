@@ -32,6 +32,7 @@ func (FileReadTool) Parameters() map[string]interface{} {
 			"offset":     map[string]interface{}{"type": "integer", "description": "Archive-compatible 1-based start line alias"},
 			"limit":      map[string]interface{}{"type": "integer", "description": "Archive-compatible number of lines to read"},
 		},
+		"required": []string{"path"},
 	}
 }
 

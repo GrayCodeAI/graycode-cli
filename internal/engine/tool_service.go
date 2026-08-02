@@ -342,9 +342,34 @@ func (s *ToolService) NormalizeOutput(output, canonicalTool, toolID string, cont
 		}
 	}
 	if len(output) > maxChars {
-		output = output[:maxChars] + "\n... (truncated)"
+		output = truncateOutputStructurally(output, maxChars)
 	}
 	return maybeSpillToolOutput(output, canonicalTool, toolID)
+}
+
+// truncateOutputStructurally trims oversized tool output at a structural
+// boundary instead of a raw byte cut, so JSON-ish results keep whole lines
+// (or a valid splice point) rather than being chopped mid-object (Phase 3).
+func truncateOutputStructurally(output string, maxChars int) string {
+	trimmed := strings.TrimLeft(output, " \t\r\n")
+	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+		// JSON-ish output: prefer the last newline before the cap.
+		if cut := strings.LastIndex(output[:maxChars], "\n"); cut >= 0 {
+			return output[:cut] + "\n... (truncated)"
+		}
+		// Single-line JSON: splice at the previous element separator so the
+		// visible prefix remains well-formed up to the marker.
+		if cut := strings.LastIndex(output[:maxChars], ","); cut >= 0 {
+			return output[:cut+1] + "\n... (truncated)"
+		}
+		// No safe splice: fall back to the byte cap.
+		return output[:maxChars] + "\n... (truncated)"
+	}
+	// Plain text: cut at the last line boundary to keep whole lines.
+	if cut := strings.LastIndex(output[:maxChars], "\n"); cut > 0 {
+		return output[:cut] + "\n... (truncated)"
+	}
+	return output[:maxChars] + "\n... (truncated)"
 }
 
 // PostProcess applies the domain mutation/validation hooks that follow a raw

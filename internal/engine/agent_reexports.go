@@ -3,7 +3,11 @@
 // during the Stage 2 migration. See REFACTOR_PLAN.md.
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/agent"
+import (
+	"context"
+
+	"github.com/GrayCodeAI/hawk/internal/engine/agent"
+)
 
 type (
 	SubAgentMode        = agent.SubAgentMode
@@ -37,7 +41,10 @@ func NewSubAgentBudget(mode SubAgentMode, cfg SubAgentConfig) *SubAgentBudget {
 func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 	return agent.FilterToolsForMode(mode, available)
 }
-func DefaultTurnsForMode(mode SubAgentMode) int       { return agent.DefaultTurnsForMode(mode) }
-func IsReadOnlyMode(mode SubAgentMode) bool           { return agent.IsReadOnlyMode(mode) }
-func NewBackgroundAgentPool() *BackgroundAgentPool    { return agent.NewBackgroundAgentPool() }
+func DefaultTurnsForMode(mode SubAgentMode) int    { return agent.DefaultTurnsForMode(mode) }
+func IsReadOnlyMode(mode SubAgentMode) bool        { return agent.IsReadOnlyMode(mode) }
+func NewBackgroundAgentPool() *BackgroundAgentPool { return agent.NewBackgroundAgentPool() }
+func NewBackgroundAgentPoolWithContext(ctx context.Context) *BackgroundAgentPool {
+	return agent.NewBackgroundAgentPoolWithContext(ctx)
+}
 func FormatResults(results []BackgroundResult) string { return agent.FormatResults(results) }

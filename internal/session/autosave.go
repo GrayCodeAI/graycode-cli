@@ -1,6 +1,8 @@
 package session
 
 import (
+	"bufio"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
@@ -270,6 +272,17 @@ func SearchSessions(query string, maxResults int) ([]SearchResult, error) {
 		}
 
 		id := e.Name()[:len(e.Name())-len(ext)]
+		// Stream JSONL sessions line-by-line instead of loading the whole
+		// transcript into memory, and stop as soon as the limit is reached
+		// (Phase 3). Legacy single-document .json files still use Load.
+		if ext == ".jsonl" {
+			matches, serr := searchSessionFileStream(filepath.Join(dir, e.Name()), id, query, maxResults-len(results))
+			if serr != nil {
+				continue
+			}
+			results = append(results, matches...)
+			continue
+		}
 		sess, err := Load(id)
 		if err != nil {
 			continue
@@ -289,6 +302,49 @@ func SearchSessions(query string, maxResults int) ([]SearchResult, error) {
 				}
 			}
 		}
+	}
+	return results, nil
+}
+
+// searchSessionFileStream scans a JSONL session file line-by-line, collecting
+// matches without materializing the full message list. meta and corrupt lines
+// are skipped (matching Load's semantics); MsgIndex counts parsed messages.
+func searchSessionFileStream(path, id, query string, limit int) ([]SearchResult, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+
+	var results []SearchResult
+	idx := 0
+	for scanner.Scan() {
+		if len(results) >= limit {
+			break
+		}
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var msg Message
+		if err := json.Unmarshal(line, &msg); err != nil {
+			continue // corrupt line
+		}
+		if msg.Role == "" {
+			continue // session_meta (or non-message) line; not part of Messages
+		}
+		if containsIgnoreCase(msg.Content, query) {
+			results = append(results, SearchResult{
+				SessionID: id,
+				MsgIndex:  idx,
+				Role:      msg.Role,
+				Preview:   extractContext(msg.Content, query, 100),
+			})
+		}
+		idx++
 	}
 	return results, nil
 }

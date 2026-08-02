@@ -205,9 +205,26 @@ func (g *ConversationGraph) persistLocked() error {
 	if err != nil {
 		return fmt.Errorf("conversation graph: encode: %w", err)
 	}
+	// fsync before rename so a crash cannot leave a truncated/empty graph at
+	// the final path (H14). Mirrors session/persist.go's durable write.
 	tmp := g.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- path is a fixed internal file + ".tmp"
+	if err != nil {
+		return fmt.Errorf("conversation graph: create: %w", err)
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return fmt.Errorf("conversation graph: write: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return fmt.Errorf("conversation graph: sync: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("conversation graph: close: %w", err)
 	}
 	if err := os.Rename(tmp, g.path); err != nil {
 		_ = os.Remove(tmp)

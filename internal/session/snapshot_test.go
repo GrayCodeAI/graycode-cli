@@ -249,3 +249,43 @@ func TestSnapshotStore_Cleanup(t *testing.T) {
 		}
 	}
 }
+
+// TestSnapshotStore_ConcurrentAccess runs Take/List/Format concurrently to
+// verify the SnapshotStore mutex (H13) prevents data races.
+func TestSnapshotStore_ConcurrentAccess(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	ss := NewSnapshotStore("conc-snap")
+	if ss.err != nil {
+		t.Fatalf("NewSnapshotStore: %v", ss.err)
+	}
+	t.Cleanup(ss.Cleanup)
+	sess := &Session{ID: "conc-snap"}
+	sess.Messages = []Message{{Role: "user", Content: "hi"}, {Role: "assistant", Content: "hello"}}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 50; i++ {
+			_ = ss.Take("edit", sess)
+			_ = ss.List()
+			_ = ss.Format()
+		}
+	}()
+	for i := 0; i < 4; i++ {
+		go func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+					_ = ss.List()
+					_ = ss.Format()
+				}
+			}
+		}()
+	}
+	<-done
+	if got := len(ss.List()); got == 0 {
+		t.Error("expected snapshots to be recorded")
+	}
+}

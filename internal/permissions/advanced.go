@@ -106,6 +106,13 @@ func (a *AutoModeState) ShouldAutoAllow(toolName, summary string) (bool, bool) {
 			if strings.HasPrefix(pattern, "Bash:") {
 				cmdPattern := strings.TrimPrefix(pattern, "Bash:")
 				if matchBashPattern(cmdPattern, summary) {
+					// Narrow the auto-allow for git patterns: a broad
+					// "Bash:git:*" must not auto-approve destructive git
+					// subcommands like push --force / reset --hard / clean -f.
+					// Only the safe read-only subcommands pass (Phase 3).
+					if strings.HasPrefix(strings.TrimSpace(summary), "git ") && !isSafeGitCommand(summary) {
+						return false, true
+					}
 					return true, true
 				}
 			}

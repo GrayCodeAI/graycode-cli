@@ -238,13 +238,17 @@ func (r *Registry) EyrieTools() []types.EyrieTool {
 	return out
 }
 
-// Execute runs a tool by name with the given JSON input.
+// Execute runs a tool by name with the given JSON input. Input is validated
+// against the tool's declared schema before dispatch (H5).
 func (r *Registry) Execute(ctx context.Context, name string, input json.RawMessage) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	t, ok := r.tools[name]
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", name)
+	}
+	if err := ValidateToolInput(t, input); err != nil {
+		return "", err
 	}
 	return t.Execute(ctx, input)
 }

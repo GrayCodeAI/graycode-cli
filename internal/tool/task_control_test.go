@@ -60,7 +60,7 @@ func TestWaitTasksAndKillMonitor(t *testing.T) {
 }
 
 func TestTaskOutputUnifiedShell(t *testing.T) {
-	id, err := startBackgroundBash(context.Background(), "echo hello-unified")
+	id, err := startBackgroundBash(context.Background(), "echo hello-unified", "bash", []string{"-c", "echo hello-unified"})
 	if err != nil {
 		t.Fatal(err)
 	}
