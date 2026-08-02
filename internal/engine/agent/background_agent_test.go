@@ -22,6 +22,74 @@ func TestBackgroundAgentPool_NewPool(t *testing.T) {
 	}
 }
 
+// TestBackgroundAgentPool_StopCancelsInFlight verifies that Stop() cancels
+// every in-flight background agent (C8 fix). Previously Submit used
+// context.Background(), so agents could never be cancelled via the pool.
+func TestBackgroundAgentPool_StopCancelsInFlight(t *testing.T) {
+	t.Parallel()
+	parent, pcancel := context.WithCancel(context.Background())
+	defer pcancel()
+	pool := NewBackgroundAgentPoolWithContext(parent)
+
+	var started atomic.Bool
+	var cancelled atomic.Bool
+	pool.Submit("bg-stop", "wait", func(ctx context.Context, prompt string) (string, error) {
+		started.Store(true)
+		<-ctx.Done()
+		cancelled.Store(true)
+		return "", ctx.Err()
+	})
+
+	// Wait for the agent to actually start before stopping.
+	deadline := time.Now().Add(2 * time.Second)
+	for !started.Load() && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if !started.Load() {
+		t.Fatal("background agent did not start")
+	}
+
+	pool.Stop()
+
+	deadline = time.Now().Add(2 * time.Second)
+	for !cancelled.Load() && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if !cancelled.Load() {
+		t.Error("Stop() did not cancel the in-flight background agent")
+	}
+	if pool.PendingCount() != 0 {
+		t.Errorf("PendingCount() = %d, want 0 after Stop()", pool.PendingCount())
+	}
+}
+
+// TestBackgroundAgentPool_ParentCancellation verifies that cancelling the
+// parent context (session teardown) also cancels in-flight agents.
+func TestBackgroundAgentPool_ParentCancellation(t *testing.T) {
+	t.Parallel()
+	parent, cancel := context.WithCancel(context.Background())
+	pool := NewBackgroundAgentPoolWithContext(parent)
+
+	var cancelled atomic.Bool
+	pool.Submit("bg-parent", "wait", func(ctx context.Context, prompt string) (string, error) {
+		<-ctx.Done()
+		cancelled.Store(true)
+		return "", ctx.Err()
+	})
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for !cancelled.Load() && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if !cancelled.Load() {
+		t.Error("cancelling parent context did not cancel the background agent")
+	}
+	pool.Stop()
+}
+
 func TestBackgroundAgentPool_SubmitAndCollect(t *testing.T) {
 	t.Parallel()
 	pool := NewBackgroundAgentPool()
