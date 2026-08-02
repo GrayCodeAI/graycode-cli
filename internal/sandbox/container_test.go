@@ -253,3 +253,43 @@ func containsStr(s, sub string) bool {
 	}
 	return false
 }
+
+// TestUsernsRemapAvailable_UsesProbeAndCache verifies the userns-remap probe
+// (H16) is consulted once and cached for the process lifetime.
+func TestUsernsRemapAvailable_UsesProbeAndCache(t *testing.T) {
+	original := usernsProbe
+	t.Cleanup(func() { usernsProbe = original; resetUsernsCache() })
+	resetUsernsCache()
+
+	var calls int
+	usernsProbe = func() (bool, error) {
+		calls++
+		return true, nil
+	}
+
+	if !usernsRemapAvailable() {
+		t.Fatal("expected probe to report userns available")
+	}
+	// Second call must be served from cache.
+	if !usernsRemapAvailable() {
+		t.Fatal("expected cached userns availability")
+	}
+	if calls != 1 {
+		t.Fatalf("userns probe calls = %d, want 1 (cached)", calls)
+	}
+}
+
+// TestUsernsRemapAvailable_FalseOnProbeError verifies an unavailable Docker
+// daemon does not enable userns remapping.
+func TestUsernsRemapAvailable_FalseOnProbeError(t *testing.T) {
+	original := usernsProbe
+	t.Cleanup(func() { usernsProbe = original; resetUsernsCache() })
+	resetUsernsCache()
+
+	usernsProbe = func() (bool, error) {
+		return false, errors.New("docker unreachable")
+	}
+	if usernsRemapAvailable() {
+		t.Error("expected userns remapping unavailable when docker cannot be probed")
+	}
+}

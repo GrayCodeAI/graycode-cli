@@ -164,10 +164,21 @@ func (s *Sandbox) runDocker(ctx context.Context, command string) (*exec.Cmd, err
 	}
 	args := []string{
 		"run", "--rm",
-		"-v", fmt.Sprintf("%s:/workspace", workDir),
+		// Hardening (H16): drop all capabilities, forbid privilege
+		// escalation, make the rootfs read-only (bind mounts below keep
+		// their own :rw/:ro flags, so /workspace stays writable) and give
+		// /tmp scratch space.
+		"--cap-drop", "ALL",
+		"--security-opt", "no-new-privileges",
+		"--read-only",
+		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=64m",
+		"-v", fmt.Sprintf("%s:/workspace:rw", workDir),
 		"-w", "/workspace",
 		"--memory", fmt.Sprintf("%dm", s.config.MaxMemoryMB),
 		"--cpus", fmt.Sprintf("%.2f", float64(s.config.MaxCPUPct)/100.0),
+	}
+	if usernsRemapAvailable() {
+		args = append(args, "--userns-remap", "default")
 	}
 	if !s.config.AllowNetwork {
 		args = append(args, "--network", "none")
