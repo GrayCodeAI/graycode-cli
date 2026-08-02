@@ -262,7 +262,7 @@ func isIdentChar(b byte) bool {
 }
 
 // CreateSession inserts a new session record.
-func (s *SQLiteStore) CreateSession(sess *SessionRecord) error {
+func (s *SQLiteStore) CreateSession(ctx context.Context, sess *SessionRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -277,7 +277,7 @@ func (s *SQLiteStore) CreateSession(sess *SessionRecord) error {
 	}
 
 	_, err := s.db.ExecContext(
-		context.Background(),
+		ctx,
 		`INSERT INTO sessions (id, project_dir, provider, model, created_at, updated_at, parent_id, status, title, total_tokens, total_cost_usd)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		sess.ID, sess.ProjectDir, sess.Provider, sess.Model,
@@ -291,11 +291,11 @@ func (s *SQLiteStore) CreateSession(sess *SessionRecord) error {
 }
 
 // GetSession retrieves a session by ID.
-func (s *SQLiteStore) GetSession(id string) (*SessionRecord, error) {
+func (s *SQLiteStore) GetSession(ctx context.Context, id string) (*SessionRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	row := s.db.QueryRowContext(context.Background(), `SELECT id, project_dir, provider, model, created_at, updated_at,
+	row := s.db.QueryRowContext(ctx, `SELECT id, project_dir, provider, model, created_at, updated_at,
 		COALESCE(parent_id, ''), status, COALESCE(title, ''), total_tokens, total_cost_usd
 		FROM sessions WHERE id = ?`, id)
 
@@ -315,7 +315,7 @@ func (s *SQLiteStore) GetSession(id string) (*SessionRecord, error) {
 // ListSessions returns sessions for a project directory, ordered by most
 // recently updated. If projectDir is empty, all sessions are returned.
 // limit <= 0 means no limit.
-func (s *SQLiteStore) ListSessions(projectDir string, limit int) ([]*SessionRecord, error) {
+func (s *SQLiteStore) ListSessions(ctx context.Context, projectDir string, limit int) ([]*SessionRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -324,21 +324,21 @@ func (s *SQLiteStore) ListSessions(projectDir string, limit int) ([]*SessionReco
 
 	if projectDir == "" {
 		if limit > 0 {
-			rows, err = s.db.QueryContext(context.Background(), `SELECT id, project_dir, provider, model, created_at, updated_at,
+			rows, err = s.db.QueryContext(ctx, `SELECT id, project_dir, provider, model, created_at, updated_at,
 				COALESCE(parent_id, ''), status, COALESCE(title, ''), total_tokens, total_cost_usd
 				FROM sessions ORDER BY updated_at DESC LIMIT ?`, limit)
 		} else {
-			rows, err = s.db.QueryContext(context.Background(), `SELECT id, project_dir, provider, model, created_at, updated_at,
+			rows, err = s.db.QueryContext(ctx, `SELECT id, project_dir, provider, model, created_at, updated_at,
 				COALESCE(parent_id, ''), status, COALESCE(title, ''), total_tokens, total_cost_usd
 				FROM sessions ORDER BY updated_at DESC`)
 		}
 	} else {
 		if limit > 0 {
-			rows, err = s.db.QueryContext(context.Background(), `SELECT id, project_dir, provider, model, created_at, updated_at,
+			rows, err = s.db.QueryContext(ctx, `SELECT id, project_dir, provider, model, created_at, updated_at,
 				COALESCE(parent_id, ''), status, COALESCE(title, ''), total_tokens, total_cost_usd
 				FROM sessions WHERE project_dir = ? ORDER BY updated_at DESC LIMIT ?`, projectDir, limit)
 		} else {
-			rows, err = s.db.QueryContext(context.Background(), `SELECT id, project_dir, provider, model, created_at, updated_at,
+			rows, err = s.db.QueryContext(ctx, `SELECT id, project_dir, provider, model, created_at, updated_at,
 				COALESCE(parent_id, ''), status, COALESCE(title, ''), total_tokens, total_cost_usd
 				FROM sessions WHERE project_dir = ? ORDER BY updated_at DESC`, projectDir)
 		}
@@ -363,11 +363,11 @@ func (s *SQLiteStore) ListSessions(projectDir string, limit int) ([]*SessionReco
 
 // AppendMessage adds a message to a session and updates the session's
 // updated_at timestamp and token totals.
-func (s *SQLiteStore) AppendMessage(sessionID string, msg *MessageRecord) error {
+func (s *SQLiteStore) AppendMessage(ctx context.Context, sessionID string, msg *MessageRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tx, err := s.db.BeginTx(context.Background(), nil)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -377,7 +377,7 @@ func (s *SQLiteStore) AppendMessage(sessionID string, msg *MessageRecord) error 
 		msg.CreatedAt = time.Now()
 	}
 
-	result, err := tx.ExecContext(context.Background(), `INSERT INTO messages (session_id, role, content, tool_use_id, tool_name, is_error, tokens, created_at)
+	result, err := tx.ExecContext(ctx, `INSERT INTO messages (session_id, role, content, tool_use_id, tool_name, is_error, tokens, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		sessionID, msg.Role, msg.Content, msg.ToolUseID, msg.ToolName,
 		msg.IsError, msg.Tokens, msg.CreatedAt)
@@ -393,7 +393,7 @@ func (s *SQLiteStore) AppendMessage(sessionID string, msg *MessageRecord) error 
 	msg.SessionID = sessionID
 
 	// Update session metadata.
-	_, err = tx.ExecContext(context.Background(), `UPDATE sessions SET updated_at = ?, total_tokens = total_tokens + ?
+	_, err = tx.ExecContext(ctx, `UPDATE sessions SET updated_at = ?, total_tokens = total_tokens + ?
 		WHERE id = ?`, time.Now(), msg.Tokens, sessionID)
 	if err != nil {
 		return fmt.Errorf("update session: %w", err)
@@ -403,11 +403,11 @@ func (s *SQLiteStore) AppendMessage(sessionID string, msg *MessageRecord) error 
 }
 
 // GetMessages retrieves all messages for a session, ordered by creation time.
-func (s *SQLiteStore) GetMessages(sessionID string) ([]*MessageRecord, error) {
+func (s *SQLiteStore) GetMessages(ctx context.Context, sessionID string) ([]*MessageRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	rows, err := s.db.QueryContext(context.Background(), `SELECT id, session_id, role, content,
+	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, role, content,
 		COALESCE(tool_use_id, ''), COALESCE(tool_name, ''), is_error, tokens, created_at
 		FROM messages WHERE session_id = ? ORDER BY id ASC`, sessionID)
 	if err != nil {
@@ -429,7 +429,7 @@ func (s *SQLiteStore) GetMessages(sessionID string) ([]*MessageRecord, error) {
 
 // UpdateSession updates specific fields of a session. Supported keys:
 // status, title, model, provider, total_tokens, total_cost_usd.
-func (s *SQLiteStore) UpdateSession(id string, updates map[string]interface{}) error {
+func (s *SQLiteStore) UpdateSession(ctx context.Context, id string, updates map[string]interface{}) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -465,7 +465,7 @@ func (s *SQLiteStore) UpdateSession(id string, updates map[string]interface{}) e
 	args = append(args, id)
 
 	query := fmt.Sprintf("UPDATE sessions SET %s WHERE id = ?", strings.Join(setClauses, ", ")) // #nosec G201 -- column names from fixed allowlist; values parameterized
-	result, err := s.db.ExecContext(context.Background(), query, args...)
+	result, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update session: %w", err)
 	}
@@ -478,22 +478,22 @@ func (s *SQLiteStore) UpdateSession(id string, updates map[string]interface{}) e
 }
 
 // DeleteSession removes a session and all its messages.
-func (s *SQLiteStore) DeleteSession(id string) error {
+func (s *SQLiteStore) DeleteSession(ctx context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tx, err := s.db.BeginTx(context.Background(), nil)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
 	// Delete messages first (FK constraint).
-	if _, execErr := tx.ExecContext(context.Background(), "DELETE FROM messages WHERE session_id = ?", id); execErr != nil {
+	if _, execErr := tx.ExecContext(ctx, "DELETE FROM messages WHERE session_id = ?", id); execErr != nil {
 		return fmt.Errorf("delete messages: %w", execErr)
 	}
 
-	result, err := tx.ExecContext(context.Background(), "DELETE FROM sessions WHERE id = ?", id)
+	result, err := tx.ExecContext(ctx, "DELETE FROM sessions WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
@@ -508,11 +508,11 @@ func (s *SQLiteStore) DeleteSession(id string) error {
 
 // ForkSession creates a copy of a session with a new ID, duplicating all
 // messages. The new session's parent_id points to the original.
-func (s *SQLiteStore) ForkSession(originalID, newID string) error {
+func (s *SQLiteStore) ForkSession(ctx context.Context, originalID, newID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tx, err := s.db.BeginTx(context.Background(), nil)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -520,7 +520,7 @@ func (s *SQLiteStore) ForkSession(originalID, newID string) error {
 
 	// Copy the session record.
 	now := time.Now()
-	_, err = tx.ExecContext(context.Background(), `INSERT INTO sessions (id, project_dir, provider, model, created_at, updated_at, parent_id, status, title, total_tokens, total_cost_usd)
+	_, err = tx.ExecContext(ctx, `INSERT INTO sessions (id, project_dir, provider, model, created_at, updated_at, parent_id, status, title, total_tokens, total_cost_usd)
 		SELECT ?, project_dir, provider, model, ?, ?, ?, status, title, total_tokens, total_cost_usd
 		FROM sessions WHERE id = ?`,
 		newID, now, now, originalID, originalID)
@@ -529,7 +529,7 @@ func (s *SQLiteStore) ForkSession(originalID, newID string) error {
 	}
 
 	// Copy all messages.
-	_, err = tx.ExecContext(context.Background(), `INSERT INTO messages (session_id, role, content, tool_use_id, tool_name, is_error, tokens, created_at)
+	_, err = tx.ExecContext(ctx, `INSERT INTO messages (session_id, role, content, tool_use_id, tool_name, is_error, tokens, created_at)
 		SELECT ?, role, content, tool_use_id, tool_name, is_error, tokens, created_at
 		FROM messages WHERE session_id = ? ORDER BY id ASC`,
 		newID, originalID)
@@ -543,12 +543,12 @@ func (s *SQLiteStore) ForkSession(originalID, newID string) error {
 // SearchSessions performs a full-text search across message content and returns
 // sessions that contain matching messages. Requires the FTS migration to have
 // been applied (migration 2).
-func (s *SQLiteStore) SearchSessions(query string) ([]*SessionRecord, error) {
+func (s *SQLiteStore) SearchSessions(ctx context.Context, query string) ([]*SessionRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	// Use FTS5 match syntax.
-	rows, err := s.db.QueryContext(context.Background(), `SELECT DISTINCT s.id, s.project_dir, s.provider, s.model,
+	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT s.id, s.project_dir, s.provider, s.model,
 		s.created_at, s.updated_at, COALESCE(s.parent_id, ''), s.status,
 		COALESCE(s.title, ''), s.total_tokens, s.total_cost_usd
 		FROM sessions s
@@ -557,7 +557,7 @@ func (s *SQLiteStore) SearchSessions(query string) ([]*SessionRecord, error) {
 		ORDER BY s.updated_at DESC`, query)
 	if err != nil {
 		// Fall back to LIKE search if FTS is not available.
-		return s.searchFallback(query)
+		return s.searchFallback(ctx, query)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -575,12 +575,12 @@ func (s *SQLiteStore) SearchSessions(query string) ([]*SessionRecord, error) {
 }
 
 // searchFallback uses LIKE when FTS is not available.
-func (s *SQLiteStore) searchFallback(query string) ([]*SessionRecord, error) {
+func (s *SQLiteStore) searchFallback(ctx context.Context, query string) ([]*SessionRecord, error) {
 	// Escape LIKE wildcards in user input to prevent unintended matches.
 	query = strings.ReplaceAll(query, `%`, `\%`)
 	query = strings.ReplaceAll(query, `_`, `\_`)
 	pattern := "%" + query + "%"
-	rows, err := s.db.QueryContext(context.Background(), `SELECT DISTINCT s.id, s.project_dir, s.provider, s.model,
+	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT s.id, s.project_dir, s.provider, s.model,
 		s.created_at, s.updated_at, COALESCE(s.parent_id, ''), s.status,
 		COALESCE(s.title, ''), s.total_tokens, s.total_cost_usd
 		FROM sessions s
@@ -623,7 +623,7 @@ func (s *SQLiteStore) Close() error {
 // Compact removes old messages from a session, keeping only the last keepLast
 // messages. This is useful for long-running sessions where older context is
 // no longer needed.
-func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
+func (s *SQLiteStore) Compact(ctx context.Context, sessionID string, keepLast int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -631,14 +631,14 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 		return fmt.Errorf("keepLast must be positive, got %d", keepLast)
 	}
 
-	tx, err := s.db.BeginTx(context.Background(), nil)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
 	// Find the cutoff: delete all messages except the last N.
-	_, err = tx.ExecContext(context.Background(), `DELETE FROM messages
+	_, err = tx.ExecContext(ctx, `DELETE FROM messages
 		WHERE session_id = ? AND id NOT IN (
 			SELECT id FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?
 		)`, sessionID, sessionID, keepLast)
@@ -648,12 +648,12 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 
 	// Recalculate total tokens.
 	var totalTokens int
-	row := tx.QueryRowContext(context.Background(), "SELECT COALESCE(SUM(tokens), 0) FROM messages WHERE session_id = ?", sessionID)
+	row := tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(tokens), 0) FROM messages WHERE session_id = ?", sessionID)
 	if scanErr := row.Scan(&totalTokens); scanErr != nil {
 		return fmt.Errorf("sum tokens: %w", scanErr)
 	}
 
-	_, err = tx.ExecContext(context.Background(), "UPDATE sessions SET total_tokens = ?, updated_at = ? WHERE id = ?",
+	_, err = tx.ExecContext(ctx, "UPDATE sessions SET total_tokens = ?, updated_at = ? WHERE id = ?",
 		totalTokens, time.Now(), sessionID)
 	if err != nil {
 		return fmt.Errorf("update token total: %w", err)
@@ -665,14 +665,14 @@ func (s *SQLiteStore) Compact(sessionID string, keepLast int) error {
 
 	// After a large delete, checkpoint the WAL so the freed pages are
 	// reclaimed and .db-wal doesn't grow unbounded.
-	if _, err := s.db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
+	if _, err := s.db.ExecContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)"); err != nil {
 		return fmt.Errorf("wal checkpoint after compact: %w", err)
 	}
 	return nil
 }
 
 // GetSessionStats returns aggregate statistics for a session.
-func (s *SQLiteStore) GetSessionStats(id string) (*SessionStats, error) {
+func (s *SQLiteStore) GetSessionStats(ctx context.Context, id string) (*SessionStats, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -680,7 +680,7 @@ func (s *SQLiteStore) GetSessionStats(id string) (*SessionStats, error) {
 	var createdAt, updatedAt time.Time
 
 	// Get session-level stats.
-	row := s.db.QueryRowContext(context.Background(), `SELECT total_tokens, total_cost_usd, created_at, updated_at
+	row := s.db.QueryRowContext(ctx, `SELECT total_tokens, total_cost_usd, created_at, updated_at
 		FROM sessions WHERE id = ?`, id)
 	if err := row.Scan(&stats.TotalTokens, &stats.TotalCostUSD, &createdAt, &updatedAt); err != nil {
 		if err == sql.ErrNoRows {
@@ -691,7 +691,7 @@ func (s *SQLiteStore) GetSessionStats(id string) (*SessionStats, error) {
 	stats.Duration = updatedAt.Sub(createdAt)
 
 	// Count messages and tool calls.
-	row = s.db.QueryRowContext(context.Background(), `SELECT COUNT(*), COALESCE(SUM(CASE WHEN tool_name != '' AND tool_name IS NOT NULL THEN 1 ELSE 0 END), 0)
+	row = s.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(CASE WHEN tool_name != '' AND tool_name IS NOT NULL THEN 1 ELSE 0 END), 0)
 		FROM messages WHERE session_id = ?`, id)
 	if err := row.Scan(&stats.MessageCount, &stats.ToolCalls); err != nil {
 		return nil, fmt.Errorf("count messages: %w", err)
