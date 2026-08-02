@@ -398,7 +398,7 @@ func TestGuardian_BuildReviewPrompt(t *testing.T) {
 	// Check that the prompt contains all expected parts
 	expectedParts := []string{
 		"security reviewer",
-		"Tool: Bash",
+		"tool=Bash",
 		"go test ./...",
 		"User asked to run tests",
 		"A Go web application",
