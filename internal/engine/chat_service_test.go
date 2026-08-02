@@ -233,3 +233,76 @@ func retryConfigForBoundaryTest() retry.Config {
 		Multiplier: 1,
 	}
 }
+
+// overflowThenCaptureClient simulates a provider that rejects an oversized
+// context on the first call, then succeeds — recording the transcript it
+// received on the retry so tests can assert the emergency compact (H3).
+type overflowThenCaptureClient struct {
+	calls   int
+	seen    []types.EyrieMessage
+	started bool
+}
+
+func (*overflowThenCaptureClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+	return nil, nil
+}
+
+func (c *overflowThenCaptureClient) StreamChatContinue(_ context.Context, messages []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
+	c.calls++
+	if c.calls == 1 {
+		return nil, errors.New("input too long: 120000 tokens exceeds the limit of 100000")
+	}
+	c.started = true
+	c.seen = append([]types.EyrieMessage(nil), messages...)
+	return &types.StreamResult{}, nil
+}
+
+// TestChatService_EmergencyCompactTrimsBeforeRetry verifies the H3 fix: on a
+// context-overflow error, the retry sends a compacted (smaller) transcript
+// instead of re-sending the same overflowing messages.
+func TestChatService_EmergencyCompactTrimsBeforeRetry(t *testing.T) {
+	var messages []types.EyrieMessage
+	messages = append(messages, types.EyrieMessage{Role: "system", Content: "sys"})
+	for i := 0; i < 100; i++ {
+		messages = append(messages, types.EyrieMessage{Role: "user", Content: "message-" + itoaForTest(i)})
+	}
+
+	client := &overflowThenCaptureClient{}
+	svc := NewChatService(client, ChatServiceConfig{RetryConfig: retryConfigForBoundaryTest()})
+	result, err := svc.Stream(context.Background(), messages, types.ChatOptions{})
+	if err != nil {
+		t.Fatalf("Stream() error = %v", err)
+	}
+	if !client.started {
+		t.Fatal("expected the retry after overflow to reach the client")
+	}
+	if result == nil {
+		t.Fatal("expected a result after successful retry")
+	}
+	if len(client.seen) >= len(messages) {
+		t.Errorf("retry transcript length = %d, want < %d (compact must shrink it)", len(client.seen), len(messages))
+	}
+	foundLast := false
+	for _, m := range client.seen {
+		if m.Role == "user" && m.Content == "message-99" {
+			foundLast = true
+			break
+		}
+	}
+	if !foundLast {
+		t.Error("expected the retry transcript to preserve the most recent messages")
+	}
+}
+
+func itoaForTest(i int) string {
+	digits := []byte("0123456789")
+	var b []byte
+	for i >= 0 {
+		b = append([]byte{digits[i%10]}, b...)
+		i /= 10
+		if i == 0 {
+			break
+		}
+	}
+	return string(b)
+}
