@@ -51,8 +51,10 @@ func TestBackgroundAgentPool_StopCancelsInFlight(t *testing.T) {
 
 	pool.Stop()
 
+	// The registry only drains a task once its spawn fn returns, so poll
+	// until the cancellation is observed AND the task has exited.
 	deadline = time.Now().Add(2 * time.Second)
-	for !cancelled.Load() && time.Now().Before(deadline) {
+	for (!cancelled.Load() || pool.PendingCount() != 0) && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
 	if !cancelled.Load() {
