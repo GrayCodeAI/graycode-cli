@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +27,17 @@ import (
 )
 
 const maxRequestBodyBytes = 1 << 20
+
+// Defaults for the daemon's global request throttling (H9). The chat limit is
+// deliberately stricter than the general API limit because each generation is
+// long-running and expensive. Both are per-IP token buckets.
+const (
+	defaultMaxConcurrentChat = 4
+	defaultChatRatePerMin    = 30.0 // tokens per minute for /v1/chat
+	defaultChatBurst         = 6
+	defaultAPIRatePerMin     = 10.0 // tokens per minute for other authed routes
+	defaultAPIBurst          = 4
+)
 
 // SessionFactory creates a configured engine session for a given request.
 // The caller (cmd package) provides this, wiring system prompts, tools, keys.
@@ -84,6 +97,19 @@ type Server struct {
 	// routePatterns records every "METHOD /path" pattern registered on the
 	// mux so tests can verify the HTTP surface matches api/openapi.yaml.
 	routePatterns []string
+
+	// concurrencySem bounds the number of in-flight /v1/chat generations
+	// server-wide. Per-session stripe locks already serialize the *same*
+	// session; this caps total load across sessions (H9).
+	concurrencySem chan struct{}
+	// cancelMu guards cancels, the sessionID -> cancel mapping used by
+	// POST /v1/cancel to abort an in-flight generation (H10).
+	cancelMu sync.Mutex
+	cancels  map[string]*cancelEntry
+	// General per-IP token bucket for non-chat API routes.
+	apiLimiter *ipLimiter
+	// Per-IP token bucket for /v1/chat generations (heavier, so lower rate).
+	chatLimiter *ipLimiter
 }
 
 // ReadyResponse is the JSON response from GET /v1/ready.
@@ -165,11 +191,15 @@ func New(cfg Config, factory SessionFactory) *Server {
 	}
 
 	s := &Server{
-		addr:       fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		mux:        http.NewServeMux(),
-		startedAt:  time.Now(),
-		newSession: factory,
-		apiKey:     cfg.APIKey,
+		addr:           fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		mux:            http.NewServeMux(),
+		startedAt:      time.Now(),
+		newSession:     factory,
+		apiKey:         cfg.APIKey,
+		concurrencySem: make(chan struct{}, maxConcurrentFromEnv()),
+		cancels:        make(map[string]*cancelEntry),
+		apiLimiter:     newIPLimiter(defaultAPIRatePerMin/60, defaultAPIBurst),
+		chatLimiter:    newIPLimiter(defaultChatRatePerMin/60, defaultChatBurst),
 	}
 	s.routes()
 	// Build the messaging-bridge manager. The daemon URL is finalised in Start
@@ -324,13 +354,14 @@ func (s *Server) ready() (bool, string) {
 func (s *Server) routes() {
 	s.handle("GET /v1/health", s.handleHealth)
 	s.handle("GET /v1/ready", s.handleReady)
-	s.handle("POST /v1/chat", s.auth(s.handleChat))
-	s.handle("GET /v1/sessions", s.auth(s.handleListSessions))
-	s.handle("GET /v1/sessions/{id}", s.auth(s.handleGetSession))
-	s.handle("GET /v1/sessions/{id}/messages", s.auth(s.handleGetMessages))
-	s.handle("GET /v1/sessions/{id}/graph", s.auth(s.handleGetSessionGraph))
-	s.handle("DELETE /v1/sessions/{id}", s.auth(s.handleDeleteSession))
-	s.handle("GET /v1/stats", s.auth(s.handleStats))
+	s.handle("POST /v1/chat", s.auth(s.rate(s.handleChat, s.chatLimiter)))
+	s.handle("POST /v1/cancel", s.auth(s.rate(s.handleCancel, s.apiLimiter)))
+	s.handle("GET /v1/sessions", s.auth(s.rate(s.handleListSessions, s.apiLimiter)))
+	s.handle("GET /v1/sessions/{id}", s.auth(s.rate(s.handleGetSession, s.apiLimiter)))
+	s.handle("GET /v1/sessions/{id}/messages", s.auth(s.rate(s.handleGetMessages, s.apiLimiter)))
+	s.handle("GET /v1/sessions/{id}/graph", s.auth(s.rate(s.handleGetSessionGraph, s.apiLimiter)))
+	s.handle("DELETE /v1/sessions/{id}", s.auth(s.rate(s.handleDeleteSession, s.apiLimiter)))
+	s.handle("GET /v1/stats", s.auth(s.rate(s.handleStats, s.apiLimiter)))
 	s.RegisterReviewRoutes()
 }
 
@@ -339,6 +370,72 @@ func (s *Server) routes() {
 func (s *Server) handle(pattern string, h http.HandlerFunc) {
 	s.routePatterns = append(s.routePatterns, pattern)
 	s.mux.HandleFunc(pattern, h)
+}
+
+// rate wraps a handler with per-IP rate limiting (H9). Rejected requests get
+// 429 with a Retry-After hint.
+func (s *Server) rate(next http.HandlerFunc, lim *ipLimiter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if lim != nil && !lim.Allow(clientIP(r)) {
+			w.Header().Set("Retry-After", "2")
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
+			return
+		}
+		next(w, r)
+	}
+}
+
+// cancelEntry pairs a generation's cancel func with an identity pointer so
+// unregisterCancel can remove only the *current* generation's entry (a later
+// session may have replaced it).
+type cancelEntry struct {
+	cancel context.CancelFunc
+}
+
+// registerCancel records the cancel func for a session's in-flight
+// generation so POST /v1/cancel can abort it.
+func (s *Server) registerCancel(sessionID string, cancel context.CancelFunc) {
+	s.cancelMu.Lock()
+	s.cancels[sessionID] = &cancelEntry{cancel: cancel}
+	s.cancelMu.Unlock()
+}
+
+// unregisterCancel removes a session's cancel entry; it is a no-op if the
+// entry no longer belongs to this cancel func.
+func (s *Server) unregisterCancel(sessionID string, cancel context.CancelFunc) {
+	s.cancelMu.Lock()
+	if e := s.cancels[sessionID]; e != nil && e.cancel != nil {
+		// Funcs are only comparable to nil, so compare code pointers.
+		if reflect.ValueOf(e.cancel).Pointer() == reflect.ValueOf(cancel).Pointer() {
+			delete(s.cancels, sessionID)
+		}
+	}
+	s.cancelMu.Unlock()
+}
+
+// cancelSession aborts the in-flight generation for sessionID, if any.
+// Returns true when a generation was active and was cancelled.
+func (s *Server) cancelSession(sessionID string) bool {
+	s.cancelMu.Lock()
+	e := s.cancels[sessionID]
+	s.cancelMu.Unlock()
+	if e == nil || e.cancel == nil {
+		return false
+	}
+	e.cancel()
+	return true
+}
+
+// maxConcurrentFromEnv reads HAWK_DAEMON_MAX_CONCURRENT (clamped to >= 1) so
+// operators can tune the global chat concurrency cap without a rebuild.
+func maxConcurrentFromEnv() int {
+	n := defaultMaxConcurrentChat
+	if raw := os.Getenv("HAWK_DAEMON_MAX_CONCURRENT"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			n = parsed
+		}
+	}
+	return n
 }
 
 // RoutePatterns returns a copy of every registered "METHOD /path" pattern.
@@ -446,6 +543,16 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	if s.newSession == nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "engine not configured"})
+		return
+	}
+
+	// Global concurrency cap (H9): refuse rather than queue when too many
+	// generations are in flight, so a burst cannot build an unbounded backlog.
+	select {
+	case s.concurrencySem <- struct{}{}:
+		defer func() { <-s.concurrencySem }()
+	default:
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "server busy: too many concurrent generations in flight"})
 		return
 	}
 
@@ -578,7 +685,14 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	sess.AddUser(req.Prompt)
 
-	events, err := sess.Stream(r.Context())
+	// Derive a cancellable generation context so POST /v1/cancel can abort an
+	// in-flight generation for this session (H10). The entry lives for the
+	// duration of the generation only.
+	genCtx, genCancel := context.WithCancel(r.Context())
+	s.registerCancel(sessionID, genCancel)
+	defer s.unregisterCancel(sessionID, genCancel)
+
+	events, err := sess.Stream(genCtx)
 	if err != nil {
 		slog.Error("stream failed", "err", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "stream failed"})
@@ -700,6 +814,35 @@ func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.St
 
 func validSessionID(id string) bool {
 	return hawksession.ValidID(id)
+}
+
+// CancelRequest is the JSON body for POST /v1/cancel.
+type CancelRequest struct {
+	SessionID string `json:"session_id"`
+}
+
+// handleCancel aborts the in-flight generation for a session (H10). It must
+// not take the per-session stripe lock: handleChat holds that lock for the
+// whole generation, so taking it here would deadlock.
+func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
+	var req CancelRequest
+	if !decodeJSONBody(w, r, &req) {
+		return
+	}
+	sessionID := strings.TrimSpace(req.SessionID)
+	if sessionID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "session_id is required"})
+		return
+	}
+	if !validSessionID(sessionID) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid session id"})
+		return
+	}
+	if !s.cancelSession(sessionID) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no active generation for session"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"cancelled": true})
 }
 
 func newSessionID() (string, error) {
