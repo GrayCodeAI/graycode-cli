@@ -1,6 +1,11 @@
 package oteltrace
 
-import "context"
+import (
+	"context"
+	"sync"
+
+	"github.com/GrayCodeAI/hawk/internal/engine/safety"
+)
 
 // StartAgentLoopSpan creates a span for the agent loop iteration.
 func StartAgentLoopSpan(ctx context.Context, t *Tracer, provider, model string, messageCount int) (context.Context, *Span) {
@@ -43,12 +48,35 @@ func StartSessionSpan(ctx context.Context, t *Tracer, sessionID string) (context
 }
 
 // EndSpanWithError finishes a span and marks it as errored if err is non-nil.
+// The error message is redacted so secrets/PII that leak into an error string
+// are not exported in span attributes (H15).
 func EndSpanWithError(span *Span, err error) {
 	if err != nil {
 		span.SetTag("error", "true")
-		span.SetTag("error.message", err.Error())
+		span.SetTag("error.message", redactErrorMessage(err))
 	}
 	span.Finish()
+}
+
+var (
+	redactorOnce sync.Once
+	redactor     *safety.OutputRedactor
+)
+
+// redactErrorMessage applies the shared secret-redaction patterns to an
+// error message before it is stored in a span tag.
+func redactErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	redactorOnce.Do(func() {
+		redactor = safety.NewOutputRedactor()
+	})
+	if redactor != nil {
+		msg = redactor.Redact(msg)
+	}
+	return msg
 }
 
 func itoa(n int) string {

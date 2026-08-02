@@ -36,8 +36,10 @@ func DefaultTelemetryConfig() TelemetryConfig {
 		ShutdownTimeout: 2 * time.Second,
 	}
 
-	cfg.Enabled = os.Getenv("HAWK_CODE_ENABLE_TELEMETRY") == "1" ||
-		os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != ""
+	// Telemetry is opt-in: only the explicit HAWK_CODE_ENABLE_TELEMETRY=1
+	// flag enables it. Setting the standard OTEL_EXPORTER_OTLP_ENDPOINT must
+	// not implicitly enable hawk telemetry (Phase 3 hardening).
+	cfg.Enabled = os.Getenv("HAWK_CODE_ENABLE_TELEMETRY") == "1"
 
 	if hdrs := os.Getenv("OTEL_EXPORTER_OTLP_HEADERS"); hdrs != "" {
 		cfg.Headers = parseHeaders(hdrs)
