@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
@@ -25,7 +26,11 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		if err != nil {
 			return nil, fmt.Errorf("worktree: %w", err)
 		}
-		defer removeWorktree(ctx, cfg.RepoDir, wtPath)
+		// Use a detached context for cleanup so that cancellation of the
+		// mission context (Ctrl-C, timeout) does not kill the cleanup
+		// command. Without this, git worktree remove is killed before it
+		// runs and the worktree leaks on disk permanently (C4 fix).
+		defer removeWorktreeDetached(cfg.RepoDir, wtPath)
 
 		// Build the worker prompt
 		workerPrompt := fmt.Sprintf(
@@ -201,15 +206,33 @@ func createWorktree(ctx context.Context, repoDir, baseBranch, branch string) (st
 	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
+		// Clean up the temp directory created by mktemp so it doesn't
+		// leak on disk when git worktree add fails (C5 fix).
+		_ = os.RemoveAll(wtPath)
 		return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return wtPath, nil
+}
+
+// removeWorktreeDetached removes a git worktree using a fresh, non-cancellable
+// context with a generous timeout. This ensures cleanup runs even when the
+// mission context was cancelled (C4 fix). The original removeWorktree used the
+// caller's context, which meant a cancelled mission would kill the cleanup
+// command before it could run, leaking the worktree directory permanently.
+func removeWorktreeDetached(repoDir, wtPath string) {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	removeWorktree(cleanupCtx, repoDir, wtPath)
 }
 
 func removeWorktree(ctx context.Context, repoDir, wtPath string) {
 	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtPath) // #nosec G204 -- fixed git executable
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
+		// Best-effort: if git worktree remove fails (e.g. the worktree
+		// metadata is already gone), still try to remove the directory
+		// itself so we don't leak the temp dir from mktemp.
+		_ = os.RemoveAll(wtPath)
 		fmt.Fprintf(os.Stderr, "warning: failed to remove worktree %s: %v\n", wtPath, err)
 	}
 }

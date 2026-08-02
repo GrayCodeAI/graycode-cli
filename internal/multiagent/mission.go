@@ -520,6 +520,20 @@ func (m *Mission) createDir() (string, error) {
 	return dir, nil
 }
 
+// Cleanup removes the mission's temporary directory from /tmp/hawk-missions/.
+// Call this after the mission is complete (success or failure) to prevent
+// unbounded accumulation of mission artifacts. Safe to call multiple times.
+func (m *Mission) Cleanup() error {
+	if m.Dir == "" {
+		return nil
+	}
+	err := os.RemoveAll(m.Dir)
+	if err == nil {
+		m.Dir = ""
+	}
+	return err
+}
+
 func (m *Mission) persistState() error {
 	if m.Dir == "" {
 		return nil

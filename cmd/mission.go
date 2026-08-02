@@ -77,6 +77,10 @@ func runMission(_ *cobra.Command, args []string) error {
 	}
 
 	m := mission.New(prompt, cfg)
+	// Clean up the mission's temp directory when the command finishes,
+	// whether it succeeded or failed. Without this, /tmp/hawk-missions/
+	// accumulates one directory per run indefinitely (C6 fix).
+	defer func() { _ = m.Cleanup() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), missionTimeout)
 	defer cancel()
