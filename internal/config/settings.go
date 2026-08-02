@@ -196,6 +196,15 @@ func readSettingsFileCached(path string) ([]byte, error) {
 	return data, err
 }
 
+// invalidateSettingsCache forces the next readSettingsFileCached to re-read
+// from disk. SaveGlobal calls it after writing so a same-second, same-size
+// write cannot be served from stale mtime/size cache (Phase 3 fix).
+func invalidateSettingsCache() {
+	settingsCache.Lock()
+	settingsCache.valid = false
+	settingsCache.Unlock()
+}
+
 // LoadGlobalSettings loads only Hawk's user config settings.json.
 func LoadGlobalSettings() Settings {
 	var s Settings
@@ -388,7 +397,14 @@ func SaveGlobal(s Settings) error {
 		return err
 	}
 	// 0600: per-user config; keep it unreadable to other local users.
-	return os.WriteFile(globalSettingsPath(), data, 0o600)
+	if err := os.WriteFile(globalSettingsPath(), data, 0o600); err != nil {
+		return err
+	}
+	// Invalidate the in-process byte cache so subsequent loads within the
+	// same second see the new file (the cache is also keyed on mtime/size,
+	// which can be identical for a same-size write).
+	invalidateSettingsCache()
+	return nil
 }
 
 // SettingValue returns a display-safe value for a supported setting key.
