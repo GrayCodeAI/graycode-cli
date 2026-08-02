@@ -2,6 +2,7 @@ package parallel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 )
@@ -87,7 +88,9 @@ func (p *Pool) AddTask(description string) *Task {
 
 // Run executes all queued tasks in parallel, each in its own git worktree.
 // workFn receives the worktree path and task, and returns a result summary.
-// Tasks that fail do not prevent other tasks from completing.
+// Tasks that fail do not prevent other tasks from completing; the returned
+// error aggregates every failed task so callers are not left with silent
+// failures.
 func (p *Pool) Run(ctx context.Context, workFn func(ctx context.Context, worktreePath string, task *Task) (string, error)) error {
 	p.mu.Lock()
 	tasks := make([]*Task, len(p.tasks))
@@ -161,6 +164,22 @@ func (p *Pool) Run(ctx context.Context, workFn func(ctx context.Context, worktre
 	}
 
 	wg.Wait()
+
+	// Aggregate failures instead of returning nil unconditionally, so a run
+	// where every task failed is distinguishable from a fully successful run.
+	var failed []*Task
+	for _, t := range tasks {
+		if t.Status == StatusFailed {
+			failed = append(failed, t)
+		}
+	}
+	if len(failed) > 0 {
+		errs := make([]error, 0, len(failed))
+		for _, t := range failed {
+			errs = append(errs, fmt.Errorf("task %q failed: %w", t.Description, t.Error))
+		}
+		return errors.Join(errs...)
+	}
 	return nil
 }
 

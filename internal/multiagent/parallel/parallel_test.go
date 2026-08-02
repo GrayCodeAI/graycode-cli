@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -202,8 +203,11 @@ func TestErrorHandling(t *testing.T) {
 		}
 		return "success", nil
 	})
-	if err != nil {
-		t.Fatalf("Run: %v", err)
+	if err == nil {
+		t.Fatal("Run should return an aggregate error when a task fails")
+	}
+	if !strings.Contains(err.Error(), "fail-1") || !strings.Contains(err.Error(), "intentional failure") {
+		t.Errorf("aggregate error should name the failed task and its error, got: %v", err)
 	}
 	defer pool.Cleanup()
 
@@ -310,8 +314,8 @@ func TestContextCancellation(t *testing.T) {
 			return "", ctx.Err()
 		}
 	})
-	if err != nil {
-		t.Fatalf("Run: %v", err)
+	if err == nil {
+		t.Fatal("Run should report an aggregate error when tasks fail")
 	}
 	defer pool.Cleanup()
 
