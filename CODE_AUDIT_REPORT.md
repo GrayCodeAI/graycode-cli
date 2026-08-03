@@ -94,7 +94,7 @@ Every `SemanticSearch`/`HybridSearch` `SELECT`s all nodes then recomputes `Gener
 
 **H11. `engine/docs`: ~2,000 lines shipping with zero importers** — `internal/engine/docs/` (docgen.go, doc_updater.go, external_docs.go)
 Verified: no file outside the package references it. Within it: multi-line doc comments truncated to last line (doc_updater.go:350-368), `OldDoc` populated from *new* content (`:56,:87`), false-positive machine for capitalized words (`:522-539`), parser chokes on nested parens (`:330`), `ExternalDocs.Cache` never written (`external_docs.go:77`), methods of generic types dropped (docgen.go:938-951).
-**Fix:** either wire to a `hawk docs` command or delete; at minimum fix the top-3 bugs.
+**Fix:** either wire to a `hawk docs` command or delete; at minimum fix the top-3 bugs. *(fixed: deleted — dead since f0aa8fd, no importers, six known bugs; recoverable from git history if ever wanted)*
 
 **H12. Bash tool subprocesses inherit API-key env vars** — `internal/tool/task_tools.go:80`, `bash.go` (`exec.CommandContext` with no `cmd.Env` → full `os.Environ()`)
 Guard regexes (bash.go:102-105) block obvious dump patterns but are trivially bypassed (`python3 -c "import os;print(os.environ['ANTHROPIC_API_KEY'])"`). Keys are readable by anything the agent runs.
@@ -206,7 +206,7 @@ Sources: official docs matrix (hidekazu-konishi.com), MorphLLM ranked table, cod
 
 1. **Triage (C1, H1, H3–H6, H12):** wire panic recovery, runtime.jsonc allowlist, fail-closed HTTP hooks, SSE write-error exit, signal-safe session save, EvolvingMemory persistence, env scrubbing for bash
 2. **Concurrency & budgets (H7, M1, M2, M9):** mutex'd limits accessors, wire RecordCost, bounded tracer, honest error propagation
-3. **Dead code (H10, H11, M5, M8):** fix-and-test async; decide docs fate; wire or delete approval gate/composio stub/MessageBus
+3. **Dead code (H10, H11, M5, M8):** fix-and-test async; delete docs; wire or delete approval gate/composio stub/MessageBus
 4. **Performance (H8, M14–M18):** embedding cache, hoisted regexes, no-clone context access, viewport incremental render, lazy eyrie init
 5. **Multiagent correctness (H9, M6):** retryable branch names, exit-code propagation, detached worktree cleanup
 6. **Competitor deltas:** MCP server mode, JSONL headless output, benchmark harness
