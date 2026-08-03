@@ -96,7 +96,7 @@ func runPrint(text string) error {
 			// surface the remaining time budget once, on the first content.
 			if countdown && !countdownShown {
 				if rem := lifecycle.RemainingTime(ctx); rem != "" {
-					fmt.Fprintf(os.Stderr, "\n⏱️  %s\n", rem)
+					fmt.Fprintf(os.Stderr, "[time remaining] %s\n", rem)
 					countdownShown = true
 				}
 			}
@@ -377,7 +377,7 @@ func runRepl() error {
 				printed.WriteString(ev.Content)
 				if countdown && !countdownShown {
 					if rem := lifecycle.RemainingTime(ctx); rem != "" {
-						fmt.Fprintf(os.Stderr, "\n⏱️  %s\n", rem)
+						fmt.Fprintf(os.Stderr, "[time remaining] %s\n", rem)
 						countdownShown = true
 					}
 				}
