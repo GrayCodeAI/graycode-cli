@@ -11,7 +11,7 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.3
-	github.com/GrayCodeAI/eyrie v0.1.4-0.20260801100447-a8dd5d0900b0
+	github.com/GrayCodeAI/eyrie v0.1.4-0.20260803003032-026bfdd2be4b
 	github.com/GrayCodeAI/hawk-core-contracts v0.1.12
 	github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738
 	github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589
@@ -68,7 +68,6 @@ require (
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
-	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/dlclark/regexp2 v1.12.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -130,7 +129,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/GrayCodeAI/trace v0.1.4-0.20260726090743-c8165a1cc5f6
+	github.com/GrayCodeAI/trace v0.1.4-0.20260803003541-1cd0fc51b106
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
