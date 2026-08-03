@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -12,12 +13,18 @@ import (
 // HTTPHook is a remote decision hook invoked via POST.
 // The body is {"event":"...","tool":"...","data":{...}}.
 // Expected response JSON: {"action":"allow|deny","reason":"...","message":"..."}.
+//
+// Failure semantics: by default (FailOpen=false) any transport, protocol, or
+// response error DENIES the guarded operation — a downed compliance hook must
+// never silently allow. Set FailOpen=true only if an unreachable hook should
+// be treated as "no opinion".
 type HTTPHook struct {
 	Name     string
 	URL      string
 	Events   []string // empty = all events
 	Timeout  time.Duration
 	Priority int
+	FailOpen bool // when true, hook errors allow the operation instead of denying it
 }
 
 // RegisterHTTPDecisionHook registers an HTTP-backed decision hook.
@@ -30,6 +37,7 @@ func RegisterHTTPDecisionHook(h HTTPHook) {
 	}
 	client := &http.Client{Timeout: h.Timeout}
 	url := h.URL
+	failOpen := h.FailOpen
 	events := append([]string{}, h.Events...)
 	RegisterDecisionHookWithConfig(DecisionHookConfig{
 		Name: h.Name,
@@ -38,11 +46,25 @@ func RegisterHTTPDecisionHook(h HTTPHook) {
 		},
 		Priority: h.Priority,
 	}, func(event string, data map[string]interface{}) *HookDecision {
-		return invokeHTTPHook(client, url, event, data)
+		return invokeHTTPHook(client, url, event, data, failOpen)
 	})
 }
 
-func invokeHTTPHook(client *http.Client, url, event string, data map[string]interface{}) *HookDecision {
+// hookError converts a hook failure into a decision per the fail-open policy,
+// always logging the failure so a silently-dropped guardrail is impossible.
+func hookError(failOpen bool, event string, format string, args ...interface{}) *HookDecision {
+	msg := fmt.Sprintf(format, args...)
+	slog.Warn("http decision hook failed",
+		"event", event,
+		"fail_open", failOpen,
+		"error", msg)
+	if failOpen {
+		return nil // configured to allow when the hook is unreachable
+	}
+	return Deny("guardrail hook unavailable: " + msg)
+}
+
+func invokeHTTPHook(client *http.Client, url, event string, data map[string]interface{}, failOpen bool) *HookDecision {
 	payload := map[string]interface{}{
 		"event": event,
 		"data":  data,
@@ -52,21 +74,21 @@ func invokeHTTPHook(client *http.Client, url, event string, data map[string]inte
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil // fail-open
+		return hookError(failOpen, event, "marshal payload: %v", err)
 	}
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		return nil
+		return hookError(failOpen, event, "build request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "hawk-hooks/1.0")
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil
+		return hookError(failOpen, event, "request failed: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil
+		return hookError(failOpen, event, "unexpected status %d", resp.StatusCode)
 	}
 	var out struct {
 		Action  string `json:"action"`
@@ -74,7 +96,7 @@ func invokeHTTPHook(client *http.Client, url, event string, data map[string]inte
 		Message string `json:"message"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil
+		return hookError(failOpen, event, "decode response: %v", err)
 	}
 	switch out.Action {
 	case ActionDeny:
@@ -84,7 +106,7 @@ func invokeHTTPHook(client *http.Client, url, event string, data map[string]inte
 	case ActionInstruct:
 		return Instruct(firstNonEmpty(out.Message, out.Reason))
 	default:
-		return nil
+		return hookError(failOpen, event, "unrecognized action %q", out.Action)
 	}
 }
 

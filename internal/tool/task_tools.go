@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/env"
 	"github.com/GrayCodeAI/hawk/internal/taskruntime"
 )
 
@@ -78,6 +79,9 @@ func startBackgroundBash(ctx context.Context, command string, execName string, e
 	// execName/execArgs are already sandbox-wrapped by the Bash tool (or
 	// default to "bash" "-c" when sandbox is off).
 	cmd := exec.CommandContext(bgCtx, execName, execArgs...) // #nosec G204 -- intentional Bash tool execution after policy checks and sandbox wrapping
+	// Background tasks are long-lived and observable by the agent; scrub
+	// provider API keys so the child environment cannot leak credentials.
+	cmd.Env = env.SubprocessEnv()
 	// Put the child in its own process group so we can kill the whole tree
 	// (including grandchildren spawned by the shell) via kill(-pgid). Without
 	// this, e.g. `bash -c 'sleep 60 &'` leaves an orphan when the parent is

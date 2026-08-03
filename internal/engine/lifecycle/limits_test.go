@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -139,5 +140,54 @@ func TestLimitTracker_BashAndFileTracking(t *testing.T) {
 	}
 	if !strings.Contains(reason, "bash command limit") {
 		t.Errorf("unexpected reason: %q", reason)
+	}
+}
+
+func TestLimitTracker_ConcurrentAccessors(t *testing.T) {
+	lt := NewLimitTracker(DefaultLimits())
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 500; j++ {
+				lt.SetMaxTurns(j % 100)
+				lt.MaxTurns()
+				lt.SetMaxBudgetUSD(float64(j % 50))
+				lt.MaxBudgetUSD()
+				lt.SetCostUSD(float64(j))
+				_, _ = lt.IsExceeded()
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+func TestLimitTracker_CostLimitFallsBackToBudget(t *testing.T) {
+	// MaxCostUSD unset -> MaxBudgetUSD is the effective cap.
+	lt := NewLimitTracker(SafetyLimits{MaxBudgetUSD: 10})
+	lt.SetCostUSD(9.99)
+	if exceeded, _ := lt.IsExceeded(); exceeded {
+		t.Fatal("should not be exceeded below budget")
+	}
+	lt.SetCostUSD(10)
+	if exceeded, reason := lt.IsExceeded(); !exceeded {
+		t.Fatal("budget should be enforced via MaxCostUSD fallback")
+	} else if !strings.Contains(reason, "cost limit") {
+		t.Errorf("unexpected reason: %q", reason)
+	}
+}
+
+func TestLimitTracker_SetMaxBudgetUSD_SyncsCostLimit(t *testing.T) {
+	lt := NewLimitTracker(SafetyLimits{})
+	lt.SetMaxBudgetUSD(25)
+	lt.SetCostUSD(24.99)
+	if exceeded, _ := lt.IsExceeded(); exceeded {
+		t.Fatal("should not be exceeded below budget")
+	}
+	lt.SetCostUSD(25)
+	if exceeded, _ := lt.IsExceeded(); !exceeded {
+		t.Fatal("SetMaxBudgetUSD should drive IsExceeded via MaxCostUSD fallback")
 	}
 }

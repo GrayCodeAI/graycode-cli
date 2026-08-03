@@ -8,9 +8,11 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"golang.org/x/term"
@@ -647,6 +649,18 @@ func runChat() error {
 	// Enable terminal tab progress bar (OSC 9;4) for long-running operations.
 	EnableTabProgress()
 	ref.Set(p)
+
+	// Forward SIGHUP (terminal close, ssh drop, window manager exit) into the
+	// TUI as a tea.QuitMsg so the session is saved and cleaned up instead of
+	// dying silently mid-run. Bubble Tea only handles SIGINT and SIGTERM.
+	{
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGHUP)
+		go func() {
+			<-sigCh
+			ref.Send(tea.QuitMsg{})
+		}()
+	}
 
 	go func() {
 		if extra := strings.TrimSpace(buildDeferredWorkspacePromptContext()); extra != "" {

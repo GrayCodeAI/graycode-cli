@@ -512,6 +512,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Budget enforcement
 		limits := s.LifecycleSvc().Limits()
+		// Sync the tracker's cost accounting with the session's authoritative
+		// cost accumulator so LimitTracker.IsExceeded() (checked every turn by
+		// checkGuardConditions) enforces the same budget as this explicit check.
+		limits.SetCostUSD(s.CostValue().TotalUSD())
 		if limits.MaxBudgetUSD() > 0 && s.CostValue().TotalUSD() >= limits.MaxBudgetUSD() {
 			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())}
 			ch <- StreamEvent{Type: "done"}
