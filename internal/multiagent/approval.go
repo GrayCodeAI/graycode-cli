@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 )
 
 // RequestResponse is the operator's decision for an approval request.
@@ -90,7 +91,8 @@ type MissionApprovalGate struct {
 	// *ApprovalRequest to an operator UI and return immediately.
 	OnRequest func(req *ApprovalRequest)
 
-	// sessionApproved is the set of tool names auto-approved for this session.
+	// mu guards sessionApproved; Check may run from many worker goroutines.
+	mu              sync.Mutex
 	sessionApproved map[string]bool
 }
 
@@ -107,25 +109,27 @@ func NewMissionApprovalGate(onRequest func(req *ApprovalRequest)) *MissionApprov
 // the tool matches a risky category, it calls OnRequest and blocks until the
 // operator responds. Returns an error if the call is rejected or the context
 // expires; nil means proceed.
-func (g *MissionApprovalGate) Check(ctx context.Context, toolName string, args map[string]interface{}) error {
+func (g *MissionApprovalGate) Check(ctx context.Context, toolName, summary string) error {
 	if g == nil || g.OnRequest == nil {
 		return nil
 	}
 
-	cat, risky := classifyMissionAction(toolName, args)
+	cat, risky := classifyMissionAction(toolName, summary)
 	if !risky {
 		return nil
 	}
 
 	// Session-level auto-approval (ResponseApproveForSession was used before).
-	if g.sessionApproved[toolName] {
+	g.mu.Lock()
+	approved := g.sessionApproved[toolName]
+	g.mu.Unlock()
+	if approved {
 		return nil
 	}
 
 	req := &ApprovalRequest{
 		ToolName: toolName,
-		Args:     args,
-		Summary:  missionApprovalSummary(toolName, args),
+		Summary:  missionApprovalSummary(toolName, summary),
 		Category: cat,
 		respond:  make(chan RequestResponse, 1),
 	}
@@ -141,7 +145,9 @@ func (g *MissionApprovalGate) Check(ctx context.Context, toolName string, args m
 	case ResponseApprove:
 		return nil
 	case ResponseApproveForSession:
+		g.mu.Lock()
 		g.sessionApproved[toolName] = true
+		g.mu.Unlock()
 		return nil
 	case ResponseReject:
 		return ErrToolRejected
@@ -153,20 +159,20 @@ func (g *MissionApprovalGate) Check(ctx context.Context, toolName string, args m
 // classifyMissionAction mirrors the category heuristics from
 // engine/approval_gate.go so the multiagent gate reuses the same risk model
 // without importing the engine package (which would create a cycle).
-func classifyMissionAction(toolName string, args map[string]interface{}) (string, bool) {
+// summary carries the human-readable command/args text from the permission
+// request; it is empty when no detail is available.
+func classifyMissionAction(toolName, summary string) (string, bool) {
 	canon := missionCanonicalTool(toolName)
 
 	switch canon {
 	case "WebFetch", "WebSearch":
 		return "network", true
 	case "Bash":
-		if cmd, ok := args["command"].(string); ok {
-			if missionIsDestructiveDelete(cmd) {
-				return "file_deletion", true
-			}
-			if missionIsNetworkCommand(cmd) {
-				return "network", true
-			}
+		if missionIsDestructiveDelete(summary) {
+			return "file_deletion", true
+		}
+		if missionIsNetworkCommand(summary) {
+			return "network", true
 		}
 	}
 	return "", false
@@ -204,9 +210,9 @@ func missionIsNetworkCommand(cmd string) bool {
 	return false
 }
 
-func missionApprovalSummary(toolName string, args map[string]interface{}) string {
-	if cmd, ok := args["command"].(string); ok && cmd != "" {
-		return missionCanonicalTool(toolName) + ": " + cmd
+func missionApprovalSummary(toolName, summary string) string {
+	if summary != "" {
+		return missionCanonicalTool(toolName) + ": " + summary
 	}
 	return missionCanonicalTool(toolName)
 }

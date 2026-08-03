@@ -45,6 +45,11 @@ type Config struct {
 	PerWorkerTimeout  time.Duration `json:"per_worker_timeout,omitempty"`
 	MaxRetriesPerFeat int           `json:"max_retries_per_feat,omitempty"`
 
+	// ApprovalGate, when non-nil, intercepts risky tool calls (network,
+	// destructive file ops) in workers: the worker blocks until the operator
+	// responds. Never serialized — wired at run time from Mission.ApprovalGate.
+	ApprovalGate *MissionApprovalGate `json:"-"`
+
 	// Staged pipeline configuration (oh-my-claudecode-style team workflow).
 	PRDModel          string `json:"prd_model,omitempty"`
 	FixModel          string `json:"fix_model,omitempty"`
@@ -165,6 +170,11 @@ func (m *Mission) Plan(ctx context.Context, planFn PlanFunc) error {
 func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 	m.mu.Lock()
 	m.Status = StatusRunning
+	// A gate set directly on the Mission (m.ApprovalGate) must reach the
+	// workers, which only see m.Config.
+	if m.ApprovalGate != nil {
+		m.Config.ApprovalGate = m.ApprovalGate
+	}
 	m.mu.Unlock()
 
 	missionDir, err := m.ensureRunDir()

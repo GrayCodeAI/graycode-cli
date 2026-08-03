@@ -132,8 +132,6 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 				return err
 			}
 		}
-		// Defer credential migration until chat/print (keeps cold paths fast).
-		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 
 		if settings, err := loadEffectiveSettings(); err == nil {
 			if !replFlag && settings.ReplMode != nil && *settings.ReplMode {
@@ -146,6 +144,11 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 		}
 
 		if printMode || promptFlag != "" || inputFormat == "stream-json" || replFlag || watchFlag {
+			// Credential migration is deferred until a path that actually
+			// uses credentials: `hawk path`, `hawk version`, auto-skill and
+			// other cold commands no longer construct the eyrie engine
+			// (M17 — was ~1.8s on every root command).
+			logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 			if promptFlag == "" && !replFlag && !watchFlag {
 				stdinPrompt, err := readPromptFromStdin(inputFormat)
 				if err != nil {
@@ -196,6 +199,9 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 		if err := ensureCatalogBeforeAgent(context.Background(), false); err != nil {
 			return err
 		}
+
+		// TUI path uses credentials — run the one-time hygiene pass here.
+		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
 
 		// Launch TUI — use /config to set API keys; eyrie supplies providers and models
 		return runChat()

@@ -156,7 +156,11 @@ func (l *SessionLifecycle) OnSessionEnd(_ context.Context, session interface{}, 
 			Timestamp: time.Now(),
 		}
 		if session != nil {
-			entry.SessionID = fmt.Sprintf("session_%d", time.Now().UnixNano())
+			// Use the real session ID when the caller supplies a Session;
+			// fabricated IDs make cost metrics untraceable.
+			if sid, ok := session.(interface{ SessionID() string }); ok {
+				entry.SessionID = sid.SessionID()
+			}
 		}
 		if err := l.CostTracker.Record(entry); err != nil {
 			errs = append(errs, fmt.Sprintf("record cost: %v", err))

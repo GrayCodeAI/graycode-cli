@@ -52,6 +52,12 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	if reason := IsSensitivePath(path); reason != "" {
 		return "", fmt.Errorf("blocked: %s", reason)
 	}
+	// Resolve a symlinked parent so the write lands where the allowlist and
+	// sensitivity checks evaluated it, not behind a swapped symlink (M13).
+	// Brand-new directories don't resolve yet; MkdirAll creates them below.
+	if rdir, err := filepath.EvalSymlinks(filepath.Dir(path)); err == nil {
+		path = filepath.Join(rdir, filepath.Base(path))
+	}
 	if tc := GetToolContext(ctx); tc != nil && tc.Protected != nil && tc.Protected.IsProtected(path) {
 		return "", fmt.Errorf("path %s is protected (read-only)", path)
 	}

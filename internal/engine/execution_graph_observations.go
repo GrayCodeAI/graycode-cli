@@ -97,6 +97,13 @@ func (s *Session) executionGraphSessionID() string {
 	return strings.TrimSpace(s.persistID)
 }
 
+// SessionID returns the persistence ID of this session, or "" before one is
+// assigned. Used by lifecycle bookkeeping to attribute cost entries to the
+// real session instead of fabricated IDs.
+func (s *Session) SessionID() string {
+	return s.executionGraphSessionID()
+}
+
 // ConfigureContextGraphObservation binds Yaad recall projections to this
 // persisted Hawk session. It is safe to call before either side is configured.
 func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {

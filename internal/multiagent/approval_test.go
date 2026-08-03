@@ -17,9 +17,7 @@ func TestApprovalGate_ApprovePath(t *testing.T) {
 		}()
 	})
 
-	err := gate.Check(context.Background(), "Bash", map[string]interface{}{
-		"command": "rm -rf /tmp/test",
-	})
+	err := gate.Check(context.Background(), "Bash", "rm -rf /tmp/test")
 	if err != nil {
 		t.Fatalf("expected nil error on approve, got: %v", err)
 	}
@@ -31,9 +29,7 @@ func TestApprovalGate_RejectPath(t *testing.T) {
 		go func() { _ = req.Respond(ResponseReject) }()
 	})
 
-	err := gate.Check(context.Background(), "Bash", map[string]interface{}{
-		"command": "curl http://example.com",
-	})
+	err := gate.Check(context.Background(), "Bash", "curl http://example.com")
 	if err == nil {
 		t.Fatal("expected ErrToolRejected, got nil")
 	}
@@ -52,7 +48,7 @@ func TestApprovalGate_SessionApprovePath(t *testing.T) {
 	})
 
 	// First call: triggers OnRequest, gets session-approved.
-	err := gate.Check(context.Background(), "WebFetch", map[string]interface{}{})
+	err := gate.Check(context.Background(), "WebFetch", "")
 	if err != nil {
 		t.Fatalf("first call: expected nil, got: %v", err)
 	}
@@ -61,7 +57,7 @@ func TestApprovalGate_SessionApprovePath(t *testing.T) {
 	}
 
 	// Second call: should skip OnRequest because the tool is session-approved.
-	err = gate.Check(context.Background(), "WebFetch", map[string]interface{}{})
+	err = gate.Check(context.Background(), "WebFetch", "")
 	if err != nil {
 		t.Fatalf("second call: expected nil (session approved), got: %v", err)
 	}
@@ -80,9 +76,7 @@ func TestApprovalGate_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 
-	err := gate.Check(ctx, "Bash", map[string]interface{}{
-		"command": "wget http://example.com",
-	})
+	err := gate.Check(ctx, "Bash", "wget http://example.com")
 	if err == nil {
 		t.Fatal("expected ErrApprovalTimeout when context expires, got nil")
 	}
@@ -94,9 +88,7 @@ func TestApprovalGate_ContextCancellation(t *testing.T) {
 // TestApprovalGate_NilGate verifies that a nil gate is a no-op.
 func TestApprovalGate_NilGate(t *testing.T) {
 	var gate *MissionApprovalGate
-	err := gate.Check(context.Background(), "Bash", map[string]interface{}{
-		"command": "rm -rf /tmp/x",
-	})
+	err := gate.Check(context.Background(), "Bash", "rm -rf /tmp/x")
 	if err != nil {
 		t.Fatalf("nil gate should be a no-op, got: %v", err)
 	}
@@ -105,9 +97,7 @@ func TestApprovalGate_NilGate(t *testing.T) {
 // TestApprovalGate_NilOnRequest verifies that a gate with no OnRequest is a no-op.
 func TestApprovalGate_NilOnRequest(t *testing.T) {
 	gate := NewMissionApprovalGate(nil)
-	err := gate.Check(context.Background(), "Bash", map[string]interface{}{
-		"command": "rm -rf /tmp/x",
-	})
+	err := gate.Check(context.Background(), "Bash", "rm -rf /tmp/x")
 	if err != nil {
 		t.Fatalf("gate with nil OnRequest should be a no-op, got: %v", err)
 	}
@@ -120,9 +110,7 @@ func TestApprovalGate_NonRiskyToolNotGated(t *testing.T) {
 		called = true
 	})
 
-	err := gate.Check(context.Background(), "Read", map[string]interface{}{
-		"file_path": "/etc/hosts",
-	})
+	err := gate.Check(context.Background(), "Read", "")
 	if err != nil {
 		t.Fatalf("non-risky tool should not be gated, got: %v", err)
 	}

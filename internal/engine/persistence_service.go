@@ -102,6 +102,22 @@ func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 	return cloneMessages(s.messages)
 }
 
+// RawMessagesView returns the live transcript for read-only, non-retaining
+// use. It performs no clone — repeated per-turn reads (token estimation,
+// context management) must not deep-copy the whole transcript each time
+// (M15 — that made long sessions quadratic). Callers must treat the result
+// as ephemeral: appends may reallocate the backing array, and nested tool
+// arguments are shared with live session state. Use RawMessages when a
+// stable snapshot is required. Safe on a nil receiver (returns nil).
+func (s *PersistenceService) RawMessagesView() []types.EyrieMessage {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.messages
+}
+
 // Graph returns Hawk's product-owned conversation graph.
 func (s *PersistenceService) Graph() *session.ConversationGraph { return s.graph }
 

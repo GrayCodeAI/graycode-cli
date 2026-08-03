@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -627,7 +628,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if err != nil || resp == nil {
 						return
 					}
-					lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Yaad(), resp.Content)
+					if err := lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Yaad(), resp.Content); err != nil {
+						slog.Warn("memory ops", "error", err)
+					}
 				}()
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
@@ -682,7 +685,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						break
 					}
 				}
-				go s.LifecycleSvc().Pipeline().EndSession(ctx.Err() == nil, taskGoal)
+				go s.LifecycleSvc().Pipeline().EndSession(ctx, ctx.Err() == nil, taskGoal)
 			}
 			// Session end hook
 			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
@@ -690,6 +693,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"model":    s.ChatLLM().Model(),
 				"messages": len(s.Persistence().RawMessages()),
 			})
+			// Drain the async hook queue with a bounded wait so post-session
+			// observers finish before the process exits; nothing new is
+			// scheduled after this point (M19). Timeout guards a hung hook.
+			waitCtx, waitCancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer waitCancel()
+			if err := hooks.WaitAsync(waitCtx); err != nil {
+				slog.Warn("session end hooks", "error", err)
+			}
 			return
 		}
 

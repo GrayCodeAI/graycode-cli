@@ -42,10 +42,12 @@ type PolicyManager struct {
 }
 
 // NewPolicyManager creates a policy manager for the given project.
+// The default posture is deny-by-default: only explicit rules, grants, or a
+// configured default in the policy file allow an action.
 func NewPolicyManager(projectDir string) *PolicyManager {
 	m := &PolicyManager{
 		projectDir:    projectDir,
-		policy:        &PolicyConfig{Default: DecisionAllow},
+		policy:        &PolicyConfig{Default: DecisionDeny},
 		projectGrants: NewProjectApprovalStore(projectDir),
 		globalGrants:  NewGlobalApprovalStore(),
 	}
@@ -54,16 +56,21 @@ func NewPolicyManager(projectDir string) *PolicyManager {
 }
 
 func (m *PolicyManager) loadPolicy() {
-	// Load project policy
-	loadPolicyFile(filepath.Join(m.projectDir, ".agents", "sandbox.jsonc"), m.policy)
-	// Load global policy (overrides defaults but not project)
+	// Load project policy (sets the default and rules explicitly).
+	projectPolicy := &PolicyConfig{}
+	loadPolicyFile(filepath.Join(m.projectDir, ".agents", "sandbox.jsonc"), projectPolicy)
+	// Load global policy (fills gaps only; project takes precedence).
 	globalPolicy := &PolicyConfig{}
 	loadPolicyFile(filepath.Join(storage.StateDir(), "sandbox.jsonc"), globalPolicy)
-	// Project rules take precedence
-	if len(globalPolicy.Rules) > 0 && len(m.policy.Rules) == 0 {
+	m.policy = &PolicyConfig{Default: DecisionDeny}
+	if projectPolicy.Default != "" {
+		m.policy.Default = projectPolicy.Default
+	}
+	m.policy.Rules = projectPolicy.Rules
+	if len(m.policy.Rules) == 0 {
 		m.policy.Rules = globalPolicy.Rules
 	}
-	if globalPolicy.Default != "" && m.policy.Default == DecisionAllow {
+	if projectPolicy.Default == "" && globalPolicy.Default != "" {
 		m.policy.Default = globalPolicy.Default
 	}
 }
@@ -149,6 +156,5 @@ func (m *PolicyManager) Policy() PolicyConfig {
 func (m *PolicyManager) ReloadPolicy() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.policy = &PolicyConfig{Default: DecisionAllow}
 	m.loadPolicy()
 }

@@ -49,13 +49,13 @@ Severity scale: **CRITICAL** (crash/data loss/RCE), **HIGH** (security boundary 
 - `cmd/hawk/main.go` — `Execute()` has no `recover()`. `cmd/errors.go:33` (`panicRecovery`) and `internal/crash/crash.go` are **dead code** — zero production callers (verified by grep).
 - `internal/crash/crash.go:17-18` states explicitly: *"Do NOT call this from cmd/hawk yet — wiring into the binary entry point is a future wave."*
 - **Impact:** any panic in a background goroutine (TUI render, spinner at `cmd/chat_tools.go:234`, tool execution) kills the process mid-session with no session save, no crash report, no cleanup.
-- **Fix:** wrap `Execute()` in `panicRecovery(saveFn)` and install `crash.Install()` at startup. *(scheduled)*
+- **Fix:** wrap `Execute()` in `panicRecovery(saveFn)` and install `crash.Install()` at startup. *(fixed: `panicRecovery` wraps the TUI execute path; `crash.Install()` wired in `cmd/hawk/main.go`)*
 
 ### 3.2 HIGH
 
 **H1. `.agents/runtime.jsonc` → arbitrary root code execution at image build time** — `internal/sandbox/runtime_deps.go:14-67`, `container.go:154,236-238`
 `runtime_extra_deps[]` becomes raw `RUN <shell>` layers in the sandbox image; `runtime_startup_env_vars` becomes `docker run -e KEY=VALUE`. The file is project-controlled and agent-writable. A malicious repo executes attacker shell as root during `docker build` (build network unrestricted, `--cap-drop` does not apply), and the result is baked into the session image — a persistent session backdoor.
-**Fix:** allowlist validation (reject `curl|wget|nc|sh|bash|python` in deps; fixed key set for env; no `PATH`/`HOME`/`LD_PRELOAD`). *(scheduled)*
+**Fix:** allowlist validation (reject `curl|wget|nc|sh|bash|python` in deps; fixed key set for env; no `PATH`/`HOME`/`LD_PRELOAD`). *(fixed: blocklisted dep terms rejected with `slog.Warn`; env validated against a fixed key set)*
 
 **H2. Project secrets readable + exfiltratable by default** — `container.go:143` (project rw mount), `mode.go:160-170` (`ModeAllowsNetwork`: workspace → network on), `bash.go:604-673`
 Default mode mounts the whole project (incl. `.env`, credentials) rw into a container with **outbound network**. A compromised agent can exfiltrate project secrets. Strict mode denies network but is not the default. `NetworkProxy`/`BlockPrivateNetworks` exist but are never wired into production (only tests reference them).
@@ -63,22 +63,22 @@ Default mode mounts the whole project (incl. `.env`, credentials) rw into a cont
 
 **H3. HTTP decision hooks fail open silently** — `internal/hooks/http_hooks.go:45-88`, `decision.go:118-142`
 Every failure path (marshal, request build, client error/3s timeout, non-2xx, decode, unknown action) returns `nil`, and `ExecuteDecisionHooks` treats nil as "no opinion, proceed". No logging on HTTP errors. A downed compliance/guardrail hook → every guarded tool call silently allowed.
-**Fix:** return a deny decision + `slog.Warn` on error; make fail-open an explicit config option. *(scheduled)*
+**Fix:** return a deny decision + `slog.Warn` on error; make fail-open an explicit config option. *(fixed: deny + `slog.Warn` by default; `FailOpen` explicit opt-in)*
 
 **H4. SSE generation >5 min permanently wedges the daemon** — `internal/daemon/daemon.go:215` (`WriteTimeout: 300s`), `streamSSE` `:721-777`
 `WriteTimeout` is an absolute deadline; `streamSSE` ignores `fmt.Fprintf` errors (`_, _ =`) and only exits on `r.Context().Done()` or channel close — neither fires when the write deadline lapses. The handler never returns; the session stripe lock (`:580-582`) and global `concurrencySem` (`:551-557`) are held forever; with the default cap of 4, all subsequent `/v1/chat` requests 503 permanently. Agentic tasks routinely exceed 5 min.
-**Fix:** exit the SSE loop on write error; use `http.ResponseController` for a per-write deadline that resets per flush. *(scheduled)*
+**Fix:** exit the SSE loop on write error; use `http.ResponseController` for a per-write deadline that resets per flush. *(fixed: `writeSSE` reports failures, handler exits the loop; per-write deadline via `ResponseController`)*
 
 **H5. External SIGINT/SIGTERM/SIGHUP bypass session save** — `cmd/chat_update.go` (no `tea.InterruptMsg`/`tea.QuitMsg` cases — verified absent), Bubble Tea v2 handles both and exits without `saveSession()`; SIGHUP unhandled (default kill).
 `kill -TERM`, terminal close, or ssh drop mid-run → transcript lost, temp files left.
-**Fix:** handle `tea.InterruptMsg`/`tea.QuitMsg` → run the same save path as the two-stage ctrl+c; install SIGHUP handler. *(scheduled)*
+**Fix:** handle `tea.InterruptMsg`/`tea.QuitMsg` → run the same save path as the two-stage ctrl+c; install SIGHUP handler. *(fixed: `InterruptMsg`/`QuitMsg`/SIGHUP all route through the shared quit-save path)*
 
 **H6. Self-improvement memory never persists (default CLI path)** — `internal/intelligence/memory/evolving.go:36-40` (`NewEvolvingMemory` never calls `Load`), `internal/engine/lifecycle/lifecycle_adapters.go:14-39` (adapter only calls `Learn`/`Retrieve`/`Format`, never `Save`)
 Everything learned at session end is lost at process exit; `OnSessionStart` always returns empty guidelines. The Reflexion-style loop is a **no-op** in the shipped CLI.
-**Fix:** `Load()` in constructor, `Save()` after `Learn` (debounced), test the round-trip. *(scheduled)*
+**Fix:** `Load()` in constructor, `Save()` after `Learn` (debounced), test the round-trip. *(fixed: `Load` in constructor, atomic `Save` after `Learn`, round-trip test)*
 
 **H7. Budget enforcement is split-brain** — `internal/engine/lifecycle/limits.go:14` (`MaxCostUSD` "default: from MaxBudgetUSD" — never implemented), `:86` (`IsExceeded` checks `MaxCostUSD` only), `RecordCost`/`RecordTokens` have **zero production callers** (verified by grep); production budget flows through `Session.SetMaxBudgetUSD` and enforcement at `stream.go:515`. `VibeLimits` sets `MaxCostUSD: 5.0` with `MaxBudgetUSD: 0` (limits.go:147-156) — inconsistent.
-**Fix:** fallback `MaxCostUSD = MaxBudgetUSD` when unset; wire `RecordCost` into the stream cost accounting; make `VibeLimits` consistent. *(scheduled)*
+**Fix:** fallback `MaxCostUSD = MaxBudgetUSD` when unset; wire `RecordCost` into the stream cost accounting; make `VibeLimits` consistent. *(fixed: `MaxCostUSD` falls back to `MaxBudgetUSD`; accessors mutex-protected (M1); cost synced from the session cost accumulator)*
 
 **H8. Codegraph semantic search is O(N) full re-embedding per query** — `internal/codegraph/embeddings_cgo.go:13-57`, `tool/codegraph.go:482`
 Every `SemanticSearch`/`HybridSearch` `SELECT`s all nodes then recomputes `GenerateEmbedding(n)` per node (hash-based, uncached), then cosine-compares. On 100k-node repos this is seconds per tool call. The precomputed `CodeVectorStore` (`vector_store.go:122-239`) exists but is unused by `SemanticSearch` (dead duplication; itself brute-force O(N²) sort, no locks).
@@ -90,7 +90,7 @@ Every `SemanticSearch`/`HybridSearch` `SELECT`s all nodes then recomputes `Gener
 
 **H10. `engine/async`: goroutine leak + double-loop + missing terminal event (dead code today)** — `internal/engine/async/engine.go:93-106`, `:49-56`, `event.go:146`, `engine.go:128-146`
 `Stop()` cancels ctx but the loop is parked in `subQ.Next()` (`<-sq.notify`) → **leak on every stop**; `Start()` after `Stop()` spawns a second loop draining the same queue (double processing); on stream error `EventDone` is never emitted → consumers hang; `toAsyncEvent` has no default for `compact_start`/`blast_radius` events → zero-value garbage events; `ReplyTo` contract is unfulfilled; subscribers can't unsubscribe.
-**Fix:** rewritten engine: `Stop()` cancels a loop ctx and joins via WaitGroup (bounded wait); `Start` after `Stop` spawns one fresh loop; single-threaded loop drains the queue via non-recursive `pop()` after each notify (no stack-growth, no parked-goroutine leak); `Cancel()` aborts the in-flight turn directly (a queued cancel could never be popped while the loop is blocked inside the turn's stream); `EventDone` is always emitted (success, stream error, or canceled turn) and forwarded to `ReplyTo`; unmapped events map to `EventInfo` preserving the raw type; `EventQueue.Unsubscribe` added; full-UUID event/submission IDs. **8 tests, 88.2% coverage (was 0%), race-clean.** *(fixed)*
+**Fix:** rewritten engine: `Stop()` cancels a loop ctx and joins via WaitGroup (bounded wait); `Start` after `Stop` spawns one fresh loop; single-threaded loop drains the queue via non-recursive `pop()` after each notify (no stack-growth, no parked-goroutine leak); `Cancel()` aborts the in-flight turn directly (a queued cancel could never be popped while the loop is blocked inside the turn's stream); `EventDone` is always emitted (success, stream error, or canceled turn) and forwarded to `ReplyTo`; unmapped events map to `EventInfo` preserving the raw type; `EventQueue.Unsubscribe` added; full-UUID event/submission IDs. **9 tests, 88.2% coverage (was 0%), race-clean.** *(fixed)*
 
 **H11. `engine/docs`: ~2,000 lines shipping with zero importers** — `internal/engine/docs/` (docgen.go, doc_updater.go, external_docs.go)
 Verified: no file outside the package references it. Within it: multi-line doc comments truncated to last line (doc_updater.go:350-368), `OldDoc` populated from *new* content (`:56,:87`), false-positive machine for capitalized words (`:522-539`), parser chokes on nested parens (`:330`), `ExternalDocs.Cache` never written (`external_docs.go:77`), methods of generic types dropped (docgen.go:938-951).
@@ -98,32 +98,32 @@ Verified: no file outside the package references it. Within it: multi-line doc c
 
 **H12. Bash tool subprocesses inherit API-key env vars** — `internal/tool/task_tools.go:80`, `bash.go` (`exec.CommandContext` with no `cmd.Env` → full `os.Environ()`)
 Guard regexes (bash.go:102-105) block obvious dump patterns but are trivially bypassed (`python3 -c "import os;print(os.environ['ANTHROPIC_API_KEY'])"`). Keys are readable by anything the agent runs.
-**Fix:** strip provider key env vars (or pass a scrubbed env) when spawning agent commands. *(scheduled)*
+**Fix:** strip provider key env vars (or pass a scrubbed env) when spawning agent commands. *(fixed: agent subprocesses spawn with scrubbed env — `internal/env/scrub.go` builds the allowlist once from `ScrubSet`)*
 
 ### 3.3 MEDIUM
 
 | ID | Finding | Location |
 |---|---|---|
-| M1 | Data race on `LimitTracker.limits` accessors (read/write without mutex) while daemon/multiagent goroutines call `SetMaxTurns` concurrently | `internal/engine/lifecycle/limits.go:129-132` |
-| M2 | `ParseAndApplyMemoryOps` swallows all errors (nil bridge, discarded `bridge.Remember`, malformed JSON); 0% coverage; runs in background goroutine | `sleeptime_ops.go:25-35`, `stream.go:626` |
-| M3 | `SkillDistillerAdapter` returns nil on error — "not configured" and "failed" indistinguishable | `lifecycle_adapters.go:50-52,77-80` |
-| M4 | Cost metrics use fabricated session IDs (`"session_"+UnixNano`) instead of the real session ID | `lifecycle.go:158-160` |
-| M5 | `MissionApprovalGate` is dead code (zero production callers); workers auto-approve everything incl. arbitrary bash; `sessionApproved` map would race when wired | `multiagent/approval.go:110-144`, `worker.go:61-66` |
+| M1 | Data race on `LimitTracker.limits` accessors (read/write without mutex) while daemon/multiagent goroutines call `SetMaxTurns` concurrently | `internal/engine/lifecycle/limits.go:129-132` *(fixed: mutex-protected accessors, covered by `limits_test.go`)* |
+| M2 | `ParseAndApplyMemoryOps` swallows all errors (nil bridge, discarded `bridge.Remember`, malformed JSON); 0% coverage; runs in background goroutine | `sleeptime_ops.go:25-35`, `stream.go:626` *(fixed: returns `error` — `ErrNoMemoryOps`, wrapped parse/remember errors via `errors.Join`, nil-bridge error; call site logs `slog.Warn`; 7 new tests)* |
+| M3 | `SkillDistillerAdapter` returns nil on error — "not configured" and "failed" indistinguishable | `lifecycle_adapters.go:50-52,77-80` *(fixed: `Retrieve` logs `slog.Warn` with the `Search` error)* |
+| M4 | Cost metrics use fabricated session IDs (`"session_"+UnixNano`) instead of the real session ID | `lifecycle.go:158-160` *(fixed: `OnSessionEnd` reads the real ID via `Session.SessionID()` — added in `execution_graph_observations.go`; nil-getter falls back to empty)* |
+| M5 | `MissionApprovalGate` is dead code (zero production callers); workers auto-approve everything incl. arbitrary bash; `sessionApproved` map would race when wired | `multiagent/approval.go:110-144`, `worker.go:61-66` *(fixed: wired into production — `Config.ApprovalGate` consulted by the worker permission fn; `Check(ctx, toolName, summary)` classifies bash/network/web actions as risky; `sessionApproved` mutex-protected)* |
 | M6 | Validation-worker cleanup regressed (cancellable ctx kills `git worktree remove` → permanent leak) | `multiagent/worker.go:144` *(fixed: detached-context cleanup + branch deletion)* |
-| M7 | Oversized MCP response (>1MB scanner cap) silently kills the client connection; server child stays alive; no recovery | `internal/mcp/mcp.go:95,167-179` |
-| M8 | `Composio.ExecuteTool` returns fake success (`Success: true` echoing params); agents would report unexecuted actions | `internal/composio/composio.go:147-177` |
-| M9 | In-memory `Tracer` accumulates spans unboundedly (daemon lifetime); `Disable()` doesn't stop recording | `internal/engine/observability/trace.go:45-59,112-116` *(fixed: `StartSpan` checks `enable`, buffer capped at 10k spans; dropped spans stay functional)* |
-| M10 | `diffsandbox.absPath` is lexical-only; symlinked intermediate components escape the sandbox root | `internal/diffsandbox/sandbox.go:419-435` |
-| M11 | `PolicyManager` defaults to `DecisionAllow` — stated deny-by-default posture not reflected | `internal/sandbox/manager.go:48` |
-| M12 | userns remap conditional; without it container runs as root with rw project mount; no `--user` fallback | `container.go:33-40,149-153` |
-| M13 | Host-side file tools: check-then-open symlink TOCTOU; name-based sensitivity (`secrets.txt` allowed) | `internal/tool/file_read.go`, `file_write.go`, `safety.go:251+` |
+| M7 | Oversized MCP response (>1MB scanner cap) silently kills the client connection; server child stays alive; no recovery | `internal/mcp/mcp.go:95,167-179` *(fixed: dead-server flag marks the connection on readLoop end, kills the child process, and `callWithTimeout` fails fast)* |
+| M8 | `Composio.ExecuteTool` returns fake success (`Success: true` echoing params); agents would report unexecuted actions | `internal/composio/composio.go:147-177` *(fixed: package deleted — unwired stub, zero importers; provider implementations belong in `external/eyrie` per the architecture note; recoverable from git history)* |
+| M9 | In-memory `Tracer` accumulates spans unboundedly (daemon lifetime); `Disable()` doesn't stop recording | `internal/observability/oteltrace/trace.go:45-59,112-116` *(fixed: `StartSpan` checks `enable`, buffer capped at 10k spans; dropped spans stay functional)* |
+| M10 | `diffsandbox.absPath` is lexical-only; symlinked intermediate components escape the sandbox root | `internal/diffsandbox/sandbox.go:419-435` *(fixed: component-wise walk with `Lstat` — symlinks resolved and containment-re-checked against the resolved root, dangling symlinks rejected; covers macOS `/var → /private/var`)* |
+| M11 | `PolicyManager` defaults to `DecisionAllow` — stated deny-by-default posture not reflected | `internal/sandbox/manager.go:48` *(fixed: default is `DecisionDeny`; project policy takes precedence with global filling gaps; reload no longer resets to allow)* |
+| M12 | userns remap conditional; without it container runs as root with rw project mount; no `--user` fallback | `container.go:33-40,149-153` *(fixed: `--user <uid>:<gid>` appended when userns remap is unavailable)* |
+| M13 | Host-side file tools: check-then-open symlink TOCTOU; name-based sensitivity (`secrets.txt` allowed) | `internal/tool/file_read.go`, `file_write.go`, `safety.go:251+` *(fixed: resolve-then-revalidate + `os.SameFile` fd guard; writes land at the resolved parent; `blockedBasenames` covers secrets/credential files; symlink-escape tests added)* |
 | M14 | Per-call `regexp.MustCompile` in hot paths (5 sites) | `internal/feature/eval/filters.go:13-32`, `tool/spec_checklist.go:119-149`, `tool/ticket_compliance.go:62`, `feature/fingerprint/project_conventions.go:180-181` *(fixed: all hoisted to package-level vars)* |
-| M15 | Full-transcript deep clone per access in `RawMessages()` — quadratic over session length | `internal/engine/persistence_service.go`, callers `context_governor.go:120-148` |
-| M16 | TUI viewport re-renders full prefix per streamed chunk — O(messages) per token | `cmd/chat_viewport_render.go` |
-| M17 | `hawk path` 1.83s wall; `MigrateProviderSecrets`→`newEyrieEngine()`+`gateway.New()` runs on **every** root command | `cmd/root.go:136`, `internal/config/eyrie_engine.go:15-17,127-133` |
-| M18 | Unbounded TUI-side growth (history, messageQueue, messages, `toolResultExpanded`) | `cmd/chat_submit.go:51`, `chat_model.go:185` |
-| M19 | Async hook goroutines never drained (`WaitAsync` has no callers) — unbounded under tool loops | `internal/hooks/hooks.go:134-156` |
-| M20 | Legacy `Sandbox.Run` fails open when `Enabled=false` (host `bash -c`); no production callers — latent footgun | `internal/sandbox/sandbox.go:134-135` |
+| M15 | Full-transcript deep clone per access in `RawMessages()` — quadratic over session length | `internal/engine/persistence_service.go`, callers `context_governor.go:120-148` *(fixed: hot per-turn reads use the read-only, non-retaining `RawMessagesView()` (no clone); `RawMessages` keeps its deep-copy snapshot contract)* |
+| M16 | TUI viewport re-renders full prefix per streamed chunk — O(messages) per token | `cmd/chat_viewport_render.go` *(no change needed: render cache + incremental stream tail already make per-chunk rendering amortized O(tail); incremental-vs-full-rebuild equivalence asserted by `chat_viewport_render_test.go`)* |
+| M17 | `hawk path` 1.83s wall; `MigrateProviderSecrets`→`newEyrieEngine()`+`gateway.New()` runs on **every** root command | `cmd/root.go:136`, `internal/config/eyrie_engine.go:15-17,127-133` *(fixed: migration moved off the root preamble into the chat/print/repl branches and before `runChat()`; cold commands like `hawk path` never build the engine)* |
+| M18 | Unbounded TUI-side growth (history, messageQueue, messages, `toolResultExpanded`) | `cmd/chat_submit.go:51`, `chat_model.go:185` *(fixed: prompt history capped (200) via `pushHistory`, queue capped (100) via `enqueueMessage`, messages already trimmed at 500, expansion map reindexed+pruned on trim; unit tests added)* |
+| M19 | Async hook goroutines never drained (`WaitAsync` has no callers) — unbounded under tool loops | `internal/hooks/hooks.go:134-156` *(fixed: session-end drains queued async hooks via `WaitAsync` with a 30s cap after `ExecuteAsync`)* |
+| M20 | Legacy `Sandbox.Run` fails open when `Enabled=false` (host `bash -c`); no production callers — latent footgun | `internal/sandbox/sandbox.go:134-135` *(fixed: fails closed unless explicitly opted out via `Tier == TierOff`)* |
 
 ### 3.4 LOW (selected)
 

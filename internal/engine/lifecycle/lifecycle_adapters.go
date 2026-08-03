@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
@@ -79,6 +80,9 @@ func (a *SkillDistillerAdapter) Retrieve(query string) []string {
 	}
 	skills, err := a.Search(query)
 	if err != nil {
+		// The interface cannot surface errors, so log them: "not configured"
+		// (nil Search) and "search failed" must not look identical.
+		slog.Warn("skill distiller: retrieve failed", "error", err)
 		return nil
 	}
 	out := make([]string, 0, len(skills))

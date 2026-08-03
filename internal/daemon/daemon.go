@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -972,6 +973,50 @@ func (s *Server) trackSession(id string, req ChatRequest, previous *hawksession.
 		CWD:       req.CWD,
 		Agent:     req.Agent,
 	})
+	// The sessions map is a soft in-memory index (durable state lives in the
+	// on-disk session store) — bounding it prevents unbounded growth across a
+	// long-lived daemon lifetime (LOW finding). Drop the oldest entries once
+	// the cap is exceeded; LastUsed is recomputed on each trackSession call.
+	s.evictStaleSessions(maxTrackedSessions)
+}
+
+// maxTrackedSessions caps the in-memory session index (LOW finding: the map
+// previously grew without bound over the daemon lifetime). Durability is
+// unaffected — this only backs GET /v1/sessions and per-session turn counts.
+const maxTrackedSessions = 1000
+
+// evictStaleSessions trims the in-memory session index to at most `maxKeep`
+// entries, dropping the ones with the oldest LastUsed (ties broken by ID for
+// determinism). It is safe to call concurrently with ongoing Store/Load.
+func (s *Server) evictStaleSessions(maxKeep int) {
+	var entries []struct {
+		id string
+		s  *Session
+	}
+	s.sessions.Range(func(k, v any) bool {
+		id, _ := k.(string)
+		sess, _ := v.(*Session)
+		if id == "" || sess == nil {
+			return true
+		}
+		entries = append(entries, struct {
+			id string
+			s  *Session
+		}{id: id, s: sess})
+		return true
+	})
+	if len(entries) <= maxKeep {
+		return
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if !entries[i].s.LastUsed.Equal(entries[j].s.LastUsed) {
+			return entries[i].s.LastUsed.Before(entries[j].s.LastUsed)
+		}
+		return entries[i].id < entries[j].id
+	})
+	for i := 0; i < len(entries)-maxKeep; i++ {
+		s.sessions.Delete(entries[i].id)
+	}
 }
 
 func (s *Server) handleListSessions(w http.ResponseWriter, _ *http.Request) {

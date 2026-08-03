@@ -48,9 +48,7 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 		m.input.CursorEnd()
 		return m, nil
 	}
-	m.history = append(m.history, text)
-	m.historyIdx = len(m.history)
-	m.historyDraft = ""
+	m.pushHistory(text)
 	m.input.Reset()
 	if strings.HasPrefix(text, "/") {
 		result, cmd := m.handleCommand(text)

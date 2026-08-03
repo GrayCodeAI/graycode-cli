@@ -2,9 +2,11 @@ package session
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -92,9 +94,11 @@ func Save(s *Session) error {
 		return fmt.Errorf("create sessions directory: %w", err)
 	}
 
-	// Write to temp file, then atomic rename
+	// Write to temp file, then atomic rename. The temp name is namespaced
+	// with getpid() so two processes (or two saves of the same session from
+	// different hawk instances) don't clobber each other's temp file.
 	target := jsonlPathFor(s.ID)
-	tmp := target + ".tmp"
+	tmp := fmt.Sprintf("%s.tmp.%d", target, os.Getpid())
 
 	// 0600: the session JSONL holds full conversation history (private user
 	// state, matching the WAL and 0750 session dir). os.Create would leave it
@@ -276,57 +280,27 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	var s Session
-	s.ID = sessionID
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 1MB line buffer
-
-	lineNum := 0
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		// Check if it's metadata
-		var raw map[string]interface{}
-		if json.Unmarshal(line, &raw) == nil {
-			if raw["type"] == "session_meta" {
-				if v, ok := raw["model"].(string); ok {
-					s.Model = v
-				}
-				if v, ok := raw["provider"].(string); ok {
-					s.Provider = v
-				}
-				if v, ok := raw["agent"].(string); ok {
-					s.Agent = v
-				}
-				if v, ok := raw["cwd"].(string); ok {
-					s.CWD = v
-				}
-				if v, ok := raw["created_at"].(string); ok {
-					s.CreatedAt, _ = time.Parse(time.RFC3339, v)
-				}
-				continue
-			}
-		}
-
-		var msg Message
-		if err := json.Unmarshal(line, &msg); err != nil {
-			// Don't silently drop corrupt lines: log them so data loss is
-			// visible and diagnosable (Phase 3).
-			slog.Warn("corrupted session line skipped", "session_id", s.ID, "line", lineNum, "error", err)
-			lineNum++
-			continue
-		}
-		lineNum++
-		s.Messages = append(s.Messages, msg)
+	// Use the same tolerant line scanner as JSONL loading: oversize/corrupt
+	// lines no longer brick recovery (LOW finding). The WAL's first record is
+	// session_meta, so the meta is captured by scanJSONLLines.
+	meta, messages, err := scanJSONLLines(f, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("recover session %s: %w", sessionID, err)
 	}
-
-	if len(s.Messages) == 0 {
+	if len(messages) == 0 {
 		return nil, nil
 	}
 
+	var s Session
+	s.ID = sessionID
+	s.Messages = messages
+	s.Model = asString(meta["model"])
+	s.Provider = asString(meta["provider"])
+	s.Agent = asString(meta["agent"])
+	s.CWD = asString(meta["cwd"])
+	if v, ok := meta["created_at"].(string); ok {
+		s.CreatedAt, _ = time.Parse(time.RFC3339, v)
+	}
 	s.UpdatedAt = time.Now()
 	return &s, nil
 }
@@ -376,6 +350,75 @@ func loadJSONL(id string) (*Session, error) {
 	return loadJSONLFile(jsonlPathFor(id), id)
 }
 
+// scanJSONLLines reads a JSONL session file tolerantly: lines larger than the
+// per-line cap are drained+logged and skipped (the prior 1MB bufio.Scanner
+// cap bricked the whole load on a single oversized line — LOW finding), and
+// JSON-corrupt lines are logged+skipped rather than failing the load. The
+// first non-empty line is decoded into meta.
+func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []Message, err error) {
+	const maxLine = 16 * 1024 * 1024
+	reader := bufio.NewReaderSize(r, maxLine)
+	flushOversize := func() {
+		_, _ = reader.ReadString('\n') // drain the remainder of an oversize line
+	}
+	lineNo := 0
+	firstLine := true
+	for {
+		line, lpErr := reader.ReadSlice('\n')
+		isPrefix := lpErr == bufio.ErrBufferFull
+		if isPrefix {
+			flushOversize()
+			lineNo++
+			slog.Warn("session: skipped oversize line", "session", logID, "line", lineNo, "max", maxLine)
+			firstLine = false
+			continue
+		}
+		if lpErr != nil && !(errors.Is(lpErr, io.EOF) && len(line) > 0) {
+			if errors.Is(lpErr, io.EOF) {
+				break
+			}
+			return nil, nil, lpErr
+		}
+		lineNo++
+		raw := bytes.TrimRight(line, "\r\n")
+		if len(bytes.TrimSpace(raw)) == 0 {
+			if errors.Is(lpErr, io.EOF) {
+				break
+			}
+			continue
+		}
+		if firstLine {
+			firstLine = false
+			var m map[string]any
+			if err := json.Unmarshal(raw, &m); err == nil {
+				meta = m
+			} else {
+				// First non-empty line is not valid JSON — the session file is
+				// corrupt, not merely empty. Surface this as a load error
+				// (distinct from ErrNotFound) so callers report a 500, not 404.
+				return nil, nil, fmt.Errorf("session %s: parse meta line %d: %w", logID, lineNo, err)
+			}
+			if errors.Is(lpErr, io.EOF) {
+				break
+			}
+			continue
+		}
+		var msg Message
+		if jerr := json.Unmarshal(raw, &msg); jerr != nil {
+			slog.Warn("session: skipped corrupted line", "session", logID, "line", lineNo, "err", jerr)
+			if errors.Is(lpErr, io.EOF) {
+				break
+			}
+			continue
+		}
+		messages = append(messages, msg)
+		if errors.Is(lpErr, io.EOF) {
+			break
+		}
+	}
+	return meta, messages, nil
+}
+
 func loadJSONLFile(path, id string) (*Session, error) {
 	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
@@ -383,60 +426,38 @@ func loadJSONLFile(path, id string) (*Session, error) {
 	}
 	defer func() { _ = f.Close() }()
 
+	meta, messages, err := scanJSONLLines(f, id)
+	if err != nil {
+		return nil, fmt.Errorf("read session %s: %w", id, err)
+	}
 	var s Session
 	s.ID = id
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 1MB line buffer
-	firstLine := true
-
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
+	s.Messages = messages
+	if meta != nil {
+		s.Model = asString(meta["model"])
+		s.Provider = asString(meta["provider"])
+		s.Agent = asString(meta["agent"])
+		s.CWD = asString(meta["cwd"])
+		s.Name = asString(meta["name"])
+		if v, ok := meta["created_at"].(string); ok {
+			s.CreatedAt, _ = time.Parse(time.RFC3339, v)
 		}
-
-		if firstLine {
-			firstLine = false
-			var meta map[string]interface{}
-			if err := json.Unmarshal(line, &meta); err != nil {
-				return nil, err
-			}
-			if v, ok := meta["model"].(string); ok {
-				s.Model = v
-			}
-			if v, ok := meta["provider"].(string); ok {
-				s.Provider = v
-			}
-			if v, ok := meta["agent"].(string); ok {
-				s.Agent = v
-			}
-			if v, ok := meta["cwd"].(string); ok {
-				s.CWD = v
-			}
-			if v, ok := meta["name"].(string); ok {
-				s.Name = v
-			}
-			if v, ok := meta["created_at"].(string); ok {
-				s.CreatedAt, _ = time.Parse(time.RFC3339, v)
-			}
-			if v, ok := meta["updated_at"].(string); ok {
-				s.UpdatedAt, _ = time.Parse(time.RFC3339, v)
-			}
-			continue
+		if v, ok := meta["updated_at"].(string); ok {
+			s.UpdatedAt, _ = time.Parse(time.RFC3339, v)
 		}
-
-		var msg Message
-		if err := json.Unmarshal(line, &msg); err != nil {
-			continue // skip corrupted lines instead of failing
-		}
-		s.Messages = append(s.Messages, msg)
 	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	if len(s.Messages) == 0 && meta == nil {
+		return nil, ErrNotFound
 	}
-
 	return &s, nil
+}
+
+// asString safely extracts a string value from a JSON-decoded map.
+func asString(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 func loadLegacyJSON(id string) (*Session, error) {

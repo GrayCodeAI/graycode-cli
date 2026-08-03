@@ -67,11 +67,13 @@ func runPrint(text string) error {
 
 	// Wire timeout if --timeout flag is set
 	ctx := context.Background()
+	var countdown bool
 	if timeout > 0 {
 		cfg := lifecycle.TimeoutConfig{Total: timeout, Countdown: true}
 		var cancel context.CancelFunc
 		ctx, cancel = lifecycle.WithTimeout(ctx, cfg)
 		defer cancel()
+		countdown = cfg.Countdown
 	}
 
 	ch, err := sess.Stream(ctx)
@@ -80,6 +82,7 @@ func runPrint(text string) error {
 	}
 
 	var printed strings.Builder
+	var countdownShown bool
 	for ev := range ch {
 		switch ev.Type {
 		case "content":
@@ -89,6 +92,14 @@ func runPrint(text string) error {
 				writePrintEvent(sessionID, "content", ev.Content, "")
 			}
 			printed.WriteString(ev.Content)
+			// Honour the Countdown flag (was previously set but unread):
+			// surface the remaining time budget once, on the first content.
+			if countdown && !countdownShown {
+				if rem := lifecycle.RemainingTime(ctx); rem != "" {
+					fmt.Fprintf(os.Stderr, "\n⏱️  %s\n", rem)
+					countdownShown = true
+				}
+			}
 		case "tool_use":
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
@@ -297,11 +308,13 @@ func runRepl() error {
 	}
 
 	ctx := context.Background()
+	var countdown bool
 	if timeout > 0 {
 		cfg := lifecycle.TimeoutConfig{Total: timeout, Countdown: true}
 		var cancel context.CancelFunc
 		ctx, cancel = lifecycle.WithTimeout(ctx, cfg)
 		defer cancel()
+		countdown = cfg.Countdown
 	}
 
 	for {
@@ -352,6 +365,7 @@ func runRepl() error {
 		}
 
 		var printed strings.Builder
+		var countdownShown bool
 		for ev := range ch {
 			switch ev.Type {
 			case "content":
@@ -361,6 +375,12 @@ func runRepl() error {
 					writePrintEvent(sessionID, "content", ev.Content, "")
 				}
 				printed.WriteString(ev.Content)
+				if countdown && !countdownShown {
+					if rem := lifecycle.RemainingTime(ctx); rem != "" {
+						fmt.Fprintf(os.Stderr, "\n⏱️  %s\n", rem)
+						countdownShown = true
+					}
+				}
 			case "tool_use":
 				if outputFormat == "stream-json" {
 					writePrintEvent(sessionID, "tool_use", "", ev.ToolName)

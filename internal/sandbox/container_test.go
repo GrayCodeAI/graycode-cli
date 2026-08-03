@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,6 +91,8 @@ func TestContainerSandbox_StopForceRemovesContainer(t *testing.T) {
 	}
 }
 
+// TestContainerSandbox_DockerRunArgs_Hardened verifies the hardened run args
+// are present regardless of userns availability.
 func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 	projectDir := t.TempDir()
 	cs := NewContainerSandbox(projectDir)
@@ -252,6 +255,41 @@ func containsStr(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// TestContainerSandbox_DockerRunArgs_UserFallback verifies that without
+// userns remapping the container runs as the host uid:gid instead of root
+// (M12), and that userns remapping suppresses the --user fallback.
+func TestContainerSandbox_DockerRunArgs_UserFallback(t *testing.T) {
+	original := usernsProbe
+	t.Cleanup(func() { usernsProbe = original; resetUsernsCache() })
+
+	projectDir := t.TempDir()
+	cs := NewContainerSandbox(projectDir)
+	cs.SetImage("hawk:test")
+
+	// userns unavailable -> --user fallback with host uid:gid.
+	resetUsernsCache()
+	usernsProbe = func() (bool, error) { return false, nil }
+	args := strings.Join(cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache"), " ")
+	wantUser := fmt.Sprintf("--user %d:%d", os.Getuid(), os.Getgid())
+	if !strings.Contains(args, wantUser) {
+		t.Fatalf("expected %q in run args without userns, got:\n%s", wantUser, args)
+	}
+	if strings.Contains(args, "--userns-remap") {
+		t.Fatalf("userns-remap must not be added when unavailable:\n%s", args)
+	}
+
+	// userns available -> --userns-remap, no --user fallback.
+	resetUsernsCache()
+	usernsProbe = func() (bool, error) { return true, nil }
+	args = strings.Join(cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache"), " ")
+	if !strings.Contains(args, "--userns-remap default") {
+		t.Fatalf("expected --userns-remap default in run args, got:\n%s", args)
+	}
+	if strings.Contains(args, "--user ") {
+		t.Fatalf("--user fallback must not be added when userns is available:\n%s", args)
+	}
 }
 
 // TestUsernsRemapAvailable_UsesProbeAndCache verifies the userns-remap probe

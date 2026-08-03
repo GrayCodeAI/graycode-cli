@@ -60,8 +60,17 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			return nil, fmt.Errorf("set max turns: %w", setErr)
 		}
 
-		// Auto-approve everything in mission workers
+		// Auto-approve everything in mission workers unless a human approval
+		// gate is configured: risky calls (network, destructive file ops)
+		// block until the operator responds. The gate's Await uses the worker
+		// ctx, so mission cancellation still unblocks it.
 		sess.SetPermissionFn(func(req engine.PermissionRequest) {
+			if cfg.ApprovalGate != nil && req.Response != nil {
+				if err := cfg.ApprovalGate.Check(ctx, req.ToolName, req.Summary); err != nil {
+					req.Response <- false
+					return
+				}
+			}
 			if req.Response != nil {
 				req.Response <- true
 			}

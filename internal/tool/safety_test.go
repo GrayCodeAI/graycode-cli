@@ -338,6 +338,65 @@ func TestIsSensitivePath_HawkConfigDirEnv(t *testing.T) {
 	}
 }
 
+// TestFileRead_BlocksSymlinkToSensitiveFile verifies the read tool resolves
+// symlinks before opening (M13): reading through a symlink that points at a
+// sensitive target is blocked, while a symlink to an ordinary file works.
+func TestFileRead_BlocksSymlinkToSensitiveFile(t *testing.T) {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	if err := os.MkdirAll(eyrieDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+	providerPath := filepath.Join(eyrieDir, "provider.json")
+	if err := os.WriteFile(providerPath, []byte(`{"key":"x"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	workDir := t.TempDir()
+	link := filepath.Join(workDir, "readme.md")
+	if err := os.Symlink(providerPath, link); err != nil {
+		t.Fatal(err)
+	}
+	in, _ := json.Marshal(map[string]string{"path": link})
+	_, err := (FileReadTool{}).Execute(context.Background(), in)
+	if err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("expected sensitive-path block for symlinked provider config, got %v", err)
+	}
+
+	// A symlink to an ordinary file must still read fine.
+	plain := filepath.Join(workDir, "plain.txt")
+	if err := os.WriteFile(plain, []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link2 := filepath.Join(workDir, "link2.txt")
+	if err := os.Symlink(plain, link2); err != nil {
+		t.Fatal(err)
+	}
+	in2, _ := json.Marshal(map[string]string{"path": link2})
+	out, err := (FileReadTool{}).Execute(context.Background(), in2)
+	if err != nil {
+		t.Fatalf("expected symlinked plain file to read, got %v", err)
+	}
+	if !strings.Contains(out, "hello") {
+		t.Fatalf("expected content through symlink, got %q", out)
+	}
+}
+
+// TestIsSensitivePath_SecretBasenames verifies the expanded basename blocklist
+// (secrets.txt, .git-credentials, private keys, …) applies anywhere, not just
+// under the home directory.
+func TestIsSensitivePath_SecretBasenames(t *testing.T) {
+	for _, name := range []string{
+		"secrets.txt", "secrets.yaml", ".git-credentials", ".htpasswd",
+		"id_rsa", "id_ed25519", "id_ecdsa", "id_dsa",
+	} {
+		path := filepath.Join(t.TempDir(), name)
+		if reason := IsSensitivePath(path); reason == "" {
+			t.Errorf("expected %s to be blocked as a sensitive basename", name)
+		}
+	}
+}
+
 func TestIsSensitivePath_Symlink(t *testing.T) {
 	home, _ := os.UserHomeDir()
 	sshDir := filepath.Join(home, ".ssh")

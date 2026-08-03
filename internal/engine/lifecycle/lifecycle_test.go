@@ -642,6 +642,10 @@ func TestIsComplex_Empty(t *testing.T) {
 
 // --- CostEntry field tests ---
 
+type sessionIDStub struct{ id string }
+
+func (s sessionIDStub) SessionID() string { return s.id }
+
 func TestOnSessionEnd_CostEntry_HasSessionID(t *testing.T) {
 	tracker := &mockCostTracker{}
 	lc := &SessionLifecycle{CostTracker: tracker}
@@ -651,7 +655,7 @@ func TestOnSessionEnd_CostEntry_HasSessionID(t *testing.T) {
 		TaskGoal: "test",
 	}
 
-	err := lc.OnSessionEnd(context.Background(), &struct{}{}, outcome)
+	err := lc.OnSessionEnd(context.Background(), sessionIDStub{id: "abc-123"}, outcome)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -659,8 +663,23 @@ func TestOnSessionEnd_CostEntry_HasSessionID(t *testing.T) {
 	if len(tracker.entries) != 1 {
 		t.Fatal("expected 1 entry")
 	}
-	if !strings.HasPrefix(tracker.entries[0].SessionID, "session_") {
-		t.Errorf("expected session ID prefix, got %q", tracker.entries[0].SessionID)
+	if got := tracker.entries[0].SessionID; got != "abc-123" {
+		t.Errorf("expected real session ID, got %q", got)
+	}
+}
+
+func TestOnSessionEnd_CostEntry_NoSessionIDGetter(t *testing.T) {
+	tracker := &mockCostTracker{}
+	lc := &SessionLifecycle{CostTracker: tracker}
+
+	outcome := SessionOutcome{Success: true, TaskGoal: "test"}
+
+	err := lc.OnSessionEnd(context.Background(), &struct{}{}, outcome)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := tracker.entries[0].SessionID; got != "" {
+		t.Errorf("expected empty session ID when no getter is present, got %q", got)
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 )
 
 // KnowledgeEntry represents a single piece of distilled knowledge.
@@ -516,7 +518,7 @@ func (kb *KnowledgeBase) Save() error {
 	}
 
 	path := filepath.Join(kb.Dir, "knowledge.json")
-	if err := os.WriteFile(path, raw, 0o600); err != nil {
+	if err := safewrite.WriteFile(path, raw); err != nil {
 		return fmt.Errorf("knowledge: write: %w", err)
 	}
 

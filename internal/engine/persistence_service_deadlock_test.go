@@ -87,3 +87,29 @@ func TestPersistenceServiceSetRawMessagesCopiesInput(t *testing.T) {
 		t.Fatalf("SetRawMessages retained caller alias: got %v", got)
 	}
 }
+
+// TestPersistenceServiceRawMessagesView verifies the read-only view (M15):
+// it reflects live transcript state without cloning, so per-turn reads are
+// O(1). It is a view — the caller must not mutate or retain it.
+func TestPersistenceServiceRawMessagesView(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	ps.LoadMessages([]types.EyrieMessage{{Role: "user", Content: "a"}})
+
+	view := ps.RawMessagesView()
+	if len(view) != 1 || view[0].Content != "a" {
+		t.Fatalf("unexpected view content: %+v", view)
+	}
+
+	// The view must see subsequent mutations (no stale clone).
+	ps.AddUser("b")
+	view2 := ps.RawMessagesView()
+	if len(view2) != 2 {
+		t.Fatalf("view did not reflect mutation: %d messages", len(view2))
+	}
+
+	// The view must not alias the deep-copy snapshot path.
+	snap := ps.RawMessages()
+	if &snap[0] == &view2[0] {
+		t.Fatal("RawMessages must return a copy, not the view")
+	}
+}

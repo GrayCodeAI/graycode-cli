@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -260,7 +261,10 @@ func (s *SecureStorage) setFile(account, token string) error {
 	}
 	tokens[account] = token
 	data, _ := json.Marshal(tokens)
-	return os.WriteFile(path, data, 0o600)
+	// Atomic, fsync'd, symlink-safe write to the token store (LOW finding:
+	// the prior os.WriteFile was non-atomic and could leave a partial
+	// `.tokens` file under a crash).
+	return safewrite.WriteFile(path, data)
 }
 
 // GenerateNonce generates a random nonce for OAuth.

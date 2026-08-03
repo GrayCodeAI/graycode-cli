@@ -783,10 +783,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "enter" {
 				text := strings.TrimSpace(m.input.Value())
 				if text != "" {
-					m.history = append(m.history, text)
-					m.historyIdx = len(m.history)
-					m.historyDraft = ""
-					m.messageQueue = append(m.messageQueue, text)
+					m.pushHistory(text)
+					m.enqueueMessage(text)
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Queued: %s", icons.Mail(), text)})
 					m.input.Reset()
 					m.viewDirty = true

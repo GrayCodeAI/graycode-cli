@@ -93,16 +93,16 @@ func TestApprovalStore_Persistence(t *testing.T) {
 	}
 }
 
-func TestPolicyManager_CheckTool_DefaultAllow(t *testing.T) {
+func TestPolicyManager_CheckTool_DefaultDeny(t *testing.T) {
 	dir := t.TempDir()
 	m := NewPolicyManager(dir)
 
 	decision, shouldPrompt := m.CheckTool(ClassBash, "ls -la")
-	if decision != DecisionAllow {
-		t.Errorf("expected allow, got %v", decision)
+	if decision != DecisionDeny {
+		t.Errorf("expected deny (default posture), got %v", decision)
 	}
 	if shouldPrompt {
-		t.Error("should not prompt with default allow")
+		t.Error("should not prompt with default deny")
 	}
 }
 
