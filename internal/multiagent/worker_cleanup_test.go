@@ -122,7 +122,7 @@ func TestRemoveWorktreeDetachedSurvivesCancellation(t *testing.T) {
 
 	// removeWorktreeDetached should succeed despite the caller's context
 	// being cancelled. It uses its own context.Background() with a timeout.
-	removeWorktreeDetached(tmpRepo, wtPath)
+	removeWorktreeDetached(tmpRepo, wtPath, "test-cleanup-branch")
 
 	// The worktree should be removed. Note: git worktree remove removes the
 	// git metadata, but the directory itself may or may not be removed
@@ -136,6 +136,69 @@ func TestRemoveWorktreeDetachedSurvivesCancellation(t *testing.T) {
 	}
 	if strings.Contains(string(out), wtPath) {
 		t.Errorf("worktree %s still registered in git after removeWorktreeDetached", wtPath)
+	}
+
+	// The branch must also be deleted (H9): a leaked branch made retries
+	// fail with "already exists".
+	branchOut, err := exec.CommandContext(context.Background(), "git", "-C", tmpRepo, "branch", "--list", "test-cleanup-branch").CombinedOutput()
+	if err != nil {
+		t.Fatalf("git branch list failed: %v", err)
+	}
+	if strings.TrimSpace(string(branchOut)) != "" {
+		t.Errorf("branch test-cleanup-branch still exists after removeWorktreeDetached: %q", branchOut)
+	}
+}
+
+// TestCreateWorktreeChecksOutExistingBranch verifies the H9 fallback: when the
+// branch already exists (retry after failed cleanup, or a validation worker
+// reusing an implementation branch), createWorktree checks it out instead of
+// failing.
+func TestCreateWorktreeChecksOutExistingBranch(t *testing.T) {
+	tmpRepo, err := os.MkdirTemp("", "hawk-worktree-existing-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpRepo)
+
+	if out, err := exec.CommandContext(context.Background(), "git", "init", "--initial-branch", "main", tmpRepo).CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+	for _, args := range [][]string{
+		{"git", "-C", tmpRepo, "config", "user.email", "hawk-test@example.com"},
+		{"git", "-C", tmpRepo, "config", "user.name", "hawk test"},
+	} {
+		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
+			t.Fatalf("git config failed: %v\n%s", err, out)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(tmpRepo, "README"), []byte("test"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"git", "-C", tmpRepo, "add", "."},
+		{"git", "-C", tmpRepo, "commit", "-m", "init"},
+	} {
+		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
+			t.Fatalf("git command failed: %v\n%s", err, out)
+		}
+	}
+
+	// Simulate the H9 leak: a branch exists but no worktree has it checked
+	// out (attempt 1's worktree was removed, but the branch ref survived).
+	if out, err := exec.CommandContext(context.Background(), "git", "-C", tmpRepo, "branch", "leaked-branch", "main").CombinedOutput(); err != nil {
+		t.Fatalf("git branch failed: %v\n%s", err, out)
+	}
+
+	// createWorktree with an existing-but-unchecked-out branch must fall
+	// back to checking it out instead of failing.
+	wt, err := createWorktree(context.Background(), tmpRepo, "main", "leaked-branch")
+	if err != nil {
+		t.Fatalf("createWorktree with existing branch failed (H9 fallback): %v", err)
+	}
+	defer removeWorktreeDetached(tmpRepo, wt, "leaked-branch")
+
+	if _, err := os.Stat(wt); err != nil {
+		t.Errorf("worktree path %s does not exist: %v", wt, err)
 	}
 }
 

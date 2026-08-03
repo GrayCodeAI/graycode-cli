@@ -24,6 +24,14 @@ type CodeGraph struct {
 	root     string
 	parser   *sitter.Parser
 	extracts map[string]*LanguageExtractor
+
+	// embeddingCache memoizes GenerateEmbedding results keyed by a content
+	// hash of the node's embedding-relevant fields (H8). SemanticSearch
+	// recomputes a hash-based embedding for every node on every query —
+	// seconds per tool call on large repos. embedMu is separate from mu so
+	// cache writes never deadlock against the read lock held during search.
+	embeddingCache map[string][]float32
+	embedMu        sync.Mutex
 }
 
 // Node represents a code symbol (function, class, method, etc.).
@@ -88,10 +96,11 @@ func Open(root string) (*CodeGraph, error) {
 	}
 
 	cg := &CodeGraph{
-		db:       db,
-		root:     root,
-		parser:   sitter.NewParser(),
-		extracts: make(map[string]*LanguageExtractor),
+		db:             db,
+		root:           root,
+		parser:         sitter.NewParser(),
+		extracts:       make(map[string]*LanguageExtractor),
+		embeddingCache: make(map[string][]float32),
 	}
 
 	if err := cg.createSchema(); err != nil {

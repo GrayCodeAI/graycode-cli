@@ -82,15 +82,15 @@ Everything learned at session end is lost at process exit; `OnSessionStart` alwa
 
 **H8. Codegraph semantic search is O(N) full re-embedding per query** — `internal/codegraph/embeddings_cgo.go:13-57`, `tool/codegraph.go:482`
 Every `SemanticSearch`/`HybridSearch` `SELECT`s all nodes then recomputes `GenerateEmbedding(n)` per node (hash-based, uncached), then cosine-compares. On 100k-node repos this is seconds per tool call. The precomputed `CodeVectorStore` (`vector_store.go:122-239`) exists but is unused by `SemanticSearch` (dead duplication; itself brute-force O(N²) sort, no locks).
-**Fix:** memoize embeddings per node; use the vector store; incremental index. *(scheduled)*
+**Fix:** `CodeGraph.embeddingFor` memoizes embeddings in a bounded cache (200k entries, content-hash key covering every field `extractFeatures` reads; full reset when full — far cheaper than recomputing per query). `SemanticSearch` now goes through the cache; repeated queries and unchanged nodes skip recomputation. 3 new tests (memoization, content invalidation, bound). *(fixed)*
 
 **H9. Mission retry loop is structurally broken; failures report success** — `internal/multiagent/mission.go:158,238-258`, `worker.go:206`, `graph.go:80-90`, `cmd/mission.go:134-136`
 `feature.Branch` is deterministic (`hawk-mission/<id>/<feature>`); `git worktree add -b` fails on retry 2+ because attempt 1's branch survives worktree removal — every retry fails, branch leaks. `runFeatureSet`/`RunWaves` return `nil` unconditionally → `hawk mission` **exits 0 when all features fail** (CI sees green).
-**Fix:** include attempt in branch name + clean up branch; propagate feature failure as error. *(scheduled)*
+**Fix:** the retry loop now rewrites `feat.Branch` to `<base>/attempt-N` before every worker call (unique per attempt); `createWorktree` falls back to checking out an existing-but-unchecked-out branch (leaked branch or validation reuse); `removeWorktreeDetached` deletes the branch after removing the worktree (best-effort); `cmd/mission.go` returns an error — non-zero exit — when any feature failed, so CI no longer sees green on failure. *(fixed)*
 
 **H10. `engine/async`: goroutine leak + double-loop + missing terminal event (dead code today)** — `internal/engine/async/engine.go:93-106`, `:49-56`, `event.go:146`, `engine.go:128-146`
 `Stop()` cancels ctx but the loop is parked in `subQ.Next()` (`<-sq.notify`) → **leak on every stop**; `Start()` after `Stop()` spawns a second loop draining the same queue (double processing); on stream error `EventDone` is never emitted → consumers hang; `toAsyncEvent` has no default for `compact_start`/`blast_radius` events → zero-value garbage events; `ReplyTo` contract is unfulfilled; subscribers can't unsubscribe.
-**Fix:** close notify on stop + waitgroup join; or fix + test. Package has **0% coverage**; it is unwired in production. *(fix + tests scheduled)*
+**Fix:** rewritten engine: `Stop()` cancels a loop ctx and joins via WaitGroup (bounded wait); `Start` after `Stop` spawns one fresh loop; single-threaded loop drains the queue via non-recursive `pop()` after each notify (no stack-growth, no parked-goroutine leak); `Cancel()` aborts the in-flight turn directly (a queued cancel could never be popped while the loop is blocked inside the turn's stream); `EventDone` is always emitted (success, stream error, or canceled turn) and forwarded to `ReplyTo`; unmapped events map to `EventInfo` preserving the raw type; `EventQueue.Unsubscribe` added; full-UUID event/submission IDs. **8 tests, 88.2% coverage (was 0%), race-clean.** *(fixed)*
 
 **H11. `engine/docs`: ~2,000 lines shipping with zero importers** — `internal/engine/docs/` (docgen.go, doc_updater.go, external_docs.go)
 Verified: no file outside the package references it. Within it: multi-line doc comments truncated to last line (doc_updater.go:350-368), `OldDoc` populated from *new* content (`:56,:87`), false-positive machine for capitalized words (`:522-539`), parser chokes on nested parens (`:330`), `ExternalDocs.Cache` never written (`external_docs.go:77`), methods of generic types dropped (docgen.go:938-951).
@@ -109,15 +109,15 @@ Guard regexes (bash.go:102-105) block obvious dump patterns but are trivially by
 | M3 | `SkillDistillerAdapter` returns nil on error — "not configured" and "failed" indistinguishable | `lifecycle_adapters.go:50-52,77-80` |
 | M4 | Cost metrics use fabricated session IDs (`"session_"+UnixNano`) instead of the real session ID | `lifecycle.go:158-160` |
 | M5 | `MissionApprovalGate` is dead code (zero production callers); workers auto-approve everything incl. arbitrary bash; `sessionApproved` map would race when wired | `multiagent/approval.go:110-144`, `worker.go:61-66` |
-| M6 | Validation-worker cleanup regressed (cancellable ctx kills `git worktree remove` → permanent leak) | `multiagent/worker.go:144` |
+| M6 | Validation-worker cleanup regressed (cancellable ctx kills `git worktree remove` → permanent leak) | `multiagent/worker.go:144` *(fixed: detached-context cleanup + branch deletion)* |
 | M7 | Oversized MCP response (>1MB scanner cap) silently kills the client connection; server child stays alive; no recovery | `internal/mcp/mcp.go:95,167-179` |
 | M8 | `Composio.ExecuteTool` returns fake success (`Success: true` echoing params); agents would report unexecuted actions | `internal/composio/composio.go:147-177` |
-| M9 | In-memory `Tracer` accumulates spans unboundedly (daemon lifetime); `Disable()` doesn't stop recording | `internal/engine/observability/trace.go:45-59,112-116` |
+| M9 | In-memory `Tracer` accumulates spans unboundedly (daemon lifetime); `Disable()` doesn't stop recording | `internal/engine/observability/trace.go:45-59,112-116` *(fixed: `StartSpan` checks `enable`, buffer capped at 10k spans; dropped spans stay functional)* |
 | M10 | `diffsandbox.absPath` is lexical-only; symlinked intermediate components escape the sandbox root | `internal/diffsandbox/sandbox.go:419-435` |
 | M11 | `PolicyManager` defaults to `DecisionAllow` — stated deny-by-default posture not reflected | `internal/sandbox/manager.go:48` |
 | M12 | userns remap conditional; without it container runs as root with rw project mount; no `--user` fallback | `container.go:33-40,149-153` |
 | M13 | Host-side file tools: check-then-open symlink TOCTOU; name-based sensitivity (`secrets.txt` allowed) | `internal/tool/file_read.go`, `file_write.go`, `safety.go:251+` |
-| M14 | Per-call `regexp.MustCompile` in hot paths (5 sites) | `internal/feature/eval/filters.go:13-32`, `tool/spec_checklist.go:119-149`, `tool/ticket_compliance.go:62`, `feature/fingerprint/project_conventions.go:180-181` |
+| M14 | Per-call `regexp.MustCompile` in hot paths (5 sites) | `internal/feature/eval/filters.go:13-32`, `tool/spec_checklist.go:119-149`, `tool/ticket_compliance.go:62`, `feature/fingerprint/project_conventions.go:180-181` *(fixed: all hoisted to package-level vars)* |
 | M15 | Full-transcript deep clone per access in `RawMessages()` — quadratic over session length | `internal/engine/persistence_service.go`, callers `context_governor.go:120-148` |
 | M16 | TUI viewport re-renders full prefix per streamed chunk — O(messages) per token | `cmd/chat_viewport_render.go` |
 | M17 | `hawk path` 1.83s wall; `MigrateProviderSecrets`→`newEyrieEngine()`+`gateway.New()` runs on **every** root command | `cmd/root.go:136`, `internal/config/eyrie_engine.go:15-17,127-133` |

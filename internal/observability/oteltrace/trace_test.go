@@ -97,3 +97,43 @@ func TestTracerEnableDisable(t *testing.T) {
 		t.Fatal("expected enabled")
 	}
 }
+
+// TestTracerDisableStopsRecording verifies the M9 fix: Disable() must stop
+// StartSpan from accumulating spans, not just flip the flag.
+func TestTracerDisableStopsRecording(t *testing.T) {
+	tr := NewTracer()
+	tr.Disable()
+
+	tr.StartSpan(context.Background(), "a")
+	tr.StartSpan(context.Background(), "b")
+	if got := len(tr.Spans()); got != 0 {
+		t.Fatalf("disabled tracer recorded %d spans, want 0", got)
+	}
+
+	// Re-enabling resumes recording.
+	tr.Enable()
+	tr.StartSpan(context.Background(), "c")
+	if got := len(tr.Spans()); got != 1 {
+		t.Fatalf("enabled tracer recorded %d spans, want 1", got)
+	}
+}
+
+// TestTracerBoundedSpans verifies the M9 bound: the span buffer never grows
+// past maxRecordedSpans, while new spans remain functional.
+func TestTracerBoundedSpans(t *testing.T) {
+	tr := NewTracer()
+	for i := 0; i < maxRecordedSpans+100; i++ {
+		tr.StartSpan(context.Background(), "span")
+	}
+	if got := len(tr.Spans()); got != maxRecordedSpans {
+		t.Fatalf("span buffer = %d, want capped at %d", got, maxRecordedSpans)
+	}
+
+	// A dropped span must still work (tags, finish) for callers.
+	_, span := tr.StartSpan(context.Background(), "overflow")
+	span.SetTag("k", "v")
+	span.Finish()
+	if span.Tags["k"] != "v" {
+		t.Error("dropped span must remain functional")
+	}
+}

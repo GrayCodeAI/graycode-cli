@@ -236,6 +236,16 @@ func (m *Mission) runFeatureSet(ctx context.Context, workerFn WorkerFunc, missio
 			var err error
 		retryLoop:
 			for attempt := 0; attempt <= maxRetries; attempt++ {
+				// Each attempt gets a unique branch (H9): feature.Branch is
+				// deterministic, and a failed attempt's worktree removal does
+				// not remove the branch ref, so `git worktree add -b` on
+				// retry 2+ failed with "already exists" — every retry was
+				// guaranteed to fail and leaked the branch. Attempt-suffixed
+				// names make retries fresh; cleanup deletes the branch.
+				m.mu.Lock()
+				feat.Branch = fmt.Sprintf("hawk-mission/%s/%s/attempt-%d", m.ID, feat.ID, attempt+1)
+				m.mu.Unlock()
+
 				workerCtx := ctx
 				cancel := func() {}
 				if m.Config.PerWorkerTimeout > 0 {

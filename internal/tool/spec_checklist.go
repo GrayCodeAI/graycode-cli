@@ -113,11 +113,18 @@ func (ChecklistTool) Execute(ctx context.Context, input json.RawMessage) (string
 	return fmt.Sprintf("Generated checklist at %s\n\n%s", checklistPath, strings.TrimSpace(b.String())), nil
 }
 
+// Package-level compiled patterns (M14): checklist generation runs per spec
+// file; regexp.MustCompile per call wasted CPU and allocation.
+var (
+	checklistRequirementRe = regexp.MustCompile(`(?m)^###?\s+Requirement:\s*(.+)$`)
+	checklistScenarioRe    = regexp.MustCompile(`(?m)^#{2,4}\s+Scenario:\s*(.+)$`)
+	checklistTaskRe        = regexp.MustCompile(`(?m)^- \[ \]\s+(.+)$`)
+)
+
 func generateSpecChecklist(content string) []string {
 	var items []string
 
-	re := regexp.MustCompile(`(?m)^###?\s+Requirement:\s*(.+)$`)
-	matches := re.FindAllStringSubmatch(content, -1)
+	matches := checklistRequirementRe.FindAllStringSubmatch(content, -1)
 
 	for _, m := range matches {
 		reqName := strings.TrimSpace(m[1])
@@ -134,8 +141,7 @@ func generateSpecChecklist(content string) []string {
 }
 
 func extractScenarios(content string) []string {
-	re := regexp.MustCompile(`(?m)^#{2,4}\s+Scenario:\s*(.+)$`)
-	matches := re.FindAllStringSubmatch(content, -1)
+	matches := checklistScenarioRe.FindAllStringSubmatch(content, -1)
 	var scenarios []string
 	for _, m := range matches {
 		scenarios = append(scenarios, strings.TrimSpace(m[1]))
@@ -146,8 +152,7 @@ func extractScenarios(content string) []string {
 func generateTasksChecklist(content string) []string {
 	var items []string
 
-	re := regexp.MustCompile(`(?m)^- \[ \]\s+(.+)$`)
-	matches := re.FindAllStringSubmatch(content, -1)
+	matches := checklistTaskRe.FindAllStringSubmatch(content, -1)
 
 	for _, m := range matches {
 		items = append(items, strings.TrimSpace(m[1]))

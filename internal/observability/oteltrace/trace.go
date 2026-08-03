@@ -29,6 +29,12 @@ type SpanEvent struct {
 	Tags      map[string]string `json:"tags,omitempty"`
 }
 
+// maxRecordedSpans bounds the in-memory span buffer (M9): long-lived tracers
+// (daemon lifetime) must not accumulate spans without limit. When the buffer
+// is full, new spans are still created and returned (so callers and child
+// spans keep working) but they are not retained.
+const maxRecordedSpans = 10000
+
 // Tracer is a simple tracer.
 type Tracer struct {
 	mu     sync.RWMutex
@@ -52,7 +58,11 @@ func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *
 	}
 
 	t.mu.Lock()
-	t.spans = append(t.spans, span)
+	// Disable() must stop recording (M9): previously only the flag flipped
+	// while StartSpan kept appending regardless.
+	if t.enable && len(t.spans) < maxRecordedSpans {
+		t.spans = append(t.spans, span)
+	}
 	t.mu.Unlock()
 
 	return context.WithValue(ctx, spanKey, span), span

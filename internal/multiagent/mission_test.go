@@ -2,6 +2,8 @@ package mission
 
 import (
 	"context"
+	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -116,6 +118,55 @@ func TestMission_Run_PartialFailure(t *testing.T) {
 	}
 	if m.Features[1].Status != FeatureFailed {
 		t.Errorf("f2 should be failed")
+	}
+}
+
+// TestMission_Run_RetryUsesAttemptSuffixedBranch verifies the H9 fix: each
+// retry attempt gets a unique branch name so `git worktree add -b` can never
+// collide with the previous attempt's branch.
+func TestMission_Run_RetryUsesAttemptSuffixedBranch(t *testing.T) {
+	m := New("test", Config{MaxWorkers: 2, MaxRetriesPerFeat: 1})
+	m.Features = []Feature{
+		{ID: "f1", Description: "A", Status: FeaturePending},
+	}
+
+	seen := make([]string, 0, 2)
+	var mu sync.Mutex
+	attempts := 0
+	workerFn := func(_ context.Context, feat *Feature, _ string, _ Config) (*Handoff, error) {
+		mu.Lock()
+		seen = append(seen, feat.Branch)
+		attempts++
+		n := attempts
+		mu.Unlock()
+		if n < 2 {
+			return nil, errors.New("transient failure")
+		}
+		return &Handoff{Summary: "ok"}, nil
+	}
+
+	if err := m.Run(context.Background(), workerFn); err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) != 2 {
+		t.Fatalf("expected 2 attempts, got %d: %v", len(seen), seen)
+	}
+	if seen[0] == seen[1] {
+		t.Errorf("branch must differ per attempt, both %q", seen[0])
+	}
+	if want := "hawk-mission/" + m.ID + "/f1/attempt-1"; seen[0] != want {
+		t.Errorf("attempt 1 branch = %q, want %q", seen[0], want)
+	}
+	if want := "hawk-mission/" + m.ID + "/f1/attempt-2"; seen[1] != want {
+		t.Errorf("attempt 2 branch = %q, want %q", seen[1], want)
+	}
+	if m.Features[0].Branch != seen[1] {
+		t.Errorf("final feature branch = %q, want last attempt %q", m.Features[0].Branch, seen[1])
+	}
+	if m.Features[0].Status != FeatureCompleted {
+		t.Errorf("feature should complete after retry, got %s", m.Features[0].Status)
 	}
 }
 

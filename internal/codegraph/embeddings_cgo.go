@@ -4,8 +4,54 @@ package codegraph
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"sort"
 )
+
+// maxEmbeddingCacheEntries bounds the in-memory embedding cache so long-lived
+// CodeGraph instances (daemon) cannot grow it without limit.
+var maxEmbeddingCacheEntries = 200_000
+
+// embeddingFor returns the embedding for a node, computing it once and
+// memoizing it keyed by a content hash (H8). The key covers every field
+// extractFeatures reads, so a node edit invalidates the entry naturally.
+// The cache is bounded: once full it is reset (cheap for hash-based
+// embeddings — a recompute after reset is far cheaper than the unbounded
+// per-query recomputation this replaces).
+func (cg *CodeGraph) embeddingFor(node Node) []float32 {
+	key := embeddingCacheKey(node)
+
+	cg.embedMu.Lock()
+	defer cg.embedMu.Unlock()
+	if vec, ok := cg.embeddingCache[key]; ok {
+		return vec
+	}
+	vec := GenerateEmbedding(node)
+	if len(cg.embeddingCache) >= maxEmbeddingCacheEntries {
+		cg.embeddingCache = make(map[string][]float32, maxEmbeddingCacheEntries/2)
+	}
+	cg.embeddingCache[key] = vec
+	return vec
+}
+
+func embeddingCacheKey(node Node) string {
+	h := sha256.New()
+	h.Write([]byte(node.Name))
+	h.Write([]byte{0})
+	h.Write([]byte(node.QualifiedName))
+	h.Write([]byte{0})
+	h.Write([]byte(node.Kind))
+	h.Write([]byte{0})
+	h.Write([]byte(node.Language))
+	h.Write([]byte{0})
+	h.Write([]byte(node.Docstring))
+	h.Write([]byte{0})
+	h.Write([]byte(node.Signature))
+	h.Write([]byte{0})
+	h.Write([]byte(node.FilePath))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 // SemanticSearch performs embedding-based semantic search.
 // It generates embeddings for all nodes and finds the most similar
@@ -49,7 +95,7 @@ func (cg *CodeGraph) SemanticSearch(query string, limit int) ([]Node, error) {
 	var scoredNodes []scored
 
 	for _, n := range allNodes {
-		vec := GenerateEmbedding(n)
+		vec := cg.embeddingFor(n)
 		sim := CosineSimilarity(queryVec, vec)
 		if sim > 0.1 { // threshold
 			scoredNodes = append(scoredNodes, scored{n, sim})

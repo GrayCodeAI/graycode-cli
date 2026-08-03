@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+// Package-level compiled patterns (M14): these filters run per evaluation
+// candidate, and regexp.MustCompile per call wasted CPU and allocation.
+var (
+	genericCodeBlockRe = regexp.MustCompile("(?s)```\\s*\n(.*?)```")
+	markdownBlockRe    = regexp.MustCompile("(?s)```[a-z]*\\s*\n(.*?)```")
+)
+
 // Filter transforms LLM output before validation.
 type Filter func(string) string
 
@@ -18,8 +25,7 @@ func ExtractCodeBlock(lang string) Filter {
 			return strings.TrimSpace(matches[1])
 		}
 		// Try generic code block
-		generic := regexp.MustCompile("(?s)```\\s*\n(.*?)```")
-		if m := generic.FindStringSubmatch(s); len(m) > 1 {
+		if m := genericCodeBlockRe.FindStringSubmatch(s); len(m) > 1 {
 			return strings.TrimSpace(m[1])
 		}
 		return s
@@ -29,8 +35,7 @@ func ExtractCodeBlock(lang string) Filter {
 // StripMarkdown removes all markdown formatting, keeping only code content.
 func StripMarkdown(s string) string {
 	// Extract all code blocks
-	pattern := regexp.MustCompile("(?s)```[a-z]*\\s*\n(.*?)```")
-	matches := pattern.FindAllStringSubmatch(s, -1)
+	matches := markdownBlockRe.FindAllStringSubmatch(s, -1)
 	if len(matches) > 0 {
 		var parts []string
 		for _, m := range matches {
