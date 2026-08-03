@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/engine"
@@ -254,13 +255,29 @@ func (c *ChatService) Chat(ctx context.Context, messages []types.EyrieMessage, o
 
 // isContextOverflow reports whether err looks like a "context too long"
 // error from the upstream provider. Used by Stream() to trigger an
-// emergency context-compact + retry.
+// emergency context-compact + retry. Matches structured provider signals
+// (context_length_exceeded / context_length_error) and the common
+// "N tokens exceeds the limit" phrasing, but requires a token/context
+// qualifier alongside "too long" so ordinary "request timeout, too long"
+// errors don't spuriously trigger an emergency compact.
 func isContextOverflow(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
-	return contains(msg, "too long") || contains(msg, "too many tokens")
+	msg := strings.ToLower(err.Error())
+	switch {
+	case contains(msg, "context_length_exceeded"),
+		contains(msg, "context_length_error"),
+		contains(msg, "exceeds the limit"):
+		return true
+	}
+	if contains(msg, "too long") || contains(msg, "too many tokens") {
+		return contains(msg, "context") ||
+			contains(msg, "tokens") ||
+			contains(msg, "token") ||
+			contains(msg, "limit")
+	}
+	return false
 }
 
 func contains(s, sub string) bool {

@@ -306,3 +306,24 @@ func itoaForTest(i int) string {
 	}
 	return string(b)
 }
+
+func TestIsContextOverflow(t *testing.T) {
+	cases := []struct {
+		err  error
+		want bool
+	}{
+		{nil, false},
+		{errors.New("input too long: 120000 tokens exceeds the limit of 100000"), true},
+		{errors.New("context_length_exceeded: this model maximum context length"), true},
+		{errors.New("context_length_error: exceeds the limit of 200000 tokens"), true},
+		{errors.New("exceeds the limit of N tokens"), true},
+		{errors.New("request timeout, too long"), false},
+		{errors.New("the response was too long"), false},
+		{errors.New("HTTP 503 unavailable"), false},
+	}
+	for _, c := range cases {
+		if got := isContextOverflow(c.err); got != c.want {
+			t.Errorf("isContextOverflow(%v) = %v, want %v", c.err, got, c.want)
+		}
+	}
+}
