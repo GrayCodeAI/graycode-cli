@@ -23,6 +23,11 @@ var bundledSandboxDockerfile string
 
 var sandboxImageTag = strings.TrimSpace(rawSandboxImageTag)
 
+// sandboxImageDigestOverride, when non-empty (set via HAWK_SANDBOX_IMAGE_DIGEST),
+// pins EnsureImage to an immutable digest instead of a mutable tag (LOW finding:
+// pulling by mutable tag can silently roll a different image under the same tag).
+var sandboxImageDigestOverride = strings.TrimSpace(os.Getenv("HAWK_SANDBOX_IMAGE_DIGEST"))
+
 // dockerImageCommand is replaceable in tests.
 var dockerImageCommand = func(ctx context.Context, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, "docker", args...).CombinedOutput() // #nosec G204 -- fixed Docker executable
@@ -38,6 +43,9 @@ const (
 )
 
 func defaultHawkImage() string {
+	if sandboxImageDigestOverride != "" {
+		return sandboxImageRepository + "@sha256:" + sandboxImageDigestOverride
+	}
 	return sandboxImageRepository + ":" + sandboxImageTag
 }
 

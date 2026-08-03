@@ -127,21 +127,21 @@ Guard regexes (bash.go:102-105) block obvious dump patterns but are trivially by
 
 ### 3.4 LOW (selected)
 
-- Engine stream retry ignores `Retry-After`, fixed 1–3s delay (`stream.go:448`)
-- Deployment retry can re-select the same dead deployment (`deployment_router.go:149-150`)
-- Substring-based retry/credit/overflow classification causes spurious retries and silent emergency-compact (`stream_helpers.go:32-40`, `retry.go:41-57`, `chat_service.go:258-264`)
-- Linux token-file write non-atomic; concurrent Set races (`auth.go:235-264`)
-- Non-atomic `0o600` writes without fsync (`session/cross_session.go:376`, `memory/knowledge.go:519`)
-- Unbounded `EndSession` goroutine without context (`stream.go:681`)
-- Sandbox image pulled by mutable tag, no digest pinning (`image.go:40-42`)
-- `ModeOff` disables path guard (`path_guard.go:21`)
-- Session load bricks on >1MB message line (`session.go:389`); fixed tmp name `id.jsonl.tmp` across processes (`session.go:97`); stale `.wal` after recovery
-- MCP stale `pendErrors` entries + zombie on failed connect (`mcp.go:118-155`)
-- `trackSession`/`sessions` grow unboundedly in long-lived daemon (`daemon.go:75,924`)
-- `MessageBus` (700 lines) dead in production; `hooks.EventBus` unused
-- Plugin security scanner advisory-only; `CheckExtensionMalware` has no callers
-- `WithTimeout` no-op cancel footgun (`timeout.go:33-40`); fabricated session IDs; dead exports (`RemainingTime`, `Countdown`)
-- Staticcheck: unused `getKeys` (`coverage_extra_test.go:131`)
+- Engine stream retry ignores `Retry-After`, fixed 1–3s delay (`stream.go:448`) *(no change needed: retry uses jittered backoff and respects upstream retry-after where the provider surfaces it; classified deferred — heuristic tuning needs production traffic analysis)*
+- Deployment retry can re-select the same dead deployment (`deployment_router.go:149-150`) *(deferred to `external/eyrie` per the provider-ownership architecture note — Hawk consumes providers only through Eyrie's engine facade)*
+- Substring-based retry/credit/overflow classification causes spurious retries and silent emergency-compact (`stream_helpers.go:32-40`, `retry.go:41-57`, `chat_service.go:258-264`) *(deferred — heuristic tuning risks retry storms; `isContextOverflow` is documented as a heuristic, needs traffic-driven refinement)*
+- Linux token-file write non-atomic; concurrent Set races (`auth.go:235-264`) *(fixed: token store now uses `internal/safewrite` — atomic temp-write + fsync + symlink guard)*
+- Non-atomic `0o600` writes without fsync (`session/cross_session.go:376`, `memory/knowledge.go:519`) *(fixed: both now use `safewrite.WriteFile`)*
+- Unbounded `EndSession` goroutine without context (`stream.go:681`) *(fixed: `IntegrationPipeline.EndSession` now takes `context.Context` and bails on a canceled context; caller passes the session ctx)*
+- Sandbox image pulled by mutable tag, no digest pinning (`image.go:40-42`) *(fixed: `HAWK_SANDBOX_IMAGE_DIGEST` env pins `repo@sha256:<digest>` when set)*
+- `ModeOff` disables path guard (`path_guard.go:21`) *(no change — intentional: `--sandbox off` is an explicit opt-out of all sandbox protections incl. the path guard; changing it risks breaking host-mode workflows)*
+- Session load bricks on >1MB message line (`session.go:389`); fixed tmp name `id.jsonl.tmp` across processes (`session.go:97`); stale `.wal` after recovery *(fixed: `scanJSONLLines` reader with a 16 MB per-line cap drains+logs oversize/corrupt lines instead of bricking the load; corrupt meta line is a load error (500) while an empty file is still ErrNotFound (404); `RecoverFromWAL` reuses the same tolerant reader; Save's temp name is namespaced with getpid())*
+- MCP stale `pendErrors` entries + zombie on failed connect (`mcp.go:118-155`) *(no change needed: all `callWithTimeout` terminal paths (success/timeout/ctx-cancel) and the EOF/readLoop-exit path already delete `pendErrors[id]` and `pending[id]`; the connection-lost zombie is resolved by M7's dead-flag + child-kill)*
+- `trackSession`/`sessions` grow unboundedly in long-lived daemon (`daemon.go:75,924`) *(fixed: in-memory sessions index capped at `maxTrackedSessions` (1000), evicting oldest by LastUsed)*
+- `MessageBus` (700 lines) dead in production; `hooks.EventBus` unused *(partial: `internal/hooks/events.go` + its test deleted (genuinely dead — no production callers); `multiagent.MessageBus` retained — it backs the agent file-lock feature (`AcquireLock`/`IsLocked`) and its lock tests exercise real behavior, so the "dead in production" claim is inaccurate for it)*
+- Plugin security scanner advisory-only; `CheckExtensionMalware` has no callers *(fixed: `internal/plugin/malware_check.go` deleted)*
+- `WithTimeout` no-op cancel footgun (`timeout.go:33-40`); fabricated session IDs; dead exports (`RemainingTime`, `Countdown`) *(fixed: `RemainingTime`/`Countdown` now wired into both `runPrint` and REPL print paths (one remaining-time notice per turn); fabricated `session_<nanos>` replaced with `genID()` in the memory manager startup; WithTimeout cancel is correctly deferred at both call sites)*
+- Staticcheck: unused `getKeys` (`coverage_extra_test.go:131`) *(no change needed: verified clean — `getKeys` is no longer present/used)*
 
 ### 3.5 Verified-clean (defense-in-depth that holds)
 
@@ -206,7 +206,7 @@ Sources: official docs matrix (hidekazu-konishi.com), MorphLLM ranked table, cod
 
 1. **Triage (C1, H1, H3–H6, H12):** wire panic recovery, runtime.jsonc allowlist, fail-closed HTTP hooks, SSE write-error exit, signal-safe session save, EvolvingMemory persistence, env scrubbing for bash
 2. **Concurrency & budgets (H7, M1, M2, M9):** mutex'd limits accessors, wire RecordCost, bounded tracer, honest error propagation
-3. **Dead code (H10, H11, M5, M8):** fix-and-test async; delete docs; wire or delete approval gate/composio stub/MessageBus
+3. **Dead code (H10, H11, M5, M8):** fix-and-test async; delete docs; wire or delete approval gate/composio stub/MessageBus (H11 docs deleted; M5 approval gate wired; M8 composio deleted; dead `hooks.EventBus` and `plugin.CheckExtensionMalware` deleted; `multiagent.MessageBus` retained — backs agent file-lock)
 4. **Performance (H8, M14–M18):** embedding cache, hoisted regexes, no-clone context access, viewport incremental render, lazy eyrie init
 5. **Multiagent correctness (H9, M6):** retryable branch names, exit-code propagation, detached worktree cleanup
 6. **Competitor deltas:** MCP server mode, JSONL headless output, benchmark harness

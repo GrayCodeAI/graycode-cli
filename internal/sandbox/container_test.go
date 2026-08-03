@@ -331,3 +331,18 @@ func TestUsernsRemapAvailable_FalseOnProbeError(t *testing.T) {
 		t.Error("expected userns remapping unavailable when docker cannot be probed")
 	}
 }
+
+func TestDefaultHawkImageDigestOverride(t *testing.T) {
+	prev := sandboxImageDigestOverride
+	sandboxImageDigestOverride = "abc123digest"
+	defer func() { sandboxImageDigestOverride = prev }()
+
+	got := defaultHawkImage()
+	wantRepo := sandboxImageRepository + "@sha256:"
+	if !strings.HasPrefix(got, wantRepo) {
+		t.Fatalf("defaultHawkImage=%q, want prefix %q", got, wantRepo)
+	}
+	if !strings.HasSuffix(got, "abc123digest") {
+		t.Fatalf("defaultHawkImage=%q, want digest suffix", got)
+	}
+}
