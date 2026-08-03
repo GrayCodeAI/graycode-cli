@@ -446,7 +446,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"reason":  retryReason,
 				"error":   streamErr.Error(),
 			})
-			retryTimer := time.NewTimer(time.Duration(streamAttempt+1) * time.Second)
+			retryTimer := time.NewTimer(streamRetryDelay(streamErr, streamAttempt))
 			select {
 			case <-retryTimer.C:
 			case <-ctx.Done():
