@@ -32,11 +32,18 @@ type EvolvingMemory struct {
 	path       string
 }
 
-// NewEvolvingMemory creates a new EvolvingMemory with the default storage path.
+// NewEvolvingMemory creates a new EvolvingMemory with the default storage path
+// and loads any previously persisted guidelines so prior sessions' lessons
+// survive process restarts. Load failures (other than "no file yet") are
+// logged to stderr only — a corrupt memory file must not prevent startup.
 func NewEvolvingMemory() *EvolvingMemory {
-	return &EvolvingMemory{
+	em := &EvolvingMemory{
 		path: filepath.Join(storage.StateDir(), "memory", "guidelines.json"),
 	}
+	if err := em.Load(); err != nil {
+		fmt.Fprintf(os.Stderr, "hawk: warning: could not load evolving memory: %v\n", err)
+	}
+	return em
 }
 
 // Load reads persisted guidelines from disk.
@@ -60,7 +67,8 @@ func (em *EvolvingMemory) Load() error {
 	return nil
 }
 
-// Save persists guidelines to disk.
+// Save persists guidelines to disk atomically (temp file + rename) so a
+// crash mid-write can never corrupt or truncate the memory file.
 func (em *EvolvingMemory) Save() error {
 	em.mu.Lock()
 	defer em.mu.Unlock()
@@ -73,7 +81,32 @@ func (em *EvolvingMemory) Save() error {
 	if err != nil {
 		return fmt.Errorf("marshal guidelines: %w", err)
 	}
-	return os.WriteFile(em.path, data, 0o600)
+
+	tmp, err := os.CreateTemp(dir, "guidelines-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write temp file: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("sync temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temp file: %w", err)
+	}
+	if err := os.Chmod(tmpName, 0o600); err != nil {
+		return fmt.Errorf("chmod temp file: %w", err)
+	}
+	if err := os.Rename(tmpName, em.path); err != nil {
+		return fmt.Errorf("rename temp file: %w", err)
+	}
+	return nil
 }
 
 // Learn adds a new guideline or strengthens an existing one if a similar pattern exists.

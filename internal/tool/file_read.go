@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,10 +56,31 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if path == "" {
 		return "", fmt.Errorf("path is required")
 	}
+	// Check the caller's path first (block sensitive paths even when the
+	// file is missing), then resolve symlinks so the checks apply to the
+	// real target (M13): a symlink to ~/.ssh/id_rsa must be caught here,
+	// not silently followed during the read.
 	if err := validatePathAllowed(ctx, path); err != nil {
 		return "", err
 	}
 	if reason := IsSensitivePath(path); reason != "" {
+		return "", fmt.Errorf("blocked: %s", reason)
+	}
+	resolved := path
+	if canonical, err := filepath.EvalSymlinks(path); err == nil {
+		resolved = canonical
+	} else {
+		// Nonexistent file or dangling symlink — report as not found.
+		suggestion := suggestSimilar(path)
+		if suggestion != "" {
+			return "", fmt.Errorf("file not found: %s\nDid you mean: %s", path, suggestion)
+		}
+		return "", fmt.Errorf("file not found: %s", path)
+	}
+	if err := validatePathAllowed(ctx, resolved); err != nil {
+		return "", err
+	}
+	if reason := IsSensitivePath(resolved); reason != "" {
 		return "", fmt.Errorf("blocked: %s", reason)
 	}
 	startLine, endLine := p.StartLine, p.EndLine
@@ -72,32 +94,41 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		endLine = p.Limit
 	}
 
-	info, err := os.Stat(path)
+	f, err := os.Open(resolved)
 	if err != nil {
-		suggestion := suggestSimilar(path)
-		if suggestion != "" {
-			return "", fmt.Errorf("file not found: %s\nDid you mean: %s", path, suggestion)
+		return "", fmt.Errorf("read %s: %w", path, err)
+	}
+	defer func() { _ = f.Close() }()
+	info, err := f.Stat()
+	if err != nil {
+		return "", fmt.Errorf("stat %s: %w", path, err)
+	}
+	// TOCTOU guard: the fd is fixed, but verify it is the exact file we
+	// validated — if a symlink was swapped in after resolution, Lstat sees
+	// the symlink and SameFile fails (M13).
+	if li, lerr := os.Lstat(resolved); lerr == nil {
+		if !os.SameFile(info, li) {
+			return "", fmt.Errorf("read %s: file changed during access (symlink swap rejected)", path)
 		}
-		return "", fmt.Errorf("file not found: %s", path)
 	}
 	if info.Size() > maxFileSize {
 		return "", fmt.Errorf("file too large: %d bytes (max %d)", info.Size(), maxFileSize)
 	}
-	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)
 	}
 	if IsBinaryContent(data) {
 		// Multi-modal vision: encode images as base64 data URIs
-		if isImageFile(path) {
-			ext := strings.ToLower(filepath.Ext(path))
+		if isImageFile(resolved) {
+			ext := strings.ToLower(filepath.Ext(resolved))
 			mimeType := imageExtensions[ext]
 			if mimeType == "" {
 				mimeType = "image/png"
 			}
 			encoded := base64.StdEncoding.EncodeToString(data)
 			dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
-			return fmt.Sprintf("[IMAGE: %s]\n%s", filepath.Base(path), dataURI), nil
+			return fmt.Sprintf("[IMAGE: %s]\n%s", filepath.Base(resolved), dataURI), nil
 		}
 		return BinaryIndicator, nil
 	}

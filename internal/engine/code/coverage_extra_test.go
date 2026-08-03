@@ -1,7 +1,6 @@
 package code
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -127,14 +126,3 @@ func TestLookupTestStatus_NonExistentFile(t *testing.T) {
 }
 
 // --- Helper functions ---
-
-func getKeys(m map[string]float64) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// Ensure strings import is used
-var _ = strings.Contains

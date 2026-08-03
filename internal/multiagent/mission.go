@@ -45,6 +45,11 @@ type Config struct {
 	PerWorkerTimeout  time.Duration `json:"per_worker_timeout,omitempty"`
 	MaxRetriesPerFeat int           `json:"max_retries_per_feat,omitempty"`
 
+	// ApprovalGate, when non-nil, intercepts risky tool calls (network,
+	// destructive file ops) in workers: the worker blocks until the operator
+	// responds. Never serialized — wired at run time from Mission.ApprovalGate.
+	ApprovalGate *MissionApprovalGate `json:"-"`
+
 	// Staged pipeline configuration (oh-my-claudecode-style team workflow).
 	PRDModel          string `json:"prd_model,omitempty"`
 	FixModel          string `json:"fix_model,omitempty"`
@@ -165,6 +170,11 @@ func (m *Mission) Plan(ctx context.Context, planFn PlanFunc) error {
 func (m *Mission) Run(ctx context.Context, workerFn WorkerFunc) error {
 	m.mu.Lock()
 	m.Status = StatusRunning
+	// A gate set directly on the Mission (m.ApprovalGate) must reach the
+	// workers, which only see m.Config.
+	if m.ApprovalGate != nil {
+		m.Config.ApprovalGate = m.ApprovalGate
+	}
 	m.mu.Unlock()
 
 	missionDir, err := m.ensureRunDir()
@@ -236,6 +246,16 @@ func (m *Mission) runFeatureSet(ctx context.Context, workerFn WorkerFunc, missio
 			var err error
 		retryLoop:
 			for attempt := 0; attempt <= maxRetries; attempt++ {
+				// Each attempt gets a unique branch (H9): feature.Branch is
+				// deterministic, and a failed attempt's worktree removal does
+				// not remove the branch ref, so `git worktree add -b` on
+				// retry 2+ failed with "already exists" — every retry was
+				// guaranteed to fail and leaked the branch. Attempt-suffixed
+				// names make retries fresh; cleanup deletes the branch.
+				m.mu.Lock()
+				feat.Branch = fmt.Sprintf("hawk-mission/%s/%s/attempt-%d", m.ID, feat.ID, attempt+1)
+				m.mu.Unlock()
+
 				workerCtx := ctx
 				cancel := func() {}
 				if m.Config.PerWorkerTimeout > 0 {

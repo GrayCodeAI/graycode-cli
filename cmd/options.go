@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	ctxrepomap "github.com/GrayCodeAI/hawk/internal/context/repomap"
@@ -378,7 +377,11 @@ func configureSessionHeavy(sess *engine.Session) {
 		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
 		sess.MemorySvc().SetEnhanced(enhancedMem)
 		sess.ConfigureContextGraphObservation(cwd)
-		enhancedMem.StartSession(fmt.Sprintf("session_%d", time.Now().UnixNano()))
+		// Use a real unique session ID (genID) rather than a fabricated
+		// "session_<nanos>" placeholder — the persist ID may not be assigned
+		// yet at this point in startup, but it must still be collision-safe
+		// for the memory manager (LOW finding: fabricated session IDs).
+		enhancedMem.StartSession(genID())
 	}
 }
 

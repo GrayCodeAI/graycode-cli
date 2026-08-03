@@ -132,7 +132,13 @@ func (s *Sandbox) setupNamespace() error {
 // Run executes a command in the sandbox.
 func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 	if !s.config.Enabled {
-		return exec.CommandContext(ctx, "bash", "-c", command), nil // #nosec G204 -- intentional sandbox command boundary
+		// Fail closed: a disabled sandbox must not silently fall back to host
+		// execution. Only an explicit tier=off opt-out allows running on the
+		// host; anything else is a misconfiguration (e.g. no backend).
+		if s.config.Tier != TierOff {
+			return nil, fmt.Errorf("sandbox is disabled and not explicitly opted out; set tier=off to allow host execution")
+		}
+		return exec.CommandContext(ctx, "bash", "-c", command), nil // #nosec G204 -- intentional host execution behind explicit tier=off opt-out
 	}
 
 	// Auto-select the best available sandbox backend.

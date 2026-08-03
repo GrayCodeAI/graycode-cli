@@ -117,10 +117,12 @@ func (s *Session) WillCompactBeforeTurn() bool {
 	if s.Persistence().AutoCompactor().ShouldAutoCompact(s) {
 		return true
 	}
-	if len(s.Persistence().RawMessages()) > maxContextMessages {
+	// Read-only view: repeated per-turn reads must not deep-clone the whole
+	// transcript (M15 — RawMessages was O(n) per read, O(n²) per session).
+	if len(s.Persistence().RawMessagesView()) > maxContextMessages {
 		return true
 	}
-	convTokens := EstimateTokens(s.Persistence().RawMessages())
+	convTokens := EstimateTokens(s.Persistence().RawMessagesView())
 	budget := ctxmgr.NewContextBudget(s.ContextWindowSize())
 	return budget.ShouldCompact(convTokens)
 }
@@ -138,20 +140,20 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 		return compactStrategy, true // recordCompaction emitted inside AutoCompactIfNeeded
 	}
 
-	if len(s.Persistence().RawMessages()) > maxContextMessages {
-		before := EstimateTokens(s.Persistence().RawMessages())
+	if len(s.Persistence().RawMessagesView()) > maxContextMessages {
+		before := EstimateTokens(s.Persistence().RawMessagesView())
 		s.smartCompact()
-		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.Persistence().RawMessages()), false)
+		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.Persistence().RawMessagesView()), false)
 		return "smart_message_cap", true
 	}
 
-	convTokens := EstimateTokens(s.Persistence().RawMessages())
+	convTokens := EstimateTokens(s.Persistence().RawMessagesView())
 	window := s.ContextWindowSize()
 	budget := ctxmgr.NewContextBudget(window)
 	if budget.ShouldCompact(convTokens) {
-		before := EstimateTokens(s.Persistence().RawMessages())
+		before := EstimateTokens(s.Persistence().RawMessagesView())
 		s.smartCompact()
-		s.recordCompaction("smart_budget", before, EstimateTokens(s.Persistence().RawMessages()), false)
+		s.recordCompaction("smart_budget", before, EstimateTokens(s.Persistence().RawMessagesView()), false)
 		return "smart_budget", true
 	}
 

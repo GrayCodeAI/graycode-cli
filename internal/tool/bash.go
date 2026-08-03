@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/env"
 	homepkg "github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
@@ -673,6 +674,10 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	}
 
 	cmd := exec.CommandContext(ctx, execName, execArgs...) // #nosec G204 -- command parsed from tool-configured command string (lint/test command)
+	// Never pass provider API keys to the child: the guard regexes block
+	// obvious dumps, but any process the agent runs can otherwise read
+	// ANTHROPIC_API_KEY etc. from the inherited environment.
+	cmd.Env = env.SubprocessEnv()
 	// Put the child in its own process group so we can kill the whole tree
 	// (including grandchildren spawned by the shell) via kill(-pgid).
 	setCmdProcessGroup(cmd)

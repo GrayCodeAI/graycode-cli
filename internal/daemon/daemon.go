@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +28,13 @@ import (
 )
 
 const maxRequestBodyBytes = 1 << 20
+
+// sseWriteTimeout is the per-frame write deadline applied to SSE responses.
+// It is far shorter than the server's absolute WriteTimeout so a client that
+// stops reading releases the handler (and its concurrency slot) quickly,
+// while still being generous enough for slow-but-alive clients of agentic
+// streams. See writeSSE.
+const sseWriteTimeout = 90 * time.Second
 
 // Defaults for the daemon's global request throttling (H9). The chat limit is
 // deliberately stricter than the general API limit because each generation is
@@ -726,6 +734,7 @@ func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan 
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "DENY")
 	flusher, _ := w.(http.Flusher)
+	rc := http.NewResponseController(w)
 	var totalIn, totalOut, turns int
 
 	for {
@@ -737,9 +746,8 @@ func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan 
 			if !ok {
 				if saveErr := persistDaemonSession(sessionID, req, sess, saved, start); saveErr != nil {
 					slog.Error("persist streaming session failed", "err", saveErr, "session_id", sessionID)
-					_, _ = fmt.Fprint(w, "event: error\ndata: session persistence failed\n\n")
-					if flusher != nil {
-						flusher.Flush()
+					if writeSSE(w, rc, "event: error\ndata: session persistence failed\n\n") {
+						flushSSE(flusher)
 					}
 					return
 				}
@@ -750,18 +758,23 @@ func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan 
 					"tokens_out":  totalOut,
 					"turns_taken": turns,
 				})
-				_, _ = fmt.Fprintf(w, "event: done\ndata: %s\n\n", doneData)
-				if flusher != nil {
-					flusher.Flush()
+				if writeSSE(w, rc, "event: done\ndata: %s\n\n", doneData) {
+					flushSSE(flusher)
 				}
 				return
 			}
 			switch ev.Type {
 			case "content":
 				for _, line := range strings.Split(ev.Content, "\n") {
-					_, _ = fmt.Fprintf(w, "data: %s\n", line)
+					if !writeSSE(w, rc, "data: %s\n", line) {
+						s.abortStreamedSession(sessionID)
+						return
+					}
 				}
-				_, _ = fmt.Fprint(w, "\n")
+				if !writeSSE(w, rc, "\n") {
+					s.abortStreamedSession(sessionID)
+					return
+				}
 			case "usage":
 				if ev.Usage != nil {
 					totalIn += ev.Usage.PromptTokens
@@ -769,11 +782,42 @@ func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan 
 					turns++
 				}
 			}
-			if flusher != nil {
-				flusher.Flush()
-			}
+			flushSSE(flusher)
 		}
 	}
+}
+
+// writeSSE writes one SSE frame, returning false when the write failed (client
+// gone, or the server write deadline lapsed). A failed write means the handler
+// MUST stop immediately: with an absolute http.Server.WriteTimeout, a stalled
+// client would otherwise keep the handler (and the session stripe lock plus
+// the global concurrency slot) pinned forever.
+func writeSSE(w http.ResponseWriter, rc *http.ResponseController, format string, args ...interface{}) bool {
+	if rc != nil {
+		// Reset the write deadline before each frame so long agentic streams
+		// are not cut off by the server's absolute WriteTimeout, while a
+		// stalled client still fails the write and releases the handler.
+		_ = rc.SetWriteDeadline(time.Now().Add(sseWriteTimeout))
+	}
+	if _, err := fmt.Fprintf(w, format, args...); err != nil {
+		return false
+	}
+	return true
+}
+
+func flushSSE(flusher http.Flusher) {
+	if flusher != nil {
+		flusher.Flush()
+	}
+}
+
+// abortStreamedSession cancels the in-flight generation for a streaming
+// session whose client connection died mid-stream, so the agent loop does not
+// keep running (and blocking on the unconsumed events channel) after the
+// handler has returned and released the concurrency slot.
+func (s *Server) abortStreamedSession(sessionID string) {
+	slog.Info("SSE write failed, aborting session", "session_id", sessionID)
+	s.cancelSession(sessionID)
 }
 
 // writeJSONResponse accumulates events and writes a single JSON response.
@@ -929,6 +973,50 @@ func (s *Server) trackSession(id string, req ChatRequest, previous *hawksession.
 		CWD:       req.CWD,
 		Agent:     req.Agent,
 	})
+	// The sessions map is a soft in-memory index (durable state lives in the
+	// on-disk session store) — bounding it prevents unbounded growth across a
+	// long-lived daemon lifetime (LOW finding). Drop the oldest entries once
+	// the cap is exceeded; LastUsed is recomputed on each trackSession call.
+	s.evictStaleSessions(maxTrackedSessions)
+}
+
+// maxTrackedSessions caps the in-memory session index (LOW finding: the map
+// previously grew without bound over the daemon lifetime). Durability is
+// unaffected — this only backs GET /v1/sessions and per-session turn counts.
+const maxTrackedSessions = 1000
+
+// evictStaleSessions trims the in-memory session index to at most `maxKeep`
+// entries, dropping the ones with the oldest LastUsed (ties broken by ID for
+// determinism). It is safe to call concurrently with ongoing Store/Load.
+func (s *Server) evictStaleSessions(maxKeep int) {
+	var entries []struct {
+		id string
+		s  *Session
+	}
+	s.sessions.Range(func(k, v any) bool {
+		id, _ := k.(string)
+		sess, _ := v.(*Session)
+		if id == "" || sess == nil {
+			return true
+		}
+		entries = append(entries, struct {
+			id string
+			s  *Session
+		}{id: id, s: sess})
+		return true
+	})
+	if len(entries) <= maxKeep {
+		return
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if !entries[i].s.LastUsed.Equal(entries[j].s.LastUsed) {
+			return entries[i].s.LastUsed.Before(entries[j].s.LastUsed)
+		}
+		return entries[i].id < entries[j].id
+	})
+	for i := 0; i < len(entries)-maxKeep; i++ {
+		s.sessions.Delete(entries[i].id)
+	}
 }
 
 func (s *Server) handleListSessions(w http.ResponseWriter, _ *http.Request) {

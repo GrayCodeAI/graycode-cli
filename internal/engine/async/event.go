@@ -21,7 +21,7 @@ type Submission struct {
 	Op        OpType
 	Payload   string
 	Timestamp time.Time
-	ReplyTo   chan<- *Event // optional: caller gets a direct reply
+	ReplyTo   chan<- *Event // optional: caller receives the terminal event (EventDone/EventError) directly
 }
 
 // EventType identifies the kind of event emitted by the engine.
@@ -35,6 +35,7 @@ const (
 	EventError      EventType = "error"
 	EventThinking   EventType = "thinking"
 	EventUsage      EventType = "usage"
+	EventInfo       EventType = "info"
 )
 
 // Event is a single event from the async engine.
@@ -47,13 +48,20 @@ type Event struct {
 	Usage     *Usage
 	Timestamp time.Time
 	SessionID string
+	// SourceType preserves the raw engine stream event type for unmapped
+	// events (e.g. "compact_start") so diagnostics stay accurate.
+	SourceType string
 }
 
 // Usage tracks token usage.
 type Usage struct {
 	PromptTokens     int
 	CompletionTokens int
+	CacheReadTokens  int
+	CacheWriteTokens int
 	TotalTokens      int
+	Provider         string
+	Model            string
 }
 
 // EventQueue is a thread-safe, replayable queue of events.
@@ -105,6 +113,19 @@ func (eq *EventQueue) Subscribe() <-chan *Event {
 	return ch
 }
 
+// Unsubscribe removes a subscriber channel. It is safe to call from the
+// consumer goroutine; a channel that is not subscribed is a no-op.
+func (eq *EventQueue) Unsubscribe(ch <-chan *Event) {
+	eq.subMu.Lock()
+	defer eq.subMu.Unlock()
+	for i, sub := range eq.subs {
+		if sub == ch {
+			eq.subs = append(eq.subs[:i], eq.subs[i+1:]...)
+			return
+		}
+	}
+}
+
 // Replay returns all stored events for replay.
 func (eq *EventQueue) Replay() []*Event {
 	eq.mu.RLock()
@@ -141,24 +162,17 @@ func (sq *SubmissionQueue) Submit(s *Submission) {
 	}
 }
 
-// Next blocks until a submission is available and returns it.
-func (sq *SubmissionQueue) Next() *Submission {
-	<-sq.notify
+// pop returns the oldest pending submission without blocking. Returns ok=false
+// when the queue is empty. The engine drains the queue after each notify.
+func (sq *SubmissionQueue) pop() (s *Submission, ok bool) {
 	sq.mu.Lock()
+	defer sq.mu.Unlock()
 	if len(sq.submissions) == 0 {
-		sq.mu.Unlock()
-		return sq.Next()
+		return nil, false
 	}
-	s := sq.submissions[0]
+	s = sq.submissions[0]
 	sq.submissions = sq.submissions[1:]
-	sq.mu.Unlock()
-	if len(sq.submissions) > 0 {
-		select {
-		case sq.notify <- struct{}{}:
-		default:
-		}
-	}
-	return s
+	return s, true
 }
 
 // Len returns the number of pending submissions.

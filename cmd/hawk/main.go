@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/GrayCodeAI/hawk/cmd"
+	"github.com/GrayCodeAI/hawk/internal/crash"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
 )
@@ -29,6 +30,11 @@ var (
 )
 
 func main() {
+	// Install the crash handler first so SIGQUIT/SIGTERM dumps and runtime
+	// fault output are captured before any user code runs. Additive: it never
+	// replaces existing signal handling (Bubble Tea, daemon shutdown).
+	crash.Install()
+
 	// Handle --version flag immediately
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
 		fmt.Println("hawk " + Version)
@@ -42,7 +48,7 @@ func main() {
 	cmd.SetBuildDate(BuildDate)
 	mcp.SetClientVersion(Version)
 
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.RunWithPanicRecovery(cmd.Execute); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		// An explicit ExitCodeError (e.g. a wrapped Bash exit status) wins —
 		// it already carries the intended code. Otherwise classify the failure

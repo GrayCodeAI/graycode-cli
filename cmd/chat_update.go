@@ -98,6 +98,32 @@ func shouldReturnToPromptOnType(msg tea.KeyMsg) bool {
 	return true
 }
 
+// quitModel performs the shared graceful-quit sequence used by every exit
+// path (Ctrl+C twice, /quit, SIGINT as tea.InterruptMsg, SIGTERM/SIGHUP as
+// tea.QuitMsg): cancel any in-flight stream, persist the session, stop
+// background workers (watcher, parallel agents, background tasks), stop the
+// sandbox container, and mark the model as quitting so the final view can
+// show the resume hint.
+func (m *chatModel) quitModel() (tea.Model, tea.Cmd) {
+	if m.cancel != nil {
+		m.cancel()
+		m.cancel = nil
+	}
+	m.saveSession()
+	if m.watcherStop != nil {
+		m.watcherStop()
+	}
+	if m.parallelCancel != nil {
+		m.parallelCancel()
+	}
+	if m.bgCancel != nil {
+		m.bgCancel()
+	}
+	m.stopContainer()
+	m.quitting = true
+	return m, tea.Quit
+}
+
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	if _, isMouse := msg.(tea.MouseMsg); !isMouse {
@@ -127,6 +153,17 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewDirty = true
 		m.updateViewportContent()
 		return m, nil
+
+	case tea.InterruptMsg:
+		// External SIGINT delivered while the terminal is not in raw mode
+		// (e.g. `kill -INT`, tmux/screen `prefix` + ctrl+c). Bubble Tea would
+		// otherwise exit without saving the session.
+		return m.quitModel()
+
+	case tea.QuitMsg:
+		// SIGTERM (e.g. `kill <pid>`, terminal close on some platforms).
+		// Exit through the same save-and-cleanup path as Ctrl+C.
+		return m.quitModel()
 
 	case promptKeepAliveMsg:
 		if m.uiFocus == focusPrompt && !m.configOpen && !m.useConfigInput {
@@ -723,19 +760,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.updateViewportContent()
 					return m, nil
 				}
-				m.saveSession()
-				if m.watcherStop != nil {
-					m.watcherStop()
-				}
-				if m.parallelCancel != nil {
-					m.parallelCancel()
-				}
-				if m.bgCancel != nil {
-					m.bgCancel()
-				}
-				m.stopContainer()
-				m.quitting = true
-				return m, tea.Quit
+				return m.quitModel()
 			}
 			if msg.String() == "escape" {
 				if m.cancel != nil {
@@ -758,10 +783,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "enter" {
 				text := strings.TrimSpace(m.input.Value())
 				if text != "" {
-					m.history = append(m.history, text)
-					m.historyIdx = len(m.history)
-					m.historyDraft = ""
-					m.messageQueue = append(m.messageQueue, text)
+					m.pushHistory(text)
+					m.enqueueMessage(text)
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Queued: %s", icons.Mail(), text)})
 					m.input.Reset()
 					m.viewDirty = true

@@ -29,8 +29,10 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		// Use a detached context for cleanup so that cancellation of the
 		// mission context (Ctrl-C, timeout) does not kill the cleanup
 		// command. Without this, git worktree remove is killed before it
-		// runs and the worktree leaks on disk permanently (C4 fix).
-		defer removeWorktreeDetached(cfg.RepoDir, wtPath)
+		// runs and the worktree leaks on disk permanently (C4 fix). The
+		// feature branch is deleted alongside so retries (H9) never collide
+		// with the previous attempt's branch.
+		defer removeWorktreeDetached(cfg.RepoDir, wtPath, feature.Branch)
 
 		// Build the worker prompt
 		workerPrompt := fmt.Sprintf(
@@ -58,8 +60,17 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			return nil, fmt.Errorf("set max turns: %w", setErr)
 		}
 
-		// Auto-approve everything in mission workers
+		// Auto-approve everything in mission workers unless a human approval
+		// gate is configured: risky calls (network, destructive file ops)
+		// block until the operator responds. The gate's Await uses the worker
+		// ctx, so mission cancellation still unblocks it.
 		sess.SetPermissionFn(func(req engine.PermissionRequest) {
+			if cfg.ApprovalGate != nil && req.Response != nil {
+				if err := cfg.ApprovalGate.Check(ctx, req.ToolName, req.Summary); err != nil {
+					req.Response <- false
+					return
+				}
+			}
 			if req.Response != nil {
 				req.Response <- true
 			}
@@ -141,7 +152,12 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		if err != nil {
 			return nil, fmt.Errorf("worktree: %w", err)
 		}
-		defer removeWorktree(ctx, cfg.RepoDir, wtPath)
+		// Detached-context cleanup (M6): the old `defer removeWorktree(ctx,...)`
+		// used the caller's cancellable context, so a cancelled mission killed
+		// `git worktree remove` before it ran and the worktree leaked on disk
+		// permanently. Also delete the branch so a subsequent validation or
+		// retry cannot collide with it.
+		defer removeWorktreeDetached(cfg.RepoDir, wtPath, feature.Branch)
 
 		validationPrompt := fmt.Sprintf(
 			"You are validating the implementation of feature: %s\n\nDescription: %s\n\n"+
@@ -206,6 +222,20 @@ func createWorktree(ctx context.Context, repoDir, baseBranch, branch string) (st
 	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branch, wtPath, baseBranch)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
+		// The branch already exists (retry with leaked branch, or a
+		// validation worker on the implementation worker's branch): fall
+		// back to checking out the existing branch instead of failing (H9).
+		if strings.Contains(string(out), "already exists") {
+			// #nosec G204 -- binary is the fixed string "git"; wtPath/branch come from internal mission state, not raw external input
+			fallback := exec.CommandContext(ctx, "git", "worktree", "add", wtPath, branch)
+			fallback.Dir = repoDir
+			if fout, ferr := fallback.CombinedOutput(); ferr == nil {
+				return wtPath, nil
+			} else if !strings.Contains(string(fout), "already") {
+				_ = os.RemoveAll(wtPath)
+				return "", fmt.Errorf("%s: %w", strings.TrimSpace(string(fout)), ferr)
+			}
+		}
 		// Clean up the temp directory created by mktemp so it doesn't
 		// leak on disk when git worktree add fails (C5 fix).
 		_ = os.RemoveAll(wtPath)
@@ -216,13 +246,24 @@ func createWorktree(ctx context.Context, repoDir, baseBranch, branch string) (st
 
 // removeWorktreeDetached removes a git worktree using a fresh, non-cancellable
 // context with a generous timeout. This ensures cleanup runs even when the
-// mission context was cancelled (C4 fix). The original removeWorktree used the
-// caller's context, which meant a cancelled mission would kill the cleanup
-// command before it could run, leaking the worktree directory permanently.
-func removeWorktreeDetached(repoDir, wtPath string) {
+// mission context was cancelled (C4 fix). The worktree's branch is deleted
+// afterwards (best-effort) so retries never collide with a leaked branch (H9).
+// The original removeWorktree used the caller's context, which meant a
+// cancelled mission would kill the cleanup command before it could run,
+// leaking the worktree directory permanently.
+func removeWorktreeDetached(repoDir, wtPath, branch string) {
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	removeWorktree(cleanupCtx, repoDir, wtPath)
+	if branch == "" {
+		return
+	}
+	// #nosec G204 -- binary is the fixed string "git"; branch comes from internal mission state
+	del := exec.CommandContext(cleanupCtx, "git", "branch", "-D", branch)
+	del.Dir = repoDir
+	if out, err := del.CombinedOutput(); err != nil && !strings.Contains(string(out), "not found") {
+		fmt.Fprintf(os.Stderr, "warning: failed to delete mission branch %s: %v\n", branch, err)
+	}
 }
 
 func removeWorktree(ctx context.Context, repoDir, wtPath string) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -445,7 +446,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"reason":  retryReason,
 				"error":   streamErr.Error(),
 			})
-			retryTimer := time.NewTimer(time.Duration(streamAttempt+1) * time.Second)
+			retryTimer := time.NewTimer(streamRetryDelay(streamErr, streamAttempt))
 			select {
 			case <-retryTimer.C:
 			case <-ctx.Done():
@@ -512,6 +513,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 
 		// Budget enforcement
 		limits := s.LifecycleSvc().Limits()
+		// Sync the tracker's cost accounting with the session's authoritative
+		// cost accumulator so LimitTracker.IsExceeded() (checked every turn by
+		// checkGuardConditions) enforces the same budget as this explicit check.
+		limits.SetCostUSD(s.CostValue().TotalUSD())
 		if limits.MaxBudgetUSD() > 0 && s.CostValue().TotalUSD() >= limits.MaxBudgetUSD() {
 			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())}
 			ch <- StreamEvent{Type: "done"}
@@ -623,7 +628,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if err != nil || resp == nil {
 						return
 					}
-					lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Yaad(), resp.Content)
+					if err := lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Yaad(), resp.Content); err != nil {
+						slog.Warn("memory ops", "error", err)
+					}
 				}()
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
@@ -678,7 +685,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						break
 					}
 				}
-				go s.LifecycleSvc().Pipeline().EndSession(ctx.Err() == nil, taskGoal)
+				go s.LifecycleSvc().Pipeline().EndSession(ctx, ctx.Err() == nil, taskGoal)
 			}
 			// Session end hook
 			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
@@ -686,6 +693,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"model":    s.ChatLLM().Model(),
 				"messages": len(s.Persistence().RawMessages()),
 			})
+			// Drain the async hook queue with a bounded wait so post-session
+			// observers finish before the process exits; nothing new is
+			// scheduled after this point (M19). Timeout guards a hung hook.
+			waitCtx, waitCancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+			defer waitCancel()
+			if err := hooks.WaitAsync(waitCtx); err != nil {
+				slog.Warn("session end hooks", "error", err)
+			}
 			return
 		}
 

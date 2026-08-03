@@ -235,6 +235,16 @@ var blockedBasenames = []string{
 	"credentials.yaml",
 	"credentials.yml",
 	"credentials.xml",
+	"secrets.txt",
+	"secrets.yaml",
+	"secrets.yml",
+	"secrets.json",
+	".git-credentials",
+	".htpasswd",
+	"id_rsa",
+	"id_ed25519",
+	"id_ecdsa",
+	"id_dsa",
 }
 
 func matchesResolvedPath(cleanPath, candidate string) bool {

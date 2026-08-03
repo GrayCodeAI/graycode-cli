@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/mathutil"
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 )
 
 // Insight represents a learned insight from a previous session.
@@ -373,7 +374,7 @@ func (c *CrossSessionLearner) Save() error {
 	}
 
 	path := filepath.Join(c.Dir, "cross_session.json")
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	if err := safewrite.WriteFile(path, data); err != nil {
 		return fmt.Errorf("write learner file: %w", err)
 	}
 

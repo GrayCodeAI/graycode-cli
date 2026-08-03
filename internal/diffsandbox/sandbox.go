@@ -416,10 +416,20 @@ func (s *Sandbox) statsLocked() SandboxStats {
 
 // absPath resolves a path relative to the sandbox root and rejects any path
 // (absolute or relative, e.g. containing "..") that escapes the root.
+// Lexical containment alone is not enough: a symlinked intermediate
+// directory can point outside the root, so existing components are resolved
+// one at a time and every symlink target is re-checked for containment
+// (M10). A dangling symlink is rejected outright. The resolved path is
+// returned so callers operate on the real target, not behind a symlink swap.
 func (s *Sandbox) absPath(path string) (string, error) {
 	root, err := filepath.Abs(s.rootDir)
 	if err != nil {
 		return "", fmt.Errorf("resolve sandbox root %s: %w", s.rootDir, err)
+	}
+	// Resolve the root itself (e.g. macOS /var -> /private/var) so every
+	// later containment comparison uses the same physical prefix.
+	if resolvedRoot, rerr := filepath.EvalSymlinks(root); rerr == nil {
+		root = resolvedRoot
 	}
 	var abs string
 	if filepath.IsAbs(path) {
@@ -427,11 +437,49 @@ func (s *Sandbox) absPath(path string) (string, error) {
 	} else {
 		abs = filepath.Join(root, path)
 	}
+	// Normalize abs through the same physical-prefix resolution as root
+	// (e.g. macOS /var -> /private/var), resolving the parent when the final
+	// component does not exist yet (creates).
+	if r, rerr := filepath.EvalSymlinks(abs); rerr == nil {
+		abs = r
+	} else if rdir, rerr2 := filepath.EvalSymlinks(filepath.Dir(abs)); rerr2 == nil {
+		abs = filepath.Join(rdir, filepath.Base(abs))
+	}
 	rel, err := filepath.Rel(root, abs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", fmt.Errorf("path %q escapes sandbox root %q", path, root)
 	}
-	return abs, nil
+
+	// Walk existing components, following symlinks only when their targets
+	// stay inside the root. Non-existent components (creates) terminate the
+	// walk and are appended unresolved.
+	cur := root
+	resolved := root
+	components := strings.Split(rel, string(filepath.Separator))
+	for i, comp := range components {
+		cand := filepath.Join(cur, comp)
+		li, lerr := os.Lstat(cand)
+		if lerr != nil {
+			tail := strings.Join(components[i:], string(filepath.Separator))
+			resolved = filepath.Join(cur, tail)
+			break
+		}
+		if li.Mode()&os.ModeSymlink != 0 {
+			target, terr := filepath.EvalSymlinks(cand)
+			if terr != nil {
+				return "", fmt.Errorf("path %q escapes sandbox root %q: unresolvable symlink %q", path, root, cand)
+			}
+			relT, rerr := filepath.Rel(root, target)
+			if rerr != nil || relT == ".." || strings.HasPrefix(relT, ".."+string(filepath.Separator)) {
+				return "", fmt.Errorf("path %q escapes sandbox root %q via symlink %q -> %q", path, root, cand, target)
+			}
+			cur = target
+		} else {
+			cur = cand
+		}
+		resolved = cur
+	}
+	return resolved, nil
 }
 
 // SortedPaths returns all pending paths in sorted order.

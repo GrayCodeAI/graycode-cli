@@ -377,6 +377,36 @@ const maxDisplayMessages = 500
 // We trim in batches to avoid frequent reallocations.
 const messageTrimThreshold = 450
 
+// maxPromptHistory bounds the in-memory prompt history ring (M18: history
+// grew without bound across a long session).
+const maxPromptHistory = 200
+
+// pushHistory records a submitted prompt, capped to the most recent
+// maxPromptHistory entries.
+func (m *chatModel) pushHistory(text string) {
+	m.history = append(m.history, text)
+	if len(m.history) > maxPromptHistory {
+		keep := len(m.history) - maxPromptHistory
+		m.history = append(m.history[:0], m.history[keep:]...)
+	}
+	m.historyIdx = len(m.history)
+	m.historyDraft = ""
+}
+
+// maxQueuedMessages bounds the queue of prompts entered while the agent is
+// working (M18: it grew without bound during long turns). The oldest queued
+// prompts are dropped first so the most recent intent is preserved.
+const maxQueuedMessages = 100
+
+// enqueueMessage queues a prompt entered while the agent is working,
+// dropping the oldest entries past the cap.
+func (m *chatModel) enqueueMessage(text string) {
+	if len(m.messageQueue) >= maxQueuedMessages {
+		m.messageQueue = append(m.messageQueue[:0], m.messageQueue[1:]...)
+	}
+	m.messageQueue = append(m.messageQueue, text)
+}
+
 // trimOldMessages removes old messages when the count exceeds the threshold.
 // Keeps the most recent messages and shows a hint about trimmed history.
 func (m *chatModel) trimOldMessages() {
@@ -412,7 +442,28 @@ func (m *chatModel) trimOldMessages() {
 	kept = append(kept, trimmedHint)
 	kept = append(kept, m.messages[startIdx+trimCount:]...)
 	m.messages = kept
+	// Expansion state is keyed by message index; reindex the survivors so
+	// Enter-to-expand keeps targeting the right messages and stale keys for
+	// trimmed messages are pruned (M18: the map grew without bound).
+	m.toolResultExpanded = reindexExpandedMap(m.toolResultExpanded, startIdx, trimCount)
 	m.invalidateViewportCache()
+}
+
+// reindexExpandedMap maps tool-result expansion state across
+// trimOldMessages' reindex: indices below startIdx are untouched, trimmed
+// indices are pruned, and survivors above the trim shift down by
+// trimCount-1 because the trim hint takes one slot.
+func reindexExpandedMap(expanded map[int]bool, startIdx, trimCount int) map[int]bool {
+	reindexed := make(map[int]bool, len(expanded))
+	for idx, expandedState := range expanded {
+		switch {
+		case idx < startIdx:
+			reindexed[idx] = expandedState
+		case idx >= startIdx+trimCount:
+			reindexed[idx-trimCount+1] = expandedState
+		}
+	}
+	return reindexed
 }
 
 func (m *chatModel) markPartialDirty() tea.Cmd {

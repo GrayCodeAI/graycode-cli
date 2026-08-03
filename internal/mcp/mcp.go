@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -39,6 +40,11 @@ type Server struct {
 	pendMu     sync.Mutex
 	closeOnce  sync.Once
 	closeErr   error
+	// dead is set once the stdout reader stops (oversized response, server
+	// crash, …). New calls fail fast instead of hanging until the timeout,
+	// and the child process is killed so it cannot linger (M7).
+	dead     atomic.Bool
+	deadOnce sync.Once
 }
 
 // Tool is a tool exposed by an MCP server.
@@ -164,8 +170,24 @@ func (s *Server) readLoop() {
 	}
 	// Scanner done — log the cause if it was an error (e.g., oversized
 	// response exceeding the 1MB buffer), then close all pending channels.
+	var cause string
 	if err := s.reader.Err(); err != nil {
+		cause = err.Error()
 		slog.Warn("mcp: stdout reader stopped", "server", s.Name, "error", err)
+	}
+	// The connection is permanently broken: kill the child so it cannot
+	// linger in the background, and mark the server dead so new calls fail
+	// fast instead of hanging until the call timeout (M7). Close() is safe
+	// to race: it closes stdin and waits; killing first makes Wait return
+	// immediately.
+	s.deadOnce.Do(func() {
+		s.dead.Store(true)
+		if s.cmd != nil && s.cmd.Process != nil {
+			_ = s.cmd.Process.Kill()
+		}
+	})
+	if cause != "" {
+		slog.Warn("mcp: server connection lost", "server", s.Name, "cause", cause)
 	}
 	s.pendMu.Lock()
 	for id, ch := range s.pending {
@@ -315,6 +337,13 @@ func (s *Server) call(method string, params interface{}) (json.RawMessage, error
 }
 
 func (s *Server) callWithTimeout(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
+	// Fail fast once the reader has stopped (oversized response, crash):
+	// a request registered now would never be answered and would hang
+	// until the call timeout (M7).
+	if s.dead.Load() {
+		return nil, fmt.Errorf("mcp: connection closed (server %s is no longer running)", s.Name)
+	}
+
 	s.mu.Lock()
 	s.nextID++
 	id := s.nextID

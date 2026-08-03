@@ -158,6 +158,19 @@ func runMission(_ *cobra.Command, args []string) error {
 		}
 	}
 
+	// Propagate feature failures as a non-zero exit so CI sees a real
+	// failure instead of green: Mission.Run historically returned nil even
+	// when every feature failed (H9), so `hawk mission` exited 0.
+	failed := 0
+	for _, f := range m.Features {
+		if f.Status == mission.FeatureFailed {
+			failed++
+		}
+	}
+	if failed > 0 {
+		return fmt.Errorf("mission %s: %d/%d features failed", m.ID, failed, len(m.Features))
+	}
+
 	return nil
 }
 

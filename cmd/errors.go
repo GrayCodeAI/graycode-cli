@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -29,7 +27,17 @@ func friendlyError(err error) string {
 // Catches panics, saves the current session state, logs the stack trace to
 // Hawk's user state crash log, and exits with a user-friendly message.
 
-//lint:ignore U1000 Infrastructure wired in main.go for production builds
+// RunWithPanicRecovery executes fn with the process-level panic recovery
+// installed. An unexpected panic in the main execution path is caught, the
+// optional saveFn is invoked to persist session state, the stack is written to
+// the crash log, and the process exits with a user-friendly message instead of
+// a raw stack trace. saveFn may be nil (sessions are persisted incrementally,
+// so a nil saveFn loses at most the in-flight message).
+func RunWithPanicRecovery(fn func() error) (err error) {
+	defer panicRecovery(nil)
+	return fn()
+}
+
 func panicRecovery(saveFn func()) {
 	if r := recover(); r != nil {
 		stack := string(debug.Stack())
@@ -69,7 +77,11 @@ func panicRecovery(saveFn func()) {
 
 		// Print user-friendly message
 		_, _ = fmt.Fprintf(os.Stderr, "\nhawk encountered an unexpected error and needs to exit.\n")
-		_, _ = fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
+		if saveFn != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "Session messages are persisted incrementally; the in-flight message may be lost.\n")
+		}
 		_, _ = fmt.Fprintf(os.Stderr, "Details logged to %s\n", filepath.Join(storage.StateDir(), "crash.log"))
 		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Include this error ID: %s\n\n", errorID)
@@ -88,43 +100,6 @@ func generateErrorID(stack string) string {
 		hash = ((hash << 5) + hash) ^ uint32(stack[i])
 	}
 	return fmt.Sprintf("hawk-%s-%06x", time.Now().Format("060102"), hash&0xFFFFFF)
-}
-
-// ─── signalHandler ────────────────────────────────────────────────────────────
-// Handles SIGTERM, SIGINT, and SIGHUP gracefully. Calls the provided save
-// function before exiting to ensure the current session is persisted.
-
-//lint:ignore U1000 Infrastructure wired in main.go for production builds
-func signalHandler(saveFn func()) {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-
-	go func() {
-		sig := <-sigCh
-		_, _ = fmt.Fprintf(os.Stderr, "\nReceived %v, saving session...\n", sig)
-
-		if saveFn != nil {
-			// Give save a bounded amount of time
-			done := make(chan struct{})
-			go func() {
-				defer func() {
-					_ = recover() // don't let save panic crash the handler
-					close(done)
-				}()
-				saveFn()
-			}()
-
-			select {
-			case <-done:
-				// saved successfully
-			case <-time.After(5 * time.Second):
-				_, _ = fmt.Fprintf(os.Stderr, "Save timed out, exiting.\n")
-			}
-		}
-
-		_, _ = fmt.Fprintf(os.Stderr, "Goodbye.\n")
-		os.Exit(0) // os.Exit intentional: signal handler, must terminate process
-	}()
 }
 
 // ─── errorLogger ──────────────────────────────────────────────────────────────

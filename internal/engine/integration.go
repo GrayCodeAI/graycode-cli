@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -488,7 +489,15 @@ func (p *IntegrationPipeline) PostToolExecution(toolName string, args map[string
 
 // EndSession runs the session-end pipeline: self-assess, record experience,
 // update knowledge base, collect feedback, and generate a summary.
-func (p *IntegrationPipeline) EndSession(success bool, taskGoal string) *SessionSummary {
+//
+// ctx is honored for lifecycle tracking (the fire-and-forget caller in
+// stream.go passes the session context), and a canceled context causes the
+// pipeline to bail out early rather than running post-session work after the
+// session is torn down (LOW finding: the goroutine previously had no context).
+func (p *IntegrationPipeline) EndSession(ctx context.Context, success bool, taskGoal string) *SessionSummary {
+	if ctx.Err() != nil {
+		return nil
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

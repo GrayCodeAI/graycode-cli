@@ -737,7 +737,7 @@ func TestTransactionTool_ExecuteEmptyOperations(t *testing.T) {
 
 func TestTransactionTool_RejectsCredentialContent(t *testing.T) {
 	dir := t.TempDir()
-	createPath := filepath.Join(dir, "secrets.txt")
+	createPath := filepath.Join(dir, "notes.txt")
 
 	input := transactionInput{
 		Operations: []struct {

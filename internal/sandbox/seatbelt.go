@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/env"
 )
 
 // SeatbeltPolicy describes the permissions for a macOS seatbelt sandbox profile.
@@ -113,8 +115,9 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	seatbeltTmpFiles = append(seatbeltTmpFiles, tmpFile.Name())
 	seatbeltTmpFilesMu.Unlock()
 
-	// Pass through environment, ensuring HOME is set.
-	cmd.Env = os.Environ()
+	// Pass through environment (minus provider API keys — the sandboxed
+	// process is agent-controlled), ensuring HOME is set.
+	cmd.Env = env.SubprocessEnv()
 
 	return cmd, nil
 }

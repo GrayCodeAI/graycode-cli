@@ -12,6 +12,19 @@ import (
 	"strings"
 )
 
+// Package-level compiled patterns (M14): the convention detectors run per
+// scanned repo (filepath.WalkDir over every matching file); regexp.MustCompile
+// per call wasted CPU and allocation.
+var (
+	pythonSnakeRe  = regexp.MustCompile(`\bdef ([a-z][a-z0-9]*_[a-z0-9_]+)\b`)
+	pythonCamelRe  = regexp.MustCompile(`\bdef ([a-z][a-zA-Z0-9]+[A-Z][a-zA-Z0-9]*)\b`)
+	goWrapErrRe    = regexp.MustCompile(`fmt\.Errorf\([^)]*%w`)
+	goBareErrRe    = regexp.MustCompile(`return\s+err\b`)
+	goTableTestRe  = regexp.MustCompile(`(tests|cases|testCases|tt)\s*:?=\s*\[\]struct`)
+	goSimpleTestRe = regexp.MustCompile(`func Test[A-Z]\w+\(t \*testing\.T\)`)
+	conventionalRe = regexp.MustCompile(`^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\(.+\))?:`)
+)
+
 // This file holds the coding-convention detectors used by Scan (indentation,
 // naming, error handling, import organization, test style, commit style). The
 // language/build detectors live in project_detect.go.
@@ -177,9 +190,6 @@ func detectNamingConvention(dir string, lang string) *Convention {
 		camelCount := 0
 		sampled := 0
 
-		snakeRe := regexp.MustCompile(`\bdef ([a-z][a-z0-9]*_[a-z0-9_]+)\b`)
-		camelRe := regexp.MustCompile(`\bdef ([a-z][a-zA-Z0-9]+[A-Z][a-zA-Z0-9]*)\b`)
-
 		_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || sampled >= 10 {
 				return filepath.SkipAll
@@ -196,8 +206,8 @@ func detectNamingConvention(dir string, lang string) *Convention {
 				return nil
 			}
 			content := string(data)
-			snakeCount += len(snakeRe.FindAllString(content, -1))
-			camelCount += len(camelRe.FindAllString(content, -1))
+			snakeCount += len(pythonSnakeRe.FindAllString(content, -1))
+			camelCount += len(pythonCamelRe.FindAllString(content, -1))
 			sampled++
 			return nil
 		})
@@ -229,9 +239,6 @@ func detectGoErrorHandling(dir string) *Convention {
 	bareCount := 0 // return err (without wrapping)
 	sampled := 0
 
-	wrapRe := regexp.MustCompile(`fmt\.Errorf\([^)]*%w`)
-	bareRe := regexp.MustCompile(`return\s+err\b`)
-
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || sampled >= 20 {
 			return filepath.SkipAll
@@ -248,8 +255,8 @@ func detectGoErrorHandling(dir string) *Convention {
 			return nil
 		}
 		content := string(data)
-		wrapCount += len(wrapRe.FindAllString(content, -1))
-		bareCount += len(bareRe.FindAllString(content, -1))
+		wrapCount += len(goWrapErrRe.FindAllString(content, -1))
+		bareCount += len(goBareErrRe.FindAllString(content, -1))
 		sampled++
 		return nil
 	})
@@ -362,9 +369,6 @@ func detectTestNaming(dir string, lang string) *Convention {
 	simpleCount := 0
 	sampled := 0
 
-	tableDrivenRe := regexp.MustCompile(`(tests|cases|testCases|tt)\s*:?=\s*\[\]struct`)
-	simpleFuncRe := regexp.MustCompile(`func Test[A-Z]\w+\(t \*testing\.T\)`)
-
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || sampled >= 15 {
 			return filepath.SkipAll
@@ -381,8 +385,8 @@ func detectTestNaming(dir string, lang string) *Convention {
 			return nil
 		}
 		content := string(data)
-		tableDrivenCount += len(tableDrivenRe.FindAllString(content, -1))
-		simpleCount += len(simpleFuncRe.FindAllString(content, -1))
+		tableDrivenCount += len(goTableTestRe.FindAllString(content, -1))
+		simpleCount += len(goSimpleTestRe.FindAllString(content, -1))
 		sampled++
 		return nil
 	})
@@ -416,7 +420,6 @@ func detectCommitStyle(dir string) *Convention {
 	}
 
 	// Check for conventional commits (feat:, fix:, chore:, etc.).
-	conventionalRe := regexp.MustCompile(`^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\(.+\))?:`)
 	conventionalCount := 0
 
 	for _, line := range lines {

@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 )
@@ -13,10 +14,13 @@ type EvolvingMemoryAdapter struct {
 
 func (a *EvolvingMemoryAdapter) Learn(pattern, lesson string) error {
 	if a.EM == nil {
-		return nil
+		return fmt.Errorf("evolving memory: not configured")
 	}
 	a.EM.Learn(pattern, lesson, "session_lifecycle")
-	return nil
+	// Persist immediately: sessions run in short-lived processes and an
+	// unsaved guideline is lost forever at exit. Save is a small JSON write;
+	// the error is surfaced rather than swallowed.
+	return a.EM.Save()
 }
 
 func (a *EvolvingMemoryAdapter) Retrieve(query string) []string {
@@ -48,7 +52,7 @@ type SkillDistillerAdapter struct {
 
 func (a *SkillDistillerAdapter) Distill(goal string, steps []string, outcome string) error {
 	if a.SD == nil {
-		return nil
+		return fmt.Errorf("skill distiller: not configured")
 	}
 	if a.Chat == nil {
 		return fmt.Errorf("skill distiller: chat function is not configured")
@@ -76,6 +80,9 @@ func (a *SkillDistillerAdapter) Retrieve(query string) []string {
 	}
 	skills, err := a.Search(query)
 	if err != nil {
+		// The interface cannot surface errors, so log them: "not configured"
+		// (nil Search) and "search failed" must not look identical.
+		slog.Warn("skill distiller: retrieve failed", "error", err)
 		return nil
 	}
 	out := make([]string, 0, len(skills))

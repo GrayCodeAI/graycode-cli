@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -662,4 +663,33 @@ func TestErrorResponse_JSON(t *testing.T) {
 	if decoded.Code != resp.Code {
 		t.Errorf("Code = %q, want %q", decoded.Code, resp.Code)
 	}
+}
+
+// TestServer_EvictStaleSessionsBoundsMap verifies the LOW-finding fix: the
+// in-memory session index does not grow without bound — oldest entries are
+// dropped once the cap is exceeded.
+func TestServer_EvictStaleSessionsBoundsMap(t *testing.T) {
+	s := &Server{}
+	for i := 0; i < maxTrackedSessions+50; i++ {
+		id := fmt.Sprintf("sess-%d", i)
+		// Stagger LastUsed so ordering is deterministic.
+		s.sessions.Store(id, &Session{ID: id, LastUsed: time.Unix(int64(i), 0)})
+		s.evictStaleSessions(maxTrackedSessions)
+	}
+	if count := countSessions(s); count != maxTrackedSessions {
+		t.Fatalf("session index len = %d, want <= %d", count, maxTrackedSessions)
+	}
+	// The youngest entries must survive; the oldest must be evicted.
+	if _, ok := s.sessions.Load("sess-0"); ok {
+		t.Fatal("oldest session should have been evicted")
+	}
+	if _, ok := s.sessions.Load(fmt.Sprintf("sess-%d", maxTrackedSessions+49)); !ok {
+		t.Fatal("youngest session should have been retained")
+	}
+}
+
+func countSessions(s *Server) int {
+	n := 0
+	s.sessions.Range(func(_, _ any) bool { n++; return true })
+	return n
 }

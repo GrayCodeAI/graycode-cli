@@ -33,6 +33,23 @@ func TestRunDisabled(t *testing.T) {
 	}
 	defer s.Close()
 
+	// A disabled sandbox fails closed: no silent host fallback.
+	if _, err := s.Run(context.Background(), "echo hello"); err == nil {
+		t.Fatal("expected error for disabled sandbox without explicit opt-out")
+	}
+}
+
+func TestRunDisabledExplicitOptOut(t *testing.T) {
+	s, err := New(&Config{
+		Enabled: false,
+		Type:    "none",
+		Tier:    TierOff,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
 	cmd, err := s.Run(context.Background(), "echo hello")
 	if err != nil {
 		t.Fatal(err)

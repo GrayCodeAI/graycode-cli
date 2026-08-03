@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -376,5 +377,49 @@ func TestChatModel_StreamingCommands(t *testing.T) {
 			}
 			time.Sleep(10 * time.Millisecond)
 		})
+	}
+}
+
+func TestChatModel_PushHistoryCapsAtMax(t *testing.T) {
+	m := newTestChatModel()
+	for i := 0; i < maxPromptHistory+50; i++ {
+		m.pushHistory(fmt.Sprintf("prompt-%d", i))
+	}
+	if len(m.history) != maxPromptHistory {
+		t.Fatalf("history len = %d, want %d", len(m.history), maxPromptHistory)
+	}
+	if m.history[0] != "prompt-50" || m.history[len(m.history)-1] != fmt.Sprintf("prompt-%d", maxPromptHistory+49) {
+		t.Fatalf("history did not keep the most recent prompts: first=%q last=%q", m.history[0], m.history[len(m.history)-1])
+	}
+	if m.historyIdx != len(m.history) {
+		t.Fatalf("historyIdx = %d, want %d", m.historyIdx, len(m.history))
+	}
+}
+
+func TestChatModel_EnqueueMessageCapsAtMax(t *testing.T) {
+	m := newTestChatModel()
+	for i := 0; i < maxQueuedMessages+25; i++ {
+		m.enqueueMessage(fmt.Sprintf("queued-%d", i))
+	}
+	if len(m.messageQueue) != maxQueuedMessages {
+		t.Fatalf("queue len = %d, want %d", len(m.messageQueue), maxQueuedMessages)
+	}
+	if m.messageQueue[0] != "queued-25" {
+		t.Fatalf("oldest queued prompt not dropped: first=%q", m.messageQueue[0])
+	}
+}
+
+func TestChatModel_ReindexExpandedMap(t *testing.T) {
+	// startIdx=1 (welcome preserved), trimCount=3: old idx 4 → 2, old idx 8 → 6.
+	expanded := map[int]bool{0: true, 1: true, 3: false, 4: true, 8: true}
+	got := reindexExpandedMap(expanded, 1, 3)
+	want := map[int]bool{0: true, 2: true, 6: true}
+	if len(got) != len(want) {
+		t.Fatalf("reindexed map len = %d, want %d: %v", len(got), len(want), got)
+	}
+	for idx, state := range want {
+		if got[idx] != state {
+			t.Fatalf("reindexed[%d] = %v, want %v", idx, got[idx], state)
+		}
 	}
 }

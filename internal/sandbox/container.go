@@ -147,9 +147,15 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 		"--entrypoint", "sleep",
 	}
 	// User-namespace remapping further isolates the container from the host
-	// kernel (H16); only added when the daemon supports it.
+	// kernel (H16); only added when the daemon supports it. Without userns
+	// the container would run as root against the rw project mount, so fall
+	// back to --user with the host uid:gid (M12). exec.CommandContext runs
+	// the container process as that uid inside the container regardless of
+	// whether /etc/passwd knows it.
 	if usernsRemapAvailable() {
 		args = append(args, "--userns-remap", "default")
+	} else {
+		args = append(args, "--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
 	}
 	args = append(args, c.runtime.StartupEnvArgs()...)
 	args = append(args, c.image, "infinity")

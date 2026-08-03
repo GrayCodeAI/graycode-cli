@@ -83,8 +83,8 @@ func (lt *LimitTracker) IsExceeded() (bool, string) {
 	if lt.limits.MaxBashCommands > 0 && lt.bashCmds >= lt.limits.MaxBashCommands {
 		return true, fmt.Sprintf("bash command limit reached (%d/%d)", lt.bashCmds, lt.limits.MaxBashCommands)
 	}
-	if lt.limits.MaxCostUSD > 0 && lt.costUSD >= lt.limits.MaxCostUSD {
-		return true, fmt.Sprintf("cost limit reached ($%.2f/$%.2f)", lt.costUSD, lt.limits.MaxCostUSD)
+	if limit := lt.costLimitLocked(); limit > 0 && lt.costUSD >= limit {
+		return true, fmt.Sprintf("cost limit reached ($%.2f/$%.2f)", lt.costUSD, limit)
 	}
 	if lt.limits.MaxTurns > 0 && lt.turns >= lt.limits.MaxTurns {
 		return true, fmt.Sprintf("turn limit reached (%d/%d)", lt.turns, lt.limits.MaxTurns)
@@ -126,10 +126,55 @@ func (lt *LimitTracker) Summary() string {
 }
 
 // DefaultLimits returns conservative safety limits for normal interactive use.
-func (lt *LimitTracker) MaxTurns() int             { return lt.limits.MaxTurns }
-func (lt *LimitTracker) SetMaxTurns(n int)         { lt.limits.MaxTurns = n }
-func (lt *LimitTracker) MaxBudgetUSD() float64     { return lt.limits.MaxBudgetUSD }
-func (lt *LimitTracker) SetMaxBudgetUSD(f float64) { lt.limits.MaxBudgetUSD = f }
+func (lt *LimitTracker) MaxTurns() int {
+	lt.mu.Lock()
+	defer lt.mu.Unlock()
+	return lt.limits.MaxTurns
+}
+
+func (lt *LimitTracker) SetMaxTurns(n int) {
+	lt.mu.Lock()
+	defer lt.mu.Unlock()
+	lt.limits.MaxTurns = n
+}
+
+func (lt *LimitTracker) MaxBudgetUSD() float64 {
+	lt.mu.Lock()
+	defer lt.mu.Unlock()
+	return lt.limits.MaxBudgetUSD
+}
+
+func (lt *LimitTracker) SetMaxBudgetUSD(f float64) {
+	lt.mu.Lock()
+	defer lt.mu.Unlock()
+	lt.limits.MaxBudgetUSD = f
+	if lt.limits.MaxCostUSD == 0 {
+		// Honor the documented contract: MaxCostUSD defaults to MaxBudgetUSD.
+		// Keeps IsExceeded's cost guard consistent with the budget configured
+		// through Session.SetMaxBudgetUSD.
+		lt.limits.MaxCostUSD = f
+	}
+}
+
+// SetCostUSD sets the session's running spend to an absolute value. It is
+// idempotent by design — the session's cost accumulator (engine.Cost) is the
+// source of truth, and the stream loop syncs it here after each turn so
+// IsExceeded enforces the same budget as the explicit stream check.
+func (lt *LimitTracker) SetCostUSD(usd float64) {
+	lt.mu.Lock()
+	defer lt.mu.Unlock()
+	lt.costUSD = usd
+}
+
+// costLimit returns the effective spend cap: MaxCostUSD when set, falling back
+// to MaxBudgetUSD per the SafetyLimits.MaxCostUSD contract. Callers must hold
+// lt.mu.
+func (lt *LimitTracker) costLimitLocked() float64 {
+	if lt.limits.MaxCostUSD > 0 {
+		return lt.limits.MaxCostUSD
+	}
+	return lt.limits.MaxBudgetUSD
+}
 
 func DefaultLimits() SafetyLimits {
 	return SafetyLimits{

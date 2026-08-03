@@ -35,6 +35,22 @@ type TicketCompliance struct {
 	mu sync.Mutex
 }
 
+// Package-level compiled patterns (M14): ExtractTicketRef and the criteria
+// parsers run per PR review; regexp.MustCompile per call wasted CPU and
+// allocation.
+var (
+	jiraRefRe            = regexp.MustCompile(`\b([A-Z][A-Z0-9]+-\d+)\b`)
+	githubRefRe          = regexp.MustCompile(`#(\d+)`)
+	keywordRefRe         = regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)`)
+	keywordJiraRefRe     = regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+([A-Z][A-Z0-9]+-\d+)`)
+	branchJiraRefRe      = regexp.MustCompile(`(?:^|/)([A-Z][A-Z0-9]+-\d+)`)
+	acceptanceCheckboxRe = regexp.MustCompile(`^\s*-\s*\[[ x]?\]\s*(.+)`)
+	acceptanceNumberedRe = regexp.MustCompile(`^\s*\d+\.\s+(.+)`)
+	acceptanceShouldRe   = regexp.MustCompile(`(?i)^.*\bshould\b\s+(.+)`)
+	acceptanceHeaderRe   = regexp.MustCompile(`(?i)^\s*#{0,6}\s*(?:acceptance\s+criteria|requirements|definition\s+of\s+done|criteria)\s*:?\s*$`)
+	keywordSplitterRe    = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+)
+
 // NewTicketCompliance creates a new TicketCompliance checker.
 func NewTicketCompliance() *TicketCompliance {
 	return &TicketCompliance{}
@@ -58,21 +74,10 @@ func (tc *TicketCompliance) ExtractTicketRef(branchName, prDescription string) [
 		}
 	}
 
-	// Pattern for JIRA-style references: PROJ-123
-	jiraPattern := regexp.MustCompile(`\b([A-Z][A-Z0-9]+-\d+)\b`)
-
-	// Pattern for GitHub-style references: #123
-	githubPattern := regexp.MustCompile(`#(\d+)`)
-
-	// Pattern for keyword-linked references: fixes #123, closes #456, resolves PROJ-789
-	keywordPattern := regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)`)
-	keywordJiraPattern := regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+([A-Z][A-Z0-9]+-\d+)`)
-
 	// Extract from branch name.
 	// Pattern: feature/PROJ-123-description or bugfix/PROJ-123-foo
-	branchJiraPattern := regexp.MustCompile(`(?:^|/)([A-Z][A-Z0-9]+-\d+)`)
 	if branchName != "" {
-		matches := branchJiraPattern.FindAllStringSubmatch(branchName, -1)
+		matches := branchJiraRefRe.FindAllStringSubmatch(branchName, -1)
 		for _, m := range matches {
 			addRef(m[1])
 		}
@@ -81,25 +86,25 @@ func (tc *TicketCompliance) ExtractTicketRef(branchName, prDescription string) [
 	// Extract from PR description.
 	if prDescription != "" {
 		// Keyword-linked GitHub references (fixes #42, closes #101).
-		matches := keywordPattern.FindAllStringSubmatch(prDescription, -1)
+		matches := keywordRefRe.FindAllStringSubmatch(prDescription, -1)
 		for _, m := range matches {
 			addRef("#" + m[1])
 		}
 
 		// Keyword-linked JIRA references (Resolves HAWK-99).
-		matches = keywordJiraPattern.FindAllStringSubmatch(prDescription, -1)
+		matches = keywordJiraRefRe.FindAllStringSubmatch(prDescription, -1)
 		for _, m := range matches {
 			addRef(m[1])
 		}
 
 		// Standalone JIRA-style references.
-		matches = jiraPattern.FindAllStringSubmatch(prDescription, -1)
+		matches = jiraRefRe.FindAllStringSubmatch(prDescription, -1)
 		for _, m := range matches {
 			addRef(m[1])
 		}
 
 		// Standalone GitHub-style references.
-		matches = githubPattern.FindAllStringSubmatch(prDescription, -1)
+		matches = githubRefRe.FindAllStringSubmatch(prDescription, -1)
 		for _, m := range matches {
 			addRef("#" + m[1])
 		}
@@ -143,23 +148,18 @@ func (tc *TicketCompliance) ParseTicket(content string) *Ticket {
 	inCriteria := false
 	hasExplicitCriteria := false
 
-	checkboxPattern := regexp.MustCompile(`^\s*-\s*\[[ x]?\]\s*(.+)`)
-	numberedPattern := regexp.MustCompile(`^\s*\d+\.\s+(.+)`)
-	shouldPattern := regexp.MustCompile(`(?i)^.*\bshould\b\s+(.+)`)
-	criteriaHeaderPattern := regexp.MustCompile(`(?i)^\s*#{0,6}\s*(?:acceptance\s+criteria|requirements|definition\s+of\s+done|criteria)\s*:?\s*$`)
-
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
 		// Check if we hit an acceptance criteria section header.
-		if criteriaHeaderPattern.MatchString(trimmed) {
+		if acceptanceHeaderRe.MatchString(trimmed) {
 			inCriteria = true
 			hasExplicitCriteria = true
 			continue
 		}
 
 		// Extract checkboxes anywhere in the content.
-		if m := checkboxPattern.FindStringSubmatch(line); m != nil {
+		if m := acceptanceCheckboxRe.FindStringSubmatch(line); m != nil {
 			criteria = append(criteria, strings.TrimSpace(m[1]))
 			inCriteria = true
 			hasExplicitCriteria = true
@@ -168,7 +168,7 @@ func (tc *TicketCompliance) ParseTicket(content string) *Ticket {
 
 		// If we're in a criteria section, extract numbered lists.
 		if inCriteria {
-			if m := numberedPattern.FindStringSubmatch(line); m != nil {
+			if m := acceptanceNumberedRe.FindStringSubmatch(line); m != nil {
 				criteria = append(criteria, strings.TrimSpace(m[1]))
 				continue
 			}
@@ -180,7 +180,7 @@ func (tc *TicketCompliance) ParseTicket(content string) *Ticket {
 		}
 
 		// Collect "should" statements from description as fallback criteria.
-		if shouldPattern.MatchString(line) {
+		if acceptanceShouldRe.MatchString(line) {
 			shouldStatements = append(shouldStatements, strings.TrimSpace(trimmed))
 		}
 
@@ -296,8 +296,7 @@ func extractKeywords(text string) []string {
 	}
 
 	// Split on non-alphanumeric characters.
-	splitter := regexp.MustCompile(`[^a-zA-Z0-9]+`)
-	parts := splitter.Split(strings.ToLower(text), -1)
+	parts := keywordSplitterRe.Split(strings.ToLower(text), -1)
 
 	var keywords []string
 	for _, p := range parts {
