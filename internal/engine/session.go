@@ -16,7 +16,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/session"
@@ -119,9 +118,6 @@ type Session struct {
 	//   Snapshots      -> legacy field; not yet on Persistence
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
 	// Backtrack and limits are owned by LifecycleService.
-
-	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
-	smartSkills []plugin.SmartSkill
 }
 
 // NewSession creates a conversation session through Eyrie's engine facade.

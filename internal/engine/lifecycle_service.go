@@ -7,6 +7,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -64,6 +65,8 @@ type LifecycleService struct {
 	costTracker *CostTracker
 	teach       TeachConfig
 	trajectory  *TrajectoryDistiller
+	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
+	smartSkills []plugin.SmartSkill
 	verbose     bool
 	// log is the session logger.
 	log *logger.Logger
@@ -279,6 +282,23 @@ func (s *LifecycleService) Teach() TeachConfig                   { return s.teac
 func (s *LifecycleService) SetTeach(t TeachConfig)               { s.teach = t }
 func (s *LifecycleService) Trajectory() *TrajectoryDistiller     { return s.trajectory }
 func (s *LifecycleService) SetTrajectory(t *TrajectoryDistiller) { s.trajectory = t }
+
+// LoadSmartSkills loads the session's auto-discovery skills once.
+func (s *LifecycleService) LoadSmartSkills() {
+	if s == nil || s.smartSkills != nil {
+		return
+	}
+	s.smartSkills = plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+}
+
+// SmartSkills returns the loaded auto-discovery skills.
+func (s *LifecycleService) SmartSkills() []plugin.SmartSkill {
+	if s == nil {
+		return nil
+	}
+	return s.smartSkills
+}
+
 func (s *LifecycleService) ToggleVerbose() bool {
 	if s == nil {
 		return false
