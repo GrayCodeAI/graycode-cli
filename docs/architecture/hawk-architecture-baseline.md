@@ -84,6 +84,9 @@ The graph is intentionally directional:
 - CLI, daemon, and other entry points share substantial construction and
   orchestration responsibilities instead of depending on one explicit
   application composition root.
+- Non-interactive entry points now share `cmd.newConfiguredHawkSession`; the
+  interactive TUI intentionally retains a lightweight startup path followed by
+  deferred heavy configuration to protect first-frame latency.
 
 ## Architecture decisions for the improvement program
 
@@ -151,4 +154,6 @@ Phase 1 adds AST/package-graph dependency checks. Phase 2 completes the safe
 Session migration using the boundaries documented here, with `Session.Cost`
 explicitly retained as a compatibility exception. Phase 3 now targets one
 command composition root while preserving the interactive startup split
-between lightweight and deferred session configuration.
+between lightweight and deferred session configuration. The next Phase 3
+slice should reduce TUI-only orchestration without collapsing that latency
+boundary.
