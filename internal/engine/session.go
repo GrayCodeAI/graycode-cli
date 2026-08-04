@@ -55,10 +55,9 @@ type SnapshotTracker interface {
 // have a dedicated service. Permission, tool execution, transcript, memory,
 // and lifecycle state are owned by the corresponding services below.
 type Session struct {
-	mu      sync.RWMutex
-	log     *logger.Logger
-	metrics *metrics.Registry
-	Cost    Cost
+	mu   sync.RWMutex
+	log  *logger.Logger
+	Cost Cost
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
 	// code should go through s.llm.* rather than duplicating transport state.
@@ -127,8 +126,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	}
 	log := logger.Default()
 	s := &Session{
-		log:     log,
-		metrics: metrics.NewRegistry(),
+		log: log,
 	}
 	rateLimiter := ratelimit.PerSecond(10)
 	s.Cost.Model = model
@@ -148,7 +146,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		Model:             model,
 		DeploymentRouting: deploymentRouting,
 		RateLimiter:       rateLimiter,
-		Metrics:           s.metrics,
+		Metrics:           metrics.NewRegistry(),
 	})
 	s.perms = NewPermissionService(log)
 	s.life = NewLifecycleService(log)
@@ -156,7 +154,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.persist = NewPersistenceService(log)
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
-	s.tools = NewToolService(registry).WithMetrics(s.metrics).WithTracer(oteltrace.NewTracer())
+	s.tools = NewToolService(registry).WithMetrics(s.llm.Metrics()).WithTracer(oteltrace.NewTracer())
 	s.tools.WithExecutionDeps(toolExecutionDeps{
 		permissions: s.perms,
 		chat:        s.llm,
@@ -235,7 +233,13 @@ func (s *Session) Provider() string {
 	}
 	return ""
 }
-func (s *Session) Metrics() *metrics.Registry { return s.metrics }
+
+func (s *Session) Metrics() *metrics.Registry {
+	if s == nil || s.ChatLLM() == nil {
+		return nil
+	}
+	return s.ChatLLM().Metrics()
+}
 
 // Logger returns the session logger through the observability boundary.
 func (s *Session) Logger() *logger.Logger { return s.log }

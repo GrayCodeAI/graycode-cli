@@ -115,6 +115,16 @@ func (c *ChatService) Provider() string {
 	return c.provider
 }
 
+// Metrics returns the shared product metrics registry.
+func (c *ChatService) Metrics() *metrics.Registry {
+	if c == nil {
+		return nil
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.metrics
+}
+
 // Model returns the active model identifier.
 func (c *ChatService) Model() string {
 	c.mu.RLock()
