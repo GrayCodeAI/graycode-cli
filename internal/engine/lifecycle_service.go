@@ -328,6 +328,25 @@ func (s *LifecycleService) UsageTracker() *tok.UsageTracker {
 	return s.usage
 }
 
+// Logger returns the logger shared by lifecycle collaborators.
+func (s *LifecycleService) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	return s.log
+}
+
+// SetLogger replaces the logger shared by lifecycle collaborators.
+func (s *LifecycleService) SetLogger(l *logger.Logger) {
+	if s == nil {
+		return
+	}
+	if l == nil {
+		l = logger.Default()
+	}
+	s.log = l
+}
+
 func (s *LifecycleService) ToggleVerbose() bool {
 	if s == nil {
 		return false

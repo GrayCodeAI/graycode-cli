@@ -45,6 +45,25 @@ func NewMemoryService(log *logger.Logger) *MemoryService {
 	return &MemoryService{log: log}
 }
 
+// Logger returns the logger shared by memory collaborators.
+func (s *MemoryService) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	return s.log
+}
+
+// SetLogger replaces the logger shared by memory collaborators.
+func (s *MemoryService) SetLogger(l *logger.Logger) {
+	if s == nil {
+		return
+	}
+	if l == nil {
+		l = logger.Default()
+	}
+	s.log = l
+}
+
 // WithMemory sets the simple MemoryRecaller.
 func (s *MemoryService) WithMemory(m MemoryRecaller) *MemoryService {
 	s.memory = m

@@ -56,7 +56,6 @@ type SnapshotTracker interface {
 // and lifecycle state are owned by the corresponding services below.
 type Session struct {
 	mu   sync.RWMutex
-	log  *logger.Logger
 	Cost Cost
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
@@ -125,9 +124,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		slog.Debug("NewSessionWithClient called with empty provider or model", "provider", provider, "model", model)
 	}
 	log := logger.Default()
-	s := &Session{
-		log: log,
-	}
+	s := &Session{}
 	rateLimiter := ratelimit.PerSecond(10)
 	s.Cost.Model = model
 	s.refreshContextWindowCache()
@@ -241,8 +238,19 @@ func (s *Session) Metrics() *metrics.Registry {
 	return s.ChatLLM().Metrics()
 }
 
-// Logger returns the session logger through the observability boundary.
-func (s *Session) Logger() *logger.Logger { return s.log }
+// Logger returns the shared session logger through the observability boundary.
+func (s *Session) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	if s.life != nil && s.life.Logger() != nil {
+		return s.life.Logger()
+	}
+	if s.perms != nil && s.perms.Logger() != nil {
+		return s.perms.Logger()
+	}
+	return logger.Default()
+}
 
 // TracerValue returns the session tracer through the observability boundary.
 func (s *Session) TracerValue() *oteltrace.Tracer {
@@ -283,7 +291,7 @@ func (s *Session) Persistence() *PersistenceService {
 	// A zero-value Session can still be used by narrow UI/test adapters. Keep
 	// lazy service materialization for that compatibility case, but there is no
 	// second transcript or system-prompt state to import.
-	s.persist = NewPersistenceService(s.log)
+	s.persist = NewPersistenceService(s.Logger())
 	return s.persist
 }
 
@@ -545,7 +553,21 @@ func (s *Session) ReplaceSystemContextSection(header, content string) {
 
 // SetLogger replaces the session logger.
 func (s *Session) SetLogger(l *logger.Logger) {
-	s.log = l
+	if l == nil {
+		l = logger.Default()
+	}
+	if s.perms != nil {
+		s.perms.SetLogger(l)
+	}
+	if s.life != nil {
+		s.life.SetLogger(l)
+	}
+	if s.memory != nil {
+		s.memory.SetLogger(l)
+	}
+	if s.persist != nil {
+		s.persist.SetLogger(l)
+	}
 }
 
 // SetAllowedDirs sets directories that file tools are allowed to access.

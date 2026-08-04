@@ -86,6 +86,25 @@ func (s *PermissionService) WithEngine(pe *PermissionEngine) *PermissionService 
 	return s
 }
 
+// Logger returns the logger used by permission decisions.
+func (s *PermissionService) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	return s.log
+}
+
+// SetLogger replaces the logger used by permission decisions.
+func (s *PermissionService) SetLogger(l *logger.Logger) {
+	if s == nil {
+		return
+	}
+	if l == nil {
+		l = logger.Default()
+	}
+	s.log = l
+}
+
 // Engine returns the underlying PermissionEngine. Used by the legacy
 // Session fields that read s.Perm directly.
 func (s *PermissionService) Engine() *PermissionEngine { return s.perm }

@@ -65,6 +65,25 @@ func NewPersistenceService(log *logger.Logger) *PersistenceService {
 	}
 }
 
+// Logger returns the logger used by persistence operations.
+func (s *PersistenceService) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	return s.log
+}
+
+// SetLogger replaces the logger used by persistence operations.
+func (s *PersistenceService) SetLogger(l *logger.Logger) {
+	if s == nil {
+		return
+	}
+	if l == nil {
+		l = logger.Default()
+	}
+	s.log = l
+}
+
 // Messages returns a snapshot copy of the current transcript.
 func (s *PersistenceService) Messages() []types.EyrieMessage {
 	s.mu.RLock()
