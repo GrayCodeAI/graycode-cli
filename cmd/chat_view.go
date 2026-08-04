@@ -227,18 +227,17 @@ func (m chatModel) computeChatBottomBarLines() int {
 		footerW = 80
 	}
 	inputBoxLines := m.measureInputBoxLines(footerW)
-	lines := 1 + inputBoxLines // container/model row + input box (measured)
+	lines := 1 + 1 + inputBoxLines // 1 top chrome divider + 1 container/model row + input box (measured)
+	if val := m.input.Value(); strings.Count(val, "\n") > 0 {
+		lines++ // multiline indicator row ("¶ N lines (Shift+Enter for newline)")
+	}
 	if m.ghostText != nil {
 		if ghost := m.ghostText.Get(); ghost != "" && m.input.Value() == "" {
 			lines++
 		}
 	}
 	lines += m.visibleSlashSuggestionLines()
-	lines++ // primary session stats row (tokens · cost · duration)
-	if footerW >= 120 {
-		// Wide terminal: second stats row (autonomy, container, session ID, hints)
-		lines++
-	}
+	lines += len(renderStatusBar(&m, footerW)) // exact status bar line count
 	if m.manualCompacting {
 		lines += 2 // "Compacting conversation..." + progress bar
 	}
@@ -362,6 +361,7 @@ func (m chatModel) View() tea.View {
 		}
 		slashOpen := m.slashMenuOpen()
 		footerW := m.footerContentWidth(totalW)
+		bottomBar.WriteString(m.finishFooterLine("", totalW) + "\n")
 		leftRendered := renderContainerFooterLeft(m)
 		modelRendered, _, ctxRendered, ctxVisLen := m.renderConnectionStatusSplit()
 		rightLine := modelRendered

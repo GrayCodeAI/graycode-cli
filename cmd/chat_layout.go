@@ -23,10 +23,11 @@ func (m chatModel) withSyncedLayout() chatModel {
 	if m.configOpen {
 		bottomH = 0
 	}
-	// Viewport takes all available space above the bottom bar.
 	vpH := m.height - bottomH
-	if vpH < minChatViewportLines {
+	if vpH < minChatViewportLines && m.height >= minChatViewportLines+bottomH {
 		vpH = minChatViewportLines
+	} else if vpH < 1 {
+		vpH = 1
 	}
 	if m.viewport.Height() != vpH {
 		m.viewport.SetHeight(vpH)

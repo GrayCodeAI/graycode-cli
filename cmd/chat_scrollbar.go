@@ -149,27 +149,27 @@ func padToHeight(s string, height int) string {
 // prepended showing the most recent out-of-view prompt.
 func (m chatModel) renderChatPane() string {
 	chatView := m.viewport.View()
-	vpH := m.viewport.Height()
+	origVpH := m.viewport.Height()
 
 	// Prepend sticky header when scrolled up.
 	sticky := m.renderStickyHeader(m.viewport.Width())
 	if sticky != "" {
 		chatView = sticky + "\n" + chatView
-		// Reduce viewport height by the sticky header height (header text
-		// + separator line = 2 rows) so the overall pane height stays
-		// consistent with the layout.
-		if vpH > stickyHeaderHeight {
-			vpH -= stickyHeaderHeight
-		}
 	}
+
+	lines := strings.Split(chatView, "\n")
+	if origVpH > 0 && len(lines) > origVpH {
+		lines = lines[:origVpH]
+	}
+	chatView = strings.Join(lines, "\n")
 
 	if !m.chatScrollbarVisible() {
-		return padToHeight(chatView, vpH)
+		return padToHeight(chatView, origVpH)
 	}
 
-	scrollbar := m.renderScrollbarHeight(vpH)
+	scrollbar := m.renderScrollbarHeight(origVpH)
 	if scrollbar == "" {
-		return padToHeight(chatView, vpH)
+		return padToHeight(chatView, origVpH)
 	}
 
 	targetW := m.viewport.Width()
@@ -179,7 +179,7 @@ func (m chatModel) renderChatPane() string {
 
 	// Join each line of the chat view with the corresponding scrollbar row.
 	chatLines := strings.Split(chatView, "\n")
-	for len(chatLines) < vpH {
+	for len(chatLines) < origVpH {
 		chatLines = append(chatLines, "")
 	}
 	barLines := strings.Split(scrollbar, "\n")
