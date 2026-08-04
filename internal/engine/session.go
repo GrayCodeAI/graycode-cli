@@ -57,11 +57,10 @@ type SnapshotTracker interface {
 // have a dedicated service. Permission, tool execution, transcript, memory,
 // and lifecycle state are owned by the corresponding services below.
 type Session struct {
-	mu       sync.RWMutex
-	registry *tool.Registry
-	log      *logger.Logger
-	metrics  *metrics.Registry
-	Cost     Cost
+	mu      sync.RWMutex
+	log     *logger.Logger
+	metrics *metrics.Registry
+	Cost    Cost
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
 	// code should go through s.llm.* rather than duplicating transport state.
@@ -140,9 +139,8 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	}
 	log := logger.Default()
 	s := &Session{
-		registry: registry,
-		log:      log,
-		metrics:  metrics.NewRegistry(),
+		log:     log,
+		metrics: metrics.NewRegistry(),
 	}
 	rateLimiter := ratelimit.PerSecond(10)
 	s.Cost.Model = model
@@ -222,7 +220,9 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 // SubSession clones transport and routing mode for explore/general sub-agents.
 func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry) *Session {
 	if registry == nil {
-		registry = s.registry
+		if tools := s.Tools(); tools != nil {
+			registry = tools.Registry()
+		}
 	}
 	var chat ChatClient
 	provider := ""
