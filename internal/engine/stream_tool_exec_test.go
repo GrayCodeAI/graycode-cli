@@ -146,3 +146,19 @@ func TestExecuteSingleTool_PropagatesPermissionContext(t *testing.T) {
 		t.Fatalf("service AllowedDirs = %#v", got)
 	}
 }
+
+func TestToolServiceWorkingDirPropagatesContext(t *testing.T) {
+	capture := &contextCaptureTool{}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(capture))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.Tools().SetWorkingDir("/tmp/hawk-working-dir")
+
+	ch := make(chan StreamEvent, 4)
+	res := sess.executeSingleTool(context.Background(), types.ToolCall{Name: "Read", ID: "cwd"}, ch, 0, "")
+	if res.isErr || capture.ctx == nil {
+		t.Fatalf("tool failed or context missing: %#v", res)
+	}
+	if capture.ctx.WorkingDir != "/tmp/hawk-working-dir" {
+		t.Fatalf("WorkingDir = %q, want %q", capture.ctx.WorkingDir, "/tmp/hawk-working-dir")
+	}
+}

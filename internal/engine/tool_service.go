@@ -30,6 +30,8 @@ type ToolService struct {
 	agentSpawn        tool.AgentSpawnFn
 	snapshots         SnapshotTracker
 	bgMu              sync.Mutex
+	workingDirMu      sync.RWMutex
+	workingDir        string
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
@@ -75,8 +77,33 @@ func NewToolService(registry *tool.Registry) *ToolService {
 
 // WithExecutionDeps binds the extracted service graph used by ExecuteOne.
 func (s *ToolService) WithExecutionDeps(deps toolExecutionDeps) *ToolService {
+	s.workingDirMu.Lock()
+	defer s.workingDirMu.Unlock()
 	s.deps = deps
+	s.workingDir = deps.workingDir
 	return s
+}
+
+// SetWorkingDir configures the preferred working directory for tool execution
+// and graph observations.
+func (s *ToolService) SetWorkingDir(dir string) {
+	if s == nil {
+		return
+	}
+	s.workingDirMu.Lock()
+	defer s.workingDirMu.Unlock()
+	s.workingDir = dir
+	s.deps.workingDir = dir
+}
+
+// WorkingDir returns the preferred working directory for tool execution.
+func (s *ToolService) WorkingDir() string {
+	if s == nil {
+		return ""
+	}
+	s.workingDirMu.RLock()
+	defer s.workingDirMu.RUnlock()
+	return s.workingDir
 }
 
 // WithMetrics attaches the registry used for tool execution counters.
@@ -285,7 +312,7 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		SandboxMode:         s.deps.permissions.SandboxMode(),
 		BackgroundManager:   s.EnsureBackgroundManager(),
 		ReadOnlyBash:        s.deps.readOnlyBash,
-		WorkingDir:          s.deps.workingDir,
+		WorkingDir:          s.WorkingDir(),
 	})
 	if s.containerExecutor != nil && s.containerExecutor.Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, s.containerExecutor)

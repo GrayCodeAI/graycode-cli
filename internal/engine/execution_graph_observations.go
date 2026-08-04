@@ -98,6 +98,13 @@ func (s *Session) executionGraphSessionID() string {
 	return ""
 }
 
+func (s *Session) configuredWorkingDir() string {
+	if s == nil || s.Tools() == nil {
+		return ""
+	}
+	return strings.TrimSpace(s.Tools().WorkingDir())
+}
+
 // SessionID returns the persistence ID of this session, or "" before one is
 // assigned. Used by lifecycle bookkeeping to attribute cost entries to the
 // real session instead of fabricated IDs.
@@ -129,9 +136,7 @@ func (s *Session) recordTokCompressionObservation(source, stage string, stats to
 	if sessionID == "" || stats.OriginalTokens <= 0 {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}
@@ -166,9 +171,7 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 	if sessionID == "" || matchCount <= 0 {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}
@@ -219,9 +222,7 @@ func (s *Session) recordTokUsageBudgetObservation(
 	if sessionID == "" {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}
@@ -301,9 +302,7 @@ func (s *Session) recordEyrieOperationObservation(
 	if sessionID == "" || usage == nil {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}

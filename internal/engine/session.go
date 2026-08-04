@@ -78,10 +78,7 @@ type Session struct {
 	// Permission and approval state is owned exclusively by PermissionService.
 	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
 	readOnlyBash bool
-	// workingDir is the preferred cwd for tools (worktree isolation).
-	workingDir string
-
-	tokUsage *tok.UsageTracker
+	tokUsage     *tok.UsageTracker
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 
@@ -182,7 +179,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 			return s.perms.AskUserFn()(question)
 		},
 		readOnlyBash:       s.readOnlyBash,
-		workingDir:         s.workingDir,
 		checkApproval:      s.CheckApproval,
 		recordPolicy:       s.recordPolicyObservation,
 		recordVerification: s.recordVerificationObservation,

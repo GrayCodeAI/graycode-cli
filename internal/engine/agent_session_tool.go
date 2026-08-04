@@ -162,7 +162,7 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 		defer cleanup()
 	}
 	if workDir != "" {
-		sub.workingDir = workDir
+		sub.Tools().SetWorkingDir(workDir)
 		sub.SetAllowedDirs([]string{workDir})
 	}
 
