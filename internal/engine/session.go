@@ -616,7 +616,7 @@ func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
 // ToolService (the source of truth).
 func (s *Session) SetContainerRequired(v bool) {
 	if s.tools != nil {
-		s.tools.WithContainerExecutor(s.tools.ContainerExecutor(), v)
+		s.tools.SetContainerRequired(v)
 	}
 }
 
@@ -624,7 +624,7 @@ func (s *Session) SetContainerRequired(v bool) {
 // (the source of truth), preserving the current required flag.
 func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
 	if s.tools != nil {
-		s.tools.WithContainerExecutor(ce, s.ContainerRequired())
+		s.tools.SetContainerExecutor(ce)
 	}
 }
 

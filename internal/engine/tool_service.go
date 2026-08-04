@@ -136,9 +136,37 @@ func (s *ToolService) WithMetrics(registry *metrics.Registry) *ToolService {
 
 // WithContainerExecutor configures container isolation.
 func (s *ToolService) WithContainerExecutor(ce tool.ContainerExecutor, required bool) *ToolService {
+	if s == nil {
+		return s
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
 	s.containerExecutor = ce
 	s.containerRequired = required
 	return s
+}
+
+// SetContainerRequired updates container-first mode without replacing the
+// currently configured executor.
+func (s *ToolService) SetContainerRequired(required bool) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.containerRequired = required
+}
+
+// SetContainerExecutor updates the executor without changing container-first
+// mode. Keeping the mutation on ToolService makes the pair safe to update
+// while asynchronous container startup/retry is in progress.
+func (s *ToolService) SetContainerExecutor(ce tool.ContainerExecutor) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.containerExecutor = ce
 }
 
 // WithTracer configures the OTel tracer.
@@ -265,7 +293,8 @@ func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch
 func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turn int, intent string) toolExecResult {
 	result := toolExecResult{tc: tc}
 	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
-	if s.containerRequired && (s.containerExecutor == nil || !s.containerExecutor.Running()) {
+	containerExecutor, containerRequired := s.containerState()
+	if containerRequired && (containerExecutor == nil || !containerExecutor.Running()) {
 		msg := "Container not ready — tools are disabled until the sandbox is running."
 		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
 		result.output, result.isErr, result.err = msg, true, fmt.Errorf("%s", msg)
@@ -336,8 +365,8 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		ReadOnlyBash:        s.ReadOnlyBash(),
 		WorkingDir:          s.WorkingDir(),
 	})
-	if s.containerExecutor != nil && s.containerExecutor.Running() {
-		toolCtx = tool.WithContainerExecutor(toolCtx, s.containerExecutor)
+	if containerExecutor != nil && containerExecutor.Running() {
+		toolCtx = tool.WithContainerExecutor(toolCtx, containerExecutor)
 	}
 	toolCtx, cancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
 	t := override
@@ -600,8 +629,9 @@ func (s *ToolService) EstimateBlastRadius(planned []PlannedCall) *BlastRadiusRep
 // retry policy. Returns the (output, isErr) pair. The tool_result
 // StreamEvent is emitted on ch.
 func (s *ToolService) ExecuteRegistered(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent) (string, bool) {
-	if s.containerRequired {
-		if s.containerExecutor == nil || !s.containerExecutor.Running() {
+	containerExecutor, containerRequired := s.containerState()
+	if containerRequired {
+		if containerExecutor == nil || !containerExecutor.Running() {
 			msg := "Container not ready — tools are disabled until the sandbox is running."
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
 			return msg, true
@@ -637,11 +667,28 @@ func (s *ToolService) BackgroundManager() *tool.BackgroundAgentManager {
 	return s.bgManager
 }
 
+// containerState returns one consistent view for a tool invocation. The
+// executor can be replaced asynchronously by the TUI's container retry path.
+func (s *ToolService) containerState() (tool.ContainerExecutor, bool) {
+	if s == nil {
+		return nil, false
+	}
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+	return s.containerExecutor, s.containerRequired
+}
+
 // ContainerRequired reports whether container-first mode is on.
-func (s *ToolService) ContainerRequired() bool { return s.containerRequired }
+func (s *ToolService) ContainerRequired() bool {
+	_, required := s.containerState()
+	return required
+}
 
 // ContainerExecutor returns the configured container executor, or nil.
-func (s *ToolService) ContainerExecutor() tool.ContainerExecutor { return s.containerExecutor }
+func (s *ToolService) ContainerExecutor() tool.ContainerExecutor {
+	executor, _ := s.containerState()
+	return executor
+}
 
 // Snapshots returns the configured automatic snapshot tracker.
 func (s *ToolService) Snapshots() SnapshotTracker { return s.snapshots }
