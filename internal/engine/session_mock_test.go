@@ -2,11 +2,44 @@ package engine
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
+
+func TestSession_PersistenceLazyInitIsSynchronized(t *testing.T) {
+	t.Parallel()
+
+	s := &Session{}
+	const callers = 32
+	services := make(chan *PersistenceService, callers)
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			services <- s.Persistence()
+		}()
+	}
+	wg.Wait()
+	close(services)
+
+	var first *PersistenceService
+	for service := range services {
+		if service == nil {
+			t.Fatal("Persistence returned nil")
+		}
+		if first == nil {
+			first = service
+			continue
+		}
+		if service != first {
+			t.Fatal("concurrent lazy initialization created multiple persistence services")
+		}
+	}
+}
 
 func newMockSession(mc *mockClient) *Session {
 	s := NewSession("", "mock-model", "You are a test assistant.", nil)

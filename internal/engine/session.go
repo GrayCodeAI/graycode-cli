@@ -285,6 +285,15 @@ func (s *Session) Persistence() *PersistenceService {
 	if s == nil {
 		return nil
 	}
+	s.mu.RLock()
+	persist := s.persist
+	s.mu.RUnlock()
+	if persist != nil {
+		return persist
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.persist != nil {
 		return s.persist
 	}
