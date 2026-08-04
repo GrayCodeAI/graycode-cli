@@ -21,7 +21,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/tok"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -78,7 +77,6 @@ type Session struct {
 	// Permission and approval state is owned exclusively by PermissionService.
 	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
 	readOnlyBash bool
-	tokUsage     *tok.UsageTracker
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 
