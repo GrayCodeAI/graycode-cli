@@ -66,6 +66,11 @@ The graph is intentionally directional:
   engine layer independent of the provider adapter package for this path.
 - Container-required state and its executor are owned by `ToolService` and
   read through synchronized snapshots, including asynchronous TUI retry.
+- `GraphAwareBudget` reads Yaad through `YaadBridge`; its graph-budget path no
+  longer imports Yaad engine or storage implementation types directly.
+- `CodeMemoryLinker` also routes node search, edge creation, and file-anchor
+  persistence through `YaadBridge`; remaining direct Yaad users are isolated
+  to the other memory workflow slices awaiting migration.
 - The local boundary suite, full Go tests, and `go vet` pass at this baseline.
 
 ### Transitional
