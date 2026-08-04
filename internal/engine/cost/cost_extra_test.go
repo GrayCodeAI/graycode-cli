@@ -2,8 +2,34 @@ package cost
 
 import (
 	"strings"
+	"sync"
 	"testing"
 )
+
+func TestCost_SnapshotConcurrentWithUpdates(t *testing.T) {
+	c := &Cost{}
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				c.Add(10, 5)
+				c.SetModel("")
+			}
+		}()
+	}
+	for i := 0; i < 20; i++ {
+		snapshot := c.Snapshot()
+		if snapshot.PromptTokens < snapshot.CompletionTokens {
+			t.Fatalf("snapshot has invalid token totals: %+v", snapshot)
+		}
+	}
+	wg.Wait()
+	if got := c.Snapshot().PromptTokens; got != 4*10*10 {
+		t.Fatalf("PromptTokens = %d, want %d", got, 4*10*10)
+	}
+}
 
 func TestCost_Add(t *testing.T) {
 	c := &Cost{}

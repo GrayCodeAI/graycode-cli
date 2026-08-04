@@ -7,6 +7,7 @@ import (
 
 type (
 	Cost           = cost.Cost
+	CostSnapshot   = cost.Snapshot
 	CostOptimizer  = cost.CostOptimizer
 	CostTracker    = cost.CostTracker
 	RequestCost    = cost.RequestCost

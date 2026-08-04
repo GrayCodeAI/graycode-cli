@@ -16,6 +16,37 @@ type Cost struct {
 	TotalCostUSD     float64
 }
 
+// Snapshot is a race-free view of the accumulated session cost.
+type Snapshot struct {
+	Model            string
+	PromptTokens     int
+	CompletionTokens int
+	CacheReadTokens  int
+	CacheWriteTokens int
+	TotalCostUSD     float64
+}
+
+// SetModel updates the model used for subsequent pricing calculations.
+func (c *Cost) SetModel(model string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Model = strings.TrimSpace(model)
+}
+
+// Snapshot returns a consistent view of all cost fields.
+func (c *Cost) Snapshot() Snapshot {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return Snapshot{
+		Model:            c.Model,
+		PromptTokens:     c.PromptTokens,
+		CompletionTokens: c.CompletionTokens,
+		CacheReadTokens:  c.CacheReadTokens,
+		CacheWriteTokens: c.CacheWriteTokens,
+		TotalCostUSD:     c.TotalCostUSD,
+	}
+}
+
 func (c *Cost) Add(prompt, completion int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

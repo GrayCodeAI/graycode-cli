@@ -126,7 +126,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	log := logger.Default()
 	s := &Session{}
 	rateLimiter := ratelimit.PerSecond(10)
-	s.Cost.Model = model
+	s.Cost.SetModel(model)
 	s.refreshContextWindowCache()
 
 	// Initialize agents accumulator for project learnings.
@@ -376,9 +376,7 @@ func (s *Session) SubServices() SubServices {
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
 	m := strings.TrimSpace(model)
-	s.mu.Lock()
-	s.Cost.Model = m
-	s.mu.Unlock()
+	s.Cost.SetModel(m)
 	if s.llm != nil {
 		s.llm.SetModel(m)
 	}

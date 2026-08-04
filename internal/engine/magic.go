@@ -171,10 +171,11 @@ func magicTokens(session *Session, _ string) string {
 		totalTokens += len(msg.Content) / 4 // rough estimate: ~4 chars per token
 	}
 
-	input := session.Cost.PromptTokens
-	output := session.Cost.CompletionTokens
-	cacheRead := session.Cost.CacheReadTokens
-	cacheWrite := session.Cost.CacheWriteTokens
+	cost := session.Cost.Snapshot()
+	input := cost.PromptTokens
+	output := cost.CompletionTokens
+	cacheRead := cost.CacheReadTokens
+	cacheWrite := cost.CacheWriteTokens
 	total := input + output
 
 	var sb strings.Builder
@@ -190,7 +191,7 @@ func magicTokens(session *Session, _ string) string {
 	fmt.Fprintf(&sb, "  Messages:    %d\n", len(messages))
 	fmt.Fprintf(&sb, "  Est. context: ~%d tokens\n", totalTokens)
 	if session.LifecycleSvc() != nil && session.LifecycleSvc().Limits().MaxBudgetUSD() > 0 {
-		spent := session.Cost.TotalCostUSD
+		spent := cost.TotalCostUSD
 		budget := session.LifecycleSvc().Limits().MaxBudgetUSD()
 		remaining := budget - spent
 		fmt.Fprintf(&sb, "  Budget:      $%.4f remaining of $%.4f\n", remaining, budget)
@@ -222,12 +223,13 @@ func magicCost(session *Session, _ string) string {
 	session.mu.RLock()
 	defer session.mu.RUnlock()
 
-	input := session.Cost.PromptTokens
-	output := session.Cost.CompletionTokens
-	cacheRead := session.Cost.CacheReadTokens
-	cacheWrite := session.Cost.CacheWriteTokens
-	totalCost := session.Cost.TotalCostUSD
-	model := session.Cost.Model
+	cost := session.Cost.Snapshot()
+	input := cost.PromptTokens
+	output := cost.CompletionTokens
+	cacheRead := cost.CacheReadTokens
+	cacheWrite := cost.CacheWriteTokens
+	totalCost := cost.TotalCostUSD
+	model := cost.Model
 
 	var sb strings.Builder
 	sb.WriteString("Cost Breakdown\n")
