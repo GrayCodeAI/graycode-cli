@@ -17,6 +17,7 @@ Documents:
 - `hawk-trace-event-model.md` - trace and audit event model
 - `hawk-contract-migration-inventory.md` - current shared-type usage and migration order
 - `hawk-architecture-v1-definition-of-done.md` - realistic shipping bar for architecture v1
+- `adr/ADR-0004-file-first-session-history.md` - canonical session history and SQLite projection boundary
 - `tasks.md` - historical implementation checklist from the initial architecture pass (superseded by the definition-of-done doc; kept for record)
 - `adr/` - accepted architecture decision records, e.g. exceptions to the dependency rules above
   - `ADR-0003-grok-behavioral-port-go-multirepo.md` - Year 0 Grok behavioral port keeps Go multi-repo
