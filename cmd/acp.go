@@ -39,10 +39,9 @@ func runACP(cmd *cobra.Command, _ []string) error {
 			return nil, err
 		}
 		effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
-		sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 		// stdout is the JSON-RPC channel; keep logs off it.
-		sess.SetLogger(logger.New(io.Discard, logger.Error))
-		if err := configureSession(sess, settings); err != nil {
+		sess, err := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+		if err != nil {
 			return nil, err
 		}
 		return sess, nil

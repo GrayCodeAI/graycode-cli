@@ -79,8 +79,8 @@ func runEvalTools(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	modelName, providerName := effectiveModelAndProvider(settings)
-	sess := newHawkSession(settings, providerName, modelName, systemPrompt, registry)
-	if err := configureSession(sess, settings); err != nil {
+	sess, err := newConfiguredHawkSession(settings, providerName, modelName, systemPrompt, registry, nil)
+	if err != nil {
 		return err
 	}
 
