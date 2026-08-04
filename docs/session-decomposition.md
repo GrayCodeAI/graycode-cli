@@ -61,10 +61,21 @@ exists. The first Phase 2 slice also moved token accounting, token-estimate
 cache, and checkpoint-manager state fully into `PersistenceService`; the
 corresponding duplicate `Session` fields have been removed. `persistID` and
 zero-value lazy service materialization remain pending because their call
-graphs and compatibility behavior have higher fan-out. The next slice moved
-LLM client/provider/model ownership into `ChatService` and added synchronization
-around transport identity and reattachment; command fixtures now use the
-explicit constructor rather than relying on zero-value Session transport state.
+graphs and compatibility behavior have higher fan-out. Lazy materialization of
+the persistence service itself is now synchronized, and `Cost` exposes locked
+snapshots while retaining its public fields for source compatibility. WAL
+recovery now surfaces non-not-found I/O errors instead of treating them as an
+empty session. The next slice moved LLM client/provider/model ownership into
+`ChatService` and added synchronization around transport identity and
+reattachment; command fixtures now use the explicit constructor rather than
+relying on zero-value Session transport state.
+
+This decomposition does not yet make `PersistenceService` the durable storage
+authority. It owns live runtime state; `internal/session` still owns the active
+JSONL save/load format and external WAL recovery. The implemented
+`SQLiteStore`, workspace snapshots, conversation graph, and graph journal are
+separate capabilities and must not be treated as interchangeable persistence
+backends without an explicit migration and recovery decision.
 
 ## Proposed Decomposition
 
@@ -295,6 +306,8 @@ These tests don't need to construct a `Session` anymore; they can construct just
 ## Status
 
 **IN PROGRESS.** The implemented migration slice above is live and tested.
-The remaining work is to move the internals of the tool execution pipeline,
-finish compaction ownership, migrate all production call sites, and then
-remove the compatibility fields in a separately reviewed cleanup commit.
+Tool execution, compaction, token accounting, lazy persistence initialization,
+cost snapshots, and WAL error handling have active coverage. Remaining work is
+to move the last non-authoritative lifecycle, memory, and persistence fields,
+resolve durable persistence authority, migrate all production call sites, and
+then remove compatibility fields in separately reviewed cleanup commits.

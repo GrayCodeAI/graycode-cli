@@ -85,12 +85,19 @@ The graph is intentionally directional:
   At this baseline its top-level production files contain approximately
   19,253 lines, its top-level tests approximately 11,855 lines, and the
   subtree contains compatibility alias/re-export files.
-- Hawk directly consumes lower-level Yaad and Tok packages in several internal
-  paths. Replaceability for those engines is therefore not yet equivalent to
-  the Eyrie boundary.
-- Session state is represented across WAL, SQLite persistence, snapshots,
-  checkpoints, graph journals, execution graphs, and trace integrations. A
-  canonical source-of-truth decision is still required.
+- Hawk's Yaad and Tok implementation imports are now consolidated behind
+  `YaadBridge` and `internal/token` for the migrated production paths. The
+  remaining direct Yaad users are isolated workflow or test integrations;
+  replaceability is improved, but still not equivalent to the Eyrie boundary.
+- `PersistenceService` is the in-memory runtime owner for transcript/context
+  state and checkpoint metadata. The active durable session path remains
+  `internal/session` JSONL plus the external file WAL used for crash recovery.
+  `SQLiteStore` is implemented but dormant: it is not the active `Load`/`Save`
+  backend. Workspace snapshots, conversation graphs, graph journals, and
+  execution graphs are secondary records or projections, not the canonical
+  durable transcript. An ADR is still required to define whether JSONL/WAL
+  remains authoritative or SQLite becomes authoritative, including migration,
+  retention, and recovery semantics.
 - CLI, daemon, and other entry points share substantial construction and
   orchestration responsibilities instead of depending on one explicit
   application composition root.
@@ -160,11 +167,22 @@ and change-scope detection before committing.
 
 ## Next phase
 
-Phase 1 adds AST/package-graph dependency checks. Phase 2 completes the safe
+Phase 1 adds AST/package-graph dependency checks. Phase 2 continues the safe
 Session migration using the boundaries documented here, with `Session.Cost`
-explicitly retained as a compatibility exception. Phase 3 now has explicit
-non-interactive and interactive startup composition boundaries, with heavy TUI
-configuration remaining deferred for first-frame latency. Phase 4 has begun by
-moving provider capability contracts onto `hawk-core-contracts`; the next
-slice should audit the remaining Yaad/Tok/Trace implementation-type imports
-and decide where a facade materially improves replaceability.
+explicitly retained as a compatibility exception. Lazy persistence
+initialization, cost snapshots, and WAL recovery error reporting are now
+synchronized and tested. Phase 3 has explicit non-interactive and interactive
+startup composition boundaries, with heavy TUI configuration remaining
+deferred for first-frame latency. Phase 4 has consolidated the migrated Yaad
+and Tok implementation imports behind narrow Hawk-owned facades. The next
+decision is the persistence ADR: document and enforce one durable authority,
+then define the migration and recovery contract before introducing additional
+storage backends.
+
+## Current branch follow-up
+
+The architecture is strong but transitional, not perfect. The highest-value
+remaining risk is persistence authority: several storage and observability
+mechanisms exist, but only JSONL plus the external WAL currently define durable
+session recovery. No code should silently switch the active backend until the
+persistence ADR is approved and covered by compatibility and recovery tests.
