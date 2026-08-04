@@ -4,9 +4,6 @@ import (
 	"context"
 	"strings"
 	"sync"
-
-	yaadEngine "github.com/GrayCodeAI/yaad/engine"
-	"github.com/GrayCodeAI/yaad/storage"
 )
 
 // CrossProjectMemory manages global user-level memories that transfer across
@@ -31,17 +28,7 @@ func (cp *CrossProjectMemory) StoreGlobal(content, nodeType string) error {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	if !yaadEngine.IsValidNodeType(nodeType) {
-		nodeType = "preference"
-	}
-
-	_, err := cp.bridge.engine.Remember(context.Background(), yaadEngine.RememberInput{
-		Type:    nodeType,
-		Content: content,
-		Scope:   "global",
-		Project: "__global__",
-	})
-	return err
+	return cp.bridge.rememberGlobal(context.Background(), content, nodeType)
 }
 
 // RecallGlobal retrieves global memories relevant to a query.
@@ -52,13 +39,7 @@ func (cp *CrossProjectMemory) RecallGlobal(query string, budget int) (string, er
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	result, err := cp.bridge.recallResultWithContext(context.Background(), yaadEngine.RecallOpts{
-		Query:   query,
-		Budget:  budget,
-		Limit:   10,
-		Depth:   1,
-		Project: "__global__",
-	})
+	result, err := cp.bridge.recallProject(context.Background(), query, "__global__", budget, 10, 1)
 	if err != nil || result == nil || len(result.Nodes) == 0 {
 		return "", err
 	}
@@ -81,11 +62,7 @@ func (cp *CrossProjectMemory) GetPreferences() ([]string, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	nodes, err := cp.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Type:  "preference",
-		Scope: "global",
-		Limit: 50,
-	})
+	nodes, err := cp.bridge.listNodesByScope(context.Background(), "preference", "global", 0, 50)
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +82,7 @@ func (cp *CrossProjectMemory) GetConventions() ([]string, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	nodes, err := cp.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Type:  "convention",
-		Scope: "global",
-		Limit: 50,
-	})
+	nodes, err := cp.bridge.listNodesByScope(context.Background(), "convention", "global", 0, 50)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +103,7 @@ func (cp *CrossProjectMemory) InjectGlobalContext(budget int) string {
 	defer cp.mu.Unlock()
 
 	// Get preferences and global conventions
-	nodes, err := cp.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Scope:         "global",
-		Limit:         20,
-		MinConfidence: 0.5,
-	})
+	nodes, err := cp.bridge.listNodesByScope(context.Background(), "", "global", 0.5, 20)
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
@@ -142,7 +111,7 @@ func (cp *CrossProjectMemory) InjectGlobalContext(budget int) string {
 	var sb strings.Builder
 	sb.WriteString("## User Preferences (Global)\n")
 	tokenEstimate := 0
-	selected := make([]*storage.Node, 0, len(nodes))
+	selected := nodes[:0]
 	for _, n := range nodes {
 		line := "- [" + n.Type + "] " + n.Content + "\n"
 		lineTokens := len(line) / 4

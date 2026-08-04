@@ -211,6 +211,15 @@ func (b *YaadBridge) listNodesByType(ctx context.Context, nodeType string, minCo
 	})
 }
 
+func (b *YaadBridge) listNodesByScope(ctx context.Context, nodeType, scope string, minConfidence float64, limit int) ([]*storage.Node, error) {
+	return b.listNodes(ctx, storage.NodeFilter{
+		Type:          nodeType,
+		Scope:         scope,
+		MinConfidence: minConfidence,
+		Limit:         limit,
+	})
+}
+
 func (b *YaadBridge) recallBudget(ctx context.Context, query string, budget, limit, depth int) (*yaadEngine.RecallResult, error) {
 	return b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
 		Query:  query,
@@ -218,6 +227,35 @@ func (b *YaadBridge) recallBudget(ctx context.Context, query string, budget, lim
 		Limit:  limit,
 		Depth:  depth,
 	})
+}
+
+func (b *YaadBridge) recallProject(ctx context.Context, query, project string, budget, limit, depth int) (*yaadEngine.RecallResult, error) {
+	return b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
+		Query:   query,
+		Budget:  budget,
+		Limit:   limit,
+		Depth:   depth,
+		Project: project,
+	})
+}
+
+func (b *YaadBridge) rememberGlobal(ctx context.Context, content, nodeType string) error {
+	if !b.ready {
+		return b.notReadyError("RememberGlobal")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if !yaadEngine.IsValidNodeType(nodeType) {
+		nodeType = "preference"
+	}
+	_, err := b.engine.Remember(ctx, yaadEngine.RememberInput{
+		Type:    nodeType,
+		Content: content,
+		Scope:   "global",
+		Project: "__global__",
+	})
+	return err
 }
 
 func (b *YaadBridge) searchNodes(ctx context.Context, query string, limit int) ([]*storage.Node, error) {
