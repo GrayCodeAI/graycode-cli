@@ -81,6 +81,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		}
 	}
 
+	newSession := newConfiguredHawkSessionFactory(settings, logger.New(io.Discard, logger.Error))
 	factory := func(req daemon.ChatRequest) (*engine.Session, error) {
 		systemPrompt, err := buildSystemPrompt()
 		if err != nil {
@@ -91,21 +92,13 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return nil, err
 		}
-		registry, err := defaultRegistry(settings)
-		if err != nil {
-			return nil, err
-		}
-		effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+		modelOverride := ""
 		if req.Model != "" {
-			effectiveModel = req.Model
+			modelOverride = req.Model
 		} else if agentModel != "" {
-			effectiveModel = agentModel
+			modelOverride = agentModel
 		}
-		sess, err := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
-		if err != nil {
-			return nil, err
-		}
-		return sess, nil
+		return newSession(systemPrompt, modelOverride)
 	}
 
 	daemon.SetVersion(version)

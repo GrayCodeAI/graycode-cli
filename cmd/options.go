@@ -264,6 +264,24 @@ func newConfiguredHawkSession(settings hawkconfig.Settings, effectiveProvider, e
 	return sess, nil
 }
 
+// newConfiguredHawkSessionFactory is the shared composition seam for
+// non-interactive protocol/server entry points. It owns registry creation and
+// settings-based model selection while allowing each protocol to provide its
+// own prompt and optional model override.
+func newConfiguredHawkSessionFactory(settings hawkconfig.Settings, sessionLogger *logger.Logger) func(string, string, ...int) (*engine.Session, error) {
+	return func(systemPrompt, modelOverride string, maxTurnsOverride ...int) (*engine.Session, error) {
+		registry, err := defaultRegistry(settings)
+		if err != nil {
+			return nil, err
+		}
+		effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+		if strings.TrimSpace(modelOverride) != "" {
+			effectiveModel = modelOverride
+		}
+		return newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, sessionLogger, maxTurnsOverride...)
+	}
+}
+
 // prepareInteractiveSessionStartup applies only the cheap TUI startup slice.
 // Transport rebuild and heavy memory setup remain deferred until the first
 // real chat request in bootstrapSessionForChat.
