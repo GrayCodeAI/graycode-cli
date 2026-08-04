@@ -276,7 +276,10 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	path := filepath.Join(sessionsDir(), sessionID+".wal")
 	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID, internal session store
 	if err != nil {
-		return nil, nil // no WAL, nothing to recover
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil // no WAL, nothing to recover
+		}
+		return nil, fmt.Errorf("open recovery WAL %s: %w", sessionID, err)
 	}
 	defer func() { _ = f.Close() }()
 
