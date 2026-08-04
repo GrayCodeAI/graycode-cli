@@ -162,3 +162,19 @@ func TestToolServiceWorkingDirPropagatesContext(t *testing.T) {
 		t.Fatalf("WorkingDir = %q, want %q", capture.ctx.WorkingDir, "/tmp/hawk-working-dir")
 	}
 }
+
+func TestToolServiceReadOnlyBashPropagatesContext(t *testing.T) {
+	capture := &contextCaptureTool{}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(capture))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.Tools().SetReadOnlyBash(true)
+
+	ch := make(chan StreamEvent, 4)
+	res := sess.executeSingleTool(context.Background(), types.ToolCall{Name: "Read", ID: "readonly"}, ch, 0, "")
+	if res.isErr || capture.ctx == nil {
+		t.Fatalf("tool failed or context missing: %#v", res)
+	}
+	if !capture.ctx.ReadOnlyBash {
+		t.Fatal("ReadOnlyBash = false, want true")
+	}
+}

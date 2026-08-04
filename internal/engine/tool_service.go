@@ -30,8 +30,9 @@ type ToolService struct {
 	agentSpawn        tool.AgentSpawnFn
 	snapshots         SnapshotTracker
 	bgMu              sync.Mutex
-	workingDirMu      sync.RWMutex
+	executionConfigMu sync.RWMutex
 	workingDir        string
+	readOnlyBash      bool
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
@@ -61,7 +62,6 @@ type toolExecutionDeps struct {
 	memory             *MemoryService
 	agentSpawn         tool.AgentSpawnFn
 	askUser            func(string) (string, error)
-	readOnlyBash       bool
 	workingDir         string
 	checkApproval      func(context.Context, string, map[string]interface{}) (bool, string)
 	recordPolicy       func(types.ToolCall, string, bool, string)
@@ -77,8 +77,8 @@ func NewToolService(registry *tool.Registry) *ToolService {
 
 // WithExecutionDeps binds the extracted service graph used by ExecuteOne.
 func (s *ToolService) WithExecutionDeps(deps toolExecutionDeps) *ToolService {
-	s.workingDirMu.Lock()
-	defer s.workingDirMu.Unlock()
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
 	s.deps = deps
 	s.workingDir = deps.workingDir
 	return s
@@ -90,8 +90,8 @@ func (s *ToolService) SetWorkingDir(dir string) {
 	if s == nil {
 		return
 	}
-	s.workingDirMu.Lock()
-	defer s.workingDirMu.Unlock()
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
 	s.workingDir = dir
 	s.deps.workingDir = dir
 }
@@ -101,9 +101,31 @@ func (s *ToolService) WorkingDir() string {
 	if s == nil {
 		return ""
 	}
-	s.workingDirMu.RLock()
-	defer s.workingDirMu.RUnlock()
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
 	return s.workingDir
+}
+
+// SetReadOnlyBash enables the explore/plan Bash allowlist for this tool
+// service and all subsequent tool contexts.
+func (s *ToolService) SetReadOnlyBash(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.readOnlyBash = enabled
+}
+
+// ReadOnlyBash reports whether Bash is restricted to the explore/plan
+// allowlist.
+func (s *ToolService) ReadOnlyBash() bool {
+	if s == nil {
+		return false
+	}
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+	return s.readOnlyBash
 }
 
 // WithMetrics attaches the registry used for tool execution counters.
@@ -311,7 +333,7 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		AllowedDirectories:  s.deps.permissions.AllowedDirs(),
 		SandboxMode:         s.deps.permissions.SandboxMode(),
 		BackgroundManager:   s.EnsureBackgroundManager(),
-		ReadOnlyBash:        s.deps.readOnlyBash,
+		ReadOnlyBash:        s.ReadOnlyBash(),
 		WorkingDir:          s.WorkingDir(),
 	})
 	if s.containerExecutor != nil && s.containerExecutor.Running() {

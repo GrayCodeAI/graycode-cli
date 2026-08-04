@@ -74,9 +74,6 @@ type Session struct {
 	memory  *MemoryService
 	persist *PersistenceService
 	tools   *ToolService
-	// Permission and approval state is owned exclusively by PermissionService.
-	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
-	readOnlyBash bool
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 
@@ -176,7 +173,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 			}
 			return s.perms.AskUserFn()(question)
 		},
-		readOnlyBash:       s.readOnlyBash,
 		checkApproval:      s.CheckApproval,
 		recordPolicy:       s.recordPolicyObservation,
 		recordVerification: s.recordVerificationObservation,

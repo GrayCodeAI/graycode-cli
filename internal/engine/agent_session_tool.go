@@ -130,7 +130,7 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	sub.PermSvc().SetPermissionFn(s.PermSvc().PermissionFn())
 	// Explore/plan: hard read-only bash allowlist (in addition to tool filter).
 	if IsReadOnlyMode(mode) || norm.CapabilityMode == agentcontracts.CapReadOnly {
-		sub.readOnlyBash = true
+		sub.Tools().SetReadOnlyBash(true)
 	}
 	// A child receives an independent snapshot of the parent's policy. This
 	// prevents parent mutations from changing an in-flight child and prevents
