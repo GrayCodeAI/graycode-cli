@@ -220,6 +220,55 @@ func (b *YaadBridge) recallBudget(ctx context.Context, query string, budget, lim
 	})
 }
 
+func (b *YaadBridge) searchNodes(ctx context.Context, query string, limit int) ([]*storage.Node, error) {
+	if !b.ready {
+		return nil, b.notReadyError("SearchNodes")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.store.SearchNodes(ctx, query, limit)
+}
+
+func (b *YaadBridge) createTouchEdge(ctx context.Context, fromID, toID string) error {
+	if !b.ready {
+		return b.notReadyError("CreateEdge")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.store.CreateEdge(ctx, &storage.Edge{
+		FromID: fromID,
+		ToID:   toID,
+		Type:   "touches",
+		Weight: 0.8,
+	})
+}
+
+func (b *YaadBridge) getOrCreateFileAnchor(ctx context.Context, path string) (*storage.Node, error) {
+	if !b.ready {
+		return nil, b.notReadyError("GetOrCreateFileAnchor")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	key := "file:" + path
+	if node, err := b.store.GetNodeByKey(ctx, key, ""); err == nil && node != nil {
+		return node, nil
+	}
+
+	node := &storage.Node{
+		Type:       "file",
+		Content:    "File: " + filepath.Base(path) + " (" + path + ")",
+		Scope:      "project",
+		Tier:       2,
+		Confidence: 0.9,
+		Key:        key,
+	}
+	if err := b.store.CreateNode(ctx, node); err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
 func (b *YaadBridge) recordContextGraph(query string, result *yaadEngine.RecallResult) {
 	if b.graphSessionID == "" || result == nil || len(result.Nodes) == 0 {
 		return
