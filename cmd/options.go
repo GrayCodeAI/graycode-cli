@@ -264,6 +264,15 @@ func newConfiguredHawkSession(settings hawkconfig.Settings, effectiveProvider, e
 	return sess, nil
 }
 
+// prepareInteractiveSessionStartup applies only the cheap TUI startup slice.
+// Transport rebuild and heavy memory setup remain deferred until the first
+// real chat request in bootstrapSessionForChat.
+func prepareInteractiveSessionStartup(sess *engine.Session, settings hawkconfig.Settings) error {
+	syncSessionFromPersistedSelection(sess)
+	sess.SetLogger(logger.New(io.Discard, logger.Error))
+	return configureSessionStartup(sess, settings)
+}
+
 func firstNonEmptyTrimmed(values ...string) string {
 	for _, value := range values {
 		if trimmed := strings.TrimSpace(value); trimmed != "" {

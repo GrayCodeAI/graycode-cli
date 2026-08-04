@@ -32,7 +32,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/feature/taste"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/startup"
@@ -168,9 +167,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	startup.EndPhase("newChatModel:newHawkSession")
 
 	startup.MarkPhase("newChatModel:configureSession")
-	syncSessionFromPersistedSelection(sess)
-	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if cfgErr := configureSessionStartup(sess, settings); cfgErr != nil {
+	if cfgErr := prepareInteractiveSessionStartup(sess, settings); cfgErr != nil {
 		return chatModel{}, cfgErr
 	}
 	startup.EndPhase("newChatModel:configureSession")
