@@ -10,12 +10,24 @@ type Stats = tok.Stats
 // UsageTracker and UsageLimits expose the session budget API through Hawk's
 // token boundary without changing Tok's accounting behavior.
 type (
-	UsageTracker = tok.UsageTracker
-	UsageLimits  = tok.UsageLimits
+	UsageTracker   = tok.UsageTracker
+	UsageLimits    = tok.UsageLimits
+	CodeChunk      = tok.CodeChunk
+	ChunkOptions   = tok.ChunkOptions
+	SecretMatch    = tok.SecretMatch
+	SecretDetector = tok.SecretDetector
 )
 
 // NewUsageTracker creates an in-memory usage tracker with Tok's defaults.
 func NewUsageTracker() *UsageTracker { return tok.NewUsageTracker() }
+
+// ChunkCode splits source into semantically meaningful token-bounded chunks.
+func ChunkCode(source string, opts ChunkOptions) []CodeChunk {
+	return tok.ChunkCode(source, opts)
+}
+
+// DefaultSecretDetector returns Tok's concurrency-safe built-in detector.
+func DefaultSecretDetector() *SecretDetector { return tok.DefaultSecretDetector() }
 
 // Compress applies Tok's context compression with a fixed token budget.
 func Compress(text string, budget int) (string, Stats) {

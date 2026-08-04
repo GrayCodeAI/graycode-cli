@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/tok"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ func NewSmartReader(maxTokens int) *SmartReader {
 }
 
 func estimateTokens(text string) int {
-	return tok.EstimateTokens(text)
+	return token.CountTokensFast(text)
 }
 
 // ReadFile reads a file intelligently within the token budget.
