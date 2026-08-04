@@ -61,6 +61,11 @@ The graph is intentionally directional:
   file/line diagnostics across Hawk and available support repositories.
 - Persisted tool, review, verification, event, and policy contracts use the
   implemented portions of `hawk-core-contracts`.
+- Native-compaction capability contracts use `hawk-core-contracts/llm`; Eyrie
+  request translation remains inside `internal/provider/gateway`, keeping the
+  engine layer independent of the provider adapter package for this path.
+- Container-required state and its executor are owned by `ToolService` and
+  read through synchronized snapshots, including asynchronous TUI retry.
 - The local boundary suite, full Go tests, and `go vet` pass at this baseline.
 
 ### Transitional
@@ -152,8 +157,9 @@ and change-scope detection before committing.
 
 Phase 1 adds AST/package-graph dependency checks. Phase 2 completes the safe
 Session migration using the boundaries documented here, with `Session.Cost`
-explicitly retained as a compatibility exception. Phase 3 now targets one
-command composition root while preserving the interactive startup split
-between lightweight and deferred session configuration. The next Phase 3
-slice should reduce TUI-only orchestration without collapsing that latency
-boundary.
+explicitly retained as a compatibility exception. Phase 3 now has explicit
+non-interactive and interactive startup composition boundaries, with heavy TUI
+configuration remaining deferred for first-frame latency. Phase 4 has begun by
+moving provider capability contracts onto `hawk-core-contracts`; the next
+slice should audit the remaining Yaad/Tok/Trace implementation-type imports
+and decide where a facade materially improves replaceability.
