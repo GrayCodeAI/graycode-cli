@@ -68,6 +68,9 @@ The graph is intentionally directional:
 - `internal/engine.Session` still contains service fields and remaining legacy
   state. The service graph is authoritative in the migrated paths, but the
   decomposition is not complete.
+- `Session.Cost` remains a public compatibility field because existing callers
+  assign it directly. New code must use `CostValue()`; removing the field is a
+  versioned API change, not a safe internal extraction.
 - `internal/engine` remains a large compatibility and orchestration package.
   At this baseline its top-level production files contain approximately
   19,253 lines, its top-level tests approximately 11,855 lines, and the
@@ -144,5 +147,8 @@ and change-scope detection before committing.
 
 ## Next phase
 
-Phase 1 adds AST/package-graph dependency checks. Phase 2 then completes the
-Session migration using the boundaries documented here.
+Phase 1 adds AST/package-graph dependency checks. Phase 2 completes the safe
+Session migration using the boundaries documented here, with `Session.Cost`
+explicitly retained as a compatibility exception. Phase 3 now targets one
+command composition root while preserving the interactive startup split
+between lightweight and deferred session configuration.
