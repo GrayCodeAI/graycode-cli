@@ -51,7 +51,7 @@ func TestPlatformContextForNativeModel_MimoV25Pro(t *testing.T) {
 }
 
 func TestConnectionStatusParts_OmitsDefault128kPlaceholder(t *testing.T) {
-	m := chatModel{session: &engine.Session{}}
+	m := chatModel{session: engine.NewSession("", "", "", nil)}
 	m.session.SetModel("mimo-v2.5-pro")
 	m.session.SetProvider("xiaomi_mimo_token_plan")
 	_, _, ctxLabel := m.connectionStatusParts()
@@ -64,7 +64,7 @@ func TestConnectionStatusParts_MimoShowsPlatformContext(t *testing.T) {
 	invalidatePlatformContextCache()
 	seedPlatformContextCacheForTest(map[string]int{"mimo-v2.5-pro": 1_048_576})
 	t.Cleanup(invalidatePlatformContextCache)
-	sess := &engine.Session{}
+	sess := engine.NewSession("", "", "", nil)
 	sess.SetProvider("xiaomi_mimo_token_plan")
 	sess.SetModel("mimo-v2.5-pro")
 	applyLiveModelMetadata(sess, "xiaomi_mimo_token_plan", "mimo-v2.5-pro")
@@ -120,7 +120,7 @@ func TestConnectionStatusParts_MimoShowsPlatformContext_HyphenProvider(t *testin
 	invalidatePlatformContextCache()
 	seedPlatformContextCacheForTest(map[string]int{"mimo-v2.5-pro": 1_048_576})
 	t.Cleanup(invalidatePlatformContextCache)
-	sess := &engine.Session{}
+	sess := engine.NewSession("", "", "", nil)
 	sess.SetProvider("xiaomi-mimo-token-plan") // hyphenated as normalized at runtime
 	sess.SetModel("mimo-v2.5-pro")
 	applyLiveModelMetadata(sess, "xiaomi-mimo-token-plan", "mimo-v2.5-pro")

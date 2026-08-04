@@ -2,7 +2,9 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/engine"
@@ -23,6 +25,7 @@ import (
 // previously inlined. See docs/session-decomposition.md for the migration
 // plan.
 type ChatService struct {
+	mu sync.RWMutex
 	// client is the eyrie transport. Always non-nil after construction.
 	client ChatClient
 	// provider / model are the active LLM identity.
@@ -99,21 +102,39 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 // Client returns the underlying eyrie client. Exposed for callers (e.g.
 // background goroutines) that need to issue one-off LLM calls without
 // the agent-loop retry wrapper.
-func (c *ChatService) Client() ChatClient { return c.client }
+func (c *ChatService) Client() ChatClient {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.client
+}
 
 // Provider returns the active provider identifier.
-func (c *ChatService) Provider() string { return c.provider }
+func (c *ChatService) Provider() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.provider
+}
 
 // Model returns the active model identifier.
-func (c *ChatService) Model() string { return c.model }
+func (c *ChatService) Model() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.model
+}
 
 // DeploymentRouting reports whether the underlying client is catalog-backed
 // (true) or a single-provider transport (false).
-func (c *ChatService) DeploymentRouting() bool { return c.deploymentRouting }
+func (c *ChatService) DeploymentRouting() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.deploymentRouting
+}
 
 // SetThinkingEnabled sets the generic host thinking/reasoning toggle for
 // providers that support it (Z.AI, LongCat, Agnes, …).
 func (c *ChatService) SetThinkingEnabled(v *bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.thinkingEnabled = v
 }
 
@@ -125,11 +146,15 @@ func (c *ChatService) SetGLMThinkingEnabled(v *bool) {
 // SetModel updates the active model. The next StreamChat will use the new
 // model.
 func (c *ChatService) SetModel(model string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.model = model
 }
 
 // SetProvider updates the active provider.
 func (c *ChatService) SetProvider(provider string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.provider = provider
 }
 
@@ -139,6 +164,8 @@ func (c *ChatService) Reattach(client ChatClient, provider string) {
 	if client == nil {
 		return
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.client = client
 	if provider != "" {
 		c.provider = provider
@@ -149,21 +176,26 @@ func (c *ChatService) Reattach(client ChatClient, provider string) {
 // encoding all the knobs the agent loop needs (system prompt, model,
 // max tokens, tools, structured output, etc.).
 func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens int, tools []types.EyrieTool) types.ChatOptions {
+	c.mu.RLock()
+	provider := c.provider
+	thinkingEnabled := c.thinkingEnabled
+	outputSchema := c.outputSchema
+	c.mu.RUnlock()
 	opts := types.ChatOptions{
-		Provider:      c.provider,
+		Provider:      provider,
 		Model:         activeModel,
 		MaxTokens:     maxTokens,
 		System:        systemPrompt,
-		EnableCaching: c.provider == "anthropic",
+		EnableCaching: provider == "anthropic",
 		Tools:         tools,
 	}
-	if supportsThinkingToggle(c.provider) && c.thinkingEnabled != nil {
-		opts.ThinkingEnabled = c.thinkingEnabled
-		opts.GLMThinkingEnabled = c.thinkingEnabled // alias for older adapters
+	if supportsThinkingToggle(provider) && thinkingEnabled != nil {
+		opts.ThinkingEnabled = thinkingEnabled
+		opts.GLMThinkingEnabled = thinkingEnabled // alias for older adapters
 	}
 	// Structured output: request a JSON-schema-constrained response when set.
-	if c.outputSchema != "" {
-		opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: c.outputSchema}
+	if outputSchema != "" {
+		opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: outputSchema}
 	}
 	return opts
 }
@@ -181,22 +213,32 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 // those clients this service records the product metric and delegates exactly
 // once; injected legacy clients retain Hawk's compatibility retry/rate layer.
 func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
-	if clientManagesResilience(c.client) {
-		c.metrics.Counter("api.requests").Inc()
-		return c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
+	c.mu.RLock()
+	client := c.client
+	rateLimiter := c.rateLimiter
+	metricsRegistry := c.metrics
+	retryConfig := c.retryCfg
+	continuationConfig := c.contCfg
+	c.mu.RUnlock()
+	if client == nil {
+		return nil, errors.New("chat service: no client configured")
+	}
+	if clientManagesResilience(client) {
+		metricsRegistry.Counter("api.requests").Inc()
+		return client.StreamChatContinue(ctx, messages, opts, continuationConfig)
 	}
 	// Rate limit: wait for a token before making the LLM call
-	if c.rateLimiter != nil {
-		if waitErr := c.rateLimiter.Wait(ctx); waitErr != nil {
+	if rateLimiter != nil {
+		if waitErr := rateLimiter.Wait(ctx); waitErr != nil {
 			return nil, waitErr
 		}
 	}
-	c.metrics.Counter("api.requests").Inc()
+	metricsRegistry.Counter("api.requests").Inc()
 
 	var result *types.StreamResult
-	err := retry.Do(ctx, c.retryCfg, func() error {
+	err := retry.Do(ctx, retryConfig, func() error {
 		var callErr error
-		result, callErr = c.client.StreamChatContinue(ctx, messages, opts, c.contCfg)
+		result, callErr = client.StreamChatContinue(ctx, messages, opts, continuationConfig)
 		if callErr != nil {
 			// On context overflow, do an emergency compact and retry once.
 			// Previously this re-sent the unmodified messages — a no-op that
@@ -204,7 +246,7 @@ func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage,
 			// shrink the transcript beneath the ceiling first.
 			if isContextOverflow(callErr) {
 				compacted := emergencyCompact(messages)
-				result, callErr = c.client.StreamChatContinue(ctx, compacted, opts, c.contCfg)
+				result, callErr = client.StreamChatContinue(ctx, compacted, opts, continuationConfig)
 			}
 		}
 		return callErr
@@ -250,7 +292,11 @@ func emergencyCompact(messages []types.EyrieMessage) []types.EyrieMessage {
 // (sleeptime consolidation, skill distillation) that don't need
 // incremental events.
 func (c *ChatService) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	return c.client.Chat(ctx, messages, opts)
+	client := c.Client()
+	if client == nil {
+		return nil, errors.New("chat service: no client configured")
+	}
+	return client.Chat(ctx, messages, opts)
 }
 
 // isContextOverflow reports whether err looks like a "context too long"

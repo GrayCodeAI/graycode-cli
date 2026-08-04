@@ -58,17 +58,13 @@ type SnapshotTracker interface {
 // and lifecycle state are owned by the corresponding services below.
 type Session struct {
 	mu       sync.RWMutex
-	client   ChatClient
 	registry *tool.Registry
-	provider string
-	model    string
 	log      *logger.Logger
 	metrics  *metrics.Registry
 	Cost     Cost
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
-	// code should go through s.llm.* rather than touching the legacy
-	// client/provider/model/Router/DeploymentRouting fields.
+	// code should go through s.llm.* rather than duplicating transport state.
 	// Named lowercase (unexported) to avoid colliding with the public
 	// Session.Chat() method used by Reflector and SelfReview.
 	llm *ChatService
@@ -144,10 +140,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	}
 	log := logger.Default()
 	s := &Session{
-		client:   chat,
 		registry: registry,
-		provider: provider,
-		model:    model,
 		log:      log,
 		metrics:  metrics.NewRegistry(),
 	}
@@ -216,16 +209,8 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	if chat == nil {
 		return
 	}
-	s.mu.Lock()
-	s.client = chat
-	if strings.TrimSpace(provider) != "" {
-		s.provider = strings.TrimSpace(provider)
-	}
-	prov := s.provider
-	llm := s.llm
-	s.mu.Unlock()
-	if llm != nil {
-		llm.Reattach(chat, prov)
+	if llm := s.ChatLLM(); llm != nil {
+		llm.Reattach(chat, strings.TrimSpace(provider))
 	}
 	// deploymentRouting is now read through ChatService; the ChatService
 	// constructed at session creation already holds the value. If a
@@ -239,20 +224,30 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 	if registry == nil {
 		registry = s.registry
 	}
-	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting())
+	var chat ChatClient
+	provider := ""
+	deploymentRouting := false
+	if llm := s.ChatLLM(); llm != nil {
+		chat = llm.Client()
+		provider = llm.Provider()
+		deploymentRouting = llm.DeploymentRouting()
+	}
+	sub := NewSessionWithClient(chat, provider, model, systemPrompt, registry, deploymentRouting)
 	return sub
 }
 
 func (s *Session) Model() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.model
+	if llm := s.ChatLLM(); llm != nil {
+		return llm.Model()
+	}
+	return ""
 }
 
 func (s *Session) Provider() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.provider
+	if llm := s.ChatLLM(); llm != nil {
+		return llm.Provider()
+	}
+	return ""
 }
 func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
@@ -375,7 +370,6 @@ func (s *Session) SubServices() SubServices {
 func (s *Session) SetModel(model string) {
 	m := strings.TrimSpace(model)
 	s.mu.Lock()
-	s.model = m
 	s.Cost.Model = m
 	s.mu.Unlock()
 	if s.llm != nil {
@@ -390,7 +384,7 @@ func (s *Session) syncCascadeDefaultModel() {
 	if s == nil || s.LifecycleSvc() == nil || s.LifecycleSvc().Cascade() == nil {
 		return
 	}
-	if m := strings.TrimSpace(s.model); m != "" {
+	if m := strings.TrimSpace(s.Model()); m != "" {
 		cascade := s.LifecycleSvc().Cascade()
 		cascade.DefaultModel = m
 	}
@@ -399,11 +393,7 @@ func (s *Session) syncCascadeDefaultModel() {
 // SetProvider updates the active provider for subsequent requests.
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
-	s.mu.Lock()
-	s.provider = p
-	llm := s.llm
-	s.mu.Unlock()
-	if llm != nil {
+	if llm := s.ChatLLM(); llm != nil {
 		llm.SetProvider(p)
 	}
 }
@@ -715,10 +705,10 @@ func (s *Session) RawMessages() []types.EyrieMessage {
 // Chat implements the LLMClient interface by delegating to the underlying client.
 // This allows Session to be passed to components that need LLM access (e.g. Reflector, SelfReview).
 func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	if s.client == nil {
+	if s.ChatLLM() == nil {
 		return nil, fmt.Errorf("session: no LLM client configured")
 	}
-	return s.client.Chat(ctx, msgs, opts)
+	return s.ChatLLM().Chat(ctx, msgs, opts)
 }
 
 // RemoveLastExchange removes the last user+assistant message pair.

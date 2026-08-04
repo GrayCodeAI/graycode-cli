@@ -61,7 +61,10 @@ exists. The first Phase 2 slice also moved token accounting, token-estimate
 cache, and checkpoint-manager state fully into `PersistenceService`; the
 corresponding duplicate `Session` fields have been removed. `persistID` and
 zero-value lazy service materialization remain pending because their call
-graphs and compatibility behavior have higher fan-out.
+graphs and compatibility behavior have higher fan-out. The next slice moved
+LLM client/provider/model ownership into `ChatService` and added synchronization
+around transport identity and reattachment; command fixtures now use the
+explicit constructor rather than relying on zero-value Session transport state.
 
 ## Proposed Decomposition
 

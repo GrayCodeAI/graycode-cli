@@ -51,7 +51,7 @@ func TestFormatConnectionContextLabel(t *testing.T) {
 		}
 	}
 
-	sess := &engine.Session{}
+	sess := engine.NewSession("", "", "", nil)
 	sess.AddUser(strings.Repeat("a", 4000))
 	m.session = sess
 	got = ansi.Strip(formatConnectionContextLabel(m, "131k"))
@@ -108,9 +108,7 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
 	hawkconfig.RefreshConfigCredSnapshot(ctx)
 
-	sess := &engine.Session{}
-	sess.SetProvider("openrouter")
-	sess.SetModel("moonshotai/kimi-k2.6")
+	sess := engine.NewSession("openrouter", "moonshotai/kimi-k2.6", "", nil)
 
 	m := chatModel{session: sess}
 	got := m.chatConnectionStatus()

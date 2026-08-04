@@ -82,7 +82,9 @@ The first bounded slice is complete: transcript/system state, token
 accounting, token-estimate cache, and checkpoint-manager state now have one
 owner in `PersistenceService`. `persistID` remains dual-written pending the
 graph/journal migration slice. Zero-value lazy service materialization remains
-as a compatibility seam until direct construction fixtures are classified.
+as a compatibility seam until direct construction fixtures are classified. A
+second slice is complete: LLM client/provider/model identity now has one owner
+in `ChatService`, with synchronized access and reattachment.
 
 1. Freeze new direct reads of legacy Session fields.
 2. Add or complete named service methods for each remaining access pattern.

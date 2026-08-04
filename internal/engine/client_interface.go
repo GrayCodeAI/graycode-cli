@@ -46,9 +46,8 @@ func clientNativeCompaction(client ChatClient, ctx context.Context, provider, mo
 // Also reattaches the ChatService so the agent loop's `s.ChatLLM().Stream`
 // call site sees the mock (Phase 7 migration).
 func (s *Session) SetTestClient(c ChatClient) {
-	s.client = c
 	if s.llm != nil {
-		s.llm.Reattach(c, s.provider)
+		s.llm.Reattach(c, s.llm.Provider())
 	}
 }
 
