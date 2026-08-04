@@ -187,6 +187,39 @@ func (b *YaadBridge) recallResultWithContext(
 	return result, nil
 }
 
+// listNodes is the memory package's read boundary for Yaad node queries.
+// Callers stay independent of the storage lifecycle and synchronization.
+func (b *YaadBridge) listNodes(ctx context.Context, filter storage.NodeFilter) ([]*storage.Node, error) {
+	if !b.ready {
+		return nil, b.notReadyError("ListNodes")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.store.ListNodes(ctx, filter)
+}
+
+func (b *YaadBridge) listPinnedNodes(ctx context.Context, limit int) ([]*storage.Node, error) {
+	pinned := true
+	return b.listNodes(ctx, storage.NodeFilter{Pinned: &pinned, Limit: limit})
+}
+
+func (b *YaadBridge) listNodesByType(ctx context.Context, nodeType string, minConfidence float64, limit int) ([]*storage.Node, error) {
+	return b.listNodes(ctx, storage.NodeFilter{
+		Type:          nodeType,
+		MinConfidence: minConfidence,
+		Limit:         limit,
+	})
+}
+
+func (b *YaadBridge) recallBudget(ctx context.Context, query string, budget, limit, depth int) (*yaadEngine.RecallResult, error) {
+	return b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
+		Query:  query,
+		Budget: budget,
+		Limit:  limit,
+		Depth:  depth,
+	})
+}
+
 func (b *YaadBridge) recordContextGraph(query string, result *yaadEngine.RecallResult) {
 	if b.graphSessionID == "" || result == nil || len(result.Nodes) == 0 {
 		return
