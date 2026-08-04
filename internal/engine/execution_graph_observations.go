@@ -13,7 +13,6 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	tokgraph "github.com/GrayCodeAI/tok/runtimegraph"
 )
 
 func (s *Session) recordPolicyObservation(tc types.ToolCall, stage string, allowed bool, reason string) {
@@ -145,7 +144,7 @@ func (s *Session) recordTokCompressionObservation(source, stage string, stats to
 		repositoryID = filepath.Base(filepath.Clean(repositoryDir))
 	}
 	observedAt := time.Now().UTC()
-	export, err := tokgraph.Build(tokgraph.Input{
+	export, err := token.BuildRuntimeGraph(token.RuntimeGraphInput{
 		Compression:   &stats,
 		Source:        source,
 		ObservedAt:    observedAt,
@@ -180,8 +179,8 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 		repositoryID = filepath.Base(filepath.Clean(repositoryDir))
 	}
 	observedAt := time.Now().UTC()
-	export, err := tokgraph.Build(tokgraph.Input{
-		Redaction: &tokgraph.RedactionSummary{
+	export, err := token.BuildRuntimeGraph(token.RuntimeGraphInput{
+		Redaction: &token.RedactionSummary{
 			MatchCount: matchCount,
 			Types:      types,
 		},
@@ -232,9 +231,9 @@ func (s *Session) recordTokUsageBudgetObservation(
 	}
 
 	observedAt := time.Now().UTC()
-	export, err := tokgraph.Build(tokgraph.Input{
+	export, err := token.BuildRuntimeGraph(token.RuntimeGraphInput{
 		Usage: &usage,
-		Budget: &tokgraph.BudgetDecision{
+		Budget: &token.BudgetDecision{
 			Allowed:      allowed,
 			Reason:       reason,
 			HourlyLimit:  limits.HourlyTokens,

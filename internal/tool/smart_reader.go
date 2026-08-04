@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
