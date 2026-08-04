@@ -187,9 +187,10 @@ func planWithLLM(ctx context.Context, prompt, provider, model string, settings h
 	)
 
 	registry, _ := defaultRegistry(settings)
-	sess := newHawkSession(settings, provider, model, planPrompt, registry)
-	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	_ = configureSession(sess, settings)
+	sess, err := newConfiguredHawkSession(settings, provider, model, planPrompt, registry, logger.New(io.Discard, logger.Error))
+	if err != nil {
+		return nil, err
+	}
 	sess.PermSvc().SetMaxTurns(1)
 	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
 		if req.Response != nil {
