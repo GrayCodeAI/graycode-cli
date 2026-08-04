@@ -264,6 +264,26 @@ func (b *YaadBridge) recallProject(ctx context.Context, query, project string, b
 	})
 }
 
+func (b *YaadBridge) rememberProject(ctx context.Context, content, nodeType, project, agent string) error {
+	if !b.ready {
+		return b.notReadyError("RememberProject")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if !yaadEngine.IsValidNodeType(nodeType) {
+		nodeType = "convention"
+	}
+	_, err := b.engine.Remember(ctx, yaadEngine.RememberInput{
+		Type:    nodeType,
+		Content: content,
+		Scope:   "project",
+		Project: project,
+		Agent:   agent,
+	})
+	return err
+}
+
 func (b *YaadBridge) rememberGlobal(ctx context.Context, content, nodeType string) error {
 	if !b.ready {
 		return b.notReadyError("RememberGlobal")
