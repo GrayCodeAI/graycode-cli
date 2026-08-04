@@ -2,7 +2,11 @@
 
 ## Purpose
 
-This document is the single source of truth for:
+This document is the source of truth for the ecosystem repository map and
+steady-state dependency shape. The dated implementation baseline and
+migration status are recorded in `hawk-architecture-baseline.md`.
+
+It defines:
 
 - what exists in the current local workspace
 - which repos are part of the Hawk product architecture

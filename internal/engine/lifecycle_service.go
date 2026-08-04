@@ -110,8 +110,9 @@ func (s *LifecycleService) OnSessionStart(ctx context.Context, s2 *Session, last
 func (s *LifecycleService) OnSessionEnd(ctx context.Context, s2 *Session, success bool, duration time.Duration) {
 	if s.lifecycle != nil {
 		outcome := SessionOutcome{Success: success, Duration: duration}
-		if len(s2.messages) > 0 {
-			for _, m := range s2.messages {
+		messages := s2.Persistence().RawMessages()
+		if len(messages) > 0 {
+			for _, m := range messages {
 				if m.Role == "user" && len(m.ToolResults) == 0 && outcome.TaskGoal == "" {
 					outcome.TaskGoal = m.Content
 				}
@@ -120,7 +121,7 @@ func (s *LifecycleService) OnSessionEnd(ctx context.Context, s2 *Session, succes
 		_ = s.lifecycle.OnSessionEnd(ctx, s2, outcome)
 	}
 	if s.adaptivePrompt != nil {
-		for _, m := range s2.messages {
+		for _, m := range s2.Persistence().RawMessages() {
 			if m.Role == "user" && len(m.ToolResults) == 0 {
 				s.adaptivePrompt.LearnFromFeedback(m.Content)
 			}

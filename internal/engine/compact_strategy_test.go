@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -28,11 +26,8 @@ func TestAutoCompactor_CircuitBreaker(t *testing.T) {
 	ac := NewAutoCompactor(cfg)
 	ac.consecutiveFailures = 2
 
-	sess := &Session{
-		messages: makeMessages(200),
-		log:      newTestLogger(),
-		metrics:  newTestMetrics(),
-	}
+	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
+	sess.Persistence().SetRawMessages(makeMessages(200))
 
 	if ac.ShouldAutoCompact(sess) {
 		t.Error("should not trigger after max failures reached")
@@ -56,12 +51,8 @@ func TestStrategyRegistry_SelectStrategy(t *testing.T) {
 }
 
 func TestTruncateStrategy(t *testing.T) {
-	sess := &Session{
-		messages: makeMessages(100),
-		log:      newTestLogger(),
-		metrics:  newTestMetrics(),
-		client:   NewMockClientForTest(),
-	}
+	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
+	sess.Persistence().SetRawMessages(makeMessages(100))
 
 	s := &TruncateStrategy{}
 	result, err := s.Compact(context.Background(), sess)
@@ -86,12 +77,4 @@ func makeMessages(n int) []types.EyrieMessage {
 		}
 	}
 	return msgs
-}
-
-func newTestLogger() *logger.Logger {
-	return logger.Default()
-}
-
-func newTestMetrics() *metrics.Registry {
-	return metrics.NewRegistry()
 }

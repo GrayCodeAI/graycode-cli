@@ -134,10 +134,9 @@ func (r *MagicRegistry) registerBuiltin() {
 // --- Built-in magic command handlers ---
 
 func magicReset(session *Session, _ string) string {
-	session.mu.Lock()
-	count := len(session.messages)
-	session.messages = nil
-	session.mu.Unlock()
+	persist := session.Persistence()
+	count := len(persist.RawMessages())
+	persist.SetRawMessages(nil)
 	return fmt.Sprintf("Conversation reset. Cleared %d messages.", count)
 }
 
@@ -151,26 +150,24 @@ func magicUndo(session *Session, args string) string {
 		n = parsed
 	}
 
-	session.mu.Lock()
-	defer session.mu.Unlock()
-
-	total := len(session.messages)
+	persist := session.Persistence()
+	messages := persist.RawMessages()
+	total := len(messages)
 	if total == 0 {
 		return "No messages to undo."
 	}
 	if n > total {
 		n = total
 	}
-	session.messages = session.messages[:total-n]
-	return fmt.Sprintf("Removed last %d message(s). %d remaining.", n, len(session.messages))
+	messages = messages[:total-n]
+	persist.SetRawMessages(messages)
+	return fmt.Sprintf("Removed last %d message(s). %d remaining.", n, len(messages))
 }
 
 func magicTokens(session *Session, _ string) string {
-	session.mu.RLock()
-	defer session.mu.RUnlock()
-
+	messages := session.Persistence().RawMessages()
 	totalTokens := 0
-	for _, msg := range session.messages {
+	for _, msg := range messages {
 		totalTokens += len(msg.Content) / 4 // rough estimate: ~4 chars per token
 	}
 
@@ -190,7 +187,7 @@ func magicTokens(session *Session, _ string) string {
 		fmt.Fprintf(&sb, "  Cache write: %d\n", cacheWrite)
 	}
 	fmt.Fprintf(&sb, "  Total:       %d\n", total)
-	fmt.Fprintf(&sb, "  Messages:    %d\n", len(session.messages))
+	fmt.Fprintf(&sb, "  Messages:    %d\n", len(messages))
 	fmt.Fprintf(&sb, "  Est. context: ~%d tokens\n", totalTokens)
 	if session.LifecycleSvc() != nil && session.LifecycleSvc().Limits().MaxBudgetUSD() > 0 {
 		spent := session.Cost.TotalCostUSD

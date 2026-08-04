@@ -54,8 +54,7 @@ func (td *TrajectoryDistiller) RunWithDistillation(ctx context.Context, prompt s
 		}
 
 		// Snapshot current messages so we can restore after each attempt.
-		savedMessages := make([]types.EyrieMessage, len(td.session.messages))
-		copy(savedMessages, td.session.messages)
+		savedMessages := td.session.Persistence().RawMessages()
 
 		// Add the user prompt.
 		td.session.AddUser(augmented)
@@ -63,7 +62,7 @@ func (td *TrajectoryDistiller) RunWithDistillation(ctx context.Context, prompt s
 		// Collect the response by running the stream.
 		ch, err := td.session.Stream(ctx)
 		if err != nil {
-			td.session.messages = savedMessages
+			td.session.Persistence().SetRawMessages(savedMessages)
 			return "", fmt.Errorf("trajectory run %d: %w", attempt+1, err)
 		}
 
@@ -86,8 +85,7 @@ func (td *TrajectoryDistiller) RunWithDistillation(ctx context.Context, prompt s
 		}
 
 		// Capture the messages generated during this run.
-		runMessages := make([]types.EyrieMessage, len(td.session.messages))
-		copy(runMessages, td.session.messages)
+		runMessages := td.session.Persistence().RawMessages()
 
 		run := TrajectoryRun{
 			ID:       attempt + 1,
@@ -104,7 +102,7 @@ func (td *TrajectoryDistiller) RunWithDistillation(ctx context.Context, prompt s
 		}
 
 		// Restore messages for next attempt.
-		td.session.messages = savedMessages
+		td.session.Persistence().SetRawMessages(savedMessages)
 	}
 
 	// All attempts failed; return the best one.

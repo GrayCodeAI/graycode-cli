@@ -38,8 +38,8 @@ type SnapshotTracker interface {
 }
 
 // Session manages a conversation with an LLM via eyrie.
-// The mu RWMutex protects messages and system for concurrent access
-// (e.g. daemon handling concurrent requests, background memory goroutines).
+// The mu RWMutex protects the remaining session metadata for concurrent
+// access. Transcript and system-context state are owned by PersistenceService.
 //
 // Phases 1-7 of the god-object decomposition (see
 // docs/session-decomposition.md) have extracted the 35-collaborator
@@ -60,10 +60,8 @@ type Session struct {
 	mu       sync.RWMutex
 	client   ChatClient
 	registry *tool.Registry
-	messages []types.EyrieMessage
 	provider string
 	model    string
-	system   string
 	log      *logger.Logger
 	metrics  *metrics.Registry
 	Cost     Cost
@@ -89,14 +87,7 @@ type Session struct {
 	// workingDir is the preferred cwd for tools (worktree isolation).
 	workingDir string
 
-	persistID            string
-	lastPromptTokens     int
-	lastCompletionTokens int
-	estTokensCache       int
-	estTokensMsgCount    int
-	estTokensLastLen     int
-	tokUsage             *tok.UsageTracker
-	checkpointMgr        *session.CheckpointManager
+	tokUsage *tok.UsageTracker
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 
@@ -157,7 +148,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		registry: registry,
 		provider: provider,
 		model:    model,
-		system:   systemPrompt,
 		log:      log,
 		metrics:  metrics.NewRegistry(),
 	}
@@ -305,12 +295,10 @@ func (s *Session) Persistence() *PersistenceService {
 	if s.persist != nil {
 		return s.persist
 	}
-	// A handful of focused tests and compatibility integrations still build a
-	// Session literal. Lazily materialize the persistence service and import
-	// their legacy transcript once, so the service boundary remains total.
+	// A zero-value Session can still be used by narrow UI/test adapters. Keep
+	// lazy service materialization for that compatibility case, but there is no
+	// second transcript or system-prompt state to import.
 	s.persist = NewPersistenceService(s.log)
-	s.persist.SetSystem(s.system)
-	s.persist.SetRawMessages(s.messages)
 	return s.persist
 }
 
@@ -501,9 +489,6 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 		}
 	}
 	p.SetRawMessages(msgs)
-	s.mu.Lock()
-	s.messages = append(s.messages[:0], msgs...)
-	s.mu.Unlock()
 	return fork.ID, nil
 }
 
@@ -531,9 +516,6 @@ func (s *Session) SwitchBranch(nodeID string) error {
 		}
 	}
 	p.SetRawMessages(msgs)
-	s.mu.Lock()
-	s.messages = append(s.messages[:0], msgs...)
-	s.mu.Unlock()
 	return nil
 }
 
@@ -570,9 +552,6 @@ func (s *Session) ConvoHead() string {
 func (s *Session) AppendSystemContext(content string) {
 	if p := s.Persistence(); p != nil {
 		p.AppendSystemContext(content)
-		s.mu.Lock()
-		s.system = p.System()
-		s.mu.Unlock()
 	}
 }
 
@@ -581,9 +560,6 @@ func (s *Session) AppendSystemContext(content string) {
 func (s *Session) ReplaceSystemContextSection(header, content string) {
 	if p := s.Persistence(); p != nil {
 		p.ReplaceSystemContextSection(header, content)
-		s.mu.Lock()
-		s.system = p.System()
-		s.mu.Unlock()
 	}
 }
 
@@ -727,18 +703,13 @@ func (s *Session) MessageCount() int {
 //
 // PersistenceService is the single source of truth for the live transcript:
 // AddUser/AddAssistant and the agent loop (stream.go) all write through it,
-// and compaction/governor paths read it. The legacy s.messages field is kept
-// only for Sessions constructed without a PersistenceService (some unit
-// tests). Delegating here means TUI/CLI consumers — notably saveSession,
-// which returned early when the legacy slice was empty — see the real,
-// populated transcript instead of a stale empty slice.
+// and compaction/governor paths read it. Delegating here means TUI/CLI
+// consumers — notably saveSession — see the real, populated transcript.
 func (s *Session) RawMessages() []types.EyrieMessage {
 	if p := s.Persistence(); p != nil {
 		return p.RawMessages()
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.messages
+	return nil
 }
 
 // Chat implements the LLMClient interface by delegating to the underlying client.

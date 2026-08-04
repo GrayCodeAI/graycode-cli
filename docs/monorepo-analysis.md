@@ -1,5 +1,11 @@
 # Hawk Monorepo Analysis Report
 
+> Historical note: this document uses “monorepo” loosely for the local
+> `hawk-eco` workspace. The current architecture is a multi-repository
+> ecosystem with Hawk as the product repository. See
+> [Hawk Architecture Baseline](architecture/hawk-architecture-baseline.md) for
+> the authoritative dated state.
+
 **Date:** 2026-07-05
 **Scope:** Analysis of the hawk-eco monorepo structure, configuration, and organization
 
@@ -341,9 +347,10 @@ docs/
 
 ## 7. Conclusion
 
-The hawk-eco monorepo is **well-organized and properly configured**. It follows Go best practices for workspace management, has comprehensive CI/CD coverage, and thorough documentation. The external dependency management is robust with consistent versioning and replace directives.
-
-**Overall Score: 9/10**
+The historical analysis found a well-organized local workspace with Go module
+and CI support. It is not a current architecture assessment; dependency
+ownership, migration status, and verification evidence are maintained in the
+architecture baseline.
 
 ---
 

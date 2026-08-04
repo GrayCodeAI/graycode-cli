@@ -57,7 +57,11 @@ The permission aliases (`Perm`, `Permissions`, `AutoMode`, `Classifier`,
 `BypassKill`, `PermissionFn`, `Approval`, and `Autonomy`) have been removed from
 `Session`. Remaining lifecycle, memory, and persistence fields are being moved
 incrementally; service state is authoritative and no fallback execution path
-exists.
+exists. The first Phase 2 slice also moved token accounting, token-estimate
+cache, and checkpoint-manager state fully into `PersistenceService`; the
+corresponding duplicate `Session` fields have been removed. `persistID` and
+zero-value lazy service materialization remain pending because their call
+graphs and compatibility behavior have higher fan-out.
 
 ## Proposed Decomposition
 

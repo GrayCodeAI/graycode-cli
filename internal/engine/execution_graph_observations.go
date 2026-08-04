@@ -92,9 +92,10 @@ func (s *Session) executionGraphSessionID() string {
 	if s == nil {
 		return ""
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return strings.TrimSpace(s.persistID)
+	if p := s.Persistence(); p != nil {
+		return strings.TrimSpace(p.PersistID())
+	}
+	return ""
 }
 
 // SessionID returns the persistence ID of this session, or "" before one is
