@@ -220,6 +220,31 @@ func (b *YaadBridge) listNodesByScope(ctx context.Context, nodeType, scope strin
 	})
 }
 
+func (b *YaadBridge) adjustNodeConfidence(ctx context.Context, id string, delta float64, skipPinned bool) error {
+	if !b.ready {
+		return b.notReadyError("AdjustNodeConfidence")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	node, err := b.store.GetNode(ctx, id)
+	if err != nil || node == nil {
+		return err
+	}
+	if skipPinned && node.Pinned {
+		return nil
+	}
+
+	node.Confidence += delta
+	if node.Confidence > 1.0 {
+		node.Confidence = 1.0
+	}
+	if node.Confidence < 0.1 {
+		node.Confidence = 0.1
+	}
+	return b.store.UpdateNode(ctx, node)
+}
+
 func (b *YaadBridge) recallBudget(ctx context.Context, query string, budget, limit, depth int) (*yaadEngine.RecallResult, error) {
 	return b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
 		Query:  query,
