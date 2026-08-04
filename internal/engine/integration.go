@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/tok"
 )
 
 // ---------------------------------------------------------------------------
@@ -363,7 +363,7 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []types.Eyr
 
 	// 4. Redact secrets from output (hawk's patterns + tok's 27 patterns)
 	result.FormattedResponse = p.OutputRedactor.Redact(result.FormattedResponse)
-	secretDetector := tok.DefaultSecretDetector()
+	secretDetector := token.DefaultSecretDetector()
 	secretMatches := secretDetector.DetectSecrets(result.FormattedResponse)
 	if len(secretMatches) > 0 {
 		result.SecretMatches = len(secretMatches)
