@@ -10,9 +10,9 @@ import (
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
 	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/tok"
 	tokgraph "github.com/GrayCodeAI/tok/runtimegraph"
 )
 
@@ -131,7 +131,7 @@ func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {
 	)
 }
 
-func (s *Session) recordTokCompressionObservation(source, stage string, stats tok.Stats) {
+func (s *Session) recordTokCompressionObservation(source, stage string, stats token.Stats) {
 	sessionID := s.executionGraphSessionID()
 	if sessionID == "" || stats.OriginalTokens <= 0 {
 		return
@@ -262,14 +262,14 @@ func (s *Session) recordTokUsageBudgetObservation(
 	}
 }
 
-func (s *Session) ensureTokUsageTracker() *tok.UsageTracker {
+func (s *Session) ensureTokUsageTracker() *token.UsageTracker {
 	if s == nil || s.LifecycleSvc() == nil {
 		return nil
 	}
 	return s.LifecycleSvc().EnsureUsageTracker()
 }
 
-func (s *Session) currentTokUsageTracker() *tok.UsageTracker {
+func (s *Session) currentTokUsageTracker() *token.UsageTracker {
 	if s == nil || s.LifecycleSvc() == nil {
 		return nil
 	}

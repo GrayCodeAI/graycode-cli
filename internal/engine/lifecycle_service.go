@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/tok"
 )
 
 // LifecycleService is the Session's view of the self-improvement and
@@ -70,7 +70,7 @@ type LifecycleService struct {
 	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
 	smartSkills []plugin.SmartSkill
 	usageMu     sync.Mutex
-	usage       *tok.UsageTracker
+	usage       *token.UsageTracker
 	verbose     bool
 	// log is the session logger.
 	log *logger.Logger
@@ -305,21 +305,21 @@ func (s *LifecycleService) SmartSkills() []plugin.SmartSkill {
 
 // EnsureUsageTracker returns the session token-budget tracker, creating it
 // with ceilings disabled until the caller opts into local limits.
-func (s *LifecycleService) EnsureUsageTracker() *tok.UsageTracker {
+func (s *LifecycleService) EnsureUsageTracker() *token.UsageTracker {
 	if s == nil {
 		return nil
 	}
 	s.usageMu.Lock()
 	defer s.usageMu.Unlock()
 	if s.usage == nil {
-		s.usage = tok.NewUsageTracker()
-		s.usage.SetLimits(tok.UsageLimits{})
+		s.usage = token.NewUsageTracker()
+		s.usage.SetLimits(token.UsageLimits{})
 	}
 	return s.usage
 }
 
 // UsageTracker returns the initialized token-budget tracker, if any.
-func (s *LifecycleService) UsageTracker() *tok.UsageTracker {
+func (s *LifecycleService) UsageTracker() *token.UsageTracker {
 	if s == nil {
 		return nil
 	}
