@@ -13,6 +13,11 @@ import (
 
 // BackgroundAgentPool manages async sub-agents that run in the background.
 // PACK-02: backed by taskruntime.Registry (shared with tool.BackgroundAgentManager).
+//
+// Deprecated: new code should use Session.SpawnController() (Spawn /
+// SpawnBackground / Tasks) which shares the same taskruntime.Registry via
+// ToolService.EnsureBackgroundManager. This pool is retained for older
+// callers and tests.
 type BackgroundAgentPool struct {
 	mu      sync.Mutex
 	reg     *taskruntime.Registry
