@@ -873,7 +873,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				case "?":
 					// Quick help — show contextual help summary in chat.
-					m.messages = append(m.messages, displayMsg{role: "system", content: "Quick help:\n  /help            — list all commands\n  /help <topic>    — detailed help (e.g., /help /commit)\n  ctrl+K           — command palette\n  ctrl+L           — cycle autonomy tiers\n  ctrl+N           — switch model\n  ctrl+R           — search input history\n  ?                — show this help\n  Type / to see slash commands, or ask a question to get started."})
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Quick help:\n  /start           — guided setup (trust, mode, branch)\n  /mode plan|act   — research vs build\n  /isolation       — sandbox profile\n  /help            — list all commands\n  /help <topic>    — detailed help (e.g., /help /commit)\n  ctrl+K           — command palette\n  ctrl+L           — cycle autonomy tiers\n  ctrl+N           — switch model\n  ctrl+R           — search input history\n  ?                — show this help\n  Type / to see slash commands, or ask a question to get started."})
 					m.viewDirty = true
 					m.updateViewportContent()
 					return m, nil
@@ -1192,7 +1192,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.permReq = &msg.req
 		m.permReqSeq++
 		m.permTimeoutAt = time.Now().Add(5 * time.Minute)
-		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary, timeoutAt: m.permTimeoutAt})
+		// Display-only enrichment (risk + why). Keep req.Summary as ToolSummary
+		// for AutoMode / memory matching after y/n/a/d.
+		permBody := engine.FormatPermissionDisplay(msg.req.ToolName, msg.req.Summary)
+		m.messages = append(m.messages, displayMsg{role: "permission", content: permBody, timeoutAt: m.permTimeoutAt})
 		m.viewDirty = true
 		m.updateViewportContent()
 		return m, permissionPromptTimeoutCmd(m.permReqSeq)
@@ -1446,10 +1449,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.sandbox != nil {
 			m.containerSandbox = msg.sandbox
 			if m.session != nil {
+				m.session.ApplyIsolationProfile(engine.IsolationContainer)
 				m.session.SetContainerExecutor(msg.sandbox)
 			}
 		}
 		if msg.ready && m.session != nil {
+			m.session.ApplyIsolationProfile(engine.IsolationContainer)
 			if m.session.PermSvc().Autonomy() == 0 && !m.session.PermSvc().AutonomyExplicit() {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}

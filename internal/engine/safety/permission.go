@@ -1,6 +1,7 @@
 package safety
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -166,6 +167,7 @@ func ToolNeedsPermission(name string, args map[string]interface{}) bool {
 }
 
 // ToolSummary generates a human-readable summary of what a tool call will do.
+// This short form is also used for AutoMode / memory rule matching — keep it stable.
 func ToolSummary(name string, args map[string]interface{}) string {
 	switch canonicalToolName(name) {
 	case "Bash":
@@ -189,6 +191,55 @@ func ToolSummary(name string, args map[string]interface{}) string {
 		}
 	}
 	return name
+}
+
+// FormatPermissionDisplay builds the multi-line body shown in the TUI permission
+// box. toolName and summary are display inputs; summary should remain ToolSummary
+// so AutoMode still matches after the user answers.
+func FormatPermissionDisplay(toolName, summary string) string {
+	policy := ToolPolicyFor(toolName)
+	risk := string(policy.DefaultRisk)
+	if risk == "" {
+		risk = string(RiskMedium)
+	}
+	// Escalate Bash to high when the summary still looks like a shell command
+	// that was forced through a prompt (suspicious commands).
+	if canonicalToolName(toolName) == "Bash" && risk != string(RiskHigh) {
+		if tool.IsSuspicious(summary) {
+			risk = string(RiskHigh)
+		}
+	}
+	why := permissionWhyLine(toolName, RiskLevel(risk), policy)
+	if strings.TrimSpace(summary) == "" {
+		summary = toolName
+	}
+	return fmt.Sprintf("[%s risk] %s\n%s\n%s", strings.ToUpper(risk), canonicalToolName(toolName), summary, why)
+}
+
+func permissionWhyLine(toolName string, risk RiskLevel, policy ToolPolicy) string {
+	switch risk {
+	case RiskHigh:
+		if canonicalToolName(toolName) == "Bash" {
+			return "Why: shell can change your system — review the command before allowing."
+		}
+		return "Why: high-impact action needs your confirmation."
+	case RiskMedium:
+		if hasCapability(policy, CapabilityFilesystemWrite) || hasCapability(policy, CapabilityFilesystemDelete) {
+			return "Why: this can modify or delete project files."
+		}
+		return "Why: this can change project state."
+	default:
+		return "Why: current autonomy settings require confirmation for this tool."
+	}
+}
+
+func hasCapability(policy ToolPolicy, want Capability) bool {
+	for _, c := range policy.Capabilities {
+		if c == want {
+			return true
+		}
+	}
+	return false
 }
 
 func pathArgument(args map[string]interface{}) (string, bool) {

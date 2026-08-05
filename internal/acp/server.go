@@ -166,6 +166,15 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 					"audio": false,
 				},
 			},
+			// Hawk control-plane metadata for IDE clients that want it.
+			"hawkCapabilities": map[string]any{
+				"workModes":       []string{"plan", "act", "review"},
+				"isolation":       []string{"dev", "workspace", "strict", "container"},
+				"folderTrust":     true,
+				"lazyTools":       true,
+				"autoCommit":      true,
+				"spawnController": true,
+			},
 		})
 	case "session/new":
 		s.handleSessionNew(msg)
@@ -199,8 +208,18 @@ func (s *Server) handleSessionNew(msg rpcMessage) {
 
 	// Route tool-permission prompts to the client for this session.
 	sess.SetPermissionFn(s.permissionFnFor(id))
+	// Default product modes for IDE-driven sessions (same as chat).
+	_ = sess.SetWorkMode(engine.WorkModeAct)
 
-	s.reply(msg.ID, map[string]any{"sessionId": id})
+	s.reply(msg.ID, map[string]any{
+		"sessionId": id,
+		// Hawk extensions (ignored by clients that only read sessionId).
+		"hawk": map[string]any{
+			"workMode":   string(sess.WorkMode()),
+			"isolation":  sess.Isolation().String(),
+			"autoCommit": sess.AutoCommit(),
+		},
+	})
 }
 
 // evictOldestLocked removes the oldest session to keep memory bounded; the

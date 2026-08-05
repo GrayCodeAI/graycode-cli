@@ -49,10 +49,17 @@ func (ToolSearchTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	}
 
 	matches := searchAvailableTools(tc.AvailableTools, p.Query, p.MaxResults)
+	// select:<name> promotes hidden optional tools onto the model surface.
+	if strings.HasPrefix(strings.ToLower(p.Query), "select:") && tc.Registry != nil {
+		for _, name := range matches {
+			_ = tc.Registry.PromoteModelTool(name)
+		}
+	}
 	out := map[string]interface{}{
 		"matches":     matches,
 		"query":       p.Query,
 		"total_tools": len(tc.AvailableTools),
+		"promoted":    strings.HasPrefix(strings.ToLower(p.Query), "select:"),
 	}
 	data, _ := json.MarshalIndent(out, "", "  ")
 	return string(data), nil

@@ -43,6 +43,12 @@ hawk analyze --depth full
 hawk fix --auto
 ```
 
+### Headless agent in CI
+
+Copy [hawk-ci-exec.yml](github/hawk-ci-exec.yml) to run `hawk exec --ephemeral --json`
+on pull requests (summarize diff, risk list, or your own prompt). Pin your
+hawk install step and provider secrets before enabling the job.
+
 ### Report CI delivery context
 
 Copy [hawk-delivery-context.yml](github/hawk-delivery-context.yml) to your

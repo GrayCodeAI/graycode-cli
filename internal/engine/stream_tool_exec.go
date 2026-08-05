@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/diff"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
@@ -193,7 +194,10 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 	}
 	canonicalPre := canonicalToolName(tc.Name)
 	var preEditContent, preEditPath string
-	if (canonicalPre == "Write" || canonicalPre == "Edit" || canonicalPre == "MultiEdit") && s.ChatLLM() != nil {
+	// Always snapshot pre-edit content for mutation tools so users (and the
+	// model) get a reviewable unified diff after the write — not only when
+	// LLM self-review is enabled.
+	if canonicalPre == "Write" || canonicalPre == "Edit" || canonicalPre == "MultiEdit" || canonicalPre == "StructuredEdit" {
 		if p, ok := pathArgument(tc.Arguments); ok && p != "" {
 			preEditPath = p
 			if data, readErr := readFileContent(p); readErr == nil {
@@ -217,28 +221,35 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 		}
 	} else {
 		s.Logger().Info("tool executed", map[string]interface{}{"tool": tc.Name, "output": len(output)})
-		if preEditPath != "" && s.ChatLLM() != nil && shouldSelfReview(tc.Name) {
-			if newContent, readErr := readFileContent(preEditPath); readErr == nil && newContent != preEditContent {
-				reviewResult, reviewErr := ReviewBeforeWrite(ctx, s.ChatLLM().Client(), s.ChatLLM().Model(), intentText, preEditPath, preEditContent, newContent)
-				if reviewErr == nil && reviewResult != nil && !reviewResult.Approved {
-					var revertErr error
-					if preEditContent == "" {
-						revertErr = os.Remove(preEditPath)
-					} else {
-						revertErr = os.WriteFile(preEditPath, []byte(preEditContent), 0o600)
-					}
-					if revertErr != nil {
-						s.Logger().Error("self-review revert failed; rejecting diff loudly", map[string]interface{}{"path": preEditPath, "error": revertErr.Error()})
-						output = fmt.Sprintf("Self-review rejected the change AND the revert failed: %s. Original review issues: %s. Manual intervention required.", revertErr.Error(), strings.Join(reviewResult.Issues, "; "))
-					} else {
-						issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
-						if len(reviewResult.Suggestions) > 0 {
-							issueStr += ". Suggestions: " + strings.Join(reviewResult.Suggestions, "; ")
+		if preEditPath != "" {
+			newContent, readErr := readFileContent(preEditPath)
+			if readErr == nil && newContent != preEditContent {
+				// Optional LLM self-review when a chat client is available.
+				if s.ChatLLM() != nil && shouldSelfReview(tc.Name) {
+					reviewResult, reviewErr := ReviewBeforeWrite(ctx, s.ChatLLM().Client(), s.ChatLLM().Model(), intentText, preEditPath, preEditContent, newContent)
+					if reviewErr == nil && reviewResult != nil && !reviewResult.Approved {
+						var revertErr error
+						if preEditContent == "" {
+							revertErr = os.Remove(preEditPath)
+						} else {
+							revertErr = os.WriteFile(preEditPath, []byte(preEditContent), 0o600)
 						}
-						output = issueStr + ". Please fix these issues and try again."
+						if revertErr != nil {
+							s.Logger().Error("self-review revert failed; rejecting diff loudly", map[string]interface{}{"path": preEditPath, "error": revertErr.Error()})
+							output = fmt.Sprintf("Self-review rejected the change AND the revert failed: %s. Original review issues: %s. Manual intervention required.", revertErr.Error(), strings.Join(reviewResult.Issues, "; "))
+						} else {
+							issueStr := "Self-review found issues: " + strings.Join(reviewResult.Issues, "; ")
+							if len(reviewResult.Suggestions) > 0 {
+								issueStr += ". Suggestions: " + strings.Join(reviewResult.Suggestions, "; ")
+							}
+							output = issueStr + ". Please fix these issues and try again."
+						}
+						isErr = true
 					}
-					isErr = true
-				} else if reviewErr == nil && reviewResult != nil && reviewResult.Approved {
+				}
+				// Diff-first UX: always surface a compact unified diff after
+				// successful mutations so the TUI and model can review changes.
+				if !isErr {
 					if diffSummary := generateDiffSummary(preEditContent, newContent, preEditPath); diffSummary != "" {
 						output += "\n" + diffSummary
 					}
@@ -280,44 +291,29 @@ func shouldSelfReview(toolName string) bool {
 	return selfReviewTools[toolName]
 }
 
-// generateDiffSummary creates a compact diff summary for the TUI to display.
-// Returns a string with line-level change stats and a short preview.
+// maxDiffPreviewLines caps unified-diff lines appended to tool results so large
+// rewrites do not blow the context window. Stats still report full +/− counts.
+const maxDiffPreviewLines = 80
+
+// generateDiffSummary creates a reviewable change summary for the TUI and model.
+// It returns line-level stats plus a truncated unified diff preview.
 func generateDiffSummary(oldContent, newContent, filePath string) string {
-	oldLines := strings.Split(oldContent, "\n")
-	newLines := strings.Split(newContent, "\n")
-
-	added := 0
-	removed := 0
-
-	// Simple line-level diff count
-	oldSet := make(map[string]int)
-	for _, l := range oldLines {
-		oldSet[l]++
-	}
-	newSet := make(map[string]int)
-	for _, l := range newLines {
-		newSet[l]++
-	}
-	for _, l := range newLines {
-		if oldSet[l] > 0 {
-			oldSet[l]--
-		} else {
-			added++
+	hunks := diff.ComputeDiff(oldContent, newContent)
+	change := diff.FileChange{Path: filePath, Hunks: hunks}
+	added, removed := 0, 0
+	for _, h := range hunks {
+		for _, line := range h.Lines {
+			switch line.Type {
+			case "add":
+				added++
+			case "remove":
+				removed++
+			}
 		}
 	}
-	for _, l := range oldLines {
-		if newSet[l] > 0 {
-			newSet[l]--
-		} else {
-			removed++
-		}
-	}
-
 	if added == 0 && removed == 0 {
 		return ""
 	}
-
-	// Compact summary: +N -N lines
 	parts := []string{}
 	if added > 0 {
 		parts = append(parts, fmt.Sprintf("+%d", added))
@@ -325,5 +321,26 @@ func generateDiffSummary(oldContent, newContent, filePath string) string {
 	if removed > 0 {
 		parts = append(parts, fmt.Sprintf("-%d", removed))
 	}
-	return fmt.Sprintf("diff %s: %s lines", filePath, strings.Join(parts, " "))
+	header := fmt.Sprintf("diff %s: %s lines", filePath, strings.Join(parts, " "))
+	unified := strings.TrimRight(diff.RenderUnified(&change), "\n")
+	if unified == "" {
+		return header
+	}
+	preview := truncateDiffPreview(unified, maxDiffPreviewLines)
+	return header + "\n" + preview
+}
+
+// truncateDiffPreview keeps the first maxLines of a unified diff and notes when
+// the remainder was dropped.
+func truncateDiffPreview(unified string, maxLines int) string {
+	if maxLines <= 0 {
+		return unified
+	}
+	lines := strings.Split(unified, "\n")
+	if len(lines) <= maxLines {
+		return unified
+	}
+	kept := strings.Join(lines[:maxLines], "\n")
+	omitted := len(lines) - maxLines
+	return kept + fmt.Sprintf("\n… (%d more lines truncated)", omitted)
 }

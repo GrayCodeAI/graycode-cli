@@ -16,10 +16,13 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
-// WireAgentTool sets up typed sub-agent spawning.
+// WireAgentTool sets up typed sub-agent spawning via SpawnController.
 // Modes: explore (read-only research), plan (read-only planning), general-purpose (full tools).
+// Faces and tools should prefer Session.SpawnController() for new call sites.
 func (s *Session) WireAgentTool() {
 	_ = s.ensureBackgroundManager()
+	// SpawnController.Spawn uses spawnSubAgentRequest; the tool AgentSpawnFn
+	// remains the thin adapter so AgentTool/MultiAgent keep working.
 	s.Tools().SetAgentSpawnFn(func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error) {
 		return s.spawnSubAgentRequest(ctx, req, 0)
 	})

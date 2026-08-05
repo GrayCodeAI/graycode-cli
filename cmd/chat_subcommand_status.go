@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // statusSubcommand implements the /status slash command. It prints
@@ -25,14 +28,42 @@ func (s *statusSubcommand) Handle(m *chatModel, args []string, text string) (tea
 // out of the original handleCommand switch case so the subcommand
 // file can stay self-contained.
 func buildStatusInfo(m *chatModel) string {
-	toolCount := 0
-	if m.registry != nil {
-		toolCount = len(m.registry.EyrieTools())
+	if m == nil || m.session == nil {
+		return "No active session."
 	}
-	info := fmt.Sprintf("Session: %s\nModel: %s/%s\nMode: %s\nSpec stage: %s\nMessages: %d\nTools: %d\n%s",
+	toolCount := 0
+	visible := 0
+	if m.registry != nil {
+		toolCount = len(m.registry.PrimaryTools())
+		visible = len(m.registry.EyrieTools())
+	}
+	work := string(m.session.WorkMode())
+	if work == "" {
+		work = "act"
+	}
+	iso := m.session.Isolation().String()
+	tr := engine.ProjectTrust("")
+	git := engine.InspectGitBranch("")
+	ac := "off"
+	if m.session.AutoCommit() {
+		ac = "on"
+	}
+	shell := "agent"
+	if m.modeManager != nil {
+		shell = m.modeManager.Current().String()
+	}
+	info := fmt.Sprintf(
+		"Session: %s\nModel: %s/%s\nShell mode: %s\nWork mode: %s\nIsolation: %s\nAuto-commit: %s\nFolder trust: %s\nSpec stage: %s\nMessages: %d\nTools: %d visible / %d registered\nGit: %s\n%s",
 		m.sessionID, m.session.Provider(), m.session.Model(),
-		m.modeManager.Current().String(),
-		specStageLabel(m.session), m.session.MessageCount(), toolCount, m.session.CostValue().Summary())
+		shell, work, iso, ac, tr.String(),
+		specStageLabel(m.session), m.session.MessageCount(),
+		visible, toolCount,
+		engine.GitSafetyAdvice(git),
+		m.session.CostValue().Summary(),
+	)
+	if tr.Blocked {
+		info += "\n" + icons.Alert() + " " + tr.Detail()
+	}
 	if len(addDirs) > 0 {
 		info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
 	}
