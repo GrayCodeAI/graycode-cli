@@ -62,6 +62,8 @@ func essentialTools() []tool.Tool {
 		tool.MonitorTool{},
 		tool.LSPTool{},
 		tool.MultiEditTool{},
+		tool.BrowserTool{},
+		tool.ScreenshotTool{},
 	}
 }
 
