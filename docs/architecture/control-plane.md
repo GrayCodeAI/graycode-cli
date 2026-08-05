@@ -114,10 +114,23 @@ Single entry for subagents + background tasks:
 - Production path: `BackgroundAgentManager` → `taskruntime` (SpawnController uses same)
 - `BackgroundAgentPool` remains test/legacy reexport only (not chat session path)
 
+## Iteration 4
+
+### Container ↔ IsolationProfile
+- `attachRequiredContainer` and TUI container-ready path call `ApplyIsolationProfile(IsolationContainer)`
+
+### Onboarding / CI
+- CLI `Welcome` surfaces control-plane commands + `hawk exec`
+- Example workflow: `examples/github/hawk-ci-exec.yml`
+
+### ACP
+- `initialize` advertises `hawkCapabilities` (work modes, isolation, lazy tools, …)
+- `session/new` returns `hawk` snapshot (`workMode`, `isolation`, `autoCommit`) and defaults act mode
+
 ## Not done yet (next iterations)
 
 - True 60s binary install path (packaging/CI)
-- Full ACP parity for IDE
+- Deeper ACP (session/setMode, client fs routing)
 - Public Terminal-Bench scorecard
 - Optional: deprecate BackgroundAgentPool reexports
 

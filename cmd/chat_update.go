@@ -1449,10 +1449,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.sandbox != nil {
 			m.containerSandbox = msg.sandbox
 			if m.session != nil {
+				m.session.ApplyIsolationProfile(engine.IsolationContainer)
 				m.session.SetContainerExecutor(msg.sandbox)
 			}
 		}
 		if msg.ready && m.session != nil {
+			m.session.ApplyIsolationProfile(engine.IsolationContainer)
 			if m.session.PermSvc().Autonomy() == 0 && !m.session.PermSvc().AutonomyExplicit() {
 				m.session.PermSvc().SetAutonomy(DefaultContainerAutonomy)
 			}

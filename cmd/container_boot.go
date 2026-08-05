@@ -55,7 +55,8 @@ func attachRequiredContainer(sess *engine.Session, projectDir string) (*sandbox.
 	if sess == nil {
 		return nil, fmt.Errorf("docker container required: session is unavailable")
 	}
-	sess.SetContainerRequired(true)
+	// Keep IsolationProfile in sync with Docker-required execution (single story).
+	sess.ApplyIsolationProfile(engine.IsolationContainer)
 	cs, err := startRequiredContainer(projectDir)
 	if err != nil {
 		return nil, fmt.Errorf("docker container required: %w", err)
