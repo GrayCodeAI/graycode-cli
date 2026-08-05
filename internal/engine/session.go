@@ -76,6 +76,9 @@ type Session struct {
 	// cross-session store (e.g. the chat client's SelfImprover). It is a
 	// callback so the engine stays decoupled from storage; nil disables it.
 	learnFn func(what, why, lesson, category string)
+	// sec is the session's tamper-evident security event log, opened lazily on
+	// the first recorded event (see security_events.go).
+	sec *securityLog
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 

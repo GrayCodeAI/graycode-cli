@@ -41,12 +41,19 @@ func NewSelfImprover() *SelfImprover {
 
 // Learn records a new lesson. It is nil-safe and bounded: oldest entries are
 // dropped past maxSelfImproveEntries so the store cannot grow without limit.
+// Exact duplicates (same what/lesson/category) are skipped so repeated
+// failures do not fill the store with identical rows.
 func (si *SelfImprover) Learn(what, why, lesson, category string) {
 	if si == nil {
 		return
 	}
 	si.mu.Lock()
 	defer si.mu.Unlock()
+	for _, e := range si.Entries {
+		if e.What == what && e.Lesson == lesson && e.Category == category {
+			return
+		}
+	}
 	si.Entries = append(si.Entries, SelfImproveEntry{
 		Timestamp: time.Now(),
 		What:      what,
@@ -77,6 +84,20 @@ func (si *SelfImprover) Lessons(category string) []SelfImproveEntry {
 		}
 	}
 	return filtered
+}
+
+// Clear removes all lessons.
+func (si *SelfImprover) Clear() {
+	if si == nil {
+		return
+	}
+	si.mu.Lock()
+	defer si.mu.Unlock()
+	if len(si.Entries) == 0 {
+		return
+	}
+	si.Entries = nil
+	si.save()
 }
 
 // ForPrompt formats recent lessons as context for the system prompt.
@@ -114,15 +135,18 @@ func (si *SelfImprover) save() {
 	_ = os.WriteFile(si.Path, data, 0o600)
 }
 
-// LearnPrompt generates a prompt to extract lessons from a failed interaction.
+// LearnPrompt generates a prompt that asks a model to extract a lesson from a
+// failed interaction. It is the canonical instruction block used by the
+// engine's Reflector (via buildReflectionPrompt) and surfaced by the
+// `hawk learn` CLI. The response format matches parseReflectionEntry.
 func LearnPrompt(context string) string {
-	return `A task just failed or produced a suboptimal result. Extract a lesson.
-
-Context: ` + context + `
-
-Respond with:
-- **What went wrong:** (one sentence)
-- **Why:** (root cause)
-- **Lesson:** (what to do differently next time)
-- **Category:** code | test | design | communication`
+	prompt := "A task just failed or produced a suboptimal result. Extract a lesson.\n\n"
+	if context != "" {
+		prompt += "Context: " + context + "\n\n"
+	}
+	prompt += "Respond with exactly three labeled lines:\n" +
+		"WHAT_FAILED: <what went wrong, one sentence>\n" +
+		"WHY_FAILED: <root cause>\n" +
+		"WHAT_TO_DO: <what to do differently next time>"
+	return prompt
 }

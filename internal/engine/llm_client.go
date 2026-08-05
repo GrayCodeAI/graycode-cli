@@ -100,6 +100,8 @@ func parseReflectionEntry(content string, attempt int, goal string) ReflectionEn
 }
 
 // buildReflectionPrompt constructs the reflection prompt from goal, messages, and error.
+// The instruction block is delegated to LearnPrompt so the failure-analysis
+// template lives in one place.
 func buildReflectionPrompt(goal string, msgs []types.EyrieMessage, errorContext string) string {
 	var sb strings.Builder
 	sb.WriteString("TASK GOAL: " + goal + "\n\n")
@@ -122,7 +124,7 @@ func buildReflectionPrompt(goal string, msgs []types.EyrieMessage, errorContext 
 		}
 	}
 	sb.WriteString("\nFINAL ERROR: " + errorContext + "\n\n")
-	sb.WriteString("Analyze this failure. Respond with exactly:\nWHAT_FAILED: <what went wrong>\nWHY_FAILED: <root cause>\nWHAT_TO_DO: <corrective action>")
+	sb.WriteString(LearnPrompt(""))
 	return sb.String()
 }
 

@@ -2,6 +2,7 @@ package safety
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -20,6 +21,32 @@ type RedactStats struct {
 	TotalRedacted int
 	ByCategory    map[string]int
 	BytesSaved    int
+}
+
+// secretEnvNames are environment variable names whose values are treated as
+// secrets. RegisterEnvSecrets and RedactEnvVars both key off this list so the
+// set stays in one place.
+var secretEnvNames = []string{
+	"AWS_SECRET_ACCESS_KEY",
+	"AWS_SESSION_TOKEN",
+	"GITHUB_TOKEN",
+	"GH_TOKEN",
+	"OPENAI_API_KEY",
+	"ANTHROPIC_API_KEY",
+	"DATABASE_URL",
+	"REDIS_URL",
+	"SECRET_KEY",
+	"API_KEY",
+	"AUTH_TOKEN",
+	"ACCESS_TOKEN",
+	"PRIVATE_KEY",
+	"NPM_TOKEN",
+	"SLACK_TOKEN",
+	"STRIPE_SECRET_KEY",
+	"SENDGRID_API_KEY",
+	"TWILIO_AUTH_TOKEN",
+	"HEROKU_API_KEY",
+	"DOCKER_PASSWORD",
 }
 
 // OutputRedactor strips sensitive information from tool outputs before they reach the LLM.
@@ -167,6 +194,20 @@ func (r *OutputRedactor) AddKnownSecret(name, value string) {
 	r.KnownSecrets[name] = value
 }
 
+// RegisterEnvSecrets imports the values of secret-named environment variables
+// (see secretEnvNames) into the known-secrets table so tool output that echoes
+// them is redacted before it reaches the model. Values shorter than 8 bytes are
+// skipped to avoid mangling short, non-secret values. Safe to call repeatedly.
+func (r *OutputRedactor) RegisterEnvSecrets() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, envName := range secretEnvNames {
+		if val := strings.TrimSpace(os.Getenv(envName)); len(val) >= 8 {
+			r.KnownSecrets["env:"+envName] = val
+		}
+	}
+}
+
 // RedactEnvVars scans the output for values of known environment variables
 // whose names suggest they contain secrets, and replaces them.
 func (r *OutputRedactor) RedactEnvVars(output string) string {
@@ -175,29 +216,6 @@ func (r *OutputRedactor) RedactEnvVars(output string) string {
 
 	result := output
 	originalLen := len(output)
-
-	secretEnvNames := []string{
-		"AWS_SECRET_ACCESS_KEY",
-		"AWS_SESSION_TOKEN",
-		"GITHUB_TOKEN",
-		"GH_TOKEN",
-		"OPENAI_API_KEY",
-		"ANTHROPIC_API_KEY",
-		"DATABASE_URL",
-		"REDIS_URL",
-		"SECRET_KEY",
-		"API_KEY",
-		"AUTH_TOKEN",
-		"ACCESS_TOKEN",
-		"PRIVATE_KEY",
-		"NPM_TOKEN",
-		"SLACK_TOKEN",
-		"STRIPE_SECRET_KEY",
-		"SENDGRID_API_KEY",
-		"TWILIO_AUTH_TOKEN",
-		"HEROKU_API_KEY",
-		"DOCKER_PASSWORD",
-	}
 
 	for _, envName := range secretEnvNames {
 		val, ok := r.KnownSecrets["env:"+envName]

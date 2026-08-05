@@ -770,12 +770,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			Content: assistContent,
 			ToolUse: toolCalls,
 		}))
-		// Append tool results as proper tool_result messages
+		// Append tool results as proper tool_result messages. Tool output is
+		// redacted before it is appended so secrets never reach the model;
+		// the user-facing stream events already carried the raw output.
 		for _, r := range results {
 			resultContent := r.output
 			if resultContent == "" {
 				resultContent = "(no output)"
 			}
+			resultContent = s.redactToolResult(resultContent)
 			msg := types.EyrieMessage{
 				Role:    "user",
 				Content: resultContent,

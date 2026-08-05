@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // EventSeverity classifies the impact of a security event.
@@ -66,6 +68,12 @@ type Log struct {
 	seq     uint64
 	last    string
 	closed  bool
+}
+
+// DefaultDir returns the default on-disk location for the security event log,
+// rooted under hawk's per-user state directory.
+func DefaultDir() string {
+	return filepath.Join(storage.StateDir(), "securitylog")
 }
 
 // New opens (or creates) a security event log rooted at dir. The HMAC key is
@@ -221,6 +229,10 @@ func (l *Log) computeHash(ev Event) string {
 func Verify(dir string) (int, error) {
 	data, err := os.ReadFile(filepath.Join(dir, logFileName))
 	if err != nil {
+		if os.IsNotExist(err) {
+			// No log to verify yet is vacuously intact.
+			return 0, nil
+		}
 		return 0, fmt.Errorf("securitylog: read log: %w", err)
 	}
 	key, err := os.ReadFile(filepath.Join(dir, keyFileName))
@@ -273,6 +285,30 @@ func hashEntry(key []byte, ev Event) string {
 	mac := hmac.New(sha256.New, key)
 	mac.Write(payload)
 	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// Entries reads and decodes every event in the log, oldest first. It does not
+// verify the chain (see Verify); it exists for inspection and display.
+func Entries(dir string) ([]Event, error) {
+	data, err := os.ReadFile(filepath.Join(dir, logFileName))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("securitylog: read log: %w", err)
+	}
+	var events []Event
+	for _, line := range splitLines(data) {
+		if len(line) == 0 {
+			continue
+		}
+		var ev Event
+		if err := json.Unmarshal(line, &ev); err != nil {
+			return events, fmt.Errorf("securitylog: corrupt entry: %w", err)
+		}
+		events = append(events, ev)
+	}
+	return events, nil
 }
 
 // Close flushes and closes the underlying file.

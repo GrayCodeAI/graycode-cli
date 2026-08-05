@@ -174,6 +174,13 @@ func BuildProfile(name string, doc Document) (*Layer, error) {
 	return buildLayer(name, doc)
 }
 
+// LoadLayer loads and parses a policy or profile document from disk. The name
+// is used only for error messages; the layer's behavior is identical for
+// policy and profile documents.
+func LoadLayer(name, path string) (*Layer, error) {
+	return loadLayer(name, path)
+}
+
 func buildLayer(name string, doc Document) (*Layer, error) {
 	if doc.Version != 1 {
 		return nil, fmt.Errorf("governance: unsupported version %d", doc.Version)

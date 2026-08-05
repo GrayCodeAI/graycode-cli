@@ -16,6 +16,12 @@ import (
 )
 
 func (s *Session) recordPolicyObservation(tc types.ToolCall, stage string, allowed bool, reason string) {
+	// Tamper-evident security event log: record every denial regardless of
+	// whether graph observation is available, so enforcement history is
+	// auditable even when the session transcript is gone.
+	if !allowed {
+		s.recordSecurityDenial(tc, stage, reason)
+	}
 	sessionID := s.executionGraphSessionID()
 	if sessionID == "" {
 		return
