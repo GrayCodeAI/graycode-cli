@@ -38,9 +38,18 @@ func (mo *modeSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 		if m.session != nil {
 			iso = m.session.Isolation().String()
 		}
+		tr := engine.ProjectTrust("")
+		ac := "off"
+		if m.session != nil && m.session.AutoCommit() {
+			ac = "on"
+		}
+		visible := 0
+		if m.session != nil && m.session.Tools() != nil && m.session.Tools().Registry() != nil {
+			visible = len(m.session.Tools().Registry().EyrieTools())
+		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-			"Work mode: %s (plan | act | review)\nShell mode: %s (auto | shell | agent)\nIsolation: %s",
-			work, shell, iso,
+			"Work mode:  %s  (plan | act | review)\nShell mode: %s  (auto | shell | agent)\nIsolation:  %s\nTrust:      %s\nAuto-commit: %s\nTools visible: %d\n\n/start · /isolation · /trust · /branch-agent · /auto-commit",
+			work, shell, iso, tr.String(), ac, visible,
 		)})
 		return m, nil
 	}
@@ -59,16 +68,7 @@ func (mo *modeSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		hint := ""
-		switch wm {
-		case engine.WorkModePlan:
-			hint = " — research only; no file writes"
-		case engine.WorkModeReview:
-			hint = " — inspect with evidence; no writes"
-		case engine.WorkModeAct:
-			hint = " — full tools (lazy essential surface)"
-		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Work mode → %s%s", wm, hint)})
+		m.messages = append(m.messages, displayMsg{role: "system", content: workModeSwitchSummary(m.session, wm)})
 		return m, nil
 	}
 

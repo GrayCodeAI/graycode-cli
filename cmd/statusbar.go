@@ -47,17 +47,86 @@ func renderStatusBar(m *chatModel, width int) []string {
 	}
 	left := renderStatusBarLeft(m)
 	right := renderStatusBarRight(m)
-	if width >= 120 {
-		// Two-line layout: primary row keeps cwd/branch/model + tokens/cost.
-		// Secondary row gets autonomy tier, container mode, session ID, hints.
+	// Two-line layout from 100 cols so control-plane chips are visible more often.
+	if width >= 100 {
 		primary := layoutFooterRow(renderStatusBarPrimaryLeft(m), renderStatusBarPrimaryRight(m), width)
 		secondary := layoutFooterRow(renderStatusBarSecondaryLeft(m), renderStatusBarSecondaryRight(m), width)
-		if secondary == "" || secondary == strings.Repeat(" ", len(secondary)) {
+		if secondary == "" || strings.TrimSpace(stripANSI(secondary)) == "" {
 			return []string{primary}
 		}
 		return []string{primary, secondary}
 	}
+	// Narrow: fold a compact control-plane chip into the left cluster.
+	left = mergeNarrowControlChip(m, left)
 	return []string{layoutFooterRow(left, right, width)}
+}
+
+// stripANSI removes CSI sequences for empty checks (status bar only).
+func stripANSI(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			j := i + 2
+			for j < len(s) {
+				if s[j] >= 0x40 && s[j] <= 0x7e {
+					j++
+					break
+				}
+				j++
+			}
+			i = j
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
+}
+
+// mergeNarrowControlChip appends mode·iso·trust when width is too small for a second row.
+func mergeNarrowControlChip(m *chatModel, left string) string {
+	chip := controlPlaneChip(m)
+	if chip == "" {
+		return left
+	}
+	if left == "" {
+		return chip
+	}
+	return left + statusDimStyle.Render(" · ") + chip
+}
+
+func controlPlaneChip(m *chatModel) string {
+	if m == nil || m.session == nil {
+		return ""
+	}
+	work := string(m.session.WorkMode())
+	if work == "" {
+		work = "act"
+	}
+	iso := m.session.Isolation().String()
+	// Short iso labels for narrow bars.
+	switch iso {
+	case "workspace":
+		iso = "ws"
+	case "container":
+		iso = "ctr"
+	case "strict":
+		iso = "ro"
+	}
+	tr := engine.ProjectTrust("")
+	trust := "ut" // untrusted
+	if !tr.Enforced {
+		trust = "—"
+	} else if tr.Trusted {
+		trust = "✓"
+	}
+	chip := statusSpecStyle.Render(work) + statusDimStyle.Render("/") +
+		statusDimStyle.Render(iso) + statusDimStyle.Render("/") +
+		statusDimStyle.Render(trust)
+	if gi := engine.InspectGitBranch(""); gi.OnDefault {
+		chip += statusDimStyle.Render(" ") + dryRunStyle.Render("main!")
+	}
+	return chip
 }
 
 // renderStatusBarPrimaryLeft — cwd, branch, spec stage.
@@ -83,7 +152,7 @@ func renderStatusBarPrimaryRight(m *chatModel) string {
 	}
 	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
 	tokenText := icons.Database() + " " + formatTokenCountCompact(tokens) + " tokens"
-	costText := fmt.Sprintf("%s %.2f", icons.Ruby(), m.session.CostValue().Total())
+	costText := formatStatusCost(m.session.CostValue())
 	parts := []string{
 		statusTokenStyle.Render(tokenText),
 		statusCostStyle.Render(costText),
@@ -97,6 +166,13 @@ func renderStatusBarPrimaryRight(m *chatModel) string {
 		parts = append(parts, statusClockStyle.Render(formatSessionDuration(requestDuration(m))))
 	}
 	return strings.Join(parts, statusDimStyle.Render(" · "))
+}
+
+func formatStatusCost(c *engine.Cost) string {
+	if c == nil {
+		return icons.Ruby() + " $0.00"
+	}
+	return fmt.Sprintf("%s $%.3f", icons.Ruby(), c.TotalUSD())
 }
 
 func renderStatusBarSecondaryLeft(m *chatModel) string {
@@ -262,7 +338,7 @@ func renderStatusBarRight(m *chatModel) string {
 
 	tokens := m.session.CostValue().PromptTokens + m.session.CostValue().CompletionTokens
 	tokenText := icons.Database() + " " + formatTokenCountCompact(tokens) + " tokens"
-	costText := fmt.Sprintf("%s %.2f", icons.Ruby(), m.session.CostValue().Total())
+	costText := formatStatusCost(m.session.CostValue())
 	var meta []string
 	if m.inScrollbackFocus() {
 		meta = append(meta, statusFocusStyle.Render("⧉"))

@@ -249,17 +249,25 @@ func toolListSummary(registry *tool.Registry) string {
 		return "No tools enabled."
 	}
 	tools := registry.EyrieTools()
+	registered := len(registry.PrimaryTools())
 	if len(tools) == 0 {
 		return "No tools enabled."
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Enabled tools (%d):\n", len(tools)))
+	if registered > len(tools) {
+		b.WriteString(fmt.Sprintf("Model-visible tools (%d of %d registered — lazy surface):\n", len(tools), registered))
+	} else {
+		b.WriteString(fmt.Sprintf("Enabled tools (%d):\n", len(tools)))
+	}
 	for _, t := range tools {
 		desc := t.Description
 		if runes := []rune(desc); len(runes) > 96 {
 			desc = string(runes[:96]) + "..."
 		}
 		b.WriteString(fmt.Sprintf("  %s — %s\n", t.Name, desc))
+	}
+	if registered > len(tools) {
+		b.WriteString("\nUnlock more: ToolSearch with query select:<ToolName>")
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

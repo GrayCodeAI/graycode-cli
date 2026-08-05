@@ -15,7 +15,7 @@ func helpCategory(cmdName string) string {
 	switch cmdName {
 	case "/help", "/model", "/config", "/quit", "/exit", "/clear", "/compact", "/undo", "/snapshot", "/recover", "/new", "/copy", "/welcome":
 		return "Core"
-	case "/review", "/commit", "/test", "/lint", "/diff", "/status", "/audit", "/security-review", "/check", "/bughunter", "/hunt", "/ultrareview":
+	case "/review", "/commit", "/test", "/lint", "/diff", "/status", "/audit", "/security-review", "/check", "/bughunter", "/hunt", "/ultrareview", "/start", "/branch-agent", "/auto-commit":
 		return "Workflow"
 	case "/agents", "/agents-init", "/mission", "/exec", "/research", "/loop", "/council", "/dream", "/investigate", "/vibe":
 		return "Agent"
@@ -25,7 +25,7 @@ func helpCategory(cmdName string) string {
 		return "Tools"
 	case "/doctor", "/cost", "/usage", "/metrics", "/stats", "/integrity", "/stale", "/tokens", "/provider-status":
 		return "Diagnostics"
-	case "/autonomy", "/spec", "/vim", "/theme", "/color", "/mouse", "/select", "/focus", "/follow", "/output-style", "/statusline", "/keybindings", "/voice", "/remote-env", "/refresh-model-catalog":
+	case "/autonomy", "/spec", "/vim", "/theme", "/color", "/mouse", "/select", "/focus", "/follow", "/output-style", "/statusline", "/keybindings", "/voice", "/remote-env", "/refresh-model-catalog", "/mode", "/isolation", "/trust":
 		return "Settings"
 	default:
 		return "Other"

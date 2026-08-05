@@ -541,7 +541,8 @@ func renderPermissionBox(summary string, width int, timeoutAt time.Time) string 
 		}
 	}
 	body := lipgloss.JoinVertical(lipgloss.Left, bodyParts...)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es  [n]o  [a]lways allow  [d]eny always")
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y] allow once   [n] deny   [a] always allow tool   [d] always deny tool")
+	hint := lipgloss.NewStyle().Foreground(textMuted).Render("Esc cancels · prompt times out after 5 minutes")
 
 	rows := []string{title, "", body}
 	// Countdown bar — only when a deadline is active.
@@ -549,7 +550,7 @@ func renderPermissionBox(summary string, width int, timeoutAt time.Time) string 
 		bar := renderCountdownBar(timeoutAt, width-10)
 		rows = append(rows, "", bar)
 	}
-	rows = append(rows, "", options)
+	rows = append(rows, "", options, hint)
 
 	inner := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	// Bordered box with amber highlight so the prompt stands out in scrollback.

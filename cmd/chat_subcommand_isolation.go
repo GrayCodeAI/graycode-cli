@@ -42,10 +42,17 @@ func (c *isolationSubcommand) Handle(m *chatModel, args []string, text string) (
 		return m, nil
 	}
 	m.session.ApplyIsolationProfile(p)
-	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-		"Isolation → %s (os=%s, container_required=%v)\nShell wrap applies when os is workspace/strict; tools block until Docker is up when container_required.",
-		p.String(), p.OSMode, p.ContainerRequired,
-	)})
+	detail := fmt.Sprintf("Isolation → %s\n  OS sandbox: %s\n  Container required: %v",
+		p.String(), p.OSMode, p.ContainerRequired)
+	switch {
+	case p.ContainerRequired:
+		detail += "\n  Tools wait until Docker sandbox is ready."
+	case p.OSMode == "workspace" || p.OSMode == "strict":
+		detail += "\n  Bash/PowerShell use OS wrap when a backend is available (seatbelt/unshare)."
+	default:
+		detail += "\n  Host shell (no OS wrap). Prefer workspace for safer agent runs."
+	}
+	m.messages = append(m.messages, displayMsg{role: "system", content: detail})
 	return m, nil
 }
 
