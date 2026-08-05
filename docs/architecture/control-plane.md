@@ -126,12 +126,19 @@ Single entry for subagents + background tasks:
 ### ACP
 - `initialize` advertises `hawkCapabilities` (work modes, isolation, lazy tools, …)
 - `session/new` returns `hawk` snapshot (`workMode`, `isolation`, `autoCommit`) and defaults act mode
+- `session/setMode` — switch work mode (plan|act|review)
+- `session/setIsolation` — apply isolation profile
+- `session/status` — control-plane snapshot (mode, isolation, autoCommit, message count)
+
+### Deprecations
+- `BackgroundAgentPool` / `NewBackgroundAgentPool*` / `FormatResults` marked Deprecated
+  in favor of `Session.SpawnController()` (same taskruntime.Registry). Retained
+  for compatibility; no production callers found.
 
 ## Not done yet (next iterations)
 
 - True 60s binary install path (packaging/CI)
 - Deeper ACP (session/setMode, client fs routing)
-
 
 - Public Terminal-Bench scorecard
 - Optional: deprecate BackgroundAgentPool reexports
