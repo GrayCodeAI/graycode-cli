@@ -3,10 +3,12 @@ package engine
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/safety"
+	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -59,13 +61,38 @@ func NewPermissionService(log *logger.Logger) *PermissionService {
 		log = logger.Default()
 	}
 	pe := NewPermissionEngine()
-	return &PermissionService{
+	s := &PermissionService{
 		perm:       pe,
 		memory:     pe.Memory,
 		autoMode:   pe.AutoMode,
 		classifier: pe.Classifier,
 		bypassKill: pe.BypassKill,
 		log:        log,
+	}
+	s.loadManagedGovernance()
+	return s
+}
+
+// loadManagedGovernance attempts to install the administrator-set POLICY
+// ceiling from the platform trust-root (see governance.ManagedPolicyPath).
+// A missing file is the normal unmanaged case and leaves the engine
+// fail-open; a malformed file is logged loudly so misconfiguration is
+// visible without hard-failing every session.
+func (s *PermissionService) loadManagedGovernance() {
+	if s == nil || s.perm == nil || s.perm.Governance == nil {
+		return
+	}
+	path := governance.ManagedPolicyPath()
+	if path == "" {
+		return
+	}
+	if err := s.perm.Governance.LoadPolicy(path); err != nil {
+		if !os.IsNotExist(err) {
+			s.log.Error("governance: failed to load managed policy", map[string]interface{}{
+				"path":  path,
+				"error": err.Error(),
+			})
+		}
 	}
 }
 
