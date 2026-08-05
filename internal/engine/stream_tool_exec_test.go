@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -144,6 +145,73 @@ func TestExecuteSingleTool_PropagatesPermissionContext(t *testing.T) {
 	}
 	if got := sess.PermSvc().AllowedDirs(); len(got) != 1 || got[0] != "/tmp/extra" {
 		t.Fatalf("service AllowedDirs = %#v", got)
+	}
+}
+
+// sandboxModeCaptureTool records ModeFromContext so we can assert the session
+// sandbox policy is bridged onto the tool execution context for Bash wrap.
+type sandboxModeCaptureTool struct {
+	mode sandbox.Mode
+}
+
+func (t *sandboxModeCaptureTool) Name() string        { return "Read" }
+func (t *sandboxModeCaptureTool) Description() string { return "capture sandbox mode" }
+func (t *sandboxModeCaptureTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{"type": "object", "properties": map[string]interface{}{}}
+}
+
+func (t *sandboxModeCaptureTool) Execute(ctx context.Context, _ json.RawMessage) (string, error) {
+	t.mode = sandbox.ModeFromContext(ctx)
+	return "ok", nil
+}
+
+func TestExecuteSingleTool_BridgesSandboxModeOntoContext(t *testing.T) {
+	capture := &sandboxModeCaptureTool{}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(capture))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.PermSvc().SetSandboxMode(sandbox.ModeWorkspace)
+	ch := make(chan StreamEvent, 4)
+	res := sess.executeSingleTool(context.Background(), types.ToolCall{Name: "Read", ID: "sb"}, ch, 0, "")
+	if res.isErr {
+		t.Fatalf("tool failed: %#v", res)
+	}
+	if capture.mode != sandbox.ModeWorkspace {
+		t.Fatalf("ModeFromContext = %q, want %q (session sandbox must wrap shell)", capture.mode, sandbox.ModeWorkspace)
+	}
+}
+
+func TestExecuteSingleTool_SandboxOffDoesNotSetModeOnContext(t *testing.T) {
+	capture := &sandboxModeCaptureTool{}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(capture))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.PermSvc().SetSandboxMode(sandbox.ModeOff)
+	ch := make(chan StreamEvent, 4)
+	res := sess.executeSingleTool(context.Background(), types.ToolCall{Name: "Read", ID: "sb-off"}, ch, 0, "")
+	if res.isErr {
+		t.Fatalf("tool failed: %#v", res)
+	}
+	// ModeOff / unset should leave ModeFromContext as ModeOff so host shell
+	// is not force-wrapped without a backend.
+	if capture.mode != sandbox.ModeOff {
+		t.Fatalf("ModeFromContext = %q, want off", capture.mode)
+	}
+}
+
+func TestGenerateDiffSummary_IncludesUnifiedPreview(t *testing.T) {
+	old := "line1\nline2\n"
+	newC := "line1\nline2 changed\nline3\n"
+	got := generateDiffSummary(old, newC, "demo.go")
+	if got == "" {
+		t.Fatal("expected non-empty diff summary")
+	}
+	if !strings.Contains(got, "diff demo.go:") {
+		t.Fatalf("missing stats header: %q", got)
+	}
+	if !strings.Contains(got, "--- a/demo.go") || !strings.Contains(got, "+++ b/demo.go") {
+		t.Fatalf("missing unified diff headers: %q", got)
+	}
+	if !strings.Contains(got, "+line2 changed") && !strings.Contains(got, "+line3") {
+		t.Fatalf("missing added lines in preview: %q", got)
 	}
 }
 

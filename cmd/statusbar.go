@@ -100,10 +100,35 @@ func renderStatusBarPrimaryRight(m *chatModel) string {
 }
 
 func renderStatusBarSecondaryLeft(m *chatModel) string {
-	return ""
+	if m == nil || m.session == nil {
+		return ""
+	}
+	// Control-plane HUD: work mode · isolation · folder trust
+	work := string(m.session.WorkMode())
+	if work == "" {
+		work = "act"
+	}
+	iso := m.session.Isolation().String()
+	tr := engine.ProjectTrust("")
+	trustLabel := tr.String()
+	trustStyle := statusDimStyle
+	if tr.Blocked {
+		trustStyle = dryRunStyle
+	} else if tr.Trusted && tr.Enforced {
+		trustStyle = containerModeStyle
+	}
+	parts := []string{
+		statusSpecStyle.Render("mode:" + work),
+		statusDimStyle.Render("iso:" + iso),
+		trustStyle.Render(trustLabel),
+	}
+	if gi := engine.InspectGitBranch(""); gi.OnDefault {
+		parts = append(parts, dryRunStyle.Render("⚠ default-branch"))
+	}
+	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
-// renderStatusBarSecondaryRight — errors, dry-run, vim, focus/pause.
+// renderStatusBarSecondaryRight — errors, dry-run, vim, focus/pause, spend.
 func renderStatusBarSecondaryRight(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return ""
@@ -122,6 +147,17 @@ func renderStatusBarSecondaryRight(m *chatModel) string {
 	}
 	if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().DryRun() {
 		parts = append(parts, dryRunStyle.Render(icons.Pause()+" DRY-RUN"))
+	}
+	// Always-visible compact spend on wide secondary row.
+	if c := m.session.CostValue(); c != nil {
+		if usd := c.TotalUSD(); usd > 0 {
+			parts = append(parts, statusCostStyle.Render(fmt.Sprintf("$%.3f", usd)))
+		} else if c.Total() > 0 {
+			parts = append(parts, statusCostStyle.Render(fmt.Sprintf("%s %.2f", icons.Ruby(), c.Total())))
+		}
+	}
+	if m.session.AutoCommit() {
+		parts = append(parts, statusDimStyle.Render("auto-commit"))
 	}
 	if m.vim != nil && m.vim.IsEnabled() {
 		parts = append(parts, statusDimStyle.Render(m.vim.ModeString()))

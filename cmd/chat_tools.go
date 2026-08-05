@@ -231,8 +231,15 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 		return nil, err
 	}
 	registry := tool.NewRegistry(filtered...)
+	// Lazy model surface: only essential tools are sent to the LLM.
+	// Optional tools register for Get/ToolSearch and promote via select:.
+	essentialNames := make([]string, 0, len(filtered))
+	for _, t := range filtered {
+		essentialNames = append(essentialNames, t.Name())
+	}
+	registry.EnableLazyModelSurface(essentialNames)
 
-	// Lazy-load optional tools in background
+	// Lazy-load optional tools in background (executable, not model-visible).
 	go func() {
 		for _, t := range optionalTools() {
 			_ = registry.Register(t)

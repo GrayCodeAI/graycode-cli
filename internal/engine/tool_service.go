@@ -14,6 +14,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -33,6 +34,7 @@ type ToolService struct {
 	executionConfigMu sync.RWMutex
 	workingDir        string
 	readOnlyBash      bool
+	autoCommit        bool
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
@@ -126,6 +128,26 @@ func (s *ToolService) ReadOnlyBash() bool {
 	s.executionConfigMu.RLock()
 	defer s.executionConfigMu.RUnlock()
 	return s.readOnlyBash
+}
+
+// SetAutoCommit enables git auto-commit after successful Write/Edit/StructuredEdit.
+func (s *ToolService) SetAutoCommit(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.autoCommit = enabled
+}
+
+// AutoCommit reports whether write tools should auto-commit.
+func (s *ToolService) AutoCommit() bool {
+	if s == nil {
+		return false
+	}
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+	return s.autoCommit
 }
 
 // WithMetrics attaches the registry used for tool execution counters.
@@ -352,6 +374,12 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	if s.deps.memory != nil {
 		yaad = s.deps.memory.Yaad()
 	}
+	sbMode := s.deps.permissions.SandboxMode()
+	var available []tool.Tool
+	if s.registry != nil {
+		// Full primary set so ToolSearch can discover lazy/optional tools.
+		available = s.registry.PrimaryTools()
+	}
 	toolCtx := tool.WithToolContext(ctx, &tool.ToolContext{
 		AgentSpawnFn:        s.deps.agentSpawn,
 		AskUserFn:           s.deps.askUser,
@@ -360,11 +388,23 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		SpecSlugGet:         func() string { return s.deps.permissions.SpecSlug() },
 		SpecSlugSet:         func(slug string) { s.deps.permissions.SetSpecSlug(slug) },
 		AllowedDirectories:  s.deps.permissions.AllowedDirs(),
-		SandboxMode:         s.deps.permissions.SandboxMode(),
+		SandboxMode:         sbMode,
 		BackgroundManager:   s.EnsureBackgroundManager(),
 		ReadOnlyBash:        s.ReadOnlyBash(),
 		WorkingDir:          s.WorkingDir(),
+		AvailableTools:      available,
+		Registry:            s.registry,
+		AutoCommit:          s.AutoCommit(),
 	})
+	// Bridge session sandbox policy onto the context so Bash/PowerShell
+	// WrapCommand actually applies. Path guards already read ToolContext.SandboxMode;
+	// process isolation previously only fired when callers set ModeFromContext
+	// explicitly (tests), so configured workspace/strict modes were a no-op for shell.
+	// Only attach for explicit workspace/strict — empty or "off" leave ModeOff so
+	// host shell works without a seatbelt/unshare backend.
+	if sbMode == sandbox.ModeWorkspace || sbMode == sandbox.ModeStrict {
+		toolCtx = sandbox.ContextWithMode(toolCtx, sbMode)
+	}
 	if containerExecutor != nil && containerExecutor.Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, containerExecutor)
 	}

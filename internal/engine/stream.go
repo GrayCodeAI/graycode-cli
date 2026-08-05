@@ -260,6 +260,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				opts.System += cfgPrompt
 			}
 		}
+		// Work mode (plan/act/review) — ephemeral product control plane.
+		if addon := s.workModeSystemAddon(); addon != "" {
+			opts.System += "\n\n" + addon
+		}
 		if s.Tools() != nil && s.Tools().Registry() != nil {
 			opts.Tools = s.Tools().Registry().EyrieTools()
 		}

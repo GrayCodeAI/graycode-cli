@@ -311,7 +311,24 @@ func configureSession(sess *engine.Session, settings hawkconfig.Settings, maxTur
 func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings, maxTurnsOverride ...int) error {
 	sess.WireAgentTool()
 	sess.SetAllowedDirs(addDirs)
-	sess.PermSvc().SetSandboxMode(sandbox.ParseMode(effectivePermissionSandbox(settings)))
+	// Unified isolation profile (OS sandbox + optional container-required).
+	// Prefer ApplyIsolationProfile over setting SandboxMode alone.
+	osMode := sandbox.ParseMode(effectivePermissionSandbox(settings))
+	iso := engine.IsolationProfile{OSMode: osMode, Label: string(osMode)}
+	if iso.Label == "" || iso.Label == string(sandbox.Mode("")) {
+		iso.Label = "dev"
+		iso.OSMode = sandbox.ModeOff
+	}
+	// When Docker container path is the product default, faces may set
+	// ContainerRequired after attachRequiredContainer; startup only applies OS mode.
+	sess.ApplyIsolationProfile(iso)
+	_ = sess.SetWorkMode(engine.WorkModeAct)
+	// Auto-commit: CLI flag wins, else settings.auto_commit, default off.
+	autoCommit := autoCommitFlag
+	if !autoCommitFlag && settings.AutoCommit != nil {
+		autoCommit = *settings.AutoCommit
+	}
+	sess.SetAutoCommit(autoCommit)
 
 	for _, spec := range settings.AutoAllow {
 		sess.PermSvc().Memory().AllowSpec(spec)

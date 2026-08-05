@@ -1192,7 +1192,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.permReq = &msg.req
 		m.permReqSeq++
 		m.permTimeoutAt = time.Now().Add(5 * time.Minute)
-		m.messages = append(m.messages, displayMsg{role: "permission", content: msg.req.Summary, timeoutAt: m.permTimeoutAt})
+		// Display-only enrichment (risk + why). Keep req.Summary as ToolSummary
+		// for AutoMode / memory matching after y/n/a/d.
+		permBody := engine.FormatPermissionDisplay(msg.req.ToolName, msg.req.Summary)
+		m.messages = append(m.messages, displayMsg{role: "permission", content: permBody, timeoutAt: m.permTimeoutAt})
 		m.viewDirty = true
 		m.updateViewportContent()
 		return m, permissionPromptTimeoutCmd(m.permReqSeq)
