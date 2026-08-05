@@ -43,6 +43,30 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 
 Follow [GrayCode](https://github.com/GrayCodeAI) for progress. When Hawk is ready to try, we will announce it on [graycodeai.com](https://graycodeai.com/changelog).
 
+## Install (60 seconds)
+
+Pick one — all install the same `hawk` binary (versioned into `~/.hawk/bin`, symlinked as `hawk`):
+
+```bash
+# 1. Script (any shell, verifies checksum; cosign signature when available)
+curl -fsSL https://raw.githubusercontent.com/GrayCodeAI/hawk/main/install.sh | sh
+
+# 2. Homebrew (macOS / Linuxbrew) — after the next tagged release
+brew install graycodeai/tap/hawk
+
+# 3. npm (wraps the same release binaries)
+npm install -g @graycodeai/hawk
+```
+
+If `~/.hawk/bin` is not on your `PATH`, add it to your shell profile.
+
+Then:
+
+```bash
+hawk            # interactive REPL (/config on first run: API key + model)
+hawk path       # verify readiness
+```
+
 ## Quick Start (contributors — from source)
 
 ```bash
