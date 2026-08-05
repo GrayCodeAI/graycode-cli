@@ -254,6 +254,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// stage advances to Implementing.
 		if stage := s.PermSvc().SpecStage(); stage != SpecStageNone && stage != SpecStageImplementing {
 			opts.System += specStageSystemPrompt
+			// Inject project constitution as governing principles
+			if constitution := constitutionForPrompt(s.PermSvc().SpecSlug()); constitution != "" {
+				opts.System += constitution
+			}
 			// Inject user's spec configuration (language, framework, etc.)
 			// as context so the model writes specs that match preferences.
 			if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {

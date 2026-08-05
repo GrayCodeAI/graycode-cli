@@ -2,6 +2,8 @@ package safety
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -12,7 +14,7 @@ import (
 // no autonomy level (including YOLO) can bypass it while a spec workflow is
 // mid-flight.
 func TestCheckTool_SpecStageBlocksEvenYOLO(t *testing.T) {
-	for _, stage := range []SpecStage{SpecStageSpecify, SpecStagePlan, SpecStageTasks} {
+	for _, stage := range []SpecStage{SpecStageProposal, SpecStageSpecify, SpecStageDesign, SpecStagePlan, SpecStageTasks} {
 		pe := NewPermissionEngine()
 		pe.Stage = stage
 		pe.Autonomy = AutonomyYOLO
@@ -36,22 +38,36 @@ func TestCheckTool_SpecStageBlocksEvenYOLO(t *testing.T) {
 // spec workflow is active, the workflow's own tools and read-only tools are
 // still allowed through without a user prompt.
 func TestCheckTool_SpecStageAllowsWorkflowAndReadTools(t *testing.T) {
+	tmpDir := t.TempDir()
+	origDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	constitutionDir := filepath.Join(tmpDir, ".hawk", "specs", "test-spec")
+	os.MkdirAll(constitutionDir, 0o700)
+	os.WriteFile(filepath.Join(constitutionDir, "constitution.md"), []byte("## Constitution\n"), 0o600)
+
 	pe := NewPermissionEngine()
 	pe.Stage = SpecStageSpecify
+	pe.SpecSlug = "test-spec"
 	pe.Autonomy = AutonomySupervised
 
 	for _, name := range []string{"Specify"} {
 		allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: name})
 		if !allowed {
-			t.Errorf("tool %q: expected allowed during spec stage, got denied: %q", name, reason)
+			t.Errorf("tool %q: expected allowed during spec stage (no slug), got denied: %q", name, reason)
 		}
 	}
 	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); allowed || reason == "" {
 		t.Fatalf("Plan should wait for Specify, allowed=%v reason=%q", allowed, reason)
 	}
-	pe.SpecSlug = "test-spec"
+	pe.specDone = doneSpecify
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); allowed || reason == "" {
+		t.Fatalf("Plan should wait for both Specify and Design, allowed=%v reason=%q", allowed, reason)
+	}
+	pe.specDone = doneSpecify | doneDesign
 	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); !allowed || reason != "" {
-		t.Fatalf("Plan should be allowed after Specify, allowed=%v reason=%q", allowed, reason)
+		t.Fatalf("Plan should be allowed when both Specify and Design done (gates checked post-write), allowed=%v reason=%q", allowed, reason)
 	}
 	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Tasks"}); allowed || reason == "" {
 		t.Fatalf("Tasks should wait for Plan, allowed=%v reason=%q", allowed, reason)

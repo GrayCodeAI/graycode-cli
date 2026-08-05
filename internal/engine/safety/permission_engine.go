@@ -17,6 +17,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
+var reNeedsClarify = regexp.MustCompile(`\[NEEDS CLARIFICATION.*?\]`)
+
 // SpecStage tracks position in the independent spec-driven-development
 // workflow. It is orthogonal to AutonomyLevel: a session can be at any
 // trust tier while at any spec stage — trust governs *how* a tool call is
@@ -25,7 +27,9 @@ type SpecStage int
 
 const (
 	SpecStageNone SpecStage = iota // no active spec workflow
+	SpecStageProposal
 	SpecStageSpecify
+	SpecStageDesign
 	SpecStagePlan
 	SpecStageTasks
 	SpecStageImplementing
@@ -48,6 +52,7 @@ type PermissionEngine struct {
 	// prompt is needed, while the sandbox decides what the tool may actually do.
 	SandboxMode sandbox.Mode
 	Stage       SpecStage
+	specDone    specDone
 	// DryRun is a global kill switch: when true, every tool call is denied
 	// unconditionally, regardless of tier or spec stage. Replaces the old
 	// PermissionModeDontAsk's hard-lockout role — that mode was otherwise
@@ -65,9 +70,10 @@ type PermissionEngine struct {
 	// Phase gates sequential task completion within the Implementing stage.
 	// 0 means no phase gating (default); 1+ means the model should complete
 	// Phase N before progressing to N+1.
-	Phase    int
-	Phases   int                     // total number of phases detected from tasks.md
-	PromptFn func(PermissionRequest) // callback to ask user
+	Phase           int
+	Phases          int                     // total number of phases detected from tasks.md
+	convergeChecked bool                    // whether convergence has been checked this session
+	PromptFn        func(PermissionRequest) // callback to ask user
 }
 
 // DecisionOutcome is the result of evaluating a tool request.
@@ -235,7 +241,7 @@ func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCal
 	// implementation, only the workflow's own tools and reads may proceed.
 	if pe.Stage != SpecStageNone && pe.Stage != SpecStageImplementing {
 		switch toolName {
-		case "Specify", "Plan", "Tasks", "AskUserQuestion", "SpecStatus", "SpecEdit", "SpecList", "SpecReset", "SpecConfig", "Clarify", "Analyze", "Checklist", "Constitution", "Converge":
+		case "Proposal", "Specify", "Design", "Plan", "Tasks", "AskUserQuestion", "SpecStatus", "SpecEdit", "SpecList", "SpecReset", "SpecConfig", "Clarify", "Analyze", "Checklist", "Constitution", "Converge":
 			if !pe.specToolAllowed(toolName) {
 				return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: pe.specStageReason(toolName)}
 			}
@@ -244,16 +250,12 @@ func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCal
 			if pe.Stage != SpecStageTasks {
 				return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: "Spec stage active: ApproveImplementation is available only after Tasks completes."}
 			}
-			// Always a real human decision — never auto-allowed by tier,
-			// bypass-kill, or auto-mode, unlike everything below. Show the
-			// actual spec/plan/tasks content in the prompt rather than a
-			// bare tool name, so approval isn't a blind yes/no.
 			return pe.promptDecisionWithSummary(ctx, tc, specApprovalSummary(pe.SpecSlug))
 		default:
 			if tool.IsReadOnly(tc.Name) {
 				return Decision{Outcome: DecisionAllow, Reason: ReasonSpecGate}
 			}
-			return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: "Spec stage active: only Specify/Plan/Tasks (and reads) are allowed until ApproveImplementation."}
+			return Decision{Outcome: DecisionDeny, Reason: ReasonSpecGate, Message: "Spec stage active: only spec workflow tools (and reads) are allowed until ApproveImplementation."}
 		}
 	}
 
@@ -316,10 +318,15 @@ func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCal
 
 func (pe *PermissionEngine) specToolAllowed(toolName string) bool {
 	switch toolName {
-	case "Specify":
-		return pe.Stage == SpecStageSpecify
+	case "Proposal":
+		return pe.Stage == SpecStageNone || pe.Stage == SpecStageProposal
+	case "Specify", "Design":
+		if pe.SpecSlug != "" && !pe.constitutionExists() {
+			return false
+		}
+		return pe.Stage >= SpecStageProposal && pe.Stage < SpecStagePlan
 	case "Plan":
-		return pe.Stage == SpecStageSpecify && pe.SpecSlug != ""
+		return pe.specDone&(doneSpecify|doneDesign) == doneSpecify|doneDesign
 	case "Tasks":
 		return pe.Stage == SpecStagePlan
 	default:
@@ -327,14 +334,76 @@ func (pe *PermissionEngine) specToolAllowed(toolName string) bool {
 	}
 }
 
+func (pe *PermissionEngine) constitutionExists() bool {
+	if pe.SpecSlug == "" {
+		return false
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+	path := filepath.Join(cwd, ".hawk", "specs", pe.SpecSlug, "constitution.md")
+	_, err = os.Stat(path)
+	return err == nil
+}
+
+func (pe *PermissionEngine) phaseGatesPass() bool {
+	if pe.SpecSlug == "" {
+		return false
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+	planPath := filepath.Join(cwd, ".hawk", "specs", pe.SpecSlug, "plan.md")
+	data, err := os.ReadFile(planPath)
+	if err != nil {
+		return false
+	}
+	content := strings.ToLower(string(data))
+	hasSimplicity := strings.Contains(content, "simplicity") || strings.Contains(content, "≤3") || strings.Contains(content, "<=3")
+	hasAntiAbstraction := strings.Contains(content, "anti-abstraction") || strings.Contains(content, "framework directly")
+	hasIntegrationFirst := strings.Contains(content, "integration-first") || strings.Contains(content, "contract")
+	hasComplexityTracking := strings.Contains(content, "complexity tracking") || strings.Contains(content, "justification")
+	return hasSimplicity && hasAntiAbstraction && hasIntegrationFirst && hasComplexityTracking
+}
+
+func (pe *PermissionEngine) unresolvedClarifications() int {
+	if pe.SpecSlug == "" {
+		return 0
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return 0
+	}
+	specPath := filepath.Join(cwd, ".hawk", "specs", pe.SpecSlug, "spec.md")
+	data, err := os.ReadFile(specPath)
+	if err != nil {
+		return 0
+	}
+	matches := reNeedsClarify.FindAllString(string(data), -1)
+	return len(matches)
+}
+
 func (pe *PermissionEngine) specStageReason(toolName string) string {
 	switch toolName {
+	case "Proposal":
+		return "Proposal is only available when no spec workflow is active."
+	case "Specify", "Design":
+		if pe.SpecSlug != "" && !pe.constitutionExists() {
+			return "Constitution required: call Constitution tool with action='init' before Specify/Design."
+		}
+		return "Spec stage active: Specify/Design require Proposal and must complete before Plan."
 	case "Plan":
-		return "Spec stage active: Plan is available only after Specify completes."
+		if pe.specDone&(doneSpecify|doneDesign) != doneSpecify|doneDesign {
+			return "Spec stage active: Plan requires both Specify and Design to be complete."
+		}
+		if pe.unresolvedClarifications() > 0 {
+			return fmt.Sprintf("Spec stage active: resolve %d [NEEDS CLARIFICATION] marker(s) before advancing to Plan.", pe.unresolvedClarifications())
+		}
+		return "Spec stage active: Plan phase gates not documented."
 	case "Tasks":
 		return "Spec stage active: Tasks is available only after Plan completes."
-	case "Specify":
-		return "Spec stage active: Specify is not available at the current stage."
 	default:
 		return "Spec stage active: tool is not available at the current stage."
 	}
@@ -452,7 +521,7 @@ func specApprovalSummary(slug string) string {
 	dir := filepath.Join(cwd, ".hawk", "specs", slug)
 
 	var b strings.Builder
-	for _, f := range []string{"spec.md", "plan.md", "tasks.md"} {
+	for _, f := range []string{"proposal.md", "spec.md", "design.md", "plan.md", "tasks.md"} {
 		content, err := os.ReadFile(filepath.Join(dir, f)) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			continue
@@ -496,20 +565,30 @@ func (pe *PermissionEngine) AdvanceSpecStage(name string) {
 	if canonicalToolName(name) == "SpecReset" {
 		pe.Stage = SpecStageNone
 		pe.SpecSlug = ""
+		pe.specDone = 0
 		pe.Phase = 0
 		pe.Phases = 0
+		pe.convergeChecked = false
 		pe.Revision++
 		return
 	}
-	w := SpecWorkflow{Stage: pe.Stage, Slug: pe.SpecSlug}
+	w := SpecWorkflow{Stage: pe.Stage, Slug: pe.SpecSlug, Done: pe.specDone}
 	if err := w.Transition(name, pe.SpecSlug); err != nil {
 		return
 	}
-	pe.Stage, pe.SpecSlug = w.Stage, w.Slug
+	pe.Stage, pe.SpecSlug, pe.specDone = w.Stage, w.Slug, w.Done
 	pe.Revision++
 	if canonicalToolName(name) == "ApproveImplementation" {
 		pe.Phase = 1
 		pe.Phases = detectPhases(pe.SpecSlug)
+		pe.convergeChecked = false
+	}
+	if canonicalToolName(name) == "Plan" {
+		if pe.unresolvedClarifications() > 0 {
+			pe.Stage = SpecStageDesign
+		} else if !pe.phaseGatesPass() {
+			pe.Stage = SpecStageDesign
+		}
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // AnalyzeTool performs cross-artifact consistency and quality analysis on the
@@ -108,6 +110,11 @@ func analyzeCrossArtifact(spec, plan, tasks string) analysisReport {
 	}
 	if spec != "" && tasks != "" {
 		checkSpecTasksConsistency(specReqs, tasks, &report)
+	}
+
+	// Orphan REQ detection (code cites REQ not in spec = hallucination)
+	if spec != "" {
+		checkOrphanReqs(spec, &report)
 	}
 
 	// Missing artifacts
@@ -348,4 +355,35 @@ func readFileStr(path string) string {
 		return ""
 	}
 	return string(data)
+}
+
+func checkOrphanReqs(specContent string, report *analysisReport) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	codeFiles := spec.ScanCodeForReqIDs(cwd)
+	if len(codeFiles) == 0 {
+		return
+	}
+	var allCodeIDs []string
+	for _, ids := range codeFiles {
+		allCodeIDs = append(allCodeIDs, ids...)
+	}
+	orphans := spec.FindOrphanReqIDs(allCodeIDs, specContent)
+	if len(orphans) > 0 {
+		report.Issues = append(report.Issues, analysisIssue{
+			Severity: "critical", Category: "Hallucination Detection",
+			Message: fmt.Sprintf("%d orphan REQ ID(s) in code not found in spec: %s — possible hallucination", len(orphans), strings.Join(orphans, ", ")),
+		})
+		report.QualityScore -= 15
+	}
+	missing := spec.FindMissingReqIDs(specContent, codeFiles)
+	if len(missing) > 0 {
+		report.Issues = append(report.Issues, analysisIssue{
+			Severity: "warning", Category: "Traceability",
+			Message: fmt.Sprintf("%d REQ ID(s) in spec not cited in code: %s — unimplemented or missing citation", len(missing), strings.Join(missing, ", ")),
+		})
+		report.QualityScore -= 5
+	}
 }

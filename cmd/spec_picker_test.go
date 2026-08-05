@@ -96,7 +96,7 @@ func TestChatSpecSubcommand_WithDescriptionStartsDirectly(t *testing.T) {
 	if cm.specPicker != nil && cm.specPicker.IsOpen() {
 		t.Error("expected /spec with a description to start directly, not open the picker")
 	}
-	if currentSpecStage(cm.session) != engine.SpecStageSpecify {
-		t.Fatalf("expected stage SpecStageSpecify, got %v", currentSpecStage(cm.session))
+	if currentSpecStage(cm.session) != engine.SpecStageProposal {
+		t.Fatalf("expected stage SpecStageProposal, got %v", currentSpecStage(cm.session))
 	}
 }

@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -19,11 +20,14 @@ func newSpecModeSession(approveImplement bool) (*Session, *int) {
 	registry := tool.NewRegistry(
 		tool.FileReadTool{},
 		tool.FileWriteTool{},
+		tool.ProposalTool{},
 		tool.SpecifyTool{},
+		tool.DesignTool{},
 		tool.PlanTool{},
 		tool.TasksTool{},
 		tool.ApproveImplementationTool{},
 		tool.SpecResetTool{},
+		tool.ConstitutionTool{},
 	)
 	s := NewSession("", "", "test", registry)
 	prompts := 0
@@ -46,7 +50,23 @@ func runSpecTool(t *testing.T, s *Session, name string, args map[string]interfac
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	res := s.executeSingleTool(ctx, types.ToolCall{Name: name, ID: "t1", Arguments: args}, ch, 1, "")
+	if !res.isErr {
+		s.PermSvc().AdvanceSpecStage(name)
+	}
 	return res
+}
+
+func ensureTestConstitution(t *testing.T, s *Session) {
+	t.Helper()
+	slug := s.PermSvc().SpecSlug()
+	if slug == "" {
+		return
+	}
+	cwd, _ := os.Getwd()
+	dir := filepath.Join(cwd, ".hawk", "specs", slug)
+	os.MkdirAll(dir, 0o700)
+	path := filepath.Join(dir, "constitution.md")
+	os.WriteFile(path, []byte("## Constitution\n"), 0o600)
 }
 
 func TestSpecMode_SpecifyAdvancesStage(t *testing.T) {
@@ -59,11 +79,18 @@ func TestSpecMode_SpecifyAdvancesStage(t *testing.T) {
 }
 
 func TestSpecMode_PlanTasksAdvanceStage(t *testing.T) {
-	s, _ := newSpecModeSession(true)
-	s.PermSvc().SetSpecStage(SpecStageSpecify)
-	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "test", "spec": "problem statement"})
+	dir := t.TempDir()
+	old, _ := os.Getwd()
+	os.Chdir(dir)
+	t.Cleanup(func() { os.Chdir(old) })
 
-	runSpecTool(t, s, "Plan", map[string]interface{}{"plan": "technical approach"})
+	s, _ := newSpecModeSession(true)
+	s.PermSvc().SetSpecStage(SpecStageProposal)
+	runSpecTool(t, s, "Proposal", map[string]interface{}{"title": "test", "proposal": "proposal"})
+	ensureTestConstitution(t, s)
+	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "test", "spec": "problem statement"})
+	runSpecTool(t, s, "Design", map[string]interface{}{"design": "technical design"})
+	runSpecTool(t, s, "Plan", map[string]interface{}{"plan": "## Summary\n### Simplicity: using <=3 projects\n### Anti-Abstraction: framework directly\n### Integration-First: contract defined\n### Complexity Tracking\n| Gate | Justification |\n|------|---------------|\n"})
 	if s.PermSvc().SpecStage() != SpecStagePlan {
 		t.Errorf("expected stage Plan after Plan tool, got %v", s.PermSvc().SpecStage())
 	}
@@ -171,7 +198,13 @@ func TestSpecMode_ApprovalPromptShowsSpecContent(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chdir(old) })
 
 	s, _ := newSpecModeSession(true)
-	s.PermSvc().SetSpecStage(SpecStageSpecify)
+	s.PermSvc().SetSpecStage(SpecStageProposal)
+	runSpecTool(t, s, "Proposal", map[string]interface{}{"title": "test", "proposal": "proposal"})
+	ensureTestConstitution(t, s)
+	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "approval preview test", "spec": "unique spec marker xyz123"})
+	runSpecTool(t, s, "Design", map[string]interface{}{"design": "design"})
+	runSpecTool(t, s, "Plan", map[string]interface{}{"plan": "## Summary\nunique plan marker abc456\n\n### Phase -1: Pre-Implementation Gates\n#### Simplicity Gate (Article VII)\n- [x] Using ≤3 projects?\n- [x] No future-proofing?\n\n#### Anti-Abstraction Gate (Article VIII)\n- [x] Using framework directly?\n- [x] Single model representation?\n\n#### Integration-First Gate (Article IX)\n- [x] Contracts defined?\n- [x] Contract tests written?\n\n### Complexity Tracking\n| Gate | Justification |\n|------|---------------|\n| - | All gates pass |"})
+	runSpecTool(t, s, "Tasks", map[string]interface{}{"tasks": "unique tasks marker def789"})
 
 	var lastSummary string
 	s.SetPermissionFn(func(req PermissionRequest) {
@@ -182,10 +215,6 @@ func TestSpecMode_ApprovalPromptShowsSpecContent(t *testing.T) {
 			req.Response <- true
 		}
 	})
-
-	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "approval preview test", "spec": "unique spec marker xyz123"})
-	runSpecTool(t, s, "Plan", map[string]interface{}{"plan": "unique plan marker abc456"})
-	runSpecTool(t, s, "Tasks", map[string]interface{}{"tasks": "unique tasks marker def789"})
 	runSpecTool(t, s, "ApproveImplementation", map[string]interface{}{})
 
 	if !strings.Contains(lastSummary, "unique spec marker xyz123") {
@@ -235,7 +264,10 @@ func TestSpecMode_ResetClearsStageAndSlug(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chdir(old) })
 
 	s, _ := newSpecModeSession(true)
-	s.PermSvc().SetSpecStage(SpecStageSpecify)
+	s.PermSvc().SetSpecStage(SpecStageProposal)
+	ensureTestConstitution(t, s)
+	runSpecTool(t, s, "Proposal", map[string]interface{}{"title": "reset-test", "proposal": "proposal"})
+	ensureTestConstitution(t, s)
 	runSpecTool(t, s, "Specify", map[string]interface{}{"title": "reset-test", "spec": "content"})
 	if s.PermSvc().SpecSlug() == "" {
 		t.Fatal("Specify should set an active slug")

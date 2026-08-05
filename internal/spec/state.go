@@ -164,14 +164,18 @@ func StageFromFiles(slug string) string {
 // StageEnumFromString converts a stage string to SpecStage integer.
 func StageEnumFromString(s string) int {
 	switch s {
+	case "proposal":
+		return 1 // SpecStageProposal
 	case "specify":
-		return 1 // SpecStageSpecify
+		return 2 // SpecStageSpecify
+	case "design":
+		return 3 // SpecStageDesign
 	case "plan":
-		return 2 // SpecStagePlan
+		return 4 // SpecStagePlan
 	case "tasks":
-		return 3 // SpecStageTasks
+		return 5 // SpecStageTasks
 	case "implementing":
-		return 4 // SpecStageImplementing
+		return 6 // SpecStageImplementing
 	default:
 		return 0 // SpecStageNone
 	}
@@ -181,12 +185,16 @@ func StageEnumFromString(s string) int {
 func StringFromStageEnum(stage int) string {
 	switch stage {
 	case 1:
-		return "specify"
+		return "proposal"
 	case 2:
-		return "plan"
+		return "specify"
 	case 3:
-		return "tasks"
+		return "design"
 	case 4:
+		return "plan"
+	case 5:
+		return "tasks"
+	case 6:
 		return "implementing"
 	default:
 		return "none"
@@ -196,8 +204,12 @@ func StringFromStageEnum(stage int) string {
 // StageEnumDisplayName returns a human-readable display name for a stage string.
 func StageEnumDisplayName(stage string) string {
 	switch stage {
+	case "proposal":
+		return "Proposal"
 	case "specify":
 		return "Specify"
+	case "design":
+		return "Design"
 	case "plan":
 		return "Plan"
 	case "tasks":

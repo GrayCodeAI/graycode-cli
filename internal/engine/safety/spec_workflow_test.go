@@ -9,7 +9,9 @@ func TestSpecWorkflowTransitionsInOrder(t *testing.T) {
 		slug  string
 		stage SpecStage
 	}{
-		{"Specify", "demo", SpecStageSpecify},
+		{"Proposal", "demo", SpecStageProposal},
+		{"Specify", "", SpecStageSpecify},
+		{"Design", "", SpecStageDesign},
 		{"Plan", "", SpecStagePlan},
 		{"Tasks", "", SpecStageTasks},
 		{"ApproveImplementation", "", SpecStageImplementing},
@@ -23,10 +25,32 @@ func TestSpecWorkflowTransitionsInOrder(t *testing.T) {
 	}
 }
 
+func TestSpecWorkflowParallelStages(t *testing.T) {
+	w := SpecWorkflow{}
+	if err := w.Transition("Proposal", "demo"); err != nil {
+		t.Fatalf("Proposal: %v", err)
+	}
+	if err := w.Transition("Design", ""); err != nil {
+		t.Fatalf("Design before Specify: %v", err)
+	}
+	if err := w.Transition("Specify", ""); err != nil {
+		t.Fatalf("Specify after Design: %v", err)
+	}
+	if w.Stage != SpecStageSpecify {
+		t.Fatalf("expected Specify stage, got %v", w.Stage)
+	}
+	if err := w.Transition("Plan", ""); err != nil {
+		t.Fatalf("Plan after both Specify and Design: %v", err)
+	}
+}
+
 func TestSpecWorkflowRejectsInvalidTransitionWithoutMutation(t *testing.T) {
-	w := SpecWorkflow{Stage: SpecStageSpecify, Slug: "demo"}
-	if err := w.Transition("Tasks", ""); err == nil {
-		t.Fatal("expected Tasks before Plan to fail")
+	w := SpecWorkflow{Stage: SpecStageProposal, Slug: "demo", Done: doneProposal}
+	if err := w.Transition("Specify", ""); err != nil {
+		t.Fatalf("Specify after Proposal: %v", err)
+	}
+	if err := w.Transition("Plan", ""); err == nil {
+		t.Fatal("expected Plan before Design to fail")
 	}
 	if w.Stage != SpecStageSpecify || w.Slug != "demo" {
 		t.Fatalf("invalid transition mutated workflow: %#v", w)

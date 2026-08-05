@@ -32,9 +32,9 @@ type specPickerEntry struct {
 }
 
 var specPickerEntries = []specPickerEntry{
-	{specActionStart, "Start", "Begin the workflow — writes spec.md, then plan.md, then tasks.md"},
+	{specActionStart, "Start", "Begin the workflow — writes proposal.md, then spec.md + design.md, then plan.md, then tasks.md"},
 	{specActionStatus, "Status", "Show the current stage"},
-	{specActionEdit, "Edit", "Edit the active spec's artifacts (spec.md, plan.md, tasks.md)"},
+	{specActionEdit, "Edit", "Edit the active spec's artifacts"},
 	{specActionResume, "Resume", "Resume from the current stage — continue where you left off"},
 	{specActionArchive, "Archive", "Archive a completed spec when implementation is done"},
 	{specActionConfigure, "Configure", "Set language, framework, methodology, architecture preferences"},
@@ -207,8 +207,12 @@ func (sp *SpecPicker) Render(viewWidth int) string {
 // rather than a *engine.Session.
 func specStageDisplayName(stage engine.SpecStage) string {
 	switch stage {
+	case engine.SpecStageProposal:
+		return "Proposal"
 	case engine.SpecStageSpecify:
 		return "Specify"
+	case engine.SpecStageDesign:
+		return "Design"
 	case engine.SpecStagePlan:
 		return "Plan"
 	case engine.SpecStageTasks:
