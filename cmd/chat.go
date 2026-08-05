@@ -252,6 +252,12 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	m.hintsLoader = engine.NewHintsLoader()
 	m.sourceRoots = engine.NewSourceRoots()
 	m.selfImprover = engine.NewSelfImprover()
+	// Close the self-improvement loop: failure reflections produced by the
+	// engine's Reflector are persisted to the cross-session lesson store and
+	// injected back via ForPrompt on later submits.
+	if sess != nil {
+		sess.SetLearnFn(m.selfImprover.Learn)
+	}
 	m.codingSoul = engine.LoadCodingSoul()
 	startup.EndPhase("newChatModel:bmad-features")
 

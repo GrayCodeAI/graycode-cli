@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
+
+// maxSelfImproveEntries caps the persisted lesson store so a long-lived
+// machine does not accumulate an unbounded file. Oldest entries are dropped.
+const maxSelfImproveEntries = 200
 
 // SelfImproveEntry records a lesson learned from a mistake.
 type SelfImproveEntry struct {
@@ -23,6 +28,7 @@ type SelfImproveEntry struct {
 type SelfImprover struct {
 	Path    string
 	Entries []SelfImproveEntry
+	mu      sync.Mutex
 }
 
 // NewSelfImprover loads or creates the improvement log.
@@ -33,8 +39,14 @@ func NewSelfImprover() *SelfImprover {
 	return si
 }
 
-// Learn records a new lesson.
+// Learn records a new lesson. It is nil-safe and bounded: oldest entries are
+// dropped past maxSelfImproveEntries so the store cannot grow without limit.
 func (si *SelfImprover) Learn(what, why, lesson, category string) {
+	if si == nil {
+		return
+	}
+	si.mu.Lock()
+	defer si.mu.Unlock()
 	si.Entries = append(si.Entries, SelfImproveEntry{
 		Timestamp: time.Now(),
 		What:      what,
@@ -42,13 +54,21 @@ func (si *SelfImprover) Learn(what, why, lesson, category string) {
 		Lesson:    lesson,
 		Category:  category,
 	})
+	if len(si.Entries) > maxSelfImproveEntries {
+		si.Entries = si.Entries[len(si.Entries)-maxSelfImproveEntries:]
+	}
 	si.save()
 }
 
 // Lessons returns all lessons, optionally filtered by category.
 func (si *SelfImprover) Lessons(category string) []SelfImproveEntry {
+	if si == nil {
+		return nil
+	}
+	si.mu.Lock()
+	defer si.mu.Unlock()
 	if category == "" {
-		return si.Entries
+		return append([]SelfImproveEntry{}, si.Entries...)
 	}
 	var filtered []SelfImproveEntry
 	for _, e := range si.Entries {
@@ -61,6 +81,11 @@ func (si *SelfImprover) Lessons(category string) []SelfImproveEntry {
 
 // ForPrompt formats recent lessons as context for the system prompt.
 func (si *SelfImprover) ForPrompt(maxEntries int) string {
+	if si == nil {
+		return ""
+	}
+	si.mu.Lock()
+	defer si.mu.Unlock()
 	if len(si.Entries) == 0 {
 		return ""
 	}
