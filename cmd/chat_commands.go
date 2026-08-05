@@ -70,7 +70,7 @@ func ResetSlashCache() {
 }
 
 var allSlashCommands = []string{
-	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/autonomy", "/branch", "/branches", "/bughunter", "/clean", "/clear",
+	"/add", "/add-dir", "/agents", "/agents-init", "/audit", "/auto-commit", "/autonomy", "/branch", "/branch-agent", "/branches", "/bughunter", "/clean", "/clear",
 	"/check", "/color", "/commit", "/compact", "/compress", "/config", "/context", "/council", "/design",
 	"/copy", "/cost", "/cron", "/ctx", "/diff", "/doctor", "/drop", "/effort", "/env", "/exit", "/explain",
 	"/export", "/fast", "/feedback", "/files", "/focus", "/follow", "/fork", "/help", "/history", "/home", "/hooks", "/init",
@@ -79,8 +79,9 @@ var allSlashCommands = []string{
 	"/power", "/pr-comments", "/provider-status", "/quit", "/recipe", "/recover", "/reflect", "/refresh-model-catalog", "/release-notes",
 	"/image", "/reload-plugins", "/remote-env", "/rename", "/render", "/research", "/resume", "/retry", "/review", "/rewind",
 	"/run", "/btw", "/brainstorm", "/checkpoint", "/dream", "/away", "/investigate", "/search", "/security-review", "/session", "/share", "/skills", "/snapshot", "/soul", "/spec", "/stale", "/stats",
-	"/mouse", "/select", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme", "/think", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/ultrareview", "/undo", "/upgrade", "/usage",
+	"/mouse", "/select", "/start", "/status", "/statusline", "/summary", "/tag", "/taste", "/tasks", "/test", "/theme", "/think", "/thinkback", "/thinkback-play", "/tokens", "/tools", "/trust", "/ultrareview", "/undo", "/upgrade", "/usage",
 	"/version", "/vibe", "/vim", "/voice", "/welcome", "/ecosystem", "/path", "/yaad",
+	"/isolation",
 	"/scroll-speed", "/scroll-invert", "/scroll-mode", "/terminal-setup", "/pager-config", "/prompt-queue",
 }
 
@@ -240,7 +241,12 @@ var slashDescriptions = map[string]string{
 	"/skills":                "List skills or manage: search, install, trending, info, remove, update, feedback, publish, audit",
 	"/learn":                 "LLM-powered skill advisor (/learn deep for source analysis)",
 	"/stats":                 "Show analytics stats",
-	"/status":                "Show session info",
+	"/status":                "Show session info (mode, isolation, trust, cost)",
+	"/start":                 "Guided setup: trust, mode, branch, first tasks",
+	"/trust":                 "Folder trust status / add / remove",
+	"/isolation":             "Isolation profile: dev|workspace|strict|container",
+	"/branch-agent":          "Create hawk/agent-* branch if on main/master",
+	"/auto-commit":           "Toggle git auto-commit after Write/Edit (on|off)",
 	"/summary":               "Summarize the session",
 	"/tasks":                 "Show task list",
 	"/test":                  "Run tests, add failures to context",

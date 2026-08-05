@@ -71,14 +71,17 @@ type ToolContext struct {
 	RefreshCodeIndexFn  func(ctx context.Context) error
 	CommitMessageChatFn func(ctx context.Context, prompt string) (string, error)
 	AvailableTools      []Tool
-	AllowedDirectories  []string
-	SandboxMode         sandbox.Mode
-	AutoCommit          bool
-	Protected           PathProtector
-	YaadBridge          *memory.YaadBridge
-	Attribution         *types.Attribution
-	SettingsGet         func(key string) (string, bool)
-	SettingsSet         func(key, value string) error
+	// Registry is optional; when set, ToolSearch select: promotes tools onto
+	// the lazy model-visible surface for subsequent LLM turns.
+	Registry           *Registry
+	AllowedDirectories []string
+	SandboxMode        sandbox.Mode
+	AutoCommit         bool
+	Protected          PathProtector
+	YaadBridge         *memory.YaadBridge
+	Attribution        *types.Attribution
+	SettingsGet        func(key string) (string, bool)
+	SettingsSet        func(key, value string) error
 	// SpecSlugGet/SpecSlugSet let the Specify/Plan/Tasks tools read and
 	// write the active spec workflow's directory slug without any
 	// package-level state — each session supplies its own closures over
@@ -167,6 +170,9 @@ type Registry struct {
 	mu      sync.RWMutex
 	tools   map[string]Tool
 	primary []Tool
+	// modelVisible, when non-nil, restricts EyrieTools to the listed primary
+	// names (lazy model surface). Get/Execute still reach every registered tool.
+	modelVisible map[string]bool
 }
 
 // NewRegistry creates a registry with the given tools.
@@ -223,12 +229,16 @@ func (r *Registry) Filter(allow []string) *Registry {
 	return NewRegistry(filtered...)
 }
 
-// EyrieTools converts all tools to Hawk runtime tool definitions for the API boundary.
+// EyrieTools converts model-visible tools to Hawk runtime tool definitions.
+// When lazy model surface is enabled, only promoted/essential tools are listed.
 func (r *Registry) EyrieTools() []types.EyrieTool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]types.EyrieTool, 0, len(r.primary))
 	for _, t := range r.primary {
+		if r.modelVisible != nil && !r.modelVisible[t.Name()] {
+			continue
+		}
 		out = append(out, types.EyrieTool{
 			Name:        t.Name(),
 			Description: t.Description(),

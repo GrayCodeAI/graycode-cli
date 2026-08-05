@@ -1,0 +1,73 @@
+# Hawk CI agent (headless)
+#
+# Copy to .github/workflows/hawk-ci-exec.yml.
+# Runs a non-interactive agent turn with JSON output — suitable for
+# "fix failing tests", "summarize this PR", or similar CI jobs.
+#
+# Prerequisites:
+#   - hawk binary on PATH (pin a release or install from your org's package)
+#   - LLM credentials via secrets (never commit keys)
+#   - Docker available on the runner if your hawk build requires container isolation
+#
+name: Hawk CI Exec
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Agent prompt"
+        required: true
+        default: "Summarize the git diff for this PR and list the riskiest files."
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  hawk-exec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Install hawk with your org's preferred mechanism, for example:
+      #   - curl -fsSL https://…/install.sh | sh
+      #   - go install github.com/GrayCodeAI/hawk/cmd/hawk@vX.Y.Z
+      #   - download a release asset into $GITHUB_PATH
+      - name: Ensure hawk is available
+        run: |
+          if ! command -v hawk >/dev/null 2>&1; then
+            echo "Install hawk before this step (see comments in this workflow)."
+            exit 1
+          fi
+          hawk version || hawk --version || true
+
+      - name: Trust workspace (folder trust)
+        run: hawk trust add --reason "github-actions ci" || true
+
+      - name: Run agent (ephemeral + JSON)
+        id: agent
+        env:
+          # Map your provider key(s) here, e.g. ANTHROPIC_API_KEY / OPENAI_API_KEY.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          HAWK_PROMPT: ${{ github.event.inputs.prompt || 'Summarize the changes in this PR (git log/diff) and list risks.' }}
+        run: |
+          set -euo pipefail
+          PROMPT="${HAWK_PROMPT}"
+          hawk exec \
+            --ephemeral \
+            --json \
+            --auto full \
+            --max-turns 20 \
+            "$PROMPT" | tee hawk-result.json
+
+      - name: Upload agent result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hawk-result
+          path: hawk-result.json

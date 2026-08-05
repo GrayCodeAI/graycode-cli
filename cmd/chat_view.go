@@ -523,18 +523,34 @@ func (m chatModel) terminalView(content string) tea.View {
 // so the user can see how long they have to decide before the prompt auto-dismisses.
 func renderPermissionBox(summary string, width int, timeoutAt time.Time) string {
 	title := lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(icons.Alert() + " Permission required")
-	body := lipgloss.NewStyle().Foreground(textWhite).Render(summary)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y]es [n]o [a]lways [d]eny always")
-
-	rows := []string{
-		lipgloss.JoinHorizontal(lipgloss.Top, title, "  ", body),
+	// Multi-line body: risk badge, action summary, short "why" (from FormatPermissionDisplay).
+	bodyWidth := width - 10
+	if bodyWidth < 20 {
+		bodyWidth = 20
 	}
+	bodyLines := strings.Split(summary, "\n")
+	var bodyParts []string
+	for i, line := range bodyLines {
+		wrapped := wrapText(line, bodyWidth, 0)
+		if i == 0 {
+			bodyParts = append(bodyParts, lipgloss.NewStyle().Foreground(warnAmber).Bold(true).Render(wrapped))
+		} else if i == len(bodyLines)-1 && strings.HasPrefix(strings.TrimSpace(line), "Why:") {
+			bodyParts = append(bodyParts, lipgloss.NewStyle().Foreground(textMuted).Render(wrapped))
+		} else {
+			bodyParts = append(bodyParts, lipgloss.NewStyle().Foreground(textWhite).Render(wrapped))
+		}
+	}
+	body := lipgloss.JoinVertical(lipgloss.Left, bodyParts...)
+	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y] allow once   [n] deny   [a] always allow tool   [d] always deny tool")
+	hint := lipgloss.NewStyle().Foreground(textMuted).Render("Esc cancels · prompt times out after 5 minutes")
+
+	rows := []string{title, "", body}
 	// Countdown bar — only when a deadline is active.
 	if !timeoutAt.IsZero() {
 		bar := renderCountdownBar(timeoutAt, width-10)
 		rows = append(rows, "", bar)
 	}
-	rows = append(rows, "", options)
+	rows = append(rows, "", options, hint)
 
 	inner := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	// Bordered box with amber highlight so the prompt stands out in scrollback.

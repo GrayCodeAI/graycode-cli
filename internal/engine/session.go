@@ -108,6 +108,10 @@ type Session struct {
 	//   Snapshots      -> legacy field; not yet on Persistence
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
 	// Backtrack and limits are owned by LifecycleService.
+
+	// Control plane (product modes) — orthogonal to SpecStage and shellmode.
+	workMode  WorkMode
+	isolation IsolationProfile
 }
 
 // NewSession creates a conversation session through Eyrie's engine facade.
@@ -625,6 +629,21 @@ func (s *Session) SetContainerRequired(v bool) {
 	if s.tools != nil {
 		s.tools.SetContainerRequired(v)
 	}
+}
+
+// SetAutoCommit enables git auto-commit after successful Write/Edit tools.
+func (s *Session) SetAutoCommit(enabled bool) {
+	if s != nil && s.tools != nil {
+		s.tools.SetAutoCommit(enabled)
+	}
+}
+
+// AutoCommit reports whether write tools auto-commit.
+func (s *Session) AutoCommit() bool {
+	if s == nil || s.tools == nil {
+		return false
+	}
+	return s.tools.AutoCommit()
 }
 
 // SetContainerExecutor sets the container executor on the ToolService

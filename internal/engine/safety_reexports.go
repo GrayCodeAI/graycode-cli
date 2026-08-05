@@ -37,19 +37,21 @@ const (
 )
 
 var (
-	NewHallucinationGuard = safety.NewHallucinationGuard
-	BuildRejectionMessage = safety.BuildRejectionMessage
-	FormatGroundingResult = safety.FormatGroundingResult
-	NewOutputRedactor     = safety.NewOutputRedactor
-	NewPermissionMemory   = safety.NewPermissionMemory
-	NewPermissionEngine   = safety.NewPermissionEngine
-	NewProtectedPaths     = safety.NewProtectedPaths
-	NewRiskAssessor       = safety.NewRiskAssessor
-	GenerateMitigations   = safety.GenerateMitigations
-	FormatAssessment      = safety.FormatAssessment
-	ShouldProceed         = safety.ShouldProceed
-	PresetConfig          = safety.PresetConfig
-	ParseAutonomyLevel    = safety.ParseAutonomyLevel
-	ToolSummary           = safety.ToolSummary
-	ToolNeedsPermission   = safety.ToolNeedsPermission
+	NewHallucinationGuard   = safety.NewHallucinationGuard
+	BuildRejectionMessage   = safety.BuildRejectionMessage
+	FormatGroundingResult   = safety.FormatGroundingResult
+	NewOutputRedactor       = safety.NewOutputRedactor
+	NewPermissionMemory     = safety.NewPermissionMemory
+	NewPermissionEngine     = safety.NewPermissionEngine
+	NewProtectedPaths       = safety.NewProtectedPaths
+	NewRiskAssessor         = safety.NewRiskAssessor
+	GenerateMitigations     = safety.GenerateMitigations
+	FormatAssessment        = safety.FormatAssessment
+	ShouldProceed           = safety.ShouldProceed
+	PresetConfig            = safety.PresetConfig
+	ParseAutonomyLevel      = safety.ParseAutonomyLevel
+	ToolSummary             = safety.ToolSummary
+	ToolNeedsPermission     = safety.ToolNeedsPermission
+	FormatPermissionDisplay = safety.FormatPermissionDisplay
+	ToolPolicyFor           = safety.ToolPolicyFor
 )

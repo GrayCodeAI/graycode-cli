@@ -312,6 +312,10 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	m.welcomeAgentsOK = quickSnapshot.agentsOK
 	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, 0, connectedMCPCount(registry), false, initWidth, initHeight, nil, quickSnapshot, false, "")
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
+	// First-session control-plane tip (skip when resuming history).
+	if saved == nil {
+		m.messages = append(m.messages, displayMsg{role: "system", content: controlPlaneOnboardingHint(sess)})
+	}
 	startup.EndPhase("newChatModel:welcome")
 
 	// Wire permission system
