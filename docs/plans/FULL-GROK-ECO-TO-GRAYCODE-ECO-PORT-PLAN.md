@@ -1,14 +1,14 @@
-# Full Port Plan: grok-eco → hawk-eco (Go reimplementation)
+# Full Port Plan: grok-eco → graycode-eco (Go reimplementation)
 
 **Status:** Master long-term plan  
 **Date:** 2026-07-16  
 **Active execution:** [YEAR-0-ACTIVE.md](./YEAR-0-ACTIVE.md) (Year 0 control-plane track)  
 **ADR:** [ADR-0003](../architecture/adr/ADR-0003-grok-behavioral-port-go-multirepo.md)  
-**Meaning of “port”:** Reimplement **every Grok Build capability** in idiomatic **Go** across hawk-eco repos.  
+**Meaning of “port”:** Reimplement **every Grok Build capability** in idiomatic **Go** across graycode-eco repos.  
 **Not meaning:** Copy Rust crates, depend on Grok binaries, or collapse hawk into a Rust monorepo.
 
 **Source tree:** `grok-eco/grok-build` (~1.35M LOC Rust, 1 product monorepo)  
-**Target tree:** `hawk-eco/*` (multi-repo Go platform + cloud/TS/Python)
+**Target tree:** `graycode-eco/*` (multi-repo Go platform + cloud/TS/Python)
 
 **Related shorter plan:** `GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md` (control-plane focus).  
 **This document:** **complete** crate/tool/doc/slash inventory, including small items, with owner repo + status + phase.
@@ -30,7 +30,7 @@
 
 | Status | Meaning |
 |--------|---------|
-| **Done** | Hawk-eco already has equivalent or better |
+| **Done** | graycode-eco already has equivalent or better |
 | **Partial** | Exists but incomplete vs Grok |
 | **Port** | Must reimplement in Go |
 | **Skip** | Intentionally not porting (vendor/stack conflict) |
@@ -82,11 +82,11 @@ grok-eco/grok-build  (one Rust workspace)
 ```
 
 **There is only one Grok product repo (`grok-build`).**  
-“Port all grok-eco repos” = port **all crates/capabilities inside grok-build** into the **appropriate hawk-eco repos**.
+“Port all grok-eco repos” = port **all crates/capabilities inside grok-build** into the **appropriate graycode-eco repos**.
 
 ---
 
-## 2. Master crate → hawk-eco matrix
+## 2. Master crate → graycode-eco matrix
 
 ### 2.1 Product / TUI / shell (codegen)
 
@@ -543,7 +543,7 @@ Only if product requires remote tool hosts:
 
 ---
 
-## 9. Per hawk-eco repo full ownership checklist
+## 9. Per graycode-eco repo full ownership checklist
 
 ### `hawk` (majority)
 
@@ -692,7 +692,7 @@ Execute shorter plan as **Year 0** of this master plan.
 
 ## 16. One-line summary
 
-**Port all of grok-eco into hawk-eco = reimplement Grok Build’s full capability surface in Go across hawk-eco repos, map each crate to an owner engine, skip vendor/privacy conflicts, wire Hawk’s existing partial systems first, and run a multi-year program ending in behavioral parity—not a Rust code transplant.**
+**Port all of grok-eco into graycode-eco = reimplement Grok Build’s full capability surface in Go across graycode-eco repos, map each crate to an owner engine, skip vendor/privacy conflicts, wire Hawk’s existing partial systems first, and run a multi-year program ending in behavioral parity—not a Rust code transplant.**
 
 ---
 

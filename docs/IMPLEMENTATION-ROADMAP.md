@@ -1,4 +1,4 @@
-# Hawk-Eco Implementation Roadmap
+# graycode-eco Implementation Roadmap
 
 ## Historical product roadmap
 
@@ -39,7 +39,7 @@ Numeric scores are intentionally not used as current architecture evidence.
 
 **Why:**
 - Top 20 agents all have IDE integration
-- Differentiate Hawk-Eco as terminal+IDE agent
+- Differentiate graycode-eco as terminal+IDE agent
 - Capture market share from Cursor/Copilot users
 
 **Implementation Plan:**

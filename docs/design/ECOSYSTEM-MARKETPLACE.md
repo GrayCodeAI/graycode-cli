@@ -1,11 +1,11 @@
-# Design Doc: hawk-eco Extension Marketplace + Unified Documentation Site
+# Design Doc: graycode-eco Extension Marketplace + Unified Documentation Site
 
 **Status:** Draft
 **Author:** Ecosystem / DX working group
 **Last updated:** 2026-06-06
 **Scope:** Multi-month effort spanning all 5 repos (hawk, eyrie, yaad, tok, trace) + a new gallery web property + a unified docs site.
 
-> This is a design a team executes against, not a code-session deliverable. It grounds every claim in the actual hawk-eco codebase (cited as `path:line`) and reuses what already exists rather than greenfielding.
+> This is a design a team executes against, not a code-session deliverable. It grounds every claim in the actual graycode-eco codebase (cited as `path:line`) and reuses what already exists rather than greenfielding.
 
 ---
 
@@ -14,7 +14,7 @@
 Two adjacent gaps from `TOP20_COMPARISON.md` are addressed together because they share infrastructure (a registry index, a content format, a web property):
 
 1. **Centralized extension gallery / plugin marketplace** — `TOP20_COMPARISON.md:65` (hawk P1) and `TOP20_COMPARISON.md:227` (cross-cutting P1).
-2. **Documentation site (Docusaurus/Mintlify) for the hawk-eco ecosystem** — `TOP20_COMPARISON.md:232` (cross-cutting P1).
+2. **Documentation site (Docusaurus/Mintlify) for the graycode-eco ecosystem** — `TOP20_COMPARISON.md:232` (cross-cutting P1).
 
 ### Who ships this in the Top 20
 
@@ -25,9 +25,9 @@ Two adjacent gaps from `TOP20_COMPARISON.md` are addressed together because they
 | Skills marketplace | **CrewAI skills** | `TOP20_COMPARISON.md:65` |
 | Unified docs site (getting-started, API refs, architecture, comparison tables) | **OpenHands / LiteLLM / Mem0** all run Docusaurus/Mintlify-class doc portals | `TOP20_COMPARISON.md:232` |
 
-### Where hawk-eco is today (the strong starting position)
+### Where graycode-eco is today (the strong starting position)
 
-hawk-eco is **not** starting from zero. A large fraction of the marketplace already exists as working Go and a populated registry:
+graycode-eco is **not** starting from zero. A large fraction of the marketplace already exists as working Go and a populated registry:
 
 - **A populated registry already ships.** `hawk-community-skills/registry.json` is a 4.3 MB JSON array of skill entries with `name`, `description`, `category`, `tags`, `path`, `file_count`, `has_scripts` (see file head). It is served raw from GitHub and consumed by hawk at `hawk/internal/plugin/registry.go:18` (`defaultIndexURL = https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json`).
 - **A registry client already works.** `hawk/internal/plugin/registry.go` defines `SkillEntry`/`SkillIndex` (`:21`, `:36`), `FetchIndex` with a 1-hour cache (`:60`), and `Install/Remove/InstalledSkillInfo` (`:196`, `:289`, `:309`).
@@ -213,7 +213,7 @@ CI (docs repo) →
 
 ---
 
-## 4. Integration with Existing hawk-eco Code
+## 4. Integration with Existing graycode-eco Code
 
 Concrete reuse map — what is *already there* and what each piece becomes:
 

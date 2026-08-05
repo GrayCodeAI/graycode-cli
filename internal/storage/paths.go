@@ -74,10 +74,6 @@ func WorkspaceSnapshotsDir() string {
 	return filepath.Join(StateDir(), "snapshots")
 }
 
-func BundledSkillsDir() string {
-	return filepath.Join(StateDir(), "bundled-skills")
-}
-
 func PersonasDir() string {
 	return filepath.Join(StateDir(), "agents")
 }

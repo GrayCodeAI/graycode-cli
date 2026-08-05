@@ -1,6 +1,6 @@
-# hawk-eco shared templates
+# graycode-eco shared templates
 
-Every hawk-ecosystem repo's `Makefile`, `lefthook.yml`, and
+Every graycode-ecosystem repo's `Makefile`, `lefthook.yml`, and
 `.github/workflows/*.yml` carries a header comment like:
 
 ```
@@ -12,7 +12,7 @@ This directory is that source of truth. It lives here, in `hawk`, because
 there is no separate monorepo at the workspace root to hold it.
 
 **This directory is not built or run by hawk itself.** It is a template
-library that other hawk-ecosystem repos copy from and diff against.
+library that other graycode-ecosystem repos copy from and diff against.
 
 ## Layout
 

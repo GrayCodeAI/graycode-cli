@@ -1,10 +1,10 @@
-# hawk-eco Unified Config-as-Code
+# graycode-eco Unified Config-as-Code
 
 Status: Draft / shared spec
 Applies to: hawk, eyrie, yaad, tok, trace
 
 This document specifies a **single, unified configuration schema** for the
-hawk-eco ecosystem: one declarative file (`hawk-eco.yaml`, with an equivalent
+graycode-eco ecosystem: one declarative file (`graycode-eco.yaml`, with an equivalent
 JSON form) that captures model/provider selection, memory, compression,
 tracing, and gateway settings for all five repos. It is **config-as-code**: the
 file is the source of truth, version-controlled alongside a project, and each
@@ -22,9 +22,9 @@ any runtime behavior.
 ## Design principles
 
 1. **Additive, not breaking.** Every key maps to an env var/flag that already
-   exists. A repo that ignores `hawk-eco.yaml` keeps working exactly as before.
+   exists. A repo that ignores `graycode-eco.yaml` keeps working exactly as before.
 2. **Env still wins at runtime.** Precedence: explicit flag > process env var >
-   `hawk-eco.yaml` value > repo default. This preserves current behavior where
+   `graycode-eco.yaml` value > repo default. This preserves current behavior where
    env/flags are authoritative.
 3. **Repo-owned sections.** Each top-level section is owned by one repo (with
    `model`/`providers` shared by hawk + eyrie). A repo only reads its sections.
@@ -41,8 +41,8 @@ runtime precedence above):
 
 1. `--config <path>` flag (where a repo's CLI supports it)
 2. `$HAWK_ECO_CONFIG`
-3. `./hawk-eco.yaml` (project root)
-4. `~/.config/hawk-eco/config.yaml`
+3. `./graycode-eco.yaml` (project root)
+4. `~/.config/graycode-eco/config.yaml`
 
 ## Top-level schema
 
@@ -209,7 +209,7 @@ few env vars.
 The unified file is designed to be **resolved** into the existing mechanisms:
 
 - **env-based repos** (hawk, eyrie, tok, trace): export the mapped env var for
-  any key set in `hawk-eco.yaml` that is not already present in the process
+  any key set in `graycode-eco.yaml` that is not already present in the process
   environment (preserving "env wins" precedence).
 - **file-based repos** (yaad): write/merge the `memory.*` section into
   `~/.yaad/config.toml` using the field names above.

@@ -1,4 +1,4 @@
-# Canonical CI workflow for hawk-eco Go repos.
+# Canonical CI workflow for graycode-eco Go repos.
 # Source of truth: .shared-templates/workflows/go-ci.yml.tmpl
 #
 # Placeholders rendered per repo:
@@ -228,7 +228,7 @@ jobs:
         run: go build ./...
 
 # -----------------------------------------------------------------------------
-# Foundation repos (hawk-core-contracts, hawk-mcpkit) have zero hawk-eco
+# Foundation repos (hawk-core-contracts, hawk-mcpkit) have zero graycode-eco
 # dependencies, so they drop the GOPROXY/GOPRIVATE/GONOSUMDB env block above
 # and every "Clone <peer repo>" step that other repos may add for local
 # workspace deps — there is nothing to clone.

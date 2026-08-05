@@ -1,4 +1,4 @@
-# Hawk-Eco Long-Horizon Plan: Grok-Class Agent Control Plane (Go)
+# graycode-eco Long-Horizon Plan: Grok-Class Agent Control Plane (Go)
 
 **Status:** Planning  
 **Date:** 2026-07-16  
@@ -970,7 +970,7 @@ Week 4
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Language | Go only | Hawk ecosystem is Go |
+| Language | Go only | graycode-eco ecosystem is Go |
 | First work | Wire existing modes | Types already exist; highest ROI |
 | Contracts location | hawk-core-contracts | Engines/SDKs may later honor modes |
 | Trust default | On | Security |

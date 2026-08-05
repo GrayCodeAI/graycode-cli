@@ -1,4 +1,4 @@
-# Hawk ecosystem architecture
+# graycode-eco ecosystem architecture
 
 This document records the target repository and dependency architecture for the
 fourteen repositories audited in July 2026. It distinguishes source integration,

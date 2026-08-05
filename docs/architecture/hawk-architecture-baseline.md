@@ -110,7 +110,7 @@ The graph is intentionally directional:
 ### ADR-B01 — Keep the multi-repository ecosystem
 
 Do not collapse the support engines into Hawk or force a shared release cycle.
-The `hawk-eco` workspace and Hawk's pinned `external/` modules provide local
+The `graycode-eco` workspace and Hawk's pinned `external/` modules provide local
 integration without removing independent ownership and release boundaries.
 
 ### ADR-B02 — Preserve the Eyrie boundary

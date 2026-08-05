@@ -1,6 +1,6 @@
 # Hawk Architecture v1 — Definition of Done
 
-This document defines **realistic v1 complete** for the Hawk ecosystem architecture.
+This document defines **realistic v1 complete** for the graycode-eco ecosystem architecture.
 
 It is the shipping bar for the contracts-and-boundaries refactor. It is **not** a promise that every future package in `hawk-core-contracts-spec.md` exists, or that every engine is wired through shared contracts on every runtime path.
 
@@ -19,7 +19,7 @@ v1 does **not** require a single unified contract layer for runtime, persistence
 
 Status note:
 
-- checked items below are verified in the local `hawk-eco` workspace
+- checked items below are verified in the local `graycode-eco` workspace
 - unchecked items are intentionally reserved for external branch / release /
   publication state that this workspace audit cannot prove
 

@@ -1,4 +1,4 @@
-# Canonical lefthook config for hawk-eco Go repos.
+# Canonical lefthook config for graycode-eco Go repos.
 # Source of truth: .shared-templates/lefthook.yml.tmpl
 #
 # Install lefthook:
@@ -140,7 +140,7 @@ prepare-commit-msg:
 
 # ---------------------------------------------------------------------------
 # Notes for foundation repos (hawk-core-contracts, hawk-mcpkit): these have
-# no hawk-eco dependencies at all, so `pre-push.commands.boundaries` checks
+# no graycode-eco dependencies at all, so `pre-push.commands.boundaries` checks
 # for *zero* GrayCodeAI/* imports rather than checking against a peer-engine
 # allowlist. The command line above is identical either way — only
 # scripts/check-ecosystem-boundaries.sh differs per repo role.

@@ -4,7 +4,7 @@
 
 Hawk is a model-agnostic AI coding agent CLI from GrayCodeAI.
 
-Hawk is the only primary product surface in the Hawk ecosystem. The support repos exist to power Hawk, not to compete with it as standalone products.
+Hawk is the only primary product surface in the graycode-eco ecosystem. The support repos exist to power Hawk, not to compete with it as standalone products.
 
 For model execution specifically: **Hawk is the face and composition layer;
 Eyrie is the engine.** Hawk owns the conversation and product experience while

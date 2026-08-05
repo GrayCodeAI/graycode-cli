@@ -1,14 +1,13 @@
 # Plan: Hawk Contracts Migration Backlog
 
 > Status: locally complete
-> Scope: Hawk ecosystem architecture cleanup after introducing `hawk-core-contracts`
+> Scope: graycode-eco ecosystem architecture cleanup after introducing `hawk-core-contracts`
 > Goal: keep `hawk` as the product while moving stable cross-repo contracts out of Hawk internals
 
 External follow-up still outside the scope of this local workspace audit:
 
 - confirm upstream branches contain the final architecture commits
 - confirm published module tags/releases match the merged contract changes
-- execute `architecture-upstream-release-plan.md`
 
 ## Done
 

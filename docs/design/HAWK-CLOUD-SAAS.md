@@ -297,7 +297,7 @@ Billing:  sandbox_ms metered from Start→Stop
 
 ---
 
-## 4. Integration With Existing hawk-eco Code
+## 4. Integration With Existing graycode-eco Code
 
 This is the crux: **what is reusable today vs. net-new.**
 

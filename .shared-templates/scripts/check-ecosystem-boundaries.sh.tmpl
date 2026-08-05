@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Canonical import-boundary guard for hawk-eco repos.
+# Canonical import-boundary guard for graycode-eco repos.
 # Source of truth: .shared-templates/scripts/check-ecosystem-boundaries.sh.tmpl
 #
 # This template has three real variants depending on the repo's role. Pick
@@ -54,7 +54,7 @@ echo "ecosystem boundary guard passed"
 
 # =============================================================================
 # VARIANT 2 — Foundation repo (hawk-core-contracts, hawk-mcpkit).
-# Foundation repos sit below everything: zero hawk-eco dependencies at all.
+# Foundation repos sit below everything: zero graycode-eco dependencies at all.
 # =============================================================================
 #
 # FORBIDDEN='github\.com/GrayCodeAI/(?!{{OWN_MODULE}}(/|"))'
@@ -67,7 +67,7 @@ echo "ecosystem boundary guard passed"
 # fi
 #
 # if [[ -n "${violations}" ]]; then
-#   echo "forbidden hawk-eco imports found in {{OWN_MODULE}}:"
+#   echo "forbidden graycode-eco imports found in {{OWN_MODULE}}:"
 #   echo "${violations}"
 #   echo
 #   echo "{{OWN_MODULE}} is a foundation repo — it must not depend on hawk, engines, or any other GrayCodeAI/* package"

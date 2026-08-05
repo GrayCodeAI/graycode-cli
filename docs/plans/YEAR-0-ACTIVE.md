@@ -3,9 +3,8 @@
 **Status:** Active  
 **Date:** 2026-07-16  
 **ADR:** [ADR-0003](../architecture/adr/ADR-0003-grok-behavioral-port-go-multirepo.md)  
-**Full matrices:** [FULL-GROK-ECO-TO-HAWK-ECO-PORT-PLAN.md](./FULL-GROK-ECO-TO-HAWK-ECO-PORT-PLAN.md),
+**Full matrices:** [FULL-GROK-ECO-TO-GRAYCODE-ECO-PORT-PLAN.md](./FULL-GROK-ECO-TO-GRAYCODE-ECO-PORT-PLAN.md),
 [GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md](./GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md)  
-**Call-site inventory:** [Y0-CALL-SITE-INVENTORY.md](./Y0-CALL-SITE-INVENTORY.md)
 
 This is the **executable Year 0 program**. It does not replace the full
 port matrices; it freezes what “Year 0 done” means and tracks pack status.
@@ -15,7 +14,7 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 | Do | Do not |
 |----|--------|
 | Reimplement Grok **behavior** in Go | Copy Rust crates or depend on Grok |
-| Map capabilities to hawk-eco repos | Collapse engines into hawk monorepo |
+| Map capabilities to graycode-eco repos | Collapse engines into hawk monorepo |
 | Wire existing modes/budgets first | Rebuild eyrie/yaad/tok as Grok clones |
 | Privacy-first telemetry (OTEL opt-in) | Port Mixpanel defaults |
 
