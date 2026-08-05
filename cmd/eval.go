@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -73,6 +74,7 @@ func init() {
 	evalCmd.AddCommand(evalListCmd)
 	evalCmd.AddCommand(evalResultsCmd)
 	evalCmd.AddCommand(evalCacheCmd)
+	evalCmd.AddCommand(evalSmokeCmd)
 }
 
 func runEval(_ *cobra.Command, _ []string) error {
@@ -222,6 +224,36 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 		desc := truncateWithEllipsis(t.Description, 53)
 		fmt.Printf("| %s | %s | %s |\n", t.ID, desc, tags)
 	}
+	return nil
+}
+
+var evalSmokeCmd = &cobra.Command{
+	Use:   "smoke",
+	Short: "Run headless agent-loop smoke benchmarks (no provider/API key needed)",
+	RunE:  runEvalSmoke,
+}
+
+func runEvalSmoke(_ *cobra.Command, _ []string) error {
+	suite := eval.SmokeSuite()
+
+	fmt.Printf("Running %d agent-loop smoke tasks...\n", len(suite.Tasks))
+
+	// Quiet engine INFO logs so the scorecard report is the only stdout.
+	origLevel := slog.SetLogLoggerLevel(slog.LevelWarn)
+	defer slog.SetLogLoggerLevel(origLevel)
+
+	runner := eval.NewRunner("smoke", "")
+	runner.NoCache = true
+	runner.Filters = nil // no code-block extraction for smoke tasks
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	result, err := runner.Run(ctx, suite)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(eval.GenerateReport(result))
 	return nil
 }
 

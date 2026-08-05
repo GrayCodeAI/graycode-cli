@@ -131,16 +131,30 @@ Single entry for subagents + background tasks:
 - `session/status` — control-plane snapshot (mode, isolation, autoCommit, message count)
 
 ### Deprecations
-- `BackgroundAgentPool` / `NewBackgroundAgentPool*` / `FormatResults` marked Deprecated
-  in favor of `Session.SpawnController()` (same taskruntime.Registry). Retained
-  for compatibility; no production callers found.
+- `BackgroundAgentPool` / `NewBackgroundAgentPool*` / `FormatResults` **removed**
+  in favor of `Session.SpawnController()` (same taskruntime.Registry). No
+  production callers existed; the type and shims were deleted outright.
+
+## Iteration 5
+
+### ACP client docs
+- `docs/acp/client.md` — wire protocol, worked lifecycle example
+  (new → setMode → setIsolation → status → prompt), reference client.
+
+### Benchmark scorecard
+- `hawk eval smoke` — headless agent-loop smoke benchmark (stub provider,
+  no API key, CI-safe): drives the real `Session.Stream` loop and scores
+  steps / tool calls / token usage per task.
+- Fixtures: `smoke-read-file` (must emit ≥1 Read tool call), `smoke-no-tools`
+  (must terminate cleanly). Run with `hawk eval smoke`.
 
 ## Not done yet (next iterations)
 
-- True 60s binary install path (packaging/CI)
-- Deeper ACP (session/setMode, client fs routing)
-- Public Terminal-Bench scorecard
-- Optional: deprecate BackgroundAgentPool reexports
+- True 60s binary install path (packaging/CI) — Homebrew tap configured in
+  goreleaser; requires `GrayCodeAI/homebrew-tap` repo + `HOMEBREW_TAP_TOKEN`
+  secret before the next tagged release.
+- Deeper ACP (session/load, client fs routing)
+- Full Terminal-Bench scorecard against external agents
 
 ## Tests
 
