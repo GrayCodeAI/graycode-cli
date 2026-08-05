@@ -72,4 +72,3 @@ Before the dormant `SQLiteStore` becomes an active projection, add tests for:
 - retention/compaction behavior;
 - concurrent readers with one writer;
 - successful resume when SQLite is unavailable.
-
