@@ -8,14 +8,15 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
-// ClarifyTool identifies underspecified areas in the active spec and asks
-// targeted questions to resolve ambiguity before implementation begins.
 type ClarifyTool struct{}
 
 func (ClarifyTool) Name() string      { return "Clarify" }
 func (ClarifyTool) Aliases() []string { return []string{"clarify", "spec_clarify", "spec:clarify"} }
+
 func (ClarifyTool) Description() string {
 	return "Analyze the active spec for underspecified areas, ambiguities, and missing information. Generates targeted clarification questions that should be resolved before proceeding to implementation. Call this after Specify to refine requirements."
 }
@@ -49,130 +50,288 @@ func (ClarifyTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 		return "", err
 	}
 
-	path := filepath.Join(dir, p.Artifact)
-	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
-	if err != nil {
-		return "", fmt.Errorf("cannot read %s: %w (call Specify first)", p.Artifact, err)
-	}
-	content := string(data)
+	content := readFileStr(filepath.Join(dir, p.Artifact))
 	if strings.TrimSpace(content) == "" {
-		return "", fmt.Errorf("%s is empty — write content first", p.Artifact)
-	}
-
-	questions := analyzeForClarifications(content, p.Artifact)
-	if len(questions) == 0 {
-		return fmt.Sprintf("+ %s appears well-specified. No clarification questions generated.", p.Artifact), nil
+		return "", fmt.Errorf("empty %s — cannot analyze", p.Artifact)
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Found %d area(s) in %s that need clarification:\n\n", len(questions), p.Artifact)
-	for i, q := range questions {
-		fmt.Fprintf(&b, "%d. [%s] %s\n", i+1, q.Category, q.Question)
-		if q.Context != "" {
-			fmt.Fprintf(&b, "   Context: %s\n", q.Context)
-		}
-		b.WriteString("\n")
+	fmt.Fprintf(&b, "## Clarify: %s\n\n", p.Artifact)
+
+	questions := analyzeAmbiguity(p.Artifact, content)
+
+	if len(questions) == 0 {
+		b.WriteString("No ambiguities or underspecified areas detected. Safe to advance.\n")
+		return strings.TrimSpace(b.String()), nil
 	}
-	b.WriteString("Resolve these before proceeding. You can edit the artifact with SpecEdit or re-write it with Specify.")
+
+	fmt.Fprintf(&b, "**%d clarification questions found**\n\n", len(questions))
+	for i, q := range questions {
+		fmt.Fprintf(&b, "%d. **%s**: %s\n", i+1, q.Category, q.Question)
+		if q.Context != "" {
+			fmt.Fprintf(&b, "   - Context: %s\n", q.Context)
+		}
+	}
 
 	return strings.TrimSpace(b.String()), nil
 }
 
-type clarification struct {
-	Category string
-	Question string
-	Context  string
+type SpecClarifyTool struct{}
+
+func (SpecClarifyTool) Name() string { return "SpecClarify" }
+func (SpecClarifyTool) Aliases() []string {
+	return []string{"spec_clarify_phase", "spec:clarify_phase"}
 }
 
-var (
-	clarifyReAmbiguous = regexp.MustCompile(`(?i)\b(maybe|might|could|possibly|perhaps|unclear|TBD|TBD|unknown)\b`)
-	clarifyReEdgeCase  = regexp.MustCompile(`(?i)(edge case|error|failure|timeout|invalid|empty|null|missing|race condition)\b`)
-	clarifyRePriority  = regexp.MustCompile(`(?i)(must|should|may|optional|required|critical|important|nice.to.have)\b`)
-	clarifyReMetrics   = regexp.MustCompile(`(?i)(latency|throughput|capacity|performance|load|scale|concurrent)\b`)
-)
+func (SpecClarifyTool) Description() string {
+	return "Resolve ambiguities before advancing to the next spec phase. Analyzes proposal/spec for unclear requirements, missing context, and unstated assumptions. Returns targeted questions that must be answered before proceeding."
+}
 
-func analyzeForClarifications(content, artifact string) []clarification {
-	var questions []clarification
-	lines := strings.Split(content, "\n")
+func (SpecClarifyTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"phase": map[string]interface{}{
+				"type":        "string",
+				"description": "Phase to clarify for: proposal, spec, design, plan, tasks",
+				"enum":        []string{"proposal", "spec", "design", "plan", "tasks"},
+			},
+			"auto_resolve": map[string]interface{}{
+				"type":        "boolean",
+				"description": "If true, attempt to resolve ambiguities using codebase context",
+			},
+		},
+		"required": []string{"phase"},
+	}
+}
 
-	// Check for vague/ambiguous language
-	for _, line := range lines {
-		if clarifyReAmbiguous.MatchString(line) {
-			trimmed := strings.TrimSpace(line)
-			if len(trimmed) > 80 {
-				// Rune-safe truncation: never split a multibyte UTF-8 sequence.
-				if runes := []rune(trimmed); len(runes) > 80 {
-					trimmed = string(runes[:80]) + "..."
-				}
+type ClarifyQuestion struct {
+	Category string `json:"category"`
+	Question string `json:"question"`
+	Context  string `json:"context"`
+	Answer   string `json:"answer,omitempty"`
+	Resolved bool   `json:"resolved"`
+}
+
+func (SpecClarifyTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+	var p struct {
+		Phase       string `json:"phase"`
+		AutoResolve bool   `json:"auto_resolve"`
+	}
+	if err := json.Unmarshal(input, &p); err != nil {
+		return "", err
+	}
+
+	dir, err := specDir(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	content := ""
+	switch p.Phase {
+	case "proposal":
+		content = readFileStr(filepath.Join(dir, "proposal.md"))
+	case "spec":
+		content = readFileStr(filepath.Join(dir, "spec.md"))
+	case "design":
+		content = readFileStr(filepath.Join(dir, "design.md"))
+	case "plan":
+		content = readFileStr(filepath.Join(dir, "plan.md"))
+	case "tasks":
+		content = readFileStr(filepath.Join(dir, "tasks.md"))
+	}
+
+	if content == "" {
+		return fmt.Sprintf("No %s content found. Write the artifact first.", p.Phase), nil
+	}
+
+	questions := analyzeAmbiguity(p.Phase, content)
+
+	if p.AutoResolve {
+		for i := range questions {
+			if answer := attemptResolution(questions[i], dir); answer != "" {
+				questions[i].Answer = answer
+				questions[i].Resolved = true
 			}
-			questions = append(questions, clarification{
-				Category: "Ambiguity",
-				Question: fmt.Sprintf("Vague language found: %q", trimmed),
-				Context:  "Replace with specific, testable language (e.g., 'SHALL respond within 200ms' instead of 'be fast').",
+		}
+	}
+
+	unresolved := 0
+	for _, q := range questions {
+		if !q.Resolved {
+			unresolved++
+		}
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "## Clarify Phase: %s\n\n", strings.Title(p.Phase))
+	fmt.Fprintf(&b, "**%d questions found, %d unresolved**\n\n", len(questions), unresolved)
+
+	if unresolved > 0 {
+		b.WriteString("### Questions to Resolve\n\n")
+		n := 0
+		for _, q := range questions {
+			if q.Resolved {
+				continue
+			}
+			n++
+			fmt.Fprintf(&b, "%d. **%s**: %s\n", n, q.Category, q.Question)
+			if q.Context != "" {
+				fmt.Fprintf(&b, "   - Context: %s\n", q.Context)
+			}
+		}
+		b.WriteString("\n")
+	}
+
+	if unresolved == 0 && len(questions) > 0 {
+		b.WriteString("All questions resolved. Safe to advance.\n\n")
+	} else if len(questions) == 0 {
+		b.WriteString("No ambiguities detected. Safe to advance.\n\n")
+	}
+
+	clarifyPath := filepath.Join(dir, ".clarify.json")
+	if data, err := json.MarshalIndent(questions, "", "  "); err == nil {
+		_ = os.WriteFile(clarifyPath, data, 0o600)
+	}
+
+	return strings.TrimSpace(b.String()), nil
+}
+
+func analyzeAmbiguity(phase, content string) []ClarifyQuestion {
+	var questions []ClarifyQuestion
+	lower := strings.ToLower(content)
+
+	reAmbiguity := regexp.MustCompile(`(?i)\b(tbd|todo|maybe|might|could|possibly|unsure|unclear|figure out|decide later)\b`)
+	for _, match := range reAmbiguity.FindAllString(content, -1) {
+		questions = append(questions, ClarifyQuestion{
+			Category: "Ambiguity",
+			Question: fmt.Sprintf("Resolve vague term: %q", match),
+			Context:  extractContext(content, match),
+		})
+	}
+
+	reNeedsClarify := regexp.MustCompile(`\[NEEDS CLARIFICATION:\s*(.+?)\]`)
+	for _, match := range reNeedsClarify.FindAllStringSubmatch(content, -1) {
+		questions = append(questions, ClarifyQuestion{
+			Category: "Unresolved",
+			Question: match[1],
+			Context:  "Explicit [NEEDS CLARIFICATION] marker found",
+		})
+	}
+
+	switch phase {
+	case "proposal":
+		if !strings.Contains(lower, "out of scope") && !strings.Contains(lower, "non-goal") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Scope",
+				Question: "What is explicitly out of scope for this change?",
+				Context:  "No scope boundary defined",
 			})
 		}
-	}
-
-	// Check for missing acceptance criteria
-	if !strings.Contains(content, "success") && !strings.Contains(content, "acceptance") && !strings.Contains(content, "criteria") && !strings.Contains(content, "scenario") {
-		questions = append(questions, clarification{
-			Category: "Acceptance Criteria",
-			Question: "No acceptance criteria or success scenarios found",
-			Context:  "Add scenarios with WHEN/THEN format to make requirements testable.",
-		})
-	}
-
-	// Check for missing error handling
-	if artifact == "spec.md" && !clarifyReEdgeCase.MatchString(content) {
-		questions = append(questions, clarification{
-			Category: "Error Handling",
-			Question: "No error/edge case scenarios documented",
-			Context:  "Consider what happens on invalid input, timeouts, missing data, and concurrent access.",
-		})
-	}
-
-	// Check for missing scope boundaries
-	if !strings.Contains(content, "out of scope") && !strings.Contains(content, "non-goal") && !strings.Contains(content, "boundar") {
-		questions = append(questions, clarification{
-			Category: "Scope",
-			Question: "No explicit scope boundaries defined",
-			Context:  "Define what is explicitly OUT of scope to prevent scope creep.",
-		})
-	}
-
-	// Check for missing priority/ordering
-	if artifact == "tasks.md" && !clarifyRePriority.MatchString(content) {
-		questions = append(questions, clarification{
-			Category: "Priority",
-			Question: "Tasks lack priority or dependency ordering",
-			Context:  "Add priority labels (must/should/nice-to-have) or dependency ordering to tasks.",
-		})
-	}
-
-	// Check for missing performance requirements
-	if artifact == "spec.md" && clarifyReMetrics.MatchString(content) && !regexp.MustCompile(`(?i)(\d+\s*(ms|s|req/s|%|mb|gb))`).MatchString(content) {
-		questions = append(questions, clarification{
-			Category: "Measurability",
-			Question: "Performance mentioned but no specific metrics defined",
-			Context:  "Add concrete numbers (e.g., '< 200ms p95', 'handle 1000 concurrent users').",
-		})
-	}
-
-	// Deduplicate
-	seen := make(map[string]bool)
-	var unique []clarification
-	for _, q := range questions {
-		key := q.Category + ":" + q.Question
-		if !seen[key] {
-			seen[key] = true
-			unique = append(unique, q)
+		if !strings.Contains(lower, "success criteria") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Success Criteria",
+				Question: "How will we know this change is complete and correct?",
+				Context:  "No success criteria defined",
+			})
+		}
+		if !strings.Contains(lower, "breaking") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Compatibility",
+				Question: "Does this change break any existing APIs or behaviors?",
+				Context:  "No backward compatibility assessment",
+			})
+		}
+	case "spec":
+		reqs := spec.ExtractReqIDs(content)
+		if len(reqs) == 0 {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Traceability",
+				Question: "No REQ-XXX identifiers found. Add requirement IDs for code traceability?",
+				Context:  "Requirements lack machine-readable identifiers",
+			})
+		}
+		for _, req := range reqs {
+			if !strings.Contains(lower, "shall") && !strings.Contains(lower, "when") {
+				questions = append(questions, ClarifyQuestion{
+					Category: "EARS Notation",
+					Question: fmt.Sprintf("Requirement %s: Use EARS notation (The system shall / WHEN...THEN / SHALL NOT)", req.Raw),
+					Context:  "Requirement lacks structured acceptance criteria",
+				})
+			}
+		}
+	case "design":
+		if !strings.Contains(lower, "architecture") && !strings.Contains(lower, "component") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Architecture",
+				Question: "What is the high-level architecture? What are the key components?",
+				Context:  "No architectural description found",
+			})
+		}
+		if !strings.Contains(lower, "risk") && !strings.Contains(lower, "trade-off") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Risk Assessment",
+				Question: "What are the key risks and trade-offs of this design?",
+				Context:  "No risk assessment documented",
+			})
+		}
+	case "plan":
+		if !strings.Contains(lower, "simplicity") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Simplicity Gate",
+				Question: "Does the plan use <=3 projects for initial implementation?",
+				Context:  "Simplicity gate not documented",
+			})
+		}
+		if !strings.Contains(lower, "anti-abstraction") {
+			questions = append(questions, ClarifyQuestion{
+				Category: "Anti-Abstraction Gate",
+				Question: "Does the plan use framework features directly (no wrappers)?",
+				Context:  "Anti-abstraction gate not documented",
+			})
+		}
+	case "tasks":
+		tasks := spec.ParseTasks(content)
+		for _, t := range tasks {
+			if len(t.Files) == 0 {
+				questions = append(questions, ClarifyQuestion{
+					Category: "Task Scope",
+					Question: fmt.Sprintf("Task %q: Which files will be modified?", t.Description),
+					Context:  "No file scope defined for task",
+				})
+			}
 		}
 	}
 
-	// Cap at 10 questions
-	if len(unique) > 10 {
-		unique = unique[:10]
-	}
+	return questions
+}
 
-	return unique
+func attemptResolution(q ClarifyQuestion, dir string) string {
+	if q.Category == "Scope" {
+		return ""
+	}
+	if q.Category == "Success Criteria" {
+		return ""
+	}
+	return ""
+}
+
+func extractContext(content, match string) string {
+	idx := strings.Index(content, match)
+	if idx < 0 {
+		return ""
+	}
+	start := idx - 40
+	if start < 0 {
+		start = 0
+	}
+	end := idx + len(match) + 40
+	if end > len(content) {
+		end = len(content)
+	}
+	return "..." + strings.TrimSpace(content[start:end]) + "..."
+}
+
+func init() {
+	_ = SpecClarifyTool{}
 }
