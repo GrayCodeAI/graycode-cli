@@ -243,14 +243,9 @@ func (BrowserTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 		if err := validatePathAllowed(ctx, dest); err != nil {
 			return "", err
 		}
-		var buf []byte
-		if err := chromedp.Run(
-			bctx,
-			chromedp.Navigate(p.URL),
-			chromedp.Sleep(wait),
-			chromedp.FullScreenshot(&buf, 100),
-		); err != nil {
-			return "", browserErr(err)
+		buf, err := captureFullScreenshot(p.URL, p.Selector, wait, 0, 0)
+		if err != nil {
+			return "", err
 		}
 		if err := os.WriteFile(dest, buf, 0o644); err != nil {
 			return "", fmt.Errorf("write screenshot: %w", err)
@@ -303,6 +298,42 @@ func truncateChars(s string, max int) string {
 		return s
 	}
 	return string(r[:max]) + "…"
+}
+
+// captureFullScreenshot drives a headless browser to navigate to url (optionally
+// waiting for a selector) and return a full-page PNG. The viewport is set to
+// width x height, with 0 values falling back to the allocator's default
+// (1280x800). Shared by BrowserTool's screenshot action and ScreenshotTool to
+// avoid drift.
+func captureFullScreenshot(url, selector string, wait time.Duration, width, height int) ([]byte, error) {
+	if err := validateBrowserURL(url); err != nil {
+		return nil, err
+	}
+	bctx, err := acquireBrowser()
+	if err != nil {
+		return nil, browserErr(err)
+	}
+	actions := []chromedp.Action{}
+	if width > 0 && height > 0 {
+		actions = append(actions, chromedp.EmulateViewport(int64(width), int64(height)))
+	}
+	actions = append(
+		actions,
+		chromedp.Navigate(url),
+		chromedp.Sleep(wait),
+	)
+	if selector != "" {
+		sel := selector
+		actions = append(actions, chromedp.ActionFunc(func(c context.Context) error {
+			return waitForSelector(c, sel, 10*time.Second)
+		}))
+	}
+	var buf []byte
+	actions = append(actions, chromedp.FullScreenshot(&buf, 100))
+	if err := chromedp.Run(bctx, actions...); err != nil {
+		return nil, browserErr(err)
+	}
+	return buf, nil
 }
 
 // waitForSelector polls document.querySelector via the already-running page

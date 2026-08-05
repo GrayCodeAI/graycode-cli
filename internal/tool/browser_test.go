@@ -78,6 +78,25 @@ func TestBrowserToolSchemaAndParams(t *testing.T) {
 	}
 }
 
+func TestBrowserToolCloseDoesNotRequireBrowser(t *testing.T) {
+	// close must not require a Chrome install; it should simply tear down any
+	// cached browser (a no-op here) and return a fixed message.
+	t.Cleanup(releaseBrowser)
+	out, err := BrowserTool{}.Execute(context.Background(), json.RawMessage(`{"action":"close"}`))
+	if err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	if out != "Browser closed." {
+		t.Fatalf("unexpected close output: %q", out)
+	}
+}
+
+func TestCaptureFullScreenshotRejectsBadURL(t *testing.T) {
+	if _, err := captureFullScreenshot("file:///etc/passwd", "", 0, 0, 0); err == nil {
+		t.Errorf("expected error for non-http url")
+	}
+}
+
 func TestScreenshotToolSchema(t *testing.T) {
 	var st ScreenshotTool
 	if st.Name() != "Screenshot" {

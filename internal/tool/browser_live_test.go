@@ -11,11 +11,12 @@ import (
 )
 
 // TestBrowserLive is an opt-in end-to-end check against a real
-// Chrome/Chromium install. Run with HAWK_LIVE_BROWSER=1 go test -run
-// TestBrowserLive ./internal/tool/.
+// Chrome/Chromium install. CI runs without a display/browser, so the live
+// path is exercised in developer environments only.
+// TODO: https://github.com/GrayCodeAI/hawk/issues/273 track live-browser CI coverage.
 func TestBrowserLive(t *testing.T) {
 	if os.Getenv("HAWK_LIVE_BROWSER") == "" {
-		t.Skip("set HAWK_LIVE_BROWSER=1 to run the live browser test")
+		t.Skip("requires HAWK_LIVE_BROWSER=1 and a Chrome/Chromium binary")
 	}
 	t.Cleanup(releaseBrowser)
 

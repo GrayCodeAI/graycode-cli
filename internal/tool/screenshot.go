@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/chromedp/chromedp"
 )
 
 // ScreenshotTool captures a full-page PNG of a URL using headless Chrome.
@@ -50,9 +48,6 @@ func (ScreenshotTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
 	}
-	if err := validateBrowserURL(p.URL); err != nil {
-		return "", err
-	}
 
 	dest := p.Path
 	if dest == "" {
@@ -75,26 +70,9 @@ func (ScreenshotTool) Execute(ctx context.Context, input json.RawMessage) (strin
 		height = 800
 	}
 
-	bctx, err := acquireBrowser()
+	buf, err := captureFullScreenshot(p.URL, p.Selector, wait, width, height)
 	if err != nil {
-		return "", browserErr(err)
-	}
-
-	actions := []chromedp.Action{
-		chromedp.EmulateViewport(int64(width), int64(height)),
-		chromedp.Navigate(p.URL),
-		chromedp.Sleep(wait),
-	}
-	if p.Selector != "" {
-		sel := p.Selector
-		actions = append(actions, chromedp.ActionFunc(func(c context.Context) error {
-			return waitForSelector(c, sel, 10*time.Second)
-		}))
-	}
-	var buf []byte
-	actions = append(actions, chromedp.FullScreenshot(&buf, 100))
-	if err := chromedp.Run(bctx, actions...); err != nil {
-		return "", browserErr(err)
+		return "", err
 	}
 	if err := os.WriteFile(dest, buf, 0o644); err != nil {
 		return "", fmt.Errorf("write screenshot: %w", err)
