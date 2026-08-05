@@ -120,6 +120,25 @@ changelog:
       order: 999
 
 # ---------------------------------------------------------------------------
+# Homebrew — publishes a formula to GrayCodeAI/homebrew-tap so users can
+# `brew install graycodeai/tap/hawk`. Requires HOMEBREW_TAP_TOKEN or
+# TAP_GITHUB_TOKEN in the release workflow (both already wired there).
+# ---------------------------------------------------------------------------
+brews:
+  - repository:
+      owner: GrayCodeAI
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/GrayCodeAI/hawk"
+    description: "AI coding agent — reads, writes, and runs code in your terminal"
+    license: "MIT"
+    install: |
+      bin.install "hawk"
+    test: |
+      system "#{bin}/hawk", "--version"
+
+# ---------------------------------------------------------------------------
 # Release — auto-detect prereleases (rc/beta tags). Created on the repo
 # itself (not a separate release repo).
 # ---------------------------------------------------------------------------
