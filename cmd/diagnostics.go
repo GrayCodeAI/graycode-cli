@@ -257,11 +257,17 @@ func sessionsSummary() string {
 }
 
 func builtInToolsSummary() string {
-	tools := allTools()
+	essential := essentialTools()
+	optional := optionalTools()
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Built-in tools (%d):\n", len(tools)))
-	for _, t := range tools {
-		b.WriteString(fmt.Sprintf("  %s - %s\n", t.Name(), t.Description()))
+	b.WriteString(fmt.Sprintf("Built-in tools (%d total: %d essential, %d optional):\n", len(essential)+len(optional), len(essential), len(optional)))
+	b.WriteString("  Essential (loaded at startup):\n")
+	for _, t := range essential {
+		b.WriteString(fmt.Sprintf("    %s - %s\n", t.Name(), t.Description()))
+	}
+	b.WriteString("  Optional (lazy-loaded):\n")
+	for _, t := range optional {
+		b.WriteString(fmt.Sprintf("    %s - %s\n", t.Name(), t.Description()))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
