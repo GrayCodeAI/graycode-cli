@@ -178,6 +178,12 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 		})
 	case "session/new":
 		s.handleSessionNew(msg)
+	case "session/setMode":
+		s.handleSetMode(msg)
+	case "session/setIsolation":
+		s.handleSetIsolation(msg)
+	case "session/status":
+		s.handleStatus(msg)
 	case "session/prompt":
 		s.handlePrompt(ctx, msg)
 	case "session/cancel":
@@ -187,6 +193,94 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 			s.writeError(msg.ID, errCodeMethodNotFound, "method not found: "+msg.Method)
 		}
 	}
+}
+
+type setModeParams struct {
+	SessionID string `json:"sessionId"`
+	Mode      string `json:"mode"`
+}
+
+// handleSetMode switches the session's work mode (plan|act|review).
+func (s *Server) handleSetMode(msg rpcMessage) {
+	var p setModeParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		s.writeError(msg.ID, errCodeInvalidParams, "invalid params")
+		return
+	}
+	as := s.lookupSession(p.SessionID)
+	if as == nil {
+		s.writeError(msg.ID, errCodeInvalidParams, "unknown sessionId")
+		return
+	}
+	if err := as.sess.SetWorkMode(engine.WorkMode(p.Mode)); err != nil {
+		s.writeError(msg.ID, errCodeInvalidParams, err.Error())
+		return
+	}
+	s.reply(msg.ID, map[string]any{
+		"sessionId": p.SessionID,
+		"workMode":  string(as.sess.WorkMode()),
+	})
+}
+
+type setIsolationParams struct {
+	SessionID string `json:"sessionId"`
+	Profile   string `json:"profile"`
+}
+
+// handleSetIsolation applies an IsolationProfile (dev|workspace|strict|container or key=value).
+func (s *Server) handleSetIsolation(msg rpcMessage) {
+	var p setIsolationParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		s.writeError(msg.ID, errCodeInvalidParams, "invalid params")
+		return
+	}
+	as := s.lookupSession(p.SessionID)
+	if as == nil {
+		s.writeError(msg.ID, errCodeInvalidParams, "unknown sessionId")
+		return
+	}
+	prof, err := engine.ParseIsolationProfile(p.Profile)
+	if err != nil {
+		s.writeError(msg.ID, errCodeInvalidParams, err.Error())
+		return
+	}
+	as.sess.ApplyIsolationProfile(prof)
+	s.reply(msg.ID, map[string]any{
+		"sessionId": p.SessionID,
+		"isolation": as.sess.Isolation().String(),
+	})
+}
+
+type statusParams struct {
+	SessionID string `json:"sessionId"`
+}
+
+// handleStatus returns the control-plane snapshot for a session.
+func (s *Server) handleStatus(msg rpcMessage) {
+	var p statusParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil {
+		s.writeError(msg.ID, errCodeInvalidParams, "invalid params")
+		return
+	}
+	as := s.lookupSession(p.SessionID)
+	if as == nil {
+		s.writeError(msg.ID, errCodeInvalidParams, "unknown sessionId")
+		return
+	}
+	s.reply(msg.ID, map[string]any{
+		"sessionId":  p.SessionID,
+		"workMode":   string(as.sess.WorkMode()),
+		"isolation":  as.sess.Isolation().String(),
+		"autoCommit": as.sess.AutoCommit(),
+		"messages":   as.sess.MessageCount(),
+	})
+}
+
+// lookupSession returns the acpSession for id, or nil.
+func (s *Server) lookupSession(id string) *acpSession {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.sessions[id]
 }
 
 func (s *Server) handleSessionNew(msg rpcMessage) {

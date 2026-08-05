@@ -10,9 +10,12 @@ import (
 )
 
 type (
-	SubAgentMode        = agent.SubAgentMode
-	SubAgentConfig      = agent.SubAgentConfig
-	SubAgentBudget      = agent.SubAgentBudget
+	SubAgentMode   = agent.SubAgentMode
+	SubAgentConfig = agent.SubAgentConfig
+	SubAgentBudget = agent.SubAgentBudget
+	// Deprecated: use Session.SpawnController() and BackgroundAgentManager
+	// (taskruntime-backed) instead. BackgroundAgentPool is retained for
+	// compatibility with older callers and tests.
 	BackgroundAgentPool = agent.BackgroundAgentPool
 	BackgroundResult    = agent.BackgroundResult
 )
@@ -41,10 +44,18 @@ func NewSubAgentBudget(mode SubAgentMode, cfg SubAgentConfig) *SubAgentBudget {
 func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 	return agent.FilterToolsForMode(mode, available)
 }
-func DefaultTurnsForMode(mode SubAgentMode) int    { return agent.DefaultTurnsForMode(mode) }
-func IsReadOnlyMode(mode SubAgentMode) bool        { return agent.IsReadOnlyMode(mode) }
+func DefaultTurnsForMode(mode SubAgentMode) int { return agent.DefaultTurnsForMode(mode) }
+func IsReadOnlyMode(mode SubAgentMode) bool     { return agent.IsReadOnlyMode(mode) }
+
+// Deprecated: prefer Session.SpawnController().SpawnBackground for async
+// sub-agents. Retained for compatibility.
 func NewBackgroundAgentPool() *BackgroundAgentPool { return agent.NewBackgroundAgentPool() }
+
+// Deprecated: prefer Session.SpawnController().SpawnBackground for async
+// sub-agents. Retained for compatibility.
 func NewBackgroundAgentPoolWithContext(ctx context.Context) *BackgroundAgentPool {
 	return agent.NewBackgroundAgentPoolWithContext(ctx)
 }
+
+// Deprecated: prefer SpawnController for background result formatting.
 func FormatResults(results []BackgroundResult) string { return agent.FormatResults(results) }
