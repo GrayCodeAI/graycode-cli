@@ -109,7 +109,7 @@ func relPath(abs string) string {
 }
 
 func shouldIgnore(path string) bool {
-	ignored := []string{".git", ".hawk/specs", "node_modules", ".DS_Store"}
+	ignored := []string{".git", ".hawk/specs", "node_modules", ".DS_Store", "vendor"}
 	for _, p := range ignored {
 		if strings.Contains(path, string(os.PathSeparator)+p+string(os.PathSeparator)) ||
 			strings.HasPrefix(path, p+string(os.PathSeparator)) {
@@ -117,4 +117,21 @@ func shouldIgnore(path string) bool {
 		}
 	}
 	return false
+}
+
+func init() {
+	_ = isTestFile
+	_ = isSourceFile
+}
+
+func isTestFile(path string) bool {
+	return strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, ".test.ts") ||
+		strings.HasSuffix(path, ".test.js") || strings.HasSuffix(path, "_test.py")
+}
+
+func isSourceFile(path string) bool {
+	return strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".ts") ||
+		strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".py") ||
+		strings.HasSuffix(path, ".rs") || strings.HasSuffix(path, ".java") ||
+		strings.HasSuffix(path, ".c") || strings.HasSuffix(path, ".cpp")
 }

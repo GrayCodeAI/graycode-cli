@@ -102,6 +102,13 @@ var (
 	reNoImplementation      = regexp.MustCompile(`(?i)implementation details|tech stack|language:|framework:|database:`)
 	reUserValue             = regexp.MustCompile(`(?i)user|stakeholder|customer|business|value|benefit`)
 	reEdgeCases             = regexp.MustCompile(`(?i)edge case|error|failure|boundary|limit|exception|fallback`)
+	reEARSUbiquitous        = regexp.MustCompile(`(?i)the system shall|shall\s+\w+`)
+	reEARSEventDriven       = regexp.MustCompile(`(?i)when\s+.+\s+then\s+`)
+	reEARSStateDriven       = regexp.MustCompile(`(?i)while\s+.+\s+then\s+`)
+	reEARSUnwanted          = regexp.MustCompile(`(?i)the system shall not|shall not|must not`)
+	reEARSOptional          = regexp.MustCompile(`(?i)if\s+.+\s+then\s+`)
+	reReqIDAll              = regexp.MustCompile(`REQ-(\d+)\.(\d+)\.(\d+)`)
+	reReqIDAny              = regexp.MustCompile(`REQ-(\d+)(?:\.(\d+))?(?:\.(\d+))?`)
 )
 
 // ValidateSpec validates the quality of a spec document.
@@ -189,6 +196,35 @@ func ValidateSpec(content string) ValidationResult {
 			Level:   ValidationInfo,
 			Code:    "NO_BOUNDARIES",
 			Message: "consider defining scope boundaries (what is explicitly in/out of scope)",
+		})
+	}
+
+	// Check EARS notation usage
+	reqs := extractRequirementsFromContent(content)
+	if len(reqs) > 0 {
+		earsCount := 0
+		for _, req := range reqs {
+			if reEARSUbiquitous.MatchString(req) || reEARSEventDriven.MatchString(req) ||
+				reEARSStateDriven.MatchString(req) || reEARSUnwanted.MatchString(req) || reEARSOptional.MatchString(req) {
+				earsCount++
+			}
+		}
+		if earsCount < len(reqs)/2 {
+			issues = append(issues, ValidationIssue{
+				Level:   ValidationWarning,
+				Code:    "NO_EARS_NOTATION",
+				Message: "requirements should use EARS notation (The system shall / WHEN...THEN / SHALL NOT)",
+			})
+		}
+	}
+
+	// Check REQ IDs on requirements
+	reqIDs := ExtractReqIDs(content)
+	if len(reqs) > 0 && len(reqIDs) < len(reqs)/2 {
+		issues = append(issues, ValidationIssue{
+			Level:   ValidationInfo,
+			Code:    "NO_REQ_IDS",
+			Message: "consider adding REQ-XXX.Y.Z identifiers for traceability",
 		})
 	}
 
@@ -408,4 +444,116 @@ func containsAny(content string, substrs ...string) bool {
 		}
 	}
 	return false
+}
+
+// extractRequirementsFromContent extracts requirement lines from spec content.
+func extractRequirementsFromContent(content string) []string {
+	var reqs []string
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "### Requirement:") || strings.HasPrefix(trimmed, "## Requirement:") {
+			reqs = append(reqs, trimmed)
+		}
+		if strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
+			lower := strings.ToLower(trimmed)
+			if strings.Contains(lower, "req-") {
+				reqs = append(reqs, trimmed)
+			}
+		}
+	}
+	return reqs
+}
+
+// ReqID represents a parsed requirement identifier.
+type ReqID struct {
+	Major int
+	Minor int
+	Patch int
+	Raw   string
+}
+
+// ExtractReqIDs extracts all REQ-XXX.Y.Z identifiers from content.
+func ExtractReqIDs(content string) []ReqID {
+	matches := reReqIDAll.FindAllStringSubmatch(content, -1)
+	seen := make(map[string]bool)
+	var ids []ReqID
+	for _, m := range matches {
+		raw := m[0]
+		if seen[raw] {
+			continue
+		}
+		seen[raw] = true
+		major := 0
+		minor := 0
+		patch := 0
+		_, _ = fmt.Sscanf(m[1], "%d", &major)
+		if m[2] != "" {
+			_, _ = fmt.Sscanf(m[2], "%d", &minor)
+		}
+		if m[3] != "" {
+			_, _ = fmt.Sscanf(m[3], "%d", &patch)
+		}
+		ids = append(ids, ReqID{Major: major, Minor: minor, Patch: patch, Raw: raw})
+	}
+	return ids
+}
+
+// ScanCodeForReqIDs scans source files for [REQ-XXX] citation comments.
+func ScanCodeForReqIDs(root string) map[string][]string {
+	result := make(map[string][]string)
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, ".ts") && !strings.HasSuffix(path, ".js") &&
+			!strings.HasSuffix(path, ".py") && !strings.HasSuffix(path, ".rs") {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		matches := reReqIDAny.FindAllString(string(data), -1)
+		if len(matches) > 0 {
+			result[path] = matches
+		}
+		return nil
+	})
+	return result
+}
+
+// FindOrphanReqIDs finds REQ IDs in code that don't exist in the spec.
+func FindOrphanReqIDs(codeIDs []string, specContent string) []string {
+	specIDs := make(map[string]bool)
+	for _, id := range ExtractReqIDs(specContent) {
+		specIDs[id.Raw] = true
+	}
+	var orphans []string
+	seen := make(map[string]bool)
+	for _, id := range codeIDs {
+		if !specIDs[id] && !seen[id] {
+			orphans = append(orphans, id)
+			seen[id] = true
+		}
+	}
+	return orphans
+}
+
+// FindMissingReqIDs finds REQ IDs in spec that aren't cited in any code.
+func FindMissingReqIDs(specContent string, codeFiles map[string][]string) []string {
+	specIDs := ExtractReqIDs(specContent)
+	cited := make(map[string]bool)
+	for _, ids := range codeFiles {
+		for _, id := range ids {
+			cited[id] = true
+		}
+	}
+	var missing []string
+	for _, id := range specIDs {
+		if !cited[id.Raw] {
+			missing = append(missing, id.Raw)
+		}
+	}
+	return missing
 }

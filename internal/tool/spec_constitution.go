@@ -74,9 +74,76 @@ func (ConstitutionTool) Execute(ctx context.Context, input json.RawMessage) (str
 	case "validate":
 		return validateAgainstConstitution(ctx, dir, constitutionPath)
 
+	case "gates":
+		return getPhaseGates()
+
 	default:
-		return "", fmt.Errorf("unknown action %q. Use 'get', 'set', 'init', or 'validate'", p.Action)
+		return "", fmt.Errorf("unknown action %q. Use 'get', 'set', 'init', 'validate', or 'gates'", p.Action)
 	}
+}
+
+type PhaseGate struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Checks      []string `json:"checks"`
+}
+
+func getPhaseGates() (string, error) {
+	gates := []PhaseGate{
+		{
+			Name:        "Simplicity Gate",
+			Description: "Keep the implementation minimal and focused",
+			Checks: []string{
+				"Using ≤3 projects/modules for initial implementation?",
+				"No future-proofing or speculative features?",
+				"Each component has a single, clear responsibility?",
+			},
+		},
+		{
+			Name:        "Anti-Abstraction Gate",
+			Description: "Use frameworks directly, avoid premature abstraction",
+			Checks: []string{
+				"Using framework features directly rather than wrapping them?",
+				"Single model representation (no redundant interfaces)?",
+				"No abstract base classes unless shared by 3+ implementations?",
+			},
+		},
+		{
+			Name:        "Integration-First Gate",
+			Description: "Define contracts before implementation",
+			Checks: []string{
+				"API contracts defined before implementation?",
+				"Contract tests written before handler code?",
+				"Prefer real dependencies over mocks where feasible?",
+			},
+		},
+		{
+			Name:        "Test-First Gate",
+			Description: "Tests written before or alongside implementation",
+			Checks: []string{
+				"Unit tests written for each requirement?",
+				"Tests confirmed to fail before implementation (Red phase)?",
+				"Integration tests for cross-component behavior?",
+			},
+		},
+	}
+	var b strings.Builder
+	b.WriteString("## Phase Gates (checked at Plan transition)\n\n")
+	b.WriteString("All gates must pass before advancing to Plan. Failures require documented justification.\n\n")
+	for _, g := range gates {
+		fmt.Fprintf(&b, "### %s\n", g.Name)
+		fmt.Fprintf(&b, "%s\n\n", g.Description)
+		for _, c := range g.Checks {
+			fmt.Fprintf(&b, "- [ ] %s\n", c)
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("### Complexity Tracking\n\n")
+	b.WriteString("For any gate that fails, document the justification here:\n\n")
+	b.WriteString("| Gate | Justification |\n")
+	b.WriteString("|------|---------------|\n")
+	b.WriteString("|      |               |\n")
+	return strings.TrimSpace(b.String()), nil
 }
 
 func getConstitution(path string) (string, error) {
@@ -92,26 +159,37 @@ func initConstitution(path string) (string, error) {
 		return "", fmt.Errorf("constitution already exists at %s — use 'set' to update", path)
 	}
 
-	template := "## Core Principles\n\n" +
-		"1. **Security First**: Never expose secrets, never trust user input, always validate.\n" +
-		"2. **Explicit Over Implicit**: Use SHALL/MUST for normative requirements. No vague language.\n" +
-		"3. **Testable Everything**: Every requirement MUST have at least one test scenario.\n" +
-		"4. **Minimal Scope**: Each change should do one thing well. Avoid scope creep.\n" +
-		"5. **Backward Compatibility**: Breaking changes require explicit migration plan.\n\n" +
-		"## Code Standards\n\n" +
-		"- All errors must be handled (no unchecked errors)\n" +
-		"- No global mutable state — prefer dependency injection\n" +
-		"- Functions should do one thing well\n" +
-		"- Tests must pass with race detector enabled\n\n" +
-		"## Architecture Rules\n\n" +
-		"- Internal packages must not be imported from external repos\n" +
-		"- API keys go in OS keychain, not config files\n" +
-		"- No panic() for error handling (except init() assertions)\n" +
-		"- No fmt.Print for logging — use structured logger\n\n" +
+	template := "## Constitution\n\n" +
+		"### Article I: Library-First\n" +
+		"Every feature starts as a standalone library. Prefer well-maintained libraries over custom implementations. " +
+		"Justify any custom implementation in Complexity Tracking.\n\n" +
+		"### Article II: CLI Interface\n" +
+		"Every library must expose a command-line interface for observability and scriptability.\n\n" +
+		"### Article III: Test-First Imperative\n" +
+		"NON-NEGOTIABLE: All implementation follows strict Test-Driven Development. " +
+		"No implementation code before: (1) unit tests written, (2) tests confirmed to FAIL (Red phase).\n\n" +
+		"### Article IV: Explicit Over Implicit\n" +
+		"Use SHALL/MUST for normative requirements. No vague language. " +
+		"Ambiguity is marked with [NEEDS CLARIFICATION] instead of guessing.\n\n" +
+		"### Article V: Security First\n" +
+		"Never expose secrets, never trust user input, always validate. " +
+		"API keys in OS keychain, not config files.\n\n" +
+		"### Article VI: Observability Over Opacity\n" +
+		"All functionality must be inspectable through CLI interfaces. Structured logging, not fmt.Print.\n\n" +
+		"### Article VII: Simplicity\n" +
+		"Maximum 3 projects for initial implementation. The simplest solution that meets requirements wins. " +
+		"No future-proofing. No speculative features.\n\n" +
+		"### Article VIII: Anti-Abstraction\n" +
+		"Use framework features directly. No premature abstraction. " +
+		"Abstract only when shared by 3+ implementations. Document any exception.\n\n" +
+		"### Article IX: Integration-First Testing\n" +
+		"Tests in realistic environments. Prefer real databases over mocks. " +
+		"Prefer actual service instances over stubs. Contract tests mandatory before implementation.\n\n" +
 		"## Review Requirements\n\n" +
 		"- All PRs must have at least one approval\n" +
 		"- Security-sensitive changes require security review\n" +
-		"- Performance changes require benchmarks\n"
+		"- Performance changes require benchmarks\n" +
+		"- Breaking changes require migration plan\n"
 
 	if err := os.WriteFile(path, []byte(template), 0o600); err != nil {
 		return "", fmt.Errorf("write constitution: %w", err)

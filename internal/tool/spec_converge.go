@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // ConvergeTool assesses the gap between the active spec and the current
@@ -18,7 +20,7 @@ func (ConvergeTool) Name() string      { return "Converge" }
 func (ConvergeTool) Aliases() []string { return []string{"converge", "spec_converge", "spec:converge"} }
 
 func (ConvergeTool) Description() string {
-	return "Assess the gap between the active spec and the codebase. Checks incomplete tasks, missing implementations, and unresolved requirements. Optionally appends convergence tasks to tasks.md to track remaining work."
+	return "Assess the gap between the active spec and the codebase. Checks incomplete tasks, missing REQ coverage, orphan citations, and constitution compliance. Optionally appends convergence tasks to tasks.md."
 }
 
 func (ConvergeTool) Parameters() map[string]interface{} {
@@ -167,6 +169,36 @@ func assessConvergence(slug string) convergenceResult {
 			Severity:    "medium",
 			Source:      "spec.md",
 		})
+	}
+
+	// Check REQ coverage: orphan REQs in code, missing REQ citations
+	if specContent != "" {
+		cwd, _ := os.Getwd()
+		codeFiles := spec.ScanCodeForReqIDs(cwd)
+		var allCodeIDs []string
+		for _, ids := range codeFiles {
+			allCodeIDs = append(allCodeIDs, ids...)
+		}
+		orphans := spec.FindOrphanReqIDs(allCodeIDs, specContent)
+		if len(orphans) > 0 {
+			result.Gaps = append(result.Gaps, convergenceGap{
+				Description: fmt.Sprintf("%d orphan REQ ID(s) in code not in spec: %s", len(orphans), strings.Join(orphans, ", ")),
+				Category:    "hallucination",
+				Severity:    "critical",
+				Source:      "code",
+			})
+			result.Converged = false
+		}
+		missing := spec.FindMissingReqIDs(specContent, codeFiles)
+		if len(missing) > 0 {
+			result.Gaps = append(result.Gaps, convergenceGap{
+				Description: fmt.Sprintf("%d REQ ID(s) in spec not cited in code: %s", len(missing), strings.Join(missing, ", ")),
+				Category:    "missing",
+				Severity:    "high",
+				Source:      "spec.md",
+			})
+			result.Converged = false
+		}
 	}
 
 	if result.Converged && len(result.Gaps) == 0 {

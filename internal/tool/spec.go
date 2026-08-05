@@ -195,7 +195,7 @@ type TasksTool struct{}
 func (TasksTool) Name() string      { return "Tasks" }
 func (TasksTool) Aliases() []string { return []string{"tasks"} }
 func (TasksTool) Description() string {
-	return "Write tasks.md breaking the plan into concrete implementation steps. Call after Plan."
+	return "Write tasks.md breaking the plan into concrete implementation steps. Each task should reference REQ-XXX.Y.Z IDs from the spec. Call after Plan."
 }
 
 func (TasksTool) Parameters() map[string]interface{} {
